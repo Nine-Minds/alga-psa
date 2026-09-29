@@ -1,7 +1,7 @@
 {
   "catalog": {
     "title": "Service-Anfragen",
-    "description": "Reichen Sie eine strukturierte Anfrage ein und wir erstellen automatisch ein Ticket dafür.",
+    "description": "Reichen Sie eine strukturierte Anfrage ein und wir kümmern uns um den Rest.",
     "myRequests": "Meine Anfragen",
     "empty": "Derzeit sind keine anfragbaren Services verfügbar.",
     "fallbackCategory": "Dienst",
@@ -56,7 +56,16 @@
     "attachmentsTitle": "Anhänge",
     "noAttachments": "Keine Anhänge enthalten.",
     "fileIdLabel": "Datei-ID: {{id}}",
-    "fileTypeLabel": "Typ: {{mime}}"
+    "fileTypeLabel": "Typ: {{mime}}",
+    "versionLabel": "Version {{version}}",
+    "historyTitle": "Verlauf",
+    "historyEmpty": "Noch kein Verlauf aufgezeichnet.",
+    "historyActor": "von {{actor}}",
+    "historyOperations": {
+      "service_request_submission_created": "Anfrage eingereicht",
+      "service_request_submission_execution_succeeded": "Verarbeitung abgeschlossen",
+      "service_request_submission_execution_failed": "Verarbeitung fehlgeschlagen"
+    }
   },
   "recent": {
     "title": "Ihre letzten Anfragen",

@@ -44,9 +44,15 @@ export const getSurveyFilterOptions = withAuth(async (_user, { tenant }): Promis
     type: 'left',
     rootTenantColumn: 'sr.tenant',
   });
-  db.tenantJoin(technicianQuery, `${USERS_TABLE} as u`, 't.assigned_to', 'u.user_id', {
+  db.tenantJoin(technicianQuery, 'projects as p', 'sr.project_id', 'p.project_id', {
+    type: 'left', rootTenantColumn: 'sr.tenant',
+  });
+  db.tenantJoin(technicianQuery, `${USERS_TABLE} as u`, 'sr.tenant', 'u.tenant', {
+      on: join => { join.andOn(function () {
+        this.on('t.assigned_to', '=', 'u.user_id').orOn('p.assigned_to', '=', 'u.user_id');
+      }); },
     type: 'left',
-    rootTenantColumn: 't.tenant',
+    rootTenantColumn: 'sr.tenant',
   });
 
   const clientQuery = db.table(`${RESPONSES_TABLE} as sr`);
@@ -61,8 +67,8 @@ export const getSurveyFilterOptions = withAuth(async (_user, { tenant }): Promis
       .select(['template_id', 'template_name'])
       .orderBy('template_name', 'asc'),
     technicianQuery
-      .whereNotNull('t.assigned_to')
-      .distinct('t.assigned_to as user_id')
+      .whereNotNull('u.user_id')
+      .distinct('u.user_id as user_id')
       .select(knex.raw("COALESCE(CONCAT(u.first_name, ' ', u.last_name), '') as full_name"))
       .orderBy('full_name', 'asc'),
     clientQuery

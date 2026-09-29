@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "revision": "67d3b6689bfccde839a64beeeaf30c859ce75793",
+  "status": "passed",
+  "counts": {
+    "tests": 636,
+    "passed": 636,
+    "failed": 0,
+    "skipped": 0,
+    "todo": 0,
+    "cancelled": 0
+  },
+  "workingTreeDirty": false,
+  "failures": [],
+  "requiredFiles": 65,
+  "hashes": {
+    "test-results/node-tooling/evidence.json": "1efc4062eeafea1cd2125e7ab393ade15e841447c48b561665391c2423917518",
+    "test-results/node-tooling/events.jsonl": "a5e96372811d6cf09a82f8bbcfcb2b8e9954ae000ea11891029664699d54bcc9",
+    "/tmp/alga-tooling-67d3b6.log": "b3a428543f4e7e316163fbfe3fe7e9dc4a563e90705d415fe56b1483063bfb5e"
+  },
+  "limitations": [
+    "Native local tooling only; no current-source GitHub CI pass or publication is established."
+  ]
+}

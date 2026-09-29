@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "kind": "behavioral-assertion-repair",
+  "testFile": "server/src/test/unit/billingPlanSelection.test.ts",
+  "counts": {
+    "numTotalTests": 21,
+    "numPassedTests": 20,
+    "numFailedTests": 0,
+    "numPendingTests": 0,
+    "numTodoTests": 1
+  },
+  "reportSha256": "b2646e7ec333b494d4365153da46d7bdf9e30eb8b45f532c2bbebb4cb7a73fb0",
+  "controlledFault": {
+    "change": "Force the real UI projection hasBucketOverlay value to false",
+    "failedAssertions": [
+      "Contract line choices returned to the UI retains every choice and distinguishes explicit-member, catch-all and absent buckets",
+      "Contract line choices returned to the UI preserves legacy overlay details without inventing a bucket for an empty configuration"
+    ],
+    "reportSha256": "d011e60589d93bc00d269b22fa1d6c62b325314e8579a21cbbe485b4a73a1714",
+    "restored": true
+  },
+  "limitations": [
+    "Database I/O is mocked; these tests verify real date/overlay/UI projection behavior, not SQL eligibility or browser behavior.",
+    "The existing missing-client input-validation TODO remains explicitly pending.",
+    "Controlled fault experiment, not historical incident replay."
+  ]
+}

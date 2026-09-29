@@ -6,9 +6,11 @@ import {
   MSP_SSO_DISCOVERY_TTL_SECONDS,
   MSP_SSO_GENERIC_FAILURE_MESSAGE,
   MSP_SSO_RESOLUTION_TTL_SECONDS,
+  getMspSsoEdition,
   getMspSsoSigningSecret,
   hasAppFallbackProviderCredentials,
   hasTenantProviderCredentials,
+  isSupportedProvider,
   isValidClientPortalResolverCallbackUrl,
   normalizeResolverEmail,
   parseResolverProvider,
@@ -61,7 +63,9 @@ function computeSignature(payloadEncoded: string, secret: string): string {
 
 function normalizeProviders(values: unknown): MspSsoProviderId[] {
   if (!Array.isArray(values)) return [];
-  const providers = values.filter((provider): provider is MspSsoProviderId => provider === 'google' || provider === 'azure-ad');
+  const providers = values.filter(
+    (provider): provider is MspSsoProviderId => typeof provider === 'string' && isSupportedProvider(provider)
+  );
   return Array.from(new Set(providers));
 }
 
@@ -143,16 +147,23 @@ export async function resolveClientPortalSsoTenantContext(
 }
 
 export async function discoverClientPortalSsoProviders(tenantId: string): Promise<MspSsoProviderId[]> {
-  const [tenantGoogleReady, tenantMicrosoftReady, appGoogleReady, appMicrosoftReady] = await Promise.all([
-    hasTenantProviderCredentials(tenantId, 'google'),
-    hasTenantProviderCredentials(tenantId, 'azure-ad'),
-    hasAppFallbackProviderCredentials('google'),
-    hasAppFallbackProviderCredentials('azure-ad'),
-  ]);
+  // The CE OAuth profile mapper resolves internal MSP users only, so the client
+  // portal has no SSO on Community Edition.
+  if (getMspSsoEdition() === 'ce') return [];
+
+  const [tenantGoogleReady, tenantMicrosoftReady, appGoogleReady, appMicrosoftReady, appKeycloakReady] =
+    await Promise.all([
+      hasTenantProviderCredentials(tenantId, 'google'),
+      hasTenantProviderCredentials(tenantId, 'azure-ad'),
+      hasAppFallbackProviderCredentials('google'),
+      hasAppFallbackProviderCredentials('azure-ad'),
+      hasAppFallbackProviderCredentials('keycloak'),
+    ]);
 
   return normalizeProviders([
     ...(tenantGoogleReady || appGoogleReady ? ['google'] : []),
     ...(tenantMicrosoftReady || appMicrosoftReady ? ['azure-ad'] : []),
+    ...(appKeycloakReady ? ['keycloak'] : []),
   ]);
 }
 

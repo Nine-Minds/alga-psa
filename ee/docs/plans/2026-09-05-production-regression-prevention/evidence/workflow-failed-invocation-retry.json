@@ -1,0 +1,20 @@
+{
+  "status": "local_behavior_and_database_verified_native_pending",
+  "problem": "Existing FAILED invocation attempts reinsert its unique key rather than retrying the row",
+  "fix": "Tenant-scoped conditional FAILED-to-STARTED claim increments attempt; activity reuses claimed invocation and rejects a lost claim without executing handler",
+  "validation": {
+    "readiness_passed": 71,
+    "database_passed": 1,
+    "typescript": "tsc --noEmit -p ee/temporal-workflows/tsconfig.build.json passed",
+    "logs": [
+      "/tmp/alga-temporal-failed-retry.log",
+      "/tmp/alga-workflow-retry-claim-db.log",
+      "/tmp/alga-temporal-retry-types.log"
+    ]
+  },
+  "limits": [
+    "Stale STARTED recovery after worker crash remains unimplemented",
+    "Handler effects still require stable provider/business idempotency",
+    "Live Temporal and native full integration validation pending"
+  ]
+}

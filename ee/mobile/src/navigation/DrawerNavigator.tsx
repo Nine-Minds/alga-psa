@@ -4,6 +4,7 @@ import type { DrawerParamList } from "./types";
 import { TicketsStackNavigator } from "./TicketsStackNavigator";
 import { UserActivitiesScreen } from "../screens/UserActivitiesScreen";
 import { ScheduleScreen } from "../screens/ScheduleScreen";
+import { InteractionsScreen } from "../screens/InteractionsScreen";
 import { TimeEntriesScreen } from "../screens/TimeEntriesScreen";
 import { ClientsListScreen } from "../screens/ClientsListScreen";
 import { ContactsListScreen } from "../screens/ContactsListScreen";
@@ -22,6 +23,7 @@ export function DrawerNavigator() {
   const { t: tTickets } = useTranslation("tickets");
   const { t: tUserActivities } = useTranslation("userActivities");
   const { t: tSchedule } = useTranslation("schedule");
+  const { t: tInteractions } = useTranslation("interactions");
   const { t: tTimeEntries } = useTranslation("timeEntries");
   const { t: tClients } = useTranslation("clients");
   const { t: tContacts } = useTranslation("contacts");
@@ -79,6 +81,16 @@ export function DrawerNavigator() {
           title: tSchedule("title", "Schedule"),
           drawerIcon: ({ color, size }) => (
             <MaterialCommunityIcons name="calendar-blank-outline" size={size} color={color} />
+          ),
+        }}
+      />
+      <Drawer.Screen
+        name="InteractionsTab"
+        component={InteractionsScreen}
+        options={{
+          title: tInteractions("title", "Interactions"),
+          drawerIcon: ({ color, size }) => (
+            <MaterialCommunityIcons name="phone-message-outline" size={size} color={color} />
           ),
         }}
       />

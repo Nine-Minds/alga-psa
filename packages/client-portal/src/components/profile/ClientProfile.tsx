@@ -8,21 +8,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/component
 import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
 import { Button } from '@alga-psa/ui/components/Button';
-import { Switch } from '@alga-psa/ui/components/Switch';
 import TimezonePicker from '@alga-psa/ui/components/TimezonePicker';
 import CustomTabs, { TabContent } from '@alga-psa/ui/components/CustomTabs';
 import ViewSwitcher, { ViewSwitcherOption } from '@alga-psa/ui/components/ViewSwitcher';
-import { InternalNotificationPreferences } from '@alga-psa/notifications/components';
+import { EmailNotificationPreferences, InternalNotificationPreferences } from '@alga-psa/notifications/components';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { updateUser } from '@alga-psa/users/actions';
 import { useContactAvatar, invalidateContactAvatar } from '@alga-psa/user-composition/hooks';
-import {
-  getCategoriesAction,
-  getCategoryWithSubtypesAction,
-  getUserPreferencesAction,
-  updateUserPreferenceAction
-} from '@alga-psa/notifications/actions';
-import type { NotificationCategory, NotificationSubtype, UserNotificationPreference } from '@alga-psa/notifications';
 import type { IUserWithRoles } from '@alga-psa/types';
 import { PasswordChangeForm } from '@alga-psa/users/components';
 import { SessionManagement } from '@alga-psa/auth/components';
@@ -47,8 +39,6 @@ export function ClientProfile() {
   const [user, setUser] = useState<IUserWithRoles | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [categories, setCategories] = useState<NotificationCategory[]>([]);
-  const [subtypesByCategory, setSubtypesByCategory] = useState<Record<number, NotificationSubtype[]>>({});
 
   // Use SWR hook for contact avatar - automatically syncs with header
   const { avatarUrl: contactAvatarUrl } = useContactAvatar(user?.contact_id ?? undefined, user?.tenant);
@@ -89,41 +79,6 @@ export function ClientProfile() {
         const inherited = await getInheritedLocaleAction();
         setCurrentEffectiveLocale(inherited.locale);
         setInheritedSource(inherited.source);
-
-        // Get notification categories, subtypes, and saved user email preferences
-        const notificationCategories = await getCategoriesAction();
-        const emailPreferences = await getUserPreferencesAction(currentUser.tenant, currentUser.user_id);
-        const emailPreferenceBySubtype = new Map(
-          emailPreferences.map((preference: UserNotificationPreference) => [
-            preference.subtype_id,
-            preference.is_enabled
-          ])
-        );
-
-        // Get subtypes for each category
-        const subtypes: Record<number, NotificationSubtype[]> = {};
-        await Promise.all(
-          notificationCategories.map(async (category: NotificationCategory): Promise<void> => {
-            const { subtypes: categorySubtypes } = await getCategoryWithSubtypesAction(category.id);
-            subtypes[category.id] = categorySubtypes.map((subtype: NotificationSubtype) => ({
-              ...subtype,
-              is_enabled: subtype.is_enabled && (emailPreferenceBySubtype.get(subtype.id) ?? true)
-            }));
-          })
-        );
-        setCategories(notificationCategories.map((category: NotificationCategory) => {
-          const categorySubtypes = subtypes[category.id] ?? [];
-          if (categorySubtypes.length === 0) {
-            return category;
-          }
-
-          return {
-            ...category,
-            is_enabled: categorySubtypes.every((subtype: NotificationSubtype) => subtype.is_enabled)
-          };
-        }));
-        setSubtypesByCategory(subtypes);
-
       } catch (err) {
         console.error('Error initializing profile:', err);
         setError(tProfile('profile.messages.loadError', 'Failed to load profile'));
@@ -170,80 +125,6 @@ export function ClientProfile() {
     } catch (err) {
       toast.error(tProfile('profile.messages.updateError', 'Failed to save profile'));
       handleError(err, tProfile('profile.messages.updateError', 'Failed to save profile'));
-    }
-  };
-
-  const handleCategoryToggle = async (categoryId: number, enabled: boolean) => {
-    if (!user) return;
-
-    const categorySubtypes = subtypesByCategory[categoryId] ?? [];
-
-    try {
-      await Promise.all(
-        categorySubtypes.map((subtype: NotificationSubtype) =>
-          updateUserPreferenceAction(user.tenant, user.user_id, {
-            subtype_id: subtype.id,
-            is_enabled: enabled
-          })
-        )
-      );
-
-      setSubtypesByCategory(prev => ({
-        ...prev,
-        [categoryId]: (prev[categoryId] ?? []).map((subtype): NotificationSubtype => ({
-          ...subtype,
-          is_enabled: enabled
-        }))
-      }));
-
-      setCategories(prev =>
-        prev.map((cat): NotificationCategory =>
-          cat.id === categoryId ? { ...cat, is_enabled: enabled } : cat
-        )
-      );
-    } catch (err) {
-      toast.error(tProfile('notifications.preferences.saveError', 'Failed to save preference'));
-      handleError(err, tProfile('notifications.preferences.saveError', 'Failed to save preference'));
-    }
-  };
-
-  const handleSubtypeToggle = async (categoryId: number, subtypeId: number, enabled: boolean) => {
-    if (!user) return;
-
-    try {
-      await updateUserPreferenceAction(user.tenant, user.user_id, {
-        subtype_id: subtypeId,
-        is_enabled: enabled
-      });
-
-      setSubtypesByCategory(prev => ({
-        ...prev,
-        [categoryId]: (prev[categoryId] ?? []).map((subtype): NotificationSubtype =>
-          subtype.id === subtypeId ? { ...subtype, is_enabled: enabled } : subtype
-        )
-      }));
-
-      setCategories(prev =>
-        prev.map((category): NotificationCategory => {
-          if (category.id !== categoryId) {
-            return category;
-          }
-
-          const updatedSubtypes = (subtypesByCategory[categoryId] ?? []).map((subtype): NotificationSubtype =>
-            subtype.id === subtypeId ? { ...subtype, is_enabled: enabled } : subtype
-          );
-
-          return {
-            ...category,
-            is_enabled: updatedSubtypes.length > 0
-              ? updatedSubtypes.every((subtype: NotificationSubtype) => subtype.is_enabled)
-              : enabled
-          };
-        })
-      );
-    } catch (err) {
-      toast.error(tProfile('notifications.preferences.saveError', 'Failed to save preference'));
-      handleError(err, tProfile('notifications.preferences.saveError', 'Failed to save preference'));
     }
   };
 
@@ -427,31 +308,7 @@ export function ClientProfile() {
           </CardHeader>
           <CardContent>
             {notificationView === 'email' ? (
-              <div className="space-y-6">
-                {categories.map((category: NotificationCategory): React.JSX.Element => (
-                  <div key={category.id} className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <Label>{category.name}</Label>
-                      <Switch
-                        checked={category.is_enabled}
-                        onCheckedChange={(checked) => handleCategoryToggle(category.id, checked)}
-                      />
-                    </div>
-                    <div className="ml-6 space-y-2">
-                      {subtypesByCategory[category.id]?.map((subtype: NotificationSubtype): React.JSX.Element => (
-                        <div key={subtype.id} className="flex items-center justify-between">
-                          <Label className="text-sm">{subtype.name}</Label>
-                          <Switch
-                            checked={subtype.is_enabled}
-                            disabled={!category.is_enabled}
-                            onCheckedChange={(checked) => handleSubtypeToggle(category.id, subtype.id, checked)}
-                          />
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
+              <EmailNotificationPreferences />
             ) : (
               <InternalNotificationPreferences />
             )}

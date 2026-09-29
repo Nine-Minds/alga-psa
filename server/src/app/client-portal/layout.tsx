@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import { getSession, getSessionWithRevocationCheck } from "@alga-psa/auth";
@@ -6,18 +7,23 @@ import { getTenantBrandingByTenantId } from "@alga-psa/tenancy/actions";
 import { getHierarchicalLocaleAction } from "@alga-psa/tenancy/actions";
 import { getCurrentTenantProduct } from "@/lib/productAccess";
 import { getTenantDefaultCurrencyCode } from "@alga-psa/billing/actions/billingCurrencyActions";
+import { getDateFormatPreference } from "@alga-psa/clients/actions/countryActions";
+import { SYSTEM_DATE_FORMAT } from "@alga-psa/core/i18n/countryDateFormat";
 import type { Metadata } from 'next';
 import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 import { getClientPortalFeatureSettings } from '@alga-psa/client-portal/actions/client-portal-actions/clientPortalFeatureSettingsActions';
 
 const CLIENT_SIDEBAR_COOKIE = 'client_portal_sidebar_collapsed';
 
+/** generateMetadata and the layout body share one branding round trip. */
+const loadPortalBranding = cache((tenantId: string) => getTenantBrandingByTenantId(tenantId));
+
 // This template overrides the root layout's template for all /client-portal/* pages.
 // The default includes the suffix because defaults bypass their own template.
 export async function generateMetadata(): Promise<Metadata> {
   const { t } = await getServerTranslation(undefined, 'metadata');
 
-  return {
+  const metadata: Metadata = {
     title: {
       // '%s' is Next's own slot for the child route's title, not an i18next
       // placeholder — it passes through translation untouched.
@@ -25,6 +31,19 @@ export async function generateMetadata(): Promise<Metadata> {
       default: t('clientPortal.layout.defaultTitle', { defaultValue: 'Dashboard | Client Portal' }),
     },
   };
+
+  // The portal is the tenant's own front door, so its tab follows the tenant
+  // favicon. Next merges icons from the leaf segment over the root layout's.
+  const session = await getSession().catch(() => null);
+  const tenantId = session?.user?.tenant;
+  if (tenantId) {
+    const branding = await loadPortalBranding(tenantId).catch(() => null);
+    if (branding?.faviconUrl) {
+      metadata.icons = { icon: branding.faviconUrl };
+    }
+  }
+
+  return metadata;
 }
 
 export default async function Layout({
@@ -52,7 +71,7 @@ export default async function Layout({
 
   // Get branding from session tenant (no host header needed!)
   const branding = session?.user?.tenant
-    ? await getTenantBrandingByTenantId(session.user.tenant)
+    ? await loadPortalBranding(session.user.tenant)
     : null;
 
   // Get hierarchical locale on server (user -> client -> tenant -> system)
@@ -65,6 +84,8 @@ export default async function Layout({
     cookieStore.get(CLIENT_SIDEBAR_COOKIE)?.value === 'true';
   const productCode = await getCurrentTenantProduct();
   const currencyCode = await getTenantDefaultCurrencyCode().catch(() => 'USD');
+  // The portal writes dates the way the CLIENT does, falling back to the tenant.
+  const dateFormat = await getDateFormatPreference().catch(() => SYSTEM_DATE_FORMAT);
   const portalFeatureSettings = await getClientPortalFeatureSettings();
 
   return (
@@ -74,6 +95,7 @@ export default async function Layout({
       productCode={productCode}
       appointmentsEnabled={portalFeatureSettings.appointmentsEnabled}
       currencyCode={currencyCode}
+      dateFormat={dateFormat}
       initialLocale={locale}
       initialSidebarCollapsed={initialSidebarCollapsed}
     >

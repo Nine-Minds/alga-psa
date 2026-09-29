@@ -1,6 +1,8 @@
 'use client';
 
-import { useEffect, useRef, MutableRefObject } from 'react';
+import { useEffect, useRef, useState, MutableRefObject } from 'react';
+import { Button } from '../components/Button';
+import { useTranslation } from '../lib/i18n/client';
 import { useTheme } from 'next-themes';
 import {
   useCreateBlockNote,
@@ -83,6 +85,7 @@ interface TextEditorProps {
   placeholder?: string;
   uploadFile?: (file: File, blockId?: string) => Promise<string | Record<string, any>>;
   autoFocus?: boolean;
+  allowFileAttachments?: boolean;
 }
 
 export const DEFAULT_BLOCK: PartialBlock[] = [{
@@ -178,8 +181,13 @@ export default function TextEditor({
   placeholder,
   uploadFile,
   autoFocus = false,
+  allowFileAttachments = false,
 }: TextEditorProps) {
   useShortcutScope('editor');
+  const { t } = useTranslation('common');
+  const filePickerRef = useRef<HTMLInputElement>(null);
+  const [uploadingFiles, setUploadingFiles] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const { resolvedTheme } = useTheme();
   const blockNoteTheme = resolvedTheme === 'dark' ? 'dark' : 'light';
   // Parse initial content and remove empty trailing blocks
@@ -230,7 +238,14 @@ export default function TextEditor({
   const editor = useCreateBlockNote({
     schema,
     initialContent,
-    uploadFile,
+    uploadFile: uploadFile ? async (file, blockId) => {
+      const result = await uploadFile(file, blockId);
+      // Comment files render as download links; images keep BlockNote's inline behavior.
+      if (typeof result === 'string' && result.startsWith('/api/documents/download/') && !file.type.startsWith('image/')) {
+        return { type: 'file', props: { url: result, name: file.name } };
+      }
+      return result;
+    } : undefined,
     placeholders: {
       default: placeholder || "Start typing...",
     },
@@ -477,6 +492,28 @@ export default function TextEditor({
   return (
     <div className="w-full h-full min-w-0" data-keyboard-shortcuts-editor-root="true">
       {children}
+      {allowFileAttachments && uploadFile && <div className="mb-2 flex items-center gap-2">
+        <input id={`${id}-attachment-input`} ref={filePickerRef} type="file" multiple hidden onChange={async event => {
+          const files = Array.from(event.target.files || []);
+          event.target.value = '';
+          setUploadingFiles(true); setUploadError(null);
+          try {
+            for (const file of files) {
+              const uploaded = await uploadFile(file);
+              const block = typeof uploaded === 'string' ? {
+                type: file.type.startsWith('image/') ? 'image' : 'file', props: { url: uploaded, name: file.name },
+              } : uploaded;
+              editor.insertBlocks([block as any], editor.getTextCursorPosition().block, 'after');
+            }
+          } catch (error) {
+            setUploadError(error instanceof Error ? error.message : t('editor.fileUploadFailed', 'File upload failed.'));
+          } finally { setUploadingFiles(false); }
+        }} />
+        <Button id={`${id}-attach-files`} type="button" variant="outline" size="sm" disabled={uploadingFiles} onClick={() => filePickerRef.current?.click()}>
+          {uploadingFiles ? t('editor.uploadingFiles', 'Uploading files…') : t('editor.attachFiles', 'Attach files')}
+        </Button>
+        {uploadError && <span role="alert" className="text-sm text-[rgb(var(--color-text-700))]">{uploadError}</span>}
+      </div>}
       <div
         className="min-h-[100px] h-full w-full editor-paper border border-[rgb(var(--color-border-200))] rounded-lg p-4 overflow-auto min-w-0"
         onDragStart={(e) => {

@@ -13,6 +13,7 @@ import type {
   TicketScheduleEntrySummary,
 } from '../actions/ticketBentoActions';
 import type { ITicketChecklistItem } from '../actions/checklists/ticketChecklistActions';
+import type { ITicketExternalLinkView } from '../actions/externalLinks/externalLinkActions';
 import type { ITicketAutoCloseState } from '../actions/close-rules/closeRuleActions';
 import type { TicketDetailLayout } from '../actions/ticketLayoutPreference';
 import type { AdjacentTicketData } from '../components/ticket/TicketNavigation';
@@ -41,10 +42,11 @@ export interface TicketReactionsBootstrap {
 export interface TicketScreenBootstrap {
   layoutPreference: { layout: TicketDetailLayout; timelineOrder: 'asc' | 'desc' } | null;
   checklistItems: ITicketChecklistItem[] | null;
+  externalLinks: ITicketExternalLinkView[] | null;
   autoCloseState: ITicketAutoCloseState | null;
   canViewCommentMetadataDebug: boolean | null;
   teams: ITeam[] | null;
-  displaySettings: { dateTimeFormat?: string; responseStateTrackingEnabled?: boolean } | null;
+  displaySettings: { showWeekday?: boolean; responseStateTrackingEnabled?: boolean } | null;
   tags: ITag[] | null;
   streams: {
     /** Non-comment timeline entries (system/time/alert lanes). */

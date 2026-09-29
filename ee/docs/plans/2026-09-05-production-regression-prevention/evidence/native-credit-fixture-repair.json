@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "kind": "native-failure-local-repair",
+  "revision": "0be4bd2020",
+  "nativeJob": "https://github.com/Nine-Minds/alga-psa/actions/runs/34064092646/job/101569699429",
+  "nativeHead": "9b12c5fa638a6757b990b3894d8f8c1682cddb19",
+  "nativeFailures": [
+    {
+      "file": "server/src/test/unit/billing/creditActions.applyCredit.postDrop.test.ts",
+      "reason": "Fixture threw Unexpected table invoice_payments after the real cash-balance read was added.",
+      "repair": "Model an empty payment ledger in this no-payments fixture; preserve every behavioral assertion."
+    },
+    {
+      "file": "server/src/test/unit/billing/projectBillingInvoiceLifecycle.contract.test.ts",
+      "reason": "Exact source-text select list rejected the additional total_amount column.",
+      "repair": "Remove the brittle select-list assertion; do not replace it with another source-text assertion."
+    }
+  ],
+  "localValidation": {
+    "filesPassed": 2,
+    "testsPassed": 5,
+    "skipped": 0,
+    "durationSeconds": 1.38,
+    "logSha256": "655df3897109825e10bf20d4e3c41ee3520bdc0492c3da71ae995b65ab974eb9"
+  },
+  "limits": [
+    "Four existing source-contract cases still run; they are not evidence of behavioral coverage.",
+    "Actual financial behavior is independently verified by the native workspace DB model and local credit concurrency suites.",
+    "Both repairs require a new native candidate after publishing."
+  ]
+}

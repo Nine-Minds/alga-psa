@@ -136,6 +136,34 @@ const transformedInvoiceData = {
 };
 
 describe('invoiceTemplatePreview authoritative AST integration', () => {
+  it('reports an unfinished transform as a preview diagnostic and recovers after the edit is cleared', async () => {
+    const preview = (value: DesignerWorkspaceSnapshot) => (runAuthoritativeInvoiceTemplatePreview as any)(
+      { id: 'test-user', tenant: 'test-tenant' },
+      { tenant: 'test-tenant' },
+      { workspace: value, invoiceData },
+    );
+    const result = await preview({
+      ...workspace,
+      transforms: {
+        ...createEmptyDesignerTransformWorkspace(),
+        sourceBindingId: 'items',
+        outputBindingId: 'sortedItems',
+        operations: [],
+      },
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.compile.status).toBe('error');
+    expect(result.compile.error).toBe('Add at least one transform operation before saving the pipeline.');
+    expect(result.compile.diagnostics).toEqual([
+      expect.objectContaining({ severity: 'error', message: result.compile.error }),
+    ]);
+    expect(result.render).toMatchObject({ status: 'idle', html: null });
+    const recovered = await preview(workspace);
+    expect(recovered.success).toBe(true);
+    expect(recovered.render.html).toContain('Consulting');
+  });
+
   it('executes AST validation + evaluator + renderer path without requiring compilation', async () => {
     const actionResult = await (runAuthoritativeInvoiceTemplatePreview as any)(
       { id: 'test-user', tenant: 'test-tenant' },

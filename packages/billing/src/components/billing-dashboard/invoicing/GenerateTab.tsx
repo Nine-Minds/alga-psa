@@ -39,6 +39,7 @@ const GenerateTab: React.FC<GenerateTabProps> = ({
   const { t } = useTranslation('msp/invoicing');
   const { enabled: billingEnabled } = useFeatureFlag('billing-enabled');
   const [error, setError] = useState<string | null>(null);
+  const [salesOrderLoadFailed, setSalesOrderLoadFailed] = useState(false);
   const [clients, setClients] = useState<IClient[]>([]);
   const [services, setServices] = useState<IService[]>([]);
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
@@ -54,12 +55,29 @@ const GenerateTab: React.FC<GenerateTabProps> = ({
   }, [invoiceType, refreshTrigger]);
 
   const loadManualInvoiceData = async () => {
+    setError(null);
+    setSalesOrderLoadFailed(false);
+    setClients([]);
+    setServices([]);
+    setInvoiceableSalesOrders([]);
     try {
-      const [clientsData, servicesData, invoiceableSalesOrdersData] = await Promise.all([
+      const [clientsResult, servicesResult, salesOrdersResult] = await Promise.allSettled([
         getAllClientsForBilling(),
         getServices(1, 999, { item_kind: 'any' }),
         invoiceType === 'manual' ? listInvoiceableSalesOrdersForBilling() : Promise.resolve([])
       ]);
+      // Sales order conversion is optional for a manual invoice. Its separate
+      // read permission must not prevent Finance users from loading billing
+      // clients/services that they are authorized to use.
+      if (clientsResult.status === 'rejected') throw clientsResult.reason;
+      if (servicesResult.status === 'rejected') throw servicesResult.reason;
+      const clientsData = clientsResult.value;
+      const servicesData = servicesResult.value;
+      if (salesOrdersResult.status === 'fulfilled') {
+        setInvoiceableSalesOrders(salesOrdersResult.value);
+      } else {
+        setSalesOrderLoadFailed(true);
+      }
 
       if (isActionMessageError(clientsData) || isActionPermissionError(clientsData)) {
         setClients([]);
@@ -68,7 +86,6 @@ const GenerateTab: React.FC<GenerateTabProps> = ({
       }
 
       setClients(clientsData);
-      setInvoiceableSalesOrders(invoiceableSalesOrdersData);
 
       if (isActionMessageError(servicesData) || isActionPermissionError(servicesData)) {
         setServices([]);
@@ -143,6 +160,14 @@ const GenerateTab: React.FC<GenerateTabProps> = ({
       {error && (
         <Alert variant="destructive" className="mb-4">
           <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+
+      {salesOrderLoadFailed && (
+        <Alert variant="warning" className="mb-4">
+          <AlertDescription>{t('generateTab.messages.salesOrderSourcesUnavailable', {
+            defaultValue: 'Sales order sources could not be loaded. You can still enter manual invoice items.',
+          })}</AlertDescription>
         </Alert>
       )}
 

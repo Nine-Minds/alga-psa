@@ -4,6 +4,7 @@ import type { Knex } from 'knex';
 import { createTenantKnex, registerAfterCommit, tenantDb, withTransaction } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
+import { SharedNumberingService } from '@alga-psa/shared/services/numberingService';
 import type { IOpportunity, IOpportunityDetail, IOpportunityEvidence, IOpportunityHandoff, IQuote, OpportunityListFilters } from '@alga-psa/types';
 import { createOpportunitySchema, updateOpportunitySchema, loseOpportunitySchema, completeNextActionSchema, opportunityListFiltersSchema, recordDeclaredEvidenceSchema, winOpportunitySchema } from '../schemas/opportunitySchemas';
 import { OpportunityModel } from '../models/opportunityModel';
@@ -37,10 +38,7 @@ async function requirePermission(user: unknown, action: 'create' | 'read' | 'upd
 }
 
 async function nextOpportunityNumber(trx: Knex.Transaction, tenant: string): Promise<string> {
-  const result = await trx.raw('SELECT generate_next_number(:tenant::uuid, :type::text) as number', { tenant, type: 'OPPORTUNITY' });
-  const number = result?.rows?.[0]?.number;
-  if (!number) throw new Error('Failed to generate opportunity number');
-  return number;
+  return SharedNumberingService.getNextNumber('OPPORTUNITY', { knex: trx, tenant });
 }
 
 function actorId(user: any): string {
@@ -254,6 +252,12 @@ export const deleteOpportunity = withAuth(async (user, { tenant }, opportunityId
     await db.table('interactions').where({ opportunity_id: opportunityId }).update({ opportunity_id: null });
     await db.table('opportunity_suggestions').where({ created_opportunity_id: opportunityId }).update({ created_opportunity_id: null });
     await db.table('opportunity_qbr_triggers').where({ created_opportunity_id: opportunityId }).update({ created_opportunity_id: null });
+
+    // Drop only the link: the documents themselves are library rows that may
+    // be filed against the client or a quote as well.
+    await db.table('document_associations')
+      .where({ entity_type: 'opportunity', entity_id: opportunityId })
+      .delete();
 
     if (!await OpportunityModel.delete(trx, tenant, opportunityId)) throw new Error('Open opportunity not found');
   });

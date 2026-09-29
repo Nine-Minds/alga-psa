@@ -1,3 +1,5 @@
+import { prepareCommentAttachmentEmail, claimCommentEmailDelivery, finishCommentEmailDelivery, recipientCanReceiveCommentFiles } from './ticketCommentAttachmentEmail';
+import { isPublicAttachmentComment } from '@shared/lib/ticketCommentAttachments';
 import { randomUUID } from 'node:crypto';
 import { tenantDb } from '@alga-psa/db';
 import { getConnection } from '../db/db';
@@ -6,6 +8,7 @@ import logger from '@alga-psa/core/logger';
 import { TenantEmailService } from '@alga-psa/email';
 import { StaticTemplateProcessor } from '@alga-psa/email';
 import { EmailProviderError } from '@alga-psa/types';
+import type { OutboundMailClass } from '@alga-psa/types';
 import { getUserInfoForEmail, resolveEmailLocale } from '@alga-psa/notifications/notifications/emailLocaleResolver';
 import { SupportedLocale } from '@alga-psa/core/i18n/config';
 import Handlebars from 'handlebars';
@@ -30,6 +33,9 @@ interface ReplyMarkerPayload {
 }
 
 export interface SendEmailParams {
+  mailClass: OutboundMailClass;
+  boardId?: string;
+  senderId?: string;
   tenantId: string;
   to: string;
   subject: string;
@@ -48,6 +54,8 @@ export interface SendEmailParams {
    * Optional notification subtype association (links to notification_subtypes.id).
    */
   notificationSubtypeId?: number;
+  /** Source publication when a bundle notification replies to a different ticket. */
+  commentSource?: { ticketId: string; commentId: string };
   replyContext?: {
     ticketId?: string;
     projectId?: string;
@@ -375,6 +383,61 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
     // correct for the HTML body only.
     const subjectTemplate = Handlebars.compile(emailSubject, { noEscape: true });
 
+    const attachmentCommentId = params.template === 'ticket-comment-added'
+      ? params.commentSource?.commentId || params.replyContext?.commentId : undefined;
+    const attachmentTicketId = params.commentSource?.ticketId || params.replyContext?.ticketId;
+    if (params.template === 'ticket-comment-added' && params.commentSource) {
+      const destinationTicketId = params.replyContext?.ticketId;
+      // Bundling shares public updates, not document permissions. Recheck the
+      // destination and source on every retry before preparing source files.
+      const child = destinationTicketId && await db.table('tickets').where({
+        ticket_id: destinationTicketId, master_ticket_id: attachmentTicketId,
+      }).first();
+      if (!child || !await isPublicAttachmentComment(knex, params.tenantId, attachmentCommentId!, attachmentTicketId!) ||
+        !await recipientCanReceiveCommentFiles(knex, params.tenantId, destinationTicketId!, params.to)) return;
+
+      const mirror = await db.table('ticket_bundle_mirrors').where({
+        source_comment_id: attachmentCommentId!, child_ticket_id: destinationTicketId!,
+      }).first();
+      if (mirror && !await isPublicAttachmentComment(knex, params.tenantId, mirror.child_comment_id, destinationTicketId!)) return;
+      if (params.replyContext?.commentId && params.replyContext.commentId !== mirror?.child_comment_id) return;
+      // Link-only bundles have no child comment. Never persist a master comment
+      // under a child's reply token; incoming replies still target that ticket.
+      params = { ...params, replyContext: { ...params.replyContext, commentId: mirror?.child_comment_id } };
+    }
+    let managedCommentDelivery = false;
+    let attachmentDownloadText = '';
+    if (attachmentCommentId && attachmentTicketId) {
+      managedCommentDelivery = Boolean(await db.table('ticket_comment_attachments').where({ comment_id: attachmentCommentId }).first());
+      if (managedCommentDelivery) {
+        // Recheck persisted visibility on each queued attempt, never trust an old event payload.
+        if (!await isPublicAttachmentComment(knex, params.tenantId, attachmentCommentId, attachmentTicketId)) {
+          const current = await db.table('comments').where({ comment_id: attachmentCommentId, ticket_id: attachmentTicketId }).first();
+          const staffRecipient = await db.table('users').where({ user_type: 'internal', is_inactive: false })
+            .whereRaw('lower(email) = ?', [params.to.trim().toLowerCase()]).first();
+          // Preserve staff text notifications; never send private files or stale
+          // public-event content to a customer after a visibility change.
+          if (!current || current.deleted_at || current.publish_state !== 'published' || !staffRecipient) return;
+        }
+        const service = TenantEmailService.getInstance(params.tenantId);
+        const capabilities = await service.getAttachmentCapabilities();
+        const prepared = await prepareCommentAttachmentEmail({
+          db: knex, tenant: params.tenantId, ticketId: attachmentTicketId,
+          commentId: attachmentCommentId, recipient: params.to,
+          supportsAttachments: capabilities.supportsAttachments,
+          blockedAttachmentExtensions: capabilities.blockedAttachmentExtensions,
+          maxAttachmentBytes: capabilities.maxAttachmentSize || 0,
+          baseUrl: process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_APP_URL || '',
+        });
+        if (prepared.downloadLinks.length) attachmentDownloadText = '\nDownload attachments within one hour (verify the recipient email; no portal account required):\n' + prepared.downloadLinks.join('\n');
+        params = { ...params, attachments: prepared.attachments, context: {
+          ...params.context,
+          comment: { ...(params.context.comment as Record<string, unknown> || {}),
+            content: prepared.html, html: prepared.html, text: prepared.text, plainText: prepared.text },
+        } };
+      }
+    }
+
     let html = htmlTemplate(params.context);
     let subject = subjectTemplate(params.context).replace(/[\r\n]+/g, ' ').trim();
 
@@ -408,6 +471,8 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
       .replace(/\s+/g, ' ')
       .trim();
 
+    text += attachmentDownloadText;
+
     let replyPayload: ReplyMarkerPayload | null = null;
     let effectiveReplyContext = params.replyContext;
     if (params.replyContext?.ticketId || params.replyContext?.projectId) {
@@ -431,7 +496,18 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
     // Send via TenantEmailService (handles tenant provider and EE fallback)
     const service = TenantEmailService.getInstance(params.tenantId);
     const processor = new StaticTemplateProcessor(subject, html, text);
+    if (managedCommentDelivery && !await claimCommentEmailDelivery(knex, params.tenantId, attachmentCommentId!, params.to)) {
+      const delivery = await tenantDb(knex, params.tenantId).table('ticket_comment_email_deliveries')
+        .where({ comment_id: attachmentCommentId!, recipient: params.to.trim().toLowerCase() }).first();
+      if (delivery?.state === 'sent') return;
+      throw new EmailProviderError('Comment email has an unresolved provider outcome; reconcile before retrying.',
+        'unknown', 'unknown', false, 'COMMENT_DELIVERY_RECONCILIATION_REQUIRED', { requiresReconciliation: true });
+    }
     const result = await service.sendEmail({
+      mailClass: params.mailClass,
+      boardId: params.boardId,
+      senderId: params.senderId,
+      revalidateCommentOnRetry: managedCommentDelivery,
       to: params.to,
       tenantId: params.tenantId,
       entityType: params.entityType,
@@ -447,7 +523,29 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
       providerId: params.providerId,
       from: params.from,
       userId: params.recipientUserId  // For rate limiting
+    }).catch(async (error: unknown) => {
+      if (!managedCommentDelivery) throw error;
+      const providerError = error as { message?: string; errorCode?: string; metadata?: Record<string, unknown>; isRetryable?: boolean };
+      const notSent = providerError.metadata?.definitelyNotSent === true;
+      await finishCommentEmailDelivery(knex, params.tenantId, attachmentCommentId!, params.to, notSent ? 'failed' : 'sending', {
+        error: providerError.message || 'Email service failed with an unknown outcome', errorCode: providerError.errorCode || 'OUTCOME_UNKNOWN',
+      });
+      throw new EmailProviderError(providerError.message || 'Email delivery requires reconciliation', 'unknown', 'unknown',
+        notSent && providerError.isRetryable === true, providerError.errorCode || 'OUTCOME_UNKNOWN',
+        { ...providerError.metadata, requiresReconciliation: !notSent });
     });
+
+    if (managedCommentDelivery) {
+      if (result.success && !result.queued) {
+        // Record success before ancillary reply-token/log writes can fail.
+        await finishCommentEmailDelivery(knex, params.tenantId, attachmentCommentId!, params.to, 'sent');
+      } else if (result.metadata?.definitelyNotSent === true ||
+        Number(result.metadata?.status) === 429) {
+        await finishCommentEmailDelivery(knex, params.tenantId, attachmentCommentId!, params.to, 'failed', { error: result.error, errorCode: String(result.metadata?.errorCode || 'NOT_SENT') });
+      } else {
+        await finishCommentEmailDelivery(knex, params.tenantId, attachmentCommentId!, params.to, 'sending', { error: result.error || 'Provider outcome is unknown', errorCode: String(result.metadata?.errorCode || 'OUTCOME_UNKNOWN') });
+      }
+    }
 
     if (!result.success) {
       // If email delivery is intentionally disabled/unconfigured, treat as an informational skip (common in dev/test).
@@ -464,7 +562,8 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
 
       const providerId = result.providerId || params.providerId || 'unknown';
       const providerType = result.providerType || 'unknown';
-      const isRetryable = result.metadata?.retryable === true;
+      const isRetryable = result.metadata?.retryable === true && (!managedCommentDelivery ||
+        result.metadata?.definitelyNotSent === true || Number(result.metadata?.status) === 429);
       const errorCode = typeof result.metadata?.errorCode === 'string' ? result.metadata.errorCode : undefined;
 
       throw new EmailProviderError(

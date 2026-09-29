@@ -1,0 +1,239 @@
+{
+  "schemaVersion": 1,
+  "scope": "current-ci-upgrade-visible-bucket-and-enterprise-api",
+  "repository": "Nine-Minds/alga-psa",
+  "runId": "34320694357",
+  "testedRevision": "cec08351189624fb4db8db7ec453e788157fbdad",
+  "observations": [
+    {
+      "lane": "pg",
+      "artifactId": 10093566639,
+      "status": "passed",
+      "revision": "cec08351189624fb4db8db7ec453e788157fbdad",
+      "source": {
+        "before": {
+          "revision": "cec08351189624fb4db8db7ec453e788157fbdad",
+          "dirty": false,
+          "changes": []
+        },
+        "after": {
+          "revision": "cec08351189624fb4db8db7ec453e788157fbdad",
+          "dirty": false,
+          "changes": []
+        }
+      },
+      "failures": [],
+      "rawSha256": {
+        "evidence.json": "938f5a337c19722890498dfc632f892c3b5268528f01b7a3e1862fbfd008d27c",
+        "results.json": "5a281f1bedf7dc332f71d0725269255339bb1340bc0f4fa80cffa84b03253bc4"
+      },
+      "schemaStatus": "passed",
+      "baseline": {
+        "schemaVersion": 1,
+        "release": "v1.5.0",
+        "commit": "f3579f3a317cf51df5f4489e5dcd8f649bb71289",
+        "selection": "Explicitly approved by the user for the supported-upgrade test",
+        "fixtureStatus": "implemented"
+      },
+      "backend": "postgres",
+      "rawSchemaSha256": "3eaf14eb4ca30cbbc789cbd263be99369340bfd7a94fd2bc167128f677594ec6",
+      "tests": [
+        {
+          "file": "retained-invoice.spec.ts",
+          "title": "upgraded billing sources generate a correctly priced invoice without consuming other tenant records",
+          "projectId": "enterprise-chromium",
+          "status": "expected",
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed"
+            }
+          ]
+        },
+        {
+          "file": "retained-ticket.spec.ts",
+          "title": "upgraded tenants retain ticket writes and reject other-tenant record access",
+          "projectId": "enterprise-chromium",
+          "status": "expected",
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed"
+            }
+          ]
+        },
+        {
+          "file": "retained-usage.spec.ts",
+          "title": "Add Usage after upgrade preserves the old record and uses its existing contract line",
+          "projectId": "enterprise-chromium",
+          "status": "expected",
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "lane": "citus",
+      "artifactId": 10093682343,
+      "status": "passed",
+      "revision": "cec08351189624fb4db8db7ec453e788157fbdad",
+      "source": {
+        "before": {
+          "revision": "cec08351189624fb4db8db7ec453e788157fbdad",
+          "dirty": false,
+          "changes": []
+        },
+        "after": {
+          "revision": "cec08351189624fb4db8db7ec453e788157fbdad",
+          "dirty": false,
+          "changes": []
+        }
+      },
+      "failures": [],
+      "rawSha256": {
+        "evidence.json": "5ad515ba3bfa6ac0b08e5a4a0e99c409ad73def95899b6906bab59d49982c840",
+        "results.json": "16dadb57f115f0a0d65912ad4ee7f07b5622cfb5f40245819e68f00a1fc836ca"
+      },
+      "schemaStatus": "passed",
+      "baseline": {
+        "schemaVersion": 1,
+        "release": "v1.5.0",
+        "commit": "f3579f3a317cf51df5f4489e5dcd8f649bb71289",
+        "selection": "Explicitly approved by the user for the supported-upgrade test",
+        "fixtureStatus": "implemented"
+      },
+      "backend": "citus",
+      "rawSchemaSha256": "e59170ef4967ca9cdf1568cf0ccc657ac500658ad8f83bb711d84be149935732",
+      "tests": [
+        {
+          "file": "retained-invoice.spec.ts",
+          "title": "upgraded billing sources generate a correctly priced invoice without consuming other tenant records",
+          "projectId": "enterprise-chromium",
+          "status": "expected",
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed"
+            }
+          ]
+        },
+        {
+          "file": "retained-ticket.spec.ts",
+          "title": "upgraded tenants retain ticket writes and reject other-tenant record access",
+          "projectId": "enterprise-chromium",
+          "status": "expected",
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed"
+            }
+          ]
+        },
+        {
+          "file": "retained-usage.spec.ts",
+          "title": "Add Usage after upgrade preserves the old record and uses its existing contract line",
+          "projectId": "enterprise-chromium",
+          "status": "expected",
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "lane": "ee-api",
+      "artifactId": 10093493203,
+      "status": "passed",
+      "revision": "cec08351189624fb4db8db7ec453e788157fbdad",
+      "source": {
+        "before": {
+          "revision": "cec08351189624fb4db8db7ec453e788157fbdad",
+          "dirty": false,
+          "changes": []
+        },
+        "after": {
+          "revision": "cec08351189624fb4db8db7ec453e788157fbdad",
+          "dirty": false,
+          "changes": []
+        }
+      },
+      "failures": [],
+      "rawSha256": {
+        "evidence.json": "105253b6c400091fd1f6f7e2d27d1eb2fde544cebf52dd75e275c8b3d2b0cfa2",
+        "results.json": "7766ce45edbc3834e71a701a4e06f321fe51fd442d872e9fe30b3bfd9f8e8a36"
+      },
+      "counts": {
+        "passed": 349,
+        "failed": 0,
+        "skipped": 0,
+        "todo": 0,
+        "pending": 0
+      }
+    }
+  ],
+  "visibleBucketSource": {
+    "path": "e2e-tests/upgrade-tests/retained-usage.spec.ts",
+    "revision": "cec08351189624fb4db8db7ec453e788157fbdad",
+    "retrieval": "GitHub contents API at exact tested merge; local merge object unavailable",
+    "sha256": "ceddbaad54ccdeebbbefe8c69aa31a5acd4608242e4c348f1aaad2c06a42451a",
+    "assertions": [
+      {
+        "line": 26,
+        "text": "    expect(b.bucket).toMatchObject({ expectedTotalMinutes: 2400, expectedUsedMinutes: 0, expectedRolloverMinutes: 0 });"
+      },
+      {
+        "line": 27,
+        "text": "    const assertBucketBalance = async () => {"
+      },
+      {
+        "line": 28,
+        "text": "      const chart = page.getByText(b.bucket.lineName, { exact: true }).locator('xpath=../../..');"
+      },
+      {
+        "line": 29,
+        "text": "      await expect(chart.getByText('0.0 hours used', { exact: true })).toBeVisible();"
+      },
+      {
+        "line": 30,
+        "text": "      await expect(chart.getByText('40.0 hours total', { exact: true })).toBeVisible();"
+      },
+      {
+        "line": 31,
+        "text": "      await expect(chart.getByText('0%', { exact: true })).toBeVisible();"
+      },
+      {
+        "line": 32,
+        "text": "      await expect(page.locator('#retry-bucket-usage')).toBeHidden();"
+      },
+      {
+        "line": 33,
+        "text": "      await expect(page.getByText('Bucket balances could not be loaded. Retry to see the current balances.', { exact: true })).toBeHidden();"
+      },
+      {
+        "line": 34,
+        "text": "    };"
+      },
+      {
+        "line": 35,
+        "text": "    await assertBucketBalance();"
+      }
+    ],
+    "secondInvocation": {
+      "line": 52,
+      "text": "    await assertBucketBalance();"
+    }
+  },
+  "limits": [
+    "Both supported-upgrade browser reports passed three cases on first attempt; this proves the seeded retained bucket UI assertion on PostgreSQL and single-node Citus at the specified merge, not broad distributed production behavior.",
+    "Earlier bounded native upgrade runs with two of three cases passing remain historical failures; these current CI results do not rewrite or invalidate that evidence.",
+    "EE API 349 passing cases is actual suite execution, not independent Hocuspocus repair proof; no dedicated Hocuspocus case or diagnostic-log inspection is claimed.",
+    "No local Docker execution, source database mutation, or rerun was performed."
+  ]
+}

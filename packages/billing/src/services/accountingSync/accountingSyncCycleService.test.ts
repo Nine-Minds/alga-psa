@@ -38,6 +38,7 @@ vi.mock('./syncMappingLedger', () => ({
   SyncMappingLedger: vi.fn().mockImplementation(function () { return ({
     findByExternalId: vi.fn(async () => undefined),
     findByAlgaId: vi.fn(async () => undefined),
+    findByAlgaIdAnyRealm: vi.fn(async () => []),
     insert: vi.fn(async () => ({})),
     update: vi.fn(async () => undefined),
     withKnex: vi.fn().mockReturnThis()
@@ -182,18 +183,25 @@ describe('runAccountingSyncCycle', () => {
     tenantDbMock.mockImplementation(() => makeVendorBillDb([]));
   });
 
-  it('skips when adapter does not support change polling', async () => {
+  it('runs outbound drains when adapter does not support change polling', async () => {
     const adapter = { capabilities: vi.fn(function () { return ({ supportsChangePolling: false }); }), fetchChanges: undefined };
     const result = await runAccountingSyncCycle({
       knex: {} as any,
       tenantId: TENANT,
       adapterType: ADAPTER_TYPE,
       targetRealm: REALM,
-      adapter: adapter as any
+      adapter: adapter as any,
+      exceptions: makeFakeExceptions(),
+      notifications: makeFakeNotifications()
     });
 
-    expect(result.ran).toBe(false);
-    expect(result.status).toBe('skipped');
+    // An export-only adapter must not be stranded: inbound is skipped but the
+    // queued outbound work still drains, and the cycle reports success.
+    expect(result.ran).toBe(true);
+    expect(result.status).toBe('succeeded');
+    expect(drainApplyCreditOps).toHaveBeenCalled();
+    expect(drainVoidInvoiceOps).toHaveBeenCalled();
+    expect(drainRecordPaymentOps).toHaveBeenCalled();
   });
 
   it('skips when autoSyncEnabled=false and force not set', async () => {
@@ -302,6 +310,68 @@ describe('runAccountingSyncCycle', () => {
     expect(finishCycleCall.cursorAfter).toBe(fetchedAt);
   });
 
+  it('truncated change set does not advance the cursor', async () => {
+    const adapter = makeFakeAdapter({
+      fetchChanges: vi.fn(async () => ({
+        changes: [],
+        truncated: true,
+        fetchedAt: '2026-01-15T13:00:00.000Z',
+        // Even an adapter-provided boundary must not be used: a single
+        // timestamp cannot describe an unfinished feed.
+        nextCursor: '2026-01-15T12:30:00.000Z'
+      }))
+    });
+
+    let finishCycleCall: any = null;
+    vi.mocked(SyncCycleRepository).mockImplementationOnce(function () { return ({
+      getLastSuccessfulCursor: vi.fn(async () => null),
+      startCycle: vi.fn(async () => 'cycle-truncated'),
+      finishCycle: vi.fn(async (_tenant: string, _cycleId: string, result: any) => {
+        finishCycleCall = result;
+      })
+    } as any); });
+
+    await runAccountingSyncCycle({
+      knex: {} as any,
+      tenantId: TENANT,
+      adapterType: ADAPTER_TYPE,
+      targetRealm: REALM,
+      adapter,
+      exceptions: makeFakeExceptions(),
+      notifications: makeFakeNotifications(),
+      now: () => new Date('2026-01-15T12:00:00.000Z')
+    });
+
+    expect(finishCycleCall.status).toBe('succeeded');
+    expect(finishCycleCall.cursorAfter).toBeUndefined();
+  });
+
+  it('resumes from the raw cursor_before without re-subtracting the overlap after a failed first cycle', async () => {
+    // A prior failed cycle recorded cursor_before = the resume base. The next
+    // run must use that base (minus ONE overlap), not base minus two overlaps.
+    const resumeBase = '2026-01-15T12:00:00.000Z';
+    const adapter = makeFakeAdapter();
+    vi.mocked(SyncCycleRepository).mockImplementationOnce(function () { return ({
+      getLastSuccessfulCursor: vi.fn(async () => resumeBase),
+      startCycle: vi.fn(async () => 'cycle-resume'),
+      finishCycle: vi.fn(async () => undefined)
+    } as any); });
+
+    await runAccountingSyncCycle({
+      knex: {} as any,
+      tenantId: TENANT,
+      adapterType: ADAPTER_TYPE,
+      targetRealm: REALM,
+      adapter,
+      exceptions: makeFakeExceptions(),
+      notifications: makeFakeNotifications(),
+      now: () => new Date('2026-01-15T13:00:00.000Z')
+    });
+
+    const expectedSince = new Date(new Date(resumeBase).getTime() - CURSOR_OVERLAP_MS).toISOString();
+    expect(adapter.fetchChanges).toHaveBeenCalledWith(TENANT, expectedSince, REALM);
+  });
+
   it('inbound failure → status failed, no cursorAfter', async () => {
     const adapter = makeFakeAdapter({
       fetchChanges: vi.fn(async () => {
@@ -372,6 +442,49 @@ describe('runAccountingSyncCycle', () => {
     );
     expect(notifications.notifyConnectionExpired).toHaveBeenCalled();
   });
+
+  it.each(['XERO_REFRESH_EXPIRED', 'XERO_REFRESH_FAILED', 'XERO_UNAUTHORIZED'])(
+    '%s aborts the cycle as reconnect-required with no cursor advance',
+    async (code) => {
+      const adapter = makeFakeAdapter({
+        fetchChanges: vi.fn(async () => {
+          throw new AppError(code, 'xero auth failed');
+        })
+      });
+
+      const exceptions = makeFakeExceptions();
+      const notifications = makeFakeNotifications();
+
+      let finishCall: any = null;
+      vi.mocked(SyncCycleRepository).mockImplementationOnce(function () { return ({
+        getLastSuccessfulCursor: vi.fn(async () => '2026-01-14T10:00:00.000Z'),
+        startCycle: vi.fn(async () => `cycle-xero-${code}`),
+        finishCycle: vi.fn(async (_t: string, _c: string, result: any) => {
+          finishCall = result;
+        })
+      } as any); });
+
+      const result = await runAccountingSyncCycle({
+        knex: {} as any,
+        tenantId: TENANT,
+        adapterType: 'xero',
+        targetRealm: 'xero-conn-1',
+        adapter,
+        exceptions,
+        notifications
+      });
+
+      expect(result.status).toBe('aborted');
+      expect(finishCall.cursorAfter).toBeUndefined();
+      expect(exceptions.createOrUpdate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: 'accounting_connection_expired',
+          context: expect.objectContaining({ adapter_type: 'xero' })
+        })
+      );
+      expect(notifications.notifyConnectionExpired).toHaveBeenCalledWith('xero-conn-1', expect.any(String));
+    }
+  );
 
   it('applies changes in order: Customer → Payment → Invoice/CreditMemo, counts RefundReceipt', async () => {
     const applyCustomer = vi.mocked(applyExternalCustomerChange);
@@ -818,6 +931,7 @@ describe('runAccountingSyncCycle', () => {
     const ledgerInstance = {
       findByExternalId: vi.fn(async () => undefined),
       findByAlgaId: vi.fn(async () => driftMapping),
+      findByAlgaIdAnyRealm: vi.fn(async () => []),
       insert: vi.fn(async () => ({})),
       update: vi.fn(async () => undefined),
       withKnex: vi.fn().mockReturnThis()

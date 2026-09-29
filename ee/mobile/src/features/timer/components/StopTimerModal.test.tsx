@@ -25,6 +25,7 @@ vi.mock("../../../ui/ThemeContext", () => ({
       border: "#ccc",
       card: "#fafafa",
       danger: "#f00",
+      disabled: { bg: "#eee", text: "#666" },
       placeholder: "#aaa",
     },
     spacing: { xs: 2, sm: 4, md: 8, lg: 16, xl: 24 },

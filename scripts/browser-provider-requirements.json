@@ -1,0 +1,221 @@
+{
+  "schemaVersion": 1,
+  "editions": {
+    "community": {
+      "requirements": [
+        {
+          "identity": [
+            "e2e-tests/tests/inbound-email.spec.ts",
+            "community-chromium",
+            "community-chromium",
+            [
+              "built email service ingests MIME, preserves inline quotations, threads replies and deduplicates delivery"
+            ]
+          ],
+          "providers": [
+            {
+              "provider": "smtp-sink",
+              "mode": "emulator"
+            }
+          ]
+        },
+        {
+          "identity": [
+            "e2e-tests/tests/microsoft-mailbox.spec.ts",
+            "community-chromium",
+            "community-chromium",
+            [
+              "Microsoft mailbox OAuth receives a ticket, sends a UI reply through Graph and deduplicates callbacks"
+            ]
+          ],
+          "providers": [
+            {
+              "provider": "msgraph",
+              "mode": "emulator"
+            }
+          ]
+        }
+      ]
+    },
+    "enterprise": {
+      "requirements": [
+        {
+          "identity": [
+            "e2e-tests/tests/inbound-email.spec.ts",
+            "enterprise-chromium",
+            "enterprise-chromium",
+            [
+              "built email service ingests MIME, preserves inline quotations, threads replies and deduplicates delivery"
+            ]
+          ],
+          "providers": [
+            {
+              "provider": "smtp-sink",
+              "mode": "emulator"
+            }
+          ]
+        },
+        {
+          "identity": [
+            "e2e-tests/tests/microsoft-calendar.spec.ts",
+            "enterprise-chromium",
+            "enterprise-chromium",
+            [
+              "Microsoft calendar OAuth imports vendor events, exports UI edits and recovers from provider outage without losing remote linkage"
+            ]
+          ],
+          "providers": [
+            {
+              "provider": "msgraph",
+              "mode": "emulator"
+            }
+          ]
+        },
+        {
+          "identity": [
+            "e2e-tests/tests/microsoft-calendar.spec.ts",
+            "enterprise-chromium",
+            "enterprise-chromium",
+            [
+              "Microsoft calendar OAuth imports vendor events, exports UI edits and recovers from permission denial without losing remote linkage"
+            ]
+          ],
+          "providers": [
+            {
+              "provider": "msgraph",
+              "mode": "emulator"
+            }
+          ]
+        },
+        {
+          "identity": [
+            "e2e-tests/tests/microsoft-calendar.spec.ts",
+            "enterprise-chromium",
+            "enterprise-chromium",
+            [
+              "Microsoft calendar OAuth imports vendor events, exports UI edits and recovers from throttling without losing remote linkage"
+            ]
+          ],
+          "providers": [
+            {
+              "provider": "msgraph",
+              "mode": "emulator"
+            }
+          ]
+        },
+        {
+          "identity": [
+            "e2e-tests/tests/microsoft-calendar.spec.ts",
+            "enterprise-chromium",
+            "enterprise-chromium",
+            [
+              "Microsoft calendar OAuth imports vendor events, exports UI edits and recovers from all-day throttling without losing remote linkage"
+            ]
+          ],
+          "providers": [
+            {
+              "provider": "msgraph",
+              "mode": "emulator"
+            }
+          ]
+        },
+        {
+          "identity": [
+            "e2e-tests/tests/microsoft-mailbox.spec.ts",
+            "enterprise-chromium",
+            "enterprise-chromium",
+            [
+              "Microsoft mailbox OAuth receives a ticket, sends a UI reply through Graph and deduplicates callbacks"
+            ]
+          ],
+          "providers": [
+            {
+              "provider": "msgraph",
+              "mode": "emulator"
+            }
+          ]
+        },
+        {
+          "identity": [
+            "e2e-tests/tests/qbo-export.spec.ts",
+            "enterprise-chromium",
+            "enterprise-chromium",
+            [
+              "QuickBooks OAuth and UI mapping export to the selected company and recover without duplicate invoices"
+            ]
+          ],
+          "providers": [
+            {
+              "provider": "qbo",
+              "mode": "emulator"
+            }
+          ]
+        },
+        {
+          "identity": [
+            "e2e-tests/tests/stripe-payment.spec.ts",
+            "enterprise-chromium",
+            "enterprise-chromium",
+            [
+              "portal Checkout settles the invoice exactly once through signed webhook delivery and redelivery"
+            ]
+          ],
+          "providers": [
+            {
+              "provider": "stripe",
+              "mode": "emulator"
+            }
+          ]
+        },
+        {
+          "identity": [
+            "e2e-tests/tests/stripe-payment.spec.ts",
+            "enterprise-chromium",
+            "enterprise-chromium",
+            [
+              "declined and cancelled Checkout leaves the invoice unpaid and creates no payment ledger entry"
+            ]
+          ],
+          "providers": [
+            {
+              "provider": "stripe",
+              "mode": "emulator"
+            }
+          ]
+        },
+        {
+          "identity": [
+            "e2e-tests/tests/stripe-payment.spec.ts",
+            "enterprise-chromium",
+            "enterprise-chromium",
+            [
+              "Checkout creation failure offers a retry and recovers for the same unpaid invoice"
+            ]
+          ],
+          "providers": [
+            {
+              "provider": "stripe",
+              "mode": "emulator"
+            }
+          ]
+        },
+        {
+          "identity": [
+            "e2e-tests/tests/xero-export.spec.ts",
+            "enterprise-chromium",
+            "enterprise-chromium",
+            [
+              "Xero OAuth and UI mapping export to the selected organisation and recover without duplicate invoices"
+            ]
+          ],
+          "providers": [
+            {
+              "provider": "xero",
+              "mode": "emulator"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

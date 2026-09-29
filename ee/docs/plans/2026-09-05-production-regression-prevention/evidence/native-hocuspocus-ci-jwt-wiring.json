@@ -1,0 +1,69 @@
+{
+  "schemaVersion": 1,
+  "observedAt": "2026-09-09T06:31:16.966738+00:00",
+  "baseRevision": "717b616bf96cbb13083f0e3353baff40c08e9040",
+  "testedWorkingTreeFile": "docker-compose.e2e-emulators.yaml",
+  "testedFileSha256": "ce09cde4d4403dad6974e14c2ed72e8ba0aca2b4c38b857bfb03dd55654951f6",
+  "scope": "Native resolved CI configuration and actual JWT consumers; no daemon or image build",
+  "composeVersion": "5.1.2",
+  "nodeVersion": "25.5.0",
+  "composeFiles": [
+    "docker-compose.base.yaml",
+    "docker-compose.ce.yaml",
+    "docker-compose.prod.yaml",
+    "docker-compose.setup-ubuntu.override.yaml",
+    "docker-compose.imap-test.yaml",
+    "docker-compose.e2e-emulators.yaml"
+  ],
+  "enterpriseAdditionalFile": "docker-compose.e2e-ee.yaml",
+  "renderOptions": [
+    "--env-file",
+    "/dev/null",
+    "-p",
+    "alga-e2e-test",
+    "config",
+    "--format",
+    "json"
+  ],
+  "before": {
+    "bothEditions": {
+      "serverProduction": true,
+      "hocuspocusProduction": true,
+      "serverSecretConfigured": false,
+      "hocuspocusSecretConfigured": false
+    },
+    "runtimeFailure": "HOCUSPOCUS_JWT_SECRET is required in production"
+  },
+  "after": {
+    "editions": [
+      "community",
+      "enterprise"
+    ],
+    "production": true,
+    "runtimeAssertionsPerEdition": [
+      "Actual server getHocuspocusJwtSecret reads resolved server environment successfully",
+      "jsonwebtoken signs a five-minute ticket JWT using the returned key",
+      "Actual Hocuspocus validateDocumentRoomAccess accepts the token using resolved Hocuspocus environment",
+      "Wrong signing key rejected",
+      "Expired token rejected",
+      "Wrong tenant rejected",
+      "Wrong ticket rejected"
+    ]
+  },
+  "nativeTests": {
+    "command": "cd server && /opt/homebrew/opt/node@25/bin/node ../node_modules/vitest/vitest.mjs run src/test/unit/hocuspocus/tenantValidation.test.ts src/test/unit/api/ticketLiveToken.route.test.ts",
+    "passed": 13,
+    "files": 2
+  },
+  "localLogs": [
+    "/tmp/alga-jwt-compose-red.log",
+    "/tmp/alga-jwt-compose-green.log",
+    "/tmp/alga-jwt-existing-tests.log"
+  ],
+  "runtimeProbe": "/tmp/alga-jwt-compose-runtime.mjs",
+  "limitations": [
+    "Temporary runtime probe imports the real server secret getter and Hocuspocus room validator but does not invoke the authenticated Next.js token endpoint or establish a WebSocket connection.",
+    "No current-source CI container or browser execution is claimed.",
+    "This synthetic secret is confined to the disposable CI Compose overlay; deployment secret policy is unchanged."
+  ]
+}

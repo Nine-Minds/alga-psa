@@ -185,7 +185,7 @@ export async function apiKeyAuthMiddleware(
   }
 
   // Skip authentication for document download and view endpoints (they use session auth)
-  if (req.path.startsWith('/api/documents/download/') || req.path.startsWith('/api/documents/view/')) {
+  if (req.path === '/api/ticket-comment-attachments/download' || req.path.startsWith('/api/documents/download/') || req.path.startsWith('/api/documents/view/')) {
     return next();
   }
 

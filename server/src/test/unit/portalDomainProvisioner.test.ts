@@ -19,9 +19,10 @@ vi.mock('@ee/lib/portal-domains/workflowClient', () => ({ enqueuePortalDomainWor
 
 import {
   getPortalDomainProvisioner,
+  resolvePortalDomainProvisioning,
   directProvisioner,
-  temporalProvisioner,
-} from '@ee/lib/portal-domains/provisioner';
+} from '@/lib/portal-domains/provisioner';
+import { temporalProvisioner } from '@ee/lib/portal-domains/provisioner/temporalProvisioner';
 
 const fakeKnex = {} as any;
 
@@ -39,10 +40,18 @@ describe('getPortalDomainProvisioner (factory)', () => {
     expect(getPortalDomainProvisioner({ DEPLOYMENT_PROFILE: 'appliance' })).toBe(directProvisioner);
   });
 
-  it('returns the temporal driver by default / for hosted', () => {
+  it('returns the hosted (temporal) driver by default / for hosted when the seam provides one', () => {
     expect(getPortalDomainProvisioner({})).toBe(temporalProvisioner);
     expect(getPortalDomainProvisioner({ DEPLOYMENT_PROFILE: 'hosted' })).toBe(temporalProvisioner);
     expect(getPortalDomainProvisioner({ DEPLOYMENT_PROFILE: 'whatever' })).toBe(temporalProvisioner);
+  });
+
+  it('reports the mode that matches the selected driver', () => {
+    expect(resolvePortalDomainProvisioning({})).toEqual({ mode: 'temporal', provisioner: temporalProvisioner });
+    expect(resolvePortalDomainProvisioning({ DEPLOYMENT_PROFILE: 'appliance' })).toEqual({
+      mode: 'direct',
+      provisioner: directProvisioner,
+    });
   });
 });
 

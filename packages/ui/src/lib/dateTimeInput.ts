@@ -6,57 +6,40 @@
  * field and the tests that pin arbitrary-minute precision.
  */
 
+import {
+  SYSTEM_DATE_FORMAT,
+  type CountryDateFormat,
+  type DateFieldPart,
+} from '@alga-psa/core/i18n/countryDateFormat';
+
 export type TimeFormatPreference = '12h' | '24h';
-export type DateFieldPart = 'day' | 'month' | 'year';
+export type { DateFieldPart };
 
-/** 22 Nov 2033 — day, month and year are all distinct, so part order is unambiguous. */
-const DATE_ORDER_SAMPLE = new Date(2033, 10, 22);
-const DEFAULT_ORDER: DateFieldPart[] = ['month', 'day', 'year'];
-
-/** Pseudo-locales used for translation QA have no date convention of their own. */
-function resolveIntlLocale(locale?: string): string {
-  if (!locale || locale === 'xx' || locale === 'yy') return 'en';
-  return locale;
+/**
+ * Field order and separator come from the COUNTRY, never from the language:
+ * the parser and the display must agree, and a user whose dates read 22/11
+ * has to be able to type 22/11. Callers without a resolved country fall back
+ * to the fixed system default rather than to the browser's own convention.
+ */
+function resolveFormat(dateFormat?: CountryDateFormat): CountryDateFormat {
+  return dateFormat ?? SYSTEM_DATE_FORMAT;
 }
 
-function dateParts(locale?: string): Intl.DateTimeFormatPart[] | null {
-  try {
-    return new Intl.DateTimeFormat(resolveIntlLocale(locale), {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-    }).formatToParts(DATE_ORDER_SAMPLE);
-  } catch {
-    return null;
-  }
+/** Which of day/month/year comes first in this country's short date. */
+export function getDateFieldOrder(dateFormat?: CountryDateFormat): DateFieldPart[] {
+  return [...resolveFormat(dateFormat).order];
 }
 
-/** Which of day/month/year comes first in this locale's short date. */
-export function getDateFieldOrder(locale?: string): DateFieldPart[] {
-  const parts = dateParts(locale);
-  if (!parts) return DEFAULT_ORDER;
-
-  const order = parts
-    .filter((part): part is Intl.DateTimeFormatPart & { type: DateFieldPart } =>
-      part.type === 'day' || part.type === 'month' || part.type === 'year')
-    .map((part) => part.type);
-
-  return order.length === 3 ? order : DEFAULT_ORDER;
-}
-
-export function getDateSeparator(locale?: string): string {
-  const parts = dateParts(locale);
-  const literal = parts?.find((part) => part.type === 'literal' && /\S/.test(part.value));
-  const trimmed = literal?.value.replace(/\s/g, '');
-  return trimmed && trimmed.length > 0 ? trimmed : '/';
+export function getDateSeparator(dateFormat?: CountryDateFormat): string {
+  return resolveFormat(dateFormat).separator;
 }
 
 /** The format itself, used as the placeholder so nobody has to guess field order. */
-export function getDatePlaceholder(locale?: string): string {
-  const separator = getDateSeparator(locale);
-  return getDateFieldOrder(locale)
+export function getDatePlaceholder(dateFormat?: CountryDateFormat): string {
+  const resolved = resolveFormat(dateFormat);
+  return resolved.order
     .map((part) => (part === 'year' ? 'yyyy' : part === 'month' ? 'mm' : 'dd'))
-    .join(separator);
+    .join(resolved.separator);
 }
 
 export function startOfDay(date: Date): Date {
@@ -88,14 +71,15 @@ export interface ParseDateInputOptions {
 /**
  * Parse what a user typed into a date field.
  *
- * Accepts locale-ordered numbers with any of `/ . -` (or none at all), the three
- * relative words, and signed day offsets. Deliberately refuses everything else:
- * a wrong guess on an invoice date is expensive, so `31/02/2026` is rejected
- * rather than rolled forward.
+ * Accepts country-ordered numbers with any of `/ . -` (or none at all), the
+ * three relative words, and signed day offsets. Deliberately refuses everything
+ * else: a wrong guess on an invoice date is expensive, so `31/02/2026` is
+ * rejected rather than rolled forward. The order MUST be the same one the field
+ * displays, or a round trip through the input would move the day.
  */
 export function parseDateInput(
   raw: string,
-  locale?: string,
+  dateFormat?: CountryDateFormat,
   options: ParseDateInputOptions = {},
 ): Date | null {
   const text = normalizeWord(raw);
@@ -119,7 +103,7 @@ export function parseDateInput(
     return new Date(today.getFullYear(), today.getMonth(), today.getDate() + days);
   }
 
-  const order = getDateFieldOrder(locale);
+  const order = getDateFieldOrder(dateFormat);
   const dayMonthOrder = order.filter((part) => part !== 'year');
   const values: Partial<Record<DateFieldPart, string>> = {};
   const tokens = text.split(/[^0-9]+/).filter(Boolean);
@@ -248,7 +232,7 @@ function escapeForCharClass(value: string): string {
 }
 
 export interface TypableDateOptions {
-  /** Separator the active locale writes, when it is none of `/ . -`. */
+  /** Separator the active country writes, when it is none of `/ . -`. */
   separators?: Array<string | undefined>;
   /** Localised relative words, so they can still be spelled out. */
   words?: Array<string | undefined>;

@@ -1,0 +1,29 @@
+{
+  "scope": "Private workflow replay exclusion from history/export",
+  "baseRevision": "6fa994feb97f3aba8e36d7e8c7c7d90429e158c4",
+  "workingTreeDirty": true,
+  "validation": {
+    "before": {
+      "passed": 6,
+      "failed": 2,
+      "artifact": "/tmp/alga-replay-read-boundary-before.log",
+      "sha256": "be8d892f10ae4bc3a70035cb2481aa4ccc5dcca1029dacad2b561691699da94e"
+    },
+    "after": {
+      "passed": 8,
+      "failed": 0,
+      "artifact": "/tmp/alga-replay-read-boundary-after.log",
+      "sha256": "6632ab53da29343e9ad48bfb908c8c8924b721b212fd7b6a5e967bec53566271"
+    }
+  },
+  "behavior": [
+    "Internal invocation record includes typed encrypted replay material.",
+    "listByRun removes private replay material and exposes a diagnostic-only return type.",
+    "Real history and export actions omit the field/ciphertext while internal idempotency lookup retains a decryptable result."
+  ],
+  "limits": [
+    "Encrypted invocation fixtures are inserted directly to test read boundaries; worker writes are not yet enabled.",
+    "Auth context/permission decisions and connection boundaries are substituted; queries and actions run against a fresh migrated disposable database.",
+    "Worker key preflight, output encryption/redaction, legacy/mixed-worker upgrade handling and native CI remain required."
+  ]
+}

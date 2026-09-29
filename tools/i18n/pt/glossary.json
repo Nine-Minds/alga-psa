@@ -2420,6 +2420,11 @@
       "reason": "European spelling; Brazilian Portuguese uses contato."
     },
     {
+      "term": "contactos",
+      "preferred": "contatos",
+      "reason": "European spelling; Brazilian Portuguese uses contatos."
+    },
+    {
       "term": "corrida",
       "preferred": "execução",
       "reason": "Wrong register for a workflow run; corrida means a race/jog. Use execução."
@@ -2595,9 +2600,11 @@
       "ID",
       "JSON",
       "KB",
+      "Keycloak / OpenID Connect",
       "OK",
       "PDF",
       "Portal",
+      "Realm",
       "SLA",
       "SMS",
       "SSO",
@@ -2701,7 +2708,15 @@
       "Meta",
       "Alt",
       "Shift",
-      "×"
+      "×",
+      "{{count}} h",
+      "{{hours}} h {{minutes}} min",
+      "3CX",
+      "Teams Phone",
+      "TeamViewer",
+      "Gigabyte",
+      "Terabyte",
+      "Volume"
     ],
     "caseInsensitive": [
       "api",
@@ -2795,6 +2810,6 @@
       "^\\(SN \\{\\{sn\\}\\}\\)$",
       "^T[+-]\\{\\{days\\}\\}$"
     ],
-    "notes": "This allowlist is intentionally conservative; audit tooling should report identical English unless it matches one of these exact values, case-insensitive loanwords, or technical patterns."
+    "notes": "This allowlist is intentionally conservative; audit tooling should report identical English unless it matches one of these exact values, case-insensitive loanwords, or technical patterns. Duration templates use the unit symbols h and min in this locale as in English; only the exact symbol-only templates are allowed."
   }
 }

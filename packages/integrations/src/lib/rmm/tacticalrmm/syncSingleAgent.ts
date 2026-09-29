@@ -2,6 +2,7 @@ import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { TacticalRmmClient, normalizeTacticalBaseUrl } from './tacticalApiClient';
 import { computeTacticalAgentStatus } from './agentStatus';
+import { buildTacticalExtensionPatch, extractHardware, upsertTacticalAssetExtension } from './deviceSync';
 
 const PROVIDER = 'tacticalrmm' as const;
 
@@ -9,58 +10,6 @@ const TACTICAL_API_KEY_SECRET = 'tacticalrmm_api_key';
 const TACTICAL_KNOX_USERNAME_SECRET = 'tacticalrmm_username';
 const TACTICAL_KNOX_PASSWORD_SECRET = 'tacticalrmm_password';
 const TACTICAL_KNOX_TOKEN_SECRET = 'tacticalrmm_knox_token';
-
-function extractOsFields(agent: any): { os_type: string | null; os_version: string | null } {
-  const raw = String(agent?.operating_system || agent?.os || agent?.os_name || '').trim();
-  if (!raw) return { os_type: null, os_version: null };
-  const parts = raw.split(/\s+/);
-  const os_type = parts[0] || raw;
-  const os_version = parts.length > 1 ? parts.slice(1).join(' ') : null;
-  return { os_type, os_version };
-}
-
-function extractVitals(agent: any): {
-  current_user: string | null;
-  uptime_seconds: number | null;
-  lan_ip: string | null;
-  wan_ip: string | null;
-} {
-  const currentUser =
-    agent?.logged_in_username ??
-    agent?.current_user ??
-    agent?.currentUser ??
-    null;
-
-  const uptimeRaw =
-    agent?.uptime_seconds ??
-    agent?.uptimeSeconds ??
-    agent?.uptime ??
-    null;
-
-  const uptimeSeconds = uptimeRaw === null || typeof uptimeRaw === 'undefined'
-    ? null
-    : Number(uptimeRaw);
-
-  const lanIp =
-    agent?.lan_ip ??
-    agent?.local_ip ??
-    agent?.localIp ??
-    agent?.ip_address ??
-    null;
-
-  const wanIp =
-    agent?.wan_ip ??
-    agent?.public_ip ??
-    agent?.publicIp ??
-    null;
-
-  return {
-    current_user: currentUser ? String(currentUser) : null,
-    uptime_seconds: Number.isFinite(uptimeSeconds as any) ? uptimeSeconds : null,
-    lan_ip: lanIp ? String(lanIp) : null,
-    wan_ip: wanIp ? String(wanIp) : null,
-  };
-}
 
 export async function syncTacticalSingleAgentForTenant(args: {
   tenant: string;
@@ -135,9 +84,8 @@ export async function syncTacticalSingleAgentForTenant(args: {
   });
 
   const deviceName = String(agent?.hostname || agent?.name || agent?.computer_name || agentId);
-  const osFields = extractOsFields(agent);
-  const vitals = extractVitals(agent);
-  const agentVersion = agent?.agent_version ?? agent?.version ?? null;
+  const extensionPatch = buildTacticalExtensionPatch(agent);
+  const hardware = extractHardware(agent);
 
   const assetRow = await scopedDb.table('assets')
     .whereRaw('assets.asset_id::text = ?', [assetIdText])
@@ -153,31 +101,15 @@ export async function syncTacticalSingleAgentForTenant(args: {
       agent_status: status,
       last_seen_at: lastSeen ? new Date(lastSeen) : null,
       last_rmm_sync_at: knex.fn.now(),
+      ...(hardware.serial_number ? { serial_number: hardware.serial_number } : {}),
     });
 
-  const extensionTable = assetRow?.asset_type === 'server' ? 'server_assets' : 'workstation_assets';
-  await scopedDb.table(extensionTable)
-    .insert({
-      tenant,
-      asset_id: knex.raw('?::uuid', [assetIdText]),
-      os_type: osFields.os_type,
-      os_version: osFields.os_version,
-      agent_version: agentVersion ? String(agentVersion) : null,
-      current_user: vitals.current_user,
-      uptime_seconds: vitals.uptime_seconds,
-      lan_ip: vitals.lan_ip,
-      wan_ip: vitals.wan_ip,
-    })
-    .onConflict(['tenant', 'asset_id'])
-    .merge({
-      os_type: osFields.os_type,
-      os_version: osFields.os_version,
-      agent_version: agentVersion ? String(agentVersion) : null,
-      current_user: vitals.current_user,
-      uptime_seconds: vitals.uptime_seconds,
-      lan_ip: vitals.lan_ip,
-      wan_ip: vitals.wan_ip,
-    });
+  await upsertTacticalAssetExtension(knex, {
+    tenant,
+    assetType: assetRow?.asset_type,
+    assetId: assetIdText,
+    patch: extensionPatch,
+  });
 
   await scopedDb.table('tenant_external_entity_mappings')
     .where({ id: mapping.id })

@@ -1,0 +1,52 @@
+{
+  "status": "Current redaction utility and Temporal readiness coverage improved; legacy integration port remains incomplete",
+  "before": {
+    "passed": 1,
+    "failed": 2,
+    "logLocal": "/tmp/alga-redaction-utils-before.log"
+  },
+  "repairs": [
+    "JSON Pointer redaction copies every modified ancestor so nested values and aliases in live action inputs remain untouched",
+    "Snapshot/log limits use serialized UTF-8 bytes rather than UTF-16 string length",
+    "Temporal activity tests use production applyRedactions/safeSerialize instead of a replacement implementation"
+  ],
+  "after": {
+    "relatedWorkflowTests": {
+      "passed": 40,
+      "failed": 0,
+      "skipped": 0,
+      "files": 2,
+      "durationSeconds": 2.3,
+      "logLocal": "/tmp/alga-workflow-redaction-related.log"
+    },
+    "temporalReadiness": {
+      "passed": 13,
+      "failed": 0,
+      "skipped": 0,
+      "files": 3,
+      "discoveryUnmatched": 0,
+      "durationSeconds": 1.3,
+      "logLocal": "/tmp/alga-temporal-readiness-assigned.log",
+      "evidenceLocal": "test-results/temporal-readiness/evidence.json"
+    },
+    "runnerContract": {
+      "passed": 1,
+      "failed": 0,
+      "logLocal": "/tmp/alga-temporal-runner-contract.log"
+    },
+    "focusedTypes": "passed /tmp/alga-redaction-types.log"
+  },
+  "ciChanges": [
+    "Fast-readiness executes the shared collection/execution reconciler and uploads raw artifacts",
+    "Activity regression joins startup and generic-job checks",
+    "Changes to shared workflows and runner utilities trigger readiness",
+    "Use supported Node22 and locked npm ci without npm install fallback"
+  ],
+  "limitations": [
+    "No claim that the five skipped legacy snapshot integration cases are ported",
+    "Current invocation persistence stores input/output directly and reads persisted output for idempotent replay; storage redaction needs to preserve replay behavior, not merely mask returned business data",
+    "Snapshot generation, retention pruning and run-studio snapshot references require current-runtime integration evidence",
+    "Other Temporal tests still need their own assigned runtime lanes",
+    "Native runs on df9b928156 remain live; these local changes are not native-verified"
+  ]
+}

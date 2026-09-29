@@ -42,7 +42,14 @@ describe('client portal follows the organization theme', () => {
   });
 
   it('keeps the CE logo variants and client-portal sidebar color available', () => {
-    expect(settingsSource).toContain("uploadTenantLogo(entityId, formData, 'dark')");
+    // Uploads share one wrapper per variant, so the CE contract is that the
+    // dark square slot stays wired above the Enterprise-only wordmark gate.
+    expect(settingsSource).toContain('uploadTenantLogo(entityId, formData, variant)');
+    const darkSlot = settingsSource.indexOf("handleLogoUpload('dark')");
+    const wordmarkGate = settingsSource.indexOf('{advancedAppearanceEnabled && (');
+    expect(darkSlot).toBeGreaterThan(-1);
+    expect(wordmarkGate).toBeGreaterThan(darkSlot);
+    expect(settingsSource.indexOf("handleLogoUpload('wide')")).toBeGreaterThan(wordmarkGate);
     expect(settingsSource).toContain('id="client-portal-sidebar-style"');
     expect(settingsSource).toContain('data-automation-id="client-portal-sidebar-color-picker"');
   });

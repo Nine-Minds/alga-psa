@@ -23,7 +23,7 @@ describe('Ticket document upload controller contract', () => {
     expect(source).toContain("const file = formData.get('file');");
     expect(source).toContain('if (!(file instanceof File)) {');
     expect(source).toContain("path: ['file']");
-    expect(source).toContain('const document = await this.ticketService.uploadTicketDocument(ticketId, file, apiRequest.context!);');
+    expect(source).toContain("const document = await this.ticketService.uploadTicketDocument(ticketId, file, apiRequest.context!, formData.get('commentAttachmentDraft') === 'true');");
     expect(source).toContain('return createSuccessResponse(document, 201, undefined, apiRequest);');
   });
 });

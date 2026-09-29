@@ -1,6 +1,7 @@
 import type { ApiClient } from "./client";
 import type { ApiResult } from "./types";
 import type { SuccessResponse } from "./tickets";
+import type { MobileTheme } from "../ui/themeTokens";
 
 export type FeatureCapabilities = {
   inventory: boolean;
@@ -8,8 +9,26 @@ export type FeatureCapabilities = {
   opportunitiesCreate: boolean;
 };
 
+export type DateFieldPart = "day" | "month" | "year";
+
+/**
+ * How the server says this user's dates are written. Derived from the tenant's
+ * (or, for a portal user, their client's) country — never from the device.
+ */
+export type DateFormatCapability = {
+  country: string | null;
+  order: DateFieldPart[];
+  separator: string;
+  hour12: boolean;
+  datePattern: string;
+  dateTimePattern: string;
+};
+
 export type MyCapabilities = {
   features: FeatureCapabilities;
+  formatting?: DateFormatCapability;
+  /** Absent on servers older than the tenant-theme release. */
+  theme?: MobileTheme;
 };
 
 export const EMPTY_FEATURE_CAPABILITIES: FeatureCapabilities = {

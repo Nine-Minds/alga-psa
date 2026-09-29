@@ -1,16 +1,18 @@
 # Start with a base image and install system dependencies.
-# Pin to the production-known-good Node runtime. node:alpine floated to Node 26.2.0
-# and broke bundled Vault provider initialization in the blue deployment.
-FROM node:26.1.0-alpine AS base
-RUN apk add --no-cache \
+# Keep the production-known-good Node version while using Debian/glibc in both
+# build and runtime stages. Node 26.2.0 broke bundled Vault provider initialization.
+FROM node:26.1.0-bookworm-slim AS base
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates \
     bash \
     postgresql-client \
-    redis \
+    redis-tools \
     graphicsmagick \
     imagemagick \
     ghostscript \
     curl \
-    nano
+    nano \
+    && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 
 # Stage for installing dependencies (cache-friendly)
@@ -33,6 +35,10 @@ RUN npm install --workspace=server --workspace=shared
 FROM deps AS builder
 # Build-only fallback secrets let NextAuth edge guards pass; real secrets are injected at runtime.
 ARG NEXTAUTH_SECRET_BUILD="dev-placeholder-nextauth-secret-32"
+ARG NEXT_BUILD_MAX_OLD_SPACE_SIZE="12288"
+ARG NEXT_PUBLIC_FORCE_FEATURE_FLAGS=""
+ENV NEXT_PUBLIC_FORCE_FEATURE_FLAGS=${NEXT_PUBLIC_FORCE_FEATURE_FLAGS}
+ENV NODE_OPTIONS="--max-old-space-size=${NEXT_BUILD_MAX_OLD_SPACE_SIZE}"
 ENV NEXTAUTH_SECRET=${NEXTAUTH_SECRET_BUILD}
 ENV AUTH_SECRET=${NEXTAUTH_SECRET_BUILD}
 # Copy all project files and build the server
@@ -86,22 +92,20 @@ WORKDIR /app
 RUN npm run build:ee
 
 # Final production image with minimal runtime artifacts
-FROM node:26.1.0-alpine
-RUN apk add --no-cache bash \
+FROM node:26.1.0-bookworm-slim
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    bash \
     postgresql-client \
-    redis \
+    redis-tools \
     graphicsmagick \
     imagemagick \
     ghostscript \
     curl \
     nano \
     chromium \
-    nss \
-    freetype \
-    freetype-dev \
-    harfbuzz \
     ca-certificates \
-    ttf-freefont
+    fonts-freefont-ttf \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 COPY tsconfig.base.json ./
@@ -113,7 +117,9 @@ RUN sed -i 's/NEXT_PUBLIC_EDITION=community/NEXT_PUBLIC_EDITION=enterprise/' /ap
 
 # Copy built application and node_modules from earlier stages -- minimalist approach
 COPY --from=builder /app/shared ./shared
-COPY --from=builder /app/server/.next ./server/.next
+# Next writes runtime caches below .next, including server/app and pages.
+# Preserve compiled bytes while allowing the standard nonroot Node UID.
+COPY --from=builder --chown=1000:1000 /app/server/.next ./server/.next
 COPY --from=builder /app/server/public ./server/public
 COPY --from=builder /app/server/next.config.mjs ./server/
 COPY --from=builder /app/server/tsconfig.json ./server/
@@ -130,14 +136,22 @@ COPY --from=builder /app/server/src/ ./server/src/
 # tenant/admin. Without it the appliance install fails ERR_MODULE_NOT_FOUND.
 COPY --from=builder /app/server/scripts/ ./server/scripts/
 COPY --from=builder /app/secrets ./secrets
-COPY --from=deps /app/node_modules ./node_modules
-COPY --from=deps /app/server/node_modules ./server/node_modules
+# The early deps stage lacks workspace manifests, so its install omits packages
+# such as @microsoft/teams-js. Reuse the full install that compiled the app;
+# source-mounted development validation also needs these workspace dependencies.
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/server/node_modules ./server/node_modules
 
 # Copy EE migrations (they get merged during build-enterprise.sh)
 COPY --from=builder /app/ee/server/migrations/ ./server/migrations/
 
 # Copy core package.json for version info
 COPY packages/core/package.json /app/packages/core/package.json
+# Package the same compiled core used by the build for worker-state diagnostics.
+COPY --from=builder /app/packages/core/dist /app/packages/core/dist
+# Development validation creates next-env.d.ts and may update tsconfig; this
+# preserves the production entrypoint while supporting a nonroot runtime.
+RUN chown 1000:1000 /app/server /app/server/tsconfig.json
 
 COPY server/entrypoint.sh /app/entrypoint.sh
 RUN chmod +x /app/entrypoint.sh
@@ -157,7 +171,7 @@ ENV NEXT_PUBLIC_EDITION=enterprise
 
 # Puppeteer chromium configuration
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
-ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 
 # Secret provider configuration
 # Default configuration for composite secret system

@@ -3,8 +3,8 @@
  * These types are used by both CE (stubs) and EE (real implementations)
  */
 
-export type OAuthLinkProvider = 'google' | 'microsoft';
-export type EnterpriseOAuthProvider = 'google' | 'microsoft';
+export type OAuthLinkProvider = 'google' | 'microsoft' | 'keycloak';
+export type EnterpriseOAuthProvider = 'google' | 'microsoft' | 'keycloak';
 
 export interface OAuthProfileMappingInput {
   provider: EnterpriseOAuthProvider;

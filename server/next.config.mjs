@@ -187,10 +187,15 @@ const nextConfig = {
   // and RSC requests from origins it does not recognize, which stalls
   // hydration when a phone/tablet loads the dev server by LAN IP.
   // Comma-separated hostnames, e.g. DEV_ALLOWED_ORIGINS=192.168.1.20,my-mac.local
-  allowedDevOrigins: (process.env.DEV_ALLOWED_ORIGINS ?? '')
-    .split(',')
-    .map((origin) => origin.trim())
-    .filter(Boolean),
+  // Keep loopback IP access working for isolated browser sessions; Next blocks
+  // its HMR endpoint for this origin unless it is explicitly allowed.
+  allowedDevOrigins: [
+    '127.0.0.1',
+    ...(process.env.DEV_ALLOWED_ORIGINS ?? '')
+      .split(',')
+      .map((origin) => origin.trim())
+      .filter(Boolean),
+  ],
   env: {
     NEXT_PUBLIC_APP_VERSION: process.env.NEXT_PUBLIC_APP_VERSION || appVersion,
     // Propagate edition to client-side code
@@ -226,7 +231,7 @@ const nextConfig = {
       // SSO provider buttons - swap between CE stub and EE implementation
       '@alga-psa/auth/sso/entry': isEE
         ? '../ee/server/src/components/auth/SsoProviderButtons.tsx'
-        : '../packages/ee/src/components/auth/SsoProviderButtons.tsx',
+        : '../packages/auth/src/components/SsoProviderButtons.tsx',
       // Notifications package
       '@alga-psa/notifications': '../packages/notifications/src',
       '@alga-psa/notifications/': '../packages/notifications/src/',
@@ -261,6 +266,8 @@ const nextConfig = {
       '@alga-psa/ee-calendar/': '../ee/packages/calendar/src/',
       '@alga-psa/ee-microsoft-teams': isEE ? '../ee/packages/microsoft-teams/src/index.ts' : '../packages/ee/src/index.ts',
       '@alga-psa/ee-microsoft-teams/': isEE ? '../ee/packages/microsoft-teams/src/' : '../packages/ee/src/',
+      '@alga-psa/ee-threecx': isEE ? '../ee/packages/threecx/src/index.ts' : '../packages/ee/src/index.ts',
+      '@alga-psa/ee-threecx/': isEE ? '../ee/packages/threecx/src/' : '../packages/ee/src/',
       '@alga-psa/ee-stubs': isEE ? '../ee/server/src' : '../packages/ee/src',
       '@alga-psa/ee-stubs/': isEE ? '../ee/server/src/' : '../packages/ee/src/',
       '@alga-psa/tags': '../packages/tags/src',
@@ -274,6 +281,10 @@ const nextConfig = {
       '@alga-psa/teams/': '../packages/teams/src/',
       '@alga-psa/telephony': '../packages/telephony/src',
       '@alga-psa/telephony/': '../packages/telephony/src/',
+      '@alga-psa/marketing': '../packages/marketing/src',
+      '@alga-psa/marketing/': '../packages/marketing/src/',
+      '@alga-psa/opportunities': '../packages/opportunities/src',
+      '@alga-psa/opportunities/': '../packages/opportunities/src/',
       '@alga-psa/tenancy': '../packages/tenancy/src',
       '@alga-psa/tenancy/': '../packages/tenancy/src/',
       '@alga-psa/event-schemas': '../packages/event-schemas/src',
@@ -337,6 +348,11 @@ const nextConfig = {
       '@alga-psa/db/models/tenant': '../packages/db/src/models/tenant.ts',
       '@alga-psa/db/models/UserSession': '../packages/db/src/models/UserSession.ts',
       // Surveys package
+      '@alga-psa/list-views': '../packages/list-views/src',
+      '@alga-psa/list-views/': '../packages/list-views/src/',
+      '@alga-psa/list-views/actions': '../packages/list-views/src/actions/index.ts',
+      '@alga-psa/list-views/components': '../packages/list-views/src/components/index.ts',
+      '@alga-psa/list-views/hooks': '../packages/list-views/src/hooks/index.ts',
       '@alga-psa/surveys': '../packages/surveys/src',
       '@alga-psa/surveys/': '../packages/surveys/src/',
       '@alga-psa/surveys/actions': '../packages/surveys/src/actions/index.ts',
@@ -430,9 +446,6 @@ const nextConfig = {
       '@alga-psa/integrations/entra/routes/entry': isEE
         ? '../packages/integrations/src/entra/routes/ee/entry'
         : '../packages/integrations/src/entra/routes/oss/entry',
-      '@alga-psa/client-portal/domain-settings/entry': isEE
-        ? '@alga-psa/client-portal/domain-settings/ee/entry'
-        : '@alga-psa/client-portal/domain-settings/oss/entry',
       '@alga-psa/workflows/entry': isEE
         ? '../ee/server/src/workflows/entry'
         : '../packages/ee/src/workflows/entry',
@@ -501,6 +514,7 @@ const nextConfig = {
     '@alga-psa/user-composition',
     '@alga-psa/user-activities',
     '@alga-psa/projects',
+    '@alga-psa/list-views',
     '@alga-psa/surveys',
     '@alga-psa/tickets',
     // Product feature packages (only those needed in this app)
@@ -536,14 +550,26 @@ const nextConfig = {
   // This is required to support PostHog trailing slash API requests
   skipTrailingSlashRedirect: true,
   webpack: (config, { isServer, dev }) => {
+    if (dev && isServer) {
+      // Named action-entry IDs embed the entire loader query. Repeating those
+      // IDs for every action made the dev manifest exceed V8's string limit
+      // when billing compiled. Compact IDs retain all actions and source maps.
+      config.optimization = { ...config.optimization, moduleIds: 'deterministic' };
+    }
     // Filesystem cache: persists across builds (even after `rm -rf .next`)
     // so the second cold build reuses module compilation work. Stored under
     // node_modules/.cache/webpack so it survives `.next` clears.
+    // Keep Next's cache version and dev memory policy. Replacing this object
+    // discarded maxMemoryGenerations: 0 (Next manages its own memory cache)
+    // and the version metadata that invalidates incompatible cached builds.
+    const nextCache = typeof config.cache === 'object' && config.cache !== null ? config.cache : {};
     config.cache = {
+      ...nextCache,
       type: 'filesystem',
       cacheDirectory: path.join(__dirname, 'node_modules/.cache/webpack'),
       buildDependencies: {
-        config: [__filename],
+        ...nextCache.buildDependencies,
+        config: [...new Set([...(nextCache.buildDependencies?.config ?? []), __filename])],
       },
       // Snapshot all node_modules as immutable by mtime — avoids hash-stat on
       // every file (huge in this monorepo).
@@ -614,6 +640,10 @@ const nextConfig = {
       '@alga-psa/tags/': `${prebuiltDirAbs('tags')}/`,
       '@alga-psa/telephony': prebuiltDirAbs('telephony'),
       '@alga-psa/telephony/': `${prebuiltDirAbs('telephony')}/`,
+      '@alga-psa/marketing': prebuiltDirAbs('marketing'),
+      '@alga-psa/marketing/': `${prebuiltDirAbs('marketing')}/`,
+      '@alga-psa/opportunities': prebuiltDirAbs('opportunities'),
+      '@alga-psa/opportunities/': `${prebuiltDirAbs('opportunities')}/`,
       // Source-transpiled packages
       '@alga-psa/scheduling': path.join(__dirname, '../packages/scheduling/src'),
       // @alga-psa/jobs + /search: source-transpiled. jobs' export names do NOT
@@ -641,8 +671,12 @@ const nextConfig = {
       '@alga-psa/ee-microsoft-teams': isEE
         ? path.join(__dirname, '../ee/packages/microsoft-teams/src')
         : path.join(__dirname, '../packages/ee/src'),
+      '@alga-psa/ee-threecx': isEE
+        ? path.join(__dirname, '../ee/packages/threecx/src')
+        : path.join(__dirname, '../packages/ee/src'),
       '@alga-psa/users': path.join(__dirname, '../packages/users/src'),
       '@alga-psa/teams': path.join(__dirname, '../packages/teams/src'),
+      '@alga-psa/list-views': path.join(__dirname, '../packages/list-views/src'),
       '@alga-psa/surveys': path.join(__dirname, '../packages/surveys/src'),
       '@alga-psa/client-portal': path.join(__dirname, '../packages/client-portal/src'),
       '@alga-psa/portal-shared': path.join(__dirname, '../packages/portal-shared/src'),
@@ -687,7 +721,7 @@ const nextConfig = {
       // SSO provider buttons - swap between CE stub and EE implementation
       '@alga-psa/auth/sso/entry': isEE
         ? path.join(__dirname, '../ee/server/src/components/auth/SsoProviderButtons.tsx')
-        : path.join(__dirname, '../packages/ee/src/components/auth/SsoProviderButtons.tsx'),
+        : path.join(__dirname, '../packages/auth/src/components/SsoProviderButtons.tsx'),
       '@alga-psa/ee-stubs': isEE
         ? path.join(__dirname, '../ee/server/src')
         : path.join(__dirname, '../packages/ee/src'),
@@ -709,9 +743,6 @@ const nextConfig = {
       '@alga-psa/integrations/entra/routes/entry': isEE
         ? path.join(__dirname, '../packages/integrations/src/entra/routes/ee/entry.ts')
         : path.join(__dirname, '../packages/integrations/src/entra/routes/oss/entry.ts'),
-      '@alga-psa/client-portal/domain-settings/entry': isEE
-        ? path.join(__dirname, '../packages/client-portal/src/domain-settings/ee/entry.tsx')
-        : path.join(__dirname, '../packages/client-portal/src/domain-settings/oss/entry.tsx'),
       '@alga-psa/workflows/entry': isEE
         ? path.join(__dirname, '../ee/server/src/workflows/entry.tsx')
         : path.join(__dirname, '../packages/ee/src/workflows/entry.tsx'),
@@ -777,12 +808,6 @@ const nextConfig = {
       const pkgMcpEeEntry = path.join(__dirname, '../packages/product-mcp/ee/entry.ts');
       config.resolve.alias[pkgMcpEntry] = pkgMcpEeEntry;
 
-      const pkgClientPortalEntry = path.join(__dirname, '../packages/client-portal/src/domain-settings/entry.ts');
-      const pkgClientPortalEntryIndex = path.join(__dirname, '../packages/client-portal/src/domain-settings/entry.tsx');
-      const pkgClientPortalEeEntry = path.join(__dirname, '../packages/client-portal/src/domain-settings/ee/entry.tsx');
-      config.resolve.alias[pkgClientPortalEntry] = pkgClientPortalEeEntry;
-      config.resolve.alias[pkgClientPortalEntryIndex] = pkgClientPortalEeEntry;
-
       const pkgEmailDomainsEntry = path.join(__dirname, '../packages/integrations/src/email/domains/entry.ts');
       const pkgEmailDomainsEeEntry = path.join(__dirname, '../packages/integrations/src/email/domains/ee/entry.ts');
       config.resolve.alias[pkgEmailDomainsEntry] = pkgEmailDomainsEeEntry;
@@ -800,13 +825,6 @@ const nextConfig = {
           fromCandidates: [
             path.join(__dirname, '../packages/product-settings-extensions/oss/entry.ts'),
             path.join(__dirname, '../packages/product-settings-extensions/oss/entry.tsx'),
-          ],
-        },
-        {
-          to: pkgClientPortalEeEntry,
-          fromCandidates: [
-            path.join(__dirname, '../packages/client-portal/src/domain-settings/oss/entry.ts'),
-            path.join(__dirname, '../packages/client-portal/src/domain-settings/oss/entry.tsx'),
           ],
         },
         {
@@ -1221,6 +1239,10 @@ const nextConfig = {
     incomingRequests: {
       ignore: [/\/callback([\/?]|$)/],
     },
+    // Server-function timing lines serialize the action's arguments, which for
+    // several settings actions include field values users just typed. Keep the
+    // timing noise off entirely. Dev-only — same scope as incomingRequests.
+    serverFunctions: false,
   },
   // SWC compiler: strip console.* in production output (excluding error/warn).
   // Cuts bytes; minify pass also has less to walk.

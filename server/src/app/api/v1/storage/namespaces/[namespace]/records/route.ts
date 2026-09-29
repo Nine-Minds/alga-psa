@@ -30,15 +30,16 @@ const bulkPutSchema = z.object({
 
 export const dynamic = 'force-dynamic';
 
-export async function GET(req: NextRequest, { params }: { params: { namespace: string } }) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ namespace: string }> }) {
   try {
+    const resolvedParams = await params;
     const search = listQuerySchema.parse(Object.fromEntries(new URL(req.url).searchParams.entries()));
     const authContext = await resolveStorageAuthContext(req);
     const { service, knex } = await getStorageServiceForTenant(authContext.tenantId);
     await ensureStoragePermission('read', authContext, knex);
 
     const request: StorageListRequest = {
-      namespace: params.namespace,
+      namespace: resolvedParams.namespace,
       limit: search.limit,
       cursor: search.cursor,
       keyPrefix: search.keyPrefix,
@@ -59,15 +60,16 @@ export async function GET(req: NextRequest, { params }: { params: { namespace: s
   }
 }
 
-export async function POST(req: NextRequest, { params }: { params: { namespace: string } }) {
+export async function POST(req: NextRequest, { params }: { params: Promise<{ namespace: string }> }) {
   try {
+    const resolvedParams = await params;
     const body = bulkPutSchema.parse(await req.json());
     const authContext = await resolveStorageAuthContext(req);
     const { service, knex } = await getStorageServiceForTenant(authContext.tenantId);
     await ensureStoragePermission('write', authContext, knex);
 
     const request: StorageBulkPutRequest = {
-      namespace: params.namespace,
+      namespace: resolvedParams.namespace,
       items: body.items as StorageBulkPutRequest['items'],
     };
 

@@ -1,0 +1,23 @@
+{
+  "status": "fixed_real_temporal_execution_and_replay_verified",
+  "defect": "assignToScopePath reconstructed scopes without meta/error, dropping redaction pointers after action output assignment; meta.* assignments incorrectly wrote workflow variables.",
+  "fix": "Preserve existing scope fields and clone metadata before assignment; target metadata for meta.* paths.",
+  "regression": "Built workflow real-server smoke now executes action.call then control.return for redaction, oversized payload and metadata-output cases, and replays all three recorded histories.",
+  "validation": {
+    "before": "Actual Temporal execution exposed unresolved token in the diagnostic payload after action assignment.",
+    "after": "Three real-server cases and three same-build history replays passed; execution values remained unchanged; diagnostics redacted or truncated.",
+    "readiness": "72/72 passed with metadata and error-context preservation assertions",
+    "build": "Temporal TypeScript and alias build passed",
+    "logs": [
+      "/tmp/alga-temporal-snapshot-replay.log",
+      "/tmp/alga-temporal-snapshot-replay-fixed.log",
+      "/tmp/alga-metadata-readiness.log",
+      "/tmp/alga-metadata-worker-build.log"
+    ]
+  },
+  "limits": [
+    "Replay uses histories recorded by this same build, not a previous released worker.",
+    "Activity bodies are doubles in this runtime smoke; separate DB coverage remains necessary.",
+    "Invocation output storage redaction is still unfinished."
+  ]
+}

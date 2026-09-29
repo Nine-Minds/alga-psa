@@ -1,19 +1,21 @@
 import type { Knex } from 'knex';
-import { tenantDb } from '@alga-psa/db';
-import type {
-  AmpAssetRecord,
-  AmpContactRecord,
-  AmpEntityType,
-  AmpLocationRecord,
-  AmpOrganizationRecord,
-  AmpTicketCommentRecord,
-  AmpTicketRecord,
+import {
+  AMP_CONTACT_CLIENT_NAME_EXTENSION_KEY,
+  type AmpAssetRecord,
+  type AmpContactRecord,
+  type AmpEntityType,
+  type AmpLocationRecord,
+  type AmpOrganizationRecord,
+  type AmpTicketCommentRecord,
+  type AmpTicketRecord,
 } from '@alga-psa/migration-spec';
 import { createLocation } from '@alga-psa/clients/models';
 import { ClientModel } from '@alga-psa/shared/models/clientModel';
 import { ContactModel } from '@alga-psa/shared/models/contactModel';
 import { TicketModel } from '@alga-psa/shared/models/ticketModel';
 import { createAssetInTransaction } from '@alga-psa/assets/actions';
+// LEVERAGE: pattern asset-attribute-coercion — same coercion used by planner validation.
+import { coerceAttributeValue } from '@alga-psa/assets/lib/assetTypeAttributes';
 import type { ApplierContext } from './context';
 
 export interface AppliedTarget {
@@ -28,8 +30,15 @@ export interface EntityApplier {
   apply(
     trx: Knex.Transaction,
     context: ApplierContext,
-    payload: Record<string, unknown>
+    payload: Record<string, unknown>,
+    staged?: { customFieldValues: Record<string, unknown> }
   ): Promise<AppliedTarget>;
+}
+
+/** Leading calendar date of an AMP timestamp, or undefined if it has none. */
+function sourceCreatedDate(value?: string | null): string | undefined {
+  const match = typeof value === 'string' ? /^\d{4}-\d{2}-\d{2}/.exec(value.trim()) : null;
+  return match ? match[0] : undefined;
 }
 
 /**
@@ -51,6 +60,10 @@ export class OrganizationMigrationApplier implements EntityApplier {
       client_name: record.name,
       url: record.website ?? undefined,
       phone_no: record.phone ?? undefined,
+      // Tenure carried over from the source PSA: when the organization was
+      // created there, not when this row lands here. An unreadable timestamp
+      // falls back to created_at rather than failing the whole organization.
+      client_since: sourceCreatedDate(record.created_at),
       properties: {
         ...(record.website ? { website: record.website } : {}),
         ...(record.phone ? { phone: record.phone } : {}),
@@ -128,6 +141,8 @@ export class ContactMigrationApplier implements EntityApplier {
     payload: Record<string, unknown>
   ): Promise<AppliedTarget> {
     const record = payload as unknown as AmpContactRecord;
+    const warnings: string[] = [];
+    const carriedClientName = readCarriedClientName(record);
 
     let clientId: string | null = null;
     if (record.organization_package_record_id) {
@@ -140,6 +155,25 @@ export class ContactMigrationApplier implements EntityApplier {
         throw new Error(
           `Owning organization ${record.organization_package_record_id} has not been applied; the contact cannot be placed.`
         );
+      }
+    } else if (carriedClientName) {
+      // A single-sheet contacts import has no organizations table to resolve
+      // against, so the carried name is matched against existing tenant clients
+      // and the configured default is the fallback. An unmatched name is a
+      // diagnostic, never a rejection.
+      clientId = await context.resolveClientByName(trx, carriedClientName);
+      if (!clientId) {
+        const fallback = context.configuration.defaultClientId ?? null;
+        if (fallback) {
+          clientId = fallback;
+          warnings.push(
+            `Client "${carriedClientName}" was not matched to an existing client; the configured default client was used.`
+          );
+        } else {
+          warnings.push(
+            `Client "${carriedClientName}" was not matched to an existing client and no default client is configured; the contact was created without a client.`
+          );
+        }
       }
     } else {
       clientId = context.configuration.defaultClientId ?? null;
@@ -163,7 +197,7 @@ export class ContactMigrationApplier implements EntityApplier {
       {
         full_name: fullName,
         email: record.email,
-        client_id: clientId,
+        client_id: clientId ?? undefined,
         role: record.title ?? undefined,
         phone_numbers: record.phone
           ? [{ phone_number: record.phone, is_default: true }]
@@ -173,7 +207,26 @@ export class ContactMigrationApplier implements EntityApplier {
       trx
     );
 
-    return { targetEntityType: this.targetEntityType, targetEntityId: contact.contact_name_id };
+    return {
+      targetEntityType: this.targetEntityType,
+      targetEntityId: contact.contact_name_id,
+      ...(warnings.length > 0 ? { warnings } : {}),
+    };
+  }
+}
+
+/** Read the carried client name stashed by the CSV converter, if any. */
+function readCarriedClientName(record: AmpContactRecord): string | null {
+  const extensionJson = record.extension_json;
+  if (typeof extensionJson !== 'string' || extensionJson.length === 0) {
+    return null;
+  }
+  try {
+    const parsed = JSON.parse(extensionJson) as Record<string, unknown>;
+    const value = parsed[AMP_CONTACT_CLIENT_NAME_EXTENSION_KEY];
+    return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
+  } catch {
+    return null;
   }
 }
 
@@ -323,7 +376,8 @@ export class AssetMigrationApplier implements EntityApplier {
   async apply(
     trx: Knex.Transaction,
     context: ApplierContext,
-    payload: Record<string, unknown>
+    payload: Record<string, unknown>,
+    staged?: { customFieldValues: Record<string, unknown> }
   ): Promise<AppliedTarget> {
     const record = payload as unknown as AmpAssetRecord;
     const assetConfig = context.configuration.assets;
@@ -333,7 +387,9 @@ export class AssetMigrationApplier implements EntityApplier {
     if (!record.asset_type_name) {
       throw new Error('Asset has no asset_type_name; AMP assets must carry a source type to map.');
     }
-    const assetTypeSlug = assetConfig.assetTypeMapping[record.asset_type_name];
+    const assetTypeSlug = Object.prototype.hasOwnProperty.call(assetConfig.assetTypeMapping, record.asset_type_name)
+      ? assetConfig.assetTypeMapping[record.asset_type_name]
+      : undefined;
     if (!assetTypeSlug) {
       throw new Error(`Source asset type "${record.asset_type_name}" is not mapped.`);
     }
@@ -366,6 +422,26 @@ export class AssetMigrationApplier implements EntityApplier {
       );
     }
 
+    const fields = await context.assetTypeFields(trx, assetTypeSlug);
+    const customFieldMappings = assetConfig.customFieldMapping;
+    const sourceMapping = customFieldMappings && Object.prototype.hasOwnProperty.call(customFieldMappings, assetTypeSlug)
+      ? customFieldMappings[assetTypeSlug]
+      : {};
+    const customAttributes: Record<string, unknown> = {};
+    for (const [sourceName, targetKey] of Object.entries(sourceMapping)) {
+      const values = staged?.customFieldValues;
+      const sourceValue = values && Object.prototype.hasOwnProperty.call(values, sourceName) ? values[sourceName] : undefined;
+      if (sourceValue === undefined || sourceValue === null || (typeof sourceValue === 'string' && sourceValue.trim() === '')) continue;
+      const field = fields.find((candidate) => candidate.key === targetKey);
+      if (!field) throw new Error(`Mapped custom asset field "${targetKey}" no longer exists; preflight must pass before applying.`);
+      const coerced = coerceAttributeValue(field, sourceValue);
+      if (coerced.ok === false) {
+        const valueDescription = typeof sourceValue === 'string' ? sourceValue : JSON.stringify(sourceValue) ?? '[value]';
+        throw new Error(`Custom asset field "${sourceName}" value "${valueDescription}" ${coerced.reason}.`);
+      }
+      customAttributes[targetKey] = coerced.value;
+    }
+
     const asset = await createAssetInTransaction(
       trx,
       context.tenant,
@@ -382,6 +458,7 @@ export class AssetMigrationApplier implements EntityApplier {
         attributes: {
           ...(record.manufacturer ? { manufacturer: record.manufacturer } : {}),
           ...(record.model ? { model: record.model } : {}),
+          ...customAttributes,
         },
       },
       { requireCustomAttributes: false }

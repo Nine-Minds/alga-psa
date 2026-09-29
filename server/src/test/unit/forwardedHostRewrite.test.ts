@@ -1,9 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import { detectForwardedHostRewrite } from '@/lib/deployment/requestHost';
-import type { DeploymentCapabilities } from '@/lib/deployment/deploymentProfile';
+import { resolveDeploymentCapabilities } from '@/lib/deployment/deploymentProfile';
 
-const HOSTED: DeploymentCapabilities = { portalDomain: { provisioner: 'temporal' }, trustForwardedHost: false };
-const APPLIANCE: DeploymentCapabilities = { portalDomain: { provisioner: 'direct' }, trustForwardedHost: true };
+const HOSTED = resolveDeploymentCapabilities({});
+const APPLIANCE = resolveDeploymentCapabilities({ DEPLOYMENT_PROFILE: 'appliance' });
 
 function req(headers: Record<string, string>) {
   const lower = Object.fromEntries(Object.entries(headers).map(([k, v]) => [k.toLowerCase(), v]));

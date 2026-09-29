@@ -20,6 +20,7 @@ describe('opportunity generator facts', () => {
       clientContractId: 'assignment-1',
       monthlyValueCents: 245000,
       currencyCode: 'USD',
+      hasVariableUsage: false,
     }]]), new Date('2026-07-12T00:00:00.000Z'));
 
     expect(suggestions).toEqual([expect.objectContaining({

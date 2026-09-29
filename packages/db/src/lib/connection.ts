@@ -10,6 +10,8 @@ import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 
 // Create a map to store Knex instances
 const knexInstances: Map<string, KnexType> = new Map();
+let initialization: Promise<KnexType> | undefined;
+let cleanup: Promise<void> | undefined;
 
 /**
  * Get database configuration
@@ -44,27 +46,40 @@ async function getDbConfig(): Promise<KnexType.Config> {
  * Get a database connection
  */
 export async function getConnection(): Promise<KnexType> {
-  const instanceKey = 'default';
+  // Callers arriving during cleanup must not receive a pool being destroyed.
+  if (cleanup) {
+    await cleanup;
+    return getConnection();
+  }
+  const existing = knexInstances.get('default');
+  if (existing) return existing;
+  if (initialization) return initialization;
 
-  // Check if we already have an instance
-  let knexInstance = knexInstances.get(instanceKey);
-
-  if (!knexInstance) {
+  const pending = (async () => {
     console.log('Creating new knex instance');
     const config = await getDbConfig();
-    knexInstance = Knex(config);
-    knexInstances.set(instanceKey, knexInstance);
-  }
-
-  return knexInstance;
+    const instance = Knex(config);
+    knexInstances.set('default', instance);
+    return instance;
+  })();
+  initialization = pending;
+  try { return await pending; }
+  finally { if (initialization === pending) initialization = undefined; }
 }
 
-/**
- * Cleanup all database connections
- */
+/** Cleanup also owns pools whose secret lookup has not finished yet. */
 export async function cleanupConnections(): Promise<void> {
-  for (const [_id, instance] of knexInstances) {
-    await instance.destroy();
-  }
-  knexInstances.clear();
+  if (cleanup) return cleanup;
+  const pending = Promise.resolve().then(async () => {
+    // Initialization failure belongs to its callers; there is no pool to close.
+    await initialization?.catch(() => undefined);
+    for (const [id, instance] of knexInstances) {
+      // Teardown can fail after partially closing a pool; never hand it out again.
+      knexInstances.delete(id);
+      await instance.destroy();
+    }
+  });
+  cleanup = pending;
+  try { await pending; }
+  finally { if (cleanup === pending) cleanup = undefined; }
 }

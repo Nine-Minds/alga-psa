@@ -1,6 +1,13 @@
 import axios, { type AxiosRequestConfig } from 'axios';
 import { getSecretProviderInstance, type ISecretProvider } from '@alga-psa/core/secrets';
+import { createTenantKnex } from '@alga-psa/db';
 import { notifyQboConnectionChanged } from './qboConnectionChangeProvider';
+import { retireTerminalDisconnectRecord } from '../providerDisconnect/retire';
+import {
+  getProviderCredentialWriteDisposition,
+  withProviderCredentialLock,
+} from '../providerDisconnect/lock';
+import { PROVIDER_QBO } from '../providerDisconnect/types';
 import type { QboTenantCredentials } from './types';
 import { AppError, sanitizeProviderMessage, toSafeProviderError, type SafeProviderError } from '@alga-psa/core';
 import type {
@@ -56,6 +63,13 @@ export const QBO_TOKEN_URL = QBO_TOKEN_ENDPOINT;
 export const QBO_CREDENTIALS_SECRET_NAME = QBO_CREDENTIALS_SECRET;
 export const QBO_CLIENT_ID_SECRET_NAME = QBO_CLIENT_ID_SECRET;
 export const QBO_CLIENT_SECRET_SECRET_NAME = QBO_CLIENT_SECRET_SECRET;
+
+// Dev/test override for the Intuit token-revocation endpoint; defaults to the
+// production host. Lazy so tests can redirect the disconnect revoker at the
+// local provider simulator after module load.
+export function getQboRevokeUrl(): string {
+  return process.env.QBO_OAUTH_REVOKE_URL?.trim() || 'https://developer.api.intuit.com/v2/oauth2/tokens/revoke';
+}
 
 const QBO_CLIENT_ID_ENV_FALLBACKS = [
   QBO_CLIENT_ID_SECRET,
@@ -291,13 +305,55 @@ async function getTenantQboCredentials(tenantId: string, realmId: string): Promi
   return null;
 }
 
-export async function upsertStoredQboCredentials(tenantId: string, credentials: QboTenantCredentials): Promise<void> {
+export async function upsertStoredQboCredentials(
+  tenantId: string,
+  credentials: QboTenantCredentials,
+  options: { authorizationFlowStartedAt?: string } = {},
+): Promise<void> {
   const secretProvider = await getSecretProviderInstance();
-  const allCredentials = await getStoredQboCredentialsMap(tenantId);
+  const { knex } = await createTenantKnex(tenantId);
 
-  allCredentials[credentials.realmId] = credentials;
+  // The gate check and secret write hold the shared credential-write lock (see
+  // providerDisconnect/lock.ts), which disconnect initiation also holds while
+  // persisting its record and invalidating outstanding flows. Active records
+  // block every write; a finalized record is retired only for an OAuth flow
+  // provably started after finalization. Record-read failures fail closed.
+  await withProviderCredentialLock(knex, tenantId, PROVIDER_QBO, async (trx) => {
+    const disposition = await getProviderCredentialWriteDisposition(
+      trx,
+      tenantId,
+      PROVIDER_QBO,
+      options.authorizationFlowStartedAt,
+    ).catch(() => 'disconnect_in_progress' as const);
+    if (disposition === 'disconnect_in_progress') {
+      throw new AppError(
+        'QBO_DISCONNECT_IN_PROGRESS',
+        'QuickBooks is being disconnected. Finish or finalize the disconnect before connecting again.'
+      );
+    }
+    if (disposition === 'stale_authorization') {
+      throw new AppError(
+        'QBO_STALE_AUTHORIZATION',
+        'This QuickBooks authorization started before the last disconnect completed. Start the connection again.'
+      );
+    }
 
-  await secretProvider.setTenantSecret(tenantId, QBO_CREDENTIALS_SECRET, JSON.stringify(allCredentials));
+    // Reconnect after a completed (or force-finalized) disconnect: retire the
+    // stale terminal disconnect record BEFORE the new connection becomes visible
+    // to the rest of the system, so the next disconnect starts a fresh cycle
+    // instead of short-circuiting on the old finalized row. A pending disconnect
+    // record is deliberately left alone — reconnect during an in-flight cycle is
+    // blocked upstream. The disconnect service independently treats a terminal
+    // record with live credentials as stale (defense in depth).
+    await retireTerminalDisconnectRecord(tenantId, PROVIDER_QBO, trx);
+
+    // Read-merge-write inside the lock so concurrent upserts (two realms
+    // connecting at once) serialize instead of losing one realm's entry.
+    const allCredentials = await getStoredQboCredentialsMap(tenantId);
+    allCredentials[credentials.realmId] = credentials;
+    await secretProvider.setTenantSecret(tenantId, QBO_CREDENTIALS_SECRET, JSON.stringify(allCredentials));
+  });
+
   logger.info(`Stored QBO credentials for tenant ${tenantId}, realm ${credentials.realmId}`);
   await notifyQboConnectionChanged(tenantId);
 }

@@ -7,7 +7,8 @@ import { Switch } from '@alga-psa/ui/components/Switch';
 import { Label } from '@alga-psa/ui/components/Label';
 import { Button } from '@alga-psa/ui/components/Button';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
-import { CURRENCY_OPTIONS, currencyFractionDigits } from '@alga-psa/core';
+import CurrencyPicker from '@alga-psa/ui/components/CurrencyPicker';
+import { currencyFractionDigits } from '@alga-psa/core';
 import toast from 'react-hot-toast';
 import {
   getErrorMessage,
@@ -468,12 +469,11 @@ const ClientPrepaidBalanceAlertSettings: React.FC<ClientPrepaidBalanceAlertSetti
                 )}
               </div>
               <div className="space-y-2">
-                <CustomSelect
+                <CurrencyPicker
                   id="prepaid-credit-currency"
                   label={t('clientPrepaidBalanceAlertSettings.creditCurrency', { defaultValue: 'Currency' })}
                   value={creditCurrency}
                   onValueChange={setCreditCurrency}
-                  options={CURRENCY_OPTIONS}
                 />
               </div>
             </div>

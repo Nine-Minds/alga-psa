@@ -1,0 +1,196 @@
+{
+  "scope": "Isolated historical invoice locale rendering baseline",
+  "baseRevision": "bfca1ef99ea8c68fc6b1fb0192cf226211d888bd",
+  "workingTreeDirty": true,
+  "validation": {
+    "artifact": "/tmp/alga-invoice-history-locales-final.log",
+    "sha256": "6525ed24651c0003074846ba3a91ac65d79b4494381086ac6f80ce54cd536d0c",
+    "passed": 1,
+    "failed": 0,
+    "matrixCombinations": 9
+  },
+  "matrix": [
+    {
+      "history": "v1",
+      "locale": "en",
+      "effectiveLocale": "en",
+      "files": {
+        "html": {
+          "path": "/tmp/alga-invoice-history-locales/history-v1-en.html",
+          "sha256": "0982ec3b5a9443470ebb990fcb3b67183b627fc5f08e18bca277d12e47f038a4"
+        },
+        "pdf": {
+          "path": "/tmp/alga-invoice-history-locales/history-v1-en.pdf",
+          "sha256": "b64f47421e8200b23daf9e78713cb222922de897353569ae37324b8584fd9c52"
+        },
+        "txt": {
+          "path": "/tmp/alga-invoice-history-locales/history-v1-en.txt",
+          "sha256": "7fe2724df4b2217c3f1757e6570c54db349843b56f3b6e7b13e92f98580cadfb"
+        }
+      }
+    },
+    {
+      "history": "v1",
+      "locale": "fr",
+      "effectiveLocale": "fr",
+      "files": {
+        "html": {
+          "path": "/tmp/alga-invoice-history-locales/history-v1-fr.html",
+          "sha256": "d55977ef5e3da9068b4472a936bb2271679bb0c09af0cca084324abc4320ec86"
+        },
+        "pdf": {
+          "path": "/tmp/alga-invoice-history-locales/history-v1-fr.pdf",
+          "sha256": "b795b595dfb18c8b1536e1c13aacbd86cf415ededcf324f5623ab06af9f7a086"
+        },
+        "txt": {
+          "path": "/tmp/alga-invoice-history-locales/history-v1-fr.txt",
+          "sha256": "a91f76d1c4a8e3c231758b1bbbdb08b81513dc0a3e999428588357ca0a6ffd48"
+        }
+      }
+    },
+    {
+      "history": "v1",
+      "locale": "zz-unavailable",
+      "effectiveLocale": "en",
+      "files": {
+        "html": {
+          "path": "/tmp/alga-invoice-history-locales/history-v1-zz-unavailable.html",
+          "sha256": "0982ec3b5a9443470ebb990fcb3b67183b627fc5f08e18bca277d12e47f038a4"
+        },
+        "pdf": {
+          "path": "/tmp/alga-invoice-history-locales/history-v1-zz-unavailable.pdf",
+          "sha256": "eb33a84ccd6a218967a5868674a51151d8e78d67590385247c5d633d55371b38"
+        },
+        "txt": {
+          "path": "/tmp/alga-invoice-history-locales/history-v1-zz-unavailable.txt",
+          "sha256": "7fe2724df4b2217c3f1757e6570c54db349843b56f3b6e7b13e92f98580cadfb"
+        }
+      }
+    },
+    {
+      "history": "partial",
+      "locale": "en",
+      "effectiveLocale": "en",
+      "files": {
+        "html": {
+          "path": "/tmp/alga-invoice-history-locales/history-partial-en.html",
+          "sha256": "783f0810d9f47c479be6125e3078f50e2b053fa97ef2b77443c1affcaaa68b4c"
+        },
+        "pdf": {
+          "path": "/tmp/alga-invoice-history-locales/history-partial-en.pdf",
+          "sha256": "7915e4f0ad16c3a859bf435f7780dbc7eadabf627dae6d538ebc53afc8b4936e"
+        },
+        "txt": {
+          "path": "/tmp/alga-invoice-history-locales/history-partial-en.txt",
+          "sha256": "428673358228620b12025d7b99b8f6f4caed6a8ff1d6febe144847189444da4b"
+        }
+      }
+    },
+    {
+      "history": "partial",
+      "locale": "fr",
+      "effectiveLocale": "fr",
+      "files": {
+        "html": {
+          "path": "/tmp/alga-invoice-history-locales/history-partial-fr.html",
+          "sha256": "c0480f00af5e7c73930d52e64cacd0fcb4b7a1667e31bd070d3f31b6d1a307ed"
+        },
+        "pdf": {
+          "path": "/tmp/alga-invoice-history-locales/history-partial-fr.pdf",
+          "sha256": "b7b059fec351096d0ecdd932ae179378417368a20781bfa27daa6b0d8a939e00"
+        },
+        "txt": {
+          "path": "/tmp/alga-invoice-history-locales/history-partial-fr.txt",
+          "sha256": "697f2a8ac5ef80192475298b42ed4e32738ab82137f623c4a6a0b92270b25ca3"
+        }
+      }
+    },
+    {
+      "history": "partial",
+      "locale": "zz-unavailable",
+      "effectiveLocale": "en",
+      "files": {
+        "html": {
+          "path": "/tmp/alga-invoice-history-locales/history-partial-zz-unavailable.html",
+          "sha256": "783f0810d9f47c479be6125e3078f50e2b053fa97ef2b77443c1affcaaa68b4c"
+        },
+        "pdf": {
+          "path": "/tmp/alga-invoice-history-locales/history-partial-zz-unavailable.pdf",
+          "sha256": "c365907eeeef147b14bf4931a06ddaa22cfd1ceb2edff50b631d065616f961ea"
+        },
+        "txt": {
+          "path": "/tmp/alga-invoice-history-locales/history-partial-zz-unavailable.txt",
+          "sha256": "428673358228620b12025d7b99b8f6f4caed6a8ff1d6febe144847189444da4b"
+        }
+      }
+    },
+    {
+      "history": "none",
+      "locale": "en",
+      "effectiveLocale": "en",
+      "files": {
+        "html": {
+          "path": "/tmp/alga-invoice-history-locales/history-none-en.html",
+          "sha256": "a945d5827b58131f3210e4f59baa40b97823f0633a4b241d7839fe3b574a37f5"
+        },
+        "pdf": {
+          "path": "/tmp/alga-invoice-history-locales/history-none-en.pdf",
+          "sha256": "5a21e7e3dba842cc465c4aaa0704682cd4a14eb2e2165b488c4636373454c08e"
+        },
+        "txt": {
+          "path": "/tmp/alga-invoice-history-locales/history-none-en.txt",
+          "sha256": "7960bf54910a1377995894049d90ccd1971caeac62bb71ccf8c541f050959d46"
+        }
+      }
+    },
+    {
+      "history": "none",
+      "locale": "fr",
+      "effectiveLocale": "fr",
+      "files": {
+        "html": {
+          "path": "/tmp/alga-invoice-history-locales/history-none-fr.html",
+          "sha256": "77066af66077680d449c6d06bc19f68b7ce8d0216d569ca339950d9743780f66"
+        },
+        "pdf": {
+          "path": "/tmp/alga-invoice-history-locales/history-none-fr.pdf",
+          "sha256": "15a32db4d8f9ff30664372ad31da2ae9a20cdd9c6a735feb42d775124481842b"
+        },
+        "txt": {
+          "path": "/tmp/alga-invoice-history-locales/history-none-fr.txt",
+          "sha256": "a3e0e5a0eb51ab96f126bef84e5c1e98023bdc840382d76cec2fcb51f9c73000"
+        }
+      }
+    },
+    {
+      "history": "none",
+      "locale": "zz-unavailable",
+      "effectiveLocale": "en",
+      "files": {
+        "html": {
+          "path": "/tmp/alga-invoice-history-locales/history-none-zz-unavailable.html",
+          "sha256": "a945d5827b58131f3210e4f59baa40b97823f0633a4b241d7839fe3b574a37f5"
+        },
+        "pdf": {
+          "path": "/tmp/alga-invoice-history-locales/history-none-zz-unavailable.pdf",
+          "sha256": "b66c7dcb39ac3fa5be399866b5f983078d52605cb5d5975344ea28f5c45ef746"
+        },
+        "txt": {
+          "path": "/tmp/alga-invoice-history-locales/history-none-zz-unavailable.txt",
+          "sha256": "7960bf54910a1377995894049d90ccd1971caeac62bb71ccf8c541f050959d46"
+        }
+      }
+    }
+  ],
+  "behavior": [
+    "Generated owned snapshots are deliberately converted to v1, partially missing or entirely missing historical representations.",
+    "Each representation renders in English, French and an unsupported locale that must fall back to English. Actual preview and PDF text include the appropriate unknown-rate/coverage labels and formatted total.",
+    "Every render preserves the stored historical snapshots, canonical charges and in-memory invoice view model; source snapshots and client locale properties are restored afterward."
+  ],
+  "limits": [
+    "Standard template baseline only: UI authoring, custom/nested six-column layouts, entry dates, ad-hoc/project fallback labels and long multi-tax/other producer variants remain outside this addition.",
+    "Both original opt-in invoice cases remain until those additional requirements are covered.",
+    "Synthetic seeded authentication substitutes remain; no fresh native candidate or live-browser claim.",
+    "Initial text assertion failed because geometric PDF text order interleaved adjacent amount text with a wrapped French label. Verified content-order extraction preserves the full label; assertions retain full label matching."
+  ]
+}

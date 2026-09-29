@@ -1,3 +1,4 @@
+import { applyProjectCapAdjustments } from '@alga-psa/billing/lib/billing/domain/projectCapAdjustments';
 import { readFileSync } from "node:fs";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { BillingEngine } from "@alga-psa/billing/services";
@@ -482,7 +483,7 @@ describe("project T&M cap and override integration", () => {
       },
     ];
 
-    (engine as any).applyProjectCapAdjustments(secondRun, billingContext);
+    applyProjectCapAdjustments(secondRun, billingContext);
     expect(secondRun[0]).toMatchObject({
       total: 1_000,
       tax_amount: 100,
@@ -513,7 +514,7 @@ describe("project T&M cap and override integration", () => {
         project_id: "project-1",
       },
     ];
-    (engine as any).applyProjectCapAdjustments(thirdRun, billingContext);
+    applyProjectCapAdjustments(thirdRun, billingContext);
     expect(thirdRun[0]).toMatchObject({
       total: 0,
       tax_amount: 0,
@@ -545,7 +546,7 @@ describe("project T&M cap and override integration", () => {
       },
     ];
 
-    const first = (engine as any).applyProjectCapAdjustments(
+    const first = applyProjectCapAdjustments(
       firstCharge,
       billingContext,
     );
@@ -563,7 +564,7 @@ describe("project T&M cap and override integration", () => {
       written_down_amount: 0,
       notified_thresholds: [50, 75],
     });
-    const second = (engine as any).applyProjectCapAdjustments(
+    const second = applyProjectCapAdjustments(
       [
         {
           type: "time",
@@ -590,7 +591,7 @@ describe("project T&M cap and override integration", () => {
         project_billing_config_id: "config-1",
       },
     ];
-    const overage = (engine as any).applyProjectCapAdjustments(
+    const overage = applyProjectCapAdjustments(
       legacyNotifyOverage,
       billingContext,
     );

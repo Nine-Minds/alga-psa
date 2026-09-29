@@ -1,0 +1,28 @@
+{
+  "status": "six_variants_local_verified_native_pending",
+  "change": "Six formerly opt-in generation variants now bootstrap an isolated migrated database and select a seeded MSP Admin via real role assignments",
+  "local_execution": {
+    "passed": 6,
+    "failed": 0,
+    "remaining_manual_skips": 6,
+    "log": "/tmp/alga-invoice-port-six-final.log",
+    "passed_variants": [
+      "cap",
+      "recurring-cap",
+      "bucket",
+      "multi-tax-long",
+      "task-identities",
+      "hour-block"
+    ]
+  },
+  "limits": [
+    "Native CI must execute the restored variants",
+    "Remaining six cases still rely on manual fixture/artifact dependencies",
+    "Puppeteer runtime availability in full integration CI still needs native verification"
+  ],
+  "resolved_failures": {
+    "bucket": "Current pool pricing explicitly prevents hourly rebilling of covered services; assert four $150 overage hours plus $50 usage and no hourly charges",
+    "hour-block": "Filter unresolved source selectors from recurring period claims; real source linkage, prepaid consumption and PDF assertions pass"
+  },
+  "targeted_typescript": "passed /tmp/alga-invoice-port-types-final.log"
+}

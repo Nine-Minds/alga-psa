@@ -54,7 +54,11 @@ vi.mock('@alga-psa/db', () => ({
   registerAfterCommit: (_trx: unknown, hook: () => unknown | Promise<unknown>, _label?: string) => {
     afterCommitHooksQueue.push(hook);
   },
+  // After-commit publication dispatch re-reads the comment on a fresh connection.
+  getConnection: async () => lastTrx,
 }));
+
+let lastTrx: any;
 
 vi.mock('next/cache', () => ({
   revalidatePath: vi.fn(),
@@ -125,6 +129,74 @@ vi.mock('../lib/validateTicketClosure', () => ({
 
 vi.mock('./ticketBundleUtils', () => ({
   maybeReopenBundleMasterFromChildReply: vi.fn(async () => undefined),
+  revertBundlePropagationForChild: vi.fn(async () => undefined),
+  previewBundleStatusPropagation: vi.fn(async () => ({
+    mode: 'sync_updates',
+    masterTicketId: '',
+    newStatusId: '',
+    crossesBoundary: null,
+    affectedChildren: [],
+    unaffectedChildren: [],
+  })),
+  // Non-boundary propagation is the legacy mirror-to-all-children path; mirror
+  // it here so the live-update fan-out assertions keep exercising the shared
+  // registry contract without a real database.
+  propagateBundleMasterStatus: vi.fn(
+    async (
+      trx: any,
+      ctx: { tenant: string; user: { user_id: string } },
+      masterId: string,
+      updateData: Record<string, unknown>,
+    ) => {
+      const { registerAfterCommit } = await import('@alga-psa/db');
+      const { publishTicketUpdate, diffTicketFields } = await import('../lib/liveUpdates');
+
+      const propagateFields: Record<string, unknown> = {};
+      for (const key of ['status_id', 'assigned_to', 'priority_id', 'closed_by', 'closed_at']) {
+        if (Object.prototype.hasOwnProperty.call(updateData, key)) {
+          propagateFields[key] = updateData[key];
+        }
+      }
+      if (Object.keys(propagateFields).length === 0) {
+        return { propagated: false, action: null, affectedChildIds: [] };
+      }
+
+      const childRows = await trx('tickets')
+        .where({ master_ticket_id: masterId })
+        .select(['ticket_id', 'status_id', 'assigned_to', 'priority_id', 'closed_at', 'closed_by']);
+
+      const childPublishes = childRows
+        .map((child: Record<string, unknown>) => ({
+          ticketId: child.ticket_id as string,
+          updatedFields: diffTicketFields(child, propagateFields),
+        }))
+        .filter((publish: { updatedFields: string[] }) => publish.updatedFields.length > 0);
+
+      const propagate = { ...propagateFields, updated_by: ctx.user.user_id, updated_at: new Date().toISOString() };
+      await trx('tickets').where({ master_ticket_id: masterId }).update(propagate);
+
+      for (const publish of childPublishes) {
+        registerAfterCommit(
+          trx,
+          () =>
+            publishTicketUpdate({
+              tenantId: ctx.tenant,
+              ticketId: publish.ticketId,
+              updatedFields: publish.updatedFields,
+              updatedBy: { userId: ctx.user.user_id, displayName: 'Test User' },
+              updatedAt: propagate.updated_at as string,
+            }),
+          `ticket-live-update ticket=${publish.ticketId}`,
+        );
+      }
+
+      return {
+        propagated: false,
+        action: null,
+        affectedChildIds: childRows.map((child: Record<string, unknown>) => child.ticket_id as string),
+      };
+    },
+  ),
 }));
 
 import {
@@ -247,6 +319,23 @@ function buildTrx(params: {
     })),
   };
 
+  // The inserted comment row: attachment reconciliation locks it, the
+  // publication intent is written onto it, and after commit the dispatch
+  // re-reads it (jsonb payload) and marks it dispatched.
+  const commentRow: Record<string, any> = { comment_id: 'comment-1', ticket_id: 'ticket-1', note: '', publish_state: 'published' };
+  const commentRowQuery: any = {
+    whereNull: () => commentRowQuery,
+    forUpdate: () => commentRowQuery,
+    first: async () => commentRow,
+    update: async (row: Record<string, unknown>) => {
+      Object.assign(commentRow, row);
+      if (typeof commentRow.comment_publication_payload === 'string') {
+        commentRow.comment_publication_payload = JSON.parse(commentRow.comment_publication_payload);
+      }
+      return 1;
+    },
+  };
+
   const trx = ((table: string) => {
     if (table === 'tickets') {
       return ticketsTable;
@@ -286,14 +375,27 @@ function buildTrx(params: {
 
     if (table === 'comments') {
       return {
-        insert: vi.fn((row: Record<string, unknown>) => ({
-          returning: vi.fn(async () => [{ ...row, comment_id: 'comment-1' }]),
-        })),
+        insert: vi.fn((row: Record<string, unknown>) => {
+          Object.assign(commentRow, row);
+          return { returning: vi.fn(async () => [{ ...row, comment_id: 'comment-1' }]) };
+        }),
+        where: vi.fn(() => commentRowQuery),
       };
+    }
+
+    if (table === 'ticket_comment_attachments') {
+      // No draft uploads in these scenarios.
+      const builder: any = {};
+      for (const method of ['where', 'whereIn', 'orderBy', 'forUpdate']) builder[method] = vi.fn(() => builder);
+      builder.then = (resolve: any, reject?: any) => Promise.resolve([]).then(resolve, reject);
+      return builder;
     }
 
     throw new Error(`Unexpected table: ${table}`);
   }) as any;
+  trx.isTransaction = true;
+  trx.fn = { now: () => 'now()' };
+  lastTrx = trx;
   trx.raw = vi.fn(async () => ({
     rows: [{ comment_id: 'comment-1', thread_id: 'thread-1' }],
   }));
@@ -365,6 +467,19 @@ describe('updateTicketWithCache live updates', () => {
     );
 
     expect(publishRedisMock).not.toHaveBeenCalled();
+  });
+
+  it('T007: rejects a client-portal caller before any permission check or ticket access', async () => {
+    currentUser = { ...currentUser, user_id: 'client-user-1', user_type: 'client' };
+
+    const { updateTicketWithCache } = await import('./optimizedTicketActions');
+    const result = await updateTicketWithCache('ticket-1', { status_id: 'status-2' });
+
+    expect(result).toEqual(
+      expect.objectContaining({ permissionError: 'Permission denied: operation not available in client portal' })
+    );
+    expect(hasPermissionMock).not.toHaveBeenCalled();
+    expect(createTenantKnexMock).not.toHaveBeenCalled();
   });
 
   it('T006: bundled child sync publishes one live update per affected child', async () => {
@@ -679,6 +794,7 @@ describe('updateTicketWithCache live updates', () => {
       ),
     ).resolves.toEqual(expect.objectContaining({ comment_id: 'comment-1' }));
 
+    // Dispatched after commit from the persisted intent, with a durable event id.
     expect(publishEventMock).toHaveBeenCalledWith(
       expect.objectContaining({
         eventType: 'TICKET_COMMENT_ADDED',
@@ -688,6 +804,7 @@ describe('updateTicketWithCache live updates', () => {
           suppressInternalNotifications: expectedInternalSuppression,
         }),
       }),
+      expect.objectContaining({ strict: true }),
     );
   });
 

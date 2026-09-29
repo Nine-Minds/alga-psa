@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "observedAt": "2026-09-06",
+  "kind": "local-execution",
+  "revision": "9f8424a436208f18b9742b20be7938ee6c89a32d",
+  "dirty": true,
+  "status": "passed",
+  "files": [
+    "server/src/test/integration/rmm/rmmDeviceSyncSchedule.db.test.ts"
+  ],
+  "counts": {
+    "passed": 15,
+    "failed": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  "reportSha256": "0708f7969f75a7d530f5cdee03972542c52e57602e50796115707d2bd9afa861",
+  "runtime": {
+    "sdk": "@temporalio/testing 1.14.1",
+    "cliRelease": "v1.5.1",
+    "server": "1.29.1",
+    "ownership": "SDK-managed ephemeral loopback server; runner and environment are closed in teardown."
+  },
+  "ciWorkflow": ".github/workflows/integration-tests.yml",
+  "limits": [
+    "Focused local execution; native CI on the new commit remains pending.",
+    "Three Temporal cases test actual schedule creation, payload, convergence and cancellation, not execution by a Temporal worker.",
+    "PgBoss delivery and forwarded handler dispatch run in separate cases. RMM provider strategy calls are substituted.",
+    "Initial run failed on an unprefixed CLI download tag (404); the official v1.5.1 tag resolved and the full rerun passed."
+  ]
+}

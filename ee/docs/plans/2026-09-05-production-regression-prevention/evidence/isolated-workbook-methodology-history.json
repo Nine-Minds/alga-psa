@@ -1,0 +1,453 @@
+{
+  "spreadsheetId": "1v7rjj0_8tMOGbibDghxcjmSgN1Ejvyvjkyz0jOUHl7I",
+  "methodologyView": {
+    "range": "coverage_methodology!A3:L5",
+    "majorDimension": "ROWS",
+    "values": [
+      [
+        "Timestamp",
+        "Suite",
+        "Tested SHA",
+        "Lines %",
+        "Statements %",
+        "Branches %",
+        "Functions %",
+        "Measured files",
+        "Source files",
+        "Methodology",
+        "Lane gate",
+        "Run URL"
+      ],
+      [
+        "2026-09-08T12:28:26.012Z",
+        "ISOLATED-coverage-denominator",
+        "synthetic-isolated-coverage",
+        "100",
+        "100",
+        "100",
+        "100",
+        "1",
+        "5759",
+        "v8-loaded-files/source-inventory-v1",
+        "unverified"
+      ],
+      [
+        "2026-09-07T10:04:37.073Z",
+        "unit-coverage",
+        "7c52ed7d53ade3306f2ec7fae2971bd5868efaf2",
+        "35.17",
+        "34.76",
+        "31.39",
+        "34.58",
+        "4333",
+        "5754",
+        "v8-loaded-files/source-inventory-v1",
+        "unverified",
+        "https://github.com/Nine-Minds/alga-psa/actions/runs/34104450275"
+      ]
+    ]
+  },
+  "methodologyMismatch": {
+    "range": "coverage_methodology!A3:L5",
+    "majorDimension": "ROWS",
+    "values": [
+      [
+        "Timestamp",
+        "Suite",
+        "Tested SHA",
+        "Lines %",
+        "Statements %",
+        "Branches %",
+        "Functions %",
+        "Measured files",
+        "Source files",
+        "Methodology",
+        "Lane gate",
+        "Run URL"
+      ]
+    ]
+  },
+  "legacyView": {
+    "range": "legacy_history!A2:P4",
+    "majorDimension": "ROWS",
+    "values": [
+      [
+        "timestamp_utc",
+        "suite",
+        "branch",
+        "commit",
+        "passed",
+        "failed",
+        "skipped",
+        "todo",
+        "total",
+        "pass_pct",
+        "lines_pct",
+        "statements_pct",
+        "branches_pct",
+        "functions_pct",
+        "duration_s",
+        "run_url"
+      ],
+      [
+        "2026-09-08T05:44:34.309Z",
+        "integration-full",
+        "main",
+        "9c7890a8a6",
+        "1915",
+        "0",
+        "146",
+        "0",
+        "2061",
+        "100",
+        "",
+        "",
+        "",
+        "",
+        "3850",
+        "https://github.com/Nine-Minds/alga-psa/actions/runs/34187618510"
+      ],
+      [
+        "2026-09-08T04:58:16.649Z",
+        "infrastructure-full",
+        "main",
+        "9c7890a8a6",
+        "478",
+        "5",
+        "0",
+        "0",
+        "483",
+        "98.96",
+        "",
+        "",
+        "",
+        "",
+        "1073",
+        "https://github.com/Nine-Minds/alga-psa/actions/runs/34187618510"
+      ]
+    ]
+  },
+  "legacyReaders": {
+    "spreadsheetId": "1v7rjj0_8tMOGbibDghxcjmSgN1Ejvyvjkyz0jOUHl7I",
+    "spreadsheetUrl": "https://docs.google.com/spreadsheets/d/1v7rjj0_8tMOGbibDghxcjmSgN1Ejvyvjkyz0jOUHl7I/edit?ouid=108330435670522534361",
+    "properties": {
+      "title": "Alga Test Metrics — isolated regression validation 2026-09-08",
+      "locale": "en_US",
+      "timeZone": "America/New_York"
+    },
+    "sheets": [
+      {
+        "properties": {
+          "sheetId": 1594196073,
+          "title": "charts",
+          "index": 1,
+          "sheetType": "GRID",
+          "gridProperties": {
+            "rowCount": 1000,
+            "columnCount": 26,
+            "frozenRowCount": 1
+          }
+        },
+        "data": [
+          {
+            "rowData": [
+              {
+                "values": [
+                  {
+                    "userEnteredValue": {
+                      "stringValue": "Suite"
+                    },
+                    "effectiveValue": {
+                      "stringValue": "Suite"
+                    }
+                  },
+                  {
+                    "userEnteredValue": {
+                      "stringValue": "Last run (UTC)"
+                    },
+                    "effectiveValue": {
+                      "stringValue": "Last run (UTC)"
+                    }
+                  },
+                  {
+                    "userEnteredValue": {
+                      "stringValue": "Passed"
+                    },
+                    "effectiveValue": {
+                      "stringValue": "Passed"
+                    }
+                  },
+                  {
+                    "userEnteredValue": {
+                      "stringValue": "Failed"
+                    },
+                    "effectiveValue": {
+                      "stringValue": "Failed"
+                    }
+                  },
+                  {
+                    "userEnteredValue": {
+                      "stringValue": "Skipped"
+                    },
+                    "effectiveValue": {
+                      "stringValue": "Skipped"
+                    }
+                  },
+                  {
+                    "userEnteredValue": {
+                      "stringValue": "Pass %"
+                    },
+                    "effectiveValue": {
+                      "stringValue": "Pass %"
+                    }
+                  }
+                ]
+              },
+              {
+                "values": [
+                  {
+                    "userEnteredValue": {
+                      "stringValue": "unit-coverage"
+                    },
+                    "effectiveValue": {
+                      "stringValue": "unit-coverage"
+                    }
+                  },
+                  {
+                    "userEnteredValue": {
+                      "formulaValue": "=IFERROR(QUERY(metrics!A2:P,\"select A, E, F, G, J, K, O where B='unit-coverage' order by A desc limit 1\",0),\"no runs yet\")"
+                    },
+                    "effectiveValue": {
+                      "stringValue": "2026-09-07T12:44:12.952Z"
+                    }
+                  }
+                ]
+              },
+              {
+                "values": [
+                  {
+                    "userEnteredValue": {
+                      "stringValue": "integration-full"
+                    },
+                    "effectiveValue": {
+                      "stringValue": "integration-full"
+                    }
+                  },
+                  {
+                    "userEnteredValue": {
+                      "formulaValue": "=IFERROR(QUERY(metrics!A2:P,\"select A, E, F, G, J, K, O where B='integration-full' order by A desc limit 1\",0),\"no runs yet\")"
+                    },
+                    "effectiveValue": {
+                      "stringValue": "2026-09-08T05:44:34.309Z"
+                    }
+                  },
+                  {
+                    "effectiveValue": {
+                      "numberValue": 1915
+                    }
+                  },
+                  {
+                    "effectiveValue": {
+                      "numberValue": 0
+                    }
+                  },
+                  {
+                    "effectiveValue": {
+                      "numberValue": 146
+                    }
+                  },
+                  {
+                    "effectiveValue": {
+                      "numberValue": 100
+                    }
+                  }
+                ]
+              },
+              {
+                "values": [
+                  {
+                    "userEnteredValue": {
+                      "stringValue": "integration-tier1"
+                    },
+                    "effectiveValue": {
+                      "stringValue": "integration-tier1"
+                    }
+                  },
+                  {
+                    "userEnteredValue": {
+                      "formulaValue": "=IFERROR(QUERY(metrics!A2:P,\"select A, E, F, G, J, K, O where B='integration-tier1' order by A desc limit 1\",0),\"no runs yet\")"
+                    },
+                    "effectiveValue": {
+                      "stringValue": "2026-09-07T05:03:46.730Z"
+                    }
+                  },
+                  {
+                    "effectiveValue": {
+                      "numberValue": 1915
+                    }
+                  },
+                  {
+                    "effectiveValue": {
+                      "numberValue": 0
+                    }
+                  },
+                  {
+                    "effectiveValue": {
+                      "numberValue": 146
+                    }
+                  },
+                  {
+                    "effectiveValue": {
+                      "numberValue": 100
+                    }
+                  }
+                ]
+              },
+              {
+                "values": [
+                  {
+                    "userEnteredValue": {
+                      "stringValue": "infrastructure-full"
+                    },
+                    "effectiveValue": {
+                      "stringValue": "infrastructure-full"
+                    }
+                  },
+                  {
+                    "userEnteredValue": {
+                      "formulaValue": "=IFERROR(QUERY(metrics!A2:P,\"select A, E, F, G, J, K, O where B='infrastructure-full' order by A desc limit 1\",0),\"no runs yet\")"
+                    },
+                    "effectiveValue": {
+                      "stringValue": "2026-09-08T04:58:16.649Z"
+                    }
+                  },
+                  {
+                    "effectiveValue": {
+                      "numberValue": 478
+                    }
+                  },
+                  {
+                    "effectiveValue": {
+                      "numberValue": 5
+                    }
+                  },
+                  {
+                    "effectiveValue": {
+                      "numberValue": 0
+                    }
+                  },
+                  {
+                    "effectiveValue": {
+                      "numberValue": 98.96
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "properties": {
+          "sheetId": 1628688994,
+          "title": "chart_data",
+          "index": 3,
+          "sheetType": "GRID",
+          "gridProperties": {
+            "rowCount": 1501,
+            "columnCount": 40,
+            "frozenRowCount": 1
+          }
+        },
+        "data": [
+          {
+            "rowData": [
+              {
+                "values": [
+                  {
+                    "userEnteredValue": {
+                      "stringValue": "unit-coverage — timestamp"
+                    },
+                    "effectiveValue": {
+                      "stringValue": "unit-coverage — timestamp"
+                    }
+                  },
+                  {
+                    "userEnteredValue": {
+                      "stringValue": "pass %"
+                    },
+                    "effectiveValue": {
+                      "stringValue": "pass %"
+                    }
+                  },
+                  {
+                    "userEnteredValue": {
+                      "stringValue": "lines %"
+                    },
+                    "effectiveValue": {
+                      "stringValue": "lines %"
+                    }
+                  },
+                  {
+                    "userEnteredValue": {
+                      "stringValue": "statements %"
+                    },
+                    "effectiveValue": {
+                      "stringValue": "statements %"
+                    }
+                  }
+                ]
+              },
+              {
+                "values": [
+                  {
+                    "userEnteredValue": {
+                      "formulaValue": "=IFERROR(QUERY(metrics!A2:P,\"select A, J, K, L, M, N, I, O where B='unit-coverage' order by A\",0),)"
+                    },
+                    "effectiveValue": {
+                      "stringValue": "2026-07-07T13:42:52Z"
+                    }
+                  },
+                  {
+                    "effectiveValue": {
+                      "numberValue": 99.97
+                    }
+                  }
+                ]
+              },
+              {
+                "values": [
+                  {
+                    "effectiveValue": {
+                      "stringValue": "2026-07-07T13:44:36Z"
+                    }
+                  },
+                  {
+                    "effectiveValue": {
+                      "numberValue": 100
+                    }
+                  },
+                  {
+                    "effectiveValue": {
+                      "numberValue": 15.4
+                    }
+                  },
+                  {
+                    "effectiveValue": {
+                      "numberValue": 15.4
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "limitations": [
+    "Existing old charts remain diagnostic-only",
+    "Visual layout audit outstanding",
+    "No edits to original workbook"
+  ]
+}

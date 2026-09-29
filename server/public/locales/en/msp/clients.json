@@ -20,7 +20,8 @@
       "select": "Select",
       "update": "Update",
       "uploadCsv": "Upload CSV",
-      "view": "View"
+      "view": "View",
+      "next": "Next"
     },
     "states": {
       "active": "Active",
@@ -197,6 +198,9 @@
     "opportunities": "Opportunities",
     "lifecycleStatus": "Lifecycle",
     "lifecycleStatusHelper": "Prospects are available to sales workflows but hidden from operational client lists by default.",
+    "clientSince": "Client since",
+    "clientSinceHelper": "When the relationship started. Leave it empty to use the date this client was added here.",
+    "clientSincePlaceholder": "Date this client was added",
     "title": "Client Details",
     "backToClients": "Back to Clients",
     "openInNewTab": "Open in new tab",
@@ -304,7 +308,13 @@
     "parentClientSelf": "A client cannot be its own parent",
     "parentClientPlaceholder": "No parent client",
     "parentClientClear": "Clear",
-    "parentClientLegacy": "Previously entered as text: {{name}}"
+    "parentClientLegacy": "Previously entered as text: {{name}}",
+    "mergeClient": "Merge",
+    "mergeClientHelp": "Absorb another client into this one as a billing profile",
+    "inboundDomainAutoCreateContacts": "Create contacts for new senders",
+    "inboundDomainAutoCreateHelp": "Mapped domains can optionally create a contact for a trusted new sender. Domains must be unique across clients.",
+    "inboundDomainAutoCreateUpdated": "Sender contact setting updated.",
+    "inboundDomainAutoCreateUpdateFailed": "Could not update sender contact setting."
   },
   "clientCommandCenter": {
     "cards": {
@@ -1296,6 +1306,24 @@
     "loadErrorTitle": "Notes failed to load",
     "loadErrorDescription": "Could not load notes. Please try again."
   },
+  "clientAutopay": {
+    "setupLinkTitle": "Card setup link",
+    "setupLinkFallback": "Copy this link to share it with your client.",
+    "unknownUser": "Unknown user",
+    "changeCard": "Use this card for auto-pay",
+    "title": "Auto-pay · {{profile}}",
+    "active": "Enabled",
+    "authorization": "Authorized by {{user}} on {{date}} ({{source}})",
+    "attestation": "Client has authorized recurring charges",
+    "enable": "Enable auto-pay",
+    "disable": "Disable auto-pay",
+    "copySetupLink": "Copy setup link",
+    "enabled": "Auto-pay enabled",
+    "disabled": "Auto-pay disabled",
+    "linkCopied": "Card setup link copied",
+    "recentAttempts": "Recent attempts",
+    "noAttempts": "No attempts yet"
+  },
   "actions": {
     "cancel": "Cancel",
     "delete": "Delete",
@@ -1477,7 +1505,18 @@
         "unavailable": "Teams meeting creation is not available for this tenant."
       },
       "loadFailed": "Interaction options could not be loaded. Please try again.",
-      "saveFailed": "The interaction could not be saved. Please try again."
+      "saveFailed": "The interaction could not be saved. Please try again.",
+      "schedule": {
+        "addToggle": "Add to schedule",
+        "addHelp": "A schedule entry will be added to your AlgaPSA calendar.",
+        "addHelpOthers": "A schedule entry will be added to the selected users' AlgaPSA calendars.",
+        "assigneesLabel": "Schedule for",
+        "assigneesPlaceholder": "Select users"
+      },
+      "assignedTo": {
+        "label": "Assigned To",
+        "placeholder": "Select user"
+      }
     },
     "feed": {
       "addInteraction": "Add Interaction",
@@ -1498,7 +1537,15 @@
       "allContacts": "All Contacts",
       "allStatuses": "All Statuses",
       "allUsers": "All Users",
-      "columns": { "type": "Type", "title": "Title", "client": "Client", "contact": "Contact", "user": "User", "date": "Date", "status": "Status" },
+      "columns": {
+        "type": "Type",
+        "title": "Title",
+        "client": "Client",
+        "contact": "Contact",
+        "user": "User",
+        "date": "Date",
+        "status": "Status"
+      },
       "empty": "No interactions match these filters.",
       "loading": "Loading interactions…",
       "openClient": "Open client {{name}}",
@@ -1518,6 +1565,14 @@
       "statusPlaceholder": "Status",
       "title": "Recent Interactions",
       "statusesLoadFailed": "Interaction statuses could not be loaded. Please try again."
+    },
+    "callArtifacts": {
+      "sectionTitle": "Call recording and transcript",
+      "viewTranscript": "View transcript",
+      "downloadRecording": "Download recording",
+      "transcriptTitle": "Call transcript",
+      "loading": "Loading transcript…",
+      "loadFailed": "The transcript could not be loaded."
     }
   },
   "clientDrawer": {
@@ -1661,7 +1716,9 @@
     "archived": "\"{{name}}\" archived",
     "deleted": "\"{{name}}\" deleted",
     "restored": "\"{{name}}\" restored",
-    "settings": "Billing settings"
+    "settings": "Billing settings",
+    "mergeHelp": "Already track a site or entity as its own client? Merge it in and it becomes a billing profile here, keeping its invoices and history.",
+    "mergeButton": "Merge a client in"
   },
   "portalBillingProfileAccess": {
     "label": "Billing segments",
@@ -1687,7 +1744,20 @@
     "paymentTerms": "Payment terms",
     "taxExempt": "Tax exempt",
     "taxExemptInherited": "Inheriting from the client ({{value}})",
-    "regionNote": "Tax region is not set here. It follows where the work was delivered — the service, then the contract line’s location, then the client default."
+    "regionNote": "Tax region is not set here. It follows where the work was delivered — the service, then the contract line’s location, then the client default.",
+    "inheritFromClient": "Inherit from client ({{value}})",
+    "paymentMethod": "Payment method",
+    "paymentMethodHint": "Invoices for Check or Bank Transfer do not include an online \"Pay now\" link.",
+    "cardOnFileLabel": "Saved card on file",
+    "cardOnFileHint": "Saved cards are managed by the client in the client portal.",
+    "noCardOnFile": "No card on file",
+    "cardType": {
+      "card": "Card",
+      "bankAccount": "Bank account"
+    },
+    "cardExpiry": ", exp {{month}}/{{year}}",
+    "legacyPaymentTerms": "\"{{value}}\" is not a recognized payment term and was never applied. Saving clears it.",
+    "cardOnFile": "{{type}} ending in {{last4}}{{expiry}}"
   },
   "clientPrepaidBalanceAlertSettings": {
     "title": "Prepaid Balance Alerts",
@@ -1773,7 +1843,9 @@
       "missingField": "Missing required interaction field.",
       "missingFieldNamed": "Missing required interaction field: {{field}}.",
       "referenceMissing": "The selected interaction, client, contact, user, status, or type no longer exists. Please refresh and try again.",
-      "duplicate": "An interaction with these details already exists."
+      "duplicate": "An interaction with these details already exists.",
+      "scheduleAssignDenied": "Permission denied to assign schedule entries to other users.",
+      "scheduleUsersMissing": "One or more assigned users could not be found."
     },
     "interactionType": {
       "notFound": "Interaction type not found or you do not have access to it.",
@@ -1838,7 +1910,84 @@
       "recordNotFound": "That record or billing profile no longer exists.",
       "otherClient": "That billing profile belongs to a different client.",
       "archived": "That billing profile is archived.",
-      "selectionNotThisClient": "One of the selected billing profiles does not belong to this client."
+      "selectionNotThisClient": "One of the selected billing profiles does not belong to this client.",
+      "invalidPaymentTerms": "Choose one of the listed payment terms.",
+      "invalidPaymentMethod": "Choose one of the listed payment methods."
+    },
+    "clientMerge": {
+      "blocked": "This merge cannot be completed.",
+      "signInRequired": "You must be signed in to merge clients.",
+      "sourceNotFound": "The client being merged no longer exists.",
+      "targetNotFound": "The client being merged into no longer exists.",
+      "sameClient": "A client cannot be merged into itself.",
+      "sourceAlreadyMerged": "This client has already been merged into another client.",
+      "targetAlreadyMerged": "The destination client has itself been merged into another client. Merge into that one instead.",
+      "sourceIsTenantDefault": "Your own organisation record cannot be merged into a client.",
+      "parentLinkCycle": "That client is recorded as a child of the one you are merging, so merging this way would invert the hierarchy.",
+      "invalidContractCutover": "One of the cutover dates falls outside its contract term."
+    },
+    "profileContacts": {
+      "duplicateManager": "A billing profile can only have one manager.",
+      "notThisClient": "One of the selected contacts does not belong to this billing profile's client."
     }
+  },
+  "mergeClients": {
+    "title": "Merge a client into this one",
+    "description": "The client you choose becomes a billing profile of the destination client. Its invoices, billing cycles, payment methods and credits stay attached to that profile; its tickets, contacts, assets and contracts move across. This cannot be undone.",
+    "sourceLabel": "Client to merge",
+    "sourcePlaceholder": "Select a client",
+    "targetLabel": "Destination client",
+    "targetPlaceholder": "Select a client",
+    "cannotMergeIntoItself": "A client cannot be merged into itself",
+    "recordedParent": "\"{{source}}\" records \"{{parent}}\" as its parent client.",
+    "useRecordedParent": "Use it",
+    "contactsDescription": "Every contact moves to the destination client. Choose which billing profile each one belongs to, and name the manager of a segment here if you already know who it is. The ticket checkbox is a separate grant: it lets that person see every ticket attributed to their profile in the portal.",
+    "contactColumn": "Contact",
+    "profileColumn": "Billing profile",
+    "managerColumn": "Manager",
+    "seesTicketsColumn": "Sees profile tickets",
+    "noContacts": "This client has no contacts.",
+    "noProfile": "No profile",
+    "contractsDescription": "Moving a contract with its original dates changes no billing period. A cutover ends the contract on the old client and starts a copy on the destination from the date you choose.",
+    "noContracts": "This client has no contracts.",
+    "unnamedContract": "Contract",
+    "openEnded": "open-ended",
+    "keepOriginalDates": "Keep original dates",
+    "cutOver": "Cut over",
+    "cutoverDate": "Cutover date",
+    "pinGrantsLabel": "Keep portal users on their own billing segments",
+    "pinGrantsHelp": "A portal user with no billing-segment restriction currently sees every profile of their client. After the merge that would be every profile of the destination client. Leaving this on records the segments they have today.",
+    "pinGrantsCount": "{{count}} portal user(s) affected",
+    "groupRenames": "Visibility groups renamed to avoid a clash",
+    "previewHeading": "What will move",
+    "profilesHeading": "Billing profiles after the merge",
+    "confirmLabel": "Type \"{{name}}\" to confirm",
+    "loadingPreview": "Working out what would move…",
+    "submit": "Merge client",
+    "merging": "Merging…",
+    "merged": "\"{{source}}\" merged into \"{{target}}\"",
+    "accountingDescription": "These accounting mappings still point at the merged client. Re-pointing them at the destination is suggested, but nothing is changed unless you confirm it — leave a row unticked to re-link it by hand later.",
+    "accountingAlreadyMapped": "The destination client is already mapped for this integration, so this one has to be re-linked by hand.",
+    "accountingApply": "Apply selected",
+    "accountingSkip": "Skip for now",
+    "accountingRemapped": "Accounting mappings re-pointed",
+    "accountingSkipped": "{{count}} mapping(s) could not be re-pointed and need a manual re-link."
+  },
+  "billingProfileContacts": {
+    "title": "Profile contacts",
+    "description": "The people who belong to this billing segment. Naming a manager records who runs it; the ticket checkbox is a separate grant that lets them see every ticket attributed to this profile in the client portal.",
+    "loading": "Loading profile contacts…",
+    "noContacts": "This client has no contacts yet.",
+    "contact": "Contact",
+    "inProfile": "In profile",
+    "manager": "Manager",
+    "seesTickets": "Sees profile tickets",
+    "saved": "Profile contacts saved"
+  },
+  "contactBillingProfiles": {
+    "label": "Billing profiles",
+    "manager": "Manager",
+    "seesTickets": "Sees profile tickets",
+    "editHint": "Edit these on the billing profile, under the client's billing settings."
   }
 }

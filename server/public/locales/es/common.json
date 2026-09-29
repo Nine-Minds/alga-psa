@@ -1,4 +1,7 @@
 {
+  "phone": {
+    "extension": "extensión"
+  },
   "colorPicker": {
     "invalidHexBackground": "Color hexadecimal no válido (p. ej., #FF0000)",
     "invalidHexText": "Color hexadecimal no válido (p. ej., #FFFFFF)",
@@ -163,6 +166,7 @@
     },
     "sso": {
       "signInWithMicrosoft": "Iniciar sesión con Microsoft",
+      "signInWithKeycloak": "Iniciar sesión con Keycloak",
       "signInWithGoogle": "Iniciar sesión con Google",
       "redirecting": "Redirigiendo...",
       "startFailed": "No se pudo iniciar el inicio de sesión SSO. Verifique la configuración del proveedor e inténtelo de nuevo."
@@ -1594,9 +1598,135 @@
     "usedOrders": "Números de orden usados: {{orders}}",
     "noUsedOrders": "Aún no se ha usado ningún número de orden",
     "markClosed": "Marcar como estado cerrado",
-    "setDefault": "Establecer como estado predeterminado para los tickets nuevos"
+    "setDefault": "Establecer como estado predeterminado para los elementos nuevos",
+    "defaultClosedHelp": "Un estado cerrado no puede ser el predeterminado para los elementos nuevos."
   },
   "callLink": {
-    "teamsCall": "Llamar en Microsoft Teams"
+    "teamsCall": "Llamar en Microsoft Teams",
+    "threecxCall": "Llamar mediante 3CX",
+    "threecxDialing": "Marcando desde su extensión de 3CX",
+    "threecxFailed": "La centralita no pudo realizar la llamada"
+  },
+  "editor": {
+    "attachFiles": "Adjuntar archivos",
+    "uploadingFiles": "Subiendo archivos…",
+    "fileUploadFailed": "No se pudo subir el archivo."
+  },
+  "emailPreferences": {
+    "loading": "Cargando preferencias de correo…",
+    "saving": "Guardando preferencias de correo…",
+    "slow": "Esto está tardando más de lo habitual. Espere la confirmación antes de realizar más cambios.",
+    "loadError": "No se pudieron cargar las preferencias guardadas. Reintente para confirmar su configuración.",
+    "saveError": "No se pudo confirmar el guardado. Revise sus preferencias guardadas e inténtelo de nuevo.",
+    "retry": "Reintentar",
+    "disabledByAdmin": "Desactivado por el administrador",
+    "mixed": "Parcialmente activado",
+    "empty": "No hay categorías de notificaciones por correo disponibles."
+  },
+  "listViews": {
+    "defaultView": "Vista predeterminada",
+    "unsavedChanges": "Esta vista tiene cambios sin guardar",
+    "searchPlaceholder": "Buscar vistas",
+    "noMatches": "No hay vistas coincidentes",
+    "sections": {
+      "mine": "Mis vistas",
+      "mineEmpty": "Aún no hay vistas privadas",
+      "shared": "Vistas compartidas",
+      "sharedEmpty": "Aún no hay vistas compartidas"
+    },
+    "labels": {
+      "myDefault": "Mi predeterminada",
+      "sharedByYou": "Compartida por usted"
+    },
+    "visibility": {
+      "private": "Privada",
+      "shared": "Compartida"
+    },
+    "actions": {
+      "delete": "Eliminar",
+      "manage": "Administrar",
+      "setDefault": "Establecer como mi predeterminada",
+      "clearDefault": "Quitar mi predeterminada",
+      "copyLink": "Copiar enlace",
+      "saveChanges": "Guardar cambios",
+      "saveChangesTo": "Guardar cambios en \"{{name}}\"",
+      "saveAsNew": "Guardar como vista nueva…",
+      "discardChanges": "Descartar cambios"
+    },
+    "dialog": {
+      "createTitle": "Guardar como vista nueva",
+      "manageTitle": "Administrar vista",
+      "nameLabel": "Nombre",
+      "nameInvalid": "Introduce un nombre de 1 a {{max}} caracteres.",
+      "visibilityLabel": "Quién puede verla",
+      "privateHint": "Solo usted puede ver esta vista.",
+      "sharedHint": "Todas las personas que pueden abrir esta lista pueden verla y aplicarla.",
+      "sharedDisabledHint": "No tiene permiso para compartir vistas."
+    },
+    "deleteDialog": {
+      "title": "Eliminar vista",
+      "message": "¿Eliminar \"{{name}}\"?",
+      "messageShared": "¿Eliminar \"{{name}}\"? Está compartida, así que desaparecerá para todas las personas que la usan."
+    },
+    "toasts": {
+      "saved": "Se guardó \"{{name}}\"",
+      "updated": "Se actualizó \"{{name}}\"",
+      "deleted": "Vista eliminada",
+      "defaultSet": "Vista predeterminada establecida",
+      "defaultCleared": "Vista predeterminada quitada",
+      "linkCopied": "Enlace copiado",
+      "droppedReferences": "Algunos elementos de \"{{name}}\" ya no existen y se omitieron: {{fields}}"
+    },
+    "errors": {
+      "notFound": "Esta vista es privada o ya no existe.",
+      "unknownList": "Lista desconocida.",
+      "invalidName": "El nombre de una vista debe tener entre 1 y 100 caracteres.",
+      "duplicateName": "Ya tiene una vista llamada \"{{name}}\" en esta lista.",
+      "invalidSettings": "No se pudo guardar la vista: {{detail}}",
+      "invalidVisibility": "La visibilidad debe ser privada o compartida.",
+      "cannotShare": "No tiene permiso para compartir vistas.",
+      "cannotEdit": "No tiene permiso para cambiar esta vista.",
+      "cannotReadList": "No tiene permiso para ver esta lista.",
+      "saveFailed": "No se pudo guardar la vista.",
+      "deleteFailed": "No se pudo eliminar la vista.",
+      "defaultFailed": "No se pudo cambiar su vista predeterminada.",
+      "copyFailed": "No se pudo copiar el enlace."
+    }
+  },
+  "unitOfMeasure": {
+    "labels": {
+      "each": "Unidad",
+      "piece": "Pieza",
+      "box": "Caja",
+      "seat": "Puesto",
+      "license": "Licencia",
+      "device": "Dispositivo",
+      "user": "Usuario",
+      "kit": "Kit",
+      "hour": "Hora",
+      "day": "Día",
+      "week": "Semana",
+      "month": "Mes",
+      "year": "Año",
+      "minute": "Minuto",
+      "gigabyte": "Gigabyte",
+      "terabyte": "Terabyte",
+      "liter": "Litro",
+      "kilogram": "Kilogramo",
+      "meter": "Metro"
+    },
+    "groups": {
+      "time": "Tiempo",
+      "count": "Cantidad",
+      "volume": "Volumen",
+      "mass": "Masa",
+      "length": "Longitud",
+      "other": "Otro",
+      "custom": "Personalizado"
+    },
+    "customOption": "Personalizado…",
+    "customPlaceholder": "Asigne un nombre a esta unidad",
+    "register": "Agregar",
+    "selectPlaceholder": "Seleccione una unidad"
   }
 }

@@ -24,7 +24,7 @@
     "esbuild": "^0.28.1",
     "tsup": "^8.5.1",
     "typescript": "^5.4.0",
-    "vitest": "^4.0.18"
+    "vitest": "^4.1.11"
   },
   "publishConfig": {
     "access": "public"

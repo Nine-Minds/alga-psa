@@ -12,17 +12,27 @@ export interface IUsageRecord extends TenantEntity {
   service_id: string;
   usage_date: ISO8601String;
   quantity: number;
+  comments?: string | null;
   tax_region?: string;
   client_name?: string; // Joined from clients table
   service_name?: string; // Joined from service_catalog table
   contract_line_id?: string | null;
   contract_line_source?: ContractLineSource | null;
   contract_line_unresolved_reason?: ContractLineSelectionReason | null;
+  /**
+   * Optional caller-supplied request identity. A retry that replays the same
+   * request id returns the original record instead of creating a second
+   * consumption event; reusing it with different content is rejected.
+   * Distinct request ids remain separate events even with identical content.
+   */
+  request_id?: string | null;
 }
 
 export interface ICreateUsageRecord extends Pick<IUsageRecord, 'client_id' | 'service_id' | 'quantity' | 'usage_date'> {
   comments?: string;
   contract_line_id?: string | null;
+  /** Replay key. Identical replay returns the original row; changed content is rejected. */
+  request_id?: string | null;
 }
 
 export interface IUpdateUsageRecord extends Partial<ICreateUsageRecord> {

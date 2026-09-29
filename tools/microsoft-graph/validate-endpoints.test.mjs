@@ -43,6 +43,13 @@ test('packaged emulator discovery expands literal segments instead of folding th
   }
 });
 
+test('managed tenant discovery is validated against beta metadata only', () => {
+  assert.deepEqual(discoverPackagedEmulatorRoutes().filter(route =>
+    route.path === '/tenantRelationships/managedTenants/tenants'), [
+    { version: 'beta', method: 'GET', path: '/tenantRelationships/managedTenants/tenants' },
+  ]);
+});
+
 test('an emulator loop that rebinds a route literal fails discovery loudly', () => {
   const current = readFileSync(join(here, '../../packages/emulators/msgraph/src/wire.ts'), 'utf8');
   assert.doesNotThrow(() => assertPackagedLiteralsCurrent(current));

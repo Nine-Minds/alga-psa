@@ -5,25 +5,25 @@ exports.seed = async function (knex) {
     if (!context) return;
 
     const { tenantId, db } = context;
-    const boardId = (boardName) => db.table('boards')
+    const boardId = async (boardName) => (await db.table('boards')
         .where({ board_name: boardName })
         .select('board_id')
-        .first();
-    const categoryId = (categoryName) => db.table('categories')
+        .first())?.board_id ?? null;
+    const categoryId = async (categoryName) => (await db.table('categories')
         .where({ category_name: categoryName })
         .select('category_id')
-        .first();
-    const glindaUserId = db.table('users')
+        .first())?.category_id ?? null;
+    const glindaUserId = (await db.table('users')
         .where({ username: 'glinda' })
         .select('user_id')
-        .first();
+        .first())?.user_id ?? null;
 
-    const categoryRow = ({ categoryName, displayOrder, boardName, parentCategory }) => ({
+    const categoryRow = async ({ categoryName, displayOrder, boardName, parentCategory }) => ({
         tenant: tenantId,
         category_name: categoryName,
         display_order: displayOrder,
-        board_id: boardId(boardName),
-        ...(parentCategory ? { parent_category: categoryId(parentCategory) } : {}),
+        board_id: await boardId(boardName),
+        ...(parentCategory ? { parent_category: await categoryId(parentCategory) } : {}),
         created_by: glindaUserId
     });
 
@@ -49,6 +49,6 @@ exports.seed = async function (knex) {
     ];
 
     await db.table('categories').del();
-    await db.table('categories').insert(parentCategories.map(categoryRow));
-    return db.table('categories').insert(subCategories.map(categoryRow));
+    await db.table('categories').insert(await Promise.all(parentCategories.map(categoryRow)));
+    return db.table('categories').insert(await Promise.all(subCategories.map(categoryRow)));
 };

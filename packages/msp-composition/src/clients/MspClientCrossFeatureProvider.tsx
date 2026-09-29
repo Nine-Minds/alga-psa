@@ -14,6 +14,7 @@ import { getSlaPolicies } from '@alga-psa/sla/actions/slaActions';
 import HourBlocksSection from '@alga-psa/billing/components/hour-blocks/HourBlocksSection';
 import { ContractWizard } from '@alga-psa/billing/components/billing-dashboard/contracts/ContractWizard';
 import { ContractDialog } from '@alga-psa/billing/components/billing-dashboard/contracts/ContractDialog';
+import { ForceModalContext } from '@alga-psa/ui/components/ModalityContext';
 import { SpendByBillingProfileReport } from '@alga-psa/billing/components/billing-dashboard/reports/SpendByBillingProfileReport';
 import { UnresolvedChargeReview } from '@alga-psa/billing/components/billing-dashboard/UnresolvedChargeReview';
 import { getTeamsMeetingCapability } from '@alga-psa/scheduling/actions/appointmentRequestManagementActions';
@@ -129,24 +130,31 @@ export function MspClientCrossFeatureProvider({ children }: { children: ReactNod
 
   const renderContractWizard = useCallback(
     (props: ContractWizardRenderProps) => (
-      <ContractWizard
-        open={props.open}
-        onOpenChange={props.onOpenChange}
-        onComplete={props.onComplete}
-        initialClientId={props.clientId}
-      />
+      // The client Billing tab hosts this in a focus-view Drawer. Pop the wizard
+      // as a real modal so the form gets the full viewport instead of being
+      // squeezed into the drawer panel.
+      <ForceModalContext.Provider value={true}>
+        <ContractWizard
+          open={props.open}
+          onOpenChange={props.onOpenChange}
+          onComplete={props.onComplete}
+          initialClientId={props.clientId}
+        />
+      </ForceModalContext.Provider>
     ),
     []
   );
 
   const renderContractQuickAdd = useCallback(
     (props: ContractQuickAddRenderProps) => (
-      <ContractDialog
-        isOpen={props.open}
-        onOpenChange={props.onOpenChange}
-        onContractSaved={props.onSaved}
-        initialClientId={props.clientId}
-      />
+      <ForceModalContext.Provider value={true}>
+        <ContractDialog
+          isOpen={props.open}
+          onOpenChange={props.onOpenChange}
+          onContractSaved={props.onSaved}
+          initialClientId={props.clientId}
+        />
+      </ForceModalContext.Provider>
     ),
     []
   );
@@ -161,6 +169,11 @@ export function MspClientCrossFeatureProvider({ children }: { children: ReactNod
         },
         type: 'required' as const,
       })),
+      interactionUserId: input.interactionUserId,
+      // The AlgaPSA-calendar assignees ride on the schedule entry, not on the Teams invite.
+      scheduleEntry: input.scheduleAssignedUserIds?.length
+        ? { assignedUserIds: input.scheduleAssignedUserIds }
+        : undefined,
     }),
     []
   );

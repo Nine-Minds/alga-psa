@@ -17,6 +17,8 @@ import { getAllPriorities } from '@alga-psa/reference-data/actions';
 import { getAllUsers } from '@alga-psa/user-composition/actions';
 import { getServices } from '@alga-psa/projects/actions/serviceCatalogActions';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
+import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
+import { useUnsavedChangesGuard } from '../../lib/useUnsavedChangesGuard';
 import { IUserWithRoles } from '@alga-psa/types';
 import { IStatus } from '@alga-psa/types';
 import { IService } from '@alga-psa/types';
@@ -65,6 +67,10 @@ export function TemplateCreationWizard({
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<Record<number, string>>({});
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
+  // Dirty means "the user authored a change" — set only from updateData (the
+  // single funnel every step's edit handlers go through), never from
+  // reference-data loads, validation, or step navigation.
+  const [isDirty, setIsDirty] = useState(false);
 
   const [availableStatuses, setAvailableStatuses] = useState<
     Array<{ status_id: string; name: string; color?: string; is_closed?: boolean }>
@@ -187,10 +193,20 @@ export function TemplateCreationWizard({
     setErrors({});
     setCompletedSteps(new Set());
     setCurrentStep(0);
+    setIsDirty(false);
   };
+
+  const guard = useUnsavedChangesGuard({
+    isDirty,
+    isSubmitting: isLoading,
+    isOpen: open,
+    onClose: () => onOpenChange(false),
+    onDiscard: resetWizard,
+  });
 
   const updateData = (data: Partial<TemplateWizardData>) => {
     setWizardData((prev) => ({ ...prev, ...data }));
+    setIsDirty(true);
     // Clear error for current step when data changes
     setErrors((prev) => ({ ...prev, [currentStep]: '' }));
   };
@@ -376,7 +392,7 @@ export function TemplateCreationWizard({
   return (
     <Dialog
       isOpen={open}
-      onClose={() => onOpenChange(false)}
+      onClose={guard.requestClose}
       title={t('templates.wizard.title', 'Create New Project Template')}
       className="max-w-4xl max-h-[90vh]"
       footer={footer}
@@ -401,6 +417,22 @@ export function TemplateCreationWizard({
           )}
         </div>
       </div>
+      {/* Rendered inside the Dialog so it uses the nested-dialog overlay; its
+          own Escape/X/overlay dismissal maps to "keep editing" and can never
+          cascade into closing the wizard itself. */}
+      <ConfirmationDialog
+        id="template-wizard-discard-confirmation"
+        isOpen={guard.isConfirmingClose}
+        onClose={guard.keepEditing}
+        onConfirm={guard.confirmDiscard}
+        title={t('templates.discardConfirmation.title', 'Discard unsaved template?')}
+        message={t(
+          'templates.discardConfirmation.message',
+          'Your template has unsaved changes. If you leave now, those changes will be lost.'
+        )}
+        cancelLabel={t('templates.discardConfirmation.keepEditing', 'Keep editing')}
+        confirmLabel={t('templates.discardConfirmation.discard', 'Discard template')}
+      />
     </Dialog>
   );
 }

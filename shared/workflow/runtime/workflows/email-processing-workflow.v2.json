@@ -4,7 +4,16 @@
   "name": "Inbound Email Processing",
   "description": "Process inbound emails into tickets or comments.",
   "payloadSchemaRef": "payload.EmailWorkflowPayload.v1",
-  "trigger": { "type": "event", "eventName": "INBOUND_EMAIL_RECEIVED" },
+  "trigger": {
+    "type": "event",
+    "eventName": "INBOUND_EMAIL_RECEIVED",
+    "sourcePayloadSchemaRef": "payload.InboundEmailReceived.v1",
+    "payloadMapping": {
+      "emailData": { "$expr": "event.payload.emailData" },
+      "providerId": { "$expr": "event.payload.providerId" },
+      "tenantId": { "$expr": "event.payload.tenantId" }
+    }
+  },
   "steps": [
     {
       "id": "try-email-processing",

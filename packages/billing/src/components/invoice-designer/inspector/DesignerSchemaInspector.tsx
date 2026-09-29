@@ -14,6 +14,7 @@ import type {
   DesignerInspectorVisibleWhen,
 } from '../schema/inspectorSchema';
 import { TableEditorWidget } from './widgets/TableEditorWidget';
+import { TotalsRowsEditorWidget } from './widgets/TotalsRowsEditorWidget';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { type InvoiceFieldCategory } from '../fields/fieldCatalog';
 import { resolveDesignerDocumentKind } from '../utils/documentKind';
@@ -841,6 +842,9 @@ export const DesignerSchemaInspector: React.FC<Props> = ({ node, nodesById }) =>
             applyNormalized={applyNormalized}
           />
         );
+      }
+      if (field.widget === 'totals-rows-editor') {
+        return <TotalsRowsEditorWidget key={`${node.id}-${field.id}`} node={node} />;
       }
       return null;
     }

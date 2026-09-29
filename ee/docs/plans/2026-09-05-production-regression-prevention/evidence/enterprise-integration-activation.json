@@ -1,0 +1,68 @@
+{
+  "schemaVersion": 1,
+  "observedAt": "2026-09-06",
+  "kind": "local-execution",
+  "revision": "1dbb16306c4f6a6011dd6a316760e6e441eae4f4",
+  "dirty": true,
+  "command": "CI=1 node scripts/run-additional-workspace-tests.mjs enterprise-integration",
+  "status": "passed",
+  "counts": {
+    "passed": 328,
+    "failed": 0,
+    "skipped": 0,
+    "todo": 0,
+    "pending": 0
+  },
+  "selection": {
+    "mode": "full",
+    "filters": [],
+    "allFiles": [
+      "ee/server/src/__tests__/integration/contractSimulator.integration.test.ts",
+      "ee/server/src/__tests__/integration/credential-audit-scope.integration.test.ts",
+      "ee/server/src/__tests__/integration/credentials-associations-expand-migration.integration.test.ts",
+      "ee/server/src/__tests__/integration/credentials-native-source.integration.test.ts",
+      "ee/server/src/__tests__/integration/entraCompletedSyncUserCount.integration.test.ts",
+      "ee/server/src/__tests__/integration/entraDeferredMapping.integration.test.ts",
+      "ee/server/src/__tests__/integration/ext-bundles-finalize-duplicate.route.integration.test.ts",
+      "ee/server/src/__tests__/integration/extension-schedule-cleanup.integration.test.ts",
+      "ee/server/src/__tests__/integration/extension-schedule-remap.integration.test.ts",
+      "ee/server/src/__tests__/integration/extension-scheduled-invocation.handler.integration.test.ts",
+      "ee/server/src/__tests__/integration/extension-schedules.actions.integration.test.ts",
+      "ee/server/src/__tests__/integration/extension-version-immutability.integration.test.ts",
+      "ee/server/src/__tests__/integration/extension-version-list.actions.integration.test.ts",
+      "ee/server/src/__tests__/integration/extensionProxyFlow.test.ts",
+      "ee/server/src/__tests__/integration/hudu-asset-layout-map.integration.test.ts",
+      "ee/server/src/__tests__/integration/hudu-company-mappings.integration.test.ts",
+      "ee/server/src/__tests__/integration/hudu-integrations.migration.integration.test.ts",
+      "ee/server/src/__tests__/integration/hudu-regression.integration.test.ts",
+      "ee/server/src/__tests__/integration/huntressIncidentProcessor.integration.test.ts",
+      "ee/server/src/__tests__/integration/huntressOrgSync.integration.test.ts",
+      "ee/server/src/__tests__/integration/invoicingHostApi.integration.test.ts",
+      "ee/server/src/__tests__/integration/managed-email-domain-validation.integration.test.ts",
+      "ee/server/src/__tests__/integration/mcpOAuthGrants.integration.test.ts",
+      "ee/server/src/__tests__/integration/publish-sdk-duplicate-message.integration.test.ts",
+      "ee/server/src/__tests__/integration/rmmAlertPipeline.integration.test.ts",
+      "ee/server/src/__tests__/integration/schedulerHostApi.integration.test.ts",
+      "ee/server/src/__tests__/integration/scimAudit.integration.test.ts",
+      "ee/server/src/__tests__/integration/scimProvisioning.integration.test.ts",
+      "ee/server/src/__tests__/integration/stripeService.retiredPremiumCleanup.integration.test.ts",
+      "ee/server/src/__tests__/integration/ticket-response-state.integration.test.ts",
+      "ee/server/src/__tests__/integration/workflow-external-schedules.actions.integration.test.ts",
+      "ee/server/src/__tests__/integration/workflow-external-schedules.migration.integration.test.ts"
+    ],
+    "shard": {
+      "index": 1,
+      "total": 1
+    }
+  },
+  "reportSha256": {
+    "collected.json": "f5f82aec4bbca57a2ba23710761a3fb119be660bdfc3a1da7d6b1a1bbf18520c",
+    "collected-tests.json": "ffd1fb7f38e39e24d46f4cd9d65678d8c52c40b02e34269368e9aca98896b38d",
+    "results.json": "92d16c45b4685399f61cfff898b3e2c1093127acafab16e73acefd95612e537a",
+    "evidence.json": "95572861aed03a0b7589f23f9ac25e59ae87d9a972095d570e8594094d144677"
+  },
+  "limits": [
+    "Local dirty-worktree evidence; native candidate CI remains pending.",
+    "Database/action tests may mock auth and provider boundaries; not browser or vendor parity evidence."
+  ]
+}

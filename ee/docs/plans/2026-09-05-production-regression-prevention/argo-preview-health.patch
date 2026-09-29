@@ -1,0 +1,132 @@
+--- a/alga-psa/workflows/composite/alga-psa-build-migrate-deploy.yaml
++++ b/alga-psa/workflows/composite/alga-psa-build-migrate-deploy.yaml
+@@ -339,100 +339,32 @@
+         echo "Active color: $ACTIVE"
+         echo "Target color: $TARGET"
+ 
+-  # Determine active and target color based on live VirtualService
+-  - name: determine-colors
+-    inputs:
+-      parameters:
+-      - name: user-target-color
+-      - name: environment
+-    outputs:
+-      parameters:
+-      - name: active-color
+-        valueFrom:
+-          path: /tmp/active-color
+-      - name: target-color
+-        valueFrom:
+-          path: /tmp/target-color
+-    container:
+-      image: alpine/k8s:1.27.3
+-      command: [sh, -c]
+-      args:
+-      - |
+-        set -euo pipefail
+-        apk add --no-cache jq
+-        USER_COLOR="$(echo "{{inputs.parameters.user-target-color}}" | tr '[:upper:]' '[:lower:]')"
+-        ACTIVE=""
+-        TARGET=""
+-        ENVIRONMENT="{{inputs.parameters.environment}}"
+-        echo "User-specified target color: '${USER_COLOR}' (environment: ${ENVIRONMENT})"
+-
+-        case "$ENVIRONMENT" in
+-          sebastian)
+-            VS_NAME="alga-psa-vs-sebastian" ;;
+-          *)
+-            VS_NAME="alga-psa-vs" ;;
+-        esac
+-
+-        if ! kubectl get virtualservice "$VS_NAME" -n msp >/dev/null 2>&1; then
+-          echo "VirtualService $VS_NAME not found; defaulting active=blue"
+-          ACTIVE=blue
+-        else
+-          VS_JSON="$(kubectl get virtualservice "$VS_NAME" -n msp -o json)"
+-          DEFAULT_HTTP="$(echo "$VS_JSON" | jq -c '.spec.http[] | select((.match|length==0) or (.match==null))' | head -n1)"
+-          if [ -z "$DEFAULT_HTTP" ]; then
+-            echo "No default route found; assuming blue active"
+-            ACTIVE=blue
+-          else
+-            ACTIVE_HOST_LINE="$(echo "$DEFAULT_HTTP" | jq -r '.route[] | [.destination.host, ( .weight // 0 )] | @tsv' | sort -k2,2nr | head -n1 || true)"
+-            if [ -z "$ACTIVE_HOST_LINE" ]; then
+-              echo "Could not parse routes; assuming blue active"
+-              ACTIVE=blue
+-            else
+-              ACTIVE_HOST="$(echo "$ACTIVE_HOST_LINE" | awk '{print $1}')"
+-              if echo "$ACTIVE_HOST" | grep -q "sebastian-green"; then
+-                ACTIVE=green
+-              else
+-                ACTIVE=blue
+-              fi
+-              echo "Detected active color from VS: $ACTIVE (host=$ACTIVE_HOST)"
+-            fi
+-          fi
+-        fi
+-
+-        if [ -n "$USER_COLOR" ]; then
+-          TARGET="$USER_COLOR"
+-        else
+-          if [ "$ACTIVE" = "blue" ]; then TARGET=green; else TARGET=blue; fi
+-        fi
+-
+-        echo "$ACTIVE" > /tmp/active-color
+-        echo "$TARGET" > /tmp/target-color
+-        echo "Active color: $ACTIVE"
+-        echo "Target color: $TARGET"
+-
+   # Preview smoke test using host-based color subdomains
+   - name: preview-smoke-test
+     inputs:
+       parameters:
+       - name: target-color
+     container:
+-      image: curlimages/curl:8.8.0
+-      command: [sh, -c]
++      image: node:22-alpine
++      command: [node, --input-type=module, -e]
++      env:
++      - name: TARGET_COLOR
++        value: "{{inputs.parameters.target-color}}"
+       args:
+       - |
+-        set -e
+-        COLOR="{{inputs.parameters.target-color}}"
+-        echo "Running preview smoke tests against color: ${COLOR} (hosted DNS)"
+-        BASE_URL="https://${COLOR}.algapsa.com"
+-
+-        # Be tolerant of edge TLS; follow redirects
+-        run() { echo ">>> $1"; curl -fsSLk --connect-timeout 10 --max-time 25 --retry 6 --retry-delay 3 "$1" >/dev/null; }
+-
+-        run "$BASE_URL/"
+-        run "$BASE_URL/api/health" || true
+-        run "$BASE_URL/api/version" || true
+-
+-        echo "Preview smoke tests completed for: ${COLOR}"
++        const color = process.env.TARGET_COLOR;
++        if (!['blue', 'green'].includes(color)) throw new Error('Invalid preview color');
++        const base = `https://${color}.algapsa.com`;
++        const root = await fetch(`${base}/`, { signal: AbortSignal.timeout(25000) });
++        if (!root.ok) throw new Error(`Preview root failed: HTTP ${root.status}`);
++        await root.body?.cancel();
++        const health = await fetch(`${base}/api/health`, {
++          redirect: 'error', signal: AbortSignal.timeout(25000),
++        });
++        if (health.status !== 200) throw new Error(`Preview health failed: HTTP ${health.status}`);
++        const body = await health.json();
++        if (body?.status !== 'ok') throw new Error('Preview health did not report ok');
++        console.log(`Preview HTTP health passed for ${color}; business smoke is a separate requirement`);
+ 
+   # Manual approval gate
+   - name: wait-approval
+--- a/alga-psa/workflows/migrate/alga-psa-migrate-workflow.yaml
++++ b/alga-psa/workflows/migrate/alga-psa-migrate-workflow.yaml
+@@ -203,8 +203,6 @@
+     inputs:
+       parameters:
+       - name: deploy-sha
+-    imagePullSecrets:
+-    - name: harbor-credentials
+     container:
+       image: harbor.nineminds.com/nineminds/alga-psa-ee:{{inputs.parameters.deploy-sha}}
+       imagePullPolicy: Always

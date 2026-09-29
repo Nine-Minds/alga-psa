@@ -9,6 +9,7 @@ import type { IInvoiceTemplate } from '@alga-psa/types'; // Keep this for templa
 // Import the new server action
 import { renderTemplateOnServer } from '@alga-psa/billing/actions/invoiceTemplates';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
+import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface TemplateRendererProps {
@@ -78,13 +79,23 @@ export function TemplateRenderer({ template, invoiceData, invoiceId = null, rend
             ? template.template_id
             : null;
 
-        const { html, css } = await renderTemplateOnServer(templateId, processedInvoiceData, {
+        const result = await renderTemplateOnServer(templateId, processedInvoiceData, {
           templateAst: (template as any).templateAst ?? null,
           invoiceId,
         });
 
-        setRenderedHtml(html);
-        setRenderedCss(css);
+        // Expected failures (missing/invalid bindings, template lookup) come
+        // back as action errors carrying the evaluator's diagnostic — show
+        // that instead of the generic Wasm failure message.
+        if (isActionMessageError(result) || isActionPermissionError(result)) {
+          setError(getErrorMessage(result));
+          setRenderedHtml(null);
+          setRenderedCss(null);
+          return;
+        }
+
+        setRenderedHtml(result.html);
+        setRenderedCss(result.css);
 
       } catch (err) {
         console.error("Error rendering invoice template:", err);

@@ -270,12 +270,6 @@ export class EmailSettingsTestContext extends E2ETestContext {
     } catch (error: any) {
       console.log(`     ❌ Fetch failed with error: ${error.message}`);
       
-      // If the server isn't running, return a mock 404 response
-      if (error.code === 'ECONNREFUSED' || error.message.includes('ECONNREFUSED')) {
-        console.log(`     ⚠️ Next.js server not running on localhost:3000`);
-        return new Response('Not Found', { status: 404 });
-      }
-      
       throw error;
     }
   }

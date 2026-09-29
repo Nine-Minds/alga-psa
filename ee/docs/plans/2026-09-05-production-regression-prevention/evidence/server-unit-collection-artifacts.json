@@ -1,0 +1,19 @@
+{
+  "status": "incomplete",
+  "localServerUnitCollectedFiles": 2692,
+  "combinedAccountedFor": 3348,
+  "candidateCount": 3944,
+  "unmatchedCount": 596,
+  "validation": [
+    "Actual Vitest filesOnly collection succeeded with DB access disabled.",
+    "Workflow YAML parsed and extracted Bash step passed bash -n.",
+    "Session 42692 completed with exit 0: 14539 test identities across all 2692 selected files."
+  ],
+  "limits": [
+    "Local assertion collection started with existing default pool settings; committed workflow explicitly isolates per-file workers.",
+    "Native workflow verification is pending.",
+    "Mixed local collection and older native artifacts are not release readiness evidence."
+  ],
+  "localServerUnitCollectedTests": 14539,
+  "localServerUnitFilesRepresentedByTests": 2692
+}

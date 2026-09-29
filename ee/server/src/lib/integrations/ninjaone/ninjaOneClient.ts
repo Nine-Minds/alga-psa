@@ -138,6 +138,19 @@ export class NinjaOneReconnectRequiredError extends Error {
   }
 }
 
+/**
+ * Thrown when organization-device pagination cannot continue safely: a full page
+ * arrived without a usable forward cursor (missing/empty final device id) or the
+ * derived cursor does not advance (repeats a cursor already requested). Callers
+ * must treat this as an incomplete fetch — never as a successful, complete list.
+ */
+export class NinjaOnePaginationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'NinjaOnePaginationError';
+  }
+}
+
 export class NinjaOneClient {
   private tenantId: string;
   private instanceUrl: string;
@@ -604,6 +617,10 @@ export class NinjaOneClient {
     let cursor: string | undefined;
     let pageNumber = 0;
     const pageSize = params?.pageSize || 100;
+    // Every cursor already sent as `after`. A candidate cursor that is missing or
+    // already in this set cannot advance pagination, so requesting again would
+    // either loop or silently re-fetch the same page.
+    const requestedCursors = new Set<string>();
 
     do {
       pageNumber++;
@@ -638,20 +655,64 @@ export class NinjaOneClient {
         hasLinkHeader: !!linkHeader,
       });
 
-      // Extract cursor from Link header
-      cursor = this.extractCursorFromLink(linkHeader);
+      if (pageDevices.length < pageSize) {
+        // Short (or empty) page: normal completion regardless of headers.
+        cursor = undefined;
+        continue;
+      }
 
-      // Safety check: if we got a full page but no cursor, log a warning
-      if (pageDevices.length === pageSize && !cursor) {
-        logger.warn('[NinjaOneClient] Full page received but no pagination cursor - possible data truncation', {
+      // Full page: there MUST be a safe forward cursor, or this fetch is
+      // incomplete and must fail rather than return a truncated list.
+      // Prefer the Link header cursor; fall back to the endpoint's documented
+      // `after` contract (last node id of the previous page) when absent.
+      const linkCursor = this.extractCursorFromLink(linkHeader);
+      let nextCursor: string | undefined;
+      let cursorSource: 'link' | 'lastDeviceId';
+      if (linkCursor) {
+        nextCursor = linkCursor;
+        cursorSource = 'link';
+      } else {
+        const lastId = pageDevices[pageDevices.length - 1]?.id;
+        nextCursor = lastId === undefined || lastId === null ? undefined : String(lastId);
+        cursorSource = 'lastDeviceId';
+      }
+
+      if (!nextCursor) {
+        logger.error('[NinjaOneClient] Full org devices page without a usable pagination cursor - aborting to avoid truncation', {
           tenantId: this.tenantId,
           orgId,
           page: pageNumber,
           devicesInPage: pageDevices.length,
-          totalDevices: devices.length,
-          linkHeader: linkHeader || '(none)',
+          totalDevicesSoFar: devices.length,
+          hasLinkHeader: !!linkHeader,
         });
+        throw new NinjaOnePaginationError(
+          `NinjaOne organization ${orgId} devices page ${pageNumber} was full (${pageDevices.length}/${pageSize}) but provided no usable pagination cursor (no Link header and no final device id); aborting instead of returning a truncated device list`
+        );
       }
+
+      if (requestedCursors.has(nextCursor)) {
+        logger.error('[NinjaOneClient] Org devices pagination cursor did not advance - aborting to avoid request loop', {
+          tenantId: this.tenantId,
+          orgId,
+          page: pageNumber,
+          cursorSource,
+          totalDevicesSoFar: devices.length,
+        });
+        throw new NinjaOnePaginationError(
+          `NinjaOne organization ${orgId} devices pagination produced a non-advancing cursor (source: ${cursorSource}) on page ${pageNumber}; aborting instead of looping or returning a truncated device list`
+        );
+      }
+
+      requestedCursors.add(nextCursor);
+      cursor = nextCursor;
+
+      logger.debug('[NinjaOneClient] Continuing org devices pagination', {
+        tenantId: this.tenantId,
+        orgId,
+        page: pageNumber,
+        cursorSource,
+      });
     } while (cursor);
 
     logger.info('[NinjaOneClient] Finished fetching devices for organization', {

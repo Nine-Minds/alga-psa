@@ -16,6 +16,7 @@ export * from './interfaces/job';
 // Core type definitions (from shared/types)
 // Note: Some types (EmailMessage, EmailProviderConfig) in lib/email.ts are for OUTBOUND email
 export * from './lib/attributes';
+export * from './lib/dateOnly';
 export * from './lib/general';
 export * from './lib/tax';
 export * from './lib/temporal';
@@ -29,6 +30,7 @@ export * from './lib/telemetry';
 export * from './lib/tenancy';
 export * from './lib/onboardingWizard';
 export * from './lib/knowledgeBase';
+export * from './lib/senderActionResult';
 export * from './search';
 export * from './deletion';
 export * from './constants/index';
@@ -45,6 +47,9 @@ export type {
   DnsRecord,
   DnsLookupResult,
   TenantEmailSettings,
+  OutboundMailClass,
+  OutboundEmailSender,
+  OutboundEmailRoute,
   IEmailProvider,
   IEmailProviderManager
 } from './lib/email';
@@ -70,6 +75,8 @@ export type {
   ITaxRateThreshold,
   ITaxHoliday,
   ITaxCalculationResult,
+  ITaxPeriodSegment,
+  ITaxPeriodCalculationResult,
   ITaxRegion,
   IClientTaxRateAssociation,
   TaxSource,

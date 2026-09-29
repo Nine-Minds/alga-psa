@@ -11,7 +11,7 @@
     "@xterm/addon-fit": "0.11.0",
     "@xterm/xterm": "6.0.0",
     "lucide-react": "^0.548.0",
-    "next": "^16.2.11",
+    "next": "^16.3.3",
     "react": "^19.2.4",
     "react-dom": "^19.2.4"
   },
@@ -21,8 +21,10 @@
     "typescript": "^5.7.2"
   },
   "overrides": {
-    "next": "^16.2.11",
+    "next": "^16.3.3",
     "postcss": ">=8.5.23",
-    "sharp": ">=0.35.3"
+    "sharp": "^0.35.4",
+    "baseline-browser-mapping": ">=2.11.0",
+    "nanoid@3": ">=3.3.18"
   }
 }

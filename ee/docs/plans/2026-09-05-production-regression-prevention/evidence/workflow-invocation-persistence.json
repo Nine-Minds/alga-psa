@@ -1,0 +1,22 @@
+{
+  "status": "local_database_verified_native_pending",
+  "database": "workflow_invocation_82cc",
+  "command": "vitest run src/test/integration/workflowInvocationPersistence.integration.test.ts",
+  "result": {
+    "passed": 1,
+    "failed": 0,
+    "skipped": 0
+  },
+  "log": "/tmp/alga-workflow-invocation-db.log",
+  "checks": [
+    "Concurrent inserts allow one row and return 23505 for the competing insert",
+    "Distinct tenant-prefixed key persists independently",
+    "Succeeded input/output survives real DB roundtrip",
+    "Other tenant cannot read, list or update the invocation"
+  ],
+  "remaining": [
+    "Activity-level contention and STARTED/FAILED invocation retry behavior",
+    "Real email handlers and live Temporal execution",
+    "Legacy skip removal requires full behavioral replacement"
+  ]
+}

@@ -665,6 +665,7 @@ describe('msp sso domain actions', () => {
         success: false,
         google: false,
         microsoft: false,
+        keycloak: false,
       });
 
       mockUser = { user_id: 'user-1', user_type: 'internal' };
@@ -673,6 +674,7 @@ describe('msp sso domain actions', () => {
         success: false,
         google: false,
         microsoft: false,
+        keycloak: false,
       });
       expect(hasTenantProviderCredentialsMock).not.toHaveBeenCalled();
     });
@@ -683,6 +685,7 @@ describe('msp sso domain actions', () => {
         success: true,
         google: false,
         microsoft: false,
+        keycloak: false,
       });
     });
 
@@ -692,6 +695,7 @@ describe('msp sso domain actions', () => {
         success: true,
         google: true,
         microsoft: false,
+        keycloak: false,
       });
     });
 
@@ -701,6 +705,7 @@ describe('msp sso domain actions', () => {
         success: false,
         google: false,
         microsoft: false,
+        keycloak: false,
       });
     });
   });

@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-09-08",
+  "classification": "local-behavioral-regression",
+  "ciDiscovery": {
+    "runId": "34226006210",
+    "jobId": "102070296645",
+    "digest": "1419326533",
+    "message": "Add at least one transform operation before saving the pipeline."
+  },
+  "behavior": "An unfinished transform returns a structured preview diagnostic and clearing it restores rendered invoice content.",
+  "validation": {
+    "before": {
+      "passed": 7,
+      "failed": 1,
+      "report": "/tmp/alga-preview-unfinished-red.json"
+    },
+    "after": {
+      "passed": 11,
+      "failed": 0,
+      "files": 4,
+      "report": "/tmp/alga-preview-unfinished-green.json"
+    }
+  },
+  "limits": [
+    "Authentication is stubbed; workspace export, AST validation, evaluation and rendering are real.",
+    "Does not establish the cause or resolution of the separate save-navigation failure.",
+    "Current-source GitHub CI verification remains required."
+  ]
+}

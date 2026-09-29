@@ -43,6 +43,27 @@ const buildAst = (operations: TemplateTransformOperation[]): TemplateAst => ({
 });
 
 describe('evaluateTemplateAst', () => {
+  it.each(['timeEntries', 'ticketGroups', 'ticketPresentationRows'])(
+    'sorts an absent historical %s collection as empty when referenced directly', (sourceBindingId) => {
+      const ast = buildAst([{ id: 'sort-date', type: 'sort', keys: [{ path: 'date', direction: 'desc' }] }]);
+      ast.transforms!.sourceBindingId = sourceBindingId;
+      const result = evaluateTemplateAst(ast, invoiceFixture);
+      expect(result.sourceCollection).toEqual([]);
+      expect(result.output).toEqual([]);
+      expect(result.bindings['lineItems.shaped']).toEqual([]);
+      expect(result.bindings.invoice).toEqual(invoiceFixture);
+    }
+  );
+
+  it.each(['timeEntries', 'ticketGroups', 'ticketPresentationRows'])(
+    'rejects a malformed historical %s collection rather than hiding it', (sourceBindingId) => {
+      const ast = buildAst([{ id: 'sort-date', type: 'sort', keys: [{ path: 'date', direction: 'desc' }] }]);
+      ast.transforms!.sourceBindingId = sourceBindingId;
+      expect(() => evaluateTemplateAst(ast, { ...invoiceFixture, [sourceBindingId]: 'invalid' }))
+        .toThrow(expect.objectContaining({ code: 'INVALID_SOURCE_COLLECTION' }));
+    }
+  );
+
   it('resolves quote party bindings verbatim when aliases are not provided', () => {
     const ast: TemplateAst = {
       kind: 'invoice-template-ast',

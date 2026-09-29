@@ -418,6 +418,7 @@ const ContractLineMapping = {
           'cl.contract_line_id',
           'cl.display_order',
           'cl.custom_rate',
+          'cl.rate_provenance',
           'cl.cadence_owner',
           'cl.created_at',
           'cl.contract_line_name',

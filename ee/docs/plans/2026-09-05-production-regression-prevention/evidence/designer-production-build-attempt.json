@@ -1,0 +1,46 @@
+{
+  "sourceRevision": "bacc825f06",
+  "imageTag": "alga-regression-designer:bacc825f06",
+  "dockerContext": "colima-alga-regression",
+  "sourceContext": "git archive HEAD (committed source)",
+  "buildArgs": {
+    "NEXT_BUILD_MAX_OLD_SPACE_SIZE": "6144",
+    "NEXT_PUBLIC_FORCE_FEATURE_FLAGS": "release-v1-6-feature:true"
+  },
+  "buildStatus": "failed (exec 20762 exit 102): ResourceExhausted / cannot allocate memory during nx build-deps server",
+  "buildLog": "/tmp/alga-designer-production-build.log",
+  "disposableDatabase": "designer_browser_82cc",
+  "databaseRegression": {
+    "suite": "server/src/test/integration/invoiceTicketImmutable.integration.test.ts",
+    "testsPassed": 1,
+    "durationSeconds": 45.15,
+    "log": "/tmp/alga-designer-browser-db-bootstrap.log",
+    "artifacts": "/tmp/alga-designer-browser-invoice-baseline"
+  },
+  "publishedPr": {
+    "number": 3343,
+    "head": "7b170294a755dfebba34cb8bbfc1069b6d8ba8bc",
+    "base": "main",
+    "draft": true,
+    "checkConclusions": {
+      "SUCCESS": 59,
+      "FAILURE": 10,
+      "SKIPPED": 1
+    }
+  },
+  "limitations": [
+    "Build not yet complete",
+    "Browser journey not executed",
+    "Published PR predates local changes"
+  ],
+  "observedTaskGraphIssue": "Dependency build log also runs server:build, before the intended EE application build",
+  "diagnosticGraph": {
+    "session": 86583,
+    "image": "alga-regression-designer-graph:bacc825f06",
+    "log": "/tmp/alga-designer-build-graph-retry.log",
+    "source": "temporary extracted committed source; final application build replaced with graph generation only",
+    "previousAttempt": "6817 exited 1; @mongodb-js/zstd prebuilt download timed out and fallback install script was absent",
+    "status": "completed; before/after graphs verified",
+    "result": "Two suite relocations remove server:build and temporal-workflows:build from dependency plan; unchanged cycle baseline passes"
+  }
+}

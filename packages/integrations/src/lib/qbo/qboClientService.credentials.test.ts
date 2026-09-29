@@ -18,6 +18,34 @@ vi.mock('@alga-psa/core/secrets', () => ({
   }),
 }));
 
+// The token-refresh path persists credentials via upsertStoredQboCredentials,
+// which retires any stale terminal provider-disconnect record before the write.
+// Stub the DB so that no-op retirement lookup never reaches a real database.
+vi.mock('@alga-psa/db', () => ({
+  // Minimal transactional knex: the credential upsert holds its disconnect
+  // serialization lock (a raw advisory-lock statement) inside a transaction.
+  createTenantKnex: async () => ({
+    knex: {
+      fn: { now: () => new Date().toISOString() },
+      raw: async () => ({ rows: [] }),
+      transaction: async (cb: (trx: any) => Promise<any>) =>
+        cb({
+          fn: { now: () => new Date().toISOString() },
+          raw: async () => ({ rows: [] }),
+        }),
+    },
+    tenant: 'tenant-unit-test-1',
+  }),
+  tenantDb: () => ({
+    table: () => ({
+      where: () => ({
+        first: async () => undefined,
+        delete: async () => {},
+      }),
+    }),
+  }),
+}));
+
 // ── axios mock (for token refresh tests) ──────────────────────────────────
 vi.mock('axios', async (importOriginal) => {
   const actual = await importOriginal<typeof import('axios')>();

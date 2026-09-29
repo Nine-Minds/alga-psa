@@ -1,5 +1,7 @@
 import { formatCurrencyFromMinorUnits } from '@alga-psa/core';
+import { SYSTEM_DATE_FORMAT, type CountryDateFormat } from '@alga-psa/core/i18n/countryDateFormat';
 import type { TemplateFieldDisplayFormat, TemplateValueFormat } from '@alga-psa/types';
+import { formatDateValue } from '@alga-psa/ui/lib/i18n/formatDateValue';
 
 type AddressRecord = Record<string, unknown>;
 
@@ -28,9 +30,25 @@ const formatCurrency = (value: number, currencyCode: string, locale?: string) =>
   }
 };
 
-const formatDate = (value: string, locale?: string) => {
-  // Pin UTC so rendered dates don't depend on the server process timezone; the
-  // locale is the recipient's, so dates read the same language as the labels.
+// The numeric shape `toLocaleDateString()` produced before the country decided
+// the order; `formatDateValue` re-assembles these parts in the country's order,
+// separator and digit width.
+const NUMERIC_DATE_OPTIONS: Intl.DateTimeFormatOptions = {
+  year: 'numeric',
+  month: 'numeric',
+  day: 'numeric',
+};
+
+// Shared by field formatting and the AST react-renderer so every surface
+// (designer preview, invoice preview, PDF) formats dates through one code path.
+export const formatTemplateDateValue = (
+  value: string,
+  locale?: string,
+  dateFormat: CountryDateFormat = SYSTEM_DATE_FORMAT
+): string => {
+  // Two inputs, two jobs: the recipient's COUNTRY sets digit order, separator
+  // and clock, their LANGUAGE names any month or weekday. UTC stays pinned so a
+  // rendered date never depends on the server process timezone.
   const dateLocale = locale || FALLBACK_LOCALE;
   const dateOnlyMatch = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
   if (dateOnlyMatch) {
@@ -41,7 +59,9 @@ const formatDate = (value: string, locale?: string) => {
       parsedDateOnly.getUTCMonth() === Number(month) - 1 &&
       parsedDateOnly.getUTCDate() === Number(day);
     if (isValidDateOnly) {
-      return parsedDateOnly.toLocaleDateString(dateLocale, { timeZone: 'UTC' });
+      // Hand the date-only STRING over: formatDateValue treats it as a calendar
+      // date with no timezone and keeps the written day for every viewer.
+      return formatDateValue(value, dateLocale, NUMERIC_DATE_OPTIONS, dateFormat);
     }
   }
 
@@ -49,7 +69,12 @@ const formatDate = (value: string, locale?: string) => {
   if (Number.isNaN(parsed.getTime())) {
     return value;
   }
-  return parsed.toLocaleDateString(dateLocale, { timeZone: 'UTC' });
+  return formatDateValue(
+    parsed,
+    dateLocale,
+    { ...NUMERIC_DATE_OPTIONS, timeZone: 'UTC' },
+    dateFormat
+  );
 };
 
 export const normalizeFieldFormat = (value: unknown): TemplateValueFormat => {
@@ -142,7 +167,8 @@ const formatPrimitiveValue = (
   value: unknown,
   format: TemplateValueFormat,
   currencyCode: string,
-  locale?: string
+  locale?: string,
+  dateFormat?: CountryDateFormat
 ): ResolvedFieldDisplayValue => {
   if (isNullish(value)) {
     return { text: null, multiline: false };
@@ -151,14 +177,14 @@ const formatPrimitiveValue = (
     if (Number.isNaN(value.getTime())) {
       return { text: null, multiline: false };
     }
-    return formatPrimitiveValue(value.toISOString(), format, currencyCode, locale);
+    return formatPrimitiveValue(value.toISOString(), format, currencyCode, locale, dateFormat);
   }
   if (typeof value === 'string') {
     if (value.length === 0) {
       return { text: null, multiline: false };
     }
     if (format === 'date') {
-      return { text: formatDate(value, locale), multiline: false };
+      return { text: formatTemplateDateValue(value, locale, dateFormat), multiline: false };
     }
     if (format === 'number') {
       const asNumber = Number(value);
@@ -180,7 +206,7 @@ const formatPrimitiveValue = (
       return { text: formatCurrency(value, currencyCode, locale), multiline: false };
     }
     if (format === 'date') {
-      return { text: formatDate(String(value), locale), multiline: false };
+      return { text: formatTemplateDateValue(String(value), locale, dateFormat), multiline: false };
     }
     return { text: String(value), multiline: false };
   }
@@ -195,6 +221,8 @@ export const formatTemplateFieldValue = (params: {
   format: unknown;
   currencyCode: string;
   locale?: string;
+  /** The recipient country's date shape; the fixed system default when omitted. */
+  dateFormat?: CountryDateFormat;
   displayFormat?: TemplateFieldDisplayFormat | null;
 }): ResolvedFieldDisplayValue => {
   const normalizedFormat = normalizeFieldFormat(params.format);
@@ -202,5 +230,11 @@ export const formatTemplateFieldValue = (params: {
   if (displayFormat === 'single-line' || displayFormat === 'multiline' || displayFormat === 'raw') {
     return formatAddressValue(params.value, displayFormat);
   }
-  return formatPrimitiveValue(params.value, normalizedFormat, params.currencyCode, params.locale);
+  return formatPrimitiveValue(
+    params.value,
+    normalizedFormat,
+    params.currencyCode,
+    params.locale,
+    params.dateFormat
+  );
 };

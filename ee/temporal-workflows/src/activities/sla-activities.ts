@@ -4,6 +4,7 @@ import { tenantDb, withTenantTransactionRetryReadOnly } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import type {
   IBusinessHoursScheduleWithEntries,
+  SlaPauseReason,
 } from '@alga-psa/sla/types';
 import {
   calculateDeadline,
@@ -297,6 +298,57 @@ export async function completeIfTicketClosed(input: {
       resolutionMet,
       reason: 'closed',
     };
+  });
+
+  return result;
+}
+
+export interface TicketSlaPauseStateResult {
+  paused: boolean;
+  reason: SlaPauseReason | null;
+}
+
+/**
+ * Mirror of the app's shouldSlaBePaused: the ticket pauses its SLA while it
+ * awaits the client (when the tenant enables that) or sits in a status flagged
+ * pauses_sla. The workflow uses this to self-heal a lost resume signal. A
+ * missing ticket reports paused so the sweep never resumes a dead ticket;
+ * completeIfTicketClosed handles that case.
+ */
+export async function getTicketSlaPauseState(input: {
+  tenantId: string;
+  ticketId: string;
+}): Promise<TicketSlaPauseStateResult> {
+  let result: TicketSlaPauseStateResult = { paused: true, reason: null };
+
+  await withTenantTransaction(input.tenantId, async (trx) => {
+    const db = tenantDb(trx, input.tenantId);
+    const ticket = await db.table('tickets')
+      .where({ ticket_id: input.ticketId })
+      .select('status_id', 'response_state')
+      .first();
+    if (!ticket) {
+      return;
+    }
+
+    const settings = await db.table('sla_settings').first('pause_on_awaiting_client');
+    const pauseOnAwaitingClient = settings ? Boolean(settings.pause_on_awaiting_client) : true;
+    if (pauseOnAwaitingClient && ticket.response_state === 'awaiting_client') {
+      result = { paused: true, reason: 'awaiting_client' };
+      return;
+    }
+
+    const statusConfig = ticket.status_id
+      ? await db.table('status_sla_pause_config')
+          .where({ status_id: ticket.status_id })
+          .first('pauses_sla')
+      : null;
+    if (statusConfig?.pauses_sla) {
+      result = { paused: true, reason: 'status_pause' };
+      return;
+    }
+
+    result = { paused: false, reason: null };
   });
 
   return result;

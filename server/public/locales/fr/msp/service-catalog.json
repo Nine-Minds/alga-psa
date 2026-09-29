@@ -31,7 +31,8 @@
       "advancedSettings": "Paramètres avancés",
       "addNew": "Ajouter un nouveau taux de taxe",
       "add": "Ajouter un taux de taxe",
-      "update": "Mettre à jour le taux de taxe"
+      "update": "Mettre à jour le taux de taxe",
+      "cancel": "Annuler"
     },
     "dialog": {
       "fields": {
@@ -39,7 +40,8 @@
         "startDate": "Date de début *",
         "endDate": "Date de fin (facultatif)",
         "region": "Région fiscale *",
-        "percentage": "Pourcentage de taxe *"
+        "percentage": "Pourcentage de taxe *",
+        "active": "Actif"
       },
       "placeholders": {
         "loadingRegions": "Chargement des régions...",
@@ -48,13 +50,43 @@
       },
       "addTitle": "Ajouter un nouveau taux de taxe",
       "editTitle": "Modifier le taux de taxe",
-      "description": "Saisissez les détails du taux de taxe."
+      "description": "Saisissez les détails du taux de taxe.",
+      "activeHint": "Les taux inactifs sont ignorés lors de la taxation des factures.",
+      "regionDescription": "Ce taux s'applique aux factures taxées dans {{region}}."
     },
     "title": "Taux d'imposition",
     "loading": "Chargement des taux de taxe",
     "deleteEntity": {
       "fallback": "ce taux d'imposition",
       "withRegion": "taux de taxe {{regionName}}"
+    },
+    "cap": {
+      "title": "Plafond de taxe",
+      "label": "Plafond de taxe ({{currencyCode}})",
+      "currency": "Devise du taux",
+      "universal": "Toutes les devises de facture",
+      "optional": "Facultatif",
+      "noCap": "Aucun plafond",
+      "clear": "Effacer le plafond de taxe",
+      "hint": "Taxe maximale de ce taux pour chaque calcul. Laissez vide pour ne pas appliquer de plafond. Saisissez 0 pour ne facturer aucune taxe dans les calculs qui utilisent ce plafond.",
+      "scopeTitle": "Application des plafonds de taxe",
+      "scope": "Un calcul régional plafonne la contribution de chaque taux avant addition, et non le total régional. Les calculs par période appliquent le plafond à chaque taux dans chaque segment de dates ; plusieurs segments peuvent dépasser le plafond au total. Une facture peut comporter plusieurs calculs. Ce plafond ne porte pas sur une facture, un client, un projet ou une période entière. Les plafonds de facturation de projet limitent les montants facturables ; les plafonds de taxe limitent la taxe calculée. Les prestataires fiscaux externes utilisent leur propre configuration.",
+      "applicability": "Ce taux s’applique uniquement aux factures en {{currencyCode}}. Il ne sera plus sélectionné pour les autres devises.",
+      "composite": "Ce plafond s’applique à la contribution de ce taux à un calcul régional. Les calculs par composants n’appliquent pas ce plafond.",
+      "legacy": "Devise non précisée · {{amount}} unités minimales",
+      "legacyHelp": "Ce plafond enregistré s’applique actuellement dans les unités minimales de chaque devise de facture. Choisissez une devise et confirmez le montant enregistré ou saisissez un nouveau plafond. Les autres modifications préservent cette valeur ; vous pouvez aussi l’effacer sans choisir de devise.",
+      "resolve": "Utiliser le montant enregistré en unités minimales de {{currencyCode}}",
+      "reenter": "Saisissez à nouveau le plafond dans la nouvelle devise avant d’enregistrer.",
+      "example": "Exemple : {{amount}} ; sans séparateur de milliers.",
+      "errors": {
+        "negative": "Saisissez un plafond de taxe supérieur ou égal à zéro.",
+        "precision": "Le plafond comporte plus de décimales que cette devise ne le permet.",
+        "invalid": "Saisissez un montant avec le séparateur décimal de l’exemple, sans signe, séparateur de milliers ni symbole de devise.",
+        "overflow": "Le plafond dépasse le montant maximal pris en charge.",
+        "currency": "Choisissez une devise prise en charge avant de définir un plafond de taxe.",
+        "reenter": "Saisissez à nouveau le plafond dans la nouvelle devise avant d’enregistrer."
+      },
+      "compositeIndicator": "Calculs régionaux uniquement"
     }
   },
   "taxRateDetail": {
@@ -315,12 +347,17 @@
       "minimumUsage": {
         "placeholder": "0",
         "label": "Seuil d'utilisation minimum",
-        "help": "Utilisation minimale facturable par période (0 pour aucun minimum)",
-        "errorNegative": "L'utilisation minimale ne peut pas être négative"
+        "help": "Plancher appliqué à l'utilisation enregistrée (0 pour aucun minimum). Il ne s'applique que si la période comporte un enregistrement d'utilisation — même un zéro explicite — et ne crée jamais de frais à lui seul.",
+        "errorNegative": "L'utilisation minimale ne peut pas être négative",
+        "labelAdditive": "Minimum par saisie",
+        "labelPeriodTotal": "Minimum par déclaration de période",
+        "helpAdditive": "Plancher appliqué à chaque saisie enregistrée (0 pour aucun minimum). Il ne s'applique que si la période comporte un enregistrement de consommation — même un zéro explicite — et ne crée jamais de facturation à lui seul.",
+        "helpPeriodTotal": "Plancher appliqué une seule fois au décompte déclaré de la période (0 pour aucun minimum). Il ne s'applique que si un décompte est déclaré — même un zéro explicite — et ne crée jamais de facturation à lui seul."
       },
       "enableTieredPricing": "Activer la tarification échelonnée"
     },
     "title": "Configuration basée sur l'utilisation",
+    "recordDrivenNote": "Les services à l'utilisation sont facturés selon l'utilisation enregistrée dans le suivi d'utilisation pour chaque période de service. Une période sans enregistrement d'utilisation ne produit aucun frais : enregistrez l'utilisation (ou un zéro explicite) à chaque période pour facturer ce service.",
     "tiers": {
       "title": "Niveaux de tarification",
       "addTier": "Ajouter un niveau",
@@ -336,6 +373,18 @@
         "upperGreaterThanLower": "La limite supérieure du niveau doit être supérieure à la limite inférieure",
         "rateNegative": "Les tarifs par niveau ne peuvent pas être négatifs"
       }
+    },
+    "measurementMode": {
+      "label": "Comment la consommation est-elle mesurée ?",
+      "additive": {
+        "label": "Enregistrer la consommation au fil de l'eau",
+        "description": "Les saisies datées s'additionnent : des saisies de 10 et 12 facturent 22. Le minimum et les paliers s'appliquent à chaque saisie. La période suivante démarre sans aucune saisie."
+      },
+      "periodTotal": {
+        "label": "Déclarer un décompte pour chaque période",
+        "description": "Un décompte par période de service remplace le précédent : corriger 10 en 12 facture 12, jamais 22. Le minimum et les paliers s'appliquent une seule fois à ce décompte. La période suivante démarre non déclarée — aucun décompte n'est reporté."
+      },
+      "transitionNote": "Le changement de mode prend effet à partir de la prochaine période de service non facturée. Les saisies ou décomptes déjà enregistrés dans une période ouverte doivent d'abord être facturés ou supprimés."
     }
   },
   "rateTiers": {
@@ -396,12 +445,30 @@
         "label": "Alignement du cycle de facturation",
         "placeholder": "Sélectionnez l'alignement",
         "help": "Contrôle la façon dont la couverture d’une période partielle est calculée lorsque les frais récurrents doivent être réduits à une période inférieure à une période de service complète."
+      },
+      "unitRate": {
+        "label": "Tarif unitaire",
+        "placeholder": "0,00",
+        "help": "Tarif facturé pour chaque poste/unité à chaque période de service."
       }
     },
     "options": {
       "start": "Début du cycle de facturation",
       "end": "Fin du cycle de facturation",
       "prorated": "Couverture proportionnelle"
+    },
+    "pricingBasis": {
+      "label": "Comment ce service est-il tarifé ?",
+      "bundle": {
+        "label": "Prix forfaitaire",
+        "description": "C'est le total fixe de la ligne de contrat qui est facturé. Les quantités de ce service ne font que répartir une part de ce total pour le reporting — ce ne sont pas des postes facturables et les modifier ne change pas le montant facturé.",
+        "allocationNote": "Quantité de répartition : {{quantity}} — sert à répartir le total forfaitaire pour le reporting, non facturée comme des postes."
+      },
+      "unit": {
+        "label": "Postes/unités récurrents",
+        "description": "Facture quantité × tarif unitaire à chaque période, sans qu'aucun total de ligne ne prime. La même quantité et le même tarif sont de nouveau facturés la période suivante jusqu'à ce que vous planifiiez un changement. Une quantité de zéro facture zéro.",
+        "summary": "{{quantity}} × {{rate}} (postes récurrents) = {{total}} par période"
+      }
     }
   },
   "bucketConfig": {

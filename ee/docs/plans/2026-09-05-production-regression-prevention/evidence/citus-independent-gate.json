@@ -1,0 +1,25 @@
+{
+  "scope": "Independent CI verification of Citus runtime and tenant database execution",
+  "baseRevision": "ee72113f8e",
+  "workingTreeDirty": true,
+  "implementation": [
+    "scripts/verify-citus-execution.mjs",
+    ".github/workflows/citus-migration-smoke.yml"
+  ],
+  "requirements": {
+    "citus-runtime": "Consumer-owned floor of invoice immutability and workflow invocation persistence files",
+    "temporal-database": "Consumer-owned six-file floor plus tracked Temporal database candidates"
+  },
+  "verification": {
+    "command": "node --test scripts/tests/citus-execution.test.mjs scripts/tests/workspace-db-execution.test.mjs",
+    "workflowLint": "actionlint .github/workflows/citus-migration-smoke.yml",
+    "artifact": "/tmp/alga-citus-independent-gate.log",
+    "sha256": "f9fe28e889f8b6f9697ec216613854bea0ea693167cd1d003eeeff0a94b50bfb"
+  },
+  "limitations": [
+    "CLI fixture reports exercise gate behavior, not database operations.",
+    "Workflow retains path triggers; this is not a globally required check for every PR.",
+    "Native CI execution and effective branch protection are unverified.",
+    "Single-node runtime coverage does not prove supported-release or multi-node upgrades."
+  ]
+}

@@ -1,0 +1,494 @@
+import React from "react";
+import { Text } from "react-native";
+import { act, create, type ReactTestRenderer } from "react-test-renderer";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+const mockUseTicketData = vi.fn();
+
+function getInitials(name?: string | null) {
+  const value = name?.trim() ?? "";
+  if (!value) return "?";
+  const parts = value.split(/\s+/);
+  if (parts.length === 1) return parts[0][0]?.toUpperCase() ?? "?";
+  return `${parts[0][0] ?? ""}${parts[parts.length - 1][0] ?? ""}`.toUpperCase();
+}
+
+vi.mock("react-i18next", () => ({
+  useTranslation: () => ({
+    t: (key: string) => key,
+  }),
+}));
+
+vi.mock("../network/useNetworkStatus", () => ({
+  useNetworkStatus: () => ({}),
+}));
+
+
+vi.mock("../features/timer/TimerContext", () => ({
+  useTimer: () => ({
+    status: "idle",
+    session: null,
+    offsetMs: 0,
+    starting: false,
+    defaultService: null,
+    lastStopped: null,
+    client: null,
+    apiKey: null,
+    refresh: async () => undefined,
+    start: async () => false,
+    openStopModal: () => undefined,
+  }),
+  useTimerElapsedMs: () => null,
+}));
+
+vi.mock("../network/isOffline", () => ({
+  isOffline: () => false,
+}));
+
+vi.mock("../ui/toast/ToastProvider", () => ({
+  useToast: () => ({
+    showToast: () => undefined,
+  }),
+}));
+
+vi.mock("../ui/formatters/dateTime", () => ({
+  formatDateTimeWithRelative: () => "just now",
+}));
+
+vi.mock("../ui/components/Badge", () => ({
+  Badge: (props: Record<string, unknown>) => React.createElement("MockBadge", props),
+}));
+
+function MockAvatar(props: Record<string, unknown>) {
+  return React.createElement(
+    "span",
+    props,
+    props.imageUri ? null : React.createElement(Text, null, getInitials(props.name as string | null | undefined)),
+  );
+}
+vi.mock("../ui/components/Avatar", () => ({
+  Avatar: MockAvatar,
+}));
+
+vi.mock("../features/ticketDetail/hooks/useTicketData", () => ({
+  useTicketData: (...args: unknown[]) => mockUseTicketData(...args),
+}));
+
+vi.mock("../features/ticketDetail/hooks/useCommentDraft", () => ({
+  useCommentDraft: () => ({
+    draftLoaded: true,
+    submitCommentPayload: vi.fn(),
+    setCommentDraft: vi.fn(),
+    setCommentDraftPlainText: vi.fn(),
+    commentDraft: "",
+    commentDraftPlainText: "",
+    commentIsInternal: false,
+    setCommentIsInternal: vi.fn(),
+    sendComment: vi.fn(),
+    commentSending: false,
+    commentSendError: null,
+    commentEditorRef: { current: null },
+    commentsVisibleCount: 20,
+    setCommentsVisibleCount: vi.fn(),
+  }),
+}));
+
+vi.mock("../features/ticketDetail/hooks/useDescriptionEditor", () => ({
+  useDescriptionEditor: () => ({
+    persistDescriptionContent: vi.fn(),
+    startDescriptionEditing: vi.fn(),
+    setDescriptionDraft: vi.fn(),
+    setDescriptionPlainText: vi.fn(),
+    descriptionEditing: false,
+    descriptionDraft: "",
+    descriptionPlainText: "",
+    descriptionSaving: false,
+    descriptionError: null,
+    descriptionEditorRef: { current: null },
+    cancelDescriptionEditing: vi.fn(),
+    saveDescription: vi.fn(),
+  }),
+}));
+
+vi.mock("../features/ticketDetail/hooks/useTicketStatus", () => ({
+  useTicketStatus: () => ({
+    pendingStatusId: null,
+    statusOptions: [],
+    openStatusPicker: vi.fn(),
+    statusPickerOpen: false,
+    statusOptionsLoading: false,
+    statusOptionsError: null,
+    statusUpdating: false,
+    statusUpdateError: null,
+    submitStatus: vi.fn(),
+    setStatusPickerOpen: vi.fn(),
+  }),
+}));
+
+vi.mock("../features/ticketDetail/hooks/useTicketPriority", () => ({
+  useTicketPriority: () => ({
+    openPriorityPicker: vi.fn(),
+    priorityPickerOpen: false,
+    priorityOptionsLoading: false,
+    priorityOptionsError: null,
+    priorityOptions: [],
+    priorityUpdating: false,
+    priorityUpdateError: null,
+    submitPriority: vi.fn(),
+    setPriorityPickerOpen: vi.fn(),
+  }),
+}));
+
+vi.mock("../features/ticketDetail/hooks/useTicketDueDate", () => ({
+  useTicketDueDate: () => ({
+    setDueDateDraft: vi.fn(),
+    dueDateOpen: false,
+    dueDateUpdating: false,
+    dueDateError: null,
+    submitDueDateIso: vi.fn(),
+    setDueDateInDays: vi.fn(),
+    setDueDateOpen: vi.fn(),
+  }),
+}));
+
+vi.mock("../features/ticketDetail/hooks/useTicketWatch", () => ({
+  useTicketWatch: () => ({
+    watchUpdating: false,
+    toggleWatch: vi.fn(),
+    watchError: null,
+  }),
+}));
+
+vi.mock("../features/ticketDetail/hooks/useTimeEntry", () => ({
+  useTimeEntry: () => ({
+    openTimeEntryModal: vi.fn(),
+    timeEntryOpen: false,
+    timeEntryDate: "",
+    setTimeEntryDate: vi.fn(),
+    timeEntryStartTime: "",
+    setTimeEntryStartTime: vi.fn(),
+    timeEntryEndTime: "",
+    setTimeEntryEndTime: vi.fn(),
+    timeEntryNotes: "",
+    setTimeEntryNotes: vi.fn(),
+    timeEntryServiceId: null,
+    setTimeEntryServiceId: vi.fn(),
+    timeEntryUpdating: false,
+    timeEntryError: null,
+    setTimeEntryOpen: vi.fn(),
+    submitTimeEntry: vi.fn(),
+  }),
+}));
+
+vi.mock("../features/ticketDetail/hooks/useTicketAssignment", () => ({
+  useTicketAssignment: () => ({
+    assignmentUpdating: false,
+    assignmentAction: null,
+    assignToMe: vi.fn(),
+    openAgentPicker: vi.fn(),
+    assignmentError: null,
+    agentPickerOpen: false,
+    assignToUser: vi.fn(),
+    unassign: vi.fn(),
+    closeAgentPicker: vi.fn(),
+  }),
+}));
+
+vi.mock("../features/ticketDetail/hooks/useTicketTitle", () => ({
+  useTicketTitle: () => ({
+    titleEditing: false,
+    startTitleEditing: vi.fn(),
+  }),
+}));
+
+vi.mock("../features/ticketDetail/hooks/useTicketQa", () => ({
+  useTicketQa: () => ({
+    qaStatus: null,
+    handleRichTextLinkPress: vi.fn(),
+    qaAutoPressLink: false,
+  }),
+}));
+
+vi.mock("../features/ticketDetail/components/ActionChip", () => ({
+  ActionChip: (props: Record<string, unknown>) => React.createElement("MockActionChip", props),
+}));
+
+vi.mock("../features/ticketDetail/components/MoreActionsSheet", () => ({
+  MoreActionsSheet: (props: Record<string, unknown>) => React.createElement("MockMoreActionsSheet", props),
+}));
+
+vi.mock("../features/ticketDetail/components/DueDateModal", () => ({
+  DueDateModal: (props: Record<string, unknown>) => React.createElement("MockDueDateModal", props),
+}));
+
+vi.mock("../features/ticketDetail/components/TimeEntryModal", () => ({
+  TimeEntryModal: (props: Record<string, unknown>) => React.createElement("MockTimeEntryModal", props),
+}));
+
+vi.mock("../features/ticketDetail/components/PriorityPickerModal", () => ({
+  PriorityPickerModal: (props: Record<string, unknown>) => React.createElement("MockPriorityPickerModal", props),
+}));
+
+vi.mock("../features/ticketDetail/components/StatusPickerModal", () => ({
+  StatusPickerModal: (props: Record<string, unknown>) => React.createElement("MockStatusPickerModal", props),
+}));
+
+vi.mock("../features/ticketDetail/components/AgentPickerModal", () => ({
+  AgentPickerModal: (props: Record<string, unknown>) => React.createElement("MockAgentPickerModal", props),
+}));
+
+vi.mock("../features/ticketDetail/components/CommentComposer", () => ({
+  CommentComposer: (props: Record<string, unknown>) => React.createElement("MockCommentComposer", props),
+}));
+
+vi.mock("../features/ticketDetail/components/CommentsSection", () => ({
+  CommentsSection: (props: Record<string, unknown>) => React.createElement("MockCommentsSection", props),
+}));
+
+vi.mock("../features/ticketDetail/components/DescriptionSection", () => ({
+  DescriptionSection: (props: Record<string, unknown>) => React.createElement("MockDescriptionSection", props),
+}));
+
+vi.mock("../features/ticketDetail/components/DocumentsSection", () => ({
+  DocumentsSection: (props: Record<string, unknown>) => React.createElement("MockDocumentsSection", props),
+}));
+
+vi.mock("../features/ticketDetail/components/MaterialsSection", () => ({
+  MaterialsSection: (props: Record<string, unknown>) => React.createElement("MockMaterialsSection", props),
+}));
+vi.mock("../features/ticketDetail/components/AssetsSection", () => ({
+  AssetsSection: (props: Record<string, unknown>) => React.createElement("MockAssetsSection", props),
+}));
+
+vi.mock("../features/ticketDetail/components/TimeEntriesSection", () => ({
+  TimeEntriesSection: (props: Record<string, unknown>) => React.createElement("MockTimeEntriesSection", props),
+}));
+
+vi.mock("../storage/secureStorage", () => ({
+  secureStorage: {
+    getItem: async () => null,
+    setItem: async () => undefined,
+    deleteItem: async () => undefined,
+  },
+  getSecureJson: async () => null,
+  setSecureJson: async () => undefined,
+}));
+
+vi.mock("../config/appConfig", () => ({
+  getAppConfig: () => ({ ok: true, baseUrl: "https://example.com" }),
+}));
+
+vi.mock("../auth/AuthContext", () => ({
+  useAuth: () => ({ session: null, refreshSession: () => undefined }),
+}));
+
+vi.mock("../api", () => ({
+  createApiClient: vi.fn(),
+}));
+
+vi.mock("../api/users", () => ({
+  listUsers: vi.fn(),
+  getUserDisplayName: (u: Record<string, unknown>) => u.first_name ?? u.username ?? "",
+}));
+
+vi.mock("../device/clientMetadata", () => ({
+  getClientMetadataHeaders: async () => ({}),
+}));
+
+vi.mock("../cache/ticketsCache", () => ({
+  getCachedTicketDetail: () => null,
+  invalidateTicketsListCache: () => undefined,
+  setCachedTicketDetail: () => undefined,
+}));
+
+vi.mock("../features/ticketDetail/hooks/useTicketContact", () => ({
+  useTicketContact: () => ({
+    contactUpdating: false,
+    contactError: null,
+    contactPickerOpen: false,
+    updateContact: vi.fn(),
+    setContactPickerOpen: vi.fn(),
+  }),
+}));
+
+vi.mock("../features/ticketDetail/components/ContactPickerModal", () => ({
+  ContactPickerModal: (props: Record<string, unknown>) => React.createElement("MockContactPickerModal", props),
+}));
+
+vi.mock("../features/ticketDetail/hooks/useTicketTags", () => ({
+  useTicketTags: () => ({
+    tags: [],
+    tagsLoading: false,
+    tagsHidden: false,
+    tagsError: null,
+    tagUpdating: false,
+    tagActionError: null,
+    tagPickerOpen: false,
+    fetchTags: vi.fn(),
+    addTag: vi.fn(),
+    removeTag: vi.fn(),
+    selectTag: vi.fn(),
+    openTagPicker: vi.fn(),
+    closeTagPicker: vi.fn(),
+  }),
+}));
+
+vi.mock("../features/ticketDetail/components/TagsSection", () => ({
+  TagsSection: (props: Record<string, unknown>) => React.createElement("MockTagsSection", props),
+}));
+
+vi.mock("../features/ticketDetail/components/TagPickerModal", () => ({
+  TagPickerModal: (props: Record<string, unknown>) => React.createElement("MockTagPickerModal", props),
+}));
+
+vi.mock("../features/ticketDetail/components/KeyValue", () => ({
+  KeyValue: (props: Record<string, unknown>) =>
+    React.createElement("MockKeyValue", null, props.value as React.ReactNode, props.children as React.ReactNode),
+}));
+
+const placeCallMock = vi.fn();
+const resyncMock = vi.fn();
+vi.mock("../features/interactions/hooks/usePlaceCall", () => ({ usePlaceCall: () => placeCallMock }));
+vi.mock("../features/interactions/components/CallPromptHost", () => ({
+  CallPromptHost: (props: Record<string, unknown>) => React.createElement("MockCallPromptHost", props),
+}));
+vi.mock("../features/ticketDetail/components/CallsEmailsSection", () => ({
+  CallsEmailsSection: (props: Record<string, unknown>) => React.createElement("MockCallsEmailsSection", props),
+}));
+vi.mock("../notifications/reminderSync", () => ({ resyncScheduleReminders: (...args: unknown[]) => resyncMock(...args) }));
+
+import { TicketDetailBody } from "./TicketDetailScreen";
+
+function render(node: React.ReactElement): ReactTestRenderer {
+  let renderer: ReactTestRenderer | null = null;
+  act(() => {
+    renderer = create(node);
+  });
+  if (!renderer) throw new Error("Renderer was not created");
+  return renderer;
+}
+
+function makeTicket(overrides: Record<string, unknown> = {}) {
+  return {
+    ticket_id: "ticket-1",
+    ticket_number: "T-1",
+    title: "Example ticket",
+    status_id: "status-1",
+    status_name: "Open",
+    status_is_closed: false,
+    priority_id: "priority-1",
+    priority_name: "High",
+    client_name: "Acme Industries",
+    client_id: "client-1",
+    contact_name: "Casey Jones",
+    contact_name_id: "contact-1",
+    contact_email: null,
+    contact_phone: "+15550100",
+    client_email: null,
+    client_phone: "+15550200",
+    attributes: {},
+    entered_at: "2026-03-26T00:00:00.000Z",
+    updated_at: "2026-03-26T00:00:00.000Z",
+    closed_at: null,
+    assigned_to: null,
+    assigned_to_name: null,
+    contact_avatar_url: null,
+    client_logo_url: null,
+    ...overrides,
+  };
+}
+
+function renderScreen(ticketOverrides: Record<string, unknown> = {}) {
+  mockUseTicketData.mockReturnValue({
+    ticket: makeTicket(ticketOverrides),
+    initialLoading: false,
+    error: null,
+    comments: [],
+    commentsError: null,
+    refreshing: false,
+    refresh: vi.fn(),
+    fetchTicket: vi.fn(),
+    fetchComments: vi.fn(),
+    setComments: vi.fn(),
+    setTicket: vi.fn(),
+  });
+
+  return render(
+    React.createElement(TicketDetailBody, {
+      ticketId: "ticket-1",
+      config: { ok: true, env: "dev" as const, baseUrl: "https://example.com" },
+      session: { accessToken: "api-key-1", tenantId: "tenant-1", user: { id: "user-1" } } as any,
+      refreshSession: vi.fn(),
+    }),
+  );
+}
+
+function expandDetails(renderer: ReactTestRenderer): void {
+  const details = renderer.root.find((node) => node.props.accessibilityLabel === "detail.details");
+  const toggle = details.find((node) => (node.type as string) === "Pressable");
+  act(() => {
+    toggle.props.onPress();
+  });
+}
+
+const byTestId = (renderer: ReactTestRenderer, testID: string) => renderer.root.find((n) => n.props?.testID === testID);
+
+describe("TicketDetailScreen call prompt", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("dials the contact through the shared call flow, attributed to the contact, client, and ticket", () => {
+    const renderer = renderScreen();
+    expandDetails(renderer);
+
+    act(() => byTestId(renderer, "ticket-detail-call-contact").props.onPress());
+
+    expect(placeCallMock).toHaveBeenCalledWith({
+      origin: { kind: "ticket", id: "ticket-1" },
+      phone: "+15550100",
+      name: "Casey Jones",
+      contactId: "contact-1",
+      clientId: "client-1",
+      ticketId: "ticket-1",
+    });
+  });
+
+  it("dials the client's number without a contact attribution", () => {
+    const renderer = renderScreen();
+    expandDetails(renderer);
+
+    act(() => byTestId(renderer, "ticket-detail-call-client").props.onPress());
+
+    expect(placeCallMock).toHaveBeenCalledWith({
+      origin: { kind: "ticket", id: "ticket-1" },
+      phone: "+15550200",
+      name: "Acme Industries",
+      contactId: null,
+      clientId: "client-1",
+      ticketId: "ticket-1",
+    });
+  });
+
+  it("hides the call links when the ticket has no numbers", () => {
+    const renderer = renderScreen({ contact_phone: null, client_phone: "   " });
+    expandDetails(renderer);
+
+    expect(renderer.root.findAll((n) => n.props?.testID === "ticket-detail-call-contact")).toHaveLength(0);
+    expect(renderer.root.findAll((n) => n.props?.testID === "ticket-detail-call-client")).toHaveLength(0);
+  });
+
+  it("hosts the prompt for this ticket and refreshes calls & emails once the call is logged", () => {
+    const renderer = renderScreen();
+
+    const host = renderer.root.find((n) => String(n.type) === "MockCallPromptHost");
+    expect(host.props).toMatchObject({ origin: { kind: "ticket", id: "ticket-1" }, apiKey: "api-key-1", userId: "user-1" });
+    const section = () => renderer.root.find((n) => String(n.type) === "MockCallsEmailsSection");
+    expect(section().props.reloadKey).toBe(0);
+
+    act(() => host.props.onLogged());
+
+    expect(section().props.reloadKey).toBe(1);
+    expect(resyncMock).toHaveBeenCalledWith(expect.objectContaining({ accessToken: "api-key-1", userId: "user-1" }));
+  });
+});

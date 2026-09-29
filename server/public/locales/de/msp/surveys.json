@@ -265,7 +265,8 @@
         "technician": "Techniker",
         "ticket": "Ticket",
         "rating": "Bewertung",
-        "comment": "Kommentar"
+        "comment": "Kommentar",
+        "project": "Projekt"
       },
       "fallbacks": {
         "unknown": "Unbekannt",
@@ -312,7 +313,8 @@
         "technician": "Techniker",
         "rating": "Bewertung",
         "comment": "Kommentar",
-        "ticket": "Ticket"
+        "ticket": "Ticket",
+        "subject": "Ticket / Projekt"
       },
       "fallbacks": {
         "unknownClient": "Unbekannter Kunde",
@@ -342,7 +344,8 @@
         "unknownClient": "Unbekannter Kunde",
         "ticket": "Ticket {{ticket}}",
         "noComment": "Kein Kommentar hinterlassen.",
-        "assignedTo": "Zugewiesen an: {{name}}"
+        "assignedTo": "Zugewiesen an: {{name}}",
+        "project": "Projekt {{project}}"
       }
     }
   },
@@ -439,7 +442,8 @@
       "agent": "Techniker",
       "technician": "Techniker",
       "submitted": "Eingereicht",
-      "comment": "Kommentar"
+      "comment": "Kommentar",
+      "subject": "Ticket / Projekt"
     },
     "metrics": {
       "averageRating": "Durchschnittliche Bewertung",

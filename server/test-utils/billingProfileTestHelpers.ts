@@ -140,10 +140,11 @@ export async function ensureUsdServicePrice(
       service_id: serviceId,
       currency_code: 'USD',
       rate: rateCents,
+      effective_date: '1970-01-01',
       created_at: ctx.db.fn.now(),
       updated_at: ctx.db.fn.now(),
     })
-    .onConflict(['tenant', 'service_id', 'currency_code'])
+    .onConflict(['tenant', 'service_id', 'currency_code', 'effective_date'])
     .merge({ rate: rateCents, updated_at: ctx.db.fn.now() });
 }
 

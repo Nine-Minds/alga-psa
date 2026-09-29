@@ -1,12 +1,8 @@
 name: Mobile checks
 
 on:
-  pull_request:
-  push:
-    branches:
-      - main
-      - master
-      - develop
+  workflow_call:
+  workflow_dispatch:
 
 jobs:
   mobile:
@@ -55,11 +51,37 @@ jobs:
         working-directory: ee/mobile
         run: npm ci --include=dev
 
+      - name: Record collection source
+        run: |
+          mkdir -p test-results/mobile
+          node --input-type=module -e 'import {writeFileSync} from "node:fs"; import {testRevision} from "./scripts/lib/test-revision.mjs"; writeFileSync("test-results/mobile/source-before.json", JSON.stringify(testRevision(process.cwd())));'
+
       - name: Test
         working-directory: ee/mobile
-        run: npm run test
+        run: |
+          npm run generate:ticket-editor
+          mkdir -p ../../test-results/mobile
+          npx vitest list --filesOnly --json=../../test-results/mobile/collected.json
+          npx vitest list --json=../../test-results/mobile/collected-tests.json
+          node -e 'for (const file of ["collected.json", "collected-tests.json"]) { const entries = require("../../test-results/mobile/" + file); if (!Array.isArray(entries) || entries.length === 0) throw new Error("Empty mandatory mobile collection: " + file); }'
+          npm run test -- --reporter=default --reporter=json --outputFile=../../test-results/mobile/results.json
         env:
           NODE_OPTIONS: '--max-old-space-size=4096'
+
+      - name: Record final collection source
+        if: always()
+        run: |
+          mkdir -p test-results/mobile
+          node --input-type=module -e 'import {writeFileSync} from "node:fs"; import {testRevision} from "./scripts/lib/test-revision.mjs"; writeFileSync("test-results/mobile/source-after.json", JSON.stringify(testRevision(process.cwd())));'
+
+      - name: Preserve mobile collection and execution reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mobile-execution
+          path: test-results/mobile/
+          if-no-files-found: error
+          retention-days: 30
 
   mobile-audit:
     name: Mobile dependency audit (report)

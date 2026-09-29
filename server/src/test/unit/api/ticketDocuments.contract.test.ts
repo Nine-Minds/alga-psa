@@ -12,6 +12,11 @@ function readTicketDocumentsRouteSource(): string {
   return fs.readFileSync(filePath, 'utf8');
 }
 
+function readTicketDocumentVariantRouteSource(variant: 'thumbnail' | 'preview'): string {
+  const filePath = path.resolve(__dirname, `../../../app/api/v1/tickets/[id]/documents/[documentId]/${variant}/route.ts`);
+  return fs.readFileSync(filePath, 'utf8');
+}
+
 function readTicketDocumentByIdRouteSource(): string {
   const filePath = path.resolve(__dirname, '../../../app/api/v1/tickets/[id]/documents/[documentId]/route.ts');
   return fs.readFileSync(filePath, 'utf8');
@@ -53,6 +58,23 @@ describe('Ticket documents API contract', () => {
 
     expect(source).toContain('DELETE /api/v1/tickets/{id}/documents/{documentId}');
     expect(source).toContain('export const DELETE = controller.deleteDocument();');
+  });
+
+  it('T066: thumbnail and preview routes delegate GET to controller.downloadDocumentVariant', () => {
+    for (const variant of ['thumbnail', 'preview'] as const) {
+      const source = readTicketDocumentVariantRouteSource(variant);
+      expect(source).toContain(`GET /api/v1/tickets/{id}/documents/{documentId}/${variant}`);
+      expect(source).toContain(`export const GET = controller.downloadDocumentVariant('${variant}');`);
+    }
+  });
+
+  it('T067: uploads persist generated previews and variants are served from the ticket association', () => {
+    const source = readTicketServiceSource();
+
+    expect(source).toContain('await this.persistDocumentPreviews(knex, document, buffer, context.tenant);');
+    expect(source).toContain('async downloadTicketDocumentVariant(');
+    expect(source).toContain("scopedDb.tenantJoin(docQuery, 'document_associations as da', 'd.document_id', 'da.document_id');");
+    expect(source).toContain("throw new NotFoundError(`Document ${variant} not available`);");
   });
 
   it('T065: deleteTicketDocument removes association and cleans up orphaned documents', () => {

@@ -12,21 +12,45 @@
       "clearAll": "Cancella tutto",
       "viewWeek": "Visualizza settimana",
       "compare": "Confronta",
-      "stopComparing": "Smetti di confrontare"
+      "stopComparing": "Smetti di confrontare",
+      "shareMyCalendar": "Condividi il mio calendario",
+      "newGroupCalendar": "Nuovo calendario di gruppo",
+      "manageGroupCalendar": "Gestisci calendario"
     },
     "labels": {
-      "inactive": "(Inattivo)"
+      "inactive": "(Inattivo)",
+      "archived": "(Archiviato)"
     },
     "aria": {
       "viewWeek": "Visualizza settimana per {{name}}",
-      "compare": "Confronta {{name}}"
+      "compare": "Confronta {{name}}",
+      "toggleGroupCalendar": "Mostra {{name}}"
+    },
+    "sections": {
+      "myCalendar": "Il mio calendario",
+      "people": "Persone",
+      "groupCalendars": "Calendari di gruppo"
+    },
+    "empty": {
+      "people": "Nessuno ha ancora condiviso un calendario con te. Condividi il tuo così i colleghi sanno quando sei libero.",
+      "groups": "I calendari di gruppo contengono eventi condivisi, come turni di reperibilità o chiusure dell'ufficio."
     }
   },
   "agentView": {
     "loading": "Caricamento...",
     "errors": {
       "loadPermissions": "Impossibile caricare le autorizzazioni utente",
-      "forbidden": "Non hai l'autorizzazione per visualizzare questa pianificazione."
+      "forbidden": "Non hai l'autorizzazione per visualizzare questa pianificazione.",
+      "moveFailed": "Impossibile spostare la voce di agenda"
+    },
+    "schedulingFor": "Pianificazione di",
+    "selectSlotHint": "Trascina per creare, spostare o ridimensionare le voci. Fai clic su una voce per modificarla.",
+    "readOnlyHint": "Puoi visualizzare questa agenda, ma hai bisogno del permesso di aggiornamento agenda per aggiungere o modificare voci.",
+    "workItemLegend": "Questo elemento di lavoro",
+    "schedulingForAgent": "Pianificazione per {{name}}",
+    "otherWorkLegend": "Altro lavoro",
+    "workItemTypeLabel": {
+      "ticket": "Ticket"
     }
   },
   "calendar": {
@@ -80,7 +104,8 @@
         "start": "Inizio: {{dateTime}}",
         "end": "Fine: {{dateTime}}",
         "multiDay": "(Più giorni)"
-      }
+      },
+      "busy": "Occupato"
     },
     "deleteDialog": {
       "title": "Elimina voce di pianificazione",
@@ -112,6 +137,11 @@
         "title": "Opzioni di stampa",
         "description": "Scegli quali colonne includere durante la stampa del calendario."
       }
+    },
+    "busyDialog": {
+      "title": "Occupato",
+      "close": "Chiudi",
+      "timeRange": "{{start}} – {{end}}"
     }
   },
   "weeklyEvent": {
@@ -279,8 +309,9 @@
         "placeholder": "Seleziona gli approvatori"
       },
       "teamSelect": {
-        "label": "Seleziona Squadra",
-        "placeholder": "Seleziona una squadra"
+        "label": "Filtra tecnici per team",
+        "placeholder": "Tutti i tecnici autorizzati",
+        "help": "Questo filtro riguarda solo l’elenco dei tecnici; la disponibilità di prenotazione appartiene al tecnico in tutti i team."
       }
     },
     "feedback": {
@@ -319,16 +350,16 @@
     "userHours": {
       "roleManager": {
         "label": "Direttore della squadra:",
-        "description": "Puoi configurare le impostazioni di disponibilità per i membri dei tuoi team. La tabella \"Utenti configurati\" riportata di seguito mostra tutti gli utenti con impostazioni di disponibilità nel sistema."
+        "description": "Puoi configurare la disponibilità di prenotazione solo per i membri autorizzati del team e i collaboratori diretti. La tabella seguente segue il filtro del team corrente."
       },
       "roleAdmin": {
         "label": "Amministratore:",
-        "description": "È possibile configurare le impostazioni di disponibilità per qualsiasi utente nel sistema. La tabella \"Utenti configurati\" di seguito mostra tutti gli utenti con impostazioni di disponibilità."
+        "description": "Puoi configurare la disponibilità di prenotazione generale per qualsiasi tecnico autorizzato. La tabella seguente segue il filtro del team corrente."
       },
       "userSelect": {
-        "label": "Seleziona Utente da configurare",
+        "label": "Tecnico",
         "placeholderSelectTeamFirst": "Seleziona prima una squadra",
-        "placeholder": "Seleziona un utente da configurare"
+        "placeholder": "Seleziona un tecnico da configurare"
       },
       "appointmentSettings": {
         "title": "Impostazioni dell'appuntamento",
@@ -357,22 +388,31 @@
           "available": "Disponibile",
           "startTime": "Ora di inizio",
           "endTime": "Ora di fine"
-        }
+        },
+        "availableFor": "{{day}} disponibile",
+        "startTimeFor": "Ora di inizio di {{day}}",
+        "endTimeFor": "Ora di fine di {{day}}"
       },
       "configuredUsers": {
         "title": "Utenti configurati",
-        "description": "Utenti con impostazioni di disponibilità configurate",
-        "empty": "Nessun utente ancora configurato",
+        "description": "Tecnici con disponibilità di prenotazione salvata nel filtro corrente",
+        "empty": "Nessun tecnico in questo filtro ha ancora una disponibilità di prenotazione salvata",
         "columns": {
           "userName": "Nome utente",
           "status": "Stato"
         },
         "status": {
           "configured": "Configurato"
+        },
+        "actions": {
+          "edit": "Modifica gli orari di prenotazione di {{name}}",
+          "delete": "Elimina gli orari di prenotazione di {{name}}"
         }
       },
       "actions": {
-        "save": "Salva ore utente"
+        "save": "Salva ore utente",
+        "retry": "Riprova",
+        "saving": "Salvataggio..."
       },
       "feedback": {
         "selectUserError": "Seleziona un utente",
@@ -384,7 +424,19 @@
       "deleteDialog": {
         "title": "Elimina disponibilità utente",
         "message": "Sei sicuro di voler eliminare le impostazioni di disponibilità per {{userName}}? Verranno rimossi tutti gli orari di lavoro configurati. Questa azione non può essere annullata."
-      }
+      },
+      "scope": {
+        "team": "Filtro team:",
+        "allTeams": "Tutti i tecnici autorizzati",
+        "technician": "Tecnico:",
+        "schedule": "Orario:",
+        "loading": "Verifica degli orari di prenotazione salvati",
+        "saved": "Orari di prenotazione salvati",
+        "partial": "Orari di prenotazione salvati con valori predefiniti non salvati per i giorni mancanti",
+        "draft": "Modello non salvato da lunedì a venerdì, 09:00–17:00",
+        "explanation": "Questi orari di prenotazione si applicano all’utente in tutti i team. Non vengono ereditati dall’orario di lavoro separato."
+      },
+      "loading": "Caricamento degli orari del tecnico..."
     },
     "serviceRules": {
       "serviceSelect": {
@@ -531,7 +583,8 @@
       "appointmentRequest": "Richiesta di appuntamento",
       "view": "Visualizza voce",
       "edit": "Modifica voce",
-      "new": "Nuova voce"
+      "new": "Nuova voce",
+      "newForWorkItem": "Pianifica {{name}}"
     },
     "alerts": {
       "privateEntryOnlyCreator": "Questa è un'entrata privata. Solo il creatore può visualizzare o modificare i dettagli."
@@ -556,7 +609,13 @@
       "privateEntry": "Ingresso privato (non visibile agli altri utenti)",
       "start": "Inizio *",
       "end": "Fine *",
-      "notes": "Note"
+      "notes": "Note",
+      "technician": "Tecnico",
+      "notesPlaceholder": "Tutto ciò che il tecnico deve sapere prima di iniziare",
+      "calendarPersonal": "Personale",
+      "calendarUnavailable": "Calendario di gruppo",
+      "calendar": "Calendario",
+      "assignedUsersOptional": "Utenti assegnati"
     },
     "actions": {
       "cancel": "Annulla",
@@ -566,7 +625,11 @@
     },
     "workItem": {
       "adHocFallback": "Voce ad hoc (nessun elemento di lavoro)",
-      "openDetails": "Dettagli"
+      "openDetails": "Dettagli",
+      "loading": "Caricamento elemento di lavoro…",
+      "openTicket": "Apri ticket",
+      "openTask": "Apri attività",
+      "openInteraction": "Apri interazione"
     },
     "appointmentRequest": {
       "approved": {
@@ -661,6 +724,19 @@
     },
     "errors": {
       "loadWorkItem": "Impossibile caricare l'elemento di lavoro."
+    },
+    "teamsMeeting": {
+      "create": "Crea riunione Teams",
+      "creating": "Creazione riunione Teams…",
+      "join": "Partecipa alla riunione Teams",
+      "created": "Riunione di Microsoft Teams creata",
+      "createFailed": "Impossibile creare la riunione Teams",
+      "recurringUnsupported": "Le riunioni Teams possono essere aggiunte solo a voci singole, non a serie ricorrenti."
+    },
+    "duration": {
+      "minutes": "{{count}} min",
+      "hours": "{{count}} h",
+      "hoursMinutes": "{{hours}} h {{minutes}} min"
     }
   },
   "actions": {
@@ -713,6 +789,69 @@
       "graphNotFound": "La registrazione di Teams non è più disponibile tramite Microsoft Graph.",
       "graphThrottled": "Microsoft Graph sta limitando i download delle registrazioni. Riprovare tra poco.",
       "graphHttpStatus": "Microsoft Graph ha restituito HTTP {{status}} durante il download della registrazione di Teams."
+    }
+  },
+  "workItemEditor": {
+    "created": "{{title}} pianificato",
+    "updated": "Voce di agenda aggiornata",
+    "deleted": "Voce di agenda eliminata",
+    "createFailed": "Impossibile pianificare questo lavoro",
+    "updateFailed": "Impossibile aggiornare la voce di agenda",
+    "deleteFailed": "Impossibile eliminare la voce di agenda",
+    "loadFailed": "Impossibile caricare la voce di agenda",
+    "noPermission": "Hai bisogno del permesso di aggiornamento agenda per pianificare il lavoro."
+  },
+  "sharing": {
+    "levels": {
+      "freeBusy": "Libero/occupato",
+      "read": "Visualizza dettagli",
+      "edit": "Modifica",
+      "manage": "Gestione"
+    },
+    "addRecipient": "Aggiungi una persona o un team",
+    "noRecipients": "Non ancora condiviso con nessuno.",
+    "unknownRecipient": "Destinatario sconosciuto",
+    "removeRecipient": "Rimuovi {{name}}",
+    "errors": {
+      "load": "Impossibile caricare la condivisione del calendario.",
+      "save": "Impossibile salvare la condivisione del calendario."
+    },
+    "shareDialog": {
+      "title": "Condividi il mio calendario",
+      "description": "Libero/occupato mostra solo quando sei occupato. Visualizza dettagli mostra le tue voci, tranne quelle private. Modifica consente anche di aggiungere e modificare voci per te."
+    },
+    "actions": {
+      "cancel": "Annulla",
+      "saving": "Salvataggio...",
+      "save": "Salva"
+    },
+    "settings": {
+      "title": "Condivisione del calendario",
+      "description": "Scegli quali colleghi e team possono vedere la tua pianificazione e se possono prenotare tempo per te."
+    }
+  },
+  "groupCalendars": {
+    "errors": {
+      "load": "Impossibile caricare il calendario.",
+      "nameRequired": "Il nome del calendario è obbligatorio.",
+      "save": "Impossibile salvare il calendario."
+    },
+    "dialog": {
+      "manageTitle": "Gestisci calendario di gruppo",
+      "createTitle": "Nuovo calendario di gruppo"
+    },
+    "actions": {
+      "restore": "Ripristina",
+      "archive": "Archivia",
+      "create": "Crea calendario"
+    },
+    "fields": {
+      "name": "Nome",
+      "namePlaceholder": "es. Turni di reperibilità",
+      "color": "Colore",
+      "description": "Descrizione (facoltativa)",
+      "members": "Membri",
+      "creatorNote": "Potrai gestire questo calendario."
     }
   }
 }

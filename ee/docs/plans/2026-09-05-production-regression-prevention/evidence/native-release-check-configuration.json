@@ -1,0 +1,39 @@
+{
+  "schemaVersion": 1,
+  "scope": "Native release check configuration enforcement; not deployed policy proof",
+  "before": {
+    "passed": 21,
+    "failed": 10,
+    "log": "/tmp/alga-release-configuration-red.log"
+  },
+  "after": {
+    "passed": 58,
+    "failed": 0,
+    "log": "/tmp/alga-release-configuration-green.log"
+  },
+  "behaviors": [
+    "Consumer policy must declare configuration for every required check, including explicit empty objects where applicable",
+    "Matching passed checks and images cannot authorize missing, extra or changed provider/protocol/authentication configuration",
+    "Canonical object order is irrelevant; array order and exact JSON values remain significant",
+    "Actual CLI forwards consumer configuration and rejects changed provider mode"
+  ],
+  "sourceHashes": {
+    "scripts/lib/release-test-evidence.mjs": "3b102bc7347b8b37b9853c329ab9b86e963b5a048f7ec24c215ad5b1573c26e6",
+    "scripts/verify-release-promotion.mjs": "74bd565f806c4dc13ba7ce47f3ec7b4e227874d413227dcd7659ccb758cc3cf8",
+    "scripts/tests/release-test-evidence.test.mjs": "5d4d78c5ee6ad15e9bb7a9692d04b74a1760455fea891bf076e11b08c880f762",
+    "scripts/tests/kubernetes-release-observations.test.mjs": "c5429b42092f05a44359f8f7aedcd0990b91fa46d6b74e63c668b66a8882dce9"
+  },
+  "limits": [
+    "Synthetic configuration and deployment fixtures; no operational target or provider policy selected",
+    "Producer observations are compared, not independently attested",
+    "Existing policies must add requiredCheckConfigurations and result.configuration; actual release pipeline deployment remains outstanding"
+  ],
+  "review": {
+    "independent": "Approved JSON/CLI path; sparse-array direct API edge identified and fixed",
+    "additionalBefore": {
+      "passed": 31,
+      "failed": 2,
+      "log": "/tmp/alga-release-sparse-red.log"
+    }
+  }
+}

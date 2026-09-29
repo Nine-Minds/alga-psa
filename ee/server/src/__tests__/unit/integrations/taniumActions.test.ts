@@ -45,8 +45,9 @@ function createFakeKnex(db: DbState) {
 
     constructor(private readonly table: string) {}
 
-    where(where: Record<string, any>) {
-      this.whereClauses.push(where);
+    where(criteria: Record<string, any> | string, value?: unknown) {
+      const where = typeof criteria === 'string' ? { [criteria]: value } : criteria;
+      this.whereClauses.push(Object.fromEntries(Object.entries(where).map(([key, value]) => [key.split('.').at(-1)!, value])));
       return this;
     }
 
@@ -225,6 +226,7 @@ vi.mock('@alga-psa/core/secrets', () => ({
 
 vi.mock('server/src/lib/tier-gating/assertTierAccess', () => ({
   assertTierAccess: (...args: any[]) => assertTierAccessMock(...args),
+  assertTenantTierAccess: (...args: any[]) => assertTierAccessMock(...args),
 }));
 
 vi.mock('../../../lib/integrations/tanium/taniumGatewayClient', () => ({
@@ -508,7 +510,8 @@ describe('taniumActions', () => {
     const result = await (testTaniumConnection as any)({}, { tenant: "tenant_1" });
 
     expect(result.success).toBe(false);
-    expect(result.error).toContain('Unauthorized');
+    expect(result.error).toBe('Unable to test the Tanium connection.');
+    expect(result.error).not.toContain('invalid token');
     expect(state.rmm_integrations[0].is_active).toBe(false);
   });
 

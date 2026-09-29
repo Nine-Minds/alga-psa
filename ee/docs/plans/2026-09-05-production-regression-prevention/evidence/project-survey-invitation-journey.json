@@ -1,0 +1,45 @@
+{
+  "scope": "Project survey invitation service, email templates and restored dispatch regression",
+  "baseRevision": "572274c437915958fb1ea8cd8a0f71769242085e",
+  "workingTreeDirty": true,
+  "validation": {
+    "originalService": {
+      "path": "/tmp/alga-survey-invitation-db-before.log",
+      "sha256": "9120e6674bfa9e167f835ef1cff9c58f9f31d69e64f1be252a366bc6c20a6413",
+      "passed": 10,
+      "failed": 3
+    },
+    "updatedService": {
+      "path": "/tmp/alga-survey-invitation-db.log",
+      "sha256": "e00f7c463f105556a62f4ced46b1a3506f79f8e4b1af6f2c392a3ca41c948272",
+      "passed": 13,
+      "failed": 0
+    },
+    "freshMigrationDispatch": {
+      "path": "/tmp/alga-survey-dispatch-db.log",
+      "sha256": "e43fa0d42bcdd4f16cac89a3c87144dfe9449c0e555f6ff5701ef3098310b1d0",
+      "passed": 3,
+      "failed": 0
+    },
+    "freshMigrationJourney": {
+      "path": "/tmp/alga-survey-invitation-fresh-db.log",
+      "sha256": "edac0526d3215d270686c97cb88e59510837d52a254565c1c16fe0634af3a2ee",
+      "passed": 13,
+      "failed": 0
+    }
+  },
+  "behavior": [
+    "Invitation service accepts exactly one ticket or project, loads tenant-scoped subject metadata and persists the matching subject column.",
+    "Project completion subscriber passes projectId; the previously skipped dispatch test now runs and passes.",
+    "Actual DatabaseTemplateProcessor renders project-specific emails in all eight supported template languages. The generated public token resolves and accepts feedback.",
+    "Ticket and project reminders carry correct identity; generic transport failure removes invitations and emits no sent event; foreign-tenant contacts cannot receive invitations.",
+    "Template migration is idempotent and supports down/up without deleting ticket templates.",
+    "Dispatch suite bootstrapped a new task-owned PostgreSQL database through the current CE migration chain and seeds. Journey suite also passed against that freshly migrated schema."
+  ],
+  "limits": [
+    "Email transport is captured, not actual SMTP; event publication is captured, not broker delivery.",
+    "Analytics and response UI still need project-aware subjects.",
+    "Existing special handling that treats unverified-domain email failure as success remains to review.",
+    "Citus full migration chain and native candidate CI are not proven by this local PostgreSQL evidence."
+  ]
+}

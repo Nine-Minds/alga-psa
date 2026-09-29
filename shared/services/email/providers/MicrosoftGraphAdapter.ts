@@ -9,14 +9,37 @@ import type {
   DiagnosticsStepStatus,
 } from '../../../interfaces/microsoft365-diagnostics.interfaces';
 import { getSecretProviderInstance } from '../../../core/secretProvider';
+import { resolveDeploymentCapabilities } from '../../../core/deploymentProfile';
 import { getAdminConnection } from '../../../db/admin';
 import { tenantDb } from '@alga-psa/db';
 import {
   getMicrosoftGraphBaseUrl,
   getMicrosoftTokenUrl,
 } from '../microsoftGraphEndpoints';
+import {
+  buildTokenFingerprint as buildTokenFingerprintShared,
+  classifyGraphFailure as classifyGraphFailureShared,
+  computeOverallStatus as computeOverallStatusShared,
+  createDiagnosticsRunner,
+  decodeJwtPayload as decodeJwtPayloadShared,
+  extractGraphIds as extractGraphIdsShared,
+} from '../../diagnostics';
 
 export type MicrosoftSubscriptionErrorKind = 'validation' | 'authentication' | 'other';
+
+const MICROSOFT_WELL_KNOWN_FOLDERS: Record<string, string> = {
+  inbox: 'inbox', archive: 'archive', drafts: 'drafts', deleteditems: 'deleteditems',
+  junkemail: 'junkemail', sentitems: 'sentitems', outbox: 'outbox',
+  conversationhistory: 'conversationhistory', clutter: 'clutter', conflicts: 'conflicts',
+  localfailures: 'localfailures', serverfailures: 'serverfailures', syncissues: 'syncissues',
+};
+
+export class MicrosoftFolderRootAccessError extends Error {
+  constructor(folder: string) {
+    super(`Custom folder '${folder}' cannot be resolved without root mailbox access. Choose Inbox or grant Full Access.`);
+    this.name = 'MicrosoftFolderRootAccessError';
+  }
+}
 
 function getAccessTokenTenantId(accessToken: string | undefined): string | undefined {
   try {
@@ -55,6 +78,11 @@ export interface MicrosoftGraphWebhookLifecycleObserver {
   onSubscriptionCreated(subscriptionId: string): void;
 }
 
+export interface MicrosoftGraphAdapterOptions {
+  /** Keep refreshed credentials in memory without writing them to provider storage. */
+  persistRefreshedCredentials?: boolean;
+}
+
 export interface MicrosoftWebhookInitializationResult {
   success: boolean;
   subscriptionId?: string;
@@ -71,8 +99,8 @@ export interface MicrosoftGraphSendMailResult {
 const MICROSOFT_MESSAGE_SUBSCRIPTION_EXPIRATION_MS = 60 * 60 * 60 * 1000;
 
 export type MicrosoftGraphSendMailPayload =
-  | { kind: 'json'; message: Record<string, unknown> }
-  | { kind: 'mime'; content: string };
+  | { kind: 'json'; message: Record<string, unknown>; fromAddress?: string }
+  | { kind: 'mime'; content: string; fromAddress?: string };
 
 function classifySubscriptionError(error: any): MicrosoftSubscriptionErrorKind {
   const status = error?.response?.status ?? error?.status;
@@ -109,9 +137,11 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
   private baseUrl = getMicrosoftGraphBaseUrl();
   private authenticatedUserEmail: string | undefined; // Email of the user who authorized the app
   private webhookLifecycle: MicrosoftGraphWebhookLifecycleObserver | undefined;
+  private readonly persistRefreshedCredentials: boolean;
 
-  constructor(config: EmailProviderConfig) {
+  constructor(config: EmailProviderConfig, options: MicrosoftGraphAdapterOptions = {}) {
     super(config);
+    this.persistRefreshedCredentials = options.persistRefreshedCredentials !== false;
 
     // Create axios instance with default headers
     this.httpClient = axios.create({
@@ -201,34 +231,36 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
 
     // Prefer Graph "well-known folder names" (path segment) over display names.
     // This avoids issues where default folders are localized or not resolved by display name.
-    const wellKnownMap: Record<string, string> = {
-      inbox: 'inbox',
-      archive: 'archive',
-      drafts: 'drafts',
-      deleteditems: 'deleteditems',
-      junkemail: 'junkemail',
-      sentitems: 'sentitems',
-      outbox: 'outbox',
-      conversationhistory: 'conversationhistory',
-      clutter: 'clutter',
-      conflicts: 'conflicts',
-      localfailures: 'localfailures',
-      serverfailures: 'serverfailures',
-      syncissues: 'syncissues',
-    };
-
     const normalizedKey = requested.toLowerCase().replace(/\s+/g, '');
-    if (wellKnownMap[normalizedKey]) {
+    if (MICROSOFT_WELL_KNOWN_FOLDERS[normalizedKey]) {
       return {
-        resource: `${mailboxBase}/mailFolders/${wellKnownMap[normalizedKey]}/messages`,
+        resource: `${mailboxBase}/mailFolders/${MICROSOFT_WELL_KNOWN_FOLDERS[normalizedKey]}/messages`,
         resolvedFolder: `${requested} (well-known)`,
       };
     }
 
     try {
-      const list = await this.httpClient.get(`${mailboxBase}/mailFolders`, {
-        params: { $select: 'id,displayName' },
-      });
+      // Resolve exact ids or path names before attempting enumeration, which
+      // requires broader mailbox rights than reading the delegated folder.
+      try {
+        const direct = await this.httpClient.get(`${mailboxBase}/mailFolders/${encodeURIComponent(requested)}`, {
+          params: { $select: 'id,displayName' },
+        });
+        if (direct.data?.id) return {
+          resource: `${mailboxBase}/mailFolders/${encodeURIComponent(String(direct.data.id))}/messages`,
+          resolvedFolder: direct.data.displayName || requested,
+        };
+      } catch { /* Fall through to root enumeration for display names. */ }
+      let list;
+      try {
+        list = await this.httpClient.get(`${mailboxBase}/mailFolders`, { params: { $select: 'id,displayName' } });
+      } catch (error: any) {
+        const failure = this.classifyGraphFailure(error);
+        if (failure.status === 403 || failure.status === 404) {
+          throw new MicrosoftFolderRootAccessError(requested);
+        }
+        throw error;
+      }
       const match = (list.data?.value || []).find(
         (f: any) => (f.displayName || '').toLowerCase() === requested.toLowerCase()
       );
@@ -240,6 +272,7 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
       }
       this.log('warn', `Folder '${requested}' not found; defaulting subscription to Inbox`);
     } catch (error: any) {
+      if (error instanceof MicrosoftFolderRootAccessError) throw error;
       this.log('warn', `Failed to resolve folder '${requested}'; defaulting to Inbox`, error?.message || error);
     }
 
@@ -358,7 +391,7 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
       }
 
       const vendorTenantId = vendorConfig.resolved_tenant_id || vendorConfig.tenant_id || vendorConfig.tenantId;
-      const isHosted = (process.env.DEPLOYMENT_PROFILE || 'hosted').trim().toLowerCase() !== 'appliance';
+      const isHosted = resolveDeploymentCapabilities().microsoftOAuth.sharedApp;
 
       // Hosted uses Alga's shared multi-tenant Microsoft app, so preserve the
       // tenant-independent authority used when the refresh grant was issued.
@@ -422,6 +455,8 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
       this.config.provider_config.access_token = this.accessToken;
       this.config.provider_config.refresh_token = this.refreshToken;
       this.config.provider_config.token_expires_at = this.tokenExpiresAt?.toISOString();
+
+      if (!this.persistRefreshedCredentials) return;
 
       // Persist to DB (parity with Gmail)
       try {
@@ -488,7 +523,11 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
       throw new Error('Microsoft sending mailbox is not configured');
     }
 
-    const endpoint = `${this.getMailboxBasePath()}/sendMail`;
+    const requestedFrom = payload.fromAddress?.trim();
+    const endpointBase = requestedFrom && requestedFrom.toLowerCase() !== mailbox.toLowerCase()
+      ? `/users/${encodeURIComponent(requestedFrom)}`
+      : this.getMailboxBasePath();
+    const endpoint = `${endpointBase}/sendMail`;
     const send = () => payload.kind === 'mime'
       ? this.httpClient.post(endpoint, payload.content, {
           headers: { 'Content-Type': 'text/plain' },
@@ -937,9 +976,6 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
       .map((value) => value.trim());
     const requested = filters.length ? filters : ['Inbox'];
     const mailboxBase = this.getMailboxBasePath();
-    const folders = await this.httpClient.get(`${mailboxBase}/mailFolders`, {
-      params: { $select: 'id,displayName' },
-    });
     const resolved = new Set<string>();
     for (const filter of requested) {
       const normalized = filter.toLowerCase().replace(/\s+/g, '');
@@ -950,6 +986,20 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
         });
         if (response.data?.id) resolved.add(String(response.data.id));
         continue;
+      }
+      try {
+        const direct = await this.httpClient.get(`${mailboxBase}/mailFolders/${encodeURIComponent(filter)}`, { params: { $select: 'id' } });
+        if (direct.data?.id) { resolved.add(String(direct.data.id)); continue; }
+      } catch { /* Display names require root enumeration as a last resort. */ }
+      let folders;
+      try {
+        folders = await this.httpClient.get(`${mailboxBase}/mailFolders`, { params: { $select: 'id,displayName' } });
+      } catch (error: any) {
+        const failure = this.classifyGraphFailure(error);
+        if (failure.status === 403 || failure.status === 404) {
+          throw new MicrosoftFolderRootAccessError(filter);
+        }
+        throw error;
       }
       const match = (folders.data?.value || []).find((folder: any) =>
         String(folder.id) === filter || String(folder.displayName || '').toLowerCase() === filter.toLowerCase(),
@@ -969,12 +1019,28 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
       // for shared mailboxes GET /users/{mailbox} requires directory
       // permissions (User.Read.All) that the email OAuth scopes do not
       // include, so it returns 403 even when mail access is fully authorized.
-      await this.httpClient.get(`${mailboxBase}/mailFolders`, {
-        params: { $top: 1, $select: 'id' },
-      });
+      const configuredFolder = (this.config.folder_to_monitor || 'Inbox').trim() || 'Inbox';
+      const key = configuredFolder.toLowerCase().replace(/\s+/g, '');
+      let folderPath = MICROSOFT_WELL_KNOWN_FOLDERS[key]
+        ? `${mailboxBase}/mailFolders/${MICROSOFT_WELL_KNOWN_FOLDERS[key]}`
+        : `${mailboxBase}/mailFolders/${encodeURIComponent(configuredFolder)}`;
+      try {
+        await this.httpClient.get(folderPath, { params: { $top: 1, $select: 'id' } });
+      } catch (error: any) {
+        if (MICROSOFT_WELL_KNOWN_FOLDERS[key]) throw error;
+        const directFailure = this.classifyGraphFailure(error);
+        if (directFailure.status !== 404) throw error;
+        const resolved = await this.buildFolderResourcePath(configuredFolder);
+        folderPath = resolved.resource.replace(/\/messages$/, '');
+        await this.httpClient.get(folderPath, { params: { $top: 1, $select: 'id' } });
+      }
       return { success: true };
     } catch (error: any) {
-      const failure = this.classifyGraphFailure(error);
+      const failure = classifyGraphFailureShared(error, {
+        signedInUser: this.authenticatedUserEmail,
+        mailbox: this.config.mailbox,
+        requestPath: error?.config?.url || error?.response?.config?.url || `${this.getMailboxBasePath()}/mailFolders/${(this.config.folder_to_monitor || 'Inbox').trim() || 'inbox'}`,
+      });
       const detail = [
         failure.status,
         failure.code !== String(failure.status) ? failure.code : undefined,
@@ -994,30 +1060,19 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
     }
   }
 
+  // These helpers are shared with the Entra diagnostics engine. They are kept
+  // as thin instance methods so existing call sites and the email report
+  // contract are unchanged.
   private buildTokenFingerprint(token?: string): string | undefined {
-    if (!token) return undefined;
-    return `${token.slice(0, 4)}...(${token.length})`;
+    return buildTokenFingerprintShared(token);
   }
 
   private decodeJwtPayload(token: string): Record<string, any> | null {
-    try {
-      const parts = token.split('.');
-      if (parts.length < 2) return null;
-      const payload = parts[1];
-      const padded = payload.replace(/-/g, '+').replace(/_/g, '/').padEnd(Math.ceil(payload.length / 4) * 4, '=');
-      const json = Buffer.from(padded, 'base64').toString('utf8');
-      return JSON.parse(json);
-    } catch {
-      return null;
-    }
+    return decodeJwtPayloadShared(token);
   }
 
   private extractGraphIds(headers: any): { requestId?: string; clientRequestId?: string } {
-    const lower = (k: string) => (headers?.[k] ?? headers?.[k.toLowerCase()]);
-    return {
-      requestId: lower('request-id'),
-      clientRequestId: lower('client-request-id'),
-    };
+    return extractGraphIdsShared(headers);
   }
 
   private classifyGraphFailure(error: any): {
@@ -1028,26 +1083,7 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
     clientRequestId?: string;
     responseBody?: unknown;
   } {
-    const res = error?.response;
-    // Already-sanitized errors (e.g. from token refresh inside the request
-    // interceptor) carry status/code/responseBody at the top level.
-    const status = res?.status ?? error?.status;
-    const body = res?.data ?? error?.responseBody;
-    const graphErr = body?.error || body;
-    const message =
-      graphErr?.message ||
-      error?.message ||
-      (typeof error === 'string' ? error : 'Unknown error');
-    const code = graphErr?.code || (status ? String(status) : undefined);
-    const ids = this.extractGraphIds(res?.headers);
-    return {
-      status,
-      code,
-      message,
-      requestId: ids.requestId,
-      clientRequestId: ids.clientRequestId,
-      responseBody: body,
-    };
+    return classifyGraphFailureShared(error, { signedInUser: this.authenticatedUserEmail, mailbox: this.config.mailbox, requestPath: error?.config?.url || error?.response?.config?.url });
   }
 
   private toSanitizedGraphError(error: unknown, context: string): Error {
@@ -1064,6 +1100,9 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
       code: failure.code,
       requestId: failure.requestId,
       responseBody: failure.responseBody,
+      // Keep only the retry header across the sanitization boundary, never the
+      // Axios request/config (which can contain the mailbox access token).
+      retryAfter: (error as any)?.response?.headers?.['retry-after'] ?? (error as any)?.retryAfter,
     });
     return wrapped;
   }
@@ -1111,9 +1150,7 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
   }
 
   private computeOverallStatus(steps: Microsoft365DiagnosticsStep[]): DiagnosticsStepStatus {
-    if (steps.some((s) => s.status === 'fail')) return 'fail';
-    if (steps.some((s) => s.status === 'warn')) return 'warn';
-    return 'pass';
+    return computeOverallStatusShared(steps);
   }
 
   /**
@@ -1124,7 +1161,6 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
    */
   async runMicrosoft365Diagnostics(options: Microsoft365DiagnosticsOptions = {}): Promise<Microsoft365DiagnosticsReport> {
     const startedAt = new Date().toISOString();
-    const steps: Microsoft365DiagnosticsStep[] = [];
     const recommendations = new Set<string>();
 
     const requiredScopes = options.requiredScopes?.length
@@ -1133,43 +1169,18 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
 
     const folderListTop = Math.max(1, Math.min(options.folderListTop ?? 100, 250));
 
-    const addStep = (step: Microsoft365DiagnosticsStep) => steps.push(step);
-
-    const runStep = async (id: string, title: string, fn: () => Promise<Omit<Microsoft365DiagnosticsStep, 'id' | 'title' | 'startedAt' | 'durationMs'>>): Promise<void> => {
-      const stepStarted = Date.now();
-      const stepIso = new Date().toISOString();
-      try {
-        const partial = await fn();
-        addStep({
-          id,
-          title,
-          startedAt: stepIso,
-          durationMs: Date.now() - stepStarted,
-          status: partial.status,
-          http: partial.http,
-          data: partial.data,
-          error: partial.error,
-        });
-      } catch (e: any) {
-        const classified = this.classifyGraphFailure(e);
-        this.mapRecommendations({ ...classified, missingScopes: undefined }).forEach((r) => recommendations.add(r));
-        addStep({
-          id,
-          title,
-          startedAt: stepIso,
-          durationMs: Date.now() - stepStarted,
-          status: 'fail',
-          error: {
-            message: classified.message,
-            status: classified.status,
-            code: classified.code,
-            requestId: classified.requestId,
-            clientRequestId: classified.clientRequestId,
-            responseBody: classified.responseBody,
-          },
-        });
-      }
-    };
+    // Generic timed runner shared with the Entra diagnostics engine.
+    const runner = createDiagnosticsRunner({
+      classifyError: (error) => this.classifyGraphFailure(error),
+      onError: (error) => {
+        const classified = this.classifyGraphFailure(error);
+        this.mapRecommendations({ ...classified, missingScopes: undefined }).forEach((r) =>
+          recommendations.add(r)
+        );
+      },
+    });
+    const steps: Microsoft365DiagnosticsStep[] = runner.steps;
+    const runStep = runner.runStep;
 
     // Step: load credentials (tokens present)
     await runStep('tokens_present', 'Load stored OAuth tokens', async () => {
@@ -1305,26 +1316,27 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
       }
 
       const clientRequestId = randomUUID();
-      const res = await this.httpClient.get(mailboxBase, {
-        params: { $select: 'id,userPrincipalName,mail' },
-        headers: { 'client-request-id': clientRequestId, 'return-client-request-id': 'true' },
-      });
-      const ids = this.extractGraphIds(res.headers);
-      return {
-        status: 'pass' as const,
-        http: {
-          method: 'GET',
-          path: `${mailboxBase}?$select=id,userPrincipalName,mail`,
-          status: res.status,
-          requestId: ids.requestId,
-          clientRequestId: ids.clientRequestId || clientRequestId,
-        },
-        data: {
-          id: res.data?.id,
-          userPrincipalName: res.data?.userPrincipalName,
-          mail: res.data?.mail,
-        },
-      };
+      const path = `${mailboxBase}?$select=id,userPrincipalName,mail`;
+      try {
+        const res = await this.httpClient.get(mailboxBase, {
+          params: { $select: 'id,userPrincipalName,mail' },
+          headers: { 'client-request-id': clientRequestId, 'return-client-request-id': 'true' },
+        });
+        const ids = this.extractGraphIds(res.headers);
+        return {
+          status: 'pass' as const,
+          http: { method: 'GET', path, status: res.status, requestId: ids.requestId, clientRequestId: ids.clientRequestId || clientRequestId },
+          data: { id: res.data?.id, userPrincipalName: res.data?.userPrincipalName, mail: res.data?.mail },
+        };
+      } catch (error: any) {
+        const failure = this.classifyGraphFailure(error);
+        if (failure.status !== 403 && failure.status !== 404) throw error;
+        return {
+          status: 'warn' as const,
+          http: { method: 'GET', path, status: failure.status, requestId: failure.requestId, clientRequestId: failure.clientRequestId || clientRequestId },
+          error: { message: 'The mailbox directory object is not readable. Folder-level mail access is checked separately and can still work without this permission.' },
+        };
+      }
     });
 
     // Step: inbox well-known folder check
@@ -1357,27 +1369,28 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
     await runStep('folder_list', 'List top-level mail folders', async () => {
       const clientRequestId = randomUUID();
       const path = `${mailboxBase}/mailFolders`;
-      const res = await this.httpClient.get(path, {
-        params: { $select: 'id,displayName', $top: folderListTop },
-        headers: { 'client-request-id': clientRequestId, 'return-client-request-id': 'true' },
-      });
-      const ids = this.extractGraphIds(res.headers);
-      folders = (res.data?.value || []).map((f: any) => ({ id: String(f.id), displayName: f.displayName }));
-      return {
-        status: 'pass' as const,
-        http: {
-          method: 'GET',
-          path: `${path}?$select=id,displayName&$top=${folderListTop}`,
-          status: res.status,
-          requestId: ids.requestId,
-          clientRequestId: ids.clientRequestId || clientRequestId,
-        },
-        data: {
-          count: folders.length,
-          truncated: folders.length >= folderListTop,
-          sample: folders.slice(0, 25),
-        },
-      };
+      const diagnosticPath = `${path}?$select=id,displayName&$top=${folderListTop}`;
+      try {
+        const res = await this.httpClient.get(path, {
+          params: { $select: 'id,displayName', $top: folderListTop },
+          headers: { 'client-request-id': clientRequestId, 'return-client-request-id': 'true' },
+        });
+        const ids = this.extractGraphIds(res.headers);
+        folders = (res.data?.value || []).map((f: any) => ({ id: String(f.id), displayName: f.displayName }));
+        return {
+          status: 'pass' as const,
+          http: { method: 'GET', path: diagnosticPath, status: res.status, requestId: ids.requestId, clientRequestId: ids.clientRequestId || clientRequestId },
+          data: { count: folders.length, truncated: folders.length >= folderListTop, sample: folders.slice(0, 25) },
+        };
+      } catch (error: any) {
+        const failure = this.classifyGraphFailure(error);
+        if (failure.status !== 403 && failure.status !== 404) throw error;
+        return {
+          status: 'warn' as const,
+          http: { method: 'GET', path: diagnosticPath, status: failure.status, requestId: failure.requestId, clientRequestId: failure.clientRequestId || clientRequestId },
+          error: { message: 'Root folder listing is unavailable. Inbox and directly accessible folders remain usable; custom display-name resolution may require Full Access.' },
+        };
+      }
     });
 
     // Step: resolve configured folder to a resource

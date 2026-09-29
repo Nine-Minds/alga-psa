@@ -1,0 +1,39 @@
+{
+  "scope": "Project survey lifecycle event contracts",
+  "baseRevision": "293e7cbfdb",
+  "workingTreeDirty": true,
+  "events": [
+    "SURVEY_SENT",
+    "SURVEY_REMINDER_SENT",
+    "SURVEY_RESPONSE_RECEIVED",
+    "SURVEY_EXPIRED"
+  ],
+  "before": {
+    "failed": 8,
+    "passed": 4
+  },
+  "after": {
+    "passed": 12,
+    "failed": 0
+  },
+  "behavior": [
+    "Optional projectId preserved through builder and runtime schema",
+    "Ticket and subjectless payload compatibility retained",
+    "Simultaneous ticket/project subjects rejected",
+    "Invalid project UUID rejected by runtime validation"
+  ],
+  "artifacts": [
+    {
+      "path": "/tmp/alga-survey-project-events-before.log",
+      "sha256": "475afc0f7d7c14c690712445532bb626c17c21e26725d5a13a0252820fd51eea"
+    },
+    {
+      "path": "/tmp/alga-survey-project-events-after.log",
+      "sha256": "de23d1c93d46c158096cd0d03c3f76fe360641044ae1538617fe25bd6f3157bf"
+    }
+  ],
+  "limits": [
+    "Payload contracts only; project invitation and response service wiring remains incomplete.",
+    "No native execution claim."
+  ]
+}

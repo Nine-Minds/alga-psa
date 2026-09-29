@@ -1,6 +1,7 @@
 import type { IScheduleEntry, IHoliday } from '@alga-psa/types';
 import * as rrulePkg from 'rrule';
 import type { Frequency, Weekday } from 'rrule';
+import { toCalendarDateString } from '@alga-psa/core';
 
 type RRuleConstructor = typeof import('rrule').RRule;
 
@@ -22,10 +23,10 @@ const RRule = resolveRRule();
 /**
  * Helper to format a date as YYYY-MM-DD string.
  */
-function formatDateString(date: Date): string {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
+function formatDateString(date: Date, utc = false): string {
+  const year = utc ? date.getUTCFullYear() : date.getFullYear();
+  const month = String((utc ? date.getUTCMonth() : date.getMonth()) + 1).padStart(2, '0');
+  const day = String(utc ? date.getUTCDate() : date.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
 }
 
@@ -33,25 +34,37 @@ function formatDateString(date: Date): string {
  * Check if a date falls on a holiday.
  * Handles both one-time and recurring (annual) holidays.
  */
-export function isHolidayDate(date: Date, holidays: IHoliday[]): boolean {
+type HolidayDateInput = Omit<IHoliday, 'holiday_date'> & { holiday_date: string | Date };
+
+export function isHolidayDate(date: Date, holidays: HolidayDateInput[], utc = false): boolean {
   if (!holidays || holidays.length === 0) return false;
 
-  const dateStr = formatDateString(date);
+  const dateStr = formatDateString(date, utc);
 
   return holidays.some(holiday => {
+    let holidayDate: string | null;
+    // LEVERAGE: pattern holiday-date-normalize — keep defensive DB DATE conversion at this matcher.
+    try {
+      holidayDate = toCalendarDateString(holiday.holiday_date);
+    } catch {
+      holidayDate = null;
+    }
+    if (!holidayDate) return false;
     if (holiday.is_recurring) {
       // For recurring holidays, compare only month and day (MM-DD)
-      const holidayMonthDay = holiday.holiday_date.slice(5);
+      const holidayMonthDay = holidayDate.slice(5);
       const dateMonthDay = dateStr.slice(5);
       return holidayMonthDay === dateMonthDay;
     }
-    return holiday.holiday_date === dateStr;
+    return holidayDate === dateStr;
   });
 }
 
 export interface GenerateOccurrencesOptions {
   /** Holidays to exclude from generated occurrences */
   holidays?: IHoliday[];
+  /** Include the master date when the caller materializes the whole series virtually. */
+  includeMaster?: boolean;
 }
 
 export function generateOccurrences(
@@ -65,6 +78,7 @@ export function generateOccurrences(
       return [new Date(entry.scheduled_start)];
     }
     const pattern = entry.recurrence_pattern;
+    const allDay = entry.is_all_day === true;
 
     // Validate and normalize start date
     const dtstart = new Date(pattern.startDate);
@@ -72,7 +86,8 @@ export function generateOccurrences(
       console.error('[generateOccurrences] Invalid start date:', pattern.startDate);
       return [new Date(entry.scheduled_start)];
     }
-    dtstart.setHours(0, 0, 0, 0);
+    if (allDay) dtstart.setUTCHours(0, 0, 0, 0);
+    else dtstart.setHours(0, 0, 0, 0);
 
     // If end date exists, validate and normalize it
     let until: Date | undefined;
@@ -82,7 +97,8 @@ export function generateOccurrences(
         console.error('[generateOccurrences] Invalid end date:', pattern.endDate);
         return [new Date(entry.scheduled_start)];
       }
-      until.setHours(23, 59, 59, 999);
+      if (allDay) until.setUTCHours(23, 59, 59, 999);
+      else until.setHours(23, 59, 59, 999);
     }
 
     // Create RRule with error handling for frequency
@@ -115,15 +131,18 @@ export function generateOccurrences(
       console.error('[generateOccurrences] Invalid range start date:', start);
       return [new Date(entry.scheduled_start)];
     }
-    rangeStart.setHours(0, 0, 0, 0);
-    rangeStart.setSeconds(rangeStart.getSeconds() - 1);
+    if (allDay) rangeStart.setUTCHours(0, 0, 0, 0);
+    else rangeStart.setHours(0, 0, 0, 0);
+    if (allDay) rangeStart.setTime(rangeStart.getTime() - 1000);
+    else rangeStart.setSeconds(rangeStart.getSeconds() - 1);
 
     const rangeEnd = new Date(end);
     if (isNaN(rangeEnd.getTime())) {
       console.error('[generateOccurrences] Invalid range end date:', end);
       return [new Date(entry.scheduled_start)];
     }
-    rangeEnd.setHours(23, 59, 59, 999);
+    if (allDay) rangeEnd.setUTCHours(23, 59, 59, 999);
+    else rangeEnd.setHours(23, 59, 59, 999);
 
     // Get the base occurrences using normalized dates
     const baseOccurrences = rrule.between(rangeStart, rangeEnd);
@@ -141,9 +160,9 @@ export function generateOccurrences(
       .filter((date): boolean => {
         const dateStr = date.toISOString().split('T')[0];
         const masterStr = masterStartDate.toISOString().split('T')[0];
-        return dateStr !== masterStr;
+        return options?.includeMaster === true || dateStr !== masterStr;
       })
-      .map((date): Date => applyTimeToDate(date, originalTime));
+      .map((date): Date => allDay ? new Date(date.setUTCHours(0, 0, 0, 0)) : applyTimeToDate(date, originalTime));
 
     // Apply exceptions with validation
     let filteredOccurrences = occurrencesWithTime;
@@ -177,7 +196,7 @@ export function generateOccurrences(
     // Filter out holidays (unified holidays table - used by SLA and scheduling)
     if (options?.holidays && options.holidays.length > 0) {
       filteredOccurrences = filteredOccurrences.filter(
-        (date: Date): boolean => !isHolidayDate(date, options.holidays!)
+        (date: Date): boolean => !isHolidayDate(date, options.holidays!, allDay)
       );
     }
 

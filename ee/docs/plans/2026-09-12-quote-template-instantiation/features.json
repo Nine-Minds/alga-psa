@@ -1,0 +1,142 @@
+[
+  {
+    "id": "F001",
+    "description": "QuotesTab reads the source business template id from the quotes-tab URL query.",
+    "prdRefs": ["Root cause / Defect 1"],
+    "implemented": false
+  },
+  {
+    "id": "F002",
+    "description": "QuoteFormProps.initialContext carries a sourceTemplateId field.",
+    "prdRefs": ["Root cause / Defect 1"],
+    "implemented": false
+  },
+  {
+    "id": "F003",
+    "description": "QuotesTab passes the source template id into QuoteForm through initialContext.",
+    "prdRefs": ["Root cause / Defect 1"],
+    "implemented": false
+  },
+  {
+    "id": "F004",
+    "description": "The Quote Templates row action \"Create Quote from Template\" emits the renamed sourceTemplateId query param.",
+    "prdRefs": ["Root cause / Defect 1", "Design notes"],
+    "implemented": false
+  },
+  {
+    "id": "F005",
+    "description": "QuoteForm seeds its source-template state from initialContext once the business template list has loaded.",
+    "prdRefs": ["Design notes"],
+    "implemented": false
+  },
+  {
+    "id": "F006",
+    "description": "Deep-link seeding reuses the picker's existing prefill routine rather than duplicating the field-copy logic.",
+    "prdRefs": ["Primary flows", "Design notes"],
+    "implemented": false
+  },
+  {
+    "id": "F007",
+    "description": "Deep-link seeding applies exactly once per mount and does not re-apply on subsequent renders.",
+    "prdRefs": ["Design notes"],
+    "implemented": false
+  },
+  {
+    "id": "F008",
+    "description": "Deep-linked create prefills terms and conditions from the template.",
+    "prdRefs": ["Goals"],
+    "implemented": false
+  },
+  {
+    "id": "F009",
+    "description": "Deep-linked create prefills client notes, description, PO number and currency from the template.",
+    "prdRefs": ["Goals"],
+    "implemented": false
+  },
+  {
+    "id": "F010",
+    "description": "Deep-linked create prefills the template's line items.",
+    "prdRefs": ["Goals"],
+    "implemented": false
+  },
+  {
+    "id": "F011",
+    "description": "Template prefill is non-destructive: values already seeded from an opportunity context are preserved.",
+    "prdRefs": ["Design notes"],
+    "implemented": false
+  },
+  {
+    "id": "F012",
+    "description": "Submitting a deep-linked create routes through createQuoteFromTemplate instead of createQuote.",
+    "prdRefs": ["Acceptance criteria 2"],
+    "implemented": false
+  },
+  {
+    "id": "F013",
+    "description": "Line items are not persisted client-side when the server already created them from the template.",
+    "prdRefs": ["Design notes"],
+    "implemented": false
+  },
+  {
+    "id": "F014",
+    "description": "A deep link naming a missing or inaccessible template degrades to a blank new quote without crashing.",
+    "prdRefs": ["Acceptance criteria 4"],
+    "implemented": false
+  },
+  {
+    "id": "F015",
+    "description": "The QuoteForm state field template_id is renamed to source_template_id, meaning create-time provenance only.",
+    "prdRefs": ["Root cause / Defect 2"],
+    "implemented": false
+  },
+  {
+    "id": "F016",
+    "description": "Edit mode no longer loads the layout id into the source-template field; the field stays empty when editing.",
+    "prdRefs": ["Root cause / Defect 2"],
+    "implemented": false
+  },
+  {
+    "id": "F017",
+    "description": "documentTemplateId remains the sole carrier of the layout id and is what is written back to quotes.template_id.",
+    "prdRefs": ["Root cause / Defect 2", "Non-goals"],
+    "implemented": false
+  },
+  {
+    "id": "F018",
+    "description": "The \"+ From template\" picker binds to the renamed source-template field.",
+    "prdRefs": ["Primary flows"],
+    "implemented": false
+  },
+  {
+    "id": "F019",
+    "description": "The title-required guard keys off the renamed source-template field, so a layout alone no longer satisfies it.",
+    "prdRefs": ["Root cause / Defect 2"],
+    "implemented": false
+  },
+  {
+    "id": "F020",
+    "description": "The layout deep link ?tab=quote-templates&templateId= is left unchanged.",
+    "prdRefs": ["Non-goals"],
+    "coveredBy": "No new test: this is a no-change assertion already guarded by the existing QuoteDocumentTemplateEditor suites.",
+    "implemented": false
+  },
+  {
+    "id": "F021",
+    "description": "AST text nodes preserve newlines when rendered.",
+    "prdRefs": ["Root cause / Defect 3"],
+    "implemented": false
+  },
+  {
+    "id": "F022",
+    "description": "An explicit whiteSpace set in a text node's own style still overrides the preserve-newlines default.",
+    "prdRefs": ["Design notes"],
+    "implemented": false
+  },
+  {
+    "id": "F023",
+    "description": "Multi-paragraph terms and conditions render with paragraph breaks intact in the generated quote PDF.",
+    "prdRefs": ["Acceptance criteria 6"],
+    "coveredBy": "Smoke test (end-to-end PDF download). T009 covers the renderer unit underneath it.",
+    "implemented": false
+  }
+]

@@ -27,6 +27,10 @@ vi.mock('@alga-psa/user-composition/actions', () => ({
   getCurrentUserPermissions: (...args: unknown[]) => getCurrentUserPermissions(...args),
 }));
 
+vi.mock('@alga-psa/user-composition/actions/userQueryActions', () => ({
+  getCurrentUserPermissions: (...args: unknown[]) => getCurrentUserPermissions(...args),
+}));
+
 vi.mock('../../../context/TierContext', () => ({
   useTier: (...args: unknown[]) => useTier(...args),
 }));
@@ -169,6 +173,39 @@ describe('SidebarWithFeatureFlags product shell composition', () => {
       );
       expect(menuNames).toContain('Passwords');
       expect(settingsNames).toContain('Appearance');
+    });
+  });
+
+  it('hides Accounting Exports billing navigation without exports_execute', async () => {
+    getCurrentUserPermissions.mockResolvedValue([]);
+
+    render(<SidebarWithFeatureFlags sidebarOpen={true} setSidebarOpen={vi.fn()} />);
+
+    await waitFor(() => expect(getCurrentUserPermissions).toHaveBeenCalled());
+    await waitFor(() => {
+      const latestProps = sidebarPropsSpy.mock.calls.at(-1)?.[0] as {
+        billingSectionsOverride: Array<{ items: Array<{ name: string }> }>;
+      };
+      const billingNames = latestProps.billingSectionsOverride.flatMap((section) =>
+        section.items.map((item) => item.name),
+      );
+      expect(billingNames).not.toContain('Accounting Exports');
+    });
+  });
+
+  it('shows Accounting Exports billing navigation with exports_execute', async () => {
+    getCurrentUserPermissions.mockResolvedValue(['accounting_integrations:exports_execute']);
+
+    render(<SidebarWithFeatureFlags sidebarOpen={true} setSidebarOpen={vi.fn()} />);
+
+    await waitFor(() => {
+      const latestProps = sidebarPropsSpy.mock.calls.at(-1)?.[0] as {
+        billingSectionsOverride: Array<{ items: Array<{ name: string }> }>;
+      };
+      const billingNames = latestProps.billingSectionsOverride.flatMap((section) =>
+        section.items.map((item) => item.name),
+      );
+      expect(billingNames).toContain('Accounting Exports');
     });
   });
 

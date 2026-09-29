@@ -87,4 +87,8 @@ export interface IBoard extends TenantEntity {
 
   // Controls live timer + tracked intervals visibility in ticket details
   enable_live_ticket_timer?: boolean;
+
+  // When false the board is hidden from every client portal surface,
+  // regardless of visibility group membership. Defaults to true.
+  client_portal_visible?: boolean;
 }

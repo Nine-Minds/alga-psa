@@ -39,13 +39,19 @@ publish-appliance-release=true
 appliance-release-channel=stable
 ```
 
+On every stable promotion the pipeline does three things after traffic is switched: it reads the `temporal-worker`, `workflow-worker` and `email-service` deployments in the production namespace (`appliance-production-namespace`, default `msp`) and pins whichever of those images differ from the channel, so the appliance mirrors what hosted runs rather than the newest build; it republishes the Helm charts and Flux config from the promoted alga-core commit, so charts can never lag the server; and it moves the channel with the new alga-core pin. Any production image that is not on `ghcr.io` fails the promotion rather than publishing a manifest appliances cannot pull.
+
 Use `appliance-release-source-ref` / `appliance-release-version` only when intentionally overriding the source commit or release version. The appliance setup and update engines resolve the selected channel from OCI at runtime.
+
+The `nightly` channel is published automatically. The `alga-appliance-nightly-release` CronWorkflow (`~/nm-kube-config/alga-psa/workflows/appliance/alga-appliance-nightly-cronworkflow.yaml`) runs the coordinated release against `main` at 06:00 UTC every day and moves `nightly` without an approval gate. Nights where `main` has not moved publish nothing: the release checks the channel's current `sourceRevision` first and exits early when it already matches.
 
 ## Setup and updates
 
 - First install is driven by the host service and setup UI on port `8080`.
 - Application channel updates are driven by `host-service/update-engine.mjs` and the in-cluster status/update UI.
 - Both paths resolve release metadata from the OCI artifact registry, then apply runtime values, the pinned Flux config bundle, and the selected image tags.
+- An update suspends the six application HelmReleases first (as the Flux CLI's field manager, since kustomize-controller strips fields owned by plain `kubectl patch`), applies the runtime values and the config bundle, nudges the nested `alga-platform`/`alga-core`/`alga-background` Kustomizations that carry the chart pins, waits until every HelmRelease shows the new chart version, removes any leftover `alga-core-sebastian-bootstrap` bootstrap Job, and only then resumes the releases. Each release therefore runs a single Helm upgrade instead of one per changed input, which is what used to make the second upgrade collide with the first one's bootstrap Job. The update reports complete only after every release is Ready at the new chart version; a release that is still converging is reported as pending, and a failed one blocks the update.
+- Recover on the Manage page (`POST /api/recover`) resumes the releases, deletes a leftover bootstrap bootstrap Job, and forces a reset reconcile of `alga-core` (`reconcile.fluxcd.io/resetAt` + `forceAt`), so a release stalled with `RetriesExceeded` recovers without SSH.
 
 ## Operator and support helpers
 

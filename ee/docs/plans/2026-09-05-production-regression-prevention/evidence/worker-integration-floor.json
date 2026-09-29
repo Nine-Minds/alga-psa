@@ -1,0 +1,19 @@
+{
+  "status": "behavioral_runner_verification_passed",
+  "test": "scripts/tests/integration-selection.vitest.test.mjs",
+  "verified": [
+    "Real Vitest runner executes a Temporal-owned test named in the mandatory floor on docs-only direct invocation.",
+    "Moving that worker test without updating its manifest fails before execution.",
+    "Existing full/affected selection, unavailable-graph fallback and skipped-test checks still pass."
+  ],
+  "log": "/tmp/alga-worker-floor-regression.log",
+  "nativeBrowserFollowup": {
+    "revision": "9a0ea31e57ac9b9825232bda312cc04cc33dc213",
+    "workflow": 34093073839,
+    "enterpriseImage": "succeeded",
+    "communityImage": "failed (server-to-worker dependency cycle, fixed locally)",
+    "communityBrowserJob": 101659290911,
+    "enterpriseBrowserJob": 101659290969,
+    "browserExecution": "Neither suite executed; both rejected the failed build prerequisite. This is not a browser assertion failure."
+  }
+}

@@ -71,7 +71,7 @@ const serviceItem = item({ quote_item_id: 'svc-1', service_id: 'svc-labor', desc
 describe('buildQuoteConversionPreview', () => {
   beforeEach(() => {
     db.salesOrder = undefined;
-    db.salesOrderLines = [];
+    db.salesOrderLines = [{ so_line_id: 'prod-1', service_id: 'svc-prod', quantity_ordered: 1, unit_price: 1000 }];
     db.productServiceIds = ['svc-prod'];
   });
 
@@ -102,5 +102,36 @@ describe('buildQuoteConversionPreview', () => {
     expect(preview.invoice_items).toEqual([]);
     expect(preview.available_actions).not.toContain('invoice');
     expect(preview.sales_order_items).toHaveLength(1);
+  });
+
+  it('keeps invoice conversion available and splits product prices to conserve indivisible cents', async () => {
+    const product = item({ ...productItem, quantity: 3, total_price: 3000 });
+    const discount = item({ quote_item_id: 'discount', is_discount: true, discount_type: 'fixed', unit_price: 100 });
+    const preview = await buildQuoteConversionPreview(quoteWith([product, discount]), fakeKnex, TENANT);
+
+    expect(preview.available_actions).toContain('invoice');
+    expect(preview.invoice_error).toBeNull();
+    expect(preview.invoice_items.reduce((sum, row) => sum + row.total_price, 0)).toBe(2900);
+    expect(preview.sales_order_items.map((row) => [row.quantity, row.unit_price])).toEqual([[1, 966], [2, 967]]);
+    expect(new Set(preview.sales_order_items.map((row) => row.quote_item_id)).size).toBe(2);
+  });
+
+  it('shows actual legacy sales-order prices and blocks only the invoice when discounts are missing', async () => {
+    db.salesOrder = { so_id: 'so-1', so_number: 'SO00001' };
+    db.salesOrderLines = [{ so_line_id: 'line-1', service_id: 'svc-prod', quantity_ordered: 1, unit_price: 1000 }];
+    const discount = item({ quote_item_id: 'discount', is_discount: true, discount_type: 'fixed', unit_price: 400 });
+    const recurring = item({ quote_item_id: 'rec', service_id: 'rec-service', is_recurring: true, unit_price: 0, total_price: 0 });
+    const quote = quoteWith([productItem, serviceItem, discount, recurring]);
+    const preview = await buildQuoteConversionPreview(quote, fakeKnex, TENANT);
+
+    expect(preview.sales_order_items[0].total_price).toBe(1000);
+    expect(preview.invoice_error).toContain('SO00001');
+    expect(preview.available_actions).toEqual(['contract']);
+
+    db.salesOrderLines[0].unit_price = 800;
+    const reconciled = await buildQuoteConversionPreview(quote, fakeKnex, TENANT);
+    expect(reconciled.invoice_error).toBeNull();
+    expect(reconciled.available_actions).toContain('invoice');
+    expect(reconciled.sales_order_items[0].total_price).toBe(800);
   });
 });

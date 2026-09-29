@@ -38,7 +38,12 @@
           "title": "Angebotsdetails"
         }
       },
-      "title": "Abrechnung"
+      "title": "Abrechnung",
+      "paymentMethods": {
+        "setupComplete": {
+          "title": "Karteneinrichtung"
+        }
+      }
     },
     "clientSettings": {
       "description": "Verwalten Sie Ihre Unternehmenseinstellungen und -konfigurationen",
@@ -613,6 +618,11 @@
       "layout": {
         "title": "Datenschutzerklärung"
       }
+    }
+  },
+  "paymentMethods": {
+    "setupComplete": {
+      "title": "Karteneinrichtung"
     }
   }
 }

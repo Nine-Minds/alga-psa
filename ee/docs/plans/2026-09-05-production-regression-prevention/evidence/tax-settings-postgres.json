@@ -1,0 +1,25 @@
+{
+  "scope": "Real PostgreSQL tax settings and billing-profile selection",
+  "baseRevision": "41b56bb5a9",
+  "workingTreeDirty": true,
+  "passed": 19,
+  "failed": 0,
+  "skipped": 0,
+  "durationSeconds": 1.23,
+  "changes": [
+    "Removed client-tax-settings and threshold mocks from existing rate-selection DB suite",
+    "Persisted reverse-charge toggle readback and precedence over missing regional rates",
+    "Conflicting sibling profile settings must not affect default-profile calculation"
+  ],
+  "isolation": "Task-owned migrated visual_regression_82cc_test; per-test transactions rolled back",
+  "limitations": [
+    "Tenant/auth context remains substituted with transaction fixture",
+    "Local config omits global DB bootstrap; canonical workspace DB runner remains assigned",
+    "Does not establish comprehensive international tax, tax caps, or subscription-period policy; all three TODOs remain",
+    "Native CI unverified"
+  ],
+  "artifact": {
+    "path": "/tmp/alga-tax-settings-db-final.log",
+    "sha256": "ebdfb1f34ce87cce1ad2d7d356457d648ec5c4df2feb459d7c8171f5a062f860"
+  }
+}

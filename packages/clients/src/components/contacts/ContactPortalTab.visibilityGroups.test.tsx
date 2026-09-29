@@ -100,6 +100,12 @@ vi.mock('./PortalBillingProfileAccess', () => ({
   PortalBillingProfileAccess: () => null,
 }));
 
+// Same reason, for the read-only profile-membership panel this tab gained with
+// the client merge work: it reaches the same barrel through its server action.
+vi.mock('./ContactBillingProfileAssociations', () => ({
+  ContactBillingProfileAssociations: () => null,
+}));
+
 vi.mock('@alga-psa/ui/components/Badge', () => ({
   Badge: ({ children }: any) => <span>{children}</span>,
 }));
@@ -237,6 +243,7 @@ describe('ContactPortalTab visibility groups', () => {
       name: 'HR',
       description: 'HR-only boards',
       board_ids: ['board-2'],
+      ticket_scope: 'contact',
     });
     updateClientPortalVisibilityGroupForContactMock.mockResolvedValue(undefined);
 
@@ -262,6 +269,7 @@ describe('ContactPortalTab visibility groups', () => {
         name: 'HR',
         description: null,
         boardIds: ['board-2'],
+        ticketScope: 'client',
       });
     });
 
@@ -291,6 +299,7 @@ describe('ContactPortalTab visibility groups', () => {
           name: 'HR Leaders',
           description: 'HR-only boards',
           boardIds: ['board-2'],
+          ticketScope: 'contact',
         }
       );
     });

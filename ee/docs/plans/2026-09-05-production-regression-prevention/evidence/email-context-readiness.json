@@ -1,0 +1,53 @@
+{
+  "status": "passed",
+  "counts": {
+    "passed": 213,
+    "failed": 0,
+    "skipped": 0,
+    "todo": 0,
+    "pending": 0
+  },
+  "failures": [],
+  "source": {
+    "before": {
+      "revision": "703093da47fa4ec7593ca3284b1d2af160b96b07",
+      "dirty": true,
+      "changes": [
+        {
+          "status": " M",
+          "file": "ee/temporal-workflows/src/activities/__tests__/email-activities.temporal.test.ts"
+        },
+        {
+          "status": " M",
+          "file": "ee/temporal-workflows/vitest.readiness.config.ts"
+        },
+        {
+          "status": " M",
+          "file": "scripts/lib/test-discovery.mjs"
+        }
+      ]
+    },
+    "after": {
+      "revision": "703093da47fa4ec7593ca3284b1d2af160b96b07",
+      "dirty": true,
+      "changes": [
+        {
+          "status": " M",
+          "file": "ee/temporal-workflows/src/activities/__tests__/email-activities.temporal.test.ts"
+        },
+        {
+          "status": " M",
+          "file": "ee/temporal-workflows/vitest.readiness.config.ts"
+        },
+        {
+          "status": " M",
+          "file": "scripts/lib/test-discovery.mjs"
+        }
+      ]
+    }
+  },
+  "files": 29,
+  "limits": [
+    "Local readiness execution; native verification pending. Direct activity tests use mocked context and email transport, not the Temporal engine."
+  ]
+}

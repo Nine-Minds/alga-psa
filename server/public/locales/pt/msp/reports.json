@@ -240,8 +240,9 @@
     },
     "summary": {
       "totalMRR": {
-        "title": "MRR total",
-        "subtitle": "Receita recorrente mensal"
+        "title": "MRR fixo",
+        "subtitle": "Receita recorrente mensal fixa de contratos ativos",
+        "variableUsageNote": "{{count}} contratos ativos também faturam utilização variável (não incluída)"
       },
       "ytdRevenue": {
         "title": "Receita acumulada no ano",
@@ -302,7 +303,9 @@
       "revenueYtd": "Receita (acumulada no ano)",
       "costYtd": "Custo (acumulado no ano)",
       "profit": "Lucro",
-      "margin": "Margem"
+      "margin": "Margem",
+      "plusVariableUsage": "+ utilização variável",
+      "variableUsage": "Utilização variável"
     },
     "statusValues": {
       "active": "Ativo",

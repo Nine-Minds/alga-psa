@@ -265,7 +265,8 @@
         "technician": "⟦Ŧḗƈħƞīƈīȧƞ⟧",
         "ticket": "⟦Ŧīƈķḗŧ⟧",
         "rating": "⟦Řȧŧīƞɠ⟧",
-        "comment": "⟦Ƈȯḿḿḗƞŧ⟧"
+        "comment": "⟦Ƈȯḿḿḗƞŧ⟧",
+        "project": "⟦Ƥřȯĵḗƈŧ⟧"
       },
       "fallbacks": {
         "unknown": "⟦Ŭƞķƞȯẇƞ⟧",
@@ -312,7 +313,8 @@
         "technician": "⟦Ŧḗƈħƞīƈīȧƞ⟧",
         "rating": "⟦Řȧŧīƞɠ⟧",
         "comment": "⟦Ƈȯḿḿḗƞŧ⟧",
-        "ticket": "⟦Ŧīƈķḗŧ⟧"
+        "ticket": "⟦Ŧīƈķḗŧ⟧",
+        "subject": "⟦Ŧīƈķḗŧ / Ƥřȯĵḗƈŧ⟧"
       },
       "fallbacks": {
         "unknownClient": "⟦Ŭƞķƞȯẇƞ Ƈŀīḗƞŧ⟧",
@@ -342,7 +344,8 @@
         "unknownClient": "⟦Ŭƞķƞȯẇƞ Ƈŀīḗƞŧ⟧",
         "ticket": "⟦Ŧīƈķḗŧ {{ticket}}⟧",
         "noComment": "⟦Ƞȯ ƈȯḿḿḗƞŧ ŀḗƒŧ.⟧",
-        "assignedTo": "⟦Ȧşşīɠƞḗḓ ŧȯ: {{name}}⟧"
+        "assignedTo": "⟦Ȧşşīɠƞḗḓ ŧȯ: {{name}}⟧",
+        "project": "⟦Ƥřȯĵḗƈŧ {{project}}⟧"
       }
     }
   },
@@ -439,7 +442,8 @@
       "agent": "⟦Ȧɠḗƞŧ⟧",
       "technician": "⟦Ŧḗƈħƞīƈīȧƞ⟧",
       "submitted": "⟦Şŭƀḿīŧŧḗḓ⟧",
-      "comment": "⟦Ƈȯḿḿḗƞŧ⟧"
+      "comment": "⟦Ƈȯḿḿḗƞŧ⟧",
+      "subject": "⟦Ŧīƈķḗŧ / Ƥřȯĵḗƈŧ⟧"
     },
     "metrics": {
       "invitations": "⟦Īƞṽīŧȧŧīȯƞş⟧",

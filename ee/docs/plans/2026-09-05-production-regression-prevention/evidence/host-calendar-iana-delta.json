@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "scope": "host-calendar-iana-delta-replay",
+  "applicationRevision": "c5938cdad5",
+  "emulatorBaseRevision": "0ea6cdafdd",
+  "edition": "enterprise",
+  "before": {
+    "wireTestsFailed": 3,
+    "wireTestsPassed": 20,
+    "browserFailure": "Vendor correction received200 callback but local title unchanged after60000ms; emulator delta400 for America/New_York"
+  },
+  "after": {
+    "emulatorTestFiles": 5,
+    "emulatorTestsPassed": 60,
+    "typecheck": "passed",
+    "hostBundleBuild": "passed",
+    "browser": {
+      "startTime": "2026-09-08T02:55:38.393Z",
+      "duration": 26593.155000000002,
+      "expected": 3,
+      "skipped": 0,
+      "unexpected": 0,
+      "flaky": 0
+    }
+  },
+  "behavior": [
+    "Explicit offset event timestamps and IANA wall clocks select correct UTC window",
+    "Summer and winter New York offsets",
+    "Delta update/delete round trips preserve IDs and UTC response dates",
+    "Ambiguous/nonexistent local times explicitly refused",
+    "Outage503, permission403 and throttling429 browser journeys complete with real OAuth, callback, DB, UI, refresh/recovery and deletion"
+  ],
+  "sources": [
+    "https://learn.microsoft.com/en-us/graph/api/resources/datetimetimezone?view=graph-rest-1.0",
+    "https://learn.microsoft.com/en-us/graph/api/event-delta?view=graph-rest-1.0"
+  ],
+  "artifactHashes": {
+    "alga-calendar-timezone-before.log": "a1b7788fa5559da7eaa6857b5f662cf4d186f3ed528d0a3e8415e0f73e7fe6ec",
+    "alga-msgraph-timezone-full.log": "48ade792e2bb47adfb5e5bc0e7437fe8d50fc4bdf807c8c61023ca752209a486",
+    "alga-msgraph-timezone-types.log": "9581404340fec1040430b76e44b32598837051ecaa7b07a7e56f93d521c5f485",
+    "alga-calendar-host-all-faults.json": "45eafb7fd7f18f57e77fc79cfb70698bec16def8c200866407501dea221328a3"
+  },
+  "limits": [
+    "Existing app build, not current-source native CI or immutable release validation",
+    "Single delegated mailbox; Windows zone names, recurrence and ambiguous DST remain unmodeled",
+    "Legacy calendar event-list filter remains UTC-only",
+    "No Temporal worker or Teams SSO validation",
+    "No Docker builds or publication"
+  ]
+}

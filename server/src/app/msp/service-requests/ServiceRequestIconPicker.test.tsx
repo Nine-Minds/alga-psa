@@ -7,6 +7,14 @@ import '@testing-library/jest-dom';
 import { describe, expect, it, vi } from 'vitest';
 import { ServiceRequestIconPicker } from './ServiceRequestIconPicker';
 
+vi.mock('@alga-psa/ui/lib/i18n/client', async () => {
+  const { default: messages } = await import('../../../../public/locales/en/msp/service-requests.json');
+  return { useTranslation: () => ({
+    t: (key: string, options?: { defaultValue?: string }) =>
+      key.split('.').reduce((value: any, part) => value?.[part], messages) ?? options?.defaultValue ?? key,
+  }) };
+});
+
 describe('ServiceRequestIconPicker', () => {
   it('updates the selected icon through button clicks', async () => {
     const user = userEvent.setup();

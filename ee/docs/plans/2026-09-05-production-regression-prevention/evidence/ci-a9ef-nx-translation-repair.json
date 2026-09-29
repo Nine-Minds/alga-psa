@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "scope": "ci-nx-translation-repair",
+  "runId": "34339167571",
+  "jobId": "102425612657",
+  "publishedRevision": "a9efecce23230ead68afb69ddc85613c6becf1fa",
+  "testedRevision": "16264b7e71ade1ec39a1caf1654e81d860f95ba3",
+  "jobStatus": "success",
+  "checkoutLogLines": [
+    314,
+    317
+  ],
+  "rawLogSha256": "5a5e1c19b446b4dca975d6ea8c756c8c0a43ae7fd3696dda45edadb7c60bf3bd",
+  "billing": {
+    "passedFiles": 286,
+    "passedTests": 1286,
+    "logLines": [
+      28987,
+      28988
+    ],
+    "repairedFiles": [
+      {
+        "file": "packages/billing/tests/billing-dashboard/ContractLinesSubbatch.i18n.test.ts",
+        "passedTests": 52,
+        "logLine": 23457
+      },
+      {
+        "file": "packages/billing/tests/creditsNamespaceAndRoute.i18n.test.ts",
+        "passedTests": 4,
+        "logLine": 28878
+      }
+    ]
+  },
+  "serverAffected": {
+    "passedFiles": 1077,
+    "passedTests": 5705,
+    "todo": 3,
+    "logLines": [
+      65468,
+      65469
+    ]
+  },
+  "limitations": [
+    "Passing file summaries include the prior failing T051/T001 assertions but do not print each passing title separately.",
+    "Nx does not record post-test source cleanliness; no claim that pseudo generation left its checkout unchanged.",
+    "Server affected output retains three tax TODOs. Nx command success does not prove the dedicated full unit completeness gate.",
+    "Repeated cached Nx summaries were not summed."
+  ]
+}

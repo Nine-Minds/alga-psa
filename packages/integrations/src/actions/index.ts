@@ -10,6 +10,7 @@ export {
   getQboConnectionStatus,
   saveQboCredentials,
   disconnectQbo,
+  forceFinalizeQboDisconnect,
   getQboTaxCodes,
   getQboAutomatedSalesTaxMode,
   setQboAutomatedSalesTaxMode,
@@ -89,6 +90,16 @@ export type {
   EmailSettingsView,
   MicrosoftOutboundMailboxOption,
 } from './email-actions/emailSettingsActions';
+export {
+  listEmailSenders,
+  listSelectableSenders,
+  createEmailSender,
+  updateEmailSender,
+  deleteEmailSender,
+  verifyEmailSender,
+  setEmailSenderRoute,
+  clearEmailSenderRoute,
+} from './email-actions/emailSenderActions';
 export {
   getInboundTicketDefaults,
   createInboundTicketDefaults,
@@ -237,7 +248,15 @@ export {
   type EntraPreflightIdentity,
   type EntraPreflightResponse,
   type EntraSyncScheduleSettings,
+  getEntraUserFilterDefaults,
+  updateEntraUserFilterDefaults,
+  getEntraManagedTenantUserFilter,
+  updateEntraManagedTenantUserFilter,
 } from './integrations/entraActions';
+export {
+  runEntraConnectionDiagnostics,
+  runEntraClientAccessDiagnostics,
+} from './integrations/entraDiagnosticsActions';
 export {
   getTacticalRmmSettings,
   saveTacticalRmmConfiguration,
@@ -279,6 +298,7 @@ export {
   getXeroIntegrationStatus,
   saveXeroCredentials,
   disconnectXero,
+  forceFinalizeXeroDisconnect,
   getXeroAccounts,
   getXeroItems,
   getXeroTaxRates,
@@ -297,3 +317,13 @@ export {
 export {
   getTaxRegions
 } from './taxRegionActions';
+
+export {
+  getAssetRmmData,
+  refreshAssetRmmData,
+  triggerRmmReboot,
+  triggerRmmScript,
+  getAssetRemoteControlUrl,
+  getAssetRemoteControlTypes,
+  type RmmCommandResult,
+} from './integrations/assetRmmActions';

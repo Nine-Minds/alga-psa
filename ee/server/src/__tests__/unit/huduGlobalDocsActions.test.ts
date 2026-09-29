@@ -227,7 +227,7 @@ describe('T241: one Hudu page per call, search/page passthrough, hasMore heurist
 
     expect(await listHuduArticlesAcrossCompanies()).toEqual({
       state: 'error',
-      error: 'Hudu rate limit exceeded (429).',
+      error: 'Hudu rate limit exceeded. Please try again later.',
       errorKind: 'rate_limited',
     });
   });

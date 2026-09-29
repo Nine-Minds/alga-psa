@@ -8,7 +8,8 @@ const findTicketByEmailThreadMock = vi.fn();
 const resolveInboundTicketDefaultsMock = vi.fn();
 const resolveEffectiveInboundTicketDefaultsMock = vi.fn();
 const findContactByEmailMock = vi.fn();
-const findClientIdByInboundEmailDomainMock = vi.fn();
+const findInboundEmailDomainMappingMock = vi.fn();
+const createContactForInboundSenderMock = vi.fn();
 const findValidClientPrimaryContactIdMock = vi.fn();
 const findEmailProviderMailboxAddressMock = vi.fn();
 const upsertTicketWatchListRecipientsMock = vi.fn();
@@ -76,7 +77,8 @@ vi.mock('../../../workflow/actions/emailWorkflowActions', () => ({
   resolveInboundTicketDefaults: (...args: any[]) => resolveInboundTicketDefaultsMock(...args),
   resolveEffectiveInboundTicketDefaults: (...args: any[]) => resolveEffectiveInboundTicketDefaultsMock(...args),
   findContactByEmail: (...args: any[]) => findContactByEmailMock(...args),
-  findClientIdByInboundEmailDomain: (...args: any[]) => findClientIdByInboundEmailDomainMock(...args),
+  findInboundEmailDomainMapping: (...args: any[]) => findInboundEmailDomainMappingMock(...args),
+  createContactForInboundSender: (...args: any[]) => createContactForInboundSenderMock(...args),
   findValidClientPrimaryContactId: (...args: any[]) => findValidClientPrimaryContactIdMock(...args),
   findEmailProviderMailboxAddress: (...args: any[]) => findEmailProviderMailboxAddressMock(...args),
   upsertTicketWatchListRecipients: (...args: any[]) => upsertTicketWatchListRecipientsMock(...args),
@@ -134,7 +136,7 @@ describe('processInboundEmailInApp additional authorship paths', () => {
       location_id: undefined,
       entered_by: 'entered-by-user',
     });
-    findClientIdByInboundEmailDomainMock.mockResolvedValue(null);
+    findInboundEmailDomainMappingMock.mockResolvedValue(null);
     findValidClientPrimaryContactIdMock.mockResolvedValue(null);
     findEmailProviderMailboxAddressMock.mockResolvedValue('support@example.com');
     upsertTicketWatchListRecipientsMock.mockResolvedValue({ updated: true, watchList: [] });
@@ -151,7 +153,7 @@ describe('processInboundEmailInApp additional authorship paths', () => {
       },
       source: 'provider_default',
     });
-    findClientIdByInboundEmailDomainMock.mockResolvedValue(null);
+    findInboundEmailDomainMappingMock.mockResolvedValue(null);
     findValidClientPrimaryContactIdMock.mockResolvedValue(null);
     createTicketFromEmailMock.mockResolvedValue({
       ticket_id: 'ticket-1',
@@ -421,6 +423,63 @@ describe('processInboundEmailInApp additional authorship paths', () => {
             matchedAddress: 'billing@example.com',
             contactEmail: 'primary@example.com',
           }),
+        }),
+      }),
+      'tenant-1'
+    );
+  });
+
+  it('T040: Gmail-shaped Authentication-Results resolves a known contact as email_match', async () => {
+    findContactByEmailMock.mockResolvedValue({
+      contact_id: 'contact-gmail-1',
+      client_id: 'client-gmail-1',
+      user_id: 'client-user-gmail-1',
+      email: 'munjal@joymode.io',
+      name: 'Munjal Thakkar',
+      client_name: 'Joymode Business Solutions',
+    });
+
+    const { processInboundEmailInApp } = await import('../processInboundEmailInApp');
+
+    const result = await processInboundEmailInApp({
+      tenantId: 'tenant-1',
+      providerId: 'provider-1',
+      emailData: buildEmailData({
+        from: { email: 'munjal@joymode.io', name: 'Munjal Thakkar' },
+        headers: {
+          'authentication-results': `mx.google.com;
+       dkim=pass header.i=@techff.onmicrosoft.com header.s=selector1-techff-onmicrosoft-com header.b="cmLi/gLS";
+       arc=pass (i=1 spf=pass spfdomain=joymode.io dkim=pass dkdomain=joymode.io dmarc=pass fromdomain=joymode.io);
+       spf=pass (google.com: domain of munjal@joymode.io designates 2a01:111:f403:c005::5 as permitted sender) smtp.mailfrom=munjal@joymode.io`,
+        },
+      }),
+    });
+
+    expect(result.outcome).toBe('created');
+    expect(findContactByEmailMock).toHaveBeenCalledWith('munjal@joymode.io', 'tenant-1', {
+      defaultClientId: 'default-client-id',
+    });
+    expect(createTicketFromEmailMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        client_id: 'client-gmail-1',
+        contact_id: 'contact-gmail-1',
+        email_metadata: expect.objectContaining({
+          clientMatchSource: 'email_match',
+          authResults: expect.objectContaining({
+            aligned: { spf: true, dkim: false, dmarc: false },
+            dmarc: null,
+          }),
+        }),
+      }),
+      'tenant-1'
+    );
+    expect(createCommentFromEmailMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        author_type: 'contact',
+        author_id: 'client-user-gmail-1',
+        contact_id: 'contact-gmail-1',
+        metadata: expect.objectContaining({
+          unmatchedSender: false,
         }),
       }),
       'tenant-1'

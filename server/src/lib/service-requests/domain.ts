@@ -2,6 +2,7 @@ export const SERVICE_REQUEST_EXECUTION_MODES = {
   TICKET_ONLY: 'ticket-only',
   WORKFLOW_ONLY: 'workflow-only',
   TICKET_PLUS_WORKFLOW: 'ticket-plus-workflow',
+  STORE_ONLY: 'store-only',
 } as const;
 
 export type ServiceRequestExecutionMode =

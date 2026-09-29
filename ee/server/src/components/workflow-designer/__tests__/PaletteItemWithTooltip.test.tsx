@@ -1,7 +1,7 @@
 /** @vitest-environment jsdom */
 
 import React from 'react';
-import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { DraggableProvided } from '@hello-pangea/dnd';
 
@@ -94,7 +94,8 @@ describe('PaletteItemWithTooltip', () => {
       await vi.advanceTimersByTimeAsync(500);
     });
 
-    expect(screen.getByText('Ticket')).toBeInTheDocument();
-    expect(screen.getByText('Ticket actions')).toBeInTheDocument();
+    const tooltip = within(screen.getByText('Ticket actions').parentElement!);
+    expect(tooltip.getByText('Ticket')).toBeInTheDocument();
+    expect(tooltip.getByText('Ticket actions')).toBeInTheDocument();
   });
 });

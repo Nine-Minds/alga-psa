@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "entries": [
+    {
+      "artifact": "teams-development-execution",
+      "owner": "integration-owners",
+      "reason": "Scope: the Teams BROWSER journey only. Microsoft coverage itself runs and passes in CI -- mailbox, calendar with outage/permission/throttling recovery, OAuth rejection and webhook validation in the production browser lane, the NextAuth callback lane, and 86 wire-level Graph cases including Teams bot adapters, meeting adapters and organizer routing. Teams emulator overrides are denied under NODE_ENV=production by design (ee/packages/microsoft-teams/src/lib/teams/emulatorMode.ts), since they decide where the bot secret is POSTed and whose JWTs are accepted, so this journey can only run on a development server. The earlier dev-webpack chunk truncation is resolved: under Turbopack there is no SyntaxError, ChunkLoadError or memory restart, and the lane starts, authenticates and warms the dashboard. It now fails later, timing out on the first capability checkbox in the Microsoft profile dialog. The failure screenshot shows Radix and component styling present but layout utilities absent, and every stylesheet request returned 200, so the working theory is that Tailwind is not processed under Turbopack in this lane -- the control sits in a long unstyled flow rather than a dialog, which is why Playwright reports it visible and stable but outside the viewport. Not yet proven; do not relax the production guard, and do not force the click, which would assert on an element no user could reach. Tracked as F034/T028.",
+      "expires": "2026-10-21",
+      "tracking": "F034/T028"
+    }
+  ]
+}

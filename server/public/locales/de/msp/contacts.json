@@ -35,6 +35,7 @@
     "title": "Kontakte",
     "description": "Hauptseite zur Kontaktverwaltung mit Suche, Filtern, Listenansicht und Sammelaktionen",
     "heading": "Kontakte",
+    "sharedMailbox": "Freigegebenes Postfach",
     "addContact": "+ Kontakt hinzufügen",
     "actions": "Aktionen",
     "searchPlaceholder": "Kontakte, Notizen und Interaktionen suchen",
@@ -728,6 +729,16 @@
       "visibilityInvalidData": "Ungültige Daten der Sichtbarkeitsgruppe übermittelt. Bitte prüfen Sie die Gruppenangaben und die ausgewählten Boards.",
       "groupNameRequired": "Gruppenname ist erforderlich",
       "readPermission": "Berechtigung verweigert: Kontakte können nicht gelesen werden"
+    }
+  },
+  "portal": {
+    "visibilityGroups": {
+      "scopeLabel": "Ticketsichtbarkeit",
+      "scopeClient": "Alle Tickets dieses Kunden",
+      "scopeContact": "Nur eigene Tickets",
+      "scopeClientDescription": "Mitglieder sehen alle Tickets dieses Kunden auf den ausgewählten Boards.",
+      "scopeContactDescription": "Mitglieder sehen nur Tickets, bei denen sie als Kontakt eingetragen sind. Kundenadministratoren sehen alle Tickets auf den ausgewählten Boards, auch ohne Kontakt.",
+      "assignmentHelp": "Weisen Sie eine Gruppe zu, um Boards und Tickets einzuschränken, oder behalten Sie den vollständigen Kundenzugriff."
     }
   }
 }

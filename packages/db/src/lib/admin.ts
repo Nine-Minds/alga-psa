@@ -12,6 +12,32 @@ import { getSecret } from '@alga-psa/core/secrets';
 import { isReadOnlyError, retryOnReadOnly } from './readOnlyRetry';
 
 let adminConnection: Knex | null = null;
+let lifecycle: Promise<void> = Promise.resolve();
+let pendingGet: Promise<Knex> | null = null;
+let pendingRefresh: Promise<Knex> | null = null;
+
+// Order pool mutations with probes and initialization. A rejected operation must
+// not poison the queue; concurrent callers share the same acquisition operation.
+function enqueue<T>(operation: () => Promise<T>): Promise<T> {
+    const result = lifecycle.then(operation);
+    lifecycle = result.then(() => undefined, () => undefined);
+    return result;
+}
+
+async function clearAdminConnection(): Promise<void> {
+    const previous = adminConnection;
+    adminConnection = null;
+    if (previous) await previous.destroy();
+}
+
+export function getAdminConnection(): Promise<Knex> {
+    if (pendingGet) return pendingGet;
+    const result = enqueue(acquireAdminConnection);
+    pendingGet = result;
+    const clear = () => { if (pendingGet === result) pendingGet = null; };
+    void result.then(clear, clear);
+    return result;
+}
 
 /**
  * Probe that confirms the cached pool can still perform writes. Guards against
@@ -27,7 +53,7 @@ async function cachedPoolIsWritable(conn: Knex): Promise<boolean> {
     return row?.ro === false && row?.tro === 'off';
 }
 
-export async function getAdminConnection(): Promise<Knex> {
+async function acquireAdminConnection(): Promise<Knex> {
     const connectionId = Math.random().toString(36).substring(7);
 
     // Return existing connection if available and still write-capable
@@ -43,7 +69,7 @@ export async function getAdminConnection(): Promise<Knex> {
             // Probe failed outright — fall through to recreate
         }
         try {
-            await adminConnection.destroy();
+            await clearAdminConnection();
         } catch {
             /* ignore destroy errors; we're replacing the pool anyway */
         }
@@ -87,22 +113,22 @@ export async function getAdminConnection(): Promise<Knex> {
         }
     };
 
-    adminConnection = knex(config);
-
+    const candidate = knex(config);
     try {
-        await adminConnection.raw('SELECT 1');
+        await candidate.raw('SELECT 1');
     } catch (error) {
+        try { await candidate.destroy(); } catch { /* preserve initialization error */ }
         throw error;
     }
-
-    return adminConnection;
+    adminConnection = candidate;
+    return candidate;
 }
 
-export async function destroyAdminConnection(): Promise<void> {
-    if (adminConnection) {
-        await adminConnection.destroy();
-        adminConnection = null;
-    }
+export function destroyAdminConnection(): Promise<void> {
+    // Calls made after cleanup must not join an acquisition queued before it.
+    pendingGet = null;
+    pendingRefresh = null;
+    return enqueue(clearAdminConnection);
 }
 
 /**
@@ -110,13 +136,17 @@ export async function destroyAdminConnection(): Promise<void> {
  * "read-only transaction" / "writing to worker nodes" error so the next call
  * to getAdminConnection() returns a freshly-reconnected pool.
  */
-export async function refreshAdminConnection(): Promise<Knex> {
-    try {
-        await destroyAdminConnection();
-    } catch {
-        /* ignore; destroyAdminConnection clears the ref regardless */
-    }
-    return await getAdminConnection();
+export function refreshAdminConnection(): Promise<Knex> {
+    if (pendingRefresh) return pendingRefresh;
+    pendingGet = null;
+    const result = enqueue(async () => {
+        try { await clearAdminConnection(); } catch { /* detached pool may fail to close */ }
+        return acquireAdminConnection();
+    });
+    pendingRefresh = result;
+    const clear = () => { if (pendingRefresh === result) pendingRefresh = null; };
+    void result.then(clear, clear);
+    return result;
 }
 
 /**

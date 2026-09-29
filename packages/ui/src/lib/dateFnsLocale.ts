@@ -22,8 +22,17 @@ const DATE_FNS_LOCALES: Record<SupportedLocale, Locale> = {
   yy: enUS,
 };
 
+/**
+ * Map the app's active locale to the date-fns locale, for the NAMES it carries:
+ * months, weekdays, relative-time wording. Digit order and separator come from
+ * the tenant's country instead (see countryDateFormat), so a region tag here is
+ * only ever collapsed to its language.
+ */
 export function getDateFnsLocale(language?: string): Locale {
   if (language) {
+    if (language in DATE_FNS_LOCALES) {
+      return DATE_FNS_LOCALES[language as SupportedLocale];
+    }
     const normalized = language.split('-')[0] as SupportedLocale;
     if (normalized in DATE_FNS_LOCALES) {
       return DATE_FNS_LOCALES[normalized];

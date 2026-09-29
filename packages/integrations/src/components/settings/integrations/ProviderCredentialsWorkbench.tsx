@@ -154,7 +154,7 @@ export function ProviderCredentialsWorkbench({
       label: t('integrations.providersWorkbench.microsoft.label', { defaultValue: 'Microsoft' }),
       description: isEnterpriseEdition
         ? t('integrations.providersWorkbench.microsoft.descriptionEe', { defaultValue: 'Staff sign-in with Microsoft, Outlook email, Outlook calendar sync, and Teams.' })
-        : t('integrations.providersWorkbench.microsoft.descriptionCe', { defaultValue: 'Staff sign-in with Microsoft.' }),
+        : t('integrations.providersWorkbench.microsoft.descriptionCe', { defaultValue: "Outlook inbound email for your company's Microsoft app registration." }),
       badge: getMicrosoftBadge(microsoftStatus, t),
     },
   ];

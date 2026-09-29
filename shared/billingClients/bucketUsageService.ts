@@ -40,7 +40,7 @@ import { Knex } from 'knex';
 import { Temporal } from '@js-temporal/polyfill';
 import type { ISO8601String, IClientContractLine } from '@alga-psa/types';
 import { createTenantKnex, tenantDb } from '@alga-psa/db'; // Assuming needed if trx doesn't carry tenant context reliably
-import { toPlainDate, toISODate } from '@alga-psa/core';
+import { toPlainDate, toISODate, toCalendarDateString } from '@alga-psa/core';
 import {
     buildClientCadencePostDropObligationRef,
 } from './postDropRecurringObligationIdentity';
@@ -153,7 +153,7 @@ interface MemberRow {
  * if some other line (or assignment) of the same client pools it.
  */
 async function loadLineConfiguredServiceIds(
-    trx: Knex.Transaction,
+    trx: Knex | Knex.Transaction,
     tenant: string,
     contractLineId: string,
 ): Promise<Set<string>> {
@@ -169,8 +169,8 @@ async function loadLineConfiguredServiceIds(
  * scope-resolution rule: explicit membership first, then the line catch-all.
  * Returns null when the service draws from no bucket on the given line.
  */
-async function resolveBucketForLine(
-    trx: Knex.Transaction,
+export async function resolveBucketForLine(
+    trx: Knex | Knex.Transaction,
     tenant: string,
     contractLineId: string,
     serviceCatalogId: string
@@ -268,10 +268,19 @@ export async function loadAfterHoursRuleForBucket(
             end_time: String(entry.end_time),
             is_enabled: Boolean(entry.is_enabled),
         })),
-        holidays: holidays.map((holiday) => ({
-            holiday_date: String(holiday.holiday_date).slice(0, 10),
-            is_recurring: Boolean(holiday.is_recurring),
-        })),
+        holidays: holidays.flatMap((holiday) => {
+            let holidayDate: string | null;
+            // LEVERAGE: pattern holiday-date-normalize — keep DB DATE conversion at this loader boundary.
+            try {
+                holidayDate = toCalendarDateString(holiday.holiday_date);
+            } catch {
+                holidayDate = null;
+            }
+            return holidayDate ? [{
+                holiday_date: holidayDate,
+                is_recurring: Boolean(holiday.is_recurring),
+            }] : [];
+        }),
     };
 
     return { multiplier: afterHoursMultiplier, schedule };

@@ -5,6 +5,7 @@
 import type { IScheduleEntry, IRecurrencePattern, WorkItemType, ExternalCalendarEvent } from '@alga-psa/types';
 import { convertRecurrencePatternToRRULE } from './recurrenceConverter';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
+import { parseCalendarDateTime } from '@alga-psa/core';
 
 /**
  * Map IScheduleEntry to ExternalCalendarEvent format
@@ -27,8 +28,9 @@ export async function mapScheduleEntryToExternalEvent(
     ? entry.scheduled_end 
     : new Date(entry.scheduled_end);
 
-  // Determine if this is an all-day event
-  const isAllDay = isAllDayEvent(startDate, endDate);
+  // Midnight instants alone do not identify an all-day event: a timed
+  // maintenance window can have exactly the same boundaries.
+  const isAllDay = entry.is_all_day === true;
 
   // Build attendees list from assigned user IDs
   const attendees = entry.assigned_user_ids
@@ -124,15 +126,15 @@ export async function mapExternalEventToScheduleEntry(
 
   // Parse dates
   const startDate = event.start.dateTime 
-    ? new Date(event.start.dateTime)
+    ? parseCalendarDateTime(event.start.dateTime, event.start.timeZone)
     : event.start.date 
       ? new Date(event.start.date + 'T00:00:00Z')
       : new Date();
   
   const endDate = event.end.dateTime 
-    ? new Date(event.end.dateTime)
+    ? parseCalendarDateTime(event.end.dateTime, event.end.timeZone)
     : event.end.date 
-      ? new Date(event.end.date + 'T23:59:59Z')
+      ? new Date(event.end.date + 'T00:00:00Z')
       : new Date();
 
   // Extract Alga entry ID from extended properties if present
@@ -214,6 +216,7 @@ export async function mapExternalEventToScheduleEntry(
     notes: event.description,
     scheduled_start: startDate,
     scheduled_end: endDate,
+    is_all_day: !!event.start.date && !event.start.dateTime && !!event.end.date && !event.end.dateTime,
     status,
     assigned_user_ids: assignedUserIds,
     recurrence_pattern: recurrencePattern,
@@ -224,24 +227,6 @@ export async function mapExternalEventToScheduleEntry(
   };
 
   return entry;
-}
-
-/**
- * Check if an event is all-day based on start/end times
- */
-function isAllDayEvent(start: Date, end: Date): boolean {
-  const startHour = start.getHours();
-  const startMinute = start.getMinutes();
-  const endHour = end.getHours();
-  const endMinute = end.getMinutes();
-
-  // Consider all-day if starts at midnight and ends at midnight next day
-  // Or if it spans exactly 24 hours starting at midnight
-  return (
-    startHour === 0 && startMinute === 0 &&
-    (endHour === 0 && endMinute === 0 && 
-     end.getTime() - start.getTime() >= 86400000) // At least 24 hours
-  );
 }
 
 /**

@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "scope": "host-calendar-provider-partial",
+  "applicationRevision": "c5938cdad5",
+  "edition": "enterprise",
+  "status": "failed",
+  "verifiedBeforeFailure": [
+    "real Microsoft profile creation and OAuth callback",
+    "Graph webhook subscription through trusted localhost HTTPS proxy",
+    "UI schedule creation exported to Graph and removed",
+    "Graph event imported through actual callback",
+    "UI edit retains local state during injected Graph503",
+    "provider error shown in UI",
+    "retry refreshes expired token and recovers remote title/status/linkage"
+  ],
+  "failure": "Graph vendor correction webhook acknowledged200 but local title unchanged; calendarView/delta returns400 Request_UnsupportedQuery for event timezone America/New_York",
+  "protocolLimit": "msgraph core.calendarDelta only models UTC event timezones; do not call this an application regression until parity gap resolved",
+  "harnessFixes": [
+    "Task-local writable tenant secret provider",
+    "Canonical build-time OAuth origin53010 retained",
+    "Docker service names replaced by host tunnel addresses",
+    "Task-specific REDIS_PREFIX removes competing event consumer",
+    "Noon click uses measured viewport coordinates without parent auto-scroll",
+    "Calendar expected callback URL configurable with existing Compose default"
+  ],
+  "reports": {
+    "alga-calendar-host-canonical.json": "fcc56dbdc5074ff608d4ac3fc876dc5ae69432d706d37c76c4654e0a273b9dda",
+    "alga-calendar-host-slot.json": "39c994d59c7db08d4c0381942c053769e5dbb06c0fe01b66ffa9d7332b48f408",
+    "alga-calendar-host-isolated.json": "26d7c7d01f912000f4cefa3ff60e5114e141e7dcb7d3bd3cf40ceec8fa9aa4ba"
+  },
+  "limits": [
+    "No complete calendar journey pass",
+    "No Temporal worker started",
+    "No Docker build/current-source artifact/native CI",
+    "Host runtime settings in temporary private files; do not commit credentials"
+  ]
+}

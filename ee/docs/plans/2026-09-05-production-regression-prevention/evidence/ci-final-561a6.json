@@ -1,0 +1,398 @@
+{
+  "conclusion": "failure",
+  "jobs": [
+    {
+      "conclusion": "success",
+      "databaseId": 102344990244,
+      "failedSteps": [],
+      "name": "selection"
+    },
+    {
+      "conclusion": "success",
+      "databaseId": 102344990385,
+      "failedSteps": [],
+      "name": "workspace / ui-kit-showcase execution complete"
+    },
+    {
+      "conclusion": "success",
+      "databaseId": 102344990397,
+      "failedSteps": [],
+      "name": "workspace / workspace-runtime execution complete"
+    },
+    {
+      "conclusion": "success",
+      "databaseId": 102344990405,
+      "failedSteps": [],
+      "name": "unit / Nx affected unit tests"
+    },
+    {
+      "conclusion": "success",
+      "databaseId": 102344990411,
+      "failedSteps": [],
+      "name": "workspace / Enterprise unit shard 3"
+    },
+    {
+      "conclusion": "success",
+      "databaseId": 102344990430,
+      "failedSteps": [],
+      "name": "workspace / AI gateway execution complete"
+    },
+    {
+      "conclusion": "success",
+      "databaseId": 102344990436,
+      "failedSteps": [],
+      "name": "workspace / nx-tooling execution complete"
+    },
+    {
+      "conclusion": "success",
+      "databaseId": 102344990451,
+      "failedSteps": [],
+      "name": "workspace / Enterprise unit shard 2"
+    },
+    {
+      "conclusion": "success",
+      "databaseId": 102344990466,
+      "failedSteps": [],
+      "name": "node / Browser test discovery"
+    },
+    {
+      "conclusion": "success",
+      "databaseId": 102344990475,
+      "failedSteps": [],
+      "name": "node / Node tooling execution complete"
+    },
+    {
+      "conclusion": "success",
+      "databaseId": 102344990477,
+      "failedSteps": [],
+      "name": "workspace / Enterprise unit shard 1"
+    },
+    {
+      "conclusion": "failure",
+      "databaseId": 102344990478,
+      "failedSteps": [
+        "Run server unit tests with coverage",
+        "Require complete server unit execution"
+      ],
+      "name": "unit / Server unit suite + coverage"
+    },
+    {
+      "conclusion": "success",
+      "databaseId": 102344990534,
+      "failedSteps": [],
+      "name": "node / Appliance Node execution complete"
+    },
+    {
+      "conclusion": "success",
+      "databaseId": 102344990541,
+      "failedSteps": [],
+      "name": "workspace / server-colocated execution complete"
+    },
+    {
+      "conclusion": "success",
+      "databaseId": 102344990552,
+      "failedSteps": [],
+      "name": "unit / Skipped-test budget"
+    },
+    {
+      "conclusion": "success",
+      "databaseId": 102344990588,
+      "failedSteps": [],
+      "name": "workspace / Enterprise integration execution complete"
+    },
+    {
+      "conclusion": "success",
+      "databaseId": 102344990609,
+      "failedSteps": [],
+      "name": "integration / Check for relevant changes"
+    },
+    {
+      "conclusion": "success",
+      "databaseId": 102344990627,
+      "failedSteps": [],
+      "name": "workspace / workspace-unit execution complete"
+    },
+    {
+      "conclusion": "success",
+      "databaseId": 102344990657,
+      "failedSteps": [],
+      "name": "mobile / Mobile lint + typecheck"
+    },
+    {
+      "conclusion": "success",
+      "databaseId": 102344990666,
+      "failedSteps": [],
+      "name": "mobile / Mobile reproducibility checks"
+    },
+    {
+      "conclusion": "success",
+      "databaseId": 102344990675,
+      "failedSteps": [],
+      "name": "mobile / Mobile dependency audit (report)"
+    },
+    {
+      "conclusion": "success",
+      "databaseId": 102344990718,
+      "failedSteps": [],
+      "name": "browser / changes"
+    },
+    {
+      "conclusion": "success",
+      "databaseId": 102344990771,
+      "failedSteps": [],
+      "name": "mobile / Mobile unit tests"
+    },
+    {
+      "conclusion": "success",
+      "databaseId": 102345067125,
+      "failedSteps": [],
+      "name": "integration / Infrastructure shard 1"
+    },
+    {
+      "conclusion": "success",
+      "databaseId": 102345067142,
+      "failedSteps": [],
+      "name": "integration / Infrastructure shard 3"
+    },
+    {
+      "conclusion": "success",
+      "databaseId": 102345067157,
+      "failedSteps": [],
+      "name": "integration / Infrastructure shard 2"
+    },
+    {
+      "conclusion": "success",
+      "databaseId": 102345067164,
+      "failedSteps": [],
+      "name": "integration / Workspace database tests"
+    },
+    {
+      "conclusion": "success",
+      "databaseId": 102345067677,
+      "failedSteps": [],
+      "name": "integration / Integration shard 1"
+    },
+    {
+      "conclusion": "success",
+      "databaseId": 102345067698,
+      "failedSteps": [],
+      "name": "integration / Integration shard 2"
+    },
+    {
+      "conclusion": "success",
+      "databaseId": 102345067709,
+      "failedSteps": [],
+      "name": "integration / Integration shard 3"
+    },
+    {
+      "conclusion": "success",
+      "databaseId": 102345067731,
+      "failedSteps": [],
+      "name": "integration / Integration shard 4"
+    },
+    {
+      "conclusion": "success",
+      "databaseId": 102345074194,
+      "failedSteps": [],
+      "name": "browser / Standalone browser collection"
+    },
+    {
+      "conclusion": "success",
+      "databaseId": 102345074470,
+      "failedSteps": [],
+      "name": "citus / Combined migrations on single-node Citus"
+    },
+    {
+      "conclusion": "success",
+      "databaseId": 102345074556,
+      "failedSteps": [],
+      "name": "temporal / fast-readiness"
+    },
+    {
+      "conclusion": "skipped",
+      "databaseId": 102345076141,
+      "failedSteps": [],
+      "name": "temporal / docker-parity"
+    },
+    {
+      "conclusion": "success",
+      "databaseId": 102345076431,
+      "failedSteps": [],
+      "name": "temporal / Temporal engine execution complete"
+    },
+    {
+      "conclusion": "success",
+      "databaseId": 102345152306,
+      "failedSteps": [],
+      "name": "browser / build-images (temporal-worker, ee/temporal-workflows/Dockerfile, alga-e2e-test-temporal-worker:la..."
+    },
+    {
+      "conclusion": "success",
+      "databaseId": 102345152308,
+      "failedSteps": [],
+      "name": "browser / build-images (hocuspocus, hocuspocus/Dockerfile, alga-e2e-test-hocuspocus:latest, true)"
+    },
+    {
+      "conclusion": "success",
+      "databaseId": 102345152312,
+      "failedSteps": [],
+      "name": "browser / build-images (setup, setup/Dockerfile.ubuntu, alga-setup:ubuntu, true)"
+    },
+    {
+      "conclusion": "success",
+      "databaseId": 102345152320,
+      "failedSteps": [],
+      "name": "browser / build-images (server-ee, ee/server/Dockerfile.build, alga-e2e-test_server_ee_local:latest, fresh-..."
+    },
+    {
+      "conclusion": "success",
+      "databaseId": 102345152332,
+      "failedSteps": [],
+      "name": "browser / build-images (server, Dockerfile.build, alga-e2e-test_server_ce_local:latest, fresh-install-serve..."
+    },
+    {
+      "conclusion": "success",
+      "databaseId": 102345152347,
+      "failedSteps": [],
+      "name": "browser / build-images (redis, redis/Dockerfile, alga-e2e-test-redis:latest, true)"
+    },
+    {
+      "conclusion": "success",
+      "databaseId": 102345152371,
+      "failedSteps": [],
+      "name": "browser / build-images (pgbouncer, ./pgbouncer, pgbouncer/Dockerfile, alga-e2e-test-pgbouncer:latest, true)"
+    },
+    {
+      "conclusion": "success",
+      "databaseId": 102345152379,
+      "failedSteps": [],
+      "name": "browser / build-images (algasim, ./packages/emulators, packages/emulators/Dockerfile, alga-e2e-test-algasim..."
+    },
+    {
+      "conclusion": "success",
+      "databaseId": 102345152413,
+      "failedSteps": [],
+      "name": "browser / build-images (workflow-worker, services/workflow-worker/Dockerfile, alga-e2e-test-workflow-worker..."
+    },
+    {
+      "conclusion": "success",
+      "databaseId": 102345152467,
+      "failedSteps": [],
+      "name": "browser / build-images (email-service, services/email-service/Dockerfile, alga-e2e-test-email-service:lates..."
+    },
+    {
+      "conclusion": "success",
+      "databaseId": 102345764899,
+      "failedSteps": [],
+      "name": "temporal / Temporal execution gate"
+    },
+    {
+      "conclusion": "success",
+      "databaseId": 102346131541,
+      "failedSteps": [],
+      "name": "node / Node workflow execution gate"
+    },
+    {
+      "conclusion": "success",
+      "databaseId": 102346227583,
+      "failedSteps": [],
+      "name": "workspace / Enterprise unit execution complete"
+    },
+    {
+      "conclusion": "success",
+      "databaseId": 102346723070,
+      "failedSteps": [],
+      "name": "workspace / Workspace execution gate"
+    },
+    {
+      "conclusion": "success",
+      "databaseId": 102346762351,
+      "failedSteps": [],
+      "name": "citus / Citus execution complete"
+    },
+    {
+      "conclusion": "success",
+      "databaseId": 102347225475,
+      "failedSteps": [],
+      "name": "integration / Infrastructure execution complete"
+    },
+    {
+      "conclusion": "success",
+      "databaseId": 102347546565,
+      "failedSteps": [],
+      "name": "integration / Workspace database execution complete"
+    },
+    {
+      "conclusion": "success",
+      "databaseId": 102350148768,
+      "failedSteps": [],
+      "name": "integration / Integration execution complete"
+    },
+    {
+      "conclusion": "failure",
+      "databaseId": 102350320455,
+      "failedSteps": [
+        "Warm authenticated Teams dashboard"
+      ],
+      "name": "browser / Production browser (enterprise)"
+    },
+    {
+      "conclusion": "success",
+      "databaseId": 102350320544,
+      "failedSteps": [],
+      "name": "browser / Production browser (community)"
+    },
+    {
+      "conclusion": "failure",
+      "databaseId": 102359379956,
+      "failedSteps": [
+        "Independently reconcile required files and assertions"
+      ],
+      "name": "unit / Server unit execution complete"
+    },
+    {
+      "conclusion": "failure",
+      "databaseId": 102359568414,
+      "failedSteps": [
+        "Require complete production execution"
+      ],
+      "name": "browser / fresh-install-e2e"
+    },
+    {
+      "conclusion": "success",
+      "databaseId": 102359672062,
+      "failedSteps": [],
+      "name": "Repository test inventory"
+    },
+    {
+      "conclusion": "failure",
+      "databaseId": 102359795387,
+      "failedSteps": [
+        "Require every mandatory workflow and execution verdict"
+      ],
+      "name": "Production regression readiness"
+    }
+  ],
+  "status": "completed",
+  "schemaVersion": 1,
+  "runId": "34313560297",
+  "publishedHead": "561a6f1f1c009a09ec06a58b77c657c21f2bd255",
+  "testedMerge": "9ba03b9f3ad6b2e369c561399cd4049d590ac0c4",
+  "unit": {
+    "passed": 15025,
+    "failed": 1,
+    "todo": 3,
+    "failure": "InvoiceTemplateEditor.authoritativeFlow: resumes editing and preview when saving fails; Save Template button unavailable"
+  },
+  "teams": {
+    "status": "failed",
+    "stage": "dashboard",
+    "code": "dashboard-marker-missing",
+    "httpStatus": 200,
+    "elapsedMs": 140985
+  },
+  "limitations": [
+    "This run predates local Teams hydration, bucket query, invoice selection and project event repairs.",
+    "The run is terminal failure, not a successful candidate attestation."
+  ]
+}

@@ -1,0 +1,84 @@
+{
+  "schemaVersion": 1,
+  "scope": "Explicit all-day provenance, timezone parsing and recurrence follow-up",
+  "baseRevision": "6c338de84171914c8313ca40c19b02c349ab1510",
+  "workingTreeDirty": true,
+  "status": "incomplete",
+  "checks": [
+    {
+      "suite": "Combined all-day model and recurrence",
+      "passed": 114,
+      "realDatabaseCases": 42,
+      "log": "/tmp/alga-all-day-recurrence-combined.log"
+    },
+    {
+      "suite": "Schedule API merged-state validation",
+      "passed": 4,
+      "log": "/tmp/alga-api-allday-green.log"
+    },
+    {
+      "suite": "Calendar UI and provider mapping CI selection",
+      "passedPerTimezone": 39,
+      "timezones": [
+        "Europe/Berlin",
+        "America/Los_Angeles"
+      ],
+      "logs": [
+        "/tmp/alga-calendar-ci-timezone-berlin.log",
+        "/tmp/alga-calendar-ci-timezone-la.log"
+      ]
+    },
+    {
+      "suite": "Server TypeScript after recurrence editor change",
+      "status": "passed",
+      "log": "/tmp/alga-calendar-editor-final-typecheck.log"
+    },
+    {
+      "suite": "All-day column migration on disposable distributed Citus table",
+      "status": "passed",
+      "includes": [
+        "existing rows default timed",
+        "explicit all-day persists",
+        "down preserves rows"
+      ]
+    },
+    {
+      "suite": "Mobile rich-text generation",
+      "passed": 21,
+      "reproducibleGenerations": 3,
+      "generatedSha256": "3e489cb972a5ae6f3099904809985aa588a2510d6864ba503e0cecd5a5c34c94",
+      "log": "/tmp/alga-mobile-generator-green.log",
+      "portabilityLog": "/tmp/alga-mobile-generator-portability.log"
+    },
+    {
+      "suite": "Both actual mapper implementations",
+      "passedPerTimezone": 32,
+      "timezones": [
+        "UTC",
+        "Europe/Berlin",
+        "America/Los_Angeles"
+      ],
+      "beforeFailed": 7,
+      "logs": "/tmp/alga-ee-mapping-final-{utc,berlin,la}.log"
+    },
+    {
+      "suite": "Graph calendar contracts including both real adapters",
+      "passed": 45,
+      "beforeFailure": "Enterprise all-day create rejected by Graph emulator with UnableToDeserializePostBody",
+      "log": "/tmp/alga-ee-calendar-adapter-green.log"
+    },
+    {
+      "suite": "Teams auth preflight",
+      "passed": 5,
+      "realDatabaseProbe": "passed",
+      "sourcePasswordValid": true,
+      "runtime": "source-node-preflight; not Next compiled runtime"
+    }
+  ],
+  "limits": [
+    "Browser exposed duplicate EE implementations after the initial native fixes. Both actual implementations are now covered by focused contracts; final application rerun remains required.",
+    "Current-source GitHub CI has not run this batch.",
+    "Historical all-day provenance cannot be inferred safely from midnight timestamps; migration defaults existing entries to timed.",
+    "Timed recurring master omission is existing behavior, outside this all-day fix."
+  ]
+}

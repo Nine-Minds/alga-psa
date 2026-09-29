@@ -1,11 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const setCookieMock = vi.fn();
-const consumeLimiterMock = vi.fn(async () => ({ remainingPoints: 7 }));
+const consumeLimiterMock = vi.fn(async (_key: string) => ({ remainingPoints: 7 }));
 const resolveSourceMock = vi.fn();
-const getSigningSecretMock = vi.fn(async () => 'unit-test-signing-secret');
+const getSigningSecretMock = vi.fn(async (): Promise<string | null> => 'unit-test-signing-secret');
 const parseDiscoveryCookieMock = vi.fn();
-const createCookieMock = vi.fn(() => ({
+const createCookieMock = vi.fn((..._args: unknown[]) => ({
   value: 'signed-cookie-value',
   payload: {
     provider: 'google',
@@ -15,7 +15,7 @@ const createCookieMock = vi.fn(() => ({
     nonce: 'nonce',
   },
 }));
-const createPendingRememberContextCookieMock = vi.fn(() => ({
+const createPendingRememberContextCookieMock = vi.fn((..._args: unknown[]) => ({
   value: 'signed-pending-remember-context',
   payload: {
     email: 'user@example.com',

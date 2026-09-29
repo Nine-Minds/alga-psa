@@ -1,0 +1,79 @@
+{
+  "status": "passed",
+  "counts": {
+    "passed": 115,
+    "failed": 0,
+    "skipped": 0,
+    "todo": 0,
+    "pending": 0
+  },
+  "expectedFiles": [
+    "ee/temporal-workflows/src/activities/__tests__/marketing-activities.test.ts",
+    "ee/temporal-workflows/src/activities/__tests__/sla-activities.test.ts",
+    "ee/temporal-workflows/src/activities/__tests__/tenant-email-ingestion-activities.test.ts",
+    "ee/temporal-workflows/src/activities/__tests__/tenant-suspension-activities.test.ts",
+    "ee/temporal-workflows/src/activities/__tests__/workflow-runtime-v2-activities.test.ts",
+    "ee/temporal-workflows/src/config/__tests__/startupValidation.test.ts",
+    "ee/temporal-workflows/src/db/__tests__/tenant-operations.email-settings.test.ts",
+    "ee/temporal-workflows/src/schedules/__tests__/setupSchedules.entra-tier.test.ts",
+    "ee/temporal-workflows/src/schedules/__tests__/setupSchedules.marketing-fanout.test.ts",
+    "ee/temporal-workflows/src/schedules/__tests__/setupSchedules.ninjaone-backfill.test.ts",
+    "ee/temporal-workflows/src/workflows/__tests__/generic-job-workflow.temporal.test.ts",
+    "ee/temporal-workflows/src/workflows/__tests__/workflow-runtime-v2-interpreter.test.ts",
+    "ee/temporal-workflows/src/workflows/__tests__/workflow-runtime-v2-run-workflow.test.ts",
+    "ee/temporal-workflows/src/workflows/__tests__/workflow-runtime-v2-simulator-contract.test.ts"
+  ],
+  "executedFiles": [
+    "ee/temporal-workflows/src/activities/__tests__/marketing-activities.test.ts",
+    "ee/temporal-workflows/src/activities/__tests__/sla-activities.test.ts",
+    "ee/temporal-workflows/src/activities/__tests__/tenant-email-ingestion-activities.test.ts",
+    "ee/temporal-workflows/src/activities/__tests__/tenant-suspension-activities.test.ts",
+    "ee/temporal-workflows/src/activities/__tests__/workflow-runtime-v2-activities.test.ts",
+    "ee/temporal-workflows/src/config/__tests__/startupValidation.test.ts",
+    "ee/temporal-workflows/src/db/__tests__/tenant-operations.email-settings.test.ts",
+    "ee/temporal-workflows/src/schedules/__tests__/setupSchedules.entra-tier.test.ts",
+    "ee/temporal-workflows/src/schedules/__tests__/setupSchedules.marketing-fanout.test.ts",
+    "ee/temporal-workflows/src/schedules/__tests__/setupSchedules.ninjaone-backfill.test.ts",
+    "ee/temporal-workflows/src/workflows/__tests__/generic-job-workflow.temporal.test.ts",
+    "ee/temporal-workflows/src/workflows/__tests__/workflow-runtime-v2-interpreter.test.ts",
+    "ee/temporal-workflows/src/workflows/__tests__/workflow-runtime-v2-run-workflow.test.ts",
+    "ee/temporal-workflows/src/workflows/__tests__/workflow-runtime-v2-simulator-contract.test.ts"
+  ],
+  "discoveryStatus": "passed",
+  "failures": [],
+  "command": "node scripts/run-additional-workspace-tests.mjs temporal-readiness",
+  "source": {
+    "before": {
+      "revision": "a5d4ae5763f53df3226d9f90cf9b512739c62fc4",
+      "dirty": true,
+      "changes": [
+        {
+          "status": " M",
+          "file": "ee/temporal-workflows/vitest.readiness.config.ts"
+        },
+        {
+          "status": " M",
+          "file": "scripts/lib/test-discovery.mjs"
+        }
+      ]
+    },
+    "after": {
+      "revision": "a5d4ae5763f53df3226d9f90cf9b512739c62fc4",
+      "dirty": true,
+      "changes": [
+        {
+          "status": " M",
+          "file": "ee/temporal-workflows/vitest.readiness.config.ts"
+        },
+        {
+          "status": " M",
+          "file": "scripts/lib/test-discovery.mjs"
+        }
+      ]
+    }
+  },
+  "limits": [
+    "Local execution includes uncommitted readiness additions; native final revision verification pending.",
+    "These email lifecycle seams use mocked provider/database boundaries; existing real mail/browser paths remain separate."
+  ]
+}

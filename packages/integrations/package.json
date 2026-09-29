@@ -16,6 +16,10 @@
       "import": "./dist/actions/index.mjs",
       "require": "./dist/actions/index.js"
     },
+    "./emailSenderActions": {
+      "types": "./src/actions/email-actions/emailSenderActions.ts",
+      "import": "./src/actions/email-actions/emailSenderActions.ts"
+    },
     "./runtime": {
       "types": "./src/runtime.ts",
       "import": "./src/runtime.ts"

@@ -1,0 +1,19 @@
+{
+  "scope": "Generic job and KB import retry policy on ephemeral Temporal engine",
+  "test": "ee/temporal-workflows/src/workflows/__tests__/generic-job-workflow.engine.test.ts",
+  "checks": [
+    "KB import retryable errors stop after two real activity attempts",
+    "Other generic jobs retain three attempts",
+    "Failed attempts retain job/tenant/execution identity and report failed status without completed status",
+    "Successful second KB attempt returns import totals and completed status"
+  ],
+  "validation": {
+    "focusedTestsPassed": 3,
+    "mutation": "Changing KB maximumAttempts from2 to3 fails the attempt-count assertion; source restored"
+  },
+  "limits": [
+    "Activities are synthetic; does not verify actual article writes or dialog polling timeout",
+    "No production history replay compatibility claim",
+    "Native follow-up verification pending publication"
+  ]
+}

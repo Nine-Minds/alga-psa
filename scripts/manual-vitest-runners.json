@@ -1,0 +1,38 @@
+[
+  {
+    "runner": "legacy-email-review",
+    "cwd": "server",
+    "cli": "server/node_modules/vitest/vitest.mjs",
+    "config": "vitest.config.ts",
+    "filters": [
+      "src/test/e2e/email-processing.test.ts",
+      "src/test/e2e/email-settings/email-threading.test.ts",
+      "src/test/e2e/email-settings/oauth-flow.test.ts",
+      "src/test/e2e/email-settings/webhook-processing.test.ts"
+    ],
+    "owner": "Email maintainers",
+    "runtime": "Legacy MailHog/OAuth mock harness; manual execution only",
+    "mandatory": false,
+    "reason": "These legacy suites have no current CI execution lane; their fixture-created OAuth success checks do not prove a real OAuth exchange. They remain visible for repair. The real Microsoft mailbox and raw-MIME SMTP journeys are mandatory separately; this collection cannot satisfy them.",
+    "issue": "https://github.com/Nine-Minds/alga-psa/pull/3343",
+    "expires": "2026-10-08"
+  },
+  {
+    "runner": "invoice-visual-review",
+    "cwd": "server",
+    "cli": "server/node_modules/vitest/vitest.mjs",
+    "config": "vitest.config.ts",
+    "filters": [
+      "src/test/visual/invoiceTemplateGolden.test.ts"
+    ],
+    "env": {
+      "RUN_VISUAL": "1"
+    },
+    "owner": "Billing maintainers",
+    "runtime": "Manual template review with PostgreSQL, Chromium and reviewed fonts/baselines",
+    "mandatory": false,
+    "reason": "The existing visual-review workflow is explicitly opt-in and machine/font dependent. Its collection is not release evidence; mandatory invoice PDF content and persisted-layout journeys run separately.",
+    "issue": "https://github.com/Nine-Minds/alga-psa/pull/3343",
+    "expires": "2026-10-08"
+  }
+]

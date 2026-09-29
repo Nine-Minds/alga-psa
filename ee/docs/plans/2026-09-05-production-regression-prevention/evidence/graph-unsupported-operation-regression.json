@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "status": "passed",
+  "baseRevision": "a06551c8eeacbeaaf4be0217c1df20109af3d529",
+  "workingTreeDirty": true,
+  "counts": {
+    "tests": 70,
+    "passed": 70,
+    "files": 7
+  },
+  "regression": {
+    "before": "Real meeting adapter treated an unsupported route 404 as deleted success.",
+    "after": "Unsupported v1.0 Graph routes return501 EmulatorUnsupportedOperation; adapter reports failure. Known-route missing items retain404."
+  },
+  "hashes": {
+    "/tmp/alga-unsupported-route-red.log": "78d68a752880ef328700487b8a8a1586e1defb45292cb2922f91fd28b910f3c6",
+    "/tmp/alga-unsupported-route-green.log": "0b3876ea9d980621ed565f528e6227c4d96f423f5fc4997cb25de7fc251b10a4"
+  },
+  "limitations": [
+    "501 EmulatorUnsupportedOperation is an emulator capability diagnostic, not an assertion of Microsoft Graph response parity.",
+    "Native package tests only. The already-running provider host still uses its earlier bundle until explicitly rebuilt/restarted.",
+    "Current-source GitHub CI is not established."
+  ]
+}

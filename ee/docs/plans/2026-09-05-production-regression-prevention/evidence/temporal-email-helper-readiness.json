@@ -1,0 +1,27 @@
+{
+  "status": "passed",
+  "counts": {
+    "passed": 151,
+    "failed": 0,
+    "skipped": 0,
+    "todo": 0,
+    "pending": 0
+  },
+  "files": 18,
+  "failures": [],
+  "beforeEmailHelper": {
+    "failedTests": 17,
+    "passedTests": 7,
+    "unhandledErrors": 1
+  },
+  "changes": [
+    "Await password strings and email-service creation before assertions.",
+    "Assert asynchronous unknown-provider rejection.",
+    "Use current Temporal Context.log mock.",
+    "Assign email helper and comment recovery forwarding to required readiness."
+  ],
+  "limits": [
+    "Native verification pending.",
+    "Mock mail service is tested here; this does not replace real MIME intake and outbound sink testing."
+  ]
+}

@@ -1,0 +1,76 @@
+{
+  "status": "passed",
+  "counts": {
+    "passed": 4,
+    "failed": 0,
+    "skipped": 0,
+    "todo": 0,
+    "pending": 0
+  },
+  "expectedFiles": [
+    "ee/temporal-workflows/src/workflows/__tests__/tenant-product-upgrade-workflow.test.ts"
+  ],
+  "executedFiles": [
+    "ee/temporal-workflows/src/workflows/__tests__/tenant-product-upgrade-workflow.test.ts"
+  ],
+  "source": {
+    "before": {
+      "revision": "bc7a2b974ee9117cece53977a5db306dca587315",
+      "dirty": true,
+      "changes": [
+        {
+          "status": " M",
+          "file": ".github/workflows/temporal-readiness.yml"
+        },
+        {
+          "status": " M",
+          "file": "ee/temporal-workflows/vitest.readiness.config.ts"
+        },
+        {
+          "status": " M",
+          "file": "scripts/lib/test-discovery.mjs"
+        },
+        {
+          "status": " M",
+          "file": "scripts/run-additional-workspace-tests.mjs"
+        },
+        {
+          "status": "??",
+          "file": "ee/temporal-workflows/vitest.engine.config.ts"
+        }
+      ]
+    },
+    "after": {
+      "revision": "bc7a2b974ee9117cece53977a5db306dca587315",
+      "dirty": true,
+      "changes": [
+        {
+          "status": " M",
+          "file": ".github/workflows/temporal-readiness.yml"
+        },
+        {
+          "status": " M",
+          "file": "ee/temporal-workflows/vitest.readiness.config.ts"
+        },
+        {
+          "status": " M",
+          "file": "scripts/lib/test-discovery.mjs"
+        },
+        {
+          "status": " M",
+          "file": "scripts/run-additional-workspace-tests.mjs"
+        },
+        {
+          "status": "??",
+          "file": "ee/temporal-workflows/vitest.engine.config.ts"
+        }
+      ]
+    }
+  },
+  "failures": [],
+  "runtime": "Ephemeral Temporal test server; stubbed application activities",
+  "limits": [
+    "New engine job awaits native CI and branch-protection enforcement.",
+    "Product workflow execution is not previous-release database upgrade verification."
+  ]
+}

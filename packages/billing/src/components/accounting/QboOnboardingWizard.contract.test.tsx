@@ -29,7 +29,7 @@ vi.mock('../../actions/qboOnboardingActions', () => ({
   completeOnboardingWizard: async (...args: unknown[]) => completeOnboardingWizardMock(...args),
 }));
 
-vi.mock('@alga-psa/integrations/actions', () => ({
+vi.mock('@alga-psa/integrations/actions/qboActions', () => ({
   getQboCustomers: async (...args: unknown[]) => getQboCustomersMock(...args),
 }));
 

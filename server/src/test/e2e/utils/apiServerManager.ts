@@ -39,6 +39,10 @@ export async function ensureApiServerRunning(baseUrl: string): Promise<void> {
     return;
   }
 
+  if (process.env.E2E_DATABASE_ISOLATED === 'true') {
+    throw new Error(`Owned API application is not ready at ${sanitizedBaseUrl}; start the built stack before testing`);
+  }
+
   const parsedBaseUrl = new URL(sanitizedBaseUrl);
 
   if (!localHosts.has(parsedBaseUrl.hostname)) {

@@ -1,0 +1,37 @@
+{
+  "status": "passed",
+  "counts": {
+    "passed": 11,
+    "failed": 0,
+    "skipped": 0,
+    "todo": 0,
+    "pending": 0
+  },
+  "failures": [],
+  "source": {
+    "before": {
+      "revision": "6442fd09b328f2fc4da7350542af4a627473be0d",
+      "dirty": true,
+      "changes": [
+        {
+          "status": " M",
+          "file": "ee/temporal-workflows/src/db/__tests__/tenant-setup-idempotency.integration.test.ts"
+        }
+      ]
+    },
+    "after": {
+      "revision": "6442fd09b328f2fc4da7350542af4a627473be0d",
+      "dirty": true,
+      "changes": [
+        {
+          "status": " M",
+          "file": "ee/temporal-workflows/src/db/__tests__/tenant-setup-idempotency.integration.test.ts"
+        }
+      ]
+    }
+  },
+  "files": 2,
+  "limits": [
+    "Local Citus run; native CI verification pending."
+  ]
+}

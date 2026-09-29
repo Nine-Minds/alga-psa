@@ -13,7 +13,7 @@ describe('layout', () => {
 
   test('theme toggle button is visible', () => {
     render(<App />);
-    expect(screen.getByRole('button', { name: /toggle theme/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /switch to (light|dark) mode/i })).toBeInTheDocument();
   });
 
   test('category tabs are displayed', () => {

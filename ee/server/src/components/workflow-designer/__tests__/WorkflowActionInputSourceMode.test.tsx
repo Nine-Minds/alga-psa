@@ -41,12 +41,12 @@ describe('WorkflowActionInputSourceMode', () => {
     expect(screen.getByText('Fixed value')).toBeInTheDocument();
   });
 
-  it('T152/T153/T313: rehydrates direct field references into structured Reference mode and treats non-structured mappings as legacy', () => {
+  it('T152/T153/T313: rehydrates direct field references and opens compound mappings in Expression mode', () => {
     expect(deriveWorkflowActionInputSourceMode({ $expr: '' })).toEqual({ mode: 'reference' });
     expect(deriveWorkflowActionInputSourceMode({ $expr: 'payload.summary' })).toEqual({ mode: 'reference' });
     expect(deriveWorkflowActionInputSourceMode({ $expr: 'ticketItem.id' })).toEqual({ mode: 'reference' });
     expect(deriveWorkflowActionInputSourceMode({ $expr: 'payload.summary & "-" & meta.traceId' })).toEqual({
-      mode: 'fixed',
+      mode: 'expression',
     });
     expect(isWorkflowActionInputLegacyValue({ $expr: 'payload.summary & "-" & meta.traceId' })).toBe(true);
     expect(isWorkflowActionInputLegacyValue({ $secret: 'API_TOKEN' })).toBe(true);

@@ -1,0 +1,454 @@
+[
+  {
+    "id": "T001",
+    "description": "Unit: Shared runner preserves timed pass/warn/skip results and HTTP data; unexpected Graph errors become safe failures with correlation metadata. Table-test overall fold precedence and skip handling.",
+    "implemented": true,
+    "featureIds": [
+      "F001",
+      "F002",
+      "F003",
+      "F004"
+    ]
+  },
+  {
+    "id": "T002",
+    "description": "Regression: Run existing shared/services/email/providers/__tests__/MicrosoftGraphAdapter.diagnostics.test.ts unchanged after extraction, including report and optional subscription behavior.",
+    "implemented": true,
+    "featureIds": [
+      "F005",
+      "F001",
+      "F002",
+      "F003",
+      "F004"
+    ]
+  },
+  {
+    "id": "T003",
+    "description": "Unit: Construct Direct and CIPP report fixtures and verify stable step order/IDs, summary fields, client-only nesting, JSON-safe non-recursive support bundle, and empty clients in connection scope.",
+    "implemented": true,
+    "featureIds": [
+      "F006",
+      "F007",
+      "F009",
+      "F081"
+    ]
+  },
+  {
+    "id": "T004",
+    "description": "Unit: Table-test AADSTS65001/700016/7000222/50076/50079/70000/90002/50020, consent_required, invalid_client, invalid_grant, and network; specific codes override generic errors and partner/customer remedies differ.",
+    "implemented": true,
+    "featureIds": [
+      "F023",
+      "F033",
+      "F034",
+      "F037"
+    ]
+  },
+  {
+    "id": "T005",
+    "description": "Unit: Verify recommendation severity order/deduplication, distinct customer consent URLs, correct bound application client_id rather than Alga client id, and safe copy/open/navigate payloads.",
+    "implemented": true,
+    "featureIds": [
+      "F008",
+      "F035",
+      "F034"
+    ]
+  },
+  {
+    "id": "T006",
+    "description": "Unit: Missing refresh token and failed refresh skip dependent token/discovery checks with blocked-by source; worker failure does not block Graph, and all auth failures still allow local history/queue checks.",
+    "implemented": true,
+    "featureIds": [
+      "F007",
+      "F020",
+      "F021",
+      "F022",
+      "F018"
+    ]
+  },
+  {
+    "id": "T007",
+    "description": "Integration: Exercise auth/readiness routes/actions with unauthenticated, client-portal, missing read permission, missing INTEGRATIONS, missing ENTRA_SYNC, authorized read-only, and CE contexts; denied calls perform no integration/secret reads and preserve safe denial details.",
+    "implemented": false,
+    "featureIds": [
+      "F010",
+      "F011",
+      "F063",
+      "F064",
+      "F065"
+    ]
+  },
+  {
+    "id": "T008",
+    "description": "DB integration: Against migrated schema, seed connection/profile/binding/mappings/settings/history/queue and run a successful report using test secret/Temporal/Graph adapters; assert actual query outputs and unchanged domain tables.",
+    "implemented": true,
+    "featureIds": [
+      "F012",
+      "F013",
+      "F014",
+      "F066",
+      "F058",
+      "F060",
+      "F062",
+      "F071"
+    ]
+  },
+  {
+    "id": "T009",
+    "description": "DB integration: Seed two isolated workspaces with overlapping lookup shapes; reject foreign client selections and cross-user/tenant continuation access; verify no foreign profile/mapping/run/queue data or secret reads escape.",
+    "implemented": false,
+    "featureIds": [
+      "F038",
+      "F066",
+      "F068",
+      "F010"
+    ]
+  },
+  {
+    "id": "T010",
+    "description": "DB integration: Run missing-connection/missing-settings/no-history paths against migrated schema and assert useful results with no defaults, preflight records, settings rows, discovery, or validation writes inserted.",
+    "implemented": true,
+    "featureIds": [
+      "F012",
+      "F019",
+      "F058",
+      "F071",
+      "F070"
+    ]
+  },
+  {
+    "id": "T011",
+    "description": "Unit: Table-test missing binding, missing profile, archived profile, missing entra capability, absent/blank secret, fingerprint-only success, unknown expiry, under-30-day expiry and expired secret.",
+    "implemented": false,
+    "featureIds": [
+      "F013",
+      "F014",
+      "F015",
+      "F020"
+    ]
+  },
+  {
+    "id": "T012",
+    "description": "Unit: Verify connect/setup/diagnostics callback equality for environment/secret base URL precedence and trailing slashes; expected values stay informational with missing binding and never call Graph applications.",
+    "implemented": false,
+    "featureIds": [
+      "F016",
+      "F017"
+    ]
+  },
+  {
+    "id": "T013",
+    "description": "Unit: Table-test Temporal frontend/namespace failure, absent worker pollers, matching interval/next fire, mismatched enabled schedule, enabled missing schedule, and disabled absent schedule; assert no schedule mutation or workflow start.",
+    "implemented": true,
+    "featureIds": [
+      "F018",
+      "F019",
+      "F071"
+    ]
+  },
+  {
+    "id": "T014",
+    "description": "Unit: Token tests cover missing refresh, refreshable missing/expired access, forced common refresh persistence, scope warnings, opaque claims, app mismatch, and tenant-token refresh rotation without overwriting partner access token.",
+    "implemented": false,
+    "featureIds": [
+      "F021",
+      "F022",
+      "F023",
+      "F024",
+      "F025",
+      "F026",
+      "F040"
+    ]
+  },
+  {
+    "id": "T015",
+    "description": "Emulator integration: Run a green Direct connection end to end against msgraph emulator with paged discovery and mapped/unmapped tenants; verify layer order, me/probe correlation data, counts/samples and no customer token mint.",
+    "implemented": true,
+    "featureIds": [
+      "F084",
+      "F063",
+      "F027",
+      "F028",
+      "F029",
+      "F031",
+      "F009"
+    ]
+  },
+  {
+    "id": "T016",
+    "description": "Emulator integration: Inject partner consent_missing 403 and verify actionable partner consent failure, request-id, dependent discovery skips, preserved local history, and no persisted connection verdict.",
+    "implemented": true,
+    "featureIds": [
+      "F084",
+      "F028",
+      "F007",
+      "F071"
+    ]
+  },
+  {
+    "id": "T017",
+    "description": "Emulator integration: Inject AADSTS7000222 on refresh and verify secret-rotation remedy, preserved OAuth/suberror metadata, skipped Graph layers, no forbidden writes and no raw secret in report.",
+    "implemented": true,
+    "featureIds": [
+      "F084",
+      "F022",
+      "F033",
+      "F079"
+    ]
+  },
+  {
+    "id": "T018",
+    "description": "Emulator integration: Return zero managed tenants and verify warning with Lighthouse/GDAP explanation, zero count, and missing-mapping warnings rather than a healthy pass.",
+    "implemented": true,
+    "featureIds": [
+      "F084",
+      "F030",
+      "F031",
+      "F029"
+    ]
+  },
+  {
+    "id": "T019",
+    "description": "Unit/integration: Verify production beta probe URL and self-tenant smoke /organization override, plus 400 endpoint-fault versus 401 token-rejected classification with request-id; endpoint overrides reach the emulator.",
+    "implemented": false,
+    "featureIds": [
+      "F032",
+      "F028"
+    ]
+  },
+  {
+    "id": "T020",
+    "description": "Emulator integration: Run selected clients where one succeeds and another mints AADSTS65001; verify tenant-specific consent URL/remedy, independent successful result, correct aggregate, and exactly one mint per ordinary client attempt.",
+    "implemented": true,
+    "featureIds": [
+      "F084",
+      "F040",
+      "F034",
+      "F035",
+      "F049",
+      "F041",
+      "F042"
+    ]
+  },
+  {
+    "id": "T021",
+    "description": "Emulator integration: Return per-client /users 403 and verify GDAP directory-role remedy/request-id and missing-role category, while an independently accessible groups read and other clients still complete.",
+    "implemented": true,
+    "featureIds": [
+      "F084",
+      "F036",
+      "F041",
+      "F042",
+      "F049"
+    ]
+  },
+  {
+    "id": "T022",
+    "description": "Unit/integration: Exercise entitlement group success with checkMemberGroups, deleted group 404, non-security group, no configured group, empty users and failed users read; verify independent group evidence and precise membership skip reasons.",
+    "implemented": false,
+    "featureIds": [
+      "F043",
+      "F044",
+      "F045"
+    ]
+  },
+  {
+    "id": "T023",
+    "description": "Unit: Feed representative users through actual existing filter logic and assert total/included counts and disabled/missing-identity/service-account/custom-pattern exclusions; cover all-excluded and empty-directory warnings.",
+    "implemented": false,
+    "featureIds": [
+      "F046",
+      "F047",
+      "F057"
+    ]
+  },
+  {
+    "id": "T024",
+    "description": "DB integration: Run opt-in yield with real stored custom filter settings and adapter user fixtures; verify expected counts, existing token reuse, and zero new contacts/queue/sync-run/settings rows.",
+    "implemented": true,
+    "featureIds": [
+      "F046",
+      "F048",
+      "F040",
+      "F071"
+    ]
+  },
+  {
+    "id": "T025",
+    "description": "Integration: CIPP candidate fixture returns 404 then successful alternative list; verify candidate order, selected endpoint, normalized count/sample, mapping warnings and no Direct secret dependency.",
+    "implemented": true,
+    "featureIds": [
+      "F050",
+      "F051",
+      "F054",
+      "F055"
+    ]
+  },
+  {
+    "id": "T026",
+    "description": "Unit/integration: Table-test missing CIPP credentials, DNS/TLS/timeout, HTTP error and 401/403; verify reachability versus auth attribution, API-key-specific remedy, skips and secret redaction.",
+    "implemented": true,
+    "featureIds": [
+      "F050",
+      "F052",
+      "F053",
+      "F051",
+      "F079"
+    ]
+  },
+  {
+    "id": "T027",
+    "description": "Integration: CIPP empty list warns specifically about CIPP configuration; selected-client default reads stop at one page, while opt-in yield exhausts pages and shares exclusion semantics.",
+    "implemented": false,
+    "featureIds": [
+      "F054",
+      "F056",
+      "F057",
+      "F048"
+    ]
+  },
+  {
+    "id": "T028",
+    "description": "DB integration: Seed last-five runs with failed/partial/dry-run combinations, nested OAuth error, per-tenant failures and aged queue items; verify totals/durations, consecutive-real-sync warning, latest-real-run selection and oldest queue age.",
+    "implemented": false,
+    "featureIds": [
+      "F058",
+      "F059",
+      "F037",
+      "F060",
+      "F062"
+    ]
+  },
+  {
+    "id": "T029",
+    "description": "Integration: Drive a 50-client continuation fixture through multiple requests, asserting bounded batches and at most three active clients, incremental completed results, one-client failure isolation and no process-local background dependency.",
+    "implemented": true,
+    "featureIds": [
+      "F039",
+      "F067",
+      "F069",
+      "F070",
+      "F064"
+    ]
+  },
+  {
+    "id": "T030",
+    "description": "Integration: Exercise omitted versus empty selection, tampered/expired continuation, changed mapping/connection, rechecked permissions, interrupted run and retry; reject unsafe continuation before external calls and preserve completed UI results.",
+    "implemented": true,
+    "featureIds": [
+      "F038",
+      "F068",
+      "F067",
+      "F069",
+      "F077"
+    ]
+  },
+  {
+    "id": "T031",
+    "description": "Integration: Exercise multi-page optional preview exceeding a request budget; return honest partial/continuation state, preserve counts without duplicate pages, and never expose credentials in job state or mark unfinished work green.",
+    "implemented": true,
+    "featureIds": [
+      "F069",
+      "F067",
+      "F046",
+      "F070",
+      "F079"
+    ]
+  },
+  {
+    "id": "T032",
+    "description": "Security/unit: Seed sentinel access/refresh/client/API tokens and nested Axios/Graph/Temporal error payloads; verify server response plus copy/download contain only fingerprints, endpoint/action identifiers redact by default, includeIdentifiers never reveals secrets, and request IDs survive.",
+    "implemented": true,
+    "featureIds": [
+      "F079",
+      "F080",
+      "F081",
+      "F023"
+    ]
+  },
+  {
+    "id": "T033",
+    "description": "Component: Render Direct and CIPP fixture reports in standard dialog; assert overall/summary/ordered details/recommendations and client rows show names, not GUIDs, including unavailable-name fallback and optional expanded identifiers.",
+    "implemented": true,
+    "featureIds": [
+      "F072",
+      "F074",
+      "F076",
+      "F049",
+      "F083"
+    ]
+  },
+  {
+    "id": "T034",
+    "description": "Component: Verify default all-mapped selection, off-by-default yield, explicit empty selection and >20 confirmation; exercise incremental progress, duplicate-start prevention, partial failure/retry and no more polling after close.",
+    "implemented": true,
+    "featureIds": [
+      "F075",
+      "F077",
+      "F038",
+      "F039"
+    ]
+  },
+  {
+    "id": "T035",
+    "description": "Component: Exercise copy/open/navigate recommendations and copy/download support bundle on secret-sentinel fixtures; verify consent URL action, shared export serialization, includeIdentifiers control and no secret leakage.",
+    "implemented": true,
+    "featureIds": [
+      "F078",
+      "F081",
+      "F080",
+      "F079"
+    ]
+  },
+  {
+    "id": "T036",
+    "description": "Component: Render current client diagnostics beside previous sync failures and verify identity-based cross-reference with timestamps, without labeling an old failure as a current one.",
+    "implemented": false,
+    "featureIds": [
+      "F061",
+      "F060",
+      "F076"
+    ]
+  },
+  {
+    "id": "T037",
+    "description": "Component/build: Verify Connection and unhealthy Overview entry points, diagnostics localization keys, keyboard/status labels and theme-aware standard components; type/build-check EE and CE route exports.",
+    "implemented": true,
+    "featureIds": [
+      "F073",
+      "F082",
+      "F083",
+      "F065"
+    ]
+  },
+  {
+    "id": "T038",
+    "description": "Docs regression: Run server/src/test/unit/docs/entraIntegrationGuide.contract.test.ts and validate one consolidated AADSTS remedy table plus documented diagnostic scopes/read-only behavior/client outcomes.",
+    "implemented": true,
+    "featureIds": [
+      "F085"
+    ]
+  },
+  {
+    "id": "T039",
+    "description": "Manual smoke: On the dev stack wired to msgraph emulator, run connection and selected-client diagnostics; capture green screenshot and two failure screenshots (partner consent or expired secret, and customer consent or GDAP role); inspect resulting safe bundles and unchanged connection state.",
+    "implemented": true,
+    "featureIds": [
+      "F087",
+      "F084",
+      "F073",
+      "F049",
+      "F071"
+    ]
+  },
+  {
+    "id": "T040",
+    "description": "Documentation acceptance: Locate nm-store using alga-business-documentation, validate/build its new page, verify click paths and client-table explanations against actual smoke screenshots, and record page/evidence paths without claiming unperformed publication.",
+    "implemented": true,
+    "featureIds": [
+      "F086",
+      "F085",
+      "F087"
+    ]
+  }
+]

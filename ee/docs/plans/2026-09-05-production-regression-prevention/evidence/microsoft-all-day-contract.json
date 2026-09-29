@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "incident": "https://github.com/Nine-Minds/alga-psa/issues/3348",
+  "scope": "Microsoft all-day HTTP payload and adapter date roundtrip",
+  "contract": "https://learn.microsoft.com/en-us/graph/api/resources/event?view=graph-rest-1.0",
+  "before": {
+    "emulator": "Four HTTP rejection cases failed: invalid date-only create/update, non-midnight all-day boundaries, differing timezones.",
+    "adapter": "Actual createEvent failed HTTP 400 UnableToDeserializePostBody after correcting emulator validation."
+  },
+  "after": {
+    "nativeTests": 87,
+    "files": 7,
+    "failed": 0,
+    "durationSeconds": 3.8,
+    "packageTypecheck": "passed"
+  },
+  "sourceSha256": {
+    "packages/emulators/msgraph/src/core.ts": "b16193d94b079a3bc346671e6915fa15435a9570a388e3f1b4404ea56ed3e807",
+    "packages/emulators/msgraph/tests/calendar.test.ts": "7e47ae568c72f8ba94766222bcc86f8591e45afc5b56b1af00a605ba3b2d0623",
+    "packages/integrations/src/services/calendar/providers/MicrosoftCalendarAdapter.ts": "4c301269fb25662ca3229d8090fbf039cf70bd1c82ab9ac076c465d13cdee784"
+  },
+  "limitations": [
+    "No browser rendering/editor or complete issue-resolution claim.",
+    "Inbound test verifies mapping of supplied Graph timezone fields, not Prefer-header timezone conversion or live Microsoft sandbox parity.",
+    "Current-source GitHub CI remains required.",
+    "Boundary validation covers the reported shape and all-day constraints, not the complete Graph event schema."
+  ]
+}

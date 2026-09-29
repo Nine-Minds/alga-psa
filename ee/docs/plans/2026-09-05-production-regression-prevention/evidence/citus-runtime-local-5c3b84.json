@@ -1,0 +1,69 @@
+{
+  "schemaVersion": 1,
+  "suite": "citus-runtime",
+  "revision": "5c3b84448b3287a7a5e59be9a9e630e90a0548c7",
+  "status": "passed",
+  "counts": {
+    "passed": 8,
+    "failed": 0,
+    "skipped": 0,
+    "todo": 0,
+    "pending": 0
+  },
+  "source": {
+    "before": {
+      "revision": "5c3b84448b3287a7a5e59be9a9e630e90a0548c7",
+      "dirty": false,
+      "changes": []
+    },
+    "after": {
+      "revision": "5c3b84448b3287a7a5e59be9a9e630e90a0548c7",
+      "dirty": false,
+      "changes": []
+    }
+  },
+  "workingTreeDirty": false,
+  "selection": {
+    "mode": "full",
+    "filters": []
+  },
+  "failures": [],
+  "scope": "Complete local Citus runtime lane",
+  "files": 2,
+  "durationSeconds": 728.62,
+  "discoveryStatus": "passed",
+  "database": "Task-owned citus_runtime_82cc",
+  "migrationOverlay": "Combined CE/EE migrations under server/.ee-combined-migrations-citus-5c3b84",
+  "setupCorrection": "Initial overlay under test-results failed relative template resolution; corrected placement under server before final successful run.",
+  "limitations": [
+    "Single-node Citus topology; not multi-node worker distribution or previous-release upgrade.",
+    "Invoice fixture substitutes authentication; workflow suite substitutes action registration/publish boundaries while real persistence and selected ticket/comment actions execute.",
+    "Local Node 25 execution; native candidate CI remains unverified."
+  ],
+  "artifacts": [
+    {
+      "path": "test-results/citus-runtime/evidence.json",
+      "sha256": "632d9bcd76efeae55fdfc04d28174586d42aa667959df2f140f51e514e9ed5e8"
+    },
+    {
+      "path": "test-results/citus-runtime/discovery.json",
+      "sha256": "348dea3bdf6c3b6d291fa3aa812f103bc9350ed2c3135a46fec647c50fcf76e9"
+    },
+    {
+      "path": "test-results/citus-runtime/collected.json",
+      "sha256": "1143b577cf52aed0cf247421c288fd2610152202fa9bfe637d351bc297ebffb1"
+    },
+    {
+      "path": "test-results/citus-runtime/collected-tests.json",
+      "sha256": "ddbfa15c00475e3550eda12bc610dea7a725c29ad39bc6fad5e7c0ca7624ea4e"
+    },
+    {
+      "path": "test-results/citus-runtime/results.json",
+      "sha256": "07a66c5bb9a824729228858112106f7ee03f29c76559e0b9560fae1cdb5b5fa9"
+    },
+    {
+      "path": "/tmp/alga-citus-runtime-5c3b84-corrected.log",
+      "sha256": "a125ac81e1315ad65946794423f5b70827a38ed0ed003ded956f3d9443060fba"
+    }
+  ]
+}

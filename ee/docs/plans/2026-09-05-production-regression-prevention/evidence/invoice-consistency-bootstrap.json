@@ -1,0 +1,23 @@
+{
+  "scope": "Infrastructure invoice tax consistency setup regression",
+  "revision": "fd53e4679f plus removal of the per-file 60000ms bootstrap override",
+  "nativeFailure": {
+    "job": "https://github.com/Nine-Minds/alga-psa/actions/runs/34056413147/job/101549077379",
+    "error": "beforeAll hook timed out in 60000ms before the financial assertion ran"
+  },
+  "fix": "Use the existing shared Vitest hookTimeout of 120000ms for migrated/seeded TestContext setup. Assertions and per-test timeout unchanged.",
+  "localValidation": {
+    "testFile": "server/src/test/infrastructure/billing/invoices/billingInvoiceGeneration_consistency.test.ts",
+    "success": true,
+    "passed": 1,
+    "failed": 0,
+    "pending": 0,
+    "seed": 20260610,
+    "elapsedSeconds": 19.578,
+    "reportSha256": "49e128c4913648a3b0a4f2fbba847605e3eb6f070f2a2c8070a592bd1b53d94f",
+    "log": "/tmp/alga-invoice-consistency-fixed.log"
+  },
+  "limitations": [
+    "Native CI rerun pending; targeted local test is not proof of the full infrastructure shard."
+  ]
+}

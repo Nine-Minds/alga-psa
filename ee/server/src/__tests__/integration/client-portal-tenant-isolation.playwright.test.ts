@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { tenantDb } from '@alga-psa/db';
+import { tenantDb } from '@alga-psa/db/tenantDb';
 import { knex as createKnex, type Knex } from 'knex';
 import { webcrypto } from 'crypto';
 import { PLAYWRIGHT_DB_CONFIG } from './utils/playwrightDatabaseConfig';

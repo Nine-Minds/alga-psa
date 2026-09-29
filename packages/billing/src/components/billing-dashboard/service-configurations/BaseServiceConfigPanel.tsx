@@ -164,9 +164,12 @@ export function BaseServiceConfigPanel({
           </div>
         )}
         
-        <div className={`grid gap-4 ${configuration.configuration_type !== 'Hourly' ? 'grid-cols-2' : 'grid-cols-1'}`}>
-          {/* Quantity - only shown for Fixed and Usage (not used in Hourly billing) */}
-          {configuration.configuration_type !== 'Hourly' && (
+        <div className={`grid gap-4 ${configuration.configuration_type !== 'Hourly' && configuration.configuration_type !== 'Usage' ? 'grid-cols-2' : 'grid-cols-1'}`}>
+          {/* Quantity - only shown for Fixed-style allocations. Hourly bills
+              time entries and Usage bills recorded usage_tracking records, so
+              neither consumes a configured quantity; showing one here would
+              present a number billing ignores. */}
+          {configuration.configuration_type !== 'Hourly' && configuration.configuration_type !== 'Usage' && (
             <div>
               <Label htmlFor="service-quantity">
                 {t('serviceConfig.fields.quantity.label', { defaultValue: 'Quantity' })}

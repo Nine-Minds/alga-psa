@@ -1,5 +1,7 @@
 'use client';
 
+import { CanvasDocumentPreviewContext } from './canvas/DesignCanvas';
+
 import React, { useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@alga-psa/ui/components/Tabs';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -45,6 +47,7 @@ type VisualWorkspaceTab = 'design' | 'transforms' | 'preview';
 type DesignerVisualWorkspaceProps = {
   visualWorkspaceTab: VisualWorkspaceTab;
   onVisualWorkspaceTabChange: (tab: VisualWorkspaceTab) => void;
+  previewPaused?: boolean;
 };
 
 const useDebouncedValue = <T,>(value: T, delayMs: number) => {
@@ -64,6 +67,7 @@ const buildPreviewSourceOptions = (t: (key: string, options?: Record<string, unk
 export const DesignerVisualWorkspace: React.FC<DesignerVisualWorkspaceProps> = ({
   visualWorkspaceTab,
   onVisualWorkspaceTabChange,
+  previewPaused = false,
 }) => {
   const { t, i18n } = useTranslation('msp/invoicing');
   const nodes = useInvoiceDesignerStore((state) => state.nodes);
@@ -236,10 +240,10 @@ export const DesignerVisualWorkspace: React.FC<DesignerVisualWorkspaceProps> = (
   }, [previewState.selectedInvoiceId, previewState.sourceKind]);
 
   useEffect(() => {
-    if (visualWorkspaceTab !== 'preview') {
+    if (previewPaused) {
+      previewRunSequence.current += 1;
       return;
     }
-
     if (!previewData) {
       previewRunSequence.current += 1;
       dispatch({ type: 'pipeline-reset' });
@@ -302,6 +306,7 @@ export const DesignerVisualWorkspace: React.FC<DesignerVisualWorkspaceProps> = (
         dispatch({ type: 'pipeline-phase-error', phase: 'shape', error: message });
       });
   }, [
+    previewPaused,
     manualRunNonce,
     previewData,
     previewWorkspace,
@@ -331,7 +336,9 @@ export const DesignerVisualWorkspace: React.FC<DesignerVisualWorkspaceProps> = (
       </TabsList>
 
       <TabsContent value="design" className="pt-3">
-        <DesignerShell />
+        <CanvasDocumentPreviewContext.Provider value={{ data: previewData, presentationLabels: authoritativePreview?.presentationLabels, locale: authoritativePreview?.effectiveLocale ?? previewState.selectedLocale }}>
+          <DesignerShell />
+        </CanvasDocumentPreviewContext.Provider>
       </TabsContent>
 
       <TabsContent value="transforms" className="pt-3">

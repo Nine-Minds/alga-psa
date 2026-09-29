@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "observedAt": "2026-09-06",
+  "kind": "local-execution",
+  "revision": "22c7016a09d099d190276126f64bb85dc914ec2c",
+  "dirty": true,
+  "status": "passed",
+  "files": [
+    "server/src/test/integration/bucketPoolActions.integration.test.ts",
+    "server/src/test/integration/bucketUsageIntegration.test.ts",
+    "server/src/test/integration/bucketUsageOverlayIntegration.test.ts",
+    "server/src/test/integration/bucketUsageReport.integration.test.ts",
+    "server/src/test/integration/eventEmailRetryQueueRecovery.integration.test.ts",
+    "server/src/test/integration/simulatorBucketPoolSnapshot.integration.test.ts",
+    "server/src/test/integration/templateBucketPoolRoundTrip.integration.test.ts",
+    "server/src/test/integration/timeEntryBucketDrawAdjustment.integration.test.ts",
+    "server/src/test/integration/wizardBucketPoolSubmission.integration.test.ts"
+  ],
+  "counts": {
+    "passed": 31,
+    "failed": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  "reportSha256": "0e2bb07bc72c4819b1eb839c11dc91816223c66609f6ade061666f580d00d016",
+  "limits": [
+    "Focused execution of all nine activated bucket/pool and Redis recovery suites; not a full server integration pass.",
+    "Initial concurrent-bootstrap attempt failed in the shared PostgreSQL role-settings catalog. The serialized rerun passed; no product migration changed.",
+    "Auth and provider seams may be mocked. Browser and provider parity have separate evidence."
+  ]
+}

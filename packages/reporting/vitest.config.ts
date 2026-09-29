@@ -3,6 +3,8 @@ import path from 'path';
 
 export default defineConfig({
   test: {
+    // Required database suites execute in the workspace DB lane.
+    exclude: ['**/node_modules/**', '**/*.db.test.?(c|m)[jt]s?(x)'],
     globals: true,
     environment: 'node',
     include: ['src/**/*.{test,spec}.{ts,tsx}', 'tests/**/*.{test,spec}.{ts,tsx}'],
@@ -17,6 +19,7 @@ export default defineConfig({
       // alias scheduling and billing already use.
       { find: /^@alga-psa\/core$/, replacement: path.resolve(__dirname, '../core/src/index.ts') },
       { find: /^@alga-psa\/core\/(.*)$/, replacement: path.resolve(__dirname, '../core/src/lib/$1') },
+      { find: /^@alga-psa\/shared\/(.*)$/, replacement: path.resolve(__dirname, '../../shared/$1') },
     ],
   },
 });

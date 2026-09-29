@@ -1,4 +1,10 @@
 {
+  "tabs": {
+    "paymentMethods": "Payment methods & auto-pay"
+  },
+  "invoice": {
+    "autopayWillCharge": "Will be charged on {{date}} to {{brand}} •••• {{last4}}"
+  },
   "nav": {
     "dashboard": "Dashboard",
     "tickets": "Tickets",
@@ -436,6 +442,7 @@
       "addPaymentError": "Failed to add payment method",
       "removePaymentError": "Failed to remove payment method",
       "setDefaultError": "Failed to set default payment method",
+      "methodUpdateError": "Could not update this payment method. Please try again.",
       "loadingBillingInfo": "Loading billing information...",
       "overviewTitle": "Billing Overview",
       "paymentMethodsTitle": "Payment Methods",
@@ -454,6 +461,28 @@
         "addPaymentMethod": "Add Payment Method",
         "adding": "Adding...",
         "view": "View"
+      },
+      "cardSetup": {
+        "success": "Card saved securely.",
+        "error": "We could not save the card. Please try again."
+      },
+      "autopay": {
+        "title": "Payment methods & auto-pay",
+        "loading": "Loading payment methods…",
+        "profileUnavailable": "Payment method and auto-pay settings are unavailable for this billing profile.",
+        "cardFallback": "Card",
+        "enrolled": "Auto-pay is enabled.",
+        "disable": "Turn off auto-pay",
+        "consent": "I authorize recurring charges to this card for finalized invoices.",
+        "enable": "Enable auto-pay",
+        "noCards": "Add a card to enable auto-pay.",
+        "changeCard": "Use this card for auto-pay"
+      },
+      "publicCardSetup": {
+        "saved": "Card saved",
+        "failed": "We could not save your card",
+        "savedDescription": "Your card is ready for future payments.",
+        "failedDescription": "The setup could not be verified. Please ask your billing provider for a new link."
       },
       "fields": {
         "cardNumber": "Card Number",
@@ -615,7 +644,18 @@
       "deleteError": "Failed to delete.",
       "deleteConfirm": "Are you sure you want to delete this? This action cannot be undone.",
       "linking": "Linking...",
-      "linkDocument": "Link Document"
+      "linkDocument": "Link Document",
+      "cropTitle": "Choose the square mark",
+      "cropHelp": "Drag the logo and zoom to pick the part shown in small, square spaces. Zoom out to leave space around it. The full logo is kept as well.",
+      "zoom": "Zoom",
+      "zoomOut": "Zoom out",
+      "zoomIn": "Zoom in",
+      "cropPreview": "Preview",
+      "applyCrop": "Use this crop",
+      "adjustMark": "Adjust mark",
+      "cropFromWide": "Crop from wide logo",
+      "recropSuccess": "Mark updated.",
+      "recropError": "Failed to update the mark."
     },
     "validation": {
       "clientNameRequired": "Client name is required",
@@ -742,7 +782,14 @@
       "fullAccess": "Full access",
       "cancel": "Cancel",
       "assignSuccess": "Contact visibility assignment updated",
-      "assignError": "Unable to assign visibility group"
+      "assignError": "Unable to assign visibility group",
+      "scopeLabel": "Ticket visibility",
+      "scopeClient": "All of this client’s tickets",
+      "scopeContact": "Only their own tickets",
+      "scopeClientDescription": "Members see every ticket for this client on the selected boards.",
+      "scopeContactDescription": "Members see only tickets they are listed as the contact on. Client admins see all tickets on the selected boards, including tickets with no contact.",
+      "assignmentHelp": "Assign a group to limit boards and ticket visibility, or keep full client access.",
+      "boardHiddenFromPortal": "Hidden from client portal"
     },
     "domain": {
       "title": "Custom Domain",
@@ -976,7 +1023,8 @@
     },
     "tickets": {
       "notFoundOrDenied": "Ticket not found or access denied",
-      "invalidData": "Invalid ticket data"
+      "invalidData": "Invalid ticket data",
+      "statusNotPortalSelectable": "This status cannot be selected from the client portal"
     },
     "visibilityGroups": {
       "checkDetails": "Please check the visibility group details and try again.",

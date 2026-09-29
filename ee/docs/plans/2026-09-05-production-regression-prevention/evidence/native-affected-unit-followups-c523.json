@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "baseRevision": "dc1d23a98e",
+  "workingTreeDirty": true,
+  "sourceSha256": {
+    "packages/billing/tests/UsageTracking.periodContextAndRequestId.test.tsx": "2065a5f883261df90d7195d23d31bdedf2d67f507aeaf4c5fb28e65d829a2d4a",
+    "packages/emulators/xero/tests/clientRecoveryConsumer.test.ts": "f47be79b1c246dda88f103fe5719d663cb655ba0f7a16d906b0c217d12e50180"
+  },
+  "observedCi": {
+    "runId": "34320694357",
+    "jobId": "102366429522",
+    "testedMerge": "cec08351189624fb4db8db7ec453e788157fbdad",
+    "failures": [
+      "Three billing recovery cases: missing matcher then contaminated queued responses",
+      "Xero selected-organisation recovery5second timeout"
+    ]
+  },
+  "billing": {
+    "redFailed": 3,
+    "packagePassed": 10,
+    "serverPassed": 10,
+    "change": "Import jest-dom matchers and reset per-test bucket responses; product untouched"
+  },
+  "xero": {
+    "baselineNativePassed": 1,
+    "profile": {
+      "clientModuleLoadMs": 487.332791,
+      "testDurationMs": 553
+    },
+    "after": {
+      "passed": 23,
+      "failed": 0,
+      "files": 4,
+      "durationMs": 791
+    },
+    "change": "Load realAxios/client atcollection; lazily resolved provider endpoints remain set before runtime operation; no deadline/retry change",
+    "typecheck": {
+      "command": "tsc --noEmit --incremental false -p packages/emulators/xero/tsconfig.json",
+      "exitCode": 0
+    }
+  },
+  "limits": [
+    "Exact CI timeout phase was not instrumented; native measurement establishes avoidable timed module-load cost, not definitive CI cause.",
+    "New candidate CI remains required."
+  ]
+}

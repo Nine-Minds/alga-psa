@@ -1,0 +1,23 @@
+{
+  "status": "implemented_collection_verified_execution_pending",
+  "test": "e2e-tests/tests/invoice-ticket-ownership.spec.ts",
+  "validation": {
+    "collection": "One invoice ownership case collected with the e2e-tests workspace Playwright runner",
+    "targeted_typescript": "passed",
+    "logs": [
+      "/tmp/alga-invoice-ownership-collection-correct-runner.log",
+      "/tmp/alga-invoice-ownership-browser-types-final.log"
+    ]
+  },
+  "scope": [
+    "Authenticated invoice generation over HTTP",
+    "Foreign tenant snapshot excluded from authenticated invoice reads",
+    "Mismatched tenant header denied",
+    "UI PDF download checks invoice identity, total and absence of private markers"
+  ],
+  "limits": [
+    "Local execution was not started: automatic approval review rejected temporary-account setup that would read NEXTAUTH_SECRET",
+    "Legacy manual ownership case remains present until replacement execution and full behavioral parity are verified",
+    "Current local app is an older build; native current-head validation is required"
+  ]
+}

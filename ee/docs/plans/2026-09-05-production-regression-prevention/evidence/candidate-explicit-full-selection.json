@@ -1,0 +1,21 @@
+{
+  "scope": "Explicit full-selection contract in candidate artifact reader",
+  "baseRevision": "34c56983c4",
+  "workingTreeDirty": true,
+  "passed": 12,
+  "failed": 0,
+  "behavior": "Reject filtered, affected or absent selection mode even when filters is empty, before passing artifacts to mandatory candidate gate",
+  "formats": [
+    "vitest",
+    "playwright",
+    "node-events"
+  ],
+  "limitations": [
+    "Focused artifact-reader and consuming-gate tests; no new full suite or native execution.",
+    "This does not independently reconstruct all assertion identities or establish global coverage."
+  ],
+  "artifact": {
+    "path": "/tmp/alga-candidate-selection-final.log",
+    "sha256": "63365602d162f4d8d7cdbfe12c91eafeabfceb5fdf4e6108960334d1508fdf14"
+  }
+}

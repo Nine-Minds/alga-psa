@@ -21,6 +21,7 @@ function makeTrx(
     b.whereIn = vi.fn().mockReturnValue(b);
     b.count = vi.fn().mockReturnValue(b);
     b.join = vi.fn().mockReturnValue(b);
+    b.select = vi.fn().mockReturnValue(b);
     b.pluck = vi.fn().mockResolvedValue([]);
     b.first = vi.fn().mockResolvedValue({ count: String(count) });
     return b;

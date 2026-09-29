@@ -1,0 +1,32 @@
+Hi team,
+
+I have a feature request that I think would make a big difference for how we run follow-ups.
+
+Right now there is no way to schedule a promised follow-up on a ticket so it actually shows up where technicians live during the day.
+
+We make commitments to customers constantly and then rely on memory or sticky notes to keep them.
+
+For example, today I told a customer:
+
+    "I will follow up with you on Friday morning about the parts order and confirm the install window."
+
+That promise now lives nowhere except my head. What I would love is a follow-up scheduler on the ticket that supports different follow-up types:
+
+  - Call the customer back
+  - Check on a vendor or parts order
+  - Confirm a fix actually held
+  - Chase an approval or signature
+
+Outlook calendar: the scheduled follow-up should create a calendar entry on my Outlook calendar so it blocks time and moves with my day.
+
+Teams notifications: a Teams message when the follow-up comes due would meet technicians where they already are.
+
+Mobile push: for techs in the field, a push notification on the mobile app is the only thing that actually gets seen.
+
+Desktop notifications: a native desktop notification for people who keep the PSA open all day.
+
+The reason this matters: kept promises are the whole ballgame in managed services. A PSA that helps us keep every single promise we make would be a genuine differentiator.
+
+Thanks,
+Munjal Thakkar
+Sent from Outlook

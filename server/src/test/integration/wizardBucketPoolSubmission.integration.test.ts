@@ -5,14 +5,14 @@
  * wizard's line-level pool editor travel in `submission.bucket_pools` and are
  * materialized onto the line the wizard created for that service category.
  *
- * Opt-in: needs a reachable database (RUN_DB_TESTS=1).
+ * Required integration coverage against the isolated migrated test database.
  */
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { randomUUID } from 'node:crypto';
 
-import { createTestDbConnection, wireLocalTestDbEnv } from '../../../test-utils/dbConfig';
+import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { createClient, createTenant, createUser } from '../../../test-utils/testDataFactory';
 import { tenantDb } from '@alga-psa/db';
 
@@ -119,7 +119,6 @@ vi.mock('@alga-psa/users/actions', async () => ({
   getCurrentUser: vi.fn(async () => mockCurrentUser),
 }));
 
-const ENABLED = process.env.RUN_DB_TESTS === '1';
 
 let db: Knex;
 let tenantId: string;
@@ -171,9 +170,8 @@ async function grantBillingPermissions(connection: Knex, tenant: string, userId:
     .ignore();
 }
 
-describe.skipIf(!ENABLED)('wizard bucket pool submission (real DB)', () => {
+describe('wizard bucket pool submission (real DB)', () => {
   beforeAll(async () => {
-    wireLocalTestDbEnv();
     db = await createTestDbConnection();
     tenantId = await createTenant(db, 'Wizard pool submission tenant');
     userId = await createUser(db, tenantId, {

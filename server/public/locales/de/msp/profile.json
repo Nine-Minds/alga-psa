@@ -112,7 +112,7 @@
       "advanced": {
         "title": "Erweitert: Weiterleitung zu einem benutzerdefinierten Identitätsanbieter",
         "description": "Leiten Sie die MSP-SSO-Anmeldung über verifizierte Anmeldedomänen an Ihren eigenen Identitätsanbieter weiter. Dies ist nur bei benutzerdefinierten oder lokalen Installationen erforderlich.",
-        "inertNotice": "Es sind keine Anmeldedaten für einen Mandantenidentitätsanbieter konfiguriert, daher haben Domänenansprüche derzeit keine Wirkung. Benutzer melden sich über die gehosteten Google-/Microsoft-Anbieter an. Mandantenanmeldedaten werden bei benutzerdefinierten und lokalen Installationen bereitgestellt."
+        "inertNotice": "Es ist kein Mandantenidentitätsanbieter konfiguriert, daher haben Domänenansprüche derzeit keine Wirkung. Konfigurieren Sie oben Keycloak – oder in der Enterprise Edition Ihre Google-/Microsoft-App-Anmeldedaten – und beanspruchen Sie dann hier Ihre Anmeldedomäne."
       }
     },
     "userRoles": {
@@ -749,6 +749,7 @@
       "branding": {
         "google": "Mit Google fortfahren",
         "microsoft": "Mit Microsoft fortfahren",
+        "keycloak": "Mit Keycloak fortfahren",
         "default": "Fortfahren"
       }
     },

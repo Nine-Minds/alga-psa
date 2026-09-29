@@ -35,6 +35,7 @@
     "title": "Contacts",
     "description": "Page principale de gestion des contacts avec recherche, filtres, vue en liste et actions groupées",
     "heading": "Contacts",
+    "sharedMailbox": "Boîte aux lettres partagée",
     "addContact": "+ Ajouter un contact",
     "actions": "Actions",
     "searchPlaceholder": "Rechercher des contacts, notes et interactions",
@@ -728,6 +729,16 @@
       "visibilityInvalidData": "Données de groupe de visibilité non valides. Veuillez vérifier les informations du groupe et les tableaux sélectionnés.",
       "groupNameRequired": "Le nom du groupe est obligatoire",
       "readPermission": "Autorisation refusée : impossible de lire des contacts"
+    }
+  },
+  "portal": {
+    "visibilityGroups": {
+      "scopeLabel": "Visibilité des tickets",
+      "scopeClient": "Tous les tickets de ce client",
+      "scopeContact": "Uniquement leurs propres tickets",
+      "scopeClientDescription": "Les membres voient tous les tickets de ce client sur les tableaux sélectionnés.",
+      "scopeContactDescription": "Les membres voient uniquement les tickets dont ils sont le contact. Les administrateurs du client voient tous les tickets des tableaux sélectionnés, y compris ceux sans contact.",
+      "assignmentHelp": "Attribuez un groupe pour limiter les tableaux et les tickets, ou conservez un accès complet au client."
     }
   }
 }

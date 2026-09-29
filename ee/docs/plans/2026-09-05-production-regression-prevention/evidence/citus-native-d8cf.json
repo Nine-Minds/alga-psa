@@ -1,0 +1,37 @@
+{
+  "runId": 34118119105,
+  "prHead": "d8cf156c731bdfb9414ee6435152a676e0bcecf4",
+  "lanes": [
+    {
+      "suite": "temporal-database",
+      "revision": "3072eefdf9ecd8ccd551e7dfaf8d595eb6b2908f",
+      "status": "passed",
+      "counts": {
+        "passed": 25,
+        "failed": 0,
+        "skipped": 0,
+        "todo": 0,
+        "pending": 0
+      },
+      "failures": [],
+      "sha256": "1e798c436cb7aa1b175bf75a2848d3f6d6fd775652c28a5edf2abce1413f7e6a"
+    },
+    {
+      "suite": "citus-runtime",
+      "revision": "3072eefdf9ecd8ccd551e7dfaf8d595eb6b2908f",
+      "status": "passed",
+      "counts": {
+        "passed": 8,
+        "failed": 0,
+        "skipped": 0,
+        "todo": 0,
+        "pending": 0
+      },
+      "failures": [],
+      "sha256": "4e460b1c451c17399e29be7ef056d61f2b9b07657cbf133010d2c0a743a6a194"
+    }
+  ],
+  "limits": [
+    "Migrated single-node Citus; no previous-release upgrade or multi-worker production topology claim"
+  ]
+}

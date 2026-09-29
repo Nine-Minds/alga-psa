@@ -1,4 +1,5 @@
-FROM node:20-bullseye AS base
+FROM node:22-bookworm AS base
+ARG TARGETARCH
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
@@ -7,7 +8,8 @@ RUN apt-get update && apt-get install -y \
     git \
     && rm -rf /var/lib/apt/lists/*
 
-RUN curl -sSL "https://storage.googleapis.com/kubernetes-release/release/$(curl -sSL https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl" -o /usr/local/bin/kubectl \
+RUN case "$TARGETARCH" in amd64|arm64) ;; *) echo "Unsupported kubectl architecture" >&2; exit 1 ;; esac \
+    && curl -fsSL "https://dl.k8s.io/release/$(curl -fsSL https://dl.k8s.io/release/stable.txt)/bin/linux/${TARGETARCH}/kubectl" -o /usr/local/bin/kubectl \
     && chmod +x /usr/local/bin/kubectl
 
 WORKDIR /app
@@ -83,6 +85,11 @@ RUN npx tsup
 WORKDIR /app/packages/event-bus
 RUN npx tsup
 
+# Quote terms normalization in shared/worker dist resolves formatting through
+# its package exports. npm builds here do not run Nx dependency targets.
+WORKDIR /app/packages/formatting
+RUN npm run build
+
 # Build @alga-psa/workflows (dist/lib/*.mjs required at runtime)
 WORKDIR /app/ee/packages/workflows
 RUN npx tsup
@@ -101,11 +108,17 @@ RUN npx tsup
 # @alga-psa/core/secrets and /logger at runtime.
 # Known-latent, deliberately NOT built here (never hit in prod traffic): the
 # shared/dist and @alga-psa/workflows runtime bundles also carry lazy bare
-# imports of @alga-psa/{event-bus,authorization,types,storage}. If one of
-# those paths ever fires ERR_MODULE_NOT_FOUND, add the same two lines for it.
+# imports of @alga-psa/{event-bus,authorization,types}. If one of those paths
+# ever fires ERR_MODULE_NOT_FOUND, add the same two lines for it.
 WORKDIR /app/packages/core
 RUN npm install --ignore-scripts && npm run build
 WORKDIR /app/packages/db
+RUN npm install --ignore-scripts && npm run build
+
+# storage before email: email/dist imports @alga-psa/storage/{models/storage,
+# StorageProviderFactory} to attach the branded header logo, and the marketing
+# export check below loads the email index.
+WORKDIR /app/packages/storage
 RUN npm install --ignore-scripts && npm run build
 
 WORKDIR /app/packages/email
@@ -176,6 +189,10 @@ RUN cd /app/ee/temporal-workflows && node --input-type=module -e "const posts = 
 # must resolve from the worker image rather than shared/node_modules.
 RUN cd /app/ee/temporal-workflows && node --input-type=module -e "const m = await import('./dist/shared/services/email/inboundEmailSourceStager.js'); if (typeof m.parseStagedMimeIntoEmailDetails !== 'function') throw new Error('inbound email source stager runtime export is missing')"
 
+# Quote terms must resolve their formatting dependency from the final image,
+# including the prebuilt path where .dockerignore controls which dist files ship.
+RUN cd /app/ee/temporal-workflows && node --input-type=module -e "const { prepareQuoteTermsForDb } = await import('./dist/shared/lib/quoteTerms.js'); const blocks = [{ type: 'paragraph', content: [{ type: 'text', text: 'Terms' }] }]; const result = prepareQuoteTermsForDb({ terms_and_conditions_block: blocks }); if (result.terms_and_conditions !== 'Terms' || JSON.parse(result.terms_and_conditions_block)[0].type !== 'paragraph') throw new Error('quote terms runtime serialization failed')"
+
 # packages/licensing source is compiled INTO this dist tree, so every import
 # reachable from its root must be resolvable from here at runtime. file: deps
 # install as symlinks WITHOUT their own dependencies, so a bare third-party
@@ -191,7 +208,7 @@ USER temporal
 WORKDIR /app/ee/temporal-workflows
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-    CMD node -e "console.log('Health check: OK')" || exit 1
+    CMD node -e "fetch('http://127.0.0.1:' + (process.env.HEALTH_CHECK_PORT || '8080') + '/ready', { redirect: 'error', signal: AbortSignal.timeout(5000) }).then(r => { if (r.status !== 200) process.exitCode = 1; }).catch(() => { process.exitCode = 1; })"
 
 EXPOSE 8080
 
@@ -217,6 +234,10 @@ COPY --from=development /app/packages/event-schemas/dist /app/packages/event-sch
 # Copy the runtime package exports loaded by @alga-psa/email.
 COPY --from=development /app/packages/types/dist /app/packages/types/dist
 COPY --from=development /app/packages/event-bus/dist /app/packages/event-bus/dist
+COPY --from=development /app/packages/formatting/dist /app/packages/formatting/dist
+# email/dist imports @alga-psa/storage/{models/storage,StorageProviderFactory}
+# to attach the branded header logo inline.
+COPY --from=development /app/packages/storage/dist /app/packages/storage/dist
 # Copy the runtime-resolved @alga-psa package dists built above (base-stage
 # packages/ came from the build context, where .dockerignore strips **/dist)
 COPY --from=development /app/packages/core/dist /app/packages/core/dist
@@ -252,6 +273,10 @@ RUN cd /app/ee/temporal-workflows && node --input-type=module -e "const posts = 
 # worker's dist tree before the image can be deployed.
 RUN cd /app/ee/temporal-workflows && node --input-type=module -e "const m = await import('./dist/shared/services/email/inboundEmailSourceStager.js'); if (typeof m.parseStagedMimeIntoEmailDetails !== 'function') throw new Error('inbound email source stager runtime export is missing')"
 
+# Quote terms must resolve their formatting dependency from the final image,
+# including the prebuilt path where .dockerignore controls which dist files ship.
+RUN cd /app/ee/temporal-workflows && node --input-type=module -e "const { prepareQuoteTermsForDb } = await import('./dist/shared/lib/quoteTerms.js'); const blocks = [{ type: 'paragraph', content: [{ type: 'text', text: 'Terms' }] }]; const result = prepareQuoteTermsForDb({ terms_and_conditions_block: blocks }); if (result.terms_and_conditions !== 'Terms' || JSON.parse(result.terms_and_conditions_block)[0].type !== 'paragraph') throw new Error('quote terms runtime serialization failed')"
+
 # packages/licensing source is compiled INTO this dist tree, so every import
 # reachable from its root must be resolvable from here at runtime. file: deps
 # install as symlinks WITHOUT their own dependencies, so a bare third-party
@@ -269,7 +294,7 @@ WORKDIR /app/ee/temporal-workflows
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-    CMD node -e "console.log('Health check: OK')" || exit 1
+    CMD node -e "fetch('http://127.0.0.1:' + (process.env.HEALTH_CHECK_PORT || '8080') + '/ready', { redirect: 'error', signal: AbortSignal.timeout(5000) }).then(r => { if (r.status !== 200) process.exitCode = 1; }).catch(() => { process.exitCode = 1; })"
 
 # Expose health check port
 EXPOSE 8080

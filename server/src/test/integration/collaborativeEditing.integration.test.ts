@@ -8,6 +8,15 @@ import { schema } from 'prosemirror-schema-basic';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { createTenant, createUser } from '../../../test-utils/testDataFactory';
 import { tenantDb } from '@alga-psa/db';
+import { createServer, type Server as HttpServer } from 'node:http';
+import { createRequire } from 'node:module';
+import { pathToFileURL } from 'node:url';
+import type { AddressInfo } from 'node:net';
+import { NextRequest } from 'next/server';
+import { POST as persistRoute } from '@/app/api/internal/collab/persist/route';
+import { CollabPersistenceExtension } from '../../../../hocuspocus/CollabPersistenceExtension.js';
+import { validateDocumentRoomAccess } from '../../../../hocuspocus/tenantValidation.js';
+import type { Hocuspocus } from '../../../../hocuspocus/node_modules/@hocuspocus/server';
 
 /**
  * Collaborative Editing — Integration Tests
@@ -18,8 +27,10 @@ import { tenantDb } from '@alga-psa/db';
  * - Feature flag gating
  * - Tenant isolation in room name construction
  *
- * These tests use a real test database but mock the Hocuspocus connection
- * (actual WebSocket collaboration is tested manually via the test page).
+ * These tests own a real WebSocket server and migrated database. The production
+ * persistence extension calls the real route over HTTP; database routing and
+ * browser-session authentication are fixture seams. Redis fanout and the
+ * built Hocuspocus container have separate coverage.
  *
  * Run: npm run test:integration -- collaborativeEditing
  */
@@ -30,21 +41,6 @@ let userId: string;
 let secondTenantId: string;
 let secondUserId: string;
 
-const RUN_HOCUSPOCUS_TESTS = process.env.RUN_HOCUSPOCUS_TESTS === 'true';
-const HOCUSPOCUS_URL = process.env.HOCUSPOCUS_URL || 'ws://localhost:1234';
-const describeIfHocuspocus = RUN_HOCUSPOCUS_TESTS ? describe : describe.skip;
-const waitForSynced = (provider: HocuspocusProvider) => new Promise<void>((resolve) => {
-  if (provider.synced) {
-    resolve();
-    return;
-  }
-  const handleSynced = ({ state }: { state: boolean }) => {
-    if (!state) return;
-    provider.off('synced', handleSynced);
-    resolve();
-  };
-  provider.on('synced', handleSynced);
-});
 
 function tenantTable(tenant: string, table: string) {
   return tenantDb(db, tenant).table(table);
@@ -111,20 +107,19 @@ describe('Collaborative Editing — Integration Tests', () => {
   }, HOOK_TIMEOUT);
 
   afterAll(async () => {
-    // Cleanup in reverse FK order
-    for (const table of ['document_block_content', 'documents', 'users', 'tenants']) {
-      try {
+    try {
+      // A migrated suite must not hide missing tables or failed cleanup.
+      for (const table of ['document_block_content', 'documents', 'users', 'tenants']) {
         if (table === 'tenants') {
           await tenantRows().whereIn('tenant', [tenantId, secondTenantId]).del();
         } else {
           await tenantTable(tenantId, table).where({ tenant: tenantId }).del();
           await tenantTable(secondTenantId, table).where({ tenant: secondTenantId }).del();
         }
-      } catch (e) {
-        // table may not exist in test DB — ignore
       }
+    } finally {
+      await db?.destroy();
     }
-    await db.destroy();
   }, HOOK_TIMEOUT);
 
   // ─── Document Creation for Collab Sessions ───────────────────────
@@ -448,241 +443,197 @@ describe('Collaborative Editing — Integration Tests', () => {
       expect(content).toBeUndefined();
     });
   });
-});
 
-// ─── Hocuspocus Persistence (No DB Required) ───────────────────────
+  describe('Hocuspocus synchronization and persistence', () => {
+    let service: Hocuspocus;
+    let http: HttpServer;
+    let url: string;
+    let apiUrl: string;
+    const providers = new Set<HocuspocusProvider>();
+    const documents = new Set<Y.Doc>();
+    const requests: Array<{ status: number }> = [];
+    const transportErrors: Error[] = [];
+    let expectedStatuses: number[];
 
-describeIfHocuspocus('Hocuspocus persistence', () => {
-  it('should persist content across a disconnect/reconnect cycle', async () => {
-    const tenantId = uuidv4();
-    const docId = uuidv4();
-    const roomName = `document:${tenantId}:${docId}`;
-    const ydoc = new Y.Doc();
+    beforeEach(() => { expectedStatuses = [200]; });
 
-    const provider = new HocuspocusProvider({
-      url: HOCUSPOCUS_URL,
-      name: roomName,
-      document: ydoc,
-      parameters: { tenantId },
-    });
-
-    await waitForSynced(provider);
-
-    const text = ydoc.getText('test');
-    text.insert(0, 'Persisted content');
-
-    await waitForSynced(provider);
-    provider.destroy();
-
-    const ydocReloaded = new Y.Doc();
-    const reconnected = new HocuspocusProvider({
-      url: HOCUSPOCUS_URL,
-      name: roomName,
-      document: ydocReloaded,
-      parameters: { tenantId },
-    });
-
-    await waitForSynced(reconnected);
-
-    const reloadedText = ydocReloaded.getText('test').toString();
-    expect(reloadedText).toBe('Persisted content');
-
-    reconnected.destroy();
-  });
-
-  it('should sync content between two providers connected to the same room', async () => {
-    const tenantId = uuidv4();
-    const docId = uuidv4();
-    const roomName = `document:${tenantId}:${docId}`;
-    const docA = new Y.Doc();
-    const docB = new Y.Doc();
-
-    const providerA = new HocuspocusProvider({
-      url: HOCUSPOCUS_URL,
-      name: roomName,
-      document: docA,
-      parameters: { tenantId },
-    });
-
-    const providerB = new HocuspocusProvider({
-      url: HOCUSPOCUS_URL,
-      name: roomName,
-      document: docB,
-      parameters: { tenantId },
-    });
-
-    await Promise.all([waitForSynced(providerA), waitForSynced(providerB)]);
-
-    const textA = docA.getText('test');
-    const textB = docB.getText('test');
-
-    const waitForRemote = new Promise<void>((resolve) => {
-      const handle = () => {
-        if (textB.toString() === 'Hello from A') {
-          textB.unobserve(handle);
-          resolve();
-        }
-      };
-      textB.observe(handle);
-      handle();
-    });
-
-    textA.insert(0, 'Hello from A');
-
-    await waitForRemote;
-    expect(textB.toString()).toBe('Hello from A');
-
-    providerA.destroy();
-    providerB.destroy();
-  });
-
-  it('should broadcast awareness state between providers', async () => {
-    const tenantId = uuidv4();
-    const docId = uuidv4();
-    const roomName = `document:${tenantId}:${docId}`;
-    const docA = new Y.Doc();
-    const docB = new Y.Doc();
-
-    const providerA = new HocuspocusProvider({
-      url: HOCUSPOCUS_URL,
-      name: roomName,
-      document: docA,
-      parameters: { tenantId },
-    });
-
-    const providerB = new HocuspocusProvider({
-      url: HOCUSPOCUS_URL,
-      name: roomName,
-      document: docB,
-      parameters: { tenantId },
-    });
-
-    await Promise.all([waitForSynced(providerA), waitForSynced(providerB)]);
-
-    const received = new Promise<void>((resolve, reject) => {
-      const timeout = setTimeout(() => reject(new Error('Awareness state not received.')), 3000);
-      const handle = () => {
-        const states = Array.from(providerB.awareness.getStates().values());
-        const hasUser = states.some((state) => state?.user?.name === 'User A');
-        if (hasUser) {
-          clearTimeout(timeout);
-          providerB.awareness.off('change', handle);
-          resolve();
-        }
-      };
-      providerB.awareness.on('change', handle);
-      handle();
-    });
-
-    providerA.awareness.setLocalStateField('user', {
-      id: 'user-a',
-      name: 'User A',
-      color: '#ff0000',
-    });
-
-    await received;
-
-    providerA.destroy();
-    providerB.destroy();
-  });
-
-  it('should reject WebSocket connection with mismatched tenant', async () => {
-    const tenantId = uuidv4();
-    const docId = uuidv4();
-    const roomName = `document:${uuidv4()}:${docId}`;
-    const ydoc = new Y.Doc();
-
-    const provider = new HocuspocusProvider({
-      url: HOCUSPOCUS_URL,
-      name: roomName,
-      document: ydoc,
-      parameters: { tenantId },
-    });
-
-    const statuses: string[] = [];
-    const disconnected = new Promise<void>((resolve, reject) => {
-      const timeout = setTimeout(() => reject(new Error('Expected disconnect.')), 3000);
-      provider.on('status', ({ status }) => {
-        statuses.push(status);
-        if (status === 'disconnected') {
-          clearTimeout(timeout);
-          resolve();
+    beforeAll(async () => {
+      vi.stubEnv('COLLAB_PERSIST_API_KEY', uuidv4());
+      http = createServer(async (incoming, outgoing) => {
+        try {
+          const chunks: Buffer[] = [];
+          for await (const chunk of incoming) chunks.push(Buffer.from(chunk));
+          const request = new NextRequest(apiUrl, {
+            method: 'POST',
+            headers: { 'x-api-key': String(incoming.headers['x-api-key'] ?? '') },
+            body: Buffer.concat(chunks).toString(),
+          });
+          const result = await persistRoute(request);
+          requests.push({ status: result.status });
+          outgoing.writeHead(result.status, Object.fromEntries(result.headers.entries()));
+          outgoing.end(await result.text());
+        } catch (error) {
+          transportErrors.push(error as Error);
+          outgoing.writeHead(500); outgoing.end('Persistence request failed');
         }
       });
-    });
-
-    await disconnected;
-    expect(statuses).not.toContain('connected');
-
-    provider.destroy();
-  });
-
-  it('should sync Y.js content to document_block_content via syncCollabSnapshot', async () => {
-    const docId = uuidv4();
-    const now = new Date();
-
-    await tenantTable(tenantId, 'documents').insert({
-      document_id: docId,
-      document_name: 'Snapshot Test',
-      tenant: tenantId,
-      user_id: userId,
-      created_by: userId,
-      edited_by: userId,
-      entered_at: now,
-      updated_at: now,
-    });
-
-    await tenantTable(tenantId, 'document_block_content').insert({
-      content_id: uuidv4(),
-      document_id: docId,
-      block_data: JSON.stringify({ type: 'doc', content: [] }),
-      tenant: tenantId,
-      created_at: now,
-      updated_at: now,
-    });
-
-    const roomName = `document:${tenantId}:${docId}`;
-    const ydoc = new Y.Doc();
-
-    const provider = new HocuspocusProvider({
-      url: HOCUSPOCUS_URL,
-      name: roomName,
-      document: ydoc,
-      parameters: { tenantId },
-    });
-
-    await waitForSynced(provider);
-
-    const fragment = ydoc.getXmlFragment('prosemirror');
-    prosemirrorJSONToYXmlFragment(schema, {
-      type: 'doc',
-      content: [
-        {
-          type: 'paragraph',
-          content: [{ type: 'text', text: 'Snapshot content' }],
+      await new Promise<void>((resolve, reject) => {
+        http.once('error', reject);
+        http.listen(0, '127.0.0.1', resolve);
+      });
+      apiUrl = `http://127.0.0.1:${(http.address() as AddressInfo).port}/api/internal/collab/persist`;
+      // Resolve the service's own locked server version, not a test replacement.
+      const requireService = createRequire(new URL('../../../../hocuspocus/package.json', import.meta.url));
+      const { Hocuspocus } = await import(pathToFileURL(requireService.resolve('@hocuspocus/server')).href);
+      service = new Hocuspocus({
+        address: '127.0.0.1', port: 0, quiet: true,
+        debounce: 20, maxDebounce: 100,
+        extensions: [new CollabPersistenceExtension({ apiUrl, apiKey: process.env.COLLAB_PERSIST_API_KEY })],
+        onConnect: ({ documentName, request }: { documentName: string; request: unknown }) => {
+          validateDocumentRoomAccess(documentName, request);
         },
-      ],
-    }, fragment);
+      });
+      await service.listen();
+      url = `ws://127.0.0.1:${service.address.port}`;
+      vi.stubEnv('NEXT_PUBLIC_HOCUSPOCUS_URL', url);
+      vi.stubEnv('HOCUSPOCUS_INTERNAL_URL', url);
+    });
 
-    await new Promise((resolve) => setTimeout(resolve, 200));
+    afterEach(async () => {
+      for (const provider of providers) provider.destroy();
+      for (const document of documents) document.destroy();
+      providers.clear(); documents.clear();
+      await expect.poll(() => service.getConnectionsCount(), { timeout: 5000 }).toBe(0);
+      await expect.poll(() => service.getDocumentsCount(), { timeout: 5000 }).toBe(0);
+      expect(transportErrors).toEqual([]);
+      expect(requests.every(request => expectedStatuses.includes(request.status))).toBe(true);
+      requests.length = 0;
+    });
 
-    provider.destroy();
+    afterAll(async () => {
+      await service?.destroy();
+      if (http?.listening) await new Promise<void>((resolve, reject) => http.close(error => error ? reject(error) : resolve()));
+      vi.unstubAllEnvs();
+    });
 
-    const { syncCollabSnapshot } = await import(
-      '@alga-psa/documents/actions/collaborativeEditingActions'
-    );
-    const result = await syncCollabSnapshot(docId);
+    function connect(room: string, connectingTenant = tenantId) {
+      const document = new Y.Doc(); documents.add(document);
+      const provider = new HocuspocusProvider({
+        url, name: room, document, parameters: { tenantId: connectingTenant },
+        preserveConnection: false,
+      });
+      providers.add(provider);
+      return { document, provider };
+    }
 
-    expect(result?.success).toBe(true);
+    async function synced(provider: HocuspocusProvider) {
+      await expect.poll(() => provider.synced, { timeout: 5000 }).toBe(true);
+    }
 
-    const content = await tenantTable(tenantId, 'document_block_content')
-      .where({ document_id: docId, tenant: tenantId })
-      .first();
+    function write(document: Y.Doc, text: string) {
+      prosemirrorJSONToYXmlFragment(schema, {
+        type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text }] }],
+      }, document.getXmlFragment('prosemirror'));
+    }
 
-    const parsed = typeof content.block_data === 'string'
-      ? JSON.parse(content.block_data)
-      : content.block_data;
+    async function seedDocument() {
+      const documentId = uuidv4();
+      await tenantTable(tenantId, 'documents').insert({
+        document_id: documentId, document_name: 'Live collaborative snapshot', tenant: tenantId,
+        user_id: userId, created_by: userId, entered_at: db.fn.now(), updated_at: db.fn.now(),
+      });
+      await tenantTable(tenantId, 'document_block_content').insert({
+        content_id: uuidv4(), document_id: documentId, tenant: tenantId,
+        block_data: JSON.stringify({ type: 'doc', content: [] }),
+        created_at: db.fn.now(), updated_at: db.fn.now(),
+      });
+      return documentId;
+    }
 
-    expect(parsed.content?.[0]?.content?.[0]?.text).toBe('Snapshot content');
+    async function saved(documentId: string) {
+      const row = await tenantTable(tenantId, 'document_block_content').where({ document_id: documentId }).first();
+      return typeof row.block_data === 'string' ? JSON.parse(row.block_data) : row.block_data;
+    }
+
+    it('persists editor content after the last client disconnects and the room is evicted', async () => {
+      const documentId = await seedDocument();
+      const room = `document:${tenantId}:${documentId}`;
+      const first = connect(room);
+      await synced(first.provider);
+      write(first.document, 'Persisted content');
+      await expect.poll(() => first.provider.hasUnsyncedChanges, { timeout: 5000 }).toBe(false);
+      first.provider.destroy(); providers.delete(first.provider);
+      await expect.poll(() => service.documents.has(room), { timeout: 5000 }).toBe(false);
+      await expect.poll(async () => (await saved(documentId)).content?.[0]?.content?.[0]?.text).toBe('Persisted content');
+      expect(requests.some(request => request.status === 200)).toBe(true);
+
+      // A fresh server-side snapshot of the empty room must not wipe durable content.
+      const { syncCollabSnapshot } = await import('@alga-psa/documents/actions/collaborativeEditingActions');
+      expect(await syncCollabSnapshot(documentId)).toMatchObject({ success: false });
+      expect((await saved(documentId)).content[0].content[0].text).toBe('Persisted content');
+    });
+
+    it('syncs content between two providers connected to the same room', async () => {
+      const room = `document:${tenantId}:${uuidv4()}`;
+      const first = connect(room), second = connect(room);
+      await Promise.all([synced(first.provider), synced(second.provider)]);
+      first.document.getText('test').insert(0, 'Hello from A');
+      await expect.poll(() => second.document.getText('test').toString()).toBe('Hello from A');
+      second.document.getText('test').insert('Hello from A'.length, ' and B');
+      await expect.poll(() => first.document.getText('test').toString()).toBe('Hello from A and B');
+    });
+
+    it('broadcasts awareness state between providers', async () => {
+      const room = `document:${tenantId}:${uuidv4()}`;
+      const first = connect(room), second = connect(room);
+      await Promise.all([synced(first.provider), synced(second.provider)]);
+      first.provider.awareness!.setLocalStateField('user', { id: userId, name: 'Editor One', color: '#ff0000' });
+      await expect.poll(() => Array.from(second.provider.awareness!.getStates().values())
+        .some(state => state.user?.id === userId)).toBe(true);
+    });
+
+    it('rejects a mismatched tenant before synchronizing room content', async () => {
+      const room = `document:${tenantId}:${uuidv4()}`;
+      const owner = connect(room);
+      await synced(owner.provider);
+      owner.document.getText('test').insert(0, 'Private document');
+      await expect.poll(() => owner.provider.hasUnsyncedChanges).toBe(false);
+      const intruder = connect(room, secondTenantId);
+      let closed = false;
+      intruder.provider.on('close', () => { closed = true; });
+      await expect.poll(() => closed, { timeout: 5000 }).toBe(true);
+      expect(intruder.provider.synced).toBe(false);
+      expect(intruder.document.getText('test').toString()).toBe('');
+    });
+
+    it('saves a live room through syncCollabSnapshot into document_block_content', async () => {
+      const documentId = await seedDocument();
+      const owner = connect(`document:${tenantId}:${documentId}`);
+      await synced(owner.provider);
+      write(owner.document, 'Snapshot content');
+      await expect.poll(() => owner.provider.hasUnsyncedChanges).toBe(false);
+      const { syncCollabSnapshot } = await import('@alga-psa/documents/actions/collaborativeEditingActions');
+      expect(await syncCollabSnapshot(documentId)).toMatchObject({ success: true });
+      expect((await saved(documentId)).content[0].content[0].text).toBe('Snapshot content');
+      expect(await tenantTable(secondTenantId, 'document_block_content').where({ document_id: documentId }).first()).toBeUndefined();
+    });
+
+    it('rejects unauthenticated and wrong-tenant persistence without changing stored content', async () => {
+      expectedStatuses = [401, 404];
+      const documentId = await seedDocument();
+      const before = await saved(documentId);
+      const document = new Y.Doc(); documents.add(document);
+      write(document, 'Must not be saved');
+      const update = Buffer.from(Y.encodeStateAsUpdate(document)).toString('base64');
+      const send = (key: string, tenant: string) => fetch(apiUrl, {
+        method: 'POST', headers: { 'content-type': 'application/json', 'x-api-key': key },
+        body: JSON.stringify({ tenantId: tenant, documentId, update }),
+      });
+      expect((await send('invalid-test-key', tenantId)).status).toBe(401);
+      expect(await saved(documentId)).toEqual(before);
+      expect((await send(process.env.COLLAB_PERSIST_API_KEY!, secondTenantId)).status).toBe(404);
+      expect(await saved(documentId)).toEqual(before);
+      expect(requests.map(request => request.status)).toEqual([401, 404]);
+    });
   });
 });

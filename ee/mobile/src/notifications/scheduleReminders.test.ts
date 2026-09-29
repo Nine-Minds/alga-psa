@@ -11,7 +11,13 @@ vi.mock("expo-notifications", () => ({
   SchedulableTriggerInputTypes: { DATE: "date" },
 }));
 
+vi.mock("../settings/notificationPreferences", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../settings/notificationPreferences")>()),
+  getReminderLeadMinutes: async () => [15],
+}));
+
 import {
+  MAX_PENDING_SCHEDULE_REMINDERS,
   REMINDER_LEAD_MINUTES,
   diffScheduleReminders,
   parseReminderIdentifier,
@@ -38,8 +44,13 @@ function makeEntry(id: string, startIso: string, over: Partial<ScheduleEntry> = 
 describe("reminderIdentifier", () => {
   it("round-trips through parseReminderIdentifier", () => {
     const startMs = Date.parse("2026-06-12T12:00:00.000Z");
-    const id = reminderIdentifier("entry-1", startMs);
-    expect(parseReminderIdentifier(id)).toEqual({ entryId: "entry-1", startMs });
+    const id = reminderIdentifier("entry-1", startMs, 10);
+    expect(parseReminderIdentifier(id)).toEqual({ entryId: "entry-1", startMs, leadMinutes: 10 });
+  });
+
+  it("still parses identifiers written before leads were configurable", () => {
+    const startMs = Date.parse("2026-06-12T12:00:00.000Z");
+    expect(parseReminderIdentifier(`schedule-reminder:entry-1:${startMs}`)).toEqual({ entryId: "entry-1", startMs, leadMinutes: null });
   });
 
   it("rejects foreign identifiers", () => {
@@ -82,6 +93,27 @@ describe("planScheduleReminders", () => {
     const planned = planScheduleReminders([makeEntry("e1", start), makeEntry("e1", start)], { now: NOW });
     expect(planned).toHaveLength(1);
   });
+
+  it("plans one reminder per configured lead, soonest first", () => {
+    const start = "2026-06-12T12:00:00.000Z";
+    const planned = planScheduleReminders([makeEntry("e1", start)], { now: NOW, leadMinutes: [15, 5] });
+    expect(planned.map((p) => p.leadMinutes)).toEqual([15, 5]);
+    expect(planned.map((p) => p.fireAt.toISOString())).toEqual(["2026-06-12T11:45:00.000Z", "2026-06-12T11:55:00.000Z"]);
+    expect(new Set(planned.map((p) => p.identifier)).size).toBe(2);
+  });
+
+  it("plans nothing when reminders are turned off", () => {
+    expect(planScheduleReminders([makeEntry("e1", "2026-06-12T12:00:00.000Z")], { now: NOW, leadMinutes: [] })).toEqual([]);
+  });
+
+  it("caps pending reminders to the soonest ones", () => {
+    const entries = Array.from({ length: 30 }, (_, i) => makeEntry(`e${i}`, new Date(NOW.getTime() + (i + 2) * 60 * 60 * 1000).toISOString()));
+    const planned = planScheduleReminders(entries, { now: NOW, leadMinutes: [15, 5], limit: 10 });
+    expect(planned).toHaveLength(10);
+    expect(planned.every((p, i) => i === 0 || p.fireAt >= planned[i - 1].fireAt)).toBe(true);
+    expect(planned[0].entryId).toBe("e0");
+    expect(MAX_PENDING_SCHEDULE_REMINDERS).toBeLessThan(64);
+  });
 });
 
 describe("diffScheduleReminders", () => {
@@ -100,13 +132,13 @@ describe("diffScheduleReminders", () => {
   });
 
   it("cancels reminders for entries removed within the synced window", () => {
-    const stale = reminderIdentifier("gone", Date.parse("2026-06-12T15:00:00.000Z"));
+    const stale = reminderIdentifier("gone", Date.parse("2026-06-12T15:00:00.000Z"), 15);
     const { toCancel } = diffScheduleReminders([stale], [], window);
     expect(toCancel).toEqual([stale]);
   });
 
   it("reschedules when an entry start time changed", () => {
-    const oldId = reminderIdentifier("e1", Date.parse("2026-06-12T12:00:00.000Z"));
+    const oldId = reminderIdentifier("e1", Date.parse("2026-06-12T12:00:00.000Z"), 15);
     const planned = planScheduleReminders([makeEntry("e1", "2026-06-12T14:00:00.000Z")], { now: NOW });
     const { toCancel, toSchedule } = diffScheduleReminders([oldId], planned, window);
     expect(toCancel).toEqual([oldId]);
@@ -114,7 +146,7 @@ describe("diffScheduleReminders", () => {
   });
 
   it("never cancels reminders for entries outside the synced window", () => {
-    const nextWeek = reminderIdentifier("later", Date.parse("2026-06-20T12:00:00.000Z"));
+    const nextWeek = reminderIdentifier("later", Date.parse("2026-06-20T12:00:00.000Z"), 15);
     const { toCancel } = diffScheduleReminders([nextWeek], [], window);
     expect(toCancel).toEqual([]);
   });

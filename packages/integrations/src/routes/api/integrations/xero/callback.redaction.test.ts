@@ -31,6 +31,23 @@ vi.mock('@alga-psa/core/secrets', () => ({
   getSecretProviderInstance: vi.fn(async () => ({}))
 }));
 
+// The credential-write provenance gate runs a tenant DB lookup before the token
+// exchange. It is not part of the provider-error path under test: stub the DB
+// handle and report the normal "allowed" (no active disconnect) disposition so
+// the callback reaches the token exchange the redaction assertions exercise.
+vi.mock('@alga-psa/db', () => ({
+  createTenantKnex: vi.fn(async () => ({ knex: {}, tenant: TENANT_ID }))
+}));
+
+vi.mock('../../../../lib/providerDisconnect', () => ({
+  getProviderCredentialWriteDisposition: vi.fn(async () => 'allowed'),
+  withProviderCredentialLock: vi.fn(async (_knex, _tenant, _provider, fn) => fn({})),
+  getProviderDisconnectStatusInfo: vi.fn(async () => null),
+  isProviderDisconnectActive: vi.fn(async () => false),
+  PROVIDER_QBO: 'quickbooks_online',
+  PROVIDER_XERO: 'xero'
+}));
+
 const REDIRECT_URI = 'http://localhost:3000/api/integrations/xero/callback';
 const USER_ID = 'user-1';
 
@@ -43,7 +60,9 @@ vi.mock('../../../../lib/xero/xeroClientService', () => ({
   })),
   upsertStoredXeroConnections: vi.fn(async () => ({})),
   XeroConnectionsStore: {},
-  XERO_TOKEN_URL: 'https://identity.xero.com/connect/token'
+  XERO_TOKEN_URL: 'https://identity.xero.com/connect/token',
+  getXeroTokenUrl: vi.fn(() => 'https://identity.xero.com/connect/token'),
+  getXeroConnectionsUrl: vi.fn(() => 'https://api.xero.com/connections')
 }));
 
 // New opaque-nonce + server-side attempt-record model (main). The callback

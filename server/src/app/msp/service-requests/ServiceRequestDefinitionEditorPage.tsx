@@ -47,6 +47,8 @@ import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type { TFunction } from 'i18next';
 import { ServiceRequestCard } from '../../client-portal/request-services/ServiceRequestCard';
 import { ServiceRequestIconPicker } from './ServiceRequestIconPicker';
+import { AnswerMappingSection } from './AnswerMappingSection';
+import { SubmissionMappingPanel } from './SubmissionMappingPanel';
 import { SERVICE_REQUEST_ICON_OPTIONS } from '../../../lib/service-requests/iconCatalog';
 import { BoardPicker } from '@alga-psa/ui/components/settings/general/BoardPicker';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
@@ -127,15 +129,26 @@ interface DefinitionSubmissionRow {
   submitted_at: string | Date;
 }
 
+interface DefinitionSubmissionAuditEvent {
+  audit_id: string;
+  operation: string;
+  user_id: string | null;
+  actor_name: string | null;
+  timestamp: string | Date;
+  details: Record<string, unknown>;
+}
+
 interface DefinitionSubmissionDetail extends DefinitionSubmissionRow {
   definition_id: string;
   definition_version_id: string;
+  definition_version_number: number;
   submitted_payload: Record<string, unknown>;
   execution_error_summary: string | null;
   requester_user_name: string | null;
   client_name: string | null;
   contact_name: string | null;
   created_ticket_display: string | null;
+  audit_events: DefinitionSubmissionAuditEvent[];
 }
 
 function FieldRow({ label, value }: { label: string; value: React.ReactNode }) {
@@ -703,6 +716,7 @@ export default function ServiceRequestDefinitionEditorPage() {
 
   const isWorkflowBackedExecution = data?.execution.showWorkflowExecutionConfigPanel === true;
   const isTicketOnlyExecution = data?.execution.executionProvider === 'ticket-only';
+  const isStoreOnlyExecution = data?.execution.executionProvider === 'store-only';
   const hasLivePublishedVersion = Boolean(data?.publish.publishedVersionNumber);
   const draftLifecycleLabel = getServiceRequestDraftLifecycleLabel(
     data?.lifecycleState,
@@ -1528,6 +1542,17 @@ export default function ServiceRequestDefinitionEditorPage() {
             }}
           />
         </div>
+        {isStoreOnlyExecution && (
+          <div
+            id="service-request-store-only-explanation"
+            className="space-y-1 rounded border p-3 bg-[rgb(var(--color-border-100))]"
+          >
+            <h3 className="text-sm font-semibold">{t('editor.execution.storeOnly.title')}</h3>
+            <p className="text-sm text-[rgb(var(--color-text-600))]">
+              {t('editor.execution.storeOnly.description')}
+            </p>
+          </div>
+        )}
         {isTicketOnlyExecution && (
           <div className="space-y-3 rounded border p-3 bg-[rgb(var(--color-border-100))]">
             <h3 className="text-sm font-semibold">{t('editor.execution.ticketRouting.title')}</h3>
@@ -1860,6 +1885,16 @@ export default function ServiceRequestDefinitionEditorPage() {
         <FieldRow label={t('editor.execution.fields.visibilityProvider')} value={data.execution.visibilityProvider} />
       </Card>
 
+      <AnswerMappingSection
+        definitionId={data.definitionId}
+        questions={getSchemaFields(data.form.schema).map((field) => ({
+          key: field.key,
+          label: field.label || field.key,
+        }))}
+        t={t}
+        formatDate={formatDate}
+      />
+
       <Card id="service-request-editor-publish" className="p-4 space-y-3">
         <h2 className="text-lg font-semibold">{t('editor.publishSection.title')}</h2>
         <FieldRow label={t('editor.publishSection.currentDraftState')} value={draftLifecycleLabel ?? '-'} />
@@ -1937,6 +1972,12 @@ export default function ServiceRequestDefinitionEditorPage() {
             <div className="text-sm font-semibold">{t('editor.submissions.detailTitle')}</div>
             <FieldRow label={t('editor.submissions.submissionId')} value={selectedSubmissionDetail.submission_id} />
             <FieldRow
+              label={t('editor.submissions.formVersion')}
+              value={t('editor.submissions.formVersionValue', {
+                version: selectedSubmissionDetail.definition_version_number,
+              })}
+            />
+            <FieldRow
               label={t('editor.submissions.requesterUser')}
               value={
                 selectedSubmissionDetail.requester_user_name ??
@@ -1975,6 +2016,51 @@ export default function ServiceRequestDefinitionEditorPage() {
               label={t('editor.submissions.executionError')}
               value={selectedSubmissionDetail.execution_error_summary ?? '-'}
             />
+            <SubmissionMappingPanel
+              definitionId={definitionId}
+              submissionId={selectedSubmissionDetail.submission_id}
+              questionLabel={(key) => {
+                if (!key) return t('editor.submissions.mapping.emptyValue');
+                const field = getSchemaFields(data.form.schema).find((candidate) => candidate.key === key);
+                return field?.label || t('editor.answerMapping.unknownQuestion', { key });
+              }}
+              t={t}
+              formatDate={formatDate}
+              onApplied={async () => {
+                const detail = await getServiceRequestDefinitionSubmissionDetailAction(
+                  definitionId,
+                  selectedSubmissionDetail.submission_id
+                );
+                setSelectedSubmissionDetail(detail as DefinitionSubmissionDetail | null);
+              }}
+            />
+            <div className="pt-2">
+              <div className="text-sm font-semibold">{t('editor.submissions.historyTitle')}</div>
+              {selectedSubmissionDetail.audit_events.length === 0 ? (
+                <div className="text-sm text-[rgb(var(--color-text-600))]">
+                  {t('editor.submissions.historyEmpty')}
+                </div>
+              ) : (
+                <ol className="mt-1 space-y-1">
+                  {selectedSubmissionDetail.audit_events.map((event) => (
+                    <li key={event.audit_id} className="text-sm">
+                      <span className="font-medium">
+                        {t(`editor.submissions.historyOperations.${event.operation}`, {
+                          defaultValue: event.operation,
+                        })}
+                      </span>
+                      <span className="text-[rgb(var(--color-text-600))]">
+                        {' · '}
+                        {formatDate(new Date(event.timestamp), { dateStyle: 'medium', timeStyle: 'short' })}
+                        {event.actor_name
+                          ? ` · ${t('editor.submissions.historyActor', { actor: event.actor_name })}`
+                          : ''}
+                      </span>
+                    </li>
+                  ))}
+                </ol>
+              )}
+            </div>
             <pre className="text-xs bg-white p-2 rounded overflow-auto">
               {JSON.stringify(selectedSubmissionDetail.submitted_payload, null, 2)}
             </pre>

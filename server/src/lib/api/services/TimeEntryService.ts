@@ -39,6 +39,12 @@ export class TimeEntryService extends BaseService<any> {
     });
   }
 
+  // A PostgreSQL DATE is a calendar date, not an instant. Project it as text
+  // before pg hydrates it into a Date in the Node process's timezone.
+  private workDateProjection(knex: Knex): Knex.Raw {
+    return knex.raw("to_char(??, 'YYYY-MM-DD') as ??", [`${this.tableName}.work_date`, 'work_date']);
+  }
+
   private assertServiceIdPresent(serviceId: string | null | undefined): void {
     if (!serviceId) {
       throw new ValidationError('Validation failed', [
@@ -147,6 +153,7 @@ export class TimeEntryService extends BaseService<any> {
     query
       .select(
         `${this.tableName}.*`,
+        this.workDateProjection(knex),
         knex.raw(`CONCAT(users.first_name, ' ', users.last_name) as user_name`),
         'service_catalog.service_name',
         knex.raw(`ROUND(${this.tableName}.billable_duration / 60.0, 2) as duration_hours`),
@@ -191,6 +198,7 @@ export class TimeEntryService extends BaseService<any> {
       .where(`${this.tableName}.${this.primaryKey}`, id)
       .select(
         `${this.tableName}.*`,
+        this.workDateProjection(knex),
         knex.raw(`CONCAT(users.first_name, ' ', users.last_name) as user_name`),
         'service_catalog.service_name',
         knex.raw(`ROUND(${this.tableName}.billable_duration / 60.0, 2) as duration_hours`),
@@ -601,6 +609,12 @@ export class TimeEntryService extends BaseService<any> {
       const [created] = await tenantDb(trx, context.tenant).table('time_entries')
         .insert(timeEntryData)
         .returning('*');
+      // A DATE is a calendar date, not an instant: pg hydrates the returned column
+      // into a Date in the Node process timezone, which can shift the day. Overwrite
+      // it with the timezone-local 'YYYY-MM-DD' string computed above so the response
+      // and every other consumer see the correct date. (Citus rejects non-IMMUTABLE
+      // functions such as to_char in a distributed table's RETURNING clause.)
+      created.work_date = work_date;
       await recalculateProjectTaskActualHoursForEntryChange(trx, context.tenant, null, created);
       return created;
     });
@@ -694,6 +708,7 @@ export class TimeEntryService extends BaseService<any> {
     
     // Find active session (time entry with null end_time)
     const session = await this.buildTenantScopedQuery(knex, context)
+      .select(`${this.tableName}.*`, this.workDateProjection(knex))
       .where('user_id', userId)
       .whereNull('end_time')
       .first();
@@ -772,6 +787,7 @@ export class TimeEntryService extends BaseService<any> {
     query
       .select(
         `${this.tableName}.*`,
+        this.workDateProjection(knex),
         knex.raw(`CONCAT(users.first_name, ' ', users.last_name) as user_name`),
         'service_catalog.service_name',
         knex.raw(`CASE WHEN tickets.ticket_id IS NOT NULL THEN tickets.title ELSE project_tasks.task_name END as work_item_title`),
@@ -950,6 +966,7 @@ export class TimeEntryService extends BaseService<any> {
     query
       .select(
         `${this.tableName}.*`,
+        this.workDateProjection(knex),
         knex.raw(`CONCAT(users.first_name, ' ', users.last_name) as user_name`),
         'service_catalog.service_name',
         knex.raw(`CASE WHEN ${this.tableName}.billable_duration > 0 THEN true ELSE false END as is_billable`)
@@ -1038,6 +1055,7 @@ export class TimeEntryService extends BaseService<any> {
     query
       .select(
         `${this.tableName}.*`,
+        this.workDateProjection(knex),
         knex.raw(`CONCAT(users.first_name, ' ', users.last_name) as user_name`),
         'service_catalog.service_name'
       )

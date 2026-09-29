@@ -8,7 +8,7 @@ import {
   intersectAuthorizationScopes,
   type AuthorizationEvaluationInput,
   type BundleAuthorizationProvider,
-} from 'server/src/lib/authorization';
+} from '@alga-psa/authorization/kernel';
 
 function baseInput(overrides: Partial<AuthorizationEvaluationInput> = {}): AuthorizationEvaluationInput {
   return {
@@ -144,8 +144,19 @@ describe('authorization kernel fail-closed behavior', () => {
 });
 
 describe('intersectAuthorizationScopes', () => {
+  it.each([undefined, null])('preserves a restriction when another runtime scope has %s constraints', (constraints) => {
+    // External runtime values can omit this required TypeScript field; the
+    // intersection's nullish fallback must not manufacture a constraint.
+    const runtimeScope = { allowAll: false, denied: false, constraints } as unknown as Parameters<typeof intersectAuthorizationScopes>[number];
+    const restriction = { field: 'client_id', operator: 'eq' as const, value: 'client-1' };
+
+    expect(intersectAuthorizationScopes(runtimeScope, {
+      allowAll: false, denied: false, constraints: [restriction],
+    })).toEqual({ allowAll: false, denied: false, constraints: [restriction] });
+  });
+
   it('returns allow-all for an empty scope list', () => {
-    expect(intersectAuthorizationScopes()).toEqual(ALLOW_ALL_SCOPE);
+    expect(intersectAuthorizationScopes()).toEqual({ allowAll: true, denied: false, constraints: [] });
   });
 
   it('lets a single denied scope dominate the intersection and drops constraints', () => {
@@ -158,7 +169,7 @@ describe('intersectAuthorizationScopes', () => {
       DENY_ALL_SCOPE
     );
 
-    expect(result).toEqual(DENY_ALL_SCOPE);
+    expect(result).toEqual({ allowAll: false, denied: true, constraints: [] });
     expect(result.constraints).toEqual([]);
   });
 

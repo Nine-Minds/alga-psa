@@ -1,4 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+// Load during collection: a cold transform inside a timed test can outlive that
+// test and write into the next test's reset database state. vi.mock is hoisted.
+import { importClientsFromCSV } from './clientActions';
 
 const createTenantKnexMock = vi.hoisted(() => vi.fn());
 const tenantDbMock = vi.hoisted(() => vi.fn((conn: any) => ({
@@ -134,6 +137,7 @@ const TABLE_COLUMNS: Record<string, Set<string>> = {
     'invoice_template_id', 'billing_contact_id', 'billing_email', 'region_code',
     'account_manager_id', 'default_currency_code', 'sla_policy_id',
     'entra_tenant_id', 'entra_primary_domain', 'inbound_ticket_defaults_id',
+    'client_since',
   ]),
   client_locations: new Set([
     'location_id', 'tenant', 'client_id', 'location_name', 'address_line1',
@@ -144,13 +148,17 @@ const TABLE_COLUMNS: Record<string, Set<string>> = {
   ]),
   default_billing_settings: new Set(['tenant', 'default_currency_code']),
   countries: new Set(['code', 'name', 'is_active', 'created_at', 'updated_at']),
+  tenant_companies: new Set(['tenant', 'client_id', 'is_default', 'deleted_at', 'created_at', 'updated_at']),
 };
+
+type FakeTable = 'clients' | 'client_locations' | 'default_billing_settings' | 'countries' | 'tenant_companies';
 
 interface FakeState {
   clients: Record<string, any>[];
   client_locations: Record<string, any>[];
   default_billing_settings: Record<string, any>[];
   countries: Record<string, any>[];
+  tenant_companies: Record<string, any>[];
   updates: Array<{ table: string; data: Record<string, any> }>;
   failClientInsertNamed: string | null;
 }
@@ -180,15 +188,30 @@ function fakeConn(table: string) {
   if (!TABLE_COLUMNS[table]) {
     throw new Error(`Unexpected table ${table}`);
   }
-  const rows = () => state[table as 'clients' | 'client_locations' | 'default_billing_settings' | 'countries'];
+  const rows = () => state[table as FakeTable];
   const matching = (criteria: Record<string, any>) =>
-    rows().filter(row => Object.entries(criteria).every(([key, value]) => row[key] === value));
+    rows().filter(row => Object.entries(criteria).every(([key, value]) => (row[key] ?? null) === value));
 
   return {
     where(criteria: Record<string, any>) {
-      return {
+      const orderings: Array<{ column: string; direction: 'asc' | 'desc' }> = [];
+      // Every ordered column reached through this fake is a boolean flag.
+      const ordered = () => matching(criteria).sort((left, right) => {
+        for (const { column, direction } of orderings) {
+          const a = Number(Boolean(left[column]));
+          const b = Number(Boolean(right[column]));
+          if (a !== b) return direction === 'desc' ? b - a : a - b;
+        }
+        return 0;
+      });
+
+      const builder = {
+        orderBy(column: string, direction: 'asc' | 'desc' = 'asc') {
+          orderings.push({ column, direction });
+          return builder;
+        },
         first: async () => {
-          const match = matching(criteria)[0];
+          const match = ordered()[0];
           return match ? { ...match } : undefined;
         },
         select: async (...columns: string[]) => matching(criteria).map((row) =>
@@ -207,6 +230,8 @@ function fakeConn(table: string) {
           });
         },
       };
+
+      return builder;
     },
     insert(data: Record<string, any>) {
       assertRealColumns(table, data);
@@ -264,7 +289,6 @@ function csvRow(overrides: Record<string, any> = {}): Record<string, any> {
 }
 
 async function importClients(rows: Record<string, any>[], updateExisting = false) {
-  const { importClientsFromCSV } = await import('./clientActions');
   return importClientsFromCSV(rows, updateExisting) as Promise<Array<{
     success: boolean;
     message: string;
@@ -287,6 +311,7 @@ describe('importClientsFromCSV', () => {
         { code: 'CO', name: 'Colombia', is_active: true },
         { code: 'GB', name: 'United Kingdom', is_active: true },
       ],
+      tenant_companies: [],
       updates: [],
       failClientInsertNamed: null,
     };
@@ -348,7 +373,11 @@ describe('importClientsFromCSV', () => {
     })]);
 
     expect(results[0]).toMatchObject({ success: true });
+    expect(state.clients).toHaveLength(1);
+    expect(state.clients[0]).toMatchObject({ client_name: 'Bogota Support' });
+    expect(state.client_locations).toHaveLength(1);
     expect(state.client_locations[0]).toMatchObject({
+      client_id: state.clients[0].client_id,
       phone: '+573007001234',
       phone_extension: '',
       country_code: 'CO',
@@ -379,6 +408,55 @@ describe('importClientsFromCSV', () => {
     expect(results[0].message).toContain('valid phone number');
     expect(state.clients).toHaveLength(0);
     expect(state.client_locations).toHaveLength(0);
+  });
+
+  it("gives a row with no country the tenant's own country instead of US", async () => {
+    state.tenant_companies = [
+      { tenant: 'tenant-1', client_id: 'msp-client', is_default: true, deleted_at: null },
+    ];
+    state.client_locations.push({
+      client_id: 'msp-client',
+      country_code: 'GB',
+      is_default: true,
+      is_billing_address: true,
+      is_active: true,
+    });
+
+    const results = await importClients([csvRow({
+      client_name: 'Bloomsbury Chambers',
+      country: '',
+      phone_number: '020 7946 0958',
+    })]);
+
+    expect(results[0]).toMatchObject({ success: true });
+    const imported = state.client_locations.find((location) => location.client_id === state.clients[0].client_id);
+    expect(imported).toMatchObject({
+      country_code: 'GB',
+      country_name: 'United Kingdom',
+      phone: '+442079460958',
+    });
+  });
+
+  it("keeps the US fallback when the tenant's own country is still the placeholder", async () => {
+    state.tenant_companies = [
+      { tenant: 'tenant-1', client_id: 'msp-client', is_default: true, deleted_at: null },
+    ];
+    state.client_locations.push({
+      client_id: 'msp-client',
+      country_code: 'XX',
+      is_default: true,
+      is_billing_address: true,
+      is_active: true,
+    });
+
+    const results = await importClients([csvRow({
+      client_name: 'Placeholder Tenant Co',
+      country: '',
+    })]);
+
+    expect(results[0]).toMatchObject({ success: true });
+    const imported = state.client_locations.find((location) => location.client_id === state.clients[0].client_id);
+    expect(imported).toMatchObject({ country_code: 'US', country_name: 'United States' });
   });
 
   it('rejects an unknown nonblank country instead of pairing it with US', async () => {
@@ -476,6 +554,55 @@ describe('importClientsFromCSV', () => {
       'Valid After Person',
     ]);
     expect(state.clients.map((client) => client.client_type)).toEqual(['company', 'individual']);
+  });
+
+  // Bulk migration is the path tenure actually arrives on: a client whose
+  // relationship started years before the AlgaPSA row was written.
+  it('stores a mapped client_since on create', async () => {
+    const results = await importClients([csvRow({ client_since: '2015-06-01' })]);
+
+    expect(results[0]).toMatchObject({ success: true, message: 'Client created' });
+    expect(state.clients[0].client_since).toBe('2015-06-01');
+  });
+
+  it('overwrites client_since on update and clears it when the cell is empty', async () => {
+    state.clients.push({
+      tenant: 'tenant-1',
+      client_id: 'client-existing',
+      client_name: 'Harborview Dental Group',
+      url: '',
+      client_since: '2015-06-01',
+    });
+
+    const updated = await importClients([csvRow({ client_since: '2011-03-14' })], true);
+    expect(updated[0]).toMatchObject({ success: true, message: 'Client updated' });
+    expect(state.clients[0].client_since).toBe('2011-03-14');
+
+    const cleared = await importClients([csvRow({ client_since: '' })], true);
+    expect(cleared[0]).toMatchObject({ success: true, message: 'Client updated' });
+    expect(state.clients[0].client_since).toBeNull();
+
+    // An unmapped column must leave the stored date alone.
+    state.clients[0].client_since = '2011-03-14';
+    await importClients([csvRow()], true);
+    expect(state.clients[0].client_since).toBe('2011-03-14');
+  });
+
+  it('fails only the row whose client_since is not a date', async () => {
+    const results = await importClients([
+      csvRow({ client_name: 'Valid Before Co', client_since: '2015-06-01' }),
+      csvRow({ client_name: 'Garbled Date Co', client_since: 'June 2015' }),
+      csvRow({ client_name: 'Impossible Date Co', client_since: '2015-02-30' }),
+      csvRow({ client_name: 'Valid After Co', client_since: '2020-12-31' }),
+    ]);
+
+    expect(results.map((result) => result.success)).toEqual([true, false, false, true]);
+    expect(results[1].message).toContain('Client since must be a date');
+    expect(state.clients.map((client) => client.client_name)).toEqual([
+      'Valid Before Co',
+      'Valid After Co',
+    ]);
+    expect(state.clients.map((client) => client.client_since)).toEqual(['2015-06-01', '2020-12-31']);
   });
 
   it('updates the existing default location instead of inserting a second one', async () => {

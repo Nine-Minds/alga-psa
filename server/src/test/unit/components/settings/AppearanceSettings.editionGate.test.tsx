@@ -32,6 +32,7 @@ vi.mock('@alga-psa/tenancy/actions/tenant-actions/tenantBrandingActions', () => 
 vi.mock('@alga-psa/tenancy/actions/tenant-actions/tenantLogoActions', () => ({
   uploadTenantLogo: vi.fn(),
   deleteTenantLogo: vi.fn(),
+  recropTenantLogo: vi.fn(),
 }));
 vi.mock('@alga-psa/user-composition/actions/userQueryActions', () => ({
   getCurrentUser: vi.fn(async () => ({ user_id: 'user-1', tenant: 'tenant-1' })),
@@ -46,10 +47,11 @@ async function renderAppearance(edition: string) {
     '@/components/settings/general/AppearanceSettings'
   );
   render(<AppearanceSettings />);
-  // The pair picker always renders, EE or not.
-  await waitFor(() => expect(
-    document.querySelector('[data-automation-id="theme-pair-alga"]'),
-  ).toBeTruthy());
+  if (edition === 'enterprise') {
+    await waitFor(() => expect(
+      document.querySelector('[data-automation-id="theme-pair-alga"]'),
+    ).toBeTruthy());
+  }
 }
 
 describe('AppearanceSettings edition gate', () => {
@@ -64,17 +66,22 @@ describe('AppearanceSettings edition gate', () => {
 
     expect(screen.getByText(CUSTOM_THEME_HEADING)).toBeTruthy();
     expect(screen.getByText(WHITE_LABEL_HEADING)).toBeTruthy();
-    // Both shared logo slots are available here, but the MSP opt-in is explicit.
-    expect(screen.getAllByTestId('entity-image-upload')).toHaveLength(2);
+    // Square mark (light/dark), wide logo (light/dark) and the favicon are all
+    // available here, but the MSP opt-in is still explicit.
+    expect(screen.getAllByTestId('entity-image-upload')).toHaveLength(5);
+    expect(screen.getByText('Square mark')).toBeTruthy();
+    expect(screen.getByText('Wide logo (optional)')).toBeTruthy();
+    expect(screen.getByText('Browser icon (favicon)')).toBeTruthy();
     expect(screen.getByText('Enable MSP UI customization')).toBeTruthy();
   });
 
-  it('hides both Enterprise sections in Community and keeps the pair picker', async () => {
+  it('draws the Enterprise boundary in Community instead of the pair picker', async () => {
     await renderAppearance('community');
 
     expect(screen.queryByText(CUSTOM_THEME_HEADING)).toBeNull();
     expect(screen.queryByText(WHITE_LABEL_HEADING)).toBeNull();
-    expect(screen.getByText('Slate')).toBeTruthy();
-    expect(screen.getByText('High contrast')).toBeTruthy();
+    expect(document.querySelector('[data-automation-id="theme-pair-alga"]')).toBeNull();
+    expect(screen.queryByText('Slate')).toBeNull();
+    expect(document.querySelector('#appearance-upgrade-link')).toBeTruthy();
   });
 });

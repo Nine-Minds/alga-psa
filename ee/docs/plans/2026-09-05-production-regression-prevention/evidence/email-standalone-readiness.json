@@ -1,0 +1,53 @@
+{
+  "status": "passed",
+  "counts": {
+    "passed": 202,
+    "failed": 0,
+    "skipped": 0,
+    "todo": 0,
+    "pending": 0
+  },
+  "failures": [],
+  "source": {
+    "before": {
+      "revision": "31fcbd1f95d6834a48befc8ef343002697919d64",
+      "dirty": true,
+      "changes": [
+        {
+          "status": " M",
+          "file": "ee/temporal-workflows/src/activities/__tests__/email-activities-standalone.test.ts"
+        },
+        {
+          "status": " M",
+          "file": "ee/temporal-workflows/vitest.readiness.config.ts"
+        },
+        {
+          "status": " M",
+          "file": "scripts/lib/test-discovery.mjs"
+        }
+      ]
+    },
+    "after": {
+      "revision": "31fcbd1f95d6834a48befc8ef343002697919d64",
+      "dirty": true,
+      "changes": [
+        {
+          "status": " M",
+          "file": "ee/temporal-workflows/src/activities/__tests__/email-activities-standalone.test.ts"
+        },
+        {
+          "status": " M",
+          "file": "ee/temporal-workflows/vitest.readiness.config.ts"
+        },
+        {
+          "status": " M",
+          "file": "scripts/lib/test-discovery.mjs"
+        }
+      ]
+    }
+  },
+  "files": 28,
+  "limits": [
+    "Local execution; native verification pending. Email transport is mocked."
+  ]
+}

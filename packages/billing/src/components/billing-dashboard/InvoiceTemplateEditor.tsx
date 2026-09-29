@@ -194,6 +194,7 @@ const InvoiceTemplateEditor: React.FC<InvoiceTemplateEditorProps> = ({ templateI
 
     setIsLoading(true);
     setError(null); // Clear generic error before attempting save
+    let saved = false;
 
     try {
       // Add logic to prepare the template data for saving
@@ -239,6 +240,7 @@ const InvoiceTemplateEditor: React.FC<InvoiceTemplateEditorProps> = ({ templateI
       if (result.success) {
         // Navigate back to the templates list after successful save
         handleBack();
+        saved = true;
       } else {
         setError((result as any).error || t('templateEditor.errors.saveFailed', {
           defaultValue: 'Failed to save template.',
@@ -251,7 +253,9 @@ const InvoiceTemplateEditor: React.FC<InvoiceTemplateEditorProps> = ({ templateI
         defaultValue: 'An unexpected error occurred while saving.',
       }));
     } finally {
-      setIsLoading(false);
+      // Keep preview actions paused until navigation unmounts this editor.
+      // Resuming them here can enqueue work for the route we are leaving.
+      if (!saved) setIsLoading(false);
     }
   };
 
@@ -321,6 +325,7 @@ const InvoiceTemplateEditor: React.FC<InvoiceTemplateEditorProps> = ({ templateI
              <TabsContent value="visual" className="pt-4 space-y-3">
                <div className="border rounded overflow-hidden bg-card" id="invoice-template-visual-designer">
                    <DesignerVisualWorkspace
+                     previewPaused={isLoading}
                      visualWorkspaceTab={visualWorkspaceTab}
                      onVisualWorkspaceTabChange={setVisualWorkspaceTab}
                    />

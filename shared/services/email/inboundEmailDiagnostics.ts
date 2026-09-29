@@ -24,8 +24,8 @@ export interface InboundEmailDiagnosticsReport {
  * Best-effort: never throws.
  */
 export async function computeInboundEmailDiagnostics(tenant: string): Promise<InboundEmailDiagnosticsReport> {
-  const db = await (await import('@alga-psa/db/admin')).getAdminConnection();
-  const { tenantDb } = await import('@alga-psa/db');
+  const { createTenantKnex, tenantDb } = await import('@alga-psa/db');
+  const { knex: db } = await createTenantKnex(tenant);
   const scoped = tenantDb(db, tenant);
 
   const count = async (table: string, where: Record<string, unknown>): Promise<number> => {

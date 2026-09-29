@@ -1,0 +1,12 @@
+name: entra-diagnostics-green
+description: Synthetic Entra diagnostics fixture; reset then seed and reconnect the local application
+steps:
+  - reset: msgraph
+  - seed: msgraph/client
+    params: { clientId: aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee, clientSecret: northwind-synthetic-app-secret }
+  - action: msgraph/configure
+    params: { rotateRefreshTokens: false }
+  - seed: msgraph/organization
+    params: { id: bbbbbbbb-1111-4111-8111-111111111111, displayName: Cedar Grove Dental, primaryDomain: cedar.example }
+  - seed: msgraph/directory-user
+    params: { id: dddddddd-3333-4333-8333-333333333333, displayName: Jamie Lee, userPrincipalName: jamie@cedar.example, accountEnabled: true }

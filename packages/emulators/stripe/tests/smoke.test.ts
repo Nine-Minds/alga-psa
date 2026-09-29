@@ -1,5 +1,5 @@
 import http from 'node:http';
-import { createHmac } from 'node:crypto';
+import Stripe from 'stripe';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { EmulatorHost } from '@alga-psa/emulator-host';
 import stripeEmulator from '../src/index';
@@ -13,19 +13,15 @@ const received: Array<{ payload: string; signature: string }> = [];
 
 const SECRET_KEY = 'sk_test_algasim';
 const WEBHOOK_SECRET = 'whsec_algasim';
+const stripeSdk = new Stripe(SECRET_KEY);
 
 function verifyStripeSignature(payload: string, signature: string, secret: string): boolean {
-  const header = new Map(
-    signature.split(',').map((part) => {
-      const idx = part.indexOf('=');
-      return [part.slice(0, idx), part.slice(idx + 1)];
-    }),
-  );
-  const timestamp = header.get('t');
-  const expected = header.get('v1');
-  if (!timestamp || !expected) return false;
-  const digest = createHmac('sha256', secret).update(`${timestamp}.${payload}`).digest('hex');
-  return expected === digest;
+  try {
+    stripeSdk.webhooks.constructEvent(payload, signature, secret);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 async function controlPost(path: string, body?: unknown): Promise<any> {
@@ -96,6 +92,57 @@ afterAll(async () => {
 });
 
 describe('stripe emulator wire contract', { shuffle: false }, () => {
+  it('redelivers the same event with a delivery-time signature and increments delivery attempts', async () => {
+    const replayHost = new EmulatorHost({ emulators: [stripeEmulator], controlPort: 0, ports: { stripe: 0 } });
+    try {
+      const { controlPort, ports } = await replayHost.start();
+      const base = `http://127.0.0.1:${ports.stripe}`;
+      const control = `http://127.0.0.1:${controlPort}`;
+      const post = async (path: string, params: unknown) => (await fetch(`${control}${path}`, {
+        method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(params),
+      })).json();
+      await post('/control/stripe/seed/config', { webhookTarget: `http://127.0.0.1:${webhookPort}/webhook` });
+      const session = await (await fetch(`${base}/v1/checkout/sessions`, form({
+        mode: 'payment', 'line_items[0][price_data][currency]': 'usd',
+        'line_items[0][price_data][unit_amount]': '900', 'line_items[0][quantity]': '1',
+        success_url: 'http://localhost:3000/success',
+      }, auth))).json();
+      const completed = await post('/control/stripe/actions/complete-session', { sessionId: session.id });
+      expect(completed.ok).toBe(true);
+      const eventId = completed.result.eventId;
+      const firstPayload = received.at(-1)!.payload;
+      const event = (replayHost.instance('stripe').core as import('../src/core').StripeEmulatorCore).events.get(eventId)!;
+      // Retain a historical event, as a provider does when retrying hours later.
+      event.created -= 3600;
+      const before = Math.floor(Date.now() / 1000);
+      const redelivered = await post('/control/stripe/actions/redeliver-event', { eventId });
+      expect(redelivered.ok).toBe(true);
+      const delivery = received.at(-1)!;
+      expect(JSON.parse(delivery.payload)).toEqual({ ...JSON.parse(firstPayload), created: event.created });
+      expect(verifyStripeSignature(delivery.payload, delivery.signature, WEBHOOK_SECRET)).toBe(true);
+      // Independent provider implementation, not another local HMAC helper.
+      // https://docs.stripe.com/webhooks/signature (reviewed 2026-09-08)
+      expect(stripeSdk.webhooks.constructEvent(delivery.payload, delivery.signature, WEBHOOK_SECRET).id).toBe(eventId);
+      expect(verifyStripeSignature(`${delivery.payload} `, delivery.signature, WEBHOOK_SECRET)).toBe(false);
+      expect(verifyStripeSignature(delivery.payload, delivery.signature, 'whsec_wrong')).toBe(false);
+      const staleSignature = stripeSdk.webhooks.generateTestHeaderString({
+        payload: delivery.payload, secret: WEBHOOK_SECRET, timestamp: Math.floor(Date.now() / 1000) - 3600,
+      });
+      expect(verifyStripeSignature(delivery.payload, staleSignature, WEBHOOK_SECRET)).toBe(false);
+      const timestamp = Number(delivery.signature.match(/^t=(\d+),/)![1]);
+      expect(timestamp).toBeGreaterThanOrEqual(before);
+      expect(timestamp).toBeLessThanOrEqual(Math.floor(Date.now() / 1000));
+      const deliveries = (await (await fetch(`${control}/control/stripe/state/webhook-deliveries`)).json()).result;
+      expect(deliveries.filter((item: { eventId: string }) => item.eventId === eventId).map((item: { attempt: number }) => item.attempt)).toEqual([1, 2]);
+      const count = received.length;
+      const missing = await fetch(`${control}/control/stripe/actions/redeliver-event`, {
+        method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ eventId: 'evt_missing' }),
+      });
+      expect(missing.status).toBe(404);
+      expect(received).toHaveLength(count);
+    } finally { await replayHost.stop(); }
+  });
+
   it('rejects unauthenticated requests with a Stripe-shaped 401', async () => {
     const response = await fetch(`${base}/v1/customers`);
     expect(response.status).toBe(401);

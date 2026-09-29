@@ -32,8 +32,8 @@ export async function GET(
     }
 
     // Check permissions
-    const canManageBilling = await hasPermission(user, 'billing_settings', 'update');
-    if (!canManageBilling) {
+    const canExecuteExports = await hasPermission(user, 'accounting_integrations', 'exports_execute');
+    if (!canExecuteExports) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 

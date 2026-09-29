@@ -31,7 +31,7 @@ const associationBuilder = {
   then: (resolve: (value: IDocumentAssociation[]) => unknown, reject?: (reason: unknown) => unknown) =>
     Promise.resolve(mockAssociationRows).then(resolve, reject),
 };
-const mockKnexInstance: any = vi.fn(() => associationBuilder);
+const mockKnexInstance: any = vi.fn((table: string) => table === 'ticket_comment_attachments' ? { where: () => ({ where: () => ({ first: async () => undefined }) }) } : associationBuilder);
 
 describe('documentPermissionUtils', () => {
   const mockUser: IUser = {

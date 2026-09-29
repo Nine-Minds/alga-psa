@@ -1,0 +1,24 @@
+{
+  "scope": "Workspace database aggregate CLI lifecycle",
+  "baseRevision": "c5d89fa7d1",
+  "workingTreeDirty": true,
+  "passed": 2,
+  "failed": 0,
+  "cases": [
+    "Clean temporary Git checkout and matching artifacts pass",
+    "Malformed report replaces previous passing aggregate with failed verdict",
+    "Candidate SHA mismatch fails",
+    "Uncommitted source fails",
+    "Real docs-only Git diff permits skipped producer",
+    "Failed selector invalidates docs skip",
+    "New tracked DB candidate absent from artifacts fails"
+  ],
+  "limitations": [
+    "CLI fixtures use synthetic raw report payloads; earlier separate verification accepted the actual 454-test report.",
+    "Does not establish native workflow execution or effective required protections."
+  ],
+  "artifact": {
+    "path": "/tmp/alga-workspace-db-cli-tests.log",
+    "sha256": "b8f276ff0e9e7dc756e8a0b7df6965575b09c1c0d72c5980bd683ace8103f8f1"
+  }
+}

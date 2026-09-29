@@ -89,7 +89,7 @@ export function TextInput({
           borderWidth: 1,
           borderColor: hasError ? theme.colors.danger : theme.colors.border,
           borderRadius: theme.borderRadius.md,
-          backgroundColor: disabled ? theme.colors.borderLight : theme.colors.card,
+          backgroundColor: disabled ? theme.colors.disabled.bg : theme.colors.card,
           paddingHorizontal: theme.spacing.md,
         }}
       >
@@ -108,7 +108,7 @@ export function TextInput({
             {
               flex: 1,
               ...theme.typography.body,
-              color: disabled ? theme.colors.textSecondary : theme.colors.text,
+              color: disabled ? theme.colors.disabled.text : theme.colors.text,
               paddingVertical: theme.spacing.md,
             },
             multiline && minHeight ? { minHeight, textAlignVertical: "top" } : undefined,

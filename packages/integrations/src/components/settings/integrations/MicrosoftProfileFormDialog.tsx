@@ -336,6 +336,10 @@ export function MicrosoftProfileFormDialog({
             <Label htmlFor="microsoft-profile-client-id">{t('integrations.microsoft.settings.dialog.clientId', { defaultValue: 'Client ID' })}</Label>
             <Input
               id="microsoft-profile-client-id"
+              name="microsoft-app-client-id"
+              autoComplete="off"
+              data-1p-ignore
+              data-lpignore="true"
               value={formState.clientId}
               onChange={(event) => setFormValue('clientId', event.target.value)}
               placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
@@ -346,6 +350,10 @@ export function MicrosoftProfileFormDialog({
             <Label htmlFor="microsoft-profile-tenant-id">{t('integrations.microsoft.settings.dialog.tenantId', { defaultValue: 'Microsoft tenant ID' })}</Label>
             <Input
               id="microsoft-profile-tenant-id"
+              name="microsoft-app-tenant-id"
+              autoComplete="off"
+              data-1p-ignore
+              data-lpignore="true"
               value={formState.tenantId}
               onChange={(event) => setFormValue('tenantId', event.target.value)}
               placeholder="common"
@@ -356,6 +364,10 @@ export function MicrosoftProfileFormDialog({
             <Label htmlFor="microsoft-profile-client-secret">{t('integrations.microsoft.settings.dialog.clientSecret', { defaultValue: 'Client secret' })}</Label>
             <Input
               id="microsoft-profile-client-secret"
+              name="microsoft-app-client-secret"
+              autoComplete="new-password"
+              data-1p-ignore
+              data-lpignore="true"
               type="password"
               value={formState.clientSecret}
               onChange={(event) => setFormValue('clientSecret', event.target.value)}

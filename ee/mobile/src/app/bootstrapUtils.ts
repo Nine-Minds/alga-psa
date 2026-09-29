@@ -21,7 +21,3 @@ export function shouldRefreshOnResume(expiresAtMs: number, nowMs: number, skewMs
   return expiresAtMs - nowMs <= skewMs;
 }
 
-export function shouldRunRevocationCheck(lastCheckedAtMs: number, nowMs: number, throttleMs: number = 10 * 60_000): boolean {
-  return nowMs - lastCheckedAtMs >= throttleMs;
-}
-

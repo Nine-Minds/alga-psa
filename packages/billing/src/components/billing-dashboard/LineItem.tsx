@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
@@ -74,8 +74,32 @@ export const LineItem: React.FC<LineItemProps> = ({
   const [isSearchHighlighted, setIsSearchHighlighted] = useState(false);
   const itemDomId = item.item_id ? `item-${item.item_id}` : `item-${index}`;
 
-  // Reset edit state when item changes
+  // The parent maps the item into a fresh object on every render, so keying this
+  // sync on the object reference reset local edits whenever an unrelated parent
+  // state change happened mid-edit (for example the async client billing-email
+  // lookup), silently discarding the user's in-progress line item. Key on the
+  // item's data instead: re-sync only when the item actually changes.
+  const itemSyncKey = JSON.stringify({
+    item_id: item.item_id,
+    service_id: item.service_id,
+    quantity: item.quantity,
+    description: item.description,
+    rate: item.rate,
+    is_discount: item.is_discount,
+    discount_type: item.discount_type,
+    discount_percentage: item.discount_percentage,
+    applies_to_item_id: item.applies_to_item_id,
+    isRemoved: item.isRemoved,
+  });
+  const lastSyncedItemKey = useRef(itemSyncKey);
+
+  // Reset edit state when the item's data changes
   useEffect(() => {
+    if (lastSyncedItemKey.current === itemSyncKey) {
+      return;
+    }
+    lastSyncedItemKey.current = itemSyncKey;
+
     setEditState({
       ...item,
       discount_type: item.is_discount ? (item.discount_type || 'fixed') : undefined,
@@ -87,7 +111,7 @@ export const LineItem: React.FC<LineItemProps> = ({
     if (item.is_discount && item.discount_type === 'fixed') {
       setDiscountAmountInput((Math.abs(item.rate) / 100).toFixed(2));
     }
-  }, [item]);
+  }, [itemSyncKey, item]);
 
   useEffect(() => {
     if (!item.item_id || typeof window === 'undefined') {

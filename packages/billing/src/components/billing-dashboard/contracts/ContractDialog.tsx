@@ -1,5 +1,7 @@
 'use client'
 
+
+import { resolveUnitOfMeasure } from '@alga-psa/core/unitOfMeasure';
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -24,6 +26,8 @@ import {
 import { CURRENCY_OPTIONS } from '@alga-psa/core';
 import { HelpCircle, Info, Plus, XCircle, ChevronDown, ChevronUp, Search, Coins } from 'lucide-react';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
+import { BillingProfilePicker } from '@alga-psa/ui/components/BillingProfilePicker';
+import { getClientBillingProfilesForBilling } from '@alga-psa/billing/actions/billingProfileActions';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { getContractLinePresetServices, getContractLinePresetServiceCounts, getContractLinePresetFixedConfig } from '@alga-psa/billing/actions/contractLinePresetActions';
@@ -41,13 +45,14 @@ import {
 const isReturnedActionError = (value: unknown) =>
   isActionMessageError(value) || isActionPermissionError(value);
 
+const loadBillingProfiles = (clientId: string) => getClientBillingProfilesForBilling(clientId);
+
 interface ContractLinePresetServiceWithName extends IContractLinePresetService {
   service_name?: string;
   default_rate?: number;
 }
 
 interface PresetServiceOverrides {
-  quantity?: number;
   custom_rate?: number;
 }
 
@@ -95,6 +100,7 @@ export function ContractDialog({
   const [contractDescription, setContractDescription] = useState(editingContract?.contract_description ?? '');
   const [status, setStatus] = useState<string>(editingContract?.status ?? 'active');
   const [clientId, setClientId] = useState<string>(initialClientId ?? '');
+  const [billingProfileId, setBillingProfileId] = useState<string | null>(null);
   const [billingFrequency, setBillingFrequency] = useState<string>('monthly');
   const [startDate, setStartDate] = useState<Date | null>(null);
   const [endDate, setEndDate] = useState<Date | null>(null);
@@ -131,7 +137,7 @@ export function ContractDialog({
 
   // Service overrides for each preset
   const [presetServiceOverrides, setPresetServiceOverrides] = useState<Record<string, Record<string, PresetServiceOverrides>>>({});
-  const [presetServiceInputs, setPresetServiceInputs] = useState<Record<string, Record<string, { quantity: string; rate: string }>>>({});
+  const [presetServiceInputs, setPresetServiceInputs] = useState<Record<string, Record<string, { rate: string }>>>({});
 
   // Hourly preset configuration overrides
   const [hourlyPresetOverrides, setHourlyPresetOverrides] = useState<Record<string, { minimum_billable_time?: number; round_up_to_nearest?: number }>>({});
@@ -248,8 +254,8 @@ export function ContractDialog({
           [presetId]: enhancedServices
         }));
 
-        // Initialize service input states with current quantities and rates
-        const serviceInputs: Record<string, { quantity: string; rate: string }> = {};
+        // Initialize service input states with current rates
+        const serviceInputs: Record<string, { rate: string }> = {};
         enhancedServices.forEach(service => {
           // Both custom_rate and default_rate are stored in cents in the database
           // If custom_rate exists, use it; otherwise use default_rate
@@ -263,7 +269,6 @@ export function ContractDialog({
             : (service.default_rate || 0);
 
           serviceInputs[service.service_id] = {
-            quantity: service.quantity?.toString() || '1',
             rate: (rateInCents / 100).toFixed(2)
           };
         });
@@ -424,7 +429,7 @@ export function ContractDialog({
           Array.from(selectedContractLinePresetIds).map(presetId => {
             const overrides: {
               base_rate?: number | null;
-              services?: Record<string, { quantity?: number; custom_rate?: number }>;
+              services?: Record<string, { custom_rate?: number }>;
               minimum_billable_time?: number;
               round_up_to_nearest?: number;
             } = {};
@@ -445,13 +450,12 @@ export function ContractDialog({
               }
             }
 
-            // Add service-level overrides (quantity and custom_rate)
+            // Add service-level overrides (custom_rate)
             const serviceOverrides = presetServiceOverrides[presetId];
             if (serviceOverrides && Object.keys(serviceOverrides).length > 0) {
               overrides.services = {};
               for (const [serviceId, override] of Object.entries(serviceOverrides)) {
                 overrides.services[serviceId] = {
-                  quantity: override.quantity,
                   custom_rate: override.custom_rate
                 };
               }
@@ -472,6 +476,7 @@ export function ContractDialog({
         const assignmentResult = await createClientContractForBilling({
           client_id: clientId,
           contract_id: contract.contract_id,
+          billing_profile_id: billingProfileId,
           start_date: startDate.toISOString().split('T')[0],
           end_date: endDate ? endDate.toISOString().split('T')[0] : null,
           is_active: saveAsActive,
@@ -625,6 +630,8 @@ export function ContractDialog({
                 selectedClientId={clientId}
                 onSelect={(id) => {
                   setClientId(id || '');
+                  // Profiles belong to one client; a stale pick would be rejected on save.
+                  setBillingProfileId(null);
                   clearErrorIfSubmitted();
                 }}
                 filterState={filterState}
@@ -638,6 +645,27 @@ export function ContractDialog({
                 onAddNew={() => setIsQuickAddClientOpen(true)}
               />
             </div>
+
+            {/* Billing profile — rendered only for a segmented client, and only
+                while creating: this dialog edits the contract, not the client
+                assignment that carries the profile, so on edit the profile is
+                changed on the contract's client-assignment card instead. */}
+            {!editingContract && (
+            <BillingProfilePicker
+              id="contract-dialog-billing-profile"
+              clientId={clientId || null}
+              loadProfiles={loadBillingProfiles}
+              value={billingProfileId}
+              onChange={setBillingProfileId}
+              label={t('contractDialog.form.billingProfileLabel', { defaultValue: 'Billing Profile' })}
+              unassignedLabel={t('contractDialog.form.billingProfileNone', {
+                defaultValue: "Use the client's default profile",
+              })}
+              hint={t('contractDialog.form.billingProfileHint', {
+                defaultValue: 'Charges from this contract are billed to this profile.',
+              })}
+            />
+            )}
 
             {/* Contract Name */}
             <div>
@@ -1252,7 +1280,6 @@ export function ContractDialog({
                                               : (service.default_rate || 0);
 
                                             const serviceInputs = presetServiceInputs[preset.preset_id]?.[service.service_id] || {
-                                              quantity: service.quantity?.toString() || '1',
                                               rate: (rateInCents / 100).toFixed(2)
                                             };
 
@@ -1333,8 +1360,14 @@ export function ContractDialog({
                                       </div>
                                     </div>
                                   ) : (
-                                    /* For Usage presets, show quantity, rate, and unit of measure */
+                                    /* For Usage presets, show rate and unit of measure — usage bills from recorded usage, never a configured quantity */
                                     <div className="space-y-3">
+                                      <p className="text-xs text-muted-foreground">
+                                        {t('contractDialog.presetDetails.usageRecordDrivenNote', {
+                                          defaultValue:
+                                            'Usage services bill from usage recorded in Usage Tracking for each service period. A period with no usage record produces no charge — record usage (or an explicit zero) each period to bill these services.',
+                                        })}
+                                      </p>
                                       {services.map((service) => {
                                         // Fallback: calculate rate if not in state yet
                                         // Note: custom_rate might come as a string from the database
@@ -1347,56 +1380,13 @@ export function ContractDialog({
                                           : (service.default_rate || 0);
 
                                         const serviceInputs = presetServiceInputs[preset.preset_id]?.[service.service_id] || {
-                                          quantity: service.quantity?.toString() || '1',
                                           rate: (rateInCents / 100).toFixed(2)
                                         };
 
                                         return (
                                           <div key={service.service_id} className="bg-muted rounded-md p-3 border border-[rgb(var(--color-border-200))]">
                                             <div className="font-medium text-sm text-[rgb(var(--color-text-900))] mb-2">{service.service_name}</div>
-                                            <div className="grid grid-cols-3 gap-3">
-                                              <div>
-                                                <Label htmlFor={`quantity-${preset.preset_id}-${service.service_id}`} className="text-xs font-medium text-[rgb(var(--color-text-700))]">
-                                                  {t('contractDialog.presetDetails.quantity', {
-                                                    defaultValue: 'Quantity',
-                                                  })}
-                                                </Label>
-                                                <Input
-                                                  id={`quantity-${preset.preset_id}-${service.service_id}`}
-                                                  type="number"
-                                                  min="1"
-                                                  step="1"
-                                                  value={serviceInputs.quantity}
-                                                  onChange={(e) => {
-                                                    const newInputs = {
-                                                      ...presetServiceInputs,
-                                                      [preset.preset_id]: {
-                                                        ...(presetServiceInputs[preset.preset_id] || {}),
-                                                        [service.service_id]: {
-                                                          ...serviceInputs,
-                                                          quantity: e.target.value
-                                                        }
-                                                      }
-                                                    };
-                                                    setPresetServiceInputs(newInputs);
-                                                  }}
-                                                  onBlur={() => {
-                                                    const quantity = parseInt(serviceInputs.quantity) || 1;
-                                                    const newOverrides = {
-                                                      ...presetServiceOverrides,
-                                                      [preset.preset_id]: {
-                                                        ...(presetServiceOverrides[preset.preset_id] || {}),
-                                                        [service.service_id]: {
-                                                          ...(presetServiceOverrides[preset.preset_id]?.[service.service_id] || {}),
-                                                          quantity
-                                                        }
-                                                      }
-                                                    };
-                                                    setPresetServiceOverrides(newOverrides);
-                                                  }}
-                                                  className="h-9 text-sm mt-1"
-                                                />
-                                              </div>
+                                            <div className="grid grid-cols-2 gap-3">
                                               <div>
                                                 <Label htmlFor={`rate-${preset.preset_id}-${service.service_id}`} className="text-xs font-medium text-[rgb(var(--color-text-700))]">
                                                   {t('contractDialog.presetDetails.ratePerUnit', {
@@ -1473,7 +1463,7 @@ export function ContractDialog({
                                                 <Input
                                                   id={`unit-measure-${preset.preset_id}-${service.service_id}`}
                                                   type="text"
-                                                  value={service.unit_of_measure || 'unit'}
+                                                  value={service.unit_of_measure || resolveUnitOfMeasure({ fallback: 'C62' }).label}
                                                   disabled
                                                   className="h-9 text-sm mt-1 bg-muted"
                                                 />

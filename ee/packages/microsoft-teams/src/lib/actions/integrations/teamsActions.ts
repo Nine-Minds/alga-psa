@@ -4,6 +4,7 @@ import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { getMicrosoftProfileReadiness } from './providerReadiness';
 import { fetchMicrosoftGraphAppToken } from '../../graphAuth';
+import { getMicrosoftGraphBaseUrl } from '../../teams/microsoftEndpoints';
 import {
   TEAMS_NOTIFICATION_CHANNEL_MODES,
   type TeamsNotificationChannelMode,
@@ -244,7 +245,7 @@ async function resolveOrganizerObjectId(
     clientSecret,
   });
 
-  const response = await fetch(`https://graph.microsoft.com/v1.0/users/${encodeURIComponent(organizerUpn)}`, {
+  const response = await fetch(`${getMicrosoftGraphBaseUrl()}/users/${encodeURIComponent(organizerUpn)}`, {
     headers: {
       Authorization: `Bearer ${accessToken}`,
     },

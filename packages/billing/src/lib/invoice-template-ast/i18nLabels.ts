@@ -71,6 +71,7 @@ const resolveNode = (node: TemplateNode, t: TemplateLabelTranslator): TemplateNo
         children: node.children.map((child) => resolveNode(child, t)),
       };
     case 'text':
+    case 'richText':
       return node.content.type === 'i18n'
         ? { ...node, content: resolveExpression(node.content, t) }
         : node;
@@ -121,7 +122,7 @@ export const resolveTemplateAstI18n = (
 export const localizeTemplateAstForLocale = async (
   ast: TemplateAst,
   locale: string | null | undefined
-): Promise<{ ast: TemplateAst; locale?: string }> => {
+): Promise<{ ast: TemplateAst; locale?: string; t?: TemplateLabelTranslator }> => {
   const normalized = normalizeLocale(locale) ?? undefined;
   if (!normalized) {
     return { ast };
@@ -132,7 +133,7 @@ export const localizeTemplateAstForLocale = async (
     // paths that must not drag Next request APIs into their bundle.
     const { getServerTranslation } = await import('@alga-psa/ui/lib/i18n/serverOnly');
     const { t } = await getServerTranslation(normalized, DOCUMENT_LABEL_NAMESPACE);
-    return { ast: resolveTemplateAstI18n(ast, (key, options) => String(t(key, options))), locale: normalized };
+    return { ast: resolveTemplateAstI18n(ast, (key, options) => String(t(key, options))), locale: normalized, t: (key, options) => String(t(key, options)) };
   } catch (error) {
     // Drop the locale as well as the translation: English labels beside German
     // dates is worse than a consistently English document.

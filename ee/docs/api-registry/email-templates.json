@@ -1,0 +1,82 @@
+{
+  "entries": [
+    {
+      "match": {
+        "method": "get",
+        "path": "/api/v1/email/templates"
+      },
+      "metadata": {
+        "examples": [
+          {
+            "name": "Find the templates this tenant has customized",
+            "request": {
+              "query": {
+                "language": "en",
+                "customized": "true"
+              }
+            }
+          }
+        ],
+        "rbacResource": "settings"
+      }
+    },
+    {
+      "match": {
+        "method": "get",
+        "path": "/api/v1/email/templates/{name}"
+      },
+      "metadata": {
+        "examples": [
+          {
+            "name": "Read a template before editing it",
+            "request": {
+              "path": {
+                "name": "ticket-created"
+              },
+              "query": {
+                "language": "en"
+              }
+            }
+          }
+        ],
+        "rbacResource": "settings"
+      }
+    },
+    {
+      "match": {
+        "method": "put",
+        "path": "/api/v1/email/templates/{name}"
+      },
+      "metadata": {
+        "description": "Writes the tenant override for one template and language. The first write clones the system default, then applies only the fields provided, so anything left out keeps the standard content. System templates are never modified, and other languages of the same template are untouched. Read the template first so existing customizations are not overwritten by accident.",
+        "examples": [
+          {
+            "name": "Reword the subject of the ticket-created email",
+            "request": {
+              "path": {
+                "name": "ticket-created"
+              },
+              "body": {
+                "language_code": "en",
+                "subject": "New ticket {{ticket.ticketNumber}}: {{ticket.title}}"
+              }
+            }
+          }
+        ],
+        "approvalRequired": true,
+        "rbacResource": "settings"
+      }
+    },
+    {
+      "match": {
+        "method": "delete",
+        "path": "/api/v1/email/templates/{name}"
+      },
+      "metadata": {
+        "description": "Discards the tenant override for one template and language, so the standard template is sent again. Any hand-written customization for that language is lost.",
+        "approvalRequired": true,
+        "rbacResource": "settings"
+      }
+    }
+  ]
+}

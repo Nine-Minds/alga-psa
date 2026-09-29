@@ -860,7 +860,9 @@ const computeValidation = async (params: {
 
       let actual: Set<string>;
       if (value && typeof value === 'object' && '$expr' in (value as any)) {
-        actual = exprPathToSchemaTypes(String((value as any).$expr ?? ''), ctx);
+        const exprSource = String((value as any).$expr ?? '');
+        if (!exprSource.trim()) continue;
+        actual = exprPathToSchemaTypes(exprSource, ctx);
       } else if (value && typeof value === 'object' && '$secret' in (value as any)) {
         actual = new Set(['string']);
       } else {
@@ -1241,7 +1243,6 @@ const maskSensitiveKeysByPattern = (value: unknown, patterns: RegExp[]): unknown
 
 const applyRunStudioRedactions = (value: unknown, cfg: TenantRedactionConfig): unknown => {
   const withKeyMask = maskSensitiveKeysByPattern(value, cfg.keyPatterns);
-  if (!cfg.pointerRedactions.length) return withKeyMask;
   return applyRedactions(withKeyMask, cfg.pointerRedactions);
 };
 
@@ -2254,6 +2255,20 @@ export const publishWorkflowDefinitionAction = withAuth(async (user, { tenant },
 
   // Publish-time inference: for inferred mode, prefer the trigger event's schemaRef as the workflow payload contract.
   const schemaRegistry = getSchemaRegistry();
+  const dateSourcePayloadSchemaRefs: Record<string, string> = {
+    'client.anniversary': 'payload.ClientAnniversary.v1',
+    'contract.renewal_decision': 'payload.ContractRenewalDate.v1',
+    'contract.end': 'payload.ContractEndDate.v1',
+    'asset.warranty_end': 'payload.AssetWarrantyEnd.v1',
+  };
+  const dateTrigger = (definition as any)?.trigger;
+  if (dateTrigger?.type === 'date' && dateSourcePayloadSchemaRefs[dateTrigger.source] !== definition.payloadSchemaRef) {
+    return {
+      ok: false,
+      errors: [{ severity: 'error', stepPath: 'root.payloadSchemaRef', code: 'DATE_TRIGGER_SCHEMA_MISMATCH', message: 'Date trigger payload schema must match its selected source.' }],
+      warnings: [],
+    };
+  }
   const payloadSchemaMode = typeof (workflow as any)?.payload_schema_mode === 'string' ? String((workflow as any).payload_schema_mode) : 'pinned';
   const payloadSchemaProvenance = payloadSchemaMode === 'pinned' ? 'pinned' : 'inferred';
   if (isWorkflowTimeTrigger((definition as any)?.trigger)) {
@@ -3183,6 +3198,7 @@ export const listWorkflowRunStepsAction = withAuth(async (user, { tenant }, inpu
       }))
     : invocations.map((invocation) => ({
         ...invocation,
+        error_message: null,
         input_json: invocation.input_json ? { redacted: true } : null,
         output_json: invocation.output_json ? { redacted: true } : null,
         error_json: invocation.error_json ? (stripInvocationErrorForRestrictedViewer(invocation.error_json) as any) : null
@@ -3207,13 +3223,7 @@ export const exportWorkflowRunDetailAction = withAuth(async (user, { tenant }, i
   const { knex } = await createTenantKnex();
   await requireWorkflowPermission(user, 'read', knex);
 
-  const run = await WorkflowRunModelV2.getById(knex, parsed.runId, tenant);
-  if (!run) {
-    return throwHttpError(404, 'Not found');
-  }
-  if (tenant && run.tenant && run.tenant !== tenant) {
-    return throwHttpError(404, 'Not found');
-  }
+  const run = await requireRunTenantAccess(knex, parsed.runId, tenant);
 
   const runTenant = run.tenant ?? tenant ?? null;
   const steps = await WorkflowRunStepModelV2.listByRun(knex, parsed.runId, runTenant);
@@ -3224,10 +3234,17 @@ export const exportWorkflowRunDetailAction = withAuth(async (user, { tenant }, i
   const canAdmin = await hasPermission(user, 'workflow', 'admin', knex);
   const canViewSensitive = canManage || canAdmin;
 
+  const cfg = await loadTenantRedactionConfig(knex, runTenant);
   const sanitizedInvocations = canViewSensitive
-    ? invocations
+    ? invocations.map((invocation) => ({
+        ...invocation,
+        input_json: invocation.input_json ? (applyRunStudioRedactions(invocation.input_json, cfg) as any) : null,
+        output_json: invocation.output_json ? (applyRunStudioRedactions(invocation.output_json, cfg) as any) : null,
+        error_json: invocation.error_json ? (applyRunStudioRedactions(invocation.error_json, cfg) as any) : null
+      }))
     : invocations.map((invocation) => ({
         ...invocation,
+        error_message: null,
         input_json: invocation.input_json ? { redacted: true } : null,
         output_json: invocation.output_json ? { redacted: true } : null,
         error_json: invocation.error_json ? (stripInvocationErrorForRestrictedViewer(invocation.error_json) as any) : null
@@ -3235,15 +3252,15 @@ export const exportWorkflowRunDetailAction = withAuth(async (user, { tenant }, i
 
   const sanitizedSnapshots = snapshots.map((snapshot) => ({
     ...snapshot,
-    envelope_json: redactSensitiveValues(snapshot.envelope_json)
+    envelope_json: applyRunStudioRedactions(snapshot.envelope_json, cfg)
   }));
 
   const sanitizedRun = {
     ...run,
-    input_json: redactSensitiveValues(run.input_json),
-    resume_event_payload: redactSensitiveValues(run.resume_event_payload),
-    resume_error: redactSensitiveValues(run.resume_error),
-    error_json: redactSensitiveValues(run.error_json)
+    input_json: applyRunStudioRedactions(run.input_json, cfg),
+    resume_event_payload: applyRunStudioRedactions(run.resume_event_payload, cfg),
+    resume_error: applyRunStudioRedactions(run.resume_error, cfg),
+    error_json: applyRunStudioRedactions(run.error_json, cfg)
   };
 
   return {

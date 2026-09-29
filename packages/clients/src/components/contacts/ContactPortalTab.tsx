@@ -4,10 +4,12 @@ import { useEffect, useState } from 'react';
 import type { IBoard } from '@alga-psa/types';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Switch } from '@alga-psa/ui/components/Switch';
+import { RadioGroup } from '@alga-psa/ui/components/RadioGroup';
 import { Label } from '@alga-psa/ui/components/Label';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { PortalBillingProfileAccess } from './PortalBillingProfileAccess';
+import { ContactBillingProfileAssociations } from './ContactBillingProfileAssociations';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Mail, Shield, User, Info, RefreshCw } from 'lucide-react';
 import { Badge } from '@alga-psa/ui/components/Badge';
@@ -79,6 +81,7 @@ const isReturnedActionError = (value: unknown): value is ActionMessageError | Ac
 const FULL_ACCESS_VALUE = '__full_access__';
 
 interface VisibilityGroup {
+  ticket_scope: 'client' | 'contact';
   group_id: string;
   name: string;
   description: string | null;
@@ -141,6 +144,7 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
   );
   const [visibilityGroupName, setVisibilityGroupName] = useState('');
   const [visibilityGroupDescription, setVisibilityGroupDescription] = useState('');
+  const [ticketScope, setTicketScope] = useState<'client' | 'contact'>('client');
   const [visibilityGroupBoardIds, setVisibilityGroupBoardIds] = useState<string[]>([]);
   const [editingVisibilityGroupId, setEditingVisibilityGroupId] = useState<string | null>(null);
   const { toast } = useToast();
@@ -230,6 +234,7 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
     setVisibilityGroupName('');
     setVisibilityGroupDescription('');
     setVisibilityGroupBoardIds([]);
+    setTicketScope('client');
   };
 
   const handleVisibilityGroupSelect = async (selectedValue: string) => {
@@ -287,7 +292,8 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
         const result = await updateClientPortalVisibilityGroupForContact(contact.contact_name_id, editingVisibilityGroupId, {
           name: trimmedName,
           description: visibilityGroupDescription.trim() || null,
-          boardIds: visibilityGroupBoardIds
+          boardIds: visibilityGroupBoardIds,
+          ticketScope
         });
         if (isReturnedActionError(result)) {
           showReturnedActionError(result);
@@ -298,7 +304,8 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
         const result = await createClientPortalVisibilityGroupForContact(contact.contact_name_id, {
           name: trimmedName,
           description: visibilityGroupDescription.trim() || null,
-          boardIds: visibilityGroupBoardIds
+          boardIds: visibilityGroupBoardIds,
+          ticketScope
         });
         if (isReturnedActionError(result)) {
           showReturnedActionError(result);
@@ -337,6 +344,7 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
       setVisibilityGroupName(group.name);
       setVisibilityGroupDescription(group.description || '');
       setVisibilityGroupBoardIds(group.board_ids || []);
+      setTicketScope(group.ticket_scope);
     } catch (error) {
       console.error('Failed to load visibility group:', error);
       toast({
@@ -721,7 +729,7 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
           {!existingUser ? (
             <div className="space-y-6">
               {/* Portal Admin Setting - Only shows when no user exists */}
-              <div className="flex items-center justify-between">
+              {contact.contact_kind !== 'shared_mailbox' && <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
                   <Label htmlFor="portal-admin" className="text-base">
                     {t('contactPortalTab.portalAdmin.label', { defaultValue: 'Portal Administrator' })}
@@ -736,9 +744,9 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
                   onCheckedChange={handlePortalAdminToggle}
                   disabled={!currentUserPermissions.canUpdateRoles || isUpdating}
                 />
-              </div>
+              </div>}
 
-              <div className="border-t pt-6">
+              {contact.contact_kind !== 'shared_mailbox' && <div className="border-t pt-6">
                 <div className="space-y-4">
                 <Alert className="mb-4">
                   <Info className="h-4 w-4" />
@@ -769,7 +777,11 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
                     </Button>
                   </div>
                 </div>
-              </div>
+              </div>}
+            </div>
+          ) : contact.contact_kind === 'shared_mailbox' ? (
+            <div className="rounded-md border p-3 text-sm text-muted-foreground">
+              <Badge variant="default-muted">{t('contactsPage.sharedMailbox')}</Badge>
             </div>
           ) : (
             <div className="border-t pt-6">
@@ -842,6 +854,11 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
                   clientId={contact.client_id}
                   canEdit={currentUserPermissions.canUpdateRoles}
                 />
+
+                {/* Which segments this contact belongs to, and whether that
+                    comes with the profile's tickets. Read-only: membership is
+                    edited on the profile. */}
+                <ContactBillingProfileAssociations contactNameId={contact.contact_name_id} />
 
                 {/* Last Login Info */}
                 {existingUser.last_login_at && (
@@ -932,7 +949,7 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
               <div>
                 <Label className="text-sm font-medium">Ticket visibility group</Label>
                 <p className="text-sm text-muted-foreground">
-                  Assign a visibility group for this contact, or keep full access.
+                  {t('portal.visibilityGroups.assignmentHelp')}
                 </p>
               </div>
               <CustomSelect
@@ -1005,6 +1022,19 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
                   )}
                 </div>
 
+                <RadioGroup
+                  id="contact-visibility-ticket-scope"
+                  name="contact-visibility-ticket-scope"
+                  label={t('portal.visibilityGroups.scopeLabel')}
+                  value={ticketScope}
+                  onChange={(value) => setTicketScope(value as 'client' | 'contact')}
+                  disabled={isUpdating}
+                  orientation="vertical"
+                  options={[
+                    { value: 'client', label: t('portal.visibilityGroups.scopeClient'), description: t('portal.visibilityGroups.scopeClientDescription') },
+                    { value: 'contact', label: t('portal.visibilityGroups.scopeContact'), description: t('portal.visibilityGroups.scopeContactDescription') },
+                  ]}
+                />
                 <div className="flex items-end justify-end gap-2">
                   {editingVisibilityGroupId && (
                     <Button
@@ -1037,7 +1067,7 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
                       <div className="space-y-1">
                         <p className="text-sm font-medium">{group.name}</p>
                         <p className="text-xs text-muted-foreground">
-                          {t('contactPortalTab.boardCount', { defaultValue: '{{count}} boards', count: group.board_count })}
+                          {t(group.ticket_scope === 'contact' ? 'portal.visibilityGroups.scopeContact' : 'portal.visibilityGroups.scopeClient')} · {t('contactPortalTab.boardCount', { defaultValue: '{{count}} boards', count: group.board_count })}
                         </p>
                         {group.description ? (
                           <p className="text-xs text-muted-foreground">{group.description}</p>

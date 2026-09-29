@@ -21,6 +21,7 @@ import {
   FileSignature,
   FileText,
   FlaskConical,
+  FolderTree,
   Globe,
   Gauge,
   Ghost,
@@ -78,6 +79,7 @@ export interface MenuItem {
   availableEditions?: readonly MenuEdition[];
   underConstruction?: boolean;
   requiresSelfHost?: boolean;
+  requiredPermission?: string;
 }
 
 export interface NavigationSection {
@@ -474,9 +476,10 @@ export const billingNavigationSections: NavigationSection[] = [
     translationKey: 'nav.billing.sections.pricing',
     items: [
       { name: 'Service Types', translationKey: 'nav.billing.serviceTypes', icon: Layers3, href: '/msp/billing?tab=service-types' },
+      { name: 'Service Categories', translationKey: 'nav.billing.serviceCategories', icon: FolderTree, href: '/msp/billing?tab=service-categories' },
       { name: 'Services', translationKey: 'nav.billing.serviceCatalog', icon: Package, href: '/msp/billing?tab=service-catalog' },
       { name: 'Products', translationKey: 'nav.billing.products', icon: Package, href: '/msp/billing?tab=products' },
-      { name: 'Tax Rates', translationKey: 'nav.billing.taxRates', icon: Percent, href: '/msp/billing?tab=tax-rates' },
+      { name: 'Tax', translationKey: 'nav.billing.taxRates', icon: Percent, href: '/msp/billing?tab=tax-rates' },
     ]
   },
   {
@@ -485,7 +488,13 @@ export const billingNavigationSections: NavigationSection[] = [
     items: [
       { name: 'Usage Tracking', translationKey: 'nav.billing.usageTracking', icon: Gauge, href: '/msp/billing?tab=usage-tracking' },
       { name: 'Reports', translationKey: 'nav.billing.reports', icon: FileBarChart, href: '/msp/billing?tab=reports' },
-      { name: 'Accounting Exports', translationKey: 'nav.billing.accountingExports', icon: FileOutput, href: '/msp/billing?tab=accounting-exports' },
+      {
+        name: 'Accounting Exports',
+        translationKey: 'nav.billing.accountingExports',
+        icon: FileOutput,
+        href: '/msp/billing?tab=accounting-exports',
+        requiredPermission: 'accounting_integrations:exports_execute',
+      },
     ]
   }
 ];

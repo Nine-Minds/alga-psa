@@ -1,0 +1,23 @@
+{
+  "scope": "Xero emulator OAuth client and redirect binding",
+  "reference": "https://developer.xero.com/documentation/guides/oauth2/auth-flow/",
+  "test": "packages/emulators/xero/tests/smoke.test.ts",
+  "before": "Wrong-client authorization code exchange returned 200 instead of 400",
+  "after": {
+    "testsPassed": 9,
+    "typecheck": "passed",
+    "checks": [
+      "Code requires originating client and exact redirect URI",
+      "Rejected exchanges do not consume the valid code",
+      "Refresh token requires originating client",
+      "Rejected refresh does not consume valid refresh token",
+      "Correct HTTP Basic identity refreshes and rotates token",
+      "Used code cannot be replayed"
+    ]
+  },
+  "limits": [
+    "Client secrets are still not validated against a registered application",
+    "PKCE verification and per-client organisation consent remain unimplemented",
+    "Native browser/provider parity verification pending publication"
+  ]
+}

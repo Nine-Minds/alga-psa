@@ -120,6 +120,7 @@ export {
 export { WorkflowTaskSyncExceptionService } from './accountingSync/syncExceptionService';
 export {
   enqueueInvoiceAutoExport,
+  enqueueInvoiceVoid,
   enqueueVendorBillAutoExport,
   enqueueVendorBillExportRetry,
   satisfyExportOpsForManualBatch
@@ -136,3 +137,4 @@ export {
   type AccountingSyncCycleStats,
   type AccountingSyncOperation
 } from './accountingSync/accountingSync.types';
+export { verifyAndCompletePublicSetup, type SetupInspection } from './publicSetupConfirmation';

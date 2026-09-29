@@ -1,0 +1,66 @@
+{
+  "scope": "Read-only audit of checked-out production publisher definitions; live Argo installation not queried",
+  "repository": "/Users/roberisaacs/nm-kube-config",
+  "revision": "0efc640af5ad5ae869b877dd1be7c3835a2bb2f1",
+  "files": [
+    {
+      "path": "alga-psa/workflows/build/alga-psa-ci-cd-workflow.yaml",
+      "sha256": "a3c24a400cc69fd01359246b3fa9e1689d2914118072042b0208c59fc4fdfe7f",
+      "workingTreeStatus": ""
+    },
+    {
+      "path": "alga-psa/workflows/composite/alga-psa-build-migrate-deploy.yaml",
+      "sha256": "3c47cafe94b2c891a8a78d2655dd878e7be31234cf961641b95746c45224bc17",
+      "workingTreeStatus": ""
+    },
+    {
+      "path": "alga-psa/workflows/build/email-service-ci-cd-hosted-workflow.yaml",
+      "sha256": "92f070797cce9c2c3f216dc8a2fee754c819d9d553991a5a8321beffa544f046",
+      "workingTreeStatus": ""
+    },
+    {
+      "path": "alga-psa/workflows/build/temporal-worker-build-workflow.yaml",
+      "sha256": "0e2b645ad3ed4e9970d51efb718decfe21b1a2d7e9276502ad6f23712c6d3424",
+      "workingTreeStatus": ""
+    }
+  ],
+  "findings": [
+    {
+      "file": "alga-psa/workflows/build/alga-psa-ci-cd-workflow.yaml",
+      "line": 805,
+      "finding": "run-tests template uses Node20, echoes Running tests and All tests passed, but actual npm test command is commented out"
+    },
+    {
+      "file": "alga-psa/workflows/build/alga-psa-ci-cd-workflow.yaml",
+      "line": 238,
+      "finding": "verify-images accepts run-tests.Succeeded or Skipped; existing-image path bypasses new-build test task"
+    },
+    {
+      "file": "alga-psa/workflows/composite/alga-psa-build-migrate-deploy.yaml",
+      "line": 414,
+      "finding": "Preview smoke checks root response; health and version failures are ignored. No business operation assertions here"
+    },
+    {
+      "file": "alga-psa/workflows/composite/alga-psa-build-migrate-deploy.yaml",
+      "line": 191,
+      "finding": "Preview smoke precedes manual approval then traffic promotion; this is the concrete pre-promotion insertion point"
+    },
+    {
+      "file": "alga-psa/workflows/composite/alga-psa-build-migrate-deploy.yaml",
+      "line": 218,
+      "finding": "Appliance OCI publication follows traffic promotion through update-version and receives build promotion JSON"
+    }
+  ],
+  "requiredNextWork": [
+    "Verify published readiness for exact source commit in both rebuilt and existing-image paths",
+    "Produce complete component digest/source/build manifest across separate app/email/worker publishers",
+    "Run real isolated business smoke against preview color and bind results plus fresh runtime observations before traffic promotion",
+    "Preserve existing manual approval and separate hosted/appliance publication semantics"
+  ],
+  "limitations": [
+    "No external files modified; unrelated user changes exist in nm-kube-config",
+    "Local definitions may differ from installed Argo templates",
+    "Native readiness publication and live target validation remain pending"
+  ],
+  "publisherLocationQuestion": "Resolved from ee/docs/premise/talos-release-model.md; no user response needed for location"
+}

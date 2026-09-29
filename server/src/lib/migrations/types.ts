@@ -34,6 +34,8 @@ export interface TicketMigrationConfiguration {
 export interface AssetMigrationConfiguration {
   /** Source asset_type_name → tenant asset type slug. Every staged name must map. */
   assetTypeMapping: Record<string, string>;
+  /** Target custom asset-type slug → source custom field name → target field key. */
+  customFieldMapping?: Record<string, Record<string, string>>;
 }
 
 export interface MigrationJobConfiguration {
@@ -108,6 +110,14 @@ export interface MigrationOutcomeSummary {
   failed: number;
 }
 
+/** The prior migration whose identity mapping claimed a skipped record. */
+export interface MigrationOutcomeClaim {
+  migrationJobId: string;
+  sourceFileName: string | null;
+  /** True when the claim's package matches the reporting job's package. */
+  samePackage: boolean;
+}
+
 export interface MigrationOutcomeRecord {
   stagedRecordId: string;
   entityType: AmpEntityType;
@@ -119,6 +129,27 @@ export interface MigrationOutcomeRecord {
   targetEntityId: string | null;
   errors: string[];
   createdAt: string;
+  /** Set for a skip that matched an identity mapping; null otherwise. */
+  claimedBy: MigrationOutcomeClaim | null;
+}
+
+export interface MigrationSkipProvenanceEntry {
+  migrationJobId: string | null;
+  sourceFileName: string | null;
+  skippedCount: number;
+  samePackage: boolean;
+}
+
+/**
+ * Where the skipped records of one job came from. Lets the results copy make
+ * the "same package" claim only when the claiming mappings actually came from
+ * this package.
+ */
+export interface MigrationSkipProvenance {
+  /** True when every skip was claimed by this job or an identical package. */
+  allSamePackage: boolean;
+  skippedCount: number;
+  entries: MigrationSkipProvenanceEntry[];
 }
 
 export interface MigrationUploadResult {

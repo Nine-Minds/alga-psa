@@ -9,9 +9,11 @@ export type EntityType = 'user' | 'contact' | 'client' | 'tenant' | 'team';
 
 /**
  * Logo variant. 'default' is the light-surface logo every existing row carries;
- * 'dark' is the optional logo used on dark surfaces.
+ * 'dark' is the optional logo used on dark surfaces. 'wide'/'wide-dark' are the
+ * optional landscape wordmarks (Enterprise white-labeling) and 'favicon' is the
+ * browser tab icon. The column is plain text, so no migration is involved.
  */
-export type EntityLogoVariant = 'default' | 'dark';
+export type EntityLogoVariant = 'default' | 'dark' | 'wide' | 'wide-dark' | 'favicon';
 
 /**
  * Retrieves the image URL for an entity (user avatar, contact avatar, client logo).
@@ -128,6 +130,19 @@ export async function getClientLogoUrl(
   tenant: string
 ): Promise<string | null> {
   return getEntityImageUrl('client', clientId, tenant);
+}
+
+/**
+ * Logo for a client on a generated document (invoice, quote, sales order),
+ * where there is room for the full wordmark: the 'wide' variant when the
+ * square mark was cut from one, otherwise the square mark itself.
+ */
+export async function getClientDocumentLogoUrl(
+  clientId: string,
+  tenant: string
+): Promise<string | null> {
+  return (await getEntityImageUrl('client', clientId, tenant, 'wide'))
+    ?? getEntityImageUrl('client', clientId, tenant);
 }
 
 /**

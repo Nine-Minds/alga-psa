@@ -1,3 +1,4 @@
+import { formatPhoneForDisplay, formatPhoneLabel } from "../../../../packages/validation/src/lib/phone";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { CommonActions } from "@react-navigation/native";
 import { Linking, Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
@@ -24,6 +25,8 @@ import { Avatar } from "../ui/components/Avatar";
 import { Badge } from "../ui/components/Badge";
 import { usePullToRefresh } from "../hooks/usePullToRefresh";
 import { logger } from "../logging/logger";
+import { usePlaceCall } from "../features/interactions/hooks/usePlaceCall";
+import { CallPromptHost } from "../features/interactions/components/CallPromptHost";
 
 type Props = NativeStackScreenProps<RootStackParamList, "ContactDetail">;
 
@@ -34,6 +37,7 @@ export function ContactDetailScreen({ route, navigation }: Props) {
   const config = useMemo(() => getAppConfig(), []);
   const { session, refreshSession } = useAuth();
   const abortRef = useRef<AbortController | null>(null);
+  const placeCall = usePlaceCall();
 
   const client = useMemo(() => {
     if (!config.ok || !session) return null;
@@ -199,6 +203,13 @@ export function ContactDetailScreen({ route, navigation }: Props) {
         </Text>
       ) : null}
 
+      <CallPromptHost
+        origin={{ kind: "contact", id: contactId }}
+        client={client}
+        apiKey={session.accessToken}
+        userId={session.user?.id ?? null}
+      />
+
       <View style={{ marginTop: theme.spacing.lg }}>
         <PrimaryButton onPress={onViewTickets}>
           {t("detail.viewTickets", { defaultValue: "View tickets" })}
@@ -238,6 +249,13 @@ export function ContactDetailScreen({ route, navigation }: Props) {
                 phone={phone}
                 label={typeLabel(phone) ?? t("detail.phone")}
                 contactName={contact.full_name}
+                onCall={() => placeCall({
+                  origin: { kind: "contact", id: contactId },
+                  phone: formatPhoneForDisplay(phone.phone_number, phone.extension).e164 || phone.phone_number,
+                  name: contact.full_name,
+                  contactId,
+                  clientId: contact.client_id ?? null,
+                })}
               />
             ))}
             {primaryEmail ? (
@@ -299,23 +317,26 @@ function PhoneRow({
   phone,
   label,
   contactName,
+  onCall,
 }: {
   theme: Theme;
   phone: ContactPhoneNumber;
   label: string;
   contactName: string;
+  onCall: () => void;
 }) {
   const { t } = useTranslation("contacts");
   return (
     <Pressable
-      onPress={() => void Linking.openURL(`tel:${phone.phone_number}`)}
+      onPress={onCall}
+      testID={`contact-detail-call-${phone.contact_phone_number_id ?? phone.phone_number}`}
       accessibilityRole="button"
       accessibilityLabel={t("detail.callAccessibility", { name: contactName, number: phone.phone_number })}
       style={({ pressed }) => ({ paddingVertical: theme.spacing.sm, opacity: pressed ? 0.95 : 1 })}
     >
       <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary }}>{label}</Text>
       <Text style={{ ...theme.typography.body, color: theme.colors.primary, marginTop: 2 }}>
-        {phone.phone_number}
+        {formatPhoneLabel(formatPhoneForDisplay(phone.phone_number, phone.extension), t("detail.phoneExtension", { defaultValue: "ext." }))}
       </Text>
     </Pressable>
   );

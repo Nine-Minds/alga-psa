@@ -7,8 +7,9 @@ export default defineConfig({
     testTimeout: 180_000,
     hookTimeout: 180_000,
     isolate: true,
+    fileParallelism: false,
+    maxWorkers: 1,
     sequence: { concurrent: false, shuffle: false },
     coverage: { enabled: false },
   },
 });
-

@@ -112,7 +112,7 @@
       "advanced": {
         "title": "Geavanceerd: aangepaste routering van identiteitsaanbieders",
         "description": "Routeer SSO voor MSP-aanmeldingen via geverifieerde aanmeldingsdomeinen naar uw eigen identiteitsaanbieder. Alleen nodig bij aangepaste of lokale installaties.",
-        "inertNotice": "Er zijn geen referenties voor een tenantidentiteitsaanbieder geconfigureerd, waardoor domeinclaims momenteel geen effect hebben. Gebruikers melden zich aan via de gehoste Google-/Microsoft-aanbieders. Tenantreferenties worden ingericht bij aangepaste en lokale installaties."
+        "inertNotice": "Er is geen tenantidentiteitsaanbieder geconfigureerd, waardoor domeinclaims momenteel geen effect hebben. Configureer hierboven Keycloak, of in de Enterprise Edition uw Google-/Microsoft-app-referenties, en claim daarna hier uw aanmelddomein."
       }
     },
     "userRoles": {
@@ -749,6 +749,7 @@
       "branding": {
         "google": "Doorgaan met Google",
         "microsoft": "Doorgaan met Microsoft",
+        "keycloak": "Doorgaan met Keycloak",
         "default": "Doorgaan"
       }
     },

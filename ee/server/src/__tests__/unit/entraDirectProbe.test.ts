@@ -48,7 +48,9 @@ describe('probeEntraDirectAccess', () => {
     });
     expect(axiosGetMock).toHaveBeenCalledWith(
       MANAGED_TENANTS_URL,
-      expect.objectContaining({ headers: { Authorization: 'Bearer token-1' } })
+      expect.objectContaining({
+        headers: { Authorization: 'Bearer token-1', 'client-request-id': expect.any(String) },
+      })
     );
   });
 

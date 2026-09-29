@@ -1,0 +1,21 @@
+{
+  "strict": true,
+  "checks": [
+    {
+      "context": "unit / Server unit execution complete",
+      "app_id": 15368
+    },
+    {
+      "context": "integration / Integration execution complete",
+      "app_id": 15368
+    },
+    {
+      "context": "Repository test inventory",
+      "app_id": 15368
+    },
+    {
+      "context": "Production regression readiness",
+      "app_id": 15368
+    }
+  ]
+}

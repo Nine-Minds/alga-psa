@@ -266,7 +266,7 @@ export function SignInScreen() {
           <AppleAuthentication.AppleAuthenticationButton
             buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
             buttonStyle={
-              theme.colors.background === "#000000" || theme.colors.background?.toLowerCase?.() === "#000"
+              theme.mode === "dark"
                 ? AppleAuthentication.AppleAuthenticationButtonStyle.WHITE
                 : AppleAuthentication.AppleAuthenticationButtonStyle.BLACK
             }

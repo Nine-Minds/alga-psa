@@ -1,0 +1,36 @@
+{
+  "scope": "Independent workspace database execution gate",
+  "baseRevision": "8ded5cc304",
+  "workingTreeDirty": true,
+  "focusedTests": {
+    "passed": 8,
+    "failed": 0
+  },
+  "realReport": {
+    "revision": "7922859ee79f7f5006e053a27be5c4494bc9e43c",
+    "passed": 454,
+    "verdict": "passed"
+  },
+  "workflowLint": "passed",
+  "behavior": [
+    "Independent repository DB inventory versus raw collection and assertions",
+    "Candidate source and clean execution checks",
+    "Always-running job rejects failed/missing/cancelled/skipped prerequisites",
+    "Docs-only skips require independent diff and successful selection",
+    "Scheduled runs always require full database evidence"
+  ],
+  "limitations": [
+    "Real report verification invoked function with its historical revision; this is not current clean-checkout CLI/native execution proof.",
+    "Effective required protections and global cross-workflow gate remain incomplete."
+  ],
+  "artifacts": [
+    {
+      "path": "/tmp/alga-workspace-db-gate-tests.log",
+      "sha256": "68ae34ba2941c89ef888e667199b84e05c457dfb1637807b048e36952f6f7877"
+    },
+    {
+      "path": "/tmp/alga-workspace-db-gate-real-report.json",
+      "sha256": "c06cf1006fa2e06ad086c0027d660eac99052386ecfd06e0be2f779ee66e283a"
+    }
+  ]
+}

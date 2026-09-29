@@ -259,7 +259,6 @@ async function seedService(db: Knex, tenant: string): Promise<{ serviceTypeId: s
     id: serviceTypeId,
     tenant,
     name: `Ext Service Type ${serviceTypeId.slice(0, 6)}`,
-    billing_method: 'fixed',
     order_number: Math.floor(Math.random() * 1000000),
     created_at: db.fn.now(),
     updated_at: db.fn.now(),

@@ -60,6 +60,7 @@ import {
   recurringBillingRunStartedEventPayloadSchema,
 } from './domain/billingEventSchemas';
 import {
+  clientAnniversaryUpcomingEventPayloadSchema,
   clientArchivedEventPayloadSchema,
   clientCreatedEventPayloadSchema,
   clientDeletedEventPayloadSchema,
@@ -153,6 +154,7 @@ import {
   ticketCreatedEventPayloadSchema,
   ticketCustomerRepliedEventPayloadSchema,
   ticketEscalatedEventPayloadSchema,
+  ticketExternalLinkEventPayloadSchema,
   ticketInternalNoteAddedEventPayloadSchema,
   ticketMergedEventPayloadSchema,
   ticketMessageAddedEventPayloadSchema,
@@ -230,6 +232,9 @@ export const EVENT_TYPES = [
   'TICKET_APPROVAL_REQUESTED',
   'TICKET_APPROVAL_GRANTED',
   'TICKET_APPROVAL_REJECTED',
+  'TICKET_EXTERNAL_LINK_ADDED',
+  'TICKET_EXTERNAL_LINK_UPDATED',
+  'TICKET_EXTERNAL_LINK_REMOVED',
 
   // Scheduling (legacy requests)
   'APPOINTMENT_REQUEST_CREATED',
@@ -241,6 +246,9 @@ export const EVENT_TYPES = [
   'SCHEDULE_ENTRY_CREATED',
   'SCHEDULE_ENTRY_UPDATED',
   'SCHEDULE_ENTRY_DELETED',
+
+  // Scheduling (shared calendars)
+  'CALENDAR_SHARE_GRANTED',
 
   // Scheduling (domain expansion)
   'APPOINTMENT_CREATED',
@@ -348,6 +356,7 @@ export const EVENT_TYPES = [
   'RECURRING_BILLING_RUN_FAILED',
 
   // CRM (domain expansion)
+  'CLIENT_ANNIVERSARY_UPCOMING',
   'CLIENT_CREATED',
   'CLIENT_UPDATED',
   'CLIENT_STATUS_CHANGED',
@@ -553,6 +562,7 @@ export const TicketEventPayloadSchema = BasePayloadSchema.extend({
   userId: z.string().uuid(), // The user being assigned to the ticket
   assignedByUserId: z.string().uuid().optional(), // The user who performed the action
   changes: z.record(z.unknown()).optional(),
+  externalLinks: z.array(z.record(z.unknown())).optional(),
   ...TicketNotificationSuppressionSchema,
   comment: z.object({
     id: z.string().uuid(),
@@ -950,6 +960,18 @@ export const AccountingExportEventPayloadSchema = BasePayloadSchema.extend({
 });
 
 // Schedule entry event payload schema
+// Shared calendars: a user or team was granted (or had changed) access to a calendar.
+export const CalendarShareGrantedPayloadSchema = BasePayloadSchema.extend({
+  calendarId: z.string().uuid(),
+  calendarType: z.enum(['personal', 'group']),
+  ownerUserId: z.string().uuid().nullable(),
+  calendarName: z.string().nullable().optional(),
+  granteeType: z.enum(['user', 'team']),
+  granteeId: z.string().uuid(),
+  accessLevel: z.enum(['free_busy', 'read', 'edit', 'manage']),
+  grantedByUserId: z.string().uuid(),
+});
+
 export const ScheduleEntryEventPayloadSchema = BasePayloadSchema.extend({
   entryId: z.string().uuid(),
   userId: z.string().uuid(),
@@ -1022,23 +1044,30 @@ export const SurveyInvitationSentPayloadSchema = BasePayloadSchema.extend({
 
 export const SurveyResponseSubmittedPayloadSchema = BasePayloadSchema.extend({
   responseId: z.string().uuid(),
-  ticketId: z.string().uuid(),
+  ticketId: z.string().uuid().optional(),
+  projectId: z.string().uuid().optional(),
   companyId: z.string().uuid().optional(),
   rating: z.number(),
   hasComment: z.boolean(),
-});
+}).refine(value => Boolean(value.ticketId) !== Boolean(value.projectId), { message: 'Exactly one survey subject is required' });
 
 export const SurveyNegativeResponsePayloadSchema = BasePayloadSchema.extend({
   responseId: z.string().uuid(),
-  ticketId: z.string().uuid(),
-  ticketNumber: z.string(),
+  ticketId: z.string().uuid().optional(),
+  projectId: z.string().uuid().optional(),
+  ticketNumber: z.string().optional(),
+  projectNumber: z.string().optional(),
   companyId: z.string().uuid().optional(),
   companyName: z.string().optional(),
   contactName: z.string().optional(),
   rating: z.number(),
   comment: z.string().optional(),
   assignedTo: z.string().uuid().optional(),
-});
+}).refine(value => Boolean(value.ticketId) !== Boolean(value.projectId), { message: 'Exactly one survey subject is required' })
+  .refine(value => value.projectId
+    ? value.projectNumber !== undefined && value.ticketNumber === undefined
+    : value.ticketNumber !== undefined && value.projectNumber === undefined,
+  { message: 'Survey subject number must match its subject type' });
 
 export const TicketResponseStateChangedPayloadSchema = BasePayloadSchema.extend({
   ticketId: z.string().uuid(),
@@ -1221,6 +1250,9 @@ export const EventPayloadSchemas = {
   TICKET_APPROVAL_REQUESTED: ticketApprovalRequestedEventPayloadSchema,
   TICKET_APPROVAL_GRANTED: ticketApprovalGrantedEventPayloadSchema,
   TICKET_APPROVAL_REJECTED: ticketApprovalRejectedEventPayloadSchema,
+  TICKET_EXTERNAL_LINK_ADDED: ticketExternalLinkEventPayloadSchema,
+  TICKET_EXTERNAL_LINK_UPDATED: ticketExternalLinkEventPayloadSchema,
+  TICKET_EXTERNAL_LINK_REMOVED: ticketExternalLinkEventPayloadSchema,
 
   // Scheduling (legacy requests)
   APPOINTMENT_REQUEST_CREATED: AppointmentRequestEventPayloadSchema,
@@ -1232,6 +1264,7 @@ export const EventPayloadSchemas = {
   SCHEDULE_ENTRY_CREATED: ScheduleEntryEventPayloadSchema,
   SCHEDULE_ENTRY_UPDATED: ScheduleEntryEventPayloadSchema,
   SCHEDULE_ENTRY_DELETED: ScheduleEntryEventPayloadSchema,
+  CALENDAR_SHARE_GRANTED: CalendarShareGrantedPayloadSchema,
 
   // Scheduling (domain expansion)
   APPOINTMENT_CREATED: appointmentCreatedEventPayloadSchema,
@@ -1339,6 +1372,7 @@ export const EventPayloadSchemas = {
   RECURRING_BILLING_RUN_FAILED: recurringBillingRunFailedEventPayloadSchema,
 
   // CRM (domain expansion)
+  CLIENT_ANNIVERSARY_UPCOMING: clientAnniversaryUpcomingEventPayloadSchema,
   CLIENT_CREATED: clientCreatedEventPayloadSchema,
   CLIENT_UPDATED: clientUpdatedEventPayloadSchema,
   CLIENT_STATUS_CHANGED: clientStatusChangedEventPayloadSchema,
@@ -1588,6 +1622,7 @@ export type AccountingExportFailedEvent = z.infer<typeof EventSchemas.ACCOUNTING
 export type ScheduleEntryCreatedEvent = z.infer<typeof EventSchemas.SCHEDULE_ENTRY_CREATED>;
 export type ScheduleEntryUpdatedEvent = z.infer<typeof EventSchemas.SCHEDULE_ENTRY_UPDATED>;
 export type ScheduleEntryDeletedEvent = z.infer<typeof EventSchemas.SCHEDULE_ENTRY_DELETED>;
+export type CalendarShareGrantedEvent = z.infer<typeof EventSchemas.CALENDAR_SHARE_GRANTED>;
 export type BoardCreatedEvent = z.infer<typeof EventSchemas.BOARD_CREATED>;
 export type BoardUpdatedEvent = z.infer<typeof EventSchemas.BOARD_UPDATED>;
 export type BoardDeletedEvent = z.infer<typeof EventSchemas.BOARD_DELETED>;

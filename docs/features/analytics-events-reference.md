@@ -62,6 +62,7 @@ This document provides a comprehensive reference of all analytics events tracked
 | `dashboard_viewed` | Dashboard accessed | `dashboard_type`, `widgets_count` |
 | `power_user_score_calculated` | Power user score calculated | `score`, `unique_features_used`, `advanced_features_used` |
 | `role_based_usage_pattern` | Usage pattern by role | `user_role`, `adoption_rate` |
+| `ui.resources_menu.select` | Resources menu link clicked from application header | `target` (`'resources-documentation'` or `'resources-support'`) |
 
 ### 8. Error Tracking Events
 

@@ -1,3 +1,4 @@
+import { applyProjectCapAdjustments } from './projectCapAdjustments';
 import type { ChargeExplanation, IBillingResult } from "@alga-psa/types";
 import {
   calculateNormalizedContractCharge,
@@ -136,6 +137,19 @@ export function calculateContractBilling(
     });
   }
 
+  const capResult = input.projectCaps
+    ? applyProjectCapAdjustments(sourceCharges, input.projectCaps)
+    : undefined;
+  if (capResult) {
+    // Lines and persistence charges retain the same order and financial truth.
+    sourceCharges.forEach((charge, index) => {
+      const line = lines[index];
+      line.netAmount = charge.total;
+      line.taxAmount = charge.tax_amount ?? 0;
+      line.grossAmount = line.netAmount + line.taxAmount;
+    });
+  }
+
   const chargeSubtotal = sourceCharges.reduce(
     (sum, charge) => sum + charge.total,
     0,
@@ -220,6 +234,7 @@ export function calculateContractBilling(
     total: subtotal + taxTotal,
     diagnostics: [],
     sourceCharges,
+    ...(capResult ? { projectCapThresholdCrossings: capResult.thresholdCrossings } : {}),
   };
 }
 

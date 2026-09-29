@@ -1,0 +1,535 @@
+[
+  {
+    "id": "F001",
+    "description": "Refresh failing-run, effective GitHub-rule and release-entry-point inventories; classify failures and assign resolution owners.",
+    "implemented": false,
+    "workPackage": "WP1",
+    "priority": "P0",
+    "prdRefs": [
+      "R1"
+    ],
+    "dependsOn": []
+  },
+  {
+    "id": "F002",
+    "description": "Repair the unit, Tier-1 and infrastructure baseline with behavioral evidence, preserving assertions and exposing any owned temporary exclusions.",
+    "implemented": false,
+    "workPackage": "WP1",
+    "priority": "P0",
+    "prdRefs": [
+      "R1"
+    ],
+    "dependsOn": [
+      "F001"
+    ]
+  },
+  {
+    "id": "F003",
+    "description": "Run colocated workspace DB suites, including calendarMonthEndCloseActions.db.test.ts, in CI against migrated schema with required DB availability and deterministic isolation.",
+    "implemented": true,
+    "workPackage": "WP1",
+    "priority": "P0",
+    "prdRefs": [
+      "R1"
+    ],
+    "dependsOn": [
+      "F001"
+    ]
+  },
+  {
+    "id": "F004",
+    "description": "Build a runner-derived test inventory that fails for unmatched or moved tests, empty mandatory collection and expired exclusions.",
+    "implemented": true,
+    "workPackage": "WP1",
+    "priority": "P0",
+    "prdRefs": [
+      "R1"
+    ],
+    "dependsOn": [
+      "F003"
+    ],
+    "evidence": [
+      "evidence/ci-repository-inventory.json"
+    ]
+  },
+  {
+    "id": "F005",
+    "description": "Align workflow triggers and affected selection for dependencies, schemas, harnesses, scripts, services and EE packages; unknown selection widens or fails explicitly.",
+    "implemented": true,
+    "workPackage": "WP1",
+    "priority": "P0",
+    "prdRefs": [
+      "R1"
+    ],
+    "dependsOn": [
+      "F001"
+    ]
+  },
+  {
+    "id": "F006",
+    "description": "Publish expected, collected and executed identities and reject incomplete mandatory runs independently of aggregate pass percentages.",
+    "implemented": true,
+    "workPackage": "WP1",
+    "priority": "P0",
+    "prdRefs": [
+      "R1"
+    ],
+    "dependsOn": [
+      "F004",
+      "F005"
+    ]
+  },
+  {
+    "id": "F007",
+    "description": "Provide a stable aggregate gate that rejects failed, cancelled, missing, empty or unexpectedly skipped mandatory jobs and explains legitimate not-applicable selections.",
+    "implemented": true,
+    "workPackage": "WP2",
+    "priority": "P0",
+    "prdRefs": [
+      "R2"
+    ],
+    "dependsOn": [
+      "F002",
+      "F006"
+    ]
+  },
+  {
+    "id": "F008",
+    "description": "Require repaired unit, Tier-1, discovery and aggregate checks in effective GitHub protections while retaining existing guards and documenting bypass/freshness behavior.",
+    "implemented": false,
+    "workPackage": "WP2",
+    "priority": "P0",
+    "prdRefs": [
+      "R2"
+    ],
+    "dependsOn": [
+      "F007"
+    ]
+  },
+  {
+    "id": "F009",
+    "description": "Remove non-blocking behavior from repaired mandatory infrastructure tests and enforce owned, expiring, visible quarantines outside the critical journey floor.",
+    "implemented": true,
+    "workPackage": "WP2",
+    "priority": "P0",
+    "prdRefs": [
+      "R2"
+    ],
+    "dependsOn": [
+      "F002",
+      "F007"
+    ]
+  },
+  {
+    "id": "F010",
+    "description": "Provide isolated production-build Playwright smoke fixtures using real sign-in and request identity, with maintainable CE dashboard and representative EE smoke coverage.",
+    "implemented": true,
+    "workPackage": "WP3",
+    "priority": "P0",
+    "prdRefs": [
+      "R3"
+    ],
+    "dependsOn": [
+      "F003"
+    ]
+  },
+  {
+    "id": "F011",
+    "description": "Verify Add Usage through the browser with overlapping usage/bucket contract lines, persistence after reload and correct invoice preview.",
+    "implemented": true,
+    "workPackage": "WP3",
+    "priority": "P0",
+    "prdRefs": [
+      "R3"
+    ],
+    "dependsOn": [
+      "F010"
+    ]
+  },
+  {
+    "id": "F012",
+    "description": "Verify browser ticket creation, assignment, reply and reopening across persisted state changes.",
+    "implemented": true,
+    "workPackage": "WP3",
+    "priority": "P0",
+    "prdRefs": [
+      "R3"
+    ],
+    "dependsOn": [
+      "F010"
+    ]
+  },
+  {
+    "id": "F013",
+    "description": "Verify portal request submission, MSP handling and portal-visible response across separate user sessions.",
+    "implemented": true,
+    "workPackage": "WP3",
+    "priority": "P0",
+    "prdRefs": [
+      "R3"
+    ],
+    "dependsOn": [
+      "F010",
+      "F012"
+    ]
+  },
+  {
+    "id": "F014",
+    "description": "Verify time logging, submission and approval through invoicing, including refusal to bill unapproved time.",
+    "implemented": true,
+    "workPackage": "WP3",
+    "priority": "P0",
+    "prdRefs": [
+      "R3"
+    ],
+    "dependsOn": [
+      "F010"
+    ]
+  },
+  {
+    "id": "F015",
+    "description": "Verify invoice generation and finalization through download with expected invoice identity and amounts, including month-end real-DB hydration.",
+    "implemented": true,
+    "workPackage": "WP3",
+    "priority": "P0",
+    "prdRefs": [
+      "R3"
+    ],
+    "dependsOn": [
+      "F010",
+      "F003"
+    ]
+  },
+  {
+    "id": "F016",
+    "description": "Verify ordinary technician, portal-client and cross-tenant access boundaries through real authenticated requests for critical journey data.",
+    "implemented": true,
+    "workPackage": "WP3",
+    "priority": "P0",
+    "prdRefs": [
+      "R3"
+    ],
+    "dependsOn": [
+      "F011",
+      "F013",
+      "F015"
+    ]
+  },
+  {
+    "id": "F017",
+    "description": "Retain first-failure diagnostics and report retry-only passes as flaky so they cannot silently satisfy critical release readiness.",
+    "implemented": true,
+    "workPackage": "WP3",
+    "priority": "P0",
+    "prdRefs": [
+      "R3"
+    ],
+    "dependsOn": [
+      "F010"
+    ]
+  },
+  {
+    "id": "F018",
+    "description": "Register landed browser journeys as mandatory candidates in the aggregate gate, with Add Usage, ticket/portal and invoicing as the initial floor.",
+    "implemented": false,
+    "workPackage": "WP3",
+    "priority": "P0",
+    "prdRefs": [
+      "R2"
+    ],
+    "dependsOn": [
+      "F008",
+      "F011",
+      "F013",
+      "F015",
+      "F017"
+    ]
+  },
+  {
+    "id": "F019",
+    "description": "Verify raw MIME intake, queue processing, preserved ticket content, duplicate handling and threaded outbound reply through built email-service containers and a test mail sink.",
+    "implemented": true,
+    "workPackage": "WP4",
+    "priority": "P1",
+    "prdRefs": [
+      "R4"
+    ],
+    "dependsOn": [
+      "F010"
+    ]
+  },
+  {
+    "id": "F020",
+    "description": "Define and validate release component manifests; test and promote immutable image digests and reject deployed artifact mismatches.",
+    "implemented": false,
+    "workPackage": "WP4",
+    "priority": "P1",
+    "prdRefs": [
+      "R4"
+    ],
+    "dependsOn": [
+      "F007",
+      "F019"
+    ]
+  },
+  {
+    "id": "F021",
+    "description": "Upgrade a synthetic existing tenant from the supported v1.5.0 schema (f3579f3a317cf51df5f4489e5dcd8f649bb71289) and validate ticket, usage and invoice behavior afterward.",
+    "implemented": true,
+    "workPackage": "WP4",
+    "priority": "P1",
+    "prdRefs": [
+      "R4"
+    ],
+    "dependsOn": [
+      "F011",
+      "F012",
+      "F015"
+    ]
+  },
+  {
+    "id": "F022",
+    "description": "Run representative EE/Citus tenant-scoped reads, writes and billing against migrated/upgraded schema, documenting topology limitations.",
+    "implemented": true,
+    "workPackage": "WP4",
+    "priority": "P1",
+    "prdRefs": [
+      "R4"
+    ],
+    "dependsOn": [
+      "F021"
+    ]
+  },
+  {
+    "id": "F023",
+    "description": "Run isolated post-deploy and scheduled synthetic smoke with safe test recipients, idempotent cleanup, promotion handling and actionable failure notification.",
+    "implemented": false,
+    "workPackage": "WP4",
+    "priority": "P1",
+    "prdRefs": [
+      "R4"
+    ],
+    "dependsOn": [
+      "F018",
+      "F020"
+    ]
+  },
+  {
+    "id": "F024",
+    "description": "Add versioned execution/journey/retry/edition/artifact metrics without breaking existing Sheets columns or historical readers.",
+    "implemented": true,
+    "workPackage": "WP5",
+    "priority": "P1",
+    "prdRefs": [
+      "R5"
+    ],
+    "dependsOn": [
+      "F006",
+      "F017"
+    ],
+    "evidence": [
+      "evidence/ci-browser-metrics-cb884.json",
+      "evidence/isolated-browser-identity.json"
+    ]
+  },
+  {
+    "id": "F025",
+    "description": "Present readiness, failures, incomplete runs and measured-source inventory explicitly; separate PR/main/nightly trends and version coverage methodology.",
+    "implemented": false,
+    "workPackage": "WP5",
+    "priority": "P1",
+    "prdRefs": [
+      "R5"
+    ],
+    "dependsOn": [
+      "F024"
+    ]
+  },
+  {
+    "id": "F026",
+    "description": "Pilot StrykerJS/Vitest on selected billing/date and authorization predicates, review survivors and establish a scoped assertion-strength baseline.",
+    "implemented": true,
+    "workPackage": "WP5",
+    "priority": "P1",
+    "prdRefs": [
+      "R5"
+    ],
+    "dependsOn": [
+      "F002",
+      "F003"
+    ]
+  },
+  {
+    "id": "F027",
+    "description": "Use fast-check to generate tenant-calendar month-end and DST boundary cases with reproducible minimized failures and DB-backed hydration checks.",
+    "implemented": true,
+    "workPackage": "WP5",
+    "priority": "P1",
+    "prdRefs": [
+      "R5"
+    ],
+    "dependsOn": [
+      "F003",
+      "F015"
+    ]
+  },
+  {
+    "id": "F028",
+    "description": "Use an independent financial state model for finalize/pay/credit/void/retry sequences, checking balance conservation and duplicate effects against real behavior.",
+    "implemented": true,
+    "workPackage": "WP5",
+    "priority": "P1",
+    "prdRefs": [
+      "R5"
+    ],
+    "dependsOn": [
+      "F002",
+      "F015"
+    ]
+  },
+  {
+    "id": "F029",
+    "description": "Track escaped defects by journey and missing boundary, linking permanent CI tests to meaningful before/after defect-replay evidence.",
+    "implemented": false,
+    "workPackage": "WP5",
+    "priority": "P1",
+    "prdRefs": [
+      "R5"
+    ],
+    "dependsOn": [
+      "F004"
+    ]
+  },
+  {
+    "id": "F030",
+    "description": "Document actual runner/enforcement scope and establish an owned review of escape categories, exclusion age and next journey priorities.",
+    "implemented": false,
+    "workPackage": "WP5",
+    "priority": "P1",
+    "prdRefs": [
+      "R5"
+    ],
+    "dependsOn": [
+      "F008",
+      "F025",
+      "F029"
+    ]
+  },
+  {
+    "id": "F031",
+    "description": "Provide isolated Playwright/algasim wire-level fixtures with reachable provider endpoints on all Alga processes, control-API seed/reset, real callbacks and diagnostic evidence.",
+    "implemented": true,
+    "workPackage": "WP4E",
+    "priority": "P1",
+    "prdRefs": [
+      "R6"
+    ],
+    "dependsOn": [
+      "F010",
+      "F017"
+    ],
+    "evidence": [
+      "evidence/native-workflow-worker-readiness.json",
+      "evidence/shared-worker-secret-ownership.json",
+      "evidence/native-authored-workflow-execution.json",
+      "evidence/native-authored-workflow-ci-scenario.json",
+      "evidence/ci-provider-replicas-cb884.json",
+      "evidence/ci-browser-metrics-cb884.json",
+      "evidence/native-concurrent-provider-isolation.json"
+    ]
+  },
+  {
+    "id": "F032",
+    "description": "Verify invoice payment through simulated Stripe hosted Checkout and signed real webhook processing with persisted balances and duplicate-payment protection.",
+    "implemented": true,
+    "workPackage": "WP4E",
+    "priority": "P1",
+    "prdRefs": [
+      "R6"
+    ],
+    "dependsOn": [
+      "F031",
+      "F015"
+    ]
+  },
+  {
+    "id": "F033",
+    "description": "Verify QBO connection, company/mapping selection and invoice export through the UI with vendor-side readback and idempotent recovery.",
+    "implemented": true,
+    "workPackage": "WP4E",
+    "priority": "P1",
+    "prdRefs": [
+      "R6"
+    ],
+    "dependsOn": [
+      "F031"
+    ],
+    "evidence": [
+      "evidence/accounting-native-browser.json"
+    ]
+  },
+  {
+    "id": "F034",
+    "description": "Verify Microsoft mailbox and calendar/Teams browser journeys against Graph state; track and resolve or explicitly exclude unsupported SSO and production-override paths.",
+    "implemented": false,
+    "workPackage": "WP4E",
+    "priority": "P1",
+    "prdRefs": [
+      "R6"
+    ],
+    "dependsOn": [
+      "F031",
+      "F019"
+    ]
+  },
+  {
+    "id": "F035",
+    "description": "Verify Xero connection/organization selection and invoice export through the UI with vendor-side readback and correct recovery identity.",
+    "implemented": true,
+    "workPackage": "WP4E",
+    "priority": "P1",
+    "prdRefs": [
+      "R6"
+    ],
+    "dependsOn": [
+      "F031"
+    ],
+    "evidence": [
+      "evidence/accounting-native-browser.json"
+    ]
+  },
+  {
+    "id": "F036",
+    "description": "Provide representative deterministic provider failure/recovery scenarios, record provider configuration in readiness, and gate landed integration journeys on affected candidates and releases.",
+    "implemented": false,
+    "workPackage": "WP4E",
+    "priority": "P1",
+    "prdRefs": [
+      "R6"
+    ],
+    "dependsOn": [
+      "F008",
+      "F024",
+      "F032",
+      "F033",
+      "F034",
+      "F035"
+    ],
+    "evidence": [
+      "evidence/provider-recovery-readiness.json"
+    ]
+  },
+  {
+    "id": "F037",
+    "description": "Maintain explicit emulator capability and protocol-parity evidence for covered provider routes, auth and callbacks, with unsupported behavior surfaced and optional sandbox drift verification tracked.",
+    "implemented": true,
+    "workPackage": "WP4E",
+    "priority": "P1",
+    "prdRefs": [
+      "R6"
+    ],
+    "dependsOn": [
+      "F031"
+    ]
+  }
+]

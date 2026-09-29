@@ -1,0 +1,23 @@
+{
+  "status": "local tests passed; native and workbook verification pending",
+  "schemaVersion": 2,
+  "fieldsAppendedToSummary": [
+    "expected_files",
+    "collected_tests",
+    "execution_gate_status",
+    "tested_sha"
+  ],
+  "behavior": "Current-revision producer evidence supplies declared collection counts and lane gate outcome. Unknown counts are blank, stale/missing evidence is incomplete, unconfigured evidence is unverified, and passing flags without collection cannot produce passing percentages. Job summaries lead with gate/counts.",
+  "validation": {
+    "beforeLog": "/tmp/alga-metrics-counts-before.log",
+    "afterLog": "/tmp/alga-metrics-counts-final.log",
+    "passed": 18,
+    "failed": 0,
+    "skipped": 0
+  },
+  "limits": [
+    "Counts summarize lane-producer evidence; independent execution gates still validate required identities.",
+    "No global readiness, live workbook, browser retry/journey/edition/artifact completeness claimed.",
+    "F024/F025 remain incomplete."
+  ]
+}

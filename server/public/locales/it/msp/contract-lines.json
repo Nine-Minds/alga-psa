@@ -411,7 +411,9 @@
         "missingPlanOrServiceInformation": "Informazioni sul piano o sul servizio mancanti"
       },
       "loading": "Caricamento della configurazione del servizio...",
-      "title": "Modifica la configurazione del servizio"
+      "title": "Modifica la configurazione del servizio",
+      "effectiveFrom": "Modifica di quantità o misurazione con effetto dal",
+      "effectiveHelp": "Le modifiche hanno effetto al confine del periodo di servizio. I periodi precedenti mantengono i propri prezzi e la propria misurazione."
     },
     "tierEditor": {
       "actions": {
@@ -453,7 +455,8 @@
         "defaultRatePerUnit": "Tariffa per unità (utilizzata se il prezzo a scaglioni è disattivato).",
         "minimumUsage": "Unità minime fatturabili per periodo.",
         "unitOfMeasure": "ad esempio GB, Utente, Dispositivo."
-      }
+      },
+      "catalogUnitPrecedence": "L’unità del catalogo ha la precedenza sull’unità di questa configurazione di utilizzo."
     }
   },
   "list": {
@@ -692,7 +695,10 @@
       "allServicesAssociated": "Tutti i servizi disponibili sono già associati a questa riga di contratto.",
       "badges": {
         "billingMismatch": "Mancata corrispondenza della fatturazione",
-        "defaultConfigType": "Predefinito"
+        "defaultConfigType": "Predefinito",
+        "standard": "Standard",
+        "custom": "Personalizzato",
+        "unreviewed": "Non verificato"
       },
       "billingMethod": {
         "fixed": "Prezzo fisso",

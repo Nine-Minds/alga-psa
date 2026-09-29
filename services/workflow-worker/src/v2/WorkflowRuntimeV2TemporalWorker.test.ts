@@ -1,5 +1,6 @@
 import path from 'node:path';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { fileURLToPath } from 'node:url';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const {
   workerCreateMock,
@@ -27,6 +28,9 @@ vi.mock('@temporalio/worker', () => ({
 describe('WorkflowRuntimeV2TemporalWorker', () => {
   beforeEach(() => {
     vi.resetModules();
+    // Production launches this worker from its package directory. Keep that
+    // contract explicit when the same suite runs in the workspace CI lane.
+    vi.spyOn(process, 'cwd').mockReturnValue(fileURLToPath(new URL('../../', import.meta.url)));
     workerCreateMock.mockReset();
     workerRunMock.mockReset();
     workerShutdownMock.mockReset();
@@ -42,9 +46,14 @@ describe('WorkflowRuntimeV2TemporalWorker', () => {
       shutdown: workerShutdownMock,
     });
 
-    delete process.env.WORKFLOW_RUNTIME_V2_TEMPORAL_WORKFLOWS_PATH;
-    delete process.env.WORKFLOW_RUNTIME_V2_TEMPORAL_ACTIVITIES_PATH;
-    delete process.env.WORKFLOW_RUNTIME_V2_TEMPORAL_USE_SOURCE_PATHS;
+    vi.stubEnv('WORKFLOW_RUNTIME_V2_TEMPORAL_WORKFLOWS_PATH', undefined);
+    vi.stubEnv('WORKFLOW_RUNTIME_V2_TEMPORAL_ACTIVITIES_PATH', undefined);
+    vi.stubEnv('WORKFLOW_RUNTIME_V2_TEMPORAL_USE_SOURCE_PATHS', undefined);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllEnvs();
   });
 
   it('starts Temporal polling for the authored queue and shuts down cleanly', async () => {

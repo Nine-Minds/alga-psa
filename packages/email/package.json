@@ -16,6 +16,19 @@
       "types": "./src/providerConfig.ts",
       "import": "./dist/providerConfig.js",
       "require": "./dist/providerConfig.cjs"
+    },
+    "./branding": {
+      "types": "./src/branding/index.ts",
+      "import": "./dist/branding/index.js",
+      "require": "./dist/branding/index.cjs"
+    },
+    "./senderSelection": {
+      "types": "./src/senderSelection.ts",
+      "import": "./src/senderSelection.ts"
+    },
+    "./senderActions": {
+      "types": "./src/senderActions.ts",
+      "import": "./src/senderActions.ts"
     }
   },
   "scripts": {
@@ -28,9 +41,12 @@
     "@alga-psa/db": "*",
     "@alga-psa/event-bus": "*",
     "@alga-psa/shared": "*",
+    "@alga-psa/storage": "*",
+    "@alga-psa/tenancy": "*",
     "@alga-psa/types": "*",
     "axios": "^1.18.0",
-    "nodemailer": "^9.0.3"
+    "nodemailer": "^9.1.1",
+    "@alga-psa/auth": "*"
   },
   "devDependencies": {
     "@types/mailparser": "^3.4.6",

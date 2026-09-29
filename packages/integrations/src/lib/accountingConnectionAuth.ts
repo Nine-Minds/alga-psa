@@ -26,8 +26,8 @@ import {
 } from './accountingOAuthStateStore';
 
 export const ACCOUNTING_CONNECTION_ADMIN_PERMISSION = {
-  resource: 'billing_settings',
-  action: 'update'
+  resource: 'accounting_integrations',
+  action: 'connections_manage'
 } as const;
 
 export const ACCOUNTING_OAUTH_AUTHZ_ERRORS = {
@@ -46,23 +46,36 @@ export interface AccountingOAuthStateClaim {
   tenantId: string;
   userId: string;
   nonce: string;
+  initiatedAt: string;
 }
 
+type AccountingOAuthAuthzFailure = {
+  ok: false;
+  code: AccountingOAuthAuthzErrorCode;
+  message: string;
+};
+
 export type AccountingOAuthAuthzResult =
+  | { ok: true; liveUser: IUserWithRoles; flowInitiatedAt: string }
+  | AccountingOAuthAuthzFailure;
+
+export type AccountingOAuthReauthzResult =
   | { ok: true; liveUser: IUserWithRoles }
-  | { ok: false; code: AccountingOAuthAuthzErrorCode; message: string };
+  | AccountingOAuthAuthzFailure;
 
 function reject(
   code: AccountingOAuthAuthzErrorCode,
   message: string
-): AccountingOAuthAuthzResult {
+): AccountingOAuthAuthzFailure {
   return { ok: false, code, message };
 }
 
 /**
- * The single place the accounting connection-admin policy is defined. Today it
- * resolves to `billing_settings:update`; swap the resource/action here when a
- * narrower permission lands.
+ * The single place the accounting connection-admin policy is defined. It
+ * resolves to the narrow `accounting_integrations:connections_manage`
+ * capability (default Admin-only), so connecting, disconnecting, and
+ * credential administration are gated independently of ordinary
+ * `billing_settings:update` daily work.
  */
 export async function canManageAccountingConnections(
   user: IUser
@@ -85,7 +98,7 @@ export async function getAccountingConnectionSessionUser(): Promise<IUserWithRol
 
 async function verifyLiveUserMatchesClaim(
   claim: Pick<AccountingOAuthStateClaim, 'tenantId' | 'userId'>
-): Promise<AccountingOAuthAuthzResult> {
+): Promise<AccountingOAuthReauthzResult> {
   const liveUser = await getCurrentUserWithRevocationCheck();
   if (!liveUser) {
     return reject(
@@ -130,15 +143,27 @@ async function verifyLiveUserMatchesClaim(
 export async function authorizeAccountingOAuthCallback(
   claim: AccountingOAuthStateClaim
 ): Promise<AccountingOAuthAuthzResult> {
-  const consumed = await consumeAccountingOAuthNonce(claim.provider, claim.nonce);
-  if (!consumed) {
+  const storedState = await consumeAccountingOAuthNonce(claim.provider, claim.nonce);
+  if (!storedState) {
     return reject(
       ACCOUNTING_OAUTH_AUTHZ_ERRORS.STATE_REPLAYED,
       'This connection request was already used. Start the connection again.'
     );
   }
 
-  return verifyLiveUserMatchesClaim(claim);
+  if (
+    storedState.tenantId !== claim.tenantId
+  ) {
+    return reject(
+      ACCOUNTING_OAUTH_AUTHZ_ERRORS.STATE_REPLAYED,
+      'This connection request is no longer valid. Start the connection again.'
+    );
+  }
+
+  const authz = await verifyLiveUserMatchesClaim(claim);
+  return authz.ok
+    ? { ...authz, flowInitiatedAt: storedState.initiatedAt }
+    : authz;
 }
 
 /**
@@ -149,7 +174,7 @@ export async function authorizeAccountingOAuthCallback(
  */
 export async function reauthorizeAccountingOAuthCallback(
   claim: Pick<AccountingOAuthStateClaim, 'tenantId' | 'userId'>
-): Promise<AccountingOAuthAuthzResult> {
+): Promise<AccountingOAuthReauthzResult> {
   return verifyLiveUserMatchesClaim(claim);
 }
 

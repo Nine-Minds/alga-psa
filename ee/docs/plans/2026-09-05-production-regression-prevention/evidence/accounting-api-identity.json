@@ -1,0 +1,41 @@
+{
+  "status": "Accounting API identity repaired; rebuilt HTTP acceptance pending",
+  "nativePriorRevision": {
+    "revision": "3464c562eedd90cccb39a7d57c3a30e64903e9e1",
+    "runId": 34074426143,
+    "jobId": 101597733451,
+    "conclusion": "success",
+    "filesPassed": 279,
+    "filesSkipped": 4,
+    "testsPassed": 2048,
+    "testsSkipped": 49,
+    "durationSeconds": 3739.97,
+    "logLocal": "/tmp/alga-full-integration-3464.log",
+    "limitation": "Existing skips remain coverage gaps, and this does not validate subsequent local commits"
+  },
+  "accounting": {
+    "before": "API403 from missing fixture exports_execute permission; after granting capability, actual built API500 AuthenticationError: User not authenticated",
+    "cause": "Accounting controller passed only tenant context into withAuth server actions, losing the authenticated API-key user",
+    "repair": "All controller operations reuse ApiBaseController.runWithApiKeyContext; explicit permission fixture; seed matching invoices for batch creation and use a different invoice for appended lines",
+    "regression": {
+      "before": {
+        "passed": 1,
+        "failed": 1,
+        "logLocal": "/tmp/alga-accounting-context-before.log"
+      },
+      "after": {
+        "passed": 2,
+        "failed": 0,
+        "logLocal": "/tmp/alga-accounting-context-after.log"
+      },
+      "behavior": "Concurrent authenticated callers retain their own user and tenant through asynchronous actions; caller context is absent after completion"
+    },
+    "httpAfter": "Not verified: temporary source server failed from route-compilation memory exhaustion, including with 8192MB heap. Server handles are terminal; native updated image acceptance pending."
+  },
+  "relatedChecks": {
+    "contact": "Normalized-phone create journey passed against old owned application; retain formatted input and assert canonical output",
+    "approval": "Shared explicit capability helper preserves both passing approval HTTP journeys (2 executed,39 filtered,1.53s)",
+    "types": "Focused controller, tests, helpers and Tailwind configuration pass",
+    "tailwind": "Replaced CommonJS require in ESM config with static imports. Node25 import plus actual PostCSS generation of typography and container-query CSS passed."
+  }
+}

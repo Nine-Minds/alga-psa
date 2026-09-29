@@ -299,10 +299,12 @@ describe('client portal visibility group actions', () => {
       clientId,
       name: 'HR Contacts',
       description: 'Restricted HR boards',
+      ticketScope: 'contact',
       boardIds: [boardIdOne, boardIdTwo],
     });
 
     expect(result).toEqual({ group_id: 'group-new' });
+    expect(insertGroupMock).toHaveBeenCalledWith(expect.objectContaining({ ticket_scope: 'contact' }));
     expect(insertGroupBoardsMock).toHaveBeenCalledWith([
       { tenant: 'tenant-1', group_id: 'group-new', board_id: boardIdOne },
       { tenant: 'tenant-1', group_id: 'group-new', board_id: boardIdTwo },
@@ -375,6 +377,7 @@ describe('client portal visibility group actions', () => {
     await updateClientPortalVisibilityGroup(groupId, {
       name: 'Executives',
       description: 'Exec-only boards',
+      ticketScope: 'contact',
       boardIds: [boardIdThree],
     });
 
@@ -382,6 +385,7 @@ describe('client portal visibility group actions', () => {
       expect.objectContaining({
         name: 'Executives',
         description: 'Exec-only boards',
+        ticket_scope: 'contact',
       })
     );
     expect(deleteBoardsMock).toHaveBeenCalled();

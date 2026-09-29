@@ -56,4 +56,28 @@ describe('ticket origin resolver', () => {
 
     expect(origin).toBe(TICKET_ORIGIN_OTHER);
   });
+
+  it('T025: an origin external link maps through the system originCategory', () => {
+    expect(
+      getTicketOrigin({ ticket_origin: null, origin_link_system: 'email' }),
+    ).toBe(TICKET_ORIGINS.INBOUND_EMAIL);
+    expect(
+      getTicketOrigin({ ticket_origin: null, origin_link_system: 'api' }),
+    ).toBe(TICKET_ORIGINS.API);
+    expect(
+      getTicketOrigin({ ticket_origin: null, origin_link_system: 'client_portal' }),
+    ).toBe(TICKET_ORIGINS.CLIENT_PORTAL);
+  });
+
+  it('T026: custom origin systems classify as other and unknown built-ins fall through', () => {
+    expect(getTicketOrigin({ ticket_origin: null, origin_link_system: 'custom:vendor' })).toBe(
+      TICKET_ORIGIN_OTHER,
+    );
+  });
+
+  it('T027: a structured origin link is authoritative over a stored ticket_origin', () => {
+    expect(
+      getTicketOrigin({ ticket_origin: TICKET_ORIGINS.API, origin_link_system: 'email' }),
+    ).toBe(TICKET_ORIGINS.INBOUND_EMAIL);
+  });
 });

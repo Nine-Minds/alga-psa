@@ -1,0 +1,64 @@
+{
+  "schemaVersion": 1,
+  "scope": "native-project-update-event-status-identity",
+  "status": "native-passed-ci-pending",
+  "baseRevision": "717b616bf96cbb13083f0e3353baff40c08e9040",
+  "workingTreeDirty": true,
+  "sourceSha256": {
+    "server/src/lib/api/services/ProjectService.ts": "00227dbd663a8fe0aa2ba4c25abb48a0b024412e921828f9a1c458ce48830d08",
+    "server/src/test/integration/api/projectService.statusLookup.integration.test.ts": "ca6983a7faaa1d115adc7d968b54114f6404bc7b41a5e71a9bfb490d1dea2721"
+  },
+  "observedCiTrigger": {
+    "runId": "34313560297",
+    "revision": "9ba03b9f3ad6b2e369c561399cd4049d590ac0c4",
+    "diagnosticsArtifactId": "10090677888",
+    "eventType": "PROJECT_UPDATED",
+    "eventTimestamp": "2026-09-09T06:03:57.483Z",
+    "replayedAt": [
+      "2026-09-09T06:07:40.575Z",
+      "2026-09-09T06:08:11.814Z"
+    ],
+    "databaseLogLines": [
+      933,
+      936
+    ],
+    "serverLogLines": [
+      2591,
+      15939
+    ],
+    "queryFailure": "statuses.status_id UUID lookup received in_progress"
+  },
+  "cause": "ProjectService.update mutated its persisted row to the response-friendly status name before building project events.",
+  "change": "Publish from the persisted UUID row; return a separate response clone retaining named-status compatibility.",
+  "validation": {
+    "red": {
+      "passed": 1,
+      "failed": 1,
+      "skipped": 7,
+      "mismatch": "Named-status event changes.status.new was in_progress rather than persisted UUID"
+    },
+    "green": {
+      "passed": 9,
+      "failed": 0,
+      "skipped": 0,
+      "durationSeconds": 14.6
+    },
+    "cases": [
+      "Named status input: response name preserved; persisted UUID emitted in updated and status-changed events",
+      "UUID input: UUID response and event identity preserved",
+      "Repeated same status by name or UUID: no false status-changed event"
+    ],
+    "database": "Unique disposable project_status_test_<uuid>; migrated/seeded through existing helper and dropped after run",
+    "serverTypecheck": {
+      "command": "npm run typecheck --prefix server",
+      "exitCode": 0,
+      "nodeVersion": "25.5.0",
+      "log": "/tmp/alga-current-server-typecheck.log"
+    }
+  },
+  "limitations": [
+    "Real native PostgreSQL service and payload builders; publisher is mocked at delivery boundary, no live Redis or mail-delivery proof.",
+    "Observed CI replay predates upgrade browser actions; delayed delivery across database repointing is a separate harness lifecycle concern.",
+    "No Hocuspocus JWT-secret repair or complete subscriber replay repair included."
+  ]
+}

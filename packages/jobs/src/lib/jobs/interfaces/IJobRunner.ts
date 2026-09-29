@@ -100,10 +100,11 @@ export interface BaseJobData extends Record<string, unknown> {
 export interface IJobRunner {
   /**
    * Register a job handler for a specific job type
+   * Await completion before scheduling; asynchronous registration can fail.
    *
    * @param config Job handler configuration including name and handler function
    */
-  registerHandler<T extends BaseJobData>(config: JobHandlerConfig<T>): void;
+  registerHandler<T extends BaseJobData>(config: JobHandlerConfig<T>): void | Promise<void>;
 
   /**
    * Schedule a job for immediate execution
@@ -150,6 +151,27 @@ export interface IJobRunner {
     interval: string,
     options?: ScheduleJobOptions
   ): Promise<ScheduleJobResult>;
+
+  /**
+   * Schedule a recurring job that is not scoped to a tenant (for example a
+   * global sweep that enumerates tenants itself). Unlike scheduleRecurringJob,
+   * this does not create a tenant-attributed tracker row; the schedule is
+   * persisted durably by the backend and survives restarts. Backends that do
+   * not support global schedules may omit this method.
+   *
+   * @param jobName The name of the job type (must have a registered handler)
+   * @param interval Cron expression (e.g., "0 4 * * *")
+   * @param options Optional schedule id, timezone, and payload
+   */
+  scheduleGlobalRecurringJob?(
+    jobName: string,
+    interval: string,
+    options?: {
+      scheduleId?: string;
+      timezone?: string;
+      data?: Record<string, unknown>;
+    }
+  ): Promise<{ scheduleId: string }>;
 
   /**
    * Cancel a scheduled or running job

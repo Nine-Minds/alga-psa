@@ -34,6 +34,8 @@ function createService(options: {
   algadeskAnnualPriceId?: string | null;
   algapsaPriceId?: string | null;
   algapsaAnnualPriceId?: string | null;
+  proPriceId?: string | null;
+  proAnnualPriceId?: string | null;
   invoiceAmountDue?: number;
   hasCanonicalSubscription?: boolean;
 } = {}) {
@@ -115,6 +117,8 @@ function createService(options: {
     algapsaUserAnnualPriceId: options.algapsaAnnualPriceId === undefined
       ? 'price_algapsa_year'
       : options.algapsaAnnualPriceId,
+    proPriceId: options.proPriceId ?? null,
+    proAnnualPriceId: options.proAnnualPriceId ?? null,
   };
   service.stripe = {
     subscriptions,
@@ -267,11 +271,24 @@ describe('StripeService AlgaDesk to AlgaPSA product upgrade', () => {
     expectNoDestructiveStripeCalls(context);
   });
 
-  it('T037 reports a missing monthly AlgaPSA env var before any Stripe API call', async () => {
+  it('targets STRIPE_PRO_PRICE_ID when no AlgaPSA override is configured', async () => {
+    const context = createService({ algapsaPriceId: null, proPriceId: 'price_pro_month' });
+
+    await expect(context.service.swapSubscriptionToPsaProduct('tenant-product-upgrade'))
+      .resolves.toEqual({ swapped: true });
+
+    expect(context.subscriptions.update).toHaveBeenCalledWith(
+      'sub_product_upgrade',
+      expect.objectContaining({ items: [{ id: context.itemId, price: 'price_pro_month' }] }),
+    );
+    expectNoDestructiveStripeCalls(context);
+  });
+
+  it('T037 reports a missing monthly target price env var before any Stripe API call', async () => {
     const context = createService({ algapsaPriceId: null });
 
     await expect(context.service.swapSubscriptionToPsaProduct('tenant-product-upgrade'))
-      .rejects.toThrow('STRIPE_ALGAPSA_USER_PRICE_ID environment variable is not configured');
+      .rejects.toThrow('STRIPE_PRO_PRICE_ID environment variable is not configured');
 
     expect(context.subscriptions.retrieve).not.toHaveBeenCalled();
     expect(context.subscriptions.update).not.toHaveBeenCalled();

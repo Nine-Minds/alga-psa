@@ -13,6 +13,11 @@ const mockUninstallExtension = vi.fn();
 const mockGetInstallInfo = vi.fn();
 const mockReprovisionExtension = vi.fn();
 
+vi.mock('@alga-psa/ui/lib/i18n/client', async () => {
+  const { createLocaleTranslationMock } = await import('@ee/__tests__/utils/localeTranslationMock');
+  return createLocaleTranslationMock('msp/extensions');
+});
+
 vi.mock('next/navigation', () => ({
   useParams: () => ({ id: 'ext-123' }),
   useRouter: () => ({

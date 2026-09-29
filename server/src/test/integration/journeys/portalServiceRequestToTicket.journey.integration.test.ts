@@ -64,9 +64,8 @@ vi.mock('@alga-psa/db', async () => {
     ...actual,
     createTenantKnex: vi.fn(async () => ({ knex: db, tenant: tenantId })),
     getConnection: vi.fn(async () => db),
-    withTransaction: vi.fn(async (knexOrTrx: Knex, callback: (trx: Knex.Transaction) => Promise<unknown>) =>
-      callback(knexOrTrx as unknown as Knex.Transaction),
-    ),
+    // Comment writes claim attachment drafts under row locks, so the real
+    // helper (which opens a transaction on a plain connection) is kept.
     requireTenantId: vi.fn(async () => tenantId),
     runWithTenant: vi.fn(async (_tenant: string, fn: () => Promise<any>) => fn()),
   };

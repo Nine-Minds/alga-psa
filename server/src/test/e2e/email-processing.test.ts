@@ -157,16 +157,11 @@ describe('Email Processing E2E Tests', () => {
 
       // Assert
       const tickets = await unknownScenario.getTickets();
-      // Should create a ticket even for unknown client
-      expect(tickets.length).toBeGreaterThanOrEqual(0);
-      
-      // Check for any workflow tasks created for manual matching
-      const tasks = await context.db('workflow_tasks')
-        .where('task_definition_type', 'system')
-        .where('system_task_definition_task_type', 'match_email_to_client')
-        .where('created_at', '>', new Date(Date.now() - 60000));
-      
-      console.log(`📋 Manual matching tasks created: ${tasks.length}`);
+      expect(tickets).toHaveLength(1);
+      expect(tickets[0]).toMatchObject({
+        tenant: unknownScenario.tenant.tenant,
+        title: 'Request from Unknown Client',
+      });
     }, 30000);
   });
 });

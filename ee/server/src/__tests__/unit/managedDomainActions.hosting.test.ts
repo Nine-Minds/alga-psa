@@ -64,9 +64,9 @@ describe('managed domain hosting guard', () => {
 
     const { requestManagedEmailDomain } = await import('@/lib/actions/email-actions/managedDomainActions');
 
-    await expect(requestManagedEmailDomain('example.com')).rejects.toMatchObject({
-      code: 'HOSTING_REQUIRED',
-      statusCode: 403,
+    await expect(requestManagedEmailDomain('example.com')).resolves.toEqual({
+      success: false, code: 'feature_unavailable',
+      error: 'Managed email is only available on hosted installs.',
     });
     expect(assertHostedInstallMock).toHaveBeenCalledWith('Managed email');
     expect(createTenantKnexMock).not.toHaveBeenCalled();

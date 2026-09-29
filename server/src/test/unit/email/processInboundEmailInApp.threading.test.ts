@@ -8,7 +8,8 @@ const findTicketByEmailThreadMock = vi.fn();
 const resolveInboundTicketDefaultsMock = vi.fn();
 const resolveEffectiveInboundTicketDefaultsMock = vi.fn();
 const findContactByEmailMock = vi.fn();
-const findClientIdByInboundEmailDomainMock = vi.fn();
+const findInboundEmailDomainMappingMock = vi.fn();
+const createContactForInboundSenderMock = vi.fn();
 const findValidClientPrimaryContactIdMock = vi.fn();
 const findEmailProviderMailboxAddressMock = vi.fn();
 const upsertTicketWatchListRecipientsMock = vi.fn();
@@ -77,7 +78,8 @@ vi.mock('@alga-psa/shared/workflow/actions/emailWorkflowActions', () => ({
   resolveInboundTicketDefaults: (...args: any[]) => resolveInboundTicketDefaultsMock(...args),
   resolveEffectiveInboundTicketDefaults: (...args: any[]) => resolveEffectiveInboundTicketDefaultsMock(...args),
   findContactByEmail: (...args: any[]) => findContactByEmailMock(...args),
-  findClientIdByInboundEmailDomain: (...args: any[]) => findClientIdByInboundEmailDomainMock(...args),
+  findInboundEmailDomainMapping: (...args: any[]) => findInboundEmailDomainMappingMock(...args),
+  createContactForInboundSender: (...args: any[]) => createContactForInboundSenderMock(...args),
   findValidClientPrimaryContactId: (...args: any[]) => findValidClientPrimaryContactIdMock(...args),
   findEmailProviderMailboxAddress: (...args: any[]) => findEmailProviderMailboxAddressMock(...args),
   upsertTicketWatchListRecipients: (...args: any[]) => upsertTicketWatchListRecipientsMock(...args),
@@ -129,7 +131,7 @@ describe('processInboundEmailInApp threaded inbound routing', () => {
       matched_email: 'client@example.com',
       user_type: 'client',
     });
-    findClientIdByInboundEmailDomainMock.mockResolvedValue(null);
+    findInboundEmailDomainMappingMock.mockResolvedValue(null);
     findValidClientPrimaryContactIdMock.mockResolvedValue(null);
     findEmailProviderMailboxAddressMock.mockResolvedValue('support@example.com');
     upsertTicketWatchListRecipientsMock.mockResolvedValue({ updated: true, watchList: [] });
@@ -655,8 +657,29 @@ describe('processInboundEmailInApp threaded inbound routing', () => {
         }
 
         if (table === 'email_sending_logs') {
-          emailLogQueried = true;
-          return makeQueryBuilder({ threadId: 'thread-header-that-should-not-win' });
+          // notificationLoopDetection.ts also queries this table (by
+          // reply_token_hash / status, tenant-scoped) as part of the loop
+          // guard that now runs before any threading decision — that is
+          // expected and does not indicate header threading ran. Only a
+          // query keyed on rfc_message_id is the header-threading lookup
+          // this test cares about (resolveReplyTargetFromOutboundMessageId),
+          // so track that specifically.
+          const builder: any = {
+            select: vi.fn().mockReturnThis(),
+            where: vi.fn((criteria: Record<string, unknown>) => {
+              if (criteria && typeof criteria === 'object' && 'rfc_message_id' in criteria) {
+                emailLogQueried = true;
+              }
+              return builder;
+            }),
+            andWhereRaw: vi.fn().mockReturnThis(),
+            orderBy: vi.fn().mockReturnThis(),
+            // Lacks from_address/to_addresses, so notificationLoopDetection's
+            // sender/recipient correlation can never match it — only the
+            // header-threading path's `{ threadId }` shape is meaningful here.
+            first: vi.fn().mockResolvedValue({ threadId: 'thread-header-that-should-not-win' }),
+          };
+          return builder;
         }
 
         throw new Error(`Unexpected table in unit test: ${table}`);

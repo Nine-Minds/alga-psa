@@ -1,6 +1,9 @@
 import type { IService } from '@/interfaces/billing.interfaces';
 import { normalizeGtin } from '@alga-psa/core';
-import { BaseService, ServiceContext, ListResult, tenantDb } from '@alga-psa/db';
+import { resolveCatalogUnitForCreate, resolveCatalogUnitForUpdate } from '@alga-psa/shared/billingClients/tenantUnitsOfMeasure';
+import { BaseService, ServiceContext, ListResult, tenantDb, withTransaction } from '@alga-psa/db';
+import { splitServicePricesByEffectiveDate } from '@alga-psa/billing/models/service';
+import { resolveCatalogTaxRateIdForCreate } from '@alga-psa/shared/billingClients/defaultTaxRate';
 import { ListOptions } from '../controllers/types';
 import { publishServiceCatalogSearchEvent } from './ServiceCatalogService';
 import { ConflictError, NotFoundError } from '../middleware/apiMiddleware';
@@ -159,10 +162,15 @@ export class ProductCatalogService extends BaseService<IService> {
       pricesByService[price.service_id].push(price);
     }
 
-    let products = productsData.map((service: any) => ({
-      ...service,
-      prices: pricesByService[service.service_id] || []
-    }));
+    // Current price per currency in `prices`; future-dated rows in
+    // `scheduled_prices` (same split as the service catalog and the model read
+    // paths) so an API consumer cannot read a not-yet-effective rate.
+    let products = productsData.map((service: any) => {
+      const { current, scheduled } = splitServicePricesByEffectiveDate(
+        pricesByService[service.service_id] || [],
+      );
+      return { ...service, prices: current, scheduled_prices: scheduled };
+    });
 
     // Post-filter by is_license if specified
     if (filters.is_license !== undefined) {
@@ -198,7 +206,8 @@ export class ProductCatalogService extends BaseService<IService> {
       .where('service_id', id)
       .select('*');
 
-    return { ...product, prices } as IService;
+    const { current, scheduled } = splitServicePricesByEffectiveDate(prices);
+    return { ...product, prices: current, scheduled_prices: scheduled } as IService;
   }
 
   async create(data: Partial<IService>, context: ServiceContext): Promise<IService> {
@@ -228,42 +237,60 @@ export class ProductCatalogService extends BaseService<IService> {
       costCurrency = billingSettings?.default_currency_code || 'USD';
     }
 
-    const productData = {
-      ...rest,
-      cost_currency: costCurrency,
-      item_kind: 'product',
-      billing_method: 'usage',
-      unit_of_measure: unit_of_measure ?? 'each',
-      tenant,
-      default_rate: typeof rest.default_rate === 'string'
-        ? parseFloat(rest.default_rate) || 0
-        : rest.default_rate,
-      tax_rate_id: rest.tax_rate_id || null,
-      category_id: rest.category_id ?? null,
-      barcode: normalizeGtin(rest.barcode ?? '') || null,
-    };
+    // Resolve inherited defaults and units in the transaction, holding the
+    // documented rate/region locks until the catalog row is persisted.
+    // Publication happens only after commit so search consumers can read it.
+    const createdResult = await withTransaction(knex, async (trx) => {
+      const productData = {
+        ...rest,
+        cost_currency: costCurrency,
+        item_kind: 'product',
+        billing_method: 'usage',
+        ...(await resolveCatalogUnitForCreate(trx, tenant, { unit_of_measure, unit_code: rest.unit_code, item_kind: 'product' })),
+        tenant,
+        default_rate: typeof rest.default_rate === 'string'
+          ? parseFloat(rest.default_rate) || 0
+          : rest.default_rate,
+        // Omitted inherits the tenant default; explicit null stays non-taxable.
+        tax_rate_id: await resolveCatalogTaxRateIdForCreate(
+          trx,
+          tenant,
+          rest.tax_rate_id,
+          undefined,
+          { lock: true },
+        ),
+        category_id: rest.category_id ?? null,
+        barcode: normalizeGtin(rest.barcode ?? '') || null,
+      };
 
-    let created: IService;
-    try {
-      [created] = await tenantDb(knex, tenant).table<IService>('service_catalog')
-        .insert(productData)
-        .returning('*');
-    } catch (error) {
-      rethrowProductUniqueViolation(error);
-    }
+      let created: IService;
+      try {
+        [created] = await tenantDb(trx, tenant).table<IService>('service_catalog')
+          .insert(productData)
+          .returning('*');
+      } catch (error) {
+        rethrowProductUniqueViolation(error);
+      }
 
-    // Set prices if provided
-    if (prices && prices.length > 0) {
-      await this.setServicePrices(knex, created.service_id, tenant, prices);
-    }
+      // Set prices if provided
+      if (prices && prices.length > 0) {
+        await this.setServicePrices(trx, created.service_id, tenant, prices);
+      }
 
-    await publishServiceCatalogSearchEvent('SERVICE_CATALOG_CREATED', tenant, created.service_id, {
-      userId: context.userId,
-      itemKind: 'product',
-      changedFields: Object.keys(productData),
+      return {
+        serviceId: created.service_id,
+        itemKind: 'product' as const,
+        changedFields: Object.keys(productData),
+      };
     });
 
-    return this.getById(created.service_id, context) as Promise<IService>;
+    await publishServiceCatalogSearchEvent('SERVICE_CATALOG_CREATED', tenant, createdResult.serviceId, {
+      userId: context.userId,
+      itemKind: createdResult.itemKind,
+      changedFields: createdResult.changedFields,
+    });
+
+    return this.getById(createdResult.serviceId, context) as Promise<IService>;
   }
 
   async update(id: string, data: Partial<IService>, context: ServiceContext): Promise<IService> {
@@ -282,6 +309,7 @@ export class ProductCatalogService extends BaseService<IService> {
     const { prices, billing_method: _billing_method, service_type_name: _, ...updateData } = data as any;
     const normalizedUpdateData = {
       ...updateData,
+      ...(await resolveCatalogUnitForUpdate(knex, tenant, updateData)),
       ...(updateData.barcode !== undefined
         ? { barcode: normalizeGtin(updateData.barcode ?? '') || null }
         : {}),
@@ -333,9 +361,12 @@ export class ProductCatalogService extends BaseService<IService> {
     tenant: string,
     prices: Array<{ currency_code: string; rate: number }>
   ): Promise<void> {
-    // Delete existing prices and insert new ones
+    // Replace the currently-effective window only; leave scheduled future rows
+    // in place so an ordinary product save cannot revoke a scheduled increase.
+    const today = new Date().toISOString().slice(0, 10);
     await tenantDb(knex, tenant).table('service_prices')
       .where('service_id', serviceId)
+      .where('effective_date', '<=', today)
       .delete();
 
     if (prices.length > 0) {
@@ -344,7 +375,8 @@ export class ProductCatalogService extends BaseService<IService> {
           service_id: serviceId,
           tenant,
           currency_code: p.currency_code,
-          rate: p.rate
+          rate: p.rate,
+          effective_date: '1970-01-01'
         }))
       );
     }

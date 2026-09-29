@@ -20,7 +20,21 @@ type ReturnedActionError = ActionMessageError | ActionPermissionError;
 const isReturnedActionError = (value: unknown): value is ReturnedActionError =>
   isActionMessageError(value) || isActionPermissionError(value);
 
-export function TaxDelegationBanner(): React.JSX.Element | null {
+interface TaxDelegationBannerProps {
+  /**
+   * Revision bumped by the shared parent when tenant tax settings change
+   * elsewhere (e.g. TaxSourceSettings switching back to internal). When it
+   * changes, this component re-evaluates whether the banner should appear.
+   */
+  settingsRevision?: number;
+  /** Notifies the shared parent that this component changed tenant tax settings. */
+  onSettingsChanged?: () => void;
+}
+
+export function TaxDelegationBanner({
+  settingsRevision = 0,
+  onSettingsChanged,
+}: TaxDelegationBannerProps): React.JSX.Element | null {
   const { t } = useTranslation('msp/billing-settings');
   const [adapterLabel, setAdapterLabel] = React.useState<string | null>(null);
   const [shouldShow, setShouldShow] = React.useState(false);
@@ -36,6 +50,7 @@ export function TaxDelegationBanner(): React.JSX.Element | null {
         setShouldShow(state.shouldShow);
         setAdapterLabel(state.adapterLabel);
       } catch (err) {
+        if (cancelled) return;
         handleError(err, t('tax.delegation.banner.errors.loadState', { defaultValue: 'Unable to load tax delegation recommendation state.' }));
       } finally {
         if (!cancelled) setLoaded(true);
@@ -44,7 +59,7 @@ export function TaxDelegationBanner(): React.JSX.Element | null {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [settingsRevision, t]);
 
   const handleEnable = async () => {
     setBusy('enable');
@@ -66,6 +81,7 @@ export function TaxDelegationBanner(): React.JSX.Element | null {
           : t('tax.delegation.banner.toast.enabled', { defaultValue: 'External tax calculation enabled.' }),
       );
       setShouldShow(false);
+      onSettingsChanged?.();
     } catch (err) {
       handleError(err, t('tax.delegation.errors.enableFailed', { defaultValue: 'Failed to enable external tax calculation.' }));
     } finally {

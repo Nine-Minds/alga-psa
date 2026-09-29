@@ -54,6 +54,7 @@ export interface AuthorizationRecord {
   assignedUserIds?: string[];
   clientId?: string | null;
   boardId?: string | null;
+  contactId?: string | null;
   teamIds?: string[];
   [key: string]: unknown;
 }
@@ -64,7 +65,16 @@ export interface AuthorizationMutationInput {
   next?: Record<string, unknown>;
 }
 
+/** Trusted, resolved portal scope; null context means resolution failed (deny). */
+export interface ContactVisibilityScope {
+  clientId: string;
+  contactId: string;
+  visibleBoardIds: string[] | null;
+  effectiveTicketScope: 'client' | 'contact';
+}
+
 export interface AuthorizationEvaluationInput {
+  contactVisibility?: ContactVisibilityScope | null;
   subject: AuthorizationSubject;
   resource: AuthorizationResourceRef;
   record?: AuthorizationRecord;
@@ -106,7 +116,8 @@ export type RelationshipTemplateKey =
   | 'client_portfolio'
   | 'selected_clients'
   | 'same_team'
-  | 'selected_boards';
+  | 'selected_boards'
+  | 'contact_visibility';
 
 export interface RelationshipRule {
   template: RelationshipTemplateKey;

@@ -1,5 +1,7 @@
 'use server';
 
+
+import { resolveUnitOfMeasure, withUnitCode } from '@alga-psa/core/unitOfMeasure';
 import { tenantDb, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
@@ -9,6 +11,7 @@ import { withAuth } from '@alga-psa/auth/withAuth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { actionError, permissionError } from '@alga-psa/ui/lib/errorHandling';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import { emitDateDomainEventOnce, normalizeDateDomainKeyDate } from '@alga-psa/event-bus/workflow/dateDomainEvents';
 import {
   buildContractCreatedPayload,
   buildContractRenewalUpcomingPayload,
@@ -146,6 +149,11 @@ export type ClientContractWizardSubmission = {
   contract_name: string;
   description?: string;
   client_id: string;
+  /**
+   * Billing profile this contract bills to (step 3 of the attribution chain).
+   * Omitted / null keeps the client-default fallback.
+   */
+  billing_profile_id?: string | null;
   start_date: string;
   renewal_mode?: 'none' | 'manual' | 'auto';
   notice_period_days?: number;
@@ -766,7 +774,7 @@ export const createContractTemplateFromWizard = withAuth(async (
         await tenantDb(trx, tenant).table('contract_template_line_service_usage_config').insert({
           tenant,
           config_id: configId,
-          unit_of_measure: service.unit_of_measure || 'unit',
+          ...withUnitCode({ unit_of_measure: service.unit_of_measure || resolveUnitOfMeasure({ fallback: 'C62' }).label }),
           enable_tiered_pricing: false,
           minimum_usage: 0,
           base_rate: normalizedUnitRate ?? null,
@@ -829,6 +837,7 @@ export const createClientContractFromWizard = withAuth(async (
   try {
   let createdForWorkflow: {
     contractId: string;
+    clientContractId: string;
     clientId: string;
     createdAt: string;
     startDate: string;
@@ -1203,6 +1212,7 @@ export const createClientContractFromWizard = withAuth(async (
         contract_id: contractId,
         display_order: nextDisplayOrder,
         custom_rate: null,
+        rate_provenance: 'inherited',
         billing_timing: recurringAuthoringPolicy.billingTiming,
         cadence_owner: recurringAuthoringPolicy.cadenceOwner,
         is_template: false,
@@ -1225,8 +1235,13 @@ export const createClientContractFromWizard = withAuth(async (
           service_id: service.service_id,
         });
 
-        let serviceBaseRate = 0;
+        // The operator's explicit rate is a snapshot (`custom`); absent one the
+        // member is left rate-less (`inherited`) so a later catalog change
+        // reaches it. Snapshotting the catalog here would shadow it forever.
+        let serviceBaseRate: number | null = null;
+        let serviceBaseProvenance: 'custom' | 'inherited' = 'inherited';
         if (submission.fixed_base_rate) {
+          serviceBaseProvenance = 'custom';
           const share = quantity / totalQuantity;
           const provisionalValue = submission.fixed_base_rate * share;
           if (index === filteredFixedServices.length - 1) {
@@ -1236,11 +1251,19 @@ export const createClientContractFromWizard = withAuth(async (
             allocated = Math.round(allocated + serviceBaseRate);
           }
         } else {
-          serviceBaseRate =
-            firstPositiveRateInCents(
-              fixedModeDefaultsByServiceId.get(service.service_id),
-              serviceCatalogById.get(service.service_id)?.default_rate
-            ) ?? 0;
+          // A configured fixed-mode default is a chosen rate for this service,
+          // and the rate resolver does not read that table — so it must be
+          // preserved as a custom member rate or it is silently lost. The
+          // legacy currency-untagged catalog `default_rate` is deliberately NOT
+          // snapshotted: absent a mode default the line follows the effective
+          // `service_prices` catalog.
+          const modeDefault = firstPositiveRateInCents(
+            fixedModeDefaultsByServiceId.get(service.service_id),
+          );
+          if (modeDefault !== undefined) {
+            serviceBaseRate = modeDefault;
+            serviceBaseProvenance = 'custom';
+          }
         }
 
         await planServiceConfigService.createConfiguration(
@@ -1252,14 +1275,16 @@ export const createClientContractFromWizard = withAuth(async (
             tenant,
             custom_rate: undefined,
           },
-          { base_rate: serviceBaseRate ?? 0 }  // Already in cents from frontend
+          { base_rate: serviceBaseRate, rate_provenance: serviceBaseProvenance }
         );
       }
 
       const fixedConfigModel = new ContractLineFixedConfig(trx, tenant);
       await fixedConfigModel.upsert({
         contract_line_id: planId,
-        base_rate: submission.fixed_base_rate ?? 0,  // Already in cents from frontend
+        // No operator rate means "follow the catalog" (null + inherited), not a
+        // stored zero that would shadow it forever. Already in cents when set.
+        base_rate: submission.fixed_base_rate ?? null,
         enable_proration: recurringAuthoringPolicy.enableProration,
         billing_cycle_alignment: recurringAuthoringPolicy.billingCycleAlignment,
         tenant,
@@ -1414,7 +1439,7 @@ export const createClientContractFromWizard = withAuth(async (
         });
 
         await planServiceConfigService.upsertPlanServiceUsageConfiguration(usagePlanId, service.service_id, {
-          unit_of_measure: service.unit_of_measure || 'unit',
+          unit_of_measure: service.unit_of_measure || resolveUnitOfMeasure({ fallback: 'C62' }).label,
           unit_rate: normalizedUnitRate,
           enable_tiered_pricing: false,
         });
@@ -1468,7 +1493,7 @@ export const createClientContractFromWizard = withAuth(async (
       }
     }
 
-    await createClientContractAssignment(trx, tenant, {
+    const clientContractAssignment = await createClientContractAssignment(trx, tenant, {
       client_id: submission.client_id,
       contract_id: contractId,
       start_date: startDate,
@@ -1495,6 +1520,7 @@ export const createClientContractFromWizard = withAuth(async (
       po_required: submission.po_required ?? false,
       po_number: submission.po_number ?? null,
       po_amount: submission.po_amount ?? null,
+      billing_profile_id: submission.billing_profile_id ?? null,
     });
 
     if (!isDraft) {
@@ -1507,6 +1533,7 @@ export const createClientContractFromWizard = withAuth(async (
 
     createdForWorkflow = {
       contractId,
+      clientContractId: clientContractAssignment.client_contract_id,
       clientId: submission.client_id,
       createdAt: now.toISOString(),
       startDate,
@@ -1525,7 +1552,8 @@ export const createClientContractFromWizard = withAuth(async (
     renewalForWorkflow = endDate
       ? computeContractRenewalUpcoming({
           renewalAt: endDate,
-          decisionDueAt: decisionDueAtForWorkflow ?? undefined,
+          decisionDueAt: clientContractAssignment.decision_due_date ?? decisionDueAtForWorkflow ?? undefined,
+          renewalCycleKey: clientContractAssignment.renewal_cycle_key ?? undefined,
           now: now.toISOString(),
         })
       : null;
@@ -1545,6 +1573,7 @@ export const createClientContractFromWizard = withAuth(async (
   if (createdForWorkflow) {
     const wfData: {
       contractId: string;
+      clientContractId: string;
       clientId: string;
       createdAt: string;
       startDate: string;
@@ -1581,13 +1610,15 @@ export const createClientContractFromWizard = withAuth(async (
         daysUntilDecisionDue: number;
         renewalCycleKey?: string;
       } = renewalForWorkflow as any;
-      await publishWorkflowEvent({
-        eventType: 'CONTRACT_RENEWAL_UPCOMING',
+      await emitDateDomainEventOnce(knex, tenant, {
+        eventType: 'CONTRACT_RENEWAL_UPCOMING', entityId: wfData.clientContractId,
+        cycleKey: renewal.renewalCycleKey ?? normalizeDateDomainKeyDate(renewal.decisionDueDate ?? renewal.renewalAt),
+        occursOn: normalizeDateDomainKeyDate(renewal.decisionDueDate),
         payload: buildContractRenewalUpcomingPayload({
           contractId: wfData.contractId,
           clientId: wfData.clientId,
-          renewalAt: renewal.renewalAt,
-          decisionDueDate: renewal.decisionDueDate,
+          renewalAt: normalizeDateDomainKeyDate(renewal.renewalAt),
+          decisionDueDate: normalizeDateDomainKeyDate(renewal.decisionDueDate),
           daysUntilRenewal: renewal.daysUntilRenewal,
           daysUntilDecisionDue: renewal.daysUntilDecisionDue,
           renewalCycleKey: renewal.renewalCycleKey,
@@ -1599,7 +1630,6 @@ export const createClientContractFromWizard = withAuth(async (
             ? { actorType: 'USER' as const, actorUserId: wfData.actorUserId }
             : undefined,
         },
-        idempotencyKey: `contract_renewal_upcoming:${wfData.contractId}:${wfData.clientId}:${renewal.renewalCycleKey ?? renewal.decisionDueDate ?? renewal.renewalAt}`,
       });
     }
   }
@@ -1826,8 +1856,7 @@ export const getContractTemplateSnapshotForClientWizard = withAuth(async (
           unit_rate: unitRateCents,
           unit_of_measure:
             usageConfig?.unit_of_measure ||
-            service.unit_of_measure ||
-            'unit',
+            service.unit_of_measure || resolveUnitOfMeasure({ fallback: 'C62' }).label,
           bucket_overlay:
             bucketConfig && isBucketConfig(bucketConfig)
               ? {
@@ -1863,6 +1892,7 @@ export const getContractTemplateSnapshotForClientWizard = withAuth(async (
 
 export type DraftContractWizardData = {
   client_id: string;
+  billing_profile_id?: string | null;
   contract_name: string;
   start_date: string;
   end_date?: string;
@@ -2105,8 +2135,7 @@ export const getDraftContractForResume = withAuth(async (
           unit_rate: unitRateCents,
           unit_of_measure:
             usageConfig?.unit_of_measure ||
-            service.unit_of_measure ||
-            'unit',
+            service.unit_of_measure || resolveUnitOfMeasure({ fallback: 'C62' }).label,
           bucket_overlay:
             bucketConfig && isBucketConfig(bucketConfig)
               ? {
@@ -2150,6 +2179,7 @@ export const getDraftContractForResume = withAuth(async (
 
   return {
     client_id: clientContract.client_id,
+    billing_profile_id: clientContract.billing_profile_id ?? null,
     contract_name: contract.contract_name,
     start_date: startDate,
     end_date: normalizeDateOnly(clientContract.end_date) ?? undefined,

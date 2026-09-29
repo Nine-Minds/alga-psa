@@ -1,7 +1,7 @@
 /** @vitest-environment jsdom */
 
 import React from 'react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 
 const signInMock = vi.fn(async () => null);
@@ -26,12 +26,26 @@ const localStorageMock = {
   },
 };
 
+type ProviderId = 'google' | 'azure-ad' | 'keycloak';
+
+function providerRegistry(ids: ProviderId[] = ['google', 'azure-ad', 'keycloak']) {
+  return Object.fromEntries(ids.map((id) => [id, { id, type: 'oidc' }]));
+}
+
 function buildFetchMock(options: {
-  discoverProviders: Array<'google' | 'azure-ad'>;
+  discoverProviders: ProviderId[];
+  registeredProviders?: ProviderId[];
   resolveOk?: boolean;
 }) {
   return vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = String(input);
+
+    if (url === '/api/auth/providers') {
+      return {
+        ok: true,
+        json: async () => providerRegistry(options.registeredProviders),
+      };
+    }
 
     if (url === '/api/auth/msp/sso/discover') {
       return {
@@ -51,8 +65,16 @@ function buildFetchMock(options: {
   });
 }
 
+const savedEdition = process.env.NEXT_PUBLIC_EDITION;
+
 describe('MSP SSO provider buttons', () => {
+  afterAll(() => {
+    if (savedEdition === undefined) delete process.env.NEXT_PUBLIC_EDITION;
+    else process.env.NEXT_PUBLIC_EDITION = savedEdition;
+  });
+
   beforeEach(() => {
+    process.env.NEXT_PUBLIC_EDITION = 'enterprise';
     vi.clearAllMocks();
     localStorageMock.clear();
     Object.defineProperty(window, 'localStorage', {
@@ -69,18 +91,21 @@ describe('MSP SSO provider buttons', () => {
 
     expect(screen.getByRole('button', { name: 'Sign in with Google' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Sign in with Microsoft' })).toBeDisabled();
-    expect(fetchMock).not.toHaveBeenCalled();
+    expect(fetchMock).not.toHaveBeenCalledWith('/api/auth/msp/sso/discover', expect.anything());
 
     rerender(<SsoProviderButtons callbackUrl="/msp" email="not-an-email" />);
 
     expect(screen.getByRole('button', { name: 'Sign in with Google' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Sign in with Microsoft' })).toBeDisabled();
-    expect(fetchMock).not.toHaveBeenCalled();
+    expect(fetchMock).not.toHaveBeenCalledWith('/api/auth/msp/sso/discover', expect.anything());
   });
 
   it('T032: remains disabled while discovery request is in flight', async () => {
     let resolveDiscovery: ((value: unknown) => void) | null = null;
     const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      if (String(input) === '/api/auth/providers') {
+        return { ok: true, json: async () => providerRegistry() };
+      }
       if (String(input) !== '/api/auth/msp/sso/discover') {
         throw new Error(`Unexpected URL: ${String(input)}`);
       }
@@ -140,7 +165,7 @@ describe('MSP SSO provider buttons', () => {
 
     fireEvent.click(microsoftButton);
 
-    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock.mock.calls.filter(([url]) => String(url) === '/api/auth/msp/sso/discover')).toHaveLength(1);
     expect(fetchMock).not.toHaveBeenCalledWith(
       '/api/auth/msp/sso/resolve',
       expect.anything()
@@ -212,6 +237,101 @@ describe('MSP SSO provider buttons', () => {
         })
       )
     );
+  });
+
+  it('renders a Keycloak button that follows discovery and starts the keycloak provider', async () => {
+    const fetchMock = buildFetchMock({ discoverProviders: ['keycloak'] });
+    vi.stubGlobal('fetch', fetchMock as any);
+
+    render(<SsoProviderButtons callbackUrl="/msp" email="user@example.com" />);
+
+    const keycloakButton = await screen.findByRole('button', { name: 'Sign in with Keycloak' });
+    await waitFor(() => expect(keycloakButton).not.toBeDisabled());
+    expect(keycloakButton.querySelector('svg')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Sign in with Google' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Sign in with Microsoft' })).toBeDisabled();
+
+    fireEvent.click(keycloakButton);
+
+    await waitFor(() => expect(signInMock).toHaveBeenCalledWith(
+      'keycloak',
+      { callbackUrl: '/msp' },
+      expect.objectContaining({ state: expect.any(String) })
+    ));
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/auth/msp/sso/resolve',
+      expect.objectContaining({
+        body: JSON.stringify({
+          provider: 'keycloak',
+          email: 'user@example.com',
+          publicWorkstation: false,
+          callbackUrl: '/msp',
+        }),
+      })
+    );
+    expect(window.localStorage.getItem('msp_sso_last_provider')).toBe('keycloak');
+  });
+
+  it('hides providers NextAuth has not registered, so unconfigured providers never render a dead button', async () => {
+    const fetchMock = buildFetchMock({ discoverProviders: ['google'], registeredProviders: ['google', 'credentials' as ProviderId] });
+    vi.stubGlobal('fetch', fetchMock as any);
+
+    render(<SsoProviderButtons callbackUrl="/msp" email="user@example.com" />);
+
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Sign in with Google' })).not.toBeDisabled());
+    expect(screen.queryByRole('button', { name: 'Sign in with Microsoft' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Sign in with Keycloak' })).toBeNull();
+  });
+
+  it('shows a tenant-configured provider that discovery offers even though NextAuth has not registered it app-wide', async () => {
+    const fetchMock = buildFetchMock({ discoverProviders: ['keycloak'], registeredProviders: ['google', 'credentials' as ProviderId] });
+    vi.stubGlobal('fetch', fetchMock as any);
+
+    render(<SsoProviderButtons callbackUrl="/msp" email="user@example.com" />);
+
+    const keycloakButton = await screen.findByRole('button', { name: 'Sign in with Keycloak' });
+    await waitFor(() => expect(keycloakButton).not.toBeDisabled());
+    expect(screen.getByRole('button', { name: 'Sign in with Google' })).toBeDisabled();
+    expect(screen.queryByRole('button', { name: 'Sign in with Microsoft' })).toBeNull();
+  });
+
+  it('renders nothing on CE when Keycloak is neither registered nor discovered', async () => {
+    process.env.NEXT_PUBLIC_EDITION = 'community';
+    const fetchMock = buildFetchMock({ discoverProviders: [], registeredProviders: ['credentials' as ProviderId] });
+    vi.stubGlobal('fetch', fetchMock as any);
+
+    const { container } = render(<SsoProviderButtons callbackUrl="/msp" email="user@example.com" />);
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('/api/auth/msp/sso/discover', expect.anything()));
+    await waitFor(() => expect(container.innerHTML).toBe(''));
+  });
+
+  it('Community Edition renders only the Keycloak button and stacks buttons full-width', async () => {
+    process.env.NEXT_PUBLIC_EDITION = 'community';
+    const fetchMock = buildFetchMock({ discoverProviders: ['keycloak'] });
+    vi.stubGlobal('fetch', fetchMock as any);
+
+    const { container } = render(<SsoProviderButtons callbackUrl="/msp" email="user@example.com" />);
+
+    const keycloakButton = await screen.findByRole('button', { name: 'Sign in with Keycloak' });
+    await waitFor(() => expect(keycloakButton).not.toBeDisabled());
+    expect(screen.queryByRole('button', { name: 'Sign in with Google' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Sign in with Microsoft' })).toBeNull();
+    expect(container.firstElementChild?.className).toContain('flex-col');
+    expect(keycloakButton.className).toContain('w-full');
+  });
+
+  it('Community Edition client portal renders no SSO buttons and skips discovery', () => {
+    process.env.NEXT_PUBLIC_EDITION = 'community';
+    const fetchMock = buildFetchMock({ discoverProviders: ['keycloak'] });
+    vi.stubGlobal('fetch', fetchMock as any);
+
+    const { container } = render(
+      <SsoProviderButtons callbackUrl="/client-portal" email="user@example.com" authSurface="client_portal" />
+    );
+
+    expect(container.innerHTML).toBe('');
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it('T037: remembered provider is preselected only when still eligible', async () => {

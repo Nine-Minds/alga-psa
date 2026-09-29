@@ -28,21 +28,18 @@ type InsertBuilder = {
 };
 
 function createKnexHarness(options: {
-  tenantColumn?: 'tenant' | 'tenant_id';
   existingRow?: Record<string, unknown> | undefined;
 }) {
-  const tenantColumn = options.tenantColumn ?? 'tenant';
   const firstMock = vi.fn(async () => options.existingRow);
   const updateMock = vi.fn(async () => 1);
   const insertFallbackMock = vi.fn(async () => 1);
   const transactionMock = vi.fn(async (callback: (trx: any) => Promise<void>) => {
-    const trx = vi.fn((_table: string) => ({
-      where: vi.fn(() => ({
-        first: firstMock,
-        update: updateMock,
-      })),
-      insert: insertFallbackMock,
-    })) as any;
+    const trx = vi.fn((_table: string) => {
+      const query = {
+        where: vi.fn(() => query), first: firstMock, update: updateMock, insert: insertFallbackMock,
+      };
+      return query;
+    }) as any;
 
     await callback(trx);
   });
@@ -56,14 +53,10 @@ function createKnexHarness(options: {
     onConflict: onConflictMock,
   }));
 
-  const schemaHasColumnMock = vi.fn(async (_table: string, column: string) => column === tenantColumn);
-
-  const knexMock = vi.fn((_table: string) => ({
-    insert: insertMock,
-  })) as any;
-  knexMock.schema = {
-    hasColumn: schemaHasColumnMock,
-  };
+  const knexMock = vi.fn((_table: string) => {
+    const query = { where: vi.fn(() => query), insert: insertMock };
+    return query;
+  }) as any;
   knexMock.transaction = transactionMock;
 
   createTenantKnexMock.mockResolvedValue({ knex: knexMock, tenant: 'tenant-123' });
@@ -74,7 +67,6 @@ function createKnexHarness(options: {
     insertFallbackMock,
     insertMock,
     onConflictMock,
-    schemaHasColumnMock,
     transactionMock,
   };
 }
@@ -111,16 +103,15 @@ describe('requestManagedEmailDomain conflict fallback', () => {
 
   it('inserts a new email domain row when ON CONFLICT is unavailable and no row exists', async () => {
     const harness = createKnexHarness({
-      tenantColumn: 'tenant_id',
       existingRow: undefined,
     });
 
     const { requestManagedEmailDomain } = await import('@/lib/actions/email-actions/managedDomainActions');
     await requestManagedEmailDomain('example.com');
 
-    expect(harness.onConflictMock).toHaveBeenCalledWith(['tenant_id', 'domain_name']);
+    expect(harness.onConflictMock).toHaveBeenCalledWith(['tenant', 'domain_name']);
     expect(harness.insertFallbackMock).toHaveBeenCalledWith(expect.objectContaining({
-      tenant_id: 'tenant-123',
+      tenant: 'tenant-123',
       domain_name: 'example.com',
       status: 'pending',
     }));

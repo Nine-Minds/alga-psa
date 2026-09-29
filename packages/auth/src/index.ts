@@ -103,7 +103,7 @@ export { default as TwoFactorInput } from './components/TwoFA';
 
 // Services
 export { PasswordResetService } from './services/PasswordResetService';
-export { ApiKeyService } from './services/apiKeyService';
+export { ApiKeyService, shouldTouchApiKeyLastUsed, API_KEY_LAST_USED_WRITE_INTERVAL_MS } from './services/apiKeyService';
 
 // Rate limiting
 export * from './lib/security/rateLimiting';

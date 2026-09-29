@@ -52,10 +52,7 @@ export class ApiTestClient {
   private config: ApiTestConfig;
 
   constructor(config: ApiTestConfig) {
-    this.config = {
-      baseUrl: config.baseUrl || 'http://localhost:3000',
-      ...config
-    };
+    this.config = { ...config };
   }
 
   /**
@@ -119,27 +116,25 @@ export class ApiTestClient {
   ): Promise<ApiTestResponse<T>> {
     const url = `${this.config.baseUrl}${path}`;
     
-    const headers: Record<string, string> = {
-      ...this.config.headers,
-      ...options?.headers as any
-    };
+    const headers = new Headers(this.config.headers);
+    new Headers(options?.headers).forEach((value, name) => headers.set(name, value));
 
     // Add API key if set
     if (this.config.apiKey) {
-      headers['x-api-key'] = this.config.apiKey;
+      headers.set('x-api-key', this.config.apiKey);
     }
 
     // Add tenant ID if set
     // Add content-type for body requests
-    if (body && !headers['content-type']) {
-      headers['content-type'] = 'application/json';
+    if (body && !headers.has('content-type')) {
+      headers.set('content-type', 'application/json');
     }
 
     const response = await fetch(url, {
+      ...options,
       method,
       headers,
-      body: body ? JSON.stringify(body) : undefined,
-      ...options
+      body: body ? JSON.stringify(body) : undefined
     });
 
     const responseData = await response.json().catch(() => null);

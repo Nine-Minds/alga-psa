@@ -9,12 +9,12 @@ type JoinHelpers = {
 
 const eventHandlers = new Map<string, Array<{ channel: string; handler: (event: any) => Promise<void> }>>();
 
-const loggerMock = {
+const loggerMock = vi.hoisted(() => ({
   info: vi.fn(),
   warn: vi.fn(),
   error: vi.fn(),
   debug: vi.fn()
-};
+}));
 
 vi.mock('@alga-psa/core/logger', () => ({
   __esModule: true,

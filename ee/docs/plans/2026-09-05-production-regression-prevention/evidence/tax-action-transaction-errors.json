@@ -1,0 +1,33 @@
+{
+  "scope": "Tax action transaction error boundary regression",
+  "baseRevision": "7a3897ff1f",
+  "workingTreeDirty": true,
+  "before": "Overlap rejection escapes create action catch instead of returning actionError.",
+  "after": {
+    "passed": 29,
+    "failed": 0,
+    "skipped": 0,
+    "durationSeconds": 1.44
+  },
+  "fix": "Await create/update withTransaction inside try so asynchronous rejection reaches existing error mapper.",
+  "coverage": [
+    "Real nested transaction successful create/update and persisted readback",
+    "Overlap returns actionError and localized messageKey",
+    "Rejected create/update leave tenant tax rows unchanged"
+  ],
+  "limitations": [
+    "Authentication, RBAC and product-access guards substituted for authorized fixture",
+    "No browser UI assertion; canonical DB lane remains assigned",
+    "Native CI unverified"
+  ],
+  "artifacts": [
+    {
+      "path": "/tmp/alga-tax-actions-db.log",
+      "sha256": "681ec927821c5c24a48fa6bab906bc99bfb8a888e5ec25e95dc76e96355d835e"
+    },
+    {
+      "path": "/tmp/alga-tax-actions-db-verified.log",
+      "sha256": "4d0f1a99dd98c321360f7e8075feef6369ba20f17a1e26388d70c0141ad60ecd"
+    }
+  ]
+}

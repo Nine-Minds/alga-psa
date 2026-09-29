@@ -1,6 +1,6 @@
 import React from 'react';
 import { describe, expect, test, vi } from 'vitest';
-import { render, screen, within, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, within, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { CheckboxDemo } from '../src/demos/CheckboxDemo';
 import { SwitchDemo } from '../src/demos/SwitchDemo';
@@ -169,42 +169,46 @@ describe('SearchInput demo', () => {
 
   test('debounce delays onSearch callback', async () => {
     vi.useFakeTimers();
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     render(<SearchInputDemo />);
     const input = screen.getByPlaceholderText('Debounced search') as HTMLInputElement;
-    await user.type(input, 'abc');
+    fireEvent.change(input, { target: { value: 'abc' } });
     expect(screen.getByText(/Debounced value: —/)).toBeInTheDocument();
-    vi.advanceTimersByTime(400);
-    await waitFor(() => {
-      expect(screen.getByText(/Debounced value: abc/)).toBeInTheDocument();
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(400);
     });
-    vi.useRealTimers();
+    expect(screen.getByText(/Debounced value: abc/)).toBeInTheDocument();
   });
 });
 
 describe('Tabs demo', () => {
   test('default variant shows border-bottom indicator', () => {
     render(<TabsDemo />);
-    const active = screen.getAllByRole('button', { name: 'Overview' })[0];
+    const active = screen.getAllByRole('tab', { name: 'Overview' })[0];
     expect(active.style.borderBottom).toContain('var(--alga-primary');
   });
 
-  test('underline variant shows underline indicator', () => {
+  test('selecting a tab moves the underline indicator', async () => {
+    const user = userEvent.setup();
     render(<TabsDemo />);
-    const active = screen.getAllByRole('button', { name: 'Overview' })[1];
-    expect(active.style.borderBottom).toContain('var(--alga-primary');
+    const overview = screen.getByRole('tab', { name: 'Overview' });
+    const details = screen.getByRole('tab', { name: 'Details' });
+    await user.click(details);
+    expect(details).toHaveAttribute('aria-selected', 'true');
+    expect(details.style.borderBottom).toContain('var(--alga-primary');
+    expect(overview).toHaveAttribute('aria-selected', 'false');
+    expect(overview.style.borderBottom).not.toContain('var(--alga-primary');
   });
 
   test('disabled tab cannot be selected', async () => {
     render(<TabsDemo />);
-    const disabled = screen.getAllByRole('button', { name: 'Settings' })[0] as HTMLButtonElement;
+    const disabled = screen.getAllByRole('tab', { name: 'Settings' })[0] as HTMLButtonElement;
     expect(disabled.disabled).toBe(true);
   });
 
   test('tab content changes when tab is selected', async () => {
     const user = userEvent.setup();
     render(<TabsDemo />);
-    const details = screen.getAllByRole('button', { name: 'Details' })[0];
+    const details = screen.getAllByRole('tab', { name: 'Details' })[0];
     await user.click(details);
     expect(screen.getByText('Details content')).toBeInTheDocument();
   });
@@ -239,7 +243,7 @@ describe('Drawer demo', () => {
     const user = userEvent.setup();
     render(<DrawerDemo />);
     await user.click(screen.getByRole('button', { name: 'Default (400px)' }));
-    await user.click(screen.getByRole('button', { name: 'Close drawer' }));
+    await user.click(within(screen.getByRole('dialog')).getByLabelText('Close drawer'));
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
@@ -298,7 +302,7 @@ describe('DropdownMenu demo', () => {
     render(<DropdownMenuDemo />);
     await user.click(screen.getByRole('button', { name: 'Open Menu' }));
     const danger = screen.getByText('Delete item');
-    expect(danger.style.color).toContain('var(--alga-danger)');
+    expect(danger.style.color).toContain('var(--alga-danger');
   });
 
   test('right-aligned menu aligns to right edge of trigger', async () => {

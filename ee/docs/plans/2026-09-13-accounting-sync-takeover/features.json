@@ -1,0 +1,22 @@
+[
+  {
+    "id": "F1",
+    "description": "Scope health and interactive controls to the settings provider and preserve organisation selection",
+    "implemented": true
+  },
+  {
+    "id": "F2",
+    "description": "Report failed, aborted and incomplete cycles accurately",
+    "implemented": true
+  },
+  {
+    "id": "F3",
+    "description": "Complete Xero pagination beyond the former cap with a repeated-page guard",
+    "implemented": true
+  },
+  {
+    "id": "F4",
+    "description": "Resolve a usable default Xero connection consistently for manual exports, settings and catalogs while rejecting ambiguity and disconnected exports",
+    "implemented": true
+  }
+]

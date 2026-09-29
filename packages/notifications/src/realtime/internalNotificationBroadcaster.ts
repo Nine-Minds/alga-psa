@@ -182,6 +182,53 @@ export async function broadcastAllNotificationsRead(
   }
 }
 
+export interface TelephonyIncomingCallBroadcast {
+  event: 'ringing' | 'connected' | 'ended';
+  call: Record<string, unknown>;
+}
+
+/**
+ * Realtime-only signal for the incoming-call card. Nothing is persisted:
+ * Hocuspocus relays it into the user's `incomingCall` Yjs map and drops it.
+ */
+export async function broadcastTelephonyIncomingCall(
+  tenant: string,
+  userId: string,
+  message: TelephonyIncomingCallBroadcast,
+): Promise<void> {
+  try {
+    const client = await getRedisClient();
+    const channel = getNotificationChannel(tenant, userId);
+
+    await client.publish(
+      channel,
+      JSON.stringify({
+        type: 'telephony.incoming_call',
+        event: message.event,
+        call: message.call,
+        timestamp: new Date().toISOString(),
+      }),
+    );
+
+    logger.info('[NotificationBroadcaster] Incoming call broadcasted', {
+      channel,
+      event: message.event,
+      callId: message.call.callId,
+      userId,
+      tenant,
+    });
+
+    await client.disconnect();
+  } catch (error) {
+    logger.error('[NotificationBroadcaster] Failed to broadcast incoming call', {
+      error,
+      event: message.event,
+      callId: message.call.callId,
+      userId,
+    });
+  }
+}
+
 export async function broadcastUnreadCount(
   tenant: string,
   userId: string,

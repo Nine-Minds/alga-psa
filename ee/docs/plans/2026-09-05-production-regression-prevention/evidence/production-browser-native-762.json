@@ -1,0 +1,149 @@
+{
+  "schemaVersion": 1,
+  "kind": "native-production-browser-results",
+  "pullRequest": 3343,
+  "headRevision": "76235f800b56734db1872112ba5a875ecef57909",
+  "runId": 34060406094,
+  "editions": {
+    "community": {
+      "jobId": 101562895880,
+      "jobUrl": "https://github.com/Nine-Minds/alga-psa/actions/runs/34060406094/job/101562895880",
+      "artifactId": 9997802386,
+      "testedRevision": "28db477a49607f6d0df45e539a32dbb7d00ad4c8",
+      "status": "passed",
+      "counts": {
+        "passed": 20,
+        "failed": 0,
+        "flaky": 0,
+        "skipped": 0,
+        "interrupted": 0,
+        "missing": 0
+      },
+      "source": {
+        "before": {
+          "revision": "28db477a49607f6d0df45e539a32dbb7d00ad4c8",
+          "dirty": false,
+          "changes": []
+        },
+        "after": {
+          "revision": "28db477a49607f6d0df45e539a32dbb7d00ad4c8",
+          "dirty": false,
+          "changes": []
+        }
+      },
+      "selectedCases": [
+        {
+          "file": "inbound-email.spec.ts",
+          "title": "built email service ingests MIME, preserves inline quotations, threads replies and deduplicates delivery",
+          "status": "expected",
+          "attempts": [
+            {
+              "status": "passed",
+              "retry": 0,
+              "durationMs": 41579
+            }
+          ]
+        },
+        {
+          "file": "qbo-export.spec.ts",
+          "title": "community refuses the enterprise QuickBooks OAuth connection",
+          "status": "expected",
+          "attempts": [
+            {
+              "status": "passed",
+              "retry": 0,
+              "durationMs": 14
+            }
+          ]
+        },
+        {
+          "file": "xero-export.spec.ts",
+          "title": "community refuses the enterprise Xero OAuth connection",
+          "status": "expected",
+          "attempts": [
+            {
+              "status": "passed",
+              "retry": 0,
+              "durationMs": 16
+            }
+          ]
+        }
+      ],
+      "evidenceSha256": "adc0569c1107710215abd0c011b88f3ab74c4570926d2318c42a87f1e1709e6b",
+      "resultsSha256": "d7777cc518bf055811e1cf145ed108c1444fb9b5f75dcf36a705cd5de361d9ba"
+    },
+    "enterprise": {
+      "jobId": 101562895873,
+      "jobUrl": "https://github.com/Nine-Minds/alga-psa/actions/runs/34060406094/job/101562895873",
+      "artifactId": 9997804919,
+      "testedRevision": "28db477a49607f6d0df45e539a32dbb7d00ad4c8",
+      "status": "failed",
+      "counts": {
+        "passed": 21,
+        "failed": 0,
+        "flaky": 1,
+        "skipped": 0,
+        "interrupted": 0,
+        "missing": 0
+      },
+      "source": {
+        "before": {
+          "revision": "28db477a49607f6d0df45e539a32dbb7d00ad4c8",
+          "dirty": false,
+          "changes": []
+        },
+        "after": {
+          "revision": "28db477a49607f6d0df45e539a32dbb7d00ad4c8",
+          "dirty": false,
+          "changes": []
+        }
+      },
+      "selectedCases": [
+        {
+          "file": "inbound-email.spec.ts",
+          "title": "built email service ingests MIME, preserves inline quotations, threads replies and deduplicates delivery",
+          "status": "expected",
+          "attempts": [
+            {
+              "status": "passed",
+              "retry": 0,
+              "durationMs": 42501
+            }
+          ]
+        },
+        {
+          "file": "qbo-export.spec.ts",
+          "title": "QuickBooks OAuth and UI mapping export to the selected company and recover without duplicate invoices",
+          "status": "expected",
+          "attempts": [
+            {
+              "status": "passed",
+              "retry": 0,
+              "durationMs": 39989
+            }
+          ]
+        },
+        {
+          "file": "xero-export.spec.ts",
+          "title": "Xero OAuth and UI mapping export to the selected organisation and recover without duplicate invoices",
+          "status": "flaky",
+          "attempts": [
+            {
+              "status": "failed",
+              "retry": 0,
+              "durationMs": 41173
+            },
+            {
+              "status": "passed",
+              "retry": 1,
+              "durationMs": 21858
+            }
+          ]
+        }
+      ],
+      "evidenceSha256": "9f8ad93639e7438b1ffe35027225b342b597b6b0af40c392203e5b648c32eac2",
+      "resultsSha256": "3c9137265336490b8790f597cbb775d2bcc23a73106c9553b6dc44c6f35887e3"
+    }
+  },
+  "interpretation": "Inbound MIME journey passed first attempt in both built editions, completing F019/T014. Enterprise remains failed because Xero is flaky; this is not a PR readiness claim."
+}

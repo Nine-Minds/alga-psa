@@ -367,11 +367,12 @@ describe('QuickAddTicket board-scoped priorities', () => {
       />
     );
 
-    await waitFor(() => {
-      expect(getTicketFormDataMock).toHaveBeenCalled();
-    });
+    // getTicketFormDataMock is invoked at the start of the load effect, before
+    // isLoading flips back to false, so waiting on the call and then querying
+    // synchronously races the re-render (flaky under heavy parallel CI load).
+    fireEvent.click(await screen.findByText('Select Custom Board'));
 
-    fireEvent.click(screen.getByText('Select Custom Board'));
+    expect(getTicketFormDataMock).toHaveBeenCalled();
 
     const prioritySelect = await screen.findByTestId('ticket-quick-add-priority');
     const optionValues = Array.from(prioritySelect.querySelectorAll('option'))

@@ -1514,10 +1514,26 @@ describe('project business operation db actions', () => {
     });
     await createTimeEntryForProjectTask(db, runtimeState.tenantId, blockedTaskId, runtimeState.actorUserId);
 
+    const preservedRows = async () => ({
+      project: await tenantTable(db, runtimeState.tenantId, 'projects').where({ project_id: blockedProjectId }).first(),
+      phase: await tenantTable(db, runtimeState.tenantId, 'project_phases').where({ phase_id: blockedPhaseId }).first(),
+      task: await tenantTable(db, runtimeState.tenantId, 'project_tasks').where({ task_id: blockedTaskId }).first(),
+      timeEntries: await tenantTable(db, runtimeState.tenantId, 'time_entries')
+        .where({ work_item_type: 'project_task', work_item_id: blockedTaskId }),
+    });
+    const beforeBlockedDelete = await preservedRows();
+    expect(beforeBlockedDelete.timeEntries).toHaveLength(1);
     const blockedDeleteResult = await invokeAction('projects.delete', { project_id: blockedProjectId });
     expect(blockedDeleteResult.success).toBe(false);
     expect(blockedDeleteResult.can_delete).toBe(false);
-    expect(blockedDeleteResult.code).toBe('VALIDATION_FAILED');
+    expect(blockedDeleteResult.deleted).toBe(false);
+    // The shared deletion validator now catches tracked work before the
+    // action's legacy fallback, and exposes the structured dependency code.
+    expect(blockedDeleteResult.code).toBe('DEPENDENCIES_EXIST');
+    expect(blockedDeleteResult.dependencies).toEqual(expect.arrayContaining([
+      expect.objectContaining({ type: 'time_entry', count: 1 }),
+    ]));
+    expect(await preservedRows()).toEqual(beforeBlockedDelete);
   });
 
   it('T019: projects.link_ticket_to_task creates both link tables with task project/phase metadata', async () => {

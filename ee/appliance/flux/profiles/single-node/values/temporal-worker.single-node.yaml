@@ -9,11 +9,20 @@ deploymentProfile: appliance
 extraSelectorLabels:
   app.kubernetes.io/component: temporal-worker
 
-# Share the tenant-secret store with alga-core so the pinned Microsoft profile
-# client secret alga-core writes via the filesystem provider is readable here,
-# letting polling reconciliation resolve client_secret_ref.
+# Share the tenant-secret store with alga-core: polling reconciliation reads the
+# pinned Microsoft profile client secret alga-core writes there, and Entra sync
+# writes refreshed OAuth tokens back to it.
 sharedTenantSecrets:
   enabled: true
+  readOnly: false
+
+# alga-core creates the hostPath as root (0755 dirs, 0644 files) and fsGroup
+# does not apply to hostPath volumes, so the image's non-root `temporal` user
+# cannot write refreshed Entra tokens. Run as root on the appliance, matching
+# alga-core and email-service on the same host directory.
+securityContext:
+  runAsUser: 0
+  runAsGroup: 0
 
 image:
   repository: ghcr.io/nine-minds/temporal-worker

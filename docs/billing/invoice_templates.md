@@ -39,7 +39,9 @@ There is no user-authored code execution — no compilation, no Wasm, no sandbox
 
 | File | Purpose |
 |------|---------|
-| `packages/billing/src/components/invoice-designer/ast/workspaceAst.ts` | Workspace export/import (designer state to/from AST) |
+| `packages/billing/src/components/invoice-designer/ast/workspaceAst.ts` | Workspace export/import (designer state to/from AST); binding-path normalization is driven per document kind by the binding catalog |
+| `packages/billing/src/components/invoice-designer/fields/documentBindingCatalog.ts` | **Single source of truth for the field picker.** Generates picker options, display ↔ render path mappings, and canvas preview data lookup for invoice, quote, and sales-order templates from the same value-binding definitions used to build each template's AST — so the picker, round-trip path normalization, and preview can never drift apart. Replaces the former hand-maintained alias tables. |
+| `packages/billing/src/components/invoice-designer/utils/documentKind.ts` | Resolves the active document kind (invoice / quote / sales-order) from the binding catalog — used by both AST import (raw catalog lookup) and the live designer node tree |
 | `packages/billing/src/components/invoice-designer/DesignerShell.tsx` | Main designer UI shell |
 
 ### AST Capabilities
@@ -48,7 +50,8 @@ There is no user-authored code execution — no compilation, no Wasm, no sandbox
 - Layout tree: `document`, `section`, `stack`, `text`, `field`, `image`, `divider`, `table`, `dynamic-table`, `totals`
 - **Repeatable stack**: the `stack` node accepts an optional `repeat: { sourceBinding, itemBinding, keyPath? }` — the stack (and all its children) renders once per item in the source collection, pushing the current item onto the render scope under `itemBinding`. Nested `path` expressions and inner `dynamic-table` nodes resolve against the per-iteration item. Without `repeat`, the stack renders its children once against the outer scope.
 - Style tokens/classes and inline style declarations
-- Bindings for invoice values and collections (extensible — quote bindings added for the quoting system)
+- Bindings for invoice values and collections (extensible — quote and sales-order bindings supported through the same per-document-kind catalog)
+- **Per-document-kind binding validation**: the designer's field picker only surfaces paths that the active document kind's render model actually exposes. Picker options, AST round-trip path normalization in `workspaceAst.ts`, and canvas preview data lookup all derive from the same `documentBindingCatalog`, so a path that appears in the picker is guaranteed to resolve at render time. The `invoice.discount` field has been removed from the catalog — it was never backed by a real render-model value; any template element bound to it should be re-mapped to a supported field.
 - Declarative transform operations: `filter`, `sort`, `group`, `aggregate`, `computed-field`, `totals-compose`
 - Optional `strategyId` extension points on transform operations
 
@@ -60,6 +63,29 @@ Invoice and quote view models can expose a pre-computed `groupsByLocation` colle
 - **Quote**: equivalent enrichment is applied by the quote adapter.
 
 Templates consume the groups through a repeatable `stack` bound to `groupsByLocation` (outer iteration) with an inner `dynamic-table` bound to `group.items` — the pattern used by the `standard-invoice-by-location` and `standard-quote-by-location` templates to render a location header, line items, and a per-location subtotal row. See `buildStandardByLocationAst` in `packages/billing/src/lib/invoice-template-ast/standardTemplates.ts`.
+
+### Ticket-Level Billed-Time Detail
+
+Invoice view models expose a complete primary presentation and two optional detail collections built from **immutable snapshots** captured at invoice generation:
+
+- **`ticketPresentationRows`** — the complete primary charge presentation: `label`, `description`, `quantity`, nullable `rate`, `rateKind`, `rateDisplay`, and `amount` (net minor units). Retained charges also preserve their service-period fields.
+
+- **`timeEntries`** — one row per billed time entry: `id` (source entry id), `date`, `ticketNumber`, `title` (ticket title or project-task name), `description` (customer-visible ticket description), `billedMinutes`, `hours`, `rate` (minor units/hour), `amount` (net, minor units), `serviceName`.
+- **`ticketGroups`** — the same entries grouped by source work item: `key`, `label` ("`<ticket number> — <title>`"), `ticketNumber`, `title`, `description`, `dateStart`/`dateEnd`, `totalMinutes`, `totalHours`, `totalAmount`, `rate`, `rateDisplay`, `hasMixedRates`, `entryCount`, and a nested `entries` array for per-entry detail tables. Grouping and ordering are deterministic (tickets by ticket number, then project tasks by name, then a single "Other billed time" fallback group); sums use integer minutes and minor currency units.
+
+**Rolled up by default.** The standard by-ticket layout uses **Charges by Ticket** (`ticketPresentationRows`) as its single primary table. Eligible time across entries and services appears once per ticket. Project tasks group by task identity; ticketless time groups as Other billed time. Products, fees, usage, zero rows and signed adjustments retain their original rows. Totals and accounting exports continue to use canonical invoice charges.
+
+**Exact coverage.** A charge can be replaced only when its frozen generation type is time, every persisted link has a supported valid snapshot, link ownership is unique and consistent with the invoice and tenant, and integer snapshot net amounts equal the entire canonical charge net amount. A partial, conflicting, adjusted or otherwise unproven charge stays whole, and none of its entries also appear in the primary rollup. No residual allocation is guessed. The row contribution metadata reconciles every removed charge independently. New generation records charge provenance; historical provenance is not backfilled.
+
+**Legacy and partial invoices.** Unavailable time detail leaves the complete service charge visible. A localized coverage note explains partial or unavailable detail. Version-1 snapshots remain immutable and their rates display as unavailable. Current tickets, time entries and contracts are never used to reconstruct billed history.
+
+**Honest rates.** Version-2 snapshots capture `rateKind` (`uniform`, `mixed`, `unknown`) and a nullable proven `uniformRate`. Overtime can make even one entry mixed. One hour at 15000 minor units plus one at 22500 shows two hours and 37500 total with Mixed rates. Averages never establish uniformity. `rate` is null for mixed/unavailable detail; `rateDisplay` carries either numeric minor units or a localized label. Customer descriptions remain unchanged.
+
+**Optional supporting detail.** In a custom layout, select Charges by Ticket to replace the primary charge table. To add a breakdown, create a separately titled **Billed-time detail — included in the charges above** section using **Billed Time Entries** (`timeEntries`) or nested `entries` under **Billed Time by Ticket** (`ticketGroups`). These supporting collections can be incomplete on older invoices and must not feed totals. Sort/filter preserves their field choices and runs before document localization. Filter mixed-rate time with `rateKind == mixed`; translated display labels such as `Tarifs variables` are presentation only and do not select rows. Declared nested collection aliases resolve their paths within the current ticket group. Invalid scalar or missing collection paths produce diagnostics; an empty collection or absent legacy time detail remains empty. Save and reopen the layout to reuse the source, columns and transforms. Existing custom layouts retain their authored structure.
+
+The default recipient instruction is **Contact your service provider for a billed-time breakdown.** It does not promise an invoice-specific entry or rate ledger in the client portal.
+
+**Privacy and accounting.** Snapshots include only approved customer-visible work-item fields. Internal ticket comments and time-entry notes are excluded. Presentation does not change canonical charge descriptions, service/account mappings, or accounting exports.
 
 ### Style Declaration Properties
 
@@ -132,6 +158,7 @@ There are two types of invoice layouts:
 | `standard-detailed` | Full branding + party blocks |
 | `standard-grouped` | Recurring / one-time sections |
 | `standard-invoice-by-location` | Per-location bands (address header, items, location subtotal) using the repeatable stack + `groupsByLocation` |
+| `standard-invoice-by-ticket` | One primary table of eligible ticket rollups and retained charges using `ticketPresentationRows`; entry detail is optional |
 
 A parallel set exists for quotes (`standard-quote-default`, `standard-quote-detailed`, `standard-quote-by-location`).
 
@@ -237,6 +264,11 @@ Quote template details: [quoting-system.md](./quoting-system.md#document-templat
 - `packages/billing/src/actions/renderTemplateOnServer.ast.integration.test.ts`
 - `packages/billing/src/actions/invoicePdfGenerationAstWiring.test.ts`
 - `packages/billing/src/actions/invoicePreviewPdfParity.integration.test.ts`
+
+### Binding Catalog Tests
+
+- `packages/billing/src/components/invoice-designer/fields/documentBindingCatalog.test.ts` — asserts every field-picker option resolves to a path the corresponding render model actually exposes
+- `packages/billing/src/components/invoice-designer/ast/workspaceAst.bindingPaths.test.ts` — covers binding-path normalization and round-tripping across invoice, quote, and sales-order document kinds
 
 ### Quote Template Tests
 

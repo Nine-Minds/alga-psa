@@ -14,7 +14,6 @@ describe('hard cutover debt guard', () => {
       'packages/billing/src/components/settings/billing/QuickAddProduct.tsx',
       'packages/billing/src/components/settings/billing/ProductsManager.tsx',
       'packages/billing/src/components/settings/billing/ServiceCatalogManager.tsx',
-      'packages/billing/src/components/billing-dashboard/ServiceForm.tsx',
       'packages/billing/src/components/billing-dashboard/contracts/ServiceCatalogPicker.tsx',
       'packages/billing/src/components/billing-dashboard/ContractLineDialog.tsx',
       'packages/billing/src/components/billing-dashboard/contracts/CreateCustomContractLineDialog.tsx',
@@ -57,7 +56,12 @@ describe('hard cutover debt guard', () => {
     const scheduling = read('packages/scheduling/src/actions/timeEntryCrudActions.ts');
     const availability = read('packages/client-portal/src/services/availabilityService.ts');
 
-    expect(billingEngine).not.toContain('contract_line_id IS NULL');
+    // A null scope is valid in pricing-schedule ordering, but never an
+    // unconditional WHERE/OR fallback for allocating time or usage.
+    expect(billingEngine.replaceAll(
+      'CASE WHEN contract_line_id IS NULL THEN 1 ELSE 0 END',
+      '',
+    )).not.toContain('contract_line_id IS NULL');
     expect(billingEngine).not.toContain('usage_tracking.contract_line_id IS NULL');
     expect(scheduling).not.toContain('billing_method as service_type');
     expect(availability).not.toContain('billing_method as service_type');

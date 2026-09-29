@@ -51,6 +51,7 @@ vi.mock('@alga-psa/event-bus/publishers', () => ({
 
 vi.mock('@alga-psa/tickets/actions/ticketBundleUtils', () => ({
   maybeReopenBundleMasterFromChildReply: vi.fn(),
+  revertBundlePropagationForChild: vi.fn(),
 }));
 
 vi.mock('@alga-psa/tickets/lib/liveUpdates', () => ({
@@ -117,6 +118,10 @@ function buildTrx(params: { ticket: Record<string, unknown> | undefined }) {
               .mockResolvedValue({ user_id: currentUser.user_id, contact_id: 'contact-1' }),
           }),
         };
+      }
+
+      if (table === 'boards') {
+        return { select: vi.fn().mockResolvedValue([]) };
       }
 
       if (table === 'contacts') {

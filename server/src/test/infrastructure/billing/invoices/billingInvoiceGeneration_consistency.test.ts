@@ -160,7 +160,7 @@ async function ensureDefaultBillingSettings() {
     await ensureDefaultTaxConfiguration();
     await ensureDefaultBillingSettings();
     await ensureClientPlanBundlesTable(context);
-  }, 60000);
+  });
 
   beforeEach(async () => {
     context = await resetContext();

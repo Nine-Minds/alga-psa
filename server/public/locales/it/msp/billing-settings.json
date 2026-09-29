@@ -165,6 +165,27 @@
         "loadStatuses": "Impossibile caricare gli stati dei ticket di rinnovo",
         "save": "Impossibile salvare le impostazioni di automazione del rinnovo"
       }
+    },
+    "quotes": {
+      "title": "Preventivi",
+      "description": "Imposta il periodo di validità predefinito per i nuovi preventivi.",
+      "fields": {
+        "validityDays": {
+          "label": "Periodo di validità predefinito (giorni)",
+          "help": "I nuovi preventivi sono validi per questo numero di giorni."
+        }
+      },
+      "actions": {
+        "save": "Salva"
+      },
+      "toast": {
+        "updated": "Impostazioni dei preventivi aggiornate."
+      },
+      "errors": {
+        "load": "Impossibile caricare le impostazioni",
+        "save": "Impossibile salvare le impostazioni",
+        "range": "Inserisci un numero intero da 1 a 365."
+      }
     }
   },
   "quoting": {
@@ -178,6 +199,8 @@
     }
   },
   "tax": {
+    "defaultRate": { "title": "Aliquota fiscale predefinita", "tooltip": "Scegli l'aliquota ereditata da nuovi clienti, prodotti e servizi.", "description": "Imposta l'aliquota assegnata a nuovi clienti e voci di catalogo. I record esistenti non cambiano.", "loading": "Caricamento aliquota predefinita...", "empty": "Crea un'aliquota attiva prima di scegliere quella predefinita.", "invalid": "L'aliquota configurata non è più attiva o valida. Scegline un'altra.", "field": { "label": "Aliquota fiscale predefinita" }, "options": { "none": "Nessun valore predefinito del tenant" }, "help": "Se non impostata, le nuove voci restano non imponibili e i clienti usano l'aliquota attiva meno recente, se presente.", "actions": { "save": "Salva predefinita", "saving": "Salvataggio..." }, "toast": { "saved": "Aliquota predefinita salvata." }, "errors": { "load": "Impossibile caricare l'aliquota predefinita.", "save": "Impossibile salvare l'aliquota predefinita." } },
+    "backfill": { "title": "Applica l'aliquota predefinita al catalogo esistente", "description": "Visualizza prodotti e servizi senza aliquota fiscale.", "warning": "Questo modifica l'imponibilità futura e non riscrive le fatture emesse.", "loading": "Caricamento anteprima...", "empty": "Nessun prodotto o servizio idoneo.", "target": "Aliquota di destinazione: {{rate}}", "count": "{{count}} voci idonee", "dialog": { "title": "Applica aliquota predefinita" }, "actions": { "preview": "Visualizza voci esistenti", "apply": "Applica selezionate", "applying": "Applicazione..." }, "toast": { "applied": "Aliquota predefinita applicata alle voci selezionate." }, "errors": { "preview": "Impossibile visualizzare il catalogo.", "apply": "Impossibile applicare l'aliquota predefinita." } },
     "taxRegions": {
       "title": "Regioni fiscali",
       "description": "Gestisci le regioni fiscali e le relative impostazioni."
@@ -226,12 +249,13 @@
       }
     },
     "regions": {
-      "title": "Gestire le regioni fiscali",
+      "title": "Regioni e aliquote fiscali",
       "loading": "Caricamento regioni...",
       "fields": {
         "code": {
           "label": "Codice regionale",
-          "placeholder": "ad esempio, CA, NY, IVA-Regno Unito"
+          "placeholder": "ad esempio, CA, NY, IVA-Regno Unito",
+          "immutableHint": "Il codice regione identifica questa regione per aliquote fiscali, clienti e sedi, quindi non può essere modificato."
         },
         "name": {
           "label": "Nome della regione",
@@ -268,6 +292,57 @@
         "update": "Impossibile aggiornare la regione fiscale.",
         "activate": "Impossibile attivare la regione fiscale.",
         "deactivate": "Impossibile disattivare la regione fiscale."
+      },
+      "search": {
+        "placeholder": "Cerca regioni"
+      },
+      "columns": {
+        "region": "Regione",
+        "currentRate": "Aliquota attuale",
+        "rates": "Aliquote"
+      },
+      "rateSummary": {
+        "noRates": "Nessuna aliquota",
+        "noCurrentRate": "Nessuna aliquota in vigore",
+        "combined": "{{count}} combinate",
+        "combinedHint": "{{count}} aliquote attive si applicano oggi e vengono sommate nelle fatture."
+      },
+      "empty": {
+        "title": "Nessuna regione fiscale",
+        "description": "Aggiungi una regione per ogni luogo in cui applichi le imposte, poi assegnale un'aliquota.",
+        "noMatch": "Nessuna regione corrisponde a \"{{query}}\""
+      },
+      "a11y": {
+        "expand": "Mostra aliquote",
+        "collapse": "Nascondi aliquote"
+      },
+      "rates": {
+        "empty": "Questa regione non ha aliquote. Le fatture tassate qui falliranno finché non ne viene aggiunta una.",
+        "composite": "Composita",
+        "effectiveRange": "Dal {{start}} al {{end}}",
+        "effectiveFrom": "Dal {{start}}",
+        "deleteEntity": "l'aliquota del {{rate}} per {{region}}",
+        "columns": {
+          "rate": "Aliquota",
+          "description": "Descrizione",
+          "effective": "Validità"
+        },
+        "status": {
+          "current": "In vigore",
+          "scheduled": "Programmata",
+          "expired": "Scaduta",
+          "inactive": "Inattiva"
+        },
+        "actions": {
+          "add": "Aggiungi aliquota",
+          "edit": "Modifica",
+          "advanced": "Impostazioni avanzate",
+          "delete": "Elimina"
+        },
+        "errors": {
+          "validateDeletion": "Impossibile convalidare l'eliminazione. Riprova.",
+          "delete": "Impossibile eliminare l'aliquota fiscale."
+        }
       }
     },
     "thresholds": {
@@ -506,6 +581,7 @@
   },
   "serviceCategories": {
     "title": "Categorie di servizi",
+    "description": "Raggruppamenti opzionali per i tuoi prodotti. Le categorie gestiscono la colonna e il filtro Categoria nella scheda Prodotti e sono distinte dai Tipi di servizio, obbligatori e usati in report e inserimento ore.",
     "dialog": {
       "addTitle": "Aggiungi categoria di servizio",
       "editTitle": "Modifica categoria di servizio",
@@ -531,6 +607,11 @@
       "importFromStandard": "Importa da categorie standard",
       "create": "Creare",
       "update": "Aggiornamento"
+    },
+    "empty": {
+      "title": "Nessuna categoria di servizio",
+      "description": "Importa l'elenco standard per iniziare, oppure aggiungi le tue. Le categorie sono opzionali e servono solo se vuoi raggruppare i prodotti.",
+      "importPrimary": "Importa categorie di servizio standard"
     },
     "delete": {
       "message": "Sei sicuro di voler eliminare \"{{name}}\"? Questa azione non può essere annullata."
@@ -635,6 +716,8 @@
     }
   },
   "serviceCatalog": {
+    "scheduledPriceBadge": "Prossima modifica {{date}}",
+    "scheduledPriceNotice": "È prevista una modifica del prezzo per il {{date}}. Salvare qui aggiorna il prezzo corrente e non annulla la modifica pianificata.",
     "title": "Gestione del catalogo dei servizi",
     "loading": "Caricamento servizi",
     "dialog": {
@@ -644,7 +727,8 @@
       "allServiceTypes": "Tutti i tipi di servizio",
       "serviceTypePlaceholder": "Filtra per tipo di servizio...",
       "allBillingMethods": "Tutti i metodi di fatturazione",
-      "billingMethodPlaceholder": "Filtra per metodo di fatturazione..."
+      "billingMethodPlaceholder": "Filtra per metodo di fatturazione...",
+      "searchPlaceholder": "Cerca servizi per nome, SKU o descrizione..."
     },
     "fields": {
       "serviceName": {
@@ -713,6 +797,33 @@
       "cancel": "Cancellare",
       "saveChanges": "Salva modifiche"
     },
+    "bulk": {
+      "selectedCount": "{{count}} selezionati",
+      "selectAll": "Seleziona tutti i servizi",
+      "clear": "Annulla selezione",
+      "actions": {
+        "activate": "Attiva",
+        "deactivate": "Disattiva",
+        "delete": "Elimina"
+      },
+      "deleteDialog": {
+        "title": "Elimina servizi",
+        "message": "Eliminare definitivamente {{count}} servizio/i selezionato/i? I servizi ancora utilizzati da contratti o fatture verranno ignorati. Questa azione non può essere annullata."
+      },
+      "feedback": {
+        "activateSuccess": "{{count}} servizio/i attivato/i",
+        "activatePartial": "Attivati {{count}} servizio/i; {{failed}} non sono stati attivati",
+        "activateError": "Impossibile attivare {{count}} servizio/i",
+        "deactivateSuccess": "{{count}} servizio/i disattivato/i",
+        "deactivatePartial": "Disattivati {{count}} servizio/i; {{failed}} non sono stati disattivati",
+        "deactivateError": "Impossibile disattivare {{count}} servizio/i",
+        "deleteSuccess": "{{count}} servizio/i eliminato/i",
+        "deletePartial": "Eliminati {{count}} servizio/i; {{failed}} non sono stati eliminati",
+        "deletePartialBlocked": "Eliminati {{count}} servizio/i; {{failed}} non sono stati eliminati: {{names}}",
+        "deleteBlocked": "Impossibile eliminare {{count}} servizio/i — ancora in uso: {{names}}",
+        "deleteError": "Impossibile eliminare {{count}} servizio/i"
+      }
+    },
     "table": {
       "serviceName": "Nome del servizio",
       "serviceType": "Tipo di servizio",
@@ -721,7 +832,11 @@
       "unit": "Unità",
       "taxRate": "Aliquota fiscale",
       "nonTaxable": "Non imponibile",
-      "thisService": "questo servizio"
+      "thisService": "questo servizio",
+      "contractUsage": "Contratti",
+      "contractUsageNone": "Non utilizzato",
+      "contractUsageOne": "Usato in {{contracts}} contratto",
+      "contractUsageMany": "Usato in {{contracts}} contratti"
     },
     "errors": {
       "fetchServices": "Impossibile recuperare i servizi",
@@ -735,7 +850,9 @@
       "validateDelete": "Impossibile convalidare l'eliminazione. Per favore riprova.",
       "delete": "Impossibile eliminare il servizio",
       "deactivate": "Impossibile disattivare il servizio"
-    }
+    },
+    "emptySearch": "Nessun servizio corrisponde alla ricerca.",
+    "clearFilters": "Cancella filtri"
   },
   "products": {
     "title": "Prodotti",
@@ -748,6 +865,33 @@
       "restore": "Ripristinare",
       "archive": "Archivio",
       "delete": "Eliminare"
+    },
+    "bulk": {
+      "selectedCount": "{{count}} selezionati",
+      "selectAll": "Seleziona tutti i prodotti",
+      "clear": "Annulla selezione",
+      "actions": {
+        "archive": "Archivia",
+        "restore": "Ripristina",
+        "delete": "Elimina"
+      },
+      "deleteDialog": {
+        "title": "Elimina i prodotti in modo permanente",
+        "message": "Eliminare definitivamente {{count}} prodotto/i selezionato/i? I prodotti associati a dati esistenti verranno ignorati. Questa azione non può essere annullata."
+      },
+      "feedback": {
+        "archiveSuccess": "{{count}} prodotto/i archiviato/i",
+        "archivePartial": "Archiviati {{count}} prodotto/i; {{failed}} non sono stati archiviati",
+        "archiveError": "Impossibile archiviare {{count}} prodotto/i",
+        "restoreSuccess": "{{count}} prodotto/i ripristinato/i",
+        "restorePartial": "Ripristinati {{count}} prodotto/i; {{failed}} non sono stati ripristinati",
+        "restoreError": "Impossibile ripristinare {{count}} prodotto/i",
+        "deleteSuccess": "{{count}} prodotto/i eliminato/i definitivamente",
+        "deletePartial": "Eliminati {{count}} prodotto/i; {{failed}} non sono stati eliminati",
+        "deletePartialBlocked": "Eliminati {{count}} prodotto/i; {{failed}} non sono stati eliminati: {{names}}",
+        "deleteBlocked": "Impossibile eliminare {{count}} prodotto/i — ancora in uso: {{names}}",
+        "deleteError": "Impossibile eliminare {{count}} prodotto/i"
+      }
     },
     "filters": {
       "searchPlaceholder": "Cerca per nome, SKU, descrizione...",
@@ -831,14 +975,14 @@
         }
       },
       "unitOfMeasure": {
-        "label": "Unità di misura *",
+        "label": "Unità di misura",
         "placeholder": "ad esempio GB, chiamata API, utente",
         "help": "L'unità misurabile per la fatturazione (ad esempio GB, chiamata API, utente)"
       },
       "taxRate": {
         "label": "Aliquota fiscale (facoltativa)",
         "placeholder": "Seleziona aliquota fiscale (facoltativo)",
-        "loading": "Caricamento aliquote fiscali..."
+        "loading": "Caricamento aliquote fiscali...", "inherit": "Usa predefinita del tenant", "inheritNamed": "Usa predefinita del tenant ({{rate}})", "nonTaxable": "Non imponibile"
       },
       "sku": {
         "label": "SKU",
@@ -865,7 +1009,8 @@
       "billingMethodRequired": "Il metodo di fatturazione è obbligatorio",
       "skuRequiredForHardware": "Lo SKU è richiesto per l'hardware",
       "licenseTermRequired": "La durata della licenza è richiesta per le licenze software",
-      "selectedTypeNotFound": "Tipo di servizio selezionato non trovato"
+      "selectedTypeNotFound": "Tipo di servizio selezionato non trovato",
+      "unitOfMeasureRequired": "L'unità di misura è obbligatoria"
     },
     "errors": {
       "fetchCategories": "Impossibile recuperare le categorie",
@@ -902,8 +1047,8 @@
         "loading": "Caricamento..."
       },
       "label": {
-        "label": "Etichetta",
-        "placeholder": "Etichetta a forma libera opzionale"
+        "label": "Etichetta categoria",
+        "placeholder": "Etichetta libera opzionale"
       },
       "vendor": {
         "label": "Venditore"
@@ -932,13 +1077,13 @@
       "taxRate": {
         "label": "Aliquota fiscale",
         "placeholder": "Non imponibile",
-        "loading": "Caricamento..."
+        "loading": "Caricamento...", "inherit": "Usa predefinita del tenant", "inheritNamed": "Usa predefinita del tenant ({{rate}})", "nonTaxable": "Non imponibile"
       },
       "active": {
         "label": "Attivo"
       },
       "unitOfMeasure": {
-        "label": "Unità di misura *",
+        "label": "Unità di misura",
         "placeholder": "ad esempio, ciascun articolo, licenza"
       },
       "license": {
@@ -1175,7 +1320,10 @@
       "regionInvalid": "La regione fiscale selezionata non è più valida. Aggiornare la pagina e scegliere un’altra regione.",
       "duplicate": "Esiste già un’aliquota d’imposta per questa regione e questo intervallo di date.",
       "missingField": "Manca un campo obbligatorio dell’aliquota d’imposta.",
-      "missingFieldNamed": "Manca un campo obbligatorio dell’aliquota d’imposta: {{field}}."
+      "missingFieldNamed": "Manca un campo obbligatorio dell’aliquota d’imposta: {{field}}.",
+      "capInvalid": "Il limite deve essere un intero non negativo rappresentabile esattamente in unità minime.",
+      "capCurrencyRequired": "Scegliere una valuta prima di impostare o modificare un limite d’imposta.",
+      "currencyInvalid": "Scegliere una valuta supportata per l’aliquota."
     },
     "tax": {
       "defaultRequiresActiveRate": "Configurare almeno un’aliquota d’imposta attiva prima di creare le impostazioni fiscali predefinite.",
@@ -1205,7 +1353,12 @@
     "fields": {
       "prefix": {
         "label": "Prefisso del numero",
-        "help": "Prefisso facoltativo per la sequenza di numeri. Lascia vuoto per non usare alcun prefisso o inserisci un prefisso personalizzato."
+        "help": "Prefisso fisso facoltativo per la sequenza di numeri. Lascia vuoto per non usare alcun prefisso o inserisci un prefisso personalizzato. Per includere la data di emissione usa il campo Formato data, invece di digitarla qui."
+      },
+      "dateFormat": {
+        "label": "Formato data",
+        "help": "Data facoltativa inserita tra il prefisso e il numero sequenziale. Ad esempio, {YYYY}-{MM}- produce INV-2026-08-000001. Lascia vuoto per mantenere i numeri senza data.",
+        "tokensHint": "Segnaposto: {YYYY} anno a quattro cifre, {YY} anno a due cifre, {MM} mese, {DD} giorno. La data viene calcolata al momento dell'assegnazione del numero, nel fuso orario predefinito configurato in Impostazioni. La sequenza resta continua: non riparte ogni anno, mese o giorno."
       },
       "minimumDigits": {
         "label": "Cifre minime",
@@ -1239,7 +1392,14 @@
     },
     "errors": {
       "load": "Impossibile caricare le impostazioni di numerazione.",
-      "save": "Impossibile aggiornare le impostazioni."
+      "save": "Impossibile aggiornare le impostazioni.",
+      "dateFormat": {
+        "notText": "Il formato data deve essere testo.",
+        "unmatchedBrace": "Il formato data contiene una parentesi { o } non chiusa. Scrivi i segnaposto così: {{supported}}.",
+        "unknownToken": "Segnaposto sconosciuto {{tokens}}. Segnaposto supportati: {{supported}}.",
+        "unknownTokens": "Segnaposto sconosciuti {{tokens}}. Segnaposto supportati: {{supported}}.",
+        "tooLong": "Il formato data si espande in {{length}} caratteri e supera il limite di {{max}} caratteri."
+      }
     }
   },
   "payment": {
@@ -1292,6 +1452,15 @@
       "actions": {
         "save": "Salva impostazioni",
         "saving": "Salvataggio in corso..."
+      },
+      "autopay": {
+        "label": "Consenti il pagamento automatico",
+        "description": "Consenti ai profili di fatturazione di autorizzare pagamenti automatici con carta.",
+        "chargeTiming": "Momento dell’addebito",
+        "onFinalize": "Alla finalizzazione della fattura",
+        "onDueDate": "Alla data di scadenza",
+        "retryDays": "Intervalli tra i tentativi (giorni)",
+        "consentText": "Testo di consenso al pagamento automatico"
       }
     },
     "stripe": {
@@ -1420,6 +1589,70 @@
     },
     "sections": {
       "userRates": "Tariffe per utente"
+    }
+  },
+  "priceChangeRollout": {
+    "title": "Distribuzione della modifica di prezzo",
+    "previewFailed": "Impossibile caricare l'anteprima della modifica di prezzo.",
+    "skip": "Salva solo il prezzo",
+    "apply": "Applica alle righe ereditate",
+    "applying": "Salvataggio…",
+    "effectiveDate": "Data di decorrenza",
+    "effectiveDateHint": "Predefinita al prossimo confine del periodo di fatturazione.",
+    "willChange": "Cambierà",
+    "noInheritedLines": "Nessuna riga ereditata cambia a questa data.",
+    "custom": "Non cambia — personalizzata",
+    "unreviewed": "Non cambia — non ancora classificata",
+    "unreviewedAlert": "Queste righe vengono fatturate invariate finché non le revisioni.",
+    "reviewRates": "Revisiona tariffe",
+    "excluded": "Esclusa — già fatturata",
+    "none": "Nessuna.",
+    "totalMonthlyDelta": "Variazione totale dei ricavi mensili",
+    "acrossAllInherited": "Su tutte le {{lines}} righe ereditate.",
+    "applyFailed": "Impossibile applicare la distribuzione. Nessuna modifica è stata apportata.",
+    "skipFailed": "Impossibile salvare la modifica di prezzo.",
+    "columns": {
+      "client": "Cliente",
+      "contract": "Contratto",
+      "line": "Riga",
+      "current": "Attuale",
+      "new": "Nuovo",
+      "delta": "Variazione",
+      "rateAtDate": "Tariffa alla data"
+    },
+    "followsCatalog": "Segue il catalogo",
+    "close": "Chiudi",
+    "usageTitle": "Utilizzo del servizio"
+  },
+  "rateReview": {
+    "title": "Revisione tariffe",
+    "close": "Chiudi",
+    "applySelected": "Applica selezionate",
+    "applying": "Applicazione…",
+    "previewFailed": "Impossibile caricare le tariffe da revisionare.",
+    "applyFailed": "Impossibile applicare la revisione delle tariffe. Nessuna modifica è stata apportata.",
+    "intro": "Le righe prezzate esattamente alla tariffa di catalogo non cambieranno nella prossima fattura. Le righe diverse mantengono la tariffa attuale come prezzo negoziato.",
+    "applied": "{{applied}} modifica(he) applicata(e).",
+    "refused": "{{refused}} riga(he) rifiutata(e) perché sono cambiate dall'anteprima.",
+    "summary": "{{total}} riga(he) non revisionata(e): {{inherited}} corrispondenza(e) esatta(e), {{custom}} negoziate, {{skipped}} ignorate.",
+    "allClassified": "Tutte le righe sono state classificate. Nulla da revisionare.",
+    "noService": "Nessun servizio",
+    "columns": {
+      "contract": "Contratto",
+      "currentRate": "Tariffa attuale",
+      "catalogRate": "Tariffa di catalogo",
+      "proposed": "Proposta",
+      "confidence": "Affidabilità"
+    },
+    "proposal": {
+      "inherited": "Segui il catalogo",
+      "custom": "Mantieni come personalizzata",
+      "unreviewed": "Lascia non revisionata"
+    },
+    "confidence": {
+      "exact": "Corrispondenza esatta",
+      "differs": "Differisce dal catalogo",
+      "needsDecision": "Richiede una decisione"
     }
   }
 }

@@ -26,9 +26,11 @@ vi.mock('@alga-psa/auth/rbac', () => ({
 function buildThenableQuery(result: any) {
   const builder: any = {};
   builder.where = vi.fn(() => builder);
+  builder.whereIn = vi.fn(() => builder);
   builder.whereNotIn = vi.fn(() => builder);
   builder.whereNotNull = vi.fn(() => builder);
   builder.whereRaw = vi.fn(() => builder);
+  builder.orderBy = vi.fn(() => builder);
   builder.join = vi.fn(() => builder);
   builder.leftJoin = vi.fn(() => builder);
   builder.select = vi.fn(() => builder);
@@ -92,12 +94,21 @@ describe('contractReportActions summary service-period basis', () => {
         contract_id: 'contract-1',
         contract_name: 'Managed Services',
         client_name: 'Acme Industries',
+        currency_code: 'USD',
       },
     ];
     const contractLines = [
-      { contract_id: 'contract-1', custom_rate: 20000 },
+      {
+        contract_line_id: 'line-1',
+        contract_id: 'contract-1',
+        contract_line_type: 'Fixed',
+        billing_frequency: 'monthly',
+        custom_rate: 20000,
+      },
     ];
 
+    // client_contracts is scanned four times: revenue assignments, canonical
+    // valuation assignments, YTD currency resolution, then the at-risk count.
     let clientContractsCallCount = 0;
     const knex: any = vi.fn((table: string) => {
       if (table === 'invoice_charges as ic') {
@@ -105,14 +116,21 @@ describe('contractReportActions summary service-period basis', () => {
       }
       if (table === 'client_contracts as cc') {
         clientContractsCallCount += 1;
-        if (clientContractsCallCount === 1) {
+        if (clientContractsCallCount <= 3) {
           return buildThenableQuery(assignments);
         }
         return buildThenableQuery({ count: '2' });
       }
-      if (table === 'contract_lines as cl') {
+      if (table === 'contract_lines as cln') {
         return buildThenableQuery(contractLines);
       }
+      if (table === 'contract_line_service_configuration as clsc') {
+        return buildThenableQuery([]);
+      }
+      if (table === 'contract_line_unit_pricing_revisions as rev') {
+        return buildThenableQuery([]);
+      }
+      if (table === 'contract_line_service_configuration') return buildThenableQuery([]);
       throw new Error(`Unexpected table ${table}`);
     });
 
@@ -122,10 +140,11 @@ describe('contractReportActions summary service-period basis', () => {
     const summary = await getContractReportSummary();
 
     expect(summary).toEqual({
-      totalMRR: 20000,
-      totalYTD: 17000,
+      fixedMrrByCurrency: [{ currencyCode: 'USD', totalCents: 20000 }],
+      ytdRevenueByCurrency: [{ currencyCode: 'USD', totalCents: 17000 }],
       activeContractCount: 1,
       atRiskDecisionCount: 2,
+      variableUsageContractCount: 0,
     });
   });
 });

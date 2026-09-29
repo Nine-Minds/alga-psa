@@ -212,6 +212,10 @@ vi.mock("../features/ticketDetail/components/TimeEntriesSection", () => ({
   TimeEntriesSection: (props: Record<string, unknown>) => React.createElement("MockTimeEntriesSection", props),
 }));
 
+vi.mock("../features/ticketDetail/components/CallsEmailsSection", () => ({
+  CallsEmailsSection: (props: Record<string, unknown>) => React.createElement("MockCallsEmailsSection", props),
+}));
+
 vi.mock("../features/ticketDetail/components/TagsSection", () => ({
   TagsSection: (props: Record<string, unknown>) => React.createElement("MockTagsSection", props),
 }));

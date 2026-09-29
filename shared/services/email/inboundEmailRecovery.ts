@@ -54,8 +54,8 @@ export interface RecoverySweepResult {
 }
 
 export async function sweepTenantDurableWork(tenant: string, limit: number = 10): Promise<RecoverySweepResult> {
-  const db = await (await import('@alga-psa/db/admin')).getAdminConnection();
-  const { tenantDb } = await import('@alga-psa/db');
+  const { createTenantKnex, tenantDb } = await import('@alga-psa/db');
+  const { knex: db } = await createTenantKnex(tenant);
   const result: RecoverySweepResult = { enqueued: { ingress: 0, inbox: 0, artifact: 0, outbox: 0, deliveries: 0 } };
   const maxAttempts = getDurableMaxAttempts();
 
@@ -476,8 +476,8 @@ async function upsertLegacyInbox(
  * checkpointed).
  */
 export async function backfillTenantLegacyRows(tenant: string, limit: number = 25): Promise<BackfillResult> {
-  const db = await (await import('@alga-psa/db/admin')).getAdminConnection();
-  const { tenantDb } = await import('@alga-psa/db');
+  const { createTenantKnex, tenantDb } = await import('@alga-psa/db');
+  const { knex: db } = await createTenantKnex(tenant);
 
   const result: BackfillResult = { processed: 0, imported: 0, ambiguous: 0, skipped: 0 };
   const batchSize = Math.max(1, limit);
@@ -801,8 +801,8 @@ export interface MirrorResult {
  * deleted; a previously-terminal legacy row is left untouched.
  */
 export async function mirrorTenantTerminalInbox(tenant: string, limit: number = 50): Promise<MirrorResult> {
-  const db = await (await import('@alga-psa/db/admin')).getAdminConnection();
-  const { tenantDb } = await import('@alga-psa/db');
+  const { createTenantKnex, tenantDb } = await import('@alga-psa/db');
+  const { knex: db } = await createTenantKnex(tenant);
 
   const terminalRows = (await tenantDb(db, tenant).table('inbound_email_inbox')
     .where({ tenant })
@@ -858,12 +858,14 @@ export async function mirrorTenantTerminalInbox(tenant: string, limit: number = 
         metadata: JSON.stringify(metadata),
       })
       .onConflict(['message_id', 'provider_id', 'tenant'])
+      // Citus rejects STABLE functions (db.fn.now() → CURRENT_TIMESTAMP) inside
+      // ON CONFLICT DO UPDATE SET on distributed tables — must pass a literal.
       .merge({
         processing_status: status,
         ticket_id: inbox.ticket_id,
         error_message: inbox.status === 'terminal_failed' ? (inbox.last_error ?? inbox.outcome_reason ?? null) : null,
         metadata: JSON.stringify(metadata),
-        processed_at: db.fn.now(),
+        processed_at: new Date().toISOString(),
       });
     mirrored += 1;
   }

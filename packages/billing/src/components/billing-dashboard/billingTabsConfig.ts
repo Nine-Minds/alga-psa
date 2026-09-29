@@ -5,6 +5,7 @@ import {
   FileOutput,
   Percent,
   Layers3,
+  FolderTree,
   Calendar,
   Gauge,
   BarChart3,
@@ -17,6 +18,7 @@ export interface BillingTabDefinition {
   labelKey: string;
   href: string;
   icon: React.ElementType;
+  requiredPermission?: string;
 }
 
 export type BillingTabValue =
@@ -33,6 +35,7 @@ export type BillingTabValue =
   | 'service-periods'
   | 'products'
   | 'service-types'
+  | 'service-categories'
   | 'service-catalog'
   | 'tax-rates'
   | 'usage-tracking'
@@ -72,7 +75,8 @@ export const billingTabDefinitions: BillingTabDefinition[] = [
     label: 'Accounting Exports',
     labelKey: 'dashboard.tabs.accountingExports',
     href: '/msp/billing?tab=accounting-exports',
-    icon: FileOutput
+    icon: FileOutput,
+    requiredPermission: 'accounting_integrations:exports_execute'
   },
   {
     value: 'contract-templates',
@@ -97,7 +101,7 @@ export const billingTabDefinitions: BillingTabDefinition[] = [
   },
   {
     value: 'tax-rates',
-    label: 'Tax rates',
+    label: 'Tax',
     labelKey: 'dashboard.tabs.taxRates',
     href: '/msp/billing?tab=tax-rates',
     icon: Percent
@@ -143,6 +147,13 @@ export const billingTabDefinitions: BillingTabDefinition[] = [
     labelKey: 'dashboard.tabs.serviceTypes',
     href: '/msp/billing?tab=service-types',
     icon: Layers3
+  },
+  {
+    value: 'service-categories',
+    label: 'Service Categories',
+    labelKey: 'dashboard.tabs.serviceCategories',
+    href: '/msp/billing?tab=service-categories',
+    icon: FolderTree
   },
   {
     value: 'service-catalog',

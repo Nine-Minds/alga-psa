@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "suite": "node-tooling",
+  "revision": "886b65362d52a9017945891ec5b598478f75636f",
+  "runtime": "v25.5.0",
+  "status": "passed",
+  "counts": {
+    "tests": 864,
+    "passed": 864,
+    "failed": 0,
+    "skipped": 0,
+    "todo": 0,
+    "cancelled": 0
+  },
+  "source": {
+    "before": {
+      "revision": "886b65362d52a9017945891ec5b598478f75636f",
+      "dirty": false,
+      "changes": []
+    },
+    "after": {
+      "revision": "886b65362d52a9017945891ec5b598478f75636f",
+      "dirty": false,
+      "changes": []
+    }
+  },
+  "workingTreeDirty": false,
+  "failures": [],
+  "expectedFileCount": 83,
+  "executedFileCount": 83,
+  "durationMs": 162069.607708,
+  "evidenceSha256": "8c871bc98a611ea10f95c09e12a0ce9f983cbee2ba2072afc6c1c96913463dbf",
+  "command": "PATH=/opt/homebrew/opt/node@25/bin:$PATH node scripts/run-node-tooling-tests.mjs",
+  "limits": [
+    "Native macOS Node25 with installed dependencies and loopback sockets enabled; not clean Linux image validation.",
+    "Manual reconciliation workflow and actual remote credentials remain unverified."
+  ]
+}

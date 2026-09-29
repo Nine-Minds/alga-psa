@@ -186,8 +186,30 @@ describe('nextAuth session expiry sliding', () => {
     expect(isRevokedOrIdentityMismatchMock).toHaveBeenCalledTimes(2);
   });
 
-  it('fails closed when durable revocation state cannot be read', async () => {
+  // Returning null here deletes the session cookie, so a pool timeout on this
+  // one lookup used to sign a working tenant out. The request is still refused:
+  // requireLiveSession repeats the check and returns no session (see
+  // getSession.test.ts, 'fails closed when the revocation lookup throws').
+  it('keeps the session cookie when durable revocation state cannot be read', async () => {
     isRevokedOrIdentityMismatchMock.mockRejectedValue(new Error('database unavailable'));
+
+    const token = {
+      id: 'u-1',
+      tenant: 'tenant-1',
+      user_type: 'internal',
+      session_id: 'sess-1',
+      // Stale enough that a verified session would have slid its expiry.
+      last_plan_check: 0,
+      last_session_extend: 0,
+    };
+
+    await expect(runJwt(token)).resolves.toMatchObject({ id: 'u-1', session_id: 'sess-1' });
+    // An unhappy database is not asked to do the optional writes either.
+    expect(extendExpiryMock).not.toHaveBeenCalled();
+  });
+
+  it('still drops the cookie when the lookup says the session is revoked', async () => {
+    isRevokedOrIdentityMismatchMock.mockResolvedValue(true);
 
     await expect(runJwt({
       id: 'u-1',

@@ -664,6 +664,8 @@ async function createTestDbConnection(): Promise<Knex> {
   const dbPort = parseInt(process.env.DB_PORT || '5432', 10);
   const adminUser = process.env.DB_USER_ADMIN || 'postgres';
   const adminPassword = process.env.DB_PASSWORD_ADMIN || 'postpass123';
+  const appUser = process.env.DB_USER_SERVER || 'app_user';
+  const appPassword = process.env.DB_PASSWORD_SERVER || adminPassword;
   const dbName = 'profitability_reporting_test';
 
   const adminConnection = knexFactory({
@@ -684,6 +686,18 @@ async function createTestDbConnection(): Promise<Knex> {
     );
     await adminConnection.raw(`DROP DATABASE IF EXISTS "${dbName}"`);
     await adminConnection.raw(`CREATE DATABASE "${dbName}"`);
+    // The initial-schema migration GRANTs to DB_USER_SERVER, and roles are
+    // cluster-wide: this suite only passed when some earlier suite happened to
+    // create the role first. Create it here, as the other self-bootstrapping
+    // suites do, so migrations succeed whatever order the files run in. Never
+    // ALTER an existing role — a concurrent suite may rely on its password.
+    await adminConnection.raw(`DO $$
+      BEGIN
+        IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = '${appUser.replace(/'/g, "''")}') THEN
+          CREATE ROLE "${appUser.replace(/"/g, '""')}" WITH LOGIN PASSWORD '${appPassword.replace(/'/g, "''")}';
+        END IF;
+      END;
+    $$;`);
   } finally {
     await adminConnection.destroy();
   }

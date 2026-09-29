@@ -1,5 +1,6 @@
 // server/src/lib/models/contractLinePresetService.ts
 import { Knex } from 'knex';
+import { withUnitCode } from '@alga-psa/core/unitOfMeasure';
 import type { IContractLinePresetService } from '@alga-psa/types';
 import { requireTenantId, tenantDb } from '@alga-psa/db';
 
@@ -58,7 +59,7 @@ const ContractLinePresetService = {
     const tenant = await requireTenantId(knexOrTrx);
 
     const serviceWithTenant = {
-      ...serviceData,
+      ...withUnitCode(serviceData),
       tenant
     };
 
@@ -111,7 +112,7 @@ const ContractLinePresetService = {
       }
 
       const servicesWithTenant = services.map(service => ({
-        ...service,
+        ...withUnitCode(service),
         tenant
       }));
 

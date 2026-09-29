@@ -1,0 +1,324 @@
+[
+  {
+    "id": "T001",
+    "description": "Refresh baseline job failures and effective rules, attach classifications and fixes, then execute repaired suites on representative candidates; verify no assertions or skip budgets were weakened to obtain green.",
+    "implemented": false,
+    "kind": "ci-verification",
+    "featureIds": [
+      "F001",
+      "F002"
+    ]
+  },
+  {
+    "id": "T002",
+    "description": "Collect and run the month-end regression under the actual CI DB command: real pg-hydrated Dates succeed on the tenant final day, an early invocation is rejected, and narrowly restoring the old normalization triggers the intended failure.",
+    "implemented": true,
+    "kind": "db-integration",
+    "featureIds": [
+      "F003",
+      "F015",
+      "F029"
+    ]
+  },
+  {
+    "id": "T003",
+    "description": "Run workspace DB suites from clean migrated databases; unavailable DB credentials fail clearly rather than skip; repeated execution and any configured parallel isolation do not leak or overwrite another suite data.",
+    "implemented": true,
+    "kind": "harness-behavior",
+    "featureIds": [
+      "F003"
+    ]
+  },
+  {
+    "id": "T004",
+    "description": "Use a disposable test workspace to add and move a test outside configured runners; discovery fails and identifies it, then passes when a real runner collects it; zero mandatory tests and an expired exclusion fail while a valid owned manual exclusion is explicit.",
+    "implemented": true,
+    "kind": "discovery-behavior",
+    "featureIds": [
+      "F004",
+      "F006"
+    ],
+    "evidence": [
+      "evidence/ci-repository-inventory.json"
+    ]
+  },
+  {
+    "id": "T005",
+    "description": "Exercise selection with temporary git revisions changing only root lockfile, harness, schema, selection script, service and EE package files; verify required suites are selected through the outer workflow and runner. Missing base, diff failure and graph failure cannot silently narrow execution; docs-only selection remains explainable.",
+    "implemented": true,
+    "kind": "selection-behavior",
+    "featureIds": [
+      "F005"
+    ]
+  },
+  {
+    "id": "T006",
+    "description": "Feed actual-format runner reports with success, intentional skip, todo, pending work, missing file, collection failure and truncated execution into reconciliation; verify required identities and completeness survive serialization and incomplete runs never become ready.",
+    "implemented": true,
+    "kind": "report-behavior",
+    "featureIds": [
+      "F006",
+      "F024",
+      "F025"
+    ]
+  },
+  {
+    "id": "T007",
+    "description": "Evaluate aggregate decisions across success, failure, cancellation, unexpected skip, empty collection, absent/stale artifact, expired quarantine and explicit not-applicable selection; only a complete eligible mandatory set passes.",
+    "implemented": true,
+    "kind": "gate-behavior",
+    "featureIds": [
+      "F007",
+      "F009",
+      "F018"
+    ]
+  },
+  {
+    "id": "T008",
+    "description": "Read effective protections and exercise disposable candidate PRs with passing and deliberately failing required jobs; confirm actual mergeability respects stable check identities, preserves prior guards and records administrator/bot and freshness behavior.",
+    "implemented": false,
+    "kind": "github-verification",
+    "featureIds": [
+      "F008",
+      "F009",
+      "F018"
+    ]
+  },
+  {
+    "id": "T009",
+    "description": "Boot CE and EE production builds, log in with real credentials and assert dashboard/edition content; invalid credentials fail. Repeat with isolated users and tenants; force an assertion failure to verify sanitized first-attempt artifacts and that retry-only success remains flaky.",
+    "implemented": true,
+    "kind": "browser",
+    "featureIds": [
+      "F010",
+      "F017"
+    ]
+  },
+  {
+    "id": "T010",
+    "description": "As an authorized non-admin, add usage with overlapping usage/bucket eligibility through the real UI action, reload and verify chosen contract, quantity/date and preview amount; another tenant cannot access the result and cannot cause cross-tenant mutation.",
+    "implemented": true,
+    "kind": "browser-db",
+    "featureIds": [
+      "F011",
+      "F016"
+    ]
+  },
+  {
+    "id": "T011",
+    "description": "Submit a portal request, handle/assign/reply and reopen the associated ticket as MSP, then verify persisted response/status in a fresh portal session; a sibling client cannot read or update it and an ordinary technician cannot perform an admin-only action.",
+    "implemented": true,
+    "kind": "browser-db",
+    "featureIds": [
+      "F012",
+      "F013",
+      "F016"
+    ]
+  },
+  {
+    "id": "T012",
+    "description": "Log and submit ticket time, prove invoicing rejects unapproved time, approve and generate the invoice, and verify hours, rate, total and billed state; repeating generation does not bill that time twice.",
+    "implemented": true,
+    "kind": "browser-db",
+    "featureIds": [
+      "F014"
+    ]
+  },
+  {
+    "id": "T013",
+    "description": "Generate and finalize representative recurring and manual invoices from seeded business data, download the actual PDF and verify invoice identity and expected amounts; reload shows consistent status and repeating the request creates no unintended duplicate.",
+    "implemented": true,
+    "kind": "browser-db",
+    "featureIds": [
+      "F015"
+    ]
+  },
+  {
+    "id": "T014",
+    "description": "Send raw MIME through the built email service, intake, queue and DB for inline-blockquote and quoted-history cases; verify authored text, single ticket/thread, delivered reply headers and idempotent duplicate intake in the test mailbox.",
+    "implemented": true,
+    "kind": "service-containers",
+    "featureIds": [
+      "F019",
+      "F029"
+    ]
+  },
+  {
+    "id": "T015",
+    "description": "Validate the tested manifest against component image digests and simulated deployed identities; replacing only the email-service digest or presenting a result from another manifest must reject promotion, while the exact tested component set passes.",
+    "implemented": true,
+    "kind": "artifact-verification",
+    "featureIds": [
+      "F020"
+    ],
+    "evidence": [
+      "evidence/native-release-check-configuration.json",
+      "evidence/native-node-tooling-d683f3.json",
+      "evidence/release-simulation-acceptance-audit.json"
+    ]
+  },
+  {
+    "id": "T016",
+    "description": "Seed the supported v1.5.0 schema (f3579f3a317cf51df5f4489e5dcd8f649bb71289) with synthetic existing tenant/ticket/contract/usage data, run the real upgrade and verify retained records plus working ticket, Add Usage and invoice paths; preserve post-upgrade tenant isolation.",
+    "implemented": true,
+    "kind": "upgrade-db-browser",
+    "featureIds": [
+      "F021"
+    ]
+  },
+  {
+    "id": "T017",
+    "description": "Against EE/Citus migrated/upgraded schema, create and query tenant-scoped business rows and generate a representative invoice; forbidden cross-tenant reads/writes are rejected. Confirm runtime behavior, not just distribution counts.",
+    "implemented": true,
+    "kind": "citus-integration",
+    "featureIds": [
+      "F022"
+    ]
+  },
+  {
+    "id": "T018",
+    "description": "In dedicated test resources, exercise post-deploy and scheduled smoke; induce a controlled failure to verify notification and promotion handling, then rerun/cleanup twice to prove recovery and idempotency without customer recipients or live payments.",
+    "implemented": false,
+    "kind": "deployed-smoke",
+    "featureIds": [
+      "F023"
+    ]
+  },
+  {
+    "id": "T019",
+    "description": "Write success, failure, cancelled, missing and retry-only rows to an isolated metrics workbook with representative historical data; verify additive schema, existing-reader compatibility, separate PR/main/nightly views, explicit non-ready states and visible measured/total file counts.",
+    "implemented": true,
+    "kind": "metrics-integration",
+    "featureIds": [
+      "F024",
+      "F025"
+    ]
+  },
+  {
+    "id": "T020",
+    "description": "Run a compatible Stryker/Vitest pilot and prove selected tenant/eligibility/date mutations are killed by meaningful assertions; review surviving and equivalent mutants and attach the scoped baseline plus runtime cost.",
+    "implemented": true,
+    "kind": "mutation-pilot",
+    "featureIds": [
+      "F026"
+    ]
+  },
+  {
+    "id": "T021",
+    "description": "Generate and replay month-end/DST calendar cases across selected tenant timezones and real pg date hydration; invalid dates are rejected and a deliberate normalization defect yields a shrunk, reproducible failing case.",
+    "implemented": true,
+    "kind": "property-db",
+    "featureIds": [
+      "F027"
+    ]
+  },
+  {
+    "id": "T022",
+    "description": "Execute valid generated finalize/pay/credit/void/retry sequences against actual billing behavior using an independently simplified expected ledger; balances reconcile, disallowed transitions preserve state and duplicate retries cannot repeat financial effects; replay a seeded counterexample.",
+    "implemented": true,
+    "kind": "model-db",
+    "featureIds": [
+      "F028"
+    ]
+  },
+  {
+    "id": "T023",
+    "description": "For the usage-context, month-end hydration and inbound-email exemplars, verify incident-to-journey-to-test mapping and actual CI execution; attach intended pre-fix failure and post-fix pass evidence, record mock/deployment limits and assign follow-up ownership.",
+    "implemented": false,
+    "kind": "regression-process",
+    "featureIds": [
+      "F029",
+      "F030"
+    ]
+  },
+  {
+    "id": "T024",
+    "description": "Review the first completed readiness/escape report against actual runner output and effective gates, identify the oldest exclusion and highest-impact remaining escape category, and record owner/next action; verify documentation agrees with observed PR metrics and runner scope.",
+    "implemented": false,
+    "kind": "operational-review",
+    "featureIds": [
+      "F030"
+    ]
+  },
+  {
+    "id": "T025",
+    "description": "Run a real-login browser operation through production-built Alga to a wire-level provider emulator; verify server/worker routing, callback reachability, vendor and DB readback, isolated concurrent scenarios and reset. Capture a controlled failure with sanitized emulator/browser diagnostics and reject unexpected live-vendor traffic.",
+    "implemented": true,
+    "kind": "provider-wire-browser",
+    "featureIds": [
+      "F031"
+    ],
+    "evidence": [
+      "evidence/ci-primary-browser-api-561a6.json",
+      "evidence/ci-provider-replicas-cb884.json",
+      "evidence/native-concurrent-provider-isolation.json",
+      "evidence/ci-concurrent-provider-isolation-561a6.json",
+      "evidence/provider-observation-historical-replay.json"
+    ]
+  },
+  {
+    "id": "T026",
+    "description": "Complete invoice payment via simulated hosted Checkout and signed webhook, then reload and verify balance and vendor session; decline/cancellation leaves balance unpaid and replaying the same webhook cannot apply a second payment.",
+    "implemented": true,
+    "kind": "provider-wire-browser",
+    "featureIds": [
+      "F032",
+      "F036"
+    ]
+  },
+  {
+    "id": "T027",
+    "description": "Connect QBO using the supported OAuth flow, choose company/mappings and export an invoice via UI; inspect the vendor invoice and Alga sync result, expire credentials and induce stale SyncToken/transient failure, then verify visible recovery with one invoice and correct company identity.",
+    "implemented": true,
+    "kind": "provider-wire-browser",
+    "featureIds": [
+      "F033",
+      "F036"
+    ],
+    "evidence": [
+      "evidence/accounting-native-browser.json"
+    ]
+  },
+  {
+    "id": "T028",
+    "description": "Exercise Microsoft mailbox reply and calendar meeting creation/update/deletion through actual app processes and Graph endpoints; verify provider state and reopened UI. Induce permission/token failures. Verify claimed auth coverage against the capability matrix and that production Teams override guards remain effective; prelinked fixtures do not count as SSO tests.",
+    "implemented": false,
+    "kind": "provider-wire-browser",
+    "featureIds": [
+      "F034",
+      "F036",
+      "F037"
+    ]
+  },
+  {
+    "id": "T029",
+    "description": "Connect Xero, select organization/mappings and export an invoice through UI; verify vendor and persisted sync state, induce connection expiry or rejected export and recover without duplicate invoices or organization/tenant crossover.",
+    "implemented": true,
+    "kind": "provider-wire-browser",
+    "featureIds": [
+      "F035",
+      "F036"
+    ],
+    "evidence": [
+      "evidence/accounting-native-browser.json"
+    ]
+  },
+  {
+    "id": "T030",
+    "description": "Exercise deterministic representative 429/5xx and supported duplicate/out-of-order callbacks through real provider clients; assert bounded retry/actionable failure and exactly-once effects. Verify required provider/configuration results feed selection and release decisions; advance vendor/app time only through documented independent mechanisms.",
+    "implemented": false,
+    "kind": "provider-wire-browser",
+    "featureIds": [
+      "F036"
+    ]
+  },
+  {
+    "id": "T031",
+    "description": "Validate covered emulator auth/error/callback shapes against independently sourced provider contracts or sanitized captures; deliberately introduce a response-contract mismatch and verify parity validation detects it. Unsupported routes fail explicitly and missing real-sandbox verification is recorded as a limitation.",
+    "implemented": true,
+    "kind": "provider-contract",
+    "featureIds": [
+      "F037"
+    ]
+  }
+]

@@ -29,8 +29,15 @@ import {
   InboundEmailRecoveryJobData,
   INBOUND_EMAIL_RECOVERY_JOB,
 } from './handlers/inboundEmailRecoveryHandler';
+import {
+  providerDisconnectRetryJobHandler,
+  ProviderDisconnectRetryJobData,
+  PROVIDER_DISCONNECT_RETRY_JOB,
+} from './handlers/providerDisconnectRetryHandler';
 import { renewGoogleGmailWatchSubscriptions, GoogleGmailWatchRenewalJobData } from '@alga-psa/jobs/handlers/googleGmailWatchRenewalHandler';
 import { processRenewalQueueHandler, RenewalQueueProcessorJobData } from '@alga-psa/jobs/handlers/processRenewalQueueHandler';
+import { createDateTriggerScanHandler, dateTriggerScanHandler, DateTriggerScanJobData } from '@alga-psa/jobs/handlers/dateTriggerScanHandler';
+import { resolveDateTriggerWorkflowLauncher } from './dateTriggerWorkflowLauncher';
 import { autoCloseTicketsHandler, AutoCloseTicketsJobData } from '@alga-psa/jobs/handlers/autoCloseTicketsHandler';
 import { lowStockNotificationHandler, LowStockNotificationJobData } from './handlers/lowStockNotificationHandler';
 import {
@@ -256,6 +263,17 @@ export const initializeScheduler = async (storageService?: StorageService) => {
     jobScheduler.registerJobHandler<InboundEmailRecoveryJobData>(INBOUND_EMAIL_RECOVERY_JOB, async (job: Job<InboundEmailRecoveryJobData>) => {
       await inboundEmailRecoveryHandler(job);
     });
+
+    // Register provider disconnect retry handler (per-tenant, resumes pending
+    // QBO/Xero disconnect provider cleanup when its retry window has arrived)
+    jobScheduler.registerJobHandler<ProviderDisconnectRetryJobData>(PROVIDER_DISCONNECT_RETRY_JOB, async (job: Job<ProviderDisconnectRetryJobData>) => {
+      await providerDisconnectRetryJobHandler(job);
+    });
+
+    // Keep the legacy scheduler's EE handler aligned with JobHandlerRegistry without a CE import edge.
+    const dateTriggerLauncher = resolveDateTriggerWorkflowLauncher(isEnterpriseWorkflowEdition());
+    const runDateTriggerScan = dateTriggerLauncher ? createDateTriggerScanHandler(dateTriggerLauncher) : dateTriggerScanHandler;
+    jobScheduler.registerJobHandler<DateTriggerScanJobData>('date-trigger-scan', async (job) => { await runDateTriggerScan(job.data); });
 
     // Register renewal queue processing handler
     jobScheduler.registerJobHandler<RenewalQueueProcessorJobData>(
@@ -944,6 +962,21 @@ export const scheduleInboundEmailRecoveryJob = async (
   );
 };
 
+export const scheduleProviderDisconnectRetryJob = async (
+  tenantId?: string,
+  cronExpression: string = '*/5 * * * *' // Every 5 minutes
+): Promise<string | null> => {
+  if (isEnterpriseWorkflowEdition()) {
+    return null; // EE runs this via the Temporal maintenance fanout
+  }
+  const scheduler = await initializeScheduler();
+  return await scheduler.scheduleRecurringJob<ProviderDisconnectRetryJobData>(
+    PROVIDER_DISCONNECT_RETRY_JOB,
+    cronExpression,
+    { tenantId }
+  );
+};
+
 export const scheduleRenewalQueueProcessingJob = async (
   tenantId: string,
   horizonDays: number = 90,
@@ -1013,4 +1046,16 @@ export const scheduleSearchReconcileJob = async (
     cronExpression,
     { tenantId }
   );
+};
+
+export const scheduleDateTriggerScanJob = async (tenantId: string, cronExpression: string = '5 * * * *'): Promise<string | null> => {
+  if (isEnterpriseWorkflowEdition()) return null;
+  const runner = await getJobRunnerInstance();
+  const result = await runner.scheduleRecurringJob<DateTriggerScanJobData>(
+    'date-trigger-scan',
+    { tenantId },
+    cronExpression,
+    { singletonKey: `date-trigger-scan:${tenantId}` }
+  );
+  return result.jobId;
 };

@@ -9,6 +9,10 @@ import { ComponentPalette } from './ComponentPalette';
 import { useInvoiceDesignerStore } from '../state/designerStore';
 import { buildQuoteTemplateBindings } from '../../../lib/quote-template-ast/bindings';
 
+vi.mock('@alga-psa/ui/hooks/useFeatureFlag', () => ({
+  useFeatureFlag: () => ({ enabled: true, loading: false, error: null }),
+}));
+
 afterEach(() => {
   cleanup();
 });

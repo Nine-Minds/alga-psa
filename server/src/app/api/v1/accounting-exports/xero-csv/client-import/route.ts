@@ -21,9 +21,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Check permissions
-    const canManageBilling = await hasPermission(user, 'billing', 'manage');
-    if (!canManageBilling) {
+    // Check permissions. Xero CSV import is accounting export/import work,
+    // gated by the accounting-integrations `exports_execute` capability (the
+    // same gate the ApiCSVAccountingController uses for the modern CSV routes).
+    const canExecuteExports = await hasPermission(user, 'accounting_integrations', 'exports_execute');
+    if (!canExecuteExports) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 

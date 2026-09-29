@@ -216,6 +216,10 @@ export function GoogleIntegrationSettings({ onStatusChange }: GoogleIntegrationS
                     <Label htmlFor="google-gmail-client-id">{t('integrations.google.settings.oauth.gmailClientId', { defaultValue: 'Google OAuth Client ID for staff sign-in and Gmail' })}</Label>
                     <Input
                       id="google-gmail-client-id"
+                      name="google-oauth-client-id"
+                      autoComplete="off"
+                      data-1p-ignore
+                      data-lpignore="true"
                       value={gmailClientId}
                       onChange={(e) => setGmailClientId(e.target.value)}
                       placeholder="xxxxxxxxx.apps.googleusercontent.com"
@@ -229,6 +233,10 @@ export function GoogleIntegrationSettings({ onStatusChange }: GoogleIntegrationS
                     <Label htmlFor="google-gmail-client-secret">{t('integrations.google.settings.oauth.gmailClientSecret', { defaultValue: 'Google OAuth Client Secret for staff sign-in and Gmail' })}</Label>
                     <Input
                       id="google-gmail-client-secret"
+                      name="google-oauth-client-secret"
+                      autoComplete="new-password"
+                      data-1p-ignore
+                      data-lpignore="true"
                       type="password"
                       value={gmailClientSecret}
                       onChange={(e) => setGmailClientSecret(e.target.value)}
@@ -242,6 +250,10 @@ export function GoogleIntegrationSettings({ onStatusChange }: GoogleIntegrationS
                         <Label htmlFor="google-calendar-client-id">{t('integrations.google.settings.oauth.calendarClientId', { defaultValue: 'Calendar OAuth Client ID' })}</Label>
                         <Input
                           id="google-calendar-client-id"
+                          name="google-calendar-oauth-client-id"
+                          autoComplete="off"
+                          data-1p-ignore
+                          data-lpignore="true"
                           value={calendarClientId}
                           onChange={(e) => setCalendarClientId(e.target.value)}
                           placeholder="xxxxxxxxx.apps.googleusercontent.com"
@@ -252,6 +264,10 @@ export function GoogleIntegrationSettings({ onStatusChange }: GoogleIntegrationS
                         <Label htmlFor="google-calendar-client-secret">{t('integrations.google.settings.oauth.calendarClientSecret', { defaultValue: 'Calendar OAuth Client Secret' })}</Label>
                         <Input
                           id="google-calendar-client-secret"
+                          name="google-calendar-oauth-client-secret"
+                          autoComplete="new-password"
+                          data-1p-ignore
+                          data-lpignore="true"
                           type="password"
                           value={calendarClientSecret}
                           onChange={(e) => setCalendarClientSecret(e.target.value)}

@@ -5,7 +5,7 @@ import { useTranslation } from "react-i18next";
 import EmojiPicker from "rn-emoji-keyboard";
 import type { AggregatedReaction, TicketComment } from "../../../api/tickets";
 import { createApiClient } from "../../../api";
-import { toggleCommentReaction, updateTicketComment } from "../../../api/tickets";
+import { cancelScheduledTicketComment, isScheduledComment, toggleCommentReaction, updateTicketComment } from "../../../api/tickets";
 import { useAuth } from "../../../auth/AuthContext";
 import { useTheme } from "../../../ui/ThemeContext";
 import { Avatar } from "../../../ui/components/Avatar";
@@ -331,6 +331,50 @@ export function CommentsSection({
     return createApiClient({ baseUrl: config.baseUrl, getUserAgentTag: () => "mobile" });
   }, [config]);
 
+  const [cancelingCommentId, setCancelingCommentId] = useState<string | null>(null);
+
+  const cancelScheduled = useCallback(
+    (comment: TicketComment) => {
+      if (!comment.comment_id) return;
+      const commentId = comment.comment_id;
+      Alert.alert(
+        t("comments.cancelScheduledTitle"),
+        t("comments.cancelScheduledBody"),
+        [
+          { text: t("common:cancel"), style: "cancel" },
+          {
+            text: t("comments.cancelScheduledConfirm"),
+            style: "destructive",
+            onPress: () => {
+              void (async () => {
+                if (!client || !session) return;
+                setCancelingCommentId(commentId);
+                try {
+                  const auditHeaders = await getClientMetadataHeaders();
+                  const res = await cancelScheduledTicketComment(client, {
+                    apiKey: session.accessToken,
+                    ticketId,
+                    commentId,
+                    auditHeaders,
+                  });
+                  if (!res.ok) {
+                    Alert.alert(t("comments.cancelScheduledFailed"), undefined, [{ text: t("common:ok") }]);
+                    return;
+                  }
+                  onCommentUpdated?.();
+                } finally {
+                  setCancelingCommentId(null);
+                }
+              })();
+            },
+          },
+        ],
+      );
+    },
+    [client, onCommentUpdated, session, t, ticketId],
+  );
+
+
   const getReactions = useCallback(
     (commentId: string | undefined): AggregatedReaction[] => {
       if (!commentId) return [];
@@ -455,6 +499,8 @@ export function CommentsSection({
             const isEditingThis = editingCommentId === c.comment_id;
             const isReplyingThis = replyingToCommentId === c.comment_id;
             const canEdit = !isSystemEventComment && !isOptimistic && !deleted && !hidden && Boolean(meUserId && c.created_by === meUserId);
+            const scheduled = !isSystemEventComment && !deleted && isScheduledComment(c);
+            const canCancelSchedule = scheduled && !isOptimistic && !isEditingThis;
             const canReply = Boolean(onSubmitReply) && !isSystemEventComment && !isOptimistic && !deleted && !hidden && !isEditingThis;
             const commentPlainText = extractPlainTextFromSerializedRichEditorContent(c.comment_text);
             const eventText = c.event_text ?? (eventType ? `${eventType}: ${commentPlainText}` : commentPlainText);
@@ -575,6 +621,12 @@ export function CommentsSection({
                     ) : (
                       <>
                         <Badge label={c.is_internal ? t("comments.internal") : t("comments.client")} tone={c.is_internal ? "warning" : "info"} />
+                        {scheduled ? (
+                          <>
+                            <View style={{ width: spacing.xs }} />
+                            <Badge label={t("comments.scheduled")} tone="warning" />
+                          </>
+                        ) : null}
                         {c.is_resolution ? (
                           <>
                             <View style={{ width: spacing.xs }} />
@@ -617,6 +669,21 @@ export function CommentsSection({
                           style={{ padding: spacing.xs }}
                         >
                           <Feather name="corner-up-left" size={16} color={colors.textSecondary} />
+                        </Pressable>
+                      ) : null}
+                      {canCancelSchedule ? (
+                        <Pressable
+                          onPress={() => cancelScheduled(c)}
+                          disabled={cancelingCommentId === c.comment_id}
+                          accessibilityRole="button"
+                          accessibilityLabel={t("comments.cancelScheduled")}
+                          style={{ padding: spacing.xs, opacity: cancelingCommentId === c.comment_id ? 0.4 : 1 }}
+                        >
+                          {cancelingCommentId === c.comment_id ? (
+                            <ActivityIndicator size="small" color={colors.danger} />
+                          ) : (
+                            <Feather name="x-circle" size={16} color={colors.danger} />
+                          )}
                         </Pressable>
                       ) : null}
                       {canEdit ? (

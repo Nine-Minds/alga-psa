@@ -25,6 +25,47 @@ import {
 } from '../schemas/asset';
 import { publishEvent } from 'server/src/lib/eventBus/publishers';
 import { NotFoundError, ConflictError, ValidationError } from '../middleware/apiMiddleware';
+import { resolveWritableAssetType, resolveAttributeSchemaForWrite, validateAttributesForWrite, attributesMergeExpression, serializeAttributesForInsert } from '@alga-psa/assets/lib/assetAttributeWrites';
+import { isTypedAssetWriteError } from '@alga-psa/assets/lib/assetTypeAttributes';
+
+function validationDetails(issues: Array<{ key: string; code: string; message: string }>) {
+  return issues.map((issue) => ({ path: ['attributes', issue.key], code: issue.code, message: issue.message }));
+}
+
+function mapInvalidAssetTypeError(error: unknown, slug: string): unknown {
+  if (isTypedAssetWriteError(error)) {
+    try {
+      const parsed = JSON.parse((error as Error).message);
+      if (parsed.kind === 'invalid_asset_type') {
+        const message = `Unknown asset_type '${slug}'`;
+        return new ValidationError(message, [{ path: ['asset_type'], code: 'invalid_asset_type', message }]);
+      }
+    } catch {
+      // Keep unrelated errors intact if their message is not typed JSON.
+    }
+  }
+  return error;
+}
+
+async function resolveRestAssetType(knex: Knex, tenant: string, slug: string) {
+  try {
+    return await resolveWritableAssetType(knex, tenant, slug);
+  } catch (error) {
+    throw mapInvalidAssetTypeError(error, slug);
+  }
+}
+
+async function resolveRestAttributeSchema(
+  knex: Knex,
+  tenant: string,
+  input: { nextAssetType?: string; storedAssetType?: string; attributesProvided: boolean }
+) {
+  try {
+    return await resolveAttributeSchemaForWrite(knex, tenant, input);
+  } catch (error) {
+    throw mapInvalidAssetTypeError(error, input.nextAssetType ?? input.storedAssetType ?? '');
+  }
+}
 
 function scopedTable<Row extends object = Record<string, any>>(
   conn: Knex | Knex.Transaction,
@@ -248,8 +289,13 @@ export class AssetService extends BaseService<any> {
   }
 
   async create(data: CreateAssetWithExtensionData, context: ServiceContext): Promise<any> {
-    const { extension_data, ...assetData } = data;
+    // LEVERAGE: friction rest-asset-write-path — converge REST writes with createAssetRecord/updateAssetRecord for shared history and workflow behavior.
+    const { extension_data, attributes, ...assetData } = data;
     const knex = await this.getDbForContext(context);
+
+    const typeEntry = await resolveRestAssetType(knex, context.tenant, assetData.asset_type);
+    const issues = validateAttributesForWrite(typeEntry, attributes, 'create');
+    if (issues.length) throw new ValidationError('Invalid asset attributes', validationDetails(issues));
 
     if (assetData.location_id) {
       await this.assertLocationBelongsToClient(knex, context.tenant, assetData.client_id, assetData.location_id);
@@ -257,6 +303,7 @@ export class AssetService extends BaseService<any> {
     
     const assetRecord = {
       ...assetData,
+      ...(attributes !== undefined ? { attributes: serializeAttributesForInsert(attributes) } : {}),
       tenant: context.tenant,
       created_at: new Date(),
       updated_at: new Date()
@@ -286,21 +333,36 @@ export class AssetService extends BaseService<any> {
   }
 
   async update(id: string, data: UpdateAssetData, context: ServiceContext): Promise<any> {
+    // LEVERAGE: friction rest-asset-write-path — converge REST writes with createAssetRecord/updateAssetRecord for shared history and workflow behavior.
     const knex = await this.getDbForContext(context);
     const updateData: Record<string, unknown> = { ...data };
+    const attributes = data.attributes as Record<string, unknown> | undefined;
+    delete updateData.attributes;
 
     const needsCurrent =
       data.location_id !== undefined ||
       data.client_id !== undefined;
+    const needsAssetContext = needsCurrent || data.attributes !== undefined || data.asset_type !== undefined;
 
-    const current = needsCurrent
+    const current = needsAssetContext
       ? await scopedTable(knex, context.tenant, this.tableName)
           .where({ [this.primaryKey]: id })
-          .first('client_id', 'location_id')
+          .first('client_id', 'location_id', 'asset_type')
       : null;
 
-    if (needsCurrent && !current) {
+    if (needsAssetContext && !current) {
       throw new NotFoundError('Asset not found');
+    }
+
+    if (needsAssetContext) {
+      const entry = await resolveRestAttributeSchema(knex, context.tenant, {
+        nextAssetType: data.asset_type,
+        storedAssetType: current!.asset_type,
+        attributesProvided: attributes !== undefined,
+      });
+      const issues = attributes !== undefined ? validateAttributesForWrite(entry, attributes, 'merge') : [];
+      if (issues.length) throw new ValidationError('Invalid asset attributes', validationDetails(issues));
+      if (attributes !== undefined) updateData.attributes = attributesMergeExpression(knex, attributes);
     }
 
     if (data.location_id) {
@@ -711,6 +773,10 @@ export class AssetService extends BaseService<any> {
     const db = tenantDb(knex, context.tenant);
     const query = db.table('document_associations');
     db.tenantJoin(query, 'documents', 'document_associations.document_id', 'documents.document_id');
+    // documents has no original_filename/uploaded_at: the upload name and time
+    // live on external_files (absent for in-app documents), so fall back to the
+    // document's own name and timestamps.
+    db.tenantJoin(query, 'external_files', 'documents.file_id', 'external_files.file_id', { type: 'left' });
     return query
       .where({
         'document_associations.entity_type': 'asset',
@@ -718,10 +784,10 @@ export class AssetService extends BaseService<any> {
       })
       .select(
         'document_associations.*',
-        'documents.original_filename',
+        knex.raw('COALESCE(external_files.original_name, documents.document_name) AS original_filename'),
         'documents.file_size',
         'documents.mime_type',
-        'documents.uploaded_at'
+        knex.raw('COALESCE(external_files.created_at, documents.entered_at, documents.updated_at) AS uploaded_at')
       );
   }
 

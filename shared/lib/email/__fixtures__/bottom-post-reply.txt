@@ -1,0 +1,3 @@
+> Could you confirm the maintenance window for Thursday night?
+
+Confirmed - we will start at 10pm Eastern and expect roughly two hours of downtime.

@@ -47,6 +47,9 @@ function buildClientCadenceServicePeriodRow(overrides: Row = {}): Row {
     tenant: 'tenant-1',
     cadence_owner: 'client',
     obligation_type: 'client_contract_line',
+    obligation_id: 'line-1',
+    // The query stub consumes joined rows; include the contract owner.
+    owner_client_id: 'client-1',
     client_id: 'client-1',
     schedule_key: 'schedule:tenant-1:client_contract_line:line-1:client:arrears',
     period_key: 'period:2025-01-01:2025-02-01',
@@ -132,6 +135,15 @@ function createQueryBuilder(rows: Row[], tableName: string) {
     join: vi.fn(() => builder),
     orderBy: vi.fn(() => builder),
     update: vi.fn(async () => 1),
+    delete: vi.fn(async () => {
+      const deletedCount = resultRows.length;
+      for (const row of resultRows) {
+        const index = rows.indexOf(row);
+        if (index !== -1) rows.splice(index, 1);
+      }
+      resultRows = [];
+      return deletedCount;
+    }),
     insert: vi.fn((payload: Row) => {
       insertedRow = {
         invoice_id: payload.invoice_id ?? `invoice-${rows.length + 1}`,
@@ -157,6 +169,13 @@ function createQueryBuilder(rows: Row[], tableName: string) {
 const mocks = vi.hoisted(() => {
   const missingTables = new Set<string>();
   const rowsByTable: Record<string, Row[]> = {
+    client_billing_profiles: [{
+      billing_profile_id: 'unit-test-default-billing-profile',
+      tenant: 'tenant-1',
+      client_id: 'client-1',
+      is_default: true,
+      is_active: true,
+    }],
     client_billing_cycles: [
       {
         billing_cycle_id: 'cycle-1',
@@ -172,6 +191,15 @@ const mocks = vi.hoisted(() => {
         client_name: 'Acme Corp',
       },
     ],
+    // Joined contract-line / client-assignment result used by ownership validation.
+    contract_lines: [{
+      contract_line_id: 'line-1',
+      contract_id: 'contract-1',
+      tenant: 'tenant-1',
+      client_id: 'client-1',
+      line_profile_id: null,
+      contract_profile_id: null,
+    }],
     invoices: [],
     recurring_service_periods: [buildClientCadenceServicePeriodRow()],
     client_billing_settings: [
@@ -267,6 +295,7 @@ const mocks = vi.hoisted(() => {
       tax_region: 'US-NY',
     })),
     calculateAndDistributeTax: vi.fn(async () => 200),
+    claimRecurringServicePeriodsForSelectionInputs: vi.fn(async () => undefined),
     persistInvoiceCharges: vi.fn(async () => 4200),
     updateInvoiceTotalsAndRecordTransaction: vi.fn(async () => undefined),
     getNextBillingDate: vi.fn(async () => '2025-03-01T00:00:00.000Z'),
@@ -352,6 +381,7 @@ vi.mock('../../../../../packages/billing/src/services/invoiceService', () => ({
   validateClientBillingEmail: mocks.validateClientBillingEmail,
   getClientDetails: mocks.getClientDetails,
   calculateAndDistributeTax: mocks.calculateAndDistributeTax,
+  claimRecurringServicePeriodsForSelectionInputs: mocks.claimRecurringServicePeriodsForSelectionInputs,
   persistInvoiceCharges: mocks.persistInvoiceCharges,
   updateInvoiceTotalsAndRecordTransaction: mocks.updateInvoiceTotalsAndRecordTransaction,
 }));
@@ -473,6 +503,32 @@ describe('selector-input recurring generation', () => {
     mocks.detectRecurringApprovalBlockers.mockResolvedValue(new Map());
     mocks.rowsByTable.time_entries = [];
   });
+
+  it.each(['client_billing_profiles', 'contract_lines'])(
+    'rejects a contract-cadence selection when %s belongs to another client',
+    async (table) => {
+      const row = mocks.rowsByTable[table][0];
+      const originalClientId = row.client_id;
+      row.client_id = 'other-client';
+      const selectorInput = buildContractCadenceDueSelectionInput({
+        clientId: 'client-1',
+        contractId: 'contract-1',
+        contractLineId: 'line-1',
+        windowStart: '2025-02-08',
+        windowEnd: '2025-03-08',
+      });
+
+      try {
+        await expect(generateInvoiceForSelectionInput(selectorInput)).rejects.toThrow(
+          'does not belong to client client-1 in this tenant',
+        );
+        expect(mocks.persistInvoiceCharges).not.toHaveBeenCalled();
+        expect(mocks.rowsByTable.invoices).toEqual([]);
+      } finally {
+        row.client_id = originalClientId;
+      }
+    },
+  );
 
   it('T006: recurring generation API accepts a client-cadence selector-input window with no `client_contract_lines` table', async () => {
     mocks.missingTables.add('client_contract_lines');
@@ -706,9 +762,10 @@ describe('selector-input recurring generation', () => {
       new Map([[selectorInput.executionWindow.identityKey, 1]]),
     );
 
-    await expect(generateInvoiceForSelectionInput(selectorInput)).rejects.toMatchObject({
-      message: 'Blocked until approval: 1 unapproved entry.',
-      executionIdentityKey: selectorInput.executionWindow.identityKey,
+    await expect(generateInvoiceForSelectionInput(selectorInput)).resolves.toMatchObject({
+      actionError: 'Blocked until approval: 1 unapproved entry.',
+      messageKey: 'msp/invoicing:automaticInvoices.executionRows.blockedUntilApproval',
+      messageParams: { count: '1' },
     });
     expect(mocks.calculateBillingForExecutionWindow).not.toHaveBeenCalled();
   });

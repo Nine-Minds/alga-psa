@@ -2,14 +2,18 @@ import logger from '@alga-psa/core/logger';
 import { createHash, randomUUID } from 'node:crypto';
 import {
   IEmailProvider,
+  EmailProviderError,
   EmailMessage as ProviderEmailMessage,
   EmailSendResult as ProviderEmailSendResult,
   EmailAddress as ProviderEmailAddress
 } from '@alga-psa/types';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { publishWorkflowEvent, type WorkflowActor } from '@alga-psa/event-bus/publishers';
+import { addGradientFallback } from './branding/gradientFallback';
+import { embedBrandLogo } from './inlineBrandLogo';
 import { SupportedLocale } from './lib/localeConfig';
 import type { Knex } from 'knex';
+import type { OutboundMailClass, TenantEmailSettings } from '@alga-psa/types';
 
 const tenantScopedTable = (knex: Knex | Knex.Transaction, table: string, tenant: string) =>
   tenantDb(knex, tenant).table(table);
@@ -40,6 +44,7 @@ export interface EmailSendResult {
   retryCount?: number;   // current retry attempt (0 = first attempt)
   providerId?: string;
   providerType?: string;
+  sentAt?: Date;
   metadata?: Record<string, any>;
 }
 
@@ -60,6 +65,13 @@ export interface EmailTemplateContent {
 }
 
 export interface BaseEmailParams {
+  mailClass: OutboundMailClass;
+  /** Internal immutable settings snapshot used for call-scoped From resolution. */
+  resolvedTenantEmailSettings?: TenantEmailSettings | null;
+  boardId?: string;
+  boardName?: string;
+  senderId?: string;
+  revalidateCommentOnRetry?: boolean;
   to: string | string[] | EmailAddress | EmailAddress[];
   from?: string | EmailAddress;
   fromName?: string;
@@ -84,6 +96,8 @@ export interface BaseEmailParams {
   resolvedTenantCompanyName?: string | null;
   /** Internal provider snapshot used by TenantEmailService during cache refreshes. */
   resolvedEmailProvider?: IEmailProvider | null;
+  resolvedMicrosoftProviderId?: string;
+  allowUnverifiedSender?: boolean;
   /** Internal initialization error paired with resolvedEmailProvider. */
   resolvedProviderInitError?: string | null;
   /** Internal forced sender identity for a system-provider fallback. */
@@ -492,13 +506,15 @@ export abstract class BaseEmailService {
         logger.warn(`[${this.getServiceName()}] Email provider failed to initialize: ${providerInitError}`);
         return {
           success: false,
-          error: `Email provider not ready: ${providerInitError}`
+          error: `Email provider not ready: ${providerInitError}`,
+          metadata: { definitelyNotSent: true, retryable: true, errorCode: 'PROVIDER_NOT_READY' }
         };
       }
       logger.warn(`[${this.getServiceName()}] Service disabled or not configured`);
       return {
         success: false,
-        error: 'Email service is disabled or not configured'
+        error: 'Email service is disabled or not configured',
+        metadata: { definitelyNotSent: true, retryable: false, errorCode: 'PROVIDER_DISABLED' }
       };
     }
 
@@ -570,6 +586,22 @@ export abstract class BaseEmailService {
       const effectiveEntityType = params.entityType ?? (effectiveTicketId ? 'ticket' : undefined);
       const effectiveEntityId = params.entityId ?? effectiveTicketId;
 
+      // Every email path lands here after its template is rendered, so this is
+      // where gradient surfaces get the flat color the Outlooks fall back to,
+      // and where the branded header logo becomes an inline attachment.
+      html = addGradientFallback(html);
+      let attachments = params.attachments;
+      if (params.tenantId && params.tenantId !== 'system') {
+        const embedded = await embedBrandLogo(html, {
+          tenantId: params.tenantId,
+          context: { service: this.getServiceName(), subject, notificationSubtypeId: params.notificationSubtypeId },
+        });
+        html = embedded.html;
+        if (embedded.attachments.length > 0) {
+          attachments = [...(attachments ?? []), ...embedded.attachments];
+        }
+      }
+
       // Convert to provider email message format
       emailMessage = {
         from,
@@ -582,8 +614,9 @@ export abstract class BaseEmailService {
         subject,
         html,
         text,
-        attachments: params.attachments,
-        headers
+        attachments,
+        headers,
+        microsoftProviderId: params.resolvedMicrosoftProviderId,
       };
 
       // Outbound email lifecycle workflow events (F071). Best-effort: publishing
@@ -713,6 +746,7 @@ export abstract class BaseEmailService {
         error: result.error,
         providerId: result.providerId,
         providerType: result.providerType,
+        sentAt: result.sentAt,
         metadata: result.metadata
       };
     } catch (error) {
@@ -781,7 +815,11 @@ export abstract class BaseEmailService {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error',
         providerId: emailProvider.providerId,
-        providerType: emailProvider.providerType
+        providerType: emailProvider.providerType,
+        metadata: error && typeof error === 'object' && (error as any).name === 'EmailProviderError' ? {
+          retryable: (error as any).isRetryable, errorCode: (error as any).errorCode,
+          ...((error as any).metadata || {}),
+        } : undefined,
       };
     }
   }

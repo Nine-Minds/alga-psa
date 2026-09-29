@@ -67,7 +67,8 @@ export {
   getXeroConnectionStatus,
   getXeroIntegrationStatus,
   saveXeroCredentials,
-  disconnectXero
+  disconnectXero,
+  forceFinalizeXeroDisconnect
 } from './xeroActions';
 export { getXeroCsvSettings, saveXeroCsvSettings } from './xeroCsvActions';
 export {

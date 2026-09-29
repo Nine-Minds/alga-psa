@@ -102,6 +102,23 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 {{- end }}
 
+{{/* Render KEYCLOAK_* env vars for Keycloak / generic OIDC sign-in SSO. The
+     provider only registers when all four values are present, so a partial
+     block is rendered as-is and NextAuth leaves Keycloak off. */}}
+{{- define "sebastian.keycloakOAuthEnv" -}}
+{{- $kc := .Values.keycloak_sso | default dict }}
+{{- if and $kc.url $kc.realm $kc.client_id $kc.client_secret }}
+- name: KEYCLOAK_URL
+  value: "{{ $kc.url }}"
+- name: KEYCLOAK_REALM
+  value: "{{ $kc.realm }}"
+- name: KEYCLOAK_CLIENT_ID
+  value: "{{ $kc.client_id }}"
+- name: KEYCLOAK_CLIENT_SECRET
+  value: "{{ $kc.client_secret }}"
+{{- end }}
+{{- end }}
+
 {{/* Runtime DB host for workloads that should prefer PgBouncer when it is enabled. */}}
 {{- define "sebastian.runtimeDbHost" -}}
 {{- if .Values.db.enabled -}}

@@ -1,0 +1,112 @@
+{
+  "schemaVersion": 1,
+  "observedAt": "2026-09-09T08:32:22.554732+00:00",
+  "scope": "native Teams development static chunk truncation diagnostic",
+  "source": {
+    "revision": "70926ee1831fcfb5e2666131a9a47fd23a4430a3",
+    "unchangedDuringRun": "coordinator confirmed",
+    "reportSourceMetadata": "unrecorded-local-revision",
+    "limitation": "Revision and fresh-dist lifecycle are coordinator-recorded context; raw Playwright metadata does not independently bind its source."
+  },
+  "runtime": {
+    "node": "v25.5.0",
+    "maxOldSpaceSizeMiB": 12288,
+    "observedHeapLimitBytes": 13086228480,
+    "freshDist": "coordinator confirmed",
+    "developmentServer": true,
+    "releaseValidation": false
+  },
+  "priorSetupFailure": {
+    "directory": "/tmp/alga-native-teams-Cibcku",
+    "error": "Incomplete credential announcement",
+    "phase": "credential extraction before warmup/browser",
+    "browserExecutionClaimed": false
+  },
+  "execution": {
+    "directory": "/tmp/alga-native-teams-SBSqsk",
+    "warmup": "passed; harness starts Playwright only after awaited warmTeamsDashboard resolves",
+    "stats": {
+      "startTime": "2026-09-09T08:22:10.135Z",
+      "duration": 81977.96699999999,
+      "expected": 0,
+      "skipped": 0,
+      "unexpected": 1,
+      "flaky": 0
+    },
+    "retries": 0,
+    "outcome": "one unexpected browser failure",
+    "browserErrors": [
+      "SyntaxError: Invalid or unexpected token",
+      "ChunkLoadError: Loading chunk app/msp/layout failed (missing)"
+    ],
+    "traceSha256": "8d8b0ceaeb5e0a926978bed404fb918a47f479d734b4c66e94df7c4007cd7195"
+  },
+  "captures": [
+    {
+      "file": "layout-25248-1.bin",
+      "compressedBytes": 19009715,
+      "sha256": "a04d72d6855481601c1fe0b2fa49d82eae5db48f141cd91c84c13fb1b5a5e163",
+      "decodedBytes": 81713912,
+      "syntaxExitCode": 0
+    },
+    {
+      "file": "layout-25248-2.bin",
+      "compressedBytes": 10949569,
+      "sha256": "8eb43c4bebb5d319d92661bcd6b9fdc0ed2232c5451166fae5ecddc586cf06c4",
+      "decodedBytes": 46727168,
+      "syntaxExitCode": 1
+    },
+    {
+      "file": "layout-25248-3.bin",
+      "compressedBytes": 19009755,
+      "sha256": "425f1f9f00aa25f426b54fdd03d01d24345383e67661f8b3d7cad319db7abe14",
+      "decodedBytes": 81713954,
+      "syntaxExitCode": 0
+    },
+    {
+      "file": "layout-25248-4.bin",
+      "compressedBytes": 19009755,
+      "sha256": "425f1f9f00aa25f426b54fdd03d01d24345383e67661f8b3d7cad319db7abe14",
+      "decodedBytes": 81713954,
+      "syntaxExitCode": 0
+    },
+    {
+      "file": "layout-25248-5.bin",
+      "compressedBytes": 19009755,
+      "sha256": "425f1f9f00aa25f426b54fdd03d01d24345383e67661f8b3d7cad319db7abe14",
+      "decodedBytes": 81713954,
+      "syntaxExitCode": 0
+    }
+  ],
+  "comparison": {
+    "malformedDecodedBytes": 46727168,
+    "validDecodedBytes": 81713954,
+    "malformedIsExactPrefixOfValid": true,
+    "malformedDecodedSha256": "c08435d71157404ce89aea2f738c01aa73b80bd645379d10bed832168983fd6d",
+    "validDecodedSha256": "37b879cae8b2fa6b6b60bbc515a83908849a892f4de545772b41642f30f96549",
+    "malformedHttpStatus": 200,
+    "malformedContentEncoding": "gzip",
+    "malformedCaptureAbortedFlag": false,
+    "malformedSyntaxExitCode": 1,
+    "validSyntaxExitCode": 0
+  },
+  "memoryEvidence": {
+    "serverLogLine": 41070,
+    "message": "Server is approaching the used memory threshold, restarting...",
+    "installedNextSource": "node_modules/next/dist/server/lib/start-server.js:233",
+    "condition": "used_heap_size > 0.8 * heap_size_limit",
+    "thresholdFraction": 0.8
+  },
+  "cleanup": {
+    "ownedDatabaseDropped": "coordinator reported",
+    "ownedRuntimeStopped": "coordinator reported",
+    "rawRuntimeEnvironmentRemoved": true,
+    "deploymentOrSharedDatabaseReset": false
+  },
+  "limitations": [
+    "Native malformed chunk and browser errors match the CI symptom; this does not prove CI has the same cause. Terminal CI logs lacked an explicit memory-restart marker.",
+    "This is one reproduction, not a repeatability or corrected-behavior claim.",
+    "Decoded JavaScript bodies, raw browser response bodies and credentials remain private and are not copied into repository evidence.",
+    "HTTP200 and a non-aborted response alone did not establish complete executable JavaScript."
+  ]
+}

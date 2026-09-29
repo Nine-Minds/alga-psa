@@ -1,0 +1,4 @@
+Works now, thank you! The new build fixed the crash on startup.
+
+> On 2 Sep 2025, at 14:31, Alga Support <support@nineminds.com> wrote:
+> Please try the new build we pushed this morning and let us know.

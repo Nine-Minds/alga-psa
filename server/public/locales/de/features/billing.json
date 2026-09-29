@@ -151,7 +151,8 @@
     "tryAgain": "Erneut versuchen",
     "backToBilling": "Zurück zur Abrechnung",
     "retryFailed": "Die Zahlung konnte weiterhin nicht gestartet werden. Bitte versuchen Sie es gleich erneut.",
-    "loading": "Wird geladen..."
+    "loading": "Wird geladen...",
+    "offlinePaymentMethod": "Diese Rechnung wird per Scheck oder Banküberweisung bezahlt, daher ist keine Online-Zahlung möglich. Bitte folgen Sie den Zahlungshinweisen auf der Rechnung."
   },
   "quotes": {
     "pendingQuotes": "Ausstehende Angebote",

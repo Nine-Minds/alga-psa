@@ -33,6 +33,7 @@ const baseScheduleEntrySchema = tenantSchema.extend({
   created_at: z.date().optional(),
   updated_at: z.date().optional(),
   isRecurring: z.boolean().optional(),
+  is_all_day: z.boolean().optional(),
   originalEntryId: z.string().optional()
 });
 

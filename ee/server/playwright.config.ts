@@ -296,6 +296,9 @@ console.log('[Playwright] webServer', {
  * @see https://playwright.dev/docs/test-configuration
  */
 export default defineConfig({
+  // Keep source aliases consistent across imported workspace helpers; their
+  // package-local tsconfigs otherwise fall back to import-only built exports.
+  tsconfig: path.resolve(__dirname, 'tsconfig.json'),
   testDir: './src/__tests__/integration',
   // Run all Playwright integration tests in this folder
   testMatch: ['**/*.playwright.test.ts'],

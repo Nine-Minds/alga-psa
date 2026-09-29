@@ -25,8 +25,10 @@ vi.mock('@alga-psa/auth/rbac', () => ({
 function buildThenableQuery(result: any[]) {
   const builder: any = {};
   builder.where = vi.fn(() => builder);
+  builder.whereIn = vi.fn(() => builder);
   builder.whereNotIn = vi.fn(() => builder);
   builder.whereNotNull = vi.fn(() => builder);
+  builder.orderBy = vi.fn(() => builder);
   builder.join = vi.fn(() => builder);
   builder.leftJoin = vi.fn(() => builder);
   builder.select = vi.fn(() => builder);
@@ -61,10 +63,11 @@ function buildReportKnex(params: {
       contract_id: 'contract-1',
       contract_name: 'Managed Services',
       client_name: 'Acme Industries',
+      currency_code: 'USD',
     },
   ];
   const contractLines = params.contractLines ?? [
-    { contract_id: 'contract-1', custom_rate: 20000 },
+    { contract_line_id: 'line-1', contract_id: 'contract-1', contract_line_type: 'Fixed', billing_frequency: 'monthly', custom_rate: 20000 },
   ];
 
   return vi.fn((table: string) => {
@@ -74,8 +77,18 @@ function buildReportKnex(params: {
     if (table === 'client_contracts as cc') {
       return buildThenableQuery(assignments);
     }
-    if (table === 'contract_lines as cl') {
+    if (table === 'contract_lines as cln') {
       return buildThenableQuery(contractLines);
+    }
+    if (table === 'contract_line_service_configuration as clsc') {
+      return buildThenableQuery([]);
+    }
+    // Usage-config variability check reads the table without an alias.
+    if (table === 'contract_line_service_configuration') {
+      return buildThenableQuery([]);
+    }
+    if (table === 'contract_line_unit_pricing_revisions as rev') {
+      return buildThenableQuery([]);
     }
     throw new Error(`Unexpected table ${table}`);
   });
@@ -141,10 +154,11 @@ describe('contractReportActions recurring service-period basis', () => {
         contract_id: 'contract-1',
         contract_name: 'Managed Services',
         client_name: 'Acme Industries',
+        currency_code: 'USD',
       },
     ];
     const contractLines = [
-      { contract_id: 'contract-1', custom_rate: 20000 },
+      { contract_line_id: 'line-1', contract_id: 'contract-1', contract_line_type: 'Fixed', billing_frequency: 'monthly', custom_rate: 20000 },
     ];
 
     const knex: any = vi.fn((table: string) => {
@@ -154,8 +168,18 @@ describe('contractReportActions recurring service-period basis', () => {
       if (table === 'client_contracts as cc') {
         return buildThenableQuery(assignments);
       }
-      if (table === 'contract_lines as cl') {
+      if (table === 'contract_lines as cln') {
         return buildThenableQuery(contractLines);
+      }
+      if (table === 'contract_line_service_configuration as clsc') {
+        return buildThenableQuery([]);
+      }
+      // Usage-config variability check reads the table without an alias.
+      if (table === 'contract_line_service_configuration') {
+        return buildThenableQuery([]);
+      }
+      if (table === 'contract_line_unit_pricing_revisions as rev') {
+        return buildThenableQuery([]);
       }
       throw new Error(`Unexpected table ${table}`);
     });
@@ -214,6 +238,8 @@ describe('contractReportActions recurring service-period basis', () => {
         logoUrl: null,
         monthly_recurring: 20000,
         total_billed_ytd: 12000,
+        has_variable_usage: false,
+        currency_code: 'USD',
         status: 'active',
       },
     ]);

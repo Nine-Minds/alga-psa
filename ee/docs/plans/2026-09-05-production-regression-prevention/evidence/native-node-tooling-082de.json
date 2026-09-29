@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "suite": "node-tooling",
+  "revision": "082de56a31a324bc3aebaa17c9fd49eea62c2469",
+  "runtime": "v25.5.0",
+  "status": "passed",
+  "counts": {
+    "tests": 781,
+    "passed": 781,
+    "failed": 0,
+    "skipped": 0,
+    "todo": 0,
+    "cancelled": 0
+  },
+  "source": {
+    "before": {
+      "revision": "082de56a31a324bc3aebaa17c9fd49eea62c2469",
+      "dirty": false,
+      "changes": []
+    },
+    "after": {
+      "revision": "082de56a31a324bc3aebaa17c9fd49eea62c2469",
+      "dirty": false,
+      "changes": []
+    }
+  },
+  "workingTreeDirty": false,
+  "failures": [],
+  "expectedFileCount": 81,
+  "executedFileCount": 81,
+  "durationMs": 167197.195042,
+  "evidenceSha256": "aab6bef0858e9adf65087faf4d299b3b1b1177736166d13668892a5c168b878e",
+  "command": "PATH=/opt/homebrew/opt/node@25/bin:$PATH node scripts/run-node-tooling-tests.mjs",
+  "limits": [
+    "Native macOS Node25 with installed dependencies and loopback sockets enabled; not clean Linux image validation.",
+    "New CI pooler and Teams warmup still require actual application/container execution."
+  ]
+}

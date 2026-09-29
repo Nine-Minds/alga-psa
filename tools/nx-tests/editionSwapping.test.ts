@@ -29,7 +29,6 @@ function getWebpackAliases(edition: Edition) {
       ssoEntry: alias['@alga-psa/auth/sso/entry'],
       emailProvidersEntry: alias['@alga-psa/integrations/email/providers/entry'],
       emailSettingsEntry: alias['@alga-psa/integrations/email/settings/entry'],
-      clientPortalDomainSettingsEntry: alias['@alga-psa/client-portal/domain-settings/entry'],
     }));
   `;
 
@@ -64,7 +63,6 @@ function getWebpackAliases(edition: Edition) {
     ssoEntry: string;
     emailProvidersEntry: string;
     emailSettingsEntry: string;
-    clientPortalDomainSettingsEntry: string;
   };
 }
 
@@ -80,7 +78,7 @@ describe('CE/EE build swapping', () => {
       expect(alias.eeServerSrc).toBe(path.resolve(process.cwd(), 'packages/ee/src'));
       expect(alias.empty).toBe(path.resolve(process.cwd(), 'packages/ee/src'));
       expect(alias.ssoEntry).toBe(
-        path.resolve(process.cwd(), 'packages/ee/src/components/auth/SsoProviderButtons.tsx')
+        path.resolve(process.cwd(), 'packages/auth/src/components/SsoProviderButtons.tsx')
       );
 
       expect(alias.emailProvidersEntry).toBe(
@@ -88,9 +86,6 @@ describe('CE/EE build swapping', () => {
       );
       expect(alias.emailSettingsEntry).toBe(
         path.resolve(process.cwd(), 'packages/integrations/src/email/settings/oss/entry.tsx')
-      );
-      expect(alias.clientPortalDomainSettingsEntry).toBe(
-        path.resolve(process.cwd(), 'packages/client-portal/src/domain-settings/oss/entry.tsx')
       );
     } finally {
       logSpy.mockRestore();
@@ -117,9 +112,6 @@ describe('CE/EE build swapping', () => {
       );
       expect(alias.emailSettingsEntry).toBe(
         path.resolve(process.cwd(), 'packages/integrations/src/email/settings/ee/entry.tsx')
-      );
-      expect(alias.clientPortalDomainSettingsEntry).toBe(
-        path.resolve(process.cwd(), 'packages/client-portal/src/domain-settings/ee/entry.tsx')
       );
     } finally {
       logSpy.mockRestore();

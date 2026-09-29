@@ -165,6 +165,27 @@
         "loadStatuses": "Nie udało się załadować statusów zgłoszeń odnowienia",
         "save": "Nie udało się zapisać ustawień automatyzacji odnawiania"
       }
+    },
+    "quotes": {
+      "title": "Oferty",
+      "description": "Ustaw domyślny okres ważności nowych ofert.",
+      "fields": {
+        "validityDays": {
+          "label": "Domyślny okres ważności (dni)",
+          "help": "Nowe oferty są ważne przez tę liczbę dni."
+        }
+      },
+      "actions": {
+        "save": "Zapisz"
+      },
+      "toast": {
+        "updated": "Ustawienia ofert zostały zaktualizowane."
+      },
+      "errors": {
+        "load": "Nie udało się wczytać ustawień",
+        "save": "Nie udało się zapisać ustawień",
+        "range": "Wpisz liczbę całkowitą od 1 do 365."
+      }
     }
   },
   "quoting": {
@@ -178,6 +199,8 @@
     }
   },
   "tax": {
+    "defaultRate": { "title": "Domyślna stawka podatku", "tooltip": "Wybierz stawkę dziedziczoną przez nowych klientów, produkty i usługi.", "description": "Ustaw stawkę dla nowych klientów i pozycji katalogu. Istniejące rekordy nie ulegną zmianie.", "loading": "Wczytywanie domyślnej stawki...", "empty": "Utwórz aktywną stawkę przed wyborem domyślnej.", "invalid": "Skonfigurowana stawka nie jest już aktywna lub prawidłowa. Wybierz inną.", "field": { "label": "Domyślna stawka podatku" }, "options": { "none": "Brak domyślnej stawki organizacji" }, "help": "Bez stawki domyślnej nowe pozycje katalogu pozostają nieopodatkowane, a klienci używają najstarszej aktywnej stawki, jeśli istnieje.", "actions": { "save": "Zapisz domyślną", "saving": "Zapisywanie..." }, "toast": { "saved": "Zapisano domyślną stawkę." }, "errors": { "load": "Nie udało się wczytać domyślnej stawki.", "save": "Nie udało się zapisać domyślnej stawki." } },
+    "backfill": { "title": "Zastosuj domyślną stawkę do istniejącego katalogu", "description": "Wyświetl produkty i usługi bez stawki podatku.", "warning": "Zmienia to przyszłe opodatkowanie i nie modyfikuje wystawionych faktur.", "loading": "Wczytywanie podglądu...", "empty": "Nie znaleziono odpowiednich produktów ani usług.", "target": "Stawka docelowa: {{rate}}", "count": "Liczba odpowiednich pozycji: {{count}}", "dialog": { "title": "Zastosuj domyślną stawkę" }, "actions": { "preview": "Wyświetl istniejące pozycje", "apply": "Zastosuj wybrane", "applying": "Stosowanie..." }, "toast": { "applied": "Zastosowano domyślną stawkę do wybranych pozycji." }, "errors": { "preview": "Nie udało się wyświetlić katalogu.", "apply": "Nie udało się zastosować domyślnej stawki." } },
     "taxRegions": {
       "title": "Regiony podatkowe",
       "description": "Zarządzaj regionami podatkowymi i powiązanymi ustawieniami."
@@ -226,12 +249,13 @@
       }
     },
     "regions": {
-      "title": "Zarządzaj regionami podatkowymi",
+      "title": "Regiony i stawki podatkowe",
       "loading": "Ładowanie regionów...",
       "fields": {
         "code": {
           "label": "Kod regionu",
-          "placeholder": "np. Kalifornia, Nowy Jork, VAT-UK"
+          "placeholder": "np. Kalifornia, Nowy Jork, VAT-UK",
+          "immutableHint": "Kod regionu identyfikuje ten region dla stawek podatkowych, klientów i lokalizacji, dlatego nie można go zmienić."
         },
         "name": {
           "label": "Nazwa regionu",
@@ -268,6 +292,57 @@
         "update": "Nie udało się zaktualizować regionu podatkowego.",
         "activate": "Nie udało się aktywować regionu podatkowego.",
         "deactivate": "Nie udało się dezaktywować regionu podatkowego."
+      },
+      "search": {
+        "placeholder": "Szukaj regionów"
+      },
+      "columns": {
+        "region": "Region podatkowy",
+        "currentRate": "Bieżąca stawka",
+        "rates": "Stawki"
+      },
+      "rateSummary": {
+        "noRates": "Brak stawki",
+        "noCurrentRate": "Brak obowiązującej stawki",
+        "combined": "{{count}} łącznie",
+        "combinedHint": "{{count}} aktywne stawki obowiązują dziś i są sumowane na fakturach."
+      },
+      "empty": {
+        "title": "Brak regionów podatkowych",
+        "description": "Dodaj region dla każdego miejsca, w którym naliczasz podatek, a następnie przypisz mu stawkę.",
+        "noMatch": "Żaden region nie pasuje do \"{{query}}\""
+      },
+      "a11y": {
+        "expand": "Pokaż stawki",
+        "collapse": "Ukryj stawki"
+      },
+      "rates": {
+        "empty": "Ten region nie ma stawek. Faktury opodatkowane w tym regionie nie powiodą się, dopóki nie zostanie dodana stawka.",
+        "composite": "Złożona",
+        "effectiveRange": "Od {{start}} do {{end}}",
+        "effectiveFrom": "Od {{start}}",
+        "deleteEntity": "stawkę {{rate}} dla regionu {{region}}",
+        "columns": {
+          "rate": "Stawka",
+          "description": "Opis",
+          "effective": "Obowiązuje"
+        },
+        "status": {
+          "current": "Obowiązująca",
+          "scheduled": "Zaplanowana",
+          "expired": "Wygasła",
+          "inactive": "Nieaktywna"
+        },
+        "actions": {
+          "add": "Dodaj stawkę",
+          "edit": "Edytuj",
+          "advanced": "Ustawienia zaawansowane",
+          "delete": "Usuń"
+        },
+        "errors": {
+          "validateDeletion": "Nie udało się zweryfikować usunięcia. Spróbuj ponownie.",
+          "delete": "Nie udało się usunąć stawki podatkowej."
+        }
       }
     },
     "thresholds": {
@@ -506,6 +581,7 @@
   },
   "serviceCategories": {
     "title": "Kategorie usług",
+    "description": "Opcjonalne grupy produktów. Kategorie odpowiadają za kolumnę i filtr Kategoria na karcie Produkty i różnią się od Typów usług, które są wymagane i używane w raportach i ewidencji czasu pracy.",
     "dialog": {
       "addTitle": "Dodaj kategorię usługi",
       "editTitle": "Edytuj kategorię usługi",
@@ -531,6 +607,11 @@
       "importFromStandard": "Importuj z kategorii standardowych",
       "create": "Tworzyć",
       "update": "Aktualizacja"
+    },
+    "empty": {
+      "title": "Brak kategorii usług",
+      "description": "Zaimportuj listę standardową, aby rozpocząć, lub dodaj własne. Kategorie są opcjonalne i potrzebne tylko wtedy, gdy chcesz grupować produkty.",
+      "importPrimary": "Importuj standardowe kategorie usług"
     },
     "delete": {
       "message": "Czy na pewno chcesz usunąć „{{name}}”? Tej akcji nie można cofnąć."
@@ -637,6 +718,8 @@
     }
   },
   "serviceCatalog": {
+    "scheduledPriceBadge": "Następna zmiana {{date}}",
+    "scheduledPriceNotice": "Zmiana ceny jest zaplanowana na {{date}}. Zapisanie tutaj zaktualizuje bieżącą cenę i nie anuluje zaplanowanej zmiany.",
     "title": "Zarządzanie katalogiem usług",
     "loading": "Usługi ładowania",
     "dialog": {
@@ -646,7 +729,8 @@
       "allServiceTypes": "Wszystkie rodzaje usług",
       "serviceTypePlaceholder": "Filtruj według typu usługi...",
       "allBillingMethods": "Wszystkie metody rozliczeń",
-      "billingMethodPlaceholder": "Filtruj według metody rozliczeń..."
+      "billingMethodPlaceholder": "Filtruj według metody rozliczeń...",
+      "searchPlaceholder": "Szukaj usług według nazwy, SKU lub opisu..."
     },
     "fields": {
       "serviceName": {
@@ -715,6 +799,33 @@
       "cancel": "Anuluj",
       "saveChanges": "Zapisz zmiany"
     },
+    "bulk": {
+      "selectedCount": "Zaznaczono {{count}}",
+      "selectAll": "Zaznacz wszystkie usługi",
+      "clear": "Wyczyść zaznaczenie",
+      "actions": {
+        "activate": "Aktywuj",
+        "deactivate": "Dezaktywuj",
+        "delete": "Usuń"
+      },
+      "deleteDialog": {
+        "title": "Usuń usługi",
+        "message": "Trwale usunąć zaznaczone usługi ({{count}})? Usługi nadal używane przez umowy lub faktury zostaną pominięte. Tej akcji nie można cofnąć."
+      },
+      "feedback": {
+        "activateSuccess": "Aktywowano usługi: {{count}}",
+        "activatePartial": "Aktywowano usługi: {{count}}; nie udało się aktywować: {{failed}}",
+        "activateError": "Nie udało się aktywować usług: {{count}}",
+        "deactivateSuccess": "Dezaktywowano usługi: {{count}}",
+        "deactivatePartial": "Dezaktywowano usługi: {{count}}; nie udało się dezaktywować: {{failed}}",
+        "deactivateError": "Nie udało się dezaktywować usług: {{count}}",
+        "deleteSuccess": "Usunięto usługi: {{count}}",
+        "deletePartial": "Usunięto usługi: {{count}}; nie udało się usunąć: {{failed}}",
+        "deletePartialBlocked": "Usunięto usługi: {{count}}; nie udało się usunąć: {{failed}} — {{names}}",
+        "deleteBlocked": "Nie udało się usunąć usług ({{count}}) — nadal w użyciu: {{names}}",
+        "deleteError": "Nie udało się usunąć usług: {{count}}"
+      }
+    },
     "table": {
       "serviceName": "Nazwa usługi",
       "serviceType": "Typ usługi",
@@ -723,7 +834,11 @@
       "unit": "Jednostka",
       "taxRate": "Stawka podatku",
       "nonTaxable": "Nie podlega opodatkowaniu",
-      "thisService": "tę usługę"
+      "thisService": "tę usługę",
+      "contractUsage": "Umowy",
+      "contractUsageNone": "Nieużywana",
+      "contractUsageOne": "Używana w {{contracts}} umowie",
+      "contractUsageMany": "Używana w {{contracts}} umowach"
     },
     "errors": {
       "fetchServices": "Nie udało się pobrać usług",
@@ -737,7 +852,9 @@
       "validateDelete": "Nie udało się potwierdzić usunięcia. Spróbuj ponownie.",
       "delete": "Nie udało się usunąć usługi",
       "deactivate": "Nie udało się dezaktywować usługi"
-    }
+    },
+    "emptySearch": "Żadna usługa nie pasuje do wyszukiwania.",
+    "clearFilters": "Wyczyść filtry"
   },
   "products": {
     "title": "Produkty",
@@ -750,6 +867,33 @@
       "restore": "Przywrócić",
       "archive": "Archiwum",
       "delete": "Usuwać"
+    },
+    "bulk": {
+      "selectedCount": "Zaznaczono {{count}}",
+      "selectAll": "Zaznacz wszystkie produkty",
+      "clear": "Wyczyść zaznaczenie",
+      "actions": {
+        "archive": "Archiwizuj",
+        "restore": "Przywróć",
+        "delete": "Usuń"
+      },
+      "deleteDialog": {
+        "title": "Trwale usuń produkty",
+        "message": "Trwale usunąć zaznaczone produkty ({{count}})? Produkty powiązane z istniejącymi danymi zostaną pominięte. Tej akcji nie można cofnąć."
+      },
+      "feedback": {
+        "archiveSuccess": "Zarchiwizowano produkty: {{count}}",
+        "archivePartial": "Zarchiwizowano produkty: {{count}}; nie udało się zarchiwizować: {{failed}}",
+        "archiveError": "Nie udało się zarchiwizować produktów: {{count}}",
+        "restoreSuccess": "Przywrócono produkty: {{count}}",
+        "restorePartial": "Przywrócono produkty: {{count}}; nie udało się przywrócić: {{failed}}",
+        "restoreError": "Nie udało się przywrócić produktów: {{count}}",
+        "deleteSuccess": "Trwale usunięto produkty: {{count}}",
+        "deletePartial": "Usunięto produkty: {{count}}; nie udało się usunąć: {{failed}}",
+        "deletePartialBlocked": "Usunięto produkty: {{count}}; nie udało się usunąć: {{failed}} — {{names}}",
+        "deleteBlocked": "Nie udało się usunąć produktów ({{count}}) — nadal w użyciu: {{names}}",
+        "deleteError": "Nie udało się usunąć produktów: {{count}}"
+      }
     },
     "filters": {
       "searchPlaceholder": "Szukaj według nazwy, SKU, opisu...",
@@ -833,14 +977,14 @@
         }
       },
       "unitOfMeasure": {
-        "label": "Jednostka miary *",
+        "label": "Jednostka miary",
         "placeholder": "np. GB, wywołanie API, użytkownik",
         "help": "Mierzalna jednostka rozliczeniowa (np. GB, wywołanie API, użytkownik)"
       },
       "taxRate": {
         "label": "Stawka podatku (opcjonalnie)",
         "placeholder": "Wybierz stawkę podatku (opcjonalnie)",
-        "loading": "Ładowanie stawek podatku..."
+        "loading": "Ładowanie stawek podatku...", "inherit": "Użyj domyślnej stawki", "inheritNamed": "Użyj domyślnej stawki ({{rate}})", "nonTaxable": "Nie podlega opodatkowaniu"
       },
       "sku": {
         "label": "SKU",
@@ -867,7 +1011,8 @@
       "billingMethodRequired": "Metoda rozliczeniowa jest wymagana",
       "skuRequiredForHardware": "W przypadku sprzętu wymagana jest jednostka SKU",
       "licenseTermRequired": "W przypadku Licencji na oprogramowanie wymagany jest okres licencyjny",
-      "selectedTypeNotFound": "Nie znaleziono wybranego typu usługi"
+      "selectedTypeNotFound": "Nie znaleziono wybranego typu usługi",
+      "unitOfMeasureRequired": "Jednostka miary jest wymagana"
     },
     "errors": {
       "fetchCategories": "Nie udało się pobrać kategorii",
@@ -904,8 +1049,8 @@
         "loading": "Załadunek..."
       },
       "label": {
-        "label": "Etykieta",
-        "placeholder": "Opcjonalna etykieta o dowolnym kształcie"
+        "label": "Etykieta kategorii",
+        "placeholder": "Opcjonalna dowolna etykieta"
       },
       "vendor": {
         "label": "Sprzedawca"
@@ -934,13 +1079,13 @@
       "taxRate": {
         "label": "Stawka podatku",
         "placeholder": "Nie podlega opodatkowaniu",
-        "loading": "Załadunek..."
+        "loading": "Załadunek...", "inherit": "Użyj domyślnej stawki", "inheritNamed": "Użyj domyślnej stawki ({{rate}})", "nonTaxable": "Nie podlega opodatkowaniu"
       },
       "active": {
         "label": "Aktywny"
       },
       "unitOfMeasure": {
-        "label": "Jednostka miary *",
+        "label": "Jednostka miary",
         "placeholder": "np. każdy przedmiot, licencja"
       },
       "license": {
@@ -1177,7 +1322,10 @@
       "regionInvalid": "Wybrany region podatkowy nie jest już prawidłowy. Odśwież stronę i wybierz inny region.",
       "duplicate": "Dla tego regionu i zakresu dat istnieje już stawka podatku.",
       "missingField": "Brakuje wymaganego pola stawki podatku.",
-      "missingFieldNamed": "Brakuje wymaganego pola stawki podatku: {{field}}."
+      "missingFieldNamed": "Brakuje wymaganego pola stawki podatku: {{field}}.",
+      "capInvalid": "Limit musi być nieujemną liczbą całkowitą możliwą do dokładnego zapisania w najmniejszych jednostkach waluty.",
+      "capCurrencyRequired": "Wybierz walutę przed ustawieniem lub zmianą limitu podatku.",
+      "currencyInvalid": "Wybierz obsługiwaną walutę stawki."
     },
     "tax": {
       "defaultRequiresActiveRate": "Skonfiguruj co najmniej jedną aktywną stawkę podatku przed utworzeniem domyślnych ustawień podatkowych.",
@@ -1207,7 +1355,12 @@
     "fields": {
       "prefix": {
         "label": "Prefiks numeru",
-        "help": "Opcjonalny prefiks dla sekwencji numerów. Pozostaw puste, aby nie używać prefiksu, lub wprowadź własny prefiks."
+        "help": "Opcjonalny stały prefiks dla sekwencji numerów. Pozostaw puste, aby nie używać prefiksu, lub wprowadź własny prefiks. Aby dodać datę wystawienia, użyj pola Format daty zamiast wpisywać ją tutaj."
+      },
+      "dateFormat": {
+        "label": "Format daty",
+        "help": "Opcjonalna data wstawiana między prefiks a numer kolejny. Na przykład {YYYY}-{MM}- daje INV-2026-08-000001. Pozostaw puste, aby numery były bez daty.",
+        "tokensHint": "Znaczniki: {YYYY} rok czterocyfrowy, {YY} rok dwucyfrowy, {MM} miesiąc, {DD} dzień. Data jest ustalana w momencie nadania numeru, w domyślnej strefie czasowej skonfigurowanej w Ustawieniach. Sekwencja jest ciągła — nie zaczyna się od nowa co roku, co miesiąc ani codziennie."
       },
       "minimumDigits": {
         "label": "Minimalna liczba cyfr",
@@ -1241,7 +1394,14 @@
     },
     "errors": {
       "load": "Nie udało się załadować ustawień numeracji.",
-      "save": "Nie udało się zaktualizować ustawień."
+      "save": "Nie udało się zaktualizować ustawień.",
+      "dateFormat": {
+        "notText": "Format daty musi być tekstem.",
+        "unmatchedBrace": "Format daty zawiera niedomknięty nawias { lub }. Zapisz znaczniki w postaci {{supported}}.",
+        "unknownToken": "Nieznany znacznik {{tokens}}. Obsługiwane znaczniki: {{supported}}.",
+        "unknownTokens": "Nieznane znaczniki {{tokens}}. Obsługiwane znaczniki: {{supported}}.",
+        "tooLong": "Format daty rozwija się do {{length}} znaków i przekracza limit {{max}} znaków."
+      }
     }
   },
   "payment": {
@@ -1294,6 +1454,15 @@
       "actions": {
         "save": "Zapisz ustawienia",
         "saving": "Zapisywanie..."
+      },
+      "autopay": {
+        "label": "Zezwalaj na płatność automatyczną",
+        "description": "Zezwalaj profilom rozliczeniowym na autoryzowanie automatycznych płatności kartą.",
+        "chargeTiming": "Termin obciążenia",
+        "onFinalize": "Po zatwierdzeniu faktury",
+        "onDueDate": "W terminie płatności",
+        "retryDays": "Odstępy między ponownymi próbami (dni)",
+        "consentText": "Treść zgody na płatność automatyczną"
       }
     },
     "stripe": {
@@ -1422,6 +1591,70 @@
     },
     "sections": {
       "userRates": "Stawki użytkowników"
+    }
+  },
+  "priceChangeRollout": {
+    "title": "Wdrażanie zmiany ceny",
+    "previewFailed": "Nie udało się załadować podglądu zmiany ceny.",
+    "skip": "Zapisz tylko cenę",
+    "apply": "Zastosuj do linii dziedziczonych",
+    "applying": "Zapisywanie…",
+    "effectiveDate": "Data obowiązywania",
+    "effectiveDateHint": "Domyślnie następna granica okresu rozliczeniowego.",
+    "willChange": "Zmieni się",
+    "noInheritedLines": "Żadna linia dziedziczona nie zmienia się w tej dacie.",
+    "custom": "Nie zmieni się — niestandardowa",
+    "unreviewed": "Nie zmieni się — jeszcze nie sklasyfikowana",
+    "unreviewedAlert": "Te linie są rozliczane bez zmian, dopóki ich nie sprawdzisz.",
+    "reviewRates": "Sprawdź ceny",
+    "excluded": "Wykluczona — już zafakturowana",
+    "none": "Brak.",
+    "totalMonthlyDelta": "Całkowita miesięczna zmiana przychodu",
+    "acrossAllInherited": "We wszystkich {{lines}} liniach dziedziczonych.",
+    "applyFailed": "Nie udało się zastosować wdrożenia. Nie wprowadzono żadnych zmian.",
+    "skipFailed": "Nie udało się zapisać zmiany ceny.",
+    "columns": {
+      "client": "Klient",
+      "contract": "Umowa",
+      "line": "Linia",
+      "current": "Obecna",
+      "new": "Nowa",
+      "delta": "Różnica",
+      "rateAtDate": "Cena na dzień"
+    },
+    "followsCatalog": "Podąża za katalogiem",
+    "close": "Zamknij",
+    "usageTitle": "Użycie usługi"
+  },
+  "rateReview": {
+    "title": "Przegląd cen",
+    "close": "Zamknij",
+    "applySelected": "Zastosuj wybrane",
+    "applying": "Stosowanie…",
+    "previewFailed": "Nie udało się załadować cen do przeglądu.",
+    "applyFailed": "Nie udało się zastosować przeglądu cen. Nie wprowadzono żadnych zmian.",
+    "intro": "Linie wycenione dokładnie według ceny katalogowej nie zmienią się na następnej fakturze. Linie różniące się zachowują obecną cenę jako cenę wynegocjowaną.",
+    "applied": "Zastosowano {{applied}} zmian(y).",
+    "refused": "Odrzucono {{refused}} wiersz(y), ponieważ zmieniły się od czasu podglądu.",
+    "summary": "{{total}} niesprawdzonych linii: {{inherited}} dokładnych dopasowań, {{custom}} wynegocjowanych, {{skipped}} pominiętych.",
+    "allClassified": "Wszystkie linie zostały sklasyfikowane. Nie ma nic do przeglądu.",
+    "noService": "Brak usługi",
+    "columns": {
+      "contract": "Umowa",
+      "currentRate": "Obecna cena",
+      "catalogRate": "Cena katalogowa",
+      "proposed": "Propozycja",
+      "confidence": "Pewność"
+    },
+    "proposal": {
+      "inherited": "Podążaj za katalogiem",
+      "custom": "Zachowaj jako niestandardową",
+      "unreviewed": "Pozostaw niesprawdzoną"
+    },
+    "confidence": {
+      "exact": "Dokładne dopasowanie",
+      "differs": "Różni się od katalogu",
+      "needsDecision": "Wymaga decyzji"
     }
   }
 }

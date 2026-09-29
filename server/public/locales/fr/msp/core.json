@@ -69,9 +69,10 @@
       "servicePeriods": "Périodes de service",
       "credits": "Crédits",
       "serviceTypes": "Types de service",
+      "serviceCategories": "Catégories de service",
       "serviceCatalog": "Services",
       "products": "Produits",
-      "taxRates": "Taux de taxe",
+      "taxRates": "Taxes",
       "usageTracking": "Suivi de l'utilisation",
       "reports": "Rapports",
       "accountingExports": "Exportations comptables"
@@ -114,7 +115,8 @@
     "collapseSidebar": "Réduire la barre latérale",
     "collapseSection": "Réduire {{section}}",
     "expandSection": "Développer {{section}}",
-    "appLogoAlt": "Logo {{appName}}"
+    "appLogoAlt": "Logo {{appName}}",
+    "poweredBy": "Propulsé par"
   },
   "settings": {
     "sections": {
@@ -199,6 +201,12 @@
           "description": "Ajouter un nouveau produit à votre catalogue"
         }
       }
+    },
+    "resources": {
+      "ariaLabel": "Ressources et aide",
+      "title": "Ressources",
+      "documentation": "Documentation",
+      "support": "Contacter l'assistance"
     },
     "jobs": {
       "ariaLabel": "Voir l'activité des tâches d'arrière-plan",

@@ -1,0 +1,37 @@
+{
+  "scope": "Protected action replay representation and additive schema foundation",
+  "baseRevision": "b205ad6d5840a25448d7fd604524c544d04236bc",
+  "workingTreeDirty": true,
+  "validation": {
+    "cipher": {
+      "passed": 15,
+      "failed": 0,
+      "artifact": "/tmp/alga-action-replay-cipher.log",
+      "sha256": "30d2ee252b522a11af71527fbeeef34409352791ef8b49b5ab404c1365c54286"
+    },
+    "postgresMigration": {
+      "passed": 1,
+      "failed": 0,
+      "artifact": "/tmp/alga-workflow-replay-migration.log",
+      "sha256": "2554650da947d4ca9de29e7973224f1773ade6bbedb8ea9ed57a309da3b564e7"
+    },
+    "citusMigration": {
+      "passed": 1,
+      "failed": 0,
+      "artifact": "/tmp/alga-workflow-replay-migration-citus.log",
+      "sha256": "9beb0ee3c7baa6c8dab0b29e1b49ade089e56cef44928fe206aa4aee6661d760"
+    }
+  },
+  "behavior": [
+    "AES-256-GCM protects JSON replay results with a fresh nonce and authenticated tenant/invocation identity.",
+    "Wrong keys, modified nonce/tag/ciphertext, malformed envelopes and different tenant/invocation contexts reject without echoing protected values.",
+    "Additive nullable replay_output_encrypted migration preserves legacy output_json; downgrade refuses existing protected results.",
+    "Migration test persists/decrypts actual envelopes on PostgreSQL and a tenant-distributed Citus table, then verifies safe downgrade after protected results are removed."
+  ],
+  "limits": [
+    "Worker execution does not yet use this representation; invocation output redaction remains incomplete.",
+    "Key retrieval/availability must be validated before executing side effects; rotation and mixed-worker upgrade behavior still need implementation/validation.",
+    "Models/API/export must exclude private replay fields before enabling writers.",
+    "Tests use rollback-only schemas; full migration chain and native CI remain unverified."
+  ]
+}

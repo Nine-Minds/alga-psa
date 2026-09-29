@@ -194,6 +194,21 @@ spec:
           # trusted X-Forwarded-Host). Defaults to "hosted"; the appliance sets "appliance".
           - name: DEPLOYMENT_PROFILE
             value: "{{ .Values.deploymentProfile | default "hosted" }}"
+          # Trust X-Forwarded-Host from the reverse proxy without adopting the
+          # appliance profile (self-hosted behind a Host-rewriting proxy).
+          - name: TRUST_FORWARDED_HOST
+            value: "{{ .Values.trustForwardedHost | default false }}"
+          # Mobile Universal/App Links association files; unset → /.well-known routes answer 404.
+          {{- with .Values.mobileAppLinks }}
+          {{- if .appleTeamId }}
+          - name: MOBILE_APP_APPLE_TEAM_ID
+            value: {{ .appleTeamId | quote }}
+          {{- end }}
+          {{- if .androidCertFingerprints }}
+          - name: MOBILE_APP_ANDROID_CERT_FINGERPRINTS
+            value: {{ .androidCertFingerprints | quote }}
+          {{- end }}
+          {{- end }}
           # ----------- APP ----------------
           - name: VERSION
             value: "{{ .Values.version }}"
@@ -685,6 +700,11 @@ spec:
 {{ . | nindent 10 }}
           {{- end }}
 
+          # ----------- KEYCLOAK / OIDC AUTH ----------------
+          {{- with include "sebastian.keycloakOAuthEnv" . }}
+{{ . | nindent 10 }}
+          {{- end }}
+
           # ----------- GMAIL INTEGRATION ----------------
           {{- if (default dict .Values.gmail_integration).enabled }}
           - name: GOOGLE_CLIENT_ID
@@ -907,6 +927,14 @@ spec:
           {{- if .Values.stripe.pro_annual_price_id }}
           - name: STRIPE_PRO_ANNUAL_PRICE_ID
             value: "{{ .Values.stripe.pro_annual_price_id }}"
+          {{- end }}
+          {{- if .Values.stripe.algadesk_user_price_id }}
+          - name: STRIPE_ALGADESK_USER_PRICE_ID
+            value: "{{ .Values.stripe.algadesk_user_price_id }}"
+          {{- end }}
+          {{- if .Values.stripe.algadesk_user_annual_price_id }}
+          - name: STRIPE_ALGADESK_USER_ANNUAL_PRICE_ID
+            value: "{{ .Values.stripe.algadesk_user_annual_price_id }}"
           {{- end }}
           {{- if .Values.stripe.early_adopters_base_price_id }}
           - name: STRIPE_EARLY_ADOPTERS_BASE_PRICE_ID

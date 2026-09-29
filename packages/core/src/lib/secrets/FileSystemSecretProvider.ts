@@ -2,6 +2,12 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 import type { ISecretProvider } from './ISecretProvider';
 
+// LEVERAGE: pattern filesystem-secret-write-path — this static provider is not
+// imported anywhere (index.ts exports the lazy provider of the same name, which
+// delegates to fsSecretCore.ts) and duplicates the pre-hardening write/delete
+// logic there. Fold this file into fsSecretCore.ts or remove it once its
+// absence is confirmed in CI.
+
 // Common secrets mount location inside containers
 const DOCKER_SECRETS_PATH = '/run/secrets';
 

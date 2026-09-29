@@ -1,0 +1,87 @@
+[
+  {
+    "id": "T001",
+    "description": "DB-backed ownership, concurrent claim, reconciliation and shared-document preservation",
+    "implemented": true
+  },
+  {
+    "id": "T002",
+    "description": "Public/internal/draft/scheduled/deleted access across tenant and client boundaries",
+    "implemented": true
+  },
+  {
+    "id": "T003",
+    "description": "Email PDF content, unrelated exclusion, inline dedupe, provider limits, signed link binding/expiry, partial delivery retries",
+    "implemented": true
+  },
+  {
+    "id": "T004",
+    "description": "Local UI and resulting controlled email smoke; focused regression tests and typechecks",
+    "implemented": true
+  },
+  {
+    "id": "T005",
+    "description": "Actual portal listings, counts, folders and download actions enforce attachment lifecycle and board policy",
+    "implemented": true
+  },
+  {
+    "id": "T006",
+    "description": "Provider/service/queue partial-recipient recovery, explicit 429 non-delivery and observable ambiguous outcomes",
+    "implemented": true
+  },
+  {
+    "id": "T007",
+    "description": "Publication recovery after failed dispatch, recipient verification, upload cancellation and shared storage retry preservation",
+    "implemented": true
+  },
+  {
+    "id": "T008",
+    "description": "Graph adapter/provider/queue named-429 recovery and successful-recipient deduplication",
+    "implemented": true
+  },
+  {
+    "id": "T009",
+    "description": "Behavioral Temporal activity-to-server recovery dispatch and PostgreSQL new-tenant/scheduler-failure recovery",
+    "implemented": true
+  },
+  {
+    "id": "T010",
+    "description": "Actual factory/initializer/registry/PgBoss registration across repeated and concurrent discovery, scheduler/service failure, partial registration and start failure",
+    "implemented": true
+  },
+  {
+    "id": "T011",
+    "description": "Opt-in isolated real PgBoss worker-count and committed publication recovery through real SMTP, exact PDF MIME, delivery deduplication and fixture cleanup",
+    "implemented": true
+  },
+  {
+    "id": "T012",
+    "description": "Actual concurrent same-queue discovery, shared scheduler registration failure/retry and replacement handler execution without duplicate workers, and cache invalidation on stop",
+    "implemented": true
+  },
+  {
+    "id": "T013",
+    "description": "Database cancellation permission/ownership and effective visibility regressions",
+    "implemented": true
+  },
+  {
+    "id": "T014",
+    "description": "Document card/list behavioral visibility tests and live portal compose/cancel validation",
+    "implemented": true
+  },
+  {
+    "id": "T015",
+    "description": "Behavioral asynchronous size/MIME rejection and configurable wildcard policy coverage",
+    "implemented": true
+  },
+  {
+    "id": "T016",
+    "description": "Actual Enterprise Next startup: MSP public PDF and portal reply through exclusive real Redis routing, subscriber, sendEventEmail, real storage and GreenMail; exact MIME bytes, sent recipient ledger, replay deduplication and internal/canceled exclusion",
+    "implemented": true
+  },
+  {
+    "id": "T017",
+    "description": "DB-backed actual subscriber/send path covers bundled child MIME, reply mapping, source file authorization, revocation and replay deduplication",
+    "implemented": true
+  }
+]

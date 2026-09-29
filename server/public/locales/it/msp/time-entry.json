@@ -480,7 +480,8 @@
       "onlyDraftRemovable": "Solo i fogli ore in bozza possono essere rimossi.",
       "removeEntriesFirst": "Rimuovere gli inserimenti ore prima di rimuovere questo foglio ore.",
       "onlyApprovedReopenable": "Solo i fogli ore approvati possono essere riaperti.",
-      "invoicedCannotReopen": "Questo foglio ore contiene tempo fatturato e non può essere riaperto."
+      "invoicedCannotReopen": "Questo foglio ore contiene tempo fatturato e non può essere riaperto.",
+      "notEditable": "Questa scheda attività è bloccata. Scegli una bozza o una scheda con modifiche richieste."
     },
     "timeEntry": {
       "notFoundRefresh": "Inserimento ore non trovato. Potrebbe essere stato eliminato. Aggiornare la pagina e riprovare.",
@@ -506,5 +507,33 @@
       "missingField": "Manca un campo obbligatorio dell’impostazione del periodo.",
       "missingFieldNamed": "Manca un campo obbligatorio dell’impostazione del periodo: {{field}}."
     }
+  },
+  "workItemEntry": {
+    "sheetStatus": {
+      "DRAFT": "Bozza",
+      "SUBMITTED": "Inviato",
+      "APPROVED": "Approvato",
+      "CHANGES_REQUESTED": "Modifiche richieste",
+      "UNKNOWN": "Sconosciuto"
+    },
+    "sheetHint": "Scheda attività: {{range}} · {{status}}",
+    "defaultMoved": {
+      "supplied": "Gli orari del timer cadono in un giorno che non accetta nuovo tempo, quindi la voce inizia il {{date}} alle 08:00.",
+      "todayLocked": "La scheda attività di oggi ha lo stato «{{status}}», quindi la voce inizia il {{date}}, il giorno più vicino che accetta tempo.",
+      "todayUncovered": "Nessun periodo copre la giornata di oggi, quindi la voce inizia il {{date}}, il giorno più vicino che accetta tempo."
+    },
+    "save": {
+      "noPeriod": "Nessun periodo copre il {{date}}. Scegli un giorno all’interno di un periodo.",
+      "sheetLocked": "La scheda attività del {{date}} ha lo stato «{{status}}». Scegli un giorno su una bozza o su una scheda con modifiche richieste."
+    }
+  },
+  "launch": {
+    "noUser": "Impossibile caricare l'utente corrente per l'inserimento ore.",
+    "entryNotFound": "Inserimento ore non trovato.",
+    "entryMissingSheet": "Questo inserimento ore non è collegato a una scheda attività e non può essere modificato qui.",
+    "entryMissingPeriod": "Alla scheda attività di questo inserimento ore manca il periodo e non può essere aperta.",
+    "noPeriods": "Non sono ancora stati configurati periodi di tempo, quindi non è possibile registrare tempo. Chiedi a un amministratore di creare periodi di tempo in Impostazioni → Registrazione tempo.",
+    "noEditablePeriods": "Tutte le schede attività sono inviate o approvate, quindi non c’è alcun giorno a cui aggiungere tempo. Chiedi a un approvatore di riaprire una scheda o a un amministratore di aggiungere un periodo.",
+    "prepareFailed": "Si è verificato un errore durante la preparazione dell'inserimento ore. Riprova."
   }
 }

@@ -1,5 +1,9 @@
-'use server'
+'use server';
 
+import type { ContactVisibilityContext } from '../lib/clientPortalVisibility';
+import { persistCommentPublication } from '@alga-psa/shared/lib/ticketCommentAttachments';
+
+import { reconcileCommentAttachments } from '@shared/lib/ticketCommentAttachments';
 import type {
   ITicket,
   ITicketListItem,
@@ -75,6 +79,7 @@ import {
   updateTicketInTransaction,
   type UpdateTicketInTransactionOptions,
 } from './optimizedTicketActions';
+import { revertBundlePropagationForChild } from './ticketBundleUtils';
 import {
   buildTicketResolutionSlaStageCompletionEvent,
   buildTicketResolutionSlaStageEnteredEvent,
@@ -84,6 +89,7 @@ import {
   shouldApplyOpenOnlyStatusFilter,
 } from '../lib/ticketStatusFilter';
 import { ticketActionErrorFrom, type TicketActionError } from './ticketActionErrors';
+import { permissionError } from '@alga-psa/ui/lib/errorHandling';
 // SLA cancellation is injected by the composition layer to avoid tickets→sla cross-package violation
 let _cancelSlaFn: ((tenantId: string, ticketId: string) => Promise<void>) | null = null;
 
@@ -135,6 +141,14 @@ export type TicketNotificationSuppressionOptions = Pick<
   UpdateTicketInTransactionOptions,
   'suppressContactNotifications' | 'suppressInternalNotifications'
 >;
+
+export type TicketBulkStatusOptions = TicketNotificationSuppressionOptions & {
+  /**
+   * Sync-mode bundle master boundary changes require an explicit choice:
+   * true propagates to affected children, false changes masters only.
+   */
+  propagateToChildren?: boolean;
+};
 
 function tenantScopedTable(
   conn: Knex | Knex.Transaction,
@@ -228,29 +242,23 @@ function toTicketAuthorizationRecord(
     assignedUserIds: Array.from(assignees),
     clientId: ticket.client_id ?? null,
     boardId: ticket.board_id ?? null,
+    contactId: ticket.contact_name_id ?? null,
     teamIds: ticket.assigned_team_id ? [ticket.assigned_team_id] : [],
   };
 }
 
-async function resolveClientSelectedBoardIds(
+async function resolveClientVisibility(
   trx: Knex.Transaction,
   tenant: string,
   user: IUserWithRoles
-): Promise<string[] | undefined> {
-  if (user.user_type !== 'client') {
-    return undefined;
-  }
-
-  if (!user.contact_id) {
-    return [];
-  }
-
+): Promise<ContactVisibilityContext | null | undefined> {
+  if (user.user_type !== 'client') return undefined;
+  if (!user.contact_id) return null;
   try {
-    const visibilityContext = await getClientContactVisibilityContext(trx, tenant, user.contact_id);
-    return visibilityContext.visibleBoardIds ?? undefined;
+    return await getClientContactVisibilityContext(trx, tenant, user.contact_id);
   } catch {
-    // Fail closed for client portal users when visibility context cannot be resolved safely.
-    return [];
+    // A failed resolution is distinct from an internal user: deny all.
+    return null;
   }
 }
 
@@ -678,6 +686,13 @@ export const updateTicket = withAuth(async (user, { tenant }, id: string, data: 
       throw new Error('suppressInternalNotifications requires suppressContactNotifications');
     }
 
+    // MSP ticket write surface. A client-portal session can reach server actions
+    // through the page bundle it is rendered on, so block non-internal callers
+    // before they can update any tenant ticket by id.
+    if (user.user_type !== 'internal') {
+      return permissionError('Permission denied: operation not available in client portal');
+    }
+
     const {knex: db} = await createTenantKnex();
 
     const result = await db.transaction(async (trx) => {
@@ -1031,6 +1046,15 @@ export const updateTicket = withAuth(async (user, { tenant }, id: string, data: 
         updatedTicket.closed_by = null;
       }
 
+      // A bundled child reopened through this update path has left the "closed
+      // by master" state. Revert its active propagation row in the same
+      // transaction so the ledger agrees with tickets.is_closed and a later
+      // master close cannot collide with a stale row on the per-child unique
+      // index. No-op when the child holds no active row.
+      if (currentTicket.master_ticket_id && oldStatus?.is_closed && !newStatus?.is_closed) {
+        await revertBundlePropagationForChild(trx, tenant, id, user.user_id);
+      }
+
       // Auto-apply checklist templates when the ticket's targeting attributes
       // (board/category/subcategory/priority) changed. Idempotent per template.
       const checklistTargetingChanged =
@@ -1268,9 +1292,10 @@ export const getTicketsForList = withAuth(async (user, { tenant }, filters: ITic
         tenant,
         user as IUserWithRoles
       );
-      const selectedBoardIds = await resolveClientSelectedBoardIds(trx, tenant, user as IUserWithRoles);
+      const contactVisibility = await resolveClientVisibility(trx, tenant, user as IUserWithRoles);
+      const selectedBoardIds = contactVisibility === null ? [] : contactVisibility?.visibleBoardIds ?? undefined;
       const relationshipRules =
-        selectedBoardIds === undefined ? [] : [{ template: 'selected_boards' as const }];
+        contactVisibility === undefined ? [] : [{ template: 'contact_visibility' as const }];
       const authorizationKernel = createAuthorizationKernel({
         builtinProvider: new BuiltinAuthorizationKernelProvider({
           relationshipRules,
@@ -1426,6 +1451,7 @@ export const getTicketsForList = withAuth(async (user, { tenant }, filters: ITic
             },
             record: toTicketAuthorizationRecord(ticket),
             selectedBoardIds,
+            contactVisibility,
             requestCache,
             knex: trx,
           })
@@ -1547,8 +1573,10 @@ export const addTicketComment = withAuth(async (user, { tenant }, ticketId: stri
         created_at: nowIso,
       }).returning('*');
 
+      await reconcileCommentAttachments(trx, tenant, newComment.comment_id, user.user_id);
+
       // Publish comment added event
-      await publishEvent({
+      await persistCommentPublication(trx, {
         eventType: 'TICKET_COMMENT_ADDED',
         payload: {
           tenantId: tenant,
@@ -1563,7 +1591,7 @@ export const addTicketComment = withAuth(async (user, { tenant }, ticketId: stri
             isInternal
           }
         }
-      });
+      }, publishEvent);
 
       // Publish workflow v2 ticket message events (additive).
       try {
@@ -2041,7 +2069,7 @@ export const bulkUpdateTicketStatus = withAuth(async (
   { tenant },
   ticketIds: string[],
   statusId: string,
-  options: TicketNotificationSuppressionOptions = {},
+  options: TicketBulkStatusOptions = {},
 ): Promise<{
   updatedIds: string[];
   failed: Array<{ ticketId: string; message: string; closeRuleFailures?: CloseRuleFailure[] }>;
@@ -2050,6 +2078,15 @@ export const bulkUpdateTicketStatus = withAuth(async (
 
   if (uniqueIds.length === 0) {
     return { updatedIds: [], failed: [] };
+  }
+
+  // MSP bulk status write surface. Reject client-portal callers before the
+  // permission lookup or any per-ticket transaction, mirroring updateTicket.
+  if (user.user_type !== 'internal') {
+    return {
+      updatedIds: [],
+      failed: ticketBulkFailuresForAll(uniqueIds, 'Permission denied: operation not available in client portal'),
+    };
   }
 
   // Authorize once up front instead of paying a permission lookup per ticket.
@@ -2238,9 +2275,10 @@ export const getTicketById = withAuth(async (user, { tenant }, id: string): Prom
         tenant,
         user as IUserWithRoles
       );
-      const selectedBoardIds = await resolveClientSelectedBoardIds(trx, tenant, user as IUserWithRoles);
+      const contactVisibility = await resolveClientVisibility(trx, tenant, user as IUserWithRoles);
+      const selectedBoardIds = contactVisibility === null ? [] : contactVisibility?.visibleBoardIds ?? undefined;
       const relationshipRules =
-        selectedBoardIds === undefined ? [] : [{ template: 'selected_boards' as const }];
+        contactVisibility === undefined ? [] : [{ template: 'contact_visibility' as const }];
       const authorizationKernel = createAuthorizationKernel({
         builtinProvider: new BuiltinAuthorizationKernelProvider({
           relationshipRules,
@@ -2311,6 +2349,7 @@ export const getTicketById = withAuth(async (user, { tenant }, id: string): Prom
         },
         record: toTicketAuthorizationRecord(ticket),
         selectedBoardIds,
+        contactVisibility,
         requestCache,
         knex: trx,
       });

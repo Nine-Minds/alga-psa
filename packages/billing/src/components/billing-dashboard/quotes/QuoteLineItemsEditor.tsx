@@ -6,6 +6,9 @@ import { useBillingFrequencyOptions, useFormatBillingFrequency } from '@alga-psa
 import { Button } from '@alga-psa/ui/components/Button';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { Input } from '@alga-psa/ui/components/Input';
+import { UnitOfMeasureInput } from '@alga-psa/ui/components/UnitOfMeasureInput';
+import type { UnitSelection } from '@alga-psa/ui/components/UnitOfMeasureInput';
+import { listTenantUnitsOfMeasure, registerTenantUnitOfMeasure } from '@alga-psa/billing/actions/unitOfMeasureActions';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Pencil, Info } from 'lucide-react';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
@@ -26,6 +29,7 @@ import {
   createCustomDraftQuoteItem,
   createDraftDiscountQuoteItem,
   createDraftQuoteItemFromService,
+  resolveDraftDiscountAmounts,
   type DraftQuoteItem,
 } from './quoteLineItemDraft';
 
@@ -361,27 +365,6 @@ const QuoteLineItemsEditor: React.FC<QuoteLineItemsEditorProps> = ({
     setDiscountTargetValue('');
   };
 
-  const resolveDiscountAmount = (item: DraftQuoteItem): number => {
-    if (!item.is_discount) return item.quantity * item.unit_price;
-
-    if (item.discount_type === 'fixed') return item.quantity * item.unit_price;
-
-    const includedBaseItems = items.filter((i) => !i.is_discount && (!i.is_optional || i.is_selected !== false));
-    const baseSubtotal = includedBaseItems.reduce((sum, i) => sum + (i.quantity * i.unit_price), 0);
-
-    let baseAmount = baseSubtotal;
-    if (item.applies_to_item_id) {
-      const target = includedBaseItems.find((i) => (i.quote_item_id ?? i.local_id) === item.applies_to_item_id);
-      baseAmount = target ? target.quantity * target.unit_price : 0;
-    } else if (item.applies_to_service_id) {
-      baseAmount = includedBaseItems
-        .filter((i) => i.service_id === item.applies_to_service_id)
-        .reduce((sum, i) => sum + (i.quantity * i.unit_price), 0);
-    }
-
-    return Math.round(baseAmount * ((item.discount_percentage ?? 0) / 100));
-  };
-
   const getDiscountTargetLabel = (item: DraftQuoteItem): string => {
     if (item.applies_to_item_id) {
       const target = items.find((i) => (i.quote_item_id ?? i.local_id) === item.applies_to_item_id);
@@ -410,15 +393,19 @@ const QuoteLineItemsEditor: React.FC<QuoteLineItemsEditorProps> = ({
     });
   };
 
-  const renderItemRows = (sectionItems: DraftQuoteItem[]) => sectionItems.map((item) => {
-    const isDiscount = item.is_discount === true;
-    const resolvedTotal = resolveDiscountAmount(item);
-    const dragClass = draggedItemId === item.local_id ? 'opacity-60' : '';
-    const discountRowClass = isDiscount ? 'bg-amber-50/60 dark:bg-amber-950/20 border-l-2 border-l-amber-400' : '';
+  const renderItemRows = (sectionItems: DraftQuoteItem[]) => {
+    const discountAmounts = resolveDraftDiscountAmounts(items);
+    return sectionItems.map((item) => {
+      const isDiscount = item.is_discount === true;
+      const resolvedTotal = isDiscount
+        ? (discountAmounts.get(item.quote_item_id ?? item.local_id) ?? 0)
+        : item.quantity * item.unit_price;
+      const dragClass = draggedItemId === item.local_id ? 'opacity-60' : '';
+      const discountRowClass = isDiscount ? 'bg-amber-50/60 dark:bg-amber-950/20 border-l-2 border-l-amber-400' : '';
 
-    return (
-      <tr
-        key={item.local_id}
+      return (
+        <tr
+          key={item.local_id}
         draggable={!disabled}
         onDragStart={() => setDraggedItemId(item.local_id)}
         onDragEnd={() => setDraggedItemId(null)}
@@ -458,6 +445,16 @@ const QuoteLineItemsEditor: React.FC<QuoteLineItemsEditorProps> = ({
                 )
               }
             </div>
+            {!isDiscount && (
+              <UnitOfMeasureInput
+                id={`quote-line-item-unit-${item.local_id}`}
+                value={{ code: item.unit_code || '', label: item.unit_of_measure || '' }}
+                onChange={(value: UnitSelection) => updateItem(item.local_id, { unit_of_measure: value.label, unit_code: value.code })}
+                loadCustomUnits={listTenantUnitsOfMeasure}
+                registerCustomUnit={registerTenantUnitOfMeasure}
+                required={item.billing_method === 'usage'}
+              />
+            )}
             {!isDiscount && (
               <div className="space-y-1">
                 <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
@@ -627,7 +624,8 @@ const QuoteLineItemsEditor: React.FC<QuoteLineItemsEditorProps> = ({
         </td>
       </tr>
     );
-  });
+    });
+  };
 
   const renderPhaseSections = (sections: QuotePhaseSection[], sectionKeyPrefix: string) => (
     <div className="space-y-4">

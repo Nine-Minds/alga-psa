@@ -40,7 +40,7 @@ describe('prepaid balance alert delivery wiring contract', () => {
   it('evaluates collapsed-address preferences per role and can select the client route', () => {
     const roleBlock = source.slice(source.indexOf('async function resolveEmailRoles'), source.indexOf('function subtypeAndTemplateFor'));
     expect(roleBlock).toContain('delivery.recipient_user_id');
-    expect(roleBlock).toContain('emailPreferencesEnabled(knex, tenantId, subtypeName)');
+    expect(roleBlock).toContain('subtypeForRole(RECIPIENT_ROLE_CLIENT_BILLING)');
     expect(roleBlock).toContain('RECIPIENT_ROLE_CLIENT_BILLING');
     const processBlock = source.slice(source.indexOf('async function processDelivery'));
     expect(processBlock).toContain('recipientClientId: prepared.isManager ? undefined : delivery.alert.client_id');
@@ -67,7 +67,7 @@ describe('prepaid balance alert delivery wiring contract', () => {
   it('passes a flat internal context so the internal renderer can substitute every placeholder', () => {
     expect(source).toContain('buildInternalAlertContext(alert.client_name, {');
     const internalBlock = source.slice(source.indexOf('if (delivery.channel === DELIVERY_CHANNEL_INTERNAL)'));
-    expect(internalBlock).toContain('const data = buildInternalAlertContextForDelivery(delivery.alert, locale, link);');
+    expect(internalBlock).toContain('const data = buildInternalAlertContextForDelivery(delivery.alert, locale, link, hasReplenishment);');
   });
 
   it('isolates per-alert planning failures from the rest of the tenant drain', () => {

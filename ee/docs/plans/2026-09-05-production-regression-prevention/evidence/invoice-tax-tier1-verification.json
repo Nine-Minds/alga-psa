@@ -1,0 +1,39 @@
+{
+  "schemaVersion": 1,
+  "scope": "Invoice tax persistence and Tier-1 infrastructure selection",
+  "testFile": "server/src/test/infrastructure/billing/invoices/billingInvoiceGeneration_tax.test.ts",
+  "result": {
+    "files": 1,
+    "passed": 9,
+    "failed": 0,
+    "skipped": 0,
+    "log": "/tmp/alga-invoice-tax-infrastructure-final.log"
+  },
+  "assertions": [
+    "Two persisted invoice charges retain the correct service identities, net amounts (1000 and 500 cents), and tax amounts (89 and 40 cents).",
+    "Invoice subtotal, tax and total are exactly 1500, 129 and 1629 cents.",
+    "Existing suite also verifies recalculation, taxable/exempt and positive/negative line behavior."
+  ],
+  "selection": {
+    "mode": "tier1",
+    "floorFiles": 5,
+    "runnerTest": "scripts/tests/infrastructure-runner.vitest.test.mjs",
+    "status": "passed",
+    "log": "/tmp/alga-invoice-tax-floor-runner.log"
+  },
+  "environment": {
+    "postgres": "Disposable pgvector/pgvector:pg16 container",
+    "redis": "Disposable redis:7-alpine container",
+    "cleanup": "Both containers stopped and automatically removed after test completion."
+  },
+  "hashes": {
+    "alga-invoice-tax-infrastructure.log": "8a446c38f00dec150614321432e8c98981da54847456429383579c0382179949",
+    "alga-invoice-tax-infrastructure-final.log": "21851a3b50734b833416d650bdb907f847d3300e3ef4a1d96ebd14c80e6db808",
+    "alga-invoice-tax-floor-runner.log": "eccb6cfce6b9d2ab0f689a59f778b8ce7f1214798e554e0c3ded663e185261d6"
+  },
+  "limitations": [
+    "Existing integration harness substitutes authentication and transaction wrappers; this is real database invoice persistence, not a browser/authentication test.",
+    "The multi-region case supplies billing charges, so recurring charge generation is outside its scope.",
+    "Tier-1 selection is configured locally; publication and effective required GitHub protections remain unverified for this candidate."
+  ]
+}

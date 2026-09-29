@@ -7,7 +7,7 @@ import { setupCommonMocks } from 'server/test-utils/testMocks';
 import {
   requestPortalDomainRegistrationAction,
   disablePortalDomainAction,
-} from '@ee/lib/actions/tenant-actions/portalDomainActions';
+} from '@/lib/actions/tenant-actions/portalDomainActions';
 
 /**
  * DB-backed coverage of the appliance ("direct") portal-domain flow (T003/T004):

@@ -8,7 +8,8 @@ import {
   AccountingExportTransformResult,
   AccountingExportDocument
 } from '@alga-psa/types';
-import { createTenantKnex, tenantDb } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
+import { lockInvoiceForExternalSync } from '../../lib/invoiceExternalSyncLock';
 import { AccountingMappingResolver } from '../../services/accountingMappingResolver';
 import { KnexInvoiceMappingRepository } from '../../repositories/invoiceMappingRepository';
 import { AppError, unparseCSV } from '@alga-psa/core';
@@ -386,7 +387,6 @@ export class XeroCsvAdapter implements AccountingExportAdapter {
     }
 
     const { knex } = await createTenantKnex();
-    const invoiceMappingRepository = new KnexInvoiceMappingRepository(knex);
     const artifact = transformResult.files?.[0];
     const deliveredAt = new Date().toISOString();
 
@@ -396,46 +396,80 @@ export class XeroCsvAdapter implements AccountingExportAdapter {
       documentCount: transformResult.documents.length
     });
 
-    // For file-based delivery, map all lines to the generated file
-    const deliveredLines = transformResult.documents.flatMap((doc) =>
-      doc.lineIds.map((lineId) => ({
-        lineId,
-        externalDocumentRef: artifact?.filename ?? null
-      }))
-    );
+    // Mark an invoice exported only after confirming it is not cancelled. The
+    // mapping insert takes the same invoice row lock the void path holds
+    // (invoiceExternalSyncLock.ts), so a concurrent void either commits first
+    // and refuses the export of its invoice, or waits until these mappings
+    // commit and then re-reads the mapping under its own lock.
+    const deliveredLines: { lineId: string; externalDocumentRef?: string | null }[] = [];
+    const failedDocuments: Array<{
+      documentId: string;
+      lineIds: string[];
+      code: string;
+      message: string;
+    }> = [];
 
     // Create invoice mappings to mark invoices as exported (prevents re-export)
     for (const document of transformResult.documents) {
       const payload = document.payload as unknown as XeroCsvDocumentPayload;
       const externalRef = `csv:${payload.invoiceNumber}`;
 
-      await invoiceMappingRepository.upsertInvoiceMapping({
-        tenantId,
-        adapterType: this.type,
-        invoiceId: document.documentId,
-        externalInvoiceId: externalRef,
-        targetRealm: context.batch.target_realm ?? null,
-        metadata: {
-          last_exported_at: deliveredAt,
-          filename: artifact?.filename,
-          invoiceNumber: payload.invoiceNumber,
-          trackingCategories: {
-            sourceSystem: TRACKING_CATEGORY_SOURCE_SYSTEM,
-            sourceValue: TRACKING_CATEGORY_SOURCE_VALUE,
-            invoiceId: TRACKING_CATEGORY_INVOICE_ID
-          }
+      try {
+        await withTransaction(knex, async (trx) => {
+          await lockInvoiceForExternalSync(trx, tenantId, document.documentId);
+          const invoiceMappingRepository = new KnexInvoiceMappingRepository(trx);
+          await invoiceMappingRepository.upsertInvoiceMapping({
+            tenantId,
+            adapterType: this.type,
+            invoiceId: document.documentId,
+            externalInvoiceId: externalRef,
+            targetRealm: context.batch.target_realm ?? null,
+            metadata: {
+              last_exported_at: deliveredAt,
+              filename: artifact?.filename,
+              invoiceNumber: payload.invoiceNumber,
+              trackingCategories: {
+                sourceSystem: TRACKING_CATEGORY_SOURCE_SYSTEM,
+                sourceValue: TRACKING_CATEGORY_SOURCE_VALUE,
+                invoiceId: TRACKING_CATEGORY_INVOICE_ID
+              }
+            }
+          });
+        });
+
+        for (const lineId of document.lineIds) {
+          deliveredLines.push({
+            lineId,
+            externalDocumentRef: externalRef
+          });
         }
-      });
+      } catch (error) {
+        const code = error instanceof AppError ? error.code : 'XERO_CSV_DELIVERY_ERROR';
+        const message = error instanceof Error ? error.message : 'Unknown Xero CSV delivery error';
+        logger.warn('[XeroCsvAdapter] Skipping mapping for invoice delivery failure', {
+          batchId: context.batch.batch_id,
+          invoiceId: document.documentId,
+          code,
+          error: message
+        });
+        failedDocuments.push({
+          documentId: document.documentId,
+          lineIds: document.lineIds,
+          code,
+          message
+        });
+      }
     }
 
     logger.info('[XeroCsvAdapter] created invoice mappings', {
       batchId: context.batch.batch_id,
       tenant: tenantId,
-      invoiceCount: transformResult.documents.length
+      invoiceCount: deliveredLines.length > 0 ? transformResult.documents.length - failedDocuments.length : 0
     });
 
     return {
       deliveredLines,
+      failedDocuments: failedDocuments.length > 0 ? failedDocuments : undefined,
       artifacts: {
         file: artifact
       },

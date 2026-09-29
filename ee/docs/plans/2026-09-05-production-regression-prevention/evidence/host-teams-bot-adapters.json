@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "status": "passed",
+  "suite": "msgraph-emulator",
+  "baseRevision": "035abb08e264be0e438c9f7fe188befbfee8398d",
+  "workingTreeDirty": true,
+  "counts": {
+    "tests": 68,
+    "passed": 68,
+    "files": 7,
+    "newBotCases": 6
+  },
+  "hashes": {
+    "/tmp/alga-msgraph-bot-adapters-full.log": "69799c83a660af5a22b438e3f4e55583e6a7f605bb0eb340b68057b46ed78207",
+    "packages/emulators/msgraph/tests/teamsBotAdapters.test.ts": "8360ad60d0bc2a54783d15c3760cea1b42d2748bf27ee6783dec069549c4f9e9"
+  },
+  "limitations": [
+    "The HTTP receiver composes real inbound authentication and outbound connector adapters; it does not invoke the full business-command handler.",
+    "Linked-user lookup, tenant database effects, and user SSO are outside this evidence.",
+    "Development-only emulator overrides remain guarded in production.",
+    "Local native execution only; current-source GitHub CI remains unpublished and unverified."
+  ]
+}

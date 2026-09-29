@@ -23,13 +23,13 @@
  * never depends on dev-DB fixtures (integration files share one vitest
  * process and createTestDbConnection pins DB_NAME_SERVER=test_database).
  *
- * Opt-in: needs a reachable database (RUN_DB_TESTS=1).
+ * Required integration coverage against the isolated migrated test database.
  */
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import type { Knex } from 'knex';
 import { randomUUID } from 'node:crypto';
 
-import { createTestDbConnection, wireLocalTestDbEnv } from '../../../test-utils/dbConfig';
+import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { createTenant, createUser } from '../../../test-utils/testDataFactory';
 import { tenantDb } from '@alga-psa/db';
 import {
@@ -94,11 +94,10 @@ vi.mock('@alga-psa/auth/rbac', () => ({
   hasPermission: vi.fn(async () => true),
 }));
 
-const ENABLED = process.env.RUN_DB_TESTS === '1';
 
 const dateOnly = (d: Date): string => d.toISOString().slice(0, 10);
 
-describe.skipIf(!ENABLED)('bucket usage report reads the period-scoped weighted ledger (real DB)', () => {
+describe('bucket usage report reads the period-scoped weighted ledger (real DB)', () => {
   let db: Knex;
   let tenantId: string;
   let userId: string;
@@ -193,7 +192,6 @@ describe.skipIf(!ENABLED)('bucket usage report reads the period-scoped weighted 
   }
 
   beforeAll(async () => {
-    wireLocalTestDbEnv();
     db = await createTestDbConnection();
     tenantId = await createTenant(db, 'Bucket usage report tenant');
     userId = await createUser(db, tenantId);

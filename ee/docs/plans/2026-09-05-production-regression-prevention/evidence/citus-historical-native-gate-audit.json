@@ -1,0 +1,53 @@
+{
+  "scope": "Current Citus aggregate audit of historical native reports",
+  "verifierRevision": "91e82ed3f1",
+  "nativeRun": 34118119105,
+  "nativeCandidate": "3072eefdf9ecd8ccd551e7dfaf8d595eb6b2908f",
+  "publishedHead": "d8cf156c731bdfb9414ee6435152a676e0bcecf4",
+  "result": {
+    "schemaVersion": 1,
+    "revision": "3072eefdf9ecd8ccd551e7dfaf8d595eb6b2908f",
+    "scope": "citus-execution",
+    "status": "failed",
+    "results": [
+      {
+        "id": "citus-runtime",
+        "status": "failed",
+        "failures": [
+          "Expected one execution bundle, received 0"
+        ]
+      },
+      {
+        "id": "temporal-database",
+        "status": "failed",
+        "counts": {
+          "passed": 25,
+          "failed": 0,
+          "skipped": 0,
+          "todo": 0,
+          "pending": 0
+        },
+        "failures": [
+          "Uncollected candidate: ee/temporal-workflows/src/__tests__/e2e/tenant-creation-workflow.e2e.test.ts",
+          "Uncollected candidate: ee/temporal-workflows/src/db/__tests__/database-connection.integration.test.ts"
+        ]
+      }
+    ],
+    "failures": [
+      "citus-runtime: Expected one execution bundle, received 0",
+      "temporal-database: Uncollected candidate: ee/temporal-workflows/src/__tests__/e2e/tenant-creation-workflow.e2e.test.ts",
+      "temporal-database: Uncollected candidate: ee/temporal-workflows/src/db/__tests__/database-connection.integration.test.ts",
+      "citus-runtime: Cannot read execution artifacts: Required execution must declare full selection: citus-runtime"
+    ]
+  },
+  "artifact": {
+    "path": "/tmp/alga-citus-native-gate-audit/result.json",
+    "sha256": "df1b4571e07606a4d8862c79f602f291b0f5a3f93da5ed6d5b3c58535567b8ae"
+  },
+  "interpretation": "Historical runtime success does not meet current requirements: runtime evidence lacks explicit full selection, and the tenant lane predates two required database suites. Reports were not altered to satisfy the gate.",
+  "nextAction": "Execute the current full six-file Temporal database lane on owned migrated Citus; publish authorized changes and verify native candidate reports.",
+  "limits": [
+    "This is a retrospective consumer audit, not a new native run.",
+    "PR failures remain on the old published head; local fixes are not native-verified."
+  ]
+}

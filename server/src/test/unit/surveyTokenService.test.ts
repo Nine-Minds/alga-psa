@@ -18,6 +18,10 @@ type MockedKnex = ReturnType<typeof vi.fn> & { raw?: ReturnType<typeof vi.fn> };
 const getAdminConnectionMock = vi.fn();
 const createTenantKnexMock = vi.fn();
 const runWithTenantMock = vi.fn(async (_tenant: string, fn: () => Promise<any>) => fn());
+const publishWorkflowEventMock = vi.fn(async (..._args: unknown[]) => undefined);
+vi.mock('@alga-psa/event-bus/publishers', () => ({
+  publishWorkflowEvent: (...args: unknown[]) => publishWorkflowEventMock(...args),
+}));
 
 vi.mock('@alga-psa/db/admin', () => ({
   getAdminConnection: () => getAdminConnectionMock(),
@@ -45,6 +49,7 @@ describe('surveyTokenService', () => {
     getAdminConnectionMock.mockReset();
     createTenantKnexMock.mockReset();
     runWithTenantMock.mockClear();
+    publishWorkflowEventMock.mockClear();
   });
 
   it('hashes tokens deterministically', () => {
@@ -60,7 +65,7 @@ describe('surveyTokenService', () => {
     expect(first.hashedToken).toBe(hashSurveyToken(first.plainToken));
   });
 
-  it('resolves invitation metadata for a valid token', async () => {
+  it.each(['ticket', 'project'])('resolves invitation metadata for a valid %s token', async subject => {
     const plainToken = 'plain-token';
     const hashed = hashSurveyToken(plainToken);
 
@@ -74,7 +79,8 @@ describe('surveyTokenService', () => {
       invitation_id: '5c31f824-2225-4f4d-9f4f-9f8804e6a1af',
       tenant: '9f8c6b4d-7b2e-4b5d-9a28-37a1c7dbe0c1',
       template_id: '198de41a-a40c-44e3-a818-62fb6770c6ac',
-      ticket_id: '3bcd5a66-0f5f-4a9b-8e41-2b7cebb0d5e4',
+      ticket_id: subject === 'ticket' ? '3bcd5a66-0f5f-4a9b-8e41-2b7cebb0d5e4' : null,
+      project_id: subject === 'project' ? '4bcd5a66-0f5f-4a9b-8e41-2b7cebb0d5e4' : null,
       client_id: 'd661de94-8e87-4c02-95dd-8f7f231f9b73',
       contact_id: '2b87f95a-3c82-4c7a-9a64-2b229f8dbac7',
       token_expires_at: new Date(Date.now() + 60_000),
@@ -101,9 +107,16 @@ describe('surveyTokenService', () => {
     expect(result.tenant).toBe(invitationRow.tenant);
     expect(result.invitation.invitationId).toBe(invitationRow.invitation_id);
     expect(result.invitation.template.ratingLabels).toEqual(invitationRow.rating_labels);
+    if (subject === 'project') {
+      expect(result.invitation.projectId).toBe(invitationRow.project_id);
+      expect(result.invitation).not.toHaveProperty('ticketId');
+    } else {
+      expect(result.invitation.ticketId).toBe(invitationRow.ticket_id);
+      expect(result.invitation).not.toHaveProperty('projectId');
+    }
   });
 
-  it('throws when the token is expired', async () => {
+  it.each(['ticket', 'project'])('rejects expired %s tokens and publishes the correct subject', async subject => {
     const plainToken = 'expired-token';
 
     const adminBuilder = buildAdminBuilder({
@@ -116,7 +129,8 @@ describe('surveyTokenService', () => {
       invitation_id: '5b8fbd02-6d6e-4e03-8f1f-9c8d87651b5e',
       tenant: 'e8e7dcd7-6d45-4c76-af65-3d719c849c7f',
       template_id: '198de41a-a40c-44e3-a818-62fb6770c6ac',
-      ticket_id: '3bcd5a66-0f5f-4a9b-8e41-2b7cebb0d5e4',
+      ticket_id: subject === 'ticket' ? '3bcd5a66-0f5f-4a9b-8e41-2b7cebb0d5e4' : null,
+      project_id: subject === 'project' ? '4bcd5a66-0f5f-4a9b-8e41-2b7cebb0d5e4' : null,
       client_id: null,
       contact_id: null,
       token_expires_at: new Date(Date.now() - 1_000),
@@ -135,6 +149,12 @@ describe('surveyTokenService', () => {
     createTenantKnexMock.mockResolvedValue({ knex: tenantBuilder.knex });
 
     await expect(resolveSurveyTenantFromToken(plainToken)).rejects.toThrow('Survey token has expired.');
+    expect(publishWorkflowEventMock).toHaveBeenCalledOnce();
+    const event = publishWorkflowEventMock.mock.calls[0][0] as any;
+    expect(event.eventType).toBe('SURVEY_EXPIRED');
+    expect(event.payload.recipientId).toBe(invitationRow.ticket_id ?? invitationRow.project_id);
+    expect(event.payload[`${subject}Id`]).toBe(invitationRow.ticket_id ?? invitationRow.project_id);
+    expect(event.payload).not.toHaveProperty(subject === 'project' ? 'ticketId' : 'projectId');
   });
 });
 

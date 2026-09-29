@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "baseRevision": "46854c7319",
+  "workingTreeDirty": true,
+  "ci": {
+    "runId": 34266401070,
+    "jobId": 102197298522,
+    "failure": "Email activity execution deadline test exceeded 120000ms",
+    "originalTimeoutReproducedNatively": false
+  },
+  "change": "Replace long activity sleep with release barrier; advance test-server time outside activity, check TIMED_OUT then TimeoutFailure, release and await completion in finally",
+  "native": {
+    "emailCasesPassed": 6,
+    "engineCasesPassed": 61,
+    "engineFilesPassed": 12,
+    "engineDurationSeconds": 23.13,
+    "negativeControl": "Remove workflowExecutionTimeout only: TIMED_OUT assertion fails with RUNNING in3.27seconds; worker DRAINED/STOPPED despite failed assertion",
+    "finalSourceRestoredExactly": true
+  },
+  "limits": [
+    "Original CI timeout cause is not proven",
+    "Current GitHub run still tests earlier source",
+    "No timeout increase or skip introduced"
+  ]
+}

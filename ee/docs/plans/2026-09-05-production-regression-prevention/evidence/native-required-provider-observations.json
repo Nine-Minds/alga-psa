@@ -1,0 +1,402 @@
+{
+  "schemaVersion": 1,
+  "scope": "Native provider observation enforcement and actual SMTP DATA evidence; current-source CI pending",
+  "sourceBase": "f093d13c6c",
+  "dirty": true,
+  "validation": {
+    "providerReadinessMetricsAndFreshGate": {
+      "passed": 19,
+      "failed": 0,
+      "log": "/tmp/alga-provider-readiness-native.log"
+    },
+    "smtp": {
+      "passed": 7,
+      "failed": 0,
+      "log": "/tmp/alga-smtp-journal-full.log"
+    },
+    "host": {
+      "passed": 28,
+      "failed": 0
+    },
+    "typechecks": [
+      "host:passed",
+      "smtp-sink:passed"
+    ]
+  },
+  "before": {
+    "smtpNative": {
+      "failed": 2,
+      "log": "/tmp/alga-smtp-journal-red.log"
+    },
+    "currentCiReplay": {
+      "community": {
+        "revision": "cec08351189624fb4db8db7ec453e788157fbdad",
+        "result": {
+          "schemaVersion": 1,
+          "scope": "browser-provider-readiness",
+          "revision": "cec08351189624fb4db8db7ec453e788157fbdad",
+          "status": "failed",
+          "failures": [
+            "journey-0:smtp-sink:missing-incomplete-or-empty"
+          ],
+          "configuration": {
+            "edition": "community",
+            "authentication": "real-credentials",
+            "serverLifecycle": "externally-started-production-build"
+          },
+          "observations": [
+            {
+              "identity": [
+                "e2e-tests/tests/inbound-email.spec.ts",
+                "community-chromium",
+                "community-chromium",
+                [
+                  "built email service ingests MIME, preserves inline quotations, threads replies and deduplicates delivery"
+                ]
+              ],
+              "schemaVersion": 1,
+              "status": "observed",
+              "revision": "cec08351189624fb4db8db7ec453e788157fbdad",
+              "runId": "34320694357",
+              "runAttempt": 1,
+              "retry": 0,
+              "artifactContext": "validated-browser-ci-archives",
+              "artifactManifestSha256": "b8b3aa30927299e89fc924a4b11c7264214723401c58fafef36327082b6f582f",
+              "providers": [
+                {
+                  "provider": "smtp-sink",
+                  "mode": "emulator",
+                  "supported": false,
+                  "complete": false,
+                  "requestCount": 0,
+                  "dropped": 0,
+                  "inFlight": 0
+                }
+              ],
+              "limitation": "Fixture observations only; no required-provider completeness, isolation, OAuth, protocol parity or release readiness claim."
+            },
+            {
+              "identity": [
+                "e2e-tests/tests/microsoft-mailbox.spec.ts",
+                "community-chromium",
+                "community-chromium",
+                [
+                  "Microsoft mailbox OAuth receives a ticket, sends a UI reply through Graph and deduplicates callbacks"
+                ]
+              ],
+              "schemaVersion": 1,
+              "status": "observed",
+              "revision": "cec08351189624fb4db8db7ec453e788157fbdad",
+              "runId": "34320694357",
+              "runAttempt": 1,
+              "retry": 0,
+              "artifactContext": "validated-browser-ci-archives",
+              "artifactManifestSha256": "b8b3aa30927299e89fc924a4b11c7264214723401c58fafef36327082b6f582f",
+              "providers": [
+                {
+                  "provider": "msgraph",
+                  "mode": "emulator",
+                  "supported": true,
+                  "complete": true,
+                  "requestCount": 33,
+                  "dropped": 0,
+                  "inFlight": 0
+                }
+              ],
+              "limitation": "Fixture observations only; no required-provider completeness, isolation, OAuth, protocol parity or release readiness claim."
+            }
+          ],
+          "limitation": "Candidate CI archive-backed provider observations only; no OAuth, protocol parity, live-provider or deployment verification claim."
+        },
+        "observed": [
+          {
+            "identity": [
+              "e2e-tests/tests/inbound-email.spec.ts",
+              "community-chromium",
+              "community-chromium",
+              [
+                "built email service ingests MIME, preserves inline quotations, threads replies and deduplicates delivery"
+              ]
+            ],
+            "status": "expected",
+            "retry": 0,
+            "providers": [
+              {
+                "provider": "smtp-sink",
+                "supported": false,
+                "complete": false,
+                "count": 0
+              }
+            ]
+          },
+          {
+            "identity": [
+              "e2e-tests/tests/microsoft-mailbox.spec.ts",
+              "community-chromium",
+              "community-chromium",
+              [
+                "Microsoft mailbox OAuth receives a ticket, sends a UI reply through Graph and deduplicates callbacks"
+              ]
+            ],
+            "status": "expected",
+            "retry": 0,
+            "providers": [
+              {
+                "provider": "msgraph",
+                "supported": true,
+                "complete": true,
+                "count": 33
+              }
+            ]
+          }
+        ]
+      },
+      "enterprise": {
+        "revision": "cec08351189624fb4db8db7ec453e788157fbdad",
+        "result": {
+          "schemaVersion": 1,
+          "scope": "browser-provider-readiness",
+          "revision": "cec08351189624fb4db8db7ec453e788157fbdad",
+          "status": "failed",
+          "failures": [
+            "browser-execution-not-passed"
+          ],
+          "configuration": {
+            "edition": "enterprise",
+            "authentication": "real-credentials",
+            "serverLifecycle": "externally-started-production-build"
+          },
+          "observations": [],
+          "limitation": "Candidate CI archive-backed provider observations only; no OAuth, protocol parity, live-provider or deployment verification claim."
+        },
+        "observed": [
+          {
+            "identity": [
+              "e2e-tests/tests/inbound-email.spec.ts",
+              "enterprise-chromium",
+              "enterprise-chromium",
+              [
+                "built email service ingests MIME, preserves inline quotations, threads replies and deduplicates delivery"
+              ]
+            ],
+            "status": "expected",
+            "retry": 0,
+            "providers": [
+              {
+                "provider": "smtp-sink",
+                "supported": false,
+                "complete": false,
+                "count": 0
+              }
+            ]
+          },
+          {
+            "identity": [
+              "e2e-tests/tests/microsoft-calendar.spec.ts",
+              "enterprise-chromium",
+              "enterprise-chromium",
+              [
+                "Microsoft calendar OAuth imports vendor events, exports UI edits and recovers from provider outage without losing remote linkage"
+              ]
+            ],
+            "status": "expected",
+            "retry": 0,
+            "providers": [
+              {
+                "provider": "msgraph",
+                "supported": true,
+                "complete": true,
+                "count": 39
+              }
+            ]
+          },
+          {
+            "identity": [
+              "e2e-tests/tests/microsoft-calendar.spec.ts",
+              "enterprise-chromium",
+              "enterprise-chromium",
+              [
+                "Microsoft calendar OAuth imports vendor events, exports UI edits and recovers from permission denial without losing remote linkage"
+              ]
+            ],
+            "status": "expected",
+            "retry": 0,
+            "providers": [
+              {
+                "provider": "msgraph",
+                "supported": true,
+                "complete": true,
+                "count": 39
+              }
+            ]
+          },
+          {
+            "identity": [
+              "e2e-tests/tests/microsoft-calendar.spec.ts",
+              "enterprise-chromium",
+              "enterprise-chromium",
+              [
+                "Microsoft calendar OAuth imports vendor events, exports UI edits and recovers from throttling without losing remote linkage"
+              ]
+            ],
+            "status": "flaky",
+            "retry": 0,
+            "providers": [
+              {
+                "provider": "msgraph",
+                "supported": true,
+                "complete": true,
+                "count": 15
+              }
+            ]
+          },
+          {
+            "identity": [
+              "e2e-tests/tests/microsoft-calendar.spec.ts",
+              "enterprise-chromium",
+              "enterprise-chromium",
+              [
+                "Microsoft calendar OAuth imports vendor events, exports UI edits and recovers from all-day throttling without losing remote linkage"
+              ]
+            ],
+            "status": "flaky",
+            "retry": 0,
+            "providers": [
+              {
+                "provider": "msgraph",
+                "supported": true,
+                "complete": true,
+                "count": 13
+              }
+            ]
+          },
+          {
+            "identity": [
+              "e2e-tests/tests/microsoft-mailbox.spec.ts",
+              "enterprise-chromium",
+              "enterprise-chromium",
+              [
+                "Microsoft mailbox OAuth receives a ticket, sends a UI reply through Graph and deduplicates callbacks"
+              ]
+            ],
+            "status": "expected",
+            "retry": 0,
+            "providers": [
+              {
+                "provider": "msgraph",
+                "supported": true,
+                "complete": true,
+                "count": 33
+              }
+            ]
+          },
+          {
+            "identity": [
+              "e2e-tests/tests/qbo-export.spec.ts",
+              "enterprise-chromium",
+              "enterprise-chromium",
+              [
+                "QuickBooks OAuth and UI mapping export to the selected company and recover without duplicate invoices"
+              ]
+            ],
+            "status": "expected",
+            "retry": 0,
+            "providers": [
+              {
+                "provider": "qbo",
+                "supported": true,
+                "complete": true,
+                "count": 32
+              }
+            ]
+          },
+          {
+            "identity": [
+              "e2e-tests/tests/stripe-payment.spec.ts",
+              "enterprise-chromium",
+              "enterprise-chromium",
+              [
+                "portal Checkout settles the invoice exactly once through signed webhook delivery and redelivery"
+              ]
+            ],
+            "status": "expected",
+            "retry": 0,
+            "providers": [
+              {
+                "provider": "stripe",
+                "supported": true,
+                "complete": true,
+                "count": 6
+              }
+            ]
+          },
+          {
+            "identity": [
+              "e2e-tests/tests/stripe-payment.spec.ts",
+              "enterprise-chromium",
+              "enterprise-chromium",
+              [
+                "declined and cancelled Checkout leaves the invoice unpaid and creates no payment ledger entry"
+              ]
+            ],
+            "status": "expected",
+            "retry": 0,
+            "providers": [
+              {
+                "provider": "stripe",
+                "supported": true,
+                "complete": true,
+                "count": 6
+              }
+            ]
+          },
+          {
+            "identity": [
+              "e2e-tests/tests/stripe-payment.spec.ts",
+              "enterprise-chromium",
+              "enterprise-chromium",
+              [
+                "Checkout creation failure offers a retry and recovers for the same unpaid invoice"
+              ]
+            ],
+            "status": "expected",
+            "retry": 0,
+            "providers": [
+              {
+                "provider": "stripe",
+                "supported": true,
+                "complete": true,
+                "count": 8
+              }
+            ]
+          },
+          {
+            "identity": [
+              "e2e-tests/tests/xero-export.spec.ts",
+              "enterprise-chromium",
+              "enterprise-chromium",
+              [
+                "Xero OAuth and UI mapping export to the selected organisation and recover without duplicate invoices"
+              ]
+            ],
+            "status": "expected",
+            "retry": 0,
+            "providers": [
+              {
+                "provider": "xero",
+                "supported": true,
+                "complete": true,
+                "count": 17
+              }
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "limits": [
+    "CI archive observations are not deployment identity or live vendor parity.",
+    "SMTP journal records actual DATA only, not greeting, envelope or authentication failures before DATA.",
+    "Real release pipeline enforcement and current-source CI remain outstanding."
+  ]
+}

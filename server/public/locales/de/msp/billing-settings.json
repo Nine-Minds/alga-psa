@@ -165,6 +165,27 @@
         "loadStatuses": "Der Status des Verlängerungstickets konnte nicht geladen werden",
         "save": "Die Einstellungen für die Verlängerungsautomatisierung konnten nicht gespeichert werden"
       }
+    },
+    "quotes": {
+      "title": "Angebote",
+      "description": "Legen Sie die standardmäßige Gültigkeitsdauer für neue Angebote fest.",
+      "fields": {
+        "validityDays": {
+          "label": "Standardgültigkeitsdauer (Tage)",
+          "help": "Neue Angebote sind für diese Anzahl von Tagen gültig."
+        }
+      },
+      "actions": {
+        "save": "Speichern"
+      },
+      "toast": {
+        "updated": "Angebotseinstellungen wurden aktualisiert."
+      },
+      "errors": {
+        "load": "Einstellungen konnten nicht geladen werden",
+        "save": "Einstellungen konnten nicht gespeichert werden",
+        "range": "Geben Sie eine ganze Zahl von 1 bis 365 ein."
+      }
     }
   },
   "quoting": {
@@ -178,6 +199,8 @@
     }
   },
   "tax": {
+    "defaultRate": { "title": "Standardsteuersatz", "tooltip": "Wählen Sie den Steuersatz, den neue Kunden, Produkte und Services übernehmen.", "description": "Legen Sie den Steuersatz für neue Kunden und Katalogeinträge fest. Bestehende Datensätze bleiben unverändert.", "loading": "Standardsteuersatz wird geladen...", "empty": "Erstellen Sie einen aktiven Steuersatz, bevor Sie einen Standard auswählen.", "invalid": "Der konfigurierte Standard ist nicht mehr aktiv oder gültig. Wählen Sie einen anderen Satz.", "field": { "label": "Standardsteuersatz" }, "options": { "none": "Kein Mandantenstandard" }, "help": "Ohne Standard bleiben neue Katalogeinträge steuerfrei; neue Kunden verwenden, falls vorhanden, den ältesten aktiven Satz.", "actions": { "save": "Standard speichern", "saving": "Wird gespeichert..." }, "toast": { "saved": "Standardsteuersatz gespeichert." }, "errors": { "load": "Standardsteuersatz konnte nicht geladen werden.", "save": "Standardsteuersatz konnte nicht gespeichert werden." } },
+    "backfill": { "title": "Standard auf bestehende Katalogeinträge anwenden", "description": "Zeigen Sie Produkte und Services ohne Steuersatz in der Vorschau an.", "warning": "Dies ändert die zukünftige Besteuerung und schreibt ausgestellte Rechnungen nicht neu.", "loading": "Vorschau wird geladen...", "empty": "Keine geeigneten Produkte oder Services gefunden.", "target": "Zielsatz: {{rate}}", "count": "{{count}} geeignete Einträge", "dialog": { "title": "Standardsteuersatz anwenden" }, "actions": { "preview": "Bestehende Einträge prüfen", "apply": "Auswahl anwenden", "applying": "Wird angewendet..." }, "toast": { "applied": "Standardsteuersatz auf ausgewählte Einträge angewendet." }, "errors": { "preview": "Katalogvorschau konnte nicht geladen werden.", "apply": "Standardsteuersatz konnte nicht angewendet werden." } },
     "taxRegions": {
       "title": "Steuerregionen",
       "description": "Steuerregionen und zugehörige Einstellungen verwalten."
@@ -226,12 +249,13 @@
       }
     },
     "regions": {
-      "title": "Steuerregionen verwalten",
+      "title": "Steuerregionen und Steuersätze",
       "loading": "Regionen werden geladen...",
       "fields": {
         "code": {
           "label": "Regionalcode",
-          "placeholder": "z. B. CA, NY, VAT-UK"
+          "placeholder": "z. B. CA, NY, VAT-UK",
+          "immutableHint": "Der Regionscode identifiziert diese Region für Steuersätze, Kunden und Standorte und kann daher nicht geändert werden."
         },
         "name": {
           "label": "Regionsname",
@@ -268,6 +292,57 @@
         "update": "Steuerregion konnte nicht aktualisiert werden.",
         "activate": "Steuerregion konnte nicht aktiviert werden.",
         "deactivate": "Steuerregion konnte nicht deaktiviert werden."
+      },
+      "search": {
+        "placeholder": "Regionen durchsuchen"
+      },
+      "columns": {
+        "region": "Region",
+        "currentRate": "Aktueller Satz",
+        "rates": "Sätze"
+      },
+      "rateSummary": {
+        "noRates": "Kein Satz",
+        "noCurrentRate": "Kein aktueller Satz",
+        "combined": "{{count}} kombiniert",
+        "combinedHint": "{{count}} aktive Sätze gelten heute und werden auf Rechnungen addiert."
+      },
+      "empty": {
+        "title": "Noch keine Steuerregionen",
+        "description": "Legen Sie für jeden Ort, an dem Sie Steuern berechnen, eine Region an und geben Sie ihr einen Satz.",
+        "noMatch": "Keine Regionen entsprechen \"{{query}}\""
+      },
+      "a11y": {
+        "expand": "Sätze anzeigen",
+        "collapse": "Sätze ausblenden"
+      },
+      "rates": {
+        "empty": "Diese Region hat keine Sätze. Rechnungen mit dieser Region schlagen fehl, bis ein Satz hinzugefügt wird.",
+        "composite": "Zusammengesetzt",
+        "effectiveRange": "{{start}} bis {{end}}",
+        "effectiveFrom": "ab {{start}}",
+        "deleteEntity": "den Satz {{rate}} für {{region}}",
+        "columns": {
+          "rate": "Satz",
+          "description": "Beschreibung",
+          "effective": "Gültig"
+        },
+        "status": {
+          "current": "Aktuell",
+          "scheduled": "Geplant",
+          "expired": "Abgelaufen",
+          "inactive": "Inaktiv"
+        },
+        "actions": {
+          "add": "Satz hinzufügen",
+          "edit": "Bearbeiten",
+          "advanced": "Erweiterte Einstellungen",
+          "delete": "Löschen"
+        },
+        "errors": {
+          "validateDeletion": "Die Löschung konnte nicht geprüft werden. Bitte versuchen Sie es erneut.",
+          "delete": "Der Steuersatz konnte nicht gelöscht werden."
+        }
       }
     },
     "thresholds": {
@@ -506,6 +581,7 @@
   },
   "serviceCategories": {
     "title": "Servicekategorien",
+    "description": "Optionale Gruppierungen für Ihre Produkte. Kategorien steuern die Spalte und den Filter „Kategorie“ auf der Registerkarte Produkte und sind von den Servicetypen zu unterscheiden, die erforderlich sind und in Berichten und Zeiterfassung verwendet werden.",
     "dialog": {
       "addTitle": "Servicekategorie hinzufügen",
       "editTitle": "Servicekategorie bearbeiten",
@@ -531,6 +607,11 @@
       "importFromStandard": "Import aus Standardkategorien",
       "create": "Erstellen",
       "update": "Aktualisieren"
+    },
+    "empty": {
+      "title": "Noch keine Servicekategorien",
+      "description": "Importieren Sie die Standardliste, um zu beginnen, oder fügen Sie eigene hinzu. Kategorien sind optional und nur nötig, wenn Sie Produkte gruppieren möchten.",
+      "importPrimary": "Standard-Servicekategorien importieren"
     },
     "delete": {
       "message": "Sind Sie sicher, dass Sie „{{name}}“ löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden."
@@ -635,6 +716,8 @@
     }
   },
   "serviceCatalog": {
+    "scheduledPriceBadge": "Nächste Änderung {{date}}",
+    "scheduledPriceNotice": "Für {{date}} ist eine Preisänderung geplant. Speichern aktualisiert hier den aktuellen Preis und hebt die geplante Änderung nicht auf.",
     "title": "Servicekatalogverwaltung",
     "loading": "Ladedienste",
     "dialog": {
@@ -644,7 +727,8 @@
       "allServiceTypes": "Alle Servicetypen",
       "serviceTypePlaceholder": "Nach Servicetyp filtern...",
       "allBillingMethods": "Alle Abrechnungsmethoden",
-      "billingMethodPlaceholder": "Nach Abrechnungsmethode filtern..."
+      "billingMethodPlaceholder": "Nach Abrechnungsmethode filtern...",
+      "searchPlaceholder": "Dienste nach Name, SKU oder Beschreibung suchen..."
     },
     "fields": {
       "serviceName": {
@@ -713,6 +797,33 @@
       "cancel": "Stornieren",
       "saveChanges": "Änderungen speichern"
     },
+    "bulk": {
+      "selectedCount": "{{count}} ausgewählt",
+      "selectAll": "Alle Dienste auswählen",
+      "clear": "Auswahl aufheben",
+      "actions": {
+        "activate": "Aktivieren",
+        "deactivate": "Deaktivieren",
+        "delete": "Löschen"
+      },
+      "deleteDialog": {
+        "title": "Dienste löschen",
+        "message": "{{count}} ausgewählte Dienste dauerhaft löschen? Dienste, die noch von Verträgen oder Rechnungen verwendet werden, werden übersprungen. Diese Aktion kann nicht rückgängig gemacht werden."
+      },
+      "feedback": {
+        "activateSuccess": "{{count}} Dienst(e) aktiviert",
+        "activatePartial": "{{count}} Dienst(e) aktiviert; {{failed}} konnten nicht aktiviert werden",
+        "activateError": "{{count}} Dienst(e) konnten nicht aktiviert werden",
+        "deactivateSuccess": "{{count}} Dienst(e) deaktiviert",
+        "deactivatePartial": "{{count}} Dienst(e) deaktiviert; {{failed}} konnten nicht deaktiviert werden",
+        "deactivateError": "{{count}} Dienst(e) konnten nicht deaktiviert werden",
+        "deleteSuccess": "{{count}} Dienst(e) gelöscht",
+        "deletePartial": "{{count}} Dienst(e) gelöscht; {{failed}} konnten nicht gelöscht werden",
+        "deletePartialBlocked": "{{count}} Dienst(e) gelöscht; {{failed}} konnten nicht gelöscht werden: {{names}}",
+        "deleteBlocked": "{{count}} Dienst(e) konnten nicht gelöscht werden – noch in Verwendung: {{names}}",
+        "deleteError": "{{count}} Dienst(e) konnten nicht gelöscht werden"
+      }
+    },
     "table": {
       "serviceName": "Dienstname",
       "serviceType": "Servicetyp",
@@ -721,7 +832,11 @@
       "unit": "Einheit",
       "taxRate": "Steuersatz",
       "nonTaxable": "Nicht steuerpflichtig",
-      "thisService": "diesen Dienst"
+      "thisService": "diesen Dienst",
+      "contractUsage": "Verträge",
+      "contractUsageNone": "Nicht verwendet",
+      "contractUsageOne": "In {{contracts}} Vertrag verwendet",
+      "contractUsageMany": "In {{contracts}} Verträgen verwendet"
     },
     "errors": {
       "fetchServices": "Dienste konnten nicht abgerufen werden",
@@ -735,7 +850,9 @@
       "validateDelete": "Der Löschvorgang konnte nicht bestätigt werden. Bitte versuchen Sie es erneut.",
       "delete": "Der Dienst konnte nicht gelöscht werden",
       "deactivate": "Der Dienst konnte nicht deaktiviert werden"
-    }
+    },
+    "emptySearch": "Keine Dienste entsprechen Ihrer Suche.",
+    "clearFilters": "Filter zurücksetzen"
   },
   "products": {
     "title": "Produkte",
@@ -748,6 +865,33 @@
       "restore": "Wiederherstellen",
       "archive": "Archiv",
       "delete": "Löschen"
+    },
+    "bulk": {
+      "selectedCount": "{{count}} ausgewählt",
+      "selectAll": "Alle Produkte auswählen",
+      "clear": "Auswahl aufheben",
+      "actions": {
+        "archive": "Archivieren",
+        "restore": "Wiederherstellen",
+        "delete": "Löschen"
+      },
+      "deleteDialog": {
+        "title": "Produkte dauerhaft löschen",
+        "message": "{{count}} ausgewählte Produkte dauerhaft löschen? Produkte, die vorhandenen Daten zugeordnet sind, werden übersprungen. Diese Aktion kann nicht rückgängig gemacht werden."
+      },
+      "feedback": {
+        "archiveSuccess": "{{count}} Produkt(e) archiviert",
+        "archivePartial": "{{count}} Produkt(e) archiviert; {{failed}} konnten nicht archiviert werden",
+        "archiveError": "{{count}} Produkt(e) konnten nicht archiviert werden",
+        "restoreSuccess": "{{count}} Produkt(e) wiederhergestellt",
+        "restorePartial": "{{count}} Produkt(e) wiederhergestellt; {{failed}} konnten nicht wiederhergestellt werden",
+        "restoreError": "{{count}} Produkt(e) konnten nicht wiederhergestellt werden",
+        "deleteSuccess": "{{count}} Produkt(e) dauerhaft gelöscht",
+        "deletePartial": "{{count}} Produkt(e) gelöscht; {{failed}} konnten nicht gelöscht werden",
+        "deletePartialBlocked": "{{count}} Produkt(e) gelöscht; {{failed}} konnten nicht gelöscht werden: {{names}}",
+        "deleteBlocked": "{{count}} Produkt(e) konnten nicht gelöscht werden – noch in Verwendung: {{names}}",
+        "deleteError": "{{count}} Produkt(e) konnten nicht gelöscht werden"
+      }
     },
     "filters": {
       "searchPlaceholder": "Suche nach Name, SKU, Beschreibung...",
@@ -831,14 +975,14 @@
         }
       },
       "unitOfMeasure": {
-        "label": "Maßeinheit *",
+        "label": "Maßeinheit",
         "placeholder": "z. B. GB, API-Aufruf, Benutzer",
         "help": "Die messbare Einheit für die Abrechnung (z. B. GB, API-Aufruf, Benutzer)"
       },
       "taxRate": {
         "label": "Steuersatz (optional)",
         "placeholder": "Steuersatz auswählen (optional)",
-        "loading": "Steuersätze werden geladen..."
+        "loading": "Steuersätze werden geladen...", "inherit": "Mandantenstandard verwenden", "inheritNamed": "Mandantenstandard verwenden ({{rate}})", "nonTaxable": "Nicht steuerpflichtig"
       },
       "sku": {
         "label": "Artikelnummer",
@@ -865,7 +1009,8 @@
       "billingMethodRequired": "Abrechnungsmethode ist erforderlich",
       "skuRequiredForHardware": "Für Hardware ist eine SKU erforderlich",
       "licenseTermRequired": "Für Softwarelizenzen ist eine Lizenzlaufzeit erforderlich",
-      "selectedTypeNotFound": "Ausgewählter Diensttyp nicht gefunden"
+      "selectedTypeNotFound": "Ausgewählter Diensttyp nicht gefunden",
+      "unitOfMeasureRequired": "Maßeinheit ist erforderlich"
     },
     "errors": {
       "fetchCategories": "Kategorien konnten nicht abgerufen werden",
@@ -902,8 +1047,8 @@
         "loading": "Laden..."
       },
       "label": {
-        "label": "Etikett",
-        "placeholder": "Optionales Freiformetikett"
+        "label": "Kategoriebezeichnung",
+        "placeholder": "Optionale freie Bezeichnung"
       },
       "vendor": {
         "label": "Verkäufer"
@@ -932,13 +1077,13 @@
       "taxRate": {
         "label": "Steuersatz",
         "placeholder": "Nicht steuerpflichtig",
-        "loading": "Laden..."
+        "loading": "Laden...", "inherit": "Mandantenstandard verwenden", "inheritNamed": "Mandantenstandard verwenden ({{rate}})", "nonTaxable": "Nicht steuerpflichtig"
       },
       "active": {
         "label": "Aktiv"
       },
       "unitOfMeasure": {
-        "label": "Maßeinheit *",
+        "label": "Maßeinheit",
         "placeholder": "z. B. „jeder“, „Artikel“, „Lizenz“."
       },
       "license": {
@@ -1175,7 +1320,10 @@
       "regionInvalid": "Die ausgewählte Steuerregion ist nicht mehr gültig. Bitte aktualisieren Sie die Seite und wählen Sie eine andere Region.",
       "duplicate": "Für diese Region und diesen Zeitraum existiert bereits ein Steuersatz.",
       "missingField": "Erforderliches Steuersatzfeld fehlt.",
-      "missingFieldNamed": "Erforderliches Steuersatzfeld fehlt: {{field}}."
+      "missingFieldNamed": "Erforderliches Steuersatzfeld fehlt: {{field}}.",
+      "capInvalid": "Die Steuerobergrenze muss eine nicht negative, sicher darstellbare ganze Zahl in kleinsten Währungseinheiten sein.",
+      "capCurrencyRequired": "Wählen Sie eine Währung, bevor Sie eine Steuerobergrenze festlegen oder ändern.",
+      "currencyInvalid": "Wählen Sie eine unterstützte Währung für den Steuersatz."
     },
     "tax": {
       "defaultRequiresActiveRate": "Konfigurieren Sie mindestens einen aktiven Steuersatz, bevor Sie Standard-Steuereinstellungen erstellen.",
@@ -1205,7 +1353,12 @@
     "fields": {
       "prefix": {
         "label": "Nummernpräfix",
-        "help": "Optionales Präfix für die Nummernsequenz. Leer lassen für kein Präfix oder ein eigenes Präfix eingeben."
+        "help": "Optionales festes Präfix für die Nummernsequenz. Leer lassen für kein Präfix oder ein eigenes Präfix eingeben. Für das Ausstellungsdatum verwenden Sie das Feld Datumsformat, statt es hier einzutragen."
+      },
+      "dateFormat": {
+        "label": "Datumsformat",
+        "help": "Optionales Datum, das zwischen Präfix und laufender Nummer eingefügt wird. Beispiel: {YYYY}-{MM}- ergibt INV-2026-08-000001. Leer lassen, um Nummern ohne Datum zu vergeben.",
+        "tokensHint": "Platzhalter: {YYYY} vierstelliges Jahr, {YY} zweistelliges Jahr, {MM} Monat, {DD} Tag. Das Datum wird bei der Vergabe der Nummer in der unter Einstellungen konfigurierten Standard-Zeitzone bestimmt. Die Sequenz läuft fortlaufend weiter — sie beginnt nicht jedes Jahr, jeden Monat oder jeden Tag neu."
       },
       "minimumDigits": {
         "label": "Mindestanzahl Ziffern",
@@ -1239,7 +1392,14 @@
     },
     "errors": {
       "load": "Fehler beim Laden der Nummerierungseinstellungen.",
-      "save": "Fehler beim Aktualisieren der Einstellungen."
+      "save": "Fehler beim Aktualisieren der Einstellungen.",
+      "dateFormat": {
+        "notText": "Das Datumsformat muss Text sein.",
+        "unmatchedBrace": "Im Datumsformat fehlt eine öffnende oder schließende Klammer. Platzhalter so schreiben: {{supported}}.",
+        "unknownToken": "Unbekannter Platzhalter {{tokens}}. Unterstützte Platzhalter: {{supported}}.",
+        "unknownTokens": "Unbekannte Platzhalter {{tokens}}. Unterstützte Platzhalter: {{supported}}.",
+        "tooLong": "Das Datumsformat ergibt {{length}} Zeichen und überschreitet damit das Limit von {{max}} Zeichen."
+      }
     }
   },
   "payment": {
@@ -1292,6 +1452,15 @@
       "actions": {
         "save": "Einstellungen speichern",
         "saving": "Wird gespeichert..."
+      },
+      "autopay": {
+        "label": "Automatische Zahlung zulassen",
+        "description": "Abrechnungsprofilen erlauben, automatische Kartenzahlungen zu autorisieren.",
+        "chargeTiming": "Belastungszeitpunkt",
+        "onFinalize": "Bei Abschluss der Rechnung",
+        "onDueDate": "Am Fälligkeitsdatum",
+        "retryDays": "Wiederholungsintervalle (Tage)",
+        "consentText": "Einwilligungstext für die automatische Zahlung"
       }
     },
     "stripe": {
@@ -1420,6 +1589,70 @@
     },
     "sections": {
       "userRates": "Benutzersätze"
+    }
+  },
+  "priceChangeRollout": {
+    "title": "Preisänderung ausrollen",
+    "previewFailed": "Die Vorschau der Preisänderung konnte nicht geladen werden.",
+    "skip": "Preis nur speichern",
+    "apply": "Auf vererbte Positionen anwenden",
+    "applying": "Wird gespeichert…",
+    "effectiveDate": "Gültigkeitsdatum",
+    "effectiveDateHint": "Standard ist die nächste Abrechnungsperiodengrenze.",
+    "willChange": "Ändert sich",
+    "noInheritedLines": "An diesem Datum ändert sich keine vererbte Position.",
+    "custom": "Ändert sich nicht — individuell",
+    "unreviewed": "Ändert sich nicht — noch nicht klassifiziert",
+    "unreviewedAlert": "Diese Positionen werden unverändert abgerechnet, bis Sie sie überprüfen.",
+    "reviewRates": "Preise überprüfen",
+    "excluded": "Ausgeschlossen — bereits abgerechnet",
+    "none": "Keine.",
+    "totalMonthlyDelta": "Monatliche Gesamtumsatzänderung",
+    "acrossAllInherited": "Über alle {{lines}} vererbten Position(en).",
+    "applyFailed": "Das Ausrollen konnte nicht angewendet werden. Es wurden keine Änderungen vorgenommen.",
+    "skipFailed": "Die Preisänderung konnte nicht gespeichert werden.",
+    "columns": {
+      "client": "Kunde",
+      "contract": "Vertrag",
+      "line": "Position",
+      "current": "Aktuell",
+      "new": "Neu",
+      "delta": "Differenz",
+      "rateAtDate": "Preis am Datum"
+    },
+    "followsCatalog": "Folgt dem Katalog",
+    "close": "Schließen",
+    "usageTitle": "Servicenutzung"
+  },
+  "rateReview": {
+    "title": "Preisüberprüfung",
+    "close": "Schließen",
+    "applySelected": "Auswahl anwenden",
+    "applying": "Wird angewendet…",
+    "previewFailed": "Die Preise zur Überprüfung konnten nicht geladen werden.",
+    "applyFailed": "Die Preisüberprüfung konnte nicht angewendet werden. Es wurden keine Änderungen vorgenommen.",
+    "intro": "Positionen, die genau auf dem Katalogpreis liegen, ändern sich in Ihrer nächsten Rechnung nicht. Abweichende Positionen behalten ihren aktuellen Preis als ausgehandelten Preis.",
+    "applied": "{{applied}} Änderung(en) angewendet.",
+    "refused": "{{refused}} Zeile(n) wurden abgelehnt, weil sie sich seit der Vorschau geändert haben.",
+    "summary": "{{total}} ungeprüfte Position(en): {{inherited}} exakte Übereinstimmung(en), {{custom}} ausgehandelt, {{skipped}} übersprungen.",
+    "allClassified": "Alle Positionen wurden klassifiziert. Nichts zu überprüfen.",
+    "noService": "Kein Service",
+    "columns": {
+      "contract": "Vertrag",
+      "currentRate": "Aktueller Preis",
+      "catalogRate": "Katalogpreis",
+      "proposed": "Vorschlag",
+      "confidence": "Konfidenz"
+    },
+    "proposal": {
+      "inherited": "Katalog folgen",
+      "custom": "Als individuell beibehalten",
+      "unreviewed": "Ungeprüft belassen"
+    },
+    "confidence": {
+      "exact": "Exakte Übereinstimmung",
+      "differs": "Vom Katalog abweichend",
+      "needsDecision": "Entscheidung erforderlich"
     }
   }
 }

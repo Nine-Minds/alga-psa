@@ -1,0 +1,9 @@
+[
+  {
+    "file": "tools/i18n/tests/baseline.test.mjs",
+    "owner": "Localization maintainers",
+    "reason": "Optional local comparison against gitignored baseline.json files. The existing validate-translations workflow explicitly replaces these baselines with zero-regression glossary, placeholder and parity gates; its three mandatory tooling suites also run in node-tooling. This file provides no CI execution coverage and must remain visible as a manual exclusion.",
+    "issue": "https://github.com/Nine-Minds/alga-psa/pull/3343",
+    "expires": "2026-12-06"
+  }
+]

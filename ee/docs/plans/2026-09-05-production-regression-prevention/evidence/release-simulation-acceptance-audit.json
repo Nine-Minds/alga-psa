@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "requirement": "T015",
+  "status": "proven-simulated-runtime",
+  "reviewedSource": "c523418b5d70082ae191689e26cdfa1bc9a5973d",
+  "testFile": "scripts/tests/release-test-evidence.test.mjs",
+  "testSourceSha256": "5d4d78c5ee6ad15e9bb7a9692d04b74a1760455fea891bf076e11b08c880f762",
+  "behavior": [
+    "Exact coherent tested manifest and simulated runtime component set accepted",
+    "Only email-service image replaced: prior test evidence rejected even if runtime reflects replacement",
+    "Foreign per-check manifest or missing mandatory result rejected",
+    "CLI rejects wrapper-only retagging and stale rendered resource; accepts fully coherent simulated result"
+  ],
+  "executionEvidence": [
+    "native-release-check-configuration.json",
+    "native-node-tooling-d683f3.json"
+  ],
+  "limits": [
+    "T015 expressly calls for simulated deployed identities; tests satisfy that scope.",
+    "F020 remains incomplete: actual publishing, immutable promotion, configured release pipeline and observed deployed identity are not established by simulation."
+  ]
+}

@@ -11,10 +11,10 @@
     "@types/socket.io": "^3.0.1",
     "cors": "^2.8.5",
     "express": "^4.21.3",
-    "jsondiffpatch": "^0.7.3",
+    "jsondiffpatch": "^0.7.6",
     "jsonpath-plus": "^10.3.0",
     "node-fetch": "^3.3.2",
-    "puppeteer": "^23.11.1",
+    "puppeteer": "^25.10.0",
     "socket.io": "^4.8.1"
   },
   "devDependencies": {
@@ -27,6 +27,9 @@
   "overrides": {
     "body-parser": ">=1.20.6 <2",
     "ip-address": ">=10.3.1",
-    "socket.io-parser": ">=4.2.7"
+    "socket.io-parser": ">=4.2.7",
+    "js-yaml": ">=4.3.2",
+    "jsondiffpatch": "^0.7.6",
+    "qs": ">=6.16.0"
   }
 }

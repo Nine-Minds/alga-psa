@@ -90,7 +90,7 @@ describe('AddContractLinesDialog i18n wiring contract', () => {
       'addLines.hourlyConfig.servicesAndRates',
       'addLines.hourlyConfig.hourlyRate',
       'addLines.hourlyConfig.defaultRate',
-      'addLines.usageConfig.quantity',
+      'addLines.usageConfig.recordDrivenNote',
       'addLines.usageConfig.ratePerUnit',
       'addLines.usageConfig.defaultRate',
       'addLines.usageConfig.unitOfMeasure',

@@ -1093,7 +1093,7 @@ export const getClientJobStatus = withAuth(async (user, { tenant }, jobId: strin
   const knex = await getConnection(tenant);
 
   try {
-    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+    const gate = await withTransaction(knex, async (trx: Knex.Transaction) => {
       const clientId = await getClientIdFromUser(trx, user, tenant);
       if (!clientId) {
         return permissionError('Unauthorized', 'client-portal:errors.access.unauthorized');
@@ -1114,8 +1114,12 @@ export const getClientJobStatus = withAuth(async (user, { tenant }, jobId: strin
         return actionError('Job not found', 'client-portal:errors.billing.jobNotFound');
       }
 
-      return await getJobStatus(jobId, tenant);
+      return null;
     });
+    if (gate) {
+      return gate;
+    }
+    return await getJobStatus(jobId, tenant);
   } catch (error) {
     const expected = billingActionErrorFrom(error);
     if (expected) {

@@ -72,6 +72,32 @@ describe('CE OAuth profile mapper', () => {
     });
   });
 
+  it('resolves internal user by email for a Keycloak profile and ignores non-standard realm claims', async () => {
+    findUserByEmailAndTypeMock.mockResolvedValue({
+      user_id: 'u-kc',
+      email: 'kc-user@example.com',
+      username: 'kc',
+      hashed_password: 'hashed',
+      tenant: 'tenant-kc',
+      user_type: 'internal',
+      is_inactive: false,
+    });
+
+    const result = await mapCeOAuthProfileToExtendedUser({
+      provider: 'keycloak',
+      email: 'KC-User@example.com',
+      profile: { sub: 'keycloak-uuid', preferred_username: 'kc', tenant: undefined, user_type: undefined },
+    } as any);
+
+    expect(findUserByEmailAndTypeMock).toHaveBeenCalledWith('kc-user@example.com', 'internal');
+    expect(result).toMatchObject({
+      id: 'u-kc',
+      tenant: 'tenant-kc',
+      user_type: 'internal',
+    });
+    expect(result.id).not.toBe('keycloak-uuid');
+  });
+
   it('T055: rejects inactive user accounts', async () => {
     findUserByEmailAndTypeMock.mockResolvedValue({
       user_id: 'u-3',

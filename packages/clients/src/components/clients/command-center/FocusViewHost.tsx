@@ -117,7 +117,12 @@ export default function FocusViewHost({ idPrefix, tabs, activeTabId, onSelectTab
                 </div>
               ))}
             </nav>
-            <div className="flex-1 overflow-y-auto min-w-0 pl-4 pr-1 pt-4">
+            {/* `relative` makes this scroller the containing block for the
+                absolutely-positioned internals forms carry (Radix Switch
+                bubble inputs, hidden native selects). Without it they resolve
+                against the fixed panel, escape this clip and grow the panel's
+                own scroll height — a second scrollbar over the first. */}
+            <div className="relative flex-1 overflow-y-auto min-w-0 pl-4 pr-1 pt-4">
               {activeTab.content}
             </div>
           </div>

@@ -42,6 +42,8 @@ interface MultiUserAndTeamPickerProps {
   teamSectionLabel?: string;
   // Click handler for viewing user details (e.g., opening schedule drawer)
   onUserClick?: (userId: string) => void;
+  /** Tooltip/accessible label for the user chip click target (e.g. "View schedule"). */
+  userClickLabel?: string;
 }
 
 const MultiUserAndTeamPicker = ({
@@ -67,6 +69,7 @@ const MultiUserAndTeamPicker = ({
   onTeamValuesChange,
   teamSectionLabel = 'Teams',
   onUserClick,
+  userClickLabel,
   'data-automation-id': dataAutomationId
 }: MultiUserAndTeamPickerProps & AutomationProps) => {
   const { t } = useTranslation('common');
@@ -474,8 +477,19 @@ const MultiUserAndTeamPicker = ({
           >
             <div
               className={`flex items-center gap-1 ${onUserClick ? 'cursor-pointer hover:opacity-80' : ''}`}
+              role={onUserClick ? 'button' : undefined}
+              tabIndex={onUserClick ? 0 : undefined}
+              title={onUserClick ? userClickLabel : undefined}
+              aria-label={onUserClick && userClickLabel ? `${userClickLabel}: ${`${user.first_name || ''} ${user.last_name || ''}`.trim()}` : undefined}
               onClick={(e) => {
                 if (onUserClick) {
+                  e.stopPropagation();
+                  onUserClick(user.user_id);
+                }
+              }}
+              onKeyDown={(e) => {
+                if (onUserClick && (e.key === 'Enter' || e.key === ' ')) {
+                  e.preventDefault();
                   e.stopPropagation();
                   onUserClick(user.user_id);
                 }

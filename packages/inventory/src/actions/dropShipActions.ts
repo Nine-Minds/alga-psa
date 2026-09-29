@@ -4,6 +4,7 @@ import { Knex } from 'knex';
 import { withTransaction, createTenantKnex } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
+import { SharedNumberingService } from '@alga-psa/shared/services/numberingService';
 import {
   actionError,
   permissionError,
@@ -200,8 +201,7 @@ export const createDropShipForSoLine = withAuth(
         if (!vendor) throw new Error('Vendor not found');
 
         const currencyCode = so.currency_code || await resolveTenantCurrency(trx, tenant);
-        const numRes = await trx.raw('SELECT generate_next_number(?::uuid, ?) as number', [tenant, 'PURCHASE_ORDER']);
-        const poNumber = numRes.rows[0].number;
+        const poNumber = await SharedNumberingService.getNextNumber('PURCHASE_ORDER', { knex: trx, tenant });
 
         const [po] = await trx('purchase_orders')
           .insert({

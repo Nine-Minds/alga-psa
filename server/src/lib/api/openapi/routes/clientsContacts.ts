@@ -61,7 +61,12 @@ export function registerClientContactRoutes(registry: ApiOpenApiRegistry) {
       client_type: zOpenApi.enum(['company', 'individual']).optional(),
       tax_id_number: zOpenApi.string().optional(),
       notes: zOpenApi.string().optional(),
-      properties: zOpenApi.record(zOpenApi.unknown()).optional(),
+      properties: zOpenApi.object({
+        tax_id: zOpenApi.string().optional().openapi({
+          deprecated: true,
+          description: 'Deprecated legacy input. Send tax_id_number instead.',
+        }),
+      }).catchall(zOpenApi.unknown()).optional(),
       payment_terms: zOpenApi.string().optional(),
       billing_cycle: zOpenApi.enum(['weekly', 'bi-weekly', 'monthly', 'quarterly', 'semi-annually', 'annually']),
       credit_limit: zOpenApi.number().min(0).optional(),
@@ -81,6 +86,8 @@ export function registerClientContactRoutes(registry: ApiOpenApiRegistry) {
       tags: zOpenApi.array(zOpenApi.string()).optional(),
     }),
   );
+
+  const ClientUpdateBody = ClientBody.omit({ email: true, phone_no: true, address: true });
 
   const ClientLocationBody = registry.registerSchema(
     'ClientLocationBody',
@@ -404,10 +411,10 @@ export function registerClientContactRoutes(registry: ApiOpenApiRegistry) {
     method: 'put',
     path: '/api/v1/clients/{id}',
     summary: 'Update client',
-    description: 'Inherited ApiBaseController update route for one client_id.',
+    description: 'Updates client fields for one client_id. email, phone_no, and address are location fields and must be managed through /api/v1/clients/{id}/locations.',
     tags: [clientTag],
     security: [{ ApiKeyAuth: [] }],
-    request: { params: ClientIdParam, body: { schema: ClientBody.partial() } },
+    request: { params: ClientIdParam, body: { schema: ClientUpdateBody.partial() } },
     responses: {
       200: { description: 'Client updated.', schema: ClientEnvelope },
       400: { description: 'Invalid client id or request payload.', schema: ApiError },
@@ -494,6 +501,297 @@ export function registerClientContactRoutes(registry: ApiOpenApiRegistry) {
       500: { description: 'Unexpected client locations failure.', schema: ApiError },
     },
     extensions: { 'x-tenant-scoped': true, 'x-rbac-resource': 'client', 'x-rbac-action': 'read', 'x-deprecated-route-commented': true },
+    edition: 'both',
+  });
+
+  // --- Client merge (absorbing a client as a billing profile) --------------
+
+  const ClientMergeIdParams = registry.registerSchema(
+    'ClientMergeIdParams',
+    zOpenApi.object({ id: zOpenApi.string().uuid() }),
+  );
+  const BillingProfileContactsParams = registry.registerSchema(
+    'BillingProfileContactsParams',
+    zOpenApi.object({
+      id: zOpenApi.string().uuid(),
+      profileId: zOpenApi.string().uuid(),
+    }),
+  );
+
+  const ClientMergePreviewBody = registry.registerSchema(
+    'ClientMergePreviewBody',
+    zOpenApi.object({
+      source_client_id: zOpenApi.string().uuid().describe('The client that would be absorbed.'),
+    }),
+  );
+
+  const ClientMergePreviewResource = registry.registerSchema(
+    'ClientMergePreviewResource',
+    zOpenApi.object({
+      sourceClientId: zOpenApi.string().uuid(),
+      sourceClientName: zOpenApi.string(),
+      targetClientId: zOpenApi.string().uuid(),
+      targetClientName: zOpenApi.string(),
+      blockers: zOpenApi.array(zOpenApi.object({
+        code: zOpenApi.string(),
+        message: zOpenApi.string(),
+        i18nKey: zOpenApi.string(),
+      })).describe('Non-empty means the merge would be refused.'),
+      profiles: zOpenApi.array(zOpenApi.object({
+        billingProfileId: zOpenApi.string().uuid(),
+        currentName: zOpenApi.string(),
+        mergedName: zOpenApi.string().describe('The name the profile takes on the destination client.'),
+        isDefault: zOpenApi.boolean(),
+        isActive: zOpenApi.boolean(),
+      })),
+      movedDefaultProfileId: zOpenApi.string().uuid().nullable(),
+      counts: zOpenApi.record(zOpenApi.number()).describe('Rows that would move, by entity label.'),
+      contacts: zOpenApi.array(zOpenApi.object({
+        contactNameId: zOpenApi.string().uuid(),
+        fullName: zOpenApi.string(),
+        email: zOpenApi.string().nullable(),
+        suggestedBillingProfileId: zOpenApi.string().uuid().nullable(),
+      })),
+      contracts: zOpenApi.array(zOpenApi.object({
+        clientContractId: zOpenApi.string().uuid(),
+        contractName: zOpenApi.string().nullable(),
+        startDate: zOpenApi.string(),
+        endDate: zOpenApi.string().nullable(),
+        billingProfileId: zOpenApi.string().uuid().nullable(),
+        isActive: zOpenApi.boolean(),
+        suggestedChoice: zOpenApi.enum(['original', 'cutover']),
+        suggestedCutoverDate: zOpenApi.string(),
+      })),
+      visibilityGroupRenames: zOpenApi.array(zOpenApi.object({
+        groupId: zOpenApi.string().uuid(),
+        from: zOpenApi.string(),
+        to: zOpenApi.string(),
+      })),
+      unrestrictedPortalUserIds: zOpenApi.array(zOpenApi.string().uuid())
+        .describe('Portal users of the source that currently see every billing profile.'),
+      externalMappings: zOpenApi.array(zOpenApi.object({
+        mappingId: zOpenApi.string(),
+        integrationType: zOpenApi.string(),
+        algaEntityType: zOpenApi.string(),
+        externalEntityId: zOpenApi.string(),
+        externalRealmId: zOpenApi.string().nullable(),
+        targetAlreadyMapped: zOpenApi.boolean(),
+      })),
+    }),
+  );
+
+  const ClientMergeBody = registry.registerSchema(
+    'ClientMergeBody',
+    zOpenApi.object({
+      source_client_id: zOpenApi.string().uuid(),
+      contact_assignments: zOpenApi.array(zOpenApi.object({
+        contact_name_id: zOpenApi.string().uuid(),
+        billing_profile_id: zOpenApi.string().uuid(),
+        is_manager: zOpenApi.boolean().optional(),
+        can_view_profile_tickets: zOpenApi.boolean().optional(),
+      })).optional(),
+      contract_decisions: zOpenApi.array(zOpenApi.object({
+        client_contract_id: zOpenApi.string().uuid(),
+        choice: zOpenApi.enum(['original', 'cutover']),
+        cutover_date: zOpenApi.string().nullable().optional(),
+      })).optional(),
+      pin_portal_grants: zOpenApi.boolean().optional()
+        .describe('Defaults to true: records the billing segments unrestricted portal users have today.'),
+      external_remap_choices: zOpenApi.array(zOpenApi.object({
+        mapping_id: zOpenApi.string(),
+        apply: zOpenApi.boolean(),
+      })).optional(),
+    }),
+  );
+
+  const ClientMergeResource = registry.registerSchema(
+    'ClientMergeResource',
+    zOpenApi.object({
+      merge_id: zOpenApi.string().uuid(),
+      source_client_id: zOpenApi.string().uuid(),
+      target_client_id: zOpenApi.string().uuid(),
+      moved_profile_ids: zOpenApi.array(zOpenApi.string().uuid()),
+      moved_default_profile_id: zOpenApi.string().uuid().nullable(),
+      counts: zOpenApi.record(zOpenApi.number()),
+      remapped_external_mapping_ids: zOpenApi.array(zOpenApi.string()),
+      skipped_external_mapping_ids: zOpenApi.array(zOpenApi.string()),
+    }),
+  );
+
+  const BillingProfileContactResource = registry.registerSchema(
+    'BillingProfileContactResource',
+    zOpenApi.object({
+      contact_name_id: zOpenApi.string().uuid(),
+      full_name: zOpenApi.string(),
+      email: zOpenApi.string().nullable(),
+      is_manager: zOpenApi.boolean(),
+      can_view_profile_tickets: zOpenApi.boolean()
+        .describe('Lets this contact see every ticket attributed to the profile in the client portal.'),
+    }),
+  );
+
+  const BillingProfileContactsBody = registry.registerSchema(
+    'BillingProfileContactsBody',
+    zOpenApi.object({
+      contacts: zOpenApi.array(zOpenApi.object({
+        contact_name_id: zOpenApi.string().uuid(),
+        is_manager: zOpenApi.boolean().optional(),
+        can_view_profile_tickets: zOpenApi.boolean().optional(),
+      })).describe('Replaces the profile\'s contact list; omitting a contact removes it.'),
+    }),
+  );
+
+  const ClientMergePreviewEnvelope = registerSuccessEnvelope(
+    registry, 'ClientMergePreviewEnvelope', ClientMergePreviewResource);
+  const ClientMergeEnvelope = registerSuccessEnvelope(
+    registry, 'ClientMergeEnvelope', ClientMergeResource);
+  const BillingProfileContactsEnvelope = registerArrayEnvelope(
+    registry, 'BillingProfileContactsEnvelope', BillingProfileContactResource);
+
+  registry.registerRoute({
+    method: 'post',
+    path: '/api/v1/clients/{id}/merge/preview',
+    summary: 'Preview a client merge',
+    description:
+      'Dry run of absorbing source_client_id into this client as a billing profile. Writes nothing; returns the profiles that would move, per-entity row counts, the contacts and contracts needing a decision, the portal users whose billing-segment access would widen, the accounting mappings that would need re-pointing, and any blockers.',
+    tags: [clientTag],
+    security: [{ ApiKeyAuth: [] }],
+    request: { params: ClientMergeIdParams, body: { schema: ClientMergePreviewBody } },
+    responses: {
+      200: { description: 'Merge preview returned.', schema: ClientMergePreviewEnvelope },
+      400: { description: 'Invalid client id or request payload.', schema: ApiError },
+      401: { description: 'API key missing/invalid or key user not found.', schema: ApiError },
+      403: { description: 'Permission denied for client update.', schema: ApiError },
+      404: { description: 'Client not found.', schema: ApiError },
+      500: { description: 'Unexpected merge preview failure.', schema: ApiError },
+    },
+    extensions: { 'x-tenant-scoped': true, 'x-rbac-resource': 'client', 'x-rbac-action': 'update' },
+    edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'post',
+    path: '/api/v1/clients/{id}/merge',
+    summary: 'Merge a client into this one',
+    description:
+      'Absorbs source_client_id into this client as a billing profile. The source\'s billing profiles are re-parented keeping their ids, so invoices, billing cycles, payment methods, credits and tax settings follow them; tickets, contacts, projects, assets, contracts, locations and portal visibility groups move to this client. The source client is archived with a forwarding marker. Irreversible. Requires client update and delete.',
+    tags: [clientTag],
+    security: [{ ApiKeyAuth: [] }],
+    request: { params: ClientMergeIdParams, body: { schema: ClientMergeBody } },
+    responses: {
+      200: { description: 'Merge completed.', schema: ClientMergeEnvelope },
+      400: { description: 'Invalid payload, or the merge was refused (blockers are returned as validation details).', schema: ApiError },
+      401: { description: 'API key missing/invalid or key user not found.', schema: ApiError },
+      403: { description: 'Permission denied for client update or delete.', schema: ApiError },
+      404: { description: 'Client not found.', schema: ApiError },
+      500: { description: 'Unexpected merge failure.', schema: ApiError },
+    },
+    extensions: {
+      'x-tenant-scoped': true,
+      'x-rbac-resource': 'client',
+      'x-rbac-action': 'update',
+      // Irreversible and it retires a client: an agent must not run this
+      // unattended, whatever the prompt says. The spec generator nests route
+      // extensions under `extensions`, so the MCP registry reads the flag from
+      // the curated override in ee/docs/api-registry/clients.json instead;
+      // clientMerge.contract.test.ts asserts both stay true together.
+      'x-chat-approval-required': true,
+    },
+    edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'get',
+    path: '/api/v1/clients/{id}/billing-profiles/{profileId}/contacts',
+    summary: 'List billing profile contacts',
+    description:
+      'Returns the contacts attached to a billing profile, with the manager designation and the separate grant that lets a contact see every ticket attributed to the profile in the client portal.',
+    tags: [clientTag],
+    security: [{ ApiKeyAuth: [] }],
+    request: { params: BillingProfileContactsParams },
+    responses: {
+      200: { description: 'Billing profile contacts returned.', schema: BillingProfileContactsEnvelope },
+      400: { description: 'Invalid client or profile id format.', schema: ApiError },
+      401: { description: 'API key missing/invalid or key user not found.', schema: ApiError },
+      403: { description: 'Permission denied for client read.', schema: ApiError },
+      404: { description: 'Billing profile not found for this client.', schema: ApiError },
+      500: { description: 'Unexpected billing profile contacts failure.', schema: ApiError },
+    },
+    extensions: { 'x-tenant-scoped': true, 'x-rbac-resource': 'client', 'x-rbac-action': 'read' },
+    edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'put',
+    path: '/api/v1/clients/{id}/billing-profiles/{profileId}/contacts',
+    summary: 'Replace billing profile contacts',
+    description:
+      'Replaces the profile\'s contact list. At most one contact may be the manager. can_view_profile_tickets is a separate opt-in and defaults to false, so naming a manager never widens what they can read.',
+    tags: [clientTag],
+    security: [{ ApiKeyAuth: [] }],
+    request: { params: BillingProfileContactsParams, body: { schema: BillingProfileContactsBody } },
+    responses: {
+      200: { description: 'Billing profile contacts replaced.', schema: BillingProfileContactsEnvelope },
+      400: { description: 'Invalid payload, a second manager, or a contact from another client.', schema: ApiError },
+      401: { description: 'API key missing/invalid or key user not found.', schema: ApiError },
+      403: { description: 'Permission denied for client update.', schema: ApiError },
+      404: { description: 'Billing profile not found for this client.', schema: ApiError },
+      500: { description: 'Unexpected billing profile contacts failure.', schema: ApiError },
+    },
+    extensions: { 'x-tenant-scoped': true, 'x-rbac-resource': 'client', 'x-rbac-action': 'update' },
+    edition: 'both',
+  });
+
+  const ClientNotesResponse = registry.registerSchema(
+    'ClientNotesResponse',
+    zOpenApi.object({
+      data: zOpenApi.object({
+        document: zOpenApi.unknown().nullable().describe('The linked notes document row, or null when the client has no notes.'),
+        blockData: zOpenApi.unknown().nullable().describe('BlockNote block array for the notes body, or null.'),
+        lastUpdated: zOpenApi.string().nullable().describe('ISO timestamp of the last notes update, or null.'),
+      }),
+    }),
+  );
+  const ClientNotesUpdateBody = registry.registerSchema(
+    'ClientNotesUpdateBody',
+    zOpenApi.object({
+      blockData: zOpenApi.unknown().describe('Full BlockNote block array (or its JSON string). Replaces the existing notes document.'),
+    }),
+  );
+  const clientNotesErrs = {
+    400: { description: 'Invalid client id or request payload.', schema: ApiError },
+    401: { description: 'API key missing/invalid or key user not found.', schema: ApiError },
+    403: { description: 'Permission denied for client resource action.', schema: ApiError },
+    404: { description: 'Client not found.', schema: ApiError },
+    500: { description: 'Unexpected client notes failure.', schema: ApiError },
+  };
+
+  registry.registerRoute({
+    method: 'get', path: '/api/v1/clients/{id}/notes',
+    summary: 'Get client notes',
+    description: 'Returns the BlockNote content of the client notes document (the rich-text notes shown on the client page), or null fields when no notes exist.',
+    tags: [clientTag], security: [{ ApiKeyAuth: [] }], request: { params: ClientIdParam },
+    responses: { 200: { description: 'Client notes content.', schema: ClientNotesResponse }, ...clientNotesErrs },
+    extensions: { 'x-tenant-scoped': true, 'x-rbac-resource': 'client', 'x-rbac-action': 'read' },
+    edition: 'both',
+  });
+  registry.registerRoute({
+    method: 'put', path: '/api/v1/clients/{id}/notes',
+    summary: 'Update client notes',
+    description: 'Creates or replaces the BlockNote notes document linked to the client. Send the full block array; partial updates are not merged. Returns the document id.',
+    tags: [clientTag], security: [{ ApiKeyAuth: [] }], request: { params: ClientIdParam, body: { schema: ClientNotesUpdateBody } },
+    responses: { 200: { description: 'Notes saved.', schema: zOpenApi.object({ data: zOpenApi.object({ document_id: zOpenApi.string().uuid() }) }) }, ...clientNotesErrs },
+    extensions: { 'x-tenant-scoped': true, 'x-rbac-resource': 'client', 'x-rbac-action': 'update' },
+    edition: 'both',
+  });
+  registry.registerRoute({
+    method: 'delete', path: '/api/v1/clients/{id}/notes',
+    summary: 'Delete client notes',
+    description: 'Unlinks the notes document from the client. Pass delete_document=true to also hard-delete the document and its block content.',
+    tags: [clientTag], security: [{ ApiKeyAuth: [] }],
+    request: { params: ClientIdParam, query: zOpenApi.object({ delete_document: zOpenApi.enum(['true', 'false']).optional() }) },
+    responses: { 200: { description: 'Notes unlinked/deleted.', schema: zOpenApi.object({ message: zOpenApi.string() }) }, ...clientNotesErrs },
+    extensions: { 'x-tenant-scoped': true, 'x-rbac-resource': 'client', 'x-rbac-action': 'update' },
     edition: 'both',
   });
 

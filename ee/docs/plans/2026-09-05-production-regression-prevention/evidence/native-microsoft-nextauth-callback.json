@@ -1,0 +1,54 @@
+{
+  "schemaVersion": 1,
+  "scope": "actual-nextauth-microsoft-callback-native",
+  "revision": "dc1d23a98e4e0e21b02387249647709e493da2b3",
+  "dirty": true,
+  "files": {
+    "packages/auth/test-harness/microsoft-oidc-authority.mjs": "d822c03be202129dbef4a2e0efb7bb055b8ca26b636bcc68a0a2c8edb9397542",
+    "packages/auth/test-harness/microsoft-oidc-preload.mjs": "f8552373fcac39b6422869117c6659c7149de6562d349263827030eeaef939bb",
+    "packages/auth/test-harness/check-microsoft-callback.mjs": "f1c90be4399928acdb3f7aca9f34f3ff85dca2f3b0a84dacb35da131a3e73ef9"
+  },
+  "result": {
+    "positive": "Actual Microsoft provider discovery/token/profile/signIn/session callbacks create correcttenant/user session and one Microsoft link keyedbyoid distinctfromsub",
+    "negative": "Freshsignin cookies plus mismatchedstate rejects before tokenexchange; authenticatedsession absent and successfulidentity link unchanged",
+    "tokenRequests": 1,
+    "jwksRequests": 0,
+    "nonceRequested": false,
+    "pkce": "Authority validates S256 verifier against authorization challenge",
+    "signedToken": "RS256 synthetic fixture token; application signature verification not established"
+  },
+  "runtime": {
+    "privateDirectory": "/tmp/alga-native-teams-BgKlEa",
+    "ownedDatabaseDropped": true,
+    "ownedNextRedisTemporalAndAuthorityStopped": true,
+    "sourceDatabaseMutated": false,
+    "dockerUsed": false,
+    "nextNodeOptions": "--max-old-space-size=24576 --import test-only-preload",
+    "nextArgs": [
+      "dev",
+      "--webpack",
+      "--disable-source-maps"
+    ],
+    "edition": "enterprise",
+    "providerOptionsMocked": false,
+    "userFixture": "New unlinked synthetic user and explicitautoLinkInternal preference confinedtoownedDBcopy"
+  },
+  "priorAttempts": [
+    {
+      "directory": "/tmp/alga-native-teams-rzoXbZ",
+      "result": "fixture discovery missinguserinfoendpoint; no callbacksuccess",
+      "cleanup": true
+    },
+    {
+      "directory": "/tmp/alga-native-teams-vgyoXE",
+      "result": "fixture rejected actualclient_secret_basic; addedstandardauthentication support",
+      "cleanup": true
+    }
+  ],
+  "limitations": [
+    "No liveMicrosoft consent or externalEntra identityproof",
+    "No nonceorJWTsignatureverification claim from thisrun",
+    "Not a clean candidateartifactattestation",
+    "Exportedharness notyet registered as recurringCIcallbacklane"
+  ]
+}

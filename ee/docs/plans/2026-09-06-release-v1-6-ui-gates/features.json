@@ -1,0 +1,37 @@
+[
+  {
+    "id": "F001",
+    "description": "Usage and unit-pricing authoring",
+    "implemented": true
+  },
+  {
+    "id": "F002",
+    "description": "Invoice ticket layout and designer choices",
+    "implemented": true
+  },
+  {
+    "id": "F003",
+    "description": "Ticket comment attachment controls",
+    "implemented": true
+  },
+  {
+    "id": "F004",
+    "description": "Schedule Teams creation",
+    "implemented": true
+  },
+  {
+    "id": "F005",
+    "description": "Manual month-end close",
+    "implemented": true
+  },
+  {
+    "id": "F006",
+    "description": "Store-only shared UI gate",
+    "implemented": true
+  },
+  {
+    "id": "F007",
+    "description": "Documentation and verification",
+    "implemented": true
+  }
+]

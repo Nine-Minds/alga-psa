@@ -76,6 +76,7 @@ describe('Ticket bundling email fanout integration', () => {
   let statusId: string;
   let priorityId: string;
   let agentUserId: string;
+  let agentEmail: string;
 
   beforeAll(async () => {
     db = await createTestDbConnection();
@@ -106,13 +107,14 @@ describe('Ticket bundling email fanout integration', () => {
     priorityId = priority.priority_id;
 
     agentUserId = uuidv4();
+    agentEmail = `agent-${uuidv4().slice(0, 8)}@example.com`;
     await db('users').insert({
       tenant: tenantId,
       user_id: agentUserId,
       username: `agent.${agentUserId}`,
       first_name: 'Agent',
       last_name: 'Sender',
-      email: `agent-${uuidv4().slice(0, 8)}@example.com`,
+      email: agentEmail,
       hashed_password: 'x',
       created_at: db.fn.now(),
       two_factor_enabled: false,
@@ -289,6 +291,213 @@ describe('Ticket bundling email fanout integration', () => {
     const child2Email = sentEmails.find((e) => String(e.to).toLowerCase() === childEmail2.toLowerCase());
     expect(child2Email).toBeTruthy();
     expect(child2Email.headers?.['In-Reply-To']).toBe(childMsg2);
+  });
+
+  it('child notification names the master author and stays authorized against the child ticket', async () => {
+    sentEmails.length = 0;
+
+    const clientId = uuidv4();
+    await db('clients').insert({
+      tenant: tenantId,
+      client_id: clientId,
+      client_name: `Client ${uuidv4().slice(0, 6)}`,
+      billing_cycle: 'monthly',
+      is_tax_exempt: false,
+      url: '',
+      created_at: db.fn.now(),
+      updated_at: db.fn.now(),
+      is_inactive: false,
+      properties: {},
+    });
+    await db('client_locations').insert({
+      tenant: tenantId,
+      location_id: uuidv4(),
+      client_id: clientId,
+      location_name: 'Default',
+      address_line1: '123 Test St',
+      city: 'Test City',
+      country_code: 'US',
+      country_name: 'United States',
+      is_default: true,
+      is_active: true,
+      email: `client-${uuidv4().slice(0, 6)}@example.com`,
+      created_at: db.fn.now(),
+      updated_at: db.fn.now(),
+    });
+
+    const masterContactId = uuidv4();
+    const childContactId = uuidv4();
+    const masterEmail = `author-master-${uuidv4().slice(0, 6)}@example.com`;
+    const childEmail = `author-child-${uuidv4().slice(0, 6)}@example.com`;
+
+    await db('contacts').insert([
+      {
+        tenant: tenantId,
+        contact_name_id: masterContactId,
+        full_name: 'Master Contact',
+        client_id: clientId,
+        email: masterEmail,
+        created_at: db.fn.now(),
+        updated_at: db.fn.now(),
+      },
+      {
+        tenant: tenantId,
+        contact_name_id: childContactId,
+        full_name: 'Child Contact',
+        client_id: clientId,
+        email: childEmail,
+        created_at: db.fn.now(),
+        updated_at: db.fn.now(),
+      },
+    ]);
+
+    const masterTicketId = uuidv4();
+    const childTicketId = uuidv4();
+    const childMsg = `message-${uuidv4()}@mail`;
+
+    await db('tickets').insert([
+      {
+        tenant: tenantId,
+        ticket_id: masterTicketId,
+        ticket_number: `AUTH-${uuidv4().slice(0, 6)}`,
+        title: 'Author Master',
+        client_id: clientId,
+        contact_name_id: masterContactId,
+        status_id: statusId,
+        priority_id: priorityId,
+        board_id: boardId,
+        entered_at: db.fn.now(),
+        updated_at: db.fn.now(),
+        email_metadata: JSON.stringify({ messageId: `message-${uuidv4()}@mail`, threadId: `thread-${uuidv4()}`, references: [] }),
+      },
+      {
+        tenant: tenantId,
+        ticket_id: childTicketId,
+        ticket_number: `AUTH-${uuidv4().slice(0, 6)}`,
+        title: 'Author Child',
+        client_id: clientId,
+        contact_name_id: childContactId,
+        status_id: statusId,
+        priority_id: priorityId,
+        board_id: boardId,
+        master_ticket_id: masterTicketId,
+        entered_at: db.fn.now(),
+        updated_at: db.fn.now(),
+        email_metadata: JSON.stringify({ messageId: childMsg, threadId: `thread-${uuidv4()}`, references: [childMsg] }),
+      },
+    ]);
+
+    // Mirrored child comment rows that carry the agent's user id, plus the
+    // mapping the reply/attachment authorization path re-checks.
+    const sourceCommentId = uuidv4();
+    const sourceThreadId = uuidv4();
+    const childCommentId = uuidv4();
+    const childThreadId = uuidv4();
+
+    await db('comment_threads').insert([
+      {
+        tenant: tenantId,
+        thread_id: sourceThreadId,
+        ticket_id: masterTicketId,
+        root_comment_id: sourceCommentId,
+        is_internal: false,
+        reply_count: 0,
+        last_activity_at: db.fn.now(),
+        created_at: db.fn.now(),
+        created_by: agentUserId,
+      },
+      {
+        tenant: tenantId,
+        thread_id: childThreadId,
+        ticket_id: childTicketId,
+        root_comment_id: childCommentId,
+        is_internal: false,
+        reply_count: 0,
+        last_activity_at: db.fn.now(),
+        created_at: db.fn.now(),
+        created_by: agentUserId,
+      },
+    ]);
+
+    await db('comments').insert([
+      {
+        tenant: tenantId,
+        comment_id: sourceCommentId,
+        thread_id: sourceThreadId,
+        ticket_id: masterTicketId,
+        user_id: agentUserId,
+        author_type: 'internal',
+        note: 'Public update',
+        is_internal: false,
+        is_resolution: false,
+        is_system_generated: false,
+        created_at: db.fn.now(),
+      },
+      {
+        tenant: tenantId,
+        comment_id: childCommentId,
+        thread_id: childThreadId,
+        ticket_id: childTicketId,
+        user_id: agentUserId,
+        author_type: 'internal',
+        note: 'Public update',
+        is_internal: false,
+        is_resolution: false,
+        is_system_generated: true,
+        created_at: db.fn.now(),
+      },
+    ]);
+
+    await db('ticket_bundle_mirrors').insert({
+      tenant: tenantId,
+      source_comment_id: sourceCommentId,
+      child_ticket_id: childTicketId,
+      child_comment_id: childCommentId,
+    });
+
+    const handler = subscribers.get('TICKET_COMMENT_ADDED');
+    expect(handler).toBeTruthy();
+
+    const event = {
+      id: uuidv4(),
+      eventType: 'TICKET_COMMENT_ADDED',
+      timestamp: new Date().toISOString(),
+      payload: {
+        tenantId,
+        ticketId: masterTicketId,
+        userId: agentUserId,
+        comment: {
+          id: sourceCommentId,
+          content: 'Public update',
+          author: 'Agent Sender',
+          isInternal: false,
+        },
+      },
+    };
+
+    await runWithTenant(tenantId, async () => {
+      await handler!(event);
+    });
+
+    const childEmailParams = sentEmails.find((e) => String(e.to).toLowerCase() === childEmail.toLowerCase());
+    expect(childEmailParams).toBeTruthy();
+    // Authorized against the child, sending to the child's requester...
+    expect(childEmailParams.entityType).toBe('ticket');
+    expect(childEmailParams.entityId).toBe(childTicketId);
+    expect(childEmailParams.replyContext?.ticketId).toBe(childTicketId);
+    // ...sourced from the master comment, under the real author's name...
+    expect(childEmailParams.commentSource).toEqual({
+      ticketId: masterTicketId,
+      commentId: sourceCommentId,
+    });
+    expect(childEmailParams.context?.comment?.author).toBe('Agent Sender');
+    // ...and exactly once, never to the authoring agent.
+    expect(
+      sentEmails.filter((e) => String(e.to).toLowerCase() === childEmail.toLowerCase())
+    ).toHaveLength(1);
+    expect(
+      sentEmails.filter((e) => String(e.to).toLowerCase() === agentEmail.toLowerCase())
+    ).toHaveLength(0);
   });
 
   it('fans out master closure notifications to child requesters (deduped)', async () => {

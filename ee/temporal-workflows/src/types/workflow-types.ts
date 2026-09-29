@@ -160,6 +160,11 @@ export interface SetupTenantDataActivityResult {
   setupSteps: string[];
 }
 
+// Outcome of provisioning the customer's Nine Minds Support Portal account.
+// `existing` means a portal account for the email was already present and was
+// reused without touching its password or roles.
+export type PortalProvisioningStatus = 'created' | 'existing' | 'failed' | 'skipped';
+
 export interface SendWelcomeEmailActivityInput {
   tenantId: string;
   tenantName: string;
@@ -173,6 +178,10 @@ export interface SendWelcomeEmailActivityInput {
   clientName?: string;
   companyName?: string;
   productCode?: 'psa' | 'algadesk';
+  // Optional so existing callers (e.g. tenant-administration resend flow) keep
+  // working. When omitted the email is deliberately conservative: the
+  // temporary password is only claimed for the workspace, never the portal.
+  portalStatus?: PortalProvisioningStatus;
 }
 
 export interface SendWelcomeEmailActivityResult {
@@ -182,14 +191,27 @@ export interface SendWelcomeEmailActivityResult {
 }
 
 // Workflow execution state for queries
+export interface CustomerTrackingState {
+  clientReused?: boolean;
+  clientId?: string;
+  clientError?: string;
+  contactReused?: boolean;
+  contactId?: string;
+  contactError?: string;
+  portalStatus?: PortalProvisioningStatus;
+  portalError?: string;
+}
+
 export interface TenantCreationWorkflowState {
   step: 'initializing' | 'fetching_stripe_details' | 'creating_tenant' | 'creating_admin_user' | 'creating_customer_tracking' | 'setting_up_data' | 'running_onboarding_seeds' | 'sending_welcome_email' | 'completed' | 'failed';
   tenantId?: string;
   adminUserId?: string;
   clientId?: string;
   emailSent?: boolean;
+  trialReminderScheduled?: boolean;
   error?: string;
   progress: number; // 0-100
+  customerTracking?: CustomerTrackingState;
 }
 
 // Signals for workflow control
@@ -201,6 +223,71 @@ export interface TenantCreationCancelSignal {
 export interface TenantCreationUpdateSignal {
   field: string;
   value: any;
+}
+
+// Trial Payment Reminder Types
+//
+// Scheduled as an abandoned child of tenant creation: it waits until two days
+// before the Stripe trial converts to a paid subscription, re-checks that the
+// tenant is still billable, and only then emails the admin. AlgaPSA only —
+// AlgaDesk is sold without a trial, so no reminder is scheduled for it.
+export interface TrialPaymentReminderWorkflowInput {
+  tenantId: string;
+  stripeSubscriptionId: string; // Stripe external id (sub_...)
+  tenantName: string;
+  companyName?: string;
+}
+
+export type TrialPaymentReminderSkipReason =
+  | 'no_trial'
+  | 'trial_already_ended'
+  | 'tenant_missing'
+  | 'tenant_suspended'
+  | 'subscription_cancelled'
+  | 'cancellation_scheduled'
+  | 'trial_end_unstable'
+  | 'unverifiable';
+
+export interface TrialPaymentReminderWorkflowResult {
+  emailSent: boolean;
+  skipped?: TrialPaymentReminderSkipReason;
+  trialEnd?: ISO8601String;
+  messageId?: string;
+  error?: string;
+}
+
+export interface ResolveTrialEndActivityInput {
+  stripeSubscriptionId: string;
+}
+
+export interface ResolveTrialEndActivityResult {
+  // null when the subscription never had a trial.
+  trialEndIso: ISO8601String | null;
+}
+
+export interface VerifyTrialReminderActivityInput {
+  tenantId: string;
+  stripeSubscriptionId: string;
+}
+
+export interface VerifyTrialReminderActivityResult {
+  sendable: boolean;
+  reason?: TrialPaymentReminderSkipReason;
+  // Live trial end, so the workflow can detect a trial that moved later.
+  currentTrialEndIso?: ISO8601String | null;
+}
+
+export interface SendTrialPaymentReminderActivityInput {
+  tenantId: string;
+  tenantName: string;
+  trialEndIso: ISO8601String;
+  companyName?: string;
+}
+
+export interface SendTrialPaymentReminderActivityResult {
+  emailSent: boolean;
+  messageId?: string;
+  error?: string;
 }
 
 // Portal User Creation Types
@@ -220,4 +307,7 @@ export interface CreatePortalUserActivityResult {
   userId: string;
   roleId: string;
   temporaryPassword?: string; // Only set if password was generated
+  // `existing` means a client portal user for this email already existed in the
+  // tenant and was returned untouched (no password re-hash, no role change).
+  status: 'created' | 'existing';
 }

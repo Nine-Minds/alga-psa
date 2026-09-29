@@ -18,6 +18,7 @@ export const createBoardSchema = z.object({
   display_itil_impact: z.boolean().optional(),
   display_itil_urgency: z.boolean().optional(),
   enable_live_ticket_timer: z.boolean().optional(),
+  client_portal_visible: z.boolean().optional(),
 });
 
 // Update board schema (all fields optional)
@@ -41,11 +42,14 @@ export const boardResponseSchema = z.object({
   inbound_reply_reopen_status_id: uuidSchema.nullable().optional(),
   inbound_reply_ai_ack_suppression_enabled: z.boolean().optional(),
   enable_live_ticket_timer: z.boolean().nullable(),
+  client_portal_visible: z.boolean().nullable(),
   tenant: uuidSchema
 });
 
 // Board list query schema
 export const boardListQuerySchema = paginationQuerySchema.extend({
+  sort: z.string().optional().default('display_order'),
+  order: z.enum(['asc', 'desc']).optional().default('asc'),
   include_inactive: z.string().transform(val => val === 'true').optional(),
   search: z.string().optional()
 });

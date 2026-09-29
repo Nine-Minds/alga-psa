@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 1,
+  "scope": "terminal-ci-run-summary",
+  "repository": "Nine-Minds/alga-psa",
+  "runId": "34330619264",
+  "publishedRevision": "f3a77aebac4debf9882a8311db33c4e3b6d44cd7",
+  "testedRevision": "a9305d0b43dc0242156b92f3ab189e680ccecb26",
+  "status": "failed",
+  "terminal": true,
+  "unit": {
+    "artifactId": 10098274971,
+    "passed": 15039,
+    "failed": 2,
+    "todo": 3,
+    "failureCause": "Both failed assertions run translation validation; bucket recovery keys were missing in supported locales. Pseudo generation also changed tracked xx/yy files. Canonical locale repair is queued locally.",
+    "taxTodoStatus": "Expected behavior remains unresolved; no financial policy invented."
+  },
+  "teams": {
+    "artifactId": 10097964294,
+    "passed": 0,
+    "failed": 1,
+    "failure": "Initial settings navigation timed out before Teams operations. Dashboard layout remained in flight when URL-only signIn completed. Same-page dashboard readiness prerequisite queued; causality beyond this sequencing gap remains unproven."
+  },
+  "freshInstallGate": {
+    "jobId": "102417945958",
+    "status": "failed",
+    "additionalDefect": "Recursive basename search finds five evidence.json files in each browser archive, rejecting the canonical execution alongside nested diagnostic evidence. Bounded artifact selection repair is in progress.",
+    "parentJobFailure": "The failed enterprise Teams step also makes the browser matrix outcome failure; passing API/browser lane counts do not override this."
+  },
+  "otherFailures": [
+    "Appliance and mutation dependency installation failed on ffmpeg-static GitHub HTTP500 before tests. Narrow install retry queued.",
+    "Nx affected and translation consistency fail on the same locale omissions.",
+    "Repository inventory and final readiness remain failed; no overall acceptance."
+  ],
+  "passedEvidence": [
+    "ci-f3a-community-provider-observations.json",
+    "ci-f3a-enterprise-provider-observations.json",
+    "ci-f3a-microsoft-callback.json",
+    "ci-f3a-survey-bootstrap.json"
+  ],
+  "limitations": [
+    "This failed CI run does not validate unpublished repairs.",
+    "Individual passing lanes do not establish production readiness."
+  ]
+}

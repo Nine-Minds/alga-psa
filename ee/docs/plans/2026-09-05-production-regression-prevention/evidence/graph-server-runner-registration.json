@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "revision": "f6771d1738741ecff21bc742e7dd5a630680636c",
+  "workingTreeDirty": false,
+  "status": "passed",
+  "scope": "Focused Graph suite under server CI unit configuration plus full browser collection",
+  "counts": {
+    "tests": 70,
+    "passed": 70,
+    "failed": 0,
+    "pending": 0,
+    "files": 7
+  },
+  "runner": {
+    "config": "server/vitest.config.ts",
+    "skipDbTests": true,
+    "singleFork": false,
+    "maxWorkers": 1
+  },
+  "browserDiscovery": {
+    "status": "passed",
+    "executionVerified": false
+  },
+  "hashes": {
+    "/tmp/alga-msgraph-server-isolated.json": "f8fda3dfe5f340a8a34851325a4f94c646cf00cf247e07e128e4a2facb5a72a7",
+    "/tmp/alga-msgraph-server-isolated.log": "fa576b8d5e1f5911f3ac5265d982b113927aba9c9fa324e8d3e69edf4f5ccbf8",
+    "test-results/browser-discovery/evidence.json": "3b045bf89dea6a5f1be04c99333b9e8aac9631fb815146addd161ed7c08af124"
+  },
+  "limitations": [
+    "Focused local execution; no complete server unit suite or coverage run is established.",
+    "Browser collection proves registration, not execution of every discovered journey.",
+    "Current-source GitHub CI remains unpublished and unverified."
+  ]
+}

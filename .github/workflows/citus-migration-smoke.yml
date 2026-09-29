@@ -16,19 +16,8 @@ name: Citus Migration Smoke
 # maintaining a custom citus+pgvector image.
 
 on:
+  workflow_call:
   workflow_dispatch:
-  pull_request:
-    paths:
-      - 'server/migrations/**'
-      - 'ee/server/migrations/**'
-      - '.github/workflows/citus-migration-smoke.yml'
-  push:
-    branches:
-      - main
-    paths:
-      - 'server/migrations/**'
-      - 'ee/server/migrations/**'
-
 jobs:
   citus-migrate:
     name: Combined migrations on single-node Citus
@@ -143,3 +132,89 @@ jobs:
               exit 1
             fi
           done
+
+      - name: Assert default-tax-rate composite FK survived Citus migration
+        run: |
+          # tenant_settings.default_tax_rate_id references tax_rates(tenant,
+          # tax_rate_id). On Citus this is only legal when tenant_settings is
+          # citus-local or colocated with tax_rates; a non-colocated
+          # distributed pair fails the migration itself. Assert the constraint
+          # survived so a future distribution change cannot silently drop it.
+          FK=$(psql -h localhost -U postgres -d server -tAc "SELECT count(*) FROM pg_constraint WHERE conname = 'tenant_settings_default_tax_rate_id_foreign' AND contype = 'f';")
+          if [ "$FK" != "1" ]; then
+            echo "::error::tenant_settings_default_tax_rate_id_foreign missing after the Citus migration chain."
+            exit 1
+          fi
+          psql -h localhost -U postgres -d server -c "SELECT con.conname, con.conrelid::regclass AS referrer, con.confrelid::regclass AS referenced, p1.partmethod AS referrer_kind, p1.colocationid AS referrer_colocation, p2.colocationid AS referenced_colocation FROM pg_constraint con LEFT JOIN pg_dist_partition p1 ON p1.logicalrelid = con.conrelid LEFT JOIN pg_dist_partition p2 ON p2.logicalrelid = con.confrelid WHERE con.conname = 'tenant_settings_default_tax_rate_id_foreign';"
+
+      - name: Install PDF text extraction tools
+        run: sudo apt-get update && sudo apt-get install -y poppler-utils
+
+      - name: Run workflow and invoice regressions on distributed tables
+        working-directory: server
+        env:
+          CI: 'true'
+          TEST_DB_BACKEND: citus
+          TEST_DB_NAME: citus_runtime
+          DB_NAME_SERVER: citus_runtime
+          TEST_MIGRATIONS_DIR: ${{ github.workspace }}/server/combined-migrations
+        run: node ../scripts/run-citus-runtime-tests.mjs
+
+      - name: Run tenant creation and product upgrade behavior on migrated Citus
+        env:
+          DB_NAME_SERVER: citus_runtime
+          TEMPORAL_TEST_SKIP_ENV_BOOTSTRAP: '1'
+          TEMPORAL_TENANT_E2E_ISOLATED: 'true'
+        run: node scripts/run-additional-workspace-tests.mjs temporal-database
+
+      - name: Upload tenant product upgrade evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: temporal-database-execution
+          path: test-results/temporal-database/
+          if-no-files-found: error
+
+      - name: Upload Citus runtime results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: citus-runtime
+          path: test-results/citus-runtime/
+          if-no-files-found: error
+
+  citus-complete:
+    name: Citus execution complete
+    needs: [citus-migrate]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      CITUS_JOB_RESULT: ${{ needs.citus-migrate.result }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Download distributed runtime evidence
+        if: always()
+        uses: actions/download-artifact@v4
+        with:
+          name: citus-runtime
+          path: test-results/citus-input/citus-runtime
+      - name: Download tenant database evidence
+        if: always()
+        uses: actions/download-artifact@v4
+        with:
+          name: temporal-database-execution
+          path: test-results/citus-input/temporal-database
+      - name: Independently verify complete candidate execution
+        if: always()
+        run: node scripts/verify-citus-execution.mjs
+      - name: Upload Citus aggregate verdict
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: citus-aggregate
+          path: test-results/citus-gate/
+          if-no-files-found: error

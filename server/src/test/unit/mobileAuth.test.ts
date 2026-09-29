@@ -24,6 +24,7 @@ vi.mock('@alga-psa/auth', async (importOriginal) => {
       ...mod.ApiKeyService,
       createApiKey: vi.fn(),
       deactivateApiKey: vi.fn(),
+      expireApiKeyAfter: vi.fn(),
       cleanupStaleKeys: vi.fn(async () => undefined),
     },
   };
@@ -248,6 +249,7 @@ describe('mobile auth (OTT + refresh rotation)', () => {
     });
 
     vi.spyOn(ApiKeyService, 'deactivateApiKey').mockResolvedValue(undefined);
+    vi.spyOn(ApiKeyService, 'expireApiKeyAfter').mockResolvedValue(undefined);
 
     (auditLog as any).mockClear?.();
   });
@@ -403,7 +405,8 @@ describe('mobile auth (OTT + refresh rotation)', () => {
     expect(state.mobile_refresh_tokens[0]?.revoked_at).not.toBeNull();
     expect(state.mobile_refresh_tokens[0]?.replaced_by_id).toBeTruthy();
 
-    expect(ApiKeyService.deactivateApiKey).toHaveBeenCalledWith(oldApiKeyId, 'tenant-1');
+    expect(ApiKeyService.expireApiKeyAfter).toHaveBeenCalledWith(oldApiKeyId, 30_000, 'tenant-1');
+    expect(ApiKeyService.deactivateApiKey).not.toHaveBeenCalled();
 
     await expect(refreshMobileSession({ refreshToken })).rejects.toThrow(/refresh token/i);
   });

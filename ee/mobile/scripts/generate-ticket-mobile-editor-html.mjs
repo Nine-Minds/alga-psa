@@ -24,6 +24,31 @@ const result = await build({
   format: "iife",
   platform: "browser",
   nodePaths: [mobileNodeModulesPath],
+  plugins: [{
+    name: "mobile-editor-dependencies",
+    setup(builder) {
+      builder.onResolve({ filter: /^[^./]/ }, async (args) => {
+        if (args.pluginData?.mobileEditorResolution) return;
+        // Shared editor source lives outside mobile. Its bare imports must use
+        // mobile's locked packages even when a root workspace install exists.
+        // Retain nested package resolution for dependencies already in mobile.
+        const resolveDir = args.resolveDir.startsWith(`${mobileNodeModulesPath}${path.sep}`)
+          ? args.resolveDir : projectRoot;
+        const result = await builder.resolve(args.path, {
+          resolveDir,
+          kind: args.kind,
+          pluginData: { mobileEditorResolution: true },
+        });
+        if (result.errors.length) return result;
+        if (!result.path.startsWith(`${mobileNodeModulesPath}${path.sep}`)) {
+          return { errors: [{ text: `Mobile editor dependency ${args.path} must be installed inside ee/mobile/node_modules` }] };
+        }
+        // The recursion guard is only for builder.resolve above; don't pass it
+        // to the loaded module and accidentally bypass its transitive imports.
+        return { ...result, pluginData: undefined };
+      });
+    },
+  }],
   target: ["es2019"],
   minify: true,
   legalComments: "none",
@@ -38,9 +63,17 @@ const html = `<!doctype html>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
     <style>
+      /* Light defaults; the app overrides these from the tenant's theme pair,
+         first as an injected <style> and then through the set-theme message. */
       :root {
         color-scheme: light;
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        --editor-bg: #ffffff;
+        --editor-text: #111827;
+        --editor-text-secondary: #6b7280;
+        --editor-link: #0f766e;
+        --editor-mention-bg: #dbeafe;
+        --editor-mention-text: #1e40af;
       }
 
       html,
@@ -50,11 +83,11 @@ const html = `<!doctype html>
         padding: 0;
         min-height: 100%;
         height: 100%;
-        background: #ffffff;
+        background: var(--editor-bg);
       }
 
       body {
-        color: #111827;
+        color: var(--editor-text);
       }
 
       #editor-root {
@@ -98,8 +131,14 @@ const html = `<!doctype html>
       }
 
       .ProseMirror a {
-        color: #0f766e;
+        color: var(--editor-link);
         text-decoration: underline;
+      }
+
+      .ProseMirror blockquote {
+        padding-left: 8px;
+        border-left: 2px solid var(--editor-text-secondary);
+        color: var(--editor-text-secondary);
       }
 
       .ProseMirror img {
@@ -111,8 +150,8 @@ const html = `<!doctype html>
         display: inline;
         padding: 1px 4px;
         border-radius: 4px;
-        background-color: #dbeafe;
-        color: #1e40af;
+        background-color: var(--editor-mention-bg);
+        color: var(--editor-mention-text);
         font-weight: 500;
         white-space: nowrap;
         user-select: none;

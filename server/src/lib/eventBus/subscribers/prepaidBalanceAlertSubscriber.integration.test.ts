@@ -382,6 +382,7 @@ async function cleanupTenant(tenantId: string): Promise<void> {
   await tenantDb(db, tenantId).table('internal_notifications').where({ tenant: tenantId }).del();
   await tenantDb(db, tenantId).table('users').where({ tenant: tenantId }).del();
   await tenantDb(db, tenantId).table('contacts').where({ tenant: tenantId }).del();
+  await tenantDb(db, tenantId).table('client_billing_profiles').where({ tenant: tenantId }).del();
   await tenantDb(db, tenantId).table('clients').where({ tenant: tenantId }).del();
   await tenantDb(db, tenantId).table('next_number').where({ tenant: tenantId }).del();
   await tenantDb(db, tenantId).table('tenants').where({ tenant: tenantId }).del();
@@ -414,52 +415,41 @@ beforeEach(() => {
 });
 
 describe('prepaid balance alert scan (DB-backed)', () => {
-  // -------------------------------------------------------------------------
-  // T021: flag-off guard
-  // -------------------------------------------------------------------------
-  it('produces zero writes when the feature flag is disabled', async () => {
-    const tenantId = await createTenant('flag-off');
-    createdTenants.push(tenantId);
-    const clientId = await createClient(tenantId);
-    const managerId = await createManager(tenantId);
-    await db('clients').where({ client_id: clientId }).update({ account_manager_id: managerId });
-    await createBillingSettings(tenantId, clientId, { threshold: 5000, currency: 'USD', percent: 80 });
-    await createCredit(tenantId, clientId, { amount: 100 });
+  // v1.5 shipped and dba55c91ab retired its rollout flag. Scanning configured
+  // policies must continue even if the unrelated flag infrastructure is off.
+  it.each(['disabled', 'unavailable'] as const)(
+    'evaluates and delivers configured alerts with %s flag infrastructure',
+    async (flagState) => {
+      const tenantId = await createTenant(`retired-flag-${flagState}`);
+      createdTenants.push(tenantId);
+      const clientId = await createClient(tenantId);
+      const managerId = await createManager(tenantId);
+      await db('clients').where({ tenant: tenantId, client_id: clientId }).update({ account_manager_id: managerId });
+      await createBillingSettings(tenantId, clientId, { threshold: 5000, currency: 'USD' });
+      await createCredit(tenantId, clientId, { amount: 100 });
 
-    flagEnabled = false;
-    await handlePrepaidBalanceAlertScanRequested(scanEvent(tenantId));
+      const checker = vi.fn(async () => {
+        if (flagState === 'unavailable') throw new Error('Flag service unavailable');
+        return false;
+      });
+      registerFeatureFlagChecker(checker);
+      try {
+        await handlePrepaidBalanceAlertScanRequested(scanEvent(tenantId));
+      } finally {
+        registerFeatureFlagChecker(async () => flagEnabled);
+      }
 
-    expect(await countAlerts(tenantId)).toBe(0);
-    expect(await deliveries(tenantId)).toHaveLength(0);
-    const notifications = await tenantDb(db, tenantId).table('internal_notifications').where({ tenant: tenantId }).count('* as n').first();
-    expect(Number(notifications?.n ?? 0)).toBe(0);
-    expect(sendEmailMock).not.toHaveBeenCalled();
-  });
-
-  it('fails closed at the delivery boundary when the flag turns off during evaluation', async () => {
-    const tenantId = await createTenant('flag-off-before-delivery');
-    createdTenants.push(tenantId);
-    const clientId = await createClient(tenantId);
-    const managerId = await createManager(tenantId);
-    await db('clients').where({ tenant: tenantId, client_id: clientId }).update({ account_manager_id: managerId });
-    await createBillingSettings(tenantId, clientId, { threshold: 5000, currency: 'USD' });
-    await createCredit(tenantId, clientId, { amount: 100 });
-
-    let checks = 0;
-    registerFeatureFlagChecker(async () => {
-      checks += 1;
-      return checks === 1;
-    });
-    try {
-      await handlePrepaidBalanceAlertScanRequested(scanEvent(tenantId));
-    } finally {
-      registerFeatureFlagChecker(async () => flagEnabled);
-    }
-
-    expect(await countAlerts(tenantId)).toBe(1);
-    expect(await deliveries(tenantId)).toHaveLength(0);
-    expect(sendEmailMock).not.toHaveBeenCalled();
-  });
+      expect(await countAlerts(tenantId)).toBe(1);
+      expect(await deliveries(tenantId)).toEqual(expect.arrayContaining([
+        expect.objectContaining({ channel: 'internal', status: 'sent' }),
+        expect.objectContaining({ channel: 'email', status: 'sent' }),
+      ]));
+      const notifications = await tenantDb(db, tenantId).table('internal_notifications').count('* as n').first();
+      expect(Number(notifications?.n ?? 0)).toBe(1);
+      expect(sendEmailMock).toHaveBeenCalledTimes(1);
+      expect(checker).not.toHaveBeenCalled();
+    },
+  );
 
   // -------------------------------------------------------------------------
   // T009: credit episode lifecycle
@@ -1615,15 +1605,15 @@ describe('prepaid balance alert scan (DB-backed)', () => {
     // non-breaking space between the currency symbol and the amount).
     const managerCall = sendEmailMock.mock.calls.find((c) => c[0].to === 'manager@example.com');
     expect(managerCall).toBeDefined();
-    expect(managerCall[0].locale).toBe('nl');
-    expect(managerCall[0].context.alert.threshold).toBe(`€\u00A050,00`);
+    expect(managerCall![0].locale).toBe('nl');
+    expect(managerCall![0].context.alert.threshold).toBe(`€\u00A050,00`);
 
     // Client email formatted in the client's de locale: "50,00 €" (de also
     // uses a non-breaking space before the currency symbol).
     const clientCall = sendEmailMock.mock.calls.find((c) => c[0].to === 'client-billing@example.com');
     expect(clientCall).toBeDefined();
-    expect(clientCall[0].locale).toBe('de');
-    expect(clientCall[0].context.alert.threshold).toBe(`50,00\u00A0€`);
+    expect(clientCall![0].locale).toBe('de');
+    expect(clientCall![0].context.alert.threshold).toBe(`50,00\u00A0€`);
 
     // Internal notification follows the recipient user's locale (nl), including
     // the locale-formatted threshold in the rendered message.
@@ -1680,10 +1670,10 @@ describe('prepaid balance alert scan (DB-backed)', () => {
     const deStart = new Intl.DateTimeFormat('de', { dateStyle: 'medium', timeZone: 'UTC' }).format(periodStartDate);
     const deEnd = new Intl.DateTimeFormat('de', { dateStyle: 'medium', timeZone: 'UTC' }).format(periodEndDate);
 
-    expect(managerCall[0].locale).toBe('nl');
-    expect(managerCall[0].context.alert).toMatchObject({ periodStart: nlStart, periodEnd: nlEnd });
-    expect(clientCall[0].locale).toBe('de');
-    expect(clientCall[0].context.alert).toMatchObject({ periodStart: deStart, periodEnd: deEnd });
+    expect(managerCall![0].locale).toBe('nl');
+    expect(managerCall![0].context.alert).toMatchObject({ periodStart: nlStart, periodEnd: nlEnd });
+    expect(clientCall![0].locale).toBe('de');
+    expect(clientCall![0].context.alert).toMatchObject({ periodStart: deStart, periodEnd: deEnd });
 
     const notification = await tenantDb(db, tenantId).table('internal_notifications')
       .where({ tenant: tenantId, user_id: managerId })

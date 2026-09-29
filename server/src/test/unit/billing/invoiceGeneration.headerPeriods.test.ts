@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { Temporal } from '@js-temporal/polyfill';
 
 // Step 5 of the charge-attribution chain reads the client's default billing
 // profile from the database. These suites mock knex, so the read is stubbed —
@@ -22,7 +23,7 @@ const mocks = vi.hoisted(() => {
   // (outside withTransaction), so the mocked connection must be callable.
   // A recurring (non-project) invoice finds no schedule rows, so `select`
   // resolves to an empty array.
-  const createQueryBuilder = () => {
+  const createQueryBuilder = (tableName: string) => {
     const builder: any = {
       join: vi.fn(() => builder),
       leftJoin: vi.fn(() => builder),
@@ -30,7 +31,11 @@ const mocks = vi.hoisted(() => {
       andWhere: vi.fn(() => builder),
       orderBy: vi.fn(() => builder),
       select: vi.fn(async () => []),
-      first: vi.fn(async () => undefined),
+      first: vi.fn(async () => tableName === 'client_billing_cycles'
+        ? { client_id: 'client-1', billing_profile_id: null }
+        : tableName === 'client_billing_profiles'
+          ? { billing_profile_id: 'unit-test-default-billing-profile' }
+          : undefined),
       update: vi.fn(async () => 1),
       insert: vi.fn(async () => []),
       delete: vi.fn(async () => 0),
@@ -38,7 +43,7 @@ const mocks = vi.hoisted(() => {
     };
     return builder;
   };
-  const knexStub = vi.fn((_tableName: string) => createQueryBuilder());
+  const knexStub = vi.fn((_tableName: string) => createQueryBuilder(_tableName));
   const createTenantKnex = vi.fn(async () => ({ knex: knexStub }));
   const withTransaction = vi.fn(async (_knex: unknown, callback: (trx: any) => Promise<unknown>) => {
     const trx = ((tableName: string) => {
@@ -418,5 +423,52 @@ describe('invoice generation header billing periods', () => {
       }),
       'user-1',
     );
+  });
+
+  it('T-EC6: an explicit invoiceDate override stamps invoice_date and dates the due date from the override', async () => {
+    // The override is the tenant-local final calendar day the month-end close
+    // computed; the server host clock may read any other date and must not win.
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-01-30T22:00:00.000Z'));
+    mocks.getDueDate.mockResolvedValue('2026-02-20');
+
+    await createInvoiceFromBillingResult(
+      recurringBillingResult,
+      'client-1',
+      '2026-02-01',
+      '2026-03-01',
+      'cycle-1',
+      'user-1',
+      { invoiceDate: '2026-01-31' },
+    );
+
+    expect(mocks.state.insertedInvoices[0].invoice_date).toBe('2026-01-31');
+    // The stubbed profile identity sets no payment terms: Net 30 from the override.
+    expect(mocks.state.insertedInvoices[0].due_date).toBe('2026-03-02');
+    vi.useRealTimers();
+  });
+
+  it('T-EC7: without an override the invoice is stamped on the server-host calendar date, unchanged', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-01-30T22:00:00.000Z'));
+    mocks.getDueDate.mockResolvedValue('2026-02-20');
+    // Temporal.Now.plainDateISO() resolves to the host's default timezone, so
+    // compute the expected date the same way the implementation does.
+    const expectedHostDate = Temporal.Now.plainDateISO().toString();
+
+    await createInvoiceFromBillingResult(
+      recurringBillingResult,
+      'client-1',
+      '2026-02-01',
+      '2026-03-01',
+      'cycle-1',
+      'user-1',
+    );
+
+    expect(mocks.state.insertedInvoices[0].invoice_date).toBe(expectedHostDate);
+    expect(mocks.state.insertedInvoices[0].due_date).toBe(
+      Temporal.PlainDate.from(expectedHostDate).add({ days: 30 }).toString(),
+    );
+    vi.useRealTimers();
   });
 });

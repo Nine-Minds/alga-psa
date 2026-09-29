@@ -1,0 +1,21 @@
+{
+  "scope": "Shipped Temporal admin-user activity on migrated single-node Citus",
+  "test": "ee/temporal-workflows/src/activities/__tests__/user-activities-simple.test.ts",
+  "change": "Removed copied user creation/rollback implementation and call production activities through MockActivityEnvironment",
+  "checks": [
+    "Generated and supplied passwords authenticate against stored hashes; wrong password rejected; hashes independently salted",
+    "Existing MSP Admin role selected rather than portal Admin role",
+    "Duplicate internal email across tenants rejected without second-account side effects",
+    "Missing MSP role rolls back account insertion",
+    "Rollback scoped to tenant and removes grants while preserving another tenant"
+  ],
+  "validation": {
+    "databaseFiles": 4,
+    "databaseTestsPassed": 25,
+    "mutation": "Removing MSP/client role predicates makes missing-MSP-role test fail because creation incorrectly succeeds; source restored"
+  },
+  "limits": [
+    "Client account-manager association expectations from the copied helper are not supported by the shipped activity and are not represented as verified",
+    "Native CI execution of the expanded lane remains pending"
+  ]
+}

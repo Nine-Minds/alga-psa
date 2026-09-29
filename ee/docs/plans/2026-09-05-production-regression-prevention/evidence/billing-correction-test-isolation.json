@@ -1,0 +1,19 @@
+{
+  "status": "local-validation-passed-native-pending",
+  "nativeJob": "https://github.com/Nine-Minds/alga-psa/actions/runs/34104450275/job/101686141225",
+  "failure": "Reported billable correction expected quantity 7 but received 0. Save mock retained a prior quantity-12 call.",
+  "changes": [
+    "Reset upsertUsagePeriodTotal mock before each case.",
+    "Use awaited user clear/type/click and assert displayed quantity 7 before saving.",
+    "Require exactly one save with quantity 7 and displayed revision 3."
+  ],
+  "validation": {
+    "beforeLocalPassed": 37,
+    "afterLocalPassed": 37,
+    "afterSeconds": 4.2
+  },
+  "limits": [
+    "Native intermittent quantity mismatch did not reproduce locally; root cause and native repair remain unproven.",
+    "No production behavior changed and no billing assertion removed."
+  ]
+}

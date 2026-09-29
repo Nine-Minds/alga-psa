@@ -62,11 +62,11 @@ export function activityTypeColor(type: MobileActivityType, theme: Theme): strin
     case "schedule":
       return theme.colors.success; // green
     case "timeEntry":
-      return theme.colors.orange; // #F97316
+      return theme.colors.orange; // time-entry orange
     case "workflowTask":
       return theme.colors.accent; // orange (brand accent)
     case "notification":
-      return theme.colors.indigo; // #6366F1
+      return theme.colors.indigo; // notification indigo
     case "document":
     default:
       return theme.colors.textSecondary;

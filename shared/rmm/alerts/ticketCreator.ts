@@ -9,12 +9,14 @@
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import { TicketModel } from '../../models/ticketModel';
+import { SharedNumberingService } from '../../services/numberingService';
 import type {
   NormalizedRmmAlertEvent,
   NormalizedRmmAlertSeverity,
   RmmAlertRuleActions,
 } from './contracts';
 import { resolveRmmTicketContactId } from './resolveContact';
+import { associateAssetWithTicket } from '../../services/assets/assetTicketAssociation';
 
 export interface CreateAlertTicketParams {
   event: NormalizedRmmAlertEvent;
@@ -59,17 +61,10 @@ export async function createTicketForAlert(
   const title = renderTemplate(actions.ticketTemplate?.titleTemplate, params) ?? defaultTitle(event);
   const description = renderTemplate(actions.ticketTemplate?.descriptionTemplate, params) ?? defaultDescription(event);
 
-  // Delegate to the same DB function the UI/API create path uses so alert
-  // tickets share the tenant's configured numbering (prefix + single sequence),
-  // rather than a private max()+default-prefix scheme.
-  const numberResult = await trx.raw(
-    'SELECT generate_next_number(?::uuid, ?::text) as number',
-    [tenantId, 'TICKET']
-  );
-  const ticketNumber = numberResult?.rows?.[0]?.number;
-  if (!ticketNumber) {
-    throw new Error('Failed to generate ticket number');
-  }
+  // Delegate to the same service the UI/API create path uses so alert tickets
+  // share the tenant's configured numbering (prefix + optional date format +
+  // single sequence), rather than a private max()+default-prefix scheme.
+  const ticketNumber = await SharedNumberingService.getNextNumber('TICKET', { knex: trx, tenant: tenantId });
   const now = new Date().toISOString();
   const db = tenantDb(trx, tenantId);
 
@@ -95,7 +90,7 @@ export async function createTicketForAlert(
     .returning(['ticket_id', 'ticket_number']);
 
   if (params.assetId) {
-    await associateAsset(trx, tenantId, params.assetId, ticket.ticket_id, now);
+    await associateAssetWithTicket(trx, tenantId, params.assetId, ticket.ticket_id, now);
   }
 
   await addAlertInternalNote(trx, tenantId, ticket.ticket_id, initialNote(event));
@@ -142,30 +137,6 @@ export async function addAlertInternalNote(
     is_internal: true,
     is_resolution: false,
     is_system_generated: true,
-    created_at: now,
-  });
-}
-
-async function associateAsset(
-  trx: Knex.Transaction,
-  tenantId: string,
-  assetId: string,
-  ticketId: string,
-  now: string
-): Promise<void> {
-  const db = tenantDb(trx, tenantId);
-
-  // asset_associations.created_by is NOT NULL with an FK to users; attribute
-  // system-created links to the tenant's earliest user (Huntress convention).
-  const auditUser = await db.table('users').orderBy('created_at', 'asc').first('user_id');
-  if (!auditUser) return;
-  await db.table('asset_associations').insert({
-    tenant: tenantId,
-    asset_id: assetId,
-    entity_id: ticketId,
-    entity_type: 'ticket',
-    relationship_type: 'related',
-    created_by: auditUser.user_id,
     created_at: now,
   });
 }

@@ -6,9 +6,12 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
   Activity,
+  BookOpen,
   ChevronRight,
   ExternalLink,
+  HelpCircle,
   Home,
+  LifeBuoy,
   PlusCircle,
   Settings,
   Sparkles,
@@ -27,7 +30,7 @@ import ContactAvatar from '@alga-psa/ui/components/ContactAvatar';
 import { NotificationBell } from '@alga-psa/notifications/components/NotificationBell';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type { IUserWithRoles } from '@alga-psa/types';
-import { menuItems, bottomMenuItems, MenuItem } from '@/config/menuConfig';
+import { menuItems, bottomMenuItems, settingsNavigationSections, MenuItem } from '@/config/menuConfig';
 import { getCurrentUser } from '@alga-psa/user-composition/actions/userQueryActions';
 import { useUserAvatar, useContactAvatar } from '@alga-psa/user-composition/hooks';
 import { checkAccountManagementPermission } from '@alga-psa/auth/actions/permission-actions';
@@ -158,7 +161,11 @@ export const getMenuItemNameByPath = (
     return t('header.breadcrumb.dashboard', { defaultValue: 'Dashboard' });
   }
 
-  const allMenuItems = [...menuItems, ...bottomMenuItems];
+  const allMenuItems = [
+    ...menuItems,
+    ...bottomMenuItems,
+    ...settingsNavigationSections.flatMap((section) => section.items),
+  ];
 
   const segments = path.split('/');
   const topLevelPath = segments.length > 1 ? '/' + segments[1] : '/';
@@ -282,6 +289,62 @@ const QuickCreateMenu: React.FC<{ t: HeaderTranslator }> = ({ t }) => {
     </>
   );
 };
+
+const RESOURCE_LINKS = [
+  {
+    id: 'resources-documentation',
+    href: 'https://www.nineminds.com/documentation',
+    icon: BookOpen,
+    labelKey: 'header.resources.documentation',
+    labelDefault: 'Documentation',
+  },
+  {
+    id: 'resources-support',
+    href: 'https://www.nineminds.com/support',
+    icon: LifeBuoy,
+    labelKey: 'header.resources.support',
+    labelDefault: 'Contact Support',
+  },
+] as const;
+
+const ResourcesMenu: React.FC<{ t: HeaderTranslator }> = ({ t }) => (
+  <DropdownMenu>
+    <DropdownMenuTrigger asChild>
+      <Button
+        id="header-resources-menu-trigger"
+        variant="ghost"
+        size="icon"
+        aria-label={t('header.resources.ariaLabel', { defaultValue: 'Resources and help' })}
+        className="h-9 w-9"
+      >
+        <HelpCircle className="h-5 w-5" />
+      </Button>
+    </DropdownMenuTrigger>
+    <DropdownMenuContent align="end" className="min-w-[220px]">
+      <div className="px-3 py-2">
+        <p className="text-sm font-semibold text-[rgb(var(--color-text-900))]">
+          {t('header.resources.title', { defaultValue: 'Resources' })}
+        </p>
+      </div>
+      <DropdownMenuSeparator />
+      {RESOURCE_LINKS.map((link) => (
+        <DropdownMenuItem key={link.id} asChild>
+          <a
+            id={`${link.id}-menu-item`}
+            href={link.href}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={() => analytics.capture('ui.resources_menu.select', { target: link.id })}
+          >
+            <link.icon className="mr-2 h-4 w-4" />
+            {t(link.labelKey, { defaultValue: link.labelDefault })}
+            <ExternalLink className="ml-2 h-3 w-3 opacity-60" />
+          </a>
+        </DropdownMenuItem>
+      ))}
+    </DropdownMenuContent>
+  </DropdownMenu>
+);
 
 // NotificationMenu component removed - replaced with NotificationBell
 
@@ -513,6 +576,7 @@ export default function Header({
           </button>
         ) : null}
         <QuickCreateMenu t={t} />
+        <ResourcesMenu t={t} />
         <ThemeToggle
           labels={{
             ariaLabel: t('header.themeToggle.ariaLabel', { defaultValue: 'Theme toggle' }),

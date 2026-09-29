@@ -36,8 +36,23 @@ export interface MaterializeContractCadenceServicePeriodsInput {
   duePosition: DuePosition;
   sourceRuleVersion: string;
   sourceRunKey: string;
+  /**
+   * Date the rolling 180-day coverage horizon is measured from. Generation still
+   * starts at `asOf` so historical gaps are backfilled, but the target horizon
+   * advances from this anchor instead. Omit it to keep the previous behaviour
+   * (`asOf` anchors both the catch-up start and the horizon).
+   */
+  coverageAnchorDate?: ISO8601String;
   targetHorizonDays?: number;
   replenishmentThresholdDays?: number;
+  /**
+   * Upper bound on periods generated for one obligation in one call. Protects
+   * the sweep from an ancient assignment with no billed floor. When the bound
+   * is reached before the rolling horizon, the plan reports `hitPeriodCap` so
+   * callers can log/expose the truncation instead of pretending coverage is
+   * complete.
+   */
+  maxPeriodsPerRun?: number;
   recordIdFactory?: (input: {
     scheduleKey: string;
     periodKey: string;
@@ -45,10 +60,13 @@ export interface MaterializeContractCadenceServicePeriodsInput {
   }) => string;
 }
 
+export const DEFAULT_CONTRACT_CADENCE_MAX_PERIODS_PER_RUN = 200;
+
 export interface IContractCadenceMaterializedServicePeriodPlan {
   scheduleKey: string;
   coverage: IRecurringServicePeriodGenerationCoverageStatus;
   records: IRecurringServicePeriodRecord[];
+  hitPeriodCap: boolean;
 }
 
 function toDateOnly(value: ISO8601String): ISO8601String {
@@ -87,6 +105,7 @@ function resolveMonthsPerPeriod(billingCycle: SupportedContractCadenceBillingCyc
 function generateContractCadenceServicePeriods(
   input: MaterializeContractCadenceServicePeriodsInput,
   rangeEnd: ISO8601String,
+  maxPeriods: number,
 ) {
   const commonInput = {
     rangeStart: input.asOf,
@@ -94,6 +113,7 @@ function generateContractCadenceServicePeriods(
     sourceObligation: input.sourceObligation,
     duePosition: input.duePosition,
     anchorDate: input.anchorDate,
+    maxPeriods,
   };
 
   switch (input.billingCycle) {
@@ -111,15 +131,26 @@ function generateContractCadenceServicePeriods(
 export function materializeContractCadenceServicePeriods(
   input: MaterializeContractCadenceServicePeriodsInput,
 ): IContractCadenceMaterializedServicePeriodPlan {
+  // The horizon anchor may differ from the generation start: catch-up still
+  // begins at `asOf`, but the rolling target is measured from the later
+  // coverage anchor so a stale historical start cannot pin the future horizon
+  // in the past.
+  const coverageAnchor = toDateOnly(input.coverageAnchorDate ?? input.asOf);
   const horizon = resolveRecurringServicePeriodGenerationHorizon({
-    asOf: toDateOnly(input.asOf),
+    asOf: coverageAnchor,
     targetHorizonDays: input.targetHorizonDays,
     replenishmentThresholdDays: input.replenishmentThresholdDays,
   });
+  const maxPeriodsPerRun = input.maxPeriodsPerRun && input.maxPeriodsPerRun > 0
+    ? input.maxPeriodsPerRun
+    : DEFAULT_CONTRACT_CADENCE_MAX_PERIODS_PER_RUN;
   const servicePeriods = generateContractCadenceServicePeriods(
     input,
     `${horizon.targetHorizonEnd}T00:00:00Z`,
+    maxPeriodsPerRun,
   );
+  const hitPeriodCap = servicePeriods.length >= maxPeriodsPerRun
+    && servicePeriods[servicePeriods.length - 1].end.slice(0, 10) < horizon.targetHorizonEnd;
   const scheduleKey = buildRecurringServicePeriodScheduleKey({
     tenant: input.sourceObligation.tenant,
     obligationType: input.sourceObligation.obligationType,
@@ -169,11 +200,12 @@ export function materializeContractCadenceServicePeriods(
   return {
     scheduleKey,
     coverage: assessRecurringServicePeriodGenerationCoverage({
-      asOf: toDateOnly(input.asOf),
+      asOf: coverageAnchor,
       targetHorizonDays: input.targetHorizonDays,
       replenishmentThresholdDays: input.replenishmentThresholdDays,
       futurePeriods: records.map((record) => record.servicePeriod),
     }),
     records,
+    hitPeriodCap,
   };
 }

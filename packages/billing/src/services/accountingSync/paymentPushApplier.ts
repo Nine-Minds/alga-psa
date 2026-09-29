@@ -1,13 +1,16 @@
 import { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import logger from '@alga-psa/core/logger';
-// eslint-disable-next-line custom-rules/no-feature-to-feature-imports -- sync-engine applier intentionally bridges billing to the QuickBooks client (same bridge as the accounting export adapter)
+// eslint-disable-next-line custom-rules/no-feature-to-feature-imports -- sync-engine applier bridges billing to the QuickBooks client only for the legacy (no-adapter) path
 import { QboClientService } from '@alga-psa/integrations/lib/qbo/qboClientService';
+import type { AccountingExportAdapter, AccountingProviderOperations } from '@alga-psa/types';
 import type { AccountingSyncCycleStats } from './accountingSync.types';
 import type { SyncOperationsRepository } from './syncOperationsRepository';
 import type { SyncMappingLedger } from './syncMappingLedger';
 import type { SyncExceptionService } from './syncExceptions.types';
 import { getDepositAccountRef } from './accountingSyncSettings';
+import { adapterSupportsOutbound } from './normalizedChange';
+import { failUnsupportedOperations } from './unsupportedOperations';
 
 interface DrainDeps {
   knex: Knex;
@@ -18,6 +21,8 @@ interface DrainDeps {
   ledger: SyncMappingLedger;
   exceptions: SyncExceptionService;
   stats: AccountingSyncCycleStats;
+  /** Adapter selected for this cycle; gates the outbound operation. */
+  adapter?: AccountingExportAdapter;
 }
 
 interface RecordPaymentPayload {
@@ -52,16 +57,47 @@ export async function drainRecordPaymentOps(deps: DrainDeps): Promise<void> {
     return;
   }
 
-  let qboClient: QboClientService | null = null;
-  try {
-    qboClient = await QboClientService.create(deps.tenantId, deps.targetRealm);
-  } catch (error) {
-    logger.warn('[paymentPushApplier] Cannot create QBO client; leaving record_payment ops pending', {
-      tenantId: deps.tenantId,
-      targetRealm: deps.targetRealm,
-      error: error instanceof Error ? error.message : error
+  // ── Capability gate ──────────────────────────────────────────────────────
+  // An adapter that cannot push payments (e.g. Xero, for now) must produce an
+  // observable terminal outcome rather than silently retrying or — worse —
+  // dispatching through another provider's client.
+  if (!adapterSupportsOutbound(deps.adapter, deps.adapterType, 'payment')) {
+    await failUnsupportedOperations(deps, pending, {
+      entityType: 'invoice_payment',
+      operationLabel: 'payment push',
+      providerLabel: deps.adapterType === 'xero' ? 'Xero' : deps.adapterType
     });
     return;
+  }
+
+  const providerOps: AccountingProviderOperations | null = deps.adapter?.providerOperations
+    ? await deps.adapter.providerOperations(deps.tenantId, deps.targetRealm)
+    : null;
+  const providerLabel = deps.adapterType === 'xero' ? 'Xero' : 'QuickBooks';
+
+  // Only the QBO adapter may use the legacy direct-client path. A non-QBO
+  // adapter without providerOperations must never fall back to QboClientService.
+  if (!providerOps && deps.adapterType !== 'quickbooks_online') {
+    await failUnsupportedOperations(deps, pending, {
+      entityType: 'invoice_payment',
+      operationLabel: 'payment push',
+      providerLabel
+    });
+    return;
+  }
+
+  let qboClient: QboClientService | null = null;
+  if (!providerOps) {
+    try {
+      qboClient = await QboClientService.create(deps.tenantId, deps.targetRealm);
+    } catch (error) {
+      logger.warn('[paymentPushApplier] Cannot create QBO client; leaving record_payment ops pending', {
+        tenantId: deps.tenantId,
+        targetRealm: deps.targetRealm,
+        error: error instanceof Error ? error.message : error
+      });
+      return;
+    }
   }
 
   const depositAccountRef = await getDepositAccountRef(deps.knex, deps.tenantId);
@@ -174,23 +210,23 @@ export async function drainRecordPaymentOps(deps: DrainDeps): Promise<void> {
       continue;
     }
 
-    // ── Build and push QBO Payment ───────────────────────────────────────
+    // ── Build and push the payment ───────────────────────────────────────
     const invoiceExternalId = invoiceMapping.external_entity_id;
     const customerId = customerMapping.external_entity_id;
-    const amountDollars = Math.round(payload.amountCents) / 100;
-    const paymentRefNum = truncateRef(payload.referenceNumber);
 
     // ── Revalidate the remote invoice immediately before acting ──────────
     // The mapping is realm-exact, but the remote record itself may be stale
-    // (deleted in QBO, or the id retargeted by an out-of-band edit). A payment
-    // pushed against a ghost invoice would land as unapplied credit or fail
-    // mid-create, so read the invoice first and abort without writing.
+    // (deleted in the provider, or the id retargeted by an out-of-band edit). A
+    // payment pushed against a ghost invoice would land as unapplied credit or
+    // fail mid-create, so read the invoice first and abort without writing.
     let remoteInvoice: any = null;
     try {
-      remoteInvoice = await qboClient.read<any>('Invoice', invoiceExternalId);
+      remoteInvoice = providerOps
+        ? await providerOps.readDocument('Invoice', invoiceExternalId)
+        : await qboClient!.read<any>('Invoice', invoiceExternalId);
     } catch (error) {
-      const readMessage = error instanceof Error ? error.message : 'Failed to read QBO invoice';
-      logger.warn('[paymentPushApplier] Failed to revalidate QBO invoice before payment push', {
+      const readMessage = error instanceof Error ? error.message : `Failed to read ${providerLabel} invoice`;
+      logger.warn('[paymentPushApplier] Failed to revalidate remote invoice before payment push', {
         opId: op.op_id,
         invoiceId: payload.invoiceId,
         externalInvoiceId: invoiceExternalId,
@@ -203,7 +239,7 @@ export async function drainRecordPaymentOps(deps: DrainDeps): Promise<void> {
           type: 'accounting_sync_export_error',
           entityType: 'invoice_payment',
           entityId: paymentId,
-          title: 'Payment push keeps failing — QBO invoice could not be verified',
+          title: `Payment push keeps failing — ${providerLabel} invoice could not be verified`,
           context: {
             alga_payment_id: paymentId,
             alga_invoice_id: payload.invoiceId,
@@ -220,8 +256,8 @@ export async function drainRecordPaymentOps(deps: DrainDeps): Promise<void> {
     }
 
     if (!remoteInvoice) {
-      const message = `QBO Invoice ${invoiceExternalId} no longer exists in this company — the payment was not pushed`;
-      logger.warn('[paymentPushApplier] QBO invoice missing at push time; marking failed', {
+      const message = `${providerLabel} Invoice ${invoiceExternalId} no longer exists in this company — the payment was not pushed`;
+      logger.warn('[paymentPushApplier] Remote invoice missing at push time; marking failed', {
         opId: op.op_id,
         invoiceId: payload.invoiceId,
         externalInvoiceId: invoiceExternalId
@@ -233,7 +269,7 @@ export async function drainRecordPaymentOps(deps: DrainDeps): Promise<void> {
           type: 'accounting_sync_export_error',
           entityType: 'invoice_payment',
           entityId: paymentId,
-          title: 'Payment push blocked — QuickBooks invoice is missing',
+          title: `Payment push blocked — ${providerLabel} invoice is missing`,
           context: {
             alga_payment_id: paymentId,
             alga_invoice_id: payload.invoiceId,
@@ -250,35 +286,56 @@ export async function drainRecordPaymentOps(deps: DrainDeps): Promise<void> {
       continue;
     }
 
-    const qboPaymentPayload: Record<string, unknown> = {
-      CustomerRef: { value: customerId },
-      TotalAmt: amountDollars,
-      PaymentRefNum: paymentRefNum,
-      PrivateNote: `Alga payment ${payload.referenceNumber}`,
-      Line: [
-        {
-          Amount: amountDollars,
-          LinkedTxn: [{ TxnId: invoiceExternalId, TxnType: 'Invoice' }]
-        }
-      ]
-    };
-
-    if (depositAccountRef) {
-      qboPaymentPayload.DepositToAccountRef = { value: depositAccountRef.value };
-    }
+    const amountDollars = Math.round(payload.amountCents) / 100;
 
     try {
       await deps.ops.markInProgress(deps.tenantId, op.op_id);
-      const createdPayment = await qboClient.create<any>('Payment', qboPaymentPayload);
 
-      const externalPaymentId: string = createdPayment?.Id ?? createdPayment?.payment?.Id;
-      if (!externalPaymentId) {
-        throw new Error('QBO Payment response missing Id');
+      let externalPaymentId: string;
+      let syncToken: string;
+      let unappliedCents: number | undefined;
+
+      if (providerOps) {
+        const result = await providerOps.recordPayment({
+          externalInvoiceId: invoiceExternalId,
+          externalCustomerId: customerId,
+          amountCents: payload.amountCents,
+          reference: payload.referenceNumber,
+          depositAccountRef: depositAccountRef ?? null
+        });
+        externalPaymentId = result.externalPaymentId;
+        syncToken = result.syncToken ?? '0';
+        unappliedCents = result.unappliedCents;
+      } else {
+        const qboPaymentPayload: Record<string, unknown> = {
+          CustomerRef: { value: customerId },
+          TotalAmt: amountDollars,
+          PaymentRefNum: truncateRef(payload.referenceNumber),
+          PrivateNote: `Alga payment ${payload.referenceNumber}`,
+          Line: [
+            {
+              Amount: amountDollars,
+              LinkedTxn: [{ TxnId: invoiceExternalId, TxnType: 'Invoice' }]
+            }
+          ]
+        };
+        if (depositAccountRef) {
+          qboPaymentPayload.DepositToAccountRef = { value: depositAccountRef.value };
+        }
+
+        const createdPayment = await qboClient!.create<any>('Payment', qboPaymentPayload);
+        externalPaymentId = createdPayment?.Id ?? createdPayment?.payment?.Id;
+        if (!externalPaymentId) {
+          throw new Error('QBO Payment response missing Id');
+        }
+        syncToken = String(createdPayment?.SyncToken ?? createdPayment?.payment?.SyncToken ?? '0');
+        const entity = createdPayment?.Id ? createdPayment : createdPayment?.payment;
+        const unappliedAmt = Number(entity?.UnappliedAmt ?? 0);
+        unappliedCents = Number.isFinite(unappliedAmt) ? Math.round(unappliedAmt * 100) : undefined;
       }
-      const syncToken: string = String(createdPayment?.SyncToken ?? createdPayment?.payment?.SyncToken ?? '0');
 
       // Write mapping row. The sync_token stored here is what paymentApplier
-      // compares against the CDC change's syncToken — an exact match = echo → no-op.
+      // compares against the polled change's syncToken — an exact match = echo.
       await deps.ledger.insert({
         algaEntityType: 'invoice_payment',
         algaEntityId: paymentId,
@@ -303,7 +360,7 @@ export async function drainRecordPaymentOps(deps: DrainDeps): Promise<void> {
       await deps.ops.markDone(deps.tenantId, op.op_id);
       deps.stats.opsProcessed += 1;
 
-      logger.info('[paymentPushApplier] Payment pushed to QBO', {
+      logger.info('[paymentPushApplier] Payment pushed to accounting provider', {
         tenantId: deps.tenantId,
         paymentId,
         externalPaymentId,
@@ -312,21 +369,16 @@ export async function drainRecordPaymentOps(deps: DrainDeps): Promise<void> {
       });
 
       // ── Detect a silently-unapplied payment ────────────────────────────
-      // When the linked invoice has no open balance on the QBO side, QBO
-      // accepts the create but drops the application line and books the full
-      // amount as unapplied customer credit. The money landed (op stays
-      // done), but a bookkeeper has to reapply it in QBO — surface that.
-      const entity = createdPayment?.Id ? createdPayment : createdPayment?.payment;
-      // UnappliedAmt is the authoritative signal — QBO always computes it on
-      // Payment responses, while Line can be sparse in mocks/partial reads.
-      const unappliedAmt = Number(entity?.UnappliedAmt ?? 0);
-      const responseLines = Array.isArray(entity?.Line) ? entity.Line : [];
-      if (unappliedAmt > 0) {
+      // When the linked invoice has no open balance on the provider side, the
+      // provider accepts the create but drops the application line and books
+      // the full amount as unapplied customer credit. The money landed (op
+      // stays done), but a bookkeeper has to reapply it — surface that.
+      if (unappliedCents !== undefined && unappliedCents > 0) {
         const result = await deps.exceptions.createOrUpdate({
           type: 'accounting_sync_unmapped_payment',
           entityType: 'invoice_payment',
           entityId: paymentId,
-          title: 'Pushed payment was not applied to its invoice in QuickBooks',
+          title: `Pushed payment was not applied to its invoice in ${providerLabel}`,
           context: {
             reason: 'pushed_payment_unapplied',
             alga_payment_id: paymentId,
@@ -334,29 +386,30 @@ export async function drainRecordPaymentOps(deps: DrainDeps): Promise<void> {
             external_payment_id: externalPaymentId,
             external_invoice_id: invoiceExternalId,
             amount_cents: payload.amountCents,
-            unapplied_amount: unappliedAmt,
+            unapplied_amount_cents: unappliedCents,
+            ...(providerOps ? {} : { unapplied_amount: unappliedCents / 100 }),
             message:
-              'QuickBooks accepted the payment but recorded it as unapplied customer credit — ' +
-              'the linked invoice had no open balance. Apply or refund the credit in QuickBooks.',
+              `${providerLabel} accepted the payment but recorded it as unapplied customer credit — ` +
+              `the linked invoice had no open balance. Apply or refund the credit in ${providerLabel}.`,
             details:
-              `QBO Payment ${externalPaymentId} for invoice ${invoiceExternalId}: ` +
-              `UnappliedAmt=${unappliedAmt}, applicationLines=${responseLines.length}`,
+              `Payment ${externalPaymentId} for invoice ${invoiceExternalId}: ` +
+              `unapplied=${unappliedCents} cents`,
             realm: deps.targetRealm
           }
         });
         if (result.created) {
           deps.stats.exceptionsCreated += 1;
         }
-        logger.warn('[paymentPushApplier] Pushed payment landed unapplied in QBO', {
+        logger.warn('[paymentPushApplier] Pushed payment landed unapplied', {
           tenantId: deps.tenantId,
           paymentId,
           externalPaymentId,
           invoiceId: payload.invoiceId,
-          unappliedAmt
+          unappliedCents
         });
       }
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'QBO payment creation failed';
+      const message = error instanceof Error ? error.message : `${providerLabel} payment creation failed`;
       logger.warn('[paymentPushApplier] Failed to create QBO Payment', {
         opId: op.op_id,
         tenantId: deps.tenantId,

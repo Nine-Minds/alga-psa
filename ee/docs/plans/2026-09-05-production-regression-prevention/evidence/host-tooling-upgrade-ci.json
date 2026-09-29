@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "revision": "5c7fd60b82bfe1596dae6838a4e9cd15d66c92d8",
+  "status": "passed",
+  "counts": {
+    "tests": 620,
+    "passed": 620,
+    "failed": 0,
+    "skipped": 0,
+    "todo": 0,
+    "cancelled": 0
+  },
+  "requiredFiles": 63,
+  "workingTreeDirty": false,
+  "failures": [],
+  "execution": "Canonical native run-node-tooling-tests.mjs",
+  "hashes": {
+    "test-results/node-tooling/evidence.json": "9b958a600fcd13f4c4a2bead889b46068d9d3271cd8fcd7fd1959a0aa6d2151c",
+    "test-results/node-tooling/events.jsonl": "36635ee43d034f03dea6a315c7c4272427a0e13a465509daad3f396ebca6b898",
+    "/tmp/alga-tooling-5c7fd60.log": "6b576d42145f5a6327326dac03506b1d8b81feb0b3fe81947c125134baa25815"
+  },
+  "limitations": [
+    "Host tooling pass only; does not prove current application build, native GitHub execution, Citus upgrades or release enforcement."
+  ]
+}

@@ -32,9 +32,11 @@ vi.mock('@alga-psa/auth/rbac', () => ({
 function buildThenableQuery(result: any[]) {
   const builder: any = {};
   builder.where = vi.fn(() => builder);
+  builder.whereIn = vi.fn(() => builder);
   builder.whereNotIn = vi.fn(() => builder);
   builder.whereRaw = vi.fn(() => builder);
   builder.whereNotNull = vi.fn(() => builder);
+  builder.orderBy = vi.fn(() => builder);
   builder.join = vi.fn(() => builder);
   builder.leftJoin = vi.fn(() => builder);
   builder.groupBy = vi.fn(() => builder);
@@ -149,10 +151,10 @@ describe('contractReportActions shared contract results', () => {
       },
     ];
     const contractLines = [
-      { contract_id: 'contract-managed-it-services', custom_rate: 20000 },
-      { contract_id: 'contract-managed-it-services-clone', custom_rate: 20000 },
-      { contract_id: 'contract-worry-free-essentials', custom_rate: 15000 },
-      { contract_id: 'contract-worry-free-essentials-clone', custom_rate: 15000 },
+      { contract_line_id: 'line-mits', contract_id: 'contract-managed-it-services', contract_line_type: 'Fixed', billing_frequency: 'monthly', custom_rate: 20000 },
+      { contract_line_id: 'line-mits-clone', contract_id: 'contract-managed-it-services-clone', contract_line_type: 'Fixed', billing_frequency: 'monthly', custom_rate: 20000 },
+      { contract_line_id: 'line-wfe', contract_id: 'contract-worry-free-essentials', contract_line_type: 'Fixed', billing_frequency: 'monthly', custom_rate: 15000 },
+      { contract_line_id: 'line-wfe-clone', contract_id: 'contract-worry-free-essentials-clone', contract_line_type: 'Fixed', billing_frequency: 'monthly', custom_rate: 15000 },
     ];
 
     const knex: any = vi.fn((table: string) => {
@@ -162,9 +164,16 @@ describe('contractReportActions shared contract results', () => {
       if (table === 'client_contracts as cc') {
         return buildThenableQuery(assignments);
       }
-      if (table === 'contract_lines as cl') {
+      if (table === 'contract_lines as cln') {
         return buildThenableQuery(contractLines);
       }
+      if (table === 'contract_line_service_configuration as clsc') {
+        return buildThenableQuery([]);
+      }
+      if (table === 'contract_line_unit_pricing_revisions as rev') {
+        return buildThenableQuery([]);
+      }
+      if (table === 'contract_line_service_configuration') return buildThenableQuery([]);
       throw new Error(`Unexpected table ${table}`);
     });
     knex.raw = vi.fn((sql: string) => sql);

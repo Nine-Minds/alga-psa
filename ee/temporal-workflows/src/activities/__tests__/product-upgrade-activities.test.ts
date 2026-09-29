@@ -160,6 +160,31 @@ describe('product_upgrade_stripe_swap', () => {
     expect(setup.scheduleCancel).not.toHaveBeenCalled();
   });
 
+  it('targets STRIPE_PRO_PRICE_ID when no AlgaPSA override is configured', async () => {
+    const setup = dependencies(subscription());
+    setup.deps.env = {
+      STRIPE_ALGADESK_USER_PRICE_ID: 'price_algadesk_month',
+      STRIPE_PRO_PRICE_ID: 'price_pro_month',
+    } as NodeJS.ProcessEnv;
+
+    await expect(product_upgrade_stripe_swap('tenant-1', setup.deps)).resolves.toEqual({
+      swapped: true,
+    });
+    expect(setup.update).toHaveBeenCalledWith(
+      'sub_license',
+      expect.objectContaining({ items: [{ id: 'si_users', price: 'price_pro_month' }] }),
+    );
+  });
+
+  it('refuses without mutating Stripe when the interval pair is not configured', async () => {
+    const setup = dependencies(subscription());
+    setup.deps.env = { STRIPE_ALGADESK_USER_PRICE_ID: 'price_algadesk_month' } as NodeJS.ProcessEnv;
+
+    await expect(product_upgrade_stripe_swap('tenant-1', setup.deps))
+      .rejects.toThrow('STRIPE_PRO_PRICE_ID is not configured in the temporal worker');
+    expect(setup.update).not.toHaveBeenCalled();
+  });
+
   it('selects the annual target for an annual AlgaDesk item', async () => {
     const live = subscription();
     live.items.data[0].price.id = 'price_algadesk_year';

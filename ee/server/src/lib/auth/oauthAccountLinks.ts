@@ -2,7 +2,7 @@ import logger from '@alga-psa/core/logger';
 import { tenantDb } from '@alga-psa/db';
 import { getAdminConnection } from '@alga-psa/db/admin';
 
-export type OAuthLinkProvider = 'google' | 'microsoft';
+export type OAuthLinkProvider = 'google' | 'microsoft' | 'keycloak';
 
 export interface OAuthAccountLinkInput {
   tenant: string;

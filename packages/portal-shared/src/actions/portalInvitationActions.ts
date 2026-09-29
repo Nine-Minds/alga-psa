@@ -8,6 +8,7 @@ import { getPortalDomainStatusForTenant } from '@alga-psa/tenancy/server';
 import { getSystemEmailService, TenantEmailService, sendPortalInvitationEmail } from '@alga-psa/email';
 import { hasPermission, withAuth, type AuthContext } from '@alga-psa/auth';
 import { isValidEmail } from '@alga-psa/core';
+import { assertContactIsNotSharedMailbox, isSharedMailboxContact } from '@alga-psa/shared/models/contactModel';
 import type { IUserWithRoles, IUser } from '@alga-psa/types';
 import type { Knex } from 'knex';
 import type {
@@ -243,6 +244,10 @@ export const createClientPortalUser = withAuth(async (
   try {
     const { knex } = await createTenantKnex();
 
+    if (params.contactId && await isSharedMailboxContact(knex, tenant, params.contactId)) {
+      return { success: false, error: 'Shared mailbox contacts cannot be invited to the client portal.', errorCode: 'PERMISSION_DENIED_CREATE' };
+    }
+
     const normalizedContactClientId = params.contact?.clientId && params.contact.clientId.trim() !== '' ? params.contact.clientId : null;
     const existingContactForAuth = params.contactId
       ? await getContactAuthContext(knex, tenant, params.contactId)
@@ -340,6 +345,10 @@ export const createClientPortalUser = withAuth(async (
       if (!contact) {
         // Could not resolve contact
         throw new Error('Contact not found. Provide contact details to create a new contact.');
+      }
+
+      if (contact.contact_kind === 'shared_mailbox') {
+        throw new PortalInvitationError('Shared mailbox contacts cannot be invited to the client portal.', 'PERMISSION_DENIED_CREATE');
       }
 
       // Validate the resolved contact's email before creating the user account.
@@ -485,6 +494,10 @@ export const sendPortalInvitation = withAuth(async (
   try {
     const { knex } = await createTenantKnex();
 
+    if (await isSharedMailboxContact(knex, tenant, contactId)) {
+      return { success: false, error: 'Shared mailbox contacts cannot be invited to the client portal.', errorCode: 'PERMISSION_DENIED_INVITE' };
+    }
+
     const canInvite = await canManageClientPortalTargetContact(user, tenant, knex, 'invite', contactId);
     if (!canInvite) {
       return {
@@ -559,6 +572,17 @@ export const sendPortalInvitation = withAuth(async (
       };
     }
 
+    // Prefer the tenant's active custom portal domain (vanity host) so the
+    // invitation lands on the host the client portal is served from.
+    let vanityBaseUrl = '';
+    try {
+      const portalDomain = await getPortalDomainStatusForTenant(tenant);
+      if (portalDomain.status === 'active' && portalDomain.domain) {
+        vanityBaseUrl = `https://${portalDomain.domain}`;
+      }
+    } catch (domainError) {
+      console.warn('Failed to resolve custom portal domain for invitation link:', domainError);
+    }
     // Use a transaction to ensure atomicity
     const result = await knex.transaction(async (trx) => {
       const scopedDb = tenantDb(trx, tenant);
@@ -638,17 +662,6 @@ export const sendPortalInvitation = withAuth(async (
 
       const tenantSlug = await getTenantSlugForTenant(tenant);
 
-      // Prefer the tenant's active custom portal domain (vanity host) so the
-      // invitation lands on the host the client portal is served from.
-      let vanityBaseUrl = '';
-      try {
-        const portalDomain = await getPortalDomainStatusForTenant(tenant);
-        if (portalDomain.status === 'active' && portalDomain.domain) {
-          vanityBaseUrl = `https://${portalDomain.domain}`;
-        }
-      } catch (domainError) {
-        console.warn('Failed to resolve custom portal domain for invitation link:', domainError);
-      }
 
       // Generate portal setup URL with robust base URL fallback
       const baseUrl =
@@ -810,6 +823,14 @@ export async function completePortalSetup(
 
       const scopedDb = tenantDb(knex, tenant);
 
+      if (await isSharedMailboxContact(knex, tenant, contact.contact_name_id)) {
+        return {
+          success: false,
+          error: 'Shared mailbox contacts cannot have a client portal user.',
+          errorCode: 'PERMISSION_DENIED_CREATE',
+        } as CompleteSetupResult;
+      }
+
       const assertMicrosoftOAuthLinkAvailable = async (
         userId?: string,
         db: DbConnection = knex
@@ -867,9 +888,11 @@ export async function completePortalSetup(
               updated_at: trx.raw('now()')
             })
             .onConflict(['tenant', 'user_id', 'provider'])
+            // Citus rejects STABLE functions (now() → CURRENT_TIMESTAMP) inside
+            // ON CONFLICT DO UPDATE SET on distributed tables — must pass a literal.
             .merge({
               provider_account_id: prelinkedOAuth.providerAccountId,
-              updated_at: trx.raw('now()')
+              updated_at: new Date().toISOString()
             });
         } catch (error) {
           if ((error as { code?: string })?.code === '23505') {
@@ -1219,6 +1242,10 @@ export const updateClientUser = withAuth(async (
 ): Promise<IUser | null | ClientUserActionError> => {
   try {
     const { knex } = await createTenantKnex();
+    const targetUser = await tenantDb(knex, tenant).table('users')
+      .where({ user_id: userId, user_type: 'client' })
+      .first('contact_id');
+    if (targetUser?.contact_id) await assertContactIsNotSharedMailbox(knex, tenant, targetUser.contact_id);
     const targetClientId = await resolveClientUserTargetClientId(knex, tenant, userId);
     if (targetClientId === undefined) {
       return null;

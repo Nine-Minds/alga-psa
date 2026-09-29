@@ -12,7 +12,7 @@ import { IContract } from '@alga-psa/types';
 import { updateContract } from '@alga-psa/billing/actions/contractActions';
 import { useTenant } from '@alga-psa/ui/components/providers/TenantProvider';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
-import { CURRENCY_OPTIONS } from '@alga-psa/core';
+import CurrencyPicker from '@alga-psa/ui/components/CurrencyPicker';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useBillingFrequencyOptions } from '@alga-psa/billing/hooks/useBillingEnumOptions';
 import {
@@ -171,11 +171,10 @@ const ContractForm: React.FC<ContractFormProps> = ({ contract, onContractUpdated
             </div>
             <div>
               <Label htmlFor="currency-code">{t('contractForm.fields.currency', { defaultValue: 'Currency' })}</Label>
-              <CustomSelect
+              <CurrencyPicker
                 id="currency-code"
                 value={currencyCode}
                 onValueChange={setCurrencyCode}
-                options={CURRENCY_OPTIONS}
                 placeholder={t('contractForm.fields.currencyPlaceholder', { defaultValue: 'Select currency' })}
               />
             </div>

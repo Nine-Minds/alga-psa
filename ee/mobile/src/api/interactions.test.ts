@@ -9,6 +9,22 @@ function mockClient(response: unknown = { ok: true, data: { data: [] } }): ApiCl
 const apiKey = "api-key-1";
 
 describe("interactions api", () => {
+  it("passes scheduling times and multiple assignees to REST v1", async () => {
+    const client = mockClient();
+    const data = {
+      type_id: "call-type",
+      client_id: "cl-1",
+      create_schedule_entry: true,
+      start_time: "2026-10-01T12:00:00.000Z",
+      end_time: "2026-10-01T12:30:00.000Z",
+      schedule_assigned_user_ids: ["user-1", "user-2"],
+    };
+    await createInteraction(client, { apiKey, data });
+    expect(client.request).toHaveBeenCalledWith(expect.objectContaining({
+      method: "POST", path: "/api/v1/interactions", body: data,
+    }));
+  });
+
   it("types calls GET /api/v1/interaction-types", async () => {
     const client = mockClient();
     await listInteractionTypes(client, { apiKey });

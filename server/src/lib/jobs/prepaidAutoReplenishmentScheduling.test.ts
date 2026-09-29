@@ -14,12 +14,16 @@ const jobsIndexSource = readFileSync(resolve(__dirname, 'index.ts'), 'utf8');
 const initializeSource = readFileSync(resolve(__dirname, 'initializeScheduledJobs.ts'), 'utf8');
 const registerSource = readFileSync(resolve(__dirname, 'registerAllHandlers.ts'), 'utf8');
 const fanoutSource = readFileSync(resolve(__dirname, '../../../../packages/jobs/src/lib/maintenanceJobFanout.ts'), 'utf8');
-const temporalSource = readFileSync(resolve(__dirname, '../../../../ee/temporal-workflows/src/schedules/setupSchedules.ts'), 'utf8');
+// setupSchedules applies the schedule policies; the cron catalog lives beside it.
+const temporalSource = [
+  readFileSync(resolve(__dirname, '../../../../ee/temporal-workflows/src/schedules/setupSchedules.ts'), 'utf8'),
+  readFileSync(resolve(__dirname, '../../../../packages/types/src/constants/maintenanceFanoutSchedules.ts'), 'utf8'),
+].join('\n');
 
 describe('prepaid auto-replenishment wiring contract', () => {
   it('composes with the existing alert scan and owns the action in the server subscriber', () => {
     expect(subscriberSource).toContain('replenishOpenPrepaidBalanceAlerts');
-    expect(subscriberSource).toContain('Feature flag disabled before replenishment');
+    // release-v1-5-feature was retired in dba55c91ab; replenishment is now generally available.
     expect(handlerSource).toContain('PREPAID_BALANCE_ALERT_SCAN_REQUESTED');
     expect(handlerSource).not.toContain('server/src');
   });

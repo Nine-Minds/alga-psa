@@ -17,9 +17,7 @@ import CreditExpirationSettings from './CreditExpirationSettings';
 import CreditDrawdownSettings from './CreditDrawdownSettings';
 import RenewalAutomationSettings from './RenewalAutomationSettings';
 import CostRatesSettings from './CostRatesSettings';
-import { TaxSourceSettings } from '../tax/TaxSourceSettings';
-import { TaxRegionsManager } from '../tax/TaxRegionsManager';
-import TaxDelegationBanner from '../../tax/TaxDelegationBanner';
+import QuoteSettings from './QuoteSettings';
 
 // Payment Settings Skeleton Component
 const PaymentSettingsSkeleton: React.FC = () => {
@@ -123,7 +121,7 @@ const BillingSettings: React.FC = () => {
   const { t } = useTranslation('msp/billing-settings');
   const searchParams = useSearchParams();
   const sectionParam = searchParams?.get('section');
-  const billingSectionIds: readonly string[] = ['general', 'cost-rates', 'numbering', 'tax', 'payments'];
+  const billingSectionIds: readonly string[] = ['general', 'cost-rates', 'numbering', 'payments'];
 
   // Determine initial active tab based on URL parameter
   const [activeTab, setActiveTab] = useState<string>(() => {
@@ -181,6 +179,14 @@ const BillingSettings: React.FC = () => {
             <CardContent>
               <DefaultCurrencySettings />
             </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>{t('general.quotes.title', { defaultValue: 'Quotes' })}</CardTitle>
+              <CardDescription>{t('general.quotes.description', { defaultValue: 'Set the default validity period for new quotes.' })}</CardDescription>
+            </CardHeader>
+            <CardContent><QuoteSettings /></CardContent>
           </Card>
 
           <Card>
@@ -308,29 +314,6 @@ const BillingSettings: React.FC = () => {
           >
             <NumberingSettings entityType="SALES_ORDER" />
           </CollapsibleNumberingCard>
-        </div>
-      ),
-    },
-    {
-      id: 'tax',
-      label: t('tabs.tax', { defaultValue: 'Tax' }),
-      content: (
-        <div className="space-y-6">
-          <TaxDelegationBanner />
-          <TaxSourceSettings />
-          <Card>
-            <CardHeader>
-              <CardTitle>{t('tax.taxRegions.title', { defaultValue: 'Tax Regions' })}</CardTitle>
-              <CardDescription>
-                {t('tax.taxRegions.description', {
-                  defaultValue: 'Manage tax regions and related settings'
-                })}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <TaxRegionsManager />
-            </CardContent>
-          </Card>
         </div>
       ),
     },

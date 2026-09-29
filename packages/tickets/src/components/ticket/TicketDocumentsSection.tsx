@@ -29,10 +29,12 @@ interface TicketDocumentsSectionProps {
   allowBlockDocuments?: boolean;
 }
 
+const EMPTY_DOCUMENTS: IDocument[] = [];
+
 const TicketDocumentsSection: React.FC<TicketDocumentsSectionProps> = ({
   id = 'ticket-documents-section',
   ticketId,
-  initialDocuments = [],
+  initialDocuments = EMPTY_DOCUMENTS,
   onDocumentCreated,
   getFoldersFn,
   forceUploadToRoot = false,
@@ -50,16 +52,9 @@ const TicketDocumentsSection: React.FC<TicketDocumentsSectionProps> = ({
   const [documents, setDocuments] = useState<IDocument[]>(initialDocuments);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Track previous document IDs to avoid infinite loops
-  const prevDocumentIdsRef = useRef<string>('');
-
-  // Sync documents from props when they change (by ID, not reference)
+  // Claims and comment edits change metadata without changing document IDs.
   useEffect(() => {
-    const currentIds = initialDocuments.map(d => d.document_id).sort().join(',');
-    if (currentIds !== prevDocumentIdsRef.current) {
-      prevDocumentIdsRef.current = currentIds;
-      setDocuments(initialDocuments);
-    }
+    setDocuments(initialDocuments);
   }, [initialDocuments]);
 
   // Fallback fetch function (only used if initialDocuments not provided)

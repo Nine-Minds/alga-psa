@@ -17,6 +17,10 @@ import * as invoiceGenerationActions from '@alga-psa/billing/actions/invoiceGene
 import * as recurringBillingRunActions from '@alga-psa/billing/actions/recurringBillingRunActions';
 import type { IRecurringDueWorkInvoiceCandidate } from '@alga-psa/types';
 
+vi.mock('@alga-psa/ui/hooks/useFeatureFlag', () => ({
+  useFeatureFlag: () => ({ enabled: true, loading: false, error: null }),
+}));
+
 vi.mock('next/navigation', () => ({
   useRouter: () => ({
     push: vi.fn(),

@@ -30,7 +30,15 @@ vi.mock('@alga-psa/db', () => ({
   createTenantKnex: vi.fn(),
   // Facade passthrough: the fakes below dispatch by table name; tenant
   // scoping is the real facade's concern, not this test's.
-  tenantDb: (conn: any, _tenant: string) => ({ table: (name: string) => conn(name) })
+  tenantDb: (conn: any, _tenant: string) => ({ table: (name: string) => conn(name) }),
+  // bulkLinkHistoricalInvoices serializes the mapping insert on the invoice
+  // row lock; the passthrough makes the "transaction" the same fake knex.
+  withTransaction: async (_knex: any, cb: any) => cb(_knex),
+  // The shared invoice lock helper is re-exported through @alga-psa/db; the
+  // fake invoice rows the harness serves are never cancelled, so the guard
+  // passes without inspecting the fake further.
+  lockInvoiceForExternalSync: vi.fn(async () => ({ status: 'sent' })),
+  lockInvoicesForExternalSync: vi.fn(async () => [{ status: 'sent' }]),
 }));
 
 vi.mock('@alga-psa/integrations/lib/qbo/qboClientService', () => ({
@@ -105,6 +113,7 @@ function makeKnexQuery(rows: any[]) {
     orWhere: vi.fn().mockReturnThis(),
     andWhere: vi.fn().mockReturnThis(),
     select: vi.fn().mockReturnThis(),
+    forUpdate: vi.fn().mockReturnThis(),
     pluck: vi.fn(async () => rows),
     first: vi.fn(async () => rows[0] ?? undefined),
     update: vi.fn(async () => 1),
@@ -187,6 +196,9 @@ describe('bulkLinkHistoricalInvoices', () => {
     const knexMock: any = vi.fn((table: string) => {
       if (table === 'tenant_external_entity_mappings') return mappingsQuery;
       if (table === 'tenant_settings') return settingsQuery;
+      // bulkLinkHistoricalInvoices proves the local side by loading each
+      // invoice's id + prepayment flag; the shared invoice lock itself is
+      // stubbed at the module boundary, so the rows only need those two fields.
       if (table === 'invoices') {
         return makeKnexQuery(
           localInvoiceIds.map((invoiceId) => ({

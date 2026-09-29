@@ -1,0 +1,76 @@
+{
+  "schemaVersion": 1,
+  "kind": "local-built-service-browser-execution",
+  "revision": "fd53e4679f plus this checkpoint",
+  "status": "passed",
+  "stats": {
+    "startTime": "2026-09-06T20:59:46.541Z",
+    "duration": 46264.502,
+    "expected": 1,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  },
+  "identities": {
+    "providerId": "ebdc7197-ca92-4b19-b5fa-26c75e91b933",
+    "tenantId": "5c1762f8-9eb1-491c-a3ba-de86d5a5b341",
+    "ticketId": "771a0237-9dca-433e-a494-2e7c69d31097",
+    "firstId": "<new-65b8703b-da0a-4279-a094-474999eb19ad@example.test>"
+  },
+  "duplicateReceipts": [
+    {
+      "jobId": "e4b795c0-8dc4-4548-878a-40268c994c5a",
+      "dedupedCount": 1,
+      "processedCount": 0,
+      "acknowledged": true
+    },
+    {
+      "jobId": "fe335edd-cc9f-4e9d-8035-db44ea7471ef",
+      "dedupedCount": 1,
+      "processedCount": 0,
+      "acknowledged": true
+    }
+  ],
+  "images": {
+    "application": "sha256:5804ee43c0ef750d635990185626e21ee3c2d3d279a10c6bb6754007ab73565d",
+    "emailService": "sha256:15fb60a9f04748b28f21aef40430de89018254b90fe935b2d431fdc3e79c3987",
+    "emailServiceArtifact": 9996165125,
+    "greenmail": "sha256:d556b8c7df01ba04a0e0f67dacab2c5f75a61207a51774e0654c179b83a671e1",
+    "emulatorBase": "sha256:d84d082a5f830f6ac3a33005b0b8c4d177914814ddb11d20231cc03973323d86",
+    "emulatorOverrides": [
+      "smtp-sink/dist replaced with candidate build",
+      "previous local QBO and Xero dist overrides retained"
+    ]
+  },
+  "checks": [
+    "Real sign-in and IMAP provider configuration UI",
+    "SMTP raw MIME to GreenMail to built IMAP service to webhook to actual queue consumer",
+    "Correct customer, ticket destination and inline quotation persisted and rendered",
+    "Attachment bytes downloaded through authenticated application endpoint",
+    "Agent UI reply captured by SMTP sink with root-preserving threading headers",
+    "Customer reply matched same ticket; old provider-quoted history removed",
+    "Two original UID/MIME pointers redelivered via actual webhook, deduplicated and acknowledged; no extra tickets, comments, documents, processing records or agent mail",
+    "TypeScript check; workflow actionlint; CE/EE Compose merge and shared-volume/internal-network validation"
+  ],
+  "limitations": [
+    "Mailbox authentication and SPF/DKIM/DMARC results are simulated.",
+    "Duplicate assertion covers the same provider UID and MIME source; a fresh SMTP delivery has a different identity and Received headers."
+  ],
+  "reports": {
+    "browser": {
+      "path": "/tmp/alga-inbound-browser-final.log",
+      "sha256": "3bc57c3ea1830236d3be1dc52f90afacf23ca5270527cc45942e955b8a4b1a1b"
+    },
+    "consumer": {
+      "path": "/tmp/alga-email-service-final.log",
+      "sha256": "c8b6babe4822883f4dd5434e6b7071e7424d0920acc906581b1f837ea54087db"
+    }
+  },
+  "nativeAcceptance": {
+    "evidence": "production-browser-native-762.json",
+    "community": "first-attempt-passed",
+    "enterprise": "first-attempt-passed",
+    "feature": "F019",
+    "test": "T014"
+  }
+}

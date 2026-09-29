@@ -26,6 +26,9 @@ export default defineConfig({
       // which collapsed the TaskForm* suites. Point it at the real file, matching
       // the alias tickets/integrations already carry.
       { find: /^next\/server$/, replacement: path.resolve(__dirname, '../../node_modules/next/server.js') },
+      { find: /^@alga-psa\/list-views$/, replacement: path.resolve(__dirname, '../list-views/src/index.ts') },
+      { find: /^@alga-psa\/list-views\/(actions|components|hooks)$/, replacement: path.resolve(__dirname, '../list-views/src/$1/index.ts') },
+      { find: /^@alga-psa\/list-views\/(.*)$/, replacement: path.resolve(__dirname, '../list-views/src/$1') },
       { find: /^@alga-psa\/types$/, replacement: path.resolve(__dirname, '../types/src/index.ts') },
       // TaskForm imports `./billing/ProjectPaymentWarningBanner`, which is being
       // moved to @alga-psa/billing on this branch. Until TaskForm's import is
@@ -41,6 +44,11 @@ export default defineConfig({
       { find: /^@alga-psa\/projects\/(.*)$/, replacement: `${path.resolve(__dirname, 'src')}/$1` },
       { find: /^@alga-psa\/ui$/, replacement: path.resolve(__dirname, '../ui/src/index.ts') },
       { find: /^@alga-psa\/db\/admin$/, replacement: path.resolve(__dirname, '../db/src/lib/admin.ts') },
+      // @alga-psa/core's i18n exports live under src/lib for the same reason.
+      {
+        find: /^@alga-psa\/core\/i18n\/(.*)$/,
+        replacement: `${path.resolve(__dirname, '../core/src/lib/i18n')}/$1`,
+      },
       // @alga-psa/db's exports put tenant, connection and workDate under src/lib;
       // the generic workspace rule below would resolve them to src/<name>.
       { find: /^@alga-psa\/db\/models$/, replacement: path.resolve(__dirname, '../db/src/models/index.ts') },

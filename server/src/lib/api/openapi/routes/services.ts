@@ -20,6 +20,8 @@ export function registerServiceRoutes(
     zOpenApi.object({
       currency_code: zOpenApi.string().length(3),
       rate: zOpenApi.number(),
+      effective_date: zOpenApi.string().nullable().optional()
+        .describe('Calendar date the price takes effect; the epoch when untagged.'),
     }),
   );
 
@@ -33,6 +35,7 @@ export function registerServiceRoutes(
       billing_method: zOpenApi.enum(['fixed', 'hourly', 'usage']),
       default_rate: zOpenApi.number(),
       unit_of_measure: zOpenApi.string(),
+      unit_code: zOpenApi.string().nullable().optional(),
       category_id: zOpenApi.string().uuid().nullable().optional(),
       tax_rate_id: zOpenApi.string().uuid().nullable().optional(),
       description: zOpenApi.string().nullable().optional(),
@@ -48,7 +51,10 @@ export function registerServiceRoutes(
       license_term: zOpenApi.string().nullable().optional(),
       license_billing_cadence: zOpenApi.string().nullable().optional(),
       service_type_name: zOpenApi.string().optional(),
-      prices: zOpenApi.array(ServicePrice).optional(),
+      prices: zOpenApi.array(ServicePrice).optional()
+        .describe('Current price per currency (latest effective on or before today).'),
+      scheduled_prices: zOpenApi.array(ServicePrice).optional()
+        .describe('Future-dated prices that are not yet billed.'),
     }).describe('Service catalog entry.'),
   );
 

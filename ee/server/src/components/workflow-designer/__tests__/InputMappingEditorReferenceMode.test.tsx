@@ -269,7 +269,7 @@ describe('InputMappingEditor reference mode', () => {
     ).toHaveTextContent('ticket_id');
     expect(
       screen.getByTestId('mapping-step-filtered-reference-summary-reference-field')
-    ).not.toHaveTextContent('ticket_count');
+    ).toHaveTextContent('ticket_count');
   });
 
   it('T336: preserves the chosen source scope while the user is still staging a reference selection', async () => {
@@ -374,7 +374,7 @@ describe('InputMappingEditor reference mode', () => {
     ).toHaveTextContent('email.from');
     expect(
       screen.getByTestId('mapping-step-payload-schema-summary-reference-field')
-    ).not.toHaveTextContent('ticketCount');
+    ).toHaveTextContent('ticketCount');
   });
 
   it('T338: refreshes visible payload field choices when the payload schema changes upstream', async () => {
@@ -477,12 +477,13 @@ describe('InputMappingEditor reference mode', () => {
     ).not.toHaveTextContent('email.subject');
   });
 
-  it('T287: shows legacy unsupported messaging for saved expressions that cannot hydrate into structured Reference mode', async () => {
+  it('T287: preserves and edits compound mappings in Expression mode', async () => {
+    const onChange = vi.fn();
     await act(async () => {
       render(
         <InputMappingEditor
           value={{ summary: { $expr: 'payload.summary & "-" & meta.traceId' } }}
-          onChange={vi.fn()}
+          onChange={onChange}
           targetFields={[
             {
               name: 'summary',
@@ -501,18 +502,11 @@ describe('InputMappingEditor reference mode', () => {
       );
     });
 
-    expect(
-      screen.getByText('Legacy mapping no longer supported here')
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText('payload.summary & "-" & meta.traceId')
-    ).toBeInTheDocument();
-    expect(
-      document.getElementById('mapping-step-advanced-expression-summary-replace-with-reference')
-    ).toBeInTheDocument();
-    expect(
-      document.getElementById('mapping-step-advanced-expression-summary-replace-with-fixed')
-    ).toBeInTheDocument();
+    const editor = screen.getByRole('textbox');
+    expect(editor).toHaveValue('payload.summary & "-" & meta.traceId');
+    fireEvent.change(editor, { target: { value: 'payload.summary & " updated"' } });
+    expect(onChange).toHaveBeenCalledWith({ summary: { $expr: 'payload.summary & " updated"' } });
+    expect(screen.queryByText('Legacy mapping no longer supported here')).not.toBeInTheDocument();
   });
 
   it('T334: shows a collapsible browse-sources tree for reference mode and maps the current field when a source is selected', async () => {

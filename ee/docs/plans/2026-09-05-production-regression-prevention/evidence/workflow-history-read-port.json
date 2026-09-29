@@ -1,0 +1,26 @@
+{
+  "scope": "Port run-history redaction assertion to activity-written snapshots and current action",
+  "baseRevision": "f2aaf7c00232a8e62083ae7772e985c53509ffc1",
+  "workingTreeDirty": true,
+  "validation": {
+    "passed": 5,
+    "failed": 0,
+    "skipped": 0,
+    "artifact": "/tmp/alga-workflow-history-read.log",
+    "sha256": "4f93a1025019c76ed15ff212c8fc3ee4837a115e0d6963f819ee90f1d9039336",
+    "configuration": "server/vitest.config.ts",
+    "durationSeconds": 16.6
+  },
+  "behavior": [
+    "Actual Temporal step-completion activity writes redacted snapshots and links step references.",
+    "Actual listWorkflowRunStepsAction reads those persisted snapshots and returns the same references without raw secret values.",
+    "Tenant-configured redaction pointers are loaded from actual tenant_settings and mask the configured field in the returned history.",
+    "Foreign-tenant run reads reject with Not found; denied workflow permission rejects with Forbidden."
+  ],
+  "limits": [
+    "Authentication context and permission decisions are substituted; underlying RBAC policy evaluation is not claimed.",
+    "Admin/tenant database connection boundaries point to isolated transaction-owned schemas; real SQL, models, activity and action execute.",
+    "One legacy invocation input/output storage case remains skipped and needs replay-safe treatment of sensitive output.",
+    "No native candidate or Temporal scheduling validation is claimed by this local suite."
+  ]
+}

@@ -15,10 +15,15 @@ const actionMocks = vi.hoisted(() => ({
   sendQuoteReminder: vi.fn(),
 }));
 const getQuoteDocumentTemplatesMock = vi.hoisted(() => vi.fn());
+const navigationMocks = vi.hoisted(() => ({ searchParams: 'subtab=sent', push: vi.fn() }));
+const quoteFormPropsMock = vi.hoisted(() => ({ current: null as null | Record<string, unknown> }));
+const customTabsPropsMock = vi.hoisted(() => ({
+  current: null as null | { tabs: Array<{ id: string; label: string }> },
+}));
 
 vi.mock('next/navigation', () => ({
-  useRouter: () => ({ push: vi.fn() }),
-  useSearchParams: () => new URLSearchParams('subtab=sent'),
+  useRouter: () => ({ push: navigationMocks.push }),
+  useSearchParams: () => new URLSearchParams(navigationMocks.searchParams),
 }));
 
 vi.mock('../../../actions/quoteActions', () => ({
@@ -42,14 +47,20 @@ vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
     formatDate: (value: string) => value,
   }),
   useTranslation: () => ({
-    t: (key: string, options?: { defaultValue?: string }) => options?.defaultValue ?? key,
+    t: (key: string, options?: { defaultValue?: string; count?: number }) => {
+      const template = options?.defaultValue ?? key;
+      return options?.count === undefined
+        ? template
+        : template.replace('{{count}}', String(options.count));
+    },
   }),
 }));
 
 vi.mock('@alga-psa/ui/components/CustomTabs', () => ({
-  CustomTabs: ({ tabs, defaultTab }: { tabs: Array<{ id: string; content: React.ReactNode }>; defaultTab: string }) => (
-    <div>{tabs.find((tab) => tab.id === defaultTab)?.content}</div>
-  ),
+  CustomTabs: ({ tabs, defaultTab }: { tabs: Array<{ id: string; label: string; content: React.ReactNode }>; defaultTab: string }) => {
+    customTabsPropsMock.current = { tabs };
+    return <div>{tabs.find((tab) => tab.id === defaultTab)?.content}</div>;
+  },
 }));
 
 vi.mock('@alga-psa/ui/components/DataTable', () => ({
@@ -93,7 +104,18 @@ vi.mock('@alga-psa/ui/components/ClientNameCell', () => ({
 }));
 
 vi.mock('./QuoteApprovalDashboard', () => ({ default: () => null }));
-vi.mock('./QuoteForm', () => ({ default: () => null }));
+vi.mock('./QuoteForm', () => ({
+  default: (props: Record<string, unknown>) => {
+    quoteFormPropsMock.current = props;
+    return <div>
+      <input aria-label="Draft title" defaultValue="" />
+      <span data-testid="open-quote-id">{String(props.quoteId)}</span>
+      <button onClick={() => (props.onSaved as (id: string) => void)('quote-created-1')}>
+        Save test quote
+      </button>
+    </div>;
+  },
+}));
 vi.mock('./QuotePreviewPanel', () => ({ default: () => null }));
 vi.mock('./QuoteStatusBadge', () => ({ default: () => null }));
 
@@ -111,9 +133,28 @@ const sentQuote = {
   total_amount: 10000,
 };
 
+const draftQuote = {
+  ...sentQuote,
+  quote_id: 'quote-draft-1',
+  display_quote_number: 'Q-1000',
+  status: 'draft',
+  title: 'Draft quote',
+};
+
+const createDeferred = <T,>() => {
+  let resolve!: (value: T | PromiseLike<T>) => void;
+  const promise = new Promise<T>((res) => {
+    resolve = res;
+  });
+  return { promise, resolve };
+};
+
 describe('QuotesTab sent quote actions', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    vi.resetAllMocks();
+    navigationMocks.searchParams = 'subtab=sent';
+    quoteFormPropsMock.current = null;
+    customTabsPropsMock.current = null;
     actionMocks.listQuotes.mockResolvedValue({ data: [sentQuote] });
     getQuoteDocumentTemplatesMock.mockResolvedValue([]);
     actionMocks.resendQuote.mockResolvedValue({});
@@ -122,6 +163,7 @@ describe('QuotesTab sent quote actions', () => {
 
   afterEach(() => {
     cleanup();
+    vi.restoreAllMocks();
   });
 
   it('resends a sent quote with resendQuote instead of sendQuote', async () => {
@@ -140,5 +182,90 @@ describe('QuotesTab sent quote actions', () => {
 
     await waitFor(() => expect(actionMocks.sendQuoteReminder).toHaveBeenCalledWith(sentQuote.quote_id));
     expect(actionMocks.sendQuote).not.toHaveBeenCalled();
+  });
+
+  it('T001: a deep link carrying a source template id reaches QuoteForm through initialContext', async () => {
+    navigationMocks.searchParams = 'tab=quotes&quoteId=new&sourceTemplateId=tmpl-123';
+
+    render(<QuotesTab />);
+
+    await waitFor(() => expect(quoteFormPropsMock.current).not.toBeNull());
+    expect(quoteFormPropsMock.current).toMatchObject({
+      quoteId: 'new',
+      initialContext: { sourceTemplateId: 'tmpl-123' },
+    });
+  });
+
+  it('T002: a detail-view status change refreshes the list in the background without a loading flash', async () => {
+    navigationMocks.searchParams = 'tab=quotes&quoteId=quote-draft-1&mode=detail';
+    const refreshDeferred = createDeferred<{ data: unknown[] }>();
+    actionMocks.listQuotes.mockReturnValueOnce(refreshDeferred.promise);
+
+    const view = render(<QuotesTab />);
+
+    // Opening the detail form does not fetch the hidden list.
+    await waitFor(() => expect(quoteFormPropsMock.current).not.toBeNull());
+    expect(actionMocks.listQuotes).not.toHaveBeenCalled();
+
+    const onQuoteStatusChanged = quoteFormPropsMock.current?.onQuoteStatusChanged as
+      | (() => Promise<void>)
+      | undefined;
+    expect(typeof onQuoteStatusChanged).toBe('function');
+
+    const refresh = onQuoteStatusChanged!();
+    await waitFor(() => expect(actionMocks.listQuotes).toHaveBeenCalledTimes(1));
+
+    // While the background fetch is in flight the detail form stays mounted and
+    // the list-level loading card must not replace it.
+    expect(quoteFormPropsMock.current).not.toBeNull();
+    expect(screen.queryByText('Loading quotes...')).toBeNull();
+
+    refreshDeferred.resolve({ data: [sentQuote] });
+    await refresh;
+
+    // Simulate returning to the list: only searchParams change, so the mounted
+    // component fetches the list again and shows current membership and counts.
+    navigationMocks.searchParams = 'tab=quotes&subtab=active';
+    view.rerender(<QuotesTab />);
+
+    await waitFor(() => expect(screen.getByText('No quotes in this category.')).toBeTruthy());
+    expect(customTabsPropsMock.current?.tabs.find((tab) => tab.id === 'active')?.label).toBe('Active (0)');
+    await waitFor(() =>
+      expect(customTabsPropsMock.current?.tabs.find((tab) => tab.id === 'sent')?.label).toBe('Sent (1)'),
+    );
+  });
+
+  it('updates the saved quote URL without a server navigation, retains the form, and refreshes on return to the list', async () => {
+    const pushState = vi.spyOn(window.history, 'pushState');
+    navigationMocks.searchParams = 'tab=quotes&subtab=active';
+    actionMocks.listQuotes.mockResolvedValueOnce({ data: [draftQuote] });
+    const view = render(<QuotesTab />);
+    await screen.findByText('Draft quote');
+
+    navigationMocks.searchParams = 'tab=quotes&quoteId=new';
+    view.rerender(<QuotesTab />);
+    fireEvent.change(screen.getByLabelText('Draft title'), { target: { value: 'Keep this draft' } });
+    fireEvent.click(screen.getByText('Save test quote'));
+
+    expect(pushState).toHaveBeenCalledWith(null, '', '/msp/billing?tab=quotes&quoteId=quote-created-1&mode=edit');
+    expect(navigationMocks.push).not.toHaveBeenCalled();
+    expect(window.location.search).toBe('?tab=quotes&quoteId=quote-created-1&mode=edit');
+    // Before useSearchParams updates, keep the form mounted and avoid
+    // hidden-list server actions racing with the saved-quote transition.
+    expect((screen.getByLabelText('Draft title') as HTMLInputElement).value).toBe('Keep this draft');
+    expect(screen.queryByText('Loading quotes...')).toBeNull();
+    expect(actionMocks.listQuotes).toHaveBeenCalledTimes(1);
+    expect(getQuoteDocumentTemplatesMock).toHaveBeenCalledTimes(1);
+
+    navigationMocks.searchParams = 'tab=quotes&quoteId=quote-created-1&mode=edit';
+    view.rerender(<QuotesTab />);
+    expect(screen.getByTestId('open-quote-id').textContent).toBe('quote-created-1');
+    expect(actionMocks.listQuotes).toHaveBeenCalledTimes(1);
+
+    actionMocks.listQuotes.mockResolvedValueOnce({ data: [{ ...draftQuote, title: 'Newly saved quote' }] });
+    navigationMocks.searchParams = 'tab=quotes&subtab=active';
+    view.rerender(<QuotesTab />);
+    await screen.findByText('Newly saved quote');
+    expect(actionMocks.listQuotes).toHaveBeenCalledTimes(2);
   });
 });

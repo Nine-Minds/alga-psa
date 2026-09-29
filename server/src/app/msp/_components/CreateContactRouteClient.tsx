@@ -5,6 +5,7 @@ import { toast } from 'react-hot-toast';
 import type { IClient, IContact } from '@alga-psa/types';
 import QuickAddContact from '@alga-psa/clients/components/contacts/QuickAddContact';
 import { getAllClients } from '@alga-psa/clients/actions/queryActions';
+import type { CreateContactPrefill } from '@alga-psa/clients/lib/createContactRoute';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
@@ -16,9 +17,10 @@ import {
 
 interface CreateContactRouteClientProps {
   closeMode: QuickCreateRouteCloseMode;
+  prefill?: CreateContactPrefill;
 }
 
-export default function CreateContactRouteClient({ closeMode }: CreateContactRouteClientProps) {
+export default function CreateContactRouteClient({ closeMode, prefill }: CreateContactRouteClientProps) {
   const { t } = useTranslation('msp/core');
   const { close, router } = useQuickCreateRouteClose(closeMode, '/msp/contacts');
   const [clients, setClients] = useState<IClient[]>([]);
@@ -67,6 +69,8 @@ export default function CreateContactRouteClient({ closeMode }: CreateContactRou
       onClose={close}
       onContactAdded={handleContactAdded}
       clients={clients}
+      selectedClientId={prefill?.clientId ?? null}
+      initialPhoneNumber={prefill?.phone ?? null}
     />
   );
 }

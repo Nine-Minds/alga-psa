@@ -7,6 +7,7 @@ import type {
   ClientTimelineEventType,
 } from '../../../lib/commandCenterTypes';
 import { BentoTileEmpty } from '@alga-psa/ui/components/bento';
+import { useFormatters } from '@alga-psa/ui/lib/i18n/client';
 import { CardShell } from './PulseCards';
 import {
   getErrorMessage,
@@ -56,7 +57,9 @@ const markerColor: Partial<Record<ClientTimelineEventType, string>> = {
   rma_closed: 'border-green-300',
 };
 
-function relativeTime(iso: string, t: TFn): string {
+type FormatDate = (date: Date | string, options?: Intl.DateTimeFormatOptions) => string;
+
+function relativeTime(iso: string, t: TFn, formatDate: FormatDate): string {
   const deltaMs = Date.now() - new Date(iso).getTime();
   const days = Math.floor(deltaMs / 86_400_000);
   if (days <= 0) {
@@ -66,7 +69,9 @@ function relativeTime(iso: string, t: TFn): string {
       : t('clientCommandCenter.timeline.hoursAgo', { defaultValue: '{{count}}h ago', count: hours });
   }
   if (days < 30) return t('clientCommandCenter.timeline.daysAgo', { defaultValue: '{{count}}d ago', count: days });
-  return new Date(iso).toLocaleDateString();
+  // Older events fall back to an absolute date, which follows the tenant's
+  // country pattern like every other date — not the browser's locale.
+  return formatDate(iso, { year: 'numeric', month: '2-digit', day: '2-digit' });
 }
 
 export default function ClientTimelinePanel({ idPrefix, clientId, formatMoney, onEventClick, isAlgaDeskMode = false, t }: ClientTimelinePanelProps) {
@@ -75,6 +80,7 @@ export default function ClientTimelinePanel({ idPrefix, clientId, formatMoney, o
   const [filter, setFilter] = useState<FilterKey>('all');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { formatDate } = useFormatters();
 
   const filterTypes = isAlgaDeskMode ? ALGADESK_FILTER_TYPES : FILTER_TYPES;
 
@@ -201,7 +207,7 @@ export default function ClientTimelinePanel({ idPrefix, clientId, formatMoney, o
               {event.summary ? <span className="text-[rgb(var(--color-text-600))]"> · {event.summary}</span> : null}
               {event.amountCents != null ? <span className="text-[rgb(var(--color-text-500))]"> · {formatMoney(event.amountCents)}</span> : null}
             </div>
-            <div className="text-xs text-[rgb(var(--color-text-400))] mt-0.5">{relativeTime(event.occurredAt, t)}</div>
+            <div className="text-xs text-[rgb(var(--color-text-400))] mt-0.5">{relativeTime(event.occurredAt, t, formatDate)}</div>
           </li>
         ))}
       </ul>

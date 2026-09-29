@@ -11,7 +11,11 @@ const registerHandlersSource = read('server/src/lib/jobs/registerAllHandlers.ts'
 const jobsIndexSource = read('server/src/lib/jobs/index.ts');
 const jobActivitiesSource = read('ee/temporal-workflows/src/activities/job-activities.ts');
 const maintenanceFanoutSource = read('packages/jobs/src/lib/maintenanceJobFanout.ts');
-const setupSchedulesSource = read('ee/temporal-workflows/src/schedules/setupSchedules.ts');
+// setupSchedules applies the schedule policies; the maintenance cron catalog is shared from @alga-psa/types.
+const setupSchedulesSource = [
+  read('ee/temporal-workflows/src/schedules/setupSchedules.ts'),
+  read('packages/types/src/constants/maintenanceFanoutSchedules.ts'),
+].join('\n');
 const schedulingAppointmentActionsSource = read(
   'packages/scheduling/src/actions/appointmentRequestManagementActions.ts'
 );
@@ -76,7 +80,7 @@ describe('Teams meeting job wiring', () => {
       "import { teamsMeetingSweepHandler, TEAMS_MEETING_SWEEP_JOB } from './handlers/teamsMeetingSweepHandler';"
     );
     expect(maintenanceFanoutSource).toContain(
-      "[TEAMS_MEETING_SWEEP_JOB]: { scope: 'tenant', run: (tenantId) => teamsMeetingSweepHandler({ tenantId }) },"
+      "[TEAMS_MEETING_SWEEP_JOB]: { scope: 'tenant', run: (tenantId) => teamsMeetingSweepHandler({ tenantId }), tenants: tenantsWithActiveTeams },"
     );
   });
 

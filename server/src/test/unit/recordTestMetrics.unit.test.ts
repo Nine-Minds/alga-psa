@@ -66,6 +66,15 @@ describe('testCounts', () => {
     expect(counts).toMatchObject({ passed: 5, executed: 5, total: 354, runStatus: 'partial' });
     expect(counts!.passPct).toBe('');
   });
+
+  it('keeps an absent shard visible even when every observed test passed', () => {
+    const counts = testCounts({
+      executionCompleteness: 'incomplete',
+      numTotalTests: 100, numPassedTests: 100, numFailedTests: 0,
+      testResults: [{ assertionResults: [{ status: 'passed' }] }],
+    });
+    expect(counts).toMatchObject({ passed: 100, executed: 100, runStatus: 'partial', passPct: '' });
+  });
 });
 
 describe('runStatus', () => {

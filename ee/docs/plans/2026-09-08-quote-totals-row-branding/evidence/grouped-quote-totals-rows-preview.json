@@ -1,0 +1,15 @@
+{
+  "template": "standard-quote-grouped",
+  "edits": {
+    "monthly-total": {
+      "backgroundColor": "#0f766e",
+      "color": "#ecfdf5"
+    },
+    "onetime-total": {
+      "backgroundColor": "#9f1239",
+      "color": "#fff1f2"
+    }
+  },
+  "samples": 3,
+  "htmlBytes": 10677
+}

@@ -1,0 +1,75 @@
+{
+  "observedAt": "2026-09-07T12:58:00Z",
+  "latestPublishedRelease": {
+    "isDraft": false,
+    "isPrerelease": false,
+    "publishedAt": "2026-08-28T17:00:49Z",
+    "tagName": "v1.5.0",
+    "targetCommitish": "release/1.5.0",
+    "url": "https://github.com/Nine-Minds/alga-psa/releases/tag/v1.5.0"
+  },
+  "effectiveMainRules": [
+    {
+      "type": "deletion",
+      "ruleset_source_type": "Repository",
+      "ruleset_source": "Nine-Minds/alga-psa",
+      "ruleset_id": 7438254
+    },
+    {
+      "type": "non_fast_forward",
+      "ruleset_source_type": "Repository",
+      "ruleset_source": "Nine-Minds/alga-psa",
+      "ruleset_id": 7438254
+    },
+    {
+      "type": "required_status_checks",
+      "parameters": {
+        "strict_required_status_checks_policy": false,
+        "do_not_enforce_on_create": false,
+        "required_status_checks": [
+          {
+            "context": "Run ext-v2 guard and ESLint",
+            "integration_id": 15368
+          }
+        ]
+      },
+      "ruleset_source_type": "Repository",
+      "ruleset_source": "Nine-Minds/alga-psa",
+      "ruleset_id": 7438254
+    },
+    {
+      "type": "deletion",
+      "ruleset_source_type": "Repository",
+      "ruleset_source": "Nine-Minds/alga-psa",
+      "ruleset_id": 13189070
+    },
+    {
+      "type": "non_fast_forward",
+      "ruleset_source_type": "Repository",
+      "ruleset_source": "Nine-Minds/alga-psa",
+      "ruleset_id": 13189070
+    },
+    {
+      "type": "required_status_checks",
+      "parameters": {
+        "strict_required_status_checks_policy": false,
+        "do_not_enforce_on_create": false,
+        "required_status_checks": [
+          {
+            "context": "Check for new circular dependencies",
+            "integration_id": 15368
+          }
+        ]
+      },
+      "ruleset_source_type": "Repository",
+      "ruleset_source": "Nine-Minds/alga-psa",
+      "ruleset_id": 13189070
+    }
+  ],
+  "limits": [
+    "Latest published release is not confirmation of the previous supported upgrade baseline.",
+    "Deployment target and release promotion entry point remain unspecified.",
+    "Asked user for baseline and target; no assumption has been used to modify a deployment.",
+    "This read-only refresh does not establish enforcement completion."
+  ]
+}

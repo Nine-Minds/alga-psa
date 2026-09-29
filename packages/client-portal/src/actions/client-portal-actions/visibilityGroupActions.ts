@@ -16,6 +16,7 @@ import {
 const visibilityGroupSchema = z.object({
   name: z.string().trim().min(1, 'Group name is required'),
   description: z.string().trim().nullable().optional(),
+  ticketScope: z.enum(['client', 'contact']).default('client'),
   boardIds: z.array(z.string().uuid()).default([]),
   clientId: z.string().uuid().optional(),
   contactId: z.string().uuid().optional()
@@ -39,6 +40,7 @@ type VisibilityGroup = {
   client_id: string;
   name: string;
   description: string | null;
+  ticket_scope: 'client' | 'contact';
   board_ids: string[];
   board_count: number;
   assigned_contact_count: number;
@@ -275,7 +277,7 @@ export const getClientPortalVisibilityGroups = withAuth(async (
         .where({
           client_id: clientId
         })
-        .select('group_id', 'client_id', 'name', 'description')
+        .select('group_id', 'client_id', 'name', 'description', 'ticket_scope')
         .orderBy('name');
 
       const boardCounts = groups.length
@@ -450,7 +452,7 @@ export const getClientPortalVisibilityContacts = withAuth(async (
 export const createClientPortalVisibilityGroup = withAuth(async (
   currentUser: IUserWithRoles,
   { tenant }: { tenant: string },
-  input: z.infer<typeof visibilityGroupSchema>
+  input: z.input<typeof visibilityGroupSchema>
 ): Promise<{ group_id: string } | ClientPortalVisibilityGroupActionError> => {
   try {
     const payload = visibilityGroupSchema.parse(input);
@@ -473,7 +475,8 @@ export const createClientPortalVisibilityGroup = withAuth(async (
           tenant,
           client_id: clientId,
           name: payload.name,
-          description: payload.description
+          description: payload.description,
+          ticket_scope: payload.ticketScope
         })
         .returning('group_id');
 
@@ -507,7 +510,7 @@ export const updateClientPortalVisibilityGroup = withAuth(async (
   currentUser: IUserWithRoles,
   { tenant }: { tenant: string },
   groupId: string,
-  input: Omit<z.infer<typeof visibilityGroupSchema>, 'clientId' | 'contactId'>
+  input: Omit<z.input<typeof visibilityGroupSchema>, 'clientId' | 'contactId'>
 ): Promise<void | ClientPortalVisibilityGroupActionError> => {
   try {
     visibilityGroupIdSchema.parse({ groupId });
@@ -535,6 +538,7 @@ export const updateClientPortalVisibilityGroup = withAuth(async (
         .update({
           name: payload.name,
           description: payload.description,
+          ...(input.ticketScope !== undefined ? { ticket_scope: payload.ticketScope } : {}),
           updated_at: new Date().toISOString()
         });
 

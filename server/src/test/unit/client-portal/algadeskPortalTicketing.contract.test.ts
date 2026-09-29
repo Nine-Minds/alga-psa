@@ -36,7 +36,7 @@ describe('AlgaDesk client portal ticketing contracts', () => {
     const ticketActions = read('../packages/client-portal/src/actions/client-portal-actions/client-tickets.ts');
 
     expect(ticketActions).toContain('resolvePortalVisibility');
-    expect(ticketActions).toContain('applyVisibilityBoardFilter');
+    expect(ticketActions).toContain('applyTicketVisibilityFilter');
     expect(ticketActions).toContain('Selected visibility group does not allow any boards');
   });
 

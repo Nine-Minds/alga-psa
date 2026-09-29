@@ -1,0 +1,529 @@
+[
+  {
+    "id": "F001",
+    "description": "stockPalette.ts exports the stock token map with the same keys and values as server/migrations/utils/templates/_shared/constants.cjs",
+    "implemented": true,
+    "commitGroup": "palette-engine",
+    "prdRefs": [
+      "FR3",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F002",
+    "description": "resolveEmailPalette derives dark, outerBg, footerBg, cardBorder, infoBoxBg, infoBoxBorder, cardShadow, badgeBg and gradient from primary and secondary",
+    "implemented": true,
+    "commitGroup": "palette-engine",
+    "prdRefs": [
+      "FR2"
+    ]
+  },
+  {
+    "id": "F003",
+    "description": "resolveEmailPalette in single-color mode (secondary null) derives the gradient end from primary lightened 18%",
+    "implemented": true,
+    "commitGroup": "palette-engine",
+    "prdRefs": [
+      "FR2"
+    ]
+  },
+  {
+    "id": "F004",
+    "description": "resolveEmailPalette applies per-token overrides on top of derived values",
+    "implemented": true,
+    "commitGroup": "palette-engine",
+    "prdRefs": [
+      "FR2"
+    ]
+  },
+  {
+    "id": "F005",
+    "description": "applyEmailPalette replaces every stock token occurrence, case-insensitively for hex and tolerant of spacing variants in rgba and 'background: #' forms",
+    "implemented": true,
+    "commitGroup": "palette-engine",
+    "prdRefs": [
+      "FR3"
+    ]
+  },
+  {
+    "id": "F006",
+    "description": "applyEmailPalette leaves non-palette colors (status ambers, comment-box blues, text grays) untouched",
+    "implemented": true,
+    "commitGroup": "palette-engine",
+    "prdRefs": [
+      "FR3"
+    ]
+  },
+  {
+    "id": "F007",
+    "description": "applyEmailPalette rewrites auth templates that use <style> blocks as well as inline-style templates",
+    "implemented": true,
+    "commitGroup": "palette-engine",
+    "prdRefs": [
+      "FR3"
+    ]
+  },
+  {
+    "id": "F008",
+    "description": "applyEmailPalette accepts a previously applied token map as 'from' so a re-apply recolors rows the tool wrote earlier",
+    "implemented": true,
+    "commitGroup": "palette-engine",
+    "prdRefs": [
+      "FR3",
+      "FR6"
+    ]
+  },
+  {
+    "id": "F009",
+    "description": "classifyTenantTemplate returns 'system' when no tenant row exists",
+    "implemented": true,
+    "commitGroup": "classification",
+    "prdRefs": [
+      "FR4"
+    ]
+  },
+  {
+    "id": "F010",
+    "description": "classifyTenantTemplate returns 'branded' when tenant HTML equals the system HTML with appliedPalette substituted and subjects match",
+    "implemented": true,
+    "commitGroup": "classification",
+    "prdRefs": [
+      "FR4"
+    ]
+  },
+  {
+    "id": "F011",
+    "description": "classifyTenantTemplate returns 'customized' with a differs hint listing colors, text and/or subject",
+    "implemented": true,
+    "commitGroup": "classification",
+    "prdRefs": [
+      "FR4"
+    ]
+  },
+  {
+    "id": "F012",
+    "description": "classifyTenantTemplate returns 'no-stock-colors' when the tenant HTML contains no stock or applied tokens",
+    "implemented": true,
+    "commitGroup": "classification",
+    "prdRefs": [
+      "FR4"
+    ]
+  },
+  {
+    "id": "F013",
+    "description": "suggestEmailPalette returns customTheme.light primary/secondary with source 'custom-theme' when a custom theme is configured",
+    "implemented": true,
+    "commitGroup": "suggestion",
+    "prdRefs": [
+      "FR5",
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F014",
+    "description": "suggestEmailPalette returns the CUSTOM_THEME_PRESETS light primary/secondary with source 'theme-pair' when a non-default pair is picked",
+    "implemented": true,
+    "commitGroup": "suggestion",
+    "prdRefs": [
+      "FR5"
+    ]
+  },
+  {
+    "id": "F015",
+    "description": "suggestEmailPalette returns branding primary/secondary with source 'portal-branding' when only client portal colors are set",
+    "implemented": true,
+    "commitGroup": "suggestion",
+    "prdRefs": [
+      "FR5"
+    ]
+  },
+  {
+    "id": "F016",
+    "description": "suggestEmailPalette returns the stock palette with source 'default' otherwise",
+    "implemented": true,
+    "commitGroup": "suggestion",
+    "prdRefs": [
+      "FR5"
+    ]
+  },
+  {
+    "id": "F017",
+    "description": "the default 'alga' pair does not count as a picked theme for suggestion purposes",
+    "implemented": true,
+    "commitGroup": "suggestion",
+    "prdRefs": [
+      "FR5"
+    ]
+  },
+  {
+    "id": "F018",
+    "description": "saveEmailBrandingAction persists settings.emailBranding under withAuth with settings:update",
+    "implemented": true,
+    "commitGroup": "settings-actions",
+    "prdRefs": [
+      "FR7",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F019",
+    "description": "saveEmailBrandingAction rejects malformed hex values",
+    "implemented": true,
+    "commitGroup": "settings-actions",
+    "prdRefs": [
+      "FR7"
+    ]
+  },
+  {
+    "id": "F020",
+    "description": "saveEmailBrandingAction strips logo and hideAttribution on Community",
+    "implemented": true,
+    "commitGroup": "settings-actions",
+    "prdRefs": [
+      "FR7"
+    ]
+  },
+  {
+    "id": "F021",
+    "description": "getEmailBrandingStatusAction returns saved palette, suggestion with source, and per-template classification for the tenant's languages",
+    "implemented": true,
+    "commitGroup": "settings-actions",
+    "prdRefs": [
+      "FR9",
+      "FR4"
+    ]
+  },
+  {
+    "id": "F022",
+    "description": "getEmailBrandingStatusAction lists system template names newer than appliedAt with no tenant row",
+    "implemented": true,
+    "commitGroup": "settings-actions",
+    "prdRefs": [
+      "FR9"
+    ]
+  },
+  {
+    "id": "F023",
+    "description": "applyEmailBrandingAction inserts branded clones for 'system' selections with system_template_id set",
+    "implemented": true,
+    "commitGroup": "apply-action",
+    "prdRefs": [
+      "FR6"
+    ]
+  },
+  {
+    "id": "F024",
+    "description": "applyEmailBrandingAction updates 'branded' rows by rewriting from appliedPalette to the new map",
+    "implemented": true,
+    "commitGroup": "apply-action",
+    "prdRefs": [
+      "FR6"
+    ]
+  },
+  {
+    "id": "F025",
+    "description": "applyEmailBrandingAction rewrites ticked 'customized' rows replacing only stock/applied tokens",
+    "implemented": true,
+    "commitGroup": "apply-action",
+    "prdRefs": [
+      "FR6"
+    ]
+  },
+  {
+    "id": "F026",
+    "description": "applyEmailBrandingAction skips unticked customized rows and no-stock-colors rows and reports them",
+    "implemented": true,
+    "commitGroup": "apply-action",
+    "prdRefs": [
+      "FR6"
+    ]
+  },
+  {
+    "id": "F027",
+    "description": "applyEmailBrandingAction returns written/skipped/failed with per-row reasons",
+    "implemented": true,
+    "commitGroup": "apply-action",
+    "prdRefs": [
+      "FR6"
+    ]
+  },
+  {
+    "id": "F028",
+    "description": "applyEmailBrandingAction records appliedAt and appliedPalette after success",
+    "implemented": true,
+    "commitGroup": "apply-action",
+    "prdRefs": [
+      "FR6",
+      "FR1"
+    ]
+  },
+  {
+    "id": "F029",
+    "description": "applyEmailBrandingAction batches inserts and updates per language inside a transaction",
+    "implemented": true,
+    "commitGroup": "apply-action",
+    "prdRefs": [
+      "Non-functional Requirements"
+    ]
+  },
+  {
+    "id": "F030",
+    "description": "removeEmailBrandingAction deletes only rows classified branded and clears appliedAt",
+    "implemented": true,
+    "commitGroup": "apply-action",
+    "prdRefs": [
+      "FR12"
+    ]
+  },
+  {
+    "id": "F031",
+    "description": "Email branding card renders on its own Email Branding tab (gated behind feature flag release-v1-6-feature) with id email-branding-card, colors picked via the shared ColorPicker (operator amendment 2026-09-10)",
+    "implemented": true,
+    "commitGroup": "brand-panel-ui",
+    "prdRefs": [
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F032",
+    "description": "panel prefills primary/secondary from the suggestion and shows a source chip naming the source",
+    "implemented": true,
+    "commitGroup": "brand-panel-ui",
+    "prdRefs": [
+      "UX / UI Notes",
+      "FR5"
+    ]
+  },
+  {
+    "id": "F033",
+    "description": "panel shows 'Saved' chip and a 'Use suggested colors' link when a saved palette differs from the suggestion",
+    "implemented": true,
+    "commitGroup": "brand-panel-ui",
+    "prdRefs": [
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F034",
+    "description": "single-color toggle hides the secondary input and switches derivation",
+    "implemented": true,
+    "commitGroup": "brand-panel-ui",
+    "prdRefs": [
+      "UX / UI Notes",
+      "FR2"
+    ]
+  },
+  {
+    "id": "F035",
+    "description": "derived tokens render as read-only swatches with an Adjust disclosure exposing each as an overridable color",
+    "implemented": true,
+    "commitGroup": "brand-panel-ui",
+    "prdRefs": [
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F036",
+    "description": "two preview iframes re-render from system template HTML with the draft palette on every change, with no server writes",
+    "implemented": true,
+    "commitGroup": "brand-panel-ui",
+    "prdRefs": [
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F037",
+    "description": "Save palette persists via saveEmailBrandingAction and registers with UnsavedChangesProvider while dirty",
+    "implemented": true,
+    "commitGroup": "brand-panel-ui",
+    "prdRefs": [
+      "FR7"
+    ]
+  },
+  {
+    "id": "F038",
+    "description": "'Apply to templates' opens apply-email-branding-dialog with language checkboxes defaulting to the tenant's languages",
+    "implemented": true,
+    "commitGroup": "scope-apply-ui",
+    "prdRefs": [
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F039",
+    "description": "dialog groups templates by state: system and branded preselected, customized unchecked with differs hint, no-stock-colors disabled",
+    "implemented": true,
+    "commitGroup": "scope-apply-ui",
+    "prdRefs": [
+      "UX / UI Notes",
+      "FR4"
+    ]
+  },
+  {
+    "id": "F040",
+    "description": "select all / none per group and a live count in the confirm button",
+    "implemented": true,
+    "commitGroup": "scope-apply-ui",
+    "prdRefs": [
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F041",
+    "description": "confirm calls applyEmailBrandingAction and replaces the table with a written/skipped/failed summary including per-row reasons",
+    "implemented": true,
+    "commitGroup": "scope-apply-ui",
+    "prdRefs": [
+      "FR6"
+    ]
+  },
+  {
+    "id": "F042",
+    "description": "template list refreshes after apply so branded rows show as customized in the existing table",
+    "implemented": true,
+    "commitGroup": "scope-apply-ui",
+    "prdRefs": [
+      "FR6"
+    ]
+  },
+  {
+    "id": "F043",
+    "description": "edit dialog shows 'Apply my palette' (apply-palette-to-template) when a palette is saved, disabled otherwise",
+    "implemented": true,
+    "commitGroup": "editor-integration",
+    "prdRefs": [
+      "FR8"
+    ]
+  },
+  {
+    "id": "F044",
+    "description": "clicking it rewrites the editor HTML client-side from stock/applied tokens to the saved palette without saving",
+    "implemented": true,
+    "commitGroup": "editor-integration",
+    "prdRefs": [
+      "FR8"
+    ]
+  },
+  {
+    "id": "F045",
+    "description": "Customize (clone) on a template starts from the branded HTML when a palette is saved",
+    "implemented": true,
+    "commitGroup": "editor-integration",
+    "prdRefs": [
+      "Users and Primary Flows"
+    ]
+  },
+  {
+    "id": "F046",
+    "description": "banner on the Email templates tab lists the count of system templates added since appliedAt without tenant rows",
+    "implemented": true,
+    "commitGroup": "new-template-banner",
+    "prdRefs": [
+      "FR9",
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F047",
+    "description": "banner button opens the scope dialog with only those templates preselected",
+    "implemented": true,
+    "commitGroup": "new-template-banner",
+    "prdRefs": [
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F048",
+    "description": "banner dismiss hides it for the session and it returns when the count changes",
+    "implemented": true,
+    "commitGroup": "new-template-banner",
+    "prdRefs": [
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F049",
+    "description": "Enterprise section renders logo switch, variant picker and attribution switch only when edition is Enterprise",
+    "implemented": true,
+    "commitGroup": "ee-logo-attribution",
+    "prdRefs": [
+      "UX / UI Notes",
+      "FR10",
+      "FR11"
+    ]
+  },
+  {
+    "id": "F050",
+    "description": "variant picker offers only uploaded variants, preferring wide, with a link to Client Portal branding when none exist",
+    "implemented": true,
+    "commitGroup": "ee-logo-attribution",
+    "prdRefs": [
+      "FR10"
+    ]
+  },
+  {
+    "id": "F051",
+    "description": "apply inserts a data-alga-brand-logo <img> in the header cell of layout templates and before the first heading in auth templates",
+    "implemented": true,
+    "commitGroup": "ee-logo-attribution",
+    "prdRefs": [
+      "FR10"
+    ]
+  },
+  {
+    "id": "F052",
+    "description": "re-apply replaces an existing data-alga-brand-logo image instead of adding a second",
+    "implemented": true,
+    "commitGroup": "ee-logo-attribution",
+    "prdRefs": [
+      "FR10"
+    ]
+  },
+  {
+    "id": "F053",
+    "description": "apply with hideAttribution removes 'Powered by AlgaPSA' and its separator in both footer variants",
+    "implemented": true,
+    "commitGroup": "ee-logo-attribution",
+    "prdRefs": [
+      "FR11"
+    ]
+  },
+  {
+    "id": "F054",
+    "description": "re-enabling attribution restores the system footer for branded rows",
+    "implemented": true,
+    "commitGroup": "ee-logo-attribution",
+    "prdRefs": [
+      "FR11"
+    ]
+  },
+  {
+    "id": "F055",
+    "description": "server strips logo and hideAttribution on Community even if present in the saved palette",
+    "implemented": true,
+    "commitGroup": "ee-logo-attribution",
+    "prdRefs": [
+      "FR10",
+      "FR11",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F056",
+    "description": "all new strings live under notifications.emailBranding.* in msp/settings for every shipped locale",
+    "implemented": true,
+    "commitGroup": "i18n-docs",
+    "prdRefs": [
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F057",
+    "description": "nineminds docs: email section added to themes-and-white-label and apply flow added to the email templates doc",
+    "implemented": false,
+    "commitGroup": "i18n-docs",
+    "prdRefs": [
+      "Rollout / Migration"
+    ]
+  }
+]

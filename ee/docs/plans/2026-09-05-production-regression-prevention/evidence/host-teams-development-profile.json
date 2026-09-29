@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "scope": "Teams development setup UI and wire-level credential recovery",
+  "status": "passed",
+  "baseRevision": "67d3b6689bfccde839a64beeeaf30c859ce75793",
+  "workingTreeDirty": true,
+  "configuration": {
+    "nodeEnv": "development",
+    "teamsEmulatorMode": true,
+    "releaseValidation": false,
+    "appPort": 53016
+  },
+  "stats": {
+    "startTime": "2026-09-08T06:05:36.628Z",
+    "duration": 86972.198,
+    "expected": 1,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  },
+  "assertions": [
+    "Profile creation and Teams draft save through actual UI",
+    "Provider token503 observed in emulator request history and visible validation failure",
+    "Provider token200 and UI validation recovery",
+    "Same saved profile and install status after reload; no duplicate profile"
+  ],
+  "hashes": {
+    "e2e-tests/test-results/local/results.json": "f90764e6c4c131bf9b21104fd1f3743be201c5b1fd98381f1b57318e64c83d69"
+  },
+  "limitations": [
+    "Development configuration only; production Teams override guard remains intact.",
+    "Uncommitted test changes and shared helper readiness adjustment; not clean-source CI evidence.",
+    "Does not cover Teams meeting creation, bot messaging or user SSO/account linking."
+  ]
+}

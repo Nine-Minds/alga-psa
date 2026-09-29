@@ -8,6 +8,23 @@ import type { Knex } from 'knex';
 const tenantScopedTable = (trx: Knex | Knex.Transaction, tenant: string, table: string): Knex.QueryBuilder =>
   trx(table).where(`${table}.tenant`, tenant);
 
+const countProjectTaskWorkItems = (table: 'schedule_entries' | 'time_entries') => {
+  return async (trx: Knex | Knex.Transaction, options: { tenant: string; entityId: string }) => {
+    const taskIds = trx('project_tasks')
+      .where('project_tasks.tenant', options.tenant)
+      .join('project_phases', function () {
+        this.on('project_tasks.phase_id', '=', 'project_phases.phase_id')
+          .andOn('project_phases.tenant', '=', 'project_tasks.tenant');
+      })
+      .where({ 'project_phases.project_id': options.entityId })
+      .select('project_tasks.task_id');
+    const result = await tenantScopedTable(trx, options.tenant, table)
+      .where({ work_item_type: 'project_task' }).whereIn('work_item_id', taskIds)
+      .count<{ count: string }>('* as count').first();
+    return Number(result?.count ?? 0);
+  };
+};
+
 const countDocumentAssociations = (entityType: string) => {
   return async (trx: Knex | Knex.Transaction, options: { tenant: string; entityId: string }) => {
     const result = await tenantScopedTable(trx, options.tenant, 'document_associations')
@@ -286,23 +303,11 @@ export const DELETION_CONFIGS: Record<string, EntityDeletionConfig> = {
         type: 'schedule_entry',
         table: 'schedule_entries',
         label: 'schedule entry',
-        countQuery: async (trx, options) => {
-          const taskIds = await trx('project_tasks')
-            .where('project_tasks.tenant', options.tenant)
-            .join('project_phases', function () {
-              this.on('project_tasks.phase_id', '=', 'project_phases.phase_id')
-                .andOn('project_phases.tenant', '=', 'project_tasks.tenant');
-            })
-            .where({ 'project_phases.project_id': options.entityId })
-            .pluck('project_tasks.task_id');
-          if (taskIds.length === 0) return 0;
-          const result = await tenantScopedTable(trx, options.tenant, 'schedule_entries')
-            .where({ work_item_type: 'project_task' })
-            .whereIn('work_item_id', taskIds)
-            .count<{ count: string }>('* as count')
-            .first();
-          return Number(result?.count ?? 0);
-        }
+        countQuery: countProjectTaskWorkItems('schedule_entries')
+      },
+      {
+        type: 'time_entry', table: 'time_entries', label: 'time entry',
+        countQuery: countProjectTaskWorkItems('time_entries')
       },
       { type: 'project_material', table: 'project_materials', foreignKey: 'project_id', label: 'material' },
       {

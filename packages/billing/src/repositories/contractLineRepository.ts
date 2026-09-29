@@ -1,4 +1,5 @@
 import { Knex } from 'knex';
+import { withUnitCode } from '@alga-psa/core/unitOfMeasure';
 import { v4 as uuidv4 } from 'uuid';
 
 import { tenantDb } from '@alga-psa/db';
@@ -13,6 +14,7 @@ import {
   normalizeTemplateRecurringStorage,
 } from '@alga-psa/shared/billingClients/recurrenceStorageModel';
 import { cloneTemplateLinePools } from '@alga-psa/shared/billingClients/templateClone';
+import { resolveClonedRate } from '../lib/billing/pricing/resolveFixedLineRate';
 
 export type DetailedContractLine = IContractLineMapping & {
   contract_line_name?: string;
@@ -45,6 +47,7 @@ function mapContractLineRow(row: any): IContractLineMapping {
     contract_line_id: recurringStorage.contract_line_id,
     display_order: recurringStorage.display_order ?? 0,
     custom_rate: recurringStorage.custom_rate ?? null,
+    rate_provenance: row.rate_provenance ?? null,
     billing_timing: recurringStorage.billing_timing,
     cadence_owner: recurringStorage.cadence_owner,
     location_id: row.location_id ?? null,
@@ -85,6 +88,7 @@ export async function fetchContractLineMappings(
       'contract_line_id',
       'display_order',
       'custom_rate',
+      'rate_provenance',
       'billing_timing',
       'cadence_owner',
       'location_id',
@@ -160,6 +164,7 @@ export async function fetchDetailedContractLines(
       'cl.contract_line_id',
       'cl.display_order',
       'cl.custom_rate',
+      'cl.rate_provenance',
       'cl.billing_timing',
       'cl.cadence_owner',
       'cl.location_id',
@@ -299,10 +304,20 @@ async function cloneTemplateLineToContract(
 
   const now = trx.fn.now();
   const newContractLineId = uuidv4();
-  const effectiveRate =
-    customRate ??
-    templateLine.custom_rate ??
-    (templateFixedConfig?.base_rate != null ? Number(templateFixedConfig.base_rate) : null);
+  const templateRate =
+    templateLine.custom_rate != null ? Number(templateLine.custom_rate) : null;
+  const templateBaseRate =
+    templateFixedConfig?.base_rate != null
+      ? Number(templateFixedConfig.base_rate)
+      : null;
+  const clonedRate = resolveClonedRate({
+    explicitRate: customRate ?? null,
+    templateRate,
+    templateBaseRate,
+    // Templates carry no provenance label; a stored template rate is an
+    // intentional snapshot (custom), a null one follows the live catalog.
+    templateProvenance: templateRate != null ? "custom" : "inherited",
+  });
   const templateBillingCycleAlignment = resolveBillingCycleAlignmentForCompatibility({
     billingCycleAlignment: templateFixedConfig?.billing_cycle_alignment,
     enableProration: templateFixedConfig?.enable_proration,
@@ -336,7 +351,8 @@ async function cloneTemplateLineToContract(
     created_at: now,
     updated_at: now,
     is_template: false,
-    custom_rate: effectiveRate,
+    custom_rate: clonedRate.rateCents,
+    rate_provenance: clonedRate.provenance,
     display_order: templateLine.display_order ?? 0,
     billing_timing: templateRecurringStorage.billing_timing,
     cadence_owner: templateRecurringStorage.cadence_owner,
@@ -449,7 +465,7 @@ async function cloneTemplateLineToContract(
         await tenantScopedTable(trx, tenant, 'contract_line_service_usage_config').insert({
           tenant,
           config_id: newConfigId,
-          unit_of_measure: usageConfig.unit_of_measure,
+          ...withUnitCode({ unit_of_measure: usageConfig.unit_of_measure, unit_code: usageConfig.unit_code }),
           enable_tiered_pricing: usageConfig.enable_tiered_pricing,
           created_at: usageConfig.created_at ?? now,
           updated_at: now,
@@ -555,9 +571,17 @@ export async function updateContractLine(
   const template = await isTemplateContract(knex, tenant, contractId);
   const payload = { ...updateData };
 
-  if (payload.custom_rate === undefined) {
-    payload.custom_rate = null;
-  }
+  // A partial update that omits custom_rate must not null it: nulling a
+  // negotiated rate silently destroys it, and the provenance CHECK would
+  // reject the inconsistent state anyway. Only touch the rate when the caller
+  // actually supplied one, and relabel provenance to match.
+  const rateUpdate =
+    payload.custom_rate === undefined
+      ? {}
+      : {
+          custom_rate: payload.custom_rate,
+          rate_provenance: payload.custom_rate === null ? "inherited" : "custom",
+        };
 
   if (template) {
     const existingTemplateLine = await tenantScopedTable(knex, tenant, 'contract_template_lines')
@@ -573,7 +597,9 @@ export async function updateContractLine(
     await tenantScopedTable(knex, tenant, 'contract_template_lines')
       .where({ template_id: contractId, template_line_id: contractLineId })
       .update({
-        custom_rate: payload.custom_rate ?? null,
+        ...(payload.custom_rate === undefined
+          ? {}
+          : { custom_rate: payload.custom_rate }),
         display_order: payload.display_order ?? undefined,
         billing_timing: recurringAuthoringPolicy.billingTiming,
         cadence_owner: recurringAuthoringPolicy.cadenceOwner,
@@ -608,7 +634,7 @@ export async function updateContractLine(
   await tenantScopedTable(knex, tenant, 'contract_lines')
     .where({ contract_id: contractId, contract_line_id: contractLineId })
     .update({
-      custom_rate: payload.custom_rate ?? null,
+      ...rateUpdate,
       display_order: payload.display_order ?? undefined,
       billing_timing: recurringAuthoringPolicy.billingTiming,
       cadence_owner: recurringAuthoringPolicy.cadenceOwner,
@@ -687,11 +713,12 @@ export async function updateContractLineRate(
     fallbackBillingTiming: existingLine?.billing_timing,
   });
 
-  await tenantScopedTable(knex, tenant, 'contract_lines')
-    .where({ contract_id: contractId, contract_line_id: contractLineId })
-    .update({
-      custom_rate: rate,
-      billing_timing: recurringAuthoringPolicy.billingTiming,
-      updated_at: now,
-    });
+    await tenantScopedTable(knex, tenant, 'contract_lines')
+      .where({ contract_id: contractId, contract_line_id: contractLineId })
+      .update({
+        custom_rate: rate,
+        rate_provenance: rate === null ? 'inherited' : 'custom',
+        billing_timing: recurringAuthoringPolicy.billingTiming,
+        updated_at: now,
+      });
 }

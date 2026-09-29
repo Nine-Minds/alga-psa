@@ -310,8 +310,8 @@ export const checkImportConflicts = withAuth(async (
   const { knex: db } = await createTenantKnex();
 
   // Wrap in transaction
+  let referenceData = await getReferenceData(dataType, filters);
   return await withTransaction(db, async (trx) => {
-    let referenceData = await getReferenceData(dataType, filters);
 
     if (referenceIds && referenceIds.length > 0) {
       referenceData = referenceData.filter((item: any) =>
@@ -426,8 +426,8 @@ export const importReferenceData = withAuth(async (
   const { knex: db } = await createTenantKnex();
   
   // Wrap everything in a transaction
+  let referenceData = await getReferenceData(dataType, filters);
   return await withTransaction(db, async (trx) => {
-    let referenceData = await getReferenceData(dataType, filters);
 
     if (referenceIds && referenceIds.length > 0) {
       referenceData = referenceData.filter((item: any) =>
@@ -458,6 +458,10 @@ export const importReferenceData = withAuth(async (
       let nameField = 'name';
       if (item.priority_name !== undefined) nameField = 'priority_name';
       else if (item.type_name !== undefined) nameField = 'type_name';
+      // Service and ticket categories carry `category_name`, not `name`; writing
+      // the wrong field would insert an unknown column and abort the whole
+      // import transaction (Postgres poisons the tx on any error).
+      else if (item.category_name !== undefined) nameField = 'category_name';
       mappedData[nameField] = resolution.newName;
     }
     
@@ -666,8 +670,8 @@ export const getAvailableReferenceData = withAuth(async (user, { tenant }, dataT
   const { knex: db } = await createTenantKnex();
 
   // Wrap in transaction to avoid multiple connections
+  const referenceData = await getReferenceData(dataType, filters);
   return await withTransaction(db, async (trx) => {
-    const referenceData = await getReferenceData(dataType, filters);
     const config = referenceDataConfigs[dataType];
 
     const availableItems: any[] = [];

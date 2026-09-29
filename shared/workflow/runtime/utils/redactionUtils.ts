@@ -99,6 +99,11 @@ function applyJsonPointerRedaction(value: unknown, pointer: string): unknown {
         cursor[key] = REDACTED;
       }
     } else {
+      // Copy each ancestor before descending. A shallow root copy would
+      // redact the original action input through its shared nested objects.
+      const child = cursor[key];
+      if (!child || typeof child !== 'object') return cloned;
+      cursor[key] = Array.isArray(child) ? [...child] : { ...child };
       cursor = cursor[key];
     }
   }
@@ -112,12 +117,27 @@ export function safeSerialize(value: unknown): unknown {
 
 export function enforceSnapshotSize<T>(value: T, maxBytes: number): T | { truncated: true; size: number; max: number } {
   const serialized = JSON.stringify(value);
-  if (serialized.length <= maxBytes) {
+  const size = new TextEncoder().encode(serialized).byteLength;
+  if (size <= maxBytes) {
     return value;
   }
   return {
     truncated: true,
-    size: serialized.length,
+    size,
     max: maxBytes
   } as { truncated: true; size: number; max: number };
+}
+
+
+/** Build diagnostic data before crossing an activity boundary; never mutate execution state. */
+export function buildWorkflowDiagnosticSnapshot(scopes: {
+  payload: Record<string, unknown>; workflow: Record<string, unknown>;
+  lexical: Array<Record<string, unknown>>; meta?: Record<string, unknown>;
+  error?: Record<string, unknown> | null;
+}): Record<string, unknown> {
+  const pointers = Array.isArray(scopes.meta?.redactions)
+    ? scopes.meta.redactions.filter((path): path is string => typeof path === 'string') : [];
+  const envelope = { payload: scopes.payload, vars: scopes.workflow, lexical: scopes.lexical,
+    meta: scopes.meta ?? {}, error: scopes.error ?? null };
+  return enforceSnapshotSize(applyRedactions(safeSerialize(envelope), pointers), 256 * 1024) as Record<string, unknown>;
 }

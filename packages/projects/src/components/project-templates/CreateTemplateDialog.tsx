@@ -18,6 +18,8 @@ import {
 import { createTemplateFromProject, getTemplateCategories } from '../../actions/projectTemplateActions';
 import { getProjects } from '../../actions/projectActions';
 import { useTranslation } from 'react-i18next';
+import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
+import { useUnsavedChangesGuard } from '../../lib/useUnsavedChangesGuard';
 
 interface CreateTemplateDialogProps {
   onClose: () => void;
@@ -28,6 +30,15 @@ interface CreateTemplateDialogProps {
 function isReturnedActionError(value: unknown): value is { actionError: string } | { permissionError: string } {
   return isActionMessageError(value) || isActionPermissionError(value);
 }
+
+const DEFAULT_COPY_OPTIONS = {
+  copyPhases: true,
+  copyStatuses: true,
+  copyTasks: true,
+  copyAssignments: false,
+  copyChecklists: true,
+  copyServices: true
+};
 
 const CreateTemplateDialog: React.FC<CreateTemplateDialogProps> = ({ onClose, onTemplateCreated, initialProjectId }) => {
   const { t } = useTranslation(['features/projects', 'common']);
@@ -43,13 +54,26 @@ const CreateTemplateDialog: React.FC<CreateTemplateDialogProps> = ({ onClose, on
     category: ''
   });
 
-  const [copyOptions, setCopyOptions] = useState({
-    copyPhases: true,
-    copyStatuses: true,
-    copyTasks: true,
-    copyAssignments: false,
-    copyChecklists: true,
-    copyServices: true
+  const [copyOptions, setCopyOptions] = useState(DEFAULT_COPY_OPTIONS);
+
+  // Dirty means the user authored a change away from the form's initial
+  // state; loading projects/categories into the pickers does not count.
+  const isDirty =
+    formData.project_id !== (initialProjectId || '') ||
+    formData.template_name !== '' ||
+    formData.description !== '' ||
+    formData.category !== '' ||
+    (Object.keys(DEFAULT_COPY_OPTIONS) as Array<keyof typeof DEFAULT_COPY_OPTIONS>).some(
+      (key) => copyOptions[key] !== DEFAULT_COPY_OPTIONS[key]
+    );
+
+  const guard = useUnsavedChangesGuard({
+    isDirty,
+    isSubmitting,
+    onClose: () => {
+      setHasAttemptedSubmit(false);
+      onClose();
+    },
   });
 
   useEffect(() => {
@@ -123,10 +147,7 @@ const CreateTemplateDialog: React.FC<CreateTemplateDialogProps> = ({ onClose, on
       <Button
         id="cancel-button"
         variant="ghost"
-        onClick={() => {
-          setHasAttemptedSubmit(false);
-          onClose();
-        }}
+        onClick={guard.requestClose}
         disabled={isSubmitting}
       >
         {t('common:actions.cancel', 'Cancel')}
@@ -148,10 +169,7 @@ const CreateTemplateDialog: React.FC<CreateTemplateDialogProps> = ({ onClose, on
   return (
     <Dialog
       isOpen={true}
-      onClose={() => {
-        setHasAttemptedSubmit(false);
-        onClose();
-      }}
+      onClose={guard.requestClose}
       title={t('templates.create.title', 'Create Template from Project')}
       className="max-w-[600px]"
       footer={footer}
@@ -285,6 +303,22 @@ const CreateTemplateDialog: React.FC<CreateTemplateDialogProps> = ({ onClose, on
 
           </div>
         </form>
+        {/* Rendered inside the Dialog so it uses the nested-dialog overlay; its
+            own Escape/X/overlay dismissal maps to "keep editing" and can never
+            cascade into closing the underlying form. */}
+        <ConfirmationDialog
+          id="create-template-discard-confirmation"
+          isOpen={guard.isConfirmingClose}
+          onClose={guard.keepEditing}
+          onConfirm={guard.confirmDiscard}
+          title={t('templates.discardConfirmation.title', 'Discard unsaved template?')}
+          message={t(
+            'templates.discardConfirmation.message',
+            'Your template has unsaved changes. If you leave now, those changes will be lost.'
+          )}
+          cancelLabel={t('templates.discardConfirmation.keepEditing', 'Keep editing')}
+          confirmLabel={t('templates.discardConfirmation.discard', 'Discard template')}
+        />
       </DialogContent>
     </Dialog>
   );

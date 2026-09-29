@@ -47,6 +47,7 @@ export type DrawerParamList = {
   TicketsTab: undefined;
   UserActivitiesTab: undefined;
   ScheduleTab: undefined;
+  InteractionsTab: undefined;
   TimeEntriesTab: undefined;
   ClientsTab: undefined;
   ContactsTab: undefined;

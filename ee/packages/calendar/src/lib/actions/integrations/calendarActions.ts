@@ -663,7 +663,14 @@ export async function syncCalendarProviderImpl(
                     : new MicrosoftCalendarAdapter(provider);
 
                 await adapter.connect();
-                await adapter.registerWebhookSubscription();
+                // Keep the routing identity stable while notifications are in
+                // flight. Replacing a live Microsoft subscription makes its
+                // queued notifications unresolvable by the webhook processor.
+                if (provider.provider_type === 'microsoft' && provider.provider_config?.webhookSubscriptionId) {
+                  await adapter.renewWebhookSubscription();
+                } else {
+                  await adapter.registerWebhookSubscription();
+                }
               } catch (subscriptionError: any) {
                 failures.push(
                   `Webhook registration failed: ${calendarActionErrorMessage(subscriptionError, 'Calendar webhook setup failed.')}`

@@ -1,5 +1,5 @@
 import type { Knex } from 'knex';
-import { REVISABLE_QUOTE_STATUSES, type IQuote, type IQuoteListItem, type IQuoteWithClient, type PaginatedResult, type QuoteStatus } from '@alga-psa/types';
+import { REVISABLE_QUOTE_STATUSES, type IQuote, type IQuoteItem, type IQuoteListItem, type IQuoteWithClient, type PaginatedResult, type QuoteStatus } from '@alga-psa/types';
 import { tenantDb } from '@alga-psa/db';
 import { SharedNumberingService } from '@shared/services/numberingService';
 import { deleteEntityWithValidation } from '@alga-psa/core/server';
@@ -7,6 +7,7 @@ import QuoteItem from './quoteItem';
 import QuoteActivity from './quoteActivity';
 import { canTransitionQuoteStatus } from '../schemas/quoteSchemas';
 import { recalculateQuoteFinancials } from '../services/quoteCalculationService';
+import { prepareQuoteTermsForDb } from '../lib/quoteTermsContent';
 
 function formatDisplayQuoteNumber(quote: Pick<IQuote, 'quote_number' | 'quote_id' | 'version'>): string {
   const baseNumber = quote.quote_number ?? `Draft ${quote.quote_id}`;
@@ -258,7 +259,7 @@ const Quote = {
     const [createdQuote] = await quoteTable<IQuote>(knexOrTrx, tenant, 'quotes')
       .insert({
         tenant,
-        ...quote,
+        ...prepareQuoteTermsForDb(quote as Record<string, unknown>),
         quote_number: quoteNumber,
         status: quote.is_template ? null : (quote.status ?? 'draft'),
         version: quote.version ?? 1,
@@ -304,7 +305,7 @@ const Quote = {
 
     const [updatedQuote] = await quoteTable<IQuote>(knexOrTrx, tenant, 'quotes')
       .where({ quote_id: quoteId })
-      .update({ ...updateData, updated_at: knexOrTrx.fn.now() })
+      .update({ ...prepareQuoteTermsForDb(updateData as Record<string, unknown>), updated_at: knexOrTrx.fn.now() })
       .returning('*');
 
     await QuoteActivity.create(knexOrTrx, tenant, {
@@ -384,7 +385,7 @@ const Quote = {
     const nextVersion = Math.max(sourceQuote.version, ...versionRows.map((row) => Number(row.version ?? 0))) + 1;
 
     const [revisedQuote] = await quoteTable<IQuote>(knexOrTrx, tenant, 'quotes')
-      .insert({
+      .insert(prepareQuoteTermsForDb({
         tenant,
         client_id: sourceQuote.client_id ?? null,
         contact_id: sourceQuote.contact_id ?? null,
@@ -405,22 +406,46 @@ const Quote = {
         internal_notes: sourceQuote.internal_notes ?? null,
         client_notes: sourceQuote.client_notes ?? null,
         terms_and_conditions: sourceQuote.terms_and_conditions ?? null,
+        terms_and_conditions_block: sourceQuote.terms_and_conditions_block ?? null,
         is_template: false,
         template_id: sourceQuote.template_id ?? null,
         quote_number: sourceQuote.quote_number,
         created_by: performedBy ?? sourceQuote.updated_by ?? sourceQuote.created_by ?? null,
         updated_by: performedBy ?? sourceQuote.updated_by ?? sourceQuote.created_by ?? null,
-      })
+      }) as any)
       .returning('*');
 
-    for (const item of sourceQuote.quote_items ?? []) {
-      const { quote_item_id, tenant: _itemTenant, created_at, updated_at, ...itemData } = item;
-      await quoteTable(knexOrTrx, tenant, 'quote_items')
+    const sourceItems = sourceQuote.quote_items ?? [];
+    const oldToNew = new Map<string, string>();
+    const insertCopiedItem = async (item: IQuoteItem, appliesToItemId: string | null) => {
+      const { quote_item_id: _quoteItemId, tenant: _itemTenant, created_at, updated_at, ...itemData } = item;
+      const [created] = await quoteTable<IQuoteItem>(knexOrTrx, tenant, 'quote_items')
         .insert({
           tenant,
           ...itemData,
           quote_id: revisedQuote.quote_id,
-        });
+          applies_to_item_id: appliesToItemId,
+        })
+        .returning('quote_item_id');
+      return created;
+    };
+
+    // Item-targeted discounts reference base items by id. Base rows are copied
+    // first so their new ids can remap applies_to_item_id on the discount rows,
+    // regardless of display order in the source quote.
+    for (const item of sourceItems.filter((i) => !i.is_discount)) {
+      const created = await insertCopiedItem(item, null);
+      oldToNew.set(item.quote_item_id, created.quote_item_id);
+    }
+    for (const item of sourceItems.filter((i) => i.is_discount)) {
+      // Preserve unmatched scope for removed targets: keep the original target
+      // id when it was not among the copied base rows, so the copied discount
+      // stays item-scoped and resolves to zero instead of broadening into a
+      // whole-quote discount.
+      const remapped = item.applies_to_item_id
+        ? (oldToNew.get(item.applies_to_item_id) ?? item.applies_to_item_id)
+        : null;
+      await insertCopiedItem(item, remapped);
     }
 
     await quoteTable(knexOrTrx, tenant, 'quotes')

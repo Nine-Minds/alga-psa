@@ -108,7 +108,7 @@ describe('importPhasesAndTasks authorization', () => {
 
     await importPhasesAndTasks('project-1', []).catch(() => undefined);
 
-    expect(hasPermissionMock).toHaveBeenCalledWith(expect.anything(), 'project', 'update');
+    expect(hasPermissionMock).toHaveBeenCalledWith(expect.anything(), 'project', 'update', expect.anything());
     expect(projectGetByIdMock).not.toHaveBeenCalled();
   });
 

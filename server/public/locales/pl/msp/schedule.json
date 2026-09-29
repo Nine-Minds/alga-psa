@@ -12,21 +12,45 @@
       "clearAll": "Wyczyść wszystko",
       "viewWeek": "Zobacz tydzień",
       "compare": "Porównaj",
-      "stopComparing": "Przestań porównywać"
+      "stopComparing": "Przestań porównywać",
+      "shareMyCalendar": "Udostępnij mój kalendarz",
+      "newGroupCalendar": "Nowy kalendarz grupowy",
+      "manageGroupCalendar": "Zarządzaj kalendarzem"
     },
     "labels": {
-      "inactive": "(Nieaktywny)"
+      "inactive": "(Nieaktywny)",
+      "archived": "(Zarchiwizowany)"
     },
     "aria": {
       "viewWeek": "Wyświetl tydzień dla {{name}}",
-      "compare": "Porównaj {{name}}"
+      "compare": "Porównaj {{name}}",
+      "toggleGroupCalendar": "Pokaż {{name}}"
+    },
+    "sections": {
+      "myCalendar": "Mój kalendarz",
+      "people": "Osoby",
+      "groupCalendars": "Kalendarze grupowe"
+    },
+    "empty": {
+      "people": "Nikt jeszcze nie udostępnił Ci kalendarza. Udostępnij swój, aby współpracownicy widzieli, kiedy jesteś wolny.",
+      "groups": "Kalendarze grupowe zawierają wspólne wydarzenia, takie jak dyżury czy zamknięcia biura."
     }
   },
   "agentView": {
     "loading": "Ładowanie...",
     "errors": {
       "loadPermissions": "Nie udało się załadować uprawnień użytkownika",
-      "forbidden": "Nie masz uprawnień do przeglądania tego harmonogramu."
+      "forbidden": "Nie masz uprawnień do przeglądania tego harmonogramu.",
+      "moveFailed": "Nie udało się przenieść wpisu harmonogramu"
+    },
+    "schedulingFor": "Planowanie",
+    "selectSlotHint": "Przeciągnij, aby tworzyć, przenosić lub zmieniać długość wpisów. Kliknij wpis, aby go edytować.",
+    "readOnlyHint": "Możesz przeglądać ten harmonogram, ale potrzebujesz uprawnienia do aktualizacji harmonogramu, aby dodawać lub zmieniać wpisy.",
+    "workItemLegend": "Ten element pracy",
+    "schedulingForAgent": "Planowanie dla {{name}}",
+    "otherWorkLegend": "Inna praca",
+    "workItemTypeLabel": {
+      "ticket": "Zgłoszenie"
     }
   },
   "calendar": {
@@ -80,7 +104,8 @@
         "start": "Początek: {{dateTime}}",
         "end": "Koniec: {{dateTime}}",
         "multiDay": "(Wielodniowe)"
-      }
+      },
+      "busy": "Zajęty"
     },
     "deleteDialog": {
       "title": "Usuń wpis harmonogramu",
@@ -112,6 +137,11 @@
         "title": "Opcje drukowania",
         "description": "Wybierz, które kolumny dołączyć podczas drukowania harmonogramu."
       }
+    },
+    "busyDialog": {
+      "title": "Zajęty",
+      "close": "Zamknij",
+      "timeRange": "{{start}} – {{end}}"
     }
   },
   "weeklyEvent": {
@@ -279,8 +309,9 @@
         "placeholder": "Wybierz osoby zatwierdzające"
       },
       "teamSelect": {
-        "label": "Wybierz zespół",
-        "placeholder": "Wybierz zespół"
+        "label": "Filtruj techników według zespołu",
+        "placeholder": "Wszyscy autoryzowani technicy",
+        "help": "Filtr dotyczy tylko listy techników; dostępność rezerwacji technika obowiązuje we wszystkich zespołach."
       }
     },
     "feedback": {
@@ -319,16 +350,16 @@
     "userHours": {
       "roleManager": {
         "label": "Menedżer zespołu:",
-        "description": "Możesz skonfigurować ustawienia dostępności dla członków swojego zespołu(ów). Poniższa tabela „Skonfigurowani użytkownicy” przedstawia wszystkich użytkowników z ustawieniami dostępności w całym systemie."
+        "description": "Możesz konfigurować dostępność rezerwacji tylko dla autoryzowanych członków zespołu i bezpośrednich podwładnych. Poniższa tabela uwzględnia bieżący filtr zespołu."
       },
       "roleAdmin": {
         "label": "Administrator systemu:",
-        "description": "Możesz skonfigurować ustawienia dostępności dla dowolnego użytkownika w systemie. Poniższa tabela „Skonfigurowani użytkownicy” przedstawia wszystkich użytkowników z ustawieniami dostępności."
+        "description": "Możesz konfigurować ogólną dostępność rezerwacji każdego autoryzowanego technika. Poniższa tabela uwzględnia bieżący filtr zespołu."
       },
       "userSelect": {
-        "label": "Wybierz użytkownika do skonfigurowania",
+        "label": "Technik",
         "placeholderSelectTeamFirst": "Najpierw wybierz zespół",
-        "placeholder": "Wybierz użytkownika do skonfigurowania"
+        "placeholder": "Wybierz technika do konfiguracji"
       },
       "appointmentSettings": {
         "title": "Ustawienia spotkania",
@@ -357,22 +388,31 @@
           "available": "Dostępny",
           "startTime": "Czas rozpoczęcia",
           "endTime": "Czas zakończenia"
-        }
+        },
+        "availableFor": "{{day}} dostępny",
+        "startTimeFor": "Czas rozpoczęcia w {{day}}",
+        "endTimeFor": "Czas zakończenia w {{day}}"
       },
       "configuredUsers": {
         "title": "Skonfigurowani Użytkownicy",
-        "description": "Użytkownicy ze skonfigurowanymi ustawieniami dostępności",
-        "empty": "Żaden użytkownik nie został jeszcze skonfigurowany",
+        "description": "Technicy z zapisaną dostępnością rezerwacji w bieżącym filtrze",
+        "empty": "Żaden technik w tym filtrze nie ma jeszcze zapisanej dostępności rezerwacji",
         "columns": {
           "userName": "Nazwa użytkownika",
           "status": "Status"
         },
         "status": {
           "configured": "Skonfigurowane"
+        },
+        "actions": {
+          "edit": "Edytuj godziny rezerwacji użytkownika {{name}}",
+          "delete": "Usuń godziny rezerwacji użytkownika {{name}}"
         }
       },
       "actions": {
-        "save": "Zapisz godziny użytkownika"
+        "save": "Zapisz godziny użytkownika",
+        "retry": "Spróbuj ponownie",
+        "saving": "Zapisywanie..."
       },
       "feedback": {
         "selectUserError": "Wybierz użytkownika",
@@ -384,7 +424,19 @@
       "deleteDialog": {
         "title": "Usuń dostępność użytkownika",
         "message": "Czy na pewno chcesz usunąć ustawienia dostępności dla {{userName}}? Spowoduje to usunięcie wszystkich skonfigurowanych godzin pracy. Tej operacji nie można cofnąć."
-      }
+      },
+      "scope": {
+        "team": "Filtr zespołu:",
+        "allTeams": "Wszyscy autoryzowani technicy",
+        "technician": "Technik:",
+        "schedule": "Harmonogram:",
+        "loading": "Sprawdzanie zapisanych godzin rezerwacji",
+        "saved": "Zapisane godziny rezerwacji",
+        "partial": "Zapisane godziny rezerwacji z niezapisanymi wartościami domyślnymi dla brakujących dni",
+        "draft": "Niezapisany szablon od poniedziałku do piątku, 09:00–17:00",
+        "explanation": "Te godziny rezerwacji dotyczą użytkownika we wszystkich zespołach. Nie są dziedziczone z oddzielnego harmonogramu pracy."
+      },
+      "loading": "Wczytywanie godzin technika..."
     },
     "serviceRules": {
       "serviceSelect": {
@@ -531,7 +583,8 @@
       "appointmentRequest": "Zapytanie o spotkanie",
       "view": "Zobacz wpis",
       "edit": "Edytuj wpis",
-      "new": "Nowy wpis"
+      "new": "Nowy wpis",
+      "newForWorkItem": "Zaplanuj {{name}}"
     },
     "alerts": {
       "privateEntryOnlyCreator": "To jest wpis prywatny. Tylko twórca może przeglądać i edytować szczegóły."
@@ -556,7 +609,13 @@
       "privateEntry": "Wpis prywatny (niewidoczny dla innych użytkowników)",
       "start": "Rozpocznij *",
       "end": "Koniec *",
-      "notes": "Notatki"
+      "notes": "Notatki",
+      "technician": "Technik",
+      "notesPlaceholder": "Wszystko, co technik powinien wiedzieć przed rozpoczęciem",
+      "calendarPersonal": "Osobisty",
+      "calendarUnavailable": "Kalendarz grupowy",
+      "calendar": "Kalendarz",
+      "assignedUsersOptional": "Przypisani użytkownicy"
     },
     "actions": {
       "cancel": "Anuluj",
@@ -566,7 +625,11 @@
     },
     "workItem": {
       "adHocFallback": "Wpis ad-hoc (brak elementu roboczego)",
-      "openDetails": "Szczegóły"
+      "openDetails": "Szczegóły",
+      "loading": "Ładowanie elementu pracy…",
+      "openTicket": "Otwórz zgłoszenie",
+      "openTask": "Otwórz zadanie",
+      "openInteraction": "Otwórz interakcję"
     },
     "appointmentRequest": {
       "approved": {
@@ -661,6 +724,19 @@
     },
     "errors": {
       "loadWorkItem": "Nie udało się wczytać elementu pracy."
+    },
+    "teamsMeeting": {
+      "create": "Utwórz spotkanie Teams",
+      "creating": "Tworzenie spotkania Teams…",
+      "join": "Dołącz do spotkania Teams",
+      "created": "Utworzono spotkanie Microsoft Teams",
+      "createFailed": "Nie udało się utworzyć spotkania Teams",
+      "recurringUnsupported": "Spotkania Teams można dodawać tylko do pojedynczych wpisów, nie do serii cyklicznych."
+    },
+    "duration": {
+      "minutes": "{{count}} min",
+      "hours": "{{count}} godz.",
+      "hoursMinutes": "{{hours}} godz. {{minutes}} min"
     }
   },
   "actions": {
@@ -713,6 +789,69 @@
       "graphNotFound": "Nagranie Teams nie jest już dostępne w Microsoft Graph.",
       "graphThrottled": "Microsoft Graph ogranicza tempo pobierania nagrań. Spróbuj ponownie za chwilę.",
       "graphHttpStatus": "Microsoft Graph zwrócił HTTP {{status}} podczas pobierania nagrania Teams."
+    }
+  },
+  "workItemEditor": {
+    "created": "Zaplanowano {{title}}",
+    "updated": "Wpis harmonogramu zaktualizowany",
+    "deleted": "Wpis harmonogramu usunięty",
+    "createFailed": "Nie udało się zaplanować tej pracy",
+    "updateFailed": "Nie udało się zaktualizować wpisu harmonogramu",
+    "deleteFailed": "Nie udało się usunąć wpisu harmonogramu",
+    "loadFailed": "Nie udało się wczytać wpisu harmonogramu",
+    "noPermission": "Potrzebujesz uprawnienia do aktualizacji harmonogramu, aby planować pracę."
+  },
+  "sharing": {
+    "levels": {
+      "freeBusy": "Wolny/zajęty",
+      "read": "Wyświetlanie szczegółów",
+      "edit": "Edycja",
+      "manage": "Zarządzanie"
+    },
+    "addRecipient": "Dodaj osobę lub zespół",
+    "noRecipients": "Jeszcze nikomu nie udostępniono.",
+    "unknownRecipient": "Nieznany odbiorca",
+    "removeRecipient": "Usuń {{name}}",
+    "errors": {
+      "load": "Nie udało się wczytać udostępniania kalendarza.",
+      "save": "Nie udało się zapisać udostępniania kalendarza."
+    },
+    "shareDialog": {
+      "title": "Udostępnij mój kalendarz",
+      "description": "Wolny/zajęty pokazuje tylko, kiedy jesteś zajęty. Wyświetlanie szczegółów pokazuje Twoje wpisy oprócz prywatnych. Edycja pozwala też dodawać i zmieniać wpisy w Twoim imieniu."
+    },
+    "actions": {
+      "cancel": "Anuluj",
+      "saving": "Zapisywanie...",
+      "save": "Zapisz"
+    },
+    "settings": {
+      "title": "Udostępnianie kalendarza",
+      "description": "Wybierz, którzy współpracownicy i zespoły widzą Twój harmonogram i czy mogą rezerwować dla Ciebie czas."
+    }
+  },
+  "groupCalendars": {
+    "errors": {
+      "load": "Nie udało się wczytać kalendarza.",
+      "nameRequired": "Nazwa kalendarza jest wymagana.",
+      "save": "Nie udało się zapisać kalendarza."
+    },
+    "dialog": {
+      "manageTitle": "Zarządzaj kalendarzem grupowym",
+      "createTitle": "Nowy kalendarz grupowy"
+    },
+    "actions": {
+      "restore": "Przywróć",
+      "archive": "Archiwizuj",
+      "create": "Utwórz kalendarz"
+    },
+    "fields": {
+      "name": "Nazwa",
+      "namePlaceholder": "np. Grafik dyżurów",
+      "color": "Kolor",
+      "description": "Opis (opcjonalnie)",
+      "members": "Członkowie",
+      "creatorNote": "Będziesz mógł zarządzać tym kalendarzem."
     }
   }
 }

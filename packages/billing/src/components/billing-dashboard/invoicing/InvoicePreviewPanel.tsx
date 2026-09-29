@@ -27,7 +27,7 @@ import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
 import { voidInvoice } from '../../../actions/voidInvoiceActions';
 import { InvoiceTaxSourceBadge } from '../../invoices/InvoiceTaxSourceBadge';
-import { InvoiceSyncBadge, qboInvoiceDeepLink } from '../../invoices/InvoiceSyncBadge';
+import { InvoiceSyncBadge, qboInvoiceDeepLink, xeroInvoiceDeepLink } from '../../invoices/InvoiceSyncBadge';
 import { useInvoiceSyncStatuses } from '../../invoices/useInvoiceSyncStatuses';
 import { resolveTemplatePrintSettingsFromAst } from '../../../lib/invoice-template-ast/printSettings';
 import DraftInvoiceDetailsCard, { type DraftInvoiceDetailsSummary } from './DraftInvoiceDetailsCard';
@@ -61,6 +61,13 @@ interface InvoicePreviewPanelProps {
   readOnly?: boolean;
   creditApplied?: number;
   draftInvoiceSummary?: DbInvoiceViewModel | null;
+  /**
+   * Listing row for the selected invoice. A finalized invoice can no longer be
+   * re-pointed, so the profile it bills is stated here rather than edited —
+   * without it a finalized invoice gives no hint why it was addressed the way
+   * it was.
+   */
+  invoiceSummary?: DbInvoiceViewModel | null;
   /** Client owning the invoice; enables the manual Apply Credit action. */
   clientId?: string | null;
   /** Invoice total in minor units; caps the manual credit application. */
@@ -85,6 +92,7 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
   readOnly = false,
   creditApplied = 0,
   draftInvoiceSummary = null,
+  invoiceSummary = null,
   clientId = null,
   invoiceTotal = 0,
   onCreditApplied
@@ -119,6 +127,7 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
   const syncIds = invoiceId ? [invoiceId] : [];
   const { statuses: syncStatuses, hidden: syncHidden } = useInvoiceSyncStatuses(syncIds);
   const syncStatus = invoiceId ? syncStatuses[invoiceId] : undefined;
+  const syncProviderLabel = syncStatus?.provider === 'xero' ? 'Xero' : 'QuickBooks';
 
   // Match invoice/PDF rendering: honor an explicit URL template selection first,
   // then fall back to the invoice's resolved client/default template.
@@ -347,6 +356,8 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
         invoice_number: updated.invoiceNumber,
         invoice_date: updated.invoiceDate,
         due_date: updated.dueDate,
+        billing_profile_id: updated.billingProfileId,
+        billing_profile_name: updated.billingProfileName,
       };
     });
 
@@ -419,6 +430,19 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
               )}
             </div>
           </div>
+          {/* A finalized invoice states the profile it bills; the draft card
+              above already lets a draft's pick be corrected (D6). */}
+          {isFinalized && invoiceSummary?.client_has_multiple_billing_profiles ? (
+            <p id="invoice-preview-billing-profile" className="mb-2 text-sm text-[rgb(var(--color-text-600))]">
+              {t('invoicePreview.labels.billingProfile', {
+                defaultValue: 'Billing profile: {{name}}',
+                name: invoiceSummary.billing_profile_name
+                  || t('invoicePreview.labels.billingProfileDefault', {
+                    defaultValue: "the client's default profile",
+                  }),
+              })}
+            </p>
+          ) : null}
           <CustomSelect
             options={templates.map((template) => ({
               value: template.template_id,
@@ -469,7 +493,7 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
                 try {
                   await queueInvoiceSync(invoiceId);
                   await runAccountingSyncNow();
-                  setSyncActionFeedback({ type: 'success', message: 'Invoice queued for QuickBooks sync.' });
+                  setSyncActionFeedback({ type: 'success', message: `Invoice queued for ${syncProviderLabel} sync.` });
                 } catch (err) {
                   setSyncActionFeedback({ type: 'error', message: err instanceof Error ? err.message : 'Sync failed.' });
                 } finally {
@@ -477,7 +501,7 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
                 }
               }}
             >
-              {t('invoicePreview.actions.syncNow', { defaultValue: 'Sync to QuickBooks' })}
+              {t('invoicePreview.actions.syncNow', { defaultValue: `Sync to ${syncProviderLabel}` })}
             </Button>
 
             {syncStatus.state === 'drift' && (
@@ -493,7 +517,7 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
                     setSyncActionFeedback(null);
                     try {
                       await resolveAccountingDriftReExport(invoiceId);
-                      setSyncActionFeedback({ type: 'success', message: 'Re-export to QuickBooks queued.' });
+                      setSyncActionFeedback({ type: 'success', message: `Re-export to ${syncProviderLabel} queued.` });
                     } catch (err) {
                       setSyncActionFeedback({ type: 'error', message: err instanceof Error ? err.message : 'Re-export failed.' });
                     } finally {
@@ -501,7 +525,7 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
                     }
                   }}
                 >
-                  {t('invoicePreview.actions.driftReexport', { defaultValue: 'Re-export to QuickBooks' })}
+                  {t('invoicePreview.actions.driftReexport', { defaultValue: `Re-export to ${syncProviderLabel}` })}
                 </Button>
 
                 <Button
@@ -515,7 +539,7 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
                     setSyncActionFeedback(null);
                     try {
                       await resolveAccountingDriftAccept(invoiceId);
-                      setSyncActionFeedback({ type: 'success', message: 'QuickBooks version accepted.' });
+                      setSyncActionFeedback({ type: 'success', message: `${syncProviderLabel} version accepted.` });
                     } catch (err) {
                       setSyncActionFeedback({ type: 'error', message: err instanceof Error ? err.message : 'Accept failed.' });
                     } finally {
@@ -523,7 +547,7 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
                     }
                   }}
                 >
-                  {t('invoicePreview.actions.driftAccept', { defaultValue: 'Accept QuickBooks Version' })}
+                  {t('invoicePreview.actions.driftAccept', { defaultValue: `Accept ${syncProviderLabel} Version` })}
                 </Button>
               </>
             )}
@@ -536,11 +560,17 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
                 asChild
               >
                 <a
-                  href={qboInvoiceDeepLink(syncStatus.externalId, syncStatus.environment)}
+                  href={
+                    syncStatus.provider === 'xero'
+                      ? xeroInvoiceDeepLink(syncStatus.externalId)
+                      : qboInvoiceDeepLink(syncStatus.externalId, syncStatus.environment)
+                  }
                   target="_blank"
                   rel="noopener noreferrer"
                 >
-                  {t('invoicePreview.actions.viewInQbo', { defaultValue: 'View in QuickBooks' })}
+                  {syncStatus.provider === 'xero'
+                    ? t('invoicePreview.actions.viewInXero', { defaultValue: 'View in Xero' })
+                    : t('invoicePreview.actions.viewInQbo', { defaultValue: 'View in QuickBooks' })}
                 </a>
               </Button>
             )}

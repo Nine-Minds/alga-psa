@@ -1,3 +1,5 @@
+
+import { resolveUnitOfMeasure } from '@alga-psa/core/unitOfMeasure';
 /**
  * EE contract simulation orchestrator: prices a ContractScenario over its
  * horizon through the shared pure billing compute layer.
@@ -33,6 +35,9 @@ import type {
 import { RECURRING_RANGE_SEMANTICS } from "@alga-psa/types";
 import { toISODate, toPlainDate } from "@alga-psa/core";
 import { tenantDb } from "@alga-psa/db";
+// The pricing-schedule selection now lives in one shared place, so the
+// simulator cannot drift from what the engine actually bills (plan §0.5).
+import { selectActivePricingSchedule } from "@alga-psa/billing/lib/billing/pricing/resolveFixedLineRate";
 import {
   calculateServicePeriodCoverage,
   intersectActivityWindow,
@@ -244,10 +249,18 @@ export async function loadSimulationCalculationInput(
         service.item_kind !== "product" &&
         service.configuration.configuration_type === "Fixed",
     );
+    // A bucket overlay prices the service's assumed hours through included
+    // consumption and overage. BillingEngine excludes the same attributed
+    // work from hourly charges; charging both here inflates the preview.
+    const hourlyBucketServiceIds = new Set(line.services
+      .filter((service) => service.item_kind !== "product" &&
+        service.configuration.configuration_type === "Bucket")
+      .map((service) => service.service_id));
     const hourlyServices = line.services.filter(
       (service) =>
         service.item_kind !== "product" &&
-        service.configuration.configuration_type === "Hourly",
+        service.configuration.configuration_type === "Hourly" &&
+        !hourlyBucketServiceIds.has(service.service_id),
     );
     const usageServices = line.services.filter(
       (service) =>
@@ -829,34 +842,21 @@ function resolveEffectiveCustomRate(
   const periodStart = toPlainDate(timing.servicePeriodStartExclusive);
   const periodEndExclusive = toPlainDate(timing.servicePeriodEndExclusive);
 
-  const overlapping = schedules.filter(
-    (schedule) =>
-      Temporal.PlainDate.compare(
-        toPlainDate(schedule.effective_date),
-        periodEndExclusive,
-      ) < 0 &&
-      (schedule.end_date == null ||
-        Temporal.PlainDate.compare(
-          toPlainDate(schedule.end_date),
-          periodStart,
-        ) > 0),
-  );
-
-  const latest = overlapping.reduce<ScenarioPricingSchedule | null>(
-    (winner, schedule) =>
-      winner === null ||
-      Temporal.PlainDate.compare(
-        toPlainDate(schedule.effective_date),
-        toPlainDate(winner.effective_date),
-      ) > 0
-        ? schedule
-        : winner,
-    null,
+  const latest = selectActivePricingSchedule(
+    schedules.map((schedule) => ({
+      schedule_id: null,
+      contract_line_id: null,
+      effective_date: schedule.effective_date,
+      end_date: schedule.end_date,
+      custom_rate: schedule.custom_rate,
+    })),
+    line.key,
+    { start: periodStart.toString(), end: periodEndExclusive.toString() },
   );
 
   if (latest && latest.custom_rate != null) {
     return {
-      effectiveCustomRate: latest.custom_rate,
+      effectiveCustomRate: Number(latest.custom_rate),
       customRateSource: "pricing_schedule",
     };
   }
@@ -1100,7 +1100,7 @@ export function buildSimulatedPeriod(
             ? "adjustment"
             : unit?.includes("month")
               ? unit
-              : `${formatHours(canonicalLine.quantity)} ${unit ?? "units"}`;
+              : `${formatHours(canonicalLine.quantity)} ${unit ?? resolveUnitOfMeasure({ fallback: 'C62' }).pluralLabel}`;
       const adjustmentIndex =
         canonicalLine.chargeFamily === "adjustment"
           ? Number(canonicalLine.lineKey.split(":")[1])

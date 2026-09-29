@@ -1,5 +1,7 @@
 import {
+  allHandlersFinished,
   condition,
+  continueAsNew,
   defineQuery,
   defineSignal,
   log,
@@ -21,6 +23,19 @@ export interface SlaTicketWorkflowInput {
   businessHoursSchedule: IBusinessHoursScheduleWithEntries;
   /** Configured notification thresholds from sla_notification_thresholds table. 100% is always included for breach detection. */
   notificationThresholds?: number[];
+  /**
+   * Set only by continueAsNew: progress carried from the previous run so the
+   * SLA clock, pause accounting and notified thresholds survive the rollover.
+   */
+  carried?: SlaTicketWorkflowCarriedState;
+  /** Test hook: roll over to a new run once history reaches this many events. */
+  continueAsNewAfterEvents?: number;
+}
+
+export interface SlaTicketWorkflowCarriedState {
+  startedAt: string;
+  state: SlaTicketWorkflowState;
+  responseCompleted: boolean;
 }
 
 export interface SlaTicketWorkflowState {
@@ -93,6 +108,13 @@ const activities = proxyActivities<{
     resolutionMet: boolean | null;
     reason?: 'closed' | 'deleted';
   }>;
+  getTicketSlaPauseState(input: {
+    tenantId: string;
+    ticketId: string;
+  }): Promise<{
+    paused: boolean;
+    reason: SlaPauseReason | null;
+  }>;
 }>({
   startToCloseTimeout: '5m',
   retry: {
@@ -115,11 +137,21 @@ export const cancelSignal = defineSignal('cancel');
 
 export const getStateQuery = defineQuery<SlaTicketWorkflowQueryResult>('getState');
 
+// Resume/close/cancel arrive as signals, so the sweep is only a safety net for
+// signals that were lost. Deadlines are single timers and are unaffected by it.
+const PAUSED_SWEEP_INTERVAL_MS = 5 * 60_000;
+// Fallback rollover point when the server does not suggest continue-as-new.
+// Well under Temporal's 51,200-event hard limit and cheap to replay.
+const DEFAULT_CONTINUE_AS_NEW_AFTER_EVENTS = 10_000;
+
 export async function slaTicketWorkflow(
   input: SlaTicketWorkflowInput
 ): Promise<void> {
   const { ticketId, tenantId, policyTargets, businessHoursSchedule, notificationThresholds } = input;
-  const startedAt = new Date();
+  // The SLA clock starts with the first run; later runs inherit it.
+  const startedAt = input.carried ? new Date(input.carried.startedAt) : new Date();
+  const continueAsNewAfterEvents =
+    input.continueAsNewAfterEvents ?? DEFAULT_CONTINUE_AS_NEW_AFTER_EVENTS;
 
   const target = policyTargets[0];
   if (!target) {
@@ -131,42 +163,50 @@ export async function slaTicketWorkflow(
     return;
   }
 
-  let responseCompleted = false;
+  let responseCompleted = input.carried?.responseCompleted ?? false;
   let resolutionCompleted = false;
   let cancelled = false;
 
-  const state: SlaTicketWorkflowState = {
-    currentPhase: 'response',
-    currentStatus: 'active',
-    pauseState: {
-      isPaused: false,
-      pauseStartedAt: null,
-      totalPauseMinutes: 0,
-      reason: null,
-    },
-    notifiedThresholds: {
-      response: [],
-      resolution: [],
-    },
-    responseDeadline: null,
-    resolutionDeadline: null,
-    nextWakeTime: null,
-  };
+  const state: SlaTicketWorkflowState = input.carried
+    ? {
+        ...input.carried.state,
+        pauseState: { ...input.carried.state.pauseState },
+        notifiedThresholds: {
+          response: [...input.carried.state.notifiedThresholds.response],
+          resolution: [...input.carried.state.notifiedThresholds.resolution],
+        },
+      }
+    : {
+        currentPhase: 'response',
+        currentStatus: 'active',
+        pauseState: {
+          isPaused: false,
+          pauseStartedAt: null,
+          totalPauseMinutes: 0,
+          reason: null,
+        },
+        notifiedThresholds: {
+          response: [],
+          resolution: [],
+        },
+        responseDeadline: null,
+        resolutionDeadline: null,
+        nextWakeTime: null,
+      };
 
-  setHandler(pauseSignal, (signal: PauseSignal) => {
+  const applyPause = (reason: SlaPauseReason) => {
     if (state.pauseState.isPaused) {
       return;
     }
     state.pauseState.isPaused = true;
     state.pauseState.pauseStartedAt = new Date().toISOString();
-    state.pauseState.reason = signal.reason;
+    state.pauseState.reason = reason;
     state.currentStatus = 'paused';
-    log.info('SLA workflow paused', { ticketId, reason: signal.reason });
-  });
+  };
 
-  setHandler(resumeSignal, () => {
+  const applyResume = (): number | null => {
     if (!state.pauseState.isPaused || !state.pauseState.pauseStartedAt) {
-      return;
+      return null;
     }
     const pausedAt = new Date(state.pauseState.pauseStartedAt);
     const pauseMinutes = Math.floor(
@@ -177,6 +217,22 @@ export async function slaTicketWorkflow(
     state.pauseState.pauseStartedAt = null;
     state.pauseState.reason = null;
     state.currentStatus = 'active';
+    return pauseMinutes;
+  };
+
+  setHandler(pauseSignal, (signal: PauseSignal) => {
+    if (state.pauseState.isPaused) {
+      return;
+    }
+    applyPause(signal.reason);
+    log.info('SLA workflow paused', { ticketId, reason: signal.reason });
+  });
+
+  setHandler(resumeSignal, () => {
+    const pauseMinutes = applyResume();
+    if (pauseMinutes === null) {
+      return;
+    }
     log.info('SLA workflow resumed', { ticketId, pauseMinutes });
   });
 
@@ -229,6 +285,7 @@ export async function slaTicketWorkflow(
     ticketId,
     tenantId,
     workflowId: workflowInfo().workflowId,
+    continued: Boolean(input.carried),
   });
 
   const phases: Array<{
@@ -284,6 +341,42 @@ export async function slaTicketWorkflow(
     return true;
   };
 
+  // Self-heal a lost resume: the app decides pause state from the ticket row,
+  // so re-read it and resume when the ticket is no longer in a pausing state.
+  const reconcilePauseWithTicket = async (): Promise<void> => {
+    const current = await activities.getTicketSlaPauseState({ tenantId, ticketId });
+    if (current.paused || !state.pauseState.isPaused) {
+      return;
+    }
+    const pauseMinutes = applyResume();
+    log.info('SLA workflow self-healed: resume signal was missed, resuming', {
+      ticketId,
+      pauseMinutes,
+    });
+  };
+
+  const shouldRollOver = (): boolean => {
+    const info = workflowInfo();
+    return info.continueAsNewSuggested || info.historyLength >= continueAsNewAfterEvents;
+  };
+
+  // Hand the SLA clock to a fresh run so history never nears Temporal's limit.
+  // Waits for async signal handlers so audit rows are not lost mid-flight.
+  const rollOver = async (): Promise<never> => {
+    await condition(allHandlersFinished);
+    log.info('SLA workflow continuing as new', {
+      ticketId,
+      historyLength: workflowInfo().historyLength,
+    });
+    return continueAsNew<typeof slaTicketWorkflow>({
+      ...input,
+      carried: { startedAt: startedAt.toISOString(), state, responseCompleted },
+    });
+  };
+
+  const isDone = (phase: 'response' | 'resolution'): boolean =>
+    cancelled || resolutionCompleted || (phase === 'response' && responseCompleted);
+
   if (await checkClosedAndComplete('startup')) {
     return;
   }
@@ -308,35 +401,47 @@ export async function slaTicketWorkflow(
       ? notificationThresholds
       : [50, 75, 90];
     const thresholds = [...new Set([...configuredThresholds, 100])].sort((a, b) => a - b);
-    for (const threshold of thresholds) {
-      if (cancelled || resolutionCompleted) {
+    // Index loop so a pause that interrupts a wait re-enters the same threshold.
+    let thresholdIndex = 0;
+    while (thresholdIndex < thresholds.length) {
+      const threshold = thresholds[thresholdIndex];
+      if (isDone(phase.phase)) {
         break;
       }
 
-      if (phase.phase === 'response' && responseCompleted) {
-        break;
+      // Already handled by an earlier run.
+      if (state.notifiedThresholds[phase.phase].includes(threshold)) {
+        thresholdIndex += 1;
+        continue;
       }
 
-      while (state.pauseState.isPaused && !cancelled && !resolutionCompleted &&
-             !(phase.phase === 'response' && responseCompleted)) {
-        const resumedOrCompleted = await condition(
-          () =>
-            !state.pauseState.isPaused ||
-            cancelled ||
-            resolutionCompleted ||
-            (phase.phase === 'response' && responseCompleted),
-          60_000
-        );
+      while (state.pauseState.isPaused && !isDone(phase.phase)) {
+        // Plain race, not condition(pred, timeout): that cancels its timer on
+        // resume, and a CancelTimer for a timer that fired in the same workflow
+        // task is rejected by the server ("invalid history builder state"),
+        // wedging the workflow. A superseded sweep timer just fires unused.
+        const resumedOrCompleted = await Promise.race([
+          sleep(PAUSED_SWEEP_INTERVAL_MS).then(() => false),
+          condition(() => !state.pauseState.isPaused || isDone(phase.phase)).then(() => true),
+        ]);
 
         if (!resumedOrCompleted && state.pauseState.isPaused) {
           if (await checkClosedAndComplete('pause')) {
             break;
           }
+          await reconcilePauseWithTicket();
+          if (state.pauseState.isPaused && shouldRollOver()) {
+            await rollOver();
+          }
         }
       }
 
-      if (cancelled || resolutionCompleted) {
+      if (isDone(phase.phase)) {
         break;
+      }
+
+      if (shouldRollOver()) {
+        await rollOver();
       }
 
       const thresholdMinutes = Math.ceil(
@@ -360,13 +465,7 @@ export async function slaTicketWorkflow(
       if (sleepMs > 0) {
         await Promise.race([
           sleep(sleepMs),
-          condition(
-            () =>
-              state.pauseState.isPaused ||
-              cancelled ||
-              resolutionCompleted ||
-              (phase.phase === 'response' && responseCompleted)
-          ),
+          condition(() => state.pauseState.isPaused || isDone(phase.phase)),
         ]);
       }
 
@@ -374,11 +473,7 @@ export async function slaTicketWorkflow(
         continue;
       }
 
-      if (cancelled || resolutionCompleted) {
-        break;
-      }
-
-      if (phase.phase === 'response' && responseCompleted) {
+      if (isDone(phase.phase)) {
         break;
       }
 
@@ -412,6 +507,8 @@ export async function slaTicketWorkflow(
           thresholdPercent: threshold,
         });
       }
+
+      thresholdIndex += 1;
     }
   }
 }

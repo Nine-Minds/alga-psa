@@ -23,15 +23,25 @@ import { resolveProductRouteBehavior } from '@/lib/productSurfaceRegistry';
 import { ProductRouteBoundary } from '@/components/product/ProductRouteBoundary';
 import { KeyboardShortcutsProvider } from '@alga-psa/ui/keyboard-shortcuts';
 import { MspCallLinkProvider } from '@/components/layout/MspCallLinkProvider';
+import { IncomingCallProvider } from '@/components/layout/IncomingCallProvider';
 import { MspBrandingProvider, type MspBranding } from '@/components/layout/MspBrandingContext';
-import { CurrencyFormatProvider } from '@alga-psa/ui/lib';
+import { CurrencyFormatProvider, DateFormatProvider } from '@alga-psa/ui/lib';
+import type { CountryDateFormat } from '@alga-psa/core/i18n/countryDateFormat';
 import { useKeyboardShortcutPreferenceStorage } from '@/hooks/useKeyboardShortcutPreferenceStorage';
+import { useUserPreference } from '@alga-psa/user-composition/hooks';
+import {
+  DataTablePreferencesProvider,
+  DATA_TABLE_PAGE_SIZES_PREFERENCE_KEY,
+  type DataTablePageSizes,
+} from '@alga-psa/ui/components/DataTablePreferences';
 
 interface Props {
   children: React.ReactNode;
   session: Session | null;
   /** Tenant default currency (default_billing_settings) for CurrencyFormatProvider. */
   currencyCode?: string;
+  /** Date shape resolved from the tenant's country, for DateFormatProvider. */
+  dateFormat?: CountryDateFormat | null;
   productCode: ProductCode;
   needsOnboarding: boolean;
   initialSidebarCollapsed: boolean;
@@ -79,6 +89,7 @@ export function MspLayoutClient({
   children,
   session,
   currencyCode,
+  dateFormat,
   productCode,
   needsOnboarding,
   initialSidebarCollapsed,
@@ -94,6 +105,11 @@ export function MspLayoutClient({
   const routeBehavior = resolveProductRouteBehavior(productCode, pathname);
   const sessionTenant = session?.user?.tenant;
   const shortcutPreference = useKeyboardShortcutPreferenceStorage({ userId: session?.user?.id });
+  const dataTablePreferences = useUserPreference<DataTablePageSizes>(DATA_TABLE_PAGE_SIZES_PREFERENCE_KEY, {
+    defaultValue: {},
+    localStorageKey: `${DATA_TABLE_PAGE_SIZES_PREFERENCE_KEY}:${session?.user?.id ?? 'anonymous'}`,
+    userId: session?.user?.id,
+  });
   const [clientNeedsOnboarding, setClientNeedsOnboarding] = useState(false);
   const [clientOnboardingCheckComplete, setClientOnboardingCheckComplete] = useState(false);
   const shouldForceOnboarding = needsOnboarding || clientNeedsOnboarding;
@@ -139,8 +155,10 @@ export function MspLayoutClient({
           Object.prototype.hasOwnProperty.call(settings, 'onboarding_skipped');
 
         if (hasOnboardingFlags && !settings.onboarding_completed && !settings.onboarding_skipped) {
+          // The redirect effect above performs the navigation; keeping `router`
+          // out of this effect means a new router identity never re-fetches
+          // tenant settings (which would blink the license banner off and on).
           setClientNeedsOnboarding(true);
-          router.replace('/msp/onboarding');
           return;
         }
 
@@ -156,7 +174,7 @@ export function MspLayoutClient({
     return () => {
       isCancelled = true;
     };
-  }, [needsOnboarding, isOnboardingPage, sessionTenant, router]);
+  }, [needsOnboarding, isOnboardingPage, sessionTenant, onboardingResolvedServerSide]);
 
   const isAlgaDesk = productCode === 'algadesk';
 
@@ -168,6 +186,7 @@ export function MspLayoutClient({
       <ProductProvider>
         <TierProvider selfHostLicensing={selfHostLicensing}>
           <MspCallLinkProvider>
+          <IncomingCallProvider tenant={session?.user?.tenant} userId={session?.user?.id}>
           {canShowLicenseBanner && <LicenseBanner />}
           <PostHogUserIdentifier />
           <TagProvider>
@@ -178,7 +197,12 @@ export function MspLayoutClient({
                 components: []
               }}
             >
-              {isOnboardingPage ? children : (
+              <DataTablePreferencesProvider
+                pageSizes={dataTablePreferences.value}
+                hasLoaded={dataTablePreferences.hasLoadedInitial && !dataTablePreferences.isLoading}
+                onPageSizesChange={dataTablePreferences.setValue}
+              >
+                {isOnboardingPage ? children : (
                 <KeyboardShortcutsProvider
                   routeKey={pathname ?? '/msp'}
                   storage={shortcutPreference.storage}
@@ -207,9 +231,11 @@ export function MspLayoutClient({
                   )
                   }
                 </KeyboardShortcutsProvider>
-              )}
+                )}
+              </DataTablePreferencesProvider>
             </ClientUIStateProvider>
           </TagProvider>
+          </IncomingCallProvider>
           </MspCallLinkProvider>
         </TierProvider>
       </ProductProvider>
@@ -220,7 +246,9 @@ export function MspLayoutClient({
   return (
     <I18nWrapper portal="msp" initialLocale={initialLocale || undefined} preloadedResources={preloadedLocaleResources}>
       <CurrencyFormatProvider currencyCode={currencyCode || 'USD'}>
-        {content}
+        <DateFormatProvider dateFormat={dateFormat}>
+          {content}
+        </DateFormatProvider>
       </CurrencyFormatProvider>
     </I18nWrapper>
   );

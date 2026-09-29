@@ -23,6 +23,10 @@ const {
   getUserAvatarUrlsBatchAction: vi.fn(),
 }));
 
+vi.mock('@alga-psa/ui/hooks/useFeatureFlag', () => ({
+  useFeatureFlag: () => ({ enabled: true, loading: false, error: null }),
+}));
+
 vi.mock('@alga-psa/scheduling/actions', () => ({
   approveAppointmentRequest,
   declineAppointmentRequest,

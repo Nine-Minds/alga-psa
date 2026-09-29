@@ -2,6 +2,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
   createInteractionWithSideEffects: vi.fn(),
+  createInteractionScheduleEntry: vi.fn(),
+  hasPermission: vi.fn(),
   tenantDb: vi.fn(),
   withTransaction: vi.fn(async (_knex: unknown, callback: (trx: unknown) => unknown) => callback({ trx: true })),
 }));
@@ -17,7 +19,11 @@ vi.mock('@alga-psa/db', async (importOriginal) => {
 
 vi.mock('@alga-psa/clients/actions/interactionCreateHelper', () => ({
   createInteractionWithSideEffects: mocks.createInteractionWithSideEffects,
+  createInteractionScheduleEntry: mocks.createInteractionScheduleEntry,
+  resolveScheduleAssignees: (creator: string, requested?: string[]) => requested?.length ? [...new Set(requested)] : [creator],
 }));
+
+vi.mock('@alga-psa/auth/rbac', () => ({ hasPermission: mocks.hasPermission }));
 
 import { InteractionService } from '../../../lib/api/services/InteractionService';
 
@@ -51,7 +57,77 @@ function queryResolving<T>(result: T) {
 
 describe('InteractionService', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    vi.resetAllMocks();
+    mocks.withTransaction.mockImplementation(async (_knex, callback) => callback({ trx: true }));
+    mocks.createInteractionWithSideEffects.mockResolvedValue({
+      interaction: { interaction_id: 'interaction-1' },
+      publishSideEffects: vi.fn(),
+    });
+  });
+
+  const scheduleInput = {
+    type_id: '11111111-1111-4111-8111-111111111111',
+    client_id: '22222222-2222-4222-8222-222222222222',
+    start_time: '2026-10-01T12:00:00.000Z',
+    create_schedule_entry: true,
+  };
+
+  it.each([undefined, [], ['user-1']])('books self without a schedule permission check (%j)', async (ids) => {
+    const publish = vi.fn();
+    mocks.createInteractionScheduleEntry.mockResolvedValue({ publishScheduleEntryCreated: publish });
+    await new InteractionService().create({ ...scheduleInput, schedule_assigned_user_ids: ids }, context);
+    expect(mocks.hasPermission).not.toHaveBeenCalled();
+    expect(mocks.createInteractionScheduleEntry).toHaveBeenCalledWith({
+      tenant: context.tenant,
+      trx: { trx: true },
+      interaction: { interaction_id: 'interaction-1' },
+      assignedUserIds: ['user-1'],
+      assignedByUserId: 'user-1',
+    });
+    expect(publish).toHaveBeenCalledOnce();
+    expect(mocks.withTransaction.mock.invocationCallOrder[0]).toBeLessThan(publish.mock.invocationCallOrder[0]);
+  });
+
+  it('rejects assigning others before writing when permission is missing', async () => {
+    mocks.hasPermission.mockResolvedValue(false);
+    await expect(new InteractionService().create({ ...scheduleInput, schedule_assigned_user_ids: ['user-2'] }, context))
+      .rejects.toMatchObject({ statusCode: 403, message: 'Permission denied to assign schedule entries to other users.' });
+    expect(mocks.hasPermission).toHaveBeenCalledWith(context.user, 'user_schedule', 'update', context.db);
+    expect(mocks.withTransaction).not.toHaveBeenCalled();
+  });
+
+  it('books multiple users with permission in the interaction transaction', async () => {
+    mocks.hasPermission.mockResolvedValue(true);
+    await new InteractionService().create({ ...scheduleInput, schedule_assigned_user_ids: ['user-2', 'user-3', 'user-2'] }, context);
+    expect(mocks.createInteractionScheduleEntry).toHaveBeenCalledWith(expect.objectContaining({
+      trx: { trx: true }, assignedUserIds: ['user-2', 'user-3'], assignedByUserId: 'user-1',
+    }));
+  });
+
+  it('leaves scheduling opt-in even when times and assignees are present', async () => {
+    await new InteractionService().create({ ...scheduleInput, create_schedule_entry: false, schedule_assigned_user_ids: ['user-2'] }, context);
+    expect(mocks.hasPermission).not.toHaveBeenCalled();
+    expect(mocks.createInteractionScheduleEntry).not.toHaveBeenCalled();
+  });
+
+  it('rejects booking without a start time before any write', async () => {
+    await expect(new InteractionService().create({ ...scheduleInput, start_time: undefined }, context))
+      .rejects.toMatchObject({ statusCode: 400 });
+    expect(mocks.withTransaction).not.toHaveBeenCalled();
+  });
+
+  it.each(['Users user-2 not found in tenant tenant-1', 'Database unavailable'])('fails the transaction and suppresses publishers on schedule failure: %s', async (message) => {
+    const publish = vi.fn();
+    mocks.createInteractionWithSideEffects.mockResolvedValue({ interaction: {}, publishSideEffects: publish });
+    mocks.createInteractionScheduleEntry.mockRejectedValue(new Error(message));
+    const promise = new InteractionService().create(scheduleInput, context);
+    if (message.startsWith('Users ')) {
+      await expect(promise).rejects.toMatchObject({ statusCode: 400, message: 'One or more assigned users could not be found.' });
+    } else {
+      await expect(promise).rejects.toThrow(message);
+    }
+    expect(publish).not.toHaveBeenCalled();
+    await expect(mocks.withTransaction.mock.results[0].value).rejects.toThrow();
   });
 
   it('T011: delegates create to the session-free helper inside a transaction', async () => {
@@ -156,6 +232,93 @@ describe('InteractionService', () => {
     expect(types).toEqual([
       { type_id: 'system-call', type_name: 'Call', icon: 'phone', is_system: true },
       { type_id: 'tenant-demo', type_name: 'Demo', icon: null, is_system: false },
+    ]);
+  });
+
+  it('filters by a specific interaction status', async () => {
+    const dataQuery = queryResolving([]);
+    const countQuery = queryResolving(undefined);
+    countQuery.first.mockResolvedValue({ count: '0' });
+    const table = vi.fn().mockReturnValueOnce(dataQuery).mockReturnValueOnce(countQuery);
+    mocks.tenantDb.mockReturnValue({ table, tenantJoin: vi.fn((q: unknown) => q) });
+
+    await new InteractionService().list({ status_id: 'status-1', page: 1, page_size: 10 }, context);
+
+    expect(dataQuery.where).toHaveBeenCalledWith('i.status_id', 'status-1');
+    expect(countQuery.where).toHaveBeenCalledWith('i.status_id', 'status-1');
+  });
+
+  it('filters open interactions by closure via the tenant statuses table, treating no status as open', async () => {
+    const dataQuery = queryResolving([]);
+    dataQuery.whereIn = vi.fn().mockReturnValue(dataQuery);
+    const countQuery = queryResolving(undefined);
+    countQuery.first.mockResolvedValue({ count: '0' });
+    countQuery.whereIn = vi.fn().mockReturnValue(countQuery);
+    const statusSubquery = { select: vi.fn().mockReturnThis(), where: vi.fn().mockReturnThis() };
+    let interactionTableCalls = 0;
+    // Each list() call asks for 'interactions as i' twice: data first, then count.
+    const table = vi.fn((name: string) => {
+      if (name === 'statuses') return statusSubquery;
+      interactionTableCalls += 1;
+      return interactionTableCalls % 2 === 1 ? dataQuery : countQuery;
+    });
+    mocks.tenantDb.mockReturnValue({ table, tenantJoin: vi.fn((q: unknown) => q) });
+
+    await new InteractionService().list({ is_closed: false, page: 1, page_size: 10 }, context);
+
+    expect(statusSubquery.where).toHaveBeenCalledWith({ status_type: 'interaction', is_closed: false });
+    // Open = null status OR an open status; the grouped where receives a builder callback.
+    const grouped = dataQuery.where.mock.calls.find((call) => typeof call[0] === 'function');
+    expect(grouped).toBeTruthy();
+    const inner = { whereNull: vi.fn().mockReturnThis(), orWhereIn: vi.fn().mockReturnThis() };
+    (grouped![0] as (qb: unknown) => void)(inner);
+    expect(inner.whereNull).toHaveBeenCalledWith('i.status_id');
+    expect(inner.orWhereIn).toHaveBeenCalledWith('i.status_id', statusSubquery);
+    expect(dataQuery.whereIn).not.toHaveBeenCalled();
+
+    await new InteractionService().list({ is_closed: true, page: 1, page_size: 10 }, context);
+    expect(dataQuery.whereIn).toHaveBeenCalledWith('i.status_id', statusSubquery);
+  });
+
+  it('updates status/notes only after validating the interaction and the status type, then returns the hydrated row', async () => {
+    const interactionsTable = {
+      where: vi.fn().mockReturnThis(),
+      select: vi.fn().mockReturnThis(),
+      first: vi.fn().mockResolvedValue({ interaction_id: 'interaction-1' }),
+      update: vi.fn().mockResolvedValue(1),
+    };
+    const statusesTable = { where: vi.fn().mockReturnThis(), select: vi.fn().mockReturnThis(), first: vi.fn().mockResolvedValue({ status_id: 'status-closed' }) };
+    const hydrated = queryResolving(undefined);
+    hydrated.first.mockResolvedValue({ interaction_id: 'interaction-1', type_name: 'Call', status_name: 'Done' });
+    const table = vi.fn((name: string) => (name === 'statuses' ? statusesTable : name === 'interactions as i' ? hydrated : interactionsTable));
+    mocks.tenantDb.mockReturnValue({ table, tenantJoin: vi.fn((q: unknown) => q) });
+
+    const result = await new InteractionService().updateStatusOrNotes('interaction-1', { status_id: 'status-closed', notes: 'done' }, context);
+
+    expect(statusesTable.where).toHaveBeenCalledWith({ status_id: 'status-closed', status_type: 'interaction' });
+    expect(interactionsTable.update).toHaveBeenCalledWith({ status_id: 'status-closed', notes: 'done' });
+    expect(result).toEqual({ interaction_id: 'interaction-1', type_name: 'call', status_name: 'Done' });
+
+    statusesTable.first.mockResolvedValue(undefined);
+    await expect(new InteractionService().updateStatusOrNotes('interaction-1', { status_id: 'not-a-status' }, context))
+      .rejects.toThrow('status_id is not an interaction status');
+
+    interactionsTable.first.mockResolvedValue(undefined);
+    await expect(new InteractionService().updateStatusOrNotes('missing', { notes: 'x' }, context))
+      .rejects.toThrow('Interaction not found');
+  });
+
+  it('lists interaction statuses in display order', async () => {
+    const rows = [{ status_id: 's1', name: 'Open', is_closed: false, is_default: true, order_number: 1 }, { status_id: 's2', name: 'Done', is_closed: true, is_default: null, order_number: 2 }];
+    const statusesTable = queryResolving(rows);
+    mocks.tenantDb.mockReturnValue({ table: vi.fn(() => statusesTable), tenantJoin: vi.fn() });
+
+    const result = await new InteractionService().listStatuses(context);
+
+    expect(statusesTable.where).toHaveBeenCalledWith({ status_type: 'interaction' });
+    expect(result).toEqual([
+      { status_id: 's1', name: 'Open', is_closed: false, is_default: true, order_number: 1 },
+      { status_id: 's2', name: 'Done', is_closed: true, is_default: null, order_number: 2 },
     ]);
   });
 });

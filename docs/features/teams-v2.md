@@ -1,6 +1,6 @@
 # Teams V2
 
-The Teams V2 feature adds comprehensive team management capabilities to AlgaPSA: team member roles, team avatars, team assignment to tickets/tasks/templates, board-level default teams, organizational hierarchy with reports-to chains, and an org chart visualization. All UI is gated behind the **`teams-v2`** PostHog feature flag.
+The Teams V2 feature adds comprehensive team management capabilities to AlgaPSA: team member roles, team avatars, team assignment to tickets/tasks/templates, board-level default teams, organizational hierarchy with reports-to chains, and an org chart visualization. **All Teams V2 UI is unconditionally enabled for all tenants as of v1.5.** The `teams-v2` PostHog feature flag was retired when v1.5 shipped (see PR #3297); there is no flag to configure.
 
 ## Core Features
 
@@ -64,7 +64,7 @@ A `reports_to` column on the `users` table establishes manager relationships ind
 - Time sheet approval chains
 - Scheduling and availability
 
-Configured per-user in User Details settings (only visible when `teams-v2` flag is enabled).
+Configured per-user in User Details settings.
 
 ### Org Chart Visualization
 
@@ -188,7 +188,7 @@ Display component wrapping `EntityAvatar`. Shows the team's uploaded avatar imag
 
 ## Integration Points
 
-| Component | Package | Team Functionality | Feature Flag |
+| Component | Package | Team Functionality | Always On Since v1.5 |
 |---|---|---|---|
 | TaskForm | projects | Assign team via primary/additional agent pickers | Yes |
 | TaskCard | projects | Display team badge | Yes |
@@ -206,29 +206,23 @@ Display component wrapping `EntityAvatar`. Shows the team's uploaded avatar imag
 | TicketingDashboard | tickets | Team filter, team avatars in columns | Yes |
 | ticket-columns | tickets | Team avatar in assigned-to column | Yes |
 | optimizedTicketActions | tickets | Team join, team filter in queries | N/A (backend) |
-| ClientKanbanBoard | client-portal | Read-only team badge on tasks | No (display only) |
-| ClientTaskListView | client-portal | Read-only team badge in list | No (display only) |
-| TicketDetails (client) | client-portal | Read-only team badge | No (display only) |
-| TicketList (client) | client-portal | Team avatar in columns | No (display only) |
+| ClientKanbanBoard | client-portal | Read-only team badge on tasks | N/A (display only, was never flag-gated) |
+| ClientTaskListView | client-portal | Read-only team badge in list | N/A (display only, was never flag-gated) |
+| TicketDetails (client) | client-portal | Read-only team badge | N/A (display only, was never flag-gated) |
+| TicketList (client) | client-portal | Team avatar in columns | N/A (display only, was never flag-gated) |
 | UserDetails | server/settings | Reports-to dropdown | Yes |
 | OrgChart | server/settings | Org chart visualization | Yes |
 | BoardsSettings | server/settings | Default team per board | Yes |
 
 ---
 
-## Feature Flag
+## Feature Flag (Retired)
 
-All teams-v2 UI is gated behind the `teams-v2` PostHog feature flag:
+The `teams-v2` PostHog feature flag was retired in v1.5 (PR #3297). All Teams V2 UI is now unconditionally rendered for all tenants; there is no flag to configure or enable.
 
-```typescript
-const { enabled: teamsV2Enabled } = useFeatureFlag('teams-v2', { defaultValue: false });
-```
+Prior to v1.5, the flag controlled whether team-aware pickers (`UserAndTeamPicker`, `MultiUserAndTeamPicker`) were rendered instead of the basic user-only pickers, and whether team badges, team assignment UI, org chart, and the reports-to field in User Details were visible. All of that UI is now always active.
 
-When disabled:
-- Standard `UserPicker` / `MultiUserPicker` are rendered instead of team-aware pickers
-- Team badges, team assignment UI, and org chart are hidden
-- Database columns exist but remain null
-- Client portal team display is unconditional (shows data if present)
+Client portal team display was never flag-gated and remains unconditional.
 
 ---
 

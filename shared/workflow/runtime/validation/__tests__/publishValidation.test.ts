@@ -1,0 +1,117 @@
+import { beforeAll, describe, expect, it } from 'vitest';
+import { z } from 'zod';
+import { validateWorkflowDefinition } from '../publishValidation';
+import { registerDefaultNodes } from '../../nodes/registerDefaultNodes';
+import { getNodeTypeRegistry } from '../../registries/nodeTypeRegistry';
+import { getActionRegistryV2 } from '../../registries/actionRegistry';
+import type { WorkflowDefinition } from '../../types';
+
+beforeAll(() => {
+  if (!getNodeTypeRegistry().get('action.call')) {
+    registerDefaultNodes();
+  }
+  const actions = getActionRegistryV2();
+  if (!actions.get('publish.email', 1)) {
+    actions.register({
+      id: 'publish.email',
+      version: 1,
+      sideEffectful: false,
+      idempotency: { mode: 'engineProvided' },
+      inputSchema: z.object({ subject: z.string(), html: z.string().optional() }),
+      outputSchema: z.object({}),
+      handler: async () => ({}),
+    });
+  }
+});
+
+const definitionWith = (steps: unknown[]): WorkflowDefinition => ({
+  id: 'wf-publish',
+  version: 1,
+  name: 'Publish validation',
+  payloadSchemaRef: 'payload.Test.v1',
+  steps: steps as WorkflowDefinition['steps'],
+});
+
+const emailStep = (inputMapping: Record<string, unknown>) => ({
+  id: 's1',
+  type: 'action.call',
+  config: { actionId: 'publish.email', version: 1, inputMapping },
+});
+
+describe('validateWorkflowDefinition expressions', () => {
+  it('rejects a date trigger payload schema that does not match its source', () => {
+    const definition = {
+      ...definitionWith([]),
+      trigger: { type: 'date', source: 'client.anniversary', offsetDays: -30 },
+      payloadSchemaRef: 'payload.ContractEndDate.v1',
+    } as WorkflowDefinition;
+    const result = validateWorkflowDefinition(definition);
+    expect(result.errors).toContainEqual(expect.objectContaining({
+      code: 'DATE_TRIGGER_SCHEMA_MISMATCH',
+      stepPath: 'trigger',
+    }));
+  });
+
+  it('rejects an invalid IANA timezone on a date trigger', () => {
+    const definition = {
+      ...definitionWith([]),
+      trigger: { type: 'date', source: 'client.anniversary', offsetDays: 0, timezone: 'Mars/Olympus' },
+      payloadSchemaRef: 'payload.ClientAnniversary.v1',
+    } as WorkflowDefinition;
+    const result = validateWorkflowDefinition(definition);
+    expect(result.errors).toContainEqual(expect.objectContaining({
+      code: 'INVALID_TRIGGER_TIMEZONE',
+      message: expect.stringContaining('valid IANA timezone'),
+    }));
+  });
+
+  it('reports an empty action input expression exactly once, with guidance', () => {
+    const result = validateWorkflowDefinition(definitionWith([emailStep({ subject: 'Hi', html: { $expr: '' } })]));
+    const forHtml = result.errors.filter((error) => error.message.includes('inputMapping.html'));
+    expect(result.errors).toHaveLength(1);
+    expect(forHtml).toHaveLength(1);
+    expect(forHtml[0].code).toBe('EMPTY_EXPRESSION');
+    expect(forHtml[0].message).toContain('remove the mapping');
+  });
+
+  it('reports a broken action input expression once with the parser reason', () => {
+    const result = validateWorkflowDefinition(definitionWith([emailStep({ subject: { $expr: 'bad(' } })]));
+    expect(result.errors).toHaveLength(1);
+    expect(result.errors[0].code).toBe('INVALID_EXPRESSION');
+    expect(result.errors[0].message).not.toContain('Unknown error');
+  });
+
+  it('still validates expressions outside the input mapping', () => {
+    const result = validateWorkflowDefinition(
+      definitionWith([{ id: 'if', type: 'control.if', condition: { $expr: '' }, then: [] }])
+    );
+    expect(result.errors).toHaveLength(1);
+    expect(result.errors[0].code).toBe('INVALID_EXPR');
+    expect(result.errors[0].message).toContain('Expression is empty');
+  });
+
+  it('reports a missing control expression instead of throwing', () => {
+    const result = validateWorkflowDefinition(definitionWith([{ id: 'if', type: 'control.if', then: [] }]));
+    expect(result.ok).toBe(false);
+    expect(result.errors.some((error) => error.code === 'INVALID_EXPR')).toBe(true);
+  });
+
+  it('reports a missing control branch instead of throwing', () => {
+    const steps = [
+      { id: 'if', type: 'control.if', condition: { $expr: 'payload.x' } },
+      { id: 'fe', type: 'control.forEach', items: { $expr: 'payload.items' }, itemVar: 'item' },
+      { id: 'tc', type: 'control.tryCatch' }
+    ] as never;
+    const result = validateWorkflowDefinition(definitionWith(steps));
+    expect(result.ok).toBe(false);
+    expect(result.errors.some((error) => error.code === 'INVALID_WORKFLOW_DEFINITION')).toBe(true);
+  });
+
+  it('includes the parser reason for control expressions', () => {
+    const result = validateWorkflowDefinition(
+      definitionWith([{ id: 'if', type: 'control.if', condition: { $expr: 'payload..x' }, then: [] }])
+    );
+    expect(result.errors[0].code).toBe('INVALID_EXPR');
+    expect(result.errors[0].message).toMatch(/^Invalid expression: .+/);
+  });
+});

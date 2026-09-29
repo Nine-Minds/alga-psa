@@ -1,0 +1,12 @@
+[
+  {
+    "id": "T001",
+    "description": "Real parser preserves empty notification replies and genuine/ordinary message text",
+    "implemented": true
+  },
+  {
+    "id": "T002",
+    "description": "Inbound processor skips notification with real parser and accepts substantive reply",
+    "implemented": true
+  }
+]

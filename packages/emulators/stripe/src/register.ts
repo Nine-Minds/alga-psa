@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import type { ControlRegistry } from '@alga-psa/emulator-host';
+import { ControlError } from '@alga-psa/emulator-host';
 import type { StripeEmulatorConfig, StripeEmulatorCore } from './core';
 import { deliverEvent } from './notifier';
 
@@ -22,6 +23,18 @@ function redactedConfig(config: StripeEmulatorConfig) {
 }
 
 export function register(reg: ControlRegistry, core: StripeEmulatorCore): void {
+  reg.action({
+    name: 'redeliver-event',
+    description: 'Redeliver an existing event with the same ID and payload and a fresh webhook signature',
+    params: z.object({ eventId: z.string() }),
+    run: async ({ eventId }) => {
+      const event = core.events.get(eventId);
+      if (!event) throw new ControlError(404, 'Unknown Stripe event');
+      await deliverEvent(core, event, core.env);
+      return { eventId: event.id, eventType: event.type };
+    },
+  });
+
   reg.seeder({
     name: 'config',
     description: 'Configure test credentials, webhook targets, and the public hosted checkout base URL',

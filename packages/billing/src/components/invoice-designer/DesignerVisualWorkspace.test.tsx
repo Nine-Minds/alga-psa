@@ -16,16 +16,23 @@ const getTenantBrandingForDocumentPreviewMock = vi.fn();
 const templateRendererMock = vi.fn();
 const paperInvoiceMock = vi.fn();
 
+vi.mock('@alga-psa/ui/hooks/useFeatureFlag', () => ({
+  useFeatureFlag: () => ({ enabled: true, loading: false, error: null }),
+}));
+
 vi.mock('@alga-psa/billing/actions/invoiceQueries', () => ({
   fetchInvoicesPaginated: (...args: unknown[]) => fetchInvoicesPaginatedMock(...args),
   getInvoiceForRendering: (...args: unknown[]) => getInvoiceForRenderingMock(...args),
 }));
 
-vi.mock('@alga-psa/billing/lib/adapters/invoiceAdapters', () => ({
-  mapDbInvoiceToWasmViewModel: (...args: unknown[]) => mapDbInvoiceToWasmViewModelMock(...args),
-  // sampleScenarios.ts calls this at module load; grouping is irrelevant here.
-  enrichWithGroupedItems: (vm: unknown) => vm,
-}));
+vi.mock('@alga-psa/billing/lib/adapters/invoiceAdapters', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@alga-psa/billing/lib/adapters/invoiceAdapters')>();
+  return {
+    ...actual,
+    mapDbInvoiceToWasmViewModel: (...args: unknown[]) => mapDbInvoiceToWasmViewModelMock(...args),
+    // Keep sample collection enrichment real; only the fixture invoice read is stubbed.
+  };
+});
 
 vi.mock('@alga-psa/billing/actions/invoiceTemplatePreview', () => ({
   runAuthoritativeInvoiceTemplatePreview: (...args: unknown[]) =>

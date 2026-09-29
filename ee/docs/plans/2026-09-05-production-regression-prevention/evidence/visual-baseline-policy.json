@@ -1,0 +1,20 @@
+{
+  "scope": "Invoice visual baseline filesystem policy",
+  "change": "Missing baseline fails by default; UPDATE_VISUAL_BASELINES=1 explicitly creates/replaces local baselines and is forbidden in CI",
+  "validation": {
+    "unitTestsPassed": 4,
+    "test": "server/src/test/unit/testing/visualBaseline.test.ts",
+    "visualCollection": "Invoice template golden test collected with RUN_VISUAL=1 and required DB TCP probe"
+  },
+  "checks": [
+    "Missing baseline writes no file or directory",
+    "Comparison preserves reviewed baseline bytes",
+    "Explicit local update creates/replaces synthetic fixture files",
+    "CI update rejected for missing and existing files without writes"
+  ],
+  "limits": [
+    "Full rendered-image test not executed",
+    "No existing baseline PNGs changed",
+    "Visual suite remains outside mandatory CI pending renderer/database fixture work"
+  ]
+}

@@ -33,10 +33,11 @@ import { LogInteractionModal } from "../features/opportunities/components/LogInt
 import { FollowUpModal } from "../features/opportunities/components/FollowUpModal";
 import { LoseOpportunityModal } from "../features/opportunities/components/LoseOpportunityModal";
 import { WinConfirmModal } from "../features/opportunities/components/WinConfirmModal";
-import { CallPromptBanner } from "../features/opportunities/components/CallPromptBanner";
+import { CallPromptBanner } from "../features/interactions/components/CallPromptBanner";
 import { formatCents, formatDate } from "../features/opportunities/opportunityFormat";
 import { serverErrorMessage } from "../features/opportunities/opportunityErrors";
-import { recordPendingCall, usePendingCallPrompt } from "../features/opportunities/hooks/usePendingCallPrompt";
+import { usePendingCallPrompt } from "../features/interactions/hooks/usePendingCallPrompt";
+import { usePlaceCall } from "../features/interactions/hooks/usePlaceCall";
 
 type Props = NativeStackScreenProps<RootStackParamList, "OpportunityDetail">;
 
@@ -80,7 +81,8 @@ export function OpportunityDetailScreen({ route, navigation }: Props) {
   const [winSubmitting, setWinSubmitting] = useState(false);
   const [winError, setWinError] = useState<string | null>(null);
 
-  const { prompt: callPrompt, dismiss: dismissCallPrompt } = usePendingCallPrompt(opportunityId);
+  const { prompt: callPrompt, dismiss: dismissCallPrompt } = usePendingCallPrompt({ kind: "opportunity", id: opportunityId });
+  const placeCall = usePlaceCall();
 
   const fetchAll = useCallback(async () => {
     if (!client || !session) return;
@@ -162,28 +164,16 @@ export function OpportunityDetailScreen({ route, navigation }: Props) {
 
   const startCall = useCallback(
     (phone: string, contact: { name: string | null; id: string | null }) => {
-      const startedAtMs = Date.now();
-      // Arm the log-this-call prompt only once the dialer actually opens — on
-      // devices that can't place calls (wifi-only iPads) the record would
-      // otherwise fire on the next unrelated app resume.
-      Linking.openURL(`tel:${phone}`)
-        .then(() => {
-          recordPendingCall({
-            opportunityId,
-            contactName: contact.name,
-            contactId: contact.id,
-            clientId: deal?.client_id ?? null,
-            startedAtMs,
-          });
-        })
-        .catch(() => {
-          showToast({
-            message: t("errors.callUnavailable", "This device can't place phone calls."),
-            tone: "error",
-          });
-        });
+      placeCall({
+        origin: { kind: "opportunity", id: opportunityId },
+        phone,
+        name: contact.name,
+        contactId: contact.id,
+        clientId: deal?.client_id ?? null,
+        opportunityId,
+      });
     },
-    [deal?.client_id, opportunityId, showToast, t],
+    [deal?.client_id, opportunityId, placeCall],
   );
 
   const onCall = useCallback(() => {
@@ -536,6 +526,7 @@ export function OpportunityDetailScreen({ route, navigation }: Props) {
         visible={logOpen}
         client={client}
         apiKey={session.accessToken}
+        userId={session.user?.id ?? null}
         opportunityId={opportunityId}
         clientId={deal.client_id}
         contactNameId={logPreset?.contactNameId ?? deal.contact_id}

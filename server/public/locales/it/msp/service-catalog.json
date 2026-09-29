@@ -31,7 +31,8 @@
       "advancedSettings": "Impostazioni avanzate",
       "addNew": "Aggiungi nuova aliquota fiscale",
       "add": "Aggiungi aliquota fiscale",
-      "update": "Aggiorna aliquota fiscale"
+      "update": "Aggiorna aliquota fiscale",
+      "cancel": "Annulla"
     },
     "dialog": {
       "fields": {
@@ -39,7 +40,8 @@
         "startDate": "Data di inizio *",
         "endDate": "Data di fine (facoltativa)",
         "region": "Regione fiscale *",
-        "percentage": "Percentuale d'imposta *"
+        "percentage": "Percentuale d'imposta *",
+        "active": "Attiva"
       },
       "placeholders": {
         "loadingRegions": "Caricamento regioni...",
@@ -48,13 +50,43 @@
       },
       "addTitle": "Aggiungi nuova aliquota fiscale",
       "editTitle": "Modifica aliquota fiscale",
-      "description": "Inserisci i dettagli dell'aliquota fiscale."
+      "description": "Inserisci i dettagli dell'aliquota fiscale.",
+      "activeHint": "Le aliquote inattive vengono ignorate nel calcolo delle imposte sulle fatture.",
+      "regionDescription": "Questa aliquota si applica alle fatture tassate in {{region}}."
     },
     "title": "Aliquote fiscali",
     "loading": "Caricamento aliquote fiscali",
     "deleteEntity": {
       "fallback": "questa aliquota fiscale",
       "withRegion": "{{regionName}} aliquota fiscale"
+    },
+    "cap": {
+      "title": "Limite d’imposta",
+      "label": "Limite d’imposta ({{currencyCode}})",
+      "currency": "Valuta dell’aliquota",
+      "universal": "Tutte le valute delle fatture",
+      "optional": "Facoltativo",
+      "noCap": "Nessun limite",
+      "clear": "Cancella limite d’imposta",
+      "hint": "Imposta massima di questa aliquota per ogni calcolo. Lasciare vuoto per non applicare limiti. Inserire 0 per non addebitare imposte nei calcoli che usano questo limite.",
+      "scopeTitle": "Come si applicano i limiti d’imposta",
+      "scope": "Un calcolo regionale limita il contributo di ogni aliquota prima di sommare le imposte, non il totale regionale. I calcoli per periodo applicano il limite a ogni aliquota in ciascun segmento di date; più segmenti possono superare insieme il limite. Una fattura può includere più calcoli. Non è un limite per fattura, cliente, progetto o intero periodo. I limiti di fatturazione dei progetti limitano gli importi fatturabili; i limiti d’imposta limitano l’imposta calcolata. I fornitori fiscali esterni usano la propria configurazione.",
+      "applicability": "Questa aliquota si applica solo alle fatture in {{currencyCode}}. Non verrà più selezionata per le altre valute.",
+      "composite": "Questo limite si applica quando l’aliquota contribuisce a un calcolo regionale. I calcoli basati sui componenti non applicano questo limite.",
+      "legacy": "Valuta non specificata · {{amount}} unità minime",
+      "legacyHelp": "Questo limite salvato si applica attualmente nelle unità minime della valuta di ciascuna fattura. Selezionare una valuta e confermare l’importo salvato oppure inserire un nuovo limite. Le altre modifiche mantengono il valore; è anche possibile cancellarlo senza scegliere una valuta.",
+      "resolve": "Usa l’importo salvato in unità minime di {{currencyCode}}",
+      "reenter": "Reinserire il limite nella nuova valuta prima di salvare.",
+      "example": "Esempio: {{amount}}; senza separatori delle migliaia.",
+      "errors": {
+        "negative": "Inserire un limite d’imposta pari o superiore a zero.",
+        "precision": "Il limite contiene più cifre decimali di quelle consentite dalla valuta.",
+        "invalid": "Inserire un importo con il separatore decimale dell’esempio, senza segni, separatori delle migliaia o simboli di valuta.",
+        "overflow": "Il limite supera l’importo massimo supportato.",
+        "currency": "Scegliere una valuta supportata prima di impostare un limite d’imposta.",
+        "reenter": "Reinserire il limite nella nuova valuta prima di salvare."
+      },
+      "compositeIndicator": "Solo calcoli regionali"
     }
   },
   "taxRateDetail": {
@@ -315,12 +347,17 @@
       "minimumUsage": {
         "placeholder": "0",
         "label": "Soglia di utilizzo minimo",
-        "help": "Utilizzo minimo fatturabile per periodo (0 per nessun minimo)",
-        "errorNegative": "L'utilizzo minimo non può essere negativo"
+        "help": "Soglia minima applicata all'utilizzo registrato (0 per nessun minimo). Si applica solo quando il periodo ha un record di utilizzo — anche uno zero esplicito — e non crea mai un addebito da sola.",
+        "errorNegative": "L'utilizzo minimo non può essere negativo",
+        "labelAdditive": "Minimo per voce",
+        "labelPeriodTotal": "Minimo per comunicazione di periodo",
+        "helpAdditive": "Soglia minima applicata a ogni voce registrata (0 per nessun minimo). Si applica solo quando il periodo ha un record di consumo — anche uno zero esplicito — e non genera mai un addebito da sola.",
+        "helpPeriodTotal": "Soglia minima applicata una sola volta al conteggio comunicato del periodo (0 per nessun minimo). Si applica solo quando un conteggio è comunicato — anche uno zero esplicito — e non genera mai un addebito da sola."
       },
       "enableTieredPricing": "Abilita prezzi differenziati"
     },
     "title": "Configurazione basata sull'utilizzo",
+    "recordDrivenNote": "I servizi a consumo vengono fatturati in base all'utilizzo registrato nel monitoraggio utilizzo per ogni periodo di servizio. Un periodo senza record di utilizzo non produce alcun addebito: registra l'utilizzo (o uno zero esplicito) in ogni periodo per fatturare questo servizio.",
     "tiers": {
       "title": "Livelli di prezzo",
       "addTier": "Aggiungi livello",
@@ -336,6 +373,18 @@
         "upperGreaterThanLower": "Il limite superiore del livello deve essere maggiore del limite inferiore",
         "rateNegative": "Le tariffe per livello non possono essere negative"
       }
+    },
+    "measurementMode": {
+      "label": "Come viene misurato il consumo?",
+      "additive": {
+        "label": "Registrare il consumo man mano che avviene",
+        "description": "Le voci datate si sommano: voci di 10 e 12 fatturano 22. Il minimo e le fasce si applicano a ogni voce. Il periodo successivo inizia senza voci."
+      },
+      "periodTotal": {
+        "label": "Comunicare un conteggio per ogni periodo",
+        "description": "Un conteggio per periodo di servizio sostituisce il precedente: correggere 10 in 12 fattura 12, mai 22. Il minimo e le fasce si applicano una sola volta a quel conteggio. Il periodo successivo inizia non comunicato — nessun conteggio viene riportato."
+      },
+      "transitionNote": "Il cambio di modalità ha effetto dal successivo periodo di servizio non fatturato. Le voci o i conteggi già registrati in un periodo aperto devono prima essere fatturati o rimossi."
     }
   },
   "rateTiers": {
@@ -396,12 +445,30 @@
         "label": "Allineamento del ciclo di fatturazione",
         "placeholder": "Seleziona l'allineamento",
         "help": "Controlla il modo in cui viene calcolata la copertura del periodo parziale quando la tariffa ricorrente deve essere ridotta a un periodo inferiore a quello del servizio completo."
+      },
+      "unitRate": {
+        "label": "Tariffa unitaria",
+        "placeholder": "0,00",
+        "help": "Tariffa fatturata per ogni postazione/unità in ogni periodo di servizio."
       }
     },
     "options": {
       "start": "Inizio del ciclo di fatturazione",
       "end": "Fine del ciclo di fatturazione",
       "prorated": "Copertura proporzionale"
+    },
+    "pricingBasis": {
+      "label": "Come viene prezzato questo servizio?",
+      "bundle": {
+        "label": "Prezzo del pacchetto",
+        "description": "Viene fatturato il totale fisso della riga di contratto. Le quantità su questo servizio ripartiscono solo una quota di quel totale a fini di reportistica — non sono postazioni fatturabili e modificarle non cambia l'importo fatturato.",
+        "allocationNote": "Quantità di ripartizione: {{quantity}} — serve a suddividere il totale del pacchetto per la reportistica, non è fatturata come postazioni."
+      },
+      "unit": {
+        "label": "Postazioni/unità ricorrenti",
+        "description": "Fattura quantità × tariffa unitaria in ogni periodo, senza che alcun totale di riga abbia la precedenza. La stessa quantità e tariffa vengono fatturate di nuovo il periodo successivo finché non programmi una modifica. Una quantità pari a zero fattura zero.",
+        "summary": "{{quantity}} × {{rate}} (postazioni ricorrenti) = {{total}} per periodo"
+      }
     }
   },
   "bucketConfig": {

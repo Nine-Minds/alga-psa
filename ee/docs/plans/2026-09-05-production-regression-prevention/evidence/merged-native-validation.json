@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "revision": "db09315e1bef5419dfba21eb3023dfa92aea493c",
+  "scope": "Native validation after merging origin/main",
+  "checks": [
+    {
+      "suite": "Canonical Node tooling",
+      "passed": 654,
+      "requiredFiles": 70,
+      "sourceBeforeClean": true,
+      "sourceAfterClean": true,
+      "evidence": "test-results/node-tooling/evidence.json"
+    },
+    {
+      "suite": "Canonical mobile",
+      "passed": 901,
+      "files": 134,
+      "sourceBeforeClean": true,
+      "sourceAfterClean": true,
+      "generatorTrackedDiff": false,
+      "evidence": "test-results/mobile/"
+    },
+    {
+      "suite": "Exact CI calendar timezone selection",
+      "passedPerTimezone": 51,
+      "timezones": [
+        "Europe/Berlin",
+        "America/Los_Angeles"
+      ]
+    },
+    {
+      "suite": "Full server TypeScript",
+      "status": "passed",
+      "log": "/tmp/alga-merged-final-typecheck.log"
+    },
+    {
+      "suite": "Merged schedule UI composition",
+      "passed": 30,
+      "files": 6,
+      "unhandledErrors": 0,
+      "workingTreeChange": "AvailabilitySettings.component.test.tsx supplies missing jsdom scrolling and waits for real animation callbacks",
+      "log": "/tmp/alga-merged-schedule-ui-green.log"
+    }
+  ],
+  "limitations": [
+    "Latest browser run timed out waiting for OAuth popup during native compilation; warm rerun is underway.",
+    "Fresh GitHub CI must validate published source.",
+    "Three tax-policy TODOs remain unresolved; no exclusion was invented."
+  ]
+}

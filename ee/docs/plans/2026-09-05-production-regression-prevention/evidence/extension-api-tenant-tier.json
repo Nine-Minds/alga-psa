@@ -1,0 +1,29 @@
+{
+  "status": "verified_locally",
+  "nativeJob": "https://github.com/Nine-Minds/alga-psa/actions/runs/34097042847/job/101670277273",
+  "apiResults": {
+    "passed": 334,
+    "failed": 1
+  },
+  "failure": "extensions.e2e.test.ts expected enterprise install 202, received 403",
+  "codeFinding": "API-key route called assertTierAccess, which resolves a browser session. The API route already has an authenticated tenant in req.context.",
+  "change": "Use authenticated API tenant for tier policy; explicitly grant extension:write in API fixture; assert permission denial and Essentials-tier denial separately before Pro success.",
+  "limits": [
+    "Updated native API case awaits execution. The missing permission grant is a separate fixture issue from the proven API/browser tenant isolation bug."
+  ],
+  "log": "/tmp/alga-native-ee-browser-101670277273.log",
+  "fixtureFinding": "simpleRoleSetup grants CRUD resources but does not grant extension:write; explicitly grant it in this test and verify revocation is denied.",
+  "verification": {
+    "routeTests": {
+      "passed": 4,
+      "failed": 0,
+      "log": "/tmp/alga-extension-api-tier-unit.log"
+    },
+    "originalRoute": {
+      "passed": 1,
+      "failed": 3,
+      "log": "/tmp/alga-extension-api-tier-before.log"
+    },
+    "scope": "Actual route/tier policy with mocked API middleware, persisted-tier lookup and install action. Real authentication/RBAC/persistence remain native E2E responsibilities."
+  }
+}

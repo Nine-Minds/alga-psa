@@ -1,0 +1,21 @@
+{
+  "status": "local behavior verified; live Sheet and native CI not yet verified",
+  "problem": "Existing writer inspected only A1, so appended metric fields did not receive headers on an existing tab and reordered headers were accepted.",
+  "change": "Read the complete header row, verify existing managed headings, append only the missing suffix, and reject mismatches before any write. Preserve extra trailing columns after a complete matching managed header.",
+  "validation": {
+    "before": {
+      "passed": 1,
+      "failed": 2,
+      "log": "/tmp/alga-metrics-schema-before.log"
+    },
+    "after": {
+      "schemaCases": 5,
+      "combinedMetricsCases": 12,
+      "failed": 0,
+      "skipped": 0,
+      "log": "/tmp/alga-metrics-schema-final.log"
+    },
+    "scope": "Exercises appendRows against a simulated Sheets HTTP boundary, checking read/update/append requests and refusal to mutate mismatched schemas. No live spreadsheet writes."
+  },
+  "remaining": "Versioned readiness fields, live workbook verification and cancellation reconciliation remain required; F024/F025 stay incomplete."
+}

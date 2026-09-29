@@ -1,7 +1,9 @@
 import { Alert, Modal, Pressable, ScrollView, Text, View } from "react-native";
 import { useTranslation } from "react-i18next";
 import { Feather } from "@expo/vector-icons";
+import type { ApiClient } from "../../../api";
 import type { ScheduleEntry } from "../../../api/schedule";
+import { InteractionEntryContext } from "./InteractionEntryContext";
 import { useTheme } from "../../../ui/ThemeContext";
 import { Badge } from "../../../ui/components/Badge";
 import { PrimaryButton } from "../../../ui/components/PrimaryButton";
@@ -17,6 +19,7 @@ export function useEntryKindLabel() {
     if (type === "meeting") return t("kinds.meeting", { defaultValue: "Meeting" });
     if (type === "break") return t("kinds.break", { defaultValue: "Break" });
     if (type === "other") return t("kinds.other", { defaultValue: "Other" });
+    if (type === "interaction") return t("kinds.interaction", { defaultValue: "Interaction" });
     if (type === "ad_hoc" || type == null) return t("kinds.adHoc", { defaultValue: "Ad-hoc" });
     return type;
   };
@@ -28,6 +31,7 @@ export function entryKindIcon(entry: ScheduleEntry): keyof typeof Feather.glyphM
   if (kind === "project_task") return "clipboard";
   if (entry.work_item_type === "break") return "coffee";
   if (entry.work_item_type === "meeting") return "users";
+  if (entry.work_item_type === "interaction") return "phone";
   return "calendar";
 }
 
@@ -44,9 +48,13 @@ export function ScheduleEntryDetailModal({
   busy,
   error,
   onOpenTicket,
+  onOpenClient,
+  onOpenContact,
   onEdit,
   onDelete,
   onClose,
+  client = null,
+  apiKey = null,
 }: {
   visible: boolean;
   entry: ScheduleEntry | null;
@@ -54,9 +62,14 @@ export function ScheduleEntryDetailModal({
   busy: boolean;
   error: string | null;
   onOpenTicket: (ticketId: string) => void;
+  onOpenClient?: (clientId: string, clientName: string) => void;
+  onOpenContact?: (contactId: string, contactName: string) => void;
   onEdit: (entry: ScheduleEntry) => void;
   onDelete: (entry: ScheduleEntry) => void;
   onClose: () => void;
+  /** Needed to resolve the ticket/client/contact behind an interaction entry. */
+  client?: ApiClient | null;
+  apiKey?: string | null;
 }) {
   const { colors, spacing, typography, borderRadius } = useTheme();
   const { t } = useTranslation("schedule");
@@ -67,6 +80,7 @@ export function ScheduleEntryDetailModal({
   const editable = isEntryEditable(entry, currentUserId);
   const recurring = hasRecurrence(entry);
   const isTicket = entry.work_item_type === "ticket" && Boolean(entry.work_item_id);
+  const isInteraction = entry.work_item_type === "interaction" && Boolean(entry.work_item_id);
   const names = assignedNames(entry);
 
   const confirmDelete = () => {
@@ -119,6 +133,17 @@ export function ScheduleEntryDetailModal({
           <Text style={{ ...typography.body, color: colors.text, marginTop: spacing.xs }}>
             {formatDateShort(entry.scheduled_start)} • {formatTimeRange(entry.scheduled_start, entry.scheduled_end)}
           </Text>
+
+          {isInteraction ? (
+            <InteractionEntryContext
+              client={client}
+              apiKey={apiKey}
+              interactionId={entry.work_item_id as string}
+              onOpenTicket={onOpenTicket}
+              onOpenClient={onOpenClient}
+              onOpenContact={onOpenContact}
+            />
+          ) : null}
 
           {entry.notes ? (
             <>

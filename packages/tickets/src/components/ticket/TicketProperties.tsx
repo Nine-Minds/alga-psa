@@ -231,7 +231,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
   const { renderQuickAddContact } = useQuickAddClient();
   const { t } = useTranslation('features/tickets');
   // These read 'en-US' outright, so they stayed American in every locale.
-  const { formatDate, locale } = useFormatters();
+  const { formatDate, locale, dateFormat } = useFormatters();
   const liveTicketTimerEnabled = isLiveTicketTimerEnabled ?? isBoardLiveTicketTimerEnabled(board);
   const [showContactPicker, setShowContactPicker] = useState(false);
   const [showClientPicker, setShowClientPicker] = useState(false);
@@ -250,7 +250,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
   const [primaryAgentAvatarUrl, setPrimaryAgentAvatarUrl] = useState<string | null>(null);
   const [additionalAgentAvatarUrls, setAdditionalAgentAvatarUrls] = useState<Record<string, string | null>>({});
   const [contactAvatarUrl, setContactAvatarUrl] = useState<string | null>(null);
-  const [dateTimeFormat, setDateTimeFormat] = useState<string>('MMM d, yyyy h:mm a');
+  const [showWeekday, setShowWeekday] = useState<boolean>(false);
   const [appointmentRequests, setAppointmentRequests] = useState<any[]>([]);
   const [showAppointmentTooltip, setShowAppointmentTooltip] = useState(false);
   const [isRemoveTeamDialogOpen, setIsRemoveTeamDialogOpen] = useState(false);
@@ -561,7 +561,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
     const loadDisplay = async () => {
       try {
         const s = await getTicketingDisplaySettings();
-        if (s?.dateTimeFormat) setDateTimeFormat(s.dateTimeFormat);
+        setShowWeekday(s?.showWeekday ?? false);
       } catch (e) {
         console.error('Failed to load ticketing display settings', e);
       }
@@ -670,7 +670,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
               id={id}
               ticketId={ticket.ticket_id}
               currentUserId={userId}
-              dateTimeFormat={dateTimeFormat}
+              showWeekday={showWeekday}
               refreshKey={timeEntriesRefreshKey}
               onEditEntry={onEditTimeEntry}
               onDeleteEntry={onDeleteTimeEntry}
@@ -835,7 +835,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
               {(() => {
                 if (!ticket.entered_at) return t('properties.notAvailable', 'N/A');
                 try {
-                  return formatTicketDateTime(ticket.entered_at, dateTimeFormat, locale, getUserTimeZone());
+                  return formatTicketDateTime(ticket.entered_at, locale, getUserTimeZone(), dateFormat, showWeekday);
                 } catch (e) {
                   return ticket.entered_at;
                 }
@@ -1399,6 +1399,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
               size="sm"
               placeholder={t('properties.selectAdditionalAgents', 'Select additional agents...')}
               onUserClick={disableAgentSchedule ? undefined : onAgentClick}
+              userClickLabel={t('bento.hero.viewSchedule', 'View schedule')}
             />
           </div>
         </div>

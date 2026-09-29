@@ -12,6 +12,12 @@ import {
   getXeroRedirectUri,
   resolveXeroOAuthCredentials
 } from '../../../../lib/xero/xeroClientService';
+import {
+  getProviderDisconnectStatusInfo,
+  isProviderDisconnectActive,
+  PROVIDER_XERO,
+  withProviderCredentialLock
+} from '../../../../lib/providerDisconnect';
 import { generateOauthCsrfToken, buildOauthCsrfCookieOptions } from '../../../../lib/oauth/oauthCsrf';
 import { XERO_OAUTH_CSRF_COOKIE } from '../../../../lib/xero/oauthCsrf';
 import {
@@ -81,10 +87,19 @@ async function handleConnectRequest(request: NextRequest): Promise<NextResponse>
   if (!canManageBilling) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
-  const { tenant } = await createTenantKnex(sessionUser.tenant);
+  const { knex, tenant } = await createTenantKnex(sessionUser.tenant);
 
   if (!tenant) {
     return NextResponse.json({ error: 'Authentication required.' }, { status: 401 });
+  }
+
+  const disconnectActive = await isProviderDisconnectActive(knex, tenant, PROVIDER_XERO).catch(() => false);
+  if (disconnectActive) {
+    logger.info('[xeroOAuth] Connect blocked: Xero disconnect in progress', { tenantId: tenant });
+    return NextResponse.json(
+      { error: 'Xero is being disconnected. Finish or finalize the disconnect before connecting again.' },
+      { status: 409 }
+    );
   }
 
   const secretProvider = await getSecretProviderInstance();
@@ -92,36 +107,50 @@ async function handleConnectRequest(request: NextRequest): Promise<NextResponse>
 
   try {
     const credentials = await resolveXeroOAuthCredentials(tenant, secretProvider);
-    // The CSRF cookie is a single browser-slot value. Reuse an existing
-    // well-formed token so a second parallel attempt in the same browser does
-    // not clobber the first: both attempts bind to the same cookie value and
-    // each callback still passes the double-submit check.
-    const existingCsrf = request.cookies.get(XERO_OAUTH_CSRF_COOKIE.name)?.value;
-    const csrfToken =
-      existingCsrf && CSRF_TOKEN_PATTERN.test(existingCsrf) ? existingCsrf : generateOauthCsrfToken();
-    const { verifier, challenge } = createPkcePair();
-
-    // The public state is an opaque 256-bit nonce. The PKCE verifier and every
-    // binding live in a short-lived, single-use server-side record keyed by the
-    // nonce; nothing confidential is sent through the browser.
-    const nonce = crypto.randomBytes(32).toString('base64url');
-    const encryptedVerifier = await encryptXeroVerifier(verifier);
-    await storeXeroConnectAttempt(
-      nonce,
-      {
-        verifier: encryptedVerifier,
-        tenantId: tenant,
-        userId: sessionUser.user_id,
-        provider: XERO_CONNECT_ATTEMPT_PROVIDER,
-        redirectUri,
-        csrf: csrfToken,
-        createdAt: Date.now(),
-        expiresAt: Date.now() + XERO_CONNECT_ATTEMPT_TTL_SECONDS * 1000
-      },
-      XERO_CONNECT_ATTEMPT_TTL_SECONDS
-    );
-
     const scopeConfig = getXeroOAuthScopeConfig();
+    const oauthState = await withProviderCredentialLock(knex, tenant, PROVIDER_XERO, async (trx) => {
+      const active = await isProviderDisconnectActive(trx, tenant, PROVIDER_XERO).catch(() => true);
+      if (active) return null;
+      const status = await getProviderDisconnectStatusInfo(trx, tenant, PROVIDER_XERO);
+      const finalizedAtMs = status?.finalizedAt ? Date.parse(status.finalizedAt) : Number.NaN;
+      const createdAt = Number.isFinite(finalizedAtMs)
+        ? Math.max(Date.now(), finalizedAtMs + 1)
+        : Date.now();
+      // The CSRF cookie is a single browser-slot value. Reuse an existing
+      // well-formed token so parallel attempts remain bound to the same cookie.
+      const existingCsrf = request.cookies.get(XERO_OAUTH_CSRF_COOKIE.name)?.value;
+      const csrfToken =
+        existingCsrf && CSRF_TOKEN_PATTERN.test(existingCsrf) ? existingCsrf : generateOauthCsrfToken();
+      const { verifier, challenge } = createPkcePair();
+      const nonce = crypto.randomBytes(32).toString('base64url');
+      const encryptedVerifier = await encryptXeroVerifier(verifier);
+      await storeXeroConnectAttempt(
+        nonce,
+        {
+          verifier: encryptedVerifier,
+          tenantId: tenant,
+          userId: sessionUser.user_id,
+          provider: XERO_CONNECT_ATTEMPT_PROVIDER,
+          redirectUri,
+          csrf: csrfToken,
+          createdAt,
+          expiresAt: createdAt + XERO_CONNECT_ATTEMPT_TTL_SECONDS * 1000
+        },
+        XERO_CONNECT_ATTEMPT_TTL_SECONDS
+      );
+      return {
+        csrfToken,
+        challenge,
+        state: nonce
+      };
+    });
+    if (!oauthState) {
+      return NextResponse.json(
+        { error: 'Xero is being disconnected. Finish or finalize the disconnect before connecting again.' },
+        { status: 409 }
+      );
+    }
+    const { csrfToken, challenge, state } = oauthState;
 
     logger.info('[xeroOAuth] Starting Xero OAuth connect flow', {
       tenantId: tenant,
@@ -136,7 +165,7 @@ async function handleConnectRequest(request: NextRequest): Promise<NextResponse>
       client_id: String(credentials.clientId),
       redirect_uri: redirectUri,
       scope: scopeConfig.scopes.join(' '),
-      state: nonce,
+      state,
       code_challenge: challenge,
       code_challenge_method: 'S256'
     });

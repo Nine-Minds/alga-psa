@@ -1,8 +1,12 @@
 import { RuleTester } from 'eslint';
+import { describe, it } from 'node:test';
 import migrationFilename from './migration-filename.js';
 
+RuleTester.describe = describe;
+RuleTester.it = it;
+
 const ruleTester = new RuleTester({
-  parserOptions: {
+  languageOptions: {
     ecmaVersion: 2020,
     sourceType: 'commonjs',
   },
@@ -120,5 +124,3 @@ ruleTester.run('migration-filename', migrationFilename, {
     },
   ],
 });
-
-console.log('All tests passed!');

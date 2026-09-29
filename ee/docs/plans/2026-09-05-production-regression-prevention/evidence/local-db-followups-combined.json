@@ -1,0 +1,17 @@
+{
+  "revision": "74e75b367817c8979b1ee2c54ad3ae9cb20889a7",
+  "scope": "Local combined run of changed DB suites, not full integration or native CI",
+  "status": "passed",
+  "files": 3,
+  "passed": 22,
+  "skipped": 0,
+  "durationSeconds": 45.59,
+  "workerIsolation": "forks.singleFork=false; maxWorkers=1",
+  "database": "task-owned visual_regression_82cc_test; recreated/migrated per suite",
+  "suites": [
+    "microsoftEmailOAuthCallbackRoute.integration.test.ts",
+    "workflowRuntimeV2TriggerLaunch.integration.test.ts",
+    "emailScenarioMessageLookup.integration.test.ts"
+  ],
+  "logSha256": "34624d32d8c11e7ceed2a22311a74db4821c3808fcb9fbf5bfe7c407b681e92d"
+}

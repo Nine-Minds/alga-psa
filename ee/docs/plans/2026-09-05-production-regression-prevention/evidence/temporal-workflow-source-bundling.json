@@ -1,0 +1,56 @@
+{
+  "scope": "Repair native Temporal production-index workflow bundling",
+  "baseRevision": "1f0a443a9f",
+  "workingTreeDirty": true,
+  "nativeFailure": {
+    "runId": 34151013390,
+    "jobId": 101833124603,
+    "error": "Webpack cannot resolve three @alga-psa/workflows source imports without cached dist"
+  },
+  "beforeWithoutDist": {
+    "failed": 1,
+    "passed": 1
+  },
+  "afterWithoutDist": {
+    "passed": 2,
+    "failed": 0
+  },
+  "fullEngine": {
+    "files": 10,
+    "passed": 44,
+    "failed": 0,
+    "skipped": 0,
+    "todo": 0,
+    "pending": 0,
+    "durationSeconds": 44.02,
+    "discovery": "passed"
+  },
+  "change": "Configure Temporal webpack to resolve the workflows package from source, matching worker tsconfig. Existing real workflow execution assertions preserved.",
+  "artifacts": [
+    {
+      "path": "/tmp/alga-temporal-bundle-before.log",
+      "sha256": "db44643aaf29dd55e7629cfedfa6fe3fc9768a4761f2f288012e935096ebff42"
+    },
+    {
+      "path": "/tmp/alga-temporal-bundle-after.log",
+      "sha256": "53b7178e7638afd60f0ad843ced23f38ac98206bb5d453e25265240ef570a2f4"
+    },
+    {
+      "path": "/tmp/alga-temporal-engine-source-fix.log",
+      "sha256": "85e67f43e5fdfdb8614d40a75c21b9127d7b3e7af09d8ab521344ec305f5ecdb"
+    },
+    {
+      "path": "test-results/temporal-engine/evidence.json",
+      "sha256": "4903944855ae25bd7d07d8fc2882bd69d45f68faf199008f1c4b1611363fb1de"
+    },
+    {
+      "path": "test-results/temporal-engine/discovery.json",
+      "sha256": "4e0348fdeddf4b1970c2bea656e029d233750b98708bf0a03194fcd6861b43f8"
+    }
+  ],
+  "limits": [
+    "Local working-tree validation, not native execution of the fix.",
+    "Production compiled worker uses tsc-alias; this repairs source-based test bundling.",
+    "Integration shard failure remains open."
+  ]
+}

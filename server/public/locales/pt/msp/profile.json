@@ -112,7 +112,7 @@
       "advanced": {
         "title": "Avançado: roteamento de provedor de identidade personalizado",
         "description": "Direcione o login único do MSP ao seu próprio provedor de identidade usando domínios de login verificados. Necessário apenas em instalações personalizadas ou locais.",
-        "inertNotice": "Nenhuma credencial de provedor de identidade do tenant está configurada, então as declarações de domínio não têm efeito no momento. Os usuários entram com os provedores hospedados do Google ou da Microsoft. As credenciais do tenant são provisionadas em instalações personalizadas e locais."
+        "inertNotice": "Nenhum provedor de identidade do tenant está configurado, então as declarações de domínio não têm efeito no momento. Configure o Keycloak acima ou, na Enterprise Edition, as credenciais do seu aplicativo Google / Microsoft, e depois reivindique aqui o domínio de login da equipe."
       }
     },
     "userRoles": {
@@ -749,6 +749,7 @@
       "branding": {
         "google": "Continuar com o Google",
         "microsoft": "Continuar com a Microsoft",
+        "keycloak": "Continuar com o Keycloak",
         "default": "Continuar"
       }
     },

@@ -1,0 +1,17 @@
+{
+  "revision": "b4e0dba957",
+  "status": "passed",
+  "command": "tsc --noEmit -p /tmp/alga-regression-fixes-types.json",
+  "config": "/tmp/alga-regression-fixes-types.json",
+  "log": "/tmp/alga-regression-fixes-types.log",
+  "scope": [
+    "TimeEntryEditForm and race test",
+    "Extension API-key regression",
+    "API fixture cleanup regression",
+    "Accounting export selector and transitive dependencies"
+  ],
+  "limitations": [
+    "Targeted compile, not repository-wide typecheck",
+    "Native CI still pending"
+  ]
+}

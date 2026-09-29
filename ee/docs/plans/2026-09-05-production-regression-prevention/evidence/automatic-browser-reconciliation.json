@@ -1,0 +1,25 @@
+{
+  "observedAt": "2026-09-09T04:07:07.709Z",
+  "repository": "Nine-Minds/alga-psa",
+  "runId": "34304828149",
+  "runAttempt": 1,
+  "runHeadSha": "cb88424b6c4e4b9ecf98ded3a791a0b45d00e24b",
+  "workflowPath": ".github/workflows/production-regression.yml",
+  "artifacts": {
+    "community": "10087305089",
+    "enterprise": "10087346381"
+  },
+  "revisions": {
+    "community": {
+      "revision": "f71e845a2c5d66fb634a01daa39161c82dd3e4ff",
+      "revisionEvidence": "candidate-artifact",
+      "revisionDiagnostics": []
+    },
+    "enterprise": {
+      "revision": "f71e845a2c5d66fb634a01daa39161c82dd3e4ff",
+      "revisionEvidence": "candidate-artifact",
+      "revisionDiagnostics": []
+    }
+  },
+  "scope": "Read-only live GitHub API inventory, signed archive download, manifest validation and immutable run-head relationship; not independent checkout or deployment proof."
+}

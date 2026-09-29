@@ -5,7 +5,7 @@
 
 import { Knex, knex } from 'knex';
 import path from 'node:path';
-import { tenantDb } from '@alga-psa/db';
+import { tenantDb } from '@alga-psa/db/tenantDb';
 import { rollbackTenant } from './tenant-creation';
 
 export interface DbTestConfig {

@@ -1,0 +1,50 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Invoice totals row edit</title>
+<style>body{margin:24px;background:#f1f5f9;font-family:system-ui,sans-serif}</style>
+<style>.invoice-template-root {
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-size: 14px;
+  line-height: 1.35;
+  color: #111827;
+}
+
+.invoice-template-root section { margin: 0 0 16px; }
+.invoice-template-root h2 { margin: 0 0 8px; font-size: 18px; font-weight: 700; }
+.invoice-template-root p { margin: 0; }
+
+.invoice-template-root table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 8px 0 16px;
+}
+.invoice-template-root thead th {
+  border-bottom: 1px solid #e5e7eb;
+  font-weight: 600;
+  text-align: left;
+  padding: 6px 8px;
+}
+.invoice-template-root tbody td {
+  padding: 6px 8px;
+  vertical-align: top;
+}
+.invoice-template-root tbody tr + tr td { border-top: 1px solid #f3f4f6; }
+
+.invoice-template-root .ast-node-type-field {
+  display: flex;
+  gap: 6px;
+}
+
+.invoice-template-root .ast-node-type-totals > .ast-totals-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 2px 0;
+}
+@media print {
+  .invoice-template-root thead { display: table-header-group; }
+  .invoice-template-root tbody tr,
+  .invoice-template-root .ast-node-type-totals { break-inside: avoid; }
+}
+.invoice-template-root .ast-totals-value {
+  text-align: right;
+  white-space: nowrap;
+}</style></head><body><div class="invoice-template-root"><div id="root" class="ast-node ast-node-type-document" style="padding:40px;box-sizing:border-box"><section id="header" class="ast-node ast-node-type-section"><h2>Invoice</h2><div id="invoice-number" class="ast-node ast-node-type-field" style="padding:0;border:0;background-color:transparent;display:flex;justify-content:space-between;align-items:flex-start"><span>Invoice #: </span><span>INV-2026-0147</span></div><div id="issue-date" class="ast-node ast-node-type-field" style="padding:0;border:0;background-color:transparent;display:flex;justify-content:space-between;align-items:flex-start"><span>Issue Date: </span><span>2/6/2026</span></div><div id="due-date" class="ast-node ast-node-type-field" style="padding:0;border:0;background-color:transparent;display:flex;justify-content:space-between;align-items:flex-start"><span>Due Date: </span><span>2/20/2026</span></div></section><table id="line-items" class="ast-node ast-node-type-dynamic-table"><thead><tr><th>Description</th><th style="text-align:right">Qty</th><th style="text-align:right">Rate</th><th style="text-align:right">Amount</th></tr></thead><tbody><tr><td>Managed Endpoint Monitoring</td><td style="text-align:right">15</td><td style="text-align:right">$42.00</td><td style="text-align:right">$630.00</td></tr><tr><td>Patch Management</td><td style="text-align:right">15</td><td style="text-align:right">$16.00</td><td style="text-align:right">$240.00</td></tr></tbody></table><div id="totals" class="ast-node ast-node-type-totals"><div class="ast-totals-row"><span class="ast-totals-label">Subtotal</span><span class="ast-totals-value">$870.00</span></div><div class="ast-totals-row"><span class="ast-totals-label">Tax</span><span class="ast-totals-value">$78.30</span></div><div class="ast-totals-row" style="font-weight:700;background-color:#0f766e;color:#ecfdf5;padding:4px 6px;border-radius:4px"><span class="ast-totals-label">Total</span><span class="ast-totals-value">$948.30</span></div></div></div></div></body></html>

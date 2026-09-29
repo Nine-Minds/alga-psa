@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "kind": "real-database-authorization-activation",
+  "testFile": "server/src/test/infrastructure/tickets/ticketPermissions.test.ts",
+  "counts": {
+    "numTotalTests": 9,
+    "numPassedTests": 9,
+    "numFailedTests": 0,
+    "numPendingTests": 0,
+    "numTodoTests": 0
+  },
+  "reportSha256": "cf39749e58357d1aa491f924b1fb16cb8b3705be1707c6de7d91a683c362e788",
+  "runtime": "Owned PostgreSQL on port 55432, migrated test_database, CI seed 20260610",
+  "exercised": [
+    "Real ticket create/read/update actions",
+    "Production RBAC hasPermission",
+    "Database user_roles, roles, role_permissions and permissions hydration",
+    "Persisted updates and unchanged records after denial",
+    "Role revocation and client-only role rejection"
+  ],
+  "replacedTodoCases": {
+    "regular user read": "should allow regular user to view tickets",
+    "admin read": "allows the administrator to read the persisted ticket",
+    "read without permission": "denies reads immediately after the user role is revoked",
+    "admin update": "should allow admin user to update a ticket",
+    "regular user update denied": "should not allow regular user to update a ticket",
+    "admin create": "should allow admin user to create a ticket",
+    "regular user create denied": "should not allow regular user to create a ticket"
+  },
+  "controlledFault": {
+    "change": "Return true when real hasPermission finds no matching grant",
+    "failedAssertions": [
+      "Ticket Permissions Infrastructure should not allow regular user to update a ticket",
+      "Ticket Permissions Infrastructure should not allow regular user to create a ticket",
+      "Ticket Permissions Infrastructure denies reads immediately after the user role is revoked",
+      "Ticket Permissions Infrastructure does not grant an MSP user access through a client-only role",
+      "Ticket Permissions Infrastructure denies reads when the role no longer grants the read permission"
+    ],
+    "reportSha256": "bcfc68e45866fe2a592cfb48efedf946287acb14395edd27584ac25b5ca9958f",
+    "restored": true
+  },
+  "typecheck": "Passed targeted tsc using installed Vitest types",
+  "limitations": [
+    "Authentication/session and event publishing remain fixture seams. This suite does not prove browser sign-in or notification delivery.",
+    "TestContext binds one tenant; cross-tenant isolation requires the separate browser/DB isolation suites.",
+    "Controlled fault experiment, not a historical incident replay.",
+    "Current native CI is running the previous published revision; these changes require a later candidate run."
+  ]
+}

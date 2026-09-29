@@ -28,7 +28,12 @@ type Fixture = {
   opportunityId: string;
   otherTenantInteractionId: string;
   callTypeId: string;
+  openStatusId: string;
   initialOpportunityActivity: string;
+  allowedUserId: string;
+  deniedUserId: string;
+  otherUserId: string;
+  roleId: string;
 };
 
 let db: Knex;
@@ -99,15 +104,20 @@ function clientInsert(tenantId: string, clientId: string, label: string) {
   };
 }
 
-function statusInsert(tenantId: string, statusId: string, userId: string) {
+function statusInsert(
+  tenantId: string,
+  statusId: string,
+  userId: string,
+  overrides: { name?: string; orderNumber?: number; isClosed?: boolean; isDefault?: boolean } = {},
+) {
   return {
     tenant: tenantId,
     status_id: statusId,
-    name: 'Completed',
+    name: overrides.name ?? 'Completed',
     status_type: 'interaction',
-    order_number: 10,
-    is_closed: true,
-    is_default: true,
+    order_number: overrides.orderNumber ?? 10,
+    is_closed: overrides.isClosed ?? true,
+    is_default: overrides.isDefault ?? true,
     created_by: userId,
     ...(hasColumn('statuses', 'item_type') ? { item_type: 'interaction' } : {}),
     ...(hasColumn('statuses', 'is_custom') ? { is_custom: true } : {}),
@@ -145,6 +155,7 @@ async function seedFixture(): Promise<Fixture> {
   const otherClientId = randomUUID();
   const opportunityId = randomUUID();
   const statusId = randomUUID();
+  const openStatusId = randomUUID();
   const otherStatusId = randomUUID();
   const roleId = randomUUID();
   const otherTenantInteractionId = randomUUID();
@@ -185,7 +196,17 @@ async function seedFixture(): Promise<Fixture> {
     ...(hasColumn('contacts', 'updated_at') ? { updated_at: db.fn.now() } : {}),
   });
 
-  await tenantTable(tenantId, 'statuses').insert(statusInsert(tenantId, statusId, allowedUserId));
+  // Legacy shape kept on purpose: "Completed" is still flagged as the tenant default, so the
+  // POST below proves the API opens interactions in the open status instead of finishing them.
+  await tenantTable(tenantId, 'statuses').insert([
+    statusInsert(tenantId, statusId, allowedUserId),
+    statusInsert(tenantId, openStatusId, allowedUserId, {
+      name: 'Planned',
+      orderNumber: 1,
+      isClosed: false,
+      isDefault: false,
+    }),
+  ]);
   await tenantTable(otherTenantId, 'statuses').insert(statusInsert(otherTenantId, otherStatusId, otherUserId));
 
   await tenantTable(tenantId, 'opportunities').insert({
@@ -285,7 +306,12 @@ async function seedFixture(): Promise<Fixture> {
     opportunityId,
     otherTenantInteractionId,
     callTypeId: callType.type_id,
+    openStatusId,
     initialOpportunityActivity,
+    allowedUserId,
+    deniedUserId,
+    otherUserId,
+    roleId,
   };
 }
 
@@ -295,7 +321,7 @@ function request(
   path: string,
   init: { method?: string; body?: Record<string, unknown> } = {},
 ) {
-  return new NextRequest(`http://localhost${path}`, {
+  return new NextRequest(`http://localhost:3105${path}`, {
     method: init.method ?? 'GET',
     headers: {
       'x-api-key': apiKey,
@@ -307,6 +333,8 @@ function request(
 }
 
 async function cleanupTenant(tenantId: string): Promise<void> {
+  await tenantTable(tenantId, 'schedule_entry_assignees').del();
+  await tenantTable(tenantId, 'schedule_entries').del();
   await tenantTable(tenantId, 'interactions').del();
   await tenantTable(tenantId, 'opportunities').del();
   await tenantTable(tenantId, 'api_keys').del();
@@ -330,7 +358,11 @@ describe('interactions REST API (integration)', () => {
     process.env.DB_USER_SERVER = process.env.DB_USER_SERVER || 'app_user';
     process.env.DB_PASSWORD_SERVER = process.env.DB_PASSWORD_SERVER || 'postpass123';
 
-    db = await createTestDbConnection({ runSeeds: false });
+    db = await createTestDbConnection({
+      runSeeds: false,
+      // Allow verification against an existing per-card clone without migrations or a reset.
+      recreate: process.env.INTERACTION_API_REUSE_DB !== 'true',
+    });
     for (const table of [
       'tenants',
       'users',
@@ -358,6 +390,62 @@ describe('interactions REST API (integration)', () => {
 
   afterAll(async () => {
     await db?.destroy().catch(() => undefined);
+  }, HOOK_TIMEOUT);
+
+  it('books self and colleagues, rejects unauthorized assignment, and rolls back cross-tenant assignees', async () => {
+    const fixture = await seedFixture();
+    const controller = new ApiInteractionController();
+    const post = (fields: Record<string, unknown>) => controller.create()(request(
+      fixture.tenantId, fixture.allowedApiKey, '/api/v1/interactions', {
+        method: 'POST',
+        body: {
+          type_id: fixture.callTypeId, client_id: fixture.clientId,
+          opportunity_id: fixture.opportunityId,
+          title: 'Scheduled call', start_time: '2026-10-01T12:00:00.000Z',
+          duration: 45, create_schedule_entry: true, ...fields,
+        },
+      },
+    ));
+
+    expect((await post({ start_time: undefined })).status).toBe(400);
+    expect((await post({ schedule_assigned_user_ids: [fixture.deniedUserId] })).status).toBe(403);
+    expect(await tenantTable(fixture.tenantId, 'interactions')).toHaveLength(0);
+    expect(await tenantTable(fixture.tenantId, 'schedule_entries')).toHaveLength(0);
+
+    const self = await post({ schedule_assigned_user_ids: [] });
+    expect(self.status).toBe(201);
+    const { data: selfInteraction } = await self.json();
+    const selfEntry = await tenantTable(fixture.tenantId, 'schedule_entries').where({ work_item_id: selfInteraction.interaction_id }).first();
+    expect(selfEntry).toMatchObject({ title: 'Scheduled call', work_item_type: 'interaction', status: 'scheduled' });
+    expect(new Date(selfEntry.scheduled_end).toISOString()).toBe('2026-10-01T12:45:00.000Z');
+    expect(await tenantTable(fixture.tenantId, 'schedule_entry_assignees').where({ entry_id: selfEntry.entry_id }).pluck('user_id'))
+      .toEqual([fixture.allowedUserId]);
+    expect(selfInteraction.status_id).toBe(fixture.openStatusId);
+
+    const permissionId = randomUUID();
+    await tenantTable(fixture.tenantId, 'permissions').insert({
+      tenant: fixture.tenantId, permission_id: permissionId,
+      resource: 'user_schedule', action: 'update', msp: true, client: false,
+    });
+    await tenantTable(fixture.tenantId, 'role_permissions').insert({
+      tenant: fixture.tenantId, role_id: fixture.roleId, permission_id: permissionId,
+    });
+
+    const others = await post({ schedule_assigned_user_ids: [fixture.allowedUserId, fixture.deniedUserId, fixture.deniedUserId] });
+    expect(others.status).toBe(201);
+    const { data: othersInteraction } = await others.json();
+    const othersEntry = await tenantTable(fixture.tenantId, 'schedule_entries').where({ work_item_id: othersInteraction.interaction_id }).first();
+    const assignees = await tenantTable(fixture.tenantId, 'schedule_entry_assignees').where({ entry_id: othersEntry.entry_id }).pluck('user_id');
+    expect(assignees.sort()).toEqual([fixture.allowedUserId, fixture.deniedUserId].sort());
+
+    const before = await tenantTable(fixture.tenantId, 'opportunities').where({ opportunity_id: fixture.opportunityId }).first('last_activity_at');
+    const missing = await post({ schedule_assigned_user_ids: [fixture.otherUserId], interaction_date: '2026-10-02T12:00:00.000Z' });
+    expect(missing.status).toBe(400);
+    expect(await missing.json()).toMatchObject({ error: { message: 'One or more assigned users could not be found.' } });
+    expect(await tenantTable(fixture.tenantId, 'interactions')).toHaveLength(2);
+    expect(await tenantTable(fixture.tenantId, 'schedule_entries')).toHaveLength(2);
+    const after = await tenantTable(fixture.tenantId, 'opportunities').where({ opportunity_id: fixture.opportunityId }).first('last_activity_at');
+    expect(after.last_activity_at).toEqual(before.last_activity_at);
   }, HOOK_TIMEOUT);
 
   it('T012: POST persists tenant-scoped, GET filters by opportunity, missing RBAC is 403, and cross-tenant ID is 404', async () => {
@@ -399,6 +487,7 @@ describe('interactions REST API (integration)', () => {
       user_id: expect.any(String),
       title: 'Mobile discovery call',
       visibility: 'internal',
+      status_id: fixture.openStatusId,
     });
 
     const listResponse = await controller.list()(request(

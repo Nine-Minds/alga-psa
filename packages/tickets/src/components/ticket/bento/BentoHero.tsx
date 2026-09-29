@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { PartialBlock } from '@blocknote/core';
-import { Pencil, SlidersHorizontal, Flame, Save, CheckCircle } from 'lucide-react';
+import { Pencil, SlidersHorizontal, Flame, Save, CheckCircle, CalendarDays } from 'lucide-react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import CustomSelect, { type SelectOption } from '@alga-psa/ui/components/CustomSelect';
@@ -35,6 +35,7 @@ import { usePageSaveShortcut } from '@alga-psa/ui/keyboard-shortcuts';
 import TicketNotificationSuppressionControl, {
   type TicketNotificationSuppressionValue,
 } from '../TicketNotificationSuppressionControl';
+import { CategoryPicker } from '../../CategoryPicker';
 
 interface HeroSelectOption {
   value: string;
@@ -110,6 +111,8 @@ interface BentoHeroProps {
   onTagsChange?: (tags: ITag[]) => void;
   /** Rendered create-task / link-task actions (injected node). */
   taskActions?: React.ReactNode;
+  /** Rendered quick-invoice action (injected node). */
+  quickInvoiceActions?: React.ReactNode;
   /** Opens the dedicated resolution-and-close dialog. */
   onResolveAndClose?: () => void;
   resolveAndCloseDisabled?: boolean;
@@ -187,6 +190,7 @@ export function BentoHero({
   tags,
   onTagsChange,
   taskActions,
+  quickInvoiceActions,
   onResolveAndClose,
   resolveAndCloseDisabled = false,
   liveHighlightedFields = [],
@@ -500,6 +504,7 @@ export function BentoHero({
   }, [handlePendingChange, pendingBoardConfig, pendingChanges.board_id, savedBoardConfig]);
 
   const displayedStatusId = displayValue('status_id');
+  const displayedCategoryId = displayValue('subcategory_id') || displayValue('category_id');
   const baseScopedStatusOptions = boardScopedStatusOptions.length > 0
     ? boardScopedStatusOptions
     : statusOptions.filter((option) => option.board_id === effectiveBoardId || option.value === displayedStatusId);
@@ -510,17 +515,6 @@ export function BentoHero({
     displayedStatusId && !baseScopedStatusOptions.some((option) => option.value === displayedStatusId)
       ? [...baseScopedStatusOptions, ...statusOptions.filter((option) => option.value === displayedStatusId)]
       : baseScopedStatusOptions;
-
-  const categoryOptions = useMemo<SelectOption[]>(
-    () =>
-      (boardCategories ?? [])
-        .filter((category) => category.category_id)
-        .map((category) => ({
-          value: category.category_id,
-          label: category.category_name ?? '',
-        })),
-    [boardCategories],
-  );
 
   // Priority options may carry the priority color; render it as a dot. A board
   // only offers the priority family its priority_type declares, so a custom board
@@ -947,6 +941,7 @@ export function BentoHero({
               </span>
             ) : null}
             {taskActions}
+            {quickInvoiceActions}
             {onResolveAndClose ? (
               <Button
                 id={`${id}-resolve-and-close-button`}
@@ -1032,13 +1027,31 @@ export function BentoHero({
           </HeroField>
           <HeroField label={t('bento.hero.category', 'Category')}>
             {renderLiveField('category_id', '', (
-              <CustomSelect
+              <CategoryPicker
                 id={`${id}-category-select`}
+                categories={boardCategories}
+                selectedCategories={displayedCategoryId ? [displayedCategoryId] : []}
+                onSelect={(categoryIds) => {
+                  // LEVERAGE: pattern ticket-category-selection — Grid and Entry both stage parent/subcategory IDs.
+                  const selectedId = categoryIds[0];
+                  if (!selectedId || selectedId === 'no-category') {
+                    handlePendingChange('category_id', null);
+                    handlePendingChange('subcategory_id', null);
+                    return;
+                  }
+
+                  const selectedCategory = boardCategories.find((category) => category.category_id === selectedId);
+                  if (selectedCategory?.parent_category) {
+                    handlePendingChange('category_id', selectedCategory.parent_category);
+                    handlePendingChange('subcategory_id', selectedId);
+                  } else {
+                    handlePendingChange('category_id', selectedId);
+                    handlePendingChange('subcategory_id', null);
+                  }
+                }}
                 placeholder={t('bento.hero.category', 'Category')}
-                value={displayValue('category_id') ?? ''}
-                options={categoryOptions}
-                onValueChange={(value: string) => handlePendingChange('category_id', value || null)}
-                disabled={workflowLocked || isFrozen('category_id') || isLoadingBoardConfig}
+                multiSelect={false}
+                disabled={workflowLocked || isFrozen('category_id') || isFrozen('subcategory_id') || isLoadingBoardConfig}
                 className="!w-full"
               />
             ))}
@@ -1063,6 +1076,19 @@ export function BentoHero({
                 placeholder={t('bento.hero.notAssigned', 'Not assigned')}
                 disabled={workflowLocked || isFrozen('assigned_to')}
               />
+              {onAgentClick && ticket.assigned_to ? (
+                <Tooltip content={t('bento.hero.viewSchedule', 'View schedule')}>
+                  <button
+                    id={`${id}-assignee-schedule`}
+                    type="button"
+                    aria-label={t('bento.hero.viewSchedule', 'View schedule')}
+                    className="inline-flex items-center justify-center h-6 w-6 rounded text-[rgb(var(--color-text-400))] hover:text-[rgb(var(--color-text-700))] hover:bg-[rgb(var(--color-border-100))]"
+                    onClick={() => onAgentClick(ticket.assigned_to!)}
+                  >
+                    <CalendarDays className="h-4 w-4" />
+                  </button>
+                </Tooltip>
+              ) : null}
               {assignedTeam ? (
                 <Tooltip content={assignedTeam.team_name}>
                   <Badge variant="info" size="sm" className="gap-1 cursor-help">
@@ -1075,35 +1101,29 @@ export function BentoHero({
                   </Badge>
                 </Tooltip>
               ) : null}
-              {additionalAgentEntries.length > 0 ? (
-                <Tooltip
-                  content={
-                    <div className="text-xs space-y-1.5">
-                      <div className="font-medium text-gray-300 mb-1">
-                        {t('bento.hero.additionalAgentsTooltip', 'Additional agents:')}
-                      </div>
-                      {additionalAgentEntries.map((agent) => (
-                        <div key={agent.userId} className="flex items-center gap-2">
-                          <UserAvatar userId={agent.userId} userName={agent.name} avatarUrl={null} size="xs" />
-                          <span>{agent.name}</span>
-                        </div>
-                      ))}
-                    </div>
-                  }
-                >
-                  <Badge
-                    variant="info"
-                    size="sm"
-                    className="cursor-pointer"
-                    onClick={() => {
-                      const first = additionalAgentEntries[0];
-                      if (first) onAgentClick?.(first.userId);
-                    }}
-                  >
-                    +{additionalAgentEntries.length}
-                  </Badge>
-                </Tooltip>
-              ) : null}
+              {additionalAgentEntries.map((agent) => {
+                const label = onAgentClick
+                  ? `${t('bento.hero.viewSchedule', 'View schedule')}: ${agent.name}`
+                  : agent.name;
+                const avatar = <UserAvatar userId={agent.userId} userName={agent.name} avatarUrl={null} size="xs" />;
+                return (
+                  <Tooltip key={agent.userId} content={label}>
+                    {onAgentClick ? (
+                      <button
+                        id={`${id}-additional-agent-${agent.userId}`}
+                        type="button"
+                        aria-label={label}
+                        className="rounded-full hover:ring-2 hover:ring-[rgb(var(--color-primary-300))]"
+                        onClick={() => onAgentClick(agent.userId)}
+                      >
+                        {avatar}
+                      </button>
+                    ) : (
+                      <span id={`${id}-additional-agent-${agent.userId}`} className="cursor-help">{avatar}</span>
+                    )}
+                  </Tooltip>
+                );
+              })}
               </>
             ))}
           </HeroField>

@@ -1,0 +1,753 @@
+{
+  "schemaVersion": 1,
+  "observedAt": "2026-09-06",
+  "revision": "d604264c181b78a813a8aa13f13e206753acf4fc",
+  "runUrl": "https://github.com/Nine-Minds/alga-psa/actions/runs/34048360458/job/101527437186",
+  "artifact": "server-integration-execution",
+  "reportSha256": "387c0eb62d349a1473277cc67b8b4c2e55156bf0f71e496fc58ba6fc79d3a418",
+  "jobStatus": "success",
+  "readiness": "incomplete",
+  "files": 279,
+  "counts": {
+    "passed": 1915,
+    "failed": 0,
+    "skipped": 146,
+    "todo": 0
+  },
+  "unexecuted": [
+    {
+      "file": "server/src/test/integration/bucketPoolActions.integration.test.ts",
+      "test": "bucket pool list loads a real pool snapshot with members (real DB) loads the pool snapshot with joined member service_name (no ambiguous tenant column)",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/bucketUsageIntegration.test.ts",
+      "test": "weighted bucket burn integration (real DB) resolves the pool and per-member multipliers",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/bucketUsageIntegration.test.ts",
+      "test": "weighted bucket burn integration (real DB) depletes the pool on weighted minutes: 2x member burns double",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/bucketUsageIntegration.test.ts",
+      "test": "weighted bucket burn integration (real DB) accrues overage on weighted minutes once the pool is exhausted",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/bucketUsageIntegration.test.ts",
+      "test": "weighted bucket burn integration (real DB) invoice amount equals weighted overage hours \u00d7 rate",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/bucketUsageIntegration.test.ts",
+      "test": "weighted bucket burn integration (real DB) reconcile recomputes the same weighted totals from source records",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/bucketUsageIntegration.test.ts",
+      "test": "weighted bucket burn integration (real DB) dormant pool overage charges a NULL service_id and keeps the pool identity on config_id (no bucket_id leak into service FKs)",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/bucketUsageIntegration.test.ts",
+      "test": "weighted bucket burn integration (real DB) member pool charges carry a real service_id and keep the pool identity separately on config_id",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/bucketUsageIntegration.test.ts",
+      "test": "catch-all scope is line-service membership scoped (real DB) does not route a service to the catch-all pool of a line that does not offer it",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/bucketUsageIntegration.test.ts",
+      "test": "catch-all scope is line-service membership scoped (real DB) does not let an entry for a non-line service inflate a catch-all pool on reconcile",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/bucketUsageIntegration.test.ts",
+      "test": "pool overage attributes per-service tax metadata by contribution (real DB) apportions overage per contributing service with per-service tax metadata and amounts summing to the pool charge",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/bucketUsageIntegration.test.ts",
+      "test": "pool overage attributes per-service tax metadata by contribution (real DB) excludes a service not configured on the line from a catch-all pool's overage contributions",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/bucketUsageIntegration.test.ts",
+      "test": "pool overage attributes per-service tax metadata by contribution (real DB) a single-member pool produces unchanged charge output (one charge, that member metadata)",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/bucketUsageOverlayIntegration.test.ts",
+      "test": "bucket usage with an Hourly + Bucket overlay (real DB) resolves the Bucket configuration and records usage",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/bucketUsageOverlayIntegration.test.ts",
+      "test": "bucket usage with an Hourly + Bucket overlay (real DB) accrues overage once usage passes the included minutes",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/bucketUsageOverlayIntegration.test.ts",
+      "test": "bucket usage with an Hourly + Bucket overlay (real DB) reuses the existing usage record for a second entry in the same period",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/bucketUsageReport.integration.test.ts",
+      "test": "bucket usage report reads the period-scoped weighted ledger (real DB) reports the 2x entry at its weighted amount from the current-period ledger, immune to raw and out-of-period data",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/bucketUsageReport.integration.test.ts",
+      "test": "bucket usage report reads the period-scoped weighted ledger (real DB) reports a pool with no current-period ledger row as untouched",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/bucketUsageReport.integration.test.ts",
+      "test": "bucket usage report reads the period-scoped weighted ledger (real DB) keeps unrelated clients/contracts in their own rows without cross-contamination",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/bucketUsageReport.integration.test.ts",
+      "test": "bucket usage report reads the period-scoped weighted ledger (real DB) derives overage and >100% utilization from weighted ledger minutes",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/collaborativeEditing.integration.test.ts",
+      "test": "Hocuspocus persistence should persist content across a disconnect/reconnect cycle",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/collaborativeEditing.integration.test.ts",
+      "test": "Hocuspocus persistence should sync content between two providers connected to the same room",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/collaborativeEditing.integration.test.ts",
+      "test": "Hocuspocus persistence should broadcast awareness state between providers",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/collaborativeEditing.integration.test.ts",
+      "test": "Hocuspocus persistence should reject WebSocket connection with mismatched tenant",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/collaborativeEditing.integration.test.ts",
+      "test": "Hocuspocus persistence should sync Y.js content to document_block_content via syncCollabSnapshot",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/commentRecoveryScheduleDiscoveryIntegration.test.ts",
+      "test": "comment recovery schedule discovery (PostgreSQL) discovers a tenant created after startup, installs once, and recovers its publication and abandoned draft",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/commentRecoveryScheduleDiscoveryIntegration.test.ts",
+      "test": "comment recovery schedule discovery (PostgreSQL) retries scheduler initialization and partial installation, keeping successful tenants idempotent",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/eventEmailRetryQueueRecovery.integration.test.ts",
+      "test": "event email retry processing leases (Redis) atomically claims once and recovers a worker interrupted before delivery without losing the payload",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/eventEmailRetryQueueRecovery.integration.test.ts",
+      "test": "event email retry processing leases (Redis) archives ambiguous outcomes and missing payloads instead of reporting success or looping forever",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/invoiceTicketProduction.integration.test.ts",
+      "test": "generates immutable ticket presentation from approved source records",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/invoiceTicketProduction.integration.test.ts",
+      "test": "renders the UI-saved transformed detail and primary tables through preview and PDF",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/invoiceTicketProduction.integration.test.ts",
+      "test": "verifies cap production generation and persistence",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/invoiceTicketProduction.integration.test.ts",
+      "test": "verifies recurring-cap production generation and persistence",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/invoiceTicketProduction.integration.test.ts",
+      "test": "verifies bucket production generation and persistence",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/invoiceTicketProduction.integration.test.ts",
+      "test": "verifies multi-tax-long production generation and persistence",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/invoiceTicketProduction.integration.test.ts",
+      "test": "verifies task-identities production generation and persistence",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/invoiceTicketProduction.integration.test.ts",
+      "test": "verifies hour-block production generation and persistence",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/invoiceTicketProduction.integration.test.ts",
+      "test": "saves and verifies a named nested alias on the generated long invoice through production preview/PDF",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/invoiceTicketProduction.integration.test.ts",
+      "test": "surfaces declared scalar and missing collection diagnostics through production preview and PDF",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/invoiceTicketProduction.integration.test.ts",
+      "test": "generates through real authenticated HTTP and rejects foreign snapshot ownership",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/invoiceTicketProduction.integration.test.ts",
+      "test": "verifies visually authored detail and historical locale matrix through persisted reads, preview and PDF",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/simulatorBucketPoolSnapshot.integration.test.ts",
+      "test": "simulator bucket pool snapshot (real DB) snapshots catch-all and multi-member pools with their full config (scope, multipliers, schedule, after-hours)",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/simulatorBucketPoolSnapshot.integration.test.ts",
+      "test": "simulator bucket pool snapshot (real DB) round-trips real Hourly and Usage pool configs (scope, members, multipliers, schedule, after-hours)",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/simulatorBucketPoolSnapshot.integration.test.ts",
+      "test": "simulator bucket pool snapshot (real DB) distinguishes 1x explicit catch-all members from 1x catch-all non-members",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/surveyTriggerDispatch.integration.test.ts",
+      "test": "Survey trigger dispatch integration sends surveys when a project completes and matches trigger conditions",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/templateBucketPoolRoundTrip.integration.test.ts",
+      "test": "template bucket pool round-trip (real DB) round-trips a catch-all pool and a multi-member pool through template snapshot and clone",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/ticketCommentAttachmentsIntegration.test.ts",
+      "test": "ticket comment attachments (migrated PostgreSQL) loads authorized attachment metadata and membership through the actual optimized ticket path",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/ticketCommentAttachmentsIntegration.test.ts",
+      "test": "ticket comment attachments (migrated PostgreSQL) excludes unauthorized client and tenant documents from the optimized initial load and totals",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/ticketCommentAttachmentsIntegration.test.ts",
+      "test": "ticket comment attachments (migrated PostgreSQL) withdraws only authorized actor-owned drafts and preserves published/shared documents",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/ticketCommentAttachmentsIntegration.test.ts",
+      "test": "ticket comment attachments (migrated PostgreSQL) returns effective attachment visibility without changing the document setting",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/ticketCommentAttachmentsIntegration.test.ts",
+      "test": "ticket comment attachments (migrated PostgreSQL) claims a public PDF to the exact comment; ticket Documents association remains",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/ticketCommentAttachmentsIntegration.test.ts",
+      "test": "ticket comment attachments (migrated PostgreSQL) uses the model for new comments and replies and preserves the same reconciliation on edits",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/ticketCommentAttachmentsIntegration.test.ts",
+      "test": "ticket comment attachments (migrated PostgreSQL) REST create, reply and edit use the same persisted attachment lifecycle",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/ticketCommentAttachmentsIntegration.test.ts",
+      "test": "ticket comment attachments (migrated PostgreSQL) rejects other actors, expired uploads, another ticket and a second comment claim",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/ticketCommentAttachmentsIntegration.test.ts",
+      "test": "ticket comment attachments (migrated PostgreSQL) denies client listing/download/preview policy and email selection for internal",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/ticketCommentAttachmentsIntegration.test.ts",
+      "test": "ticket comment attachments (migrated PostgreSQL) denies client listing/download/preview policy and email selection for scheduled",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/ticketCommentAttachmentsIntegration.test.ts",
+      "test": "ticket comment attachments (migrated PostgreSQL) denies client listing/download/preview policy and email selection for canceled",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/ticketCommentAttachmentsIntegration.test.ts",
+      "test": "ticket comment attachments (migrated PostgreSQL) denies client listing/download/preview policy and email selection for deleted",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/ticketCommentAttachmentsIntegration.test.ts",
+      "test": "ticket comment attachments (migrated PostgreSQL) denies client listing/download/preview policy and email selection for thread-internal",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/ticketCommentAttachmentsIntegration.test.ts",
+      "test": "ticket comment attachments (migrated PostgreSQL) scheduled publication reveals attachments; subsequent visibility change revokes them",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/ticketCommentAttachmentsIntegration.test.ts",
+      "test": "ticket comment attachments (migrated PostgreSQL) abandoned and removed drafts send no attachments and preserve shared documents",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/ticketCommentAttachmentsIntegration.test.ts",
+      "test": "ticket comment attachments (migrated PostgreSQL) emits actual PDF MIME bytes, excludes unrelated files and deduplicates repeated inline images by document",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/ticketCommentAttachmentsIntegration.test.ts",
+      "test": "ticket comment attachments (migrated PostgreSQL) produces recipient-bound expiring fallback links for large/provider-restricted files",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/ticketCommentAttachmentsIntegration.test.ts",
+      "test": "ticket comment attachments (migrated PostgreSQL) does not record a send when attachment storage fails; durable per-recipient delivery survives partial failures",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/ticketCommentAttachmentsIntegration.test.ts",
+      "test": "ticket comment attachments (migrated PostgreSQL) serves fallback bytes only for the authenticated recipient and revokes expired or internal links",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/ticketCommentAttachmentsIntegration.test.ts",
+      "test": "ticket comment attachments (migrated PostgreSQL) serializes competing claims and publishes shared-model events only after commit",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/ticketCommentAttachmentsIntegration.test.ts",
+      "test": "ticket comment attachments (migrated PostgreSQL) portal global actions exclude internal before pagination, counts and folder discovery",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/ticketCommentAttachmentsIntegration.test.ts",
+      "test": "ticket comment attachments (migrated PostgreSQL) portal global actions exclude draft before pagination, counts and folder discovery",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/ticketCommentAttachmentsIntegration.test.ts",
+      "test": "ticket comment attachments (migrated PostgreSQL) portal global actions exclude removed before pagination, counts and folder discovery",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/ticketCommentAttachmentsIntegration.test.ts",
+      "test": "ticket comment attachments (migrated PostgreSQL) portal global actions exclude scheduled before pagination, counts and folder discovery",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/ticketCommentAttachmentsIntegration.test.ts",
+      "test": "ticket comment attachments (migrated PostgreSQL) portal global actions exclude board-restricted before pagination, counts and folder discovery",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/ticketCommentAttachmentsIntegration.test.ts",
+      "test": "ticket comment attachments (migrated PostgreSQL) rechecks document visibility before email bytes and guest fallback redemption",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/ticketCommentAttachmentsIntegration.test.ts",
+      "test": "ticket comment attachments (migrated PostgreSQL) guest mailbox verification binds browser, expires, limits attempts and rechecks current access",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/ticketCommentAttachmentsIntegration.test.ts",
+      "test": "ticket comment attachments (migrated PostgreSQL) cleans expired exclusively owned drafts with retryable storage deletion and preserves shared content",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/ticketCommentAttachmentsIntegration.test.ts",
+      "test": "ticket comment attachments (migrated PostgreSQL) preserves a file acquired by another document between failed cleanup and retry",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/ticketCommentAttachmentsIntegration.test.ts",
+      "test": "ticket comment attachments (migrated PostgreSQL) portal action claims new and reply files, keeps the public thread, and rejects hidden parents",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/ticketCommentAttachmentsIntegration.test.ts",
+      "test": "ticket comment attachments (migrated PostgreSQL) bundled same-client notifications preserve source authorization and child reply identity on replay",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/ticketCommentAttachmentsIntegration.test.ts",
+      "test": "ticket comment attachments (migrated PostgreSQL) bundled other-client notifications preserve source authorization and child reply identity on replay",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/ticketCommentAttachmentsIntegration.test.ts",
+      "test": "ticket comment attachments (migrated PostgreSQL) bundled no-mirror notifications preserve source authorization and child reply identity on replay",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/ticketCommentAttachmentsIntegration.test.ts",
+      "test": "ticket comment attachments (migrated PostgreSQL) bundled client-email notifications preserve source authorization and child reply identity on replay",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/ticketCommentAttachmentsIntegration.test.ts",
+      "test": "ticket comment attachments (migrated PostgreSQL) bundled no-attachment notifications preserve source authorization and child reply identity on replay",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/ticketCommentAttachmentsIntegration.test.ts",
+      "test": "ticket comment attachments (migrated PostgreSQL) bundled provider-limited notifications preserve source authorization and child reply identity on replay",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/ticketCommentAttachmentsIntegration.test.ts",
+      "test": "ticket comment attachments (migrated PostgreSQL) bundled failed-retry notifications preserve source authorization and child reply identity on replay",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/ticketCommentAttachmentsIntegration.test.ts",
+      "test": "ticket comment attachments (migrated PostgreSQL) bundled source-internal notifications preserve source authorization and child reply identity on replay",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/ticketCommentAttachmentsIntegration.test.ts",
+      "test": "ticket comment attachments (migrated PostgreSQL) bundled source-canceled notifications preserve source authorization and child reply identity on replay",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/ticketCommentAttachmentsIntegration.test.ts",
+      "test": "ticket comment attachments (migrated PostgreSQL) bundled source-deleted notifications preserve source authorization and child reply identity on replay",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/ticketCommentAttachmentsIntegration.test.ts",
+      "test": "ticket comment attachments (migrated PostgreSQL) bundled child-internal notifications preserve source authorization and child reply identity on replay",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/ticketCommentAttachmentsIntegration.test.ts",
+      "test": "ticket comment attachments (migrated PostgreSQL) bundled child-canceled notifications preserve source authorization and child reply identity on replay",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/ticketCommentAttachmentsIntegration.test.ts",
+      "test": "ticket comment attachments (migrated PostgreSQL) bundled detached notifications preserve source authorization and child reply identity on replay",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/ticketCommentAttachmentsIntegration.test.ts",
+      "test": "ticket comment attachments (migrated PostgreSQL) bundled wrong-tenant notifications preserve source authorization and child reply identity on replay",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/ticketCommentAttachmentsIntegration.test.ts",
+      "test": "ticket comment attachments (migrated PostgreSQL) bundled wrong-source-ticket notifications preserve source authorization and child reply identity on replay",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/ticketCommentAttachmentsIntegration.test.ts",
+      "test": "ticket comment attachments (migrated PostgreSQL) bundled wrong-reply-comment notifications preserve source authorization and child reply identity on replay",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/ticketCommentAttachmentsIntegration.test.ts",
+      "test": "ticket comment attachments (migrated PostgreSQL) bundled forged-mirror notifications preserve source authorization and child reply identity on replay",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/ticketCommentAttachmentsIntegration.test.ts",
+      "test": "ticket comment attachments (migrated PostgreSQL) bundled disabled-child notifications preserve source authorization and child reply identity on replay",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/ticketCommentAttachmentsIntegration.test.ts",
+      "test": "ticket comment attachments (migrated PostgreSQL) bundled blocked-child-board notifications preserve source authorization and child reply identity on replay",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/ticketCommentAttachmentsIntegration.test.ts",
+      "test": "ticket comment attachments (migrated PostgreSQL) bundled retry-revoked notifications preserve source authorization and child reply identity on replay",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/ticketCommentAttachmentsIntegration.test.ts",
+      "test": "ticket comment attachments (migrated PostgreSQL) bundled removed-file notifications preserve source authorization and child reply identity on replay",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/ticketCommentAttachmentsIntegration.test.ts",
+      "test": "ticket comment attachments (migrated PostgreSQL) resend recovers confirmed provider non-delivery through the queue without repeating a successful recipient, and exposes ambiguous outcomes",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/ticketCommentAttachmentsIntegration.test.ts",
+      "test": "ticket comment attachments (migrated PostgreSQL) graph recovers confirmed provider non-delivery through the queue without repeating a successful recipient, and exposes ambiguous outcomes",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/ticketCommentAttachmentsIntegration.test.ts",
+      "test": "ticket comment attachments (migrated PostgreSQL) live PgBoss discovery reuses workers and recovers a committed publication to SMTP once",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/ticketCommentAttachmentsIntegration.test.ts",
+      "test": "ticket comment attachments (migrated PostgreSQL) scheduled handler commits publication and retries failed dispatch with the same ID",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/ticketCommentAttachmentsIntegration.test.ts",
+      "test": "ticket comment attachments (migrated PostgreSQL) guest download POST requires the delivered code and denies revoked or expired links without an account",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/ticketCommentAttachmentsSmtpSmoke.test.ts",
+      "test": "comment attachment local SMTP smoke sends the persisted UI PDF exactly once and verifies received MIME",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/ticketCommentAttachmentsSmtpSmoke.test.ts",
+      "test": "comment attachment local SMTP smoke routes the isolated UI event through the real subscriber without request tenant context",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/timeEntryBucketDrawAdjustment.integration.test.ts",
+      "test": "time-entry edit/reassignment resolves weighted draws per record side (real DB) reverses the old draw under the OLD client/line and applies the new draw under the NEW client/line on reassignment",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/timeEntryBucketDrawAdjustment.integration.test.ts",
+      "test": "time-entry edit/reassignment resolves weighted draws per record side (real DB) reverses the old draw when the edit changes the service multiplier within the same client",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/timeEntryBucketDrawAdjustment.integration.test.ts",
+      "test": "time-entry edit/reassignment resolves weighted draws per record side (real DB) reverses the old draw and applies the new draw when time-of-day changes the after-hours multiplier",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/timeEntryBucketDrawAdjustment.integration.test.ts",
+      "test": "time-entry edit/reassignment resolves weighted draws per record side (real DB) reverses the old draw BEFORE computing the new period rollover when an edit moves an entry across billing periods",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/wizardBucketPoolSubmission.integration.test.ts",
+      "test": "wizard bucket pool submission (real DB) materializes wizard pool drafts onto the created hourly line (catch-all and member-scoped)",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/workflowRuntimeV2.email.integration.test.ts",
+      "test": "workflow runtime v2 email workflow integration tests existing ticket path via reply token Email workflow start accepts event payload and initializes EmailWorkflowPayload fields. Mocks: non-target dependencies.",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/workflowRuntimeV2.email.integration.test.ts",
+      "test": "workflow runtime v2 email workflow integration tests existing ticket path via reply token Email workflow stores processedAt in vars. Mocks: non-target dependencies.",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/workflowRuntimeV2.email.integration.test.ts",
+      "test": "workflow runtime v2 email workflow integration tests existing ticket path via reply token email.parseBody node parses body and stores parsedEmail with confidence. Mocks: non-target dependencies.",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/workflowRuntimeV2.email.integration.test.ts",
+      "test": "workflow runtime v2 email workflow integration tests existing ticket path via reply token email.parseBody sanitizes HTML and strips unsafe content. Mocks: non-target dependencies.",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/workflowRuntimeV2.email.integration.test.ts",
+      "test": "workflow runtime v2 email workflow integration tests existing ticket path via reply token Existing ticket resolution runs before branching. Mocks: non-target dependencies.",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/workflowRuntimeV2.email.integration.test.ts",
+      "test": "workflow runtime v2 email workflow integration tests existing ticket path via reply token Existing ticket path creates comment with author_type=contact. Mocks: non-target dependencies.",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/workflowRuntimeV2.email.integration.test.ts",
+      "test": "workflow runtime v2 email workflow integration tests existing ticket path via reply token Existing ticket path processes attachments with per-item error continue. Mocks: non-target dependencies.",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/workflowRuntimeV2.email.integration.test.ts",
+      "test": "workflow runtime v2 email workflow integration tests existing ticket path via reply token Existing ticket path returns early without creating new ticket. Mocks: non-target dependencies.",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/workflowRuntimeV2.email.integration.test.ts",
+      "test": "workflow runtime v2 email workflow integration tests existing ticket path via reply token Attachment processing uses idempotency keys derived from message id and attachment id. Mocks: non-target dependencies.",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/workflowRuntimeV2.email.integration.test.ts",
+      "test": "workflow runtime v2 email workflow integration tests existing ticket path via reply token Comment creation uses idempotency key derived from message id and ticket id. Mocks: non-target dependencies.",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/workflowRuntimeV2.email.integration.test.ts",
+      "test": "workflow runtime v2 email workflow integration tests existing ticket path via reply token Workflow preserves parsedEmail metadata for downstream actions. Mocks: non-target dependencies.",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/workflowRuntimeV2.email.integration.test.ts",
+      "test": "workflow runtime v2 email workflow integration tests existing ticket path via reply token Existing ticket path does not populate ticket context. Mocks: non-target dependencies.",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/workflowRuntimeV2.email.integration.test.ts",
+      "test": "workflow runtime v2 email workflow integration tests When reply token missing or not matched, resolve existing ticket via threading. Mocks: non-target dependencies.",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/workflowRuntimeV2.email.integration.test.ts",
+      "test": "workflow runtime v2 email workflow integration tests new ticket path with defaults Matched contact stored as matchedClient in vars.ticketContext. Mocks: non-target dependencies.",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/workflowRuntimeV2.email.integration.test.ts",
+      "test": "workflow runtime v2 email workflow integration tests new ticket path with defaults Resolve inbound ticket context by tenantId+providerId+senderEmail. Mocks: non-target dependencies.",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/workflowRuntimeV2.email.integration.test.ts",
+      "test": "workflow runtime v2 email workflow integration tests new ticket path with defaults Ticket defaults override logic matches legacy behavior. Mocks: non-target dependencies.",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/workflowRuntimeV2.email.integration.test.ts",
+      "test": "workflow runtime v2 email workflow integration tests new ticket path with defaults create_ticket_with_initial_comment is called with computed defaults. Mocks: non-target dependencies.",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/workflowRuntimeV2.email.integration.test.ts",
+      "test": "workflow runtime v2 email workflow integration tests new ticket path with defaults create_ticket_with_initial_comment stores ticket_id into vars.createdTicket. Mocks: non-target dependencies.",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/workflowRuntimeV2.email.integration.test.ts",
+      "test": "workflow runtime v2 email workflow integration tests new ticket path with defaults New ticket path processes attachments with per-item error continue. Mocks: non-target dependencies.",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/workflowRuntimeV2.email.integration.test.ts",
+      "test": "workflow runtime v2 email workflow integration tests new ticket path with defaults send_ticket_acknowledgement_email runs only when matchedClient exists. Mocks: non-target dependencies.",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/workflowRuntimeV2.email.integration.test.ts",
+      "test": "workflow runtime v2 email workflow integration tests new ticket path with defaults send_ticket_acknowledgement_email errors do not fail the workflow (onError=continue). Mocks: non-target dependencies.",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/workflowRuntimeV2.email.integration.test.ts",
+      "test": "workflow runtime v2 email workflow integration tests new ticket path with defaults Workflow sets EMAIL_PROCESSED state on success. Mocks: non-target dependencies.",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/workflowRuntimeV2.email.integration.test.ts",
+      "test": "workflow runtime v2 email workflow integration tests new ticket path with defaults Ticket creation uses idempotency key derived from provider id and message id. Mocks: non-target dependencies.",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/workflowRuntimeV2.email.integration.test.ts",
+      "test": "workflow runtime v2 email workflow integration tests new ticket path with defaults Workflow preserves parsedEmail metadata for ticket creation. Mocks: non-target dependencies.",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/workflowRuntimeV2.email.integration.test.ts",
+      "test": "workflow runtime v2 email workflow integration tests new ticket path with defaults New ticket path persists ticketDefaults and createdTicket together. Mocks: non-target dependencies.",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/workflowRuntimeV2.email.integration.test.ts",
+      "test": "workflow runtime v2 email workflow integration tests If ticket defaults missing, state set to ERROR_NO_TICKET_DEFAULTS and workflow returns. Mocks: non-target dependencies.",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/workflowRuntimeV2.email.integration.test.ts",
+      "test": "workflow runtime v2 email workflow integration tests email.renderCommentBlocks uses HTML->blocks conversion fallback when needed. Mocks: non-target dependencies.",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/workflowRuntimeV2.email.integration.test.ts",
+      "test": "workflow runtime v2 email workflow integration tests Outer catch sets ERROR_PROCESSING_EMAIL and AWAITING_MANUAL_RESOLUTION. Mocks: non-target dependencies.",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/workflowRuntimeV2.email.integration.test.ts",
+      "test": "workflow runtime v2 email workflow integration tests Outer catch creates human task with failure context and payload snapshot. Mocks: non-target dependencies.",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/workflowRuntimeV2.redaction.integration.test.ts",
+      "test": "workflow runtime v2 redaction + snapshot integration tests Envelope snapshots stored with redacted secretRef fields. Mocks: non-target dependencies.",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/workflowRuntimeV2.redaction.integration.test.ts",
+      "test": "workflow runtime v2 redaction + snapshot integration tests Action invocation logs store redacted input/output JSON. Mocks: non-target dependencies.",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/workflowRuntimeV2.redaction.integration.test.ts",
+      "test": "workflow runtime v2 redaction + snapshot integration tests Snapshot size truncation preserves JSON validity. Mocks: non-target dependencies.",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/workflowRuntimeV2.redaction.integration.test.ts",
+      "test": "workflow runtime v2 redaction + snapshot integration tests Snapshot retention prunes snapshots older than the configured retention window (defaults to 30 days). Mocks: non-target dependencies.",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/workflowRuntimeV2.redaction.integration.test.ts",
+      "test": "workflow runtime v2 redaction + snapshot integration tests Run steps response includes snapshot references without exposing raw secrets. Mocks: non-target dependencies.",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/rmm/rmmDeviceSyncSchedule.db.test.ts",
+      "test": "RMM device sync \u2014 Temporal (EE) schedule lifecycle creates a real Temporal Schedule carrying the worker payload",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/rmm/rmmDeviceSyncSchedule.db.test.ts",
+      "test": "RMM device sync \u2014 Temporal (EE) schedule lifecycle converges instead of creating a second schedule",
+      "status": "skipped"
+    },
+    {
+      "file": "server/src/test/integration/rmm/rmmDeviceSyncSchedule.db.test.ts",
+      "test": "RMM device sync \u2014 Temporal (EE) schedule lifecycle tears the schedule down when device sync is disabled",
+      "status": "skipped"
+    }
+  ],
+  "limits": [
+    "Terminal CI execution for the published d604 revision; excludes subsequent local additions.",
+    "Unexecuted identities are unresolved coverage gaps, not approved exclusions. F002/F004/F006/F009 remain incomplete."
+  ]
+}

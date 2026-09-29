@@ -30,6 +30,7 @@ export type DesignerComponentType =
   | 'section'
   | 'column'
   | 'text'
+  | 'richText'
   | 'totals'
   | 'table'
   | 'field'
@@ -498,7 +499,7 @@ const sanitizeTransformWorkspace = (value: unknown): DesignerTransformWorkspace 
   };
 };
 
-const snapshotWorkspaceNodesById = (
+export const snapshotWorkspaceNodesById = (
   nodes: DesignerNode[]
 ): DesignerWorkspaceSnapshot['nodesById'] =>
   Object.fromEntries(

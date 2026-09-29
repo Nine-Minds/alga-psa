@@ -153,6 +153,62 @@ describe('AccountingMappingModuleView external label rendering', () => {
     expect(await screen.findByText('175')).toBeInTheDocument();
   });
 
+  it('resolves external labels by (kind, code) and flags targets missing from the catalog', async () => {
+    // Xero-style module: the same code "200" exists as an Item and an Account.
+    const externalTarget = {
+      label: 'Map To',
+      kinds: [
+        { id: 'item', label: 'Xero Item' },
+        { id: 'account', label: 'Xero Revenue Account' }
+      ],
+      defaultKindId: 'item',
+      kindForMapping: (mapping: any) =>
+        mapping.metadata?.xeroTargetKind === 'account' ? 'account' : 'item',
+      optionIdForMapping: (mapping: any) =>
+        `${mapping.metadata?.xeroTargetKind === 'account' ? 'account' : 'item'}:${mapping.external_entity_id}`,
+      invalidNotice: 'Pick a valid Xero Item, or explicitly switch to a Revenue Account.'
+    };
+
+    loadMock.mockResolvedValue({
+      mappings: [
+        {
+          id: 'mapping-account',
+          alga_entity_id: 'svc-1',
+          external_entity_id: '200',
+          metadata: { xeroTargetKind: 'account' }
+        },
+        {
+          // Legacy kind-less mapping whose code is NOT an item: must render as
+          // invalid — never silently borrow the same-code account's label.
+          id: 'mapping-legacy',
+          alga_entity_id: 'svc-2',
+          external_entity_id: '200',
+          metadata: { externalDisplayName: 'Old item label (200)' }
+        }
+      ],
+      algaEntities: [
+        { id: 'svc-1', name: 'IT Professional Services' },
+        { id: 'svc-2', name: 'Legacy Service' }
+      ],
+      externalEntities: [
+        { id: 'account:200', name: 'Revenue account · Sales (200)', kind: 'account' }
+      ]
+    });
+
+    render(
+      <AccountingMappingModuleView
+        module={buildModule({ externalTarget } as any)}
+        context={context}
+      />
+    );
+
+    expect(await screen.findByText('Revenue account · Sales (200)')).toBeInTheDocument();
+    expect(screen.getByText('Old item label (200)')).toBeInTheDocument();
+    expect(
+      screen.getByText('Pick a valid Xero Item, or explicitly switch to a Revenue Account.')
+    ).toBeInTheDocument();
+  });
+
   it('waits for the catalog before rendering, then shows the enriched label', async () => {
     loadMock.mockResolvedValue({
       mappings: [

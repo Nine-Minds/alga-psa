@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { ArrowUpDown, Lock } from 'lucide-react';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import TaskComment from './TaskComment';
@@ -52,11 +52,26 @@ export const TaskCommentThread: React.FC<TaskCommentThreadProps> = ({
   const [reverseOrder, setReverseOrder] = useState(false);
   const [reactionsMap, setReactionsMap] = useState<Record<string, IAggregatedReaction[]>>({});
   const [reactionUserNames, setReactionUserNames] = useState<Record<string, string>>({});
+  // These loaders await server actions and then set state. Nothing cancelled them
+  // on unmount, so a late resolution reached React after teardown -- which surfaced
+  // in CI as an unhandled "window is not defined" rejection from setIsLoading in the
+  // finally below. It is a race, so it failed intermittently rather than every run.
+  // LEVERAGE: pattern unguarded-async-load -- 169 components carry the same
+  // load-then-setIsLoading(false)-in-finally shape with no unmount guard. Each is
+  // a latent intermittent failure once readiness is a required check. The answer
+  // is a loader hook that makes cancellation the default, not this guard repeated
+  // 169 times.
+  const mounted = useRef(true);
+  useEffect(() => {
+    mounted.current = true;
+    return () => { mounted.current = false; };
+  }, []);
 
   const loadComments = async () => {
     try {
       setIsLoading(true);
       const fetchedComments = await getTaskComments(taskId);
+      if (!mounted.current) return;
       if (showReturnedActionError(fetchedComments)) {
         return;
       }
@@ -67,6 +82,7 @@ export const TaskCommentThread: React.FC<TaskCommentThreadProps> = ({
       if (commentIds.length > 0) {
         try {
           const { reactions, userNames } = await getTaskCommentsReactionsBatch(commentIds);
+          if (!mounted.current) return;
           setReactionsMap(reactions);
           setReactionUserNames(prev => ({ ...prev, ...userNames }));
         } catch (err) {
@@ -76,7 +92,7 @@ export const TaskCommentThread: React.FC<TaskCommentThreadProps> = ({
     } catch (error) {
       console.error('Failed to load comments:', error);
     } finally {
-      setIsLoading(false);
+      if (mounted.current) setIsLoading(false);
     }
   };
 
@@ -85,6 +101,7 @@ export const TaskCommentThread: React.FC<TaskCommentThreadProps> = ({
       const user = await getCurrentUser();
       if (user) {
         const avatarUrl = await getCurrentUserAvatarUrl();
+        if (!mounted.current) return;
 
         setCurrentUser({
           user_id: user.user_id,

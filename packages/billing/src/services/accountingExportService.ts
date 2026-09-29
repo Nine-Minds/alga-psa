@@ -554,10 +554,19 @@ export class AccountingExportService {
             .map((message: string) => sanitizeProviderMessage(message))
         : [];
 
-      const detailMessageParts = [
-        typeof detail.message === 'string' ? sanitizeProviderMessage(detail.message) : undefined,
-        ...validationMessages
-      ].filter((part): part is string => Boolean(part));
+      // Dedupe repeated provider messages for the human-facing summary: when
+      // every line fails the same way (e.g. one bad service mapping), Xero
+      // repeats the identical validation message per line. The full per-line
+      // list still lands in metadata.validationErrors below, so no line-level
+      // evidence is lost.
+      const detailMessageParts = Array.from(
+        new Set(
+          [
+            typeof detail.message === 'string' ? sanitizeProviderMessage(detail.message) : undefined,
+            ...validationMessages
+          ].filter((part): part is string => Boolean(part))
+        )
+      );
 
       const detailMessage =
         detailMessageParts.length > 0 ? detailMessageParts.join(' | ') : sanitizeProviderMessage(error.message);

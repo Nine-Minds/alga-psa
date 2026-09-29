@@ -52,14 +52,15 @@ export async function cloneTemplateContractLine(
   const templateCustomRate = await resolveTemplateCustomRate(trx, tenant, templateContractId, templateContractLineId);
   const appliedCustomRate = overrideRate ?? templateCustomRate;
 
-  if (appliedCustomRate !== null) {
-    await db.table('contract_lines')
-      .where({ contract_line_id: contractLineId })
-      .update({
-        custom_rate: appliedCustomRate,
-        updated_at: trx.fn.now()
-      });
-  }
+  // A template rate is a clone-time snapshot source; a null one follows the
+  // live catalog. Template edits stay provenance-only for live lines.
+  await db.table('contract_lines')
+    .where({ contract_line_id: contractLineId })
+    .update({
+      custom_rate: appliedCustomRate,
+      rate_provenance: appliedCustomRate === null ? 'inherited' : 'custom',
+      updated_at: trx.fn.now()
+    });
 
   return { appliedCustomRate };
 }
@@ -338,10 +339,18 @@ async function cloneFixedConfig(trx: Knex.Transaction, tenant: string, sourceCon
 
   if (!fixedConfig) return;
 
+  // Templates carry no provenance column: a stored template base_rate is an
+  // intentional clone-time snapshot (`custom`); a null one follows the live
+  // catalog (`inherited`). Never copy a template-row provenance verbatim.
+  const templateBaseRate = fixedConfig.base_rate ?? null;
+  const { rate_provenance: _ignoredProvenance, ...rest } = fixedConfig as Record<string, unknown>;
+
   await db.table('contract_line_service_fixed_config').insert({
-    ...fixedConfig,
+    ...rest,
     tenant,
     config_id: targetConfigId,
+    base_rate: templateBaseRate,
+    rate_provenance: templateBaseRate === null ? 'inherited' : 'custom',
     created_at: trx.fn.now(),
     updated_at: trx.fn.now()
   });

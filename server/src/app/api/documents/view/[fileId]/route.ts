@@ -9,6 +9,7 @@ import { findUserByIdForApi } from '@alga-psa/users/actions';
 import { assertInternalApiUser } from '@/lib/api/middleware/apiMiddleware';
 import { runWithTenant } from 'server/src/lib/db';
 import { getAuthorizedDocumentByFileId } from '@alga-psa/documents/actions/documentActions';
+import { isPreviewableDocumentMimeType } from '@alga-psa/core';
 
 const TENANT_LOGO_DISCOVERY_TENANT = 'tenant-logo-file-discovery';
 const TENANT_LOGO_DISCOVERY_REASON = 'public tenant logo file lookup before tenant is known';
@@ -59,7 +60,8 @@ export async function GET(
           })
           .first();
 
-        if (tenantLogoAssoc) {
+        const commentAttachment = await tenantScopedAdminDb.table('ticket_comment_attachments').where({ document_id: documentRecord.document_id }).first();
+        if (tenantLogoAssoc && !commentAttachment) {
           isTenantLogo = true;
           // Public access granted for tenant logo
         }
@@ -112,9 +114,21 @@ export async function GET(
         return new NextResponse('Unauthorized', { status: 401 });
       }
 
-      // Re-fetch file record with tenant context if needed
+      // Re-fetch inside the caller's tenant: findById resolves its tenant from
+      // async context, which a session request has not entered yet. Without it
+      // a retired or foreign file threw instead of falling through to the 404.
       if (!fileRecord || fileRecord.tenant !== tenant) {
-        fileRecord = await FileStoreModel.findById(knex, fileId);
+        fileRecord = await runWithTenant(tenant, () => FileStoreModel.findById(knex, fileId));
+      }
+      // Also accept a document id and serve its current file: generated PDFs
+      // are re-rendered in place, so a file id copied from a list can be stale.
+      if (!fileRecord) {
+        const document = await tenantDb(knex, tenant).table('documents')
+          .where({ document_id: fileId })
+          .first('file_id');
+        if (document?.file_id) {
+          fileRecord = await runWithTenant(tenant, () => FileStoreModel.findById(knex, document.file_id));
+        }
       }
     }
 
@@ -128,20 +142,16 @@ export async function GET(
         return new NextResponse('Unauthorized', { status: 401 });
       }
       const authorizedDocument = await withTransaction(knex, async (trx) =>
-        getAuthorizedDocumentByFileId(trx, tenant, user, fileId)
+        getAuthorizedDocumentByFileId(trx, tenant, user, fileRecord.file_id)
       );
       if (!authorizedDocument) {
         return new NextResponse('Forbidden', { status: 403 });
       }
     }
 
-    // Check if it's a viewable file type (images, videos, PDFs)
-    const isViewableType = fileRecord.mime_type?.startsWith('image/') || 
-                          fileRecord.mime_type?.startsWith('video/') || 
-                          fileRecord.mime_type === 'application/pdf' ||
-                          fileRecord.mime_type === 'image/svg+xml';
-    
-    if (!isViewableType) {
+    // Only inline-previewable types (images, videos, PDFs) are served here; the
+    // same predicate drives which documents link to /view vs /download.
+    if (!isPreviewableDocumentMimeType(fileRecord.mime_type)) {
         return new NextResponse('File type not supported for viewing', { status: 400 });
     }
 
@@ -181,7 +191,7 @@ export async function GET(
       headers.set('Accept-Ranges', 'bytes');
       headers.set('Content-Range', `bytes ${start}-${end}/${fileSize}`);
       headers.set('Content-Length', contentLength.toString());
-      headers.set('Cache-Control', 'public, max-age=3600');
+      headers.set('Cache-Control', 'private, no-store');
 
       // Return partial content (206)
       return new NextResponse(stream as any, {
@@ -203,7 +213,7 @@ export async function GET(
       }
       
       // Cache for 1 hour (adjust as needed)
-      headers.set('Cache-Control', 'public, max-age=3600');
+      headers.set('Cache-Control', 'private, no-store');
 
       // Return the full stream response
       return new NextResponse(stream as any, {

@@ -24,7 +24,7 @@ const SEEDED_TENANT_DISCOVERY_REASON = 'seeded test tenant discovery before tena
 let gmailListMessagesSinceMock = vi.fn();
 let gmailGetMessageDetailsMock = vi.fn();
 let microsoftGetMessageDetailsMock = vi.fn();
-let microsoftDownloadMessageSourceMock = vi.fn();
+let microsoftDownloadMessageSourceMock = vi.fn(async (_messageId: string) => Buffer.from('From: sender@example.com\r\n\r\nmessage source'));
 const enqueueUnifiedInboundEmailQueueJobMock = vi.fn(async () => ({
   job: { jobId: 'test-enqueued-job' },
   queueDepth: 1,
@@ -75,6 +75,9 @@ vi.mock('@alga-psa/shared/services/email/providers/GmailAdapter', () => {
   return {
     GmailAdapter: class GmailAdapter {
       async connect() {}
+      async downloadMessageSource() {
+        return Buffer.from('From: sender@example.com\r\n\r\nmessage source');
+      }
       async listMessagesSince() {
         return gmailListMessagesSinceMock();
       }
@@ -922,6 +925,177 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
     expect(() => JSON.parse(comments[0].note)).not.toThrow();
   });
 
+  // Run one raw multipart MIME message through the real path a live inbound email
+  // takes (webhook pointer -> unified queue job -> simpleParser -> reply parser ->
+  // ticket + comment) and return what landed in the database. The replyParser unit
+  // tests cannot catch a stale bundle or a divergence between fixture HTML and what
+  // mailparser actually emits; this can (alga0002339 shipped exactly that way).
+  async function processMicrosoftRawMime(params: {
+    subject: string;
+    text: string;
+    html: string;
+  }): Promise<{ ticket: any; comment: any; parserMeta: any }> {
+    const providerId = uuidv4();
+    const mailbox = `support-mime-${uuidv4().slice(0, 6)}@example.com`;
+    const subscriptionId = `sub-mime-${uuidv4()}`;
+    const { defaultsId } = await setupMicrosoftProvider({ providerId, mailbox, subscriptionId });
+    const messageId = `ms-mime-${uuidv4()}`;
+    cleanup.push(async () => {
+      await tenantTable('email_processed_messages').where({ provider_id: providerId }).delete();
+      await tenantTable('microsoft_email_provider_config').where({ email_provider_id: providerId }).delete();
+      await tenantTable('email_providers').where({ id: providerId }).delete();
+      await tenantTable('inbound_ticket_defaults').where({ id: defaultsId }).delete();
+    });
+
+    microsoftDownloadMessageSourceMock = vi.fn().mockResolvedValue(
+      buildMicrosoftMime({
+        from: 'sender@example.com',
+        to: mailbox,
+        subject: params.subject,
+        messageId,
+        text: params.text,
+        html: params.html,
+      })
+    );
+
+    const payload = {
+      value: [
+        {
+          changeType: 'created',
+          clientState: MS_WEBHOOK_CLIENT_STATE,
+          resource: `/users/${uuidv4()}/messages/${messageId}`,
+          resourceData: {
+            '@odata.type': '#microsoft.graph.message',
+            '@odata.id': 'ignored',
+            id: messageId,
+            subject: params.subject,
+          },
+          subscriptionExpirationDateTime: new Date(Date.now() + 60_000).toISOString(),
+          subscriptionId,
+          tenantId: 'ignored',
+        },
+      ],
+    };
+
+    const { handleMicrosoftWebhookPost } = await import(
+      '@alga-psa/integrations/webhooks/email/handlers/microsoftWebhookHandler'
+    );
+    const req = new NextRequest('http://localhost:3000/api/email/webhooks/microsoft', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const res = await handleMicrosoftWebhookPost(req);
+    expect(res.status).toBe(200);
+
+    await processEnqueuedUnifiedJobs();
+
+    const tickets = await tenantTable('tickets').where({ title: params.subject });
+    expect(tickets).toHaveLength(1);
+    const ticketId = tickets[0].ticket_id;
+    cleanup.push(async () => {
+      await tenantTable('comments').where({ ticket_id: ticketId }).delete();
+      await deleteTicketRows(ticketId);
+    });
+
+    const comments = await tenantTable('comments').where({ ticket_id: ticketId });
+    expect(comments).toHaveLength(1);
+    const metadata =
+      typeof comments[0].metadata === 'string' ? JSON.parse(comments[0].metadata) : comments[0].metadata;
+    return { ticket: tickets[0], comment: comments[0], parserMeta: metadata?.parser ?? {} };
+  }
+
+  it('Raw MIME: inline Outlook elementToProof blockquote does not truncate the body (alga0002339)', async () => {
+    const { comment, parserMeta } = await processMicrosoftRawMime({
+      subject: `Inline blockquote survives ${uuidv4().slice(0, 6)}`,
+      text: [
+        'Hi support team,',
+        '',
+        'For example, today I told a customer:',
+        '',
+        '> I will follow up with you on Friday morning.',
+        '',
+        'POST BLOCKQUOTE SURVIVES CLEAN BOOT',
+        '',
+        'Follow-up types we need:',
+        '- Call the customer back',
+        '- Send a summary email',
+        '',
+        'Kept promises are the whole ballgame.',
+      ].join('\r\n'),
+      html: [
+        '<html><body>',
+        '<p>Hi support team,</p>',
+        '<p>For example, today I told a customer:</p>',
+        '<blockquote class="elementToProof" style="border-left:3px solid rgb(200,200,200); padding-left:8px">',
+        'I will follow up with you on Friday morning.',
+        '</blockquote>',
+        '<p>POST BLOCKQUOTE SURVIVES CLEAN BOOT</p>',
+        '<p>Follow-up types we need:</p>',
+        '<ul><li>Call the customer back</li><li>Send a summary email</li></ul>',
+        '<p>Kept promises are the whole ballgame.</p>',
+        '</body></html>',
+      ].join(''),
+    });
+
+    // The authored content after the inline quote must reach the stored comment.
+    expect(comment.note).toContain('POST BLOCKQUOTE SURVIVES CLEAN BOOT');
+    expect(comment.note).toContain('Call the customer back');
+    expect(comment.note).toContain('Kept promises are the whole ballgame');
+    // And the parser must not claim a high-confidence blockquote cut it did not earn.
+    expect(parserMeta.heuristics ?? []).not.toContain('html-blockquote-trim');
+    expect(`${parserMeta.strategy}/${parserMeta.confidence}`).not.toBe('custom-boundary/high');
+  });
+
+  it('Raw MIME: inline blockquote followed by quoted history keeps the authored suffix and cuts the history', async () => {
+    const { comment } = await processMicrosoftRawMime({
+      subject: `Inline then history ${uuidv4().slice(0, 6)}`,
+      text: [
+        'The vendor told me:',
+        '',
+        '> The replacement part ships Monday.',
+        '',
+        'Please plan the install for Wednesday.',
+        '',
+        'On Tue, Sep 1, 2026 at 9:00 AM Support <support@example.com> wrote:',
+        '> Vendor has not confirmed a ship date yet.',
+      ].join('\r\n'),
+      html: [
+        '<html><body>',
+        '<p>The vendor told me:</p>',
+        '<blockquote class="elementToProof">The replacement part ships Monday.</blockquote>',
+        '<p>Please plan the install for Wednesday.</p>',
+        '<div class="gmail_quote"><div>On Tue, Sep 1, 2026 at 9:00 AM Support wrote:</div>',
+        '<blockquote class="gmail_quote"><p>Vendor has not confirmed a ship date yet.</p></blockquote></div>',
+        '</body></html>',
+      ].join(''),
+    });
+
+    expect(comment.note).toContain('The replacement part ships Monday');
+    expect(comment.note).toContain('Please plan the install for Wednesday');
+    expect(comment.note).not.toContain('has not confirmed a ship date');
+  });
+
+  it('Raw MIME: bottom-posted reply keeps the answer below the quoted block', async () => {
+    const { comment } = await processMicrosoftRawMime({
+      subject: `Bottom post answer ${uuidv4().slice(0, 6)}`,
+      text: [
+        '> Could you confirm the maintenance window for tonight?',
+        '',
+        'Yes, use 10pm Eastern.',
+      ].join('\r\n'),
+      html: [
+        '<html><body>',
+        '<blockquote type="cite"><p>Could you confirm the maintenance window for tonight?</p></blockquote>',
+        '<p>Yes, use 10pm Eastern.</p>',
+        '</body></html>',
+      ].join(''),
+    });
+
+    expect(comment.note).toContain('10pm Eastern');
+    expect(comment.note).not.toContain('Could you confirm the maintenance window');
+  });
+
   it('Microsoft: in-app path persists regular attachment, embedded image, and original .eml via shared artifact orchestrator', async () => {
     const providerId = uuidv4();
     const mailbox = `support-ms-artifacts-${uuidv4().slice(0, 6)}@example.com`;
@@ -1242,7 +1416,13 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
     });
 
     const comments = await tenantTable('comments').where({ ticket_id: ticket.ticket_id });
-    expect(comments).toHaveLength(1);
+    expect(comments).toHaveLength(2);
+    expect(comments.filter(comment => !comment.is_internal)).toHaveLength(1);
+    const trail = comments.find(comment => comment.is_internal);
+    expect(trail).toMatchObject({ is_system_generated: true, user_id: null, contact_id: null });
+    expect(trail.metadata.inboundAttachmentTrail.files).toEqual([expect.objectContaining({
+      status: 'failed', reason: 'simulated upload failure',
+    })]);
 
     const failedAttachmentRow = await tenantTable('email_processed_attachments')
       .where({
@@ -3894,15 +4074,16 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
   });
 
   it('Attachments: attachment failure does not prevent ticket creation', async () => {
-    const emailActions = await import('@alga-psa/workflows/actions/emailWorkflowActions');
-    const spy = vi.spyOn(emailActions, 'processEmailAttachment').mockRejectedValueOnce(new Error('boom'));
+    storageUploadMock.mockImplementation(async (buffer: Buffer, storagePath: string) => {
+      if (buffer.toString() === 'attachment') throw new Error('simulated upload failure');
+      return { path: storagePath };
+    });
 
     const providerId = uuidv4();
     const mailbox = `support-attach-${uuidv4().slice(0, 6)}@example.com`;
     const { defaultsId } = await setupInboundDefaults({ providerId, mailbox });
 
     cleanup.push(async () => {
-      spy.mockRestore();
       await tenantTable('gmail_processed_history').where({ provider_id: providerId }).delete();
       await tenantTable('google_email_provider_config').where({ email_provider_id: providerId }).delete();
       await tenantTable('email_providers').where({ id: providerId }).delete();
@@ -3922,7 +4103,7 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
         to: [{ email: mailbox, name: 'Support' }],
         subject: 'Attachment failure subject',
         body: { text: 'Hello', html: undefined },
-        attachments: [{ id: 'att-1', name: 'file.txt', contentType: 'text/plain', size: 10 }],
+        attachments: [{ id: 'att-1', name: 'file.txt', contentType: 'text/plain', size: 10, content: Buffer.from('attachment').toString('base64') }],
       } as any,
     });
 
@@ -3934,7 +4115,13 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
     expect(ticket).toBeDefined();
 
     const comments = await tenantTable('comments').where({ ticket_id: ticket.ticket_id });
-    expect(comments).toHaveLength(1);
+    expect(comments).toHaveLength(2);
+    expect(comments.filter(comment => !comment.is_internal)).toHaveLength(1);
+    const trail = comments.find(comment => comment.is_internal);
+    expect(trail).toMatchObject({ is_system_generated: true, user_id: null, contact_id: null });
+    expect(trail.metadata.inboundAttachmentTrail.files).toEqual([expect.objectContaining({
+      status: 'failed', reason: 'simulated upload failure',
+    })]);
 
     cleanup.push(async () => {
       await tenantTable('comments').where({ ticket_id: ticket.ticket_id }).delete();
@@ -3943,8 +4130,10 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
   });
 
   it('Attachments: attachment failure does not prevent reply comment creation', async () => {
-    const emailActions = await import('@alga-psa/workflows/actions/emailWorkflowActions');
-    const spy = vi.spyOn(emailActions, 'processEmailAttachment').mockRejectedValueOnce(new Error('boom'));
+    storageUploadMock.mockImplementation(async (buffer: Buffer, storagePath: string) => {
+      if (buffer.toString() === 'attachment') throw new Error('simulated upload failure');
+      return { path: storagePath };
+    });
 
     const providerId = uuidv4();
     const mailbox = `support-reply-attach-${uuidv4().slice(0, 6)}@example.com`;
@@ -3955,7 +4144,6 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
     });
 
     cleanup.push(async () => {
-      spy.mockRestore();
       await tenantTable('microsoft_email_provider_config').where({ email_provider_id: providerId }).delete();
       await tenantTable('email_providers').where({ id: providerId }).delete();
       await tenantTable('inbound_ticket_defaults').where({ id: defaultsId }).delete();
@@ -4009,14 +4197,20 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
           text: `Customer reply\n\n[ALGA-REPLY-TOKEN ${replyToken}]\n\nOlder content`,
           html: undefined,
         },
-        attachments: [{ id: 'att-1', name: 'file.txt', contentType: 'text/plain', size: 10 }],
+        attachments: [{ id: 'att-1', name: 'file.txt', contentType: 'text/plain', size: 10, content: Buffer.from('attachment').toString('base64') }],
       } as any,
     });
 
     expect(result.outcome).toBe('replied');
 
     const comments = await tenantTable('comments').where({ ticket_id: ticketId });
-    expect(comments).toHaveLength(1);
+    expect(comments).toHaveLength(2);
+    expect(comments.filter(comment => !comment.is_internal)).toHaveLength(1);
+    const trail = comments.find(comment => comment.is_internal);
+    expect(trail).toMatchObject({ is_system_generated: true, user_id: null, contact_id: null });
+    expect(trail.metadata.inboundAttachmentTrail.files).toEqual([expect.objectContaining({
+      status: 'failed', reason: 'simulated upload failure',
+    })]);
   });
 
   it('Idempotency: replay same reply email does not create duplicate comments', async () => {

@@ -5,7 +5,7 @@ const { getTeamsAppPackageStatusMock } = vi.hoisted(() => ({
   getTeamsAppPackageStatusMock: vi.fn(),
 }));
 
-vi.mock('@alga-psa/integrations/actions', () => ({
+vi.mock('@alga-psa/ee-microsoft-teams/lib/actions/integrations/teamsPackageActions', () => ({
   getTeamsAppPackageStatus: (...args: unknown[]) => getTeamsAppPackageStatusMock(...args),
 }));
 

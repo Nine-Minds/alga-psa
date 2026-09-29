@@ -57,7 +57,7 @@ describe('optimized ticket action tenant-scoped authorization SQL contract', () 
     const section = source.slice(start, end);
 
     expect(section).toContain("tenantScopedTable(trx, 'tickets as t', tenant)");
-    expect(section).toContain("tenantScopedTable(trx, 'comments', tenant)");
+    expect(section).toContain('Comment.getAllbyTicketId(trx, tenant, ticketId)');
     expect(section).toContain("tenantScopedTable(trx, 'documents as d', tenant)");
     expect(section).toContain("tenantScopedTable(trx, 'clients as c', tenant)");
     expect(section).toContain("tenantScopedTable(trx, 'ticket_resources', tenant)");
@@ -102,11 +102,48 @@ describe('optimized ticket action tenant-scoped authorization SQL contract', () 
     expect(section).not.toContain("'mt.tenant': tenant");
   });
 
+  it('delegates consolidated comment bundle provenance to the shared read layer', () => {
+    const source = fs.readFileSync(path.resolve(__dirname, './optimizedTicketActions.ts'), 'utf8');
+    const start = source.indexOf('// Comments, with read-time bundle provenance owned by the shared read');
+    const end = source.indexOf('// Documents', start);
+
+    expect(start).toBeGreaterThanOrEqual(0);
+    expect(end).toBeGreaterThan(start);
+
+    const section = source.slice(start, end);
+
+    // The join/mapping lives once in the model so refresh paths that call
+    // Comment.getAllbyTicketId return the same shape; the action must not
+    // rebuild it inline.
+    expect(section).toContain('Comment.getAllbyTicketId(trx, tenant, ticketId)');
+    expect(section).not.toContain('ticket_bundle_mirrors as bm');
+    expect(section).not.toContain('.leftJoin(');
+  });
+
+  it('keeps the bundle provenance joins tenant-co-located in the comment read model', () => {
+    const source = fs.readFileSync(path.resolve(__dirname, '../models/comment.ts'), 'utf8');
+    const start = source.indexOf('getAllbyTicketId:');
+    const end = source.indexOf('get: async', start);
+
+    expect(start).toBeGreaterThanOrEqual(0);
+    expect(end).toBeGreaterThan(start);
+
+    const section = source.slice(start, end);
+
+    expect(section).toContain("tenantScopedTable<IComment>(knexOrTrx, 'comments', tenant)");
+    expect(section).toContain("tenantJoin(commentsQuery, 'ticket_bundle_mirrors as bm'");
+    expect(section).toContain("tenantJoin(commentsQuery, 'comments as src'");
+    expect(section).toContain("tenantJoin(commentsQuery, 'tickets as mt'");
+    expect(section).toContain("{ type: 'left' }");
+    expect(section).not.toContain('.leftJoin(');
+  });
+
   it('uses structural tenant scoping for ticket list and form option roots', () => {
     const source = fs.readFileSync(path.resolve(__dirname, './optimizedTicketActions.ts'), 'utf8');
     const listBaseStart = source.indexOf('async function buildTicketListBaseQuery');
     const listBaseEnd = source.indexOf('function buildTicketListSearchPrefixTsquery', listBaseStart);
-    const listActionStart = source.indexOf('export const getTicketsForList');
+    // The tag/avatar enrichment shared with loadTicketListItemsByIds sits just above the list action.
+    const listActionStart = source.indexOf('async function enrichTicketListItems');
     const listActionEnd = source.indexOf('export const getAllMatchingTicketIds', listActionStart);
     const boardIdsStart = source.indexOf('export const getTicketBoardIds');
     const boardIdsEnd = source.indexOf('export const getTicketFormOptions', boardIdsStart);
@@ -198,11 +235,18 @@ describe('optimized ticket action tenant-scoped authorization SQL contract', () 
     expect(section).toContain("tenantScopedTable(trx, 'categories', tenant)");
     expect(section).toContain("tenantScopedTable(trx, 'statuses', tenant)");
     expect(section).toContain("tenantScopedTable(trx, 'ticket_resources', tenant)");
-    expect(section).toContain("tenantScopedTable(trx, 'ticket_bundle_settings', tenant)");
+    // Bundle settings / propagation now live in ticketBundleUtils so the
+    // server-action and REST paths share one engine; assert they stay behind
+    // the facade there.
+    expect(section).toContain('propagateBundleMasterStatus(');
     expect(section).not.toContain(".where({ ticket_id: id, tenant: tenant })");
     expect(section).not.toContain(".where('tenant', tenant)");
     expect(section).not.toContain('tenant: tenant,');
     expect(section).not.toContain('.where({ tenant, master_ticket_id: id })');
+
+    const bundleUtils = fs.readFileSync(path.resolve(__dirname, './ticketBundleUtils.ts'), 'utf8');
+    expect(bundleUtils).toContain("tenantScopedTable(trx, 'ticket_bundle_settings', tenant)");
+    expect(bundleUtils).toContain("tenantScopedTable(trx, 'ticket_bundle_status_propagations', ctx.tenant)");
   });
 
   it('uses structural tenant scoping for optimized comment mirroring and bundle child roots', () => {
@@ -222,11 +266,41 @@ describe('optimized ticket action tenant-scoped authorization SQL contract', () 
 
     expect(commentSection).toContain("tenantScopedTable(trx, 'ticket_bundle_settings', tenant)");
     expect(commentSection).toContain("tenantScopedTable(trx, 'tickets', tenant)");
-    expect(commentSection).toContain("tenantScopedTable(trx, 'ticket_bundle_mirrors', tenant)");
+    expect(commentSection).toContain('mirrorCommentToChild(trx, tenant');
     expect(commentSection).not.toContain('.where({ tenant, master_ticket_id: ticketId })');
-    expect(commentSection).not.toContain('.where({\n              tenant,\n              source_comment_id');
+
+    // The mirror write moved into ticketBundleUtils.mirrorCommentToChild; the
+    // structural tenant scoping assertions follow it there.
+    const utilsSource = fs.readFileSync(path.resolve(__dirname, './ticketBundleUtils.ts'), 'utf8');
+    const mirrorStart = utilsSource.indexOf('export async function mirrorCommentToChild');
+    const mirrorEnd = utilsSource.indexOf('export type BundleAfterCommitPublication', mirrorStart);
+    expect(mirrorStart).toBeGreaterThanOrEqual(0);
+    expect(mirrorEnd).toBeGreaterThan(mirrorStart);
+    const mirrorSection = utilsSource.slice(mirrorStart, mirrorEnd);
+    expect(mirrorSection).toContain("tenantScopedTable(trx, 'ticket_bundle_mirrors', tenant)");
+    expect(mirrorSection).toContain("tenantDb(trx, tenant).table('comment_threads')");
+    expect(mirrorSection).toContain("tenantDb(trx, tenant).table('comments')");
+    expect(mirrorSection).not.toContain('.where({\n              tenant,\n              source_comment_id');
 
     expect(bundleSection).toContain("tenantScopedTable(trx, 'tickets as t', tenant)");
     expect(bundleSection).not.toContain("'t.tenant': tenant");
+  });
+  it('routes list rows loaded by id through the same scoped base query, authorization SQL, and enrichment as the list', () => {
+    const source = fs.readFileSync(path.resolve(__dirname, './optimizedTicketActions.ts'), 'utf8');
+    const start = source.indexOf('export const loadTicketListItemsByIds = withAuth(');
+    const end = source.indexOf('export const getTicketBoardIds = withAuth(', start);
+    expect(start).toBeGreaterThanOrEqual(0);
+    expect(end).toBeGreaterThan(start);
+    const section = source.slice(start, end);
+
+    expect(section).toContain("hasPermission(user, 'ticket', 'read', trx)");
+    expect(section).toContain('buildTicketListBaseQuery(trx, tenant, user, validatedFilters)');
+    expect(section).toContain('applyTicketReadAuthorizationSql(scopedBaseQuery, trx, tenant, authorizationContext)');
+    expect(section).toContain('filterAuthorizedTickets(trx, authorizationContext, candidates)');
+    expect(section).toContain("whereIn('t.ticket_id', requestedIds)");
+    expect(section).toContain('enrichTicketListItems(trx, tenant, mapTicketListItems(ordered))');
+
+    // The paginated list ends in the same enrichment, so both paths render identical rows.
+    expect(source).toContain('const enriched = await enrichTicketListItems(trx, tenant, ticketListItems);');
   });
 });

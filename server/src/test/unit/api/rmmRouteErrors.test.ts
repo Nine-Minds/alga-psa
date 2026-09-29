@@ -19,6 +19,21 @@ describe('rmmRouteErrorFrom', () => {
     });
   });
 
+  it('maps provider-agnostic asset states', () => {
+    expect(rmmRouteErrorFrom(new Error('Asset is not managed by an RMM'))).toEqual({
+      status: 404,
+      message: 'This asset is not managed by an RMM integration.',
+    });
+    expect(rmmRouteErrorFrom(new Error('Device actions are not available for Level assets'))).toEqual({
+      status: 501,
+      message: 'Device actions are not available for this RMM provider.',
+    });
+    expect(rmmRouteErrorFrom(new Error('Permission denied: Cannot update assets'))).toEqual({
+      status: 403,
+      message: 'You do not have permission to perform this action on assets.',
+    });
+  });
+
   it('maps tier and reconnect requirements without handling unexpected failures', () => {
     expect(rmmRouteErrorFrom(new Error('This feature requires the Enterprise plan or higher.'))).toEqual({
       status: 403,

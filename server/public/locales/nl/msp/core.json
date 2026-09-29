@@ -69,9 +69,10 @@
       "servicePeriods": "Serviceperioden",
       "credits": "Kredieten",
       "serviceTypes": "Servicetypen",
+      "serviceCategories": "Servicecategorieën",
       "serviceCatalog": "Diensten",
       "products": "Producten",
-      "taxRates": "Belastingtarieven",
+      "taxRates": "Belastingen",
       "usageTracking": "Gebruikstracking",
       "reports": "Rapporten",
       "accountingExports": "Boekhoudexports"
@@ -114,7 +115,8 @@
     "collapseSidebar": "Zijbalk inklappen",
     "collapseSection": "{{section}} samenvouwen",
     "expandSection": "{{section}} uitvouwen",
-    "appLogoAlt": "{{appName}}-logo"
+    "appLogoAlt": "{{appName}}-logo",
+    "poweredBy": "Mogelijk gemaakt door"
   },
   "settings": {
     "sections": {
@@ -199,6 +201,12 @@
           "description": "Voeg een nieuw product toe aan uw catalogus"
         }
       }
+    },
+    "resources": {
+      "ariaLabel": "Bronnen en hulp",
+      "title": "Bronnen",
+      "documentation": "Documentatie",
+      "support": "Contact opnemen met support"
     },
     "jobs": {
       "ariaLabel": "Activiteit van achtergrondtaken bekijken",

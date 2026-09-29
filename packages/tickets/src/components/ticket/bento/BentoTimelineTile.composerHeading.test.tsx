@@ -159,9 +159,11 @@ vi.mock('../TicketNotificationSuppressionControl', () => ({
 }));
 
 vi.mock('../useTicketRichTextUploadSession', () => ({
-  useTicketRichTextUploadSession: () => ({
+  useTicketRichTextUploadSession: (options: { onDiscard?: () => void }) => ({
     uploadFile: vi.fn(),
     resetDraftTracking: vi.fn(),
+    // Cancel withdraws draft uploads and then hands control back to the composer.
+    requestDiscard: vi.fn(async () => { options.onDiscard?.(); }),
   }),
 }));
 

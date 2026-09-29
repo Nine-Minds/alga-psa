@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "kind": "native-ci-execution",
+  "revision": "e23148e2865d82c41ec9dc163ddcbfc09d54209a",
+  "job": "https://github.com/Nine-Minds/alga-psa/actions/runs/34056413147/job/101549077374",
+  "conclusion": "success",
+  "completedAt": "2026-09-06T21:05:35Z",
+  "counts": {
+    "filesPassed": 275,
+    "filesSkipped": 4,
+    "testsPassed": 2013,
+    "testsSkipped": 49
+  },
+  "durationSeconds": 3936.1,
+  "logSha256": "c6c9385111e888de59bcd6541d7aba3025ae74e3f5ae9948932408e983117e83",
+  "limitations": [
+    "49 skipped assertions remain unexecuted; this successful job does not prove zero-exclusion coverage or whole-PR readiness."
+  ]
+}

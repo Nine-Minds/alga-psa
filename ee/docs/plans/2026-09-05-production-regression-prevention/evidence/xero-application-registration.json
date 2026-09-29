@@ -1,0 +1,21 @@
+{
+  "scope": "Xero emulator registered OAuth application enforcement",
+  "test": "packages/emulators/xero/tests/smoke.test.ts",
+  "before": "Incorrect client secret accepted with200 instead of401",
+  "after": {
+    "testsPassed": 11,
+    "typecheck": "passed",
+    "browserCollection": "enterprise Xero export case collected",
+    "checks": [
+      "Unknown clients and unregistered redirect URLs rejected",
+      "Confidential clients require exact secret for code and refresh grants",
+      "PKCE applications cannot omit challenge",
+      "Reset removes application registrations and issued tokens",
+      "Browser fixture explicitly seeds its application"
+    ]
+  },
+  "limits": [
+    "Native execution of updated browser fixture pending",
+    "Per-client organisation consent and real-provider drift still unverified"
+  ]
+}

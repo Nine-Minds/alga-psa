@@ -1,5 +1,5 @@
 export {
-  applyVisibilityBoardFilter,
+  applyTicketVisibilityFilter,
   VISIBILITY_GROUP_MISMATCH_ERROR,
   VISIBILITY_GROUP_MISSING_ERROR,
   type ContactVisibilityContext,

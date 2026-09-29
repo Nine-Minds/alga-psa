@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "status": "failed",
+  "passed": 2,
+  "failed": 1,
+  "database": "upgrade_billing_82cc_20260908",
+  "appRevision": "c5938cdad5",
+  "migrationRevision": "8bc3d1a6142d691401abae0245b6367a83d3a23f",
+  "passedJourneys": [
+    "Invoice generated from pre-upgrade hours/overtime/usage: subtotal87500,total96250,draft,4time links,usage consumed,other tenant untouched",
+    "Add Usage quantity2 correct retained line,old record preserved,other tenant unchanged,reload visibility"
+  ],
+  "failure": "Ticket title persisted, but reload landed on dashboard instead of showing saved ticket; cause unverified",
+  "logSha256": "4f490f929eab05571fa2b968858ac80dbf37659e25809207a51c02047dd7a9e2",
+  "output": "/var/folders/8g/3xyjqdpd4hx2h39h4qb2lyvm0000gn/T/alga-supported-upgrade-pauFZq",
+  "limitations": [
+    "Not current-source CI proof",
+    "Combined suite is not green"
+  ]
+}

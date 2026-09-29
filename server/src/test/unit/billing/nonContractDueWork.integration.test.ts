@@ -180,6 +180,7 @@ const mocks = vi.hoisted(() => {
     rowsByTable,
     trx,
     createTenantKnex: vi.fn(async () => ({ knex: trx, tenant: 'tenant-1' })),
+    resolveEffectiveTimeZone: vi.fn(async () => 'UTC'),
     withTransaction: vi.fn(async (_knex: unknown, callback: (trx: any) => Promise<unknown>) => callback(trx)),
   };
 });
@@ -216,6 +217,7 @@ vi.mock('@alga-psa/db', () => ({
   }),
   createTenantKnex: mocks.createTenantKnex,
   withTransaction: mocks.withTransaction,
+  resolveEffectiveTimeZone: mocks.resolveEffectiveTimeZone,
   runWithTenant: vi.fn(async (_tenant: string, callback: () => Promise<unknown>) => callback()),
   getTenantContext: vi.fn(async () => 'tenant-1'),
 }));

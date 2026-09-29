@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { RichTextViewer } from '@alga-psa/ui/editor';
+import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { Card } from '@alga-psa/ui/components/Card';
 import { TicketDocumentsSection, TicketConversation, TicketAppointmentRequests, TicketOriginBadge, type ITicketAppointmentRequest } from '@alga-psa/tickets/components';
 import { Badge } from '@alga-psa/ui/components/Badge';
@@ -39,6 +40,7 @@ import { PartialBlock } from '@blocknote/core';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { getTeamAvatarUrlsBatchAction } from '@alga-psa/teams/actions';
 import { IStatus } from '@alga-psa/types';
+import { derivePortalStatusOptions } from './portalStatusOptions';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import toast from 'react-hot-toast';
 import {
@@ -93,6 +95,13 @@ export function TicketDetails({
   // Local overrides for comments to ensure immediate UI reflection
   const [commentOverrides, setCommentOverrides] = useState<Record<string, { note?: string; updated_at?: string }>>({});
   const [statusOptions] = useState<IStatus[]>(initialStatusOptions);
+  // Re-derive on every current-status change: the server seeds the initial list
+  // with the ticket's current restricted status, but once the ticket moves the
+  // restricted status must stop being offered as a target without a reload.
+  const portalStatusOptions = useMemo(
+    () => derivePortalStatusOptions(statusOptions, ticket.status_id),
+    [statusOptions, ticket.status_id]
+  );
   const [responseStateTrackingEnabled, setResponseStateTrackingEnabled] = useState<boolean>(true);
   const [ticketToUpdateStatus, setTicketToUpdateStatus] = useState<{ ticketId: string; newStatusId: string; currentStatusName: string; newStatusName: string; } | null>(null);
   const [linkedAssetPreview, setLinkedAssetPreview] = useState<{
@@ -324,6 +333,26 @@ export function TicketDetails({
       return true;
     } catch (error) {
       setError(t('messages.commentError', 'Failed to add comment'));
+      handleError(error, t('messages.commentError', 'Failed to add comment'));
+      return false;
+    }
+  };
+
+  const handleAddReplyComment = async (content: PartialBlock[], parentCommentId: string): Promise<boolean> => {
+    try {
+      const result = await addClientTicketComment(ticketId, JSON.stringify(content), false, false, parentCommentId);
+      if (isReturnedActionError(result)) {
+        handleReturnedActionError(result);
+        return false;
+      }
+      const details = await getClientTicketDetails(ticketId);
+      if (isReturnedActionError(details)) {
+        handleReturnedActionError(details);
+        return false;
+      }
+      setTicket(details);
+      return true;
+    } catch (error) {
       handleError(error, t('messages.commentError', 'Failed to add comment'));
       return false;
     }
@@ -576,13 +605,13 @@ export function TicketDetails({
               <div className="flex items-center gap-3">
                 <CustomSelect
                   value={ticket.status_id || ''}
-                  options={statusOptions.map((status) => ({
+                  options={portalStatusOptions.map((status) => ({
                     value: status.status_id || '',
                     label: status.name || ''
                   }))}
                   onValueChange={(value) => {
                     if (ticket.status_id !== value) {
-                      const selectedStatus = statusOptions.find(s => s.status_id === value);
+                      const selectedStatus = portalStatusOptions.find(s => s.status_id === value);
                       if (selectedStatus) {
                         setTicketToUpdateStatus({
                           ticketId: ticket.ticket_id!,
@@ -834,7 +863,7 @@ export function TicketDetails({
           {/* Comments Section */}
           {ticket.conversations && (
             <div>
-              <TicketConversation
+              {currentUser ? <TicketConversation
                 key={`conv-${conversationVersion}`}
                 ticket={ticket}
                 conversations={ticket.conversations}
@@ -849,6 +878,7 @@ export function TicketDetails({
                 editorKey={editorKey}
                 onNewCommentContentChange={handleNewCommentContentChange}
                 onAddNewComment={handleAddNewComment}
+                onAddReplyComment={handleAddReplyComment}
                 onTabChange={(tab) => {
                   if (tab !== 'internal') {
                     setActiveTab(tab);
@@ -862,7 +892,7 @@ export function TicketDetails({
                 overrides={commentOverrides}
                 onClipboardImageUploaded={refreshTicketDocuments}
                 defaultNewestFirst
-              />
+              /> : <LoadingIndicator text={t('common.loading', 'Loading...')} />}
             </div>
           )}
 

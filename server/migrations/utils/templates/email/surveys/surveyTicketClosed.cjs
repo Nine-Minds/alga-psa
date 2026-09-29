@@ -116,7 +116,7 @@ function buildBodyHtml(lang, c, subject) {
       <td align="center">
         <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="background-color:#ffffff;border-radius:12px;box-shadow:0 10px 30px rgba(15,23,42,0.08);overflow:hidden;">
           <tr>
-            <td style="background:linear-gradient(135deg,#8A4DEA,#40CFF9);padding:28px 32px;color:#ffffff;">
+            <td bgcolor="#8A4DEA" style="background-color:#8A4DEA;background:linear-gradient(135deg,#8A4DEA,#40CFF9);padding:28px 32px;color:#ffffff;">
               <h1 style="margin:0;font-size:24px;font-weight:600;">${subject}</h1>
               <p style="margin:8px 0 0 0;font-size:14px;opacity:0.85;">${c.summary}</p>
               <p style="margin:8px 0 0 0;font-size:14px;opacity:0.85;">${c.technicianLine}</p>
@@ -139,7 +139,7 @@ function buildBodyHtml(lang, c, subject) {
               <p style="margin:0 0 20px 0;font-size:14px;color:#475569;white-space:pre-line;">{{rating_links_text}}</p>
               <p style="margin:0;font-size:16px;line-height:1.6;">${c.thankYou}</p>
               <p style="margin:20px 0 0 0;font-size:12px;color:#94a3b8;">
-                {{tenant_name}} \u00b7 ${c.ticketLabel || 'Ticket'} #{{ticket_number}} \u00b7 {{ticket_closed_at}}
+                {{tenant_name}} \u00b7 ${c.ticketLabel || 'Ticket'} #${c.subjectNumber || '{{ticket_number}}'} \u00b7 ${c.closedAt || '{{ticket_closed_at}}'}
               </p>
             </td>
           </tr>
@@ -166,7 +166,7 @@ ${c.fallback}
 
 ${c.thankYou}
 
-{{tenant_name}} \u00b7 ${c.ticketLabel || 'Ticket'} #{{ticket_number}} \u00b7 {{ticket_closed_at}}`;
+{{tenant_name}} \u00b7 ${c.ticketLabel || 'Ticket'} #${c.subjectNumber || '{{ticket_number}}'} \u00b7 ${c.closedAt || '{{ticket_closed_at}}'}`;
 }
 
 function getTemplate() {
@@ -182,4 +182,4 @@ function getTemplate() {
   };
 }
 
-module.exports = { TEMPLATE_NAME, SUBTYPE_NAME, SURVEY_CATEGORY_NAME, getTemplate };
+module.exports = { TEMPLATE_NAME, SUBTYPE_NAME, SURVEY_CATEGORY_NAME, getTemplate, COPY, buildBodyHtml, buildText };

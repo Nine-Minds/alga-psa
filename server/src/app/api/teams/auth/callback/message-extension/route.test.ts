@@ -33,11 +33,11 @@ vi.mock('next/server', () => ({
   NextResponse: MockNextResponse,
 }));
 
-vi.mock('../../../../../../../../ee/server/src/lib/teams/resolveTeamsTabAuthState', () => ({
+vi.mock('@alga-psa/ee-microsoft-teams/lib/teams/resolveTeamsTabAuthState', () => ({
   resolveTeamsTabAuthState: (...args: unknown[]) => resolveTeamsTabAuthStateMock(...args),
 }));
 
-vi.mock('@alga-psa/integrations/lib/teamsAvailability', () => ({
+vi.mock('@alga-psa/ee-microsoft-teams/lib/teams/teamsAvailability', () => ({
   getTeamsAvailability: (...args: unknown[]) => getTeamsAvailabilityMock(...args),
 }));
 

@@ -8,6 +8,8 @@ import { Calendar, Globe, Palette } from 'lucide-react';
 import { LanguageHierarchyTable } from '@alga-psa/ui/components/LanguageHierarchyTable';
 import { LOCALE_CONFIG, filterPseudoLocales, type SupportedLocale } from '@alga-psa/core/i18n/config';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
+import type { EntityLogoVariant } from '@alga-psa/types';
+import { isLightSurface, pickLogoForSurface } from '@alga-psa/ui/lib/surfaceColor';
 import {
   getTenantBrandingAction,
   updateTenantBrandingAction,
@@ -28,12 +30,13 @@ import { Input } from '@alga-psa/ui/components/Input';
 import EntityImageUpload from '@alga-psa/ui/components/EntityImageUpload';
 import ColorPicker from '@alga-psa/ui/components/ColorPicker';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
-import { deleteTenantLogo, uploadTenantLogo } from '@alga-psa/tenancy/actions/tenant-actions/tenantLogoActions';
+import { deleteTenantLogo, recropTenantLogo, uploadTenantLogo } from '@alga-psa/tenancy/actions/tenant-actions/tenantLogoActions';
+import type { LogoCropRect } from '@alga-psa/types';
 import { getCurrentUser } from '@alga-psa/user-composition/actions/userQueryActions';
 import { getTenantThemeAction } from '@alga-psa/tenancy/actions/tenant-actions/tenantThemeActions';
 import { customThemePresetFor, type CustomThemeTokens } from '@alga-psa/tenancy/lib/customTheme';
 import { useBranding } from '@alga-psa/tenancy/components/providers/BrandingProvider';
-import ClientPortalDomainSettings from '@alga-psa/client-portal/domain-settings/entry';
+import ClientPortalDomainSettings from './ClientPortalDomainSettings';
 import { CopyClientPortalLinkButton } from './CopyClientPortalLinkButton';
 import SignInPagePreview from './SignInPagePreview';
 import { getPortalDomainStatusAction } from '@alga-psa/tenancy/actions/tenant-actions/portalDomainActions';
@@ -89,6 +92,8 @@ const ClientPortalSettings = () => {
   const [brandingSaving, setBrandingSaving] = useState(false);
   const [logoUrl, setLogoUrl] = useState<string>('');
   const [logoDarkUrl, setLogoDarkUrl] = useState<string>('');
+  const [logoWideUrl, setLogoWideUrl] = useState<string>('');
+  const [logoWideDarkUrl, setLogoWideDarkUrl] = useState<string>('');
   const [primaryColor, setPrimaryColor] = useState<string>('');
   const [secondaryColor, setSecondaryColor] = useState<string>('');
   const [portalHeroGradient, setPortalHeroGradient] = useState<PortalHeroGradient>(
@@ -171,6 +176,8 @@ const ClientPortalSettings = () => {
         if (brandingSettings) {
           setLogoUrl(brandingSettings.logoUrl || '');
           setLogoDarkUrl(brandingSettings.logoDarkUrl || '');
+          setLogoWideUrl(brandingSettings.logoWideUrl || '');
+          setLogoWideDarkUrl(brandingSettings.logoWideDarkUrl || '');
           setPrimaryColor(brandingSettings.primaryColor || '');
           setSecondaryColor(brandingSettings.secondaryColor || '');
           setPortalHeroGradient(brandingSettings.portalHeroGradient ?? DEFAULT_PORTAL_HERO_GRADIENT);
@@ -360,42 +367,49 @@ const ClientPortalSettings = () => {
     }
   };
 
-  // Wrapper for logo upload that refreshes branding
-  const handleLogoUpload = async (entityId: string, formData: FormData) => {
-    const result = await uploadTenantLogo(entityId, formData);
-    if (result.success) {
-      // Refresh branding context after successful upload
-      await refreshBranding();
-    }
-    return result;
-  };
+  // Upload/delete wrappers per logo variant; each refreshes the branding
+  // context so the preview and the live portal pick the new artwork up.
+  const handleLogoUpload = (variant: EntityLogoVariant) =>
+    async (entityId: string, formData: FormData) => {
+      const result = await uploadTenantLogo(entityId, formData, variant);
+      if (result.success) {
+        await refreshBranding();
+      }
+      return result;
+    };
 
-  // Wrapper for logo delete that refreshes branding
-  const handleLogoDelete = async (entityId: string) => {
-    const result = await deleteTenantLogo(entityId);
-    if (result.success) {
-      // Refresh branding context after successful delete
-      await refreshBranding();
-    }
-    return result;
-  };
+  const handleLogoDelete = (variant: EntityLogoVariant) =>
+    async (entityId: string) => {
+      const result = await deleteTenantLogo(entityId, variant);
+      if (result.success) {
+        await refreshBranding();
+      }
+      return result;
+    };
 
-  // Same wrappers for the optional dark-surface logo variant
-  const handleDarkLogoUpload = async (entityId: string, formData: FormData) => {
-    const result = await uploadTenantLogo(entityId, formData, 'dark');
-    if (result.success) {
-      await refreshBranding();
-    }
-    return result;
-  };
+  // Re-cuts a square mark from the matching wide logo (light from wide, dark from wide-dark).
+  const handleLogoRecrop = (variant: EntityLogoVariant) =>
+    async (entityId: string, crop: LogoCropRect) => {
+      const result = await recropTenantLogo(entityId, variant, crop);
+      if (result.success) {
+        await refreshBranding();
+      }
+      return result;
+    };
 
-  const handleDarkLogoDelete = async (entityId: string) => {
-    const result = await deleteTenantLogo(entityId, 'dark');
-    if (result.success) {
-      await refreshBranding();
-    }
-    return result;
-  };
+  const markCropHelp = t('clientPortal.branding.cropHelp', {
+    defaultValue:
+      'Drag and zoom to choose the part shown in the portal side panel and every circular frame. Your wide logo is not changed.',
+  });
+
+  const squareWarning = t('clientPortal.branding.warnings.expectSquare', {
+    defaultValue:
+      'That image is much wider than it is tall. This slot fills square spaces — the wide logo slot is probably the one you want.',
+  });
+  const wideWarning = t('clientPortal.branding.warnings.expectWide', {
+    defaultValue:
+      'That image is close to square. The wide logo slot is for a landscape wordmark — a square mark belongs in the slot above.',
+  });
 
   return (
     <div className="space-y-6">
@@ -570,11 +584,17 @@ const ClientPortalSettings = () => {
                     entityId={tenantId}
                     entityName={clientName || 'Client Portal'}
                     imageUrl={logoUrl}
-                    uploadAction={handleLogoUpload}
-                    deleteAction={handleLogoDelete}
+                    wideImageUrl={logoWideUrl || null}
+                    uploadAction={handleLogoUpload('default')}
+                    deleteAction={handleLogoDelete('default')}
+                    recropAction={handleLogoRecrop('default')}
+                    cropWideToSquare
+                    cropHelpText={markCropHelp}
                     onImageChange={(newLogoUrl) => {
                       setLogoUrl(newLogoUrl || '');
                     }}
+                    previewShape="square"
+                    aspectHint={{ expects: 'square', warning: squareWarning }}
                     size="lg"
                   />
                 )}
@@ -595,11 +615,17 @@ const ClientPortalSettings = () => {
                     entityId={tenantId}
                     entityName={clientName || 'Client Portal'}
                     imageUrl={logoDarkUrl}
-                    uploadAction={handleDarkLogoUpload}
-                    deleteAction={handleDarkLogoDelete}
+                    wideImageUrl={logoWideDarkUrl || null}
+                    uploadAction={handleLogoUpload('dark')}
+                    deleteAction={handleLogoDelete('dark')}
+                    recropAction={handleLogoRecrop('dark')}
+                    cropWideToSquare
+                    cropHelpText={markCropHelp}
                     onImageChange={(newLogoUrl) => {
                       setLogoDarkUrl(newLogoUrl || '');
                     }}
+                    previewShape="square"
+                    aspectHint={{ expects: 'square', warning: squareWarning }}
                     size="lg"
                   />
                 )}
@@ -609,6 +635,71 @@ const ClientPortalSettings = () => {
                   })}
                 </p>
               </div>
+
+              {/* The wordmark slots are the same storage the MSP side menu reads,
+                  so they only appear where white-labeling exists at all. */}
+              {advancedAppearanceEnabled && (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      {t('clientPortal.branding.fields.companyLogoWide', {
+                        defaultValue: 'Wide logo (optional)',
+                      })}
+                    </label>
+                    {tenantId && (
+                      <EntityImageUpload
+                        entityType="tenant"
+                        entityId={tenantId}
+                        entityName={clientName || 'Client Portal'}
+                        imageUrl={logoWideUrl}
+                        uploadAction={handleLogoUpload('wide')}
+                        deleteAction={handleLogoDelete('wide')}
+                        onImageChange={(newLogoUrl) => {
+                          setLogoWideUrl(newLogoUrl || '');
+                        }}
+                        previewShape="rect"
+                        aspectHint={{ expects: 'wide', warning: wideWarning }}
+                        size="lg"
+                      />
+                    )}
+                    <p className="text-sm text-gray-500 mt-2">
+                      {t('clientPortal.branding.help.companyLogoWide', {
+                        defaultValue:
+                          'Shown at the top of the expanded portal side panel, at 32px tall. Include your company name in the image — the panel stops printing it separately.',
+                      })}
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      {t('clientPortal.branding.fields.companyLogoWideDark', {
+                        defaultValue: 'Wide logo for dark backgrounds (optional)',
+                      })}
+                    </label>
+                    {tenantId && (
+                      <EntityImageUpload
+                        entityType="tenant"
+                        entityId={tenantId}
+                        entityName={clientName || 'Client Portal'}
+                        imageUrl={logoWideDarkUrl}
+                        uploadAction={handleLogoUpload('wide-dark')}
+                        deleteAction={handleLogoDelete('wide-dark')}
+                        onImageChange={(newLogoUrl) => {
+                          setLogoWideDarkUrl(newLogoUrl || '');
+                        }}
+                        previewShape="rect"
+                        aspectHint={{ expects: 'wide', warning: wideWarning }}
+                        size="lg"
+                      />
+                    )}
+                    <p className="text-sm text-gray-500 mt-2">
+                      {t('clientPortal.branding.help.companyLogoWideDark', {
+                        defaultValue: 'Optional. Used while the side panel background is dark. Falls back to the wide logo.',
+                      })}
+                    </p>
+                  </div>
+                </>
+              )}
             </div>
 
             {/* Color Palette */}
@@ -931,7 +1022,13 @@ const ClientPortalSettings = () => {
                       : portalSidebarStyle === 'custom' && portalSidebarColor
                         ? getSidebarShade(portalSidebarColor, isDark)
                         : null;
-                const previewSidebarLogo = logoDarkUrl || logoUrl;
+                // The panel tint is right here, so the preview can pick the same
+                // variant the live portal will.
+                const previewPanelIsLight = isLightSurface(sidebarTint);
+                const previewSidebarLogo = pickLogoForSurface(logoUrl, logoDarkUrl, previewPanelIsLight);
+                const previewWideLogo = advancedAppearanceEnabled
+                  ? pickLogoForSurface(logoWideUrl, logoWideDarkUrl, previewPanelIsLight)
+                  : null;
                 const heroGradientEnd = portalHeroGradient === 'primary-secondary'
                   ? previewSecondary
                   : primaryColor || themeColors
@@ -949,17 +1046,23 @@ const ClientPortalSettings = () => {
                         style={sidebarTint ? { backgroundColor: sidebarTint } : undefined}
                       >
                         <div className="px-3 flex items-center gap-2">
-                          {previewSidebarLogo ? (
-                            <img src={previewSidebarLogo} alt="Logo" className="h-6 w-6 rounded-full object-contain bg-white/10" />
+                          {previewWideLogo ? (
+                            <img src={previewWideLogo} alt="Logo" className="h-6 w-auto max-w-full object-contain" />
                           ) : (
-                            <div
-                              className="h-6 w-6 rounded-full"
-                              style={{ backgroundColor: previewPrimary }}
-                            />
+                            <>
+                              {previewSidebarLogo ? (
+                                <img src={previewSidebarLogo} alt="Logo" className="h-6 w-6 rounded-full object-contain bg-white/10" />
+                              ) : (
+                                <div
+                                  className="h-6 w-6 rounded-full"
+                                  style={{ backgroundColor: previewPrimary }}
+                                />
+                              )}
+                              <span className="text-sm font-semibold truncate">
+                                {clientName || 'Your Client'}
+                              </span>
+                            </>
                           )}
-                          <span className="text-sm font-semibold truncate">
-                            {clientName || 'Your Client'}
-                          </span>
                         </div>
                         <div className="px-3 mt-3 text-[10px] uppercase tracking-wider text-slate-400">
                           {t('clientPortal.dashboardPreview.workspaceSection', { defaultValue: 'Workspace' })}

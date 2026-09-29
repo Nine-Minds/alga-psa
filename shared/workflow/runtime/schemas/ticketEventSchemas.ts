@@ -39,9 +39,25 @@ export const ticketCreatedEventPayloadSchema = BaseDomainEventPayloadSchema.exte
   createdAt: z.string().optional().describe('Created timestamp (ISO 8601)'),
   updatedFields: updatedFieldsSchema,
   changes: changesSchema,
+  externalLinks: z.array(z.record(z.unknown())).optional()
+    .describe('Ticket-level external links created with the ticket'),
 }).describe('Payload for TICKET_CREATED');
 
 export type TicketCreatedEventPayload = z.infer<typeof ticketCreatedEventPayloadSchema>;
+
+export const ticketExternalLinkEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
+  ticketId: ticketIdSchema,
+  linkId: uuidSchema('Link ID'),
+  entityType: z.enum(['ticket', 'comment']),
+  entityId: z.string().min(1),
+  system: z.string().min(1),
+  externalId: z.string().min(1),
+  externalParentId: z.string().nullable().optional(),
+  relationship: z.enum(['origin', 'mirror', 'reference']),
+  userId: userIdSchema.optional(),
+}).describe('Payload for ticket external link events (ADDED/UPDATED/REMOVED)');
+
+export type TicketExternalLinkEventPayload = z.infer<typeof ticketExternalLinkEventPayloadSchema>;
 
 export const ticketAssignedEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
   ticketId: ticketIdSchema,

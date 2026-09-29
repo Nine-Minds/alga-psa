@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "scope": "Current CI survey bootstrap failure and bounded native fixture repair",
+  "ci": {
+    "runId": 34320694357,
+    "jobId": 102366536216,
+    "revision": "cec08351189624fb4db8db7ec453e788157fbdad",
+    "file": "server/src/test/integration/surveyTriggerDispatch.integration.test.ts",
+    "beforeAllTimeoutMs": 60000,
+    "secondaryFailure": "afterAll db.destroy on undefined",
+    "suiteCounts": {
+      "passed": 576,
+      "skipped": 3,
+      "filesPassed": 72,
+      "filesFailed": 1
+    },
+    "log": "/tmp/alga-c523-integration-shard1.log"
+  },
+  "native": {
+    "baseline": {
+      "passed": 3,
+      "durationSeconds": 12.89,
+      "hooksSeconds": 11.89
+    },
+    "after": {
+      "passed": 3,
+      "durationSeconds": 11.75,
+      "hooksSeconds": 10.84,
+      "log": "/tmp/alga-survey-dispatch-final.log"
+    },
+    "finalCleanup": {
+      "ownedDatabase": "removed",
+      "ownedRole": "removed"
+    },
+    "limits": [
+      "CI timeout was not reproduced locally; no repeatability or CI recovery claim.",
+      "Initial native baseline used the shared app role before role-isolation correction; there was no prior role snapshot, so unchanged role state cannot be claimed.",
+      "Intermediate owned-role run exposed a grant to inherited DB_NAME_SERVER; only that newly owned role grant was revoked and role removed. Final validation aligned the environment database name and removed its owned database/role."
+    ]
+  },
+  "repairs": [
+    "Retain full migrations and all three behavioral cases; omit unrelated development seeds.",
+    "Await owned initialization before cleanup, avoiding undefined destroy and dropping only owned database.",
+    "Align and restore DB_NAME_SERVER because the initial migration uses it for grants."
+  ]
+}

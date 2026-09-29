@@ -1,0 +1,56 @@
+{
+  "schemaVersion": 1,
+  "runId": "34308610232",
+  "jobId": "102335315962",
+  "artifactId": 10089109372,
+  "testedRevision": "3db700f653e28ddd322dfdb652f1689a54f6b65d",
+  "status": "failed",
+  "observed": {
+    "warmupStarted": "2026-09-09T04:58:46.1307434Z",
+    "warmupFailed": "2026-09-09T05:00:20.9515446Z",
+    "elapsedSeconds": 94.82,
+    "configuredDeadlineSeconds": 240,
+    "sourceAuthenticationPreflight": "passed",
+    "csrfHttpStatus": 200,
+    "sessionHttpStatus": 200,
+    "dashboardHttpStatus": 200,
+    "dashboardSeconds": 85,
+    "dashboardCompileSeconds": 75,
+    "dashboardApplicationSeconds": 9.2
+  },
+  "diagnosis": "Failure occurred after dashboard HTTP returned, before configured deadline. Raw HTML and failed assertion were not retained, so missing dashboard marker versus error sentinel cannot be distinguished from this evidence.",
+  "repair": {
+    "scope": "sanitized diagnostic instrumentation only",
+    "files": [
+      "e2e-tests/harness/warm-teams-dashboard.mjs",
+      "scripts/tests/teams-dashboard-warmup.test.mjs"
+    ],
+    "fields": [
+      "stage",
+      "fixed code",
+      "elapsedMs",
+      "httpStatus",
+      "htmlLength",
+      "dashboardMarkerPresent",
+      "errorSentinelPresent"
+    ],
+    "preserved": [
+      "authentication checks",
+      "HTML assertions",
+      "240-second deadline",
+      "unchanged real-browser journey"
+    ],
+    "nativeValidation": {
+      "passed": 13,
+      "failed": 0,
+      "command": "node --test scripts/tests/teams-dashboard-warmup.test.mjs",
+      "log": "/tmp/alga-teams-warmup-diagnostics.log"
+    }
+  },
+  "limits": [
+    "No retained raw response proves the exact failing HTML predicate.",
+    "No timeout increase or relaxed assertion was introduced.",
+    "This instrumentation does not claim the Teams journey is fixed; next execution must identify the predicate and validate recovery.",
+    "No credentials, cookies or raw HTML retained in this evidence."
+  ]
+}

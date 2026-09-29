@@ -8,14 +8,24 @@ import * as Sharing from "expo-sharing";
 import { useTranslation } from "react-i18next";
 import { logger } from "../../../logging/logger";
 import type { ApiClient } from "../../../api";
-import { deleteTicketDocument, getTicketDocuments, uploadTicketDocument, type TicketDocument, type TicketDocumentUpload } from "../../../api/documents";
+import {
+  deleteTicketDocument,
+  getTicketDocuments,
+  isImageDocument,
+  ticketDocumentUrl,
+  type TicketDocument,
+  type TicketDocumentUpload,
+} from "../../../api/documents";
 import { Badge } from "../../../ui/components/Badge";
 import { Card } from "../../../ui/components/Card";
 import { PrimaryButton } from "../../../ui/components/PrimaryButton";
 import { SectionHeader } from "../../../ui/components/SectionHeader";
 import { formatDateTime } from "../../../ui/formatters/dateTime";
 import { useTheme } from "../../../ui/ThemeContext";
+import { useDocumentUploadQueue } from "../hooks/useDocumentUploadQueue";
 import { SectionCollapseToggle } from "./SectionCollapseToggle";
+
+const THUMBNAIL_SIZE = 44;
 
 function formatBytes(value: number | null | undefined): string {
   if (!value || value <= 0) return "—";
@@ -29,6 +39,14 @@ function getDocumentIcon(document: TicketDocument): keyof typeof Feather.glyphMa
   if (mimeType.startsWith("image/")) return "image";
   if (mimeType.includes("pdf")) return "file-text";
   return "paperclip";
+}
+
+function pickedImageToUpload(asset: ImagePicker.ImagePickerAsset, fallbackName: string): TicketDocumentUpload {
+  return {
+    uri: asset.uri,
+    name: asset.fileName ?? fallbackName,
+    mimeType: asset.mimeType ?? "image/jpeg",
+  };
 }
 
 export function DocumentsSection({
@@ -48,18 +66,24 @@ export function DocumentsSection({
   const { colors, spacing, typography } = useTheme();
   const [documents, setDocuments] = useState<TicketDocument[]>([]);
   const [loading, setLoading] = useState(true);
-  const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [attachOptionsOpen, setAttachOptionsOpen] = useState(false);
-  const [previewImage, setPreviewImage] = useState<{ uri: string; name: string } | null>(null);
+  const [previewIndex, setPreviewIndex] = useState<number | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewFallbackUris, setPreviewFallbackUris] = useState<Record<string, string>>({});
+  const [brokenThumbnails, setBrokenThumbnails] = useState<Record<string, true>>({});
   const [downloading, setDownloading] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState<string | null>(null);
   const [collapsed, setCollapsed] = useState(initiallyCollapsed);
 
   const downloadBaseUrl = useMemo(() => baseUrl?.replace(/\/+$/, "") ?? null, [baseUrl]);
+  const authHeaders = useMemo(() => ({ "x-api-key": apiKey }), [apiKey]);
+  const imageDocuments = useMemo(() => documents.filter(isImageDocument), [documents]);
+  const previewDocument = previewIndex === null ? null : imageDocuments[previewIndex] ?? null;
 
-  const loadDocuments = useCallback(async () => {
+  const loadDocuments = useCallback(async (options: { silent?: boolean } = {}) => {
     if (!client || !apiKey) return;
-    setLoading(true);
+    if (!options.silent) setLoading(true);
     setError(null);
     const result = await getTicketDocuments(client, { apiKey, ticketId });
     if (!result.ok) {
@@ -75,27 +99,20 @@ export function DocumentsSection({
     void loadDocuments();
   }, [loadDocuments]);
 
-  const submitUpload = useCallback(async (file: TicketDocumentUpload) => {
-    if (!client || !apiKey) return;
-    setUploading(true);
+  const uploads = useDocumentUploadQueue({
+    client,
+    apiKey,
+    ticketId,
+    onUploaded: () => loadDocuments({ silent: true }),
+    fallbackError: t("documents.errors.upload"),
+  });
+
+  const enqueueUploads = useCallback((files: TicketDocumentUpload[]) => {
+    if (files.length === 0) return;
     setError(null);
     setAttachOptionsOpen(false);
-
-    const result = await uploadTicketDocument(client, {
-      apiKey,
-      ticketId,
-      file,
-    });
-
-    if (!result.ok) {
-      setError(result.error.message || t("documents.errors.upload"));
-      setUploading(false);
-      return;
-    }
-
-    await loadDocuments();
-    setUploading(false);
-  }, [apiKey, client, loadDocuments, t, ticketId]);
+    uploads.enqueue(files);
+  }, [uploads]);
 
   const handleCameraAttach = useCallback(async () => {
     const permission = await ImagePicker.requestCameraPermissionsAsync();
@@ -104,88 +121,60 @@ export function DocumentsSection({
       return;
     }
 
-    const result = await ImagePicker.launchCameraAsync({
-      quality: 0.8,
-    });
+    const result = await ImagePicker.launchCameraAsync({ quality: 0.8 });
+    if (result.canceled || !result.assets?.[0]) return;
 
-    if (result.canceled || !result.assets?.[0]) {
+    enqueueUploads([pickedImageToUpload(result.assets[0], `ticket-photo-${Date.now()}.jpg`)]);
+  }, [enqueueUploads, t]);
+
+  const handlePhotosAttach = useCallback(async () => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      setError(t("documents.errors.photosPermission"));
       return;
     }
 
-    const asset = result.assets[0];
-    await submitUpload({
-      uri: asset.uri,
-      name: asset.fileName ?? `ticket-photo-${Date.now()}.jpg`,
-      mimeType: asset.mimeType ?? "image/jpeg",
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["images"],
+      allowsMultipleSelection: true,
+      selectionLimit: 0,
+      orderedSelection: true,
+      quality: 0.8,
     });
-  }, [submitUpload, t]);
+    if (result.canceled || !result.assets?.length) return;
+
+    const stamp = Date.now();
+    enqueueUploads(result.assets.map((asset, index) => pickedImageToUpload(asset, `ticket-photo-${stamp}-${index + 1}.jpg`)));
+  }, [enqueueUploads, t]);
 
   const handleFileAttach = useCallback(async () => {
     const result = await DocumentPicker.getDocumentAsync({
       copyToCacheDirectory: true,
-      multiple: false,
+      multiple: true,
     });
+    if (result.canceled || !result.assets?.length) return;
 
-    if (result.canceled || !result.assets?.[0]) {
-      return;
-    }
-
-    const asset = result.assets[0];
-    await submitUpload({
+    enqueueUploads(result.assets.map((asset) => ({
       uri: asset.uri,
       name: asset.name,
       mimeType: asset.mimeType ?? "application/octet-stream",
-    });
-  }, [submitUpload]);
+    })));
+  }, [enqueueUploads]);
 
   const downloadDocumentFile = useCallback(async (document: TicketDocument): Promise<string | null> => {
     if (!downloadBaseUrl || !document.document_id) return null;
 
-    const url = `${downloadBaseUrl}/api/v1/tickets/${ticketId}/documents/${document.document_id}`;
+    const url = ticketDocumentUrl(downloadBaseUrl, ticketId, document.document_id);
     const destination = new ExpoFile(Paths.cache, document.document_name);
     if (destination.exists) {
       destination.delete();
     }
-    const file = await ExpoFile.downloadFileAsync(url, destination, {
-      headers: { "x-api-key": apiKey },
-    });
+    const file = await ExpoFile.downloadFileAsync(url, destination, { headers: authHeaders });
 
     return file.uri;
-  }, [apiKey, downloadBaseUrl, ticketId]);
+  }, [authHeaders, downloadBaseUrl, ticketId]);
 
-  const handleOpenDocument = useCallback(async (document: TicketDocument) => {
-    if (!downloadBaseUrl || !document.document_id) {
-      setError(t("documents.errors.open"));
-      return;
-    }
-
-    setDownloading(document.document_id);
-    setError(null);
-
-    try {
-      const isImage = (document.mime_type ?? "").startsWith("image/");
-
-      if (isImage) {
-        const uri = await downloadDocumentFile(document);
-        if (!uri) throw new Error("Download failed");
-        setPreviewImage({ uri, name: document.document_name });
-      } else {
-        const uri = await downloadDocumentFile(document);
-        if (!uri) throw new Error("Download failed");
-        await Sharing.shareAsync(uri, {
-          mimeType: document.mime_type ?? undefined,
-          dialogTitle: document.document_name,
-        });
-      }
-    } catch (e) {
-      logger.error("[DocumentsSection] open failed", { error: e });
-      setError(t("documents.errors.open"));
-    } finally {
-      setDownloading(null);
-    }
-  }, [downloadBaseUrl, downloadDocumentFile, t]);
-
-  const handleSaveDocument = useCallback(async (document: TicketDocument) => {
+  const shareDocument = useCallback(async (document: TicketDocument, failureKey: string) => {
     if (!downloadBaseUrl || !document.document_id) {
       setError(t("documents.errors.open"));
       return;
@@ -202,14 +191,59 @@ export function DocumentsSection({
         dialogTitle: document.document_name,
       });
     } catch (e) {
-      logger.error("[DocumentsSection] save failed", { error: e });
+      logger.error(`[DocumentsSection] ${failureKey} failed`, { error: e });
       setError(t("documents.errors.open"));
     } finally {
       setDownloading(null);
     }
   }, [downloadBaseUrl, downloadDocumentFile, t]);
 
-  const [deleting, setDeleting] = useState<string | null>(null);
+  const handleOpenDocument = useCallback(async (document: TicketDocument) => {
+    if (isImageDocument(document) && downloadBaseUrl) {
+      const index = imageDocuments.findIndex((candidate) => candidate.document_id === document.document_id);
+      if (index >= 0) {
+        setError(null);
+        setPreviewLoading(true);
+        setPreviewIndex(index);
+        return;
+      }
+    }
+    await shareDocument(document, "open");
+  }, [downloadBaseUrl, imageDocuments, shareDocument]);
+
+  const closePreview = useCallback(() => {
+    setPreviewIndex(null);
+    setPreviewLoading(false);
+  }, []);
+
+  const stepPreview = useCallback((delta: number) => {
+    setPreviewIndex((current) => {
+      if (current === null) return current;
+      const next = current + delta;
+      if (next < 0 || next >= imageDocuments.length) return current;
+      setPreviewLoading(true);
+      return next;
+    });
+  }, [imageDocuments.length]);
+
+  // The 800x600 preview variant failed (older upload without a preview, or
+  // offline cache miss): fall back to the original file once.
+  const handlePreviewError = useCallback(async (document: TicketDocument) => {
+    if (previewFallbackUris[document.document_id]) {
+      setPreviewLoading(false);
+      setError(t("documents.errors.preview"));
+      return;
+    }
+    try {
+      const uri = await downloadDocumentFile(document);
+      if (!uri) throw new Error("Download failed");
+      setPreviewFallbackUris((current) => ({ ...current, [document.document_id]: uri }));
+    } catch (e) {
+      logger.error("[DocumentsSection] preview fallback failed", { error: e });
+      setPreviewLoading(false);
+      setError(t("documents.errors.preview"));
+    }
+  }, [downloadDocumentFile, previewFallbackUris, t]);
 
   const handleDeleteDocument = useCallback((document: TicketDocument) => {
     Alert.alert(
@@ -235,7 +269,7 @@ export function DocumentsSection({
                   setError(result.error.message || t("documents.errors.delete"));
                   return;
                 }
-                await loadDocuments();
+                await loadDocuments({ silent: true });
               } catch (e) {
                 logger.error("[DocumentsSection] delete failed", { error: e });
                 setError(t("documents.errors.delete"));
@@ -248,6 +282,54 @@ export function DocumentsSection({
       ],
     );
   }, [apiKey, client, loadDocuments, t, ticketId]);
+
+  const attachOptionStyle = {
+    flex: 1,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.sm,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.card,
+    alignItems: "center" as const,
+    flexDirection: "row" as const,
+    justifyContent: "center" as const,
+    gap: spacing.xs,
+  };
+
+  const renderThumbnail = (document: TicketDocument) => {
+    const showThumbnail = isImageDocument(document) && downloadBaseUrl && !brokenThumbnails[document.document_id];
+    if (downloading === document.document_id) {
+      return (
+        <View style={{ width: THUMBNAIL_SIZE, height: THUMBNAIL_SIZE, alignItems: "center", justifyContent: "center" }}>
+          <ActivityIndicator size={18} color={colors.textSecondary} />
+        </View>
+      );
+    }
+    if (showThumbnail) {
+      return (
+        <Image
+          testID={`document-thumbnail-${document.document_id}`}
+          accessibilityIgnoresInvertColors
+          source={{ uri: ticketDocumentUrl(downloadBaseUrl, ticketId, document.document_id, "thumbnail"), headers: authHeaders }}
+          onError={() => setBrokenThumbnails((current) => ({ ...current, [document.document_id]: true }))}
+          style={{ width: THUMBNAIL_SIZE, height: THUMBNAIL_SIZE, borderRadius: 8, backgroundColor: colors.border }}
+          resizeMode="cover"
+        />
+      );
+    }
+    return (
+      <View style={{ width: THUMBNAIL_SIZE, height: THUMBNAIL_SIZE, alignItems: "center", justifyContent: "center" }}>
+        <Feather name={getDocumentIcon(document)} size={20} color={colors.textSecondary} />
+      </View>
+    );
+  };
+
+  const previewUri = previewDocument && downloadBaseUrl
+    ? previewFallbackUris[previewDocument.document_id]
+      ?? ticketDocumentUrl(downloadBaseUrl, ticketId, previewDocument.document_id, "preview")
+    : null;
+  const previewUsesFallback = Boolean(previewDocument && previewFallbackUris[previewDocument.document_id]);
 
   return (
     <Card accessibilityLabel={t("documents.title")}>
@@ -277,34 +359,27 @@ export function DocumentsSection({
             onPress={() => { void handleCameraAttach(); }}
             accessibilityRole="button"
             accessibilityLabel={t("documents.camera")}
-            style={{
-              flex: 1,
-              paddingVertical: spacing.sm,
-              paddingHorizontal: spacing.md,
-              borderRadius: 10,
-              borderWidth: 1,
-              borderColor: colors.border,
-              backgroundColor: colors.card,
-              alignItems: "center",
-            }}
+            style={attachOptionStyle}
           >
+            <Feather name="camera" size={16} color={colors.text} />
             <Text style={{ ...typography.body, color: colors.text }}>{t("documents.camera")}</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => { void handlePhotosAttach(); }}
+            accessibilityRole="button"
+            accessibilityLabel={t("documents.photos")}
+            style={attachOptionStyle}
+          >
+            <Feather name="image" size={16} color={colors.text} />
+            <Text style={{ ...typography.body, color: colors.text }}>{t("documents.photos")}</Text>
           </Pressable>
           <Pressable
             onPress={() => { void handleFileAttach(); }}
             accessibilityRole="button"
             accessibilityLabel={t("documents.file")}
-            style={{
-              flex: 1,
-              paddingVertical: spacing.sm,
-              paddingHorizontal: spacing.md,
-              borderRadius: 10,
-              borderWidth: 1,
-              borderColor: colors.border,
-              backgroundColor: colors.card,
-              alignItems: "center",
-            }}
+            style={attachOptionStyle}
           >
+            <Feather name="paperclip" size={16} color={colors.text} />
             <Text style={{ ...typography.body, color: colors.text }}>{t("documents.file")}</Text>
           </Pressable>
         </View>
@@ -316,10 +391,60 @@ export function DocumentsSection({
         </Text>
       ) : null}
 
-      {uploading ? (
+      {uploads.progress ? (
         <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.sm, marginTop: spacing.md }}>
           <ActivityIndicator size="small" color={colors.primary} />
-          <Text style={{ ...typography.caption, color: colors.textSecondary }}>{t("documents.uploading")}</Text>
+          <Text style={{ ...typography.caption, color: colors.textSecondary }}>
+            {uploads.progress.total > 1
+              ? t("documents.uploadingProgress", { current: uploads.progress.current, total: uploads.progress.total })
+              : t("documents.uploading")}
+          </Text>
+        </View>
+      ) : null}
+
+      {uploads.failed.length > 0 ? (
+        <View style={{ marginTop: spacing.md, gap: spacing.sm }}>
+          {uploads.failed.map((item) => (
+            <View
+              key={item.id}
+              accessibilityLabel={`${t("documents.uploadFailed")}: ${item.file.name}`}
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                gap: spacing.sm,
+                paddingVertical: spacing.sm,
+                paddingHorizontal: spacing.sm,
+                borderRadius: 10,
+                borderWidth: 1,
+                borderColor: colors.danger,
+                backgroundColor: colors.card,
+              }}
+            >
+              <Feather name="alert-circle" size={18} color={colors.danger} />
+              <View style={{ flex: 1 }}>
+                <Text style={{ ...typography.body, color: colors.text }} numberOfLines={1}>{item.file.name}</Text>
+                <Text style={{ ...typography.caption, color: colors.danger, marginTop: 2 }}>{item.error}</Text>
+              </View>
+              <Pressable
+                onPress={() => uploads.retry(item.id)}
+                accessibilityRole="button"
+                accessibilityLabel={`${t("documents.retry")} ${item.file.name}`}
+                hitSlop={8}
+                style={{ padding: spacing.xs }}
+              >
+                <Text style={{ ...typography.body, color: colors.primary }}>{t("documents.retry")}</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => uploads.dismiss(item.id)}
+                accessibilityRole="button"
+                accessibilityLabel={`${t("documents.dismiss")} ${item.file.name}`}
+                hitSlop={8}
+                style={{ padding: spacing.xs }}
+              >
+                <Feather name="x" size={16} color={colors.textSecondary} />
+              </Pressable>
+            </View>
+          ))}
         </View>
       ) : null}
 
@@ -340,12 +465,12 @@ export function DocumentsSection({
               accessibilityLabel={document.document_name}
               disabled={downloading === document.document_id}
               onPress={() => { void handleOpenDocument(document); }}
-              onLongPress={() => { void handleSaveDocument(document); }}
+              onLongPress={() => { void shareDocument(document, "save"); }}
               style={{
                 flexDirection: "row",
                 alignItems: "center",
                 gap: spacing.sm,
-                paddingVertical: spacing.sm,
+                paddingVertical: spacing.xs,
                 paddingHorizontal: spacing.sm,
                 borderRadius: 10,
                 borderWidth: 1,
@@ -354,13 +479,9 @@ export function DocumentsSection({
                 opacity: downloading === document.document_id ? 0.6 : 1,
               }}
             >
-              {downloading === document.document_id ? (
-                <ActivityIndicator size={18} color={colors.textSecondary} />
-              ) : (
-                <Feather name={getDocumentIcon(document)} size={18} color={colors.textSecondary} />
-              )}
+              {renderThumbnail(document)}
               <View style={{ flex: 1 }}>
-                <Text style={{ ...typography.body, color: colors.text }}>
+                <Text style={{ ...typography.body, color: colors.text }} numberOfLines={1}>
                   {document.document_name}
                 </Text>
                 <Text style={{ ...typography.caption, color: colors.textSecondary, marginTop: 2 }}>
@@ -386,33 +507,95 @@ export function DocumentsSection({
         </View>
       )}
       </>}
-      {previewImage ? (
+      {previewDocument && previewUri ? (
         <Modal
           visible
           transparent
           animationType="fade"
-          onRequestClose={() => setPreviewImage(null)}
+          onRequestClose={closePreview}
         >
           <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.9)", justifyContent: "center", alignItems: "center" }}>
-            <Pressable
-              onPress={() => setPreviewImage(null)}
-              accessibilityRole="button"
-              accessibilityLabel={t("documents.closePreview")}
-              style={{ position: "absolute", top: 56, right: 16, zIndex: 1, padding: spacing.sm }}
-            >
-              <Feather name="x" size={28} color="#fff" />
-            </Pressable>
             <Text
-              style={{ ...typography.body, color: "#fff", position: "absolute", top: 60, left: 16, right: 60 }}
+              style={{ ...typography.body, color: colors.overlayText, position: "absolute", top: 60, left: 16, right: 120 }}
               numberOfLines={1}
             >
-              {previewImage.name}
+              {previewDocument.document_name}
             </Text>
+            <View style={{ position: "absolute", top: 48, right: 8, zIndex: 1, flexDirection: "row", alignItems: "center" }}>
+              <Pressable
+                onPress={() => { void shareDocument(previewDocument, "share"); }}
+                disabled={downloading === previewDocument.document_id}
+                accessibilityRole="button"
+                accessibilityLabel={t("documents.share")}
+                hitSlop={8}
+                style={{ padding: spacing.sm }}
+              >
+                {downloading === previewDocument.document_id ? (
+                  <ActivityIndicator size={22} color={colors.overlayText} />
+                ) : (
+                  <Feather name="share" size={24} color={colors.overlayText} />
+                )}
+              </Pressable>
+              <Pressable
+                onPress={closePreview}
+                accessibilityRole="button"
+                accessibilityLabel={t("documents.closePreview")}
+                hitSlop={8}
+                style={{ padding: spacing.sm }}
+              >
+                <Feather name="x" size={28} color={colors.overlayText} />
+              </Pressable>
+            </View>
             <Image
-              source={{ uri: previewImage.uri }}
+              key={`${previewDocument.document_id}:${previewUsesFallback ? "full" : "preview"}`}
+              testID="preview-image"
+              accessibilityIgnoresInvertColors
+              source={{ uri: previewUri, headers: previewUsesFallback ? undefined : authHeaders }}
+              onLoadEnd={() => setPreviewLoading(false)}
+              onError={() => { void handlePreviewError(previewDocument); }}
               style={{ width: "90%", height: "70%" }}
               resizeMode="contain"
             />
+            {previewLoading ? (
+              <ActivityIndicator size="large" color={colors.overlayText} style={{ position: "absolute" }} />
+            ) : null}
+            {imageDocuments.length > 1 ? (
+              <View
+                style={{
+                  position: "absolute",
+                  bottom: 48,
+                  left: 16,
+                  right: 16,
+                  flexDirection: "row",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                }}
+              >
+                <Pressable
+                  onPress={() => stepPreview(-1)}
+                  disabled={previewIndex === 0}
+                  accessibilityRole="button"
+                  accessibilityLabel={t("documents.previousImage")}
+                  hitSlop={8}
+                  style={{ padding: spacing.sm, opacity: previewIndex === 0 ? 0.3 : 1 }}
+                >
+                  <Feather name="chevron-left" size={32} color={colors.overlayText} />
+                </Pressable>
+                <Text style={{ ...typography.body, color: colors.overlayText }}>
+                  {t("documents.previewCounter", { current: (previewIndex ?? 0) + 1, total: imageDocuments.length })}
+                </Text>
+                <Pressable
+                  onPress={() => stepPreview(1)}
+                  disabled={previewIndex === imageDocuments.length - 1}
+                  accessibilityRole="button"
+                  accessibilityLabel={t("documents.nextImage")}
+                  hitSlop={8}
+                  style={{ padding: spacing.sm, opacity: previewIndex === imageDocuments.length - 1 ? 0.3 : 1 }}
+                >
+                  <Feather name="chevron-right" size={32} color={colors.overlayText} />
+                </Pressable>
+              </View>
+            ) : null}
           </View>
         </Modal>
       ) : null}

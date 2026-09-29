@@ -1,0 +1,887 @@
+{
+  "spreadsheetId": "1v7rjj0_8tMOGbibDghxcjmSgN1Ejvyvjkyz0jOUHl7I",
+  "sourceUnchanged": true,
+  "scope": "Partial T019: real exporter rows and native Google Sheets QUERY evaluation",
+  "limitations": [
+    "Retry-only browser rows not yet validated",
+    "Coverage measured/total and methodology separation not yet exercised",
+    "Cancellation here models an interrupted report; an absent CI exporter requires external reconciliation",
+    "Original historical charts preserved; no rollout to live source"
+  ],
+  "requests": [
+    {
+      "addSheet": {
+        "properties": {
+          "sheetId": 9060800,
+          "title": "readiness_pr",
+          "gridProperties": {
+            "rowCount": 2500,
+            "columnCount": 15,
+            "frozenRowCount": 3
+          }
+        }
+      }
+    },
+    {
+      "updateCells": {
+        "start": {
+          "sheetId": 9060800,
+          "rowIndex": 0,
+          "columnIndex": 0
+        },
+        "rows": [
+          {
+            "values": [
+              {
+                "userEnteredValue": {
+                  "stringValue": "Run kind"
+                }
+              },
+              {
+                "userEnteredValue": {
+                  "stringValue": "pr"
+                }
+              }
+            ]
+          },
+          {
+            "values": [
+              {
+                "userEnteredValue": {
+                  "stringValue": "ISOLATED VALIDATION — lane evidence only; missing runs require CI reconciliation. Legacy rows remain in metrics."
+                }
+              }
+            ]
+          },
+          {
+            "values": [
+              {
+                "userEnteredValue": {
+                  "formulaValue": "=QUERY(metrics!A:AB,\"select A,B,AB,R,AA,Y,Z,Q,F,G,H,S,T,X,P where A is not null and U=2 and V='\"&B1&\"' order by A desc label A 'Timestamp',B 'Suite',AB 'Tested SHA',R 'Report status',AA 'Lane gate',Y 'Expected files',Z 'Collected tests',Q 'Executed tests',F 'Failed',G 'Skipped',H 'TODO',S 'Measured files',T 'Source files',X 'Methodology',P 'Run URL'\",1)"
+                }
+              }
+            ]
+          }
+        ],
+        "fields": "userEnteredValue"
+      }
+    },
+    {
+      "repeatCell": {
+        "range": {
+          "sheetId": 9060800,
+          "startRowIndex": 2,
+          "endRowIndex": 3
+        },
+        "cell": {
+          "userEnteredFormat": {
+            "backgroundColor": {
+              "red": 0.12,
+              "green": 0.2,
+              "blue": 0.3
+            },
+            "textFormat": {
+              "bold": true,
+              "foregroundColor": {
+                "red": 1,
+                "green": 1,
+                "blue": 1
+              }
+            },
+            "wrapStrategy": "WRAP"
+          }
+        },
+        "fields": "userEnteredFormat"
+      }
+    },
+    {
+      "updateDimensionProperties": {
+        "range": {
+          "sheetId": 9060800,
+          "dimension": "COLUMNS",
+          "startIndex": 0,
+          "endIndex": 15
+        },
+        "properties": {
+          "pixelSize": 150
+        },
+        "fields": "pixelSize"
+      }
+    },
+    {
+      "addSheet": {
+        "properties": {
+          "sheetId": 9060801,
+          "title": "readiness_main",
+          "gridProperties": {
+            "rowCount": 2500,
+            "columnCount": 15,
+            "frozenRowCount": 3
+          }
+        }
+      }
+    },
+    {
+      "updateCells": {
+        "start": {
+          "sheetId": 9060801,
+          "rowIndex": 0,
+          "columnIndex": 0
+        },
+        "rows": [
+          {
+            "values": [
+              {
+                "userEnteredValue": {
+                  "stringValue": "Run kind"
+                }
+              },
+              {
+                "userEnteredValue": {
+                  "stringValue": "main"
+                }
+              }
+            ]
+          },
+          {
+            "values": [
+              {
+                "userEnteredValue": {
+                  "stringValue": "ISOLATED VALIDATION — lane evidence only; missing runs require CI reconciliation. Legacy rows remain in metrics."
+                }
+              }
+            ]
+          },
+          {
+            "values": [
+              {
+                "userEnteredValue": {
+                  "formulaValue": "=QUERY(metrics!A:AB,\"select A,B,AB,R,AA,Y,Z,Q,F,G,H,S,T,X,P where A is not null and U=2 and V='\"&B1&\"' order by A desc label A 'Timestamp',B 'Suite',AB 'Tested SHA',R 'Report status',AA 'Lane gate',Y 'Expected files',Z 'Collected tests',Q 'Executed tests',F 'Failed',G 'Skipped',H 'TODO',S 'Measured files',T 'Source files',X 'Methodology',P 'Run URL'\",1)"
+                }
+              }
+            ]
+          }
+        ],
+        "fields": "userEnteredValue"
+      }
+    },
+    {
+      "repeatCell": {
+        "range": {
+          "sheetId": 9060801,
+          "startRowIndex": 2,
+          "endRowIndex": 3
+        },
+        "cell": {
+          "userEnteredFormat": {
+            "backgroundColor": {
+              "red": 0.12,
+              "green": 0.2,
+              "blue": 0.3
+            },
+            "textFormat": {
+              "bold": true,
+              "foregroundColor": {
+                "red": 1,
+                "green": 1,
+                "blue": 1
+              }
+            },
+            "wrapStrategy": "WRAP"
+          }
+        },
+        "fields": "userEnteredFormat"
+      }
+    },
+    {
+      "updateDimensionProperties": {
+        "range": {
+          "sheetId": 9060801,
+          "dimension": "COLUMNS",
+          "startIndex": 0,
+          "endIndex": 15
+        },
+        "properties": {
+          "pixelSize": 150
+        },
+        "fields": "pixelSize"
+      }
+    },
+    {
+      "addSheet": {
+        "properties": {
+          "sheetId": 9060802,
+          "title": "readiness_nightly",
+          "gridProperties": {
+            "rowCount": 2500,
+            "columnCount": 15,
+            "frozenRowCount": 3
+          }
+        }
+      }
+    },
+    {
+      "updateCells": {
+        "start": {
+          "sheetId": 9060802,
+          "rowIndex": 0,
+          "columnIndex": 0
+        },
+        "rows": [
+          {
+            "values": [
+              {
+                "userEnteredValue": {
+                  "stringValue": "Run kind"
+                }
+              },
+              {
+                "userEnteredValue": {
+                  "stringValue": "nightly"
+                }
+              }
+            ]
+          },
+          {
+            "values": [
+              {
+                "userEnteredValue": {
+                  "stringValue": "ISOLATED VALIDATION — lane evidence only; missing runs require CI reconciliation. Legacy rows remain in metrics."
+                }
+              }
+            ]
+          },
+          {
+            "values": [
+              {
+                "userEnteredValue": {
+                  "formulaValue": "=QUERY(metrics!A:AB,\"select A,B,AB,R,AA,Y,Z,Q,F,G,H,S,T,X,P where A is not null and U=2 and V='\"&B1&\"' order by A desc label A 'Timestamp',B 'Suite',AB 'Tested SHA',R 'Report status',AA 'Lane gate',Y 'Expected files',Z 'Collected tests',Q 'Executed tests',F 'Failed',G 'Skipped',H 'TODO',S 'Measured files',T 'Source files',X 'Methodology',P 'Run URL'\",1)"
+                }
+              }
+            ]
+          }
+        ],
+        "fields": "userEnteredValue"
+      }
+    },
+    {
+      "repeatCell": {
+        "range": {
+          "sheetId": 9060802,
+          "startRowIndex": 2,
+          "endRowIndex": 3
+        },
+        "cell": {
+          "userEnteredFormat": {
+            "backgroundColor": {
+              "red": 0.12,
+              "green": 0.2,
+              "blue": 0.3
+            },
+            "textFormat": {
+              "bold": true,
+              "foregroundColor": {
+                "red": 1,
+                "green": 1,
+                "blue": 1
+              }
+            },
+            "wrapStrategy": "WRAP"
+          }
+        },
+        "fields": "userEnteredFormat"
+      }
+    },
+    {
+      "updateDimensionProperties": {
+        "range": {
+          "sheetId": 9060802,
+          "dimension": "COLUMNS",
+          "startIndex": 0,
+          "endIndex": 15
+        },
+        "properties": {
+          "pixelSize": 150
+        },
+        "fields": "pixelSize"
+      }
+    }
+  ],
+  "rows": [
+    [
+      "2026-09-08T12:21:24.948Z",
+      "ISOLATED-success",
+      "main",
+      "synthetic-",
+      2,
+      0,
+      0,
+      0,
+      2,
+      100,
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      2,
+      "complete",
+      "",
+      "",
+      2,
+      "pr",
+      "pull_request",
+      "",
+      1,
+      2,
+      "passed",
+      "synthetic-isolated-validation"
+    ],
+    [
+      "2026-09-08T12:21:24.948Z",
+      "ISOLATED-failure",
+      "main",
+      "synthetic-",
+      1,
+      1,
+      0,
+      0,
+      2,
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      2,
+      "partial",
+      "",
+      "",
+      2,
+      "pr",
+      "pull_request",
+      "",
+      1,
+      2,
+      "failed",
+      "synthetic-isolated-validation"
+    ],
+    [
+      "2026-09-08T12:21:24.949Z",
+      "ISOLATED-cancelled",
+      "main",
+      "synthetic-",
+      1,
+      0,
+      0,
+      0,
+      2,
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      1,
+      "partial",
+      "",
+      "",
+      2,
+      "pr",
+      "pull_request",
+      "",
+      1,
+      2,
+      "failed",
+      "synthetic-isolated-validation"
+    ],
+    [
+      "2026-09-08T12:21:24.951Z",
+      "ISOLATED-missing",
+      "main",
+      "synthetic-",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "partial",
+      "",
+      "",
+      2,
+      "pr",
+      "pull_request",
+      "",
+      1,
+      2,
+      "failed",
+      "synthetic-isolated-validation"
+    ],
+    [
+      "2026-09-08T12:21:24.951Z",
+      "ISOLATED-success",
+      "main",
+      "synthetic-",
+      2,
+      0,
+      0,
+      0,
+      2,
+      100,
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      2,
+      "complete",
+      "",
+      "",
+      2,
+      "main",
+      "push",
+      "",
+      1,
+      2,
+      "passed",
+      "synthetic-isolated-validation"
+    ],
+    [
+      "2026-09-08T12:21:24.951Z",
+      "ISOLATED-failure",
+      "main",
+      "synthetic-",
+      1,
+      1,
+      0,
+      0,
+      2,
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      2,
+      "partial",
+      "",
+      "",
+      2,
+      "main",
+      "push",
+      "",
+      1,
+      2,
+      "failed",
+      "synthetic-isolated-validation"
+    ],
+    [
+      "2026-09-08T12:21:24.951Z",
+      "ISOLATED-cancelled",
+      "main",
+      "synthetic-",
+      1,
+      0,
+      0,
+      0,
+      2,
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      1,
+      "partial",
+      "",
+      "",
+      2,
+      "main",
+      "push",
+      "",
+      1,
+      2,
+      "failed",
+      "synthetic-isolated-validation"
+    ],
+    [
+      "2026-09-08T12:21:24.952Z",
+      "ISOLATED-missing",
+      "main",
+      "synthetic-",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "partial",
+      "",
+      "",
+      2,
+      "main",
+      "push",
+      "",
+      1,
+      2,
+      "failed",
+      "synthetic-isolated-validation"
+    ],
+    [
+      "2026-09-08T12:21:24.952Z",
+      "ISOLATED-success",
+      "main",
+      "synthetic-",
+      2,
+      0,
+      0,
+      0,
+      2,
+      100,
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      2,
+      "complete",
+      "",
+      "",
+      2,
+      "nightly",
+      "schedule",
+      "",
+      1,
+      2,
+      "passed",
+      "synthetic-isolated-validation"
+    ],
+    [
+      "2026-09-08T12:21:24.952Z",
+      "ISOLATED-failure",
+      "main",
+      "synthetic-",
+      1,
+      1,
+      0,
+      0,
+      2,
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      2,
+      "partial",
+      "",
+      "",
+      2,
+      "nightly",
+      "schedule",
+      "",
+      1,
+      2,
+      "failed",
+      "synthetic-isolated-validation"
+    ],
+    [
+      "2026-09-08T12:21:24.952Z",
+      "ISOLATED-cancelled",
+      "main",
+      "synthetic-",
+      1,
+      0,
+      0,
+      0,
+      2,
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      1,
+      "partial",
+      "",
+      "",
+      2,
+      "nightly",
+      "schedule",
+      "",
+      1,
+      2,
+      "failed",
+      "synthetic-isolated-validation"
+    ],
+    [
+      "2026-09-08T12:21:24.952Z",
+      "ISOLATED-missing",
+      "main",
+      "synthetic-",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "partial",
+      "",
+      "",
+      2,
+      "nightly",
+      "schedule",
+      "",
+      1,
+      2,
+      "failed",
+      "synthetic-isolated-validation"
+    ]
+  ],
+  "readback": {
+    "pr": {
+      "range": "readiness_pr!A3:O7",
+      "majorDimension": "ROWS",
+      "values": [
+        [
+          "Timestamp",
+          "Suite",
+          "Tested SHA",
+          "Report status",
+          "Lane gate",
+          "Expected files",
+          "Collected tests",
+          "Executed tests",
+          "Failed",
+          "Skipped",
+          "TODO",
+          "Measured files",
+          "Source files",
+          "Methodology",
+          "Run URL"
+        ],
+        [
+          "2026-09-08T12:21:24.951Z",
+          "ISOLATED-missing",
+          "synthetic-isolated-validation",
+          "partial",
+          "failed",
+          "1",
+          "2"
+        ],
+        [
+          "2026-09-08T12:21:24.949Z",
+          "ISOLATED-cancelled",
+          "synthetic-isolated-validation",
+          "partial",
+          "failed",
+          "1",
+          "2",
+          "1",
+          "0",
+          "0",
+          "0"
+        ],
+        [
+          "2026-09-08T12:21:24.948Z",
+          "ISOLATED-success",
+          "synthetic-isolated-validation",
+          "complete",
+          "passed",
+          "1",
+          "2",
+          "2",
+          "0",
+          "0",
+          "0"
+        ],
+        [
+          "2026-09-08T12:21:24.948Z",
+          "ISOLATED-failure",
+          "synthetic-isolated-validation",
+          "partial",
+          "failed",
+          "1",
+          "2",
+          "2",
+          "1",
+          "0",
+          "0"
+        ]
+      ]
+    },
+    "main": {
+      "range": "readiness_main!A3:O7",
+      "majorDimension": "ROWS",
+      "values": [
+        [
+          "Timestamp",
+          "Suite",
+          "Tested SHA",
+          "Report status",
+          "Lane gate",
+          "Expected files",
+          "Collected tests",
+          "Executed tests",
+          "Failed",
+          "Skipped",
+          "TODO",
+          "Measured files",
+          "Source files",
+          "Methodology",
+          "Run URL"
+        ],
+        [
+          "2026-09-08T12:21:24.952Z",
+          "ISOLATED-missing",
+          "synthetic-isolated-validation",
+          "partial",
+          "failed",
+          "1",
+          "2"
+        ],
+        [
+          "2026-09-08T12:21:24.951Z",
+          "ISOLATED-success",
+          "synthetic-isolated-validation",
+          "complete",
+          "passed",
+          "1",
+          "2",
+          "2",
+          "0",
+          "0",
+          "0"
+        ],
+        [
+          "2026-09-08T12:21:24.951Z",
+          "ISOLATED-failure",
+          "synthetic-isolated-validation",
+          "partial",
+          "failed",
+          "1",
+          "2",
+          "2",
+          "1",
+          "0",
+          "0"
+        ],
+        [
+          "2026-09-08T12:21:24.951Z",
+          "ISOLATED-cancelled",
+          "synthetic-isolated-validation",
+          "partial",
+          "failed",
+          "1",
+          "2",
+          "1",
+          "0",
+          "0",
+          "0"
+        ]
+      ]
+    },
+    "nightly": {
+      "range": "readiness_nightly!A3:O7",
+      "majorDimension": "ROWS",
+      "values": [
+        [
+          "Timestamp",
+          "Suite",
+          "Tested SHA",
+          "Report status",
+          "Lane gate",
+          "Expected files",
+          "Collected tests",
+          "Executed tests",
+          "Failed",
+          "Skipped",
+          "TODO",
+          "Measured files",
+          "Source files",
+          "Methodology",
+          "Run URL"
+        ],
+        [
+          "2026-09-08T12:21:24.952Z",
+          "ISOLATED-success",
+          "synthetic-isolated-validation",
+          "complete",
+          "passed",
+          "1",
+          "2",
+          "2",
+          "0",
+          "0",
+          "0"
+        ],
+        [
+          "2026-09-08T12:21:24.952Z",
+          "ISOLATED-failure",
+          "synthetic-isolated-validation",
+          "partial",
+          "failed",
+          "1",
+          "2",
+          "2",
+          "1",
+          "0",
+          "0"
+        ],
+        [
+          "2026-09-08T12:21:24.952Z",
+          "ISOLATED-cancelled",
+          "synthetic-isolated-validation",
+          "partial",
+          "failed",
+          "1",
+          "2",
+          "1",
+          "0",
+          "0",
+          "0"
+        ],
+        [
+          "2026-09-08T12:21:24.952Z",
+          "ISOLATED-missing",
+          "synthetic-isolated-validation",
+          "partial",
+          "failed",
+          "1",
+          "2"
+        ]
+      ]
+    }
+  }
+}

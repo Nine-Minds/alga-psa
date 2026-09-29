@@ -1,0 +1,66 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-09-07",
+  "sourceRevisionBeforeChanges": "3ebf8e0041",
+  "scope": "local Helm render; no deployment",
+  "commands": [
+    "helm template regression-release helm --namespace regression-release",
+    "helm template regression-release ee/helm/email-service --namespace regression-release --set waitForBootstrap.enabled=true"
+  ],
+  "components": {
+    "main": [
+      {
+        "name": "msp/Deployment/hocuspocus/containers/sebastian",
+        "image": "harbor.nineminds.com/nineminds/sebastian_hocuspocus:latest"
+      },
+      {
+        "name": "msp/Deployment/hocuspocus/initContainers/wait-for-redis",
+        "image": "redis:latest"
+      },
+      {
+        "name": "msp/Deployment/regression-release-sebastian/containers/sebastian",
+        "image": "harbor.nineminds.com/nineminds/alga-psa:4023e8f"
+      },
+      {
+        "name": "msp/Deployment/regression-release-sebastian/initContainers/wait-for-bootstrap",
+        "image": "harbor.nineminds.com/nineminds/sebastian_setup:latest"
+      },
+      {
+        "name": "msp/Job/regression-release-sebastian-bootstrap/containers/bootstrap",
+        "image": "harbor.nineminds.com/nineminds/sebastian_setup:latest"
+      },
+      {
+        "name": "msp/Job/regression-release-sebastian-pvc-delete/containers/kubectl",
+        "image": "bitnami/kubectl:latest"
+      },
+      {
+        "name": "msp/StatefulSet/db/containers/db",
+        "image": "ankane/pgvector:latest"
+      },
+      {
+        "name": "msp/StatefulSet/db/initContainers/volume-prep",
+        "image": "busybox"
+      },
+      {
+        "name": "msp/StatefulSet/redis/containers/redis",
+        "image": "redis:latest"
+      }
+    ],
+    "email-bootstrap": [
+      {
+        "name": "regression-release/Deployment/regression-release-email-service/containers/email-service",
+        "image": "email-service:latest"
+      },
+      {
+        "name": "regression-release/Deployment/regression-release-email-service/initContainers/wait-for-bootstrap",
+        "image": "ankane/pgvector:latest"
+      }
+    ]
+  },
+  "limitations": [
+    "Default chart values are inventory examples, not the selected production release configuration.",
+    "Components include lifecycle hook images; promotion readback needs phase-aware runtime evidence for hooks.",
+    "Tags observed here must be resolved and pinned by build/release tooling before immutable manifest validation can pass.",
+    "No registry resolution, deployment, promotion or live runtime readback performed."
+  ]
+}

@@ -268,7 +268,6 @@ describe('AutomaticInvoices i18n wiring contract', () => {
     // and the redundant filter-bar count readout were removed (the view-tab
     // badges already carry the group count).
     const keyChecks = [
-      'automaticInvoices.ready.groupedPreviewUnavailable',
       'automaticInvoices.summary.empty',
       'automaticInvoices.ready.needsApproval.title',
       'automaticInvoices.ready.needsApproval.description',

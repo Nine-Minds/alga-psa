@@ -26,6 +26,8 @@ import {
   type TicketAppointmentRequestSummary,
 } from '../../../actions/ticketBentoActions';
 
+type FormatDate = (date: Date | string, options?: Intl.DateTimeFormatOptions) => string;
+
 // These run at module scope with no hook to read the app locale from, so it is
 // passed in: omitting it would format in the browser's locale, not the app's.
 function formatShortDate(iso: string, locale: string): { month: string; day: string } {
@@ -36,30 +38,36 @@ function formatShortDate(iso: string, locale: string): { month: string; day: str
   };
 }
 
-function formatTimeRange(startIso: string, endIso: string, locale: string): string {
+// Times go through the central formatter: the 12/24h clock belongs to the
+// country, not the reading language. The day fallback keeps a NAMED month, so
+// its order is the language's grammar and Intl stays in charge there.
+function formatTimeRange(startIso: string, endIso: string, formatDate: FormatDate): string {
   const start = new Date(startIso);
   const end = new Date(endIso);
   const sameDay = start.toDateString() === end.toDateString();
-  const time = (d: Date) => d.toLocaleTimeString(locale, { hour: 'numeric', minute: '2-digit' });
+  const time = (d: Date) => formatDate(d, { hour: 'numeric', minute: '2-digit' });
   if (sameDay) return `${time(start)} – ${time(end)}`;
-  const day = (d: Date) => d.toLocaleDateString(locale, { month: 'short', day: 'numeric' });
+  const day = (d: Date) => formatDate(d, { month: 'short', day: 'numeric' });
   return `${day(start)} – ${day(end)}`;
 }
 
-/** "Next visit" tile — schedule entries linked to this ticket. */
-export function NextVisitTile({
+/** "Scheduled work" tile — schedule entries linked to this ticket. */
+export function ScheduledWorkTile({
   id,
   ticketId,
   refreshKey = 0,
   initialData,
-  onScheduleVisit,
+  onSchedule,
+  onOpenEntry,
 }: {
   id: string;
   ticketId: string;
   refreshKey?: number;
   initialData?: Promise<TicketScheduleEntrySummary[]>;
   /** Opens the scheduler drawer pre-scoped to this ticket. Falls back to a dispatch link when absent. */
-  onScheduleVisit?: () => void;
+  onSchedule?: () => void;
+  /** Opens an existing entry for editing; rows are inert when absent. */
+  onOpenEntry?: (entryId: string) => void;
 }) {
   const { t } = useTranslation('features/tickets');
   const { data, error, loading } = useTileData(
@@ -75,17 +83,17 @@ export function NextVisitTile({
   return (
     <BentoTile
       id={id}
-      title={t('bento.tiles.nextVisit', 'Next visit')}
+      title={t('bento.tiles.scheduledWork', 'Scheduled work')}
       icon={<Calendar className="h-4 w-4" />}
       error={error}
       action={
-        onScheduleVisit ? (
+        onSchedule ? (
           <button
             id={`${id}-schedule`}
             type="button"
-            aria-label={t('bento.tiles.scheduleVisit', 'Schedule a visit')}
+            aria-label={t('bento.tiles.scheduleTime', 'Schedule time')}
             className="text-[rgb(var(--color-text-400))] hover:text-[rgb(var(--color-text-700))]"
-            onClick={onScheduleVisit}
+            onClick={onSchedule}
           >
             <Plus className="h-4 w-4" />
           </button>
@@ -97,14 +105,14 @@ export function NextVisitTile({
       ) : upcoming.length === 0 && past.length === 0 ? (
         <div>
           <BentoTileEmpty id={`${id}-empty`}>{t('bento.tiles.nothingScheduled', 'Nothing scheduled')}</BentoTileEmpty>
-          {onScheduleVisit ? (
+          {onSchedule ? (
             <button
               id={`${id}-schedule-link`}
               type="button"
-              onClick={onScheduleVisit}
+              onClick={onSchedule}
               className="inline-flex items-center gap-1 text-xs font-medium text-[rgb(var(--color-primary-600))] hover:underline mt-1"
             >
-              <Plus className="h-3 w-3" /> {t('bento.tiles.scheduleVisit', 'Schedule a visit')}
+              <Plus className="h-3 w-3" /> {t('bento.tiles.scheduleTime', 'Schedule time')}
             </button>
           ) : (
             <a
@@ -112,14 +120,20 @@ export function NextVisitTile({
               href="/msp/technician-dispatch"
               className="inline-flex items-center gap-1 text-xs font-medium text-[rgb(var(--color-primary-600))] hover:underline mt-1"
             >
-              <Plus className="h-3 w-3" /> {t('bento.tiles.scheduleVisit', 'Schedule a visit')}
+              <Plus className="h-3 w-3" /> {t('bento.tiles.scheduleTime', 'Schedule time')}
             </a>
           )}
         </div>
       ) : (
         <div className="space-y-2">
           {[...upcoming.slice(0, 2), ...(upcoming.length === 0 ? past : [])].map((entry) => (
-            <ScheduleRow key={entry.entryId} id={`${id}-entry-${entry.entryId}`} entry={entry} t={t} />
+            <ScheduleRow
+              key={entry.entryId}
+              id={`${id}-entry-${entry.entryId}`}
+              entry={entry}
+              t={t}
+              onOpen={onOpenEntry ? () => onOpenEntry(entry.entryId) : undefined}
+            />
           ))}
         </div>
       )}
@@ -127,21 +141,48 @@ export function NextVisitTile({
   );
 }
 
-function ScheduleRow({ id, entry, t }: { id: string; entry: TicketScheduleEntrySummary; t: (key: string, defaultValue: string) => string }) {
-  const { locale } = useFormatters();
+function ScheduleRow({
+  id,
+  entry,
+  t,
+  onOpen,
+}: {
+  id: string;
+  entry: TicketScheduleEntrySummary;
+  t: (key: string, defaultValue: string) => string;
+  onOpen?: () => void;
+}) {
+  const { locale, formatDate } = useFormatters();
   const date = formatShortDate(entry.scheduledStart, locale);
-  return (
-    <div id={id} className={`flex items-center gap-3 ${entry.isUpcoming ? '' : 'opacity-60'}`}>
+  const body = (
+    <>
       <BentoDateChip month={date.month} day={date.day} />
-      <div className="min-w-0">
+      <div className="min-w-0 text-left">
         <div className="text-sm font-medium text-[rgb(var(--color-text-800))] truncate">{entry.title || t('bento.tiles.scheduledWork', 'Scheduled work')}</div>
         <div className="text-xs text-[rgb(var(--color-text-500))] truncate">
-          {formatTimeRange(entry.scheduledStart, entry.scheduledEnd, locale)}
+          {formatTimeRange(entry.scheduledStart, entry.scheduledEnd, formatDate)}
           {entry.assignedUserNames.length > 0 ? ` · ${entry.assignedUserNames.join(', ')}` : ''}
           {!entry.isUpcoming ? ` · ${t('bento.tiles.scheduleDone', 'done')}` : ''}
         </div>
       </div>
-    </div>
+    </>
+  );
+  const rowClass = `flex items-center gap-3 ${entry.isUpcoming ? '' : 'opacity-60'}`;
+
+  if (!onOpen) {
+    return <div id={id} className={rowClass}>{body}</div>;
+  }
+
+  return (
+    <button
+      id={id}
+      type="button"
+      onClick={onOpen}
+      title={t('bento.tiles.openScheduleEntry', 'Open schedule entry')}
+      className={`${rowClass} w-full rounded-md -mx-1 px-1 py-0.5 hover:bg-[rgb(var(--color-border-100))] focus:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--color-primary-400))]`}
+    >
+      {body}
+    </button>
   );
 }
 
@@ -159,12 +200,12 @@ function appointmentStatusVariant(status: string): BadgeVariant {
   }
 }
 
-function formatAppointmentDateTime(date: string | null, time: string | null, tz: string | null, locale: string): string | null {
+function formatAppointmentDateTime(date: string | null, time: string | null, tz: string | null, formatDate: FormatDate): string | null {
   if (!date || !time) return null;
   try {
     const dt = fromZonedTime(`${date}T${time}:00`, tz || 'UTC');
     if (Number.isNaN(dt.getTime())) return null;
-    return dt.toLocaleString(locale, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+    return formatDate(dt, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
   } catch {
     return null;
   }
@@ -179,8 +220,8 @@ function AppointmentRequestRow({
   request: TicketAppointmentRequestSummary;
   t: (key: string, defaultValue: string) => string;
 }) {
-  const { locale } = useFormatters();
-  const when = formatAppointmentDateTime(request.requestedDate, request.requestedTime, request.requesterTimezone, locale);
+  const { formatDate } = useFormatters();
+  const when = formatAppointmentDateTime(request.requestedDate, request.requestedTime, request.requesterTimezone, formatDate);
   const duration = request.requestedDurationMinutes ? formatMinutes(request.requestedDurationMinutes) : null;
   return (
     <BentoRow id={id} align="start" className="justify-between">
@@ -203,7 +244,7 @@ function AppointmentRequestRow({
 /**
  * "Appointment requests" tile — client-requested appointment slots linked to
  * this ticket (pending/approved/declined). Distinct from booked visits in the
- * "Next visit" tile. Read-only surface, matching the legacy Entry layout.
+ * "Scheduled work" tile. Read-only surface, matching the legacy Entry layout.
  */
 export function AppointmentRequestsTile({
   id,

@@ -38,6 +38,18 @@ describe('DocumentListView visibility controls', () => {
     cleanup();
   });
 
+  it('shows internal comment attachments as hidden even when the document setting is public', () => {
+    const document = buildDocument({ is_client_visible: true, comment_attachment_is_public: false });
+    const onToggleVisibility = vi.fn();
+    render(<DocumentListView documents={[document]} selectedDocuments={new Set()} onSelectionChange={() => undefined} showVisibilityControls onToggleVisibility={onToggleVisibility} />);
+    expect(screen.queryByText('Client visible')).not.toBeInTheDocument();
+    expect(screen.getByText('Internal')).toBeInTheDocument();
+    const toggle = screen.getByRole('button', { name: 'Hidden from clients' });
+    expect(toggle).toBeDisabled();
+    fireEvent.click(toggle);
+    expect(onToggleVisibility).not.toHaveBeenCalled();
+  });
+
   it('renders visibility badge and toggle in MSP context', () => {
     const onToggleVisibility = vi.fn();
     const document = buildDocument({ is_client_visible: true });

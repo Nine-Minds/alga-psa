@@ -1,0 +1,43 @@
+{
+  "status": "Native deletion fixture failures repaired locally; next native run pending",
+  "native": {
+    "run": 34078331080,
+    "failedLanes": [
+      "Nx affected unit tests (@alga-psa/core:test)",
+      "Server unit suite + coverage"
+    ],
+    "serverCounts": {
+      "passed": 14509,
+      "failed": 3,
+      "skipped": 2,
+      "todo": 15
+    },
+    "failure": "Project deletion fixture query builder lacked select(), used by the new project-task work-item subquery",
+    "log": "/tmp/alga-unit-df9b-failed.log"
+  },
+  "repair": "Support chainable select() in the existing deletion-validation mock builder. Production dependency behavior and assertions are unchanged. Real DB project deletion preservation coverage is recorded separately in project-behavior-contracts.json.",
+  "validation": {
+    "corePackage": {
+      "files": 29,
+      "passed": 271,
+      "failed": 0,
+      "skipped": 6,
+      "durationSeconds": 2.92,
+      "log": "/tmp/alga-core-deletion-fixture-final-escalated.log",
+      "limitation": "Six platform-dependent cases skipped on macOS; this is not complete Linux capability coverage"
+    },
+    "serverVitest": {
+      "passed": 27,
+      "failed": 0,
+      "skipped": 0,
+      "log": "/tmp/alga-server-deletion-fixture-final.log"
+    },
+    "initialLocalRun": "Restricted tsx subprocess fixtures produced no result files, causing six unrelated filesystem provider test failures. Re-run with subprocess access passed; synthetic temporary secret values only."
+  },
+  "remaining": [
+    "Native rerun after publication",
+    "Full integration job 101608767833 revalidated live; no push while live",
+    "Existing server-unit skipped/todo cases remain a completeness concern",
+    "Broader plan requirements remain open"
+  ]
+}

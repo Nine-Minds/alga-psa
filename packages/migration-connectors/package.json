@@ -26,6 +26,6 @@
   "devDependencies": {
     "@types/papaparse": "^5.3.16",
     "typescript": "^5.7.3",
-    "vitest": "^4.1.9"
+    "vitest": "^4.1.11"
   }
 }

@@ -24,6 +24,7 @@ import {
   applyFromNameOverride,
   parseEmailAddress,
   resolveDefaultFromAddress,
+  resolveOutboundSender,
   resolveTenantCompanyName,
 } from './senderIdentity';
 
@@ -33,6 +34,9 @@ export interface SendEmailParams {
   templateData?: Record<string, any>;
   from?: EmailAddress;
   fromName?: string;
+  mailClass: import('@alga-psa/types').OutboundMailClass;
+  boardId?: string;
+  senderId?: string;
   cc?: EmailAddress[];
   bcc?: EmailAddress[];
   attachments?: any[];
@@ -58,6 +62,7 @@ interface TenantProviderSnapshot {
   providerInitError: string | null;
   fromAddress: EmailAddress;
   systemFallbackFromAddress?: EmailAddress;
+  settings: TenantEmailSettings | null;
 }
 
 function isValidEmailAddress(value: string): boolean {
@@ -107,6 +112,12 @@ export class TenantEmailService extends BaseEmailService {
     }
   }
 
+  public async getAttachmentCapabilities() {
+    const knex = await getConnection(this.tenantId);
+    const snapshot = await this.refreshProviderState(knex);
+    return snapshot.emailProvider?.capabilities ?? { supportsAttachments: false, maxAttachmentSize: 0, blockedAttachmentExtensions: [] as string[] };
+  }
+
   protected getServiceName(): string {
     return `TenantEmailService[${this.tenantId}]`;
   }
@@ -115,10 +126,7 @@ export class TenantEmailService extends BaseEmailService {
    * Override sendEmail to support provider-specific routing and rate limiting
    */
   public async sendEmail(params: BaseEmailParams): Promise<EmailSendResult> {
-    // Note: We are intentionally ignoring params.providerId for routing purposes.
-    // All outbound emails should go through the configured outbound provider (e.g. Resend/SMTP).
-    // The providerId from ticket metadata is used upstream (in ticketEmailSubscriber) to resolve
-    // the correct 'From' address, which is passed in params.from.
+    // The inbound provider id describes where a ticket arrived; outbound identity is resolved by mail class and route.
 
     // Belt-and-braces: no tenant-scoped email leaves a suspended tenant
     // (cancelled, pending deletion) even if some generator was missed by the
@@ -137,13 +145,20 @@ export class TenantEmailService extends BaseEmailService {
       });
       return {
         success: false,
-        error: 'Tenant is suspended; outbound email is disabled'
+        error: 'Tenant is suspended; outbound email is disabled',
+        metadata: { definitelyNotSent: true, retryable: false, errorCode: 'TENANT_SUSPENDED' }
       };
     }
 
     // Check rate limits before sending
     const rateLimitResult = await this.checkRateLimits(params);
     if (!rateLimitResult.allowed) {
+      // Event retries must reconstruct comment attachments and recheck visibility.
+      if (params.revalidateCommentOnRetry) return {
+        success: false, error: 'Comment notification rate limited',
+        metadata: { retryable: true, errorCode: 'COMMENT_RATE_LIMITED', definitelyNotSent: true, retryAfterMs: rateLimitResult.retryAfterMs, rateLimitReason: rateLimitResult.reason },
+      };
+
       const retryCount = params._retryCount ?? 0;
 
       // Check if we've exceeded max retries
@@ -208,6 +223,63 @@ export class TenantEmailService extends BaseEmailService {
       suspensionKnex,
       resolvedTenantCompanyName
     );
+    params.resolvedTenantEmailSettings = providerSnapshot.settings;
+
+    if (params.mailClass === 'ticket' && params.boardId && !params.boardName?.trim() && !params.fromName?.trim()) {
+      try {
+        const board = await tenantDb(suspensionKnex, this.tenantId).table('boards')
+          .where({ board_id: params.boardId }).first('board_name');
+        if (typeof board?.board_name === 'string' && board.board_name.trim()) {
+          params.boardName = board.board_name;
+        }
+      } catch (error) {
+        logger.warn(`[${this.getServiceName()}] Could not load ticket board name for From display name`, {
+          boardId: params.boardId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
+
+    if (params.senderId && !providerSnapshot.settings) {
+      throw new Error(`Outbound sender ${params.senderId} cannot be resolved because tenant email settings are unavailable.`);
+    }
+
+    if (providerSnapshot.settings && params.mailClass) {
+      const sender = resolveOutboundSender({
+        tenantId: this.tenantId,
+        mailClass: params.mailClass,
+        boardId: params.boardId,
+        senderId: params.senderId,
+        from: params.from,
+        fromName: params.fromName,
+        allowUnverifiedSender: params.allowUnverifiedSender,
+      }, providerSnapshot.settings, resolvedTenantCompanyName, params.boardName).sender;
+      if (sender && providerSnapshot.settings.emailProvider === 'resend') {
+        const domain = sender.email_address.split('@').at(-1)?.toLowerCase();
+        const verifiedDomain = domain && await tenantDb(suspensionKnex, this.tenantId).table('email_domains')
+          .where({ domain_name: domain, status: 'verified' }).first('domain_name');
+        if (!verifiedDomain) {
+          const message = `Outbound sender ${sender.email_address} is routed for ${params.mailClass}, but its domain is no longer verified.`;
+          await tenantDb(suspensionKnex, this.tenantId).table('email_sender_addresses')
+            .where({ sender_id: sender.sender_id }).update({ last_verification_error: message, verification_status: 'failed', updated_at: new Date() });
+          await TenantEmailService.invalidateTenantSettings(this.tenantId);
+          await this.logSenderValidationFailure(params, providerSnapshot.settings, message);
+          throw new Error(message);
+        }
+      }
+      if (sender?.microsoft_provider_id && providerSnapshot.settings.emailProvider === 'microsoft') {
+        try {
+          if (!this.providerManager) throw new Error('Microsoft provider manager is unavailable.');
+          await this.providerManager.validateMicrosoftProvider(sender.microsoft_provider_id, this.tenantId);
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          await tenantDb(suspensionKnex, this.tenantId).table('email_sender_addresses')
+            .where({ sender_id: sender.sender_id }).update({ last_verification_error: message, updated_at: new Date() });
+          await this.logSenderValidationFailure(params, providerSnapshot.settings, message);
+          throw error;
+        }
+      }
+    }
 
     return super.sendEmail({
       ...params,
@@ -219,6 +291,33 @@ export class TenantEmailService extends BaseEmailService {
         resolvedSystemFallbackFromAddress: providerSnapshot.systemFallbackFromAddress,
         resolvedSystemFallbackReplyTo: providerSnapshot.fromAddress,
       } : {}),
+    });
+  }
+
+  private async logSenderValidationFailure(params: BaseEmailParams, settings: TenantEmailSettings, error: string): Promise<void> {
+    const resolved = resolveOutboundSender({
+      tenantId: this.tenantId,
+      mailClass: params.mailClass,
+      boardId: params.boardId,
+      senderId: params.senderId,
+      from: params.from,
+      fromName: params.fromName,
+      allowUnverifiedSender: true,
+    }, settings, params.resolvedTenantCompanyName, params.boardName);
+    const recipients = Array.isArray(params.to) ? params.to : [params.to];
+    await this.logEmailSendResult({
+      tenantId: this.tenantId,
+      providerResult: { success: false, providerId: 'sender-validation', providerType: 'validation', error, sentAt: new Date() },
+      message: {
+        from: resolved.from,
+        to: recipients.map((value) => typeof value === 'string' ? { email: value } : value),
+        subject: typeof params.subject === 'string' ? params.subject : 'Outbound sender validation failed',
+      },
+      entityType: params.entityType,
+      entityId: params.entityId,
+      contactId: params.contactId,
+      notificationSubtypeId: params.notificationSubtypeId,
+      replyContext: params.replyContext,
     });
   }
 
@@ -342,10 +441,23 @@ export class TenantEmailService extends BaseEmailService {
       return params.resolvedSystemFallbackFromAddress;
     }
 
-    const resolved = params?.from
-      ? params.from as EmailAddress | string
-      : params?.resolvedTenantFromAddress
-        ?? this.buildTenantFromAddress(params?.resolvedTenantCompanyName);
+    const settings = params?.resolvedTenantEmailSettings ?? this.tenantSettings;
+    if (params && settings) {
+      const routed = resolveOutboundSender({
+        tenantId: this.tenantId,
+        mailClass: params.mailClass,
+        boardId: params.boardId,
+        senderId: params.senderId,
+        from: params.from,
+        fromName: params.fromName,
+        allowUnverifiedSender: params.allowUnverifiedSender,
+      }, settings, params.resolvedTenantCompanyName, params.boardName);
+      params.resolvedMicrosoftProviderId = routed.microsoftProviderId;
+      return routed.from;
+    }
+    const resolved = params?.from as EmailAddress | string | undefined
+      ?? params?.resolvedTenantFromAddress
+      ?? this.buildTenantFromAddress(params?.resolvedTenantCompanyName);
     return applyFromNameOverride(resolved, params?.fromName);
   }
 
@@ -457,6 +569,7 @@ export class TenantEmailService extends BaseEmailService {
     // Convert params to BaseEmailParams format
     const baseParams: BaseEmailParams = {
       to: params.to,
+      mailClass: params.mailClass,
       cc: params.cc,
       bcc: params.bcc,
       attachments: params.attachments,
@@ -466,6 +579,8 @@ export class TenantEmailService extends BaseEmailService {
       from: params.from,
       fromName: params.fromName,
       tenantId,
+      boardId: params.boardId,
+      senderId: params.senderId,
       locale: params.locale
     };
 
@@ -637,6 +752,7 @@ export class TenantEmailService extends BaseEmailService {
           emailProvider: this.emailProvider,
           providerInitError: this.providerInitError,
           fromAddress: this.buildTenantFromAddress(tenantCompanyName),
+          settings,
           ...(this.usingSystemProvider ? {
             systemFallbackFromAddress: this.buildSystemFallbackFromAddress(tenantCompanyName),
           } : {}),
@@ -652,6 +768,7 @@ export class TenantEmailService extends BaseEmailService {
         emailProvider: this.emailProvider,
         providerInitError: this.providerInitError,
         fromAddress: this.buildTenantFromAddress(tenantCompanyName),
+        settings,
         ...(this.usingSystemProvider ? {
           systemFallbackFromAddress: this.buildSystemFallbackFromAddress(tenantCompanyName),
         } : {}),
@@ -705,15 +822,23 @@ export class TenantEmailService extends BaseEmailService {
     tenantId: string,
     knex: Knex | Knex.Transaction
   ): Promise<TenantEmailSettings | null> {
-    const settings = await tenantDb(knex, tenantId).table('tenant_email_settings')
-      .first();
+    const db = tenantDb(knex, tenantId);
+    const [settings, outboundSenders, outboundRoutes] = await Promise.all([
+      db.table('tenant_email_settings').first(),
+      db.table('email_sender_addresses').select('*'),
+      db.table('email_sender_routes').select('*'),
+    ]);
 
     if (!settings) {
       logger.warn(`[TenantEmailService] No email settings found for tenant ${tenantId}`);
       return null;
     }
 
-    return TenantEmailService.normalizeSettingsRecord(tenantId, settings);
+    return {
+      ...TenantEmailService.normalizeSettingsRecord(tenantId, settings),
+      outboundSenders,
+      outboundRoutes,
+    };
   }
 
   /**
@@ -729,5 +854,14 @@ export class TenantEmailService extends BaseEmailService {
     tenantCompanyName?: string | null
   ): EmailAddress {
     return resolveDefaultFromAddress(settings, tenantCompanyName);
+  }
+
+  static resolveOutboundSender(request: { tenantId: string; mailClass: import('@alga-psa/types').OutboundMailClass; senderId?: string }, settings: TenantEmailSettings, companyName?: string | null) {
+    return resolveOutboundSender(request, settings, companyName);
+  }
+
+  static async resolveOutboundSenderForTenant(request: { tenantId: string; mailClass: import('@alga-psa/types').OutboundMailClass; senderId?: string }, settings: TenantEmailSettings, knex: Knex | Knex.Transaction) {
+    const companyName = await resolveTenantCompanyName(knex, request.tenantId);
+    return resolveOutboundSender(request, settings, companyName);
   }
 }

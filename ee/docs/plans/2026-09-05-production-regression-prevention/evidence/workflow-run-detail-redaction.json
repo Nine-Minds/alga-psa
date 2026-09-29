@@ -1,0 +1,24 @@
+{
+  "status": "local_behavior_verified_native_pending",
+  "problem": "Run detail preserved secret references without configured pointers; manager exports bypassed invocation redaction",
+  "fix": "Apply reference redaction unconditionally and use tenant-configured run-studio redaction on exported invocations, snapshots and run payloads",
+  "before": {
+    "passed": 7,
+    "failed": 2,
+    "log": "/tmp/alga-run-export-redaction-before.log"
+  },
+  "after": {
+    "passed": 9,
+    "targeted_typescript": "passed",
+    "logs": [
+      "/tmp/alga-run-export-redaction-final.log",
+      "/tmp/alga-run-export-types.log"
+    ]
+  },
+  "test": "ee/packages/workflows/src/actions/workflow-runtime-v2-simulate.test.ts",
+  "limits": [
+    "Server actions tested with mocked database model reads and authentication",
+    "Stored output remains unchanged for replay; storage-time output protection remains incomplete",
+    "Five skipped legacy snapshot/redaction integration cases are not waived"
+  ]
+}

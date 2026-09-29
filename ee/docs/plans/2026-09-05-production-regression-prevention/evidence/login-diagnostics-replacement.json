@@ -1,0 +1,31 @@
+{
+  "scope": "Replace diagnostic-only login scripts with asserted production behavior",
+  "baseRevision": "2eb37e107b",
+  "workingTreeDirty": true,
+  "retired": [
+    "ee/server/src/__tests__/integration/debug-login.playwright.test.ts",
+    "ee/server/src/__tests__/integration/debug-failed-login.playwright.test.ts"
+  ],
+  "replacement": "e2e-tests/tests/login.spec.ts",
+  "execution": {
+    "edition": "enterprise",
+    "headed": true,
+    "passed": 1,
+    "failed": 0,
+    "retries": 0,
+    "durationSeconds": 5.5
+  },
+  "assertions": [
+    "Root redirects to sign-in with usable credential fields",
+    "Unknown account receives actionable rejection",
+    "No authenticated identity before or after reload"
+  ],
+  "limitations": [
+    "Cached local production image, not current native candidate.",
+    "Other legacy login diagnostics remain to be classified."
+  ],
+  "artifact": {
+    "path": "/tmp/alga-root-login-regression.log",
+    "sha256": "63319d464a0f5f30b2d498f479e1556266d492ea3baa49f4d0eccb73181b84d9"
+  }
+}

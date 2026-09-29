@@ -11,7 +11,7 @@ export class BrowserPoolService {
   async getBrowser(): Promise<Browser> {
     if (this.browserPool.length > 0) {
       const browser = this.browserPool.pop();
-      if (browser && browser.isConnected()) {
+      if (browser && browser.connected) {
         this.activeBrowsers++;
         return browser!;
       }
@@ -34,7 +34,7 @@ export class BrowserPoolService {
       const interval = setInterval(async () => {
         if (this.browserPool.length > 0) {
           const browser = this.browserPool.pop();
-          if (browser && browser.isConnected()) {
+          if (browser && browser.connected) {
             clearInterval(interval);
             this.activeBrowsers++;
             resolve(browser!);
@@ -64,7 +64,7 @@ export class BrowserPoolService {
 
   async releaseBrowser(browser: Browser | null): Promise<void> {
     if (browser) {
-      if (this.browserPool.length < this.maxBrowsers && browser.isConnected()) {
+      if (this.browserPool.length < this.maxBrowsers && browser.connected) {
         this.browserPool.push(browser);
       } else {
         await browser.close();
