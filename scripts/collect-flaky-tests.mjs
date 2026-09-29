@@ -7,7 +7,11 @@ import { promisify } from 'node:util';
 import { aggregateFlakyTests, renderFlakyTestReport } from './lib/flaky-test-report.mjs';
 
 const execute = promisify(execFile);
-const WORKFLOW = 'production-regression.yml';
+// production-regression.yml calls the lane workflows, so its runs carry every
+// lane's flaky artifacts. integration-tests.yml also runs standalone — including
+// the nightly schedule, the main producer of flakes on a merged revision — so
+// its own runs are inventoried too.
+const WORKFLOWS = ['production-regression.yml', 'integration-tests.yml'];
 const MEMBER = 'flaky-tests.json';
 const PREFIX = 'flaky-tests-';
 const archiveCap = 4 * 1024 * 1024, documentCap = 1024 * 1024, pageCap = 100;
@@ -97,12 +101,21 @@ export async function collectFlakyArtifacts({ repository, githubToken, request =
     }
     return items;
   };
-  let runs;
+  let runs = [];
   try {
     const created = new URLSearchParams({ created: `>=${since}` }).toString();
-    runs = await pages(`${api}/actions/workflows/${WORKFLOW}/runs?${created}`, 'workflow_runs', maxRunPages,
-      code => diagnostics.push({ scope: 'runs', code }));
+    const seen = new Set();
+    for (const workflow of WORKFLOWS) {
+      for (const run of await pages(`${api}/actions/workflows/${workflow}/runs?${created}`, 'workflow_runs', maxRunPages,
+        code => diagnostics.push({ scope: 'runs', code }))) {
+        if (seen.has(run.id)) continue;
+        seen.add(run.id); runs.push(run);
+      }
+    }
   } catch { throw new FlakyCollectionError('runs', 'run-inventory-unavailable'); }
+  // Newest first, so anything the cap cuts is the oldest end of the window
+  // rather than one workflow's entire inventory.
+  runs.sort((a, b) => String(b.created_at ?? '').localeCompare(String(a.created_at ?? '')));
   if (runs.length > maxRuns) { diagnostics.push({ scope: 'runs', code: 'run-limit-reached' }); runs = runs.slice(0, maxRuns); }
   const artifacts = [];
   for (const run of runs) {
