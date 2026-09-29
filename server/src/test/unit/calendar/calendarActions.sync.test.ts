@@ -113,7 +113,11 @@ function buildQuery(data: any[]) {
 }
 
 function setupKnex(mappings: any[], recentEntries: any[] = []) {
-  const mappingQuery = buildQuery(mappings);
+  const mappingQuery = buildQuery(mappings.map((mapping) => ({
+    alga_last_modified: '2026-01-01T00:00:00.000Z',
+    schedule_entry_updated_at: '2026-01-02T00:00:00.000Z',
+    ...mapping,
+  })));
   const recentQuery = buildQuery(recentEntries);
   const knexFn = vi.fn().mockImplementation((table: string) => {
     if (table === 'calendar_event_mappings' || table === 'calendar_event_mappings as cem') {
@@ -166,12 +170,112 @@ describe('syncCalendarProvider manual flows', () => {
     expect(result).toEqual({ success: true, started: true });
     await vi.waitFor(() => {
       expect(mockSyncScheduleEntryToExternal).toHaveBeenCalledWith('entry-1', 'provider-1', true);
-      expect(mockSyncExternalEventToSchedule).toHaveBeenCalledWith('ext-1', 'provider-1', true);
+      expect(mockSyncExternalEventToSchedule).toHaveBeenCalledWith('ext-1', 'provider-1', false);
       expect(mockUpdateProviderStatus).toHaveBeenCalledWith(
         'provider-1',
         expect.objectContaining({ status: 'connected' })
       );
     });
+  });
+
+  it.each(['google', 'microsoft'] as const)(
+    'reconciles %s provider-authored notes before any write and preserves mapping identity', async (providerType) => {
+      setupKnex([{
+        schedule_entry_id: 'stable-entry',
+        external_event_id: 'stable-event',
+        alga_last_modified: '2026-09-28T10:00:00.000Z',
+        schedule_entry_updated_at: '2026-09-28T10:00:00.000Z',
+      }]);
+      mockGetProvider.mockResolvedValue({
+        id: `provider-${providerType}`, tenant: 'tenant-1', user_id: 'user-1', provider_type: providerType,
+        sync_direction: 'bidirectional',
+        provider_config: { accessToken: 'access-token', refreshToken: 'refresh-token' },
+      });
+      mockSyncExternalEventToSchedule.mockImplementation(async () => ({
+        success: true, scheduleEntryId: 'stable-entry',
+      }));
+
+      expect(await syncCalendarProviderImpl(authUser, { tenant: 'tenant-1' }, `provider-${providerType}`))
+        .toEqual({ success: true, started: true });
+      await vi.waitFor(() => expect(mockUpdateProviderStatus).toHaveBeenCalled());
+
+      expect(mockSyncExternalEventToSchedule).toHaveBeenCalledWith('stable-event', `provider-${providerType}`, false);
+      expect(mockSyncScheduleEntryToExternal).not.toHaveBeenCalled();
+      expect(mockSyncExternalEventToSchedule.mock.invocationCallOrder[0])
+        .toBeLessThan(mockSyncScheduleEntryToExternal.mock.invocationCallOrder[0] ?? Infinity);
+      // Provider-authored note content and marker provenance are consumed by
+      // CalendarSyncService's mapper; a stable pull result must not cause a
+      // redundant write that can erase those notes.
+    }
+  );
+
+  it.each(['google', 'microsoft'] as const)(
+    'does not re-push a %s marker/category-only echo on repeated manual sync', async (providerType) => {
+      setupKnex([{
+        schedule_entry_id: 'stable-entry', external_event_id: 'stable-event',
+        alga_last_modified: '2026-09-28T10:00:00.000Z',
+        schedule_entry_updated_at: '2026-09-28T10:00:00.000Z',
+      }]);
+      mockGetProvider.mockResolvedValue({
+        id: `provider-${providerType}`, tenant: 'tenant-1', user_id: 'user-1', provider_type: providerType,
+        sync_direction: 'bidirectional',
+        provider_config: { accessToken: 'access-token', refreshToken: 'refresh-token' },
+      });
+      mockSyncExternalEventToSchedule.mockResolvedValue({
+        success: true, skipped: true, reason: 'Only Alga calendar metadata changed',
+      });
+
+      for (let index = 0; index < 2; index++) {
+        await syncCalendarProviderImpl(authUser, { tenant: 'tenant-1' }, `provider-${providerType}`);
+        await vi.waitFor(() => expect(mockUpdateProviderStatus).toHaveBeenCalledTimes(index + 1));
+      }
+
+      expect(mockSyncExternalEventToSchedule).toHaveBeenCalledTimes(2);
+      expect(mockSyncScheduleEntryToExternal).not.toHaveBeenCalled();
+    }
+  );
+
+  it('pushes local-only edits only after checking the provider version', async () => {
+    setupKnex([{
+      schedule_entry_id: 'local-edit', external_event_id: 'external-edit',
+      alga_last_modified: '2026-09-27T10:00:00.000Z',
+      schedule_entry_updated_at: '2026-09-28T10:00:00.000Z',
+    }]);
+    mockGetProvider.mockResolvedValue({
+      id: 'provider-google', tenant: 'tenant-1', user_id: 'user-1', provider_type: 'google',
+      sync_direction: 'bidirectional',
+      provider_config: { accessToken: 'access-token', refreshToken: 'refresh-token' },
+    });
+    mockSyncExternalEventToSchedule.mockResolvedValue({ success: true, skipped: true, reason: 'External version already synchronized' });
+    mockSyncScheduleEntryToExternal.mockResolvedValue({ success: true, externalEventId: 'external-edit' });
+
+    await syncCalendarProviderImpl(authUser, { tenant: 'tenant-1' }, 'provider-google');
+    await vi.waitFor(() => expect(mockUpdateProviderStatus).toHaveBeenCalled());
+    expect(mockSyncExternalEventToSchedule).toHaveBeenCalledWith('external-edit', 'provider-google', false);
+    expect(mockSyncScheduleEntryToExternal).toHaveBeenCalledWith('local-edit', 'provider-google', true);
+    expect(mockSyncExternalEventToSchedule.mock.invocationCallOrder[0])
+      .toBeLessThan(mockSyncScheduleEntryToExternal.mock.invocationCallOrder[0]);
+  });
+
+  it('does not push through a real simultaneous-edit conflict, but re-pushes provider edits rejected by access', async () => {
+    setupKnex([
+      { schedule_entry_id: 'conflict', external_event_id: 'conflict-event' },
+      { schedule_entry_id: 'read-only', external_event_id: 'read-only-event' },
+    ]);
+    mockGetProvider.mockResolvedValue({
+      id: 'provider-outlook', tenant: 'tenant-1', user_id: 'user-1', provider_type: 'microsoft',
+      sync_direction: 'bidirectional',
+      provider_config: { accessToken: 'access-token', refreshToken: 'refresh-token' },
+    });
+    mockSyncExternalEventToSchedule
+      .mockResolvedValueOnce({ success: false, conflict: { algaModified: 'a', externalModified: 'b' }, error: 'Conflict detected' })
+      .mockResolvedValueOnce({ success: true, skipped: true, reason: 'Provider user cannot edit this entry' });
+    mockSyncScheduleEntryToExternal.mockResolvedValue({ success: true });
+
+    await syncCalendarProviderImpl(authUser, { tenant: 'tenant-1' }, 'provider-outlook');
+    await vi.waitFor(() => expect(mockUpdateProviderStatus).toHaveBeenCalled());
+    expect(mockSyncScheduleEntryToExternal).toHaveBeenCalledTimes(1);
+    expect(mockSyncScheduleEntryToExternal).toHaveBeenCalledWith('read-only', 'provider-outlook', true);
   });
 
   it('only pulls external events when provider direction is from_external', async () => {
@@ -195,7 +299,7 @@ describe('syncCalendarProvider manual flows', () => {
     expect(result).toEqual({ success: true, started: true });
     await vi.waitFor(() => {
       expect(mockSyncScheduleEntryToExternal).not.toHaveBeenCalled();
-      expect(mockSyncExternalEventToSchedule).toHaveBeenCalledWith('ext-2', 'provider-2', true);
+      expect(mockSyncExternalEventToSchedule).toHaveBeenCalledWith('ext-2', 'provider-2', false);
     });
   });
 

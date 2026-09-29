@@ -353,6 +353,59 @@ describe('shared-calendar provider sync access', () => {
     }]);
   });
 
+  it.each(['google', 'microsoft'] as const)(
+    'accepts %s-authored notes before any provider write and keeps the mapped copy stable', async (providerType) => {
+      const entryId = await seedGroupEntry([member, otherAssignee]);
+      await scoped('calendar_shares').insert({
+        tenant, calendar_id: groupCalendarId, grantee_type: 'user', grantee_id: member,
+        access_level: 'edit', created_by: otherAssignee,
+      });
+      const externalId = await seedProviderAndMapping(entryId, member, `provider-notes-${providerType}`, providerId, providerType);
+      const notes = 'Provider-authored note';
+      const description = providerType === 'microsoft'
+        ? `<html><body><p>${notes}</p><p>[Alga calendar: Sync access test]</p></body></html>`
+        : `${notes}\n[Alga calendar: Sync access test]`;
+      const event = {
+        id: externalId,
+        title: 'Alga title',
+        description,
+        ...(providerType === 'microsoft' ? { categories: ['Alga calendar: Sync access test'] } : {}),
+        extendedProperties: { private: {
+          'alga-calendar-marker-name': 'Sync access test',
+          'alga-calendar-marker-note-count': '0',
+          'alga-calendar-marker-notes-format': 'text',
+        } },
+        status: 'confirmed',
+        updated: '2026-08-02T00:00:00.000Z',
+        start: { dateTime: '2026-09-01T10:00:00Z' },
+        end: { dateTime: '2026-09-01T11:00:00Z' },
+      };
+      const adapter = {
+        connect: vi.fn(async () => {}),
+        getEvent: vi.fn(async () => event),
+        updateEvent: vi.fn(async () => event),
+        createEvent: vi.fn(async () => event),
+      };
+      (service as any).createAdapter = async () => adapter;
+      const originalMapping = await scoped('calendar_event_mappings')
+        .where({ schedule_entry_id: entryId, calendar_provider_id: providerId }).first();
+
+      expect(await service.syncExternalEventToSchedule(externalId, providerId)).toMatchObject({ success: true });
+      const row = await scoped('schedule_entries').where({ entry_id: entryId }).first();
+      const mapping = await scoped('calendar_event_mappings')
+        .where({ schedule_entry_id: entryId, calendar_provider_id: providerId }).first();
+      expect(row.notes).toBe(notes);
+      expect(row.entry_id).toBe(entryId);
+      expect(mapping.id).toBe(originalMapping.id);
+      expect(mapping.external_event_id).toBe(externalId);
+      expect(event.description).toContain('[Alga calendar: Sync access test]');
+      if (providerType === 'microsoft') {
+        expect(event.categories).toEqual(['Alga calendar: Sync access test']);
+      }
+      expect(adapter.updateEvent).not.toHaveBeenCalled();
+    }
+  );
+
   it('does not announce a provider echo of the version Alga already holds', async () => {
     const entryId = await seedGroupEntry([member, otherAssignee]);
     await scoped('calendar_shares').insert({ tenant, calendar_id: groupCalendarId, grantee_type: 'user', grantee_id: member, access_level: 'edit', created_by: otherAssignee });
@@ -379,6 +432,44 @@ describe('shared-calendar provider sync access', () => {
 
     expect(await service.syncExternalEventToSchedule(externalId, providerId)).toMatchObject({ success: true });
     expect(fixture.published).toEqual([]);
+  });
+
+  it('does not inject group metadata into an entry on an actual personal calendar row', async () => {
+    const personalCalendarId = uuidv4();
+    await scoped('calendars').insert({
+      tenant,
+      calendar_id: personalCalendarId,
+      calendar_type: 'personal',
+      owner_user_id: member,
+      created_by: member,
+    });
+    const entry = await ScheduleEntry.create(fixture.trx!, tenant, {
+      title: 'Personal entry',
+      notes: 'Keep [Alga calendar: Personal] as authored text',
+      scheduled_start: new Date('2026-09-01T10:00:00Z'),
+      scheduled_end: new Date('2026-09-01T11:00:00Z'),
+      status: 'scheduled',
+      work_item_type: 'ad_hoc',
+      calendar_id: personalCalendarId,
+    } as any, { assignedUserIds: [member] });
+    const created: any[] = [];
+    const adapter = {
+      connect: vi.fn(async () => {}),
+      createEvent: vi.fn(async (event: any) => {
+        created.push(event);
+        return { ...event, id: 'personal-copy', updated: '2026-08-02T00:00:00.000Z' };
+      }),
+      updateEvent: vi.fn(),
+    };
+    (service as any).createAdapter = async () => adapter;
+
+    expect(await service.syncScheduleEntryToExternal(entry.entry_id, providerId)).toMatchObject({
+      success: true,
+      externalEventId: 'personal-copy',
+    });
+    expect(created[0].description).toBe('Keep [Alga calendar: Personal] as authored text');
+    expect(created[0].categories).toBeUndefined();
+    expect(created[0].extendedProperties?.private).not.toHaveProperty('alga-calendar-marker-name');
   });
 
   it('removes archived copies, ignores mapped-entry webhooks, and recreates copies after restore', async () => {
