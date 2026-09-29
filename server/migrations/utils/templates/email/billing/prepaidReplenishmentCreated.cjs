@@ -87,8 +87,8 @@ const COPY = {
     headerLabel: 'Påfyllning av förbetalt saldo',
     intro: 'Faktura {{replenishment.invoiceNumber}} för <strong>{{client.name}}</strong> {{replenishment.actionPhrase}}.',
     textIntro: 'Faktura {{replenishment.invoiceNumber}} för {{client.name}} {{replenishment.actionPhrase}}.',
-    viewButton: 'Visa kundens debitering',
-    textView: 'Visa kundens debitering på',
+    viewButton: 'Visa kundens fakturering',
+    textView: 'Visa kundens fakturering på',
   },
 };
 

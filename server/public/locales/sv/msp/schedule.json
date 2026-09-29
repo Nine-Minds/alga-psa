@@ -37,11 +37,11 @@
     }
   },
   "agentView": {
-    "loading": "Laddar…",
+    "loading": "Läser in…",
     "errors": {
-      "loadPermissions": "Kunde inte läsa in användarbehörigheter",
+      "loadPermissions": "Det gick inte att läsa in användarbehörigheterna",
       "forbidden": "Du har inte behörighet att visa det här schemat.",
-      "moveFailed": "Kunde inte flytta schemaposten"
+      "moveFailed": "Det gick inte att flytta schemaposten"
     },
     "schedulingFor": "Schemaläggning",
     "selectSlotHint": "Dra för att skapa, flytta eller ändra längden på poster. Klicka på en post för att redigera den.",
@@ -67,18 +67,18 @@
       "showInactiveUsers": "Visa inaktiva användare"
     },
     "loading": {
-      "initial": "Laddar schema…",
-      "overlay": "Laddar…"
+      "initial": "Läser in schema…",
+      "overlay": "Läser in…"
     },
     "errors": {
-      "validateDeletion": "Kunde inte kontrollera om posten kan raderas. Försök igen.",
-      "loadPermissions": "Kunde inte läsa in behörigheter.",
-      "loadCurrentUser": "Kunde inte läsa in aktuell användare.",
+      "validateDeletion": "Det gick inte att kontrollera om posten kan raderas. Försök igen.",
+      "loadPermissions": "Det gick inte att läsa in behörigheterna.",
+      "loadCurrentUser": "Det gick inte att läsa in den aktuella användaren.",
       "unknown": "Ett okänt fel uppstod",
-      "deleteFailed": "Kunde inte radera schemaposten",
+      "deleteFailed": "Det gick inte att radera schemaposten",
       "deleteUnexpected": "Ett fel uppstod när schemaposten skulle raderas",
-      "updateFailed": "Kunde inte uppdatera schemaposten: {{error}}",
-      "createFailed": "Kunde inte lägga till schemaposten: {{error}}",
+      "updateFailed": "Det gick inte att uppdatera schemaposten: {{error}}",
+      "createFailed": "Det gick inte att lägga till schemaposten: {{error}}",
       "saveUnexpected": "Ett fel uppstod när schemaposten skulle sparas"
     },
     "toolbar": {
@@ -154,20 +154,20 @@
   },
   "requests": {
     "errors": {
-      "load": "Kunde inte läsa in bokningsförfrågningar",
+      "load": "Det gick inte att läsa in bokningsförfrågningarna",
       "ticketNotFound": "Ärendet hittades inte",
-      "loadTicket": "Kunde inte läsa in ärendet",
+      "loadTicket": "Det gick inte att läsa in ärendet",
       "assignTechnicianRequired": "Tilldela en tekniker",
-      "approve": "Kunde inte godkänna förfrågan",
+      "approve": "Det gick inte att godkänna förfrågan",
       "declineReasonRequired": "Ange en orsak till att avböja",
-      "decline": "Kunde inte avböja förfrågan",
-      "reschedule": "Kunde inte boka om tiden",
+      "decline": "Det gick inte att avböja förfrågan",
+      "reschedule": "Det gick inte att boka om tiden",
       "rescheduleDateRequired": "Välj ett nytt datum och klockslag",
-      "generateTeamsMeeting": "Kunde inte skapa Microsoft Teams-mötet"
+      "generateTeamsMeeting": "Det gick inte att skapa Microsoft Teams-mötet"
     },
     "feedback": {
-      "approved": "Bokningsförfrågan godkänd",
-      "declined": "Bokningsförfrågan avböjd",
+      "approved": "Bokningsförfrågan har godkänts",
+      "declined": "Bokningsförfrågan har avböjts",
       "rescheduled": "Bokningen har flyttats",
       "teamsMeetingGenerated": "Microsoft Teams-mötet har skapats"
     },
@@ -187,12 +187,12 @@
     "list": {
       "title": "Bokningsförfrågningar",
       "badgeTotal": "Totalt",
-      "loading": "Laddar förfrågningar…",
+      "loading": "Läser in förfrågningar…",
       "empty": "Ingen {{status}} förfrågan hittades",
-      "duration": "{{count}} minuter",
+      "duration": "{{count}} min",
       "ticketFallback": "Ärende #{{ticket}}",
       "fallbacks": {
-        "publicRequest": "Offentlig förfrågan"
+        "publicRequest": "Förfrågan via bokningssidan"
       }
     },
     "detail": {
@@ -213,7 +213,7 @@
         "duration": "Varaktighet",
         "teamsMeeting": "Teams-möte",
         "status": "Status",
-        "linkedTicket": "Länkat ärende",
+        "linkedTicket": "Kopplat ärende",
         "description": "Beskrivning"
       },
       "actions": {
@@ -241,7 +241,7 @@
         "decline": "Avböj"
       },
       "teamsMeetingFailure": {
-        "title": "Microsoft Teams-mötet kunde inte skapas",
+        "title": "Det gick inte att skapa Microsoft Teams-mötet",
         "description": "Bokningen godkändes inte. Försök skapa mötet igen, eller godkänn utan möte och skapa ett senare.",
         "retry": "Försök igen",
         "approveWithout": "Godkänn utan möte"
@@ -277,7 +277,7 @@
     "dialog": {
       "title": "Tillgänglighetsinställningar"
     },
-    "loading": "Laddar inställningar…",
+    "loading": "Läser in inställningar…",
     "tabs": {
       "general": "Allmänna inställningar",
       "userHours": "Bokningsbara tider",
@@ -315,7 +315,7 @@
       }
     },
     "feedback": {
-      "loadError": "Kunde inte läsa in inställningar"
+      "loadError": "Det gick inte att läsa in inställningarna"
     },
     "general": {
       "autoApproval": {
@@ -334,7 +334,7 @@
         "help": "Företagsgemensamma godkännare för bokningsförfrågningar som kräver manuellt godkännande. Lägg till flera användare och/eller team – alla som väljs aviseras och kan godkänna. Detta kan åsidosättas per tekniker under Bokningsbara tider."
       },
       "advanceBookingDays": {
-        "label": "Förhandsbokning som standard (dagar)"
+        "label": "Bokningshorisont som standard (dagar)"
       },
       "minimumNoticeHours": {
         "label": "Minsta framförhållning (timmar)"
@@ -344,7 +344,7 @@
       },
       "feedback": {
         "saveSuccess": "Allmänna inställningar har sparats",
-        "saveError": "Kunde inte spara inställningar"
+        "saveError": "Det gick inte att spara inställningarna"
       }
     },
     "userHours": {
@@ -389,9 +389,9 @@
           "startTime": "Starttid",
           "endTime": "Sluttid"
         },
-        "availableFor": "Tillgänglig på {{day}}",
-        "startTimeFor": "Starttid för {{day}}",
-        "endTimeFor": "Sluttid för {{day}}"
+        "availableFor": "{{day}}: tillgänglig",
+        "startTimeFor": "{{day}}: starttid",
+        "endTimeFor": "{{day}}: sluttid"
       },
       "configuredUsers": {
         "title": "Konfigurerade användare",
@@ -417,9 +417,9 @@
       "feedback": {
         "selectUserError": "Välj en användare",
         "saveSuccess": "Bokningsbara tider har sparats",
-        "saveError": "Kunde inte spara bokningsbara tider",
+        "saveError": "Det gick inte att spara de bokningsbara tiderna",
         "deleteSuccess": "Användarens tillgänglighet har raderats",
-        "deleteError": "Kunde inte radera användarens tillgänglighet"
+        "deleteError": "Det gick inte att radera användarens tillgänglighet"
       },
       "deleteDialog": {
         "title": "Radera användarens tillgänglighet",
@@ -436,7 +436,7 @@
         "draft": "Osparad mall för måndag–fredag kl. 09.00–17.00",
         "explanation": "De här bokningsbara tiderna gäller för användaren i alla team. De ärvs inte från det separata arbetsschemat."
       },
-      "loading": "Laddar teknikerns tider…"
+      "loading": "Läser in teknikerns tider…"
     },
     "serviceRules": {
       "serviceSelect": {
@@ -476,10 +476,10 @@
       },
       "feedback": {
         "selectServiceError": "Välj en tjänst",
-        "saveSuccess": "Tjänsteregler har sparats",
-        "saveError": "Kunde inte spara tjänsteregler",
-        "deleteSuccess": "Tjänsteregler har raderats",
-        "deleteError": "Kunde inte radera tjänsteregler"
+        "saveSuccess": "Tjänstereglerna har sparats",
+        "saveError": "Det gick inte att spara tjänstereglerna",
+        "deleteSuccess": "Tjänstereglerna har raderats",
+        "deleteError": "Det gick inte att radera tjänstereglerna"
       },
       "deleteDialog": {
         "title": "Radera tjänsteregler",
@@ -515,15 +515,15 @@
         "empty": "Inga undantag har konfigurerats",
         "status": {
           "available": "Tillgänglig",
-          "unavailable": "Ej tillgänglig"
+          "unavailable": "Inte tillgänglig"
         }
       },
       "feedback": {
         "selectDateError": "Välj ett datum",
         "addSuccess": "Undantaget har lagts till",
-        "addError": "Kunde inte lägga till undantaget",
+        "addError": "Det gick inte att lägga till undantaget",
         "deleteSuccess": "Undantaget har raderats",
-        "deleteError": "Kunde inte radera undantaget"
+        "deleteError": "Det gick inte att radera undantaget"
       }
     },
     "teamsMeetings": {
@@ -535,7 +535,7 @@
           "step1": {
             "title": "1. Bevilja programbehörighet i Graph",
             "item1": "Öppna administrationscentret för Entra → Appregistreringar.",
-            "item2": "Välj appen som används av den här klientorganisationens Teams-integrering.",
+            "item2": "Välj appen som används av organisationens Teams-integration.",
             "item3": "API-behörigheter → Lägg till → Microsoft Graph → Programbehörigheter.",
             "item4": "Lägg till OnlineMeetings.ReadWrite.All och bevilja administratörssamtycke."
           },
@@ -561,16 +561,16 @@
       },
       "feedback": {
         "saveSuccess": "Organisatören för Teams-möten har sparats",
-        "saveError": "Kunde inte spara organisatören för Teams-möten",
+        "saveError": "Det gick inte att spara organisatören för Teams-möten",
         "verifySuccess": "Organisatören för Teams-möten har verifierats",
-        "verifyError": "Kunde inte verifiera organisatören för Teams-möten"
+        "verifyError": "Det gick inte att verifiera organisatören för Teams-möten"
       },
       "verify": {
         "valid": "Microsoft-organisatören har verifierats.",
         "validWithName": "Verifierad Microsoft-användare: {{displayName}}.",
         "reasons": {
           "eeDisabled": "Verifiering av Teams-möten är endast tillgänglig i Pro.",
-          "notConfigured": "Teams-integreringen måste vara aktiv innan en organisatör kan verifieras.",
+          "notConfigured": "Teams-integrationen måste vara aktiv innan en organisatör kan verifieras.",
           "userNotFound": "Microsoft kunde inte hitta en användare för det angivna organisatörsvärdet.",
           "policyMissing": "Microsoft-användaren finns, men programåtkomstprincipen tillåter ännu inte att möten skapas.",
           "graphError": "Microsoft Graph kunde inte verifiera den här organisatören just nu."
@@ -626,7 +626,7 @@
     "workItem": {
       "adHocFallback": "Ad hoc-post (utan arbetspost)",
       "openDetails": "Detaljer",
-      "loading": "Laddar arbetspost…",
+      "loading": "Läser in arbetspost…",
       "openTicket": "Öppna ärende",
       "openTask": "Öppna uppgift",
       "openInteraction": "Öppna interaktion"
@@ -675,11 +675,11 @@
       },
       "toasts": {
         "assignTechnicianRequired": "Tilldela en tekniker",
-        "approved": "Bokningsförfrågan godkänd",
-        "approveFailed": "Kunde inte godkänna förfrågan",
+        "approved": "Bokningsförfrågan har godkänts",
+        "approveFailed": "Det gick inte att godkänna förfrågan",
         "declineReasonRequired": "Ange en orsak till att avböja",
-        "declined": "Bokningsförfrågan avböjd",
-        "declineFailed": "Kunde inte avböja förfrågan"
+        "declined": "Bokningsförfrågan har avböjts",
+        "declineFailed": "Det gick inte att avböja förfrågan"
       }
     },
     "recurrence": {
@@ -698,7 +698,7 @@
       },
       "endOptions": {
         "never": "Aldrig",
-        "date": "På datum",
+        "date": "Vid datum",
         "count": "Efter"
       },
       "applyDialog": {
@@ -707,7 +707,7 @@
       }
     },
     "delete": {
-      "validationFailed": "Kunde inte kontrollera om posten kan raderas. Försök igen.",
+      "validationFailed": "Det gick inte att kontrollera om posten kan raderas. Försök igen.",
       "entityFallback": "den här schemaposten",
       "confirm": "Är du säker på att du vill radera den här schemaposten? Åtgärden kan inte ångras.",
       "confirmWithTeamsWarning": "Är du säker på att du vill radera den här schemaposten? Åtgärden kan inte ångras. Microsoft Teams-mötet raderas också.",
@@ -723,14 +723,14 @@
       "all": "Alla händelser"
     },
     "errors": {
-      "loadWorkItem": "Kunde inte läsa in arbetsposten."
+      "loadWorkItem": "Det gick inte att läsa in arbetsposten."
     },
     "teamsMeeting": {
       "create": "Skapa Teams-möte",
       "creating": "Skapar Teams-möte…",
       "join": "Anslut till Teams-möte",
       "created": "Microsoft Teams-mötet har skapats",
-      "createFailed": "Kunde inte skapa Teams-möte",
+      "createFailed": "Det gick inte att skapa Teams-mötet",
       "recurringUnsupported": "Teams-möten kan endast läggas till i fristående poster, inte i återkommande serier."
     },
     "duration": {
@@ -765,7 +765,7 @@
   "errors": {
     "entry": {
       "notFound": "Schemaposten hittades inte.",
-      "invalid": "Den valda schemaposten är ogiltig. Ladda om och försök igen.",
+      "invalid": "Den valda schemaposten är ogiltig. Ladda om sidan och försök igen.",
       "assigneesMissing": "En eller flera tilldelade användare kunde inte hittas."
     },
     "activities": {
@@ -774,17 +774,17 @@
     "workItem": {
       "adHocTimesRequired": "Starttid och sluttid krävs för ad hoc-poster.",
       "typeUnsupported": "Den här typen av arbetspost stöds inte för schemaläggning.",
-      "entryOrUserUnavailable": "Den valda schemaposten eller användaren är inte längre tillgänglig. Ladda om och försök igen.",
-      "invalid": "Den valda arbetsposten är ogiltig. Ladda om och försök igen.",
-      "referenceMissing": "Valet av arbetspost, schemapost eller ansvarig är inte längre giltigt. Ladda om och försök igen.",
-      "duplicateEntry": "Schemaposten finns redan. Ladda om och försök igen.",
+      "entryOrUserUnavailable": "Den valda schemaposten eller användaren är inte längre tillgänglig. Ladda om sidan och försök igen.",
+      "invalid": "Den valda arbetsposten är ogiltig. Ladda om sidan och försök igen.",
+      "referenceMissing": "Valet av arbetspost, schemapost eller ansvarig är inte längre giltigt. Ladda om sidan och försök igen.",
+      "duplicateEntry": "Schemaposten finns redan. Ladda om sidan och försök igen.",
       "missingField": "Ett obligatoriskt schemafält saknas.",
       "missingFieldNamed": "Ett obligatoriskt schemafält saknas: {{field}}."
     },
     "meetingArtifacts": {
       "meetingIdRequired": "Mötes-ID krävs",
-      "refreshPermission": "Åtkomst nekad: du kan inte ladda om mötesinspelningar.",
-      "refreshFailed": "Kunde inte ladda om mötesinspelningar. Försök igen.",
+      "refreshPermission": "Åtkomst nekad: du kan inte uppdatera mötesinspelningar.",
+      "refreshFailed": "Det gick inte att uppdatera mötesinspelningarna. Försök igen.",
       "graphForbidden": "Microsoft Graph nekade åtkomst till Teams-inspelningen. Kontrollera inspelningsbehörigheterna och försök igen.",
       "graphNotFound": "Teams-inspelningen är inte längre tillgänglig via Microsoft Graph.",
       "graphThrottled": "Microsoft Graph begränsar antalet nedladdningar av inspelningar. Försök igen om en stund.",
@@ -795,10 +795,10 @@
     "created": "{{title}} har schemalagts",
     "updated": "Schemaposten har uppdaterats",
     "deleted": "Schemaposten har raderats",
-    "createFailed": "Kunde inte schemalägga det här arbetet",
-    "updateFailed": "Kunde inte uppdatera schemaposten",
-    "deleteFailed": "Kunde inte radera schemaposten",
-    "loadFailed": "Kunde inte läsa in schemaposten",
+    "createFailed": "Det gick inte att schemalägga det här arbetet",
+    "updateFailed": "Det gick inte att uppdatera schemaposten",
+    "deleteFailed": "Det gick inte att radera schemaposten",
+    "loadFailed": "Det gick inte att läsa in schemaposten",
     "noPermission": "Du behöver behörighet att uppdatera schemat för att schemalägga arbete."
   },
   "sharing": {
@@ -813,7 +813,7 @@
     "unknownRecipient": "Okänd mottagare",
     "removeRecipient": "Ta bort {{name}}",
     "errors": {
-      "load": "Det gick inte att ladda kalenderdelningen.",
+      "load": "Det gick inte att läsa in kalenderdelningen.",
       "save": "Det gick inte att spara kalenderdelningen."
     },
     "shareDialog": {
@@ -832,7 +832,7 @@
   },
   "groupCalendars": {
     "errors": {
-      "load": "Det gick inte att ladda kalendern.",
+      "load": "Det gick inte att läsa in kalendern.",
       "nameRequired": "Kalendern måste ha ett namn.",
       "save": "Det gick inte att spara kalendern."
     },
@@ -849,7 +849,7 @@
       "name": "Namn",
       "namePlaceholder": "T.ex. Jourschema",
       "color": "Färg",
-      "description": "Beskrivning (valfritt)",
+      "description": "Beskrivning (valfri)",
       "members": "Medlemmar",
       "creatorNote": "Du kommer att kunna hantera den här kalendern."
     }

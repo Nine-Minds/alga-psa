@@ -231,7 +231,7 @@ COPY.sv = {
   descriptionLabel: 'Beskrivning',
   descriptionVar: '{{{ticket.description}}}',
   viewButton: 'Visa ärende',
-  footer: 'Drivs av AlgaPSA &middot; Håller team samordnade',
+  footer: 'Drivs av AlgaPSA &middot; För samspelta team',
   textHeader: 'Nytt ärende skapat för {{ticket.clientName}}',
   textCreated: 'Skapat',
   textAssigned: 'Tilldelat till',

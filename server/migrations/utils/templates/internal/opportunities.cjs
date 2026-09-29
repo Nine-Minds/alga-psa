@@ -123,7 +123,7 @@ const TEMPLATES = [
       },
       sv: {
         title: 'Din veckosammanfattning av affärsmöjligheter',
-        message: '{{actionsDue}} åtgärder ska vara klara denna vecka, {{stalledDeals}} affärer har stagnerat, {{newSuggestions}} nya förslag och {{winsLastWeek}} vunna affärer förra veckan.',
+        message: 'Åtgärder att utföra denna vecka: {{actionsDue}}. Stagnerade affärer: {{stalledDeals}}. Nya förslag: {{newSuggestions}}. Vunna affärer förra veckan: {{winsLastWeek}}.',
       },
     },
   },

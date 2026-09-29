@@ -113,7 +113,7 @@
           "title": "Offertdetaljer"
         }
       },
-      "title": "Debitering",
+      "title": "Fakturering",
       "paymentMethods": {
         "setupComplete": {
           "title": "Kortregistrering"
@@ -125,7 +125,7 @@
       "title": "Företagsinställningar"
     },
     "dashboard": {
-      "title": "Översiktspanel"
+      "title": "Översikt"
     },
     "devices": {
       "title": "Mina enheter"
@@ -180,7 +180,7 @@
     },
     "layout": {
       "titleTemplate": "%s | Kundportal",
-      "defaultTitle": "Översiktspanel | Kundportal"
+      "defaultTitle": "Översikt | Kundportal"
     }
   },
   "msp": {
@@ -209,7 +209,7 @@
         "title": "Tillgångsimporter"
       },
       "integrations": {
-        "title": "Tillgångsintegreringar"
+        "title": "Tillgångsintegrationer"
       },
       "maintenance": {
         "title": "Tillgångsunderhåll"
@@ -220,9 +220,9 @@
       "title": "Tillgångar"
     },
     "billing": {
-      "title": "Debitering",
+      "title": "Fakturering",
       "credits": {
-        "title": "Krediteringar"
+        "title": "Tillgodohavanden"
       }
     },
     "chat": {
@@ -269,7 +269,7 @@
       "title": "Skapa ärende"
     },
     "dashboard": {
-      "title": "Översiktspanel"
+      "title": "Översikt"
     },
     "documentTemplates": {
       "detail": {
@@ -306,7 +306,7 @@
         "title": "Paket"
       },
       "loaners": {
-        "title": "Låneutrustning"
+        "title": "Låneenheter"
       },
       "locations": {
         "title": "Lagerplatser"
@@ -340,7 +340,7 @@
         "title": "Leverantörer"
       },
       "writeOffs": {
-        "title": "Lageravskrivningar"
+        "title": "Nedskrivningar"
       }
     },
     "invoices": {
@@ -383,7 +383,7 @@
     },
     "onboarding": {
       "layout": {
-        "title": "Introduktion"
+        "title": "Onboarding"
       }
     },
     "platformUpdates": {
@@ -486,7 +486,7 @@
         "title": "Enkätanalys"
       },
       "dashboard": {
-        "title": "Översiktspanel för enkäter"
+        "title": "Enkätöversikt"
       },
       "responses": {
         "detail": {
@@ -511,7 +511,7 @@
       },
       "onboarding": {
         "layout": {
-          "title": "Introduktionstest"
+          "title": "Onboardingtest"
         }
       },
       "uiKit": {
@@ -525,7 +525,7 @@
         "title": "Tilldela ärenden"
       },
       "bulkDueDate": {
-        "title": "Ange förfallodatum"
+        "title": "Ange måldatum"
       },
       "bulkPriority": {
         "title": "Ange prioritet"
@@ -554,7 +554,7 @@
           "title": "Tidrapport"
         }
       },
-      "title": "Tidpost"
+      "title": "Tidregistrering"
     },
     "timeSheetApprovals": {
       "title": "Godkännanden av tidrapporter"
@@ -585,7 +585,7 @@
       "title": "Arbetsflöden"
     },
     "layout": {
-      "defaultTitle": "Översiktspanel | AlgaPSA"
+      "defaultTitle": "Översikt | AlgaPSA"
     }
   },
   "share": {

@@ -50,8 +50,8 @@ const TEMPLATES = [
         message: 'O ticket #{{ticketNumber}} "{{ticketTitle}}" está em {{thresholdPercent}}% do SLA {{slaType}}. Tempo restante: {{remainingTime}}.',
       },
       sv: {
-        title: 'SLA-varning: {{thresholdPercent}} % av tiden har gått',
-        message: 'För ärende #{{ticketNumber}} ”{{ticketTitle}}” har {{thresholdPercent}} % av tiden enligt SLA-avtalet för {{slaType}} gått. Återstående tid: {{remainingTime}}.',
+        title: 'SLA-varning: {{thresholdPercent}} % av SLA-tiden har förbrukats',
+        message: 'Ärende #{{ticketNumber}} ”{{ticketTitle}}” har förbrukat {{thresholdPercent}} % av SLA-tiden ({{slaType}}). Återstående tid: {{remainingTime}}.',
       },
     },
   },
@@ -94,8 +94,8 @@ const TEMPLATES = [
         message: 'VIOLAÇÃO DE SLA: o ticket #{{ticketNumber}} "{{ticketTitle}}" excedeu a meta de SLA {{slaType}}. Política: {{policyName}}. Cliente: {{clientName}}.',
       },
       sv: {
-        title: 'SLA-avtal överträtt',
-        message: 'SLA-överträdelse: Ärende #{{ticketNumber}} ”{{ticketTitle}}” har överskridit SLA-målet för {{slaType}}. Policy: {{policyName}}. Kund: {{clientName}}.',
+        title: 'SLA-brott',
+        message: 'SLA-brott: ärende #{{ticketNumber}} ”{{ticketTitle}}” har överskridit SLA-tiden ({{slaType}}). Policy: {{policyName}}. Kund: {{clientName}}.',
       },
     },
   },
@@ -227,7 +227,7 @@ const TEMPLATES = [
       },
       sv: {
         title: 'Ärende eskalerat (SLA)',
-        message: 'Ärende #{{ticketNumber}} ”{{ticketTitle}}” har eskalerats till nivå {{escalationLevel}} på grund av SLA-avtalet. Du har lagts till som eskaleringsansvarig.',
+        message: 'Ärende #{{ticketNumber}} ”{{ticketTitle}}” har eskalerats till nivå {{escalationLevel}} på grund av SLA-tidsgränsen. Du har lagts till som eskaleringsansvarig.',
       },
     },
   },

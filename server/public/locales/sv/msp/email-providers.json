@@ -1,33 +1,33 @@
 {
   "configuration": {
-    "loading": "Laddar e-posttjänsteleverantörer…",
+    "loading": "Läser in e-postanslutningar…",
     "feedback": {
       "testingConnection": "Testar anslutningen till {{providerName}}…",
       "connectionSuccess": "Ansluten till {{providerName}}.",
       "connectionError": "Anslutningstestet misslyckades",
-      "refreshWatchError": "Det gick inte att uppdatera bevakningsprenumerationen",
+      "refreshWatchError": "Det gick inte att förnya bevakningsprenumerationen",
       "renewalError": "Förnyelsen misslyckades",
       "initiateOauthError": "Det gick inte att starta IMAP OAuth",
       "resyncing": "Synkroniserar om {{providerName}}…",
-      "resyncError": "Det gick inte att synkronisera om IMAP-tjänsteleverantören",
+      "resyncError": "Det gick inte att synkronisera om IMAP-anslutningen",
       "resyncStarted": "Omsynkronisering har startats för {{providerName}}.",
       "resyncRecovered": "{{providerName}} har anslutits igen.",
-      "loadProvidersError": "Det gick inte att ladda e-posttjänsteleverantörer"
+      "loadProvidersError": "Det gick inte att läsa in e-postanslutningar"
     },
     "editDrawer": {
-      "title": "Redigera e-posttjänsteleverantör",
+      "title": "Redigera e-postanslutning",
       "description": "Uppdatera konfigurationen för {{providerName}}"
     },
     "header": {
-      "title": "Konfiguration av e-posttjänsteleverantörer",
-      "description": "Konfigurera Gmail, Microsoft 365 eller IMAP-tjänsteleverantörer för att ta emot och behandla inkommande e-post som ärenden",
+      "title": "Konfiguration av e-postanslutningar",
+      "description": "Konfigurera anslutningar till Gmail, Microsoft 365 eller IMAP för att ta emot och behandla inkommande e-post som ärenden",
       "counts": "Gmail: {{gmail}} · Microsoft: {{microsoft}} · IMAP: {{imap}}"
     },
     "actions": {
-      "addProvider": "Lägg till e-posttjänsteleverantör"
+      "addProvider": "Lägg till e-postanslutning"
     },
     "nav": {
-      "providers": "Tjänsteleverantörer",
+      "providers": "Leverantörer",
       "defaults": "Standardinställningar",
       "inboundRules": "Regler för inkommande e-post"
     },
@@ -35,15 +35,15 @@
       "title": "Konfigurationsanvisningar",
       "microsoft": {
         "title": "Konfiguration av Microsoft 365",
-        "ownApp": "Använd din egen Microsoft-app — registrera den i Azure AD (Microsoft Entra ID), ge den e-postbehörigheter och anslut den till din Microsoft 365-postlåda.",
-        "providersPointer": "Konfigurationen av Microsoft-appen hanteras under Tjänsteleverantörer.",
-        "openProviders": "Öppna Tjänsteleverantörer"
+        "ownApp": "Använd din egen Microsoft-app – registrera den i Azure AD (Microsoft Entra ID), ge den e-postbehörigheter och anslut den till din Microsoft 365-postlåda.",
+        "providersPointer": "Konfigurationen av Microsoft-appen hanteras under Leverantörer.",
+        "openProviders": "Öppna Leverantörer"
       },
       "gmail": {
         "title": "Konfiguration av Gmail",
         "enterpriseSteps": {
-          "enterAddress": "Ange din Gmail-adress och tjänsteleverantörens namn",
-          "connect": "Klicka på ”Anslut Gmail” för att godkänna åtkomst",
+          "enterAddress": "Ange din Gmail-adress och ett namn på anslutningen",
+          "connect": "Klicka på ”Anslut Gmail” för att auktorisera åtkomst",
           "preferences": "Konfigurera inställningar för e-postbehandling",
           "save": "Spara för att slutföra konfigurationen"
         },
@@ -58,25 +58,25 @@
   },
   "list": {
     "header": {
-      "title": "E-posttjänsteleverantörer ({{count}})"
+      "title": "E-postanslutningar ({{count}})"
     },
     "filters": {
-      "searchPlaceholder": "Sök tjänsteleverantörer…",
-      "allProviders": "Alla tjänsteleverantörer"
+      "searchPlaceholder": "Sök anslutningar…",
+      "allProviders": "Alla leverantörer"
     },
     "actions": {
-      "refresh": "Ladda om"
+      "refresh": "Uppdatera"
     }
   },
   "selector": {
     "header": {
-      "title": "Välj din e-posttjänsteleverantör",
-      "description": "Välj den e-posttjänst du vill använda för att behandla inkommande e-post. Du kan konfigurera flera e-posttjänsteleverantörer per konto."
+      "title": "Välj din e-postleverantör",
+      "description": "Välj den e-posttjänst du vill använda för att behandla inkommande e-post. Du kan konfigurera flera e-postanslutningar per konto."
     },
     "cards": {
       "google": {
         "title": "Gmail",
-        "description": "Integrering med Google Workspace / Gmail",
+        "description": "Integration med Google Workspace / Gmail",
         "features": {
           "accounts": "✓ Gmail- och Google Workspace-konton",
           "filtering": "✓ Etikettbaserad e-postfiltrering",
@@ -87,18 +87,18 @@
       },
       "microsoft": {
         "title": "Microsoft 365",
-        "description": "Integrering med Microsoft 365 / Outlook",
+        "description": "Integration med Microsoft 365 / Outlook",
         "features": {
           "accounts": "✓ Microsoft 365- och Outlook-konton",
           "filtering": "✓ Mappbaserad e-postfiltrering",
           "processing": "✓ E-postbehandling i realtid",
-          "authentication": "✓ OAuth-integrering med Azure AD"
+          "authentication": "✓ OAuth-integration med Azure AD"
         },
         "action": "Konfigurera Microsoft 365"
       },
       "imap": {
         "title": "IMAP",
-        "description": "Integrering med en egen IMAP-server",
+        "description": "Integration med en egen IMAP-server",
         "features": {
           "accounts": "✓ Valfri IMAP-kompatibel postlåda",
           "filtering": "✓ Mappbaserad e-postfiltrering",
@@ -111,11 +111,11 @@
     "actions": {
       "cancel": "Avbryt"
     },
-    "help": "Välj den tjänsteleverantör din organisation redan använder. Om du använder Google Workspace väljer du Gmail. Om du använder Microsoft 365 väljer du Microsoft 365. Du kan ändra detta senare genom att ta bort och konfigurera om din e-posttjänsteleverantör."
+    "help": "Välj den leverantör som din organisation redan använder. Om du använder Google Workspace väljer du Gmail. Om du använder Microsoft 365 väljer du Microsoft 365. Du kan ändra detta senare genom att ta bort och konfigurera om din e-postanslutning."
   },
   "wizard": {
     "title": {
-      "select": "Välj e-posttjänsteleverantör",
+      "select": "Välj e-postleverantör",
       "setup": "Konfiguration av {{provider}}"
     },
     "actions": {
@@ -128,7 +128,7 @@
     "subscription": {
       "expired": "Utgången",
       "expiresInHours": "Går ut om {{count}} h",
-      "expiresInDays": "Går ut om {{count}} dygn"
+      "expiresInDays": "Går ut om {{count}} d"
     },
     "badges": {
       "disabled": "Inaktiverad",
@@ -145,13 +145,13 @@
       "justNow": "Nyss",
       "minutesAgo": "För {{count}} min sedan",
       "hoursAgo": "För {{count}} h sedan",
-      "daysAgo": "För {{count}} dygn sedan"
+      "daysAgo": "För {{count}} d sedan"
     },
     "actions": {
       "edit": "Redigera konfiguration",
       "testing": "Testar…",
       "testConnection": "Testa anslutning",
-      "refreshWatch": "Uppdatera Pub/Sub och bevakning",
+      "refreshWatch": "Förnya Pub/Sub och bevakning",
       "retryRenewal": "Försök förnya igen",
       "runDiagnostics": "Kör diagnostik för Microsoft 365",
       "reconnectOauth": "Återanslut OAuth",
@@ -159,7 +159,7 @@
       "resyncMailbox": "Synkronisera om postlåda",
       "pause": "Pausa inkommande e-post",
       "resume": "Återuppta inkommande e-post",
-      "delete": "Radera tjänsteleverantör",
+      "delete": "Radera anslutning",
       "runGmailDiagnostics": "Kör leveransdiagnostik för Gmail"
     },
     "feedback": {
@@ -169,8 +169,8 @@
     },
     "pausedHelp": "Meddelanden som tas emot medan den här inkorgen är pausad importeras inte i efterhand.",
     "authFailure": {
-      "title": "Inkommande e-post är pausad — återanslutning krävs",
-      "description": "Inkommande e-post för {{mailbox}} är pausad eftersom autentiseringsuppgifterna inte längre fungerar. Meddelandena går inte förlorade — de finns kvar i den ursprungliga postlådan och importeras efter att du har anslutit igen.",
+      "title": "Inkommande e-post är pausad – återanslutning krävs",
+      "description": "Inkommande e-post för {{mailbox}} är pausad eftersom autentiseringsuppgifterna inte längre fungerar. Meddelandena går inte förlorade – de finns kvar i den ursprungliga postlådan och importeras efter att du har anslutit igen.",
       "action": "Anslut igen"
     },
     "fields": {
@@ -211,17 +211,17 @@
       "empty": "Inga standardinställningar tillgängliga"
     },
     "empty": {
-      "title": "Inga e-posttjänsteleverantörer har konfigurerats",
-      "description": "Lägg till en e-posttjänsteleverantör för att börja ta emot och behandla inkommande e-post som ärenden.",
-      "action": "Lägg till e-posttjänsteleverantör"
+      "title": "Inga e-postanslutningar har konfigurerats",
+      "description": "Lägg till en e-postanslutning för att börja ta emot och behandla inkommande e-post som ärenden.",
+      "action": "Lägg till e-postanslutning"
     },
     "gmailWatch": {
       "expiredTitle": "Gmail skickar inte längre ny e-post hit",
-      "expiredDescription": "Gmail-bevakningen för {{mailbox}} har gått ut, så Google har slutat publicera aviseringar. Meddelandena går inte förlorade — de finns kvar i postlådan. Uppdatera Pub/Sub och bevakning för att återuppta leveransen.",
+      "expiredDescription": "Gmail-bevakningen för {{mailbox}} har gått ut, så Google har slutat publicera aviseringar. Meddelandena går inte förlorade – de finns kvar i postlådan. Förnya Pub/Sub och bevakning för att återuppta leveransen.",
       "missingTitle": "Pushleverans från Gmail har inte registrerats",
-      "missingDescription": "Ingen Gmail-bevakning har registrerats för {{mailbox}}, så ingen inkommande e-post kommer fram. Uppdatera Pub/Sub och bevakning för att registrera en.",
+      "missingDescription": "Ingen Gmail-bevakning har registrerats för {{mailbox}}, så ingen inkommande e-post kommer fram. Förnya Pub/Sub och bevakning för att registrera en.",
       "expiringTitle": "Pushleveransen från Gmail går ut inom ett dygn",
-      "expiringDescription": "Gmail-bevakningar gäller i sju dagar. Uppdatera Pub/Sub och bevakning innan den här går ut, annars upphör inkommande e-post utan ytterligare avisering."
+      "expiringDescription": "Gmail-bevakningar gäller i sju dagar. Förnya Pub/Sub och bevakning innan den här går ut, annars upphör inkommande e-post utan ytterligare avisering."
     }
   },
   "forms": {
@@ -229,12 +229,12 @@
       "actions": {
         "cancel": "Avbryt",
         "saving": "Sparar…",
-        "updateProvider": "Uppdatera tjänsteleverantör",
-        "addProvider": "Lägg till tjänsteleverantör",
-        "createProvider": "Skapa tjänsteleverantör",
+        "updateProvider": "Uppdatera anslutning",
+        "addProvider": "Lägg till anslutning",
+        "createProvider": "Skapa anslutning",
         "manageDefaults": "Hantera standardinställningar",
-        "refreshList": "Ladda om listan",
-        "openProvidersSettings": "Öppna inställningar för tjänsteleverantörer"
+        "refreshList": "Uppdatera listan",
+        "openProvidersSettings": "Öppna inställningar för leverantörer"
       },
       "validation": {
         "requiredFieldsTitle": "Fyll i de obligatoriska fälten:",
@@ -253,7 +253,7 @@
         "authorizeAccess": "Auktorisera åtkomst"
       },
       "messages": {
-        "setupIncomplete": "Tjänsteleverantören har sparats, men konfigurationen är inte slutförd: {{error}}"
+        "setupIncomplete": "Anslutningen har sparats, men konfigurationen är inte slutförd: {{error}}"
       }
     },
     "microsoft": {
@@ -263,7 +263,7 @@
       "validation": {
         "providerNameRequired": "Konfigurationsnamn krävs",
         "emailRequired": "En giltig e-postadress krävs",
-        "authorizeRequiresValid": "Fyll i alla obligatoriska fält innan du godkänner åtkomst",
+        "authorizeRequiresValid": "Fyll i alla obligatoriska fält innan du auktoriserar åtkomst",
         "oauthInitiateFailed": "Det gick inte att starta OAuth",
         "popupBlocked": "Det gick inte att öppna OAuth-popupfönstret. Tillåt popupfönster för den här webbplatsen.",
         "closedEarly": "Auktoriseringsfönstret stängdes innan processen slutfördes. Försök igen.",
@@ -277,12 +277,12 @@
       },
       "basic": {
         "title": "Grundläggande konfiguration",
-        "description": "Grundinställningar för din Microsoft 365-e-posttjänsteleverantör",
+        "description": "Grundinställningar för din Microsoft 365-anslutning",
         "providerNameLabel": "Konfigurationsnamn *",
         "providerNamePlaceholder": "T.ex. supportpostlåda (internt)",
         "emailLabel": "E-postadress *",
         "emailPlaceholder": "support@client.com",
-        "enableProvider": "Aktivera den här tjänsteleverantören",
+        "enableProvider": "Aktivera den här anslutningen",
         "providerNameHelp": "Internt namn som används för att identifiera den här konfigurationen. Visas inte i utgående e-post.",
         "senderDisplayNameLabel": "Avsändarens visningsnamn",
         "senderDisplayNamePlaceholder": "T.ex. Acme Support",
@@ -293,7 +293,7 @@
         "signIn": "Logga in med Microsoft"
       },
       "readiness": {
-        "openProviders": "Öppna Tjänsteleverantörer"
+        "openProviders": "Öppna Leverantörer"
       },
       "issuer": {
         "title": "Microsoft-app som auktoriserar den här postlådan",
@@ -305,12 +305,12 @@
         "selectedApp": "Vald app: {{app}}",
         "pendingReauth": "Väntar på ny auktorisering",
         "switchWarning": "Om du byter Microsoft-app måste du ansluta den här postlådan igen. Logga in med Microsoft igen för att slutföra bytet.",
-        "noneAvailable": "Konfigurera först en Microsoft-app under Tjänsteleverantörer och kom sedan tillbaka för att ansluta Microsoft 365.",
+        "noneAvailable": "Konfigurera först en Microsoft-app under Leverantörer och kom sedan tillbaka för att ansluta Microsoft 365.",
         "retry": "Försök igen",
-        "pendingConsentEmpty": "Din Microsoft-app väntar på godkännande från en Microsoft 365-administratör. När den har godkänts under Tjänsteleverantörer kan du komma tillbaka och logga in.",
+        "pendingConsentEmpty": "Din Microsoft-app väntar på godkännande från en Microsoft 365-administratör. När den har godkänts under Leverantörer kan du komma tillbaka och logga in.",
         "pendingConsentHint": "Din egen Microsoft-app väntar fortfarande på godkännande från en Microsoft 365-administratör.",
         "ownAppPrompt": "Vill du hellre logga in med din egen Microsoft-app?",
-        "ownAppSetupLink": "Konfigurera den under Tjänsteleverantörer"
+        "ownAppSetupLink": "Konfigurera den under Leverantörer"
       },
       "advanced": {
         "title": "Avancerade inställningar",
@@ -325,17 +325,17 @@
       "validation": {
         "providerNameRequired": "Konfigurationsnamn krävs",
         "gmailAddressRequired": "En giltig Gmail-adress krävs",
-        "authorizeRequiresValid": "Fyll i alla obligatoriska fält innan du godkänner åtkomst",
-        "googleNotConfigured": "Google-integreringen har inte konfigurerats för den här klientorganisationen. Konfigurera Google först och försök sedan igen.",
+        "authorizeRequiresValid": "Fyll i alla obligatoriska fält innan du auktoriserar åtkomst",
+        "googleNotConfigured": "Google-integrationen har inte konfigurerats för den här organisationen. Konfigurera Google först och försök sedan igen.",
         "oauthInitiateFailed": "Det gick inte att starta OAuth",
         "popupBlocked": "Det gick inte att öppna OAuth-popupfönstret. Tillåt popupfönster för den här webbplatsen.",
         "closedEarly": "Auktoriseringsfönstret stängdes innan processen slutfördes.",
         "authorizationFailed": "Auktoriseringen misslyckades",
         "popupFailed": "Ett fel uppstod i OAuth-popupfönstret",
-        "configureFailed": "Det gick inte att konfigurera Gmail-tjänsteleverantören"
+        "configureFailed": "Det gick inte att konfigurera Gmail-anslutningen"
       },
       "messages": {
-        "setupIncomplete": "Tjänsteleverantören har sparats, men konfigurationen är inte slutförd: {{error}}",
+        "setupIncomplete": "Anslutningen har sparats, men konfigurationen är inte slutförd: {{error}}",
         "warningsTitle": "Konfigurationen slutfördes med varningar:",
         "settingUp": "Konfigurerar Gmail-aviseringar…"
       },
@@ -345,27 +345,27 @@
       },
       "basic": {
         "title": "Grundläggande konfiguration",
-        "description": "Grundinställningar för din Gmail-tjänsteleverantör",
+        "description": "Grundinställningar för din Gmail-anslutning",
         "providerNameLabel": "Konfigurationsnamn *",
         "providerNamePlaceholder": "T.ex. Gmail för support (internt)",
         "mailboxLabel": "Gmail-adress *",
         "mailboxPlaceholder": "support@client.com",
-        "enableProvider": "Aktivera den här tjänsteleverantören",
+        "enableProvider": "Aktivera den här anslutningen",
         "providerNameHelp": "Internt namn som används för att identifiera den här konfigurationen. Visas inte i utgående e-post.",
         "senderDisplayNameLabel": "Avsändarens visningsnamn",
         "senderDisplayNamePlaceholder": "T.ex. Acme Support",
-        "senderDisplayNameHelp": "Visningsnamn som visas i From-huvudet i utgående ärendemeddelanden (svar, stängningar). Används endast när den här postlådan matchar klientorganisationens avsändaradress för ärendemeddelanden. Lämna tomt för att använda namnet på ärendets tavla."
+        "senderDisplayNameHelp": "Visningsnamn som visas i From-huvudet i utgående ärendemeddelanden (svar, stängningar). Används endast när den här postlådan matchar organisationens avsändaradress för ärendemeddelanden. Lämna tomt för att använda namnet på ärendets tavla."
       },
       "oauth": {
         "sectionTitle": "Google OAuth",
-        "sectionDescription": "Använder klientorganisationens egen Google-app som konfigurerats under Inställningar → Integreringar → Tjänsteleverantörer.",
+        "sectionDescription": "Använder organisationens egen Google-app som konfigurerats under Inställningar → Integrationer → Leverantörer.",
         "setupLabel": "Google Cloud Console",
-        "notConfigured": "Google-integreringen har inte konfigurerats för den här klientorganisationen.",
-        "setupHelp": "Konfigurera först klientorganisationens egna Google OAuth + Pub/Sub: Inställningar → Integreringar → Tjänsteleverantörer.",
+        "notConfigured": "Google-integrationen har inte konfigurerats för den här organisationen.",
+        "setupHelp": "Konfigurera först organisationens egna Google OAuth + Pub/Sub: Inställningar → Integrationer → Leverantörer.",
         "openSettings": "Öppna Google-inställningar",
         "requiredTitle": "OAuth-auktorisering krävs",
-        "requiredDescriptionAdd": "Du måste slutföra OAuth-auktoriseringen ovan innan du lägger till tjänsteleverantören för att aktivera Gmail-aviseringar.",
-        "requiredDescriptionUpdate": "Du måste slutföra OAuth-auktoriseringen ovan innan du uppdaterar tjänsteleverantören för att aktivera Gmail-aviseringar.",
+        "requiredDescriptionAdd": "Du måste slutföra OAuth-auktoriseringen ovan innan du lägger till anslutningen för att aktivera Gmail-aviseringar.",
+        "requiredDescriptionUpdate": "Du måste slutföra OAuth-auktoriseringen ovan innan du uppdaterar anslutningen för att aktivera Gmail-aviseringar.",
         "stepTitle": "Steg 1: OAuth-auktorisering",
         "stepDescription": "Slutför OAuth-flödet för att ge åtkomst till Gmail",
         "buttonSuccessSaving": "Åtkomsten har godkänts. Sparar dina inställningar…"
@@ -404,7 +404,7 @@
         "providerNameHelp": "Internt namn som används för att identifiera den här konfigurationen. Visas inte i utgående e-post.",
         "senderDisplayName": "Avsändarens visningsnamn",
         "senderDisplayNamePlaceholder": "T.ex. Acme Support",
-        "senderDisplayNameHelp": "Visningsnamn som visas i From-huvudet i utgående ärendemeddelanden (svar, stängningar). Används endast när den här postlådan matchar klientorganisationens avsändaradress för ärendemeddelanden. Lämna tomt för att använda namnet på ärendets tavla."
+        "senderDisplayNameHelp": "Visningsnamn som visas i From-huvudet i utgående ärendemeddelanden (svar, stängningar). Används endast när den här postlådan matchar organisationens avsändaradress för ärendemeddelanden. Lämna tomt för att använda namnet på ärendets tavla."
       },
       "auth": {
         "title": "Autentisering",
@@ -437,8 +437,8 @@
   },
   "inboundDefaultsForm": {
     "feedback": {
-      "loadOptionsError": "Det gick inte att ladda fältalternativ",
-      "loading": "Laddar formuläralternativ…"
+      "loadOptionsError": "Det gick inte att läsa in fältalternativ",
+      "loading": "Läser in formuläralternativ…"
     },
     "validation": {
       "nameRequired": "Kortnamn och visningsnamn krävs",
@@ -472,7 +472,7 @@
         "label": "Status *",
         "placeholder": "Välj status",
         "selectBoardFirst": "Välj tavla först",
-        "loading": "Laddar statusar…"
+        "loading": "Läser in statusar…"
       },
       "priority": {
         "label": "Prioritet *",
@@ -556,7 +556,7 @@
       "providerNameHelp": "Internt namn som används för att identifiera den här konfigurationen. Visas inte i utgående e-post.",
       "senderDisplayName": "Avsändarens visningsnamn",
       "senderDisplayNamePlaceholder": "T.ex. Acme Support",
-      "senderDisplayNameHelp": "Visningsnamn som visas i From-huvudet i utgående ärendemeddelanden (svar, stängningar). Används endast när den här postlådan matchar klientorganisationens avsändaradress för ärendemeddelanden. Lämna tomt för att använda namnet på ärendets tavla."
+      "senderDisplayNameHelp": "Visningsnamn som visas i From-huvudet i utgående ärendemeddelanden (svar, stängningar). Används endast när den här postlådan matchar organisationens avsändaradress för ärendemeddelanden. Lämna tomt för att använda namnet på ärendets tavla."
     },
     "authOptions": {
       "password": "Lösenord",
@@ -578,13 +578,13 @@
     "actions": {
       "cancel": "Avbryt",
       "saving": "Sparar…",
-      "updateProvider": "Uppdatera tjänsteleverantör",
-      "createProvider": "Skapa tjänsteleverantör"
+      "updateProvider": "Uppdatera anslutning",
+      "createProvider": "Skapa anslutning"
     }
   },
   "microsoftForm": {
     "header": {
-      "title": "Microsoft 365-integrering",
+      "title": "Microsoft 365-integration",
       "description": "Kom igång genom att ansluta ditt Microsoft 365-konto och konfigurera dina inställningar för e-postbehandling."
     },
     "sections": {
@@ -610,7 +610,7 @@
       "providerNamePlaceholder": "T.ex. supportpostlåda (internt)",
       "mailboxLabel": "Microsoft 365-adress *",
       "mailboxPlaceholder": "support@client.com",
-      "enableProvider": "Aktivera den här tjänsteleverantören",
+      "enableProvider": "Aktivera den här anslutningen",
       "foldersLabel": "Mappar att bevaka",
       "foldersPlaceholder": "Inbox, Support, Anpassad mapp",
       "foldersHelp": "Kommaseparerad lista över mappar att bevaka (standard: Inbox)",
@@ -621,19 +621,19 @@
       "providerNameHelp": "Internt namn som används för att identifiera den här konfigurationen. Visas inte i utgående e-post.",
       "senderDisplayNameLabel": "Avsändarens visningsnamn",
       "senderDisplayNamePlaceholder": "T.ex. Acme Support",
-      "senderDisplayNameHelp": "Visningsnamn som visas i From-huvudet i utgående ärendemeddelanden (svar, stängningar). Används endast när den här postlådan matchar klientorganisationens avsändaradress för ärendemeddelanden. Lämna tomt för att använda namnet på ärendets tavla."
+      "senderDisplayNameHelp": "Visningsnamn som visas i From-huvudet i utgående ärendemeddelanden (svar, stängningar). Används endast när den här postlådan matchar organisationens avsändaradress för ärendemeddelanden. Lämna tomt för att använda namnet på ärendets tavla."
     },
     "oauth": {
       "connectionTitle": "Microsoft 365-anslutning",
-      "descriptionIdle": "Godkänn åtkomst till ditt Microsoft 365-konto",
+      "descriptionIdle": "Auktorisera åtkomst till ditt Microsoft 365-konto",
       "descriptionSuccess": "Anslutningen har upprättats. Slutför konfigurationen genom att spara nedan.",
       "connecting": "Ansluter…",
       "connected": "Ansluten",
       "connectButton": "Anslut Microsoft 365",
       "requiredTitle": "Microsoft 365-anslutning krävs",
-      "requiredDescriptionUpdate": "Du måste ansluta ditt Microsoft 365-konto ovan innan du uppdaterar tjänsteleverantören.",
-      "requiredDescriptionAdd": "Du måste ansluta ditt Microsoft 365-konto ovan innan du lägger till tjänsteleverantören.",
-      "authError": "Fyll i alla obligatoriska fält innan du godkänner åtkomst",
+      "requiredDescriptionUpdate": "Du måste ansluta ditt Microsoft 365-konto ovan innan du uppdaterar anslutningen.",
+      "requiredDescriptionAdd": "Du måste ansluta ditt Microsoft 365-konto ovan innan du lägger till anslutningen.",
+      "authError": "Fyll i alla obligatoriska fält innan du auktoriserar åtkomst",
       "popupBlocked": "Det gick inte att öppna OAuth-popupfönstret. Tillåt popupfönster för den här webbplatsen.",
       "authorizationFailed": "Auktoriseringen misslyckades",
       "initiateFailed": "Det gick inte att starta OAuth",
@@ -650,13 +650,13 @@
       "cancelAutoSubmit": "Avbryt automatisk inskickning"
     },
     "buttons": {
-      "updateProvider": "Uppdatera tjänsteleverantör",
-      "addProvider": "Lägg till tjänsteleverantör",
+      "updateProvider": "Uppdatera anslutning",
+      "addProvider": "Lägg till anslutning",
       "manageDefaults": "Hantera standardinställningar",
-      "refreshList": "Ladda om listan",
+      "refreshList": "Uppdatera listan",
       "cancel": "Avbryt",
       "completeSetupSuffix": "och slutför konfigurationen",
-      "settingUp": "Konfigurerar Microsoft 365-integreringen…"
+      "settingUp": "Konfigurerar Microsoft 365-integrationen…"
     },
     "validation": {
       "requiredFieldsTitle": "Fyll i de obligatoriska fälten:",
@@ -666,7 +666,7 @@
   },
   "gmailForm": {
     "header": {
-      "title": "Gmail-integrering",
+      "title": "Gmail-integration",
       "description": "Anslut ditt Gmail-konto och konfigurera dina inställningar för e-postbehandling."
     },
     "basicConfig": {
@@ -677,7 +677,7 @@
       "title": "Gmail-autentisering",
       "description": "Anslut ditt Gmail-konto för att aktivera e-postbehandling",
       "connectionTitle": "Gmail-anslutning",
-      "descriptionIdle": "Godkänn åtkomst till ditt Gmail-konto",
+      "descriptionIdle": "Auktorisera åtkomst till ditt Gmail-konto",
       "descriptionSuccess": "Anslutningen har upprättats. Sparar dina inställningar…",
       "buttonIdle": "Anslut Gmail",
       "buttonAuthorizing": "Ansluter…",
@@ -693,20 +693,20 @@
       "manageDefaults": "Hantera standardinställningar",
       "inboundDefaultsLabel": "Standardinställningar för inkommande ärenden",
       "inboundDefaultsPlaceholder": "Välj standardinställningar (valfritt)",
-      "refreshList": "Ladda om listan"
+      "refreshList": "Uppdatera listan"
     },
     "googleConfig": {
-      "notConfigured": "Google-integreringen har inte konfigurerats för den här klientorganisationen.",
-      "configureHint": "Konfigurera först klientorganisationens egna Google OAuth + Pub/Sub:",
-      "settingsPath": "Inställningar → Integreringar → Tjänsteleverantörer",
+      "notConfigured": "Google-integrationen har inte konfigurerats för den här organisationen.",
+      "configureHint": "Konfigurera först organisationens egna Google OAuth + Pub/Sub:",
+      "settingsPath": "Inställningar → Integrationer → Leverantörer",
       "openSettings": "Öppna Google-inställningar"
     },
     "oauth": {
       "requiredTitle": "Gmail-anslutning krävs",
-      "requiredDescriptionUpdate": "Du måste ansluta ditt Gmail-konto ovan innan du uppdaterar tjänsteleverantören.",
-      "requiredDescriptionAdd": "Du måste ansluta ditt Gmail-konto ovan innan du lägger till tjänsteleverantören.",
-      "fillRequiredFields": "Fyll i alla obligatoriska fält innan du godkänner åtkomst",
-      "notConfiguredTenant": "Google-integreringen har inte konfigurerats för den här klientorganisationen. Konfigurera Google först och försök sedan igen.",
+      "requiredDescriptionUpdate": "Du måste ansluta ditt Gmail-konto ovan innan du uppdaterar anslutningen.",
+      "requiredDescriptionAdd": "Du måste ansluta ditt Gmail-konto ovan innan du lägger till anslutningen.",
+      "fillRequiredFields": "Fyll i alla obligatoriska fält innan du auktoriserar åtkomst",
+      "notConfiguredTenant": "Google-integrationen har inte konfigurerats för den här organisationen. Konfigurera Google först och försök sedan igen.",
       "initiateFailed": "Det gick inte att starta OAuth"
     },
     "validation": {
@@ -715,26 +715,26 @@
       "mailbox": "Gmail-adress"
     },
     "warnings": {
-      "setupIncomplete": "Tjänsteleverantören har sparats, men konfigurationen är inte slutförd: {{error}}",
+      "setupIncomplete": "Anslutningen har sparats, men konfigurationen är inte slutförd: {{error}}",
       "setupWarningsTitle": "Konfigurationen slutfördes med varningar:"
     },
     "buttons": {
-      "updateProvider": "Uppdatera tjänsteleverantör",
-      "addProvider": "Lägg till tjänsteleverantör",
+      "updateProvider": "Uppdatera anslutning",
+      "addProvider": "Lägg till anslutning",
       "completeSetupSuffix": "och slutför konfigurationen",
       "cancel": "Avbryt",
-      "settingUp": "Konfigurerar Gmail-integreringen…"
+      "settingUp": "Konfigurerar Gmail-integrationen…"
     }
   },
   "managed": {
     "messages": {
-      "loadDomainsFailed": "Det gick inte att ladda hanterade domäner",
-      "loadOutboundSettingsFailed": "Det gick inte att ladda inställningarna för utgående e-post",
+      "loadDomainsFailed": "Det gick inte att läsa in hanterade domäner",
+      "loadOutboundSettingsFailed": "Det gick inte att läsa in inställningarna för utgående e-post",
       "ticketingFromUpdated": "Avsändaradressen för ärendemeddelanden har uppdaterats",
       "ticketingFromSaveFailed": "Det gick inte att spara avsändaradressen för ärendemeddelanden",
       "ticketingFromCleared": "Avsändaradressen för ärendemeddelanden har rensats",
       "ticketingFromClearFailed": "Det gick inte att rensa avsändaradressen för ärendemeddelanden",
-      "switchProviderFailed": "Det gick inte att byta tjänsteleverantör",
+      "switchProviderFailed": "Det gick inte att byta leverantör",
       "smtpHostRequired": "SMTP-värd krävs",
       "fromAddressRequired": "Avsändaradress krävs",
       "smtpSaved": "SMTP-inställningarna har sparats",
@@ -743,7 +743,7 @@
       "domainSubmitted": "Domänförfrågan har skickats in",
       "domainRequestFailed": "Det gick inte att begära domänen",
       "verificationRecheckScheduled": "En ny verifieringskontroll har schemalagts",
-      "refreshStatusFailed": "Det gick inte att ladda om domänstatusen",
+      "refreshStatusFailed": "Det gick inte att uppdatera domänstatusen",
       "domainRemovalScheduled": "Borttagning av domänen har schemalagts",
       "domainRemovalScheduledWithClear": "Borttagning av domänen har schemalagts och avsändaradressen för ärendemeddelanden har rensats",
       "removeDomainFailed": "Det gick inte att ta bort domänen",
@@ -756,9 +756,9 @@
     },
     "outbound": {
       "intro": "Konfigurera utgående e-post för din organisation.",
-      "providerTitle": "Tjänsteleverantör för utgående e-post",
+      "providerTitle": "Leverantör för utgående e-post",
       "providerDescription": "Välj hur utgående e-post ska skickas från din organisation.",
-      "providerPlaceholder": "Välj tjänsteleverantör för utgående e-post",
+      "providerPlaceholder": "Välj leverantör för utgående e-post",
       "providerOptions": {
         "resend": "Hanteras av Nine Minds",
         "smtp": "SMTP",
@@ -767,7 +767,7 @@
       "resendDescription": "E-post skickas via infrastruktur som hanteras av Nine Minds. Lägg till och verifiera en egen domän nedan.",
       "smtpDescription": "E-post skickas via din egen SMTP-server.",
       "smtpLabel": "SMTP",
-      "upgradeNotice": "Hanterade e-postdomäner ingår inte i ditt nuvarande abonnemang. Uppgradera för att använda Nine Minds hanterade infrastruktur för utgående e-post med egna domäner.",
+      "upgradeNotice": "Hanterade e-postdomäner ingår inte i ditt nuvarande abonnemang. Uppgradera för att skicka utgående e-post via infrastruktur som hanteras av Nine Minds, med egna domäner.",
       "domainsTitle": "Hanterade domäner",
       "domainsDescription": "Lägg till en egen domän och följ DNS-anvisningarna för att verifiera ägarskapet.",
       "domainLabel": "Domän",
@@ -798,7 +798,7 @@
         "saveButton": "Spara SMTP-inställningar",
         "test": {
           "title": "Testa utgående e-post",
-          "description": "Sparar de aktuella inställningarna och verifierar sedan anslutningen till tjänsteleverantören. Ange en adress för att även skicka ett testmeddelande.",
+          "description": "Sparar de aktuella inställningarna och verifierar sedan anslutningen till leverantören. Ange en adress för att även skicka ett testmeddelande.",
           "recipientLabel": "Skicka test till (valfritt)",
           "recipientPlaceholder": "you@example.com",
           "testingButton": "Testar…",
@@ -837,15 +837,15 @@
         "mailboxLabel": "Avsändarpostlåda",
         "mailboxPlaceholder": "Välj en ansluten Microsoft 365-postlåda",
         "help": "Meddelanden skickas från den här postlådan via Microsoft Graph och sparas i Skickat. Anslut befintliga postlådor igen för att ge behörigheten Mail.Send.",
-        "none": "Lägg först till och auktorisera en Microsoft 365-tjänsteleverantör på fliken Inkommande e-post.",
+        "none": "Lägg först till och auktorisera en Microsoft 365-anslutning på fliken Inkommande e-post.",
         "noneConnected": "Auktorisera först en Microsoft 365-postlåda på fliken Inkommande e-post.",
         "description": "Meddelanden skickas från den valda postlådan via Microsoft Graph och sparas i Skickat.",
-        "loadFailed": "Det gick inte att ladda Microsoft 365-postlådor.",
+        "loadFailed": "Det gick inte att läsa in Microsoft 365-postlådor.",
         "saved": "Avsändarpostlådan för utgående e-post har uppdaterats."
       }
     },
     "inbound": {
-      "intro": "Konfigurera routning av inkommande e-post och automatisering för respektive tjänsteleverantör."
+      "intro": "Konfigurera routning av inkommande e-post och automatisering för respektive leverantör."
     },
     "dialogs": {
       "clearTicketingFrom": {
@@ -855,7 +855,7 @@
       },
       "removeDomain": {
         "title": "Ta bort hanterad domän",
-        "messageWithClear": "Vill du ta bort {{domain}}? Då rensas även den sparade avsändaradressen för ärendemeddelanden eftersom den här domänen för närvarande används för utgående e-post.",
+        "messageWithClear": "Vill du ta bort {{domain}}? Då rensas även inställningen för aktiv domän för utgående e-post.",
         "message": "Vill du ta bort {{domain}}?",
         "fallbackDomain": "den här domänen",
         "confirm": "Ta bort domän"
@@ -874,19 +874,19 @@
       "microsoftMustMatchMailbox": "E-postadressen för ärendemeddelanden måste matcha den valda Microsoft 365-postlådan ({{mailbox}})."
     },
     "domainList": {
-      "loading": "Laddar domäner…",
+      "loading": "Läser in domäner…",
       "empty": "Det finns inga hanterade domäner ännu. Lägg till en för att komma igång.",
-      "providerDomainId": "Domän-ID hos tjänsteleverantören: {{id}}",
+      "providerDomainId": "Domän-ID hos leverantören: {{id}}",
       "providerFallback": "Hanteras via Resend",
       "failureReason": "Felorsak: {{reason}}",
       "recheckButton": "Kontrollera DNS igen",
       "removeButton": "Ta bort domän",
       "dnsRecordsHeading": "DNS-poster",
-      "dnsRecordsHelp": "Kopiera varje post nedan till din DNS-tjänsteleverantör (GoDaddy, Cloudflare osv.). Vi kan inte ändra din DNS åt dig.",
+      "dnsRecordsHelp": "Kopiera varje post nedan till din DNS-leverantör (GoDaddy, Cloudflare osv.). Vi kan inte ändra din DNS åt dig.",
       "dnsEmpty": {
-        "pending": "Vi har bett Resend att skapa DNS-posterna för den här domänen. När de visas ska du kopiera dem till din DNS-tjänsteleverantör eftersom vi inte kan uppdatera dem automatiskt.",
-        "failed": "Vi behöver fortfarande DNS-anvisningar från Resend. Klicka på ”Kontrollera DNS igen” och publicera posterna hos din DNS-tjänsteleverantör när de har laddats.",
-        "default": "DNS-anvisningar är inte tillgängliga ännu. Kontrollera DNS igen och kopiera varje post till din DNS-tjänsteleverantör så snart den visas."
+        "pending": "Vi har bett Resend att skapa DNS-posterna för den här domänen. När de visas ska du kopiera dem till din DNS-leverantör eftersom vi inte kan uppdatera dem automatiskt.",
+        "failed": "Vi behöver fortfarande DNS-anvisningar från Resend. Klicka på ”Kontrollera DNS igen” och publicera posterna hos din DNS-leverantör när de har lästs in.",
+        "default": "DNS-anvisningar är inte tillgängliga ännu. Kontrollera DNS igen och kopiera varje post till din DNS-leverantör så snart den visas."
       }
     },
     "dnsRecords": {
@@ -897,7 +897,7 @@
         "unknown": "Väntar på kontroll"
       },
       "detectedValues": "Upptäckta värden",
-      "defaultEmpty": "Vi förbereder DNS-posterna för den här domänen. Så snart de visas ska du kopiera dem till din DNS-tjänsteleverantör eftersom vi inte kan uppdatera dem åt dig.",
+      "defaultEmpty": "Vi förbereder DNS-posterna för den här domänen. Så snart de visas ska du kopiera dem till din DNS-leverantör eftersom vi inte kan uppdatera dem åt dig.",
       "summary": "{{matched}} av {{total}} obligatoriska DNS-poster matchar",
       "summaryWithCheckedAt": "{{matched}} av {{total}} obligatoriska DNS-poster matchar • Senast kontrollerat {{checkedAt}}.",
       "lastCheckedNoRecords": "Senast kontrollerat {{checkedAt}}. Vi har inte upptäckt några poster ännu.",
@@ -908,7 +908,7 @@
       "checkedAt": "Kontrollerat {{checkedAt}}",
       "ttlLabel": "TTL:",
       "priorityLabel": "Prioritet:",
-      "missingHelp": "Vi har inte upptäckt den här posten i DNS ännu. Kontrollera att den finns hos din DNS-tjänsteleverantör med exakt det värde som visas ovan.",
+      "missingHelp": "Vi har inte upptäckt den här posten i DNS ännu. Kontrollera att den finns hos din DNS-leverantör med exakt det värde som visas ovan.",
       "mismatchHelp": "DNS-posten finns, men värdet matchar inte det som Resend förväntar sig.",
       "matchedHelp": "Det upptäckta värdet matchar det förväntade.",
       "unknownHelp": "Vi har inte kontrollerat DNS ännu. Kontrollera DNS igen för att köra verifieringen.",
@@ -917,7 +917,7 @@
       "valueLabel": "Värde",
       "copyHostAriaLabel": "Kopiera värd",
       "copyFqdnAriaLabel": "Kopiera fullständigt namn",
-      "hostHint": "Tips: Ange bara det värdnamn som visas ovan hos din DNS-tjänsteleverantör. De flesta tjänsteleverantörer (Namecheap, GoDaddy, Cloudflare och andra) lägger till ”{{domain}}” automatiskt. Om du i stället klistrar in det fullständiga namnet upprepas domänen (…{{domain}}.{{domain}}) och posten kan aldrig verifieras."
+      "hostHint": "Tips: Ange bara det värdnamn som visas ovan hos din DNS-leverantör. De flesta leverantörer (Namecheap, GoDaddy, Cloudflare och andra) lägger till ”{{domain}}” automatiskt. Om du i stället klistrar in det fullständiga namnet upprepas domänen (…{{domain}}.{{domain}}) och posten kan aldrig verifieras."
     }
   },
   "inboundRules": {
@@ -939,7 +939,7 @@
     "errors": {
       "aliasAdd": "Det gick inte att lägga till alias",
       "delete": "Det gick inte att radera regeln",
-      "load": "Det gick inte att ladda regler för inkommande e-post",
+      "load": "Det gick inte att läsa in regler för inkommande e-post",
       "reorder": "Det gick inte att ändra reglernas ordning",
       "save": "Det gick inte att spara regeln",
       "test": "Det gick inte att testa regeln",
@@ -966,7 +966,7 @@
       "aiAllowSkip": "Får hoppa över e-post",
       "aiInstruction": "Instruktion",
       "aiInstructionPlaceholder": "T.ex. avgör vilken kund det här övervakningslarmet gäller.",
-      "aiUpsell": "Klassificera med AI är tillgängligt med tillägget Enterprise AI Assistant — e-post klassificeras efter avsikt utan mönster som behöver underhållas.",
+      "aiUpsell": "Klassificera med AI är tillgängligt med tillägget Enterprise AI Assistant – e-post klassificeras efter avsikt utan mönster som behöver underhållas.",
       "cancel": "Avbryt",
       "conditions": "Villkor (alla måste matcha)",
       "create": "Skapa regel",
@@ -985,7 +985,7 @@
       "mailboxesHint": "Lämna alla omarkerade för att tillämpa den här regeln på alla postlådor.",
       "marker": "Markörtext",
       "markerPlaceholder": "T.ex. Kund:",
-      "matchHint": "Den extraherade texten matchas mot kundnamn och kundalias (utan hänsyn till skiftläge).",
+      "matchHint": "Det extraherade värdet kontrolleras mot de valda målen. Vid matchning mot kontaktens e-postadress accepteras även adresser i formatet visningsnamn <adress>.",
       "name": "Regelnamn",
       "namePlaceholder": "T.ex. kundroutning för Huntress",
       "noMailboxes": "Inga postlådor har konfigurerats ännu.",
@@ -1015,11 +1015,11 @@
         "aliases": "• Extraherade namn matchas mot kundnamn och alias. Hantera alias i kundposten eller lägg till dem när du testar regeln.",
         "audit": "• Överhoppade e-postmeddelanden kan fortfarande granskas i diagnostiken för e-postbehandling och märks med regeln som hoppade över dem.",
         "order": "• Reglerna körs uppifrån och ned för ny inkommande e-post. Den första matchande regeln tillämpas.",
-        "replies": "• Svar på befintliga ärenden blir alltid kommentarer — reglerna påverkar dem aldrig."
+        "replies": "• Svar på befintliga ärenden blir alltid kommentarer – reglerna påverkar dem aldrig."
       },
       "title": "Så fungerar det"
     },
-    "loading": "Laddar regler för inkommande e-post…",
+    "loading": "Läser in regler för inkommande e-post…",
     "menu": {
       "delete": "Radera",
       "deleting": "Raderar…",
@@ -1053,10 +1053,10 @@
       "noClient": "Ingen kund matchade",
       "outcome": {
         "assignClient": "Ärendet har tilldelats kunden ”{{client}}”",
-        "fallback": "Ingen kund matchade — ärendet har styrts till reservdestinationen",
-        "none": "Regeln gav inget resultat — normal behandling fortsätter",
+        "fallback": "Ingen kund matchade – ärendet har styrts till reservdestinationen",
+        "none": "Regeln gav inget resultat – normal behandling fortsätter",
         "setDestination": "Ärendet har styrts till den valda destinationen",
-        "skip": "E-postmeddelandet hoppades över — inget ärende skapades"
+        "skip": "E-postmeddelandet hoppades över – inget ärende skapades"
       },
       "run": "Kör test",
       "running": "Testar…",
@@ -1065,7 +1065,7 @@
       "to": "Till",
       "contactEmail": "Kontaktens e-postadress",
       "deviceName": "enhetsnamn",
-      "ambiguous": "{{target}} matchar hos {{count}} kunder — tilldelas inte"
+      "ambiguous": "{{target}} matchar hos {{count}} kunder – tilldelas inte"
     }
   },
   "errors": {
@@ -1080,10 +1080,10 @@
       "deleteFailed": "Det gick inte att radera domänen. Försök igen."
     },
     "provider": {
-      "saveFailed": "Det gick inte att spara e-posttjänsteleverantören. Kontrollera inställningarna och försök igen.",
-      "updateFailed": "Det gick inte att uppdatera e-posttjänsteleverantören. Kontrollera inställningarna och försök igen.",
-      "notFound": "E-posttjänsteleverantören hittades inte",
-      "deleteFailed": "Det gick inte att radera e-posttjänsteleverantören"
+      "saveFailed": "Det gick inte att spara e-postanslutningen. Kontrollera inställningarna och försök igen.",
+      "updateFailed": "Det gick inte att uppdatera e-postanslutningen. Kontrollera inställningarna och försök igen.",
+      "notFound": "E-postanslutningen hittades inte",
+      "deleteFailed": "Det gick inte att radera e-postanslutningen"
     },
     "settings": {
       "fetchFailed": "Det gick inte att hämta e-postinställningar",
@@ -1098,7 +1098,7 @@
       "ticketingFromDomainMismatch": "Avsändaradressen för ärendemeddelanden måste använda den konfigurerade domänen för utgående e-post",
       "refreshFailed": "Det gick inte att hämta uppdaterade inställningar",
       "updateFailed": "Det gick inte att uppdatera e-postinställningarna",
-      "mailboxesLoadFailed": "Det gick inte att ladda Microsoft 365-postlådor"
+      "mailboxesLoadFailed": "Det gick inte att läsa in Microsoft 365-postlådor"
     },
     "inboundRules": {
       "notFound": "Regeln för inkommande e-post hittades inte",
@@ -1124,13 +1124,13 @@
     "ticketFieldOptions": {
       "permissionDenied": "Åtkomst nekad: Det går inte att läsa alternativen för ärendefält",
       "loadFailed": {
-        "ticketFieldOptions": "Det gick inte att ladda alternativen för ärendefält. Försök igen.",
-        "boards": "Det gick inte att ladda tavlor. Försök igen.",
-        "statuses": "Det gick inte att ladda statusar. Försök igen.",
-        "priorities": "Det gick inte att ladda prioriteter. Försök igen.",
-        "categories": "Det gick inte att ladda kategorier. Försök igen.",
-        "clients": "Det gick inte att ladda kunder. Försök igen.",
-        "users": "Det gick inte att ladda användare. Försök igen."
+        "ticketFieldOptions": "Det gick inte att läsa in alternativen för ärendefält. Försök igen.",
+        "boards": "Det gick inte att läsa in tavlor. Försök igen.",
+        "statuses": "Det gick inte att läsa in statusar. Försök igen.",
+        "priorities": "Det gick inte att läsa in prioriteter. Försök igen.",
+        "categories": "Det gick inte att läsa in kategorier. Försök igen.",
+        "clients": "Det gick inte att läsa in kunder. Försök igen.",
+        "users": "Det gick inte att läsa in användare. Försök igen."
       }
     }
   }

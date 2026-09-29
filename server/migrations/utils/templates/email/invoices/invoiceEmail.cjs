@@ -228,7 +228,7 @@ COPY.pt = {
 COPY.sv = {
   headerLabel: 'Faktura',
   greeting: 'Hej {{recipient.name}},',
-  intro: 'Din faktura från <strong>{{company.name}}</strong> bifogas.',
+  intro: 'Här kommer din faktura från <strong>{{company.name}}</strong>.',
   invoiceNumberLabel: 'Fakturanummer',
   amountDueLabel: 'Belopp att betala',
   invoiceDateLabel: 'Fakturadatum',
@@ -244,7 +244,7 @@ COPY.sv = {
   footer: 'Drivs av AlgaPSA',
   textHeader: 'Faktura {{invoice.number}} från {{company.name}}',
   textGreeting: 'Hej {{recipient.name}},',
-  textIntro: 'Din faktura från {{company.name}} bifogas.',
+  textIntro: 'Här kommer din faktura från {{company.name}}.',
   textDetailsHeader: 'Fakturauppgifter:',
   headerMeta: 'Från {{company.name}}',
   textNoteLabel: 'Meddelande',

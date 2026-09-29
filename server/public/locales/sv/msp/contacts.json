@@ -24,7 +24,7 @@
     "states": {
       "active": "Aktiv",
       "inactive": "Inaktiv",
-      "loading": "Laddar…",
+      "loading": "Läser in…",
       "na": "Ej tillämpligt",
       "none": "Ingen"
     },
@@ -73,7 +73,7 @@
     },
     "print": {
       "title": "Kontakter",
-      "subtitle": "{{count}} kontakter",
+      "subtitle": "Kontakter: {{count}}",
       "noContacts": "Inga kontakter att skriva ut",
       "emptyValue": "-",
       "columns": {
@@ -114,7 +114,7 @@
       "role": "Roll",
       "inboundTicketDestinationOverride": "Åsidosättning av destination för inkommande ärenden",
       "useClientDestination": "Använd kundens destination",
-      "inboundTicketDestinationHelp": "Om detta anges åsidosätts kundens destination för just denna avsändarkontakt. Prioritetsordning: Kontaktens åsidosättning -> Kundens destination -> Tjänsteleverantörens standardinställning.",
+      "inboundTicketDestinationHelp": "Om detta anges åsidosätts kundens destination för just denna avsändarkontakt. Prioritetsordning: Kontaktens åsidosättning -> Kundens destination -> Organisationens standardinställning.",
       "tags": "Taggar",
       "notes": "Anteckningar",
       "status": "Status",
@@ -127,8 +127,8 @@
       "inactive": "Inaktiv"
     },
     "loading": {
-      "destinations": "Laddar destinationer…",
-      "ticketFilters": "Laddar ärendefilter…"
+      "destinations": "Läser in destinationer…",
+      "ticketFilters": "Läser in ärendefilter…"
     },
     "empty": {
       "notSet": "Inte angivet",
@@ -213,13 +213,13 @@
       "name": "Namn",
       "email": "E-post",
       "message": "Meddelande",
-      "exists": "Finns",
+      "exists": "Finns redan",
       "issues": "Problem"
     },
     "tooltips": {
       "importSuccessful": "Importen lyckades",
       "importFailed": "Importen misslyckades",
-      "validReady": "Giltig – klar att importera",
+      "validReady": "Giltig – klar för import",
       "invalidHasErrors": "Ogiltig – innehåller fel"
     },
     "upload": {
@@ -259,12 +259,12 @@
       "currentItem": "Bearbetar nu: {{item}}"
     },
     "complete": {
-      "title": "Importen är slutförd",
-      "successMessage": "{{count}} kontakter har importerats"
+      "title": "Importen är klar",
+      "successMessage": "Antal importerade kontakter: {{count}}"
     },
     "confirmUpdate": {
       "title": "Uppdatera befintliga kontakter",
-      "message": "{{count}} kontakter finns redan. Vill du uppdatera dem med de nya uppgifterna?"
+      "message": "Kontakter som redan finns: {{count}}. Vill du uppdatera dem med de nya uppgifterna?"
     }
   },
   "contactEmailAddressesEditor": {
@@ -362,7 +362,7 @@
     "boardCount_other": "{{count}} tavlor",
     "title": "Portalåtkomst",
     "description": "Hantering av en kontakts åtkomst till kundportalen, inklusive inbjudningar och rolluppdateringar",
-    "loadingDescription": "Laddar portalinformation…",
+    "loadingDescription": "Läser in portalinformation…",
     "information": "Inbjudningar skickas från din organisations e-postsystem. Svar skickas till e-postadressen för kundens standardplats.",
     "activeAccess": "Portalåtkomst aktiv",
     "noAccess": {
@@ -408,8 +408,8 @@
     "actions": {
       "sendInvitation": "Skicka portalinbjudan",
       "sending": "Skickar…",
-      "refresh": "Ladda om",
-      "refreshing": "Laddar om…",
+      "refresh": "Uppdatera",
+      "refreshing": "Uppdaterar…",
       "resend": "Skicka igen",
       "resending": "Skickar igen…",
       "revoke": "Återkalla"
@@ -418,8 +418,8 @@
       "successTitle": "Lyckades",
       "errorTitle": "Fel",
       "permissionDeniedTitle": "Åtkomst nekad",
-      "loadError": "Det gick inte att ladda portalinformationen",
-      "refreshHistoryError": "Det gick inte att ladda om inbjudningshistoriken",
+      "loadError": "Det gick inte att läsa in portalinformationen",
+      "refreshHistoryError": "Det gick inte att uppdatera inbjudningshistoriken",
       "sendInvitePermissionDenied": "Du har inte behörighet att skicka inbjudningar",
       "sendInviteSuccess": "Portalinbjudan har skickats",
       "sendInviteFailed": "Det gick inte att skicka inbjudan",
@@ -448,7 +448,7 @@
         "contactMissingEmail": "Kontakten saknar e-postadress. Lägg till en e-postadress för kontakten innan du skickar en inbjudan.",
         "contactInvalidEmail": "Kontakten har en ogiltig e-postadress. Uppdatera kontakten med en giltig e-postadress innan du skickar en inbjudan.",
         "userExistsForContact": "Ett användarkonto finns redan för den här kontakten. Använd lösenordsåterställning i stället för att skicka en inbjudan.",
-        "noDefaultClient": "Ingen standardkund har konfigurerats för den här klientorganisationen. Ange en standardkund i Allmänna inställningar.",
+        "noDefaultClient": "Ingen standardkund har konfigurerats för den här organisationen. Ange en standardkund i Allmänna inställningar.",
         "noDefaultLocation": "Standardkunden måste ha en standardplats konfigurerad för att portalinbjudningar ska kunna skickas.",
         "noLocationEmail": "Standardkundens plats måste ha en konfigurerad kontakt-e-postadress.",
         "noBaseUrl": "Bas-URL har inte konfigurerats för portalinbjudningar.",
@@ -498,7 +498,7 @@
     },
     "toasts": {
       "warningTitle": "Varning",
-      "tagsFailed": "{{count}} tagg(ar) kunde inte skapas",
+      "tagsFailed": "Taggar som inte kunde skapas: {{count}}",
       "contactCreated": "Kontakten har skapats",
       "contactAdded": "{{name}} har lagts till."
     },
@@ -543,7 +543,7 @@
       "rolePlaceholder": "T.ex. chef, utvecklare osv.",
       "phoneNumbers": "Telefonnummer:",
       "inboundTicketDestinationOverride": "Åsidosättning av destination för inkommande ärenden:",
-      "inboundTicketDestinationHelp": "Prioritetsordning: Kontaktens åsidosättning -> Kundens destination -> Tjänsteleverantörens standardinställning.",
+      "inboundTicketDestinationHelp": "Prioritetsordning: Kontaktens åsidosättning -> Kundens destination -> Organisationens standardinställning.",
       "useClientDestination": "Använd kundens destination",
       "client": "Kund:",
       "status": "Status:",
@@ -553,7 +553,7 @@
       "emailAddresses": "E-postadresser:"
     },
     "loading": {
-      "destinations": "Laddar destinationer…"
+      "destinations": "Läser in destinationer…"
     },
     "status": {
       "active": "Aktiv",
@@ -601,13 +601,13 @@
       "documents": "Dokument"
     },
     "errors": {
-      "loadTagsSystem": "Ett oväntat fel uppstod när taggarna skulle laddas. Försök igen eller kontakta supporten.",
-      "loadTagsFailed": "Det gick inte att ladda taggarna. Försök ladda om sidan.",
+      "loadTagsSystem": "Ett oväntat fel uppstod när taggarna skulle läsas in. Försök igen eller kontakta supporten.",
+      "loadTagsFailed": "Det gick inte att läsa in taggarna. Försök ladda om sidan.",
       "unexpected": "Ett oväntat fel uppstod. Försök igen.",
       "clientNotFound": "Kunden hittades inte. Kunden kan ha raderats.",
-      "loadClientSystem": "Ett oväntat fel uppstod när kunduppgifterna skulle laddas. Försök igen eller kontakta supporten.",
+      "loadClientSystem": "Ett oväntat fel uppstod när kunduppgifterna skulle läsas in. Försök igen eller kontakta supporten.",
       "clientMissing": "Kunden finns inte längre i systemet.",
-      "loadClientFailed": "Det gick inte att ladda kunduppgifterna. Försök igen.",
+      "loadClientFailed": "Det gick inte att läsa in kunduppgifterna. Försök igen.",
       "updateClientFailedWithMessage": "Det gick inte att uppdatera kunden: {{message}}",
       "updateClientFailed": "Det gick inte att uppdatera kunden. Försök igen."
     }
@@ -635,9 +635,9 @@
       "addNewContact": "Lägg till kontakt"
     },
     "errors": {
-      "loadFailed": "Det gick inte att ladda kontakterna.",
-      "loadingTitle": "Fel vid laddning av kontakter",
-      "retryFailed": "Det gick inte att ladda kontakterna. Försök igen."
+      "loadFailed": "Det gick inte att läsa in kontakterna.",
+      "loadingTitle": "Fel vid inläsning av kontakter",
+      "retryFailed": "Det gick inte att läsa in kontakterna. Försök igen."
     }
   },
   "contactsLayout": {
@@ -645,8 +645,8 @@
     "description": "Ram och sidgränssnitt för kontaktsidor"
   },
   "contactsSkeleton": {
-    "title": "Laddningsläge för kontakter",
-    "description": "Platshållare under laddning av kontaktlistan och detaljvyer"
+    "title": "Inläsningsläge för kontakter",
+    "description": "Platshållare under inläsning av kontaktlistan och detaljvyer"
   },
   "contactAvatarUpload": {
     "title": "Uppladdning av kontaktens profilbild",
@@ -656,10 +656,10 @@
     "title": "Anteckningar",
     "description": "Panel för anteckningar med formaterad text, visning av äldre anteckningar och åtgärder för att spara och försöka igen",
     "legacy": {
-      "initialNote": "Ursprunglig anteckning"
+      "initialNote": "Inledande anteckning"
     },
     "errors": {
-      "loadTitle": "Det gick inte att ladda anteckningarna",
+      "loadTitle": "Det gick inte att läsa in anteckningarna",
       "unknown": "Okänt fel"
     },
     "lastUpdated": "Senast uppdaterad: {{date}}"
@@ -688,14 +688,14 @@
       },
       "loadMore": {
         "label": "Ladda fler ärenden",
-        "loading": "Laddar…"
+        "loading": "Läser in…"
       },
-      "loading": "Laddar…",
+      "loading": "Läser in…",
       "title": "Kontaktens ärenden",
       "toasts": {
         "clientNotFound": "Kunden hittades inte",
-        "loadClientFailed": "Det gick inte att ladda kunduppgifterna",
-        "loadTicketFailed": "Det gick inte att ladda ärendet",
+        "loadClientFailed": "Det gick inte att läsa in kunduppgifterna",
+        "loadTicketFailed": "Det gick inte att läsa in ärendet",
         "openTicketFailed": "Det gick inte att öppna ärendet",
         "userNotAuthenticated": "Användaren är inte autentiserad"
       }
@@ -711,24 +711,24 @@
   "errors": {
     "contact": {
       "notFound": "Kontakten hittades inte",
-      "otherClient": "Åtkomst nekad: Kan inte hantera kontakter för en annan kund",
+      "otherClient": "Åtkomst nekad: Det går inte att hantera kontakter för en annan kund",
       "notAssociatedWithClient": "Kontakten är inte kopplad till en kund",
       "emailExists": "En kontakt med den här e-postadressen finns redan i systemet",
       "fieldRequired": "Fältet {{field}} är obligatoriskt",
       "clientInvalid": "Den valda kunden är inte längre giltig",
       "duplicate": "En kontakt med de här uppgifterna finns redan.",
       "destinationInvalid": "Den valda kunden eller destinationen för inkommande ärenden är inte längre giltig",
-      "invalidDataRefresh": "Ogiltiga kontaktuppgifter har angetts. Ladda om och försök igen.",
+      "invalidDataRefresh": "Ogiltiga kontaktuppgifter har angetts. Ladda om sidan och försök igen.",
       "invalidDataFields": "Ogiltiga kontaktuppgifter har angetts. Kontrollera alla fält och försök igen.",
       "bulkEmailExists": "En eller flera kontakter har redan den här e-postadressen",
       "invalidReference": "Ogiltig referens i uppdateringsdata",
       "visibilityMissingField": "Ett obligatoriskt fält för synlighetsgruppen saknas.",
       "visibilityMissingFieldNamed": "Ett obligatoriskt fält för synlighetsgruppen saknas: {{field}}.",
-      "visibilityReferenceInvalid": "Den valda kontakten, synlighetsgruppen eller tavlan är inte längre giltig. Ladda om och försök igen.",
+      "visibilityReferenceInvalid": "Den valda kontakten, synlighetsgruppen eller tavlan är inte längre giltig. Ladda om sidan och försök igen.",
       "visibilityDuplicate": "En synlighetsgrupp med de här uppgifterna finns redan för den här kunden.",
       "visibilityInvalidData": "Ogiltiga uppgifter för synlighetsgruppen har angetts. Kontrollera gruppuppgifterna och de valda tavlorna.",
       "groupNameRequired": "Gruppnamn krävs",
-      "readPermission": "Åtkomst nekad: Kan inte läsa kontakter"
+      "readPermission": "Åtkomst nekad: Det går inte att läsa kontakter"
     }
   },
   "portal": {

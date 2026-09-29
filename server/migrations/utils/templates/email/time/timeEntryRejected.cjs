@@ -156,7 +156,7 @@ COPY.sv = {
   rejectedBy: 'Avvisad av',
   reason: 'Orsak',
   viewButton: 'Visa tidpost',
-  footer: 'Drivs av AlgaPSA &middot; Håller team samordnade',
+  footer: 'Drivs av AlgaPSA &middot; För samspelta team',
   textHeader: 'Tidpost avvisad',
   textIntro: 'Din tidpost har avvisats:',
   textView: 'Visa tidpost på',

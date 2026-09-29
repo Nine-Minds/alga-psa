@@ -62,8 +62,8 @@
       "approvedBy": "Godkänd av:",
       "approvedAt": "Godkänd den:",
       "opportunity": "Affärsmöjlighet",
-      "assignedTo": "Tilldelat till",
-      "dueDate": "Ska vara klart"
+      "assignedTo": "Tilldelad till",
+      "dueDate": "Klart senast"
     },
     "messages": {
       "notAvailable": "Ej tillgängligt",
@@ -97,7 +97,7 @@
       "allClosed": "Alla stängda"
     },
     "messages": {
-      "accessDenied": "Åtkomst nekad: Du har inte behörighet att visa översiktspanelen för resursplanering.",
+      "accessDenied": "Åtkomst nekad: Du har inte behörighet att visa översikten för resursplanering.",
       "unknownError": "Ett okänt fel uppstod.",
       "permissionDeniedSchedule": "Du har inte behörighet att schemalägga arbete för den här teknikern.",
       "couldNotLoadWorkItemDetails": "Det gick inte att läsa in arbetspostens detaljer."
@@ -105,8 +105,8 @@
     "errors": {
       "searchWorkItems": "Det gick inte att söka efter arbetsposter",
       "loadStatusFilterOptions": "Det gick inte att läsa in statusfiltrets alternativ.",
-      "refreshScheduleEntries": "Det gick inte att ladda om schemaposterna",
-      "refreshData": "Det gick inte att ladda om data",
+      "refreshScheduleEntries": "Det gick inte att uppdatera schemaposterna",
+      "refreshData": "Det gick inte att uppdatera data",
       "loadPermissions": "Det gick inte att läsa in behörigheterna.",
       "fetchScheduleEntries": "Det gick inte att hämta schemaposterna",
       "fetchData": "Det gick inte att hämta data",
@@ -147,8 +147,8 @@
     }
   },
   "badges": {
-    "needsDispatch": "Behöver resursplanering",
-    "needsDispatchFor": "Behöver resursplanering för: {{agents}}"
+    "needsDispatch": "Behöver schemaläggas",
+    "needsDispatchFor": "Behöver schemaläggas för: {{agents}}"
   },
   "time": {
     "suffixes": {

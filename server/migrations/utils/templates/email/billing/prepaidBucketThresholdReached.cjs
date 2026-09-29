@@ -166,7 +166,7 @@ COPY.sv = {
   period: 'Förbrukningsperiod',
   closingNote: 'Kontrollera timpotten så att förbrukningen inte överskrider den.',
   viewButton: 'Visa kund',
-  footer: 'Drivs av AlgaPSA &middot; Håller team samordnade',
+  footer: 'Drivs av AlgaPSA &middot; För samspelta team',
   textHeader: 'Tröskelvärde för förbetald timpott uppnått',
   textIntro: 'En förbetald timpott för {{client.name}} har nått {{alert.usedPercent}}\u00a0% av sin kapacitet.',
   textClosingNote: 'Kontrollera timpotten så att förbrukningen inte överskrider den.',

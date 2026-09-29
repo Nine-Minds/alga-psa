@@ -147,7 +147,7 @@ COPY.sv = {
   task: 'Uppgift',
   approvedBy: 'Godkänd av',
   viewButton: 'Visa tidpost',
-  footer: 'Drivs av AlgaPSA &middot; Håller team samordnade',
+  footer: 'Drivs av AlgaPSA &middot; För samspelta team',
   textHeader: 'Tidpost godkänd',
   textIntro: 'Din tidpost har godkänts:',
   textView: 'Visa tidpost på',

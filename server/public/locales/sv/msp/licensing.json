@@ -5,7 +5,7 @@
   },
   "purchaseForm": {
     "title": "Licensköp",
-    "enterpriseOnlyHosted": "Licensköp är tillgängligt i Pro för installationer med extern drift.",
+    "enterpriseOnlyHosted": "Licensköp är tillgängligt i Pro för molnversionen (driftas av AlgaPSA).",
     "communityEditionUnlimited": "Community Edition med egen drift har ett obegränsat antal användare utan extra kostnad."
   },
   "purchasePage": {
@@ -16,7 +16,7 @@
     "metaTitle": "Köpet har genomförts",
     "scheduledTitle": "Ändringen har schemalagts",
     "updatedTitle": "Uppdateringen har slutförts",
-    "scheduledDescription": "Din licensändring har schemalagts och träder i kraft vid slutet av din nuvarande debiteringsperiod.",
+    "scheduledDescription": "Din licensändring har schemalagts och träder i kraft vid slutet av din nuvarande faktureringsperiod.",
     "updatedDescription": "Din licensuppdatering har genomförts.",
     "loadingSubscriptionDetails": "Läser in abonnemangsuppgifter…",
     "updatingLicenseCount": "Uppdaterar antalet licenser…",
@@ -26,7 +26,7 @@
     "changeEffective": "Ändringen träder i kraft",
     "whatsNext": "Vad händer nu?",
     "scheduledSteps": {
-      "currentLicenses": "Dina nuvarande licenser förblir aktiva till slutet av debiteringsperioden",
+      "currentLicenses": "Dina nuvarande licenser förblir aktiva till slutet av faktureringsperioden",
       "autoUpdate": "Antalet licenser uppdateras automatiskt på det schemalagda datumet",
       "emailConfirmation": "Du får en bekräftelse via e-post när ändringen träder i kraft"
     },
@@ -57,7 +57,7 @@
     "confirmation": {
       "title": "Bekräfta licensuppdatering",
       "increaseDescription": "Granska uppgifterna om ökningen av antalet licenser innan du bekräftar.",
-      "decreaseDescription": "Granska uppgifterna om minskningen av antalet licenser. Ändringarna träder i kraft vid slutet av din debiteringsperiod.",
+      "decreaseDescription": "Granska uppgifterna om minskningen av antalet licenser. Ändringarna träder i kraft vid slutet av din faktureringsperiod.",
       "currentMonthlyCost": "Nuvarande månadskostnad",
       "currentLicenseCount": "Nuvarande antal licenser",
       "newMonthlyCost": "Ny månadskostnad",
@@ -68,9 +68,9 @@
       "changePaymentMethod": "Ändra",
       "immediateChargeTitle": "Omedelbar debitering",
       "immediateChargeDescription": "Du debiteras nu det proportionellt beräknade beloppet {{amountDue}}.",
-      "prorationDescription": "Proportionell beräkning: {{amount}} för resten av den här debiteringsperioden",
+      "prorationDescription": "Proportionell beräkning: {{amount}} för resten av den här faktureringsperioden",
       "scheduledTitle": "Schemalagt till periodens slut",
-      "scheduledDescription": "Minskningen av antalet licenser träder i kraft {{date}}, vid slutet av din nuvarande debiteringsperiod.",
+      "scheduledDescription": "Minskningen av antalet licenser träder i kraft {{date}}, vid slutet av din nuvarande faktureringsperiod.",
       "scheduledKeepAccess": "Du behåller tillgången till alla {{count}} licenser fram till dess.",
       "cancel": "Avbryt",
       "confirmPayNow": "Bekräfta och betala nu",
@@ -111,7 +111,7 @@
   },
   "removalModal": {
     "title": "Ta bort licenser",
-    "description": "Ta bort licenser från ditt konto. Ändringarna träder i kraft vid slutet av din nuvarande debiteringsperiod.",
+    "description": "Ta bort licenser från ditt konto. Ändringarna träder i kraft vid slutet av din nuvarande faktureringsperiod.",
     "stats": {
       "currentLicenses": "Nuvarande licenser",
       "activeUsers": "Aktiva användare"
@@ -132,7 +132,7 @@
     },
     "scheduled": {
       "title": "Borttagningen schemaläggs",
-      "description": "Antalet licenser minskar från {{current}} till {{next}} vid slutet av din nuvarande debiteringsperiod.",
+      "description": "Antalet licenser minskar från {{current}} till {{next}} vid slutet av din nuvarande faktureringsperiod.",
       "creditDescription": "Du får en kreditering på nästa faktura för de oanvända licenserna."
     },
     "confirmation": {
@@ -142,7 +142,7 @@
       "newMonthlyCost": "Ny månadskostnad",
       "newLicenseCount": "Nytt antal licenser",
       "monthlySavings": "Besparing per månad",
-      "creditNotice": "Ändringarna träder i kraft vid slutet av din nuvarande debiteringsperiod. Du får en proportionellt beräknad kreditering på nästa faktura."
+      "creditNotice": "Ändringarna träder i kraft vid slutet av din nuvarande faktureringsperiod. Du får en proportionellt beräknad kreditering på nästa faktura."
     },
     "errors": {
       "deactivateUsersFirst": "Inaktivera användare först",
@@ -202,26 +202,26 @@
     }
   },
   "aiBalance": {
-    "title": "AI-tillgodohavande",
-    "subtitle": "Förbetalda tillgodohavanden finansierar AI-funktionerna i den här installationen. Köp görs i Nine Minds butik.",
-    "refresh": "Ladda om",
-    "unreachable": "Det gick inte att nå AI-tjänsten för att läsa in ditt tillgodohavande. Försök igen om en stund.",
-    "blockedPendingConsent": "AI är blockerat tills samtycke till datadelning lämnas ovan. Tillgodohavanden förbrukas inte när AI är avstängt.",
+    "title": "AI-krediter",
+    "subtitle": "Förbetalda krediter finansierar AI-funktionerna i den här installationen. Köp görs i Nine Minds butik.",
+    "refresh": "Uppdatera",
+    "unreachable": "Det gick inte att nå AI-tjänsten för att läsa in ditt kreditsaldo. Försök igen om en stund.",
+    "blockedPendingConsent": "AI är blockerat tills samtycke till datadelning lämnas ovan. Krediter förbrukas inte när AI är avstängt.",
     "upsell": {
-      "heading": "Prenumerera på AI-tillägget",
-      "body": "Det finns inget aktivt AI-abonnemang för den här installationen. Teckna ett abonnemang i Nine Minds butik för att få tillgodohavanden varje månad. Betalningar och påfyllningar hanteras i butiken.",
+      "heading": "Teckna abonnemang på AI-tillägget",
+      "body": "Det finns inget aktivt AI-abonnemang för den här installationen. Teckna ett abonnemang i Nine Minds butik för att få en tilldelning av AI-krediter varje månad. Betalningar och påfyllningar hanteras i butiken.",
       "subscribe": "Teckna abonnemang i butiken"
     },
-    "grace": "Tillgodohavandet är slut. AI fortsätter fungera med en liten reserv på {{grace}} tillgodohavanden innan det stoppas helt. Fyll på för att undvika avbrott.",
-    "low": "Tillgodohavandet börjar ta slut. Fyll på i butiken för att undvika avbrott.",
+    "grace": "Krediterna är slut. AI fortsätter att fungera med en liten reservbuffert på {{grace}} krediter innan det stoppas helt. Fyll på för att undvika avbrott.",
+    "low": "Kreditsaldot börjar ta slut. Fyll på i butiken för att undvika avbrott.",
     "total": "Totalt saldo",
-    "creditsUnit": "tillgodohavanden",
+    "creditsUnit": "krediter",
     "included": "Ingår (månadsvis)",
     "resetsMonthly": "återställs varje period",
     "topup": "Påfyllning (sparas)",
     "carriesOver": "förs över till nästa period",
     "manage": {
-      "heading": "Köp tillgodohavanden eller hantera abonnemanget",
+      "heading": "Köp krediter eller hantera abonnemanget",
       "body": "Påfyllningar, automatisk påfyllning och abonnemangsändringar hanteras i Nine Minds butik.",
       "openStore": "Öppna butiken"
     },
@@ -229,7 +229,7 @@
       "none": "Inget abonnemang",
       "active": "Aktivt",
       "trialing": "Provperiod",
-      "past_due": "Förfallet",
+      "past_due": "Betalning förfallen",
       "canceled": "Uppsagt",
       "unpaid": "Obetalt"
     }
@@ -274,7 +274,7 @@
       "licenseWrongTenant": {
         "eyebrow": "Licensen kräver åtgärd",
         "title": "Den här licensen gäller inte här",
-        "description": "Den sparade licensen utfärdades för en annan klientorganisation. Aktivera rätt licens för att få tillgång till betalfunktioner.",
+        "description": "Den sparade licensen utfärdades för en annan organisation. Aktivera rätt licens för att få tillgång till betalfunktioner.",
         "badge": "Fel installation"
       },
       "trialExpired": {
@@ -292,7 +292,7 @@
     },
     "trialCta": {
       "title": "Prova Pro i 15 dagar",
-      "description": "Få tillgång till automatisering, avancerade integreringar och alla Pro-funktioner. Inget kreditkort krävs. Installationen återgår till Essentials när provperioden löper ut."
+      "description": "Få tillgång till automatisering, avancerade integrationer och alla Pro-funktioner. Inget kreditkort krävs. Installationen återgår till Essentials när provperioden löper ut."
     },
     "details": {
       "currentTier": "Nuvarande nivå",
@@ -306,8 +306,8 @@
       "refreshHelp": "Tillämpar omedelbart de ändringar av användarlicenser eller abonnemang som gjorts i portalen."
     },
     "portal": {
-      "manageTitle": "Användarlicenser, debitering och aktiveringskoder",
-      "manageDescription": "Lägg till eller ta bort användarlicenser, uppdatera debiteringsuppgifter eller utfärda en ny aktiveringskod i licensportalen. Logga in med din registrerade e-postadress. Inget lösenord behövs.",
+      "manageTitle": "Användarlicenser, fakturering och aktiveringskoder",
+      "manageDescription": "Lägg till eller ta bort användarlicenser, uppdatera faktureringsuppgifter eller utfärda en ny aktiveringskod i licensportalen. Logga in med din registrerade e-postadress. Inget lösenord behövs.",
       "buyTitle": "Redo att köpa AlgaPSA Pro?",
       "buyDescription": "Köp i licensportalen: logga in med din registrerade e-postadress och välj antal användarlicenser. Du får då en aktiveringskod för engångsbruk att ange nedan. Din befintliga installation uppgraderas."
     },

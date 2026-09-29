@@ -257,7 +257,7 @@ COPY.sv = {
   resolutionLabel: 'Lösning',
   resolutionVar: '{{{ticket.resolution}}}',
   viewButton: 'Visa ärende',
-  footer: 'Drivs av AlgaPSA &middot; Håller team samordnade',
+  footer: 'Drivs av AlgaPSA &middot; För samspelta team',
   textHeader: 'Ärende stängt',
   textClosedBy: 'Stängt av',
   textStatus: 'Status',

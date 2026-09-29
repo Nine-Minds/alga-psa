@@ -140,7 +140,7 @@ COPY.sv = {
   progress: 'Förlopp',
   updatedBy: 'Uppdaterad av',
   viewButton: 'Visa uppgift',
-  footer: 'Drivs av AlgaPSA &middot; Håller team samordnade',
+  footer: 'Drivs av AlgaPSA &middot; För samspelta team',
   textHeader: 'Uppgift uppdaterad',
   textIntro: 'En uppgift har uppdaterats i projektet {{project.name}}:',
   textView: 'Visa uppgift på',

@@ -124,7 +124,7 @@ const COPY = {
 };
 
 SUBJECTS.pt = 'Crédito pré-pago baixo: {{client.name}}';
-SUBJECTS.sv = 'Förbetalt tillgodohavande börjar ta slut: {{client.name}}';
+SUBJECTS.sv = 'Förbetalt saldo börjar ta slut: {{client.name}}';
 COPY.pt = {
   headerLabel: 'Crédito pré-pago baixo',
   intro: 'O crédito pré-pago de <strong>{{client.name}}</strong> caiu abaixo do limite configurado.',
@@ -140,16 +140,16 @@ COPY.pt = {
   textView: 'Ver cliente em',
 };
 COPY.sv = {
-  headerLabel: 'Lågt förbetalt tillgodohavande',
-  intro: 'Det förbetalda tillgodohavandet för <strong>{{client.name}}</strong> har sjunkit under det inställda tröskelvärdet.',
-  available: 'Tillgängligt tillgodohavande',
+  headerLabel: 'Lågt förbetalt saldo',
+  intro: 'Det förbetalda saldot för <strong>{{client.name}}</strong> har sjunkit under det inställda tröskelvärdet.',
+  available: 'Tillgängligt saldo',
   threshold: 'Inställt tröskelvärde',
   currency: 'Valuta',
   closingNote: 'Kontrollera saldot så att arbetet inte avbryts.',
   viewButton: 'Visa kund',
-  footer: 'Drivs av AlgaPSA &middot; Håller team samordnade',
-  textHeader: 'Lågt förbetalt tillgodohavande',
-  textIntro: 'Det förbetalda tillgodohavandet för {{client.name}} har sjunkit under det inställda tröskelvärdet.',
+  footer: 'Drivs av AlgaPSA &middot; För samspelta team',
+  textHeader: 'Lågt förbetalt saldo',
+  textIntro: 'Det förbetalda saldot för {{client.name}} har sjunkit under det inställda tröskelvärdet.',
   textClosingNote: 'Kontrollera saldot så att arbetet inte avbryts.',
   textView: 'Visa kund på',
 };

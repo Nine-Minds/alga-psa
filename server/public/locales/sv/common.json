@@ -31,29 +31,29 @@
     "expiringForClient_other": "{{count}} tillgodohavanden för {{clientName}} går snart ut"
   },
   "staleAction": {
-    "message": "Sidan är inaktuell. Ladda om för att återställa liveuppdateringar och åtgärder."
+    "message": "Sidan är inaktuell. Ladda om sidan för att återställa liveuppdateringar och åtgärder."
   },
   "licenseBanner": {
     "trialExpiresIn_one": "Provperioden för Pro går ut om {{count}} dag. Ange en licensnyckel för att behålla Pro-funktionerna.",
     "trialExpiresIn_other": "Provperioden för Pro går ut om {{count}} dagar. Ange en licensnyckel för att behålla Pro-funktionerna.",
-    "trialDaysRemaining_one": "Provperioden för Pro är aktiv — {{count}} dag kvar.",
-    "trialDaysRemaining_other": "Provperioden för Pro är aktiv — {{count}} dagar kvar.",
+    "trialDaysRemaining_one": "Provperioden för Pro är aktiv – {{count}} dag kvar.",
+    "trialDaysRemaining_other": "Provperioden för Pro är aktiv – {{count}} dagar kvar.",
     "trialAvailable": "Essentials-funktionerna används. Starta en kostnadsfri 15-dagars provperiod av Pro för att få tillgång till alla funktioner.",
     "trialExpired": "Provperioden för Pro har gått ut. Installationen använder nu Essentials-funktionerna.",
     "licenseExpiresIn_one": "Licensen går ut om {{count}} dag. Förnya den för att undvika avbrott i tjänsten.",
     "licenseExpiresIn_other": "Licensen går ut om {{count}} dagar. Förnya den för att undvika avbrott i tjänsten.",
     "licenseExpired": "Licensen har gått ut. Installationen använder nu Essentials-funktionerna.",
-    "licenseWrongTenant": "Licensen utfärdades för en annan enhet och är inte giltig här. Installationen använder Essentials-funktionerna.",
+    "licenseWrongTenant": "Licensen utfärdades för en annan installation och är inte giltig här. Installationen använder Essentials-funktionerna.",
     "manageLicense": "Hantera licens",
     "ariaLabel": "Licensstatus",
     "dismiss": "Stäng"
   },
   "nav": {
-    "dashboard": "Översiktspanel",
+    "dashboard": "Översikt",
     "tickets": "Ärenden",
     "clients": "Kunder",
     "projects": "Projekt",
-    "billing": "Debitering",
+    "billing": "Fakturering",
     "reports": "Rapporter",
     "settings": "Inställningar",
     "profile": "Profil",
@@ -77,7 +77,7 @@
     "import": "Importera",
     "download": "Ladda ner",
     "upload": "Ladda upp",
-    "refresh": "Ladda om",
+    "refresh": "Uppdatera",
     "close": "Stäng",
     "confirm": "Bekräfta",
     "add": "Lägg till",
@@ -112,13 +112,13 @@
     "toDate": "Till datum",
     "noResults": "Inga resultat hittades",
     "searchPlaceholder": "Sök…",
-    "showingOfTotal": "Visar {{shown}} av {{total}} — skriv för att begränsa urvalet"
+    "showingOfTotal": "Visar {{shown}} av {{total}} – skriv för att begränsa urvalet"
   },
   "pickers": {
     "addNewClient": "Lägg till ny kund",
     "addNewContact": "Lägg till ny kontakt",
     "loadingUsers": "Läser in användare…",
-    "errorLoadingUsers": "Fel vid inläsning av användare",
+    "errorLoadingUsers": "Det gick inte att läsa in användare",
     "searchUsers": "Sök användare…",
     "unassigned": "Ej tilldelad",
     "noUsersAvailable": "Inga användare tillgängliga",
@@ -135,9 +135,9 @@
     "newNamePlaceholder": "Namn på ny tjänstetyp…",
     "addNew": "Lägg till ny tjänstetyp",
     "deleteTitle": "Radera tjänstetyp",
-    "deleteConfirm": "Vill du radera den här tjänstetypen? Det går inte att ångra.",
+    "deleteConfirm": "Vill du radera den här tjänstetypen? Åtgärden går inte att ångra.",
     "errors": {
-      "delete": "Det går inte att radera den här tjänstetypen. Den kan användas av befintliga tjänster.",
+      "delete": "Det gick inte att radera den här tjänstetypen. Den kan användas av befintliga tjänster.",
       "create": "Det gick inte att skapa tjänstetypen. Försök igen."
     }
   },
@@ -190,7 +190,7 @@
       "clientPortalOnly": "Åtkomst nekad: Åtgärder i kundportalen är endast tillgängliga för kundanvändare",
       "insufficientPermissions": "Otillräckliga behörigheter",
       "userIdNotFound": "Användar-ID saknas i sessionen",
-      "tenantNotFound": "Klientorganisationen saknas i sessionen. Logga ut och logga in igen.",
+      "tenantNotFound": "Organisationen saknas i sessionen. Logga ut och logga in igen.",
       "userNotFound": "Användaren hittades inte",
       "contactNotFound": "Användaren är inte kopplad till en kontakt",
       "clientNotFound": "Kontakten är inte kopplad till en kund"
@@ -198,7 +198,7 @@
     "password": {
       "currentIncorrect": "Det nuvarande lösenordet är felaktigt",
       "changeFailed": "Det gick inte att ändra lösenordet",
-      "differentTenant": "Behörighet saknas: Det går inte att ändra en användare från en annan klientorganisation",
+      "differentTenant": "Behörighet saknas: Det går inte att ändra en användare från en annan organisation",
       "internalStaffRequired": "Behörighet saknas: Rättigheter för intern personal krävs",
       "adminRequired": "Behörighet saknas: Administratörsrättigheter krävs",
       "changeUserFailed": "Det gick inte att ändra användarens lösenord"
@@ -217,10 +217,10 @@
       }
     },
     "tags": {
-      "notFound": "Taggen hittades inte. Den kan ha raderats. Ladda om och försök igen.",
-      "invalidValue": "Ett av de valda taggvärdena är ogiltigt. Ladda om och försök igen.",
+      "notFound": "Taggen hittades inte. Den kan ha raderats. Ladda om sidan och försök igen.",
+      "invalidValue": "Ett av de valda taggvärdena är ogiltigt. Ladda om sidan och försök igen.",
       "textTooLongShort": "Taggtexten är för lång.",
-      "referenceMissing": "Den valda taggen eller den taggade posten finns inte längre. Ladda om och försök igen.",
+      "referenceMissing": "Den valda taggen eller den taggade posten finns inte längre. Ladda om sidan och försök igen.",
       "alreadyApplied": "Taggen har redan lagts till på den här posten.",
       "duplicate": "En tagg med de uppgifterna finns redan.",
       "notAllowed": "Ett av taggvärdena är inte tillåtet. Kontrollera taggen och försök igen.",
@@ -271,7 +271,7 @@
       "signInWithMicrosoft": "Logga in med Microsoft",
       "signInWithKeycloak": "Logga in med Keycloak",
       "redirecting": "Omdirigerar…",
-      "startFailed": "Det gick inte att starta SSO-inloggningen. Kontrollera tjänsteleverantörens konfiguration och försök igen."
+      "startFailed": "Det gick inte att starta SSO-inloggningen. Kontrollera konfigurationen av identitetsleverantören och försök igen."
     },
     "verify": {
       "title": "E-postverifiering är inte längre tillgänglig",
@@ -357,7 +357,7 @@
       "notSetWithSource": "Inte angivet (använder {{source}}: {{languageName}} - {{locale}})",
       "source": {
         "client": "kundens standardinställning",
-        "tenant": "klientorganisationens standardinställning",
+        "tenant": "organisationens standardinställning",
         "system": "systemets standardinställning"
       }
     },
@@ -405,7 +405,7 @@
     "locations": {
       "sectionTitle": "Kundplatser",
       "manageButton": "Hantera platser",
-      "dialogTitle": "Hantera platser - {{client}}",
+      "dialogTitle": "Hantera platser – {{client}}",
       "managerLabel": "Hantering av kundplatser",
       "listTitle": "Platser",
       "buttons": {
@@ -503,7 +503,7 @@
         "structural": "Ange ett giltigt kundnamn",
         "required": "Kundnamn krävs",
         "emojiOnly": "Namnet består enbart av emojier.",
-        "tooShort": "Namnet består av ett enda tecken — stämmer det?",
+        "tooShort": "Namnet består av ett enda tecken – stämmer det?",
         "abbreviationOnly": "Det här är bara en företagsförkortning, inget namn.",
         "repeatedCharacters": "Namnet upprepar samma tecken flera gånger.",
         "looksLikeUrl": "Det här ser ut som en webbadress snarare än ett namn.",
@@ -625,7 +625,7 @@
     "itemsPerPageOption": "{{count}} poster/sida",
     "itemsPerPagePlaceholder": "Poster per sida",
     "reflectionLabel": "Sidnavigering",
-    "range": "{{from}} - {{to}} av {{total}} {{itemLabel}}",
+    "range": "{{from}}–{{to}} av {{total}} {{itemLabel}}",
     "ariaLabel": "Sidnavigering",
     "totalItems": "Totalt {{count}} {{itemLabel}}",
     "totalRecordsInline": "(totalt {{count}} poster)",
@@ -653,9 +653,9 @@
     "deleteVideoTitle": "Radera video permanent",
     "deleteVideoMessage": "Vill du radera videon ”{{name}}” permanent från systemet?\\n\\nFilen tas bort helt och kommer inte längre att vara tillgänglig någonstans. Åtgärden går inte att ångra.",
     "removeTitle": "Koppla bort dokument",
-    "removeMessage": "Vill du koppla bort ”{{name}}” från den här posten?\\n\\nEndast länken tas bort — dokumentet finns kvar i dokumentbiblioteket och kan bifogas till andra poster.",
+    "removeMessage": "Vill du koppla bort ”{{name}}” från den här posten?\\n\\nEndast länken tas bort – dokumentet finns kvar i dokumentbiblioteket och kan bifogas till andra poster.",
     "removeVideoTitle": "Koppla bort video",
-    "removeVideoMessage": "Vill du koppla bort videon ”{{name}}” från den här posten?\\n\\nEndast länken tas bort — filen finns kvar i dokumentbiblioteket och kan bifogas till andra poster.",
+    "removeVideoMessage": "Vill du koppla bort videon ”{{name}}” från den här posten?\\n\\nEndast länken tas bort – filen finns kvar i dokumentbiblioteket och kan bifogas till andra poster.",
     "downloadFile": "Ladda ner fil",
     "videoUnsupported": "Videoformatet ({{mimeType}}) stöds inte för uppspelning i webbläsaren",
     "videoTagUnsupported": "Din webbläsare stöder inte videotaggen.",
@@ -878,7 +878,7 @@
       "cascadeNo": "Nej, endast mappen"
     },
     "share": "Dela",
-    "videoPlaybackFailed": "Det går inte att spela upp videon i webbläsaren",
+    "videoPlaybackFailed": "Det gick inte att spela upp videon i webbläsaren",
     "videoPlaybackIssue": "Har du problem med att spela upp videon?",
     "downloadVideo": "Ladda ner video",
     "downloadAsPdf": "Ladda ner som PDF",
@@ -1146,7 +1146,7 @@
       "loadingRequests": "Läser in förfrågningar…"
     },
     "card": {
-      "requesterName": "Beställare",
+      "requesterName": "Begärd av",
       "companyName": "Företag",
       "service": "Tjänst",
       "requestedDateTime": "Önskat datum och klockslag",
@@ -1175,7 +1175,7 @@
     },
     "detailsModal": {
       "title": "Detaljer om förfrågan",
-      "requesterInfo": "Uppgifter om beställaren",
+      "requesterInfo": "Uppgifter om den som bokat",
       "requestInfo": "Information om förfrågan",
       "status": "Status",
       "createdAt": "Förfrågan skapad",
@@ -1204,7 +1204,7 @@
     "inactive": "Inaktiv",
     "loading": "Läser in…",
     "uploading": "Laddar upp…",
-    "error": "Ett fel inträffade",
+    "error": "Ett fel uppstod",
     "save": "Spara",
     "cancel": "Avbryt",
     "delete": "Radera",
@@ -1217,7 +1217,7 @@
     "filter": "Filtrera",
     "resetFilters": "Återställ",
     "sort": "Sortera",
-    "refresh": "Ladda om",
+    "refresh": "Uppdatera",
     "export": "Exportera",
     "import": "Importera",
     "download": "Ladda ner",
@@ -1357,14 +1357,14 @@
     "errors": {
       "somethingWentWrong": "Något gick fel",
       "genericError": "Ett fel inträffade. Försök igen senare.",
-      "notFoundTitle": "404 - Sidan hittades inte",
+      "notFoundTitle": "404 – Sidan hittades inte",
       "notFoundDescription": "Sidan du söker finns inte.",
       "userNotAuthenticated": "Användaren är inte autentiserad",
       "userNotAuthenticatedError": "Fel: Användaren är inte autentiserad",
       "missingRunId": "Körnings-ID saknas.",
       "teamLeadAccessRequired": "Teamledarbehörighet krävs",
       "teamsTabUnavailable": "Teams-fliken är inte tillgänglig",
-      "teamsFeatureName": "Microsoft Teams-integrering",
+      "teamsFeatureName": "Microsoft Teams-integration",
       "teamsEnterprisePitch": "Få tillgång till ärendeinformation och teknikernas arbetsflöden i Microsoft Teams.",
       "teamsSignInUnavailable": "Teams-inloggning är inte tillgänglig",
       "teamsSetupNotFinished": "Teams-konfigurationen är inte slutförd",
@@ -1373,11 +1373,11 @@
       "assetNotFound": "Tillgången hittades inte",
       "contactNotFound": "Kontakten hittades inte",
       "templateNotFound": "Mallen hittades inte",
-      "contactLoadError": "Fel vid inläsning av kontakten",
+      "contactLoadError": "Det gick inte att läsa in kontakten",
       "unknownError": "Ett okänt fel inträffade",
       "templateNotFoundDetail": "Mallen du söker finns inte eller har raderats.",
       "teamLeadAccessDetail": "Du måste vara teamledare för att godkänna dina teammedlemmars tidrapporter.",
-      "teamsTabEnableHint": "Be en PSA-administratör att aktivera Teams-integreringen för den här klientorganisationen innan du öppnar fliken igen."
+      "teamsTabEnableHint": "Be en PSA-administratör att aktivera Teams-integrationen för den här organisationen innan du öppnar fliken igen."
     },
     "actions": {
       "tryAgain": "Försök igen",
@@ -1385,8 +1385,8 @@
       "selectDateRange": "Välj datumintervall"
     },
     "loading": {
-      "billingDashboard": "Läser in översiktspanelen för debitering…",
-      "onboarding": "Läser in introduktion…",
+      "billingDashboard": "Läser in faktureringsöversikten…",
+      "onboarding": "Läser in onboarding…",
       "extension": "Läser in tillägget…",
       "extensionSettings": "Läser in tilläggsinställningar…",
       "ssoSettings": "Läser in SSO-inställningar…"
@@ -1400,9 +1400,9 @@
     },
     "teamsTab": {
       "signedInAs": "Inloggad som {{name}}",
-      "openInFullPsa": "Öppna i hela PSA-systemet",
+      "openInFullPsa": "Öppna i AlgaPSA",
       "iframeTitle": "{{destination}} i AlgaPSA",
-      "fullPsaHint": "Välj ”Öppna i hela PSA-systemet” för mer information än vad som kan visas på ett Teams-kort.",
+      "fullPsaHint": "Välj ”Öppna i AlgaPSA” för mer information än vad som kan visas på ett Teams-kort.",
       "fallback": {
         "label": "Den begärda posten är inte tillgänglig:",
         "showingInstead": "Visar din arbetslista i Teams i stället för {{destination}}."
@@ -1518,12 +1518,12 @@
     "upgrade": {
       "title": "Tillgängligt i AlgaPSA",
       "description": "Det här området ingår i den fullständiga AlgaPSA-produkten. AlgaDesk innehåller endast funktioner inriktade på supportarbete.",
-      "cta": "Tillbaka till översiktspanelen i AlgaDesk"
+      "cta": "Tillbaka till översikten i AlgaDesk"
     },
     "notFound": {
       "title": "Sidan är inte tillgänglig",
       "description": "Sidan är inte tillgänglig i den produkt du använder.",
-      "cta": "Gå till översiktspanelen"
+      "cta": "Gå till översikten"
     }
   },
   "notifications": {
@@ -1605,7 +1605,7 @@
     "teamsCall": "Ring i Microsoft Teams",
     "threecxCall": "Ring via 3CX",
     "threecxDialing": "Ringer från din 3CX-anknytning",
-    "threecxFailed": "Telefonväxeln kunde inte ringa samtalet"
+    "threecxFailed": "Det gick inte att ringa samtalet via telefonväxeln"
   },
   "editor": {
     "attachFiles": "Bifoga filer",
@@ -1692,5 +1692,41 @@
     "disabledByAdmin": "Inaktiverat av administratören",
     "mixed": "Delvis aktiverat",
     "empty": "Inga kategorier för e-postaviseringar är tillgängliga."
+  },
+  "unitOfMeasure": {
+    "labels": {
+      "each": "Styck",
+      "piece": "Artikel",
+      "box": "Kartong",
+      "seat": "Användarlicens",
+      "license": "Licens",
+      "device": "Enhet",
+      "user": "Användare",
+      "kit": "Sats",
+      "hour": "Timme",
+      "day": "Dag",
+      "week": "Vecka",
+      "month": "Månad",
+      "year": "År",
+      "minute": "Minut",
+      "gigabyte": "Gigabyte",
+      "terabyte": "Terabyte",
+      "liter": "Liter",
+      "kilogram": "Kilogram",
+      "meter": "Meter"
+    },
+    "groups": {
+      "time": "Tid",
+      "count": "Antal",
+      "volume": "Volym",
+      "mass": "Vikt",
+      "length": "Längd",
+      "other": "Övrigt",
+      "custom": "Anpassad"
+    },
+    "customOption": "Anpassad…",
+    "customPlaceholder": "Namnge enheten",
+    "register": "Lägg till",
+    "selectPlaceholder": "Välj en måttenhet"
   }
 }

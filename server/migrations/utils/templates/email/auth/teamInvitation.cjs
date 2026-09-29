@@ -321,10 +321,10 @@ const COPY = {
     footerCopyright: '© {{currentYear}} {{tenantName}}. Todos os direitos reservados.',
   },
   sv: {
-    subject: 'Du är inbjuden till {{tenantName}} på AlgaPSA',
+    subject: 'Du har bjudits in till {{tenantName}} på AlgaPSA',
     title: 'Teaminbjudan',
     headerTitle: 'Välkommen till teamet',
-    headerSubtitle: 'Du är inbjuden att gå med i {{tenantName}}',
+    headerSubtitle: 'Du har bjudits in att gå med i {{tenantName}}',
     greeting: 'Hej {{teamMemberName}},',
     intro: '{{invitedByName}} har bjudit in dig till <strong>{{tenantName}}</strong> som <strong>{{roleName}}</strong>. Konfigurera ditt konto för att komma igång.',
     infoBoxTitle: 'Nästa steg',

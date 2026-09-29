@@ -381,18 +381,18 @@ COPY.pt = {
 };
 
 COPY.sv = {
-  subject: 'Inbjudan till portalen - {{tenantName}}',
+  subject: 'Inbjudan till kundportalen – {{tenantName}}',
   title: 'Inbjudan till portalåtkomst',
   headerTitle: 'Välkommen till din kundportal',
-  headerSubtitle: 'Du är inbjuden att få åtkomst till ditt konto',
+  headerSubtitle: 'Du har bjudits in till kundportalen',
   greeting: 'Hej {{contactName}},',
-  intro: 'Goda nyheter. Du är inbjuden till kundportalen för <strong>{{clientName}}</strong>. I den här säkra portalen kan du direkt:',
+  intro: 'Du har bjudits in till kundportalen för <strong>{{clientName}}</strong>. I den här säkra portalen kan du direkt:',
   infoBoxTitle: '🎯 Det här får du tillgång till',
   feature1: '✓ Visa och följa dina supportärenden',
   feature2: '✓ Granska projektuppdateringar och dokumentation',
   feature3: '✓ Kommunicera direkt med ditt supportteam',
   tagline: 'Hantera dina tjänster smidigt med vår lättanvända portal. Här finns allt du behöver för att hålla dig informerad och hålla kontakten, samlat på en säker plats.',
-  buttonLabel: 'Konfigurera din portalåtkomst',
+  buttonLabel: 'Aktivera ditt portalkonto',
   copyLinkHint: 'Eller kopiera och klistra in den här länken i din webbläsare:',
   warningTitle: '⏰ Tidsbegränsad inbjudan',
   warningText: 'Den här inbjudningslänken slutar gälla om <strong>{{expirationTime}}</strong>. Slutför konfigurationen av ditt konto innan dess för att säkerställa åtkomst utan avbrott.',

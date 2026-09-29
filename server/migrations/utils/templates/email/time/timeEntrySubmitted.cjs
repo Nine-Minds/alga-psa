@@ -147,7 +147,7 @@ COPY.sv = {
   project: 'Projekt',
   task: 'Uppgift',
   viewButton: 'Granska tidpost',
-  footer: 'Drivs av AlgaPSA &middot; Håller team samordnade',
+  footer: 'Drivs av AlgaPSA &middot; För samspelta team',
   textHeader: 'Tidpost inskickad',
   textIntro: 'En tidpost har skickats in för granskning:',
   textView: 'Granska tidpost på',

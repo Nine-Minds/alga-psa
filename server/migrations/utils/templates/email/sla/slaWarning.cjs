@@ -20,7 +20,7 @@ const SUBJECTS = {
   it: 'Avviso SLA: ticket #{{ticketNumber}} al {{thresholdPercent}}%',
   pl: 'Ostrze\u017cenie SLA: zg\u0142oszenie #{{ticketNumber}} na poziomie {{thresholdPercent}}%',
   pt: 'Aviso de SLA: ticket #{{ticketNumber}} em {{thresholdPercent}}%',
-  sv: 'SLA-varning: ärende #{{ticketNumber}} vid {{thresholdPercent}}\u00a0%',
+  sv: 'SLA-varning: ärende #{{ticketNumber}} har nått {{thresholdPercent}}\u00a0%',
 };
 
 /* eslint-disable max-len */
@@ -243,7 +243,7 @@ const COPY = {
   },
   sv: {
     headerLabel: 'SLA-varning',
-    headerTitle: '{{thresholdPercent}}\u00a0% av tiden har gått',
+    headerTitle: '{{thresholdPercent}}\u00a0% av SLA-tiden har förbrukats',
     headerMeta: 'Ärende #{{ticketNumber}}',
     greeting: 'Hej {{recipientName}},',
     intro: 'Ett ärende som du ansvarar för närmar sig sin SLA-tidsgräns.',
@@ -254,8 +254,8 @@ const COPY = {
     client: 'Kund',
     callToAction: 'Vidta åtgärder för att undvika ett SLA-brott.',
     viewButton: 'Visa ärende',
-    footer: 'Drivs av AlgaPSA &middot; Håller team samordnade',
-    textHeader: 'SLA-varning: {{thresholdPercent}}\u00a0% av tiden har gått',
+    footer: 'Drivs av AlgaPSA &middot; För samspelta team',
+    textHeader: 'SLA-varning: {{thresholdPercent}}\u00a0% av SLA-tiden har förbrukats',
     textGreeting: 'Hej {{recipientName}},',
     textIntro: 'Ett ärende som du ansvarar för närmar sig sin SLA-tidsgräns.',
     textDetailsHeader: 'Ärendedetaljer:',

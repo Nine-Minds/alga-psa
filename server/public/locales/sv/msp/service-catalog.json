@@ -68,9 +68,9 @@
       "optional": "Valfritt",
       "noCap": "Inget tak",
       "clear": "Rensa skattetak",
-      "hint": "Högsta skattebelopp från den här skattesatsen per beräkning. Lämna tomt för att inte ange något tak. Ange 0 för att inte debitera någon skatt i beräkningar som använder det här taket.",
+      "hint": "Högsta skattebelopp från den här skattesatsen per beräkning. Lämna tomt för att inte ange något tak. Ange 0 för att inte ta ut någon skatt i beräkningar som använder det här taket.",
       "scopeTitle": "Så tillämpas skattetak",
-      "scope": "En regional beräkning begränsar bidraget från varje skattesats innan skatten summeras, inte regionens sammanlagda skattebelopp. Vid periodberäkningar tillämpas taket på varje skattesats i varje datumsegment. Flera segment kan tillsammans överskrida taket. En faktura kan omfatta flera beräkningar. Taket gäller inte per faktura, kund, projekt eller hel period. Debiteringstak för projekt begränsar debiterbara belopp, medan skattetak begränsar den beräknade skatten. Externa leverantörer av skattetjänster använder sin egen konfiguration.",
+      "scope": "En regional beräkning begränsar bidraget från varje skattesats innan skatten summeras, inte regionens sammanlagda skattebelopp. Vid periodberäkningar tillämpas taket på varje skattesats i varje datumsegment. Flera segment kan tillsammans överskrida taket. En faktura kan omfatta flera beräkningar. Taket gäller inte per faktura, kund, projekt eller hel period. Faktureringstak för projekt begränsar debiterbara belopp, medan skattetak begränsar den beräknade skatten. Externa leverantörer av skattetjänster använder sin egen konfiguration.",
       "applicability": "Den här skattesatsen gäller endast fakturor i {{currencyCode}}. Den väljs inte längre för andra valutor.",
       "composite": "Det här taket tillämpas när skattesatsen ingår i en regional beräkning. Komponentbaserade beräkningar tillämpar inte det här taket.",
       "legacy": "Valuta inte angiven · {{amount}} i valutans minsta enhet",
@@ -295,32 +295,32 @@
     "fields": {
       "adjustForPartialPeriods": "Justera för delperioder",
       "billingCycleAlignment": {
-        "label": "Anpassning till debiteringscykel",
+        "label": "Anpassning till faktureringscykel",
         "placeholder": "Välj anpassning",
         "help": "Styr hur täckning för delperioder beräknas när den återkommande avgiften behöver anpassas till en kortare period än en hel tjänsteperiod."
       },
       "unitRate": {
         "label": "Enhetstaxa",
         "placeholder": "0,00",
-        "help": "Taxa som debiteras för varje licens/enhet under varje tjänsteperiod."
+        "help": "Taxa som debiteras för varje användarlicens/enhet under varje tjänsteperiod."
       }
     },
     "options": {
-      "start": "Debiteringscykelns början",
-      "end": "Debiteringscykelns slut",
+      "start": "Faktureringscykelns början",
+      "end": "Faktureringscykelns slut",
       "prorated": "Proportionell täckning"
     },
     "pricingBasis": {
       "label": "Hur prissätts den här tjänsten?",
       "bundle": {
         "label": "Paketpris",
-        "description": "Det är avtalsradens fasta totalbelopp som debiteras. Antalet för den här tjänsten används bara för att fördela en andel av totalbeloppet för rapportering — det avser inte debiterbara licenser, och ändringar i antalet påverkar inte det debiterade beloppet.",
-        "allocationNote": "Fördelningsantal: {{quantity}} — används för att fördela paketets totalbelopp för rapportering och debiteras inte som licenser."
+        "description": "Det är avtalsradens fasta totalbelopp som debiteras. Antalet för den här tjänsten används bara för att fördela en andel av totalbeloppet för rapportering – det avser inte debiterbara användarlicenser, och ändringar i antalet påverkar inte det debiterade beloppet.",
+        "allocationNote": "Fördelningsantal: {{quantity}} – används för att fördela paketets totalbelopp för rapportering och debiteras inte som användarlicenser."
       },
       "unit": {
-        "label": "Återkommande licenser/enheter",
+        "label": "Återkommande användarlicenser/enheter",
         "description": "Debiterar antal × enhetstaxa varje period, utan att något totalbelopp för raden har företräde. Samma antal och taxa debiteras igen nästa period tills du schemalägger en ändring. Antalet noll ger ett debiterat belopp på noll.",
-        "summary": "{{quantity}} × {{rate}} (återkommande licenser) = {{total}} per period"
+        "summary": "{{quantity}} × {{rate}} (återkommande användarlicenser) = {{total}} per period"
       }
     }
   },
@@ -369,7 +369,7 @@
   },
   "usageConfig": {
     "title": "Konfiguration för förbrukningsbaserad debitering",
-    "recordDrivenNote": "Förbrukningsbaserade tjänster debiteras utifrån den förbrukning som registreras under Förbrukningsuppföljning för varje tjänsteperiod. En period utan registrerad förbrukning ger ingen debitering — registrera förbrukningen (eller ett uttryckligt nollvärde) varje period för att debitera den här tjänsten.",
+    "recordDrivenNote": "Förbrukningsbaserade tjänster debiteras utifrån den förbrukning som registreras under Förbrukningsuppföljning för varje tjänsteperiod. En period utan registrerad förbrukning ger ingen debitering – registrera förbrukningen (eller ett uttryckligt nollvärde) varje period för att debitera den här tjänsten.",
     "defaults": {
       "unitOfMeasure": "Enhet"
     },
@@ -383,12 +383,12 @@
       "minimumUsage": {
         "label": "Minsta förbrukningsnivå",
         "placeholder": "0",
-        "help": "Minimivärde som tillämpas på registrerad förbrukning (0 för inget minimivärde). Det gäller bara när perioden har en förbrukningspost — även ett uttryckligt nollvärde — och skapar aldrig en debitering på egen hand.",
+        "help": "Minimivärde som tillämpas på registrerad förbrukning (0 för inget minimivärde). Det gäller bara när perioden har en förbrukningspost – även ett uttryckligt nollvärde – och skapar aldrig en debitering på egen hand.",
         "errorNegative": "Minsta förbrukning kan inte vara negativ",
         "labelAdditive": "Minimivärde per post",
         "labelPeriodTotal": "Minimivärde per periodrapport",
-        "helpAdditive": "Minimivärde som tillämpas på varje registrerad post (0 för inget minimivärde). Det gäller bara när perioden har en förbrukningspost — även ett uttryckligt nollvärde — och skapar aldrig en debitering på egen hand.",
-        "helpPeriodTotal": "Minimivärde som tillämpas en gång på det rapporterade antalet för perioden (0 för inget minimivärde). Det gäller bara när ett antal rapporteras — även ett uttryckligt nollvärde — och skapar aldrig en debitering på egen hand."
+        "helpAdditive": "Minimivärde som tillämpas på varje registrerad post (0 för inget minimivärde). Det gäller bara när perioden har en förbrukningspost – även ett uttryckligt nollvärde – och skapar aldrig en debitering på egen hand.",
+        "helpPeriodTotal": "Minimivärde som tillämpas en gång på det rapporterade antalet för perioden (0 för inget minimivärde). Det gäller bara när ett antal rapporteras – även ett uttryckligt nollvärde – och skapar aldrig en debitering på egen hand."
       },
       "enableTieredPricing": "Aktivera nivåbaserad prissättning"
     },
@@ -416,7 +416,7 @@
       },
       "periodTotal": {
         "label": "Rapportera ett antal för varje period",
-        "description": "Ett antal per tjänsteperiod ersätter det föregående: om du korrigerar 10 till 12 debiteras 12, aldrig 22. Minimivärdet och eventuella nivåer tillämpas en gång på det antalet. Nästa period börjar utan rapporterat antal — inget antal förs över."
+        "description": "Ett antal per tjänsteperiod ersätter det föregående: om du korrigerar 10 till 12 debiteras 12, aldrig 22. Minimivärdet och eventuella nivåer tillämpas en gång på det antalet. Nästa period börjar utan rapporterat antal – inget antal förs över."
       },
       "transitionNote": "Ändringen av läget gäller från och med nästa ofakturerade tjänsteperiod. Poster eller antal som redan har registrerats i en öppen period måste först faktureras eller tas bort."
     }
@@ -431,11 +431,11 @@
         "errorPositive": "Det totala antalet minuter måste vara större än noll"
       },
       "billingPeriod": {
-        "label": "Debiteringsperiod",
-        "placeholder": "Välj debiteringsperiod",
+        "label": "Faktureringsperiod",
+        "placeholder": "Välj faktureringsperiod",
         "help": "Perioden som timpotten fördelas över",
         "mismatchPrefix": "Avvikelse:",
-        "mismatch": "Timpottens debiteringsperiod ({{billingPeriod}}) bör matcha avtalsradens debiteringsintervall ({{contractLineBillingFrequency}})"
+        "mismatch": "Timpottens faktureringsperiod ({{billingPeriod}}) bör matcha avtalsradens faktureringsintervall ({{contractLineBillingFrequency}})"
       },
       "overageRate": {
         "label": "Taxa för överförbrukning",
@@ -527,7 +527,7 @@
     "category": {
       "duplicateName": "En tjänstekategori med det här namnet finns redan",
       "notFound": "Tjänstekategorin hittades inte",
-      "invalid": "Den valda tjänstekategorin är ogiltig. Ladda om och försök igen.",
+      "invalid": "Den valda tjänstekategorin är ogiltig. Ladda om sidan och försök igen.",
       "inUse": "Det går inte att radera kategorin eftersom den fortfarande används.",
       "inUseByServices": "Det går inte att radera kategorin: tjänster använder den här kategorin",
       "inUseByTickets": "Det går inte att radera en kategori som används av ärenden",
@@ -539,11 +539,11 @@
     },
     "service": {
       "selectType": "Välj en tjänstetyp innan du sparar.",
-      "typeNotFound": "Den valda tjänstetypen hittades inte. Ladda om och välj en annan tjänstetyp.",
+      "typeNotFound": "Den valda tjänstetypen hittades inte. Ladda om sidan och välj en annan tjänstetyp.",
       "selectBillingMethod": "Välj en debiteringsmetod innan du sparar.",
-      "notFoundRefresh": "Tjänsten hittades inte. Den kan ha raderats. Ladda om och försök igen.",
-      "invalidValue": "Ett av de valda tjänstevärdena är ogiltigt. Ladda om och försök igen.",
-      "referenceMissing": "Den valda tjänsten, kategorin, skattesatsen eller tjänstetypen är inte längre tillgänglig. Ladda om och försök igen.",
+      "notFoundRefresh": "Tjänsten hittades inte. Den kan ha raderats. Ladda om sidan och försök igen.",
+      "invalidValue": "Ett av de valda tjänstevärdena är ogiltigt. Ladda om sidan och försök igen.",
+      "referenceMissing": "Den valda tjänsten, kategorin, skattesatsen eller tjänstetypen är inte längre tillgänglig. Ladda om sidan och försök igen.",
       "duplicate": "En tjänst eller produkt med de här värdena finns redan.",
       "missingField": "Ett obligatoriskt fält för tjänsten saknas.",
       "missingFieldNamed": "Ett obligatoriskt fält för tjänsten saknas: {{field}}."
@@ -559,16 +559,16 @@
     },
     "serviceType": {
       "duplicateName": "En tjänstetyp med det här namnet finns redan.",
-      "notFoundRefresh": "Tjänstetypen hittades inte. Den kan ha raderats. Ladda om och försök igen.",
+      "notFoundRefresh": "Tjänstetypen hittades inte. Den kan ha raderats. Ladda om sidan och försök igen.",
       "notFound": "Tjänstetypen hittades inte.",
       "inUse": "Det går inte att radera tjänstetypen eftersom den används av en eller flera tjänster.",
       "inUseByCount": "Det går inte att radera tjänstetypen. Antal tjänster som använder den: {{serviceCount}}."
     },
     "rateTier": {
       "overlap": "Nivåernas intervall får inte överlappa varandra.",
-      "notFound": "Taxenivån hittades inte. Ladda om tjänsten och försök igen.",
-      "invalid": "Den valda taxenivån är ogiltig. Ladda om tjänsten och försök igen.",
-      "serviceInvalid": "Den valda tjänsten för den här taxenivån är inte längre giltig. Ladda om tjänsten och försök igen.",
+      "notFound": "Taxenivån hittades inte. Uppdatera tjänsten och försök igen.",
+      "invalid": "Den valda taxenivån är ogiltig. Uppdatera tjänsten och försök igen.",
+      "serviceInvalid": "Den valda tjänsten för den här taxenivån är inte längre giltig. Uppdatera tjänsten och försök igen.",
       "missingField": "Ett obligatoriskt fält för taxenivån saknas.",
       "missingFieldNamed": "Ett obligatoriskt fält för taxenivån saknas: {{field}}."
     }

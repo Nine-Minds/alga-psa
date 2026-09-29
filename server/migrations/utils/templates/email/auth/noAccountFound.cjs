@@ -586,7 +586,7 @@ Esta é uma mensagem automática. Não responda a este email.`,
 };
 
 LANGS.sv = {
-  subject: '{{platformName}} - Begäran om åtkomst',
+  subject: '{{platformName}} – Begäran om åtkomst',
   html: `
         <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff;">
           <div style="background: linear-gradient(135deg, #8A4DEA, #40CFF9); padding: 30px; text-align: center;">
@@ -617,7 +617,7 @@ LANGS.sv = {
                 <strong>Behöver du hjälp?</strong>
               </p>
               <p style="color: #1e40af; font-size: 14px; margin: 5px 0 0 0;">
-                Kontakta din tjänsteleverantörs supportteam om du anser att du borde ha åtkomst till en kundportal.
+                Kontakta din IT-leverantörs supportteam om du anser att du borde ha åtkomst till en kundportal.
               </p>
             </div>
 
@@ -638,7 +638,7 @@ LANGS.sv = {
           </div>
         </div>
       `,
-  text: `{{platformName}} - Begäran om åtkomst
+  text: `{{platformName}} – Begäran om åtkomst
 
 Hej,
 
@@ -652,7 +652,7 @@ Om du inte har fått något e-postmeddelande med inloggningslänkar kan det bero
 - E-postmeddelandet kan ha hamnat i skräppostmappen
 
 Behöver du hjälp?
-Kontakta din tjänsteleverantörs supportteam om du anser att du borde ha åtkomst till en kundportal.
+Kontakta din IT-leverantörs supportteam om du anser att du borde ha åtkomst till en kundportal.
 
 Säkerhetsinformation: Om du inte har begärt åtkomst kan du lugnt ignorera det här e-postmeddelandet.
 

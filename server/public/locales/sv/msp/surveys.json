@@ -1,13 +1,13 @@
 {
   "common": {
-    "loading": "Laddar…"
+    "loading": "Läser in…"
   },
   "moduleFrame": {
     "title": "Kundnöjdhetsenkäter",
     "description": "Bevaka svarskvaliteten, analysera trender i kundnöjdheten och följ upp återkopplingen.",
     "badge": "Insikter om kundnöjdhet",
     "nav": {
-      "dashboard": "Översiktspanel",
+      "dashboard": "Översikt",
       "responses": "Svar",
       "analytics": "Analys",
       "setup": "Konfiguration"
@@ -50,7 +50,7 @@
         "setDefault": "Standardmallen har uppdaterats"
       },
       "errors": {
-        "load": "Det gick inte att ladda enkätmallarna."
+        "load": "Det gick inte att läsa in enkätmallarna."
       },
       "delete": {
         "validationFailed": "Det gick inte att validera raderingen. Försök igen.",
@@ -70,7 +70,7 @@
       "defaults": {
         "promptText": "Enkätfråga",
         "commentPrompt": "Ytterligare kommentarer (valfritt)",
-        "thankYouText": "Tack."
+        "thankYouText": "Tack!"
       },
       "labels": {
         "name": "Mallnamn",
@@ -134,7 +134,7 @@
         "deleteError": "Det gick inte att radera utlösaren"
       },
       "errors": {
-        "load": "Det gick inte att ladda enkätutlösarna."
+        "load": "Det gick inte att läsa in enkätutlösarna."
       },
       "deleteConfirm": "Vill du radera den här utlösaren? Inbjudningar som redan ligger i kö skickas ändå.",
       "actionsMenuAria": "Öppna åtgärder för utlösaren som gäller {{target}}"
@@ -175,7 +175,7 @@
       "noTemplates": "Skapa en enkätmall innan du lägger till utlösare.",
       "prioritiesMixed": "De valda tavlorna använder olika prioritetstyper. Alla prioriteter visas.",
       "errors": {
-        "reference": "Det gick inte att ladda utlösaralternativen. Försök igen."
+        "reference": "Det gick inte att läsa in utlösaralternativen. Försök igen."
       }
     }
   },
@@ -188,12 +188,12 @@
     "commentLabel": "Ytterligare kommentarer (valfritt)",
     "submitButton": "Skicka in återkoppling",
     "submitting": "Skickar in återkoppling…",
-    "submittedTitle": "Tack för ditt svar",
+    "submittedTitle": "Tack för ditt svar!",
     "submittedMessage": "{{thankYouText}}",
     "ratingSubmitted": "Återkopplingen har skickats in",
     "retryButton": "Försök igen",
     "selectRatingError": "Välj ett betyg innan du skickar in.",
-    "errorMessage": "Vi kunde inte registrera din återkoppling. Försök igen.",
+    "errorMessage": "Det gick inte att registrera din återkoppling. Försök igen.",
     "supportMessage": "Kontakta din tekniker om du har frågor."
   },
   "rating": {
@@ -246,8 +246,8 @@
     },
     "page": {
       "filterTitle": "Filtrera svar",
-      "loading": "Laddar om svar…",
-      "error": "Det gick inte att ladda enkätsvaren. Försök igen.",
+      "loading": "Uppdaterar svar…",
+      "error": "Det gick inte att läsa in enkätsvaren. Försök igen.",
       "pageSizeOptions": {
         "10": "10 per sida",
         "25": "25 per sida",
@@ -277,8 +277,8 @@
     }
   },
   "dashboard": {
-    "loadingInsights": "Laddar enkätinsikter…",
-    "printTitle": "Översiktspanel för enkäter",
+    "loadingInsights": "Läser in enkätinsikter…",
+    "printTitle": "Enkätöversikt",
     "responseMetrics": {
       "cards": {
         "sent": "Skickade inbjudningar",
@@ -286,7 +286,7 @@
         "responseRate": "Svarsfrekvens",
         "averageRating": "Genomsnittligt betyg",
         "outstanding": "Obesvarade inbjudningar",
-        "negative": "Negativa svar (<= 2 stjärnor)"
+        "negative": "Negativa svar (högst 2 stjärnor)"
       },
       "badges": {
         "awaitingResponses": "Väntar på svar",
@@ -468,15 +468,15 @@
   },
   "errors": {
     "template": {
-      "notFound": "Enkätmallen hittades inte. Den kan ha raderats. Ladda om och försök igen."
+      "notFound": "Enkätmallen hittades inte. Den kan ha raderats. Ladda om sidan och försök igen."
     },
     "trigger": {
-      "notFound": "Enkätutlösaren hittades inte. Den kan ha raderats. Ladda om och försök igen.",
+      "notFound": "Enkätutlösaren hittades inte. Den kan ha raderats. Ladda om sidan och försök igen.",
       "templateRequired": "Välj en befintlig enkätmall innan du sparar utlösaren."
     },
     "survey": {
-      "invalidValue": "Ett av de valda enkätvärdena är ogiltigt. Ladda om och försök igen.",
-      "referenceMissing": "Den valda enkätmallen eller den relaterade posten finns inte längre. Ladda om och försök igen.",
+      "invalidValue": "Ett av de valda enkätvärdena är ogiltigt. Ladda om sidan och försök igen.",
+      "referenceMissing": "Den valda enkätmallen eller den relaterade posten finns inte längre. Ladda om sidan och försök igen.",
       "duplicate": "En enkätpost med dessa uppgifter finns redan.",
       "notAllowed": "Ett av enkätvärdena är inte tillåtet. Granska formuläret och försök igen.",
       "missingField": "Ett obligatoriskt enkätfält saknas.",
@@ -484,10 +484,10 @@
       "invalidData": "Enkätdata är ogiltiga. Granska formuläret och försök igen."
     },
     "options": {
-      "boardsFailed": "Det gick inte att ladda tavlorna.",
-      "statusesFailed": "Det gick inte att ladda statusarna.",
-      "prioritiesFailed": "Det gick inte att ladda prioriteterna.",
-      "triggerOptionsFailed": "Det gick inte att ladda alternativen för enkätutlösaren. Försök igen."
+      "boardsFailed": "Det gick inte att läsa in tavlorna.",
+      "statusesFailed": "Det gick inte att läsa in statusarna.",
+      "prioritiesFailed": "Det gick inte att läsa in prioriteterna.",
+      "triggerOptionsFailed": "Det gick inte att läsa in alternativen för enkätutlösaren. Försök igen."
     },
     "response": {
       "linkInvalidOrUsed": "Den här återkopplingslänken är inte längre giltig eller har redan använts.",

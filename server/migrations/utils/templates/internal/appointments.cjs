@@ -74,7 +74,7 @@ const TEMPLATES = [
       it: { title: 'Richiesta di appuntamento cancellata', message: 'La tua richiesta di appuntamento per {{serviceName}} il {{requestedDate}} è stata cancellata con successo.' },
       pl: { title: 'Wniosek o wizytę anulowany', message: 'Twój wniosek o wizytę na {{serviceName}} w dniu {{requestedDate}} został pomyślnie anulowany.' },
       pt: { title: 'Solicitação de agendamento cancelada', message: 'Sua solicitação de agendamento para {{serviceName}} em {{requestedDate}} foi cancelada com sucesso.' },
-      sv: { title: 'Bokningsförfrågan avbruten', message: 'Din bokningsförfrågan för {{serviceName}} den {{requestedDate}} har avbrutits.' },
+      sv: { title: 'Bokningsförfrågan återkallad', message: 'Din bokningsförfrågan för {{serviceName}} den {{requestedDate}} har återkallats.' },
     },
   },
   {
@@ -89,7 +89,7 @@ const TEMPLATES = [
       it: { title: 'Richiesta di appuntamento cancellata', message: '{{requesterName}} ha cancellato la sua richiesta di appuntamento per {{serviceName}} il {{requestedDate}}.' },
       pl: { title: 'Wniosek o wizytę anulowany', message: '{{requesterName}} anulował(a) wniosek o wizytę na {{serviceName}} w dniu {{requestedDate}}.' },
       pt: { title: 'Solicitação de agendamento cancelada', message: '{{requesterName}} cancelou sua solicitação de agendamento para {{serviceName}} em {{requestedDate}}.' },
-      sv: { title: 'Bokningsförfrågan avbruten', message: '{{requesterName}} har avbrutit sin bokningsförfrågan för {{serviceName}} den {{requestedDate}}.' },
+      sv: { title: 'Bokningsförfrågan återkallad', message: '{{requesterName}} har återkallat sin bokningsförfrågan för {{serviceName}} den {{requestedDate}}.' },
     },
   },
   {

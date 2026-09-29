@@ -12,10 +12,10 @@
     "nextMonth": "Nästa månad",
     "cellWithCount": "{{date}}, antal bokningar: {{count}}",
     "moreAria": "Visa {{count}} fler för {{date}}",
-    "requestOnDate": "Skicka bokningsförfrågan för {{date}}"
+    "requestOnDate": "Begär bokning den {{date}}"
   },
   "modal": {
-    "title": "Skicka bokningsförfrågan",
+    "title": "Begär bokning",
     "editTitle": "Redigera bokningsförfrågan",
     "step": "Steg",
     "of": "av"
@@ -67,7 +67,7 @@
     "technician": "Önskad tekniker",
     "linkedTicket": "Kopplat ärende",
     "approvalNote": "Din bokningsförfrågan skickas in för godkännande. Du får en bekräftelse via e-post när den har godkänts.",
-    "submit": "Skicka bokningsförfrågan",
+    "submit": "Begär bokning",
     "update": "Uppdatera bokning"
   },
   "status": {
@@ -77,12 +77,12 @@
     "cancelled": "Avbokad"
   },
   "errors": {
-    "loadServicesFailed": "Det gick inte att ladda tillgängliga tjänster. Försök igen.",
-    "loadDatesFailed": "Det gick inte att ladda tillgängliga datum. Försök igen.",
-    "loadSlotsFailed": "Det gick inte att ladda tillgängliga tider. Försök igen.",
+    "loadServicesFailed": "Det gick inte att läsa in tillgängliga tjänster. Försök igen.",
+    "loadDatesFailed": "Det gick inte att läsa in tillgängliga datum. Försök igen.",
+    "loadSlotsFailed": "Det gick inte att läsa in tillgängliga tider. Försök igen.",
     "createFailed": "Det gick inte att skapa bokningsförfrågan. Försök igen.",
     "updateFailed": "Det gick inte att uppdatera bokningsförfrågan. Försök igen.",
-    "loadFailed": "Det gick inte att ladda bokningar. Försök igen.",
+    "loadFailed": "Det gick inte att läsa in bokningar. Försök igen.",
     "notFound": "Bokningsförfrågan hittades inte"
   },
   "messages": {
@@ -91,12 +91,12 @@
     "updateSuccess": "Bokningsförfrågan har uppdaterats.",
     "updateSuccessDetail": "Din bokningsförfrågan har uppdaterats.",
     "cancelSuccess": "Bokningen har avbokats.",
-    "cancelFailed": "Det gick inte att avboka bokningen. Försök igen."
+    "cancelFailed": "Det gick inte att avboka. Försök igen."
   },
   "page": {
     "title": "Mina bokningar",
     "subtitle": "Visa och hantera dina bokningsförfrågningar",
-    "requestButton": "Skicka ny bokningsförfrågan",
+    "requestButton": "Begär ny bokning",
     "noAppointments": "Inga bokningar hittades",
     "noAppointmentsDescription": "Du har inte skickat någon bokningsförfrågan än. Skicka en nu för att komma igång."
   },
@@ -136,21 +136,21 @@
     "description": "Beskrivning",
     "created": "Förfrågan skickad",
     "approved": "Godkänd",
-    "cancelButton": "Avboka bokning",
+    "cancelButton": "Avboka",
     "downloadRecording": "Ladda ner inspelning",
     "viewTranscript": "Visa transkription"
   },
   "cancel": {
-    "title": "Avboka bokning",
-    "message": "Är du säker på att du vill avboka denna bokningsförfrågan? Åtgärden kan inte ångras.",
-    "messageWithTeamsWarning": "Är du säker på att du vill avboka denna bokningsförfrågan? Åtgärden kan inte ångras. Microsoft Teams-mötet raderas också.",
+    "title": "Avboka",
+    "message": "Vill du avboka den här bokningsförfrågan? Åtgärden går inte att ångra.",
+    "messageWithTeamsWarning": "Vill du avboka den här bokningsförfrågan? Åtgärden går inte att ångra. Microsoft Teams-mötet raderas också.",
     "confirm": "Ja, avboka",
     "teamsMeetingCleanupNotice": "Det kopplade Microsoft Teams-mötet avbokas och försvinner snart från deltagarnas kalendrar."
   },
   "ticketSection": {
     "title": "Bokningsförfrågningar",
     "service": "Tjänst",
-    "publicRequest": "Offentlig förfrågan",
+    "publicRequest": "Förfrågan via bokningssidan",
     "minutes": "minuter",
     "preferred": "Önskad:",
     "approvedBy": "Godkänd av",

@@ -106,7 +106,7 @@ COPY.sv = {
   technicianLine: 'Tekniker: {{technician_name}}',
   ratingIntro: '{{prompt_text}}',
   buttonHelp: 'Välj ett betyg nedan för att berätta hur du upplevde vår service:',
-  fallback: 'Om knapparna inte laddas, öppna den här säkra länken till enkäten:',
+  fallback: 'Om knapparna inte visas kan du öppna den här säkra länken till enkäten:',
   thankYou: '{{thank_you_text}}',
   ticketLabel: 'Ärende',
 };

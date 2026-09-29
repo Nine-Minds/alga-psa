@@ -22,8 +22,8 @@
       "debugConsole": "Öppna felsökningskonsolen för Service Proxy Demo"
     },
     "loading": {
-      "extensions": "Laddar tillägg…",
-      "installer": "Laddar installationsprogrammet…"
+      "extensions": "Läser in tillägg…",
+      "installer": "Läser in installationsprogrammet…"
     },
     "featureNames": {
       "settings": "Tilläggsinställningar",
@@ -51,12 +51,12 @@
       "keyPlaceholder": "Nyckel (t.ex. MY_API_KEY)",
       "valuePlaceholder": "Värde",
       "markSensitive": "Markera som känslig",
-      "markPublic": "Markera som offentlig"
+      "markPublic": "Markera som ej känslig"
     },
     "schedules": {
       "title": "Scheman",
       "description": "Konfigurera schemalagda uppgifter för det här tillägget genom att anropa en API-slutpunkt som deklareras i manifestet enligt ett cron-schema. När tillägget uppdateras mappas scheman om utifrån slutpunktens metod/sökväg. Uppdateringar kan blockeras om en schemalagd slutpunkt tas bort.",
-      "loading": "Laddar scheman…",
+      "loading": "Läser in scheman…",
       "noEndpoints": "Det här tillägget deklarerar inga API-slutpunkter, så det finns inget att schemalägga.",
       "endpoint": "Slutpunkt",
       "cron": "Cron",
@@ -66,7 +66,7 @@
       "payloadHelp": "För GET-slutpunkter ignoreras nyttolasten. För POST-slutpunkter blir nyttolasten anropets brödtext. Undvik hemligheter i nyttolaster. Använd tilläggets konfiguration/hemligheter i stället.",
       "create": "Skapa schema",
       "creating": "Skapar…",
-      "refresh": "Ladda om",
+      "refresh": "Uppdatera",
       "empty": "Inga scheman har konfigurerats.",
       "lastStatus": " • senast: {{status}}",
       "save": "Spara",
@@ -106,7 +106,7 @@
   },
   "runtime": {
     "metadataTitle": "Tillägg",
-    "loadError": "Det gick inte att ladda information om tilläggets körmiljö",
+    "loadError": "Det gick inte att läsa in information om tilläggets körmiljö",
     "notFoundTitle": "Tillägget hittades inte.",
     "goToExtensions": "Gå till tillägg",
     "bundleUnavailableTitle": "Tilläggspaketet är inte tillgängligt.",
@@ -141,7 +141,7 @@
     "disable": "Inaktivera",
     "enable": "Aktivera",
     "remove": "Ta bort",
-    "loading": "Laddar information om tillägget…",
+    "loading": "Läser in information om tillägget…",
     "error": "Fel",
     "sectionInfo": "Information om tillägget",
     "runtimeDomain": "Domän för körmiljön",
@@ -150,7 +150,7 @@
     "provision": "Etablera",
     "description": "Beskrivning",
     "version": "Version",
-    "author": "Upphovsperson",
+    "author": "Utvecklare",
     "unknownAuthor": "Okänd",
     "homepage": "Hemsida",
     "license": "Licens",
@@ -159,7 +159,7 @@
     "sectionPermissions": "Behörigheter",
     "noPermissions": "Det här tillägget kräver inga behörigheter.",
     "sectionVersions": "Versioner",
-    "loadingVersions": "Laddar versioner…",
+    "loadingVersions": "Läser in versioner…",
     "noVersions": "Inga publicerade versioner är tillgängliga.",
     "colVersion": "Version",
     "colPublished": "Publicerad",
@@ -187,7 +187,7 @@
   "detailsModal": {
     "description": "Beskrivning",
     "version": "Version",
-    "author": "Upphovsperson",
+    "author": "Utvecklare",
     "unknownAuthor": "Okänd",
     "status": "Status",
     "enabled": "Aktiverat",
@@ -207,13 +207,13 @@
   },
   "simple": {
     "heading": "Tillägg",
-    "loading": "Laddar tillägg…",
+    "loading": "Läser in tillägg…",
     "error": "Fel",
     "emptyTitle": "Inga tillägg är installerade",
-    "emptyDescription": "Installera tillägg för att lägga till nya funktioner och ny funktionalitet i AlgaPSA.",
+    "emptyDescription": "Installera tillägg för att lägga till nya funktioner i AlgaPSA.",
     "colExtension": "Tillägg",
     "colVersion": "Version",
-    "colAuthor": "Upphovsperson",
+    "colAuthor": "Utvecklare",
     "colStatus": "Status",
     "colActions": "Åtgärder",
     "unknownAuthor": "Okänd",
@@ -228,7 +228,7 @@
     "removeFailed": "Det gick inte att ta bort tillägget",
     "toggleDisableFailed": "Det gick inte att inaktivera tillägget",
     "toggleEnableFailed": "Det gick inte att aktivera tillägget",
-    "loadFailed": "Det gick inte att ladda tillägg",
+    "loadFailed": "Det gick inte att läsa in tillägg",
     "removeTitle": "Ta bort tillägg",
     "removeMessage": "Är du säker på att du vill ta bort det här tillägget? Åtgärden kan inte ångras.",
     "confirmRemove": "Ta bort",
@@ -237,14 +237,14 @@
   "list": {
     "label": "Tilläggshantering",
     "heading": "Tillägg",
-    "loading": "Laddar tillägg…",
+    "loading": "Läser in tillägg…",
     "error": "Fel",
-    "loadFailed": "Det gick inte att ladda tillägg",
+    "loadFailed": "Det gick inte att läsa in tillägg",
     "emptyTitle": "Inga tillägg är installerade",
-    "emptyDescription": "Installera tillägg för att lägga till nya funktioner och ny funktionalitet i AlgaPSA.",
+    "emptyDescription": "Installera tillägg för att lägga till nya funktioner i AlgaPSA.",
     "colExtension": "Tillägg",
     "colVersion": "Version",
-    "colAuthor": "Upphovsperson",
+    "colAuthor": "Utvecklare",
     "colDomain": "Domän",
     "colActions": "Åtgärder",
     "enabled": "Aktiverat",
@@ -261,7 +261,7 @@
     "confirmRemove": "Ta bort",
     "cancel": "Avbryt",
     "dialogVersion": "Version:",
-    "dialogAuthor": "Upphovsperson:",
+    "dialogAuthor": "Utvecklare:",
     "dialogDomain": "Domän:",
     "dialogStatus": "Status:"
   },
@@ -291,7 +291,7 @@
     "uploadNoKey": "Uppladdningen lyckades, men ingen nyckel returnerades",
     "manifestMissing": "Det gick inte att extrahera ett giltigt manifest från paketet.",
     "finalizeError": "Ett oväntat fel uppstod när installationen skulle slutföras",
-    "installCompleteError": "Tillägget har färdigställts, men installationen slutfördes inte",
+    "installCompleteError": "Tillägget har slutförts, men installationen blev inte klar",
     "installUnexpected": "Ett oväntat fel uppstod under installationen",
     "finalizeRequireManifest": "Klistra in manifestet i JSON-format innan du slutför installationen.",
     "finalizeProvidedFailed": "Det gick inte att slutföra installationen med det angivna manifestet"
@@ -302,17 +302,17 @@
     "description": "Använd det fullständiga installationsprogrammet för tillägg om du behöver avancerade alternativ."
   },
   "clientPortal": {
-    "loadError": "Det gick inte att ladda information om tilläggets körmiljö",
+    "loadError": "Det gick inte att läsa in information om tilläggets körmiljö",
     "notFoundTitle": "Tillägget hittades inte.",
-    "backToDashboard": "Tillbaka till översiktspanelen",
+    "backToDashboard": "Tillbaka till översikten",
     "bundleUnavailableTitle": "Tilläggspaketet är inte tillgängligt.",
     "bundleUnavailableDescription": "Tilläggspaketet saknas eller har inte laddats upp.",
     "runtimeDomainUnavailableTitle": "Domänen för tilläggets körmiljö är inte tillgänglig.",
     "runtimeDomainUnavailableDescription": "Tilläggets domän har inte etablerats."
   },
   "messages": {
-    "loadSettingsFailed": "Det gick inte att ladda tilläggsinställningarna.",
-    "refreshSchedulesFailed": "Det gick inte att ladda om scheman.",
+    "loadSettingsFailed": "Det gick inte att läsa in tilläggsinställningarna.",
+    "refreshSchedulesFailed": "Det gick inte att uppdatera scheman.",
     "requiredSecretsMissing": "Ange värden för obligatoriska hemligheter innan du sparar.",
     "enterSecretValues": "Ange hemliga värden innan du sparar.",
     "invalidCustomKey": "Anpassade nycklar får endast innehålla bokstäver, siffror, understreck, punkter och bindestreck.",
@@ -340,11 +340,11 @@
     "extensionRemoved": "Tillägget har tagits bort",
     "reprovisionFailed": "Det gick inte att etablera på nytt",
     "manifestReadFailed": "Det gick inte att läsa manifestfilen",
-    "invalidBundleExtension": "Filnamnet måste sluta med \".tar.zst\": {{filename}}"
+    "invalidBundleExtension": "Filnamnet måste sluta med ”.tar.zst”: {{filename}}"
   },
   "debug": {
     "scopeToOneInstall": "Begränsa till en installation",
-    "overrideTenantContext": "Åsidosätt klientorganisationens kontext",
+    "overrideTenantContext": "Åsidosätt organisationskontext",
     "matchRequestId": "Matcha x-request-id / context.request_id"
   },
   "permissions": {

@@ -8,10 +8,11 @@
     "eveningWithName": "God kväll, {{name}}"
   },
   "welcome": {
-    "title": "Välkommen till din MSP-central",
-    "description": "Följ introduktionens förlopp, konfigurera kritiska tjänster och ge alla kunder en enhetlig upplevelse.",
+    "title": "Välkommen till din MSP-hubb",
+    "titleBranded": "Välkommen till MSP-hubben för {{companyName}}",
+    "description": "Följ hur onboardingen går, konfigurera kritiska tjänster och ge alla kunder en enhetlig upplevelse.",
     "titleCommunity": "Välkommen tillbaka",
-    "descriptionCommunity": "Gå direkt till ärenden, schemaläggning, projekt och rapportering från din översiktspanel."
+    "descriptionCommunity": "Gå direkt till ärenden, schemaläggning, projekt och rapportering från din översikt."
   },
   "algadesk": {
     "welcome": {
@@ -45,15 +46,15 @@
     "comingSoon": "Kommer snart",
     "tickets": {
       "title": "Ärendehantering",
-      "description": "Effektivisera supporten med ärendestyrning, SLA-uppföljning och vägledda arbetsflöden."
+      "description": "Effektivisera supporten med ärendefördelning, SLA-uppföljning och guidade arbetsflöden."
     },
     "monitoring": {
       "title": "Systemövervakning",
-      "description": "Övervaka kritiska signaler hos kunderna och utlös automatisering vid behov."
+      "description": "Övervaka kritiska signaler i kundernas miljöer och starta automatiseringar vid behov."
     },
     "security": {
       "title": "Säkerhetshantering",
-      "description": "Hantera policyer, godkännanden och svar på revisionsfrågor på ett ställe."
+      "description": "Hantera policyer, godkännanden och underlag för revisioner på ett ställe."
     },
     "projects": {
       "title": "Projekthantering",
@@ -61,7 +62,7 @@
     },
     "reports": {
       "title": "Rapportering och analys",
-      "description": "Skapa sammanställningar av beläggning, SLA-uppfyllelse och lönsamhet."
+      "description": "Skapa sammanställningar av beläggningsgrad, SLA-uppfyllelse och lönsamhet."
     },
     "schedule": {
       "title": "Schemahantering",
@@ -69,8 +70,8 @@
     }
   },
   "knowledgeBase": {
-    "title": "Vill du fördjupa dig?",
-    "description": "Utforska driftsättningsinstruktioner och rekommenderade arbetssätt i kunskapsbasen.",
+    "title": "Vill du veta mer?",
+    "description": "Utforska driftsättningsguider och rekommenderade arbetssätt i kunskapsbasen.",
     "cta": "Visa resurser"
   },
   "mobileApp": {
@@ -97,10 +98,10 @@
     }
   },
   "onboarding": {
-    "completeTitle": "Introduktionen är slutförd",
+    "completeTitle": "Onboardingen är klar",
     "incompleteTitle": "Slutför konfigurationen",
-    "completeDescription": "Du är redo att använda alla funktioner i MSP-översiktspanelen.",
-    "incompleteDescription": "Gå igenom varje steg för att få tillgång till alla funktioner i MSP-översiktspanelen.",
+    "completeDescription": "Du är redo att använda alla funktioner i MSP-översikten.",
+    "incompleteDescription": "Gå igenom varje steg för att få tillgång till alla funktioner i MSP-översikten.",
     "stepLabel": "Steg {{index}}",
     "badges": {
       "complete": "Slutfört",
@@ -109,7 +110,7 @@
       "blocked": "Blockerat"
     },
     "progress": {
-      "label": "Förlopp",
+      "label": "Framsteg",
       "steps": "{{completed}} av {{total}} steg",
       "messageStart": "Nu är du igång",
       "messageComplete": "Allt är klart – bra jobbat",
@@ -118,7 +119,7 @@
     "substeps": {
       "dataImport": "Slutför din första import eller skapa 5 kontakter",
       "identity": {
-        "addProvider": "Lägg till en SSO-tjänsteleverantör",
+        "addProvider": "Lägg till en SSO-leverantör",
         "linkTeamMember": "Koppla den första teammedlemmen"
       },
       "portal": {
@@ -128,8 +129,8 @@
       },
       "createContacts": "Skapa dina första 5 kontakter",
       "calendar": {
-        "addProvider": "Lägg till en kalendertjänsteleverantör",
-        "connectAuthorize": "Anslut tjänsteleverantören och ge åtkomst"
+        "addProvider": "Lägg till en kalenderleverantör",
+        "connectAuthorize": "Anslut leverantören och ge åtkomst"
       },
       "email": {
         "configureInbound": "Konfigurera inkommande e-post",
@@ -151,12 +152,12 @@
       "titleCombined": "Dolda kort ({{count}})"
     },
     "checklist": {
-      "title": "Checklista för introduktion",
+      "title": "Checklista för onboarding",
       "progress": "{{completed}} av {{total}} uppgifter slutförda",
       "completeTitle": "Konfigurationen är slutförd",
       "completeDescription": "Bjud in kunder till portalen med din grafiska profil.",
       "inviteCta": "Bjud in kunder",
-      "viewButton": "Visa checklistan för introduktion"
+      "viewButton": "Visa checklistan för onboarding"
     },
     "steps": {
       "identity": {
@@ -188,9 +189,9 @@
     "blockers": {
       "identity": {
         "linkedAccountsUnavailable": "Det går inte att verifiera kopplade teammedlemmar just nu.",
-        "noLinkedUsers": "Inga användare är kopplade till en identitetstjänsteleverantör ännu. Be en MSP-administratör att ansluta Google eller Microsoft.",
+        "noLinkedUsers": "Inga användare är kopplade till en identitetsleverantör ännu. Be en MSP-administratör att ansluta Google eller Microsoft.",
         "addProviderCredentials": "Lägg till autentiseringsuppgifter för Google Workspace eller Microsoft 365 för att aktivera SSO för ditt team.",
-        "configurationUnavailable": "Konfiguration av SSO-tjänsteleverantörer är inte tillgänglig i den här miljön.",
+        "configurationUnavailable": "Konfiguration av SSO-leverantörer är inte tillgänglig i den här miljön.",
         "loadFailed": "Det gick inte att läsa in status för SSO-konfigurationen."
       },
       "portal": {
@@ -201,26 +202,26 @@
       },
       "calendar": {
         "providerAttention": "{{provider}} kräver åtgärd innan synkroniseringen kan återupptas.",
-        "loadFailed": "Det gick inte att läsa in kalenderintegreringarna."
+        "loadFailed": "Det gick inte att läsa in kalenderintegrationerna."
       },
       "email": {
         "enterpriseOnly": "Hanterade e-postdomäner är endast tillgängliga i Pro.",
-        "tenantRequired": "Klientorganisationskontext krävs för att läsa in status för e-postintroduktionen.",
+        "tenantRequired": "Organisationskontext krävs för att läsa in status för e-postkonfigurationen.",
         "loadFailed": "Det gick inte att läsa in hanterade e-postdomäner.",
         "verificationFailed": "Verifieringen av {{domain}} misslyckades."
       }
     },
     "errors": {
-      "dismissFailed": "Det gick inte att dölja introduktionssteget.",
-      "restoreFailed": "Det gick inte att återställa introduktionssteget.",
-      "dismissSectionFailed": "Det gick inte att dölja introduktionsavsnittet.",
-      "restoreSectionFailed": "Det gick inte att återställa introduktionsavsnittet."
+      "dismissFailed": "Det gick inte att dölja onboardingsteget.",
+      "restoreFailed": "Det gick inte att återställa onboardingsteget.",
+      "dismissSectionFailed": "Det gick inte att dölja onboardingavsnittet.",
+      "restoreSectionFailed": "Det gick inte att återställa onboardingavsnittet."
     },
     "preferences": {
-      "title": "Inställningar för översiktspanelen",
-      "description": "Det slutförda introduktionsavsnittet är dolt på din översiktspanel.",
-      "restoreSection": "Återställ introduktionsavsnittet"
+      "title": "Inställningar för översikten",
+      "description": "Det slutförda onboardingavsnittet är dolt på din översikt.",
+      "restoreSection": "Återställ onboardingavsnittet"
     }
   },
-  "mspDashboard": "MSP-översiktspanel"
+  "mspDashboard": "MSP-översikt"
 }

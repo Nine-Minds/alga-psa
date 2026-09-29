@@ -140,7 +140,7 @@ COPY.sv = {
   completedBy: 'Slutförd av',
   projectProgress: 'Projektets förlopp',
   viewButton: 'Visa projekt',
-  footer: 'Drivs av AlgaPSA &middot; Håller team samordnade',
+  footer: 'Drivs av AlgaPSA &middot; För samspelta team',
   textHeader: 'Milstolpe slutförd',
   textIntro: 'En milstolpe har slutförts i projektet {{project.name}}:',
   textView: 'Visa projekt på',

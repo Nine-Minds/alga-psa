@@ -255,7 +255,7 @@ const COPY = {
   },
 };
 SUBJECTS.pt = 'Agendamento confirmado - {{serviceName}} em {{appointmentDate}}';
-SUBJECTS.sv = 'Bokning bekräftad - {{serviceName}} den {{appointmentDate}}';
+SUBJECTS.sv = 'Bokning bekräftad – {{serviceName}} den {{appointmentDate}}';
 COPY.pt = {
   headerLabel: 'Agendamento confirmado',
   headerSub: 'Seu agendamento foi aprovado',
@@ -293,12 +293,12 @@ COPY.sv = {
   headerLabel: 'Bokning bekräftad',
   headerSub: 'Din bokning har godkänts',
   greeting: 'Hej{{#if requesterName}} {{requesterName}}{{/if}},',
-  intro: 'Goda nyheter. Din bokningsförfrågan har godkänts och bekräftats. Vi ser fram emot att hjälpa dig.',
+  intro: 'Din bokningsförfrågan har godkänts och bekräftats. Vi ser fram emot att hjälpa dig.',
   appointmentTitle: 'Din bokning',
   service: 'Tjänst',
   date: 'Datum',
-  time: 'Klockslag',
-  duration: 'Varaktighet',
+  time: 'Tid',
+  duration: 'Längd',
   durationUnit: 'minuter',
   technicianTitle: 'Tilldelad tekniker',
   technicianEmail: 'E-post:',
@@ -307,13 +307,13 @@ COPY.sv = {
   cancellationTitle: 'Avbokningsvillkor',
   rescheduleMsg: 'Om du behöver boka om eller avboka den här bokningen, kontakta oss minst {{minimumNoticeHours}} timmar i förväg på {{contactEmail}}{{#if contactPhone}} eller ring {{contactPhone}}{{/if}}.',
   reminderMsg: 'Vi skickar en påminnelse före din bokade tid. Vi ses snart.',
-  footer: 'Drivs av AlgaPSA &middot; Håller team samordnade',
+  footer: 'Drivs av AlgaPSA &middot; För samspelta team',
   textHeader: 'Bokning bekräftad',
   textAppointmentHeader: 'Din bokning',
   textService: 'Tjänst',
   textDate: 'Datum',
-  textTime: 'Klockslag',
-  textDuration: 'Varaktighet',
+  textTime: 'Tid',
+  textDuration: 'Längd',
   textDurationUnit: 'minuter',
   textTechHeader: 'Tilldelad tekniker',
   textTechEmail: 'E-post',

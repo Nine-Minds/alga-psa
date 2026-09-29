@@ -232,7 +232,7 @@ const COPY = {
   },
 };
 SUBJECTS.pt = 'Agendamento atribuído - {{serviceName}} em {{appointmentDate}}';
-SUBJECTS.sv = 'Bokning tilldelad - {{serviceName}} den {{appointmentDate}}';
+SUBJECTS.sv = 'Bokning tilldelad – {{serviceName}} den {{appointmentDate}}';
 COPY.pt = {
   headerLabel: 'Agendamento atribuído',
   headerSub: 'Você tem um novo agendamento',
@@ -269,20 +269,20 @@ COPY.sv = {
   appointmentTitle: 'Bokningsdetaljer',
   service: 'Tjänst',
   date: 'Datum',
-  time: 'Klockslag',
-  duration: 'Varaktighet',
+  time: 'Tid',
+  duration: 'Längd',
   durationUnit: 'minuter',
   clientTitle: 'Kund',
   notesTitle: 'Anteckningar',
   calendarButton: 'Lägg till i kalendern',
   contactMsg: 'Om du har frågor, kontakta {{contactEmail}}{{#if contactPhone}} eller ring {{contactPhone}}{{/if}}.',
-  footer: 'Drivs av AlgaPSA &middot; Håller team samordnade',
+  footer: 'Drivs av AlgaPSA &middot; För samspelta team',
   textHeader: 'Bokning tilldelad',
   textAppointmentHeader: 'Bokningsdetaljer',
   textService: 'Tjänst',
   textDate: 'Datum',
-  textTime: 'Klockslag',
-  textDuration: 'Varaktighet',
+  textTime: 'Tid',
+  textDuration: 'Längd',
   textDurationUnit: 'minuter',
   textClient: 'Kund',
   textNotes: 'Anteckningar',

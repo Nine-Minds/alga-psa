@@ -230,7 +230,7 @@ COPY.sv = {
   changesLabel: 'Gjorda ändringar',
   changesVar: '{{{ticket.changes}}}',
   viewButton: 'Visa ärende',
-  footer: 'Drivs av AlgaPSA &middot; Håller team samordnade',
+  footer: 'Drivs av AlgaPSA &middot; För samspelta team',
   textHeader: 'Ärende uppdaterat',
   textUpdatedBy: 'Uppdaterat av',
   textAssigned: 'Tilldelat till',

@@ -29,7 +29,7 @@ const TEMPLATES = [
       it: { title: 'È stato menzionato', message: "{{authorName}} l'ha menzionato in {{entityType}} {{entityName}}" },
       pl: { title: 'Wspomniano o Tobie', message: '{{authorName}} wspomniał(a) o Tobie w {{entityType}} {{entityName}}' },
       pt: { title: 'Você foi mencionado', message: '{{authorName}} mencionou você em {{entityType}} {{entityName}}' },
-      sv: { title: 'Du blev omnämnd', message: '{{authorName}} nämnde dig i {{entityType}} {{entityName}}' },
+      sv: { title: 'Du har nämnts', message: '{{authorName}} nämnde dig i {{entityType}} {{entityName}}' },
     },
   },
   {
@@ -44,7 +44,7 @@ const TEMPLATES = [
       it: { title: 'Sei stato menzionato in un commento', message: '{{commentAuthor}} ti ha menzionato nel ticket #{{ticketNumber}}: {{commentPreview}}' },
       pl: { title: 'Wspomniano o Tobie w komentarzu', message: '{{commentAuthor}} wspomniał(a) o Tobie w zgłoszeniu #{{ticketNumber}}: {{commentPreview}}' },
       pt: { title: 'Você foi mencionado em um comentário', message: '{{commentAuthor}} mencionou você no ticket #{{ticketNumber}}: {{commentPreview}}' },
-      sv: { title: 'Du blev omnämnd i en kommentar', message: '{{commentAuthor}} nämnde dig i ärende #{{ticketNumber}}: {{commentPreview}}' },
+      sv: { title: 'Du har nämnts i en kommentar', message: '{{commentAuthor}} nämnde dig i ärende #{{ticketNumber}}: {{commentPreview}}' },
     },
   },
   {
@@ -59,7 +59,7 @@ const TEMPLATES = [
       it: { title: 'Sei stato menzionato in un documento', message: '{{authorName}} ti ha menzionato nel documento "{{documentName}}"' },
       pl: { title: 'Wspomniano o Tobie w dokumencie', message: '{{authorName}} wspomniał(a) o Tobie w dokumencie "{{documentName}}"' },
       pt: { title: 'Você foi mencionado em um documento', message: '{{authorName}} mencionou você no documento "{{documentName}}"' },
-      sv: { title: 'Du blev omnämnd i ett dokument', message: '{{authorName}} nämnde dig i dokumentet ”{{documentName}}”' },
+      sv: { title: 'Du har nämnts i ett dokument', message: '{{authorName}} nämnde dig i dokumentet ”{{documentName}}”' },
     },
   },
   {

@@ -31,27 +31,27 @@
   "configuration": {
     "fixed": {
       "basics": {
-        "billingFrequencyLabel": "Debiteringsintervall *",
-        "billingFrequencyPlaceholder": "Välj debiteringsintervall",
+        "billingFrequencyLabel": "Faktureringsintervall *",
+        "billingFrequencyPlaceholder": "Välj faktureringsintervall",
         "billingTiming": {
           "options": {
             "advance": "Förskott – fakturera vid periodens början",
             "arrears": "Efterskott – fakturera efter periodens slut"
           }
         },
-        "billingTimingHelp": "Vid förskottsdebitering faktureras den kommande perioden i början av varje debiteringscykel.",
-        "billingTimingLabel": "Debiteringstidpunkt *",
-        "billingTimingPlaceholder": "Välj debiteringstidpunkt",
+        "billingTimingHelp": "Vid förskottsfakturering faktureras den kommande perioden i början av varje faktureringscykel.",
+        "billingTimingLabel": "Faktureringstidpunkt *",
+        "billingTimingPlaceholder": "Välj faktureringstidpunkt",
         "cadenceOwner": {
           "description": "Välj vilket schema som styr tjänsteperioderna för denna återkommande avtalsrad.",
           "label": "Styrande schema",
           "options": {
             "client": {
-              "description": "Använd kundens debiteringskalender så att denna återkommande avtalsrad följer kundens ordinarie faktureringsschema.",
-              "label": "Fakturera enligt kundens debiteringsschema"
+              "description": "Använd kundens faktureringskalender så att denna återkommande avtalsrad följer kundens ordinarie faktureringsschema.",
+              "label": "Fakturera enligt kundens faktureringsschema"
             },
             "contract": {
-              "description": "Använd avtalsradens årsdagsschema. Avtalsschemat stöder för närvarande återkommande debitering månadsvis, kvartalsvis, halvårsvis och årligen.",
+              "description": "Använd avtalsradens årsdagsschema. Avtalsschemat stöder för närvarande återkommande fakturering månadsvis, kvartalsvis, halvårsvis och årligen.",
               "label": "Fakturera på avtalets årsdag"
             }
           }
@@ -62,7 +62,7 @@
         "invoiceLineDescriptionLabel": "Fakturaradens beskrivning",
         "invoiceLineDescriptionPlaceholder": "T.ex. månatligt underhåll av telefonsystem enligt avtal från 2019",
         "nameLabel": "Avtalsradsnamn *",
-        "namePlaceholder": "T.ex. Hanterad support – Guld"
+        "namePlaceholder": "T.ex. Drift och support – Guld"
       },
       "cardTitle": "Redigera avtalsrad: {{name}} (fast)",
       "errors": {
@@ -77,23 +77,23 @@
       "settings": {
         "adjustForPartialPeriodsHelp": "Aktivera detta om den återkommande avgiften ska anpassas till den del av tjänsteperioden som omfattas när avtalet börjar eller slutar under perioden.",
         "adjustForPartialPeriodsLabel": "Justera för delperioder",
-        "baseRateHelp": "Den sammanlagda återkommande avgiften för alla tjänster med fast pris",
-        "baseRateLabel": "Återkommande grundtaxa *",
+        "baseRateHelp": "Den sammanlagda återkommande avgiften för alla tjänster med fast avgift",
+        "baseRateLabel": "Återkommande grundavgift *",
         "billingCycleAlignment": {
           "options": {
-            "end": "Debiteringscykelns slut",
-            "prorated": "Proportionell täckning",
-            "start": "Debiteringscykelns början"
+            "end": "Faktureringscykelns slut",
+            "prorated": "Proportionell debitering",
+            "start": "Faktureringscykelns början"
           }
         },
-        "billingCycleAlignmentLabel": "Anpassning till debiteringscykel",
+        "billingCycleAlignmentLabel": "Anpassning till faktureringscykel",
         "billingCycleAlignmentPlaceholder": "Välj anpassning",
-        "description": "Ange den återkommande grundtaxan och om avgiften ska justeras när endast en del av perioden omfattas. Fördelningen mellan tjänster kan justeras när raden är aktiv.",
+        "description": "Ange den återkommande grundavgiften och om avgiften ska justeras när endast en del av perioden omfattas. Fördelningen mellan tjänster kan justeras när raden är aktiv.",
         "heading": "Inställningar för fast avgift"
       },
       "validation": {
-        "baseRateRequiredForFixedLines": "Grundtaxa krävs för avtalsrader med fast pris",
-        "billingFrequency": "Debiteringsintervall",
+        "baseRateRequiredForFixedLines": "Grundavgift krävs för avtalsrader med fast avgift",
+        "billingFrequency": "Faktureringsintervall",
         "contractLineName": "Avtalsradsnamn",
         "contractLineType": "Avtalsradstyp"
       }
@@ -103,34 +103,34 @@
         "saveConfiguration": "Spara konfiguration"
       },
       "basics": {
-        "billingFrequencyLabel": "Debiteringsintervall *",
-        "billingFrequencyPlaceholder": "Välj debiteringsintervall",
+        "billingFrequencyLabel": "Faktureringsintervall *",
+        "billingFrequencyPlaceholder": "Välj faktureringsintervall",
         "cardTitle": "Redigera avtalsrad: {{name}} (per timme)",
         "description": "Ge avtalsraden ett namn och välj hur den ska debiteras som standard.",
         "heading": "Grunduppgifter för avtalsrad",
         "nameLabel": "Avtalsradsnamn *",
         "namePlaceholder": "T.ex. support på löpande räkning",
         "validation": {
-          "billingFrequency": "Debiteringsintervall",
+          "billingFrequency": "Faktureringsintervall",
           "contractLineName": "Avtalsradsnamn"
         }
       },
       "errors": {
         "cannotSaveValidationErrors": "Det går inte att spara eftersom det finns valideringsfel i avtalsradens gemensamma inställningar.",
         "contractLineNotFoundOrInvalidType": "Avtalsraden hittades inte eller har en ogiltig typ.",
-        "failedToLoadPlanConfiguration": "Det gick inte att läsa in planens konfiguration. Försök igen.",
+        "failedToLoadPlanConfiguration": "Det gick inte att läsa in avtalsradens konfiguration. Försök igen.",
         "failedToSaveContractLine": "Det gick inte att spara avtalsraden",
-        "failedToSavePlanWideConfiguration": "Det gick inte att spara planens gemensamma konfiguration: {{message}}",
+        "failedToSavePlanWideConfiguration": "Det gick inte att spara avtalsradens gemensamma konfiguration: {{message}}",
         "failedToSaveServiceConfiguration": "Det gick inte att spara tjänstens konfiguration: {{message}}",
-        "invalidPlanTypeOrNotFound": "Ogiltig plantyp eller planen hittades inte."
+        "invalidPlanTypeOrNotFound": "Ogiltig avtalsradstyp eller avtalsraden hittades inte."
       },
       "planWideSettings": {
         "afterHours": {
-          "enableLabel": "Aktivera taxemultiplikator utanför ordinarie arbetstid",
-          "multiplierHelp": "Multiplikator utanför ordinarie arbetstid (t.ex. 1,5×).",
-          "multiplierLabel": "Multiplikator utanför ordinarie arbetstid",
+          "enableLabel": "Aktivera taxemultiplikator utanför kontorstid",
+          "multiplierHelp": "Multiplikator utanför kontorstid (t.ex. 1,5×).",
+          "multiplierLabel": "Multiplikator utanför kontorstid",
           "multiplierPlaceholder": "1,5",
-          "tooltip": "Tillämpa en multiplikator på standardtimtaxan för arbete utanför angiven ordinarie arbetstid (kräver konfiguration av ordinarie arbetstid)."
+          "tooltip": "Tillämpa en multiplikator på standardtimtaxan för arbete utanför angiven kontorstid (kräver konfiguration av kontorstid)."
         },
         "overtime": {
           "enableLabel": "Aktivera övertidstaxor",
@@ -139,19 +139,19 @@
           "thresholdHelp": "Antal timmar innan övertidstaxan börjar gälla.",
           "thresholdLabel": "Övertidsgräns (h/period)",
           "thresholdPlaceholder": "40",
-          "tooltip": "Tillämpa en annan taxa när det totala antalet arbetade timmar under avtalsradens debiteringsperiod överskrider en angiven gräns."
+          "tooltip": "Tillämpa en annan taxa när det totala antalet arbetade timmar under avtalsradens faktureringsperiod överskrider en angiven gräns."
         },
-        "trigger": "Avtalsradens timinställningar (övertid, utanför ordinarie arbetstid)"
+        "trigger": "Avtalsradens timinställningar (övertid, utanför kontorstid)"
       },
       "services": {
         "cardTitle": "Tjänstetaxor och inställningar",
         "emptyState": "Inga tjänster är för närvarande kopplade till denna avtalsrad.",
         "fallbackServiceName": "Tjänste-ID: {{id}}",
         "manageCardTitle": "Hantera avtalsradens tjänster",
-        "nonHourlyServiceMessage": "Denna tjänst (debiteringsmetod: {{method}}) kan inte konfigureras med särskilda timtaxor i denna plan."
+        "nonHourlyServiceMessage": "Denna tjänst (debiteringsmetod: {{method}}) kan inte konfigureras med särskilda timtaxor på denna avtalsrad."
       },
       "validation": {
-        "afterHoursMultiplierMinOne": "Multiplikatorn för arbete utanför ordinarie arbetstid måste vara minst 1",
+        "afterHoursMultiplierMinOne": "Multiplikatorn för arbete utanför kontorstid måste vara minst 1",
         "overtimeRateNonNegative": "Övertidstaxan får inte vara negativ",
         "overtimeThresholdNonNegative": "Övertidsgränsen får inte vara negativ"
       }
@@ -161,23 +161,23 @@
         "saveAllConfigurations": "Spara alla konfigurationer"
       },
       "basics": {
-        "billingFrequencyLabel": "Debiteringsintervall *",
-        "billingFrequencyPlaceholder": "Välj debiteringsintervall",
+        "billingFrequencyLabel": "Faktureringsintervall *",
+        "billingFrequencyPlaceholder": "Välj faktureringsintervall",
         "cardTitle": "Redigera avtalsrad: {{name}} (förbrukning)",
         "description": "Ge avtalsraden ett namn och välj hur den ska debiteras som standard.",
         "heading": "Grunduppgifter för avtalsrad",
         "nameLabel": "Avtalsradsnamn *",
         "namePlaceholder": "T.ex. förbrukningsbaserade tjänster",
         "validation": {
-          "billingFrequency": "Debiteringsintervall",
+          "billingFrequency": "Faktureringsintervall",
           "contractLineName": "Avtalsradsnamn"
         }
       },
       "errors": {
-        "failedToLoadPlanServicesOrConfigurations": "Det gick inte att läsa in planens tjänster eller konfigurationer. Försök igen.",
+        "failedToLoadPlanServicesOrConfigurations": "Det gick inte att läsa in avtalsradens tjänster eller konfigurationer. Försök igen.",
         "failedToSaveContractLine": "Det gick inte att spara avtalsraden",
         "failedToSaveOneOrMoreServiceConfigurations": "Det gick inte att spara en eller flera tjänstekonfigurationer. Kontrollera uppgifterna och försök igen.",
-        "invalidPlanTypeOrNotFound": "Ogiltig plantyp eller planen hittades inte.",
+        "invalidPlanTypeOrNotFound": "Ogiltig avtalsradstyp eller avtalsraden hittades inte.",
         "noChangesDetected": "Det finns inga ändringar att spara.",
         "validationErrorDetails": "Valideringsfel: {{details}}",
         "validationErrorsInModifiedServices": "Det går inte att spara eftersom det finns valideringsfel i de ändrade tjänsterna."
@@ -219,25 +219,25 @@
       "updatePreset": "Uppdatera förinställning för avtalsrad"
     },
     "basics": {
-      "billingFrequencyLabel": "Debiteringsintervall *",
-      "billingFrequencyPlaceholder": "Välj debiteringsintervall",
+      "billingFrequencyLabel": "Faktureringsintervall *",
+      "billingFrequencyPlaceholder": "Välj faktureringsintervall",
       "billingTiming": {
         "options": {
           "advance": "Förskott – fakturera vid periodens början",
           "arrears": "Efterskott – fakturera efter periodens slut"
         }
       },
-      "billingTimingLabel": "Debiteringstidpunkt *",
-      "billingTimingPlaceholder": "Välj debiteringstidpunkt",
+      "billingTimingLabel": "Faktureringstidpunkt *",
+      "billingTimingPlaceholder": "Välj faktureringstidpunkt",
       "description": "Skapa en återanvändbar mall som snabbt kan läggas till i avtal eller avtalsmallar. Ange debiteringsmodell, tjänster och standardtaxor som ska kopieras när förinställningen används.",
-      "heading": "Grunduppgifter för avtalsradens förinställning",
-      "nameLabel": "Namn på avtalsradens förinställning *",
-      "namePlaceholder": "T.ex. Hanterad support – Guld"
+      "heading": "Grunduppgifter för avtalsradsförinställning",
+      "nameLabel": "Namn på avtalsradsförinställning *",
+      "namePlaceholder": "T.ex. Drift och support – Guld"
     },
     "billingModel": {
       "cards": {
         "fixed": {
-          "description": "Debitera ett fast belopp varje debiteringsperiod.",
+          "description": "Debitera ett fast belopp varje faktureringsperiod.",
           "title": "Fast avgift"
         },
         "hourly": {
@@ -252,8 +252,8 @@
       "description": "Välj det debiteringssätt som passar erbjudandet. Tjänster och tillägg kan kopplas till raden när den har skapats.",
       "heading": "Välj debiteringsmodell *",
       "timingHelp": {
-        "fixed": "Vid förskottsdebitering faktureras den kommande perioden i början av debiteringscykeln.",
-        "nonFixed": "Timdebiterade och förbrukningsbaserade avtalsrader debiteras alltid i efterskott."
+        "fixed": "Vid förskottsfakturering faktureras den kommande perioden i början av faktureringscykeln.",
+        "nonFixed": "Timdebiterade och förbrukningsbaserade avtalsrader faktureras alltid i efterskott."
       }
     },
     "common": {
@@ -261,17 +261,17 @@
       "quantity": "Antal"
     },
     "errors": {
-      "saveFailed": "Det gick inte att spara avtalsradens förinställning"
+      "saveFailed": "Det gick inte att spara avtalsradsförinställningen"
     },
     "fixed": {
       "addItem": "Lägg till post",
       "adjustForPartialPeriodsHelp": "När detta är aktiverat anpassas den återkommande avgiften till den del av tjänsteperioden som omfattas när avtalet börjar eller slutar under perioden.",
       "adjustForPartialPeriodsLabel": "Justera för delperioder",
-      "alertBody": "Avtalsradens grundtaxa är det belopp som debiteras. Du kan även koppla produkter här. Produktantal debiteras per enhet, medan antalet tjänster med fast avgift endast används för skattefördelning.",
+      "alertBody": "Avtalsradens grundavgift är det belopp som debiteras. Du kan även koppla produkter här. Produktantal debiteras per enhet, medan antalet tjänster med fast avgift endast används för skattefördelning.",
       "alertTitle": "Tjänster med fast avgift:",
-      "baseRateHelp": "Föreslagen återkommande avgift för alla tjänster med fast pris. Kan åsidosättas när förinställningen läggs till i ett avtal.",
-      "baseRateLabel": "Återkommande grundtaxa (valfri)",
-      "description": "Konfigurera tjänster som debiteras med en fast återkommande taxa, oavsett förbrukning.",
+      "baseRateHelp": "Föreslagen återkommande avgift för alla tjänster med fast avgift. Kan åsidosättas när förinställningen läggs till i ett avtal.",
+      "baseRateLabel": "Återkommande grundavgift (valfri)",
+      "description": "Konfigurera tjänster som debiteras med en fast återkommande avgift, oavsett förbrukning.",
       "emptyState": "Inga poster med fast avgift har lagts till ännu. Klicka på ”Lägg till post” ovan för att komma igång.",
       "heading": "Tjänster med fast avgift",
       "itemLabel": "Post {{index}}",
@@ -304,13 +304,13 @@
     },
     "usage": {
       "addUsageService": "Lägg till förbrukningsbaserad tjänst",
-      "alertBody": "Dessa tjänster debiteras utifrån faktisk förbrukning eller användningsmått. Varje förbrukad enhet multipliceras med taxan per enhet för att beräkna fakturabeloppet.",
+      "alertBody": "Dessa tjänster debiteras utifrån faktisk förbrukning eller användningsmått. Varje förbrukad enhet multipliceras med enhetstaxan för att beräkna fakturabeloppet.",
       "alertTitle": "Vad är förbrukningsbaserade tjänster?",
       "defaultUnit": "enhet",
       "defaultUnits": "enheter",
       "description": "Konfigurera tjänster som debiteras utifrån användning eller förbrukning.",
       "emptyState": "Inga förbrukningsbaserade tjänster har lagts till ännu. Klicka på ”Lägg till förbrukningsbaserad tjänst” ovan för att komma igång.",
-      "enterUnitRate": "Ange taxa per enhet",
+      "enterUnitRate": "Ange enhetstaxa",
       "heading": "Förbrukningsbaserade tjänster",
       "ratePerUnitLabel": "Taxa per enhet",
       "rateSummary": "{{rate}}/{{unit}}",
@@ -323,16 +323,16 @@
       "unitOfMeasurePlaceholder": "T.ex. GB, API-anrop, användare"
     },
     "validation": {
-      "billingFrequencyRequired": "Debiteringsintervall krävs",
+      "billingFrequencyRequired": "Faktureringsintervall krävs",
       "contractLineTypeRequired": "Avtalsradstyp krävs",
-      "fixedServiceRequired": "Minst en tjänst med fast pris eller en produkt krävs",
+      "fixedServiceRequired": "Minst en tjänst med fast avgift eller en produkt krävs",
       "hourlyRateRequired": "Tjänst {{index}}: Timtaxa krävs",
       "hourlyServiceRequired": "Minst en timdebiterad tjänst krävs",
-      "nameRequired": "Namn på avtalsradens förinställning krävs",
+      "nameRequired": "Namn på avtalsradsförinställning krävs",
       "prefix": "Korrigera följande:",
       "serviceSelectRequired": "Tjänst {{index}}: Välj en tjänst",
       "unitOfMeasureRequired": "Tjänst {{index}}: Måttenhet krävs",
-      "unitRateRequired": "Tjänst {{index}}: Taxa per enhet krävs",
+      "unitRateRequired": "Tjänst {{index}}: Enhetstaxa krävs",
       "usageServiceRequired": "Minst en förbrukningsbaserad tjänst krävs"
     }
   },
@@ -350,7 +350,7 @@
       "tooltips": {
         "allowRollover": "Om detta är markerat kan oanvända {{units}} från en period användas i nästa.",
         "overageRatePerUnit": "Taxan som debiteras för varje {{unit}} som används utöver den inkluderade mängden. (t.ex. $)",
-        "totalInBucket": "Det totala antalet {{units}} som ingår i denna pott per debiteringsperiod."
+        "totalInBucket": "Det totala antalet {{units}} som ingår i denna pott per faktureringsperiod."
       },
       "units": {
         "defaultPlural": "enheter",
@@ -408,7 +408,7 @@
       "errors": {
         "failedToLoadServiceConfiguration": "Det gick inte att läsa in tjänstens konfiguration",
         "failedToUpdateService": "Det gick inte att uppdatera tjänsten",
-        "missingPlanOrServiceInformation": "Information om planen eller tjänsten saknas"
+        "missingPlanOrServiceInformation": "Information om avtalsraden eller tjänsten saknas"
       },
       "loading": "Läser in tjänstens konfiguration…",
       "title": "Redigera tjänstens konfiguration",
@@ -420,10 +420,10 @@
         "addTier": "Lägg till nivå"
       },
       "aria": {
-        "fromAmount": "Nivå {{tier}} från mängd",
-        "rate": "Nivå {{tier}} taxa",
+        "fromAmount": "Nivå {{tier}}, från",
+        "rate": "Taxa för nivå {{tier}}",
         "removeTier": "Ta bort nivå {{tier}}",
-        "toAmount": "Nivå {{tier}} till mängd"
+        "toAmount": "Nivå {{tier}}, till"
       },
       "cardTitle": "Prisnivåer",
       "columns": {
@@ -455,7 +455,8 @@
         "defaultRatePerUnit": "Taxa per enhet (används om nivåbaserad prissättning är inaktiverad).",
         "minimumUsage": "Minsta antal debiterbara enheter per period.",
         "unitOfMeasure": "T.ex. GB, användare, dator."
-      }
+      },
+      "catalogUnitPrecedence": "Katalogens enhet har företräde framför enheten i förbrukningskonfigurationen."
     }
   },
   "list": {
@@ -464,7 +465,7 @@
     },
     "columns": {
       "actions": "Åtgärder",
-      "billingFrequency": "Debiteringsintervall",
+      "billingFrequency": "Faktureringsintervall",
       "contractLineName": "Avtalsradsnamn",
       "contractLineType": "Avtalsradstyp",
       "isCustom": "Anpassad"
@@ -480,7 +481,7 @@
       "failedToRemoveContractLineService": "Det gick inte att ta bort tjänsten från avtalsraden",
       "failedToUpdateContractLineService": "Det gick inte att uppdatera tjänsten på avtalsraden",
       "failedToValidateDeletion": "Det gick inte att validera raderingen. Försök igen.",
-      "unknownErrorFetchingServiceTypes": "Ett okänt fel uppstod när tjänstetyper hämtades"
+      "unknownErrorFetchingServiceTypes": "Det gick inte att hämta tjänstetyper"
     },
     "heading": "Avtalsrader",
     "planServices": {
@@ -495,7 +496,7 @@
         "unitOfMeasure": "Måttenhet"
       },
       "emptyStateSelectContractLine": "Välj en avtalsrad för att hantera dess tjänster",
-      "heading": "Planens tjänster",
+      "heading": "Avtalsradens tjänster",
       "selectServicePlaceholder": "Välj tjänst…",
       "servicesFor": "Tjänster för {{name}}"
     },
@@ -509,13 +510,13 @@
     },
     "columns": {
       "actions": "Åtgärder",
-      "billingFrequency": "Debiteringsintervall",
+      "billingFrequency": "Faktureringsintervall",
       "contractLineName": "Avtalsradsnamn",
       "contractLineType": "Avtalsradstyp"
     },
     "errors": {
       "failedToFetchContractLinePresets": "Det gick inte att hämta förinställningar för avtalsrader",
-      "unexpectedDeleteError": "Ett oväntat fel uppstod när avtalsradens förinställning raderades."
+      "unexpectedDeleteError": "Det gick inte att radera avtalsradsförinställningen."
     },
     "filters": {
       "searchPlaceholder": "Sök förinställningar för avtalsrader",
@@ -527,25 +528,25 @@
     "heading": "Förinställningar för avtalsrader",
     "loading": "Läser in förinställningar för avtalsrader",
     "toast": {
-      "contractLinePresetDeletedSuccessfully": "Avtalsradens förinställning har raderats"
+      "contractLinePresetDeletedSuccessfully": "Avtalsradsförinställningen har raderats"
     }
   },
   "preset": {
     "fixed": {
       "basics": {
-        "billingFrequencyLabel": "Debiteringsintervall *",
-        "billingFrequencyPlaceholder": "Välj debiteringsintervall",
-        "description": "Ge avtalsradens förinställning ett namn och välj hur debiteringen ska ske som standard.",
-        "heading": "Grunduppgifter för avtalsradens förinställning",
-        "nameLabel": "Namn på avtalsradens förinställning *",
-        "namePlaceholder": "T.ex. Hanterad support – Guld"
+        "billingFrequencyLabel": "Faktureringsintervall *",
+        "billingFrequencyPlaceholder": "Välj faktureringsintervall",
+        "description": "Ge avtalsradsförinställningen ett namn och välj hur debiteringen ska ske som standard.",
+        "heading": "Grunduppgifter för avtalsradsförinställning",
+        "nameLabel": "Namn på avtalsradsförinställning *",
+        "namePlaceholder": "T.ex. Drift och support – Guld"
       },
       "cardTitle": "Redigera förinställning för avtalsrad: {{name}} (fast)",
       "errors": {
         "contractLineNotFoundOrInvalidType": "Avtalsraden hittades inte eller har en ogiltig typ.",
-        "failedToLoadContractLinePresetConfiguration": "Det gick inte att läsa in konfigurationen för avtalsradens förinställning. Försök igen.",
-        "failedToSaveContractLinePreset": "Det gick inte att spara avtalsradens förinställning",
-        "invalidContractLinePresetTypeOrNotFound": "Ogiltig typ av förinställning för avtalsrad eller förinställningen hittades inte."
+        "failedToLoadContractLinePresetConfiguration": "Det gick inte att läsa in konfigurationen för avtalsradsförinställningen. Försök igen.",
+        "failedToSaveContractLinePreset": "Det gick inte att spara avtalsradsförinställningen",
+        "invalidContractLinePresetTypeOrNotFound": "Ogiltig typ av avtalsradsförinställning eller förinställningen hittades inte."
       },
       "services": {
         "associatedCardTitle": "Kopplade tjänster"
@@ -553,16 +554,16 @@
       "settings": {
         "adjustForPartialPeriodsHelp": "Aktivera detta om den återkommande avgiften ska anpassas till den del av tjänsteperioden som omfattas när avtalet börjar eller slutar under perioden.",
         "adjustForPartialPeriodsLabel": "Justera för delperioder",
-        "baseRateHelp": "Föreslagen återkommande avgift för alla tjänster med fast pris. Kan åsidosättas när förinställningen läggs till i ett avtal.",
-        "baseRateLabel": "Återkommande grundtaxa (valfri)",
+        "baseRateHelp": "Föreslagen återkommande avgift för alla tjänster med fast avgift. Kan åsidosättas när förinställningen läggs till i ett avtal.",
+        "baseRateLabel": "Återkommande grundavgift (valfri)",
         "billingCycleAlignment": {
           "options": {
-            "end": "Debiteringscykelns slut",
-            "prorated": "Proportionell täckning",
-            "start": "Debiteringscykelns början"
+            "end": "Faktureringscykelns slut",
+            "prorated": "Proportionell debitering",
+            "start": "Faktureringscykelns början"
           }
         },
-        "billingCycleAlignmentLabel": "Anpassning till debiteringscykel",
+        "billingCycleAlignmentLabel": "Anpassning till faktureringscykel",
         "billingCycleAlignmentPlaceholder": "Välj anpassning",
         "billingTiming": {
           "options": {
@@ -570,51 +571,51 @@
             "arrears": "Efterskott – fakturera efter periodens slut"
           }
         },
-        "billingTimingHelp": "Förinställningens styrande schema behålls uttryckligen när den kopieras till en återkommande avtalsrad. Debiteringstidpunkten avgör fortfarande om den kopierade återkommande raden faktureras i början eller slutet av varje period som omfattas.",
-        "billingTimingLabel": "Debiteringstidpunkt",
-        "billingTimingPlaceholder": "Välj debiteringstidpunkt",
-        "description": "Ange den återkommande grundtaxan och om avgiften ska justeras när endast en del av perioden omfattas. Fördelningen mellan tjänster kan justeras när raden är aktiv.",
+        "billingTimingHelp": "Förinställningens styrande schema behålls uttryckligen när den kopieras till en återkommande avtalsrad. Faktureringstidpunkten avgör fortfarande om den kopierade återkommande raden faktureras i början eller slutet av varje period som omfattas.",
+        "billingTimingLabel": "Faktureringstidpunkt",
+        "billingTimingPlaceholder": "Välj faktureringstidpunkt",
+        "description": "Ange den återkommande grundavgiften och om avgiften ska justeras när endast en del av perioden omfattas. Fördelningen mellan tjänster kan justeras när raden är aktiv.",
         "heading": "Inställningar för fast avgift"
       },
       "validation": {
-        "billingFrequency": "Debiteringsintervall",
-        "contractLinePresetName": "Namn på avtalsradens förinställning",
+        "billingFrequency": "Faktureringsintervall",
+        "contractLinePresetName": "Namn på avtalsradsförinställning",
         "contractLineType": "Avtalsradstyp"
       }
     },
     "hourly": {
       "basics": {
-        "billingFrequencyLabel": "Debiteringsintervall *",
-        "billingFrequencyPlaceholder": "Välj debiteringsintervall",
+        "billingFrequencyLabel": "Faktureringsintervall *",
+        "billingFrequencyPlaceholder": "Välj faktureringsintervall",
         "cardTitle": "Redigera förinställning för avtalsrad: {{name}} (per timme)",
-        "description": "Ge avtalsradens förinställning ett namn och välj hur debiteringen ska ske som standard.",
-        "heading": "Grunduppgifter för avtalsradens förinställning",
+        "description": "Ge avtalsradsförinställningen ett namn och välj hur debiteringen ska ske som standard.",
+        "heading": "Grunduppgifter för avtalsradsförinställning",
         "minimumBillableTimeHelp": "T.ex. 15 minuter – kortare tidposter avrundas uppåt till denna tid",
         "minimumBillableTimeLabel": "Minsta debiterbara tid (minuter)",
         "minutesPlaceholder": "T.ex. 15",
-        "nameLabel": "Namn på avtalsradens förinställning *",
+        "nameLabel": "Namn på avtalsradsförinställning *",
         "namePlaceholder": "T.ex. support på löpande räkning",
         "roundUpToNearestHelp": "T.ex. 15 minuter – tidposter avrundas uppåt till närmaste intervall",
         "roundUpToNearestLabel": "Avrunda uppåt till närmaste (minuter)",
         "validation": {
-          "billingFrequency": "Debiteringsintervall",
-          "contractLinePresetName": "Namn på avtalsradens förinställning"
+          "billingFrequency": "Faktureringsintervall",
+          "contractLinePresetName": "Namn på avtalsradsförinställning"
         }
       },
       "errors": {
-        "cannotSaveValidationErrors": "Det går inte att spara eftersom det finns valideringsfel i de gemensamma inställningarna för avtalsradens förinställning.",
+        "cannotSaveValidationErrors": "Det går inte att spara eftersom det finns valideringsfel i avtalsradsförinställningens gemensamma inställningar.",
         "contractLineNotFoundOrInvalidType": "Avtalsraden hittades inte eller har en ogiltig typ.",
-        "failedToLoadPlanConfiguration": "Det gick inte att läsa in planens konfiguration. Försök igen.",
-        "failedToSaveContractLinePreset": "Det gick inte att spara avtalsradens förinställning",
-        "failedToSavePlanWideConfiguration": "Det gick inte att spara planens gemensamma konfiguration: {{message}}",
+        "failedToLoadPlanConfiguration": "Det gick inte att läsa in konfigurationen för avtalsradsförinställningen. Försök igen.",
+        "failedToSaveContractLinePreset": "Det gick inte att spara avtalsradsförinställningen",
+        "failedToSavePlanWideConfiguration": "Det gick inte att spara avtalsradsförinställningens gemensamma konfiguration: {{message}}",
         "failedToSaveServiceConfiguration": "Det gick inte att spara tjänstens konfiguration: {{message}}",
-        "invalidPlanTypeOrNotFound": "Ogiltig plantyp eller planen hittades inte."
+        "invalidPlanTypeOrNotFound": "Ogiltig typ av avtalsradsförinställning eller förinställningen hittades inte."
       },
       "services": {
-        "manageCardTitle": "Hantera tjänster i avtalsradens förinställning"
+        "manageCardTitle": "Hantera tjänster i avtalsradsförinställningen"
       },
       "validation": {
-        "afterHoursMultiplierMinOne": "Multiplikatorn för arbete utanför ordinarie arbetstid måste vara minst 1",
+        "afterHoursMultiplierMinOne": "Multiplikatorn för arbete utanför kontorstid måste vara minst 1",
         "overtimeRateNonNegative": "Övertidstaxan får inte vara negativ",
         "overtimeThresholdNonNegative": "Övertidsgränsen får inte vara negativ"
       }
@@ -624,23 +625,23 @@
         "saveAllConfigurations": "Spara alla konfigurationer"
       },
       "basics": {
-        "billingFrequencyLabel": "Debiteringsintervall *",
-        "billingFrequencyPlaceholder": "Välj debiteringsintervall",
+        "billingFrequencyLabel": "Faktureringsintervall *",
+        "billingFrequencyPlaceholder": "Välj faktureringsintervall",
         "cardTitle": "Redigera förinställning för avtalsrad: {{name}} (förbrukning)",
-        "description": "Ge avtalsradens förinställning ett namn och välj hur debiteringen ska ske som standard.",
-        "heading": "Grunduppgifter för avtalsradens förinställning",
-        "nameLabel": "Namn på avtalsradens förinställning *",
+        "description": "Ge avtalsradsförinställningen ett namn och välj hur debiteringen ska ske som standard.",
+        "heading": "Grunduppgifter för avtalsradsförinställning",
+        "nameLabel": "Namn på avtalsradsförinställning *",
         "namePlaceholder": "T.ex. förbrukningsbaserade tjänster",
         "validation": {
-          "billingFrequency": "Debiteringsintervall",
-          "contractLinePresetName": "Namn på avtalsradens förinställning"
+          "billingFrequency": "Faktureringsintervall",
+          "contractLinePresetName": "Namn på avtalsradsförinställning"
         }
       },
       "errors": {
-        "failedToLoadPlanServicesOrConfigurations": "Det gick inte att läsa in planens tjänster eller konfigurationer. Försök igen.",
-        "failedToSaveContractLinePreset": "Det gick inte att spara avtalsradens förinställning",
+        "failedToLoadPlanServicesOrConfigurations": "Det gick inte att läsa in avtalsradsförinställningens tjänster eller konfigurationer. Försök igen.",
+        "failedToSaveContractLinePreset": "Det gick inte att spara avtalsradsförinställningen",
         "failedToSaveOneOrMoreServiceConfigurations": "Det gick inte att spara en eller flera tjänstekonfigurationer. Kontrollera uppgifterna och försök igen.",
-        "invalidPlanTypeOrNotFound": "Ogiltig plantyp eller planen hittades inte.",
+        "invalidPlanTypeOrNotFound": "Ogiltig typ av avtalsradsförinställning eller förinställningen hittades inte.",
         "noChangesDetected": "Det finns inga ändringar att spara.",
         "validationErrorDetails": "Valideringsfel: {{details}}",
         "validationErrorsInModifiedServices": "Det går inte att spara eftersom det finns valideringsfel i de ändrade tjänsterna."
@@ -648,7 +649,7 @@
       "services": {
         "fallbackServiceName": "Tjänste-ID: {{id}}",
         "loadingConfiguration": "Läser in konfiguration…",
-        "manageCardTitle": "Hantera tjänster i avtalsradens förinställning",
+        "manageCardTitle": "Hantera tjänster i avtalsradsförinställningen",
         "pricingCardTitle": "Tjänsteprissättning",
         "summary": {
           "defaultUnit": "enhet",
@@ -681,7 +682,7 @@
       "unsupportedType": "Okänd avtalsradstyp eller typen stöds inte: {{type}}"
     },
     "preset": {
-      "loadFailed": "Det gick inte att läsa in detaljer för avtalsradens förinställning.",
+      "loadFailed": "Det gick inte att läsa in detaljer för avtalsradsförinställningen.",
       "loading": "Läser in förinställning för avtalsrad…",
       "notFound": "Förinställningen för avtalsrad med ID {{id}} hittades inte.",
       "unsupportedType": "Okänd typ av förinställning för avtalsrad eller typen stöds inte: {{type}}"
@@ -733,7 +734,7 @@
     },
     "hourlyPreset": {
       "addSelectedServices": "Lägg till markerade tjänster ({{count}})",
-      "addServicesHeading": "Lägg till tjänster i avtalsradens förinställning",
+      "addServicesHeading": "Lägg till tjänster i avtalsradsförinställningen",
       "allServicesAssociated": "Alla tillgängliga timdebiterade tjänster är redan kopplade till denna förinställning.",
       "billingMethod": {
         "fixed": "Fast pris",
@@ -751,7 +752,7 @@
       "serviceMetadata": "Tjänstetyp: {{type}} | Metod: {{method}}",
       "serviceToAddMetadata": "Tjänstetyp: {{type}} | Metod: {{method}} | Standardtaxa: {{rate}}",
       "toast": {
-        "savedSuccessfully": "Tjänsterna i avtalsradens förinställning har sparats"
+        "savedSuccessfully": "Tjänsterna i avtalsradsförinställningen har sparats"
       },
       "unknownService": "Okänd tjänst",
       "unsavedChanges": {
@@ -764,7 +765,7 @@
     },
     "usagePreset": {
       "addSelectedServices": "Lägg till markerade tjänster ({{count}})",
-      "addServicesHeading": "Lägg till tjänster i avtalsradens förinställning",
+      "addServicesHeading": "Lägg till tjänster i avtalsradsförinställningen",
       "allServicesAssociated": "Alla tillgängliga förbrukningsbaserade tjänster är redan kopplade till denna förinställning.",
       "billingMethod": {
         "fixed": "Fast pris",
@@ -784,7 +785,7 @@
       "serviceMetadata": "Tjänstetyp: {{type}} | Metod: {{method}}",
       "serviceToAddMetadata": "Tjänstetyp: {{type}} | Metod: {{method}} | Standardtaxa: {{rate}} | Enhet: {{unit}}",
       "toast": {
-        "savedSuccessfully": "Tjänsterna i avtalsradens förinställning har sparats"
+        "savedSuccessfully": "Tjänsterna i avtalsradsförinställningen har sparats"
       },
       "unitLabel": "Enhet:",
       "unitPlaceholder": "T.ex. GB, användare, dator",
@@ -809,32 +810,32 @@
   },
   "errors": {
     "line": {
-      "unavailable": "Den valda avtalsraden är inte längre tillgänglig. Ladda om och försök igen.",
-      "invalidValue": "Ett av de valda värdena för avtalsraden är ogiltigt. Ladda om och försök igen.",
-      "referenceMissing": "Det valda avtalet eller den valda avtalsraden finns inte längre. Ladda om och försök igen.",
-      "conflict": "Ändringen av avtalsraden står i konflikt med en befintlig post. Ladda om och försök igen.",
+      "unavailable": "Den valda avtalsraden är inte längre tillgänglig. Ladda om sidan och försök igen.",
+      "invalidValue": "Ett av de valda värdena för avtalsraden är ogiltigt. Ladda om sidan och försök igen.",
+      "referenceMissing": "Det valda avtalet eller den valda avtalsraden finns inte längre. Ladda om sidan och försök igen.",
+      "conflict": "Ändringen av avtalsraden står i konflikt med en befintlig post. Ladda om sidan och försök igen.",
       "notAllowed": "Ett av avtalsradens värden är inte tillåtet. Granska formuläret och försök igen.",
       "missingField": "Ett obligatoriskt fält för avtalsraden saknas.",
       "missingFieldNamed": "Ett obligatoriskt fält för avtalsraden saknas: {{field}}."
     },
     "templateLine": {
-      "unavailable": "Den valda mallraden är inte längre tillgänglig. Ladda om och försök igen."
+      "unavailable": "Den valda mallraden är inte längre tillgänglig. Ladda om sidan och försök igen."
     },
     "mapping": {
       "duplicate": "Denna avtalsrad är redan kopplad till det valda avtalet."
     },
     "preset": {
-      "invalidValue": "Ett av de valda värdena för avtalsradens förinställning är ogiltigt. Ladda om och försök igen.",
-      "referenceMissing": "Den valda förinställningen för avtalsrad, det valda avtalet eller den valda tjänsten finns inte längre. Ladda om och försök igen.",
-      "conflict": "Ändringen av avtalsradens förinställning står i konflikt med en befintlig post. Ladda om och försök igen.",
-      "notAllowed": "Ett av värdena i avtalsradens förinställning är inte tillåtet. Granska formuläret och försök igen.",
-      "missingField": "Ett obligatoriskt fält för avtalsradens förinställning saknas.",
-      "missingFieldNamed": "Ett obligatoriskt fält för avtalsradens förinställning saknas: {{field}}.",
+      "invalidValue": "Ett av de valda värdena för avtalsradsförinställningen är ogiltigt. Ladda om sidan och försök igen.",
+      "referenceMissing": "Den valda förinställningen för avtalsrad, det valda avtalet eller den valda tjänsten finns inte längre. Ladda om sidan och försök igen.",
+      "conflict": "Ändringen av avtalsradsförinställningen står i konflikt med en befintlig post. Ladda om sidan och försök igen.",
+      "notAllowed": "Ett av värdena i avtalsradsförinställningen är inte tillåtet. Granska formuläret och försök igen.",
+      "missingField": "Ett obligatoriskt fält för avtalsradsförinställningen saknas.",
+      "missingFieldNamed": "Ett obligatoriskt fält för avtalsradsförinställningen saknas: {{field}}.",
       "notFoundDuringUpdate": "Förinställningen för avtalsrad med ID {{presetId}} hittades inte vid uppdateringen."
     },
     "service": {
-      "unavailable": "Den valda tjänsten på avtalsraden är inte längre tillgänglig. Ladda om och försök igen.",
-      "referenceMissing": "Den valda avtalsraden eller tjänsten finns inte längre. Ladda om och försök igen.",
+      "unavailable": "Den valda tjänsten på avtalsraden är inte längre tillgänglig. Ladda om sidan och försök igen.",
+      "referenceMissing": "Den valda avtalsraden eller tjänsten finns inte längre. Ladda om sidan och försök igen.",
       "duplicate": "Denna tjänst är redan kopplad till den valda avtalsraden.",
       "notAllowed": "Ett av tjänstens värden är inte tillåtet. Granska formuläret och försök igen.",
       "addedOnce": "En tjänst kan bara läggas till en gång vid samma redigering av en avtalsrad.",
@@ -842,8 +843,8 @@
       "addedAndRemoved": "Samma tjänst kan inte läggas till och tas bort vid samma redigering av en avtalsrad."
     },
     "configuration": {
-      "unavailable": "Den valda tjänstekonfigurationen är inte längre tillgänglig. Ladda om och försök igen.",
-      "invalidValue": "Ett av de valda värdena för tjänstekonfigurationen är ogiltigt. Ladda om och försök igen.",
+      "unavailable": "Den valda tjänstekonfigurationen är inte längre tillgänglig. Ladda om sidan och försök igen.",
+      "invalidValue": "Ett av de valda värdena för tjänstekonfigurationen är ogiltigt. Ladda om sidan och försök igen.",
       "duplicate": "Denna tjänstekonfiguration finns redan för den valda avtalsraden.",
       "notAllowed": "Ett av tjänstekonfigurationens värden är inte tillåtet. Granska formuläret och försök igen.",
       "missingField": "Ett obligatoriskt fält för tjänstekonfigurationen saknas.",

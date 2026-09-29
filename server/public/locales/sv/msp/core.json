@@ -39,7 +39,7 @@
         "analytics": "Analys"
       }
     },
-    "inventoryDashboard": "Översiktspanel",
+    "inventoryDashboard": "Översikt",
     "inventoryStock": "Lagerbestånd",
     "inventoryLocations": "Lagerplatser",
     "inventoryUnits": "Lagerenheter",
@@ -50,7 +50,7 @@
     "inventoryDocumentLayouts": "Dokumentlayouter",
     "inventoryTransfers": "Lageröverföringar",
     "inventoryCounts": "Rullande inventeringar",
-    "inventoryWriteOffs": "Lageravskrivningar",
+    "inventoryWriteOffs": "Nedskrivningar",
     "inventoryMargin": "Marginal",
     "inventoryGhostUsage": "Oregistrerad materialförbrukning",
     "inventoryRma": "RMA",
@@ -60,10 +60,10 @@
     "timeEntry": "Tidregistrering",
     "approvals": "Godkännanden",
     "billing": {
-      "label": "Debitering",
+      "label": "Fakturering",
       "sections": {
         "contracts": "Avtal",
-        "invoicing": "Fakturering",
+        "invoicing": "Fakturor",
         "quotes": "Offerter",
         "pricing": "Prissättning",
         "trackingReports": "Uppföljning och rapporter"
@@ -74,11 +74,11 @@
       "quoteBusinessTemplates": "Offertmallar",
       "quoteLayouts": "Offertlayouter",
       "contractLinePresets": "Förinställningar för avtalsrader",
-      "invoicing": "Fakturering",
+      "invoicing": "Fakturor",
       "invoiceLayouts": "Fakturalayouter",
-      "billingCycles": "Debiteringscykler",
+      "billingCycles": "Faktureringscykler",
       "servicePeriods": "Tjänsteperioder",
-      "credits": "Krediteringar",
+      "credits": "Tillgodohavanden",
       "serviceTypes": "Tjänstetyper",
       "serviceCategories": "Tjänstekategorier",
       "serviceCatalog": "Tjänster",
@@ -184,7 +184,7 @@
         "noChannels": "Inga aktiva kanaler – lägg först till en på sidan Kanaler.",
         "campaign": "Kampanj (valfri)",
         "noCampaign": "Ingen kampanj",
-        "scheduledAt": "Schemalägg till (valfritt)",
+        "scheduledAt": "Publiceringstid (valfritt)",
         "submit": "Skapa inlägg"
       },
       "rescheduleDialog": {
@@ -269,7 +269,7 @@
         "endDate": "Slutdatum"
       },
       "funnel": {
-        "loading": "Laddar försäljningstratten…",
+        "loading": "Läser in försäljningstratten…",
         "postsPublished": "Publicerade inlägg",
         "emailsSent": "Skickade e-postmeddelanden",
         "emailsOpened": "Öppnade",
@@ -297,7 +297,7 @@
       "pickerLabel": "Sekvens",
       "emptyTitle": "Inga sekvenser ännu",
       "emptyBody": "Sekvenser skickar en tidsstyrd serie e-postmeddelanden till tillagda kontakter.",
-      "headerSummary": "{{steps}} steg · {{active}} aktiva deltagare",
+      "headerSummary": "{{steps}} steg · {{active}} aktiva deltaganden",
       "headerOpenRate": "{{rate}} % öppningsfrekvens",
       "journey": "Kundresa",
       "noSteps": "Inga steg ännu – redigera sekvensen för att lägga till steg.",
@@ -337,7 +337,7 @@
         "steps": "Steg",
         "subjectPlaceholder": "Ämne",
         "delay": "Vänta",
-        "delayAfterEnroll": "efter tillägg i sekvensen",
+        "delayAfterEnroll": "efter att kontakten lagts till",
         "delayAfterPrevious": "efter föregående steg",
         "bodyPlaceholder": "Brödtext (markdown, stöd för {{merge.fields}})",
         "addStep": "Lägg till steg",
@@ -364,7 +364,7 @@
       "sending": {
         "title": "Utskick",
         "from": "Från",
-        "provider": "Tjänsteleverantör",
+        "provider": "Leverantör",
         "notConfigured": "Inte konfigurerad",
         "unsubscribe": "Avprenumerationslänk",
         "on": "På",
@@ -438,11 +438,11 @@
     },
     "contact": {
       "title": "Marknadsföring",
-      "loading": "Laddar marknadsföringsaktivitet…",
+      "loading": "Läser in marknadsföringsaktivitet…",
       "consentGiven": "Samtycke",
       "noConsent": "Inget samtycke",
       "suppressed": "Spärrad för utskick",
-      "activeEnrollments": "Aktivt deltagande",
+      "activeEnrollments": "Aktiva deltaganden",
       "noEnrollments": "Deltar inte i någon sekvens.",
       "enrollmentMeta": "steg {{step}} · nästa {{date}}",
       "recentEngagements": "Senaste engagemang",
@@ -453,7 +453,7 @@
       "disabledDescription": "Marknadsföringsmodulen är inte aktiverad för det här kontot.",
       "permissionTitle": "Ingen åtkomst till marknadsföring",
       "permissionDescription": "Du har inte behörighet att visa marknadsföring. Be en administratör om läsbehörighet för marknadsföring.",
-      "backToDashboard": "Gå till översiktspanelen"
+      "backToDashboard": "Gå till översikten"
     }
   },
   "sidebar": {
@@ -461,7 +461,7 @@
     "searchPlaceholder": "Sök",
     "settings": "Inställningar",
     "support": "Support",
-    "goToDashboard": "Gå till översiktspanelen",
+    "goToDashboard": "Gå till översikten",
     "logoAlt": "AlgaPSA-logotyp",
     "expandSidebar": "Expandera sidofältet",
     "collapseSidebar": "Fäll ihop sidofältet",
@@ -474,9 +474,9 @@
     "sections": {
       "organizationAccess": "Organisation och åtkomst",
       "workManagement": "Arbetshantering",
-      "timeBilling": "Tid och debitering",
+      "timeBilling": "Tid och fakturering",
       "communication": "Kommunikation",
-      "dataIntegration": "Data och integrering",
+      "dataIntegration": "Data och integrationer",
       "experimental": "Experimentellt"
     },
     "tabs": {
@@ -495,11 +495,11 @@
       "opportunities": "Affärsmöjligheter",
       "notifications": "Aviseringar",
       "timeEntry": "Tidregistrering",
-      "billing": "Debitering",
+      "billing": "Fakturering",
       "secrets": "Hemligheter",
       "importExport": "Import/export",
       "email": "E-post",
-      "integrations": "Integreringar",
+      "integrations": "Integrationer",
       "extensions": "Tillägg",
       "experimentalFeatures": "Experimentella funktioner",
       "profile": "Profil",
@@ -507,7 +507,7 @@
     }
   },
   "dashboard": {
-    "onboardingWizard": "Introduktionsguide"
+    "onboardingWizard": "Onboardingguide"
   },
   "header": {
     "userFallback": "Användare",
@@ -572,15 +572,15 @@
       "active": "Aktiva bakgrundsjobb",
       "queued": "Köade bakgrundsjobb",
       "failedLast24h": "Misslyckade de senaste 24 timmarna",
-      "openJobCenter": "Öppna bakgrundsjobbcentret"
+      "openJobCenter": "Öppna jobbcentret"
     },
     "breadcrumb": {
       "label": "Navigeringssökväg",
-      "dashboard": "Översiktspanel",
+      "dashboard": "Översikt",
       "home": "Hem"
     },
     "tenantBadge": {
-      "ariaLabel": "Aktiv klientorganisation {{tenant}}"
+      "ariaLabel": "Aktiv organisation {{tenant}}"
     },
     "themeToggle": {
       "ariaLabel": "Växla tema",
@@ -610,12 +610,12 @@
   "banners": {
     "trial": {
       "dayLeft": "1 dag kvar",
-      "daysLeft": "{{count}} dagar kvar",
+      "daysLeft": "Dagar kvar: {{count}}",
       "stripeTrial": "Provperiod för {{tier}}: {{daysLabel}}"
     },
     "paymentFailed": {
       "message": "Betalningen misslyckades – uppdatera betalningsmetoden",
-      "portalError": "Det gick inte att öppna debiteringsportalen"
+      "portalError": "Det gick inte att öppna betalningsportalen"
     },
     "platformNotification": {
       "learnMore": "Läs mer",
@@ -634,8 +634,8 @@
       "product": "Produkten har skapats"
     },
     "errors": {
-      "loadClients": "Det gick inte att ladda kunder",
-      "loadServiceTypes": "Det gick inte att ladda tjänstetyper"
+      "loadClients": "Det gick inte att läsa in kunder",
+      "loadServiceTypes": "Det gick inte att läsa in tjänstetyper"
     },
     "dialogTitles": {
       "contact": "Lägg till ny kontakt",
@@ -651,7 +651,7 @@
   "notifications": {
     "messages": {
       "error": {
-        "loadFailed": "Det gick inte att ladda aviseringar"
+        "loadFailed": "Det gick inte att läsa in aviseringar"
       }
     }
   },
@@ -749,7 +749,7 @@
   },
   "onboardingRedirect": {
     "title": "Du omdirigeras till konfigurationen",
-    "description": "Din arbetsyta behöver konfigureras innan du kan använda översiktspanelen. Det går snabbt.",
+    "description": "Din arbetsyta behöver konfigureras innan du kan använda översikten. Det går snabbt.",
     "action": "Fortsätt till konfigurationen"
   },
   "githubStar": {

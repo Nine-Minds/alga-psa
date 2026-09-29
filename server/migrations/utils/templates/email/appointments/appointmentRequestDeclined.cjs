@@ -212,7 +212,7 @@ const COPY = {
   },
 };
 SUBJECTS.pt = 'Atualização da solicitação de agendamento - {{serviceName}}';
-SUBJECTS.sv = 'Uppdatering av bokningsförfrågan - {{serviceName}}';
+SUBJECTS.sv = 'Uppdatering av bokningsförfrågan – {{serviceName}}';
 COPY.pt = {
   headerLabel: 'Atualização da solicitação de agendamento',
   headerSub: 'Sobre sua solicitação recente de agendamento',
@@ -255,7 +255,7 @@ COPY.sv = {
   helpBody: 'Vi ber om ursäkt för besväret. Skicka gärna en ny förfrågan med ett annat datum och en annan tid som passar bättre med våra lediga tider.',
   requestButton: 'Skicka förfrågan om en annan tid',
   contactMsg: 'Om du har frågor eller vill ha hjälp att hitta en ledig tid, kontakta oss på {{contactEmail}}{{#if contactPhone}} eller ring {{contactPhone}}{{/if}}. Vårt team hjälper dig att hitta en tid som passar.',
-  footer: 'Drivs av AlgaPSA &middot; Håller team samordnade',
+  footer: 'Drivs av AlgaPSA &middot; För samspelta team',
   textHeader: 'Uppdatering av bokningsförfrågan',
   textDetailsHeader: 'Ursprunglig förfrågan',
   textService: 'Tjänst',

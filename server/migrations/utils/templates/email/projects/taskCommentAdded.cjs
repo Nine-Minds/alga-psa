@@ -159,7 +159,7 @@ const COPY = {
     commentLabel: '&#x1F4AC; Kommentar',
     commentVar: '{{{comment.contentHtml}}}',
     viewButton: 'Visa uppgift',
-    footer: 'Drivs av AlgaPSA &middot; Håller team samordnade',
+    footer: 'Drivs av AlgaPSA &middot; För samspelta team',
     textHeader: 'Ny kommentar på uppgiften',
     textIntro: '{{comment.author}} har lagt till en kommentar på uppgiften ”{{task.name}}” i projektet ”{{project.name}}”.',
     textComment: 'Kommentar',

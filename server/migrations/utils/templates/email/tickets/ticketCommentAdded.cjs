@@ -241,7 +241,7 @@ COPY.sv = {
   commentLabel: '&#x1F4AC; Kommentar',
   commentVar: '{{{comment.content}}}',
   viewButton: 'Visa ärende',
-  footer: 'Drivs av AlgaPSA &middot; Håller team samordnade',
+  footer: 'Drivs av AlgaPSA &middot; För samspelta team',
   textHeader: 'Ny kommentar tillagd',
   textCommentBy: 'Kommenterat av',
   textAssigned: 'Tilldelat till',

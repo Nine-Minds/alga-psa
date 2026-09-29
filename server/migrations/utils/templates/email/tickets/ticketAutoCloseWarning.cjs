@@ -125,11 +125,11 @@ const COPY = {
   sv: {
     headerLabel: 'Ärendet stängs snart',
     intro: 'Vi har inte fått något svar från dig i det här ärendet. Det stängs automatiskt <strong>{{ticket.scheduledCloseDate}}</strong> om ingen ny aktivitet sker.',
-    keepOpen: 'Om du fortfarande behöver hjälp kan du svara på det här e-postmeddelandet eller lägga till en kommentar i ärendet — då hålls det öppet.',
+    keepOpen: 'Om du fortfarande behöver hjälp kan du svara på det här e-postmeddelandet eller lägga till en kommentar i ärendet – då hålls det öppet.',
     badgePrefix: 'Ärende #',
     closeDate: 'Planerad stängning',
     viewButton: 'Visa ärende',
-    footer: 'Drivs av AlgaPSA &middot; Håller team samordnade',
+    footer: 'Drivs av AlgaPSA &middot; För samspelta team',
     textHeader: 'Ditt ärende stängs snart',
     textKeepOpen: 'Om du fortfarande behöver hjälp, svara på det här e-postmeddelandet eller lägg till en kommentar i ärendet för att hålla det öppet.',
     textView: 'Visa ärende',

@@ -43,7 +43,7 @@
       "active": "Aktiv",
       "addressed": "Åtgärdad",
       "changeRequested": "Ändring begärd",
-      "loading": "Laddar…"
+      "loading": "Läser in…"
     },
     "fallbacks": {
       "na": "Ej tillämpligt",
@@ -51,7 +51,7 @@
       "notFound": "Hittades inte",
       "untitled": "Utan titel",
       "unassigned": "Ej tilldelad",
-      "noDueDate": "Inget förfallodatum",
+      "noDueDate": "Inget måldatum",
       "noServiceSelected": "Ingen tjänst vald",
       "noNotes": "Inga anteckningar",
       "noUserFound": "Ingen användare hittades"
@@ -102,19 +102,19 @@
       "selectedCount": "Markerade: {{count}}"
     },
     "delete": {
-      "success": "{{count}} tidrapport(er) har tagits bort",
-      "partialFailure": "{{count}} tidrapport(er) kunde inte tas bort",
+      "success": "Borttagna tidrapporter: {{count}}",
+      "partialFailure": "Tidrapporter som inte kunde tas bort: {{count}}",
       "error": "Det gick inte att ta bort tidrapporter"
     },
     "removePeriod": {
-      "success": "{{count}} tidsperiod(er) har tagits bort",
-      "partialFailure": "{{count}} tidsperiod(er) kunde inte tas bort",
+      "success": "Borttagna tidsperioder: {{count}}",
+      "partialFailure": "Tidsperioder som inte kunde tas bort: {{count}}",
       "error": "Det gick inte att ta bort tidsperioder"
     },
     "remove": {
       "title": "Ta bort oanvända poster",
-      "message": "Vill du ta bort {{count}} markerad(e) period(er)? Oanvända löneperioder tas bort för hela organisationen tillsammans med eventuella tomma tidrapporter i utkastform för dessa perioder. Detta kan inte ångras.",
-      "timesheetMessage": "Vill du ta bort {{count}} oanvänd(a) tidrapport(er)? Endast tomma tidrapporter i utkastform tas bort och detta kan inte ångras."
+      "message": "Vill du ta bort de markerade perioderna ({{count}})? Oanvända löneperioder tas bort för hela organisationen tillsammans med eventuella tomma tidrapporter i utkastform för de här perioderna. Det går inte att ångra.",
+      "timesheetMessage": "Vill du ta bort oanvända tidrapporter ({{count}})? Endast tomma tidrapporter i utkastform tas bort. Det går inte att ångra."
     }
   },
   "timeEntryForm": {
@@ -170,12 +170,12 @@
       "noWorkItems": "Inga arbetsposter hittades"
     },
     "paymentWarningTitle": "Varning om betalningskrav",
-    "paymentWarning": "Betalning krävs för en flaggad debiteringsmilstolpe i projektet och har inte bekräftats. Bekräfta betalningen innan du fortsätter arbetet."
+    "paymentWarning": "Betalning krävs för en flaggad faktureringsmilstolpe i projektet och har inte bekräftats. Bekräfta betalningen innan du fortsätter arbetet."
   },
   "workItemList": {
     "meta": {
       "assignedTo": "Tilldelad till: {{value}}",
-      "dueDate": "Förfallodatum: {{value}}",
+      "dueDate": "Måldatum: {{value}}",
       "contact": "Kontakt: {{value}}",
       "scheduledEnd": "Schemalagt slut: {{value}}"
     },
@@ -379,7 +379,7 @@
       "entryOther": "{{count}} tidposter"
     },
     "focusFilter": {
-      "summary": "Visar {{count}} tidposter för {{workItem}} den {{date}}",
+      "summary": "Visar tidposter ({{count}}) för {{workItem}} den {{date}}",
       "description": "Endast tidposter från den markerade rutnätscellen visas.",
       "backToGrid": "Tillbaka till rutnätet"
     }
@@ -423,7 +423,7 @@
       "merge": "Slå ihop"
     },
     "states": {
-      "loading": "Laddar intervall…",
+      "loading": "Läser in intervall…",
       "noIntervalsThisPeriod": "Inga intervall hittades för den här tidsperioden",
       "noIntervalsThisTicket": "Inga intervall hittades för det här ärendet",
       "noIntervalsLongerThanMinute": "Inga intervall längre än 1 minut hittades"
@@ -472,11 +472,11 @@
   },
   "errors": {
     "timeSheet": {
-      "notFoundRefresh": "Tidrapporten hittades inte. Den kan ha raderats. Ladda om och försök igen.",
+      "notFoundRefresh": "Tidrapporten hittades inte. Den kan ha raderats. Ladda om sidan och försök igen.",
       "onlySubmittedApprovable": "Endast inskickade tidrapporter kan godkännas.",
       "idRequired": "Tidrapportens ID krävs.",
       "ticketIdRequired": "Ärendets ID krävs.",
-      "workItemRemoveFailed": "Det gick inte att ta bort arbetsposten. Ladda om och försök igen.",
+      "workItemRemoveFailed": "Det gick inte att ta bort arbetsposten. Ladda om sidan och försök igen.",
       "onlyDraftRemovable": "Endast tidrapporter i utkastform kan tas bort.",
       "removeEntriesFirst": "Ta bort tidposterna innan du tar bort den här tidrapporten.",
       "onlyApprovedReopenable": "Endast godkända tidrapporter kan öppnas igen.",
@@ -484,16 +484,16 @@
       "notEditable": "Den här tidrapporten är låst. Välj en tidrapport i utkastform eller en där ändringar har begärts."
     },
     "timeEntry": {
-      "notFoundRefresh": "Tidposten hittades inte. Den kan ha raderats. Ladda om och försök igen.",
+      "notFoundRefresh": "Tidposten hittades inte. Den kan ha raderats. Ladda om sidan och försök igen.",
       "serviceRequired": "Välj en tjänst innan du sparar den här tidposten.",
       "alreadyInvoiced": "Den här tidposten har redan fakturerats och kan inte ändras.",
       "workItemTypeUnsupported": "Den valda arbetsposttypen stöds inte för tidposter.",
-      "bucketUpdateFailed": "Det gick inte att uppdatera timpottens förbrukning för den här tidposten. Ladda om och försök igen.",
+      "bucketUpdateFailed": "Det gick inte att uppdatera timpottens förbrukning för den här tidposten. Ladda om sidan och försök igen.",
       "wrongTimeSheet": "Den här tidposten tillhör inte den valda tidrapporten.",
       "outsidePeriod": "Tidposten måste ligga inom den valda tidrapportens period.",
-      "invalidReference": "Den valda tidposten, tidrapporten eller arbetsposten är ogiltig. Ladda om och försök igen.",
-      "referenceMissing": "Den valda tidrapporten, tidposten, arbetsposten eller användaren är inte längre giltig. Ladda om och försök igen.",
-      "duplicate": "Det finns redan en tidpost som står i konflikt med den här. Ladda om och försök igen.",
+      "invalidReference": "Den valda tidposten, tidrapporten eller arbetsposten är ogiltig. Ladda om sidan och försök igen.",
+      "referenceMissing": "Den valda tidrapporten, tidposten, arbetsposten eller användaren är inte längre giltig. Ladda om sidan och försök igen.",
+      "duplicate": "Det finns redan en tidpost som står i konflikt med den här. Ladda om sidan och försök igen.",
       "missingField": "Ett obligatoriskt fält för tidrapport eller tidpost saknas.",
       "missingFieldNamed": "Ett obligatoriskt fält för tidrapport eller tidpost saknas: {{field}}."
     },
@@ -501,8 +501,8 @@
       "datesRequired": "Ange giltiga start- och slutdatum."
     },
     "timePeriodSettings": {
-      "invalidValue": "Ett värde i tidsperiodens inställningar är ogiltigt. Ladda om och försök igen.",
-      "referenceMissing": "Den valda tidsperiodsinställningen är inte längre giltig. Ladda om och försök igen.",
+      "invalidValue": "Ett värde i tidsperiodens inställningar är ogiltigt. Ladda om sidan och försök igen.",
+      "referenceMissing": "Den valda tidsperiodsinställningen är inte längre giltig. Ladda om sidan och försök igen.",
       "duplicate": "Det finns redan en tidsperiodsinställning som står i konflikt med den här.",
       "missingField": "Ett obligatoriskt fält för tidsperiodsinställningen saknas.",
       "missingFieldNamed": "Ett obligatoriskt fält för tidsperiodsinställningen saknas: {{field}}."
@@ -519,20 +519,20 @@
     "sheetHint": "Tidrapport: {{range}} · {{status}}",
     "defaultMoved": {
       "supplied": "Timerns tider hamnar på en dag som inte kan ta emot ny tid, så posten börjar {{date}} kl. 08.00.",
-      "todayLocked": "Dagens tidrapport är {{status}}, så posten börjar {{date}}, den närmaste dagen som kan ta emot tid.",
-      "todayUncovered": "Ingen tidsperiod täcker i dag, så posten börjar {{date}}, den närmaste dagen som kan ta emot tid."
+      "todayLocked": "Dagens tidrapport har status {{status}}, så posten börjar {{date}}, den närmaste dagen som kan ta emot tid.",
+      "todayUncovered": "Ingen tidsperiod täcker idag, så posten börjar {{date}}, den närmaste dagen som kan ta emot tid."
     },
     "save": {
       "noPeriod": "Ingen tidsperiod täcker {{date}}. Välj en dag inom en tidsperiod.",
-      "sheetLocked": "Tidrapporten för {{date}} är {{status}}. Välj en dag i en tidrapport i utkastform eller en där ändringar har begärts."
+      "sheetLocked": "Tidrapporten för {{date}} har status {{status}}. Välj en dag i en tidrapport i utkastform eller en där ändringar har begärts."
     }
   },
   "launch": {
-    "noUser": "Det gick inte att ladda den inloggade användaren för tidregistrering.",
+    "noUser": "Det gick inte att läsa in den inloggade användaren för tidregistrering.",
     "entryNotFound": "Tidposten hittades inte.",
     "entryMissingSheet": "Den här tidposten hör inte till någon tidrapport och kan därför inte redigeras här.",
     "entryMissingPeriod": "Tidrapporten för den här posten saknar sin tidsperiod och kan inte öppnas.",
-    "noPeriods": "Inga tidsperioder är uppsatta ännu, så tid kan inte registreras. Be en administratör skapa tidsperioder under Inställningar → Tidregistrering.",
+    "noPeriods": "Inga tidsperioder har skapats ännu, så tid kan inte registreras. Be en administratör skapa tidsperioder under Inställningar → Tidregistrering.",
     "noEditablePeriods": "Alla tidrapporter är inskickade eller godkända, så det finns ingen dag att lägga till tid på. Be en godkännare öppna en tidrapport igen, eller en administratör att lägga till en tidsperiod.",
     "prepareFailed": "Ett fel uppstod när tidposten förbereddes. Försök igen."
   }

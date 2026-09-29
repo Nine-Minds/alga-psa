@@ -20,7 +20,7 @@ const SUBJECTS = {
   it: 'VIOLAZIONE SLA: ticket #{{ticketNumber}} - SLA {{slaType}} superato',
   pl: 'NARUSZENIE SLA: zg\u0142oszenie #{{ticketNumber}} - SLA {{slaType}} przekroczone',
   pt: 'VIOLAÇÃO DE SLA: ticket #{{ticketNumber}} - SLA {{slaType}} excedido',
-  sv: 'SLA-brott: ärende #{{ticketNumber}} - SLA-tiden för {{slaType}} har överskridits',
+  sv: 'SLA-brott: ärende #{{ticketNumber}} – SLA-tiden ({{slaType}}) har överskridits',
 };
 
 /* eslint-disable max-len */
@@ -259,7 +259,7 @@ const COPY = {
   },
   sv: {
     headerLabel: 'SLA-brott',
-    headerTitle: 'SLA-tiden för {{slaType}} har överskridits',
+    headerTitle: 'SLA-tiden ({{slaType}}) har överskridits',
     headerMeta: 'Ärende #{{ticketNumber}}',
     greeting: 'Hej {{recipientName}},',
     alert: 'Ett ärende har överskridit sin SLA-tidsgräns och kräver omedelbar åtgärd.',
@@ -271,8 +271,8 @@ const COPY = {
     policy: 'SLA-policy',
     callToAction: 'Hantera detta ärende omedelbart.',
     viewButton: 'Visa ärendet nu',
-    footer: 'Drivs av AlgaPSA &middot; Håller team samordnade',
-    textHeader: 'SLA-brott: SLA-tiden för {{slaType}} har överskridits',
+    footer: 'Drivs av AlgaPSA &middot; För samspelta team',
+    textHeader: 'SLA-brott: SLA-tiden ({{slaType}}) har överskridits',
     textGreeting: 'Hej {{recipientName}},',
     textAlert: 'Ett ärende har överskridit sin SLA-tidsgräns och kräver omedelbar åtgärd.',
     textDetailsHeader: 'Ärendedetaljer:',

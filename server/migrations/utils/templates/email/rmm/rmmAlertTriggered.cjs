@@ -103,7 +103,7 @@ const COPY = {
   sv: {
     subject: 'RMM-larm ({{severity}}): {{deviceName}}',
     heading: 'RMM-larm',
-    intro: 'Ett larm från {{provider}} matchade en regel som aviserar dig.',
+    intro: 'Ett larm från {{provider}} matchade en av dina aviseringsregler.',
     severity: 'Allvarlighetsgrad',
     device: 'Enhet',
     message: 'Meddelande',

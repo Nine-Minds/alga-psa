@@ -5,16 +5,16 @@
     "noPermissionCancel": "Du har inte behörighet att säga upp abonnemanget",
     "noPermissionLicenses": "Du har inte behörighet att hantera licenser",
     "noPermissionSubscription": "Du har inte behörighet att hantera abonnemanget",
-    "loadAccountFailed": "Det gick inte att ladda kontoinformationen",
+    "loadAccountFailed": "Det gick inte att läsa in kontoinformationen",
     "openPaymentPortalFailed": "Det gick inte att öppna betalningsportalen",
     "updatePaymentFailed": "Det gick inte att uppdatera betalningsmetoden",
     "feedbackSendFailed": "Det gick inte att skicka din återkoppling",
     "cancelSubscriptionFailed": "Det gick inte att säga upp abonnemanget",
     "pricingPreviewFailed": "Det gick inte att hämta prisförhandsgranskningen",
     "upgradePricingFailed": "Det gick inte att hämta priset för uppgraderingen",
-    "intervalSwitchAnnual": "Debiteringsintervallet ändras till årligen vid slutet av den nuvarande perioden.",
-    "intervalSwitchMonthly": "Debiteringsintervallet ändras till månadsvis vid slutet av den nuvarande perioden.",
-    "intervalSwitchFailed": "Det gick inte att ändra debiteringsintervallet",
+    "intervalSwitchAnnual": "Faktureringsintervallet ändras till årligen vid slutet av den nuvarande perioden.",
+    "intervalSwitchMonthly": "Faktureringsintervallet ändras till månadsvis vid slutet av den nuvarande perioden.",
+    "intervalSwitchFailed": "Det gick inte att ändra faktureringsintervallet",
     "soloProTrialStarted": "Provperioden för Pro har startat. Pro-funktionerna är tillgängliga fram till {{end}} medan du fortsätter att debiteras för Solo.",
     "soloProTrialStartFailed": "Det gick inte att starta provperioden för Pro",
     "soloProTrialDefaultEnd": "slutet av din provperiod",
@@ -30,13 +30,13 @@
     "aiCheckoutFailed": "Det gick inte att starta betalningen för AI Assistant",
     "aiRemoved": "AI Assistant kommer att tas bort från ditt abonnemang.",
     "aiCancelFailed": "Det gick inte att säga upp AI Assistant",
-    "cancellationScheduled": "Abonnemanget har sagts upp. Du kan fortsätta använda AlgaPSA till slutet av din debiteringsperiod."
+    "cancellationScheduled": "Abonnemanget har sagts upp. Du kan fortsätta använda AlgaPSA till slutet av din faktureringsperiod."
   },
   "common": {
-    "loading": "Laddar…",
-    "loadingAccountInfo": "Laddar kontoinformation…",
-    "loadingPricing": "Laddar priser…",
-    "loadingPricingDetails": "Laddar prisuppgifter…",
+    "loading": "Läser in…",
+    "loadingAccountInfo": "Läser in kontoinformation…",
+    "loadingPricing": "Läser in priser…",
+    "loadingPricingDetails": "Läser in prisuppgifter…",
     "preparingCheckout": "Förbereder betalning…",
     "notAvailable": "Ej tillgängligt",
     "unknown": "Okänd",
@@ -47,34 +47,34 @@
     "daysRemaining": "{{count}} {{unit}} kvar"
   },
   "features": {
-    "integrations": "Integreringar — anslut kalender, Teams, Entra och andra externa tjänster",
-    "extensions": "Tillägg — installera och hantera tillägg från marknadsplatsen för din arbetsyta",
-    "sso": "Enkel inloggning — konfigurera SSO- och OAuth-identitetsleverantörer för ditt team",
-    "advancedAssets": "Avancerad tillgångshantering — lås upp RMM-kopplad tillgångsidentifiering och utökade hanteringsfunktioner",
-    "clientPortalAdmin": "Administration av kundportalen — hantera avancerad varumärkesanpassning och administration av kundportalen",
-    "workflowDesigner": "Arbetsflödesdesigner — skapa och underhåll anpassade automatiseringar av arbetsflöden",
-    "mobileAccess": "Mobil åtkomst — logga in från AlgaPSA-mobilappen",
-    "entraSync": "Microsoft Entra-synkronisering — identifiera klientorganisationer automatiskt och synkronisera kontakter från Entra ID",
-    "cipp": "CIPP-integrering — anslut din CIPP-instans för Entra-hantering av flera klientorganisationer",
-    "teamsIntegration": "Microsoft Teams — mötesintegrering och Teams-bot för ärendeaviseringar",
-    "scimProvisioning": "SCIM-användaretablering — synkronisera användaraktivering från din identitetsleverantör",
-    "advancedAuthorizationBundles": "Avancerade behörighetspaket — skapa och hantera återanvändbara paket med begränsningar av ABAC-behörigheter",
-    "pbxTelephony": "PBX-telefoni — anslut en 3CX-telefonväxel för identifiering av uppringare och samtalsloggning"
+    "integrations": "Integrationer – anslut kalender, Teams, Entra och andra externa tjänster",
+    "extensions": "Tillägg – installera och hantera tillägg från marknadsplatsen för din arbetsyta",
+    "sso": "Enkel inloggning – konfigurera SSO- och OAuth-identitetsleverantörer för ditt team",
+    "advancedAssets": "Avancerad tillgångshantering – lås upp RMM-kopplad tillgångsidentifiering och utökade hanteringsfunktioner",
+    "clientPortalAdmin": "Administration av kundportalen – hantera avancerad varumärkesanpassning och administration av kundportalen",
+    "workflowDesigner": "Arbetsflödesdesigner – skapa och underhåll anpassade automatiseringar av arbetsflöden",
+    "mobileAccess": "Mobil åtkomst – logga in från AlgaPSA-mobilappen",
+    "entraSync": "Microsoft Entra-synkronisering – identifiera klientorganisationer automatiskt och synkronisera kontakter från Entra ID",
+    "cipp": "CIPP-integration – anslut din CIPP-instans för Entra-hantering av flera klientorganisationer",
+    "teamsIntegration": "Microsoft Teams – mötesintegration och Teams-bot för ärendeaviseringar",
+    "scimProvisioning": "SCIM-användaretablering – synkronisera användaraktivering från din identitetsleverantör",
+    "advancedAuthorizationBundles": "Avancerade behörighetspaket – skapa och hantera återanvändbara paket med begränsningar av ABAC-behörigheter",
+    "pbxTelephony": "PBX-telefoni – anslut en 3CX-telefonväxel för identifiering av uppringare och samtalsloggning"
   },
   "summary": {
     "licensesUsed": "Använda licenser",
     "perYear": "Per år",
     "perMonth": "Per månad",
     "status": "Status",
-    "nextBilling": "Nästa debitering"
+    "nextBilling": "Nästa fakturering"
   },
   "iapBanner": {
     "upgradePendingTitle": "Din uppgradering väntar",
     "upgradePendingBody": "Apple fortsätter att debitera dig för Solo fram till {{date}}. Därefter tar ditt uppgraderade abonnemang över automatiskt.",
     "autoRenewWarningStrong": "Automatisk förnyelse är aktiverad för ditt Apple-abonnemang",
-    "autoRenewWarningBody": "inaktivera den i iOS under Inställningar → Apple-ID → Abonnemang → AlgaPSA, annars debiterar Apple dig igen och uppgraderingen fördröjs.",
+    "autoRenewWarningBody": "inaktivera den i iOS under Inställningar → [ditt namn] → Prenumerationer → AlgaPSA, annars debiterar Apple dig igen och uppgraderingen fördröjs.",
     "cancelUpgrade": "Avbryt uppgradering",
-    "appleManagedBody": "Ditt abonnemang hanteras av Apple. Den nuvarande debiteringsperioden slutar {{date}}. Du kan när som helst uppgradera till ett större abonnemang — vi anpassar den nya debiteringen till din Apple-period så att du aldrig betalar för båda samtidigt."
+    "appleManagedBody": "Ditt abonnemang hanteras av Apple. Den nuvarande faktureringsperioden slutar {{date}}. Du kan när som helst uppgradera till ett större abonnemang – vi anpassar den nya faktureringen till din Apple-period så att du aldrig betalar för båda samtidigt."
   },
   "paymentFailure": {
     "title": "Betalningen misslyckades",
@@ -100,30 +100,30 @@
     "sectionTitle": "Abonnemang och nivå",
     "currentTier": "Nuvarande nivå",
     "tierDescription": "Din abonnemangsnivå avgör vilka funktioner som är tillgängliga",
-    "soloNotice": "Ditt Solo-abonnemang omfattar grundläggande PSA-funktioner, arbetsflödesdesignern och mobil åtkomst. Uppgradera till Pro för avancerade integreringar och teamsamarbete.",
+    "soloNotice": "Ditt Solo-abonnemang omfattar grundläggande PSA-funktioner, arbetsflödesdesignern och mobil åtkomst. Uppgradera till Pro för avancerade integrationer och teamsamarbete.",
     "misconfigured": "Ditt abonnemang är inte korrekt konfigurerat. Kontakta supporten.",
     "featuresIncluded": "Funktioner som ingår i din nivå:",
-    "emptyFeaturesSolo": "Grundläggande PSA-verktyg, arbetsflödesdesignern och mobil åtkomst är aktiva i Solo. Uppgradera till Pro för att få tillgång till avancerade integreringar.",
+    "emptyFeaturesSolo": "Grundläggande PSA-verktyg, arbetsflödesdesignern och mobil åtkomst är aktiva i Solo. Uppgradera till Pro för att få tillgång till avancerade integrationer.",
     "emptyFeaturesPro": "Ditt Pro-abonnemang omfattar alla standardfunktioner.",
     "proCardTitle": "Pro",
-    "proCardDescription": "Allt i Solo, plus teamsamarbete och kraftfulla integreringar.",
+    "proCardDescription": "Allt i Solo, plus teamsamarbete och kraftfulla integrationer.",
     "proFeatureMultiUser": "Flera användare med licens per användare",
     "proFeatureCalendarSync": "Kalendersynkronisering (Google och Microsoft)",
     "proFeatureExtensions": "Marknadsplats för tillägg",
     "proFeatureSso": "SSO och hanterade e-postdomäner",
-    "proFeatureRmm": "Integrering med RMM / NinjaOne",
+    "proFeatureRmm": "Integration med RMM / NinjaOne",
     "proFeatureMobile": "Åtkomst till mobilappen",
     "upgradeToPro": "Uppgradera till Pro",
     "tryProFreeTitle": "Prova Pro gratis",
-    "tryProFreeBody": "Utforska Pro-funktioner i 30 dagar med oförändrad Solo-debitering. När provperioden slutar återgår du till Solo om du inte uppgraderar.",
+    "tryProFreeBody": "Utforska Pro-funktioner i 30 dagar med oförändrad fakturering för Solo. När provperioden slutar återgår du till Solo om du inte uppgraderar.",
     "tryProFreeButton": "Prova Pro gratis",
     "downgradeToSoloTitle": "Nedgradera till Solo",
-    "downgradeToSoloLimitedBody": "Solo är begränsat till 1 användare. Du har för närvarande {{count}} aktiva användare — ta bort extra användare först.",
+    "downgradeToSoloLimitedBody": "Solo är begränsat till 1 användare. Du har för närvarande {{count}} aktiva användare – ta bort extra användare först.",
     "downgradeToSoloBody": "Byt till abonnemanget för en användare med fast pris och endast grundläggande PSA-funktioner.",
     "switchToSolo": "Byt till Solo",
     "downgrading": "Nedgraderar…",
     "downgradeToSoloAltBody": "Byt till abonnemanget för en användare med fast pris och behåll grundläggande PSA-funktioner.",
-    "downgradeToSoloAltLimitedBody": "Solo är begränsat till 1 användare. Du har för närvarande {{count}} aktiva användare — ta bort extra användare innan du nedgraderar.",
+    "downgradeToSoloAltLimitedBody": "Solo är begränsat till 1 användare. Du har för närvarande {{count}} aktiva användare – ta bort extra användare innan du nedgraderar.",
     "downgrade": "Nedgradera"
   },
   "addOns": {
@@ -134,7 +134,7 @@
     "statusAvailable": "Tillgänglig",
     "description": "AI Assistant är ett separat betaltillägg.",
     "activeTitle": "AI Assistant (aktiv)",
-    "activeBody": "AI-chatt, dokumenthjälp och andra AI-drivna arbetsflöden är för närvarande aktiverade för den här klientorganisationen.",
+    "activeBody": "AI-chatt, dokumenthjälp och andra AI-drivna arbetsflöden är för närvarande aktiverade för din organisation.",
     "cancelling": "Säger upp…",
     "cancel": "Säg upp AI Assistant",
     "iapUnavailableTitle": "Tillägg är inte tillgängliga",
@@ -180,13 +180,13 @@
   "subscriptionDetails": {
     "sectionTitle": "Abonnemangsinformation",
     "subscriptionStatus": "Abonnemangsstatus",
-    "billingCycle": "Debiteringsintervall",
+    "billingCycle": "Faktureringsintervall",
     "annual": "Årligen",
     "monthly": "Månadsvis",
-    "switchToMonthly": "Byt till månadsvis debitering",
-    "switchToAnnual": "Byt till årlig debitering",
+    "switchToMonthly": "Byt till månadsvis fakturering",
+    "switchToAnnual": "Byt till årlig fakturering",
     "currentPeriod": "Nuvarande period",
-    "nextBillingDate": "Nästa debiteringsdatum",
+    "nextBillingDate": "Nästa faktureringsdatum",
     "annualAmount": "Årsbelopp",
     "monthlyAmount": "Månadsbelopp"
   },
@@ -199,7 +199,7 @@
   },
   "dangerZone": {
     "title": "Riskzon",
-    "body": "Om du säger upp abonnemanget inaktiveras åtkomsten för alla användare vid slutet av den nuvarande debiteringsperioden.",
+    "body": "Om du säger upp abonnemanget inaktiveras åtkomsten för alla användare vid slutet av den nuvarande faktureringsperioden.",
     "cancelSubscription": "Säg upp abonnemang",
     "scheduledBody": "Ditt abonnemang avslutas {{date}}. Alla kan fortsätta använda AlgaPSA fram till dess."
   },
@@ -212,42 +212,42 @@
     "body": "Ditt abonnemang hanteras för närvarande av Apple och automatisk förnyelse är aktiverad. För att uppgradera till {{tier}} behöver du först inaktivera automatisk förnyelse hos Apple så att Apple inte debiterar dig igen när den nuvarande perioden slutar.",
     "howToTitle": "Så här inaktiverar du automatisk förnyelse:",
     "step1": "Öppna <strong>Inställningar</strong> på din iPhone eller iPad",
-    "step2": "Tryck på ditt namn högst upp och sedan på <strong>Abonnemang</strong>",
+    "step2": "Tryck på ditt namn högst upp och sedan på <strong>Prenumerationer</strong>",
     "step3": "Tryck på <strong>AlgaPSA</strong>",
-    "step4": "Tryck på <strong>Avbryt abonnemang</strong> — då inaktiveras automatisk förnyelse, men du behåller åtkomsten fram till {{date}}",
+    "step4": "Tryck på <strong>Avsluta prenumeration</strong> – då inaktiveras automatisk förnyelse, men du behåller åtkomsten fram till {{date}}",
     "step5": "Återvänd till den här sidan och klicka på Fortsätt nedan",
     "currentPeriodFallback": "slutet av din nuvarande period",
-    "reassurance": "Du kan vara lugn — din åtkomst till Solo fortsätter till slutet av din nuvarande debiteringsperiod hos Apple, och du får tillgång till {{tier}}-funktionerna direkt efter att du har lagt till kortuppgifterna på nästa sida. Ditt kort debiteras först när Apples debiteringsperiod slutar.",
+    "reassurance": "Du kan vara lugn – din åtkomst till Solo fortsätter till slutet av din nuvarande faktureringsperiod hos Apple, och du får tillgång till {{tier}}-funktionerna direkt efter att du har lagt till kortuppgifterna på nästa sida. Ditt kort debiteras först när Apples faktureringsperiod slutar.",
     "notNow": "Inte nu",
     "checking": "Kontrollerar…",
     "continueButton": "Jag har inaktiverat automatisk förnyelse, fortsätt"
   },
   "iapCheckoutDialog": {
     "title": "Uppgradera till {{tier}}",
-    "body": "Ange dina kortuppgifter nedan. Ditt kort debiteras <strong>inte</strong> förrän din nuvarande debiteringsperiod hos Apple slutar — Stripe väntar till dess med att börja debitera för {{tier}}."
+    "body": "Ange dina kortuppgifter nedan. Ditt kort debiteras <strong>inte</strong> förrän din nuvarande faktureringsperiod hos Apple slutar – Stripe väntar till dess med att börja debitera för {{tier}}."
   },
   "cancelIapTransitionDialog": {
     "title": "Avbryta din väntande uppgradering?",
     "cancelling": "Avbryter…",
     "confirmLabel": "Ja, avbryt uppgraderingen",
-    "body1": "Det här avbryter din väntande uppgradering och återställer ditt Solo-abonnemang som hanteras av Apple. Ditt kort debiteras inte och Apple fortsätter med sitt vanliga debiteringsintervall.",
+    "body1": "Det här avbryter din väntande uppgradering och återställer ditt Solo-abonnemang som hanteras av Apple. Ditt kort debiteras inte och Apple fortsätter med sin vanliga faktureringscykel.",
     "body2": "Om du vill fortsätta med uppgraderingen senare kan du starta den igen när som helst."
   },
   "intervalSwitchDialog": {
-    "titleAnnual": "Byt till årlig debitering",
-    "titleMonthly": "Byt till månadsvis debitering",
+    "titleAnnual": "Byt till årlig fakturering",
+    "titleMonthly": "Byt till månadsvis fakturering",
     "switching": "Byter…",
     "confirm": "Bekräfta byte",
-    "toAnnualIntro": "Byt till årlig debitering och spara på ditt abonnemang.",
+    "toAnnualIntro": "Byt till årlig fakturering och spara på ditt abonnemang.",
     "currentMonthlyTotal": "Nuvarande totalsumma per månad",
     "annualTotal": "Totalsumma per år",
     "equivalentMonthly": "Motsvarande belopp per månad",
     "youSave": "Du sparar",
     "savingsPercent": "~{{percent}} %",
-    "toMonthlyIntro": "Byt tillbaka till månadsvis debitering.",
+    "toMonthlyIntro": "Byt tillbaka till månadsvis fakturering.",
     "currentAnnualTotal": "Nuvarande totalsumma per år",
     "newMonthlyTotal": "Ny totalsumma per månad",
-    "effectiveNote": "Ändringen träder i kraft vid slutet av din nuvarande debiteringsperiod",
+    "effectiveNote": "Ändringen träder i kraft vid slutet av din nuvarande faktureringsperiod",
     "effectiveDateSuffix": " ({{date}})",
     "perMonthSuffix": "/mån",
     "perYearSuffix": "/år"
@@ -269,7 +269,7 @@
     "perUserFee": "Avgift per användare ({{count}} användare)",
     "perUserFeeValue": "{{unit}} $ × {{count}} = {{total}} $/mån",
     "newMonthlyTotal": "Ny totalsumma per månad",
-    "prorationNotice": "En proportionellt beräknad avgift på <strong>{{amount}} $</strong> debiteras nu för återstoden av den nuvarande debiteringsperioden.",
+    "prorationNotice": "En proportionellt beräknad avgift på <strong>{{amount}} $</strong> debiteras nu för återstoden av den nuvarande faktureringsperioden.",
     "updateNote": "Ditt befintliga abonnemang uppdateras och beloppet dras via din betalningsmetod. Ändringen träder i kraft omedelbart.",
     "newSubNote": "Ett nytt abonnemang skapas. Ändringen träder i kraft omedelbart.",
     "perMonthSuffix": "/mån"
@@ -281,13 +281,13 @@
     "algadeskPlanName": "AlgaDesk",
     "currentPerSeatLabel": "Nuvarande pris per användare",
     "perSeatValue": "{{amount}} $ per användare",
-    "cardCta": "Få tillgång till debitering, projekt, tillgångar och alla PSA-funktioner.",
+    "cardCta": "Få tillgång till fakturering, projekt, tillgångar och alla PSA-funktioner.",
     "openButton": "Uppgradera till AlgaPSA",
     "dialogTitle": "Uppgradera till AlgaPSA",
     "intro": "Du uppgraderar den här arbetsytan från <strong>AlgaDesk</strong> till <strong>AlgaPSA</strong>.",
     "targetPerSeatLabel": "AlgaPSA-pris per användare",
-    "seatCountLabel": "Användarplatser",
-    "billingIntervalLabel": "Debiteringsintervall",
+    "seatCountLabel": "Användarlicenser",
+    "billingIntervalLabel": "Faktureringsintervall",
     "intervalMonth": "Månadsvis",
     "intervalYear": "Årligen",
     "dueTodayLabel": "Proportionellt beräknat belopp att betala idag",
@@ -306,7 +306,7 @@
     "successReloginNotice": "Andra inloggade användare måste logga ut och in igen för att se AlgaPSA.",
     "successDone": "Klart",
     "failedTitle": "Uppgraderingen slutfördes inte",
-    "failedBody": "Något gick fel under uppgraderingen. Inga ändringar gick förlorade — du kan tryggt försöka igen.",
+    "failedBody": "Något gick fel under uppgraderingen. Inga ändringar gick förlorade – du kan tryggt försöka igen.",
     "retry": "Försök igen",
     "retrying": "Försöker igen…",
     "close": "Stäng",
@@ -323,7 +323,7 @@
     "targetSolo": "Solo",
     "whatChanges": "Det här ändras",
     "flatRate": "Fast pris, högst 1 användare",
-    "footer": "Integreringar, hanterad e-post, arbetsflödesdesign och mobil åtkomst är inte längre tillgängliga efter nedgraderingen."
+    "footer": "Integrationer, hanterad e-post, arbetsflödesdesign och mobil åtkomst är inte längre tillgängliga efter nedgraderingen."
   },
   "soloProTrialDialog": {
     "title": "Starta 30 dagars provperiod för Pro",
@@ -332,8 +332,8 @@
     "intro": "Du är på väg att starta en <strong>kostnadsfri provperiod på 30 dagar</strong> med Pro-funktioner.",
     "trialPeriod": "Provperiod",
     "thirtyDays": "30 dagar",
-    "billingDuringTrial": "Debitering under provperioden",
-    "billingDuringTrialValue": "Ingen ändring — Solo-priset gäller fortsatt",
+    "billingDuringTrial": "Fakturering under provperioden",
+    "billingDuringTrialValue": "Ingen ändring – Solo-priset gäller fortsatt",
     "afterTrialEnds": "Efter provperioden",
     "afterTrialEndsValue": "Återgår till Solo om du inte uppgraderar",
     "infoBox": "Funktioner som bara ingår i Pro blir tillgängliga direkt. Den här provperioden är endast tillgänglig när din första provperiod för Solo har avslutats."
@@ -343,7 +343,7 @@
     "keepSubscription": "Behåll abonnemanget",
     "canceling": "Säger upp…",
     "beforeYouCancelBody": "Ditt abonnemang avslutas {{date}}. Alla kan fortsätta använda AlgaPSA fram till dess.",
-    "currentBillingPeriod": "vid slutet av din nuvarande debiteringsperiod",
+    "currentBillingPeriod": "vid slutet av din nuvarande faktureringsperiod",
     "replacesScheduledChange": "Det här ersätter din schemalagda licensändring.",
     "reasonLabel": "Orsak (valfri)",
     "reasonPlaceholder": "Välj en orsak",
@@ -360,11 +360,11 @@
   },
   "aiUsage": {
     "title": "AI-förbrukning",
-    "subtitle": "Debitering med tillgodohavanden för Alga AI-funktioner",
-    "refresh": "Ladda om",
+    "subtitle": "Kreditbaserad fakturering för Alga AI-funktioner",
+    "refresh": "Uppdatera",
     "errors": {
       "loadSummary": "Det gick inte att ladda uppgifter om AI-förbrukning",
-      "loadHistory": "Det gick inte att ladda förbrukningshistoriken",
+      "loadHistory": "Det gick inte att läsa in förbrukningshistoriken",
       "subscribe": "Det gick inte att starta betalningen",
       "topup": "Det gick inte att starta betalningen för påfyllning",
       "autoTopup": "Det gick inte att spara inställningarna för automatisk påfyllning",
@@ -372,42 +372,42 @@
     },
     "upsell": {
       "heading": "Lägg till AI i din arbetsyta",
-      "body": "Abonnera på AI-tillägget för att få tillgång till Alga AI i chatt, e-postprioritering med mera. Ditt månadsabonnemang innehåller tillgodohavanden. Du kan när som helst köpa enstaka påfyllningar eller aktivera automatisk påfyllning.",
-      "subscribe": "Abonnera på AI-tillägget",
+      "body": "Teckna abonnemang på AI-tillägget för att få tillgång till Alga AI i chatt, e-postprioritering med mera. Ditt månadsabonnemang innehåller en tilldelning av AI-krediter. Du kan när som helst köpa enstaka påfyllningar eller aktivera automatisk påfyllning.",
+      "subscribe": "Teckna abonnemang på AI-tillägget",
       "subscribing": "Omdirigerar…"
     },
     "grace": {
-      "title": "Tillgodohavandena är slut — reservbufferten används",
-      "body": "AI fortsätter att fungera med en liten reservbuffert på {{grace}} tillgodohavanden. Fyll på för att undvika ett fullständigt stopp."
+      "title": "Krediterna är slut – reservbufferten används",
+      "body": "AI fortsätter att fungera med en liten reservbuffert på {{grace}} krediter. Fyll på för att undvika ett fullständigt stopp."
     },
     "lowBalance": {
-      "title": "Lågt saldo för tillgodohavanden",
+      "title": "Lågt kreditsaldo",
       "body": "Överväg att fylla på eller aktivera automatisk påfyllning för att undvika avbrott."
     },
     "balance": {
       "total": "Totalt saldo",
-      "creditsUnit": "tillgodohavanden",
+      "creditsUnit": "krediter",
       "included": "Ingår (per månad)",
       "resetsMonthly": "återställs varje period",
       "topup": "Påfyllning (behålls)",
       "carriesOver": "förs över till nästa period"
     },
     "cycle": {
-      "label": "Debiteringsintervall",
-      "resetsIn": "Återställs om {{days}} dagar"
+      "label": "Faktureringsperiod",
+      "resetsIn": "Dagar till återställning: {{days}}"
     },
     "topup": {
-      "title": "Köp tillgodohavanden för påfyllning",
-      "description": "Engångspaket med tillgodohavanden som aldrig löper ut.",
+      "title": "Köp påfyllningskrediter",
+      "description": "Kreditpaket för engångsköp som aldrig löper ut.",
       "noPacks": "Inga påfyllningspaket har konfigurerats ännu.",
-      "packWithCredits": "{{label}} ({{credits}} tillgodohavanden)"
+      "packWithCredits": "{{label}} ({{credits}} krediter)"
     },
     "autoTopup": {
       "title": "Automatisk påfyllning",
       "description": "Köp automatiskt ett paket när ditt saldo sjunker under en gräns.",
       "enable": "Aktivera automatisk påfyllning",
       "enableHelp": "Använder din sparade betalningsmetod för debiteringar utan att du behöver vara inloggad.",
-      "threshold": "Gräns (tillgodohavanden)",
+      "threshold": "Gräns (krediter)",
       "pack": "Paket att köpa",
       "selectPack": "Välj ett paket",
       "save": "Spara automatisk påfyllning",
@@ -416,16 +416,16 @@
     },
     "history": {
       "title": "Förbrukningshistorik",
-      "description": "Förbrukning av tillgodohavanden per anrop.",
+      "description": "Kreditförbrukning per anrop.",
       "allFeatures": "Alla funktioner",
       "date": "Datum",
       "feature": "Funktion",
       "model": "Modell",
       "tokens": "Token",
-      "credits": "Tillgodohavanden",
+      "credits": "Krediter",
       "empty": "Ingen förbrukning har registrerats ännu.",
-      "loading": "Laddar…",
-      "loadMore": "Ladda fler"
+      "loading": "Läser in…",
+      "loadMore": "Läs in fler"
     }
   }
 }

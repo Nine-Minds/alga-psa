@@ -15,7 +15,7 @@
       "submit": "Skicka in"
     },
     "states": {
-      "loading": "Laddar…",
+      "loading": "Läser in…",
       "optional": "Valfritt",
       "required": "Obligatoriskt"
     },
@@ -23,31 +23,31 @@
     "yes": "Ja"
   },
   "onboardingProvider": {
-    "title": "Introduktionskomponent",
-    "description": "Introduktionskontroll på ruttnivå som kontrollerar om klientorganisationen har slutfört introduktionen och annars omdirigerar till guiden"
+    "title": "Onboardingkomponent",
+    "description": "Onboardingkontroll på ruttnivå som kontrollerar om organisationen har slutfört onboardingen och annars omdirigerar till guiden"
   },
   "onboardingWizard": {
-    "title": "Introduktionsguide",
-    "description": "Guidens ramverk för konfiguration av MSP-klientorganisationer med dialog- eller helsidesvisning, förlopp, validering och slutförandeflöden",
+    "title": "Onboardingguide",
+    "description": "Guidens ramverk för konfiguration av MSP-organisationer med dialog- eller helsidesvisning, förlopp, validering och slutförandeflöden",
     "steps": {
       "clientInfo": "Ditt företag",
       "teamMembers": "Teammedlemmar",
       "addClient": "Lägg till kund",
       "clientContact": "Kundkontakt",
-      "billing": "Debitering",
+      "billing": "Fakturering",
       "ticketing": "Ärendehantering",
       "algadeskWorkspace": "Arbetsyta"
     },
     "errors": {
-      "saveClientInfo": "Det gick inte att spara kunduppgifterna",
+      "saveClientInfo": "Det gick inte att spara företagsuppgifterna",
       "addTeamMembers": "Det gick inte att lägga till teammedlemmarna",
       "saveClient": "Det gick inte att spara kunden",
       "addContact": "Det gick inte att lägga till kontakten",
-      "setupBilling": "Det gick inte att konfigurera debiteringen",
+      "setupBilling": "Det gick inte att konfigurera faktureringen",
       "unknown": "Okänt fel",
       "validationFailed": "Valideringen misslyckades",
       "configureTicketing": "Det gick inte att konfigurera ärendehanteringen",
-      "completeOnboarding": "Det gick inte att slutföra introduktionen"
+      "completeOnboarding": "Det gick inte att slutföra onboardingen"
     },
     "debug": {
       "title": "Felsökningsinformation:",
@@ -59,7 +59,7 @@
     "actions": {
       "finish": "Slutför konfigurationen",
       "saving": "Sparar…",
-      "completing": "Slutför…"
+      "completing": "Slutför konfigurationen…"
     },
     "shell": {
       "title": "Konfigurera ditt system",
@@ -70,7 +70,7 @@
   },
   "addClientStep": {
     "title": "Steg för att lägga till kund",
-    "description": "Guidesteg för att skapa eller granska den primära kundposten under introduktionen",
+    "description": "Guidesteg för att skapa eller granska den primära kundposten under onboardingen",
     "validation": {
       "email": {
         "invalid": "Ange en giltig e-postadress"
@@ -104,7 +104,7 @@
       },
       "clientPhone": {
         "label": "Telefonnummer",
-        "placeholder": "+1 (555) 123-4567"
+        "placeholder": "08-123 456 78"
       },
       "website": {
         "label": "Webbplats",
@@ -117,11 +117,11 @@
     },
     "note": {
       "defaultTaxSettings": "Kunden skapas som skattebefriad (0 %) enligt standardinställningarna för skatt. Du kan konfigurera skattesatser senare i kundinställningarna.",
-      "optional": "Du kan hoppa över det här steget och lägga till eller ändra kunder när som helst från din översiktspanel."
+      "optional": "Du kan hoppa över det här steget och lägga till eller ändra kunder när som helst från din översikt."
     }
   },
   "billingSetupStep": {
-    "title": "Steg för debiteringskonfiguration",
+    "title": "Steg för faktureringskonfiguration",
     "description": "Guidesteg för att ange den första tjänsten, prissättningen, debiteringsmodellen och standardinställningarna för avtalsrader",
     "serviceTypes": {
       "toasts": {
@@ -192,7 +192,7 @@
       }
     },
     "header": {
-      "title": "Konfigurera debitering",
+      "title": "Konfigurera fakturering",
       "description": "Ange din standardvaluta och skapa din första tjänst.",
       "serviceTitle": "Skapa din första tjänst",
       "serviceDescription": "Lägg till en tjänst och välj hur den ska debiteras. Tjänstetypen anger tjänstens kategori, medan debiteringsmodellen styr prissättningen."
@@ -226,7 +226,7 @@
       },
       "defaultCurrency": {
         "label": "Standardvaluta *",
-        "description": "Den här valutan används som standard för all debitering: tjänster, avtal, offerter och fakturor. Du kan välja en annan valuta för enskilda kunder senare."
+        "description": "Den här valutan används som standard för all fakturering: tjänster, avtal, offerter och fakturor. Du kan välja en annan valuta för enskilda kunder senare."
       }
     },
     "billingMethods": {
@@ -396,7 +396,7 @@
   },
   "teamMembersStep": {
     "title": "Steg för teammedlemmar",
-    "description": "Guidesteg för att bjuda in de första teammedlemmarna och tilldela roller under introduktionen",
+    "description": "Guidesteg för att bjuda in de första teammedlemmarna och tilldela roller under onboardingen",
     "license": {
       "limitReached": "Licensgränsen har nåtts ({{current}}/{{limit}}). Kontakta supporten för att höja din licensgräns.",
       "remaining": {
@@ -497,7 +497,7 @@
   },
   "ticketingConfigStep": {
     "title": "Steg för konfiguration av ärendehantering",
-    "description": "Guidesteg för att konfigurera tavlor, statusar, prioriteter, kategorier och standardinställningar för SLA under introduktionen",
+    "description": "Guidesteg för att konfigurera tavlor, statusar, prioriteter, kategorier och standardinställningar för SLA under onboardingen",
     "boards": {
       "toasts": {
         "firstDefaultSet": "Den första tavlan har automatiskt angetts som standard",
@@ -720,14 +720,14 @@
         "removeTitle": "Ta bort status"
       },
       "empty": {
-        "forBoard": "{{boardName}} har inga statusar ännu. Lägg till eller importera minst en öppen standardstatus innan du slutför introduktionen.",
+        "forBoard": "{{boardName}} har inga statusar ännu. Lägg till eller importera minst en öppen standardstatus innan du slutför onboardingen.",
         "noBoardSelected": "Välj en tavla för att konfigurera dess statusar."
       }
     },
     "priorities": {
       "errors": {
         "duplicate": "Prioriteten finns redan",
-        "missingSession": "Användarsessionen hittades inte. Ladda om och försök igen.",
+        "missingSession": "Användarsessionen hittades inte. Ladda om sidan och försök igen.",
         "create": "Det gick inte att skapa prioriteten. Försök igen.",
         "delete": "Det gick inte att radera prioriteten."
       },
@@ -796,11 +796,11 @@
       }
     },
     "header": {
-      "title": "Konfigurera ärendehanteringssystem",
+      "title": "Konfigurera ärendehanteringen",
       "description": "Konfigurera ditt system för supportärenden. Importera standardkonfigurationer eller skapa egna."
     },
     "loading": {
-      "description": "Laddar befintlig konfiguration…"
+      "description": "Läser in befintlig konfiguration…"
     },
     "numbering": {
       "title": "Ärendenumrering",
@@ -809,11 +809,11 @@
         "prefix": {
           "label": "Ärendeprefix",
           "placeholder": "TK-",
-          "help": "Valfritt. Lämna tomt om du inte vill ha något prefix eller ange ett eget prefix (t.ex. \"TK-\", \"TICKET-\")"
+          "help": "Valfritt. Lämna tomt om du inte vill ha något prefix eller ange ett eget prefix (t.ex. ”TK-”, ”TICKET-”)"
         },
         "paddingLength": {
           "label": "Utfyllnadslängd",
-          "help": "Minsta antal siffror totalt. Till exempel gör 6 att \"1\" blir \"000001\""
+          "help": "Minsta antal siffror totalt. Till exempel gör 6 att ”1” blir ”000001”"
         },
         "startNumber": {
           "label": "Startnummer"
@@ -875,7 +875,7 @@
         }
       },
       "matrix": {
-        "title": "ITIL-prioritetsmatris (påverkan × brådska)",
+        "title": "ITIL-prioritetsmatris (påverkan × brådskandegrad)",
         "urgency": {
           "high": "Hög",
           "label": "Brådska",
@@ -896,19 +896,19 @@
           "high": "Hög (2)",
           "medium": "Medel (3)",
           "low": "Låg (4)",
-          "planning": "Planering (5)"
+          "planning": "Planerad (5)"
         },
         "explanation": {
           "impact": "Påverkan: Hur många användare eller verksamhetsfunktioner påverkas?",
-          "urgency": "Brådska: Hur snabbt behöver detta lösas?",
-          "priority": "Prioritet: Beräknas automatiskt utifrån matrisen för påverkan × brådska ovan."
+          "urgency": "Brådskandegrad: Hur snabbt behöver detta lösas?",
+          "priority": "Prioritet: Beräknas automatiskt utifrån matrisen för påverkan × brådskandegrad ovan."
         }
       }
     },
     "supportEmail": {
       "label": "Supportens e-postadress",
       "placeholder": "support@youritcompany.com",
-      "help": "Sparas som din kontaktadress för support – visas för kunder i portalen och används i e-postmeddelanden om bokningar. Anslut en e-postlåda senare via Inställningar > E-post för att automatiskt omvandla inkommande e-post till ärenden."
+      "help": "Sparas som din kontaktadress för support – visas för kunder i portalen och används i e-postmeddelanden om bokningar. Anslut en postlåda senare via Inställningar > E-post för att automatiskt omvandla inkommande e-post till ärenden."
     },
     "finalRequirement": {
       "label": "Obligatoriskt:",

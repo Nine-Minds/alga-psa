@@ -61,7 +61,7 @@
       "quoteDate": "Offertdatum",
       "quoteLayout": "Offertlayout",
       "subtotal": "Delsumma",
-      "tax": "Skatt",
+      "tax": "Moms",
       "termsAndConditions": "Villkor",
       "title": "Titel",
       "total": "Totalt",
@@ -69,7 +69,7 @@
     },
     "states": {
       "generating": "Genererar…",
-      "loading": "Laddar…",
+      "loading": "Läser in…",
       "saving": "Sparar…",
       "sending": "Skickar…"
     }
@@ -115,12 +115,12 @@
     "errors": {
       "delete": "Det gick inte att radera offerten.",
       "duplicate": "Det gick inte att duplicera offerten.",
-      "load": "Det gick inte att ladda offerterna",
+      "load": "Det gick inte att läsa in offerterna",
       "send": "Det gick inte att skicka offerten.",
       "resend": "Det gick inte att skicka offerten igen.",
       "sendReminder": "Det gick inte att skicka offertpåminnelsen."
     },
-    "loading": "Laddar offerter…",
+    "loading": "Läser in offerter…",
     "rowActions": {
       "delete": "Radera",
       "downloadPdf": "Ladda ner PDF",
@@ -137,7 +137,7 @@
       "convertToBoth": "Konvertera till båda",
       "convertToContract": "Konvertera till avtal",
       "convertToInvoice": "Konvertera till faktura",
-      "createNewRevision": "Skapa ny revision",
+      "createNewRevision": "Skapa ny version",
       "sendQuote": "Skicka offert",
       "saving": "Sparar…",
       "saveTemplate": "Spara mall",
@@ -230,18 +230,18 @@
     },
     "errors": {
       "convert": "Det gick inte att konvertera offerten",
-      "createRevision": "Det gick inte att skapa revisionen",
+      "createRevision": "Det gick inte att skapa versionen",
       "downloadPdf": "Det gick inte att ladda ner PDF-filen",
       "duplicate": "Det gick inte att duplicera offerten",
-      "load": "Det gick inte att ladda offertformuläret",
-      "loadConversionPreview": "Det gick inte att ladda förhandsgranskningen av konverteringen",
+      "load": "Det gick inte att läsa in offertformuläret",
+      "loadConversionPreview": "Det gick inte att läsa in förhandsgranskningen av konverteringen",
       "notFound": "Offerten hittades inte",
       "save": "Det gick inte att spara offerten",
       "saveFailed": "Det gick inte att spara offerten",
       "workflowAction": "Det gick inte att {{action}}",
       "removeItem": "Det gick inte att ta bort offertraden"
     },
-    "loading": "Laddar offertformulär…",
+    "loading": "Läser in offertformulär…",
     "notices": {
       "approved": "Offerten har godkänts och är klar att skickas.",
       "cancelled": "Offerten har annullerats.",
@@ -254,7 +254,7 @@
       "sent": "Offerten har skickats till kunden.",
       "submittedForApproval": "Offerten har skickats in för internt godkännande."
     },
-    "readOnlyNotice": "Den här offerten är skrivskyddad. Skapa en ny revision för att göra ändringar.",
+    "readOnlyNotice": "Den här offerten är skrivskyddad. Skapa en ny version för att göra ändringar.",
     "validation": {
       "clientRequired": "Kund krävs",
       "titleRequired": "Titel krävs om offerten inte skapas från en mall"
@@ -268,7 +268,7 @@
       "quoteTotalLabel": "Offertens totalsumma"
     },
     "breadcrumb": {
-      "billing": "Debitering",
+      "billing": "Fakturering",
       "quoteTemplates": "Offertmallar",
       "quotes": "Offerter",
       "newQuote": "Ny offert"
@@ -303,15 +303,15 @@
       "currencyPlaceholder": "Välj valuta",
       "quoteDate": "Offertdatum",
       "validUntil": "Giltig till",
-      "validUntilHelp": "Offerten går automatiskt ut detta datum."
+      "validUntilHelp": "Offerten upphör automatiskt att gälla detta datum."
     },
     "lineItems": {
       "title": "Rader",
       "subtitleEmpty": "Inga rader ännu.",
       "subtitleCount": "Antal rader: {{count}} · {{mix}}",
-      "mixBoth": "återkommande debitering och engångsdebitering",
-      "mixRecurring": "återkommande debitering",
-      "mixOneTime": "engångsdebitering",
+      "mixBoth": "återkommande och engångsbelopp",
+      "mixRecurring": "återkommande belopp",
+      "mixOneTime": "engångsbelopp",
       "addLocation": "+ Lägg till plats",
       "fromTemplate": "+ Från mall"
     },
@@ -330,7 +330,7 @@
       "opportunityPlaceholder": "Affärsmöjlighets-ID (valfritt)",
       "pdfLayout": "PDF-layout",
       "pdfLayoutPlaceholder": "Använd standardlayout",
-      "pdfLayoutHelp": "Välj vilken layout kunden ska se. Behåll standardvalet för att använda klientorganisationens standardinställning."
+      "pdfLayoutHelp": "Välj vilken layout kunden ska se. Behåll standardvalet för att använda organisationens standardlayout."
     },
     "footer": {
       "savedAgo": "Ändringar sparade · {{ago}}",
@@ -342,15 +342,15 @@
       "recurringPerMonth": "{{amount}} återkommande / månad",
       "subtotal": "Delsumma",
       "discounts": "Rabatter",
-      "tax": "Skatt",
+      "tax": "Moms",
       "statusLabel": "Status",
       "approvalLabel": "Godkännande",
       "approvalMessage": "Offerter måste godkännas av försäljningsansvarig innan de skickas.",
       "documentLayoutLabel": "Dokumentlayout",
-      "defaultLayout": "Klientorganisationens standardinställning",
+      "defaultLayout": "Organisationens standardinställning",
       "standardLayout": "Standard",
       "customLayout": "Anpassad",
-      "tenantDefault": "Klientorganisationens standardinställning",
+      "tenantDefault": "Organisationens standardinställning",
       "changeLayout": "Ändra"
     }
   },
@@ -400,7 +400,7 @@
     "empty": {
       "activity": "Ingen offertaktivitet har registrerats ännu.",
       "lineItems": "Offerten har inga rader ännu.",
-      "revisions": "Offerten har inga tidigare revisioner ännu."
+      "revisions": "Offerten har inga tidigare versioner ännu."
     },
     "clientSelections": {
       "declinedOptionalItem": "Kunden avböjde den här valfria raden",
@@ -412,16 +412,16 @@
       "cancel": "Det gick inte att annullera offerten",
       "convert": "Det gick inte att konvertera offerten",
       "delete": "Det gick inte att radera offerten",
-      "deleteUnavailable": "Offerten kunde inte raderas",
+      "deleteUnavailable": "Det gick inte att radera offerten",
       "downloadPdf": "Det gick inte att generera offertens PDF-fil",
       "duplicate": "Det gick inte att duplicera offerten",
-      "load": "Det gick inte att ladda offertdetaljerna",
-      "loadConversionPreview": "Det gick inte att ladda förhandsgranskningen av konverteringen",
+      "load": "Det gick inte att läsa in offertdetaljerna",
+      "loadConversionPreview": "Det gick inte att läsa in förhandsgranskningen av konverteringen",
       "notFound": "Offerten hittades inte",
       "preview": "Det gick inte att generera offertens förhandsgranskning",
       "requestChanges": "Det gick inte att begära ändringar i offerten",
       "resend": "Det gick inte att skicka offerten igen",
-      "revise": "Det gick inte att skapa en offertrevision",
+      "revise": "Det gick inte att skapa en ny version av offerten",
       "saveAsTemplate": "Det gick inte att spara offerten som mall",
       "send": "Det gick inte att skicka offerten",
       "sendReminder": "Det gick inte att skicka offertpåminnelsen",
@@ -434,7 +434,7 @@
       "optional": "Valfri",
       "recurring": "Återkommande"
     },
-    "loading": "Laddar offertdetaljer…",
+    "loading": "Läser in offertdetaljer…",
     "notices": {
       "approved": "Offerten har godkänts och är klar att skickas.",
       "reminderSent": "Offertpåminnelsen har skickats till de konfigurerade faktureringsmottagarna.",
@@ -447,7 +447,7 @@
       "createdSalesOrder": "Försäljningsorderutkastet {{number}} har skapats. Produktraderna faktureras vid leverans."
     },
     "preview": {
-      "loading": "Laddar förhandsgranskning…"
+      "loading": "Läser in förhandsgranskning…"
     },
     "table": {
       "description": "Beskrivning",
@@ -503,8 +503,8 @@
       "ungroupedItems": "Ogrupperade rader"
     },
     "placeholders": {
-      "phaseSection": "t.ex. kartläggning, utrullning, pågående",
-      "selectItem": "Välj rad",
+      "phaseSection": "t.ex. Kartläggning, Utrullning, Löpande",
+      "selectItem": "Välj artikel",
       "selectService": "Välj tjänst",
       "servicePicker": "Sök eller skriv ett namn på en anpassad rad…"
     },
@@ -567,13 +567,13 @@
     },
     "removeAriaLabel": "Ta bort {{email}}",
     "errors": {
-      "contactsLoadFailed": "Det gick inte att ladda kundkontakterna."
+      "contactsLoadFailed": "Det gick inte att läsa in kundkontakterna."
     }
   },
   "quoteConversion": {
     "title": "Konvertera offert",
     "description": "Konvertera den accepterade offerten ”{{title}}” till avtal och/eller fakturor.",
-    "loading": "Laddar förhandsgranskning av konvertering…",
+    "loading": "Läser in förhandsgranskning av konvertering…",
     "mode": {
       "contract": {
         "label": "Endast avtal",
@@ -638,7 +638,7 @@
     },
     "errors": {
       "convert": "Det gick inte att konvertera offerten",
-      "load": "Det gick inte att ladda förhandsgranskningen av konverteringen",
+      "load": "Det gick inte att läsa in förhandsgranskningen av konverteringen",
       "title": "Fel"
     },
     "salesOrder": {
@@ -671,10 +671,10 @@
       "title": "Inga offerter hittades"
     },
     "errors": {
-      "load": "Det gick inte att ladda offertgodkännandena",
+      "load": "Det gick inte att läsa in offertgodkännandena",
       "settings": "Det gick inte att uppdatera inställningarna för offertgodkännande"
     },
-    "loading": "Laddar kön för godkännande…"
+    "loading": "Läser in kön för godkännande…"
   },
   "quoteTemplates": {
     "title": "Mallar",
@@ -698,9 +698,9 @@
     },
     "errors": {
       "delete": "Det gick inte att radera mallen.",
-      "load": "Det gick inte att ladda mallarna"
+      "load": "Det gick inte att läsa in mallarna"
     },
-    "loading": "Laddar mallar…"
+    "loading": "Läser in mallar…"
   },
   "quotePreview": {
     "title": "Förhandsgranskning av offert",
@@ -716,9 +716,9 @@
     },
     "errors": {
       "downloadPdf": "Det gick inte att ladda ner PDF-filen. Försök igen.",
-      "load": "Det gick inte att ladda förhandsgranskningen"
+      "load": "Det gick inte att läsa in förhandsgranskningen"
     },
-    "loading": "Laddar förhandsgranskning…"
+    "loading": "Läser in förhandsgranskning…"
   },
   "templateEditor": {
     "actions": {
@@ -735,14 +735,14 @@
     "description": "Utforma offertlayouten i den visuella redigeraren och förhandsgranska sedan med exempeldata.",
     "errors": {
       "exportAst": "Det gick inte att exportera mallens AST från den visuella arbetsytan: {{message}}",
-      "load": "Det gick inte att ladda redigeraren för offertmallar",
+      "load": "Det gick inte att läsa in redigeraren för offertmallar",
       "nameRequired": "Mallnamn krävs.",
       "notFound": "Dokumentmallen för offerten hittades inte.",
       "previewPipeline": "Förhandsgranskningsprocessen misslyckades.",
       "saveFailed": "Det gick inte att spara offertmallen",
       "unknownAstExport": "Okänt fel vid AST-export",
-      "quoteNotFound": "Det gick inte att ladda offertdetaljer för förhandsgranskning.",
-      "quoteDetailLoad": "Det gick inte att ladda offertdetaljerna."
+      "quoteNotFound": "Det gick inte att läsa in offertdetaljer för förhandsgranskning.",
+      "quoteDetailLoad": "Det gick inte att läsa in offertdetaljerna."
     },
     "fields": {
       "layoutDetails": "Layoutdetaljer",
@@ -776,7 +776,7 @@
       "noQuotesFound": "Inga offerter hittades.",
       "selectQuote": "Välj offert",
       "selectQuoteHint": "Välj en offert för att förhandsgranska resultatet med offertens uppgifter.",
-      "loadingQuoteDetails": "Laddar offertdetaljer…"
+      "loadingQuoteDetails": "Läser in offertdetaljer…"
     },
     "pipeline": {
       "render": "Rendera",
@@ -809,7 +809,7 @@
       "clone": "Det gick inte att klona mallen",
       "delete": "Det gick inte att radera mallen",
       "editCopy": "Det gick inte att skapa en redigerbar kopia",
-      "load": "Det gick inte att ladda dokumentmallarna för offerter",
+      "load": "Det gick inte att läsa in dokumentmallarna för offerter",
       "setDefault": "Det gick inte att ange standardmall"
     },
     "labels": {
@@ -818,26 +818,26 @@
   },
   "errors": {
     "permissions": {
-      "create": "Åtkomst nekad: Kan inte skapa offerter",
-      "update": "Åtkomst nekad: Kan inte uppdatera offerter",
-      "read": "Åtkomst nekad: Kan inte läsa offerter",
-      "delete": "Åtkomst nekad: Kan inte radera offerter",
-      "readOne": "Åtkomst nekad: Kan inte läsa offerten",
-      "approve": "Åtkomst nekad: Kan inte godkänna offerter",
-      "updateApprovalSettings": "Åtkomst nekad: Kan inte uppdatera inställningarna för offertgodkännande",
-      "readDocumentTemplates": "Åtkomst nekad: Kan inte läsa dokumentmallar för offerter",
-      "modifyDocumentTemplates": "Åtkomst nekad: Kan inte ändra dokumentmallar för offerter",
-      "setDefaultDocumentTemplate": "Åtkomst nekad: Kan inte ange standarddokumentmall för offerter",
-      "deleteDocumentTemplates": "Åtkomst nekad: Kan inte radera dokumentmallar för offerter"
+      "create": "Åtkomst nekad: Du har inte behörighet att skapa offerter",
+      "update": "Åtkomst nekad: Du har inte behörighet att uppdatera offerter",
+      "read": "Åtkomst nekad: Du har inte behörighet att läsa offerter",
+      "delete": "Åtkomst nekad: Du har inte behörighet att radera offerter",
+      "readOne": "Åtkomst nekad: Du har inte behörighet att läsa offerten",
+      "approve": "Åtkomst nekad: Du har inte behörighet att godkänna offerter",
+      "updateApprovalSettings": "Åtkomst nekad: Du har inte behörighet att uppdatera inställningarna för offertgodkännande",
+      "readDocumentTemplates": "Åtkomst nekad: Du har inte behörighet att läsa dokumentmallar för offerter",
+      "modifyDocumentTemplates": "Åtkomst nekad: Du har inte behörighet att ändra dokumentmallar för offerter",
+      "setDefaultDocumentTemplate": "Åtkomst nekad: Du har inte behörighet att ange standarddokumentmall för offerter",
+      "deleteDocumentTemplates": "Åtkomst nekad: Du har inte behörighet att radera dokumentmallar för offerter"
     },
     "quote": {
       "formInvalid": "Offertformuläret innehåller ogiltiga värden. Granska formuläret och försök igen.",
-      "notFoundRefresh": "Offerten hittades inte. Den kan ha uppdaterats eller raderats. Ladda om och försök igen.",
-      "itemNotFoundRefresh": "Offertraden hittades inte. Den kan ha uppdaterats eller raderats. Ladda om och försök igen.",
-      "templateNotFoundRefresh": "Offertmallen hittades inte. Den kan ha uppdaterats eller raderats. Ladda om och försök igen.",
-      "invalidValue": "Ett av de valda offertvärdena är ogiltigt. Ladda om och försök igen.",
-      "referenceMissing": "Den valda offerten, kunden, kontakten eller tjänsten finns inte längre. Ladda om och försök igen.",
-      "conflict": "Den här offertändringen står i konflikt med en befintlig post. Ladda om och försök igen.",
+      "notFoundRefresh": "Offerten hittades inte. Den kan ha uppdaterats eller raderats. Ladda om sidan och försök igen.",
+      "itemNotFoundRefresh": "Offertraden hittades inte. Den kan ha uppdaterats eller raderats. Ladda om sidan och försök igen.",
+      "templateNotFoundRefresh": "Offertmallen hittades inte. Den kan ha uppdaterats eller raderats. Ladda om sidan och försök igen.",
+      "invalidValue": "Ett av de valda offertvärdena är ogiltigt. Ladda om sidan och försök igen.",
+      "referenceMissing": "Den valda offerten, kunden, kontakten eller tjänsten finns inte längre. Ladda om sidan och försök igen.",
+      "conflict": "Den här offertändringen står i konflikt med en befintlig post. Ladda om sidan och försök igen.",
       "notAllowed": "Ett av offertvärdena är inte tillåtet. Granska formuläret och försök igen.",
       "missingField": "Ett obligatoriskt offertfält saknas.",
       "missingFieldNamed": "Ett obligatoriskt offertfält saknas: {{field}}."

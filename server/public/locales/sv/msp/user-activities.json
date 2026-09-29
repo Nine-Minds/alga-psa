@@ -21,18 +21,18 @@
       "title": "Titel",
       "status": "Status",
       "priority": "Prioritet",
-      "dueDate": "Förfallodatum",
+      "dueDate": "Måldatum",
       "actions": "Åtgärder"
     },
     "values": {
-      "noDueDate": "Inget förfallodatum",
+      "noDueDate": "Inget måldatum",
       "emDash": "—",
       "unread": "Oläst",
       "recurringEvent": "Återkommande händelse",
       "adHocBadge": "Ad hoc"
     },
     "actions": {
-      "refresh": "Ladda om",
+      "refresh": "Uppdatera",
       "print": "Skriv ut"
     },
     "viewSwitcher": {
@@ -44,7 +44,7 @@
       "noMatching": "Inga aktiviteter matchar filtren"
     },
     "errors": {
-      "loadFailed": "Det gick inte att ladda aktiviteterna. Försök igen senare.",
+      "loadFailed": "Det gick inte att läsa in aktiviteterna. Försök igen senare.",
       "addAdHocFailed": "Det gick inte att lägga till ad hoc-posten. Försök igen."
     },
     "activityTypes": {
@@ -78,7 +78,7 @@
   },
   "card": {
     "noDescription": "Ingen beskrivning angiven",
-    "due": "Ska vara klar: {{date}}",
+    "due": "Klart senast: {{date}}",
     "recurringEvent": "Återkommande händelse",
     "unread": "Oläst",
     "noMessage": "Inget meddelande",
@@ -88,20 +88,20 @@
     "roles": "Roller: {{roles}}"
   },
   "drawer": {
-    "loading": "Laddar…",
+    "loading": "Läser in…",
     "errorLoadingTitle": "Fel vid inläsning av aktivitetsdetaljer",
-    "errorLoadingMessage": "Det gick inte att ladda aktivitetsdetaljerna. Försök igen senare.",
+    "errorLoadingMessage": "Det gick inte att läsa in aktivitetsdetaljerna. Försök igen senare.",
     "userNotAuthenticated": "Användaren är inte autentiserad",
     "scheduleEntryNotFound": "Schemaposten hittades inte",
     "timeEntryNotFound": "Tidposten hittades inte",
-    "unknownWorkItem": "Okänt arbetsobjekt",
+    "unknownWorkItem": "Okänd arbetspost",
     "timeEntryDetailsTitle": "Detaljer om tidposten",
     "errorLoadingTimeEntry": "Fel vid inläsning av tidposten",
     "workflowTaskTitle": "Arbetsflödesuppgift",
     "noAdditionalDetails": "Inga ytterligare detaljer finns tillgängliga.",
-    "failedToLoadDocument": "Det gick inte att ladda dokumentets innehåll",
+    "failedToLoadDocument": "Det gick inte att läsa in dokumentets innehåll",
     "notificationNotFound": "Aviseringen hittades inte",
-    "failedToLoadTicket": "Det gick inte att ladda ärendedetaljerna",
+    "failedToLoadTicket": "Det gick inte att läsa in ärendedetaljerna",
     "failedToLoadTask": "Det gick inte att ladda uppgiftsdetaljerna",
     "unsupportedTitle": "Aktivitetstypen stöds inte",
     "unsupportedDescription": "Den här aktivitetstypen ({{activityType}}) stöds inte i detaljvyn.",
@@ -135,7 +135,7 @@
         "title": "Titel",
         "titlePlaceholder": "Titel"
       },
-      "loadError": "Det gick inte att ladda den här posten. Försök igen senare.",
+      "loadError": "Det gick inte att läsa in den här posten. Försök igen senare.",
       "saveError": "Det gick inte att spara posten.",
       "saveSuccess": "Posten har sparats",
       "statusDone": "Klar",
@@ -146,14 +146,14 @@
     "enterpriseOnly": "Arbetsflödesuppgifter är en Pro-funktion.",
     "nextAction": "Nästa åtgärd",
     "overdueSince": "Försenad sedan {{date}}",
-    "dueOn": "Ska vara klar {{date}}",
+    "dueOn": "Klart senast {{date}}",
     "stage": "Stadium",
-    "confidence": "Tilltro",
+    "confidence": "Sannolikhet",
     "owner": "Ansvarig",
     "expectedClose": "Förväntat avslut",
     "mrr": "MRR",
     "nrr": "NRR",
-    "hardware": "Hårdvara",
+    "hardware": "Maskinvara",
     "contact": "Kontakt",
     "linkedQuotes": "Länkade offerter",
     "openOpportunity": "Öppna affärsmöjlighet",
@@ -177,7 +177,7 @@
       "title": "Titel",
       "status": "Status",
       "priority": "Prioritet",
-      "dueDate": "Förfallodatum"
+      "dueDate": "Måldatum"
     }
   },
   "printable": {
@@ -189,21 +189,21 @@
     "projects": {
       "title": "Projektuppgifter",
       "actions": {
-        "refresh": "Ladda om",
+        "refresh": "Uppdatera",
         "filter": "Filter",
         "reset": "Återställ",
         "viewAll": "Visa alla"
       },
       "ariaLabels": {
-        "refresh": "Ladda om projektuppgifter",
+        "refresh": "Uppdatera projektuppgifter",
         "filter": "Filtrera projektuppgifter"
       },
       "states": {
-        "loading": "Laddar projektaktiviteter…",
+        "loading": "Läser in projektaktiviteter…",
         "empty": "Inga projektaktiviteter hittades"
       },
       "errors": {
-        "loadFailed": "Det gick inte att ladda projektaktiviteterna. Försök igen senare."
+        "loadFailed": "Det gick inte att läsa in projektaktiviteterna. Försök igen senare."
       },
       "filterDialog": {
         "title": "Filtrera projektuppgifter",
@@ -216,13 +216,13 @@
           "allProjects": "Alla projekt",
           "phase": "Fas",
           "phasePlaceholder": "Välj fas…",
-          "phaseLoadingPlaceholder": "Laddar faser…",
+          "phaseLoadingPlaceholder": "Läser in faser…",
           "phaseSelectFirstPlaceholder": "Välj ett projekt först",
           "allPhases": "Alla faser",
           "priority": "Prioritet",
           "priorityPlaceholder": "Välj prioritet…",
           "allPriorities": "Alla prioriteter",
-          "dueDateRange": "Intervall för förfallodatum",
+          "dueDateRange": "Intervall för måldatum",
           "createdDateRange": "Intervall för skapandedatum",
           "showClosedTasks": "Visa stängda uppgifter"
         },
@@ -237,21 +237,21 @@
     "tickets": {
       "title": "Ärenden",
       "actions": {
-        "refresh": "Ladda om",
+        "refresh": "Uppdatera",
         "filter": "Filter",
         "reset": "Återställ",
         "viewAll": "Visa alla"
       },
       "ariaLabels": {
-        "refresh": "Ladda om ärenden",
+        "refresh": "Uppdatera ärenden",
         "filter": "Filtrera ärenden"
       },
       "states": {
-        "loading": "Laddar ärendeaktiviteter…",
+        "loading": "Läser in ärendeaktiviteter…",
         "empty": "Inga ärendeaktiviteter hittades"
       },
       "errors": {
-        "loadFailed": "Det gick inte att ladda ärendeaktiviteterna. Försök igen senare."
+        "loadFailed": "Det gick inte att läsa in ärendeaktiviteterna. Försök igen senare."
       },
       "filterDialog": {
         "title": "Filtrera ärenden",
@@ -267,7 +267,7 @@
           "priority": "Prioritet",
           "priorityPlaceholder": "Välj prioritet…",
           "allPriorities": "Alla prioriteter",
-          "dueDateRange": "Intervall för förfallodatum",
+          "dueDateRange": "Intervall för måldatum",
           "createdDateRange": "Intervall för skapandedatum",
           "showClosedTickets": "Visa stängda ärenden"
         },
@@ -283,21 +283,21 @@
       "title": "Arbetsflödesuppgifter",
       "drawerTitle": "Arbetsflödesuppgifter",
       "actions": {
-        "refresh": "Ladda om",
+        "refresh": "Uppdatera",
         "filter": "Filter",
         "reset": "Återställ",
         "viewAll": "Visa alla"
       },
       "ariaLabels": {
-        "refresh": "Ladda om arbetsflödesuppgifter",
+        "refresh": "Uppdatera arbetsflödesuppgifter",
         "filter": "Filtrera arbetsflödesuppgifter"
       },
       "states": {
-        "loading": "Laddar aktiviteter för arbetsflödesuppgifter…",
+        "loading": "Läser in aktiviteter för arbetsflödesuppgifter…",
         "empty": "Inga aktiviteter för arbetsflödesuppgifter hittades"
       },
       "errors": {
-        "loadFailed": "Det gick inte att ladda aktiviteterna för arbetsflödesuppgifter. Försök igen senare."
+        "loadFailed": "Det gick inte att läsa in aktiviteterna för arbetsflödesuppgifter. Försök igen senare."
       },
       "filterDialog": {
         "title": "Filtrera arbetsflödesuppgifter",
@@ -314,7 +314,7 @@
           "priorityHigh": "Hög",
           "priorityMedium": "Medel",
           "priorityLow": "Låg",
-          "dueDateRange": "Intervall för förfallodatum",
+          "dueDateRange": "Intervall för måldatum",
           "createdDateRange": "Intervall för skapandedatum",
           "showClosedTasks": "Visa stängda uppgifter",
           "includeHiddenTasks": "Inkludera dolda uppgifter"
@@ -329,40 +329,40 @@
       "listDrawer": {
         "searchPlaceholder": "Sök uppgifter…",
         "filters": "Filter",
-        "refresh": "Ladda om",
+        "refresh": "Uppdatera",
         "sortBy": "Sortera efter:",
         "sortOptions": {
           "priority": "Prioritet",
-          "dueDate": "Förfallodatum",
+          "dueDate": "Måldatum",
           "createdAt": "Skapandedatum",
           "title": "Titel"
         },
         "ascending": "Stigande",
         "descending": "Fallande",
         "states": {
-          "loading": "Laddar arbetsflödesuppgifter…",
+          "loading": "Läser in arbetsflödesuppgifter…",
           "empty": "Inga arbetsflödesuppgifter hittades"
         },
         "errors": {
-          "loadFailed": "Det gick inte att ladda arbetsflödesuppgifterna. Försök igen senare."
+          "loadFailed": "Det gick inte att läsa in arbetsflödesuppgifterna. Försök igen senare."
         }
       }
     },
     "schedule": {
       "title": "Schema",
       "actions": {
-        "refresh": "Ladda om",
+        "refresh": "Uppdatera",
         "filter": "Filter",
         "reset": "Återställ",
         "viewAll": "Visa alla"
       },
       "states": {
-        "loading": "Laddar schemaaktiviteter…",
+        "loading": "Läser in schemaaktiviteter…",
         "empty": "Inga schemaaktiviteter hittades"
       },
       "errors": {
-        "loadFailed": "Det gick inte att ladda schemaaktiviteterna. Försök igen senare.",
-        "refreshFailed": "Det gick inte att ladda om schemaaktiviteterna. Försök igen senare.",
+        "loadFailed": "Det gick inte att läsa in schemaaktiviteterna. Försök igen senare.",
+        "refreshFailed": "Det gick inte att uppdatera schemaaktiviteterna. Försök igen senare.",
         "addAdHocFailed": "Det gick inte att lägga till aktiviteten. Försök igen."
       },
       "filterDialog": {
@@ -372,8 +372,8 @@
           "search": "Sök",
           "searchPlaceholder": "Sök i titel och beskrivning",
           "dateRange": "Datumintervall",
-          "workItemType": "Typ av relaterat arbetsobjekt",
-          "workItemTypePlaceholder": "Välj typ av arbetsobjekt…",
+          "workItemType": "Typ av relaterad arbetspost",
+          "workItemTypePlaceholder": "Välj typ av arbetspost…",
           "allTypes": "Alla typer",
           "ticket": "Ärende",
           "projectTask": "Projektuppgift",
@@ -391,13 +391,13 @@
     "notifications": {
       "title": "Aviseringar",
       "actions": {
-        "refresh": "Ladda om",
+        "refresh": "Uppdatera",
         "filter": "Filter",
         "reset": "Återställ",
         "viewAll": "Visa alla"
       },
       "ariaLabels": {
-        "refresh": "Ladda om aviseringar",
+        "refresh": "Uppdatera aviseringar",
         "filter": "Filtrera aviseringar"
       },
       "tabs": {
@@ -406,11 +406,11 @@
         "read": "Lästa"
       },
       "states": {
-        "loading": "Laddar aviseringsaktiviteter…",
+        "loading": "Läser in aviseringsaktiviteter…",
         "empty": "Inga aviseringsaktiviteter hittades"
       },
       "errors": {
-        "loadFailed": "Det gick inte att ladda aviseringsaktiviteterna. Försök igen senare."
+        "loadFailed": "Det gick inte att läsa in aviseringsaktiviteterna. Försök igen senare."
       },
       "filterDialog": {
         "title": "Filtrera aviseringar",
@@ -449,12 +449,12 @@
   },
   "pickers": {
     "priority": {
-      "loading": "Laddar…",
+      "loading": "Läser in…",
       "empty": "Inga prioriteter tillgängliga",
       "none": "Ingen"
     },
     "status": {
-      "loading": "Laddar…",
+      "loading": "Läser in…",
       "empty": "Inga statusar tillgängliga",
       "closedSuffix": "stängd"
     }
@@ -466,10 +466,10 @@
       "tasks": "Uppgifter:",
       "priority": "Prioritet",
       "search": "Sök",
-      "dueDate": "Förfallodatum",
+      "dueDate": "Måldatum",
       "showClosed": "Visa stängda",
       "client": "Kund",
-      "dueDateShort": "Ska vara klar",
+      "dueDateShort": "Måldatum",
       "createdShort": "Skapad",
       "tags": "Taggar",
       "tagsSelected": "{{count}} taggar",
@@ -502,7 +502,7 @@
     "actions": {
       "reset": "Återställ",
       "clearClient": "Rensa kundfilter",
-      "clearDueDate": "Rensa filter för förfallodatum",
+      "clearDueDate": "Rensa filter för måldatum",
       "clearCreatedDate": "Rensa filter för skapandedatum"
     },
     "statusClosedSuffix": " (stängd)",

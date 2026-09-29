@@ -3,7 +3,7 @@
     "title": "Rapporter"
   },
   "actions": {
-    "refresh": "Ladda om"
+    "refresh": "Uppdatera"
   },
   "placeholders": {
     "selectContract": "Välj avtal…"
@@ -17,8 +17,8 @@
   "reportsPage": {
     "cards": {
       "timeUtilization": {
-        "title": "Tidsutnyttjande",
-        "placeholder": "[Platshållare för diagram över tidsutnyttjande]"
+        "title": "Tidsbeläggning",
+        "placeholder": "[Platshållare för diagram över tidsbeläggning]"
       },
       "projectProgress": {
         "title": "Projektförlopp",
@@ -37,7 +37,7 @@
     "categories": {
       "helpdesk": "Support",
       "operations": "Verksamhet",
-      "billing": "Debitering",
+      "billing": "Fakturering",
       "inventory": "Lager"
     },
     "badges": {
@@ -45,7 +45,7 @@
     },
     "actions": {
       "viewReport": "Visa rapport",
-      "openInBilling": "Öppna i debitering",
+      "openInBilling": "Öppna i fakturering",
       "openReport": "Öppna rapport",
       "requiresTier": "Kräver {{tier}}",
       "comingSoon": "Kommer snart"
@@ -59,8 +59,8 @@
       "noDate": "Inget datum",
       "notAvailable": "Ej tillgängligt",
       "noEmailChannels": "Inga e-postkanaler är konfigurerade.",
-      "noCapacity": "Ej tillgängligt — ingen kapacitet angiven",
-      "noEstimate": "Ej tillgängligt — ingen uppskattning angiven",
+      "noCapacity": "Ej tillgängligt – ingen kapacitet angiven",
+      "noEstimate": "Ej tillgängligt – ingen uppskattning angiven",
       "noOverruns": "Ingen uppgift har överskridit sin uppskattade tid."
     },
     "fallbackTitle": "Rapport",
@@ -69,7 +69,7 @@
       "allActiveProjects": "Alla aktiva projekt, från start till idag"
     },
     "units": {
-      "daysWithCount": "{{count}} dagar"
+      "daysWithCount": "{{count}} d"
     },
     "metrics": {
       "created": "Skapade",
@@ -96,7 +96,7 @@
       "timeEntries": "Tidposter",
       "activeContracts": "Aktiva avtal",
       "monthlyRecurring": "Återkommande månadsintäkter",
-      "renewalsDue": "Förnyelser som ska göras",
+      "renewalsDue": "Kommande förnyelser",
       "bucketUsedHours": "Använda timmar i timpotter",
       "bucketOverageHours": "Timmar utöver timpotter",
       "openAssigned": "Öppna tilldelade ärenden",
@@ -104,7 +104,7 @@
       "avgResolutionTime": "Genomsnittlig lösningstid",
       "workedHours": "Arbetade timmar",
       "capacityHours": "Kapacitet i timmar",
-      "utilization": "Nyttjandegrad",
+      "utilization": "Beläggningsgrad",
       "usersWithoutCapacity": "Saknar kapacitet",
       "activeUsers": "Aktiva användare",
       "activeProjects": "Aktiva projekt",
@@ -131,7 +131,7 @@
       "bucketUsage": "Förbrukning av timpotter",
       "performanceByAssignee": "Prestation per ansvarig",
       "closedByAssignee": "Stängda ärenden per ansvarig",
-      "utilizationByUser": "Nyttjandegrad per användare",
+      "utilizationByUser": "Beläggningsgrad per användare",
       "hoursByProject": "Timmar per projekt",
       "hoursByPhase": "Timmar per fas",
       "largestTaskOverruns": "Största tidsöverskridanden per uppgift"
@@ -150,7 +150,7 @@
         "description": "Mängd inkommande e-post, tid för att skapa ärenden och anslutningsstatus för e-postlådor."
       },
       "timeUtilization": {
-        "title": "Tidsutnyttjande",
+        "title": "Tidsbeläggning",
         "description": "Registrerat arbete per person och tjänsteområde för PSA-verksamheten."
       },
       "teamPerformance": {
@@ -158,7 +158,7 @@
         "description": "Genomströmning på teamnivå och svarsansvar för arbetsytor med flera användare."
       },
       "employeeUtilization": {
-        "title": "Medarbetarnas nyttjandegrad",
+        "title": "Medarbetarnas beläggningsgrad",
         "description": "Arbetade timmar i förhållande till varje teammedlems veckokapacitet."
       },
       "contractReports": {
@@ -179,7 +179,7 @@
       },
       "inventoryGhostUsage": {
         "title": "Oregistrerad materialförbrukning",
-        "description": "Stängda maskinvaruärenden utan registrerade delar — kostnader som verksamheten kan ha fått stå för."
+        "description": "Stängda maskinvaruärenden utan registrerade delar – kostnader som verksamheten kan ha fått stå för."
       },
       "projectHours": {
         "title": "Projekttimmar jämfört med uppskattningar",
@@ -206,7 +206,7 @@
       "age": "Ålder",
       "workedHours": "Arbetade timmar",
       "capacityHours": "Kapacitet i timmar",
-      "utilization": "Nyttjandegrad",
+      "utilization": "Beläggningsgrad",
       "capacityEstimated": "Uppskattat utifrån veckokapacitet; inga arbetstider angivna.",
       "project": "Projekt",
       "client": "Kund",
@@ -369,7 +369,7 @@
       },
       "timingTooltip": "Intäkter filtreras efter fakturadatum. Arbetskostnader filtreras efter arbetsdatum. Fakturerade materialkostnader följer fakturadatum; ofakturerade materialkostnader följer datumet då posten skapades.",
       "empty": {
-        "costRates": "Kostnadssatser är inte konfigurerade. Arbetstimmar visas utan beräknad kostnad tills en standardsats för klientorganisationen eller en användarspecifik sats har angetts.",
+        "costRates": "Kostnadssatser är inte konfigurerade. Arbetstimmar visas utan beräknad kostnad tills en standardsats för organisationen eller en användarspecifik sats har angetts.",
         "clients": "Inga tillgängliga lönsamhetsdata för kunder i det här intervallet.",
         "lines": "Inga detaljer på radnivå för den här raden.",
         "tickets": "Inga tillgängliga lönsamhetsdata för ärenden i det här urvalet.",
@@ -385,13 +385,13 @@
       },
       "warnings": {
         "title": "Rapportvarningar",
-        "uncostedMinutes": "{{hours}} timmar utan beräknad kostnad",
-        "unattributedMinutes": "{{hours}} timmar utan hänföring",
-        "unapprovedMinutes": "{{hours}} timmar utan godkännande ingår",
-        "zeroDuration": "{{count}} tidposter med noll varaktighet",
-        "uncostedMaterials": "{{count}} materialposter utan beräknad kostnad",
-        "unconvertedRevenue": "{{count}} intäktsrader utan valutaomräkning",
-        "materialCurrencyMismatch": "{{count}} valutaavvikelser för material"
+        "uncostedMinutes": "{{hours}} h utan beräknad kostnad",
+        "unattributedMinutes": "{{hours}} h utan hänföring",
+        "unapprovedMinutes": "{{hours}} h utan godkännande ingår",
+        "zeroDuration": "Tidposter med noll varaktighet: {{count}}",
+        "uncostedMaterials": "Materialposter utan beräknad kostnad: {{count}}",
+        "unconvertedRevenue": "Intäktsrader utan valutaomräkning: {{count}}",
+        "materialCurrencyMismatch": "Valutaavvikelser för material: {{count}}"
       },
       "summary": {
         "revenue": "Intäkter",
@@ -424,8 +424,8 @@
     "metrics": {
       "totalClients": "Totalt antal kunder",
       "activeClients": "Aktiva kunder",
-      "totalPlans": "Totalt antal planer",
-      "averagePlansPerClient": "Genomsnittligt antal planer per kund",
+      "totalPlans": "Totalt antal avtalsrader",
+      "averagePlansPerClient": "Genomsnittligt antal avtalsrader per kund",
       "totalRevenue": "Totala intäkter",
       "averageRevenuePerClient": "Genomsnittlig intäkt per kund"
     },
@@ -438,7 +438,7 @@
       "table": {
         "contract": "Avtal",
         "clients": "Kunder",
-        "plans": "Planer",
+        "plans": "Avtalsrader",
         "revenue": "Intäkter"
       }
     }
@@ -505,7 +505,7 @@
       "closing": "Utgående saldo",
       "currencyHeading": "Valuta",
       "noClients": "Inga kunder med förbetalda saldon den här månaden.",
-      "tenantTotal": "Totalt för klientorganisationen"
+      "tenantTotal": "Totalt för organisationen"
     },
     "detail": {
       "credits": "Tillgodohavanden",
@@ -517,7 +517,7 @@
       "qbo": "QBO",
       "reachable": "Synkroniserat",
       "notReachable": "Finns inte i QBO",
-      "notReachableTitle": "Tillgodohavanden från förskottsbetalningar eller projektförskott exporteras aldrig till QuickBooks — Alga är det primära registret.",
+      "notReachableTitle": "Tillgodohavanden från förskottsbetalningar eller projektförskott exporteras aldrig till QuickBooks – Alga är det primära registret.",
       "buckets": "Förbetalda timpottstimmar",
       "noBuckets": "Inga förbetalda timpottsperioder.",
       "line": "Rad",
@@ -537,8 +537,8 @@
   },
   "errors": {
     "report": {
-      "invalidValue": "En av de valda rapportposterna är ogiltig. Ladda om och försök igen.",
-      "referenceMissing": "En av de valda rapportposterna finns inte längre. Ladda om och försök igen.",
+      "invalidValue": "En av de valda rapportposterna är ogiltig. Ladda om sidan och försök igen.",
+      "referenceMissing": "En av de valda rapportposterna finns inte längre. Ladda om sidan och försök igen.",
       "missingField": "Ett obligatoriskt rapportfält saknas.",
       "missingFieldNamed": "Ett obligatoriskt rapportfält saknas: {{field}}."
     }

@@ -152,11 +152,11 @@ COPY.sv = {
   priority: 'Prioritet',
   status: 'Status',
   assignedTo: 'Tilldelat till',
-  changesLabel: 'Vad som har ändrats',
+  changesLabel: 'Ändringar',
   viewButton: 'Visa ärende',
-  footer: 'Drivs av AlgaPSA &middot; Håller team samordnade',
+  footer: 'Drivs av AlgaPSA &middot; För samspelta team',
   textHeader: 'Ditt ärende har uppdaterats',
-  textChanges: 'Vad som har ändrats',
+  textChanges: 'Ändringar',
   textView: 'Visa ärende',
 };
 

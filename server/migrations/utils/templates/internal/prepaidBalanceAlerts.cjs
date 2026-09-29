@@ -51,9 +51,9 @@ const TEMPLATES = [
           'O crédito pré-pago de {{clientName}} caiu abaixo do limite configurado. Disponível: {{available}} {{currency}} (limite: {{threshold}} {{currency}}). [Ver cliente]({{link}}).',
       },
       sv: {
-        title: 'Förbetalt tillgodohavande börjar ta slut: {{clientName}}',
+        title: 'Förbetalt saldo börjar ta slut: {{clientName}}',
         message:
-          'Det förbetalda tillgodohavandet för {{clientName}} har sjunkit under det konfigurerade tröskelvärdet. Tillgängligt: {{available}} {{currency}} (tröskelvärde: {{threshold}} {{currency}}). [Visa kund]({{link}}).',
+          'Det förbetalda saldot för {{clientName}} har sjunkit under det inställda tröskelvärdet. Tillgängligt: {{available}} {{currency}} (tröskelvärde: {{threshold}} {{currency}}). [Visa kund]({{link}}).',
       },
     },
   },
@@ -104,7 +104,7 @@ const TEMPLATES = [
       sv: {
         title: 'Tröskelvärde för förbetald timpott uppnått: {{clientName}}',
         message:
-          'En förbetald timpott för {{clientName}} har nått {{usedPercent}} % av kapaciteten (konfigurerat tröskelvärde: {{percent}} %). Förbrukat: {{used}} av {{capacity}}. Förbrukningsperiod: {{periodStart}} - {{periodEnd}}. [Visa kund]({{link}}).',
+          'En förbetald timpott för {{clientName}} har nått {{usedPercent}} % av kapaciteten (inställt tröskelvärde: {{percent}} %). Förbrukat: {{used}} av {{capacity}}. Förbrukningsperiod: {{periodStart}} – {{periodEnd}}. [Visa kund]({{link}}).',
       },
     },
   },

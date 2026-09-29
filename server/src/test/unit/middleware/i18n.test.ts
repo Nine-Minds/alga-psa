@@ -71,14 +71,11 @@ describe('i18nMiddleware', () => {
     expect(response.headers.get('x-locale')).toBe('pl');
   });
 
-  // A preview locale is withheld from the pickers pending native review, so the
-  // browser header — a guess, not a selection — must not reach it either. An
-  // explicit cookie still does.
-  it('will not hint at a preview locale from the browser header', () => {
+  it('hints at Swedish from the browser header and from an explicit cookie', () => {
     const guessed = runMiddleware(
       request('http://localhost:3000/msp/tickets', { 'accept-language': 'sv-SE,sv;q=0.9' }),
     );
-    expect(guessed.headers.get('x-locale')).toBe('en');
+    expect(guessed.headers.get('x-locale')).toBe('sv');
 
     const chosen = runMiddleware(
       request('http://localhost:3000/msp/tickets', { cookie: 'locale=sv' }),

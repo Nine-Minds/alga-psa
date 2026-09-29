@@ -20,7 +20,7 @@ const SUBJECTS = {
   it: 'Ticket scalato: #{{ticketNumber}} - livello {{escalationLevel}}',
   pl: 'Zg\u0142oszenie eskalowane: #{{ticketNumber}} - poziom {{escalationLevel}}',
   pt: 'Ticket escalonado: #{{ticketNumber}} - nível {{escalationLevel}}',
-  sv: 'Eskalerat ärende: #{{ticketNumber}} - nivå {{escalationLevel}}',
+  sv: 'Eskalerat ärende: #{{ticketNumber}} – nivå {{escalationLevel}}',
 };
 
 /* eslint-disable max-len */
@@ -288,7 +288,7 @@ const COPY = {
     assignedTo: 'Tilldelat till',
     callToAction: 'Granska detta ärende och vidta lämpliga åtgärder.',
     viewButton: 'Visa ärende',
-    footer: 'Drivs av AlgaPSA &middot; Håller team samordnade',
+    footer: 'Drivs av AlgaPSA &middot; För samspelta team',
     textHeader: 'Ärendeeskalering: nivå {{escalationLevel}}',
     textGreeting: 'Hej {{recipientName}},',
     textIntro: 'Ett ärende har eskalerats till dig på grund av SLA-relaterade problem. Du har lagts till som eskaleringsansvarig.',

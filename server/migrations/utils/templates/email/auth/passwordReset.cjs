@@ -625,7 +625,7 @@ COPY.sv = {
   textWarning2: '- Av säkerhetsskäl kan den här länken bara användas en gång',
   textWarning3: '- Om du inte har begärt den här återställningen kan du ignorera det här e-postmeddelandet',
   textWarning4: '- Ditt lösenord ändras inte förrän du skapar ett nytt',
-  textNextHeader: 'Efter att du har återställt ditt lösenord:',
+  textNextHeader: 'Nästa steg:',
   textNext1: '1. Klicka på återställningsknappen ovan eller använd länken',
   textNext2: '2. Skapa ett starkt och unikt lösenord för ditt konto',
   textNext3: '3. Du loggas in automatiskt efter återställningen',

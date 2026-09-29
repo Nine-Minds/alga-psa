@@ -38,7 +38,7 @@
     "summary": {
       "total": "Totalt",
       "activeWorkflows": "Aktiva arbetsflöden",
-      "runCount": "{{count}} körningar"
+      "runCount": "Körningar: {{count}}"
     },
     "filters": {
       "all": "Alla",
@@ -59,16 +59,16 @@
       "viewLatestRun": "Visa senaste körningen",
       "runNow": "Kör nu",
       "exportCsv": "Exportera CSV",
-      "refresh": "Ladda om",
+      "refresh": "Uppdatera",
       "details": "Detaljer",
-      "loadMore": "Ladda fler",
+      "loadMore": "Läs in fler",
       "preview": "Förhandsgranska"
     },
     "table": {
       "runId": "Körnings-ID",
       "workflow": "Arbetsflöde",
       "version": "Version",
-      "tenant": "Klientorganisation",
+      "tenant": "Organisation",
       "triggerPayload": "Utlösarens nyttolast",
       "status": "Status",
       "started": "Startad",
@@ -82,12 +82,12 @@
       }
     },
     "states": {
-      "loading": "Laddar arbetsflödeskörningar…",
+      "loading": "Läser in arbetsflödeskörningar…",
       "empty": "Inga arbetsflödeskörningar matchar de aktuella filtren."
     },
     "bulk": {
       "cancelTitle": "Avbryt markerade körningar",
-      "cancelMessage": "Avbryta {{count}} markerade körningar? Detta kan inte ångras.",
+      "cancelMessage": "Vill du avbryta markerade körningar ({{count}})? Detta kan inte ångras.",
       "reasonLabel": "Orsak",
       "cancelReasonPlaceholder": "Ange en orsak till att avbryta",
       "cancelConfirm": "Avbryt körningar",
@@ -98,25 +98,25 @@
       }
     },
     "toasts": {
-      "loadRunsFailed": "Det gick inte att ladda arbetsflödeskörningar",
+      "loadRunsFailed": "Det gick inte att läsa in arbetsflödeskörningar",
       "selectWorkflowForLatestRun": "Välj ett arbetsflöde för att visa dess senaste körning.",
       "noRunsFoundForWorkflow": "Inga körningar hittades för det arbetsflödet.",
-      "loadLatestRunFailed": "Det gick inte att ladda den senaste körningen",
+      "loadLatestRunFailed": "Det gick inte att läsa in den senaste körningen",
       "selectWorkflowToRun": "Välj ett arbetsflöde att köra.",
       "exportReady": "Körningsexporten är klar",
       "exportFailed": "Det gick inte att exportera körningarna",
       "selectRunsForBulkAction": "Markera körningar för att utföra den här åtgärden.",
       "bulkReasonTooShort": "Orsaken måste innehålla minst 3 tecken.",
       "noEligibleRuns": "Ingen av de markerade körningarna kan användas för den åtgärden.",
-      "bulkCancelFailedCount": "Det gick inte att avbryta {{count}} körningar.",
-      "bulkCancelSuccessCount": "{{count}} körningar avbröts.",
-      "bulkSkippedIneligibleCount": "{{count}} körningar som inte kunde behandlas hoppades över.",
+      "bulkCancelFailedCount": "Det gick inte att avbryta körningar ({{count}}).",
+      "bulkCancelSuccessCount": "Avbrutna körningar: {{count}}.",
+      "bulkSkippedIneligibleCount": "Körningar som inte kunde behandlas och hoppades över: {{count}}.",
       "bulkActionFailed": "Massåtgärden misslyckades"
     },
     "print": {
       "title": "Arbetsflödeskörningar",
       "selectedTitle": "Markerade arbetsflödeskörningar",
-      "subtitle": "{{count}} körningar",
+      "subtitle": "Körningar: {{count}}",
       "noRuns": "Inga arbetsflödeskörningar att skriva ut",
       "columns": {
         "run": "Körning",
@@ -136,7 +136,7 @@
       "close": "Stäng",
       "next": "Nästa",
       "openFullPage": "Öppna helsida",
-      "position": "{{current}} av {{total}} laddade körningar",
+      "position": "{{current}} av {{total}} inlästa körningar",
       "previous": "Föregående",
       "selectedRun": "Markerad körning",
       "title": "Förhandsgranskning av körning"
@@ -160,7 +160,7 @@
       "apply": "Tillämpa",
       "reset": "Återställ",
       "exportCsv": "Exportera CSV",
-      "loadMore": "Ladda fler",
+      "loadMore": "Läs in fler",
       "exportAuditCsv": "Exportera granskningslogg som CSV"
     },
     "summary": {
@@ -184,7 +184,7 @@
     "stepTimeline": {
       "title": "Tidslinje för steg",
       "description": "Försök, varaktighet och fel per steg.",
-      "loading": "Laddar…",
+      "loading": "Läser in…",
       "stepStatusLabel": "Stegstatus",
       "nodeTypeLabel": "Nodtyp",
       "collapseNestedLabel": "Fäll ihop nästlade block",
@@ -220,11 +220,11 @@
       "title": "Väntningshistorik",
       "eventLine": "Händelse: {{event}} · Nyckel: {{key}} · Filter: {{count}}",
       "timeLine": "Läge: {{mode}} · Schemalagd återupptagning: {{scheduledResume}}",
-      "timeoutLine": "Tidsgräns: {{timeout}} · Avslutad: {{resolved}}"
+      "timeoutLine": "Tidsgräns: {{timeout}} · Uppfylld: {{resolved}}"
     },
     "envelope": {
-      "title": "Kuvertdata",
-      "description": "Nyttolast, vars, meta och error från den senaste ögonblicksbilden.",
+      "title": "Körningsdata",
+      "description": "Nyttolast, variabler, metadata och fel från den senaste ögonblicksbilden.",
       "redactedNotice": "Maskerade värden visas som {{marker}}.",
       "noSnapshot": "Ingen ögonblicksbild tillgänglig.",
       "tabs": {
@@ -261,7 +261,7 @@
         "event": "Händelse",
         "correlation": "Korrelation"
       },
-      "loading": "Laddar loggar…"
+      "loading": "Läser in loggar…"
     },
     "audit": {
       "title": "Granskningslogg",
@@ -274,7 +274,7 @@
         "user": "Användare",
         "details": "Detaljer"
       },
-      "loading": "Laddar granskningslogg…",
+      "loading": "Läser in granskningslogg…",
       "unknownUser": "Okänd användare"
     },
     "dialogs": {
@@ -290,9 +290,9 @@
       "replayConfirm": "Kör om"
     },
     "toasts": {
-      "loadRunDetailsFailed": "Det gick inte att ladda körningsdetaljer",
-      "loadLogsFailed": "Det gick inte att ladda loggar",
-      "loadAuditLogsFailed": "Det gick inte att ladda granskningsloggar",
+      "loadRunDetailsFailed": "Det gick inte att läsa in körningsdetaljer",
+      "loadLogsFailed": "Det gick inte att läsa in loggar",
+      "loadAuditLogsFailed": "Det gick inte att läsa in granskningsloggar",
       "logExportReady": "Loggexporten är klar",
       "exportLogsFailed": "Det gick inte att exportera loggarna",
       "reasonTooShort": "Orsaken måste innehålla minst 3 tecken.",
@@ -307,8 +307,8 @@
       "exportAuditLogsFailed": "Det gick inte att exportera granskningsloggarna"
     },
     "queuedWarning": {
-      "title": "I kö – väntar på en arbetsflödesarbetare",
-      "description": "Den här körningen startade för över en minut sedan, men inga steg har körts ännu. Kontrollera att arbetsflödets arbetartjänst körs och är ansluten till Temporal."
+      "title": "I kö – väntar på en worker för arbetsflöden",
+      "description": "Den här körningen startade för över en minut sedan, men inga steg har körts ännu. Kontrollera att worker-tjänsten för arbetsflöden körs och är ansluten till Temporal."
     }
   },
   "runDialog": {
@@ -316,7 +316,7 @@
     "description": "Ange en syntetisk nyttolast för att förhandsgranska (och köra) ett arbetsflöde.",
     "descriptionEvent": "Händelse: {{name}}.",
     "draftWarning": "Utkastversionen skiljer sig från den publicerade (v{{version}}).",
-    "concurrencyLimit": "Samtidighetsgräns: {{count}} körningar åt gången.",
+    "concurrencyLimit": "Max antal samtidiga körningar: {{count}}.",
     "common": {
       "emptyValue": "—"
     },
@@ -346,12 +346,12 @@
       "searchLabel": "Sök händelser",
       "searchPlaceholder": "Sök efter namn, typ eller kategori",
       "eventTypeLabel": "Händelsetyp",
-      "loadingEvents": "Laddar händelser…",
+      "loadingEvents": "Läser in händelser…",
       "selectEventType": "Välj händelsetyp",
       "systemBadge": "System",
-      "tenantBadge": "Klientorganisation",
+      "tenantBadge": "Organisation",
       "systemEvent": "Systemhändelse",
-      "tenantEvent": "Klientorganisationshändelse",
+      "tenantEvent": "Organisationshändelse",
       "uncategorized": "Utan kategori"
     },
     "fields": {
@@ -394,7 +394,7 @@
       "schemaRef": "Schemareferens",
       "schemaRefLabel": "Schemareferens",
       "selectSchema": "Välj schema…",
-      "noSchemasFound": "Inga scheman hittades",
+      "noSchemasFound": "Inga JSON-scheman hittades",
       "unknownSchemaRef": "Okänd schemareferens.",
       "useEventSchema": "Använd händelseschema",
       "viewSchemaDiff": "Visa schemaskillnader",
@@ -431,7 +431,7 @@
     "toasts": {
       "confirmSystemRun": "Bekräfta att du vill köra det här systemarbetsflödet.",
       "eventMissingSchemaRef": "Den valda händelsen saknar en nyttolastschemareferens och kan inte köras med utlösarmappning.",
-      "loadLatestRunFailed": "Det gick inte att ladda den senaste körningen",
+      "loadLatestRunFailed": "Det gick inte att läsa in den senaste körningen",
       "mapEntryExists": "Den nyckeln finns redan.",
       "noPriorPayload": "Ingen nyttolast från en tidigare körning hittades.",
       "payloadCopied": "Nyttolasten har kopierats till urklipp.",
@@ -493,12 +493,12 @@
       }
     },
     "states": {
-      "loading": "Laddar händelser…",
+      "loading": "Läser in händelser…",
       "empty": "Inga arbetsflödeshändelser hittades."
     },
     "detail": {
       "title": "Händelsedetaljer",
-      "loading": "Laddar händelsedetaljer…",
+      "loading": "Läser in händelsedetaljer…",
       "eventIdLabel": "Händelse-ID",
       "statusLabel": "Status",
       "eventNameLabel": "Händelsenamn",
@@ -512,15 +512,15 @@
       "waitIdLine": "Väntnings-ID: {{waitId}}",
       "waitStatusLine": "Status: {{status}}",
       "waitTimeoutLine": "Tidsgräns: {{value}}",
-      "waitResolvedLine": "Avslutad: {{value}}",
+      "waitResolvedLine": "Uppfylld: {{value}}",
       "waitStepLine": "Steg: {{value}}",
       "matchedRunLabel": "Matchad körning",
       "runStatusLine": "Status: {{status}}",
       "payloadLabel": "Nyttolast"
     },
     "toasts": {
-      "loadEventsFailed": "Det gick inte att ladda arbetsflödeshändelser",
-      "loadEventDetailFailed": "Det gick inte att ladda händelsedetaljer",
+      "loadEventsFailed": "Det gick inte att läsa in arbetsflödeshändelser",
+      "loadEventDetailFailed": "Det gick inte att läsa in händelsedetaljer",
       "exportReady": "Händelseexporten är klar",
       "exportFailed": "Det gick inte att exportera händelserna"
     }
@@ -534,8 +534,8 @@
       "minimumRetriesPlaceholder": "3"
     },
     "actions": {
-      "refresh": "Ladda om",
-      "loadMore": "Ladda fler"
+      "refresh": "Uppdatera",
+      "loadMore": "Läs in fler"
     },
     "table": {
       "columns": {
@@ -550,10 +550,10 @@
     },
     "states": {
       "empty": "Inga körningar i felkön hittades.",
-      "loading": "Laddar körningar i felkön…"
+      "loading": "Läser in körningar i felkön…"
     },
     "toasts": {
-      "loadFailed": "Det gick inte att ladda körningar i felkön"
+      "loadFailed": "Det gick inte att läsa in körningar i felkön"
     }
   },
   "audit": {
@@ -565,8 +565,8 @@
     },
     "actions": {
       "exportCsv": "Exportera CSV",
-      "loadMore": "Ladda fler",
-      "refresh": "Ladda om"
+      "loadMore": "Läs in fler",
+      "refresh": "Uppdatera"
     },
     "table": {
       "columns": {
@@ -579,13 +579,13 @@
     "states": {
       "selectWorkflow": "Välj ett arbetsflöde för att visa granskningshistorik.",
       "empty": "Inga granskningsposter ännu.",
-      "loading": "Laddar granskningsposter…"
+      "loading": "Läser in granskningsposter…"
     },
     "values": {
       "system": "system"
     },
     "toasts": {
-      "loadFailed": "Det gick inte att ladda granskningsloggar",
+      "loadFailed": "Det gick inte att läsa in granskningsloggar",
       "exportReady": "Granskningsexporten är klar",
       "exportFailed": "Det gick inte att exportera granskningsloggarna"
     }
@@ -610,7 +610,7 @@
       "quota": {
         "consumedLabel": "Förbrukat",
         "consumedUnit": "förbrukade",
-        "loading": "Laddar…",
+        "loading": "Läser in…",
         "planLimit": "Gräns: {{limit}}",
         "remainingLabel": "Återstående",
         "remainingUnit": "återstående",
@@ -660,7 +660,7 @@
       "schemaSuffixClock": " till det fasta datakontraktet för klocknyttolasten.",
       "schemaSuffixPinned": " för att hålla arbetsflödet stabilt om utlösarscheman ändras.",
       "chooseTriggerHint": "Välj en utlösare för att definiera tillgängliga fält.",
-      "schemaLoadErrorPrefix": "Det gick inte att ladda schemainformation för",
+      "schemaLoadErrorPrefix": "Det gick inte att läsa in schemainformation för",
       "schemaLoadErrorSuffix": "Kontrollera posten i händelsekatalogen.",
       "draftDifferent": "Utkastets datakontrakt skiljer sig från det publicerade",
       "publishedUsesPrefix": "Den publicerade versionen använder",
@@ -674,7 +674,7 @@
       "workflowStepsListHint": "Dra steg för att ändra ordningen eller flytta dem mellan flöden.",
       "workflowStepsGraphHint": "Panorera och zooma i grafen. Grenar visas som separata banor.",
       "workflowStepsViewAria": "Vy för arbetsflödessteg",
-      "warningsCount": "{{count}} varningar",
+      "warningsCount": "Varningar: {{count}}",
       "dateSource": "Datumkälla",
       "dateSourceAnniversary": "Kundens årsdag",
       "dateSourceRenewal": "Beslutsdatum för avtalsförnyelse",
@@ -683,13 +683,13 @@
       "dateOffset": "Dagar",
       "dateDirection": "Tidpunkt",
       "before": "Före",
-      "onDate": "På dagen",
+      "onDate": "Samma dag",
       "after": "Efter",
       "daysBefore": "dagar före",
       "daysAfter": "dagar efter",
       "localTime": "Lokal tid",
       "timezoneOptional": "Tidszon (valfritt)",
-      "tenantTimezoneDefault": "klientorganisationens tidszon",
+      "tenantTimezoneDefault": "Organisationens tidszon",
       "dateTriggerSummary": "Körs {{days}} {{direction}} {{source}} kl. {{time}} ({{timezone}})",
       "inputDataDatePrefix": "Det här arbetsflödet tar emot nyttolasten som definieras av"
     },
@@ -707,7 +707,7 @@
       "payloadFilters": "Nyttolastfilter",
       "addFilter": "Lägg till filter",
       "noFiltersConfigured": "Inga filter har konfigurerats.",
-      "loadingEventSchema": "Laddar händelseschemats fält…",
+      "loadingEventSchema": "Läser in händelseschemats fält…",
       "timeoutMs": "Tidsgräns (ms)",
       "assignOnResume": "Tilldela vid återupptagning",
       "fieldLabel": "Fält",
@@ -822,7 +822,7 @@
     "actions": {
       "ai.infer": {
         "label": "Härled strukturerade utdata",
-        "description": "Generera strukturerade arbetsflödesdata från en prompt med den konfigurerade AI-tjänsteleverantören."
+        "description": "Generera strukturerade arbetsflödesdata från en prompt med den konfigurerade AI-leverantören."
       },
       "store.get": {
         "label": "Hämta lagrat värde",
@@ -846,7 +846,7 @@
       },
       "store.list_namespaces": {
         "label": "Lista datalagrets namnrymder",
-        "description": "Lista namnrymder i arbetsflödenas datalager som används av den här klientorganisationen."
+        "description": "Lista namnrymder i arbetsflödenas datalager som används av den här organisationen."
       },
       "links.upsert": {
         "label": "Skapa eller uppdatera entitetslänk",
@@ -866,7 +866,7 @@
       },
       "links.list_namespaces": {
         "label": "Lista länknamnrymder",
-        "description": "Lista namnrymder för arbetsflödenas entitetslänkar som används av den här klientorganisationen."
+        "description": "Lista namnrymder för arbetsflödenas entitetslänkar som används av den här organisationen."
       }
     },
     "validation": {
@@ -894,8 +894,8 @@
     "blockSection": {
       "then": "Då",
       "else": "Annars",
-      "try": "Försök",
-      "catch": "Fånga",
+      "try": "Try",
+      "catch": "Catch",
       "body": "Innehåll"
     },
     "palette": {
@@ -952,7 +952,7 @@
         },
         "transform.assign": {
           "label": "Tilldela",
-          "description": "Tilldela värden i payload eller vars"
+          "description": "Tilldela värden i nyttolasten (payload) eller variabler (vars)"
         },
         "action.call": {
           "label": "Anropa åtgärd",
@@ -1023,7 +1023,7 @@
       "badges": {
         "if": "Om",
         "loop": "Slinga",
-        "try": "Försök",
+        "try": "Try",
         "block": "Block",
         "disconnected": "Frånkopplat"
       },
@@ -1045,10 +1045,10 @@
       "disconnectedTitle": "{{group}} är inte ansluten. Det här steget misslyckas vid körning tills anslutningen återställs."
     },
     "toasts": {
-      "loadRegistriesFailed": "Det gick inte att ladda arbetsflödesregister",
-      "loadPermissionsFailed": "Det gick inte att ladda behörigheter",
-      "loadWorkflowsFailed": "Det gick inte att ladda arbetsflöden",
-      "loadEventCatalogFailed": "Det gick inte att ladda händelsekatalogen",
+      "loadRegistriesFailed": "Det gick inte att läsa in arbetsflödesregister",
+      "loadPermissionsFailed": "Det gick inte att läsa in behörigheter",
+      "loadWorkflowsFailed": "Det gick inte att läsa in arbetsflöden",
+      "loadEventCatalogFailed": "Det gick inte att läsa in händelsekatalogen",
       "settingsUpdated": "Arbetsflödesinställningarna har uppdaterats",
       "settingsUpdateFailed": "Det gick inte att uppdatera arbetsflödesinställningarna",
       "created": "Arbetsflödet har skapats",
@@ -1079,7 +1079,7 @@
       "sourceSchemaOverride": "Åsidosätt utlösarens källschema",
       "useCatalogSchemaDefault": "Använd katalogschema (standard)",
       "useCatalogSchemaPlaceholder": "Använd katalogschema…",
-      "noSchemasFound": "Inga scheman hittades",
+      "noSchemasFound": "Inga JSON-scheman hittades",
       "mappingTitle": "Utlösarmappning",
       "mappingNotRequired": "Mappning: Krävs inte.",
       "mappingErrors": "Mappningsfel",
@@ -1094,9 +1094,9 @@
       "availableFieldsPreview": "Förhandsgranskning av tillgängliga fält",
       "payloadContract": "Datakontraktsschema för arbetsflödets nyttolast",
       "ref": "Schemareferens:",
-      "loadFailed": "Det gick inte att ladda schemat.",
-      "notLoaded": "Schemat har inte laddats ännu.",
-      "loadPreviewFailed": "Det gick inte att ladda schemaförhandsgranskningen.",
+      "loadFailed": "Det gick inte att läsa in schemat.",
+      "notLoaded": "Schemat har inte lästs in ännu.",
+      "loadPreviewFailed": "Det gick inte att läsa in schemaförhandsgranskningen.",
       "selectVersionPlaceholder": "Välj schemaversion…",
       "payloadRefAdvanced": "Nyttolastschemareferens (avancerat)"
     },
@@ -1121,7 +1121,7 @@
       "process": "Process:",
       "clientId": "Klient-ID:",
       "clientSecret": "Klienthemlighet:",
-      "tenantId": "Klientorganisations-ID:",
+      "tenantId": "Organisations-ID:",
       "userEmail": "Användarens e-postadress:"
     }
   },
@@ -1141,7 +1141,7 @@
     "heading": "Åtgärdens indata"
   },
   "actionInputFixedPicker": {
-    "loadingOptions": "Laddar alternativ…",
+    "loadingOptions": "Läser in alternativ…",
     "ticketSearchPlaceholder": "Sök ärenden efter nummer eller titel",
     "ticketSelect": "Välj ärende",
     "ticketTypeAbove": "Skriv ovan för att söka efter ärenden",
@@ -1153,27 +1153,27 @@
       "userOrTeam": "Välj användare eller team"
     },
     "errors": {
-      "loadTicket": "Det gick inte att ladda ärendet",
+      "loadTicket": "Det gick inte att läsa in ärendet",
       "searchTickets": "Det gick inte att söka efter ärenden",
-      "loadOptions": "Det gick inte att ladda alternativen"
+      "loadOptions": "Det gick inte att läsa in alternativen"
     },
     "dependencyHints": {
       "contact": {
-        "client_id": "Välj först en fast kund för att ladda kontaktalternativ."
+        "client_id": "Välj först en fast kund för att läsa in kontaktalternativ."
       },
       "client-location": {
-        "client_id": "Välj först en fast kund för att ladda platsalternativ."
+        "client_id": "Välj först en fast kund för att läsa in platsalternativ."
       },
       "ticket-category": {
-        "board_id": "Välj först en fast tavla för att ladda kategorialternativ."
+        "board_id": "Välj först en fast tavla för att läsa in kategorialternativ."
       },
       "ticket-status": {
-        "board_id": "Välj först en fast tavla för att ladda statusalternativ.",
-        "ticket_id": "Välj först ett fast ärende för att ladda statusalternativ."
+        "board_id": "Välj först en fast tavla för att läsa in statusalternativ.",
+        "ticket_id": "Välj först ett fast ärende för att läsa in statusalternativ."
       },
       "ticket-subcategory": {
-        "board_id": "Välj först en fast tavla för att ladda underkategorialternativ.",
-        "category_id": "Välj först en fast kategori för att ladda underkategorialternativ."
+        "board_id": "Välj först en fast tavla för att läsa in underkategorialternativ.",
+        "category_id": "Välj först en fast kategori för att läsa in underkategorialternativ."
       }
     }
   },
@@ -1183,7 +1183,7 @@
     "notFound": "Hittades inte.",
     "workflowNotFound": "Arbetsflödet hittades inte.",
     "workflowVersionNotFound": "Arbetsflödesversionen hittades inte.",
-    "workflowVersionExists": "Arbetsflödesversion {{version}} finns redan. Ladda om och försök igen.",
+    "workflowVersionExists": "Arbetsflödesversion {{version}} finns redan. Ladda om sidan och försök igen.",
     "workflowValidationFailed": "Valideringen av arbetsflödet misslyckades.",
     "noPublishedVersions": "Det här arbetsflödet har inga publicerade versioner ännu.",
     "workflowPaused": "Det här arbetsflödet är pausat.",
@@ -1224,7 +1224,7 @@
     "backToList": "← Tillbaka till uppgiftslistan",
     "tabs": {
       "pending": "Väntande",
-      "claimed": "Tagna",
+      "claimed": "Påtagna",
       "completed": "Slutförda",
       "all": "Alla uppgifter"
     }
@@ -1237,7 +1237,7 @@
     },
     "errors": {
       "loadFailed": "Det gick inte att ladda uppgifter. Försök igen.",
-      "claimFailed": "Det gick inte att ta uppgiften: {{error}}",
+      "claimFailed": "Det gick inte att ta på dig uppgiften: {{error}}",
       "unclaimFailed": "Det gick inte att lämna tillbaka uppgiften: {{error}}",
       "unknown": "Okänt fel"
     },
@@ -1245,7 +1245,7 @@
       "claim": "Ta uppgift",
       "unclaim": "Lämna tillbaka"
     },
-    "noDueDate": "Inget förfallodatum",
+    "noDueDate": "Inget måldatum",
     "overdueSuffix": "(Försenad)",
     "empty": "Inga uppgifter hittades",
     "duePrefix": "Förfaller:"
@@ -1262,7 +1262,7 @@
       "status": "Status",
       "priority": "Prioritet",
       "created": "Skapad",
-      "dueDate": "Förfallodatum",
+      "dueDate": "Måldatum",
       "claimedBy": "Tagen av",
       "completedBy": "Slutförd av"
     },
@@ -1277,7 +1277,7 @@
     },
     "errors": {
       "loadFailed": "Det gick inte att ladda uppgiftsdetaljer. Försök igen.",
-      "claimFailed": "Det gick inte att ta uppgiften: {{error}}",
+      "claimFailed": "Det gick inte att ta på dig uppgiften: {{error}}",
       "unclaimFailed": "Det gick inte att lämna tillbaka uppgiften: {{error}}",
       "unknown": "Okänt fel"
     }
@@ -1289,7 +1289,7 @@
     "detailsLabel": "Detaljer",
     "actions": {
       "created": "Skapad",
-      "claimed": "Tagen",
+      "claimed": "Påtagen",
       "unclaimed": "Återlämnad",
       "completed": "Slutförd",
       "canceled": "Avbruten",
@@ -1320,7 +1320,7 @@
     "backToTasks": "← Tillbaka till uppgifter"
   },
   "actionButton": {
-    "processing": "Behandlar…",
+    "processing": "Bearbetar…",
     "confirm": "Bekräfta",
     "cancel": "Avbryt",
     "confirmTitle": "Bekräfta åtgärd"
@@ -1430,7 +1430,7 @@
       "saveOutput": "Spara utdata",
       "emptyConjunction": "eller steget",
       "assignStep": "Tilldela",
-      "emptySuffix": "för att fylla"
+      "emptySuffix": "för att fylla i dem"
     },
     "loop": {
       "currentItem": "aktuell post",
@@ -1602,7 +1602,7 @@
     },
     "disconnected": {
       "title": "{{group}} är inte ansluten",
-      "message": "Steg som använder dess åtgärder misslyckas vid körning tills integreringen återansluts under Inställningar > Integreringar."
+      "message": "Steg som använder dess åtgärder misslyckas vid körning tills integrationen återansluts under Inställningar > Integrationer."
     }
   },
   "trigger": {
@@ -1661,7 +1661,7 @@
     "actions": {
       "replay": "Kör om",
       "cancel": "Avbryt",
-      "refresh": "Ladda om"
+      "refresh": "Uppdatera"
     },
     "status": {
       "running": "Körs",
@@ -1670,7 +1670,7 @@
       "failed": "Misslyckades",
       "pending": "Väntande",
       "canceled": "Avbruten",
-      "loading": "Laddar"
+      "loading": "Läser in"
     },
     "failure": {
       "title": "Körningen misslyckades",
@@ -1684,8 +1684,8 @@
         "list": "Lista"
       },
       "states": {
-        "loadingDefinition": "Laddar arbetsflödesdefinition…",
-        "loadingDefinitionPlain": "Laddar arbetsflödesdefinition…",
+        "loadingDefinition": "Läser in arbetsflödesdefinition…",
+        "loadingDefinitionPlain": "Läser in arbetsflödesdefinition…",
         "noSteps": "Inga steg att visa."
       },
       "selectPrompt": "Välj ett steg för att markera det.",
@@ -1697,7 +1697,7 @@
         "runId": "Körnings-ID",
         "started": "Startad",
         "duration": "Varaktighet",
-        "tenant": "Klientorganisation",
+        "tenant": "Organisation",
         "trigger": "Utlösare",
         "eventType": "Händelsetyp",
         "scheduleState": "Schemastatus",
@@ -1726,7 +1726,7 @@
         "configuration": "Stegkonfiguration",
         "inputResolved": "Indata (beräknade)",
         "output": "Utdata",
-        "envelopeSnapshot": "Ögonblicksbild av kuvert"
+        "envelopeSnapshot": "Ögonblicksbild av körningsdata"
       }
     },
     "timeline": {
@@ -1741,7 +1741,7 @@
       "eventSegment": " · Händelse: {{eventName}}",
       "keySegment": " · Nyckel: {{key}}",
       "createdLine": "Skapad: {{createdAt}}",
-      "resolvedSegment": " · Avslutad: {{resolvedAt}}",
+      "resolvedSegment": " · Uppfylld: {{resolvedAt}}",
       "actions": {
         "jump": "Gå till"
       }
@@ -1775,7 +1775,7 @@
       },
       "actions": {
         "close": "Stäng",
-        "confirmCancel": "Bekräfta avbrott",
+        "confirmCancel": "Avbryt körningen",
         "startReplay": "Starta omkörning",
         "working": "Arbetar…"
       },
@@ -1801,14 +1801,14 @@
       "badges": {
         "if": "Om",
         "loop": "Slinga",
-        "try": "Försök",
+        "try": "Try",
         "block": "Block"
       },
       "sections": {
         "then": "Då",
         "else": "Annars",
-        "try": "Försök",
-        "catch": "Fånga",
+        "try": "Try",
+        "catch": "Catch",
         "body": "Innehåll"
       }
     },
@@ -1820,9 +1820,9 @@
       "canceled": "Körningen avbröts.",
       "replayStarted": "Omkörningen har startat.",
       "actionFailed": "Det gick inte att utföra åtgärden.",
-      "loadFailed": "Det gick inte att ladda körningsstudion"
+      "loadFailed": "Det gick inte att läsa in körningsstudion"
     },
-    "lastRefreshed": "Senast omladdad {{time}}",
+    "lastRefreshed": "Senast uppdaterad {{time}}",
     "navigation": {
       "backToRuns": "← Tillbaka till arbetsflödeskörningar"
     },
@@ -1864,7 +1864,7 @@
       "disabled": "Inaktiverat"
     },
     "triggerType": {
-      "schedule": "Engångs",
+      "schedule": "Engång",
       "recurring": "Återkommande"
     },
     "dayType": {
@@ -1886,8 +1886,8 @@
       }
     },
     "states": {
-      "loadingReflection": "Arbetsflödesscheman laddas",
-      "loading": "Laddar scheman…",
+      "loadingReflection": "Arbetsflödesscheman läses in",
+      "loading": "Läser in scheman…",
       "never": "Aldrig",
       "calendarMisconfigured": "Felkonfigurerad kalender",
       "noEligibleUpcomingRun": "Ingen möjlig kommande körning",
@@ -1896,7 +1896,7 @@
       "emptyDescription": "Skapa ett engångsschema eller ett återkommande schema för att köra ett publicerat arbetsflöde med sparade indata."
     },
     "errors": {
-      "loadFailed": "Det gick inte att ladda scheman.",
+      "loadFailed": "Det gick inte att läsa in scheman.",
       "updateFailed": "Det gick inte att uppdatera schemat.",
       "deleteFailed": "Det gick inte att radera schemat."
     },
@@ -1914,7 +1914,7 @@
       },
       "description": "Konfigurera tidpunkter och statiska nyttolastdata för ett arbetsflödesschema.",
       "states": {
-        "loading": "Laddar schemadetaljer…"
+        "loading": "Läser in schemadetaljer…"
       },
       "fields": {
         "workflow": "Arbetsflöde",
@@ -1953,19 +1953,19 @@
         "unavailableSchemaRef": "Det valda arbetsflödet använder en otillgänglig nyttolastschemareferens: {{schemaRef}}."
       },
       "calendarSource": {
-        "tenantDefault": "Klientorganisationens standardöppettider",
-        "tenantDefaultMissing": "Klientorganisationens standardöppettider (inte konfigurerade)",
-        "tenantDefaultHint": "Ange först ett standardschema för klientorganisationens öppettider eller välj ett specifikt schema.",
+        "tenantDefault": "Organisationens standardöppettider",
+        "tenantDefaultMissing": "Organisationens standardöppettider (inte konfigurerade)",
+        "tenantDefaultHint": "Ange först ett standardschema för organisationens öppettider eller välj ett specifikt schema.",
         "specific": "Specifikt öppettidsschema",
         "specificHint": "Skapa ett öppettidsschema först.",
-        "tenantDefaultMissingDescription": "Inget standardschema för klientorganisationens öppettider har konfigurerats ännu. Välj ett specifikt öppettidsschema eller ange först ett standardschema för klientorganisationen.",
+        "tenantDefaultMissingDescription": "Inget standardschema för organisationens öppettider har konfigurerats ännu. Välj ett specifikt öppettidsschema eller ange först ett standardschema för organisationen.",
         "holidaysNote": "Helgdagar räknas alltid som arbetsfria dagar."
       },
       "businessHours": {
         "defaultSuffix": " (standard)",
         "noneConfigured": "Inga öppettidsscheman har konfigurerats ännu.",
-        "usingTenantDefault": "Använder klientorganisationens standardschema för öppettider.",
-        "noTenantDefault": "Inget standardschema för klientorganisationens öppettider har konfigurerats ännu."
+        "usingTenantDefault": "Använder organisationens standardschema för öppettider.",
+        "noTenantDefault": "Inget standardschema för organisationens öppettider har konfigurerats ännu."
       },
       "recurring": {
         "title": "Återkommande schema",
@@ -2018,7 +2018,7 @@
         "invalidJson": "Ogiltig JSON"
       },
       "errors": {
-        "loadScheduleFailed": "Det gick inte att ladda schemat.",
+        "loadScheduleFailed": "Det gick inte att läsa in schemat.",
         "saveFailed": "Det gick inte att spara schemat."
       }
     },
@@ -2275,7 +2275,7 @@
         "delete": "Radera"
       },
       "states": {
-        "errorTitle": "Det gick inte att ladda arbetsflöden",
+        "errorTitle": "Det gick inte att läsa in arbetsflöden",
         "errorFallback": "Det gick inte att hämta arbetsflöden",
         "validationFailed": "Det gick inte att validera raderingen. Försök igen.",
         "emptyTitle": "Inga arbetsflöden ännu",
@@ -2309,7 +2309,7 @@
         "sourceOptions": {
           "all": "Alla källor",
           "system": "System",
-          "tenant": "Klientorganisation"
+          "tenant": "Organisation"
         },
         "sort": "Sortera",
         "sortOptions": {
@@ -2322,11 +2322,11 @@
         "viewList": "Listvy"
       },
       "card": {
-        "workflowsCount": "{{count}} arbetsflöden",
+        "workflowsCount": "Arbetsflöden: {{count}}",
         "actions": {
           "simulate": "Simulera",
           "metrics": "Mätvärden",
-          "attachTitle": "Koppla (nytt arbetsflöde)"
+          "attachTitle": "Koppla till (nytt arbetsflöde)"
         },
         "metrics": {
           "executions": "Körningar",
@@ -2339,7 +2339,7 @@
         "noEventsDescription": "Prova att ändra filtren.",
         "noEventsInRange": "Inga händelser i det här intervallet.",
         "noDataAvailable": "Inga data tillgängliga.",
-        "loading": "Laddar…"
+        "loading": "Läser in…"
       },
       "pagination": {
         "showing": "Visar {{start}} till {{end}} av {{total}} resultat",
@@ -2349,7 +2349,7 @@
       },
       "badges": {
         "system": "System",
-        "tenant": "Klientorganisation",
+        "tenant": "Organisation",
         "noSchema": "Inget schema",
         "unknownSchema": "Okänt schema",
         "schema": "Schema"
@@ -2359,7 +2359,7 @@
         "close": "Stäng",
         "simulate": "Simulera",
         "metrics": "Mätvärden",
-        "attach": "Koppla",
+        "attach": "Koppla arbetsflöde",
         "schema": {
           "heading": "Schema",
           "viewFull": "Visa fullständigt schema",
@@ -2371,7 +2371,7 @@
         },
         "attached": {
           "heading": "Kopplade arbetsflöden",
-          "loading": "Laddar…",
+          "loading": "Läser in…",
           "empty": "Inga arbetsflöden är kopplade.",
           "publishedBadge": "Publicerat",
           "systemBadge": "System",
@@ -2386,7 +2386,7 @@
       "schemaModal": {
         "close": "Stäng",
         "headerTitle": "Nyttolastschema",
-        "loading": "Laddar…",
+        "loading": "Läser in…",
         "unavailable": "Schemat är inte tillgängligt.",
         "copy": "Kopiera",
         "copySuccess": "Kopierat",
@@ -2397,9 +2397,9 @@
         "headerTitle": "Mätvärden · {{eventType}}",
         "from": "Från",
         "to": "Till",
-        "refresh": "Ladda om",
+        "refresh": "Uppdatera",
         "openWorkflowEditor": "Öppna arbetsflödesredigeraren",
-        "loading": "Laddar…",
+        "loading": "Läser in…",
         "totals": {
           "totalEvents": "Totalt antal händelser",
           "matched": "Matchad",
@@ -2413,7 +2413,7 @@
         "recentEvents": "Senaste händelser",
         "viewInEvents": "Visa bland händelser",
         "openRun": "Visa körning",
-        "loadFailed": "Det gick inte att ladda mätvärden",
+        "loadFailed": "Det gick inte att läsa in mätvärden",
         "rangeShowing": "Visar {{start}}–{{end}} av {{total}}",
         "prev": "Föregående",
         "next": "Nästa"
@@ -2484,7 +2484,7 @@
           "name": "Namn",
           "namePlaceholder": "Lättläst namn",
           "category": "Kategori",
-          "categoryPlaceholder": "t.ex. ärenden",
+          "categoryPlaceholder": "t.ex. Ärenden",
           "description": "Beskrivning",
           "descriptionPlaceholder": "Valfri beskrivning",
           "useSchemaRef": "Använd schemareferens",
@@ -2493,7 +2493,7 @@
           "selectPlaceholder": "Välj…",
           "payloadSchemaJson": "Nyttolastschema (JSON)"
         },
-        "footer": "Anpassade händelser gäller inom klientorganisationen och kan användas som arbetsflödesutlösare.",
+        "footer": "Anpassade händelser gäller inom organisationen och kan användas som arbetsflödesutlösare.",
         "validation": {
           "typeAndNameRequired": "Händelsetyp och namn krävs.",
           "schemaRefRequired": "Välj en nyttolastschemareferens (eller använd ett inbäddat schema).",
@@ -2505,10 +2505,10 @@
         }
       },
       "toasts": {
-        "loadEventsFailed": "Det gick inte att ladda händelser",
+        "loadEventsFailed": "Det gick inte att läsa in händelser",
         "workflowCreated": "Arbetsflödet har skapats",
         "createWorkflowFailed": "Det gick inte att skapa arbetsflödet",
-        "detachConfirm": "Koppla från arbetsflödet från händelsen? Detta publicerar en ny version där utlösaren har tagits bort.",
+        "detachConfirm": "Vill du koppla bort arbetsflödet från händelsen? Detta publicerar en ny version där utlösaren har tagits bort.",
         "detachValidationFailed": "Frånkopplingen misslyckades (valideringsfel)",
         "detached": "Frånkopplat",
         "detachFailed": "Det gick inte att koppla från"
@@ -2516,7 +2516,7 @@
     },
     "actionInput": {
       "fallbacks": {
-        "loadingOptions": "Laddar alternativ…",
+        "loadingOptions": "Läser in alternativ…",
         "selectName": "Välj {{name}}",
         "ticketSearchPlaceholder": "Sök ärenden efter nummer eller titel",
         "ticketSelect": "Välj ärende",
@@ -2528,23 +2528,23 @@
         "selectUserOrTeam": "Välj användare eller team"
       },
       "errors": {
-        "loadTicket": "Det gick inte att ladda ärendet",
+        "loadTicket": "Det gick inte att läsa in ärendet",
         "searchTickets": "Det gick inte att söka efter ärenden",
-        "loadOptions": "Det gick inte att ladda alternativen"
+        "loadOptions": "Det gick inte att läsa in alternativen"
       },
       "dependencyHints": {
-        "contactClient": "Välj först en fast kund för att ladda kontaktalternativ.",
-        "locationClient": "Välj först en fast kund för att ladda platsalternativ.",
-        "categoryBoard": "Välj först en fast tavla för att ladda kategorialternativ.",
-        "statusBoard": "Välj först en fast tavla för att ladda statusalternativ.",
-        "statusTicket": "Välj först ett fast ärende för att ladda statusalternativ.",
-        "subcategoryBoard": "Välj först en fast tavla för att ladda underkategorialternativ.",
-        "subcategoryCategory": "Välj först en fast kategori för att ladda underkategorialternativ."
+        "contactClient": "Välj först en fast kund för att läsa in kontaktalternativ.",
+        "locationClient": "Välj först en fast kund för att läsa in platsalternativ.",
+        "categoryBoard": "Välj först en fast tavla för att läsa in kategorialternativ.",
+        "statusBoard": "Välj först en fast tavla för att läsa in statusalternativ.",
+        "statusTicket": "Välj först ett fast ärende för att läsa in statusalternativ.",
+        "subcategoryBoard": "Välj först en fast tavla för att läsa in underkategorialternativ.",
+        "subcategoryCategory": "Välj först en fast kategori för att läsa in underkategorialternativ."
       }
     }
   },
   "automationGate": {
-    "loading": "Laddar arbetsflödesautomatisering…"
+    "loading": "Läser in arbetsflödesautomatisering…"
   },
   "flow": {
     "designer": {
@@ -2598,7 +2598,7 @@
   },
   "mappingEditor": {
     "error": {
-      "title": "Det gick inte att ladda schemat",
+      "title": "Det gick inte att läsa in schemat",
       "retry": "Försök igen",
       "retryWithCount": "Försök igen ({{retryCount}}/{{maxRetries}})",
       "attemptOfMax": "Försök {{retryCount}} av {{maxRetries}}",

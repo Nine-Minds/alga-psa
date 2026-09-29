@@ -486,7 +486,7 @@ Esta é uma mensagem automática. Não responda a este email.`,
 };
 
 LANGS.sv = {
-  subject: '{{platformName}} - Dina inloggningslänkar',
+  subject: '{{platformName}} – Dina inloggningslänkar',
   html: `
         <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff;">
           <div style="background: linear-gradient(135deg, #8A4DEA, #40CFF9); padding: 30px; text-align: center;">
@@ -529,7 +529,7 @@ LANGS.sv = {
           </div>
         </div>
       `,
-  text: `{{platformName}} - Dina inloggningslänkar
+  text: `{{platformName}} – Dina inloggningslänkar
 
 Hej,
 

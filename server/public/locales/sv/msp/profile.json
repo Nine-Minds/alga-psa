@@ -8,7 +8,7 @@
       "apiKeys": "API-nycklar",
       "notifications": "Aviseringar",
       "calendar": "Kalender",
-      "keyboardShortcuts": "Kortkommandon"
+      "keyboardShortcuts": "Tangentbordsgenvägar"
     },
     "basicInfo": {
       "title": "Grundläggande uppgifter"
@@ -43,7 +43,7 @@
         "internal": "Interna"
       }
     },
-    "loading": "Laddar profil…",
+    "loading": "Läser in profilen…",
     "messages": {
       "success": {
         "profileUpdated": "Profilen har uppdaterats"
@@ -51,7 +51,7 @@
       "error": {
         "userNotFound": "Användaren hittades inte",
         "fillRequiredFields": "Fyll i alla obligatoriska fält",
-        "loadFailed": "Det gick inte att ladda profilen",
+        "loadFailed": "Det gick inte att läsa in profilen",
         "saveFailed": "Det gick inte att spara profilen",
         "errorPrefix": "Fel: {{error}}"
       }
@@ -76,11 +76,11 @@
     "loadingStates": {
       "sso": {
         "title": "Enkel inloggning",
-        "description": "Laddar SSO-inställningar…"
+        "description": "Läser in SSO-inställningar…"
       },
       "calendar": {
         "title": "Kalender",
-        "description": "Laddar kalenderinställningar…"
+        "description": "Läser in kalenderinställningar…"
       }
     }
   },
@@ -98,26 +98,26 @@
       "userProvisioning": "Användaretablering"
     },
     "loading": {
-      "roles": "Laddar rollkonfiguration…",
-      "permissions": "Laddar behörighetskonfiguration…",
-      "userRoles": "Laddar konfiguration för användarroller…",
-      "policies": "Laddar policykonfiguration…",
-      "apiKeys": "Laddar konfiguration för API-nycklar…",
-      "webhooks": "Laddar webhookkonfiguration…",
-      "sso": "Laddar verktyg för SSO-hantering…",
-      "sessions": "Laddar aktiva sessioner…",
-      "userProvisioning": "Laddar SCIM-etablering…"
+      "roles": "Läser in rollkonfiguration…",
+      "permissions": "Läser in behörighetskonfiguration…",
+      "userRoles": "Läser in konfiguration för användarroller…",
+      "policies": "Läser in policykonfiguration…",
+      "apiKeys": "Läser in konfiguration för API-nycklar…",
+      "webhooks": "Läser in webhookkonfiguration…",
+      "sso": "Läser in verktyg för SSO-hantering…",
+      "sessions": "Läser in aktiva sessioner…",
+      "userProvisioning": "Läser in SCIM-etablering…"
     },
     "scim": {
       "title": "Användaretablering",
       "description": "Låt Microsoft Entra inaktivera och återaktivera befintliga interna användare. Alga förblir den styrande källan för profiler, roller, team och licenser.",
-      "loading": "Laddar användaretablering",
+      "loading": "Läser in användaretablering",
       "status": {
         "enabled": "Tar emot anrop",
         "disabled": "Etableringen är pausad"
       },
       "errors": {
-        "load": "Det gick inte att ladda SCIM-etableringen.",
+        "load": "Det gick inte att läsa in SCIM-etableringen.",
         "update": "Det gick inte att uppdatera SCIM-etableringen."
       },
       "upgrade": {
@@ -126,7 +126,7 @@
       },
       "setup": {
         "title": "Anslut Microsoft Entra",
-        "description": "Generera en slutpunkt för klientorganisationen och en bearer-token som visas en enda gång. SCIM skapar inga Alga-användare.",
+        "description": "Generera en slutpunkt för din organisation och en bearer-token som visas en enda gång. SCIM skapar inga Alga-användare.",
         "create": "Generera anslutning"
       },
       "connection": {
@@ -185,7 +185,7 @@
       "advanced": {
         "title": "Avancerat: anpassad routning till identitetsleverantör",
         "description": "Styr SSO för MSP-inloggning till din egen identitetsleverantör med verifierade inloggningsdomäner. Behövs endast för anpassade eller lokala installationer.",
-        "inertNotice": "Ingen identitetsleverantör har konfigurerats för klientorganisationen, så domänanspråk har för närvarande ingen effekt. Konfigurera Keycloak ovan eller, i Enterprise Edition, autentiseringsuppgifterna för din Google- eller Microsoft-app. Gör sedan anspråk på personalens inloggningsdomän här."
+        "inertNotice": "Ingen identitetsleverantör har konfigurerats för organisationen, så domänanspråk har för närvarande ingen effekt. Konfigurera Keycloak ovan eller, i Enterprise Edition, autentiseringsuppgifterna för din Google- eller Microsoft-app. Gör sedan anspråk på personalens inloggningsdomän här."
       }
     },
     "userRoles": {
@@ -269,13 +269,13 @@
       "oauthWarning": "Om du återkallar denna session återkallas inte OAuth-åtkomsten till {{provider}}. Återkalla åtkomsten i kontoinställningarna hos {{provider}}.",
       "confirmLogout": "Är du säker på att du vill logga ut från denna enhet?",
       "messages": {
-        "loadFailed": "Det gick inte att ladda sessionerna",
+        "loadFailed": "Det gick inte att läsa in sessionerna",
         "loggingOut": "Loggar ut…",
         "revoked": "Sessionen har återkallats",
         "revokeFailed": "Det gick inte att återkalla sessionen"
       },
       "emptyState": {
-        "loading": "Laddar sessioner…",
+        "loading": "Läser in sessioner…",
         "noMatch": "Inga sessioner matchar din sökning",
         "noSessions": "Inga aktiva sessioner hittades"
       },
@@ -299,7 +299,7 @@
         "newWebhook": "Ny webhook",
         "list": {
           "title": "Konfigurerade inkommande webhookar",
-          "loading": "Laddar…",
+          "loading": "Läser in…",
           "configuredCount": "Konfigurerade: {{count}}",
           "empty": "Inga inkommande webhookar har konfigurerats ännu.",
           "columns": {
@@ -319,7 +319,7 @@
           "inactive": "Inaktiv"
         },
         "messages": {
-          "loadFailed": "Det gick inte att ladda inkommande webhookar.",
+          "loadFailed": "Det gick inte att läsa in inkommande webhookar.",
           "nameRequired": "Namn krävs.",
           "slugRequired": "URL-segment krävs.",
           "actionRequired": "Välj en åtgärd innan du sparar.",
@@ -415,7 +415,7 @@
           "workflowHelp": "Välj ett arbetsflöde som ska startas med webhookens normaliserade meddelandehölje.",
           "workflow": "Arbetsflöde",
           "workflowPlaceholder": "Välj ett arbetsflöde",
-          "workflowEmpty": "Inga arbetsflöden är synliga i denna klientorganisation. Publicera eller visa ett dolt arbetsflöde för att använda arbetsflödeshanteraren.",
+          "workflowEmpty": "Inga arbetsflöden är synliga i den här organisationen. Publicera eller visa ett dolt arbetsflöde för att använda arbetsflödeshanteraren.",
           "envelopeTitle": "Meddelandehölje för arbetsflödets indata",
           "fieldTypes": {
             "string": "Sträng",
@@ -447,11 +447,11 @@
           "modeStatic": "Statiskt värde",
           "modeExpression": "Mappa från nyttolast",
           "unknownReference": "Okänd referens",
-          "loading": "Laddar…",
+          "loading": "Läser in…",
           "errors": {
             "INVALID_INT": "Värdet ”{{value}}” måste vara ett heltal.",
             "INVALID_NUMBER": "Värdet ”{{value}}” måste vara ett tal.",
-            "INVALID_BOOLEAN": "Värdet måste vara \"true\" eller \"false\".",
+            "INVALID_BOOLEAN": "Värdet måste vara ”true” eller ”false”.",
             "INVALID_JSON": "Värdet måste vara giltig JSON."
           }
         },
@@ -459,7 +459,7 @@
           "title": "Leveranslogg",
           "help": "Senaste verifierade leveranser för denna inkommande webhook.",
           "empty": "Inga leveranser har registrerats ännu.",
-          "loadFailed": "Det gick inte att ladda leveranser för den inkommande webhooken.",
+          "loadFailed": "Det gick inte att läsa in leveranser för den inkommande webhooken.",
           "pageSummary": "Sida {{page}} av {{total}}",
           "durationMs": "{{duration}} ms",
           "allStatuses": "Alla statusar",
@@ -547,7 +547,7 @@
       },
       "list": {
         "title": "Konfigurerade webhookar",
-        "loading": "Laddar…",
+        "loading": "Läser in…",
         "configuredCount": "Konfigurerade: {{count}}",
         "empty": "Inga webhookar har konfigurerats ännu.",
         "columns": {
@@ -594,8 +594,8 @@
         "next": "Nästa"
       },
       "messages": {
-        "loadFailed": "Det gick inte att ladda webhookinställningarna.",
-        "loadDeliveriesFailed": "Det gick inte att ladda webhookleveranserna.",
+        "loadFailed": "Det gick inte att läsa in webhookinställningarna.",
+        "loadDeliveriesFailed": "Det gick inte att läsa in webhookleveranserna.",
         "saveFailed": "Det gick inte att spara webhooken.",
         "createSuccess": "Webhooken har skapats.",
         "updateSuccess": "Webhooken har uppdaterats.",
@@ -627,19 +627,19 @@
       "deliveryStatus": {
         "delivered": "Levererad",
         "retrying": "Försöker igen",
-        "abandoned": "Avbruten",
+        "abandoned": "Övergiven",
         "pending": "Väntande"
       }
     },
     "apiKeys": {
       "rateLimit": {
         "columnTitle": "Anropsgräns",
-        "loading": "Laddar…",
+        "loading": "Läser in…",
         "summary": "{{maxTokens}} vid anropstopp / {{refillPerMin}} per min",
         "source": "Källa: {{label}}",
         "sourceLabels": {
           "key": "Åsidosättning",
-          "tenant": "Klientorganisationens standardinställning",
+          "tenant": "Organisationens standardinställning",
           "default": "Systemets standardinställning"
         },
         "remaining": " • Återstående: {{remaining}}/{{maxTokens}}",
@@ -707,7 +707,7 @@
           "user": "Användare"
         },
         "errors": {
-          "loadFailed": "Det gick inte att ladda API-nycklarna. Kontrollera att du har administratörsbehörighet.",
+          "loadFailed": "Det gick inte att läsa in API-nycklarna. Kontrollera att du har administratörsbehörighet.",
           "deactivateFailed": "Det gick inte att inaktivera API-nyckeln. Kontrollera att du har administratörsbehörighet."
         }
       }
@@ -736,14 +736,14 @@
       "verifyCredentials": "Verifiera autentiseringsuppgifter",
       "verifying": "Verifierar…",
       "reset": "Återställ",
-      "linkedSuccess": "Tjänsteleverantören har kopplats.",
-      "credentialsVerified": "Autentiseringsuppgifterna har verifierats. Välj en tjänsteleverantör nedan för att slutföra kopplingen till ditt konto.",
+      "linkedSuccess": "Identitetsleverantören har kopplats.",
+      "credentialsVerified": "Autentiseringsuppgifterna har verifierats. Välj en identitetsleverantör nedan för att slutföra kopplingen till ditt konto.",
       "verifyFailed": "Det gick inte att verifiera autentiseringsuppgifterna.",
-      "verifyBeforeProvider": "Verifiera ditt lösenord (och din tvåfaktorskod om det krävs) innan du ansluter en tjänsteleverantör."
+      "verifyBeforeProvider": "Verifiera ditt lösenord (och din tvåfaktorskod om det krävs) innan du ansluter en identitetsleverantör."
     },
     "providers": {
-      "title": "Anslut en tjänsteleverantör",
-      "description": "Välj en tjänsteleverantör för att slutföra SSO-kopplingen. Du omdirigeras till tjänsteleverantörens inloggningsflöde.",
+      "title": "Anslut en identitetsleverantör",
+      "description": "Välj en identitetsleverantör för att slutföra SSO-kopplingen. Du omdirigeras till identitetsleverantörens inloggningsflöde.",
       "noneConfigured": "Inga SSO-leverantörer har konfigurerats för denna miljö. Be din administratör konfigurera autentiseringsuppgifter för Google eller Microsoft.",
       "notConfigured": "Inte konfigurerad",
       "branding": {
@@ -755,7 +755,7 @@
     },
     "linked": {
       "title": "Kopplade konton",
-      "description": "Vi uppdaterar kopplingen nästa gång du loggar in via en ansluten tjänsteleverantör.",
+      "description": "Vi uppdaterar kopplingen nästa gång du loggar in via en ansluten identitetsleverantör.",
       "empty": "Inga SSO-leverantörer har kopplats ännu. Slutför stegen ovan för att ansluta en.",
       "linkedAt": "Kopplat {{date}}",
       "lastUsed": "Senast använt {{date}}",
@@ -806,7 +806,7 @@
       "replayMissingConfig": "Det går inte att köra en inkommande leverans igen utan en webhookkonfiguration.",
       "notFoundOrInactive": "Den inkommande webhooken hittades inte eller är inaktiv.",
       "validation": {
-        "slugReserved": "Detta URL-segment är reserverat för en medföljande integrering.",
+        "slugReserved": "Detta URL-segment är reserverat för en medföljande integration.",
         "authTypeMismatch": "Autentiseringskonfigurationens typ måste matcha den valda autentiseringstypen.",
         "handlerTypeMismatch": "Hanterarkonfigurationens typ måste matcha den valda hanterartypen."
       }

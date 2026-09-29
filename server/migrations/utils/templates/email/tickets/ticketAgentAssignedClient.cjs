@@ -181,7 +181,7 @@ const COPY = {
     category: 'Kategori',
     requester: 'Beställare',
     viewButton: 'Visa ärende',
-    footer: 'Drivs av AlgaPSA &middot; Håller team samordnade',
+    footer: 'Drivs av AlgaPSA &middot; För samspelta team',
     textHeader: 'Ditt ärende hanteras',
     textAssigned: 'Tilldelat till',
     textRequester: 'Beställare',

@@ -194,7 +194,7 @@ COPY.sv = {
   badgeColor: '#5b38b0',
   taskLabel: 'Uppgift',
   projectLabel: 'Projekt',
-  dueDateLabel: 'Förfallodatum',
+  dueDateLabel: 'Måldatum',
   assignedByLabel: 'Tilldelad av',
   roleLabel: 'Roll',
   descriptionTitle: 'Beskrivning',

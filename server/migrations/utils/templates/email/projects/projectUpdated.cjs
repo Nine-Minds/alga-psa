@@ -143,7 +143,7 @@ COPY.sv = {
   changes: 'Ändringar',
   updatedBy: 'Uppdaterat av',
   viewButton: 'Visa projekt',
-  footer: 'Drivs av AlgaPSA &middot; Håller team samordnade',
+  footer: 'Drivs av AlgaPSA &middot; För samspelta team',
   textHeader: 'Projekt uppdaterat',
   textIntro: 'Ett projekt har uppdaterats:',
   textView: 'Visa projekt på',

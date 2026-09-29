@@ -8,7 +8,7 @@
     },
     "tabs": {
       "articles": "Artiklar",
-      "reviewDashboard": "Översiktspanel för granskning"
+      "reviewDashboard": "Granskningsöversikt"
     },
     "feedback": {
       "loadError": "Det gick inte att läsa in artiklarna",
@@ -49,7 +49,7 @@
   },
   "list": {
     "title": "Artiklar i kunskapsbasen",
-    "countSummary": "Antal artiklar: {{count}}",
+    "countSummary": "Artiklar: {{count}}",
     "itemLabel": "artiklar",
     "empty": "Inga artiklar hittades",
     "createFirst": "Skapa din första artikel",
@@ -89,15 +89,15 @@
       "archive": {
         "title": "Arkivera artikel",
         "message": "Vill du arkivera ”{{title}}”? Artikeln blir då inte längre synlig för kunder.",
-        "titleMultiple": "Arkivera {{count}} artiklar",
-        "messageMultiple": "Vill du arkivera {{count}} artiklar? De blir då inte längre synliga för kunder."
+        "titleMultiple": "Arkivera artiklar ({{count}})",
+        "messageMultiple": "Vill du arkivera de markerade artiklarna ({{count}})? De blir då inte längre synliga för kunder."
       },
       "delete": {
         "title": "Radera artikel",
         "message": "Vill du radera ”{{title}}” permanent? Artikeln och dess innehåll tas bort. Det går inte att ångra.",
-        "titleMultiple": "Radera {{count}} artiklar",
-        "messageMultiple": "Vill du radera {{count}} artiklar permanent? Artiklarna och deras innehåll tas bort. Det går inte att ångra.",
-        "skippedNotice": "Antal valda artiklar som är publicerade eller under granskning: {{count}}. Dessa hoppas över – arkivera dem först."
+        "titleMultiple": "Radera artiklar ({{count}})",
+        "messageMultiple": "Vill du radera de markerade artiklarna ({{count}}) permanent? Artiklarna och deras innehåll tas bort. Det går inte att ångra.",
+        "skippedNotice": "Markerade artiklar som är publicerade eller under granskning hoppas över ({{count}}) – arkivera dem först."
       }
     },
     "feedback": {
@@ -105,17 +105,17 @@
       "archiveSuccess": "Artikeln har arkiverats",
       "deleteError": "Det gick inte att radera artikeln",
       "deleteSuccess": "Artikeln har raderats permanent",
-      "bulkArchiveSuccess": "{{count}} artiklar har arkiverats",
-      "bulkArchiveError": "Det gick inte att arkivera {{count}} artiklar",
-      "bulkArchivePartial": "Arkiverade artiklar: {{count}}. Kunde inte arkiveras: {{failed}}",
-      "bulkDeleteSuccess": "{{count}} artiklar har raderats permanent",
-      "bulkDeleteError": "Det gick inte att radera {{count}} artiklar",
-      "bulkDeletePartial": "Permanent raderade artiklar: {{count}}. Kunde inte raderas: {{failed}}",
+      "bulkArchiveSuccess": "Arkiverade artiklar: {{count}}",
+      "bulkArchiveError": "Det gick inte att arkivera artiklarna ({{count}})",
+      "bulkArchivePartial": "Arkiverade artiklar: {{count}}. Misslyckades: {{failed}}",
+      "bulkDeleteSuccess": "Permanent raderade artiklar: {{count}}",
+      "bulkDeleteError": "Det gick inte att radera artiklarna ({{count}})",
+      "bulkDeletePartial": "Permanent raderade artiklar: {{count}}. Misslyckades: {{failed}}",
       "deleteNotAllowed": "Artiklar som är publicerade eller under granskning måste arkiveras innan de kan raderas"
     },
     "bulk": {
       "actionBar": {
-        "selectedCount": "Antal markerade: {{count}}",
+        "selectedCount": "Markerade: {{count}}",
         "archive": "Arkivera",
         "delete": "Radera",
         "clear": "Avmarkera alla"
@@ -314,7 +314,7 @@
     "feedback": {
       "unsupportedFileType": "{{fileName}}: filtypen stöds inte. Använd .md eller .html",
       "permissionDenied": "Åtkomst nekad",
-      "importSuccess": "{{imported}} av {{total}} artiklar har importerats",
+      "importSuccess": "Importerade artiklar: {{imported}} av {{total}}",
       "allFailed": "Alla importer misslyckades",
       "importError": "Importen misslyckades",
       "fileTooLarge": "{{fileName}} är större än {{limit}} MB",
@@ -323,7 +323,7 @@
       "importTimedOut": "Importen tar längre tid än väntat. Kontrollera igen om en stund."
     },
     "results": {
-      "summary": "{{imported}} av {{total}} artiklar har importerats",
+      "summary": "Importerade artiklar: {{imported}} av {{total}}",
       "failedCount": "Misslyckade importer ({{count}}):"
     }
   },
@@ -331,8 +331,8 @@
     "badges": {
       "reviewOverdue": "Granskning försenad",
       "reviewDueSoon": "Dags för granskning snart",
-      "overdueBy": "Försening i dagar: {{count}}",
-      "dueIn": "Dagar kvar till granskning: {{count}}"
+      "overdueBy": "Försenad med {{count}} d",
+      "dueIn": "Granskas om {{count}} d"
     },
     "tooltips": {
       "reviewOverdue": "Skulle ha granskats senast {{date}}",

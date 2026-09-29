@@ -143,7 +143,7 @@ COPY.sv = {
   startDate: 'Startdatum',
   projectManager: 'Projektledare',
   viewButton: 'Visa projekt',
-  footer: 'Drivs av AlgaPSA &middot; Håller team samordnade',
+  footer: 'Drivs av AlgaPSA &middot; För samspelta team',
   textHeader: 'Nytt projekt skapat',
   textIntro: 'Ett nytt projekt har skapats:',
   textView: 'Visa projekt på',

@@ -199,7 +199,7 @@ COPY.sv = {
   tableHeaderTransaction: 'Ursprunglig transaktion',
   closingNote: 'Använd dessa tillgodohavanden innan de löper ut för att undvika att förlora dem.',
   viewButton: 'Visa tillgodohavanden',
-  footer: 'Drivs av AlgaPSA &middot; Håller team samordnade',
+  footer: 'Drivs av AlgaPSA &middot; För samspelta team',
   textHeader: 'Tillgodohavanden löper snart ut',
   textIntro: 'Följande tillgodohavanden för {{client.name}} löper snart ut:',
   textCreditDetails: 'Information om tillgodohavanden',

@@ -40,7 +40,7 @@ const TEMPLATES = [
       },
       sv: {
         title: 'Lågt lagerbestånd på {{locationName}}',
-        message: 'Lagerbeståndet för {{productCount}} produkt(er) på {{locationName}} är vid eller under beställningspunkten: {{summary}}',
+        message: 'Produkter på {{locationName}} med lagersaldo vid eller under beställningspunkten ({{productCount}}): {{summary}}',
       },
     },
   },
@@ -82,7 +82,7 @@ const TEMPLATES = [
       },
       sv: {
         title: 'Inköpsorder {{poNumber}} mottagen',
-        message: '{{receivedLineCount}} rad(er) har tagits emot från {{vendorName}}.',
+        message: 'Mottagna rader från {{vendorName}}: {{receivedLineCount}}.',
       },
     },
   },

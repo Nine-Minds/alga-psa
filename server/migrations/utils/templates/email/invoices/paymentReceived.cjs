@@ -113,7 +113,7 @@ const COPY = {
   },
 };
 SUBJECTS.pt = 'Pagamento recebido: fatura #{{invoice.number}}';
-SUBJECTS.sv = 'Betalning mottagen: faktura #{{invoice.number}}';
+SUBJECTS.sv = 'Betalning mottagen: faktura nr {{invoice.number}}';
 COPY.pt = {
   headerLabel: 'Pagamento recebido',
   intro: 'O pagamento da fatura #{{invoice.number}} foi recebido.',
@@ -128,15 +128,15 @@ COPY.pt = {
 };
 COPY.sv = {
   headerLabel: 'Betalning mottagen',
-  intro: 'Betalningen för faktura #{{invoice.number}} har tagits emot.',
+  intro: 'Betalningen för faktura nr {{invoice.number}} har tagits emot.',
   invoiceNumberLabel: 'Fakturanummer',
   amountPaidLabel: 'Betalt belopp',
   paymentDateLabel: 'Betalningsdatum',
   paymentMethodLabel: 'Betalningsmetod',
   viewButton: 'Visa faktura',
-  footer: 'Drivs av AlgaPSA &middot; Håller team samordnade',
+  footer: 'Drivs av AlgaPSA &middot; För samspelta team',
   textHeader: 'Betalning mottagen',
-  textIntro: 'Betalningen för faktura #{{invoice.number}} har tagits emot:',
+  textIntro: 'Betalningen för faktura nr {{invoice.number}} har tagits emot:',
 };
 
 /* eslint-enable max-len */

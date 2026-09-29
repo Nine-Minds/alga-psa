@@ -1,16 +1,16 @@
 {
   "calendar": {
     "integrations": {
-      "loadError": "Det gick inte att läsa in kalendertjänsteleverantörer",
+      "loadError": "Det gick inte att läsa in kalenderanslutningar",
       "header": {
-        "title": "Kalenderintegreringar",
+        "title": "Kalenderintegrationer",
         "description": "Anslut din personliga Google- eller Microsoft-kalender för att synkronisera schemaposter som du är tilldelad. Händelser som du skapar i Alga visas i din externa kalender när du är tilldelad dem."
       },
       "buttons": {
-        "googleCalendar": "Google Calendar",
-        "outlookCalendar": "Outlook Calendar",
-        "addGoogleCalendar": "Lägg till Google Calendar",
-        "addOutlookCalendar": "Lägg till Outlook Calendar"
+        "googleCalendar": "Google Kalender",
+        "outlookCalendar": "Outlook-kalender",
+        "addGoogleCalendar": "Lägg till Google Kalender",
+        "addOutlookCalendar": "Lägg till Outlook-kalender"
       },
       "proTip": {
         "label": "Proffstips",
@@ -47,8 +47,8 @@
         "lastSync": "Senaste synkronisering:"
       },
       "providerType": {
-        "google": "Google Calendar",
-        "microsoft": "Microsoft Outlook Calendar"
+        "google": "Google Kalender",
+        "microsoft": "Microsoft Outlook-kalender"
       },
       "syncDirection": {
         "bidirectional": "Dubbelriktad",
@@ -70,12 +70,12 @@
       },
       "toasts": {
         "deleted": {
-          "title": "Kalendertjänsteleverantören har raderats",
+          "title": "Kalenderanslutningen har raderats",
           "description": "{{name}} har tagits bort."
         },
         "deleteFailed": {
-          "title": "Det går inte att radera kalendertjänsteleverantören",
-          "fallback": "Det gick inte att radera kalendertjänsteleverantören"
+          "title": "Det går inte att radera kalenderanslutningen",
+          "fallback": "Det gick inte att radera kalenderanslutningen"
         },
         "syncStarted": {
           "title": "Synkroniseringen har startat",
@@ -89,24 +89,24 @@
         },
         "syncException": {
           "title": "Manuell synkronisering misslyckades",
-          "fallback": "Det gick inte att synkronisera kalendertjänsteleverantören"
+          "fallback": "Det gick inte att synkronisera kalenderanslutningen"
         }
       },
       "dialogs": {
-        "addTitle": "Lägg till kalendertjänsteleverantör för {{provider}}",
+        "addTitle": "Lägg till kalenderanslutning för {{provider}}",
         "addDescription": "Anslut din personliga kalender för att synkronisera schemaposter som du är tilldelad.",
-        "editTitle": "Redigera kalendertjänsteleverantör för {{provider}}",
+        "editTitle": "Redigera kalenderanslutning för {{provider}}",
         "editDescription": "Uppdatera anslutningsinställningarna för din personliga kalender.",
         "delete": {
-          "title": "Radera kalendertjänsteleverantör",
+          "title": "Radera kalenderanslutning",
           "messageWithName": "Om du raderar {{name}} stoppas framtida synkronisering och tillhörande webhookar tas bort. Åtgärden kan inte ångras.",
-          "messageGeneric": "Vill du verkligen radera den här kalendertjänsteleverantören?",
-          "confirmLabel": "Radera tjänsteleverantör",
-          "cancelLabel": "Behåll tjänsteleverantör"
+          "messageGeneric": "Är du säker på att du vill radera den här kalenderanslutningen?",
+          "confirmLabel": "Radera anslutning",
+          "cancelLabel": "Behåll anslutning"
         }
       },
       "errors": {
-        "notAuthorized": "OAuth-auktoriseringen har ännu inte slutförts för den här kalendertjänsteleverantören. Öppna dess inställningar och klicka på Auktorisera. Synkronisera sedan igen."
+        "notAuthorized": "OAuth-auktoriseringen har ännu inte slutförts för den här kalenderanslutningen. Öppna dess inställningar och klicka på Auktorisera. Synkronisera sedan igen."
       }
     },
     "sync": {
@@ -129,9 +129,9 @@
       },
       "header": {
         "title": "Status för kalendersynkronisering",
-        "refresh": "Ladda om"
+        "refresh": "Uppdatera"
       },
-      "empty": "Inga kalenderintegreringar har konfigurerats",
+      "empty": "Inga kalenderintegrationer har konfigurerats",
       "inactive": "Inaktiv",
       "fields": {
         "syncDirection": "Synkroniseringsriktning:",
@@ -161,12 +161,12 @@
         "actions": {
           "cancel": "Avbryt",
           "saving": "Sparar…",
-          "updateProvider": "Uppdatera tjänsteleverantör",
-          "createProvider": "Skapa tjänsteleverantör"
+          "updateProvider": "Uppdatera anslutning",
+          "createProvider": "Skapa anslutning"
         },
         "errors": {
-          "createFailed": "Det gick inte att skapa kalendertjänsteleverantören",
-          "saveFailed": "Det gick inte att spara tjänsteleverantören"
+          "createFailed": "Det gick inte att skapa kalenderanslutningen",
+          "saveFailed": "Det gick inte att spara anslutningen"
         },
         "syncDirections": {
           "bidirectional": "Dubbelriktad (rekommenderas)"
@@ -174,74 +174,74 @@
       },
       "google": {
         "config": {
-          "title": "Konfiguration av Google Calendar",
-          "description": "Anslut din Google Calendar för att synkronisera schemaposter"
+          "title": "Konfiguration av Google Kalender",
+          "description": "Anslut din Google Kalender för att synkronisera schemaposter"
         },
         "fields": {
-          "providerName": "Tjänsteleverantörens namn *",
-          "providerNamePlaceholder": "T.ex. Min Google Calendar",
+          "providerName": "Anslutningens namn *",
+          "providerNamePlaceholder": "T.ex. Min Google Kalender",
           "calendarId": "Kalender-ID *",
           "calendarIdPlaceholder": "primary",
           "calendarIdHint": "Vanligtvis \"primary\" för din huvudkalender",
           "syncDirection": "Synkroniseringsriktning *",
-          "enableProvider": "Aktivera den här tjänsteleverantören"
+          "enableProvider": "Aktivera den här anslutningen"
         },
         "syncDirections": {
-          "toExternal": "Endast Alga → Google Calendar",
-          "fromExternal": "Endast Google Calendar → Alga"
+          "toExternal": "Endast Alga → Google Kalender",
+          "fromExternal": "Endast Google Kalender → Alga"
         },
         "oauth": {
           "title": "OAuth-auktorisering för Google",
-          "description": "Auktorisera åtkomst till din Google Calendar"
+          "description": "Auktorisera åtkomst till din Google Kalender"
         },
         "configAlert": {
-          "title": "Google har inte konfigurerats för den här klientorganisationen.",
-          "body": "Konfigurera först klientorganisationens Google OAuth under <strong>Inställningar → Integreringar → Tjänsteleverantörer</strong>.",
+          "title": "Google har inte konfigurerats för din organisation.",
+          "body": "Konfigurera först organisationens Google OAuth under <strong>Inställningar → Integrationer → Leverantörer</strong>.",
           "openSettings": "Öppna Google-inställningar"
         },
         "errors": {
-          "notConfigured": "Google-integreringen har inte konfigurerats för den här klientorganisationen. Konfigurera Google först och försök sedan igen."
+          "notConfigured": "Google-integrationen har inte konfigurerats för din organisation. Konfigurera Google först och försök sedan igen."
         },
         "defaults": {
-          "providerName": "Google Calendar",
+          "providerName": "Google Kalender",
           "calendarId": "primary"
         }
       },
       "microsoft": {
         "config": {
-          "title": "Konfiguration av Microsoft Outlook Calendar",
-          "description": "Anslut din Microsoft Outlook Calendar för att synkronisera schemaposter"
+          "title": "Konfiguration av Microsoft Outlook-kalender",
+          "description": "Anslut din Microsoft Outlook-kalender för att synkronisera schemaposter"
         },
         "fields": {
-          "providerName": "Tjänsteleverantörens namn *",
-          "providerNamePlaceholder": "T.ex. Min Outlook Calendar",
+          "providerName": "Anslutningens namn *",
+          "providerNamePlaceholder": "T.ex. Min Outlook-kalender",
           "calendarId": "Kalender-ID *",
           "calendarIdPlaceholder": "calendar",
           "calendarIdHint": "Vanligtvis \"calendar\" för din huvudkalender",
           "syncDirection": "Synkroniseringsriktning *",
-          "enableProvider": "Aktivera den här tjänsteleverantören"
+          "enableProvider": "Aktivera den här anslutningen"
         },
         "syncDirections": {
-          "toExternal": "Endast Alga → Outlook Calendar",
-          "fromExternal": "Endast Outlook Calendar → Alga"
+          "toExternal": "Endast Alga → Outlook-kalender",
+          "fromExternal": "Endast Outlook-kalender → Alga"
         },
         "oauth": {
           "title": "OAuth-auktorisering för Microsoft",
-          "description": "Auktorisera åtkomst till din Microsoft Outlook Calendar"
+          "description": "Auktorisera åtkomst till din Microsoft Outlook-kalender"
         },
         "configAlert": {
-          "title": "Inställningarna för Microsoft-tjänsteleverantören har inte konfigurerats.",
-          "body": "Konfigurera först tjänsteleverantörer under Inställningar → Integreringar → Tjänsteleverantörer och återvänd sedan hit för att ansluta Outlook Calendar.",
-          "openSettings": "Öppna inställningar för tjänsteleverantörer"
+          "title": "Inställningarna för Microsoft-leverantören har inte konfigurerats.",
+          "body": "Konfigurera först leverantörer under Inställningar → Integrationer → Leverantörer och återvänd sedan hit för att ansluta Outlook-kalendern.",
+          "openSettings": "Öppna leverantörsinställningar"
         },
         "setupReason": {
           "unsupported_consumer": "Microsoft-konsumenttypen stöds inte för kalendern.",
-          "binding_not_configured": "Kalendern är ännu inte kopplad till en Microsoft-profil. Konfigurera tjänsteleverantörer först och återvänd sedan hit för att ansluta Outlook Calendar.",
-          "profile_missing": "Microsoft-profilen som är kopplad till kalendern saknas eller är arkiverad. Välj en aktiv profil under Tjänsteleverantörer och återvänd sedan hit.",
-          "profile_credentials_missing": "Microsoft-profilen som är kopplad till kalendern saknar nödvändiga autentiseringsuppgifter. Uppdatera profilen under Tjänsteleverantörer och återvänd sedan hit."
+          "binding_not_configured": "Kalendern är ännu inte kopplad till en Microsoft-profil. Konfigurera leverantörer först och återvänd sedan hit för att ansluta Outlook-kalendern.",
+          "profile_missing": "Microsoft-profilen som är kopplad till kalendern saknas eller är arkiverad. Välj en aktiv profil under Leverantörer och återvänd sedan hit.",
+          "profile_credentials_missing": "Microsoft-profilen som är kopplad till kalendern saknar nödvändiga autentiseringsuppgifter. Uppdatera profilen under Leverantörer och återvänd sedan hit."
         },
         "defaults": {
-          "providerName": "Outlook Calendar",
+          "providerName": "Outlook-kalender",
           "calendarId": "calendar"
         }
       }

@@ -140,7 +140,7 @@ COPY.sv = {
   startDate: 'Startdatum',
   assignedBy: 'Tilldelat av',
   viewButton: 'Visa projekt',
-  footer: 'Drivs av AlgaPSA &middot; Håller team samordnade',
+  footer: 'Drivs av AlgaPSA &middot; För samspelta team',
   textHeader: 'Projekt tilldelat',
   textIntro: 'Du har tilldelats ett projekt:',
   textView: 'Visa projekt på',

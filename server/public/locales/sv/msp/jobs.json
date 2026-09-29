@@ -16,8 +16,8 @@
   },
   "recentTable": {
     "columns": {
-      "jobName": "Bakgrundsjobbets namn",
-      "runner": "Körmotor",
+      "jobName": "Jobbnamn",
+      "runner": "Jobbmotor",
       "status": "Status",
       "duration": "Varaktighet",
       "started": "Startat",
@@ -40,8 +40,8 @@
       "subtitle": "{{count}} bakgrundsjobb",
       "noJobs": "Inga bakgrundsjobb att skriva ut",
       "columns": {
-        "jobName": "Bakgrundsjobbets namn",
-        "runner": "Körmotor",
+        "jobName": "Jobbnamn",
+        "runner": "Jobbmotor",
         "status": "Status",
         "duration": "Varaktighet",
         "started": "Startat",
@@ -55,9 +55,9 @@
   },
   "metrics": {
     "labels": {
-      "totalJobs": "Totalt antal bakgrundsjobb",
-      "totalJobsPgBoss": "Totalt antal bakgrundsjobb (PG Boss)",
-      "totalJobsTemporal": "Totalt antal bakgrundsjobb (Temporal)",
+      "totalJobs": "Totalt antal jobb",
+      "totalJobsPgBoss": "Totalt antal jobb (PG Boss)",
+      "totalJobsTemporal": "Totalt antal jobb (Temporal)",
       "completed": "Slutförda",
       "failed": "Misslyckade",
       "pending": "Väntande",
@@ -72,7 +72,7 @@
   },
   "historyTable": {
     "columns": {
-      "jobName": "Bakgrundsjobbets namn",
+      "jobName": "Jobbnamn",
       "status": "Status",
       "created": "Skapat",
       "started": "Startat",
@@ -80,10 +80,10 @@
     }
   },
   "progress": {
-    "loading": "Laddar detaljer om bakgrundsjobbet…",
+    "loading": "Läser in detaljer om jobbet…",
     "labels": {
       "created": "Skapat:",
-      "jobData": "Bakgrundsjobbets data"
+      "jobData": "Jobbdata"
     }
   },
   "drawer": {
@@ -96,7 +96,7 @@
     }
   },
   "stepHistory": {
-    "title": "Bakgrundsjobbets steg",
+    "title": "Jobbsteg",
     "labels": {
       "processed": "Bearbetat:",
       "retries": "Omförsök:"

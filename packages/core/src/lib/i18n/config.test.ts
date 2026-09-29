@@ -38,16 +38,13 @@ describe('filterPseudoLocales', () => {
     }
   });
 
-  // sv is translated end-to-end (the glossary audit reports a full key count
-  // with nothing untranslated) but has not had native-speaker review, so it is
-  // QA-able in dev and withheld from production pickers.
-  it('offers Swedish for preview in development only', () => {
-    expect(PREVIEW_LOCALES).toContain('sv');
+  it('exposes sv as a production locale (no longer preview-gated)', () => {
+    expect(PREVIEW_LOCALES).not.toContain('sv');
     expect(INCOMPLETE_LOCALES).not.toContain('sv');
     vi.stubEnv('NODE_ENV', 'development');
     expect(filterPseudoLocales(LOCALE_CONFIG.supportedLocales)).toContain('sv');
     vi.stubEnv('NODE_ENV', 'production');
-    expect(filterPseudoLocales(LOCALE_CONFIG.supportedLocales)).not.toContain('sv');
+    expect(filterPseudoLocales(LOCALE_CONFIG.supportedLocales)).toContain('sv');
   });
 
   it('labels pt as Brazilian Portuguese', () => {
@@ -64,7 +61,7 @@ describe('filterPseudoLocales', () => {
   it('keeps production locales untouched', () => {
     vi.stubEnv('NODE_ENV', 'production');
     expect(filterPseudoLocales(LOCALE_CONFIG.supportedLocales)).toEqual([
-      'en', 'fr', 'es', 'de', 'nl', 'it', 'pl', 'pt',
+      'en', 'fr', 'es', 'de', 'nl', 'it', 'pl', 'pt', 'sv',
     ]);
   });
 });
@@ -129,24 +126,19 @@ describe('normalizeLocale', () => {
   });
 
   // An Accept-Language header is a guess about the visitor, not a language they
-  // chose, so it must not reach a locale the pickers withhold. Before this, a
-  // production visitor with a Swedish browser and no stored preference was
-  // auto-assigned the very unreviewed pack sv is preview-gated to withhold.
-  it('will not auto-assign a preview locale from Accept-Language in production', () => {
+  // chose, so it must not reach a locale the pickers withhold.
+  it('will not auto-assign a withheld locale from Accept-Language in production', () => {
     vi.stubEnv('NODE_ENV', 'production');
-    expect(getBestMatchingLocale(['sv-SE', 'en'])).toBe('en');
-    expect(getBestMatchingLocale(['sv-SE'])).toBe(LOCALE_CONFIG.defaultLocale);
+    expect(getBestMatchingLocale(['xx', 'en'])).toBe('en');
     expect(getBestMatchingLocale(['xx'])).toBe(LOCALE_CONFIG.defaultLocale);
   });
 
-  it('matches a preview locale from Accept-Language in development', () => {
-    vi.stubEnv('NODE_ENV', 'development');
+  it('matches Swedish from Accept-Language in production', () => {
+    vi.stubEnv('NODE_ENV', 'production');
     expect(getBestMatchingLocale(['sv-SE', 'en'])).toBe('sv');
   });
 
-  // An explicit choice still reaches a preview locale: the cookie, user, client
-  // and tenant preference paths resolve through normalizeLocale.
-  it('still normalizes an explicitly stored preview locale in production', () => {
+  it('normalizes an explicitly stored Swedish preference', () => {
     vi.stubEnv('NODE_ENV', 'production');
     expect(normalizeLocale('sv-SE')).toBe('sv');
   });

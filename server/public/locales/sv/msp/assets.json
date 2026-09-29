@@ -10,7 +10,7 @@
       "delete": "Radera",
       "download": "Ladda ner",
       "edit": "Redigera",
-      "refresh": "Ladda om",
+      "refresh": "Uppdatera",
       "remove": "Ta bort",
       "retry": "Försök igen",
       "save": "Spara",
@@ -55,7 +55,7 @@
         "description": "Öppna snabbregistreringen för att registrera en ny tillgång"
       },
       "refreshData": {
-        "label": "Ladda om data",
+        "label": "Uppdatera data",
         "description": "Hämta tillgångar från servern igen"
       },
       "reset": {
@@ -79,17 +79,17 @@
     }
   },
   "assetDashboard": {
-    "title": "Översiktspanel för tillgångar",
+    "title": "Tillgångsöversikt",
     "description": "Överordnad komponent för tillgångsöversikten som visar tillgångsvyn på klientsidan"
   },
   "assetDashboardClient": {
     "title": "Klientkomponent för tillgångsöversikten",
     "description": "Huvudsida för tillgångslistan med filter, tabell- och rutnätsvyer, massåtgärder och flöden i sidopaneler",
     "reflection": {
-      "label": "Översiktspanel för tillgångar"
+      "label": "Tillgångsöversikt"
     },
     "errors": {
-      "loadDrawerFailed": "Det går inte att läsa in tillgångens detaljer just nu. Försök igen."
+      "loadDrawerFailed": "Det gick inte att läsa in tillgångens detaljer. Försök igen."
     },
     "details": {
       "noIp": "Ingen IP-adress",
@@ -111,7 +111,7 @@
       "viewDetails": "Visa detaljer",
       "editAsset": "Redigera tillgång",
       "createTicket": "Skapa ärende",
-      "refreshData": "Ladda om data"
+      "refreshData": "Uppdatera data"
     },
     "table": {
       "name": "Namn",
@@ -204,7 +204,7 @@
     "print": {
       "title": "Tillgångar",
       "selectedTitle": "Markerade tillgångar",
-      "subtitle": "{{count}} tillgångar",
+      "subtitle": "Antal tillgångar: {{count}}",
       "noAssets": "Inga tillgångar att skriva ut",
       "emptyValue": "-",
       "columns": {
@@ -241,9 +241,9 @@
         "title": "Radera markerade tillgångar"
       },
       "errors": {
-        "deleteFailed": "Det går inte att radera de markerade tillgångarna.",
-        "updateLocationFailed": "Det går inte att uppdatera platserna för de markerade tillgångarna.",
-        "updateStatusFailed": "Det går inte att uppdatera de markerade tillgångarna."
+        "deleteFailed": "Det gick inte att radera de markerade tillgångarna.",
+        "updateLocationFailed": "Det gick inte att uppdatera platserna för de markerade tillgångarna.",
+        "updateStatusFailed": "Det gick inte att uppdatera de markerade tillgångarna."
       },
       "locationDialog": {
         "clearLocation": "Rensa plats",
@@ -320,7 +320,7 @@
       "active": "Aktiva",
       "complianceRate": "Efterlevnadsgrad",
       "history": "Underhållshistorik",
-      "loggedBy": "Loggat av {{name}}",
+      "loggedBy": "Loggad av {{name}}",
       "system": "system",
       "noLogs": "Underhållsloggar visas här efter den första serviceposten."
     },
@@ -346,7 +346,7 @@
       "status": "Status",
       "created": "Skapad",
       "updated": "Uppdaterad",
-      "tenant": "Klientorganisation"
+      "tenant": "Organisation"
     },
     "typeDetails": {
       "workstation": "Arbetsstationsdetaljer",
@@ -364,7 +364,7 @@
       "deviceType": "Enhetstyp",
       "managementIp": "IP-adress för hantering",
       "portCount": "Antal portar",
-      "firmwareVersion": "Version av fast programvara",
+      "firmwareVersion": "Firmwareversion",
       "poeSupport": "PoE-stöd",
       "powerDraw": "Effektförbrukning",
       "virtualized": "Virtualiserad",
@@ -397,14 +397,14 @@
   },
   "assetDetailHeader": {
     "title": "Sidhuvud för tillgångsdetaljer",
-    "description": "Sidhuvud för tillgångsvyn med identitet, statusmärken och åtgärder för omladdning",
+    "description": "Sidhuvud för tillgångsvyn med identitet, statusmärken och åtgärder för uppdatering",
     "backToAssets": "Tillbaka till tillgångar",
     "assetTag": "Inventarienummer: {{tag}}",
     "actions": {
       "createTicket": "Skapa ärende",
       "menu": "Åtgärder",
-      "refreshing": "Laddar om…",
-      "refreshData": "Ladda om data",
+      "refreshing": "Uppdaterar…",
+      "refreshData": "Uppdatera data",
       "rebootDevice": "Starta om enhet",
       "rebooting": "Startar om…",
       "editAsset": "Redigera tillgång",
@@ -470,7 +470,7 @@
       "managementIp": "IP-adress för hantering",
       "portCount": "Antal portar",
       "powerDraw": "Effektförbrukning",
-      "firmwareVersion": "Version av fast programvara",
+      "firmwareVersion": "Firmwareversion",
       "poeSupport": "PoE-stöd",
       "type": "Typ",
       "hypervisor": "Hypervisor",
@@ -555,8 +555,8 @@
     "errors": {
       "assetNotFound": "Tillgången hittades inte",
       "loadFailed": "Det gick inte att läsa in tillgångsdetaljer",
-      "clientsLoadFailed": "Det går inte att läsa in kunder",
-      "locationsLoadFailed": "Det går inte att läsa in platser för den här kunden",
+      "clientsLoadFailed": "Det gick inte att läsa in kunder",
+      "locationsLoadFailed": "Det gick inte att läsa in platser för den här kunden",
       "updateFailed": "Det gick inte att uppdatera tillgången",
       "validation": "Korrigera de markerade fälten innan du sparar."
     },
@@ -586,7 +586,7 @@
       "deviceType": "Enhetstyp",
       "managementIp": "IP-adress för hantering",
       "portCount": "Antal portar",
-      "firmwareVersion": "Version av fast programvara",
+      "firmwareVersion": "Firmwareversion",
       "powerDrawWatts": "Effektförbrukning (watt)",
       "supportsPoe": "Stöder PoE",
       "primaryIp": "Primär IP-adress",
@@ -680,15 +680,15 @@
     },
     "securityStatuses": {
       "secure": "Säker",
-      "missingPatches": "{{count}} saknade patchar",
+      "missingPatches": "Saknade patchar: {{count}}",
       "critical": "Kritisk",
       "unknown": "Okänd"
     },
     "openTickets": {
-      "active": "[{{count}} aktiva]"
+      "active": "[Aktiva: {{count}}]"
     },
     "warrantyStatuses": {
-      "expiresIn": "Löper ut om {{count}} dagar",
+      "expiresIn": "Går ut om {{count}} d",
       "expired": "Utgången",
       "unknown": "Okänd"
     }
@@ -702,14 +702,14 @@
       "actionRequired": "Åtgärd krävs",
       "updatesAvailable": "Uppdateringar tillgängliga",
       "minorUpdates": "Mindre uppdateringar",
-      "upToDate": "Uppdaterad"
+      "upToDate": "Helt uppdaterad"
     },
     "relativeTime": {
       "never": "Aldrig",
       "justNow": "Nyss",
       "minutesAgo": "för {{count}} min sedan",
       "hoursAgo": "för {{count}} h sedan",
-      "daysAgo": "för {{count}} dagar sedan"
+      "daysAgo": "för {{count}} d sedan"
     },
     "labels": {
       "osPatches": "OS-patchar",
@@ -725,7 +725,7 @@
     "description": "Omslutande komponent i Enterprise för inventering av installerad programvara och versionsdata",
     "heading": "Programvaruinventering",
     "searchPlaceholder": "Sök efter programvara…",
-    "appsCount": "{{count}} appar",
+    "appsCount": "Antal appar: {{count}}",
     "unknownName": "Okänd",
     "noMatch": "Ingen programvara matchar din sökning",
     "version": "v{{version}}",
@@ -747,8 +747,8 @@
     "errors": {
       "urlFetchFailed": "Det gick inte att hämta URL:en för fjärråtkomst",
       "initiateFailed": "Det gick inte att starta fjärråtkomst",
-      "managePermission": "Åtkomst nekad: Du kan inte hantera tillgångsinställningar.",
-      "readPermission": "Åtkomst nekad: Du kan inte läsa tillgångar."
+      "managePermission": "Behörighet saknas: Du kan inte hantera tillgångsinställningar.",
+      "readPermission": "Behörighet saknas: Du kan inte läsa tillgångar."
     },
     "indicator": {
       "online": "Online",
@@ -784,14 +784,14 @@
       "noneAvailable": "Inga alternativ för fjärråtkomst är tillgängliga.",
       "unavailable": "Inte tillgängligt för den här tillgången",
       "confirmDeleteTitle": "Radera länk för fjärråtkomst?",
-      "confirmDeleteMessage": "Vill du verkligen radera ”{{label}}”? Åtgärden går inte att ångra.",
+      "confirmDeleteMessage": "Vill du radera ”{{label}}”? Åtgärden går inte att ångra.",
       "actions": "Åtgärder",
       "openMenu": "Öppna meny",
       "selectLabel": "Markera {{label}}",
       "selectAll": "Markera alla länkar",
       "confirmBulkDeleteTitle": "Radera markerade länkar?",
-      "confirmBulkDeleteMessage": "Radera {{count}} markerade länkar för fjärråtkomst?",
-      "selectedCount": "{{count}} markerade"
+      "confirmBulkDeleteMessage": "Vill du radera markerade länkar för fjärråtkomst ({{count}})?",
+      "selectedCount": "Markerade: {{count}}"
     }
   },
   "assetListErrors": {
@@ -815,7 +815,7 @@
     },
     "errors": {
       "loadAvailableAssets": "Det gick inte att läsa in tillgängliga tillgångar",
-      "loadDrawerFailed": "Det går inte att läsa in tillgångens detaljer just nu. Försök igen.",
+      "loadDrawerFailed": "Det gick inte att läsa in tillgångens detaljer. Försök igen.",
       "loadAssociatedAssets": "Det gick inte att läsa in kopplade tillgångar",
       "selectAtLeastOneAsset": "Välj minst en tillgång",
       "associateFailed": "Det gick inte att koppla tillgångarna – de kan redan vara kopplade",
@@ -1014,7 +1014,7 @@
   },
   "remoteAccessButton": {
     "title": "Knapp för fjärråtkomst",
-    "description": "Startfunktion för fjärråtkomst till tillgångar med anslutningsintegreringar som stöds"
+    "description": "Startfunktion för fjärråtkomst till tillgångar med anslutningsintegrationer som stöds"
   },
   "rmmStatusIndicator": {
     "title": "RMM-statusindikator",
@@ -1022,13 +1022,13 @@
     "titles": {
       "unknown": "Agentstatus okänd",
       "status": "{{status}}{{suffix}}",
-      "lastSeen": " - Senast sedd: {{value}}"
+      "lastSeen": " – Senast sedd: {{value}}"
     },
     "relative": {
       "justNow": "Nyss",
       "minutesAgo": "för {{count}} min sedan",
       "hoursAgo": "för {{count}} h sedan",
-      "daysAgo": "för {{count}} dagar sedan"
+      "daysAgo": "för {{count}} d sedan"
     }
   },
   "assetInfoPanel": {
@@ -1087,9 +1087,9 @@
   },
   "rmmVitalsPanel": {
     "title": "RMM-driftvärden och anslutning",
-    "description": "RMM-panel med driftvärden för livstecken, övervakning och klientenheternas hälsa",
+    "description": "RMM-panel med driftvärden för livstecken, övervakning och slutpunkternas hälsa",
     "actions": {
-      "refresh": "Ladda om"
+      "refresh": "Uppdatera"
     },
     "fields": {
       "agentStatus": "Agentstatus",
@@ -1108,7 +1108,7 @@
       "title": "RMM-driftvärden",
       "notConnected": "Inte ansluten till RMM"
     },
-    "uptime": "{{days}} dagar, {{hours}} timmar, {{minutes}} minuter"
+    "uptime": "{{days}} d, {{hours}} h, {{minutes}} min"
   },
   "securityPatchingPanel": {
     "title": "Säkerhet och patchning",
@@ -1130,8 +1130,8 @@
     "patchStatus": {
       "critical": "Kritisk",
       "atRisk": "Riskutsatt",
-      "missingPatches": "- {{count}} kritiska operativsystemspatchar saknas.",
-      "upToDate": "✔ Uppdaterad"
+      "missingPatches": "– Kritiska OS-patchar som saknas: {{count}}.",
+      "upToDate": "✔ Helt uppdaterad"
     },
     "firewall": {
       "on": "✔ På"
@@ -1159,7 +1159,7 @@
       "secure": "Säker",
       "at_risk": "Riskutsatt",
       "active": "Aktiv",
-      "expiring_soon": "Löper snart ut",
+      "expiring_soon": "Går snart ut",
       "expired": "Utgången"
     }
   },
@@ -1276,7 +1276,7 @@
     "dialog": {
       "delete": {
         "title": "Radera underhållsschema",
-        "message": "Vill du verkligen radera ”{{name}}”? Det går inte att ångra åtgärden."
+        "message": "Vill du radera ”{{name}}”? Åtgärden går inte att ångra."
       }
     }
   },
@@ -1335,7 +1335,7 @@
         "select": "Välj"
       },
       "actions": {
-        "selected": "Vald",
+        "selected": "Markerad",
         "linking": "Kopplar…",
         "confirm": "Koppla tillgång"
       }
@@ -1428,7 +1428,7 @@
     "status": "Status",
     "location": "Plats",
     "purchased": "Inköpt",
-    "warrantyEnds": "Garantin löper ut",
+    "warrantyEnds": "Garantin går ut",
     "hardware": "Maskinvara",
     "os": "Operativsystem",
     "cpu": "CPU",
@@ -1459,7 +1459,7 @@
     "viewAll": "Visa alla",
     "open": "Öppna",
     "close": "Stäng",
-    "packagesReported": "{{count}} rapporterade paket",
+    "packagesReported": "Rapporterade paket: {{count}}",
     "noSoftware": "Ingen programvaruinventering rapporterad.",
     "noService": "Inga ärenden hänvisar till den här tillgången.",
     "activeSchedules": "Aktiva scheman",
@@ -1499,12 +1499,12 @@
   },
   "assetSignals": {
     "warranty": {
-      "daysLeft": "{{count}} dagar kvar",
-      "expiresToday": "löper ut idag",
-      "expiredAgo": "löpte ut för {{count}} dagar sedan"
+      "daysLeft": "{{count}} d kvar",
+      "expiresToday": "går ut idag",
+      "expiredAgo": "gick ut för {{count}} d sedan"
     },
     "duration": {
-      "dayHour": "{{days}} dagar {{hours}} h",
+      "dayHour": "{{days}} d {{hours}} h",
       "hourMinute": "{{hours}} h {{minutes}} min",
       "minute": "{{minutes}} min"
     },
@@ -1512,12 +1512,12 @@
       "justNow": "nyss",
       "minutesAgo": "för {{count}} min sedan",
       "hoursAgo": "för {{count}} h sedan",
-      "daysAgo": "för {{count}} dagar sedan"
+      "daysAgo": "för {{count}} d sedan"
     },
     "patching": {
-      "failed": "{{count}} misslyckade",
+      "failed": "misslyckade: {{count}}",
       "pending": "{{count}} väntande",
-      "upToDate": "uppdaterad"
+      "upToDate": "helt uppdaterad"
     }
   },
   "assetCells": {
@@ -1548,29 +1548,29 @@
   },
   "errors": {
     "permissions": {
-      "readAssets": "Åtkomst nekad: Kan inte läsa tillgångar",
-      "readAssetTypes": "Åtkomst nekad: Kan inte läsa tillgångstyper",
-      "manageAssetTypes": "Åtkomst nekad: Kan inte hantera tillgångstyper",
-      "readDocuments": "Åtkomst nekad: Kan inte läsa tillgångsdokument",
-      "associateDocuments": "Åtkomst nekad: Kan inte koppla dokument till tillgångar",
-      "removeDocuments": "Åtkomst nekad: Kan inte ta bort dokument från tillgångar",
-      "updateDocumentNotes": "Åtkomst nekad: Kan inte uppdatera anteckningar för tillgångsdokument"
+      "readAssets": "Behörighet saknas: Du kan inte läsa tillgångar",
+      "readAssetTypes": "Behörighet saknas: Du kan inte läsa tillgångstyper",
+      "manageAssetTypes": "Behörighet saknas: Du kan inte hantera tillgångstyper",
+      "readDocuments": "Behörighet saknas: Du kan inte läsa tillgångsdokument",
+      "associateDocuments": "Behörighet saknas: Du kan inte koppla dokument till tillgångar",
+      "removeDocuments": "Behörighet saknas: Du kan inte ta bort dokument från tillgångar",
+      "updateDocumentNotes": "Behörighet saknas: Du kan inte uppdatera anteckningar för tillgångsdokument"
     },
     "asset": {
-      "notFoundRefresh": "Tillgången hittades inte. Den kan ha raderats. Ladda om och försök igen.",
-      "clientNotFound": "Kunden hittades inte. Den kan ha raderats. Ladda om och försök igen.",
-      "maintenanceNotFound": "Underhållsschemat hittades inte. Det kan ha raderats. Ladda om och försök igen.",
-      "maintenanceMismatch": "Den här underhållsposten hör inte till den valda tillgången. Ladda om och försök igen.",
+      "notFoundRefresh": "Tillgången hittades inte. Den kan ha raderats. Ladda om sidan och försök igen.",
+      "clientNotFound": "Kunden hittades inte. Den kan ha raderats. Ladda om sidan och försök igen.",
+      "maintenanceNotFound": "Underhållsschemat hittades inte. Det kan ha raderats. Ladda om sidan och försök igen.",
+      "maintenanceMismatch": "Den här underhållsposten hör inte till den valda tillgången. Ladda om sidan och försök igen.",
       "locationUnavailable": "Den valda platsen är inte tillgänglig för den här kunden.",
       "selfRelation": "En tillgång kan inte vara relaterad till sig själv.",
       "selectAtLeastOne": "Välj minst en tillgång.",
       "typeUnavailable": "Tillgångstypen är inte tillgänglig. Välj en giltig tillgångstyp.",
       "typeUnavailableNamed": "Tillgångstypen ”{{assetType}}” är inte tillgänglig. Välj en giltig tillgångstyp.",
-      "documentAssociationNotFound": "Dokumentkopplingen hittades inte. Den kan redan ha tagits bort. Ladda om och försök igen.",
-      "invalidValue": "Ett av de valda tillgångsvärdena är ogiltigt. Ladda om och försök igen.",
+      "documentAssociationNotFound": "Dokumentkopplingen hittades inte. Den kan redan ha tagits bort. Ladda om sidan och försök igen.",
+      "invalidValue": "Ett av de valda tillgångsvärdena är ogiltigt. Ladda om sidan och försök igen.",
       "invalidDate": "Ett av de valda tillgångsdatumen är ogiltigt. Granska formuläret och försök igen.",
-      "referenceMissing": "Den valda tillgången, dokumentet eller den relaterade posten finns inte längre. Ladda om och försök igen.",
-      "conflict": "Den här tillgångsändringen står i konflikt med en befintlig post. Ladda om och försök igen.",
+      "referenceMissing": "Den valda tillgången, dokumentet eller den relaterade posten finns inte längre. Ladda om sidan och försök igen.",
+      "conflict": "Den här tillgångsändringen står i konflikt med en befintlig post. Ladda om sidan och försök igen.",
       "notAllowed": "Ett av tillgångsvärdena är inte tillåtet. Granska formuläret och försök igen.",
       "missingField": "Ett obligatoriskt tillgångsfält saknas.",
       "missingFieldNamed": "Obligatoriskt tillgångsfält saknas: {{field}}."

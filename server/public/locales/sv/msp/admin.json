@@ -4,7 +4,7 @@
       "save": "Spara inställningar",
       "saving": "Sparar…",
       "reset": "Återställ",
-      "refresh": "Ladda om",
+      "refresh": "Uppdatera",
       "close": "Stäng",
       "edit": "Redigera",
       "delete": "Radera",
@@ -15,13 +15,13 @@
     "states": {
       "active": "Aktiv",
       "inactive": "Inaktiv",
-      "loading": "Laddar…"
+      "loading": "Läser in…"
     }
   },
   "telemetry": {
     "loading": {
       "title": "Organisationens telemetriinställningar",
-      "description": "Laddar…"
+      "description": "Läser in…"
     },
     "empty": {
       "title": "Organisationens telemetriinställningar",
@@ -88,7 +88,7 @@
       "updatedBy": " av {{user}}"
     },
     "errors": {
-      "loadTenantTelemetrySettings": "Det gick inte att läsa in klientorganisationens telemetriinställningar",
+      "loadTenantTelemetrySettings": "Det gick inte att läsa in organisationens telemetriinställningar",
       "loadSettings": "Det gick inte att läsa in inställningarna",
       "saveTelemetrySettings": "Det gick inte att spara telemetriinställningarna",
       "saveSettings": "Det gick inte att spara inställningarna"
@@ -103,24 +103,24 @@
     },
     "descriptions": {
       "outbound": "Konfigurera SMTP- eller API-inställningar för att skicka e-post från din applikation",
-      "inbound": "Konfigurera e-posttjänsteleverantörer för att ta emot och behandla e-post som ärenden"
+      "inbound": "Konfigurera e-postleverantörer för att ta emot och behandla e-post som ärenden"
     },
     "providerConfig": {
-      "title": "Konfiguration av e-posttjänsteleverantör",
-      "providerLabel": "E-posttjänsteleverantör",
+      "title": "Konfiguration av e-postleverantör",
+      "providerLabel": "E-postleverantör",
       "options": {
         "smtp": "SMTP (traditionell e-postserver)",
         "resend": "Resend (modern API-tjänst)",
         "microsoft": "Microsoft 365 (Microsoft Graph)"
       },
-      "placeholder": "Välj e-posttjänsteleverantör",
+      "placeholder": "Välj e-postleverantör",
       "descriptions": {
         "smtp": "Konfigurera inställningar för en traditionell SMTP-server för e-post",
         "resend": "Konfigurera Resend API för modern e-postleverans",
         "microsoft": "Skicka via den OAuth-anslutna Microsoft 365-postlådan som används för inkommande e-post"
       },
       "status": {
-        "provider": "Tjänsteleverantör: {{provider}}"
+        "provider": "Leverantör: {{provider}}"
       }
     },
     "smtp": {
@@ -169,7 +169,7 @@
       "mailbox": {
         "label": "Avsändarpostlåda",
         "placeholder": "Välj en ansluten Microsoft 365-postlåda",
-        "none": "Lägg först till och auktorisera en Microsoft 365-tjänsteleverantör på fliken Inkommande e-post.",
+        "none": "Lägg först till och auktorisera en Microsoft 365-anslutning på fliken Inkommande e-post.",
         "help": "Meddelanden skickas från den här postlådan via Microsoft Graph och sparas i Skickat. Återanslut befintliga postlådor för att bevilja Mail.Send."
       }
     },
@@ -193,7 +193,7 @@
     },
     "test": {
       "title": "Testa utgående e-post",
-      "description": "Sparar de aktuella inställningarna och verifierar sedan anslutningen till tjänsteleverantören. Ange en adress för att även skicka ett testmeddelande.",
+      "description": "Sparar de aktuella inställningarna och verifierar sedan anslutningen till leverantören. Ange en adress för att även skicka ett testmeddelande.",
       "recipientLabel": "Skicka test till (valfritt)",
       "recipientPlaceholder": "you@example.com",
       "run": "Testa anslutning",
@@ -224,7 +224,7 @@
         "nameLabel": "Avsändarens visningsnamn",
         "namePlaceholder": "Ditt företagsnamn",
         "nameHelp": "Lämna tomt för att använda {{company}} automatiskt.",
-        "companyFallback": "din klientorganisations namn"
+        "companyFallback": "ditt företagsnamn"
       },
       "warningTitle": "Kontrollera svarsroutningen",
       "errorTitle": "Rätta identiteten för ärendemeddelanden",
@@ -242,9 +242,9 @@
         "boardSummary": "Avsändare för ärenden per tavla hanteras i varje tavlas inställningar.",
         "ticket": "E-post för ärenden",
         "project": "E-post för projekt",
-        "billing": "E-post för debitering",
+        "billing": "E-post för fakturering",
         "sales": "E-post för försäljning",
-        "scheduling": "E-post för resursplanering",
+        "scheduling": "E-post för bokningar",
         "survey": "E-post för enkäter",
         "account": "E-post för konto",
         "general": "Allmän e-post",
@@ -287,7 +287,7 @@
       "body": "Diagnostiken skapar en tillfällig Microsoft Graph-prenumeration och raderar den sedan. Om raderingen misslyckas kan du behöva ta bort prenumerationen manuellt i Microsoft 365."
     },
     "labels": {
-      "provider": "Tjänsteleverantör:",
+      "provider": "Leverantör:",
       "mailbox": "Postlåda:",
       "overall": "Samlat resultat:",
       "resource": "Resurs: {{resource}}",
@@ -353,7 +353,7 @@
         "providerReference": "• Varje e-postleverantör kan hänvisa till en konfiguration med standardinställningar för ärenden",
         "requiredValues": "• När ett e-postmeddelande skapar ett ärende anger dessa standardinställningar värden för obligatoriska fält",
         "systemCreator": "• Systemgenererade ärenden visar ”System” som skapare när entered_by är null",
-        "scenarios": "• Du kan skapa olika standardinställningar för olika e-postscenarier (support, debitering osv.)"
+        "scenarios": "• Du kan skapa olika standardinställningar för olika e-postscenarier (support, fakturering osv.)"
       }
     },
     "errors": {
@@ -368,7 +368,7 @@
       "time": "Tid",
       "projects": "Projekt",
       "assets": "Tillgångar",
-      "billing": "Debitering"
+      "billing": "Fakturering"
     },
     "targetTypes": {
       "role": "Roll",
@@ -377,13 +377,13 @@
       "apiKey": "API-nyckel"
     },
     "templateSummaries": {
-      "own": "poster som ägs av säkerhetsidentiteten",
-      "assigned": "poster som tilldelats säkerhetsidentiteten",
+      "own": "poster som ägs av säkerhetsobjektet",
+      "assigned": "poster som tilldelats säkerhetsobjektet",
       "managed": "poster som ägs av hanterade användare",
-      "ownOrAssigned": "poster som ägs av eller tilldelats säkerhetsidentiteten",
-      "ownOrManaged": "poster som ägs av säkerhetsidentiteten eller hanterade användare",
+      "ownOrAssigned": "poster som ägs av eller tilldelats säkerhetsobjektet",
+      "ownOrManaged": "poster som ägs av säkerhetsobjektet eller hanterade användare",
       "sameClient": "poster för samma kund",
-      "clientPortfolio": "poster för säkerhetsidentitetens kundportfölj",
+      "clientPortfolio": "poster för säkerhetsobjektets kundportfölj",
       "selectedClients": "poster för valda kunder",
       "sameTeam": "poster som ägs av samma team",
       "selectedBoards": "poster på valda tavlor"
@@ -459,7 +459,7 @@
         "systemStarter": "Systemets startpaket.",
         "customBundle": "Anpassat begränsningspaket för tilldelning till roller, team, användare eller API-nycklar."
       },
-      "effectiveSummary": "Aktuell sammanfattning: {{status}} paket. Aktiva tilldelningar: {{count}}.",
+      "effectiveSummary": "Gällande sammanfattning: {{status}} paket. Aktiva tilldelningar: {{count}}.",
       "empty": "Inga behörighetspaket hittades.",
       "loading": "Läser in behörighetspaket…",
       "actions": {
@@ -566,7 +566,7 @@
     },
     "simulator": {
       "header": "Åtkomstsimulator",
-      "description": "Simulera hur paketets utkastversion och publicerade version fungerar för en verklig säkerhetsidentitet och en befintlig post.",
+      "description": "Simulera hur paketets utkastversion och publicerade version fungerar för ett verkligt säkerhetsobjekt och en befintlig post.",
       "inputTitle": "Simuleringsindata",
       "resource": "Resurs",
       "action": "Åtgärd",
@@ -618,7 +618,7 @@
       "selectTarget": "Välj ett mål innan du lägger till en tilldelning.",
       "addAssignment": "Det gick inte att lägga till tilldelningen.",
       "updateAssignmentStatus": "Det gick inte att uppdatera tilldelningens status.",
-      "selectPrincipal": "Välj en säkerhetsidentitet innan du kör simuleringen.",
+      "selectPrincipal": "Välj ett säkerhetsobjekt innan du kör simuleringen.",
       "selectRecord": "Välj en post innan du kör simuleringen.",
       "runSimulation": "Det gick inte att köra simuleringen.",
       "simulator": {
@@ -659,17 +659,17 @@
       "subject": "Ämne",
       "status": "Status"
     },
-    "loading": "Laddar…",
+    "loading": "Läser in…",
     "results_one": "{{count}} resultat",
     "results_other": "{{count}} resultat",
-    "refresh": "Ladda om",
+    "refresh": "Uppdatera",
     "close": "Stäng",
     "detail": {
       "title": "Information om e-postloggen",
       "noSubject": "Inget ämne",
       "sentAt": "Skickat",
       "status": "Status",
-      "provider": "Tjänsteleverantör",
+      "provider": "Leverantör",
       "messageId": "Meddelande-ID",
       "to": "Till",
       "from": "Från",
@@ -681,7 +681,7 @@
     "title": "Diagnostik av Gmail-leverans",
     "description": "Kontrollerar Pub/Sub-ämnet, dess behörigheter, push-slutpunkten och målgruppen, Gmail-bevakningen och när den senaste push-aviseringen kom fram.",
     "labels": {
-      "provider": "Tjänsteleverantör:",
+      "provider": "Leverantör:",
       "mailbox": "Postlåda:",
       "overall": "Samlat resultat:",
       "recommendations": "Rekommendationer",
@@ -763,7 +763,7 @@
           "authenticated": "Inloggad",
           "notClientPortal": "Inte en kundportalanvändare",
           "edition": "Enterprise-utgåvan",
-          "integrationsTier": "Integreringsnivå",
+          "integrationsTier": "Integrationsnivå",
           "entraSyncTier": "Nivå för Entra-synkronisering (Pro)",
           "systemSettingsRead": "Läsbehörighet för system_settings"
         },
@@ -820,13 +820,13 @@
           "partial": "Delvis"
         },
         "remedies": {
-          "connectEntra": "Anslut Microsoft Entra via Inställningar > Integreringar > Entra.",
+          "connectEntra": "Anslut Microsoft Entra via Inställningar > Integrationer > Entra.",
           "selectAppRegistration": "Välj en Microsoft-appregistrering för Entra och återanslut sedan.",
           "selectExistingApp": "Den kopplade Microsoft-appen finns inte längre. Välj en befintlig appregistrering och återanslut sedan.",
           "chooseAnotherApp": "Den kopplade Microsoft-appregistreringen är arkiverad. Välj en annan appregistrering och återanslut sedan.",
-          "addEntraCapability": "Redigera appregistreringen under Inställningar > Integreringar > Microsoft och aktivera Entra-funktionen.",
+          "addEntraCapability": "Redigera appregistreringen under Inställningar > Integrationer > Microsoft och aktivera Entra-funktionen.",
           "secretExpiryUnknown": "Klienthemlighetens utgångsdatum är okänt. Microsofts klienthemligheter upphör att gälla efter 6–24 månader. Rotera dem enligt schemat i Azure.",
-          "clientSecretMissing": "Appregistreringens klienthemlighet saknas eller är tom. Rotera hemligheten i Azure och uppdatera appregistreringen under Inställningar > Integreringar > Microsoft.",
+          "clientSecretMissing": "Appregistreringens klienthemlighet saknas eller är tom. Rotera hemligheten i Azure och uppdatera appregistreringen under Inställningar > Integrationer > Microsoft.",
           "entraAccessDenied": "Åtkomst till Entra-diagnostik nekas för den här användaren eller arbetsytan.",
           "temporalUnreachable": "Det gick inte att nå Temporals frontend. Automatisk synkronisering kan inte köras förrän den är tillgänglig.",
           "temporalNoWorkers": "Temporal går att nå, men ingen arbetsprocess hämtar uppgifter från Entras uppgiftskö. Schemalagda synkroniseringar kommer inte att behandlas.",
@@ -853,7 +853,7 @@
           "yieldFailed": "Det gick inte att beräkna förhandsgranskningen av användarurvalet.",
           "missingScope": "Tokenen saknar {{scope}}. Ge administratörssamtycke och återanslut sedan Microsoft Entra.",
           "appClientIdMismatch": "Tokenen utfärdades för en annan applikation än den kopplade appregistreringen. Återanslut Microsoft Entra med rätt app.",
-          "client_secret_invalid": "Microsoft avvisade appens autentiseringsuppgift (invalid_client / AADSTS7000222). Rotera klienthemligheten i Azure, uppdatera Microsoft-appregistreringen under Inställningar > Integreringar > Microsoft och återanslut sedan.",
+          "client_secret_invalid": "Microsoft avvisade appens autentiseringsuppgift (invalid_client / AADSTS7000222). Rotera klienthemligheten i Azure, uppdatera Microsoft-appregistreringen under Inställningar > Integrationer > Microsoft och återanslut sedan.",
           "app_not_found": "Microsoft kunde inte hitta applikationen (AADSTS700016). Kontrollera det kopplade klient-ID:t och att appen stöder flera klientorganisationer.",
           "partner_consent_required": "Administratörssamtycke saknas i partnerns klientorganisation (AADSTS65001 / consent_required). Ge administratörssamtycke för appen i partnerns klientorganisation och återanslut sedan.",
           "conditional_access": "Villkorsstyrd åtkomst blockerade begäran (AADSTS50076/AADSTS50079). Kontot som ansluter måste uppfylla policyn för MFA och enheter som uppfyller kraven.",

@@ -2,11 +2,11 @@
   "settings": {
     "title": "Tangentbordsgenvägar",
     "description": "Anpassa tangentbordsgenvägar för den här enheten och det här kontot.",
-    "loading": "Laddar tangentbordsgenvägar…",
+    "loading": "Läser in tangentbordsgenvägar…",
     "capturePrompt": "Tryck på tangenter",
     "columns": {
       "action": "Åtgärd",
-      "scope": "Omfattning",
+      "scope": "Gäller i",
       "default": "Standard",
       "effective": "Gällande tangentkombination",
       "enabled": "Aktiverad",
@@ -169,16 +169,16 @@
         "description": "Gå till kundsidan."
       },
       "goDashboard": {
-        "label": "Gå till översiktspanelen",
-        "description": "Gå till översiktspanelen."
+        "label": "Gå till översikten",
+        "description": "Gå till översikten."
       },
       "goProjects": {
         "label": "Gå till projekt",
         "description": "Gå till projektsidan."
       },
       "goBilling": {
-        "label": "Gå till debitering",
-        "description": "Gå till debitering."
+        "label": "Gå till fakturering",
+        "description": "Gå till fakturering."
       },
       "goSettings": {
         "label": "Gå till inställningar",
@@ -357,12 +357,12 @@
     },
     "linkhints": {
       "show": {
-        "label": "Visa länktips",
-        "description": "Visa tangentbordstips för synliga länkar och kontroller."
+        "label": "Visa länkmarkeringar",
+        "description": "Visa tangentmarkeringar för synliga länkar och kontroller."
       },
       "showNewTab": {
-        "label": "Visa länktips för ny flik",
-        "description": "Visa tangentbordstips och öppna länkar i en ny flik när det är möjligt."
+        "label": "Visa länkmarkeringar för ny flik",
+        "description": "Visa tangentmarkeringar och öppna länkar i en ny flik när det är möjligt."
       }
     }
   },

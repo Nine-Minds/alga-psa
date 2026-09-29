@@ -25,7 +25,7 @@ export function isSupportedLocale(locale: string): locale is SupportedLocale {
  * Mirror of PREVIEW_LOCALES in @alga-psa/core i18n config, duplicated because
  * this file must stay import-free for the Edge runtime. Keep the two in sync.
  */
-const PREVIEW_LOCALES: ReadonlyArray<SupportedLocale> = ['sv'];
+const PREVIEW_LOCALES: ReadonlyArray<SupportedLocale> = [];
 
 function isAutoAssignable(locale: SupportedLocale): boolean {
   return (

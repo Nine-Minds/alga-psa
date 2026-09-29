@@ -14,7 +14,7 @@
     "notAvailable": "Ej tillgängligt",
     "openMenu": "Öppna meny",
     "processing": "Bearbetar…",
-    "refresh": "Ladda om",
+    "refresh": "Uppdatera",
     "remove": "Ta bort",
     "reset": "Återställ",
     "save": "Spara",
@@ -26,10 +26,10 @@
     "export": "Exportera"
   },
   "dashboard": {
-    "title": "Debitering",
+    "title": "Fakturering",
     "beta": {
       "title": "Betaversion",
-      "description": "Vårt omarbetade debiteringssystem är för närvarande i beta. Du kan stöta på problem eller ofullständiga funktioner. Tack för ditt tålamod medan vi fortsätter att förbättra upplevelsen."
+      "description": "Vårt omarbetade faktureringssystem är för närvarande i beta. Du kan stöta på problem eller ofullständiga funktioner. Tack för ditt tålamod medan vi fortsätter att förbättra upplevelsen."
     },
     "errorPrefix": "Fel:",
     "backToPresets": "Tillbaka till listan över förinställningar för avtalsrader",
@@ -41,11 +41,11 @@
       "clientContracts": "Kundavtal",
       "accountingExports": "Bokföringsexporter",
       "contractTemplates": "Avtalsmallar",
-      "invoicing": "Fakturering",
+      "invoicing": "Fakturor",
       "invoiceLayouts": "Fakturalayouter",
       "taxRates": "Skatt",
       "contractLinePresets": "Förinställningar för avtalsrader",
-      "billingCycles": "Debiteringscykler",
+      "billingCycles": "Faktureringscykler",
       "servicePeriods": "Tjänsteperioder",
       "usageTracking": "Förbrukningsuppföljning",
       "reports": "Rapporter",
@@ -57,8 +57,8 @@
   },
   "overview": {
     "errors": {
-      "loadTitle": "Det går inte att läsa in debiteringsuppgifter",
-      "loadData": "Det gick inte att läsa in debiteringsuppgifter"
+      "loadTitle": "Det gick inte att läsa in faktureringsuppgifterna",
+      "loadData": "Det gick inte att läsa in faktureringsuppgifterna"
     },
     "metrics": {
       "activeContractLines": {
@@ -103,7 +103,7 @@
       },
       "serviceCatalog": {
         "title": "Hantering av tjänstekatalog",
-        "description": "Hantera ditt tjänsteutbud, din prissättning och dina debiteringsinställningar",
+        "description": "Hantera ditt tjänsteutbud, din prissättning och dina faktureringsinställningar",
         "activeServicesLabel": "Aktiva tjänster",
         "button": "Hantera tjänstekatalog"
       }
@@ -114,16 +114,16 @@
         "description": "Följ upp och hantera kundbetalningar, behandla återbetalningar och hantera betalningstvister"
       },
       "billingCycles": {
-        "title": "Debiteringscykler",
-        "description": "Hantera kundernas debiteringsscheman, standardinställningar för debiteringens periodicitet och inställningar för faktureringsfrekvens"
+        "title": "Faktureringscykler",
+        "description": "Hantera kundernas faktureringsscheman, standardinställningar för periodicitet och inställningar för fakturafrekvens"
       },
       "servicePeriods": {
         "title": "Tjänsteperioder",
-        "description": "Granska återkommande tjänsteperioder och se hur faktureringsintervallen grupperar dem"
+        "description": "Granska återkommande tjänsteperioder och se hur faktureringsperioderna grupperar dem"
       },
       "invoiceManagement": {
         "title": "Fakturahantering",
-        "description": "Generera faktureringsintervall för återkommande tjänsteperioder och skapa manuella dokument eller förskottsdokument när den ekonomiska hanteringen skiljer sig från den återkommande tjänstetäckningen"
+        "description": "Generera faktureringsperioder för återkommande tjänsteperioder och skapa manuella dokument eller förskottsdokument när den ekonomiska hanteringen skiljer sig från den återkommande tjänstetäckningen"
       },
       "overduePayments": {
         "title": "Förfallna betalningar",
@@ -172,7 +172,7 @@
     },
     "states": {
       "loadingRecords": "Läser in förbrukningsposter",
-      "noActiveBucketPlans": "Inga aktiva timpottsplaner hittades."
+      "noActiveBucketPlans": "Inga aktiva avtalsrader med timpott hittades."
     },
     "dialog": {
       "addTitle": "Lägg till förbrukningspost",
@@ -228,8 +228,8 @@
       "invoiceDiscount": "Fakturarabatt",
       "appliedTo": "Tillämpas på: {{description}}",
       "selectService": "Välj tjänst",
-      "taxable": "(Skattepliktig)",
-      "nonTaxable": "(Ej skattepliktig)",
+      "taxable": "(Momspliktig)",
+      "nonTaxable": "(Ej momspliktig)",
       "calculatedOnSave": "(beräknas när du sparar)"
     },
     "expanded": {
@@ -241,7 +241,7 @@
       "service": "Tjänst",
       "quantity": "Antal",
       "discountType": "Rabattyp",
-      "percentage": "Procentandel",
+      "percentage": "Procent",
       "amount": "Belopp ({{currencySymbol}})",
       "discountDescription": "Rabattbeskrivning",
       "applyDiscountTo": "Tillämpa rabatt på",
@@ -270,7 +270,7 @@
       "subtotal": "Delsumma: {{amount}} {{currencySymbol}}"
     },
     "options": {
-      "percentage": "Procentandel",
+      "percentage": "Procent",
       "fixedAmount": "Fast belopp"
     }
   },
@@ -300,7 +300,7 @@
       "addSelectedServicesWithCount": "Lägg till markerade tjänster ({{count}})"
     },
     "tooltip": {
-      "defaultRate": "Tjänstens standardtaxa, som används för intern värdefördelning och rapportering inom planens fasta totalbelopp. Kan inte redigeras direkt här."
+      "defaultRate": "Tjänstens standardtaxa, som används för intern värdefördelning och rapportering inom avtalsradens fasta totalbelopp. Kan inte redigeras direkt här."
     },
     "states": {
       "loading": "Läser in tjänster…",
@@ -338,7 +338,7 @@
       "actions": "Åtgärder"
     },
     "tooltip": {
-      "defaultRate": "Tjänstens standardtaxa, som används för intern värdefördelning och rapportering inom planens fasta totalbelopp."
+      "defaultRate": "Tjänstens standardtaxa, som används för intern värdefördelning och rapportering inom avtalsradens fasta totalbelopp."
     },
     "states": {
       "loading": "Läser in tjänster…",
@@ -384,7 +384,7 @@
       "actions": "Åtgärder"
     },
     "actions": {
-      "refresh": "Ladda om",
+      "refresh": "Uppdatera",
       "newExport": "Ny export",
       "open": "Öppna",
       "execute": "Kör",
@@ -521,8 +521,8 @@
     "uncategorized": "Utan kategori"
   },
   "spendByProfile": {
-    "title": "Kostnader per debiteringsprofil",
-    "description": "Kostnaden för varje plats eller enhet hos denna kund under perioden. Öppna en rad för att se debiteringarna bakom beloppet.",
+    "title": "Kostnader per faktureringsprofil",
+    "description": "Kostnaden för varje plats eller organisatorisk enhet hos denna kund under perioden. Öppna en rad för att se debiteringarna bakom beloppet.",
     "from": "Från",
     "to": "Till",
     "comparePrevious": "Jämför med föregående period",
@@ -533,10 +533,10 @@
     "priorPeriod": "var {{amount}}",
     "unattributedHint": "Inget avtal, ingen avtalsrad och ingen arbetspost kopplade dessa debiteringar till en profil, så de hamnade på standardprofilen.",
     "columns": {
-      "profile": "Debiteringsprofil",
+      "profile": "Faktureringsprofil",
       "charges": "Debiteringar",
       "net": "Netto",
-      "tax": "Skatt",
+      "tax": "Moms",
       "total": "Totalt",
       "unattributed": "Hamnade på standardprofilen",
       "priorTotal": "Föregående periods totalsumma",
@@ -559,7 +559,7 @@
       "explicit": "Någon valde {{line}} för denna post.",
       "autoUniqueService": "{{line}} var den enda avtalsrad som omfattade denna tjänst.",
       "autoBucketOverlay": "Flera avtalsrader omfattade denna tjänst. {{line}} var den enda med en timpott.",
-      "autoBillingProfile": "Flera avtalsrader omfattade denna tjänst. {{line}} valdes eftersom den tillhör arbetspostens debiteringsprofil.",
+      "autoBillingProfile": "Flera avtalsrader omfattade denna tjänst. {{line}} valdes eftersom den tillhör arbetspostens faktureringsprofil.",
       "reconciled": "{{line}} matchades med denna post när fakturan genererades.",
       "unresolved": "Ingen avtalsrad kunde väljas för denna post.",
       "unknown": "Det registrerades inte hur denna avtalsrad valdes."
@@ -591,72 +591,72 @@
     }
   },
   "errors": {
-    "duplicateRecurringInvoice": "Det finns redan en faktura för denna återkommande debiteringsperiod.",
+    "duplicateRecurringInvoice": "Det finns redan en faktura för denna återkommande faktureringsperiod.",
     "permissions": {
-      "billingRead": "Åtkomst nekad: behörighet att läsa debiteringsuppgifter krävs",
-      "billingUpdate": "Åtkomst nekad: behörighet att uppdatera debiteringsuppgifter krävs",
-      "billingCreate": "Åtkomst nekad: behörighet att skapa debiteringsposter krävs",
-      "billingDelete": "Åtkomst nekad: behörighet att radera debiteringsposter krävs",
+      "billingRead": "Åtkomst nekad: behörighet att läsa faktureringsuppgifter krävs",
+      "billingUpdate": "Åtkomst nekad: behörighet att uppdatera faktureringsuppgifter krävs",
+      "billingCreate": "Åtkomst nekad: behörighet att skapa faktureringsposter krävs",
+      "billingDelete": "Åtkomst nekad: behörighet att radera faktureringsposter krävs",
       "clientRead": "Åtkomst nekad: behörighet att läsa kunduppgifter krävs",
       "otherClientLocations": "Åtkomst nekad: du kan inte komma åt en annan kunds platser",
       "clientPortalUnavailable": "Åtkomst nekad: åtgärden är inte tillgänglig i kundportalen",
-      "resolveCurrency": "Åtkomst nekad: kundens debiteringsvaluta kan inte fastställas",
-      "clientBillingAccess": "Åtkomst nekad: du har inte tillgång till denna kunds debiteringsuppgifter."
+      "resolveCurrency": "Åtkomst nekad: kundens faktureringsvaluta kan inte fastställas",
+      "clientBillingAccess": "Åtkomst nekad: du har inte tillgång till denna kunds faktureringsuppgifter."
     },
     "context": {
-      "tenantNotFound": "Klientorganisationen hittades inte",
-      "tenantContextNotFound": "Klientorganisationens kontext hittades inte",
-      "noTenantContext": "Klientorganisationens kontext saknas. Ladda om och försök igen.",
+      "tenantNotFound": "Organisationen hittades inte",
+      "tenantContextNotFound": "Organisationens kontext hittades inte",
+      "noTenantContext": "Organisationens kontext saknas. Ladda om sidan och försök igen.",
       "clientContextNotFound": "Kundkontexten hittades inte",
       "notAuthenticated": "Obehörig åtkomst: ingen autentiserad användare hittades",
       "notLoggedIn": "Användaren är inte inloggad"
     },
     "client": {
       "notFound": "Kunden hittades inte",
-      "notFoundRefresh": "Kunden hittades inte. Den kan ha uppdaterats eller raderats. Ladda om och försök igen.",
+      "notFoundRefresh": "Kunden hittades inte. Den kan ha uppdaterats eller raderats. Ladda om sidan och försök igen.",
       "idRequired": "Kund-ID krävs."
     },
     "clientContract": {
-      "notFound": "Tilldelningen av kundavtalet hittades inte. Den kan ha uppdaterats eller raderats. Ladda om och försök igen.",
-      "invalidValue": "Ett av de valda värdena för kundavtalet är ogiltigt. Ladda om och försök igen.",
-      "referenceMissing": "Den valda kunden, det valda avtalet eller den valda debiteringsposten finns inte längre. Ladda om och försök igen.",
+      "notFound": "Tilldelningen av kundavtalet hittades inte. Den kan ha uppdaterats eller raderats. Ladda om sidan och försök igen.",
+      "invalidValue": "Ett av de valda värdena för kundavtalet är ogiltigt. Ladda om sidan och försök igen.",
+      "referenceMissing": "Den valda kunden, det valda avtalet eller den valda faktureringsposten finns inte längre. Ladda om sidan och försök igen.",
       "duplicate": "Denna tilldelning av kundavtal finns redan.",
       "missingField": "Ett obligatoriskt fält för kundavtalet saknas.",
       "missingFieldNamed": "Ett obligatoriskt fält för kundavtalet saknas: {{field}}."
     },
     "cycle": {
-      "cannotCreateNext": "Det går inte att skapa nästa debiteringscykel just nu"
+      "cannotCreateNext": "Det går inte att skapa nästa faktureringscykel just nu"
     },
     "currency": {
       "multipleActive": "Kunden har aktiva avtal i flera valutor ({{currencies}})."
     },
     "bucketOverlay": {
-      "invalidValue": "Ett av de valda värdena för timpottstillägget är ogiltigt. Ladda om och försök igen.",
-      "recordInvalid": "En av de valda posterna för timpottstillägget är inte längre giltig. Ladda om och försök igen.",
+      "invalidValue": "Ett av de valda värdena för timpottstillägget är ogiltigt. Ladda om sidan och försök igen.",
+      "recordInvalid": "En av de valda posterna för timpottstillägget är inte längre giltig. Ladda om sidan och försök igen.",
       "duplicate": "Det finns redan ett timpottstillägg för denna tjänst.",
       "notAllowed": "Ett av värdena för timpottstillägget är inte tillåtet. Granska formuläret och försök igen.",
       "missingField": "Ett obligatoriskt fält för timpottstillägget saknas.",
       "missingFieldNamed": "Ett obligatoriskt fält för timpottstillägget saknas: {{field}}."
     },
     "bucketPool": {
-      "duplicate": "Det finns redan en timpottspool eller en medlem med denna konfiguration. Ladda om och försök igen.",
-      "recordInvalid": "En av de valda posterna för timpottspoolen är inte längre giltig. Ladda om och försök igen.",
+      "duplicate": "Det finns redan en timpottspool eller en medlem med denna konfiguration. Ladda om sidan och försök igen.",
+      "recordInvalid": "En av de valda posterna för timpottspoolen är inte längre giltig. Ladda om sidan och försök igen.",
       "notAllowed": "Ett av värdena för timpottspoolen är inte tillåtet. Granska formuläret och försök igen."
     },
     "material": {
-      "invalidValue": "Ett av de valda materialvärdena är ogiltigt. Ladda om och försök igen.",
-      "recordInvalid": "En av de valda materialposterna är inte längre giltig. Ladda om och försök igen.",
+      "invalidValue": "Ett av de valda materialvärdena är ogiltigt. Ladda om sidan och försök igen.",
+      "recordInvalid": "En av de valda materialposterna är inte längre giltig. Ladda om sidan och försök igen.",
       "duplicate": "Denna materialpost finns redan.",
       "notAllowed": "Ett av materialvärdena är inte tillåtet. Granska formuläret och försök igen.",
       "missingField": "Ett obligatoriskt materialfält saknas.",
       "missingFieldNamed": "Ett obligatoriskt materialfält saknas: {{field}}."
     },
     "usage": {
-      "notFoundRefresh": "Förbrukningsposten hittades inte. Den kan ha raderats. Ladda om och försök igen.",
-      "bucketUpdateFailed": "Det går inte att uppdatera timpottens förbrukning för denna förbrukningspost. Ladda om och försök igen.",
-      "invalidValue": "Den valda förbrukningsposten, kunden, tjänsten eller avtalsraden är ogiltig. Ladda om och försök igen.",
-      "referenceMissing": "Den valda kunden, tjänsten eller avtalsraden är inte längre giltig. Ladda om och försök igen.",
-      "duplicate": "Det finns redan en förbrukningspost som står i konflikt med denna. Ladda om och försök igen.",
+      "notFoundRefresh": "Förbrukningsposten hittades inte. Den kan ha raderats. Ladda om sidan och försök igen.",
+      "bucketUpdateFailed": "Det gick inte att uppdatera timpottens förbrukning för denna förbrukningspost. Ladda om sidan och försök igen.",
+      "invalidValue": "Den valda förbrukningsposten, kunden, tjänsten eller avtalsraden är ogiltig. Ladda om sidan och försök igen.",
+      "referenceMissing": "Den valda kunden, tjänsten eller avtalsraden är inte längre giltig. Ladda om sidan och försök igen.",
+      "duplicate": "Det finns redan en förbrukningspost som står i konflikt med denna. Ladda om sidan och försök igen.",
       "alreadyDeleted": "Förbrukningsposten hittades inte. Den kan redan ha raderats.",
       "missingField": "Ett obligatoriskt förbrukningsfält saknas.",
       "missingFieldNamed": "Ett obligatoriskt förbrukningsfält saknas: {{field}}."
@@ -669,19 +669,19 @@
         "increaseTotalAmountOnly": "Totalsumman kan bara höjas för beloppsbaserade poster.",
         "amountAndPercentageTogether": "Fälten amount och percentage måste uppdateras tillsammans, och exakt ett av dem måste vara null."
       },
-      "invalidValue": "Ett av de valda värdena för projektdebitering är ogiltigt. Ladda om och försök igen.",
-      "referenceMissing": "Det valda projektet, den valda fakturan, fasen, tjänsten eller debiteringsposten finns inte längre. Ladda om och försök igen.",
-      "duplicate": "Det finns redan en projektdebiteringspost som står i konflikt med denna. Ladda om och försök igen.",
-      "ruleViolation": "Värdena för projektdebitering bryter mot en dataregel. Granska formuläret och försök igen.",
-      "requestFailed": "Begäran om projektdebitering kunde inte slutföras. Ladda om och försök igen.",
-      "missingField": "Ett obligatoriskt fält för projektdebitering saknas.",
-      "missingFieldNamed": "Ett obligatoriskt fält för projektdebitering saknas: {{field}}."
+      "invalidValue": "Ett av de valda värdena för projektfakturering är ogiltigt. Ladda om sidan och försök igen.",
+      "referenceMissing": "Det valda projektet, den valda fakturan, fasen, tjänsten eller faktureringsposten finns inte längre. Ladda om sidan och försök igen.",
+      "duplicate": "Det finns redan en projektfaktureringspost som står i konflikt med denna. Ladda om sidan och försök igen.",
+      "ruleViolation": "Värdena för projektfakturering bryter mot en dataregel. Granska formuläret och försök igen.",
+      "requestFailed": "Det gick inte att slutföra begäran om projektfakturering. Ladda om sidan och försök igen.",
+      "missingField": "Ett obligatoriskt fält för projektfakturering saknas.",
+      "missingFieldNamed": "Ett obligatoriskt fält för projektfakturering saknas: {{field}}."
     },
     "profitability": {
       "dateRangeRequired": "Startdatum och slutdatum krävs."
     },
     "recurringRun": {
-      "selectPeriods": "Välj minst en återkommande debiteringsperiod att generera.",
+      "selectPeriods": "Välj minst en återkommande faktureringsperiod att generera.",
       "invoicePermission": "Åtkomst nekad: behörighet att skapa eller generera fakturor krävs",
       "monthEndCloseNotMaterialized": "Återkommande tjänsteperioder skapades inte för detta återkommande körningsintervall.",
       "monthEndCloseNotEligible": "Perioden {{servicePeriod}} kan endast stängas vid månadsslutet den {{finalCalendarDay}}. Endast tjänsteperioder som omfattar en kalendermånad och debiteras i efterskott kan stängas i förtid på sin sista kalenderdag."
@@ -700,7 +700,7 @@
       }
     },
     "vendorBill": {
-      "notFoundRefresh": "Leverantörsfakturan hittades inte. Den kan ha uppdaterats eller raderats. Ladda om och försök igen."
+      "notFoundRefresh": "Leverantörsfakturan hittades inte. Den kan ha uppdaterats eller raderats. Ladda om sidan och försök igen."
     },
     "documentTemplate": {
       "unknownType": "Okänd dokumenttyp: {{documentType}}",
@@ -718,7 +718,7 @@
     "billingProfile": {
       "periodOrder": "Välj en period vars startdatum är samma som eller tidigare än slutdatumet.",
       "comparisonPeriodOrder": "Välj en jämförelseperiod vars startdatum är samma som eller tidigare än slutdatumet.",
-      "notThisClient": "Den debiteringsprofilen tillhör inte denna kund."
+      "notThisClient": "Den faktureringsprofilen tillhör inte denna kund."
     },
     "unresolvedCharge": {
       "itemNotFound": "Den posten finns inte längre.",

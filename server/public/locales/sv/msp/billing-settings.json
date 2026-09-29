@@ -5,12 +5,12 @@
     "quoting": "Offerter",
     "tax": "Skatt",
     "payments": "Betalningar",
-    "costRates": "Kostnadstaxor"
+    "costRates": "Timkostnader"
   },
   "general": {
     "currency": {
       "title": "Standardvaluta",
-      "description": "Ange standardvaluta för nya produkter, tjänster, avtal och offerter. Valutan kan ändras för enskilda kunder i deras debiteringsinställningar.",
+      "description": "Ange standardvaluta för nya produkter, tjänster, avtal och offerter. Valutan kan ändras för enskilda kunder i deras faktureringsinställningar.",
       "fields": {
         "currency": {
           "label": "Valuta",
@@ -49,7 +49,7 @@
       },
       "options": {
         "draft": "Skapa som utkast",
-        "finalized": "Skapa och slutför"
+        "finalized": "Skapa och fastställ"
       },
       "toast": {
         "updated": "Inställningarna för fakturor med nollbelopp har uppdaterats."
@@ -93,8 +93,8 @@
       "description": "Ange när kundernas tillgodohavanden avräknas mot fakturor och hur de förbrukas.",
       "fields": {
         "autoApply": {
-          "label": "Avräkna tillgodohavanden automatiskt när fakturan slutförs",
-          "help": "När detta är aktiverat avräknas tillgängligt tillgodohavande automatiskt när en faktura slutförs"
+          "label": "Avräkna tillgodohavanden automatiskt när fakturan fastställs",
+          "help": "När detta är aktiverat avräknas tillgängligt tillgodohavande automatiskt när en faktura fastställs"
         },
         "order": {
           "label": "Avräkningsordning för tillgodohavanden",
@@ -135,12 +135,12 @@
         },
         "ticketBoard": {
           "label": "Tavla för förnyelseärenden",
-          "placeholderLoading": "Laddar tavlor…",
+          "placeholderLoading": "Läser in tavlor…",
           "placeholderSelect": "Välj tavla"
         },
         "ticketStatus": {
           "label": "Status för förnyelseärenden",
-          "placeholderLoading": "Laddar statusar…",
+          "placeholderLoading": "Läser in statusar…",
           "placeholderSelect": "Välj status",
           "placeholderSelectBoardFirst": "Välj en tavla först",
           "help": "Statusarna för förnyelseärenden gäller den valda tavlan."
@@ -151,7 +151,7 @@
         "queueOnly": "Endast i kön"
       },
       "states": {
-        "unnamedBoard": "Namnlös tavla"
+        "unnamedBoard": "Tavla utan namn"
       },
       "actions": {
         "save": "Spara",
@@ -172,7 +172,7 @@
       "fields": {
         "validityDays": {
           "label": "Standardgiltighetstid (dagar)",
-          "help": "Nya offerter är giltiga så här många dagar."
+          "help": "Nya offerter är giltiga i så många dagar."
         }
       },
       "actions": {
@@ -182,7 +182,7 @@
         "updated": "Offertinställningarna har uppdaterats."
       },
       "errors": {
-        "load": "Det gick inte att ladda inställningarna",
+        "load": "Det gick inte att läsa in inställningarna",
         "save": "Det gick inte att spara inställningarna",
         "range": "Ange ett heltal från 1 till 365."
       }
@@ -203,14 +203,14 @@
       "title": "Standardskattesats",
       "tooltip": "Välj den skattesats som nya kunder, produkter och tjänster ärver.",
       "description": "Ange skattesatsen som tilldelas nya kunder och katalogposter. Befintliga poster ändras inte.",
-      "loading": "Laddar standardskattesats…",
+      "loading": "Läser in standardskattesats…",
       "empty": "Skapa en aktiv skattesats innan du väljer en standard.",
       "invalid": "Den konfigurerade standarden är inte längre aktiv eller giltig. Välj en annan skattesats.",
       "field": {
         "label": "Standardskattesats"
       },
       "options": {
-        "none": "Ingen standard för klientorganisationen"
+        "none": "Ingen standard för organisationen"
       },
       "help": "När ingen standard är angiven förblir nya katalogposter skattefria och nya kunder får den äldsta aktiva skattesatsen om det finns någon.",
       "actions": {
@@ -221,18 +221,18 @@
         "saved": "Standardskattesatsen har sparats."
       },
       "errors": {
-        "load": "Det gick inte att ladda standardskattesatsen.",
+        "load": "Det gick inte att läsa in standardskattesatsen.",
         "save": "Det gick inte att spara standardskattesatsen."
       }
     },
     "backfill": {
       "title": "Tillämpa standarden på befintliga katalogposter",
       "description": "Förhandsgranska produkter och tjänster som i dag saknar skattesats.",
-      "warning": "Detta ändrar skatteplikten för framtida debiteringar och skriver inte om utfärdade fakturor.",
-      "loading": "Laddar förhandsgranskning…",
+      "warning": "Detta ändrar skatteplikten för framtida fakturering och skriver inte om utfärdade fakturor.",
+      "loading": "Läser in förhandsgranskning…",
       "empty": "Inga kvalificerade produkter eller tjänster hittades.",
       "target": "Målskattesats: {{rate}}",
-      "count": "{{count}} kvalificerade poster",
+      "count": "Kvalificerade poster: {{count}}",
       "dialog": {
         "title": "Tillämpa standardskattesats"
       },
@@ -280,9 +280,9 @@
         "step4": "Skattebeloppen importeras tillbaka till AlgaPSA",
         "step5": "Fakturornas totalsummor uppdateras med den importerade skatten",
         "note": "Bokföringssystemet som används bestäms automatiskt utifrån vilket system du exporterar fakturan till.",
-        "warning": "Viktigt: Fakturor för kunder med extern skatteberäkning kan inte slutföras förrän skatten har importerats tillbaka från ditt bokföringssystem. Detta kräver en ansluten bokföringsintegrering (QuickBooks eller Xero) och att fakturan först exporteras dit. Annars förblir fakturorna utkast. Byt tillbaka till intern skatteberäkning för en enskild faktura för att slutföra den i Alga."
+        "warning": "Viktigt: Fakturor för kunder med extern skatteberäkning kan inte fastställas förrän skatten har importerats tillbaka från ditt bokföringssystem. Detta kräver en ansluten bokföringsintegration (QuickBooks eller Xero) och att fakturan först exporteras dit. Annars förblir fakturorna utkast. Byt tillbaka till intern skatteberäkning för en enskild faktura för att fastställa den i Alga."
       },
-      "loading": "Laddar inställningar…",
+      "loading": "Läser in inställningar…",
       "actions": {
         "cancel": "Avbryt",
         "save": "Spara inställningar",
@@ -298,7 +298,7 @@
     },
     "regions": {
       "title": "Skatteregioner och skattesatser",
-      "loading": "Laddar regioner…",
+      "loading": "Läser in regioner…",
       "fields": {
         "code": {
           "label": "Regionkod",
@@ -352,7 +352,7 @@
       "rateSummary": {
         "noRates": "Ingen skattesats",
         "noCurrentRate": "Ingen aktuell skattesats",
-        "combined": "{{count}} kombinerade",
+        "combined": "Kombinerade: {{count}}",
         "combinedHint": "{{count}} aktiva skattesatser gäller idag och läggs ihop på fakturor."
       },
       "empty": {
@@ -396,7 +396,7 @@
     "thresholds": {
       "title": "Progressiva skatteintervall",
       "tooltip": "Definiera progressiva skatteintervall där olika skattesatser gäller för olika delar av beloppet. Varje intervall gäller endast den del av beloppet som ligger inom intervallet.",
-      "loading": "Laddar skatteintervall…",
+      "loading": "Läser in skatteintervall…",
       "empty": "Inga skatteintervall har definierats. Lägg till intervall för att använda progressiv beskattning.",
       "noLimit": "Ingen gräns",
       "above": "över",
@@ -462,7 +462,7 @@
     "components": {
       "title": "Skattekomponenter",
       "tooltip": "Komponenterna tillämpas i angiven ordning. Komponenter med skatt på skatt beräknar skatt på grundbeloppet plus tidigare skatter.",
-      "loading": "Laddar komponenter…",
+      "loading": "Läser in komponenter…",
       "empty": "Inga skattekomponenter har definierats. Lägg till komponenter för att skapa en sammansatt skatt.",
       "preview": {
         "title": "Förhandsgranskning av beräkning (grundbelopp {{amount}})",
@@ -532,7 +532,7 @@
       "title": "Skattebefrielseperioder",
       "titleWithName": "Skattebefrielseperioder för {{name}}",
       "tooltip": "Skattebefrielseperioder är tillfälliga perioder då den här skatten inte tillämpas. Använd dem för kampanjer, säsongsbundna undantag eller statligt beslutade skattebefrielseperioder.",
-      "loading": "Laddar skattebefrielseperioder…",
+      "loading": "Läser in skattebefrielseperioder…",
       "empty": "Inga skattebefrielseperioder har definierats. Lägg till perioder för att tillfälligt undanta den här skatten under angivna perioder.",
       "summary": {
         "active": "Aktiva: {{count}}",
@@ -608,13 +608,13 @@
       },
       "nudge": {
         "title": "Låt {{provider}} beräkna skatten på framtida fakturor?",
-        "description": "Rekommenderas. Nya fakturor skickas till {{provider}} utan skattebelopp, {{provider}} tillämpar sina skatteregler och den beräknade skatten synkroniseras tillbaka till Alga så att bokföringen stämmer överens i båda systemen. Du kan ändra detta när som helst under Debitering → Skatteinställningar.",
+        "description": "Rekommenderas. Nya fakturor skickas till {{provider}} utan skattebelopp, {{provider}} tillämpar sina skatteregler och den beräknade skatten synkroniseras tillbaka till Alga så att bokföringen stämmer överens i båda systemen. Du kan ändra detta när som helst under Fakturering → Skatteinställningar.",
         "actions": {
           "enable": "Ja, använd {{provider}}",
           "keepInternal": "Låt Alga fortsätta beräkna skatten"
         },
         "toast": {
-          "enabled": "{{provider}} beräknar skatten på nya fakturor. Du kan ändra detta i debiteringsinställningarna."
+          "enabled": "{{provider}} beräknar skatten på nya fakturor. Du kan ändra detta i faktureringsinställningarna."
         },
         "errors": {
           "loadSettings": "Det gick inte att läsa in de aktuella skatteinställningarna."
@@ -625,7 +625,7 @@
   "payments": {
     "title": "Betalningsinställningar",
     "description": "Ange hur betalningslänkar fungerar med dina fakturor.",
-    "loading": "Laddar betalningsinställningar…"
+    "loading": "Läser in betalningsinställningar…"
   },
   "serviceCategories": {
     "title": "Tjänstekategorier",
@@ -695,7 +695,7 @@
   "serviceTypes": {
     "title": "Anpassade tjänstetyper",
     "description": "Hantera din organisations anpassade tjänstetyper.",
-    "loading": "Laddar tjänstetyper…",
+    "loading": "Läser in tjänstetyper…",
     "dialog": {
       "addTitle": "Lägg till anpassad tjänstetyp",
       "editTitle": "Redigera anpassad tjänstetyp",
@@ -767,7 +767,7 @@
     "scheduledPriceBadge": "Nästa ändring {{date}}",
     "scheduledPriceNotice": "En prisändring är schemalagd till {{date}}. När du sparar här uppdateras det aktuella priset utan att den schemalagda ändringen avbryts.",
     "title": "Hantera tjänstekatalog",
-    "loading": "Laddar tjänster",
+    "loading": "Läser in tjänster",
     "dialog": {
       "editTitle": "Redigera tjänst"
     },
@@ -797,8 +797,8 @@
       },
       "pricing": {
         "label": "Prissättning *",
-        "primaryRateHelp": "Taxan i den första valutan är den primära taxan.",
-        "multiCurrencyHelp": "Lägg till priser i flera valutor. Taxan i den första valutan är den primära taxan.",
+        "primaryRateHelp": "Priset i den första valutan är det primära priset.",
+        "multiCurrencyHelp": "Lägg till priser i flera valutor. Priset i den första valutan är det primära priset.",
         "placeholders": {
           "currency": "Valuta",
           "rate": "0,00"
@@ -811,14 +811,14 @@
         }
       },
       "unitOfMeasure": {
-        "label": "Måttenhet *",
+        "label": "Måttenhet",
         "placeholder": "T.ex. GB, API-anrop, användare",
         "help": "Den mätbara enheten för debitering (t.ex. GB, API-anrop, användare)"
       },
       "taxRate": {
         "label": "Skattesats (valfri)",
         "placeholder": "Välj skattesats (eller lämna tomt för skattefri)",
-        "loading": "Laddar skattesatser…"
+        "loading": "Läser in skattesatser…"
       },
       "sku": {
         "label": "SKU",
@@ -860,14 +860,14 @@
       },
       "feedback": {
         "activateSuccess": "Antal aktiverade tjänster: {{count}}",
-        "activatePartial": "Antal aktiverade tjänster: {{count}}. Kunde inte aktiveras: {{failed}}",
+        "activatePartial": "Antal aktiverade tjänster: {{count}}. Det gick inte att aktivera: {{failed}}",
         "activateError": "Antal tjänster som inte kunde aktiveras: {{count}}",
         "deactivateSuccess": "Antal inaktiverade tjänster: {{count}}",
-        "deactivatePartial": "Antal inaktiverade tjänster: {{count}}. Kunde inte inaktiveras: {{failed}}",
+        "deactivatePartial": "Antal inaktiverade tjänster: {{count}}. Det gick inte att inaktivera: {{failed}}",
         "deactivateError": "Antal tjänster som inte kunde inaktiveras: {{count}}",
         "deleteSuccess": "Antal raderade tjänster: {{count}}",
-        "deletePartial": "Antal raderade tjänster: {{count}}. Kunde inte raderas: {{failed}}",
-        "deletePartialBlocked": "Antal raderade tjänster: {{count}}. Kunde inte raderas: {{failed}} ({{names}})",
+        "deletePartial": "Antal raderade tjänster: {{count}}. Det gick inte att radera: {{failed}}",
+        "deletePartialBlocked": "Antal raderade tjänster: {{count}}. Det gick inte att radera: {{failed}} ({{names}})",
         "deleteBlocked": "Antal tjänster som inte kunde raderas: {{count}}. Används fortfarande: {{names}}",
         "deleteError": "Antal tjänster som inte kunde raderas: {{count}}"
       }
@@ -904,7 +904,7 @@
   },
   "products": {
     "title": "Produkter",
-    "loading": "Laddar produkter",
+    "loading": "Läser in produkter",
     "thisProduct": "den här produkten",
     "actions": {
       "add": "Lägg till produkt",
@@ -929,14 +929,14 @@
       },
       "feedback": {
         "archiveSuccess": "Antal arkiverade produkter: {{count}}",
-        "archivePartial": "Antal arkiverade produkter: {{count}}. Kunde inte arkiveras: {{failed}}",
+        "archivePartial": "Antal arkiverade produkter: {{count}}. Det gick inte att arkivera: {{failed}}",
         "archiveError": "Antal produkter som inte kunde arkiveras: {{count}}",
         "restoreSuccess": "Antal återställda produkter: {{count}}",
-        "restorePartial": "Antal återställda produkter: {{count}}. Kunde inte återställas: {{failed}}",
+        "restorePartial": "Antal återställda produkter: {{count}}. Det gick inte att återställa: {{failed}}",
         "restoreError": "Antal produkter som inte kunde återställas: {{count}}",
         "deleteSuccess": "Antal permanent raderade produkter: {{count}}",
-        "deletePartial": "Antal raderade produkter: {{count}}. Kunde inte raderas: {{failed}}",
-        "deletePartialBlocked": "Antal raderade produkter: {{count}}. Kunde inte raderas: {{failed}} ({{names}})",
+        "deletePartial": "Antal raderade produkter: {{count}}. Det gick inte att radera: {{failed}}",
+        "deletePartialBlocked": "Antal raderade produkter: {{count}}. Det gick inte att radera: {{failed}} ({{names}})",
         "deleteBlocked": "Antal produkter som inte kunde raderas: {{count}}. Används fortfarande: {{names}}",
         "deleteError": "Antal produkter som inte kunde raderas: {{count}}"
       }
@@ -948,7 +948,7 @@
       "inactive": "Inaktiv",
       "allCategories": "Alla kategorier",
       "allTypes": "Alla typer",
-      "loading": "Laddar…"
+      "loading": "Läser in…"
     },
     "table": {
       "product": "Produkt",
@@ -1010,7 +1010,7 @@
       },
       "pricing": {
         "label": "Prissättning *",
-        "help": "Lägg till priser i flera valutor. Taxan i den första valutan är den primära taxan.",
+        "help": "Lägg till priser i flera valutor. Priset i den första valutan är det primära priset.",
         "placeholders": {
           "currency": "Valuta",
           "rate": "0,00"
@@ -1023,16 +1023,16 @@
         }
       },
       "unitOfMeasure": {
-        "label": "Måttenhet *",
+        "label": "Måttenhet",
         "placeholder": "T.ex. GB, API-anrop, användare",
         "help": "Den mätbara enheten för debitering (t.ex. GB, API-anrop, användare)"
       },
       "taxRate": {
         "label": "Skattesats (valfri)",
         "placeholder": "Välj skattesats (valfritt)",
-        "loading": "Laddar skattesatser…",
-        "inherit": "Använd klientorganisationens standard",
-        "inheritNamed": "Använd klientorganisationens standard ({{rate}})",
+        "loading": "Läser in skattesatser…",
+        "inherit": "Använd organisationens standardinställning",
+        "inheritNamed": "Använd organisationens standard ({{rate}})",
         "nonTaxable": "Skattefri"
       },
       "sku": {
@@ -1060,7 +1060,8 @@
       "billingMethodRequired": "Debiteringsmetod krävs",
       "skuRequiredForHardware": "SKU krävs för maskinvara",
       "licenseTermRequired": "Licensperiod krävs för programvarulicenser",
-      "selectedTypeNotFound": "Den valda tjänstetypen hittades inte"
+      "selectedTypeNotFound": "Den valda tjänstetypen hittades inte",
+      "unitOfMeasureRequired": "Måttenhet krävs"
     },
     "errors": {
       "fetchCategories": "Det gick inte att hämta kategorierna",
@@ -1094,7 +1095,7 @@
       "category": {
         "label": "Kategori",
         "placeholder": "Utan kategori",
-        "loading": "Laddar…"
+        "loading": "Läser in…"
       },
       "label": {
         "label": "Kategorietikett",
@@ -1115,9 +1116,9 @@
       },
       "pricing": {
         "label": "Prissättning *",
-        "help": "Lägg till priser i flera valutor. Taxan i den första valutan är den primära taxan.",
+        "help": "Lägg till priser i flera valutor. Priset i den första valutan är det primära priset.",
         "rateType": {
-          "rate": "Taxa"
+          "rate": "Pris"
         },
         "placeholders": {
           "currency": "Valuta",
@@ -1127,16 +1128,16 @@
       "taxRate": {
         "label": "Skattesats",
         "placeholder": "Skattefri",
-        "loading": "Laddar…",
-        "inherit": "Använd klientorganisationens standard",
-        "inheritNamed": "Använd klientorganisationens standard ({{rate}})",
+        "loading": "Läser in…",
+        "inherit": "Använd organisationens standardinställning",
+        "inheritNamed": "Använd organisationens standard ({{rate}})",
         "nonTaxable": "Skattefri"
       },
       "active": {
         "label": "Aktiv"
       },
       "unitOfMeasure": {
-        "label": "Måttenhet *",
+        "label": "Måttenhet",
         "placeholder": "T.ex. styck, artikel, licens"
       },
       "license": {
@@ -1188,7 +1189,7 @@
   },
   "clientTaxSettings": {
     "title": "Skatteinställningar för kund",
-    "loading": "Laddar skatteinställningar…",
+    "loading": "Läser in skatteinställningar…",
     "noSettingsFound": "Inga skatteinställningar hittades för den här kunden.",
     "createDefaultButton": "Skapa standardskatteinställningar",
     "alerts": {
@@ -1197,10 +1198,10 @@
     },
     "messages": {
       "defaultCreated": "Standardskatteinställningarna har skapats",
-      "createDefaultError": "Fel när standardskatteinställningarna skapades",
-      "fetchError": "Fel när skatteinställningarna hämtades",
+      "createDefaultError": "Det gick inte att skapa standardskatteinställningarna",
+      "fetchError": "Det gick inte att hämta skatteinställningarna",
       "updated": "Skatteinställningarna har uppdaterats",
-      "updateError": "Fel när skatteinställningarna uppdaterades",
+      "updateError": "Det gick inte att uppdatera skatteinställningarna",
       "taxExemptEnabled": "Kunden har markerats som skattebefriad.",
       "taxExemptDisabled": "Kunden är inte längre markerad som skattebefriad.",
       "taxExemptUpdateError": "Det gick inte att uppdatera skattebefrielsestatusen"
@@ -1249,10 +1250,10 @@
       },
       "taxSourceOverride": {
         "label": "Anpassad skatteberäkningskälla",
-        "tooltip": "Åsidosätt klientorganisationens standardkälla för skatteberäkning för den här kunden. ”Intern” använder Algas skatteberäkning. ”Extern” överlåter skatteberäkningen till bokföringssystemet när fakturor exporteras.",
+        "tooltip": "Åsidosätt organisationens standardkälla för skatteberäkning för den här kunden. ”Intern” använder Algas skatteberäkning. ”Extern” överlåter skatteberäkningen till bokföringssystemet när fakturor exporteras.",
         "placeholder": "Välj skatteberäkningskälla…",
         "options": {
-          "default": "Använd klientorganisationens standardinställning",
+          "default": "Använd organisationens standardinställning",
           "internal": "AlgaPSA beräknar skatten",
           "external": "Bokföringssystemet beräknar skatten"
         },
@@ -1263,7 +1264,7 @@
         },
         "notAvailable": {
           "messageStart": "Det går inte att anpassa skatteberäkningskällan. Funktionen måste aktiveras i",
-          "link": "debiteringsinställningarna",
+          "link": "faktureringsinställningarna",
           "messageEnd": "för att tillåta anpassade skatteberäkningskällor per kund."
         }
       },
@@ -1312,7 +1313,7 @@
     },
     "licenseTerm": {
       "monthly": "Månadsvis",
-      "annual": "Årsvis",
+      "annual": "Årligen",
       "perpetual": "Permanent"
     },
     "statuses": {
@@ -1328,7 +1329,7 @@
     },
     "emptyValue": "-",
     "notAvailable": "Ej tillämpligt",
-    "loading": "Laddar…",
+    "loading": "Läser in…",
     "a11y": {
       "openMenu": "Öppna meny"
     }
@@ -1351,26 +1352,26 @@
     "failedToLoadSettings": "Det gick inte att läsa in inställningarna",
     "failedToSaveSettings": "Det gick inte att spara inställningarna",
     "permissions": {
-      "readSettings": "Åtkomst nekad: Det går inte att läsa debiteringsinställningarna",
-      "updateSettings": "Åtkomst nekad: Det går inte att uppdatera debiteringsinställningarna",
-      "readClientSettings": "Åtkomst nekad: Det går inte att läsa kundens debiteringsinställningar",
-      "updateClientSettings": "Åtkomst nekad: Det går inte att uppdatera kundens debiteringsinställningar",
+      "readSettings": "Åtkomst nekad: Du saknar behörighet att läsa faktureringsinställningarna",
+      "updateSettings": "Åtkomst nekad: Du saknar behörighet att uppdatera faktureringsinställningarna",
+      "readClientSettings": "Åtkomst nekad: Du saknar behörighet att läsa kundens faktureringsinställningar",
+      "updateClientSettings": "Åtkomst nekad: Du saknar behörighet att uppdatera kundens faktureringsinställningar",
       "settingsRead": "Åtkomst nekad: Behörigheten read för billing_settings krävs",
       "settingsUpdate": "Åtkomst nekad: Behörigheten update för billing_settings krävs",
-      "readTaxRates": "Åtkomst nekad: Det går inte att läsa skattesatserna",
-      "createTaxRates": "Åtkomst nekad: Det går inte att skapa skattesatser",
-      "updateTaxRates": "Åtkomst nekad: Det går inte att uppdatera skattesatserna",
-      "updateTaxRegions": "Åtkomst nekad: Det går inte att uppdatera skatteregionerna"
+      "readTaxRates": "Åtkomst nekad: Du saknar behörighet att läsa skattesatser",
+      "createTaxRates": "Åtkomst nekad: Du saknar behörighet att skapa skattesatser",
+      "updateTaxRates": "Åtkomst nekad: Du saknar behörighet att uppdatera skattesatser",
+      "updateTaxRegions": "Åtkomst nekad: Du saknar behörighet att uppdatera skatteregioner"
     },
     "taxRate": {
-      "notAvailableForTenant": "Åtkomst nekad: Skattesatser för debitering är inte tillgängliga för den här klientorganisationen.",
+      "notAvailableForTenant": "Åtkomst nekad: Skattesatser för fakturering är inte tillgängliga för den här organisationen.",
       "overlap": "Skattesatsens datumintervall överlappar en befintlig skattesats för den här regionen.",
       "regionRequired": "Region krävs.",
       "idRequired": "Skattesatsens ID krävs vid uppdateringar.",
       "notFound": "Skattesatsen hittades inte.",
       "notFoundOrAlreadyDeleted": "Skattesatsen hittades inte eller har redan raderats.",
-      "invalid": "Den valda skattesatsen eller regionen är ogiltig. Ladda om och försök igen.",
-      "regionInvalid": "Den valda skatteregionen är inte längre giltig. Ladda om och välj en annan region.",
+      "invalid": "Den valda skattesatsen eller regionen är ogiltig. Ladda om sidan och försök igen.",
+      "regionInvalid": "Den valda skatteregionen är inte längre giltig. Uppdatera sidan och välj en annan region.",
       "duplicate": "Det finns redan en skattesats för den här regionen och det här datumintervallet.",
       "missingField": "Ett obligatoriskt fält för skattesatsen saknas.",
       "missingFieldNamed": "Ett obligatoriskt fält för skattesatsen saknas: {{field}}.",
@@ -1380,11 +1381,11 @@
     },
     "tax": {
       "defaultRequiresActiveRate": "Konfigurera minst en aktiv skattesats innan du skapar standardskatteinställningar.",
-      "componentNotFound": "Skattekomponenten hittades inte. Den kan ha uppdaterats eller raderats. Ladda om och försök igen.",
-      "bracketNotFound": "Skatteintervallet hittades inte. Det kan ha uppdaterats eller raderats. Ladda om och försök igen.",
-      "holidayNotFound": "Skattebefrielseperioden hittades inte. Den kan ha uppdaterats eller raderats. Ladda om och försök igen.",
-      "recordInvalid": "En av de valda skatteposterna är ogiltig. Ladda om och försök igen.",
-      "referenceMissing": "En av de valda skatteposterna finns inte längre. Ladda om och försök igen.",
+      "componentNotFound": "Skattekomponenten hittades inte. Den kan ha uppdaterats eller raderats. Ladda om sidan och försök igen.",
+      "bracketNotFound": "Skatteintervallet hittades inte. Det kan ha uppdaterats eller raderats. Ladda om sidan och försök igen.",
+      "holidayNotFound": "Skattebefrielseperioden hittades inte. Den kan ha uppdaterats eller raderats. Ladda om sidan och försök igen.",
+      "recordInvalid": "En av de valda skatteposterna är ogiltig. Ladda om sidan och försök igen.",
+      "referenceMissing": "En av de valda skatteposterna finns inte längre. Ladda om sidan och försök igen.",
       "duplicate": "Det finns redan en skattepost med de uppgifterna.",
       "notAllowed": "Ett av skattevärdena är inte tillåtet. Granska formuläret och försök igen.",
       "missingField": "Ett obligatoriskt skattefält saknas.",
@@ -1462,7 +1463,7 @@
       "invalidSecretKey": "Den hemliga nyckeln ska börja med sk_",
       "invalidPublishableKey": "Den publicerbara nyckeln ska börja med pk_",
       "connectSuccess": "Stripe har anslutits och webhookar har konfigurerats automatiskt.",
-      "connectPartialSuccess": "Stripe har anslutits. Obs: Den automatiska konfigurationen av webhookar misslyckades. Du kan behöva konfigurera webhookar manuellt i Stripes översiktspanel.",
+      "connectPartialSuccess": "Stripe har anslutits. Obs: Den automatiska konfigurationen av webhookar misslyckades. Du kan behöva konfigurera webhookar manuellt i Stripe Dashboard.",
       "connectFailed": "Det gick inte att ansluta Stripe",
       "disconnected": "Stripe har kopplats från",
       "disconnectFailed": "Det gick inte att koppla från Stripe",
@@ -1508,9 +1509,9 @@
       },
       "autopay": {
         "label": "Tillåt automatisk betalning",
-        "description": "Tillåt debiteringsprofiler att godkänna automatiska kortbetalningar.",
+        "description": "Tillåt faktureringsprofiler att godkänna automatiska kortbetalningar.",
         "chargeTiming": "Tidpunkt för debitering",
-        "onFinalize": "När fakturan färdigställs",
+        "onFinalize": "När fakturan fastställs",
         "onDueDate": "På förfallodatumet",
         "retryDays": "Intervall för nya försök (dagar)",
         "consentText": "Medgivandetext för automatisk betalning"
@@ -1518,7 +1519,7 @@
     },
     "stripe": {
       "cardTitle": "Stripe-betalningar",
-      "cardDescription": "Ta emot kreditkortsbetalningar för dina fakturor",
+      "cardDescription": "Ta emot kortbetalningar för dina fakturor",
       "connectedTitle": "Stripe är anslutet",
       "publishableKey": "Publicerbar nyckel: {{key}}…",
       "testConnection": "Testa anslutning",
@@ -1542,7 +1543,7 @@
         "secretKeyLabel": "Hemlig nyckel",
         "secretKeyPlaceholder": "sk_live_... eller sk_test_...",
         "secretKeyHelpPrefix": "Du hittar den här i",
-        "secretKeyHelpLink": "Stripes översiktspanel → API-nycklar",
+        "secretKeyHelpLink": "Stripe Dashboard → API-nycklar",
         "publishableKeyLabel": "Publicerbar nyckel",
         "publishableKeyPlaceholder": "pk_live_... eller pk_test_...",
         "connecting": "Ansluter…",
@@ -1560,39 +1561,39 @@
     }
   },
   "costRates": {
-    "title": "Kostnadstaxor",
-    "description": "Hantera interna arbetskostnadstaxor inklusive alla omkostnader som används i lönsamhetsrapporteringen.",
-    "loading": "Laddar kostnadstaxor…",
+    "title": "Timkostnader",
+    "description": "Hantera interna timkostnader för arbete, inklusive alla omkostnader, som används i lönsamhetsrapporteringen.",
+    "loading": "Läser in timkostnader…",
     "default": {
-      "title": "Klientorganisationens standardkostnadstaxa",
-      "current": "Aktuell standardtaxa: {{rate}} från {{date}}",
-      "missing": "Ingen standardtaxa har konfigurerats för klientorganisationen. Ingen kostnad beräknas för användare utan egna taxor.",
-      "history": "Historik för standardtaxor",
-      "empty": "Inga standardtaxor ännu."
+      "title": "Organisationens standardtimkostnad",
+      "current": "Aktuell standardtimkostnad: {{rate}} från {{date}}",
+      "missing": "Ingen standardtimkostnad har konfigurerats för organisationen. Ingen kostnad beräknas för användare utan egna timkostnader.",
+      "history": "Historik för standardtimkostnad",
+      "empty": "Inga standardtimkostnader ännu."
     },
     "empty": {
-      "title": "Kostnadstaxor har inte konfigurerats",
-      "description": "Ange först klientorganisationens standardtaxa så att rapporter kan beräkna arbetskostnader för användare utan egna taxor."
+      "title": "Timkostnader har inte konfigurerats",
+      "description": "Ange först organisationens standardtimkostnad så att rapporter kan beräkna arbetskostnader för användare utan egna timkostnader."
     },
     "table": {
-      "currentRate": "Aktuell taxa",
+      "currentRate": "Aktuell timkostnad",
       "actions": "Åtgärder",
-      "usesDefault": "Använder standardtaxa",
+      "usesDefault": "Använder standardtimkostnad",
       "uncosted": "Utan kostnadsberäkning",
       "status": "Status",
       "user": "Användare"
     },
     "history": {
-      "empty": "Inga användarspecifika taxor."
+      "empty": "Inga användarspecifika timkostnader."
     },
     "dialog": {
-      "title": "Kostnadstaxa",
-      "description": "Ange arbetskostnaden per timme inklusive alla omkostnader i klientorganisationens standardvaluta."
+      "title": "Timkostnad",
+      "description": "Ange arbetskostnaden per timme inklusive alla omkostnader i organisationens standardvaluta."
     },
     "fields": {
       "user": {
         "label": "Användare",
-        "default": "Klientorganisationens standardinställning"
+        "default": "Organisationens standardinställning"
       },
       "rate": {
         "label": "Timkostnad"
@@ -1605,9 +1606,9 @@
       }
     },
     "actions": {
-      "setDefault": "Ange standardtaxa",
-      "addRate": "Lägg till taxa",
-      "addUserRate": "Lägg till användartaxa",
+      "setDefault": "Ange standardtimkostnad",
+      "addRate": "Lägg till timkostnad",
+      "addUserRate": "Lägg till timkostnad för användare",
       "edit": "Redigera",
       "delete": "Radera",
       "cancel": "Avbryt",
@@ -1616,18 +1617,18 @@
       "continue": "Fortsätt"
     },
     "warning": {
-      "title": "Registrerad arbetstid finns inom detta intervall",
-      "description": "Om du ändrar den här taxan ändras den historiska lönsamheten för tidposter inom taxans giltighetsperiod.",
+      "title": "Registrerad arbetstid finns inom den här perioden",
+      "description": "Om du ändrar den här timkostnaden ändras den historiska lönsamheten för tidposter inom dess giltighetsperiod.",
       "body": "Fortsätt endast om detta är en avsiktlig korrigering."
     },
     "toast": {
-      "saved": "Kostnadstaxan har sparats.",
-      "deleted": "Kostnadstaxan har raderats."
+      "saved": "Timkostnaden har sparats.",
+      "deleted": "Timkostnaden har raderats."
     },
     "errors": {
-      "load": "Det gick inte att läsa in kostnadstaxorna",
-      "save": "Det gick inte att spara kostnadstaxan",
-      "delete": "Det gick inte att radera kostnadstaxan"
+      "load": "Det gick inte att läsa in timkostnaderna",
+      "save": "Det gick inte att spara timkostnaden",
+      "delete": "Det gick inte att radera timkostnaden"
     },
     "formats": {
       "noRate": "—",
@@ -1641,7 +1642,7 @@
       "ended": "Avslutad"
     },
     "sections": {
-      "userRates": "Användartaxor"
+      "userRates": "Användarnas timkostnader"
     }
   },
   "priceChangeRollout": {
@@ -1651,7 +1652,7 @@
     "apply": "Tillämpa på rader med ärvd taxa",
     "applying": "Sparar…",
     "effectiveDate": "Giltighetsdatum",
-    "effectiveDateHint": "Nästa debiteringsperiods startdatum används som standard.",
+    "effectiveDateHint": "Nästa faktureringsperiods startdatum används som standard.",
     "willChange": "Kommer att ändras",
     "noInheritedLines": "Inga rader med ärvd taxa ändras vid detta datum.",
     "custom": "Ändras inte – anpassad taxa",

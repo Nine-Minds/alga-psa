@@ -149,14 +149,14 @@ COPY.pt = {
 };
 COPY.sv = {
   headerLabel: 'Ärende skapat',
-  intro: 'Ditt ärende för <strong>{{ticket.clientName}}</strong> har skapats. Vårt team granskar det och återkommer — du kan följa ärendets framsteg via länken nedan.',
+  intro: 'Ditt ärende för <strong>{{ticket.clientName}}</strong> har skapats. Vårt team granskar det och återkommer – du kan följa ärendet via länken nedan.',
   badgePrefix: 'Ärende #',
   priority: 'Prioritet',
   status: 'Status',
   assignedTo: 'Tilldelat till',
   descriptionLabel: 'Beskrivning',
   viewButton: 'Visa ärende',
-  footer: 'Drivs av AlgaPSA &middot; Håller team samordnade',
+  footer: 'Drivs av AlgaPSA &middot; För samspelta team',
   textHeader: 'Ditt ärende har skapats',
   textDescription: 'Beskrivning',
   textView: 'Visa ärende',

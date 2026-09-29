@@ -192,7 +192,7 @@ const COPY = {
     footer: 'Drivs av AlgaPSA',
     textHeader: 'Påminnelse: Offert {{quote.number}} går ut {{quote.validUntil}}',
     textDetailsHeader: 'Offertdetaljer:',
-    textNoteLabel: 'Anteckning',
+    textNoteLabel: 'Meddelande',
   },
 };
 /* eslint-enable max-len */
