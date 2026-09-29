@@ -156,17 +156,76 @@ the report non-green; Sheets rows cannot supply the missing source identity.
 For manual invocation, supply the run ID and full tested revision (the tested
 merge commit for a PR).
 It verifies GitHub run/attempt identities and reads the existing
-`browser_readiness` rows using the configured metrics credentials. It retains
+`browser_readiness` rows for that run using the configured metrics credentials. It retains
 a JSON artifact and step summary, including missing exports, pending work,
 cancellations, stale attempts and conflicting identities. It does not write
 to the workbook. A recorder step succeeding without configured credentials
 can still leave a missing export; the report does not assume a network error.
 
+### Index-filtered reads and `browser_readiness` retention
+
+Reconciliation only ever looks at rows whose `run_url` names the run being
+reconciled, across every attempt and both editions. The collector therefore reads
+the tab in two phases: it scans `run_url` (column G) for the whole grid in
+20,000-row chunks, then fetches only the matched rows plus row 1 for the header,
+one `values:batchGet` range per run of adjacent rows. A single column stays cheap
+far past any retained history, and the scan is exact — unlike a trailing window it
+cannot miss a days-old run reconciled by hand. `collectionMetadata` records
+`sheetReadStrategy: index-filtered`, the scanned `indexRowCount` and the
+`matchedRowCount`; the collection diagnostics repeat both.
+
+Reading the whole grid was what broke this workflow: it appends roughly 80 rows
+per regression run and nothing deleted them, so the tab reached 19,091 rows and
+every reconcile refused it with `sheet-row-limit-exceeded`. Raising that cap only
+postpones the next failure and is not the fix.
+
+`Browser metrics retention` (`.github/workflows/browser-metrics-retention.yml`,
+weekly on Sunday 06:10 UTC, plus manual dispatch) bounds the tab.
+`scripts/browser-metrics-retention.mjs` keeps raw rows for a **90-day** window
+measured by `timestamp_utc`, archiving only whole ISO weeks, so a week is
+summarized exactly once and never in halves. For each archived week it appends one
+row per week × edition × `run_kind` to `browser_readiness_weekly`, then deletes
+the archived raw rows with `deleteDimension`, working bottom-up so row numbers
+cannot shift mid-operation.
+
+| Column | Meaning |
+|---|---|
+| `week` | ISO-8601 week of the archived rows, `YYYY-Www` |
+| `edition`, `run_kind` | copied from the archived rows; `unknown` where the row predates the column |
+| `runs` | archived `row_kind=run` rows |
+| `passed`, `failed`, `incomplete` | archived run rows by `lane_status` |
+| `journeys_with_retry` | archived journey rows with `retry_count` above zero |
+| `median_collected`, `median_executed` | medians over the archived run rows; blank when no row carried a count |
+| `archived_rows` | raw rows the summary replaced |
+| `schema_version`, `summarized_at_utc` | `1`, and when the summary was written |
+
+Dry run is the default, and manual dispatch defaults to it: the plan is printed
+and nothing is written. Summary keys are `(week, edition, run_kind)`, read back
+from `browser_readiness_weekly` before appending, so a re-run adds no duplicate;
+deletion happens only after the append succeeds. Before deleting, the job re-reads
+exactly the rows in each block and refuses unless every `timestamp_utc` still
+matches the plan, so a concurrent append or hand edit cannot make it delete the
+wrong rows. Rows inside the window, rows with an unreadable `timestamp_utc` and
+allocated empty rows are never deleted — trim empty rows by hand in the Sheets UI,
+because the index scan reads the grid's `rowCount`, which includes them.
+
+A manual reconcile of a run older than the window reports the export status
+`outside-retention` rather than `missing-export`, so an archived run does not read
+as a real gap. It is still non-green: an absent export is never silently passed.
+Without a collected run creation timestamp the stricter `missing-export` stands.
+
+Both workflows end with an `if: failure()` step that opens a single titled GitHub
+issue and updates it in place on later failures, so a streak is one notice rather
+than one per run. This workflow had failed 175 times in a row before anyone
+noticed, because a `workflow_run` failure shows up nowhere a reviewer looks.
+
 Collection writes `browser-metric-collection.json` alongside the reconciliation
 report. A failed collection remains a failed workflow, but retains its phase and
 error code in the artifact, job summary and log. HTTP failures include the status;
 a `sheet-row-limit-exceeded` failure includes the allocated grid row count and
-configured limit (currently 10,000). Empty allocated rows count toward that limit.
+configured limit (currently 200,000, bounding the index scan only). Empty
+allocated rows count toward that limit, and reaching it means retention stopped
+running rather than that history grew normally.
 Diagnostics omit credentials, response bodies and upstream exception messages.
 The collection status `collected` means evidence was fetched; only the subsequent
 reconciliation decides whether the browser exports are complete.
