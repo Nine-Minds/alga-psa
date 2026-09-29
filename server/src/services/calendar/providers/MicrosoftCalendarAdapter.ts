@@ -10,6 +10,15 @@ import { getWebhookBaseUrl } from '../../../utils/email/webhookHelpers';
  * Microsoft Graph API adapter for calendar synchronization
  * Handles OAuth authentication, webhook subscriptions, and event management
  */
+// Graph requires an explicit ID filter when expanding legacy properties.
+const ALGA_PROPERTY_PREFIX = 'String {66f5a359-4659-4830-9070-00047ec6ac6e} Name ';
+const ALGA_PROPERTY_NAMES = [
+  'AlgaRRULE', 'alga-entry-id', 'alga-assigned-user-ids', 'alga-tenant',
+  'alga-work-item-id', 'alga-work-item-type', 'alga-calendar-marker-name',
+  'alga-calendar-marker-note-count', 'alga-calendar-marker-notes-format',
+];
+const ALGA_PROPERTIES_EXPAND = `singleValueExtendedProperties($filter=${ALGA_PROPERTY_NAMES.map(name => `id eq '${ALGA_PROPERTY_PREFIX}${name}'`).join(' or ')})`;
+
 export class MicrosoftCalendarAdapter extends BaseCalendarAdapter {
   private httpClient: AxiosInstance;
   private baseUrl = 'https://graph.microsoft.com/v1.0';
@@ -404,7 +413,7 @@ export class MicrosoftCalendarAdapter extends BaseCalendarAdapter {
       await this.ensureValidToken();
 
       const calendarBase = this.getCalendarBasePath();
-      const response = await this.httpClient.get(`${calendarBase}/events/${eventId}`, { params: { '$expand': 'singleValueExtendedProperties' } });
+      const response = await this.httpClient.get(`${calendarBase}/events/${eventId}`, { params: { '$expand': ALGA_PROPERTIES_EXPAND } });
 
       return this.mapMicrosoftEventToExternal(response.data);
     } catch (error) {
@@ -435,7 +444,7 @@ export class MicrosoftCalendarAdapter extends BaseCalendarAdapter {
           $filter: `start/dateTime ge '${startDate.toISOString()}' and end/dateTime le '${endDate.toISOString()}'`,
           $orderby: 'start/dateTime',
           $select: 'id,subject,body,start,end,location,attendees,recurrence,webLink,createdDateTime,lastModifiedDateTime,organizer,isAllDay,sensitivity',
-          $expand: 'singleValueExtendedProperties'
+          $expand: ALGA_PROPERTIES_EXPAND
         }
       });
 
@@ -790,7 +799,8 @@ export class MicrosoftCalendarAdapter extends BaseCalendarAdapter {
   private mapMicrosoftEventToExternal(event: any): ExternalCalendarEvent {
     const privateProperties: Record<string, string> = {};
     for (const property of event.singleValueExtendedProperties || []) {
-      const propertyName = String(property.id || '').match(/\bName\s+(.+)$/i)?.[1];
+      const propertyId = String(property.id || '');
+      const propertyName = propertyId.startsWith(ALGA_PROPERTY_PREFIX) ? propertyId.slice(ALGA_PROPERTY_PREFIX.length) : undefined;
       if (propertyName && property.value !== undefined) privateProperties[propertyName] = String(property.value);
     }
 

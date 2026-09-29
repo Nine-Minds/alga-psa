@@ -267,10 +267,17 @@ describe('shared-calendar provider sync access', () => {
     ['google', 'marker-only'],
     ['microsoft', 'marker-only'],
     ['microsoft', 'category-only'],
+    ['google', 'html-notes'],
+    ['microsoft', 'entity-notes'],
   ] as const)('does not re-push %s %s metadata for a read-only member', async (providerType, metadataKind) => {
     const entryId = await seedGroupEntry([member, otherAssignee], { readMember: true });
     const externalId = await seedProviderAndMapping(entryId, member, `metadata-${providerType}-${metadataKind}`, providerId, providerType);
-    const description = metadataKind === 'category-only'
+    const originalNotes = metadataKind === 'html-notes' ? '<p>Alga notes</p>'
+      : metadataKind === 'entity-notes' ? 'Literal &lt;tag&gt;' : 'Alga notes';
+    await scoped('schedule_entries').where({ entry_id: entryId }).update({ notes: originalNotes });
+    const description = metadataKind === 'html-notes' ? '<p>Alga notes</p>\n[Alga calendar: Sync access test]'
+      : metadataKind === 'entity-notes' ? 'Literal &amp;lt;tag&amp;gt;\n<p>[Alga calendar: Sync access test]</p>'
+      : metadataKind === 'category-only'
       ? '<html><body><p>Alga notes</p></body></html>'
       : providerType === 'microsoft'
         ? '<html><body><p>Alga notes</p><p>[Alga calendar: Sync access test]</p></body></html>'
@@ -299,7 +306,7 @@ describe('shared-calendar provider sync access', () => {
     expect(await service.syncExternalEventToSchedule(externalId, providerId)).toMatchObject({ success: true, skipped: true });
     const row = await scoped('schedule_entries').where({ entry_id: entryId }).first();
     expect(row.title).toBe('Alga title');
-    expect(row.notes).toBe('Alga notes');
+    expect(row.notes).toBe(originalNotes);
     expect(adapter.updateEvent).not.toHaveBeenCalled();
     expect(fixture.published).toEqual([]);
     expect(await scoped('calendar_event_mappings').where({ schedule_entry_id: entryId }).first()).toMatchObject({ sync_status: 'synced' });

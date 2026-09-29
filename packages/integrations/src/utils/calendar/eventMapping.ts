@@ -78,7 +78,7 @@ export async function mapScheduleEntryToExternalEvent(
   const description = appendCalendarMarker(notes, owningCalendarName, provider);
   if (owningCalendarName) {
     extendedProperties.private[CALENDAR_MARKER_NAME_PROPERTY] = owningCalendarName;
-    extendedProperties.private[CALENDAR_MARKER_NOTE_COUNT_PROPERTY] = String(countCalendarMarkerLines(notes, owningCalendarName));
+    extendedProperties.private[CALENDAR_MARKER_NOTE_COUNT_PROPERTY] = String(Math.max(0, countCalendarMarkerLines(description, owningCalendarName) - 1));
     extendedProperties.private[CALENDAR_MARKER_NOTES_FORMAT_PROPERTY] = /<(?:p|div|br|html|body)\b/i.test(notes) ? 'html' : 'text';
   }
 
@@ -122,50 +122,43 @@ function escapeHtmlText(value: string): string {
 }
 
 function decodeHtmlText(value: string): string {
-  return value.replace(/&amp;/gi, '&').replace(/&lt;/gi, '<').replace(/&gt;/gi, '>')
-    .replace(/&quot;/gi, '"').replace(/&#39;|&apos;/gi, "'");
-}
-
-function isCalendarMarkerLine(value: string, calendarName: string): boolean {
-  return decodeHtmlText(value).trim() === `[Alga calendar: ${calendarName}]`;
+  // Decode once: &amp;lt; is literal &lt;, not a second encoded '<'.
+  const entities: Record<string, string> = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: '\u00a0' };
+  return value.replace(/&(#x[0-9a-f]+|#\d+|amp|lt|gt|quot|apos|nbsp);/gi, (entity, code: string) => {
+    if (!code.startsWith('#')) return entities[code.toLowerCase()] ?? entity;
+    const point = code[1].toLowerCase() === 'x' ? Number.parseInt(code.slice(2), 16) : Number.parseInt(code.slice(1), 10);
+    return point > 0 && point <= 0x10ffff && !(point >= 0xd800 && point <= 0xdfff)
+      ? String.fromCodePoint(point) : entity;
+  });
 }
 
 function findCalendarMarkerCandidates(notes: string, calendarName: string): Array<{ start: number; end: number }> {
   const marker = `[Alga calendar: ${calendarName}]`;
-  const escapedMarker = escapeHtmlText(marker);
   const candidates: Array<{ start: number; end: number }> = [];
+  // Google appends a literal line even when existing notes contain HTML. Do
+  // not decode plain text or skip the first line after an empty line.
+  for (const line of notes.matchAll(/[^\r\n]+/g)) {
+    if (line[0].trim() === marker) {
+      const start = line.index! + line[0].indexOf(marker);
+      candidates.push({ start, end: start + marker.length });
+    }
+  }
   const blocks = [...notes.matchAll(/<(p|div)(?:\s[^>]*)?>([^<>]*)<\/\1>/gi)];
   for (const block of blocks) {
-    if (isCalendarMarkerLine(block[2], calendarName) && block.index !== undefined) {
-      candidates.push({ start: block.index, end: block.index + block[0].length });
+    if (decodeHtmlText(block[2]).trim() === marker) {
+      candidates.push({ start: block.index!, end: block.index! + block[0].length });
     }
   }
-
-  if (/<(?:p|div|br|html|body)\b/i.test(notes)) {
-    // Provider HTML may leave source text in body text nodes and normalize its
-    // line breaks to <br>. Inspect each node and line separately; never cross tags.
-    const textNodes = [...notes.matchAll(/[^<>]+/g)];
-    for (const node of textNodes) {
-      if (node.index === undefined || blocks.some(block => node.index! >= block.index! && node.index! < block.index! + block[0].length)) continue;
-      const lines = [...node[0].matchAll(/(^|\r?\n)([^\r\n]*)/g)];
-      for (const line of lines) {
-        if (!isCalendarMarkerLine(line[2], calendarName)) continue;
-        const rawMarkerIndex = line[2].indexOf(escapedMarker);
-        if (rawMarkerIndex < 0) continue;
-        const start = node.index + line.index! + line[1].length + rawMarkerIndex;
-        candidates.push({ start, end: start + escapedMarker.length });
-      }
+  // Only inspect text nodes, never tag names/attributes, and do not match
+  // across elements containing user text. Blocks above own their contents.
+  for (const token of notes.matchAll(/<[^>]*>|[^<]+/g)) {
+    if (token[0].startsWith('<') || blocks.some(block => token.index! >= block.index! && token.index! < block.index! + block[0].length)) continue;
+    for (const line of token[0].matchAll(/[^\r\n]+/g)) {
+      if (decodeHtmlText(line[0]).trim() !== marker) continue;
+      const start = token.index! + line.index!;
+      const end = start + line[0].length;
+      if (!candidates.some(candidate => candidate.start >= start && candidate.end <= end)) candidates.push({ start, end });
     }
-    return candidates.sort((left, right) => left.start - right.start);
-  }
-
-  const lines = [...notes.matchAll(/(^|\r?\n)([^\r\n]*)/g)];
-  for (const line of lines) {
-    if (!isCalendarMarkerLine(line[2], calendarName) || line.index === undefined) continue;
-    const rawMarkerIndex = line[2].indexOf(marker);
-    if (rawMarkerIndex < 0) continue;
-    const start = line.index + line[1].length + rawMarkerIndex;
-    candidates.push({ start, end: start + marker.length });
   }
   return candidates.sort((left, right) => left.start - right.start);
 }
@@ -203,7 +196,7 @@ function stripCalendarMarker(notes: string | undefined, markerName?: string, ori
   else if (notes.slice(injected.end).startsWith('\r\n')) removeEnd += 2;
   else if (notes.slice(injected.end).startsWith('\n')) removeEnd++;
   const remaining = notes.slice(0, removeStart) + notes.slice(removeEnd);
-  return /^\s*(?:<html(?:\s[^>]*)?>\s*)?(?:<body(?:\s[^>]*)?>\s*)?(?:<\/body>\s*)?(?:<\/html>\s*)?$/i.test(remaining) ? '' : remaining || '';
+  return /<\/?(?:html|body)\b/i.test(remaining) && /^\s*(?:<html(?:\s[^>]*)?>\s*)?(?:<body(?:\s[^>]*)?>\s*)?(?:<\/body>\s*)?(?:<\/html>\s*)?$/i.test(remaining) ? '' : remaining || '';
 }
 
 function restoreCalendarNotes(notes: string | undefined, provider: 'google' | 'microsoft', format?: string): string | undefined {

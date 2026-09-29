@@ -30,6 +30,26 @@ describe('MicrosoftCalendarAdapter shared calendar categories', () => {
     });
   });
 
+  it.each([
+    ['workspace', MicrosoftCalendarAdapter],
+    ['enterprise', EnterpriseMicrosoftCalendarAdapter],
+    ['server', LegacyMicrosoftCalendarAdapter],
+  ] as const)('%s retrieves provenance with explicit Graph property filters', async (_name, Adapter) => {
+    const adapter = new Adapter(config) as any;
+    adapter.ensureValidToken = vi.fn().mockResolvedValue(undefined);
+    adapter.httpClient = { get: vi.fn().mockImplementation(async (_path: string, options: any) => {
+      const expand = options?.params?.$expand;
+      expect(expand).toMatch(/^singleValueExtendedProperties\(\$filter=id eq '/);
+      for (const name of ['alga-calendar-marker-name', 'alga-calendar-marker-note-count', 'alga-calendar-marker-notes-format', 'alga-entry-id']) {
+        expect(expand).toContain(`id eq 'String {66f5a359-4659-4830-9070-00047ec6ac6e} Name ${name}'`);
+      }
+      return { data: { id: 'event', value: [] } };
+    }) };
+    await adapter.getEvent('event');
+    await adapter.listEvents(new Date('2026-09-01'), new Date('2026-10-01'));
+    expect(adapter.httpClient.get).toHaveBeenCalledTimes(2);
+  });
+
   it.each(['Keep <safe> & notes\n', ''] as const)('sends escaped standalone HTML marker content to Graph for notes %j', async notes => {
     const adapter = new MicrosoftCalendarAdapter(config) as any;
     adapter.ensureValidToken = vi.fn().mockResolvedValue(undefined);

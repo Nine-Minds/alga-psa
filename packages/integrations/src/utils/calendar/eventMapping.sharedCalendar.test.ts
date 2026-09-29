@@ -11,6 +11,21 @@ const entry = (notes: string): IScheduleEntry => ({
 
 describe.each([['workspace', workspace], ['enterprise', enterprise], ['server', legacyServer]] as const)(
   '%s shared calendar metadata mapping', (_name, mapping) => {
+    it.each(['google', 'microsoft'] as const)('%s preserves HTML, literal entities and blank lines through repeated round trips', async provider => {
+      for (const notes of ['', '  ', '\n\n', '<p>Keep</p>', 'Keep\n\n', 'Literal &lt;tag&gt; and &quot;quoted&quot;', '[Alga calendar: R&D &lt;Ops&gt;]']) {
+        for (const name of ['Ops', 'R&D &lt;Ops&gt;', 'R&D <Ops>', 'Ops [West]']) {
+          const source = entry(notes);
+          let current = source;
+          for (let round = 0; round < 3; round++) {
+            const external = await mapping.mapScheduleEntryToExternalEvent(current, provider, new Map(), name);
+            const inbound = await mapping.mapExternalEventToScheduleEntry(external, 'unused-tenant', provider, new Map());
+            expect(inbound.notes, `${provider}: ${name}: ${notes}`).toBe(notes);
+            current = { ...source, ...inbound } as IScheduleEntry;
+          }
+        }
+      }
+    });
+
     it.each(['google', 'microsoft'] as const)('%s adds group metadata without changing title and round-trips notes', async provider => {
       const source = entry('Keep this note');
       const outbound = await mapping.mapScheduleEntryToExternalEvent(source, provider, new Map(), 'On-call');
