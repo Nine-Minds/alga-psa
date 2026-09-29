@@ -185,8 +185,24 @@ working.
 
 Four shards, the CI shard count, `VITEST_SEED=20260610`, 4 workers,
 `SKIP_DB_TESTS=1`: **two consecutive all-green runs** (772 + 772 + 771 + 771 =
-3086 files each, 17,606 tests, 0 failed, the same 6 platform skips). Re-run end
-to end after the matcher stopped using picomatch, with the same result.
+3086 files each, 0 failed, the same 6 platform skips). Re-run end to end after
+the matcher stopped using picomatch, with the same result.
+
+Re-run once more end to end after the DB-lane fix below (the two config options
+removed, the sweep scoped), against the final tree. Both passes identical:
+
+| | shard 1 | shard 2 | shard 3 | shard 4 | total |
+| --- | --- | --- | --- | --- | --- |
+| files | 772 | 772 | 771 | 771 | 3086 |
+| passed | 4498 | 4365 | 4270 | 4467 | **17,600** |
+| failed | 0 | 0 | 0 | 0 | **0** |
+| skipped | 0 | 0 | 0 | 6 | 6 |
+
+`window is not defined` / `document is not defined` occurrences across all eight
+shard logs: **0**. The `qbo` smoke flake recorded below did not recur in either
+pass. The two unit-lane files that stub inside `beforeAll`
+(`ClientInvoicePreview.servicePeriods.test.tsx`,
+`ticketDocumentsMetadata.test.tsx`) pass under the `jsdom` project in both runs.
 
 One earlier run lost shard 2 to `packages/emulators/qbo/tests/smoke.test.ts`,
 which is worth recording because it is *not* an environment failure and should
