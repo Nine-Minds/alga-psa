@@ -218,6 +218,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
   // Whether the open composer holds typed text. Reported to the surrounding
   // Drawer/Dialog so Escape or an overlay click asks before dropping it.
   const [composeHasContent, setComposeHasContent] = useState(false);
+  // LEVERAGE: pattern composer-dirty-guard — same track-content + two-guard shape as BentoTimelineTile and InlineReplyComposer
   useRegisterDismissGuard(showEditor && composeHasContent);
   // Full-page ticket view: no Dialog/Drawer to guard, so the page-level registry
   // makes prev/next ticket navigation confirm and reload/history chords blocked.

@@ -65,6 +65,7 @@ export function InlineReplyComposer({
 
   // A typed reply must survive a stray Escape / overlay click on the drawer or
   // dialog hosting this composer: report it so the container asks before closing.
+  // LEVERAGE: pattern composer-dirty-guard — same track-content + two-guard shape as TicketConversation and BentoTimelineTile
   const hasTypedReply = hasEditorContent(content);
   useRegisterDismissGuard(hasTypedReply);
   // On a full page (no Dialog/Drawer) the page-level registry guards ticket
