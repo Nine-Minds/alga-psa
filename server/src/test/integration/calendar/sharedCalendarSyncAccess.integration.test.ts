@@ -280,6 +280,7 @@ describe('shared-calendar provider sync access', () => {
       title: 'Alga title',
       description,
       ...(providerType === 'microsoft' && metadataKind === 'category-only' ? { categories: ['Alga calendar: Sync access test'] } : {}),
+      extendedProperties: { private: { 'alga-calendar-marker-name': 'Sync access test', 'alga-calendar-marker-note-count': '0', 'alga-calendar-marker-notes-format': 'text' } },
       status: 'confirmed',
       updated: '2026-08-02T00:00:00.000Z',
       start: { dateTime: '2026-09-01T10:00:00Z' },

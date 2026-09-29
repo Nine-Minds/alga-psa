@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
-import type { CalendarProviderConfig } from '@alga-psa/types';
+import type { CalendarProviderConfig, IScheduleEntry } from '@alga-psa/types';
+import { mapScheduleEntryToExternalEvent, mapExternalEventToScheduleEntry } from '../../../utils/calendar/eventMapping';
 import { MicrosoftCalendarAdapter } from './MicrosoftCalendarAdapter';
 import { CalendarProviderService } from '../CalendarProviderService';
 import { MicrosoftCalendarAdapter as EnterpriseMicrosoftCalendarAdapter } from '../../../../../../ee/packages/calendar/src/lib/services/calendar/providers/MicrosoftCalendarAdapter';
@@ -27,6 +28,51 @@ describe('MicrosoftCalendarAdapter shared calendar categories', () => {
     expect(adapter.httpClient.post).toHaveBeenCalledWith('/me/outlook/masterCategories', {
       displayName: 'Alga calendar: On-call', color: 'preset0',
     });
+  });
+
+  it.each(['Keep <safe> & notes\n', ''] as const)('sends escaped standalone HTML marker content to Graph for notes %j', async notes => {
+    const adapter = new MicrosoftCalendarAdapter(config) as any;
+    adapter.ensureValidToken = vi.fn().mockResolvedValue(undefined);
+    adapter.httpClient = {
+      get: vi.fn().mockResolvedValue({ data: { value: [{ displayName: 'Alga calendar: R&D <Ops>' }], categories: [] } }),
+      post: vi.fn(),
+      patch: vi.fn().mockResolvedValue({ data: { id: 'event', body: { content: '' }, categories: [] } }),
+    };
+    const source = {
+      entry_id: 'entry-1', title: 'Title', notes, assigned_user_ids: [], work_item_type: 'ad_hoc',
+      scheduled_start: new Date('2026-09-28T10:00:00Z'), scheduled_end: new Date('2026-09-28T11:00:00Z'),
+    } as unknown as IScheduleEntry;
+    const mapped = await mapScheduleEntryToExternalEvent(source, 'microsoft', new Map(), 'R&D <Ops>');
+    await adapter.updateEvent('event', mapped);
+    const payload = adapter.httpClient.patch.mock.calls[0][1];
+    expect(payload.body.contentType).toBe('HTML');
+    expect(payload.body.content).toContain('<p>[Alga calendar: R&amp;D &lt;Ops&gt;]</p>');
+    expect(payload.body.content).not.toContain('[Alga calendar: R&D <Ops>]');
+    if (notes) expect(payload.body.content).toContain('Keep &lt;safe&gt; &amp; notes<br>');
+    else expect(payload.body.content).toBe('<p>[Alga calendar: R&amp;D &lt;Ops&gt;]</p>');
+    expect(payload.singleValueExtendedProperties).toEqual(expect.arrayContaining([
+      expect.objectContaining({ id: expect.stringContaining('Name alga-calendar-marker-name'), value: 'R&D <Ops>' }),
+      expect.objectContaining({ id: expect.stringContaining('Name alga-calendar-marker-note-count'), value: '0' }),
+    ]));
+  });
+
+  it('reads marker provenance from provider-normalized Outlook HTML for inbound stripping', async () => {
+    const adapter = new MicrosoftCalendarAdapter(config) as any;
+    adapter.ensureValidToken = vi.fn().mockResolvedValue(undefined);
+    adapter.httpClient = { get: vi.fn().mockResolvedValue({ data: {
+      id: 'event', subject: 'Title', body: { contentType: 'html', content: '<html><body><p>Keep &amp; preserve</p><p>[Alga calendar: R&amp;D &lt;Ops&gt;]</p></body></html>' },
+      start: { dateTime: '2026-09-28T10:00:00', timeZone: 'UTC' },
+      end: { dateTime: '2026-09-28T11:00:00', timeZone: 'UTC' },
+      singleValueExtendedProperties: [
+        { id: 'String {66f5a359-4659-4830-9070-00047ec6ac6e} Name alga-calendar-marker-name', value: 'R&D <Ops>' },
+        { id: 'String {66f5a359-4659-4830-9070-00047ec6ac6e} Name alga-calendar-marker-note-count', value: '0' },
+        { id: 'String {66f5a359-4659-4830-9070-00047ec6ac6e} Name alga-calendar-marker-notes-format', value: 'text' },
+      ],
+    } }) };
+    const external = await adapter.getEvent('event');
+    expect(external.extendedProperties?.private?.['alga-calendar-marker-name']).toBe('R&D <Ops>');
+    const inbound = await mapExternalEventToScheduleEntry(external, 'unused-tenant', 'microsoft', new Map());
+    expect(inbound.notes).toBe('Keep & preserve');
   });
 
   it('continues event updates with a reconnect warning when category consent is missing', async () => {

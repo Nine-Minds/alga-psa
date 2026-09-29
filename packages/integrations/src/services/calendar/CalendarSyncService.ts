@@ -337,10 +337,7 @@ export class CalendarSyncService {
           }
 
           // Convert external event to schedule entry format
-          const owningCalendar = existingEntry.calendar_id
-            ? await tenantDb(trx, tenant).table('calendars').where({ calendar_id: existingEntry.calendar_id, calendar_type: 'group' }).first()
-            : null;
-          const entryData = await mapExternalEventToScheduleEntry(externalEvent, tenant, provider.provider_type, undefined, owningCalendar?.name, !!owningCalendar);
+          const entryData = await mapExternalEventToScheduleEntry(externalEvent, tenant, provider.provider_type);
 
           // Merge with existing entry, but preserve assigned_user_ids from Alga
           // External calendars often don't include the correct attendees, so we keep

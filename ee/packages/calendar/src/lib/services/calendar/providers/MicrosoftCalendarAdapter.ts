@@ -363,6 +363,16 @@ export class MicrosoftCalendarAdapter extends BaseCalendarAdapter {
         }];
       }
 
+      if (event.extendedProperties?.private) {
+        updateData.singleValueExtendedProperties = [
+          ...(updateData.singleValueExtendedProperties || []),
+          ...Object.entries(event.extendedProperties.private).map(([key, value]) => ({
+            id: `String {66f5a359-4659-4830-9070-00047ec6ac6e} Name ${key}`,
+            value
+          }))
+        ];
+      }
+
       const response = await this.httpClient.patch(`${calendarBase}/events/${eventId}`, updateData);
 
       return this.mapMicrosoftEventToExternal(response.data);
@@ -395,7 +405,7 @@ export class MicrosoftCalendarAdapter extends BaseCalendarAdapter {
       await this.ensureValidToken();
 
       const calendarBase = this.getCalendarBasePath();
-      const response = await this.httpClient.get(`${calendarBase}/events/${eventId}`);
+      const response = await this.httpClient.get(`${calendarBase}/events/${eventId}`, { params: { '$expand': 'singleValueExtendedProperties' } });
 
       return this.mapMicrosoftEventToExternal(response.data);
     } catch (error: any) {
@@ -424,7 +434,8 @@ export class MicrosoftCalendarAdapter extends BaseCalendarAdapter {
         params: {
           $filter: `start/dateTime ge '${startDate.toISOString()}' and end/dateTime le '${endDate.toISOString()}'`,
           $orderby: 'start/dateTime',
-          $select: 'id,subject,body,start,end,location,attendees,recurrence,webLink,createdDateTime,lastModifiedDateTime,organizer,isAllDay,sensitivity'
+          $select: 'id,subject,body,start,end,location,attendees,recurrence,webLink,createdDateTime,lastModifiedDateTime,organizer,isAllDay,sensitivity',
+          $expand: 'singleValueExtendedProperties'
         }
       });
 
@@ -774,6 +785,12 @@ export class MicrosoftCalendarAdapter extends BaseCalendarAdapter {
    * Map Microsoft Calendar event to ExternalCalendarEvent format
    */
   private mapMicrosoftEventToExternal(event: any): ExternalCalendarEvent {
+    const privateProperties: Record<string, string> = {};
+    for (const property of event.singleValueExtendedProperties || []) {
+      const propertyName = String(property.id || '').match(/\bName\s+(.+)$/i)?.[1];
+      if (propertyName && property.value !== undefined) privateProperties[propertyName] = String(property.value);
+    }
+
     // Extract RRULE from extended properties if present
     let recurrence: string[] | undefined;
     if (event.singleValueExtendedProperties) {
@@ -810,7 +827,8 @@ export class MicrosoftCalendarAdapter extends BaseCalendarAdapter {
         email: event.organizer.emailAddress?.address || '',
         name: event.organizer.emailAddress?.name
       } : undefined,
-      visibility: event.sensitivity === 'private' ? 'private' : 'default'
+      visibility: event.sensitivity === 'private' ? 'private' : 'default',
+      extendedProperties: Object.keys(privateProperties).length ? { private: privateProperties } : undefined
     };
   }
 

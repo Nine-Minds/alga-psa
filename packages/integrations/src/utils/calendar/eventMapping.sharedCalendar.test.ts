@@ -21,7 +21,7 @@ describe.each([['workspace', workspace], ['enterprise', enterprise], ['server', 
       let roundTrip: Partial<IScheduleEntry> = {};
       let current = outbound;
       for (let i = 0; i < 3; i++) {
-        roundTrip = await mapping.mapExternalEventToScheduleEntry(current, 'unused-tenant', provider, new Map(), 'On-call', true);
+        roundTrip = await mapping.mapExternalEventToScheduleEntry(current, 'unused-tenant', provider, new Map());
         expect(roundTrip.notes).toBe('Keep this note');
         current = await mapping.mapScheduleEntryToExternalEvent({ ...source, ...roundTrip } as IScheduleEntry, provider, new Map(), 'On-call');
       }
@@ -39,9 +39,10 @@ describe.each([['workspace', workspace], ['enterprise', enterprise], ['server', 
       const event: ExternalCalendarEvent = {
         id: 'event', provider: 'microsoft', title: 'Title',
         description: '<p>Keep [Alga calendar: user text] inside HTML.</p>\n<p>[Alga calendar: On-call]</p>',
+        extendedProperties: { private: { 'alga-calendar-marker-name': 'On-call', 'alga-calendar-marker-note-count': '0' } },
         start: { dateTime: '2026-09-28T10:00:00Z' }, end: { dateTime: '2026-09-28T11:00:00Z' },
       };
-      const inbound = await mapping.mapExternalEventToScheduleEntry(event, 'unused-tenant', 'microsoft', new Map(), 'On-call', true);
+      const inbound = await mapping.mapExternalEventToScheduleEntry(event, 'unused-tenant', 'microsoft', new Map());
       expect(inbound.notes).toBe('<p>Keep [Alga calendar: user text] inside HTML.</p>');
     });
 
@@ -51,7 +52,7 @@ describe.each([['workspace', workspace], ['enterprise', enterprise], ['server', 
       const normalized = provider === 'microsoft'
         ? { ...outbound, description: `<html><body><p>[Alga calendar: Ops [West]]</p></body></html>` }
         : outbound;
-      const inbound = await mapping.mapExternalEventToScheduleEntry(normalized, 'unused-tenant', provider, new Map(), 'Ops [West]', true);
+      const inbound = await mapping.mapExternalEventToScheduleEntry(normalized, 'unused-tenant', provider, new Map());
       expect(inbound.notes).toBe('');
     });
 
@@ -59,27 +60,56 @@ describe.each([['workspace', workspace], ['enterprise', enterprise], ['server', 
       const personalMarker = '[Alga calendar: Ops [West]]';
       const source = entry(personalMarker);
       const outbound = await mapping.mapScheduleEntryToExternalEvent(source, provider, new Map(), 'Ops [West]');
-      const inbound = await mapping.mapExternalEventToScheduleEntry(outbound, 'unused-tenant', provider, new Map(), 'Ops [West]', true);
+      const inbound = await mapping.mapExternalEventToScheduleEntry(outbound, 'unused-tenant', provider, new Map());
       expect(inbound.notes).toBe(personalMarker);
     });
 
-    it.each(['google', 'microsoft'] as const)('%s preserves note-ending whitespace and strips an old marker before the next outbound update', async provider => {
+    it.each(['google', 'microsoft'] as const)('%s strips only the marker actually injected before a rename, preserving a matching user note', async provider => {
+      const source = entry('Keep\n[Alga calendar: New]');
+      const oldOutbound = await mapping.mapScheduleEntryToExternalEvent(source, provider, new Map(), 'Old');
+      const inboundBeforeNextPush = await mapping.mapExternalEventToScheduleEntry(oldOutbound, 'unused-tenant', provider, new Map());
+      expect(inboundBeforeNextPush.notes).toBe(source.notes);
+      const renamed = await mapping.mapScheduleEntryToExternalEvent({ ...source, ...inboundBeforeNextPush } as IScheduleEntry, provider, new Map(), 'New');
+      expect(renamed.description).toContain('[Alga calendar: New]');
+      expect(renamed.description).not.toContain('[Alga calendar: Old]');
+    });
+
+    it.each(['google', 'microsoft'] as const)('%s preserves note-ending whitespace across repeated rounds', async provider => {
       const source = entry('Keep\n');
-      const oldOutbound = await mapping.mapScheduleEntryToExternalEvent(source, provider, new Map(), 'Old [Team]');
-      const inboundBeforeNextPush = await mapping.mapExternalEventToScheduleEntry(oldOutbound, 'unused-tenant', provider, new Map(), 'New [Team]', true);
-      expect(inboundBeforeNextPush.notes).toBe('Keep\n');
-      const renamed = await mapping.mapScheduleEntryToExternalEvent({ ...source, ...inboundBeforeNextPush } as IScheduleEntry, provider, new Map(), 'New [Team]');
-      expect(renamed.description).toContain('[Alga calendar: New [Team]]');
-      expect(renamed.description).not.toContain('[Alga calendar: Old [Team]]');
+      const outbound = await mapping.mapScheduleEntryToExternalEvent(source, provider, new Map(), 'On-call');
+      const inbound = await mapping.mapExternalEventToScheduleEntry(outbound, 'unused-tenant', provider, new Map());
+      expect(inbound.notes).toBe('Keep\n');
+    });
+
+    it.each(['google', 'microsoft'] as const)('%s preserves a user marker-like line on an existing group copy without provenance', async provider => {
+      const note = 'Keep\n[Alga calendar: user text]';
+      const event: ExternalCalendarEvent = {
+        id: 'existing', provider, title: 'Title', description: note,
+        start: { dateTime: '2026-09-28T10:00:00Z' }, end: { dateTime: '2026-09-28T11:00:00Z' },
+      };
+      const inbound = await mapping.mapExternalEventToScheduleEntry(event, 'unused-tenant', provider, new Map());
+      expect(inbound.notes).toBe(note);
+    });
+
+    it.each(['google', 'microsoft'] as const)('%s preserves user-authored marker text when the injected marker was removed externally', async provider => {
+      const source = entry('Keep\n[Alga calendar: Old]');
+      const outbound = await mapping.mapScheduleEntryToExternalEvent(source, provider, new Map(), 'Old');
+      const externalWithoutInjectedLine = { ...outbound, description: source.notes };
+      const inbound = await mapping.mapExternalEventToScheduleEntry(externalWithoutInjectedLine, 'unused-tenant', provider, new Map());
+      expect(inbound.notes).toBe(source.notes);
     });
 
     it.each(['google', 'microsoft'] as const)('%s removes a moved injected marker while preserving user text below it', async provider => {
+      const generated = await mapping.mapScheduleEntryToExternalEvent(entry('Keep'), provider, new Map(), 'Old [Team]');
       const event: ExternalCalendarEvent = {
+        ...generated,
         id: 'event', provider, title: 'Title',
-        description: 'Keep\n[Alga calendar: Old [Team]]\nAdded by user',
+        description: provider === 'microsoft'
+          ? '<html><body><p>Keep</p><p>[Alga calendar: Old [Team]]</p><p>Added by user</p></body></html>'
+          : 'Keep\n[Alga calendar: Old [Team]]\nAdded by user',
         start: { dateTime: '2026-09-28T10:00:00Z' }, end: { dateTime: '2026-09-28T11:00:00Z' },
       };
-      const inbound = await mapping.mapExternalEventToScheduleEntry(event, 'unused-tenant', provider, new Map(), 'New [Team]', true);
+      const inbound = await mapping.mapExternalEventToScheduleEntry(event, 'unused-tenant', provider, new Map());
       expect(inbound.notes).toBe('Keep\nAdded by user');
     });
 
@@ -110,7 +140,7 @@ describe.each([['workspace', workspace], ['enterprise', enterprise], ['server', 
       const restored = await mapping.mapExternalEventToScheduleEntry({
         ...once,
         categories: ['Alga calendar: R&D <Ops>'],
-      }, 'unused-tenant', 'microsoft', new Map(), 'R&D <Ops>', true);
+      }, 'unused-tenant', 'microsoft', new Map());
       const twice = await mapping.mapScheduleEntryToExternalEvent({ ...source, ...restored } as IScheduleEntry, 'microsoft', new Map(), 'R&D <Ops>');
       expect(twice.description).toBe(once.description);
       const inbound = restored;
