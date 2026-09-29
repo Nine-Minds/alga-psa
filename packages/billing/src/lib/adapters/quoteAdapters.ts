@@ -98,6 +98,7 @@ const mapQuoteItemToViewModel = (
     tax_amount: toFiniteNumber(item.tax_amount),
     net_amount: toFiniteNumber(item.net_amount),
     unit_of_measure: item.unit_of_measure ?? null,
+    unit_code: item.unit_code ?? null,
     phase: item.phase ?? null,
     is_optional: Boolean(item.is_optional),
     is_selected: item.is_selected !== false,

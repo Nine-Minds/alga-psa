@@ -5,6 +5,7 @@ import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { createRequire } from 'node:module';
+import { chromium, expect as expectBrowser } from '@playwright/test';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import {
   startDevServer,
@@ -44,7 +45,7 @@ type UpgradeOutcome =
   | { kind: 'response'; statusCode: number }
   | { kind: 'error'; error: Error };
 
-function requestUpgrade(port: number, path: string): Promise<UpgradeOutcome> {
+function requestUpgrade(port: number, path: string, origin?: string): Promise<UpgradeOutcome> {
   return new Promise((resolve) => {
     let settled = false;
     const finish = (outcome: UpgradeOutcome) => {
@@ -74,6 +75,7 @@ function requestUpgrade(port: number, path: string): Promise<UpgradeOutcome> {
         Upgrade: 'websocket',
         'Sec-WebSocket-Key': 'dGhlIHNhbXBsZSBub25jZQ==',
         'Sec-WebSocket-Version': '13',
+        ...(origin ? { Origin: origin } : {}),
       },
     });
     req.on('upgrade', (res, socket) => {
@@ -107,18 +109,30 @@ function findUnusedPort(): Promise<number> {
  */
 async function createFixtureApp(): Promise<string> {
   const dir = await mkdtemp(path.join(REPO_ROOT, '.tmp-dev-server-fixture-'));
-  await mkdir(path.join(dir, 'pages'), { recursive: true });
+  await mkdir(path.join(dir, 'app'), { recursive: true });
   await writeFile(
     path.join(dir, 'package.json'),
     JSON.stringify({ name: 'alga-dev-server-fixture', private: true, version: '0.0.0' }),
   );
   await writeFile(
     path.join(dir, 'next.config.mjs'),
-    `export default { allowedDevOrigins: ['127.0.0.1'], turbopack: { root: ${JSON.stringify(REPO_ROOT)} } };\n`,
+    `import { getAllowedDevOrigins } from ${JSON.stringify(path.join(SERVER_DIR, 'src/lib/http/devAllowedOrigins.mjs'))};\n` +
+      `export default { allowedDevOrigins: getAllowedDevOrigins(), turbopack: { root: ${JSON.stringify(REPO_ROOT)} } };\n`,
   );
   await writeFile(
-    path.join(dir, 'pages', 'index.js'),
-    'export default function Home() { return <main>fixture</main>; }\n',
+    path.join(dir, 'app', 'layout.js'),
+    'export default function RootLayout({ children }) { return <html><body>{children}</body></html>; }\n',
+  );
+  await writeFile(
+    path.join(dir, 'app', 'Counter.js'),
+    '"use client";\nimport { useState } from "react";\n' +
+      'export default function Counter() { const [count, setCount] = useState(0); return <button id="hydration-counter" onClick={() => setCount(value => value + 1)}>Count: {count}</button>; }\n',
+  );
+  await writeFile(
+    path.join(dir, 'app', 'page.js'),
+    'import Counter from "./Counter";\n' +
+      'async function InitialServerData() { await new Promise(resolve => setTimeout(resolve, 25)); return <p id="initial-rsc">Initial RSC ready</p>; }\n' +
+      'export default function Home() { return <main><Counter /><InitialServerData /></main>; }\n',
   );
   return dir;
 }
@@ -219,6 +233,9 @@ describe('development server turbopack entrypoint (dev:turbo)', () => {
   beforeAll(async () => {
     ({ running, fixtureDir } = await bootFixture({
       turbopack: true,
+      // Match the common dev setup: listen on all interfaces, then browse via
+      // loopback. The HMR Origin must be allowed independently of hostname.
+      hostname: '0.0.0.0',
       // No upstream configured: /hocuspocus must still be rejected promptly.
       hocuspocusHost: undefined,
       hocuspocusPort: undefined,
@@ -242,6 +259,7 @@ describe('development server turbopack entrypoint (dev:turbo)', () => {
     const outcome = await requestUpgrade(
       running.port,
       '/_next/webpack-hmr?id=turbo-test',
+      `http://127.0.0.1:${running.port}`,
     );
     expect(outcome.kind).toBe('upgrade');
     if (outcome.kind === 'upgrade') {
@@ -249,4 +267,68 @@ describe('development server turbopack entrypoint (dev:turbo)', () => {
       outcome.socket.destroy();
     }
   });
+
+  it('hydrates an App Router client control while opened through loopback on a differently named host', async () => {
+    const browser = await chromium.launch({
+      headless: true,
+      args: ['--no-sandbox'],
+      ...(process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH
+        ? { executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH }
+        : {}),
+    });
+    try {
+      const page = await browser.newPage();
+      const browserErrors: string[] = [];
+      const hmrErrors: string[] = [];
+      const failedBootstrapResources: string[] = [];
+      page.on('pageerror', (error) => browserErrors.push(error.message));
+      page.on('console', (message) => {
+        if (message.type() !== 'error') return;
+        if (message.text().includes('/_next/webpack-hmr')) hmrErrors.push(message.text());
+      });
+      page.on('response', (resource) => {
+        if (resource.status() < 400) return;
+        const type = resource.request().resourceType();
+        if (type === 'script' || type === 'fetch') {
+          failedBootstrapResources.push(`${resource.status()} ${resource.url()}`);
+        }
+      });
+
+      const response = await page.goto(`http://127.0.0.1:${running.port}/`, {
+        waitUntil: 'load',
+        timeout: 60_000,
+      });
+      expect(response?.status()).toBe(200);
+      const inlineFlightChunks = await page.locator('script').evaluateAll((scripts) =>
+        scripts.filter((script) => script.textContent?.includes('__next_f.push')).length,
+      );
+      expect(inlineFlightChunks).toBeGreaterThan(0);
+      await expectBrowser(page.locator('#initial-rsc')).toHaveText('Initial RSC ready');
+      const inlineFlightQueue = await page.evaluate(() => ({
+        flight: (window as Window & { __next_f?: unknown[] }).__next_f,
+      })).then(({ flight }) => ({
+        length: flight?.length ?? null,
+      }));
+      expect(inlineFlightQueue.length).toBe(0);
+      expect(failedBootstrapResources).toEqual([]);
+
+      const counter = page.locator('#hydration-counter');
+      await expectBrowser(counter).toHaveText('Count: 0');
+      const hasReactProps = await counter.evaluate((element) =>
+        Object.keys(element).some((key) => key.startsWith('__reactProps')),
+      );
+      expect(
+        hasReactProps,
+        JSON.stringify({ inlineFlightQueue, browserErrors, hmrErrors, failedBootstrapResources }),
+      ).toBe(true);
+      await counter.click();
+      await expectBrowser(counter).toHaveText('Count: 1');
+
+      expect(browserErrors).toEqual([]);
+      expect(hmrErrors).toEqual([]);
+      expect(failedBootstrapResources).toEqual([]);
+    } finally {
+      await browser.close();
+    }
+  }, 90_000);
 });

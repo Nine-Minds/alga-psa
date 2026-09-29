@@ -975,7 +975,7 @@
         }
       },
       "unitOfMeasure": {
-        "label": "Unidad de medida *",
+        "label": "Unidad de medida",
         "placeholder": "por ejemplo, GB, llamada API, usuario",
         "help": "La unidad medible para la facturación (por ejemplo, GB, llamada API, usuario)"
       },
@@ -1009,7 +1009,8 @@
       "billingMethodRequired": "Se requiere método de facturación",
       "skuRequiredForHardware": "Se requiere SKU para hardware",
       "licenseTermRequired": "Se requiere un plazo de licencia para las licencias de software",
-      "selectedTypeNotFound": "Tipo de servicio seleccionado no encontrado"
+      "selectedTypeNotFound": "Tipo de servicio seleccionado no encontrado",
+      "unitOfMeasureRequired": "Se requiere unidad de medida"
     },
     "errors": {
       "fetchCategories": "No se han podido recuperar las categorías",
@@ -1082,7 +1083,7 @@
         "label": "Activo"
       },
       "unitOfMeasure": {
-        "label": "Unidad de medida *",
+        "label": "Unidad de medida",
         "placeholder": "por ejemplo, cada, artículo, licencia"
       },
       "license": {

@@ -32,6 +32,20 @@ export function playwrightTests(report, root) {
   return entries;
 }
 
+// Retry-only passes, reported so they stop being invisible. This is the
+// classification reconcilePlaywrightExecution applies below; it stays a gate
+// failure there, a flaky observation here.
+export function flakyPlaywrightTests(report, root) {
+  return playwrightTests(report, root).flatMap(entry => {
+    const results = Array.isArray(entry.results) ? entry.results : [];
+    const retries = results.filter(result => result.retry > 0);
+    if (entry.status !== 'flaky' && !(retries.length && results.some(result => result.status === 'passed'))) return [];
+    const name = entry.titles.join(' > ');
+    return [{ testId: `${entry.file} > ${name} [${entry.projectName}]`, file: entry.file, name,
+      projectId: entry.projectId, projectName: entry.projectName, titles: entry.titles, retryCount: retries.length }];
+  });
+}
+
 // `deferred` lists collected identities a recorded judgment excused from this
 // run. Each must exist in the collection; the rest of the collection must run.
 export function reconcilePlaywrightExecution({ collected, report, root, revision, exitCode, deferred = [] }) {

@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import { testCounts } from '../record-test-metrics.mjs';
 import assert from 'node:assert/strict';
 import { execFileSync, spawnSync } from 'node:child_process';
-import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, unlinkSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, unlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -16,7 +16,9 @@ test('actual integration runner partitions, executes and rejects missing or stal
     writeFileSync(path.join(root, file), content);
   };
   for (const file of ['scripts/run-tier1-integration.mjs', 'scripts/verify-integration-shards.mjs',
-    'scripts/lib/integration-selection.mjs', 'scripts/lib/test-discovery.mjs', 'scripts/lib/test-execution-evidence.mjs', 'scripts/lib/test-revision.mjs', 'scripts/lib/test-sharding.mjs', 'scripts/lib/jev-enforcement.mjs']) {
+    'scripts/lib/integration-selection.mjs', 'scripts/lib/test-discovery.mjs', 'scripts/lib/test-execution-evidence.mjs',
+    'scripts/lib/test-revision.mjs', 'scripts/lib/test-sharding.mjs',
+    'scripts/lib/flaky-policy.mjs', 'scripts/lib/vitest-flaky-reporter.mjs', 'scripts/lib/jev-enforcement.mjs']) {
     write(file, readFileSync(path.join(source, file), 'utf8'));
   }
   write('.gitignore', 'node_modules\ntest-results/\nserver/test-results-integration.json\n');
@@ -33,7 +35,9 @@ test('actual integration runner partitions, executes and rejects missing or stal
   git('add', '.'); git('commit', '-qm', 'fixture');
   const run = (script, index = 1, mode = 'full', total = 3, base = '', overrides = {}) => spawnSync(process.execPath, [path.join(root, 'scripts', script)], {
     cwd: root, encoding: 'utf8', timeout: 30_000,
-    env: { ...process.env, CI: '1', TIER1_BASE_SHA: base, GITHUB_SHA: git('rev-parse', 'HEAD').trim(), INTEGRATION_FULL: String(mode === 'full'), INTEGRATION_JOB_RESULT: 'success', INTEGRATION_SELECTION_RESULT: 'success', INTEGRATION_EVENT: 'pull_request', INTEGRATION_SHARD_INDEX: String(index), INTEGRATION_SHARD_TOTAL: String(total), ...overrides },
+    // GITHUB_EVENT_NAME drives the retry-only-pass policy, so it is pinned here
+    // rather than inherited from whatever run executes this test.
+    env: { ...process.env, CI: '1', TIER1_BASE_SHA: base, GITHUB_SHA: git('rev-parse', 'HEAD').trim(), GITHUB_EVENT_NAME: 'pull_request', GITHUB_HEAD_REF: 'feature/flakes', GITHUB_REF_NAME: '', INTEGRATION_FULL: String(mode === 'full'), INTEGRATION_JOB_RESULT: 'success', INTEGRATION_SELECTION_RESULT: 'success', INTEGRATION_EVENT: 'pull_request', INTEGRATION_SHARD_INDEX: String(index), INTEGRATION_SHARD_TOTAL: String(total), ...overrides },
   });
   const read = file => JSON.parse(readFileSync(path.join(root, file), 'utf8'));
   for (const index of [1, 2, 3]) {
@@ -120,4 +124,49 @@ test('actual integration runner partitions, executes and rejects missing or stal
   }
   assert.equal(run('verify-integration-shards.mjs', 1, 'selected', 1, base, skipped).status, 1);
   assert.equal(run('verify-integration-shards.mjs', 1, 'selected', 1, 'missing-base', skipped).status, 1);
+
+  // The runner owns --retry=1 and the flaky reporter, so a fail-then-pass is
+  // recorded instead of vanishing into a rerun. The affected-collection check
+  // above removed the runner's node_modules; restore it to execute again.
+  symlinkSync(path.join(source, 'server/node_modules'), path.join(root, 'server/node_modules'), 'dir');
+  const marker = JSON.stringify(path.join(root, 'test-results/integration-marker'));
+  write('server/src/test/integration/recovers.test.ts', [
+    "import { existsSync, mkdirSync, writeFileSync } from 'node:fs';",
+    "import path from 'node:path';",
+    "test('recovers on retry', () => {",
+    `  if (!existsSync(${marker})) {`,
+    `    mkdirSync(path.dirname(${marker}), { recursive: true });`,
+    `    writeFileSync(${marker}, 'attempted');`,
+    "    throw new Error('deliberate first-attempt failure');",
+    '  }',
+    '  expect(2 + 3).toBe(5);',
+    '});',
+  ].join('\n') + '\n');
+  git('add', '.'); git('commit', '-qm', 'add a deliberately flaky integration suite');
+  const flakyId = 'src/test/integration/recovers.test.ts > recovers on retry';
+  const onPullRequest = run('run-tier1-integration.mjs', 1, 'full', 1);
+  assert.equal(onPullRequest.status, 0, onPullRequest.stdout + onPullRequest.stderr);
+  assert.match(onPullRequest.stderr, new RegExp(`::warning::Flaky test passed only on retry: ${flakyId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`));
+  const document = read('test-results/integration/flaky-tests.json');
+  assert.deepEqual([document.suite, document.job, document.eventName, document.branch],
+    ['integration', 'integration shard 1/1', 'pull_request', 'feature/flakes']);
+  assert.deepEqual(document.tests.map(entry => entry.testId), [flakyId]);
+  // Only a shard that retried fills the upload directory the weekly report reads.
+  assert.deepEqual(read('test-results/integration-flaky/flaky-tests.json'), document);
+
+  // The same flake on a push to main fails the lane's execution verification.
+  rmSync(path.join(root, 'test-results/integration-marker'));
+  const onPush = run('run-tier1-integration.mjs', 1, 'full', 1, '',
+    { GITHUB_EVENT_NAME: 'push', GITHUB_HEAD_REF: '', GITHUB_REF_NAME: 'main' });
+  assert.equal(onPush.status, 1, onPush.stdout);
+  const pushEvidence = read('test-results/integration/evidence.json');
+  assert.equal(pushEvidence.status, 'failed');
+  assert.ok(pushEvidence.failures.includes(`retry-only pass on push run: ${flakyId}`), pushEvidence.failures.join('\n'));
+  assert.equal(read('test-results/integration/flaky-tests.json').eventName, 'push');
+
+  // Nothing retried: the journal stays beside the evidence and nothing publishes.
+  const stable = run('run-tier1-integration.mjs', 1, 'full', 1);
+  assert.equal(stable.status, 0, stable.stdout + stable.stderr);
+  assert.deepEqual(read('test-results/integration/flaky-tests.json').tests, []);
+  assert.equal(existsSync(path.join(root, 'test-results/integration-flaky')), false);
 });

@@ -455,7 +455,8 @@
         "defaultRatePerUnit": "Tarief per eenheid (gebruikt als gedifferentieerde prijzen zijn uitgeschakeld).",
         "minimumUsage": "Minimaal factureerbare eenheden per periode.",
         "unitOfMeasure": "bijvoorbeeld GB, Gebruiker, Apparaat."
-      }
+      },
+      "catalogUnitPrecedence": "De catalogus-eenheid heeft voorrang op de eenheid in deze gebruiksconfiguratie."
     }
   },
   "list": {

@@ -110,6 +110,8 @@ export interface IInvoiceChargeTimeEntryLink {
 }
 
 export interface IInvoiceCharge extends TenantEntity, NetAmountItem {
+  unit_code?: string | null;
+  unit_label?: string | null;
   item_id: string;
   invoice_id: string;
   service_id?: string;

@@ -12551,6 +12551,10 @@ components:
           type: number
         unit_of_measure:
           type: string
+        unit_code:
+          type:
+            - string
+            - "null"
         category_id:
           type:
             - string
@@ -12722,6 +12726,10 @@ components:
           type: number
         unit_of_measure:
           type: string
+        unit_code:
+          type:
+            - string
+            - "null"
         category_id:
           type:
             - string
@@ -52952,6 +52960,8 @@ paths:
                   type: string
                   minLength: 1
                   maxLength: 128
+                unit_code:
+                  type: string
                 category_id:
                   anyOf:
                     - type: string
@@ -52975,7 +52985,6 @@ paths:
                 - custom_service_type_id
                 - billing_method
                 - default_rate
-                - unit_of_measure
             description: Service creation payload.
       responses:
         "201":
@@ -53101,6 +53110,8 @@ paths:
                   type: string
                   minLength: 1
                   maxLength: 128
+                unit_code:
+                  type: string
                 category_id:
                   anyOf:
                     - type: string
@@ -53358,6 +53369,8 @@ paths:
                   type: string
                   minLength: 1
                   maxLength: 128
+                unit_code:
+                  type: string
                 category_id:
                   anyOf:
                     - type: string
@@ -53455,7 +53468,6 @@ paths:
               required:
                 - service_name
                 - custom_service_type_id
-                - unit_of_measure
             description: Product creation payload.
       responses:
         "201":
@@ -53593,6 +53605,8 @@ paths:
                   type: string
                   minLength: 1
                   maxLength: 128
+                unit_code:
+                  type: string
                 category_id:
                   anyOf:
                     - type: string

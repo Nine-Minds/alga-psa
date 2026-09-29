@@ -1,5 +1,6 @@
 import type { IService } from '@/interfaces/billing.interfaces';
 import { BaseService, ServiceContext, ListResult, tenantDb, withTransaction } from '@alga-psa/db';
+import { resolveCatalogUnitForCreate, resolveCatalogUnitForUpdate } from '@alga-psa/shared/billingClients/tenantUnitsOfMeasure';
 import { splitServicePricesByEffectiveDate } from '@alga-psa/billing/models/service';
 import { resolveCatalogTaxRateIdForCreate } from '@alga-psa/shared/billingClients/defaultTaxRate';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
@@ -238,10 +239,9 @@ export class ServiceCatalogService extends BaseService<IService> {
       ...serviceInput
     } = rawData;
 
-    // Resolve the inherited default and insert inside one transaction, holding
-    // the documented rate/region locks until the catalog row is persisted.
-    // Publication happens only after commit so an external search consumer
-    // cannot read the event before its own connection can see the row.
+    // Resolve inherited defaults and units in the transaction, holding the
+    // documented rate/region locks until the catalog row is persisted.
+    // Publication happens only after commit so search consumers can read it.
     const createdResult = await withTransaction(knex, async (trx) => {
       if (custom_service_type_id) {
         const serviceType = await tenantDb(trx, tenant).table('service_types')
@@ -255,6 +255,7 @@ export class ServiceCatalogService extends BaseService<IService> {
       const serviceData = {
         category_id: serviceInput.category_id ?? null,
         ...serviceInput,
+        ...(await resolveCatalogUnitForCreate(trx, tenant, serviceInput)),
         tenant,
         default_rate: typeof serviceInput.default_rate === 'string'
           ? parseFloat(serviceInput.default_rate) || 0
@@ -300,6 +301,7 @@ export class ServiceCatalogService extends BaseService<IService> {
       currency_code: _currency_code,
       ...updateData
     } = data as any;
+    Object.assign(updateData, await resolveCatalogUnitForUpdate(knex, tenant, updateData));
 
     const [updated] = await tenantDb(knex, tenant).table('service_catalog')
       .where('service_id', id)

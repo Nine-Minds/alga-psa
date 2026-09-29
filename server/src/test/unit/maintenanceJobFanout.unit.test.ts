@@ -61,7 +61,15 @@ vi.mock('@alga-psa/billing/actions/contractCadenceServicePeriodMaterialization',
   replenishContractCadenceServicePeriodsSweep: (...a: unknown[]) => contractSweepMock(...a),
 }));
 
-import { runMaintenanceJob, isKnownMaintenanceJob, configureDateTriggerWorkflowLauncher } from '@alga-psa/jobs/fanout';
+import {
+  runMaintenanceJob,
+  isKnownMaintenanceJob,
+  configureDateTriggerWorkflowLauncher,
+  listMaintenanceJobNames,
+  registerMaintenanceJob,
+} from '@alga-psa/jobs/fanout';
+import { MAINTENANCE_FANOUT_SCHEDULES } from '@alga-psa/types';
+import { SERVER_MAINTENANCE_JOBS } from '../../lib/jobs/serverMaintenanceJobNames';
 
 describe('runMaintenanceJob', () => {
   beforeEach(() => {
@@ -245,5 +253,44 @@ describe('runMaintenanceJob', () => {
     await expect(runMaintenanceJob('replenishContractCadenceServicePeriods')).rejects.toThrow(
       'database unavailable',
     );
+  });
+
+  it('runs a server-registered job through the same fan-out', async () => {
+    const serverJob = vi.fn().mockResolvedValue(undefined);
+    registerMaintenanceJob('test-server-registered-job', { scope: 'tenant', run: serverJob });
+    listTenantsMock.mockReturnValue([{ tenant: 't1' }, { tenant: 't2' }]);
+
+    expect(isKnownMaintenanceJob('test-server-registered-job')).toBe(true);
+    const result = await runMaintenanceJob('test-server-registered-job');
+
+    expect(serverJob).toHaveBeenCalledWith('t1');
+    expect(serverJob).toHaveBeenCalledWith('t2');
+    expect(result).toMatchObject({ scope: 'tenant', total: 2, succeeded: 2, failed: 0 });
+  });
+});
+
+// EE/appliance runs recurring work only from the worker's maintenance-fanout:*
+// schedules. A schedule without a definition fails every tick; a definition
+// without a schedule silently never runs in EE (hour-block expiry and
+// provider-disconnect retry once shipped that way).
+describe('maintenance schedule / fan-out registry parity', () => {
+  const scheduled = MAINTENANCE_FANOUT_SCHEDULES.map(({ jobName }) => jobName);
+  const serverJobs = Object.values(SERVER_MAINTENANCE_JOBS) as string[];
+
+  it('resolves every Temporal maintenance schedule to a fan-out definition', () => {
+    const unresolved = scheduled.filter(
+      (jobName) => !isKnownMaintenanceJob(jobName) && !serverJobs.includes(jobName),
+    );
+    expect(unresolved).toEqual([]);
+  });
+
+  it('schedules every fan-out definition on Temporal', () => {
+    const definitions = [...listMaintenanceJobNames(), ...serverJobs]
+      .filter((jobName) => !jobName.startsWith('test-'));
+    expect(definitions.filter((jobName) => !scheduled.includes(jobName))).toEqual([]);
+  });
+
+  it('schedules each job exactly once', () => {
+    expect(new Set(scheduled).size).toBe(scheduled.length);
   });
 });

@@ -12,7 +12,7 @@ import EntityImageUpload from '@alga-psa/ui/components/EntityImageUpload';
 import { useRegisterUnsavedChanges } from '@alga-psa/ui/context';
 import { Palette, Sparkles } from 'lucide-react';
 import { toast } from 'react-hot-toast';
-import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type { EntityLogoVariant } from '@alga-psa/types';
 import {
@@ -20,6 +20,10 @@ import {
   updateTenantThemeAction,
 } from '@alga-psa/tenancy/actions/tenant-actions/tenantThemeActions';
 import { getTenantBrandingAction } from '@alga-psa/tenancy/actions/tenant-actions/tenantBrandingActions';
+import {
+  getDashboardWelcomeSettingsAction,
+  setDashboardWelcomeUseCompanyNameAction,
+} from '@alga-psa/tenancy/actions/tenant-settings-actions/dashboardWelcomeActions';
 import { deleteTenantLogo, recropTenantLogo, uploadTenantLogo } from '@alga-psa/tenancy/actions/tenant-actions/tenantLogoActions';
 import type { LogoCropRect } from '@alga-psa/types';
 import { getCurrentUser } from '@alga-psa/user-composition/actions/userQueryActions';
@@ -85,6 +89,11 @@ const AppearanceSettings = () => {
   const [logoWideUrl, setLogoWideUrl] = useState('');
   const [logoWideDarkUrl, setLogoWideDarkUrl] = useState('');
   const [faviconUrl, setFaviconUrl] = useState('');
+  // The dashboard welcome opt-in is not part of the theme draft: it is a single
+  // flag, shared with Settings → General, and it saves the moment it is flipped.
+  const [welcomeUsesCompanyName, setWelcomeUsesCompanyName] = useState(false);
+  const [welcomeCompanyName, setWelcomeCompanyName] = useState<string | null>(null);
+  const [welcomeSaving, setWelcomeSaving] = useState(false);
 
   const isDirty = useMemo(() => {
     if (draft.pairId !== saved.pairId) return true;
@@ -100,10 +109,11 @@ const AppearanceSettings = () => {
   useEffect(() => {
     const load = async () => {
       try {
-        const [theme, branding, user] = await Promise.all([
+        const [theme, branding, user, welcome] = await Promise.all([
           getTenantThemeAction(),
           getTenantBrandingAction(),
           getCurrentUser(),
+          getDashboardWelcomeSettingsAction().catch(() => null),
         ]);
         const persisted = theme.customTheme
           ? { light: theme.customTheme.light, dark: theme.customTheme.dark }
@@ -139,6 +149,8 @@ const AppearanceSettings = () => {
         setFaviconUrl(branding?.faviconUrl || '');
         setClientName(branding?.clientName || '');
         setTenantId(user?.tenant || '');
+        setWelcomeUsesCompanyName(welcome?.useCompanyName === true);
+        setWelcomeCompanyName(welcome?.companyName ?? null);
       } catch (error) {
         handleError(error, t('appearance.messages.loadFailed', { defaultValue: 'Failed to load appearance settings' }));
       } finally {
@@ -234,6 +246,33 @@ const AppearanceSettings = () => {
       handleError(error, t('appearance.messages.saveFailed', { defaultValue: 'Failed to save appearance settings' }));
     } finally {
       setSaving(false);
+    }
+  };
+
+  const toggleWelcomeCompanyName = async (checked: boolean) => {
+    const previous = welcomeUsesCompanyName;
+    setWelcomeSaving(true);
+    setWelcomeUsesCompanyName(checked);
+    try {
+      const result = await setDashboardWelcomeUseCompanyNameAction(checked);
+      if (isActionPermissionError(result)) {
+        setWelcomeUsesCompanyName(previous);
+        handleError(result, t('dashboardWelcome.messages.saveFailed', {
+          defaultValue: 'Failed to update the dashboard welcome',
+        }));
+        return;
+      }
+      // The banner is rendered on the server, so refresh rather than making the
+      // admin reload to see the new title.
+      router.refresh();
+      toast.success(t('dashboardWelcome.messages.saved', { defaultValue: 'Dashboard welcome updated' }));
+    } catch (error) {
+      setWelcomeUsesCompanyName(previous);
+      handleError(error, t('dashboardWelcome.messages.saveFailed', {
+        defaultValue: 'Failed to update the dashboard welcome',
+      }));
+    } finally {
+      setWelcomeSaving(false);
     }
   };
 
@@ -412,6 +451,49 @@ const AppearanceSettings = () => {
                 </p>
               </button>
             )}
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>{t('dashboardWelcome.label', { defaultValue: 'Use your company name in the dashboard welcome' })}</CardTitle>
+          <CardDescription>
+            {welcomeCompanyName
+              ? t('dashboardWelcome.help', {
+                  defaultValue:
+                    'Off by default: the MSP dashboard reads "Welcome to Your MSP Command Center". Turn this on and it names the client marked as your company instead. This switch saves on its own, right away.',
+                })
+              : t('dashboardWelcome.noCompany', {
+                  defaultValue:
+                    'No client is marked as your company yet. Pick one under Settings → General and its name can appear here.',
+                })}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-between gap-4">
+            <p className="text-sm">
+              {t('dashboardWelcome.previewLabel', { defaultValue: 'Your team sees:' })}{' '}
+              <span className="font-medium">
+                {welcomeUsesCompanyName && welcomeCompanyName
+                  ? t('dashboardWelcome.preview', {
+                      defaultValue: 'Welcome to the {{companyName}} Command Center',
+                      companyName: welcomeCompanyName,
+                    })
+                  : t('dashboardWelcome.previewDefault', {
+                      defaultValue: 'Welcome to Your MSP Command Center',
+                    })}
+              </span>
+            </p>
+            <Switch
+              id="dashboard-welcome-company-name-toggle"
+              checked={welcomeUsesCompanyName}
+              disabled={loading || welcomeSaving || !welcomeCompanyName}
+              onCheckedChange={toggleWelcomeCompanyName}
+              aria-label={t('dashboardWelcome.label', {
+                defaultValue: 'Use your company name in the dashboard welcome',
+              })}
+            />
           </div>
         </CardContent>
       </Card>

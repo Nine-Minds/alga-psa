@@ -36062,6 +36062,9 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "minLength": 1,
           "maxLength": 128
         },
+        "unit_code": {
+          "type": "string"
+        },
         "category_id": {
           "anyOf": [
             {
@@ -36109,8 +36112,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "service_name",
         "custom_service_type_id",
         "billing_method",
-        "default_rate",
-        "unit_of_measure"
+        "default_rate"
       ]
     },
     "responseBodySchema": {
@@ -36223,6 +36225,9 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "type": "string",
           "minLength": 1,
           "maxLength": 128
+        },
+        "unit_code": {
+          "type": "string"
         },
         "category_id": {
           "anyOf": [
@@ -36538,6 +36543,9 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "minLength": 1,
           "maxLength": 128
         },
+        "unit_code": {
+          "type": "string"
+        },
         "category_id": {
           "anyOf": [
             {
@@ -36739,8 +36747,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       },
       "required": [
         "service_name",
-        "custom_service_type_id",
-        "unit_of_measure"
+        "custom_service_type_id"
       ]
     },
     "responseBodySchema": {
@@ -36858,6 +36865,9 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "type": "string",
           "minLength": 1,
           "maxLength": 128
+        },
+        "unit_code": {
+          "type": "string"
         },
         "category_id": {
           "anyOf": [

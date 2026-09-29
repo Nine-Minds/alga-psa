@@ -455,7 +455,8 @@
         "defaultRatePerUnit": "Tarifa por unidad (se utiliza si el precio escalonado está desactivado).",
         "minimumUsage": "Unidades mínimas facturables por período.",
         "unitOfMeasure": "por ejemplo, GB, Usuario, Dispositivo."
-      }
+      },
+      "catalogUnitPrecedence": "La unidad del catálogo tiene prioridad sobre la unidad de esta configuración de uso."
     }
   },
   "list": {

@@ -1,8 +1,12 @@
 'use client';
 
+
+import { resolveUnitOfMeasure } from '@alga-psa/core/unitOfMeasure';
 import React, { useState, useEffect } from 'react';
 import { Label } from '@alga-psa/ui/components/Label';
 import { Input } from '@alga-psa/ui/components/Input';
+import { UnitOfMeasureInput } from '@alga-psa/ui/components/UnitOfMeasureInput';
+import { listTenantUnitsOfMeasure, registerTenantUnitOfMeasure } from '@alga-psa/billing/actions/unitOfMeasureActions';
 import { Button } from '@alga-psa/ui/components/Button';
 import { ContractWizardData } from '../ContractWizard';
 import { ServiceCatalogPicker, ServiceCatalogPickerItem } from '../ServiceCatalogPicker';
@@ -71,7 +75,7 @@ export function UsageBasedServicesStep({ data, updateData }: UsageBasedServicesS
           service_id: '',
           service_name: '',
           unit_rate: undefined,
-          unit_of_measure: 'unit',
+          unit_of_measure: '',
         },
       ],
     });
@@ -95,7 +99,7 @@ export function UsageBasedServicesStep({ data, updateData }: UsageBasedServicesS
       // Only prefill when a price exists in the contract's currency. Legacy default_rate is
       // untagged and likely USD — don't paste it into a non-USD contract.
       unit_rate: currencyRate,
-      unit_of_measure: item.unit_of_measure || next[index].unit_of_measure || 'unit',
+      unit_of_measure: item.unit_of_measure || next[index].unit_of_measure || resolveUnitOfMeasure({ fallback: 'C62' }).label,
     };
     updateData({ usage_services: next });
     setLegacyDefaultRates((prev) => ({
@@ -247,14 +251,12 @@ export function UsageBasedServicesStep({ data, updateData }: UsageBasedServicesS
                   <Label htmlFor={`unit-measure-${index}`} className="text-sm flex items-center gap-2 h-5">
                     {t('wizardUsage.labels.unitOfMeasure', { defaultValue: 'Unit of Measure' })}
                   </Label>
-                  <Input
+                  <UnitOfMeasureInput
                     id={`unit-measure-${index}`}
-                    type="text"
-                    value={service.unit_of_measure ?? 'unit'}
-                    onChange={(event) => handleUnitChange(index, event.target.value)}
-                    placeholder={t('wizardUsage.labels.unitOfMeasurePlaceholder', {
-                      defaultValue: 'e.g., GB, API call, user',
-                    })}
+                    value={service.unit_of_measure ?? ''}
+                    onChange={(unit: string) => handleUnitChange(index, unit)}
+                    loadCustomUnits={listTenantUnitsOfMeasure}
+                    registerCustomUnit={registerTenantUnitOfMeasure}
                   />
                   <p className="text-xs text-[rgb(var(--color-text-400))]">
                     {t('wizardUsage.labels.unitOfMeasureHint', { defaultValue: 'Choose the unit this service bills on.' })}

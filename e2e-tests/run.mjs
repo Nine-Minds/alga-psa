@@ -3,8 +3,9 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { publishFlakyTests, resetFlakyPublication } from '../scripts/lib/flaky-policy.mjs';
 import { reconcileDiscovery, repositoryTestFiles } from '../scripts/lib/test-discovery.mjs';
-import { playwrightTests, reconcilePlaywrightExecution } from '../scripts/lib/playwright-execution-evidence.mjs';
+import { flakyPlaywrightTests, playwrightTests, reconcilePlaywrightExecution } from '../scripts/lib/playwright-execution-evidence.mjs';
 import { testRevision } from '../scripts/lib/test-revision.mjs';
 import { browserTestMetrics } from '../scripts/lib/browser-test-metrics.mjs';
 import { applyBrowserPolicy, loadJevSelection, providerFloorFiles } from '../scripts/lib/jev-enforcement.mjs';
@@ -14,8 +15,11 @@ const cwd = fileURLToPath(new URL('.', import.meta.url));
 const root = path.resolve(cwd, '..');
 const output = path.join(cwd, 'execution-evidence');
 mkdirSync(output, { recursive: true });
-const files = Object.fromEntries(['collected', 'results', 'discovery', 'evidence', 'metrics'].map(name => [name, path.join(output, `${name}.json`)]));
+const files = Object.fromEntries(['collected', 'results', 'discovery', 'evidence', 'metrics', 'flaky-tests'].map(name => [name, path.join(output, `${name}.json`)]));
 for (const file of Object.values(files)) writeFileSync(file, 'null\n');
+// A rerun in the same workspace must not resurrect the previous run's flakes.
+const flakyUpload = path.join(output, 'flaky');
+resetFlakyPublication(flakyUpload);
 const save = (file, data) => writeFileSync(file, JSON.stringify(data, null, 2) + '\n');
 let before;
 let evidence;
@@ -98,5 +102,25 @@ save(files.metrics, browserTestMetrics({ collected: readReport(files.collected),
   artifactManifest: process.env.E2E_ARTIFACT_MANIFEST ? readReport(process.env.E2E_ARTIFACT_MANIFEST) : null,
   artifactManifestRequired: Boolean(process.env.E2E_ARTIFACT_MANIFEST),
   runId: process.env.GITHUB_RUN_ID, runAttempt: Number(process.env.GITHUB_RUN_ATTEMPT) }));
+// Always written next to the rest of the evidence, so a green run still shows
+// the reporter ran. Only a run that actually retried gets the upload copy the
+// weekly report downloads: an empty artifact from every run would spend that
+// job's whole GitHub API budget reading nothing.
+let flaky = [];
+try { flaky = flakyPlaywrightTests(readReport(files.results), root); } catch { flaky = []; }
+const edition = readReport(files.collected)?.config?.metadata?.edition ?? null;
+const runAttempt = Number(process.env.GITHUB_RUN_ATTEMPT);
+const flakyDocument = {
+  schemaVersion: 1, suite: 'production-browser', job: `production-browser (${edition ?? 'unknown'})`,
+  edition, revision: before?.revision ?? null, runId: process.env.GITHUB_RUN_ID ?? null,
+  runAttempt: Number.isSafeInteger(runAttempt) && runAttempt > 0 ? runAttempt : null,
+  // Which revision a flake was observed on decides whether it is somebody's
+  // branch misbehaving or main; the weekly report counts the two apart.
+  eventName: process.env.GITHUB_EVENT_NAME || null,
+  branch: process.env.GITHUB_HEAD_REF || process.env.GITHUB_REF_NAME || null,
+  tests: flaky.map(({ testId, file, name, projectName, retryCount }) => ({ testId, file, name, project: projectName, retryCount })),
+};
+save(files['flaky-tests'], flakyDocument);
+publishFlakyTests({ documentPath: files['flaky-tests'], directory: flakyUpload });
 for (const failure of evidence.failures) console.error(failure);
 process.exit(evidence.status === 'passed' ? 0 : 1);

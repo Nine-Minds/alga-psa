@@ -60,8 +60,22 @@
     },
     "clients": {
       "title": "Państwa firma",
-      "help": "Klient oznaczony jako Państwa firma reprezentuje Państwa własną organizację. Jego nazwa, adres i logo pojawiają się na fakturach, ofertach oraz w komunikacji z klientami.",
+      "help": "Klient oznaczony jako Państwa firma reprezentuje Państwa własną organizację. Jego nazwa, adres i logo pojawiają się na fakturach, ofertach oraz w komunikacji z klientami, a kraj jego lokalizacji określa format daty i kraj wstępnie wybierany w nowych rekordach.",
       "currentDefault": "Państwa firmą jest obecnie {{name}}.",
+      "defaults": {
+        "title": "Co określa Państwa firma",
+        "intro": "Kraj lokalizacji {{name}} określa poniższe ustawienia dla całej aplikacji MSP:",
+        "country": "Nowi klienci, kontakty i lokalizacje mają wstępnie wybrany kraj {{country}}.",
+        "countryMissing": "Nowi klienci, kontakty i lokalizacje nie mają wstępnie wybranego kraju.",
+        "phoneCode": "Numery telefonów zaczynają się od numeru kierunkowego {{code}}.",
+        "phoneCodeMissing": "Numery telefonów zaczynają się bez numeru kierunkowego.",
+        "dateFormat": "Daty są zapisywane jako {{pattern}} — {{example}} — w formacie {{clock}}.",
+        "clock12": "12-godzinnym",
+        "clock24": "24-godzinnym",
+        "noCountry": "{{name}} nie ma kraju w lokalizacji, więc wszystkie trzy wracają do domyślnego formatu {{pattern}}. Aby je zmienić, proszę dodać do {{name}} lokalizację z krajem — nie ma osobnego ustawienia formatu daty.",
+        "portalNote": "W portalu klienta daty są wyświetlane w formacie właściwym dla danego klienta, wynikającym z kraju jego lokalizacji, a nie Państwa.",
+        "changeIntro": "Przełączenie na {{name}} zmienia także te ustawienia domyślne:"
+      },
       "yourCompanyBadge": "Państwa firma",
       "table": {
         "name": "Nazwa",
@@ -99,6 +113,18 @@
         "setDefaultClient": "Nie udało się ustawić domyślnego klienta",
         "loadClients": "Nie udało się załadować klientów"
       }
+    }
+  },
+  "dashboardWelcome": {
+    "label": "Używaj nazwy firmy w powitaniu na pulpicie",
+    "help": "Domyślnie wyłączone: pulpit MSP wyświetla „Witamy w centrum dowodzenia MSP”. Po włączeniu pojawia się nazwa klienta oznaczonego jako Państwa firma. Ten przełącznik zapisuje się natychmiast i niezależnie.",
+    "noCompany": "Żaden klient nie jest jeszcze oznaczony jako Państwa firma. Proszę wybrać go w Ustawienia → Ogólne, aby jego nazwa mogła się tu pojawić.",
+    "previewLabel": "Państwa zespół zobaczy:",
+    "preview": "Witamy w centrum dowodzenia {{companyName}}",
+    "previewDefault": "Witamy w centrum dowodzenia MSP",
+    "messages": {
+      "saved": "Zaktualizowano powitanie na pulpicie",
+      "saveFailed": "Nie udało się zaktualizować powitania na pulpicie"
     }
   },
   "experimentalFeatures": {

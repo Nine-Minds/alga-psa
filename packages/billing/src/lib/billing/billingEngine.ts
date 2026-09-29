@@ -6500,6 +6500,7 @@ export class BillingEngine {
             "sc.service_name",
             "sc.tax_rate_id",
             "sc.unit_of_measure",
+            "sc.unit_code",
             "sc.billing_method",
           )
           .join("service_catalog as sc", function (this: any) {
@@ -6518,6 +6519,7 @@ export class BillingEngine {
               tax_rate_id: (member.tax_rate_id as string | null) ?? null,
               unit_of_measure:
                 (member.unit_of_measure as string | null) ?? null,
+              unit_code: (member.unit_code as string | null) ?? null,
               billing_method: (member.billing_method as string | null) ?? null,
             },
           ]),
@@ -6530,6 +6532,7 @@ export class BillingEngine {
         const firstMemberServiceId = members[0]?.service_id ?? null;
         const firstMemberTaxRateId = members[0]?.tax_rate_id ?? null;
         const firstMemberUnitOfMeasure = members[0]?.unit_of_measure ?? null;
+        const firstMemberUnitCode = members[0]?.unit_code ?? null;
         const firstMemberBillingMethod = members[0]?.billing_method ?? null;
 
         // Weighted when any member multiplier ≠ 1 or an after-hours rule exists.
@@ -6554,6 +6557,7 @@ export class BillingEngine {
           members.length > 0 ? firstMemberTaxRateId : null;
         const chargeUnitOfMeasure =
           members.length > 0 ? firstMemberUnitOfMeasure : null;
+        const chargeUnitCode = members.length > 0 ? firstMemberUnitCode : null;
         const chargeBillingMethod =
           members.length > 0 ? firstMemberBillingMethod : null;
 
@@ -6605,6 +6609,7 @@ export class BillingEngine {
             service_name: string;
             tax_rate_id: string | null;
             unit_of_measure: string | null;
+            unit_code: string | null;
             billing_method: string | null;
           }
         >();
@@ -6618,6 +6623,7 @@ export class BillingEngine {
               "sc.service_name",
               "sc.tax_rate_id",
               "sc.unit_of_measure",
+              "sc.unit_code",
               "sc.billing_method",
             );
           for (const row of catalogRows) {
@@ -6625,6 +6631,7 @@ export class BillingEngine {
               service_name: row.service_name as string,
               tax_rate_id: (row.tax_rate_id as string | null) ?? null,
               unit_of_measure: (row.unit_of_measure as string | null) ?? null,
+              unit_code: (row.unit_code as string | null) ?? null,
               billing_method: (row.billing_method as string | null) ?? null,
             });
           }
@@ -6648,6 +6655,7 @@ export class BillingEngine {
                   pool.bucket_name ?? metadata?.service_name ?? undefined,
                 tax_rate_id: metadata?.tax_rate_id ?? null,
                 unit_of_measure: metadata?.unit_of_measure ?? null,
+                unit_code: metadata?.unit_code ?? null,
                 billing_method: metadata?.billing_method ?? null,
                 weightedMinutes: contribution.weightedMinutes,
               };
@@ -6669,6 +6677,7 @@ export class BillingEngine {
               service_name: serviceName,
               tax_rate_id: chargeTaxRateId,
               unit_of_measure: chargeUnitOfMeasure,
+              unit_code: chargeUnitCode,
               billing_method: chargeBillingMethod,
               total_minutes: pool.total_minutes,
               overage_rate: pool.overage_rate,
