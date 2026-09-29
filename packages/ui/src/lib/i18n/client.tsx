@@ -32,10 +32,6 @@ import { useDateFormat } from '../dateFormat/useDateFormat';
 let i18nInitialized = false;
 let i18nInitialization: Promise<void> | null = null;
 
-// Make the singleton available to useTranslation during server rendering too.
-// Loading the resources is still started by I18nProvider on the client.
-initReactI18next.init(i18next);
-
 const BOOTSTRAP_LOADING_TEXT: Record<
   SupportedLocale,
   { translations: string; languagePreferences: string }
@@ -229,6 +225,11 @@ export function I18nProvider({
   preloadedResources,
   renderChildrenWhileLoading = false,
 }: I18nProviderProps) {
+  // Register only when a provider renders, including during SSR. Registering
+  // on module import makes standalone controls suspend on an uninitialized
+  // engine even though no provider exists to start loading its resources.
+  initReactI18next.init(i18next);
+
   const [locale, setLocaleState] = useState<SupportedLocale>(
     initialLocale || (LOCALE_CONFIG.defaultLocale as SupportedLocale)
   );

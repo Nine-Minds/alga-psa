@@ -33,8 +33,8 @@ vi.unmock('@alga-psa/ui/lib/i18n/client');
 
 const { I18nProvider, useTranslation } = await import('./client');
 
-function SignInForm() {
-  const { t } = useTranslation('msp/auth', { useSuspense: false });
+function SignInForm({ useSuspense }: { useSuspense?: boolean }) {
+  const { t } = useTranslation('msp/auth', useSuspense === undefined ? undefined : { useSuspense });
   const [email, setEmail] = useState('');
 
   return (
@@ -64,6 +64,16 @@ describe('I18nProvider auth loading recovery', () => {
     pendingReads.length = 0;
   });
 
+  it('renders usable fallback controls before any provider initializes the engine', () => {
+    expect(i18next.isInitialized).not.toBe(true);
+    render(<SignInForm />);
+
+    const email = screen.getByRole('textbox', { name: 'Email' });
+    fireEvent.change(email, { target: { value: 'standalone@example.test' } });
+    expect((email as HTMLInputElement).value).toBe('standalone@example.test');
+    expect(pendingReads).toHaveLength(0);
+  });
+
   it('keeps sign-in inputs usable while backend reads are pending, then applies translations', async () => {
     const initSpy = vi.spyOn(i18next, 'init');
     render(
@@ -73,7 +83,7 @@ describe('I18nProvider auth loading recovery', () => {
           namespaces={['common', 'msp/auth']}
           renderChildrenWhileLoading
         >
-          <SignInForm />
+          <SignInForm useSuspense={false} />
         </I18nProvider>
       </React.StrictMode>,
     );
