@@ -322,8 +322,18 @@ export class MicrosoftCalendarAdapter extends BaseCalendarAdapter {
         const desiredCategories = event.categories?.length
           ? await this.ensureMasterCategories(event.categories)
           : [];
-        const current = await this.httpClient.get(`${calendarBase}/events/${eventId}`, { params: { $select: 'categories' } });
-        const unrelated = (current.data.categories || []).filter((category: string) => !/^Alga calendar: /i.test(category));
+        const markerNamePropertyId = "String {66f5a359-4659-4830-9070-00047ec6ac6e} Name alga-calendar-marker-name";
+        const current = await this.httpClient.get(`${calendarBase}/events/${eventId}`, {
+          params: {
+            $select: 'categories,singleValueExtendedProperties',
+            $expand: `singleValueExtendedProperties($filter=id eq '${markerNamePropertyId}')`,
+          },
+        });
+        const ownedMarkerName = current.data.singleValueExtendedProperties?.find(
+          (property: { id?: string }) => property.id?.toLowerCase() === markerNamePropertyId.toLowerCase(),
+        )?.value;
+        const ownedCategory = typeof ownedMarkerName === 'string' ? `Alga calendar: ${ownedMarkerName}` : undefined;
+        const unrelated = (current.data.categories || []).filter((category: string) => category !== ownedCategory);
         updateData.categories = [...new Set([...unrelated, ...desiredCategories])];
       }
 

@@ -12,8 +12,8 @@ const entry = (notes: string): IScheduleEntry => ({
 describe.each([['workspace', workspace], ['enterprise', enterprise], ['server', legacyServer]] as const)(
   '%s shared calendar metadata mapping', (_name, mapping) => {
     it.each(['google', 'microsoft'] as const)('%s preserves HTML, literal entities and blank lines through repeated round trips', async provider => {
-      for (const notes of ['', '  ', '\n\n', '<p>Keep</p>', 'Keep\n\n', 'Literal &lt;tag&gt; and &quot;quoted&quot;', '[Alga calendar: R&D &lt;Ops&gt;]']) {
-        for (const name of ['Ops', 'R&D &lt;Ops&gt;', 'R&D <Ops>', 'Ops [West]']) {
+      for (const notes of ['', '  ', '\n\n', '<p>Keep</p>', '<html><body><p>Keep</p></body></html>', 'Keep\n\n', 'Literal &lt;tag&gt; and &quot;quoted&quot;', '[Alga calendar: R&D &lt;Ops&gt;]']) {
+        for (const name of ['Ops', 'R&D &lt;Ops&gt;', 'R&D <Ops>', 'Ops [West]', 'Ops $&', "Ops $' $` $$"]) {
           const source = entry(notes);
           let current = source;
           for (let round = 0; round < 3; round++) {
@@ -47,7 +47,7 @@ describe.each([['workspace', workspace], ['enterprise', enterprise], ['server', 
       const outbound = await mapping.mapScheduleEntryToExternalEvent(entry('Personal note'), provider, new Map());
       expect(outbound.title).toBe('Unchanged title');
       expect(outbound.description).toBe('Personal note');
-      expect(outbound.categories).toBeUndefined();
+      expect(outbound).not.toHaveProperty('categories');
     });
 
     it('strips only complete injected marker lines while retaining embedded marker-like text and HTML', async () => {

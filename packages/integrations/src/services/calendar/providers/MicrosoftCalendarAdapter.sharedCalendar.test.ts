@@ -50,6 +50,46 @@ describe('MicrosoftCalendarAdapter shared calendar categories', () => {
     expect(adapter.httpClient.get).toHaveBeenCalledTimes(2);
   });
 
+  it.each([
+    ['workspace', MicrosoftCalendarAdapter],
+    ['enterprise', EnterpriseMicrosoftCalendarAdapter],
+    ['server', LegacyMicrosoftCalendarAdapter],
+  ] as const)('%s leaves personal categories untouched and replaces only the category proven to be Alga-owned', async (_name, Adapter) => {
+    const adapter = new Adapter(config) as any;
+    adapter.ensureValidToken = vi.fn().mockResolvedValue(undefined);
+    adapter.httpClient = {
+      get: vi.fn().mockImplementation(async (path: string) => path.endsWith('masterCategories')
+        ? { data: { value: [{ displayName: 'Alga calendar: New' }] } }
+        : { data: {
+          categories: ['Alga calendar: Old', 'Alga calendar: Personal', 'User category'],
+          singleValueExtendedProperties: [{
+            id: 'String {66f5a359-4659-4830-9070-00047ec6ac6e} Name alga-calendar-marker-name',
+            value: 'Old',
+          }],
+        } }),
+      post: vi.fn(),
+      patch: vi.fn().mockResolvedValue({ data: { id: 'event', body: { content: '' }, categories: [] } }),
+    };
+
+    const personal = await mapScheduleEntryToExternalEvent({
+      entry_id: 'personal', title: 'Personal', notes: 'Notes', assigned_user_ids: [], work_item_type: 'ad_hoc',
+      scheduled_start: new Date('2026-09-28T10:00:00Z'), scheduled_end: new Date('2026-09-28T11:00:00Z'),
+    } as unknown as IScheduleEntry, 'microsoft', new Map());
+    expect(personal).not.toHaveProperty('categories');
+    await adapter.updateEvent('personal-event', personal);
+    expect(adapter.httpClient.get).toHaveBeenCalledTimes(0);
+    expect(adapter.httpClient.patch.mock.calls[0][1]).not.toHaveProperty('categories');
+
+    const group = await mapScheduleEntryToExternalEvent({
+      entry_id: 'group', title: 'Group', notes: 'Notes', assigned_user_ids: [], work_item_type: 'ad_hoc',
+      scheduled_start: new Date('2026-09-28T10:00:00Z'), scheduled_end: new Date('2026-09-28T11:00:00Z'),
+    } as unknown as IScheduleEntry, 'microsoft', new Map(), 'New');
+    await adapter.updateEvent('group-event', group);
+    expect(adapter.httpClient.patch.mock.calls[1][1].categories).toEqual([
+      'Alga calendar: Personal', 'User category', 'Alga calendar: New',
+    ]);
+  });
+
   it.each(['Keep <safe> & notes\n', ''] as const)('sends escaped standalone HTML marker content to Graph for notes %j', async notes => {
     const adapter = new MicrosoftCalendarAdapter(config) as any;
     adapter.ensureValidToken = vi.fn().mockResolvedValue(undefined);
@@ -103,7 +143,13 @@ describe('MicrosoftCalendarAdapter shared calendar categories', () => {
         if (path.endsWith('masterCategories')) {
           throw { response: { status: 403, data: { error: { code: 'ErrorAccessDenied' } } } };
         }
-        return { data: { categories: ['Alga calendar: Old', 'User category'] } };
+        return { data: {
+          categories: ['Alga calendar: Old', 'User category'],
+          singleValueExtendedProperties: [{
+            id: 'String {66f5a359-4659-4830-9070-00047ec6ac6e} Name alga-calendar-marker-name',
+            value: 'Old',
+          }],
+        } };
       }),
       post: vi.fn(),
       patch: vi.fn().mockResolvedValue({ data: {

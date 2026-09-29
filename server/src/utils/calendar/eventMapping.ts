@@ -89,7 +89,7 @@ export async function mapScheduleEntryToExternalEvent(
     provider,
     title: entry.title,
     description,
-    categories: provider === 'microsoft' && owningCalendarName ? [`Alga calendar: ${owningCalendarName}`] : undefined,
+    ...(provider === 'microsoft' && owningCalendarName ? { categories: [`Alga calendar: ${owningCalendarName}`] } : {}),
     start: isAllDay ? {
       date: formatDateOnly(startDate),
       timeZone: 'UTC'
@@ -175,8 +175,8 @@ function appendCalendarMarker(notes: string, calendarName: string | undefined, p
 
   const paragraph = `<p>${escapeHtmlText(marker)}</p>`;
   if (/<(?:p|div|br|html|body)\b/i.test(notes)) {
-    if (/<\/body>/i.test(notes)) return notes.replace(/<\/body>/i, `\n${paragraph}</body>`);
-    if (/<\/html>/i.test(notes)) return notes.replace(/<\/html>/i, `\n${paragraph}</html>`);
+    if (/<\/body>/i.test(notes)) return notes.replace(/<\/body>/i, () => `\n${paragraph}</body>`);
+    if (/<\/html>/i.test(notes)) return notes.replace(/<\/html>/i, () => `\n${paragraph}</html>`);
     return `${notes}${notes ? '\n' : ''}${paragraph}`;
   }
   const safeNotes = escapeHtmlText(notes).replace(/\r\n|\r|\n/g, '<br>');
