@@ -5,6 +5,7 @@ import type { PartialBlock } from '@blocknote/core';
 import { TextEditor } from '../editor';
 import { hasEditorContent } from '../editor/hasEditorContent';
 import { useRegisterDismissGuard } from './DismissGuard';
+import { useRegisterUnsavedChanges } from '../context/UnsavedChangesContext';
 import { Button } from './Button';
 import { Label } from './Label';
 import { Switch } from './Switch';
@@ -64,7 +65,11 @@ export function InlineReplyComposer({
 
   // A typed reply must survive a stray Escape / overlay click on the drawer or
   // dialog hosting this composer: report it so the container asks before closing.
-  useRegisterDismissGuard(hasEditorContent(content));
+  const hasTypedReply = hasEditorContent(content);
+  useRegisterDismissGuard(hasTypedReply);
+  // On a full page (no Dialog/Drawer) the page-level registry guards ticket
+  // navigation and reload instead; a no-op when no UnsavedChangesProvider is mounted.
+  useRegisterUnsavedChanges(`inline-reply-composer-${componentId}`, hasTypedReply);
 
   return (
     // Sticky so replying to a comment taller than the viewport keeps the

@@ -52,6 +52,7 @@ import { getContactAvatarUrlAction, getUserContactId, searchUsersForMentions } f
 import type { CommentContactAuthor, CommentUserAuthor } from '../../lib/commentAuthorResolution';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { useRegisterDismissGuard } from '@alga-psa/ui/components/DismissGuard';
+import { useRegisterUnsavedChanges } from '@alga-psa/ui/context/UnsavedChangesContext';
 import { hasEditorContent } from '@alga-psa/ui/editor/hasEditorContent';
 import { useTicketRichTextUploadSession } from './useTicketRichTextUploadSession';
 import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossFeatureContext';
@@ -218,6 +219,9 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
   // Drawer/Dialog so Escape or an overlay click asks before dropping it.
   const [composeHasContent, setComposeHasContent] = useState(false);
   useRegisterDismissGuard(showEditor && composeHasContent);
+  // Full-page ticket view: no Dialog/Drawer to guard, so the page-level registry
+  // makes prev/next ticket navigation confirm and reload/history chords blocked.
+  useRegisterUnsavedChanges(`${compId}-compose`, showEditor && composeHasContent);
 
   const handleComposeContentChange = React.useCallback((content: PartialBlock[]) => {
     setComposeHasContent(hasEditorContent(content));

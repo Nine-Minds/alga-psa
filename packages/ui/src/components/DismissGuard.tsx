@@ -12,7 +12,7 @@ import React, {
 // LEVERAGE: friction dismiss-guard-import-cycle — Dialog renders ConfirmationDialog, which is itself built on Dialog; only safe because both are used at render time, not module-eval time
 import { ConfirmationDialog } from './ConfirmationDialog';
 import { useTranslation } from '../lib/i18n/client';
-import { isEditableElement } from '../keyboard-shortcuts/editable';
+import { useLeaveGuard } from '../lib/leaveGuard';
 
 /**
  * Dismiss guard: lets a Dialog or Drawer refuse to throw away unsaved work.
@@ -24,6 +24,7 @@ import { isEditableElement } from '../keyboard-shortcuts/editable';
  * `requestClose`, which asks "Discard unsaved changes?" instead of closing.
  */
 
+// LEVERAGE: friction dismiss-guard-vs-unsaved-changes — DismissGuard (per Dialog/Drawer) and UnsavedChangesContext (per page) are two parallel dirty registries; composers must register with both (useRegisterDismissGuard + useRegisterUnsavedChanges) and only leaveGuard.ts is shared
 export interface DismissGuardRegistry {
   register: (id: string, dirty: boolean) => void;
   unregister: (id: string) => void;
@@ -214,55 +215,9 @@ export function useDismissGuard({
     };
   }, [trackActive, isOpen]);
 
-  // Browser-level escapes from an editor that has lost focus:
-  //  - Cmd/Ctrl/Alt+Left/Right and Cmd+[ / ] are "history back/forward" in
-  //    browsers when focus is not in a text field, and history navigation
-  //    unmounts intercepted-route modals together with their text.
-  //  - Reload / tab close.
-  // Runs on window in the bubble phase, after the shortcut layer and any
-  // component handler had their turn, and only when nobody handled the key.
-  useEffect(() => {
-    if (!isOpen) {
-      return;
-    }
-
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.defaultPrevented || !isDirty()) {
-        return;
-      }
-
-      const isHistoryChord =
-        ((event.metaKey || event.ctrlKey || event.altKey) &&
-          (event.key === 'ArrowLeft' || event.key === 'ArrowRight')) ||
-        (event.metaKey && (event.key === '[' || event.key === ']'));
-      if (!isHistoryChord) {
-        return;
-      }
-
-      const target = event.target instanceof Element ? event.target : document.activeElement;
-      if (isEditableElement(target)) {
-        // Native caret movement inside the text; nothing to block.
-        return;
-      }
-
-      event.preventDefault();
-    };
-
-    const onBeforeUnload = (event: BeforeUnloadEvent) => {
-      if (!isDirty()) {
-        return;
-      }
-      event.preventDefault();
-      event.returnValue = '';
-    };
-
-    window.addEventListener('keydown', onKeyDown);
-    window.addEventListener('beforeunload', onBeforeUnload);
-    return () => {
-      window.removeEventListener('keydown', onKeyDown);
-      window.removeEventListener('beforeunload', onBeforeUnload);
-    };
-  }, [isOpen, isDirty]);
+  // Reload, tab close and browser history chords also throw the typed text away;
+  // the shared leave guard (also used by UnsavedChangesProvider) blocks them.
+  useLeaveGuard(isDirty, isOpen);
 
   const confirmElement = (
     <ConfirmationDialog
