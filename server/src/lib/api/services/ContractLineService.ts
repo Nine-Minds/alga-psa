@@ -1086,6 +1086,7 @@ export class ContractLineService extends BaseService<IContractLine> {
         .insert(contractLineData)
         .returning('*');
 
+      // LEVERAGE: pattern template-clone-substrate — legacy clone path; see cloneTemplateLineToContract (alga-2026-0002371).
       // Clone services and configuration from template
       await cloneTemplateContractLine(trx, {
         tenant: context.tenant,

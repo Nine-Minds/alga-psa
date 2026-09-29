@@ -178,7 +178,35 @@ vi.mock('../src/components/billing-dashboard/contracts/wizard-steps/ReviewContra
 vi.mock('@alga-psa/billing/actions/contractWizardActions', () => ({
   createClientContractFromWizard: vi.fn(),
   listContractTemplatesForWizard: vi.fn(async () => []),
-  getContractTemplateSnapshotForClientWizard: vi.fn(),
+  getContractTemplateLinesForClientWizard: vi.fn(),
+}));
+
+vi.mock('../src/components/billing-dashboard/contracts/wizard-steps/TemplateLinesStep', () => ({
+  TemplateLinesStep: ({
+    view,
+    edits,
+    onChange,
+  }: {
+    view: any;
+    edits: any[];
+    onChange: (next: any[]) => void;
+  }) => (
+    <div
+      data-testid="step-template-lines"
+      data-line-count={String(view?.lines?.length ?? 0)}
+      data-currency={view?.currency_code ?? ''}
+    >
+      <button
+        type="button"
+        onClick={() =>
+          onChange([...edits, { template_line_id: 'tl-2', line_name: 'Renamed hourly line' }])
+        }
+      >
+        Edit second line
+      </button>
+    </div>
+  ),
+  TemplateLinesReview: () => <div data-testid="step-template-review" />,
 }));
 
 vi.mock('@alga-psa/billing/actions/billingSettingsActions', () => ({
@@ -662,20 +690,22 @@ describe('ContractWizard resume behavior', () => {
     });
   });
 
-  it('applies template-authored cadence_owner and billing_timing to the client contract submission payload (T236)', async () => {
+  it('template mode: loads the per-line view, sends template_id + per-line edits and no flat per-type payload (T236)', async () => {
     const {
       createClientContractFromWizard,
-      getContractTemplateSnapshotForClientWizard,
+      getContractTemplateLinesForClientWizard,
     } = await import('@alga-psa/billing/actions/contractWizardActions');
     (createClientContractFromWizard as any).mockResolvedValue({ contract_id: 'contract-template' });
-    (getContractTemplateSnapshotForClientWizard as any).mockResolvedValue({
+    (getContractTemplateLinesForClientWizard as any).mockResolvedValue({
+      template_id: 'template-1',
       contract_name: 'Template Contract',
+      description: null,
       billing_frequency: 'monthly',
-      cadence_owner: 'contract',
-      billing_timing: 'advance',
-      enable_proration: false,
-      fixed_base_rate: 10000,
-      fixed_services: [{ service_id: 'svc-template', quantity: 1 }],
+      currency_code: 'EUR',
+      lines: [
+        { template_line_id: 'tl-1', line_name: 'Fixed A', line_type: 'Fixed', billing_frequency: 'monthly', services: [{ service_id: 'svc-a' }] },
+        { template_line_id: 'tl-2', line_name: 'Hourly B', line_type: 'Hourly', billing_frequency: 'weekly', services: [{ service_id: 'svc-b' }] },
+      ],
     });
 
     render(<ContractWizard open={true} onOpenChange={vi.fn()} />);
@@ -688,18 +718,20 @@ describe('ContractWizard resume behavior', () => {
     });
 
     await waitFor(() => {
-      expect(getContractTemplateSnapshotForClientWizard).toHaveBeenCalledWith('template-1');
+      expect(getContractTemplateLinesForClientWizard).toHaveBeenCalledWith('template-1', 'client-1');
     });
 
+    // Template mode collapses the per-type steps into one per-line step.
     await act(async () => {
       await user.click(screen.getByText('Next'));
     });
-
-    const fixedStep = await screen.findByTestId('step-fixed-fee');
-    expect(fixedStep).toHaveAttribute('data-cadence-owner', 'contract');
-    expect(fixedStep).toHaveAttribute('data-billing-timing', 'advance');
+    const linesStep = await screen.findByTestId('step-template-lines');
+    expect(linesStep).toHaveAttribute('data-line-count', '2');
+    expect(linesStep).toHaveAttribute('data-currency', 'EUR');
+    expect(screen.queryByTestId('step-fixed-fee')).not.toBeInTheDocument();
 
     await act(async () => {
+      await user.click(screen.getByText('Edit second line'));
       await user.click(screen.getByText('Save Draft'));
     });
 
@@ -711,10 +743,11 @@ describe('ContractWizard resume behavior', () => {
     expect(options).toEqual({ isDraft: true });
     expect(submission).toMatchObject({
       template_id: 'template-1',
-      cadence_owner: 'contract',
-      billing_timing: 'advance',
-      enable_proration: false,
-      fixed_services: [{ service_id: 'svc-template', quantity: 1 }],
+      template_lines: [{ template_line_id: 'tl-2', line_name: 'Renamed hourly line' }],
+      fixed_services: [],
+      hourly_services: [],
+      usage_services: [],
+      product_services: [],
     });
   });
 

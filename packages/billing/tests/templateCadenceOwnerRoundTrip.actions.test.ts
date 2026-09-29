@@ -245,19 +245,11 @@ describe('template cadence owner roundtrip actions', () => {
     ]);
   });
 
-  it('T120: template snapshots and resumed drafts preserve cadence_owner and billing_timing defaults even when the recurring line is not fixed', async () => {
-    const {
-      getContractTemplateSnapshotForClientWizard,
-      getDraftContractForResume,
-    } = await import('../src/actions/contractWizardActions');
-
-    const snapshot = await getContractTemplateSnapshotForClientWizard('template-1');
-    expect(snapshot).toMatchObject({
-      contract_name: 'Template Alpha',
-      billing_frequency: 'monthly',
-      cadence_owner: 'contract',
-      billing_timing: 'advance',
-    });
+  it('T120: resumed drafts preserve cadence_owner and billing_timing defaults even when the recurring line is not fixed', async () => {
+    // Template cadence/timing is no longer flattened into a wizard snapshot: each
+    // template line carries its own values and the server clones them per line
+    // (asserted against a real DB in createContractFromTemplate.integration.test.ts).
+    const { getDraftContractForResume } = await import('../src/actions/contractWizardActions');
 
     const draft = await getDraftContractForResume('contract-1');
     expect(draft).toMatchObject({

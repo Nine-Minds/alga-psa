@@ -508,7 +508,9 @@ export async function createClientContractAssignment(
     client_contract_id: uuidv4(),
     client_id: input.client_id,
     contract_id: input.contract_id,
-    template_contract_id: null,
+    // Provenance only: the template this contract was cloned from (null for
+    // contracts authored from scratch).
+    template_contract_id: input.template_contract_id ?? null,
     start_date: input.start_date,
     end_date: input.end_date,
     is_active: input.is_active,

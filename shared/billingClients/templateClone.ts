@@ -3,6 +3,7 @@ import { tenantDb } from '@alga-psa/db';
 import { v4 as uuidv4 } from 'uuid';
 import type { IContractTemplateLine } from '@alga-psa/types';
 
+// LEVERAGE: pattern template-clone-substrate — older, divergent template->contract clone (drops hourly/usage rates and fixed config detail). The faithful one is cloneTemplateLineToContract in packages/billing/src/repositories/contractLineRepository.ts (alga-2026-0002371).
 interface CloneTemplateOptions {
   tenant: string;
   templateContractLineId: string;
