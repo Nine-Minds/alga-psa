@@ -76,7 +76,10 @@ loopback; use the repository Graph emulator only on the development host.
 
 1. Copy the four endpoint settings from the generated `app.env` into this worktree's
    `server/.env.local` before the board starts its app. These are process-level
-   settings, not stored vendor columns. Do not apply them to other worktrees.
+   settings, not stored vendor columns. Keep this worktree's unique `REDIS_PREFIX`
+   in the same file so its Schedule publisher and calendar subscriber share an
+   isolated stream route; see [Redis event namespace rollout](redis-event-namespace-rollout.md).
+   Do not apply fixture endpoints or this prefix to other worktrees.
 2. From `server/`, run the provisioning command with `--serve` appended. It verifies
    that `.env.local` has the exact endpoints, repeats the adapter checks, activates
    only the two journaled fixtures, and keeps their emulators in the foreground.
