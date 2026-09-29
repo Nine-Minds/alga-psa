@@ -3,7 +3,6 @@ import { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import logger from '@alga-psa/core/logger';
 import { getAccountingSyncSettings } from './accountingSyncSettings';
-import { resolveDefaultRealm } from './accountingSyncSettings';
 import { SyncOperationsRepository } from './syncOperationsRepository';
 import { ADAPTER_EXPORT_CAPABILITIES } from '../../adapters/accounting/registry';
 import { resolveConnectedAccountingIntegration } from './connectedAccountingIntegration';
@@ -23,6 +22,14 @@ function isEnterpriseEdition(): boolean {
 }
 
 const QBO_ADAPTER_TYPE = 'quickbooks_online';
+
+/**
+ * Payment providers that are themselves accounting systems. A payment whose
+ * origin is one of these must never be pushed back into an accounting system
+ * (echo), and must never be routed to a *different* provider that also happens
+ * to be connected.
+ */
+const ACCOUNTING_ORIGIN_PROVIDERS = new Set(['quickbooks', 'quickbooks_online', 'qbo', 'xero']);
 
 function adapterSupportsExportType(adapterType: string, exportType: string): boolean {
   const capabilities = ADAPTER_EXPORT_CAPABILITIES as Record<string, readonly string[] | undefined>;
@@ -280,21 +287,22 @@ export async function enqueueInvoiceVoid(
       return;
     }
 
-    const realm = await resolveDefaultRealm(knex, tenantId);
-    if (!realm) {
+    const integration = await resolveConnectedAccountingIntegration(knex, tenantId);
+    if (!integration) {
       return;
     }
 
-    // Only enqueue when a mapping exists in the operation realm (otherwise
-    // there's nothing to void in this QBO company; a mapping in another realm
-    // or a legacy realm-less row must not produce a void against this one).
+    // Only enqueue when a mapping exists in the connected organisation
+    // (otherwise there's nothing to void there; a mapping in another realm or
+    // a legacy realm-less row must not produce a void against this one).
     const mapping = await tenantDb(knex, tenantId).table('tenant_external_entity_mappings')
       .where({
-        integration_type: QBO_ADAPTER_TYPE,
+        integration_type: integration.adapterType,
         alga_entity_type: 'invoice',
         alga_entity_id: invoiceId,
-        external_realm_id: realm
+        external_realm_id: integration.targetRealm
       })
+      .whereNull('deleted_at')
       .first('id');
 
     if (!mapping) {
@@ -303,15 +311,20 @@ export async function enqueueInvoiceVoid(
 
     await new SyncOperationsRepository(knex).enqueue({
       tenant: tenantId,
-      adapterType: QBO_ADAPTER_TYPE,
-      targetRealm: realm,
+      adapterType: integration.adapterType,
+      targetRealm: integration.targetRealm,
       operation: 'void_invoice',
       algaEntityType: 'invoice',
       algaEntityId: invoiceId,
       payload: { requestedByUserId: options.actorUserId ?? null }
     });
 
-    logger.debug('[accountingSync] Queued invoice void', { tenantId, invoiceId, realm });
+    logger.debug('[accountingSync] Queued invoice void', {
+      tenantId,
+      invoiceId,
+      adapterType: integration.adapterType,
+      realm: integration.targetRealm
+    });
   } catch (error) {
     logger.warn('[accountingSync] Failed to queue invoice void (void action unaffected)', {
       tenantId,
@@ -346,8 +359,10 @@ export async function enqueueExternalPaymentPush(
   }
 ): Promise<void> {
   try {
-    // Echo guard: never push back payments that originated from QBO.
-    if (params.provider === 'quickbooks') {
+    // Echo guard: never push back payments that originated from ANY accounting
+    // provider. This prevents a Xero-pulled payment from being exported to a
+    // QBO realm that also happens to be mapped.
+    if (ACCOUNTING_ORIGIN_PROVIDERS.has(params.provider.toLowerCase())) {
       return;
     }
 
@@ -355,36 +370,42 @@ export async function enqueueExternalPaymentPush(
       return;
     }
 
-    const realm = await resolveDefaultRealm(knex, tenantId);
-    if (!realm) {
+    // Route to the provider the tenant is actually connected to instead of
+    // assuming QBO. An export-only provider (Xero) still gets the op so the
+    // capability gate produces its observable outcome rather than silently
+    // dropping the payment.
+    const integration = await resolveConnectedAccountingIntegration(knex, tenantId);
+    if (!integration) {
       return;
     }
 
-    // Skip invoices that don't have a QBO mapping in the operation realm
+    // Skip invoices that don't have a mapping in the operation organisation
     // (pre-go-live invoices, or invoices mapped to a different company —
     // neither may drive a payment into this realm).
     const mapping = await tenantDb(knex, tenantId).table('tenant_external_entity_mappings')
       .where({
-        integration_type: QBO_ADAPTER_TYPE,
+        integration_type: integration.adapterType,
         alga_entity_type: 'invoice',
         alga_entity_id: params.invoiceId,
-        external_realm_id: realm
+        external_realm_id: integration.targetRealm
       })
+      .whereNull('deleted_at')
       .first('id');
 
     if (!mapping) {
-      logger.debug('[accountingSync] Skipping payment push — invoice has no QBO mapping (pre-go-live)', {
+      logger.debug('[accountingSync] Skipping payment push — invoice has no mapping in the connected organisation', {
         tenantId,
         invoiceId: params.invoiceId,
-        paymentId: params.paymentId
+        paymentId: params.paymentId,
+        adapterType: integration.adapterType
       });
       return;
     }
 
     await new SyncOperationsRepository(knex).enqueue({
       tenant: tenantId,
-      adapterType: QBO_ADAPTER_TYPE,
-      targetRealm: realm,
+      adapterType: integration.adapterType,
+      targetRealm: integration.targetRealm,
       operation: 'record_payment',
       algaEntityType: 'invoice_payment',
       algaEntityId: params.paymentId,
@@ -396,11 +417,12 @@ export async function enqueueExternalPaymentPush(
       }
     });
 
-    logger.debug('[accountingSync] Queued payment push to QBO', {
+    logger.debug('[accountingSync] Queued payment push', {
       tenantId,
       invoiceId: params.invoiceId,
       paymentId: params.paymentId,
-      realm
+      adapterType: integration.adapterType,
+      realm: integration.targetRealm
     });
   } catch (error) {
     logger.warn('[accountingSync] Failed to queue payment push (payment action unaffected)', {
@@ -433,7 +455,7 @@ export async function enqueueCreditApplication(
     targetInvoiceId: string;
     amountCents: number;
   },
-  decision: { shouldEnqueue: boolean; realm: string | null }
+  decision: { shouldEnqueue: boolean; realm: string | null; adapterType?: string | null }
 ): Promise<void> {
   try {
     if (!decision.shouldEnqueue || !decision.realm) {
@@ -442,7 +464,7 @@ export async function enqueueCreditApplication(
 
     await new SyncOperationsRepository(knex).enqueue({
       tenant: tenantId,
-      adapterType: QBO_ADAPTER_TYPE,
+      adapterType: decision.adapterType ?? QBO_ADAPTER_TYPE,
       targetRealm: decision.realm,
       operation: 'apply_credit',
       algaEntityType: 'credit_allocation',

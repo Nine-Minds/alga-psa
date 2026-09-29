@@ -302,6 +302,9 @@ export class SMTPEmailProvider implements IEmailProvider {
 
     if (attachment.cid) {
       result.cid = attachment.cid;
+      // Nodemailer puts it in the related part either way; saying so explicitly
+      // keeps Outlook from also listing the logo as a file attachment.
+      result.contentDisposition = 'inline';
     }
 
     return result;

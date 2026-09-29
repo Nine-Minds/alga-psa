@@ -22,6 +22,16 @@ export const QUOTE_TEMPLATE_VALUE_BINDINGS: QuoteTemplateValueBindings = {
     path: 'terms_and_conditions',
     fallback: '',
   },
+  // Resolves to the authored structured block content when present, and to the
+  // legacy plain-text projection otherwise. The richText node branches on the
+  // resolved shape; keeping this separate leaves the string-only
+  // `termsAndConditions` binding (and any customized layout using it) intact.
+  termsAndConditionsRich: {
+    id: 'termsAndConditionsRich',
+    kind: 'value',
+    path: 'terms_and_conditions_rich',
+    fallback: '',
+  },
   clientNotes: { id: 'clientNotes', kind: 'value', path: 'client_notes', fallback: '' },
   version: { id: 'version', kind: 'value', path: 'version' },
   clientName: { id: 'clientName', kind: 'value', path: 'client.name', fallback: 'Client' },

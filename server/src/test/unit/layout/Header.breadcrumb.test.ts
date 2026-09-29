@@ -12,4 +12,8 @@ describe('getMenuItemNameByPath', () => {
     expect(getMenuItemNameByPath('/msp/assets', translate)).toBe('All Assets');
     expect(getMenuItemNameByPath('/msp/documents', translate)).toBe('All Documents');
   });
+
+  it('uses the specific settings route instead of the settings landing page', () => {
+    expect(getMenuItemNameByPath('/msp/settings/integrations', translate)).toBe('Integrations');
+  });
 });

@@ -59,6 +59,34 @@
     "deleteEntity": {
       "fallback": "esta tasa impositiva",
       "withRegion": "{{regionName}} tasa impositiva"
+    },
+    "cap": {
+      "title": "Límite de impuesto",
+      "label": "Límite de impuesto ({{currencyCode}})",
+      "currency": "Moneda de la tasa",
+      "universal": "Todas las monedas de factura",
+      "optional": "Opcional",
+      "noCap": "Sin límite",
+      "clear": "Borrar límite de impuesto",
+      "hint": "Impuesto máximo de esta tasa por cálculo. Déjelo vacío para no aplicar límite. Introduzca 0 para no cobrar impuesto en los cálculos que usan este límite.",
+      "scopeTitle": "Cómo se aplican los límites de impuesto",
+      "scope": "Un cálculo regional limita la aportación de cada tasa antes de sumar los impuestos, no el total regional. Los cálculos por período aplican el límite a cada tasa en cada segmento de fechas; varios segmentos pueden superarlo en conjunto. Una factura puede incluir varios cálculos. No es un límite por factura, cliente, proyecto ni período completo. Los límites de facturación de proyectos limitan los importes facturables; los de impuesto limitan el impuesto calculado. Los proveedores fiscales externos usan su propia configuración.",
+      "applicability": "Esta tasa solo se aplica a facturas en {{currencyCode}}. Ya no se seleccionará para otras monedas.",
+      "composite": "Este límite se aplica cuando esta tasa contribuye a un cálculo regional. Los cálculos basados en componentes no aplican este límite.",
+      "legacy": "Moneda sin especificar · {{amount}} unidades mínimas",
+      "legacyHelp": "Este límite guardado se aplica actualmente en las unidades mínimas de cada moneda de factura. Seleccione una moneda y confirme que desea conservar el importe guardado o introduzca un nuevo límite. Otros cambios conservan el valor; también puede borrarlo sin elegir una moneda.",
+      "resolve": "Usar el importe guardado en unidades mínimas de {{currencyCode}}",
+      "reenter": "Vuelva a introducir el límite en la nueva moneda antes de guardar.",
+      "example": "Ejemplo: {{amount}}; sin separadores de miles.",
+      "errors": {
+        "negative": "Introduzca un límite de impuesto de cero o más.",
+        "precision": "El límite tiene más decimales de los que permite esta moneda.",
+        "invalid": "Introduzca un importe con el separador decimal del ejemplo, sin signos, separadores de miles ni símbolos de moneda.",
+        "overflow": "El límite supera el importe máximo admitido.",
+        "currency": "Seleccione una moneda admitida antes de establecer un límite de impuesto.",
+        "reenter": "Vuelva a introducir el límite en la nueva moneda antes de guardar."
+      },
+      "compositeIndicator": "Solo cálculos regionales"
     }
   },
   "taxRateDetail": {

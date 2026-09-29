@@ -197,7 +197,7 @@ const buildStandardQuoteDefaultAst = (): TemplateAst => ({
         type: 'section',
         title: { i18nKey: 'labels.termsAndConditions', defaultValue: 'Terms & Conditions' },
         children: [
-          { id: 'terms-copy', type: 'text', content: { type: 'binding', bindingId: 'termsAndConditions' }, style: { inline: { color: '#374151', lineHeight: 1.5, fontSize: '13px' } } },
+          { id: 'terms-copy', type: 'richText', content: { type: 'binding', bindingId: 'termsAndConditionsRich' }, style: { inline: { color: '#374151', lineHeight: 1.5, fontSize: '13px' } } },
         ],
       },
       // ── Signature block ───────────────────────────────────────────
@@ -395,7 +395,7 @@ const buildStandardQuoteDetailedAst = (): TemplateAst => ({
         type: 'section',
         title: { i18nKey: 'labels.termsAndConditions', defaultValue: 'Terms & Conditions' },
         children: [
-          { id: 'terms-copy', type: 'text', content: { type: 'binding', bindingId: 'termsAndConditions' }, style: { inline: { color: '#374151', lineHeight: 1.5, fontSize: '13px' } } },
+          { id: 'terms-copy', type: 'richText', content: { type: 'binding', bindingId: 'termsAndConditionsRich' }, style: { inline: { color: '#374151', lineHeight: 1.5, fontSize: '13px' } } },
         ],
       },
       // ── Signature block ───────────────────────────────────────────
@@ -618,7 +618,7 @@ const buildStandardQuoteGroupedAst = (): TemplateAst => ({
         type: 'section',
         title: { i18nKey: 'labels.termsAndConditions', defaultValue: 'Terms & Conditions' },
         children: [
-          { id: 'terms-copy', type: 'text', content: { type: 'binding', bindingId: 'termsAndConditions' }, style: { inline: { color: '#374151', lineHeight: 1.5, fontSize: '13px' } } },
+          { id: 'terms-copy', type: 'richText', content: { type: 'binding', bindingId: 'termsAndConditionsRich' }, style: { inline: { color: '#374151', lineHeight: 1.5, fontSize: '13px' } } },
         ],
       },
       // ── Signature block ───────────────────────────────────────────
@@ -852,7 +852,7 @@ const buildStandardQuoteByLocationAst = (): TemplateAst => ({
         type: 'section',
         title: { i18nKey: 'labels.termsAndConditions', defaultValue: 'Terms & Conditions' },
         children: [
-          { id: 'terms-copy', type: 'text', content: { type: 'binding', bindingId: 'termsAndConditions' }, style: { inline: { color: '#374151', lineHeight: 1.5, fontSize: '13px' } } },
+          { id: 'terms-copy', type: 'richText', content: { type: 'binding', bindingId: 'termsAndConditionsRich' }, style: { inline: { color: '#374151', lineHeight: 1.5, fontSize: '13px' } } },
         ],
       },
       // ── Signature block ───────────────────────────────────────────

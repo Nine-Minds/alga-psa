@@ -14,6 +14,7 @@ import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { ArrowLeft, Download } from 'lucide-react';
 import type { IQuote, IQuoteItem, QuoteStatus } from '@alga-psa/types';
 import { useFormatQuoteStatus } from '@alga-psa/ui/hooks/useQuoteEnumOptions';
+import { QuoteTermsContent, hasQuoteTermsContent } from '@alga-psa/ui/editor';
 import {
   acceptClientQuote,
   downloadClientQuotePdf,
@@ -23,7 +24,7 @@ import {
   updateClientQuoteSelections,
   type ClientPortalLocationSummary,
 } from '@alga-psa/client-portal/actions';
-import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 
 const STATUS_VARIANTS: Record<QuoteStatus, BadgeVariant> = {
@@ -139,19 +140,22 @@ const QuoteDetailPage: React.FC<QuoteDetailPageProps> = ({ quoteId }) => {
     return money(amountInCents, currencyCode);
   }, [money]);
 
+  // Central formatter: the client's own country sets the digit order, their
+  // language names the month. The hand-rolled 'en-US' build this replaces did
+  // neither, and pinned every portal user to US order.
+  const { formatDate: formatLocalizedDate } = useFormatters();
   const formatDate = useCallback((date: string | { toString(): string } | undefined | null) => {
     if (!date) return 'N/A';
     try {
       const dateStr = typeof date === 'string' ? date : date.toString();
-      const dateObj = new Date(dateStr);
-      const year = dateObj.getFullYear();
-      const month = new Intl.DateTimeFormat('en-US', { month: 'long' }).format(dateObj);
-      const day = dateObj.getDate();
-      return `${month} ${day}, ${year}`;
+      if (Number.isNaN(new Date(dateStr).getTime())) {
+        return 'Invalid date';
+      }
+      return formatLocalizedDate(dateStr);
     } catch {
       return 'Invalid date';
     }
-  }, []);
+  }, [formatLocalizedDate]);
 
   useEffect(() => {
     const fetchQuote = async () => {
@@ -647,10 +651,16 @@ const QuoteDetailPage: React.FC<QuoteDetailPageProps> = ({ quoteId }) => {
             </div>
           )}
 
-          {quote.terms_and_conditions && (
+          {hasQuoteTermsContent(quote.terms_and_conditions_block, quote.terms_and_conditions) && (
             <div>
               <h3 className="mb-2 text-sm font-semibold">{t('quotes.detail.termsAndConditions', { defaultValue: 'Terms & Conditions' })}</h3>
-              <p className="text-sm text-muted-foreground whitespace-pre-wrap">{quote.terms_and_conditions}</p>
+              <QuoteTermsContent
+                id="client-portal-quote-terms-content"
+                block={quote.terms_and_conditions_block}
+                text={quote.terms_and_conditions}
+                textClassName="text-sm text-muted-foreground"
+                richClassName="text-sm text-muted-foreground"
+              />
             </div>
           )}
         </div>

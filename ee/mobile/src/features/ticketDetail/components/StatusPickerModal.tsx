@@ -109,6 +109,11 @@ export function StatusPickerModal({
             onApply={() => {
               if (!selectedStatusId) return;
               const commit = () => onApply(selectedStatusId, activeTicketNotificationSuppression(suppression));
+              // The ticket detail payload has no bundle-master flag (a master's
+              // master_ticket_id is null, same as a standalone ticket), so the
+              // generic close confirm must run for every close. A sync master
+              // then gets the server 409 three-way as a second prompt; plain
+              // tickets get one prompt and submit.
               if (statuses.find((status) => status.status_id === selectedStatusId)?.is_closed) {
                 Alert.alert(
                   t("confirm.closeTitle", "Close this ticket?"),

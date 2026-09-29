@@ -26,6 +26,11 @@
         "detail": {
           "title": "Dettagli del preventivo"
         }
+      },
+      "paymentMethods": {
+        "setupComplete": {
+          "title": "Configurazione della carta"
+        }
       }
     },
     "devices": {
@@ -613,6 +618,11 @@
     },
     "tab": {
       "title": "Team"
+    }
+  },
+  "paymentMethods": {
+    "setupComplete": {
+      "title": "Configurazione della carta"
     }
   }
 }

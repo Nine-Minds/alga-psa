@@ -122,7 +122,8 @@
       "taskType": "Typ",
       "actions": "Aktionen"
     },
-    "unknownUser": "Unbekannt"
+    "unknownUser": "Unbekannt",
+    "searchSmart": "Projekte, Aufgaben und Kommentare durchsuchen… Enter für intelligente Suche"
   },
   "quickAdd": {
     "title": "Neues Projekt hinzufügen",
@@ -1871,5 +1872,29 @@
       "loadRecipient": "Empfängerinformationen konnten nicht geladen werden",
       "sendFailed": "Statusupdate konnte nicht gesendet werden"
     }
+  },
+  "smartSearch": {
+    "run": "Intelligente Suche",
+    "runTitle": "Gefilterte Projekte anhand dieser Anfrage bewerten",
+    "relevanceColumn": "Treffer",
+    "relevance": "{{percent}} % Übereinstimmung",
+    "strong": "Starke Treffer",
+    "possible": "Mögliche Treffer",
+    "unlikely": "Unwahrscheinliche Treffer",
+    "emptyBucketRunning": "Noch keine",
+    "emptyBucket": "Keine",
+    "scoring": "{{scored}} von {{total}} Projekte bewertet",
+    "summary": "{{total}} Projekte bewertet · {{strong}} stark · {{possible}} möglich",
+    "cancelled": "Suche nach {{scored}} von {{total}} Projekte abgebrochen",
+    "errorTitle": "Intelligente Suche gestoppt",
+    "starting": "Intelligente Suche wird gestartet…",
+    "rerun": "Filter geändert. Erneut ausführen",
+    "retry": "Erneut versuchen",
+    "cancel": "Abbrechen",
+    "exit": "Zurück zur Liste",
+    "notConfigured": "Die intelligente Suche ist auf diesem Server nicht konfiguriert",
+    "failedCount": "{{count}} Projekte konnten nicht bewertet werden",
+    "unscored": "Nicht bewertet",
+    "addOnRequired": "Die intelligente Suche erfordert das KI-Assistent-Add-on"
   }
 }

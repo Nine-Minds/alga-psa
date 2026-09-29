@@ -58,8 +58,22 @@
     },
     "clients": {
       "title": "Sua empresa",
-      "help": "O cliente marcado como sua empresa representa sua própria organização. O nome, o endereço e o logotipo desse cliente aparecem em faturas, orçamentos e comunicações com clientes.",
+      "help": "O cliente marcado como sua empresa representa sua própria organização. O nome, o endereço e o logotipo desse cliente aparecem em faturas, orçamentos e comunicações com clientes, e o país do endereço dele define o formato de data e o país pré-selecionado em novos cadastros.",
       "currentDefault": "Atualmente, sua empresa é {{name}}.",
+      "defaults": {
+        "title": "O que sua empresa define",
+        "intro": "O país do endereço de {{name}} define o seguinte para todo o aplicativo MSP:",
+        "country": "Novos clientes, contatos e endereços vêm com {{country}} pré-selecionado.",
+        "countryMissing": "Novos clientes, contatos e endereços não vêm com país pré-selecionado.",
+        "phoneCode": "Os telefones começam com o código {{code}}.",
+        "phoneCodeMissing": "Os telefones começam sem código de país.",
+        "dateFormat": "As datas são escritas como {{pattern}} — {{example}} — com relógio de {{clock}}.",
+        "clock12": "12 horas",
+        "clock24": "24 horas",
+        "noCountry": "{{name}} não tem país no endereço, então os três voltam ao padrão {{pattern}}. Adicione a {{name}} um endereço com país para alterá-los — não existe uma configuração separada de formato de data.",
+        "portalNote": "No portal do cliente, as datas seguem o formato do próprio cliente, vindo do país do endereço dele e não do seu.",
+        "changeIntro": "Mudar para {{name}} também altera estes padrões:"
+      },
       "yourCompanyBadge": "Sua empresa",
       "table": {
         "name": "Nome",
@@ -97,6 +111,18 @@
         "setDefaultClient": "Falha ao definir o cliente padrão",
         "loadClients": "Falha ao carregar clientes"
       }
+    }
+  },
+  "dashboardWelcome": {
+    "label": "Usar o nome da sua empresa na saudação do painel",
+    "help": "Desativado por padrão: o painel MSP mostra “Bem-vindo ao seu centro de comando MSP”. Ao ativar, ele mostra o nome do cliente marcado como sua empresa. Esta opção é salva na hora e de forma independente.",
+    "noCompany": "Nenhum cliente está marcado como sua empresa ainda. Escolha um em Configurações → Geral para que o nome dele possa aparecer aqui.",
+    "previewLabel": "Sua equipe verá:",
+    "preview": "Bem-vindo ao centro de comando de {{companyName}}",
+    "previewDefault": "Bem-vindo ao seu centro de comando MSP",
+    "messages": {
+      "saved": "Saudação do painel atualizada",
+      "saveFailed": "Não foi possível atualizar a saudação do painel"
     }
   },
   "experimentalFeatures": {
@@ -830,7 +856,17 @@
         }
       },
       "empty": "Nenhum quadro encontrado.",
-      "searchPlaceholder": "Pesquisar quadros…"
+      "searchPlaceholder": "Pesquisar quadros…",
+      "emailSender": {
+        "useDefault": "Usar padrão do chamado",
+        "duplicateRoute": "Esta rota de remetente já existe.",
+        "saveFailed": "Não foi possível salvar o remetente do chamado. Tente novamente.",
+        "label": "Remetente de saída",
+        "inboundWarning": "Este remetente é usado para e-mails enviados sobre tickets. As configurações de e-mail recebido não são alteradas.",
+        "displayName": "Nome de exibição",
+        "save": "Guardar remetente",
+        "saved": "Remetente guardado"
+      }
     },
     "priorities": {
       "title": {
@@ -1218,6 +1254,8 @@
         "followTheme": "Quando ativado, o portal do cliente usa o tema escolhido em Configurações → Aparência. Quando desativado, as cores abaixo o substituem.",
         "followThemeActive": "As cores abaixo ficam salvas, mas não são aplicadas enquanto o portal seguir o tema da organização."
       },
+      "cropHelp": "Arraste e amplie para escolher a parte mostrada no painel lateral do portal e em todas as molduras circulares. O seu logotipo largo não é alterado.",
+      "cropHelpFromSquare": "Arraste e amplie para escolher a parte mostrada no painel lateral do portal e em todas as molduras circulares. Apenas a marca é alterada, então você pode ajustá-la novamente depois.",
       "heroGradient": {
         "primaryShades": "Cor primária para tom primário",
         "primarySecondary": "Cor primária para cor secundária"
@@ -1312,7 +1350,7 @@
     },
     "domain": {
       "title": "Domínio Personalizado",
-      "description": "Configure um nome de host de marca para seu portal do cliente. Forneceremos certificados TLS automaticamente assim que o DNS for verificado.",
+      "description": "Configure um nome de host de marca para seu portal do cliente.",
       "currentStatus": "Estado atual",
       "noDomainConfigured": "Nenhum domínio personalizado configurado",
       "defaultStatusMessage": "Nenhum domínio personalizado registrado ainda.",
@@ -1354,7 +1392,8 @@
         "step3": "Obtenha e mantenha o certificado TLS para o domínio no seu proxy.",
         "step4": "Salve o domínio aqui — ele é ativado imediatamente. Configure primeiro o DNS e o seu proxy, pois os links do portal mudam para este domínio imediatamente.",
         "docLinkText": "Guia de configuração e solução de problemas do proxy reverso",
-        "neverSeenWarning": "Nenhuma solicitação chegou a {{domain}} ainda. Verifique se o seu proxy reverso encaminha o cabeçalho Host original."
+        "neverSeenWarning": "Nenhuma solicitação chegou a {{domain}} ainda. Verifique se o seu proxy reverso encaminha o cabeçalho Host original.",
+        "tlsNote": "O TLS termina no seu proxy reverso, que mantém o certificado."
       },
       "badges": {
         "pending_dns": "DNS pendente",
@@ -1379,7 +1418,8 @@
         "refreshFailed": "Falha ao atualizar o status do domínio.",
         "retryFailed": "Falha na nova tentativa.",
         "disableFailed": "Falha ao desativar o domínio personalizado."
-      }
+      },
+      "hostedTlsNote": "Forneceremos certificados TLS automaticamente assim que o DNS for verificado."
     },
     "yourCompanyName": "Nome da sua empresa",
     "brandingPreviewMode": "Modo de tema de visualização da marca",
@@ -1487,7 +1527,13 @@
     "whiteLabel": {
       "title": "Marca própria no aplicativo MSP",
       "description": "Envie seu logotipo uma vez. Ele substitui a marca Alga no menu lateral MSP, e o portal do cliente usa as mesmas imagens.",
-      "logoHelp": "A marca quadrada é usada sempre que o espaço é quadrado: no menu lateral recolhido e nas molduras circulares. O logotipo largo opcional substitui a marca e o nome no menu lateral expandido, então envie um que já contenha o nome da sua empresa. O menu lateral segue o próprio fundo: usa as variantes para fundos escuros quando o menu é escuro e as claras quando é claro, recorrendo à variante que você enviou.",
+      "logoHelp": "A marca quadrada é usada sempre que o espaço é quadrado: no menu lateral recolhido e nas molduras circulares. Solte um logotipo largo num espaço quadrado e escolha qual parte se torna a marca; depois de enviar um logotipo largo, também pode recortar a marca diretamente a partir dele. O logotipo largo opcional substitui a marca e o nome no menu lateral expandido, então envie um que já contenha o nome da sua empresa. O menu lateral segue o próprio fundo: usa as variantes para fundos escuros quando o menu é escuro e as claras quando é claro, recorrendo à variante que você enviou.",
+      "cropHelp": "Arraste e amplie para escolher a parte mostrada no menu lateral recolhido e em todas as molduras circulares. O seu logotipo largo não é alterado.",
+      "cropHelpFromSquare": "Arraste e amplie para escolher a parte mostrada no menu lateral recolhido e em todas as molduras circulares. Apenas a marca é alterada, então você pode ajustá-la novamente depois.",
+      "linkDocument": {
+        "title": "Usar uma imagem já enviada",
+        "description": "Escolha uma imagem que você já enviou para Documentos. O documento em si permanece como está."
+      },
       "fields": {
         "mark": "Marca quadrada",
         "markDark": "Marca quadrada para fundos escuros",
@@ -1876,6 +1922,11 @@
         "normal": "Normal",
         "low": "Baixa"
       }
+    },
+    "emailTemplates": {
+      "editor": {
+        "inlineLogoHint": "O seu logótipo é incorporado na mensagem no momento do envio. Mantenha a referência src=\"cid:{{cid}}\" como está — substituí-la por um URL obriga os destinatários a autorizar primeiro a transferência da imagem."
+      }
     }
   },
   "timeEntry": {
@@ -2172,6 +2223,18 @@
       "comingSoon": "Os modelos de mapeamento e as importações programadas ficarão aqui. Salve mapeamentos de colunas, compartilhe-os com toda a equipe e configure trabalhos recorrentes."
     },
     "migration": {
+      "customFields": {
+        "required": "obrigatório",
+        "title": "Campos de {{name}}",
+        "mapping": "Mapeamento de campos personalizados",
+        "description": "Associe as colunas CSV preservadas aos campos deste tipo de ativo.",
+        "empty": "Não foram preservadas colunas personalizadas para este tipo de ativo.",
+        "samples_one": "{{sample}} · {{count}} registro",
+        "samples_other": "{{sample}} · {{count}} registros",
+        "noSample": "Sem exemplo",
+        "missingRequired": "Campos obrigatórios não associados: {{fields}}",
+        "duplicate": "Um campo personalizado está associado mais de uma vez. Escolha um destino único para cada origem."
+      },
       "actions": {
         "back": "Voltar para migrações",
         "upload": "Enviar pacote"
@@ -3048,7 +3111,7 @@
     "assetTypes": {
       "tab": "Ativos",
       "title": "Tipos de ativos",
-      "description": "Gerencie os tipos de ativos disponíveis em seu módulo de ativos. Os tipos personalizados carregam um esquema de campo que orienta seus formulários de criação/edição.",
+      "description": "Tipos personalizados usam um esquema de campos nos formulários; tipos integrados também aceitam campos adicionais.",
       "loading": "Carregando tipos de recursos...",
       "table": {
         "name": "Nome",
@@ -3076,7 +3139,7 @@
         "namePlaceholder": "por exemplo Firewall",
         "displayOrderLabel": "Ordem de exibição",
         "iconLabel": "Ícone",
-        "builtinSchemaHint": "Os tipos integrados usam formulários fixos gerenciados pelo AlgaPSA, portanto seu esquema de campo não pode ser editado. Você ainda pode renomear o tipo ou alterar seu ícone."
+        "builtinSchemaHint": "O formulário padrão integrado permanece fixo. Estes campos adicionais são definidos por tenant."
       },
       "deleteDialog": {
         "title": "Excluir tipo de ativo",
@@ -3134,7 +3197,8 @@
           "invalidOptions": "As opções devem ser valores não vazios.",
           "invalidField": "Este campo é inválido."
         }
-      }
+      },
+      "additionalFields": "Campos adicionais"
     }
   },
   "mcpServer": {
@@ -3454,5 +3518,8 @@
       "nothingToRetry": "Não há registro de domínio personalizado com falha para repetir.",
       "retryOnlyAfterFailure": "A repetição só está disponível após um registro com falha."
     }
+  },
+  "common": {
+    "saving": "A guardar…"
   }
 }

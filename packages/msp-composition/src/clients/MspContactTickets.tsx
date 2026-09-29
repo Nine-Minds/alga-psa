@@ -85,7 +85,7 @@ const MspContactTickets: React.FC<ContactTicketsProps> = ({
   initialUsers = []
 }) => {
   const { t } = useTranslation('msp/contacts');
-  const { locale } = useFormatters();
+  const { locale, dateFormat } = useFormatters();
   const router = useRouter();
   const [tickets, setTickets] = useState<ITicketListItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -311,7 +311,8 @@ const MspContactTickets: React.FC<ContactTicketsProps> = ({
       showClient: true, // Show client column in contact view
       onClientClick: handleClientClick,
       locale,
-    }), [initialCategories, initialBoards, displaySettings, handleTicketClick, handleTagsChange, handleClientClick, locale]);
+      dateFormat,
+    }), [initialCategories, initialBoards, displaySettings, handleTicketClick, handleTagsChange, handleClientClick, locale, dateFormat]);
 
   const handleCategorySelect = (
     selectedCategories: string[],

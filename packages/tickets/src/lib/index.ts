@@ -17,6 +17,13 @@ export {
 } from './ticketColumnCatalog';
 export type { TicketColumnSpec, TicketColumnKind, TicketListColumnKey } from './ticketColumnCatalog';
 export {
+  TICKET_LIST_SORT_KEYS,
+  DEFAULT_TICKET_LIST_SORT_KEY,
+  isTicketListSortKey,
+  normalizeTicketListSortKey,
+} from './ticketListSort';
+export type { TicketListSortKey } from './ticketListSort';
+export {
   CAPTURE_EXCLUDED_FILTER_KEYS,
   TICKET_VIEW_DENSITY_DEFAULT,
   TICKET_VIEW_DENSITY_STEP,
@@ -128,3 +135,17 @@ export type {
   EnforceTicketCloseRulesOptions,
   EnforceTicketCloseRulesResult,
 } from './closeRuleConstants';
+export {
+  BundlePropagationConfirmationRequiredError,
+} from './ticketBundlePropagation';
+export type {
+  TicketBundleBoundary,
+  BundlePropagationChild,
+  BundlePropagationUnaffectedReason,
+  BundlePropagationUnaffectedChild,
+  BundleStatusPropagationPreview,
+  BundlePropagationUser,
+  BundleStatusPropagationContext,
+  PropagateBundleMasterStatusOptions,
+  PropagateBundleMasterStatusResult,
+} from './ticketBundlePropagation';

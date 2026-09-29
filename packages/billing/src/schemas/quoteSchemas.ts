@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { isUnitOfMeasureCode } from '@alga-psa/core/unitOfMeasure';
 import type { QuoteStatus } from '@alga-psa/types';
 
 export const quoteStatusSchema = z.enum([
@@ -30,6 +31,9 @@ const createQuoteBaseSchema = z.object({
   internal_notes: z.string().optional().nullable(),
   client_notes: z.string().optional().nullable(),
   terms_and_conditions: z.string().optional().nullable(),
+  // Authored BlockNote block array. When present and non-empty the write path
+  // projects it to terms_and_conditions and it wins for display (FR7/FR8).
+  terms_and_conditions_block: z.array(z.any()).optional().nullable(),
   // DD-2/F-2: no static 'USD' default. When omitted, the create action
   // (quoteActions.ts createQuote) resolves the currency from the quote's client
   // (clients.default_currency_code), then the tenant default
@@ -88,6 +92,7 @@ const createQuoteItemBaseSchema = z.object({
   quantity: z.number().int().positive(),
   unit_price: z.number().int().min(0).optional(),
   unit_of_measure: z.string().trim().optional().nullable(),
+  unit_code: z.string().refine(isUnitOfMeasureCode, 'Unknown unit of measure code').optional().nullable(),
   display_order: z.number().int().min(0).optional(),
   phase: z.string().trim().optional().nullable(),
   is_optional: z.boolean().default(false),

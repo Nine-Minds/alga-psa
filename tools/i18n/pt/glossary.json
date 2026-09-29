@@ -2420,6 +2420,11 @@
       "reason": "European spelling; Brazilian Portuguese uses contato."
     },
     {
+      "term": "contactos",
+      "preferred": "contatos",
+      "reason": "European spelling; Brazilian Portuguese uses contatos."
+    },
+    {
       "term": "corrida",
       "preferred": "execução",
       "reason": "Wrong register for a workflow run; corrida means a race/jog. Use execução."
@@ -2705,7 +2710,13 @@
       "Shift",
       "×",
       "{{count}} h",
-      "{{hours}} h {{minutes}} min"
+      "{{hours}} h {{minutes}} min",
+      "3CX",
+      "Teams Phone",
+      "TeamViewer",
+      "Gigabyte",
+      "Terabyte",
+      "Volume"
     ],
     "caseInsensitive": [
       "api",

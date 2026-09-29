@@ -12,11 +12,21 @@ export async function validateScenarioTenantScope(
   const db = tenantDb(knex, tenant);
 
   if (scenario.contract_id) {
+    // Template scenarios carry the contract_templates.template_id as
+    // contract_id (see snapshotContractToScenario), so resolve either source.
     const contract = await db
       .table("contracts")
       .where({ contract_id: scenario.contract_id })
       .first("contract_id");
-    if (!contract) throw new Error("Scenario contract is not available");
+    const template = contract
+      ? undefined
+      : await db
+          .table("contract_templates")
+          .where({ template_id: scenario.contract_id })
+          .first("template_id");
+    if (!contract && !template) {
+      throw new Error("Scenario contract is not available");
+    }
 
     const originIds = Array.from(
       new Set(
@@ -26,11 +36,17 @@ export async function validateScenarioTenantScope(
       ),
     );
     if (originIds.length > 0) {
-      const rows = await db
-        .table("contract_lines")
-        .where({ contract_id: scenario.contract_id })
-        .whereIn("contract_line_id", originIds)
-        .select("contract_line_id");
+      const rows = contract
+        ? await db
+            .table("contract_lines")
+            .where({ contract_id: scenario.contract_id })
+            .whereIn("contract_line_id", originIds)
+            .select("contract_line_id")
+        : await db
+            .table("contract_template_lines")
+            .where({ template_id: scenario.contract_id })
+            .whereIn("template_line_id", originIds)
+            .select("template_line_id");
       if (rows.length !== originIds.length) {
         throw new Error("Scenario contains an invalid contract line reference");
       }

@@ -5,6 +5,8 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { Input } from '@alga-psa/ui/components/Input';
+import { UnitOfMeasureInput, type UnitSelection } from '@alga-psa/ui/components/UnitOfMeasureInput';
+import { listTenantUnitsOfMeasure, registerTenantUnitOfMeasure } from '@alga-psa/billing/actions/unitOfMeasureActions';
 import { Plus, MoreVertical, Trash2, Save } from 'lucide-react';
 import {
   DropdownMenu,
@@ -151,6 +153,7 @@ const UsageContractLinePresetServicesList: React.FC<UsageContractLinePresetServi
       // Compare custom rate and unit
       if (service.custom_rate !== original.custom_rate) return true;
       if (service.unit_of_measure !== original.unit_of_measure) return true;
+      if ((service.unit_code ?? null) !== (original.unit_code ?? null)) return true;
 
       // Compare bucket configuration
       const serviceHasBucket = Boolean(service.bucket_overlay);
@@ -265,7 +268,8 @@ const UsageContractLinePresetServicesList: React.FC<UsageContractLinePresetServi
         service_id: serviceId,
         custom_rate: service?.default_rate || 0,
         quantity: undefined,
-        unit_of_measure: service?.unit_of_measure || t('services.usagePreset.defaultUnit', { defaultValue: 'unit' }),
+        unit_of_measure: service?.unit_of_measure ?? '',
+        unit_code: service?.unit_code ?? null,
         bucket_total_minutes: undefined,
         bucket_overage_rate: undefined,
         bucket_allow_rollover: undefined,
@@ -295,11 +299,10 @@ const UsageContractLinePresetServicesList: React.FC<UsageContractLinePresetServi
     })));
   };
 
-  const handleUnitChange = (serviceId: string, newUnit: string) => {
-    setPresetServices(currentServices => currentServices.map(s => ({
-      ...s,
-      unit_of_measure: s.service_id === serviceId ? newUnit : s.unit_of_measure
-    })));
+  const handleUnitChange = (serviceId: string, newUnit: UnitSelection) => {
+    setPresetServices(currentServices => currentServices.map(s => (
+      s.service_id === serviceId ? { ...s, unit_of_measure: newUnit.label, unit_code: newUnit.code } : s
+    )));
   };
 
   const handleSave = async () => {
@@ -316,6 +319,7 @@ const UsageContractLinePresetServicesList: React.FC<UsageContractLinePresetServi
         custom_rate: s.custom_rate,
         quantity: s.quantity,
         unit_of_measure: s.unit_of_measure,
+        unit_code: s.unit_code,
         bucket_total_minutes: s.bucket_overlay?.total_minutes,
         bucket_overage_rate: s.bucket_overlay?.overage_rate,
         bucket_allow_rollover: s.bucket_overlay?.allow_rollover
@@ -463,16 +467,13 @@ const UsageContractLinePresetServicesList: React.FC<UsageContractLinePresetServi
                         <label className="text-sm font-medium">
                           {t('services.usagePreset.unitLabel', { defaultValue: 'Unit:' })}
                         </label>
-                        <Input
-                          type="text"
-                          value={service.unit_of_measure || t('services.usagePreset.defaultUnit', { defaultValue: 'unit' })}
-                          onChange={(e) => {
-                            handleUnitChange(service.service_id, e.target.value);
-                          }}
-                          className="w-32"
-                          placeholder={t('services.usagePreset.unitPlaceholder', {
-                            defaultValue: 'e.g., GB, user, device',
-                          })}
+                        <UnitOfMeasureInput
+                          id={`usage-preset-service-unit-${service.service_id}`}
+                          value={{ code: service.unit_code ?? '', label: service.unit_of_measure ?? '' }}
+                          onChange={(unit: UnitSelection) => handleUnitChange(service.service_id, unit)}
+                          className="w-48"
+                          loadCustomUnits={listTenantUnitsOfMeasure}
+                          registerCustomUnit={registerTenantUnitOfMeasure}
                         />
                       </div>
                     </div>

@@ -55,6 +55,7 @@ function createUploadResult(documentId: string, fileId = `file-${documentId}`) {
     document: {
       document_id: documentId,
       file_id: fileId,
+      mime_type: 'image/png',
       document_name: `${documentId}.png`,
     },
   };

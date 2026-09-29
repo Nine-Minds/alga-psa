@@ -165,6 +165,27 @@
         "loadStatuses": "Failed to load renewal ticket statuses",
         "save": "Failed to save renewal automation settings"
       }
+    },
+    "quotes": {
+      "title": "Quotes",
+      "description": "Set the default validity period for new quotes.",
+      "fields": {
+        "validityDays": {
+          "label": "Default validity period (days)",
+          "help": "New quotes are valid for this many days."
+        }
+      },
+      "actions": {
+        "save": "Save"
+      },
+      "toast": {
+        "updated": "Quote settings have been updated."
+      },
+      "errors": {
+        "load": "Failed to load settings",
+        "save": "Failed to save settings",
+        "range": "Enter a whole number from 1 to 365."
+      }
     }
   },
   "quoting": {
@@ -178,6 +199,39 @@
     }
   },
   "tax": {
+    "defaultRate": {
+      "title": "Default tax rate",
+      "tooltip": "Choose the tax rate inherited by new clients, products, and services.",
+      "description": "Set the tax rate assigned to new clients and catalog items. Existing records are unchanged.",
+      "loading": "Loading default tax rate...",
+      "empty": "Create an active tax rate before choosing a default.",
+      "invalid": "The configured default is no longer active or valid. Choose another rate.",
+      "field": { "label": "Default tax rate" },
+      "options": { "none": "No tenant default" },
+      "help": "When unset, new catalog items remain non-taxable and new clients use the oldest active rate when one exists.",
+      "actions": { "save": "Save default", "saving": "Saving..." },
+      "toast": { "saved": "Default tax rate saved." },
+      "errors": {
+        "load": "Failed to load the default tax rate.",
+        "save": "Failed to save the default tax rate."
+      }
+    },
+    "backfill": {
+      "title": "Apply default to existing catalog items",
+      "description": "Preview products and services that currently have no tax rate.",
+      "warning": "This changes future billing taxability and does not rewrite issued invoices.",
+      "loading": "Loading preview...",
+      "empty": "No eligible products or services found.",
+      "target": "Target rate: {{rate}}",
+      "count": "{{count}} eligible item(s)",
+      "dialog": { "title": "Apply default tax rate" },
+      "actions": { "preview": "Preview existing items", "apply": "Apply selected", "applying": "Applying..." },
+      "toast": { "applied": "Default tax rate applied to selected items." },
+      "errors": {
+        "preview": "Failed to preview catalog items.",
+        "apply": "Failed to apply the default tax rate."
+      }
+    },
     "taxRegions": {
       "title": "Tax Regions",
       "description": "Manage tax regions and related settings."
@@ -704,7 +758,8 @@
       "allServiceTypes": "All Service Types",
       "serviceTypePlaceholder": "Filter by service type...",
       "allBillingMethods": "All Billing Methods",
-      "billingMethodPlaceholder": "Filter by billing method..."
+      "billingMethodPlaceholder": "Filter by billing method...",
+      "searchPlaceholder": "Search services by name, SKU, or description..."
     },
     "fields": {
       "serviceName": {
@@ -739,7 +794,7 @@
         }
       },
       "unitOfMeasure": {
-        "label": "Unit of Measure *",
+        "label": "Unit of Measure",
         "placeholder": "e.g., GB, API call, user",
         "help": "The measurable unit for billing (e.g., GB, API call, user)"
       },
@@ -826,7 +881,9 @@
       "validateDelete": "Failed to validate deletion. Please try again.",
       "delete": "Failed to delete service",
       "deactivate": "Failed to deactivate service"
-    }
+    },
+    "emptySearch": "No services match your search.",
+    "clearFilters": "Clear filters"
   },
   "products": {
     "title": "Products",
@@ -949,14 +1006,17 @@
         }
       },
       "unitOfMeasure": {
-        "label": "Unit of Measure *",
+        "label": "Unit of Measure",
         "placeholder": "e.g., GB, API call, user",
         "help": "The measurable unit for billing (e.g., GB, API call, user)"
       },
       "taxRate": {
         "label": "Tax Rate (Optional)",
         "placeholder": "Select Tax Rate (optional)",
-        "loading": "Loading tax rates..."
+        "loading": "Loading tax rates...",
+        "inherit": "Use tenant default",
+        "inheritNamed": "Use tenant default ({{rate}})",
+        "nonTaxable": "Non-taxable"
       },
       "sku": {
         "label": "SKU",
@@ -983,7 +1043,8 @@
       "billingMethodRequired": "Billing method is required",
       "skuRequiredForHardware": "SKU is required for Hardware",
       "licenseTermRequired": "License term is required for Software Licenses",
-      "selectedTypeNotFound": "Selected service type not found"
+      "selectedTypeNotFound": "Selected service type not found",
+      "unitOfMeasureRequired": "Unit of measure is required"
     },
     "errors": {
       "fetchCategories": "Failed to fetch categories",
@@ -1050,13 +1111,16 @@
       "taxRate": {
         "label": "Tax Rate",
         "placeholder": "Non-Taxable",
-        "loading": "Loading..."
+        "loading": "Loading...",
+        "inherit": "Use tenant default",
+        "inheritNamed": "Use tenant default ({{rate}})",
+        "nonTaxable": "Non-taxable"
       },
       "active": {
         "label": "Active"
       },
       "unitOfMeasure": {
-        "label": "Unit of Measure *",
+        "label": "Unit of Measure",
         "placeholder": "e.g., each, item, license"
       },
       "license": {
@@ -1293,7 +1357,10 @@
       "regionInvalid": "The selected tax region is no longer valid. Please refresh and choose another region.",
       "duplicate": "A tax rate already exists for this region and date range.",
       "missingField": "Missing required tax rate field.",
-      "missingFieldNamed": "Missing required tax rate field: {{field}}."
+      "missingFieldNamed": "Missing required tax rate field: {{field}}.",
+      "capInvalid": "Tax rate cap must be a non-negative safe whole number in minor units.",
+      "capCurrencyRequired": "Choose a rate currency before setting or changing a tax cap.",
+      "currencyInvalid": "Choose a supported rate currency."
     },
     "tax": {
       "defaultRequiresActiveRate": "Configure at least one active tax rate before creating default tax settings.",
@@ -1422,6 +1489,15 @@
       "actions": {
         "save": "Save Settings",
         "saving": "Saving..."
+      },
+      "autopay": {
+        "label": "Allow auto-pay",
+        "description": "Allow billing profiles to authorize automatic card payments.",
+        "chargeTiming": "Charge timing",
+        "onFinalize": "When invoice is finalized",
+        "onDueDate": "On due date",
+        "retryDays": "Retry intervals (days)",
+        "consentText": "Auto-pay consent text"
       }
     },
     "stripe": {

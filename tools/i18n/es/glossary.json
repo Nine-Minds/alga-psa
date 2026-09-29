@@ -2406,7 +2406,12 @@
       "×",
       "{{count}} h",
       "{{hours}} h {{minutes}} min",
-      "Variables"
+      "Variables",
+      "3CX",
+      "Teams Phone",
+      "TeamViewer",
+      "Gigabyte",
+      "Terabyte"
     ],
     "caseInsensitive": [
       "api",

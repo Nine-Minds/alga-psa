@@ -49,6 +49,7 @@ export type TemplateNodeType =
   | 'section'
   | 'stack'
   | 'text'
+  | 'richText'
   | 'field'
   | 'image'
   | 'divider'
@@ -92,6 +93,18 @@ export interface TemplateStackNode extends TemplateNodeBase {
 
 export interface TemplateTextNode extends TemplateNodeBase {
   type: 'text';
+  content: TemplateValueExpression;
+  children?: never;
+}
+
+/**
+ * A node whose resolved content may be structured BlockNote/ProseMirror JSON.
+ * Structured content is emitted as sanitized HTML; a plain-string value (the
+ * legacy terms projection) renders as pre-line text so existing layouts are
+ * unchanged.
+ */
+export interface TemplateRichTextNode extends TemplateNodeBase {
+  type: 'richText';
   content: TemplateValueExpression;
   children?: never;
 }
@@ -201,6 +214,7 @@ export type TemplateNode =
   | TemplateSectionNode
   | TemplateStackNode
   | TemplateTextNode
+  | TemplateRichTextNode
   | TemplateFieldNode
   | TemplateImageNode
   | TemplateDividerNode

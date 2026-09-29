@@ -1,11 +1,14 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { randomUUID } from 'node:crypto';
-import { knex as createKnex, type Knex } from 'knex';
+import type { Knex } from 'knex';
+
+import { createDisposableDatabase, type DisposableDatabase } from './helpers/disposableDatabase';
 
 const createTenantKnexMock = vi.hoisted(() => vi.fn());
 const runWithTenantMock = vi.hoisted(() =>
   vi.fn(async (_tenant: string, fn: () => Promise<unknown>) => fn()),
 );
+const getCurrentUserMock = vi.hoisted(() => vi.fn());
 
 vi.mock('@/lib/db', () => ({
   createTenantKnex: createTenantKnexMock,
@@ -24,12 +27,17 @@ vi.mock('@alga-psa/db/tenant', async (importOriginal) => {
   };
 });
 
+vi.mock('@alga-psa/user-composition/actions', () => ({
+  getCurrentUser: getCurrentUserMock,
+}));
+
 const TEST_TENANT = 'chat-persistence-test-tenant';
 
 type ChatActionsModule = typeof import('@ee/lib/chat-actions/chatActions');
 
 describe('chat persistence execution flows (db-backed)', () => {
   let db: Knex;
+  let disposable: DisposableDatabase | undefined;
 
   const loadChatActions = async (): Promise<ChatActionsModule> => {
     vi.resetModules();
@@ -37,20 +45,8 @@ describe('chat persistence execution flows (db-backed)', () => {
   };
 
   beforeAll(async () => {
-    db = createKnex({
-      client: 'pg',
-      connection: {
-        host: process.env.DB_HOST ?? 'localhost',
-        port: Number(process.env.DB_PORT ?? 5438),
-        user: process.env.DB_USER_ADMIN ?? 'postgres',
-        password: process.env.DB_PASSWORD_ADMIN ?? 'postpass123',
-        database: 'postgres',
-      },
-      pool: { min: 1, max: 4 },
-    });
-
-    await db.schema.dropTableIfExists('messages');
-    await db.schema.dropTableIfExists('chats');
+    disposable = await createDisposableDatabase('ee_chat_persistence');
+    db = disposable.db;
 
     await db.schema.createTable('chats', (table) => {
       table.text('id').primary();
@@ -74,15 +70,17 @@ describe('chat persistence execution flows (db-backed)', () => {
 
   beforeEach(async () => {
     createTenantKnexMock.mockReset();
+    getCurrentUserMock.mockReset();
     createTenantKnexMock.mockResolvedValue({ knex: db, tenant: TEST_TENANT });
+    getCurrentUserMock.mockResolvedValue({ user_id: 'user-1', tenant: TEST_TENANT });
     await db('messages').where({ tenant: TEST_TENANT }).delete();
     await db('chats').where({ tenant: TEST_TENANT }).delete();
   });
 
   afterAll(async () => {
-    await db.schema.dropTableIfExists('messages');
-    await db.schema.dropTableIfExists('chats');
-    await db.destroy();
+    if (disposable) {
+      await disposable.drop();
+    }
   });
 
   it('DB-backed happy path: approved execution persists final assistant message', async () => {
@@ -131,6 +129,7 @@ describe('chat persistence execution flows (db-backed)', () => {
   });
 
   it('DB-backed guard path: declined/failed execution does not persist false completion', async () => {
+    getCurrentUserMock.mockResolvedValue({ user_id: 'user-2', tenant: TEST_TENANT });
     const { createNewChatAction, addMessageToChatAction, getChatMessagesAction } =
       await loadChatActions();
 
@@ -163,6 +162,7 @@ describe('chat persistence execution flows (db-backed)', () => {
   });
 
   it('No migration required: existing chat persistence read/write ordering remains functional', async () => {
+    getCurrentUserMock.mockResolvedValue({ user_id: 'user-3', tenant: TEST_TENANT });
     const { createNewChatAction, addMessageToChatAction, getChatMessagesAction } =
       await loadChatActions();
 

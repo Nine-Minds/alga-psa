@@ -1,0 +1,50 @@
+[
+  {
+    "id": "T001",
+    "description": "DB-backed integration: seed assigned users, teams, updated timestamps, null assignees, and tied values; verify getTicketsForList orders assigned_to_name, assigned_team_name, and updated_at correctly in both directions with ticket_id as the deterministic tie-breaker.",
+    "implemented": true,
+    "featureIds": ["F001", "F002"]
+  },
+  {
+    "id": "T002",
+    "description": "DB-backed integration: for each new sort key, verify getAdjacentTicketIds reports neighbors and position in the same order returned by the paginated list.",
+    "implemented": true,
+    "featureIds": ["F004"]
+  },
+  {
+    "id": "T003",
+    "description": "Component/contract: clicking the Assigned To header forwards assigned_to_name to fetchTicketsWithPagination, and URL/history parsing preserves all three new supported keys while rejecting an unknown key.",
+    "implemented": true,
+    "featureIds": ["F001", "F003"]
+  },
+  {
+    "id": "T004",
+    "description": "Unit: ticketListFiltersSchema accepts assigned_to_name, assigned_team_name, and updated_at, rejects an unknown sort key, and the typed SQL map is exhaustive at compile time.",
+    "implemented": true,
+    "featureIds": ["F001", "F002", "F003", "F004"]
+  },
+  {
+    "id": "T005",
+    "description": "Unit: handleError shows a returned actionError instead of a supplied fallback, preserves permission handling, and uses the fallback for an ordinary thrown Error.",
+    "implemented": true,
+    "featureIds": ["F005", "F006"]
+  },
+  {
+    "id": "T006",
+    "description": "Unit: stored-view validation with no known-user universe removes malformed assignedToIds, preserves and deduplicates valid UUIDs, omits an emptied list, and retains includeUnassigned semantics.",
+    "implemented": true,
+    "featureIds": ["F007", "F008"]
+  },
+  {
+    "id": "T007",
+    "description": "Unit: the board-view write schema accepts UUID assignedToIds and rejects non-UUID tokens.",
+    "implemented": true,
+    "featureIds": ["F009"]
+  },
+  {
+    "id": "T008",
+    "description": "Regression: existing URL assignee normalization and valid assignedToIds/assignedTeamIds/includeUnassigned query behavior continue to pass.",
+    "implemented": true,
+    "featureIds": ["F007", "F008"]
+  }
+]

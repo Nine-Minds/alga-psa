@@ -79,7 +79,10 @@ export default function BulkChangeStatusRouteClient({ closeMode }: BulkChangeSta
     };
   }, [handleError, isResolvingSelectedBoards, selectedTicketsSharedBoardId]);
 
-  const handleConfirm = async (statusId: string, options?: TicketNotificationSuppressionOptions) => {
+  const handleConfirm = async (
+    statusId: string,
+    options?: TicketNotificationSuppressionOptions & { propagateToChildren?: boolean },
+  ) => {
     if (selectedTicketIdsArray.length === 0) return;
 
     setIsSubmitting(true);
@@ -127,6 +130,7 @@ export default function BulkChangeStatusRouteClient({ closeMode }: BulkChangeSta
       isOpen={true}
       onClose={close}
       ticketCount={selectedTicketCount}
+      ticketIds={selectedTicketIdsArray}
       statuses={statuses}
       isLoadingStatuses={isResolvingSelectedBoards || isLoadingStatuses}
       failed={labelFailures(failed)}

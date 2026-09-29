@@ -151,7 +151,8 @@ async function loadCandidateUnits(
         [soLineId],
       ),
     )
-    .orderBy('u.received_at', 'asc');
+    // LEVERAGE: pattern fifo-unit-order — allocation, fulfillment candidates, and this pick list share FIFO ordering.
+    .orderByRaw('u.received_at ASC NULLS LAST, u.unit_id ASC');
 
   if (opts.unitIds && opts.unitIds.length > 0) {
     q.whereIn('u.unit_id', opts.unitIds);

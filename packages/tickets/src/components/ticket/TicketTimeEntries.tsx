@@ -18,7 +18,7 @@ interface TicketTimeEntriesProps {
   id?: string;
   ticketId: string;
   currentUserId: string;
-  dateTimeFormat?: string;
+  showWeekday?: boolean;
   /**
    * Increment this value to force the panel to re-fetch (e.g. after a new entry is saved).
    */
@@ -60,7 +60,7 @@ const TicketTimeEntries: React.FC<TicketTimeEntriesProps> = ({
   id,
   ticketId,
   currentUserId,
-  dateTimeFormat = 'MMM d, yyyy h:mm a',
+  showWeekday = false,
   refreshKey = 0,
   onEditEntry,
   onDeleteEntry,
@@ -232,7 +232,7 @@ const TicketTimeEntries: React.FC<TicketTimeEntriesProps> = ({
                   key={entry.entry_id}
                   id={`${id}-mine-${entry.entry_id}`}
                   entry={entry}
-                  dateTimeFormat={dateTimeFormat}
+                  showWeekday={showWeekday}
                   timeZone={userTimeZone}
                   showUserName={false}
                   durationLabels={durationLabels}
@@ -275,7 +275,7 @@ const TicketTimeEntries: React.FC<TicketTimeEntriesProps> = ({
                   key={entry.entry_id}
                   id={`${id}-other-${entry.entry_id}`}
                   entry={entry}
-                  dateTimeFormat={dateTimeFormat}
+                  showWeekday={showWeekday}
                   timeZone={userTimeZone}
                   showUserName
                   durationLabels={durationLabels}
@@ -311,7 +311,7 @@ const TicketTimeEntries: React.FC<TicketTimeEntriesProps> = ({
 interface TimeEntryRowProps {
   id?: string;
   entry: TicketTimeEntrySummaryEntry;
-  dateTimeFormat: string;
+  showWeekday: boolean;
   timeZone: string;
   showUserName: boolean;
   durationLabels?: { hr?: string; hrs?: string; min?: string };
@@ -322,7 +322,7 @@ interface TimeEntryRowProps {
 const TimeEntryRow: React.FC<TimeEntryRowProps> = ({
   id,
   entry,
-  dateTimeFormat,
+  showWeekday,
   timeZone,
   showUserName,
   durationLabels,
@@ -330,14 +330,14 @@ const TimeEntryRow: React.FC<TimeEntryRowProps> = ({
   onDelete,
 }) => {
   const { t } = useTranslation('features/tickets');
-  const { locale } = useFormatters();
+  const { locale, dateFormat } = useFormatters();
   const startLabel = useMemo(() => {
     try {
-      return formatTicketDateTime(entry.start_time, dateTimeFormat, locale, timeZone);
+      return formatTicketDateTime(entry.start_time, locale, timeZone, dateFormat, showWeekday);
     } catch {
       return entry.start_time;
     }
-  }, [entry.start_time, timeZone, dateTimeFormat, locale]);
+  }, [entry.start_time, timeZone, dateFormat, showWeekday, locale]);
 
   const statusKey = entry.approval_status ?? 'DRAFT';
   const statusLabel = t(

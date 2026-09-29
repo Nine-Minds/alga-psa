@@ -17,6 +17,7 @@ import type {
 } from '@alga-psa/types';
 import { Temporal } from '@js-temporal/polyfill';
 import { displayAddressField, displayCountry } from '@alga-psa/core';
+import { paymentMethodDisplayLabel } from '@alga-psa/shared/billingClients/paymentPreferences';
 // toPlainDate is likely not needed here as we format to string for Wasm
 
 // Helper function to convert DateValue (Date or ISO string or Temporal) to ISO string for Wasm
@@ -139,12 +140,16 @@ const resolveTenantClientSnapshot = (source: Record<string, unknown>): WasmInvoi
   };
 };
 
-const recurringServicePeriodDateFormatter = new Intl.DateTimeFormat('en-US', {
-  month: 'short',
-  day: 'numeric',
-  year: 'numeric',
-  timeZone: 'UTC',
-});
+// A NAMED month, so the reading language names and orders it; the country rule
+// governs numeric dates, which this label is not. UTC stays pinned so the
+// written period never shifts with the server timezone.
+const recurringServicePeriodDateFormatter = (locale?: string): Intl.DateTimeFormat =>
+  new Intl.DateTimeFormat(locale || 'en', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    timeZone: 'UTC',
+  });
 
 const parseRecurringServicePeriodDate = (value: unknown): Date | null => {
   if (value instanceof Date) {
@@ -166,17 +171,18 @@ const parseRecurringServicePeriodDate = (value: unknown): Date | null => {
   return Number.isNaN(parsed.getTime()) ? null : parsed;
 };
 
-const buildRecurringServicePeriodLabel = (start: unknown, end: unknown): string | null => {
+const buildRecurringServicePeriodLabel = (start: unknown, end: unknown, locale?: string): string | null => {
   const parsedStart = parseRecurringServicePeriodDate(start);
   const parsedEnd = parseRecurringServicePeriodDate(end);
   if (!parsedStart || !parsedEnd) {
     return null;
   }
 
-  return `${recurringServicePeriodDateFormatter.format(parsedStart)} - ${recurringServicePeriodDateFormatter.format(parsedEnd)}`;
+  const formatter = recurringServicePeriodDateFormatter(locale);
+  return `${formatter.format(parsedStart)} - ${formatter.format(parsedEnd)}`;
 };
 
-const resolveRecurringServicePeriodSummary = (source: Record<string, unknown>) => {
+const resolveRecurringServicePeriodSummary = (source: Record<string, unknown>, locale?: string) => {
   const recurringServicePeriodStart =
     normalizeDateLikeValue(source.recurringServicePeriodStart) ||
     normalizeDateLikeValue(source.recurring_service_period_start) ||
@@ -191,7 +197,7 @@ const resolveRecurringServicePeriodSummary = (source: Record<string, unknown>) =
     recurringServicePeriodEnd,
     recurringServicePeriodLabel:
       recurringServicePeriodStart && recurringServicePeriodEnd
-        ? buildRecurringServicePeriodLabel(recurringServicePeriodStart, recurringServicePeriodEnd)
+        ? buildRecurringServicePeriodLabel(recurringServicePeriodStart, recurringServicePeriodEnd, locale)
         : null,
   };
 };
@@ -538,7 +544,7 @@ export function enrichWithGroupedItems(vm: WasmInvoiceViewModel): WasmInvoiceVie
  * @returns An InvoiceViewModel suitable for template rendering, or null if input is null.
  */
 // Change input type to 'any' as the actual input structure seems to be WasmInvoiceViewModel based on logs
-export function mapDbInvoiceToWasmViewModel(inputData: DbInvoiceViewModel | WasmInvoiceViewModel | any): WasmInvoiceViewModel | null {
+export function mapDbInvoiceToWasmViewModel(inputData: DbInvoiceViewModel | WasmInvoiceViewModel | any, locale?: string): WasmInvoiceViewModel | null {
   console.log('[mapDbInvoiceToWasmViewModel] Received Data:', JSON.stringify(inputData, null, 2));
 
   if (!inputData) {
@@ -604,6 +610,8 @@ export function mapDbInvoiceToWasmViewModel(inputData: DbInvoiceViewModel | Wasm
 
         return {
           id: String(item.item_id ?? ''),
+          unit_code: item.unit_code ?? null,
+          unit_label: item.unit_label ?? null,
           description: String(item.description ?? ''),
           quantity: toFiniteNumber(item.quantity),
           unitPrice: toMinorUnits(item.unit_price),
@@ -628,7 +636,7 @@ export function mapDbInvoiceToWasmViewModel(inputData: DbInvoiceViewModel | Wasm
       const subtotal = toMinorUnits(rawSubtotal);
       const tax = toMinorUnits(rawTax);
       const total = toMinorUnits(rawTotal);
-      const recurringServicePeriodSummary = resolveRecurringServicePeriodSummary(dbRecord);
+      const recurringServicePeriodSummary = resolveRecurringServicePeriodSummary(dbRecord, locale);
 
       viewModel = {
         invoiceNumber: String(dbData.invoice_number ?? 'N/A'),
@@ -639,6 +647,7 @@ export function mapDbInvoiceToWasmViewModel(inputData: DbInvoiceViewModel | Wasm
           address: String(dbData.client?.address ?? 'N/A'),
         },
         poNumber: (dbData as any).po_number ?? null,
+        paymentMethod: paymentMethodDisplayLabel((dbData as any).payment_method),
         ...((dbData as any).project_name
           ? {
               projectName: String((dbData as any).project_name),
@@ -678,7 +687,7 @@ export function mapDbInvoiceToWasmViewModel(inputData: DbInvoiceViewModel | Wasm
         viewModel.subtotal = Number(viewModel.subtotal ?? 0);
         viewModel.tax = Number(viewModel.tax ?? 0);
         viewModel.total = Number(viewModel.total ?? 0);
-        const recurringServicePeriodSummary = resolveRecurringServicePeriodSummary(wasmRecord);
+        const recurringServicePeriodSummary = resolveRecurringServicePeriodSummary(wasmRecord, locale);
         viewModel.recurringServicePeriodStart = recurringServicePeriodSummary.recurringServicePeriodStart;
         viewModel.recurringServicePeriodEnd = recurringServicePeriodSummary.recurringServicePeriodEnd;
         viewModel.recurringServicePeriodLabel = recurringServicePeriodSummary.recurringServicePeriodLabel;

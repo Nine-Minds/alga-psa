@@ -40,7 +40,7 @@ import {
 import { ColumnDefinition, DeletionValidationResult, ITaxRate, ITaxRegion } from '@alga-psa/types';
 import { toPlainDate } from '@alga-psa/core';
 import { preCheckDeletion } from '@alga-psa/auth/lib/preCheckDeletion';
-import { getTaxRates, deleteTaxRate, DeleteTaxRateResult } from '../../../actions/taxRateActions';
+import { getTaxRatePermissions, getTaxRates, deleteTaxRate, DeleteTaxRateResult } from '../../../actions/taxRateActions';
 import { getTaxRegions, updateTaxRegion } from '../../../actions/taxSettingsActions';
 import {
   formatTaxPercentage,
@@ -50,6 +50,7 @@ import {
   TaxRateStatus,
 } from '../../../lib/taxRateApplicability';
 import { TaxRateDetailPanel } from '../../billing-dashboard/TaxRateDetailPanel';
+import { TaxCapReadout } from '../../billing-dashboard/TaxCapFields';
 import { TaxRegionDialog } from './TaxRegionDialog';
 import { TaxRateDialog } from './TaxRateDialog';
 
@@ -76,7 +77,7 @@ const rateStatusBadge: Record<TaxRateStatus, 'success' | 'info' | 'warning' | 'd
  * number. Rates are always created inside a region, so there is no region picker.
  */
 export function TaxRegionsAndRates() {
-  const { t } = useTranslation('msp/billing-settings');
+  const { t } = useTranslation(['msp/billing-settings', 'msp/service-catalog']);
   const { formatDate } = useFormatters();
   const today = useMemo(() => Temporal.Now.plainDateISO(), []);
   // Rates carry calendar dates; format them in the app locale so they read the
@@ -100,6 +101,25 @@ export function TaxRegionsAndRates() {
   const [deleteValidation, setDeleteValidation] = useState<DeletionValidationResult | null>(null);
   const [isDeleteValidating, setIsDeleteValidating] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [permissions, setPermissions] = useState({ canCreate: false, canUpdate: false, canDelete: false });
+  const [isLoadingPermissions, setIsLoadingPermissions] = useState(true);
+
+  useEffect(() => {
+    let active = true;
+    setIsLoadingPermissions(true);
+    getTaxRatePermissions()
+      .then((result) => {
+        if (!active) return;
+        if (isActionMessageError(result) || isActionPermissionError(result)) {
+          setPermissions({ canCreate: false, canUpdate: false, canDelete: false });
+          return;
+        }
+        setPermissions(result);
+      })
+      .catch(() => { if (active) setPermissions({ canCreate: false, canUpdate: false, canDelete: false }); })
+      .finally(() => { if (active) setIsLoadingPermissions(false); });
+    return () => { active = false; };
+  }, []);
 
   const load = useCallback(async (showLoading: boolean) => {
     if (showLoading) {
@@ -276,6 +296,22 @@ export function TaxRegionsAndRates() {
     );
   };
 
+  // Creating needs billing:create; editing needs billing:update. Without update
+  // permission a rate opens read-only in the detail panel instead of the editor.
+  const openRateEditor = (region: RegionRef, rate: ITaxRate | null) => {
+    if (rate === null) {
+      if (permissions.canCreate) {
+        setRateDialog({ region, rate: null });
+      }
+      return;
+    }
+    if (permissions.canUpdate) {
+      setRateDialog({ region, rate });
+    } else {
+      setViewingRate(rate);
+    }
+  };
+
   const columns: ColumnDefinition<RegionRow>[] = [
     {
       title: '',
@@ -347,8 +383,9 @@ export function TaxRegionsAndRates() {
               id={`add-tax-rate-menu-item-${region.region_code}`}
               onClick={(e: React.MouseEvent) => {
                 e.stopPropagation();
-                setRateDialog({ region, rate: null });
+                openRateEditor(region, null);
               }}
+              disabled={!permissions.canCreate}
             >
               {t('tax.regions.rates.actions.add', { defaultValue: 'Add rate' })}
             </DropdownMenuItem>
@@ -393,8 +430,9 @@ export function TaxRegionsAndRates() {
         variant="outline"
         onClick={(e: React.MouseEvent) => {
           e.stopPropagation();
-          setRateDialog({ region: row, rate: null });
+          openRateEditor(row, null);
         }}
+        disabled={!permissions.canCreate}
       >
         <PlusCircle className="mr-2 h-4 w-4" />
         {t('tax.regions.rates.actions.add', { defaultValue: 'Add rate' })}
@@ -420,6 +458,7 @@ export function TaxRegionsAndRates() {
           <thead>
             <tr className="text-left text-xs uppercase tracking-wide text-muted-foreground">
               <th className="py-1 pr-3 font-medium">{t('tax.regions.rates.columns.rate', { defaultValue: 'Rate' })}</th>
+              <th className="py-1 pr-3 font-medium">{t('msp/service-catalog:taxRates.cap.title')}</th>
               <th className="py-1 pr-3 font-medium">{t('tax.regions.rates.columns.description', { defaultValue: 'Description' })}</th>
               <th className="py-1 pr-3 font-medium">{t('tax.regions.rates.columns.effective', { defaultValue: 'Effective' })}</th>
               <th className="py-1 pr-3 font-medium">{t('common.columns.status', { defaultValue: 'Status' })}</th>
@@ -436,10 +475,13 @@ export function TaxRegionsAndRates() {
                   className="cursor-pointer hover:bg-[rgb(var(--color-border-50)/0.82)]"
                   onClick={(e) => {
                     e.stopPropagation();
-                    setRateDialog({ region: row, rate });
+                    openRateEditor(row, rate);
                   }}
                 >
                   <td className="py-2 pr-3 font-medium tabular-nums">{formatTaxPercentage(rate.tax_percentage)}</td>
+                  <td className="py-2 pr-3">
+                    <TaxCapReadout rate={rate} compact />
+                  </td>
                   <td className="py-2 pr-3">
                     <span className="inline-flex items-center gap-2">
                       {rate.description || <span className="text-muted-foreground">&mdash;</span>}
@@ -489,7 +531,7 @@ export function TaxRegionsAndRates() {
                           id={`edit-tax-rate-${rate.tax_rate_id}`}
                           onClick={(e: React.MouseEvent) => {
                             e.stopPropagation();
-                            setRateDialog({ region: row, rate });
+                            openRateEditor(row, rate);
                           }}
                         >
                           {t('tax.regions.rates.actions.edit', { defaultValue: 'Edit' })}
@@ -511,6 +553,7 @@ export function TaxRegionsAndRates() {
                             e.stopPropagation();
                             requestDelete(rate);
                           }}
+                          disabled={!permissions.canDelete}
                         >
                           {t('tax.regions.rates.actions.delete', { defaultValue: 'Delete' })}
                         </DropdownMenuItem>
@@ -535,6 +578,7 @@ export function TaxRegionsAndRates() {
           setViewingRate(null);
           void refresh();
         }}
+        isReadOnly={!permissions.canUpdate}
       />
     );
   }
@@ -560,7 +604,7 @@ export function TaxRegionsAndRates() {
             <AlertDescription>{loadError}</AlertDescription>
           </Alert>
         )}
-        {isLoading ? (
+        {isLoading || isLoadingPermissions ? (
           <LoadingIndicator
             layout="stacked"
             className="py-10 text-muted-foreground"

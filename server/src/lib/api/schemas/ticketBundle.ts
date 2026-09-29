@@ -6,13 +6,23 @@ import { z } from 'zod';
 
 export const bundleModeSchema = z.enum(['link_only', 'sync_updates']);
 
+export const closedMasterChoiceSchema = z.enum([
+  'keep_closed',
+  'apply_resolution',
+  'reopen_master',
+]);
+
+export type ClosedMasterChoice = z.infer<typeof closedMasterChoiceSchema>;
+
 export const createBundleSchema = z.object({
   child_ticket_ids: z.array(z.string().uuid()).min(1),
   mode: bundleModeSchema.default('sync_updates'),
+  on_closed_master: closedMasterChoiceSchema.optional(),
 });
 
 export const addBundleChildrenSchema = z.object({
   child_ticket_ids: z.array(z.string().uuid()).min(1),
+  on_closed_master: closedMasterChoiceSchema.optional(),
 });
 
 export const promoteBundleMasterSchema = z.object({

@@ -40,7 +40,10 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
     const source = testRevision(root);
     if (source.dirty || source.revision !== process.env.GITHUB_SHA) throw new Error('Gate checkout is dirty or differs from candidate');
     result = verifyServerUnitAggregate({ root, revision: source.revision,
-      directory: path.join(root, 'test-results/server-unit-input'), candidates: repositoryTestFiles(root),
+      // The complete job merges shard evidence in its own checkout, so the
+      // bundle may live at the repository root instead of a downloaded artifact.
+      directory: path.resolve(root, process.env.SERVER_UNIT_INPUT_DIR || 'test-results/server-unit-input'),
+      candidates: repositoryTestFiles(root),
       jobResult: process.env.SERVER_UNIT_JOB_RESULT });
   } catch (error) { result = { schemaVersion: 1, scope: 'server-unit-execution', status: 'failed', failures: [error.message] }; }
   const output = path.join(root, 'test-results/server-unit-gate');

@@ -198,6 +198,17 @@ spec:
           # appliance profile (self-hosted behind a Host-rewriting proxy).
           - name: TRUST_FORWARDED_HOST
             value: "{{ .Values.trustForwardedHost | default false }}"
+          # Mobile Universal/App Links association files; unset → /.well-known routes answer 404.
+          {{- with .Values.mobileAppLinks }}
+          {{- if .appleTeamId }}
+          - name: MOBILE_APP_APPLE_TEAM_ID
+            value: {{ .appleTeamId | quote }}
+          {{- end }}
+          {{- if .androidCertFingerprints }}
+          - name: MOBILE_APP_ANDROID_CERT_FINGERPRINTS
+            value: {{ .androidCertFingerprints | quote }}
+          {{- end }}
+          {{- end }}
           # ----------- APP ----------------
           - name: VERSION
             value: "{{ .Values.version }}"

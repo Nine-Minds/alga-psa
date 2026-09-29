@@ -17,8 +17,12 @@ export function tenantManagementRouteError(
     return { error: 'Unauthorized', status: 401 };
   }
 
-  if (message === 'Invalid API key') {
+  if (message === 'Invalid API key' || message === 'Access denied: invalid API key') {
     return { error: 'Invalid API key', status: 401 };
+  }
+
+  if (message === 'Authentication required') {
+    return { error: 'Unauthorized', status: 401 };
   }
 
   if (message === 'Forbidden' || message.includes('Access denied') || message.includes('Authentication')) {

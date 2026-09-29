@@ -20,6 +20,13 @@ test('an administrator authors a billed-time date sort and reopens its persisted
   const { tenant } = await createTimeBillingFixture(database, credentials.email);
   const name = `Billed time sort ${randomUUID()}`;
   const outputBinding = 'billedTimeByDate';
+  // Digit order is a property of the recipient's country, never of the document
+  // language. These fixture clients carry no location country, so every locale
+  // renders the fixed system default (MM/dd/yyyy): a French invoice localizes
+  // month names, currency and copy while still writing 08/16/2026. Matching one
+  // month-first pattern across all locales is therefore the assertion -- were
+  // the order to follow the language again, the French pass would count zero.
+  const countryOrderedDate = /08\/\d+\/2026/g;
   const choose = async (selector: string, label: string | RegExp) => {
     await page.locator(selector).click();
     await page.getByRole('option', { name: label, exact: typeof label === 'string' }).click();
@@ -234,7 +241,7 @@ test('an administrator authors a billed-time date sort and reopens its persisted
             }
             // Each available snapshot appears in both the flat and nested table.
             // Missing historical detail must not be reconstructed from live work.
-            expect(pdfText.match(french ? /\d+\/08\/2026/g : /8\/\d+\/2026/g) ?? [])
+            expect(pdfText.match(countryOrderedDate) ?? [])
               .toHaveLength(history === 'none' ? 0 : history === 'partial' ? 6 : 8);
             expect(localized).not.toContain('PRIVATE');
             expect(await readSnapshots()).toEqual(expectedSnapshots);
@@ -280,9 +287,8 @@ test('an administrator authors a billed-time date sort and reopens its persisted
             sourceEntries: longLinks.length, expectedDetailRows: 148, subtotal: longInvoice.subtotal,
             tax: longInvoice.tax, total: longInvoice.total_amount }), contentType: 'application/json',
         });
-        const datePattern = locale === 'fr' ? /\d+\/08\/2026/g : /8\/\d+\/2026/g;
-        expect(document.text.match(datePattern) ?? []).toHaveLength(148);
-        for (const pageText of document.pages.filter(text => text.match(datePattern))) {
+        expect(document.text.match(countryOrderedDate) ?? []).toHaveLength(148);
+        for (const pageText of document.pages.filter(text => text.match(countryOrderedDate))) {
           expect(pageText).toContain('Date');
           expect(pageText).toContain('Ticket');
         }
@@ -335,7 +341,7 @@ test('an administrator authors a billed-time date sort and reopens its persisted
           expect(compact).toContain(locale === 'fr' ? 'Tâchedeprojet' : 'Projecttask');
           expect(compact).toContain(locale === 'fr' ? '180,00' : '$180.00');
           expect(compact).toContain(locale === 'fr' ? '1600,50' : '1,600.50');
-          expect(text.match(locale === 'fr' ? /\d+\/08\/2026/g : /8\/\d+\/2026/g) ?? []).toHaveLength(16);
+          expect(text.match(countryOrderedDate) ?? []).toHaveLength(16);
           expect(compact).not.toMatch(/PRIVATE|EDITED/);
           expect(await readTaskLinks()).toEqual(links);
           expect(await readTaskCharges()).toEqual(chargesBefore);

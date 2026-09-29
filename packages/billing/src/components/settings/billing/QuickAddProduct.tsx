@@ -1,5 +1,7 @@
 'use client';
 
+
+import { resolveUnitOfMeasure } from '@alga-psa/core/unitOfMeasure';
 import React, { useEffect, useMemo, useState } from 'react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
@@ -18,6 +20,14 @@ import {
 } from '@alga-psa/billing/actions/serviceActions';
 import { getDefaultBillingSettings } from '@alga-psa/billing/actions/billingSettingsActions';
 import { getTaxRates } from '@alga-psa/billing/actions/taxRateActions';
+import { getTenantTaxSettings } from '@alga-psa/billing/actions/taxSettingsActions';
+import {
+  INHERIT_TAX_RATE_VALUE,
+  NON_TAXABLE_VALUE,
+  fromTaxRateSelectionValue,
+  toTaxRateCreateField,
+  toTaxRateSelectionValue,
+} from './catalogTaxSelection';
 import {
   getProductInventorySettings,
   enableInventory,
@@ -41,6 +51,8 @@ import {
 } from '@alga-psa/ui/lib/errorHandling';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useCurrencyFormat } from '@alga-psa/ui/lib';
+import { UnitOfMeasureInput, type UnitSelection } from '@alga-psa/ui/components/UnitOfMeasureInput';
+import { listTenantUnitsOfMeasure, registerTenantUnitOfMeasure } from '@alga-psa/billing/actions/unitOfMeasureActions';
 
 const LICENSE_TERM_OPTION_VALUES = ['monthly', 'annual', 'perpetual'] as const;
 const BILLING_METHOD_OPTION_VALUES = ['usage'] as const;
@@ -92,6 +104,7 @@ export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: Qu
   }, []);
 
   const [taxRates, setTaxRates] = useState<ITaxRate[]>([]);
+  const [defaultTaxRateLabel, setDefaultTaxRateLabel] = useState<string | null>(null);
   const [isLoadingTaxRates, setIsLoadingTaxRates] = useState(true);
 
   const [categories, setCategories] = useState<IServiceCategory[]>([]);
@@ -105,7 +118,8 @@ export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: Qu
     item_kind: 'product',
     is_active: true,
     billing_method: 'usage',
-    unit_of_measure: '',
+    unit_of_measure: 'Each',
+    unit_code: 'C62',
     cost_currency: defaultCurrency,
     is_license: false,
     license_term: 'monthly',
@@ -382,6 +396,17 @@ export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: Qu
       fetchServiceTypes().catch((e) => console.error('[QuickAddProduct] Failed to fetch service types:', e));
       fetchTaxRates().catch((e) => console.error('[QuickAddProduct] Failed to fetch tax rates:', e));
       fetchCategories().catch((e) => console.error('[QuickAddProduct] Failed to fetch categories:', e));
+      getTenantTaxSettings()
+        .then((settings) => {
+          if (isActionMessageError(settings) || isActionPermissionError(settings)) return;
+          const rate = settings?.default_tax_rate;
+          setDefaultTaxRateLabel(
+            rate
+              ? `${rate.description || rate.region_code} — ${Number(rate.tax_percentage).toFixed(2)}%`
+              : null
+          );
+        })
+        .catch(() => {});
     }
   }, [isOpen]);
 
@@ -460,12 +485,6 @@ export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: Qu
       }));
       return;
     }
-    if (!formProduct.unit_of_measure?.trim()) {
-      setError(t('quickAddProduct.validation.unitOfMeasureRequired', {
-        defaultValue: 'Unit of measure is required'
-      }));
-      return;
-    }
     const priceError = validatePrices(formPrices);
     if (priceError) {
       setError(priceError);
@@ -492,7 +511,9 @@ export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: Qu
           unit_of_measure: formProduct.unit_of_measure!.trim(),
           description: formProduct.description ?? null,
           category_id: formProduct.category_id ?? null,
-          tax_rate_id: formProduct.tax_rate_id ?? null,
+          // Create mode: omitted inherits the tenant default; explicit null is
+          // non-taxable; a saved edit value is unaffected (update path above).
+          ...toTaxRateCreateField(formProduct.tax_rate_id),
           item_kind: 'product',
           is_active: formProduct.is_active ?? true,
           sku: formProduct.sku ?? null,
@@ -891,16 +912,40 @@ export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: Qu
               {t('quickAddProduct.fields.taxRate.label', { defaultValue: 'Tax Rate' })}
             </label>
             <CustomSelect
-              value={formProduct.tax_rate_id || ''}
+              value={toTaxRateSelectionValue(formProduct.tax_rate_id)}
               placeholder={
                 isLoadingTaxRates
                   ? t('quickAddProduct.fields.taxRate.loading', { defaultValue: 'Loading...' })
                   : t('quickAddProduct.fields.taxRate.placeholder', { defaultValue: 'Non-Taxable' })
               }
-              onValueChange={(v) => setFormProduct({ ...formProduct, tax_rate_id: v || null })}
-              options={taxRates.map((r) => ({ value: r.tax_rate_id, label: formatTaxRateLabel(r) }))}
+              onValueChange={(v) => setFormProduct({
+                ...formProduct,
+                tax_rate_id: fromTaxRateSelectionValue(v),
+              })}
+              options={[
+                ...(isEditMode
+                  ? []
+                  : [
+                      {
+                        value: INHERIT_TAX_RATE_VALUE,
+                        label: defaultTaxRateLabel
+                          ? t('quickAddProduct.fields.taxRate.inheritNamed', {
+                              defaultValue: 'Use tenant default ({{rate}})',
+                              rate: defaultTaxRateLabel,
+                            })
+                          : t('quickAddProduct.fields.taxRate.inherit', {
+                              defaultValue: 'Use tenant default',
+                            }),
+                      },
+                    ]),
+                {
+                  value: NON_TAXABLE_VALUE,
+                  label: t('quickAddProduct.fields.taxRate.nonTaxable', { defaultValue: 'Non-taxable' }),
+                },
+                ...taxRates.map((r) => ({ value: r.tax_rate_id, label: formatTaxRateLabel(r) })),
+              ]}
               disabled={isLoadingTaxRates}
-              allowClear={true}
+              allowClear={false}
             />
           </div>
 
@@ -921,13 +966,18 @@ export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: Qu
             <div>
               <label className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">
                 {t('quickAddProduct.fields.unitOfMeasure.label', {
-                  defaultValue: 'Unit of Measure *'
+                  defaultValue: 'Unit of Measure'
                 })}
               </label>
-              <Input
+              <UnitOfMeasureInput
                 id="quick-add-product-unit-of-measure"
-                value={formProduct.unit_of_measure || ''}
-                onChange={(e) => setFormProduct({ ...formProduct, unit_of_measure: e.target.value })}
+                value={{ code: formProduct.unit_code || 'C62', label: formProduct.unit_of_measure || resolveUnitOfMeasure({ fallback: 'C62' }).label }}
+                onChange={(value: UnitSelection | string) => {
+                  if (typeof value !== 'string') setFormProduct({ ...formProduct, unit_of_measure: value.label, unit_code: value.code });
+                }}
+                loadCustomUnits={listTenantUnitsOfMeasure}
+                registerCustomUnit={registerTenantUnitOfMeasure}
+                serviceType="Product"
                 placeholder={t('quickAddProduct.fields.unitOfMeasure.placeholder', {
                   defaultValue: 'e.g., each, item, license'
                 })}

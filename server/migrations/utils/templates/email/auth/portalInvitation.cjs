@@ -24,6 +24,7 @@ const PORTAL_INVITATION_CSS = `
       background-color: #f8fafc;
     }
     .header {
+      background-color:#8A4DEA;
       background: linear-gradient(135deg, #8A4DEA, #40CFF9);
       color: white;
       padding: 32px 24px;

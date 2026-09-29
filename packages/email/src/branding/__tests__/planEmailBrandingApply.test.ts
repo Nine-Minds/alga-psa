@@ -377,7 +377,7 @@ describe('planEmailBrandingRemoval', () => {
 });
 
 describe('enterprise brand assets in the plan', () => {
-  const logo = { url: 'https://cdn.example.com/logo-wide.png', alt: 'Acme MSP' };
+  const logo = { variant: 'wide' as const, alt: 'Acme MSP' };
   const decorate = (html: string) => decorateBrandedHtml(html, { logo, hideAttribution: true });
 
   function applyOnce() {

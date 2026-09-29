@@ -13,6 +13,8 @@ import type {
   TaggedEntityType,
 } from '@alga-psa/types';
 import { tenantDb } from '@alga-psa/db';
+import { resolveUnitOfMeasure, withUnitCode } from '@alga-psa/core/unitOfMeasure';
+import { prepareQuoteTermsForDb } from '../../../../lib/quoteTerms';
 import { SharedNumberingService } from '../../../../services/numberingService';
 
 export const quoteStatusSchema = z.enum([
@@ -852,7 +854,7 @@ export const Quote = {
     const [createdQuote] = await tenantScopedTable(knexOrTrx, tenant, 'quotes')
       .insert({
         tenant,
-        ...quote,
+        ...prepareQuoteTermsForDb(quote as Record<string, unknown>),
         quote_number: quoteNumber,
         status: quote.is_template ? null : (quote.status ?? 'draft'),
         version: quote.version ?? 1,
@@ -898,7 +900,7 @@ export const Quote = {
 
     const [updatedQuote] = await tenantScopedTable(knexOrTrx, tenant, 'quotes')
       .where({ quote_id: quoteId })
-      .update({ ...updateData, updated_at: knexOrTrx.fn.now() })
+      .update({ ...prepareQuoteTermsForDb(updateData as Record<string, unknown>), updated_at: knexOrTrx.fn.now() })
       .returning('*');
 
     await QuoteActivity.create(knexOrTrx, tenant, {
@@ -1442,7 +1444,10 @@ export async function convertQuoteToDraftContract(
       usageConfigRows.map(({ configId, item }) => ({
         tenant,
         config_id: configId,
-        unit_of_measure: item.unit_of_measure || 'unit',
+        ...withUnitCode({
+          unit_of_measure: item.unit_of_measure || resolveUnitOfMeasure({ fallback: 'C62' }).label,
+          unit_code: item.unit_code ?? null,
+        }),
         enable_tiered_pricing: false,
         minimum_usage: 0,
         base_rate: item.unit_price,

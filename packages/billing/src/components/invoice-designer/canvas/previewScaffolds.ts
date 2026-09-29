@@ -2,6 +2,11 @@ import type { DesignerNode } from '../state/designerStore';
 import { resolveLabelText } from '../labelText';
 import { formatBoundValue } from '../preview/previewBindings';
 import { getNodeMetadata } from '../utils/nodeProps';
+import {
+  SYSTEM_DATE_FORMAT,
+  type CountryDateFormat,
+  type DateFieldPart,
+} from '@alga-psa/core/i18n/countryDateFormat';
 
 type NodeMetadata = Record<string, unknown>;
 
@@ -65,12 +70,25 @@ const resolveSampleValue = (metadata: NodeMetadata): string => {
 
 const hasAnyKeyword = (value: string, patterns: RegExp[]): boolean => patterns.some((pattern) => pattern.test(value));
 
+const PART_HINT: Record<DateFieldPart, string> = { day: 'DD', month: 'MM', year: 'YYYY' };
+
+/**
+ * The shape hint shown in an unbound date field, e.g. 'DD/MM/YYYY'.
+ *
+ * A placeholder that advertises the wrong digit order is a small lie about what
+ * the rendered document will say, so it follows the same country format the
+ * bound value would.
+ */
+const dateScaffoldHint = (dateFormat: CountryDateFormat = SYSTEM_DATE_FORMAT): string =>
+  dateFormat.order.map((part) => PART_HINT[part]).join(dateFormat.separator);
+
 const inferContextualValueScaffold = (input: {
   bindingKey: string;
   placeholderHint: string;
   labelHint: string;
   format: string;
   currencyCode: string;
+  dateFormat?: CountryDateFormat;
 }): string => {
   const contextHaystack = normalizeHintText(`${input.bindingKey} ${input.labelHint}`);
   if (
@@ -91,13 +109,13 @@ const inferContextualValueScaffold = (input: {
       /\bduedate\b/,
     ])
   ) {
-    return 'MM/DD/YYYY';
+    return dateScaffoldHint(input.dateFormat);
   }
   if (hasAnyKeyword(contextHaystack, [/\bpo\b/, /\bpo number\b/, /\bpurchase order\b/, /\bpurchaseorder\b/])) {
     return 'Optional';
   }
   if (input.format === 'date') {
-    return 'MM/DD/YYYY';
+    return dateScaffoldHint(input.dateFormat);
   }
   if (input.format === 'currency') {
     return formatBoundValue(0, 'currency', input.currencyCode) ?? '';
@@ -129,7 +147,11 @@ const resolveFieldLabelHint = (metadata: NodeMetadata): string =>
   asTrimmedString(metadata.label) ||
   asTrimmedString(metadata.text);
 
-export const resolveFieldPreviewScaffold = (node: DesignerNode, currencyCode: string = 'USD'): EditorPreviewScaffold => {
+export const resolveFieldPreviewScaffold = (
+  node: DesignerNode,
+  currencyCode: string = 'USD',
+  dateFormat?: CountryDateFormat
+): EditorPreviewScaffold => {
   const metadata = getNodeMetadata(node) as NodeMetadata;
   const sampleValue = resolveSampleValue(metadata);
   if (sampleValue.length > 0) {
@@ -153,6 +175,7 @@ export const resolveFieldPreviewScaffold = (node: DesignerNode, currencyCode: st
       labelHint: resolveFieldLabelHint(metadata),
       format,
       currencyCode,
+      dateFormat,
     }),
     isPlaceholder: true,
   };

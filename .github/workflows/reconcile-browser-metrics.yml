@@ -18,6 +18,7 @@ on:
 permissions:
   contents: read
   actions: read
+  issues: write
 
 jobs:
   reconcile:
@@ -33,7 +34,7 @@ jobs:
         with:
           node-version: '22'
       - name: Collect CI identities and existing metric rows
-        run: node scripts/collect-browser-metric-executions.mjs "$RUNNER_TEMP/browser-metric-executions.json"
+        run: node scripts/collect-browser-metric-executions.mjs "$RUNNER_TEMP/browser-metric-executions.json" "$RUNNER_TEMP/browser-metric-collection.json"
         env:
           GITHUB_TOKEN: ${{ github.token }}
           RECONCILE_RUN_ID: ${{ inputs.run_id || github.event.workflow_run.id }}
@@ -43,11 +44,34 @@ jobs:
           TEST_METRICS_SHEET_ID: ${{ vars.TEST_METRICS_SHEET_ID }}
       - name: Reconcile observed browser executions
         run: node scripts/reconcile-browser-metric-executions.mjs "$RUNNER_TEMP/browser-metric-executions.json" "$RUNNER_TEMP/browser-metric-reconciliation.json"
-      - name: Preserve reconciliation report
+      - name: Preserve collection diagnostics and reconciliation report
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: browser-metric-reconciliation-${{ github.run_id }}-${{ github.run_attempt }}
-          path: ${{ runner.temp }}/browser-metric-reconciliation.json
+          path: |
+            ${{ runner.temp }}/browser-metric-collection.json
+            ${{ runner.temp }}/browser-metric-reconciliation.json
           if-no-files-found: error
           retention-days: 14
+      # This workflow failed 175 times in a row before anyone noticed, because a
+      # workflow_run failure shows up nowhere a reviewer looks.
+      - name: Open or update the failure notice
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          NOTICE_TITLE: 'CI: browser metrics reconciliation is failing'
+        run: |
+          set -euo pipefail
+          url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/attempts/${GITHUB_RUN_ATTEMPT}"
+          body="$(printf '%s\n\n%s\n' "Browser metrics reconciliation failed. Read browser-metric-collection.json in the run artifact for the phase and code before rerunning." "Latest failing run: ${url}")"
+          # One open notice per streak, updated in place, so a failure run after
+          # every regression run cannot bury the repository in issues.
+          number="$(gh issue list --state open --limit 100 --json number,title --jq 'map(select(.title == env.NOTICE_TITLE)) | first | .number // empty')"
+          if [ -n "$number" ]; then
+            gh issue edit "$number" --body "$body"
+            echo "Updated existing notice #${number}."
+          else
+            gh issue create --title "$NOTICE_TITLE" --body "$body"
+          fi

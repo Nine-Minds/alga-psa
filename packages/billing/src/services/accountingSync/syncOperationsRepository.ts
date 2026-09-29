@@ -238,9 +238,24 @@ export class SyncOperationsRepository {
     return query.update({ status: 'done', processed_at: this.knex.fn.now(), last_error: null });
   }
 
-  async countByStatus(tenant: string, adapterType: string): Promise<Record<string, number>> {
-    const rows = await this.table(tenant)
-      .where({ adapter_type: adapterType })
+  async countByStatus(
+    tenant: string,
+    adapterType: string,
+    targetRealm?: string | null
+  ): Promise<Record<string, number>> {
+    const query = this.table(tenant).where({ adapter_type: adapterType });
+
+    // Organisation-scoped when a realm is supplied: another company's op counts
+    // must not appear in this organisation's health.
+    if (targetRealm !== undefined) {
+      if (targetRealm === null) {
+        query.whereNull('target_realm');
+      } else {
+        query.andWhere({ target_realm: targetRealm });
+      }
+    }
+
+    const rows = await query
       .select('status')
       .count<{ status: string; count: string }[]>('* as count')
       .groupBy('status');

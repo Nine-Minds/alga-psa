@@ -171,6 +171,8 @@ export async function updatePrepaidBalanceAlertSettingsDb(
         updated_at: trx.fn.now(),
       })
       .onConflict(['tenant', 'client_id'])
+      // Citus rejects STABLE functions (trx.fn.now() → CURRENT_TIMESTAMP) inside
+      // ON CONFLICT DO UPDATE SET on distributed tables — must pass a literal.
       .merge({
         prepaid_credit_alert_threshold: prepaidCreditAlertThreshold,
         prepaid_credit_alert_currency_code: prepaidCreditAlertCurrencyCode,
@@ -180,7 +182,7 @@ export async function updatePrepaidBalanceAlertSettingsDb(
         prepaid_credit_replenishment_amount: effectiveCreditReplenishmentAmount,
         prepaid_bucket_replenishment_minutes: effectiveBucketReplenishmentMinutes,
         prepaid_replenishment_horizon_days: prepaidReplenishmentHorizonDays,
-        updated_at: trx.fn.now(),
+        updated_at: new Date().toISOString(),
       });
   };
 

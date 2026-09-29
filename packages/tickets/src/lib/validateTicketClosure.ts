@@ -10,6 +10,7 @@ import {
   auditCloseRulesBypassIfGated,
   closeRulesHaveEnabledGates,
   getBoardCloseRulesRow,
+  openBundleChildrenCount,
   parseCloseRuleRequiredFields,
   type BoardCloseRulesRow,
 } from '@alga-psa/shared/lib/ticketCloseRules';
@@ -136,11 +137,7 @@ async function evaluateGates(
   }
 
   if (rules.require_no_open_children) {
-    const openChildren = await tenantScopedTable(trx, 'tickets', tenant)
-      .where({ master_ticket_id: ticketId })
-      .whereNull('closed_at')
-      .count<{ count: string }[]>('* as count');
-    const openCount = Number(openChildren[0]?.count ?? 0);
+    const openCount = await openBundleChildrenCount(trx, tenant, ticketId);
     if (openCount > 0) {
       failures.push({
         rule: 'open_children',

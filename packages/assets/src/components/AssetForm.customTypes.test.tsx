@@ -319,6 +319,20 @@ describe('AssetForm custom asset types', () => {
     expect(payload.attributes).toBeUndefined();
   });
 
+  it('renders built-in additional fields under Additional fields and submits them in attributes', async () => {
+    const user = userEvent.setup();
+    mockGetAsset.mockResolvedValue({ ...workstationAsset, attributes: {} });
+    mockGetAssetTypes.mockResolvedValue(REGISTRY.map((entry: any) => entry.slug === 'workstation'
+      ? { ...entry, fields_schema: [{ key: 'sc_session', label: 'ScreenConnect Session', kind: 'text' }] }
+      : entry));
+    await renderForm();
+    expect(screen.getByText('Additional fields')).toBeTruthy();
+    await user.type(await screen.findByLabelText('asset-edit-field-sc_session'), 'sess-2562-abc');
+    await user.click(screen.getByRole('button', { name: 'Save Changes' }));
+    await waitFor(() => expect(mockUpdateAsset).toHaveBeenCalledTimes(1));
+    expect(mockUpdateAsset.mock.calls[0][1].attributes).toEqual({ sc_session: 'sess-2562-abc' });
+  });
+
   it('D4: switching a built-in asset to a custom type swaps the panels (values kept server-side via merge)', async () => {
     const user = userEvent.setup();
     mockGetAsset.mockResolvedValue(workstationAsset);

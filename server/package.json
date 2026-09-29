@@ -1,6 +1,6 @@
 {
   "name": "server",
-  "version": "1.5.5",
+  "version": "1.6.7",
   "private": true,
   "type": "module",
   "engines": {
@@ -8,8 +8,8 @@
     "npm": ">=10.0.0"
   },
   "scripts": {
-    "dev": "cd .. && npx nx build-deps server && NX_LOAD_DOT_ENV_FILES=false NODE_ENV=development NX_DAEMON=false npx nx next:dev server",
-    "dev:turbo": "cd .. && npx nx build-deps server && NX_LOAD_DOT_ENV_FILES=false NODE_ENV=development npx nx next:dev server -- --turbo",
+    "dev": "cd .. && npx nx build-deps server && cd server && NX_LOAD_DOT_ENV_FILES=false NODE_ENV=development npx tsx dev-server.ts",
+    "dev:turbo": "cd .. && npx nx build-deps server && cd server && NX_LOAD_DOT_ENV_FILES=false NODE_ENV=development DEV_TURBOPACK=1 npx tsx dev-server.ts",
     "dev:express": "NODE_OPTIONS='--max-old-space-size=8192' NODE_ENV=development nodemon --watch index.ts --watch src/middleware --ext ts --exec tsx index.ts",
     "dev:ngrok": "node scripts/dev-with-ngrok-instructions.js",
     "ngrok:start": "ngrok http 3000 --subdomain=alga-psa-dev",
@@ -27,7 +27,7 @@
     "start:express": "tsx index.ts",
     "lint": "next lint",
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "test": "NODE_OPTIONS=\"${NODE_OPTIONS:---max-old-space-size=4096}\" SKIP_DB_TESTS=1 vitest run src/test/unit --coverage.enabled=false --poolOptions.forks.singleFork=false --maxWorkers=1",
+    "test": "NODE_OPTIONS=\"${NODE_OPTIONS:---max-old-space-size=4096}\" SKIP_DB_TESTS=1 VITEST_RECYCLE_FORKS=1 vitest run src/test/unit --coverage.enabled=false --maxWorkers=1",
     "test:watch": "vitest --watch",
     "test:unit": "vitest src/test/unit",
     "test:integration": "vitest src/test/integration ../ee/temporal-workflows/src/__tests__/integration",
@@ -259,6 +259,7 @@
     "nodemon": "^3.1.10",
     "null-loader": "^4.0.1",
     "pngjs": "^5.0.0",
+    "tinyglobby": "^0.2.15",
     "tsx": "^4.20.3",
     "typescript-eslint": "^8.19.1",
     "vitest": "^3.2.4"

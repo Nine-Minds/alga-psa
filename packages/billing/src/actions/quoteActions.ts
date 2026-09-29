@@ -69,6 +69,7 @@ interface SendQuoteInput {
   email_addresses?: string[];
   subject?: string;
   message?: string;
+  senderId?: string;
 }
 
 const requireBillingCreatePermission = async (user: unknown): Promise<ActionPermissionError | null> => {
@@ -556,7 +557,7 @@ const renderQuoteEmail = async ({
     quote: {
       number: quote.quote_number ?? quote.quote_id,
       amount: formatCurrency((quote.total_amount ?? 0) / 100, locale ?? 'en', quote.currency_code || 'USD'),
-      validUntil: formatQuoteDate(quote.valid_until ?? null),
+      validUntil: formatQuoteDate(quote.valid_until ?? null, locale),
     },
     company: {
       name: companyName,
@@ -582,6 +583,7 @@ const sendQuoteEmailWithAttachment = async ({
   subject,
   html,
   text,
+  senderId,
 }: {
   tenant: string;
   quote: IQuote;
@@ -590,12 +592,15 @@ const sendQuoteEmailWithAttachment = async ({
   subject: string;
   html: string;
   text: string;
+  senderId?: string;
 }) => {
   const actorId = getActorUserId(user);
   const pdfBuffer = await createPDFGenerationService(tenant).generatePDF({ quoteId: quote.quote_id, userId: actorId ?? '' });
   const resolvedQuoteNumber = quote.quote_number ?? quote.quote_id;
 
   return await TenantEmailService.getInstance(tenant).sendEmail({
+    mailClass: 'sales',
+    senderId,
     tenantId: tenant,
     to: recipients,
     subject,
@@ -1103,6 +1108,21 @@ export const createQuoteFromTemplate = withAuth(async (
     }
 
     const actorUserId = getActorUserId(user);
+
+    // Resolve the two terms fields together. `undefined` means "not supplied"
+    // (inherit from the template); `null` means an explicit clear. Resolving
+    // them independently would let a plain-text override silently inherit the
+    // template's block (which then wins during normalization), and would turn
+    // an explicit clear back into the template's terms.
+    const termsSupplied =
+      input.terms_and_conditions !== undefined || input.terms_and_conditions_block !== undefined;
+    const resolvedTermsAndConditions = termsSupplied
+      ? (input.terms_and_conditions !== undefined ? (input.terms_and_conditions ?? null) : null)
+      : (template.terms_and_conditions ?? null);
+    const resolvedTermsAndConditionsBlock = termsSupplied
+      ? (input.terms_and_conditions_block !== undefined ? (input.terms_and_conditions_block ?? null) : null)
+      : (template.terms_and_conditions_block ?? null);
+
     const parsedQuote = normalizeQuoteDates(createQuoteSchema.parse({
       client_id: input.client_id,
       contact_id: input.contact_id ?? null,
@@ -1114,7 +1134,8 @@ export const createQuoteFromTemplate = withAuth(async (
       opportunity_id: input.opportunity_id ?? null,
       internal_notes: input.internal_notes ?? template.internal_notes ?? null,
       client_notes: input.client_notes ?? template.client_notes ?? null,
-      terms_and_conditions: input.terms_and_conditions ?? template.terms_and_conditions ?? null,
+      terms_and_conditions: resolvedTermsAndConditions,
+      terms_and_conditions_block: resolvedTermsAndConditionsBlock,
       currency_code: input.currency_code ?? template.currency_code,
       is_template: false,
       created_by: input.created_by ?? actorUserId,
@@ -1177,6 +1198,7 @@ export const duplicateQuote = withAuth(async (
       internal_notes: sourceQuote.internal_notes ?? null,
       client_notes: sourceQuote.client_notes ?? null,
       terms_and_conditions: sourceQuote.terms_and_conditions ?? null,
+      terms_and_conditions_block: sourceQuote.terms_and_conditions_block ?? null,
       currency_code: sourceQuote.currency_code,
       tax_source: sourceQuote.tax_source ?? 'internal',
       is_template: false,
@@ -1249,6 +1271,7 @@ export const saveQuoteAsTemplate = withAuth(async (
       internal_notes: sourceQuote.internal_notes ?? null,
       client_notes: sourceQuote.client_notes ?? null,
       terms_and_conditions: sourceQuote.terms_and_conditions ?? null,
+      terms_and_conditions_block: sourceQuote.terms_and_conditions_block ?? null,
       currency_code: sourceQuote.currency_code,
       tax_source: sourceQuote.tax_source ?? 'internal',
       is_template: true,
@@ -1595,6 +1618,7 @@ export const sendQuote = withAuth(async (
         subject,
         html: renderedEmail.html,
         text: renderedEmail.text,
+        senderId: input.senderId,
       });
 
       emailSent = emailResult.success;
@@ -1695,6 +1719,7 @@ export const resendQuote = withAuth(async (
         subject,
         html: renderedEmail.html,
         text: renderedEmail.text,
+        senderId: input.senderId,
       });
 
       emailSent = emailResult.success;
@@ -1791,6 +1816,7 @@ export const sendQuoteReminder = withAuth(async (
         subject,
         html: renderedEmail.html,
         text: renderedEmail.text,
+        senderId: input.senderId,
       });
 
       emailSent = emailResult.success;

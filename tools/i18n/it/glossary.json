@@ -2350,7 +2350,13 @@
       "{{count}} asset",
       "{{count}} assets",
       "{{count}} h",
-      "{{hours}} h {{minutes}} min"
+      "{{hours}} h {{minutes}} min",
+      "3CX",
+      "Teams Phone",
+      "TeamViewer",
+      "Gigabyte",
+      "Terabyte",
+      "Volume"
     ],
     "caseInsensitive": [
       "account",
@@ -2403,7 +2409,8 @@
       "escalation",
       "bot",
       "editor",
-      "drop-ship"
+      "drop-ship",
+      "zoom"
     ],
     "patterns": [
       "^\\s*$",

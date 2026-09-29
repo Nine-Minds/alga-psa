@@ -5,6 +5,7 @@ import {
   ITimePeriodView,
   TaxRegion,
 } from '@alga-psa/types';
+import type { CatalogPeriod } from '../../../../lib/timeEntryPeriodSelection';
 
 export interface Service {
   id: string;
@@ -46,7 +47,20 @@ export interface TimeEntryFormProps {
   onUpdateTimeInputs: (inputs: TimeInputs) => void;
   lastNoteInputRef?: React.RefObject<HTMLTextAreaElement | null>;
   timePeriod?: ITimePeriodView;
+  /**
+   * The subject user's periods with sheet statuses. When set (instead of
+   * `timePeriod`), the date field spans every editable period, disables days on
+   * locked or uncovered sheets, and names the sheet the chosen day lands on.
+   */
+  periodCatalog?: readonly CatalogPeriod[];
   date?: Date;
+  /**
+   * IANA timezone the entry's work_date is derived in (the subject user's).
+   * When set, the date field, period bounds, and time pickers operate on that
+   * calendar day so the edited entry matches the saved subject work_date; when
+   * omitted they keep the historical browser-local behavior.
+   */
+  workTimeZone?: string;
   isNewEntry?: boolean;
   isSaving?: boolean;
   disableSave?: boolean;

@@ -4,6 +4,7 @@ import { localizeTimePresentation } from './timePresentationLocalization';
 import type { TemplateLabelTranslator } from './i18nLabels';
 import React from 'react';
 import { formatCurrencyFromMinorUnits } from '@alga-psa/core';
+import { SYSTEM_DATE_FORMAT, type CountryDateFormat } from '@alga-psa/core/i18n/countryDateFormat';
 import type {
   TemplateAst,
   TemplateFieldBorderStyle,
@@ -24,6 +25,7 @@ import type { TemplateEvaluationResult } from './evaluator';
 import { decodeTemplatePathExpression } from './templateInterpolationFilters';
 import { normalizeTemplateAstFieldBorderDefaults } from './normalize';
 import { resolveTemplatePrintSettingsFromAst } from './printSettings';
+import { convertBlockContentToHTML } from '@alga-psa/formatting/blocknoteUtils';
 
 type UnknownRecord = Record<string, unknown>;
 
@@ -45,11 +47,23 @@ type RenderScope = {
 type RenderContext = {
   ast: TemplateAst;
   locale: string;
+  /** The recipient country's date shape: digit order, separator and clock. */
+  dateFormat: CountryDateFormat;
   currencyCode: string;
 };
 
 const isRecord = (value: unknown): value is UnknownRecord =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
+
+/**
+ * True when a resolved value is authored structured content (a non-empty
+ * BlockNote block array or a ProseMirror doc). A plain string — the legacy
+ * terms projection — is not structured and renders as pre-line text.
+ */
+const isStructuredBlockContent = (value: unknown): boolean => {
+  if (Array.isArray(value)) return value.length > 0;
+  return isRecord(value) && value.type === 'doc';
+};
 
 /**
  * A display string as it should appear. Key references are normally resolved
@@ -232,7 +246,7 @@ const formatValue = (value: unknown, format: TemplateValueFormat | undefined, ct
     // Shared UTC-pinned formatter: date-only values must not shift with the
     // server process timezone (e.g. YYYY-MM-DD snapshot dates in negative
     // UTC offsets), and preview/PDF must agree with field formatting.
-    return formatTemplateDateValue(String(value), ctx.locale);
+    return formatTemplateDateValue(String(value), ctx.locale, ctx.dateFormat);
   }
 
   if (normalizedFormat === 'currency') {
@@ -569,12 +583,46 @@ const renderNode = (
     }
     case 'text': {
       const content = resolveExpressionValue(node.content, evaluation, scope, ctx);
+      // Preserve authored line breaks for legacy multiline terms. The layout
+      // author's own style still wins via the spread.
       return (
         <p
           key={node.id}
           id={node.id}
           className={elementClassName || undefined}
-          style={{ whiteSpace: 'pre-line', ...style }}
+          style={{ whiteSpace: 'pre-line', ...(style ?? {}) }}
+        >
+          {String(content ?? '')}
+        </p>
+      );
+    }
+    case 'richText': {
+      const content = resolveExpressionValue(node.content, evaluation, scope, ctx);
+
+      if (isStructuredBlockContent(content)) {
+        const html = convertBlockContentToHTML(content);
+        return (
+          <div
+            key={node.id}
+            id={node.id}
+            className={elementClassName || undefined}
+            style={style}
+            dangerouslySetInnerHTML={{ __html: html }}
+          />
+        );
+      }
+
+      // Plain string — including an empty one — falls back to exactly what the
+      // legacy `text` node emits (pre-line whitespace, empty paragraph
+      // preserved). A migrated stock layout therefore reproduces the pre-change
+      // PDF byte-for-byte; the converter's "[No content]" placeholder is never
+      // reached.
+      return (
+        <p
+          key={node.id}
+          id={node.id}
+          className={elementClassName || undefined}
+          style={{ whiteSpace: 'pre-line', ...(style ?? {}) }}
         >
           {String(content ?? '')}
         </p>
@@ -587,6 +635,7 @@ const renderNode = (
         format: node.format,
         currencyCode: ctx.currencyCode,
         locale: ctx.locale,
+        dateFormat: ctx.dateFormat,
         displayFormat: node.displayFormat,
       });
       const multilineFieldAdjustments: React.CSSProperties | null = formattedValue.multiline
@@ -777,10 +826,21 @@ export interface TemplateReactRendererProps {
    * currency so formatting never diverges from the language of the labels.
    */
   locale?: string;
+  /**
+   * The recipient country's date shape. Digit order, separator and 12/24h clock
+   * come from WHERE the document is addressed, never from the language it is
+   * written in; omitted, the fixed system default applies.
+   */
+  dateFormat?: CountryDateFormat;
   t?: TemplateLabelTranslator;
 }
 
-export const TemplateAstRenderer: React.FC<TemplateReactRendererProps> = ({ ast, evaluation, locale: localeOverride }) => {
+export const TemplateAstRenderer: React.FC<TemplateReactRendererProps> = ({
+  ast,
+  evaluation,
+  locale: localeOverride,
+  dateFormat,
+}) => {
   const invoiceRecord = isRecord(evaluation.bindings.invoice) ? evaluation.bindings.invoice : {};
   const invoiceRecordUntyped = invoiceRecord as Record<string, unknown>;
   const currencyCode = String(
@@ -791,7 +851,13 @@ export const TemplateAstRenderer: React.FC<TemplateReactRendererProps> = ({ ast,
 
   return (
     <div className="invoice-template-root">
-      {renderNode(ast.layout, evaluation, {}, { ast, currencyCode, locale }, rootDocumentStyleOverride)}
+      {renderNode(
+        ast.layout,
+        evaluation,
+        {},
+        { ast, currencyCode, locale, dateFormat: dateFormat ?? SYSTEM_DATE_FORMAT },
+        rootDocumentStyleOverride
+      )}
     </div>
   );
 };
@@ -804,6 +870,8 @@ export interface TemplateRenderOutput {
 export interface TemplateRenderOptions {
   /** The recipient's locale; falls back to `metadata.locale`, then `en-US`. */
   locale?: string;
+  /** The recipient country's date shape; the fixed system default when omitted. */
+  dateFormat?: CountryDateFormat;
   t?: TemplateLabelTranslator;
 }
 
@@ -818,7 +886,12 @@ export const renderEvaluatedTemplateAst = async (
   const normalizedAst = normalizeTemplateAstFieldBorderDefaults(ast);
   return {
     html: renderToStaticMarkup(
-      <TemplateAstRenderer ast={normalizedAst} evaluation={localizeTimePresentation(evaluation, options.t)} locale={options.locale} />
+      <TemplateAstRenderer
+        ast={normalizedAst}
+        evaluation={localizeTimePresentation(evaluation, options.t)}
+        locale={options.locale}
+        dateFormat={options.dateFormat}
+      />
     ),
     css: buildAstCss(normalizedAst),
   };

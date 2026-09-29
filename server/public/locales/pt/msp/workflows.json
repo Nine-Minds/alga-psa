@@ -674,7 +674,24 @@
       "workflowStepsListHint": "Arraste as etapas para reordenar ou mover-se entre tubos.",
       "workflowStepsGraphHint": "Panorâmica/zoom o gráfico. Ramos são renderizados como pistas separadas.",
       "workflowStepsViewAria": "Visualização de etapas do fluxo de trabalho",
-      "warningsCount": "Avisos {{count}}"
+      "warningsCount": "Avisos {{count}}",
+      "dateSource": "Origem da data",
+      "dateSourceAnniversary": "Aniversário do cliente",
+      "dateSourceRenewal": "Data de decisão de renovação do contrato",
+      "dateSourceContractEnd": "Data de término do contrato",
+      "dateSourceWarranty": "Fim da garantia do ativo",
+      "dateOffset": "Dias",
+      "dateDirection": "Momento",
+      "before": "Antes",
+      "onDate": "No próprio dia",
+      "after": "Depois",
+      "daysBefore": "dias antes de",
+      "daysAfter": "dias depois de",
+      "localTime": "Horário local",
+      "timezoneOptional": "Fuso horário (opcional)",
+      "tenantTimezoneDefault": "Fuso horário do locatário",
+      "dateTriggerSummary": "Executa {{days}} {{direction}} {{source}} às {{time}} ({{timezone}})",
+      "inputDataDatePrefix": "Este fluxo de trabalho recebe a carga útil definida por"
     },
     "stepPanel": {
       "readOnly": "Acesso somente leitura: a edição de etapas está desativada.",
@@ -1593,7 +1610,8 @@
     "event": "Evento",
     "eventWithType": "Evento: {{eventType}}",
     "oneTimeSchedule": "Agendamento único",
-    "recurringSchedule": "Cronograma recorrente"
+    "recurringSchedule": "Cronograma recorrente",
+    "date": "Data"
   },
   "scheduleStatus": {
     "unknown": "Desconhecido",
@@ -2201,13 +2219,15 @@
         "event": "Baseado em eventos",
         "schedule": "Agendamento único",
         "recurring": "Cronograma recorrente",
-        "manual": "Manual"
+        "manual": "Manual",
+        "date": "Baseado em data"
       },
       "triggerLabels": {
         "manual": "Manual",
         "schedule": "Agendamento único",
         "recurring": "Cronograma recorrente",
-        "event": "Evento"
+        "event": "Evento",
+        "date": "Data"
       },
       "bulk": {
         "selectedSingular": "Fluxo de trabalho {{count}} selecionado",

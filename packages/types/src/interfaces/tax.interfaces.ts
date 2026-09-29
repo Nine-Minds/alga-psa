@@ -32,11 +32,14 @@ export interface ITaxRate extends TenantEntity {
   description: string | null; // Added description field from tax_rates table
   region_code: string; // Added region_code field from tax_rates table
   name?: string; // Made optional for backward compatibility with tests
+  /** Explicit invoice currency; null/omitted means this rate is universal. */
+  currency_code?: string | null;
   /**
-   * Maximum tax this rate may charge for a single calculation, in the
-   * smallest currency unit (same unit as the net amount). `null`/`undefined`
-   * means uncapped; `0` is a supplied cap that charges no tax. Only applied to
-   * the single-rate simple and progressive-threshold paths.
+   * Maximum tax contribution in currency_code minor units (0..MAX_SAFE_INTEGER).
+   * Null/omitted is uncapped; zero is a real cap. Applied to simple/progressive
+   * and regional paths, per rate per segment for period calculations. Component-
+   * based composite calculations do not apply this row cap. Legacy universal
+   * caps retain their stored minor units until explicitly resolved or cleared.
    */
   cap_amount?: number | null;
 }

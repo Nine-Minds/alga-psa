@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { applyEmailPalette } from '../applyEmailPalette';
 import { decorateBrandedHtml } from '../brandAssets';
+import { stripGradientFallback } from '../gradientFallback';
 import { classifyTenantTemplate } from '../classifyTenantTemplate';
 import { resolveEmailPalette } from '../resolveEmailPalette';
 import { STOCK_EMAIL_PALETTE } from '../stockPalette';
@@ -35,6 +36,19 @@ describe('classifyTenantTemplate', () => {
 
   it('classifies a row the tool wrote as branded', () => {
     expect(classifyTenantTemplate({ tenantRow: brandedRow, systemRow, appliedPalette: TERRACOTTA }))
+      .toEqual({ state: 'branded', differs: [] });
+  });
+
+  it('classifies a branded row written before the header carried the flat fallback as branded', () => {
+    // Rows in tenant_email_templates predate the bgcolor/background-color
+    // fallback; the corrected system template must not turn them "customized".
+    const legacyBranded = {
+      subject: brandedRow.subject,
+      html_content: stripGradientFallback(brandedRow.html_content),
+    };
+    expect(legacyBranded.html_content).not.toBe(brandedRow.html_content);
+
+    expect(classifyTenantTemplate({ tenantRow: legacyBranded, systemRow, appliedPalette: TERRACOTTA }))
       .toEqual({ state: 'branded', differs: [] });
   });
 
@@ -101,7 +115,7 @@ describe('classifyTenantTemplate', () => {
 });
 
 describe('classifyTenantTemplate with enterprise brand assets', () => {
-  const logo = { url: 'https://cdn.example.com/logo.png', alt: 'Acme' };
+  const logo = { variant: 'default' as const, alt: 'Acme' };
 
   it('recognizes a row it wrote with a logo and no attribution as branded', () => {
     const decorated = decorateBrandedHtml(brandedRow.html_content, { logo, hideAttribution: true });

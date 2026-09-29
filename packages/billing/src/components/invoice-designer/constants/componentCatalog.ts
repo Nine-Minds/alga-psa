@@ -18,6 +18,7 @@ const PALETTE_TYPES: ComponentDefinition['type'][] = [
   'divider',
   'spacer',
   'text',
+  'richText',
   'totals',
   'table',
   'dynamic-table',

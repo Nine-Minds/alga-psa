@@ -508,6 +508,11 @@ export interface ITaxRate extends TenantEntity {
   description?: string;
   start_date: string;
   end_date?: string | null;
+  /** Explicit invoice currency, or null for a universal rate. */
+  currency_code?: string | null;
+  /** Safe integer tax cap in rate-currency minor units; null is uncapped, zero is intentional.
+   * Applied per rate contribution/per period segment, not to component-based composite totals. */
+  cap_amount?: number | null;
 }
 
 export interface IClientTaxRate extends TenantEntity {
@@ -526,6 +531,7 @@ export interface IDefaultBillingSettings extends TenantEntity {
   credit_expiration_notification_days: number[];
   default_renewal_mode?: 'none' | 'manual' | 'auto';
   default_notice_period_days?: number;
+  default_quote_validity_days?: number;
   renewal_due_date_action_policy?: 'queue_only' | 'create_ticket';
   renewal_ticket_board_id?: string | null;
   renewal_ticket_status_id?: string | null;
