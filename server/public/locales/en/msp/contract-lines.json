@@ -455,7 +455,8 @@
         "defaultRatePerUnit": "Rate per unit (used if tiered pricing is off).",
         "minimumUsage": "Minimum billable units per period.",
         "unitOfMeasure": "e.g., GB, User, Device."
-      }
+      },
+      "catalogUnitPrecedence": "The catalog unit takes precedence over this usage-config unit."
     }
   },
   "list": {

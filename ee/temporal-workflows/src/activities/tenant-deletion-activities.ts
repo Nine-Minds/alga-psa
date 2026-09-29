@@ -435,6 +435,8 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
 
   // Service catalog
   'service_catalog', 'service_types', 'service_categories',
+  // Tenant custom units of measure (no FKs; referenced by unit_code text only)
+  'tenant_units_of_measure',
 
   // Settings that might be referenced
   'approval_thresholds',

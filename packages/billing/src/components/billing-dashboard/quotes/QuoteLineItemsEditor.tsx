@@ -6,6 +6,9 @@ import { useBillingFrequencyOptions, useFormatBillingFrequency } from '@alga-psa
 import { Button } from '@alga-psa/ui/components/Button';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { Input } from '@alga-psa/ui/components/Input';
+import { UnitOfMeasureInput } from '@alga-psa/ui/components/UnitOfMeasureInput';
+import type { UnitSelection } from '@alga-psa/ui/components/UnitOfMeasureInput';
+import { listTenantUnitsOfMeasure, registerTenantUnitOfMeasure } from '@alga-psa/billing/actions/unitOfMeasureActions';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Pencil, Info } from 'lucide-react';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
@@ -442,6 +445,16 @@ const QuoteLineItemsEditor: React.FC<QuoteLineItemsEditorProps> = ({
                 )
               }
             </div>
+            {!isDiscount && (
+              <UnitOfMeasureInput
+                id={`quote-line-item-unit-${item.local_id}`}
+                value={{ code: item.unit_code || '', label: item.unit_of_measure || '' }}
+                onChange={(value: UnitSelection) => updateItem(item.local_id, { unit_of_measure: value.label, unit_code: value.code })}
+                loadCustomUnits={listTenantUnitsOfMeasure}
+                registerCustomUnit={registerTenantUnitOfMeasure}
+                required={item.billing_method === 'usage'}
+              />
+            )}
             {!isDiscount && (
               <div className="space-y-1">
                 <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">

@@ -1692,5 +1692,41 @@
       "defaultFailed": "No se pudo cambiar su vista predeterminada.",
       "copyFailed": "No se pudo copiar el enlace."
     }
+  },
+  "unitOfMeasure": {
+    "labels": {
+      "each": "Unidad",
+      "piece": "Pieza",
+      "box": "Caja",
+      "seat": "Puesto",
+      "license": "Licencia",
+      "device": "Dispositivo",
+      "user": "Usuario",
+      "kit": "Kit",
+      "hour": "Hora",
+      "day": "Día",
+      "week": "Semana",
+      "month": "Mes",
+      "year": "Año",
+      "minute": "Minuto",
+      "gigabyte": "Gigabyte",
+      "terabyte": "Terabyte",
+      "liter": "Litro",
+      "kilogram": "Kilogramo",
+      "meter": "Metro"
+    },
+    "groups": {
+      "time": "Tiempo",
+      "count": "Cantidad",
+      "volume": "Volumen",
+      "mass": "Masa",
+      "length": "Longitud",
+      "other": "Otro",
+      "custom": "Personalizado"
+    },
+    "customOption": "Personalizado…",
+    "customPlaceholder": "Asigne un nombre a esta unidad",
+    "register": "Agregar",
+    "selectPlaceholder": "Seleccione una unidad"
   }
 }

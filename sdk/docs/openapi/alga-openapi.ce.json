@@ -17775,6 +17775,12 @@
           "unit_of_measure": {
             "type": "string"
           },
+          "unit_code": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "category_id": {
             "type": [
               "string",
@@ -18018,6 +18024,12 @@
           },
           "unit_of_measure": {
             "type": "string"
+          },
+          "unit_code": {
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "category_id": {
             "type": [
@@ -78213,6 +78225,9 @@
                     "minLength": 1,
                     "maxLength": 128
                   },
+                  "unit_code": {
+                    "type": "string"
+                  },
                   "category_id": {
                     "anyOf": [
                       {
@@ -78260,8 +78275,7 @@
                   "service_name",
                   "custom_service_type_id",
                   "billing_method",
-                  "default_rate",
-                  "unit_of_measure"
+                  "default_rate"
                 ]
               },
               "description": "Service creation payload."
@@ -78461,6 +78475,9 @@
                     "type": "string",
                     "minLength": 1,
                     "maxLength": 128
+                  },
+                  "unit_code": {
+                    "type": "string"
                   },
                   "category_id": {
                     "anyOf": [
@@ -78873,6 +78890,9 @@
                     "minLength": 1,
                     "maxLength": 128
                   },
+                  "unit_code": {
+                    "type": "string"
+                  },
                   "category_id": {
                     "anyOf": [
                       {
@@ -79074,8 +79094,7 @@
                 },
                 "required": [
                   "service_name",
-                  "custom_service_type_id",
-                  "unit_of_measure"
+                  "custom_service_type_id"
                 ]
               },
               "description": "Product creation payload."
@@ -79290,6 +79309,9 @@
                     "type": "string",
                     "minLength": 1,
                     "maxLength": 128
+                  },
+                  "unit_code": {
+                    "type": "string"
                   },
                   "category_id": {
                     "anyOf": [

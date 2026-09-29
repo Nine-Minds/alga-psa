@@ -26,6 +26,10 @@
       "import": "./dist/lib/workSchedule.js",
       "types": "./src/lib/workSchedule.ts"
     },
+    "./unitOfMeasure": {
+      "import": "./dist/lib/unitOfMeasure.js",
+      "types": "./src/lib/unitOfMeasure.ts"
+    },
     "./secrets": {
       "import": "./dist/lib/secrets/index.js",
       "types": "./src/lib/secrets/index.ts"

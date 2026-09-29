@@ -1726,5 +1726,41 @@
       "defaultFailed": "Nie można zmienić Twojego widoku domyślnego.",
       "copyFailed": "Nie można skopiować linku."
     }
+  },
+  "unitOfMeasure": {
+    "labels": {
+      "each": "Sztuka",
+      "piece": "Element",
+      "box": "Pudełko",
+      "seat": "Stanowisko",
+      "license": "Licencja",
+      "device": "Urządzenie",
+      "user": "Użytkownik",
+      "kit": "Zestaw",
+      "hour": "Godzina",
+      "day": "Dzień",
+      "week": "Tydzień",
+      "month": "Miesiąc",
+      "year": "Rok",
+      "minute": "Minuta",
+      "gigabyte": "Gigabajt",
+      "terabyte": "Terabajt",
+      "liter": "Litr",
+      "kilogram": "Kilogram",
+      "meter": "Metr"
+    },
+    "groups": {
+      "time": "Czas",
+      "count": "Liczba",
+      "volume": "Objętość",
+      "mass": "Masa",
+      "length": "Długość",
+      "other": "Inne",
+      "custom": "Niestandardowa"
+    },
+    "customOption": "Niestandardowa…",
+    "customPlaceholder": "Nazwij tę jednostkę",
+    "register": "Dodaj",
+    "selectPlaceholder": "Wybierz jednostkę"
   }
 }

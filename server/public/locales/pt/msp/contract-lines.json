@@ -455,7 +455,8 @@
         "defaultRatePerUnit": "Taxa por unidade (usada se o preço diferenciado estiver desativado).",
         "minimumUsage": "Unidades faturáveis ​​mínimas por período.",
         "unitOfMeasure": "por exemplo, GB, usuário, dispositivo."
-      }
+      },
+      "catalogUnitPrecedence": "A unidade do catálogo tem precedência sobre a unidade desta configuração de uso."
     }
   },
   "list": {

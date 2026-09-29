@@ -68,6 +68,8 @@ export interface IContractLineServiceUsageConfig extends TenantEntity {
   effective_period_start?: string;
   config_id: string;
   unit_of_measure: string;
+  /** UN/ECE Rec 20 code for `unit_of_measure`; derived from the label on write when omitted. */
+  unit_code?: string | null;
   enable_tiered_pricing: boolean;
   minimum_usage?: number | null; // Make nullable to match DB and input
   base_rate?: number | null; // Add the new base_rate field
