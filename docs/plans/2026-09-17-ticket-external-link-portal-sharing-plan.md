@@ -31,3 +31,22 @@ The dedicated `POST /api/v1/tickets/{id}/external-links` and `PATCH /api/v1/tick
 - Light and dark views were inspected. A narrow MSP row layout was corrected so the label and visibility remain readable; all 17 affected UI/contract tests passed again. The seeded review ticket is left with one private and one shared link; demo account credentials and session state remain outside version control in the locations recorded on the workflow card.
 
 Review the [MSP visibility rows](2026-09-17-ticket-external-link-sharing-evidence/msp-link-visibility.png), [sharing dialog](2026-09-17-ticket-external-link-sharing-evidence/msp-sharing-dialog.png), and [customer section](2026-09-17-ticket-external-link-sharing-evidence/portal-shared-link.png). Compare the [dark MSP dialog](2026-09-17-ticket-external-link-sharing-evidence/msp-sharing-dialog-dark.png) and [dark customer section](2026-09-17-ticket-external-link-sharing-evidence/portal-shared-link-dark.png). Repeat the journey with the seeded accounts and inspect the response body, not just the DOM. No live push revocation is promised.
+
+## Mitigation, 2026-09-29
+
+Human review found the client-portal External links container did not match its sibling ticket sections: the shared `Card` rendered `rounded-lg` (8px), while the ticket details panel uses `rounded-3xl` (24px) and Conversation/Documents use `var(--radius-4xl, 24px)`.
+
+`PortalTicketExternalLinks` now overrides the Card with `!rounded-3xl p-6 space-y-5` plus the theme-aware `border-[rgb(var(--color-border-200))]` token:
+
+- The `!` important prefix is required because the app's Tailwind output orders `.rounded-lg` after `.rounded-3xl`, so a plain class loses the cascade and the Card keeps its 8px radius.
+- The explicit border token is required because the Card's bare `border` stays `#e5e7eb` in dark mode, whereas the details panel's `border-gray-200` is shimmed to the dark border token. Using the token makes light and dark match the panel.
+
+Zero shared links still returns `null`, hiding the section (the "omits the entire section when empty" test is unchanged). No data, authorization, notification, sharing, or localized-copy behavior changed.
+
+Verification:
+
+- `npx vitest run src/components/tickets/PortalTicketExternalLinks.test.tsx` in `packages/client-portal` — 2/2 passed, including "omits the entire section when empty".
+- `npx tsc --noEmit` in `packages/client-portal` — passed.
+- `NODE_OPTIONS=--max-old-space-size=16384 npx tsc --noEmit --project tsconfig.json --incremental --tsBuildInfoFile /tmp/share-portal-typecheck-fix.tsbuildinfo` in `server` — passed.
+- `npx eslint packages/client-portal/src/components/tickets/PortalTicketExternalLinks.tsx` — passed.
+- Live dev server (`:3688`, same worktree): the External links container and the details panel both compute `border-radius: 24px` and `padding: 24px` with matching border and background in light and dark. Updated [light](2026-09-17-ticket-external-link-sharing-evidence/portal-shared-link.png) and [dark](2026-09-17-ticket-external-link-sharing-evidence/portal-shared-link-dark.png) portal screenshots show the section beside the ticket details, Comments, and Documents sections.

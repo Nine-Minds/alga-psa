@@ -9,7 +9,7 @@ export function PortalTicketExternalLinks({ links }: { links: PortalTicketExtern
   if (links.length === 0) return null;
 
   return (
-    <Card className="p-4 space-y-3">
+    <Card className="!rounded-3xl border-[rgb(var(--color-border-200))] p-6 space-y-5">
       <h2 className="text-sm font-semibold">{t('externalLinks.title', 'External links')}</h2>
       <p className="text-sm text-[rgb(var(--color-text-600))]">
         {t('externalLinks.visibility.help', 'Customers with access to this ticket can see this link. Sharing the link does not grant access to the external system.')}
