@@ -59,13 +59,17 @@ test('browser command rejects dirty source before or during otherwise passing ex
     // flaky report reads out of the red job.
     writeFileSync(path.join(root, 'app.txt'), 'original');
     const retried = spawnSync(process.execPath, ['e2e-tests/run.mjs'], { cwd: root, encoding: 'utf8', timeout: 10000,
-      env: { ...process.env, MUTATE_SOURCE: '0', RETRY_ONLY: '1', GITHUB_RUN_ID: '77', GITHUB_RUN_ATTEMPT: '2' } });
+      env: { ...process.env, MUTATE_SOURCE: '0', RETRY_ONLY: '1', GITHUB_RUN_ID: '77', GITHUB_RUN_ATTEMPT: '2',
+        GITHUB_EVENT_NAME: 'schedule', GITHUB_HEAD_REF: '', GITHUB_REF_NAME: 'main' } });
     assert.equal(retried.status, 1, retried.stderr);
     assert.equal(evidenceFile('evidence').counts.flaky, 1);
     const flaky = evidenceFile('flaky-tests');
     assert.match(flaky.revision, /^[a-f0-9]{40}$/);
+    // The event and branch let the weekly report count main-run flakes apart
+    // from pull-request ones.
     assert.deepEqual({ ...flaky, revision: null, tests: undefined }, { schemaVersion: 1, suite: 'production-browser',
-      job: 'production-browser (enterprise)', edition: 'enterprise', revision: null, runId: '77', runAttempt: 2, tests: undefined });
+      job: 'production-browser (enterprise)', edition: 'enterprise', revision: null, runId: '77', runAttempt: 2,
+      eventName: 'schedule', branch: 'main', tests: undefined });
     assert.deepEqual(flaky.tests, [{ testId: 'e2e-tests/tests/journey.spec.ts > persists result [ee]',
       file: 'e2e-tests/tests/journey.spec.ts', name: 'persists result', project: 'ee', retryCount: 1 }]);
     // The uploaded copy is the same document, and living under the ignored
