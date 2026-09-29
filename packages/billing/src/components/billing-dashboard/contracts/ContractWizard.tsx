@@ -430,8 +430,12 @@ export function ContractWizard({
     setCurrentStep(0);
   };
 
-  const updateData = (data: Partial<ContractWizardData>) => {
-    setWizardData((prev) => ({ ...prev, ...data }));
+  // A function update is resolved against the latest state inside the setter, so
+  // async callers (e.g. catalog-price prefill) never write back a stale snapshot.
+  const updateData = (
+    data: Partial<ContractWizardData> | ((prev: ContractWizardData) => Partial<ContractWizardData>),
+  ) => {
+    setWizardData((prev) => ({ ...prev, ...(typeof data === 'function' ? data(prev) : data) }));
   };
 
   const hasUnsavedChanges = useMemo(() => {

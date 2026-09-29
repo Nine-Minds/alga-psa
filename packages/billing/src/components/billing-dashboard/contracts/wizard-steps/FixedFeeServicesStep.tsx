@@ -29,7 +29,14 @@ import {
 
 interface FixedFeeServicesStepProps {
   data: ContractWizardData;
-  updateData: (data: Partial<ContractWizardData>) => void;
+  /**
+   * Accepts a partial to shallow-merge, or a function that derives the partial
+   * from the latest wizard state. Use the function form after an `await`, where
+   * `data` is the render that started the async work and may be stale.
+   */
+  updateData: (
+    data: Partial<ContractWizardData> | ((prev: ContractWizardData) => Partial<ContractWizardData>),
+  ) => void;
 }
 
 export function FixedFeeServicesStep({ data, updateData }: FixedFeeServicesStepProps) {
@@ -62,13 +69,16 @@ export function FixedFeeServicesStep({ data, updateData }: FixedFeeServicesStepP
         const rates = await getServiceCatalogRatesForCurrency(missingRateKey.split(','), data.currency_code);
         if (cancelled) return;
         setCatalogRates((prev) => ({ ...prev, ...rates }));
-        updateData({
-          fixed_services: data.fixed_services.map((service) =>
+        // Apply against the wizard state as it is now: the operator may have
+        // edited rows while the request was pending, and only a still-unpriced
+        // per-unit row on the same service is filled in.
+        updateData((prev) => ({
+          fixed_services: prev.fixed_services.map((service) =>
             isUnitFixedService(service) && service.service_id && service.unit_rate == null && rates[service.service_id] != null
               ? { ...service, unit_rate: rates[service.service_id] as number }
               : service
           ),
-        });
+        }));
       } catch (error) {
         console.error('Failed to load catalog prices for recurring services', error);
       }
