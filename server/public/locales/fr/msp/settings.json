@@ -658,6 +658,21 @@
         "defaultBoard": {
           "label": "Tableau par défaut pour les tickets du portail client",
           "help": "Les nouveaux tickets soumis depuis le portail client sont ajoutés à ce tableau. Un seul tableau peut être défini par défaut."
+        },
+        "defaultWatchlist": {
+          "enabledLabel": "Ajouter des observateurs par défaut aux nouveaux tickets",
+          "enabledHelp": "Les observateurs de cette liste sont ajoutés à chaque nouveau ticket de ce tableau, quelle que soit la façon dont il est créé. Les observateurs reçoivent des notifications et ne sont pas assignés. Les tickets existants ne changent pas.",
+          "usersLabel": "Membres de l'équipe",
+          "usersPlaceholder": "Sélectionner des membres de l'équipe",
+          "usersHelp": "Les observateurs sont notifiés à leur adresse e-mail actuelle. Les utilisateurs inactifs sont ignorés.",
+          "emailsLabel": "Adresses e-mail",
+          "emailPlaceholder": "nom@example.com",
+          "addEmail": "Ajouter",
+          "emailsHelp": "Utilisez des adresses e-mail pour les listes de diffusion et les contacts externes. La liste accepte jusqu'à {{max}} destinataires.",
+          "removeEmail": "Retirer {{email}}",
+          "emailInvalid": "« {{email}} » n'est pas une adresse e-mail valide.",
+          "emailDuplicate": "{{email}} figure déjà dans la liste.",
+          "tooMany": "La liste accepte jusqu'à {{max}} destinataires."
         }
       },
       "dialog": {
@@ -804,6 +819,8 @@
           "automationHelp": "Clôturer automatiquement les tickets inactifs après une période d'inactivité",
           "statuses": "Priorités et statuts",
           "statusesHelp": "Priorité par défaut et statuts de ticket pour ce tableau",
+          "watchlist": "Liste de suivi par défaut",
+          "watchlistHelp": "Observateurs ajoutés à chaque nouveau ticket",
           "display": "Affichage et comportement",
           "displayHelp": "Minuteur en direct et type de tableau"
         },

@@ -275,6 +275,27 @@ vi.mock('@alga-psa/ui/components/UserPicker', () => ({
   default: () => <div data-testid="user-picker" />,
 }));
 
+vi.mock('@alga-psa/ui/components/MultiUserPicker', () => ({
+  __esModule: true,
+  default: ({ id, values, onValuesChange, users }: { id: string; values: string[]; onValuesChange: (v: string[]) => void; users: Array<{ user_id: string; first_name?: string }> }) => (
+    <div data-testid={id}>
+      {users.map((user) => (
+        <button
+          key={user.user_id}
+          type="button"
+          data-testid={`${id}-${user.user_id}`}
+          aria-pressed={values.includes(user.user_id)}
+          onClick={() =>
+            onValuesChange(values.includes(user.user_id) ? values.filter((v) => v !== user.user_id) : [...values, user.user_id])
+          }
+        >
+          {user.first_name}
+        </button>
+      ))}
+    </div>
+  ),
+}));
+
 vi.mock('@alga-psa/ui/components/UserAndTeamPicker', () => ({
   __esModule: true,
   default: () => <div data-testid="user-team-picker" />,
@@ -931,5 +952,101 @@ describe('BoardsSettings ticket status copy flow', () => {
 
     expect(document.getElementById('board-row-board-11')).toBeInTheDocument();
     expect(document.getElementById('board-row-board-15')).toBeInTheDocument();
+  });
+});
+
+describe('BoardsSettings default watchlist section (alga-2026-0002379)', () => {
+  const USER_ID = '11111111-1111-4111-8111-111111111111';
+
+  beforeEach(() => {
+    Object.defineProperty(window, 'localStorage', {
+      configurable: true,
+      value: { getItem: vi.fn(() => null), setItem: vi.fn(), removeItem: vi.fn(), clear: vi.fn() },
+    });
+    vi.clearAllMocks();
+    useFeatureFlagMock.mockReturnValue({ enabled: false });
+    getAllBoardsMock.mockResolvedValue([
+      {
+        board_id: 'board-source',
+        board_name: 'Support',
+        display_order: 10,
+        is_inactive: false,
+        default_watchlist_enabled: true,
+        default_watchlist: { user_ids: [USER_ID], emails: ['dl@msp.example'] },
+      },
+    ]);
+    updateBoardMock.mockResolvedValue({ board_id: 'board-source' });
+    // Saving requires exactly one open default status on the board.
+    getBoardTicketStatusesMock.mockResolvedValue([
+      { status_id: 'status-open', name: 'Support Open', is_closed: false, is_default: true, order_number: 10 },
+    ]);
+    getAllPrioritiesMock.mockResolvedValue([]);
+    getAllUsersMock.mockResolvedValue([{ user_id: USER_ID, first_name: 'Ada', user_type: 'internal', is_inactive: false }]);
+    getSlaPoliciesMock.mockResolvedValue([]);
+    getTeamsMock.mockResolvedValue([]);
+  });
+
+  const openEditor = async () => {
+    renderBoardsSettings();
+    await waitFor(() => expect(document.querySelector('[id^="board-row-"]')).toBeTruthy());
+    fireEvent.click(screen.getAllByText('ticketing.boards.actions.edit')[0]);
+    await waitFor(() => expect(document.getElementById('board-editor-section-watchlist')).toBeTruthy());
+    // Saving stays disabled until the board's statuses finish loading.
+    await waitFor(() => expect(screen.getByTestId('save-board-button')).not.toBeDisabled());
+    expandSection('watchlist');
+  };
+
+  it('loads the saved watchlist, validates a typed address and saves the edited list', async () => {
+    await openEditor();
+
+    expect(screen.getByTestId('default_watchlist_enabled')).toBeChecked();
+    expect(document.getElementById('board-default-watchlist-email-list')).toHaveTextContent('dl@msp.example');
+    expect(screen.getByTestId(`board-default-watchlist-users-${USER_ID}`)).toHaveAttribute('aria-pressed', 'true');
+
+    const input = document.getElementById('board-default-watchlist-email-input') as HTMLInputElement;
+
+    // invalid address: refused with an inline error, list unchanged
+    fireEvent.change(input, { target: { value: 'not-an-email' } });
+    fireEvent.click(screen.getByTestId('board-default-watchlist-email-add'));
+    expect(document.getElementById('board-default-watchlist-email-error')).toHaveTextContent(
+      'ticketing.boards.fields.defaultWatchlist.emailInvalid'
+    );
+    expect(document.getElementById('board-default-watchlist-email-list')).not.toHaveTextContent('not-an-email');
+
+    // duplicate (case-insensitive) is refused
+    fireEvent.change(input, { target: { value: 'DL@msp.example' } });
+    fireEvent.click(screen.getByTestId('board-default-watchlist-email-add'));
+    expect(document.getElementById('board-default-watchlist-email-error')).toHaveTextContent(
+      'ticketing.boards.fields.defaultWatchlist.emailDuplicate'
+    );
+
+    // a valid address is normalised and added; Enter also adds
+    fireEvent.change(input, { target: { value: ' Ops@Customer.Example ' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+    expect(document.getElementById('board-default-watchlist-email-error')).toBeNull();
+    expect(document.getElementById('board-default-watchlist-email-list')).toHaveTextContent('ops@customer.example');
+
+    // remove the original address and the picked user
+    fireEvent.click(document.getElementById('board-default-watchlist-email-remove-dl-msp-example')!);
+    fireEvent.click(screen.getByTestId(`board-default-watchlist-users-${USER_ID}`));
+
+    fireEvent.click(screen.getByTestId('save-board-button'));
+
+    await waitFor(() => expect(updateBoardMock).toHaveBeenCalled());
+    const [boardId, payload] = updateBoardMock.mock.calls[0];
+    expect(boardId).toBe('board-source');
+    expect(payload.default_watchlist_enabled).toBe(true);
+    expect(payload.default_watchlist).toEqual({ user_ids: [], emails: ['ops@customer.example'] });
+  });
+
+  it('shows the server error when the save is rejected', async () => {
+    updateBoardMock.mockResolvedValue({ actionError: 'Invalid email address: nope' });
+    await openEditor();
+
+    fireEvent.click(screen.getByTestId('default_watchlist_enabled'));
+    fireEvent.click(screen.getByTestId('save-board-button'));
+
+    await waitFor(() => expect(screen.getByText('Invalid email address: nope')).toBeInTheDocument());
+    expect(updateBoardMock.mock.calls[0][1].default_watchlist_enabled).toBe(false);
   });
 });

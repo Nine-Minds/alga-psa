@@ -86,6 +86,12 @@ export interface IBoard extends TenantEntity {
   inbound_reply_reopen_status_id?: string | null;
   inbound_reply_ai_ack_suppression_enabled?: boolean;
 
+  // Default watchlist: when enabled, every new ticket on this board gets these
+  // recipients as watchers (tickets.attributes.watch_list). Watchers only — never
+  // assignment. Internal users are stored by id, free-form addresses normalised.
+  default_watchlist_enabled?: boolean;
+  default_watchlist?: { user_ids: string[]; emails: string[] } | null;
+
   // Controls live timer + tracked intervals visibility in ticket details
   enable_live_ticket_timer?: boolean;
 

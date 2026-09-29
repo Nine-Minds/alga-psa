@@ -1433,7 +1433,10 @@
       "referenceInvalid": "O quadro, o status, a prioridade, o responsável, a equipe ou a política de SLA selecionados não são mais válidos. Atualize a página e tente novamente.",
       "duplicateName": "Já existe um quadro com este nome.",
       "duplicate": "Já existe um quadro ou status com as mesmas configurações.",
-      "invalidValue": "Um dos valores do quadro ou do status é inválido. Atualize a página e tente novamente."
+      "invalidValue": "Um dos valores do quadro ou do status é inválido. Atualize a página e tente novamente.",
+      "watchlistInvalidEmail": "Estes endereços da lista de acompanhamento predefinida não são endereços de e-mail válidos: {{emails}}.",
+      "watchlistTooMany": "Uma lista de acompanhamento predefinida pode ter no máximo 50 destinatários.",
+      "watchlistInvalid": "A lista de acompanhamento predefinida não é válida. Atualize a página e tente novamente."
     },
     "material": {
       "invalidValue": "Um dos valores de material selecionados é inválido. Atualize a página e tente novamente.",

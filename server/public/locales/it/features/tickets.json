@@ -1433,7 +1433,10 @@
       "referenceInvalid": "La bacheca, lo stato, la priorità, l’incaricato, il team o il criterio SLA selezionati non sono più validi. Aggiornare la pagina e riprovare.",
       "duplicateName": "Esiste già una bacheca con questo nome.",
       "duplicate": "Esiste già una bacheca o uno stato con le stesse impostazioni.",
-      "invalidValue": "Uno dei valori della bacheca o dello stato non è valido. Aggiornare la pagina e riprovare."
+      "invalidValue": "Uno dei valori della bacheca o dello stato non è valido. Aggiornare la pagina e riprovare.",
+      "watchlistInvalidEmail": "Questi indirizzi dell'elenco di osservatori predefinito non sono indirizzi e-mail validi: {{emails}}.",
+      "watchlistTooMany": "Un elenco di osservatori predefinito può contenere al massimo 50 destinatari.",
+      "watchlistInvalid": "L'elenco di osservatori predefinito non è valido. Aggiorna la pagina e riprova."
     },
     "material": {
       "invalidValue": "Uno dei valori del materiale selezionati non è valido. Aggiornare la pagina e riprovare.",

@@ -658,6 +658,21 @@
         "defaultBoard": {
           "label": "Quadro padrão para tickets do portal do cliente",
           "help": "Novos tickets enviados pelo portal do cliente são atribuídos a este quadro. Apenas um quadro pode ser o padrão."
+        },
+        "defaultWatchlist": {
+          "enabledLabel": "Adicionar observadores padrão aos novos tickets",
+          "enabledHelp": "Os observadores desta lista são adicionados a cada novo ticket deste quadro, independentemente de como ele é criado. Os observadores recebem notificações e não são atribuídos. Os tickets existentes não são alterados.",
+          "usersLabel": "Membros da equipe",
+          "usersPlaceholder": "Selecionar membros da equipe",
+          "usersHelp": "Os observadores são notificados no endereço de e-mail atual. Usuários inativos são ignorados.",
+          "emailsLabel": "Endereços de e-mail",
+          "emailPlaceholder": "nome@example.com",
+          "addEmail": "Adicionar",
+          "emailsHelp": "Use endereços de e-mail para listas de distribuição e contatos externos. A lista comporta até {{max}} destinatários.",
+          "removeEmail": "Remover {{email}}",
+          "emailInvalid": "\"{{email}}\" não é um endereço de e-mail válido.",
+          "emailDuplicate": "{{email}} já está na lista.",
+          "tooMany": "A lista comporta até {{max}} destinatários."
         }
       },
       "dialog": {
@@ -804,6 +819,8 @@
           "automationHelp": "Fechar automaticamente tickets inativos após inatividade",
           "statuses": "Prioridades e status",
           "statusesHelp": "Prioridade padrão e os status de ticket deste quadro",
+          "watchlist": "Lista de observadores padrão",
+          "watchlistHelp": "Observadores adicionados a cada novo ticket",
           "display": "Exibição e comportamento",
           "displayHelp": "Cronômetro ao vivo e tipo de quadro"
         },

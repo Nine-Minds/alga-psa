@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { Button } from '@alga-psa/ui/components/Button';
-import { Plus, MoreVertical, HelpCircle, ChevronDown, ArrowLeft, AlertTriangle, CheckCircle2, Settings2, Users, ListChecks, Mail, Zap, Clock, Search, Inbox, Star, LayoutGrid, EyeOff } from "lucide-react";
+import { Plus, MoreVertical, HelpCircle, ChevronDown, ArrowLeft, AlertTriangle, CheckCircle2, Settings2, Users, ListChecks, Mail, Zap, Clock, Search, Inbox, Star, LayoutGrid, EyeOff, Eye, X } from "lucide-react";
 import { IBoard, ITeam, CategoryType, PriorityType, IPriority, IUser, DeletionValidationResult, DeletionDependency, isSenderActionFailure, type SenderActionFailure } from '@alga-psa/types';
 import {
   getAllBoards,
@@ -34,6 +34,11 @@ import { getAllPriorities } from '@alga-psa/reference-data/actions/priorityActio
 import { getAllUsers } from '@alga-psa/user-composition/actions/userQueryActions';
 import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions/avatarActions';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
+import MultiUserPicker from '@alga-psa/ui/components/MultiUserPicker';
+import {
+  BOARD_DEFAULT_WATCHLIST_MAX_RECIPIENTS,
+  normalizeWatchlistEmail,
+} from '@alga-psa/shared/lib/tickets/boardDefaultWatchlistSchema';
 import UserAndTeamPicker from '@alga-psa/ui/components/UserAndTeamPicker';
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
 import TeamAvatar from '@alga-psa/ui/components/TeamAvatar';
@@ -377,7 +382,7 @@ const BoardLoadBar: React.FC<{ open: number; total: number }> = ({ open, total }
 
 // Editor accordion: rendered top-to-bottom in this order. Only the first
 // section (General) is expanded when the editor opens; the rest start collapsed.
-const EDITOR_SECTION_IDS = ['general', 'assignment', 'inbound', 'close', 'automation', 'statuses', 'display'] as const;
+const EDITOR_SECTION_IDS = ['general', 'assignment', 'inbound', 'close', 'automation', 'statuses', 'watchlist', 'display'] as const;
 const collapsedExceptFirstSection = (): Set<string> => new Set<string>(EDITOR_SECTION_IDS.slice(1));
 // When creating a board, also expand 'statuses' up front — ticket statuses are
 // required and otherwise hidden inside a collapsed section.
@@ -457,6 +462,9 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
     enable_live_ticket_timer: true,
     client_portal_visible: true,
     is_pinned: true,
+    default_watchlist_enabled: false,
+    default_watchlist_user_ids: [] as string[],
+    default_watchlist_emails: [] as string[],
     status_seed_mode: 'copy_existing' as TicketStatusSeedMode,
     copy_ticket_statuses_from_board_id: '',
     ticket_statuses: [] as ManagedTicketStatus[],
@@ -533,6 +541,9 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
   const [showAddEditDialog, setShowAddEditDialog] = useState(false);
   const [editingBoard, setEditingBoard] = useState<IBoard | null>(null);
   const [formData, setFormData] = useState(createEmptyFormData);
+  // Draft address being typed into the default-watchlist editor, and its inline error.
+  const [watchlistEmailDraft, setWatchlistEmailDraft] = useState('');
+  const [watchlistEmailError, setWatchlistEmailError] = useState<string | null>(null);
   const [ticketSenderOptions, setTicketSenderOptions] = useState<Array<{ value: string; label: string }>>([]);
   const [ticketSenderId, setTicketSenderId] = useState('');
   const [ticketSenderName, setTicketSenderName] = useState('');
@@ -793,8 +804,35 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
     }
   };
 
+  const addWatchlistEmail = () => {
+    const raw = watchlistEmailDraft.trim();
+    if (!raw) return;
+    const normalized = normalizeWatchlistEmail(raw);
+    if (!normalized) {
+      setWatchlistEmailError(t('ticketing.boards.fields.defaultWatchlist.emailInvalid', { defaultValue: '"{{email}}" is not a valid email address.', email: raw }));
+      return;
+    }
+    if (formData.default_watchlist_emails.includes(normalized)) {
+      setWatchlistEmailError(t('ticketing.boards.fields.defaultWatchlist.emailDuplicate', { defaultValue: '{{email}} is already on the list.', email: normalized }));
+      return;
+    }
+    if (formData.default_watchlist_user_ids.length + formData.default_watchlist_emails.length >= BOARD_DEFAULT_WATCHLIST_MAX_RECIPIENTS) {
+      setWatchlistEmailError(t('ticketing.boards.fields.defaultWatchlist.tooMany', { defaultValue: 'The list holds up to {{max}} recipients.', max: BOARD_DEFAULT_WATCHLIST_MAX_RECIPIENTS }));
+      return;
+    }
+    setFormData((prev) => ({ ...prev, default_watchlist_emails: [...prev.default_watchlist_emails, normalized] }));
+    setWatchlistEmailDraft('');
+    setWatchlistEmailError(null);
+  };
+
+  const removeWatchlistEmail = (email: string) => {
+    setFormData((prev) => ({ ...prev, default_watchlist_emails: prev.default_watchlist_emails.filter((e) => e !== email) }));
+  };
+
   const startEditing = async (board: IBoard) => {
     setEditingBoard(board);
+    setWatchlistEmailDraft('');
+    setWatchlistEmailError(null);
     setFormData({
       ...createEmptyFormData(),
       board_name: board.board_name || '',
@@ -817,6 +855,9 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
       enable_live_ticket_timer: board.enable_live_ticket_timer ?? true,
       client_portal_visible: board.client_portal_visible ?? true,
       is_pinned: board.is_pinned ?? false,
+      default_watchlist_enabled: board.default_watchlist_enabled ?? false,
+      default_watchlist_user_ids: board.default_watchlist?.user_ids ?? [],
+      default_watchlist_emails: board.default_watchlist?.emails ?? [],
       ticket_statuses: [],
     });
     setShowAddEditDialog(true);
@@ -1085,6 +1126,11 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
           enable_live_ticket_timer: formData.enable_live_ticket_timer,
           client_portal_visible: formData.client_portal_visible,
           is_pinned: formData.is_pinned,
+          default_watchlist_enabled: formData.default_watchlist_enabled,
+          default_watchlist: {
+            user_ids: formData.default_watchlist_user_ids,
+            emails: formData.default_watchlist_emails,
+          },
           ticket_statuses: normalizedTicketStatuses,
         });
         if (isReturnedActionError(updatedBoard)) {
@@ -1167,6 +1213,11 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
           // createBoard defaults is_pinned to true, which would silently ignore
           // an admin turning it off on the way in.
           is_pinned: formData.is_pinned,
+          default_watchlist_enabled: formData.default_watchlist_enabled,
+          default_watchlist: {
+            user_ids: formData.default_watchlist_user_ids,
+            emails: formData.default_watchlist_emails,
+          },
           copy_ticket_statuses_from_board_id: formData.status_seed_mode === 'copy_existing'
             ? (formData.copy_ticket_statuses_from_board_id || null)
             : null,
@@ -1282,6 +1333,8 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
     setShowAddEditDialog(false);
     setEditingBoard(null);
     setFormData(createEmptyFormData());
+    setWatchlistEmailDraft('');
+    setWatchlistEmailError(null);
     setDialogError(null);
     setSectionErrors({});
     setIsLoadingBoardStatuses(false);
@@ -1326,6 +1379,11 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
     }),
     appearance: JSON.stringify({
       is_pinned: formData.is_pinned,
+    }),
+    watchlist: JSON.stringify({
+      enabled: formData.default_watchlist_enabled,
+      user_ids: formData.default_watchlist_user_ids,
+      emails: formData.default_watchlist_emails,
     }),
   });
 
@@ -2577,6 +2635,110 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
               </div>
             )}
           </div>
+          </EditorAccordionSection>
+
+          <EditorAccordionSection
+            id="watchlist"
+            error={sectionErrors['watchlist']}
+            title={t('ticketing.boards.editor.sections.watchlist', 'Default watchlist')}
+            description={t('ticketing.boards.editor.sections.watchlistHelp', 'Watchers added to every new ticket')}
+            icon={<Eye className="h-4 w-4" />}
+            open={!collapsedSections.has('watchlist')}
+            dirty={isSectionDirty('watchlist')}
+            onToggle={() => toggleSection('watchlist')}
+            onSave={handleSaveBoard}
+            saveLabel={t('ticketing.boards.editor.saveChanges', 'Save Changes')}
+            unsavedLabel={t('ticketing.boards.editor.unsaved', 'Unsaved')}
+            saveDisabled={saveDisabled}
+          >
+            <div className="space-y-4">
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <Label htmlFor="default_watchlist_enabled">{t('ticketing.boards.fields.defaultWatchlist.enabledLabel', 'Add default watchers to new tickets')}</Label>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {t('ticketing.boards.fields.defaultWatchlist.enabledHelp', 'Watchers on this list are added to each new ticket on this board, however it is created. Watchers receive notifications and are not assigned. Existing tickets are not changed.')}
+                  </p>
+                </div>
+                <Switch
+                  id="default_watchlist_enabled"
+                  checked={formData.default_watchlist_enabled}
+                  onCheckedChange={(checked) => setFormData({ ...formData, default_watchlist_enabled: checked })}
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="board-default-watchlist-users">{t('ticketing.boards.fields.defaultWatchlist.usersLabel', 'Team members')}</Label>
+                <MultiUserPicker
+                  id="board-default-watchlist-users"
+                  values={formData.default_watchlist_user_ids}
+                  onValuesChange={(values) => setFormData({ ...formData, default_watchlist_user_ids: values })}
+                  users={users}
+                  getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
+                  placeholder={t('ticketing.boards.fields.defaultWatchlist.usersPlaceholder', 'Select team members')}
+                  showSearch
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  {t('ticketing.boards.fields.defaultWatchlist.usersHelp', 'Watchers are notified at their current email address. Inactive users are skipped.')}
+                </p>
+              </div>
+
+              <div>
+                <Label htmlFor="board-default-watchlist-email-input">{t('ticketing.boards.fields.defaultWatchlist.emailsLabel', 'Email addresses')}</Label>
+                <div className="flex items-start gap-2">
+                  <Input
+                    id="board-default-watchlist-email-input"
+                    type="email"
+                    value={watchlistEmailDraft}
+                    placeholder={t('ticketing.boards.fields.defaultWatchlist.emailPlaceholder', 'name@example.com')}
+                    onChange={(event) => {
+                      setWatchlistEmailDraft(event.target.value);
+                      if (watchlistEmailError) setWatchlistEmailError(null);
+                    }}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter') {
+                        event.preventDefault();
+                        addWatchlistEmail();
+                      }
+                    }}
+                  />
+                  <Button
+                    id="board-default-watchlist-email-add"
+                    type="button"
+                    variant="outline"
+                    disabled={!watchlistEmailDraft.trim()}
+                    onClick={addWatchlistEmail}
+                  >
+                    {t('ticketing.boards.fields.defaultWatchlist.addEmail', 'Add')}
+                  </Button>
+                </div>
+                {watchlistEmailError && (
+                  <p className="text-sm text-red-600 mt-1" role="alert" id="board-default-watchlist-email-error">
+                    {watchlistEmailError}
+                  </p>
+                )}
+                <p className="text-xs text-muted-foreground mt-1">
+                  {t('ticketing.boards.fields.defaultWatchlist.emailsHelp', { defaultValue: 'Use email addresses for distribution lists and outside contacts. The list holds up to {{max}} recipients.', max: BOARD_DEFAULT_WATCHLIST_MAX_RECIPIENTS })}
+                </p>
+                {formData.default_watchlist_emails.length > 0 && (
+                  <ul className="mt-2 flex flex-wrap gap-2" id="board-default-watchlist-email-list">
+                    {formData.default_watchlist_emails.map((email) => (
+                      <li key={email} className="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-gray-50 px-2.5 py-1 text-xs text-gray-700">
+                        <span>{email}</span>
+                        <button
+                          id={`board-default-watchlist-email-remove-${email.replace(/[^a-z0-9]+/g, '-')}`}
+                          type="button"
+                          className="text-gray-400 hover:text-gray-600"
+                          aria-label={t('ticketing.boards.fields.defaultWatchlist.removeEmail', { defaultValue: 'Remove {{email}}', email })}
+                          onClick={() => removeWatchlistEmail(email)}
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </div>
           </EditorAccordionSection>
 
           <EditorAccordionSection

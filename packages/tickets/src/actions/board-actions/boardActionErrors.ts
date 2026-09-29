@@ -4,6 +4,7 @@ import {
   type ActionMessageError,
   type ActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
+import { BoardDefaultWatchlistValidationError } from '@alga-psa/shared/lib/tickets/boardDefaultWatchlistSchema';
 
 export type BoardActionError = ActionMessageError | ActionPermissionError;
 
@@ -33,7 +34,20 @@ const EXPECTED_BOARD_MESSAGES = [
   'Invalid board view settings',
 ];
 
+
 export function boardActionErrorFrom(error: unknown): BoardActionError | null {
+  if (error instanceof BoardDefaultWatchlistValidationError) {
+    switch (error.code) {
+      case 'INVALID_EMAIL':
+        return actionError(error.message, 'features/tickets:errors.board.watchlistInvalidEmail', {
+          emails: error.invalidValues.join(', '),
+        });
+      case 'TOO_MANY':
+        return actionError(error.message, 'features/tickets:errors.board.watchlistTooMany');
+      default:
+        return actionError(error.message, 'features/tickets:errors.board.watchlistInvalid');
+    }
+  }
   if (error instanceof Error) {
     if (error.message.includes('Permission denied')) {
       return permissionError(error.message);

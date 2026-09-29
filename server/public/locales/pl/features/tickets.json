@@ -1571,7 +1571,10 @@
       "referenceInvalid": "Wybrana tablica, status, priorytet, osoba przypisana, zespół lub zasada SLA nie jest już prawidłowa. Odśwież stronę i spróbuj ponownie.",
       "duplicateName": "Tablica o tej nazwie już istnieje.",
       "duplicate": "Tablica lub status o tych samych ustawieniach już istnieje.",
-      "invalidValue": "Jedna z wartości tablicy lub statusu jest nieprawidłowa. Odśwież stronę i spróbuj ponownie."
+      "invalidValue": "Jedna z wartości tablicy lub statusu jest nieprawidłowa. Odśwież stronę i spróbuj ponownie.",
+      "watchlistInvalidEmail": "Te adresy domyślnej listy obserwujących nie są prawidłowymi adresami e-mail: {{emails}}.",
+      "watchlistTooMany": "Domyślna lista obserwujących może zawierać najwyżej 50 odbiorców.",
+      "watchlistInvalid": "Domyślna lista obserwujących jest nieprawidłowa. Odśwież stronę i spróbuj ponownie."
     },
     "material": {
       "invalidValue": "Jedna z wybranych wartości materiału jest nieprawidłowa. Odśwież stronę i spróbuj ponownie.",

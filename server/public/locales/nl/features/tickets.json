@@ -1433,7 +1433,10 @@
       "referenceInvalid": "Het geselecteerde bord, de status, de prioriteit, de behandelaar, het team of het SLA-beleid is niet langer geldig. Vernieuw de pagina en probeer het opnieuw.",
       "duplicateName": "Er bestaat al een bord met deze naam.",
       "duplicate": "Er bestaat al een bord of status met dezelfde instellingen.",
-      "invalidValue": "Een van de bord- of statuswaarden is ongeldig. Vernieuw de pagina en probeer het opnieuw."
+      "invalidValue": "Een van de bord- of statuswaarden is ongeldig. Vernieuw de pagina en probeer het opnieuw.",
+      "watchlistInvalidEmail": "Deze adressen in de standaardvolglijst zijn geen geldige e-mailadressen: {{emails}}.",
+      "watchlistTooMany": "Een standaardvolglijst kan maximaal 50 ontvangers bevatten.",
+      "watchlistInvalid": "De standaardvolglijst is ongeldig. Vernieuw de pagina en probeer het opnieuw."
     },
     "material": {
       "invalidValue": "Een van de geselecteerde materiaalwaarden is ongeldig. Vernieuw de pagina en probeer het opnieuw.",
