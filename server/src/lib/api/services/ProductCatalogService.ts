@@ -1,5 +1,6 @@
 import type { IService } from '@/interfaces/billing.interfaces';
 import { normalizeGtin } from '@alga-psa/core';
+import { resolveCatalogUnitForCreate, resolveCatalogUnitForUpdate } from '@alga-psa/shared/billingClients/tenantUnitsOfMeasure';
 import { BaseService, ServiceContext, ListResult, tenantDb, withTransaction } from '@alga-psa/db';
 import { splitServicePricesByEffectiveDate } from '@alga-psa/billing/models/service';
 import { resolveCatalogTaxRateIdForCreate } from '@alga-psa/shared/billingClients/defaultTaxRate';
@@ -236,17 +237,16 @@ export class ProductCatalogService extends BaseService<IService> {
       costCurrency = billingSettings?.default_currency_code || 'USD';
     }
 
-    // Resolve the inherited default and insert inside one transaction, holding
-    // the documented rate/region locks until the catalog row is persisted.
-    // Publication happens only after commit so an external search consumer
-    // cannot read the event before its own connection can see the row.
+    // Resolve inherited defaults and units in the transaction, holding the
+    // documented rate/region locks until the catalog row is persisted.
+    // Publication happens only after commit so search consumers can read it.
     const createdResult = await withTransaction(knex, async (trx) => {
       const productData = {
         ...rest,
         cost_currency: costCurrency,
         item_kind: 'product',
         billing_method: 'usage',
-        unit_of_measure: unit_of_measure ?? 'each',
+        ...(await resolveCatalogUnitForCreate(trx, tenant, { unit_of_measure, unit_code: rest.unit_code, item_kind: 'product' })),
         tenant,
         default_rate: typeof rest.default_rate === 'string'
           ? parseFloat(rest.default_rate) || 0
@@ -309,6 +309,7 @@ export class ProductCatalogService extends BaseService<IService> {
     const { prices, billing_method: _billing_method, service_type_name: _, ...updateData } = data as any;
     const normalizedUpdateData = {
       ...updateData,
+      ...(await resolveCatalogUnitForUpdate(knex, tenant, updateData)),
       ...(updateData.barcode !== undefined
         ? { barcode: normalizeGtin(updateData.barcode ?? '') || null }
         : {}),

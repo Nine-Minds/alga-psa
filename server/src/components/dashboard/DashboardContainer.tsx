@@ -30,6 +30,11 @@ interface DashboardContainerProps {
   onboardingSection?: React.ReactNode;
   initialMobileAppCardDismissed?: boolean;
   selfHost?: boolean;
+  /**
+   * The MSP's own company name, already gated on the opt-in server-side. Null
+   * keeps the stock "Your MSP" title.
+   */
+  welcomeCompanyName?: string | null;
 }
 
 interface FeatureCardProps {
@@ -143,7 +148,12 @@ const FeatureCard = ({ icon: Icon, title, description, analyticsName }: FeatureC
   );
 };
 
-const WelcomeDashboard = ({ onboardingSection, initialMobileAppCardDismissed = false, selfHost = false }: DashboardContainerProps) => {
+const WelcomeDashboard = ({
+  onboardingSection,
+  initialMobileAppCardDismissed = false,
+  selfHost = false,
+  welcomeCompanyName = null,
+}: DashboardContainerProps) => {
   const posthog = usePostHog();
   const { t } = useTranslation('msp/dashboard');
   const [mobileDismissed, setMobileDismissed] = useState(initialMobileAppCardDismissed);
@@ -211,9 +221,14 @@ const WelcomeDashboard = ({ onboardingSection, initialMobileAppCardDismissed = f
     description: t(feature.descriptionKey, { defaultValue: feature.descriptionDefault }),
   }));
 
-  const welcomeTitle = t('welcome.title', {
-    defaultValue: 'Welcome to Your MSP Command Center',
-  });
+  const welcomeTitle = welcomeCompanyName
+    ? t('welcome.titleBranded', {
+        defaultValue: 'Welcome to the {{companyName}} Command Center',
+        companyName: welcomeCompanyName,
+      })
+    : t('welcome.title', {
+        defaultValue: 'Welcome to Your MSP Command Center',
+      });
   const welcomeDescription = t('welcome.description', {
     defaultValue: 'Track onboarding progress, configure critical services, and keep every client experience consistent.',
   });

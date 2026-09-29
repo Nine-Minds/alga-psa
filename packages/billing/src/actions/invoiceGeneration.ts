@@ -53,6 +53,7 @@ import { ISO8601String } from '@alga-psa/types';
 import { TaxService } from '../services/taxService';
 import { ITaxCalculationResult } from '@alga-psa/types';
 import { v4 as uuidv4 } from 'uuid';
+import { resolveUnitOfMeasure } from '@alga-psa/core/unitOfMeasure';
 import { auditLog } from '@alga-psa/db';
 import { getClientDocumentLogoUrl } from '@alga-psa/formatting/avatarUtils';
 import { calculateAndDistributeTax, claimRecurringServicePeriodsForSelectionInputs, getClientDetails, persistInvoiceCharges, updateInvoiceTotalsAndRecordTransaction, validateClientBillingEmail } from '../services/invoiceService';
@@ -239,7 +240,8 @@ function getChargeUnitPrice(charge: IBillingCharge): number {
  * "Prepaid hour block (Svc) — 4.0 hrs consumed, 12.5 hrs remaining".
  */
 function formatHourBlockChargeDescription(charge: IHourBlockCharge): string {
-  return `Prepaid hour block (${charge.serviceName}) — ${charge.hoursUsed.toFixed(1)} hrs consumed, ${charge.hoursRemaining.toFixed(1)} hrs remaining`;
+  const hourShortLabel = resolveUnitOfMeasure({ fallback: 'HUR' }).shortLabel;
+  return `Prepaid hour block (${charge.serviceName}) — ${charge.hoursUsed.toFixed(1)} ${hourShortLabel} consumed, ${charge.hoursRemaining.toFixed(1)} ${hourShortLabel} remaining`;
 }
 
 function normalizePreviewRecurringDetailPeriods(
@@ -497,10 +499,16 @@ async function persistProjectScheduleCharges(
     if (charge.total !== 0 || (charge.tax_amount || 0) !== 0) {
       exportServiceIds ??= await ensureProjectScheduleExportServices(trx, tenant);
       itemId = uuidv4();
+      const unit = resolveUnitOfMeasure({
+        catalog: charge.unit_code ? { code: charge.unit_code, label: charge.unit_label } : null,
+        fallback: charge.type === 'time' ? 'HUR' : 'C62',
+      });
       await tenantDb(trx, tenant).table('invoice_charges').insert({
         item_id: itemId,
         invoice_id: invoiceId,
         service_id: charge.serviceId ?? exportServiceIds[charge.type as 'project_milestone' | 'project_deposit'],
+        unit_code: unit.code,
+        unit_label: unit.label,
         description: charge.serviceName,
         quantity: charge.quantity ?? 1,
         unit_price: charge.rate,
@@ -2350,8 +2358,9 @@ async function buildPreviewInvoiceForSelectionInputs(params: {
       let description = charge.serviceName;
       if (isBucketCharge(charge)) {
         const currencySymbol = getCurrencySymbol(billingResult.currency_code || 'USD');
+        const hourShortLabel = resolveUnitOfMeasure({ fallback: 'HUR' }).shortLabel;
         if (charge.isUsageBucket) {
-          const unitLabel = charge.unitOfMeasure?.trim() || 'units';
+          const unitLabel = charge.unitOfMeasure?.trim() || resolveUnitOfMeasure({ fallback: 'C62' }).pluralLabel;
           const unitsUsed = charge.unitsUsed ?? charge.hoursUsed;
           const overageUnits = charge.overageUnits ?? charge.quantity ?? 0;
           const unitsIncluded = charge.includedUnits ?? Math.max(0, unitsUsed - overageUnits);
@@ -2363,9 +2372,9 @@ async function buildPreviewInvoiceForSelectionInputs(params: {
         } else {
           const hoursIncluded = charge.hoursUsed - charge.overageHours;
           if (charge.overageHours > 0) {
-            description = `${charge.serviceName} - ${charge.hoursUsed.toFixed(2)} hrs used (${hoursIncluded.toFixed(2)} hrs included + ${charge.overageHours.toFixed(2)} hrs overage @ ${currencySymbol}${(charge.overageRate / 100).toFixed(2)}/hr)`;
+            description = `${charge.serviceName} - ${charge.hoursUsed.toFixed(2)} ${hourShortLabel} used (${hoursIncluded.toFixed(2)} ${hourShortLabel} included + ${charge.overageHours.toFixed(2)} ${hourShortLabel} overage @ ${currencySymbol}${(charge.overageRate / 100).toFixed(2)}/${hourShortLabel})`;
           } else {
-            description = `${charge.serviceName} - ${charge.hoursUsed.toFixed(2)} hrs used (within ${hoursIncluded.toFixed(2)} hrs included)`;
+            description = `${charge.serviceName} - ${charge.hoursUsed.toFixed(2)} ${hourShortLabel} used (within ${hoursIncluded.toFixed(2)} ${hourShortLabel} included)`;
           }
         }
       }

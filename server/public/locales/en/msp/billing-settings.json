@@ -794,7 +794,7 @@
         }
       },
       "unitOfMeasure": {
-        "label": "Unit of Measure *",
+        "label": "Unit of Measure",
         "placeholder": "e.g., GB, API call, user",
         "help": "The measurable unit for billing (e.g., GB, API call, user)"
       },
@@ -1006,7 +1006,7 @@
         }
       },
       "unitOfMeasure": {
-        "label": "Unit of Measure *",
+        "label": "Unit of Measure",
         "placeholder": "e.g., GB, API call, user",
         "help": "The measurable unit for billing (e.g., GB, API call, user)"
       },
@@ -1043,7 +1043,8 @@
       "billingMethodRequired": "Billing method is required",
       "skuRequiredForHardware": "SKU is required for Hardware",
       "licenseTermRequired": "License term is required for Software Licenses",
-      "selectedTypeNotFound": "Selected service type not found"
+      "selectedTypeNotFound": "Selected service type not found",
+      "unitOfMeasureRequired": "Unit of measure is required"
     },
     "errors": {
       "fetchCategories": "Failed to fetch categories",
@@ -1119,7 +1120,7 @@
         "label": "Active"
       },
       "unitOfMeasure": {
-        "label": "Unit of Measure *",
+        "label": "Unit of Measure",
         "placeholder": "e.g., each, item, license"
       },
       "license": {

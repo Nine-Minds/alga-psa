@@ -2713,7 +2713,10 @@
       "{{hours}} h {{minutes}} min",
       "3CX",
       "Teams Phone",
-      "TeamViewer"
+      "TeamViewer",
+      "Gigabyte",
+      "Terabyte",
+      "Volume"
     ],
     "caseInsensitive": [
       "api",

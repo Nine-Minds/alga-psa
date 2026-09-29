@@ -14,6 +14,7 @@
 
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
+import type { TenantDb } from '@alga-psa/db';
 
 /** Tenant-wide import/sync run status (mirrors rmm_integrations.sync_status). */
 export type HuduSyncStatus = 'idle' | 'syncing' | 'completed' | 'error';
@@ -51,6 +52,19 @@ export async function getHuduIntegration(
 ): Promise<HuduIntegrationRecord | null> {
   const row = await tenantDb(knex, tenant).table<HuduIntegrationRecord>(TABLE).first();
   return row ?? null;
+}
+
+/**
+ * Tenants whose daily auto-sync should run: an active connection with
+ * settings.autoSync.enabled. Drives the Temporal maintenance fan-out's tenant
+ * selection, so it reads across tenants on the caller's unscoped handle.
+ */
+export function listHuduAutoSyncTenants(db: TenantDb): PromiseLike<Array<{ tenant: string }>> {
+  return db
+    .unscoped<{ tenant: string }>(TABLE, 'Hudu auto-sync fan-out selects tenants with auto-sync enabled')
+    .where('is_active', true)
+    .whereRaw("settings->'autoSync'->>'enabled' = 'true'")
+    .distinct('tenant');
 }
 
 /**

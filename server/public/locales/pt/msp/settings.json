@@ -58,8 +58,22 @@
     },
     "clients": {
       "title": "Sua empresa",
-      "help": "O cliente marcado como sua empresa representa sua própria organização. O nome, o endereço e o logotipo desse cliente aparecem em faturas, orçamentos e comunicações com clientes.",
+      "help": "O cliente marcado como sua empresa representa sua própria organização. O nome, o endereço e o logotipo desse cliente aparecem em faturas, orçamentos e comunicações com clientes, e o país do endereço dele define o formato de data e o país pré-selecionado em novos cadastros.",
       "currentDefault": "Atualmente, sua empresa é {{name}}.",
+      "defaults": {
+        "title": "O que sua empresa define",
+        "intro": "O país do endereço de {{name}} define o seguinte para todo o aplicativo MSP:",
+        "country": "Novos clientes, contatos e endereços vêm com {{country}} pré-selecionado.",
+        "countryMissing": "Novos clientes, contatos e endereços não vêm com país pré-selecionado.",
+        "phoneCode": "Os telefones começam com o código {{code}}.",
+        "phoneCodeMissing": "Os telefones começam sem código de país.",
+        "dateFormat": "As datas são escritas como {{pattern}} — {{example}} — com relógio de {{clock}}.",
+        "clock12": "12 horas",
+        "clock24": "24 horas",
+        "noCountry": "{{name}} não tem país no endereço, então os três voltam ao padrão {{pattern}}. Adicione a {{name}} um endereço com país para alterá-los — não existe uma configuração separada de formato de data.",
+        "portalNote": "No portal do cliente, as datas seguem o formato do próprio cliente, vindo do país do endereço dele e não do seu.",
+        "changeIntro": "Mudar para {{name}} também altera estes padrões:"
+      },
       "yourCompanyBadge": "Sua empresa",
       "table": {
         "name": "Nome",
@@ -97,6 +111,18 @@
         "setDefaultClient": "Falha ao definir o cliente padrão",
         "loadClients": "Falha ao carregar clientes"
       }
+    }
+  },
+  "dashboardWelcome": {
+    "label": "Usar o nome da sua empresa na saudação do painel",
+    "help": "Desativado por padrão: o painel MSP mostra “Bem-vindo ao seu centro de comando MSP”. Ao ativar, ele mostra o nome do cliente marcado como sua empresa. Esta opção é salva na hora e de forma independente.",
+    "noCompany": "Nenhum cliente está marcado como sua empresa ainda. Escolha um em Configurações → Geral para que o nome dele possa aparecer aqui.",
+    "previewLabel": "Sua equipe verá:",
+    "preview": "Bem-vindo ao centro de comando de {{companyName}}",
+    "previewDefault": "Bem-vindo ao seu centro de comando MSP",
+    "messages": {
+      "saved": "Saudação do painel atualizada",
+      "saveFailed": "Não foi possível atualizar a saudação do painel"
     }
   },
   "experimentalFeatures": {

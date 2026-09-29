@@ -975,7 +975,7 @@
         }
       },
       "unitOfMeasure": {
-        "label": "Unité de mesure *",
+        "label": "Unité de mesure",
         "placeholder": "Par exemple, Go, appel API, utilisateur",
         "help": "L'unité mesurable pour la facturation (par exemple, Go, appel API, utilisateur)"
       },
@@ -1009,7 +1009,8 @@
       "billingMethodRequired": "La méthode de facturation est requise",
       "skuRequiredForHardware": "Le SKU est requis pour le matériel",
       "licenseTermRequired": "Une durée de licence est requise pour les licences logicielles",
-      "selectedTypeNotFound": "Type de service sélectionné introuvable"
+      "selectedTypeNotFound": "Type de service sélectionné introuvable",
+      "unitOfMeasureRequired": "L'unité de mesure est requise"
     },
     "errors": {
       "fetchCategories": "Échec de la récupération des catégories",
@@ -1082,7 +1083,7 @@
         "label": "Actif"
       },
       "unitOfMeasure": {
-        "label": "Unité de mesure *",
+        "label": "Unité de mesure",
         "placeholder": "par exemple, chaque article, licence"
       },
       "license": {
