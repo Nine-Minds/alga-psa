@@ -257,26 +257,52 @@ describe('syncCalendarProvider manual flows', () => {
       .toBeLessThan(mockSyncScheduleEntryToExternal.mock.invocationCallOrder[0]);
   });
 
-  it('does not push through a real simultaneous-edit conflict, but re-pushes provider edits rejected by access', async () => {
-    setupKnex([
-      { schedule_entry_id: 'conflict', external_event_id: 'conflict-event' },
-      { schedule_entry_id: 'read-only', external_event_id: 'read-only-event' },
-    ]);
-    mockGetProvider.mockResolvedValue({
-      id: 'provider-outlook', tenant: 'tenant-1', user_id: 'user-1', provider_type: 'microsoft',
-      sync_direction: 'bidirectional',
-      provider_config: { accessToken: 'access-token', refreshToken: 'refresh-token' },
-    });
-    mockSyncExternalEventToSchedule
-      .mockResolvedValueOnce({ success: false, conflict: { algaModified: 'a', externalModified: 'b' }, error: 'Conflict detected' })
-      .mockResolvedValueOnce({ success: true, skipped: true, reason: 'Provider user cannot edit this entry' });
-    mockSyncScheduleEntryToExternal.mockResolvedValue({ success: true });
+  it.each(['google', 'microsoft'] as const)(
+    'preserves a pending local edit and performs no write when %s inbound reconciliation fails', async (providerType) => {
+      setupKnex([{
+        schedule_entry_id: 'pending-local-edit', external_event_id: 'failed-pull',
+        alga_last_modified: '2026-09-27T10:00:00.000Z',
+        schedule_entry_updated_at: '2026-09-28T10:00:00.000Z',
+      }]);
+      mockGetProvider.mockResolvedValue({
+        id: `provider-${providerType}`, tenant: 'tenant-1', user_id: 'user-1', provider_type: providerType,
+        sync_direction: 'bidirectional',
+        provider_config: { accessToken: 'access-token', refreshToken: 'refresh-token' },
+      });
+      mockSyncExternalEventToSchedule.mockResolvedValue({
+        success: false, error: 'Provider read failed before reconciliation',
+      });
 
-    await syncCalendarProviderImpl(authUser, { tenant: 'tenant-1' }, 'provider-outlook');
-    await vi.waitFor(() => expect(mockUpdateProviderStatus).toHaveBeenCalled());
-    expect(mockSyncScheduleEntryToExternal).toHaveBeenCalledTimes(1);
-    expect(mockSyncScheduleEntryToExternal).toHaveBeenCalledWith('read-only', 'provider-outlook', true);
-  });
+      await syncCalendarProviderImpl(authUser, { tenant: 'tenant-1' }, `provider-${providerType}`);
+      await vi.waitFor(() => expect(mockUpdateProviderStatus).toHaveBeenCalledWith(
+        `provider-${providerType}`, expect.objectContaining({ status: 'error', errorMessage: expect.stringContaining('Provider read failed') })
+      ));
+      expect(mockSyncExternalEventToSchedule).toHaveBeenCalledWith('failed-pull', `provider-${providerType}`, false);
+      expect(mockSyncScheduleEntryToExternal).not.toHaveBeenCalled();
+    }
+  );
+
+  it.each(['google', 'microsoft'] as const)(
+    'does not issue a second access-rejection push for %s', async (providerType) => {
+      setupKnex([{
+        schedule_entry_id: 'read-only', external_event_id: 'read-only-event',
+        alga_last_modified: '2026-09-28T10:00:00.000Z',
+        schedule_entry_updated_at: '2026-09-28T10:00:00.000Z',
+      }]);
+      mockGetProvider.mockResolvedValue({
+        id: `provider-${providerType}`, tenant: 'tenant-1', user_id: 'user-1', provider_type: providerType,
+        sync_direction: 'bidirectional',
+        provider_config: { accessToken: 'access-token', refreshToken: 'refresh-token' },
+      });
+      mockSyncExternalEventToSchedule.mockResolvedValue({
+        success: true, skipped: true, reason: 'Provider user cannot edit this entry',
+      });
+
+      await syncCalendarProviderImpl(authUser, { tenant: 'tenant-1' }, `provider-${providerType}`);
+      await vi.waitFor(() => expect(mockUpdateProviderStatus).toHaveBeenCalled());
+      expect(mockSyncScheduleEntryToExternal).not.toHaveBeenCalled();
+    }
+  );
 
   it('only pulls external events when provider direction is from_external', async () => {
     setupKnex([{ schedule_entry_id: 'entry-2', external_event_id: 'ext-2' }]);

@@ -618,9 +618,10 @@ export async function syncCalendarProviderImpl(
                 pulled += 1;
               } else {
                 failures.push(`Pull ${mapping.external_event_id}: ${pullResult.error || 'unknown error'}`);
-                // Keep the conflict visible for the existing resolution flow;
-                // pushing here would overwrite one side before resolution.
-                if (pullResult.conflict) continue;
+                // No write is safe when reconciliation failed: the provider
+                // version may contain edits that were not read successfully.
+                // Conflicts remain available to the existing resolution flow.
+                continue;
               }
             }
 
@@ -633,13 +634,11 @@ export async function syncCalendarProviderImpl(
                 : NaN;
               const hasUnpushedAlgaEdit = Number.isFinite(entryModifiedAt) &&
                 (!Number.isFinite(lastPushedAt) || entryModifiedAt > lastPushedAt);
-              const accessRejectedProviderEdit = pullResult?.success &&
-                pullResult.skipped && pullResult.reason === 'Provider user cannot edit this entry';
-
               // Provider-only edits and metadata-only echoes are already
-              // reconciled by the pull. Re-push only pending Alga edits or a
-              // genuine provider edit rejected by the access resolver.
-              if (!allowPull || hasUnpushedAlgaEdit || accessRejectedProviderEdit) {
+              // reconciled by the pull. CalendarSyncService itself re-pushes
+              // a provider edit rejected by access, so this layer only writes
+              // pending Alga edits (or retains outbound-only behavior).
+              if (!allowPull || hasUnpushedAlgaEdit) {
                 const result = await syncService.syncScheduleEntryToExternal(
                   mapping.schedule_entry_id,
                   calendarProviderId,

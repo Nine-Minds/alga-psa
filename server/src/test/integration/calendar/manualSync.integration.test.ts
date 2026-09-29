@@ -25,20 +25,13 @@ const context = vi.hoisted(() => ({
   tenant: null as string | null,
   defaultTenant: null as string | null,
   userId: null as string | null,
+  secondUserId: null as string | null,
+  canViewAll: true,
   scheduleEntryColumns: {} as Record<string, { nullable: boolean }>,
-  lastPushMetadata: null as {
-    entryId: string;
-    providerId: string;
-    lastSyncedAt: Date;
-    algaLastModified: Date;
-    externalLastModified: string;
-  } | null,
-  lastPullMetadata: null as {
-    externalEventId: string;
-    providerId: string;
-    created: boolean;
-    externalLastModified: string;
-  } | null,
+  providerEvents: new Map<string, any>(),
+  providerCalls: [] as Array<{ providerId: string; operation: string; eventId?: string; event?: any }>,
+  providerReadFailures: new Map<string, Error>(),
+  nextEventNumber: 1,
 }));
 
 function buildDbExports() {
@@ -178,163 +171,6 @@ vi.mock('@alga-psa/ee-calendar/lib/services/calendar/CalendarProviderService', (
   },
 }));
 
-vi.mock('@alga-psa/ee-calendar/lib/services/calendar/CalendarSyncService', () => ({
-  CalendarSyncService: class {
-    async syncScheduleEntryToExternal(entryId: string, providerId: string) {
-      if (!context.db) {
-        throw new Error('Database not initialized');
-      }
-      const tenant = context.tenant ?? context.defaultTenant;
-      if (!tenant) {
-        throw new Error('Tenant context missing');
-      }
-
-      const mapping = await contextTenantTable('calendar_event_mappings', tenant)
-        .where({
-          tenant,
-          calendar_provider_id: providerId,
-          schedule_entry_id: entryId,
-        })
-        .first();
-
-      if (!mapping) {
-        return { success: false, error: 'Mapping not found' };
-      }
-
-      const algaLastModified = new Date('2025-10-31T10:00:00.000Z');
-      const lastSyncedAt = new Date('2025-10-31T11:05:00.000Z');
-      const externalLastModified = '2025-10-31T11:00:00.000Z';
-
-      await contextTenantTable('calendar_event_mappings', tenant)
-        .where({ id: mapping.id, tenant })
-        .update({
-          sync_status: 'synced',
-          last_synced_at: lastSyncedAt,
-          alga_last_modified: algaLastModified,
-          external_last_modified: externalLastModified,
-          sync_error_message: null,
-          updated_at: lastSyncedAt,
-        });
-
-      context.lastPushMetadata = {
-        entryId,
-        providerId,
-        lastSyncedAt,
-        algaLastModified,
-        externalLastModified,
-      };
-
-      return {
-        success: true,
-        externalEventId: mapping.external_event_id,
-      };
-    }
-
-    async syncExternalEventToSchedule(externalEventId: string, providerId: string) {
-      if (!context.db) {
-        throw new Error('Database not initialized');
-      }
-      const tenant = context.tenant ?? context.defaultTenant;
-      if (!tenant) {
-        throw new Error('Tenant context missing');
-      }
-
-      const mapping = await contextTenantTable('calendar_event_mappings', tenant)
-        .where({
-          tenant,
-          calendar_provider_id: providerId,
-          external_event_id: externalEventId,
-        })
-        .first();
-
-      if (!mapping) {
-        return { success: false, error: 'Mapping not found' };
-      }
-
-      const columns = context.scheduleEntryColumns;
-      const existing = await contextTenantTable('schedule_entries', tenant)
-        .where({ tenant, entry_id: mapping.schedule_entry_id })
-        .first();
-
-      const now = new Date('2025-10-31T12:15:00.000Z');
-
-      if (!existing) {
-        const insertRecord: Record<string, any> = {
-          tenant,
-          entry_id: mapping.schedule_entry_id,
-          title: 'Inbound Meeting',
-          scheduled_start: new Date('2025-10-31T12:00:00.000Z'),
-          scheduled_end: new Date('2025-10-31T13:00:00.000Z'),
-          status: 'scheduled',
-          notes: 'Created via inbound sync',
-          work_item_type: columns.work_item_type ? 'ad_hoc' : 'ticket',
-          created_at: now,
-          updated_at: now,
-        };
-
-        if (columns.work_item_id) {
-          insertRecord.work_item_id = uuidv4();
-        }
-        if (columns.user_id) {
-          insertRecord.user_id = context.userId;
-        }
-        if (columns.is_private) {
-          insertRecord.is_private = false;
-        }
-        if (columns.is_recurring) {
-          insertRecord.is_recurring = false;
-        }
-        if (columns.recurrence_pattern) {
-          insertRecord.recurrence_pattern = null;
-        }
-        if (columns.original_entry_id) {
-          insertRecord.original_entry_id = null;
-        }
-        if (columns.duration_minutes) {
-          insertRecord.duration_minutes = 60;
-        }
-
-        await contextTenantTable('schedule_entries', tenant).insert(insertRecord);
-        context.lastPullMetadata = {
-          externalEventId,
-          providerId,
-          created: true,
-          externalLastModified: '2025-10-31T12:05:00.000Z',
-        };
-      } else {
-        await contextTenantTable('schedule_entries', tenant)
-          .where({ tenant, entry_id: mapping.schedule_entry_id })
-          .update({
-            notes: 'Updated via inbound sync',
-            updated_at: now,
-          });
-        context.lastPullMetadata = {
-          externalEventId,
-          providerId,
-          created: false,
-          externalLastModified: '2025-10-31T12:05:00.000Z',
-        };
-      }
-
-      await contextTenantTable('calendar_event_mappings', tenant)
-        .where({ id: mapping.id, tenant })
-        .update({
-          sync_status: 'synced',
-          last_synced_at: now,
-          alga_last_modified: now,
-          external_last_modified: '2025-10-31T12:05:00.000Z',
-          sync_error_message: null,
-          updated_at: now,
-        });
-
-      return {
-        success: true,
-        scheduleEntryId: mapping.schedule_entry_id,
-      };
-    }
-  },
-}));
-
 vi.mock('@alga-psa/users/actions', () => ({
   getCurrentUser: vi.fn(async () => ({
     tenant: context.defaultTenant,
@@ -349,23 +185,77 @@ vi.mock(modulePaths.rbacModulePathNoExt, () => ({
   hasPermission: vi.fn(async () => true),
 }));
 
+vi.mock('@alga-psa/auth', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@alga-psa/auth')>();
+  return { ...actual, hasPermission: async () => context.canViewAll };
+});
+
 vi.mock('@/lib/eventBus/publishers', () => ({
   publishEvent: vi.fn(),
 }));
 
-// Keep the adapter/maintenance imports of the EE impl inert.
+// Stateful provider doubles are used by the real CalendarSyncService called
+// from syncCalendarProviderImpl. They model event bodies and update timestamps
+// while recording every provider write for assertions.
+function createStatefulAdapter(provider: any) {
+  const key = (eventId: string) => `${provider.id}:${eventId}`;
+  return {
+    async connect() {},
+    async registerWebhookSubscription() {},
+    async renewWebhookSubscription() {},
+    async getEvent(eventId: string) {
+      context.providerCalls.push({ providerId: provider.id, operation: 'get', eventId });
+      const failure = context.providerReadFailures.get(provider.id);
+      if (failure) throw failure;
+      const event = context.providerEvents.get(key(eventId));
+      if (!event) throw Object.assign(new Error('Provider event not found'), { status: 404 });
+      return structuredClone(event);
+    },
+    async createEvent(event: any) {
+      const eventId = `manual-sync-${context.nextEventNumber++}`;
+      const stored = { ...structuredClone(event), id: eventId, updated: new Date(Date.now() + 5000).toISOString() };
+      context.providerEvents.set(key(eventId), stored);
+      context.providerCalls.push({ providerId: provider.id, operation: 'create', eventId, event: structuredClone(stored) });
+      return structuredClone(stored);
+    },
+    async updateEvent(eventId: string, event: any) {
+      const existing = context.providerEvents.get(key(eventId));
+      if (!existing) throw Object.assign(new Error('Provider event not found'), { status: 404 });
+      const stored = { ...existing, ...structuredClone(event), id: eventId, updated: new Date(Date.now() + 10_000).toISOString() };
+      context.providerEvents.set(key(eventId), stored);
+      context.providerCalls.push({ providerId: provider.id, operation: 'update', eventId, event: structuredClone(stored) });
+      return structuredClone(stored);
+    },
+    async deleteEvent(eventId: string) {
+      context.providerEvents.delete(key(eventId));
+      context.providerCalls.push({ providerId: provider.id, operation: 'delete', eventId });
+    },
+  };
+}
+
 vi.mock('@alga-psa/ee-calendar/lib/services/calendar/providers/GoogleCalendarAdapter', () => ({
   GoogleCalendarAdapter: class {
-    constructor(_provider: unknown) {}
-    async connect() {}
-    async registerWebhookSubscription() {}
+    private adapter: ReturnType<typeof createStatefulAdapter>;
+    constructor(provider: any) { this.adapter = createStatefulAdapter(provider); }
+    connect() { return this.adapter.connect(); }
+    getEvent(eventId: string) { return this.adapter.getEvent(eventId); }
+    createEvent(event: any) { return this.adapter.createEvent(event); }
+    updateEvent(eventId: string, event: any) { return this.adapter.updateEvent(eventId, event); }
+    deleteEvent(eventId: string) { return this.adapter.deleteEvent(eventId); }
+    registerWebhookSubscription() { return this.adapter.registerWebhookSubscription(); }
   },
 }));
 vi.mock('@alga-psa/ee-calendar/lib/services/calendar/providers/MicrosoftCalendarAdapter', () => ({
   MicrosoftCalendarAdapter: class {
-    constructor(_provider: unknown) {}
-    async connect() {}
-    async registerWebhookSubscription() {}
+    private adapter: ReturnType<typeof createStatefulAdapter>;
+    constructor(provider: any) { this.adapter = createStatefulAdapter(provider); }
+    connect() { return this.adapter.connect(); }
+    getEvent(eventId: string) { return this.adapter.getEvent(eventId); }
+    createEvent(event: any) { return this.adapter.createEvent(event); }
+    updateEvent(eventId: string, event: any) { return this.adapter.updateEvent(eventId, event); }
+    deleteEvent(eventId: string) { return this.adapter.deleteEvent(eventId); }
+    registerWebhookSubscription() { return this.adapter.registerWebhookSubscription(); }
+    renewWebhookSubscription() { return this.adapter.renewWebhookSubscription(); }
   },
 }));
 vi.mock('@alga-psa/ee-calendar/lib/services/calendar/CalendarWebhookMaintenanceService', () => ({
@@ -381,6 +271,8 @@ import { syncCalendarProvider } from '@alga-psa/ee-calendar/actions';
 describe('Manual calendar sync integration', () => {
   const testTenant = uuidv4();
   const testUserId = uuidv4();
+  const secondUserId = uuidv4();
+  const thirdUserId = uuidv4();
   let db: Knex;
 
   beforeAll(async () => {
@@ -388,6 +280,7 @@ describe('Manual calendar sync integration', () => {
     context.db = db;
     context.defaultTenant = testTenant;
     context.userId = testUserId;
+    context.secondUserId = secondUserId;
 
     await db.migrate.latest();
 
@@ -405,8 +298,30 @@ describe('Manual calendar sync integration', () => {
       tenant: testTenant,
       user_id: testUserId,
       username: 'calendar-sync-user',
+      user_type: 'internal',
       hashed_password: 'not-used',
       email: 'calendar-user@example.com',
+      created_at: new Date(),
+      updated_at: new Date(),
+    }).onConflict(['tenant', 'user_id']).ignore();
+    await tenantTable(db, testTenant, 'users').insert({
+      tenant: testTenant,
+      user_id: thirdUserId,
+      username: 'calendar-sync-third-user',
+      user_type: 'internal',
+      hashed_password: 'not-used',
+      email: 'calendar-third-user@example.com',
+      created_at: new Date(),
+      updated_at: new Date(),
+    }).onConflict(['tenant', 'user_id']).ignore();
+
+    await tenantTable(db, testTenant, 'users').insert({
+      tenant: testTenant,
+      user_id: secondUserId,
+      username: 'calendar-sync-second-user',
+      user_type: 'internal',
+      hashed_password: 'not-used',
+      email: 'calendar-second-user@example.com',
       created_at: new Date(),
       updated_at: new Date(),
     }).onConflict(['tenant', 'user_id']).ignore();
@@ -417,7 +332,11 @@ describe('Manual calendar sync integration', () => {
       await tenantTable(db, testTenant, 'calendar_event_mappings').del();
       await tenantTable(db, testTenant, 'calendar_providers').del();
       await tenantTable(db, testTenant, 'schedule_entries').del();
+      await tenantTable(db, testTenant, 'calendar_shares').del();
+      await tenantTable(db, testTenant, 'calendars').del();
       await tenantTable(db, testTenant, 'users').where({ user_id: testUserId }).del();
+      await tenantTable(db, testTenant, 'users').where({ user_id: secondUserId }).del();
+      await tenantTable(db, testTenant, 'users').where({ user_id: thirdUserId }).del();
       await tenantRows(db, testTenant).where({ tenant: testTenant }).del();
       await db.destroy();
     }
@@ -425,13 +344,18 @@ describe('Manual calendar sync integration', () => {
 
   beforeEach(async () => {
     context.tenant = null;
-    context.lastPushMetadata = null;
-    context.lastPullMetadata = null;
+    context.canViewAll = true;
+    context.providerEvents.clear();
+    context.providerCalls.length = 0;
+    context.providerReadFailures.clear();
+    context.nextEventNumber = 1;
     providerTenantMap.clear();
 
     await tenantTable(db, testTenant, 'calendar_event_mappings').del();
     await tenantTable(db, testTenant, 'calendar_providers').del();
     await tenantTable(db, testTenant, 'schedule_entries').del();
+    await tenantTable(db, testTenant, 'calendar_shares').del();
+    await tenantTable(db, testTenant, 'calendars').del();
   });
 
   function buildScheduleEntryInsert(entryId: string) {
@@ -495,6 +419,70 @@ describe('Manual calendar sync integration', () => {
     }
   }
 
+  async function seedBidirectionalProvider(providerType: 'google' | 'microsoft', userId = testUserId) {
+    const providerId = uuidv4();
+    await tenantTable(db, testTenant, 'calendar_providers').insert({
+      id: providerId,
+      tenant: testTenant,
+      user_id: userId,
+      provider_type: providerType,
+      provider_name: `Manual ${providerType}`,
+      calendar_id: 'primary',
+      is_active: true,
+      sync_direction: 'bidirectional',
+      status: 'disconnected',
+      last_sync_at: null,
+      error_message: null,
+      vendor_config: JSON.stringify({}),
+      created_at: new Date(),
+      updated_at: new Date(),
+    });
+    return providerId;
+  }
+
+  async function seedCalendarEntry(options: {
+    calendarType: 'group' | 'personal';
+    assignedUserIds?: string[];
+    notes?: string;
+  }) {
+    const calendarId = uuidv4();
+    await tenantTable(db, testTenant, 'calendars').insert({
+      tenant: testTenant,
+      calendar_id: calendarId,
+      calendar_type: options.calendarType,
+      owner_user_id: options.calendarType === 'personal' ? testUserId : null,
+      name: options.calendarType === 'group' ? 'Operations' : null,
+      is_archived: false,
+      created_by: testUserId,
+      created_at: new Date(),
+      updated_at: new Date(),
+    });
+    const entryId = uuidv4();
+    const entry = buildScheduleEntryInsert(entryId);
+    entry.notes = options.notes ?? 'Baseline notes';
+    entry.calendar_id = calendarId;
+    await tenantTable(db, testTenant, 'schedule_entries').insert(entry);
+    const assignedUserIds = options.assignedUserIds ?? [testUserId];
+    if (assignedUserIds.length) {
+      await tenantTable(db, testTenant, 'schedule_entry_assignees').insert(
+        assignedUserIds.map(userId => ({ tenant: testTenant, entry_id: entryId, user_id: userId }))
+      );
+    }
+    return { calendarId, entryId };
+  }
+
+  async function runManualSync(providerId: string) {
+    await tenantTable(db, testTenant, 'calendar_providers')
+      .where({ id: providerId, tenant: testTenant }).update({ status: 'disconnected' });
+    expect(await syncCalendarProvider(providerId)).toEqual({ success: true, started: true });
+    return waitForBackgroundSync(providerId);
+  }
+
+  async function readMapping(providerId: string, entryId: string) {
+    return tenantTable(db, testTenant, 'calendar_event_mappings')
+      .where({ tenant: testTenant, calendar_provider_id: providerId, schedule_entry_id: entryId }).first();
+  }
+
   it('pushes existing schedule entries to the external provider and updates mapping metadata', async () => {
     const providerId = uuidv4();
     const scheduleEntryId = uuidv4();
@@ -535,14 +523,23 @@ describe('Manual calendar sync integration', () => {
       created_at: new Date(),
       updated_at: new Date(),
     });
+    context.providerEvents.set(`${providerId}:${externalEventId}`, {
+      id: externalEventId,
+      provider: 'google',
+      title: 'Manual Sync Entry',
+      description: 'Initial notes',
+      start: { dateTime: new Date(Date.now() + 60 * 60 * 1000).toISOString() },
+      end: { dateTime: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString() },
+      status: 'confirmed',
+      updated: new Date(Date.now() - 60_000).toISOString(),
+    });
 
     const result = await syncCalendarProvider(providerId);
     expect(result).toEqual({ success: true, started: true });
     await waitForBackgroundSync(providerId);
 
-    expect(context.lastPushMetadata).not.toBeNull();
-    expect(context.lastPushMetadata?.entryId).toBe(scheduleEntryId);
-    expect(context.lastPushMetadata?.providerId).toBe(providerId);
+    expect(context.providerCalls.filter(call => call.operation === 'update')).toHaveLength(1);
+    expect(context.providerCalls.filter(call => call.operation === 'get')).toHaveLength(0);
 
     const updatedMapping = await tenantTable(db, testTenant, 'calendar_event_mappings')
       .where({ id: mappingId, tenant: testTenant })
@@ -550,12 +547,11 @@ describe('Manual calendar sync integration', () => {
 
     expect(updatedMapping).toBeDefined();
     expect(updatedMapping?.sync_status).toBe('synced');
-    expect(context.lastPushMetadata).not.toBeNull();
     const pushExternalLastModified =
       updatedMapping?.external_last_modified instanceof Date
         ? updatedMapping.external_last_modified.toISOString()
         : updatedMapping?.external_last_modified;
-    expect(pushExternalLastModified).toBe(context.lastPushMetadata?.externalLastModified);
+    expect(pushExternalLastModified).toBeDefined();
     expect(updatedMapping?.alga_last_modified instanceof Date).toBe(true);
     expect(updatedMapping?.sync_error_message).toBeNull();
 
@@ -592,7 +588,9 @@ describe('Manual calendar sync integration', () => {
 
     // Manual sync reconciles existing mapped entries only (inbound creation of
     // brand-new entries is webhook-driven now), so the local entry must exist.
-    await tenantTable(db, testTenant, 'schedule_entries').insert(buildScheduleEntryInsert(inboundEntryId));
+    const inboundEntry = buildScheduleEntryInsert(inboundEntryId);
+    inboundEntry.updated_at = new Date(Date.now() - 120_000);
+    await tenantTable(db, testTenant, 'schedule_entries').insert(inboundEntry);
 
     await tenantTable(db, testTenant, 'calendar_event_mappings').insert({
       id: mappingId,
@@ -601,22 +599,30 @@ describe('Manual calendar sync integration', () => {
       schedule_entry_id: inboundEntryId,
       external_event_id: externalEventId,
       sync_status: 'pending',
-      last_synced_at: null,
+      last_synced_at: new Date(Date.now() - 60_000),
       sync_error_message: null,
       sync_direction: 'from_external',
-      alga_last_modified: null,
+      alga_last_modified: inboundEntry.updated_at,
       external_last_modified: null,
       created_at: new Date(),
       updated_at: new Date(),
+    });
+    context.providerEvents.set(`${providerId}:${externalEventId}`, {
+      id: externalEventId,
+      provider: 'google',
+      title: 'Manual Sync Entry',
+      description: 'Updated via inbound sync',
+      start: { dateTime: new Date(Date.now() + 60 * 60 * 1000).toISOString() },
+      end: { dateTime: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString() },
+      status: 'confirmed',
+      updated: new Date().toISOString(),
     });
 
     const result = await syncCalendarProvider(providerId);
     expect(result).toEqual({ success: true, started: true });
     await waitForBackgroundSync(providerId);
 
-    expect(context.lastPullMetadata).not.toBeNull();
-    expect(context.lastPullMetadata?.externalEventId).toBe(externalEventId);
-    expect(context.lastPullMetadata?.created).toBe(false);
+    expect(context.providerCalls.filter(call => call.operation === 'get')).toHaveLength(1);
 
     const storedEntry = await tenantTable(db, testTenant, 'schedule_entries')
       .where({ tenant: testTenant, entry_id: inboundEntryId })
@@ -635,7 +641,203 @@ describe('Manual calendar sync integration', () => {
       updatedMapping?.external_last_modified instanceof Date
         ? updatedMapping.external_last_modified.toISOString()
         : updatedMapping?.external_last_modified;
-    expect(pullExternalLastModified).toBe(context.lastPullMetadata?.externalLastModified);
+    expect(pullExternalLastModified).toBeDefined();
     expect(updatedMapping?.sync_error_message).toBeNull();
   });
+
+  it.each(['google', 'microsoft'] as const)(
+    'preserves provider-authored %s notes through real bidirectional Sync Now and repeated sync', async providerType => {
+      const providerId = await seedBidirectionalProvider(providerType);
+      const { entryId } = await seedCalendarEntry({ calendarType: 'group', notes: 'Alga baseline' });
+      await runManualSync(providerId);
+      const baselineMapping = await readMapping(providerId, entryId);
+      expect(baselineMapping).toBeDefined();
+      const externalId = baselineMapping.external_event_id;
+      const eventKey = `${providerId}:${externalId}`;
+      const baselineEvent = context.providerEvents.get(eventKey);
+      expect(baselineEvent.description).toContain('[Alga calendar: Operations]');
+      if (providerType === 'microsoft') {
+        expect(baselineEvent.categories).toEqual(['Alga calendar: Operations']);
+      }
+
+      const providerNotes = 'Notes authored in the provider';
+      const editedEvent = {
+        ...baselineEvent,
+        description: providerType === 'microsoft'
+          ? `<html><body><p>${providerNotes}</p><p>[Alga calendar: Operations]</p></body></html>`
+          : `${providerNotes}\n[Alga calendar: Operations]`,
+        updated: new Date(Date.now() + 60_000).toISOString(),
+      };
+      context.providerEvents.set(eventKey, editedEvent);
+
+      await runManualSync(providerId);
+      const storedEntry = await tenantTable(db, testTenant, 'schedule_entries')
+        .where({ tenant: testTenant, entry_id: entryId }).first();
+      const mappingAfterPull = await readMapping(providerId, entryId);
+      expect(storedEntry.notes).toBe(providerNotes);
+      expect(mappingAfterPull.id).toBe(baselineMapping.id);
+      expect(mappingAfterPull.external_event_id).toBe(externalId);
+      expect(context.providerEvents.get(eventKey).description).toContain('[Alga calendar: Operations]');
+      expect(context.providerEvents.get(eventKey).description).toContain(providerNotes);
+      if (providerType === 'microsoft') {
+        expect(context.providerEvents.get(eventKey).categories).toEqual(['Alga calendar: Operations']);
+      }
+      expect(context.providerCalls.filter(call => call.operation === 'update')).toHaveLength(0);
+
+      await runManualSync(providerId);
+      expect((await tenantTable(db, testTenant, 'schedule_entries').where({ entry_id: entryId }).first()).notes)
+        .toBe(providerNotes);
+      expect((await readMapping(providerId, entryId)).id).toBe(baselineMapping.id);
+      expect(context.providerCalls.filter(call => call.operation === 'update')).toHaveLength(0);
+    }
+  );
+
+  it.each(['google', 'microsoft'] as const)(
+    'pushes a %s local-only edit after confirming the provider version', async providerType => {
+      const providerId = await seedBidirectionalProvider(providerType);
+      const { entryId } = await seedCalendarEntry({ calendarType: 'group', notes: 'Baseline' });
+      await runManualSync(providerId);
+      const mapping = await readMapping(providerId, entryId);
+      const eventKey = `${providerId}:${mapping.external_event_id}`;
+      await tenantTable(db, testTenant, 'schedule_entries').where({ entry_id: entryId }).update({
+        notes: 'Local-only edit',
+        updated_at: new Date(Date.now() + 30_000),
+      });
+
+      await runManualSync(providerId);
+      expect(context.providerCalls.filter(call => call.operation === 'get')).toHaveLength(1);
+      expect(context.providerCalls.filter(call => call.operation === 'update')).toHaveLength(1);
+      expect(context.providerEvents.get(eventKey).description).toContain('Local-only edit');
+      expect(context.providerEvents.get(eventKey).description).toContain('[Alga calendar: Operations]');
+    }
+  );
+
+  it.each(['google', 'microsoft'] as const)(
+    'leaves %s simultaneous edits in conflict without a provider write', async providerType => {
+      const providerId = await seedBidirectionalProvider(providerType);
+      const { entryId } = await seedCalendarEntry({ calendarType: 'group', notes: 'Baseline' });
+      await runManualSync(providerId);
+      const mapping = await readMapping(providerId, entryId);
+      const eventKey = `${providerId}:${mapping.external_event_id}`;
+      await tenantTable(db, testTenant, 'schedule_entries').where({ entry_id: entryId }).update({
+        notes: 'Simultaneous Alga edit',
+        updated_at: new Date(Date.now() + 30_000),
+      });
+      context.providerEvents.set(eventKey, {
+        ...context.providerEvents.get(eventKey),
+        description: `Simultaneous provider edit\n[Alga calendar: Operations]`,
+        updated: new Date(Date.now() + 60_000).toISOString(),
+      });
+
+      const status = await runManualSync(providerId);
+      expect(status.status).toBe('error');
+      expect(status.error_message).toContain('Conflict detected');
+      expect((await readMapping(providerId, entryId)).sync_status).toBe('conflict');
+      expect(context.providerCalls.filter(call => call.operation === 'update')).toHaveLength(0);
+    }
+  );
+
+  it.each(['google', 'microsoft'] as const)(
+    'does not overwrite a pending %s local edit when inbound reconciliation fails', async providerType => {
+      const providerId = await seedBidirectionalProvider(providerType);
+      const { entryId } = await seedCalendarEntry({ calendarType: 'group', notes: 'Baseline' });
+      await runManualSync(providerId);
+      const mapping = await readMapping(providerId, entryId);
+      await tenantTable(db, testTenant, 'schedule_entries').where({ entry_id: entryId }).update({
+        notes: 'Pending local edit',
+        updated_at: new Date(Date.now() + 30_000),
+      });
+      context.providerReadFailures.set(providerId, new Error('synthetic provider read failure'));
+
+      const status = await runManualSync(providerId);
+      expect(status.status).toBe('error');
+      expect(status.error_message).toContain('synthetic provider read failure');
+      expect((await tenantTable(db, testTenant, 'schedule_entries').where({ entry_id: entryId }).first()).notes)
+        .toBe('Pending local edit');
+      expect(context.providerCalls.filter(call => call.operation === 'update')).toHaveLength(0);
+      expect((await readMapping(providerId, entryId)).external_event_id).toBe(mapping.external_event_id);
+    }
+  );
+
+  it.each(['google', 'microsoft'] as const)(
+    'uses non-admin read-only group access for %s marker echoes and performs one corrective write for a real edit', async providerType => {
+      context.canViewAll = false;
+      const providerId = await seedBidirectionalProvider(providerType);
+      const { calendarId, entryId } = await seedCalendarEntry({
+        calendarType: 'group',
+        assignedUserIds: [context.secondUserId!, thirdUserId],
+        notes: 'Shared notes',
+      });
+      await tenantTable(db, testTenant, 'calendar_shares').insert({
+        tenant: testTenant,
+        calendar_id: calendarId,
+        grantee_type: 'user',
+        grantee_id: testUserId,
+        access_level: 'read',
+        created_by: testUserId,
+      });
+      await runManualSync(providerId);
+      const mapping = await readMapping(providerId, entryId);
+      const eventKey = `${providerId}:${mapping.external_event_id}`;
+      const baseline = context.providerEvents.get(eventKey);
+      expect(baseline.description).toContain('[Alga calendar: Operations]');
+      expect(context.canViewAll).toBe(false);
+
+      context.providerEvents.set(eventKey, {
+        ...baseline,
+        ...(providerType === 'microsoft'
+          ? { categories: [...(baseline.categories ?? []), 'Provider category echo'] }
+          : {}),
+        updated: new Date(Date.now() + 30_000).toISOString(),
+      });
+      await runManualSync(providerId);
+      expect(context.providerCalls.filter(call => call.operation === 'update')).toHaveLength(0);
+      expect((await tenantTable(db, testTenant, 'schedule_entries').where({ entry_id: entryId }).first()).notes)
+        .toBe('Shared notes');
+
+      const echoed = context.providerEvents.get(eventKey);
+      context.providerEvents.set(eventKey, {
+        ...echoed,
+        title: 'Unauthorized provider title edit',
+        updated: new Date(Date.now() + 60_000).toISOString(),
+      });
+      await runManualSync(providerId);
+      expect(context.providerCalls.filter(call => call.operation === 'update')).toHaveLength(1);
+      expect(context.providerEvents.get(eventKey).title).toBe('Manual Sync Entry');
+      expect((await tenantTable(db, testTenant, 'schedule_entries').where({ entry_id: entryId }).first()).notes)
+        .toBe('Shared notes');
+    }
+  );
+
+  it.each(['google', 'microsoft'] as const)(
+    'preserves user-authored marker-like notes on a non-null personal calendar_id for %s outbound and inbound sync', async providerType => {
+      const providerId = await seedBidirectionalProvider(providerType);
+      const userNote = 'Personal [Alga calendar: authored by the user]';
+      const { calendarId, entryId } = await seedCalendarEntry({
+        calendarType: 'personal', notes: userNote,
+      });
+      expect(calendarId).toBeTruthy();
+      await runManualSync(providerId);
+      const mapping = await readMapping(providerId, entryId);
+      const eventKey = `${providerId}:${mapping.external_event_id}`;
+      const outbound = context.providerEvents.get(eventKey);
+      expect(outbound.description).toBe(userNote);
+      expect(outbound.categories).toBeUndefined();
+      expect(outbound.extendedProperties?.private).not.toHaveProperty('alga-calendar-marker-name');
+
+      const providerAuthoredNote = 'Provider personal [Alga calendar: keep this literal]';
+      context.providerEvents.set(eventKey, {
+        ...outbound,
+        description: providerAuthoredNote,
+        updated: new Date(Date.now() + 30_000).toISOString(),
+      });
+      await runManualSync(providerId);
+      const storedEntry = await tenantTable(db, testTenant, 'schedule_entries')
+        .where({ entry_id: entryId }).first();
+      expect(storedEntry.calendar_id).toBe(calendarId);
+      expect(storedEntry.notes).toBe(providerAuthoredNote);
+      expect(context.providerEvents.get(eventKey).description).toBe(providerAuthoredNote);
+      expect((await readMapping(providerId, entryId)).id).toBe(mapping.id);
+    }
+  );
 });
