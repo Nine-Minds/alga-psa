@@ -521,6 +521,7 @@ async function syncContractCadenceObligation(
     tenant: params.tenant,
     contractLineId: params.obligation.contract_line_id,
   });
+  // LEVERAGE: pattern line-billed-boundary — same per-line "billed or invoice-linked, max end" rule as loadClientCadenceLineBilledBoundaries (client cadence)
   const billedBoundaryEnd = existingRecords
     .filter((record) => record.lifecycleState === 'billed' || record.invoiceLinkage != null)
     .map((record) => record.servicePeriod.end)

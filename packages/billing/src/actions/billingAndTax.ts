@@ -51,7 +51,7 @@ import {
     CLIENT_CADENCE_POST_DROP_OBLIGATION_TYPE,
 } from '@alga-psa/shared/billingClients/postDropRecurringObligationIdentity';
 import {
-    loadClientBilledLedgerBoundary,
+    loadClientCadenceLineBilledBoundaries,
     resolveClientCadenceObligationStart,
 } from '@alga-psa/shared/billingClients/clientCadenceScheduleRegeneration';
 import { BillingEngine, createFixedChargePreviewSession } from '../lib/billing/billingEngine';
@@ -581,11 +581,12 @@ async function fetchClientCadenceMaterializationGaps(
         recurringClientsById.set(row.client_id, clientRows);
     }
 
-    // Load once per client, not once per line/window. A new schedule has no
-    // billed rows of its own; its first obligation still respects sibling history.
-    const billedBoundaryByClient = new Map(await Promise.all(clientIds.map(async (clientId) => [
+    // Load once per client, not once per line/window. The boundary is per LINE
+    // (a line's own billed history); sibling invoices must not hide a new line's
+    // first partial period. Must match regeneration/repair or gaps never clear.
+    const billedBoundariesByClient = new Map(await Promise.all(clientIds.map(async (clientId) => [
         clientId,
-        await loadClientBilledLedgerBoundary(trx, { tenant, clientId }),
+        await loadClientCadenceLineBilledBoundaries(trx, { tenant, clientId }),
     ] as const)));
     const fallbackStart = new Date().toISOString();
 
@@ -631,7 +632,8 @@ async function fetchClientCadenceMaterializationGaps(
 
             const obligationStart = resolveClientCadenceObligationStart({
                 assignmentStart: row.start_date,
-                billedBoundaryEnd: billedBoundaryByClient.get(period.client_id) ?? null,
+                billedBoundaryEnd:
+                    billedBoundariesByClient.get(period.client_id)?.get(row.client_contract_line_id) ?? null,
                 fallbackStart,
             });
             if (!isRecurringLineExpectedInClientCadenceWindow({

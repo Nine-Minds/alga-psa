@@ -135,9 +135,11 @@ function maxIsoDateOnly(left: ISO8601String, right: ISO8601String) {
 }
 
 /**
- * First eligible client-cadence obligation start. A newly added line inherits
- * its assignment's start, but cannot reopen service already consumed in the
- * client's ledger (including draft invoice detail links on sibling lines).
+ * First eligible client-cadence obligation start. A line starts at its
+ * assignment's start, but cannot reopen service already consumed by that same
+ * line (billed, or linked to a draft invoice detail). `billedBoundaryEnd` must
+ * be the LINE's own boundary (loadClientCadenceLineBilledBoundaries), never a
+ * sibling's: a new line starting mid-cycle keeps its first partial period.
  * Keep discovery, initial materialization and operator repairs on this rule.
  */
 export function resolveClientCadenceObligationStart(input: {
@@ -277,15 +279,28 @@ function buildScheduleSourceRuleVersion(
   ].join('|');
 }
 
-export async function loadClientBilledLedgerBoundary(
+/**
+ * Last billed (or invoice-linked, including draft) service-period end for each
+ * client-cadence line of a client, keyed by contract_line_id. Lines with no
+ * billed history are absent from the map.
+ *
+ * The "already billed" boundary is a property of the LINE: it stops that line's
+ * own invoiced periods from being regenerated or double-billed. It must not be
+ * derived from sibling lines - a new line starting mid-cycle would otherwise
+ * lose its first partial period whenever another contract is already billed
+ * (e.g. in advance) through the current cycle. Contract cadence scopes its
+ * boundary the same way.
+ */
+// LEVERAGE: pattern line-billed-boundary — "billed or invoice-linked, max service_period_end" is derived per line here (SQL) and in contractCadenceServicePeriodMaterialization.ts (in memory)
+export async function loadClientCadenceLineBilledBoundaries(
   trx: Knex | Knex.Transaction,
   params: { tenant: string; clientId: string },
-) {
+): Promise<Map<string, ISO8601String>> {
   const db = tenantDb(trx, params.tenant);
   const query = db.table('recurring_service_periods as rsp');
   db.tenantJoin(query, 'contract_lines as cl', 'cl.contract_line_id', 'rsp.obligation_id');
   db.tenantJoin(query, 'contracts as ct', 'ct.contract_id', 'cl.contract_id');
-  const lastBilled = await query
+  const billedRows = (await query
     .where('rsp.obligation_type', CLIENT_CADENCE_POST_DROP_OBLIGATION_TYPE)
     .where('rsp.cadence_owner', 'client')
     .where('ct.owner_client_id', params.clientId)
@@ -293,13 +308,42 @@ export async function loadClientBilledLedgerBoundary(
       builder.where('rsp.lifecycle_state', 'billed')
         .orWhereNotNull('rsp.invoice_charge_detail_id');
     })
-    .orderBy('rsp.service_period_end', 'desc')
-    .select({ service_period_end: 'rsp.service_period_end' })
-    .first();
+    .select({
+      obligation_id: 'rsp.obligation_id',
+      service_period_end: 'rsp.service_period_end',
+    })) as Array<{ obligation_id: string; service_period_end: unknown }>;
 
-  return lastBilled?.service_period_end
-    ? normalizeDateOnlyValue(lastBilled.service_period_end)
-    : null;
+  const boundaries = new Map<string, ISO8601String>();
+  for (const row of billedRows) {
+    const end = normalizeDateOnlyValue(row.service_period_end);
+    if (!end) {
+      continue;
+    }
+    const current = boundaries.get(row.obligation_id);
+    if (!current || compareIsoDateOnly(end, current) > 0) {
+      boundaries.set(row.obligation_id, end);
+    }
+  }
+  return boundaries;
+}
+
+/**
+ * Client-wide latest billed end across every line. Only for "is there billed
+ * history in the affected range?" reporting; it must never gate what a
+ * particular line may generate (use the per-line boundary for that).
+ */
+export async function loadClientBilledLedgerBoundary(
+  trx: Knex | Knex.Transaction,
+  params: { tenant: string; clientId: string },
+) {
+  const boundaries = await loadClientCadenceLineBilledBoundaries(trx, params);
+  let latest: ISO8601String | null = null;
+  for (const end of boundaries.values()) {
+    if (!latest || compareIsoDateOnly(end, latest) > 0) {
+      latest = end;
+    }
+  }
+  return latest;
 }
 
 async function loadClientCadenceRecurringObligations(
@@ -420,6 +464,7 @@ type ClientCadenceObligationRegenerationPlan = {
 };
 
 type ClientCadenceRegenerationComputation = {
+  /** Client-wide, reporting only (preview). Per-line boundaries drive generation. */
   billedBoundaryEnd: ISO8601String | null;
   obligationPlans: ClientCadenceObligationRegenerationPlan[];
 };
@@ -434,7 +479,13 @@ async function computeClientCadenceRegeneration(
   trx: Knex.Transaction,
   params: ClientCadenceScheduleChangeParams,
 ): Promise<ClientCadenceRegenerationComputation> {
-  const billedBoundaryEnd = await loadClientBilledLedgerBoundary(trx, params);
+  const billedBoundaryByLine = await loadClientCadenceLineBilledBoundaries(trx, params);
+  let clientBilledBoundaryEnd: ISO8601String | null = null;
+  for (const end of billedBoundaryByLine.values()) {
+    if (!clientBilledBoundaryEnd || compareIsoDateOnly(end, clientBilledBoundaryEnd) > 0) {
+      clientBilledBoundaryEnd = end;
+    }
+  }
   const obligations = await loadClientCadenceRecurringObligations(trx, params);
   const materializedAt = new Date().toISOString();
   const sourceRuleVersion = buildScheduleSourceRuleVersion(
@@ -446,6 +497,8 @@ async function computeClientCadenceRegeneration(
   const obligationPlans: ClientCadenceObligationRegenerationPlan[] = [];
 
   for (const obligation of obligations) {
+    // Scoped to this line: sibling invoice history must not suppress its periods.
+    const billedBoundaryEnd = billedBoundaryByLine.get(obligation.client_contract_line_id) ?? null;
     const obligationStart =
       normalizeDateOnlyValue(obligation.start_date) ?? ensureUtcMidnightIsoDate(materializedAt);
     const regenerationStart = resolveClientCadenceObligationStart({
@@ -508,7 +561,7 @@ async function computeClientCadenceRegeneration(
     });
   }
 
-  return { billedBoundaryEnd, obligationPlans };
+  return { billedBoundaryEnd: clientBilledBoundaryEnd, obligationPlans };
 }
 
 export async function replenishClientCadenceServicePeriods(

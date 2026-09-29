@@ -44,6 +44,20 @@ describe('Cadence-change resync wiring', () => {
     expect(regeneration).toContain("regenerationReasonCode: 'billing_schedule_changed'");
   });
 
+  it('alga-2026-0002499: the billed boundary that gates a line is scoped to that line, not the client', () => {
+    // Regeneration, gap discovery and operator repair must share the per-line
+    // boundary; a client-wide boundary would hide a new mid-cycle line's first period.
+    expect(regeneration).toContain('export async function loadClientCadenceLineBilledBoundaries');
+    expect(regeneration).toContain(
+      'billedBoundaryByLine.get(obligation.client_contract_line_id)',
+    );
+    const billingAndTax = read('../src/actions/billingAndTax.ts');
+    for (const source of [billingAndTax, rspActions]) {
+      expect(source).toContain('loadClientCadenceLineBilledBoundaries');
+      expect(source).not.toContain('loadClientBilledLedgerBoundary');
+    }
+  });
+
   it('bounds candidate periods in both client- and contract-cadence persistence paths', () => {
     expect(regeneration).toContain('clipRecurringCandidatesToObligationBounds(');
     expect(contractCadenceMaterialization).toContain(
