@@ -58,8 +58,22 @@
     },
     "clients": {
       "title": "Your Company",
-      "help": "The client marked as your company is your own organization. Its name, address, and logo appear on invoices, quotes, and client-facing communications.",
+      "help": "The client marked as your company is your own organization. Its name, address, and logo appear on invoices, quotes, and client-facing communications, and the country on its location sets your date format and the country preselected on new records.",
       "currentDefault": "Your company is currently {{name}}.",
+      "defaults": {
+        "title": "What your company decides",
+        "intro": "The country on {{name}}'s location settles these for everyone in the MSP app:",
+        "country": "New clients, contacts and locations preselect {{country}}.",
+        "countryMissing": "New clients, contacts and locations preselect no country.",
+        "phoneCode": "Phone numbers start on the {{code}} dial code.",
+        "phoneCodeMissing": "Phone numbers start with no dial code.",
+        "dateFormat": "Dates are written {{pattern}} — {{example}} — on a {{clock}} clock.",
+        "clock12": "12-hour",
+        "clock24": "24-hour",
+        "noCountry": "{{name}} has no country on its location, so all three fall back to the {{pattern}} default. Add a location with a country to {{name}} to change them — there is no separate date-format setting.",
+        "portalNote": "Client portal users read dates in their own client's format, taken from that client's location country rather than yours.",
+        "changeIntro": "Switching to {{name}} also changes these defaults:"
+      },
       "yourCompanyBadge": "Your company",
       "table": {
         "name": "Name",
@@ -97,6 +111,18 @@
         "setDefaultClient": "Failed to set default client",
         "loadClients": "Failed to load clients"
       }
+    }
+  },
+  "dashboardWelcome": {
+    "label": "Use your company name in the dashboard welcome",
+    "help": "Off by default: the MSP dashboard reads \"Welcome to Your MSP Command Center\". Turn this on and it names the client marked as your company instead. This switch saves on its own, right away.",
+    "noCompany": "No client is marked as your company yet. Pick one under Settings → General and its name can appear here.",
+    "previewLabel": "Your team sees:",
+    "preview": "Welcome to the {{companyName}} Command Center",
+    "previewDefault": "Welcome to Your MSP Command Center",
+    "messages": {
+      "saved": "Dashboard welcome updated",
+      "saveFailed": "Failed to update the dashboard welcome"
     }
   },
   "experimentalFeatures": {

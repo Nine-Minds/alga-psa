@@ -58,8 +58,22 @@
     },
     "clients": {
       "title": "Su empresa",
-      "help": "El cliente marcado como su empresa es su propia organización. Su nombre, dirección y logotipo aparecen en facturas, cotizaciones y comunicaciones dirigidas a los clientes.",
+      "help": "El cliente marcado como su empresa es su propia organización. Su nombre, dirección y logotipo aparecen en facturas, cotizaciones y comunicaciones dirigidas a los clientes, y el país de su ubicación define el formato de fecha y el país preseleccionado en los registros nuevos.",
       "currentDefault": "Actualmente su empresa es {{name}}.",
+      "defaults": {
+        "title": "Lo que define su empresa",
+        "intro": "El país de la ubicación de {{name}} define lo siguiente para todo el equipo en la aplicación MSP:",
+        "country": "Los nuevos clientes, contactos y ubicaciones preseleccionan {{country}}.",
+        "countryMissing": "Los nuevos clientes, contactos y ubicaciones no preseleccionan ningún país.",
+        "phoneCode": "Los teléfonos comienzan con el prefijo {{code}}.",
+        "phoneCodeMissing": "Los teléfonos comienzan sin prefijo.",
+        "dateFormat": "Las fechas se escriben {{pattern}} — {{example}} — con reloj de {{clock}}.",
+        "clock12": "12 horas",
+        "clock24": "24 horas",
+        "noCountry": "{{name}} no tiene país en su ubicación, por lo que las tres opciones vuelven al valor predeterminado {{pattern}}. Agregue una ubicación con país a {{name}} para cambiarlas: no existe una opción aparte para el formato de fecha.",
+        "portalNote": "En el portal de clientes las fechas se muestran en el formato del propio cliente, tomado del país de su ubicación y no del suyo.",
+        "changeIntro": "Cambiar a {{name}} también modifica estos valores predeterminados:"
+      },
       "yourCompanyBadge": "Su empresa",
       "table": {
         "name": "Nombre",
@@ -97,6 +111,18 @@
         "setDefaultClient": "Error al establecer el cliente predeterminado",
         "loadClients": "Error al cargar los clientes"
       }
+    }
+  },
+  "dashboardWelcome": {
+    "label": "Usar el nombre de su empresa en el saludo del panel",
+    "help": "Desactivado de forma predeterminada: el panel MSP muestra «Bienvenido a su centro de mando MSP». Al activarlo, aparece el nombre del cliente marcado como su empresa. Este interruptor se guarda por separado y de inmediato.",
+    "noCompany": "Todavía no hay ningún cliente marcado como su empresa. Elija uno en Configuración → General para que su nombre pueda aparecer aquí.",
+    "previewLabel": "Su equipo verá:",
+    "preview": "Bienvenido al centro de mando de {{companyName}}",
+    "previewDefault": "Bienvenido a su centro de mando MSP",
+    "messages": {
+      "saved": "Saludo del panel actualizado",
+      "saveFailed": "No se pudo actualizar el saludo del panel"
     }
   },
   "experimentalFeatures": {
