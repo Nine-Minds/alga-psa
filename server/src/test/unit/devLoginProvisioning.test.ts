@@ -74,8 +74,8 @@ describe('development login provisioning', () => {
     expect(updatePassword).toHaveBeenCalledWith('glinda-user', 'emerald-tenant', expect.any(String));
   });
 
-  it('falls back to the shared authentication secret when the optional encryption key is missing', async () => {
-    getSecret.mockImplementation(async (name: string) => name === 'credential_encryption_key' ? '' : 'unit-test-nextauth-secret');
+  it.each(['', 'short-key'])('falls back to the shared authentication secret when the optional encryption key is %j', async credentialKey => {
+    getSecret.mockImplementation(async (name: string) => name === 'credential_encryption_key' ? credentialKey : 'unit-test-nextauth-secret');
     const first = await provisionDevelopmentLogin();
     const second = await provisionDevelopmentLogin();
     expect(first?.password).toBe(second?.password);
