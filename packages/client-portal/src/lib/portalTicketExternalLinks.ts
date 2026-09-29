@@ -1,7 +1,11 @@
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
-import type { IExternalEntityLink, PortalTicketExternalLink } from '@alga-psa/types';
-import { renderExternalLinkUrl, resolveExternalSystem } from '@alga-psa/tickets/lib/externalSystems';
+import {
+  renderExternalLinkUrl,
+  resolveExternalSystem,
+  type IExternalEntityLink,
+  type PortalTicketExternalLink,
+} from '@alga-psa/types';
 
 /** Call only after the portal's parent-ticket authorization succeeds. Not a server action. */
 export async function loadPortalTicketExternalLinks(
