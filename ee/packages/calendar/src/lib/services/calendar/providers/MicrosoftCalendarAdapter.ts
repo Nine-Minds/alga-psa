@@ -16,9 +16,11 @@ export class MicrosoftCalendarAdapter extends BaseCalendarAdapter {
   private baseUrl = getMicrosoftGraphBaseUrl();
   private authenticatedUserEmail: string | undefined;
   private calendarId: string;
+  private categoryConsentWarning?: string;
 
   constructor(config: CalendarProviderConfig) {
     super(config);
+    if (config.error_message?.startsWith('Outlook calendar categories are unavailable.')) this.categoryConsentWarning = config.error_message;
 
     // Get calendar ID from config
     this.calendarId = config.calendar_id || 'calendar';
@@ -731,6 +733,10 @@ export class MicrosoftCalendarAdapter extends BaseCalendarAdapter {
     }
   }
 
+  getProviderStatusWarning(): string | undefined {
+    return this.categoryConsentWarning;
+  }
+
   private async ensureMasterCategories(categories: string[]): Promise<string[]> {
     const available: string[] = [];
     for (const displayName of categories) {
@@ -738,14 +744,24 @@ export class MicrosoftCalendarAdapter extends BaseCalendarAdapter {
         const response = await this.httpClient.get('/me/outlook/masterCategories', {
           params: { '$filter': `displayName eq '${displayName.replace(/'/g, "''")}'` }
         });
-        if ((response.data.value || []).some((category: any) => category.displayName?.toLowerCase() === displayName.toLowerCase())) { available.push(displayName); continue; }
+        if ((response.data.value || []).some((category: any) => category.displayName?.toLowerCase() === displayName.toLowerCase())) { this.categoryConsentWarning = undefined; available.push(displayName); continue; }
         await this.httpClient.post('/me/outlook/masterCategories', { displayName, color: 'preset0' });
+        this.categoryConsentWarning = undefined;
         available.push(displayName);
       } catch (error: any) {
         const status = error?.response?.status;
         const code = error?.response?.data?.error?.code;
         if (status === 403 && ['ErrorAccessDenied', 'Authorization_RequestDenied'].includes(code)) {
-          console.warn(`[MicrosoftCalendarAdapter] Outlook category consent is missing. Reconnect the Microsoft calendar with MailboxSettings.ReadWrite permission to enable the ${displayName} category.`);
+          const warning = `Outlook calendar categories are unavailable. Reconnect this Microsoft calendar and grant MailboxSettings.ReadWrite permission to show the owning Alga calendar as a category. Event notes will still show the calendar name.`;
+          this.categoryConsentWarning = warning;
+          this.config.error_message = warning;
+          console.warn(`[MicrosoftCalendarAdapter] ${warning}`);
+          try {
+            const providerService = new CalendarProviderService();
+            await providerService.updateProviderStatus(this.config.id, { status: 'connected', errorMessage: warning });
+          } catch (statusError) {
+            console.warn('[MicrosoftCalendarAdapter] Could not publish category consent warning to provider status', statusError);
+          }
           continue;
         }
         throw error;

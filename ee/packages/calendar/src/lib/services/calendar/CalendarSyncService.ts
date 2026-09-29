@@ -160,7 +160,7 @@ export class CalendarSyncService {
               externalEventId: updatedEvent.id
             };
 
-            await this.markProviderConnected(provider.id);
+            await this.markProviderConnected(provider.id, adapter);
             return syncResult;
           }
 
@@ -199,7 +199,7 @@ export class CalendarSyncService {
           externalEventId: createdEvent.id
         };
 
-        await this.markProviderConnected(provider.id);
+        await this.markProviderConnected(provider.id, adapter);
         return syncResult;
       });
       return result;
@@ -361,7 +361,7 @@ export class CalendarSyncService {
           const owningCalendar = existingEntry.calendar_id
             ? await tenantDb(trx, tenant).table('calendars').where({ calendar_id: existingEntry.calendar_id, calendar_type: 'group' }).first()
             : null;
-          const entryData = await mapExternalEventToScheduleEntry(externalEvent, tenant, provider.provider_type, undefined, owningCalendar?.name);
+          const entryData = await mapExternalEventToScheduleEntry(externalEvent, tenant, provider.provider_type, undefined, owningCalendar?.name, !!owningCalendar);
 
           // Merge with existing entry, but preserve assigned_user_ids from Alga
           // External calendars often don't include the correct attendees, so we keep
@@ -491,7 +491,7 @@ export class CalendarSyncService {
             externalEventId: externalEvent.id
           };
 
-          await this.markProviderConnected(provider.id);
+          await this.markProviderConnected(provider.id, adapter);
           return syncResult;
         } else {
           // Check if this event was originally created by Alga (has alga-entry-id)
@@ -534,7 +534,7 @@ export class CalendarSyncService {
                 externalEventId: externalEvent.id
               };
 
-              await this.markProviderConnected(provider.id);
+              await this.markProviderConnected(provider.id, adapter);
               return syncResult;
             }
             // Entry doesn't exist (may have been deleted) - fall through to create new entry
@@ -617,7 +617,7 @@ export class CalendarSyncService {
             externalEventId: externalEvent.id
           };
 
-          await this.markProviderConnected(provider.id);
+          await this.markProviderConnected(provider.id, adapter);
           return syncResult;
         }
       });
@@ -1020,12 +1020,12 @@ export class CalendarSyncService {
     };
   }
 
-  private async markProviderConnected(providerId: string): Promise<void> {
+  private async markProviderConnected(providerId: string, adapter?: BaseCalendarAdapter): Promise<void> {
     try {
       await this.providerService.updateProviderStatus(providerId, {
         status: 'connected',
         lastSyncAt: new Date().toISOString(),
-        errorMessage: null
+        errorMessage: adapter instanceof MicrosoftCalendarAdapter ? adapter.getProviderStatusWarning() ?? null : null
       });
     } catch (statusError) {
       console.warn('[CalendarSyncService] Failed to update provider status to connected', {

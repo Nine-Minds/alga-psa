@@ -123,36 +123,52 @@ function appendCalendarMarker(notes: string, calendarName?: string): string {
   return `${base}${base ? '\n' : ''}${marker}`;
 }
 
-function stripCalendarMarker(notes?: string, calendarName?: string): string | undefined {
-  if (notes === undefined || calendarName === undefined) return notes;
-  const marker = `[Alga calendar: ${calendarName}]`;
-  const escapedTextMarker = marker.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-  const candidates = new Set([marker, escapedTextMarker]);
-
-  // Provider HTML normalizes line breaks to paragraphs. Match one paragraph at
-  // a time so marker text cannot consume adjacent user-content elements.
-  const paragraphPattern = /<p(?:\s[^>]*)?>([^<>]*)<\/p>/gi;
-  let match: RegExpExecArray | null;
-  let lastParagraph: RegExpExecArray | null = null;
-  while ((match = paragraphPattern.exec(notes)) !== null) lastParagraph = match;
-  if (lastParagraph && /^\s*(?:<\/body>\s*)?(?:<\/html>\s*)?$/i.test(notes.slice(lastParagraph.index + lastParagraph[0].length))) {
-    const paragraphText = lastParagraph[1]
-      .replace(/&amp;/gi, '&').replace(/&lt;/gi, '<').replace(/&gt;/gi, '>')
+function stripCalendarMarker(notes?: string, calendarName?: string, trustedGroupEntry = false): string | undefined {
+  if (notes === undefined || !trustedGroupEntry) return notes;
+  const markerText = (value: string) => {
+    const decoded = value.replace(/&amp;/gi, '&').replace(/&lt;/gi, '<').replace(/&gt;/gi, '>')
       .replace(/&quot;/gi, '"').replace(/&#39;|&apos;/gi, "'").trim();
-    if (candidates.has(paragraphText)) {
-      const before = notes.slice(0, lastParagraph.index).replace(/\r?\n[ \t]*$/, '');
-      const after = notes.slice(lastParagraph.index + lastParagraph[0].length);
-      const remaining = `${before}${after}`;
-      return /^\s*(?:<html(?:\s[^>]*)?>\s*)?(?:<body(?:\s[^>]*)?>\s*)?(?:<\/body>\s*)?(?:<\/html>\s*)?$/i.test(remaining) ? '' : remaining;
-    }
+    const match = decoded.match(/^\[Alga calendar: (.+)\]$/);
+    return match ? { text: decoded, name: match[1] } : null;
+  };
+  const isPreferred = (value: string) => {
+    const parsed = markerText(value);
+    return !!parsed && !!calendarName && parsed.name === calendarName;
+  };
+
+  // Outlook commonly normalizes line breaks to paragraphs. Inspect each simple
+  // paragraph independently so matching cannot span user-content elements.
+  const paragraphPattern = /<p(?:\s[^>]*)?>([^<>]*)<\/p>/gi;
+  const paragraphs = [...notes.matchAll(paragraphPattern)];
+  const validParagraphs = paragraphs.filter(match => markerText(match[1]));
+  const selectedParagraph = validParagraphs.findLast(match => isPreferred(match[1]))
+    ?? validParagraphs.at(-1);
+  if (selectedParagraph && selectedParagraph.index !== undefined) {
+    const start = selectedParagraph.index;
+    const end = start + selectedParagraph[0].length;
+    let removeStart = start;
+    let removeEnd = end;
+    if (notes.slice(0, start).endsWith('\n')) removeStart--;
+    else if (notes.slice(end).startsWith('\n')) removeEnd++;
+    const remaining = notes.slice(0, removeStart) + notes.slice(removeEnd);
+    return /^\s*(?:<html(?:\s[^>]*)?>\s*)?(?:<body(?:\s[^>]*)?>\s*)?(?:<\/body>\s*)?(?:<\/html>\s*)?$/i.test(remaining) ? '' : remaining;
   }
 
-  const linePattern = /(?:^|\r?\n)([^\r\n]*)$/;
-  const lastLine = notes.match(linePattern);
-  if (lastLine && candidates.has(lastLine[1].trim())) {
-    return notes.slice(0, lastLine.index).replace(/\r?\n$/, '') || '';
-  }
-  return notes;
+  const lines = [...notes.matchAll(/(^|\r?\n)([^\r\n]*)/g)];
+  const candidates = lines.filter(match => markerText(match[2]));
+  const selectedLine = candidates.findLast(match => isPreferred(match[2])) ?? candidates.at(-1);
+  if (!selectedLine || selectedLine.index === undefined) return notes;
+  const lineStart = selectedLine.index + selectedLine[1].length;
+  const lineEnd = lineStart + selectedLine[2].length;
+  let removeStart = lineStart;
+  let removeEnd = lineEnd;
+  // The newline immediately before a generated marker is the injected
+  // separator. Removing that one preserves any whitespace already in notes.
+  if (selectedLine[1]) removeStart = selectedLine.index;
+  else if (notes.slice(lineEnd).startsWith('\r\n')) removeEnd += 2;
+  else if (notes.slice(lineEnd).startsWith('\n')) removeEnd++;
+  const remaining = notes.slice(0, removeStart) + notes.slice(removeEnd);
+  return remaining || '';
 }
 
 /**
@@ -163,7 +179,8 @@ export async function mapExternalEventToScheduleEntry(
   tenant: string,
   provider: 'google' | 'microsoft',
   userEmails?: Map<string, string>, // Map of email -> user_id
-  owningCalendarName?: string
+  owningCalendarName?: string,
+  trustedGroupEntry = false
 ): Promise<Partial<IScheduleEntry>> {
   // Fetch user IDs if not provided
   if (!userEmails && event.attendees && event.attendees.length > 0) {
@@ -264,7 +281,7 @@ export async function mapExternalEventToScheduleEntry(
     ...(algaEntryId ? { entry_id: algaEntryId } : {}),
     tenant,
     title: event.title,
-    notes: stripCalendarMarker(event.description, owningCalendarName ?? (provider === 'microsoft' ? event.categories?.find(category => category.startsWith('Alga calendar: '))?.slice('Alga calendar: '.length) : undefined)),
+    notes: stripCalendarMarker(event.description, owningCalendarName, trustedGroupEntry),
     scheduled_start: startDate,
     scheduled_end: endDate,
     status,

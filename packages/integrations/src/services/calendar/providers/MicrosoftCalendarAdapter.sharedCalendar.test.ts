@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { CalendarProviderConfig } from '@alga-psa/types';
 import { MicrosoftCalendarAdapter } from './MicrosoftCalendarAdapter';
+import { CalendarProviderService } from '../CalendarProviderService';
 import { MicrosoftCalendarAdapter as EnterpriseMicrosoftCalendarAdapter } from '../../../../../../ee/packages/calendar/src/lib/services/calendar/providers/MicrosoftCalendarAdapter';
 import { MicrosoftCalendarAdapter as LegacyMicrosoftCalendarAdapter } from '../../../../../../server/src/services/calendar/providers/MicrosoftCalendarAdapter';
 
@@ -47,6 +48,7 @@ describe('MicrosoftCalendarAdapter shared calendar categories', () => {
       } }),
     };
     const warning = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const publishStatus = vi.spyOn(CalendarProviderService.prototype, 'updateProviderStatus').mockResolvedValue(undefined);
     try {
       await adapter.updateEvent('event', {
         title: 'Title', description: 'Description',
@@ -55,9 +57,14 @@ describe('MicrosoftCalendarAdapter shared calendar categories', () => {
       expect(adapter.httpClient.patch).toHaveBeenCalledWith('/me/calendar/events/event', expect.objectContaining({
         subject: 'Title', categories: ['User category'],
       }));
-      expect(warning).toHaveBeenCalledWith(expect.stringContaining('Reconnect the Microsoft calendar'));
+      expect(warning).toHaveBeenCalledWith(expect.stringContaining('Reconnect this Microsoft calendar'));
+      expect(publishStatus).toHaveBeenCalledWith('provider', 'tenant', expect.objectContaining({
+        status: 'connected', errorMessage: expect.stringContaining('MailboxSettings.ReadWrite'),
+      }));
+      expect(adapter.getProviderStatusWarning()).toContain('MailboxSettings.ReadWrite');
     } finally {
       warning.mockRestore();
+      publishStatus.mockRestore();
     }
   });
 
