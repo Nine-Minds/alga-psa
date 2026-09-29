@@ -13,6 +13,7 @@ const fixture = vi.hoisted(() => ({
   canViewAll: false,
   providers: new Map<string, any>(),
   forceReadOnly: false,
+  failAccessResolution: false,
   published: [] as Array<{ eventType: string; payload: any }>,
 }));
 
@@ -37,6 +38,9 @@ vi.mock('@alga-psa/scheduling/lib/calendarAccess', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@alga-psa/scheduling/lib/calendarAccess')>();
   return {
     ...actual,
+    resolveCalendarAccess: (...args: any[]) => fixture.failAccessResolution
+      ? Promise.reject(new Error('access lookup unavailable'))
+      : actual.resolveCalendarAccess(...args),
     evaluateEntryAccess: (entry: any, access: any) => fixture.forceReadOnly
       ? { access: 'full', canEdit: false }
       : actual.evaluateEntryAccess(entry, access),
@@ -47,6 +51,7 @@ describe('shared-calendar provider sync access', () => {
   const tenant = uuidv4();
   const member = uuidv4();
   const otherAssignee = uuidv4();
+  const secondOtherAssignee = uuidv4();
   const providerId = uuidv4();
   const groupCalendarId = uuidv4();
   let db: Knex;
@@ -153,6 +158,7 @@ describe('shared-calendar provider sync access', () => {
     await db('tenants').insert({ tenant, client_name: 'Calendar Sync Access Test', email: `${tenant}@example.test`, created_at: new Date(), updated_at: new Date() }).onConflict('tenant').ignore();
     await seedUser(member);
     await seedUser(otherAssignee);
+    await seedUser(secondOtherAssignee);
     service = new CalendarSyncService();
     (service as any).providerService = { getProvider: async (id: string) => fixture.providers.get(id) ?? null };
     (service as any).markProviderConnected = async () => {};
@@ -163,6 +169,7 @@ describe('shared-calendar provider sync access', () => {
     fixture.trx = await db.transaction();
     fixture.canViewAll = false;
     fixture.forceReadOnly = false;
+    fixture.failAccessResolution = false;
     fixture.published.length = 0;
   });
 
@@ -222,9 +229,9 @@ describe('shared-calendar provider sync access', () => {
     expect(await scoped('calendar_event_mappings').where({ schedule_entry_id: entryId, calendar_provider_id: providerId }).first()).toBeUndefined();
   });
 
-  it('re-pushes unauthorized edits after commit and acknowledges the pushed version for webhook redelivery', async () => {
+  it.each(['google', 'microsoft'] as const)('re-pushes unauthorized %s edits exactly once and acknowledges the pushed version for webhook redelivery', async (providerType) => {
     const entryId = await seedGroupEntry([member, otherAssignee], { readMember: true });
-    const externalId = await seedProviderAndMapping(entryId, member, 'readonly-edit');
+    const externalId = await seedProviderAndMapping(entryId, member, `readonly-edit-${providerType}`, providerId, providerType);
     const staleEvent = {
       id: externalId,
       title: 'Provider edit',
@@ -471,6 +478,77 @@ describe('shared-calendar provider sync access', () => {
     expect(created[0].categories).toBeUndefined();
     expect(created[0].extendedProperties?.private).not.toHaveProperty('alga-calendar-marker-name');
   });
+
+  it.each(['google', 'microsoft'] as const)(
+    'blocks %s exports to inaccessible entries for both new and existing mappings', async (providerType) => {
+      const entryId = await seedGroupEntry([otherAssignee], { readMember: true });
+      const externalId = await seedProviderAndMapping(entryId, member, `revoked-${providerType}`, providerId, providerType);
+      await scoped('calendar_shares').where({ calendar_id: groupCalendarId, grantee_type: 'user', grantee_id: member }).del();
+      const calendarless = await ScheduleEntry.create(fixture.trx!, tenant, {
+        title: 'Private calendar-less detail', notes: 'Secret notes',
+        scheduled_start: new Date('2026-09-01T10:00:00Z'), scheduled_end: new Date('2026-09-01T11:00:00Z'),
+        status: 'scheduled', work_item_type: 'ad_hoc',
+      } as any, { assignedUserIds: [otherAssignee] });
+      const writes: any[] = [];
+      const adapter = {
+        connect: vi.fn(async () => {}),
+        updateEvent: vi.fn(async (id: string, event: any) => { writes.push(['update', id, event]); return { id, updated: new Date().toISOString() }; }),
+        createEvent: vi.fn(async (event: any) => { writes.push(['create', event]); return { id: 'new-copy', updated: new Date().toISOString() }; }),
+      };
+      (service as any).createAdapter = async () => adapter;
+
+      expect(await service.syncScheduleEntryToExternal(entryId, providerId, true)).toMatchObject({ success: true, skipped: true });
+      expect(await service.syncScheduleEntryToExternal(calendarless.entry_id, providerId, true)).toMatchObject({ success: true, skipped: true });
+      expect(writes).toEqual([]);
+      expect(adapter.updateEvent).not.toHaveBeenCalledWith(externalId, expect.anything());
+      expect(adapter.createEvent).not.toHaveBeenCalled();
+    }
+  );
+
+  it.each(['google', 'microsoft'] as const)(
+    'does not disclose payload fields to %s free/busy provider owners', async (providerType) => {
+      const entryId = await seedGroupEntry([otherAssignee]);
+      await scoped('calendar_shares').insert({ tenant, calendar_id: groupCalendarId, grantee_type: 'user', grantee_id: member, access_level: 'free_busy', created_by: otherAssignee });
+      await seedProviderAndMapping(entryId, member, `busy-${providerType}`, providerId, providerType);
+      const adapter = { connect: vi.fn(async () => {}), updateEvent: vi.fn(), createEvent: vi.fn() };
+      (service as any).createAdapter = async () => adapter;
+
+      expect(await service.syncScheduleEntryToExternal(entryId, providerId, true)).toMatchObject({ success: true, skipped: true, reason: expect.stringContaining('busy-only') });
+      expect(adapter.updateEvent).not.toHaveBeenCalled();
+      expect(adapter.createEvent).not.toHaveBeenCalled();
+    }
+  );
+
+  it.each(['google', 'microsoft'] as const)(
+    'keeps eligible read-only shared multi-assignee %s exports', async (providerType) => {
+      const entryId = await seedGroupEntry([otherAssignee, secondOtherAssignee], { readMember: true });
+      const payloads: any[] = [];
+      const adapter = {
+        connect: vi.fn(async () => {}),
+        createEvent: vi.fn(async (event: any) => { payloads.push(event); return { id: 'readonly-copy', updated: new Date().toISOString() }; }),
+        updateEvent: vi.fn(),
+      };
+      (service as any).createAdapter = async () => adapter;
+
+      expect(await service.syncScheduleEntryToExternal(entryId, providerId, true)).toMatchObject({ success: true });
+      expect(adapter.createEvent).toHaveBeenCalledTimes(1);
+      expect(payloads[0]).toMatchObject({ title: 'Alga title', description: 'Alga notes' });
+    }
+  );
+
+  it.each(['google', 'microsoft'] as const)(
+    'fails closed when %s outbound access lookup fails', async (providerType) => {
+      const entryId = await seedGroupEntry([member]);
+      await seedProviderAndMapping(entryId, member, `lookup-error-${providerType}`, providerId, providerType);
+      fixture.failAccessResolution = true;
+      const adapter = { connect: vi.fn(async () => {}), updateEvent: vi.fn(), createEvent: vi.fn() };
+      (service as any).createAdapter = async () => adapter;
+
+      expect(await service.syncScheduleEntryToExternal(entryId, providerId, true)).toMatchObject({ success: false });
+      expect(adapter.updateEvent).not.toHaveBeenCalled();
+      expect(adapter.createEvent).not.toHaveBeenCalled();
+    }
+  );
 
   it('removes archived copies, ignores mapped-entry webhooks, and recreates copies after restore', async () => {
     const entryId = await seedGroupEntry([member, otherAssignee]);

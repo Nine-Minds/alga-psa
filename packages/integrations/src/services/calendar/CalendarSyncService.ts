@@ -120,6 +120,19 @@ export class CalendarSyncService {
       const existingMapping = await this.getMappingByScheduleEntry(entryId, calendarProviderId, tenant);
 
       const result = await withTransaction(knex, async (trx) => {
+        if (entry.calendar_id && await tenantDb(trx, tenant).table('calendars')
+          .where({ calendar_id: entry.calendar_id, calendar_type: 'group', is_archived: true }).first()) {
+          return { success: true, skipped: true, reason: 'Calendar is archived' };
+        }
+        const providerAccess = await this.resolveProviderUserAccess(trx, tenant, provider.user_id);
+        if (!providerAccess) return { success: false, skipped: true, error: 'Provider owner access could not be resolved' };
+        const accessDecision = evaluateEntryAccess(entry, providerAccess);
+        if (accessDecision.access !== 'full') {
+          return { success: true, skipped: true, reason: accessDecision.access === 'busy'
+            ? 'Provider owner has busy-only access; no safe outbound representation exists'
+            : 'Provider owner cannot view this schedule entry' };
+        }
+
         const groupCalendar = entry.calendar_id
           ? await tenantDb(trx, tenant).table('calendars').where({ calendar_id: entry.calendar_id, calendar_type: 'group' }).first()
           : null;
