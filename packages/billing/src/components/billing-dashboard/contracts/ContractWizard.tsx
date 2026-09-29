@@ -13,12 +13,14 @@ import { Dialog } from "@alga-psa/ui/components/Dialog";
 import { WizardProgress } from "@alga-psa/ui/components/onboarding/WizardProgress";
 import { WizardNavigation } from "@alga-psa/ui/components/onboarding/WizardNavigation";
 import { ConfirmationDialog } from "@alga-psa/ui/components/ConfirmationDialog";
+import { Button } from "@alga-psa/ui/components/Button";
 import { ContractBasicsStep } from "./wizard-steps/ContractBasicsStep";
 import { FixedFeeServicesStep } from "./wizard-steps/FixedFeeServicesStep";
 import { ProductsStep } from "./wizard-steps/ProductsStep";
 import { HourlyServicesStep } from "./wizard-steps/HourlyServicesStep";
 import { UsageBasedServicesStep } from "./wizard-steps/UsageBasedServicesStep";
 import { ReviewContractStep } from "./wizard-steps/ReviewContractStep";
+import { ContractCreatedConfirmation } from "./wizard-steps/ContractCreatedConfirmation";
 import {
   createClientContractFromWizard,
   listContractTemplatesForWizard,
@@ -311,6 +313,10 @@ export function ContractWizard({
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
   const [showUnsavedChangesDialog, setShowUnsavedChangesDialog] =
     useState(false);
+  // Set once a contract with fixed-fee lines is created; the wizard then shows
+  // when it first invoices and only reports completion when that is dismissed.
+  const [createdContract, setCreatedContract] =
+    useState<ContractWizardData | null>(null);
 
   const [templates, setTemplates] = useState<TemplateOption[]>([]);
   const [isLoadingTemplates, setIsLoadingTemplates] = useState(false);
@@ -356,6 +362,7 @@ export function ContractWizard({
     setErrors({});
     setCompletedSteps(new Set());
     setCurrentStep(0);
+    setCreatedContract(null);
 
     const initialWizardData = buildInitialContractWizardData(editingContract);
     if (!editingContract && initialClientId) {
@@ -422,6 +429,7 @@ export function ContractWizard({
     setErrors({});
     setCompletedSteps(new Set());
     setCurrentStep(0);
+    setCreatedContract(null);
   };
 
   const updateData = (data: Partial<ContractWizardData>) => {
@@ -434,7 +442,20 @@ export function ContractWizard({
     return !isEqual(wizardData, initialWizardDataRef.current);
   }, [open, wizardData]);
 
+  const handleConfirmationDone = () => {
+    const created = createdContract;
+    setCreatedContract(null);
+    if (created) {
+      onComplete?.(created);
+    }
+    onOpenChange(false);
+  };
+
   const handleCloseRequest = () => {
+    if (createdContract) {
+      handleConfirmationDone();
+      return;
+    }
     if (hasUnsavedChanges) {
       setShowUnsavedChangesDialog(true);
       return;
@@ -885,6 +906,10 @@ export function ContractWizard({
       };
 
       setWizardData(completedData);
+      if (completedData.fixed_services.length > 0) {
+        setCreatedContract(completedData);
+        return;
+      }
       onComplete?.(completedData);
       onOpenChange(false);
     } catch (error) {
@@ -1028,7 +1053,17 @@ export function ContractWizard({
     }
   };
 
-  const wizardFooter = (
+  const wizardFooter = createdContract ? (
+    <div className="flex justify-end">
+      <Button
+        id="contract-wizard-created-done"
+        variant="default"
+        onClick={handleConfirmationDone}
+      >
+        {t("wizardCreated.done", { defaultValue: "Done" })}
+      </Button>
+    </div>
+  ) : (
     <WizardNavigation
       currentStep={currentStep}
       totalSteps={stepLabels.length}
@@ -1061,28 +1096,40 @@ export function ContractWizard({
         isOpen={open}
         onClose={handleCloseRequest}
         title={
-          editingContract
-            ? t("wizard.title.editContract", { defaultValue: "Edit Contract" })
-            : t("wizard.title.createNewContract", {
-                defaultValue: "Create New Contract",
-              })
+          createdContract
+            ? t("wizardCreated.title", { defaultValue: "Contract Created" })
+            : editingContract
+              ? t("wizard.title.editContract", {
+                  defaultValue: "Edit Contract",
+                })
+              : t("wizard.title.createNewContract", {
+                  defaultValue: "Create New Contract",
+                })
         }
         className="max-w-4xl max-h-[90vh]"
         disableFocusTrap
         footer={wizardFooter}
       >
         <div className="flex flex-col h-full">
-          <div className="flex-shrink-0 px-6 pt-6">
-            <WizardProgress
-              steps={stepLabels as unknown as string[]}
-              currentStep={currentStep}
-              completedSteps={completedSteps}
-              onStepClick={handleStepClick}
-            />
-          </div>
+          {!createdContract && (
+            <div className="flex-shrink-0 px-6 pt-6">
+              <WizardProgress
+                steps={stepLabels as unknown as string[]}
+                currentStep={currentStep}
+                completedSteps={completedSteps}
+                onStepClick={handleStepClick}
+              />
+            </div>
+          )}
 
           <div className="flex-1 overflow-y-auto px-6 py-6">
-            <div className="mb-4">{renderStep()}</div>
+            <div className="mb-4">
+              {createdContract ? (
+                <ContractCreatedConfirmation data={createdContract} />
+              ) : (
+                renderStep()
+              )}
+            </div>
 
             {errors[currentStep] && (
               <div className="mb-4 p-3 bg-[rgb(var(--color-destructive)/0.1)] border border-[rgb(var(--color-destructive)/0.3)] rounded-md">
