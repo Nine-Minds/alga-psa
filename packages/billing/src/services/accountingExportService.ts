@@ -311,9 +311,9 @@ export class AccountingExportService {
       transformResult = await adapter.transform(context);
       const deliveryResult = await adapter.deliver(transformResult, context);
       // File adapters return their exact serialized output in metadata.files.
-      // Persist immediately after delivery and before marking the batch done;
-      // a storage failure is surfaced as a batch failure and recorded for
-      // operator recovery instead of silently losing the download.
+      // Persist immediately after delivery and before marking the batch done.
+      // StorageService is preferred, with an exact-byte database backup so an
+      // object-store outage cannot force operators to redeliver just to download.
       const deliveredMetadata = deliveryResult.metadata as { files?: Array<{ filename?: unknown; contentType?: unknown; content?: unknown }> } | undefined;
       const artifactValue = deliveryResult.artifacts?.file as { filename?: unknown; contentType?: unknown; content?: unknown } | undefined;
       const isFileAdapter = ['quickbooks_csv', 'quickbooks_desktop', 'xero_csv'].includes(adapter.type);
