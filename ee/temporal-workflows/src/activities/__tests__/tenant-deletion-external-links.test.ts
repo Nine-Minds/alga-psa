@@ -26,7 +26,7 @@ describe('tenant deletion with external links', () => {
   it('explicitly deletes external links and custom systems before their parents, preserving other tenants', async () => {
     const target = 'tenant-to-delete';
     const survivor = 'another-tenant';
-    const rows = new Map(['tenants', 'tickets', 'users', 'external_entity_links', 'tenant_external_systems']
+    const rows = new Map(['tenants', 'tickets', 'users', 'external_entity_links', 'tenant_external_systems', 'accounting_export_artifacts', 'accounting_export_batches']
       .map(table => [table, [{ tenant: target }, { tenant: survivor }]]));
     const deletedTables: string[] = [];
     const query = (table: string, tenant?: string) => {
@@ -63,7 +63,7 @@ describe('tenant deletion with external links', () => {
 
     const result = await deleteTenantData(target, 'deletion-id');
 
-    expect(result).toMatchObject({ success: true, deletedRecords: 5, tablesAffected: 5 });
+    expect(result).toMatchObject({ success: true, deletedRecords: 7, tablesAffected: 7 });
     for (const table of ['external_entity_links', 'tenant_external_systems']) {
       expect(deletedTables).toContain(table);
       expect(rows.get(table)).toEqual([{ tenant: survivor }]);
@@ -72,6 +72,8 @@ describe('tenant deletion with external links', () => {
     for (const parent of ['tickets', 'users']) {
       expect(deletedTables.indexOf('external_entity_links')).toBeLessThan(deletedTables.indexOf(parent));
     }
+    expect(deletedTables.indexOf('accounting_export_artifacts')).toBeLessThan(deletedTables.indexOf('accounting_export_batches'));
+    expect(rows.get('accounting_export_artifacts')).toEqual([{ tenant: survivor }]);
     for (const remaining of rows.values()) {
       expect(remaining).toEqual([{ tenant: survivor }]);
     }

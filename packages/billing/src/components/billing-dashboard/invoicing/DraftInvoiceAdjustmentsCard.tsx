@@ -91,7 +91,9 @@ const DraftInvoiceAdjustmentsCard: React.FC<DraftInvoiceAdjustmentsCardProps> = 
   // accounting system, or one a permission check rejects, is blocked here even
   // when the optimistic sync badge has not caught up yet.
   const serverBlockedReason = capability && !capability.editable
-    ? capability.reason
+    ? capability.code === 'exporting'
+      ? t('draftInvoiceAdjustments.blocked.exporting', { defaultValue: capability.reason })
+      : capability.reason
     : null;
   const effectiveBlockedReason = serverBlockedReason ?? blockedReason;
 

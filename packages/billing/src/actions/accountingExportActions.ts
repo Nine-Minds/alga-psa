@@ -297,9 +297,23 @@ export const downloadAccountingExportArtifact = withAuth(async (
     db.tenantJoin(query, 'accounting_export_batches as batch', 'batch.batch_id', 'artifact.batch_id');
     const artifact = await query.first('artifact.file_id', 'artifact.content', 'artifact.filename', 'artifact.content_type');
     if (!artifact) throw new Error('This export artifact is unavailable for this batch.');
-    const bytes = artifact.file_id
-      ? (await StorageService.downloadFile(artifact.file_id)).buffer
-      : Buffer.from(artifact.content);
+    let bytes: Buffer;
+    if (artifact.file_id) {
+      try {
+        bytes = (await StorageService.downloadFile(artifact.file_id)).buffer;
+      } catch (storageError) {
+        // The tenant-scoped row keeps the exact adapter bytes as a durable
+        // recovery copy when object storage is temporarily unavailable.
+        logger.warn('[AccountingExport] Primary artifact download failed; using persisted byte backup', {
+          batchId,
+          artifactId,
+          error: storageError instanceof Error ? storageError.message : String(storageError),
+        });
+        bytes = Buffer.from(artifact.content);
+      }
+    } else {
+      bytes = Buffer.from(artifact.content);
+    }
     return {
       filename: artifact.filename,
       contentType: artifact.content_type,

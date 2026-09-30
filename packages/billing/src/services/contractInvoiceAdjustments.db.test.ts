@@ -3054,6 +3054,32 @@ describe('accounting adjustment export matrix', () => {
     })).rejects.toThrow();
   });
 
+  it('downloads from object storage first and falls back to the exact tenant-scoped byte backup', async () => {
+    const batchId = uuidv4();
+    const artifactId = uuidv4();
+    const fileId = uuidv4();
+    const backup = Buffer.from('Name,Amount\r\ncredit,-40.50\r\n', 'utf8');
+    const primary = Buffer.from('Name,Amount\r\ncredit,-40.50\r\n', 'utf8');
+    await db('accounting_export_batches').insert({ tenant, batch_id: batchId, adapter_type: 'quickbooks_csv', export_type: 'invoice', status: 'delivered' });
+    await db('accounting_export_artifacts').insert({
+      tenant, artifact_id: artifactId, batch_id: batchId, file_id: fileId, filename: 'stored.csv',
+      content_type: 'text/csv', content: backup, storage_fallback: false,
+    });
+
+    const { StorageService } = await import('@alga-psa/storage/StorageService');
+    const download = vi.spyOn(StorageService, 'downloadFile');
+    const { downloadAccountingExportArtifact } = await import('../actions/accountingExportActions');
+    download.mockResolvedValueOnce({ buffer: primary } as any);
+    const normal = await downloadAccountingExportArtifact(batchId, artifactId) as any;
+    expect(Buffer.from(normal.contentBase64, 'base64')).toEqual(primary);
+
+    download.mockRejectedValueOnce(new Error('object store unavailable'));
+    const fallback = await downloadAccountingExportArtifact(batchId, artifactId) as any;
+    expect(Buffer.from(fallback.contentBase64, 'base64')).toEqual(backup);
+    expect(download).toHaveBeenCalledWith(fileId);
+    download.mockRestore();
+  });
+
   it('seeds miscellaneous service idempotently and validates the effective edited row', async () => {
     const { ensureMiscellaneousService } = await import('@alga-psa/db');
     const id = await ensureMiscellaneousService(db, tenant);

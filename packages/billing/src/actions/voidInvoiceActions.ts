@@ -13,6 +13,7 @@ import { enqueueInvoiceVoid } from '../services/accountingSync/syncProducers';
 import { notifyInvoiceTerminalStatus } from '../services/accountingSync/invoiceTerminalStatusHandlers';
 import { suppressPrepaidReplenishmentForVoidedInvoice } from '../lib/prepaidAutoReplenishment';
 import { hasConnectedQboRealm } from '../services/accountingSync/accountingSyncSettings';
+import { findInvoiceExportInProgress } from '../services/accountingSync/invoiceExportGuards';
 
 export type VoidInvoiceResult =
   | { success: true }
@@ -167,6 +168,9 @@ export const voidInvoice = withAuth(async (
     }
     if (lockedInvoice.status === 'cancelled') {
       return { success: false, error: 'Invoice is already voided.' };
+    }
+    if (await findInvoiceExportInProgress(trx, tenant, invoiceId)) {
+      return { success: false, error: 'An accounting export is being prepared for this invoice. Wait for it to finish before voiding it.' };
     }
 
     // Authoritative re-check of the remote-mutate capability under the

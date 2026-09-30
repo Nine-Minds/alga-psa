@@ -31,7 +31,7 @@ import {
 
 import { validateInvoiceFinalization, validateInvoiceFinalizationInternal } from './taxSourceActions';
 import { enqueueInvoiceAutoExport } from '../services/accountingSync/syncProducers';
-import { assertInvoiceNotExported } from '../services/accountingSync/invoiceExportGuards';
+import { assertInvoiceNotExported, findInvoiceExportInProgress } from '../services/accountingSync/invoiceExportGuards';
 import {
   inspectInvoiceEditable,
   type InvoiceAdjustmentCapability,
@@ -1070,6 +1070,13 @@ export const updateDraftInvoiceProperties = withAuth(async (
       return;
     }
 
+    try {
+      await assertInvoiceNotExported(trx, tenant, invoiceId, 'edit');
+    } catch (error) {
+      expectedError = actionError(getErrorMessage(error));
+      return;
+    }
+
     if (invoice.finalized_at || invoice.status !== 'draft') {
       expectedError = actionError('Only draft invoices can be edited', 'msp/invoicing:errors.invoice.onlyDraftEditable');
       return;
@@ -1220,6 +1227,10 @@ export async function finalizeInvoiceWithKnex(
 
     if (!invoice) {
       throw expectedInvoiceActionError('Invoice not found');
+    }
+
+    if (await findInvoiceExportInProgress(trx, tenant, invoiceId)) {
+      throw expectedInvoiceActionError('An accounting export is being prepared for this invoice. Wait for it to finish before changing the invoice.');
     }
 
     // Replenishment invoices are payment-gated regardless of whether they are
@@ -1735,6 +1746,13 @@ export const unfinalizeInvoice = withAuth(async (
 
     if (!invoice) {
       expectedError = actionError('Invoice not found', 'msp/invoicing:errors.invoice.notFound');
+      return;
+    }
+
+    try {
+      await assertInvoiceNotExported(trx, tenant, invoiceId, 'unfinalize');
+    } catch (error) {
+      expectedError = actionError(getErrorMessage(error));
       return;
     }
 

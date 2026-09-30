@@ -2255,7 +2255,8 @@
   "draftInvoiceAdjustments": {
     "blockedTitle": "Rechnungsanpassungen nicht verfügbar",
     "blocked": {
-      "exported": "Diese Rechnung ist mit einem Buchhaltungssystem synchronisiert. Stornieren Sie sie oder stellen Sie eine separate Gutschrift aus, anstatt ihre Positionen zu bearbeiten."
+      "exported": "Diese Rechnung ist mit einem Buchhaltungssystem synchronisiert. Stornieren Sie sie oder stellen Sie eine separate Gutschrift aus, anstatt ihre Positionen zu bearbeiten.",
+      "exporting": "Ein Buchhaltungsexport für diese Rechnung wird vorbereitet. Warten Sie, bis er abgeschlossen ist, bevor Sie die Rechnung ändern."
     }
   }
 }

@@ -1,6 +1,6 @@
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
-import { findInvoiceAccountingMapping } from './accountingSync/invoiceExportGuards';
+import { findInvoiceAccountingMapping, findInvoiceExportInProgress } from './accountingSync/invoiceExportGuards';
 
 function tenantScopedTable<Row extends object = Record<string, unknown>>(
   conn: Knex | Knex.Transaction,
@@ -15,6 +15,7 @@ export type InvoiceAdjustmentBlockCode =
   | 'finalized'
   | 'paid'
   | 'cancelled'
+  | 'exporting'
   | 'exported';
 
 export interface InvoiceAdjustmentCapability {
@@ -95,6 +96,18 @@ export async function inspectInvoiceEditable(
         editable: false,
         code: 'finalized',
         reason: 'Only draft invoices can be adjusted. Unfinalize this invoice first or issue a separate adjustment.',
+      },
+    };
+  }
+
+  if (await findInvoiceExportInProgress(conn as Knex, tenant, invoiceId)) {
+    return {
+      invoice,
+      capability: {
+        ...base,
+        editable: false,
+        code: 'exporting',
+        reason: 'An accounting export is being prepared for this invoice. Wait for it to finish before changing the invoice.',
       },
     };
   }

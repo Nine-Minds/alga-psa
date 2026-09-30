@@ -83,7 +83,7 @@ function mergeErrorMetadata(
 }
 
 export class AccountingExportValidation {
-  static async ensureMappingsForBatch(batchId: string): Promise<void> {
+  static async ensureMappingsForBatch(batchId: string, options: { preserveBatchStatus?: boolean } = {}): Promise<void> {
     const repo = await AccountingExportRepository.create();
     const batch = await repo.getBatch(batchId);
     if (!batch) {
@@ -141,7 +141,9 @@ export class AccountingExportValidation {
 
       const errors = await repo.listErrors(batchId);
       const openErrors = errors.filter((item) => item.resolution_state === 'open');
-      await repo.updateBatchStatus(batchId, { status: openErrors.length === 0 ? 'ready' : 'needs_attention' });
+      if (!options.preserveBatchStatus) {
+        await repo.updateBatchStatus(batchId, { status: openErrors.length === 0 ? 'ready' : 'needs_attention' });
+      }
       return;
     }
 
@@ -573,7 +575,9 @@ export class AccountingExportValidation {
     const errors = await repo.listErrors(batchId);
     const openErrors = errors.filter((item) => item.resolution_state === 'open');
     const cleanedStatus = openErrors.length === 0 ? 'ready' : 'needs_attention';
-    await repo.updateBatchStatus(batchId, { status: cleanedStatus });
+    if (!options.preserveBatchStatus) {
+      await repo.updateBatchStatus(batchId, { status: cleanedStatus });
+    }
   }
 }
 

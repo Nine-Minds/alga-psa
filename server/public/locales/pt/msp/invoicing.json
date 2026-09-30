@@ -2255,7 +2255,8 @@
   "draftInvoiceAdjustments": {
     "blockedTitle": "Ajustes da fatura indisponíveis",
     "blocked": {
-      "exported": "Esta fatura está sincronizada com um sistema de contabilidade. Anule-a ou emita um crédito separado em vez de editar os seus itens."
+      "exported": "Esta fatura está sincronizada com um sistema de contabilidade. Anule-a ou emita um crédito separado em vez de editar os seus itens.",
+      "exporting": "Está a ser preparada uma exportação contabilística para esta fatura. Aguarde que termine antes de a alterar."
     }
   }
 }

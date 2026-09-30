@@ -2255,7 +2255,8 @@
   "draftInvoiceAdjustments": {
     "blockedTitle": "Invoice adjustments unavailable",
     "blocked": {
-      "exported": "This invoice is synced to an accounting system. Void it or issue a separate credit instead of editing its lines."
+      "exported": "This invoice is synced to an accounting system. Void it or issue a separate credit instead of editing its lines.",
+      "exporting": "An accounting export is being prepared for this invoice. Wait for it to finish before changing the invoice."
     }
   }
 }

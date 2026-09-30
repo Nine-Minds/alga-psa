@@ -321,7 +321,9 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   'usage_period_total_requests', 'usage_period_totals', 'usage_measurement_revisions',
   'contract_line_unit_pricing_revisions', 'billing_semantics_locks',
   'usage_tracking', 'bucket_usage', 'bucket_usage_unmappable_archive', 'recurring_service_periods', 'transactions',
-  'accounting_export_errors', 'accounting_export_lines', 'accounting_export_batches',
+  // Artifacts contain adapter-produced financial bytes and have no cascading
+  // FK to the export batch, so remove them explicitly before the batch rows.
+  'accounting_export_artifacts', 'accounting_export_errors', 'accounting_export_lines', 'accounting_export_batches',
   // Accounting sync engine (leaf tables: nothing references them)
   'accounting_sync_operations', 'accounting_sync_cycles',
   'contract_line_bucket_services', 'contract_line_buckets',

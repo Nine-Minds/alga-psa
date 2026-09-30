@@ -2305,7 +2305,8 @@
   "draftInvoiceAdjustments": {
     "blockedTitle": "Korekty faktury niedostępne",
     "blocked": {
-      "exported": "Ta faktura jest zsynchronizowana z systemem księgowym. Unieważnij ją lub wystaw osobny kredyt, zamiast edytować jej pozycje."
+      "exported": "Ta faktura jest zsynchronizowana z systemem księgowym. Unieważnij ją lub wystaw osobny kredyt, zamiast edytować jej pozycje.",
+      "exporting": "Trwa przygotowywanie eksportu księgowego tej faktury. Poczekaj na jego zakończenie przed zmianą faktury."
     }
   }
 }

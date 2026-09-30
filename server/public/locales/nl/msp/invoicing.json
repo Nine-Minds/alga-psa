@@ -2255,7 +2255,8 @@
   "draftInvoiceAdjustments": {
     "blockedTitle": "Factuuraanpassingen niet beschikbaar",
     "blocked": {
-      "exported": "Deze factuur is gesynchroniseerd met een boekhoudsysteem. Maak haar ongeldig of geef een apart krediet uit in plaats van de regels te bewerken."
+      "exported": "Deze factuur is gesynchroniseerd met een boekhoudsysteem. Maak haar ongeldig of geef een apart krediet uit in plaats van de regels te bewerken.",
+      "exporting": "Er wordt een boekhoudingsexport voor deze factuur voorbereid. Wacht tot deze is voltooid voordat u de factuur wijzigt."
     }
   }
 }

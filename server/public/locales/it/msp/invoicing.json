@@ -2255,7 +2255,8 @@
   "draftInvoiceAdjustments": {
     "blockedTitle": "Rettifiche fattura non disponibili",
     "blocked": {
-      "exported": "Questa fattura è sincronizzata con un sistema contabile. Annullala o emetti un credito separato invece di modificarne le voci."
+      "exported": "Questa fattura è sincronizzata con un sistema contabile. Annullala o emetti un credito separato invece di modificarne le voci.",
+      "exporting": "È in preparazione un’esportazione contabile per questa fattura. Attendi il completamento prima di modificarla."
     }
   }
 }

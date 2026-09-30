@@ -2255,7 +2255,8 @@
   "draftInvoiceAdjustments": {
     "blockedTitle": "Ajustes de factura no disponibles",
     "blocked": {
-      "exported": "Esta factura está sincronizada con un sistema de contabilidad. Anúlela o emita un crédito por separado en lugar de editar sus conceptos."
+      "exported": "Esta factura está sincronizada con un sistema de contabilidad. Anúlela o emita un crédito por separado en lugar de editar sus conceptos.",
+      "exporting": "Se está preparando una exportación contable para esta factura. Espere a que termine antes de cambiarla."
     }
   }
 }

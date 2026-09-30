@@ -21,7 +21,6 @@ import {
   PendingTaxImportRecord
 } from '@alga-psa/types';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
-import { AppError } from '@alga-psa/core';
 import { lockInvoiceForExternalSync } from '../../lib/invoiceExternalSyncLock';
 import { AccountingMappingResolver } from '../../services/accountingMappingResolver';
 import { KnexInvoiceMappingRepository } from '../../repositories/invoiceMappingRepository';
@@ -355,9 +354,6 @@ export class QuickBooksCSVAdapter implements AccountingExportAdapter {
       throw new Error('QuickBooks CSV adapter requires batch tenant identifier for delivery');
     }
 
-    const { knex } = await createTenantKnex();
-    const deliveredAt = new Date().toISOString();
-
     logger.info('[QuickBooksCSVAdapter] Starting delivery (file generation)', {
       tenant: tenantId,
       batchId: context.batch.batch_id,
@@ -383,65 +379,15 @@ export class QuickBooksCSVAdapter implements AccountingExportAdapter {
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-').split('T')[0];
     const filename = `quickbooks-invoices-${timestamp}.csv`;
 
-    // Mark an invoice exported only after confirming it is not cancelled. The
-    // mapping insert takes the same invoice row lock the void path holds
-    // (invoiceExternalSyncLock.ts), so a concurrent void either commits first
-    // and refuses the export of its invoice, or waits until these mappings
-    // commit and then re-reads the mapping under its own lock.
     const deliveredLines: { lineId: string; externalDocumentRef?: string | null }[] = [];
-    const failedDocuments: Array<{
-      documentId: string;
-      lineIds: string[];
-      code: string;
-      message: string;
-    }> = [];
-
     for (const document of transformResult.documents) {
       const payload = document.payload as unknown as InvoiceDocumentPayload;
       const externalRef = `csv:${payload.invoiceNumber}`;
-      try {
-        await withTransaction(knex, async (trx) => {
-          await lockInvoiceForExternalSync(trx, tenantId, document.documentId);
-          const invoiceMappingRepository = new KnexInvoiceMappingRepository(trx);
-          await invoiceMappingRepository.upsertInvoiceMapping({
-            tenantId,
-            adapterType: this.type,
-            invoiceId: document.documentId,
-            externalInvoiceId: externalRef,
-            targetRealm: context.batch.target_realm ?? null,
-            metadata: {
-              last_exported_at: deliveredAt,
-              filename,
-              invoiceNumber: payload.invoiceNumber
-            }
-          });
-        });
-
-        for (const lineId of document.lineIds) {
-          deliveredLines.push({
-            lineId,
-            externalDocumentRef: externalRef
-          });
-        }
-      } catch (error) {
-        const code = error instanceof AppError ? error.code : 'QBO_CSV_DELIVERY_ERROR';
-        const message = error instanceof Error ? error.message : 'Unknown QuickBooks CSV delivery error';
-        logger.warn('[QuickBooksCSVAdapter] Skipping mapping for invoice delivery failure', {
-          invoiceId: document.documentId,
-          code,
-          error: message
-        });
-        failedDocuments.push({
-          documentId: document.documentId,
-          lineIds: document.lineIds,
-          code,
-          message
-        });
-      }
+      for (const lineId of document.lineIds) deliveredLines.push({ lineId, externalDocumentRef: externalRef });
     }
 
     // Create file attachment
-    const files: AccountingExportFileAttachment[] = [{
+    const files: AccountingExportFileAttachment[] = allRows.length === 0 ? [] : [{
       filename,
       contentType: 'text/csv',
       content: csvContent
@@ -456,7 +402,6 @@ export class QuickBooksCSVAdapter implements AccountingExportAdapter {
 
     return {
       deliveredLines,
-      failedDocuments: failedDocuments.length > 0 ? failedDocuments : undefined,
       artifacts: {
         filename,
         rowCount: allRows.length,
@@ -464,10 +409,33 @@ export class QuickBooksCSVAdapter implements AccountingExportAdapter {
       },
       metadata: {
         adapter: this.type,
-        deliveredInvoices: transformResult.documents.length - failedDocuments.length,
-        files
+        deliveredInvoices: transformResult.documents.length,
+        files,
+        invoiceMappings: transformResult.documents.map((document) => {
+          const payload = document.payload as unknown as InvoiceDocumentPayload;
+          return { invoiceId: document.documentId, invoiceNumber: payload.invoiceNumber, lineIds: document.lineIds, filename };
+        })
       }
     };
+  }
+
+  async postProcess(deliveryResult: AccountingExportDeliveryResult, context: AccountingExportAdapterContext): Promise<void> {
+    const tenantId = context.batch.tenant;
+    if (!tenantId) throw new Error('QuickBooks CSV mapping requires a tenant');
+    const metadata = deliveryResult.metadata as { invoiceMappings?: Array<{ invoiceId: string; invoiceNumber: string; filename?: string }> } | undefined;
+    const mappings = metadata?.invoiceMappings ?? [];
+    const { knex } = await createTenantKnex();
+    const deliveredAt = new Date().toISOString();
+    await withTransaction(knex, async (trx) => {
+      for (const mapping of [...mappings].sort((a, b) => a.invoiceId.localeCompare(b.invoiceId))) {
+        await lockInvoiceForExternalSync(trx, tenantId, mapping.invoiceId);
+        await new KnexInvoiceMappingRepository(trx).upsertInvoiceMapping({
+          tenantId, adapterType: this.type, invoiceId: mapping.invoiceId,
+          externalInvoiceId: `csv:${mapping.invoiceNumber}`, targetRealm: context.batch.target_realm ?? null,
+          metadata: { last_exported_at: deliveredAt, filename: mapping.filename, invoiceNumber: mapping.invoiceNumber },
+        });
+      }
+    });
   }
 
   /**

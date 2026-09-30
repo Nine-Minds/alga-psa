@@ -2255,7 +2255,8 @@
   "draftInvoiceAdjustments": {
     "blockedTitle": "Ajustements de facture indisponibles",
     "blocked": {
-      "exported": "Cette facture est synchronisée avec un système comptable. Annulez-la ou émettez un crédit distinct au lieu de modifier ses lignes."
+      "exported": "Cette facture est synchronisée avec un système comptable. Annulez-la ou émettez un crédit distinct au lieu de modifier ses lignes.",
+      "exporting": "Un export comptable de cette facture est en cours de préparation. Attendez qu’il soit terminé avant de modifier la facture."
     }
   }
 }
