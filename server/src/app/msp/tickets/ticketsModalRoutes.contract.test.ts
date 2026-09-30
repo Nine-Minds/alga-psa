@@ -120,10 +120,38 @@ describe('tickets modal route infrastructure', () => {
       expect(routeClient).toContain(dialogName);
       expect(routeClient).toContain('useTicketBulkRouteDialog(closeMode)');
       expect(routeClient).toContain(actionCall);
-      expect(routeClient).toContain('keepFailedSelection(result.failed)');
-      expect(routeClient).toContain('refreshList()');
-      expect(routeClient).toContain('refreshAndClose()');
+
+      // Full success refreshes exactly once, from inside the shared helper. An extra
+      // refreshList() here would fire a second router.refresh() that races the close the
+      // helper hands to the empty-selection effect.
+      const branchSplit = routeClient.indexOf('\n      } else {');
+      expect(branchSplit).toBeGreaterThan(0);
+      const partialFailureBranch = routeClient.slice(
+        routeClient.indexOf('if (result.failed.length > 0) {'),
+        branchSplit,
+      );
+      const fullSuccessBranch = routeClient.slice(branchSplit);
+
+      expect(partialFailureBranch).toContain('keepFailedSelection(result.failed)');
+      expect(partialFailureBranch).toContain('refreshList()');
+      expect(fullSuccessBranch).toContain('refreshAndClose()');
+      expect(fullSuccessBranch).not.toContain('refreshList()');
     }
+
+    // Clearing the selection is what makes the close state-driven and stops a hard reload
+    // of a bulk route from rehydrating a stale selection and re-opening the dialog.
+    const helper = read('server/src/app/msp/tickets/_components/TicketBulkRouteHelpers.ts');
+    const refreshAndCloseBody = helper.slice(
+      helper.indexOf('const refreshAndClose = () => {'),
+      helper.indexOf('const refreshList = () => {'),
+    );
+
+    expect(helper).toContain('clearSelectedTicketIds');
+    expect(refreshAndCloseBody).toContain('clearSelectedTicketIds()');
+    expect(refreshAndCloseBody).toContain('router.refresh()');
+    expect(refreshAndCloseBody).not.toContain('close()');
+    // One close per mount, so the effect can never pop a second history entry.
+    expect(helper).toContain('hasClosedRef');
   });
 
   it('keeps the bulk action bar in the list while navigating to bulk modal routes', () => {
