@@ -72,6 +72,9 @@ const dbMocks = vi.hoisted(() => ({
 
 const assertTierAccessMock = vi.hoisted(() => vi.fn(async () => undefined));
 const hasPermissionMock = vi.hoisted(() => vi.fn(async () => true));
+// The sole-approver predicate is DB-backed and covered against real Postgres in
+// quoteSelfApproval.integration.test.ts; here it is a controllable seam.
+const resolveAllowSelfApprovalFlagMock = vi.hoisted(() => vi.fn(async () => false));
 
 // The kernel's default rbacEvaluator resolves roles via User.getUserRolesWithPermissions;
 // grant every simulator resource/action so the bundle/builtin narrowing stages stay decisive.
@@ -247,6 +250,11 @@ vi.mock('@alga-psa/auth/rbac', () => ({
   hasPermission: (...args: unknown[]) => hasPermissionMock(...args),
 }));
 
+vi.mock('@alga-psa/authorization/quoteSelfApproval', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@alga-psa/authorization/quoteSelfApproval')>()),
+  resolveAllowSelfApprovalFlag: (...args: unknown[]) => (resolveAllowSelfApprovalFlagMock as any)(...args),
+}));
+
 vi.mock('@alga-psa/db/models/user', () => ({
   default: {
     getUserRolesWithPermissions: vi.fn(async () => kernelRbacRoles),
@@ -359,6 +367,8 @@ describe('runAuthorizationBundleSimulationAction', () => {
     assertTierAccessMock.mockResolvedValue(undefined);
     hasPermissionMock.mockReset();
     hasPermissionMock.mockResolvedValue(true);
+    resolveAllowSelfApprovalFlagMock.mockReset();
+    resolveAllowSelfApprovalFlagMock.mockResolvedValue(false);
   });
 
   it('denies bundle-management actions when tier access is not entitled', async () => {
@@ -452,6 +462,22 @@ describe('runAuthorizationBundleSimulationAction', () => {
     expect(result.draft.allowed).toBe(false);
     expect(result.published.reasonCodes).toContain('mutation:billing_not_self_approver_denied');
     expect(result.draft.reasonCodes).toContain('mutation:billing_not_self_approver_denied');
+  });
+
+  it('allows the simulated approve when the principal is the sole approver (allowSelfApproval flag)', async () => {
+    resolveAllowSelfApprovalFlagMock.mockResolvedValue(true);
+
+    const result = expectSuccessfulSimulation(await runAuthorizationBundleSimulationAction({
+      bundleId: 'bundle-1',
+      principalUserId,
+      resourceType: 'billing',
+      action: 'approve',
+      resourceId: quoteId,
+    }));
+
+    expect(result.published.reasonCodes).not.toContain('mutation:billing_not_self_approver_denied');
+    expect(result.draft.reasonCodes).not.toContain('mutation:billing_not_self_approver_denied');
+    expect(resolveAllowSelfApprovalFlagMock).toHaveBeenCalledWith(expect.anything(), authContext.tenant, principalUserId, principalUserId);
   });
 
   it('applies document client-visibility invariant and rejects unsupported simulator actions', async () => {
