@@ -293,6 +293,40 @@ describe('EntryPopup Teams meeting creation refreshes the calendar', () => {
     vi.clearAllMocks();
   });
 
+  it.each([null, undefined, 'Discuss the installation handoff.'])(
+    'opens an interaction booking with notes %s and saves edited notes without React warnings',
+    async (notes) => {
+      const consoleError = vi.spyOn(console, 'error');
+      try {
+        serverEvents = [baseEntry({
+          entry_id: 'entry-interaction',
+          work_item_id: 'interaction-1',
+          work_item_type: 'interaction',
+          notes,
+        })];
+        render(<CalendarHarness />);
+        openEntry('entry-interaction');
+        await waitFor(() => expect(getScheduleEntryTeamsMeeting).toHaveBeenCalled());
+
+        expect(notesField().value).toBe(notes ?? '');
+        expect(consoleError.mock.calls.flat().join(' ')).not.toMatch(/should not be null/);
+
+        fireEvent.change(notesField(), { target: { value: 'Confirm vendor costs before quote.' } });
+        clickSave();
+
+        await waitFor(() => expect(savedEntries).toHaveLength(1));
+        expect(savedEntries[0]).toMatchObject({
+          work_item_id: 'interaction-1',
+          work_item_type: 'interaction',
+          notes: 'Confirm vendor costs before quote.',
+        });
+        expect(consoleError.mock.calls.flat().join(' ')).not.toMatch(/uncontrolled.*controlled/);
+      } finally {
+        consoleError.mockRestore();
+      }
+    },
+  );
+
   it.each([false, true])('flag off hides creation but keeps existing meeting access (%s)', async existing => {
     releaseFlag.enabled = false;
     serverEvents = [baseEntry({ entry_id: 'entry-standalone' })];

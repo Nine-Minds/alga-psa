@@ -1584,7 +1584,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
             <TextArea
               id="notes"
               name="notes"
-              value={entryData.notes}
+              value={entryData.notes ?? ''}
               onChange={handleInputChange}
               placeholder={t('entryPopup.fields.notesPlaceholder', { defaultValue: 'Anything the technician should know before starting' })}
               rows={3}
