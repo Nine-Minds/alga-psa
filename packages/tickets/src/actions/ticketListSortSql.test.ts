@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { TICKET_LIST_SORT_KEYS } from '../lib/ticketListSort';
 import {
   resolveTicketListSortSpec,
+  TICKET_LATEST_ACTIVITY_PUBLIC_SQL,
   TICKET_LATEST_ACTIVITY_SQL,
   TICKET_LIST_SORT_SQL,
 } from './ticketListSortSql';
@@ -39,6 +40,26 @@ describe('TICKET_LIST_SORT_SQL', () => {
     // Scheduled/canceled and soft-deleted comments must not count as activity.
     expect(TICKET_LATEST_ACTIVITY_SQL).toContain('c_act.deleted_at IS NULL');
     expect(TICKET_LATEST_ACTIVITY_SQL).toContain("c_act.publish_state = 'published'");
+  });
+
+  it('hides internal comments from the client-portal activity expression', () => {
+    // A portal contact must not be able to infer when an agent wrote an
+    // internal note, so the portal variant counts only client-visible comments
+    // on client-visible threads (same rule as the portal comment list).
+    expect(TICKET_LATEST_ACTIVITY_PUBLIC_SQL).toContain('c_act.is_internal = false');
+    expect(TICKET_LATEST_ACTIVITY_PUBLIC_SQL).toContain(
+      'LEFT JOIN comment_threads ct_act ON ct_act.tenant = c_act.tenant AND ct_act.thread_id = c_act.thread_id',
+    );
+    expect(TICKET_LATEST_ACTIVITY_PUBLIC_SQL).toContain(
+      '(ct_act.is_internal IS NULL OR ct_act.is_internal = false)',
+    );
+    // Everything the internal expression guarantees still holds.
+    expect(TICKET_LATEST_ACTIVITY_PUBLIC_SQL).toContain('GREATEST(t.updated_at, t.entered_at');
+    expect(TICKET_LATEST_ACTIVITY_PUBLIC_SQL).toContain('c_act.deleted_at IS NULL');
+    expect(TICKET_LATEST_ACTIVITY_PUBLIC_SQL).toContain("c_act.publish_state = 'published'");
+    // The internal-facing expression stays unfiltered: agents see all activity.
+    expect(TICKET_LATEST_ACTIVITY_SQL).not.toContain('is_internal');
+    expect(TICKET_LATEST_ACTIVITY_SQL).not.toContain('comment_threads');
   });
 
   it('resolves unknown or absent keys to the entered_at default', () => {
