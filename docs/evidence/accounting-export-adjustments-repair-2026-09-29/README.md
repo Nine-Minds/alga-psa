@@ -4,6 +4,8 @@ PR #3499 now gives discounts an explicit accounting mapping and requires a tenan
 
 ## Review first
 
+For review, start with the active integration's discount mapping, then compare the signed amounts in the CSV/IIF artifacts with the mocked Xero request and QBO payload. Next verify the fixed-plan parent: its two persisted $1,950 service allocations total $3,900 once, and the export keeps the parent batch line identity while serializing the allocation rows.
+
 - In each accounting mapping screen, open **Discounts and credits**. QBO uses an account ID; Xero uses an account code; QuickBooks CSV uses a discount item name. QuickBooks CSV settings also expose **Desktop discounts**, **Desktop service accounts**, and Desktop tax accounts for IIF exports. API targets are checked against the connected accounting company before saving. Mapping actions enforce tenant ownership, accounting permissions, and realm scope.
 - **Miscellaneous / One-time charge** is an ordinary editable catalog service with a stable tenant-derived ID. The migration provisions existing tenants; tenant initialization and provisioning cover new tenants. It is selected for new manual charges and needs an ordinary service mapping. Existing invoice rows are never silently assigned to it.
 - The shared writer rejects serviceless positive charges. Updates validate the effective persisted row, so description-only edits keep a valid existing service. Unknown/foreign services and edits to legacy serviceless positive rows are rejected before writing. Negative-rate credits are classified before this requirement; a serviceless credit uses the discount mapping.
@@ -32,13 +34,16 @@ ACCOUNTING_EVIDENCE_DIR="$PWD/../docs/evidence/accounting-export-adjustments-rep
 
 This recreates the isolated test database. Run database suites serially.
 
+The September 30 rerun used the current adapter writers and isolated DB fixtures. The API examples use USD with no tax, so the artifacts demonstrate settled net totals but do not exercise nonzero tax or foreign currency. Code review confirms QBO serializes `CurrencyRef` and invoice `TxnTaxDetail`, while Xero serializes `CurrencyCode`, `LineAmountTypes` and per-line `TaxAmount`; the Xero artifact is a real serialized request with transport mocked, not a provider acceptance result.
+
 ## Validation
 
 - Contract adjustment DB suite: 55 tests, including creation/update service validation, idempotent catalog provisioning, credits, settlement retries, lifecycle protections and all five adapter payloads.
 - External mapping DB suite: 35 tests, including create/read/update/delete of the discount identity for all five providers, realm/tenant isolation and invalid Xero accounts.
+- Current-head focused unit rerun: 53 tests passed across accounting CSV serialization, export validation, save-time warnings and mapping-screen registration. The validation cases include fixed-parent child service mapping and allocation-total mismatch rejection.
 - Credit/tax and invoice-generation discount DB suites: 11 tests. Positive manual fixtures now use a real service; tax and monetary expectations are unchanged.
 - Billing unit suite: 1,627 tests across 323 files, including four editor-warning tests and 18 batch-validation tests. Integration unit suite: 960 tests across 115 files.
-- Billing, integrations, database and server TypeScript checks pass. The server check needed a 12 GB heap and exposed a stale local invoice interface; its nullable contract assignment now matches the shared charge type. Billing package build passes. The integrations package's standalone build script has no configured entry points. The production application build hit an 8 GB heap limit and is retrying with 16 GB; completion is pending.
+- Billing, integrations, database and server TypeScript checks pass (previous recorded verification). Billing package build passes. The integrations package's standalone build script has no configured entry points. The production application build completed with exit code 0 using a 16 GB heap and `.next-accounting-repair`; Webpack reported existing conflicting star-export and critical-dependency warnings, and Next skipped type validation. Separate package typechecks are the type evidence.
 - Localization audit and pseudo-locales: 32 tests pass. Focused lint: zero errors; existing and test-fixture warnings remain.
 
 ## Current-head UI smoke pending
