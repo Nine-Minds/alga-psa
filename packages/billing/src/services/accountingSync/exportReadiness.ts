@@ -69,7 +69,7 @@ export async function assertInvoiceExportReady(
   if (blockers.length > 0) {
     throw new InvoiceExportReadinessError(
       `This invoice can't be finalized because it would fail QuickBooks export: ${blockers.join('; ')}. ` +
-        'Assign services and QuickBooks item mappings to these lines, or turn off auto-sync, then finalize again.'
+        'Assign services and QuickBooks item mappings to these lines, configure the discount mapping, or turn off auto-sync, then finalize again.'
     );
   }
 }
@@ -109,10 +109,10 @@ async function collectExportBlockers(knex: Knex, tenant: string, invoiceId: stri
     return [];
   }
 
-  const charges: Array<{ item_id: string; service_id: string | null; description: string | null }> =
+  const charges: Array<{ item_id: string; service_id: string | null; description: string | null; is_discount?: boolean }> =
     await knex('invoice_charges')
       .where({ invoice_id: invoiceId, tenant })
-      .select('item_id', 'service_id', 'description');
+      .select('item_id', 'service_id', 'description', 'is_discount');
 
   // Consolidated fixed-plan parent charges intentionally carry no service_id —
   // their services live in invoice_charge_details children. Only a serviceless
@@ -132,7 +132,16 @@ async function collectExportBlockers(knex: Knex, tenant: string, invoiceId: stri
 
   const blockers: string[] = [];
 
-  const serviceless = charges.filter((charge) => !charge.service_id && !consolidatedParents.has(charge.item_id));
+  const discounts = charges.filter((charge) => charge.is_discount);
+  if (discounts.length > 0 && !(await new AccountingMappingResolver(knex).resolveDiscountMapping({
+    tenantId: tenant,
+    adapterType: SYNC_ADAPTER_TYPE,
+    targetRealm: realm
+  }))) {
+    blockers.push(`${discounts.length} discount/credit line${discounts.length === 1 ? ' is' : 's are'} missing a QuickBooks discount mapping`);
+  }
+
+  const serviceless = charges.filter((charge) => !charge.service_id && !charge.is_discount && !consolidatedParents.has(charge.item_id));
   if (serviceless.length > 0) {
     const samples = serviceless.slice(0, 3).map((charge) => `"${truncateDescription(charge.description)}"`);
     blockers.push(
@@ -141,7 +150,7 @@ async function collectExportBlockers(knex: Knex, tenant: string, invoiceId: stri
   }
 
   const resolver = new AccountingMappingResolver(knex);
-  const serviceIds = [...new Set(charges.map((charge) => charge.service_id).filter((id): id is string => Boolean(id)))];
+  const serviceIds = [...new Set(charges.filter((charge) => !charge.is_discount).map((charge) => charge.service_id).filter((id): id is string => Boolean(id)))];
   const unmappedServiceIds: string[] = [];
   for (const serviceId of serviceIds) {
     const mapping = await resolver.resolveServiceMapping({

@@ -102,6 +102,7 @@ function createFakeRepo(state: FakeState) {
 function createFakeResolver(overrides: Partial<Record<string, any>> = {}) {
   return {
     resolveServiceMapping: vi.fn(async () => ({ external_entity_id: 'item-1', source: 'service' })),
+    resolveDiscountMapping: vi.fn(async () => ({ external_entity_id: 'discount-account', source: 'discount' })),
     resolveTaxCodeMapping: vi.fn(async () => ({ external_entity_id: 'tax-1', source: 'tax_code' })),
     resolvePaymentTermMapping: vi.fn(async () => ({ external_entity_id: 'term-1', source: 'payment_term' })),
     ...overrides,
@@ -186,13 +187,28 @@ describe('AccountingExportValidation.ensureMappingsForBatch', () => {
 
   it('flags charges that have no associated service', async () => {
     const state = baseState({
-      charges: [{ item_id: 'charge-1', invoice_id: 'inv-1', service_id: null, tax_region: null }],
+      charges: [{ item_id: 'charge-1', invoice_id: 'inv-1', service_id: null, description: 'Old manual charge', tax_region: null }],
     });
     const { repo } = await run(state);
 
     expect(repo.errors).toEqual([
-      expect.objectContaining({ code: 'missing_service', line_id: 'line-1' }),
+      expect.objectContaining({ code: 'missing_service', line_id: 'line-1', message: expect.stringContaining("Assign a service to 'Old manual charge'") }),
     ]);
+  });
+
+  it('requires the configured discount mapping for serviceless discount settlements', async () => {
+    const state = baseState({
+      charges: [{ item_id: 'charge-1', invoice_id: 'inv-1', service_id: null, is_discount: true, description: 'Automatic contract discount' }],
+      chargeDetails: []
+    });
+    const resolver = createFakeResolver({ resolveDiscountMapping: vi.fn(async () => null) });
+    const { repo } = await run(state, resolver);
+
+    expect(repo.errors).toContainEqual(expect.objectContaining({
+      code: 'missing_discount_mapping',
+      message: expect.stringContaining('Configure a discount mapping')
+    }));
+    expect(repo.errors.some((error: any) => error.code === 'missing_service')).toBe(false);
   });
 
   it('reports an unmapped service once per service+realm, with the service name', async () => {

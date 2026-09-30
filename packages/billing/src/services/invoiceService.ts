@@ -924,6 +924,16 @@ export async function persistManualInvoiceCharges(
   // --- First Pass: Process non-discount manual items ---
   const nonDiscountItems = manualItems.filter(item => !item.is_discount);
   for (const requestItem of nonDiscountItems) {
+    // Accounting classification is part of a manual charge's persisted
+    // contract. Credits/discount settlements are classified by their
+    // integration discount mapping and are the only serviceless exception.
+    if (!requestItem.service_id) {
+      throw new ManualInvoiceError(
+        'SERVICE_REQUIRED',
+        `Assign a service to '${requestItem.description?.trim() || 'manual charge'}' before saving.`,
+        { description: requestItem.description ?? null }
+      );
+    }
     let service;
     if (requestItem.service_id) {
       service = await tenantScopedTable(tx, tenant, 'service_catalog')

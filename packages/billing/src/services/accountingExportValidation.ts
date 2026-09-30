@@ -12,6 +12,8 @@ type ChargeProjection = {
   service_id?: string | null;
   tax_region?: string | null;
   net_amount?: number | string | null;
+  description?: string | null;
+  is_discount?: boolean | null;
 };
 
 type ChargeDetailProjection = {
@@ -170,7 +172,7 @@ export class AccountingExportValidation {
     const charges =
       chargeIds.size > 0
         ? await db.table<ChargeProjection>('invoice_charges')
-            .select('item_id', 'invoice_id', 'service_id', 'tax_region', 'net_amount')
+            .select('item_id', 'invoice_id', 'service_id', 'tax_region', 'net_amount', 'description', 'is_discount')
             .whereIn('item_id', Array.from(chargeIds))
         : [];
     const chargesById = new Map(charges.map((charge) => [charge.item_id, charge]));
@@ -336,13 +338,37 @@ export class AccountingExportValidation {
         });
         continue;
       }
-      if (!charge?.service_id) {
+      if (charge?.is_discount) {
+        const mapping = await resolver.resolveDiscountMapping({
+          tenantId: tenant,
+          adapterType,
+          targetRealm: batch.target_realm
+        });
+        if (!mapping) {
+          await repo.addError({
+            batch_id: batchId,
+            line_id: line.line_id,
+            code: 'missing_discount_mapping',
+            message: 'Configure a discount mapping for this accounting integration before exporting discounts or credits.',
+            metadata: mergeErrorMetadata(line, {
+              invoice_charge_id: charge.item_id,
+              description: charge.description ?? null,
+              invoice_id: charge.invoice_id ?? line.document_id ?? null
+            })
+          });
+        }
+      }
+      if (!charge?.service_id && !charge?.is_discount) {
         await repo.addError({
           batch_id: batchId,
           line_id: line.line_id,
           code: 'missing_service',
-          message: `Charge ${line.document_line_id} missing associated service`,
-          metadata: mergeErrorMetadata(line)
+          message: `Assign a service to '${charge?.description ?? 'charge'}' on invoice ${line.document_id ?? 'unknown'} (line ${line.line_id}).`,
+          metadata: mergeErrorMetadata(line, {
+            invoice_charge_id: line.document_line_id,
+            invoice_id: line.document_id ?? null,
+            description: charge?.description ?? null
+          })
         });
         continue;
       }
@@ -418,8 +444,8 @@ export class AccountingExportValidation {
         }
       }
 
-      const serviceMappingKey = `${charge.service_id}:${batch.target_realm ?? 'default'}`;
-      if (!checkedServiceMappings.has(serviceMappingKey)) {
+      const serviceMappingKey = charge.service_id ? `${charge.service_id}:${batch.target_realm ?? 'default'}` : null;
+      if (serviceMappingKey && charge.service_id && !charge.is_discount && !checkedServiceMappings.has(serviceMappingKey)) {
         const mapping = await resolver.resolveServiceMapping({
           tenantId: tenant,
           adapterType,

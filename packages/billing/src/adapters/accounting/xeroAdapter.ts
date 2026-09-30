@@ -87,6 +87,8 @@ type DbCharge = {
   net_amount?: number | null;
   tax_amount?: number | null;
   tax_region?: string | null;
+  is_taxable?: boolean | null;
+  is_discount?: boolean | null;
 };
 
 type DbClient = {
@@ -474,16 +476,17 @@ export class XeroAdapter implements AccountingExportAdapter {
         if (!charge) {
           throw new AppError('XERO_CHARGE_NOT_FOUND', `Charge ${line.document_line_id} missing for invoice ${invoiceId}`);
         }
-        if (!charge.service_id) {
+        const serviceMapping = charge.is_discount
+          ? await resolver.resolveDiscountMapping({ tenantId: context.batch.tenant, adapterType: this.type, targetRealm: context.batch.target_realm })
+          : charge.service_id
+            ? await resolver.resolveServiceMapping({ tenantId: context.batch.tenant, adapterType: this.type, serviceId: charge.service_id, targetRealm: context.batch.target_realm })
+            : null;
+        if (charge.is_discount && !serviceMapping) {
+          throw new AppError('XERO_DISCOUNT_MAPPING_MISSING', 'Configure a Xero discount account mapping before exporting discounts or credits.');
+        }
+        if (!charge.service_id && !charge.is_discount) {
           throw new AppError('XERO_SERVICE_MISSING', `Charge ${charge.item_id} missing service_id for invoice ${invoiceId}`);
         }
-
-        const serviceMapping = await resolver.resolveServiceMapping({
-          tenantId: context.batch.tenant,
-          adapterType: this.type,
-          serviceId: charge.service_id,
-          targetRealm: context.batch.target_realm
-        });
 
         if (!serviceMapping) {
           throw new AppError('XERO_SERVICE_MAPPING_MISSING', `No Xero mapping for service ${charge.service_id}`);
@@ -545,7 +548,10 @@ export class XeroAdapter implements AccountingExportAdapter {
           charge.description ??
           `Invoice ${invoice.invoice_number ?? invoice.invoice_id} line`;
 
-        const unitAmountCents = coerceChargeCents(charge.unit_price);
+        const storedUnitAmountCents = coerceChargeCents(charge.unit_price);
+        const unitAmountCents = charge.is_discount && storedUnitAmountCents !== null
+          ? -Math.abs(storedUnitAmountCents)
+          : storedUnitAmountCents;
 
         const netAmountCents = coerceChargeCents(charge.net_amount);
         if (netAmountCents === null) {
@@ -562,9 +568,9 @@ export class XeroAdapter implements AccountingExportAdapter {
         // hold identical strings, and guessing would silently change the
         // accounting classification. Legacy mappings without a kind are item
         // mappings — that is the only semantics they ever had.
-        const targetKind: XeroServiceTargetKind | null = readXeroServiceTargetKind(
-          serviceMapping.metadata ?? null
-        );
+        const targetKind: XeroServiceTargetKind | null = charge.is_discount
+          ? 'account'
+          : readXeroServiceTargetKind(serviceMapping.metadata ?? null);
         if (targetKind === null) {
           throw new AppError(
             'XERO_SERVICE_MAPPING_KIND_INVALID',

@@ -214,29 +214,32 @@ export class QuickBooksCSVAdapter implements AccountingExportAdapter {
           throw new Error(`QuickBooks CSV adapter: charge ${line.document_line_id} not found`);
         }
 
-        if (!charge.service_id) {
+        const lineMapping = charge.is_discount
+          ? await resolver.resolveDiscountMapping({ tenantId, adapterType: this.type, targetRealm: context.batch.target_realm })
+          : charge.service_id
+            ? await resolver.resolveServiceMapping({ tenantId, adapterType: this.type, serviceId: charge.service_id, targetRealm: context.batch.target_realm })
+            : null;
+        if (!lineMapping && charge.is_discount) {
+          throw new Error('Configure a QuickBooks CSV discount item mapping before exporting discounts or credits.');
+        }
+        if (!charge.service_id && !charge.is_discount) {
           throw new Error(`QuickBooks CSV adapter: charge ${charge.item_id} missing service_id`);
         }
 
-        // Resolve service mapping to get QuickBooks item name
-        const serviceMapping = await resolver.resolveServiceMapping({
-          tenantId: context.batch.tenant,
-          adapterType: this.type,
-          serviceId: charge.service_id,
-          targetRealm: context.batch.target_realm
-        });
-
-        if (!serviceMapping) {
+        if (!lineMapping) {
           throw new Error(`QuickBooks CSV adapter: no mapping for service ${charge.service_id}. Please configure service mappings before export.`);
         }
 
         // Get the item name from mapping metadata or use external_entity_id
-        const itemName = this.getItemName(serviceMapping);
+        const itemName = this.getItemName(lineMapping);
 
         // Calculate amounts
         const quantity = charge.quantity ?? 1;
-        const unitPrice = charge.unit_price ?? charge.total_price;
         const lineAmount = charge.net_amount ?? charge.total_price;
+        // The CSV importer derives the line from quantity × rate. Use the
+        // persisted net sign so fixed discounts and quantity-derived credits
+        // stay negative even when the authored rate was stored as positive.
+        const unitPrice = quantity ? lineAmount / quantity : lineAmount;
         const taxAmount = shouldExcludeTax ? 0 : (charge.tax_amount ?? 0);
 
         totalAmountCents += lineAmount;

@@ -46,6 +46,7 @@ type DbCharge = {
   total_price: number;
   tax_amount?: number | null;
   tax_region?: string | null;
+  is_discount?: boolean | null;
 };
 
 type DbClient = {
@@ -214,7 +215,20 @@ export class XeroCsvAdapter implements AccountingExportAdapter {
         let accountCode = '';
         let taxType = '';
 
-        if (charge.service_id) {
+        if (charge.is_discount) {
+          const discountMapping = await resolver.resolveDiscountMapping({
+            tenantId: context.batch.tenant,
+            adapterType: 'xero',
+            targetRealm: context.batch.target_realm
+          });
+          if (!discountMapping) {
+            throw new AppError('XERO_CSV_DISCOUNT_MAPPING_MISSING', 'Configure a Xero discount account mapping before exporting discounts or credits.');
+          }
+          accountCode = safeString(discountMapping.external_entity_id) ?? '';
+          taxType = charge.tax_region
+            ? safeString((await resolver.resolveTaxCodeMapping({ tenantId: context.batch.tenant, adapterType: 'xero', taxRegionId: charge.tax_region, targetRealm: context.batch.target_realm }))?.external_entity_id) ?? ''
+            : '';
+        } else if (charge.service_id) {
           const serviceMapping = await resolver.resolveServiceMapping({
             tenantId: context.batch.tenant,
             adapterType: 'xero', // Use xero mappings (shared with OAuth adapter)
@@ -246,9 +260,7 @@ export class XeroCsvAdapter implements AccountingExportAdapter {
 
         const description = line.notes ?? charge.description ?? `Line item for invoice ${invoiceNumber}`;
         const quantity = typeof charge.quantity === 'number' ? charge.quantity : 1;
-        const unitAmount = typeof charge.unit_price === 'number'
-          ? (charge.unit_price / 100).toFixed(2)
-          : (line.amount_cents / 100 / quantity).toFixed(2);
+        const unitAmount = (line.amount_cents / 100 / quantity).toFixed(2);
 
         // Build CSV row
         const row: XeroCsvRow = {
@@ -536,7 +548,8 @@ export class XeroCsvAdapter implements AccountingExportAdapter {
         'unit_price',
         'total_price',
         'tax_amount',
-        'tax_region'
+        'tax_region',
+        'is_discount'
       )
       .whereIn('item_id', chargeIds);
 

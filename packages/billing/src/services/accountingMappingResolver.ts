@@ -10,7 +10,7 @@ import { resolveXeroRealmAliases } from './accountingSync/xeroRealmIdentity';
 export interface MappingResolution {
   external_entity_id: string;
   metadata?: Record<string, any> | null;
-  source: 'service' | 'service_category' | 'fallback' | 'tax_code' | 'payment_term' | 'company';
+  source: 'service' | 'service_category' | 'fallback' | 'tax_code' | 'payment_term' | 'company' | 'discount';
 }
 
 interface ResolveParams {
@@ -109,6 +109,18 @@ export class AccountingMappingResolver {
       entityType: 'payment_term',
       entityId: params.paymentTermId,
       source: 'payment_term',
+      targetRealm: params.targetRealm ?? null
+    });
+  }
+
+  /** Tenant/integration/realm-owned mapping for invoice discount and credit rows. */
+  async resolveDiscountMapping(params: { tenantId?: string; adapterType: string; targetRealm?: string | null }): Promise<MappingResolution | null> {
+    return this.resolveGenericMapping({
+      adapterType: params.adapterType,
+      tenantId: params.tenantId,
+      entityType: 'discount',
+      entityId: 'invoice_discount',
+      source: 'discount',
       targetRealm: params.targetRealm ?? null
     });
   }

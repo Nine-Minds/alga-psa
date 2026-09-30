@@ -425,6 +425,49 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
         if (!charge) {
           throw new Error(`QuickBooks adapter: charge ${line.document_line_id} missing for invoice ${invoiceId}`);
         }
+        const rawNetAmountCents = coerceChargeCents(charge.net_amount);
+        if (rawNetAmountCents === null) {
+          throw new AppError('QBO_CHARGE_MISSING_NET_AMOUNT', `Charge ${charge.item_id} on invoice ${invoiceId} is missing net_amount; run the backfill migration.`);
+        }
+        if (charge.is_discount) {
+          const discountMapping = await resolver.resolveDiscountMapping({
+            tenantId: context.batch.tenant,
+            adapterType: this.type,
+            targetRealm: context.batch.target_realm
+          });
+          if (!discountMapping) {
+            throw new AppError('QBO_DISCOUNT_MAPPING_MISSING', 'Configure a QuickBooks discount mapping before exporting discounts or credits.');
+          }
+          const discountDetail: NonNullable<QboInvoiceLine['DiscountLineDetail']> = {
+            DiscountAccountRef: { value: discountMapping.external_entity_id },
+            PercentBased: false,
+            DiscountAmount: centsToAmount(Math.abs(rawNetAmountCents))
+          };
+          if (charge.is_taxable && charge.tax_region) {
+            const taxMapping = await resolver.resolveTaxCodeMapping({
+              tenantId: context.batch.tenant,
+              adapterType: this.type,
+              taxRegionId: charge.tax_region,
+              targetRealm: context.batch.target_realm
+            });
+            if (taxMapping) discountDetail.TaxCodeRef = { value: taxMapping.external_entity_id };
+          } else if (automatedSalesTaxEnabled && context.taxDelegationMode === 'delegate') {
+            discountDetail.TaxCodeRef = { value: QBO_PSEUDO_TAX_CODE_NON_TAXABLE };
+          }
+          qboLines.push({
+            Amount: centsToAmount(Math.abs(rawNetAmountCents)),
+            DetailType: 'DiscountLineDetail',
+            Description: charge.description ?? undefined,
+            DiscountLineDetail: discountDetail
+          });
+          chargeIds.push(line.document_line_id);
+          invoiceNetCents += rawNetAmountCents;
+          if (shouldIncludeAuthoritativeTax) {
+            const discountTaxCents = coerceChargeCents(charge.tax_amount);
+            if (discountTaxCents !== null) invoiceTaxCents += isCreditNote ? Math.abs(discountTaxCents) : discountTaxCents;
+          }
+          continue;
+        }
         if (!charge.service_id) {
           throw new Error(`QuickBooks adapter: charge ${charge.item_id} missing service_id for invoice ${invoiceId}`);
         }
@@ -523,13 +566,6 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
         // settings. We never set GlobalTaxCalculation: Intuit documents it as
         // non-US only, and sending it on a US-locale transaction faults.
 
-        const rawNetAmountCents = coerceChargeCents(charge.net_amount);
-        if (rawNetAmountCents === null) {
-          throw new AppError(
-            'QBO_CHARGE_MISSING_NET_AMOUNT',
-            `Charge ${charge.item_id} on invoice ${invoiceId} is missing net_amount; run the backfill migration.`
-          );
-        }
         const netAmountCents = isCreditNote ? Math.abs(rawNetAmountCents) : rawNetAmountCents;
         invoiceNetCents += netAmountCents;
         if (shouldIncludeAuthoritativeTax) {
