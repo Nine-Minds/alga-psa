@@ -27,7 +27,8 @@
       "sendToClient": "Invia al cliente",
       "setAsDefault": "Imposta come predefinito",
       "submitForApproval": "Invia per l'approvazione",
-      "done": "Fatto"
+      "done": "Fatto",
+      "markAccepted": "Segna come accettato"
     },
     "badges": {
       "standard": "Standard"
@@ -158,7 +159,8 @@
       "backToQuotes": "Torna ai preventivi",
       "backToTemplates": "Torna ai modelli di preventivo",
       "convertToSalesOrder": "Converti in ordine di vendita",
-      "convert": "Converti in…"
+      "convert": "Converti in…",
+      "markAccepted": "Segna come accettato"
     },
     "headings": {
       "editQuote": "Modifica preventivo",
@@ -217,6 +219,12 @@
         "message": "Messaggio",
         "from": "Da",
         "useDefault": "Usa mittente predefinito"
+      },
+      "markAccepted": {
+        "title": "Segna il preventivo come accettato",
+        "description": "Registra che il cliente ha accettato questo preventivo al di fuori del portale clienti (ad esempio per telefono o via e-mail). Il preventivo passa ad Accettato e può essere convertito come qualsiasi preventivo accettato. Vengono registrati il tuo nome e l'ora.",
+        "note": "Nota (facoltativa)",
+        "notePlaceholder": "Ad esempio: accettato via e-mail il 3"
       }
     },
     "errorActions": {
@@ -226,7 +234,8 @@
       "resendQuote": "inviare nuovamente il preventivo",
       "sendQuote": "inviare preventivo",
       "sendReminder": "inviare promemoria",
-      "submitForApproval": "sottoporre all'approvazione"
+      "submitForApproval": "sottoporre all'approvazione",
+      "markAccepted": "segnare il preventivo come accettato"
     },
     "errors": {
       "convert": "Impossibile convertire il preventivo",
@@ -252,7 +261,8 @@
       "requestedChanges": "Preventivo restituito alla bozza con le modifiche richieste.",
       "resent": "Preventivo inviato di nuovo.",
       "sent": "Preventivo inviato al cliente.",
-      "submittedForApproval": "Preventivo inviato per l'approvazione interna."
+      "submittedForApproval": "Preventivo inviato per l'approvazione interna.",
+      "markedAccepted": "Preventivo segnato come accettato."
     },
     "readOnlyNotice": "Questo preventivo è di sola lettura. Per apportare modifiche, crea una nuova revisione.",
     "validation": {
@@ -425,7 +435,8 @@
       "saveAsTemplate": "Impossibile salvare il preventivo come modello",
       "send": "Impossibile inviare il preventivo",
       "sendReminder": "Impossibile inviare il promemoria del preventivo",
-      "submitForApproval": "Impossibile inviare il preventivo per l'approvazione"
+      "submitForApproval": "Impossibile inviare il preventivo per l'approvazione",
+      "markAccepted": "Impossibile segnare il preventivo come accettato"
     },
     "labels": {
       "phase": "Fase: {{phase}}",
@@ -444,7 +455,8 @@
       "submittedForApproval": "Preventivo inviato per l'approvazione interna.",
       "templateAssigned": "Modello di documento assegnato.",
       "templateCleared": "Modello di documento deselezionato (utilizzando l'impostazione predefinita).",
-      "createdSalesOrder": "Creato l'ordine di vendita in bozza {{number}}. Le righe di prodotto verranno fatturate all'evasione."
+      "createdSalesOrder": "Creato l'ordine di vendita in bozza {{number}}. Le righe di prodotto verranno fatturate all'evasione.",
+      "markedAccepted": "Preventivo segnato come accettato."
     },
     "preview": {
       "loading": "Caricamento anteprima..."
@@ -674,7 +686,14 @@
       "load": "Impossibile caricare le approvazioni dei preventivi",
       "settings": "Impossibile aggiornare le impostazioni di approvazione del preventivo"
     },
-    "loading": "Caricamento coda di approvazione..."
+    "loading": "Caricamento coda di approvazione...",
+    "soleApprover": {
+      "title": "Sei l'unico approvatore dei preventivi",
+      "description": "Nessun altro utente attivo può approvare i preventivi, quindi puoi approvare i tuoi. Le auto-approvazioni vengono registrate nell'attività del preventivo.",
+      "draftDescription": "Sei l'unico utente che può approvare i preventivi. Dopo aver inviato questo preventivo per l'approvazione, potrai approvarlo tu stesso e poi inviarlo.",
+      "pendingDescription": "Sei l'unico utente che può approvare i preventivi, quindi puoi approvare questo preventivo tu stesso. Scegli Approva per renderlo pronto per l'invio.",
+      "dialogNote": "Sei l'unico approvatore, quindi approvare il tuo preventivo è consentito. L'approvazione viene registrata come auto-approvazione."
+    }
   },
   "quoteTemplates": {
     "title": "Modelli",
@@ -840,7 +859,9 @@
       "conflict": "Questa modifica del preventivo è in conflitto con un record esistente. Aggiornare la pagina e riprovare.",
       "notAllowed": "Uno dei valori del preventivo non è consentito. Controllare il modulo e riprovare.",
       "missingField": "Manca un campo obbligatorio del preventivo.",
-      "missingFieldNamed": "Manca un campo obbligatorio del preventivo: {{field}}."
+      "missingFieldNamed": "Manca un campo obbligatorio del preventivo: {{field}}.",
+      "templateCannotBeAccepted": "I modelli di preventivo non possono essere segnati come accettati",
+      "onlySentCanBeAccepted": "Solo i preventivi inviati possono essere segnati come accettati"
     }
   }
 }
