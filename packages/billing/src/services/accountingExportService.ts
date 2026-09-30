@@ -127,7 +127,8 @@ export class AccountingExportService {
         batchId, status: current.status, requestedStatus: updates.status,
       });
     }
-    return this.repository.updateBatchStatus(batchId, updates);
+    const allowed = current?.status === 'validating' ? ['validating'] as AccountingExportStatus[] : [current?.status ?? 'pending'] as AccountingExportStatus[];
+    return this.transitionBatchStatus(batchId, allowed, updates);
   }
 
   /**
@@ -152,12 +153,18 @@ export class AccountingExportService {
       });
     }
 
-    const updated = await this.repository.updateBatchStatus(batchId, {
+    const updated = await this.transitionBatchStatus(batchId, cancellable, {
       status: 'cancelled',
       last_updated_by: options.cancelledBy ?? null,
       notes: options.reason ?? batch.notes ?? null
     });
-    return updated ?? { ...batch, status: 'cancelled' };
+    if (!updated) {
+      const latest = await this.repository.getBatch(batchId);
+      throw new AppError('ACCOUNTING_EXPORT_INVALID_STATE', `Cannot cancel batch in status ${latest?.status ?? 'missing'}`, {
+        batchId, status: latest?.status ?? null,
+      });
+    }
+    return updated;
   }
 
   async getBatchWithDetails(batchId: string): Promise<{
@@ -174,72 +181,47 @@ export class AccountingExportService {
     // canonical detail-backed recurring lines may coexist in one stored batch, and rereads
     // must preserve each line's stored projection metadata instead of collapsing them to one
     // batch-wide service-period basis.
-    const [lines, errors, artifacts] = await Promise.all([
+    const [lines, errors] = await Promise.all([
       this.repository.listLines(batchId),
-      this.repository.listErrors(batchId),
-      tenantDb((await createTenantKnex(batch.tenant)).knex, batch.tenant)
-        .table('accounting_export_artifacts').where({ batch_id: batchId })
-        .select('artifact_id', 'filename', 'content_type', 'storage_fallback').orderBy('filename')
+      this.repository.listErrors(batchId)
     ]);
-    return { batch, lines, errors, artifacts };
+    return { batch, lines, errors, artifacts: this.repository.listArtifacts
+      ? await this.repository.listArtifacts(batchId)
+      : [] };
   }
 
   async listBatches(params: { status?: AccountingExportStatus; adapter_type?: string } = {}): Promise<AccountingExportBatch[]> {
     return this.repository.listBatches(params);
   }
 
-  /**
-   * Reserve the selected invoices before adapter transformation reads their
-   * amounts. Adjustment writers take the same invoice row lock and reject
-   * `validating` batch membership, so either an edit commits before this
-   * snapshot or the export reservation wins and the edit is refused.
-   */
-  private async reserveInvoicesForExport(
-    batchId: string,
-    tenant: string | undefined,
-    invoiceIds: string[],
-    expectedStatus: AccountingExportStatus,
-    validatedAt: string
-  ): Promise<void> {
-    if (!tenant) throw new Error('Export batch has no tenant');
-    const uniqueIds = [...new Set(invoiceIds)].sort();
-    const { knex } = await createTenantKnex(tenant);
-    await knex.transaction(async (trx) => {
-      if (uniqueIds.length > 0) {
-        await tenantDb(trx, tenant).table('invoices')
-          .where({ tenant }).whereIn('invoice_id', uniqueIds)
-          .orderBy('invoice_id').forUpdate().select('invoice_id');
-        const conflict = await tenantDb(trx, tenant).table('accounting_export_lines as line')
-          .join('accounting_export_batches as active_batch', function joinBatch() {
-            this.on('active_batch.tenant', '=', 'line.tenant').andOn('active_batch.batch_id', '=', 'line.batch_id');
-          })
-          .where({ 'line.tenant': tenant, 'active_batch.tenant': tenant, 'active_batch.status': 'validating' })
-          .whereIn('line.document_id', uniqueIds)
-          .whereNot('line.batch_id', batchId)
-          .first('line.line_id');
-        if (conflict) {
-          throw new AppError('ACCOUNTING_EXPORT_INVOICE_EXPORT_IN_PROGRESS', 'An export is already being prepared for one of these invoices', {
-            batchId, lineId: conflict.line_id,
-          });
-        }
-      }
-      const changed = await tenantDb(trx, tenant).table('accounting_export_batches')
-        .where({ tenant, batch_id: batchId, status: expectedStatus })
-        .update({ status: 'validating', validated_at: validatedAt });
-      if (changed !== 1) {
-        throw new AppError('ACCOUNTING_EXPORT_INVALID_STATE', 'Export batch changed before execution could reserve its invoices', {
-          batchId, status: expectedStatus
-        });
-      }
-    });
+  private async transitionBatchStatus(batchId: string, allowed: AccountingExportStatus[], updates: UpdateExportBatchStatusInput) {
+    if (this.repository.transitionBatchStatus) return this.repository.transitionBatchStatus(batchId, allowed, updates);
+    const current = await this.repository.getBatch(batchId);
+    if (!current || !allowed.includes(current.status)) return null;
+    return this.repository.updateBatchStatus(batchId, updates);
   }
 
   async executeBatch(batchId: string): Promise<AccountingExportDeliveryResult> {
-    const initial = await this.getBatchWithDetails(batchId);
-    const batch = initial.batch;
+    let initial = await this.getBatchWithDetails(batchId);
+    let batch = initial.batch;
     if (!batch) {
       throw new Error(`Export batch ${batchId} not found`);
     }
+
+    // A process crash can strand a reservation. Expire only executions whose
+    // persisted reservation timestamp is old enough to outlive normal work;
+    // the conditional update cannot release a reservation owned by a new run.
+    if (batch.status === 'validating' && batch.updated_at) {
+      const reservedAt = Date.parse(batch.updated_at);
+      if (Number.isFinite(reservedAt) && Date.now() - reservedAt > 15 * 60 * 1000) {
+        if (this.repository.recoverExpiredExecution) {
+          await this.repository.recoverExpiredExecution(batchId, new Date(Date.now() - 15 * 60 * 1000).toISOString());
+        }
+        initial = await this.getBatchWithDetails(batchId);
+        batch = initial.batch;
+      }
+    }
+    if (!batch) throw new Error(`Export batch ${batchId} not found`);
 
     if (initial.lines.length === 0) {
       const now = new Date().toISOString();
@@ -286,10 +268,29 @@ export class AccountingExportService {
     }
 
     const now = new Date().toISOString();
-    await this.reserveInvoicesForExport(batchId, batch.tenant, initial.lines.map((line) => line.document_id), batch.status, now);
+    if (this.repository.reserveInvoicesForExport) {
+      await this.repository.reserveInvoicesForExport(batchId, initial.lines.map((line) => line.document_id), batch.status, now);
+    } else {
+      // Lightweight service unit doubles may omit the database reservation capability.
+      await this.repository.updateBatchStatus(batchId, { status: 'validating', validated_at: now });
+    }
+    const leaseHeartbeat = this.repository.refreshExecutionLease
+      ? setInterval(() => {
+          void this.repository.refreshExecutionLease!(batchId, new Date().toISOString()).catch((error) => {
+            logger.warn('[AccountingExportService] Failed to refresh export reservation lease', {
+              batchId, error: error instanceof Error ? error.message : String(error),
+            });
+          });
+        }, 60_000)
+      : null;
 
+    let refreshed: Awaited<ReturnType<AccountingExportService['getBatchWithDetails']>>;
+    let taxDelegationMode: TaxDelegationMode;
+    let adapterSettings: Record<string, unknown> | undefined;
+    let context: AccountingExportAdapterContext;
+    try {
     await AccountingExportValidation.ensureMappingsForBatch(batchId, { preserveBatchStatus: true });
-    const refreshed = await this.getBatchWithDetails(batchId);
+    refreshed = await this.getBatchWithDetails(batchId);
     if (!refreshed.batch) {
       throw new Error(`Export batch ${batchId} was not found after validation`);
     }
@@ -329,11 +330,11 @@ export class AccountingExportService {
     };
 
     // Determine tax delegation mode from invoice tax_source values
-    const taxDelegationMode = await this.determineTaxDelegationMode(refreshed.batch, refreshed.lines);
+    taxDelegationMode = await this.determineTaxDelegationMode(refreshed.batch, refreshed.lines);
     const excludeTaxFromExport = taxDelegationMode === 'delegate';
 
     // Load adapter-specific settings
-    let adapterSettings: Record<string, unknown> | undefined;
+    adapterSettings = undefined;
     if (normalizedBatch.adapter_type === 'xero_csv' && normalizedBatch.tenant) {
       try {
         const xeroCsvSettings = await getXeroCsvSettingsForTenant(normalizedBatch.tenant);
@@ -348,13 +349,25 @@ export class AccountingExportService {
       }
     }
 
-    const context: AccountingExportAdapterContext = {
+    context = {
       batch: normalizedBatch,
       lines: refreshed.lines,
       taxDelegationMode,
       excludeTaxFromExport,
       adapterSettings
     };
+
+    } catch (error) {
+      // Recover reservation if mapping validation, detail reload, or tax lookup fails.
+      const current = await this.repository.getBatch(batchId);
+      if (current?.status === 'validating') {
+        await this.transitionBatchStatus(batchId, ['validating'], {
+          status: 'failed', notes: error instanceof Error ? error.message : 'Accounting export preparation failed'
+        });
+      }
+      if (leaseHeartbeat) clearInterval(leaseHeartbeat);
+      throw error;
+    }
 
     let transformResult: AccountingExportTransformResult | null = null;
     let fileExportFinalized = false;
@@ -426,7 +439,7 @@ export class AccountingExportService {
           }
           const artifactRow = {
             file_id: fileId, filename: file.filename,
-            content_type: file.contentType, content: bytes, storage_fallback: storageFallback,
+          content_type: file.contentType, content: bytes, storage_fallback: storageFallback, committed: false,
           };
           try {
             await db.table('accounting_export_artifacts').insert({ tenant: artifactTenant, batch_id: batchId, ...artifactRow });
@@ -453,6 +466,11 @@ export class AccountingExportService {
       if (failedDocuments.length === 0 && typeof adapter.postProcess === 'function') {
         await adapter.postProcess(deliveryResult, context);
         if (isFileAdapter) fileExportFinalized = true;
+      }
+      if (isFileAdapter && outputFiles.length > 0 && fileExportFinalized) {
+        const committedDb = tenantDb((await createTenantKnex(context.batch.tenant!)).knex, context.batch.tenant!);
+        await committedDb.table('accounting_export_artifacts')
+          .where({ tenant: context.batch.tenant, batch_id: batchId }).update({ committed: true });
       }
 
       for (const delivered of deliveryResult.deliveredLines) {
@@ -534,8 +552,10 @@ export class AccountingExportService {
         });
       }
 
+      if (leaseHeartbeat) clearInterval(leaseHeartbeat);
       return deliveryResult;
     } catch (error: any) {
+      if (leaseHeartbeat) clearInterval(leaseHeartbeat);
       if (!fileExportFinalized && ['quickbooks_csv', 'quickbooks_desktop', 'xero_csv'].includes(adapter.type) && context.batch.tenant) {
         try {
           const db = tenantDb((await createTenantKnex(context.batch.tenant)).knex, context.batch.tenant);

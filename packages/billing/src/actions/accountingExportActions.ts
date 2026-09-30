@@ -293,7 +293,7 @@ export const downloadAccountingExportArtifact = withAuth(async (
     const { knex } = await createTenantKnex();
     const db = tenantDb(knex, tenant);
     const query = db.table('accounting_export_artifacts as artifact')
-      .where({ 'artifact.artifact_id': artifactId, 'artifact.batch_id': batchId });
+      .where({ 'artifact.artifact_id': artifactId, 'artifact.batch_id': batchId, 'artifact.committed': true });
     db.tenantJoin(query, 'accounting_export_batches as batch', 'batch.batch_id', 'artifact.batch_id');
     const artifact = await query.first('artifact.file_id', 'artifact.content', 'artifact.filename', 'artifact.content_type');
     if (!artifact) throw new Error('This export artifact is unavailable for this batch.');
