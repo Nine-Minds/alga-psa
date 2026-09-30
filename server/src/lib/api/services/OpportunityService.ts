@@ -59,6 +59,7 @@ import type {
   CreateOpportunityApi,
   DeclaredOpportunityEvidenceApi,
   LoseOpportunityApi,
+  SetOpportunityStageApi,
   UpdateOpportunityApi,
   AcceptOpportunitySuggestionApi,
   WinOpportunityApi,
@@ -96,6 +97,7 @@ function throwOpportunityApiError(error: unknown): never {
     error.message === 'Next step must be a planned step of this opportunity' ||
     error.message === 'Opportunity has no current next action to complete' ||
     error.message === 'Only open opportunities can be closed' ||
+    error.message === 'Only open opportunities can change stage' ||
     error.message === 'Only open opportunities can be deleted' ||
     error.message === 'Opportunity values are locked by an accepted quote' ||
     error.message === 'Unlink quotes before deleting an opportunity' ||
@@ -113,6 +115,33 @@ function throwOpportunityApiError(error: unknown): never {
   }
 
   throw error;
+}
+
+/**
+ * Fields owned by a dedicated flow may be echoed back unchanged by a
+ * read-modify-write caller, but never reassigned through the generic update.
+ * Timestamps are compared by instant so `...Z` and `....000Z` count as equal.
+ */
+function assertUnchangedByUpdate(
+  field: string,
+  requested: string | null | undefined,
+  current: string | null | undefined,
+  guidance: string,
+): void {
+  if (requested === undefined) return;
+  if (sameFieldValue(requested, current)) return;
+  throw new ValidationError(`${field} cannot be changed through this endpoint. ${guidance}.`);
+}
+
+function sameFieldValue(requested: string | null, current: string | null | undefined): boolean {
+  const normalizedCurrent = current ?? null;
+  if (requested === normalizedCurrent) return true;
+  if (requested === null || normalizedCurrent === null) return false;
+  const requestedInstant = Date.parse(requested);
+  const currentInstant = Date.parse(normalizedCurrent);
+  return Number.isFinite(requestedInstant)
+    && Number.isFinite(currentInstant)
+    && requestedInstant === currentInstant;
 }
 
 async function nextOpportunityNumber(trx: Knex.Transaction, tenant: string): Promise<string> {
@@ -343,12 +372,52 @@ export class OpportunityService extends BaseService<IOpportunity | IOpportunityL
       if (!current) throw new Error('Opportunity not found');
 
       const {
-        client_id: _clientId,
+        client_id: clientId,
+        stage,
+        status,
+        next_action: nextAction,
+        next_action_due: nextActionDue,
         generator_key: _generatorKey,
         generator_context: _generatorContext,
         suggestion_id: _suggestionId,
         ...allowed
       } = data;
+
+      // These columns belong to dedicated flows, but a full-body
+      // read-modify-write PUT resends them unchanged. Echoing the current value
+      // is a no-op; asking to change it gets a 400 naming the real endpoint
+      // rather than the silent drop this used to do.
+      assertUnchangedByUpdate(
+        'stage',
+        stage,
+        current.stage,
+        'Stage changes use POST /api/v1/opportunities/{id}/stage (or /evidence, /win, /lose)',
+      );
+      assertUnchangedByUpdate(
+        'status',
+        status,
+        current.status,
+        'Status changes use POST /api/v1/opportunities/{id}/win or POST /api/v1/opportunities/{id}/lose',
+      );
+      assertUnchangedByUpdate(
+        'next_action',
+        nextAction,
+        current.next_action,
+        'Next-action changes use POST /api/v1/opportunities/{id}/complete-action or the opportunity steps API',
+      );
+      assertUnchangedByUpdate(
+        'next_action_due',
+        nextActionDue,
+        current.next_action_due,
+        'Next-action changes use POST /api/v1/opportunities/{id}/complete-action or the opportunity steps API',
+      );
+      assertUnchangedByUpdate(
+        'client_id',
+        clientId,
+        current.client_id,
+        'An opportunity cannot be moved between clients; create it under the intended client instead',
+      );
+
       if (
         current.values_locked_by_quote &&
         (allowed.mrr_cents !== undefined ||
@@ -359,10 +428,29 @@ export class OpportunityService extends BaseService<IOpportunity | IOpportunityL
         throw new Error('Opportunity values are locked by an accepted quote');
       }
 
-      // next_action / next_action_due are absent by schema: those columns
-      // mirror the current step, which the step flows own.
       return OpportunityModel.update(trx, context.tenant, id, allowed as Partial<IOpportunity>);
     }).catch(throwOpportunityApiError);
+  }
+
+  async setStage(
+    id: string,
+    data: SetOpportunityStageApi,
+    context: ServiceContext,
+  ): Promise<IOpportunity> {
+    if (data.stage === 'won' || data.stage === 'lost') {
+      throw new ValidationError(
+        `Closing an opportunity uses POST /api/v1/opportunities/{id}/${data.stage === 'won' ? 'win' : 'lose'}`,
+      );
+    }
+    const knex = await this.getDbForContext(context);
+    return withTransaction(knex, (trx) => declareStage(
+      trx,
+      context.tenant,
+      id,
+      data.stage,
+      context.userId,
+      data.detail,
+    )).catch(throwOpportunityApiError);
   }
 
   async delete(id: string, context: ServiceContext): Promise<void> {
