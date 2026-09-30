@@ -437,9 +437,10 @@ export class OpportunityService extends BaseService<IOpportunity | IOpportunityL
     data: SetOpportunityStageApi,
     context: ServiceContext,
   ): Promise<IOpportunity> {
-    if (data.stage === 'won' || data.stage === 'lost') {
+    const stage = data.stage;
+    if (stage === 'won' || stage === 'lost') {
       throw new ValidationError(
-        `Closing an opportunity uses POST /api/v1/opportunities/{id}/${data.stage === 'won' ? 'win' : 'lose'}`,
+        `Closing an opportunity uses POST /api/v1/opportunities/{id}/${stage === 'won' ? 'win' : 'lose'}`,
       );
     }
     const knex = await this.getDbForContext(context);
@@ -447,7 +448,7 @@ export class OpportunityService extends BaseService<IOpportunity | IOpportunityL
       trx,
       context.tenant,
       id,
-      data.stage,
+      stage,
       context.userId,
       data.detail,
     )).catch(throwOpportunityApiError);
