@@ -30,8 +30,10 @@ export const createOpportunityApiSchema = createOpportunitySchema;
 export const updateOpportunityApiSchema = updateOpportunitySchema.extend({
   stage: opportunityStageSchema.optional(),
   status: opportunityStatusSchema.optional(),
-  next_action: z.string().trim().min(1).optional(),
-  next_action_due: z.string().datetime().optional(),
+  // Nullable: a closed opportunity has no current step, so GET returns
+  // next_action/next_action_due as null and the echo has to validate.
+  next_action: z.string().trim().min(1).nullable().optional(),
+  next_action_due: z.string().datetime().nullable().optional(),
 });
 export const setOpportunityStageApiSchema = z.object({
   stage: opportunityStageSchema,

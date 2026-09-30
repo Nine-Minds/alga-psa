@@ -17156,10 +17156,14 @@ components:
             - won
             - lost
         next_action:
-          type: string
+          type:
+            - string
+            - "null"
           minLength: 1
         next_action_due:
-          type: string
+          type:
+            - string
+            - "null"
           format: date-time
     SetOpportunityStageBodyV1:
       type: object

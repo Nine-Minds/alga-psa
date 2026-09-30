@@ -120,23 +120,29 @@ function throwOpportunityApiError(error: unknown): never {
 /**
  * Fields owned by a dedicated flow may be echoed back unchanged by a
  * read-modify-write caller, but never reassigned through the generic update.
- * Timestamps are compared by instant so `...Z` and `....000Z` count as equal.
+ * Timestamps opt into `instant` compare so `...Z` and `....000Z` count as equal;
+ * free text stays an exact match.
  */
 function assertUnchangedByUpdate(
   field: string,
   requested: string | null | undefined,
   current: string | null | undefined,
   guidance: string,
+  compare: 'exact' | 'instant' = 'exact',
 ): void {
   if (requested === undefined) return;
-  if (sameFieldValue(requested, current)) return;
+  if (sameFieldValue(requested, current, compare)) return;
   throw new ValidationError(`${field} cannot be changed through this endpoint. ${guidance}.`);
 }
 
-function sameFieldValue(requested: string | null, current: string | null | undefined): boolean {
+function sameFieldValue(
+  requested: string | null,
+  current: string | null | undefined,
+  compare: 'exact' | 'instant',
+): boolean {
   const normalizedCurrent = current ?? null;
   if (requested === normalizedCurrent) return true;
-  if (requested === null || normalizedCurrent === null) return false;
+  if (compare === 'exact' || requested === null || normalizedCurrent === null) return false;
   const requestedInstant = Date.parse(requested);
   const currentInstant = Date.parse(normalizedCurrent);
   return Number.isFinite(requestedInstant)
@@ -410,6 +416,7 @@ export class OpportunityService extends BaseService<IOpportunity | IOpportunityL
         nextActionDue,
         current.next_action_due,
         'Next-action changes use POST /api/v1/opportunities/{id}/complete-action or the opportunity steps API',
+        'instant',
       );
       assertUnchangedByUpdate(
         'client_id',

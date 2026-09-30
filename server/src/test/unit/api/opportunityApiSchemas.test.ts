@@ -80,6 +80,28 @@ describe('opportunity REST schemas', () => {
     expect(updateOpportunityApiSchema.safeParse({ status: 'archived' }).success).toBe(false);
   });
 
+  // A closed opportunity has no current step, so GET answers with nulls there.
+  // Echoing that body back has to parse, or the read-modify-write flow this
+  // schema exists to protect breaks on exactly the won/lost rows.
+  it('accepts the null next-action pair a closed opportunity reads back as', () => {
+    expect(updateOpportunityApiSchema.parse({
+      title: 'Closed renewal',
+      stage: 'won',
+      status: 'won',
+      next_action: null,
+      next_action_due: null,
+    })).toMatchObject({
+      title: 'Closed renewal',
+      stage: 'won',
+      status: 'won',
+      next_action: null,
+      next_action_due: null,
+    });
+    // Null is the empty value; blank text still is not one.
+    expect(updateOpportunityApiSchema.safeParse({ next_action: '' }).success).toBe(false);
+    expect(updateOpportunityApiSchema.safeParse({ next_action_due: 'tomorrow' }).success).toBe(false);
+  });
+
   it('takes a stage plus optional detail and still validates the enum', () => {
     expect(setOpportunityStageApiSchema.parse({ stage: 'proposed' })).toEqual({ stage: 'proposed' });
     expect(setOpportunityStageApiSchema.parse({ stage: 'verbal', detail: '  Verbal yes  ' }))

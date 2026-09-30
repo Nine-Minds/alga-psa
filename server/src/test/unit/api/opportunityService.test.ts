@@ -145,6 +145,40 @@ describe('OpportunityService', () => {
       expect(mocks.update).toHaveBeenCalledWith({}, 'tenant-1', 'opportunity-1', { title: 'Renamed deal' });
     });
 
+    // Same flow on a closed row, where the next-action pair reads back as null.
+    it('ignores the null next-action pair a closed opportunity echoes back', async () => {
+      mocks.getById.mockResolvedValue({
+        ...current,
+        status: 'won',
+        stage: 'won',
+        next_action: null,
+        next_action_due: null,
+      });
+      const service = new OpportunityService();
+
+      await service.update('opportunity-1', {
+        title: 'Renamed deal',
+        stage: 'won',
+        status: 'won',
+        next_action: null,
+        next_action_due: null,
+        client_id: 'client-1',
+      } as any, context);
+
+      expect(mocks.update).toHaveBeenCalledWith({}, 'tenant-1', 'opportunity-1', { title: 'Renamed deal' });
+    });
+
+    // The lenient instant compare is for timestamps only: free text that happens
+    // to be date-parseable is still a change, not an echo.
+    it('compares next_action as text rather than as an instant', async () => {
+      mocks.getById.mockResolvedValue({ ...current, next_action: '2026' });
+      const service = new OpportunityService();
+
+      await expect(service.update('opportunity-1', { next_action: '2026-01-01' } as any, context))
+        .rejects.toMatchObject({ statusCode: 400, message: expect.stringContaining('next_action') });
+      expect(mocks.update).not.toHaveBeenCalled();
+    });
+
     it.each([
       ['stage', { stage: 'proposed' }, '/api/v1/opportunities/{id}/stage'],
       ['status', { status: 'won' }, '/api/v1/opportunities/{id}/win'],
