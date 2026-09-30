@@ -162,30 +162,6 @@ export async function getContractMonthlyFixedValuesByContract(
     .filter((line) => line.contract_line_type === 'Fixed')
     .map((line) => line.contract_line_id);
 
-  // Contract currency drives the currency-specific catalog price, matching the
-  // invoice engine's `service_prices` join.
-  const contractCurrencies = new Map<string, string>();
-  if (contractIds.length > 0) {
-    const contractRows = (await db.table('contracts')
-      .whereIn('contract_id', contractIds)
-      .select('contract_id', 'currency_code')) as Array<{
-      contract_id: string;
-      currency_code: string | null;
-    }>;
-    for (const contract of contractRows) {
-      contractCurrencies.set(
-        contract.contract_id,
-        (contract.currency_code && String(contract.currency_code).trim()) || 'USD',
-      );
-    }
-  }
-  const tenantSettings = (await db.table('default_billing_settings')
-    .select('default_currency_code')
-    .first()) as { default_currency_code?: string | null } | undefined;
-  const tenantDefaultCurrency =
-    (tenantSettings?.default_currency_code && String(tenantSettings.default_currency_code).trim()) ||
-    'USD';
-
   const membersByLine = new Map<string, FixedMemberValuationRow[]>();
   if (fixedLineIds.length > 0) {
     const memberQuery = db.table('contract_line_service_configuration as clsc')
@@ -213,10 +189,36 @@ export async function getContractMonthlyFixedValuesByContract(
     }
   }
 
+  // Contract currency drives the currency-specific catalog price, matching the
+  // invoice engine's `service_prices` join. Only member rate resolution reads
+  // it, so a valuation with no Fixed-line members skips these lookups.
+  const contractCurrencies = new Map<string, string>();
+  let tenantDefaultCurrency = 'USD';
+  if (membersByLine.size > 0) {
+    const contractRows = (await db.table('contracts')
+      .whereIn('contract_id', contractIds)
+      .select('contract_id', 'currency_code')) as Array<{
+      contract_id: string;
+      currency_code: string | null;
+    }>;
+    for (const contract of contractRows) {
+      contractCurrencies.set(
+        contract.contract_id,
+        (contract.currency_code && String(contract.currency_code).trim()) || 'USD',
+      );
+    }
+    const tenantSettings = (await db.table('default_billing_settings')
+      .select('default_currency_code')
+      .first()) as { default_currency_code?: string | null } | undefined;
+    tenantDefaultCurrency =
+      (tenantSettings?.default_currency_code && String(tenantSettings.default_currency_code).trim()) ||
+      'USD';
+  }
+
   // Legacy service-line overrides (`contract_line_services.custom_rate`) — the
   // product baseline consults these before the catalog price.
   const serviceLineRates = new Map<string, number | string | null>();
-  if (fixedLineIds.length > 0) {
+  if (membersByLine.size > 0) {
     const serviceLineRows = (await db.table('contract_line_services')
       .whereIn('contract_line_id', fixedLineIds)
       .select('contract_line_id', 'service_id', 'custom_rate')) as Array<{
