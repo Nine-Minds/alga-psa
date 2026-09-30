@@ -215,6 +215,10 @@ export interface AccountingExportDeliveryResult {
 /** External invoice charge with tax data from accounting system */
 export interface ExternalInvoiceChargeTax {
   lineId: string;
+  /** Original invoice charge when this provider line represents a fixed-plan allocation. */
+  parentChargeId?: string;
+  /** Persisted invoice_charge_details.item_detail_id represented by this provider line. */
+  allocationDetailId?: string;
   externalLineId?: string;
   taxAmount: number;
   taxCode?: string;

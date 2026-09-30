@@ -124,6 +124,8 @@ interface XeroDocumentPayload {
   invoice: XeroInvoicePayload;
   /** Charge IDs in same order as invoice.lines[] for mapping after delivery */
   chargeIds: string[];
+  /** Original invoice parent and fixed-detail identities parallel to chargeIds. */
+  chargeLineage: Array<{ parentChargeId: string; allocationDetailId?: string }>;
   mapping: {
     clientId: string;
     source?: string;
@@ -468,6 +470,7 @@ export class XeroAdapter implements AccountingExportAdapter {
 
       const lineItems: XeroInvoiceLinePayload[] = [];
       const chargeIds: string[] = []; // Track charge IDs in same order as lineItems
+      const chargeLineage: XeroDocumentPayload['chargeLineage'] = [];
       let invoiceTotal = 0;
       let detectedLineAmountType: LineAmountType | undefined;
 
@@ -656,6 +659,10 @@ export class XeroAdapter implements AccountingExportAdapter {
 
         lineItems.push(payload);
         chargeIds.push(line.document_line_id);
+        chargeLineage.push({
+          parentChargeId: line.payload?.metadata?.allocation_parent_charge_id ?? line.document_line_id,
+          allocationDetailId: line.payload?.metadata?.allocation_detail_id,
+        });
         invoiceTotal += netAmountCents;
       }
 
@@ -693,6 +700,7 @@ export class XeroAdapter implements AccountingExportAdapter {
         connectionId: context.batch.target_realm ?? null,
         invoice: invoicePayload,
         chargeIds, // Alga charge IDs in same order as invoice.lines[]
+        chargeLineage,
         mapping: {
           clientId,
           source: extractMappingSource(clientMapping.metadata)
@@ -787,13 +795,15 @@ export class XeroAdapter implements AccountingExportAdapter {
         // Xero may return line IDs in the raw response - extract if available
         const rawInvoice = result.raw as Record<string, any> | undefined;
         const xeroLines = rawInvoice?.LineItems ?? [];
-        const chargeLineMappings: Array<{ chargeId: string; xeroLineItemId: string }> = [];
+        const chargeLineMappings: Array<{ chargeId: string; parentChargeId: string; allocationDetailId?: string; xeroLineItemId: string }> = [];
 
         for (let j = 0; j < payload.chargeIds.length && j < xeroLines.length; j++) {
           const xeroLineItemId = xeroLines[j]?.LineItemID;
           if (xeroLineItemId) {
             chargeLineMappings.push({
               chargeId: payload.chargeIds[j],
+              parentChargeId: payload.chargeLineage[j]?.parentChargeId ?? payload.chargeIds[j],
+              allocationDetailId: payload.chargeLineage[j]?.allocationDetailId,
               xeroLineItemId
             });
           }
@@ -1022,13 +1032,13 @@ export class XeroAdapter implements AccountingExportAdapter {
         })
         .first();
 
-      const chargeLineMappings: Array<{ chargeId: string; xeroLineItemId: string }> =
+      const chargeLineMappings: Array<{ chargeId: string; parentChargeId?: string; allocationDetailId?: string; xeroLineItemId: string }> =
         (mappingRow?.metadata as any)?.chargeLineMappings ?? [];
 
-      // Build reverse map: Xero lineItemId -> Alga charge ID
-      const xeroLineToChargeId = new Map<string, string>();
+      // Keep provider split identity and original invoice parent identity together.
+      const xeroLineToCharge = new Map<string, { chargeId: string; parentChargeId?: string; allocationDetailId?: string }>();
       for (const mapping of chargeLineMappings) {
-        xeroLineToChargeId.set(mapping.xeroLineItemId, mapping.chargeId);
+        xeroLineToCharge.set(mapping.xeroLineItemId, mapping);
       }
 
       // Map Xero line items to external invoice charges with full tax component details
@@ -1047,11 +1057,13 @@ export class XeroAdapter implements AccountingExportAdapter {
 
         // Use stored charge ID if available, otherwise fall back to Xero lineItemId or positional index
         const xeroLineItemId = line.lineItemId;
-        const chargeId = xeroLineItemId ? xeroLineToChargeId.get(xeroLineItemId) : undefined;
-        const lineId = chargeId ?? xeroLineItemId ?? `line-${index}`;
+        const chargeMapping = xeroLineItemId ? xeroLineToCharge.get(xeroLineItemId) : undefined;
+        const lineId = chargeMapping?.chargeId ?? xeroLineItemId ?? `line-${index}`;
 
         return {
           lineId,
+          parentChargeId: chargeMapping?.parentChargeId,
+          allocationDetailId: chargeMapping?.allocationDetailId,
           externalLineId: xeroLineItemId,
           taxAmount: line.taxAmount,
           taxCode: line.taxType,

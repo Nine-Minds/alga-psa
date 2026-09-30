@@ -1,27 +1,27 @@
 {
   "documents": [
     {
-      "documentId": "d593279e-9f5f-45f9-ac6c-4605b2db1779",
+      "documentId": "51d9538e-94f9-4abb-8e71-a64bfb9f4728",
       "lineIds": [
-        "1fbaad70-cec4-4203-b2c2-e46f3e71ae99",
-        "19ffa928-afc7-421f-a5de-65755c90935c",
-        "187e63e8-98d8-4fc8-a9ae-844e36d58f70",
-        "580b29b0-110e-466f-a2d9-5c447ec2d13e",
-        "cdafe903-00fb-4eb8-834d-acdd1b3978e8",
-        "50509787-bac0-4f88-835c-6c57ac9f4457"
+        "72903d23-2448-4dda-ad02-07e69f279380",
+        "5e495281-5b5d-4c5b-a234-c4b7ed8601f2",
+        "ebfea62f-e81d-4895-b553-7e5b86c70299",
+        "d6a965ec-641c-4085-b76c-444b1f44e7f4",
+        "425195ae-1387-476a-be8e-2c9368f6dfd2",
+        "c8343f54-5910-4598-8e90-ac9287cc1651"
       ],
       "payload": {
         "type": "quickbooks_desktop_iif",
-        "batchId": "d593279e-9f5f-45f9-ac6c-4605b2db1779",
-        "generatedAt": "2026-09-30T04:08:11.710Z"
+        "batchId": "51d9538e-94f9-4abb-8e71-a64bfb9f4728",
+        "generatedAt": "2026-09-30T04:43:59.471Z"
       }
     }
   ],
   "files": [
     {
-      "filename": "accounting-export-d593279e-9f5f-45f9-ac6c-4605b2db1779.iif",
+      "filename": "accounting-export-51d9538e-94f9-4abb-8e71-a64bfb9f4728.iif",
       "contentType": "text/plain",
-      "content": "!TRNS\tTRNSID\tTRNSTYPE\tDATE\tACCNT\tNAME\tAMOUNT\tDOCNUM\tMEMO\n!SPL\tSPLID\tTRNSTYPE\tDATE\tACCNT\tNAME\tAMOUNT\tDOCNUM\tMEMO\n!ENDTRNS\nTRNS\tc81253d5-deaf-432a-af55-e3673600006b\tINVOICE\t9/1/2026\tAccounts Receivable\tCUSTOMER\t3238.00\tREVIEW-CONTRACT-3499-quickbooks_desktop\tREVIEW-CONTRACT-3499-quickbooks_desktop\nSPL\t80351885-db36-404c-b6b5-32096c622e16\tINVOICE\t9/1/2026\tDISCOUNT\tCUSTOMER\t405.00\tREVIEW-CONTRACT-3499-quickbooks_desktop\tLoyalty 10%\nSPL\t4ccc7314-adb0-47f5-bf94-18e4b461538d\tINVOICE\t9/1/2026\tDISCOUNT\tCUSTOMER\t0.99\tREVIEW-CONTRACT-3499-quickbooks_desktop\tManual credit\nSPL\tc7741a08-46f6-4b71-bcf9-533719bb3695\tINVOICE\t9/1/2026\tDISCOUNT\tCUSTOMER\t1.01\tREVIEW-CONTRACT-3499-quickbooks_desktop\tManual fixed discount\nSPL\t2a985b81-2d66-41b4-8c9f-7e6ca55f5ecc\tINVOICE\t9/1/2026\tDISCOUNT\tCUSTOMER\t405.00\tREVIEW-CONTRACT-3499-quickbooks_desktop\tManual percentage discount\nSPL\t2e6e2a60-8a3d-4c28-9309-35c6488c3083\tINVOICE\t9/1/2026\tMISC\tCUSTOMER\t-150.00\tREVIEW-CONTRACT-3499-quickbooks_desktop\tMiscellaneous charge\nSPL\t598c78a5-b96f-45a8-82a4-8f840133b005\tINVOICE\t9/1/2026\tMISC\tCUSTOMER\t-1950.00\tREVIEW-CONTRACT-3499-quickbooks_desktop\tRecurring support\nSPL\t95f67ce6-8fcf-4a3c-876d-85b672e3c08d\tINVOICE\t9/1/2026\tRECURRING\tCUSTOMER\t-1950.00\tREVIEW-CONTRACT-3499-quickbooks_desktop\tRecurring support\nENDTRNS"
+      "content": "!TRNS\tTRNSID\tTRNSTYPE\tDATE\tACCNT\tNAME\tAMOUNT\tDOCNUM\tMEMO\n!SPL\tSPLID\tTRNSTYPE\tDATE\tACCNT\tNAME\tAMOUNT\tDOCNUM\tMEMO\n!ENDTRNS\nTRNS\t8258538d-39eb-4cac-b9aa-0c9d90d9abc4\tINVOICE\t9/1/2026\tAccounts Receivable\tCUSTOMER\t3238.00\tREVIEW-CONTRACT-3499-quickbooks_desktop\tREVIEW-CONTRACT-3499-quickbooks_desktop\nSPL\t8f5e1ada-e4df-48c6-9c84-f0aa4892ed9a\tINVOICE\t9/1/2026\tDISCOUNT\tCUSTOMER\t405.00\tREVIEW-CONTRACT-3499-quickbooks_desktop\tLoyalty 10%\nSPL\tc5a21a5a-5ec3-4392-9ae9-6433aea49127\tINVOICE\t9/1/2026\tDISCOUNT\tCUSTOMER\t0.99\tREVIEW-CONTRACT-3499-quickbooks_desktop\tManual credit\nSPL\t2a7a6948-d804-43a9-b1db-83320e6bed06\tINVOICE\t9/1/2026\tDISCOUNT\tCUSTOMER\t1.01\tREVIEW-CONTRACT-3499-quickbooks_desktop\tManual fixed discount\nSPL\tebc71bd2-a5f0-4f94-9bc3-0fc401a307b4\tINVOICE\t9/1/2026\tDISCOUNT\tCUSTOMER\t405.00\tREVIEW-CONTRACT-3499-quickbooks_desktop\tManual percentage discount\nSPL\ta6b96790-8caf-4640-b117-970f8f96ee18\tINVOICE\t9/1/2026\tMISC\tCUSTOMER\t-150.00\tREVIEW-CONTRACT-3499-quickbooks_desktop\tMiscellaneous charge\nSPL\tcf3f0572-d838-4dd6-821a-1c1650947136\tINVOICE\t9/1/2026\tRECURRING\tCUSTOMER\t-1950.00\tREVIEW-CONTRACT-3499-quickbooks_desktop\tRecurring support\nSPL\tfecdbf08-ad20-46e8-a0a3-cc453820a6c1\tINVOICE\t9/1/2026\tMISC\tCUSTOMER\t-1950.00\tREVIEW-CONTRACT-3499-quickbooks_desktop\tRecurring support\nENDTRNS"
     }
   ],
   "metadata": {

@@ -72,7 +72,7 @@
       "Description": "Recurring support",
       "SalesItemLineDetail": {
         "ItemRef": {
-          "value": "RECURRING"
+          "value": "MISC"
         },
         "Qty": 1,
         "UnitPrice": 1950
@@ -84,7 +84,7 @@
       "Description": "Recurring support",
       "SalesItemLineDetail": {
         "ItemRef": {
-          "value": "MISC"
+          "value": "RECURRING"
         },
         "Qty": 1,
         "UnitPrice": 1950

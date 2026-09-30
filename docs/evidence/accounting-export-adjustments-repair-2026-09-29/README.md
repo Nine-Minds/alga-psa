@@ -26,6 +26,15 @@ The artifacts below were produced by the real adapters against isolated database
 | Xero CSV | [CSV](artifacts/xero_csv.csv), [adapter result](artifacts/xero_csv.json) | Independent `xero_csv` mappings; negative numeric cells and settlement totals survive parsing. |
 | QuickBooks Desktop | [IIF](artifacts/quickbooks_desktop.iif), [adapter result](artifacts/quickbooks_desktop.json) | Mapped service/discount account splits; receivable plus splits sums to zero. |
 
+## Fixed-plan external-tax round trip
+
+The QBO and Xero round-trip fixtures include two $1,950 allocations under one $3,900 consolidated parent, a $150 manual charge, a $390 automatic discount, $1.10 of original tax, and a mocked provider response with $4.35 of changed tax. Both imports update the parent and manual line, recalculate the invoice total to $3,664.35, and leave the discount amount intact. QBO's invoice-level tax is split across its sales lines ($4.18 onto the parent and $0.17 onto the manual charge); Xero's per-line taxes aggregate $4.10 from the two allocation IDs onto the parent and $0.25 onto the manual charge.
+
+- [QBO provider response, persisted split identities, import, repeat import and update mapping](artifacts/tax_roundtrip_quickbooks_online.json)
+- [Xero provider response, persisted split identities, import, repeat import and update mapping](artifacts/tax_roundtrip_xero.json)
+
+The adapters retain each allocation's detail ID as its retry/update identity and also record the parent charge ID. Tax import aggregates returned allocation taxes onto that parent while direct lines such as the manual charge keep their own tax. A repeated import is rejected after `tax_source` becomes `external`; assertions confirm it does not change tax, totals, or create a second import record. Provider responses in these fixtures are mocked; they do not claim live QBO/Xero acceptance.
+
 Regenerate artifacts from `server/` with:
 
 ```sh
@@ -38,7 +47,7 @@ The September 30 rerun used the current adapter writers and isolated DB fixtures
 
 ## Validation
 
-- Contract adjustment DB suite: 55 tests, including creation/update service validation, idempotent catalog provisioning, credits, settlement retries, lifecycle protections and all five adapter payloads.
+- Contract adjustment DB suite: 57 tests, including creation/update service validation, idempotent catalog provisioning, credits, settlement retries, lifecycle protections, all five adapter payloads, and the QBO/Xero external-tax round trips.
 - External mapping DB suite: 35 tests, including create/read/update/delete of the discount identity for all five providers, realm/tenant isolation and invalid Xero accounts.
 - Current-head focused unit rerun: 53 tests passed across accounting CSV serialization, export validation, save-time warnings and mapping-screen registration. The validation cases include fixed-parent child service mapping and allocation-total mismatch rejection.
 - Credit/tax and invoice-generation discount DB suites: 11 tests. Positive manual fixtures now use a real service; tax and monetary expectations are unchanged.

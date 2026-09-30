@@ -39,7 +39,19 @@ export async function expandAccountingExportCharges<T extends Charge>(
         service_id: child.service_id, quantity: 1, unit_price: amount, net_amount: amount,
         tax_amount: taxAmount, total_price: amount + taxAmount,
       });
-      result.push({ ...line, document_line_id: child.item_detail_id, amount_cents: amount + taxAmount });
+      result.push({
+        ...line,
+        document_line_id: child.item_detail_id,
+        amount_cents: amount + taxAmount,
+        payload: {
+          ...line.payload,
+          metadata: {
+            ...line.payload?.metadata,
+            allocation_parent_charge_id: parent.item_id,
+            allocation_detail_id: child.item_detail_id,
+          },
+        },
+      });
     }
   }
   return { charges: expanded, lines: result };

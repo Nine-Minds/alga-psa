@@ -200,7 +200,7 @@ export class ExternalTaxImportService {
         .select('item_id', 'description', 'tax_amount');
 
       const originalTax = charges.reduce(
-        (sum, c) => sum + (c.tax_amount ?? 0),
+        (sum, c) => sum + Number(c.tax_amount ?? 0),
         0
       );
 
@@ -512,8 +512,9 @@ export class ExternalTaxImportService {
     let chargesUpdated = 0;
     const db = tenantDb(knex, tenant);
 
-    // Create a map of external charges by lineId for matching
-    // lineId is now the actual charge ID (item_id) when charge mappings are stored
+    // Provider split IDs remain unique in lineId. A consolidated fixed-plan
+    // parent is carried separately so the split tax can be summed onto its
+    // invoice_charges row without collapsing sibling allocations in a Map.
     const externalChargeMap = new Map(
       externalInvoice.charges.map(c => [c.lineId, c])
     );
@@ -521,19 +522,54 @@ export class ExternalTaxImportService {
     // Build set of charge IDs for robust matching
     const chargeIds = new Set(charges.map(c => c.item_id));
 
-    // Check if external charges use actual charge IDs (robust matching)
-    // or fall back to positional line-N format
-    const hasChargeIdMatching = externalInvoice.charges.some(
-      c => chargeIds.has(c.lineId)
+    // Older exports stored allocation detail IDs as charge IDs without parent
+    // lineage. Recover their parent from the canonical persisted details table.
+    const externalLineIds = externalInvoice.charges.map(charge => charge.lineId)
+      .filter(lineId => !chargeIds.has(lineId));
+    const detailParents = externalLineIds.length > 0
+      ? await db.table('invoice_charge_details')
+          .whereIn('item_detail_id', externalLineIds)
+          .select('item_detail_id', 'item_id')
+      : [];
+    const detailParentById = new Map<string, string>(
+      detailParents.map((row: { item_detail_id: string; item_id: string }) => [row.item_detail_id, row.item_id])
     );
+    const externalByParent = new Map<string, typeof externalInvoice.charges>();
+    for (const externalCharge of externalInvoice.charges) {
+      const parentId = externalCharge.parentChargeId ??
+        (chargeIds.has(externalCharge.lineId) ? externalCharge.lineId : detailParentById.get(externalCharge.lineId));
+      if (!parentId || !chargeIds.has(parentId)) continue;
+      const matched = externalByParent.get(parentId) ?? [];
+      matched.push(externalCharge);
+      externalByParent.set(parentId, matched);
+    }
+
+    // Check whether any provider line resolves to an invoice charge (directly
+    // or through fixed-detail lineage), else retain the positional fallback.
+    const hasChargeIdMatching = externalByParent.size > 0;
 
     const hasPositionalMatching = !hasChargeIdMatching &&
       charges.every((_, i) => externalChargeMap.has(`line-${i}`));
 
     if (hasChargeIdMatching && externalInvoice.charges.length > 0) {
-      // Direct mapping by charge ID - most robust
+      // Match direct invoice lines one-to-one and sum allocation split taxes
+      // onto a consolidated fixed-plan parent.
       for (const charge of charges) {
-        const externalCharge = externalChargeMap.get(charge.item_id);
+        const directCharge = externalChargeMap.get(charge.item_id);
+        const parentMatches = externalByParent.get(charge.item_id) ?? [];
+        const allocationMatches = parentMatches.filter(externalCharge =>
+          externalCharge.allocationDetailId != null || externalCharge.lineId !== charge.item_id
+        );
+        const externalCharge = directCharge ?? (allocationMatches.length > 0
+          ? {
+              ...allocationMatches[0],
+              taxAmount: allocationMatches.reduce((sum, allocation) => sum + allocation.taxAmount, 0),
+              taxCode: allocationMatches.every(allocation => allocation.taxCode === allocationMatches[0].taxCode)
+                ? allocationMatches[0].taxCode : undefined,
+              taxRate: allocationMatches.every(allocation => allocation.taxRate === allocationMatches[0].taxRate)
+                ? allocationMatches[0].taxRate : undefined,
+            }
+          : undefined);
 
         if (externalCharge) {
           await db.table('invoice_charges')

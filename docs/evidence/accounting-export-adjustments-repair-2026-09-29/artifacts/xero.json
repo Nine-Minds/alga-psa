@@ -57,7 +57,7 @@
         "Quantity": 1,
         "UnitAmount": 1950,
         "LineAmount": 1950,
-        "AccountCode": "RECURRING",
+        "AccountCode": "MISC",
         "TaxAmount": 0
       },
       {
@@ -65,7 +65,7 @@
         "Quantity": 1,
         "UnitAmount": 1950,
         "LineAmount": 1950,
-        "AccountCode": "MISC",
+        "AccountCode": "RECURRING",
         "TaxAmount": 0
       }
     ]

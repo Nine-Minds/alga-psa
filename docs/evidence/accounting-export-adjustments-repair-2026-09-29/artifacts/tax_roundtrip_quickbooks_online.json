@@ -1,0 +1,118 @@
+{
+  "adapter": "quickbooks_online",
+  "provider": "mocked QBO response",
+  "providerResponse": {
+    "DocNumber": "ADJ-8abc77a4",
+    "TxnDate": "2026-09-01",
+    "DueDate": "2026-09-30",
+    "CustomerRef": {
+      "value": "CUSTOMER"
+    },
+    "Line": [
+      {
+        "Amount": 1950,
+        "DetailType": "SalesItemLineDetail",
+        "Description": "Recurring support",
+        "SalesItemLineDetail": {
+          "ItemRef": {
+            "value": "RECURRING"
+          },
+          "Qty": 1,
+          "UnitPrice": 1950
+        },
+        "Id": "qbo-line-0"
+      },
+      {
+        "Amount": 1950,
+        "DetailType": "SalesItemLineDetail",
+        "Description": "Recurring support",
+        "SalesItemLineDetail": {
+          "ItemRef": {
+            "value": "MISC"
+          },
+          "Qty": 1,
+          "UnitPrice": 1950
+        },
+        "Id": "qbo-line-1"
+      },
+      {
+        "Amount": 390,
+        "DetailType": "DiscountLineDetail",
+        "Description": "Loyalty 10%",
+        "DiscountLineDetail": {
+          "DiscountAccountRef": {
+            "value": "DISCOUNT"
+          },
+          "PercentBased": false,
+          "DiscountAmount": 390
+        },
+        "Id": "qbo-line-2"
+      },
+      {
+        "Amount": 150,
+        "DetailType": "SalesItemLineDetail",
+        "Description": "Round-trip manual charge",
+        "SalesItemLineDetail": {
+          "ItemRef": {
+            "value": "MISC"
+          },
+          "Qty": "1.00",
+          "UnitPrice": 150
+        },
+        "Id": "qbo-line-3"
+      }
+    ],
+    "CurrencyRef": {
+      "value": "USD"
+    },
+    "Id": "TAX-quickbooks_online-8abc77a4",
+    "SyncToken": "2",
+    "TotalAmt": 3664.35,
+    "TxnTaxDetail": {
+      "TotalTax": 4.35
+    },
+    "sparse": true
+  },
+  "exportedParent": "0d3d83c1-797d-469a-bfe6-95317ca8cb37",
+  "allocations": [
+    {
+      "chargeId": "34b75876-d345-40a8-93e7-722ab23dc1cd",
+      "qboLineId": "qbo-line-0",
+      "parentChargeId": "0d3d83c1-797d-469a-bfe6-95317ca8cb37",
+      "allocationDetailId": "34b75876-d345-40a8-93e7-722ab23dc1cd"
+    },
+    {
+      "chargeId": "ec246dac-2a5b-4811-86a1-c9e21ca72ff7",
+      "qboLineId": "qbo-line-1",
+      "parentChargeId": "0d3d83c1-797d-469a-bfe6-95317ca8cb37",
+      "allocationDetailId": "ec246dac-2a5b-4811-86a1-c9e21ca72ff7"
+    }
+  ],
+  "importResult": {
+    "success": true,
+    "invoiceId": "8abc77a4-e674-4a23-8484-612ae6f7c826",
+    "importId": "f644e00c-18dd-48fb-a1ce-f2d3394a9ebc",
+    "originalTax": 110,
+    "importedTax": 435,
+    "difference": 325,
+    "chargesUpdated": 2
+  },
+  "importedAmountsCents": {
+    "parentTax": 418,
+    "manualChargeTax": 17,
+    "discountTax": 0,
+    "invoiceSubtotal": 366000,
+    "invoiceTax": 435,
+    "invoiceTotal": 366435
+  },
+  "repeatedImport": {
+    "success": false,
+    "invoiceId": "8abc77a4-e674-4a23-8484-612ae6f7c826",
+    "originalTax": 0,
+    "importedTax": 0,
+    "difference": 0,
+    "chargesUpdated": 0,
+    "error": "Invoice tax source is 'external', expected 'pending_external'"
+  },
+  "repeatImportCount": 1
+}

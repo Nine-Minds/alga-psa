@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { createTestDbConnection, wireLocalTestDbEnv } from '../actions/_dbTestUtils';
@@ -388,6 +388,8 @@ afterAll(async () => {
   actionContext.userId = null;
   await db?.destroy().catch(() => undefined);
 });
+
+afterEach(() => vi.restoreAllMocks());
 
 describe('contract invoice adjustments (DB-backed)', () => {
   const dateOnly = (value: unknown) => value instanceof Date
@@ -3069,6 +3071,186 @@ describe('accounting adjustment export matrix', () => {
       await fs.mkdir(process.env.ACCOUNTING_EVIDENCE_DIR, { recursive: true });
       await fs.writeFile(`${process.env.ACCOUNTING_EVIDENCE_DIR}/${adapterType}.json`, JSON.stringify(evidence, null, 2));
       for (const file of transformed.files ?? []) await fs.writeFile(`${process.env.ACCOUNTING_EVIDENCE_DIR}/${adapterType}.${adapterType === 'quickbooks_desktop' ? 'iif' : 'csv'}`, String(file.content));
+    }
+  });
+
+  it.each(['quickbooks_online', 'xero'])('round-trips fixed allocation tax through %s export and import', async (adapterType) => {
+    const { ensureMiscellaneousService } = await import('@alga-psa/db');
+    const { ExternalTaxImportService } = await import('./externalTaxImportService');
+    const miscId = await ensureMiscellaneousService(db, tenant);
+    const fixture = await createDraftWithGeneratedChargeAndDiscount();
+    const externalRef = `TAX-${adapterType}-${fixture.invoiceId.slice(0, 8)}`;
+    const realm = 'contract-tax-roundtrip-realm';
+    const allocationDetailIds = [uuidv4(), uuidv4()];
+    const configIds = [uuidv4(), uuidv4()];
+    const internalTax = 110; // cents: 100 on the fixed parent, 10 on the manual charge
+
+    await db('invoices').where({ tenant, invoice_id: fixture.invoiceId }).update({
+      tax_source: 'pending_external', subtotal: 366000, tax: internalTax, total_amount: 366000 + internalTax,
+    });
+    await db('invoice_charges').where({ tenant, item_id: fixture.generatedChargeId }).update({
+      service_id: null, tax_amount: 100, total_price: 390100,
+    });
+    await db('invoice_charges').where({ tenant, item_id: fixture.automaticDiscountItemId }).update({
+      service_id: null, tax_amount: 0,
+    });
+    await db.transaction(trx => persistManualInvoiceCharges(trx, fixture.invoiceId, [
+      { service_id: miscId, description: 'Round-trip manual charge', quantity: 1, rate: 15000, tax_rate_id: null },
+    ], { client_id: clientId, region_code: null, default_currency_code: 'USD' }, { user: { id: userId } } as never, tenant));
+    const manualCharge = await db('invoice_charges').where({ tenant, invoice_id: fixture.invoiceId, description: 'Round-trip manual charge' }).first();
+    await db('invoice_charges').where({ tenant, item_id: manualCharge.item_id }).update({ tax_amount: 10, total_price: Number(manualCharge.net_amount) + 10 });
+    await db('invoices').where({ tenant, invoice_id: fixture.invoiceId }).update({ subtotal: 366000, tax: internalTax, total_amount: 366000 + internalTax });
+    await db('contract_line_service_configuration').insert([
+      { tenant, config_id: configIds[0], contract_line_id: contractLineId, service_id: serviceId, configuration_type: 'Fixed', quantity: 1 },
+      { tenant, config_id: configIds[1], contract_line_id: contractLineId, service_id: miscId, configuration_type: 'Fixed', quantity: 1 },
+    ]);
+    await db('invoice_charge_details').insert([
+      { tenant, item_detail_id: allocationDetailIds[0], item_id: fixture.generatedChargeId, service_id: serviceId, config_id: configIds[0], quantity: 1, rate: 195000 },
+      { tenant, item_detail_id: allocationDetailIds[1], item_id: fixture.generatedChargeId, service_id: miscId, config_id: configIds[1], quantity: 1, rate: 195000 },
+    ]);
+    await db('invoice_charge_fixed_details').insert([
+      { tenant, item_detail_id: allocationDetailIds[0], base_rate: 195000, allocated_amount: 195000, tax_amount: 40, enable_proration: false, fmv: 195000, proportion: 0.5 },
+      { tenant, item_detail_id: allocationDetailIds[1], base_rate: 195000, allocated_amount: 195000, tax_amount: 60, enable_proration: false, fmv: 195000, proportion: 0.5 },
+    ]);
+
+    for (const [kind, local, external] of [
+      ['service', serviceId, 'RECURRING'], ['service', miscId, 'MISC'],
+      ['discount', 'invoice_discount', 'DISCOUNT'], ['client', clientId, 'CUSTOMER'],
+    ]) {
+      await db('tenant_external_entity_mappings').where({ tenant, integration_type: adapterType, alga_entity_type: kind, alga_entity_id: local, external_realm_id: realm }).delete();
+      await db('tenant_external_entity_mappings').insert({ tenant, integration_type: adapterType, alga_entity_type: kind, alga_entity_id: local,
+        external_entity_id: external, external_realm_id: realm, sync_status: 'manual_link', metadata: JSON.stringify({ accountCode: external, xeroTargetKind: 'account' }) });
+    }
+
+    const adapter = adapterType === 'quickbooks_online'
+      ? new (await import('../adapters/accounting/quickBooksOnlineAdapter')).QuickBooksOnlineAdapter()
+      : new (await import('../adapters/accounting/xeroAdapter')).XeroAdapter();
+    const makeContext = async () => {
+      const invoiceCharges = await db('invoice_charges').where({ tenant, invoice_id: fixture.invoiceId }).orderBy('created_at').orderBy('item_id');
+      return { batch: { tenant, batch_id: uuidv4(), adapter_type: adapterType, target_realm: realm, export_type: 'invoice', created_at: '2026-09-01' },
+        lines: invoiceCharges.map(charge => ({ tenant, line_id: uuidv4(), document_id: fixture.invoiceId, document_line_id: charge.item_id,
+          client_id: clientId, amount_cents: Number(charge.total_price), currency_code: 'USD', payload: { service_period_source: 'financial_document_fallback' } })),
+        taxDelegationMode: 'delegate' } as any;
+    };
+    const context = await makeContext();
+    const transformed = await adapter.transform(context);
+    let qboProviderInvoice: any;
+    let xeroProviderInvoice: any;
+
+    if (adapterType === 'quickbooks_online') {
+      const { QboClientService } = await import('@alga-psa/integrations/lib/qbo/qboClientService');
+      const qboClient = {
+        create: vi.fn(async (_entity: string, payload: any) => {
+          qboProviderInvoice = { ...payload, Id: externalRef, SyncToken: '1', TotalAmt: 3664.35, TxnTaxDetail: { TotalTax: 4.35 },
+            Line: payload.Line.map((line: any, index: number) => ({ ...line, Id: `qbo-line-${index}` })) };
+          return qboProviderInvoice;
+        }),
+        read: vi.fn(async () => qboProviderInvoice),
+        update: vi.fn(async (_entity: string, payload: any) => {
+          qboProviderInvoice = { ...qboProviderInvoice, ...payload, SyncToken: '2',
+            TotalAmt: 3664.35, TxnTaxDetail: { TotalTax: 4.35 },
+            Line: payload.Line.map((line: any, index: number) => ({ ...line, Id: `qbo-line-${index}` })) };
+          return qboProviderInvoice;
+        }),
+      };
+      vi.spyOn(QboClientService, 'create').mockResolvedValue(qboClient as any);
+      await adapter.deliver(transformed, context);
+      const mapping = await db('tenant_external_entity_mappings').where({ tenant, integration_type: adapterType, alga_entity_type: 'invoice', alga_entity_id: fixture.invoiceId }).first();
+      const persistedLines = mapping.metadata.chargeLineMappings;
+      const parentMappings = persistedLines.filter((line: any) => line.parentChargeId === fixture.generatedChargeId);
+      expect(parentMappings.map((line: any) => line.chargeId).sort()).toEqual([...allocationDetailIds].sort());
+      expect(parentMappings.map((line: any) => line.allocationDetailId).sort()).toEqual([...allocationDetailIds].sort());
+    } else {
+      const { XeroClientService } = await import('@alga-psa/integrations/lib/xero/xeroClientService');
+      const xeroPayload = (transformed.documents[0].payload as any);
+      const fakeClient = {
+        createInvoices: vi.fn(async (payloads: any[]) => {
+          const payload = payloads[0];
+          const lineItems = payload.lines.map((_line: any, index: number) => ({ LineItemID: `xero-line-${index}` }));
+          xeroProviderInvoice = {
+            invoiceId: externalRef, invoiceNumber: externalRef, status: 'AUTHORISED', currencyCode: 'USD', total: 366435,
+            totalTax: 435, subTotal: 366000, lineItems: payload.lines.map((line: any, index: number) => ({
+              lineItemId: lineItems[index].LineItemID, lineAmount: line.amountCents,
+              taxAmount: xeroPayload.chargeLineage[index]?.allocationDetailId === allocationDetailIds[0] ? 200
+                : xeroPayload.chargeLineage[index]?.allocationDetailId === allocationDetailIds[1] ? 210
+                  : xeroPayload.chargeIds[index] === manualCharge.item_id ? 25 : 0,
+              taxType: 'OUTPUT',
+            })),
+          };
+          return [{ status: 'success', invoiceId: externalRef, documentId: payload.invoiceId,
+            raw: { InvoiceID: externalRef, InvoiceNumber: externalRef, Total: 3664.35, LineItems: lineItems } }];
+        }),
+        getInvoice: vi.fn(async () => xeroProviderInvoice),
+      };
+      vi.spyOn(XeroClientService, 'create').mockResolvedValue(fakeClient as any);
+      await adapter.deliver(transformed, context);
+      const mapping = await db('tenant_external_entity_mappings').where({ tenant, integration_type: adapterType, alga_entity_type: 'invoice', alga_entity_id: fixture.invoiceId }).first();
+      const persistedLines = mapping.metadata.chargeLineMappings;
+      const parentMappings = persistedLines.filter((line: any) => line.parentChargeId === fixture.generatedChargeId);
+      expect(parentMappings.map((line: any) => line.chargeId).sort()).toEqual([...allocationDetailIds].sort());
+      expect(parentMappings.map((line: any) => line.allocationDetailId).sort()).toEqual([...allocationDetailIds].sort());
+    }
+
+    const importer = new ExternalTaxImportService();
+    const importResult = await importer.importTaxForInvoice(fixture.invoiceId, userId);
+    expect(importResult).toMatchObject({ success: true, originalTax: internalTax, importedTax: 435, difference: 325 });
+    const parent = await db('invoice_charges').where({ tenant, item_id: fixture.generatedChargeId }).first();
+    const manual = await db('invoice_charges').where({ tenant, item_id: manualCharge.item_id }).first();
+    const discount = await db('invoice_charges').where({ tenant, item_id: fixture.automaticDiscountItemId }).first();
+    const invoiceAfterImport = await db('invoices').where({ tenant, invoice_id: fixture.invoiceId }).first();
+    expect(Number(parent.external_tax_amount)).toBe(adapterType === 'xero' ? 410 : 418);
+    expect(Number(manual.external_tax_amount)).toBe(adapterType === 'xero' ? 25 : 17);
+    expect(Number(discount.external_tax_amount ?? discount.tax_amount)).toBe(0);
+    expect(Number(invoiceAfterImport.total_amount)).toBe(366435);
+    expect(invoiceAfterImport.tax_source).toBe('external');
+
+    const repeated = await importer.importTaxForInvoice(fixture.invoiceId, userId);
+    expect(repeated).toMatchObject({ success: false, importedTax: 0 });
+    expect(Number((await db('invoice_charges').where({ tenant, item_id: fixture.generatedChargeId }).first()).external_tax_amount)).toBe(adapterType === 'xero' ? 410 : 418);
+    expect(Number((await db('invoices').where({ tenant, invoice_id: fixture.invoiceId }).first()).total_amount)).toBe(366435);
+    expect(await db('external_tax_imports').where({ tenant, invoice_id: fixture.invoiceId }).count('* as count').first().then((row: any) => Number(row.count))).toBe(1);
+
+    const updateContext = await makeContext();
+    const updateTransform = await adapter.transform(updateContext);
+    if (adapterType === 'xero') {
+      const updatePayload = updateTransform.documents[0].payload as any;
+      const mapping = await db('tenant_external_entity_mappings').where({ tenant, integration_type: adapterType, alga_entity_type: 'invoice', alga_entity_id: fixture.invoiceId }).first();
+      for (const line of mapping.metadata.chargeLineMappings.filter((entry: any) => entry.parentChargeId === fixture.generatedChargeId)) {
+        const index = updatePayload.chargeIds.indexOf(line.chargeId);
+        expect(updatePayload.invoice.lines[index].externalLineItemId).toBe(line.xeroLineItemId);
+      }
+    }
+    await adapter.deliver(updateTransform, updateContext);
+    const finalMapping = await db('tenant_external_entity_mappings').where({ tenant, integration_type: adapterType, alga_entity_type: 'invoice', alga_entity_id: fixture.invoiceId }).first();
+    const finalParentMappings = finalMapping.metadata.chargeLineMappings.filter((line: any) => line.parentChargeId === fixture.generatedChargeId);
+    expect(finalParentMappings.map((line: any) => line.chargeId).sort()).toEqual([...allocationDetailIds].sort());
+    const finalProviderLineIds = adapterType === 'quickbooks_online'
+      ? finalParentMappings.map((line: any) => line.qboLineId)
+      : finalParentMappings.map((line: any) => line.xeroLineItemId);
+    expect(finalProviderLineIds).toHaveLength(2);
+    expect(new Set(finalProviderLineIds).size).toBe(2);
+    expect(finalProviderLineIds.every((lineId: unknown) => typeof lineId === 'string' && lineId.length > 0)).toBe(true);
+    if (process.env.ACCOUNTING_EVIDENCE_DIR) {
+      const fs = await import('node:fs/promises');
+      await fs.mkdir(process.env.ACCOUNTING_EVIDENCE_DIR, { recursive: true });
+      await fs.writeFile(`${process.env.ACCOUNTING_EVIDENCE_DIR}/tax_roundtrip_${adapterType}.json`, JSON.stringify({
+        adapter: adapterType,
+        provider: adapterType === 'quickbooks_online' ? 'mocked QBO response' : 'mocked Xero response',
+        providerResponse: adapterType === 'quickbooks_online' ? qboProviderInvoice : xeroProviderInvoice,
+        exportedParent: fixture.generatedChargeId,
+        allocations: finalParentMappings,
+        importResult,
+        importedAmountsCents: {
+          parentTax: Number(parent.external_tax_amount),
+          manualChargeTax: Number(manual.external_tax_amount),
+          discountTax: Number(discount.external_tax_amount ?? discount.tax_amount),
+          invoiceSubtotal: Number(invoiceAfterImport.subtotal),
+          invoiceTax: Number(invoiceAfterImport.tax),
+          invoiceTotal: Number(invoiceAfterImport.total_amount),
+        },
+        repeatedImport: repeated,
+        repeatImportCount: 1,
+      }, null, 2));
     }
   });
 });

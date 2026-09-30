@@ -1,17 +1,17 @@
 {
   "documents": [
     {
-      "documentId": "d9405a6d-ebc6-47b6-a631-80397c951fd5",
+      "documentId": "a7c52c4d-9741-41f1-8427-0585462cce17",
       "lineIds": [
-        "87198883-2a30-4c93-a1bd-f2f177e7c4fd",
-        "894e6aee-7138-4544-bdf9-3282aa29c718",
-        "7d4a6012-f681-4775-aad0-e9c26bb41877",
-        "e5bc3bce-ee72-49d0-965d-1b6ba45a932a",
-        "7bdfc94b-32fb-42a0-97ff-d5b1ed2a0762",
-        "e327dbf3-405d-43bf-9e2c-07723999ea03"
+        "36975a54-6275-41ae-89ea-22872f4754c0",
+        "51900786-3088-431d-8c4f-77bbbfbbbf1f",
+        "c1af56f7-0b09-465b-9202-65e309cad485",
+        "f7c7fc79-bdb0-420c-902b-7abad656afe3",
+        "77ef9880-459f-4fe7-9d2c-bdbd57b327db",
+        "03ffe9b6-3bff-4c83-a1d8-59ac7465be81"
       ],
       "payload": {
-        "invoiceId": "d9405a6d-ebc6-47b6-a631-80397c951fd5",
+        "invoiceId": "a7c52c4d-9741-41f1-8427-0585462cce17",
         "invoiceNumber": "REVIEW-CONTRACT-3499-xero_csv",
         "clientName": "Emerald City",
         "clientEmail": "",
@@ -28,7 +28,7 @@
             "POPostalCode": "",
             "POCountry": "",
             "*InvoiceNumber": "REVIEW-CONTRACT-3499-xero_csv",
-            "Reference": "d9405a6d-ebc6-47b6-a631-80397c951fd5",
+            "Reference": "a7c52c4d-9741-41f1-8427-0585462cce17",
             "*InvoiceDate": "09/01/2026",
             "*DueDate": "09/30/2026",
             "Total": "",
@@ -42,7 +42,7 @@
             "TrackingName1": "Source System",
             "TrackingOption1": "AlgaPSA",
             "TrackingName2": "External Invoice ID",
-            "TrackingOption2": "d9405a6d-ebc6-47b6-a631-80397c951fd5",
+            "TrackingOption2": "a7c52c4d-9741-41f1-8427-0585462cce17",
             "Currency": "USD"
           },
           {
@@ -71,7 +71,7 @@
             "TrackingName1": "Source System",
             "TrackingOption1": "AlgaPSA",
             "TrackingName2": "External Invoice ID",
-            "TrackingOption2": "d9405a6d-ebc6-47b6-a631-80397c951fd5",
+            "TrackingOption2": "a7c52c4d-9741-41f1-8427-0585462cce17",
             "Currency": ""
           },
           {
@@ -100,7 +100,7 @@
             "TrackingName1": "Source System",
             "TrackingOption1": "AlgaPSA",
             "TrackingName2": "External Invoice ID",
-            "TrackingOption2": "d9405a6d-ebc6-47b6-a631-80397c951fd5",
+            "TrackingOption2": "a7c52c4d-9741-41f1-8427-0585462cce17",
             "Currency": ""
           },
           {
@@ -129,7 +129,7 @@
             "TrackingName1": "Source System",
             "TrackingOption1": "AlgaPSA",
             "TrackingName2": "External Invoice ID",
-            "TrackingOption2": "d9405a6d-ebc6-47b6-a631-80397c951fd5",
+            "TrackingOption2": "a7c52c4d-9741-41f1-8427-0585462cce17",
             "Currency": ""
           },
           {
@@ -158,36 +158,7 @@
             "TrackingName1": "Source System",
             "TrackingOption1": "AlgaPSA",
             "TrackingName2": "External Invoice ID",
-            "TrackingOption2": "d9405a6d-ebc6-47b6-a631-80397c951fd5",
-            "Currency": ""
-          },
-          {
-            "*ContactName": "",
-            "EmailAddress": "",
-            "POAddressLine1": "",
-            "POAddressLine2": "",
-            "POAddressLine3": "",
-            "POAddressLine4": "",
-            "POCity": "",
-            "PORegion": "",
-            "POPostalCode": "",
-            "POCountry": "",
-            "*InvoiceNumber": "",
-            "Reference": "",
-            "*InvoiceDate": "",
-            "*DueDate": "",
-            "Total": "",
-            "InventoryItemCode": "MISC",
-            "*Description": "Recurring support",
-            "*Quantity": "1",
-            "*UnitAmount": "1950.00",
-            "Discount": "",
-            "*AccountCode": "MISC",
-            "*TaxType": "",
-            "TrackingName1": "Source System",
-            "TrackingOption1": "AlgaPSA",
-            "TrackingName2": "External Invoice ID",
-            "TrackingOption2": "d9405a6d-ebc6-47b6-a631-80397c951fd5",
+            "TrackingOption2": "a7c52c4d-9741-41f1-8427-0585462cce17",
             "Currency": ""
           },
           {
@@ -216,7 +187,36 @@
             "TrackingName1": "Source System",
             "TrackingOption1": "AlgaPSA",
             "TrackingName2": "External Invoice ID",
-            "TrackingOption2": "d9405a6d-ebc6-47b6-a631-80397c951fd5",
+            "TrackingOption2": "a7c52c4d-9741-41f1-8427-0585462cce17",
+            "Currency": ""
+          },
+          {
+            "*ContactName": "",
+            "EmailAddress": "",
+            "POAddressLine1": "",
+            "POAddressLine2": "",
+            "POAddressLine3": "",
+            "POAddressLine4": "",
+            "POCity": "",
+            "PORegion": "",
+            "POPostalCode": "",
+            "POCountry": "",
+            "*InvoiceNumber": "",
+            "Reference": "",
+            "*InvoiceDate": "",
+            "*DueDate": "",
+            "Total": "",
+            "InventoryItemCode": "MISC",
+            "*Description": "Recurring support",
+            "*Quantity": "1",
+            "*UnitAmount": "1950.00",
+            "Discount": "",
+            "*AccountCode": "MISC",
+            "*TaxType": "",
+            "TrackingName1": "Source System",
+            "TrackingOption1": "AlgaPSA",
+            "TrackingName2": "External Invoice ID",
+            "TrackingOption2": "a7c52c4d-9741-41f1-8427-0585462cce17",
             "Currency": ""
           }
         ]
@@ -225,9 +225,9 @@
   ],
   "files": [
     {
-      "filename": "xero-invoice-export-369a9da3-fbe4-443b-bc9c-c82045943ffc.csv",
+      "filename": "xero-invoice-export-8075a22a-a3e3-4f6f-935e-dd136ac8e843.csv",
       "contentType": "text/csv",
-      "content": "*ContactName,EmailAddress,POAddressLine1,POAddressLine2,POAddressLine3,POAddressLine4,POCity,PORegion,POPostalCode,POCountry,*InvoiceNumber,Reference,*InvoiceDate,*DueDate,Total,InventoryItemCode,*Description,*Quantity,*UnitAmount,Discount,*AccountCode,*TaxType,TrackingName1,TrackingOption1,TrackingName2,TrackingOption2,Currency\nEmerald City,,,,,,,,,,REVIEW-CONTRACT-3499-xero_csv,d9405a6d-ebc6-47b6-a631-80397c951fd5,09/01/2026,09/30/2026,,,Loyalty 10%,1,-405.00,,DISCOUNT,,Source System,AlgaPSA,External Invoice ID,d9405a6d-ebc6-47b6-a631-80397c951fd5,USD\n,,,,,,,,,,,,,,,,Manual credit,1,-0.99,,DISCOUNT,,Source System,AlgaPSA,External Invoice ID,d9405a6d-ebc6-47b6-a631-80397c951fd5,\n,,,,,,,,,,,,,,,,Manual fixed discount,1,-1.01,,DISCOUNT,,Source System,AlgaPSA,External Invoice ID,d9405a6d-ebc6-47b6-a631-80397c951fd5,\n,,,,,,,,,,,,,,,,Manual percentage discount,1,-405.00,,DISCOUNT,,Source System,AlgaPSA,External Invoice ID,d9405a6d-ebc6-47b6-a631-80397c951fd5,\n,,,,,,,,,,,,,,,MISC,Miscellaneous charge,3,50.00,,MISC,,Source System,AlgaPSA,External Invoice ID,d9405a6d-ebc6-47b6-a631-80397c951fd5,\n,,,,,,,,,,,,,,,MISC,Recurring support,1,1950.00,,MISC,,Source System,AlgaPSA,External Invoice ID,d9405a6d-ebc6-47b6-a631-80397c951fd5,\n,,,,,,,,,,,,,,,RECURRING,Recurring support,1,1950.00,,RECURRING,,Source System,AlgaPSA,External Invoice ID,d9405a6d-ebc6-47b6-a631-80397c951fd5,"
+      "content": "*ContactName,EmailAddress,POAddressLine1,POAddressLine2,POAddressLine3,POAddressLine4,POCity,PORegion,POPostalCode,POCountry,*InvoiceNumber,Reference,*InvoiceDate,*DueDate,Total,InventoryItemCode,*Description,*Quantity,*UnitAmount,Discount,*AccountCode,*TaxType,TrackingName1,TrackingOption1,TrackingName2,TrackingOption2,Currency\nEmerald City,,,,,,,,,,REVIEW-CONTRACT-3499-xero_csv,a7c52c4d-9741-41f1-8427-0585462cce17,09/01/2026,09/30/2026,,,Loyalty 10%,1,-405.00,,DISCOUNT,,Source System,AlgaPSA,External Invoice ID,a7c52c4d-9741-41f1-8427-0585462cce17,USD\n,,,,,,,,,,,,,,,,Manual credit,1,-0.99,,DISCOUNT,,Source System,AlgaPSA,External Invoice ID,a7c52c4d-9741-41f1-8427-0585462cce17,\n,,,,,,,,,,,,,,,,Manual fixed discount,1,-1.01,,DISCOUNT,,Source System,AlgaPSA,External Invoice ID,a7c52c4d-9741-41f1-8427-0585462cce17,\n,,,,,,,,,,,,,,,,Manual percentage discount,1,-405.00,,DISCOUNT,,Source System,AlgaPSA,External Invoice ID,a7c52c4d-9741-41f1-8427-0585462cce17,\n,,,,,,,,,,,,,,,MISC,Miscellaneous charge,3,50.00,,MISC,,Source System,AlgaPSA,External Invoice ID,a7c52c4d-9741-41f1-8427-0585462cce17,\n,,,,,,,,,,,,,,,RECURRING,Recurring support,1,1950.00,,RECURRING,,Source System,AlgaPSA,External Invoice ID,a7c52c4d-9741-41f1-8427-0585462cce17,\n,,,,,,,,,,,,,,,MISC,Recurring support,1,1950.00,,MISC,,Source System,AlgaPSA,External Invoice ID,a7c52c4d-9741-41f1-8427-0585462cce17,"
     }
   ],
   "metadata": {
