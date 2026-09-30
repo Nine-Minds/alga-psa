@@ -492,7 +492,7 @@ interface ManualInvoiceItemInput extends NetAmountItem {
    * new UUID (idempotent manual save); absent ids are generated.
    */
   item_id?: string;
-  service_id?: string; // Optional for manual items
+  service_id?: string;
   description: string;
   is_taxable?: boolean; // Still needed for purely manual items without a service
   applies_to_service_id?: string;
@@ -807,8 +807,36 @@ export async function validateManualChargeAttribution(
     billing_profile_id?: string | null;
     tax_rate_id?: string | null;
     client_contract_id?: string | null;
+    service_id?: string | null;
+    description?: string | null;
+    is_discount?: boolean | null;
+    rate?: number | null;
   }>,
 ): Promise<void> {
+  const serviceChargeItems = items.filter((item) =>
+    !item.is_discount && !(Number(item.rate) < 0)
+  );
+  for (const item of serviceChargeItems) {
+    const serviceId = item.service_id?.trim();
+    if (!serviceId) {
+      throw new ManualInvoiceError(
+        'SERVICE_REQUIRED',
+        `Assign a service to '${item.description?.trim() || 'manual charge'}' before saving.`,
+        { description: item.description ?? 'manual charge' },
+      );
+    }
+    const service = await tenantScopedTable(tx, tenant, 'service_catalog')
+      .where({ service_id: serviceId, tenant })
+      .first('service_id');
+    if (!service) {
+      throw new ManualInvoiceError(
+        'SERVICE_NOT_FOUND',
+        `The selected service for '${item.description?.trim() || 'manual charge'}' is not available in this workspace.`,
+        { serviceId },
+      );
+    }
+  }
+
   const locationIds = [...new Set(
     items
       .map((item) => item.location_id)
@@ -924,10 +952,14 @@ export async function persistManualInvoiceCharges(
   // --- First Pass: Process non-discount manual items ---
   const nonDiscountItems = manualItems.filter(item => !item.is_discount);
   for (const requestItem of nonDiscountItems) {
+    // A negative unit rate is a quantity-derived manual credit and is
+    // classified as a discount settlement below. It uses the discount
+    // accounting mapping, so it does not require a service.
+    const isCredit = requestItem.rate < 0;
     // Accounting classification is part of a manual charge's persisted
     // contract. Credits/discount settlements are classified by their
     // integration discount mapping and are the only serviceless exception.
-    if (!requestItem.service_id) {
+    if (!requestItem.service_id && !isCredit) {
       throw new ManualInvoiceError(
         'SERVICE_REQUIRED',
         `Assign a service to '${requestItem.description?.trim() || 'manual charge'}' before saving.`,
@@ -998,7 +1030,6 @@ export async function persistManualInvoiceCharges(
     }
 
     // Detect manual credits (negative rate, not explicitly marked as discount)
-    const isCredit = !requestItem.is_discount && requestItem.rate < 0;
     const itemProfile = resolveItemProfile(requestItem);
 
     if (requestItem.item_id) {

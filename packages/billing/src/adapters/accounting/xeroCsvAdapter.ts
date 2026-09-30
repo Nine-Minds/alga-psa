@@ -259,7 +259,10 @@ export class XeroCsvAdapter implements AccountingExportAdapter {
         }
 
         const description = line.notes ?? charge.description ?? `Line item for invoice ${invoiceNumber}`;
-        const quantity = typeof charge.quantity === 'number' ? charge.quantity : 1;
+        // CSV importers recalculate totals from quantity × rounded rate.
+        // Discount settlements therefore use one signed line so fractional
+        // source quantities cannot change the settled minor-unit amount.
+        const quantity = charge.is_discount ? 1 : (typeof charge.quantity === 'number' ? charge.quantity : 1);
         const unitAmount = (line.amount_cents / 100 / quantity).toFixed(2);
 
         // Build CSV row

@@ -393,6 +393,31 @@ describe('contract invoice adjustments (DB-backed)', () => {
     ? value.toISOString().slice(0, 10)
     : String(value).slice(0, 10);
 
+  it('requires a tenant service for manual charges but accepts serviceless quantity-derived credits', async () => {
+    const fixture = await createDraftWithGeneratedChargeAndDiscount();
+    const chargeId = uuidv4();
+    await expect(db.transaction((trx) => persistManualInvoiceCharges(
+      trx, fixture.invoiceId,
+      [{ item_id: chargeId, description: 'Legacy service-less charge', quantity: 1, rate: 2500 }],
+      { client_id: clientId, region_code: null, default_currency_code: 'USD' },
+      { user: { id: userId } } as never, tenant,
+    ))).rejects.toMatchObject({ code: 'SERVICE_REQUIRED' });
+    expect(await db('invoice_charges').where({ tenant, item_id: chargeId }).first()).toBeUndefined();
+
+    const creditId = uuidv4();
+    await db.transaction((trx) => persistManualInvoiceCharges(
+      trx, fixture.invoiceId,
+      [{ item_id: creditId, description: 'Quantity-derived credit', quantity: 3, rate: -50 }],
+      { client_id: clientId, region_code: null, default_currency_code: 'USD' },
+      { user: { id: userId } } as never, tenant,
+    ));
+    const credit = await db('invoice_charges').where({ tenant, item_id: creditId }).first();
+    expect(credit.is_discount).toBe(true);
+    expect(credit.is_manual_credit).toBe(true);
+    expect(Number(credit.quantity)).toBe(3);
+    expect(Number(credit.net_amount)).toBe(-150);
+  });
+
   it('persists an ordinary freeform Add Charge and reloads a calculator adjustment with contract attribution and its adjustment period', async () => {
     const fixture = await createDraftWithGeneratedChargeAndDiscount();
     const ordinaryId = uuidv4();
@@ -410,7 +435,7 @@ describe('contract invoice adjustments (DB-backed)', () => {
     });
     await db.transaction(async (trx) => {
       await persistManualInvoiceCharges(trx, fixture.invoiceId, [{
-        item_id: ordinaryId, description: 'Unclassified one-off', quantity: 1, rate: 2500,
+        item_id: ordinaryId, service_id: serviceId, description: 'Classified one-off', quantity: 1, rate: 2500,
       }], { client_id: clientId, region_code: null, default_currency_code: 'USD' }, { user: { id: userId } } as never, tenant);
       await persistManualInvoiceCharges(trx, fixture.invoiceId, [{
         item_id: partialId, service_id: serviceId, client_contract_id: clientContractId,
@@ -497,7 +522,7 @@ describe('contract invoice adjustments (DB-backed)', () => {
     const sameSaveCharge = uuidv4();
     const sameSaveDiscount = uuidv4();
     await db.transaction((trx) => persistManualInvoiceCharges(trx, fixture.invoiceId, [
-      { item_id: sameSaveCharge, description: 'Same-save charge', quantity: 1, rate: 10000, is_taxable: false },
+      { item_id: sameSaveCharge, service_id: serviceId, description: 'Same-save charge', quantity: 1, rate: 10000, is_taxable: false },
       { item_id: sameSaveDiscount, description: 'Same-save 10%', quantity: 1, rate: 0, is_discount: true, discount_type: 'percentage', discount_percentage: 10 },
     ], client, session, tenant));
     expect(Number((await db('invoice_charges').where({ tenant, item_id: sameSaveDiscount }).first()).net_amount)).toBe(-41500);

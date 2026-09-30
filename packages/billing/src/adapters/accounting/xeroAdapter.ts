@@ -548,11 +548,6 @@ export class XeroAdapter implements AccountingExportAdapter {
           charge.description ??
           `Invoice ${invoice.invoice_number ?? invoice.invoice_id} line`;
 
-        const storedUnitAmountCents = coerceChargeCents(charge.unit_price);
-        const unitAmountCents = charge.is_discount && storedUnitAmountCents !== null
-          ? -Math.abs(storedUnitAmountCents)
-          : storedUnitAmountCents;
-
         const netAmountCents = coerceChargeCents(charge.net_amount);
         if (netAmountCents === null) {
           throw new AppError(
@@ -560,6 +555,20 @@ export class XeroAdapter implements AccountingExportAdapter {
             `Charge ${charge.item_id} on invoice ${invoiceId} is missing net_amount; run the backfill migration.`
           );
         }
+
+        // Xero calculates LineAmount from Quantity × UnitAmount. Discount
+        // rows (especially percentage settlements) may persist a zero source
+        // unit price, so derive a rate from the settled amount. Retain credit
+        // quantity where it represents an exact minor-unit rate; otherwise
+        // export the settled credit as one signed line to avoid rounding drift.
+        const settledQuantity = coerceChargeDecimal(charge.quantity) ?? 1;
+        const quantity = charge.is_discount && settledQuantity !== 0 &&
+          netAmountCents % settledQuantity === 0
+          ? settledQuantity
+          : charge.is_discount ? 1 : settledQuantity;
+        const unitAmountCents = charge.is_discount
+          ? netAmountCents / quantity
+          : coerceChargeCents(charge.unit_price);
 
         const servicePeriod = resolveXeroLineServicePeriod(line);
 
@@ -608,7 +617,7 @@ export class XeroAdapter implements AccountingExportAdapter {
           externalLineItemId: knownChargeToXeroLineItemId.get(line.document_line_id) ?? null,
           amountCents: netAmountCents,
           description,
-          quantity: coerceChargeDecimal(charge.quantity) ?? 1,
+          quantity,
           unitAmountCents,
           itemCode,
           accountCode,

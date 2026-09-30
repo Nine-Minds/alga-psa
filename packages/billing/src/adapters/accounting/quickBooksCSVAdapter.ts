@@ -234,11 +234,11 @@ export class QuickBooksCSVAdapter implements AccountingExportAdapter {
         const itemName = this.getItemName(lineMapping);
 
         // Calculate amounts
-        const quantity = charge.quantity ?? 1;
         const lineAmount = charge.net_amount ?? charge.total_price;
         // The CSV importer derives the line from quantity × rate. Use the
         // persisted net sign so fixed discounts and quantity-derived credits
         // stay negative even when the authored rate was stored as positive.
+        const quantity = charge.is_discount ? 1 : (charge.quantity ?? 1);
         const unitPrice = quantity ? lineAmount / quantity : lineAmount;
         const taxAmount = shouldExcludeTax ? 0 : (charge.tax_amount ?? 0);
 
