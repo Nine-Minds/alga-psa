@@ -111,6 +111,8 @@ export interface ITicketListItem extends Omit<ITicket, 'status_id' | 'priority_i
   bundle_open_child_count?: number;
   bundle_master_ticket_number?: string | null;
   bundle_distinct_client_count?: number;
+  // Newest of the ticket's own timestamps and its newest published comment.
+  latest_activity_at?: string | null;
 }
 
 export interface ITicketListFilters {
