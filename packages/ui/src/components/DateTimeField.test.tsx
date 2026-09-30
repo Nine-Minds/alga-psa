@@ -8,6 +8,7 @@ import { DateTimeField } from './DateTimeField';
 import { DateFormatProvider } from '../lib/dateFormat/useDateFormat';
 import {
   buildTimeOptions,
+  formatTimeDisplay,
   getDatePlaceholder,
   isTypableDateText,
   isTypableTimeText,
@@ -237,6 +238,12 @@ describe('the exit contract', () => {
 
     fireEvent.click(screen.getByRole('option', { name: '14:35' }));
     expect(screen.queryAllByRole('option')).toHaveLength(0);
+    // The time pick is committed, not just the panel closed: same day as picked, 14:35.
+    expect(onChange).toHaveBeenCalledTimes(2);
+    const committed = onChange.mock.calls[1][0] as Date;
+    expect(committed.getHours()).toBe(14);
+    expect(committed.getMinutes()).toBe(35);
+    expect(formatDateFns(committed, 'yyyy-MM-dd')).toBe(formatDateFns(new Date(), 'yyyy-MM-dd'));
   });
 
   it('closes on Escape without committing what was typed', () => {
@@ -473,5 +480,143 @@ describe('parsing rules', () => {
     const withExact = buildTimeOptions('14:37', 15);
     expect(withExact).toHaveLength(97);
     expect(withExact[withExact.indexOf('14:30') + 1]).toBe('14:37');
+  });
+});
+
+/**
+ * alga-2026-0002591: a day pick followed by a time that is NOT the one already
+ * held (nor midnight). The older "keeps the panel" test picks the time the
+ * value already had, so it could not tell a committed pick from a no-op.
+ */
+describe('datetime: day pick, then a time other than the held one', () => {
+  function Controlled({
+    initial,
+    onCommit,
+    timeFormat,
+    minDate,
+  }: {
+    initial?: Date;
+    onCommit: (date?: Date) => void;
+    timeFormat: '12h' | '24h';
+    minDate?: Date;
+  }) {
+    const [value, setValue] = React.useState<Date | undefined>(initial);
+    return (
+      <DateTimeField
+        variant="datetime"
+        value={value}
+        minDate={minDate}
+        timeFormat={timeFormat}
+        onChange={(next) => {
+          const date = next instanceof Date ? next : undefined;
+          setValue(date);
+          onCommit(date);
+        }}
+      />
+    );
+  }
+
+  const dayButton = (day: string) => {
+    const button = screen
+      .getAllByRole('button')
+      .find((candidate) => candidate.textContent === day && !(candidate as HTMLButtonElement).disabled);
+    if (!button) throw new Error(`no enabled day button ${day}`);
+    return button;
+  };
+
+  const cases: { name: string; timeFormat: '12h' | '24h'; option: string; shown: string; h: number; m: number }[] = [
+    { name: '12h, morning quarter', timeFormat: '12h', option: '9:15 AM', shown: '9:15 AM', h: 9, m: 15 },
+    { name: '12h, afternoon quarter', timeFormat: '12h', option: '4:45 PM', shown: '4:45 PM', h: 16, m: 45 },
+    { name: '24h, morning quarter', timeFormat: '24h', option: '09:15', shown: '09:15', h: 9, m: 15 },
+    { name: '24h, evening quarter', timeFormat: '24h', option: '21:30', shown: '21:30', h: 21, m: 30 },
+  ];
+
+  for (const c of cases) {
+    it(`commits the rail pick from an empty value (${c.name})`, () => {
+      const seen: (Date | undefined)[] = [];
+      render(<Controlled onCommit={(d) => seen.push(d)} timeFormat={c.timeFormat} />);
+
+      const [dateInput, timeInput] = fields();
+      fireEvent.focus(dateInput);
+      fireEvent.click(dayButton('17'));
+      fireEvent.click(screen.getByRole('option', { name: c.option }));
+
+      const last = seen.at(-1) as Date;
+      expect(last.getDate()).toBe(17);
+      expect(last.getHours()).toBe(c.h);
+      expect(last.getMinutes()).toBe(c.m);
+      expect(timeInput.value).toBe(c.shown);
+    });
+
+    it(`commits the rail pick over a different held time (${c.name})`, () => {
+      const seen: (Date | undefined)[] = [];
+      render(<Controlled initial={new Date(2026, 7, 13, 14, 35)} onCommit={(d) => seen.push(d)} timeFormat={c.timeFormat} />);
+
+      const [dateInput, timeInput] = fields();
+      fireEvent.focus(dateInput);
+      fireEvent.click(dayButton('17'));
+      fireEvent.click(screen.getByRole('option', { name: c.option }));
+
+      const last = seen.at(-1) as Date;
+      expect(last.getDate()).toBe(17);
+      expect(last.getHours()).toBe(c.h);
+      expect(last.getMinutes()).toBe(c.m);
+      expect(timeInput.value).toBe(c.shown);
+    });
+  }
+
+  it('commits the rail pick when minDate is the same day (the End Time case)', () => {
+    const seen: (Date | undefined)[] = [];
+    const minDate = new Date(2026, 7, 13, 9, 0);
+    render(
+      <Controlled
+        initial={new Date(2026, 7, 13, 9, 0)}
+        minDate={minDate}
+        onCommit={(d) => seen.push(d)}
+        timeFormat="12h"
+      />
+    );
+
+    const [dateInput, timeInput] = fields();
+    fireEvent.focus(dateInput);
+    fireEvent.click(dayButton('13'));
+    fireEvent.click(screen.getByRole('option', { name: '10:45 AM' }));
+
+    const last = seen.at(-1) as Date;
+    expect(formatDateFns(last, 'yyyy-MM-dd HH:mm')).toBe('2026-08-13 10:45');
+    expect(timeInput.value).toBe('10:45 AM');
+  });
+
+  it('commits a typed time after the day pick, in 12h and in 24h', () => {
+    for (const [timeFormat, typed, shown] of [
+      ['12h', '3:37 PM', '3:37 PM'],
+      ['24h', '15:37', '15:37'],
+    ] as const) {
+      const seen: (Date | undefined)[] = [];
+      const { unmount } = render(<Controlled onCommit={(d) => seen.push(d)} timeFormat={timeFormat} />);
+
+      const [dateInput, timeInput] = fields();
+      fireEvent.focus(dateInput);
+      fireEvent.click(dayButton('17'));
+      fireEvent.change(timeInput, { target: { value: typed } });
+      fireEvent.keyDown(timeInput, { key: 'Enter' });
+
+      const last = seen.at(-1) as Date;
+      expect(last.getDate()).toBe(17);
+      expect(last.getHours()).toBe(15);
+      expect(last.getMinutes()).toBe(37);
+      expect(timeInput.value).toBe(shown);
+      unmount();
+    }
+  });
+
+  it('round-trips every quarter-hour row through display and parse, in both formats', () => {
+    const options = buildTimeOptions(undefined);
+    expect(options).toHaveLength(96);
+    for (const format of ['12h', '24h'] as const) {
+      for (const option of options) {
+        expect(parseTimeInput(formatTimeDisplay(option, format))).toBe(option);
+      }
+    }
   });
 });
