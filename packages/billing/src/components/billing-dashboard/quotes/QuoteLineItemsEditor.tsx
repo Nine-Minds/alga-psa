@@ -101,6 +101,62 @@ const InlineEditableValue: React.FC<InlineEditableValueProps> = ({
   );
 };
 
+interface PhaseSectionInputProps {
+  id: string;
+  value: string;
+  onCommit: (value: string | null) => void;
+  placeholder?: string;
+  disabled?: boolean;
+}
+
+/**
+ * Phase / Section field. The committed phase groups rows into sections, so
+ * writing it on every keystroke remounted the section the row lives in and
+ * stole focus mid-word (and trimming per keystroke ate spaces). Keep an
+ * untrimmed local draft while focused and commit once on blur / Enter.
+ */
+const PhaseSectionInput: React.FC<PhaseSectionInputProps> = ({
+  id,
+  value,
+  onCommit,
+  placeholder,
+  disabled = false,
+}) => {
+  const [draft, setDraft] = useState(value);
+  const [isFocused, setIsFocused] = useState(false);
+
+  useEffect(() => {
+    if (!isFocused) setDraft(value);
+  }, [value, isFocused]);
+
+  const commit = () => {
+    const nextValue = draft.trim() || null;
+    if (nextValue === (value || null)) return;
+    onCommit(nextValue);
+  };
+
+  return (
+    <Input
+      id={id}
+      value={draft}
+      onChange={(event) => setDraft(event.target.value)}
+      onFocus={() => setIsFocused(true)}
+      onBlur={() => {
+        setIsFocused(false);
+        commit();
+      }}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter') {
+          event.preventDefault();
+          commit();
+        }
+      }}
+      placeholder={placeholder}
+      disabled={disabled}
+    />
+  );
+};
+
 interface QuoteLineItemsEditorProps {
   items: DraftQuoteItem[];
   currencyCode: string;
@@ -406,9 +462,6 @@ const QuoteLineItemsEditor: React.FC<QuoteLineItemsEditorProps> = ({
       return (
         <tr
           key={item.local_id}
-        draggable={!disabled}
-        onDragStart={() => setDraggedItemId(item.local_id)}
-        onDragEnd={() => setDraggedItemId(null)}
         onDragOver={(event) => event.preventDefault()}
         onDrop={(event) => {
           event.preventDefault();
@@ -419,7 +472,26 @@ const QuoteLineItemsEditor: React.FC<QuoteLineItemsEditorProps> = ({
         }}
         className={`${dragClass} ${discountRowClass}`.trim() || undefined}
       >
-        <td className="px-3 py-3 align-top text-lg text-muted-foreground">⋮⋮</td>
+        <td className="px-3 py-3 align-top text-lg text-muted-foreground">
+          {/* Only the handle drags: a draggable row swallows click-drag text
+              selection inside the row's inputs. */}
+          <span
+            draggable={!disabled}
+            onDragStart={(event) => {
+              setDraggedItemId(item.local_id);
+              const transfer = event.dataTransfer;
+              if (transfer) {
+                transfer.setData('text/plain', item.local_id);
+                transfer.effectAllowed = 'move';
+              }
+            }}
+            onDragEnd={() => setDraggedItemId(null)}
+            className="cursor-grab select-none"
+            aria-label={t('quoteLineItems.columns.move', { defaultValue: 'Move' })}
+          >
+            ⋮⋮
+          </span>
+        </td>
         <td className="px-3 py-3 align-top">
           <div className="space-y-2">
             {isDiscount && (
@@ -460,9 +532,10 @@ const QuoteLineItemsEditor: React.FC<QuoteLineItemsEditorProps> = ({
                 <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                   {t('quoteLineItems.labels.phaseSection', { defaultValue: 'Phase / Section' })}
                 </div>
-                <Input
+                <PhaseSectionInput
+                  id={`quote-line-phase-${item.local_id}`}
                   value={item.phase ?? ''}
-                  onChange={(event) => updateItem(item.local_id, { phase: event.target.value.trim() || null })}
+                  onCommit={(phase) => updateItem(item.local_id, { phase })}
                   placeholder={t('quoteLineItems.placeholders.phaseSection', {
                     defaultValue: 'e.g. Discovery, Rollout, Ongoing',
                   })}
