@@ -224,7 +224,7 @@ it('installs all project email translations idempotently and rolls back without 
   }
   await emailMigration.down(trx);
   expect(await trx('system_email_templates').where({ name: 'SURVEY_PROJECT_CLOSED' })).toHaveLength(0);
-  expect(await trx('system_email_templates').where({ name: 'SURVEY_TICKET_CLOSED' })).toHaveLength(8);
+  expect(await trx('system_email_templates').where({ name: 'SURVEY_TICKET_CLOSED' })).toHaveLength(LOCALE_CONFIG.supportedLocales.length);
   await emailMigration.up(trx);
-  expect(await trx('system_email_templates').where({ name: 'SURVEY_PROJECT_CLOSED' })).toHaveLength(8);
+  expect(await trx('system_email_templates').where({ name: 'SURVEY_PROJECT_CLOSED' })).toHaveLength(LOCALE_CONFIG.supportedLocales.length);
 });
