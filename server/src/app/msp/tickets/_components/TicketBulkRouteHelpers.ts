@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
@@ -27,8 +27,10 @@ export function useTicketBulkRouteDialog(closeMode: TicketBulkCloseMode) {
     selectedTicketIdsArray,
     selectedTicketDetails,
     setSelectedTicketIds,
+    clearSelectedTicketIds,
     selectionHydrated,
   } = useTicketsRouteState();
+  const hasClosedRef = useRef(false);
 
   const ticketLabelById = useMemo(() => {
     const map = new Map<string, string>();
@@ -47,19 +49,25 @@ export function useTicketBulkRouteDialog(closeMode: TicketBulkCloseMode) {
   };
 
   // A bulk dialog with no selection is meaningless. This happens on a hard load/reload of
-  // the route once there is genuinely nothing selected (e.g. storage cleared, or the URL
-  // visited directly). Wait for selectionHydrated so we don't bounce away before the
-  // persisted selection is restored from sessionStorage on mount.
+  // the route once there is genuinely nothing selected (e.g. storage cleared, the URL
+  // visited directly, or the action just completed and cleared the selection). Wait for
+  // selectionHydrated so we don't bounce away before the persisted selection is restored
+  // from sessionStorage on mount. The ref keeps this to one close per mount so a second
+  // render can never fire a second router.back() and pop an extra history entry.
   useEffect(() => {
-    if (selectionHydrated && selectedTicketIds.size === 0) {
-      close();
-    }
+    if (!selectionHydrated || selectedTicketIds.size > 0 || hasClosedRef.current) return;
+    hasClosedRef.current = true;
+    close();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectionHydrated, selectedTicketIds.size]);
 
+  // Full success: drop the selection (which also wipes the persisted copy) and refresh the
+  // list. Closing is left to the empty-selection effect above so it is state-driven — a
+  // direct close() here would leave the selection in sessionStorage, and a hard reload of
+  // the bulk route would then rehydrate it and re-open the dialog.
   const refreshAndClose = () => {
+    clearSelectedTicketIds();
     router.refresh();
-    close();
   };
 
   const refreshList = () => {
