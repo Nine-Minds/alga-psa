@@ -1099,7 +1099,8 @@
       },
       "label": {
         "label": "Kategorietikett",
-        "placeholder": "Valfri etikett i fritext"
+        "placeholder": "Valfri etikett i fritext",
+        "help": "Intern identifierare, till exempel tillverkare/modell; sökbar, visas aldrig för kunder."
       },
       "vendor": {
         "label": "Leverantör"
