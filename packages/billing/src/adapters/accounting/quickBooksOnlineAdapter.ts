@@ -1529,6 +1529,8 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
 
         return {
           lineId: item.lineId,
+          parentChargeId: item.parentChargeId,
+          allocationDetailId: item.allocationDetailId,
           externalLineId: item.externalLineId,
           taxAmount,
           taxCode: item.taxCode,

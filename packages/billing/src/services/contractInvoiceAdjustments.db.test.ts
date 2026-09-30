@@ -3136,6 +3136,7 @@ describe('accounting adjustment export matrix', () => {
     const transformed = await adapter.transform(context);
     let qboProviderInvoice: any;
     let xeroProviderInvoice: any;
+    let qboFetchedLineage: Array<{ lineId: string; parentChargeId?: string; allocationDetailId?: string }> = [];
 
     if (adapterType === 'quickbooks_online') {
       const { QboClientService } = await import('@alga-psa/integrations/lib/qbo/qboClientService');
@@ -3160,6 +3161,16 @@ describe('accounting adjustment export matrix', () => {
       const parentMappings = persistedLines.filter((line: any) => line.parentChargeId === fixture.generatedChargeId);
       expect(parentMappings.map((line: any) => line.chargeId).sort()).toEqual([...allocationDetailIds].sort());
       expect(parentMappings.map((line: any) => line.allocationDetailId).sort()).toEqual([...allocationDetailIds].sort());
+      if (adapterType === 'quickbooks_online') {
+        const fetched = await adapter.fetchExternalInvoice(externalRef, realm);
+        expect(fetched.success).toBe(true);
+        const fetchedParentLines = fetched.invoice!.charges.filter((line: any) => line.parentChargeId === fixture.generatedChargeId);
+        expect(fetchedParentLines.map((line: any) => line.lineId).sort()).toEqual([...allocationDetailIds].sort());
+        expect(fetchedParentLines.map((line: any) => line.allocationDetailId).sort()).toEqual([...allocationDetailIds].sort());
+        qboFetchedLineage = fetchedParentLines.map((line: any) => ({
+          lineId: line.lineId, parentChargeId: line.parentChargeId, allocationDetailId: line.allocationDetailId,
+        }));
+      }
     } else {
       const { XeroClientService } = await import('@alga-psa/integrations/lib/xero/xeroClientService');
       const xeroPayload = (transformed.documents[0].payload as any);
@@ -3237,6 +3248,7 @@ describe('accounting adjustment export matrix', () => {
         adapter: adapterType,
         provider: adapterType === 'quickbooks_online' ? 'mocked QBO response' : 'mocked Xero response',
         providerResponse: adapterType === 'quickbooks_online' ? qboProviderInvoice : xeroProviderInvoice,
+        fetchedLineage: adapterType === 'quickbooks_online' ? qboFetchedLineage : undefined,
         exportedParent: fixture.generatedChargeId,
         allocations: finalParentMappings,
         importResult,

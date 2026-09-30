@@ -505,7 +505,7 @@ export class ExternalTaxImportService {
     knex: any,
     tenant: string,
     invoiceId: string,
-    charges: Array<{ item_id: string; description?: string; tax_amount?: number }>,
+    charges: Array<{ item_id: string; description?: string; tax_amount?: number; net_amount?: number }>,
     externalInvoice: ExternalInvoiceData
   ): Promise<{ chargesUpdated: number; warnings: string[] }> {
     const warnings: string[] = [];
@@ -524,8 +524,9 @@ export class ExternalTaxImportService {
 
     // Older exports stored allocation detail IDs as charge IDs without parent
     // lineage. Recover their parent from the canonical persisted details table.
+    const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     const externalLineIds = externalInvoice.charges.map(charge => charge.lineId)
-      .filter(lineId => !chargeIds.has(lineId));
+      .filter(lineId => !chargeIds.has(lineId) && uuidPattern.test(lineId));
     const detailParents = externalLineIds.length > 0
       ? await db.table('invoice_charge_details')
           .whereIn('item_detail_id', externalLineIds)
@@ -553,7 +554,12 @@ export class ExternalTaxImportService {
 
     if (hasChargeIdMatching && externalInvoice.charges.length > 0) {
       // Match direct invoice lines one-to-one and sum allocation split taxes
-      // onto a consolidated fixed-plan parent.
+      // onto a consolidated fixed-plan parent. Keep positional IDs available
+      // for individual unmatched rows, then distribute any remaining provider
+      // tax over the remaining charges instead of dropping it.
+      const matchedExternalLineIds = new Set<string>();
+      const unresolvedCharges: typeof charges = [];
+      let matchedTax = 0;
       for (const charge of charges) {
         const directCharge = externalChargeMap.get(charge.item_id);
         const parentMatches = externalByParent.get(charge.item_id) ?? [];
@@ -570,20 +576,55 @@ export class ExternalTaxImportService {
                 ? allocationMatches[0].taxRate : undefined,
             }
           : undefined);
+        const positionalCharge = !externalCharge ? externalChargeMap.get(`line-${charges.indexOf(charge)}`) : undefined;
+        const chargeTax = externalCharge ?? positionalCharge;
 
-        if (externalCharge) {
+        if (chargeTax) {
+          matchedExternalLineIds.add(chargeTax.lineId);
           await db.table('invoice_charges')
             .where({ item_id: charge.item_id })
             .update({
-              external_tax_amount: externalCharge.taxAmount,
-              external_tax_code: externalCharge.taxCode,
-              external_tax_rate: externalCharge.taxRate,
+              external_tax_amount: chargeTax.taxAmount,
+              external_tax_code: chargeTax.taxCode,
+              external_tax_rate: chargeTax.taxRate,
               updated_at: knex.fn.now()
             });
 
+          matchedTax += chargeTax.taxAmount;
           chargesUpdated++;
         } else {
-          warnings.push(`No external tax data for charge ${charge.item_id}`);
+          unresolvedCharges.push(charge);
+        }
+      }
+
+      if (unresolvedCharges.length > 0) {
+        const unmatchedProviderLines = externalInvoice.charges.filter(externalCharge =>
+          !matchedExternalLineIds.has(externalCharge.lineId) &&
+          !externalByParent.has(externalCharge.parentChargeId ?? '') &&
+          !chargeIds.has(externalCharge.lineId)
+        );
+        const unmatchedTax = unmatchedProviderLines.reduce((sum, line) => sum + line.taxAmount, 0);
+        const taxToDistribute = unmatchedTax > 0 ? unmatchedTax : Math.max(0, externalInvoice.totalTax - matchedTax);
+        const unresolvedAmount = unresolvedCharges.reduce((sum, charge) => sum + Number(charge.net_amount ?? 0), 0);
+        let distributedTax = 0;
+
+        for (let index = 0; index < unresolvedCharges.length; index++) {
+          const charge = unresolvedCharges[index];
+          const taxAmount = index === unresolvedCharges.length - 1
+            ? taxToDistribute - distributedTax
+            : unresolvedAmount > 0
+              ? Math.floor((Number(charge.net_amount ?? 0) / unresolvedAmount) * taxToDistribute)
+              : 0;
+          distributedTax += taxAmount;
+          await db.table('invoice_charges')
+            .where({ item_id: charge.item_id })
+            .update({ external_tax_amount: taxAmount, updated_at: knex.fn.now() });
+          chargesUpdated++;
+        }
+        if (unmatchedProviderLines.length > 0) {
+          warnings.push('Using proportional tax distribution for unmatched external lines');
+        } else if (unresolvedCharges.length > 0) {
+          warnings.push(`No external tax data for ${unresolvedCharges.length} charge(s); distributed remaining invoice tax`);
         }
       }
     } else if (hasPositionalMatching && externalInvoice.charges.length > 0) {

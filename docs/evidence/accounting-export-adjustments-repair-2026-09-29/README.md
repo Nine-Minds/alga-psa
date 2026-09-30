@@ -33,7 +33,7 @@ The QBO and Xero round-trip fixtures include two $1,950 allocations under one $3
 - [QBO provider response, persisted split identities, import, repeat import and update mapping](artifacts/tax_roundtrip_quickbooks_online.json)
 - [Xero provider response, persisted split identities, import, repeat import and update mapping](artifacts/tax_roundtrip_xero.json)
 
-The adapters retain each allocation's detail ID as its retry/update identity and also record the parent charge ID. Tax import aggregates returned allocation taxes onto that parent while direct lines such as the manual charge keep their own tax. A repeated import is rejected after `tax_source` becomes `external`; assertions confirm it does not change tax, totals, or create a second import record. Provider responses in these fixtures are mocked; they do not claim live QBO/Xero acceptance.
+The adapters retain each allocation's detail ID as its retry/update identity and also record the parent charge ID. The QBO artifact includes the fetched adapter-boundary lineage, confirming those IDs are returned directly rather than recovered from the database details table. Tax import aggregates returned allocation taxes onto that parent while direct lines such as the manual charge keep their own tax. A repeated import is rejected after `tax_source` becomes `external`; assertions confirm it does not change tax, totals, or create a second import record. Provider responses in these fixtures are mocked; they do not claim live QBO/Xero acceptance.
 
 Regenerate artifacts from `server/` with:
 
@@ -48,6 +48,7 @@ The September 30 rerun used the current adapter writers and isolated DB fixtures
 ## Validation
 
 - Contract adjustment DB suite: 57 tests, including creation/update service validation, idempotent catalog provisioning, credits, settlement retries, lifecycle protections, all five adapter payloads, and the QBO/Xero external-tax round trips.
+- External tax import integration suite: 17 tests, including UUID-guarded positional IDs, unmatched provider IDs, and mixed matched/unmatched lines alongside the fixed-parent split-line round trips.
 - External mapping DB suite: 35 tests, including create/read/update/delete of the discount identity for all five providers, realm/tenant isolation and invalid Xero accounts.
 - Current-head focused unit rerun: 53 tests passed across accounting CSV serialization, export validation, save-time warnings and mapping-screen registration. The validation cases include fixed-parent child service mapping and allocation-total mismatch rejection.
 - Credit/tax and invoice-generation discount DB suites: 11 tests. Positive manual fixtures now use a real service; tax and monetary expectations are unchanged.

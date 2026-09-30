@@ -2,8 +2,8 @@
   "adapter": "xero",
   "provider": "mocked Xero response",
   "providerResponse": {
-    "invoiceId": "TAX-xero-1942f397",
-    "invoiceNumber": "TAX-xero-1942f397",
+    "invoiceId": "TAX-xero-197892e6",
+    "invoiceNumber": "TAX-xero-197892e6",
     "status": "AUTHORISED",
     "currencyCode": "USD",
     "total": 366435,
@@ -13,13 +13,13 @@
       {
         "lineItemId": "xero-line-0",
         "lineAmount": 195000,
-        "taxAmount": 210,
+        "taxAmount": 200,
         "taxType": "OUTPUT"
       },
       {
         "lineItemId": "xero-line-1",
         "lineAmount": 195000,
-        "taxAmount": 200,
+        "taxAmount": 210,
         "taxType": "OUTPUT"
       },
       {
@@ -36,25 +36,25 @@
       }
     ]
   },
-  "exportedParent": "3dbb6a04-851a-4140-ab56-17913897a3e0",
+  "exportedParent": "0860c668-2a36-467c-a9ef-92ce25eefd9b",
   "allocations": [
     {
-      "chargeId": "1902c43c-0974-4bf9-b739-cf37c29b1bd5",
-      "parentChargeId": "3dbb6a04-851a-4140-ab56-17913897a3e0",
+      "chargeId": "9b16eb7a-30e6-4399-8ebc-d59f040a9988",
+      "parentChargeId": "0860c668-2a36-467c-a9ef-92ce25eefd9b",
       "xeroLineItemId": "xero-line-0",
-      "allocationDetailId": "1902c43c-0974-4bf9-b739-cf37c29b1bd5"
+      "allocationDetailId": "9b16eb7a-30e6-4399-8ebc-d59f040a9988"
     },
     {
-      "chargeId": "2bb9c901-6f99-4c1d-929a-dbef4ed7044a",
-      "parentChargeId": "3dbb6a04-851a-4140-ab56-17913897a3e0",
+      "chargeId": "b069e547-ca7f-4852-a598-eeb5851a977d",
+      "parentChargeId": "0860c668-2a36-467c-a9ef-92ce25eefd9b",
       "xeroLineItemId": "xero-line-1",
-      "allocationDetailId": "2bb9c901-6f99-4c1d-929a-dbef4ed7044a"
+      "allocationDetailId": "b069e547-ca7f-4852-a598-eeb5851a977d"
     }
   ],
   "importResult": {
     "success": true,
-    "invoiceId": "1942f397-e153-4d7f-a7e3-167e235e93d5",
-    "importId": "791fd122-f804-4610-9bb3-c8129405ed91",
+    "invoiceId": "197892e6-753f-46ca-a875-7a01b531961d",
+    "importId": "f2581911-14ac-4328-ae07-a6a638322266",
     "originalTax": 110,
     "importedTax": 435,
     "difference": 325,
@@ -70,7 +70,7 @@
   },
   "repeatedImport": {
     "success": false,
-    "invoiceId": "1942f397-e153-4d7f-a7e3-167e235e93d5",
+    "invoiceId": "197892e6-753f-46ca-a875-7a01b531961d",
     "originalTax": 0,
     "importedTax": 0,
     "difference": 0,

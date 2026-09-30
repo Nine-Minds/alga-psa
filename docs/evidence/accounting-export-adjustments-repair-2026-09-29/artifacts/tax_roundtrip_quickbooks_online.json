@@ -2,7 +2,7 @@
   "adapter": "quickbooks_online",
   "provider": "mocked QBO response",
   "providerResponse": {
-    "DocNumber": "ADJ-8abc77a4",
+    "DocNumber": "ADJ-f6e7d88f",
     "TxnDate": "2026-09-01",
     "DueDate": "2026-09-30",
     "CustomerRef": {
@@ -65,7 +65,7 @@
     "CurrencyRef": {
       "value": "USD"
     },
-    "Id": "TAX-quickbooks_online-8abc77a4",
+    "Id": "TAX-quickbooks_online-f6e7d88f",
     "SyncToken": "2",
     "TotalAmt": 3664.35,
     "TxnTaxDetail": {
@@ -73,29 +73,41 @@
     },
     "sparse": true
   },
-  "exportedParent": "0d3d83c1-797d-469a-bfe6-95317ca8cb37",
-  "allocations": [
+  "fetchedLineage": [
     {
-      "chargeId": "34b75876-d345-40a8-93e7-722ab23dc1cd",
-      "qboLineId": "qbo-line-0",
-      "parentChargeId": "0d3d83c1-797d-469a-bfe6-95317ca8cb37",
-      "allocationDetailId": "34b75876-d345-40a8-93e7-722ab23dc1cd"
+      "lineId": "18e60d02-c967-4927-841b-55a6bd7d0119",
+      "parentChargeId": "fafb0d5e-0398-4345-8c1b-0b843878826a",
+      "allocationDetailId": "18e60d02-c967-4927-841b-55a6bd7d0119"
     },
     {
-      "chargeId": "ec246dac-2a5b-4811-86a1-c9e21ca72ff7",
+      "lineId": "cd07842d-f14b-4b6a-9190-9fe457259b00",
+      "parentChargeId": "fafb0d5e-0398-4345-8c1b-0b843878826a",
+      "allocationDetailId": "cd07842d-f14b-4b6a-9190-9fe457259b00"
+    }
+  ],
+  "exportedParent": "fafb0d5e-0398-4345-8c1b-0b843878826a",
+  "allocations": [
+    {
+      "chargeId": "18e60d02-c967-4927-841b-55a6bd7d0119",
+      "qboLineId": "qbo-line-0",
+      "parentChargeId": "fafb0d5e-0398-4345-8c1b-0b843878826a",
+      "allocationDetailId": "18e60d02-c967-4927-841b-55a6bd7d0119"
+    },
+    {
+      "chargeId": "cd07842d-f14b-4b6a-9190-9fe457259b00",
       "qboLineId": "qbo-line-1",
-      "parentChargeId": "0d3d83c1-797d-469a-bfe6-95317ca8cb37",
-      "allocationDetailId": "ec246dac-2a5b-4811-86a1-c9e21ca72ff7"
+      "parentChargeId": "fafb0d5e-0398-4345-8c1b-0b843878826a",
+      "allocationDetailId": "cd07842d-f14b-4b6a-9190-9fe457259b00"
     }
   ],
   "importResult": {
     "success": true,
-    "invoiceId": "8abc77a4-e674-4a23-8484-612ae6f7c826",
-    "importId": "f644e00c-18dd-48fb-a1ce-f2d3394a9ebc",
+    "invoiceId": "f6e7d88f-6479-4d8d-9929-5e04e8a3ab38",
+    "importId": "61d8f77c-9fe1-474e-b8ff-ac9914232bf9",
     "originalTax": 110,
     "importedTax": 435,
     "difference": 325,
-    "chargesUpdated": 2
+    "chargesUpdated": 3
   },
   "importedAmountsCents": {
     "parentTax": 418,
@@ -107,7 +119,7 @@
   },
   "repeatedImport": {
     "success": false,
-    "invoiceId": "8abc77a4-e674-4a23-8484-612ae6f7c826",
+    "invoiceId": "f6e7d88f-6479-4d8d-9929-5e04e8a3ab38",
     "originalTax": 0,
     "importedTax": 0,
     "difference": 0,
