@@ -56,7 +56,7 @@ export class ServiceCatalogService extends BaseService<IService> {
       tableName: 'service_catalog',
       primaryKey: 'service_id',
       tenantColumn: 'tenant',
-      searchableFields: ['service_name', 'description', 'sku'],
+      searchableFields: ['service_name', 'description', 'sku', 'product_category'],
       defaultSort: 'service_name',
       defaultOrder: 'asc'
     });
@@ -107,7 +107,8 @@ export class ServiceCatalogService extends BaseService<IService> {
           builder
             .whereILike('sc.service_name', term)
             .orWhereILike('sc.description', term)
-            .orWhereILike('sc.sku', term);
+            .orWhereILike('sc.sku', term)
+            .orWhereILike('sc.product_category', term);
         });
       }
       return query;
