@@ -459,7 +459,8 @@
       "executeError": "Impossibile eseguire il batch",
       "cancelled": "Batch annullato",
       "cancelError": "Impossibile annullare il batch",
-      "realmRequired": "Scegli un'azienda contabile connessa prima di creare l'esportazione."
+      "realmRequired": "Scegli un'azienda contabile connessa prima di creare l'esportazione.",
+      "artifactDownloadError": "Impossibile scaricare questo file esportato."
     },
     "status": {
       "pending": "In sospeso",
@@ -470,6 +471,12 @@
       "failed": "Non riuscito",
       "cancelled": "Annullato",
       "needsAttention": "Richiede attenzione"
+    },
+    "artifacts": {
+      "title": "File consegnati",
+      "download": "Scarica",
+      "unavailable": "Questo batch storico non contiene file salvati. Non è possibile recuperarli senza eseguire una nuova esportazione.",
+      "storageFallback": "Salvato in un backup del database"
     }
   },
   "templateRenderer": {

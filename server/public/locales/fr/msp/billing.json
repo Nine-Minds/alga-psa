@@ -459,7 +459,8 @@
       "executeError": "Échec de l'exécution du lot",
       "cancelled": "Lot annulé",
       "cancelError": "Échec de l'annulation du lot",
-      "realmRequired": "Choisissez une société comptable connectée avant de créer l'exportation."
+      "realmRequired": "Choisissez une société comptable connectée avant de créer l'exportation.",
+      "artifactDownloadError": "Impossible de télécharger ce fichier exporté."
     },
     "status": {
       "pending": "En attente",
@@ -470,6 +471,12 @@
       "failed": "Échec",
       "cancelled": "Annulé",
       "needsAttention": "Attention requise"
+    },
+    "artifacts": {
+      "title": "Fichiers livrés",
+      "download": "Télécharger",
+      "unavailable": "Ce lot historique ne contient aucun fichier enregistré. Il ne peut pas être récupéré sans lancer un nouvel export.",
+      "storageFallback": "Enregistré dans une sauvegarde de la base de données"
     }
   },
   "templateRenderer": {

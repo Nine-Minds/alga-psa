@@ -459,7 +459,8 @@
       "executeError": "Nie udało się wykonać partii",
       "cancelled": "Partia anulowana",
       "cancelError": "Nie udało się anulować partii",
-      "realmRequired": "Wybierz połączoną firmę księgową przed utworzeniem eksportu."
+      "realmRequired": "Wybierz połączoną firmę księgową przed utworzeniem eksportu.",
+      "artifactDownloadError": "Nie można pobrać tego pliku eksportu."
     },
     "status": {
       "pending": "Oczekujące",
@@ -470,6 +471,12 @@
       "failed": "Niepowodzenie",
       "cancelled": "Anulowane",
       "needsAttention": "Wymaga uwagi"
+    },
+    "artifacts": {
+      "title": "Dostarczone pliki",
+      "download": "Pobierz",
+      "unavailable": "Ten historyczny pakiet nie zawiera zapisanego pliku. Można go odzyskać tylko przez ponowne wykonanie eksportu.",
+      "storageFallback": "Zapisano w kopii zapasowej bazy danych"
     }
   },
   "templateRenderer": {

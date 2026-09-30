@@ -16,6 +16,7 @@
 const TENANT_TABLE_METADATA = {
   assets: { scope: 'tenant' },
   accounting_export_batches: { scope: 'tenant' },
+  accounting_export_artifacts: { scope: 'tenant' },
   accounting_export_errors: { scope: 'tenant' },
   accounting_export_lines: { scope: 'tenant' },
   accounting_sync_cycles: { scope: 'tenant' },

@@ -27,6 +27,8 @@ import { publishEvent } from '@alga-psa/event-bus/publishers';
 import { AppError, sanitizeProviderMessage } from '@alga-psa/core';
 import { getXeroCsvSettingsForTenant } from '@alga-psa/integrations/runtime';
 import logger from '@alga-psa/core/logger';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
+import { StorageService } from '@alga-psa/storage/StorageService';
 
 export interface ExternalTaxImporter {
   importTaxForInvoice(invoiceId: string): Promise<{ success: boolean; importedTax?: number; chargesUpdated?: number; error?: string }>;
@@ -151,20 +153,24 @@ export class AccountingExportService {
     batch: AccountingExportBatch | null;
     lines: AccountingExportLine[];
     errors: AccountingExportError[];
+    artifacts: Array<{ artifact_id: string; filename: string; content_type: string; storage_fallback: boolean }>;
   }> {
     const batch = await this.repository.getBatch(batchId);
     if (!batch) {
-      return { batch: null, lines: [], errors: [] };
+      return { batch: null, lines: [], errors: [], artifacts: [] };
     }
     // Mixed export batches are line-authoritative. Historical/header-fallback lines and
     // canonical detail-backed recurring lines may coexist in one stored batch, and rereads
     // must preserve each line's stored projection metadata instead of collapsing them to one
     // batch-wide service-period basis.
-    const [lines, errors] = await Promise.all([
+    const [lines, errors, artifacts] = await Promise.all([
       this.repository.listLines(batchId),
-      this.repository.listErrors(batchId)
+      this.repository.listErrors(batchId),
+      tenantDb((await createTenantKnex(batch.tenant)).knex, batch.tenant)
+        .table('accounting_export_artifacts').where({ batch_id: batchId })
+        .select('artifact_id', 'filename', 'content_type', 'storage_fallback').orderBy('filename')
     ]);
-    return { batch, lines, errors };
+    return { batch, lines, errors, artifacts };
   }
 
   async listBatches(params: { status?: AccountingExportStatus; adapter_type?: string } = {}): Promise<AccountingExportBatch[]> {
@@ -304,6 +310,57 @@ export class AccountingExportService {
     try {
       transformResult = await adapter.transform(context);
       const deliveryResult = await adapter.deliver(transformResult, context);
+      // File adapters return their exact serialized output in metadata.files.
+      // Persist immediately after delivery and before marking the batch done;
+      // a storage failure is surfaced as a batch failure and recorded for
+      // operator recovery instead of silently losing the download.
+      const deliveredMetadata = deliveryResult.metadata as { files?: Array<{ filename?: unknown; contentType?: unknown; content?: unknown }> } | undefined;
+      const artifactValue = deliveryResult.artifacts?.file as { filename?: unknown; contentType?: unknown; content?: unknown } | undefined;
+      const isFileAdapter = ['quickbooks_csv', 'quickbooks_desktop', 'xero_csv'].includes(adapter.type);
+      const outputFiles = isFileAdapter
+        ? (deliveredMetadata?.files ?? (artifactValue ? [artifactValue] : transformResult.files ?? []))
+        : [];
+      if (outputFiles.length > 0 && !(deliveryResult.failedDocuments?.length)) {
+        const artifactTenant = context.batch.tenant;
+        if (!artifactTenant) throw new Error('Export batch has no tenant for artifact persistence');
+        const db = tenantDb((await createTenantKnex(artifactTenant)).knex, artifactTenant);
+        for (const file of outputFiles) {
+          if (typeof file.filename !== 'string' || typeof file.contentType !== 'string' || typeof file.content !== 'string') {
+            throw new Error('Accounting adapter returned an invalid file artifact');
+          }
+          const existingArtifact = await db.table('accounting_export_artifacts')
+            .where({ batch_id: batchId, filename: file.filename }).first('artifact_id');
+          if (existingArtifact) continue;
+          const bytes = Buffer.from(file.content, 'utf8');
+          let fileId: string | null = null;
+          let storageFallback = !context.batch.created_by;
+          if (context.batch.created_by) {
+            try {
+              const stored = await StorageService.uploadFile(
+                artifactTenant, bytes, file.filename,
+                { mime_type: file.contentType, uploaded_by_id: context.batch.created_by, origin: 'system-artifact', isDerivedArtifact: true },
+              );
+              fileId = stored.file_id;
+            } catch (storageError) {
+              // Keep the adapter bytes in the tenant-sharded artifact row so a
+              // transient object-storage failure cannot force a second delivery.
+              storageFallback = true;
+              logger.error('[AccountingExportService] StorageService artifact upload failed; retaining exact bytes in database', {
+                batchId, filename: file.filename,
+                error: storageError instanceof Error ? storageError.message : String(storageError),
+              });
+            }
+          } else {
+            logger.warn('[AccountingExportService] Export batch has no creator; retaining exact artifact bytes in database', {
+              batchId, filename: file.filename,
+            });
+          }
+          await db.table('accounting_export_artifacts').insert({
+            batch_id: batchId, file_id: fileId, filename: file.filename,
+            content_type: file.contentType, content: bytes, storage_fallback: storageFallback,
+          });
+        }
+      }
       const failedDocuments = deliveryResult.failedDocuments ?? [];
 
       for (const delivered of deliveryResult.deliveredLines) {

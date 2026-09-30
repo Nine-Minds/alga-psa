@@ -1,7 +1,5 @@
 import { Knex } from 'knex';
 
-const ACCOUNTING_INTEGRATION_TYPE = 'quickbooks_online';
-
 export type ExportedInvoiceAction = 'unfinalize' | 'delete' | 'edit';
 
 const BLOCK_MESSAGES: Record<ExportedInvoiceAction, string> = {
@@ -17,14 +15,28 @@ export async function findInvoiceAccountingMapping(
   tenant: string,
   invoiceId: string
 ): Promise<{ id: string } | undefined> {
-  return knex('tenant_external_entity_mappings')
+  const mapped = await knex('tenant_external_entity_mappings')
     .where({
       tenant,
-      integration_type: ACCOUNTING_INTEGRATION_TYPE,
       alga_entity_type: 'invoice',
       alga_entity_id: invoiceId
     })
     .first('id');
+  if (mapped) return mapped;
+
+  // File exports don't create a provider mapping in every adapter. A delivered
+  // export line is persisted evidence of delivery; batch membership alone is
+  // insufficient because failed/cancelled batches may retain their lines.
+  return knex('accounting_export_lines as line')
+    .join('accounting_export_batches as batch', function joinBatch() {
+      this.on('batch.tenant', '=', 'line.tenant')
+        .andOn('batch.batch_id', '=', 'line.batch_id');
+    })
+    .where({ 'line.tenant': tenant, 'batch.tenant': tenant, 'line.document_id': invoiceId })
+    .whereIn('batch.adapter_type', ['quickbooks_csv', 'quickbooks_desktop', 'xero_csv'])
+    .where((query) => query.whereIn('line.status', ['delivered', 'posted'])
+      .orWhereIn('batch.status', ['delivered', 'posted']))
+    .first('line.line_id as id');
 }
 
 /**

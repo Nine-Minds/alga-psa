@@ -459,7 +459,8 @@
       "executeError": "Batch konnte nicht ausgeführt werden",
       "cancelled": "Stapel storniert",
       "cancelError": "Batch konnte nicht storniert werden",
-      "realmRequired": "Wählen Sie ein verbundenes Buchhaltungsunternehmen, bevor Sie den Export erstellen."
+      "realmRequired": "Wählen Sie ein verbundenes Buchhaltungsunternehmen, bevor Sie den Export erstellen.",
+      "artifactDownloadError": "Diese Exportdatei kann nicht heruntergeladen werden."
     },
     "status": {
       "pending": "Ausstehend",
@@ -470,6 +471,12 @@
       "failed": "Fehlgeschlagen",
       "cancelled": "Storniert",
       "needsAttention": "Erfordert Aufmerksamkeit"
+    },
+    "artifacts": {
+      "title": "Bereitgestellte Dateien",
+      "download": "Herunterladen",
+      "unavailable": "Für diesen historischen Stapel ist keine Datei gespeichert. Sie kann nur durch einen neuen Export wiederhergestellt werden.",
+      "storageFallback": "In einer Datenbanksicherung gespeichert"
     }
   },
   "templateRenderer": {

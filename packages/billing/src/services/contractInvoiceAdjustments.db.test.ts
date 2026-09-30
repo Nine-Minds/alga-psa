@@ -1,4 +1,5 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+import { Buffer } from 'node:buffer';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { createTestDbConnection, wireLocalTestDbEnv } from '../actions/_dbTestUtils';
@@ -532,7 +533,7 @@ describe('contract invoice adjustments (DB-backed)', () => {
     await db('discounts').where({ tenant, discount_id: configuredDiscountId }).update({ is_active: true });
   });
 
-  it('applies a newly added invoice-wide manual percentage discount to generated and previously saved charges on first save', async () => {
+  it.each(['pending_external', 'external'])('applies manual percentage discounts after later charges on %s-tax invoices', async (taxSource) => {
     const fixture = await createDraftWithGeneratedChargeAndDiscount();
     // This scenario is specifically the operator-authored discount path; remove
     // the fixture's configured automatic discount so the expected base is 390k.
@@ -581,11 +582,26 @@ describe('contract invoice adjustments (DB-backed)', () => {
     expect(await updateInvoiceManualItems(fixture.invoiceId, { newItems: [], updatedItems: [], removedItemIds: [] }))
       .toMatchObject({ invoice_id: fixture.invoiceId });
     await assertFinancialState();
+    // Pending external tax skips the internal tax recalculation branch. A new
+    // charge must still update the persisted percentage discount on this save.
+    await db('invoices').where({ tenant, invoice_id: fixture.invoiceId }).update({ tax_source: taxSource });
+    const laterChargeId = uuidv4();
+    const laterChargeSave = { newItems: [{ item_id: laterChargeId, service_id: serviceId, description: 'Later charge', quantity: 1, rate: 100, is_taxable: false } as any], updatedItems: [], removedItemIds: [] };
+    const laterChargeOperationId = uuidv4();
+    expect(await updateInvoiceManualItems(fixture.invoiceId, laterChargeSave, { operationId: laterChargeOperationId, expectedRevision: 3 }))
+      .toMatchObject({ invoice_id: fixture.invoiceId });
+    const laterDiscount = await db('invoice_charges').where({ tenant, item_id: manualDiscountId }).first();
+    const laterInvoice = await db('invoices').where({ tenant, invoice_id: fixture.invoiceId }).first();
+    expect(Number(laterDiscount.net_amount)).toBe(-40510);
+    expect(Number(laterInvoice.total_amount)).toBe(364590);
+    expect(await updateInvoiceManualItems(fixture.invoiceId, laterChargeSave, { operationId: laterChargeOperationId, expectedRevision: 3 }))
+      .toMatchObject({ invoice_id: fixture.invoiceId });
+    expect(Number((await db('invoices').where({ tenant, invoice_id: fixture.invoiceId }).first()).total_amount)).toBe(364590);
     const generated = await db('transactions').where({ tenant, invoice_id: fixture.invoiceId, type: 'invoice_generated' });
     const adjustments = await db('transactions').where({ tenant, invoice_id: fixture.invoiceId, type: 'invoice_adjustment' });
     expect(generated).toHaveLength(1);
-    expect(adjustments.map((row) => Number(row.amount))).toEqual([15000, -40500]);
-    expect(Number(generated[0].amount) + adjustments.reduce((sum, row) => sum + Number(row.amount), 0)).toBe(364500);
+    expect(adjustments.map((row) => Number(row.amount))).toEqual([15000, -40500, 90]);
+    expect(Number(generated[0].amount) + adjustments.reduce((sum, row) => sum + Number(row.amount), 0)).toBe(364590);
     await db('discounts').where({ tenant, discount_id: configuredDiscountId }).update({ is_active: true });
   });
 
@@ -2953,6 +2969,49 @@ describe('invoice adjustment editability (DB-backed)', () => {
     expect(capability.code).toBe('exported');
   });
 
+  it('blocks a Xero mapping and delivered CSV batch evidence but ignores failed/cancelled batch membership', async () => {
+    const xeroInvoice = await insertInvoice('draft');
+    await db('tenant_external_entity_mappings').insert({
+      tenant, integration_type: 'xero', alga_entity_type: 'invoice', alga_entity_id: xeroInvoice,
+      external_entity_id: `XERO-${xeroInvoice.slice(0, 8)}`,
+    });
+    expect((await inspectInvoiceEditable(db, tenant, xeroInvoice)).capability.code).toBe('exported');
+
+    const { updateInvoiceManualItems } = await import('../actions/invoiceModification');
+    const assertWriterLocked = async (invoiceId: string) => {
+      const before = await db('invoices').where({ tenant, invoice_id: invoiceId }).first('subtotal', 'total_amount', 'draft_adjustment_revision');
+      const chargeRows = await db('invoice_charges').where({ tenant, invoice_id: invoiceId }).orderBy('item_id');
+      const ledgerRows = await db('transactions').where({ tenant, invoice_id: invoiceId }).orderBy('transaction_id');
+      const result = await updateInvoiceManualItems(invoiceId, {
+        newItems: [{ item_id: uuidv4(), description: 'Should be rejected', quantity: 1, rate: 500 } as any],
+        updatedItems: [], removedItemIds: [],
+      }, { operationId: uuidv4(), expectedRevision: 0 });
+      expect(result).not.toMatchObject({ invoice_id: invoiceId });
+      expect(await db('invoices').where({ tenant, invoice_id: invoiceId }).first('subtotal', 'total_amount', 'draft_adjustment_revision')).toEqual(before);
+      expect(await db('invoice_charges').where({ tenant, invoice_id: invoiceId }).orderBy('item_id')).toEqual(chargeRows);
+      expect(await db('transactions').where({ tenant, invoice_id: invoiceId }).orderBy('transaction_id')).toEqual(ledgerRows);
+    };
+    await assertWriterLocked(xeroInvoice);
+
+    const failedInvoice = await insertInvoice('draft');
+    const failedBatch = uuidv4();
+    const failedLine = uuidv4();
+    await db('accounting_export_batches').insert({ tenant, batch_id: failedBatch, adapter_type: 'xero_csv', export_type: 'invoice', status: 'failed' });
+    await db('accounting_export_lines').insert({ tenant, batch_id: failedBatch, line_id: failedLine, document_id: failedInvoice, amount_cents: 100, currency_code: 'USD', status: 'failed' });
+    expect((await inspectInvoiceEditable(db, tenant, failedInvoice)).capability.editable).toBe(true);
+    await db('accounting_export_batches').where({ tenant, batch_id: failedBatch }).update({ status: 'cancelled' });
+    expect((await inspectInvoiceEditable(db, tenant, failedInvoice)).capability.editable).toBe(true);
+
+    const deliveredInvoice = await insertInvoice('draft');
+    const deliveredBatch = uuidv4();
+    const deliveredLine = uuidv4();
+    await db('accounting_export_batches').insert({ tenant, batch_id: deliveredBatch, adapter_type: 'quickbooks_csv', export_type: 'invoice', status: 'delivered' });
+    await db('accounting_export_lines').insert({ tenant, batch_id: deliveredBatch, line_id: deliveredLine, document_id: deliveredInvoice, amount_cents: 100, currency_code: 'USD', status: 'delivered' });
+    const locked = await inspectInvoiceEditable(db, tenant, deliveredInvoice);
+    expect(locked.capability).toMatchObject({ editable: false, code: 'exported' });
+    await assertWriterLocked(deliveredInvoice);
+  });
+
   it('reports not_found for an unknown invoice', async () => {
     const { invoice, capability } = await inspectInvoiceEditable(db, tenant, uuidv4());
     expect(invoice).toBeNull();
@@ -2962,6 +3021,39 @@ describe('invoice adjustment editability (DB-backed)', () => {
 });
 
 describe('accounting adjustment export matrix', () => {
+  it('reloads multiple delivered artifacts byte-for-byte and rejects a foreign-tenant artifact id', async () => {
+    const batchId = uuidv4();
+    const artifactIds = [uuidv4(), uuidv4()];
+    const contents = [Buffer.from('Amount,Description\r\n-4.05,discount\r\n', 'utf8'), Buffer.from('TRNS\tINV\tINVOICE\t-4.05\r\n', 'utf8')];
+    await db('accounting_export_batches').insert({ tenant, batch_id: batchId, adapter_type: 'quickbooks_desktop', export_type: 'invoice', status: 'delivered' });
+    await db('accounting_export_artifacts').insert(artifactIds.map((artifact_id, index) => ({
+      tenant, artifact_id, batch_id: batchId, file_id: null,
+      filename: index ? 'export.iif' : 'export.csv', content_type: index ? 'text/plain' : 'text/csv',
+      content: contents[index], storage_fallback: true,
+    })));
+    const foreignTenant = uuidv4();
+    await db('accounting_export_batches').insert({ tenant: foreignTenant, batch_id: batchId, adapter_type: 'quickbooks_desktop', export_type: 'invoice', status: 'delivered' });
+    await db('accounting_export_artifacts').insert({
+      tenant: foreignTenant, artifact_id: uuidv4(), batch_id: batchId, file_id: null,
+      filename: 'private.iif', content_type: 'text/plain', content: Buffer.from('private'), storage_fallback: true,
+    });
+
+    const { getAccountingExportBatch, downloadAccountingExportArtifact } = await import('../actions/accountingExportActions');
+    const detail = await getAccountingExportBatch(batchId) as any;
+    expect(detail.artifacts.map((artifact: any) => artifact.filename)).toEqual(['export.csv', 'export.iif']);
+    for (let index = 0; index < artifactIds.length; index += 1) {
+      const downloaded = await downloadAccountingExportArtifact(batchId, artifactIds[index]) as any;
+      expect(Buffer.from(downloaded.contentBase64, 'base64')).toEqual(contents[index]);
+    }
+    const foreignArtifactId = await db('accounting_export_artifacts').where({ tenant: foreignTenant, batch_id: batchId }).first('artifact_id');
+    const unavailable = await downloadAccountingExportArtifact(batchId, foreignArtifactId.artifact_id) as any;
+    expect(unavailable).toMatchObject({ success: false });
+    await expect(db('accounting_export_artifacts').insert({
+      tenant, artifact_id: uuidv4(), batch_id: batchId, file_id: null,
+      filename: 'export.csv', content_type: 'text/csv', content: contents[0], storage_fallback: true,
+    })).rejects.toThrow();
+  });
+
   it('seeds miscellaneous service idempotently and validates the effective edited row', async () => {
     const { ensureMiscellaneousService } = await import('@alga-psa/db');
     const id = await ensureMiscellaneousService(db, tenant);

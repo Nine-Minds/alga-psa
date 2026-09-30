@@ -18,7 +18,7 @@ import { IInvoiceCharge, InvoiceViewModel, DiscountType, type ManualPartialPerio
 import { BillingEngine } from '../lib/billing/billingEngine';
 import ProjectBillingCapUsage from '../models/projectBillingCapUsage';
 import ProjectBillingScheduleEntry from '../models/projectBillingScheduleEntry';
-import { persistInvoiceCharges, persistManualInvoiceCharges, resolveTaxRegionCodeForRate, validateManualChargeAttribution } from '../services/invoiceService'; // Import persistManualInvoiceCharges
+import { persistInvoiceCharges, persistManualInvoiceCharges, recalculatePercentageDiscountInvoiceCharges, resolveTaxRegionCodeForRate, validateManualChargeAttribution } from '../services/invoiceService'; // Import persistManualInvoiceCharges
 import { reconcileAutomaticInvoiceAdjustments } from '../services/invoiceAutomaticAdjustments';
 import Invoice from '@alga-psa/billing/models/invoice';
 import { v4 as uuidv4 } from 'uuid';
@@ -2452,6 +2452,11 @@ async function updateManualInvoiceItemsInternal(
     // post-edit eligible base first, in place, so the stored discount rows and
     // the manual additions agree.
     await reconcileAutomaticInvoiceAdjustments(trx, tenant, invoiceId);
+    // Recompute the shared legacy/manual percentage discount rows from the
+    // complete persisted charge set. This must run outside the tax calculator:
+    // pending/external-tax invoices do not necessarily traverse its internal
+    // tax branch, and newItems were only persisted above.
+    await recalculatePercentageDiscountInvoiceCharges(trx, invoiceId, tenant);
     await billingEngine.recalculateInvoice(invoiceId, trx, tenant);
     await recordAdjustmentSave(trx, tenant, invoiceId, submission?.operationId);
   });

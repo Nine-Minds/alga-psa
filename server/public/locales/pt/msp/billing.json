@@ -459,7 +459,8 @@
       "executeError": "Falha ao executar lote",
       "cancelled": "Lote cancelado",
       "cancelError": "Falha ao cancelar lote",
-      "realmRequired": "Escolha uma empresa contábil conectada antes de criar a exportação."
+      "realmRequired": "Escolha uma empresa contábil conectada antes de criar a exportação.",
+      "artifactDownloadError": "Não foi possível baixar este arquivo exportado."
     },
     "status": {
       "pending": "Pendente",
@@ -470,6 +471,12 @@
       "failed": "Fracassado",
       "cancelled": "Cancelado",
       "needsAttention": "Precisa de atenção"
+    },
+    "artifacts": {
+      "title": "Arquivos entregues",
+      "download": "Baixar",
+      "unavailable": "Este lote histórico não tem nenhum arquivo salvo. Ele não pode ser recuperado sem executar uma nova exportação.",
+      "storageFallback": "Armazenado em um backup do banco de dados"
     }
   },
   "templateRenderer": {
