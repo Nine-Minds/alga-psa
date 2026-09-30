@@ -184,7 +184,7 @@ export class AccountingExportRepository {
     return this.tenantId;
   }
 
-  async reserveInvoicesForExport(batchId: string, invoiceIds: string[], expectedStatus: AccountingExportStatus, validatedAt: string): Promise<void> {
+  async reserveInvoicesForExport(batchId: string, invoiceIds: string[], expectedStatus: AccountingExportStatus, validatedAt: string, executionId: string): Promise<void> {
     const tenant = this.requireTenant();
     const uniqueIds = [...new Set(invoiceIds)].sort();
     await this.knex.transaction(async (trx) => {
@@ -204,22 +204,46 @@ export class AccountingExportRepository {
         if (conflict) throw new Error('An export is already being prepared for one of these invoices');
       }
       await tenantDb(trx, tenant).table('accounting_export_batches')
-        .where({ tenant, batch_id: batchId, status: expectedStatus }).update({ status: 'validating', validated_at: validatedAt, updated_at: validatedAt });
+        .where({ tenant, batch_id: batchId, status: expectedStatus }).update({ status: 'validating', validated_at: validatedAt, updated_at: validatedAt, execution_id: executionId });
     });
   }
 
-  async refreshExecutionLease(batchId: string, heartbeatAt: string): Promise<void> {
+  getConnection(): Knex {
+    return this.knex;
+  }
+
+  /** The row lock fences the entire attempt, including artifact publication.
+   * Recovery skips a live transaction; a resumed older worker must match its ID.
+   */
+  async withExecution<T>(batchId: string, executionId: string, work: (repository: AccountingExportRepository) => Promise<T>): Promise<T> {
     const tenant = this.requireTenant();
-    await this.table('accounting_export_batches', tenant).where({ batch_id: batchId, status: 'validating' })
-      .update({ updated_at: heartbeatAt });
+    return this.knex.transaction(async (trx) => {
+      const batch = await tenantDb(trx, tenant).table('accounting_export_batches')
+        .where({ tenant, batch_id: batchId, status: 'validating', execution_id: executionId })
+        .forNoKeyUpdate().first('batch_id');
+      if (!batch) throw new Error('Accounting export execution no longer owns this reservation');
+      return work(new AccountingExportRepository(trx, tenant));
+    });
+  }
+
+  async failExecution(batchId: string, executionId: string, notes: string): Promise<void> {
+    const tenant = this.requireTenant();
+    await this.table('accounting_export_batches', tenant)
+      .where({ batch_id: batchId, status: 'validating', execution_id: executionId })
+      .update({ status: 'failed', notes, updated_at: new Date().toISOString() });
   }
 
   async recoverExpiredExecution(batchId: string, expiredBefore: string): Promise<boolean> {
     const tenant = this.requireTenant();
-    const changed = await this.table('accounting_export_batches', tenant)
-      .where({ batch_id: batchId, status: 'validating' }).andWhere('updated_at', '<', expiredBefore)
-      .update({ status: 'failed', notes: 'Export reservation expired after an interrupted execution.', updated_at: new Date().toISOString() });
-    return changed === 1;
+    return this.knex.transaction(async (trx) => {
+      const query = tenantDb(trx, tenant).table('accounting_export_batches')
+        .where({ tenant, batch_id: batchId, status: 'validating' }).andWhere('updated_at', '<', expiredBefore);
+      const abandoned = await query.clone().forUpdate().skipLocked().first('batch_id');
+      if (!abandoned) return false;
+      await query.update({ status: 'failed', execution_id: null,
+        notes: 'Export reservation expired after an interrupted execution.', updated_at: new Date().toISOString() });
+      return true;
+    });
   }
 
   private requireTenant(): string {

@@ -419,12 +419,12 @@ export class QuickBooksCSVAdapter implements AccountingExportAdapter {
     };
   }
 
-  async postProcess(deliveryResult: AccountingExportDeliveryResult, context: AccountingExportAdapterContext): Promise<void> {
+  async postProcess(deliveryResult: AccountingExportDeliveryResult, context: AccountingExportAdapterContext, transaction?: Knex): Promise<void> {
     const tenantId = context.batch.tenant;
     if (!tenantId) throw new Error('QuickBooks CSV mapping requires a tenant');
     const metadata = deliveryResult.metadata as { invoiceMappings?: Array<{ invoiceId: string; invoiceNumber: string; filename?: string }> } | undefined;
     const mappings = metadata?.invoiceMappings ?? [];
-    const { knex } = await createTenantKnex();
+    const knex = transaction ?? (await createTenantKnex()).knex;
     const deliveredAt = new Date().toISOString();
     await withTransaction(knex, async (trx) => {
       for (const mapping of [...mappings].sort((a, b) => a.invoiceId.localeCompare(b.invoiceId))) {

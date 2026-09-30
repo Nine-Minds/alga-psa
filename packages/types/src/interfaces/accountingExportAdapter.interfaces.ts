@@ -1,3 +1,4 @@
+import type { Knex } from 'knex';
 import type { AccountingExportBatch, AccountingExportLine } from './accountingExport.interfaces';
 
 export interface AccountingExportAdapterCapabilities {
@@ -266,7 +267,8 @@ export interface AccountingExportAdapter {
   capabilities(): AccountingExportAdapterCapabilities;
   transform(context: AccountingExportAdapterContext): Promise<AccountingExportTransformResult>;
   deliver(transformResult: AccountingExportTransformResult, context: AccountingExportAdapterContext): Promise<AccountingExportDeliveryResult>;
-  postProcess?(deliveryResult: AccountingExportDeliveryResult, context: AccountingExportAdapterContext): Promise<void>;
+  /** File adapters must use the supplied transaction for mappings so files and edit guards publish atomically. */
+  postProcess?(deliveryResult: AccountingExportDeliveryResult, context: AccountingExportAdapterContext, transaction?: Knex): Promise<void>;
 
   /**
    * Fetch invoice data including tax amounts from external accounting system.

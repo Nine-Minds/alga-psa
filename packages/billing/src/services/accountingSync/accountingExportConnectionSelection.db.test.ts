@@ -74,6 +74,7 @@ vi.mock('@alga-psa/auth/rbac', () => ({ hasPermission: async () => true }));
 
 import * as dbModule from '@alga-psa/db';
 import { AccountingExportInvoiceSelector } from '../accountingExportInvoiceSelector';
+import { AccountingExportRepository } from '../../repositories/accountingExportRepository';
 import { AccountingExportService } from '../accountingExportService';
 import { KnexInvoiceMappingRepository } from '../../repositories/invoiceMappingRepository';
 import { lockInvoiceForExternalSync } from '../../lib/invoiceExternalSyncLock';
@@ -240,6 +241,70 @@ beforeEach(async () => {
 });
 
 describe('manual export selected-target delivery (DB-backed)', () => {
+  it('fences an expired owner and never recovers a live execution transaction', async () => {
+    const { invoiceId } = await seedInvoice();
+    const repo = await AccountingExportRepository.createForTenant(tenantA);
+    const batch = await repo.createBatch({ adapter_type: 'quickbooks_desktop', export_type: 'invoice' });
+    await repo.addLine({ batch_id: batch.batch_id, document_id: invoiceId, amount_cents: 5000, currency_code: 'USD' });
+    const expired = new Date(Date.now() - 30 * 60 * 1000).toISOString();
+    const cutoff = new Date(Date.now() - 15 * 60 * 1000).toISOString();
+    const oldId = randomUUID();
+    await repo.reserveInvoicesForExport(batch.batch_id, [invoiceId], batch.status, expired, oldId);
+    expect(await repo.recoverExpiredExecution(batch.batch_id, cutoff)).toBe(true);
+    const newId = randomUUID();
+    await repo.reserveInvoicesForExport(batch.batch_id, [invoiceId], 'failed', expired, newId);
+    const staleWork = vi.fn();
+    await expect(repo.withExecution(batch.batch_id, oldId, staleWork)).rejects.toThrow(/no longer owns/);
+    expect(staleWork).not.toHaveBeenCalled();
+    await repo.failExecution(batch.batch_id, oldId, 'stale worker failure');
+    expect((await repo.getBatch(batch.batch_id))?.status).toBe('validating');
+
+    await repo.withExecution(batch.batch_id, newId, async (scoped) => {
+      // Even an old timestamp cannot override a worker still holding its fence.
+      expect(await repo.recoverExpiredExecution(batch.batch_id, cutoff)).toBe(false);
+      await scoped.updateBatchStatus(batch.batch_id, { status: 'delivered' });
+    });
+    await repo.failExecution(batch.batch_id, oldId, 'late failure');
+    expect((await repo.getBatch(batch.batch_id))?.status).toBe('delivered');
+  });
+
+  it('publishes IIF bytes and delivered edit guards atomically when a status write fails', async () => {
+    const { invoiceId, serviceId, clientId } = await seedInvoice();
+    for (const [entityType, entityId, externalId] of [
+      ['service', serviceId, 'ATOMIC-SERVICE'], ['client', clientId, 'ATOMIC-CUSTOMER'],
+    ] as const) await db('tenant_external_entity_mappings').insert({
+      id: randomUUID(), tenant: tenantA, integration_type: 'quickbooks_desktop',
+      alga_entity_type: entityType, alga_entity_id: entityId, external_entity_id: externalId,
+      sync_status: 'manual_link', created_at: db.fn.now(), updated_at: db.fn.now(),
+    });
+    const selected = await new AccountingExportInvoiceSelector(db, tenantA).createBatchFromFilters({
+      adapterType: 'quickbooks_desktop', filters: { invoiceIds: [invoiceId] },
+    });
+    await db('invoices').where({ tenant: tenantA, invoice_id: invoiceId }).update({ status: 'draft', finalized_at: null });
+    const service = await AccountingExportService.createForTenant(tenantA);
+    const { AccountingExportValidation } = await import('../accountingExportValidation');
+    const validation = vi.spyOn(AccountingExportValidation, 'ensureMappingsForBatch')
+      .mockRejectedValueOnce(new Error('injected preparation failure'));
+    try {
+      await expect(service.executeBatch(selected.batch.batch_id)).rejects.toThrow('injected preparation failure');
+    } finally { validation.mockRestore(); }
+    expect((await service.getBatchWithDetails(selected.batch.batch_id)).batch?.status).toBe('failed');
+    expect((await inspectInvoiceEditable(db, tenantA, invoiceId)).capability.editable).toBe(true);
+    const updateLine = vi.spyOn(AccountingExportRepository.prototype, 'updateLine').mockImplementationOnce(async () => {
+      expect((await service.getBatchWithDetails(selected.batch.batch_id)).artifacts).toHaveLength(0);
+      expect((await inspectInvoiceEditable(db, tenantA, invoiceId)).capability.editable).toBe(false);
+      throw new Error('injected delivered-line failure');
+    });
+    try {
+      await expect(service.executeBatch(selected.batch.batch_id)).rejects.toThrow('injected delivered-line failure');
+    } finally { updateLine.mockRestore(); }
+    expect((await service.getBatchWithDetails(selected.batch.batch_id)).artifacts).toHaveLength(0);
+    expect((await inspectInvoiceEditable(db, tenantA, invoiceId)).capability.editable).toBe(true);
+    await service.executeBatch(selected.batch.batch_id);
+    expect((await service.getBatchWithDetails(selected.batch.batch_id)).artifacts).toHaveLength(1);
+    expect((await inspectInvoiceEditable(db, tenantA, invoiceId)).capability).toMatchObject({ editable: false, code: 'exported' });
+  });
+
   it('does not let a cancellation that read ready overwrite an execution reservation', async () => {
     const { invoiceId, serviceId, clientId } = await seedInvoice();
     for (const [entityType, entityId, externalId] of [
@@ -277,10 +342,11 @@ describe('manual export selected-target delivery (DB-backed)', () => {
     const execution = service.executeBatch(selected.batch.batch_id);
     await started;
     continueCancellation();
-    await expect(cancellation).rejects.toThrow(/cannot cancel batch in status validating/i);
+    const rejectedCancellation = expect(cancellation).rejects.toThrow(/cannot cancel batch in status (validating|delivered)/i);
     expect((await originalGetBatch(selected.batch.batch_id))?.status).toBe('validating');
     releaseTransform();
     await execution;
+    await rejectedCancellation;
     adapter.transform = originalTransform;
     repo.getBatch = originalGetBatch;
   });

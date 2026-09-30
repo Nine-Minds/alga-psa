@@ -1,3 +1,5 @@
+import { randomUUID } from 'node:crypto';
+import { Buffer } from 'node:buffer';
 /* eslint-disable custom-rules/no-feature-to-feature-imports -- Accounting export orchestration - requires integration-specific tenant settings for adapter configuration */
 import {
   AccountingExportBatch,
@@ -14,6 +16,7 @@ import {
 } from '../repositories/accountingExportRepository';
 import { AccountingAdapterRegistry } from '../adapters/accounting/registry';
 import {
+  AccountingExportAdapter,
   AccountingExportAdapterContext,
   AccountingExportDeliveryDocumentFailure,
   AccountingExportDeliveryResult,
@@ -27,7 +30,7 @@ import { publishEvent } from '@alga-psa/event-bus/publishers';
 import { AppError, sanitizeProviderMessage } from '@alga-psa/core';
 import { getXeroCsvSettingsForTenant } from '@alga-psa/integrations/runtime';
 import logger from '@alga-psa/core/logger';
-import { createTenantKnex, tenantDb } from '@alga-psa/db';
+import { tenantDb } from '@alga-psa/db';
 import { StorageService } from '@alga-psa/storage/StorageService';
 
 export interface ExternalTaxImporter {
@@ -45,6 +48,9 @@ export interface AppendErrorsOptions {
 }
 
 export class AccountingExportService {
+  private isTransactionalExecution = false;
+  private readonly afterCommit: Array<() => Promise<void>> = [];
+  private readonly afterRollback: Array<() => Promise<void>> = [];
   constructor(
     private readonly repository: AccountingExportRepository,
     private readonly adapterRegistry: AccountingAdapterRegistry,
@@ -268,95 +274,109 @@ export class AccountingExportService {
     }
 
     const now = new Date().toISOString();
+    const executionId = randomUUID();
     if (this.repository.reserveInvoicesForExport) {
-      await this.repository.reserveInvoicesForExport(batchId, initial.lines.map((line) => line.document_id), batch.status, now);
+      await this.repository.reserveInvoicesForExport(batchId, initial.lines.map((line) => line.document_id), batch.status, now, executionId);
     } else {
       // Lightweight service unit doubles may omit the database reservation capability.
       await this.repository.updateBatchStatus(batchId, { status: 'validating', validated_at: now });
     }
-    const leaseHeartbeat = this.repository.refreshExecutionLease
-      ? setInterval(() => {
-          void this.repository.refreshExecutionLease!(batchId, new Date().toISOString()).catch((error) => {
-            logger.warn('[AccountingExportService] Failed to refresh export reservation lease', {
-              batchId, error: error instanceof Error ? error.message : String(error),
-            });
-          });
-        }, 60_000)
-      : null;
+    if (this.repository.withExecution) {
+      let scopedService: AccountingExportService | undefined;
+      let result: AccountingExportDeliveryResult;
+      try {
+        result = await this.repository.withExecution(batchId, executionId, async (repository) => {
+          scopedService = new AccountingExportService(repository, this.adapterRegistry, this.taxImporter);
+          scopedService.isTransactionalExecution = true;
+          return scopedService.executeReservedBatch(batchId, adapter, now);
+        });
+      } catch (error) {
+        for (const cleanup of scopedService?.afterRollback ?? []) await cleanup();
+        await this.repository.failExecution(batchId, executionId,
+          error instanceof Error ? error.message : 'Accounting export failed');
+        throw error;
+      }
+      // Tax import opens its own invoice transaction, so run it only after the
+      // mapping/artifact/delivery transaction releases its invoice locks.
+      for (const followup of scopedService?.afterCommit ?? []) await followup();
+      return result;
+    }
+    return this.executeReservedBatch(batchId, adapter, now);
+  }
 
+  private async executeReservedBatch(batchId: string, adapter: AccountingExportAdapter, now: string): Promise<AccountingExportDeliveryResult> {
     let refreshed: Awaited<ReturnType<AccountingExportService['getBatchWithDetails']>>;
     let taxDelegationMode: TaxDelegationMode;
     let adapterSettings: Record<string, unknown> | undefined;
     let context: AccountingExportAdapterContext;
     try {
-    await AccountingExportValidation.ensureMappingsForBatch(batchId, { preserveBatchStatus: true });
-    refreshed = await this.getBatchWithDetails(batchId);
-    if (!refreshed.batch) {
-      throw new Error(`Export batch ${batchId} was not found after validation`);
-    }
-
-    const openValidationErrors = refreshed.errors.filter((item) => item.resolution_state === 'open');
-    if (openValidationErrors.length > 0) {
-      await this.repository.updateBatchStatus(batchId, { status: 'needs_attention', validated_at: now });
-      await publishEvent({
-        eventType: 'ACCOUNTING_EXPORT_FAILED',
-        payload: {
-          tenantId: refreshed.batch.tenant,
-          batchId,
-          adapterType: adapter.type,
-          error: {
-            message: 'Batch not ready after validation',
-            status: 'needs_attention'
-          }
-        }
-      });
-      // Typed so callers (e.g. the scheduled drain) can tell deterministic
-      // validation failures apart from transient transport errors.
-      throw new AppError(
-        'ACCOUNTING_EXPORT_VALIDATION_FAILED',
-        `Export batch ${batchId} is not ready for delivery (status ${refreshed.batch.status})`,
-        {
-          batchId,
-          status: 'needs_attention',
-          validationErrors: openValidationErrors.slice(0, 10).map((item) => ({ code: item.code, message: item.message }))
-        }
-      );
-    }
-
-    const normalizedBatch: AccountingExportBatch = {
-      ...refreshed.batch,
-      status: 'validating',
-      validated_at: now
-    };
-
-    // Determine tax delegation mode from invoice tax_source values
-    taxDelegationMode = await this.determineTaxDelegationMode(refreshed.batch, refreshed.lines);
-    const excludeTaxFromExport = taxDelegationMode === 'delegate';
-
-    // Load adapter-specific settings
-    adapterSettings = undefined;
-    if (normalizedBatch.adapter_type === 'xero_csv' && normalizedBatch.tenant) {
-      try {
-        const xeroCsvSettings = await getXeroCsvSettingsForTenant(normalizedBatch.tenant);
-        adapterSettings = {
-          dateFormat: xeroCsvSettings.dateFormat,
-          defaultCurrency: xeroCsvSettings.defaultCurrency
-        };
-      } catch (error) {
-        logger.warn('[AccountingExportService] Failed to load Xero CSV settings, using defaults', {
-          error: (error as Error).message
-        });
+      await AccountingExportValidation.ensureMappingsForBatch(batchId, { preserveBatchStatus: true });
+      refreshed = await this.getBatchWithDetails(batchId);
+      if (!refreshed.batch) {
+        throw new Error(`Export batch ${batchId} was not found after validation`);
       }
-    }
 
-    context = {
-      batch: normalizedBatch,
-      lines: refreshed.lines,
-      taxDelegationMode,
-      excludeTaxFromExport,
-      adapterSettings
-    };
+      const openValidationErrors = refreshed.errors.filter((item) => item.resolution_state === 'open');
+      if (openValidationErrors.length > 0) {
+        await this.repository.updateBatchStatus(batchId, { status: 'needs_attention', validated_at: now });
+        await publishEvent({
+          eventType: 'ACCOUNTING_EXPORT_FAILED',
+          payload: {
+            tenantId: refreshed.batch.tenant,
+            batchId,
+            adapterType: adapter.type,
+            error: {
+              message: 'Batch not ready after validation',
+              status: 'needs_attention'
+            }
+          }
+        });
+        // Typed so callers (e.g. the scheduled drain) can tell deterministic
+        // validation failures apart from transient transport errors.
+        throw new AppError(
+          'ACCOUNTING_EXPORT_VALIDATION_FAILED',
+          `Export batch ${batchId} is not ready for delivery (status ${refreshed.batch.status})`,
+          {
+            batchId,
+            status: 'needs_attention',
+            validationErrors: openValidationErrors.slice(0, 10).map((item) => ({ code: item.code, message: item.message }))
+          }
+        );
+      }
 
+      const normalizedBatch: AccountingExportBatch = {
+        ...refreshed.batch,
+        status: 'validating',
+        validated_at: now
+      };
+
+      // Determine tax delegation mode from invoice tax_source values
+      taxDelegationMode = await this.determineTaxDelegationMode(refreshed.batch, refreshed.lines);
+      const excludeTaxFromExport = taxDelegationMode === 'delegate';
+
+      // Load adapter-specific settings
+      adapterSettings = undefined;
+      if (normalizedBatch.adapter_type === 'xero_csv' && normalizedBatch.tenant) {
+        try {
+          const xeroCsvSettings = await getXeroCsvSettingsForTenant(normalizedBatch.tenant);
+          adapterSettings = {
+            dateFormat: xeroCsvSettings.dateFormat,
+            defaultCurrency: xeroCsvSettings.defaultCurrency
+          };
+        } catch (error) {
+          logger.warn('[AccountingExportService] Failed to load Xero CSV settings, using defaults', {
+            error: (error as Error).message
+          });
+        }
+      }
+
+      context = {
+        batch: normalizedBatch,
+        lines: refreshed.lines,
+        taxDelegationMode,
+        excludeTaxFromExport,
+        adapterSettings
+      };
     } catch (error) {
       // Recover reservation if mapping validation, detail reload, or tax lookup fails.
       const current = await this.repository.getBatch(batchId);
@@ -365,7 +385,6 @@ export class AccountingExportService {
           status: 'failed', notes: error instanceof Error ? error.message : 'Accounting export preparation failed'
         });
       }
-      if (leaseHeartbeat) clearInterval(leaseHeartbeat);
       throw error;
     }
 
@@ -390,7 +409,7 @@ export class AccountingExportService {
       if (outputFiles.length > 0) {
         const artifactTenant = context.batch.tenant;
         if (!artifactTenant) throw new Error('Export batch has no tenant for artifact persistence');
-        const db = tenantDb((await createTenantKnex(artifactTenant)).knex, artifactTenant);
+        const db = tenantDb(this.repository.getConnection(), artifactTenant);
         // A retry replaces the artifact set as one attempt. Remove old rows
         // first so a mid-persistence failure cannot expose bytes from a prior
         // attempt under a filename that now describes different contents.
@@ -399,14 +418,7 @@ export class AccountingExportService {
         await db.table('accounting_export_artifacts').where({ tenant: artifactTenant, batch_id: batchId }).del();
         if (context.batch.created_by) {
           for (const previous of previousArtifacts) {
-            if (!previous.file_id) continue;
-            try { await StorageService.deleteFile(previous.file_id, context.batch.created_by); }
-            catch (cleanupError) {
-              logger.warn('[AccountingExportService] Prior attempt artifact cleanup failed', {
-                batchId, filename: previous.filename,
-                error: cleanupError instanceof Error ? cleanupError.message : String(cleanupError),
-              });
-            }
+            if (previous.file_id) this.afterCommit.push(() => this.deleteArtifactFile(previous.file_id, context.batch.created_by!, batchId));
           }
         }
         for (const file of outputFiles) {
@@ -423,6 +435,7 @@ export class AccountingExportService {
                 { mime_type: file.contentType, uploaded_by_id: context.batch.created_by, origin: 'system-artifact', isDerivedArtifact: true },
               );
               fileId = stored.file_id;
+              this.afterRollback.push(() => this.deleteArtifactFile(stored.file_id, context.batch.created_by!, batchId));
             } catch (storageError) {
               // Keep the adapter bytes in the tenant-sharded artifact row so a
               // transient object-storage failure cannot force a second delivery.
@@ -439,22 +452,9 @@ export class AccountingExportService {
           }
           const artifactRow = {
             file_id: fileId, filename: file.filename,
-          content_type: file.contentType, content: bytes, storage_fallback: storageFallback, committed: false,
+            content_type: file.contentType, content: bytes, storage_fallback: storageFallback, committed: false,
           };
-          try {
-            await db.table('accounting_export_artifacts').insert({ tenant: artifactTenant, batch_id: batchId, ...artifactRow });
-          } catch (persistError) {
-            if (fileId && context.batch.created_by) {
-              try { await StorageService.deleteFile(fileId, context.batch.created_by); }
-              catch (cleanupError) {
-                logger.warn('[AccountingExportService] Unreferenced artifact object cleanup failed', {
-                  batchId, filename: file.filename,
-                  error: cleanupError instanceof Error ? cleanupError.message : String(cleanupError),
-                });
-              }
-            }
-            throw persistError;
-          }
+          await db.table('accounting_export_artifacts').insert({ tenant: artifactTenant, batch_id: batchId, ...artifactRow });
         }
         if (isFileAdapter && typeof adapter.postProcess !== 'function') fileExportFinalized = true;
       }
@@ -464,11 +464,11 @@ export class AccountingExportService {
       // The validating reservation remains in place through this mapping
       // transaction, closing the transform-to-delivery edit window.
       if (failedDocuments.length === 0 && typeof adapter.postProcess === 'function') {
-        await adapter.postProcess(deliveryResult, context);
+        await adapter.postProcess(deliveryResult, context, this.repository.getConnection?.());
         if (isFileAdapter) fileExportFinalized = true;
       }
       if (isFileAdapter && outputFiles.length > 0 && fileExportFinalized) {
-        const committedDb = tenantDb((await createTenantKnex(context.batch.tenant!)).knex, context.batch.tenant!);
+        const committedDb = tenantDb(this.repository.getConnection(), context.batch.tenant!);
         await committedDb.table('accounting_export_artifacts')
           .where({ tenant: context.batch.tenant, batch_id: batchId }).update({ committed: true });
       }
@@ -516,16 +516,16 @@ export class AccountingExportService {
       if (failedDocuments.length === 0 || hasDeliveredLines) {
         // Automatically import external tax after successful delivery with tax delegation
         if (context.taxDelegationMode === 'delegate') {
-          await this.importExternalTaxAfterDelivery(
-            deliveryResult,
-            { ...context, lines: deliveredContextLines },
-            adapter
+          const importTax = () => this.importExternalTaxAfterDelivery(
+            deliveryResult, { ...context, lines: deliveredContextLines }, adapter
           );
+          if (this.isTransactionalExecution) this.afterCommit.push(importTax);
+          else await importTax();
         }
       }
 
       if (failedDocuments.length === 0) {
-        await publishEvent({
+        const publishCompletion = () => publishEvent({
           eventType: 'ACCOUNTING_EXPORT_COMPLETED',
           payload: {
             tenantId: context.batch.tenant,
@@ -534,6 +534,8 @@ export class AccountingExportService {
             deliveredLineIds: deliveryResult.deliveredLines.map((item) => item.lineId)
           }
         });
+        if (this.isTransactionalExecution) this.afterCommit.push(publishCompletion);
+        else await publishCompletion();
       } else {
         await publishEvent({
           eventType: 'ACCOUNTING_EXPORT_FAILED',
@@ -552,59 +554,48 @@ export class AccountingExportService {
         });
       }
 
-      if (leaseHeartbeat) clearInterval(leaseHeartbeat);
       return deliveryResult;
     } catch (error: any) {
-      if (leaseHeartbeat) clearInterval(leaseHeartbeat);
-      if (!fileExportFinalized && ['quickbooks_csv', 'quickbooks_desktop', 'xero_csv'].includes(adapter.type) && context.batch.tenant) {
-        try {
-          const db = tenantDb((await createTenantKnex(context.batch.tenant)).knex, context.batch.tenant);
-          const artifacts = await db.table('accounting_export_artifacts')
-            .where({ tenant: context.batch.tenant, batch_id: batchId }).select('file_id', 'filename');
-          await db.table('accounting_export_artifacts').where({ tenant: context.batch.tenant, batch_id: batchId }).del();
-          if (context.batch.created_by) {
-            for (const artifact of artifacts) {
-              if (!artifact.file_id) continue;
-              try { await StorageService.deleteFile(artifact.file_id, context.batch.created_by); }
-              catch (cleanupError) {
-                logger.warn('[AccountingExportService] Failed attempt artifact cleanup failed', {
-                  batchId, filename: artifact.filename,
-                  error: cleanupError instanceof Error ? cleanupError.message : String(cleanupError),
-                });
-              }
+      try {
+        await this.persistAdapterFailure({
+          batchId,
+          adapterType: adapter.type,
+          context,
+          transformResult,
+          error
+        });
+
+        await this.repository.updateBatchStatus(batchId, {
+          status: 'failed',
+          notes: error?.message ?? 'Accounting export failed'
+        });
+
+        await publishEvent({
+          eventType: 'ACCOUNTING_EXPORT_FAILED',
+          payload: {
+            tenantId: context.batch.tenant,
+            batchId: context.batch.batch_id,
+            adapterType: adapter.type,
+            error: {
+              message: error?.message ?? 'Unknown accounting export failure'
             }
           }
-        } catch (cleanupError) {
-          logger.error('[AccountingExportService] Failed to clear incomplete artifact attempt', {
-            batchId, error: cleanupError instanceof Error ? cleanupError.message : String(cleanupError),
-          });
-        }
+        });
+      } catch (recordError) {
+        logger.warn('[AccountingExportService] Could not record failure inside export transaction', {
+          batchId, error: recordError instanceof Error ? recordError.message : String(recordError),
+        });
       }
-      await this.persistAdapterFailure({
-        batchId,
-        adapterType: adapter.type,
-        context,
-        transformResult,
-        error
-      });
-
-      await this.repository.updateBatchStatus(batchId, {
-        status: 'failed',
-        notes: error?.message ?? 'Accounting export failed'
-      });
-
-      await publishEvent({
-        eventType: 'ACCOUNTING_EXPORT_FAILED',
-        payload: {
-          tenantId: context.batch.tenant,
-          batchId: context.batch.batch_id,
-          adapterType: adapter.type,
-          error: {
-            message: error?.message ?? 'Unknown accounting export failure'
-          }
-        }
-      });
       throw error;
+    }
+  }
+
+  private async deleteArtifactFile(fileId: string, actorId: string, batchId: string): Promise<void> {
+    try { await StorageService.deleteFile(fileId, actorId); }
+    catch (error) {
+      logger.warn('[AccountingExportService] Artifact object cleanup failed', {
+        batchId, fileId, error: error instanceof Error ? error.message : String(error),
+      });
     }
   }
 
