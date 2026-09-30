@@ -2822,7 +2822,7 @@ describe('Quote infrastructure', () => {
       expect(Number(monthlyOpt.tax_rate)).toBe(6);
       expect(Number(monthlyOpt.tax_amount)).toBe(240);
 
-      // Persisted quote totals keep the legacy rule (required + selected optional).
+      // Persisted quote totals follow the shared rule (required + selected optional).
       const storedQuote = await context.db('quotes')
         .where({ tenant: context.tenantId, quote_id: quote.quote_id })
         .first();
@@ -2830,15 +2830,16 @@ describe('Quote infrastructure', () => {
       expect(Number(storedQuote.tax)).toBe(annualSelected ? 5094 : 4794);
       expect(Number(storedQuote.total_amount)).toBe(annualSelected ? 89994 : 84694);
 
-      // The presented quote reports the same if-selected figures either way.
+      // The presented quote (PDF) reports exactly the persisted totals, and
+      // quotes the pending annual add-on with its hypothetical tax.
       const viewModel = await mapDbQuoteToViewModel(context.db, context.tenantId, quote.quote_id);
       expect(viewModel).toBeTruthy();
-      expect(viewModel!.subtotal).toBe(75900);
-      expect(viewModel!.tax).toBe(4554);
-      expect(viewModel!.total_amount).toBe(80454);
-      expect(viewModel!.optional_subtotal).toBe(9000);
-      expect(viewModel!.optional_tax).toBe(540);
-      expect(viewModel!.optional_total).toBe(9540);
+      expect(viewModel!.subtotal).toBe(Number(storedQuote.subtotal));
+      expect(viewModel!.tax).toBe(Number(storedQuote.tax));
+      expect(viewModel!.total_amount).toBe(Number(storedQuote.total_amount));
+      expect(viewModel!.optional_subtotal).toBe(annualSelected ? 0 : 5000);
+      expect(viewModel!.optional_tax).toBe(annualSelected ? 0 : 300);
+      expect(viewModel!.optional_total).toBe(annualSelected ? 0 : 5300);
     }
   });
 });

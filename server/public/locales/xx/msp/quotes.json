@@ -501,6 +501,7 @@
       "noPriceInCurrency": "⟦Ƞȯ ƥřīƈḗ īƞ {{currencyCode}}⟧",
       "optional": "⟦Ȯƥŧīȯƞȧŀ⟧",
       "phaseSection": "⟦Ƥħȧşḗ / Şḗƈŧīȯƞ⟧",
+      "preselected": "⟦Ƥřḗ-şḗŀḗƈŧḗḓ⟧",
       "recurring": "⟦Řḗƈŭřřīƞɠ⟧",
       "service": "⟦şḗřṽīƈḗ⟧",
       "setPrice": "⟦Şḗŧ ƥřīƈḗ⟧",

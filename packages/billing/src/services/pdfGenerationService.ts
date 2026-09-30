@@ -8,7 +8,7 @@ import {
   resolveClientCountry,
   resolveTenantDefaultCountry,
 } from '@alga-psa/tenancy/lib/tenantDefaultCountry';
-import type { DocumentAssociationEntityType, IDocument, QuoteViewModel, QuoteViewModelCadenceGroup, TemplateAst } from '@alga-psa/types';
+import type { DocumentAssociationEntityType, IDocument, QuoteViewModel, QuoteViewModelCadenceGroup, QuoteViewModelLineItem, TemplateAst } from '@alga-psa/types';
 import type { FileStore } from '@alga-psa/storage/types/storage';
 import { StorageProviderFactory, generateStoragePath, FileStoreModel } from '@alga-psa/storage';
 import { convertBlockContentToHTML } from '@alga-psa/formatting/blocknoteUtils';
@@ -24,7 +24,7 @@ import {
 
 import { mapDbInvoiceToWasmViewModel } from '../lib/adapters/invoiceAdapters';
 import { enrichInvoiceViewModelWithLocations } from '../lib/adapters/invoiceAdapters.server';
-import { mapDbQuoteToViewModel } from '../lib/adapters/quoteAdapters';
+import { OPTIONAL_INCLUDED_LABEL, OPTIONAL_PENDING_LABEL, mapDbQuoteToViewModel } from '../lib/adapters/quoteAdapters';
 import { mapDbSalesOrderToViewModel } from '../lib/adapters/salesOrderAdapters';
 import { fetchTenantParty } from '../lib/adapters/tenantPartyAdapter';
 import { evaluateTemplateAst } from '../lib/invoice-template-ast/evaluator';
@@ -98,6 +98,33 @@ async function localizeQuoteCadenceGroups(
     };
     groups.forEach(localize);
     optionalGroups.forEach(localize);
+
+    // Per-row optional markers: the adapter emits the English fallback; every
+    // collection shares the same line-item objects, so localize each once.
+    const includedLabel = String(t('labels.optionalIncluded', { defaultValue: OPTIONAL_INCLUDED_LABEL }));
+    const pendingLabel = String(t('labels.optionalSection', { defaultValue: OPTIONAL_PENDING_LABEL }));
+    const seen = new Set<QuoteViewModelLineItem>();
+    const localizeItem = (item: QuoteViewModelLineItem): void => {
+      if (seen.has(item) || !item.optional_label) return;
+      seen.add(item);
+      item.optional_label = item.optional_label === OPTIONAL_INCLUDED_LABEL ? includedLabel : pendingLabel;
+    };
+    const collections: Array<QuoteViewModelLineItem[] | undefined> = [
+      viewModel.line_items,
+      viewModel.recurring_items,
+      viewModel.onetime_items,
+      viewModel.service_items,
+      viewModel.product_items,
+      ...groups.map((group) => group.items),
+      ...groups.map((group) => group.optional_items),
+      ...optionalGroups.map((group) => group.items),
+      ...optionalGroups.map((group) => group.optional_items),
+      ...(viewModel.groups_by_location ?? []).map((group) => group.items),
+      ...(viewModel.phases ?? []).map((phase) => phase.items),
+    ];
+    for (const collection of collections) {
+      (collection ?? []).forEach(localizeItem);
+    }
   } catch (error) {
     // Never fail a render over a label: fall back to the English band names.
     console.error('Failed to localize quote cadence labels:', error);

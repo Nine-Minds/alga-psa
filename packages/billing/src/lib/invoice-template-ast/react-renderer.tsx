@@ -311,19 +311,32 @@ const resolveColumnCellLines = (
     return null;
   }
 
-  const lines = column.lines
-    .map((line) => {
-      const raw = resolveExpressionValue(line.value, evaluation, scope, ctx);
-      const { className: lineClassName, style: lineStyle } = resolveStyleRef(line.style);
-      return {
-        text: formatValue(raw ?? '', line.format ?? column.format, ctx),
-        style: lineStyle,
-        className: lineClassName,
-      };
-    })
-    .filter((entry) => entry.text.trim().length > 0);
+  const resolveLine = (line: NonNullable<TemplateTableColumn['lines']>[number]): RenderedCellLine => {
+    const raw = resolveExpressionValue(line.value, evaluation, scope, ctx);
+    const { className: lineClassName, style: lineStyle } = resolveStyleRef(line.style);
+    return {
+      text: formatValue(raw ?? '', line.format ?? column.format, ctx),
+      style: lineStyle,
+      className: lineClassName,
+    };
+  };
+  const nonEmpty = (entry: RenderedCellLine): boolean => entry.text.trim().length > 0;
 
-  return lines.length > 0 ? lines : null;
+  // Primary lines decide whether the stack replaces the flat value; a
+  // supplemental line (an annotation such as an optional-row marker) only
+  // ever follows what the cell already shows.
+  const primary = column.lines.filter((line) => !line.supplemental).map(resolveLine).filter(nonEmpty);
+  const supplemental = column.lines.filter((line) => line.supplemental).map(resolveLine).filter(nonEmpty);
+
+  if (primary.length > 0) {
+    return [...primary, ...supplemental];
+  }
+  if (supplemental.length > 0) {
+    const value = resolveExpressionValue(column.value, evaluation, scope, ctx);
+    const flat: RenderedCellLine = { text: formatValue(value ?? '', column.format, ctx) };
+    return [...(nonEmpty(flat) ? [flat] : []), ...supplemental];
+  }
+  return null;
 };
 
 /**
@@ -355,6 +368,17 @@ const renderTableCellContent = (
   const value = resolveExpressionValue(column.value, evaluation, rowScope, ctx);
   const cell = resolveTableCellText(formatValue(value ?? '', column.format, ctx));
   return cell.multiline ? <span style={{ whiteSpace: 'pre-line' }}>{cell.text}</span> : cell.text;
+};
+
+/** A totals value that has nothing to report: absent, blank, or numerically zero. */
+const isZeroOrEmptyTotal = (raw: unknown): boolean => {
+  if (raw === null || raw === undefined) return true;
+  if (typeof raw === 'number') return raw === 0;
+  if (typeof raw === 'string') {
+    const trimmed = raw.trim();
+    return trimmed.length === 0 || (Number.isFinite(Number(trimmed)) && Number(trimmed) === 0);
+  }
+  return false;
 };
 
 const buildAstCss = (ast: TemplateAst): string => {
@@ -408,6 +432,8 @@ const buildAstCss = (ast: TemplateAst): string => {
   .invoice-template-root thead { display: table-header-group; }
   .invoice-template-root tbody tr,
   .invoice-template-root .ast-node-type-totals { break-inside: avoid; }
+  /* A section heading never sits alone at the foot of a page. */
+  .invoice-template-root section > h2 { break-after: avoid; }
 }
 .invoice-template-root .ast-totals-value {
   text-align: right;
@@ -795,6 +821,9 @@ const renderNode = (
         <div key={node.id} id={node.id} className={elementClassName || undefined} style={style}>
           {node.rows.map((row) => {
             const raw = totals[row.id] ?? resolveExpressionValue(row.value, evaluation, scope, ctx) ?? '';
+            if (row.hideWhenZero && isZeroOrEmptyTotal(raw)) {
+              return null;
+            }
             const { style: rowStyle } = resolveStyleRef(row.style);
             const { className: labelClassName, style: labelStyle } = resolveStyleRef(row.labelStyle);
             const emphasizeStyle = row.emphasize ? { fontWeight: 700 } : undefined;

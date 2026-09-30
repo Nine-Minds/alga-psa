@@ -29,6 +29,7 @@ import {
   resolveDraftDiscountAmounts,
   type DraftQuoteItem,
 } from './quoteLineItemDraft';
+import { isQuoteItemIncluded } from '../../../lib/quoteItemInclusion';
 
 interface InlineEditableValueProps {
   displayValue: string;
@@ -136,7 +137,7 @@ interface QuotePhaseSection {
 function computeEffectiveUnitPrice(item: DraftQuoteItem, items: DraftQuoteItem[]): number {
   if (item.is_discount || item.quantity === 0) return item.unit_price;
 
-  const includedBaseItems = items.filter((i) => !i.is_discount && (!i.is_optional || i.is_selected !== false));
+  const includedBaseItems = items.filter((i) => !i.is_discount && isQuoteItemIncluded(i));
   const itemKey = item.quote_item_id ?? item.local_id;
   const isIncluded = includedBaseItems.some((i) => (i.quote_item_id ?? i.local_id) === itemKey);
   if (!isIncluded) return item.unit_price;
@@ -487,8 +488,22 @@ const QuoteLineItemsEditor: React.FC<QuoteLineItemsEditorProps> = ({
                 checked={item.is_optional}
                 label={t('quoteLineItems.labels.optional', { defaultValue: 'Optional' })}
                 disabled={disabled}
-                onChange={(event) => updateItem(item.local_id, { is_optional: event.target.checked })}
+                // An add-on starts unselected (excluded from the total until the
+                // customer opts in); clearing Optional makes the row required.
+                onChange={(event) => updateItem(item.local_id, {
+                  is_optional: event.target.checked,
+                  is_selected: !event.target.checked,
+                })}
               />
+              {item.is_optional ? (
+                <Checkbox
+                  id={`quote-line-preselected-${item.local_id}`}
+                  checked={item.is_selected}
+                  label={t('quoteLineItems.labels.preselected', { defaultValue: 'Pre-selected' })}
+                  disabled={disabled}
+                  onChange={(event) => updateItem(item.local_id, { is_selected: event.target.checked })}
+                />
+              ) : null}
               <Checkbox
                 id={`quote-line-recurring-${item.local_id}`}
                 checked={item.is_recurring}

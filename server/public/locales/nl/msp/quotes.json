@@ -501,6 +501,7 @@
       "noPriceInCurrency": "Geen prijs in {{currencyCode}}",
       "optional": "Optioneel",
       "phaseSection": "Fase / Sectie",
+      "preselected": "Vooraf geselecteerd",
       "recurring": "Terugkerend",
       "service": "dienst",
       "setPrice": "Prijs instellen",

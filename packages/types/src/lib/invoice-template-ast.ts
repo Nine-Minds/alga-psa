@@ -147,6 +147,13 @@ export interface TemplateTableColumnLine {
   value: TemplateValueExpression;
   format?: TemplateValueFormat;
   style?: TemplateNodeStyleRef;
+  /**
+   * An annotation line (e.g. an "Optional (included)" marker). It renders
+   * beneath whatever the cell shows but never, on its own, replaces the
+   * column's flat `value`: when no primary line resolves, the flat value
+   * still renders and the supplemental lines follow it.
+   */
+  supplemental?: boolean;
 }
 
 export interface TemplateTableColumn {
@@ -206,6 +213,12 @@ export interface TemplateTotalsRow {
   value: TemplateValueExpression;
   format?: TemplateValueFormat;
   emphasize?: boolean;
+  /**
+   * Omit the row entirely when its value resolves to zero or nothing, so an
+   * informational row (e.g. "Optional if selected") never prints as $0.00 on
+   * a document that has nothing to report.
+   */
+  hideWhenZero?: boolean;
   style?: TemplateNodeStyleRef;
 }
 
@@ -270,6 +283,13 @@ export interface TemplateStyleDeclaration {
   objectPosition?: string;
   borderColor?: string;
   fontStyle?: string;
+  // Print fragmentation hints (CSS Fragmentation Level 3). The PDF renderer
+  // prints through Chromium, which honours these on block and flex children:
+  // `breakAfter: 'avoid'` keeps a heading with what follows it,
+  // `breakInside: 'avoid'` keeps a block (a totals card) on one page.
+  breakInside?: 'auto' | 'avoid' | 'avoid-page';
+  breakAfter?: 'auto' | 'avoid' | 'avoid-page' | 'page';
+  breakBefore?: 'auto' | 'avoid' | 'avoid-page' | 'page';
 }
 
 export interface TemplateBindingCatalog {

@@ -8,6 +8,8 @@ vi.mock('./tenantPartyAdapter', () => ({
 }));
 
 import { mapLoadedQuoteToViewModel, toDateOnlyString, toIsoDateString } from './quoteAdapters';
+import { summarizeQuoteTotals } from '../quoteTotals';
+import { calculateDraftQuoteTotals, type DraftQuoteItem } from '../../components/billing-dashboard/quotes/quoteLineItemDraft';
 
 const fakeKnex = {
   schema: {
@@ -784,9 +786,11 @@ describe('quoteAdapters cadence bands and optional add-ons', () => {
     });
   });
 
-  // One-time + monthly + one annual ($159) + optional monthly/annual, with a
-  // fixed discount targeted at the annual base. Every figure below is asserted
-  // so the annual line can never silently rejoin the monthly band.
+  // One-time + monthly + one annual ($159) + optional monthly (selected) and
+  // optional annual (not selected), with a fixed discount targeted at the
+  // annual base. Every figure below is asserted so the annual line can never
+  // silently rejoin the monthly band and a pending add-on can never inflate a
+  // total.
   const mixedCadenceQuote = (overrides: Record<string, unknown> = {}) =>
     buildQuote({
       subtotal: 50900,
@@ -878,8 +882,13 @@ describe('quoteAdapters cadence bands and optional add-ons', () => {
     const annual = bands.find((band) => band.cadence_key === 'annually')!;
     const onetime = bands.find((band) => band.cadence_key === 'onetime')!;
 
-    expect(monthly.items.map((item) => item.quote_item_id)).toEqual(['monthly-req']);
+    // The selected optional monthly add-on counts, so it sits in the monthly
+    // band with an "Optional (included)" marker; the pending annual add-on
+    // does not appear in any base band.
+    expect(monthly.items.map((item) => item.quote_item_id)).toEqual(['monthly-req', 'monthly-opt']);
+    expect(monthly.items.map((item) => item.optional_label)).toEqual([null, 'Optional (included)']);
     expect(annual.items.map((item) => item.quote_item_id)).toEqual(['annual-req', 'disc-annual']);
+    expect(bands.some((band) => band.items.some((item) => item.quote_item_id === 'annual-opt'))).toBe(false);
     expect(onetime.items.map((item) => item.quote_item_id)).toEqual(['onetime-req']);
 
     // The annual base never appears in the monthly band.
@@ -888,16 +897,17 @@ describe('quoteAdapters cadence bands and optional add-ons', () => {
     expect(onetime.is_recurring).toBe(false);
   });
 
-  it('computes required per-band subtotal/tax/total from the renderer and attributes the discount to the annual band', async () => {
+  it('computes included per-band subtotal/tax/total from the renderer and attributes the discount to the annual band', async () => {
     const viewModel = await mapLoadedQuoteToViewModel(fakeKnex, 'tenant-1', mixedCadenceQuote());
     const bands = viewModel.groups_by_cadence ?? [];
     const monthly = bands.find((band) => band.cadence_key === 'monthly')!;
     const annual = bands.find((band) => band.cadence_key === 'annually')!;
     const onetime = bands.find((band) => band.cadence_key === 'onetime')!;
 
-    expect(monthly.subtotal).toBe(10000);
-    expect(monthly.tax).toBe(800);
-    expect(monthly.total).toBe(10800);
+    // $100 required + $40 selected optional.
+    expect(monthly.subtotal).toBe(14000);
+    expect(monthly.tax).toBe(1120);
+    expect(monthly.total).toBe(15120);
 
     // $159 annual less the $10 annual-targeted discount.
     expect(annual.subtotal).toBe(14900);
@@ -916,38 +926,34 @@ describe('quoteAdapters cadence bands and optional add-ons', () => {
     expect(onetime.total_label).toBe('One-time Total');
   });
 
-  it('excludes optional add-ons from band and base subtotals and reports them as optional_*', async () => {
+  it('excludes pending (unselected) add-ons from band and overall totals and reports them as optional_*', async () => {
     const viewModel = await mapLoadedQuoteToViewModel(fakeKnex, 'tenant-1', mixedCadenceQuote());
 
-    // Optional rows are absent from every required band's items and subtotal.
+    // Pending rows are absent from every base band's items and subtotal.
     const bands = viewModel.groups_by_cadence ?? [];
     for (const band of bands) {
-      expect(band.items.every((item) => item.is_optional !== true)).toBe(true);
+      expect(band.items.every((item) => !item.is_optional || item.is_selected)).toBe(true);
     }
-    const monthlyRequired = bands.find((band) => band.cadence_key === 'monthly')!;
-    expect(monthlyRequired.subtotal).toBe(10000); // not 14000
 
+    // Only the cadence with a pending add-on gets an "Optional (if selected)" band.
     const optionalBands = viewModel.groups_by_cadence_with_optionals ?? [];
-    expect(optionalBands.map((band) => band.cadence_key)).toEqual(['monthly', 'annually']);
-    const monthlyOptional = optionalBands.find((band) => band.cadence_key === 'monthly')!;
-    const annualOptional = optionalBands.find((band) => band.cadence_key === 'annually')!;
-    expect(monthlyOptional.optional_items.map((item) => item.quote_item_id)).toEqual(['monthly-opt']);
-    expect(monthlyOptional.optional_subtotal).toBe(4000);
-    expect(monthlyOptional.optional_tax).toBe(320);
-    expect(monthlyOptional.optional_total).toBe(4320);
+    expect(optionalBands.map((band) => band.cadence_key)).toEqual(['annually']);
+    const annualOptional = optionalBands[0]!;
     expect(annualOptional.optional_items.map((item) => item.quote_item_id)).toEqual(['annual-opt']);
+    expect(annualOptional.optional_items[0]!.optional_label).toBe('Optional (if selected)');
     expect(annualOptional.optional_subtotal).toBe(5000);
     expect(annualOptional.optional_tax).toBe(0);
     expect(annualOptional.optional_total).toBe(5000);
 
-    // Overall base totals exclude optional; the if-selected bucket carries them.
-    expect(viewModel.subtotal).toBe(50900);
+    // Overall totals = required + selected optional; the if-selected bucket
+    // carries only the pending add-on.
+    expect(viewModel.subtotal).toBe(54900);
     expect(viewModel.discount_total).toBe(1000);
-    expect(viewModel.tax).toBe(2800);
-    expect(viewModel.total_amount).toBe(52700);
-    expect(viewModel.optional_subtotal).toBe(9000);
-    expect(viewModel.optional_tax).toBe(320);
-    expect(viewModel.optional_total).toBe(9320);
+    expect(viewModel.tax).toBe(3120);
+    expect(viewModel.total_amount).toBe(57020);
+    expect(viewModel.optional_subtotal).toBe(5000);
+    expect(viewModel.optional_tax).toBe(0);
+    expect(viewModel.optional_total).toBe(5000);
   });
 
   it('keeps the legacy recurring_*/onetime_* bindings on their all-recurring meaning', async () => {
@@ -1104,11 +1110,11 @@ describe('quoteAdapters optional if-selected tax (alga-2026-0002383 SMOKE-2383-T
     });
   });
 
-  // Required base $759.00 at 6% ($45.54 tax, $804.54 total) plus optional
-  // monthly $40 and optional annual $50. The persisted recalculation zeroes
-  // tax_amount on an unselected optional row but keeps its tax_rate, so the
-  // presented "if selected" tax must be the same whichever way the annual
-  // row is toggled: $5.40 tax, $95.40 total.
+  // Required base $759.00 at 6% plus optional monthly $40 (selected) and
+  // optional annual $50 toggled either way. The presented totals must equal
+  // the persisted quote totals in both states ($846.94 / $899.94), and the
+  // pending annual add-on must quote its hypothetical 6% tax ($53.00) from the
+  // tax_rate the recalculation keeps on an unselected row.
   const taxQuote = (annualSelected: boolean) =>
     buildQuote({
       subtotal: annualSelected ? 84900 : 79900,
@@ -1181,28 +1187,36 @@ describe('quoteAdapters optional if-selected tax (alga-2026-0002383 SMOKE-2383-T
   it.each([
     ['unselected', false],
     ['selected', true],
-  ])('reports optional tax $5.40 / total $95.40 with the annual add-on %s, base unchanged', async (_label, annualSelected) => {
-    const viewModel = await mapLoadedQuoteToViewModel(fakeKnex, 'tenant-1', taxQuote(annualSelected));
+  ])('presents the persisted total with the annual add-on %s and quotes the pending add-on at $53.00', async (_label, annualSelected) => {
+    const quote = taxQuote(annualSelected);
+    const viewModel = await mapLoadedQuoteToViewModel(fakeKnex, 'tenant-1', quote);
 
-    expect(viewModel.subtotal).toBe(75900);
-    expect(viewModel.tax).toBe(4554);
-    expect(viewModel.total_amount).toBe(80454);
-
-    expect(viewModel.optional_subtotal).toBe(9000);
-    expect(viewModel.optional_tax).toBe(540);
-    expect(viewModel.optional_total).toBe(9540);
+    // PDF total == persisted (list/portal) total in both states.
+    expect(viewModel.subtotal).toBe(quote.subtotal);
+    expect(viewModel.tax).toBe(quote.tax);
+    expect(viewModel.total_amount).toBe(quote.total_amount);
+    expect(viewModel.total_amount).toBe(annualSelected ? 89994 : 84694);
 
     const optionalBands = viewModel.groups_by_cadence_with_optionals ?? [];
-    const monthlyOptional = optionalBands.find((band) => band.cadence_key === 'monthly')!;
-    const annualOptional = optionalBands.find((band) => band.cadence_key === 'annually')!;
-    expect(monthlyOptional.optional_tax).toBe(240);
-    expect(monthlyOptional.optional_total).toBe(4240);
-    expect(annualOptional.optional_tax).toBe(300);
-    expect(annualOptional.optional_total).toBe(5300);
+    if (annualSelected) {
+      expect(viewModel.optional_subtotal).toBe(0);
+      expect(viewModel.optional_tax).toBe(0);
+      expect(viewModel.optional_total).toBe(0);
+      expect(optionalBands).toEqual([]);
+    } else {
+      expect(viewModel.optional_subtotal).toBe(5000);
+      expect(viewModel.optional_tax).toBe(300);
+      expect(viewModel.optional_total).toBe(5300);
+      expect(optionalBands.map((band) => band.cadence_key)).toEqual(['annually']);
+      expect(optionalBands[0]!.optional_tax).toBe(300);
+      expect(optionalBands[0]!.optional_total).toBe(5300);
+    }
 
-    // Required bands never pick up hypothetical optional tax.
+    // Base bands carry exactly the persisted tax of included rows (the
+    // selected monthly add-on's $2.40 included), never hypothetical tax.
     const bands = viewModel.groups_by_cadence ?? [];
-    expect(bands.reduce((sum, band) => sum + band.tax, 0)).toBe(4554);
+    expect(bands.find((band) => band.cadence_key === 'monthly')!.tax).toBe(840);
+    expect(bands.reduce((sum, band) => sum + band.tax, 0)).toBe(quote.tax);
   });
 
   it('does not invent tax for an unselected optional row that is not taxable', async () => {
@@ -1211,7 +1225,100 @@ describe('quoteAdapters optional if-selected tax (alga-2026-0002383 SMOKE-2383-T
     annualOpt.tax_rate = 0; // recalculation persists rate 0 for non-taxable rows
 
     const viewModel = await mapLoadedQuoteToViewModel(fakeKnex, 'tenant-1', quote);
-    expect(viewModel.optional_tax).toBe(240);
-    expect(viewModel.optional_total).toBe(9240);
+    expect(viewModel.optional_tax).toBe(0);
+    expect(viewModel.optional_total).toBe(5000);
+  });
+});
+
+describe('quoteAdapters one source of truth: PDF view model == editor draft == persisted total (alga-2026-0002383)', () => {
+  beforeEach(() => {
+    fetchTenantPartyMock.mockReset();
+    fetchTenantPartyMock.mockResolvedValue({ name: 'Northwind MSP', address: null, email: null, phone: null, logo_url: null });
+  });
+
+  type Selection = { monthly: boolean; annual: boolean } | null;
+
+  // Rows as `recalculateQuoteFinancials` persists them: tax_rate on every base
+  // row; tax_amount/net_amount only on included rows.
+  const persistedRows = (selection: Selection): IQuoteItem[] => {
+    const rows = [
+      baseQuoteItem({ quote_item_id: 'monthly-req', unit_price: 10000, total_price: 10000, tax_amount: 600, tax_rate: 6, is_recurring: true, billing_frequency: 'monthly', display_order: 1 }),
+      baseQuoteItem({ quote_item_id: 'annual-req', unit_price: 15900, total_price: 15900, tax_amount: 954, tax_rate: 6, is_recurring: true, billing_frequency: 'annually', display_order: 2 }),
+      baseQuoteItem({ quote_item_id: 'onetime-req', unit_price: 50000, total_price: 50000, tax_amount: 3000, tax_rate: 6, is_recurring: false, billing_frequency: null, display_order: 3 }),
+    ];
+    if (selection) {
+      rows.push(
+        baseQuoteItem({ quote_item_id: 'monthly-opt', unit_price: 4000, total_price: 4000, tax_amount: selection.monthly ? 240 : 0, tax_rate: 6, is_recurring: true, billing_frequency: 'monthly', is_optional: true, is_selected: selection.monthly, display_order: 4 }),
+        baseQuoteItem({ quote_item_id: 'annual-opt', unit_price: 5000, total_price: 5000, tax_amount: selection.annual ? 300 : 0, tax_rate: 6, is_recurring: true, billing_frequency: 'annually', is_optional: true, is_selected: selection.annual, display_order: 5 }),
+      );
+    }
+    return rows;
+  };
+
+  const toDraft = (row: IQuoteItem): DraftQuoteItem => ({
+    local_id: row.quote_item_id!,
+    quote_item_id: row.quote_item_id,
+    service_id: row.service_id ?? null,
+    service_item_kind: null,
+    service_name: null,
+    service_sku: null,
+    billing_method: null,
+    description: row.description,
+    catalog_description: null,
+    quantity: Number(row.quantity),
+    unit_price: Number(row.unit_price),
+    unit_of_measure: null,
+    phase: null,
+    is_optional: Boolean(row.is_optional),
+    is_selected: row.is_selected === true,
+    is_recurring: Boolean(row.is_recurring),
+    billing_frequency: row.billing_frequency ?? null,
+    is_discount: false,
+    discount_type: null,
+    discount_percentage: null,
+    applies_to_item_id: null,
+    applies_to_service_id: null,
+    is_taxable: true,
+    tax_region: null,
+    tax_rate: row.tax_rate ?? null,
+    location_id: null,
+  });
+
+  it.each([
+    ['no optional items', null, 80454, 0],
+    ['none selected', { monthly: false, annual: false }, 80454, 9540],
+    ['some selected', { monthly: true, annual: false }, 84694, 5300],
+    ['all selected', { monthly: true, annual: true }, 89994, 0],
+  ] as Array<[string, Selection, number, number]>)('%s: every surface reports the same total', async (_label, selection, expectedTotal, expectedOptional) => {
+    const rows = persistedRows(selection);
+    const quote = buildQuote({ subtotal: 0, tax: 0, total_amount: 0, quote_items: rows });
+
+    // The persisted rule (what the quote list and the portal show).
+    const persisted = summarizeQuoteTotals(rows, {
+      amountOf: (row) => Number(row.total_price),
+      taxOf: (row) => Number(row.tax_amount),
+      discountTotal: 0,
+    });
+    // The document view model (PDF).
+    const viewModel = await mapLoadedQuoteToViewModel(fakeKnex, 'tenant-1', quote);
+    // The editor sidebar.
+    const draft = calculateDraftQuoteTotals(rows.map(toDraft));
+
+    expect(persisted.total_amount).toBe(expectedTotal);
+    expect(viewModel.total_amount).toBe(expectedTotal);
+    expect(draft.total_amount).toBe(expectedTotal);
+    expect(viewModel.subtotal).toBe(persisted.subtotal);
+    expect(viewModel.tax).toBe(persisted.tax);
+    expect(draft.subtotal).toBe(persisted.subtotal);
+    expect(draft.tax).toBe(persisted.tax);
+
+    // Band totals add up to the same total.
+    const bands = viewModel.groups_by_cadence ?? [];
+    expect(bands.reduce((sum, band) => sum + band.total, 0)).toBe(expectedTotal);
+
+    // Pending add-ons agree too, and vanish entirely when nothing is pending.
+    expect(viewModel.optional_total).toBe(expectedOptional);
+    expect(draft.optional_total).toBe(expectedOptional);
+    expect((viewModel.groups_by_cadence_with_optionals ?? []).length > 0).toBe(expectedOptional > 0);
   });
 });

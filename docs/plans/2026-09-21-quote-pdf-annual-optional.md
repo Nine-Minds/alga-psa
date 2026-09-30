@@ -186,6 +186,15 @@ Therefore, to avoid the #3358 "recreate every quote" outcome:
   the new cadence-band AST (mirroring `20260402100000` seed + `20260908100001` update
   pattern), so all non-customized tenants get the fix. Tenants who cloned grouped keep their
   frozen copy (documented; they re-clone to adopt).
+- **Re-clone path for customized grouped clones (verified live).** A tenant-owned clone in
+  `quote_document_templates` keeps its frozen pre-cadence AST and keeps rendering from the
+  current view model: the legacy `recurring_*` / `onetime_*` bindings now follow the same
+  inclusion rule as every other surface, so its "Monthly Total" + "One-time Total" equal the
+  persisted total (`standardTemplates.legacyGrouped.test.ts` pins this against the frozen
+  AST captured in `__fixtures__/legacy-grouped-quote-ast.json`). Annual lines still print
+  under "Monthly Items" there. To adopt cadence bands the tenant opens Quote Layouts, clones
+  the (migrated) Standard Quote Grouped template again, re-applies its customizations and
+  points its quotes at the new clone; there is no in-place upgrade of a frozen clone.
 - No `quote_items` schema change is needed — `is_optional/is_selected/is_recurring/
   billing_frequency` already exist (`20260320100000_create_quotes_tables.cjs:104-107`).
 
@@ -353,12 +362,19 @@ and asserting section membership and every total:
 
 ## Open questions (for XO / captain)
 
-1. **Persisted total & conversion semantics for optional-selected.** Presentation now
-   excludes all optional from the base. Should the **stored** `quotes.subtotal/total_amount`
-   and conversion-to-contract also stop counting optional-selected lines (making "select"
-   purely an acceptance signal resolved at conversion), or keep today's "selected optional is
-   in the stored total"? Default in this plan: change presentation + editor summary only;
-   leave persisted/conversion behavior intact. Confirm.
+1. **Persisted total & conversion semantics for optional-selected.** RESOLVED (captain
+   return, repair round): there is **one** rule everywhere — the quote total is required
+   rows plus **selected** optional rows (price + tax) less discounts; an optional row that is
+   not selected is a *pending* add-on, presented as "Optional if selected" (price + the tax
+   it would carry) and excluded. The rule lives in `@alga-psa/core`
+   (`quoteItemInclusion.ts`: `isQuoteItemIncluded` / `isPendingOptional`) and the money
+   derivation in `packages/billing/src/lib/quoteTotals.ts`; the persisted recalculation
+   (quote list, client portal), the editor draft, the document view model (PDF) and quote
+   conversion all consume them, and `T230` (`quoteConversion.test.ts`) asserts
+   list == editor == PDF == converted for no / none / some / all selected. Because the MSP
+   had no selection control, flagging a row Optional in the editor now defaults it to
+   *unselected* (a "Pre-selected" checkbox opts it back in); existing optional rows keep
+   their stored `is_selected` and are not migrated.
 2. **Mutually-exclusive alternatives** (cloud vs on-prem) — confirm it is a separate
    follow-up card, not a blocker for this one.
 3. **Custom grouped clones** — accept the documented "re-clone to adopt" upgrade path for

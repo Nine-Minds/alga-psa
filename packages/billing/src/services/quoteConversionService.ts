@@ -12,7 +12,8 @@ import type {
 import { tenantDb } from '@alga-psa/db';
 import { v4 as uuidv4 } from 'uuid';
 import { SharedNumberingService } from '@shared/services/numberingService';
-import { allocateQuoteDiscounts } from './quoteDiscountAllocation';
+import { isPendingOptional, isQuoteItemIncluded } from '../lib/quoteItemInclusion';
+import { allocateIncludedQuoteDiscounts } from '../lib/quoteTotals';
 import { getClientDefaultBillingProfileId } from '../lib/billing/billingProfileLookup';
 import Contract from '../models/contract';
 import Quote from '../models/quote';
@@ -156,15 +157,6 @@ function getContractLineBillingTiming(item: IQuoteItem): 'arrears' | 'advance' {
     : 'advance';
 }
 
-// LEVERAGE: this is the same legacy inclusion rule as the shared
-// `isQuoteItemIncluded` in `../lib/quoteItemInclusion`. Conversion behavior is
-// deliberately frozen for alga-2026-0002383, so it was not repointed here;
-// a follow-up could import the shared helper.
-function isItemSelected(item: IQuoteItem): boolean {
-  if (!item.is_optional) return true;
-  return item.is_selected === true;
-}
-
 function toIntegerCents(value: unknown): number | null {
   if (value === undefined || value === null || value === '') {
     return null;
@@ -187,33 +179,15 @@ export interface QuoteDiscountConversionShare {
 
 /**
  * Resolve every quote discount to the share of its reduction that lands on
- * recurring versus one-time base rows, using the same shared allocation model
- * the quote document adapter and the editor use. Conversion must never apply a
- * whole persisted discount to a one-time invoice when part of that discount
- * reduces a recurring service.
+ * recurring versus one-time base rows, using the same shared allocation the
+ * quote document adapter, the editor and the persisted recalculation use
+ * (`quoteTotals`): included rows only — required rows and optional rows the
+ * customer selected — so what converts is exactly what was quoted and
+ * accepted. Conversion must never apply a whole persisted discount to a
+ * one-time invoice when part of that discount reduces a recurring service.
  */
 function resolveQuoteDiscountConversionShares(items: IQuoteItem[]): Map<string, QuoteDiscountConversionShare> {
-  const bases = items
-    .filter((item) => !item.is_discount && isItemSelected(item))
-    .map((item) => ({
-      id: item.quote_item_id,
-      serviceId: item.service_id ?? null,
-      amount: toIntegerCents(Number(item.quantity) * Number(item.unit_price)) ?? 0,
-      isRecurring: item.is_recurring === true,
-    }));
-
-  const discounts = items
-    .filter((item) => item.is_discount && isItemSelected(item))
-    .map((item) => ({
-      id: item.quote_item_id,
-      discountType: (item.discount_type === 'percentage' ? 'percentage' : 'fixed') as 'percentage' | 'fixed',
-      fixedAmount: Math.abs(toIntegerCents(Number(item.quantity ?? 1) * Number(item.unit_price)) ?? 0),
-      discountPercentage: item.discount_percentage != null ? Number(item.discount_percentage) : null,
-      appliesToItemId: item.applies_to_item_id ?? null,
-      appliesToServiceId: item.applies_to_service_id ?? null,
-    }));
-
-  const allocation = allocateQuoteDiscounts(bases, discounts);
+  const allocation = allocateIncludedQuoteDiscounts(items, (item) => item.quote_item_id);
   const shares = new Map<string, QuoteDiscountConversionShare>();
   for (const result of allocation.discounts) {
     const onetimeByBase = new Map<string, number>();
@@ -239,7 +213,7 @@ function getSelectedRecurringItems(items: IQuoteItem[] = []): IQuoteItem[] {
       return false;
     }
 
-    return isItemSelected(item);
+    return isQuoteItemIncluded(item);
   });
 }
 
@@ -250,7 +224,7 @@ function getSelectedOneTimeItems(items: IQuoteItem[] = []): IQuoteItem[] {
       return false;
     }
 
-    return isItemSelected(item);
+    return isQuoteItemIncluded(item);
   });
 
   return includedItems.filter((item) => {
@@ -583,7 +557,7 @@ export async function buildQuoteConversionPreview(
     }
 
     let reason = 'Item is not eligible for conversion';
-    if (item.is_optional && item.is_selected !== true) {
+    if (isPendingOptional(item)) {
       reason = 'Optional item was not selected by the client';
     } else if (item.is_discount && item.is_recurring) {
       reason = 'Recurring discount lines are excluded from contract conversion';
@@ -1051,7 +1025,7 @@ export async function convertQuoteToDraftInvoice(
   // its product rows are claimed there and their allocated discount share is
   // excluded from this invoice.
   const oneTimeBaseItems = quoteItemsForInvoice.filter(
-    (item) => !item.is_recurring && !item.is_discount && isItemSelected(item),
+    (item) => !item.is_recurring && !item.is_discount && isQuoteItemIncluded(item),
   );
   if (salesOrderForQuote) {
     const error = existingSalesOrderDiscountError(
@@ -1067,7 +1041,7 @@ export async function convertQuoteToDraftInvoice(
   const invoiceableBaseIds = new Set(invoiceableBaseItems.map((item) => item.quote_item_id));
 
   const invoiceableDiscounts = quoteItemsForInvoice
-    .filter((item) => item.is_discount && isItemSelected(item))
+    .filter((item) => item.is_discount && isQuoteItemIncluded(item))
     .map((item) => ({
       item,
       amount: allocatedOneTimeAmountFor(shares, item.quote_item_id, invoiceableBaseIds),

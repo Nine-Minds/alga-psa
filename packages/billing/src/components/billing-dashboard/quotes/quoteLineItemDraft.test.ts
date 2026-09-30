@@ -211,16 +211,16 @@ describe('quoteLineItemDraft cadence summary (editor == PDF)', () => {
     fixedDiscount('disc-annual', 1000, { applies_to_item_id: 'annual-req' }),
   ];
 
-  it('draft base totals exclude optional add-ons and report them as optional_*', () => {
+  it('draft totals count required + selected optional rows and report pending add-ons as optional_*', () => {
     const totals = calculateDraftQuoteTotals(mixedCadenceItems());
 
-    expect(totals.subtotal).toBe(50900); // required only, optional excluded
+    expect(totals.subtotal).toBe(54900); // required $509 + selected optional $40
     expect(totals.discount_total).toBe(1000);
     expect(totals.tax).toBe(0);
-    expect(totals.total_amount).toBe(49900);
-    expect(totals.optional_subtotal).toBe(9000);
+    expect(totals.total_amount).toBe(53900);
+    expect(totals.optional_subtotal).toBe(5000); // pending annual add-on only
     expect(totals.optional_tax).toBe(0);
-    expect(totals.optional_total).toBe(9000);
+    expect(totals.optional_total).toBe(5000);
   });
 
   it('per-cadence nets and optional totals match the adapter bands on the same fixture', () => {
@@ -229,14 +229,14 @@ describe('quoteLineItemDraft cadence summary (editor == PDF)', () => {
 
     expect(summary.map((entry) => entry.cadence_key)).toEqual(['monthly', 'annually', 'onetime']);
 
-    // Required nets equal the adapter's per-band `subtotal`; the discount lands
-    // on the annual band only.
-    expect(byKey.monthly?.net).toBe(10000);
+    // Included nets equal the adapter's per-band `subtotal` (the selected
+    // monthly add-on counts); the discount lands on the annual band only.
+    expect(byKey.monthly?.net).toBe(14000);
     expect(byKey.annually?.net).toBe(14900);
     expect(byKey.onetime?.net).toBe(25000);
 
-    // Optional figures equal the adapter's per-band `optional_subtotal`.
-    expect(byKey.monthly?.optional_total).toBe(4000);
+    // Pending figures equal the adapter's per-band `optional_subtotal`.
+    expect(byKey.monthly?.optional_total).toBe(0);
     expect(byKey.annually?.optional_total).toBe(5000);
     expect(byKey.onetime?.optional_total).toBe(0);
   });
@@ -245,8 +245,8 @@ describe('quoteLineItemDraft cadence summary (editor == PDF)', () => {
 describe('quoteLineItemDraft optional if-selected tax (alga-2026-0002383 SMOKE-2383-TAX)', () => {
   // Same fixture as the adapter suite: required $759 at 6% plus optional
   // monthly $40 (selected) and annual $50 toggled either way. Draft rows carry
-  // the persisted tax_rate, so both selection states must present $5.40 tax /
-  // $95.40 optional total while the base stays $45.54 / $804.54.
+  // the persisted tax_rate, so the editor derives the same totals the server
+  // persists ($846.94 / $899.94) and quotes the pending add-on at $53.00.
   const taxItems = (annualSelected: boolean): DraftQuoteItem[] => [
     serviceItem({ local_id: 'monthly-req', description: 'Managed Support', unit_price: 10000, is_recurring: true, billing_frequency: 'monthly', tax_rate: 6 }),
     serviceItem({ local_id: 'annual-req', description: 'Annual Firewall Subscription', unit_price: 15900, is_recurring: true, billing_frequency: 'annually', tax_rate: 6 }),
@@ -258,23 +258,23 @@ describe('quoteLineItemDraft optional if-selected tax (alga-2026-0002383 SMOKE-2
   it.each([
     ['unselected', false],
     ['selected', true],
-  ])('presents optional tax $5.40 / total $95.40 with the annual add-on %s, base unchanged', (_label, annualSelected) => {
+  ])('presents the persisted total with the annual add-on %s and quotes the pending add-on at $53.00', (_label, annualSelected) => {
     const totals = calculateDraftQuoteTotals(taxItems(annualSelected));
 
-    expect(totals.subtotal).toBe(75900);
-    expect(totals.tax).toBe(4554);
-    expect(totals.total_amount).toBe(80454);
-    expect(totals.optional_subtotal).toBe(9000);
-    expect(totals.optional_tax).toBe(540);
-    expect(totals.optional_total).toBe(9540);
+    expect(totals.subtotal).toBe(annualSelected ? 84900 : 79900);
+    expect(totals.tax).toBe(annualSelected ? 5094 : 4794);
+    expect(totals.total_amount).toBe(annualSelected ? 89994 : 84694);
+    expect(totals.optional_subtotal).toBe(annualSelected ? 0 : 5000);
+    expect(totals.optional_tax).toBe(annualSelected ? 0 : 300);
+    expect(totals.optional_total).toBe(annualSelected ? 0 : 5300);
   });
 
-  it('honours is_taxable=false on an optional row', () => {
+  it('honours is_taxable=false on a pending optional row', () => {
     const items = taxItems(false);
     items.find((item) => item.local_id === 'annual-opt')!.is_taxable = false;
 
     const totals = calculateDraftQuoteTotals(items);
-    expect(totals.optional_tax).toBe(240);
-    expect(totals.optional_total).toBe(9240);
+    expect(totals.optional_tax).toBe(0);
+    expect(totals.optional_total).toBe(5000);
   });
 });

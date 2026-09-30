@@ -225,6 +225,12 @@ export interface QuoteViewModelLineItem {
   phase?: string | null;
   is_optional: boolean;
   is_selected: boolean;
+  /**
+   * Row marker for optional lines — "Optional (included)" for a selected
+   * add-on that counts toward the total, "Optional (if selected)" for a
+   * pending one; null for required rows. Localized by the PDF service.
+   */
+  optional_label?: string | null;
   is_recurring: boolean;
   billing_frequency?: string | null;
   is_discount?: boolean;
@@ -258,9 +264,10 @@ export interface QuoteViewModelLocationGroup {
 
 /**
  * One cadence band of a quote (Monthly / Quarterly / Semi-annually / Annually /
- * any other recurring cadence / One-time). Required items and their per-band
- * subtotal/tax/total are the base price; `optional_items` and `optional_*`
- * carry the "if selected" add-ons that are excluded from every base total.
+ * any other recurring cadence / One-time). `items` are the rows that count
+ * toward the total (required rows and selected optional add-ons) with their
+ * per-band subtotal/tax/total; `optional_items` and `optional_*` carry the
+ * pending "if selected" add-ons that are excluded from every total.
  */
 export interface QuoteViewModelCadenceGroup {
   cadence_key: string;

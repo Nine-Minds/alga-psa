@@ -1250,6 +1250,8 @@
       "$.layout.children[4].children[1].columns[0].lines[0].value.path=service_name",
       "$.layout.children[4].children[1].columns[0].lines[1].id=catalog-description",
       "$.layout.children[4].children[1].columns[0].lines[1].value.path=catalog_description",
+      "$.layout.children[4].children[1].columns[0].lines[2].id=optional-marker",
+      "$.layout.children[4].children[1].columns[0].lines[2].value.path=optional_label",
       "$.layout.children[4].children[1].columns[0].value.path=description",
       "$.layout.children[4].children[1].columns[1].header.i18nKey=labels.qty",
       "$.layout.children[4].children[1].columns[1].id=quantity",

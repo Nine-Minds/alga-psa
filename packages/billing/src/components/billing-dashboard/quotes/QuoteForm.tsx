@@ -41,6 +41,7 @@ import { calculateDraftCadenceSummary, calculateDraftMonthlyRecurringNet, calcul
 import { QuoteTermsContent, TextEditor } from '@alga-psa/ui/editor';
 import type { PartialBlock } from '@blocknote/core';
 import { flattenBlockContentToPlainText } from '@alga-psa/formatting/blocknoteUtils';
+import { isQuoteItemIncluded } from '../../../lib/quoteItemInclusion';
 
 // Cadence key -> the `quoteForm.sidebar.cadence.*` leaf. Unknown cadences fall
 // back to the adapter's English `entry.name` so a new cadence never renders a
@@ -920,10 +921,10 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
   };
 
   const canConvertToContract = useMemo(() => {
-    return Boolean((quote?.quote_items || []).some((item) => item.is_recurring && !item.is_discount && (!item.is_optional || item.is_selected !== false)));
+    return Boolean((quote?.quote_items || []).some((item) => item.is_recurring && !item.is_discount && isQuoteItemIncluded(item)));
   }, [quote]);
   const canConvertToInvoice = useMemo(() => {
-    const oneTimeItems = (quote?.quote_items || []).filter((item) => !item.is_recurring && (!item.is_optional || item.is_selected !== false));
+    const oneTimeItems = (quote?.quote_items || []).filter((item) => !item.is_recurring && isQuoteItemIncluded(item));
     return oneTimeItems.some((item) => !item.is_discount);
   }, [quote]);
   // Product one-time lines are what convert to a sales order (F002/D2).
@@ -935,7 +936,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
             item.service_item_kind === 'product' &&
             !item.is_recurring &&
             !item.is_discount &&
-            (!item.is_optional || item.is_selected !== false),
+            isQuoteItemIncluded(item),
         ),
       ),
     [quote],

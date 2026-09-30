@@ -2,7 +2,8 @@ import type { CatalogPickerItem } from '../../../actions/serviceActions';
 import type { IQuoteItem } from '@alga-psa/types';
 import { allocateQuoteDiscounts } from '../../../services/quoteDiscountAllocation';
 import { compareCadenceKeys, cadenceDefaultName, isRecurringCadenceKey, resolveCadenceKey } from '../../../lib/quoteItemCadence';
-import { isOptional, isQuoteItemIncluded, isRequired } from '../../../lib/quoteItemInclusion';
+import { isPendingOptional } from '../../../lib/quoteItemInclusion';
+import { buildQuoteDiscountAllocationInputs, summarizeQuoteTotals } from '../../../lib/quoteTotals';
 import { hypotheticalTaxAmount } from '../../../lib/quoteItemTax';
 
 export type DraftQuoteItem = {
@@ -210,74 +211,26 @@ const draftBaseItemId = (item: DraftQuoteItem): string => item.quote_item_id ?? 
 
 /**
  * Allocation inputs shared by the draft totals, the discount amount column and
- * the cadence summary. Bases and discounts follow the same legacy inclusion the
- * adapter and the persisted recalculation use (required always, optional only
- * while selected) so the editor and the rendered PDF derive identical
- * allocations. Optional add-ons are still reported separately, never as base.
+ * the cadence summary. Built by the shared `quoteTotals` helper so the editor,
+ * the rendered PDF and the persisted recalculation derive identical
+ * allocations: required rows and selected optional rows are bases, pending
+ * add-ons are not.
  */
 function buildDraftAllocationInputs(items: DraftQuoteItem[]) {
-  const allocationBases = items.filter((item) => !item.is_discount && isQuoteItemIncluded(item));
-  const bases = allocationBases.map((item) => ({
-    id: draftBaseItemId(item),
-    serviceId: item.service_id ?? null,
-    amount: item.quantity * item.unit_price,
-    isRecurring: item.is_recurring === true,
-  }));
-
-  const discounts = items
-    .filter((item) => item.is_discount && isQuoteItemIncluded(item))
-    .map((item) => ({
-      id: draftBaseItemId(item),
-      discountType: (item.discount_type === 'percentage' ? 'percentage' : 'fixed') as 'percentage' | 'fixed',
-      fixedAmount: item.quantity * item.unit_price,
-      discountPercentage: item.discount_percentage ?? 0,
-      appliesToItemId: item.applies_to_item_id ?? null,
-      appliesToServiceId: item.applies_to_service_id ?? null,
-    }));
-
-  return { allocationBases, bases, discounts };
+  return buildQuoteDiscountAllocationInputs(items, draftBaseItemId);
 }
 
 export function calculateDraftQuoteTotals(items: DraftQuoteItem[]): DraftQuoteTotals {
-  const { allocationBases, bases, discounts } = buildDraftAllocationInputs(items);
+  const { bases, discounts } = buildDraftAllocationInputs(items);
   const allocation = allocateQuoteDiscounts(bases, discounts);
 
-  const optionalById = new Map(allocationBases.map((item) => [draftBaseItemId(item), isOptional(item)]));
-  const requiredBaseItems = items.filter((item) => !item.is_discount && isRequired(item));
-  const optionalBaseItems = items.filter((item) => !item.is_discount && isOptional(item));
-
-  const subtotal = requiredBaseItems.reduce((sum, item) => sum + item.quantity * item.unit_price, 0);
-  const optionalSubtotal = optionalBaseItems.reduce((sum, item) => sum + item.quantity * item.unit_price, 0);
-
-  let discountTotal = 0;
-  let optionalDiscountTotal = 0;
-  for (const result of allocation.discounts) {
-    for (const itemAllocation of result.allocations) {
-      if (optionalById.get(itemAllocation.baseItemId)) optionalDiscountTotal += itemAllocation.amount;
-      else discountTotal += itemAllocation.amount;
-    }
-  }
-
   // Draft rows carry the persisted rate, so the editor derives tax the same
-  // way the adapter does for unselected optional rows (ceil to the cent).
-  const taxFor = (baseItems: DraftQuoteItem[]): number =>
-    baseItems.reduce(
-      (sum, item) => sum + hypotheticalTaxAmount({ ...item, total_price: item.quantity * item.unit_price }),
-      0,
-    );
-
-  const tax = taxFor(requiredBaseItems);
-  const optionalTax = taxFor(optionalBaseItems);
-
-  return {
-    subtotal,
-    discount_total: discountTotal,
-    tax,
-    total_amount: subtotal - discountTotal + tax,
-    optional_subtotal: optionalSubtotal,
-    optional_tax: optionalTax,
-    optional_total: optionalSubtotal - optionalDiscountTotal + optionalTax,
-  };
+  // way the adapter does for pending add-ons (ceil to the cent).
+  return summarizeQuoteTotals(items, {
+    amountOf: (item) => item.quantity * item.unit_price,
+    taxOf: (item) => hypotheticalTaxAmount({ ...item, total_price: item.quantity * item.unit_price }),
+    discountTotal: allocation.totalDiscount,
+  });
 }
 
 /**
@@ -300,19 +253,19 @@ export interface DraftCadenceSummary {
   cadence_key: string;
   name: string;
   is_recurring: boolean;
-  /** Required net for the band after its share of the discount allocation. */
+  /** Included net for the band (required + selected optional) after its share of the discount allocation. */
   net: number;
-  /** Optional add-on total for the band (if selected). */
+  /** Pending (unselected optional) add-on total for the band (if selected). */
   optional_total: number;
 }
 
 /**
- * Per-cadence required nets and optional add-on totals for the editor summary.
+ * Per-cadence included nets and pending add-on totals for the editor summary.
  *
  * Discounts are attributed to a band by the base item they reduce (via the
  * shared allocation), so the editor's per-cadence figures equal the PDF's
- * per-band totals on the same quote. Optional rows are reported separately and
- * never reduce the required `net`.
+ * per-band totals on the same quote. Pending (unselected optional) rows are
+ * reported separately and never reduce `net`.
  */
 export function calculateDraftCadenceSummary(items: DraftQuoteItem[]): DraftCadenceSummary[] {
   const { bases, discounts } = buildDraftAllocationInputs(items);
@@ -347,7 +300,7 @@ export function calculateDraftCadenceSummary(items: DraftQuoteItem[]): DraftCade
     if (item.is_discount) continue;
     const entry = ensure(resolveCadenceKey(item));
     const base = item.quantity * item.unit_price;
-    if (isOptional(item)) {
+    if (isPendingOptional(item)) {
       entry.optional_total += base;
     } else {
       entry.net += Math.max(0, base - (consumedByBase.get(draftBaseItemId(item)) ?? 0));

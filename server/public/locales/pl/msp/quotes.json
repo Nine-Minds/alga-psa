@@ -501,6 +501,7 @@
       "noPriceInCurrency": "Brak ceny w {{currencyCode}}",
       "optional": "Fakultatywny",
       "phaseSection": "Faza / sekcja",
+      "preselected": "Wstępnie wybrane",
       "recurring": "Powtarzający się",
       "service": "praca",
       "setPrice": "Ustal cenę",

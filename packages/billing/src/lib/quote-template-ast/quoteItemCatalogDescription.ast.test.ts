@@ -137,10 +137,56 @@ describe('quote catalog-description stacked table cells', () => {
     expect(sourceDescriptionColumns.length).toBe(roundTrippedColumns.length);
     expect(sourceDescriptionColumns.length).toBeGreaterThan(0);
 
-    for (const column of roundTrippedColumns) {
+    // Every description column keeps name + catalog description; the grouped
+    // base bands additionally carry the optional-row marker. The round trip
+    // preserves each column's lines exactly.
+    roundTrippedColumns.forEach((column, index) => {
       expect(column.value).toEqual({ type: 'path', path: 'description' });
-      expect(linePaths(column)).toEqual(['service_name', 'catalog_description']);
-    }
+      expect(linePaths(column).slice(0, 2)).toEqual(['service_name', 'catalog_description']);
+      expect(linePaths(column)).toEqual(linePaths(sourceDescriptionColumns[index]!));
+    });
+    const bandTable = findNodeById<TemplateDynamicTableNode>(roundTripped.layout, 'cadence-band-items')!;
+    expect(linePaths(bandTable.columns.find((column) => column.id === 'description')!)).toEqual([
+      'service_name',
+      'catalog_description',
+      'optional_label',
+    ]);
+  });
+
+  it('keeps a custom row description when only the supplemental optional marker resolves (grouped bands)', async () => {
+    const ast = requireAst(getStandardQuoteTemplateAstByCode('standard-quote-grouped'));
+    const base = viewModel([
+      quoteItem({ quote_item_id: 'qi-catalog', is_optional: true, is_selected: true, optional_label: 'Optional (included)' } as Partial<QuoteViewModelLineItem>),
+      quoteItem({
+        quote_item_id: 'qi-custom',
+        service_name: null,
+        catalog_description: null,
+        description: 'Optional Endpoint Backup (custom)',
+        service_id: null,
+        is_optional: true,
+        is_selected: true,
+        optional_label: 'Optional (included)',
+      } as Partial<QuoteViewModelLineItem>),
+      quoteItem({ quote_item_id: 'qi-required', service_name: null, catalog_description: null, description: 'Onboarding (custom)', service_id: null, optional_label: null } as Partial<QuoteViewModelLineItem>),
+    ]);
+    const data = {
+      ...base,
+      groups_by_cadence: [{
+        cadence_key: 'monthly', name: 'Monthly', total_label: 'Monthly Total', is_recurring: true,
+        items: base.line_items, subtotal: 0, tax: 0, total: 0, optional_items: [], optional_subtotal: 0, optional_tax: 0, optional_total: 0,
+      }],
+      groups_by_cadence_with_optionals: [],
+    } as QuoteViewModel;
+
+    const { html } = await renderHtml(ast, data);
+    // Catalog row: name + catalog description + marker.
+    expect(html).toContain('Optional (included)');
+    // Custom optional row: its description survives with the marker beneath it.
+    expect(html).toContain('Optional Endpoint Backup (custom)');
+    expect(html.indexOf('Optional Endpoint Backup (custom)')).toBeLessThan(html.lastIndexOf('Optional (included)'));
+    // Required custom row: description only, no marker.
+    expect(html).toContain('Onboarding (custom)');
+    expect((html.match(/Optional \(included\)/g) ?? []).length).toBe(2);
   });
 
   it('renders name above catalog description, collapses missing lines, and falls back for custom rows', async () => {

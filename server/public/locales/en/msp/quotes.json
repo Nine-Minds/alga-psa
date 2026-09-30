@@ -501,6 +501,7 @@
       "noPriceInCurrency": "No price in {{currencyCode}}",
       "optional": "Optional",
       "phaseSection": "Phase / Section",
+      "preselected": "Pre-selected",
       "recurring": "Recurring",
       "service": "service",
       "setPrice": "Set price",

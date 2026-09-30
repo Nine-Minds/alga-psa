@@ -873,6 +873,9 @@ const mapWorkspaceColumnLines = (
     if (style) {
       line.style = style;
     }
+    if (entry.supplemental === true) {
+      line.supplemental = true;
+    }
     mapped.push(line);
   }
 
@@ -2013,6 +2016,9 @@ export const importTemplateAstToWorkspace = (
                 }
                 if (line.style) {
                   mappedLine.style = { ...line.style } as Record<string, unknown>;
+                }
+                if (line.supplemental) {
+                  mappedLine.supplemental = true;
                 }
                 return mappedLine;
               });
