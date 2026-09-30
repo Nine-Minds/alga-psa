@@ -1,5 +1,6 @@
 'use client'
 
+import { getInvoiceAdjustmentExportWarnings } from '../../actions/invoiceExportWarnings';
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Temporal } from '@js-temporal/polyfill';
 import {
@@ -39,7 +40,7 @@ import { InvoiceViewModel, DiscountType, IInvoiceCharge, type ManualLineMetadata
 import { hasOverlappingContractChangeAdjustment, resolveSourceDerivedPartialPeriod } from '../../lib/billing/compute/contractInvoiceAdjustments';
 import { buildPartialPeriodInvoiceDescription } from '../../lib/billing/partialPeriodInvoiceDescription';
 import type { JSX } from 'react';
-import { v4 as uuidv4 } from 'uuid';
+import { v4 as uuidv4, v5 as uuidv5 } from 'uuid';
 import { PlusIcon, MinusCircleIcon } from 'lucide-react';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { useQuickAddClient } from '@alga-psa/ui/context';
@@ -131,14 +132,14 @@ const singleCanonicalPeriod = (item: IInvoiceCharge): { start: string; end: stri
   return { start, end: Temporal.PlainDate.from(inclusiveEnd).add({ days: 1 }).toString() };
 };
 
-// An untouched default row (no service, description, amount or adjustment
-// metadata) is a placeholder, not a financial line. Saving it would persist a
+// An untouched default row (no description, amount or adjustment metadata,
+// with only its default service selected) is a placeholder, not a financial line. Saving it would persist a
 // meaningless zero charge on the invoice.
-const isBlankManualItem = (item: EditableInvoiceItem): boolean =>
+const isBlankManualItem = (item: EditableInvoiceItem, defaultServiceId?: string): boolean =>
   !item.isExisting
   && !item.isRemoved
   && !item.is_discount
-  && !item.service_id
+  && (!item.service_id || item.service_id === defaultServiceId)
   && !item.manual_line_metadata
   && !(item.description ?? '').trim()
   && (item.rate ?? 0) === 0;
@@ -273,6 +274,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
   variant = 'standard',
   onSaved,
 }) => {
+  const defaultManualServiceId = services.find(service => service.tenant && service.service_id === uuidv5(`${service.tenant}:manual-charge-service`, uuidv5.DNS))?.service_id;
   const isDraftAdjustments = variant === 'draftAdjustments';
   const { t } = useTranslation('msp/invoicing');
   const router = useRouter();
@@ -328,6 +330,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
     // Ensure the default item gets a unique ID if added
     return mappedItems.length > 0 ? mappedItems : [{
       ...baseDefaultItem,
+      service_id: defaultManualServiceId,
       item_id: uuidv4(), // Add ID here
       invoice_id: invoice?.invoice_id || ''
     }];
@@ -335,6 +338,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
 
   const [expandedItems, setExpandedItems] = useState<Set<number>>(new Set());
   const [isGenerating, setIsGenerating] = useState(false);
+  const [exportWarnings, setExportWarnings] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   // Stable per-unsaved-edit idempotency key: a retried save reuses it, so the
   // server returns the already-applied result instead of appending twice.
@@ -535,6 +539,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
           // Ensure the default item gets a unique ID if added after fetch
           setItems(mappedManualItems.length > 0 ? mappedManualItems : [{
             ...baseDefaultItem,
+            service_id: defaultManualServiceId,
             item_id: uuidv4(), // Add ID here
             invoice_id: invoiceIdToFetch
           }]);
@@ -553,6 +558,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
         // Ensure the default item gets a unique ID when resetting
         setItems([{
           ...baseDefaultItem,
+          service_id: defaultManualServiceId,
           item_id: uuidv4(), // Add ID here
           invoice_id: ''
         }]);
@@ -639,6 +645,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
       ...baseDefaultItem,
       invoice_id: currentInvoiceData?.invoice_id || '',
       item_id: uuidv4(), // Generate ID for the new item
+      service_id: !isDiscount ? defaultManualServiceId : undefined,
       is_discount: isDiscount,
       discount_type: isDiscount ? ('fixed' as DiscountType) : undefined,
       rate: 0,
@@ -843,6 +850,20 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
 
     setIsGenerating(true);
     setError(null);
+    setExportWarnings([]);
+    if (currentInvoiceData?.invoice_id) {
+      try {
+        const warnings = await getInvoiceAdjustmentExportWarnings(currentInvoiceData.invoice_id, items.filter(item => !item.isRemoved && !isBlankManualItem(item, defaultManualServiceId)));
+        setExportWarnings(warnings.map(warning => t(
+          warning.code === 'discount' ? 'manualInvoices.exportWarnings.discount' : 'manualInvoices.exportWarnings.service',
+          { adapter: warning.adapter, description: warning.description, defaultValue: warning.code === 'discount'
+            ? '{{adapter}}: configure the discount mapping before exporting {{description}}.'
+            : '{{adapter}}: assign a mapped service to {{description}} before exporting.' },
+        )));
+      } catch {
+        setExportWarnings([t('manualInvoices.exportWarnings.unavailable', { defaultValue: 'Accounting readiness could not be checked. Check mappings before exporting.' })]);
+      }
+    }
 
     try {
       if (!currentInvoiceData && selectedSalesOrderId && !selectedSalesOrder) {
@@ -885,7 +906,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
             removedCount: items.filter(i => i.isRemoved).length
         });
 
-        const newItemsToSave = items.filter(item => !item.isExisting && !item.isRemoved && !isBlankManualItem(item));
+        const newItemsToSave = items.filter(item => !item.isExisting && !item.isRemoved && !isBlankManualItem(item, defaultManualServiceId));
         const updatedItemsToSave = items.filter(item => item.isExisting && !item.isRemoved && item.item_id);
         const removedItemIds = items
           .filter(item => item.isExisting && item.isRemoved && item.item_id)
@@ -1111,6 +1132,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
         }));
         setItems(mappedUpdatedManual.length > 0 ? mappedUpdatedManual : [{
             ...baseDefaultItem,
+            service_id: defaultManualServiceId,
             item_id: uuidv4(),
             invoice_id: currentInvoiceData.invoice_id
         }]);
@@ -1367,6 +1389,8 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
                 </p>
               </div>
             </div>
+
+            {exportWarnings.length > 0 && <Alert><AlertDescription><ul>{exportWarnings.map((warning, index) => <li key={index}>{warning}</li>)}</ul></AlertDescription></Alert>}
 
             {currentInvoiceData && !isDraftAdjustments && (
               <div className="mb-6">

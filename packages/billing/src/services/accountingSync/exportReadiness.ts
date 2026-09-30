@@ -119,16 +119,10 @@ async function collectExportBlockers(knex: Knex, tenant: string, invoiceId: stri
   // charge with no children is a user-fixable gap (a manual/discount line
   // someone forgot to classify).
   const chargeIdsForDetailLookup = charges.filter((c) => !c.service_id).map((c) => c.item_id);
-  const consolidatedParents = new Set<string>(
-    chargeIdsForDetailLookup.length > 0
-      ? (
-          await knex('invoice_charge_details')
-            .whereIn('item_id', chargeIdsForDetailLookup)
-            .andWhere({ tenant })
-            .select('item_id')
-        ).map((row: { item_id: string }) => row.item_id)
-      : []
-  );
+  const detailServices: Array<{ item_id: string; service_id: string }> = chargeIdsForDetailLookup.length > 0
+    ? await knex('invoice_charge_details').whereIn('item_id', chargeIdsForDetailLookup)
+      .andWhere({ tenant }).select('item_id', 'service_id') : [];
+  const consolidatedParents = new Set(detailServices.filter(row => row.service_id).map(row => row.item_id));
 
   const blockers: string[] = [];
 
@@ -150,7 +144,7 @@ async function collectExportBlockers(knex: Knex, tenant: string, invoiceId: stri
   }
 
   const resolver = new AccountingMappingResolver(knex);
-  const serviceIds = [...new Set(charges.filter((charge) => !charge.is_discount).map((charge) => charge.service_id).filter((id): id is string => Boolean(id)))];
+  const serviceIds = [...new Set([...charges.filter((charge) => !charge.is_discount).map((charge) => charge.service_id), ...detailServices.map(row => row.service_id)].filter((id): id is string => Boolean(id)))];
   const unmappedServiceIds: string[] = [];
   for (const serviceId of serviceIds) {
     const mapping = await resolver.resolveServiceMapping({

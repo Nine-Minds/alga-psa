@@ -1,5 +1,7 @@
 'use server';
 
+import { ensureMiscellaneousService } from '@alga-psa/db';
+
 import { getCurrentUserPermissions } from '@alga-psa/user-composition/actions/userQueryActions';
 import { withAuth, type AuthContext } from '@alga-psa/auth';
 import { featureFlags } from '@alga-psa/core/server';
@@ -419,6 +421,7 @@ export async function setTenantTimezone(
 export async function initializeTenantSettings(tenantId: string): Promise<void> {
   try {
     const { knex } = await createTenantKnex(tenantId);
+    await ensureMiscellaneousService(knex, tenantId);
     
     // Use a literal timestamp for Citus compatibility
     const now = new Date();

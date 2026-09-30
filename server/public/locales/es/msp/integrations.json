@@ -92,6 +92,19 @@
           "taxCodes": "Códigos fiscales",
           "paymentTerms": "Condiciones de pago"
         }
+      },
+      "adjustmentMappings": {
+        "desktopServices": "Cuentas de servicios de Desktop",
+        "desktopDiscounts": "Descuentos de Desktop",
+        "discounts": "Descuentos y créditos",
+        "qboAccount": "ID de cuenta de descuentos de QuickBooks",
+        "xeroAccount": "Código de cuenta de Xero",
+        "desktopAccount": "Nombre de cuenta de ingresos de Desktop",
+        "csvItem": "Nombre del artículo de descuento de QuickBooks",
+        "description": "Asigne descuentos y créditos de facturas antes de exportar. La asignación pertenece a esta empresa contable.",
+        "add": "Añadir asignación",
+        "remove": "Eliminar asignación",
+        "removeConfirm": "¿Eliminar esta asignación contable?"
       }
     },
     "calendar": {

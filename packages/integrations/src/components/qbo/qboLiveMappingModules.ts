@@ -1,3 +1,4 @@
+import { createDiscountMappingModule } from '../accounting-mappings/discountMappingModule';
 import {
   createExternalEntityMapping,
   deleteExternalEntityMapping,
@@ -161,7 +162,8 @@ export function createQboLiveMappingModules(t?: TFn): AccountingMappingModule[] 
   return [
     createServiceModule(tab('itemsServices', 'Items / Services')),
     createTaxCodeModule(tab('taxCodes', 'Tax Codes'), t),
-    createPaymentTermModule(tab('paymentTerms', 'Payment Terms'))
+    createPaymentTermModule(tab('paymentTerms', 'Payment Terms')),
+    createDiscountMappingModule(ADAPTER_TYPE, t)
   ];
 }
 

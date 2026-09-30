@@ -1,3 +1,4 @@
+import { ensureMiscellaneousService } from '@alga-psa/db';
 import { Context, ApplicationFailure } from '@temporalio/activity';
 import { tenantDb } from '@alga-psa/db';
 import { getAdminConnection, withAdminTransactionRetryReadOnly } from '@alga-psa/db/admin.js';
@@ -452,6 +453,7 @@ export async function setupTenantDataInDB(
     const setupSteps: string[] = [];
 
     await withAdminTransactionRetryReadOnly(async (trx: Knex.Transaction) => {
+      await ensureMiscellaneousService(trx, input.tenantId);
       // Set up tenant email settings with defaults (simple insert, no ON CONFLICT to avoid distributed table issues)
       try {
         // Keep a caught SQL error from aborting other setup steps.

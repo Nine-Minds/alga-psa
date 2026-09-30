@@ -1,0 +1,73 @@
+{
+  "transport": "mocked Xero request; no external write",
+  "request": {
+    "Type": "ACCREC",
+    "InvoiceNumber": "REVIEW-CONTRACT-3499-xero",
+    "Reference": "REVIEW-CONTRACT-3499-xero",
+    "Date": "2026-09-01",
+    "DueDate": "2026-09-30",
+    "CurrencyCode": "USD",
+    "LineAmountTypes": "NoTax",
+    "Contact": {
+      "ContactID": "CUSTOMER"
+    },
+    "LineItems": [
+      {
+        "Description": "Loyalty 10%",
+        "Quantity": 1,
+        "UnitAmount": -405,
+        "LineAmount": -405,
+        "AccountCode": "DISCOUNT",
+        "TaxAmount": 0
+      },
+      {
+        "Description": "Manual credit",
+        "Quantity": 3,
+        "UnitAmount": -0.33,
+        "LineAmount": -0.99,
+        "AccountCode": "DISCOUNT",
+        "TaxAmount": 0
+      },
+      {
+        "Description": "Manual fixed discount",
+        "Quantity": 1,
+        "UnitAmount": -1.01,
+        "LineAmount": -1.01,
+        "AccountCode": "DISCOUNT",
+        "TaxAmount": 0
+      },
+      {
+        "Description": "Manual percentage discount",
+        "Quantity": 1,
+        "UnitAmount": -405,
+        "LineAmount": -405,
+        "AccountCode": "DISCOUNT",
+        "TaxAmount": 0
+      },
+      {
+        "Description": "Miscellaneous charge",
+        "Quantity": 3,
+        "UnitAmount": 50,
+        "LineAmount": 150,
+        "AccountCode": "MISC",
+        "TaxAmount": 0
+      },
+      {
+        "Description": "Recurring support",
+        "Quantity": 1,
+        "UnitAmount": 1950,
+        "LineAmount": 1950,
+        "AccountCode": "RECURRING",
+        "TaxAmount": 0
+      },
+      {
+        "Description": "Recurring support",
+        "Quantity": 1,
+        "UnitAmount": 1950,
+        "LineAmount": 1950,
+        "AccountCode": "MISC",
+        "TaxAmount": 0
+      }
+    ]
+  }
+}

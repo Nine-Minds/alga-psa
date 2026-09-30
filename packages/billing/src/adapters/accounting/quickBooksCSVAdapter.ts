@@ -1,3 +1,5 @@
+import { serializeAccountingCsv } from '../../services/accountingCsv';
+import { expandAccountingExportCharges } from '../../services/accountingExportChargeExpansion';
 /**
  * QuickBooks CSV Export Adapter
  *
@@ -23,7 +25,6 @@ import { AppError } from '@alga-psa/core';
 import { lockInvoiceForExternalSync } from '../../lib/invoiceExternalSyncLock';
 import { AccountingMappingResolver } from '../../services/accountingMappingResolver';
 import { KnexInvoiceMappingRepository } from '../../repositories/invoiceMappingRepository';
-import { unparseCSV } from '@alga-psa/core';
 
 /**
  * Database types for invoices and charges
@@ -166,7 +167,10 @@ export class QuickBooksCSVAdapter implements AccountingExportAdapter {
 
     // Load data
     const invoicesById = await this.loadInvoices(knex, tenantId, context);
-    const chargesById = await this.loadCharges(knex, tenantId, context);
+    const loadedCharges = await this.loadCharges(knex, tenantId, context);
+    const expanded = await expandAccountingExportCharges(knex, tenantId, loadedCharges, context.lines);
+    const chargesById = expanded.charges;
+    context = { ...context, lines: expanded.lines };
     const clientData = await this.loadClients(knex, tenantId, invoicesById);
 
     // Set up mapping resolver
@@ -319,7 +323,7 @@ export class QuickBooksCSVAdapter implements AccountingExportAdapter {
 
       documents.push({
         documentId: invoiceId,
-        lineIds: exportLines.map((line) => line.line_id),
+        lineIds: [...new Set(exportLines.map((line) => line.line_id))],
         payload: payload as unknown as Record<string, unknown>
       });
     }
@@ -373,7 +377,7 @@ export class QuickBooksCSVAdapter implements AccountingExportAdapter {
     }
 
     // Generate CSV content
-    const csvContent = unparseCSV(allRows, CSV_FIELDS as string[]);
+    const csvContent = serializeAccountingCsv(allRows, CSV_FIELDS as string[], ['*ItemQuantity', '*ItemRate', '*ItemAmount', 'TaxAmount']);
 
     // Generate filename with timestamp
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-').split('T')[0];
@@ -581,6 +585,7 @@ export class QuickBooksCSVAdapter implements AccountingExportAdapter {
         'item_id',
         'invoice_id',
         'service_id',
+        'is_manual',
         'description',
         'quantity',
         'unit_price',

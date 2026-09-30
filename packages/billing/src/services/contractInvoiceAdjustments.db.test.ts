@@ -54,6 +54,7 @@ vi.mock('@alga-psa/auth/withAuth', () => ({
   ),
 }));
 vi.mock('@alga-psa/auth/rbac', () => ({ hasPermission: async () => true }));
+vi.mock('@alga-psa/integrations/lib/qbo/qboTaxSettings', () => ({ isQboAutomatedSalesTaxEnabled: async () => false }));
 vi.mock('@alga-psa/event-bus/publishers', () => ({ publishWorkflowEvent: vi.fn() }));
 
 const {
@@ -291,7 +292,7 @@ async function insertManualPartialPeriodCharge(params: {
       [
         {
           item_id: itemId,
-          service_id: undefined,
+          service_id: serviceId,
           description: params.description ?? '3 × $100 × 15/30',
           quantity: 1,
           rate: amount,
@@ -502,7 +503,7 @@ describe('contract invoice adjustments (DB-backed)', () => {
     const manualId = uuidv4();
     const discountIdForInvoice = uuidv4();
     await db.transaction((trx) => persistManualInvoiceCharges(trx, fixture.invoiceId, [{
-      item_id: manualId, description: 'Separate manual charge', quantity: 1, rate: 15000, is_taxable: false,
+      item_id: manualId, service_id: serviceId, description: 'Separate manual charge', quantity: 1, rate: 15000, is_taxable: false,
     }], client, session, tenant));
     await db.transaction((trx) => persistManualInvoiceCharges(trx, fixture.invoiceId, [{
       item_id: discountIdForInvoice, description: 'Invoice-wide 10% discount', quantity: 1, rate: 0,
@@ -545,7 +546,7 @@ describe('contract invoice adjustments (DB-backed)', () => {
     const manualDiscountId = uuidv4();
     const operationId = uuidv4();
     expect(await updateInvoiceManualItems(fixture.invoiceId, {
-      newItems: [{ item_id: manualChargeId, description: 'Separate manual charge', quantity: 1, rate: 15000, is_taxable: false } as any],
+      newItems: [{ item_id: manualChargeId, service_id: serviceId, description: 'Separate manual charge', quantity: 1, rate: 15000, is_taxable: false } as any],
       updatedItems: [], removedItemIds: [],
     }, { operationId: uuidv4(), expectedRevision: 0 })).toMatchObject({ invoice_id: fixture.invoiceId });
 
@@ -623,7 +624,7 @@ describe('contract invoice adjustments (DB-backed)', () => {
     const { updateInvoiceManualItems } = await import('../actions/invoiceModification');
     const manualId = uuidv4();
     const operationId = uuidv4();
-    const add = { newItems: [{ item_id: manualId, description: 'One-time addition', quantity: 1, rate: 15000, is_taxable: false } as any], updatedItems: [], removedItemIds: [] };
+    const add = { newItems: [{ item_id: manualId, service_id: serviceId, description: 'One-time addition', quantity: 1, rate: 15000, is_taxable: false } as any], updatedItems: [], removedItemIds: [] };
     expect(await updateInvoiceManualItems(fixture.invoiceId, add, { operationId, expectedRevision: 0 })).toMatchObject({ invoice_id: fixture.invoiceId });
     expect(await updateInvoiceManualItems(fixture.invoiceId, add, { operationId, expectedRevision: 0 })).toMatchObject({ invoice_id: fixture.invoiceId });
     expect(await updateInvoiceManualItems(fixture.invoiceId, { newItems: [], updatedItems: [], removedItemIds: [] })).toMatchObject({ invoice_id: fixture.invoiceId });
@@ -1215,7 +1216,7 @@ describe('contract invoice adjustments (DB-backed)', () => {
         [
           {
             item_id: uuidv4(),
-            description: 'Extra manual charge',
+            service_id: serviceId, description: 'Extra manual charge',
             quantity: 1,
             rate: 10_000,
             is_taxable: false,
@@ -1582,7 +1583,7 @@ describe('contract invoice adjustments (DB-backed)', () => {
           [
             {
               item_id: uuidv4(),
-              description: 'Charge on a foreign location',
+              service_id: serviceId, description: 'Charge on a foreign location',
               quantity: 1,
               rate: 1_000,
               is_taxable: true,
@@ -1615,7 +1616,7 @@ describe('contract invoice adjustments (DB-backed)', () => {
           [
             {
               item_id: uuidv4(),
-              description: 'Charge on a foreign billing profile',
+              service_id: serviceId, description: 'Charge on a foreign billing profile',
               quantity: 1,
               rate: 1_000,
               is_taxable: true,
@@ -1660,7 +1661,7 @@ describe('contract invoice adjustments (DB-backed)', () => {
         [
           {
             item_id: taxableItemId,
-            description: 'Taxable freeform charge',
+            service_id: serviceId, description: 'Taxable freeform charge',
             quantity: 1,
             rate: 10_000,
             tax_rate_id: taxRateId,
@@ -1668,7 +1669,7 @@ describe('contract invoice adjustments (DB-backed)', () => {
           },
           {
             item_id: exemptItemId,
-            description: 'Exempt freeform charge',
+            service_id: serviceId, description: 'Exempt freeform charge',
             quantity: 1,
             rate: 5_000,
             tax_rate_id: null,
@@ -1707,7 +1708,7 @@ describe('contract invoice adjustments (DB-backed)', () => {
           [
             {
               item_id: uuidv4(),
-              description: 'Forged tax treatment',
+              service_id: serviceId, description: 'Forged tax treatment',
               quantity: 1,
               rate: 1_000,
               tax_rate_id: uuidv4(),
@@ -2955,5 +2956,119 @@ describe('invoice adjustment editability (DB-backed)', () => {
     expect(invoice).toBeNull();
     expect(capability.editable).toBe(false);
     expect(capability.code).toBe('not_found');
+  });
+});
+
+describe('accounting adjustment export matrix', () => {
+  it('seeds miscellaneous service idempotently and validates the effective edited row', async () => {
+    const { ensureMiscellaneousService } = await import('@alga-psa/db');
+    const id = await ensureMiscellaneousService(db, tenant);
+    await db('service_catalog').where({ tenant, service_id: id }).update({ service_name: 'Renamed one-time service' });
+    expect(await ensureMiscellaneousService(db, tenant)).toBe(id);
+    expect((await db('service_catalog').where({ tenant, service_id: id }).first()).service_name).toBe('Renamed one-time service');
+    const fixture = await createDraftWithGeneratedChargeAndDiscount();
+    const { updateInvoiceManualItems } = await import('../actions/invoiceModification');
+    const itemId = uuidv4();
+    expect(await updateInvoiceManualItems(fixture.invoiceId, { newItems: [{ item_id: itemId, service_id: id, description: 'Misc charge', rate: 1000, quantity: 1 } as any], updatedItems: [], removedItemIds: [] })).toMatchObject({ invoice_id: fixture.invoiceId });
+    expect(await updateInvoiceManualItems(fixture.invoiceId, { newItems: [], updatedItems: [{ item_id: itemId, description: 'Description-only patch' }], removedItemIds: [] })).toMatchObject({ invoice_id: fixture.invoiceId });
+    expect(await updateInvoiceManualItems(fixture.invoiceId, { newItems: [], updatedItems: [{ item_id: itemId, service_id: uuidv4() }], removedItemIds: [] })).toMatchObject({ success: false, code: 'SERVICE_NOT_FOUND' });
+    await db('invoice_charges').where({ tenant, item_id: itemId }).update({ service_id: null });
+    expect(await updateInvoiceManualItems(fixture.invoiceId, { newItems: [], updatedItems: [{ item_id: itemId, description: 'Legacy edit' }], removedItemIds: [] })).toMatchObject({ success: false, code: 'SERVICE_REQUIRED' });
+    expect((await db('invoice_charges').where({ tenant, item_id: itemId }).first()).description).toBe('Description-only patch');
+    // A legacy serviceless charge may become an explicit quantity-derived credit.
+    expect(await updateInvoiceManualItems(fixture.invoiceId, { newItems: [], updatedItems: [{ item_id: itemId, quantity: 3, rate: -33 }], removedItemIds: [] })).toMatchObject({ invoice_id: fixture.invoiceId });
+    const credit = await db('invoice_charges').where({ tenant, item_id: itemId }).first();
+    expect(credit).toMatchObject({ service_id: null, is_discount: true, is_manual_credit: true });
+    expect(Number(credit.net_amount)).toBe(-99);
+    expect(await updateInvoiceManualItems(fixture.invoiceId, { newItems: [], updatedItems: [{ item_id: itemId, description: 'Credit description only' }], removedItemIds: [] })).toMatchObject({ invoice_id: fixture.invoiceId });
+    expect(Number((await db('invoice_charges').where({ tenant, item_id: itemId }).first()).net_amount)).toBe(-99);
+  });
+
+  it.each(['quickbooks_online', 'xero', 'quickbooks_csv', 'xero_csv', 'quickbooks_desktop'])('serializes manual/automatic discounts, credits and misc charges for %s', async (adapterType) => {
+    const { ensureMiscellaneousService } = await import('@alga-psa/db');
+    const miscId = await ensureMiscellaneousService(db, tenant);
+    await db('discounts').where({ tenant, discount_id: configuredDiscountId }).update({ is_active: true });
+    const fixture = await createDraftWithGeneratedChargeAndDiscount();
+    await db('invoices').where({ tenant, invoice_id: fixture.invoiceId }).update({ invoice_number: `REVIEW-CONTRACT-3499-${adapterType}`, tax_source: 'internal' });
+    await db.transaction(trx => persistManualInvoiceCharges(trx, fixture.invoiceId, [
+      { service_id: miscId, description: 'Miscellaneous charge', quantity: 3, rate: 5000, tax_rate_id: null },
+      { description: 'Manual fixed discount', quantity: 3, rate: 101, is_discount: true, discount_type: 'fixed' },
+      { description: 'Manual percentage discount', quantity: 1, rate: 0, is_discount: true, discount_type: 'percentage', discount_percentage: 10 },
+      { description: 'Manual credit', quantity: 3, rate: -33 },
+    ], { client_id: clientId, region_code: null, default_currency_code: 'USD' }, { user: { id: userId } } as never, tenant));
+    await db.transaction(trx => reconcileAutomaticInvoiceAdjustments(trx, tenant, fixture.invoiceId));
+    const realm = ['xero', 'quickbooks_online'].includes(adapterType) ? 'test-realm' : null;
+    for (const [kind, local, external] of [['service', miscId, 'MISC'], ['service', serviceId, 'RECURRING'], ['discount', 'invoice_discount', 'DISCOUNT'], ['client', clientId, 'CUSTOMER']]) {
+      await db('tenant_external_entity_mappings').where({ tenant, integration_type: adapterType, alga_entity_type: kind, alga_entity_id: local }).delete();
+      await db('tenant_external_entity_mappings').insert({ tenant, integration_type: adapterType, alga_entity_type: kind, alga_entity_id: local,
+        external_entity_id: external, external_realm_id: realm, sync_status: 'manual_link', metadata: JSON.stringify({ xeroTargetKind: 'account', accountCode: external }) });
+    }
+    // The fixed-plan parent is intentionally serviceless. Export its canonical
+    // allocated children exactly once while preserving the batch parent identity.
+    await db('invoice_charges').where({ tenant, item_id: fixture.generatedChargeId }).update({ service_id: null });
+    for (const service of [serviceId, miscId]) {
+      const detailId = uuidv4();
+      const configId = uuidv4();
+      await db('contract_line_service_configuration').insert({ tenant, config_id: configId, contract_line_id: contractLineId, service_id: service, configuration_type: 'Fixed', quantity: 1 });
+      await db('invoice_charge_details').insert({ tenant, item_detail_id: detailId, item_id: fixture.generatedChargeId, service_id: service, config_id: configId, quantity: 1, rate: 195000 });
+      await db('invoice_charge_fixed_details').insert({ tenant, item_detail_id: detailId, base_rate: 195000, allocated_amount: 195000, tax_amount: 0, enable_proration: false, fmv: 195000, proportion: 0.5 });
+    }
+    const charges = await db('invoice_charges').where({ tenant, invoice_id: fixture.invoiceId }).orderBy('description');
+    const context: any = { batch: { tenant, batch_id: uuidv4(), adapter_type: adapterType, target_realm: realm, export_type: 'invoice', created_at: '2026-09-01' },
+      lines: charges.map(charge => ({ tenant, line_id: uuidv4(), document_id: fixture.invoiceId, document_line_id: charge.item_id,
+        client_id: clientId, amount_cents: Number(charge.total_price), currency_code: 'USD', payload: { service_period_source: 'financial_document_fallback' } })), taxDelegationMode: 'internal' };
+    const adapter = adapterType === 'quickbooks_online' ? new (await import('../adapters/accounting/quickBooksOnlineAdapter')).QuickBooksOnlineAdapter()
+      : adapterType === 'xero' ? new (await import('../adapters/accounting/xeroAdapter')).XeroAdapter()
+      : adapterType === 'quickbooks_csv' ? new (await import('../adapters/accounting/quickBooksCSVAdapter')).QuickBooksCSVAdapter()
+      : adapterType === 'xero_csv' ? new (await import('../adapters/accounting/xeroCsvAdapter')).XeroCsvAdapter()
+      : new (await import('../adapters/accounting/quickBooksDesktopAdapter')).QuickBooksDesktopAdapter();
+    const transformed = await adapter.transform(context);
+    if (adapterType === 'quickbooks_csv') {
+      const delivery = await adapter.deliver(transformed, context);
+      expect(delivery.failedDocuments).toBeUndefined();
+      transformed.files = (delivery.metadata as any).files;
+    }
+    const net = charges.reduce((sum, charge) => sum + Number(charge.net_amount), 0);
+    let evidence: unknown = transformed;
+    if (adapterType === 'quickbooks_online') {
+      const invoice = (transformed.documents[0].payload as any).invoice;
+      expect(invoice.Line.filter((line: any) => line.DetailType === 'DiscountLineDetail')).toHaveLength(4);
+      expect(Math.round(invoice.Line.reduce((sum: number, line: any) => sum + (line.DetailType === 'DiscountLineDetail' ? -line.Amount : line.Amount), 0) * 100)).toBe(net);
+      expect(invoice.Line.filter((line: any) => line.DetailType === 'DiscountLineDetail').every((line: any) => line.DiscountLineDetail.DiscountAccountRef.value === 'DISCOUNT')).toBe(true);
+      expect(invoice.Line.filter((line: any) => line.DetailType === 'SalesItemLineDetail')).toHaveLength(3);
+      evidence = invoice;
+    } else if (adapterType === 'xero') {
+      const { XeroClientService } = await import('@alga-psa/integrations/lib/xero/xeroClientService');
+      const client = new (XeroClientService as any)(tenant, { scope: 'accounting.invoices', connectionId: 'mock' }, {}, {});
+      const request = vi.spyOn(client, 'request').mockResolvedValue({ Invoices: [{ InvoiceID: 'mock-export' }] });
+      await client.createInvoices([(transformed.documents[0].payload as any).invoice]);
+      const serialized = (request.mock.calls[0][0] as any).data.Invoices[0];
+      expect(serialized.LineItems.filter((line: any) => line.AccountCode === 'DISCOUNT')).toHaveLength(4);
+      for (const line of serialized.LineItems) expect(Math.round(line.Quantity * line.UnitAmount * 100)).toBe(Math.round(line.LineAmount * 100));
+      expect(Math.round(serialized.LineItems.reduce((sum: number, line: any) => sum + line.LineAmount, 0) * 100)).toBe(net);
+      evidence = { transport: 'mocked Xero request; no external write', request: serialized };
+    } else {
+      const content = String(transformed.files?.[0]?.content);
+      expect(content).toContain('DISCOUNT'); expect(content).toContain('MISC'); expect(content).toContain('Manual percentage discount');
+      if (adapterType === 'quickbooks_desktop') {
+        const rows = content.split('\n').filter(row => /^(TRNS|SPL)\t/.test(row));
+        expect(Math.round(rows.reduce((sum, row) => sum + Number(row.split('\t')[6]), 0) * 100)).toBe(0);
+        expect(Number(rows[0].split('\t')[6]) * 100).toBeCloseTo(net);
+      } else {
+        const { parseCSV } = await import('@alga-psa/core');
+        const rows = parseCSV(content, { header: true });
+        const quantityKey = adapterType === 'xero_csv' ? '*Quantity' : '*ItemQuantity';
+        const rateKey = adapterType === 'xero_csv' ? '*UnitAmount' : '*ItemRate';
+        expect(Math.round(rows.reduce((sum: number, row: any) => sum + Number(row[quantityKey]) * Number(row[rateKey]), 0) * 100)).toBe(net);
+      }
+    }
+    await db('tenant_external_entity_mappings').where({ tenant, integration_type: adapterType, alga_entity_type: 'discount', alga_entity_id: 'invoice_discount' }).delete();
+    await expect(adapter.transform(context)).rejects.toThrow(/discount.*mapping/i);
+    if (process.env.ACCOUNTING_EVIDENCE_DIR) {
+      const fs = await import('node:fs/promises');
+      await fs.mkdir(process.env.ACCOUNTING_EVIDENCE_DIR, { recursive: true });
+      await fs.writeFile(`${process.env.ACCOUNTING_EVIDENCE_DIR}/${adapterType}.json`, JSON.stringify(evidence, null, 2));
+      for (const file of transformed.files ?? []) await fs.writeFile(`${process.env.ACCOUNTING_EVIDENCE_DIR}/${adapterType}.${adapterType === 'quickbooks_desktop' ? 'iif' : 'csv'}`, String(file.content));
+    }
   });
 });

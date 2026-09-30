@@ -92,6 +92,19 @@
           "taxCodes": "Kody podatkowe",
           "paymentTerms": "Warunki płatności"
         }
+      },
+      "adjustmentMappings": {
+        "desktopServices": "Konta usług Desktop",
+        "desktopDiscounts": "Rabaty Desktop",
+        "discounts": "Rabaty i uznania",
+        "qboAccount": "Identyfikator konta rabatów QuickBooks",
+        "xeroAccount": "Kod konta Xero",
+        "desktopAccount": "Nazwa konta przychodów Desktop",
+        "csvItem": "Nazwa pozycji rabatowej QuickBooks",
+        "description": "Przed eksportem przypisz rabaty i uznania faktur. Przypisanie dotyczy tej firmy księgowej.",
+        "add": "Dodaj przypisanie",
+        "remove": "Usuń przypisanie",
+        "removeConfirm": "Usunąć to przypisanie księgowe?"
       }
     },
     "calendar": {

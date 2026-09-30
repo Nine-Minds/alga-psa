@@ -1,3 +1,5 @@
+import { serializeAccountingCsv } from '../../services/accountingCsv';
+import { expandAccountingExportCharges } from '../../services/accountingExportChargeExpansion';
 import logger from '@alga-psa/core/logger';
 import { Knex } from 'knex';
 import {
@@ -12,7 +14,7 @@ import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { lockInvoiceForExternalSync } from '../../lib/invoiceExternalSyncLock';
 import { AccountingMappingResolver } from '../../services/accountingMappingResolver';
 import { KnexInvoiceMappingRepository } from '../../repositories/invoiceMappingRepository';
-import { AppError, unparseCSV } from '@alga-psa/core';
+import { AppError } from '@alga-psa/core';
 
 /**
  * Fixed tracking category names for Xero CSV export.
@@ -44,6 +46,7 @@ type DbCharge = {
   quantity?: number | null;
   unit_price?: number | null;
   total_price: number;
+  net_amount?: number | string | null;
   tax_amount?: number | null;
   tax_region?: string | null;
   is_discount?: boolean | null;
@@ -162,7 +165,10 @@ export class XeroCsvAdapter implements AccountingExportAdapter {
     const resolver = await AccountingMappingResolver.create({});
 
     const invoicesById = await this.loadInvoices(knex, tenantId, context);
-    const chargesById = await this.loadCharges(knex, tenantId, context);
+    const loadedCharges = await this.loadCharges(knex, tenantId, context);
+    const expanded = await expandAccountingExportCharges(knex, tenantId, loadedCharges, context.lines);
+    const chargesById = expanded.charges;
+    context = { ...context, lines: expanded.lines };
     const clientData = await this.loadClients(knex, tenantId, context, invoicesById);
 
     const linesByInvoice = groupBy(context.lines, (line) => line.document_id);
@@ -218,7 +224,7 @@ export class XeroCsvAdapter implements AccountingExportAdapter {
         if (charge.is_discount) {
           const discountMapping = await resolver.resolveDiscountMapping({
             tenantId: context.batch.tenant,
-            adapterType: 'xero',
+            adapterType: this.type,
             targetRealm: context.batch.target_realm
           });
           if (!discountMapping) {
@@ -226,12 +232,12 @@ export class XeroCsvAdapter implements AccountingExportAdapter {
           }
           accountCode = safeString(discountMapping.external_entity_id) ?? '';
           taxType = charge.tax_region
-            ? safeString((await resolver.resolveTaxCodeMapping({ tenantId: context.batch.tenant, adapterType: 'xero', taxRegionId: charge.tax_region, targetRealm: context.batch.target_realm }))?.external_entity_id) ?? ''
+            ? safeString((await resolver.resolveTaxCodeMapping({ tenantId: context.batch.tenant, adapterType: this.type, taxRegionId: charge.tax_region, targetRealm: context.batch.target_realm }))?.external_entity_id) ?? ''
             : '';
         } else if (charge.service_id) {
           const serviceMapping = await resolver.resolveServiceMapping({
             tenantId: context.batch.tenant,
-            adapterType: 'xero', // Use xero mappings (shared with OAuth adapter)
+            adapterType: this.type, // CSV mappings are configured independently of OAuth mappings
             serviceId: charge.service_id,
             targetRealm: context.batch.target_realm
           });
@@ -248,7 +254,7 @@ export class XeroCsvAdapter implements AccountingExportAdapter {
         if (charge.tax_region && !taxType) {
           const taxMapping = await resolver.resolveTaxCodeMapping({
             tenantId: context.batch.tenant,
-            adapterType: 'xero', // Use xero mappings
+            adapterType: this.type,
             taxRegionId: charge.tax_region,
             targetRealm: context.batch.target_realm
           });
@@ -262,8 +268,10 @@ export class XeroCsvAdapter implements AccountingExportAdapter {
         // CSV importers recalculate totals from quantity × rounded rate.
         // Discount settlements therefore use one signed line so fractional
         // source quantities cannot change the settled minor-unit amount.
-        const quantity = charge.is_discount ? 1 : (typeof charge.quantity === 'number' ? charge.quantity : 1);
-        const unitAmount = (line.amount_cents / 100 / quantity).toFixed(2);
+        const storedQuantity = Number(charge.quantity ?? 1);
+        const quantity = charge.is_discount || !Number.isFinite(storedQuantity) || storedQuantity === 0 ? 1 : storedQuantity;
+        const netAmount = Number(charge.net_amount ?? charge.total_price) - (charge.net_amount == null ? Number(charge.tax_amount ?? 0) : 0);
+        const unitAmount = (netAmount / 100 / quantity).toFixed(2);
 
         // Build CSV row
         const row: XeroCsvRow = {
@@ -321,7 +329,7 @@ export class XeroCsvAdapter implements AccountingExportAdapter {
 
       documents.push({
         documentId: invoiceId,
-        lineIds: exportLines.map((line) => line.line_id),
+        lineIds: [...new Set(exportLines.map((line) => line.line_id))],
         payload: documentPayload as unknown as Record<string, unknown>
       });
     }
@@ -357,7 +365,7 @@ export class XeroCsvAdapter implements AccountingExportAdapter {
       'Currency'
     ];
 
-    const csvContent = unparseCSV(allCsvRows, csvHeaders);
+    const csvContent = serializeAccountingCsv(allCsvRows, csvHeaders, ['*Quantity', '*UnitAmount', 'Discount', 'Total']);
 
     const filename = `xero-invoice-export-${context.batch.batch_id}.csv`;
 
@@ -546,10 +554,12 @@ export class XeroCsvAdapter implements AccountingExportAdapter {
         'item_id',
         'invoice_id',
         'service_id',
+        'is_manual',
         'description',
         'quantity',
         'unit_price',
         'total_price',
+        'net_amount',
         'tax_amount',
         'tax_region',
         'is_discount'

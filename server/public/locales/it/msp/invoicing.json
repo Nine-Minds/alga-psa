@@ -387,7 +387,8 @@
       "SOURCE_ALREADY_BILLED": "Alcuni elementi selezionati non sono più fatturabili (già fatturati, non approvati o rimossi). Aggiorna e riprova.",
       "SOURCE_NOT_ELIGIBLE": "Un elemento selezionato non appartiene a questo ticket o non è più idoneo. Aggiorna e riprova.",
       "SOURCE_CURRENCY_MISMATCH": "Alcuni prodotti selezionati sono prezzati in una valuta diversa da quella di fatturazione di questo cliente e non possono essere aggiunti. Fatturali separatamente nella loro valuta.",
-      "CLIENT_CONTRACT_NOT_FOUND": "Il contratto selezionato non appartiene al cliente di questa fattura."
+      "CLIENT_CONTRACT_NOT_FOUND": "Il contratto selezionato non appartiene al cliente di questa fattura.",
+      "SERVICE_REQUIRED": "Assegna un servizio a questo addebito prima di salvare."
     },
     "warnings": {
       "noBillingEmail": "Questo cliente non ha un indirizzo e-mail di fatturazione. Imposta un contatto per la fatturazione, un indirizzo e-mail di fatturazione del cliente o un indirizzo e-mail nella sede di fatturazione o predefinita prima di generare la fattura."
@@ -435,6 +436,11 @@
         "decrease": "{{description}} — credito per {{units}} {{unitLabel}} in meno, {{period}} — {{calculation}}"
       },
       "sourceDescriptionFallback": "Adeguamento del servizio"
+    },
+    "exportWarnings": {
+      "discount": "{{adapter}}: configura l’associazione degli sconti prima di esportare {{description}}.",
+      "service": "{{adapter}}: assegna un servizio associato a {{description}} prima di esportare.",
+      "unavailable": "Impossibile verificare la preparazione contabile. Controlla le associazioni prima di esportare."
     }
   },
   "quickInvoice": {

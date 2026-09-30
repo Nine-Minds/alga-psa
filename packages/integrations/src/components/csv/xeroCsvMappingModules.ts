@@ -1,3 +1,4 @@
+import { createDiscountMappingModule } from '../accounting-mappings/discountMappingModule';
 import {
   createExternalEntityMapping,
   deleteExternalEntityMapping,
@@ -45,7 +46,8 @@ export function createXeroCsvMappingModules(t?: TFn): AccountingMappingModule[] 
   return [
     createClientModule(tab('clients', 'Clients')),
     createServiceModule(tab('itemsServices', 'Items / Services')),
-    createTaxCodeModule(tab('taxCodes', 'Tax Codes'))
+    createTaxCodeModule(tab('taxCodes', 'Tax Codes')),
+    createDiscountMappingModule(ADAPTER_TYPE, t)
   ];
 }
 

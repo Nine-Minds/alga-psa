@@ -1,3 +1,4 @@
+import { ensureMiscellaneousService } from '@alga-psa/db';
 import { tenantDb } from '@alga-psa/db';
 import { getAdminConnection } from '@alga-psa/db/admin';
 import { CreateTenantInput, TenantResponse } from './types/tenant.schema';
@@ -38,6 +39,7 @@ export class TenantService {
           throw new TenantProvisioningError('Failed to create tenant record');
         }
 
+        await ensureMiscellaneousService(trx, tenant.tenant);
         return tenant;
       });
 

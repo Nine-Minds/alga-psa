@@ -1,24 +1,54 @@
-# Accounting export adjustment repair evidence
+# Accounting export repair
 
-This is a partial mitigation record for the 2026-09-29 Draft Implementation pass on PR #3499. It is not final acceptance evidence.
+PR #3499 now gives discounts an explicit accounting mapping and requires a tenant-owned catalog service on manual charges. The repair includes the mapping editor, miscellaneous-service provisioning, save-time warnings, and all five accounting adapters.
 
-## Implemented and checked
+## Review first
 
-- The shared manual invoice charge persistence path rejects non-discount rows without a tenant-valid service. The draft update path also validates explicitly supplied update services, including legacy serviceless rows. This is not yet backed by behavioral coverage for standalone creation and draft add/update endpoints.
-- Accounting batch validation now reports a description/invoice/line-specific service assignment instruction for legacy serviceless charges, and separately reports a missing discount mapping for discounts and credits.
-- Finalize readiness now checks for the tenant/integration/realm-scoped QBO discount mapping and reports it as a blocker when auto-sync will run.
-- QBO API emits fixed `DiscountLineDetail` rows; QBO CSV, Xero API and Xero CSV use the discount resolver and preserve the persisted negative amount. Discount mapping cannot yet be written/configured through settings, and serialized behavior remains incompletely tested.
-- CSV discount exports now use a single signed line to avoid rate rounding changing the settled amount. Xero API discount quantity/rate are derived from the settled amount (credit quantity is kept when the minor-unit rate is exact).
+- In each accounting mapping screen, open **Discounts and credits**. QBO uses an account ID; Xero uses an account code; QuickBooks CSV uses a discount item name. QuickBooks CSV settings also expose **Desktop discounts**, **Desktop service accounts**, and Desktop tax accounts for IIF exports. API targets are checked against the connected accounting company before saving. Mapping actions enforce tenant ownership, accounting permissions, and realm scope.
+- **Miscellaneous / One-time charge** is an ordinary editable catalog service with a stable tenant-derived ID. The migration provisions existing tenants; tenant initialization and provisioning cover new tenants. It is selected for new manual charges and needs an ordinary service mapping. Existing invoice rows are never silently assigned to it.
+- The shared writer rejects serviceless positive charges. Updates validate the effective persisted row, so description-only edits keep a valid existing service. Unknown/foreign services and edits to legacy serviceless positive rows are rejected before writing. Negative-rate credits are classified before this requirement; a serviceless credit uses the discount mapping.
+- Save-time warnings identify unmapped manual lines, generated services and automatic discounts. Batch validation and QBO finalize readiness remain authoritative. Saving a draft is allowed while its accounting mappings are incomplete.
+- Consolidated fixed-plan parents are exported through their persisted service allocations exactly once. Net and tax allocation sums must match the parent. Batch line identity remains the parent; remote split identity uses each detail ID.
 
-## Automated verification
+Discount export amounts come from the settled invoice amount. QBO uses fixed native discount lines. Xero uses negative lines on the mapped discount account; exact credit quantities are retained when their rates can reproduce the settlement. CSV uses a quantity of one for discount rows so two-decimal rate formatting cannot change a fractional settlement. IIF uses signed mapped-account splits and a balanced receivable transaction. Numeric CSV amounts remain numbers; descriptions and other text still receive spreadsheet-formula protection.
 
-- `npx vitest run src/services/accountingSync/exportReadiness.test.ts` from `server/`: 10 tests passed.
-- `NODE_OPTIONS=--max-old-space-size=8192 npm run typecheck --workspace=@alga-psa/billing`: passed after fixing the Xero charge projection type.
-- Focused ESLint over the touched TypeScript files: zero errors; 85 warnings were reported, primarily existing `any`, unused symbol, and environment-global warnings.
-- `git diff --check`: passed before the latest changes.
+## Reproducible export evidence
 
-## Acceptance still pending
+The artifacts below were produced by the real adapters against isolated database fixtures named `REVIEW-CONTRACT-3499-<adapter>`. They are not downloads from the retained review-app invoice. The fixtures contain $3,900 in generated fixed-plan allocations, a $150 miscellaneous charge, a $1.01 fixed discount with quantity 3, a manual 10% discount, an automatic 10% settlement, and a 3 × $0.33 credit. Every export represents $3,238.00 before tax. Tests also remove the discount mapping and assert that each adapter rejects the export.
 
-The current mapping UI does not expose a discount mapping editor, and the external mapping write path does not yet allow the fixed `discount/invoice_discount` record. The QuickBooks Desktop IIF path has not been repaired. Miscellaneous service provisioning/default selection, editor early warnings, full serialized adapter tests, consolidated-parent export behavior, CSV/QBO/Xero artifacts, localization, full billing/accounting suites, full lint/build, and current-head UI smoke remain outstanding. The new focused DB run found 12 failures in the broader existing adjustment suite because test/manual-add fixtures lack the newly required service; the test suite is not green. The app server stayed stopped as required.
+| Adapter | Evidence | What was checked |
+| --- | --- | --- |
+| QBO | [Invoice JSON](artifacts/quickbooks_online.json) | Four native discount lines on the configured account; generated allocations and misc charge appear once; signed sum matches the database. |
+| Xero | [Mocked HTTP request](artifacts/xero.json) | Real client serialization with only its transport mocked; every quantity × unit amount matches the line amount, including percentage and fractional fixed settlements. |
+| QuickBooks CSV | [CSV](artifacts/quickbooks_csv.csv), [adapter result](artifacts/quickbooks_csv.json) | Real adapter delivery artifact; parsed signed quantities × rates equal the persisted net total. |
+| Xero CSV | [CSV](artifacts/xero_csv.csv), [adapter result](artifacts/xero_csv.json) | Independent `xero_csv` mappings; negative numeric cells and settlement totals survive parsing. |
+| QuickBooks Desktop | [IIF](artifacts/quickbooks_desktop.iif), [adapter result](artifacts/quickbooks_desktop.json) | Mapped service/discount account splits; receivable plus splits sums to zero. |
 
-Do not use historical screenshots in the review guide as evidence for this repair. Full acceptance requires current-head configuration and end-to-end output evidence, including at least one real adapter-produced CSV and a mocked/emulated QBO or Xero payload, followed by the required UI re-smoke.
+Regenerate artifacts from `server/` with:
+
+```sh
+ACCOUNTING_EVIDENCE_DIR="$PWD/../docs/evidence/accounting-export-adjustments-repair-2026-09-29/artifacts" npx vitest run --config vitest.workspace-db.config.ts ../packages/billing/src/services/contractInvoiceAdjustments.db.test.ts
+```
+
+This recreates the isolated test database. Run database suites serially.
+
+## Validation
+
+- Contract adjustment DB suite: 55 tests, including creation/update service validation, idempotent catalog provisioning, credits, settlement retries, lifecycle protections and all five adapter payloads.
+- External mapping DB suite: 35 tests, including create/read/update/delete of the discount identity for all five providers, realm/tenant isolation and invalid Xero accounts.
+- Credit/tax and invoice-generation discount DB suites: 11 tests. Positive manual fixtures now use a real service; tax and monetary expectations are unchanged.
+- Billing unit suite: 1,627 tests across 323 files, including four editor-warning tests and 18 batch-validation tests. Integration unit suite: 960 tests across 115 files.
+- Billing, integrations, database and server TypeScript checks pass. The server check needed a 12 GB heap and exposed a stale local invoice interface; its nullable contract assignment now matches the shared charge type. Billing package build passes. The integrations package's standalone build script has no configured entry points. The production application build hit an 8 GB heap limit and is retrying with 16 GB; completion is pending.
+- Localization audit and pseudo-locales: 32 tests pass. Focused lint: zero errors; existing and test-fixture warnings remain.
+
+## Current-head UI smoke pending
+
+The app server stayed stopped. No current-head mapping-editor screenshots, actual Desktop import, live QBO/Xero delivery, portal walkthrough, or combined-companion validation is claimed. The mocked Xero request proves serialization, not provider acceptance. Historical invoice preview/PDF screenshots do not prove this accounting repair.
+
+On the next authorized smoke step, use an owned copy of REVIEW-CONTRACT-3499:
+
+1. Configure the active provider's service and discount mappings through settings; reload and verify them. Remove the discount mapping and verify the editor warning and export/finalize blocker, then restore it.
+2. Add the default miscellaneous charge for $150, apply a manual or configured 10% discount, and save. For $3,900 + $150, verify the first-save discount is $405 and the net amount is $3,645. Repeat/reload must preserve row counts and ledger principal.
+3. Edit and remove a manual charge; verify generated charges remain protected. Edit a legacy serviceless charge and verify service selection is required. Save a serviceless negative-rate credit and verify the discount mapping is used.
+4. Download a CSV and compare its parsed amounts with preview, PDF and the posted invoice principal. Exercise the mocked/emulated provider export through the application when its server is available.
+5. Test a consolidated fixed-plan invoice with tax and multiple allocated services; confirm no duplicated parent revenue. Restore owned fixtures and leave shared invoices unchanged.

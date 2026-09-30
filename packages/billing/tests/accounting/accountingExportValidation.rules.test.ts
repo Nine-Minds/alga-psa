@@ -29,6 +29,7 @@ vi.mock('@alga-psa/db', () => ({
   createTenantKnex: vi.fn(async () => ({ knex: h.knex, tenant: 'tenant-1' })),
   tenantDb: vi.fn((knex: any) => ({
     table: (table: string) => knex(table),
+    tenantJoin: () => undefined,
   })),
 }));
 
@@ -45,6 +46,7 @@ type FakeState = {
   lines: any[];
   charges: any[];
   chargeDetails: any[];
+  fixedDetails?: any[];
   invoices: any[];
   clients: any[];
   services: any[];
@@ -55,6 +57,7 @@ function createFakeKnex(state: FakeState) {
   const tableData: Record<string, () => any[]> = {
     invoice_charges: () => state.charges.map((charge) => ({ net_amount: 100, ...charge })),
     invoice_charge_details: () => state.chargeDetails,
+    'invoice_charge_details as d': () => state.fixedDetails ?? [],
     invoices: () => state.invoices,
     clients: () => state.clients,
     service_catalog: () => state.services,
@@ -183,6 +186,30 @@ describe('AccountingExportValidation.ensureMappingsForBatch', () => {
       expect.objectContaining({ code: 'missing_charge_id', line_id: 'line-1' }),
     ]);
     expect(repo.updateBatchStatus).toHaveBeenCalledWith('batch-1', { status: 'needs_attention' });
+  });
+
+  it('validates fixed-plan child services without exporting or rejecting the parent', async () => {
+    const state = baseState({
+      charges: [{ item_id: 'charge-1', invoice_id: 'inv-1', service_id: null, is_manual: false, net_amount: 100, tax_amount: 0 }],
+      fixedDetails: [
+        { item_id: 'charge-1', item_detail_id: 'detail-1', service_id: 'svc-1', allocated_amount: 60, tax_amount: 0 },
+        { item_id: 'charge-1', item_detail_id: 'detail-2', service_id: 'svc-2', allocated_amount: 40, tax_amount: 0 },
+      ],
+    });
+    const { repo, resolver } = await run(state);
+    expect(repo.errors).toEqual([]);
+    expect(repo.updateBatchStatus).toHaveBeenCalledWith('batch-1', { status: 'ready' });
+    expect(resolver.resolveServiceMapping.mock.calls.map(([args]: any[]) => args.serviceId)).toEqual(['svc-1', 'svc-2']);
+    const unmapped = await run(state, createFakeResolver({ resolveServiceMapping: vi.fn(async () => null) }));
+    expect(unmapped.repo.errors).toHaveLength(2);
+    expect(unmapped.repo.errors.every((error: any) => error.code === 'missing_service_mapping')).toBe(true);
+  });
+
+  it('rejects inconsistent fixed allocations instead of dropping or duplicating revenue', async () => {
+    await expect(run(baseState({
+      charges: [{ item_id: 'charge-1', service_id: null, is_manual: false, net_amount: 100, tax_amount: 0 }],
+      fixedDetails: [{ item_id: 'charge-1', item_detail_id: 'detail-1', service_id: 'svc-1', allocated_amount: 99, tax_amount: 0 }],
+    }))).rejects.toThrow('Fixed-plan allocation totals do not match');
   });
 
   it('flags charges that have no associated service', async () => {

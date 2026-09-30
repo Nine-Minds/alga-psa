@@ -1,3 +1,4 @@
+import { createDiscountMappingModule } from '../accounting-mappings/discountMappingModule';
 import {
   createExternalEntityMapping,
   deleteExternalEntityMapping,
@@ -89,7 +90,8 @@ export function createXeroLiveMappingModules(t?: TFn): AccountingMappingModule[]
     t ? t(`integrations.accounting.modules.tabs.${key}`, { defaultValue: fallback }) : fallback;
   return [
     createServiceModule(tab('itemsServices', 'Items / Services')),
-    createTaxCodeModule(tab('taxCodes', 'Tax Codes'))
+    createTaxCodeModule(tab('taxCodes', 'Tax Codes')),
+    createDiscountMappingModule(ADAPTER_TYPE, t)
   ];
 }
 

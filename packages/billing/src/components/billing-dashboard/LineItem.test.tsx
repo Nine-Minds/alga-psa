@@ -68,7 +68,7 @@ const renderLineItem = (item: EditableItem, onChange = vi.fn()) => {
 };
 
 const editItem = () => {
-  fireEvent.change(document.getElementById('service-select')!, { target: { value: 'svc-1' } });
+  fireEvent.change(document.getElementById('service-select-item-1')!, { target: { value: 'svc-1' } });
   fireEvent.change(document.getElementById('quantity-input')!, { target: { value: '3' } });
   fireEvent.change(document.getElementById('rate-input')!, { target: { value: '12.5' } });
 };
@@ -97,7 +97,7 @@ it('re-syncs the editor when the item data genuinely changes', () => {
 
   view.rerender(<LineItem {...props} item={{ ...baseItem, service_id: 'svc-2', quantity: 5, rate: 900 }} />);
 
-  expect((document.getElementById('service-select') as HTMLSelectElement).value).toBe('svc-2');
+  expect((document.getElementById('service-select-item-1') as HTMLSelectElement).value).toBe('svc-2');
   expect((document.getElementById('quantity-input') as HTMLInputElement).value).toBe('5');
   expect((document.getElementById('rate-input') as HTMLInputElement).value).toBe('9');
 });
@@ -159,7 +159,7 @@ it('reports the operator tax-treatment choice when the row is committed', () => 
   const onChange = vi.fn();
   render(
     <LineItem
-      item={baseItem}
+      item={{ ...baseItem, service_id: 'svc-1' }}
       index={0}
       isExpanded
       serviceOptions={serviceOptions}

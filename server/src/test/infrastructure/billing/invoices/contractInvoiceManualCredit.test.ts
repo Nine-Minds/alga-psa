@@ -377,7 +377,7 @@ describe('Contract Invoice Manual Credit', () => {
     const positiveItem: IInvoiceCharge = {
       item_id: uuidv4(),
       invoice_id: invoiceId,
-      service_id: undefined,
+      service_id: await (await import('@alga-psa/db')).ensureMiscellaneousService(context.db, context.tenantId),
       description: 'Manual service charge',
       quantity: 1,
       rate: 50000,
@@ -476,7 +476,7 @@ describe('Contract Invoice Manual Credit', () => {
     const positiveItem: IInvoiceCharge = {
       item_id: uuidv4(),
       invoice_id: invoiceId,
-      service_id: undefined,
+      service_id: await (await import('@alga-psa/db')).ensureMiscellaneousService(context.db, context.tenantId),
       description: 'Manual service charge',
       quantity: 1,
       rate: 50000,
@@ -579,7 +579,7 @@ describe('Contract Invoice Manual Credit', () => {
     const addedInvoice = await addManualItemsToInvoice(invoiceId, [{
       item_id: itemId,
       invoice_id: invoiceId,
-      service_id: undefined,
+      service_id: await (await import('@alga-psa/db')).ensureMiscellaneousService(context.db, context.tenantId),
       description: 'Taxable freeform charge',
       quantity: 1,
       rate: 10000,
@@ -786,7 +786,7 @@ describe('Contract Invoice Manual Credit', () => {
     const addedInvoice = await addManualItemsToInvoice(invoiceId, [{
       item_id: itemId,
       invoice_id: invoiceId,
-      service_id: undefined,
+      service_id: await (await import('@alga-psa/db')).ensureMiscellaneousService(context.db, context.tenantId),
       description: 'Unknown rate target',
       quantity: 1,
       rate: 10000,

@@ -1,3 +1,4 @@
+import { expandAccountingExportCharges } from './accountingExportChargeExpansion';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { AccountingExportRepository } from '../repositories/accountingExportRepository';
 import { AccountingMappingResolver } from './accountingMappingResolver';
@@ -94,7 +95,7 @@ export class AccountingExportValidation {
       throw new Error(`Export batch ${batchId} is missing tenant context`);
     }
 
-    const lines = await repo.listLines(batchId);
+    let lines = await repo.listLines(batchId);
     const { knex } = await createTenantKnex();
     const db = tenantDb(knex, tenant);
     const validationTimestamp = new Date().toISOString();
@@ -172,10 +173,12 @@ export class AccountingExportValidation {
     const charges =
       chargeIds.size > 0
         ? await db.table<ChargeProjection>('invoice_charges')
-            .select('item_id', 'invoice_id', 'service_id', 'tax_region', 'net_amount', 'description', 'is_discount')
+            .select('item_id', 'invoice_id', 'service_id', 'tax_region', 'net_amount', 'description', 'is_discount', 'is_manual', 'tax_amount')
             .whereIn('item_id', Array.from(chargeIds))
         : [];
-    const chargesById = new Map(charges.map((charge) => [charge.item_id, charge]));
+    const expanded = await expandAccountingExportCharges(knex, tenant, new Map(charges.map((charge) => [charge.item_id, charge])), lines);
+    const chargesById = expanded.charges;
+    lines = expanded.lines;
     const chargeDetailRows =
       chargeIds.size > 0
         ? await db.table<ChargeDetailProjection>('invoice_charge_details')
@@ -299,7 +302,7 @@ export class AccountingExportValidation {
     const missingServiceMappings = new Set<string>();
 
     const serviceIds = new Set<string>();
-    for (const charge of charges) {
+    for (const charge of chargesById.values()) {
       if (charge.service_id) {
         serviceIds.add(charge.service_id);
       }
@@ -373,7 +376,7 @@ export class AccountingExportValidation {
         continue;
       }
 
-      const canonicalPeriods = canonicalPeriodsByChargeId.get(line.document_line_id) ?? [];
+      const canonicalPeriods = canonicalPeriodsByChargeId.get(lineById.get(line.line_id)?.document_line_id ?? line.document_line_id) ?? [];
       const exportSource = normalizeExportLineServicePeriodSource(line.payload);
       const exportSummaryStart = normalizeIsoString(line.service_period_start);
       const exportSummaryEnd = normalizeIsoString(line.service_period_end);
@@ -476,7 +479,7 @@ export class AccountingExportValidation {
       const invoiceDelegatesTax =
         invoiceTaxSource === 'external' || invoiceTaxSource === 'pending_external';
 
-      if (isQuickBooks && charge.tax_region && !invoiceDelegatesTax) {
+      if ((isQuickBooks || adapterType === 'quickbooks_desktop') && charge.tax_region && !invoiceDelegatesTax) {
         const cacheKey = `${charge.tax_region}:${batch.target_realm ?? 'default'}`;
         if (!checkedTaxRegions.has(cacheKey)) {
           const taxMapping = await resolver.resolveTaxCodeMapping({

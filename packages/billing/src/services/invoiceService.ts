@@ -813,11 +813,10 @@ export async function validateManualChargeAttribution(
     rate?: number | null;
   }>,
 ): Promise<void> {
-  const serviceChargeItems = items.filter((item) =>
-    !item.is_discount && !(Number(item.rate) < 0)
-  );
-  for (const item of serviceChargeItems) {
+  for (const item of items) {
     const serviceId = item.service_id?.trim();
+    const requiresService = !item.is_discount && !(Number(item.rate) < 0);
+    if (!serviceId && !requiresService) continue;
     if (!serviceId) {
       throw new ManualInvoiceError(
         'SERVICE_REQUIRED',

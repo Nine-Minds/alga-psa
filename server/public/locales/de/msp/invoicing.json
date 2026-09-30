@@ -387,7 +387,8 @@
       "SOURCE_ALREADY_BILLED": "Einige ausgewählte Positionen sind nicht mehr abrechenbar (bereits abgerechnet, nicht genehmigt oder entfernt). Aktualisieren und erneut versuchen.",
       "SOURCE_NOT_ELIGIBLE": "Eine ausgewählte Position gehört nicht zu den abrechenbaren Positionen dieses Tickets oder ist nicht mehr zulässig. Aktualisieren und erneut versuchen.",
       "SOURCE_CURRENCY_MISMATCH": "Einige ausgewählte Produkte sind in einer anderen Währung bepreist als die Rechnungswährung dieses Kunden. Sie können nicht hinzugefügt werden. Rechnen Sie sie in ihrer eigenen Währung getrennt ab.",
-      "CLIENT_CONTRACT_NOT_FOUND": "Der ausgewählte Vertrag gehört nicht zum Kunden dieser Rechnung."
+      "CLIENT_CONTRACT_NOT_FOUND": "Der ausgewählte Vertrag gehört nicht zum Kunden dieser Rechnung.",
+      "SERVICE_REQUIRED": "Weisen Sie dieser Position vor dem Speichern einen Dienst zu."
     },
     "warnings": {
       "noBillingEmail": "Für diesen Kunden ist keine Rechnungs-E-Mail-Adresse hinterlegt. Lege vor dem Generieren der Rechnung einen Rechnungskontakt, eine Rechnungs-E-Mail-Adresse des Kunden oder eine E-Mail-Adresse am Rechnungs- oder Standardstandort fest."
@@ -435,6 +436,11 @@
         "decrease": "{{description}} — Gutschrift für {{units}} weniger {{unitLabel}}, {{period}} — {{calculation}}"
       },
       "sourceDescriptionFallback": "Serviceanpassung"
+    },
+    "exportWarnings": {
+      "discount": "{{adapter}}: Konfigurieren Sie die Rabattzuordnung vor dem Export von {{description}}.",
+      "service": "{{adapter}}: Weisen Sie {{description}} vor dem Export einen zugeordneten Dienst zu.",
+      "unavailable": "Die Exportbereitschaft konnte nicht geprüft werden. Prüfen Sie die Zuordnungen vor dem Export."
     }
   },
   "quickInvoice": {

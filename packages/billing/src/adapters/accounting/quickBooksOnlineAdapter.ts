@@ -1,3 +1,4 @@
+import { expandAccountingExportCharges } from '../../services/accountingExportChargeExpansion';
 /* eslint-disable custom-rules/no-feature-to-feature-imports -- Accounting export adapter - intentionally bridges billing and QuickBooks integration APIs */
 import logger from '@alga-psa/core/logger';
 import { AppError } from '@alga-psa/core';
@@ -288,7 +289,10 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
     );
 
     const invoicesById = await this.loadInvoices(knex, tenantId, context);
-    const chargesById = await this.loadCharges(knex, tenantId, context);
+    const loadedCharges = await this.loadCharges(knex, tenantId, context);
+    const expanded = await expandAccountingExportCharges(knex, tenantId, loadedCharges, context.lines);
+    const chargesById = expanded.charges;
+    context = { ...context, lines: expanded.lines };
     const clientData = await this.loadClients(knex, tenantId, context, invoicesById);
     const resolver = await AccountingMappingResolver.create({ companySyncService });
 
@@ -668,7 +672,7 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
 
       documents.push({
         documentId: invoiceId,
-        lineIds: exportLines.map((line) => line.line_id),
+        lineIds: [...new Set(exportLines.map((line) => line.line_id))],
         payload: payload as unknown as Record<string, unknown>
       });
     }
@@ -871,7 +875,7 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
 
       documents.push({
         documentId: billId,
-        lineIds: exportLines.map((line) => line.line_id),
+        lineIds: [...new Set(exportLines.map((line) => line.line_id))],
         payload: payload as unknown as Record<string, unknown>
       });
     }
@@ -1230,7 +1234,7 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
     // Build charge-to-QBO-line mapping from response
     // QBO returns lines in same order as sent, filter to SalesItemLineDetail only
     const qboSalesLines = (response.Line ?? [])
-      .filter((line: QboInvoiceLine) => line.DetailType === 'SalesItemLineDetail');
+      .filter((line: QboInvoiceLine) => line.DetailType === 'SalesItemLineDetail' || line.DetailType === 'DiscountLineDetail');
     const chargeLineMappings: Array<{ chargeId: string; qboLineId: string }> = [];
     for (let i = 0; i < payload.chargeIds.length && i < qboSalesLines.length; i++) {
       const qboLineId = qboSalesLines[i].Id;
@@ -1317,6 +1321,7 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
         'item_id',
         'invoice_id',
         'service_id',
+        'is_manual',
         'description',
         'quantity',
         'unit_price',

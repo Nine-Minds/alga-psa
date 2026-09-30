@@ -420,6 +420,7 @@ export const LineItem: React.FC<LineItemProps> = ({
             id='collapse-line-item-button'
             type="button"
             onClick={handleCollapse}
+            disabled={!editState.isRemoved && !editState.is_discount && editState.rate >= 0 && !editState.service_id}
             variant="secondary"
             size="sm"
           >
@@ -448,13 +449,14 @@ export const LineItem: React.FC<LineItemProps> = ({
                 {t('lineItem.fields.service', { defaultValue: 'Service' })}
               </label>
               <CustomSelect
-                id='service-select'
+                id={`service-select-${item.item_id ?? index}`}
                 value={editState.service_id}
                 onValueChange={(value) => handleLocalChange('service_id', value)}
                 options={serviceOptions}
                 className="w-full"
                 disabled={editState.isRemoved}
               />
+              {!editState.service_id && editState.rate >= 0 && <p className="text-sm text-destructive">{t('manualInvoices.errors.SERVICE_REQUIRED', { defaultValue: 'Assign a service to this charge before saving.' })}</p>}
             </div>
 
             <div>

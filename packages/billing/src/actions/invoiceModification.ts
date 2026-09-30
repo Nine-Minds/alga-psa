@@ -2102,12 +2102,29 @@ async function updateManualInvoiceItemsInternal(
 
     // Attribution ids on an edit must belong to this invoice's client; the
     // editor's selects are not an authorization boundary.
-    await validateManualChargeAttribution(
-      trx,
-      tenant,
-      invoice.client_id,
-      changes.updatedItems ?? [],
-    );
+    // Updates are patches: validate the effective row, not only supplied fields.
+    const effectiveUpdates = [];
+    for (const patch of changes.updatedItems ?? []) {
+      const stored = await tenantScopedTable(trx, tenant, 'invoice_charges')
+        .where({ invoice_id: invoiceId, item_id: patch.item_id, is_manual: true })
+        .first();
+      if (!stored) continue; // The generated/foreign-row guard below owns this error.
+      const effective = {
+        ...stored,
+        rate: Number(stored.unit_price),
+        ...Object.fromEntries(Object.entries(patch).filter(([, value]) => value !== undefined)),
+      };
+      // Negative-rate manual charges become quantity-derived credits on edits too.
+      if (!effective.is_discount && Number(effective.rate) < 0) {
+        patch.is_discount = true;
+        patch.discount_type = 'fixed';
+        patch.is_manual_credit = true;
+        effective.is_discount = true;
+      }
+      patch.is_discount = Boolean(effective.is_discount);
+      effectiveUpdates.push(effective);
+    }
+    await validateManualChargeAttribution(trx, tenant, invoice.client_id, effectiveUpdates);
 
     const targetedItemIds = Array.from(
       new Set([
@@ -2234,6 +2251,7 @@ async function updateManualInvoiceItemsInternal(
           // Rate is already in cents from the frontend, no need to multiply by 100
           unit_price: item.rate !== undefined ? Math.round(item.rate) : undefined,
           is_discount: item.is_discount,
+          is_manual_credit: item.is_manual_credit,
           discount_type: item.discount_type,
           discount_percentage: item.discount_percentage,
           applies_to_item_id: item.applies_to_item_id,
@@ -2368,6 +2386,7 @@ async function updateManualInvoiceItemsInternal(
           rate: item.rate,
           quantity: item.quantity,
           is_discount: item.is_discount,
+          is_manual_credit: item.is_manual_credit,
           discount_type: item.discount_type,
           applies_to_item_id: item.applies_to_item_id,
           service_id: item.service_id || undefined,
@@ -2542,6 +2561,7 @@ async function addManualInvoiceItemsInternal(
           rate: item.rate,
           quantity: item.quantity,
           is_discount: item.is_discount,
+          is_manual_credit: item.is_manual_credit,
           discount_type: item.discount_type,
           applies_to_item_id: item.applies_to_item_id,
           service_id: item.service_id || undefined,

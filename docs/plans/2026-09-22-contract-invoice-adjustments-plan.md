@@ -328,3 +328,11 @@ The companion card owns permanent unit revisions and automatic true-up generatio
 A positive recurring standing charge remains a catalog-backed contract line so it retains a service, tax, and accounting classification; a recurring fixed credit is authored as a fixed contract discount. The companion handoff was absent in this checkout, so the above interface is sourced from the captain instructions and must be confirmed against the companion branch during integration review.
 
 Live smoke and `SMOKE-ADJ-1` reseeding are deliberately outstanding for the authorized smoke step because the app server must remain stopped during this repair.
+
+## Accounting export mitigation (2026-09-29)
+
+Manual positive charges require a tenant-valid catalog service at creation and on every edit. New lines select the ordinary editable Miscellaneous / One-time charge service, provisioned idempotently for existing and new tenants. Historical serviceless charges are left unchanged and require explicit assignment when next edited or exported. Freeform descriptions and amounts remain available.
+
+Discounts and quantity-derived credits use an explicit tenant/integration/realm mapping (`discount`, `invoice_discount`) in the existing external mapping table. Configuration uses the existing permissioned mapping screens and actions. QBO emits native fixed discount lines; Xero uses a negative line on the mapped account; CSV/IIF preserve the settled amount using the configured item/account. CSV signed numeric fields must not be escaped into text.
+
+Serviceless consolidated fixed-plan parents expand into their canonical persisted service allocations for export and validation. Allocation totals must equal the parent net/tax totals. The original batch line remains the export/retry identity, so expansion neither adds revenue nor loses retry ownership. Save-time editor warnings complement existing batch and finalize gates. Current-head UI acceptance is pending the separately authorized smoke step; Draft Implementation does not start the app server.

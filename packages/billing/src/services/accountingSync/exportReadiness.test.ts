@@ -52,7 +52,7 @@ function makeKnex(fixture: KnexFixture): any {
       return {
         whereIn: () => ({
           andWhere: () => ({
-            select: async () => (fixture.detailBackedChargeIds ?? []).map((id) => ({ item_id: id }))
+            select: async () => (fixture.detailBackedChargeIds ?? []).map((id) => ({ item_id: id, service_id: 'detail-service' }))
           })
         })
       };

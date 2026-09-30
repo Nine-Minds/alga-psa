@@ -387,7 +387,8 @@
       "SOURCE_ALREADY_BILLED": "Sommige geselecteerde items zijn niet meer factureerbaar (al gefactureerd, niet goedgekeurd of verwijderd). Vernieuw en probeer opnieuw.",
       "SOURCE_NOT_ELIGIBLE": "Een geselecteerd item hoort niet bij dit ticket of is niet langer in aanmerking komend. Vernieuw en probeer opnieuw.",
       "SOURCE_CURRENCY_MISMATCH": "Sommige geselecteerde producten zijn geprijsd in een andere valuta dan de factuurvaluta van deze klant en kunnen niet worden toegevoegd. Factureer ze apart in hun eigen valuta.",
-      "CLIENT_CONTRACT_NOT_FOUND": "Het geselecteerde contract hoort niet bij de klant van deze factuur."
+      "CLIENT_CONTRACT_NOT_FOUND": "Het geselecteerde contract hoort niet bij de klant van deze factuur.",
+      "SERVICE_REQUIRED": "Wijs een dienst toe aan deze kostenpost voordat u opslaat."
     },
     "warnings": {
       "noBillingEmail": "Deze klant heeft geen facturatie-e-mailadres. Stel een contactpersoon voor facturering, een facturatie-e-mailadres van de klant of een e-mailadres op de facturatielocatie of standaardlocatie in voordat u de factuur genereert."
@@ -435,6 +436,11 @@
         "decrease": "{{description}} — tegoed voor {{units}} minder {{unitLabel}}, {{period}} — {{calculation}}"
       },
       "sourceDescriptionFallback": "Serviceaanpassing"
+    },
+    "exportWarnings": {
+      "discount": "{{adapter}}: configureer de kortingskoppeling voordat u {{description}} exporteert.",
+      "service": "{{adapter}}: wijs vóór export een gekoppelde dienst toe aan {{description}}.",
+      "unavailable": "De boekhoudgereedheid kon niet worden gecontroleerd. Controleer de koppelingen vóór export."
     }
   },
   "quickInvoice": {

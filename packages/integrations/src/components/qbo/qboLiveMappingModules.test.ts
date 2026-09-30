@@ -79,15 +79,16 @@ describe('QBO live mapping modules', () => {
     });
   });
 
-  it('T030: returns exactly 3 modules in order: service, tax_code, payment_term', () => {
+  it('T030: returns service, tax, terms and discount mapping modules', () => {
     const modules = createQboLiveMappingModules();
-    expect(modules).toHaveLength(3);
+    expect(modules).toHaveLength(4);
     expect(modules[0].id).toBe('qbo-live-service-mappings');
     expect(modules[1].id).toBe('qbo-live-tax-code-mappings');
     expect(modules[2].id).toBe('qbo-live-payment-term-mappings');
+    expect(modules[3].algaEntityType).toBe('discount');
   });
 
-  it('T031: all three modules have adapterType quickbooks_online', () => {
+  it('T031: all modules have adapterType quickbooks_online', () => {
     const modules = createQboLiveMappingModules();
     for (const mod of modules) {
       expect(mod.adapterType).toBe('quickbooks_online');
@@ -401,4 +402,15 @@ describe('QBO live mapping modules', () => {
       'NM-Roosevelt (6.25%)'
     ]);
   });
+});
+
+it('exposes a realm-scoped discount mapping without treating it as a catalog service', async () => {
+  getExternalEntityMappingsMock.mockResolvedValue([]);
+  createExternalEntityMappingMock.mockResolvedValue({ id: 'discount-map' });
+  const module = createQboLiveMappingModules().find(module => module.algaEntityType === 'discount')!;
+  const result = await module.load({ realmId: 'realm-123' });
+  expect(result.algaEntities.map(entity => entity.id)).toEqual(['invoice_discount']);
+  expect(getExternalEntityMappingsMock).toHaveBeenCalledWith({ integrationType: 'quickbooks_online', algaEntityType: 'discount', externalRealmId: 'realm-123' });
+  await module.create({ realmId: 'realm-123' }, { algaEntityId: 'invoice_discount', externalEntityId: 'discount-account' });
+  expect(createExternalEntityMappingMock).toHaveBeenCalledWith(expect.objectContaining({ alga_entity_type: 'discount', alga_entity_id: 'invoice_discount', external_realm_id: 'realm-123', external_entity_id: 'discount-account' }));
 });

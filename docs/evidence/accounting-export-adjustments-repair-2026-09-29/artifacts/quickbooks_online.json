@@ -1,0 +1,97 @@
+{
+  "DocNumber": "REVIEW-CONTRACT-3499-quickbooks_online",
+  "TxnDate": "2026-09-01",
+  "DueDate": "2026-09-30",
+  "CustomerRef": {
+    "value": "CUSTOMER"
+  },
+  "Line": [
+    {
+      "Amount": 405,
+      "DetailType": "DiscountLineDetail",
+      "Description": "Loyalty 10%",
+      "DiscountLineDetail": {
+        "DiscountAccountRef": {
+          "value": "DISCOUNT"
+        },
+        "PercentBased": false,
+        "DiscountAmount": 405
+      }
+    },
+    {
+      "Amount": 0.99,
+      "DetailType": "DiscountLineDetail",
+      "Description": "Manual credit",
+      "DiscountLineDetail": {
+        "DiscountAccountRef": {
+          "value": "DISCOUNT"
+        },
+        "PercentBased": false,
+        "DiscountAmount": 0.99
+      }
+    },
+    {
+      "Amount": 1.01,
+      "DetailType": "DiscountLineDetail",
+      "Description": "Manual fixed discount",
+      "DiscountLineDetail": {
+        "DiscountAccountRef": {
+          "value": "DISCOUNT"
+        },
+        "PercentBased": false,
+        "DiscountAmount": 1.01
+      }
+    },
+    {
+      "Amount": 405,
+      "DetailType": "DiscountLineDetail",
+      "Description": "Manual percentage discount",
+      "DiscountLineDetail": {
+        "DiscountAccountRef": {
+          "value": "DISCOUNT"
+        },
+        "PercentBased": false,
+        "DiscountAmount": 405
+      }
+    },
+    {
+      "Amount": 150,
+      "DetailType": "SalesItemLineDetail",
+      "Description": "Miscellaneous charge",
+      "SalesItemLineDetail": {
+        "ItemRef": {
+          "value": "MISC"
+        },
+        "Qty": "3.00",
+        "UnitPrice": 50
+      }
+    },
+    {
+      "Amount": 1950,
+      "DetailType": "SalesItemLineDetail",
+      "Description": "Recurring support",
+      "SalesItemLineDetail": {
+        "ItemRef": {
+          "value": "RECURRING"
+        },
+        "Qty": 1,
+        "UnitPrice": 1950
+      }
+    },
+    {
+      "Amount": 1950,
+      "DetailType": "SalesItemLineDetail",
+      "Description": "Recurring support",
+      "SalesItemLineDetail": {
+        "ItemRef": {
+          "value": "MISC"
+        },
+        "Qty": 1,
+        "UnitPrice": 1950
+      }
+    }
+  ],
+  "CurrencyRef": {
+    "value": "USD"
+  }
+}

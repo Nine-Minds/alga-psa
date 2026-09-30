@@ -405,7 +405,8 @@
       "SOURCE_ALREADY_BILLED": "Niektóre wybrane pozycje nie są już rozliczalne (już rozliczone, niezatwierdzone lub usunięte). Odśwież i spróbuj ponownie.",
       "SOURCE_NOT_ELIGIBLE": "Wybrana pozycja nie należy do tego zgłoszenia lub nie jest już kwalifikowalna. Odśwież i spróbuj ponownie.",
       "SOURCE_CURRENCY_MISMATCH": "Niektóre wybrane produkty są wycenione w innej walucie niż waluta fakturowania tego klienta, więc nie można ich dodać. Rozlicz je osobno w ich własnej walucie.",
-      "CLIENT_CONTRACT_NOT_FOUND": "Wybrana umowa nie należy do klienta tej faktury."
+      "CLIENT_CONTRACT_NOT_FOUND": "Wybrana umowa nie należy do klienta tej faktury.",
+      "SERVICE_REQUIRED": "Przypisz usługę do tej pozycji przed zapisaniem."
     },
     "warnings": {
       "noBillingEmail": "Ten klient nie ma adresu e-mail do rozliczeń. Ustaw kontakt ds. rozliczeń, adres e-mail do rozliczeń klienta lub adres e-mail w lokalizacji rozliczeniowej albo domyślnej przed wygenerowaniem faktury."
@@ -453,6 +454,11 @@
         "decrease": "{{description}} — korekta za {{units}} mniej {{unitLabel}}, {{period}} — {{calculation}}"
       },
       "sourceDescriptionFallback": "Korekta usługi"
+    },
+    "exportWarnings": {
+      "discount": "{{adapter}}: skonfiguruj przypisanie rabatów przed eksportem {{description}}.",
+      "service": "{{adapter}}: przypisz usługę z mapowaniem do {{description}} przed eksportem.",
+      "unavailable": "Nie można sprawdzić gotowości księgowej. Sprawdź przypisania przed eksportem."
     }
   },
   "quickInvoice": {

@@ -1,3 +1,4 @@
+import { expandAccountingExportCharges } from '../../services/accountingExportChargeExpansion';
 /* eslint-disable custom-rules/no-feature-to-feature-imports -- Accounting export adapter - intentionally bridges billing and Xero integration APIs */
 import logger from '@alga-psa/core/logger';
 import { Knex } from 'knex';
@@ -358,7 +359,10 @@ export class XeroAdapter implements AccountingExportAdapter {
     const invoiceMappingRepository = new KnexInvoiceMappingRepository(knex);
 
     const invoicesById = await this.loadInvoices(knex, tenantId, context);
-    const chargesById = await this.loadCharges(knex, tenantId, context);
+    const loadedCharges = await this.loadCharges(knex, tenantId, context);
+    const expanded = await expandAccountingExportCharges(knex, tenantId, loadedCharges, context.lines);
+    const chargesById = expanded.charges;
+    context = { ...context, lines: expanded.lines };
     const clientData = await this.loadClients(knex, tenantId, context, invoicesById);
 
     const linesByInvoice = groupBy(context.lines, (line) => line.document_id);
@@ -697,7 +701,7 @@ export class XeroAdapter implements AccountingExportAdapter {
 
       documents.push({
         documentId: invoiceId,
-        lineIds: exportLines.map((line) => line.line_id),
+        lineIds: [...new Set(exportLines.map((line) => line.line_id))],
         payload: documentPayload as unknown as Record<string, unknown>
       });
     }
@@ -882,11 +886,14 @@ export class XeroAdapter implements AccountingExportAdapter {
         'item_id',
         'invoice_id',
         'service_id',
+        'is_manual',
         'description',
         'quantity',
         'unit_price',
         'total_price',
         'net_amount',
+        'is_discount',
+        'is_taxable',
         'tax_amount',
         'tax_region'
       )

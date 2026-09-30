@@ -92,6 +92,19 @@
           "taxCodes": "Códigos fiscais",
           "paymentTerms": "Condições de pagamento"
         }
+      },
+      "adjustmentMappings": {
+        "desktopServices": "Contas de serviços Desktop",
+        "desktopDiscounts": "Descontos Desktop",
+        "discounts": "Descontos e créditos",
+        "qboAccount": "ID da conta de descontos QuickBooks",
+        "xeroAccount": "Código da conta Xero",
+        "desktopAccount": "Nome da conta de receitas Desktop",
+        "csvItem": "Nome do item de desconto QuickBooks",
+        "description": "Associe descontos e créditos antes de exportar. A associação pertence a esta empresa contabilística.",
+        "add": "Adicionar associação",
+        "remove": "Remover associação",
+        "removeConfirm": "Remover esta associação contabilística?"
       }
     },
     "calendar": {
