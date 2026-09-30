@@ -24,6 +24,7 @@ export interface EntraPendingYield {
     totalUsers: number;
     includedUsers: number;
     excluded: Record<string, number>;
+    unknownFieldCounts?: { userType: number; assignedLicenseCount: number };
   };
 }
 

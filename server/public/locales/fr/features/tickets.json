@@ -78,7 +78,8 @@
     "paused": "En pause",
     "allResponseStatuses": "Tous les statuts de réponse",
     "responseStatus": "Statut de réponse",
-    "board": "Filtrer par tableau"
+    "board": "Filtrer par tableau",
+    "searchSmart": "Rechercher des tickets et commentaires… Entrée pour la recherche intelligente"
   },
   "create": {
     "title": "Créer un ticket d'assistance",
@@ -645,7 +646,19 @@
       "propagationSummary": "{{masters}} ticket(s) sélectionné(s) sont des maîtres en mode synchronisation ; cette modification fermera/rouvrira {{children}} ticket(s) enfants.",
       "masterSummary": "{{children}} ticket(s) enfants",
       "applyToChildren": "Appliquer aux enfants",
-      "mastersOnly": "Maîtres uniquement"
+      "mastersOnly": "Maîtres uniquement",
+      "membersLabel": "Tickets de ce lot",
+      "addTicketSearchPlaceholder": "Rechercher des tickets par numéro ou titre",
+      "addTicketEmpty": "Rechercher des tickets à ajouter",
+      "badgeAdded": "Ajouté",
+      "badgeInBundle": "Dans le lot #{{number}}",
+      "badgeMaster": "Ticket maître du lot",
+      "masterTag": "Maître",
+      "removeMember": "Retirer",
+      "needMoreTickets": "Ajoutez au moins un ticket supplémentaire au lot.",
+      "unresolvedSelectedTickets_one": "Impossible de charger {{count}} ticket sélectionné.",
+      "unresolvedSelectedTickets_other": "Impossible de charger {{count}} tickets sélectionnés.",
+      "badgeClosed": "Fermé"
     },
     "auth": {
       "moveRequired": "Vous devez être connecté pour déplacer des tickets",
@@ -671,7 +684,8 @@
       "dueDate": "Échéance",
       "statusDisabledMultiBoard": "Les tickets sélectionnés sont sur des tableaux différents",
       "statusResolvingBoards": "Vérification des tableaux des tickets sélectionnés…",
-      "more": "Plus"
+      "more": "Plus",
+      "bundleNeedsOne": "Sélectionnez au moins 1 ticket à regrouper"
     },
     "assign": {
       "dialogTitle": "Assigner les tickets sélectionnés",
@@ -1073,7 +1087,21 @@
       "selectParentCategory": "Sélectionnez une catégorie parente",
       "parentHelpWithBoard": "Sélectionnez une catégorie parente pour créer une sous-catégorie, ou laissez vide pour le niveau supérieur",
       "parentHelpWithoutBoard": "Sélectionnez d'abord un tableau ou choisissez une catégorie parente pour hériter de son tableau",
-      "creating": "Création..."
+      "creating": "Création...",
+      "copyToBoard": "Copier les catégories vers un autre tableau",
+      "copyTitle": "Copier les catégories vers un autre tableau",
+      "copySourceLabel": "Sélectionner le tableau source",
+      "copyTargetLabel": "Sélectionner le tableau cible",
+      "copySelected": "Copier la sélection",
+      "copySuccess": "{{created}} catégories copiées ; {{skipped}} déjà présentes ignorées.",
+      "copyFailed": "Échec de la copie des catégories",
+      "copyEmpty": "Aucune catégorie sur ce tableau.",
+      "copying": "Copie en cours…",
+      "copySourceBoard": "Sélectionner le tableau source",
+      "copyTargetBoard": "Sélectionner le tableau cible",
+      "copyBoardTypeMismatch": "Les catégories de tickets ne peuvent être copiées qu’entre des tableaux du même type de catégorie.",
+      "copyConflicts_one": "{{count}} catégorie ignorée a une catégorie parente différente sur le tableau cible.",
+      "copyConflicts_other": "{{count}} catégories ignorées ont une catégorie parente différente sur le tableau cible."
     },
     "display": {
       "responseStateTrackingTitle": "Suivi de l'état de réponse",
@@ -1453,7 +1481,11 @@
       "missingField": "Un champ obligatoire de la liste de contrôle est manquant.",
       "missingFieldNamed": "Un champ obligatoire de la liste de contrôle est manquant : {{field}}.",
       "referenceInvalid": "Le ticket, le modèle de liste de contrôle ou le filtre de règle sélectionné n’est plus valide. Veuillez actualiser la page et réessayer.",
-      "invalidValue": "L’une des valeurs de la liste de contrôle n’est pas valide. Veuillez actualiser la page et réessayer."
+      "invalidValue": "L’une des valeurs de la liste de contrôle n’est pas valide. Veuillez actualiser la page et réessayer.",
+      "ruleCategoryBoardMismatch": "La catégorie sélectionnée appartient à un tableau différent de celui de la règle.",
+      "ruleCategoryInvalid": "La catégorie sélectionnée n'est pas une catégorie de premier niveau.",
+      "ruleSubcategoryInvalid": "La sous-catégorie sélectionnée n'appartient pas à la catégorie sélectionnée.",
+      "ruleSubcategoryRequiresCategory": "Sélectionnez une catégorie avant de choisir une sous-catégorie."
     }
   },
   "ticketSection": {
@@ -1920,5 +1952,29 @@
       "systemRequired": "Choisissez un système externe.",
       "urlRequired": "Une URL est requise pour les systèmes sans modèle d'URL."
     }
+  },
+  "smartSearch": {
+    "run": "Recherche intelligente",
+    "runTitle": "Évaluer les tickets filtrés par rapport à cette requête",
+    "relevanceColumn": "Pertinence",
+    "relevance": "{{percent}}% pertinent",
+    "strong": "Correspondances fortes",
+    "possible": "Correspondances possibles",
+    "unlikely": "Correspondances improbables",
+    "emptyBucketRunning": "Aucune pour l’instant",
+    "emptyBucket": "Aucune",
+    "scoring": "{{scored}} tickets sur {{total}} évalués",
+    "summary": "{{total}} tickets évalués · {{strong}} fortes · {{possible}} possibles",
+    "cancelled": "Recherche annulée après {{scored}} tickets sur {{total}}",
+    "errorTitle": "La recherche intelligente s’est arrêtée",
+    "starting": "Démarrage de la recherche intelligente…",
+    "rerun": "Les filtres ont changé. Relancer",
+    "retry": "Réessayer",
+    "cancel": "Annuler",
+    "exit": "Retour à la liste",
+    "notConfigured": "La recherche intelligente n’est pas configurée sur ce serveur",
+    "failedCount": "{{count}} tickets n’ont pas pu être évalués",
+    "unscored": "Non évalués",
+    "addOnRequired": "La recherche intelligente nécessite le module complémentaire Assistant IA"
   }
 }

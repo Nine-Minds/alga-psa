@@ -4,20 +4,16 @@ import { logger, registerFeatureFlagChecker, registerJobEnqueuer, registerSchedu
 import { validateEnv } from 'server/src/config/envConfig';
 import { validateRequiredConfiguration, validateDatabaseConnectivity, validateSecretUniqueness } from 'server/src/config/criticalEnvValidation';
 import { config } from 'dotenv';
-import User from '@alga-psa/db/models/user';
 import { tenantDb } from '@alga-psa/db';
-import { hashPassword, generateSecurePassword } from 'server/src/utils/encryption/encryption';
 import { JobScheduler, IJobScheduler } from 'server/src/lib/jobs/jobScheduler';
 import { JobService } from 'server/src/services/job.service';
 import { InvoiceZipJobHandler } from 'server/src/lib/jobs/handlers/invoiceZipHandler';
 import type { InvoiceZipJobData } from 'server/src/lib/jobs/handlers/invoiceZipHandler';
 import { initializeJobRunner, stopJobRunner } from 'server/src/lib/jobs/initializeJobRunner';
-import { createClientContractLineCycles } from '@alga-psa/billing/lib/billing/createBillingCycles';
 import { registerContractCadenceReplenishmentSchedule } from 'server/src/lib/jobs/scheduleContractCadenceReplenishment';
 import { getConnection } from 'server/src/lib/db/db';
 import { runWithTenant } from 'server/src/lib/db';
-import { createNextTimePeriod } from '@alga-psa/scheduling/actions/timePeriodsActions';
-import { TimePeriodSettings } from '@alga-psa/scheduling/models/timePeriodSettings';
+import { createClientContractLineCyclesForAllTenants, createNextTimePeriodForTenant } from 'server/src/lib/jobs/tenantPeriodMaintenance';
 import { StorageService } from '@alga-psa/storage/StorageService';
 import { initializeScheduler } from 'server/src/lib/jobs';
 import { validateEmailConfiguration, logEmailConfigWarnings } from './validation/emailConfigValidation';
@@ -30,7 +26,6 @@ import { EventEmailRetryQueue } from './notifications/EventEmailRetryQueue';
 import { registerAuthEmailProvider } from '@alga-psa/auth';
 import { registerWorkflowEmailProvider } from '@alga-psa/workflows/runtime';
 import { registerWorkflowScheduleJobRunner } from '@alga-psa/workflows/lib/jobRunnerProvider';
-import { registerAccountingConnectionChangeHandler } from '@alga-psa/integrations/lib/accountingConnectionChangeProvider';
 import { getRedisClient } from '../config/redisConfig';
 import { registerEnterpriseStorageProviders } from './storage/registerEnterpriseStorageProviders';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
@@ -40,6 +35,7 @@ import { inboundWebhookRateLimitConfigGetter } from './inboundWebhooks/rateLimit
 import { bootstrapInboundWebhookActions } from './inboundWebhooks/actions/bootstrap';
 import { WebhookDeliveryQueue } from './webhooks/WebhookDeliveryQueue';
 import { processWebhookDeliveryJob } from './webhooks/processWebhookDeliveryJob';
+import { setupDevelopmentEnvironment } from './developmentEnvironmentSetup';
 
 let isFunctionExecuted = false;
 
@@ -149,7 +145,7 @@ export async function initializeApp() {
       getTenantEmailService: async (tenant) => TenantEmailService.getInstance(tenant),
     });
     registerWorkflowEmailProvider({
-      TenantEmailService: TenantEmailService as any,
+      TenantEmailService: Object.assign(TenantEmailService, { resolveOutboundSenderForTenant: TenantEmailService.resolveOutboundSenderForTenant }) as any,
       StaticTemplateProcessor: StaticTemplateProcessor as any,
       EmailProviderManager: EmailProviderManager as any,
     });
@@ -188,13 +184,6 @@ export async function initializeApp() {
       const { getJobRunner } = await import('@alga-psa/jobs/runner');
       const runner = await getJobRunner();
       return runner.cancelJob(jobId, tenantId);
-    });
-    // Converge the accounting-sync schedule the moment a tenant connects or
-    // disconnects either provider, so connected-only scheduling doesn't wait
-    // for the next startup reconcile.
-    registerAccountingConnectionChangeHandler(async (tenantId) => {
-      const { scheduleAccountingSyncCycleJob } = await import('./jobs/handlers/accountingSyncCycleHandler');
-      await scheduleAccountingSyncCycleJob(tenantId);
     });
     logger.info('Email provider registries initialized');
 
@@ -490,9 +479,14 @@ function logConfiguration() {
 
 // Helper function to initialize job scheduler
 async function initializeJobScheduler(storageService: StorageService) {
-  const { startCommentRecoveryScheduleDiscovery } = await import('./jobs/commentRecoveryScheduleDiscovery');
-  // The discovery timer survives failed initialization and sees tenants created later.
-  await startCommentRecoveryScheduleDiscovery(initializeJobRunner);
+  // EE/appliance recovers comment publications from the Temporal
+  // maintenance-fanout:recover-comment-publications schedule instead of
+  // installing a per-tenant schedule from here.
+  if (!isEnterprise) {
+    const { startCommentRecoveryScheduleDiscovery } = await import('./jobs/commentRecoveryScheduleDiscovery');
+    // The discovery timer survives failed initialization and sees tenants created later.
+    await startCommentRecoveryScheduleDiscovery(initializeJobRunner);
+  }
   // Initialize the new job runner abstraction (handles all core handler registration)
   try {
     const jobRunner = await initializeJobRunner();
@@ -525,41 +519,19 @@ async function initializeJobScheduler(storageService: StorageService) {
   // via initializeJobRunner() above. The legacy scheduler is kept for custom
   // app-specific jobs like billing cycles and time periods.
 
+  // In EE/appliance every recurring schedule is owned by the Temporal worker
+  // (setupSchedules → maintenance-fanout:*), run server-side through the
+  // MAINTENANCE_JOB_REQUESTED subscriber. Only CE converges schedules here.
+  const temporalOwnsSchedules = isEnterprise;
+
   // Register billing cycles job if it doesn't exist
-  const existingBillingJobs = await jobScheduler.getJobs({ jobName: 'createClientContractLineCycles' });
-  if (existingBillingJobs.length === 0) {
+  const existingBillingJobs = temporalOwnsSchedules
+    ? []
+    : await jobScheduler.getJobs({ jobName: 'createClientContractLineCycles' });
+  if (!temporalOwnsSchedules && existingBillingJobs.length === 0) {
     // Register the nightly billing cycle creation job
     jobScheduler.registerJobHandler('createClientContractLineCycles', async () => {
-      // Get all tenants
-      const rootKnex = await getConnection(null);
-      const tenants = await tenantDb(rootKnex, '__billing_cycle_tenant_enumeration__')
-        .unscoped('tenants', 'legacy billing cycle scheduler enumerates all tenants to run per-tenant cycle jobs')
-        .whereNull('suspended_at')
-        .select('tenant');
-
-      // Process each tenant
-      for (const { tenant } of tenants) {
-        try {
-          // Get tenant-specific connection
-          const tenantKnex = await getConnection(tenant);
-
-          // Get all active clients for this tenant
-          const clients = await tenantDb(tenantKnex, tenant).table('clients')
-            .where({ is_inactive: false })
-            .select('*');
-
-          // Create billing cycles for each client
-          for (const client of clients) {
-            try {
-              await createClientContractLineCycles(tenantKnex, client);
-            } catch (error) {
-              logger.error(`Error creating billing cycles for client ${client.client_id} in tenant ${tenant}:`, error);
-            }
-          }
-        } catch (error) {
-          logger.error(`Error processing tenant ${tenant}:`, error);
-        }
-      }
+      await createClientContractLineCyclesForAllTenants();
     });
 
     // Schedule the billing cycles job
@@ -584,6 +556,16 @@ async function initializeJobScheduler(storageService: StorageService) {
       logger.warn('createNextTimePeriods job received unsupported tenantId', {
         jobId: job.id,
         tenantId
+      });
+      return;
+    }
+
+    // A chain armed before Temporal took over the schedule ends here, so it
+    // cannot double-run alongside maintenance-fanout:create-next-time-periods.
+    if (temporalOwnsSchedules) {
+      logger.info('createNextTimePeriods: Temporal owns this schedule, ending legacy pg-boss chain', {
+        tenantId,
+        jobId: job.id
       });
       return;
     }
@@ -626,41 +608,23 @@ async function initializeJobScheduler(storageService: StorageService) {
         scheduledJobId: job.id
       });
 
-      await runWithTenant(tenantId, async () => {
-        await jobService.updateJobStatus(jobRecordId!, JobStatus.Processing, {
+      await runWithTenant(tenantId, async () =>
+        jobService.updateJobStatus(jobRecordId!, JobStatus.Processing, {
           tenantId,
           pgBossJobId: job.id,
           details: 'Starting time period creation run'
-        });
+        })
+      );
 
-        const tenantKnex = await getConnection(tenantId);
-        const settings = await TimePeriodSettings.getActiveSettings(tenantKnex, tenantId);
+      const outcome = await createNextTimePeriodForTenant(tenantId);
 
-        // Skip if no time period settings are configured for this tenant
-        if (!settings || settings.length === 0) {
-          logger.debug(`No time period settings configured for tenant ${tenantId}, skipping time period creation`);
-          await jobService.updateJobStatus(jobRecordId!, JobStatus.Completed, {
-            tenantId,
-            pgBossJobId: job.id,
-            details: 'Skipped - no time period settings configured'
-          });
-          return;
-        }
-
-        const result = await createNextTimePeriod(settings);
-        const details =
-          result
-            ? `Created new time period ${result.start_date} to ${result.end_date}`
-            : 'No new time period needed';
-
-        await jobService.updateJobStatus(jobRecordId!, JobStatus.Completed, {
+      await runWithTenant(tenantId, async () =>
+        jobService.updateJobStatus(jobRecordId!, JobStatus.Completed, {
           tenantId,
           pgBossJobId: job.id,
-          details
-        });
-
-        logger.info(`Time period creation job completed for tenant ${tenantId}: ${details}`);
-      });
+          details: outcome.details
+        })
+      );
     } catch (error) {
       logger.error(`Error creating next time period in tenant ${tenantId}:`, error);
 
@@ -713,25 +677,34 @@ async function initializeJobScheduler(storageService: StorageService) {
     }
   });
 
-  // Schedule the time periods job for each tenant
-  const rootKnex = await getConnection(null);
-  // Deliberately NOT filtered by suspended_at: the chain must stay armed for
-  // suspended tenants (the handler skips per run) so win-back resumes it
-  // without waiting for a server restart.
-  const tenants = await tenantDb(rootKnex, '__time_period_tenant_enumeration__')
-    .unscoped('tenants', 'legacy time period scheduler enumerates all tenants to schedule per-tenant jobs')
-    .select('tenant');
+  // Schedule the time periods job for each tenant (CE only; EE runs
+  // maintenance-fanout:create-next-time-periods on Temporal).
+  if (!temporalOwnsSchedules) {
+    const rootKnex = await getConnection(null);
+    // Deliberately NOT filtered by suspended_at: the chain must stay armed for
+    // suspended tenants (the handler skips per run) so win-back resumes it
+    // without waiting for a server restart.
+    const tenants = await tenantDb(rootKnex, '__time_period_tenant_enumeration__')
+      .unscoped('tenants', 'legacy time period scheduler enumerates all tenants to schedule per-tenant jobs')
+      .select('tenant');
 
-  for (const { tenant } of tenants) {
-    try {
-      await jobScheduler.scheduleRecurringJob(
-        'createNextTimePeriods',
-        '24 hours',
-        { tenantId: tenant }
-      );
-    } catch (error) {
-      logger.error(`Failed to schedule createNextTimePeriods job for tenant ${tenant}:`, error);
+    for (const { tenant } of tenants) {
+      try {
+        await jobScheduler.scheduleRecurringJob(
+          'createNextTimePeriods',
+          '24 hours',
+          { tenantId: tenant }
+        );
+      } catch (error) {
+        logger.error(`Failed to schedule createNextTimePeriods job for tenant ${tenant}:`, error);
+      }
     }
+  }
+
+  // EE/appliance converges RMM polling from maintenance-fanout:rmm-polling-reconcile
+  // on Temporal instead of this process-local timer.
+  if (temporalOwnsSchedules) {
+    return;
   }
 
   // RMM polling (alert reconciliation + Huntress incidents) runs as
@@ -767,44 +740,5 @@ async function initializeJobScheduler(storageService: StorageService) {
     await tick();
   } catch (error) {
     logger.error('Failed to set up RMM polling schedule reconciler:', error);
-  }
-}
-
-// Helper function to setup development environment
-async function setupDevelopmentEnvironment() {
-  let newPassword;
-  const glinda = await User.findUserByEmail("glinda@emeraldcity.oz");
-  if (glinda) {
-    newPassword = generateSecurePassword();
-    const hashedPassword = await hashPassword(newPassword);
-    await User.updatePassword(glinda.user_id, glinda.tenant, hashedPassword);
-  } else {
-    logger.info('Glinda not found. Skipping password update.');
-  }
-
-  if (process.env.NODE_ENV === 'development') {
-    try {
-      logger.info(`
-:::::::::  :::::::::: :::     ::: :::::::::: :::        ::::::::  :::::::::  ::::    ::::  :::::::::: ::::    ::: :::::::::::      ::::    ::::   ::::::::  :::::::::  ::::::::::
-:+:    :+: :+:        :+:     :+: :+:        :+:       :+:    :+: :+:    :+: +:+:+: :+:+:+ :+:        :+:+:   :+:     :+:          +:+:+: :+:+:+ :+:    :+: :+:    :+: :+:
-+:+    +:+ +:+        +:+     +:+ +:+        +:+       +:+    +:+ +:+    +:+ +:+ +:+:+ +:+ +:+        :+:+:+  +:+     +:+          +:+ +:+:+ +:+ +:+    +:+ +:+    +:+ :+:
-+#+    +:+ +#++:++#   +#+     +:+ +#++:++#   +#+       +#+    +:+ +#++:++#+  +#+  +:+  +#+ +#++:++#   +#+ +:+ +#+     +#+          +#+  +:+  +#+ +#+    +:+ +#+    +:+ +#++:++#
-+#+    +#+ +#+         +#+   +#+  +#+        +#+       +#+    +#+ +#+        +#+       +#+ +#+        +#+  +#+#+#     +#+          +#+       +#+ +#+    +#+ +#+    +#+ +#+
-#+#    #+# #+#          #+#+#+#   #+#        #+#       #+#    #+# #+#        #+#       #+# #+#        #+#   #+#+#     #+#          #+#       #+# #+#    #+# #+#    #+# #+#
-#########  ##########     ###     ########## ########## ########  ###        ###       ### ########## ###    ####     ###          ###       ###  ########  #########  ##########
-      `);
-    } catch (error) {
-      logger.error('Error displaying development banner:', error);
-    }
-  }
-
-  if (glinda && newPassword) {
-    logger.info('*************************************************************');
-    logger.info(`********                                             ********`);
-    logger.info(`******** User Email is -> [ ${glinda.email} ]  ********`);
-    logger.info(`********                                             ********`);
-    logger.info(`********       Password is -> [ ${newPassword} ]   ********`);
-    logger.info(`********                                             ********`);
-    logger.info('*************************************************************');
   }
 }

@@ -141,6 +141,7 @@ const billingCycleAlignmentPostInventoryRemovals = new Set([
 // pass-0 inventory snapshot was taken (recurring service-period ledger work
 // landed after the inventory was captured).
 const servicePeriodPostInventoryRefs = new Set([
+  'server/src/test/integration/billing/billingProfileAttribution.integration.test.ts',
   'packages/billing/src/lib/billing/pricing/isPeriodAlreadyInvoiced.ts',
   'shared/billingClients/resolveFixedLineRate.ts',
   // Invoice ticket presentation (origin/main a81661446e) added template

@@ -455,7 +455,8 @@
         "defaultRatePerUnit": "Tarif par unité (utilisé si la tarification échelonnée est désactivée).",
         "minimumUsage": "Nombre minimum d'unités facturables par période.",
         "unitOfMeasure": "par exemple, Go, utilisateur, appareil."
-      }
+      },
+      "catalogUnitPrecedence": "L'unité du catalogue prévaut sur l'unité de cette configuration d'utilisation."
     }
   },
   "list": {

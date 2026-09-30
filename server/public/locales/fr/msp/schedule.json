@@ -12,14 +12,28 @@
       "clearAll": "Tout effacer",
       "viewWeek": "Afficher la semaine",
       "compare": "Comparer",
-      "stopComparing": "Arrêtez de comparer"
+      "stopComparing": "Arrêtez de comparer",
+      "shareMyCalendar": "Partager mon calendrier",
+      "newGroupCalendar": "Nouveau calendrier de groupe",
+      "manageGroupCalendar": "Gérer le calendrier"
     },
     "labels": {
-      "inactive": "(Inactif)"
+      "inactive": "(Inactif)",
+      "archived": "(Archivé)"
     },
     "aria": {
       "viewWeek": "Afficher la semaine pour {{name}}",
-      "compare": "Comparez {{name}}"
+      "compare": "Comparez {{name}}",
+      "toggleGroupCalendar": "Afficher {{name}}"
+    },
+    "sections": {
+      "myCalendar": "Mon calendrier",
+      "people": "Personnes",
+      "groupCalendars": "Calendriers de groupe"
+    },
+    "empty": {
+      "people": "Personne n'a encore partagé de calendrier avec vous. Partagez le vôtre pour que vos collègues voient quand vous êtes disponible.",
+      "groups": "Les calendriers de groupe contiennent des événements partagés, comme les astreintes ou les fermetures du bureau."
     }
   },
   "agentView": {
@@ -90,7 +104,8 @@
         "start": "Début : {{dateTime}}",
         "end": "Fin : {{dateTime}}",
         "multiDay": "(Plusieurs jours)"
-      }
+      },
+      "busy": "Occupé"
     },
     "deleteDialog": {
       "title": "Supprimer l'entrée de planification",
@@ -122,6 +137,11 @@
         "title": "Options d'impression",
         "description": "Choisissez les colonnes à inclure lors de l'impression du planning."
       }
+    },
+    "busyDialog": {
+      "title": "Occupé",
+      "close": "Fermer",
+      "timeRange": "{{start}} – {{end}}"
     }
   },
   "weeklyEvent": {
@@ -591,7 +611,11 @@
       "end": "Fin *",
       "notes": "Remarques",
       "technician": "Technicien",
-      "notesPlaceholder": "Tout ce que le technicien doit savoir avant de commencer"
+      "notesPlaceholder": "Tout ce que le technicien doit savoir avant de commencer",
+      "calendarPersonal": "Personnel",
+      "calendarUnavailable": "Calendrier de groupe",
+      "calendar": "Calendrier",
+      "assignedUsersOptional": "Utilisateurs assignés"
     },
     "actions": {
       "cancel": "Annuler",
@@ -776,5 +800,58 @@
     "deleteFailed": "Impossible de supprimer l’entrée de planning",
     "loadFailed": "Impossible de charger l’entrée de planning",
     "noPermission": "Vous avez besoin de la permission de mise à jour du planning pour planifier du travail."
+  },
+  "sharing": {
+    "levels": {
+      "freeBusy": "Disponibilité",
+      "read": "Voir les détails",
+      "edit": "Modifier",
+      "manage": "Gérer"
+    },
+    "addRecipient": "Ajouter une personne ou une équipe",
+    "noRecipients": "Partagé avec personne pour l'instant.",
+    "unknownRecipient": "Destinataire inconnu",
+    "removeRecipient": "Retirer {{name}}",
+    "errors": {
+      "load": "Impossible de charger le partage du calendrier.",
+      "save": "Impossible d'enregistrer le partage du calendrier."
+    },
+    "shareDialog": {
+      "title": "Partager mon calendrier",
+      "description": "Disponibilité indique seulement quand vous êtes occupé. Voir les détails affiche vos entrées, sauf les entrées privées. Modifier permet en plus d'ajouter et de modifier des entrées pour vous."
+    },
+    "actions": {
+      "cancel": "Annuler",
+      "saving": "Enregistrement...",
+      "save": "Enregistrer"
+    },
+    "settings": {
+      "title": "Partage du calendrier",
+      "description": "Choisissez quels collègues et équipes peuvent voir votre planning, et s'ils peuvent réserver du temps pour vous."
+    }
+  },
+  "groupCalendars": {
+    "errors": {
+      "load": "Impossible de charger le calendrier.",
+      "nameRequired": "Le nom du calendrier est obligatoire.",
+      "save": "Impossible d'enregistrer le calendrier."
+    },
+    "dialog": {
+      "manageTitle": "Gérer le calendrier de groupe",
+      "createTitle": "Nouveau calendrier de groupe"
+    },
+    "actions": {
+      "restore": "Restaurer",
+      "archive": "Archiver",
+      "create": "Créer le calendrier"
+    },
+    "fields": {
+      "name": "Nom",
+      "namePlaceholder": "ex. Rotation d'astreinte",
+      "color": "Couleur",
+      "description": "Description (facultative)",
+      "members": "Membres",
+      "creatorNote": "Vous pourrez gérer ce calendrier."
+    }
   }
 }

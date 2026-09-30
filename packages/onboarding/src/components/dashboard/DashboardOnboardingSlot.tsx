@@ -2,6 +2,7 @@ import DashboardOnboardingSection from './DashboardOnboardingSection';
 import {
   getDismissedDashboardOnboardingSteps,
   getOnboardingProgressAction,
+  getDashboardOnboardingSectionDismissedAction,
 } from '@alga-psa/onboarding/actions';
 import type { OnboardingStepId, OnboardingStepServerState } from '@alga-psa/onboarding/actions';
 
@@ -14,12 +15,17 @@ interface OnboardingProgressSummary {
 
 export async function DashboardOnboardingSlot() {
   try {
-    const [onboardingProgress, dismissedStepIds] = await Promise.all([
+    const [onboardingProgress, dismissedStepIds, sectionDismissal] = await Promise.all([
       getOnboardingProgressAction(),
       getDismissedDashboardOnboardingSteps(),
+      getDashboardOnboardingSectionDismissedAction().catch((error) => {
+        console.error('Failed to load dashboard onboarding section preference:', error);
+        return { success: false as const };
+      }),
     ]);
     const steps = applyDismissedState(onboardingProgress.steps, dismissedStepIds);
     const summary = buildSummary(steps);
+    if (shouldHideCompletedOnboardingSection(summary.allComplete, sectionDismissal.success && sectionDismissal.data?.dismissed === true)) return null;
 
     const className = summary.allComplete ? 'order-last' : undefined;
 
@@ -34,6 +40,10 @@ export async function DashboardOnboardingSlot() {
     console.error('Failed to load onboarding progress for dashboard:', error);
     return null;
   }
+}
+
+export function shouldHideCompletedOnboardingSection(allComplete: boolean, sectionDismissed: boolean): boolean {
+  return allComplete && sectionDismissed;
 }
 
 function applyDismissedState(

@@ -107,7 +107,9 @@
         "message": "Message",
         "messageOptional": "Message (facultatif)",
         "messagePlaceholder": "Ajoutez une note personnelle pour le destinataire...",
-        "title": "Envoyer un devis"
+        "title": "Envoyer un devis",
+        "from": "De",
+        "useDefault": "Utiliser l’expéditeur par défaut"
       }
     },
     "errors": {
@@ -212,7 +214,9 @@
         "description": "Cela enverra le devis par courrier électronique aux contacts de facturation du client et changera son statut en « Envoyé ».",
         "title": "Envoyer un devis au client",
         "additionalEmails": "Destinataires supplémentaires",
-        "message": "Message"
+        "message": "Message",
+        "from": "De",
+        "useDefault": "Utiliser l’expéditeur par défaut"
       }
     },
     "errorActions": {

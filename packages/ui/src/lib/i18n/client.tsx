@@ -4,7 +4,7 @@
 
 'use client';
 
-import { createContext, useContext, useState, useEffect, useMemo, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useMemo, useCallback, ReactNode } from 'react';
 import i18next from 'i18next';
 import { initReactI18next, useTranslation as useI18nextTranslation } from 'react-i18next';
 import HttpBackend from 'i18next-http-backend';
@@ -30,6 +30,7 @@ import { useDateFormat } from '../dateFormat/useDateFormat';
  * server text rendered in one language and client text in another.
  */
 let i18nInitialized = false;
+let i18nInitialization: Promise<void> | null = null;
 
 const BOOTSTRAP_LOADING_TEXT: Record<
   SupportedLocale,
@@ -147,39 +148,45 @@ async function initI18n(
   namespaces?: string[],
 ) {
   const resolvedLocale = (locale || LOCALE_CONFIG.defaultLocale) as SupportedLocale;
-  if (i18nInitialized) {
-    applyPreloadedResources(resolvedLocale, preloaded);
-    if (locale && i18next.language !== locale) {
-      await i18next.changeLanguage(locale);
+  if (!i18nInitialized) {
+    if (!i18nInitialization) {
+      // React Strict Mode replays mount effects in development. Share the
+      // in-flight init promise so both effects don't initialize the singleton
+      // twice while its backend is still loading.
+      const hasPreloadedContent = preloaded && Object.keys(preloaded).length > 0;
+      const seededResources = hasPreloadedContent
+        ? { [resolvedLocale]: preloaded }
+        : undefined;
+
+      i18nInitialization = i18next
+        .use(HttpBackend)
+        .use(initReactI18next)
+        .init({
+          ...I18N_CONFIG,
+          lng: resolvedLocale,
+          // Seed the route's namespaces so useTranslation() resolves them without a
+          // network round-trip; the HTTP backend still covers anything not seeded.
+          resources: seededResources,
+          partialBundledLanguages: true,
+          backend: {
+            loadPath: '/locales/{{lng}}/{{ns}}.json',
+          },
+        })
+        .then(() => {
+          i18nInitialized = true;
+        })
+        .catch((error) => {
+          i18nInitialization = null;
+          throw error;
+        });
     }
-    await ensureNamespacesLoaded(resolvedLocale, namespaces);
-    return;
+    await i18nInitialization;
   }
 
-  // Seed only when the server actually embedded namespace data — an empty seed
-  // would mark the bundle as loaded and mask the real (fetched) translations
-  // with missing keys.
-  const hasPreloadedContent = preloaded && Object.keys(preloaded).length > 0;
-  const seededResources = hasPreloadedContent
-    ? { [resolvedLocale]: preloaded }
-    : undefined;
-
-  await i18next
-    .use(HttpBackend)
-    .use(initReactI18next)
-    .init({
-      ...I18N_CONFIG,
-      lng: resolvedLocale,
-      // Seed the route's namespaces so useTranslation() resolves them without a
-      // network round-trip; the HTTP backend still covers anything not seeded.
-      resources: seededResources,
-      partialBundledLanguages: true,
-      backend: {
-        loadPath: '/locales/{{lng}}/{{ns}}.json',
-      },
-    });
-
-  i18nInitialized = true;
+  applyPreloadedResources(resolvedLocale, preloaded);
+  if (locale && i18next.language !== locale) {
+    await i18next.changeLanguage(locale);
+  }
   await ensureNamespacesLoaded(resolvedLocale, namespaces);
 }
 
@@ -204,6 +211,8 @@ interface I18nProviderProps {
   initialLocale?: SupportedLocale;
   portal?: 'msp' | 'client';
   namespaces?: string[];
+  /** Render children after i18next starts, even while route namespaces load. */
+  renderChildrenWhileLoading?: boolean;
   /** Server-embedded namespace resources for the current route (no HTTP fetch). */
   preloadedResources?: PreloadedNamespaceResources;
 }
@@ -214,7 +223,13 @@ export function I18nProvider({
   portal = 'client',
   namespaces,
   preloadedResources,
+  renderChildrenWhileLoading = false,
 }: I18nProviderProps) {
+  // Register only when a provider renders, including during SSR. Registering
+  // on module import makes standalone controls suspend on an uninitialized
+  // engine even though no provider exists to start loading its resources.
+  initReactI18next.init(i18next);
+
   const [locale, setLocaleState] = useState<SupportedLocale>(
     initialLocale || (LOCALE_CONFIG.defaultLocale as SupportedLocale)
   );
@@ -224,15 +239,41 @@ export function I18nProvider({
   // this array inline would otherwise reload namespaces on every render.
   const namespaceKey = namespaces ? namespaces.join(',') : '';
 
+  // A full-page sign-in response may be used before hydration (or while the
+  // locale backend is slow). Start the shared initialization synchronously in
+  // the browser render so useTranslation has its normal i18next instance
+  // before auth children render. The shared promise keeps Strict Mode replay
+  // from initializing the singleton twice.
+  if (renderChildrenWhileLoading && typeof window !== 'undefined' && !i18nInitialization) {
+    void initI18n(
+      locale,
+      preloadedResources,
+      namespaceKey ? namespaceKey.split(',') : undefined,
+    ).catch(() => undefined);
+  }
+
   useEffect(() => {
     let cancelled = false;
     // The route's namespaces are awaited as part of initialization rather than
     // in a follow-up effect, so `isInitialized` means "translations are ready"
     // and not merely "i18next exists". Children used to render in the gap.
-    initI18n(locale, preloadedResources, namespaceKey ? namespaceKey.split(',') : undefined).then(
+    // initI18n installs react-i18next synchronously before its first await. The
+    // auth screen can then render its forms with useSuspense:false while the
+    // locale backend is still responding.
+    const initialization = initI18n(
+      locale,
+      preloadedResources,
+      namespaceKey ? namespaceKey.split(',') : undefined,
+    );
+    initialization.then(
       () => {
         if (!cancelled) setIsInitialized(true);
-      }
+      },
+      (error) => {
+        // Initialization failures are distinct from missing-resource errors,
+        // which i18next reports through the backend callback and resolves.
+        console.error('Failed to initialize translations:', error);
+      },
     );
     return () => {
       cancelled = true;
@@ -291,7 +332,7 @@ export function I18nProvider({
     isRTL: LOCALE_CONFIG.rtlLocales.includes(locale),
   };
 
-  if (!isInitialized) {
+  if (!isInitialized && !renderChildrenWhileLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-gray-500">{getBootstrapLoadingText(locale, 'translations')}</div>
@@ -325,8 +366,34 @@ export function useOptionalI18n() {
 /**
  * Hook for translations (wrapper around react-i18next)
  */
-export function useTranslation(namespace?: string | string[]) {
-  return useI18nextTranslation(namespace as any);
+export function useTranslation(
+  namespace?: string | string[],
+  options?: Parameters<typeof useI18nextTranslation>[1],
+) {
+  const translation = useI18nextTranslation(namespace as any, options as any);
+  const [, i18n] = translation;
+  // Keep this hook unconditional across initialization and the callback stable:
+  // sign-in alert effects depend on t and update state while resources load.
+  const t = useCallback((...args: any[]) => {
+    const [key, translationOptions] = args;
+    // During the auth bootstrap, i18next has been attached to React but its
+    // backend may not have returned yet. Preserve the call site's fallback
+    // copy so the server-rendered controls remain labelled and usable.
+    if (typeof translationOptions === 'string') return translationOptions;
+    if (typeof translationOptions?.defaultValue === 'string') {
+      return translationOptions.defaultValue;
+    }
+    return Array.isArray(key) ? key[0] : key;
+  }, []);
+
+  // Once initialized, preserve react-i18next's translator and its complete
+  // overloads (including defaultValue plus interpolation/plural options).
+  if (i18n?.isInitialized) return translation;
+
+  const wrapped = Object.assign([...translation], translation) as typeof translation;
+  wrapped[0] = t as typeof translation[0];
+  wrapped.t = t as typeof translation.t;
+  return wrapped;
 }
 
 /**
@@ -442,4 +509,19 @@ export function useFormatters() {
       return rtf.format(Math.trunc(diff / 1000), 'second');
     },
   }), [locale, dateFormat]);
+}
+
+/**
+ * Translate outside a React tree (server-action launchers, imperative toasts).
+ *
+ * Uses the same module-level i18next instance the hooks do, and relies on the
+ * caller's `defaultValue` until the namespace is loaded, so it is safe to call
+ * before the provider mounts. Prefer `useTranslation` inside components.
+ */
+export function translate(
+  namespace: string,
+  key: string,
+  options?: Record<string, unknown>,
+): string {
+  return i18next.t(key, { ns: namespace, ...(options ?? {}) }) as string;
 }

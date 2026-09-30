@@ -1,4 +1,4 @@
-export type WorkflowRunTriggerType = 'event' | 'schedule' | 'recurring' | null | undefined;
+export type WorkflowRunTriggerType = 'event' | 'schedule' | 'recurring' | 'date' | null | undefined;
 export type WorkflowScheduleStatus = 'scheduled' | 'paused' | 'disabled' | 'completed' | 'failed' | null | undefined;
 
 export const isTimeTriggeredRun = (triggerType: WorkflowRunTriggerType): boolean =>
@@ -10,6 +10,7 @@ export const getWorkflowRunTriggerLabel = (
 ): string => {
   if (triggerType === 'schedule') return 'One-time schedule';
   if (triggerType === 'recurring') return 'Recurring schedule';
+  if (triggerType === 'date') return 'Date';
   if (triggerType === 'event') return eventType ? `Event: ${eventType}` : 'Event';
   return 'Manual';
 };

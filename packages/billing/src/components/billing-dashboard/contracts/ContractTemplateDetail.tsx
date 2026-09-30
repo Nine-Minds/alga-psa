@@ -1960,6 +1960,7 @@ const TemplateServicesManager: React.FC<TemplateServicesManagerProps> = ({
   contractLines,
   onServicesChanged,
 }) => {
+  const { money } = useCurrencyFormat();
   const { t } = useTranslation("msp/contracts");
   const [editingLine, setEditingLine] = useState<TemplateContractLine | null>(
     null,

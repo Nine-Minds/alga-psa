@@ -67,8 +67,10 @@ interface QuickAddInteractionProps {
   id?: string; // Made optional to maintain backward compatibility
   /** Omit entityId/entityType for a standalone interaction that selects its client/contact in the form. */
   entityId?: string;
-  entityType?: 'contact' | 'client';
+  entityType?: 'contact' | 'client' | 'opportunity';
   clientId?: string;
+  /** The deal's contact when entityType is 'opportunity'; optional (deals without a contact still log). */
+  contactId?: string;
   ticketId?: string; // Links the new interaction to a ticket (create mode only)
   onInteractionAdded: (newInteraction: IInteraction) => void;
   isOpen: boolean;
@@ -81,6 +83,7 @@ export function QuickAddInteraction({
   entityId,
   entityType,
   clientId,
+  contactId,
   ticketId,
   onInteractionAdded,
   isOpen,
@@ -150,7 +153,11 @@ export function QuickAddInteraction({
   const meetingContactId = !isEditMode
     ? (isStandaloneCreate
         ? (selectedContactId || null)
-        : (entityType === 'contact' ? (entityId ?? null) : null))
+        : (entityType === 'contact'
+            ? (entityId ?? null)
+            : entityType === 'opportunity'
+              ? (contactId ?? null)
+              : null))
     : null;
   const selectedInteractionType = useMemo(
     () => interactionTypes.find((type) => type.type_id === typeId) ?? null,
@@ -775,6 +782,12 @@ export function QuickAddInteraction({
         if (entityType === 'contact') {
           interactionData.contact_name_id = entityId;
           interactionData.client_id = clientId;
+        } else if (entityType === 'opportunity') {
+          // The interaction is the substrate for the deal's history: it carries the
+          // opportunity, the deal's client (required by create), and its contact.
+          interactionData.opportunity_id = entityId;
+          interactionData.client_id = clientId;
+          interactionData.contact_name_id = contactId ?? null;
         } else {
           interactionData.client_id = entityId;
         }
@@ -798,12 +811,19 @@ export function QuickAddInteraction({
         resultInteraction = updateResult;
         console.log('Updated interaction received:', resultInteraction);
       } else if (createTeamsMeeting && canCreateTeamsMeeting && startTime && endTime) {
+        // LEVERAGE: pattern cross-feature-interaction-fields — unlike the plain
+        // addInteraction branch below (which forwards the whole interactionData),
+        // the Teams seam enumerates interaction fields by hand, so every new
+        // interaction field must be added here too (opportunity_id/notes were
+        // silently dropped before this fix).
         const scheduleResult = await clientCrossFeature.scheduleTeamsMeeting!({
           subject: title,
           startDateTime: startTime,
           endDateTime: endTime,
           client_id: interactionData.client_id ?? null,
           contact_name_id: interactionData.contact_name_id ?? null,
+          opportunity_id: interactionData.opportunity_id ?? null,
+          notes: interactionData.notes,
           attendees: meetingAttendees,
           interactionUserId: interactionData.user_id,
           // The scheduled meeting must exist on the AlgaPSA calendar too;

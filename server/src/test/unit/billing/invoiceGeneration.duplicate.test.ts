@@ -100,6 +100,13 @@ function createQueryBuilder(rows: Row[]) {
 
 const mocks = vi.hoisted(() => {
   const rowsByTable: Record<string, Row[]> = {
+    client_billing_profiles: [{
+      billing_profile_id: 'unit-test-default-billing-profile',
+      tenant: 'tenant-1',
+      client_id: 'client-1',
+      is_default: true,
+      is_active: true,
+    }],
     client_billing_cycles: [
       {
         billing_cycle_id: 'cycle-1',

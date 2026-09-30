@@ -77,7 +77,9 @@
       "pickedBy": "Picked by: ____________________     Date: ____________",
       "preTaxTotals": "Totals shown are pre-tax. Applicable tax is calculated on your invoice.",
       "thankYouForOrder": "Thank you for your order."
-    }
+    },
+    "serialNumbers": "Serial numbers",
+    "allocatedSerialsNote": "Allocated serial numbers; subject to change at fulfillment."
   },
   "errors": {
     "permissions": {

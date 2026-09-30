@@ -44,7 +44,6 @@ describe('UsageBasedServicesStep i18n wiring contract', () => {
       'wizardUsage.labels.ratePerUnitValue',
       'wizardUsage.labels.enterUnitRate',
       'wizardUsage.labels.unitOfMeasure',
-      'wizardUsage.labels.unitOfMeasurePlaceholder',
       'wizardUsage.labels.unitOfMeasureHint',
       'wizardUsage.values.defaultUnit',
       'wizardUsage.actions.addUsageBasedService',

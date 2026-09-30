@@ -65,7 +65,7 @@ async function renderScreen(): Promise<ReactTestRenderer> {
 describe("ClientDetailScreen calls", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    getClientMock.mockResolvedValue({ ok: true, data: { data: { client_id: "client-1", client_name: "Acme", phone_no: " +15550200 ", email: null, url: null } } });
+    getClientMock.mockResolvedValue({ ok: true, data: { data: { client_id: "client-1", client_name: "Acme", phone_no: " +13202521658 ", email: null, url: null } } });
     getClientLocationsMock.mockResolvedValue({ ok: true, data: { data: [] } });
     getClientContactsMock.mockResolvedValue({ ok: true, data: { data: [], pagination: { total: 0 } } });
   });
@@ -73,12 +73,12 @@ describe("ClientDetailScreen calls", () => {
   it("dials the client's number through the shared call flow, attributed to the client", async () => {
     const renderer = await renderScreen();
 
-    const row = renderer.root.find((n) => n.props?.accessibilityLabel === "detail.phone:  +15550200 ");
+    const row = renderer.root.find((n) => n.props?.accessibilityLabel === "detail.phone: +1 320 252 1658");
     act(() => row.props.onPress());
 
     expect(placeCallMock).toHaveBeenCalledWith({
       origin: { kind: "client", id: "client-1" },
-      phone: "+15550200",
+      phone: "+13202521658",
       name: "Acme",
       contactId: null,
       clientId: "client-1",
@@ -97,5 +97,42 @@ describe("ClientDetailScreen calls", () => {
     const renderer = await renderScreen();
 
     expect(renderer.root.findAll((n) => typeof n.props?.accessibilityLabel === "string" && n.props.accessibilityLabel.startsWith("detail.phone:"))).toHaveLength(0);
+  });
+});
+
+describe("ClientDetailScreen maps", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    getClientContactsMock.mockResolvedValue({ ok: true, data: { data: [], pagination: { total: 0 } } });
+  });
+
+  it("opens the client's address in the maps app", async () => {
+    const { Linking } = await import("react-native");
+    const openUrl = vi.spyOn(Linking, "openURL").mockResolvedValue(undefined as never);
+    getClientMock.mockResolvedValue({ ok: true, data: { data: { client_id: "client-1", client_name: "Acme", phone_no: null, email: null, url: null, address: "1 Main St\nSpringfield, IL" } } });
+    getClientLocationsMock.mockResolvedValue({ ok: true, data: { data: [] } });
+    const renderer = await renderScreen();
+
+    const row = renderer.root.find((n) => n.props?.accessibilityLabel === "detail.address: 1 Main St\nSpringfield, IL");
+    act(() => row.props.onPress());
+
+    expect(openUrl).toHaveBeenCalledTimes(1);
+    expect(openUrl.mock.calls[0][0]).toMatch(/^(maps|geo):0,0\?q=1%20Main%20St%2C%20Springfield%2C%20IL$/);
+  });
+
+  it("opens each listed location in the maps app", async () => {
+    const { Linking } = await import("react-native");
+    const openUrl = vi.spyOn(Linking, "openURL").mockResolvedValue(undefined as never);
+    getClientMock.mockResolvedValue({ ok: true, data: { data: { client_id: "client-1", client_name: "Acme", phone_no: null, email: null, url: null, address: null } } });
+    getClientLocationsMock.mockResolvedValue({
+      ok: true,
+      data: { data: [{ location_id: "loc-1", location_name: "Warehouse", address_line1: "9 Dock Rd", city: "Springfield", state_province: "IL", postal_code: "62701", country_name: "United States", is_default: false, phone: null }] },
+    });
+    const renderer = await renderScreen();
+
+    const link = renderer.root.find((n) => n.props?.accessibilityLabel === "detail.openInMaps");
+    act(() => link.props.onPress());
+
+    expect(openUrl.mock.calls[0][0]).toMatch(/^(maps|geo):0,0\?q=9%20Dock%20Rd%2C%20Springfield%2C%20IL%2C%2062701%2C%20United%20States$/);
   });
 });

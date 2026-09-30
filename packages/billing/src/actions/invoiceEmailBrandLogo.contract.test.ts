@@ -4,25 +4,18 @@ import { resolve } from 'path';
 
 const source = readFileSync(resolve(__dirname, 'invoiceJobActions.ts'), 'utf8');
 
-/**
- * Invoice mail renders a tenant template and hands it to the provider without
- * passing through BaseEmailService, where the rest of the outbound paths get
- * their logo embedded. A branded row references the logo by content-id, so
- * skipping the pass here would mail a dangling `cid:` and a broken image.
- */
 describe('invoice email brand logo contract', () => {
-  it('embeds the branded logo before handing the message to the provider', () => {
-    expect(source).toContain("import { embedBrandLogo, SystemEmailProviderFactory } from '@alga-psa/email'");
-    expect(source).toContain('const branded = await embedBrandLogo(html, {');
-    expect(source).toContain('html: branded.html,');
-    expect(source).toContain('...branded.attachments,');
-
-    expect(source.indexOf('await embedBrandLogo(')).toBeLessThan(source.indexOf('await emailProvider.sendEmail('));
+  it('routes invoice mail through TenantEmailService and preserves attachments', () => {
+    expect(source).toContain("import { StaticTemplateProcessor, TenantEmailService } from '@alga-psa/email'");
+    expect(source).toContain("mailClass: 'billing'");
+    expect(source).toContain('TenantEmailService.getInstance(tenant).sendEmail({');
+    expect(source).toContain('templateProcessor: new StaticTemplateProcessor(subject, html, text)');
+    expect(source).toContain("contentType: 'application/pdf'");
+    expect(source).not.toContain('SystemEmailProviderFactory');
   });
 
-  it('never sends the unembedded HTML', () => {
-    const message = source.slice(source.indexOf('const message: EmailMessage = {'));
-
-    expect(message.slice(0, message.indexOf('};'))).not.toMatch(/^\s*html,$/m);
+  it('delegates branded logo handling to the shared email engine', () => {
+    expect(source).not.toContain('embedBrandLogo(');
+    expect(source).toContain('templateProcessor: new StaticTemplateProcessor(subject, html, text)');
   });
 });

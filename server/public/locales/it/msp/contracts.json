@@ -118,6 +118,9 @@
       "renewalHandling": "Gestione del rinnovo"
     },
     "clientAssignment": {
+      "billingProfile": "Profilo di fatturazione",
+      "billingProfileLabel": "Profilo di fatturazione dell'assegnazione",
+      "billingProfileNone": "Usa il profilo predefinito del cliente",
       "clientContractId": "ID contratto cliente: {{id}}",
       "creditDrawdownOptOut": "Escludi dall'utilizzo del credito",
       "empty": "Questo contratto non è ancora assegnato a un cliente.",
@@ -399,7 +402,10 @@
       "selectClientFirst": "Seleziona prima un cliente",
       "startDateLabel": "Data di inizio *",
       "useTenantDefaultsDescription": "Applica le impostazioni di modalità di rinnovo e periodo di preavviso a livello organizzativo.",
-      "useTenantDefaultsLabel": "Utilizza le impostazioni predefinite di rinnovo del tenant"
+      "useTenantDefaultsLabel": "Utilizza le impostazioni predefinite di rinnovo del tenant",
+      "billingProfileLabel": "Profilo di fatturazione",
+      "billingProfileNone": "Usa il profilo predefinito del cliente",
+      "billingProfileHint": "Gli addebiti di questo contratto vengono fatturati a questo profilo."
     },
     "po": {
       "amountLabel": "Importo OdA (opzionale)",
@@ -1520,6 +1526,11 @@
       },
       "selectTemplateOptional": "Seleziona un modello (opzionale)",
       "startFromTemplate": "Inizia da un modello"
+    },
+    "billingProfile": {
+      "label": "Profilo di fatturazione",
+      "none": "Usa il profilo predefinito del cliente",
+      "hint": "Gli addebiti di questo contratto vengono fatturati a questo profilo, salvo override di una riga."
     }
   },
   "wizardFixed": {
@@ -1692,6 +1703,7 @@
     },
     "fields": {
       "client": "Cliente",
+      "billingProfile": "Profilo di fatturazione",
       "contractName": "Nome del contratto",
       "billingFrequency": "Frequenza di fatturazione",
       "currency": "Valuta",
@@ -1700,6 +1712,9 @@
       "renewalMode": "Modalità di rinnovo",
       "noticePeriod": "Periodo di preavviso",
       "renewalTerm": "Termine di rinnovo"
+    },
+    "billingProfile": {
+      "clientDefault": "Il profilo predefinito del cliente"
     },
     "fallback": {
       "notSelected": "Non selezionato",

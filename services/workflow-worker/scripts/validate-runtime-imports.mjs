@@ -32,6 +32,10 @@ const FORBIDDEN_ROOT_IMPORTS = new Set([
   '@alga-psa/integrations',
   '@alga-psa/billing',
   '@alga-psa/ui',
+  // The storage barrel re-exports a validation module that fails under native
+  // node (ERR_MODULE_NOT_FOUND). Runtime code must use the narrow subpaths
+  // (@alga-psa/storage/config/storage, @alga-psa/storage/StorageProviderFactory).
+  '@alga-psa/storage',
 ]);
 
 function readFile(filePath) {

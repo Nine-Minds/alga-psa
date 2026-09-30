@@ -193,9 +193,10 @@ async function generateProductionVariant(db: ReturnType<typeof knex>, variant: s
   });
   const { generateInvoice, generateProjectInvoice } = await import('@alga-psa/billing/actions/invoiceGeneration');
   let result: any;
+  let hourBlockPreviewSubtotal: number | undefined;
   if (variant === 'hour-block') {
     const { buildClientCadenceDueSelectionInput } = await import('@alga-psa/shared/billingClients/recurringRunExecutionIdentity');
-    const { generateInvoiceForSelectionInputs } = await import('@alga-psa/billing/actions/invoiceGeneration');
+    const { generateInvoiceForSelectionInputs, previewGroupedInvoicesForSelectionInputs } = await import('@alga-psa/billing/actions/invoiceGeneration');
     const periods = await db('recurring_service_periods').where({ tenant: ids.tenant, invoice_window_start: '2026-09-01', invoice_window_end: '2026-10-01' }).whereIn('obligation_id', [ids.lineId, ids.usageLineId]);
     const selectors = periods.map((period) => buildClientCadenceDueSelectionInput({ clientId: ids.clientId,
       scheduleKey: period.schedule_key, periodKey: period.period_key, windowStart: '2026-09-01', windowEnd: '2026-10-01' }));
@@ -204,6 +205,14 @@ async function generateProductionVariant(db: ReturnType<typeof knex>, variant: s
       periodKey: `period:2026-09-01:2026-10-01:unresolved:time:${blockEntryIds[1]}`,
       windowStart: '2026-09-01', windowEnd: '2026-10-01' }));
     fs.writeFileSync(`${dir}/selectors.json`, JSON.stringify(selectors, null, 2));
+    // A source-record selector has no recurring obligation. Both preview and
+    // generation must still include its uncovered time on the default invoice.
+    const preview = await previewGroupedInvoicesForSelectionInputs([
+      { previewGroupKey: 'hour-block', selectorInputs: selectors },
+    ]);
+    expect(preview.success, JSON.stringify(preview)).toBe(true);
+    if (!preview.success) throw new Error(preview.error);
+    hourBlockPreviewSubtotal = preview.previews[0].data.subtotal;
     result = await generateInvoiceForSelectionInputs(selectors);
   } else result = await (variant === 'cap' ? generateProjectInvoice(cappedProjectId!) : generateInvoice(ids.cycleId));
   expect(result.invoice_id, JSON.stringify(result)).toBeTruthy();
@@ -287,6 +296,14 @@ async function generateProductionVariant(db: ReturnType<typeof knex>, variant: s
     expect(mapDbInvoiceToWasmViewModel(await Invoice.getFullInvoiceById(db, ids.tenant, result.invoice_id))).toEqual(vm);
   }
   if (variant === 'hour-block') {
+    expect(invoice!.billing_profile_id).toBe(ids.profileId);
+    expect(vm.subtotal).toBe(hourBlockPreviewSubtotal);
+    const uncoveredTimeLink = links.find((link) => link.entry_id === blockEntryIds[1]);
+    expect(uncoveredTimeLink).toBeDefined();
+    expect(charges.find((charge) => charge.item_id === uncoveredTimeLink!.item_id)).toMatchObject({
+      billing_profile_id: ids.profileId,
+      net_amount: '15000',
+    });
     const information = charges.filter((charge) => charge.billing_charge_type === 'hour_block');
     expect(information).toHaveLength(1);
     expect(Number(information[0].net_amount)).toBe(0);
