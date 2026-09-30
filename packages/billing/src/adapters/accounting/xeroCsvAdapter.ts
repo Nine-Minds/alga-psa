@@ -1,5 +1,6 @@
 import { serializeAccountingCsv } from '../../services/accountingCsv';
 import { expandAccountingExportCharges } from '../../services/accountingExportChargeExpansion';
+import { toDateOnly } from '../../lib/billing/dateOnly';
 import logger from '@alga-psa/core/logger';
 import { Knex } from 'knex';
 import {
@@ -565,17 +566,15 @@ function safeString(value: unknown): string | undefined {
 
 type XeroDateFormat = 'DD/MM/YYYY' | 'MM/DD/YYYY';
 
-function formatDateForXero(value?: string | Date | null, dateFormat: XeroDateFormat = 'MM/DD/YYYY'): string {
+export function formatDateForXero(value?: string | Date | null, dateFormat: XeroDateFormat = 'MM/DD/YYYY'): string {
   if (!value) {
     return formatCurrentDate(dateFormat);
   }
-  const date = typeof value === 'string' ? new Date(value) : value;
-  if (Number.isNaN(date.getTime())) {
+  const dateOnly = toDateOnly(value);
+  if (!dateOnly) {
     return formatCurrentDate(dateFormat);
   }
-  const day = date.getDate().toString().padStart(2, '0');
-  const month = (date.getMonth() + 1).toString().padStart(2, '0');
-  const year = date.getFullYear();
+  const [year, month, day] = dateOnly.split('-');
 
   if (dateFormat === 'DD/MM/YYYY') {
     return `${day}/${month}/${year}`;

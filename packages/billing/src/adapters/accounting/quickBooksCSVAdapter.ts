@@ -1,5 +1,6 @@
 import { serializeAccountingCsv } from '../../services/accountingCsv';
 import { expandAccountingExportCharges } from '../../services/accountingExportChargeExpansion';
+import { toDateOnly } from '../../lib/billing/dateOnly';
 /**
  * QuickBooks CSV Export Adapter
  *
@@ -605,16 +606,7 @@ export class QuickBooksCSVAdapter implements AccountingExportAdapter {
   }
 
   private formatDate(value?: string | Date | null): string {
-    if (!value) return '';
-    const date = typeof value === 'string' ? new Date(value) : value;
-    if (Number.isNaN(date.getTime())) {
-      return '';
-    }
-    // MM/DD/YYYY format for QuickBooks
-    const month = (date.getMonth() + 1).toString().padStart(2, '0');
-    const day = date.getDate().toString().padStart(2, '0');
-    const year = date.getFullYear();
-    return `${month}/${day}/${year}`;
+    return formatDateForQuickBooks(value);
   }
 
   private centsToAmount(cents: number): number {
@@ -641,4 +633,11 @@ export class QuickBooksCSVAdapter implements AccountingExportAdapter {
     const line = context.lines.find((l) => l.line_id === lineId);
     return line?.document_id;
   }
+}
+
+export function formatDateForQuickBooks(value?: string | Date | null): string {
+  const dateOnly = toDateOnly(value);
+  if (!dateOnly) return '';
+  const [year, month, day] = dateOnly.split('-');
+  return `${month}/${day}/${year}`;
 }
