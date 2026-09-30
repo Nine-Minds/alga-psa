@@ -18,6 +18,10 @@
       "import": "./dist/kernel/*.js",
       "types": "./src/kernel/*"
     },
+    "./quoteSelfApproval": {
+      "import": "./dist/quoteSelfApproval.js",
+      "types": "./src/quoteSelfApproval.ts"
+    },
     "./bundles/catalog": {
       "import": "./dist/bundles/catalog.js",
       "types": "./src/bundles/catalog.ts"

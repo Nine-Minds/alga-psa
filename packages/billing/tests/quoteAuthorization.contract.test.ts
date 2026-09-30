@@ -17,7 +17,7 @@ describe('billing quote authorization kernel contracts', () => {
     expect(source).toContain("code: 'billing_not_self_approver_denied'");
     expect(source).toContain('bundleProvider: new BundleAuthorizationKernelProvider({');
     expect(source).toContain('return await resolveBundleNarrowingRulesForEvaluation(knex, input);');
-    expect(source).toContain('const mutationDecision = await authorizationKernel.authorizeMutation({');
+    expect(source).toContain('const mutationDecision = await authorizationKernel.authorizeMutation(mutationInput);');
   });
 
   it('T023: redacts configured fields on allowed quote records without changing base access decision', () => {
