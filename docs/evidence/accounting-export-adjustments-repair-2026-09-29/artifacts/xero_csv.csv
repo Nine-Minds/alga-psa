@@ -1,8 +1,8 @@
 *ContactName,EmailAddress,POAddressLine1,POAddressLine2,POAddressLine3,POAddressLine4,POCity,PORegion,POPostalCode,POCountry,*InvoiceNumber,Reference,*InvoiceDate,*DueDate,Total,InventoryItemCode,*Description,*Quantity,*UnitAmount,Discount,*AccountCode,*TaxType,TrackingName1,TrackingOption1,TrackingName2,TrackingOption2,Currency
-Emerald City,,,,,,,,,,REVIEW-CONTRACT-3499-xero_csv,a7c52c4d-9741-41f1-8427-0585462cce17,09/01/2026,09/30/2026,,,Loyalty 10%,1,-405.00,,DISCOUNT,,Source System,AlgaPSA,External Invoice ID,a7c52c4d-9741-41f1-8427-0585462cce17,USD
-,,,,,,,,,,,,,,,,Manual credit,1,-0.99,,DISCOUNT,,Source System,AlgaPSA,External Invoice ID,a7c52c4d-9741-41f1-8427-0585462cce17,
-,,,,,,,,,,,,,,,,Manual fixed discount,1,-1.01,,DISCOUNT,,Source System,AlgaPSA,External Invoice ID,a7c52c4d-9741-41f1-8427-0585462cce17,
-,,,,,,,,,,,,,,,,Manual percentage discount,1,-405.00,,DISCOUNT,,Source System,AlgaPSA,External Invoice ID,a7c52c4d-9741-41f1-8427-0585462cce17,
-,,,,,,,,,,,,,,,MISC,Miscellaneous charge,3,50.00,,MISC,,Source System,AlgaPSA,External Invoice ID,a7c52c4d-9741-41f1-8427-0585462cce17,
-,,,,,,,,,,,,,,,RECURRING,Recurring support,1,1950.00,,RECURRING,,Source System,AlgaPSA,External Invoice ID,a7c52c4d-9741-41f1-8427-0585462cce17,
-,,,,,,,,,,,,,,,MISC,Recurring support,1,1950.00,,MISC,,Source System,AlgaPSA,External Invoice ID,a7c52c4d-9741-41f1-8427-0585462cce17,
+Emerald City,,,,,,,,,,REVIEW-CONTRACT-3499-xero_csv,d21ac581-fce0-4cda-895f-851764e927b0,09/01/2026,09/30/2026,,,Loyalty 10%,1,-405.00,,DISCOUNT,,Source System,AlgaPSA,External Invoice ID,d21ac581-fce0-4cda-895f-851764e927b0,USD
+,,,,,,,,,,,,,,,,Manual credit,1,-0.99,,DISCOUNT,,Source System,AlgaPSA,External Invoice ID,d21ac581-fce0-4cda-895f-851764e927b0,
+,,,,,,,,,,,,,,,,Manual fixed discount,1,-1.01,,DISCOUNT,,Source System,AlgaPSA,External Invoice ID,d21ac581-fce0-4cda-895f-851764e927b0,
+,,,,,,,,,,,,,,,,Manual percentage discount,1,-405.00,,DISCOUNT,,Source System,AlgaPSA,External Invoice ID,d21ac581-fce0-4cda-895f-851764e927b0,
+,,,,,,,,,,,,,,,MISC,Miscellaneous charge,3,50.00,,MISC,,Source System,AlgaPSA,External Invoice ID,d21ac581-fce0-4cda-895f-851764e927b0,
+,,,,,,,,,,,,,,,RECURRING,Recurring support,1,1950.00,,RECURRING,,Source System,AlgaPSA,External Invoice ID,d21ac581-fce0-4cda-895f-851764e927b0,
+,,,,,,,,,,,,,,,MISC,Recurring support,1,1950.00,,MISC,,Source System,AlgaPSA,External Invoice ID,d21ac581-fce0-4cda-895f-851764e927b0,

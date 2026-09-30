@@ -1,19 +1,19 @@
 {
   "documents": [
     {
-      "documentId": "2800336d-f3b9-48e9-b3c9-aa6d6f84b3e9",
+      "documentId": "55b57960-474d-47ee-a33c-93b4e9fc4573",
       "lineIds": [
-        "706b7ef7-f931-4efb-ad4c-4ba61c87db1a",
-        "b2d8f0f8-bc70-4c19-a148-8b48ad03ec3f",
-        "64b00c6d-ba8a-4ce9-b030-ea512135c385",
-        "5820095b-0845-40c4-bb25-ff24224eb43a",
-        "4d3399b9-a195-440e-b01c-e75977cee644",
-        "d3ebde8f-0bfb-4f54-8408-867290387f22"
+        "e8fb8767-5eeb-4f0b-a449-a772ded60d26",
+        "c5c0cdf5-3267-456a-b5a2-094565daae8b",
+        "a10a7e45-7d60-4f12-98ea-f6370ac424d8",
+        "7ce63708-87bd-40b0-a96d-dcfa5229543b",
+        "b4adb9ba-addb-4b89-9c3f-13bc06913cc8",
+        "29283a9a-5223-424e-96a9-a868d6d44377"
       ],
       "payload": {
-        "invoiceId": "2800336d-f3b9-48e9-b3c9-aa6d6f84b3e9",
+        "invoiceId": "55b57960-474d-47ee-a33c-93b4e9fc4573",
         "invoiceNumber": "REVIEW-CONTRACT-3499-quickbooks_csv",
-        "clientId": "64b35144-c139-4933-8aef-e20aa1d8e5f1",
+        "clientId": "b24fcd60-ab6e-4518-8673-5f5bdaf710dc",
         "clientName": "Emerald City",
         "invoiceDate": "09/01/2026",
         "dueDate": "09/30/2026",
@@ -29,7 +29,7 @@
             "*ItemRate": "-405.00",
             "*ItemAmount": "-405.00",
             "Terms": "net_30",
-            "Memo": "AlgaPSA: 2800336d-f3b9-48e9-b3c9-aa6d6f84b3e9",
+            "Memo": "AlgaPSA: 55b57960-474d-47ee-a33c-93b4e9fc4573",
             "TaxCode": "",
             "TaxAmount": "0.00"
           },
@@ -44,7 +44,7 @@
             "*ItemRate": "-0.99",
             "*ItemAmount": "-0.99",
             "Terms": "net_30",
-            "Memo": "AlgaPSA: 2800336d-f3b9-48e9-b3c9-aa6d6f84b3e9",
+            "Memo": "AlgaPSA: 55b57960-474d-47ee-a33c-93b4e9fc4573",
             "TaxCode": "",
             "TaxAmount": "0.00"
           },
@@ -59,7 +59,7 @@
             "*ItemRate": "-1.01",
             "*ItemAmount": "-1.01",
             "Terms": "net_30",
-            "Memo": "AlgaPSA: 2800336d-f3b9-48e9-b3c9-aa6d6f84b3e9",
+            "Memo": "AlgaPSA: 55b57960-474d-47ee-a33c-93b4e9fc4573",
             "TaxCode": "",
             "TaxAmount": "0.00"
           },
@@ -74,7 +74,7 @@
             "*ItemRate": "-405.00",
             "*ItemAmount": "-405.00",
             "Terms": "net_30",
-            "Memo": "AlgaPSA: 2800336d-f3b9-48e9-b3c9-aa6d6f84b3e9",
+            "Memo": "AlgaPSA: 55b57960-474d-47ee-a33c-93b4e9fc4573",
             "TaxCode": "",
             "TaxAmount": "0.00"
           },
@@ -89,22 +89,7 @@
             "*ItemRate": "50.00",
             "*ItemAmount": "150.00",
             "Terms": "net_30",
-            "Memo": "AlgaPSA: 2800336d-f3b9-48e9-b3c9-aa6d6f84b3e9",
-            "TaxCode": "",
-            "TaxAmount": "0.00"
-          },
-          {
-            "*InvoiceNo": "REVIEW-CONTRACT-3499-quickbooks_csv",
-            "*Customer": "CUSTOMER",
-            "*InvoiceDate": "09/01/2026",
-            "*DueDate": "09/30/2026",
-            "*Item": "RECURRING",
-            "ItemDescription": "Recurring support",
-            "*ItemQuantity": "1",
-            "*ItemRate": "1950.00",
-            "*ItemAmount": "1950.00",
-            "Terms": "net_30",
-            "Memo": "AlgaPSA: 2800336d-f3b9-48e9-b3c9-aa6d6f84b3e9",
+            "Memo": "AlgaPSA: 55b57960-474d-47ee-a33c-93b4e9fc4573",
             "TaxCode": "",
             "TaxAmount": "0.00"
           },
@@ -119,7 +104,22 @@
             "*ItemRate": "1950.00",
             "*ItemAmount": "1950.00",
             "Terms": "net_30",
-            "Memo": "AlgaPSA: 2800336d-f3b9-48e9-b3c9-aa6d6f84b3e9",
+            "Memo": "AlgaPSA: 55b57960-474d-47ee-a33c-93b4e9fc4573",
+            "TaxCode": "",
+            "TaxAmount": "0.00"
+          },
+          {
+            "*InvoiceNo": "REVIEW-CONTRACT-3499-quickbooks_csv",
+            "*Customer": "CUSTOMER",
+            "*InvoiceDate": "09/01/2026",
+            "*DueDate": "09/30/2026",
+            "*Item": "RECURRING",
+            "ItemDescription": "Recurring support",
+            "*ItemQuantity": "1",
+            "*ItemRate": "1950.00",
+            "*ItemAmount": "1950.00",
+            "Terms": "net_30",
+            "Memo": "AlgaPSA: 55b57960-474d-47ee-a33c-93b4e9fc4573",
             "TaxCode": "",
             "TaxAmount": "0.00"
           }
@@ -141,7 +141,7 @@
     {
       "filename": "quickbooks-invoices-2026-09-30.csv",
       "contentType": "text/csv",
-      "content": "*InvoiceNo,*Customer,*InvoiceDate,*DueDate,*Item,ItemDescription,*ItemQuantity,*ItemRate,*ItemAmount,Terms,Memo,TaxCode,TaxAmount\nREVIEW-CONTRACT-3499-quickbooks_csv,CUSTOMER,09/01/2026,09/30/2026,DISCOUNT,Loyalty 10%,1,-405.00,-405.00,net_30,AlgaPSA: 2800336d-f3b9-48e9-b3c9-aa6d6f84b3e9,,0.00\nREVIEW-CONTRACT-3499-quickbooks_csv,CUSTOMER,09/01/2026,09/30/2026,DISCOUNT,Manual credit,1,-0.99,-0.99,net_30,AlgaPSA: 2800336d-f3b9-48e9-b3c9-aa6d6f84b3e9,,0.00\nREVIEW-CONTRACT-3499-quickbooks_csv,CUSTOMER,09/01/2026,09/30/2026,DISCOUNT,Manual fixed discount,1,-1.01,-1.01,net_30,AlgaPSA: 2800336d-f3b9-48e9-b3c9-aa6d6f84b3e9,,0.00\nREVIEW-CONTRACT-3499-quickbooks_csv,CUSTOMER,09/01/2026,09/30/2026,DISCOUNT,Manual percentage discount,1,-405.00,-405.00,net_30,AlgaPSA: 2800336d-f3b9-48e9-b3c9-aa6d6f84b3e9,,0.00\nREVIEW-CONTRACT-3499-quickbooks_csv,CUSTOMER,09/01/2026,09/30/2026,MISC,Miscellaneous charge,3.00,50.00,150.00,net_30,AlgaPSA: 2800336d-f3b9-48e9-b3c9-aa6d6f84b3e9,,0.00\nREVIEW-CONTRACT-3499-quickbooks_csv,CUSTOMER,09/01/2026,09/30/2026,RECURRING,Recurring support,1,1950.00,1950.00,net_30,AlgaPSA: 2800336d-f3b9-48e9-b3c9-aa6d6f84b3e9,,0.00\nREVIEW-CONTRACT-3499-quickbooks_csv,CUSTOMER,09/01/2026,09/30/2026,MISC,Recurring support,1,1950.00,1950.00,net_30,AlgaPSA: 2800336d-f3b9-48e9-b3c9-aa6d6f84b3e9,,0.00"
+      "content": "*InvoiceNo,*Customer,*InvoiceDate,*DueDate,*Item,ItemDescription,*ItemQuantity,*ItemRate,*ItemAmount,Terms,Memo,TaxCode,TaxAmount\nREVIEW-CONTRACT-3499-quickbooks_csv,CUSTOMER,09/01/2026,09/30/2026,DISCOUNT,Loyalty 10%,1,-405.00,-405.00,net_30,AlgaPSA: 55b57960-474d-47ee-a33c-93b4e9fc4573,,0.00\nREVIEW-CONTRACT-3499-quickbooks_csv,CUSTOMER,09/01/2026,09/30/2026,DISCOUNT,Manual credit,1,-0.99,-0.99,net_30,AlgaPSA: 55b57960-474d-47ee-a33c-93b4e9fc4573,,0.00\nREVIEW-CONTRACT-3499-quickbooks_csv,CUSTOMER,09/01/2026,09/30/2026,DISCOUNT,Manual fixed discount,1,-1.01,-1.01,net_30,AlgaPSA: 55b57960-474d-47ee-a33c-93b4e9fc4573,,0.00\nREVIEW-CONTRACT-3499-quickbooks_csv,CUSTOMER,09/01/2026,09/30/2026,DISCOUNT,Manual percentage discount,1,-405.00,-405.00,net_30,AlgaPSA: 55b57960-474d-47ee-a33c-93b4e9fc4573,,0.00\nREVIEW-CONTRACT-3499-quickbooks_csv,CUSTOMER,09/01/2026,09/30/2026,MISC,Miscellaneous charge,3.00,50.00,150.00,net_30,AlgaPSA: 55b57960-474d-47ee-a33c-93b4e9fc4573,,0.00\nREVIEW-CONTRACT-3499-quickbooks_csv,CUSTOMER,09/01/2026,09/30/2026,MISC,Recurring support,1,1950.00,1950.00,net_30,AlgaPSA: 55b57960-474d-47ee-a33c-93b4e9fc4573,,0.00\nREVIEW-CONTRACT-3499-quickbooks_csv,CUSTOMER,09/01/2026,09/30/2026,RECURRING,Recurring support,1,1950.00,1950.00,net_30,AlgaPSA: 55b57960-474d-47ee-a33c-93b4e9fc4573,,0.00"
     }
   ]
 }

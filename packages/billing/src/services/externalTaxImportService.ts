@@ -197,7 +197,7 @@ export class ExternalTaxImportService {
       // 6. Get current invoice charges and their tax
       const charges = await db.table('invoice_charges')
         .where({ invoice_id: invoiceId })
-        .select('item_id', 'description', 'tax_amount');
+        .select('item_id', 'description', 'tax_amount', 'net_amount');
 
       const originalTax = charges.reduce(
         (sum, c) => sum + Number(c.tax_amount ?? 0),
@@ -580,7 +580,12 @@ export class ExternalTaxImportService {
         const chargeTax = externalCharge ?? positionalCharge;
 
         if (chargeTax) {
-          matchedExternalLineIds.add(chargeTax.lineId);
+          // An aggregate consumes every allocation, including legacy detail
+          // mappings recovered from the DB rather than provider metadata.
+          const consumedLines = directCharge || positionalCharge
+            ? [chargeTax]
+            : allocationMatches;
+          for (const consumed of consumedLines) matchedExternalLineIds.add(consumed.lineId);
           await db.table('invoice_charges')
             .where({ item_id: charge.item_id })
             .update({
@@ -599,12 +604,11 @@ export class ExternalTaxImportService {
 
       if (unresolvedCharges.length > 0) {
         const unmatchedProviderLines = externalInvoice.charges.filter(externalCharge =>
-          !matchedExternalLineIds.has(externalCharge.lineId) &&
-          !externalByParent.has(externalCharge.parentChargeId ?? '') &&
-          !chargeIds.has(externalCharge.lineId)
+          !matchedExternalLineIds.has(externalCharge.lineId)
         );
-        const unmatchedTax = unmatchedProviderLines.reduce((sum, line) => sum + line.taxAmount, 0);
-        const taxToDistribute = unmatchedTax > 0 ? unmatchedTax : Math.max(0, externalInvoice.totalTax - matchedTax);
+        // The provider's invoice total is authoritative. Allocate only its
+        // remaining signed tax, never amounts already included in a parent.
+        const taxToDistribute = externalInvoice.totalTax - matchedTax;
         const unresolvedAmount = unresolvedCharges.reduce((sum, charge) => sum + Number(charge.net_amount ?? 0), 0);
         let distributedTax = 0;
 

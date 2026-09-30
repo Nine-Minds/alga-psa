@@ -35,6 +35,10 @@ The QBO and Xero round-trip fixtures include two $1,950 allocations under one $3
 
 The adapters retain each allocation's detail ID as its retry/update identity and also record the parent charge ID. The QBO artifact includes the fetched adapter-boundary lineage, confirming those IDs are returned directly rather than recovered from the database details table. Tax import aggregates returned allocation taxes onto that parent while direct lines such as the manual charge keep their own tax. A repeated import is rejected after `tax_source` becomes `external`; assertions confirm it does not change tax, totals, or create a second import record. Provider responses in these fixtures are mocked; they do not claim live QBO/Xero acceptance.
 
+Legacy exports are covered separately: [QBO legacy mapping recovery](artifacts/tax_roundtrip_quickbooks_online_legacy.json) and [Xero legacy mapping recovery](artifacts/tax_roundtrip_xero_legacy.json). Their `fetchedForImport` records contain detail IDs without parent metadata. Recovery sums both allocations once; the omitted QBO discount tax stays zero and invoice tax stays 435 minor units. All allocation identities are consumed before distributing a remainder.
+
+The takeover regressions failed before the repair. Three mixed charges received taxes `[1000, 0, 600]` instead of `[1000, 400, 200]` because the import query omitted `net_amount`. A legacy QBO split was counted again on the discount, adding 209 minor units of tax. The corrected importer loads net amounts and distributes only the provider total minus already-matched tax, preserving signed remainders. Positional and arbitrary provider IDs still avoid UUID queries.
+
 Regenerate artifacts from `server/` with:
 
 ```sh
@@ -43,17 +47,17 @@ ACCOUNTING_EVIDENCE_DIR="$PWD/../docs/evidence/accounting-export-adjustments-rep
 
 This recreates the isolated test database. Run database suites serially.
 
-The September 30 rerun used the current adapter writers and isolated DB fixtures. The API examples use USD with no tax, so the artifacts demonstrate settled net totals but do not exercise nonzero tax or foreign currency. Code review confirms QBO serializes `CurrencyRef` and invoice `TxnTaxDetail`, while Xero serializes `CurrencyCode`, `LineAmountTypes` and per-line `TaxAmount`; the Xero artifact is a real serialized request with transport mocked, not a provider acceptance result.
+The September 30 rerun used the current adapter writers and isolated DB fixtures. The five-adapter matrix uses USD with no tax. The separate round trips exercise changed nonzero tax; foreign-currency provider acceptance remains unverified. Code review confirms QBO serializes `CurrencyRef` and invoice `TxnTaxDetail`, while Xero serializes `CurrencyCode`, `LineAmountTypes` and per-line `TaxAmount`; the Xero artifact is a real serialized request with transport mocked, not a provider acceptance result.
 
 ## Validation
 
-- Contract adjustment DB suite: 57 tests, including creation/update service validation, idempotent catalog provisioning, credits, settlement retries, lifecycle protections, all five adapter payloads, and the QBO/Xero external-tax round trips.
-- External tax import integration suite: 17 tests, including UUID-guarded positional IDs, unmatched provider IDs, and mixed matched/unmatched lines alongside the fixed-parent split-line round trips.
+- Contract adjustment DB suite: 59 tests, including creation/update service validation, idempotent catalog provisioning, credits, settlement retries, lifecycle protections, all five adapter payloads, and the QBO/Xero external-tax round trips.
+- External tax import integration suite: 18 tests, including UUID-guarded positional IDs, unmatched provider IDs, and multiple unresolved charges with unequal net amounts, and a negative credit-tax remainder. Fixed-parent round trips also cover legacy mappings without parent metadata.
 - External mapping DB suite: 35 tests, including create/read/update/delete of the discount identity for all five providers, realm/tenant isolation and invalid Xero accounts.
 - Current-head focused unit rerun: 53 tests passed across accounting CSV serialization, export validation, save-time warnings and mapping-screen registration. The validation cases include fixed-parent child service mapping and allocation-total mismatch rejection.
 - Credit/tax and invoice-generation discount DB suites: 11 tests. Positive manual fixtures now use a real service; tax and monetary expectations are unchanged.
 - Billing unit suite: 1,627 tests across 323 files, including four editor-warning tests and 18 batch-validation tests. Integration unit suite: 960 tests across 115 files.
-- Billing, integrations, database and server TypeScript checks pass (previous recorded verification). Billing package build passes. The integrations package's standalone build script has no configured entry points. The production application build completed with exit code 0 using a 16 GB heap and `.next-accounting-repair`; Webpack reported existing conflicting star-export and critical-dependency warnings, and Next skipped type validation. Separate package typechecks are the type evidence.
+- Takeover verification: billing TypeScript check and package build pass; all 1,627 billing unit tests pass. Focused lint has zero errors. Integrations, database and server TypeScript checks retain their previous recorded verification. The integrations package's standalone build script has no configured entry points. The preceding production application build completed with exit code 0 using a 16 GB heap and `.next-accounting-repair`; Webpack reported existing conflicting star-export and critical-dependency warnings, and Next skipped type validation. Separate package typechecks are the type evidence.
 - Localization audit and pseudo-locales: 32 tests pass. Focused lint: zero errors; existing and test-fixture warnings remain.
 
 ## Current-head UI smoke pending

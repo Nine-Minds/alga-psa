@@ -3074,7 +3074,12 @@ describe('accounting adjustment export matrix', () => {
     }
   });
 
-  it.each(['quickbooks_online', 'xero'])('round-trips fixed allocation tax through %s export and import', async (adapterType) => {
+  it.each([
+    { adapterType: 'quickbooks_online', legacyLineage: false },
+    { adapterType: 'xero', legacyLineage: false },
+    { adapterType: 'quickbooks_online', legacyLineage: true },
+    { adapterType: 'xero', legacyLineage: true },
+  ])('round-trips fixed allocation tax through $adapterType (legacy lineage: $legacyLineage)', async ({ adapterType, legacyLineage }) => {
     const { ensureMiscellaneousService } = await import('@alga-psa/db');
     const { ExternalTaxImportService } = await import('./externalTaxImportService');
     const miscId = await ensureMiscellaneousService(db, tenant);
@@ -3202,6 +3207,25 @@ describe('accounting adjustment export matrix', () => {
       expect(parentMappings.map((line: any) => line.allocationDetailId).sort()).toEqual([...allocationDetailIds].sort());
     }
 
+    if (legacyLineage) {
+      // Pre-lineage exports stored the detail UUID as chargeId. Recover both
+      // children from canonical details, without taxing the discount again.
+      const query = () => db('tenant_external_entity_mappings').where({ tenant,
+        integration_type: adapterType, alga_entity_type: 'invoice', alga_entity_id: fixture.invoiceId });
+      const mapping = await query().first();
+      await query().update({ metadata: JSON.stringify({ ...mapping.metadata,
+        chargeLineMappings: mapping.metadata.chargeLineMappings.map(({ parentChargeId, allocationDetailId, ...line }: any) => line),
+      }) });
+    }
+
+    const fetchedForImport = await adapter.fetchExternalInvoice(externalRef, realm);
+    expect(fetchedForImport.success).toBe(true);
+    const allocationTaxes = fetchedForImport.invoice!.charges.filter(line => allocationDetailIds.includes(line.lineId));
+    expect(allocationTaxes).toHaveLength(2);
+    if (legacyLineage) {
+      expect(allocationTaxes.every(line => line.parentChargeId === undefined && line.allocationDetailId === undefined)).toBe(true);
+    }
+
     const importer = new ExternalTaxImportService();
     const importResult = await importer.importTaxForInvoice(fixture.invoiceId, userId);
     expect(importResult).toMatchObject({ success: true, originalTax: internalTax, importedTax: 435, difference: 325 });
@@ -3244,11 +3268,13 @@ describe('accounting adjustment export matrix', () => {
     if (process.env.ACCOUNTING_EVIDENCE_DIR) {
       const fs = await import('node:fs/promises');
       await fs.mkdir(process.env.ACCOUNTING_EVIDENCE_DIR, { recursive: true });
-      await fs.writeFile(`${process.env.ACCOUNTING_EVIDENCE_DIR}/tax_roundtrip_${adapterType}.json`, JSON.stringify({
+      await fs.writeFile(`${process.env.ACCOUNTING_EVIDENCE_DIR}/tax_roundtrip_${adapterType}${legacyLineage ? '_legacy' : ''}.json`, JSON.stringify({
         adapter: adapterType,
         provider: adapterType === 'quickbooks_online' ? 'mocked QBO response' : 'mocked Xero response',
         providerResponse: adapterType === 'quickbooks_online' ? qboProviderInvoice : xeroProviderInvoice,
         fetchedLineage: adapterType === 'quickbooks_online' ? qboFetchedLineage : undefined,
+        legacyLineage,
+        fetchedForImport: fetchedForImport.invoice!.charges,
         exportedParent: fixture.generatedChargeId,
         allocations: finalParentMappings,
         importResult,
