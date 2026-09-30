@@ -5379,7 +5379,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/assets",
     "displayName": "Create asset",
     "summary": "Create asset",
-    "description": "Creates an asset for the authenticated tenant. The request body is validated with createAssetWithExtensionSchema; client_id, asset_type, asset_tag, name, and status are required. AssetService.create writes assets.tenant from the request context, inserts the asset, optionally upserts asset-type-specific extension_data, publishes an ASSET_CREATED event, and returns getWithDetails with HATEOAS links.",
+    "description": "Creates an asset for the authenticated tenant. The request body is validated with createAssetWithExtensionSchema; client_id, asset_type, asset_tag, name, and status are required. Custom attributes are checked against the registered type schema and required fields must be present. Unknown asset_type slugs and invalid/missing required attributes return 400. AssetService.create writes the attributes map, optionally upserts extension_data, publishes ASSET_CREATED, and returns getWithDetails.",
     "tags": [
       "Assets"
     ],
@@ -5395,7 +5395,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         },
         "asset_type": {
           "type": "string",
-          "description": "Asset type. Determines the optional extension data table."
+          "description": "Must be a built-in slug or registered custom slug; unknown slugs return 400."
         },
         "asset_tag": {
           "type": "string",
@@ -5439,6 +5439,9 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "type": "string",
           "format": "date-time",
           "description": "Optional warranty end date/time."
+        },
+        "attributes": {
+          "$ref": "#/components/schemas/AssetAttributes"
         },
         "extension_data": {
           "$ref": "#/components/schemas/AssetExtensionData"
@@ -5547,7 +5550,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/assets/bulk-update",
     "displayName": "Bulk update assets",
     "summary": "Bulk update assets",
-    "description": "Updates up to 50 assets in the authenticated tenant. Each array item supplies an asset_id and partial update data validated with updateAssetSchema. The controller calls AssetService.update for every item, tenant-scoping each update by asset_id and context.tenant and publishing ASSET_UPDATED events.",
+    "description": "Updates up to 50 assets in the authenticated tenant. Each item is validated and written independently; custom attributes are validated against that asset type and merged into its stored map. Unknown types and invalid attributes return 400. Earlier items may remain committed if a later item fails.",
     "tags": [
       "Assets"
     ],
@@ -6127,7 +6130,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/assets/{id}",
     "displayName": "Update asset",
     "summary": "Update asset",
-    "description": "Partially updates base asset fields for the authenticated tenant. The request body is validated with updateAssetSchema, where all fields are optional. AssetService.update scopes the update by asset_id and context.tenant, writes updated_at, publishes ASSET_UPDATED, and returns the refreshed base asset with joined client_name and warranty_status. This REST path does not update extension data, create asset history records, or wrap the update in a transaction. Missing assets currently lead to a 500 when the controller tries to add links to a null result rather than a clean 404.",
+    "description": "Partially updates base asset fields for the authenticated tenant. Custom attributes are validated against the next asset type when asset_type changes, then merged into the stored map so omitted keys remain. Required custom fields cannot be blanked. Unknown asset_type slugs and invalid attributes return 400.",
     "tags": [
       "Assets"
     ],
@@ -6155,7 +6158,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         },
         "asset_type": {
           "type": "string",
-          "description": "Asset type to store in assets.asset_type."
+          "description": "Must be a built-in slug or registered custom slug; unknown slugs return 400."
         },
         "asset_tag": {
           "type": "string",
@@ -6199,6 +6202,9 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "type": "string",
           "format": "date-time",
           "description": "Warranty end date/time."
+        },
+        "attributes": {
+          "$ref": "#/components/schemas/AssetAttributes"
         }
       }
     },
@@ -10407,6 +10413,9 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                   },
                   "logo": {
                     "type": "string"
+                  },
+                  "defaultLocale": {
+                    "type": "string"
                   }
                 }
               },
@@ -10497,6 +10506,12 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                 "format": "uuid"
               },
               "account_manager_full_name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "client_since": {
                 "type": [
                   "string",
                   "null"
@@ -10866,6 +10881,9 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                 },
                 "logo": {
                   "type": "string"
+                },
+                "defaultLocale": {
+                  "type": "string"
                 }
               }
             },
@@ -10956,6 +10974,12 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
               "format": "uuid"
             },
             "account_manager_full_name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "client_since": {
               "type": [
                 "string",
                 "null"
@@ -11164,6 +11188,9 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                 },
                 "logo": {
                   "type": "string"
+                },
+                "defaultLocale": {
+                  "type": "string"
                 }
               }
             },
@@ -11259,6 +11286,12 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                 "null"
               ]
             },
+            "client_since": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
             "logoUrl": {
               "type": [
                 "string",
@@ -11323,7 +11356,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/clients/{id}",
     "displayName": "Update client",
     "summary": "Update client",
-    "description": "Inherited ApiBaseController update route for one client_id.",
+    "description": "Updates client fields for one client_id. email, phone_no, and address are location fields and must be managed through /api/v1/clients/{id}/locations.",
     "tags": [
       "Clients"
     ],
@@ -11347,19 +11380,9 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "minLength": 1,
           "maxLength": 255
         },
-        "phone_no": {
-          "type": "string"
-        },
-        "email": {
-          "type": "string",
-          "format": "email"
-        },
         "url": {
           "type": "string",
           "format": "uri"
-        },
-        "address": {
-          "type": "string"
         },
         "client_type": {
           "type": "string",
@@ -11459,11 +11482,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             "type": "string"
           }
         }
-      },
-      "required": [
-        "client_name",
-        "billing_cycle"
-      ]
+      }
     },
     "responseBodySchema": {
       "type": "object",
@@ -11588,6 +11607,9 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                 },
                 "logo": {
                   "type": "string"
+                },
+                "defaultLocale": {
+                  "type": "string"
                 }
               }
             },
@@ -11678,6 +11700,12 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
               "format": "uuid"
             },
             "account_manager_full_name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "client_since": {
               "type": [
                 "string",
                 "null"
@@ -35848,7 +35876,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "schema": {
           "type": "integer",
           "minimum": 1,
-          "maximum": 100,
           "default": 25
         }
       },
@@ -36100,6 +36127,9 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
               "type": "null"
             }
           ]
+        },
+        "is_active": {
+          "type": "boolean"
         }
       },
       "required": [
@@ -36264,6 +36294,9 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
               "type": "null"
             }
           ]
+        },
+        "is_active": {
+          "type": "boolean"
         }
       }
     },
@@ -53760,7 +53793,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             "string",
             "null"
           ],
-          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}([T ].*)?$"
         },
         "next_action": {
           "type": "string",
@@ -53896,7 +53929,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/opportunities/{id}",
     "displayName": "Update opportunity",
     "summary": "Update opportunity",
-    "description": "Updates editable opportunity fields; status and stage use dedicated flows.",
+    "description": "Updates editable opportunity fields. status, stage, client_id, and the next-action mirror columns may be echoed back unchanged but never reassigned here: changing them answers 400 naming the dedicated endpoint.",
     "tags": [
       "Opportunities v1"
     ],
@@ -53980,7 +54013,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             "string",
             "null"
           ],
-          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}([T ].*)?$"
         },
         "generator_key": {
           "type": [
@@ -54008,6 +54041,212 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             "null"
           ],
           "format": "uuid"
+        },
+        "stage": {
+          "type": "string",
+          "enum": [
+            "identified",
+            "qualified",
+            "assessment",
+            "proposed",
+            "verbal",
+            "won",
+            "lost"
+          ]
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "open",
+            "won",
+            "lost"
+          ]
+        },
+        "next_action": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1
+        },
+        "next_action_due": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        }
+      }
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "additionalProperties": {}
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "patch-_api_v1_opportunities_id",
+    "method": "patch",
+    "path": "/api/v1/opportunities/{id}",
+    "displayName": "Partially update opportunity",
+    "summary": "Partially update opportunity",
+    "description": "Applies a partial update using the same contract as PUT; every field is optional.",
+    "tags": [
+      "Opportunities v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Opportunity UUID from opportunities.opportunity_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Opportunity UUID from opportunities.opportunity_id."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "client_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "contact_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1
+        },
+        "opportunity_type": {
+          "type": "string",
+          "enum": [
+            "new_logo",
+            "expansion",
+            "renewal",
+            "project"
+          ]
+        },
+        "owner_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "confidence": {
+          "type": "string",
+          "enum": [
+            "low",
+            "medium",
+            "high",
+            "committed"
+          ],
+          "default": "medium"
+        },
+        "mrr_cents": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 0
+        },
+        "nrr_cents": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 0
+        },
+        "hardware_cents": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 0
+        },
+        "currency_code": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 3
+        },
+        "expected_close_date": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}([T ].*)?$"
+        },
+        "generator_key": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "renewal",
+            "tm_conversion",
+            "whitespace",
+            "asset_aging",
+            "inbound-lead"
+          ]
+        },
+        "generator_context": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": {}
+        },
+        "suggestion_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid"
+        },
+        "stage": {
+          "type": "string",
+          "enum": [
+            "identified",
+            "qualified",
+            "assessment",
+            "proposed",
+            "verbal",
+            "won",
+            "lost"
+          ]
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "open",
+            "won",
+            "lost"
+          ]
+        },
+        "next_action": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1
+        },
+        "next_action_due": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
         }
       }
     },
@@ -54257,6 +54496,73 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     }
   },
   {
+    "id": "post-_api_v1_opportunities_id_stage",
+    "method": "post",
+    "path": "/api/v1/opportunities/{id}/stage",
+    "displayName": "Set opportunity stage",
+    "summary": "Set opportunity stage",
+    "description": "Sets an open-pipeline stage through the declared-evidence flow the board drag uses; won and lost answer 400 pointing at /win and /lose.",
+    "tags": [
+      "Opportunities v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Opportunity UUID from opportunities.opportunity_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Opportunity UUID from opportunities.opportunity_id."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "stage": {
+          "type": "string",
+          "enum": [
+            "identified",
+            "qualified",
+            "assessment",
+            "proposed",
+            "verbal",
+            "won",
+            "lost"
+          ]
+        },
+        "detail": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "stage"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "additionalProperties": {}
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
     "id": "post-_api_v1_opportunities_id_win",
     "method": "post",
     "path": "/api/v1/opportunities/{id}/win",
@@ -54301,7 +54607,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         },
         "project_start_date": {
           "type": "string",
-          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}([T ].*)?$"
         }
       },
       "additionalProperties": false
@@ -54826,7 +55132,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             "string",
             "null"
           ],
-          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}([T ].*)?$"
         },
         "next_action": {
           "type": "string",
