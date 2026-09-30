@@ -27,7 +27,8 @@
       "sendToClient": "Enviar para o cliente",
       "setAsDefault": "Definir como padrão",
       "submitForApproval": "Enviar para aprovação",
-      "done": "Concluído"
+      "done": "Concluído",
+      "markAccepted": "Marcar como aceita"
     },
     "badges": {
       "standard": "Padrão"
@@ -158,7 +159,8 @@
       "backToQuotes": "Voltar para cotações",
       "backToTemplates": "Voltar aos modelos de cotação",
       "convertToSalesOrder": "Converter em pedido de venda",
-      "convert": "Converter em…"
+      "convert": "Converter em…",
+      "markAccepted": "Marcar como aceita"
     },
     "headings": {
       "editQuote": "Editar cotação",
@@ -217,6 +219,12 @@
         "message": "Mensagem",
         "from": "De",
         "useDefault": "Usar remetente predefinido"
+      },
+      "markAccepted": {
+        "title": "Marcar cotação como aceita",
+        "description": "Registre que o cliente aceitou esta cotação fora do portal do cliente (por exemplo, por telefone ou e-mail). A cotação passa para Aceita e pode ser convertida como qualquer cotação aceita. Seu nome e o horário são registrados.",
+        "note": "Nota (opcional)",
+        "notePlaceholder": "Por exemplo: aceita por e-mail no dia 3"
       }
     },
     "errorActions": {
@@ -226,7 +234,8 @@
       "resendQuote": "reenviar cotação",
       "sendQuote": "enviar cotação",
       "sendReminder": "enviar lembrete",
-      "submitForApproval": "enviar para aprovação"
+      "submitForApproval": "enviar para aprovação",
+      "markAccepted": "marcar a cotação como aceita"
     },
     "errors": {
       "convert": "Falha ao converter cotação",
@@ -252,7 +261,8 @@
       "requestedChanges": "A cotação voltou ao rascunho com as alterações solicitadas.",
       "resent": "Cotação reenviada.",
       "sent": "Cotação enviada ao cliente.",
-      "submittedForApproval": "Cotação submetida para aprovação interna."
+      "submittedForApproval": "Cotação submetida para aprovação interna.",
+      "markedAccepted": "Cotação marcada como aceita."
     },
     "readOnlyNotice": "Esta cotação é somente leitura. Para fazer alterações, crie uma nova revisão.",
     "validation": {
@@ -425,7 +435,8 @@
       "saveAsTemplate": "Falha ao salvar cotação como modelo",
       "send": "Falha ao enviar cotação",
       "sendReminder": "Falha ao enviar lembrete de cotação",
-      "submitForApproval": "Falha ao enviar cotação para aprovação"
+      "submitForApproval": "Falha ao enviar cotação para aprovação",
+      "markAccepted": "Falha ao marcar a cotação como aceita"
     },
     "labels": {
       "phase": "Fase: {{phase}}",
@@ -444,7 +455,8 @@
       "submittedForApproval": "Cotação submetida para aprovação interna.",
       "templateAssigned": "Modelo de documento atribuído.",
       "templateCleared": "Modelo de documento desmarcado (usando o padrão).",
-      "createdSalesOrder": "Pedido de venda em rascunho {{number}} criado. As linhas de produto serão faturadas na entrega."
+      "createdSalesOrder": "Pedido de venda em rascunho {{number}} criado. As linhas de produto serão faturadas na entrega.",
+      "markedAccepted": "Cotação marcada como aceita."
     },
     "preview": {
       "loading": "Carregando visualização..."
@@ -674,7 +686,14 @@
       "load": "Falha ao carregar aprovações de cotação",
       "settings": "Falha ao atualizar as configurações de aprovação de cotação"
     },
-    "loading": "Carregando fila de aprovação..."
+    "loading": "Carregando fila de aprovação...",
+    "soleApprover": {
+      "title": "Você é o único aprovador de cotações",
+      "description": "Nenhum outro usuário ativo pode aprovar cotações, então você pode aprovar as suas próprias. As autoaprovações são registradas na atividade da cotação.",
+      "draftDescription": "Você é o único usuário que pode aprovar cotações. Depois de enviar esta cotação para aprovação, você poderá aprová-la você mesmo e depois enviá-la.",
+      "pendingDescription": "Você é o único usuário que pode aprovar cotações, então pode aprovar esta cotação você mesmo. Escolha Aprovar para deixá-la pronta para envio.",
+      "dialogNote": "Você é o único aprovador, então aprovar a sua própria cotação é permitido. A aprovação é registrada como autoaprovação."
+    }
   },
   "quoteTemplates": {
     "title": "Modelos",
@@ -840,7 +859,9 @@
       "conflict": "Esta alteração da cotação conflita com um registro existente. Atualize a página e tente novamente.",
       "notAllowed": "Um dos valores da cotação não é permitido. Revise o formulário e tente novamente.",
       "missingField": "Falta um campo obrigatório da cotação.",
-      "missingFieldNamed": "Falta um campo obrigatório da cotação: {{field}}."
+      "missingFieldNamed": "Falta um campo obrigatório da cotação: {{field}}.",
+      "templateCannotBeAccepted": "Modelos de cotação não podem ser marcados como aceitos",
+      "onlySentCanBeAccepted": "Somente cotações enviadas podem ser marcadas como aceitas"
     }
   }
 }
