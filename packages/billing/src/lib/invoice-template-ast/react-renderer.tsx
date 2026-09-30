@@ -25,7 +25,7 @@ import type { TemplateEvaluationResult } from './evaluator';
 import { decodeTemplatePathExpression } from './templateInterpolationFilters';
 import { normalizeTemplateAstFieldBorderDefaults } from './normalize';
 import { resolveTemplatePrintSettingsFromAst } from './printSettings';
-import { convertBlockContentToHTML } from '@alga-psa/formatting/blocknoteUtils';
+import { convertBlockContentToHTML, flattenBlockContentToPlainText } from '@alga-psa/formatting/blocknoteUtils';
 
 type UnknownRecord = Record<string, unknown>;
 
@@ -432,8 +432,13 @@ const buildAstCss = (ast: TemplateAst): string => {
   .invoice-template-root thead { display: table-header-group; }
   .invoice-template-root tbody tr,
   .invoice-template-root .ast-node-type-totals { break-inside: avoid; }
-  /* A section heading never sits alone at the foot of a page. */
+  /* A section heading never sits alone at the foot of a page: the heading
+     may not end a page and whatever follows it may not start one. */
   .invoice-template-root section > h2 { break-after: avoid; }
+  .invoice-template-root section > h2 + * { break-before: avoid; }
+  /* The stock signature block (every standard quote layout and the tenant
+     clones frozen from them share the id) is signed as one unit. */
+  .invoice-template-root #signature-block { break-inside: avoid; }
 }
 .invoice-template-root .ast-totals-value {
   text-align: right;
@@ -543,6 +548,53 @@ const resolveCollection = (
   return rows;
 };
 
+const isBlankText = (value: unknown): boolean =>
+  value === null ||
+  value === undefined ||
+  (typeof value === 'string' && value.trim().length === 0) ||
+  (Array.isArray(value) && value.length === 0);
+
+/**
+ * Whether a node paints anything a reader can see once its bindings resolve.
+ *
+ * Used to decide if a titled `section` has content to head. Leaf text nodes
+ * are visible when their resolved value has non-whitespace text (structured
+ * block content counts by its plain-text projection, so an authored-but-empty
+ * paragraph is still empty); images when their source resolves; containers
+ * when any child does (a repeating stack over an empty collection does not).
+ * Every other node type — fields, tables (which render a header row or their
+ * empty-state text), totals, page breaks — always paints and counts as visible.
+ */
+const nodeHasVisibleContent = (
+  node: TemplateNode,
+  evaluation: TemplateEvaluationResult,
+  scope: RenderScope,
+  ctx: RenderContext,
+): boolean => {
+  switch (node.type) {
+    case 'text':
+      return !isBlankText(resolveExpressionValue(node.content, evaluation, scope, ctx));
+    case 'richText': {
+      const content = resolveExpressionValue(node.content, evaluation, scope, ctx);
+      return isStructuredBlockContent(content)
+        ? !isBlankText(flattenBlockContentToPlainText(content))
+        : !isBlankText(content);
+    }
+    case 'image':
+      return normalizeImageSrc(resolveExpressionValue(node.src, evaluation, scope, ctx)) !== null;
+    case 'section':
+    case 'document':
+      return node.children.some((child) => nodeHasVisibleContent(child, evaluation, scope, ctx));
+    case 'stack':
+      if (node.repeat) {
+        return resolveCollection(ctx.ast, node.repeat.sourceBinding.bindingId, evaluation, scope).length > 0;
+      }
+      return node.children.some((child) => nodeHasVisibleContent(child, evaluation, scope, ctx));
+    default:
+      return true;
+  }
+};
+
 const renderNode = (
   node: TemplateNode,
   evaluation: TemplateEvaluationResult,
@@ -566,13 +618,22 @@ const renderNode = (
           {node.children.map((child) => renderNode(child, evaluation, scope, ctx))}
         </div>
       );
-    case 'section':
+    case 'section': {
+      const title = displayText(node.title);
+      // A heading with nothing to head is omitted outright — an empty
+      // "Terms & Conditions" or "Notes" section must not leave an orphan title
+      // (and its spacing) on the page. Untitled sections are left alone: they
+      // are layout wrappers whose box may be intentional.
+      if (title && !node.children.some((child) => nodeHasVisibleContent(child, evaluation, scope, ctx))) {
+        return null;
+      }
       return (
         <section key={node.id} id={node.id} className={elementClassName || undefined} style={style}>
-          {displayText(node.title) ? <h2>{displayText(node.title)}</h2> : null}
+          {title ? <h2>{title}</h2> : null}
           {node.children.map((child) => renderNode(child, evaluation, scope, ctx))}
         </section>
       );
+    }
     case 'stack': {
       const defaultStackStyle: React.CSSProperties = {
         display: 'flex',
