@@ -51,6 +51,9 @@ import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContai
 import { getContactAvatarUrlAction, getUserContactId, searchUsersForMentions } from '@alga-psa/user-composition/actions';
 import type { CommentContactAuthor, CommentUserAuthor } from '../../lib/commentAuthorResolution';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
+import { useRegisterDismissGuard } from '@alga-psa/ui/components/DismissGuard';
+import { useRegisterUnsavedChanges } from '@alga-psa/ui/context/UnsavedChangesContext';
+import { hasEditorContent } from '@alga-psa/ui/editor/hasEditorContent';
 import { useTicketRichTextUploadSession } from './useTicketRichTextUploadSession';
 import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossFeatureContext';
 import {
@@ -212,8 +215,28 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
     }, 0);
   }, []);
 
+  // Whether the open composer holds typed text. Reported to the surrounding
+  // Drawer/Dialog so Escape or an overlay click asks before dropping it.
+  const [composeHasContent, setComposeHasContent] = useState(false);
+  // LEVERAGE: pattern composer-dirty-guard — same track-content + two-guard shape as BentoTimelineTile and InlineReplyComposer
+  useRegisterDismissGuard(showEditor && composeHasContent);
+  // Full-page ticket view: no Dialog/Drawer to guard, so the page-level registry
+  // makes prev/next ticket navigation confirm and reload/history chords blocked.
+  useRegisterUnsavedChanges(`${compId}-compose`, showEditor && composeHasContent);
+
+  const handleComposeContentChange = React.useCallback((content: PartialBlock[]) => {
+    setComposeHasContent(hasEditorContent(content));
+    onNewCommentContentChange(content);
+  }, [onNewCommentContentChange]);
+
+  // The composer remounts empty after a successful submit (editorKey bump).
+  useEffect(() => {
+    setComposeHasContent(false);
+  }, [editorKey]);
+
   const discardComposeEditor = React.useCallback(() => {
     onNewCommentContentChange(DEFAULT_BLOCK);
+    setComposeHasContent(false);
     setShowEditor(false);
   }, [onNewCommentContentChange]);
 
@@ -827,7 +850,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
             key={editorKey}
             roomName={`ticket-${ticket.ticket_id}`}
             initialContent={DEFAULT_BLOCK}
-            onContentChange={onNewCommentContentChange}
+            onContentChange={handleComposeContentChange}
             searchMentions={searchUsersForMentions}
             uploadFile={composeUploadSession.uploadFile}
             autoFocus

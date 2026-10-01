@@ -26,6 +26,7 @@ interface HudEntry {
   display: string;
 }
 
+// LEVERAGE: pattern editable-target-check — duplicates isKeyboardEventInEditable in keyboard-shortcuts/editable.ts (which also checks focus and contenteditable=""/plaintext-only)
 function isEditableTarget(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false;
   if (target.isContentEditable) return true;

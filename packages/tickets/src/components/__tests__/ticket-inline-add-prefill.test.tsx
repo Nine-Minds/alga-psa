@@ -581,6 +581,19 @@ vi.mock('../useQuickAddRichTextUploadSession', async () => {
 });
 
 vi.mock('../../lib/ticketRichText', () => ({
+  extractTicketRichTextPlainText: (value: unknown): string => {
+    if (typeof value === 'string') {
+      return value;
+    }
+    if (!Array.isArray(value)) {
+      return '';
+    }
+    return value
+      .map((block: { content?: Array<{ text?: string }> }) =>
+        (block.content ?? []).map((item) => item.text ?? '').join(''),
+      )
+      .join('\n');
+  },
   parseTicketRichTextContent: (value: string) => {
     if (!value) {
       return [];

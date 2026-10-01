@@ -18,6 +18,9 @@ import {
 import RichTextEditorSkeleton from '@alga-psa/ui/components/skeletons/RichTextEditorSkeleton';
 import { buildCommentThreadGroups, HybridThreadNode, type CommentThreadGroup } from '@alga-psa/ui/components';
 import InlineReplyComposer from '@alga-psa/ui/components/InlineReplyComposer';
+import { useRegisterDismissGuard } from '@alga-psa/ui/components/DismissGuard';
+import { useRegisterUnsavedChanges } from '@alga-psa/ui/context/UnsavedChangesContext';
+import { hasEditorContent } from '@alga-psa/ui/editor/hasEditorContent';
 import { ClampedContent } from '@alga-psa/ui/components/ClampedContent';
 import StickyComposerDock from '@alga-psa/ui/components/StickyComposerDock';
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
@@ -418,6 +421,14 @@ export function BentoTimelineTile({
   // Composer is collapsed until asked for. Both slots are sticky, so a
   // half-typed draft follows the reader down a long timeline either way.
   const [showComposer, setShowComposer] = useState(false);
+  // Whether the open composer holds text a reader would be upset to lose. Unlike
+  // hasDraft (which only gates Send and never resets on clearing), this tracks the
+  // editor's current content. It lives here, not in a slot, so it covers both the
+  // top slot and the bottom dock, which render the same composer.
+  const [composeHasContent, setComposeHasContent] = useState(false);
+  // LEVERAGE: pattern composer-dirty-guard — track hasEditorContent(content) + useRegisterDismissGuard + useRegisterUnsavedChanges; same shape as TicketConversation and InlineReplyComposer
+  useRegisterDismissGuard(showComposer && composeHasContent);
+  useRegisterUnsavedChanges(`${id}-compose`, showComposer && composeHasContent);
   const [composerPlacement, setComposerPlacement] = useState<'top' | 'bottom'>('top');
   // Proxy for "the tile header is still on screen" — the header itself lives
   // inside BentoTile, so the filter row directly beneath it is the sentinel.
@@ -450,7 +461,7 @@ export function BentoTimelineTile({
     onDocumentsChanged: onClipboardImageUploaded,
     onDiscard: () => {
       onNewCommentContentChange(DEFAULT_BLOCK);
-      setHasDraft(false); setShowComposer(false); setIsScheduleToggle(false); setScheduledPublishAt(undefined);
+      setHasDraft(false); setComposeHasContent(false); setShowComposer(false); setIsScheduleToggle(false); setScheduledPublishAt(undefined);
     },
     uploadDocumentAction: uploadTicketAttachmentAction,
     deleteDraftClipboardImagesAction: deleteDraftTicketAttachmentImagesAction,
@@ -686,6 +697,7 @@ export function BentoTimelineTile({
     );
     if (success) {
       setHasDraft(false);
+      setComposeHasContent(false);
       setShowComposer(false);
       setResolutionCloseStatusId(NO_STATUS_CHANGE);
       setNotificationSuppression(defaultNotificationSuppression());
@@ -695,6 +707,11 @@ export function BentoTimelineTile({
     }
     return success;
   }, [composeUploadSession.isUploading, onAddNewComment, composerLane, resolutionCloseStatusId, notificationSuppression, isScheduleToggle, scheduledInstant, composeUploadSession]);
+
+  // The composer remounts empty after a successful submit (editorKey bump).
+  useEffect(() => {
+    setComposeHasContent(false);
+  }, [editorKey]);
 
   const handleCancelCompose = useCallback(async () => {
     await composeUploadSession.requestDiscard();
@@ -791,6 +808,7 @@ export function BentoTimelineTile({
         onContentChange={(content: PartialBlock[]) => {
           onNewCommentContentChange(content);
           setHasDraft(true);
+          setComposeHasContent(hasEditorContent(content));
         }}
         searchMentions={searchUsersForMentions}
         uploadFile={composeUploadSession.uploadFile}

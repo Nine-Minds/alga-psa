@@ -2,13 +2,50 @@
 /// <reference types="@testing-library/jest-dom/vitest" />
 
 import React from 'react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 
 import { QuickAddTicket } from '../QuickAddTicket';
 
 const getTicketFormDataMock = vi.fn();
 const getTicketStatusesMock = vi.fn();
+
+// Real Dialog / ConfirmationDialog / dismiss guard on purpose: this test is about what
+// Escape, the X button and Cmd+Arrow do to typed text in the new-ticket dialog.
+vi.mock('@alga-psa/ui/hooks', () => ({
+  useFeatureFlag: () => ({ enabled: false }),
+}));
+
+vi.mock('@alga-psa/ui/editor', () => ({
+  TextEditor: ({ onContentChange }: { onContentChange?: (content: unknown[]) => void }) => (
+    <div
+      className="ProseMirror"
+      contentEditable
+      suppressContentEditableWarning
+      tabIndex={0}
+      role="textbox"
+      aria-label="Description editor"
+      onInput={(event) =>
+        onContentChange?.([
+          { type: 'paragraph', content: [{ type: 'text', text: event.currentTarget.textContent ?? '', styles: {} }] },
+        ])
+      }
+    />
+  ),
+}));
+
+vi.mock('../useQuickAddRichTextUploadSession', () => ({
+  useQuickAddRichTextUploadSession: ({ onDiscard }: { onDiscard: () => void }) => ({
+    uploadFile: vi.fn(),
+    requestDiscard: onDiscard,
+    resetDraftTracking: vi.fn(),
+    stagedClipboardImages: [],
+    showDraftCancelDialog: false,
+    setShowDraftCancelDialog: vi.fn(),
+    deleteTrackedDraftClipboardImages: vi.fn(),
+    keepDraftClipboardImages: vi.fn(),
+  }),
+}));
 
 vi.mock('next/server', () => ({
   NextRequest: class NextRequest {},
@@ -129,10 +166,6 @@ vi.mock('../../actions/teamAssignmentActions', () => ({
   assignTeamToTicket: vi.fn(),
 }));
 
-vi.mock('@alga-psa/ui/hooks', () => ({
-  useFeatureFlag: () => ({ enabled: false }),
-}));
-
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
   useTranslation: () => ({
     t: (
@@ -163,14 +196,6 @@ vi.mock('@alga-psa/ui/context', () => ({
     renderQuickAddClient: () => null,
     renderQuickAddContact: () => null,
   }),
-}));
-
-vi.mock('@alga-psa/ui/components/Dialog', () => ({
-  Dialog: ({ isOpen, children }: { isOpen: boolean; children: React.ReactNode }) => (isOpen ? <div>{children}</div> : null),
-  DialogContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  DialogHeader: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  DialogTitle: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  DialogFooter: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
 
 vi.mock('@alga-psa/ui/components/Button', () => ({
@@ -261,17 +286,9 @@ vi.mock('@alga-psa/ui/components/UserAndTeamPicker', () => ({
   default: () => <div data-testid="user-team-picker" />,
 }));
 
-vi.mock('@alga-psa/ui/editor', () => ({
-  TextEditor: () => <div data-testid="text-editor" />,
-}));
-
 vi.mock('@alga-psa/ui/components/Alert', () => ({
   Alert: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   AlertDescription: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-}));
-
-vi.mock('@alga-psa/ui/components/ConfirmationDialog', () => ({
-  ConfirmationDialog: () => null,
 }));
 
 vi.mock('@alga-psa/ui/components/DatePicker', () => ({
@@ -315,76 +332,127 @@ vi.mock('@alga-psa/ui/ui-reflection/withDataAutomationId', () => ({
   withDataAutomationId: () => ({}),
 }));
 
-vi.mock('../useQuickAddRichTextUploadSession', () => ({
-  useQuickAddRichTextUploadSession: () => ({
-    uploadFile: vi.fn(),
-    requestDiscard: vi.fn(),
-    resetDraftTracking: vi.fn(),
-    stagedClipboardImages: [],
-    showDraftCancelDialog: false,
-    setShowDraftCancelDialog: vi.fn(),
-    deleteTrackedDraftClipboardImages: vi.fn(),
-    keepDraftClipboardImages: vi.fn(),
-  }),
-}));
-
-vi.mock('../../lib/ticketRichText', () => ({
-  parseTicketRichTextContent: vi.fn().mockReturnValue([]),
-  serializeTicketRichTextContent: vi.fn().mockReturnValue(''),
-  extractTicketRichTextPlainText: vi.fn().mockReturnValue(''),
-}));
-
 vi.mock('../../lib/ticketRichTextImages', () => ({
   removeTicketRichTextImageUrls: vi.fn().mockImplementation((value) => value),
   replaceTicketRichTextImageUrls: vi.fn().mockImplementation((value) => value),
 }));
 
 
-describe('QuickAddTicket board-scoped priorities', () => {
+const question = () => screen.queryByText('Discard unsaved changes?');
+
+const pressEscape = (target: Element | Document = document) =>
+  fireEvent.keyDown(target, { key: 'Escape', bubbles: true });
+
+async function renderOpenDialog() {
+  const onOpenChange = vi.fn();
+  render(<QuickAddTicket open={true} onOpenChange={onOpenChange} onTicketAdded={vi.fn()} />);
+  const title = await screen.findByPlaceholderText('Ticket Title *');
+  const description = await screen.findByLabelText('Description editor');
+  return { onOpenChange, title: title as HTMLInputElement, description };
+}
+
+function typeDescription(editor: HTMLElement, text: string) {
+  editor.focus();
+  editor.textContent = text;
+  fireEvent.input(editor);
+}
+
+describe('QuickAddTicket never discards typed text without confirmation', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     getTicketFormDataMock.mockResolvedValue({
       users: [],
-      boards: [
-        { board_id: 'board-custom', board_name: 'Custom Board', priority_type: 'custom', category_type: 'custom' },
-      ],
+      boards: [],
       statuses: [],
-      priorities: [
-        { priority_id: 'priority-custom', priority_name: 'High', item_type: 'ticket', is_from_itil_standard: false },
-        { priority_id: 'priority-itil', priority_name: 'P1 - Critical', item_type: 'ticket', is_from_itil_standard: true, itil_priority_level: 1 },
-      ],
+      priorities: [],
       clients: [],
     });
-    getTicketStatusesMock.mockResolvedValue([
-      { status_id: 'status-default', name: 'New', is_default: true, is_closed: false },
-    ]);
+    getTicketStatusesMock.mockResolvedValue([]);
   });
 
-  it('offers only custom priorities once a custom board is selected', async () => {
-    render(
-      <QuickAddTicket
-        open={true}
-        onOpenChange={vi.fn()}
-        onTicketAdded={vi.fn()}
-      />
-    );
+  afterEach(() => cleanup());
 
-    // getTicketFormDataMock is invoked at the start of the load effect, before
-    // isLoading flips back to false, so waiting on the call and then querying
-    // synchronously races the re-render (flaky under heavy parallel CI load).
-    fireEvent.click(await screen.findByText('Select Custom Board'));
+  it('Escape with a typed description asks first; Keep editing leaves dialog and text in place', async () => {
+    const { onOpenChange, description } = await renderOpenDialog();
+    typeDescription(description, 'Printer on floor 2 jams every morning');
 
-    expect(getTicketFormDataMock).toHaveBeenCalled();
+    pressEscape(description);
 
-    const prioritySelect = await screen.findByTestId('ticket-quick-add-priority');
-    const optionValues = Array.from(prioritySelect.querySelectorAll('option'))
-      .map((option) => option.getAttribute('value'))
-      .filter((value) => value);
+    await waitFor(() => expect(question()).toBeTruthy());
+    expect(onOpenChange).not.toHaveBeenCalled();
 
-    expect(optionValues).toEqual(['priority-custom']);
-    expect(optionValues).not.toContain('priority-itil');
-    await waitFor(() => {
-      expect(prioritySelect).toHaveValue('priority-custom');
-    });
+    fireEvent.click(screen.getByRole('button', { name: 'Keep editing' }));
+
+    await waitFor(() => expect(question()).toBeNull());
+    expect(onOpenChange).not.toHaveBeenCalled();
+    expect(screen.getByLabelText('Description editor').textContent).toBe('Printer on floor 2 jams every morning');
+  });
+
+  it('confirming Discard closes the dialog', async () => {
+    const { onOpenChange, description } = await renderOpenDialog();
+    typeDescription(description, 'draft');
+
+    pressEscape(description);
+    await waitFor(() => expect(question()).toBeTruthy());
+    fireEvent.click(screen.getByRole('button', { name: 'Discard changes' }));
+
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+  });
+
+  it('a typed title alone is protected as well', async () => {
+    const { onOpenChange, title } = await renderOpenDialog();
+    fireEvent.change(title, { target: { value: 'Printer jam' } });
+
+    pressEscape(title);
+
+    await waitFor(() => expect(question()).toBeTruthy());
+    expect(onOpenChange).not.toHaveBeenCalled();
+  });
+
+  it('the X button asks too', async () => {
+    const { onOpenChange, description } = await renderOpenDialog();
+    typeDescription(description, 'draft');
+
+    fireEvent.click(document.querySelector('button[aria-label="Close"]')!);
+
+    await waitFor(() => expect(question()).toBeTruthy());
+    expect(onOpenChange).not.toHaveBeenCalled();
+  });
+
+  it('Cmd/Ctrl+Arrow in the description editor triggers nothing and leaves the text alone', async () => {
+    const { onOpenChange, description } = await renderOpenDialog();
+    typeDescription(description, 'draft');
+
+    for (const key of ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight']) {
+      for (const modifier of [{ metaKey: true }, { ctrlKey: true }]) {
+        const event = new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true, ...modifier });
+        description.dispatchEvent(event);
+        expect(event.defaultPrevented).toBe(false);
+      }
+    }
+
+    expect(onOpenChange).not.toHaveBeenCalled();
+    expect(question()).toBeNull();
+    expect(screen.getByLabelText('Description editor').textContent).toBe('draft');
+  });
+
+  it('Escape on an untouched dialog still closes it', async () => {
+    const { onOpenChange } = await renderOpenDialog();
+
+    pressEscape();
+
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+    expect(question()).toBeNull();
+  });
+
+  it('Escape after clearing the typed text closes without asking', async () => {
+    const { onOpenChange, description } = await renderOpenDialog();
+    typeDescription(description, 'oops');
+    typeDescription(description, '');
+
+    pressEscape(description);
+
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+    expect(question()).toBeNull();
   });
 });
