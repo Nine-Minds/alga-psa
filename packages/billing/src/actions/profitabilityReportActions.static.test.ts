@@ -132,6 +132,32 @@ describe('profitability report action SQL contracts', () => {
     expect(source).toContain('ON sc.tenant = ?');
   });
 
+  it('rolls ticket time up to its project through the one shared resolver', () => {
+    const budgetActuals = readFileSync(path.resolve(testDir, 'projectBillingConfigActions.ts'), 'utf8');
+    const clientPulse = readFileSync(
+      path.resolve(repoRoot, 'packages/clients/src/actions/clientPulseActions.ts'),
+      'utf8',
+    );
+
+    for (const consumer of [source, budgetActuals, clientPulse]) {
+      expect(consumer).toContain(
+        "from '@alga-psa/shared/billingClients/ticketProjectAttribution'",
+      );
+      expect(consumer).toMatch(/ticketProjectAttributionJoin\('(te|pp)?[a-z_]*'\)/);
+      expect(consumer).toContain('ticketProjectIdExpression(');
+    }
+
+    // Budget actuals must reach ticket time at all: the inner-join chain that
+    // hid it is gone and the project filter runs on the COALESCE.
+    expect(budgetActuals).toContain('LEFT JOIN project_tasks task');
+    expect(budgetActuals).toContain("AND ${ticketProjectIdExpression('phase')} = ?");
+
+    // Fixed-price coverage of ticket time: the config join keys off the
+    // resolved project, not the phase alone.
+    expect(source).toContain("AND config.project_id = ${ticketProjectIdExpression('phase')}");
+    expect(source).toContain('LEFT JOIN project_phases phase');
+  });
+
   it('removes the old contract-report profitability stub and registry definition', () => {
     const contractReportActions = readFileSync(path.resolve(testDir, 'contractReportActions.ts'), 'utf8');
     const reportRegistry = readFileSync(path.resolve(repoRoot, 'packages/reporting/src/lib/reports/core/ReportRegistry.ts'), 'utf8');

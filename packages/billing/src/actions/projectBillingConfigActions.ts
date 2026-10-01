@@ -31,6 +31,10 @@ import {
 } from '../services/projectBillingService';
 import { persistProjectBillingConfigUpdate } from '../services/projectBillingConfigUpdateService';
 import { withProjectBillingActionErrors } from './projectBillingActionErrors';
+import {
+  ticketProjectAttributionJoin,
+  ticketProjectIdExpression,
+} from '@alga-psa/shared/billingClients/ticketProjectAttribution';
 
 // View DTOs live in @alga-psa/types — import them from there. A type re-export
 // here breaks at runtime: the 'use server' transform registers every export as
@@ -273,13 +277,14 @@ async function getProjectEconomics(
         * COALESCE(resolved_rate.cost_rate, 0)
       )), 0) AS labor_cost
     FROM time_entries te
-    JOIN project_tasks task
+    LEFT JOIN project_tasks task
       ON task.tenant = te.tenant
      AND te.work_item_type = 'project_task'
      AND task.task_id = te.work_item_id
-    JOIN project_phases phase
+    LEFT JOIN project_phases phase
       ON phase.tenant = task.tenant
      AND phase.phase_id = task.phase_id
+    ${ticketProjectAttributionJoin('te')}
     LEFT JOIN LATERAL (
       SELECT rate.cost_rate
       FROM user_cost_rates rate
@@ -291,7 +296,7 @@ async function getProjectEconomics(
       LIMIT 1
     ) resolved_rate ON true
     WHERE te.tenant = ?
-      AND phase.project_id = ?
+      AND ${ticketProjectIdExpression('phase')} = ?
   `, [tenant, projectId]);
 
   // Prefer actual inventory COGS, as profitability does, and fall back to the

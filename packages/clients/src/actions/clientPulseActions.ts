@@ -30,6 +30,10 @@ import type {
 } from '../lib/commandCenterTypes';
 import { listClientBillingProfiles } from '@alga-psa/shared/billingClients/billingProfiles';
 import { ageInvoicesByProfile, summariseClientAr } from '@alga-psa/shared/billingClients/billingProfileAr';
+import {
+  ticketProjectAttributionJoin,
+  ticketProjectIdExpression,
+} from '@alga-psa/shared/billingClients/ticketProjectAttribution';
 
 type ClientPulseLocations = ClientPulse['locations'];
 type ClientPulseActionError = ActionMessageError | ActionPermissionError;
@@ -688,8 +692,13 @@ async function fetchMoney(
       .leftJoin('project_phases as pp', function joinWipProjectPhases() {
         this.on('pt.phase_id', '=', 'pp.phase_id').andOn('pt.tenant', '=', 'pp.tenant');
       })
+      // Shared ticket→project resolver, so WIP time reaches the same project
+      // every other consumer bills it under. Client attribution is unchanged:
+      // ticket time still matches through the ticket's client below.
+      .joinRaw(ticketProjectAttributionJoin('te'))
       .leftJoin('projects as pr', function joinWipProjects() {
-        this.on('pp.project_id', '=', 'pr.project_id').andOn('pp.tenant', '=', 'pr.tenant');
+        this.on(trx.raw(ticketProjectIdExpression('pp')) as unknown as string, '=', 'pr.project_id')
+          .andOn('te.tenant', '=', 'pr.tenant');
       })
       .where({ 'te.tenant': tenant, 'te.invoiced': false })
       .where('te.billable_duration', '>', 0)

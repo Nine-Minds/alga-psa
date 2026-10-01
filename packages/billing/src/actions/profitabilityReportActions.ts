@@ -10,6 +10,10 @@ import {
   type ActionMessageError,
   type ActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
+import {
+  ticketProjectAttributionJoin,
+  ticketProjectIdExpression,
+} from '@alga-psa/shared/billingClients/ticketProjectAttribution';
 
 const COUNTABLE_INVOICE_STATUSES = [
   'sent',
@@ -377,16 +381,17 @@ async function fetchRevenueFacts(
           JOIN time_entries te
             ON te.tenant = ite.tenant
            AND te.entry_id = ite.entry_id
-          JOIN project_tasks task
+          LEFT JOIN project_tasks task
             ON task.tenant = te.tenant
            AND te.work_item_type = 'project_task'
            AND task.task_id = te.work_item_id
-          JOIN project_phases phase
+          LEFT JOIN project_phases phase
             ON phase.tenant = task.tenant
            AND phase.phase_id = task.phase_id
+          ${ticketProjectAttributionJoin('te')}
           JOIN project_billing_configs config
-            ON config.tenant = phase.tenant
-           AND config.project_id = phase.project_id
+            ON config.tenant = te.tenant
+           AND config.project_id = ${ticketProjectIdExpression('phase')}
            AND config.billing_model = 'fixed_price'
           WHERE ite.tenant = ic.tenant
             AND ite.item_id = ic.item_id
@@ -595,9 +600,13 @@ async function fetchLaborFacts(knex: Knex, tenant: string, startDate: string, en
     LEFT JOIN project_phases pp
       ON pp.tenant = pt.tenant
      AND pp.phase_id = pt.phase_id
+    ${ticketProjectAttributionJoin('te')}
+    -- Every consumer resolves a time entry's project the same way, so labor on
+    -- a linked ticket reaches its project here too. Client attribution for
+    -- ticket time deliberately stays on the ticket (see the CASE above).
     LEFT JOIN projects p
-      ON p.tenant = pp.tenant
-     AND p.project_id = pp.project_id
+      ON p.tenant = te.tenant
+     AND p.project_id = ${ticketProjectIdExpression('pp')}
     LEFT JOIN interactions i
       ON i.tenant = te.tenant
      AND te.work_item_type = 'interaction'
