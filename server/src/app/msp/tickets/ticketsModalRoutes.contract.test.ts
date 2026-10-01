@@ -114,7 +114,7 @@ describe('tickets modal route infrastructure', () => {
     expect(dashboard).toContain('setTicketsRoutePriorityOptions(priorityOptions)');
   });
 
-  it('routes all extracted bulk dialogs through plain and intercepted entries', () => {
+  it('routes all extracted bulk dialogs through intercepted entries and bounces direct loads', () => {
     const cases = [
       ['bulk-assign', 'BulkAssignTicketsRouteContent', 'BulkAssignTicketsDialog', 'bulkAssignTickets'],
       ['bulk-tags', 'BulkAddTagsRouteClient', 'BulkAddTagsDialog', 'bulkAddTagsToTickets(selectedTicketIdsArray, tagTexts)'],
@@ -127,8 +127,15 @@ describe('tickets modal route infrastructure', () => {
       const plainRoute = read(`server/src/app/msp/tickets/${segment}/page.tsx`);
       const modalRoute = read(`server/src/app/msp/tickets/@modal/(.)${segment}/page.tsx`);
 
-      expect(plainRoute).toContain('closeMode="replace"');
-      expect(plainRoute).toContain(routeComponent);
+      // A refresh (or any hard load) of a bulk URL renders this plain route, not the
+      // @modal slot. Rendering the dialog here is what kept it on screen after a refresh —
+      // the persisted selection rehydrated and the dialog came straight back — so the
+      // plain route sends the user to the list and leaves the dialog to the interception.
+      expect(plainRoute).toContain("import { redirect } from 'next/navigation'");
+      expect(plainRoute).toContain("redirect('/msp/tickets')");
+      expect(plainRoute).not.toContain(routeComponent);
+      expect(plainRoute).not.toContain('closeMode');
+
       expect(modalRoute).toContain('closeMode="back"');
       expect(modalRoute).toContain(routeComponent);
 

@@ -1,10 +1,11 @@
 // @vitest-environment jsdom
 
-// Regression test for "dialog stays open after page refresh". A bulk route keeps its
-// selection in sessionStorage so a hard reload can rehydrate it; that is also what let a
-// completed bulk action's dialog come back on refresh. Completing the action now clears
-// the selection, which both wipes the persisted copy and arms the empty-selection guard
-// that performs the single close.
+// Regression test for "dialog stays open after page refresh". A refresh of a bulk URL is
+// handled by the plain route, which now redirects to the list (see
+// ticketsModalRoutes.contract.test.ts) instead of re-rendering the dialog over the
+// selection rehydrated from sessionStorage. This covers the other half: completing the
+// action clears the selection, which wipes the persisted copy and arms the
+// empty-selection guard that performs the single close.
 
 import React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
@@ -89,7 +90,7 @@ describe('useTicketBulkRouteDialog completion', () => {
     expect(window.sessionStorage.getItem(STORAGE_KEY)).toBeNull();
   });
 
-  it('bounces a reload of the bulk route instead of re-opening the dialog', async () => {
+  it('bounces a fresh mount with nothing left to rehydrate', async () => {
     seedSelection();
 
     const first = renderRoute('replace');
@@ -98,8 +99,8 @@ describe('useTicketBulkRouteDialog completion', () => {
     fireEvent.click(screen.getByText('complete'));
     await waitFor(() => expect(window.sessionStorage.getItem(STORAGE_KEY)).toBeNull());
 
-    // Simulate a hard reload of the bulk route: a brand-new provider with nothing left in
-    // sessionStorage to rehydrate, which must redirect back to the list.
+    // A brand-new provider with nothing left in sessionStorage to rehydrate must send the
+    // user to the list rather than render a dialog over an empty selection.
     first.unmount();
     router.replace.mockClear();
     renderRoute('replace');
