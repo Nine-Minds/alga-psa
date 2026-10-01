@@ -743,7 +743,9 @@ export function ThreecxIntegrationSettings() {
     }
   }, []);
 
-  if (state && !state.available) {
+  // Availability is authoritative on the server. Do not briefly expose the
+  // settings while that check is still in flight (or when it is denied).
+  if (!state?.available) {
     return null;
   }
 

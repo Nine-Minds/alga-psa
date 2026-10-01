@@ -29,11 +29,12 @@ const FOLLOW_UP_CARD = '63db81a4-76cf-4486-aca3-a09f7c02efb1';
  * import_export:manage, import_export:read and marketing:manage into the
  * catalog. billing:manage then left it once the Xero CSV export/import routes
  * moved to the granular accounting_integrations:exports_execute permission and
- * no production code checked billing:manage any longer.
+ * no production code checked billing:manage any longer. tenant.create left it
+ * when tenant provisioning moved onto the master-tenant gate
+ * (system_settings:update) with the GHSA-v72r-pvf8-6cq2 fix.
  */
 const KNOWN_UNDECLARED = [
   'role.read',
-  'tenant.create',
   'user.admin',
   'user_schedule.read_all',
 ] as const;
@@ -74,7 +75,7 @@ describe('permission catalog contract', () => {
 
     expect(missing, `Add new production permissions to the catalog; never extend KNOWN_UNDECLARED (${FOLLOW_UP_CARD})`).toEqual([]);
     expect(stale, `Remove stale quarantine entries tracked by ${FOLLOW_UP_CARD}`).toEqual([]);
-    expect(KNOWN_UNDECLARED).toHaveLength(4);
+    expect(KNOWN_UNDECLARED).toHaveLength(3);
   });
 
   it('retains product-specific grants and the secrets screen grants', () => {

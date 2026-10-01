@@ -57,12 +57,37 @@ vi.mock('@alga-psa/tenancy/actions/tenant-settings-actions/tenantSettingsActions
   setTenantTimezone: vi.fn().mockResolvedValue(undefined),
 }));
 
+vi.mock('@alga-psa/tenancy/actions/tenant-settings-actions/dashboardWelcomeActions', () => ({
+  getDashboardWelcomeSettingsAction: vi.fn().mockResolvedValue({
+    useCompanyName: false,
+    companyName: 'Acme MSP',
+  }),
+  setDashboardWelcomeUseCompanyNameAction: vi.fn().mockResolvedValue(undefined),
+}));
+
 vi.mock('@alga-psa/clients/actions/queryActions', () => ({
   getAllClients: vi.fn().mockResolvedValue([
     { client_id: 'client-1', client_name: 'Acme MSP' },
     { client_id: 'client-2', client_name: 'Globex' },
     { client_id: 'client-3', client_name: 'Initech' },
   ]),
+}));
+
+// Country-derived defaults: the MSP sits in the US, the client being considered
+// in the UK, so switching visibly changes the date shape.
+const countryDefaults: Record<string, unknown> = {
+  'client-1': {
+    country: { code: 'US', name: 'United States', phone_code: '+1' },
+    dateFormat: { country: 'US', datePattern: 'MM/dd/yyyy', hour12: true },
+  },
+  'client-2': {
+    country: { code: 'GB', name: 'United Kingdom', phone_code: '+44' },
+    dateFormat: { country: 'GB', datePattern: 'dd/MM/yyyy', hour12: false },
+  },
+};
+
+vi.mock('@alga-psa/clients/actions/countryActions', () => ({
+  getClientCountryDefaultsPreview: vi.fn(async (clientId: string) => countryDefaults[clientId] ?? null),
 }));
 
 const clientPickerProps = vi.fn();
@@ -117,7 +142,9 @@ describe('GeneralSettings default client confirmation', () => {
 
     fireEvent.click(radioFor('client-2'));
 
-    await screen.findByText(enSettings.general.clients.confirmDialog.title);
+    // A node message makes the dialog describe itself by its title, so the
+    // heading and the screen-reader description both carry it.
+    await screen.findAllByText(enSettings.general.clients.confirmDialog.title);
     expect(
       screen.getAllByText(
         translate('general.clients.confirmDialog.message', {
@@ -165,6 +192,50 @@ describe('GeneralSettings default client confirmation', () => {
     await waitFor(() => expect(setDefaultClient).toHaveBeenCalledWith('client-2'));
     await waitFor(() => expect(radioFor('client-2').checked).toBe(true));
     expect(radioFor('client-1').checked).toBe(false);
+  });
+
+  it('spells out the country, dial code and date format your company decides', async () => {
+    render(<GeneralSettings />);
+
+    await screen.findByText(enSettings.general.clients.defaults.title);
+    expect(
+      screen.getByText(
+        translate('general.clients.defaults.country', { country: 'United States (US)' })
+      )
+    ).toBeTruthy();
+    expect(
+      screen.getByText(translate('general.clients.defaults.phoneCode', { code: '+1' }))
+    ).toBeTruthy();
+    expect(
+      screen.getByText(
+        translate('general.clients.defaults.dateFormat', {
+          pattern: 'MM/dd/yyyy',
+          example: '11/22/2033',
+          clock: enSettings.general.clients.defaults.clock12,
+        })
+      )
+    ).toBeTruthy();
+    expect(screen.getByText(enSettings.general.clients.defaults.portalNote)).toBeTruthy();
+  });
+
+  it('shows what changes before the default client is switched', async () => {
+    render(<GeneralSettings />);
+
+    await waitFor(() => expect(radioFor('client-2')).toBeTruthy());
+    fireEvent.click(radioFor('client-2'));
+
+    await screen.findByText(
+      translate('general.clients.defaults.changeIntro', { name: 'Globex' })
+    );
+    expect(
+      screen.getByText(
+        translate('general.clients.defaults.dateFormat', {
+          pattern: 'dd/MM/yyyy',
+          example: '22/11/2033',
+          clock: enSettings.general.clients.defaults.clock24,
+        })
+      )
+    ).toBeTruthy();
   });
 
   it('does not offer clients that are already listed', async () => {

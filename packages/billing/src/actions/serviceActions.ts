@@ -19,6 +19,11 @@ import {
 import type { ActionMessageError, ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { normalizeGtin } from '@alga-psa/core';
 import { deleteEntityWithValidation } from '@alga-psa/core/server';
+import { resolveCatalogTaxRateIdForCreate } from '@alga-psa/shared/billingClients/defaultTaxRate';
+import {
+  InvalidDefaultTaxRateError,
+  InvalidTaxRateSelectionError,
+} from '@alga-psa/shared/billingClients/defaultTaxRate';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
 
 type ServiceCatalogSearchEventType =
@@ -192,7 +197,7 @@ export interface CatalogPickerSearchOptions {
 
 export type CatalogPickerItem = Pick<
   IService,
-  'service_id' | 'service_name' | 'billing_method' | 'unit_of_measure' | 'item_kind' | 'sku' | 'description'
+  'service_id' | 'service_name' | 'billing_method' | 'unit_of_measure' | 'unit_code' | 'item_kind' | 'sku' | 'description' | 'product_category'
 > & {
   default_rate: number;
   /** Rate from service_prices for the requested currency (null when no currency-specific price exists). */
@@ -235,10 +240,15 @@ export const searchServiceCatalogForPicker = withAuth(async (
     }
 
     if (searchTerm) {
+      // LEVERAGE: pattern catalog-search-predicate — this service_name/description/sku/product_category
+      // ILIKE shape is duplicated in getServices (below), ServiceCatalogService.list,
+      // ProductCatalogService.list (plus barcode), and inventory's queryCatalogPickerItems.
+      // Consider a shared predicate helper once a sixth caller appears.
       base.andWhere((qb) => {
         qb.whereILike('sc.service_name', searchTerm)
           .orWhereILike('sc.description', searchTerm)
-          .orWhereILike('sc.sku', searchTerm);
+          .orWhereILike('sc.sku', searchTerm)
+          .orWhereILike('sc.product_category', searchTerm);
       });
     }
 
@@ -259,6 +269,7 @@ export const searchServiceCatalogForPicker = withAuth(async (
         'sc.item_kind as item_kind',
         'sc.sku as sku',
         'sc.description as description',
+        'sc.product_category as product_category',
         trx.raw('CAST(sc.default_rate AS FLOAT) as default_rate'),
         trx.raw('CAST(sc.cost AS FLOAT) as cost'),
         'sc.cost_currency as cost_currency'
@@ -403,7 +414,8 @@ export const getServices = withAuth(async (
               builder
                 .whereILike('sc.service_name', term)
                 .orWhereILike('sc.description', term)
-                .orWhereILike('sc.sku', term);
+                .orWhereILike('sc.sku', term)
+                .orWhereILike('sc.product_category', term);
             });
           }
 
@@ -529,6 +541,10 @@ export type CreateServiceInput = Omit<IService, 'service_id' | 'tenant'>;
 function normalizeCreateServiceError(serviceData: CreateServiceInput, error: unknown): ActionMessageError | null {
     const typedError = error as { code?: string; constraint?: string };
 
+    if (error instanceof InvalidDefaultTaxRateError || error instanceof InvalidTaxRateSelectionError) {
+        return actionError(error.message);
+    }
+
     if (
         typedError?.code === '23505' &&
         serviceData.item_kind === 'product' &&
@@ -604,6 +620,16 @@ export const createService = withAuth(async (
         console.log(`[serviceActions] Creating service with billing method: ${serviceData.billing_method}`);
 
         // 3. Prepare final data
+        // Catalog create contract: omitted tax_rate_id inherits the tenant
+        // default (or NULL when unset); explicit null stays non-taxable; a UUID
+        // is an explicit override validated in this tenant.
+        const resolvedTaxRateId = await resolveCatalogTaxRateIdForCreate(
+            trx,
+            tenant,
+            serviceData.tax_rate_id,
+            undefined,
+            { lock: true },
+        );
         const finalServiceData = {
             ...serviceData,
             tenant: tenant, // Explicitly add tenant to the data
@@ -613,8 +639,7 @@ export const createService = withAuth(async (
             default_rate: typeof serviceData.default_rate === 'string'
                 ? parseFloat(serviceData.default_rate) || 0
                 : serviceData.default_rate,
-            // Explicitly handle tax_rate_id to ensure it's null rather than undefined
-            tax_rate_id: serviceData.tax_rate_id || null,
+            tax_rate_id: resolvedTaxRateId,
             barcode: serviceData.item_kind === 'product'
                 ? normalizeGtin(serviceData.barcode ?? '') || null
                 : null,

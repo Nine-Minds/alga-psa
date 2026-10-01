@@ -11,6 +11,7 @@ const translatedManualInvoiceErrorCodes = new Set<ManualInvoiceErrorCode>([
   'RECURRING_PRICING_STALE',
   'USAGE_CALCULATION_ERROR',
   'CLIENT_NOT_FOUND',
+  'BILLING_PROFILE_NOT_FOUND',
   'SERVICE_NOT_FOUND',
   'INVALID_QUANTITY',
   'NO_TAX_RATE',

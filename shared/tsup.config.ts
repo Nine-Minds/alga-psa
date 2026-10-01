@@ -48,6 +48,7 @@ export default defineConfig({
     'workflow/streams/domainEventBuilders/integrationWebhookEventBuilders': 'workflow/streams/domainEventBuilders/integrationWebhookEventBuilders.ts',
     'workflow/streams/domainEventBuilders/mediaEventBuilders': 'workflow/streams/domainEventBuilders/mediaEventBuilders.ts',
     'workflow/streams/domainEventBuilders/notificationEventBuilders': 'workflow/streams/domainEventBuilders/notificationEventBuilders.ts',
+    'workflow/streams/domainEventBuilders/opportunityEventBuilders': 'workflow/streams/domainEventBuilders/opportunityEventBuilders.ts',
     'workflow/streams/domainEventBuilders/projectLifecycleEventBuilders': 'workflow/streams/domainEventBuilders/projectLifecycleEventBuilders.ts',
     'workflow/streams/domainEventBuilders/projectTaskEventBuilders': 'workflow/streams/domainEventBuilders/projectTaskEventBuilders.ts',
     'workflow/streams/domainEventBuilders/recurringBillingRunEventBuilders': 'workflow/streams/domainEventBuilders/recurringBillingRunEventBuilders.ts',
@@ -74,6 +75,7 @@ export default defineConfig({
     'billingClients/recurringUnitPricing': 'billingClients/recurringUnitPricing.ts',
     'billingClients/recurringUnitMidPeriodAdjustment': 'billingClients/recurringUnitMidPeriodAdjustment.ts',
     'billingClients/coverageProration': 'billingClients/coverageProration.ts',
+    'billingClients/contractMonthlyValue': 'billingClients/contractMonthlyValue.ts',
     'billingClients/index': 'billingClients/index.ts',
     // packages/jobs runs vitest from its own root, so this resolves through the
     // exports map into dist/ rather than being transpiled from source the way

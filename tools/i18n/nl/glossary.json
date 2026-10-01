@@ -2543,7 +2543,14 @@
       "• Database",
       "• Printer",
       "• Server",
-      "• VPN"
+      "• VPN",
+      "TeamViewer",
+      "Gigabyte",
+      "Terabyte",
+      "Liter",
+      "Kilogram",
+      "Meter",
+      "Volume"
     ],
     "caseInsensitive": [
       "account",

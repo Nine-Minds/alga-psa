@@ -86,6 +86,11 @@ export class InboundEmailOutboxEventPublisher implements IEventPublisher {
     });
   }
 
+  async publishContactCreated(payload: Record<string, unknown>): Promise<void> {
+    const contactId = String(payload.contactId ?? 'unknown');
+    await this.enqueue({ eventKey: `contact_created:${contactId}`, eventType: 'CONTACT_CREATED', payload: { tenantId: this.ctx.tenantId, ...payload } });
+  }
+
   async publishTicketUpdated(data: {
     tenantId: string;
     ticketId: string;

@@ -176,12 +176,14 @@ describe('CustomTypeDetailsPanel (T315)', () => {
     expect(value.tagName).not.toBe('A');
   });
 
-  it('renders nothing for a built-in asset and never fetches the registry', () => {
-    const { container } = render(
-      <CustomTypeDetailsPanel asset={baseAsset('workstation', { vendor: 'irrelevant' })} />
-    );
+  it('renders built-in schema values and skips built-ins with empty schemas', async () => {
+    const { container } = render(<CustomTypeDetailsPanel asset={baseAsset('workstation', { vendor: 'Dell' })} />);
+    await waitFor(() => expect(screen.getByText('Dell')).toBeTruthy());
+    cleanup();
+    mockGetAssetTypes.mockResolvedValue([{ ...builtinWorkstationType, fields_schema: [] }]);
+    const empty = render(<CustomTypeDetailsPanel asset={baseAsset('workstation', { vendor: 'Dell' })} />);
+    await waitFor(() => expect(empty.container.innerHTML).toBe(''));
     expect(container.innerHTML).toBe('');
-    expect(mockGetAssetTypes).not.toHaveBeenCalled();
   });
 
   it('renders nothing for an unregistered custom slug', async () => {

@@ -118,6 +118,9 @@
       "renewalHandling": "⟦Řḗƞḗẇȧŀ Ħȧƞḓŀīƞɠ⟧"
     },
     "clientAssignment": {
+      "billingProfile": "⟦Ɓīŀŀīƞɠ Ƥřȯƒīŀḗ⟧",
+      "billingProfileLabel": "⟦Ȧşşīɠƞḿḗƞŧ ƀīŀŀīƞɠ ƥřȯƒīŀḗ⟧",
+      "billingProfileNone": "⟦Ŭşḗ ŧħḗ ƈŀīḗƞŧ'ş ḓḗƒȧŭŀŧ ƥřȯƒīŀḗ⟧",
       "clientContractId": "⟦Ƈŀīḗƞŧ Ƈȯƞŧřȧƈŧ ĪḒ: {{id}}⟧",
       "creditDrawdownOptOut": "⟦Ḗẋƈŀŭḓḗ ƒřȯḿ ƈřḗḓīŧ ḓřȧẇ-ḓȯẇƞ⟧",
       "empty": "⟦Ŧħīş ƈȯƞŧřȧƈŧ īş ƞȯŧ ȧşşīɠƞḗḓ ŧȯ ȧ ƈŀīḗƞŧ ẏḗŧ.⟧",
@@ -400,7 +403,10 @@
       "selectClientFirst": "⟦Şḗŀḗƈŧ ȧ ƈŀīḗƞŧ ƒīřşŧ⟧",
       "startDateLabel": "⟦Şŧȧřŧ Ḓȧŧḗ *⟧",
       "useTenantDefaultsDescription": "⟦Ȧƥƥŀẏ ȯřɠȧƞīẑȧŧīȯƞ-ŀḗṽḗŀ řḗƞḗẇȧŀ ḿȯḓḗ ȧƞḓ ƞȯŧīƈḗ ƥḗřīȯḓ şḗŧŧīƞɠş.⟧",
-      "useTenantDefaultsLabel": "⟦Ŭşḗ Ŧḗƞȧƞŧ Řḗƞḗẇȧŀ Ḓḗƒȧŭŀŧş⟧"
+      "useTenantDefaultsLabel": "⟦Ŭşḗ Ŧḗƞȧƞŧ Řḗƞḗẇȧŀ Ḓḗƒȧŭŀŧş⟧",
+      "billingProfileLabel": "⟦Ɓīŀŀīƞɠ Ƥřȯƒīŀḗ⟧",
+      "billingProfileNone": "⟦Ŭşḗ ŧħḗ ƈŀīḗƞŧ'ş ḓḗƒȧŭŀŧ ƥřȯƒīŀḗ⟧",
+      "billingProfileHint": "⟦Ƈħȧřɠḗş ƒřȯḿ ŧħīş ƈȯƞŧřȧƈŧ ȧřḗ ƀīŀŀḗḓ ŧȯ ŧħīş ƥřȯƒīŀḗ.⟧"
     },
     "po": {
       "amountLabel": "⟦ƤȮ Ȧḿȯŭƞŧ (Ȯƥŧīȯƞȧŀ)⟧",
@@ -1592,6 +1598,11 @@
       },
       "selectTemplateOptional": "⟦Şḗŀḗƈŧ ȧ ŧḗḿƥŀȧŧḗ (ȯƥŧīȯƞȧŀ)⟧",
       "startFromTemplate": "⟦Şŧȧřŧ Ƒřȯḿ Ŧḗḿƥŀȧŧḗ⟧"
+    },
+    "billingProfile": {
+      "label": "⟦Ɓīŀŀīƞɠ ƥřȯƒīŀḗ⟧",
+      "none": "⟦Ŭşḗ ŧħḗ ƈŀīḗƞŧ'ş ḓḗƒȧŭŀŧ ƥřȯƒīŀḗ⟧",
+      "hint": "⟦Ƈħȧřɠḗş ƒřȯḿ ŧħīş ƈȯƞŧřȧƈŧ ȧřḗ ƀīŀŀḗḓ ŧȯ ŧħīş ƥřȯƒīŀḗ ŭƞŀḗşş ȧ ŀīƞḗ ȯṽḗřřīḓḗş īŧ.⟧"
     }
   },
   "wizardFixed": {
@@ -1771,6 +1782,7 @@
     },
     "fields": {
       "client": "⟦Ƈŀīḗƞŧ⟧",
+      "billingProfile": "⟦Ɓīŀŀīƞɠ Ƥřȯƒīŀḗ⟧",
       "contractName": "⟦Ƈȯƞŧřȧƈŧ Ƞȧḿḗ⟧",
       "billingFrequency": "⟦Ɓīŀŀīƞɠ Ƒřḗʠŭḗƞƈẏ⟧",
       "currency": "⟦Ƈŭřřḗƞƈẏ⟧",
@@ -1779,6 +1791,9 @@
       "renewalMode": "⟦Řḗƞḗẇȧŀ Ḿȯḓḗ⟧",
       "noticePeriod": "⟦Ƞȯŧīƈḗ Ƥḗřīȯḓ⟧",
       "renewalTerm": "⟦Řḗƞḗẇȧŀ Ŧḗřḿ⟧"
+    },
+    "billingProfile": {
+      "clientDefault": "⟦Ŧħḗ ƈŀīḗƞŧ'ş ḓḗƒȧŭŀŧ ƥřȯƒīŀḗ⟧"
     },
     "fallback": {
       "notSelected": "⟦Ƞȯŧ şḗŀḗƈŧḗḓ⟧",

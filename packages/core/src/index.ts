@@ -54,3 +54,5 @@ export * from './constants/currency';
 
 // Types barrel export
 export * from './types/index';
+
+export { isPreviewableDocumentMimeType } from './lib/documentMimeType';

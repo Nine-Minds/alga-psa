@@ -32,7 +32,10 @@ export interface EmailBrandingTemplateStatus {
 
 export interface EmailBrandingLogoOptions {
   logoUrl?: string;
+  /** Artwork for a dark header; Enterprise only, like the wide variants. */
+  logoDarkUrl?: string;
   logoWideUrl?: string;
+  logoWideDarkUrl?: string;
   clientName?: string;
 }
 

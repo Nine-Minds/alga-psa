@@ -118,6 +118,14 @@ let mockDb: Knex;
 vi.mock('server/src/lib/db/db', () => ({
   getConnection: vi.fn(() => Promise.resolve(mockDb)),
 }));
+// The payment services take their connection from @alga-psa/db directly.
+vi.mock('@alga-psa/db', async () => {
+  const actual = await vi.importActual<typeof import('@alga-psa/db')>('@alga-psa/db');
+  return {
+    ...actual,
+    getConnection: vi.fn(() => Promise.resolve(mockDb)),
+  };
+});
 
 // Mock tenant utilities
 let testTenantId: string;

@@ -21,7 +21,7 @@ import { EditionGateError, getEditionGateResponse, isEditionGateError } from '@/
 import type { EditionGateResponseBody } from '@/lib/editionGating/types';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
-const AUDIT_PAGE_SIZE = 10;
+const DEFAULT_AUDIT_PAGE_SIZE = 10;
 
 const PROVIDER_NAME: Record<'microsoft' | 'google', string> = { microsoft: 'Microsoft', google: 'Google' };
 
@@ -82,6 +82,7 @@ export default function McpServerSettings() {
   const [audit, setAudit] = useState<AuditRow[]>([]);
   const [auditAgent, setAuditAgent] = useState<Agent | null>(null);
   const [auditPage, setAuditPage] = useState(1);
+  const [auditPageSize, setAuditPageSize] = useState(DEFAULT_AUDIT_PAGE_SIZE);
   const [auditTotal, setAuditTotal] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [editionGate, setEditionGate] = useState<EditionGateResponseBody | null>(null);
@@ -292,18 +293,18 @@ export default function McpServerSettings() {
       });
     });
 
-  const loadAudit = (agent: Agent, page = 1) =>
+  const loadAudit = (agent: Agent, page = 1, pageSize = auditPageSize) =>
     run(async () => {
       setAuditAgent(agent);
       if (demoMode) {
-        const { rows, total } = demoAuditPage(agent.agent_id, page, AUDIT_PAGE_SIZE);
+        const { rows, total } = demoAuditPage(agent.agent_id, page, pageSize);
         setAudit(rows);
         setAuditTotal(total);
         setAuditPage(page);
         return;
       }
       const r = await api<{ data: AuditRow[]; total: number }>(
-        `/api/v1/mcp/audit?agentId=${encodeURIComponent(agent.agent_id)}&page=${page}&pageSize=${AUDIT_PAGE_SIZE}`,
+        `/api/v1/mcp/audit?agentId=${encodeURIComponent(agent.agent_id)}&page=${page}&pageSize=${pageSize}`,
       );
       setAudit(r.data);
       setAuditTotal(r.total);
@@ -802,13 +803,17 @@ export default function McpServerSettings() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <DataTable
+            <DataTable id="mcp-audit-log-table"
               data={audit}
               columns={auditColumns}
               totalItems={auditTotal}
               currentPage={auditPage}
-              pageSize={AUDIT_PAGE_SIZE}
+              pageSize={auditPageSize}
               onPageChange={(page) => auditAgent && loadAudit(auditAgent, page)}
+              onItemsPerPageChange={(pageSize) => {
+                setAuditPageSize(pageSize);
+                if (auditAgent) loadAudit(auditAgent, 1, pageSize);
+              }}
             />
           </CardContent>
         </Card>

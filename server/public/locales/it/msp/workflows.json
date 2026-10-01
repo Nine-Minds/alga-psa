@@ -674,7 +674,24 @@
       "workflowStepsListHint": "Trascina i passaggi per riordinarli o spostarli tra le pipeline.",
       "workflowStepsGraphHint": "Scorri/ingrandisci il grafo. I rami vengono visualizzati in corsie separate.",
       "workflowStepsViewAria": "Vista dei passaggi del workflow",
-      "warningsCount": "{{count}} avvisi"
+      "warningsCount": "{{count}} avvisi",
+      "dateSource": "Origine della data",
+      "dateSourceAnniversary": "Anniversario del cliente",
+      "dateSourceRenewal": "Data di decisione sul rinnovo del contratto",
+      "dateSourceContractEnd": "Data di fine del contratto",
+      "dateSourceWarranty": "Fine garanzia dell’asset",
+      "dateOffset": "Giorni",
+      "dateDirection": "Tempistica",
+      "before": "Prima",
+      "onDate": "Il giorno stesso",
+      "after": "Dopo",
+      "daysBefore": "giorni prima di",
+      "daysAfter": "giorni dopo",
+      "localTime": "Ora locale",
+      "timezoneOptional": "Fuso orario (facoltativo)",
+      "tenantTimezoneDefault": "Fuso orario del tenant",
+      "dateTriggerSummary": "Viene eseguito {{days}} {{direction}} {{source}} alle {{time}} ({{timezone}})",
+      "inputDataDatePrefix": "Questo workflow riceve il payload definito da"
     },
     "stepPanel": {
       "readOnly": "Accesso in sola lettura: la modifica dei passaggi è disabilitata.",
@@ -1715,7 +1732,8 @@
     "event": "Evento",
     "eventWithType": "Evento: {{eventType}}",
     "oneTimeSchedule": "Pianificazione singola",
-    "recurringSchedule": "Pianificazione ricorrente"
+    "recurringSchedule": "Pianificazione ricorrente",
+    "date": "Data"
   },
   "scheduleStatus": {
     "unknown": "Sconosciuto",
@@ -2323,13 +2341,15 @@
         "event": "Basato su evento",
         "schedule": "Pianificazione singola",
         "recurring": "Pianificazione ricorrente",
-        "manual": "Manuale"
+        "manual": "Manuale",
+        "date": "Basato su data"
       },
       "triggerLabels": {
         "manual": "Manuale",
         "schedule": "Pianificazione singola",
         "recurring": "Pianificazione ricorrente",
-        "event": "Evento"
+        "event": "Evento",
+        "date": "Data"
       },
       "bulk": {
         "selectedSingular": "{{count}} workflow selezionato",

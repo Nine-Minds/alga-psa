@@ -103,6 +103,8 @@
       "selectAsset": "Seleziona l'asset {{name}}",
       "selectedAssets_one": "{{count}} asset selezionato",
       "selectedAssets_other": "{{count}} asset selezionati",
+      "selectedAssets_few": "{{count}} asset selezionati",
+      "selectedAssets_many": "{{count}} asset selezionati",
       "clearSelection": "Cancella selezione",
       "bulkActionsComingSoon": "Azioni collettive in arrivo"
     },
@@ -389,10 +391,16 @@
       "momentsAgo": "pochi istanti fa",
       "minutesAgo_one": "{{count}} minuto fa",
       "minutesAgo_other": "{{count}} minuti fa",
+      "minutesAgo_few": "{{count}} minuti fa",
+      "minutesAgo_many": "{{count}} minuti fa",
       "hoursAgo_one": "{{count}} ora fa",
       "hoursAgo_other": "{{count}} ore fa",
+      "hoursAgo_few": "{{count}} ore fa",
+      "hoursAgo_many": "{{count}} ore fa",
       "daysAgo_one": "{{count}} giorno fa",
-      "daysAgo_other": "{{count}} giorni fa"
+      "daysAgo_other": "{{count}} giorni fa",
+      "daysAgo_few": "{{count}} giorni fa",
+      "daysAgo_many": "{{count}} giorni fa"
     }
   },
   "assetDetailHeader": {
@@ -655,7 +663,8 @@
       "mobileDevice": "Dettagli del dispositivo mobile",
       "printer": "Dettagli della stampante",
       "custom": "Dettagli di {{typeName}}"
-    }
+    },
+    "additionalFields": "Campi aggiuntivi"
   },
   "assetFormClient": {
     "title": "Cliente del modulo asset",
@@ -733,20 +742,64 @@
     "more": "+{{count}} altri"
   },
   "remoteAccess": {
+    "connectionTypes": {
+      "teamviewer": "TeamViewer",
+      "vnc": "VNC",
+      "rdp": "RDP"
+    },
     "remoteDesktop": "Desktop remoto",
     "remoteShell": "Shell remota",
     "remoteAccess": "Accesso remoto",
     "deviceOverdue": "Il dispositivo è in ritardo",
     "deviceOffline": "Il dispositivo è offline",
     "errors": {
-      "urlFetchFailed": "Impossibile ottenere l'URL di accesso remoto",
-      "initiateFailed": "Impossibile avviare l'accesso remoto"
+      "urlFetchFailed": "Impossibile ottenere l’URL di accesso remoto",
+      "initiateFailed": "Impossibile avviare l’accesso remoto",
+      "managePermission": "Autorizzazione negata: impossibile gestire le impostazioni degli asset.",
+      "readPermission": "Autorizzazione negata: impossibile leggere gli asset."
     },
     "indicator": {
       "online": "Connesso",
       "offline": "Disconnesso",
       "available": "Accesso remoto disponibile",
       "deviceOffline": "Dispositivo offline"
+    },
+    "links": {
+      "title": "Collegamenti di accesso remoto",
+      "description": "Configura modelli URL per ScreenConnect e altri strumenti di accesso remoto.",
+      "errors": {
+        "load": "Impossibile caricare i collegamenti di accesso remoto.",
+        "save": "Impossibile salvare il collegamento di accesso remoto.",
+        "delete": "Impossibile eliminare il collegamento di accesso remoto.",
+        "templateHttp": "Il modello deve iniziare con http:// o https:// e un host letterale.",
+        "templatePlaceholder": "Il modello contiene un segnaposto non supportato.",
+        "templateUrl": "Il modello deve generare un URL http o https valido.",
+        "required": "Sono obbligatori un’etichetta e un modello URL.",
+        "partialDelete": "Impossibile eliminare {{count}} collegamento/i selezionato/i."
+      },
+      "noneAvailable": "Nessuna opzione di accesso remoto disponibile.",
+      "confirmDeleteTitle": "Eliminare il collegamento di accesso remoto?",
+      "confirmDeleteMessage": "Eliminare “{{label}}”? Questa azione è irreversibile.",
+      "openMenu": "Apri menu",
+      "selectLabel": "Seleziona {{label}}",
+      "confirmBulkDeleteTitle": "Eliminare i collegamenti selezionati?",
+      "confirmBulkDeleteMessage": "Eliminare {{count}} collegamento/i di accesso remoto selezionato/i?",
+      "selectedCount": "{{count}} selezionato/i",
+      "add": "Aggiungi collegamento",
+      "empty": "Nessun collegamento di accesso remoto configurato.",
+      "edit": "Modifica",
+      "delete": "Elimina",
+      "addTitle": "Aggiungi collegamento di accesso remoto",
+      "editTitle": "Modifica collegamento di accesso remoto",
+      "cancel": "Annulla",
+      "save": "Salva",
+      "label": "Etichetta del pulsante",
+      "template": "Modello URL",
+      "tokens": "Usa {asset.name}, {asset.asset_tag}, {asset.serial_number}, {client.name} e {field.<key>} con le chiavi dei campi personalizzati definite in Impostazioni → Asset → Tipi di asset.",
+      "loading": "Caricamento delle opzioni di accesso remoto…",
+      "unavailable": "Non disponibile per questo asset",
+      "actions": "Azioni",
+      "selectAll": "Seleziona tutti i collegamenti"
     }
   },
   "assetListErrors": {
@@ -766,7 +819,9 @@
       "addAsset": "Aggiungi asset",
       "showLess": "Mostra meno",
       "moreAssets_one": "{{count}} altro asset",
-      "moreAssets_other": "{{count}} altri asset"
+      "moreAssets_other": "{{count}} altri asset",
+      "moreAssets_few": "{{count}} altri asset",
+      "moreAssets_many": "{{count}} altri asset"
     },
     "errors": {
       "loadAvailableAssets": "Impossibile caricare gli asset disponibili",
@@ -780,8 +835,12 @@
     "success": {
       "associated_one": "{{count}} asset associato correttamente",
       "associated_other": "{{count}} asset associati correttamente",
+      "associated_few": "{{count}} asset associati correttamente",
+      "associated_many": "{{count}} asset associati correttamente",
       "associatedPartial_one": "{{count}} asset associato correttamente; operazione non riuscita per {{failed}} (potrebbe essere già associato)",
       "associatedPartial_other": "{{count}} asset associati correttamente; operazione non riuscita per {{failed}} (potrebbero essere già associati)",
+      "associatedPartial_few": "{{count}} asset associati correttamente; operazione non riuscita per {{failed}} (potrebbero essere già associati)",
+      "associatedPartial_many": "{{count}} asset associati correttamente; operazione non riuscita per {{failed}} (potrebbero essere già associati)",
       "removed": "Associazione dell'asset rimossa"
     },
     "empty": {
@@ -805,7 +864,9 @@
       },
       "actions": {
         "addAssets_one": "Aggiungi asset",
-        "addAssets_other": "Aggiungi asset"
+        "addAssets_other": "Aggiungi asset",
+        "addAssets_few": "Aggiungi asset",
+        "addAssets_many": "Aggiungi asset"
       }
     },
     "table": {
@@ -1194,17 +1255,29 @@
     "frequency": {
       "every_one": "Ogni {{frequency}}",
       "every_other": "Ogni {{count}} {{frequency}}",
+      "every_few": "Ogni {{count}} {{frequency}}",
+      "every_many": "Ogni {{count}} {{frequency}}",
       "units": {
         "daily_one": "giorno",
         "daily_other": "giorni",
+        "daily_few": "giorni",
+        "daily_many": "giorni",
         "weekly_one": "settimana",
         "weekly_other": "settimane",
+        "weekly_few": "settimane",
+        "weekly_many": "settimane",
         "monthly_one": "mese",
         "monthly_other": "mesi",
+        "monthly_few": "mesi",
+        "monthly_many": "mesi",
         "quarterly_one": "trimestre",
         "quarterly_other": "trimestri",
+        "quarterly_few": "trimestri",
+        "quarterly_many": "trimestri",
         "yearly_one": "anno",
-        "yearly_other": "anni"
+        "yearly_other": "anni",
+        "yearly_few": "anni",
+        "yearly_many": "anni"
       }
     },
     "status": {

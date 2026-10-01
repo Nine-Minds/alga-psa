@@ -3,8 +3,14 @@ import { resolveTicketAttachmentViewUrl } from '../ticketAttachmentViewUrl';
 
 describe('resolveTicketAttachmentViewUrl', () => {
   it('views a file-backed document by its file id', () => {
-    expect(resolveTicketAttachmentViewUrl({ document_id: 'doc-1', file_id: 'file-1' })).toBe(
+    expect(resolveTicketAttachmentViewUrl({ document_id: 'doc-1', file_id: 'file-1', mime_type: 'application/pdf' })).toBe(
       '/api/documents/view/file-1',
+    );
+  });
+
+  it.each(['audio/wav', 'application/zip', undefined])('downloads files that cannot be previewed (%s)', (mime_type) => {
+    expect(resolveTicketAttachmentViewUrl({ document_id: 'doc-1', file_id: 'file-1', mime_type })).toBe(
+      '/api/documents/download/file-1',
     );
   });
 

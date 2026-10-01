@@ -2045,6 +2045,7 @@ const TemplateServicesManager: React.FC<TemplateServicesManagerProps> = ({
   contractLines,
   onServicesChanged,
 }) => {
+  const { money } = useCurrencyFormat();
   const { t } = useTranslation("msp/contracts");
   const formatNeutralRate = useTemplateNeutralRate();
   const [editingLine, setEditingLine] = useState<TemplateContractLine | null>(

@@ -22,6 +22,7 @@ export default defineConfig({
       // covers the stale-source comparison, not only the server-wide glob.
       'src/lib/billing/recurringPricingIdentity.test.ts',
       'src/schemas/**/*.test.ts',
+      'src/constants/billingQuoteValidity.test.ts',
       // Colocated suites for the document-preview tenant-branding seam. Most
       // src/ tests are reached only through server/vitest.config.ts (which globs
       // ../packages/**), but this package's own `npm test` target is a separate
@@ -40,6 +41,9 @@ export default defineConfig({
       // Multi-select bulk actions on the catalog and product lists — listed for
       // the same reason as the suites above.
       'src/components/settings/billing/ServiceCatalogManager.bulkActions.contract.test.tsx',
+      // Server-side search + filters on the Service Catalog list — listed for the
+      // same reason as the suites above.
+      'src/components/settings/billing/ServiceCatalogManager.search.contract.test.tsx',
       'src/components/settings/billing/ProductsManager.bulkActions.contract.test.tsx',
       'src/components/billing-dashboard/quotes/QuoteDocumentTemplateEditor.tenantBranding.test.tsx',
       'src/components/billing-dashboard/quotes/QuoteDocumentTemplateEditor.existingQuote.test.tsx',
@@ -51,6 +55,8 @@ export default defineConfig({
       // Ticket-level billed-time detail: snapshot aggregation, standard-template
       // bindings, and render parity — listed for the same reason as above.
       'src/lib/adapters/invoiceAdapters.test.ts',
+      'src/lib/adapters/salesOrderAdapters.test.ts',
+      'src/lib/sales-order-template-ast/standardTemplates.test.ts',
       'src/lib/invoice-template-ast/standardTemplates.test.ts',
       'src/lib/invoice-template-ast/standardTemplates.byTicket.test.ts',
       // Rich Terms & Conditions: write-path projection + designer richText

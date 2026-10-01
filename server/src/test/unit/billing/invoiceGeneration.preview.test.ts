@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { Temporal } from '@js-temporal/polyfill';
 import {
   buildClientCadenceDueSelectionInput,
   buildContractCadenceDueSelectionInput,
@@ -47,6 +48,9 @@ function buildClientCadenceServicePeriodRow(overrides: Row = {}): Row {
     tenant: 'tenant-1',
     cadence_owner: 'client',
     obligation_type: 'client_contract_line',
+    obligation_id: 'line-1',
+    // This query stub supplies joined rows, including the contract owner.
+    owner_client_id: 'client-1',
     client_id: 'client-1',
     schedule_key: 'schedule:tenant-1:client_contract_line:line-1:client:arrears',
     period_key: 'period:2025-01-01:2025-02-01',
@@ -147,6 +151,13 @@ function createQueryBuilder(rows: Row[], raw: (sql: string) => string) {
 const mocks = vi.hoisted(() => {
   const missingTables = new Set<string>();
   const rowsByTable: Record<string, Row[]> = {
+    client_billing_profiles: [{
+      billing_profile_id: 'unit-test-default-billing-profile',
+      tenant: 'tenant-1',
+      client_id: 'client-1',
+      is_default: true,
+      is_active: true,
+    }],
     client_billing_cycles: [
       {
         billing_cycle_id: 'cycle-1',
@@ -175,6 +186,15 @@ const mocks = vi.hoisted(() => {
         client_id: 'tenant-client-1',
       },
     ],
+    // Joined contract-line / client-assignment row for selection ownership checks.
+    contract_lines: [{
+      contract_line_id: 'line-1',
+      contract_id: 'contract-1',
+      tenant: 'tenant-1',
+      client_id: 'client-1',
+      line_profile_id: null,
+      contract_profile_id: null,
+    }],
     recurring_service_periods: [buildClientCadenceServicePeriodRow()],
   };
 
@@ -334,6 +354,7 @@ vi.mock('@alga-psa/shared/billingClients', () => ({
 
 vi.mock('@alga-psa/formatting/avatarUtils', () => ({
   getClientLogoUrl: mocks.getClientLogoUrl,
+  getClientDocumentLogoUrl: mocks.getClientLogoUrl,
 }));
 
 vi.mock('../../../../../packages/billing/src/services/purchaseOrderService', () => ({
@@ -511,7 +532,9 @@ describe('invoice preview recurring timing', () => {
       expectedRecurringPricingSources: [],
       data: expect.objectContaining({
         invoiceNumber: 'PREVIEW',
-        dueDate: '2025-03-15',
+        // The stubbed profile identity sets no payment terms, so the preview
+        // is due on Net 30 from today.
+        dueDate: Temporal.Now.plainDateISO().add({ days: 30 }).toString(),
         currencyCode: 'USD',
         subtotal: 4000,
         tax: 200,
@@ -655,6 +678,36 @@ describe('invoice preview recurring timing', () => {
     });
     expect(invalidResult).not.toHaveProperty('executionIdentityKey');
     expect(invalidResult).not.toHaveProperty('billingCycleId');
+  });
+
+  it.each([
+    ['client_billing_profiles', 'client_id'],
+    ['client_billing_profiles', 'tenant'],
+    ['contract_lines', 'client_id'],
+    ['contract_lines', 'tenant'],
+  ])('rejects preview when %s has a foreign %s', async (table, column) => {
+    const row = mocks.rowsByTable[table][0];
+    const original = row[column];
+    row[column] = 'foreign-owner';
+    const selectorInput = buildContractCadenceDueSelectionInput({
+      clientId: 'client-1',
+      contractId: 'contract-1',
+      contractLineId: 'line-1',
+      windowStart: '2025-02-08',
+      windowEnd: '2025-03-08',
+    });
+
+    try {
+      const result = await previewInvoiceForSelectionInput(selectorInput);
+      expect(result).toMatchObject({
+        success: false,
+        error: 'An error occurred while previewing the invoice',
+        executionIdentityKey: selectorInput.executionWindow.identityKey,
+      });
+      expect(mocks.calculateBillingForExecutionWindow).not.toHaveBeenCalled();
+    } finally {
+      row[column] = original;
+    }
   });
 
   it('T005: selector-input preview action resolves a client-cadence execution window without `client_contract_lines`', async () => {

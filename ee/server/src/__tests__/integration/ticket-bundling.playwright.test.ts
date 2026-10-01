@@ -22,7 +22,7 @@ function tenantTable(db: Knex, tenantId: string, table: string) {
 }
 
 async function waitForUIState(page: Page): Promise<void> {
-  await page.waitForFunction(() => Boolean((window as any).__UI_STATE__), null, { timeout: 30_000 });
+  await page.waitForFunction(() => Boolean((window as Window & { __UI_STATE__?: unknown }).__UI_STATE__), null, { timeout: 30_000 });
 }
 
 async function waitForTicketsTableIdle(page: Page): Promise<void> {
@@ -215,7 +215,6 @@ test('Ticket bundling: list toggle, bundling, grouping, and child banners', asyn
   page.on('console', (msg) => {
     // Useful for debugging async loading issues in the ticket dashboard container.
     // (Kept minimal: just surface text.)
-    // eslint-disable-next-line no-console
     console.log(`[browser:${msg.type()}] ${msg.text()}`);
   });
   const db = createTestDbConnection();
@@ -242,7 +241,8 @@ test('Ticket bundling: list toggle, bundling, grouping, and child banners', asyn
     });
 
     const tenantId = tenantData.tenant.tenantId;
-    const primaryClientId = tenantData.client!.clientId;
+    const primaryClientId = tenantData.client?.clientId;
+    if (!primaryClientId) throw new Error('Expected the test tenant to include a client');
     await ensureDefaultClientLocation(db, tenantId, primaryClientId, `primary-${uuidv4().slice(0, 6)}@example.com`);
     const refs = await ensureTicketRefs(db, tenantId, tenantData.adminUser.userId);
 
@@ -335,10 +335,93 @@ test('Ticket bundling: list toggle, bundling, grouping, and child banners', asyn
   }
 });
 
+test('Ticket bundling: add a searched ticket from a one-ticket selection', async ({ page }) => {
+  test.setTimeout(300_000);
+  const db = createTestDbConnection();
+  let tenantData: TenantTestData | null = null;
+
+  try {
+    tenantData = await createTenantAndLogin(db, page, {
+      tenantOptions: { companyName: `Bundling Search ${uuidv4().slice(0, 6)}` },
+      completeOnboarding: { completedAt: new Date() },
+      permissions: [
+        {
+          roleName: 'Admin',
+          permissions: [
+            { resource: 'asset', action: 'read' },
+            { resource: 'document', action: 'read' },
+            { resource: 'user', action: 'read' },
+            { resource: 'ticket', action: 'read' },
+            { resource: 'ticket', action: 'update' },
+          ],
+        },
+      ],
+    });
+
+    const tenantId = tenantData.tenant.tenantId;
+    const clientId = tenantData.client?.clientId;
+    if (!clientId) throw new Error('Expected the test tenant to include a client');
+    await ensureDefaultClientLocation(db, tenantId, clientId, `search-${uuidv4().slice(0, 6)}@example.com`);
+    const refs = await ensureTicketRefs(db, tenantId, tenantData.adminUser.userId);
+    const masterId = uuidv4();
+    const childId = uuidv4();
+    const masterNumber = `BS-${uuidv4().slice(0, 6)}`;
+    const childNumber = `BS-${uuidv4().slice(0, 6)}`;
+    const masterContactId = await createContact(db, tenantId, clientId, `m-${uuidv4().slice(0, 6)}@example.com`, 'Bundle Search Master');
+    const childContactId = await createContact(db, tenantId, clientId, `c-${uuidv4().slice(0, 6)}@example.com`, 'Bundle Search Child');
+
+    await insertTicket(db, {
+      tenant: tenantId,
+      ticketId: masterId,
+      ticketNumber: masterNumber,
+      title: 'Bundle search master',
+      clientId,
+      contactId: masterContactId,
+      statusId: refs.statusId,
+      priorityId: refs.priorityId,
+      boardId: refs.boardId,
+    });
+    await insertTicket(db, {
+      tenant: tenantId,
+      ticketId: childId,
+      ticketNumber: childNumber,
+      title: 'Bundle search child',
+      clientId,
+      contactId: childContactId,
+      statusId: refs.statusId,
+      priorityId: refs.priorityId,
+      boardId: refs.boardId,
+    });
+
+    await page.goto(`${TEST_CONFIG.baseUrl}/msp/tickets`, { waitUntil: 'domcontentloaded', timeout: 60_000 });
+    await waitForTicketsTableIdle(page);
+    await waitForUIState(page);
+    await selectTicketById(page, masterId);
+
+    const bundleButton = page.locator('[data-automation-id="ticketing-dashboard-bundle-tickets-button"]');
+    await expect(bundleButton).toBeEnabled({ timeout: 30_000 });
+    await bundleButton.click();
+    await page.locator('[data-automation-id="ticketing-dashboard-bundle-dialog-dialog"]').waitFor({ timeout: 10_000 });
+
+    await page.locator('[data-automation-id="ticketing-dashboard-bundle-add-ticket-search"]').click();
+    const searchInput = page.getByPlaceholder('Search tickets by number or title');
+    await searchInput.fill(childNumber);
+    await page.getByRole('option', { name: new RegExp(childNumber) }).click();
+    await expect(page.locator('[data-automation-id="ticketing-dashboard-bundle-confirm"]')).toBeEnabled({ timeout: 15_000 });
+    await page.locator('[data-automation-id="ticketing-dashboard-bundle-confirm"]').click();
+
+    await expect(page.locator('[data-automation-id="ticketing-dashboard-bundle-dialog-dialog"]')).toBeHidden({ timeout: 20_000 });
+    await waitForDialogOverlaysToClear(page);
+    await waitForTicketsTableIdle(page);
+    await expect(page.getByRole('row', { name: new RegExp(`${masterNumber}.*Bundle · 1`) })).toBeVisible({ timeout: 20_000 });
+  } finally {
+    await db.destroy().catch(() => undefined);
+  }
+});
+
 test('Ticket bundling: multi-client confirmation, add-child confirmation, promote/remove/unbundle', async ({ page }) => {
   test.setTimeout(300_000);
   page.on('console', (msg) => {
-    // eslint-disable-next-line no-console
     console.log(`[browser:${msg.type()}] ${msg.text()}`);
   });
   const db = createTestDbConnection();
@@ -367,7 +450,8 @@ test('Ticket bundling: multi-client confirmation, add-child confirmation, promot
     const tenantId = tenantData.tenant.tenantId;
     const refs = await ensureTicketRefs(db, tenantId, tenantData.adminUser.userId);
 
-    const clientA = tenantData.client!.clientId;
+    const clientA = tenantData.client?.clientId;
+    if (!clientA) throw new Error('Expected the test tenant to include a client');
     await ensureDefaultClientLocation(db, tenantId, clientA, `a-${uuidv4().slice(0, 6)}@example.com`);
     const clientB = uuidv4();
     await tenantTable(db, tenantId, 'clients').insert({

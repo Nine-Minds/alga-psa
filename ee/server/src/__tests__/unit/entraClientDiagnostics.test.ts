@@ -29,7 +29,7 @@ const hoisted = vi.hoisted(() => {
     mappings: [mapping('c1', 'entra-1'), mapping('c2', 'entra-2')],
     mintError: null as any,
     users: [] as any[],
-    filterResult: { included: [], excluded: [] } as any,
+    filterResult: { included: [], excluded: [], unknownFieldCounts: { userType: 0, assignedLicenseCount: 0 }, deactivateExcludedContacts: false, groupMembershipResolver: { isMember: async () => false } } as any,
     cippUsers: [] as any[],
     cippError: null as any,
     pageNextLink: null as string | null,
@@ -54,6 +54,16 @@ vi.mock('@ee/lib/integrations/entra/connectionRepository', () => ({
 vi.mock('@ee/lib/integrations/entra/mapping/confirmedMappingsService', () => ({
   listConfirmedEntraMappings: vi.fn(async () => hoisted.mappings),
   listConfirmedEntraMappingsWithDb: vi.fn(async () => hoisted.mappings),
+}));
+
+vi.mock('../../lib/integrations/entra/settingsService', () => ({
+  filterEntraUsersForManagedTenant: vi.fn(async () => hoisted.filterResult),
+  resolveEntraUserFilterPolicy: vi.fn(async () => ({})),
+}));
+
+vi.mock('@ee/lib/integrations/entra/settingsService', () => ({
+  filterEntraUsersForManagedTenant: vi.fn(async () => hoisted.filterResult),
+  resolveEntraUserFilterPolicy: vi.fn(async () => ({})),
 }));
 
 vi.mock('@ee/lib/integrations/entra/auth/refreshDirectToken', () => ({
@@ -107,8 +117,8 @@ vi.mock('@ee/lib/integrations/entra/providers/cipp/cippSecretStore', () => ({
   getEntraCippCredentials: vi.fn(async () => ({ baseUrl: 'https://cipp.test', apiToken: 'k' })),
 }));
 
-vi.mock('@ee/lib/integrations/entra/settingsService', () => ({
-  filterEntraUsersForTenant: vi.fn(async () => hoisted.filterResult),
+vi.mock('@ee/lib/integrations/entra/sync/userFilterPipeline', () => ({
+  filterEntraUsers: vi.fn(() => hoisted.filterResult),
 }));
 
 vi.mock('@alga-psa/db', () => ({
@@ -253,7 +263,8 @@ describe('runEntraClientAccessDiagnostics', () => {
     expect(second.clients[0].clientId).toBe('c4');
     expect(second.completed).toBe(4);
     expect(second.isDone).toBe(true);
-    expect(second.overallStatus).toBe('pass');
+    expect(second.overallStatus).toBe('warn');
+    expect(second.clients[0].steps.find(step => step.id === 'shared_mailbox_detection')?.status).toBe('warn');
   });
 
   it('does not finalize a client whose resumable preview is incomplete', async () => {
@@ -294,7 +305,7 @@ describe('runEntraClientAccessDiagnostics', () => {
 
     const c1 = result.clients.find((c) => c.clientId === 'c1');
     const c2 = result.clients.find((c) => c.clientId === 'c2');
-    expect(c1?.overallStatus).toBe('pass');
+    expect(c1?.overallStatus).toBe('warn');
     expect(c2?.category).toBe('need_consent');
 
     const consentAction = c2?.steps

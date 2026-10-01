@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-import type { RmmAssetDeviceActions, RmmAssetDeviceRef } from '../assetDeviceActions';
+import type { RmmAssetDeviceActions, RmmAssetDeviceRef, RmmRemoteConnectionType } from '../assetDeviceActions';
 import { buildTacticalClientForTenant } from './buildClient';
 import { syncTacticalSingleAgentForTenant } from './syncSingleAgent';
 
@@ -19,6 +19,15 @@ function tacticalCommandError(err: unknown, fallback: string): Error {
 }
 
 export const tacticalRmmAssetDeviceActions: RmmAssetDeviceActions = {
+  async remoteControlTypes(ref): Promise<RmmRemoteConnectionType[]> {
+    const client = await buildTacticalClientForTenant(ref.tenant);
+    if (!client) return [];
+    const links = await client.getAgentMeshCentralLinks(ref.deviceId);
+    const types: RmmRemoteConnectionType[] = [];
+    if (links.control) types.push('splashtop');
+    if (links.terminal) types.push('shell');
+    return types;
+  },
   async refresh(ref: RmmAssetDeviceRef): Promise<void> {
     const result = await syncTacticalSingleAgentForTenant({ tenant: ref.tenant, agentId: ref.deviceId });
     if (!result.updated) {
@@ -33,6 +42,20 @@ export const tacticalRmmAssetDeviceActions: RmmAssetDeviceActions = {
       await client.request({ method: 'POST', path: `/agents/${encodeURIComponent(ref.deviceId)}/reboot/` });
     } catch (err) {
       throw tacticalCommandError(err, 'Tactical RMM could not send the reboot command.');
+    }
+  },
+
+  async remoteControlUrl(ref, connectionType) {
+    if (connectionType !== 'splashtop' && connectionType !== 'shell') return null;
+    const client = await buildTacticalClientForTenant(ref.tenant);
+    if (!client) throw new Error('No active Tactical RMM integration found');
+    try {
+      const links = await client.getAgentMeshCentralLinks(ref.deviceId);
+      const url = connectionType === 'splashtop' ? links.control : links.terminal;
+      // Tactical's response shape varies by version; a missing link means this action is unavailable.
+      return typeof url === 'string' && url.trim() ? url : null;
+    } catch (err) {
+      throw tacticalCommandError(err, 'Tactical RMM could not create a MeshCentral session.');
     }
   },
 };

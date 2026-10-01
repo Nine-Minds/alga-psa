@@ -15,6 +15,8 @@ import {
 } from 'lucide-react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
+import { UnitOfMeasureInput } from '@alga-psa/ui/components/UnitOfMeasureInput';
+import type { UnitSelection } from '@alga-psa/ui/components/UnitOfMeasureInput';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
 import { Badge, type BadgeVariant } from '@alga-psa/ui/components/Badge';
@@ -44,6 +46,8 @@ import {
   getKitDetail,
   listKitComponentCandidates,
   listKitSummaries,
+  listKitTenantUnits,
+  registerKitTenantUnit,
   removeKitComponent,
   updateKitProduct,
 } from '../actions';
@@ -61,6 +65,7 @@ interface CreateKitDraft {
   sku: string;
   custom_service_type_id: string;
   unit_of_measure: string;
+  unit_code: string;
   fixed_price: string;
   currency_code: string;
   kit_pricing_mode: 'sum' | 'fixed';
@@ -70,7 +75,8 @@ const DEFAULT_CREATE_DRAFT: CreateKitDraft = {
   service_name: '',
   sku: '',
   custom_service_type_id: '',
-  unit_of_measure: 'kit',
+  unit_of_measure: 'Kit',
+  unit_code: 'C62',
   fixed_price: '',
   currency_code: 'USD',
   kit_pricing_mode: 'sum',
@@ -287,7 +293,8 @@ export function KitManager({ initialKits, serviceTypes, componentCandidates: ini
         service_name: createDraft.service_name,
         sku: createDraft.sku || null,
         custom_service_type_id: createDraft.custom_service_type_id,
-        unit_of_measure: createDraft.unit_of_measure || 'kit',
+        unit_of_measure: createDraft.unit_of_measure || 'Kit',
+        unit_code: createDraft.unit_code || 'C62',
         currency_code: createDraft.currency_code || 'USD',
         kit_pricing_mode: createDraft.kit_pricing_mode,
         kit_fixed_price: fixedPrice,
@@ -543,7 +550,7 @@ export function KitManager({ initialKits, serviceTypes, componentCandidates: ini
                   </div>
                   <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-[rgb(var(--color-text-500))]">
                     <span>{t('kits.fields.sku', { defaultValue: 'SKU' })}: <span className="font-mono">{detail.sku || t('common.emptyValue', { defaultValue: '—' })}</span></span>
-                    <span>{t('kits.fields.unit', { defaultValue: 'Unit' })}: {detail.unit_of_measure || 'kit'}</span>
+                    <span>{t('kits.fields.unit', { defaultValue: 'Unit' })}: {detail.unit_of_measure || 'Kit'}</span>
                     <span>{t('kits.usage.usedOnSalesOrders', { defaultValue: 'Used on sales orders' })}: {detail.sales_order_count}</span>
                   </div>
                 </div>
@@ -899,12 +906,17 @@ export function KitManager({ initialKits, serviceTypes, componentCandidates: ini
               options={serviceTypes.map((type) => ({ value: type.id, label: type.name }))}
               required
             />
-            <Input
-              id="kit-create-unit"
-              label={t('kits.fields.unit', { defaultValue: 'Unit' })}
-              value={createDraft.unit_of_measure}
-              onChange={(event) => setCreateDraft((prev) => ({ ...prev, unit_of_measure: event.target.value }))}
-            />
+            <div>
+              <label className="mb-1 block text-sm font-medium">{t('kits.fields.unit', { defaultValue: 'Unit' })}</label>
+              <UnitOfMeasureInput
+                id="kit-create-unit-of-measure"
+                value={{ code: createDraft.unit_code, label: createDraft.unit_of_measure }}
+                onChange={(value: UnitSelection) => setCreateDraft((prev) => ({ ...prev, unit_of_measure: value.label, unit_code: value.code }))}
+                serviceType="Product"
+                loadCustomUnits={listKitTenantUnits}
+                registerCustomUnit={registerKitTenantUnit}
+              />
+            </div>
             <Input
               id="kit-create-currency"
               label={t('kits.pricing.currency', { defaultValue: 'Currency' })}

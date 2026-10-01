@@ -8,7 +8,12 @@ vi.mock('@alga-psa/scheduling/lib/contractLineDisambiguation', () => ({
   getEligibleContractLinesForUI: mocks.plans, getClientIdForWorkItem: async () => 'client-1',
 }));
 vi.mock('@alga-psa/scheduling/actions/clientInteractionLookupActions', () => ({ getSchedulingClientById: async () => ({}) }));
-vi.mock('@alga-psa/ui/lib/i18n/client', () => ({ useTranslation: () => ({ t: (_key: string, options: any) => options?.defaultValue || '' }) }));
+vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
+  useTranslation: () => ({ t: (_key: string, options: any) => options?.defaultValue || '' }),
+  useFormatters: () => ({
+    formatDate: (value: Date | string) => new Date(value).toISOString().slice(0, 10),
+  }),
+}));
 vi.mock('@alga-psa/ui/components/BillingAttributionInspector', () => ({ BillingAttributionInspector: () => null }));
 vi.mock('@alga-psa/ui/components/Input', () => ({ Input: () => null }));
 vi.mock('@alga-psa/ui/components/Button', () => ({ Button: () => null }));

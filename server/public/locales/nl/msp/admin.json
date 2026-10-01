@@ -9,7 +9,8 @@
       "edit": "Bewerken",
       "delete": "Verwijderen",
       "deleting": "Bezig met verwijderen…",
-      "verify": "Verifiëren"
+      "verify": "Verifiëren",
+      "cancel": "Annuleren"
     },
     "states": {
       "active": "Actief",
@@ -226,7 +227,53 @@
         "companyFallback": "uw tenantbedrijf"
       },
       "warningTitle": "Antwoordroutering controleren",
-      "errorTitle": "Ticketidentiteit corrigeren"
+      "errorTitle": "Ticketidentiteit corrigeren",
+      "addresses": {
+        "title": "Afzenderadressen",
+        "description": "Maak benoemde adressen voor uitgaande e-mail."
+      },
+      "routing": {
+        "title": "Afzenderroutering",
+        "description": "Kies welke afzender voor elke e-mailklasse wordt gebruikt.",
+        "default": "Standaard (alle overige e-mail)",
+        "useDefault": "Standaard gebruiken",
+        "sender": "Afzender",
+        "displayName": "Weergavenaam",
+        "boardSummary": "Ticketafzenders per bord beheert u in de instellingen van elk bord.",
+        "ticket": "Ticket-e-mail",
+        "project": "Projecte-mail",
+        "billing": "Facturatie-e-mail",
+        "sales": "Verkoop-e-mail",
+        "scheduling": "Planningse-mail",
+        "survey": "Enquête-e-mail",
+        "account": "Account-e-mail",
+        "general": "Algemene e-mail",
+        "noneProviderFrom": "Geen (afzender van provider gebruiken)",
+        "confirmSmtp": "Ik bevestig dat de SMTP-relay dit afzenderadres accepteert.",
+        "inboundReplyWarning": "Inkomende antwoorden blijven naar de geconfigureerde mailbox gaan; dit Van-adres wijzigen verandert de routering van antwoorden niet.",
+        "unknownBoard": "Onbekend bord"
+      },
+      "actions": {
+        "add": "Afzender toevoegen",
+        "verify": "Verifiëren",
+        "delete": "Verwijderen"
+      },
+      "fields": {
+        "address": "E-mailadres",
+        "localPart": "Adresnaam",
+        "domain": "Geverifieerd domein",
+        "sendThrough": "Verzenden via",
+        "displayName": "Weergavenaam",
+        "displayNamePlaceholder": "Supportteam"
+      },
+      "smtpHelp": "Uw SMTP-relay moet dit adres toestaan.",
+      "microsoftHelp": "De verbonden mailbox heeft Exchange Send As-rechten voor dit adres nodig.",
+      "errors": {
+        "duplicateAddress": "Dit afzenderadres bestaat al.",
+        "saveFailed": "Afzender toevoegen mislukt. Controleer het adres en probeer het opnieuw.",
+        "duplicateRoute": "Deze afzenderroute bestaat al.",
+        "saveRoutingFailed": "Afzenderroute opslaan is mislukt. Probeer het opnieuw."
+      }
     }
   },
   "microsoft365": {
@@ -253,7 +300,8 @@
     },
     "states": {
       "running": "Diagnostiek wordt uitgevoerd...",
-      "diagnosticsFailed": "Diagnostiek mislukt"
+      "diagnosticsFailed": "Diagnostiek mislukt",
+      "callbackDiagnosticsCaptured": "Callbackdiagnose vastgelegd op {{timestamp}}."
     },
     "statuses": {
       "pass": "Geslaagd",

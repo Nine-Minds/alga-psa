@@ -459,7 +459,8 @@
         "defaultRatePerUnit": "Stawka za jednostkę (stosowana, jeśli ceny warstwowe są wyłączone).",
         "minimumUsage": "Minimalna liczba jednostek podlegających rozliczeniu w okresie.",
         "unitOfMeasure": "np. GB, Użytkownik, Urządzenie."
-      }
+      },
+      "catalogUnitPrecedence": "Jednostka z katalogu ma pierwszeństwo przed jednostką z tej konfiguracji użycia."
     }
   },
   "list": {

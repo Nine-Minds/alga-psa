@@ -317,14 +317,16 @@
       "client": "Cliente",
       "invoiceNumber": "Numero della fattura",
       "invoiceNumberOptional": "Numero fattura (facoltativo)",
-      "sourceSalesOrder": "Ordine di vendita di origine (opzionale)"
+      "sourceSalesOrder": "Ordine di vendita di origine (opzionale)",
+      "billingProfile": "Profilo di fatturazione"
     },
     "placeholders": {
       "selectClient": "Seleziona un cliente",
       "invoiceNumberOptional": "Lascia vuoto per generare automaticamente",
       "sourceSalesOrder": "Seleziona un ordine di vendita evaso o fatturabile manualmente",
       "searchSalesOrders": "Cerca ordini di vendita…",
-      "noInvoiceableSalesOrders": "Nessun ordine di vendita fatturabile trovato."
+      "noInvoiceableSalesOrders": "Nessun ordine di vendita fatturabile trovato.",
+      "selectBillingProfile": "Seleziona un profilo di fatturazione"
     },
     "automatedItems": {
       "title": "Elementi pubblicitari automatizzati",
@@ -346,7 +348,8 @@
       "clearSalesOrderSource": "Cancella ordine di vendita di origine"
     },
     "labels": {
-      "total": "Totale"
+      "total": "Totale",
+      "defaultBillingProfile": "{{name}} (predefinito)"
     },
     "prepayment": {
       "label": "Questa è una fattura di pagamento anticipato (crea credito)",
@@ -385,7 +388,8 @@
       "SOURCE_ALREADY_BILLED": "Alcuni elementi selezionati non sono più fatturabili (già fatturati, non approvati o rimossi). Aggiorna e riprova.",
       "SOURCE_NOT_ELIGIBLE": "Un elemento selezionato non appartiene a questo ticket o non è più idoneo. Aggiorna e riprova.",
       "SOURCE_CURRENCY_MISMATCH": "Alcuni prodotti selezionati sono prezzati in una valuta diversa da quella di fatturazione di questo cliente e non possono essere aggiunti. Fatturali separatamente nella loro valuta.",
-      "RECURRING_PRICING_STALE": "L'anteprima non è aggiornata: {{details}}. Esegui di nuovo l'anteprima per vedere i valori attuali, quindi genera di nuovo."
+      "RECURRING_PRICING_STALE": "L'anteprima non è aggiornata: {{details}}. Esegui di nuovo l'anteprima per vedere i valori attuali, quindi genera di nuovo.",
+      "BILLING_PROFILE_NOT_FOUND": "Il profilo di fatturazione selezionato non è disponibile per questo cliente. Aggiorna la pagina e riprova."
     },
     "warnings": {
       "noBillingEmail": "Questo cliente non ha un indirizzo e-mail di fatturazione. Imposta un contatto per la fatturazione, un indirizzo e-mail di fatturazione del cliente o un indirizzo e-mail nella sede di fatturazione o predefinita prima di generare la fattura."
@@ -396,6 +400,9 @@
     },
     "salesOrderContext": {
       "summary": "{{quantity}} articoli pronti per la fatturazione da {{lineCount}} righe. Questa bozza verrà collegata all'ordine di vendita."
+    },
+    "hints": {
+      "billingProfile": "La fattura e le sue righe vengono fatturate a questo profilo."
     }
   },
   "quickInvoice": {
@@ -490,7 +497,8 @@
       "finalizedDate": "Data definitiva",
       "status": "Stato",
       "actions": "Azioni",
-      "quickbooks": "QuickBooks"
+      "quickbooks": "QuickBooks",
+      "autopay": "Pagamento automatico"
     },
     "actions": {
       "downloadPdfs": "Scarica PDF",
@@ -522,6 +530,9 @@
         "selectedCount": "{{count}} selezionati",
         "clear": "Annulla selezione"
       }
+    },
+    "autopay": {
+      "scheduled": "Pagamento automatico {{status}}"
     }
   },
   "recurringServicePeriods": {
@@ -726,7 +737,9 @@
     "title": "Anteprima della fattura",
     "templatePlaceholder": "Seleziona il modello di fattura...",
     "labels": {
-      "standard": "(Standard)"
+      "standard": "(Standard)",
+      "billingProfile": "Profilo di fatturazione: {{name}}",
+      "billingProfileDefault": "il profilo predefinito del cliente"
     },
     "actions": {
       "finalizeInvoice": "Finalizza fattura",
@@ -981,12 +994,17 @@
       "billingEmail": "E-mail di fatturazione",
       "clientEmail": "Email cliente",
       "noEmailFound": "Nessuna e-mail trovata",
-      "notConfigured": "Nessun indirizzo email è configurato per questo client."
+      "notConfigured": "Nessun indirizzo email è configurato per questo client.",
+      "billingProfile": "Profilo di fatturazione",
+      "billingProfileNamed": "Profilo di fatturazione: {{name}}",
+      "billingProfileDefault": "il profilo predefinito del cliente"
     },
     "fields": {
       "due": "Scadenza",
       "additionalMessage": "Messaggio aggiuntivo",
-      "additionalMessagePlaceholder": "Aggiungi una nota personale da includere nell'e-mail..."
+      "additionalMessagePlaceholder": "Aggiungi una nota personale da includere nell'e-mail...",
+      "from": "Da",
+      "useDefault": "Usa mittente predefinito"
     },
     "preview": "Le e-mail verranno inviate da {{fromEmail}} per conto di {{companyName}}. Ogni fattura verrà allegata in formato PDF.",
     "values": {
@@ -2056,6 +2074,13 @@
     "errors": {
       "invoiceNumberRequired": "Il numero della fattura è obbligatorio.",
       "invoiceDateRequired": "La data della fattura è obbligatoria."
+    },
+    "labels": {
+      "billingProfile": "Profilo di fatturazione",
+      "billingProfileDefault": "Il profilo predefinito del cliente"
+    },
+    "hints": {
+      "billingProfile": "La fattura, le sue righe e la copia inviata via e-mail seguono questo profilo."
     }
   },
   "documentTemplates": {
@@ -2166,7 +2191,8 @@
       "referenceMissing": "La fattura, il cliente, il contratto o il record di fatturazione selezionato non esiste più. Aggiornare la pagina e riprovare.",
       "duplicate": "Esiste già una fattura in conflitto. Aggiornare la pagina e riprovare.",
       "missingField": "Manca un campo obbligatorio della fattura.",
-      "missingFieldNamed": "Manca un campo obbligatorio della fattura: {{field}}."
+      "missingFieldNamed": "Manca un campo obbligatorio della fattura: {{field}}.",
+      "billingProfileUnavailable": "Il profilo di fatturazione selezionato non è disponibile per questo cliente."
     },
     "billingCycle": {
       "notFoundRefresh": "Ciclo di fatturazione non trovato. Potrebbe essere stato aggiornato o eliminato. Aggiornare la pagina e riprovare.",

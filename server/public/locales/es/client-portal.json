@@ -426,6 +426,29 @@
         "expMonth": "Introduzca un mes válido (01-12)",
         "expYear": "Introduzca un año válido (2024-2099)",
         "cvv": "Introduzca un CVV válido"
+      },
+      "methodUpdateError": "No se pudo actualizar este método de pago. Inténtelo de nuevo.",
+      "cardSetup": {
+        "success": "Tarjeta guardada de forma segura.",
+        "error": "No pudimos guardar la tarjeta. Inténtelo de nuevo."
+      },
+      "autopay": {
+        "title": "Métodos de pago y pago automático",
+        "loading": "Cargando métodos de pago…",
+        "profileUnavailable": "Los métodos de pago y la configuración del pago automático no están disponibles para este perfil de facturación.",
+        "cardFallback": "Tarjeta",
+        "enrolled": "El pago automático está activado.",
+        "disable": "Desactivar el pago automático",
+        "consent": "Autorizo cargos recurrentes a esta tarjeta por las facturas finalizadas.",
+        "enable": "Activar el pago automático",
+        "noCards": "Añada una tarjeta para activar el pago automático.",
+        "changeCard": "Usar esta tarjeta para el pago automático"
+      },
+      "publicCardSetup": {
+        "saved": "Tarjeta guardada",
+        "failed": "No pudimos guardar su tarjeta",
+        "savedDescription": "Su tarjeta está lista para pagos futuros.",
+        "failedDescription": "No se pudo verificar la configuración. Solicite un nuevo enlace a su proveedor de facturación."
       }
     }
   },
@@ -566,7 +589,19 @@
       "deleteError": "No se pudo eliminar.",
       "deleteConfirm": "¿Seguro que quiere eliminar esto? Esta acción no se puede deshacer.",
       "linking": "Vinculando...",
-      "linkDocument": "Vincular documento"
+      "linkDocument": "Vincular documento",
+      "cropTitle": "Elegir la marca cuadrada",
+      "cropHelp": "Arrastre el logotipo y haga zoom para elegir la parte que se muestra en espacios pequeños y cuadrados. Aleje el zoom para dejar espacio alrededor. El logotipo completo también se conserva.",
+      "zoom": "Zoom",
+      "zoomOut": "Alejar",
+      "zoomIn": "Acercar",
+      "cropPreview": "Vista previa",
+      "applyCrop": "Usar este recorte",
+      "adjustMark": "Ajustar marca",
+      "cropFromWide": "Recortar del logotipo ancho",
+      "recropSuccess": "Marca actualizada.",
+      "recropError": "No se pudo actualizar la marca.",
+      "fileNameLabel": "Archivo almacenado"
     },
     "validation": {
       "clientNameRequired": "El nombre de la empresa es obligatorio",
@@ -1000,5 +1035,11 @@
       "duplicate": "Ya existe un grupo de visibilidad con estos datos para este cliente.",
       "invalidData": "Datos del grupo de visibilidad no válidos. Revise los datos del grupo y los tableros seleccionados."
     }
+  },
+  "tabs": {
+    "paymentMethods": "Métodos de pago y pago automático"
+  },
+  "invoice": {
+    "autopayWillCharge": "Se cargará el {{date}} a {{brand}} •••• {{last4}}"
   }
 }

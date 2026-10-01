@@ -26,6 +26,9 @@ function buildClientCadenceServicePeriodRow(overrides: Row = {}): Row {
     tenant: 'tenant-1',
     cadence_owner: 'client',
     obligation_type: 'client_contract_line',
+    obligation_id: 'contract-line-1',
+    // This query stub supplies joined rows, including the contract owner.
+    owner_client_id: 'client-1',
     client_id: 'client-1',
     schedule_key: 'schedule:tenant-1:client_contract_line:contract-line-1:client:advance',
     period_key: 'period:2025-02-01:2025-03-01',
@@ -143,6 +146,13 @@ function createQueryBuilder(rows: Row[], tableName: string) {
 
 const mocks = vi.hoisted(() => {
   const rowsByTable: Record<string, Row[]> = {
+    client_billing_profiles: [{
+      billing_profile_id: 'unit-test-default-billing-profile',
+      tenant: 'tenant-1',
+      client_id: 'client-1',
+      is_default: true,
+      is_active: true,
+    }],
     client_billing_cycles: [
       {
         billing_cycle_id: 'cycle-1',
@@ -280,8 +290,8 @@ vi.mock('@alga-psa/auth/rbac', () => ({
 }));
 
 vi.mock('@alga-psa/db', () => ({
-  tenantDb: (conn: any, _tenant: string) => ({
-    table: (t: string) => conn(t),
+  tenantDb: (conn: any, tenant: string) => ({
+    table: (t: string) => conn(t).where({ tenant }),
     scoped: (t: string) => conn(t),
     subquery: (t: string) => conn(t),
     parentScopedTable: (t: string) => conn(t),
@@ -409,6 +419,27 @@ describe('invoice generation zero-dollar recurring handling', () => {
     );
   });
 
+  it.each(['client_id', 'tenant'])(
+    'rejects a zero-dollar invoice when its billing profile has a foreign %s',
+    async (column) => {
+      const profile = mocks.rowsByTable.client_billing_profiles[0];
+      const original = profile[column];
+      profile[column] = 'foreign-owner';
+
+      try {
+        await expect(generateInvoice('cycle-1')).rejects.toThrow(
+          'does not belong to client client-1 in this tenant',
+        );
+        expect(mocks.rowsByTable.invoices).toEqual([]);
+        expect(mocks.persistInvoiceCharges).not.toHaveBeenCalled();
+        expect(mocks.claimRecurringServicePeriodsForSelectionInputs).not.toHaveBeenCalled();
+        expect(mocks.finalizeInvoiceWithKnex).not.toHaveBeenCalled();
+      } finally {
+        profile[column] = original;
+      }
+    },
+  );
+
   it('T210/T273: zero-dollar recurring invoices with canonical billing content are persisted and finalized according to zero-dollar settings', async () => {
     const result = await generateInvoice('cycle-1');
 
@@ -424,6 +455,7 @@ describe('invoice generation zero-dollar recurring handling', () => {
       })],
       linkedAt: expect.any(String),
       omittedUsagePeriods: [],
+      excludedServicePeriodRecordIds: [],
     });
     expect(mocks.finalizeInvoiceWithKnex).toHaveBeenCalledWith(
       'invoice-created',

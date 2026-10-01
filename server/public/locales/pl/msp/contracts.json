@@ -118,6 +118,9 @@
       "renewalHandling": "Obsługa odnowień"
     },
     "clientAssignment": {
+      "billingProfile": "Profil rozliczeniowy",
+      "billingProfileLabel": "Profil rozliczeniowy przypisania",
+      "billingProfileNone": "Użyj domyślnego profilu klienta",
       "clientContractId": "ID umowy klienta: {{id}}",
       "creditDrawdownOptOut": "Wyklucz z wykorzystania kredytu",
       "empty": "Ta umowa nie została jeszcze przypisana do klienta.",
@@ -400,7 +403,10 @@
       "selectClientFirst": "Najpierw wybierz klienta",
       "startDateLabel": "Data rozpoczęcia *",
       "useTenantDefaultsDescription": "Zastosuj ustawienia trybu odnowienia i okresu wypowiedzenia z poziomu organizacji.",
-      "useTenantDefaultsLabel": "Użyj domyślnych ustawień odnowień tenanta"
+      "useTenantDefaultsLabel": "Użyj domyślnych ustawień odnowień tenanta",
+      "billingProfileLabel": "Profil rozliczeniowy",
+      "billingProfileNone": "Użyj domyślnego profilu klienta",
+      "billingProfileHint": "Opłaty z tej umowy są rozliczane w tym profilu."
     },
     "po": {
       "amountLabel": "Kwota PO (opcjonalnie)",
@@ -1596,6 +1602,11 @@
       },
       "selectTemplateOptional": "Wybierz szablon (opcjonalnie)",
       "startFromTemplate": "Rozpocznij z szablonu"
+    },
+    "billingProfile": {
+      "label": "Profil rozliczeniowy",
+      "none": "Użyj domyślnego profilu klienta",
+      "hint": "Opłaty z tej umowy są rozliczane w tym profilu, chyba że pozycja go zastąpi."
     }
   },
   "wizardFixed": {
@@ -1775,6 +1786,7 @@
     },
     "fields": {
       "client": "Klient",
+      "billingProfile": "Profil rozliczeniowy",
       "contractName": "Nazwa umowy",
       "billingFrequency": "Częstotliwość rozliczeń",
       "currency": "Waluta",
@@ -1783,6 +1795,9 @@
       "renewalMode": "Tryb odnowienia",
       "noticePeriod": "Okres wypowiedzenia",
       "renewalTerm": "Okres odnowienia"
+    },
+    "billingProfile": {
+      "clientDefault": "Domyślny profil klienta"
     },
     "fallback": {
       "notSelected": "Nie wybrano",

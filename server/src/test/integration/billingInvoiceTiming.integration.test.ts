@@ -5433,6 +5433,51 @@ it('T159: production schema has time-entry updated_at but no usage_tracking upda
   expect(tablesWithUpdatedAt.has('usage_tracking')).toBe(false);
 });
 
+it('UOM snapshot: generated fixed charge stores the catalog code and matching label', async () => {
+  setupCommonMocks({ tenantId, userId: 'test-user', permissionCheck: () => true });
+  const setup = await createClientWithCycles('UOM snapshot client');
+  const fixed = await createFixedContractLine(setup.contextLike, {
+    serviceName: 'UOM snapshot service',
+    planName: 'UOM snapshot plan',
+    baseRateCents: 2500,
+    startDate: setup.currentPeriodStart,
+    billingTiming: 'advance',
+    cadenceOwner: 'contract',
+  });
+  await tenantTable(db, tenantId, 'service_catalog').where({ service_id: fixed.serviceId }).update({
+    unit_code: 'H87',
+    unit_of_measure: 'Piece',
+  });
+  const configuration = await tenantTable(db, tenantId, 'contract_line_service_configuration')
+    .where({ contract_line_id: fixed.contractLineId }).first('config_id');
+  expect(configuration).toBeTruthy();
+  await tenantTable(db, tenantId, 'contract_line_service_usage_config').insert({
+    tenant: tenantId,
+    config_id: configuration.config_id,
+    unit_code: 'C62',
+    unit_of_measure: 'Each',
+  }).onConflict(['tenant', 'config_id']).merge({ unit_code: 'C62', unit_of_measure: 'Each' });
+  await syncContractLineRecurringPeriods(fixed.contractLineId);
+  const selection = buildContractCadenceDueSelectionInput({
+    clientId: setup.clientId,
+    contractId: fixed.contractId,
+    contractLineId: fixed.contractLineId,
+    windowStart: `${setup.currentPeriodStart}T00:00:00Z`,
+    windowEnd: `${setup.nextPeriodStart}T00:00:00Z`,
+  });
+  const invoice = await generateInvoiceForSelectionInput(selection);
+  expect(invoice).toBeTruthy();
+  const charge = await tenantTable(db, tenantId, 'invoice_charges').where({ invoice_id: invoice!.invoice_id }).first();
+  expect(charge).toMatchObject({ unit_code: 'H87', unit_label: 'Piece' });
+
+  // The snapshot must survive the shared loader that feeds previews, PDFs and the REST API.
+  const { mapDbInvoiceToWasmViewModel } = await import('@alga-psa/billing/lib/adapters/invoiceAdapters');
+  const viewModel = mapDbInvoiceToWasmViewModel(await Invoice.getFullInvoiceById(db, tenantId, invoice!.invoice_id));
+  expect(viewModel?.items).toEqual([
+    expect.objectContaining({ unit_code: 'H87', unit_label: 'Piece' }),
+  ]);
+}, HOOK_TIMEOUT);
+
 });
 
 interface ClientSetupResult {

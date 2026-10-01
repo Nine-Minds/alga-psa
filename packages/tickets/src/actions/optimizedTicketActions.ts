@@ -97,6 +97,7 @@ import {
   TICKET_STATUS_FILTER_OPEN,
 } from '../lib/ticketStatusFilter';
 import { ticketActionErrorFrom, type TicketActionError } from './ticketActionErrors';
+import { resolveTicketListSortSpec, TICKET_LATEST_ACTIVITY_SQL } from './ticketListSortSql';
 import { actionError, permissionError } from '@alga-psa/ui/lib/errorHandling';
 import { scheduleJobAt as scheduleBackgroundJobAt } from '@alga-psa/core';
 import { authorizeAndRedactDocuments } from '@shared/lib/documentAuthorization';
@@ -1758,21 +1759,8 @@ function applyTicketListSort(
   query: Knex.QueryBuilder,
   validatedFilters: ITicketListFilters
 ): Knex.QueryBuilder {
-    const sortBy = validatedFilters.sortBy ?? 'entered_at';
     const sortDirection: 'asc' | 'desc' = validatedFilters.sortDirection ?? 'desc';
-    const sortColumnMap: Record<string, { column?: string; rawExpression?: string }> = {
-      ticket_number: { column: 't.ticket_number' },
-      title: { column: 't.title' },
-      status_name: { column: 's.name' },
-      priority_name: { column: 'p.priority_name' },
-      board_name: { column: 'c.board_name' },
-      category_name: { column: 'cat.category_name' },
-      client_name: { column: 'comp.client_name' },
-      entered_at: { column: 't.entered_at' },
-      entered_by_name: { rawExpression: "COALESCE(CONCAT(u.first_name, ' ', u.last_name), '')" },
-      due_date: { column: 't.due_date' }
-    };
-    const selectedSort = sortColumnMap[sortBy] || sortColumnMap.entered_at;
+    const selectedSort = resolveTicketListSortSpec(validatedFilters.sortBy);
 
     return query
       .modify(queryBuilder => {
@@ -1792,21 +1780,8 @@ function applyTicketListSort(
  * Mirrors applyTicketListSort but returns a string instead of modifying a query.
  */
 function getTicketListSortOrderByClause(validatedFilters: ITicketListFilters): string {
-    const sortBy = validatedFilters.sortBy ?? 'entered_at';
     const sortDirection: 'asc' | 'desc' = validatedFilters.sortDirection ?? 'desc';
-    const sortColumnMap: Record<string, { column?: string; rawExpression?: string }> = {
-      ticket_number: { column: 't.ticket_number' },
-      title: { column: 't.title' },
-      status_name: { column: 's.name' },
-      priority_name: { column: 'p.priority_name' },
-      board_name: { column: 'c.board_name' },
-      category_name: { column: 'cat.category_name' },
-      client_name: { column: 'comp.client_name' },
-      entered_at: { column: 't.entered_at' },
-      entered_by_name: { rawExpression: "COALESCE(CONCAT(u.first_name, ' ', u.last_name), '')" },
-      due_date: { column: 't.due_date' }
-    };
-    const selectedSort = sortColumnMap[sortBy] || sortColumnMap.entered_at;
+    const selectedSort = resolveTicketListSortSpec(validatedFilters.sortBy);
 
     let primarySort: string;
     if (selectedSort.rawExpression) {
@@ -1928,6 +1903,9 @@ function buildTicketListItemsQuery(
       // Additional agents from pre-aggregated JOIN
       trx.raw('COALESCE(ags.additional_agent_count, 0)::int as additional_agent_count'),
       trx.raw("COALESCE(ags.additional_agents, '[]'::json) as additional_agents"),
+      // Same expression the latest_activity_at sort orders by, so the column
+      // renders exactly the value the ordering used.
+      trx.raw(`${TICKET_LATEST_ACTIVITY_SQL} as latest_activity_at`),
     );
 }
 
@@ -1954,6 +1932,7 @@ function mapTicketListItems(tickets: any[]): ITicketListItem[] {
       bundle_open_child_count,
       bundle_distinct_client_count,
       bundle_master_ticket_number,
+      latest_activity_at,
       // NOTE: Legacy ITIL fields removed - now using unified system
       ...rest
     } = ticket;
@@ -1993,7 +1972,10 @@ function mapTicketListItems(tickets: any[]): ITicketListItem[] {
       bundle_child_count: typeof bundle_child_count === 'number' ? bundle_child_count : Number.parseInt(String(bundle_child_count ?? '0'), 10) || 0,
       bundle_open_child_count: typeof bundle_open_child_count === 'number' ? bundle_open_child_count : Number.parseInt(String(bundle_open_child_count ?? '0'), 10) || 0,
       bundle_distinct_client_count: typeof bundle_distinct_client_count === 'number' ? bundle_distinct_client_count : Number.parseInt(String(bundle_distinct_client_count ?? '0'), 10) || 0,
-      bundle_master_ticket_number: bundle_master_ticket_number ?? null
+      bundle_master_ticket_number: bundle_master_ticket_number ?? null,
+      latest_activity_at: latest_activity_at instanceof Date
+        ? latest_activity_at.toISOString()
+        : latest_activity_at ?? null
     };
   });
 }

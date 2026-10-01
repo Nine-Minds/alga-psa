@@ -317,14 +317,16 @@
       "client": "Klant",
       "invoiceNumber": "Factuurnummer",
       "invoiceNumberOptional": "Factuurnummer (optioneel)",
-      "sourceSalesOrder": "Bronverkooporder (optioneel)"
+      "sourceSalesOrder": "Bronverkooporder (optioneel)",
+      "billingProfile": "Facturatieprofiel"
     },
     "placeholders": {
       "selectClient": "Selecteer een klant",
       "invoiceNumberOptional": "Laat dit leeg om automatisch te genereren",
       "sourceSalesOrder": "Selecteer een afgehandelde of handmatig factureerbare verkooporder",
       "searchSalesOrders": "Verkooporders zoeken...",
-      "noInvoiceableSalesOrders": "Geen factureerbare verkooporders gevonden."
+      "noInvoiceableSalesOrders": "Geen factureerbare verkooporders gevonden.",
+      "selectBillingProfile": "Selecteer een facturatieprofiel"
     },
     "automatedItems": {
       "title": "Geautomatiseerde regelitems",
@@ -346,7 +348,8 @@
       "clearSalesOrderSource": "Bronverkooporder wissen"
     },
     "labels": {
-      "total": "Totaal"
+      "total": "Totaal",
+      "defaultBillingProfile": "{{name}} (standaard)"
     },
     "prepayment": {
       "label": "Dit is een vooruitbetalingsfactuur (creëert krediet)",
@@ -385,7 +388,8 @@
       "SOURCE_ALREADY_BILLED": "Sommige geselecteerde items zijn niet meer factureerbaar (al gefactureerd, niet goedgekeurd of verwijderd). Vernieuw en probeer opnieuw.",
       "SOURCE_NOT_ELIGIBLE": "Een geselecteerd item hoort niet bij dit ticket of is niet langer in aanmerking komend. Vernieuw en probeer opnieuw.",
       "SOURCE_CURRENCY_MISMATCH": "Sommige geselecteerde producten zijn geprijsd in een andere valuta dan de factuurvaluta van deze klant en kunnen niet worden toegevoegd. Factureer ze apart in hun eigen valuta.",
-      "RECURRING_PRICING_STALE": "Het voorbeeld is verouderd: {{details}}. Voer het voorbeeld opnieuw uit om de actuele bedragen te zien en genereer daarna opnieuw."
+      "RECURRING_PRICING_STALE": "Het voorbeeld is verouderd: {{details}}. Voer het voorbeeld opnieuw uit om de actuele bedragen te zien en genereer daarna opnieuw.",
+      "BILLING_PROFILE_NOT_FOUND": "Het geselecteerde facturatieprofiel is niet beschikbaar voor deze klant. Vernieuw de pagina en probeer het opnieuw."
     },
     "warnings": {
       "noBillingEmail": "Deze klant heeft geen facturatie-e-mailadres. Stel een contactpersoon voor facturering, een facturatie-e-mailadres van de klant of een e-mailadres op de facturatielocatie of standaardlocatie in voordat u de factuur genereert."
@@ -396,6 +400,9 @@
     },
     "salesOrderContext": {
       "summary": "{{quantity}} artikelen uit {{lineCount}} regels gereed voor facturering. Dit concept wordt aan de verkooporder gekoppeld."
+    },
+    "hints": {
+      "billingProfile": "De factuur en de factuurregels worden aan dit profiel toegerekend."
     }
   },
   "quickInvoice": {
@@ -490,7 +497,8 @@
       "finalizedDate": "Definitieve datum",
       "status": "Status",
       "actions": "Acties",
-      "quickbooks": "QuickBooks"
+      "quickbooks": "QuickBooks",
+      "autopay": "Automatische betaling"
     },
     "actions": {
       "downloadPdfs": "PDF's downloaden",
@@ -522,6 +530,9 @@
         "selectedCount": "{{count}} geselecteerd",
         "clear": "Selectie wissen"
       }
+    },
+    "autopay": {
+      "scheduled": "Automatische betaling {{status}}"
     }
   },
   "recurringServicePeriods": {
@@ -726,7 +737,9 @@
     "title": "Factuurvoorbeeld",
     "templatePlaceholder": "Factuursjabloon selecteren...",
     "labels": {
-      "standard": "(Standaard)"
+      "standard": "(Standaard)",
+      "billingProfile": "Factureringsprofiel: {{name}}",
+      "billingProfileDefault": "het standaardprofiel van de klant"
     },
     "actions": {
       "finalizeInvoice": "Factuur finaliseren",
@@ -981,12 +994,17 @@
       "billingEmail": "Facturerings-e-mailadres",
       "clientEmail": "Klant-e-mail",
       "noEmailFound": "Geen e-mailadres gevonden",
-      "notConfigured": "Er is geen e-mailadres geconfigureerd voor deze client."
+      "notConfigured": "Er is geen e-mailadres geconfigureerd voor deze client.",
+      "billingProfile": "Factureringsprofiel",
+      "billingProfileNamed": "Factureringsprofiel: {{name}}",
+      "billingProfileDefault": "het standaardprofiel van de klant"
     },
     "fields": {
       "due": "Vervaldatum",
       "additionalMessage": "Aanvullend bericht",
-      "additionalMessagePlaceholder": "Voeg een persoonlijke notitie toe om in de e-mail op te nemen..."
+      "additionalMessagePlaceholder": "Voeg een persoonlijke notitie toe om in de e-mail op te nemen...",
+      "from": "Van",
+      "useDefault": "Standaardafzender gebruiken"
     },
     "preview": "E-mails worden verzonden vanuit {{fromEmail}} namens {{companyName}}. Elke factuur wordt als PDF bijgevoegd.",
     "values": {
@@ -2056,6 +2074,13 @@
     "errors": {
       "invoiceNumberRequired": "Het factuurnummer is verplicht.",
       "invoiceDateRequired": "De factuurdatum is verplicht."
+    },
+    "labels": {
+      "billingProfile": "Factureringsprofiel",
+      "billingProfileDefault": "Het standaardprofiel van de klant"
+    },
+    "hints": {
+      "billingProfile": "De factuur, de regels en de gemailde kopie volgen dit profiel."
     }
   },
   "documentTemplates": {
@@ -2166,7 +2191,8 @@
       "referenceMissing": "De geselecteerde factuur, klant, het contract of de factuurregistratie bestaat niet meer. Vernieuw de pagina en probeer het opnieuw.",
       "duplicate": "Er bestaat al een conflicterende factuur. Vernieuw de pagina en probeer het opnieuw.",
       "missingField": "Er ontbreekt een verplicht factuurveld.",
-      "missingFieldNamed": "Er ontbreekt een verplicht factuurveld: {{field}}."
+      "missingFieldNamed": "Er ontbreekt een verplicht factuurveld: {{field}}.",
+      "billingProfileUnavailable": "Het geselecteerde factureringsprofiel is niet beschikbaar voor deze klant."
     },
     "billingCycle": {
       "notFoundRefresh": "Factuurcyclus niet gevonden. Mogelijk is deze bijgewerkt of verwijderd. Vernieuw de pagina en probeer het opnieuw.",

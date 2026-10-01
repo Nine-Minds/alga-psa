@@ -440,10 +440,20 @@ export const workflowRecurringScheduleTriggerSchema = z.object({
   timezone: z.string().min(1)
 }).strict();
 
+export const workflowDateTriggerSchema = z.object({
+  type: z.literal('date'),
+  // LEVERAGE: pattern date-trigger-source-list — derive from the shared source definitions; see schemas/dateTriggerPayloadSchemas.ts.
+  source: z.enum(['client.anniversary', 'contract.renewal_decision', 'contract.end', 'asset.warranty_end']),
+  offsetDays: z.number().int().min(-365).max(365),
+  localTime: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/).default('08:00'),
+  timezone: z.string().min(1).optional(),
+}).strict();
+
 export const workflowTriggerSchema = z.discriminatedUnion('type', [
   workflowEventTriggerSchema,
   workflowOneTimeScheduleTriggerSchema,
-  workflowRecurringScheduleTriggerSchema
+  workflowRecurringScheduleTriggerSchema,
+  workflowDateTriggerSchema
 ]);
 
 export const workflowDefinitionSchema = z.object({
@@ -493,6 +503,7 @@ export type Envelope = z.infer<typeof envelopeSchema>;
 export type WorkflowEventTrigger = z.infer<typeof workflowEventTriggerSchema>;
 export type WorkflowOneTimeScheduleTrigger = z.infer<typeof workflowOneTimeScheduleTriggerSchema>;
 export type WorkflowRecurringScheduleTrigger = z.infer<typeof workflowRecurringScheduleTriggerSchema>;
+export type WorkflowDateTrigger = z.infer<typeof workflowDateTriggerSchema>;
 export type WorkflowTrigger = z.infer<typeof workflowTriggerSchema>;
 export type WorkflowTimeTrigger = WorkflowOneTimeScheduleTrigger | WorkflowRecurringScheduleTrigger;
 

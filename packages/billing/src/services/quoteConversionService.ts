@@ -10,6 +10,7 @@ import type {
   QuoteConversionPreviewItem,
 } from '@alga-psa/types';
 import { tenantDb } from '@alga-psa/db';
+import { resolveUnitOfMeasure } from '@alga-psa/core/unitOfMeasure';
 import { v4 as uuidv4 } from 'uuid';
 import { SharedNumberingService } from '@shared/services/numberingService';
 import { allocateQuoteDiscounts } from './quoteDiscountAllocation';
@@ -832,7 +833,8 @@ export async function convertQuoteToDraftContract(
       usageConfigRows.map(({ configId, item }) => ({
         tenant,
         config_id: configId,
-        unit_of_measure: item.unit_of_measure || 'unit',
+        unit_of_measure: item.unit_of_measure || resolveUnitOfMeasure({ fallback: 'C62' }).label,
+        unit_code: item.unit_code || resolveUnitOfMeasure({ fallback: 'C62' }).code,
         enable_tiered_pricing: false,
         minimum_usage: 0,
         base_rate: item.unit_price,
@@ -1169,6 +1171,7 @@ export async function convertQuoteToDraftInvoice(
 
     const isDiscount = source.is_discount === true;
     const taxAmount = isDiscount ? 0 : Number(source.tax_amount ?? 0);
+    const unit = resolveUnitOfMeasure({ catalog: { code: source.unit_code, label: source.unit_of_measure }, fallback: 'C62' });
 
     return {
       tenant,
@@ -1178,6 +1181,8 @@ export async function convertQuoteToDraftInvoice(
       service_item_kind: source.service_item_kind ?? null,
       service_sku: source.service_sku ?? null,
       service_name: source.service_name ?? null,
+      unit_code: unit.code,
+      unit_label: unit.label,
       description: source.description,
       quantity: isDiscount ? 1 : source.quantity,
       unit_price: isDiscount ? -Math.abs(netAmount) : source.unit_price,
