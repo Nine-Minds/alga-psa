@@ -570,6 +570,9 @@ export const updateScheduleEntry = withAuth(async (
   try {
     const { knex: db } = await createTenantKnex();
     const canUpdateGlobally = await hasPermission(user, 'user_schedule', 'update', db);
+    if (!canUpdateGlobally) {
+      return { success: false, error: 'Permission denied to update this schedule entry.' };
+    }
 
     const masterEntryId =
       (typeof entry.original_entry_id === 'string' && entry.original_entry_id.length > 0
@@ -918,6 +921,18 @@ export const deleteScheduleEntry = withAuth(async (
 ): Promise<DeletionValidationResult & { success: boolean; deleted?: boolean; isPrivateError?: boolean; error?: string }> => {
   try {
     const { knex: db } = await createTenantKnex();
+    if (!await hasPermission(user, 'user_schedule', 'update', db)) {
+      const message = 'Permission denied to delete this schedule entry.';
+      return {
+        success: false,
+        error: message,
+        canDelete: false,
+        code: 'PERMISSION_DENIED',
+        message,
+        dependencies: [],
+        alternatives: [],
+      };
+    }
 
     const isVirtualId = entry_id.includes('_');
     const masterEntryId = isVirtualId ? entry_id.split('_')[0] : entry_id;
