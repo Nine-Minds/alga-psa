@@ -66,6 +66,7 @@ import {
 import { getClientDefaultTaxRegionCode as getClientDefaultTaxRegionCodeShared } from "@alga-psa/shared/billingClients";
 import { computePoolContributionsByService, resolveBucketForLine } from "@alga-psa/shared/billingClients/bucketUsageService";
 import {
+  ambiguousTicketProjectLinksQuery,
   ticketProjectAttributionJoin,
   ticketProjectIdExpression,
 } from "@alga-psa/shared/billingClients/ticketProjectAttribution";
@@ -1761,7 +1762,11 @@ export class BillingEngine {
     const runWarnings = projectBillingContext
       ? [
           ...projectMaterialWarnings,
-          ...(await this.getAmbiguousTicketProjectWarnings(clientId)),
+          ...(await this.getAmbiguousTicketProjectWarnings(
+            clientId,
+            billingPeriod,
+            options.projectTarget,
+          )),
         ]
       : projectMaterialWarnings;
 
@@ -2091,9 +2096,18 @@ export class BillingEngine {
    * A ticket flagged into more than one project cannot be attributed without
    * guessing, so the resolver drops it (project_count = 1) and the biller is
    * told once per run which links to fix.
+   *
+   * Only tickets whose time this very run would have billed are reported: the
+   * same uninvoiced/approved/billable time the loaders read, in the same window
+   * (a project-target run ignores the period, exactly as the loaders do), and
+   * for a project run only when one of the competing links points at the
+   * project being invoiced. Otherwise one stale link would warn on every run
+   * forever, with nothing at stake.
    */
   private async getAmbiguousTicketProjectWarnings(
     clientId: string,
+    billingPeriod: IBillingPeriod,
+    projectTarget?: CalculateBillingOptions["projectTarget"],
   ): Promise<string[]> {
     await this.initKnex();
     if (!this.tenant) {
@@ -2101,18 +2115,49 @@ export class BillingEngine {
     }
 
     const db = tenantDb(this.knex, this.tenant);
-    const query = db.table("project_ticket_links");
-    db.tenantJoin(
-      query,
-      "tickets",
-      "project_ticket_links.ticket_id",
-      "tickets.ticket_id",
+    const query = db.table("tickets");
+    // Shared with the resolver, so the warning can never claim time was dropped
+    // that in fact billed.
+    query.joinRaw(
+      `JOIN (${ambiguousTicketProjectLinksQuery()}) ambiguous
+         ON ambiguous.tenant = tickets.tenant
+        AND ambiguous.ticket_id = tickets.ticket_id`,
     );
+    query.where("tickets.client_id", clientId);
+    if (projectTarget) {
+      query.whereRaw(
+        `EXISTS (SELECT 1 FROM project_ticket_links target_link
+                  WHERE target_link.tenant = tickets.tenant
+                    AND target_link.ticket_id = tickets.ticket_id
+                    AND target_link.bill_under_project
+                    AND target_link.project_id = ?)`,
+        [projectTarget.projectId],
+      );
+      query.whereRaw(
+        `EXISTS (SELECT 1 FROM time_entries te
+                  WHERE te.tenant = tickets.tenant
+                    AND te.work_item_type = 'ticket'
+                    AND te.work_item_id = tickets.ticket_id
+                    AND te.invoiced = false
+                    AND te.approval_status = 'APPROVED'
+                    AND te.billable_duration > 0)`,
+      );
+    } else {
+      query.whereRaw(
+        `EXISTS (SELECT 1 FROM time_entries te
+                  WHERE te.tenant = tickets.tenant
+                    AND te.work_item_type = 'ticket'
+                    AND te.work_item_id = tickets.ticket_id
+                    AND te.invoiced = false
+                    AND te.approval_status = 'APPROVED'
+                    AND te.billable_duration > 0
+                    AND te.start_time >= ?
+                    AND te.end_time < ?)`,
+        [billingPeriod.startDate, billingPeriod.endDate],
+      );
+    }
     const rows = await query
-      .where("project_ticket_links.bill_under_project", true)
-      .where("tickets.client_id", clientId)
       .groupBy("tickets.ticket_number")
-      .havingRaw("COUNT(DISTINCT project_ticket_links.project_id) > 1")
       .select<{ ticket_number: string }[]>("tickets.ticket_number");
 
     if (rows.length === 0) {

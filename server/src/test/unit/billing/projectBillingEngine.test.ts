@@ -8,6 +8,7 @@ import {
   type TimeBasedChargeComputeInputs,
 } from "@alga-psa/billing/lib/billing/compute/computeTimeBasedCharges";
 import {
+  ambiguousTicketProjectLinksQuery,
   ticketProjectAttributionJoin,
   ticketProjectIdExpression,
 } from "@alga-psa/shared/billingClients/ticketProjectAttribution";
@@ -1114,13 +1115,14 @@ describe("ticket time project attribution", () => {
     expect(billingEngineSource).toContain(
       '{ type: "left", rootTenantColumn: "time_entries.tenant" }',
     );
-    // The dead join this replaces must not come back: the only remaining
-    // reference to the link table is the ambiguity reader behind the warning.
+    // The dead join this replaces must not come back: the engine reads the link
+    // table only through the shared fragments (the ambiguity warning's
+    // project-target probe is the one direct reference left).
     expect(
       billingEngineSource.match(/project_ticket_links/g),
-    ).toHaveLength(4);
+    ).toHaveLength(1);
     expect(billingEngineSource).toContain(
-      'havingRaw("COUNT(DISTINCT project_ticket_links.project_id) > 1")',
+      "JOIN (${ambiguousTicketProjectLinksQuery()}) ambiguous",
     );
     // Decision e: invoiced time is out of reach of both loaders, whatever the
     // link says.
@@ -1132,14 +1134,46 @@ describe("ticket time project attribution", () => {
 
     // Grouped by the Citus distribution column, so one ticket can never fan a
     // time entry out into several rows however many links it carries.
-    expect(join).toContain("GROUP BY tenant, ticket_id");
-    expect(join).toContain("WHERE bill_under_project");
-    expect(join).toContain("COUNT(DISTINCT project_id) AS project_count");
+    expect(join).toContain("GROUP BY link.tenant, link.ticket_id");
+    expect(join).toContain("WHERE link.bill_under_project");
+    expect(join).toContain("COUNT(DISTINCT link.project_id) AS project_count");
     expect(join).toContain("ticket_project.project_count = 1");
     expect(join).toContain("time_entries.work_item_type = 'ticket'");
     expect(join).toContain("ticket_project.tenant = time_entries.tenant");
     expect(ticketProjectIdExpression("project_phases")).toBe(
       "COALESCE(project_phases.project_id, ticket_project.project_id)",
+    );
+  });
+
+  it("T029: a link to another client's project is never a billing candidate", () => {
+    const join = ticketProjectAttributionJoin("time_entries");
+
+    // Nothing validates the client when a link is made, and the loaders' client
+    // gate is satisfied through the linked project — so without this predicate a
+    // cross-client link would bill one client's hour onto another's project.
+    expect(join).toContain("link_project.client_id = link_ticket.client_id");
+    expect(join).toContain("JOIN tickets link_ticket");
+    expect(join).toContain("JOIN projects link_project");
+
+    // The warning counts the same candidates, so a ticket whose only competing
+    // link is foreign is reported as attributed, not as ambiguous.
+    const ambiguous = ambiguousTicketProjectLinksQuery();
+    expect(ambiguous).toContain("link_project.client_id = link_ticket.client_id");
+    expect(ambiguous).toContain("HAVING COUNT(DISTINCT link.project_id) > 1");
+  });
+
+  it("T030: the ambiguity warning only reports tickets the run would have billed", () => {
+    // A stale ambiguous link with no billable time left must not warn on every
+    // run forever; a project run also only hears about links touching it.
+    expect(billingEngineSource).toContain(
+      "AND target_link.project_id = ?",
+    );
+    expect(billingEngineSource).toContain(
+      "AND te.approval_status = 'APPROVED'",
+    );
+    expect(billingEngineSource).toContain("AND te.start_time >= ?");
+    expect(billingEngineSource).toContain(
+      "await this.getAmbiguousTicketProjectWarnings(\n            clientId,\n            billingPeriod,\n            options.projectTarget,\n          )",
     );
   });
 });
