@@ -382,12 +382,16 @@ export const DELETION_CONFIGS: Record<string, EntityDeletionConfig> = {
     entityType: 'team',
     supportsInactive: false,
     supportsArchive: false,
+    // Only work items that point at the team block deletion: they are ticket /
+    // project data, so deleting the team must never silently rewrite them.
+    // Team membership rows, calendar shares and board default-team settings are
+    // owned by the team and are removed / cleared by deleteTeam itself. (Listing
+    // team_members here made every team undeletable: a team always has a lead
+    // and members.)
     dependencies: [
-      { type: 'member', table: 'team_members', foreignKey: 'team_id', label: 'team member' },
       { type: 'ticket', table: 'tickets', foreignKey: 'assigned_team_id', label: 'assigned ticket' },
       { type: 'project_task', table: 'project_tasks', foreignKey: 'assigned_team_id', label: 'assigned project task' },
-      { type: 'project_template_task', table: 'project_template_tasks', foreignKey: 'assigned_team_id', label: 'project template task' },
-      { type: 'board', table: 'boards', foreignKey: 'default_assigned_team_id', label: 'board default team' }
+      { type: 'project_template_task', table: 'project_template_tasks', foreignKey: 'assigned_team_id', label: 'project template task' }
     ]
   },
   user: {

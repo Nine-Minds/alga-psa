@@ -1434,7 +1434,10 @@
       "referenceInvalid": "Das ausgewählte Board, der Status, die Priorität, der Bearbeiter, das Team oder die SLA-Richtlinie ist nicht mehr gültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
       "duplicateName": "Ein Board mit diesem Namen existiert bereits.",
       "duplicate": "Ein Board oder Status mit denselben Einstellungen existiert bereits.",
-      "invalidValue": "Einer der Board- oder Statuswerte ist ungültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut."
+      "invalidValue": "Einer der Board- oder Statuswerte ist ungültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "watchlistInvalidEmail": "Diese Adressen der Standard-Beobachterliste sind keine gültigen E-Mail-Adressen: {{emails}}.",
+      "watchlistTooMany": "Eine Standard-Beobachterliste kann höchstens 50 Empfänger enthalten.",
+      "watchlistInvalid": "Die Standard-Beobachterliste ist ungültig. Aktualisieren Sie die Seite und versuchen Sie es erneut."
     },
     "material": {
       "invalidValue": "Einer der ausgewählten Materialwerte ist ungültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",

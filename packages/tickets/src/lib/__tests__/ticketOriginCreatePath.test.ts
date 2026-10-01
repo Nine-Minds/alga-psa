@@ -63,11 +63,20 @@ describe('ticket origin create-path persistence contracts', () => {
       insert: insertMock,
     };
     ticketQuery.where.mockReturnValue(ticketQuery);
+    // createTicket looks up the board's default watchlist; this board has none.
+    const boardQuery = {
+      where: vi.fn(),
+      first: vi.fn().mockResolvedValue({ default_watchlist_enabled: false, default_watchlist: null }),
+    };
+    boardQuery.where.mockReturnValue(boardQuery);
 
     const trx = Object.assign(
       (table: string) => {
         if (table === 'tickets') {
           return ticketQuery;
+        }
+        if (table === 'boards') {
+          return boardQuery;
         }
 
         throw new Error(`Unexpected table: ${table}`);

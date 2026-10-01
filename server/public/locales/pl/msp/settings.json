@@ -424,7 +424,8 @@
       "placeholders": {
         "teamName": "Wprowadź nazwę zespołu",
         "selectTeamLead": "Wybierz lidera zespołu",
-        "selectUserToAdd": "Wybierz użytkownika do dodania"
+        "selectUserToAdd": "Wybierz użytkownika do dodania",
+        "noTeamLead": "Nieprzypisany"
       },
       "alert": {
         "unsavedChanges": "Mają Państwo niezapisane zmiany"
@@ -459,7 +460,8 @@
         "createFailed": "Nie udało się utworzyć zespołu: {{error}}",
         "deleteFailed": "Nie udało się usunąć zespołu",
         "updateName": "Nie udało się zaktualizować nazwy zespołu",
-        "saveChanges": "Nie udało się zapisać zmian. Spróbuj ponownie."
+        "saveChanges": "Nie udało się zapisać zmian. Spróbuj ponownie.",
+        "validateDeleteFailed": "Nie udało się sprawdzić, czy ten zespół można usunąć. Spróbuj ponownie."
       }
     }
   },
@@ -686,6 +688,21 @@
         "defaultBoard": {
           "label": "Domyślna tablica dla zgłoszeń z portalu klienta",
           "help": "Nowe zgłoszenia przesłane z portalu klienta trafiają na tę tablicę. Tylko jedna tablica może być domyślna."
+        },
+        "defaultWatchlist": {
+          "enabledLabel": "Dodawaj domyślnych obserwujących do nowych zgłoszeń",
+          "enabledHelp": "Obserwujący z tej listy są dodawani do każdego nowego zgłoszenia na tej tablicy, niezależnie od sposobu jego utworzenia. Obserwujący otrzymują powiadomienia i nie są przypisani do zgłoszenia. Istniejące zgłoszenia nie zmieniają się.",
+          "usersLabel": "Członkowie zespołu",
+          "usersPlaceholder": "Wybierz członków zespołu",
+          "usersHelp": "Obserwujący otrzymują powiadomienia na swój aktualny adres e-mail. Nieaktywni użytkownicy są pomijani.",
+          "emailsLabel": "Adresy e-mail",
+          "emailPlaceholder": "imie@example.com",
+          "addEmail": "Dodaj",
+          "emailsHelp": "Adresy e-mail służą do list dystrybucyjnych i kontaktów zewnętrznych. Lista mieści do {{max}} odbiorców.",
+          "removeEmail": "Usuń {{email}}",
+          "emailInvalid": "„{{email}}” nie jest prawidłowym adresem e-mail.",
+          "emailDuplicate": "{{email}} jest już na liście.",
+          "tooMany": "Lista mieści do {{max}} odbiorców."
         }
       },
       "dialog": {
@@ -832,6 +849,8 @@
           "automationHelp": "Automatycznie zamykaj nieaktywne zgłoszenia po okresie bezczynności",
           "statuses": "Priorytety i statusy",
           "statusesHelp": "Domyślny priorytet oraz statusy zgłoszeń dla tej tablicy",
+          "watchlist": "Domyślna lista obserwujących",
+          "watchlistHelp": "Obserwujący dodawani do każdego nowego zgłoszenia",
           "display": "Wyświetlanie i zachowanie",
           "displayHelp": "Licznik na żywo i typ tablicy"
         },

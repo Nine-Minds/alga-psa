@@ -10,6 +10,7 @@ import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import { TicketModel } from '../../models/ticketModel';
 import { SharedNumberingService } from '../../services/numberingService';
+import { resolveBoardDefaultWatchers, withBoardDefaultWatchers } from '../../lib/tickets/boardDefaultWatchlist';
 import type {
   NormalizedRmmAlertEvent,
   NormalizedRmmAlertSeverity,
@@ -79,10 +80,15 @@ export async function createTicketForAlert(
       priority_id: priorityId ?? null,
       board_id: boardId,
       assigned_to: actions.assignToUserId ?? null,
-      attributes: JSON.stringify({
-        description,
-        source_reference: event.externalAlertId,
-      }),
+      // Board default watchlist — this creator inserts directly rather than via
+      // TicketModel.createTicket, so it applies the same helper.
+      // LEVERAGE: pattern direct-ticket-insert-watchlist — a third direct insert site would justify a shared insert layer under TicketModel
+      attributes: JSON.stringify(
+        withBoardDefaultWatchers(
+          { description, source_reference: event.externalAlertId },
+          await resolveBoardDefaultWatchers(trx, tenantId, boardId)
+        )
+      ),
       source: event.provider,
       entered_at: now,
       updated_at: now,

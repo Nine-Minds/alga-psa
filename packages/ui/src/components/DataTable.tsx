@@ -936,6 +936,7 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
                       const cellValue = cell.getValue();
                       
                       // For columns with custom renders, use the raw value; for others, convert to string
+                      // LEVERAGE: friction datatable-dataindex-render-lookup — duplicate dataIndex values silently render the wrong cell
                       const columnDef = columns.find(col => {
                         const colId = Array.isArray(col.dataIndex) ? col.dataIndex.join('_') : col.dataIndex;
                         return colId === columnId;

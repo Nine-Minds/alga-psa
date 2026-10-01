@@ -422,7 +422,8 @@
       "placeholders": {
         "teamName": "Teamnaam invoeren",
         "selectTeamLead": "Selecteer een teamleider",
-        "selectUserToAdd": "Selecteer een gebruiker om toe te voegen"
+        "selectUserToAdd": "Selecteer een gebruiker om toe te voegen",
+        "noTeamLead": "Niet toegewezen"
       },
       "alert": {
         "unsavedChanges": "U heeft niet-opgeslagen wijzigingen"
@@ -455,7 +456,8 @@
         "createFailed": "Kan team niet aanmaken: {{error}}",
         "deleteFailed": "Kan team niet verwijderen",
         "updateName": "Kan teamnaam niet bijwerken",
-        "saveChanges": "Kan wijzigingen niet opslaan. Probeer het opnieuw."
+        "saveChanges": "Kan wijzigingen niet opslaan. Probeer het opnieuw.",
+        "validateDeleteFailed": "Kon niet controleren of dit team kan worden verwijderd. Probeer het opnieuw."
       }
     }
   },
@@ -682,6 +684,21 @@
         "defaultBoard": {
           "label": "Standaardbord voor tickets uit klantportaal",
           "help": "Nieuwe tickets die via het klantportaal worden ingediend, komen op dit bord terecht. Slechts één bord kan het standaardbord zijn."
+        },
+        "defaultWatchlist": {
+          "enabledLabel": "Standaardvolgers toevoegen aan nieuwe tickets",
+          "enabledHelp": "Volgers op deze lijst worden toegevoegd aan elk nieuw ticket op dit bord, ongeacht hoe het wordt aangemaakt. Volgers ontvangen meldingen en worden niet toegewezen. Bestaande tickets blijven ongewijzigd.",
+          "usersLabel": "Teamleden",
+          "usersPlaceholder": "Teamleden selecteren",
+          "usersHelp": "Volgers krijgen meldingen op hun huidige e-mailadres. Inactieve gebruikers worden overgeslagen.",
+          "emailsLabel": "E-mailadressen",
+          "emailPlaceholder": "naam@example.com",
+          "addEmail": "Toevoegen",
+          "emailsHelp": "Gebruik e-mailadressen voor distributielijsten en externe contacten. De lijst bevat maximaal {{max}} ontvangers.",
+          "removeEmail": "{{email}} verwijderen",
+          "emailInvalid": "\"{{email}}\" is geen geldig e-mailadres.",
+          "emailDuplicate": "{{email}} staat al op de lijst.",
+          "tooMany": "De lijst bevat maximaal {{max}} ontvangers."
         }
       },
       "dialog": {
@@ -828,6 +845,8 @@
           "automationHelp": "Inactieve tickets automatisch sluiten na inactiviteit",
           "statuses": "Prioriteiten & statussen",
           "statusesHelp": "Standaardprioriteit en de ticketstatussen voor dit bord",
+          "watchlist": "Standaard volglijst",
+          "watchlistHelp": "Volgers die aan elk nieuw ticket worden toegevoegd",
           "display": "Weergave & gedrag",
           "displayHelp": "Live-timer en bordtype"
         },

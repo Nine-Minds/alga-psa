@@ -422,7 +422,8 @@
       "placeholders": {
         "teamName": "Enter team name",
         "selectTeamLead": "Select a team lead",
-        "selectUserToAdd": "Select a user to add"
+        "selectUserToAdd": "Select a user to add",
+        "noTeamLead": "Not assigned"
       },
       "alert": {
         "unsavedChanges": "You have unsaved changes"
@@ -455,7 +456,8 @@
         "createFailed": "Failed to create team: {{error}}",
         "deleteFailed": "Failed to delete team",
         "updateName": "Failed to update team name",
-        "saveChanges": "Failed to save changes. Please try again."
+        "saveChanges": "Failed to save changes. Please try again.",
+        "validateDeleteFailed": "Could not check whether this team can be deleted. Try again."
       }
     }
   },
@@ -682,6 +684,21 @@
         "defaultBoard": {
           "label": "Default board for client portal tickets",
           "help": "New tickets submitted from the client portal land on this board. Only one board can be the default."
+        },
+        "defaultWatchlist": {
+          "enabledLabel": "Add default watchers to new tickets",
+          "enabledHelp": "Watchers on this list are added to each new ticket on this board, however it is created. Watchers receive notifications and are not assigned. Existing tickets are not changed.",
+          "usersLabel": "Team members",
+          "usersPlaceholder": "Select team members",
+          "usersHelp": "Watchers are notified at their current email address. Inactive users are skipped.",
+          "emailsLabel": "Email addresses",
+          "emailPlaceholder": "name@example.com",
+          "addEmail": "Add",
+          "emailsHelp": "Use email addresses for distribution lists and outside contacts. The list holds up to {{max}} recipients.",
+          "removeEmail": "Remove {{email}}",
+          "emailInvalid": "\"{{email}}\" is not a valid email address.",
+          "emailDuplicate": "{{email}} is already on the list.",
+          "tooMany": "The list holds up to {{max}} recipients."
         }
       },
       "dialog": {
@@ -828,6 +845,8 @@
           "automationHelp": "Auto-close stale tickets after inactivity",
           "statuses": "Priorities & statuses",
           "statusesHelp": "Default priority and the ticket statuses for this board",
+          "watchlist": "Default watchlist",
+          "watchlistHelp": "Watchers added to every new ticket",
           "display": "Display & behaviour",
           "displayHelp": "Live timer and board type"
         },

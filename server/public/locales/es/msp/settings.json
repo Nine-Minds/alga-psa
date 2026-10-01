@@ -422,7 +422,8 @@
       "placeholders": {
         "teamName": "Ingrese el nombre del equipo",
         "selectTeamLead": "Seleccionar un líder de equipo",
-        "selectUserToAdd": "Seleccionar un usuario para agregar"
+        "selectUserToAdd": "Seleccionar un usuario para agregar",
+        "noTeamLead": "Sin asignar"
       },
       "alert": {
         "unsavedChanges": "Tiene cambios sin guardar"
@@ -455,7 +456,8 @@
         "createFailed": "Error al crear el equipo: {{error}}",
         "deleteFailed": "Error al eliminar el equipo",
         "updateName": "No se pudo actualizar el nombre del equipo",
-        "saveChanges": "No se pudieron guardar los cambios. Inténtelo de nuevo."
+        "saveChanges": "No se pudieron guardar los cambios. Inténtelo de nuevo.",
+        "validateDeleteFailed": "No se pudo comprobar si este equipo se puede eliminar. Inténtelo de nuevo."
       }
     }
   },
@@ -682,6 +684,21 @@
         "defaultBoard": {
           "label": "Tablero predeterminado para tickets del portal del cliente",
           "help": "Los nuevos tickets enviados desde el portal del cliente se asignan a este tablero. Solo un tablero puede ser el predeterminado."
+        },
+        "defaultWatchlist": {
+          "enabledLabel": "Añadir observadores predeterminados a los tickets nuevos",
+          "enabledHelp": "Los observadores de esta lista se añaden a cada ticket nuevo de este tablero, sea cual sea la forma de crearlo. Los observadores reciben notificaciones y no quedan asignados. Los tickets existentes no cambian.",
+          "usersLabel": "Miembros del equipo",
+          "usersPlaceholder": "Seleccionar miembros del equipo",
+          "usersHelp": "Los observadores reciben notificaciones en su dirección de correo actual. Los usuarios inactivos se omiten.",
+          "emailsLabel": "Direcciones de correo",
+          "emailPlaceholder": "nombre@example.com",
+          "addEmail": "Añadir",
+          "emailsHelp": "Use direcciones de correo para listas de distribución y contactos externos. La lista admite hasta {{max}} destinatarios.",
+          "removeEmail": "Quitar {{email}}",
+          "emailInvalid": "«{{email}}» no es una dirección de correo válida.",
+          "emailDuplicate": "{{email}} ya está en la lista.",
+          "tooMany": "La lista admite hasta {{max}} destinatarios."
         }
       },
       "dialog": {
@@ -828,6 +845,8 @@
           "automationHelp": "Cerrar automáticamente los tickets inactivos tras un período de inactividad",
           "statuses": "Prioridades y estados",
           "statusesHelp": "Prioridad predeterminada y los estados de ticket de este tablero",
+          "watchlist": "Lista de seguimiento predeterminada",
+          "watchlistHelp": "Observadores que se añaden a cada ticket nuevo",
           "display": "Visualización y comportamiento",
           "displayHelp": "Temporizador en vivo y tipo de tablero"
         },

@@ -1434,7 +1434,10 @@
       "referenceInvalid": "El tablero, el estado, la prioridad, el responsable, el equipo o la política de SLA seleccionados ya no son válidos. Actualice la página e inténtelo de nuevo.",
       "duplicateName": "Ya existe un tablero con este nombre.",
       "duplicate": "Ya existe un tablero o estado con la misma configuración.",
-      "invalidValue": "Uno de los valores del tablero o del estado no es válido. Actualice la página e inténtelo de nuevo."
+      "invalidValue": "Uno de los valores del tablero o del estado no es válido. Actualice la página e inténtelo de nuevo.",
+      "watchlistInvalidEmail": "Estas direcciones de la lista de seguimiento predeterminada no son direcciones de correo válidas: {{emails}}.",
+      "watchlistTooMany": "Una lista de seguimiento predeterminada puede contener como máximo 50 destinatarios.",
+      "watchlistInvalid": "La lista de seguimiento predeterminada no es válida. Actualice la página e inténtelo de nuevo."
     },
     "material": {
       "invalidValue": "Uno de los valores de material seleccionados no es válido. Actualice la página e inténtelo de nuevo.",

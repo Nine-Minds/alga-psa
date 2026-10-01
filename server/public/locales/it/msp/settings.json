@@ -422,7 +422,8 @@
       "placeholders": {
         "teamName": "Inserisci il nome del team",
         "selectTeamLead": "Seleziona un responsabile del team",
-        "selectUserToAdd": "Seleziona un utente da aggiungere"
+        "selectUserToAdd": "Seleziona un utente da aggiungere",
+        "noTeamLead": "Non assegnato"
       },
       "alert": {
         "unsavedChanges": "Sono presenti modifiche non salvate"
@@ -455,7 +456,8 @@
         "createFailed": "Impossibile creare il team: {{error}}",
         "deleteFailed": "Impossibile eliminare il team",
         "updateName": "Impossibile aggiornare il nome del team",
-        "saveChanges": "Impossibile salvare le modifiche. Riprova."
+        "saveChanges": "Impossibile salvare le modifiche. Riprova.",
+        "validateDeleteFailed": "Impossibile verificare se questo team può essere eliminato. Riprova."
       }
     }
   },
@@ -682,6 +684,21 @@
         "defaultBoard": {
           "label": "Bacheca predefinita per i ticket del portale clienti",
           "help": "I nuovi ticket inviati dal portale clienti vengono assegnati a questa bacheca. Solo una bacheca può essere quella predefinita."
+        },
+        "defaultWatchlist": {
+          "enabledLabel": "Aggiungi osservatori predefiniti ai nuovi ticket",
+          "enabledHelp": "Gli osservatori di questa lista vengono aggiunti a ogni nuovo ticket di questa bacheca, indipendentemente da come viene creato. Gli osservatori ricevono notifiche e non vengono assegnati. I ticket esistenti non cambiano.",
+          "usersLabel": "Membri del team",
+          "usersPlaceholder": "Seleziona i membri del team",
+          "usersHelp": "Gli osservatori ricevono le notifiche al loro indirizzo e-mail attuale. Gli utenti inattivi vengono ignorati.",
+          "emailsLabel": "Indirizzi e-mail",
+          "emailPlaceholder": "nome@example.com",
+          "addEmail": "Aggiungi",
+          "emailsHelp": "Usa gli indirizzi e-mail per le liste di distribuzione e i contatti esterni. La lista contiene fino a {{max}} destinatari.",
+          "removeEmail": "Rimuovi {{email}}",
+          "emailInvalid": "\"{{email}}\" non è un indirizzo e-mail valido.",
+          "emailDuplicate": "{{email}} è già nella lista.",
+          "tooMany": "La lista contiene fino a {{max}} destinatari."
         }
       },
       "dialog": {
@@ -828,6 +845,8 @@
           "automationHelp": "Chiudi automaticamente i ticket inattivi dopo un periodo di inattività",
           "statuses": "Priorità e stati",
           "statusesHelp": "Priorità predefinita e gli stati dei ticket per questa bacheca",
+          "watchlist": "Lista di osservatori predefinita",
+          "watchlistHelp": "Osservatori aggiunti a ogni nuovo ticket",
           "display": "Visualizzazione e comportamento",
           "displayHelp": "Timer dal vivo e tipo di bacheca"
         },

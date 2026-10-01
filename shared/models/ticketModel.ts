@@ -13,6 +13,7 @@ import { z } from 'zod';
 import type { IEventPublisher } from '@alga-psa/types';
 import { applyMatchingChecklistTemplates } from '../lib/ticketChecklists';
 import { SharedNumberingService } from '../services/numberingService';
+import { resolveBoardDefaultWatchers, withBoardDefaultWatchers } from '../lib/tickets/boardDefaultWatchlist';
 
 const TICKET_ORIGINS = {
   INTERNAL: 'internal',
@@ -926,10 +927,22 @@ export class TicketModel {
     );
 
     // Prepare attributes object - description goes into attributes.description
-    const attributes = { ...cleanedInput.attributes };
+    let attributes: Record<string, any> = { ...cleanedInput.attributes };
     if (cleanedInput.description) {
       attributes.description = cleanedInput.description;
     }
+
+    // Board default watchlist: every ticket created through this model (UI, API,
+    // client portal, inbound email, workflows, importers, integrations) starts
+    // with the board's opt-in watchers in attributes.watch_list — the same store
+    // the Watch list card and notification fan-out already read. Watchers only:
+    // assignment is never touched. Entries already supplied by the caller win, so
+    // nothing is duplicated. Applies at creation only; see
+    // docs/plans/2026-09-29-board-default-watchlist-plan.md for moves between boards.
+    attributes = (withBoardDefaultWatchers(
+      attributes,
+      await resolveBoardDefaultWatchers(trx, tenant, cleanedInput.board_id)
+    ) ?? attributes) as Record<string, any>;
 
     // Assemble the insert row through the exhaustive field-handling map so
     // every CreateTicketInput key is either persisted, transformed, or

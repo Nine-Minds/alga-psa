@@ -7,7 +7,7 @@ import { Knex } from 'knex';
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import { deleteEntityWithValidation } from '@alga-psa/core/server';
 import { permissionError, type ActionMessageError, type ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
-import { teamActionErrorFrom, type TeamActionError } from './teamActionErrors';
+import { teamActionErrorFrom, teamActionErrorMessage, type TeamActionError } from './teamActionErrors';
 
 export type TeamMutationResult = ITeam | ActionMessageError | ActionPermissionError;
 export type TeamReadResult = ITeam | TeamActionError;
@@ -53,6 +53,42 @@ async function getUsersWithRoles(
     roles: rolesByUser.get(user.user_id) ?? [],
     role: roleByUser.get(user.user_id) ?? 'member',
   }));
+}
+
+/**
+ * Point a team at a new lead, or clear the lead (`null` = "Not Assigned").
+ * Keeps teams.manager_id and team_members.role in step: every previous lead is
+ * demoted to 'member' (clearing the lead keeps everyone as members), and a new
+ * lead is added to the team if they are not already on it.
+ */
+async function applyTeamLead(
+  trx: Knex.Transaction,
+  tenant: string,
+  teamId: string,
+  managerId: string | null,
+): Promise<void> {
+  const db = tenantDb(trx, tenant);
+
+  await Team.update(trx, tenant, teamId, { manager_id: managerId });
+
+  await db.table('team_members')
+    .where({ team_id: teamId, role: 'lead' })
+    .update({ role: 'member' });
+
+  if (!managerId) {
+    return;
+  }
+
+  const existingMember = await db.table('team_members')
+    .where({ team_id: teamId, user_id: managerId })
+    .first();
+  if (existingMember) {
+    await db.table('team_members')
+      .where({ team_id: teamId, user_id: managerId })
+      .update({ role: 'lead' });
+  } else {
+    await Team.addMember(trx, tenant, teamId, managerId, 'lead');
+  }
 }
 
 export const createTeam = withAuth(async (user, { tenant }, teamData: Omit<ITeam, 'members'> & { members?: IUserWithRoles[] }): Promise<TeamMutationResult> => {
@@ -132,7 +168,16 @@ export const updateTeam = withAuth(async (user, { tenant }, teamId: string, team
   }
 
   try {
-    await Team.update(knex, tenant, teamId, teamData);
+    const { manager_id: managerId, members: _members, ...fields } = teamData as Partial<ITeam> & { members?: unknown };
+    await withTransaction(knex, async (trx: Knex.Transaction) => {
+      if (Object.keys(fields).length > 0) {
+        await Team.update(trx, tenant, teamId, fields);
+      }
+      // `undefined` = leave the lead alone; `null` = Not Assigned.
+      if (managerId !== undefined) {
+        await applyTeamLead(trx, tenant, teamId, managerId);
+      }
+    });
     return await getTeamByIdInternal(knex, tenant, teamId);
   } catch (error) {
     console.error(error);
@@ -164,9 +209,18 @@ export const deleteTeam = withAuth(async (
 
     const result = await deleteEntityWithValidation('team', teamId, knex, tenant, async (trx, tenantId) => {
       // Calendar shares granted to the team (polymorphic grantee, no FK).
-      await tenantDb(trx, tenantId).table('calendar_shares')
+      const db = tenantDb(trx, tenantId);
+      await db.table('calendar_shares')
         .where({ grantee_type: 'team', grantee_id: teamId })
         .del();
+      // Boards keep working without a default team. Set to NULL here because the
+      // FK has no ON DELETE action (Citus forbids SET NULL). Tickets, project
+      // tasks and templates are NOT touched: they block deletion (see the
+      // 'team' deletion config) so assignment data is never rewritten silently.
+      await db.table('boards')
+        .where({ default_assigned_team_id: teamId })
+        .update({ default_assigned_team_id: null });
+      // Owns team_members; the team's members themselves (users) are untouched.
       await Team.delete(trx, tenantId, teamId);
     });
 
@@ -177,11 +231,12 @@ export const deleteTeam = withAuth(async (
     };
   } catch (error) {
     console.error(error);
+    const expected = teamActionErrorFrom(error);
     return {
       success: false,
       canDelete: false,
       code: 'VALIDATION_FAILED',
-      message: 'Failed to delete team',
+      message: expected ? teamActionErrorMessage(expected) : 'Failed to delete team',
       dependencies: [],
       alternatives: []
     };
@@ -292,7 +347,8 @@ export const getTeams = withAuth(async (user, { tenant }): Promise<TeamsReadResu
 });
 
 export interface TeamChanges {
-  managerId?: string;
+  /** New lead's user id, `null` for "Not Assigned", or omitted to leave the lead unchanged. */
+  managerId?: string | null;
   addUserIds: string[];
   removeUserIds: string[];
 }
@@ -308,41 +364,24 @@ export const saveTeamChanges = withAuth(async (user, { tenant }, teamId: string,
     await withTransaction(knex, async (trx: Knex.Transaction) => {
       const db = tenantDb(trx, tenant);
 
-      // Assign manager if changed
-      if (changes.managerId) {
-        await Team.update(trx, tenant, teamId, { manager_id: changes.managerId });
+      // Read the lead as it is *before* this save so removals are judged against
+      // the lead the user is looking at, not the one this save is about to set.
+      const currentTeam = await Team.get(trx, tenant, teamId);
+      if (!currentTeam) {
+        throw new Error('Team not found');
+      }
+      const leadAfterSave = changes.managerId === undefined ? currentTeam.manager_id : changes.managerId;
 
-        // Demote any existing leads to 'member'
-        await db.table('team_members')
-          .where({ team_id: teamId, role: 'lead' })
-          .update({ role: 'member' });
+      if (changes.removeUserIds.length > 0 && leadAfterSave && changes.removeUserIds.includes(leadAfterSave)) {
+        throw new Error('Cannot remove the team lead. Please assign a new team lead first.');
+      }
 
-        // Add or promote the new manager
-        const existingMember = await db.table('team_members')
-          .where({ team_id: teamId, user_id: changes.managerId })
-          .first();
-        if (existingMember) {
-          await db.table('team_members')
-            .where({ team_id: teamId, user_id: changes.managerId })
-            .update({ role: 'lead' });
-        } else {
-          await Team.addMember(trx, tenant, teamId, changes.managerId, 'lead');
-        }
+      if (changes.managerId !== undefined) {
+        await applyTeamLead(trx, tenant, teamId, changes.managerId);
       }
 
       // Batch remove members
       if (changes.removeUserIds.length > 0) {
-        // Prevent removing the current manager unless a new manager is being assigned
-        const currentTeam = await Team.get(trx, tenant, teamId);
-        if (
-          currentTeam &&
-          currentTeam.manager_id &&
-          changes.removeUserIds.includes(currentTeam.manager_id) &&
-          !changes.managerId
-        ) {
-          throw new Error('Cannot remove the team lead. Please assign a new team lead first.');
-        }
-
         await db.table('team_members')
           .where({ team_id: teamId })
           .whereIn('user_id', changes.removeUserIds)
@@ -391,29 +430,7 @@ export const assignManagerToTeam = withAuth(async (user, { tenant }, teamId: str
 
   try {
 
-    await withTransaction(knex, async (trx: Knex.Transaction) => {
-      const db = tenantDb(trx, tenant);
-
-      // Update team manager
-      await Team.update(trx, tenant, teamId, { manager_id: userId });
-
-      // Demote any existing leads to 'member'
-      await db.table('team_members')
-        .where({ team_id: teamId, role: 'lead' })
-        .update({ role: 'member' });
-
-      // Add or promote the new manager
-      const existingMember = await db.table('team_members')
-        .where({ team_id: teamId, user_id: userId })
-        .first();
-      if (existingMember) {
-        await db.table('team_members')
-          .where({ team_id: teamId, user_id: userId })
-          .update({ role: 'lead' });
-      } else {
-        await Team.addMember(trx, tenant, teamId, userId, 'lead');
-      }
-    });
+    await withTransaction(knex, (trx: Knex.Transaction) => applyTeamLead(trx, tenant, teamId, userId));
 
     return await getTeamByIdInternal(knex, tenant, teamId);
   } catch (error) {

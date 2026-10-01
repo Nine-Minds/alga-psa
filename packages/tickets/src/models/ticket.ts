@@ -111,6 +111,7 @@ const Ticket = {
     }
 
     try {
+      // LEVERAGE: pattern direct-ticket-insert-watchlist — raw insert (no callers found); does not apply the board default watchlist, use TicketModel.createTicket
       const [insertedTicket] = await tenantScopedTable<ITicket>(knexOrTrx, 'tickets', tenant)
         .insert({ ...ticket, tenant })
         .returning('ticket_id');

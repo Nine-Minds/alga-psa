@@ -412,6 +412,7 @@ export class EmailService {
         .update({ next_number: ticketNumber + 1 });
 
       // Create ticket
+      // LEVERAGE: pattern direct-ticket-insert-watchlist — legacy direct insert (no callers found); does not apply the board default watchlist
       await db.table('tickets').insert({
         ticket_id: ticketId,
         tenant: this.tenant,

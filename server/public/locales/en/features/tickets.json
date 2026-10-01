@@ -1442,7 +1442,10 @@
       "referenceInvalid": "The selected board, status, priority, assignee, team, or SLA policy is no longer valid. Please refresh and try again.",
       "duplicateName": "A board with this name already exists.",
       "duplicate": "A board or status with the same settings already exists.",
-      "invalidValue": "One of the board or status values is invalid. Please refresh and try again."
+      "invalidValue": "One of the board or status values is invalid. Please refresh and try again.",
+      "watchlistInvalidEmail": "These default watchlist addresses are not valid email addresses: {{emails}}.",
+      "watchlistTooMany": "A default watchlist can hold at most 50 recipients.",
+      "watchlistInvalid": "The default watchlist is not valid. Refresh the page and try again."
     },
     "material": {
       "invalidValue": "One of the selected material values is invalid. Please refresh and try again.",

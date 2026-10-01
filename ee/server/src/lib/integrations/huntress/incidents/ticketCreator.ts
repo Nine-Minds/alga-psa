@@ -10,6 +10,7 @@ import { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import { resolveRmmTicketContactId } from '@alga-psa/shared/rmm/alerts';
 import { SharedNumberingService } from '@alga-psa/shared/services/numberingService';
+import { resolveBoardDefaultWatchers, withBoardDefaultWatchers } from '@alga-psa/shared/lib/tickets/boardDefaultWatchlist';
 
 export interface CreateHuntressTicketParams {
   clientId: string;
@@ -75,10 +76,14 @@ export async function createHuntressTicket(
       // The live tickets schema has no description/source_reference/created_at
       // columns: the body and provenance live in the attributes JSONB, and
       // entered_at is the creation timestamp.
-      attributes: JSON.stringify({
-        description: params.body,
-        source_reference: params.sourceReference,
-      }),
+      // Board default watchlist — direct insert, so it applies the shared helper.
+      // LEVERAGE: pattern direct-ticket-insert-watchlist — same shape as shared/rmm/alerts/ticketCreator.ts
+      attributes: JSON.stringify(
+        withBoardDefaultWatchers(
+          { description: params.body, source_reference: params.sourceReference },
+          await resolveBoardDefaultWatchers(trx, tenantId, params.boardId)
+        )
+      ),
       source: 'huntress',
       entered_at: now,
       updated_at: now,

@@ -14,6 +14,7 @@ import { boardActionErrorFrom, type BoardActionError } from './boardActionErrors
 import { parseTicketViewSettings } from './boardViewSettingsSchema';
 import { ticketSlaBreachedBindings, ticketSlaBreachedSql } from '../../lib/ticketSlaSql';
 import type { TicketViewSettings } from '../../lib/ticketViewSettings';
+import { parseBoardDefaultWatchlistInput } from '@alga-psa/shared/lib/tickets/boardDefaultWatchlistSchema';
 import { permissionError, type ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 
 export interface FindBoardByNameOutput {
@@ -409,6 +410,10 @@ export const createBoard = withAuth(async (user, { tenant }, boardData: CreateBo
           inbound_reply_ai_ack_suppression_enabled: boardData.inbound_reply_ai_ack_suppression_enabled ?? false,
           enable_live_ticket_timer: boardData.enable_live_ticket_timer ?? true,
           client_portal_visible: boardData.client_portal_visible ?? true,
+          default_watchlist_enabled: boardData.default_watchlist_enabled === true,
+          default_watchlist: boardData.default_watchlist
+            ? JSON.stringify(parseBoardDefaultWatchlistInput(boardData.default_watchlist))
+            : null,
           // A new board is pinned by default: it was just created deliberately,
           // so it earns a tab until an admin decides otherwise. list_view_settings
           // starts NULL — a new board inherits the tenant view rather than
@@ -860,7 +865,11 @@ export const updateBoard = withAuth(async (user, { tenant }, boardId: string, bo
       // decorative and a client-portal caller could re-enable a restricted
       // status. Checked before ANY board or status mutation, including the
       // unset-other-defaults step below.
-      const touchesViewConfig = 'is_pinned' in boardData || 'list_view_settings' in boardData;
+      const touchesViewConfig =
+        'is_pinned' in boardData ||
+        'list_view_settings' in boardData ||
+        'default_watchlist' in boardData ||
+        'default_watchlist_enabled' in boardData;
       const touchesTicketStatusConfig = Array.isArray(boardData.ticket_statuses);
       if (
         (touchesViewConfig || touchesTicketStatusConfig) &&
@@ -920,8 +929,16 @@ export const updateBoard = withAuth(async (user, { tenant }, boardId: string, bo
         sanitizedData.is_pinned = Boolean(sanitizedData.is_pinned);
       }
 
-      const { ticket_statuses: ticketStatuses, list_view_settings: listViewSettings, ...rest } =
-        sanitizedData;
+      if ('default_watchlist_enabled' in sanitizedData) {
+        sanitizedData.default_watchlist_enabled = sanitizedData.default_watchlist_enabled === true;
+      }
+
+      const {
+        ticket_statuses: ticketStatuses,
+        list_view_settings: listViewSettings,
+        default_watchlist: defaultWatchlist,
+        ...rest
+      } = sanitizedData;
       const boardUpdateData: Record<string, unknown> = { ...rest };
 
       // list_view_settings is validated strictly on write (unknown keys rejected)
@@ -931,6 +948,15 @@ export const updateBoard = withAuth(async (user, { tenant }, boardId: string, bo
           listViewSettings === null || listViewSettings === undefined
             ? null
             : JSON.stringify(parseTicketViewSettings(listViewSettings));
+      }
+
+      // default_watchlist is validated strictly on write (bad addresses are
+      // rejected, not dropped) and stored as JSON text; null clears it.
+      if ('default_watchlist' in sanitizedData) {
+        boardUpdateData.default_watchlist =
+          defaultWatchlist === null || defaultWatchlist === undefined
+            ? null
+            : JSON.stringify(parseBoardDefaultWatchlistInput(defaultWatchlist));
       }
 
       const [updatedBoard] = (await tenantScopedTable('boards')

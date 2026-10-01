@@ -422,7 +422,8 @@
       "placeholders": {
         "teamName": "Teamname eingeben",
         "selectTeamLead": "Teamleiter auswählen",
-        "selectUserToAdd": "Benutzer zum Hinzufügen auswählen"
+        "selectUserToAdd": "Benutzer zum Hinzufügen auswählen",
+        "noTeamLead": "Nicht zugewiesen"
       },
       "alert": {
         "unsavedChanges": "Sie haben ungespeicherte Änderungen"
@@ -455,7 +456,8 @@
         "createFailed": "Team konnte nicht erstellt werden: {{error}}",
         "deleteFailed": "Team konnte nicht gelöscht werden",
         "updateName": "Teamname konnte nicht aktualisiert werden",
-        "saveChanges": "Änderungen konnten nicht gespeichert werden. Bitte versuche es erneut."
+        "saveChanges": "Änderungen konnten nicht gespeichert werden. Bitte versuche es erneut.",
+        "validateDeleteFailed": "Es konnte nicht geprüft werden, ob dieses Team gelöscht werden kann. Versuchen Sie es erneut."
       }
     }
   },
@@ -682,6 +684,21 @@
         "defaultBoard": {
           "label": "Standard-Board für Tickets aus dem Kundenportal",
           "help": "Neue Tickets, die über das Kundenportal eingereicht werden, landen auf diesem Board. Nur ein Board kann das Standard-Board sein."
+        },
+        "defaultWatchlist": {
+          "enabledLabel": "Standardbeobachter zu neuen Tickets hinzufügen",
+          "enabledHelp": "Die Beobachter dieser Liste werden jedem neuen Ticket dieses Boards hinzugefügt, unabhängig davon, wie es erstellt wird. Beobachter erhalten Benachrichtigungen und werden nicht zugewiesen. Bestehende Tickets bleiben unverändert.",
+          "usersLabel": "Teammitglieder",
+          "usersPlaceholder": "Teammitglieder auswählen",
+          "usersHelp": "Beobachter werden an ihre aktuelle E-Mail-Adresse benachrichtigt. Inaktive Benutzer werden übersprungen.",
+          "emailsLabel": "E-Mail-Adressen",
+          "emailPlaceholder": "name@example.com",
+          "addEmail": "Hinzufügen",
+          "emailsHelp": "Verwenden Sie E-Mail-Adressen für Verteilerlisten und externe Kontakte. Die Liste fasst bis zu {{max}} Empfänger.",
+          "removeEmail": "{{email}} entfernen",
+          "emailInvalid": "„{{email}}“ ist keine gültige E-Mail-Adresse.",
+          "emailDuplicate": "{{email}} steht bereits auf der Liste.",
+          "tooMany": "Die Liste fasst bis zu {{max}} Empfänger."
         }
       },
       "dialog": {
@@ -828,6 +845,8 @@
           "automationHelp": "Inaktive Tickets nach Inaktivität automatisch schließen",
           "statuses": "Prioritäten & Status",
           "statusesHelp": "Standardpriorität und die Ticket-Status für dieses Board",
+          "watchlist": "Standard-Beobachterliste",
+          "watchlistHelp": "Beobachter, die jedem neuen Ticket hinzugefügt werden",
           "display": "Anzeige & Verhalten",
           "displayHelp": "Live-Timer und Board-Typ"
         },
