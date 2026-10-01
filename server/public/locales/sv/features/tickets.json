@@ -1892,7 +1892,8 @@
       "remove": "Ta bort",
       "cancel": "Avbryt",
       "save": "Spara",
-      "menu": "Länkåtgärder"
+      "menu": "Länkåtgärder",
+      "openRecord": "Öppna extern post"
     },
     "relationship": {
       "origin": "Ursprung",
@@ -1951,7 +1952,14 @@
       "systemLabelRequired": "Systemetikett krävs",
       "permissionDenied": "Behörighet saknas: Det går inte att hantera externa system",
       "systemRequired": "Välj ett externt system.",
-      "urlRequired": "En URL krävs för system utan URL-mall."
+      "urlRequired": "En URL krävs för system utan URL-mall.",
+      "invalidVisibility": "Endast ärendelänkar kan delas och synligheten måste vara ett booleskt värde"
+    },
+    "visibility": {
+      "label": "Synlighet",
+      "internal": "Endast internt",
+      "shared": "Synlig i kundportalen",
+      "help": "Kunder med åtkomst till det här ärendet kan se länken. Att dela länken ger inte åtkomst till det externa systemet."
     }
   },
   "smartSearch": {
