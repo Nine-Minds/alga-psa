@@ -130,7 +130,10 @@ const QuoteDocumentTemplate = {
       is_default: insertRecord.is_default,
       templateAst: insertRecord.templateAst,
       // The insert path takes the column default; a conflict-merge must bump it explicitly.
-      updated_at: knexOrTrx.fn.now(),
+      // Bound, not now(): Citus rejects non-IMMUTABLE functions in DO UPDATE SET on
+      // distributed tables.
+      // LEVERAGE: pattern citus-upsert-timestamp — every merge that bumps a timestamp hand-binds new Date()
+      updated_at: new Date(),
     };
 
     const [savedTemplate] = await tenantScopedTable(knexOrTrx, tenant)

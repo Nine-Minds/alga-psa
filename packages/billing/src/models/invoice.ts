@@ -1063,7 +1063,10 @@ const Invoice = {
       version: insertRecord.version,
       is_default: insertRecord.is_default,
       // The insert path takes the column default; a conflict-merge must bump it explicitly.
-      updated_at: knexOrTrx.fn.now(),
+      // Bound, not now(): Citus rejects non-IMMUTABLE functions in DO UPDATE SET on
+      // distributed tables.
+      // LEVERAGE: pattern citus-upsert-timestamp — every merge that bumps a timestamp hand-binds new Date()
+      updated_at: new Date(),
     };
     if (Object.prototype.hasOwnProperty.call(insertRecord, 'templateAst')) {
       updateRecord.templateAst = insertRecord.templateAst;

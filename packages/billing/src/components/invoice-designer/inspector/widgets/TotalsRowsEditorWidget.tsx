@@ -14,6 +14,7 @@ import {
   type TranslatableRef,
 } from '../../utils/translatableText';
 import { StandardLabelControl } from './StandardLabelControl';
+import { getStandardDocumentLabel } from '../../../../lib/invoice-template-ast/standardDocumentLabels';
 
 type Props = {
   node: DesignerNode;
@@ -91,12 +92,12 @@ const setInlineColor = (
   return nextRow;
 };
 
-// Rows a totals block can add; value paths are the render model's totals.
-const TOTALS_ROW_PRESETS: Array<{ id: string; label: TranslatableRef; valuePath: string }> = [
-  { id: 'subtotal', label: { i18nKey: 'labels.subtotal', defaultValue: 'Subtotal' }, valuePath: 'subtotal' },
-  { id: 'tax', label: { i18nKey: 'labels.tax', defaultValue: 'Tax' }, valuePath: 'tax' },
-  { id: 'total', label: { i18nKey: 'labels.total', defaultValue: 'Total' }, valuePath: 'total' },
-];
+// Rows a totals block can add; value paths are the render model's totals. Labels
+// are the standard document labels of the same name (namespace `documents`), so a
+// new row translates for each recipient like the rows a preset ships with.
+const TOTALS_ROW_PRESETS: Array<{ id: string; label: TranslatableRef; valuePath: string }> = (
+  ['subtotal', 'tax', 'total'] as const
+).map((id) => ({ id, label: getStandardDocumentLabel(`labels.${id}`)!, valuePath: id }));
 
 const HEX_COLOR_RE = /^#(?:[0-9a-fA-F]{6})$/;
 

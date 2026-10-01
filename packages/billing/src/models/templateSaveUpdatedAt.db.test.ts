@@ -9,9 +9,10 @@ import QuoteDocumentTemplate from './quoteDocumentTemplate';
 //
 // saveTemplate upserts with ON CONFLICT ... MERGE. A merge only writes the columns
 // it is given, so without an explicit updated_at the column kept its insert-time
-// default forever and the status never advanced after the first save. Each save
-// below is its own statement/transaction: now() is fixed for the length of a
-// Postgres transaction, so two saves inside one transaction would tie.
+// default forever and the status never advanced after the first save. The merge
+// binds the save time from the application (Citus rejects now() there; see
+// templateSaveUpsert.citus.test.ts), and each save below runs separately with a
+// pause between, so the two timestamps are strictly ordered.
 
 const AST = { kind: 'template', version: 1 };
 
