@@ -1572,6 +1572,10 @@
       "quantityLabel": "Quantité",
       "selectServicePlaceholder": "Sélectionnez un service",
       "serviceItemLabel": "Service {{index}}"
+    },
+    "advanceSuggestion": {
+      "message": "Facturée à terme échu, cette ligne ne peut pas être facturée avant la fin de sa première période de service. Avec une facturation par avance selon le rythme du contrat, elle est facturée à la date de début.",
+      "action": "Facturer par avance selon le rythme du contrat"
     }
   },
   "wizardProducts": {
@@ -1775,16 +1779,6 @@
         "label": "Propriétaire de la cadence :",
         "contractAnniversary": "Anniversaire du contrat",
         "clientBillingSchedule": "Calendrier de facturation du client"
-      },
-      "firstInvoice": {
-        "contract": {
-          "advance": "Première facture : émise lors de la fenêtre d'anniversaire du contrat qui ouvre la première période de service couverte.",
-          "arrears": "Première facture : émise lors de la prochaine fenêtre d'anniversaire du contrat après la clôture de la première période de service couverte."
-        },
-        "client": {
-          "advance": "Première facture : émise lors de la première fenêtre du calendrier de facturation client couvrant la période de service.",
-          "arrears": "Première facture : émise lors de la prochaine fenêtre du calendrier de facturation client après la clôture de la première période de service couverte."
-        }
       },
       "partialPeriod": {
         "enabled": "Les périodes partielles ajustent les frais récurrents à la portion couverte de la période de service.",
@@ -2502,5 +2496,31 @@
       "contractNotActive": "Le contrat de renouvellement activé n’est plus actif. Veuillez actualiser la page et réessayer.",
       "manualRetryDueOnly": "La relance manuelle n’est possible que pour les cycles de renouvellement échus."
     }
+  },
+  "wizardFirstInvoice": {
+    "loading": "Vérification du calendrier de facturation du client…",
+    "arrearsPreviewNote": "D'ici là, un aperçu des factures de ce client n'a rien à facturer pour cette ligne.",
+    "unavailable": {
+      "missingStartDate": "Choisissez une date de début pour voir quand ce contrat sera facturé pour la première fois.",
+      "unsupportedFrequency": "Aucune date de première facture n'est affichée, car la facturation selon le rythme du contrat ne prend pas en charge cette fréquence. Choisissez une fréquence prise en charge ou facturez selon le calendrier du client.",
+      "clientSchedule": "Cette ligne est facturée selon le calendrier de facturation du client. Ce calendrier n'a pas pu être chargé, donc aucune date n'est affichée."
+    },
+    "contract": {
+      "arrears": "Facturée à terme échu selon le rythme du contrat : la première facture sera disponible le {{date}}, à la fin de la première période de service.",
+      "advance": "Facturée par avance selon le rythme du contrat : la première facture est disponible à partir du {{date}}, la date de début du contrat."
+    },
+    "client": {
+      "arrears": "Facturée à terme échu selon le calendrier de facturation du client : la première facture sera disponible le {{date}}, à la fin de la période de facturation en cours du client.",
+      "advance": "Facturée par avance selon le calendrier de facturation du client : la première facture est disponible à partir du {{date}}, le début de la période de facturation du client qui contient la date de début du contrat."
+    }
+  },
+  "wizardCreated": {
+    "title": "Contrat créé",
+    "heading": "{{contractName}} a été créé",
+    "firstInvoiceHeading": "Première facture",
+    "done": "Terminé"
+  },
+  "sellHourBlockNote": {
+    "text": "Un forfait d'heures de contrat ne facture que le dépassement. Pour facturer d'avance un bloc d'heures, utilisez Vendre un bloc sous Blocs d'heures, dans l'onglet Tableau de bord de facturation du client."
   }
 }

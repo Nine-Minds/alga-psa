@@ -1572,6 +1572,10 @@
       "quantityLabel": "Quantidade",
       "selectServicePlaceholder": "Selecione um serviço",
       "serviceItemLabel": "Serviço {{index}}"
+    },
+    "advanceSuggestion": {
+      "message": "Com faturamento em atraso, esta linha só pode ser faturada depois que seu primeiro período de serviço terminar. Com faturamento antecipado pelo ciclo do contrato, ela é faturada na data de início.",
+      "action": "Faturar antecipadamente pelo ciclo do contrato"
     }
   },
   "wizardProducts": {
@@ -1775,16 +1779,6 @@
         "label": "Proprietário da cadência:",
         "contractAnniversary": "Aniversário do contrato",
         "clientBillingSchedule": "Cronograma de faturamento do cliente"
-      },
-      "firstInvoice": {
-        "contract": {
-          "advance": "Primeira fatura: fatura na janela de aniversário do contrato que abre o primeiro período de serviço coberto.",
-          "arrears": "Primeira fatura: fatura na próxima janela de aniversário do contrato após o encerramento do primeiro período de serviço coberto."
-        },
-        "client": {
-          "advance": "Primeira fatura: fatura na primeira janela de agendamento de faturamento do cliente cobrindo o período de serviço.",
-          "arrears": "Primeira fatura: fatura na próxima janela de programação de faturamento do cliente após o encerramento do primeiro período de serviço coberto."
-        }
       },
       "partialPeriod": {
         "enabled": "Os períodos parciais ajustam a taxa recorrente à parcela coberta do período de serviço.",
@@ -2502,5 +2496,31 @@
       "contractNotActive": "O contrato de renovação ativado não está mais ativo. Atualize a página e tente novamente.",
       "manualRetryDueOnly": "A nova tentativa manual só está disponível para ciclos de renovação vencidos."
     }
+  },
+  "wizardFirstInvoice": {
+    "loading": "Verificando o calendário de faturamento do cliente…",
+    "arrearsPreviewNote": "Até lá, uma prévia de faturas deste cliente não tem nada a faturar para esta linha.",
+    "unavailable": {
+      "missingStartDate": "Escolha uma data de início para ver quando este contrato será faturado pela primeira vez.",
+      "unsupportedFrequency": "Nenhuma data da primeira fatura é exibida porque o faturamento pelo ciclo do contrato não oferece suporte a essa frequência. Escolha uma frequência compatível ou fature pelo calendário do cliente.",
+      "clientSchedule": "Esta linha é faturada pelo calendário de faturamento do cliente. Não foi possível carregar esse calendário, então nenhuma data é exibida."
+    },
+    "contract": {
+      "arrears": "Faturada em atraso pelo ciclo do contrato: a primeira fatura fica disponível em {{date}}, quando o primeiro período de serviço termina.",
+      "advance": "Faturada antecipadamente pelo ciclo do contrato: a primeira fatura está disponível a partir de {{date}}, a data de início do contrato."
+    },
+    "client": {
+      "arrears": "Faturada em atraso pelo calendário de faturamento do cliente: a primeira fatura fica disponível em {{date}}, quando o período de faturamento atual do cliente termina.",
+      "advance": "Faturada antecipadamente pelo calendário de faturamento do cliente: a primeira fatura está disponível a partir de {{date}}, o início do período de faturamento do cliente que contém a data de início do contrato."
+    }
+  },
+  "wizardCreated": {
+    "title": "Contrato criado",
+    "heading": "{{contractName}} foi criado",
+    "firstInvoiceHeading": "Primeira fatura",
+    "done": "Concluído"
+  },
+  "sellHourBlockNote": {
+    "text": "Um pacote de horas do contrato fatura apenas o excedente. Para cobrar antecipadamente um bloco de horas, use Vender bloco em Blocos de horas, na guia Painel de faturamento do cliente."
   }
 }

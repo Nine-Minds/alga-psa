@@ -1576,6 +1576,10 @@
       "quantityLabel": "Ilość",
       "selectServicePlaceholder": "Wybierz usługę",
       "serviceItemLabel": "Usługa {{index}}"
+    },
+    "advanceSuggestion": {
+      "message": "Przy rozliczaniu z dołu tę pozycję można zafakturować dopiero po zakończeniu pierwszego okresu usługi. Przy rozliczaniu z góry według cyklu umowy zostanie zafakturowana w dniu rozpoczęcia.",
+      "action": "Rozliczaj z góry według cyklu umowy"
     }
   },
   "wizardProducts": {
@@ -1779,16 +1783,6 @@
         "label": "Właściciel rytmu:",
         "contractAnniversary": "Rocznica umowy",
         "clientBillingSchedule": "Harmonogram rozliczeń klienta"
-      },
-      "firstInvoice": {
-        "contract": {
-          "advance": "Pierwsza faktura: rozlicz w oknie rocznicy umowy, które otwiera pierwszy objęty okres usługi.",
-          "arrears": "Pierwsza faktura: rozlicz w kolejnym oknie rocznicy umowy po zamknięciu pierwszego objętego okresu usługi."
-        },
-        "client": {
-          "advance": "Pierwsza faktura: rozlicz w pierwszym oknie harmonogramu rozliczeń klienta obejmującym okres usługi.",
-          "arrears": "Pierwsza faktura: rozlicz w kolejnym oknie harmonogramu rozliczeń klienta po zamknięciu pierwszego objętego okresu usługi."
-        }
       },
       "partialPeriod": {
         "enabled": "Okresy częściowe dostosowują opłatę cykliczną do objętej części okresu usługi.",
@@ -2506,5 +2500,31 @@
       "contractNotActive": "Aktywowana umowa odnowienia nie jest już aktywna. Odśwież stronę i spróbuj ponownie.",
       "manualRetryDueOnly": "Ręczne ponowienie jest dostępne tylko dla wymagalnych cykli odnowienia."
     }
+  },
+  "wizardFirstInvoice": {
+    "loading": "Sprawdzanie harmonogramu rozliczeń klienta…",
+    "arrearsPreviewNote": "Do tego czasu podgląd faktur tego klienta nie zawiera nic do rozliczenia dla tej pozycji.",
+    "unavailable": {
+      "missingStartDate": "Wybierz datę rozpoczęcia, aby zobaczyć, kiedy ta umowa zostanie po raz pierwszy zafakturowana.",
+      "unsupportedFrequency": "Data pierwszej faktury nie jest wyświetlana, ponieważ rozliczanie według cyklu umowy nie obsługuje tej częstotliwości. Wybierz obsługiwaną częstotliwość lub rozliczaj według harmonogramu klienta.",
+      "clientSchedule": "Ta pozycja jest rozliczana według harmonogramu rozliczeń klienta. Nie udało się go wczytać, więc data nie jest wyświetlana."
+    },
+    "contract": {
+      "arrears": "Rozliczana z dołu według cyklu umowy: pierwsza faktura będzie dostępna {{date}}, gdy zakończy się pierwszy okres usługi.",
+      "advance": "Rozliczana z góry według cyklu umowy: pierwsza faktura jest dostępna od {{date}}, czyli daty rozpoczęcia umowy."
+    },
+    "client": {
+      "arrears": "Rozliczana z dołu według harmonogramu rozliczeń klienta: pierwsza faktura będzie dostępna {{date}}, gdy zakończy się bieżący okres rozliczeniowy klienta.",
+      "advance": "Rozliczana z góry według harmonogramu rozliczeń klienta: pierwsza faktura jest dostępna od {{date}}, czyli początku okresu rozliczeniowego klienta, w którym przypada data rozpoczęcia umowy."
+    }
+  },
+  "wizardCreated": {
+    "title": "Umowa utworzona",
+    "heading": "Utworzono umowę {{contractName}}",
+    "firstInvoiceHeading": "Pierwsza faktura",
+    "done": "Gotowe"
+  },
+  "sellHourBlockNote": {
+    "text": "Pakiet godzin w umowie rozlicza tylko przekroczenie. Aby z góry naliczyć opłatę za pakiet godzin, użyj opcji Sprzedaj pakiet w sekcji Pakiety godzin na karcie Panel rozliczeniowy klienta."
   }
 }

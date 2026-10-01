@@ -862,6 +862,50 @@ async function assertExpectedUsagePeriodTotalsCurrent(params: {
 }
 
 /**
+ * Expected preview refusals the billing engine raises as bare sentences. Each
+ * gets a stable code (the UI translates by it) and an English message that says
+ * what to do next, used when the UI has no translation for the code.
+ */
+const EXPLAINED_PREVIEW_FAILURES: ReadonlyArray<{
+  matches: (message: string) => boolean;
+  code: Extract<
+    HandledRecurringFailureCode,
+    'RECURRING_PERIODS_NOT_MATERIALIZED' | 'NO_ACTIVE_CONTRACT_LINES' | 'NOTHING_TO_BILL'
+  >;
+  message: string;
+}> = [
+  {
+    matches: (message) => message.startsWith('Recurring service periods were not materialized'),
+    code: 'RECURRING_PERIODS_NOT_MATERIALIZED',
+    message:
+      "Service periods haven't been generated for this billing window yet. Use Fix all on the Automatic Invoices page, or check Billing > Service Periods, then preview again.",
+  },
+  {
+    matches: (message) =>
+      message === 'No active contract lines found for this client in the selected billing period.',
+    code: 'NO_ACTIVE_CONTRACT_LINES',
+    message:
+      'No contract line is active for this billing period. Check the contract start and end dates and that the contract is active.',
+  },
+  {
+    matches: (message) => message === 'Nothing to bill',
+    code: 'NOTHING_TO_BILL',
+    message:
+      'Nothing is ready to invoice for this window. Contracts billed in arrears can only be invoiced after their service period ends, so check the billing timing and dates.',
+  },
+];
+
+function explainedPreviewFailureFromMessage(
+  message: string,
+): { message: string; code: HandledRecurringFailureCode } | null {
+  // LEVERAGE: friction engine-failure-identity — the engine identifies these refusals only by
+  // their English sentence, so preview must string-match; typed errors from the engine would
+  // remove this table.
+  const explained = EXPLAINED_PREVIEW_FAILURES.find((entry) => entry.matches(message));
+  return explained ? { message: explained.message, code: explained.code } : null;
+}
+
+/**
  * Maps a preview failure to the user-safe message plus the structured, known
  * failure (code/params) the UI needs to render localized, actionable guidance.
  * Unknown/internal failures carry no code, so the UI keeps the generic string.
@@ -878,8 +922,12 @@ function previewInvoiceErrorInfo(error: unknown): {
     return { message };
   }
 
-  if (message.startsWith('Recurring service periods were not materialized')) {
-    return { message };
+  // The engine raises these as plain sentences from several throw sites shared
+  // with generation, so preview recognizes them here and hands the UI a stable
+  // code plus an actionable English fallback. The generation path is untouched.
+  const explainedFailure = explainedPreviewFailureFromMessage(message);
+  if (explainedFailure) {
+    return explainedFailure;
   }
 
   if (/^Billing cycle .+ not found for client .+$/.test(message)) {
@@ -902,7 +950,6 @@ function previewInvoiceErrorInfo(error: unknown): {
     'Grouped recurring selection inputs must share the same client and invoice window.',
     'Invalid billing cycle dates',
     'Invoice period cannot span billing cycle change',
-    'No active contract lines found for this client in the selected billing period.',
     'No recurring execution windows selected',
     'No recurring selections were provided for preview.',
     'Recurring selector input execution window kind is not supported.',
