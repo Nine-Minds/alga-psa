@@ -202,20 +202,27 @@ describe('tickets modal route infrastructure', () => {
   });
 
   it('threads optional notification suppression through eligible bulk dialogs and excludes tag writes', () => {
+    // The status client carries the bulk close extras (bundle propagation, the
+    // optional resolution comment) on top of the suppression flags, so it
+    // threads the wider TicketBulkStatusOptions alias instead.
     const routedBulkClients = [
-      ['server/src/app/msp/tickets/_components/BulkAssignTicketsRouteClient.tsx', 'bulkAssignTickets(selectedTicketIdsArray, selection, options)'],
-      ['server/src/app/msp/tickets/_components/BulkSetDueDateRouteClient.tsx', 'bulkUpdateTicketDueDate(selectedTicketIdsArray, dueDateIso, options)'],
-      ['server/src/app/msp/tickets/_components/BulkChangeStatusRouteClient.tsx', 'bulkUpdateTicketStatus(selectedTicketIdsArray, statusId, options)'],
-      ['server/src/app/msp/tickets/_components/BulkChangePriorityRouteClient.tsx', 'bulkUpdateTicketPriority(selectedTicketIdsArray, priorityId, options)'],
+      ['server/src/app/msp/tickets/_components/BulkAssignTicketsRouteClient.tsx', 'bulkAssignTickets(selectedTicketIdsArray, selection, options)', 'TicketNotificationSuppressionOptions'],
+      ['server/src/app/msp/tickets/_components/BulkSetDueDateRouteClient.tsx', 'bulkUpdateTicketDueDate(selectedTicketIdsArray, dueDateIso, options)', 'TicketNotificationSuppressionOptions'],
+      ['server/src/app/msp/tickets/_components/BulkChangeStatusRouteClient.tsx', 'bulkUpdateTicketStatus(selectedTicketIdsArray, statusId, options)', 'TicketBulkStatusOptions'],
+      ['server/src/app/msp/tickets/_components/BulkChangePriorityRouteClient.tsx', 'bulkUpdateTicketPriority(selectedTicketIdsArray, priorityId, options)', 'TicketNotificationSuppressionOptions'],
     ] as const;
 
-    for (const [routeClientPath, silentCall] of routedBulkClients) {
+    for (const [routeClientPath, silentCall, optionsType] of routedBulkClients) {
       const routeClient = read(routeClientPath);
 
-      expect(routeClient).toContain('type TicketNotificationSuppressionOptions');
-      expect(routeClient).toContain('options?: TicketNotificationSuppressionOptions');
+      expect(routeClient).toContain(`type ${optionsType}`);
+      expect(routeClient).toContain(`options?: ${optionsType}`);
       expect(routeClient).toContain(silentCall);
     }
+
+    expect(read('packages/tickets/src/actions/ticketActions.ts')).toContain(
+      'export type TicketBulkStatusOptions = TicketNotificationSuppressionOptions &',
+    );
 
     for (const dialogPath of [
       'packages/tickets/src/components/BulkAssignTicketsDialog.tsx',
