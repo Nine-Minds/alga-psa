@@ -230,7 +230,7 @@ export default function TicketResolutionDialog({
               <p className="mt-1 text-xs text-[rgb(var(--color-text-600))]">
                 {t(
                   "info.markResolutionInternalHelper",
-                  "An internal resolution stays out of the client portal and never appears in the close email.",
+                  "An internal resolution stays out of the client portal and is left out of the close email.",
                 )}
               </p>
             </div>
