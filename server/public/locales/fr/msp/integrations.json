@@ -469,7 +469,8 @@
           "previousCount": "Précédent",
           "syncFinished": "Synchronisation terminée pour {{client}}.",
           "syncing": "Synchronisation…",
-          "syncTrackingFailed": "La synchronisation a démarré, mais cette page n'a pas pu la suivre jusqu'à la fin. Actualisez la page pour voir le dernier résultat."
+          "syncTrackingFailed": "La synchronisation a démarré, mais cette page n'a pas pu la suivre jusqu'à la fin. Actualisez la page pour voir le dernier résultat.",
+          "syncWorkerUnavailable": "La synchronisation est en file d'attente, mais rien ne traite la file d'arrière-plan pour le moment. Elle s'exécutera dès que le worker sera de retour ; si elle reste bloquée, redémarrez le service temporal-worker."
         },
         "connection": {
           "changeAction": "Modifier la connexion",
