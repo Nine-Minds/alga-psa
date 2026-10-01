@@ -742,7 +742,10 @@
       "success_other": "Stato aggiornato su {{count}} ticket",
       "partialFailure": "Stato non aggiornato su alcuni ticket",
       "failure": "Impossibile aggiornare lo stato",
-      "failedHeading": "Stato non aggiornato sui seguenti ticket:"
+      "failedHeading": "Stato non aggiornato sui seguenti ticket:",
+      "resolutionLabel": "Commento di risoluzione (facoltativo)",
+      "resolutionPlaceholder": "Descrivi come sono stati risolti questi ticket",
+      "resolutionHelper": "Viene salvato come risoluzione su ogni ticket selezionato e soddisfa le bacheche che ne richiedono una prima della chiusura."
     },
     "priority": {
       "dialogTitle": "Cambia priorità dei ticket selezionati",
@@ -946,6 +949,11 @@
     "closeReasonPlaceholder": "Motivo della chiusura forzata (facoltativo, registrato nel log di controllo)",
     "closing": "Chiusura…",
     "closeAnyway": "Chiudi comunque",
+    "markResolutionInternal": "Segna come interno",
+    "markResolutionInternalHelper": "Una risoluzione interna non compare nel portale clienti e non viene inclusa nell’email di chiusura.",
+    "closeTicketNowTitle": "Chiudere il ticket adesso?",
+    "closeTicketNowPrompt": "Questo commento è ora la risoluzione. Scegli uno stato di chiusura per chiudere il ticket oppure lascialo aperto.",
+    "leaveTicketOpen": "Lascia aperto",
     "timerActiveElsewhereTitle": "Timer attivo altrove",
     "timerTakeoverMessage": "Il timer di questo ticket è attivo in un'altra finestra. Vuoi assumerne il controllo e sostituirlo qui?",
     "replaceHere": "Sostituisci qui",
@@ -1790,7 +1798,6 @@
       "replyTo": "Rispondi a {{name}}",
       "writeReply": "Scrivi una risposta",
       "modeInternal": "Interno",
-      "modeResolution": "Risoluzione",
       "sending": "Invio…",
       "send": "Invia",
       "systemActor": "Sistema",

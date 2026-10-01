@@ -742,7 +742,10 @@
       "success_other": "Estado actualizado en {{count}} tickets",
       "partialFailure": "El estado no se pudo actualizar en algunos tickets",
       "failure": "Error al actualizar el estado",
-      "failedHeading": "No se pudo actualizar el estado en los siguientes tickets:"
+      "failedHeading": "No se pudo actualizar el estado en los siguientes tickets:",
+      "resolutionLabel": "Comentario de resolución (opcional)",
+      "resolutionPlaceholder": "Describa cómo se resolvieron estos tickets",
+      "resolutionHelper": "Se guarda como la resolución de cada ticket seleccionado y cumple con los tableros que exigen una antes de cerrar."
     },
     "priority": {
       "dialogTitle": "Cambiar prioridad de los tickets seleccionados",
@@ -946,6 +949,11 @@
     "closeReasonPlaceholder": "Motivo para cerrar de todos modos (opcional, se registra en el historial de auditoría)",
     "closing": "Cerrando…",
     "closeAnyway": "Cerrar de todos modos",
+    "markResolutionInternal": "Marcar como interno",
+    "markResolutionInternalHelper": "Una resolución interna no aparece en el portal del cliente ni se incluye en el correo electrónico de cierre.",
+    "closeTicketNowTitle": "¿Cerrar el ticket ahora?",
+    "closeTicketNowPrompt": "Este comentario es ahora la resolución. Elija un estado de cierre para cerrar el ticket o déjelo abierto.",
+    "leaveTicketOpen": "Dejar abierto",
     "timerActiveElsewhereTitle": "Temporizador activo en otra ventana",
     "timerTakeoverMessage": "El temporizador de este ticket está activo en otra ventana. ¿Deseas tomar el control y reemplazarlo aquí?",
     "replaceHere": "Reemplazar aquí",
@@ -1790,7 +1798,6 @@
       "replyTo": "Responder a {{name}}",
       "writeReply": "Escribir una respuesta",
       "modeInternal": "Interno",
-      "modeResolution": "Resolución",
       "sending": "Enviando…",
       "send": "Enviar",
       "systemActor": "Sistema",

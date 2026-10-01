@@ -750,7 +750,10 @@
       "success_other": "Status har uppdaterats för {{count}} ärenden",
       "partialFailure": "Det gick inte att uppdatera status för vissa ärenden",
       "failure": "Det gick inte att uppdatera status för de markerade ärendena",
-      "failedHeading": "Det gick inte att uppdatera status för följande ärenden:"
+      "failedHeading": "Det gick inte att uppdatera status för följande ärenden:",
+      "resolutionLabel": "Lösningskommentar (valfritt)",
+      "resolutionPlaceholder": "Beskriv hur dessa ärenden löstes",
+      "resolutionHelper": "Sparas som lösningen på varje markerat ärende och uppfyller tavlor som kräver en innan stängning."
     },
     "priority": {
       "dialogTitle": "Ändra prioritet för markerade ärenden",
@@ -954,6 +957,11 @@
     "closeReasonPlaceholder": "Orsak till att stänga ändå (valfritt, registreras i granskningsloggen)",
     "closing": "Stänger…",
     "closeAnyway": "Stäng ändå",
+    "markResolutionInternal": "Markera som intern",
+    "markResolutionInternalHelper": "En intern lösning visas inte i kundportalen och tas inte med i e-postmeddelandet om stängning.",
+    "closeTicketNowTitle": "Stäng ärendet nu?",
+    "closeTicketNowPrompt": "Den här kommentaren är nu lösningen. Välj en stängningsstatus för att stänga ärendet, eller låt det vara öppet.",
+    "leaveTicketOpen": "Lämna öppet",
     "timerActiveElsewhereTitle": "Timern är aktiv i ett annat fönster",
     "timerTakeoverMessage": "Ärendets timer är aktiv i ett annat fönster. Vill du ta över och ersätta den här?",
     "replaceHere": "Ersätt här",
@@ -1845,7 +1853,6 @@
       "replyTo": "Svara {{name}}",
       "writeReply": "Skriv ett svar",
       "modeInternal": "Intern",
-      "modeResolution": "Lösning",
       "sending": "Skickar…",
       "send": "Skicka",
       "systemActor": "System",

@@ -2890,6 +2890,34 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
   }
 }
 
+type ResolutionCommentRow = { note?: unknown; is_internal?: boolean | null } | null | undefined;
+
+/**
+ * Close-email resolution bodies, split by recipient visibility. A resolution can
+ * be marked internal, which makes it MSP-only: the contact, bundle child
+ * requester and external watcher mails must then quote nothing rather than the
+ * internal body.
+ */
+function resolveCloseEmailResolutions(
+  latestResolution: ResolutionCommentRow,
+  latestClientVisibleResolution: ResolutionCommentRow,
+): { internalResolutionHtml: string; externalResolutionHtml: string } {
+  const toHtml = (comment: ResolutionCommentRow): string => {
+    if (!comment) return '';
+    const formatting = formatBlockNoteContent(comment.note);
+    return formatting.html || formatting.text || '';
+  };
+
+  return {
+    internalResolutionHtml: toHtml(latestResolution),
+    // Defence in depth: an internal row reaching this argument still yields an
+    // empty external body.
+    externalResolutionHtml: latestClientVisibleResolution?.is_internal
+      ? ''
+      : toHtml(latestClientVisibleResolution),
+  };
+}
+
 async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
   const { payload } = event;
   const { tenantId } = payload;
@@ -3013,16 +3041,21 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
       : null;
     const closedBy = closer ? `${closer.first_name} ${closer.last_name}` : 'System';
 
-    // Get the resolution comment (most recent comment with is_resolution = true)
-    const resolutionComment = await tenantDb(db, tenantId).table('comments')
+    // Resolution bodies for the close email, split by recipient visibility: the
+    // latest resolution of any visibility for internal recipients, the latest
+    // client-visible one for contacts, bundle child requesters and external
+    // watchers.
+    const resolutionCommentQuery = () => tenantDb(db, tenantId).table('comments')
       .where({ ticket_id: payload.ticketId, is_resolution: true })
-      .orderBy('created_at', 'desc')
-      .first();
-    let resolutionHtml = '';
-    if (resolutionComment) {
-      const resolutionFormatting = formatBlockNoteContent(resolutionComment.note);
-      resolutionHtml = resolutionFormatting.html || resolutionFormatting.text || '';
-    }
+      .orderBy('created_at', 'desc');
+    const latestResolutionComment = await resolutionCommentQuery().first();
+    const latestClientVisibleResolutionComment = !latestResolutionComment || !latestResolutionComment.is_internal
+      ? latestResolutionComment
+      : await resolutionCommentQuery().where('is_internal', false).first();
+    const { internalResolutionHtml, externalResolutionHtml } = resolveCloseEmailResolutions(
+      latestResolutionComment,
+      latestClientVisibleResolutionComment,
+    );
 
     const { internalUrl, portalUrl } = await resolveTicketLinks(db, tenantId, ticket.ticket_id, ticket.ticket_number);
 
@@ -3050,7 +3083,9 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
       locationSummary,
       changes,
       closedBy,
-      resolution: resolutionHtml
+      // Client-safe by default: every context that spreads this base is
+      // external except internalContext, which overrides the body below.
+      resolution: externalResolutionHtml
     };
 
     const externalContext = {
@@ -3062,6 +3097,7 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
     const internalContext = {
       ticket: {
         ...baseTicketContext,
+        resolution: internalResolutionHtml,
         url: internalUrl
       }
     };
@@ -3374,6 +3410,7 @@ export const ticketEmailSubscriberTestHarness = {
   shouldSendTicketCommentNotification,
   shouldSendTicketWatcherEmail,
   shouldSendTicketClosedWatcherEmail,
+  resolveCloseEmailResolutions,
   handleTicketCreated,
   handleTicketUpdated,
   handleTicketAssigned,
