@@ -2153,6 +2153,11 @@
         "additionalProperties": {},
         "description": "Asset-type-specific extension data written to the corresponding extension table for workstation, network device, server, mobile device, or printer assets."
       },
+      "AssetAttributes": {
+        "type": "object",
+        "additionalProperties": {},
+        "description": "Values for a custom asset type's fields, keyed by each field's key in the tenant asset type registry fields_schema. On create, required fields must be present; on update, provided keys merge into the stored map, omitted keys remain, and required fields cannot be blanked. Other keys such as integration namespaces are stored as-is. Built-in asset types accept the map without schema validation."
+      },
       "AssetCreateRequest": {
         "type": "object",
         "properties": {
@@ -2163,7 +2168,7 @@
           },
           "asset_type": {
             "type": "string",
-            "description": "Asset type. Determines the optional extension data table."
+            "description": "Must be a built-in slug or registered custom slug; unknown slugs return 400."
           },
           "asset_tag": {
             "type": "string",
@@ -2208,6 +2213,9 @@
             "format": "date-time",
             "description": "Optional warranty end date/time."
           },
+          "attributes": {
+            "$ref": "#/components/schemas/AssetAttributes"
+          },
           "extension_data": {
             "$ref": "#/components/schemas/AssetExtensionData"
           }
@@ -2230,7 +2238,7 @@
           },
           "asset_type": {
             "type": "string",
-            "description": "Asset type to store in assets.asset_type."
+            "description": "Must be a built-in slug or registered custom slug; unknown slugs return 400."
           },
           "asset_tag": {
             "type": "string",
@@ -2274,6 +2282,9 @@
             "type": "string",
             "format": "date-time",
             "description": "Warranty end date/time."
+          },
+          "attributes": {
+            "$ref": "#/components/schemas/AssetAttributes"
           }
         }
       },
@@ -2648,6 +2659,20 @@
             "type": "string",
             "format": "uuid",
             "description": "Tenant UUID from assets.tenant; filtered to the authenticated request context."
+          },
+          "attributes": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/AssetAttributes"
+              },
+              {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "description": "Stored custom-type attribute values and integration namespaces."
+              }
+            ]
           },
           "client_name": {
             "type": "string",
@@ -8167,6 +8192,9 @@
                   },
                   "logo": {
                     "type": "string"
+                  },
+                  "defaultLocale": {
+                    "type": "string"
                   }
                 }
               },
@@ -8257,6 +8285,12 @@
                 "format": "uuid"
               },
               "account_manager_full_name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "client_since": {
                 "type": [
                   "string",
                   "null"
@@ -8444,6 +8478,9 @@
                     },
                     "logo": {
                       "type": "string"
+                    },
+                    "defaultLocale": {
+                      "type": "string"
                     }
                   }
                 },
@@ -8534,6 +8571,12 @@
                   "format": "uuid"
                 },
                 "account_manager_full_name": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "client_since": {
                   "type": [
                     "string",
                     "null"
@@ -23981,7 +24024,7 @@
               "string",
               "null"
             ],
-            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}([T ].*)?$"
           },
           "next_action": {
             "type": "string",
@@ -24094,7 +24137,7 @@
               "string",
               "null"
             ],
-            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}([T ].*)?$"
           },
           "generator_key": {
             "type": [
@@ -24122,8 +24165,68 @@
               "null"
             ],
             "format": "uuid"
+          },
+          "stage": {
+            "type": "string",
+            "enum": [
+              "identified",
+              "qualified",
+              "assessment",
+              "proposed",
+              "verbal",
+              "won",
+              "lost"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "open",
+              "won",
+              "lost"
+            ]
+          },
+          "next_action": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1
+          },
+          "next_action_due": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
           }
         }
+      },
+      "SetOpportunityStageBodyV1": {
+        "type": "object",
+        "properties": {
+          "stage": {
+            "type": "string",
+            "enum": [
+              "identified",
+              "qualified",
+              "assessment",
+              "proposed",
+              "verbal",
+              "won",
+              "lost"
+            ]
+          },
+          "detail": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "stage"
+        ]
       },
       "WinOpportunityBodyV1": {
         "type": "object",
@@ -24146,7 +24249,7 @@
           },
           "project_start_date": {
             "type": "string",
-            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}([T ].*)?$"
           }
         },
         "additionalProperties": false
@@ -24330,7 +24433,7 @@
               "string",
               "null"
             ],
-            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}([T ].*)?$"
           },
           "next_action": {
             "type": "string",
@@ -35673,7 +35776,7 @@
       },
       "post": {
         "summary": "Create asset",
-        "description": "Creates an asset for the authenticated tenant. The request body is validated with createAssetWithExtensionSchema; client_id, asset_type, asset_tag, name, and status are required. AssetService.create writes assets.tenant from the request context, inserts the asset, optionally upserts asset-type-specific extension_data, publishes an ASSET_CREATED event, and returns getWithDetails with HATEOAS links.",
+        "description": "Creates an asset for the authenticated tenant. The request body is validated with createAssetWithExtensionSchema; client_id, asset_type, asset_tag, name, and status are required. Custom attributes are checked against the registered type schema and required fields must be present. Unknown asset_type slugs and invalid/missing required attributes return 400. AssetService.create writes the attributes map, optionally upserts extension_data, publishes ASSET_CREATED, and returns getWithDetails.",
         "tags": [
           "Assets"
         ],
@@ -35717,7 +35820,7 @@
             }
           },
           "400": {
-            "description": "Request body validation failed.",
+            "description": "Request validation failed, asset_type is not a built-in or registered slug, or custom attributes are invalid or missing required fields.",
             "content": {
               "application/json": {
                 "schema": {
@@ -35852,7 +35955,7 @@
     "/api/v1/assets/bulk-update": {
       "put": {
         "summary": "Bulk update assets",
-        "description": "Updates up to 50 assets in the authenticated tenant. Each array item supplies an asset_id and partial update data validated with updateAssetSchema. The controller calls AssetService.update for every item, tenant-scoping each update by asset_id and context.tenant and publishing ASSET_UPDATED events.",
+        "description": "Updates up to 50 assets in the authenticated tenant. Each item is validated and written independently; custom attributes are validated against that asset type and merged into its stored map. Unknown types and invalid attributes return 400. Earlier items may remain committed if a later item fails.",
         "tags": [
           "Assets"
         ],
@@ -35897,7 +36000,7 @@
             }
           },
           "400": {
-            "description": "Request body validation failed.",
+            "description": "Request validation failed, asset_type is not registered, or custom attributes are invalid.",
             "content": {
               "application/json": {
                 "schema": {
@@ -36753,7 +36856,7 @@
       },
       "put": {
         "summary": "Update asset",
-        "description": "Partially updates base asset fields for the authenticated tenant. The request body is validated with updateAssetSchema, where all fields are optional. AssetService.update scopes the update by asset_id and context.tenant, writes updated_at, publishes ASSET_UPDATED, and returns the refreshed base asset with joined client_name and warranty_status. This REST path does not update extension data, create asset history records, or wrap the update in a transaction. Missing assets currently lead to a 500 when the controller tries to add links to a null result rather than a clean 404.",
+        "description": "Partially updates base asset fields for the authenticated tenant. Custom attributes are validated against the next asset type when asset_type changes, then merged into the stored map so omitted keys remain. Required custom fields cannot be blanked. Unknown asset_type slugs and invalid attributes return 400.",
         "tags": [
           "Assets"
         ],
@@ -36814,7 +36917,7 @@
             }
           },
           "400": {
-            "description": "Request body validation failed, or the database rejected an invalid reference.",
+            "description": "Request validation failed, asset_type is not registered, custom attributes are invalid, or the database rejected an invalid reference.",
             "content": {
               "application/json": {
                 "schema": {
@@ -42737,7 +42840,7 @@
       },
       "put": {
         "summary": "Update client",
-        "description": "Inherited ApiBaseController update route for one client_id.",
+        "description": "Updates client fields for one client_id. email, phone_no, and address are location fields and must be managed through /api/v1/clients/{id}/locations.",
         "tags": [
           "Clients"
         ],
@@ -42771,7 +42874,116 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/ClientBody"
+                "type": "object",
+                "properties": {
+                  "client_name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 255
+                  },
+                  "url": {
+                    "type": "string",
+                    "format": "uri"
+                  },
+                  "client_type": {
+                    "type": "string",
+                    "enum": [
+                      "company",
+                      "individual"
+                    ]
+                  },
+                  "tax_id_number": {
+                    "type": "string"
+                  },
+                  "notes": {
+                    "type": "string"
+                  },
+                  "properties": {
+                    "type": "object",
+                    "properties": {
+                      "tax_id": {
+                        "type": "string",
+                        "description": "Deprecated legacy input. Send tax_id_number instead.",
+                        "deprecated": true
+                      }
+                    },
+                    "additionalProperties": {}
+                  },
+                  "payment_terms": {
+                    "type": "string"
+                  },
+                  "billing_cycle": {
+                    "type": "string",
+                    "enum": [
+                      "weekly",
+                      "bi-weekly",
+                      "monthly",
+                      "quarterly",
+                      "semi-annually",
+                      "annually"
+                    ]
+                  },
+                  "credit_limit": {
+                    "type": "number",
+                    "minimum": 0
+                  },
+                  "default_currency_code": {
+                    "type": "string",
+                    "minLength": 3,
+                    "maxLength": 3
+                  },
+                  "preferred_payment_method": {
+                    "type": "string"
+                  },
+                  "auto_invoice": {
+                    "type": "boolean"
+                  },
+                  "invoice_delivery_method": {
+                    "type": "string",
+                    "enum": [
+                      "email",
+                      "mail",
+                      "portal"
+                    ]
+                  },
+                  "region_code": {
+                    "type": "string"
+                  },
+                  "is_tax_exempt": {
+                    "type": "boolean"
+                  },
+                  "tax_exemption_certificate": {
+                    "type": "string"
+                  },
+                  "timezone": {
+                    "type": "string"
+                  },
+                  "invoice_template_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "billing_contact_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "billing_email": {
+                    "type": "string",
+                    "format": "email"
+                  },
+                  "account_manager_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "is_inactive": {
+                    "type": "boolean"
+                  },
+                  "tags": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                }
               }
             }
           }
@@ -78040,7 +78252,6 @@
             "schema": {
               "type": "integer",
               "minimum": 1,
-              "maximum": 100,
               "default": 25
             },
             "required": false,
@@ -78292,6 +78503,9 @@
                         "type": "null"
                       }
                     ]
+                  },
+                  "is_active": {
+                    "type": "boolean"
                   }
                 },
                 "required": [
@@ -78543,6 +78757,9 @@
                         "type": "null"
                       }
                     ]
+                  },
+                  "is_active": {
+                    "type": "boolean"
                   }
                 }
               },
@@ -104439,7 +104656,123 @@
       },
       "put": {
         "summary": "Update opportunity",
-        "description": "Updates editable opportunity fields; status and stage use dedicated flows.",
+        "description": "Updates editable opportunity fields. status, stage, client_id, and the next-action mirror columns may be echoed back unchanged but never reassigned here: changing them answers 400 naming the dedicated endpoint.",
+        "tags": [
+          "Opportunities v1"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-auth-mechanism": "x-api-key validated in ApiBaseController.authenticate()",
+          "x-tenant-header": "x-tenant-id (optional; inferred from API key when omitted)",
+          "x-rbac-resource": "opportunities"
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Opportunity UUID from opportunities.opportunity_id."
+            },
+            "required": true,
+            "description": "Opportunity UUID from opportunities.opportunity_id.",
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateOpportunityBodyV1"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Operation succeeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpportunityApiSuccessV1"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation or request parsing failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpportunityApiErrorV1"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key missing or invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpportunityApiErrorV1"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "RBAC denied for the opportunities resource action.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpportunityApiErrorV1"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Opportunity or nested resource not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpportunityApiErrorV1"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Opportunity state conflicts with the requested operation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpportunityApiErrorV1"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected controller or service failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpportunityApiErrorV1"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "summary": "Partially update opportunity",
+        "description": "Applies a partial update using the same contract as PUT; every field is optional.",
         "tags": [
           "Opportunities v1"
         ],
@@ -104920,6 +105253,124 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/CompleteOpportunityStepBodyV1"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Operation succeeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpportunityApiSuccessV1"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation or request parsing failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpportunityApiErrorV1"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key missing or invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpportunityApiErrorV1"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "RBAC denied for the opportunities resource action.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpportunityApiErrorV1"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Opportunity or nested resource not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpportunityApiErrorV1"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Opportunity state conflicts with the requested operation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpportunityApiErrorV1"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected controller or service failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpportunityApiErrorV1"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/opportunities/{id}/stage": {
+      "post": {
+        "summary": "Set opportunity stage",
+        "description": "Sets an open-pipeline stage through the declared-evidence flow the board drag uses; won and lost answer 400 pointing at /win and /lose.",
+        "tags": [
+          "Opportunities v1"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-auth-mechanism": "x-api-key validated in ApiBaseController.authenticate()",
+          "x-tenant-header": "x-tenant-id (optional; inferred from API key when omitted)",
+          "x-rbac-resource": "opportunities"
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Opportunity UUID from opportunities.opportunity_id."
+            },
+            "required": true,
+            "description": "Opportunity UUID from opportunities.opportunity_id.",
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetOpportunityStageBodyV1"
               }
             }
           }

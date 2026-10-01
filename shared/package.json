@@ -7,6 +7,7 @@
   "types": "index.d.ts",
   "exports": {
     "./billingClients/resolveFixedLineRate": "./dist/billingClients/resolveFixedLineRate.js",
+    "./billingClients/contractMonthlyValue": "./dist/billingClients/contractMonthlyValue.js",
     "./types": "./dist/types/index.js",
     "./core": "./dist/core/index.js",
     "./core/logger.js": "./dist/core/logger.js",
@@ -25,6 +26,7 @@
     "./workflow/streams/redisStreamClient.js": "./dist/workflow/streams/redisStreamClient.js",
     "./workflow/streams/domainEventBuilders/documentStorageEventBuilders": "./dist/workflow/streams/domainEventBuilders/documentStorageEventBuilders.js",
     "./workflow/streams/domainEventBuilders/mediaEventBuilders": "./dist/workflow/streams/domainEventBuilders/mediaEventBuilders.js",
+    "./workflow/streams/domainEventBuilders/opportunityEventBuilders": "./dist/workflow/streams/domainEventBuilders/opportunityEventBuilders.js",
     "./utils/retryUtils.js": "./dist/utils/retryUtils.js",
     "./db/connection.js": "./dist/db/connection.js",
     "./extension-utils": "./dist/extension-utils/index.js",
