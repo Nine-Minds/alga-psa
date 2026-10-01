@@ -742,7 +742,10 @@
       "success_other": "Status bijgewerkt op {{count}} tickets",
       "partialFailure": "Status kon niet bij alle tickets worden bijgewerkt",
       "failure": "Bijwerken van status is mislukt",
-      "failedHeading": "Status kon niet worden bijgewerkt bij de volgende tickets:"
+      "failedHeading": "Status kon niet worden bijgewerkt bij de volgende tickets:",
+      "resolutionLabel": "Oplossingscommentaar (optioneel)",
+      "resolutionPlaceholder": "Beschrijf hoe deze tickets zijn opgelost",
+      "resolutionHelper": "Wordt opgeslagen als de oplossing op elk geselecteerd ticket en voldoet aan borden die er een vereisen voordat ze sluiten."
     },
     "priority": {
       "dialogTitle": "Prioriteit wijzigen voor geselecteerde tickets",

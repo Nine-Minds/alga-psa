@@ -742,7 +742,10 @@
       "success_other": "Status bei {{count}} Tickets aktualisiert",
       "partialFailure": "Status konnte bei einigen Tickets nicht aktualisiert werden",
       "failure": "Fehler beim Aktualisieren des Status",
-      "failedHeading": "Folgende Tickets konnten nicht aktualisiert werden:"
+      "failedHeading": "Folgende Tickets konnten nicht aktualisiert werden:",
+      "resolutionLabel": "Lösungskommentar (optional)",
+      "resolutionPlaceholder": "Beschreiben Sie, wie diese Tickets gelöst wurden",
+      "resolutionHelper": "Wird als Lösung in jedem ausgewählten Ticket gespeichert und erfüllt Boards, die vor dem Schließen eine Lösung verlangen."
     },
     "priority": {
       "dialogTitle": "Priorität für ausgewählte Tickets ändern",

@@ -742,7 +742,10 @@
       "success_other": "Estado actualizado en {{count}} tickets",
       "partialFailure": "El estado no se pudo actualizar en algunos tickets",
       "failure": "Error al actualizar el estado",
-      "failedHeading": "No se pudo actualizar el estado en los siguientes tickets:"
+      "failedHeading": "No se pudo actualizar el estado en los siguientes tickets:",
+      "resolutionLabel": "Comentario de resolución (opcional)",
+      "resolutionPlaceholder": "Describa cómo se resolvieron estos tickets",
+      "resolutionHelper": "Se guarda como la resolución de cada ticket seleccionado y cumple con los tableros que exigen una antes de cerrar."
     },
     "priority": {
       "dialogTitle": "Cambiar prioridad de los tickets seleccionados",

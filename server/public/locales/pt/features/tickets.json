@@ -742,7 +742,10 @@
       "success_other": "Status atualizado nos tickets {{count}}",
       "partialFailure": "Não foi possível atualizar o status de alguns tickets",
       "failure": "Falha ao atualizar o status dos tickets selecionados",
-      "failedHeading": "Não foi possível atualizar o status nos seguintes tickets:"
+      "failedHeading": "Não foi possível atualizar o status nos seguintes tickets:",
+      "resolutionLabel": "Comentário de resolução (opcional)",
+      "resolutionPlaceholder": "Descreva como esses tickets foram resolvidos",
+      "resolutionHelper": "Salvo como a resolução em cada ticket selecionado e atende aos quadros que exigem uma antes do fechamento."
     },
     "priority": {
       "dialogTitle": "Alterar prioridade para tickets selecionados",

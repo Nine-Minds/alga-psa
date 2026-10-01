@@ -750,7 +750,10 @@
       "success_other": "Status updated on {{count}} tickets",
       "partialFailure": "Status could not be updated on some tickets",
       "failure": "Failed to update status on selected tickets",
-      "failedHeading": "Status could not be updated on the following tickets:"
+      "failedHeading": "Status could not be updated on the following tickets:",
+      "resolutionLabel": "Resolution comment (optional)",
+      "resolutionPlaceholder": "Describe how these tickets were resolved",
+      "resolutionHelper": "Saved as the resolution on each selected ticket, satisfying boards that require one before closing."
     },
     "priority": {
       "dialogTitle": "Change Priority for Selected Tickets",
