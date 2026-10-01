@@ -8,12 +8,11 @@ import { type SharedExpressionPathOption } from '@alga-psa/workflows/expression-
 import { getComponentSchema } from '../schema/componentSchema';
 import type { DesignerNode } from '../state/designerStore';
 import {
-  collectLayerNames,
-  createUniqueLayerName,
+  resolveDefaultLayerRename,
   resolveNewNodeBaseStyle,
   useInvoiceDesignerStore,
 } from '../state/designerStore';
-import { isDefaultLayerName, suggestLayerName } from '../utils/structureEditing';
+import { suggestLayerName } from '../utils/structureEditing';
 import type {
   DesignerInspectorField,
   DesignerInspectorPanel,
@@ -29,7 +28,6 @@ import {
   createTextTranslationMetadata,
   getNodeLabelTranslation,
   getNodeTextTranslation,
-  isTranslatableValue,
   resolveAutoTranslation,
   TRANSLATION_OPT_OUT_KEY,
 } from '../utils/translatableText';
@@ -42,9 +40,7 @@ import {
   buildDocumentExpressionPathOptions,
   describeBindingOption,
   isDocumentFieldPath,
-  resolveDefaultFieldFormat,
   resolveDocumentFieldLabel,
-  resolveStandardFieldLabel,
 } from '../fields/documentBindingCatalog';
 import {
   normalizeCssColor,
@@ -78,18 +74,11 @@ type Props = {
 
 type ApplyNormalized = (path: string, next: unknown, commit: boolean) => void;
 
-/**
- * Replaces a still-generated layer name ("Data Field 3") with one describing the
- * block's content, so the outline reads like the document without manual renames.
- */
+/** Renames a still-generated layer name to describe its content (see resolveDefaultLayerRename). */
 const renameIfDefault = (nodeId: string, suggestion: string | null) => {
-  if (!suggestion) return;
   const state = useInvoiceDesignerStore.getState();
-  const node = state.nodesById[nodeId];
-  const name = typeof node?.props.name === 'string' ? node.props.name : '';
-  if (!node || !isDefaultLayerName(name, getComponentSchema(node.type).label)) return;
-  const takenNames = collectLayerNames(state.nodes.filter((candidate) => candidate.id !== nodeId));
-  state.setNodeProp(nodeId, 'name', createUniqueLayerName(suggestion, takenNames), true);
+  const renamed = resolveDefaultLayerRename(state.nodes, nodeId, suggestion);
+  if (renamed) state.setNodeProp(nodeId, 'name', renamed, true);
 };
 
 type BindingOption = {
@@ -219,6 +208,7 @@ const FieldBindingPicker: React.FC<FieldBindingPickerProps> = ({
   const normalizedBinding = value.trim();
 
   const currentNode = useInvoiceDesignerStore((state) => state.nodesById[nodeId] as DesignerNode | undefined);
+  const rebindDataField = useInvoiceDesignerStore((state) => state.rebindDataField);
   const [query, setQuery] = useState('');
   const [customMode, setCustomMode] = useState(() => normalizedBinding.length > 0 && !isDocumentFieldPath(normalizedBinding));
   const currentPlaceholder = useMemo(() => {
@@ -229,20 +219,6 @@ const FieldBindingPicker: React.FC<FieldBindingPickerProps> = ({
     return typeof metadata?.placeholder === 'string' ? metadata.placeholder.trim() : '';
   }, [currentNode]);
   const autoPlaceholderLabel = useMemo(() => resolveDocumentFieldLabel(normalizedBinding), [normalizedBinding]);
-  // A label is automatic while it is empty, the current binding's catalog name, or a
-  // still-translated standard label; anything else was typed by the author and stays.
-  const labelFollowsBinding = useMemo(() => {
-    const metadata = currentNode && isPlainObject(currentNode.props) && isPlainObject(currentNode.props.metadata)
-      ? currentNode.props.metadata
-      : {};
-    const label = typeof metadata.label === 'string' ? metadata.label.trim() : '';
-    return (
-      label.length === 0 ||
-      label === resolveDocumentFieldLabel(normalizedBinding) ||
-      isTranslatableValue(label, metadata.__astLabelI18n)
-    );
-  }, [currentNode, normalizedBinding]);
-
   React.useEffect(() => {
     setCustomMode(normalizedBinding.length > 0 && !isDocumentFieldPath(normalizedBinding));
     setQuery('');
@@ -298,23 +274,8 @@ const FieldBindingPicker: React.FC<FieldBindingPickerProps> = ({
     if (shouldSyncPlaceholder) {
       applyNormalized('metadata.placeholder', option.label, false);
     }
-    if (option.path !== normalizedBinding) {
-      // The format describes the data, so it always follows the binding.
-      applyNormalized('metadata.format', resolveDefaultFieldFormat(option.path), false);
-      // The label follows too unless the author wrote their own.
-      if (labelFollowsBinding) {
-        const standardLabel = resolveStandardFieldLabel(option.path);
-        if (standardLabel) {
-          applyNormalized('metadata.label', standardLabel.defaultValue, false);
-          applyNormalized('metadata.__astLabelI18n', standardLabel, false);
-        } else {
-          applyNormalized('metadata.label', option.label, false);
-          applyNormalized('metadata.__astLabelI18n', undefined, false);
-        }
-      }
-    }
-    applyNormalized(path, option.path, true);
-    renameIfDefault(nodeId, suggestLayerName({ bindingKey: option.path }));
+    // Format, label and layer name follow the binding as one undo step (shared with the FIELDS tab).
+    rebindDataField(nodeId, option.path, option.label);
     setQuery('');
   };
 

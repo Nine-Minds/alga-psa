@@ -129,6 +129,8 @@ const QuoteDocumentTemplate = {
       version: insertRecord.version,
       is_default: insertRecord.is_default,
       templateAst: insertRecord.templateAst,
+      // The insert path takes the column default; a conflict-merge must bump it explicitly.
+      updated_at: knexOrTrx.fn.now(),
     };
 
     const [savedTemplate] = await tenantScopedTable(knexOrTrx, tenant)

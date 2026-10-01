@@ -2227,7 +2227,7 @@ export const DesignerShell: React.FC = () => {
       const liveSelectedNode = liveState.nodesById[liveSelectedNodeId];
       // A selected Data Field takes the clicked field as its binding.
       if (liveSelectedNode?.type === 'field') {
-        setNodeProp(liveSelectedNode.id, 'metadata.bindingKey', bindingPath, true);
+        liveState.rebindDataField(liveSelectedNode.id, bindingPath);
         showDropFeedback('info', t('designer.feedback.fieldRebound', {
           defaultValue: '{{name}} now shows {{path}}.',
           name: getNodeName(liveSelectedNode),

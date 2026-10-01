@@ -17,7 +17,8 @@ import {
   unsetNodeProp as patchUnsetNodeProp,
 } from './patchOps';
 import { getPresetById, LegacyLayoutPresetLayout } from '../constants/presets';
-import { COPYABLE_STYLE_KEYS } from '../utils/structureEditing';
+import { COPYABLE_STYLE_KEYS, isDefaultLayerName, suggestLayerName } from '../utils/structureEditing';
+import { planDataFieldRebind } from '../fields/dataFieldRebind';
 import type { DesignerClipboardPayload, DesignerStyleClipboard, InsertPlacement } from '../utils/structureEditing';
 import type { DesignerInspectorTab } from '../schema/inspectorSchema';
 import {
@@ -254,6 +255,13 @@ interface DesignerState {
   // Generic patch API (primary path going forward).
   setNodeProp: (nodeId: string, path: string, value: unknown, commit?: boolean) => void;
   unsetNodeProp: (nodeId: string, path: string, commit?: boolean) => void;
+  /**
+   * Points a Data Field at `bindingPath` as one undo step: format always follows,
+   * the label follows unless the author typed their own, and a still-generated
+   * layer name is renamed. Shared by the inspector picker and the FIELDS tab.
+   * `catalogLabel` is the picker's label for bindings without a standard label.
+   */
+  rebindDataField: (nodeId: string, bindingPath: string, catalogLabel?: string) => void;
   insertChild: (parentId: string, childId: string, index: number) => void;
   removeChild: (parentId: string, childId: string) => void;
   moveNode: (nodeId: string, nextParentId: string, nextIndex: number) => void;
@@ -321,6 +329,24 @@ export const createUniqueLayerName = (name: string, takenNames: ReadonlySet<stri
     const candidate = `${base}${separator}${index}`;
     if (!takenNames.has(candidate)) return candidate;
   }
+};
+
+/**
+ * Replaces a still-generated layer name ("Data Field 3") with one describing the
+ * block's content, so the outline reads like the document without manual renames.
+ * Returns the new unique name, or null when the layer keeps its current one.
+ */
+export const resolveDefaultLayerRename = (
+  nodes: DesignerNode[],
+  nodeId: string,
+  suggestion: string | null
+): string | null => {
+  if (!suggestion) return null;
+  const node = nodes.find((candidate) => candidate.id === nodeId);
+  if (!node) return null;
+  const name = isPlainObject(node.props) && typeof node.props.name === 'string' ? node.props.name : '';
+  if (!isDefaultLayerName(name, getComponentSchema(node.type).label)) return null;
+  return createUniqueLayerName(suggestion, collectLayerNames(nodes.filter((candidate) => candidate.id !== nodeId)));
 };
 
 export const resolveNewNodeBaseStyle = (type: DesignerComponentType, size: Size): DesignerNodeStyle => {
@@ -1356,6 +1382,29 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
         const { history, historyIndex } = appendHistory(state, nodes, state.transforms);
         return { nodes, history, historyIndex };
       }, false, 'designer/unsetNodeProp');
+    },
+
+    rebindDataField: (nodeId, bindingPath, catalogLabel) => {
+      setWithIndex((state) => {
+        const node = state.nodesById[nodeId];
+        if (!node) return state;
+
+        let nodes = state.nodes;
+        for (const { path, value } of planDataFieldRebind(node, bindingPath, catalogLabel)) {
+          const normalizedPath = normalizeDesignerPatchPath(path);
+          nodes =
+            typeof value === 'undefined'
+              ? patchUnsetNodeProp(nodes, nodeId, normalizedPath)
+              : patchSetNodeProp(nodes, nodeId, normalizedPath, value);
+        }
+
+        const renamed = resolveDefaultLayerRename(state.nodes, nodeId, suggestLayerName({ bindingKey: bindingPath }));
+        if (renamed) nodes = patchSetNodeProp(nodes, nodeId, normalizeDesignerPatchPath('name'), renamed);
+
+        if (nodes === state.nodes) return state;
+        const { history, historyIndex } = appendHistory(state, nodes, state.transforms);
+        return { nodes, history, historyIndex };
+      }, false, 'designer/rebindDataField');
     },
 
     insertChild: (parentId, childId, index) => {
