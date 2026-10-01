@@ -9,10 +9,6 @@ import { useDroppable, useDraggable } from '@dnd-kit/core';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useDateFormat } from '@alga-psa/ui/lib/dateFormat/useDateFormat';
 import type { CountryDateFormat } from '@alga-psa/core/i18n/countryDateFormat';
-import {
-  SortableContext,
-  useSortable,
-} from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import clsx from 'clsx';
 import { Languages } from 'lucide-react';
@@ -34,7 +30,9 @@ import {
   isNodeTextTranslatable,
 } from '../utils/translatableText';
 import { inferHeightMode } from '../utils/sizeModes';
-import { resolveSortableStrategy } from '../utils/sortableStrategy';
+import { DESIGNER_NODE_ID_ATTRIBUTE } from '../utils/canvasDom';
+import { SelectionAdorner, type Frame, type HandleResetSize, type HandleResize, type ResizeHandle } from './SelectionAdorner';
+import { CanvasRulers } from './CanvasRulers';
 import { resolveInsertionTarget } from '../utils/structureEditing';
 import {
   formatBoundValue,
@@ -99,12 +97,14 @@ interface DesignCanvasProps {
   snapToGrid: boolean;
   guides: AlignmentGuide[];
   isDragActive: boolean;
-  dropIndicator?: DropIndicator;
+  /** The block being dragged, shown dimmed in place. */
+  draggingNodeId?: string | null;
   forcedDropTarget: string | 'canvas' | null;
   droppableId: string;
   onPointerLocationChange: (point: { x: number; y: number } | null) => void;
   onNodeSelect: (id: string | null) => void;
-  onResize: (id: string, size: { width: number; height: number }, commit?: boolean) => void;
+  onResize: HandleResize;
+  onResetSize?: HandleResetSize;
   onTextEdit?: (id: string, text: string, commit: boolean) => void;
   readOnly?: boolean;
   previewData?: WasmInvoiceViewModel | null;
@@ -112,10 +112,15 @@ interface DesignCanvasProps {
 
 const GRID_COLOR = 'rgba(148, 163, 184, 0.25)';
 
-type DropIndicator =
-  | { kind: 'insert'; overNodeId: string; position: 'before' | 'after'; tone: 'valid' | 'invalid' }
-  | { kind: 'container'; containerId: string; tone: 'invalid' }
-  | null;
+const ALL_RESIZE_HANDLES: ResizeHandle[] = ['e', 'w', 's', 'se', 'sw'];
+
+/** Sides a block can be resized from: a divider only gets wider, a spacer only taller. */
+const resolveResizeHandles = (node: DesignerNode | undefined): ResizeHandle[] => {
+  if (!node || node.allowResize === false || node.type === 'document' || node.type === 'page') return [];
+  if (node.type === 'divider') return ['e', 'w'];
+  if (node.type === 'spacer') return ['s'];
+  return ALL_RESIZE_HANDLES;
+};
 
 interface CanvasNodeProps {
   node: DesignerNode;
@@ -126,10 +131,9 @@ interface CanvasNodeProps {
   isInSelectionContext: boolean;
   hasActiveSelection: boolean;
   isDragActive: boolean;
-  dropIndicator: DropIndicator;
+  draggingNodeId: string | null;
   forcedDropTarget: string | 'canvas' | null;
   onSelect: (id: string | null) => void;
-  onResize: (id: string, size: { width: number; height: number }, commit?: boolean) => void;
   onTextEdit?: (id: string, text: string, commit: boolean) => void;
   renderChildren: (parentId: string) => React.ReactNode;
   childExtents?: { maxRight: number; maxBottom: number };
@@ -494,8 +498,19 @@ const hasMovedBeyondThreshold = (
   return Math.abs(current.x - start.x) > threshold || Math.abs(current.y - start.y) > threshold;
 };
 
-const shouldToggleSelectionOff = (wasSelectedOnPointerDown: boolean, pointerMoved: boolean): boolean =>
-  wasSelectedOnPointerDown && !pointerMoved;
+/** True when a block other than the page is selected and contains `nodeId`. */
+const isInsideSelectedContainer = (nodeId: string): boolean => {
+  const { selectedNodeId, nodesById } = useInvoiceDesignerStore.getState();
+  if (!selectedNodeId || selectedNodeId === nodeId) return false;
+  const selected = nodesById[selectedNodeId];
+  if (!selected || selected.type === 'page' || selected.type === 'document') return false;
+  let current = nodesById[nodeId]?.parentId ?? null;
+  while (current) {
+    if (current === selectedNodeId) return true;
+    current = nodesById[current]?.parentId ?? null;
+  }
+  return false;
+};
 
 const shouldDeemphasizeNode = (
   hasActiveSelection: boolean,
@@ -1218,10 +1233,9 @@ const CanvasNodeInner: React.FC<CanvasNodeProps & { dnd: CanvasNodeDnd }> = ({
   isInSelectionContext,
   hasActiveSelection,
   isDragActive,
-  dropIndicator,
+  draggingNodeId,
   forcedDropTarget,
   onSelect,
-  onResize,
   onTextEdit,
   renderChildren,
   childExtents,
@@ -1231,21 +1245,12 @@ const CanvasNodeInner: React.FC<CanvasNodeProps & { dnd: CanvasNodeDnd }> = ({
   dnd,
 }) => {
   const { t } = useTranslation('msp/invoicing');
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = dnd;
+  const { attributes, listeners, setNodeRef, transform, transition } = dnd;
+  // The block being moved (which may be the selected container rather than the block pressed).
+  const isDragging = draggingNodeId === node.id;
   const [isEditingText, setIsEditingText] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const isContainer = node.allowedChildren.length > 0;
-  const { setNodeRef: setDropZoneRef, isOver: isNodeDropTarget } = useDroppable({
-    id: `droppable-${node.id}`,
-    disabled: !isContainer || readOnly,
-    data: isContainer
-      ? {
-          nodeId: node.id,
-          nodeType: node.type,
-          allowedChildren: node.allowedChildren,
-        }
-      : undefined,
-  });
 
   const inferredWidth =
     isContainer && childExtents && Number.isFinite(childExtents.maxRight)
@@ -1310,7 +1315,10 @@ const CanvasNodeInner: React.FC<CanvasNodeProps & { dnd: CanvasNodeDnd }> = ({
       : {}),
   };
   const shouldDeemphasize = shouldDeemphasizeNode(hasActiveSelection, isInSelectionContext, isDragging);
-  const [isHovered, setIsHovered] = useState(false);
+  // One hovered block across the canvas (the deepest under the pointer), so a badge
+  // never lingers on a container the pointer already left.
+  const isHovered = useInvoiceDesignerStore((state) => state.hoverNodeId === node.id);
+  const setHoverNode = useInvoiceDesignerStore((state) => state.setHoverNode);
   const insertionMarker = React.useContext(InsertionMarkerContext);
   const markerSide = !insertionMarker
     ? null
@@ -1339,28 +1347,12 @@ const CanvasNodeInner: React.FC<CanvasNodeProps & { dnd: CanvasNodeDnd }> = ({
   const fieldSurfaceClasses = resolveFieldBorderClasses(fieldBorderStyle);
   const isInlineFieldLike = isFieldNode || isLabelNode;
   const isCompactLeaf = isTotalsRow || isInlineFieldLike || isTextNode;
-  const isResizeHandleSupported =
-    node.type !== 'document' &&
-    node.type !== 'page' &&
-    node.type !== 'divider' &&
-    node.type !== 'spacer';
-  // One badge at a time: nested containers share a top-left corner, so labelling
-  // every block at once stacks the badges into an unreadable pile.
-  // Hover only: the selection is named in the "Selected" bar, and a permanent
-  // badge would cover the content next to the block being edited.
-  const showOverlayNodeBadge = !readOnly && isHovered && !isDragActive;
+  // Nested containers share a top-left corner, so labelling every block at once stacks
+  // the badges into an unreadable pile: only the hovered block and the selected one
+  // (whose badge is its drag grip) are labelled.
+  const showOverlayNodeBadge = !readOnly && (isHovered || isSelected) && !isDragActive;
   const hasNoChildren = isContainer && node.children.length === 0;
 
-  const combinedRef = useCallback(
-    (element: HTMLDivElement | null) => {
-      // dnd-kit refs are typed as HTMLElement; HTMLDivElement is compatible.
-      setNodeRef(element);
-      if (isContainer) {
-        setDropZoneRef(element);
-      }
-    },
-    [isContainer, setDropZoneRef, setNodeRef]
-  );
 
   const draggablePointerDown = listeners?.onPointerDown;
   const canvasAst = React.useContext(CanvasAstContext);
@@ -1380,6 +1372,9 @@ const CanvasNodeInner: React.FC<CanvasNodeProps & { dnd: CanvasNodeDnd }> = ({
   const pointerDownPositionRef = useRef<{ x: number; y: number } | null>(null);
   const pointerDownSelectedRef = useRef(false);
   const pointerMovedRef = useRef(false);
+  // Pressing inside the selected container keeps it selected (a drag moves the
+  // container); the block under the pointer is selected on release instead.
+  const deferredSelectRef = useRef(false);
 
   const handlePointerDown: React.PointerEventHandler<HTMLDivElement> = (event) => {
     event.stopPropagation();
@@ -1389,7 +1384,10 @@ const CanvasNodeInner: React.FC<CanvasNodeProps & { dnd: CanvasNodeDnd }> = ({
     pointerDownPositionRef.current = { x: event.clientX, y: event.clientY };
     pointerDownSelectedRef.current = isSelected;
     pointerMovedRef.current = false;
-    onSelect(node.id);
+    deferredSelectRef.current = !isSelected && isInsideSelectedContainer(node.id);
+    if (!deferredSelectRef.current) {
+      onSelect(node.id);
+    }
     draggablePointerDown?.(event);
   };
 
@@ -1429,12 +1427,14 @@ const CanvasNodeInner: React.FC<CanvasNodeProps & { dnd: CanvasNodeDnd }> = ({
     if (readOnly) {
       return;
     }
-    const shouldDeselect = shouldToggleSelectionOff(pointerDownSelectedRef.current, pointerMovedRef.current);
+    // Clicking the selected block keeps it selected (click empty canvas to deselect).
+    const selectOnRelease = deferredSelectRef.current && !pointerMovedRef.current;
     pointerDownPositionRef.current = null;
     pointerDownSelectedRef.current = false;
     pointerMovedRef.current = false;
-    if (shouldDeselect) {
-      onSelect(null);
+    deferredSelectRef.current = false;
+    if (selectOnRelease) {
+      onSelect(node.id);
     }
   };
 
@@ -1464,43 +1464,12 @@ const CanvasNodeInner: React.FC<CanvasNodeProps & { dnd: CanvasNodeDnd }> = ({
     }
   };
 
-  const startResize = (event: React.PointerEvent<HTMLDivElement>) => {
-    if (readOnly) {
-      return;
-    }
-    event.preventDefault();
-    event.stopPropagation();
-    const startX = event.clientX;
-    const startY = event.clientY;
-    const { width, height } = node.size;
-    let latestSize = node.size;
-
-    const handlePointerMove = (moveEvent: PointerEvent) => {
-      const deltaX = moveEvent.clientX - startX;
-      const deltaY = moveEvent.clientY - startY;
-      latestSize = {
-        width: Math.max(40, width + deltaX),
-        height: Math.max(32, height + deltaY),
-      };
-      onResize(node.id, latestSize, false);
-    };
-
-    const handlePointerUp = (upEvent: PointerEvent) => {
-      upEvent.preventDefault();
-      window.removeEventListener('pointermove', handlePointerMove);
-      window.removeEventListener('pointerup', handlePointerUp);
-      onResize(node.id, latestSize, true);
-    };
-
-    window.addEventListener('pointermove', handlePointerMove);
-    window.addEventListener('pointerup', handlePointerUp, { once: true });
-  };
-
   return (
     <div
-      ref={combinedRef}
+      ref={setNodeRef}
       style={nodeStyle}
       data-automation-id={`designer-canvas-node-${node.id}`}
+      {...{ [DESIGNER_NODE_ID_ATTRIBUTE]: node.id }}
       className={clsx(
         'relative select-none transition-[opacity,box-shadow,border-color,background-color] duration-150',
         authoredBackground && 'designer-authored-bg',
@@ -1521,12 +1490,7 @@ const CanvasNodeInner: React.FC<CanvasNodeProps & { dnd: CanvasNodeDnd }> = ({
         !isSelected &&
           isConstraintCounterpart &&
           'ring-2 ring-cyan-500 shadow-[0_0_0_2px_rgba(6,182,212,0.2)]',
-        ((isDragActive && isNodeDropTarget) || forcedDropTarget === node.id) &&
-          'ring-2 ring-emerald-500 shadow-[0_0_0_2px_rgba(16,185,129,0.2)]',
-        isDragActive &&
-          dropIndicator?.kind === 'container' &&
-          dropIndicator.containerId === node.id &&
-          'ring-2 ring-red-500 shadow-[0_0_0_2px_rgba(239,68,68,0.25)] cursor-not-allowed',
+        forcedDropTarget === node.id && 'ring-2 ring-emerald-500 shadow-[0_0_0_2px_rgba(16,185,129,0.2)]',
         shouldDeemphasize && applySelectionDeemphasis && 'opacity-85',
         isDragging && 'opacity-80'
       )}
@@ -1537,26 +1501,19 @@ const CanvasNodeInner: React.FC<CanvasNodeProps & { dnd: CanvasNodeDnd }> = ({
       onPointerCancel={handlePointerCancel}
       onPointerOver={(event) => {
         event.stopPropagation();
-        setIsHovered(true);
+        setHoverNode(node.id);
       }}
       onPointerOut={(event) => {
         event.stopPropagation();
-        setIsHovered(false);
+        if (useInvoiceDesignerStore.getState().hoverNodeId === node.id) setHoverNode(null);
       }}
       onClick={handleNodeClick}
       onDoubleClick={handleDoubleClick}
       {...(readOnly ? {} : attributes)}
     >
-      {dropIndicator?.kind === 'insert' && parentUsesFlowLayout && dropIndicator.overNodeId === node.id && (
-        <div
-          className={clsx(
-            clsx(
-              'pointer-events-none absolute left-0 right-0 h-0.5 z-20',
-              dropIndicator.tone === 'invalid' ? 'bg-red-500' : 'bg-emerald-500'
-            ),
-            dropIndicator.position === 'before' ? '-top-1' : '-bottom-1'
-          )}
-        />
+      {node.type === 'divider' && !readOnly && (
+        // A divider is a hairline; give the pointer a few px either side to grab it by.
+        <span aria-hidden className="absolute -inset-1.5" />
       )}
       {markerSide && (
         <div
@@ -1573,7 +1530,11 @@ const CanvasNodeInner: React.FC<CanvasNodeProps & { dnd: CanvasNodeDnd }> = ({
       )}
       {showOverlayNodeBadge && (
         <div
-          className="absolute left-0 -top-5 z-40 flex max-w-full items-center gap-1.5 rounded bg-slate-900/85 px-2 py-0.5 text-[10px] tracking-wide text-white pointer-events-none whitespace-nowrap"
+          className={clsx(
+            'absolute left-0 -top-5 z-40 flex max-w-full items-center gap-1.5 rounded px-2 py-0.5 text-[10px] tracking-wide text-white whitespace-nowrap cursor-grab',
+            isSelected ? 'bg-primary-600' : 'bg-slate-900/85'
+          )}
+          title={t('designer.canvas.badgeDragHint', { defaultValue: 'Drag to move this block' })}
           data-automation-id="designer-canvas-node-badge"
         >
           <span className="truncate">{getNodeName(node)} · {t(`designer.blocks.${node.type}.label`, { defaultValue: node.type })}</span>
@@ -1692,21 +1653,14 @@ const CanvasNodeInner: React.FC<CanvasNodeProps & { dnd: CanvasNodeDnd }> = ({
           onClick={(event) => event.stopPropagation()}
         />
       )}
-      {!readOnly && node.allowResize !== false && isResizeHandleSupported && !isEditingText && (
-        <div
-          role="button"
-          tabIndex={0}
-          onPointerDown={startResize}
-          className="absolute -bottom-2 -right-2 h-4 w-4 rounded-full border border-primary-500 bg-white dark:bg-slate-900 cursor-se-resize"
-        />
-      )}
     </div>
   );
 };
 
 const FlowCanvasNode: React.FC<CanvasNodeProps> = (props) => {
   const { node, readOnly } = props;
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+  // Blocks stay put while dragging; the drop preview shows where one will land.
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: node.id,
     disabled: readOnly,
     data: {
@@ -1723,8 +1677,8 @@ const FlowCanvasNode: React.FC<CanvasNodeProps> = (props) => {
         attributes,
         listeners,
         setNodeRef,
-        transform,
-        transition,
+        transform: null,
+        transition: undefined,
         isDragging,
       }}
     />
@@ -1773,12 +1727,13 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({
   snapToGrid,
   guides,
   isDragActive,
-  dropIndicator = null,
+  draggingNodeId = null,
   forcedDropTarget,
   droppableId,
   onPointerLocationChange,
   onNodeSelect,
   onResize,
+  onResetSize = () => {},
   onTextEdit,
   readOnly = false,
   previewData = null,
@@ -1811,6 +1766,8 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({
   }, [nodes, transforms, exportWorkspace]);
   const { t, i18n } = useTranslation('msp/invoicing');
   const artboardRef = useRef<HTMLDivElement>(null);
+  const [artboardElement, setArtboardElement] = useState<HTMLDivElement | null>(null);
+  const [selectedFrame, setSelectedFrame] = useState<Frame | null>(null);
   const { locale: canvasLocale } = React.useContext(CanvasDocumentPreviewContext);
   const canvasLocaleLabel = useMemo(() => {
     if (!canvasLocale || canvasLocale.toLowerCase().startsWith('en')) return null;
@@ -1833,7 +1790,7 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({
   );
   // Prefer page/document roots, but tolerate malformed parent links from imported snapshots.
   const rootDropMeta = defaultPageNode ?? documentNode ?? nodes.find((node) => node.parentId === null);
-  const { setNodeRef: setDroppableNodeRef, isOver } = useDroppable({
+  const { setNodeRef: setDroppableNodeRef } = useDroppable({
     id: droppableId,
     data: rootDropMeta
       ? {
@@ -1846,6 +1803,7 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({
   const setArtboardNodeRef = useCallback(
     (node: HTMLDivElement | null) => {
       setDroppableNodeRef(node);
+      setArtboardElement(node);
       artboardRef.current = node;
     },
     [setDroppableNodeRef]
@@ -1938,10 +1896,9 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({
           isInSelectionContext={selectionContextNodeIds.has(node.id)}
           hasActiveSelection={hasActiveRenderableSelection}
           isDragActive={isDragActive}
-          dropIndicator={dropIndicator}
+          draggingNodeId={draggingNodeId}
           forcedDropTarget={forcedDropTarget}
           onSelect={onNodeSelect}
-          onResize={onResize}
           onTextEdit={onTextEdit}
           renderChildren={renderNodeTree}
           childExtents={childExtentsMap.get(node.id)}
@@ -1950,15 +1907,6 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({
           applySelectionDeemphasis={!readOnly}
         />
       ));
-    if (!readOnly && parentUsesFlowLayout) {
-      const items = children.filter((child) => child.type !== 'document' && child.type !== 'page').map((child) => child.id);
-      const strategy = resolveSortableStrategy(parentLayout);
-      return (
-        <SortableContext items={items} strategy={strategy}>
-          {renderedChildren}
-        </SortableContext>
-      );
-    }
     return renderedChildren;
   }, [
     activeReferenceNodeId,
@@ -1966,12 +1914,11 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({
     childrenMap,
     nodesById,
     constrainedCounterpartNodeIds,
-    dropIndicator,
     forcedDropTarget,
+    draggingNodeId,
     hasActiveRenderableSelection,
     isDragActive,
     onNodeSelect,
-    onResize,
     onTextEdit,
     previewData,
     readOnly,
@@ -1980,6 +1927,8 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({
   ]);
 
   const rootParentId = rootDropMeta?.id;
+  const selectedNode = selectedNodeId ? nodesById.get(selectedNodeId) : undefined;
+  const selectedResizeHandles = useMemo(() => resolveResizeHandles(selectedNode), [selectedNode]);
   const canvasWidth = defaultPageNode?.size.width ?? DESIGNER_CANVAS_WIDTH;
   const canvasHeight = defaultPageNode?.size.height ?? DESIGNER_CANVAS_HEIGHT;
 
@@ -2016,39 +1965,41 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({
     <style>{AUTHORED_SURFACE_CSS}</style>
     <div
       className="relative flex-1 overflow-auto bg-slate-100 dark:bg-[rgb(var(--color-background))]"
+      data-designer-canvas-viewport="true"
       onClick={() => {
         if (!readOnly) {
           onNodeSelect(null);
         }
       }}
     >
-      {showRulers && (
-        <>
-          <div className="absolute top-0 left-12 right-0 h-8 bg-white dark:bg-[rgb(var(--color-card))] border-b border-slate-200 dark:border-[rgb(var(--color-border-200))] flex items-end text-[10px] text-slate-400 px-3 gap-3 z-10">
-            {Array.from({ length: Math.ceil(canvasWidth / 50) + 2 }).map((_, index) => (
-              <span key={`hr-${index}`}>{index * 50}</span>
-            ))}
-          </div>
-          <div className="absolute top-8 bottom-0 left-0 w-12 bg-white dark:bg-[rgb(var(--color-card))] border-r border-slate-200 dark:border-[rgb(var(--color-border-200))] flex flex-col items-end text-[10px] text-slate-400 py-4 pr-1 gap-6 z-10">
-            {Array.from({ length: Math.ceil(canvasHeight / 50) + 2 }).map((_, index) => (
-              <span key={`vr-${index}`}>{index * 50}</span>
-            ))}
-          </div>
-        </>
-      )}
-      <div className="relative flex-1" style={{ padding: showRulers ? '48px 0 0 48px' : '32px' }}>
+      <div className="relative flex-1" style={{ padding: '32px' }}>
         <div
-          className="mx-auto"
+          className="relative mx-auto"
           style={{
             width: canvasWidth * canvasScale,
             height: canvasHeight * canvasScale,
           }}
         >
+          {showRulers && (
+            <CanvasRulers
+              width={canvasWidth}
+              height={canvasHeight}
+              canvasScale={canvasScale}
+              selection={
+                selectedFrame
+                  ? {
+                      x: { start: selectedFrame.left, end: selectedFrame.left + selectedFrame.width },
+                      y: { start: selectedFrame.top, end: selectedFrame.top + selectedFrame.height },
+                    }
+                  : null
+              }
+            />
+          )}
           <div
             ref={setArtboardNodeRef}
             className={clsx(
               'relative rounded-lg border border-slate-300 dark:border-slate-600 shadow-inner bg-white dark:bg-slate-900',
-              ((isDragActive && isOver) || forcedDropTarget === 'canvas') && 'ring-2 ring-emerald-500'
+              forcedDropTarget === 'canvas' && 'ring-2 ring-emerald-500'
             )}
             data-designer-canvas="true"
             style={{
@@ -2095,6 +2046,18 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({
             >
               {rootParentId && renderNodeTree(rootParentId)}
             </div>
+            {!readOnly && !isDragActive && selectedNode && selectedResizeHandles.length > 0 && (
+              <SelectionAdorner
+                nodeId={selectedNode.id}
+                artboard={artboardElement}
+                canvasScale={canvasScale}
+                handles={selectedResizeHandles}
+                onResize={onResize}
+                onResetSize={onResetSize}
+                layoutKey={nodes}
+                onFrameChange={setSelectedFrame}
+              />
+            )}
             {showGuides && guides.map((guide) => (
               <div
                 key={`${guide.type}-${guide.position}`}
@@ -2124,7 +2087,7 @@ export const __designCanvasSelectionTestUtils = {
   hasRenderableActiveSelection,
   collectSelectionContextNodeIds,
   hasMovedBeyondThreshold,
-  shouldToggleSelectionOff,
+  isInsideSelectedContainer,
   shouldDeemphasizeNode,
 };
 

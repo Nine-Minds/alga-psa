@@ -8,6 +8,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DesignCanvas } from './DesignCanvas';
 import { useInvoiceDesignerStore } from '../state/designerStore';
 import type { DesignerNode } from '../state/designerStore';
+import type { HandleResetSize, HandleResize } from './SelectionAdorner';
 
 afterEach(() => cleanup());
 
@@ -137,8 +138,8 @@ describe('DesignCanvas (resize integration)', () => {
     expect(after.style.height).toBe('160px');
   });
 
-  it('calls onResize with commit=false during pointer-move and commit=true on completion', () => {
-    // JSDOM doesn't always provide PointerEvent; DesignCanvas relies on window-level pointer listeners.
+  const renderSelected = (onResize: HandleResize, canvasScale = 1, onResetSize: HandleResetSize = noop) => {
+    // JSDOM doesn't always provide PointerEvent; the adorner relies on window-level pointer listeners.
     if (typeof (globalThis as any).PointerEvent === 'undefined') {
       // eslint-disable-next-line @typescript-eslint/no-extraneous-class
       class MockPointerEvent extends MouseEvent {}
@@ -194,20 +195,18 @@ describe('DesignCanvas (resize integration)', () => {
       gridSize: 8,
       showGuides: false,
       showRulers: false,
-      canvasScale: 1,
+      canvasScale,
     });
-
-    const onResize = vi.fn();
 
     render(
       <DndContext>
         <DesignCanvas
           nodes={useInvoiceDesignerStore.getState().nodes}
-          selectedNodeId={null}
+          selectedNodeId="container-1"
           showGuides={false}
           showRulers={false}
           gridSize={8}
-          canvasScale={1}
+          canvasScale={canvasScale}
           snapToGrid={false}
           guides={[]}
           isDragActive={false}
@@ -216,32 +215,58 @@ describe('DesignCanvas (resize integration)', () => {
           onPointerLocationChange={noop}
           onNodeSelect={noop}
           onResize={onResize}
+          onResetSize={onResetSize}
           readOnly={false}
         />
       </DndContext>
     );
+  };
 
-    const container = document.querySelector('[data-automation-id="designer-canvas-node-container-1"]') as
-      | HTMLElement
-      | null;
-    expect(container).toBeTruthy();
-    if (!container) return;
+  const drag = (handle: string, from: { x: number; y: number }, to: { x: number; y: number }) => {
+    const element = document.querySelector(`[data-automation-id="designer-resize-handle-${handle}"]`) as HTMLElement | null;
+    expect(element).toBeTruthy();
+    fireEvent.pointerDown(element!, { clientX: from.x, clientY: from.y, button: 0 });
+    window.dispatchEvent(new (globalThis as any).PointerEvent('pointermove', { clientX: to.x, clientY: to.y }));
+    window.dispatchEvent(new (globalThis as any).PointerEvent('pointerup', { clientX: to.x, clientY: to.y }));
+  };
 
-    const resizeHandle = container.querySelector('div[role="button"]') as HTMLElement | null;
-    expect(resizeHandle).toBeTruthy();
-    if (!resizeHandle) return;
+  it('calls onResize with commit=false during pointer-move and commit=true on completion', () => {
+    const onResize = vi.fn<HandleResize>();
+    renderSelected(onResize);
+    drag('se', { x: 100, y: 100 }, { x: 120, y: 130 });
 
-    fireEvent.pointerDown(resizeHandle, { clientX: 100, clientY: 100 });
-    window.dispatchEvent(new (globalThis as any).PointerEvent('pointermove', { clientX: 120, clientY: 130 }));
-    window.dispatchEvent(new (globalThis as any).PointerEvent('pointerup', { clientX: 120, clientY: 130 }));
+    const commits = onResize.mock.calls.map((args) => ({ nodeId: args[0], commit: args[2] }));
+    expect(commits).toEqual([
+      { nodeId: 'container-1', commit: false },
+      { nodeId: 'container-1', commit: true },
+    ]);
+  });
 
-    const calls = onResize.mock.calls.map((args) => ({
-      nodeId: args[0],
-      commit: args[2],
-    }));
+  it('changes only the dragged side, by the pointer movement divided by the zoom', () => {
+    const onResize = vi.fn<HandleResize>();
+    renderSelected(onResize, 2);
+    drag('e', { x: 100, y: 100 }, { x: 160, y: 140 });
+    // JSDOM boxes measure 0x0, so the width is the movement alone: 60 screen px at 200%.
+    expect(onResize).toHaveBeenLastCalledWith('container-1', { width: 30, height: undefined }, true);
 
-    // At least one in-flight update (commit=false) and one final commit=true update are required.
-    expect(calls.some((c) => c.nodeId === 'container-1' && c.commit === false)).toBe(true);
-    expect(calls.some((c) => c.nodeId === 'container-1' && c.commit === true)).toBe(true);
+    onResize.mockClear();
+    drag('s', { x: 100, y: 100 }, { x: 160, y: 140 });
+    expect(onResize).toHaveBeenLastCalledWith('container-1', { width: undefined, height: 20 }, true);
+  });
+
+  it('does not resize (or add an undo step) for a press without movement', () => {
+    const onResize = vi.fn<HandleResize>();
+    renderSelected(onResize);
+    drag('w', { x: 100, y: 100 }, { x: 100, y: 100 });
+    expect(onResize).not.toHaveBeenCalled();
+  });
+
+  it('double-clicking a handle sizes that dimension back to its content', () => {
+    const onResetSize = vi.fn<HandleResetSize>();
+    renderSelected(vi.fn<HandleResize>(), 1, onResetSize);
+    fireEvent.doubleClick(document.querySelector('[data-automation-id="designer-resize-handle-e"]')!);
+    expect(onResetSize).toHaveBeenLastCalledWith('container-1', { width: true, height: false });
+    fireEvent.doubleClick(document.querySelector('[data-automation-id="designer-resize-handle-se"]')!);
+    expect(onResetSize).toHaveBeenLastCalledWith('container-1', { width: true, height: true });
   });
 });
