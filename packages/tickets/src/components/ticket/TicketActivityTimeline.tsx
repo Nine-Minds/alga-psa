@@ -191,7 +191,7 @@ function notificationSuppressionAnnotation(activity: TicketActivityRow): string 
   return undefined;
 }
 
-function describeActivity(activity: TicketActivityRow): { title: string; annotation?: string; subtitle?: string } {
+function describeActivity(activity: TicketActivityRow, visibilityLabel: (visible: boolean) => string): { title: string; annotation?: string; subtitle?: string } {
   const actor = actorLabel(activity);
   const annotation = notificationSuppressionAnnotation(activity);
 
@@ -306,7 +306,12 @@ function describeActivity(activity: TicketActivityRow): { title: string; annotat
     case 'TICKET_EXTERNAL_LINK_ADDED':
       return { title: `${actor} linked ${externalLinkReference(activity)}` };
     case 'TICKET_EXTERNAL_LINK_UPDATED':
-      return { title: `${actor} updated the ${externalLinkReference(activity)} link` };
+      return {
+        title: `${actor} updated the ${externalLinkReference(activity)} link`,
+        subtitle: activity.changes?.portal_visible
+          ? `${visibilityLabel(activity.changes.portal_visible.old === true)} → ${visibilityLabel(activity.changes.portal_visible.new === true)}`
+          : undefined,
+      };
     case 'TICKET_EXTERNAL_LINK_REMOVED':
       return { title: `${actor} unlinked ${externalLinkReference(activity)}` };
     default:
@@ -314,10 +319,13 @@ function describeActivity(activity: TicketActivityRow): { title: string; annotat
   }
 }
 
-export function formatEntries(entries: TicketTimelineEntry[]): FormattedEntry[] {
+export function formatEntries(
+  entries: TicketTimelineEntry[],
+  visibilityLabel: (visible: boolean) => string = (visible: boolean) => visible ? 'Visible in client portal' : 'Internal only',
+): FormattedEntry[] {
   return entries.map((entry) => {
     if (entry.type === 'activity' && entry.activity) {
-      const desc = describeActivity(entry.activity);
+      const desc = describeActivity(entry.activity, visibilityLabel);
       return {
         key: `activity-${entry.sortId}`,
         occurredAt: entry.occurredAt,
@@ -458,6 +466,7 @@ function sourceBadge(source: string): { label: string; className: string } {
 
 export function TicketActivityTimeline({ ticketId, refreshKey = 0 }: TicketActivityTimelineProps) {
   const { t: tCommon } = useTranslation('common');
+  const { t: tTickets } = useTranslation('features/tickets');
   const { formatDate } = useFormatters();
   const [entries, setEntries] = useState<TicketTimelineEntry[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -497,7 +506,9 @@ export function TicketActivityTimeline({ ticketId, refreshKey = 0 }: TicketActiv
 
   // All hooks must run unconditionally on every render — keep useMemo/etc.
   // above the loading/error early returns to satisfy the rules of hooks.
-  const formatted = useMemo(() => formatEntries(entries ?? []), [entries]);
+  const formatted = useMemo(() => formatEntries(entries ?? [], (visible) => visible
+    ? tTickets('externalLinks.visibility.shared', 'Visible in client portal')
+    : tTickets('externalLinks.visibility.internal', 'Internal only')), [entries, tTickets]);
 
   const filtered = useMemo(() => {
     return formatted.filter((entry) => {
@@ -627,7 +638,7 @@ export function TicketActivityTimeline({ ticketId, refreshKey = 0 }: TicketActiv
         },
       },
     ],
-    [expandedKey],
+    [expandedKey, formatDate],
   );
 
   const filterBar = (

@@ -535,11 +535,20 @@ describe('kbImportBlocks pathological input stays linear', { timeout: 120_000 },
     // Chunking holds this at ~2.5x per doubling (hard-splitting a window costs a
     // little more than splitting on whitespace), so bound it at 4x: clear of the
     // measured cost, and still an order of magnitude under the regression. Both
-    // sizes take the fastest of two samples so one stalled run cannot skew the
+    // sizes take the fastest of three samples so one stalled run cannot skew the
     // ratio on a loaded runner.
-    const half = fastestOf(2, () => markdownToBlocks('`a`'.repeat(42_500)));
-    const full = fastestOf(2, () => markdownToBlocks('`a`'.repeat(85_000)));
+    const half = fastestOf(3, () => markdownToBlocks('`a`'.repeat(42_500)));
+    const full = fastestOf(3, () => markdownToBlocks('`a`'.repeat(85_000)));
     expect(full).toBeLessThan(Math.max(half, 20) * 4);
+  });
+
+  it('scales linearly while finding hard splits in a whitespace-free inline run', () => {
+    // There is no preferred split point in this input. The fallback search
+    // must inspect only the current window rather than repeatedly scanning
+    // every preceding character as the source grows.
+    const half = fastestOf(2, () => markdownToBlocks('x'.repeat(4_000_000)));
+    const full = fastestOf(2, () => markdownToBlocks('x'.repeat(8_000_000)));
+    expect(full).toBeLessThan(Math.max(half, 20) * 3);
   });
 
   it('costs the same whether inline constructs sit in one block or many', () => {
