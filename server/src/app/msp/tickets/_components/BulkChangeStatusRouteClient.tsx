@@ -93,13 +93,12 @@ export default function BulkChangeStatusRouteClient({ closeMode }: BulkChangeSta
         ? await bulkUpdateTicketStatus(selectedTicketIdsArray, statusId, options)
         : await bulkUpdateTicketStatus(selectedTicketIdsArray, statusId);
 
-      if (result.updatedIds.length > 0) {
-        refreshList();
-      }
-
       if (result.failed.length > 0) {
         setFailed(result.failed);
         keepFailedSelection(result.failed);
+        if (result.updatedIds.length > 0) {
+          refreshList();
+        }
         toastBulkResult(result, {
           partialFailure: t('bulk.status.partialFailure', 'Status could not be updated on some tickets'),
           success: (count) => t('bulk.status.success', {
