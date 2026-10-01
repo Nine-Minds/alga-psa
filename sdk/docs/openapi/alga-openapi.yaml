@@ -15899,6 +15899,50 @@ components:
           type: string
         query:
           type: string
+    WorkV1TicketListQuery:
+      type: object
+      properties:
+        page:
+          type: string
+        limit:
+          type: string
+        sort:
+          type: string
+          enum:
+            - client_name
+            - closed_at
+            - created_at
+            - due_date
+            - entered_at
+            - latest_activity_at
+            - priority_name
+            - status_name
+            - ticket_number
+            - title
+            - updated_at
+          description: Sort field. Defaults to entered_at. `created_at` is a legacy alias
+            for `entered_at` (tickets have no created_at column).
+            `latest_activity_at` orders by the newest of the ticket's own
+            timestamps and its newest visible comment; for client-portal callers
+            only client-visible comments count. Ties break on ticket_id
+            descending. Any other value is rejected with 400.
+        order:
+          type: string
+          enum:
+            - asc
+            - desc
+        fields:
+          type: string
+          description: Comma-separated response fields. Accepts ticket_id, ticket_number,
+            title, status_id, status_name, status_is_closed, priority_name,
+            assigned_to_name, client_name, contact_name, updated_at, entered_at,
+            closed_at, latest_activity_at, tags, master_ticket_id,
+            bundle_master_ticket_number, bundle_child_count, or the mobile_list
+            preset. Unknown names are rejected with 400.
+        search:
+          type: string
+        query:
+          type: string
     WorkV1GenericBody:
       type: object
       additionalProperties: {}
@@ -61195,7 +61239,9 @@ paths:
     get:
       summary: List tickets
       description: Lists tickets via ApiTicketController.list() with
-        authorization-aware pagination.
+        authorization-aware pagination. `sort` is validated against an allowlist
+        (unknown values return 400) and supports latest_activity_at, which is
+        also selectable through `fields`.
       tags:
         - Work Management v1
       security:
@@ -61222,7 +61268,31 @@ paths:
           in: query
         - schema:
             type: string
+            enum:
+              - client_name
+              - closed_at
+              - created_at
+              - due_date
+              - entered_at
+              - latest_activity_at
+              - priority_name
+              - status_name
+              - ticket_number
+              - title
+              - updated_at
+            description: Sort field. Defaults to entered_at. `created_at` is a legacy alias
+              for `entered_at` (tickets have no created_at column).
+              `latest_activity_at` orders by the newest of the ticket's own
+              timestamps and its newest visible comment; for client-portal
+              callers only client-visible comments count. Ties break on
+              ticket_id descending. Any other value is rejected with 400.
           required: false
+          description: Sort field. Defaults to entered_at. `created_at` is a legacy alias
+            for `entered_at` (tickets have no created_at column).
+            `latest_activity_at` orders by the newest of the ticket's own
+            timestamps and its newest visible comment; for client-portal callers
+            only client-visible comments count. Ties break on ticket_id
+            descending. Any other value is rejected with 400.
           name: sort
           in: query
         - schema:
@@ -61233,7 +61303,19 @@ paths:
           in: query
         - schema:
             type: string
+            description: Comma-separated response fields. Accepts ticket_id, ticket_number,
+              title, status_id, status_name, status_is_closed, priority_name,
+              assigned_to_name, client_name, contact_name, updated_at,
+              entered_at, closed_at, latest_activity_at, tags, master_ticket_id,
+              bundle_master_ticket_number, bundle_child_count, or the
+              mobile_list preset. Unknown names are rejected with 400.
           required: false
+          description: Comma-separated response fields. Accepts ticket_id, ticket_number,
+            title, status_id, status_name, status_is_closed, priority_name,
+            assigned_to_name, client_name, contact_name, updated_at, entered_at,
+            closed_at, latest_activity_at, tags, master_ticket_id,
+            bundle_master_ticket_number, bundle_child_count, or the mobile_list
+            preset. Unknown names are rejected with 400.
           name: fields
           in: query
         - schema:

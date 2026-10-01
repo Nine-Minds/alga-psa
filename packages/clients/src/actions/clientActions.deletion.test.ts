@@ -269,7 +269,8 @@ describe('client deletion actions', () => {
 
   it('persists top-level tax_id_number without adding it to properties', async () => {
       const updateCalls: Record<string, unknown>[] = [];
-      const currentClient = { client_id: 'client-1', client_name: 'Client', tenant: 'tenant-1', url: '', is_inactive: false, properties: {}, created_at: '2026-01-01', updated_at: '2026-01-01' };
+      // A real `select *` row carries every column (null when unset); updateClient only writes keys present on it.
+      const currentClient = { client_id: 'client-1', client_name: 'Client', tenant: 'tenant-1', url: '', is_inactive: false, properties: {}, tax_id_number: null, created_at: '2026-01-01', updated_at: '2026-01-01' };
       createTenantKnexMock.mockResolvedValue({ knex: {} });
       withTransactionMock.mockImplementation(async (_db: unknown, callback: TransactionCallback) => {
         const trx = ((table: string) => ({ where: vi.fn(() => ({

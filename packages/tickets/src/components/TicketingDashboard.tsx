@@ -1818,6 +1818,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       due_date: (ticket) => formatPrintDate(ticket.due_date, locale) || t('dashboard.print.noDueDate', 'No due date'),
       entered_at: (ticket) => formatPrintDateTime(ticket.entered_at, formatDate) || t('dashboard.print.emptyValue', '—'),
       entered_by_name: (ticket) => ticket.entered_by_name || t('dashboard.print.emptyValue', '—'),
+      latest_activity_at: (ticket) => formatPrintDateTime(ticket.latest_activity_at, formatDate) || t('dashboard.print.emptyValue', '—'),
       tags: (ticket) => {
         const tags = ticket.ticket_id ? ticketTagsRef.current[ticket.ticket_id] ?? [] : [];
         return tags.length > 0
@@ -1839,7 +1840,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
           ? 'tickets-print-number-column'
           : dataIndexKey === 'title'
             ? 'tickets-print-title-column'
-            : dataIndexKey === 'due_date' || dataIndexKey === 'entered_at'
+            : dataIndexKey === 'due_date' || dataIndexKey === 'entered_at' || dataIndexKey === 'latest_activity_at'
               ? 'tickets-print-date-column'
               : undefined,
         render: knownRenderer ?? ((ticket) => (
