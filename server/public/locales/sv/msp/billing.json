@@ -335,7 +335,8 @@
       "billingMethod": "Debiteringsmetod",
       "quantity": "Antal",
       "defaultRate": "Standardtaxa",
-      "actions": "Åtgärder"
+      "actions": "Åtgärder",
+      "pricing": "Prissättning"
     },
     "tooltip": {
       "defaultRate": "Tjänstens standardtaxa, som används för intern värdefördelning och rapportering inom avtalsradens fasta totalbelopp."
@@ -370,7 +371,17 @@
       "saveSuccess": "Tjänsterna i förinställningen för avtalsraden har sparats",
       "saveError": "Det gick inte att spara tjänsterna"
     },
-    "unknownService": "Okänd tjänst"
+    "unknownService": "Okänd tjänst",
+    "pricing": {
+      "product": "Debiteras per antal enheter",
+      "bundle": "Ingår i radens totalbelopp",
+      "unit": "Per licens/enhet",
+      "unitRate": "Enhetspris",
+      "unitRatePlaceholder": "Katalogpris"
+    },
+    "errors": {
+      "recurringQuantityInvalid": "{{name}}: det återkommande antalet måste vara ett heltal, noll eller mer."
+    }
   },
   "accountingExports": {
     "title": "Bokföringsexporter",
