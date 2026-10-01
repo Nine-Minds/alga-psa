@@ -138,8 +138,15 @@ describe('profitability report action SQL contracts', () => {
       path.resolve(repoRoot, 'packages/clients/src/actions/clientPulseActions.ts'),
       'utf8',
     );
+    // Runs inside the generation transaction just before the engine and repeats
+    // its fixed-price exclusion, so it must resolve the same project or
+    // pre-written attribution diverges from what bills.
+    const attributionWriter = readFileSync(
+      path.resolve(repoRoot, 'packages/billing/src/lib/billing/contractLineAttributionWriter.ts'),
+      'utf8',
+    );
 
-    for (const consumer of [source, budgetActuals, clientPulse]) {
+    for (const consumer of [source, budgetActuals, clientPulse, attributionWriter]) {
       expect(consumer).toContain(
         "from '@alga-psa/shared/billingClients/ticketProjectAttribution'",
       );
@@ -156,6 +163,16 @@ describe('profitability report action SQL contracts', () => {
     // resolved project, not the phase alone.
     expect(source).toContain("AND config.project_id = ${ticketProjectIdExpression('phase')}");
     expect(source).toContain('LEFT JOIN project_phases phase');
+
+    // The writer's own projects join must run on the resolved project, not on
+    // 'project_phases.project_id', or its fixed-price exclusion and
+    // billing-profile COALESCE stay blind to ticket time.
+    expect(attributionWriter).toContain(
+      "trx.raw(ticketProjectIdExpression('project_phases')) as unknown as string",
+    );
+    expect(attributionWriter).not.toContain(
+      "'projects', 'project_phases.project_id', 'projects.project_id'",
+    );
   });
 
   it('removes the old contract-report profitability stub and registry definition', () => {

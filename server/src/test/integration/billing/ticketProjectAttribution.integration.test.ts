@@ -8,6 +8,7 @@ import {
   ticketProjectIdExpression,
 } from '@alga-psa/shared/billingClients/ticketProjectAttribution';
 import { BillingEngine } from '@alga-psa/billing/services';
+import { reconcileWindowAttribution } from '@alga-psa/billing/lib/billing/contractLineAttributionWriter';
 import { ProjectService } from '@/lib/api/services/ProjectService';
 import {
   createProjectTicketLinkSchema,
@@ -22,8 +23,8 @@ const HOOK_TIMEOUT = 300_000;
  * (alga-2026-0002622): the column and its index exist, existing links are
  * backfilled to true, the resolver collapses a ticket's links into one row and
  * attributes nothing when they disagree, a link to another client's project is
- * never a candidate, and the REST link path carries the flag and rejects
- * duplicates.
+ * never a candidate, the pre-generation attribution writer resolves the same
+ * project, and the REST link path carries the flag and rejects duplicates.
  */
 describe('ticket time project attribution', () => {
   let db: Knex;
@@ -438,6 +439,57 @@ describe('ticket time project attribution', () => {
     await expect(
       warn(period('2026-07-01T00:00:00Z', '2026-08-01T00:00:00Z'), { projectId: unrelatedProjectId }),
     ).resolves.toEqual([]);
+  });
+
+  it('keeps the pre-generation attribution writer on the same project as the engine', async () => {
+    // The writer runs inside the generation transaction just before the loaders
+    // and repeats their fixed-price exclusion. Before it resolved ticket time's
+    // project, it pre-wrote a contract line for time the engine then refused to
+    // bill on a fixed-price project.
+    await table('project_billing_configs').insert({
+      tenant,
+      config_id: uuidv4(),
+      project_id: projectBId,
+      billing_model: 'fixed_price',
+      total_price: 500_000,
+      currency: 'USD',
+      invoice_mode: 'standalone',
+    });
+
+    const fixedPriceTicket = await createTicket('writer-fixed', 'Ticket on a fixed-price project');
+    const hourlyTicket = await createTicket('writer-hourly', 'Ticket on an hourly project');
+    await table('project_ticket_links').insert([
+      { tenant, link_id: uuidv4(), project_id: projectBId, phase_id: phaseBId, task_id: taskBId, ticket_id: fixedPriceTicket },
+      { tenant, link_id: uuidv4(), project_id: projectAId, phase_id: phaseAId, task_id: taskA1Id, ticket_id: hourlyTicket },
+    ]);
+    const fixedPriceEntry = await logHour(fixedPriceTicket, 'ticket');
+    const hourlyEntry = await logHour(hourlyTicket, 'ticket');
+
+    await db.transaction(async (trx) => {
+      await reconcileWindowAttribution({
+        trx,
+        tenant,
+        clientId,
+        windowStart: '2026-07-01T00:00:00Z' as any,
+        windowEnd: '2026-08-01T00:00:00Z' as any,
+      });
+    });
+
+    const read = (entryId: string) =>
+      table('time_entries').where({ entry_id: entryId }).first('contract_line_id', 'contract_line_source');
+
+    // Covered by the fee: the writer must leave it alone, exactly as the engine's
+    // loaders now do.
+    await expect(read(fixedPriceEntry)).resolves.toMatchObject({
+      contract_line_id: null,
+      contract_line_source: null,
+    });
+    // Hourly project: still a candidate, and with no contract behind it the
+    // writer records why rather than guessing a line.
+    await expect(read(hourlyEntry)).resolves.toMatchObject({
+      contract_line_id: null,
+      contract_line_source: 'unresolved',
+    });
   });
 
   it('creates REST links with the flag defaulted to true, honours an explicit opt-out, and rejects duplicates', async () => {

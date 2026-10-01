@@ -111,6 +111,8 @@ function createQueryBuilder(rows: Row[], tableName: string) {
     first: vi.fn(async () => resultRows[0]),
     join: vi.fn(() => builder),
     leftJoin: vi.fn(() => builder),
+    // The ticket→project resolver is joined as raw SQL (alga-2026-0002622).
+    joinRaw: vi.fn(() => builder),
     orderBy: vi.fn(() => builder),
     update: vi.fn(async () => 1),
     delete: vi.fn(async () => {
