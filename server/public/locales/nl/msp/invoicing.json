@@ -1819,7 +1819,8 @@
         "selectedCount": "{{count}} geselecteerd",
         "clear": "Selectie wissen"
       }
-    }
+    },
+    "emptyTimeHint": "Goedgekeurde tijd en materialen komen hier nooit in de wachtrij — ze worden gefactureerd via de normale factuurrun of via de knop Projectfactuur genereren."
   },
   "invoiceDesigner": {
     "transforms": {

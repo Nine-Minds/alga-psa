@@ -1819,7 +1819,8 @@
         "selectedCount": "{{count}} sélectionnés",
         "clear": "Effacer la sélection"
       }
-    }
+    },
+    "emptyTimeHint": "Le temps et les matériels approuvés ne sont jamais mis en file ici : ils sont facturés par la facturation normale ou par le bouton Générer la facture du projet."
   },
   "invoiceDesigner": {
     "transforms": {

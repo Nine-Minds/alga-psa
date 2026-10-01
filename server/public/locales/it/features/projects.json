@@ -509,7 +509,14 @@
     "linkedToTaskSuccess": "Ticket collegato all’attività con successo",
     "failedLoadTask": "Impossibile caricare l’attività",
     "clientFallback": "Cliente",
-    "defaultNewStatus": "Nuovo"
+    "defaultNewStatus": "Nuovo",
+    "billUnderProjectLabel": "Fattura le ore di questo ticket come ore di progetto",
+    "billingOffBadge": "Fatturato a livello cliente",
+    "billingOnTooltip": "Non fatturare più le ore di questo ticket come ore di progetto",
+    "billingOffTooltip": "Fattura le ore di questo ticket come ore di progetto",
+    "billingOnSuccess": "Le ore di questo ticket saranno fatturate come ore di progetto",
+    "billingOffSuccess": "Le ore di questo ticket saranno fatturate a livello cliente",
+    "billingUpdateFailed": "Impossibile aggiornare la fatturazione del ticket"
   },
   "materials": {
     "title": "Materiali del progetto",
@@ -804,7 +811,9 @@
       "task": "Attività",
       "tasks": "Attività",
       "badgeCount_other": "{{count}} Attività",
-      "badgeCount_one": "{{count}} Attività"
+      "badgeCount_one": "{{count}} Attività",
+      "billsToProject": "Le ore sono fatturate come ore di progetto",
+      "billsToClient": "Le ore sono fatturate a livello cliente"
     },
     "bulkMoveTask": {
       "title": "Sposta attività",

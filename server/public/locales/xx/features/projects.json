@@ -509,7 +509,14 @@
     "linkedToTaskSuccess": "⟦Ŧīƈķḗŧ ŀīƞķḗḓ ŧȯ ŧȧşķ şŭƈƈḗşşƒŭŀŀẏ⟧",
     "failedLoadTask": "⟦Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ŧȧşķ⟧",
     "clientFallback": "⟦Ƈŀīḗƞŧ⟧",
-    "defaultNewStatus": "⟦Ƞḗẇ⟧"
+    "defaultNewStatus": "⟦Ƞḗẇ⟧",
+    "billUnderProjectLabel": "⟦Ɓīŀŀ ŧħīş ŧīƈķḗŧ'ş ŧīḿḗ ȧş ƥřȯĵḗƈŧ ŧīḿḗ⟧",
+    "billingOffBadge": "⟦Ɓīŀŀḗḓ ȧŧ ƈŀīḗƞŧ ŀḗṽḗŀ⟧",
+    "billingOnTooltip": "⟦Şŧȯƥ ƀīŀŀīƞɠ ŧħīş ŧīƈķḗŧ'ş ŧīḿḗ ȧş ƥřȯĵḗƈŧ ŧīḿḗ⟧",
+    "billingOffTooltip": "⟦Ɓīŀŀ ŧħīş ŧīƈķḗŧ'ş ŧīḿḗ ȧş ƥřȯĵḗƈŧ ŧīḿḗ⟧",
+    "billingOnSuccess": "⟦Ŧħīş ŧīƈķḗŧ'ş ŧīḿḗ ẇīŀŀ ƀīŀŀ ȧş ƥřȯĵḗƈŧ ŧīḿḗ⟧",
+    "billingOffSuccess": "⟦Ŧħīş ŧīƈķḗŧ'ş ŧīḿḗ ẇīŀŀ ƀīŀŀ ȧŧ ŧħḗ ƈŀīḗƞŧ ŀḗṽḗŀ⟧",
+    "billingUpdateFailed": "⟦Ƒȧīŀḗḓ ŧȯ ŭƥḓȧŧḗ ŧīƈķḗŧ ƀīŀŀīƞɠ⟧"
   },
   "materials": {
     "title": "⟦Ƥřȯĵḗƈŧ Ḿȧŧḗřīȧŀş⟧",
@@ -804,7 +811,9 @@
       "tasks": "⟦Ŧȧşķş⟧",
       "badgeCount_other": "⟦{{count}} Ŧȧşķş⟧",
       "restrictedTooltip": "⟦Ŀīḿīŧḗḓ ḓḗŧȧīŀş — ẏȯŭ ȧřḗ ƞȯŧ ȧşşīɠƞḗḓ ŧȯ ŧħīş ŧȧşķ⟧",
-      "badgeCount_one": "⟦{{count}} Ŧȧşķ⟧"
+      "badgeCount_one": "⟦{{count}} Ŧȧşķ⟧",
+      "billsToProject": "⟦Ŧīḿḗ ƀīŀŀş ȧş ƥřȯĵḗƈŧ ŧīḿḗ⟧",
+      "billsToClient": "⟦Ŧīḿḗ ƀīŀŀş ȧŧ ŧħḗ ƈŀīḗƞŧ ŀḗṽḗŀ⟧"
     },
     "bulkMoveTask": {
       "title": "⟦Ḿȯṽḗ Ŧȧşķş⟧",

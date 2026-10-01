@@ -509,7 +509,14 @@
     "linkedToTaskSuccess": "Ticket gekoppeld aan taak",
     "failedLoadTask": "Kan taak niet laden",
     "clientFallback": "Klant",
-    "defaultNewStatus": "Nieuw"
+    "defaultNewStatus": "Nieuw",
+    "billUnderProjectLabel": "Tijd van dit ticket als projecttijd factureren",
+    "billingOffBadge": "Gefactureerd op klantniveau",
+    "billingOnTooltip": "Tijd van dit ticket niet meer als projecttijd factureren",
+    "billingOffTooltip": "Tijd van dit ticket als projecttijd factureren",
+    "billingOnSuccess": "De tijd van dit ticket wordt als projecttijd gefactureerd",
+    "billingOffSuccess": "De tijd van dit ticket wordt op klantniveau gefactureerd",
+    "billingUpdateFailed": "Facturatie van het ticket kon niet worden bijgewerkt"
   },
   "materials": {
     "title": "Projectmaterialen",
@@ -804,7 +811,9 @@
       "task": "Taak",
       "tasks": "Taken",
       "badgeCount_other": "{{count}} Taken",
-      "badgeCount_one": "{{count}} Taak"
+      "badgeCount_one": "{{count}} Taak",
+      "billsToProject": "Tijd wordt als projecttijd gefactureerd",
+      "billsToClient": "Tijd wordt op klantniveau gefactureerd"
     },
     "bulkMoveTask": {
       "title": "Taken verplaatsen",

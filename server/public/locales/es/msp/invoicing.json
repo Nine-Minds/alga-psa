@@ -1819,7 +1819,8 @@
         "selectedCount": "{{count}} seleccionados",
         "clear": "Limpiar selección"
       }
-    }
+    },
+    "emptyTimeHint": "El tiempo y los materiales aprobados nunca se encolan aquí: se facturan en la ejecución de facturación normal o con el botón Generar factura del proyecto."
   },
   "invoiceDesigner": {
     "transforms": {

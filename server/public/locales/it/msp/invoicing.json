@@ -1819,7 +1819,8 @@
         "selectedCount": "{{count}} selezionati",
         "clear": "Annulla selezione"
       }
-    }
+    },
+    "emptyTimeHint": "Ore e materiali approvati non vengono mai messi in coda qui: vengono fatturati con la normale generazione fatture o con il pulsante Genera fattura di progetto."
   },
   "invoiceDesigner": {
     "transforms": {

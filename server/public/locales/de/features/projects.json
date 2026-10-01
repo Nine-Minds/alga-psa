@@ -509,7 +509,14 @@
     "linkedToTaskSuccess": "Ticket erfolgreich mit Aufgabe verknüpft",
     "failedLoadTask": "Aufgabe konnte nicht geladen werden",
     "clientFallback": "Kunde",
-    "defaultNewStatus": "Neu"
+    "defaultNewStatus": "Neu",
+    "billUnderProjectLabel": "Zeit dieses Tickets als Projektzeit abrechnen",
+    "billingOffBadge": "Auf Kundenebene abgerechnet",
+    "billingOnTooltip": "Zeit dieses Tickets nicht mehr als Projektzeit abrechnen",
+    "billingOffTooltip": "Zeit dieses Tickets als Projektzeit abrechnen",
+    "billingOnSuccess": "Die Zeit dieses Tickets wird als Projektzeit abgerechnet",
+    "billingOffSuccess": "Die Zeit dieses Tickets wird auf Kundenebene abgerechnet",
+    "billingUpdateFailed": "Abrechnung des Tickets konnte nicht aktualisiert werden"
   },
   "materials": {
     "title": "Projektmaterialien",
@@ -804,7 +811,9 @@
       "task": "Aufgabe",
       "tasks": "Aufgaben",
       "badgeCount_other": "{{count}} Aufgaben",
-      "badgeCount_one": "{{count}} Aufgabe"
+      "badgeCount_one": "{{count}} Aufgabe",
+      "billsToProject": "Zeit wird als Projektzeit abgerechnet",
+      "billsToClient": "Zeit wird auf Kundenebene abgerechnet"
     },
     "bulkMoveTask": {
       "title": "Aufgaben verschieben",

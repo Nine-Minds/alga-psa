@@ -509,7 +509,14 @@
     "linkedToTaskSuccess": "Ticket vinculado a la tarea correctamente",
     "failedLoadTask": "No se pudo cargar la tarea",
     "clientFallback": "Cliente",
-    "defaultNewStatus": "Nuevo"
+    "defaultNewStatus": "Nuevo",
+    "billUnderProjectLabel": "Facturar el tiempo de este ticket como tiempo del proyecto",
+    "billingOffBadge": "Facturado a nivel de cliente",
+    "billingOnTooltip": "Dejar de facturar el tiempo de este ticket como tiempo del proyecto",
+    "billingOffTooltip": "Facturar el tiempo de este ticket como tiempo del proyecto",
+    "billingOnSuccess": "El tiempo de este ticket se facturará como tiempo del proyecto",
+    "billingOffSuccess": "El tiempo de este ticket se facturará a nivel de cliente",
+    "billingUpdateFailed": "No se pudo actualizar la facturación del ticket"
   },
   "materials": {
     "title": "Materiales del proyecto",
@@ -804,7 +811,9 @@
       "task": "Tarea",
       "tasks": "Tareas",
       "badgeCount_other": "{{count}} Tareas",
-      "badgeCount_one": "{{count}} Tarea"
+      "badgeCount_one": "{{count}} Tarea",
+      "billsToProject": "El tiempo se factura como tiempo del proyecto",
+      "billsToClient": "El tiempo se factura a nivel de cliente"
     },
     "bulkMoveTask": {
       "title": "Mover tareas",
