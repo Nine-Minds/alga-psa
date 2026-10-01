@@ -47,7 +47,7 @@ import {
 import { Dialog, DialogContent, DialogDescription } from '@alga-psa/ui/components/Dialog';
 import { Popover, PopoverContent, PopoverTrigger } from '@alga-psa/ui/components/Popover';
 import { Switch } from '@alga-psa/ui/components/Switch';
-import { formatCurrency, formatCurrencyFromMinorUnits } from '@alga-psa/core';
+import { useCurrencyFormat } from '@alga-psa/ui/lib';
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   getErrorMessage,
@@ -683,6 +683,7 @@ const matchesAutomaticInvoiceView = (
 const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess, onRefreshNeeded, refreshTrigger = 0 }) => {
   const { t } = useTranslation('msp/invoicing');
   const { formatDate } = useFormatters();
+  const { money } = useCurrencyFormat();
   const router = useRouter();
   const translateAssignmentContext = (contextValue: string | null): string | null => {
     if (!contextValue) {
@@ -833,7 +834,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
   const [poOverageDialogState, setPoOverageDialogState] = useState<{
     isOpen: boolean;
     executionIdentityKeys: string[];
-    overageByExecutionIdentityKey: Record<string, { clientName: string; overageCents: number; poNumber: string | null }>;
+    overageByExecutionIdentityKey: Record<string, { clientName: string; overageCents: number; poNumber: string | null; currencyCode: string | null }>;
   }>({
     isOpen: false,
     executionIdentityKeys: [],
@@ -846,6 +847,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
     selectorInput: IRecurringDueSelectionInput | null;
     overageCents: number;
     poNumber: string | null;
+    currencyCode: string | null;
   }>({
     isOpen: false,
     billingCycleId: null,
@@ -853,6 +855,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
     selectorInput: null,
     overageCents: 0,
     poNumber: null,
+    currencyCode: null,
   });
   // Pending "generate without the unreported usage services?" confirmation.
   // Captures the exact generation request that failed with the
@@ -1317,6 +1320,10 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
       selectionKnownCents += amount;
     }
   }
+  const selectionCurrencies = new Set(
+    selectedExecutionRows.map((member) => member.currencyCode?.trim()).filter((code): code is string => Boolean(code)),
+  );
+  const selectionCurrencyCode = selectionCurrencies.size === 1 ? [...selectionCurrencies][0] : undefined;
   const selectionInvoiceCount = selectedSelectionGroups.length;
   const selectionCombineCount = selectedSelectionGroups.filter((group) => group.selectorInputs.length > 1).length;
   const selectionSeparateCount = selectedSelectionGroups.filter((group) => group.selectorInputs.length === 1).length;
@@ -1436,18 +1443,19 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
 
   const renderGroupAmountCell = (group: RecurringInvoiceParentGroup) => {
     const summary = summarizeGroupAmount(group.childExecutionRows);
+    const groupCurrency = group.candidate.currencyCode?.trim() || undefined;
     if (summary.allKnown) {
       return (
         <div className="flex items-center justify-end gap-1 font-semibold font-mono tabular-nums text-foreground">
           <Check className="h-3.5 w-3.5 text-success" />
-          {formatCurrency(summary.knownCents / 100)}
+          {money(summary.knownCents, groupCurrency)}
         </div>
       );
     }
     if (summary.hasKnown) {
       return (
         <div className="text-right">
-          <div className="font-semibold font-mono tabular-nums text-foreground">{formatCurrency(summary.knownCents / 100)}</div>
+          <div className="font-semibold font-mono tabular-nums text-foreground">{money(summary.knownCents, groupCurrency)}</div>
           <div className="text-2xs text-muted-foreground">
             {t('automaticInvoices.amount.plusAtGeneration', {
               count: summary.atGenerationCount,
@@ -1732,7 +1740,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
       );
 
       const overageAnalysisErrors: { [key: string]: string } = {};
-      const overageByExecutionIdentityKey: Record<string, { clientName: string; overageCents: number; poNumber: string | null }> = {};
+      const overageByExecutionIdentityKey: Record<string, { clientName: string; overageCents: number; poNumber: string | null; currencyCode: string | null }> = {};
       for (const result of overageResults) {
         const overage = result.overage;
         if (isReturnedActionError(overage)) {
@@ -1751,6 +1759,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
           clientName,
           overageCents: overage.overage_cents,
           poNumber: overage.po_number ?? null,
+          currencyCode: result.period.currencyCode?.trim() || null,
         };
       }
 
@@ -1877,11 +1886,11 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
         for (const [, info] of Object.entries(overageByExecutionIdentityKey)) {
           newErrors[info.clientName] =
             t('automaticInvoices.dialogs.poOverage.skippedError', {
-              amount: formatCurrencyFromMinorUnits(info.overageCents),
+              amount: money(info.overageCents, info.currencyCode ?? undefined),
               poLabel: formatPoLabel(info.poNumber),
               defaultValue:
                 `Skipped due to PO overage (${formatPoLabel(info.poNumber)}): `
-                + `over by ${formatCurrencyFromMinorUnits(info.overageCents)}.`,
+                + `over by ${money(info.overageCents, info.currencyCode ?? undefined)}.`,
             });
         }
       }
@@ -2016,6 +2025,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
           selectorInput: previewState.selectorInput,
           overageCents: overage.overage_cents,
           poNumber: overage.po_number ?? null,
+          currencyCode: previewState.previews[0]?.data.currencyCode ?? null,
         });
         return;
       }
@@ -2106,6 +2116,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
       selectorInput: null,
       overageCents: 0,
       poNumber: null,
+      currencyCode: null,
     });
 
     setIsGeneratingFromPreview(true);
@@ -2693,7 +2704,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                 <div className="ml-auto text-right leading-tight">
                   {selectionKnownCents > 0 ? (
                     <>
-                      <div className="font-semibold font-mono tabular-nums">{formatCurrency(selectionKnownCents / 100)}</div>
+                      <div className="font-semibold font-mono tabular-nums">{money(selectionKnownCents, selectionCurrencyCode)}</div>
                       <div className="text-2xs text-white/80">
                         {selectionAtGenerationCount > 0
                           ? t('automaticInvoices.summary.knownPlusAtGeneration', {
@@ -3075,7 +3086,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                         </span>
                       );
                     }
-                    return <span className="font-medium font-mono tabular-nums">{formatCurrency(amount / 100)}</span>;
+                    return <span className="font-medium font-mono tabular-nums">{money(amount, record.member.currencyCode?.trim() || record.group.candidate.currencyCode?.trim() || undefined)}</span>;
                   }
                   return renderGroupAmountCell(record.group);
                 },
@@ -3726,7 +3737,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                                 <td className="py-2 px-2">{item.description}</td>
                                 <td className="text-right py-2 px-2"></td>
                                 <td className="text-right py-2 px-2"></td>
-                                <td className="text-right py-2 px-2">{formatCurrency(item.total / 100)}</td>
+                                <td className="text-right py-2 px-2">{money(item.total, previewEntry.data.currencyCode)}</td>
                               </tr>
                             );
                           }
@@ -3734,8 +3745,8 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                             <tr key={item.id} className="border-b">
                               <td className="py-2 px-2">{item.description}</td>
                               <td className="text-right py-2 px-2">{item.quantity}</td>
-                              <td className="text-right py-2 px-2">{formatCurrency(item.unitPrice / 100)}</td>
-                              <td className="text-right py-2 px-2">{formatCurrency(item.total / 100)}</td>
+                              <td className="text-right py-2 px-2">{money(item.unitPrice, previewEntry.data.currencyCode)}</td>
+                              <td className="text-right py-2 px-2">{money(item.total, previewEntry.data.currencyCode)}</td>
                             </tr>
                           );
                         })}
@@ -3743,15 +3754,15 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                       <tfoot>
                         <tr>
                           <td colSpan={3} className="text-right py-2 font-semibold">{t('automaticInvoices.dialogs.preview.totals.subtotal', { defaultValue: 'Subtotal' })}</td>
-                          <td className="text-right py-2">{formatCurrency(previewEntry.data.subtotal / 100)}</td>
+                          <td className="text-right py-2">{money(previewEntry.data.subtotal, previewEntry.data.currencyCode)}</td>
                         </tr>
                         <tr>
                           <td colSpan={3} className="text-right py-2 font-semibold">{t('automaticInvoices.dialogs.preview.totals.tax', { defaultValue: 'Tax' })}</td>
-                          <td className="text-right py-2">{formatCurrency(previewEntry.data.tax / 100)}</td>
+                          <td className="text-right py-2">{money(previewEntry.data.tax, previewEntry.data.currencyCode)}</td>
                         </tr>
                         <tr>
                           <td colSpan={3} className="text-right py-2 font-semibold">{t('automaticInvoices.dialogs.preview.totals.total', { defaultValue: 'Total' })}</td>
-                          <td className="text-right py-2">{formatCurrency(previewEntry.data.total / 100)}</td>
+                          <td className="text-right py-2">{money(previewEntry.data.total, previewEntry.data.currencyCode)}</td>
                         </tr>
                       </tfoot>
                     </table>
@@ -3866,8 +3877,8 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                 <li key={id}>
                   {t('automaticInvoices.dialogs.poOverage.batchItem', {
                     clientName: info.clientName,
-                    amount: formatCurrencyFromMinorUnits(info.overageCents),
-                    defaultValue: `${info.clientName}: over by ${formatCurrencyFromMinorUnits(info.overageCents)}`,
+                    amount: money(info.overageCents, info.currencyCode ?? undefined),
+                    defaultValue: `${info.clientName}: over by ${money(info.overageCents, info.currencyCode ?? undefined)}`,
                   })}
                   {info.poNumber ? ` (${formatPoLabel(info.poNumber)})` : ''}
                 </li>
@@ -3905,6 +3916,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
             selectorInput: null,
             overageCents: 0,
             poNumber: null,
+            currencyCode: null,
           })
         }
         title={t('automaticInvoices.dialogs.poOverage.title', {
@@ -3914,9 +3926,9 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
           <div className="space-y-2">
             <p>
               {t('automaticInvoices.dialogs.poOverage.singleDescription', {
-                amount: formatCurrencyFromMinorUnits(poOverageSingleConfirm.overageCents),
+                amount: money(poOverageSingleConfirm.overageCents, poOverageSingleConfirm.currencyCode ?? undefined),
                 defaultValue:
-                  `This invoice would exceed the Purchase Order authorized amount by ${formatCurrencyFromMinorUnits(poOverageSingleConfirm.overageCents)}.`,
+                  `This invoice would exceed the Purchase Order authorized amount by ${money(poOverageSingleConfirm.overageCents, poOverageSingleConfirm.currencyCode ?? undefined)}.`,
               })}
             </p>
             {poOverageSingleConfirm.poNumber && (

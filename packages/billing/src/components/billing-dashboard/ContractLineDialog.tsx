@@ -24,7 +24,6 @@ import { IContractLinePreset } from '@alga-psa/types';
 import { useTenant } from '@alga-psa/ui/components/providers/TenantProvider';
 import { Package, Clock, Activity, Plus, X, Coins } from 'lucide-react';
 import { useBillingFrequencyOptions } from '@alga-psa/billing/hooks/useBillingEnumOptions';
-import { getCurrencySymbol } from '@alga-psa/core';
 import { getServiceById } from '@alga-psa/billing/actions/serviceActions';
 import { SwitchWithLabel } from '@alga-psa/ui/components/SwitchWithLabel';
 import { BucketOverlayFields } from './contracts/BucketOverlayFields';
@@ -73,7 +72,7 @@ interface ContractLineDialogProps {
 
 export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerButton }: ContractLineDialogProps) {
   const { t } = useTranslation('msp/contract-lines');
-  const { symbol } = useCurrencyFormat();
+  const { symbol, money } = useCurrencyFormat();
   const billingFrequencyOptions = useBillingFrequencyOptions();
   const [open, setOpen] = useState(false);
   const [planName, setPlanName] = useState('');
@@ -565,11 +564,7 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
     closeDialog();
   };
 
-  const formatCurrency = (cents: number | undefined, currencyCode: string = 'USD') => {
-    const symbol = getCurrencySymbol(currencyCode);
-    if (!cents) return `${symbol}0.00`;
-    return `${symbol}${(cents / 100).toFixed(2)}`;
-  };
+  const formatCurrency = (cents: number | undefined) => money(cents ?? 0);
 
   const renderFixedConfig = () => {
     const handleAddFixedService = () => {
