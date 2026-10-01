@@ -791,7 +791,8 @@
       "back": "Tillbaka till fakturalayouter",
       "cancel": "Avbryt",
       "save": "Spara mall",
-      "saving": "Sparar…"
+      "saving": "Sparar…",
+      "close": "Stäng"
     },
     "titles": {
       "create": "Skapa ny fakturalayout",
@@ -801,7 +802,9 @@
       "templateName": "Mallnamn",
       "templateAst": "Mallens AST (JSON)",
       "created": "Skapad",
-      "lastUpdated": "Senast uppdaterad"
+      "lastUpdated": "Senast uppdaterad",
+      "savedAt": "Sparad {{time}}",
+      "notSaved": "Inte sparad än"
     },
     "tabs": {
       "visual": "Visuell",
@@ -817,6 +820,9 @@
       "templateNameRequired": "Mallnamn krävs",
       "astExportFailed": "Det gick inte att exportera mallens AST från den visuella arbetsytan: {{message}}",
       "unknownAstExport": "Okänt fel vid AST-export"
+    },
+    "toast": {
+      "saved": "Layouten ”{{name}}” har sparats."
     }
   },
   "templates": {
@@ -1254,6 +1260,15 @@
         "content": "Innehåll",
         "media": "Media",
         "dynamic": "Dynamiskt"
+      },
+      "insertTarget": {
+        "page": "Nya block hamnar i slutet av sidan.",
+        "inside": "Nya block hamnar inuti {{name}}.",
+        "after": "Nya block hamnar direkt efter {{name}}.",
+        "label": "Var nya block hamnar",
+        "insideOption": "Inuti det",
+        "afterOption": "Efter det",
+        "shiftHint": "Skift+klicka på + för att lägga till efter det i stället."
       }
     },
     "inspector": {
@@ -1273,7 +1288,70 @@
       "fitSectionToContents": "Anpassa avsnitt till innehållet",
       "sectionNoChildContent": "Avsnittet saknar underordnat innehåll att anpassa till.",
       "apply": "Tillämpa",
-      "emptyHelp": "Välj en komponent för att redigera dess egenskaper."
+      "emptyHelp": "Välj en komponent för att redigera dess egenskaper.",
+      "size": "Storlek",
+      "width": "Bredd",
+      "widthValue": "Breddvärde",
+      "minWidth": "Minsta bredd",
+      "maxWidth": "Största bredd",
+      "height": "Höjd",
+      "heightValue": "Höjdvärde",
+      "minHeight": "Minsta höjd",
+      "maxHeight": "Största höjd",
+      "mediaSource": "Bildkälla",
+      "mediaSourceLogo": "Företagslogotyp",
+      "mediaSourceCustom": "Egen bild",
+      "mediaSourceLogoHint": "Visar logotypen från företagets profilinställningar på alla dokument.",
+      "mediaSourceUrl": "Käll-URL",
+      "renameInner": "Vill du byta namn på {{count}} inre lager också ({{from}} → {{to}}…)?",
+      "renameInnerApply": "Byt namn",
+      "renameInnerDismiss": "Nej",
+      "tabsLabel": "Avsnitt i egenskapspanelen",
+      "insertDataField": "+ Infoga datafält…",
+      "searchDataFields": "Sök datafält…",
+      "dataFields": "Datafält",
+      "box": {
+        "top": "Överkant",
+        "right": "Höger",
+        "bottom": "Nederkant",
+        "left": "Vänster",
+        "all": "Alla sidor",
+        "sameOnAllSides": "Samma på alla sidor",
+        "unit": "Enhet",
+        "customValue": "Eget CSS-värde behålls tills du ändrar en sida: {{value}}"
+      },
+      "examplePlaceholder": "t.ex. {{value}}",
+      "setCount": "{{count}} angivna",
+      "overrides": {
+        "none": "Använder endast standardvärden.",
+        "jump": "Redigera på fliken {{tab}}",
+        "title": "Angivet för det här blocket ({{count}}):"
+      },
+      "tabs": {
+        "content": "Innehåll",
+        "style": "Stil",
+        "layout": "Layout och storlek"
+      },
+      "sizeModes": {
+        "auto": {
+          "label": "Auto",
+          "widthTooltip": "Låt behållaren avgöra (sträcks ut i en vertikal stapel)",
+          "heightTooltip": "Väx med innehållet"
+        },
+        "fill": {
+          "label": "Fyll",
+          "widthTooltip": "Fyll behållarens hela bredd"
+        },
+        "fit": {
+          "label": "Anpassa",
+          "widthTooltip": "Krymp så att innehållet precis får plats"
+        },
+        "fixed": {
+          "label": "Fast",
+          "widthTooltip": "Använd den exakta bredden som anges nedan",
+          "heightTooltip": "Använd den exakta höjden som anges nedan"
+        }
+      }
     },
     "shell": {
       "selectedLabel": "Markerat:",
@@ -1565,6 +1643,12 @@
             },
             "margin": {
               "label": "Marginal"
+            },
+            "padding": {
+              "label": "Inre marginal"
+            },
+            "containerPadding": {
+              "label": "Inre marginal"
             }
           }
         },
@@ -1652,6 +1736,84 @@
         },
         "totals-rows": {
           "title": "Summeringsrader"
+        },
+        "typography": {
+          "title": "Typografi",
+          "fields": {
+            "fontSize": {
+              "label": "Storlek"
+            },
+            "fontWeight": {
+              "label": "Teckenvikt",
+              "options": {
+                "400": "Normal (400)",
+                "500": "Medel (500)",
+                "600": "Halvfet (600)",
+                "700": "Fet (700)"
+              }
+            },
+            "lineHeight": {
+              "label": "Radhöjd"
+            },
+            "textAlign": {
+              "label": "Justering",
+              "options": {
+                "left": "Vänster",
+                "center": "Centrerad",
+                "right": "Höger",
+                "justify": "Marginaljusterad"
+              }
+            },
+            "fontStyle": {
+              "label": "Stil",
+              "options": {
+                "normal": "Normal",
+                "italic": "Kursiv"
+              }
+            },
+            "color": {
+              "label": "Färg"
+            }
+          }
+        },
+        "value-typography": {
+          "title": "Värdetext",
+          "fields": {
+            "fontSize": {
+              "label": "Storlek"
+            },
+            "fontWeight": {
+              "label": "Teckenvikt",
+              "options": {
+                "400": "Normal (400)",
+                "500": "Medel (500)",
+                "600": "Halvfet (600)",
+                "700": "Fet (700)"
+              }
+            },
+            "lineHeight": {
+              "label": "Radhöjd"
+            },
+            "textAlign": {
+              "label": "Justering",
+              "options": {
+                "left": "Vänster",
+                "center": "Centrerad",
+                "right": "Höger",
+                "justify": "Marginaljusterad"
+              }
+            },
+            "fontStyle": {
+              "label": "Stil",
+              "options": {
+                "normal": "Normal",
+                "italic": "Kursiv"
+              }
+            },
+            "color": {
+              "label": "Färg"
+            }
+          }
         }
       }
     },
@@ -1751,10 +1913,66 @@
     },
     "canvas": {
       "templateBoundary": "Mallgräns",
-      "translatableHint": "Översätts automatiskt till mottagarens språk. Redigera för att istället använda din egen fasta text."
+      "translatableHint": "Översätts automatiskt till mottagarens språk. Redigera för att istället använda din egen fasta text.",
+      "noLineItems": "Inga rader",
+      "moreRows": "+{{count}} rader till",
+      "subtotal": "Delsumma",
+      "tax": "Moms",
+      "total": "Totalt",
+      "buttonLabel": "Knapp",
+      "signatureLabel": "Underskrift",
+      "attachmentsLabel": "Bilagor",
+      "spacerLabel": "Avståndselement",
+      "companyLogo": "Företagslogotyp",
+      "insertionMarker": "Nästa block du lägger till hamnar här",
+      "emptyContainer": "Tom – markera den och lägg till block från den vänstra panelen",
+      "localeChip": "Översatta etiketter visas på {{language}} (förhandsgranskningsspråk)"
     },
     "dragOverlay": {
       "component": "Komponent"
+    },
+    "arrange": {
+      "up": "Upp",
+      "upHint": "Flytta tidigare i behållaren (↑)",
+      "down": "Ner",
+      "downHint": "Flytta senare i behållaren (↓)",
+      "out": "Ut",
+      "outHint": "Flytta ut ur behållaren och placera direkt efter den (Alt+←)",
+      "into": "In",
+      "intoHint": "Flytta in i behållaren direkt före (Alt+→)",
+      "copy": "Kopiera",
+      "copyHint": "Kopiera (Ctrl/⌘+C). Klistra in med Ctrl/⌘+V när du har markerat var det ska hamna.",
+      "paste": "Klistra in",
+      "pasteHint": "Klistra in i den markerade behållaren eller efter det markerade blocket (Ctrl/⌘+V)",
+      "duplicate": "Duplicera",
+      "duplicateHint": "Duplicera direkt efter sig självt (Ctrl/⌘+D)",
+      "copyStyle": "Kopiera format",
+      "copyStyleHint": "Kopiera färger, kantlinjer, avstånd och textformat (Ctrl/⌘+Alt+C)",
+      "pasteStyle": "Klistra in format",
+      "pasteStyleHint": "Ge det här blocket det kopierade formatet (Ctrl/⌘+Alt+V)",
+      "delete": "Radera",
+      "deleteHint": "Radera (Delete-tangenten)",
+      "title": "Ordna"
+    },
+    "feedback": {
+      "cannotInsert": "{{block}} kan inte läggas till här.",
+      "insertedOnPage": "{{block}} har lagts till på sidan.",
+      "insertedInto": "{{block}} har lagts till i {{parent}}.",
+      "fieldRebound": "{{name}} visar nu {{path}}."
+    },
+    "translation": {
+      "translatedAs": "Standardetikett ”{{name}}”, översatt för varje mottagare",
+      "useFixedText": "Använd fast text",
+      "pickStandardLabel": "Fast text. Översätt automatiskt…",
+      "searchStandardLabels": "Sök standardetiketter…",
+      "standardLabels": "Standardetiketter",
+      "noMatches": "Ingen standardetikett matchar.",
+      "cancel": "Avbryt"
+    },
+    "outline": {
+      "collapse": "Fäll ihop {{name}}",
+      "expand": "Fäll ut {{name}}",
+      "title": "Disposition"
     }
   },
   "projectBilling": {
@@ -2009,7 +2227,9 @@
         "addLine": "+ Rad",
         "clearLines": "En rad",
         "stackedLinesHint": "Varje ifylld rad visas på en egen rad. När alla rader är tomma visas kolumnens bindningsnyckel ovan.",
-        "removeLine": "Ta bort rad {{index}}"
+        "removeLine": "Ta bort rad {{index}}",
+        "align": "Justering",
+        "widthPlaceholder": "auto | 50% | 120px"
       },
       "columnTypes": {
         "text": "Text",
@@ -2044,6 +2264,12 @@
         "groupedRowKey": "Grupperad rads nyckel",
         "groupedRowItems": "Grupperad rads poster",
         "availableBinding": "Tillgänglig bindning"
+      },
+      "columnAlign": {
+        "default": "Standard",
+        "left": "Vänster",
+        "center": "Centrerad",
+        "right": "Höger"
       }
     },
     "imagePicker": {
@@ -2062,7 +2288,14 @@
       "clearRowBackground": "Rensa radens bakgrundsfärg",
       "clearRowTextColor": "Rensa radens textfärg",
       "labelColorOverrideNote": "Den här etiketten behåller sin sparade färg och ärver inte radens textfärg som anges ovan. Beloppet följer fortfarande radens textfärg.",
-      "noRows": "Det här summeringsblocket har inga sparade rader ännu. Spara mallen och öppna den igen för att redigera radfärger."
+      "noRows": "Det här summeringsblocket har inga sparade rader ännu. Spara mallen och öppna den igen för att redigera radfärger.",
+      "addRow": "Lägg till rad:",
+      "empty": "Inga rader än. Lägg till en nedan.",
+      "moveUp": "Flytta {{row}} uppåt",
+      "moveDown": "Flytta {{row}} nedåt",
+      "remove": "Ta bort {{row}}",
+      "label": "Etikett",
+      "emphasize": "Framhäv (som slutsumma)"
     }
   },
   "draftInvoiceDetails": {

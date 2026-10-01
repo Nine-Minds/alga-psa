@@ -2348,7 +2348,9 @@
       "• VPN",
       "• Wi-Fi",
       "TeamViewer",
-      "Kilogram"
+      "Kilogram",
+      "Auto",
+      "auto | 50% | 120px"
     ],
     "caseInsensitive": [
       "api",

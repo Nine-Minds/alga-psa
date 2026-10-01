@@ -469,7 +469,8 @@
           "previousCount": "Föregående",
           "syncFinished": "Synkroniseringen för {{client}} är klar.",
           "syncing": "Synkroniserar…",
-          "syncTrackingFailed": "Synkroniseringen startade, men sidan kunde inte följa den till slutet. Ladda om sidan för att se det senaste resultatet."
+          "syncTrackingFailed": "Synkroniseringen startade, men sidan kunde inte följa den till slutet. Ladda om sidan för att se det senaste resultatet.",
+          "syncWorkerUnavailable": "Synkroniseringen är köad, men inget bearbetar bakgrundskön just nu. Den körs när workern är tillbaka; om den fortsätter att sitta fast, starta om tjänsten temporal-worker."
         },
         "connection": {
           "changeAction": "Ändra anslutning",
