@@ -276,7 +276,10 @@
       "heading": "Serviços de taxa fixa",
       "itemLabel": "Item {{index}}",
       "selectItemPlaceholder": "Selecione um item",
-      "servicesAndProducts": "Serviços e Produtos"
+      "servicesAndProducts": "Serviços e Produtos",
+      "recurringQuantity": "Quantidade recorrente",
+      "unitRateOptional": "Opcional. Deixe a tarifa unitária vazia para usar o preço de catálogo do serviço na moeda do cliente quando uma linha for criada a partir desta predefinição.",
+      "alertUnits": "Para faturar um serviço por posto ou unidade, escolha para ele o preço por quantidade recorrente: é faturado quantidade × tarifa unitária em cada período e não faz parte da tarifa base."
     },
     "hourly": {
       "addHourlyService": "Adicionar serviço por hora",
@@ -333,7 +336,8 @@
       "serviceSelectRequired": "Serviço {{index}}: Selecione um serviço",
       "unitOfMeasureRequired": "Serviço {{index}}: Unidade de medida obrigatória",
       "unitRateRequired": "Serviço {{index}}: taxa unitária é obrigatória",
-      "usageServiceRequired": "É necessário pelo menos um serviço baseado em uso"
+      "usageServiceRequired": "É necessário pelo menos um serviço baseado em uso",
+      "recurringQuantityInvalid": "Serviço {{index}}: A quantidade recorrente deve ser um número inteiro, zero ou mais"
     }
   },
   "forms": {

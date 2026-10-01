@@ -4,7 +4,14 @@ import { describe, it, expect, vi, beforeEach, beforeAll } from 'vitest';
 import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react';
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
-import enContracts from '../../../server/public/locales/en/msp/contracts.json';
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
+
+// Read, not imported: a static JSON import from server/ records a
+// @alga-psa/billing -> server project edge and closes a dependency cycle.
+const enContracts = JSON.parse(
+  readFileSync(path.resolve(__dirname, '../../../server/public/locales/en/msp/contracts.json'), 'utf8'),
+);
 
 const actions = vi.hoisted(() => ({ read: vi.fn(), save: vi.fn(), preview: vi.fn(), revisions: vi.fn(), history: vi.fn(), resolve: vi.fn() }));
 vi.mock('@alga-psa/billing/actions/contractLineUnitPricingActions', () => ({

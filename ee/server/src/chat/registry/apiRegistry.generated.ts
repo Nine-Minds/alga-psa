@@ -15263,7 +15263,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         },
         "quantity": {
           "type": "number",
-          "minimum": 1
+          "minimum": 0,
+          "description": "Seat/unit count. Must be at least 1 for a bundle service; zero or more (whole number) when type_config.pricing_basis is \"unit\" (zero bills zero)."
         },
         "custom_rate": {
           "type": "number",
@@ -15280,7 +15281,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         },
         "type_config": {
           "type": "object",
-          "additionalProperties": {}
+          "additionalProperties": {},
+          "description": "Type-specific configuration. For a Fixed service, set pricing_basis to \"unit\" to bill quantity x base_rate every period (base_rate is the unit rate in minor units of the contract currency; omit or null to follow the catalog price in the contract currency). The default \"bundle\" keeps the line total authoritative. Per-unit pricing is not available for products or non-Fixed lines."
         }
       },
       "required": [
@@ -15456,7 +15458,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "properties": {
         "quantity": {
           "type": "number",
-          "minimum": 1
+          "minimum": 0,
+          "description": "New seat/unit count (zero or more, whole number, for a per-unit service; at least 1 for a bundle service). On a per-unit service the change is scheduled as a dated revision effective at the next unbilled period boundary; already-invoiced periods keep their price."
         },
         "custom_rate": {
           "type": "number",
@@ -15464,7 +15467,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         },
         "type_config": {
           "type": "object",
-          "additionalProperties": {}
+          "additionalProperties": {},
+          "description": "For a per-unit Fixed service, base_rate is the new unit rate (scheduled like a quantity change). pricing_basis may be sent only if it equals the stored basis; it cannot be changed after the service is added."
         },
         "rate_tiers": {
           "type": "array",

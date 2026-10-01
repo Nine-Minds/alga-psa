@@ -1,6 +1,7 @@
 import { TenantEntity } from './index';
 import type { ISO8601String } from '../lib/temporal';
 import type { CadenceOwner } from './recurringTiming.interfaces';
+import type { FixedPricingBasis } from './contractLineServiceConfiguration.interfaces';
 
 export interface IBillingPeriod extends TenantEntity {
   startDate: ISO8601String;
@@ -610,7 +611,13 @@ export interface IContractLinePresetService extends TenantEntity {
   preset_id: string;
   service_id: string;
   quantity?: number;
+  /**
+   * Hourly/Usage: the service rate. Fixed 'unit' services: the optional default
+   * unit rate in minor units (null follows the catalog in the contract currency).
+   */
   custom_rate?: number | null;
+  /** Fixed services only. Absent/null/'bundle' = quantity allocates a share of the line total. */
+  pricing_basis?: FixedPricingBasis | null;
   unit_of_measure?: string;
   // Bucket overlay fields - recommended bucket configuration
   bucket_total_minutes?: number;

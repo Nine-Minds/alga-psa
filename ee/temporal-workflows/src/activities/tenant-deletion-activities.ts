@@ -314,8 +314,10 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   // outlive whatever made a usage row unmappable), so it can drop anywhere.
   // Usage semantics stores are FK-less leaves (they reference contract lines,
   // clients, and configs by id only), as are the seat-pricing revision store
-  // and the per-tenant billing-semantics lock row.
+  // and the per-tenant billing-semantics lock row. The seat-pricing revision
+  // history and the mid-period true-up ledger are FK-less leaves too.
   'usage_period_total_requests', 'usage_period_totals', 'usage_measurement_revisions',
+  'contract_line_unit_pricing_revision_history', 'contract_recurring_unit_adjustments',
   'contract_line_unit_pricing_revisions', 'billing_semantics_locks',
   'usage_tracking', 'bucket_usage', 'bucket_usage_unmappable_archive', 'recurring_service_periods', 'transactions',
   'accounting_export_errors', 'accounting_export_lines', 'accounting_export_batches',
@@ -340,6 +342,7 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   'contract_template_line_defaults',
   'contract_template_line_bucket_services', 'contract_template_line_buckets',
   'contract_template_line_fixed_config', 'contract_template_line_service_bucket_config',
+  'contract_template_line_service_fixed_config',
   'contract_template_line_service_hourly_config',
   'contract_template_line_service_usage_config',
   'contract_template_line_service_configuration',

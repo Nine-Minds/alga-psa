@@ -2,7 +2,7 @@ import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { tenantDb } from '@alga-psa/db';
 import type { IContractTemplateLine } from '@alga-psa/types';
-import { cloneTemplateLinePools } from '@alga-psa/shared/billingClients/templateClone';
+import { cloneTemplateLinePools, cloneTemplateServiceFixedConfig } from '@alga-psa/shared/billingClients/templateClone';
 
 interface CloneTemplateOptions {
   tenant: string;
@@ -114,15 +114,12 @@ async function cloneServices(
         contract_line_id: contractLineId,
         service_id: service.service_id,
         quantity: service.quantity,
-        custom_rate: normalizeNumeric(service.custom_rate),
-        created_at: trx.fn.now(),
-        updated_at: trx.fn.now()
+        custom_rate: normalizeNumeric(service.custom_rate)
       })
       .onConflict(['tenant', 'contract_line_id', 'service_id'])
       .merge({
         quantity: service.quantity,
-        custom_rate: normalizeNumeric(service.custom_rate),
-        updated_at: new Date().toISOString()
+        custom_rate: normalizeNumeric(service.custom_rate)
       });
 
     await cloneServiceConfiguration(
@@ -188,7 +185,7 @@ async function cloneServiceConfiguration(
     }
 
     if (configuration.configuration_type === 'Fixed') {
-      await cloneFixedConfig(trx, tenant, configuration.config_id, newConfigId);
+      await cloneTemplateServiceFixedConfig(trx, tenant, configuration.config_id, newConfigId);
     }
   }
 }
@@ -237,31 +234,6 @@ async function cloneBucketConfig(
     service_id: serviceId,
     contract_line_id: contractLineId,
     burn_multiplier: 1,
-    created_at: trx.fn.now(),
-    updated_at: trx.fn.now()
-  });
-}
-
-type TemplateFixedConfigRow = {
-  base_rate: number | string | null;
-};
-
-async function cloneFixedConfig(
-  trx: Knex.Transaction,
-  tenant: string,
-  sourceConfigId: string,
-  targetConfigId: string
-) {
-  const fixedConfig = await tenantDb(trx, tenant).table('contract_template_line_service_fixed_config')
-    .where('config_id', sourceConfigId)
-    .first('base_rate');
-
-  if (!fixedConfig) return;
-
-  await tenantDb(trx, tenant).table('contract_line_service_fixed_config').insert({
-    tenant,
-    config_id: targetConfigId,
-    base_rate: normalizeNumeric(fixedConfig.base_rate),
     created_at: trx.fn.now(),
     updated_at: trx.fn.now()
   });

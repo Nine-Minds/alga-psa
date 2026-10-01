@@ -325,7 +325,8 @@
       "serviceCountOther": "{{count}} diensten",
       "previouslyConfiguredQuantity": "Eerder geconfigureerde hoeveelheid: {{count}} — niet gebruikt voor facturatie",
       "billedOnPeriodCount": "Gefactureerd op het per periode opgegeven aantal",
-      "recurringSeats": "{{count}} × {{rate}} (terugkerende plaatsen)",
+      "recurringSeats": "{{count}} × {{rate}} = {{amount}} (terugkerende plaatsen)",
+      "recurringSeatsCatalogRate": "{{count}} × catalogusprijs (terugkerende plaatsen)",
       "bundleAllocation": "Verdeling van de bundelprijs — geen factureerbare plaatsen",
       "setUpRecurringSeats": "Terugkerende plaatsen instellen",
       "reportPeriodCount": "Periodeaantal doorgeven"
@@ -611,28 +612,67 @@
       "unreviewed": "Niet beoordeeld"
     },
     "recurringSchedule": {
-      "openPanel": "Schedule recurring change & history",
-      "systemActor": "System",
-      "unknownActor": "Unknown user",
-      "midPeriodToggle": "Apply a one-time mid-period true-up",
-      "midPeriodToggleHelp": "Quantity-only. The new standing quantity starts at the boundary above, and one prorated charge or credit covers the days from the change date to that boundary. Leave off to change only at the boundary.",
-      "midPeriodDate": "Quantity changes on",
-      "midPeriodQuantityOnly": "A mid-period true-up may only change the quantity. Schedule a unit price change at a service-period boundary instead.",
-      "midPeriodAffected": "Affected period {{start}} to {{end}} changes by {{delta}} units.",
-      "midPeriodMath": "{{delta}} units × {{rate}} × {{covered}}/{{full}} days = {{amount}} {{effect}}.",
-      "credit": "credit",
-      "charge": "charge",
-      "midPeriodStanding": "From {{boundary}} the standing quantity is {{quantity}}. The true-up lands on the next eligible editable draft (with applicable discounts and tax).",
-      "midPeriodNote": "Mid-period true-up: the new standing quantity starts at the boundary shown, and one prorated charge or credit covers the partial period. Earlier billed amounts are never rewritten.",
-      "midPeriodDateRequired": "Choose a date inside an upcoming unbilled period for the one-time mid-period true-up.",
-      "midPeriodFrom": "true-up from {{date}}",
-      "previewImpact": "Preview invoice impact",
-      "invoiceWindowMidPeriod": "Estimated client invoice for {{start}} to {{end}}. Includes other items in this billing window and the one-time mid-period true-up.",
-      "invoiceWindowBoundaryOnly": "Estimated client invoice for {{start}} to {{end}}. Includes other items in this billing window; no mid-period adjustment.",
-      "invoiceTotals": "Subtotal after discounts: {{subtotal}}. Tax: {{tax}}. Total: {{before}} → {{after}}.",
-      "olderUnbilled": "This boundary is in the past. Pending billing from this date onward will use the scheduled values; earlier billed periods stay unchanged.",
-      "catalogPriceMissing": "No {{currency}} catalog price covers this boundary, so a positive quantity cannot bill. Add a {{currency}} catalog price or choose \"Override unit price\" before saving.",
-      "invoiceImpact": "From {{date}} the recurring subtotal for this item changes by {{delta}} to {{total}} (before discounts and tax). Earlier billed periods are unchanged."
+      "openPanel": "Terugkerende wijziging plannen en geschiedenis",
+      "systemActor": "Systeem",
+      "unknownActor": "Onbekende gebruiker",
+      "midPeriodToggle": "Eenmalige verrekening halverwege de periode toepassen",
+      "midPeriodToggleHelp": "Alleen hoeveelheid. De nieuwe vaste hoeveelheid gaat in op de bovenstaande grens, en één toeslag of krediet naar rato dekt de dagen van de wijzigingsdatum tot die grens. Laat dit uit om alleen op de grens te wijzigen.",
+      "midPeriodDate": "Hoeveelheid wijzigt op",
+      "midPeriodQuantityOnly": "Een verrekening halverwege de periode mag alleen de hoeveelheid wijzigen. Plan een wijziging van de stukprijs in plaats daarvan op een grens van een serviceperiode.",
+      "midPeriodAffected": "De betreffende periode {{start}} tot {{end}} wijzigt met {{delta}} eenheden.",
+      "midPeriodMath": "{{delta}} eenheden × {{rate}} × {{covered}}/{{full}} dagen = {{amount}} {{effect}}.",
+      "credit": "krediet",
+      "charge": "toeslag",
+      "midPeriodStanding": "Vanaf {{boundary}} is de vaste hoeveelheid {{quantity}}. De verrekening komt op de volgende geschikte, bewerkbare conceptfactuur (met toepasselijke kortingen en belasting).",
+      "midPeriodNote": "Verrekening halverwege de periode: de nieuwe vaste hoeveelheid gaat in op de getoonde grens, en één toeslag of krediet naar rato dekt de gedeeltelijke periode. Eerder gefactureerde bedragen worden nooit herschreven.",
+      "midPeriodDateRequired": "Kies een datum binnen een komende, nog niet gefactureerde periode voor de eenmalige verrekening halverwege de periode.",
+      "midPeriodFrom": "verrekening vanaf {{date}}",
+      "previewImpact": "Voorbeeld van factuurimpact",
+      "invoiceWindowMidPeriod": "Geschatte klantfactuur voor {{start}} tot {{end}}. Inclusief andere items in dit factuurvenster en de eenmalige verrekening halverwege de periode.",
+      "invoiceWindowBoundaryOnly": "Geschatte klantfactuur voor {{start}} tot {{end}}. Inclusief andere items in dit factuurvenster; geen aanpassing halverwege de periode.",
+      "invoiceTotals": "Subtotaal na kortingen: {{subtotal}}. Belasting: {{tax}}. Totaal: {{before}} → {{after}}.",
+      "olderUnbilled": "Deze grens ligt in het verleden. Openstaande facturering vanaf deze datum gebruikt de geplande waarden; eerder gefactureerde perioden blijven ongewijzigd.",
+      "catalogPriceMissing": "Geen catalogusprijs in {{currency}} dekt deze grens, dus een positieve hoeveelheid kan niet worden gefactureerd. Voeg een catalogusprijs in {{currency}} toe of kies \"Stukprijs overschrijven\" voordat u opslaat.",
+      "invoiceImpact": "Vanaf {{date}} wijzigt het terugkerende subtotaal voor dit item met {{delta}} naar {{total}} (vóór kortingen en belasting). Eerder gefactureerde perioden blijven ongewijzigd.",
+      "discardDirty": "Als u de ingangsdatum wijzigt, worden de geldende waarden opnieuw geladen en gaat uw niet-opgeslagen wijziging verloren. Doorgaan?",
+      "invalidQuantity": "De hoeveelheid moet een geheel getal van 0 of hoger zijn.",
+      "invalidRate": "Voer een stukprijs van 0 of hoger in, of schakel over naar catalogusprijzen.",
+      "saved": "Gepland: {{quantity}} met ingang van {{date}}.",
+      "openPeriod": "volgende periodegrens",
+      "title": "Planning van terugkerende hoeveelheid en prijs",
+      "kindProduct": "Productartikel",
+      "kindService": "Service per eenheid",
+      "historyLoadError": "Kan de geplande geschiedenis niet laden: {{error}}",
+      "protectedPeriod": "Deze periode is al {{state}} en is beveiligd. Kies een latere, nog niet gefactureerde grens van een serviceperiode; gefactureerde factuurbedragen worden nooit herschreven.",
+      "existingRevisionNotice": "Er geldt al een geplande wijziging vanaf {{date}}. Als u opnieuw opslaat op dezelfde grens, wordt deze vervangen (versie {{version}}); eerdere perioden blijven ongewijzigd.",
+      "boundaryOnly": "Wijzigingen gaan alleen in op een grens van een serviceperiode. Er is geen verrekening naar rato halverwege de periode, geen verrekening achteraf en geen krediet: eerder gefactureerde bedragen blijven ongewijzigd en de nieuwe hoeveelheid/prijs geldt vanaf de getoonde grens.",
+      "stopHelp": "Nul stopt de terugkerende facturering vanaf deze periode. Het item, de geschiedenis ervan en andere contractitems blijven behouden; voeg een latere revisie toe om te hervatten.",
+      "pricingSource": "Bron van de stukprijs",
+      "useCatalog": "Catalogusprijs gebruiken",
+      "override": "Stukprijs overschrijven",
+      "inherited": "Overgenomen uit de catalogus",
+      "currentEffective": "Geldend voor perioden vanaf {{date}}: {{quantity}} × {{rate}} ({{source}}).",
+      "sourceCatalog": "catalogusprijs",
+      "sourceOverride": "expliciet overschreven",
+      "coverage": "Dekt {{start}} tot {{end}} ({{currency}}).",
+      "catalogSource": "Catalogusprijs {{priceId}} met ingang van {{effectiveDate}}; overgenomen, dus een latere cataloguswijziging wordt automatisch gevolgd.",
+      "baselineRow": "Basislijn (geen revisie): {{quantity}} × {{rate}}.",
+      "replace": "Geplande wijziging vervangen",
+      "schedule": "Wijziging plannen",
+      "scheduledPeriods": "Geplande perioden",
+      "effectiveDate": "Geldig vanaf",
+      "quantity": "Hoeveelheid",
+      "unitPrice": "Stukprijs",
+      "version": "Versie",
+      "status": "Toestand",
+      "actor": "Uitgevoerd door",
+      "baselineLabel": "Basislijn",
+      "catalogLabel": "Catalogus",
+      "statusInForce": "Van kracht",
+      "statusScheduled": "Gepland",
+      "statusSuperseded": "Vervangen",
+      "supersededHistory": "Vervangen openstaande wijzigingen ({{count}})",
+      "supersededBy": "Vervangen door"
     }
   },
   "contractLineEdit": {
@@ -1178,7 +1218,12 @@
       "serviceFallback": "Service",
       "title": "Sjabloonsamenstelling",
       "unitLabel": "Eenheid:",
-      "usageBasedPlans": "Verbruiksplannen"
+      "usageBasedPlans": "Verbruiksplannen",
+      "recurringQuantityLabel": "Terugkerende hoeveelheid:",
+      "unitRateLabel": "Eenheidstarief:",
+      "unitRateFromCatalog": "Catalogusprijs in de valuta van de klant",
+      "unitAmountLabel": "Terugkerend bedrag:",
+      "unitAmountValue": "{{count}} × {{rate}} = {{amount}}"
     },
     "editBasicsTitle": "Sjabloonbasis bewerken",
     "editGuidanceTitle": "Sjabloonrichtlijnen bewerken",
@@ -1404,7 +1449,10 @@
       "selectClientBeforeDraft": "Selecteer een klant voordat u opslaat als concept",
       "selectProductForEachLine": "Selecteer een product voor elke productregel",
       "startDateRequired": "Startdatum is verplicht",
-      "unsupportedRecurringAuthoringCombination": "Niet-ondersteunde combinatie voor terugkerend maken voor {{lineType}}-services: contractverjaardagscadans ondersteunt momenteel {{supportedFrequencies}} factureerfrequenties. {{billingFrequency}} wordt nog niet ondersteund. Gebruik een van de ondersteunde frequenties of factureer in plaats daarvan op het klantfactureerschema."
+      "unsupportedRecurringAuthoringCombination": "Niet-ondersteunde combinatie voor terugkerend maken voor {{lineType}}-services: contractverjaardagscadans ondersteunt momenteel {{supportedFrequencies}} factureerfrequenties. {{billingFrequency}} wordt nog niet ondersteund. Gebruik een van de ondersteunde frequenties of factureer in plaats daarvan op het klantfactureerschema.",
+      "recurringUnitRateRequired": "Voer een eenheidstarief in voor elke terugkerende dienst.",
+      "recurringQuantityWholeNumber": "De terugkerende hoeveelheid moet een geheel getal zijn.",
+      "fixedQuantityInvalid": "De hoeveelheid moet nul of hoger zijn."
     },
     "nav": {
       "back": "Terug",
@@ -1551,7 +1599,8 @@
     "baseRate": {
       "hint": "Totaal terugkerend tarief voor alle vaste services samen.",
       "label": "Terugkerend basistarief",
-      "placeholder": "0.00"
+      "placeholder": "0.00",
+      "hintWithUnits": "Totale terugkerende vergoeding voor de bundeldiensten. Terugkerende plaatsen/eenheden worden apart gefactureerd als hoeveelheid × eenheidstarief en maken geen deel uit van dit tarief."
     },
     "description": "Configureer services die per factureercyclus tegen een vast tarief worden gefactureerd. U kunt nog steeds tijd registreren, maar de facturatie is gebaseerd op dit vaste bedrag.",
     "emptyState": "Nog geen services met vaste vergoeding toegevoegd. Klik hierboven op “Service toevoegen” of op “Overslaan” om verder te gaan.",
@@ -1568,12 +1617,15 @@
         "invoiceWindow": "Factuurvenster:",
         "recurringRate": "Terugkerend tarief:",
         "service": "Service:",
-        "services": "Services:"
+        "services": "Services:",
+        "recurringUnits": "Terugkerende plaatsen/eenheden:",
+        "recurringTotal": "Totaal per periode:"
       },
       "materializedPeriods": {
         "tooltip": "Een voorbeeld van de volgende serviceperioden en de factureringsvensters die op basis van de huidige instellingen zouden worden gegenereerd. Hiermee kunt u de cadans controleren voordat u opslaat — de daadwerkelijke facturen worden later door de factureringsrun geproduceerd."
       },
-      "title": "Terugkerend voorbeeld vóór opslaan"
+      "title": "Terugkerend voorbeeld vóór opslaan",
+      "unitRow": "{{serviceName}}: {{quantity}} × {{rate}} = {{amount}}"
     },
     "proration": {
       "label": "Aanpassen voor gedeeltelijke perioden",
@@ -1584,7 +1636,10 @@
       "label": "Services",
       "quantityLabel": "Hoeveelheid",
       "selectServicePlaceholder": "Selecteer een service",
-      "serviceItemLabel": "Service {{index}}"
+      "serviceItemLabel": "Service {{index}}",
+      "recurringQuantityLabel": "Terugkerende hoeveelheid",
+      "allocationQuantityLabel": "Toewijzingshoeveelheid",
+      "noCurrencyPrice": "Geen prijs in {{currency}} in de catalogus. Voer een eenheidstarief in."
     }
   },
   "wizardProducts": {
@@ -1777,7 +1832,8 @@
         "other": "{{count}} diensten"
       },
       "monthlyBaseRate": "Maandelijks basistarief:",
-      "partialPeriodAdjustment": "Aanpassing gedeeltelijke periode:"
+      "partialPeriodAdjustment": "Aanpassing gedeeltelijke periode:",
+      "recurringUnitRow": "{{serviceName}}: {{quantity}} × {{rate}} = {{amount}}"
     },
     "recurring": {
       "cadenceOwner": {
@@ -1888,7 +1944,8 @@
           "hourly": "Per uur",
           "usage": "Verbruik"
         }
-      }
+      },
+      "recurringQuantityInvalid": "De terugkerende hoeveelheid voor \"{{serviceName}}\" moet een geheel getal van nul of meer zijn en een eventueel eenheidstarief moet een geldig bedrag zijn."
     }
   },
   "templateBasics": {
@@ -1938,7 +1995,8 @@
       "adjustPartialPeriods": "Aanpassen voor gedeeltelijke perioden",
       "services": "Services",
       "serviceNumber": "Service {{index}}",
-      "quantityOptional": "Hoeveelheid (optioneel)"
+      "quantityOptional": "Hoeveelheid (optioneel)",
+      "recurringQuantity": "Terugkerende hoeveelheid"
     },
     "placeholders": {
       "billingTiming": "Selecteer facturatietiming",
@@ -1946,7 +2004,9 @@
     },
     "help": {
       "adjustPartialPeriods": "Gebruik dit wanneer contracten die op basis van het sjabloon worden aangemaakt, het terugkerende tarief moeten schalen als de service binnen een periode begint of eindigt.",
-      "quantity": "Voorgestelde hoeveelheid bij het aanmaken van contracten"
+      "quantity": "Voorgestelde hoeveelheid bij het aanmaken van contracten",
+      "recurringQuantity": "Beginaantal seats/eenheden. Dit kan worden aangepast wanneer er een contract van deze sjabloon wordt gemaakt.",
+      "unitRateOptional": "Optioneel. Laat het eenheidstarief leeg om bij het aanmaken van een contract de catalogusprijs van deze service in de valuta van de klant te gebruiken."
     },
     "preview": {
       "unknownService": "Onbekende service",
@@ -2068,7 +2128,8 @@
       "quantity": "Hoeveelheid:",
       "bucket": "Bundel:",
       "enabled": "Ingeschakeld",
-      "disabled": "Uitgeschakeld"
+      "disabled": "Uitgeschakeld",
+      "recurringQuantity": "Terugkerende hoeveelheid:"
     },
     "fixed": {
       "cadenceOwnerLabel": "Cadanseigenaar:",
@@ -2083,7 +2144,10 @@
       },
       "partialPeriodLabel": "Aanpassing gedeeltelijke periode:",
       "serviceLabel": "Service:",
-      "invoiceWindowLabel": "Factuurvenster:"
+      "invoiceWindowLabel": "Factuurvenster:",
+      "unitRateLabel": "Eenheidstarief:",
+      "unitRateFromCatalog": "Catalogusprijs in de valuta van de klant",
+      "unitRateNeutral": "{{rate}} in de valuta van de klant"
     },
     "hourly": {
       "minimumBillableTimeLabel": "Minimum factureerbare tijd:",
@@ -2113,7 +2177,8 @@
     },
     "selectedHeading": "Geselecteerde {{type}}-services ({{count}})",
     "labels": {
-      "qty": "Aantal:"
+      "qty": "Aantal:",
+      "recurringUnits": "Terugkerende seats/eenheden"
     },
     "removeDialog": {
       "title": "Contractregelpreset verwijderen",
