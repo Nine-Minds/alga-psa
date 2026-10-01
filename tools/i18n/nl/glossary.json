@@ -2550,7 +2550,9 @@
       "Liter",
       "Kilogram",
       "Meter",
-      "Volume"
+      "Volume",
+      "Auto",
+      "auto | 50% | 120px"
     ],
     "caseInsensitive": [
       "account",

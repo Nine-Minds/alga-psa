@@ -70,6 +70,8 @@ export default defineConfig({
       'src/lib/invoice-template-ast/fieldFormatting.country.test.ts',
       'src/lib/invoice-template-ast/react-renderer.country.test.tsx',
       'src/services/pdfGenerationService.renderCountry.test.ts',
+      // Template saves must stay valid upserts on Citus distributed tables.
+      'src/models/templateSaveUpsert.citus.test.ts',
     ],
     testTimeout: 20000,
     // Match testTimeout. The default hookTimeout is 10s, so a beforeAll doing

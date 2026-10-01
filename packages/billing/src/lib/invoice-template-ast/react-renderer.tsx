@@ -357,6 +357,16 @@ const renderTableCellContent = (
   return cell.multiline ? <span style={{ whiteSpace: 'pre-line' }}>{cell.text}</span> : cell.text;
 };
 
+/**
+ * Collapsed table borders cannot be rounded, so an authored radius would be
+ * silently dropped; a rounded table switches to separate borders with no spacing,
+ * which draws the same lines and honours the corners.
+ */
+const resolveTableStyle = (style: React.CSSProperties | undefined): React.CSSProperties | undefined =>
+  style?.borderRadius !== undefined
+    ? { borderCollapse: 'separate', borderSpacing: 0, overflow: 'hidden', ...style }
+    : style;
+
 const buildAstCss = (ast: TemplateAst): string => {
   const baseCss = `
 .invoice-template-root {
@@ -690,7 +700,7 @@ const renderNode = (
       const rows = resolveCollection(ctx.ast, node.sourceBinding.bindingId, evaluation, scope);
       const { style: headerStyle } = resolveStyleRef(node.headerStyle);
       return (
-        <table key={node.id} id={node.id} className={elementClassName || undefined} style={style}>
+        <table key={node.id} id={node.id} className={elementClassName || undefined} style={resolveTableStyle(style)}>
           <thead>
             <tr style={headerStyle}>
               {node.columns.map((column) => {
@@ -741,7 +751,7 @@ const renderNode = (
       const rows = resolveCollection(ctx.ast, node.repeat.sourceBinding.bindingId, evaluation, scope);
       const { style: dynamicHeaderStyle } = resolveStyleRef(node.headerStyle);
       return (
-        <table key={node.id} id={node.id} className={elementClassName || undefined} style={style}>
+        <table key={node.id} id={node.id} className={elementClassName || undefined} style={resolveTableStyle(style)}>
           <thead>
             <tr style={dynamicHeaderStyle}>
               {node.columns.map((column) => {
