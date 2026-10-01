@@ -6,6 +6,14 @@ import ColorPicker from '@alga-psa/ui/components/ColorPicker';
 import { getNodeMetadata } from '../../utils/nodeProps';
 import type { DesignerNode } from '../../state/designerStore';
 import { useInvoiceDesignerStore } from '../../state/designerStore';
+import {
+  createLabelTranslationMetadata,
+  isTranslatableValue,
+  resolveAutoTranslation,
+  TRANSLATION_OPT_OUT_KEY,
+  type TranslatableRef,
+} from '../../utils/translatableText';
+import { StandardLabelControl } from './StandardLabelControl';
 
 type Props = {
   node: DesignerNode;
@@ -82,6 +90,13 @@ const setInlineColor = (
   }
   return nextRow;
 };
+
+// Rows a totals block can add; value paths are the render model's totals.
+const TOTALS_ROW_PRESETS: Array<{ id: string; label: TranslatableRef; valuePath: string }> = [
+  { id: 'subtotal', label: { i18nKey: 'labels.subtotal', defaultValue: 'Subtotal' }, valuePath: 'subtotal' },
+  { id: 'tax', label: { i18nKey: 'labels.tax', defaultValue: 'Tax' }, valuePath: 'tax' },
+  { id: 'total', label: { i18nKey: 'labels.total', defaultValue: 'Total' }, valuePath: 'total' },
+];
 
 const HEX_COLOR_RE = /^#(?:[0-9a-fA-F]{6})$/;
 
@@ -188,6 +203,64 @@ export const TotalsRowsEditorWidget: React.FC<Props> = ({ node }) => {
     [rows, updateRows]
   );
 
+  const updateRow = useCallback(
+    (rowId: string, patch: Record<string, unknown>, commit: boolean) => {
+      // Designer state must stay JSON: an undefined patch value removes the key.
+      const merge = (row: TotalsRowRecord): TotalsRowRecord =>
+        Object.fromEntries(
+          Object.entries({ ...row, ...patch }).filter(([, value]) => value !== undefined)
+        ) as TotalsRowRecord;
+      updateRows(rows.map((row) => (row.id === rowId ? merge(row) : row)), commit);
+    },
+    [rows, updateRows]
+  );
+
+  const moveRow = useCallback(
+    (rowId: string, direction: -1 | 1) => {
+      const index = rows.findIndex((row) => row.id === rowId);
+      const target = index + direction;
+      if (index < 0 || target < 0 || target >= rows.length) return;
+      const next = [...rows];
+      const [moved] = next.splice(index, 1);
+      next.splice(target, 0, moved);
+      updateRows(next, true);
+    },
+    [rows, updateRows]
+  );
+
+  const removeRow = useCallback(
+    (rowId: string) => updateRows(rows.filter((row) => row.id !== rowId), true),
+    [rows, updateRows]
+  );
+
+  const addRow = useCallback(
+    (presetId: string) => {
+      const preset = TOTALS_ROW_PRESETS.find((candidate) => candidate.id === presetId);
+      if (!preset) return;
+      const takenIds = new Set(rows.map((row) => String(row.id)));
+      let id = preset.id;
+      for (let suffix = 2; takenIds.has(id); suffix += 1) {
+        id = `${preset.id}-${suffix}`;
+      }
+      updateRows(
+        [
+          ...rows,
+          {
+            id,
+            // Standard rows render in each recipient's language.
+            ...createLabelTranslationMetadata(preset.label),
+            valuePath: preset.valuePath,
+            format: 'currency',
+            type: 'currency',
+            emphasize: preset.id === 'total',
+          },
+        ],
+        true
+      );
+    },
+    [rows, t, updateRows]
+  );
+
   const clearRowColors = useCallback(
     (rowId: string) => {
       updateRows(
@@ -205,12 +278,32 @@ export const TotalsRowsEditorWidget: React.FC<Props> = ({ node }) => {
     [rows, updateRows]
   );
 
+  const addRowControl = (
+    <div className="flex flex-wrap items-center gap-1.5" data-automation-id="designer-totals-rows-add">
+      <span className="text-[11px] text-slate-400 dark:text-slate-500">
+        {t('invoiceDesigner.totalsRowsEditor.addRow', { defaultValue: 'Add row:' })}
+      </span>
+      {TOTALS_ROW_PRESETS.map((preset) => (
+        <button
+          key={preset.id}
+          type="button"
+          id={`designer-totals-add-row-${preset.id}`}
+          className="inline-flex h-6 items-center rounded-md border border-slate-200 dark:border-[rgb(var(--color-border-200))] bg-slate-50 dark:bg-[rgb(var(--color-background))] px-2 text-[11px] font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
+          onClick={() => addRow(preset.id)}
+        >
+          {t(`invoiceDesigner.totalsRowsEditor.presets.${preset.id}`, { defaultValue: preset.label.defaultValue })}
+        </button>
+      ))}
+    </div>
+  );
+
   if (rows.length === 0) {
     return (
-      <div className="rounded-lg border border-dashed border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-[rgb(var(--color-background))] px-3 py-4 text-center text-xs text-slate-500 dark:text-slate-400">
-        {t('invoiceDesigner.totalsRowsEditor.noRows', {
-          defaultValue: 'This totals block has no saved rows yet. Save the template and reopen it to edit row colors.',
-        })}
+      <div className="space-y-2">
+        <div className="rounded-lg border border-dashed border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-[rgb(var(--color-background))] px-3 py-4 text-center text-xs text-slate-500 dark:text-slate-400">
+          {t('invoiceDesigner.totalsRowsEditor.empty', { defaultValue: 'No rows yet. Add one below.' })}
+        </div>
+        {addRowControl}
       </div>
     );
   }
@@ -233,15 +326,80 @@ export const TotalsRowsEditorWidget: React.FC<Props> = ({ node }) => {
                 </span>
                 <span className="truncate text-xs font-semibold text-slate-700 dark:text-slate-300">{label}</span>
               </div>
-              <div className="flex shrink-0 items-center gap-1.5">
-                <code className="hidden text-[10px] text-slate-400 dark:text-slate-500 md:inline" title={rowId}>
-                  {rowId}
-                </code>
-                <Button id={`${domBaseId}-reset`} variant="outline" size="xs" onClick={() => clearRowColors(rowId)}>
-                  {t('invoiceDesigner.totalsRowsEditor.resetColors', { defaultValue: 'Reset colors' })}
+              <div className="flex shrink-0 items-center gap-1">
+                <Button
+                  id={`${domBaseId}-move-up`}
+                  variant="outline"
+                  size="icon"
+                  className="h-6 w-6"
+                  disabled={index === 0}
+                  aria-label={t('invoiceDesigner.totalsRowsEditor.moveUp', { defaultValue: 'Move {{row}} up', row: label })}
+                  onClick={() => moveRow(rowId, -1)}
+                >
+                  ↑
+                </Button>
+                <Button
+                  id={`${domBaseId}-move-down`}
+                  variant="outline"
+                  size="icon"
+                  className="h-6 w-6"
+                  disabled={index === rows.length - 1}
+                  aria-label={t('invoiceDesigner.totalsRowsEditor.moveDown', { defaultValue: 'Move {{row}} down', row: label })}
+                  onClick={() => moveRow(rowId, 1)}
+                >
+                  ↓
+                </Button>
+                <Button
+                  id={`${domBaseId}-remove`}
+                  variant="outline"
+                  size="icon"
+                  className="h-6 w-6 hover:text-destructive"
+                  aria-label={t('invoiceDesigner.totalsRowsEditor.remove', { defaultValue: 'Remove {{row}}', row: label })}
+                  onClick={() => removeRow(rowId)}
+                >
+                  ×
                 </Button>
               </div>
             </div>
+
+            <div>
+              <label htmlFor={`${domBaseId}-label`} className="block text-[10px] font-medium text-slate-500 dark:text-slate-400">
+                {t('invoiceDesigner.totalsRowsEditor.label', { defaultValue: 'Label' })}
+              </label>
+              <Input
+                id={`${domBaseId}-label`}
+                key={`${domBaseId}-label-${label}`}
+                className="text-xs"
+                defaultValue={label}
+                // Editing the text freezes it to a literal, like other translatable labels.
+                onBlur={(event) => {
+                  const next = event.target.value.trim();
+                  if (next.length > 0 && next !== label) {
+                    const ref = resolveAutoTranslation(next, row[TRANSLATION_OPT_OUT_KEY]);
+                    updateRow(rowId, ref ? createLabelTranslationMetadata(ref) : { label: next, __astLabelI18n: undefined }, true);
+                  }
+                }}
+              />
+              <StandardLabelControl
+                domId={`${domBaseId}-label-translation`}
+                translation={
+                  isTranslatableValue(row.label, row.__astLabelI18n) ? (row.__astLabelI18n as TranslatableRef) : null
+                }
+                onUseStandardLabel={(ref) =>
+                  updateRow(rowId, { ...createLabelTranslationMetadata(ref), [TRANSLATION_OPT_OUT_KEY]: undefined }, true)
+                }
+                onUseFixedText={() => updateRow(rowId, { __astLabelI18n: undefined, [TRANSLATION_OPT_OUT_KEY]: true }, true)}
+              />
+            </div>
+            <label className="flex items-center gap-2 text-[11px] text-slate-600 dark:text-slate-400">
+              <input
+                id={`${domBaseId}-emphasize`}
+                type="checkbox"
+                checked={row.emphasize === true}
+                onChange={(event) => updateRow(rowId, { emphasize: event.target.checked }, true)}
+              />
+              {t('invoiceDesigner.totalsRowsEditor.emphasize', { defaultValue: 'Emphasize (grand total style)' })}
+            </label>
 
             <RowColorControl
               domBaseId={`${domBaseId}-background`}
@@ -266,6 +424,11 @@ export const TotalsRowsEditorWidget: React.FC<Props> = ({ node }) => {
               })}
             />
 
+            <div className="flex justify-end">
+              <Button id={`${domBaseId}-reset`} variant="ghost" size="xs" onClick={() => clearRowColors(rowId)}>
+                {t('invoiceDesigner.totalsRowsEditor.resetColors', { defaultValue: 'Reset colors' })}
+              </Button>
+            </div>
             {labelOverrideColor.length > 0 && (
               <p className="rounded border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 px-2 py-1.5 text-[10px] leading-snug text-amber-700 dark:text-amber-300">
                 {t('invoiceDesigner.totalsRowsEditor.labelColorOverrideNote', {
@@ -277,6 +440,7 @@ export const TotalsRowsEditorWidget: React.FC<Props> = ({ node }) => {
           </div>
         );
       })}
+      {addRowControl}
     </div>
   );
 };

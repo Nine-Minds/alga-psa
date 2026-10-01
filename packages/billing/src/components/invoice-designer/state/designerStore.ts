@@ -17,7 +17,11 @@ import {
   unsetNodeProp as patchUnsetNodeProp,
 } from './patchOps';
 import { getPresetById, LegacyLayoutPresetLayout } from '../constants/presets';
+import { COPYABLE_STYLE_KEYS } from '../utils/structureEditing';
+import type { DesignerClipboardPayload, DesignerStyleClipboard, InsertPlacement } from '../utils/structureEditing';
+import type { DesignerInspectorTab } from '../schema/inspectorSchema';
 import {
+  createPageLayout,
   canNestWithinParent,
   getAllowedChildrenForType,
   getAllowedParentsForType,
@@ -223,6 +227,14 @@ interface DesignerState {
   transforms: DesignerTransformWorkspace;
   selectedNodeId: string | null;
   hoverNodeId: string | null;
+  // Designer-internal clipboard for copy/cut/paste/duplicate; not part of history.
+  clipboard: DesignerClipboardPayload | null;
+  styleClipboard: DesignerStyleClipboard | null;
+  // Outline rows the user collapsed; kept here so switching panel tabs keeps them.
+  outlineCollapsedIds: string[];
+  // Where "+" puts a block when a container is selected: inside it, or after it.
+  insertPlacement: InsertPlacement;
+  inspectorTab: DesignerInspectorTab;
   snapToGrid: boolean;
   gridSize: number;
   showGuides: boolean;
@@ -235,7 +247,7 @@ interface DesignerState {
   addNodeFromPalette: (
     type: DesignerComponentType,
     dropPoint: Point,
-    options?: { defaults?: DesignerNodeDefaults; parentId?: string }
+    options?: { defaults?: DesignerNodeDefaults; parentId?: string; index?: number }
   ) => void;
   insertPreset: (presetId: string, dropPoint?: Point, parentId?: string) => void;
   applyPrintSettings: (settings: Partial<TemplatePrintSettings>) => void;
@@ -245,6 +257,15 @@ interface DesignerState {
   insertChild: (parentId: string, childId: string, index: number) => void;
   removeChild: (parentId: string, childId: string) => void;
   moveNode: (nodeId: string, nextParentId: string, nextIndex: number) => void;
+  /** Inserts a fresh copy of a clipboard subtree and selects it; returns the new root id. */
+  pasteSubtree: (payload: DesignerClipboardPayload, parentId: string, index: number) => string | null;
+  setClipboard: (payload: DesignerClipboardPayload | null) => void;
+  setStyleClipboard: (style: DesignerStyleClipboard | null) => void;
+  /** Replaces the node's visual style (and container layout) with a copied one, as one undo step. */
+  pasteStyle: (nodeId: string, style: DesignerStyleClipboard) => void;
+  toggleOutlineCollapsed: (nodeId: string) => void;
+  setInsertPlacement: (placement: InsertPlacement) => void;
+  setInspectorTab: (tab: DesignerInspectorTab) => void;
   deleteNode: (nodeId: string) => void;
   selectNode: (id: string | null) => void;
   setHoverNode: (id: string | null) => void;
@@ -275,6 +296,46 @@ export const DOCUMENT_NODE_ID = 'designer-document-root';
 const DEFAULT_PAGE_NODE_ID = 'designer-page-default';
 
 const generateId = () => generateUUID();
+
+// Media frames need a concrete box; spacers exist to occupy a fixed height.
+// Everything else is laid out by its parent's flow and sized by its content.
+const FIXED_FRAME_TYPES = new Set<DesignerComponentType>(['image', 'logo', 'qr']);
+
+export const collectLayerNames = (nodes: DesignerNode[]): Set<string> =>
+  new Set(
+    nodes
+      .map((node) => (isPlainObject(node.props) ? node.props.name : undefined))
+      .filter((name): name is string => typeof name === 'string')
+  );
+
+/**
+ * A copied layer gets the next free numbered name ("Invoice # 2", "from-card-2"),
+ * following the name's own separator style, so the outline never shows twins.
+ */
+export const createUniqueLayerName = (name: string, takenNames: ReadonlySet<string>): string => {
+  if (!takenNames.has(name)) return name;
+  const numbered = /^(.*?)([ -])(\d+)$/.exec(name);
+  const base = numbered ? numbered[1] : name;
+  const separator = numbered ? numbered[2] : /\s/.test(name) || !/[-_]/.test(name) ? ' ' : '-';
+  for (let index = 2; ; index += 1) {
+    const candidate = `${base}${separator}${index}`;
+    if (!takenNames.has(candidate)) return candidate;
+  }
+};
+
+export const resolveNewNodeBaseStyle = (type: DesignerComponentType, size: Size): DesignerNodeStyle => {
+  // A logo keeps its width and lets height follow the image (capped by its max height).
+  if (type === 'logo') {
+    return { width: `${Math.round(size.width)}px`, height: 'auto' };
+  }
+  if (FIXED_FRAME_TYPES.has(type)) {
+    return { width: `${Math.round(size.width)}px`, height: `${Math.round(size.height)}px` };
+  }
+  if (type === 'spacer') {
+    return { width: 'auto', height: `${Math.round(size.height)}px` };
+  }
+  return { width: 'auto', height: 'auto' };
+};
 
 const deepCloneJson = <T,>(value: T): T => JSON.parse(JSON.stringify(value));
 
@@ -684,15 +745,6 @@ const normalizeDefaultMetadataForNewNode = (
   if (!metadata) return undefined;
   const clone = deepCloneJson(metadata);
 
-  if (type === 'table' && Array.isArray((clone as { columns?: unknown }).columns)) {
-    (clone as { columns: Array<Record<string, unknown>> }).columns = (
-      (clone as { columns: Array<Record<string, unknown>> }).columns ?? []
-    ).map((column) => ({
-      ...column,
-      id: typeof column.id === 'string' && column.id.length > 0 ? `${column.id}-${generateId()}` : generateId(),
-    }));
-  }
-
   if (type === 'attachment-list' && Array.isArray((clone as { items?: unknown }).items)) {
     (clone as { items: Array<Record<string, unknown>> }).items = (
       (clone as { items: Array<Record<string, unknown>> }).items ?? []
@@ -848,14 +900,7 @@ const createPageNode = (parentId: string, index = 1): DesignerNode => {
     props: {
       name: `Page ${index}`,
       metadata: {},
-      layout: {
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '32px',
-        padding: `${resolvedPrintSettings.marginPx}px`,
-        justifyContent: 'flex-start',
-        alignItems: 'stretch',
-      },
+      layout: createPageLayout(`${resolvedPrintSettings.marginPx}px`),
       style: {
         width: `${resolvedPrintSettings.pageWidthPx}px`,
         height: `${resolvedPrintSettings.pageHeightPx}px`,
@@ -1014,6 +1059,11 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
     transforms: createEmptyDesignerTransformWorkspace(),
     selectedNodeId: null,
     hoverNodeId: null,
+    clipboard: null,
+    styleClipboard: null,
+    outlineCollapsedIds: [],
+    insertPlacement: 'inside',
+    inspectorTab: 'content',
     snapToGrid: true,
     gridSize: 8,
     showGuides: true,
@@ -1078,12 +1128,11 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
         ...(overrideMetadata ?? {}),
       };
 
-      const baseStyle: DesignerNodeStyle = {
-        width: `${Math.round(size.width)}px`,
-        height: `${Math.round(size.height)}px`,
-      };
+      const baseStyle = resolveNewNodeBaseStyle(type, size);
 
-      const nodeName = schema?.defaults.name ?? `${schema?.label ?? type} ${get().nodes.length + 1}`;
+      // The first free number, so names stay dense after deletes and undos.
+      const takenNames = collectLayerNames(get().nodes);
+      const nodeName = schema?.defaults.name ?? createUniqueLayerName(`${schema?.label ?? type} 1`, takenNames);
 
       const node: DesignerNode = {
         id: generateId(),
@@ -1114,7 +1163,11 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
       setWithIndex((state) => {
         const appendedNodes = [...state.nodes, node];
         const parent = state.nodesById[resolvedParentId];
-        const insertIndex = parent ? parent.children.length : 0;
+        const childCount = parent ? parent.children.length : 0;
+        const insertIndex =
+          typeof options.index === 'number' && Number.isInteger(options.index)
+            ? Math.min(Math.max(options.index, 0), childCount)
+            : childCount;
         const withParentLink = patchInsertChild(appendedNodes, resolvedParentId, node.id, insertIndex);
         const { history, historyIndex } = appendHistory(state, withParentLink, state.transforms);
         return {
@@ -1122,6 +1175,9 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
           history,
           historyIndex,
           selectedNodeId: node.id,
+          insertPlacement: 'inside',
+          // A new block is filled in next, so it opens on Content (blocks without one fall back to Style).
+          inspectorTab: 'content',
         };
       }, false, 'designer/addNodeFromPalette');
     },
@@ -1151,6 +1207,7 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
 
         const keyToId = new Map<string, string>();
         const nodesById = new Map<string, DesignerNode>(state.nodes.map((node) => [node.id, node]));
+        const takenNames = collectLayerNames(state.nodes);
         const createdNodes: DesignerNode[] = [];
 
         preset.nodes.forEach((definition) => {
@@ -1173,13 +1230,20 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
             ? mapLegacyPresetLayoutToCss(definition.layout)
             : definition.layout;
 
+          // Preset blocks start exactly like palette blocks (schema defaults, content
+          // sizing, unique names) with the preset's own settings on top.
+          const schema = getComponentSchema(definition.type);
           const style: DesignerNodeStyle = {
-            width: `${Math.round(size.width)}px`,
-            height: `${Math.round(size.height)}px`,
+            ...resolveNewNodeBaseStyle(definition.type, size),
+            ...(schema?.defaults.style ?? {}),
             ...definition.style,
           };
-          const metadata = definition.metadata ?? {};
-          const name = definition.name ?? definition.type;
+          const metadata = {
+            ...(normalizeDefaultMetadataForNewNode(definition.type, schema?.defaults.metadata) ?? {}),
+            ...(definition.metadata ?? {}),
+          };
+          const name = createUniqueLayerName(definition.name ?? schema?.label ?? definition.type, takenNames);
+          takenNames.add(name);
 
           createdNodes.push({
             id,
@@ -1187,7 +1251,7 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
             props: {
               name,
               metadata,
-              layout: mappedLayout,
+              layout: mappedLayout ?? schema?.defaults.layout,
               style,
             },
             position,
@@ -1321,6 +1385,107 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
       }, false, 'designer/removeChild');
     },
 
+    setClipboard: (payload) => setWithIndex({ clipboard: payload }),
+
+    setStyleClipboard: (style) => setWithIndex({ styleClipboard: style }),
+
+    pasteStyle: (nodeId, copied) => {
+      const node = get().nodesById[nodeId];
+      if (!node) return;
+      // Every copyable key is written: a key the source lacks is cleared, so the
+      // result looks exactly like the source rather than a blend of both.
+      const patches: Array<[path: string, value: unknown]> = COPYABLE_STYLE_KEYS.map((key) => [
+        `style.${key}`,
+        copied.style[key],
+      ]);
+      if (node.allowedChildren.length > 0 && copied.layout) {
+        patches.push(['layout', copied.layout]);
+      }
+      patches.forEach(([path, value], index) => {
+        const commit = index === patches.length - 1;
+        if (value === undefined) {
+          get().unsetNodeProp(nodeId, path, commit);
+        } else {
+          get().setNodeProp(nodeId, path, value, commit);
+        }
+      });
+    },
+
+    setInsertPlacement: (placement) => setWithIndex({ insertPlacement: placement }),
+
+    setInspectorTab: (tab) => setWithIndex({ inspectorTab: tab }),
+
+    toggleOutlineCollapsed: (nodeId) =>
+      setWithIndex((state) => ({
+        outlineCollapsedIds: state.outlineCollapsedIds.includes(nodeId)
+          ? state.outlineCollapsedIds.filter((id) => id !== nodeId)
+          : [...state.outlineCollapsedIds, nodeId],
+      })),
+
+    pasteSubtree: (payload, parentId, index) => {
+      const parent = get().nodesById[parentId];
+      const source = new Map(payload.nodes.map((entry) => [entry.id, entry] as const));
+      const sourceRoot = source.get(payload.rootId);
+      if (!parent || !sourceRoot || !canNestWithinParent(sourceRoot.type, parent.type)) {
+        return null;
+      }
+
+      const idMap = new Map(payload.nodes.map((entry) => [entry.id, generateId()] as const));
+      const newIdFor = (sourceId: string): string => {
+        const id = idMap.get(sourceId);
+        if (!id) throw new Error(`Clipboard node ${sourceId} is missing from its own payload`);
+        return id;
+      };
+      const takenNames = collectLayerNames(get().nodes);
+      const created: DesignerNode[] = payload.nodes.map((entry) => {
+        const props = JSON.parse(JSON.stringify(entry.props)) as Record<string, unknown>;
+        if (typeof props.name === 'string' && props.name.length > 0) {
+          const uniqueName = createUniqueLayerName(props.name, takenNames);
+          props.name = uniqueName;
+          takenNames.add(uniqueName);
+        }
+        const metadata = isPlainObject(props.metadata) ? (props.metadata as Record<string, unknown>) : null;
+        // A copy is a new layer: it must not export under the original's AST id.
+        if (metadata) {
+          delete metadata.__astOriginalNodeId;
+        }
+        const propSize = isPlainObject(props.size) ? (props.size as Partial<Size>) : {};
+        const size = {
+          width: typeof propSize.width === 'number' ? propSize.width : DEFAULT_SIZE.width,
+          height: typeof propSize.height === 'number' ? propSize.height : DEFAULT_SIZE.height,
+        };
+        return {
+          id: newIdFor(entry.id),
+          type: entry.type,
+          props,
+          position: { x: 0, y: 0 },
+          size,
+          baseSize: size,
+          rotation: 0,
+          canRotate: true,
+          allowResize: true,
+          parentId: null,
+          children: entry.children.map((childId) => idMap.get(childId)).filter((id): id is string => Boolean(id)),
+          allowedChildren: getAllowedChildrenForType(entry.type),
+        };
+      });
+      const createdById = new Map(created.map((node) => [node.id, node] as const));
+      created.forEach((node) => {
+        node.children.forEach((childId) => {
+          const child = createdById.get(childId);
+          if (child) child.parentId = node.id;
+        });
+      });
+      const newRootId = newIdFor(payload.rootId);
+
+      setWithIndex((state) => {
+        const nodes = patchInsertChild([...state.nodes, ...created], parentId, newRootId, index);
+        const { history, historyIndex } = appendHistory(state, nodes, state.transforms);
+        return { nodes, history, historyIndex, selectedNodeId: newRootId, insertPlacement: 'inside' };
+      }, false, 'designer/pasteSubtree');
+      return newRootId;
+    },
+
     moveNode: (nodeId, nextParentId, nextIndex) => {
       setWithIndex((state) => {
         const nodesById = state.nodesById;
@@ -1342,11 +1507,27 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
         if (nodes === state.nodes) return state;
         const remainingIds = new Set(nodes.map((node) => node.id));
         const { history, historyIndex } = appendHistory(state, nodes, state.transforms);
+        // Deleting the selection keeps the user in place: the next sibling, else the
+        // previous one, else the container it was in (never the page itself).
+        const resolveSelectionAfterDelete = (): string | null => {
+          const deleted = state.nodesById[nodeId];
+          const parent = deleted?.parentId ? state.nodesById[deleted.parentId] : undefined;
+          if (!deleted || !parent) return null;
+          const index = parent.children.indexOf(nodeId);
+          const neighbour = parent.children[index + 1] ?? parent.children[index - 1];
+          if (neighbour && remainingIds.has(neighbour)) return neighbour;
+          return parent.type === 'page' || parent.type === 'document' ? null : parent.id;
+        };
         return {
           nodes,
           history,
           historyIndex,
-          selectedNodeId: state.selectedNodeId && remainingIds.has(state.selectedNodeId) ? state.selectedNodeId : null,
+          selectedNodeId:
+            state.selectedNodeId === nodeId
+              ? resolveSelectionAfterDelete()
+              : state.selectedNodeId && remainingIds.has(state.selectedNodeId)
+                ? state.selectedNodeId
+                : null,
           hoverNodeId: state.hoverNodeId && remainingIds.has(state.hoverNodeId) ? state.hoverNodeId : null,
         };
       }, false, 'designer/deleteNode');
@@ -1357,6 +1538,8 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
         const nextId = id && state.nodesById[id] ? id : null;
         return {
           selectedNodeId: nextId,
+          // "After" is a one-selection choice; a new selection starts from "inside".
+          insertPlacement: nextId === state.selectedNodeId ? state.insertPlacement : 'inside',
           metrics: { ...state.metrics, totalSelections: state.metrics.totalSelections + 1 },
         };
       });

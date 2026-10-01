@@ -1,6 +1,6 @@
 import { isBilledTimeCollection } from '../../utils/billedTimeUi';
 import { humanizeCollectionBindingLabel } from '../../../../lib/invoice-template-ast/collectionDescriptors';
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import type { TFunction } from 'i18next';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
@@ -12,7 +12,16 @@ import { createEmptyDesignerTransformWorkspace, useInvoiceDesignerStore } from '
 import { hasDesignerTransforms } from '../../transforms/transformWorkspace';
 import { resolveDesignerDocumentKind } from '../../utils/documentKind';
 import { getNodeMetadata } from '../../utils/nodeProps';
-import { buildInvoiceTemplateBindings } from '../../../../lib/invoice-template-ast/standardTemplates';
+import { normalizeCssLength } from '../normalizers';
+import { StandardLabelControl } from './StandardLabelControl';
+import {
+  isColumnHeaderTranslatable,
+  resolveAutoTranslation,
+  TRANSLATION_OPT_OUT_KEY,
+  type TranslatableRef,
+} from '../../utils/translatableText';
+import { findStandardDocumentLabelByText } from '../../../../lib/invoice-template-ast/standardDocumentLabels';
+import { resolveDocumentCanonicalBindings } from '../../fields/documentBindingCatalog';
 import { resolveCollectionDescriptor, resolveColumnPresetsForBinding, resolveExtraBindingKeySuggestions } from '../../../../lib/invoice-template-ast/collectionDescriptors';
 export { buildTicketGroupColumnPresets, buildTimeEntryColumnPresets, resolveColumnPresetsForBinding, resolveExtraBindingKeySuggestions } from '../../../../lib/invoice-template-ast/collectionDescriptors';
 import { generateUUID } from '@alga-psa/core';
@@ -78,6 +87,45 @@ const resolveTableSourceBindingId = (metadata: Record<string, unknown>): string 
   asTrimmedString(metadata.path) ||
   'items';
 
+const readColumnInlineStyle = (column: ColumnModel): Record<string, unknown> => {
+  const style = column.style;
+  if (typeof style !== 'object' || style === null || Array.isArray(style)) return {};
+  const inline = (style as { inline?: unknown }).inline;
+  return typeof inline === 'object' && inline !== null && !Array.isArray(inline) ? (inline as Record<string, unknown>) : {};
+};
+
+/**
+ * Column width and alignment live in the column's inline style, which is what
+ * the document renders; the legacy pixel `width` is dropped on first edit.
+ */
+const withColumnInlineStyle = (
+  column: ColumnModel,
+  key: 'width' | 'textAlign',
+  value: string | undefined
+): Partial<ColumnModel> => {
+  const inline = { ...readColumnInlineStyle(column) };
+  if (value === undefined) {
+    delete inline[key];
+  } else {
+    inline[key] = value;
+  }
+  const existingStyle =
+    typeof column.style === 'object' && column.style !== null && !Array.isArray(column.style)
+      ? (column.style as Record<string, unknown>)
+      : {};
+  const nextStyle: Record<string, unknown> = { ...existingStyle };
+  if (Object.keys(inline).length > 0) {
+    nextStyle.inline = inline;
+  } else {
+    delete nextStyle.inline;
+  }
+  return { style: Object.keys(nextStyle).length > 0 ? nextStyle : undefined, width: undefined };
+};
+
+// "auto" is the unsized default, so it clears the width instead of storing it.
+const normalizeColumnWidthInput = (raw: string): string | undefined =>
+  raw.trim() === 'auto' ? undefined : normalizeCssLength(raw);
+
 const getUniqueStrings = (values: Array<string | undefined | null>): string[] =>
   Array.from(new Set(values.map((value) => asTrimmedString(value)).filter(Boolean)));
 
@@ -120,6 +168,7 @@ export const TableEditorWidget: React.FC<Props> = ({ node }) => {
   }, [rootId, nodes, snapToGrid, gridSize, showGuides, showRulers, canvasScale]);
 
   const metadata = useMemo(() => getNodeMetadata(node), [node]);
+  const [expandedColumnId, setExpandedColumnId] = useState<string | null>(null);
   const sourceBindingId = useMemo(() => resolveTableSourceBindingId(metadata), [metadata]);
   // Presets follow the bound collection so ticket/time tables offer their own
   // columns (Ticket | Description | Hours | Rate | Amount) via quick-add.
@@ -161,6 +210,21 @@ export const TableEditorWidget: React.FC<Props> = ({ node }) => {
       });
     }
 
+    // The exported workspace only registers collections that are already in
+    // use, which would make new data sources undiscoverable, so the document
+    // type's canonical catalog is always offered (for invoices: line items,
+    // recurring / one-time splits, location groups, and the billed-time
+    // ticketGroups / timeEntries snapshot collections). It is listed before the
+    // layout's own bindings so its friendly names win the de-duplication below.
+    options.push(
+      ...Object.entries(resolveDocumentCanonicalBindings(resolveDesignerDocumentKind(nodes)).collections ?? {}).map(
+        ([bindingId, binding]) => ({
+          value: binding.path,
+          label: humanizeCollectionBindingLabel(bindingId, binding.path, t),
+        })
+      )
+    );
+
     // Catalog options carry the collection's data PATH, not its binding id:
     // `metadata.collectionBindingKey` is a path everywhere else (AST import
     // writes denormalized paths, presets write paths), and export registers
@@ -173,20 +237,6 @@ export const TableEditorWidget: React.FC<Props> = ({ node }) => {
         label: humanizeCollectionBindingLabel(bindingId, binding.path, t),
       }))
     );
-
-    // The exported workspace only registers collections that are already in
-    // use, which would make new data sources undiscoverable. For invoice
-    // documents, always offer the canonical catalog (line items, recurring /
-    // one-time splits, location groups, and the billed-time ticketGroups /
-    // timeEntries snapshot collections).
-    if (resolveDesignerDocumentKind(nodes) === 'invoice') {
-      options.push(
-        ...Object.entries(buildInvoiceTemplateBindings().collections ?? {}).map(([bindingId, binding]) => ({
-          value: binding.path,
-          label: humanizeCollectionBindingLabel(bindingId, binding.path, t),
-        }))
-      );
-    }
 
     if (!options.some((option) => option.value === sourceBindingId)) {
       options.unshift({
@@ -269,18 +319,17 @@ export const TableEditorWidget: React.FC<Props> = ({ node }) => {
     [columns, updateColumns]
   );
 
+  // Column ids surface in the saved layout, so they stay readable: the preset's
+  // id (or "column"), suffixed only when the table already has one.
   const appendColumn = useCallback(
-    (nextColumn: Omit<ColumnModel, 'id'>) => {
-      updateColumns(
-        [
-          ...columns,
-          {
-            id: createLocalId(),
-            ...nextColumn,
-          },
-        ],
-        true
-      );
+    (nextColumn: Omit<ColumnModel, 'id'>, baseId: string) => {
+      const takenIds = new Set(columns.map((column) => column.id));
+      let id = baseId;
+      for (let suffix = 2; takenIds.has(id); suffix += 1) {
+        id = `${baseId}-${suffix}`;
+      }
+      updateColumns([...columns, { id, ...nextColumn }], true);
+      setExpandedColumnId(id);
     },
     [columns, updateColumns]
   );
@@ -290,8 +339,7 @@ export const TableEditorWidget: React.FC<Props> = ({ node }) => {
       header: t('invoiceDesigner.tableEditor.columns.newColumnHeader', { defaultValue: 'New Column' }),
       key: 'item.field',
       type: 'text',
-      width: 120,
-    });
+    }, 'column');
   }, [appendColumn, t]);
 
   const handleAddPresetColumn = useCallback(
@@ -300,11 +348,13 @@ export const TableEditorWidget: React.FC<Props> = ({ node }) => {
       if (!preset) {
         return;
       }
+      const standardHeader = findStandardDocumentLabelByText(preset.header ?? '');
       const nextColumn: Omit<ColumnModel, 'id'> = {
         header: preset.header,
+        // A header that is a standard label renders in each recipient's language.
+        ...(standardHeader ? { __astHeaderI18n: standardHeader } : {}),
         key: preset.key,
         type: preset.type,
-        width: preset.width,
       };
       if (preset.lines && preset.lines.length > 0) {
         nextColumn.lines = preset.lines.map((line) => ({
@@ -313,7 +363,7 @@ export const TableEditorWidget: React.FC<Props> = ({ node }) => {
           ...(line.style ? { style: line.style } : {}),
         }));
       }
-      appendColumn(nextColumn);
+      appendColumn(nextColumn, preset.id);
     },
     [appendColumn, columnPresets]
   );
@@ -450,6 +500,7 @@ export const TableEditorWidget: React.FC<Props> = ({ node }) => {
             </p>
           </div>
           <CustomSelect
+            showPlaceholderInDropdown={false}
             id="designer-table-source-binding"
             options={collectionBindingOptions}
             value={sourceBindingId}
@@ -503,6 +554,7 @@ export const TableEditorWidget: React.FC<Props> = ({ node }) => {
               {t('invoiceDesigner.tableEditor.style.borderPreset', { defaultValue: 'Border preset' })}
             </label>
             <CustomSelect
+              showPlaceholderInDropdown={false}
               id="designer-table-border-preset"
               options={[
                 { value: 'list', label: t('invoiceDesigner.tableEditor.borderPresets.list', { defaultValue: 'List' }) },
@@ -521,6 +573,7 @@ export const TableEditorWidget: React.FC<Props> = ({ node }) => {
               {t('invoiceDesigner.tableEditor.style.headerWeight', { defaultValue: 'Header weight' })}
             </label>
             <CustomSelect
+              showPlaceholderInDropdown={false}
               id="designer-table-header-weight"
               options={[
                 { value: 'normal', label: t('invoiceDesigner.tableEditor.headerWeights.normal', { defaultValue: 'Normal' }) },
@@ -589,14 +642,24 @@ export const TableEditorWidget: React.FC<Props> = ({ node }) => {
       <div className="space-y-2">
         {columns.map((column, index) => (
           <div key={column.id} className="rounded-lg border border-slate-200 dark:border-[rgb(var(--color-border-200))] bg-white dark:bg-[rgb(var(--color-card))] px-3 py-2.5 shadow-sm space-y-1.5">
-            <div className="flex items-center justify-between">
-              <div className="inline-flex items-center gap-1.5">
+            <div className="flex items-center justify-between gap-1">
+              <div className="flex min-w-0 flex-1 items-center gap-1.5">
                 <span className="inline-flex h-5 w-5 items-center justify-center rounded bg-slate-100 dark:bg-slate-800 text-[10px] font-medium text-slate-500 dark:text-slate-400 tabular-nums shrink-0">
                   {index + 1}
                 </span>
-                <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
-                  {t('invoiceDesigner.tableEditor.columns.itemLabel', { defaultValue: 'Column' })}
-                </span>
+                <button
+                  type="button"
+                  id={`designer-column-toggle-${column.id}`}
+                  aria-expanded={expandedColumnId === column.id}
+                  className="min-w-0 truncate text-left text-[11px] text-slate-600 dark:text-slate-300 hover:underline"
+                  onClick={() => setExpandedColumnId((current) => (current === column.id ? null : column.id))}
+                >
+                  <span className="font-semibold">{column.header || t('invoiceDesigner.tableEditor.columns.itemLabel', { defaultValue: 'Column' })}</span>
+                  <span className="text-slate-400">
+                    {' · '}
+                    {[column.key, column.type, asTrimmedString(readColumnInlineStyle(column).width)].filter(Boolean).join(' · ')}
+                  </span>
+                </button>
               </div>
               <div className="flex items-center gap-1 shrink-0">
                 <Button
@@ -605,7 +668,7 @@ export const TableEditorWidget: React.FC<Props> = ({ node }) => {
                   size="icon"
                   aria-label={t('invoiceDesigner.tableEditor.columns.moveUp', {
                     defaultValue: 'Move {{column}} up',
-                    column: column.id,
+                    column: column.header || column.id,
                   })}
                   disabled={index === 0}
                   className="h-6 w-6 text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
@@ -619,7 +682,7 @@ export const TableEditorWidget: React.FC<Props> = ({ node }) => {
                   size="icon"
                   aria-label={t('invoiceDesigner.tableEditor.columns.moveDown', {
                     defaultValue: 'Move {{column}} down',
-                    column: column.id,
+                    column: column.header || column.id,
                   })}
                   disabled={index === columns.length - 1}
                   className="h-6 w-6 text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
@@ -633,7 +696,7 @@ export const TableEditorWidget: React.FC<Props> = ({ node }) => {
                   size="icon"
                   aria-label={t('invoiceDesigner.tableEditor.columns.remove', {
                     defaultValue: 'Remove {{column}}',
-                    column: column.id,
+                    column: column.header || column.id,
                   })}
                   className="h-6 w-6 text-slate-400 hover:text-destructive hover:bg-destructive/10"
                   onClick={() => handleRemoveColumn(column.id)}
@@ -642,6 +705,9 @@ export const TableEditorWidget: React.FC<Props> = ({ node }) => {
                 </Button>
               </div>
             </div>
+            {/* Collapsed to one summary line; the full editor opens on demand. */}
+            {expandedColumnId === column.id && (
+              <>
             <div>
               <label className="text-[10px] font-medium text-slate-500 dark:text-slate-400 block mb-0.5">
                 {t('invoiceDesigner.tableEditor.columns.header', { defaultValue: 'Header' })}
@@ -652,9 +718,21 @@ export const TableEditorWidget: React.FC<Props> = ({ node }) => {
                 containerClassName="w-full"
                 value={column.header ?? ''}
                 onChange={(event) => updateColumn(column.id, { header: event.target.value }, false)}
-                onBlur={(event) => updateColumn(column.id, { header: event.target.value }, true)}
+                onBlur={(event) => {
+                  const header = event.target.value;
+                  const ref = resolveAutoTranslation(header, column[TRANSLATION_OPT_OUT_KEY]);
+                  updateColumn(column.id, ref ? { header: ref.defaultValue, __astHeaderI18n: ref } : { header }, true);
+                }}
                 placeholder={t('invoiceDesigner.tableEditor.columns.headerPlaceholder', { defaultValue: 'Header label' })}
                 className="text-xs"
+              />
+              <StandardLabelControl
+                domId={`column-header-translation-${column.id}`}
+                translation={isColumnHeaderTranslatable(column) ? (column.__astHeaderI18n as TranslatableRef) : null}
+                onUseStandardLabel={(ref) =>
+                  updateColumn(column.id, { header: ref.defaultValue, __astHeaderI18n: ref, [TRANSLATION_OPT_OUT_KEY]: undefined }, true)
+                }
+                onUseFixedText={() => updateColumn(column.id, { __astHeaderI18n: undefined, [TRANSLATION_OPT_OUT_KEY]: true }, true)}
               />
             </div>
             <div>
@@ -769,12 +847,13 @@ export const TableEditorWidget: React.FC<Props> = ({ node }) => {
                 </div>
               );
             })()}
-            <div className="grid grid-cols-[minmax(0,1fr)_88px] gap-1.5">
+            <div className="grid grid-cols-2 gap-1.5">
               <div>
                 <label className="text-[10px] font-medium text-slate-500 dark:text-slate-400 block mb-0.5">
                   {t('invoiceDesigner.tableEditor.columns.type', { defaultValue: 'Type' })}
                 </label>
                 <CustomSelect
+                  showPlaceholderInDropdown={false}
                   id={`column-type-${column.id}`}
                   options={[
                     { value: 'text', label: t('invoiceDesigner.tableEditor.columnTypes.text', { defaultValue: 'Text' }) },
@@ -789,20 +868,56 @@ export const TableEditorWidget: React.FC<Props> = ({ node }) => {
               </div>
               <div>
                 <label className="text-[10px] font-medium text-slate-500 dark:text-slate-400 block mb-0.5">
+                  {t('invoiceDesigner.tableEditor.columns.align', { defaultValue: 'Align' })}
+                </label>
+                <CustomSelect
+                  showPlaceholderInDropdown={false}
+                  id={`column-align-${column.id}`}
+                  options={[
+                    { value: 'default', label: t('invoiceDesigner.tableEditor.columnAlign.default', { defaultValue: 'Default' }) },
+                    { value: 'left', label: t('invoiceDesigner.tableEditor.columnAlign.left', { defaultValue: 'Left' }) },
+                    { value: 'center', label: t('invoiceDesigner.tableEditor.columnAlign.center', { defaultValue: 'Center' }) },
+                    { value: 'right', label: t('invoiceDesigner.tableEditor.columnAlign.right', { defaultValue: 'Right' }) },
+                  ]}
+                  value={asTrimmedString(readColumnInlineStyle(column).textAlign) || 'default'}
+                  onValueChange={(value: string) =>
+                    updateColumn(column.id, withColumnInlineStyle(column, 'textAlign', value === 'default' ? undefined : value), true)
+                  }
+                  size="sm"
+                />
+              </div>
+              <div className="col-span-2">
+                <label
+                  htmlFor={`column-width-${column.id}`}
+                  className="text-[10px] font-medium text-slate-500 dark:text-slate-400 block mb-0.5"
+                >
                   {t('invoiceDesigner.tableEditor.columns.width', { defaultValue: 'Width' })}
                 </label>
                 <Input
                   id={`column-width-${column.id}`}
+                  key={`column-width-${column.id}-${asTrimmedString(readColumnInlineStyle(column).width)}`}
                   size="sm"
                   containerClassName="w-full"
-                  type="number"
-                  value={typeof column.width === 'number' && Number.isFinite(column.width) ? column.width : 120}
-                  onChange={(event) => updateColumn(column.id, { width: Number(event.target.value) }, false)}
-                  onBlur={(event) => updateColumn(column.id, { width: Number(event.target.value) }, true)}
+                  defaultValue={asTrimmedString(readColumnInlineStyle(column).width)}
+                  placeholder={t('invoiceDesigner.tableEditor.columns.widthPlaceholder', { defaultValue: 'auto | 50% | 120px' })}
+                  onBlur={(event) =>
+                    updateColumn(column.id, withColumnInlineStyle(column, 'width', normalizeColumnWidthInput(event.target.value)), true)
+                  }
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter') {
+                      updateColumn(
+                        column.id,
+                        withColumnInlineStyle(column, 'width', normalizeColumnWidthInput(event.currentTarget.value)),
+                        true
+                      );
+                    }
+                  }}
                   className="text-xs tabular-nums"
                 />
               </div>
             </div>
+              </>
+            )}
           </div>
         ))}
       </div>
