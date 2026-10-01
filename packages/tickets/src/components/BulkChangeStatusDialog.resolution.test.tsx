@@ -9,15 +9,23 @@ vi.mock('../actions/ticketBundleActions', () => ({
   previewBulkBundleStatusPropagationAction: vi.fn().mockResolvedValue({}),
 }));
 
+const { translate } = vi.hoisted(() => ({
+  translate: (key: string, fallback?: string | Record<string, unknown>) => {
+    const template = typeof fallback === 'string' ? fallback : (fallback?.defaultValue as string | undefined);
+    if (typeof template !== 'string') return key;
+    const values = typeof fallback === 'string' ? undefined : fallback;
+    return template.replace(/\{\{(\w+)\}\}/g, (_match, name: string) => String(values?.[name] ?? `{{${name}}}`));
+  },
+}));
+
 vi.mock('react-i18next', () => ({
-  useTranslation: () => ({
-    t: (_key: string, fallback?: string | Record<string, unknown>) => {
-      const template = typeof fallback === 'string' ? fallback : fallback?.defaultValue;
-      if (typeof template !== 'string') return _key;
-      const values = typeof fallback === 'string' ? undefined : fallback;
-      return template.replace(/\{\{(\w+)\}\}/g, (_match, name: string) => String(values?.[name] ?? `{{${name}}}`));
-    },
-  }),
+  useTranslation: () => ({ t: translate }),
+}));
+
+// The dialog renders TicketNotificationSuppressionControl, which translates via
+// the UI package's wrapper rather than react-i18next directly.
+vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
+  useTranslation: () => ({ t: translate }),
 }));
 
 vi.mock('@alga-psa/ui/components/Dialog', () => ({
