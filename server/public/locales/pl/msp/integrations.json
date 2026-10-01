@@ -469,7 +469,8 @@
           "previousCount": "Poprzednia wartość",
           "syncFinished": "Synchronizacja klienta {{client}} zakończona.",
           "syncing": "Synchronizowanie…",
-          "syncTrackingFailed": "Synchronizacja została uruchomiona, ale ta strona nie mogła śledzić jej do końca. Odśwież stronę, aby zobaczyć najnowszy wynik."
+          "syncTrackingFailed": "Synchronizacja została uruchomiona, ale ta strona nie mogła śledzić jej do końca. Odśwież stronę, aby zobaczyć najnowszy wynik.",
+          "syncWorkerUnavailable": "Synchronizacja jest w kolejce, ale obecnie nic nie przetwarza kolejki w tle. Uruchomi się, gdy worker wróci; jeśli nadal będzie zablokowana, uruchom ponownie usługę temporal-worker."
         },
         "connection": {
           "changeAction": "Zmień połączenie",

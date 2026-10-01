@@ -15,6 +15,11 @@ import {
   type WorkerConfig,
 } from "./workerConfig.js";
 import {
+  reportWorkerHealth,
+  startWorkerFailureWatchdog,
+  type QueueWorker,
+} from "./workerHealth.js";
+import {
   registerInboundAuthPauseEventPublisher,
 } from "@alga-psa/shared/services/email/inboundAuthPauseEventNotifier";
 import {
@@ -39,10 +44,21 @@ const logger = createLogger({
   ],
 });
 
+/** Time for the failure log line to flush before the process exits. */
+const FAILURE_EXIT_GRACE_MS = 2_000;
+
+interface RunningQueue extends QueueWorker {
+  worker: Worker;
+}
+
+/** Set by the signal handlers so a draining worker is not mistaken for a dead one. */
+let shuttingDown = false;
+const isShuttingDown = () => shuttingDown;
+
 /**
  * Create and configure the Temporal worker
  */
-async function createWorkers(config: WorkerConfig): Promise<Worker[]> {
+async function createWorkers(config: WorkerConfig): Promise<RunningQueue[]> {
   logger.info("Connecting to Temporal", {
     address: config.temporalAddress,
     namespace: config.temporalNamespace,
@@ -54,7 +70,7 @@ async function createWorkers(config: WorkerConfig): Promise<Worker[]> {
 
   logger.info("Connected to Temporal successfully");
 
-  const workers: Worker[] = [];
+  const queues: RunningQueue[] = [];
 
   for (const taskQueue of config.taskQueues) {
     const worker = await Worker.create({
@@ -76,21 +92,22 @@ async function createWorkers(config: WorkerConfig): Promise<Worker[]> {
       maxConcurrentWorkflows: config.maxConcurrentWorkflowTaskExecutions,
     });
 
-    workers.push(worker);
+    queues.push({ taskQueue, worker, getState: () => worker.getState() });
   }
 
-  return workers;
+  return queues;
 }
 
 /**
  * Handle graceful shutdown
  */
-function setupGracefulShutdown(workers: Worker[]): void {
+function setupGracefulShutdown(queues: RunningQueue[]): void {
   const shutdownHandler = async (signal: string) => {
+    shuttingDown = true;
     logger.info(`Received ${signal}, shutting down gracefully...`);
 
     try {
-      await Promise.all(workers.map((worker) => worker.shutdown()));
+      await Promise.all(queues.map(({ worker }) => worker.shutdown()));
       logger.info("Worker shutdown completed");
       process.exit(0);
     } catch (error) {
@@ -120,26 +137,49 @@ function setupGracefulShutdown(workers: Worker[]): void {
 }
 
 /**
- * Health check endpoint for Kubernetes
+ * A worker that dies leaves its queue with no poller while the process, and
+ * therefore the pod, looks fine. Exit so the orchestrator restarts everything;
+ * Temporal keeps the queued tasks until the new pollers arrive.
  */
-function startHealthCheck(): void {
+function startFailureWatchdog(queues: RunningQueue[]): void {
+  startWorkerFailureWatchdog(queues, {
+    isShuttingDown,
+    onFailure: (dead, report) => {
+      logger.error("Temporal worker died; exiting so the process is restarted", {
+        deadQueues: dead.map((queue) => queue.taskQueue),
+        queues: report.queues,
+      });
+      setTimeout(() => process.exit(1), FAILURE_EXIT_GRACE_MS).unref();
+    },
+  });
+}
+
+/**
+ * Health check endpoint for Kubernetes. Liveness fails once any worker has
+ * died; readiness fails unless every configured queue is being polled.
+ */
+function startHealthCheck(queues: RunningQueue[]): void {
   if (process.env.ENABLE_HEALTH_CHECK === "true") {
     const app = express();
     const port = process.env.HEALTH_CHECK_PORT || 8080;
 
     app.get("/health", (req: any, res: any) => {
-      res.status(200).json({
-        status: "healthy",
+      const report = reportWorkerHealth(queues, isShuttingDown());
+      res.status(report.live ? 200 : 503).json({
+        status: report.live ? "healthy" : "unhealthy",
         timestamp: new Date().toISOString(),
-        worker: "running",
+        worker: report.live ? "running" : "failed",
+        queues: report.queues,
       });
     });
 
     app.get("/ready", (req: any, res: any) => {
-      res.status(200).json({
-        status: "ready",
+      const report = reportWorkerHealth(queues, isShuttingDown());
+      res.status(report.ready ? 200 : 503).json({
+        status: report.ready ? "ready" : "not-ready",
         timestamp: new Date().toISOString(),
-        worker: "ready",
+        worker: report.ready ? "ready" : "not-ready",
+        queues: report.queues,
       });
     });
 
@@ -194,19 +234,20 @@ async function main(): Promise<void> {
     // Initialize schedules
     await setupSchedules();
 
-    const workers = await createWorkers(config);
+    const queues = await createWorkers(config);
 
     // Setup graceful shutdown
-    setupGracefulShutdown(workers);
+    setupGracefulShutdown(queues);
 
     // Start health check server if enabled
-    startHealthCheck();
+    startHealthCheck(queues);
+    startFailureWatchdog(queues);
 
-    config.taskQueues.forEach((taskQueue) =>
+    queues.forEach(({ taskQueue }) =>
       logger.info("Worker starting...", { taskQueue }),
     );
 
-    await Promise.all(workers.map((worker) => worker.run()));
+    await Promise.all(queues.map(({ worker }) => worker.run()));
   } catch (error) {
     logger.error("Failed to start worker", {
       error: error instanceof Error ? error.message : "Unknown error",
