@@ -392,7 +392,10 @@ export function BentoTimelineTile({
   const skipFirstReactionsFetch = useRef(Boolean(initialReactions));
   const [filter, setFilter] = useState<LaneFilter>('everything');
   const [order, setOrder] = useState<'asc' | 'desc'>(initialOrder);
-  const [composerLane, setComposerLane] = useState<'client' | 'internal' | 'resolution'>('client');
+  // Visibility and resolution are independent, same as the legacy composer: an
+  // internal note can also be the resolution.
+  const [composerVisibility, setComposerVisibility] = useState<'client' | 'internal'>('client');
+  const [isResolutionToggle, setIsResolutionToggle] = useState(false);
   const [isScheduleToggle, setIsScheduleToggle] = useState(false);
   const [scheduledPublishAt, setScheduledPublishAt] = useState<Date | undefined>(undefined);
   const scheduledInstant = useMemo(() => {
@@ -403,7 +406,7 @@ export function BentoTimelineTile({
       return null;
     }
   }, [isScheduleToggle, scheduledPublishAt]);
-  const isClientComposer = composerLane === 'client';
+  const isClientComposer = composerVisibility === 'client';
   const scheduleIsValid = !isClientComposer || !isScheduleToggle || Boolean(scheduledInstant && scheduledInstant.getTime() > Date.now());
   const [hasDraft, setHasDraft] = useState(false);
   const [resolutionCloseStatusId, setResolutionCloseStatusId] = useState<string>(NO_STATUS_CHANGE);
@@ -451,6 +454,7 @@ export function BentoTimelineTile({
     onDiscard: () => {
       onNewCommentContentChange(DEFAULT_BLOCK);
       setHasDraft(false); setShowComposer(false); setIsScheduleToggle(false); setScheduledPublishAt(undefined);
+      setIsResolutionToggle(false);
     },
     uploadDocumentAction: uploadTicketAttachmentAction,
     deleteDraftClipboardImagesAction: deleteDraftTicketAttachmentImagesAction,
@@ -667,26 +671,27 @@ export function BentoTimelineTile({
   }, [order]);
 
   const handleSend = useCallback(async () => {
-    const isResolution = composerLane === 'resolution';
+    const isResolution = isResolutionToggle;
     const closeStatusId =
       isResolution && resolutionCloseStatusId !== NO_STATUS_CHANGE
         ? resolutionCloseStatusId
         : null;
     if (composeUploadSession.isUploading) return;
     const success = await onAddNewComment(
-      composerLane === 'internal',
+      composerVisibility === 'internal',
       isResolution,
       closeStatusId,
       closeStatusId && notificationSuppression.suppressContactNotifications
         ? notificationSuppression
         : undefined,
-      isScheduleToggle && composerLane === 'client' && scheduledInstant
+      isScheduleToggle && composerVisibility === 'client' && scheduledInstant
         ? { publishAt: scheduledInstant.toISOString(), timeZone: getUserTimeZone() }
         : null,
     );
     if (success) {
       setHasDraft(false);
       setShowComposer(false);
+      setIsResolutionToggle(false);
       setResolutionCloseStatusId(NO_STATUS_CHANGE);
       setNotificationSuppression(defaultNotificationSuppression());
       setIsScheduleToggle(false);
@@ -694,18 +699,18 @@ export function BentoTimelineTile({
       composeUploadSession.resetDraftTracking();
     }
     return success;
-  }, [composeUploadSession.isUploading, onAddNewComment, composerLane, resolutionCloseStatusId, notificationSuppression, isScheduleToggle, scheduledInstant, composeUploadSession]);
+  }, [composeUploadSession.isUploading, onAddNewComment, composerVisibility, isResolutionToggle, resolutionCloseStatusId, notificationSuppression, isScheduleToggle, scheduledInstant, composeUploadSession]);
 
   const handleCancelCompose = useCallback(async () => {
     await composeUploadSession.requestDiscard();
   }, [composeUploadSession]);
 
   useEffect(() => {
-    if (composerLane !== 'resolution') {
+    if (!isResolutionToggle) {
       setResolutionCloseStatusId(NO_STATUS_CHANGE);
       setNotificationSuppression(defaultNotificationSuppression());
     }
-  }, [composerLane]);
+  }, [isResolutionToggle]);
 
   // Keyboard parity with the conversation view: "c" focuses the composer, and
   // mod+s/mod+Enter sends the draft. The dialog scope only activates while a
@@ -775,7 +780,7 @@ export function BentoTimelineTile({
 
   const composer = (
     <div id={`${id}-composer`} ref={composerRef} className="p-3">
-      {composerLane === 'client' ? (
+      {isClientComposer ? (
         <p className="text-xs font-medium text-[rgb(var(--color-text-500))] mb-1.5">
           {contactFirstName
             ? t('bento.timeline.replyTo', 'Reply to {{name}}', { name: contactFirstName })
@@ -806,24 +811,35 @@ export function BentoTimelineTile({
             [
               { value: 'client', label: t('bento.timeline.modeClient', 'Client') },
               { value: 'internal', label: t('bento.timeline.modeInternal', 'Internal') },
-              { value: 'resolution', label: t('bento.timeline.modeResolution', 'Resolution') },
             ] as const
           ).map((option) => (
             <button
               key={option.value}
               id={`${id}-composer-lane-${option.value}`}
               type="button"
-              aria-pressed={composerLane === option.value}
+              aria-pressed={composerVisibility === option.value}
               className={`px-2.5 py-1 rounded-md transition-colors ${
-                composerLane === option.value
+                composerVisibility === option.value
                   ? 'bg-[rgb(var(--color-card))] text-[rgb(var(--color-text-900))] shadow-sm'
                   : 'text-[rgb(var(--color-text-500))] hover:text-[rgb(var(--color-text-700))]'
               }`}
-              onClick={() => setComposerLane(option.value)}
+              onClick={() => setComposerVisibility(option.value)}
             >
               {option.label}
             </button>
           ))}
+        </div>
+        <div className="flex items-center gap-2">
+          <Switch
+            id={`${id}-composer-resolution-toggle`}
+            checked={isResolutionToggle}
+            onCheckedChange={setIsResolutionToggle}
+          />
+          <Label htmlFor={`${id}-composer-resolution-toggle`}>
+            {isResolutionToggle
+              ? t('conversation.markedAsResolution', 'Marked as Resolution')
+              : t('conversation.markAsResolution', 'Mark as Resolution')}
+          </Label>
         </div>
         <div className="flex-1" />
         <Button
@@ -884,7 +900,7 @@ export function BentoTimelineTile({
           ) : null}
         </div>
       ) : null}
-      {composerLane === 'resolution' ? (
+      {isResolutionToggle ? (
         <div
           id={`${id}-composer-resolution-options`}
           className="mt-3 flex flex-wrap items-start gap-3 border-t border-[rgb(var(--color-border-100))] pt-3"
