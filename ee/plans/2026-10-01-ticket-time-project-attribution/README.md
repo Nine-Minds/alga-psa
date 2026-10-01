@@ -124,6 +124,12 @@ project-scoped invoices, counts toward T&M caps, and is covered by a fixed-price
 being billed hourly. Already-invoiced time is unaffected. Untick 'Bill this ticket's time as
 project time' on a link to keep billing that ticket at the client level."
 
+Reporting moves with it, and reporting looks backwards as well as forwards: project budget
+actuals, profitability and the client WIP rollup now count linked-ticket hours against the
+project for past periods too, so a fixed-price project's historical ticket time reads as
+covered by the fee (revenue on the fee, not on the hours) rather than as separate hourly
+revenue. Client-level attribution of that time is unchanged — only the project rollup moves.
+
 ## Work items, in order
 
 1. Migration + interface fields + `tenantTableMetadata` unchanged (still tenant-scoped).
