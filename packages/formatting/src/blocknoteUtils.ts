@@ -123,7 +123,7 @@ export function normalizeBlockHtmlForEmail(html: unknown): string {
     .replace(PARAGRAPH_OPEN_TAG, (_match, attributes?: string) => {
       const attrs = attributes ?? '';
       if (PARAGRAPH_STYLE_ATTRIBUTE.test(attrs)) {
-        return `<p${attrs.replace(PARAGRAPH_STYLE_ATTRIBUTE, `$1${EMAIL_PARAGRAPH_MARGIN}`)}>`;
+        return `<p${attrs.replace(PARAGRAPH_STYLE_ATTRIBUTE, (stylePrefix) => `${stylePrefix}${EMAIL_PARAGRAPH_MARGIN}`)}>`;
       }
       return `<p${attrs} style="${EMAIL_PARAGRAPH_MARGIN}">`;
     })
