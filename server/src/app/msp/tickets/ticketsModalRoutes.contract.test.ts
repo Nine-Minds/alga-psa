@@ -35,6 +35,32 @@ describe('tickets modal route infrastructure', () => {
     expect(defaultSlot).toContain('return null');
   });
 
+  it('never lets an intercepted modal path reach the ticket detail route as an id', () => {
+    const detailPage = read('server/src/app/msp/tickets/[id]/page.tsx');
+
+    // Next resolves the intercepted bulk routes to a marker path ('/msp/tickets/(.)bulk-tags').
+    // When the router hands that path to this dynamic route instead, the marker used to travel
+    // on as a ticket id, and Postgres' uuid cast came back as "One of the selected ticket values
+    // is invalid. Please refresh and try again." on the screen the user opened as a bulk dialog.
+    const guard = detailPage.slice(
+      detailPage.indexOf('export default async function TicketDetailsPage'),
+      detailPage.indexOf('const resolvedSearchParams'),
+    );
+    expect(guard).toContain('!TICKET_ID_PATTERN.test(id)');
+    expect(guard).toContain('notFound()');
+    expect(detailPage).toContain("import { notFound } from 'next/navigation'");
+
+    const patternSource = detailPage.match(/const TICKET_ID_PATTERN = \/(.+)\/i;/)?.[1];
+    expect(patternSource).toBeDefined();
+    const ticketIdPattern = new RegExp(patternSource ?? '$^', 'i');
+
+    for (const segment of ['bulk-assign', 'bulk-due-date', 'bulk-priority', 'bulk-status', 'bulk-tags', 'export', 'import']) {
+      expect(ticketIdPattern.test(`(.)${segment}`)).toBe(false);
+      expect(ticketIdPattern.test(segment)).toBe(false);
+    }
+    expect(ticketIdPattern.test('6f1b0e3c-6a4f-4d5e-9b2a-7c8d9e0f1a2b')).toBe(true);
+  });
+
   it('routes Import through plain and intercepted route entries', () => {
     const plainRoute = read('server/src/app/msp/tickets/import/page.tsx');
     const modalRoute = read('server/src/app/msp/tickets/@modal/(.)import/page.tsx');
