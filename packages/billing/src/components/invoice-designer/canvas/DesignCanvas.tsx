@@ -296,6 +296,9 @@ const resolveAuthoredTypography = (
   return { style: resolved, hasSize: fontSize !== undefined, hasColor: color !== undefined };
 };
 
+/** Where a press counts as "on a block": the block itself or the selection adorner's handles. */
+const PRESS_ON_BLOCK_SELECTOR = `[${DESIGNER_NODE_ID_ATTRIBUTE}], [data-automation-id="designer-selection-adorner"], [data-automation-id^="designer-resize-handle-"]`;
+
 const AUTHORED_COLOR_CLASS = '[color:var(--designer-authored-color)] dark:[color:inherit]';
 
 // Authored surfaces win over the designer's structural chrome on the light page.
@@ -1927,6 +1930,7 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({
   ]);
 
   const rootParentId = rootDropMeta?.id;
+  const pressStartedOnBlockRef = useRef(false);
   const selectedNode = selectedNodeId ? nodesById.get(selectedNodeId) : undefined;
   const selectedResizeHandles = useMemo(() => resolveResizeHandles(selectedNode), [selectedNode]);
   const canvasWidth = defaultPageNode?.size.width ?? DESIGNER_CANVAS_WIDTH;
@@ -1966,8 +1970,20 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({
     <div
       className="relative flex-1 overflow-auto bg-slate-100 dark:bg-[rgb(var(--color-background))]"
       data-designer-canvas-viewport="true"
+      onPointerDownCapture={(event) => {
+        // A click's target is the common ancestor of where the press and the release landed.
+        // Press on a block and release on its resize handle (which sits outside the block's
+        // subtree) and the click arrives here: only a press that started on empty canvas
+        // may deselect.
+        const target = event.target instanceof Element ? event.target : null;
+        pressStartedOnBlockRef.current = Boolean(target?.closest(PRESS_ON_BLOCK_SELECTOR));
+      }}
       onClick={() => {
-        if (!readOnly) {
+        // Consumed per press, so a click without a pointerdown (keyboard, programmatic)
+        // is treated as an empty-canvas click rather than inheriting an earlier press.
+        const startedOnBlock = pressStartedOnBlockRef.current;
+        pressStartedOnBlockRef.current = false;
+        if (!readOnly && !startedOnBlock) {
           onNodeSelect(null);
         }
       }}

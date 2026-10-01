@@ -8,12 +8,19 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DesignCanvas } from './DesignCanvas';
 import { useInvoiceDesignerStore } from '../state/designerStore';
 import type { DesignerNode } from '../state/designerStore';
+import { HANDLE_ARM_DELAY_MS } from './SelectionAdorner';
 import type { HandleResetSize, HandleResize } from './SelectionAdorner';
 import { resolveHandleResizePatch } from '../utils/handleResize';
 import { exportWorkspaceToTemplateAst, importTemplateAstToWorkspace } from '../ast/workspaceAst';
 import { createAstDocument, cloneAst } from '../ast/workspaceAst.roundtrip.helpers';
 
-afterEach(() => cleanup());
+afterEach(() => {
+  cleanup();
+  // A resize drag registers a window click-swallow that removes itself on a timeout; flush it
+  // so it cannot swallow the next test's click when the timers were faked.
+  if (vi.isFakeTimers()) vi.runOnlyPendingTimers();
+  vi.useRealTimers();
+});
 
 const noop = () => {};
 
@@ -201,6 +208,9 @@ describe('DesignCanvas (resize integration)', () => {
       canvasScale,
     });
 
+    // Handles of a freshly mounted adorner are dormant until the double-click interval
+    // has passed; these tests exercise handles of an already-selected block.
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
     render(
       <DndContext>
         <DesignCanvas
@@ -223,6 +233,9 @@ describe('DesignCanvas (resize integration)', () => {
         />
       </DndContext>
     );
+    act(() => {
+      vi.advanceTimersByTime(HANDLE_ARM_DELAY_MS);
+    });
   };
 
   const drag = (handle: string, from: { x: number; y: number }, to: { x: number; y: number }) => {
@@ -509,6 +522,245 @@ describe('DesignCanvas (resize integration)', () => {
       applyHandle({ width: 'auto' });
       rerender();
       expect(renderedText().style.minWidth).toBe('90px');
+    });
+  });
+
+  describe('selecting a block with a press that lands near its edge', () => {
+    const handleSelector = (handle: string) => `[data-automation-id="designer-resize-handle-${handle}"]`;
+    const textSelector = '[data-automation-id="designer-canvas-node-text-1"]';
+    const viewportSelector = '[data-designer-canvas-viewport="true"]';
+
+    const edgeNodes = (): DesignerNode[] => [
+      {
+        id: 'doc-1',
+        type: 'document',
+        props: { name: 'Document' },
+        position: { x: 0, y: 0 },
+        size: { width: 816, height: 1056 },
+        parentId: null,
+        children: ['page-1'],
+        allowedChildren: ['page'],
+      },
+      {
+        id: 'page-1',
+        type: 'page',
+        props: { name: 'Page 1' },
+        position: { x: 0, y: 0 },
+        size: { width: 816, height: 1056 },
+        parentId: 'doc-1',
+        children: ['section-1'],
+        allowedChildren: ['section'],
+      },
+      {
+        id: 'section-1',
+        type: 'section',
+        props: { name: 'Section', layout: { display: 'flex', flexDirection: 'column', gap: '8px', padding: '8px' } },
+        position: { x: 24, y: 24 },
+        size: { width: 520, height: 200 },
+        parentId: 'page-1',
+        children: ['text-1'],
+        allowedChildren: ['text'],
+      },
+      {
+        id: 'text-1',
+        type: 'text',
+        props: { name: 'Text', metadata: { text: 'Hello' }, style: { width: '120px', height: '24px' } },
+        position: { x: 0, y: 0 },
+        size: { width: 120, height: 24 },
+        baseSize: { width: 120, height: 24 },
+        parentId: 'section-1',
+        children: [],
+        allowedChildren: [],
+      },
+    ];
+
+    // Mirrors the shell: selection lives in state, so an onNodeSelect(null) really deselects.
+    const mountSelectable = (initialSelected: string | null) => {
+      if (typeof (globalThis as any).PointerEvent === 'undefined') {
+        class MockPointerEvent extends MouseEvent {}
+        (globalThis as any).PointerEvent = MockPointerEvent;
+      }
+      vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+      useInvoiceDesignerStore.getState().loadWorkspace({
+        nodes: edgeNodes(),
+        snapToGrid: false,
+        gridSize: 8,
+        showGuides: false,
+        showRulers: false,
+        canvasScale: 1,
+      });
+      const selections: Array<string | null> = [];
+      const onResize = vi.fn<HandleResize>();
+      const onResetSize = vi.fn<HandleResetSize>();
+      const onTextEdit = vi.fn();
+      const Harness = () => {
+        const [selected, setSelected] = React.useState<string | null>(initialSelected);
+        return (
+          <DndContext>
+            <DesignCanvas
+              nodes={useInvoiceDesignerStore.getState().nodes}
+              selectedNodeId={selected}
+              showGuides={false}
+              showRulers={false}
+              gridSize={8}
+              canvasScale={1}
+              snapToGrid={false}
+              guides={[]}
+              isDragActive={false}
+              forcedDropTarget={null}
+              droppableId="canvas"
+              onPointerLocationChange={noop}
+              onNodeSelect={(id) => {
+                selections.push(id);
+                setSelected(id);
+              }}
+              onResize={onResize}
+              onResetSize={onResetSize}
+              onTextEdit={onTextEdit}
+              readOnly={false}
+            />
+          </DndContext>
+        );
+      };
+      render(<Harness />);
+      const text = () => document.querySelector(textSelector) as HTMLElement;
+      const handle = (name: string) => document.querySelector(handleSelector(name)) as HTMLElement;
+      const viewport = () => document.querySelector(viewportSelector) as HTMLElement;
+      const advance = (ms: number) => act(() => void vi.advanceTimersByTime(ms));
+      const lastSelection = () => selections[selections.length - 1];
+      return { selections, onResize, onResetSize, onTextEdit, text, handle, viewport, advance, lastSelection };
+    };
+
+    it('keeps the block selected when the release lands on the fresh handle and the click retargets to the viewport', () => {
+      const view = mountSelectable(null);
+      expect(view.handle('s')).toBeNull();
+
+      fireEvent.pointerDown(view.text(), { button: 0, clientX: 4, clientY: 20 });
+      expect(view.lastSelection()).toBe('text-1');
+
+      // The adorner is mounted now; its handles are dormant for this selection.
+      expect(view.handle('s').getAttribute('data-armed')).toBe('false');
+      expect(view.handle('s').style.pointerEvents).toBe('none');
+      expect(view.handle('w').style.pointerEvents).toBe('none');
+
+      fireEvent.pointerUp(view.handle('s'), { button: 0 });
+      fireEvent.click(view.handle('s'));
+      // jsdom does not hit-test: real browsers deliver the click to the common ancestor.
+      fireEvent.click(view.viewport());
+
+      expect(view.selections).toEqual(['text-1']);
+      expect(view.selections).not.toContain(null);
+      expect(view.handle('s')).toBeTruthy();
+    });
+
+    it('keeps the block selected when the press itself starts on a handle (a drag-resize end)', () => {
+      const view = mountSelectable('text-1');
+      view.advance(HANDLE_ARM_DELAY_MS);
+      fireEvent.pointerDown(view.handle('s'), { button: 0, clientX: 4, clientY: 20 });
+      fireEvent.pointerUp(view.handle('s'), { button: 0 });
+      fireEvent.click(view.viewport());
+      expect(view.selections).not.toContain(null);
+    });
+
+    it('still deselects when the press starts on empty canvas', () => {
+      const view = mountSelectable('text-1');
+      view.advance(HANDLE_ARM_DELAY_MS);
+      fireEvent.pointerDown(view.viewport(), { button: 0 });
+      fireEvent.pointerUp(view.viewport(), { button: 0 });
+      fireEvent.click(view.viewport());
+      expect(view.lastSelection()).toBeNull();
+      expect(view.handle('s')).toBeNull();
+    });
+
+    it('does not let an earlier press on a block suppress a later click with no pointerdown', () => {
+      const view = mountSelectable(null);
+      fireEvent.pointerDown(view.text(), { button: 0 });
+      fireEvent.click(view.viewport());
+      expect(view.selections).toEqual(['text-1']);
+      // e.g. a programmatic click: no press behind it, so it is an empty-canvas click.
+      fireEvent.click(view.viewport());
+      expect(view.lastSelection()).toBeNull();
+    });
+
+    it('enters inline text edit on a double-click at the edge and does not reset the size', () => {
+      const view = mountSelectable(null);
+      // First press selects the block; the release lands on the (dormant) south handle.
+      fireEvent.pointerDown(view.text(), { button: 0, clientX: 40, clientY: 22 });
+      fireEvent.pointerUp(view.handle('s'), { button: 0 });
+      fireEvent.click(view.viewport());
+      view.advance(120);
+      // Second press, inside the double-click interval: the handle is still dormant, so the
+      // press and the dblclick belong to the block.
+      expect(view.handle('s').style.pointerEvents).toBe('none');
+      fireEvent.pointerDown(view.text(), { button: 0, clientX: 40, clientY: 22 });
+      fireEvent.doubleClick(view.text());
+      // A browser would not deliver the dblclick to a dormant handle; the logic also refuses it.
+      fireEvent.doubleClick(view.handle('s'));
+
+      expect(document.querySelector('textarea')).toBeTruthy();
+      expect(view.onResetSize).not.toHaveBeenCalled();
+      expect(view.selections).not.toContain(null);
+    });
+
+    it('arms the handles only once the selecting press is released and the double-click interval has passed', () => {
+      const view = mountSelectable(null);
+      fireEvent.pointerDown(view.text(), { button: 0 });
+      view.advance(HANDLE_ARM_DELAY_MS - 50);
+      fireEvent.pointerUp(view.text(), { button: 0 });
+      view.advance(HANDLE_ARM_DELAY_MS - 1);
+      expect(view.handle('s').getAttribute('data-armed')).toBe('false');
+      view.advance(1);
+      expect(view.handle('s').getAttribute('data-armed')).toBe('true');
+      expect(view.handle('s').style.pointerEvents).toBe('auto');
+    });
+
+    it('resets size on a handle double-click, and resizes on a deliberate drag, once the handles are armed', () => {
+      const view = mountSelectable(null);
+      fireEvent.pointerDown(view.text(), { button: 0 });
+      fireEvent.pointerUp(view.text(), { button: 0 });
+      fireEvent.click(view.text());
+
+      // Too early: a handle double-click and a handle press are both ignored.
+      fireEvent.doubleClick(view.handle('e'));
+      expect(view.onResetSize).not.toHaveBeenCalled();
+      fireEvent.pointerDown(view.handle('e'), { button: 0, clientX: 100, clientY: 100 });
+      window.dispatchEvent(new (globalThis as any).PointerEvent('pointermove', { clientX: 140, clientY: 100 }));
+      window.dispatchEvent(new (globalThis as any).PointerEvent('pointerup', { clientX: 140, clientY: 100 }));
+      expect(view.onResize).not.toHaveBeenCalled();
+
+      view.advance(HANDLE_ARM_DELAY_MS);
+      expect(view.handle('e').getAttribute('data-armed')).toBe('true');
+
+      fireEvent.doubleClick(view.handle('e'));
+      expect(view.onResetSize).toHaveBeenLastCalledWith('text-1', { width: true, height: false });
+
+      // A slow, deliberate press on an armed handle still resizes (one commit).
+      fireEvent.pointerDown(view.handle('e'), { button: 0, clientX: 100, clientY: 100 });
+      view.advance(2000);
+      window.dispatchEvent(new (globalThis as any).PointerEvent('pointermove', { clientX: 140, clientY: 100 }));
+      window.dispatchEvent(new (globalThis as any).PointerEvent('pointerup', { clientX: 140, clientY: 100 }));
+      expect(view.onResize.mock.calls.map((args) => args[2])).toEqual([false, true]);
+      expect(view.onResize).toHaveBeenLastCalledWith('text-1', { width: 40, height: undefined }, true);
+    });
+
+    it('goes dormant again when the selection moves to another block', () => {
+      const view = mountSelectable('text-1');
+      view.advance(HANDLE_ARM_DELAY_MS);
+      expect(view.handle('s').getAttribute('data-armed')).toBe('true');
+      // Selecting the section (a different block) re-keys the adorner.
+      const section = document.querySelector('[data-automation-id="designer-canvas-node-section-1"]') as HTMLElement;
+      fireEvent.pointerDown(section, { button: 0 });
+      expect(view.lastSelection()).toBe('section-1');
+      expect(view.handle('s').getAttribute('data-armed')).toBe('false');
+      view.advance(HANDLE_ARM_DELAY_MS);
+      expect(view.handle('s').getAttribute('data-armed')).toBe('true');
+    });
+
+    it('clears the arming timer on unmount', () => {
+      const view = mountSelectable(null);
+      fireEvent.pointerDown(view.text(), { button: 0 });
+      cleanup();
+      expect(vi.getTimerCount()).toBe(0);
     });
   });
 });

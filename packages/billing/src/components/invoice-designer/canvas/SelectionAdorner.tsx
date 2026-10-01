@@ -1,4 +1,4 @@
-import React, { useCallback, useLayoutEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import clsx from 'clsx';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
@@ -46,6 +46,16 @@ const HANDLE_CURSOR: Record<ResizeHandle, string> = {
 const HIT_PX = 14;
 
 const GRIP_PX = 8;
+
+/**
+ * How long a freshly selected block's handles stay dormant after the selecting press is
+ * released. It covers the platform double-click interval (500ms on Windows, the usual
+ * default elsewhere), so the second press of a double-click on the block's edge still
+ * reaches the block (inline text edit) instead of a handle (size reset).
+ * Trade-off: grabbing a handle within this window of selecting a block drags the block's
+ * body instead of resizing it.
+ */
+export const HANDLE_ARM_DELAY_MS = 500;
 /** Screen px within which a resize snaps to the block's content (auto) size. */
 const AUTO_DETENT_PX = 6;
 
@@ -81,6 +91,40 @@ export const SelectionAdorner: React.FC<SelectionAdornerProps> = ({
   const [frame, setFrame] = useState<Frame | null>(null);
   const [readout, setReadout] = useState<{ width: number; height: number; widthAuto: boolean; heightAuto: boolean } | null>(null);
   const resizingRef = useRef(false);
+  // Handles are drawn above the block, so on the press that selects a block (and a
+  // double-click's second press) they would take the pointer from the block: the release
+  // lands on a handle, the "click" retargets to the canvas and deselects, and a double-click
+  // runs the size reset instead of text edit. They stay dormant (pointer-events: none) for
+  // each new selection until the selecting press is released and the double-click interval
+  // has passed. Keyed by block id, so a selection change disarms in the same render.
+  const [armedNodeId, setArmedNodeId] = useState<string | null>(null);
+  const armed = armedNodeId === nodeId;
+
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const schedule = () => {
+      if (timer !== undefined) clearTimeout(timer);
+      timer = setTimeout(() => {
+        timer = undefined;
+        stopListening();
+        setArmedNodeId(nodeId);
+      }, HANDLE_ARM_DELAY_MS);
+    };
+    // The adorner mounts during the selecting press, before its release: the interval
+    // restarts at the release. A selection made without a press (layers panel, keyboard)
+    // has no release to wait for and arms HANDLE_ARM_DELAY_MS after mounting.
+    const stopListening = () => {
+      window.removeEventListener('pointerup', schedule, true);
+      window.removeEventListener('pointercancel', schedule, true);
+    };
+    window.addEventListener('pointerup', schedule, true);
+    window.addEventListener('pointercancel', schedule, true);
+    schedule();
+    return () => {
+      stopListening();
+      if (timer !== undefined) clearTimeout(timer);
+    };
+  }, [nodeId]);
 
   const measure = useCallback(() => {
     if (!artboard) return;
@@ -128,7 +172,7 @@ export const SelectionAdorner: React.FC<SelectionAdornerProps> = ({
   }, [artboard, measure, nodeId, layoutKey]);
 
   const startResize = (handle: ResizeHandle) => (event: React.PointerEvent<HTMLDivElement>) => {
-    if (event.button !== 0 || !frame) return;
+    if (event.button !== 0 || !frame || !armed) return;
     event.preventDefault();
     event.stopPropagation();
     const startX = event.clientX;
@@ -222,12 +266,21 @@ export const SelectionAdorner: React.FC<SelectionAdornerProps> = ({
         <div
           key={handle}
           role="presentation"
-          className="group pointer-events-auto absolute flex items-center justify-center"
-          style={{ ...handleBox(handle), cursor: HANDLE_CURSOR[handle], touchAction: 'none' }}
+          className="group absolute flex items-center justify-center"
+          style={{
+            ...handleBox(handle),
+            cursor: HANDLE_CURSOR[handle],
+            touchAction: 'none',
+            // The adorner root is pointer-events: none; only armed handles take the pointer.
+            pointerEvents: armed ? 'auto' : 'none',
+          }}
+          data-armed={armed ? 'true' : 'false'}
           onPointerDown={startResize(handle)}
           onClick={(event) => event.stopPropagation()}
           onDoubleClick={(event) => {
             event.stopPropagation();
+            // Only a block that was already selected before this gesture resets its size.
+            if (!armed) return;
             onResetSize(nodeId, { width: handle !== 's', height: handle === 's' || handle === 'se' || handle === 'sw' });
           }}
           title={t('designer.resize.handleHint', { defaultValue: 'Drag to resize · double-click to size to content' })}
