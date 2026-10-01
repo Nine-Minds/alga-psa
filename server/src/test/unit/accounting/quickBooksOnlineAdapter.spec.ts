@@ -149,6 +149,9 @@ describe('QuickBooksOnlineAdapter service-period export policy', () => {
   });
 
   afterEach(() => {
+    // Vitest 4's restoreAllMocks only restores vi.spyOn spies; reset the
+    // vi.fn() module mocks too so call history cannot leak between tests.
+    vi.resetAllMocks();
     vi.restoreAllMocks();
   });
 
@@ -703,6 +706,9 @@ describe('QuickBooksOnlineAdapter credit-note (CreditMemo) transform', () => {
   });
 
   afterEach(() => {
+    // Vitest 4's restoreAllMocks only restores vi.spyOn spies; reset the
+    // vi.fn() module mocks too so call history cannot leak between tests.
+    vi.resetAllMocks();
     vi.restoreAllMocks();
   });
 
@@ -834,6 +840,9 @@ describe('QuickBooksOnlineAdapter deliver CreditMemo branch', () => {
   });
 
   afterEach(() => {
+    // Vitest 4's restoreAllMocks only restores vi.spyOn spies; reset the
+    // vi.fn() module mocks too so call history cannot leak between tests.
+    vi.resetAllMocks();
     vi.restoreAllMocks();
   });
 
@@ -894,6 +903,9 @@ describe('QuickBooksOnlineAdapter delivery realm', () => {
   });
 
   afterEach(() => {
+    // Vitest 4's restoreAllMocks only restores vi.spyOn spies; reset the
+    // vi.fn() module mocks too so call history cannot leak between tests.
+    vi.resetAllMocks();
     vi.restoreAllMocks();
   });
 
@@ -930,6 +942,9 @@ describe('QuickBooksOnlineAdapter transform realm', () => {
   });
 
   afterEach(() => {
+    // Vitest 4's restoreAllMocks only restores vi.spyOn spies; reset the
+    // vi.fn() module mocks too so call history cannot leak between tests.
+    vi.resetAllMocks();
     vi.restoreAllMocks();
   });
 
@@ -1007,6 +1022,9 @@ describe('QuickBooksOnlineAdapter class/department transform', () => {
   });
 
   afterEach(() => {
+    // Vitest 4's restoreAllMocks only restores vi.spyOn spies; reset the
+    // vi.fn() module mocks too so call history cannot leak between tests.
+    vi.resetAllMocks();
     vi.restoreAllMocks();
   });
 
@@ -1213,6 +1231,9 @@ describe('QuickBooksOnlineAdapter customer auto-provisioning gate', () => {
   });
 
   afterEach(() => {
+    // Vitest 4's restoreAllMocks only restores vi.spyOn spies; reset the
+    // vi.fn() module mocks too so call history cannot leak between tests.
+    vi.resetAllMocks();
     vi.restoreAllMocks();
   });
 
@@ -1385,6 +1406,9 @@ describe('QuickBooksOnlineAdapter Automated Sales Tax mode', () => {
   });
 
   afterEach(() => {
+    // Vitest 4's restoreAllMocks only restores vi.spyOn spies; reset the
+    // vi.fn() module mocks too so call history cannot leak between tests.
+    vi.resetAllMocks();
     vi.restoreAllMocks();
   });
 

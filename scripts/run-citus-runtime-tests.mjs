@@ -24,7 +24,7 @@ try {
   if (process.argv.length !== 2) throw new Error('Citus runtime requires complete execution without CLI filters');
   if (process.env.TEST_DB_BACKEND !== 'citus') throw new Error('This gate requires TEST_DB_BACKEND=citus');
   const before = testRevision(root);
-  const run = args => spawnSync(process.execPath, [path.join(server, 'node_modules/vitest/vitest.mjs'),
+  const run = args => spawnSync(process.execPath, [path.join(root, 'node_modules/vitest/vitest.mjs'),
     ...args], { cwd: server, stdio: 'inherit' });
   const selection = files.map(file => path.relative(server, path.join(root, file)));
   const fileCollection = run(['list', ...selection, '--filesOnly', `--json=${path.join(output, 'collected.json')}`]);

@@ -11,12 +11,12 @@ fs.mkdirSync(path.resolve(__dirname, './coverage/.tmp'), { recursive: true });
 // exercise another zone.
 process.env.TZ = process.env.TZ || 'UTC';
 
-// Vitest only forwards a whitelist of CLI options into project configs, and
-// `poolOptions` is not on it — so `--poolOptions.forks.singleFork=false` stops
-// reaching the workers the moment a lane declares projects (the jsdom/node
-// split below). The shard runner's fresh-fork-per-file guarantee therefore
-// travels in the environment instead, where every project can read it.
-const singleFork = process.env.VITEST_RECYCLE_FORKS !== '1';
+// With `isolate: true` vitest 4 gives every file a fresh fork. Lanes that run
+// without VITEST_RECYCLE_FORKS (the DB-backed integration lanes) are capped at
+// one worker in config, where a CLI --maxWorkers cannot lift it into the jsdom/
+// node projects; VITEST_RECYCLE_FORKS=1 lanes (unit shards, `npm test`) leave
+// the worker count to their CLI --maxWorkers/--fileParallelism.
+const recycleForks = process.env.VITEST_RECYCLE_FORKS === '1';
 
 const SERVER_UNIT_INCLUDE = [
   '../ee/temporal-workflows/src/__tests__/integration/**/*.test.ts',
@@ -106,10 +106,9 @@ export default defineConfig({
     isolate: true,
     maxConcurrency: 1,
     // Integration suites share one test_database and drop/recreate it in
-    // beforeAll; parallel files corrupt each other's bootstrap. Vitest 4
-    // removed singleFork/singleThread, so state serialization explicitly —
-    // fileParallelism is honored by both v3 and v4.
+    // beforeAll; parallel files corrupt each other's bootstrap.
     fileParallelism: false,
+    ...(recycleForks ? {} : { maxWorkers: 1 }),
     sequence: {
       concurrent: false,
       shuffle: true,
@@ -117,14 +116,6 @@ export default defineConfig({
       seed: process.env.VITEST_SEED ? Number(process.env.VITEST_SEED) : undefined
     },
     pool: 'forks',
-    poolOptions: {
-      threads: {
-        singleThread: singleFork
-      },
-      forks: {
-        singleFork
-      }
-    },
     logHeapUsage: true,
     testTimeout: 20000,
     hookTimeout: 120000,
@@ -138,11 +129,6 @@ export default defineConfig({
       // instrumentation cost. CI enables it where reports are collected.
       enabled: false,
       provider: 'v8',
-      // AST-aware remapping (vitest 4's default): the classic sourcemap remap
-      // of the full package/shared file set blows the 14GB heap at report
-      // time ("Ineffective mark-compacts near heap limit"); this path uses a
-      // fraction of the memory.
-      experimentalAstAwareRemapping: true,
       // Coverage reports are skipped on failing runs by default; red runs
       // are exactly the ones the metrics sheet needs coverage rows for.
       reportOnFailure: true,

@@ -13,10 +13,12 @@ const tenantKnexMock = vi.fn();
 const createTenantKnexMock = vi.fn();
 
 vi.mock('posthog-node', () => ({
-  PostHog: vi.fn().mockImplementation(() => ({
-    isFeatureEnabled: isFeatureEnabledMock,
-    getFeatureFlag: vi.fn(),
-  })),
+  PostHog: vi.fn().mockImplementation(function () {
+    return {
+      isFeatureEnabled: isFeatureEnabledMock,
+      getFeatureFlag: vi.fn(),
+    };
+  }),
 }));
 
 vi.mock('server/src/config/posthog.config', () => ({

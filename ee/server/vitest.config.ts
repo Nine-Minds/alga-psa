@@ -13,14 +13,10 @@ export default defineConfig({
       shuffle: true
     },
     pool: 'forks',
-    poolOptions: {
-      threads: {
-        singleThread: true
-      },
-      forks: {
-        singleFork: true
-      }
-    },
+    // Vitest 4 removed poolOptions.singleFork: files run one at a time, each
+    // in a fresh fork (isolate: true).
+    fileParallelism: false,
+    maxWorkers: 1,
     logHeapUsage: true,
     testTimeout: 30000, // Increased for integration tests
     server: {
@@ -51,6 +47,9 @@ export default defineConfig({
       { find: /^@\/lib\/tenant$/, replacement: `${path.resolve(__dirname, '../../server/src/lib/tenant.ts')}` },
       { find: /^@\/lib\/iap\/(.*)$/, replacement: `${path.resolve(__dirname, '../../server/src/lib/iap')}/$1` },
       { find: /^@\/lib\/services\/(.*)$/, replacement: `${path.resolve(__dirname, '../../server/src/lib/services')}/$1` },
+      // tsconfig's `@/lib/*` falls back to server/src/lib; these subtrees exist only there.
+      { find: /^@\/lib\/api\/(.*)$/, replacement: `${path.resolve(__dirname, '../../server/src/lib/api')}/$1` },
+      { find: /^@\/lib\/analytics\/(.*)$/, replacement: `${path.resolve(__dirname, '../../server/src/lib/analytics')}/$1` },
       { find: /^@\/config\/(.*)$/, replacement: `${path.resolve(__dirname, '../../server/src/config')}/$1` },
       { find: /^@\/utils\/(.*)$/, replacement: `${path.resolve(__dirname, '../../server/src/utils')}/$1` },
       { find: /^@\/interfaces\/(.*)$/, replacement: `${path.resolve(__dirname, '../../server/src/interfaces')}/$1` },

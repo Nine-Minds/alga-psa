@@ -8,7 +8,7 @@ vi.mock('@temporalio/client', () => {
     create: vi.fn(),
   };
 
-  const Client = vi.fn(() => ({ schedule, workflow: { start: vi.fn() } }));
+  const Client = vi.fn(function () { return { schedule, workflow: { start: vi.fn() } }; });
   const Connection = { connect: vi.fn(async () => ({})) };
 
   return { Client, Connection };

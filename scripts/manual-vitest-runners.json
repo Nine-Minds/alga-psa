@@ -2,7 +2,7 @@
   {
     "runner": "legacy-email-review",
     "cwd": "server",
-    "cli": "server/node_modules/vitest/vitest.mjs",
+    "cli": "node_modules/vitest/vitest.mjs",
     "config": "vitest.config.ts",
     "filters": [
       "src/test/e2e/email-processing.test.ts",
@@ -20,7 +20,7 @@
   {
     "runner": "invoice-visual-review",
     "cwd": "server",
-    "cli": "server/node_modules/vitest/vitest.mjs",
+    "cli": "node_modules/vitest/vitest.mjs",
     "config": "vitest.config.ts",
     "filters": [
       "src/test/visual/invoiceTemplateGolden.test.ts"

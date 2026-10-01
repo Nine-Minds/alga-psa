@@ -258,6 +258,9 @@ describe('mobile auth (OTT + refresh rotation)', () => {
     vi.useRealTimers();
     vi.unstubAllEnvs();
     __resetMobileAuthTestState();
+    // Vitest 4's restoreAllMocks only restores vi.spyOn spies; reset the
+    // vi.fn() module mocks too so call history cannot leak between tests.
+    vi.resetAllMocks();
     vi.restoreAllMocks();
   });
 

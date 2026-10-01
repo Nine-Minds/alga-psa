@@ -236,10 +236,8 @@ jobs:
         env:
           NODE_OPTIONS: '--max-old-space-size=8192'
           SKIP_DB_TESTS: '1'
-          # A fresh fork per file. Passing --poolOptions.forks.singleFork=false
-          # on the CLI stopped working when the config grew projects (vitest
-          # forwards only a whitelist of CLI options into them); the config
-          # reads this instead.
+          # Lifts server/vitest.config.ts's one-worker cap so --maxWorkers=2
+          # reaches the jsdom/node projects.
           VITEST_RECYCLE_FORKS: '1'
           DB_USER_ADMIN: ''
           DB_PASSWORD_ADMIN: ''

@@ -34,7 +34,7 @@ test('actual infrastructure runner partitions, executes and rejects missing or s
   write('server/vitest.config.mjs', `export default ${JSON.stringify({ test: { globals: true, include: ['src/test/infrastructure/**/*.test.ts'], fileParallelism: false, maxWorkers: 1 } })};`);
   const files = [...floorRelative, 'extra.test.ts'];
   for (const file of files) write(`server/src/test/infrastructure/${file}`, "test('observes the result', () => expect(2 + 3).toBe(5));\n");
-  symlinkSync(path.join(source, 'server/node_modules'), path.join(root, 'server/node_modules'), 'dir');
+  symlinkSync(path.join(source, 'node_modules'), path.join(root, 'node_modules'), 'dir');
   const git = (...args) => execFileSync('git', args, { cwd: root, encoding: 'utf8' });
   git('init', '-q'); git('config', 'user.email', 'fixture@example.invalid'); git('config', 'user.name', 'CI fixture');
   git('add', '.'); git('commit', '-qm', 'fixture');

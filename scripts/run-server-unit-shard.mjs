@@ -33,19 +33,18 @@ export function runServerUnitShard({ root, index, total, workers, env = process.
   for (const target of Object.values(paths)) writeFileSync(target, 'null\n');
   const flakyUpload = path.join(root, 'test-results/server-unit-flaky');
   resetFlakyPublication(flakyUpload);
-  // VITEST_RECYCLE_FORKS carries the same intent as the CLI override below.
-  // Vitest forwards only a whitelist of CLI options into project configs and
-  // poolOptions is not on it, so once the shard config declares its jsdom/node
-  // projects the flag alone would silently stop recycling forks per file.
+  // VITEST_RECYCLE_FORKS lifts server/vitest.config.ts's one-worker cap so the
+  // CLI --maxWorkers below reaches the jsdom/node projects; isolate: true gives
+  // each file a fresh fork.
   const runEnv = { ...env, SERVER_UNIT_SHARD_FILES: paths.shardFiles, TEST_PROGRESS_PATH: paths.progress,
     VITEST_RECYCLE_FORKS: '1',
     FLAKY_TESTS_PATH: paths.flaky, FLAKY_SUITE: 'server-unit', FLAKY_JOB: `server-unit shard ${index}/${total}`,
     FLAKY_SHARD_INDEX: String(index), FLAKY_SHARD_TOTAL: String(total),
     SERVER_UNIT_SHARD_INDEX: String(index), SERVER_UNIT_SHARD_TOTAL: String(total) };
-  const vitest = args => spawnSync(process.execPath, [path.join(server, 'node_modules/vitest/vitest.mjs'), ...args],
+  const vitest = args => spawnSync(process.execPath, [path.join(root, 'node_modules/vitest/vitest.mjs'), ...args],
     { cwd: server, env: runEnv, stdio: 'inherit' });
   const shardArgs = ['--config', 'vitest.server-unit-shard.config.ts'];
-  const parallelForks = ['--poolOptions.forks.singleFork=false', '--fileParallelism=true', `--maxWorkers=${workers}`];
+  const parallelForks = ['--fileParallelism=true', `--maxWorkers=${workers}`];
   const normalized = collected => collected.map(entry => normalizeTestFile(typeof entry === 'string' ? entry : entry.file, root)).sort();
   let before;
   let evidence;
