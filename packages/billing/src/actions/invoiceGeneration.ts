@@ -10,6 +10,7 @@ import { hasPermission } from '@alga-psa/auth/rbac';
 import { getAnalyticsAsync } from '../lib/authHelpers';
 import { BillingEngine, UnresolvedCatalogPricingError } from '../lib/billing/billingEngine';
 import { reconcileWindowAttribution } from '../lib/billing/contractLineAttributionWriter';
+import { getClientDefaultBillingProfileId } from '../lib/billing/billingProfileLookup';
 import { listUnmaterializedClientCadenceWindowLineIds } from '../lib/billing/clientCadenceWindowMaterialization';
 import {
   getCycleBillingProfileId,
