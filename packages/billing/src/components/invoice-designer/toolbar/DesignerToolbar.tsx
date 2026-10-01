@@ -119,7 +119,7 @@ export const DesignerToolbar: React.FC<DesignerToolbarProps> = ({
           >
             +
           </Button>
-          <span className="w-10 text-right tabular-nums">{Math.round(canvasScale * 100)}%</span>
+          <span className="min-w-12 whitespace-nowrap text-right tabular-nums">{Math.round(canvasScale * 100)}%</span>
           <Button id="designer-zoom-fit" variant="outline" size="sm" className="h-7 px-2" onClick={onZoomToFit}>
             {t('designer.toolbar.zoomFit', { defaultValue: 'Fit' })}
           </Button>

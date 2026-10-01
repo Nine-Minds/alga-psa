@@ -25,7 +25,7 @@ const isUnsized = (value: unknown) => value === undefined || value === null || v
  * size the user dragged it to: a content-sized block with a minimum is sized by that
  * minimum, so the minimum changes; otherwise the block gets a fixed size, and a
  * minimum or maximum that would hold it at another size follows the drag.
- * Only the dragged dimension is written; `'auto'` clears the authored size.
+ * Only the dragged dimension is written; `'auto'` marks the dimension content-sized.
  */
 export const resolveHandleResizePatch = (
   node: DesignerNode,
@@ -37,8 +37,13 @@ export const resolveHandleResizePatch = (
   const apply = (dimension: 'width' | 'height', value: HandleResizeValue | undefined) => {
     if (value === undefined) return;
     if (value === 'auto') {
-      // Back to content size: the authored size goes; a minimum that sizes the block stays.
-      if (style[dimension] !== undefined) patches.push({ path: `style.${dimension}`, value: null });
+      // Back to content size. Clearing the property is not enough: in a flow layout an
+      // unset width/height lets the canvas fall back to the legacy `node.size` as a
+      // minimum (and an imported block to its imported size), holding the block at the
+      // last dragged size. An explicit `'auto'` is the content-size marker the inspector's
+      // Auto mode already writes; it round-trips through the AST as `width: 'auto'`.
+      // A minimum that sizes the block stays.
+      if (style[dimension] !== 'auto') patches.push({ path: `style.${dimension}`, value: 'auto' });
       return;
     }
     if (!Number.isFinite(value)) return;

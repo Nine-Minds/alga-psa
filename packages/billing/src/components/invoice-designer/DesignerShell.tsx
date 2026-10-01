@@ -78,7 +78,7 @@ import type { DesignerInspectorTab } from './schema/inspectorSchema';
 import { useDropTargeting, type DropPreview, type DropTargetingSubject } from './hooks/useDropTargeting';
 import { DropPreviewOverlay, captureDragGhost, type DragGhost } from './canvas/DropPreviewOverlay';
 import type { HandleResetSize, HandleResize } from './canvas/SelectionAdorner';
-import { resolveHandleResizePatch } from './utils/handleResize';
+import { resolveHandleResizePatch, type HandleResizeValue } from './utils/handleResize';
 import { DESIGNER_CANVAS_VIEWPORT_SELECTOR, resolveFitScale } from './utils/canvasDom';
 import { DesignerSchemaInspector } from './inspector/DesignerSchemaInspector';
 import { NodeOverridesSummary } from './inspector/NodeOverridesSummary';
@@ -712,29 +712,34 @@ export const DesignerShell: React.FC = () => {
 
   // Canvas resize handles: each drag writes only the dragged dimension, through the
   // property that governs it (see utils/handleResize), as one undo step on release.
-  const resizeNodeFromHandle = useCallback<HandleResize>(
-    (id, size, commit) => {
+  // Applies a handle gesture's patches; the whole gesture is one undo step, recorded on `commit`.
+  const applyHandleResizePatches = useCallback(
+    (id: string, size: { width?: HandleResizeValue; height?: HandleResizeValue }, commit: boolean) => {
       const node = useInvoiceDesignerStore.getState().nodesById[id];
       if (!node) return;
-      const patches = resolveHandleResizePatch(node, size);
-      patches.forEach((patch) => {
+      resolveHandleResizePatch(node, size).forEach((patch) => {
         if (patch.value === null) unsetNodeProp(id, patch.path, false);
         else setNodeProp(id, patch.path, patch.value, false);
       });
-      // The whole gesture is one undo step, recorded on release.
       if (commit) commitHistory();
     },
     [commitHistory, setNodeProp, unsetNodeProp]
   );
 
+  const resizeNodeFromHandle = useCallback<HandleResize>(
+    (id, size, commit) => applyHandleResizePatches(id, size, commit),
+    [applyHandleResizePatches]
+  );
+
+  // Double-clicking a handle is the same as dragging to the content-size detent.
   const resetNodeSizeFromHandle = useCallback<HandleResetSize>(
-    (id, dimensions) => {
-      const paths = [dimensions.width && 'style.width', dimensions.height && 'style.height'].filter(
-        (path): path is string => Boolean(path)
-      );
-      paths.forEach((path, index) => unsetNodeProp(id, path, index === paths.length - 1));
-    },
-    [unsetNodeProp]
+    (id, dimensions) =>
+      applyHandleResizePatches(
+        id,
+        { width: dimensions.width ? 'auto' : undefined, height: dimensions.height ? 'auto' : undefined },
+        true
+      ),
+    [applyHandleResizePatches]
   );
 
   const zoomToFit = useCallback(() => {

@@ -192,13 +192,19 @@ export const SelectionAdorner: React.FC<SelectionAdornerProps> = ({
 
   const handleBox = (handle: ResizeHandle): React.CSSProperties => {
     const { width, height } = frame;
+    // Side handles span the edge between the corner handles, but never shrink below a
+    // comfortable grab length: on a short block they stay centred on the edge (overlapping
+    // the corners rather than leaving a dead spot).
+    const sideLength = (edge: number) => Math.max(edge - hit, hit * 2);
+    const sideHeight = sideLength(height);
+    const sideWidth = sideLength(width);
     switch (handle) {
       case 'e':
-        return { left: width - hit / 2, top: hit / 2, width: hit, height: Math.max(0, height - hit) };
+        return { left: width - hit / 2, top: (height - sideHeight) / 2, width: hit, height: sideHeight };
       case 'w':
-        return { left: -hit / 2, top: hit / 2, width: hit, height: Math.max(0, height - hit) };
+        return { left: -hit / 2, top: (height - sideHeight) / 2, width: hit, height: sideHeight };
       case 's':
-        return { left: hit / 2, top: height - hit / 2, width: Math.max(0, width - hit), height: hit };
+        return { left: (width - sideWidth) / 2, top: height - hit / 2, width: sideWidth, height: hit };
       case 'se':
         return { left: width - hit / 2, top: height - hit / 2, width: hit, height: hit };
       case 'sw':

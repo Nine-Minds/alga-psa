@@ -29,6 +29,8 @@ export const captureDragGhost = (nodeId: string): DragGhost | null => {
   const rect = source.getBoundingClientRect();
   const zoom = artboard.offsetWidth > 0 ? artboard.getBoundingClientRect().width / artboard.offsetWidth : 1;
   const element = source.cloneNode(true) as HTMLElement;
+  // Hover/selection badges belong to the canvas, not to the block being carried.
+  element.querySelectorAll('.designer-canvas-node-badge, [data-automation-id="designer-canvas-node-badge"]').forEach((badge) => badge.remove());
   [element, ...Array.from(element.querySelectorAll<HTMLElement>('*'))].forEach((node) => {
     node.removeAttribute('id');
     Array.from(node.attributes)
@@ -103,7 +105,7 @@ const resolveChipPosition = (
 export const DropPreviewOverlay: React.FC<DropPreviewOverlayProps> = ({ preview, dragLabel, getName, ghost = null }) => {
   const { t } = useTranslation('msp/invoicing');
   if (!preview || typeof document === 'undefined') return null;
-  const { target, indicator, containerRect, pointer, clipRect } = preview;
+  const { target, indicator, containerRect, pointer, clipRect, surface } = preview;
   // Marks are drawn in a layer clipped to the visible canvas, offset to its origin.
   const clip = clipRect ?? { left: 0, top: 0, width: window.innerWidth, height: window.innerHeight };
   const ghostFit = ghost
@@ -141,7 +143,14 @@ export const DropPreviewOverlay: React.FC<DropPreviewOverlayProps> = ({ preview,
           }}
           data-automation-id="designer-drop-preview-container"
         >
-          <span className="absolute left-0 top-0 -translate-y-full whitespace-nowrap rounded bg-primary-500 px-1.5 py-0.5 text-[10px] font-medium text-white">
+          <span
+            className={clsx(
+              'absolute whitespace-nowrap rounded bg-primary-500 px-1.5 py-0.5 text-[10px] font-medium text-white',
+              // Outline rows are stacked edge to edge: a label above the box would cover the row above,
+              // so it sits inside the box, at the right end of the receiving row.
+              surface === 'outline' ? 'right-1 top-0.5 max-w-[60%] truncate' : 'left-0 top-0 -translate-y-full'
+            )}
+          >
             {getName(target.parentId)}
           </span>
         </div>

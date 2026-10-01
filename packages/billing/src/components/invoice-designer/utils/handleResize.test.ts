@@ -3,11 +3,11 @@ import { describe, expect, it } from 'vitest';
 import type { DesignerNode } from '../state/designerStore';
 import { resolveHandleResizePatch } from './handleResize';
 
-const nodeWithStyle = (style: Record<string, unknown>): DesignerNode =>
+const nodeWithStyle = (style: Record<string, unknown>, metadata?: Record<string, unknown>): DesignerNode =>
   ({
     id: 'n1',
     type: 'container',
-    props: { name: 'n1', style },
+    props: { name: 'n1', style, ...(metadata ? { metadata } : {}) },
     position: { x: 0, y: 0 },
     size: { width: 100, height: 100 },
     baseSize: { width: 100, height: 100 },
@@ -54,11 +54,60 @@ describe('resolveHandleResizePatch', () => {
     expect(paths).toEqual(['style.width', 'size.width', 'baseSize.width', 'style.height', 'size.height', 'baseSize.height']);
   });
 
-  it('clears the authored size when the drag rests on the content size', () => {
+  it("marks a dimension content-sized when the drag rests on the content size", () => {
     expect(resolveHandleResizePatch(nodeWithStyle({ width: '190px', height: '91px' }), { width: 'auto', height: 'auto' })).toEqual([
-      { path: 'style.width', value: null },
-      { path: 'style.height', value: null },
+      { path: 'style.width', value: 'auto' },
+      { path: 'style.height', value: 'auto' },
     ]);
-    expect(resolveHandleResizePatch(nodeWithStyle({ minWidth: '280px' }), { width: 'auto' })).toEqual([]);
+    // A minimum that sizes the block is authored; it stays.
+    const patches = resolveHandleResizePatch(nodeWithStyle({ minWidth: '280px' }), { width: 'auto' });
+    expect(patches).toEqual([{ path: 'style.width', value: 'auto' }]);
+    // Already content-sized: nothing to write (and no undo step).
+    expect(resolveHandleResizePatch(nodeWithStyle({ width: 'auto' }), { width: 'auto' })).toEqual([]);
+  });
+
+  describe("'auto' after a px resize leaves no effective min size", () => {
+    type Patch = ReturnType<typeof resolveHandleResizePatch>[number];
+    const applyPatches = (node: DesignerNode, patches: Patch[]): DesignerNode => {
+      const next = JSON.parse(JSON.stringify(node));
+      for (const { path, value } of patches) {
+        const [root, key] = path.split('.');
+        const target = root === 'style' ? (next.props.style ??= {}) : next[root];
+        if (value === null) delete target[key];
+        else target[key] = value;
+      }
+      return next;
+    };
+    // What DesignCanvas keys the flow min-size fallback on: no authored width/height
+    // (or an explicit 'auto'/content size) and no authored min.
+    const style = (node: DesignerNode) => (node.props as any).style as Record<string, unknown>;
+
+    const cases: Array<[string, Record<string, unknown> | undefined]> = [
+      ['a session-created node', undefined],
+      ['an AST-imported node', { __astImported: true, __astHadWidth: true, __astHadHeight: true }],
+    ];
+
+    it.each(cases)('%s', (_label, metadata) => {
+      const fresh = nodeWithStyle({ width: '120px', height: '60px' }, metadata);
+      const resized = applyPatches(fresh, resolveHandleResizePatch(fresh, { width: 172, height: 90 }));
+      expect(style(resized)).toMatchObject({ width: '172px', height: '90px' });
+      expect(resized.size).toEqual({ width: 172, height: 90 });
+
+      const reset = applyPatches(resized, resolveHandleResizePatch(resized, { width: 'auto', height: 'auto' }));
+      // An explicit content-size marker (so the canvas never falls back to node.size)...
+      expect(style(reset).width).toBe('auto');
+      expect(style(reset).height).toBe('auto');
+      // ...and no min size of any kind.
+      expect(style(reset).minWidth).toBeUndefined();
+      expect(style(reset).minHeight).toBeUndefined();
+      // Metadata is untouched: the marker lives in style alone.
+      expect((reset.props as any).metadata).toEqual(metadata);
+    });
+
+    it('also holds when the block had no authored size yet (flow node with only legacy size)', () => {
+      const fresh = nodeWithStyle({}, { __astImported: true, __astHadWidth: false, __astHadHeight: false });
+      const reset = applyPatches(fresh, resolveHandleResizePatch(fresh, { width: 'auto', height: 'auto' }));
+      expect(style(reset)).toMatchObject({ width: 'auto', height: 'auto' });
+    });
   });
 });

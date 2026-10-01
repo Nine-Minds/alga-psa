@@ -40,6 +40,8 @@ export type DropPreview = {
   containerRect: DropRect | null;
   /** Visible canvas area; drop marks outside it are hidden. */
   clipRect: DropRect | null;
+  /** Where the pointer is: over the canvas, or over the Outline pane (whose rows are tightly stacked). */
+  surface?: 'canvas' | 'outline';
 };
 
 const toRect = (rect: DOMRect): DropRect => ({ left: rect.left, top: rect.top, width: rect.width, height: rect.height });
@@ -137,6 +139,7 @@ export const useDropTargeting = (subject: DropTargetingSubject | null) => {
           indicator: resolved?.indicator ?? null,
           containerRect: resolved ? rows.get(resolved.containerRowId)?.rect ?? null : null,
           clipRect: outlineRect,
+          surface: 'outline',
         };
       }
 
