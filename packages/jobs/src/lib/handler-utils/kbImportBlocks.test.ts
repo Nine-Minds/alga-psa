@@ -546,9 +546,24 @@ describe('kbImportBlocks pathological input stays linear', { timeout: 120_000 },
     // There is no preferred split point in this input. The fallback search
     // must inspect only the current window rather than repeatedly scanning
     // every preceding character as the source grows.
-    const half = fastestOf(2, () => markdownToBlocks('x'.repeat(4_000_000)));
-    const full = fastestOf(2, () => markdownToBlocks('x'.repeat(8_000_000)));
-    expect(full).toBeLessThan(Math.max(half, 20) * 3);
+    //
+    // At these sizes the linear parse still dominates the quadratic scan, so a
+    // doubling barely separates them (~2.1x fixed vs ~3.2x regressed) and a
+    // loaded runner flaked across a 3x bound. Quadrupling widens the gap
+    // (~5x fixed vs ~10x regressed), and 7x sits roughly evenly between the
+    // two. Samples alternate between sizes so a slow stretch on the runner
+    // lands on both, and inputs are built outside the timer.
+    const quarterInput = 'x'.repeat(2_000_000);
+    const fullInput = 'x'.repeat(8_000_000);
+    const quarterRuns: number[] = [];
+    const fullRuns: number[] = [];
+    for (let run = 0; run < 3; run++) {
+      quarterRuns.push(timed(() => markdownToBlocks(quarterInput)));
+      fullRuns.push(timed(() => markdownToBlocks(fullInput)));
+    }
+    const quarter = Math.min(...quarterRuns);
+    const full = Math.min(...fullRuns);
+    expect(full).toBeLessThan(Math.max(quarter, 20) * 7);
   });
 
   it('costs the same whether inline constructs sit in one block or many', () => {
