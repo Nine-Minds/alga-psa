@@ -790,7 +790,8 @@
       "back": "Back to Invoice Layouts",
       "cancel": "Cancel",
       "save": "Save Template",
-      "saving": "Saving..."
+      "saving": "Saving...",
+      "close": "Close"
     },
     "titles": {
       "create": "Create New Invoice Layout",
@@ -800,7 +801,9 @@
       "templateName": "Template Name",
       "templateAst": "Template AST (JSON)",
       "created": "Created",
-      "lastUpdated": "Last Updated"
+      "lastUpdated": "Last Updated",
+      "savedAt": "Saved {{time}}",
+      "notSaved": "Not saved yet"
     },
     "tabs": {
       "visual": "Visual",
@@ -816,6 +819,9 @@
       "templateNameRequired": "Template name is required",
       "astExportFailed": "Failed to export template AST from visual workspace: {{message}}",
       "unknownAstExport": "Unknown AST export error"
+    },
+    "toast": {
+      "saved": "Layout \"{{name}}\" saved."
     }
   },
   "templates": {
@@ -1253,6 +1259,15 @@
         "content": "Content",
         "media": "Media",
         "dynamic": "Dynamic"
+      },
+      "insertTarget": {
+        "page": "New blocks go at the end of the page.",
+        "inside": "New blocks go inside {{name}}.",
+        "after": "New blocks go right after {{name}}.",
+        "label": "Where new blocks go",
+        "insideOption": "Inside it",
+        "afterOption": "After it",
+        "shiftHint": "Shift+click + to add after it instead."
       }
     },
     "inspector": {
@@ -1272,7 +1287,70 @@
       "fitSectionToContents": "Fit Section to Contents",
       "sectionNoChildContent": "Section has no child content to fit.",
       "apply": "Apply",
-      "emptyHelp": "Select a component to edit its properties."
+      "emptyHelp": "Select a component to edit its properties.",
+      "size": "Size",
+      "width": "Width",
+      "widthValue": "Width value",
+      "minWidth": "Min width",
+      "maxWidth": "Max width",
+      "height": "Height",
+      "heightValue": "Height value",
+      "minHeight": "Min height",
+      "maxHeight": "Max height",
+      "mediaSource": "Image source",
+      "mediaSourceLogo": "Company logo",
+      "mediaSourceCustom": "Custom image",
+      "mediaSourceLogoHint": "Shows the logo from your company branding settings on every document.",
+      "mediaSourceUrl": "Source URL",
+      "renameInner": "Rename {{count}} inner layers too ({{from}} → {{to}}…)?",
+      "renameInnerApply": "Rename",
+      "renameInnerDismiss": "No",
+      "tabsLabel": "Inspector sections",
+      "insertDataField": "+ Insert data field…",
+      "searchDataFields": "Search data fields…",
+      "dataFields": "Data fields",
+      "box": {
+        "top": "Top",
+        "right": "Right",
+        "bottom": "Bottom",
+        "left": "Left",
+        "all": "All sides",
+        "sameOnAllSides": "Same on all sides",
+        "unit": "Unit",
+        "customValue": "Custom CSS value kept until you edit a side: {{value}}"
+      },
+      "examplePlaceholder": "e.g. {{value}}",
+      "setCount": "{{count}} set",
+      "overrides": {
+        "none": "Uses defaults only.",
+        "jump": "Edit in the {{tab}} tab",
+        "title": "Set on this block ({{count}}):"
+      },
+      "tabs": {
+        "content": "Content",
+        "style": "Style",
+        "layout": "Layout & size"
+      },
+      "sizeModes": {
+        "auto": {
+          "label": "Auto",
+          "widthTooltip": "Let the container decide (stretches in a vertical stack)",
+          "heightTooltip": "Grow with the content"
+        },
+        "fill": {
+          "label": "Fill",
+          "widthTooltip": "Fill the full width of the container"
+        },
+        "fit": {
+          "label": "Fit",
+          "widthTooltip": "Shrink to fit the content"
+        },
+        "fixed": {
+          "label": "Fixed",
+          "widthTooltip": "Use the exact width typed below",
+          "heightTooltip": "Use the exact height typed below"
+        }
+      }
     },
     "shell": {
       "selectedLabel": "Selected:",
@@ -1564,6 +1642,12 @@
             },
             "margin": {
               "label": "Margin"
+            },
+            "padding": {
+              "label": "Padding"
+            },
+            "containerPadding": {
+              "label": "Padding"
             }
           }
         },
@@ -1651,6 +1735,84 @@
         },
         "totals-rows": {
           "title": "Totals Rows"
+        },
+        "typography": {
+          "title": "Typography",
+          "fields": {
+            "fontSize": {
+              "label": "Size"
+            },
+            "fontWeight": {
+              "label": "Weight",
+              "options": {
+                "400": "Normal (400)",
+                "500": "Medium (500)",
+                "600": "Semibold (600)",
+                "700": "Bold (700)"
+              }
+            },
+            "lineHeight": {
+              "label": "Line height"
+            },
+            "textAlign": {
+              "label": "Align",
+              "options": {
+                "left": "Left",
+                "center": "Center",
+                "right": "Right",
+                "justify": "Justify"
+              }
+            },
+            "fontStyle": {
+              "label": "Style",
+              "options": {
+                "normal": "Normal",
+                "italic": "Italic"
+              }
+            },
+            "color": {
+              "label": "Color"
+            }
+          }
+        },
+        "value-typography": {
+          "title": "Value Text",
+          "fields": {
+            "fontSize": {
+              "label": "Size"
+            },
+            "fontWeight": {
+              "label": "Weight",
+              "options": {
+                "400": "Normal (400)",
+                "500": "Medium (500)",
+                "600": "Semibold (600)",
+                "700": "Bold (700)"
+              }
+            },
+            "lineHeight": {
+              "label": "Line height"
+            },
+            "textAlign": {
+              "label": "Align",
+              "options": {
+                "left": "Left",
+                "center": "Center",
+                "right": "Right",
+                "justify": "Justify"
+              }
+            },
+            "fontStyle": {
+              "label": "Style",
+              "options": {
+                "normal": "Normal",
+                "italic": "Italic"
+              }
+            },
+            "color": {
+              "label": "Color"
+            }
+          }
         }
       }
     },
@@ -1750,10 +1912,66 @@
     },
     "canvas": {
       "templateBoundary": "Template Boundary",
-      "translatableHint": "Translated automatically into the recipient's language. Edit it to use your own fixed text instead."
+      "translatableHint": "Translated automatically into the recipient's language. Edit it to use your own fixed text instead.",
+      "noLineItems": "No line items",
+      "moreRows": "+{{count}} more rows",
+      "subtotal": "Subtotal",
+      "tax": "Tax",
+      "total": "Total",
+      "buttonLabel": "Button",
+      "signatureLabel": "Signature",
+      "attachmentsLabel": "Attachments",
+      "spacerLabel": "Spacer",
+      "companyLogo": "Company logo",
+      "insertionMarker": "The next block you add goes here",
+      "emptyContainer": "Empty — select it and add blocks from the left panel",
+      "localeChip": "Translated labels shown in {{language}} (Preview language)"
     },
     "dragOverlay": {
       "component": "Component"
+    },
+    "arrange": {
+      "up": "Up",
+      "upHint": "Move earlier in its container (↑)",
+      "down": "Down",
+      "downHint": "Move later in its container (↓)",
+      "out": "Out",
+      "outHint": "Move out of its container, placing it right after (Alt+←)",
+      "into": "In",
+      "intoHint": "Move into the container just before it (Alt+→)",
+      "copy": "Copy",
+      "copyHint": "Copy (Ctrl/⌘+C). Paste with Ctrl/⌘+V after selecting where it should go.",
+      "paste": "Paste",
+      "pasteHint": "Paste into the selected container, or after the selected block (Ctrl/⌘+V)",
+      "duplicate": "Duplicate",
+      "duplicateHint": "Duplicate right after itself (Ctrl/⌘+D)",
+      "copyStyle": "Copy style",
+      "copyStyleHint": "Copy colors, borders, spacing and text style (Ctrl/⌘+Alt+C)",
+      "pasteStyle": "Paste style",
+      "pasteStyleHint": "Give this block the copied style (Ctrl/⌘+Alt+V)",
+      "delete": "Delete",
+      "deleteHint": "Delete (Delete key)",
+      "title": "Arrange"
+    },
+    "feedback": {
+      "cannotInsert": "{{block}} cannot be added here.",
+      "insertedOnPage": "Added {{block}} to the page.",
+      "insertedInto": "Added {{block}} to {{parent}}.",
+      "fieldRebound": "{{name}} now shows {{path}}."
+    },
+    "translation": {
+      "translatedAs": "Standard label \"{{name}}\", translated for each recipient",
+      "useFixedText": "Use fixed text",
+      "pickStandardLabel": "Fixed text. Translate automatically…",
+      "searchStandardLabels": "Search standard labels…",
+      "standardLabels": "Standard labels",
+      "noMatches": "No standard label matches.",
+      "cancel": "Cancel"
+    },
+    "outline": {
+      "collapse": "Collapse {{name}}",
+      "expand": "Expand {{name}}",
+      "title": "Outline"
     }
   },
   "projectBilling": {
@@ -2008,7 +2226,9 @@
         "addLine": "+ Line",
         "clearLines": "Single line",
         "stackedLinesHint": "Each non-empty line renders on its own row. When all lines are empty the column’s binding key above is shown.",
-        "removeLine": "Remove line {{index}}"
+        "removeLine": "Remove line {{index}}",
+        "align": "Align",
+        "widthPlaceholder": "auto | 50% | 120px"
       },
       "columnTypes": {
         "text": "Text",
@@ -2043,6 +2263,12 @@
         "groupedRowKey": "Grouped row key",
         "groupedRowItems": "Grouped row items",
         "availableBinding": "Available binding"
+      },
+      "columnAlign": {
+        "default": "Default",
+        "left": "Left",
+        "center": "Center",
+        "right": "Right"
       }
     },
     "imagePicker": {
@@ -2061,7 +2287,14 @@
       "clearRowBackground": "Clear row background color",
       "clearRowTextColor": "Clear row text color",
       "labelColorOverrideNote": "This label keeps its own saved color and does not inherit the row text color set above. The amount still follows the row text color.",
-      "noRows": "This totals block has no saved rows yet. Save the template and reopen it to edit row colors."
+      "noRows": "This totals block has no saved rows yet. Save the template and reopen it to edit row colors.",
+      "addRow": "Add row:",
+      "empty": "No rows yet. Add one below.",
+      "moveUp": "Move {{row}} up",
+      "moveDown": "Move {{row}} down",
+      "remove": "Remove {{row}}",
+      "label": "Label",
+      "emphasize": "Emphasize (grand total style)"
     }
   },
   "draftInvoiceDetails": {

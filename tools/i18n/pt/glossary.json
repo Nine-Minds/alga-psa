@@ -2716,7 +2716,10 @@
       "TeamViewer",
       "Gigabyte",
       "Terabyte",
-      "Volume"
+      "Volume",
+      "Auto",
+      "Normal (400)",
+      "auto | 50% | 120px"
     ],
     "caseInsensitive": [
       "api",

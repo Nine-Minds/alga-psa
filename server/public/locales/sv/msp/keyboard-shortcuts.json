@@ -283,6 +283,38 @@
       "moveRight": {
         "label": "Flytta åt höger",
         "description": "Flytta det markerade objektet åt höger i redigeraren."
+      },
+      "moveOut": {
+        "label": "Flytta ut ur behållare",
+        "description": "Flytta det markerade blocket ut ur dess behållare."
+      },
+      "moveInto": {
+        "label": "Flytta in i behållare",
+        "description": "Flytta det markerade blocket in i behållaren före det."
+      },
+      "copy": {
+        "label": "Kopiera",
+        "description": "Kopiera det markerade blocket."
+      },
+      "cut": {
+        "label": "Klipp ut",
+        "description": "Klipp ut det markerade blocket."
+      },
+      "paste": {
+        "label": "Klistra in",
+        "description": "Klistra in det kopierade blocket."
+      },
+      "duplicate": {
+        "label": "Duplicera",
+        "description": "Duplicera det markerade blocket."
+      },
+      "copyStyle": {
+        "label": "Kopiera format",
+        "description": "Kopiera det markerade blockets färger, kantlinjer, avstånd och textformat."
+      },
+      "pasteStyle": {
+        "label": "Klistra in format",
+        "description": "Tillämpa det kopierade formatet på det markerade blocket."
       }
     },
     "scroll": {

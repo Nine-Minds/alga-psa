@@ -469,7 +469,8 @@
           "previousCount": "Anterior",
           "syncFinished": "Sincronização concluída para {{client}}.",
           "syncing": "Sincronizando…",
-          "syncTrackingFailed": "A sincronização foi iniciada, mas esta página não conseguiu acompanhá-la até o fim. Atualize-a para ver o resultado mais recente."
+          "syncTrackingFailed": "A sincronização foi iniciada, mas esta página não conseguiu acompanhá-la até o fim. Atualize-a para ver o resultado mais recente.",
+          "syncWorkerUnavailable": "A sincronização está na fila, mas nada está processando a fila em segundo plano no momento. Ela será executada quando o worker voltar; se continuar travada, reinicie o serviço temporal-worker."
         },
         "connection": {
           "changeAction": "Alterar conexão",

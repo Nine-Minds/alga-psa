@@ -742,7 +742,10 @@
       "success_other": "Status bei {{count}} Tickets aktualisiert",
       "partialFailure": "Status konnte bei einigen Tickets nicht aktualisiert werden",
       "failure": "Fehler beim Aktualisieren des Status",
-      "failedHeading": "Folgende Tickets konnten nicht aktualisiert werden:"
+      "failedHeading": "Folgende Tickets konnten nicht aktualisiert werden:",
+      "resolutionLabel": "Lösungskommentar (optional)",
+      "resolutionPlaceholder": "Beschreiben Sie, wie diese Tickets gelöst wurden",
+      "resolutionHelper": "Wird als Lösung in jedem ausgewählten Ticket gespeichert und erfüllt Boards, die vor dem Schließen eine Lösung verlangen."
     },
     "priority": {
       "dialogTitle": "Priorität für ausgewählte Tickets ändern",
@@ -946,6 +949,11 @@
     "closeReasonPlaceholder": "Grund für das trotzdem Schließen (optional, wird im Audit-Log erfasst)",
     "closing": "Wird geschlossen…",
     "closeAnyway": "Trotzdem schließen",
+    "markResolutionInternal": "Als intern markieren",
+    "markResolutionInternalHelper": "Eine interne Lösung erscheint nicht im Kundenportal und wird nicht in die Abschluss-E-Mail aufgenommen.",
+    "closeTicketNowTitle": "Ticket jetzt schließen?",
+    "closeTicketNowPrompt": "Dieser Kommentar ist nun die Lösung. Wählen Sie einen Schließstatus, um das Ticket zu schließen, oder lassen Sie es offen.",
+    "leaveTicketOpen": "Offen lassen",
     "timerActiveElsewhereTitle": "Timer an anderer Stelle aktiv",
     "timerTakeoverMessage": "Der Timer dieses Tickets ist in einem anderen Fenster aktiv. Möchten Sie ihn übernehmen und hier ersetzen?",
     "replaceHere": "Hier ersetzen",
@@ -1790,7 +1798,6 @@
       "replyTo": "An {{name}} antworten",
       "writeReply": "Antwort verfassen",
       "modeInternal": "Intern",
-      "modeResolution": "Lösung",
       "sending": "Wird gesendet…",
       "send": "Senden",
       "systemActor": "System",
@@ -1892,7 +1899,8 @@
       "remove": "Entfernen",
       "cancel": "Abbrechen",
       "save": "Speichern",
-      "menu": "Link-Aktionen"
+      "menu": "Link-Aktionen",
+      "openRecord": "Externen Datensatz öffnen"
     },
     "relationship": {
       "origin": "Ursprung",
@@ -1951,7 +1959,14 @@
       "systemLabelRequired": "Systembezeichnung ist erforderlich",
       "permissionDenied": "Zugriff verweigert",
       "systemRequired": "Wählen Sie ein externes System.",
-      "urlRequired": "Für Systeme ohne URL-Vorlage ist eine URL erforderlich."
+      "urlRequired": "Für Systeme ohne URL-Vorlage ist eine URL erforderlich.",
+      "invalidVisibility": "Nur Ticket-Links können geteilt werden; die Sichtbarkeit muss ein boolescher Wert sein"
+    },
+    "visibility": {
+      "label": "Sichtbarkeit",
+      "internal": "Nur intern",
+      "shared": "Im Kundenportal sichtbar",
+      "help": "Kunden mit Zugriff auf dieses Ticket können diesen Link sehen. Das Teilen des Links gewährt keinen Zugriff auf das externe System."
     }
   },
   "smartSearch": {
