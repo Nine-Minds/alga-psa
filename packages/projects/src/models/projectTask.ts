@@ -524,7 +524,7 @@ const ProjectTaskModel = {
   },
 
   // Task Ticket Links Methods
-  addTaskTicketLink: async (knexOrTrx: Knex | Knex.Transaction, tenant: string, projectId: string, taskId: string | null, ticketId: string, phaseId: string): Promise<IProjectTicketLink> => {
+  addTaskTicketLink: async (knexOrTrx: Knex | Knex.Transaction, tenant: string, projectId: string, taskId: string | null, ticketId: string, phaseId: string, billUnderProject: boolean = true): Promise<IProjectTicketLink> => {
     try {
       if (!tenant) {
         throw new Error('Tenant context is required');
@@ -550,6 +550,7 @@ const ProjectTaskModel = {
           phase_id: phaseId,
           task_id: taskId,
           ticket_id: ticketId,
+          bill_under_project: billUnderProject,
           tenant,
           created_at: knexOrTrx.fn.now()
         })
@@ -557,6 +558,30 @@ const ProjectTaskModel = {
       return newLink;
     } catch (error) {
       console.error('Error adding ticket link:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Flips whether the linked ticket's time bills as project time. Invoiced
+   * time is untouched either way: the billing engine only ever reads
+   * `invoiced = false` entries.
+   */
+  setTicketLinkBilling: async (knexOrTrx: Knex | Knex.Transaction, tenant: string, linkId: string, billUnderProject: boolean): Promise<void> => {
+    try {
+      if (!tenant) {
+        throw new Error('Tenant context is required');
+      }
+
+      const updated = await tenantScopedTable(knexOrTrx, 'project_ticket_links', tenant)
+        .where('link_id', linkId)
+        .update({ bill_under_project: billUnderProject });
+
+      if (updated === 0) {
+        throw new Error('Ticket link not found');
+      }
+    } catch (error) {
+      console.error('Error updating ticket link billing:', error);
       throw error;
     }
   },
@@ -757,6 +782,7 @@ const ProjectTaskModel = {
         .whereNotNull('project_ticket_links.task_id')
         .select(
           'project_ticket_links.link_id',
+          'project_ticket_links.bill_under_project',
           'project_tasks.task_id',
           'project_tasks.task_name',
           'projects.project_id',

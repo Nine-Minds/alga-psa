@@ -930,18 +930,38 @@ export class ProjectService extends BaseService<IProject> {
 
   async createTicketLink(projectId: string, data: CreateProjectTicketLinkData, context: ServiceContext): Promise<IProjectTicketLink> {
       const { knex } = await this.getKnex();
-      
+
       const linkData = {
-        ...data,
         project_id: projectId,
+        phase_id: data.phase_id ?? null,
+        task_id: data.task_id ?? null,
+        ticket_id: data.ticket_id,
+        // Default true, like every other link path: ticket time bills as
+        // project time unless the caller opts out (alga-2026-0002622).
+        bill_under_project: data.bill_under_project ?? true,
         tenant: context.tenant,
         created_at: new Date()
       };
-  
+
+      // Same guard the model applies on the UI path. The table is unique only
+      // on (tenant, link_id), so without it one ticket collects duplicate
+      // links and the biller has to clean them up by hand.
+      const existing = await tenantDb(knex, context.tenant).table('project_ticket_links')
+        .where({
+          project_id: linkData.project_id,
+          phase_id: linkData.phase_id,
+          task_id: linkData.task_id,
+          ticket_id: linkData.ticket_id
+        })
+        .first();
+      if (existing) {
+        throw new ConflictError('This ticket is already linked to this project task');
+      }
+
       const [link] = await tenantDb(knex, context.tenant).table('project_ticket_links')
         .insert(linkData)
         .returning('*');
-  
+
       return link;
     }
 
