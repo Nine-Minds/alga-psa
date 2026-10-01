@@ -2395,8 +2395,18 @@ export const duplicateTaskToPhase = withAuth(async (
                     if (!allowedTicketIds.has(link.ticket_id)) {
                         continue;
                     }
-                    // addTaskTicketLink expects projectId, taskId, ticketId, phaseId
-                    await ProjectTaskModel.addTaskTicketLink(trx, tenant, newPhase.project_id, newTask.task_id, link.ticket_id, newPhaseId);
+                    // addTaskTicketLink expects projectId, taskId, ticketId, phaseId.
+                    // A reference-only link stays reference-only on the copy:
+                    // duplicating a task must never start billing its time.
+                    await ProjectTaskModel.addTaskTicketLink(
+                        trx,
+                        tenant,
+                        newPhase.project_id,
+                        newTask.task_id,
+                        link.ticket_id,
+                        newPhaseId,
+                        link.bill_under_project ?? true
+                    );
                 }
             }
 
