@@ -2972,6 +2972,7 @@ const CALENDAR_ACCESS_LEVEL_LABELS: Record<string, Record<string, string>> = {
   it: { free_busy: 'libero/occupato', read: 'visualizza dettagli', edit: 'modifica', manage: 'gestione' },
   pl: { free_busy: 'wolny/zajęty', read: 'wyświetlanie szczegółów', edit: 'edycja', manage: 'zarządzanie' },
   pt: { free_busy: 'livre/ocupado', read: 'ver detalhes', edit: 'edição', manage: 'gestão' },
+  sv: { free_busy: 'ledig/upptagen', read: 'visa detaljer', edit: 'redigera', manage: 'hantera' },
 };
 
 /**

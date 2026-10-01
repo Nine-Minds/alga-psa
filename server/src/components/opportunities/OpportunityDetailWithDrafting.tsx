@@ -8,6 +8,7 @@ import {
   sendOpportunityFollowUp,
 } from '@enterprise/lib/opportunities/draftingActions';
 import { OpportunityCommitmentsSection } from './OpportunityCommitmentsSection';
+import { OpportunityInteractionsSection } from './OpportunityInteractionsSection';
 
 /**
  * Detail host with AI drafting callbacks injected. Rendered only when the
@@ -33,6 +34,13 @@ export function OpportunityDetailWithDrafting({
       autoOpenDraft={autoOpenDraft}
       returnTab={returnTab}
       commitments={managementAvailable ? <OpportunityCommitmentsSection detail={detail} /> : undefined}
+      activity={
+        <OpportunityInteractionsSection
+          opportunityId={detail.opportunity_id}
+          clientId={detail.client_id}
+          contactId={detail.contact_id ?? undefined}
+        />
+      }
       drafting={
         draftingAvailable
           ? {

@@ -18,7 +18,6 @@ on:
 permissions:
   contents: read
   actions: read
-  issues: write
 
 jobs:
   reconcile:
@@ -55,23 +54,13 @@ jobs:
           if-no-files-found: error
           retention-days: 14
       # This workflow failed 175 times in a row before anyone noticed, because a
-      # workflow_run failure shows up nowhere a reviewer looks.
-      - name: Open or update the failure notice
+      # workflow_run failure shows up nowhere a reviewer looks. Failures land in
+      # the test-metrics sheet (workflow_health tab), where CI health is tracked;
+      # a GitHub issue per streak was tried on 2026-09-29 and was noise there.
+      - name: Record the failure in the test-metrics sheet
         if: failure()
+        run: node scripts/record-workflow-health.mjs "$RUNNER_TEMP/browser-metric-collection.json" "$RUNNER_TEMP/browser-metric-reconciliation.json"
         env:
-          GH_TOKEN: ${{ github.token }}
-          GH_REPO: ${{ github.repository }}
-          NOTICE_TITLE: 'CI: browser metrics reconciliation is failing'
-        run: |
-          set -euo pipefail
-          url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/attempts/${GITHUB_RUN_ATTEMPT}"
-          body="$(printf '%s\n\n%s\n' "Browser metrics reconciliation failed. Read browser-metric-collection.json in the run artifact for the phase and code before rerunning." "Latest failing run: ${url}")"
-          # One open notice per streak, updated in place, so a failure run after
-          # every regression run cannot bury the repository in issues.
-          number="$(gh issue list --state open --limit 100 --json number,title --jq 'map(select(.title == env.NOTICE_TITLE)) | first | .number // empty')"
-          if [ -n "$number" ]; then
-            gh issue edit "$number" --body "$body"
-            echo "Updated existing notice #${number}."
-          else
-            gh issue create --title "$NOTICE_TITLE" --body "$body"
-          fi
+          WORKFLOW_HEALTH_CONCLUSION: ${{ job.status }}
+          GOOGLE_SA_KEY: ${{ secrets.TEST_METRICS_GOOGLE_SA_KEY }}
+          TEST_METRICS_SHEET_ID: ${{ vars.TEST_METRICS_SHEET_ID }}

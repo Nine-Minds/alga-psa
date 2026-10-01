@@ -289,7 +289,10 @@ export const ticketWithDetailsResponseSchema = ticketResponseSchema.extend({
   assigned_to_name: z.string().optional(),
   location_name: z.string().optional(),
   location_address: z.string().nullable().optional(),
-  
+  // Newest of the ticket's own timestamps and its newest visible comment.
+  // List-only (computed in SQL); client-portal callers see public activity only.
+  latest_activity_at: z.string().datetime().nullable().optional(),
+
   // Related objects
   client: z.object({
     client_id: uuidSchema,

@@ -84,8 +84,16 @@ export default function TicketNavigation({ currentTicketId, initialAdjacent }: T
   }, [currentTicketId, returnFilters]);
 
   const navigateToTicket = useCallback((ticketId: string) => {
+    // `returnFilters` is itself a query string, and useSearchParams() already
+    // decoded it — so it has to be re-encoded on the way out. Interpolating it
+    // raw made every `&`-separated pair after the first one a top-level param
+    // of the ticket URL instead, silently truncating the carried-over list
+    // state to its first filter: paging to the next ticket kept `statusId` but
+    // dropped `sortBy`/`sortDirection`, so the pager recomputed position under
+    // the default sort (showing 1/N with Previous disabled) and Back to
+    // Tickets returned to an unsorted list.
     const href = returnFilters
-      ? `/msp/tickets/${ticketId}?returnFilters=${returnFilters}`
+      ? `/msp/tickets/${ticketId}?returnFilters=${encodeURIComponent(returnFilters)}`
       : `/msp/tickets/${ticketId}`;
 
     const doNavigate = () => {
