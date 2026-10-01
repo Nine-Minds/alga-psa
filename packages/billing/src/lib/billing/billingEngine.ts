@@ -66,6 +66,10 @@ import {
 import { getClientDefaultTaxRegionCode as getClientDefaultTaxRegionCodeShared } from "@alga-psa/shared/billingClients";
 import { computePoolContributionsByService, resolveBucketForLine } from "@alga-psa/shared/billingClients/bucketUsageService";
 import {
+  ticketProjectAttributionJoin,
+  ticketProjectIdExpression,
+} from "@alga-psa/shared/billingClients/ticketProjectAttribution";
+import {
   calculateServicePeriodCoverage,
   resolveCadenceOwner,
   resolveRecurringSettlementsForInvoiceWindow,
@@ -1752,6 +1756,14 @@ export class BillingEngine {
           billingCurrency,
         )
       : [];
+    // Reported once per run, alongside the material warnings, and only where a
+    // project run can act on them.
+    const runWarnings = projectBillingContext
+      ? [
+          ...projectMaterialWarnings,
+          ...(await this.getAmbiguousTicketProjectWarnings(clientId)),
+        ]
+      : projectMaterialWarnings;
 
     if (clientContractLines.length === 0 && !nonContractSelection?.include) {
       if (materialCharges.length === 0 && !projectBillingContext) {
@@ -1762,7 +1774,7 @@ export class BillingEngine {
           adjustments: [],
           finalAmount: 0,
           currency_code: billingCurrency,
-          warnings: projectMaterialWarnings,
+          warnings: runWarnings,
           error:
             "No active contract lines found for this client in the selected billing period.",
         };
@@ -2059,7 +2071,7 @@ export class BillingEngine {
           ...canonicalFinalCharges,
           ...usageStatusField,
           projectCapThresholdCrossings: canonical.projectCapThresholdCrossings,
-          warnings: projectMaterialWarnings,
+          warnings: runWarnings,
         }
       : { ...canonicalFinalCharges, ...usageStatusField };
   }
@@ -2073,6 +2085,49 @@ export class BillingEngine {
     input: Parameters<typeof calculateContractBilling>[0],
   ) {
     return calculateContractBilling(input);
+  }
+
+  /**
+   * A ticket flagged into more than one project cannot be attributed without
+   * guessing, so the resolver drops it (project_count = 1) and the biller is
+   * told once per run which links to fix.
+   */
+  private async getAmbiguousTicketProjectWarnings(
+    clientId: string,
+  ): Promise<string[]> {
+    await this.initKnex();
+    if (!this.tenant) {
+      throw new Error("tenant context not found");
+    }
+
+    const db = tenantDb(this.knex, this.tenant);
+    const query = db.table("project_ticket_links");
+    db.tenantJoin(
+      query,
+      "tickets",
+      "project_ticket_links.ticket_id",
+      "tickets.ticket_id",
+    );
+    const rows = await query
+      .where("project_ticket_links.bill_under_project", true)
+      .where("tickets.client_id", clientId)
+      .groupBy("tickets.ticket_number")
+      .havingRaw("COUNT(DISTINCT project_ticket_links.project_id) > 1")
+      .select<{ ticket_number: string }[]>("tickets.ticket_number");
+
+    if (rows.length === 0) {
+      return [];
+    }
+
+    const listed = rows.slice(0, 5).map((row) => row.ticket_number);
+    const remainder = rows.length - listed.length;
+    const tickets =
+      remainder > 0 ? `${listed.join(", ")} and ${remainder} more` : listed.join(", ");
+
+    return [
+      `Time on ticket(s) ${tickets} was not attributed to a project: each is linked to more than one project. ` +
+        `Untick "Bill this ticket's time as project time" on the links that should not carry its time.`,
+    ];
   }
 
   private async getProjectMaterialCurrencyWarnings(
@@ -2465,13 +2520,10 @@ export class BillingEngine {
       "time_entries.service_id",
       { type: "left" },
     );
-    db.tenantJoin(
-      timeEntriesQuery,
-      "project_ticket_links",
-      "time_entries.work_item_id",
-      "project_ticket_links.ticket_id",
-      { type: "left" },
-    );
+    // Ticket time counts as project time when its link says so, so the project
+    // reached below is the phase's project for task time and the resolved link
+    // project for ticket time.
+    timeEntriesQuery.joinRaw(ticketProjectAttributionJoin("time_entries"));
     db.tenantJoin(
       timeEntriesQuery,
       "project_tasks",
@@ -2489,9 +2541,13 @@ export class BillingEngine {
     db.tenantJoin(
       timeEntriesQuery,
       "projects",
-      "project_phases.project_id",
+      this.knex.raw(
+        ticketProjectIdExpression("project_phases"),
+      ) as unknown as string,
       "projects.project_id",
-      { type: "left" },
+      // project_phases is null for ticket time, so the tenant predicate has to
+      // come from the time entry rather than the (inferred) phase.
+      { type: "left", rootTenantColumn: "time_entries.tenant" },
     );
     db.tenantJoin(
       timeEntriesQuery,
@@ -5029,13 +5085,9 @@ export class BillingEngine {
       currency: contractCurrency,
       alias: "sp",
     });
-    db.tenantJoin(
-      query,
-      "project_ticket_links",
-      "time_entries.work_item_id",
-      "project_ticket_links.ticket_id",
-      { type: "left" },
-    );
+    // Same attribution as the non-contract loader: a flagged ticket link makes
+    // the ticket's time reachable through its project.
+    query.joinRaw(ticketProjectAttributionJoin("time_entries"));
     db.tenantJoin(
       query,
       "project_tasks",
@@ -5053,9 +5105,11 @@ export class BillingEngine {
     db.tenantJoin(
       query,
       "projects",
-      "project_phases.project_id",
+      this.knex.raw(
+        ticketProjectIdExpression("project_phases"),
+      ) as unknown as string,
       "projects.project_id",
-      { type: "left" },
+      { type: "left", rootTenantColumn: "time_entries.tenant" },
     );
     db.tenantJoin(
       query,

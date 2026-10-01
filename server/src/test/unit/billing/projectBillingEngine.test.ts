@@ -3,6 +3,15 @@ import { readFileSync } from "node:fs";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { BillingEngine } from "@alga-psa/billing/services";
 import { TaxService } from "@alga-psa/billing/services/taxService";
+import {
+  computeTimeBasedCharges,
+  type TimeBasedChargeComputeInputs,
+} from "@alga-psa/billing/lib/billing/compute/computeTimeBasedCharges";
+import {
+  ticketProjectAttributionJoin,
+  ticketProjectIdExpression,
+} from "@alga-psa/shared/billingClients/ticketProjectAttribution";
+import type { IClientContractLine } from "@alga-psa/types";
 
 // Step 5 of the charge-attribution chain reads the client's default billing
 // profile from the database. These suites mock knex, so the read is stubbed —
@@ -642,6 +651,12 @@ describe("project billing engine orchestration", () => {
       engine as any,
       "getProjectMaterialCurrencyWarnings",
     ).mockResolvedValue([]);
+    // Ambiguous ticket→project links are read from the database; the suites
+    // that assert the warning channel stub this per test.
+    vi.spyOn(
+      engine as any,
+      "getAmbiguousTicketProjectWarnings",
+    ).mockResolvedValue([]);
   });
 
   it("T013: standalone T&M combines project contract time, unresolved time, materials, and milestones", async () => {
@@ -805,6 +820,47 @@ describe("project billing engine orchestration", () => {
     ]);
   });
 
+  it("T023: a ticket linked into two projects warns once per run and is attributed to neither", async () => {
+    const projectConfig = config({
+      billing_model: "time_and_materials",
+      total_price: null,
+      invoice_mode: "standalone",
+    });
+    const billingContext = context([projectConfig], []);
+    vi.spyOn(
+      engine as any,
+      "getClientContractLinesForBillingPeriod",
+    ).mockResolvedValue([]);
+    vi.spyOn(engine as any, "loadProjectBillingContext").mockResolvedValue(
+      billingContext,
+    );
+    vi.spyOn(engine as any, "calculateMaterialCharges").mockResolvedValue([]);
+    vi.spyOn(
+      engine as any,
+      "calculateUnresolvedNonContractCharges",
+    ).mockResolvedValue([]);
+    vi.mocked(
+      (engine as any).getAmbiguousTicketProjectWarnings,
+    ).mockResolvedValue([
+      'Time on ticket(s) T-42 was not attributed to a project: the ticket is linked to more than one project. Untick "Bill this ticket\'s time as project time" on the links that should not carry its time.',
+    ]);
+
+    const result = await (engine as any).calculateBillingForPreparedPeriod(
+      "client-1",
+      PERIOD,
+      CLIENT,
+      { projectTarget: { projectId: "project-1" } },
+    );
+
+    expect(result.warnings).toEqual([
+      'Time on ticket(s) T-42 was not attributed to a project: the ticket is linked to more than one project. Untick "Bill this ticket\'s time as project time" on the links that should not carry its time.',
+    ]);
+    expect(
+      (engine as any).getAmbiguousTicketProjectWarnings,
+    ).toHaveBeenCalledTimes(1);
+    expect(result.charges).toEqual([]);
+  });
+
   it("T021: no-config golden scenario preserves legacy contract/time/material/bucket output byte-for-byte", async () => {
     const fixed = {
       type: "fixed",
@@ -915,5 +971,175 @@ describe("project billing engine orchestration", () => {
       ),
     ).toBe(true);
     expect(actual).not.toHaveProperty("projectCapThresholdCrossings");
+  });
+});
+
+describe("ticket time project attribution", () => {
+  const PERIOD_START = "2026-07-01T00:00:00Z";
+  const PERIOD_END = "2026-08-01T00:00:00Z";
+  const NO_TAX = {
+    getTaxInfoFromService: () => ({ taxRegion: null, isTaxable: false }),
+    getLocationTaxRegionCode: () => null,
+    getClientDefaultTaxRegionCode: () => null,
+    isTaxExemptForProfile: () => false,
+    calculateTax: () => ({ taxAmount: 0, taxRate: 0 }),
+  };
+
+  // One approved hour on a ticket. `project_id` is what the resolver yields:
+  // the single billable project of the ticket's links, or null when the flag is
+  // off or the links are ambiguous. `project_phase_id` is always null for
+  // ticket time.
+  function ticketTimeInputs(
+    projectId: string | null,
+    billingModel = "time_and_materials",
+  ): TimeBasedChargeComputeInputs {
+    return {
+      billingPeriod: { startDate: PERIOD_START, endDate: PERIOD_END },
+      clientContractLine: {
+        client_contract_line_id: "line-1",
+      } as IClientContractLine,
+      timing: {
+        duePosition: "arrears",
+        servicePeriodStart: PERIOD_START,
+        servicePeriodEnd: PERIOD_END,
+        servicePeriodStartExclusive: PERIOD_START,
+        servicePeriodEndExclusive: PERIOD_END,
+        coverageRatio: 1,
+      },
+      client: { client_id: "client-1" },
+      plan: {},
+      serviceConfigMap: new Map([
+        [
+          "service-1",
+          {
+            config: {
+              config_id: "hourly-1",
+              hourly_rate: 12_000,
+              minimum_billable_time: 0,
+              round_up_to_nearest: 0,
+            },
+            userTypeRates: new Map<string, number>(),
+          },
+        ],
+      ]),
+      timeEntries: [
+        {
+          entry_id: "ticket-entry",
+          user_id: "user-1",
+          start_time: new Date(PERIOD_START),
+          end_time: new Date(PERIOD_END),
+          service_id: "service-1",
+          service_name: "Ticket support",
+          billable_duration: 60,
+          work_item_type: "ticket",
+          work_item_id: "ticket-1",
+          ticket_number: "T-1",
+          ticket_title: "Printer down",
+          currency_rate: 12_000,
+          project_id: projectId,
+          project_phase_id: null,
+        },
+      ],
+      contractCurrency: "USD",
+      getProjectChargeConfig: (candidate) =>
+        candidate === "project-1"
+          ? {
+              project_id: "project-1",
+              project_name: "Implementation",
+              project_number: "PRJ-100",
+              config_id: "config-1",
+              billing_model: billingModel,
+            }
+          : undefined,
+    };
+  }
+
+  it("T024: attributed ticket time bills as project time and carries the T&M project tag", () => {
+    const { charges } = computeTimeBasedCharges(
+      ticketTimeInputs("project-1"),
+      NO_TAX,
+    );
+
+    expect(charges).toHaveLength(1);
+    expect(charges[0]).toMatchObject({
+      type: "time",
+      entryId: "ticket-entry",
+      total: 12_000,
+      project_id: "project-1",
+      project_billing_config_id: "config-1",
+      project_name: "Implementation",
+    });
+    // The ticket stays the customer-visible work item; only the money moves.
+    expect(charges[0].workItemSnapshot).toMatchObject({
+      workItemType: "ticket",
+      ticketNumber: "T-1",
+    });
+  });
+
+  it("T025: unattributed ticket time (flag off or ambiguous links) bills the same hour untagged", () => {
+    const { charges } = computeTimeBasedCharges(ticketTimeInputs(null), NO_TAX);
+
+    expect(charges).toHaveLength(1);
+    expect(charges[0].total).toBe(12_000);
+    expect(charges[0]).not.toHaveProperty("project_id");
+    expect(charges[0]).not.toHaveProperty("project_billing_config_id");
+  });
+
+  it("T026: a fixed-price project never tags ticket time, and the loaders exclude it from hourly billing", () => {
+    const { charges } = computeTimeBasedCharges(
+      ticketTimeInputs("project-1", "fixed_price"),
+      NO_TAX,
+    );
+    expect(charges[0]).not.toHaveProperty("project_billing_config_id");
+
+    // The exclusion itself is a loader predicate, and it keys off the project
+    // the COALESCE join now resolves for ticket time.
+    expect(billingEngineSource).toContain(
+      'this.whereNull("projects.project_id").orWhereNotIn(\n          "projects.project_id",\n          fixedPriceProjectIds,',
+    );
+  });
+
+  it("T027: both time-entry loaders resolve the project through the shared resolver", () => {
+    const resolverCalls = billingEngineSource.match(
+      /joinRaw\(ticketProjectAttributionJoin\("time_entries"\)\)/g,
+    );
+    expect(resolverCalls).toHaveLength(2);
+
+    const coalesceJoins = billingEngineSource.match(
+      /ticketProjectIdExpression\("project_phases"\)/g,
+    );
+    expect(coalesceJoins).toHaveLength(2);
+    // project_phases is null for ticket time, so the projects join cannot infer
+    // its tenant predicate from the phase.
+    expect(billingEngineSource).toContain(
+      '{ type: "left", rootTenantColumn: "time_entries.tenant" }',
+    );
+    // The dead join this replaces must not come back: the only remaining
+    // reference to the link table is the ambiguity reader behind the warning.
+    expect(
+      billingEngineSource.match(/project_ticket_links/g),
+    ).toHaveLength(4);
+    expect(billingEngineSource).toContain(
+      'havingRaw("COUNT(DISTINCT project_ticket_links.project_id) > 1")',
+    );
+    // Decision e: invoiced time is out of reach of both loaders, whatever the
+    // link says.
+    expect(billingEngineSource).toContain('.where("time_entries.invoiced", false)');
+  });
+
+  it("T028: the resolver yields one row per ticket and attributes nothing when links disagree", () => {
+    const join = ticketProjectAttributionJoin("time_entries");
+
+    // Grouped by the Citus distribution column, so one ticket can never fan a
+    // time entry out into several rows however many links it carries.
+    expect(join).toContain("GROUP BY tenant, ticket_id");
+    expect(join).toContain("WHERE bill_under_project");
+    expect(join).toContain("COUNT(DISTINCT project_id) AS project_count");
+    expect(join).toContain("ticket_project.project_count = 1");
+    expect(join).toContain("time_entries.work_item_type = 'ticket'");
+    expect(join).toContain("ticket_project.tenant = time_entries.tenant");
+    expect(ticketProjectIdExpression("project_phases")).toBe(
+      "COALESCE(project_phases.project_id, ticket_project.project_id)",
+    );
   });
 });
