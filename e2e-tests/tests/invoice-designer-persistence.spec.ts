@@ -106,7 +106,10 @@ test('an administrator authors a billed-time date sort and reopens its persisted
   expect(saved.templateAst.bindings.collections[nestedTable.repeat.sourceBinding.bindingId].path).toBe('group.entries');
   expect(nestedTable.columns).toHaveLength(6);
   const primaryTable = tables.find(table => table.id !== detailTable.id && table.id !== nestedTable.id);
-  expect(primaryTable.repeat.sourceBinding.bindingId).toContain('items');
+  // The charges table binds under the document catalog's canonical id, the same
+  // one shipped templates use, and that binding still reads the invoice items.
+  expect(primaryTable.repeat.sourceBinding.bindingId).toBe('lineItems');
+  expect(saved.templateAst.bindings.collections.lineItems).toEqual({ id: 'lineItems', kind: 'collection', path: 'items' });
   expect(detailTable.columns.map((column: any) => column.value)).toEqual([
     'date', 'ticketNumber', 'title', 'hours', 'rateDisplay', 'amount',
   ].map(path => expect.objectContaining({ type: 'path', path })));
