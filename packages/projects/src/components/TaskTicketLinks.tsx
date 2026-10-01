@@ -414,7 +414,9 @@ const TaskTicketLinks = forwardRef<TaskTicketLinksRef, TaskTicketLinksProps>(fun
         if (selectedTicketDetails) {
           // Create a new link object instead of fetching all links again
           const newLink: IProjectTicketLinkWithDetails = {
-            link_id: `new-${Date.now()}`, // This will be replaced with the actual ID on next fetch
+            // Keep the persisted id so the billing toggle on this row reaches
+            // the server instead of only moving local state.
+            link_id: result.link_id,
             task_id: taskId,
             ticket_id: selectedTicketDetails.ticket_id!,
             ticket_number: selectedTicketDetails.ticket_number,
@@ -422,7 +424,7 @@ const TaskTicketLinks = forwardRef<TaskTicketLinksRef, TaskTicketLinksProps>(fun
             created_at: new Date(),
             project_id: projectId,
             phase_id: phaseId,
-            bill_under_project: billUnderProject,
+            bill_under_project: result.bill_under_project ?? billUnderProject,
             status_name: selectedTicketDetails.status_name || linkT('defaultNewStatus', 'New'),
             is_closed: false
           };
@@ -507,8 +509,8 @@ const TaskTicketLinks = forwardRef<TaskTicketLinksRef, TaskTicketLinksProps>(fun
     }
   };
 
-  // Unsaved links (new task, or the optimistic row before the next fetch) have
-  // no persisted link_id yet, so their flag only moves in local state.
+  // Links on an unsaved task have no persisted link_id yet, so their flag only
+  // moves in local state until the task is saved.
   const isPersistedLink = (linkId: string) => !linkId.startsWith('temp-') && !linkId.startsWith('new-');
 
   const onToggleLinkBilling = async (link: IProjectTicketLinkWithDetails) => {
@@ -556,7 +558,8 @@ const TaskTicketLinks = forwardRef<TaskTicketLinksRef, TaskTicketLinksProps>(fun
 
         // Create a new link object instead of fetching all links again
         const newLink: IProjectTicketLinkWithDetails = {
-          link_id: `new-${Date.now()}`, // This will be replaced with the actual ID on next fetch
+          // Persisted id, so the row's billing toggle hits the server.
+          link_id: result.link_id,
           task_id: taskId,
           ticket_id: ticket.ticket_id,
           ticket_number: ticket.ticket_number || `#${Date.now()}`,
@@ -564,7 +567,7 @@ const TaskTicketLinks = forwardRef<TaskTicketLinksRef, TaskTicketLinksProps>(fun
           created_at: new Date(),
           project_id: projectId,
           phase_id: phaseId,
-          bill_under_project: true,
+          bill_under_project: result.bill_under_project ?? true,
           status_name: defaultStatus?.name || linkT('defaultNewStatus', 'New'),
           is_closed: false
         };
