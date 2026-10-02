@@ -338,6 +338,8 @@
     },
     "captchaRequired": "Slutför verifieringen nedan och logga sedan in igen.",
     "tooManyAttempts": "För många misslyckade inloggningsförsök. Vänta några minuter innan du försöker igen.",
+    "tenantRequiredMessage": "Din e-postadress är kopplad till mer än en organisation – välj din organisation för att fortsätta.",
+    "tenantRequiredLink": "Välj din organisation",
     "tenantDiscovery": {
       "title": "Hitta din organisation",
       "description": "Ange din e-postadress så skickar vi inloggningslänkar för alla organisationer du har åtkomst till.",

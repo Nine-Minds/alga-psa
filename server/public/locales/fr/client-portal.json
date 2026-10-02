@@ -283,6 +283,8 @@
     },
     "captchaRequired": "Veuillez compléter la vérification ci-dessous, puis connectez-vous à nouveau.",
     "tooManyAttempts": "Trop de tentatives de connexion échouées. Veuillez patienter quelques minutes avant de réessayer.",
+    "tenantRequiredMessage": "Votre adresse e-mail est associée à plusieurs organisations — choisissez votre organisation pour continuer.",
+    "tenantRequiredLink": "Choisir votre organisation",
     "tenantDiscovery": {
       "title": "Trouvez votre organisation",
       "description": "Saisissez votre adresse e-mail et nous vous enverrons des liens de connexion pour toutes les organisations auxquelles vous avez accès.",
