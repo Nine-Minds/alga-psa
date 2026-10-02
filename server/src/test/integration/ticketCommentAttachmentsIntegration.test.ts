@@ -578,7 +578,14 @@ describe('ticket comment attachments (migrated PostgreSQL)', () => {
     const bytes = Buffer.from('%PDF-bundled-notification'), messages: any[] = [];
     const { sendEventEmail } = await import('@/lib/notifications/sendEventEmail');
     const { getSecretProviderInstance } = await import('@alga-psa/core/secrets');
-    const secret = vi.spyOn(await getSecretProviderInstance(), 'getAppSecret').mockResolvedValue('bundle-test-secret');
+    // Leave redis_password on the real provider: vitest 4 gives this file a
+    // fresh process, so the event bus creates its Redis client during this test
+    // and must not be handed the fake app secret as its password.
+    const secretProvider = await getSecretProviderInstance();
+    const realGetAppSecret = secretProvider.getAppSecret.bind(secretProvider);
+    const secret = vi.spyOn(secretProvider, 'getAppSecret').mockImplementation(
+      async (name: string) => (name === 'redis_password' ? realGetAppSecret(name) : 'bundle-test-secret'),
+    );
     const provider = new SMTPEmailProvider('bundle-test');
     if (mode === 'provider-limited') provider.capabilities.maxAttachmentSize = 1;
     const stream = nodemailer.createTransport({ streamTransport: true, buffer: true });
