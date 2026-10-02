@@ -514,6 +514,13 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
                   ? QBO_PSEUDO_TAX_CODE_NON_TAXABLE
                   : taxCodeRef ?? QBO_PSEUDO_TAX_CODE_TAXABLE
             };
+          } else if (automatedSalesTaxEnabled && charge.is_taxable === false) {
+            // Alga owns the tax total here, but the line still carries a code,
+            // and on an AST company Intuit accepts only TAX/NON — a mapped
+            // catalog code faults the whole invoice with "Invalid Line
+            // TaxCode" (6100). An exempt line says NON regardless of what its
+            // region is mapped to; omitting the code would read as taxable.
+            salesDetail.TaxCodeRef = { value: QBO_PSEUDO_TAX_CODE_NON_TAXABLE };
           } else if (taxCodeRef) {
             salesDetail.TaxCodeRef = { value: taxCodeRef };
           }

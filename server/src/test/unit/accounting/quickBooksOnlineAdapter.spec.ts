@@ -1465,6 +1465,49 @@ describe('QuickBooksOnlineAdapter Automated Sales Tax mode', () => {
     expect(invoice.Line[0].SalesItemLineDetail.TaxCodeRef).toEqual({ value: 'NON' });
   });
 
+  // Internal-tax mode on an AST realm still puts a tax code on the line, and
+  // Intuit accepts only TAX/NON there — a mapped catalog code faults the whole
+  // invoice with "Invalid Line TaxCode" (6100). This is the shape of invoice
+  // I001287: one non-taxable line, tax_source switched to internal.
+  it('AST on, internal-tax mode: a non-taxable charge carries NON, not the mapped code', async () => {
+    const invoice = await transformWith({
+      astEnabled: true,
+      taxDelegationMode: 'none',
+      excludeTaxFromExport: false,
+      charge: { is_taxable: false, tax_amount: 0 },
+      taxCodeMapping: { external_entity_id: '2', metadata: { externalDisplayName: 'Out of scope (0%)' } }
+    });
+
+    expect(invoice.Line[0].SalesItemLineDetail.TaxCodeRef).toEqual({ value: 'NON' });
+  });
+
+  it('AST on, internal-tax mode: a taxable charge keeps the mapped tax code', async () => {
+    const invoice = await transformWith({
+      astEnabled: true,
+      taxDelegationMode: 'none',
+      excludeTaxFromExport: false,
+      charge: { is_taxable: true },
+      taxCodeMapping: { external_entity_id: 'TAX-NY', metadata: {} }
+    });
+
+    expect(invoice.Line[0].SalesItemLineDetail.TaxCodeRef).toEqual({ value: 'TAX-NY' });
+    expect(invoice.TxnTaxDetail).toEqual({ TotalTax: 17.75 });
+  });
+
+  it('AST off, internal-tax mode: a non-taxable charge still carries the mapped code', async () => {
+    // Off the AST path nothing changes: a non-AST company accepts its own
+    // zero-rate codes, and silently rewriting them to NON would be a new bug.
+    const invoice = await transformWith({
+      astEnabled: false,
+      taxDelegationMode: 'none',
+      excludeTaxFromExport: false,
+      charge: { is_taxable: false, tax_amount: 0 },
+      taxCodeMapping: { external_entity_id: '2', metadata: {} }
+    });
+
+    expect(invoice.Line[0].SalesItemLineDetail.TaxCodeRef).toEqual({ value: '2' });
+  });
+
   it('never emits GlobalTaxCalculation, which faults on US companies', async () => {
     for (const astEnabled of [false, true]) {
       const invoice = await transformWith({

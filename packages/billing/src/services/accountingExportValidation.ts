@@ -1,9 +1,26 @@
+/* eslint-disable custom-rules/no-feature-to-feature-imports -- Export pre-validation must judge a mapping against the connected QuickBooks company's tax settings */
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { AccountingExportRepository } from '../repositories/accountingExportRepository';
-import { AccountingMappingResolver } from './accountingMappingResolver';
+import { AccountingMappingResolver, type MappingResolution } from './accountingMappingResolver';
 import { getAccountingSyncSettings } from './accountingSync/accountingSyncSettings';
 import type { AccountingExportLine, AccountingExportServicePeriodSource } from '@alga-psa/types';
 import { normalizeAccountingExportCalendarDate } from './accountingExportDateUtils';
+import { isQboAutomatedSalesTaxEnabled } from '@alga-psa/integrations/lib/qbo/qboTaxSettings';
+import { isQboUnitedStatesCompany } from '@alga-psa/integrations/lib/qbo/qboCompanyCountry';
+
+/**
+ * The only line-level tax codes Intuit accepts on a US Automated Sales Tax
+ * company. Any other id — including a real code from the company's own tax-code
+ * list — is rejected at delivery with "Invalid Line TaxCode" (6100), so a
+ * mapping that names one is caught here rather than three retries later.
+ */
+const QBO_AST_PSEUDO_TAX_CODES = new Set(['TAX', 'NON']);
+
+function readExternalDisplayName(metadata: unknown): string | null {
+  if (!metadata || typeof metadata !== 'object') return null;
+  const value = (metadata as Record<string, unknown>).externalDisplayName;
+  return typeof value === 'string' && value.length > 0 ? value : null;
+}
 
 type ChargeProjection = {
   tenant: string;
@@ -12,6 +29,7 @@ type ChargeProjection = {
   service_id?: string | null;
   tax_region?: string | null;
   net_amount?: number | string | null;
+  is_taxable?: boolean | null;
 };
 
 type ChargeDetailProjection = {
@@ -170,7 +188,7 @@ export class AccountingExportValidation {
     const charges =
       chargeIds.size > 0
         ? await db.table<ChargeProjection>('invoice_charges')
-            .select('item_id', 'invoice_id', 'service_id', 'tax_region', 'net_amount')
+            .select('item_id', 'invoice_id', 'service_id', 'tax_region', 'net_amount', 'is_taxable')
             .whereIn('item_id', Array.from(chargeIds))
         : [];
     const chargesById = new Map(charges.map((charge) => [charge.item_id, charge]));
@@ -290,11 +308,28 @@ export class AccountingExportValidation {
 
     const checkedTaxRegions = new Set<string>();
     const missingTaxRegions = new Set<string>();
+    const invalidTaxRegions = new Set<string>();
+    const taxMappingByRegion = new Map<string, MappingResolution | null>();
     const checkedPaymentTerms = new Set<string>();
     const missingPaymentTerms = new Set<string>();
     const missingClientRefs = new Set<string>();
     const checkedServiceMappings = new Set<string>();
     const missingServiceMappings = new Set<string>();
+
+    // Resolved at most once per batch, and only once a tax mapping actually
+    // needs judging: reading the company country costs a QuickBooks round trip,
+    // and the pseudo-code rule binds US Automated Sales Tax companies only.
+    let qboAstUsCompany: boolean | null = null;
+    const isQboAstUsCompany = async (): Promise<boolean> => {
+      if (qboAstUsCompany === null) {
+        qboAstUsCompany =
+          adapterType === 'quickbooks_online' &&
+          Boolean(batch.target_realm) &&
+          (await isQboAutomatedSalesTaxEnabled(knex, tenant, batch.target_realm)) &&
+          (await isQboUnitedStatesCompany(tenant, batch.target_realm));
+      }
+      return qboAstUsCompany;
+    };
 
     const serviceIds = new Set<string>();
     for (const charge of charges) {
@@ -471,7 +506,36 @@ export class AccountingExportValidation {
             });
             missingTaxRegions.add(cacheKey);
           }
+          taxMappingByRegion.set(cacheKey, taxMapping);
           checkedTaxRegions.add(cacheKey);
+        }
+
+        // Taxability is a property of the charge, not of the region, so this
+        // runs for every line even after the region's mapping has been
+        // resolved once. A non-taxable line is exempt from the check: the
+        // exporter sends NON for it on an AST realm whatever the mapping says.
+        const resolvedTaxMapping = taxMappingByRegion.get(cacheKey) ?? null;
+        if (
+          resolvedTaxMapping &&
+          charge.is_taxable !== false &&
+          !invalidTaxRegions.has(cacheKey) &&
+          !QBO_AST_PSEUDO_TAX_CODES.has(resolvedTaxMapping.external_entity_id) &&
+          (await isQboAstUsCompany())
+        ) {
+          const mappedName =
+            readExternalDisplayName(resolvedTaxMapping.metadata) ?? resolvedTaxMapping.external_entity_id;
+          await repo.addError({
+            batch_id: batchId,
+            line_id: line.line_id,
+            code: 'invalid_tax_mapping',
+            message: `Tax region ${charge.tax_region} is mapped to QuickBooks tax code "${mappedName}", which QuickBooks rejects on Automated Sales Tax companies. Map it to TAX or NON under Settings → Integrations → Accounting → QuickBooks → Tax Codes.`,
+            metadata: mergeErrorMetadata(line, {
+              tax_region: charge.tax_region,
+              external_entity_id: resolvedTaxMapping.external_entity_id,
+              external_display_name: mappedName
+            })
+          });
+          invalidTaxRegions.add(cacheKey);
         }
       }
     }
