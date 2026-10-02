@@ -71,6 +71,9 @@
       "name": "Contract Lines"
     },
     {
+      "name": "Countries"
+    },
+    {
       "name": "Documents"
     },
     {
@@ -7020,6 +7023,23 @@
           "id"
         ]
       },
+      "ClientLocationIdParams": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "locationId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "id",
+          "locationId"
+        ]
+      },
       "ContactIdParam": {
         "type": "object",
         "properties": {
@@ -7281,8 +7301,7 @@
             "type": "string"
           },
           "address_line1": {
-            "type": "string",
-            "minLength": 1
+            "type": "string"
           },
           "address_line2": {
             "type": "string"
@@ -7291,8 +7310,7 @@
             "type": "string"
           },
           "city": {
-            "type": "string",
-            "minLength": 1
+            "type": "string"
           },
           "state_province": {
             "type": "string"
@@ -7339,8 +7357,6 @@
           }
         },
         "required": [
-          "address_line1",
-          "city",
           "country_code",
           "country_name"
         ]
@@ -9808,6 +9824,35 @@
           }
         }
       },
+      "ContactAvatarResult": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "success": {
+                "type": "boolean"
+              },
+              "message": {
+                "type": "string"
+              },
+              "avatarUrl": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "success",
+              "message"
+            ]
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
       "ContractLineIdParam": {
         "type": "object",
         "properties": {
@@ -11330,6 +11375,7 @@
               "it",
               "pl",
               "pt",
+              "sv",
               "xx",
               "yy"
             ],
@@ -11372,6 +11418,7 @@
               "it",
               "pl",
               "pt",
+              "sv",
               "xx",
               "yy"
             ],
@@ -11393,6 +11440,7 @@
               "it",
               "pl",
               "pt",
+              "sv",
               "xx",
               "yy"
             ],
@@ -11632,6 +11680,7 @@
               "it",
               "pl",
               "pt",
+              "sv",
               "xx",
               "yy"
             ],
@@ -13816,6 +13865,42 @@
             "maximum": 200
           }
         }
+      },
+      "CountriesEnvelope": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string",
+                  "minLength": 2,
+                  "maxLength": 2,
+                  "description": "ISO 3166-1 alpha-2"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "phone_code": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "description": "International dialing prefix, e.g. +1"
+                }
+              },
+              "required": [
+                "code",
+                "name"
+              ]
+            }
+          }
+        },
+        "required": [
+          "data"
+        ]
       },
       "PriorityListQuery": {
         "type": "object",
@@ -22108,6 +22193,42 @@
             "items": {
               "type": "string"
             }
+          },
+          "service_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "is_closed": {
+            "type": "boolean"
+          },
+          "phase_name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "project_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "project_name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "client_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
           }
         },
         "required": [
@@ -22331,6 +22452,317 @@
         ],
         "description": "Payload for creating a project task within a phase. Provide project_status_mapping_id as a UUID from the project task status mappings endpoint. The phaseId path parameter selects which phase will receive the task."
       },
+      "ProjectTaskCommentParams": {
+        "type": "object",
+        "properties": {
+          "taskId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Project task UUID."
+          },
+          "commentId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Task comment UUID."
+          }
+        },
+        "required": [
+          "taskId",
+          "commentId"
+        ]
+      },
+      "ProjectTaskCommentResource": {
+        "type": "object",
+        "properties": {
+          "task_comment_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "task_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "thread_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "parent_comment_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "user_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "author_type": {
+            "type": "string",
+            "enum": [
+              "internal"
+            ]
+          },
+          "note": {
+            "type": "string"
+          },
+          "markdown_content": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "created_at": {
+            "type": "string"
+          },
+          "updated_at": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "edited_at": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "deleted_at": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "author": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "user_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "first_name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "last_name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "email": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "avatar_url": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "user_id",
+              "first_name",
+              "last_name",
+              "email",
+              "avatar_url"
+            ]
+          },
+          "reactions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "emoji": {
+                  "type": "string"
+                },
+                "count": {
+                  "type": "integer"
+                },
+                "userIds": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "format": "uuid"
+                  }
+                },
+                "currentUserReacted": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "emoji",
+                "count",
+                "userIds",
+                "currentUserReacted"
+              ]
+            }
+          },
+          "reaction_user_names": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "task_comment_id",
+          "task_id",
+          "thread_id",
+          "parent_comment_id",
+          "user_id",
+          "author_type",
+          "note",
+          "markdown_content",
+          "created_at",
+          "updated_at",
+          "edited_at",
+          "deleted_at",
+          "author",
+          "reactions",
+          "reaction_user_names"
+        ]
+      },
+      "ProjectTaskCommentEnvelope": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/ProjectTaskCommentResource"
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "ProjectTaskCommentListEnvelope": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProjectTaskCommentResource"
+            }
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "ProjectTaskCommentBody": {
+        "type": "object",
+        "properties": {
+          "note": {
+            "type": "string",
+            "minLength": 1
+          },
+          "parent_comment_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "note"
+        ],
+        "additionalProperties": false
+      },
+      "ProjectTaskCommentUpdateBody": {
+        "type": "object",
+        "properties": {
+          "note": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "note"
+        ],
+        "additionalProperties": false
+      },
+      "ProjectTaskCommentReactionBody": {
+        "type": "object",
+        "properties": {
+          "emoji": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 50
+          }
+        },
+        "required": [
+          "emoji"
+        ],
+        "additionalProperties": false
+      },
+      "ProjectTaskCommentReactionEnvelope": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "added": {
+                "type": "boolean"
+              },
+              "reactions": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "emoji": {
+                      "type": "string"
+                    },
+                    "count": {
+                      "type": "integer"
+                    },
+                    "userIds": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "format": "uuid"
+                      }
+                    },
+                    "currentUserReacted": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "emoji",
+                    "count",
+                    "userIds",
+                    "currentUserReacted"
+                  ]
+                }
+              },
+              "reaction_user_names": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "added",
+              "reactions",
+              "reaction_user_names"
+            ]
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
       "WorkV1IdParam": {
         "type": "object",
         "properties": {
@@ -22375,6 +22807,62 @@
         "required": [
           "taskId"
         ]
+      },
+      "WorkV1ProjectTaskChecklistItemParams": {
+        "type": "object",
+        "properties": {
+          "taskId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Project task UUID from project_tasks.task_id."
+          },
+          "itemId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Checklist item UUID from task_checklist_items.checklist_item_id."
+          }
+        },
+        "required": [
+          "taskId",
+          "itemId"
+        ]
+      },
+      "WorkV1ProjectTaskChecklistItemBody": {
+        "type": "object",
+        "properties": {
+          "item_name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Checklist item text. Required on create. `item_text` is accepted as a legacy alias."
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "assigned_to": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "completed": {
+            "type": "boolean",
+            "description": "Mark the item done/undone. `is_completed` is accepted as a legacy alias."
+          },
+          "due_date": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "order_number": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
       },
       "WorkV1SessionParam": {
         "type": "object",
@@ -24024,7 +24512,7 @@
               "string",
               "null"
             ],
-            "pattern": "^\\d{4}-\\d{2}-\\d{2}([T ].*)?$"
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
           },
           "next_action": {
             "type": "string",
@@ -24137,7 +24625,7 @@
               "string",
               "null"
             ],
-            "pattern": "^\\d{4}-\\d{2}-\\d{2}([T ].*)?$"
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
           },
           "generator_key": {
             "type": [
@@ -24249,7 +24737,7 @@
           },
           "project_start_date": {
             "type": "string",
-            "pattern": "^\\d{4}-\\d{2}-\\d{2}([T ].*)?$"
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
           }
         },
         "additionalProperties": false
@@ -24433,7 +24921,7 @@
               "string",
               "null"
             ],
-            "pattern": "^\\d{4}-\\d{2}-\\d{2}([T ].*)?$"
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
           },
           "next_action": {
             "type": "string",
@@ -26384,12 +26872,33 @@
                   },
                   "opportunitiesCreate": {
                     "type": "boolean"
+                  },
+                  "projects": {
+                    "type": "boolean",
+                    "description": "Project tasks on mobile (project:read; PSA product only)."
+                  },
+                  "clientsCreate": {
+                    "type": "boolean"
+                  },
+                  "clientsUpdate": {
+                    "type": "boolean"
+                  },
+                  "contactsCreate": {
+                    "type": "boolean"
+                  },
+                  "contactsUpdate": {
+                    "type": "boolean"
                   }
                 },
                 "required": [
                   "inventory",
                   "opportunities",
-                  "opportunitiesCreate"
+                  "opportunitiesCreate",
+                  "projects",
+                  "clientsCreate",
+                  "clientsUpdate",
+                  "contactsCreate",
+                  "contactsUpdate"
                 ]
               },
               "formatting": {
@@ -42982,6 +43491,10 @@
                     "items": {
                       "type": "string"
                     }
+                  },
+                  "deactivate_contacts": {
+                    "type": "boolean",
+                    "description": "With is_inactive=true: also deactivate the client's contacts and their portal users (default true). Requires contact:update when true."
                   }
                 }
               }
@@ -44264,6 +44777,307 @@
         }
       }
     },
+    "/api/v1/clients/{id}/locations/{locationId}": {
+      "put": {
+        "summary": "Update client location",
+        "description": "Updates one location of client_id. This is where a client's phone, email and address are edited; PUT /api/v1/clients/{id} rejects those fields. Promoting is_default demotes the previous default; the last active location cannot lose its default flag.",
+        "tags": [
+          "Clients"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-rbac-resource": "client",
+          "x-rbac-action": "update"
+        },
+        "x-alga-products": [
+          "psa",
+          "algadesk"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "locationId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/ClientLocationBody"
+                  },
+                  {
+                    "properties": {
+                      "location_name": {
+                        "type": "string"
+                      },
+                      "address_line1": {
+                        "type": "string"
+                      },
+                      "address_line2": {
+                        "type": "string"
+                      },
+                      "address_line3": {
+                        "type": "string"
+                      },
+                      "city": {
+                        "type": "string"
+                      },
+                      "state_province": {
+                        "type": "string"
+                      },
+                      "postal_code": {
+                        "type": "string"
+                      },
+                      "country_code": {
+                        "type": "string",
+                        "minLength": 2,
+                        "maxLength": 3
+                      },
+                      "country_name": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "region_code": {
+                        "type": "string"
+                      },
+                      "is_billing_address": {
+                        "type": "boolean"
+                      },
+                      "is_shipping_address": {
+                        "type": "boolean"
+                      },
+                      "is_default": {
+                        "type": "boolean"
+                      },
+                      "phone": {
+                        "type": "string"
+                      },
+                      "fax": {
+                        "type": "string"
+                      },
+                      "email": {
+                        "type": [
+                          "string",
+                          "null"
+                        ],
+                        "format": "email",
+                        "description": "null clears the email"
+                      },
+                      "notes": {
+                        "type": "string"
+                      },
+                      "is_active": {
+                        "type": "boolean"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Client location updated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientLocationEnvelope"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid ids or request payload.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientContactApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key missing/invalid or key user not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientContactApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Permission denied for client update.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientContactApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Client or location not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientContactApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default-location rule violated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientContactApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected client location update failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientContactApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete client location",
+        "description": "Deletes one location of client_id. Refused while tickets or other records still reference it.",
+        "tags": [
+          "Clients"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-rbac-resource": "client",
+          "x-rbac-action": "update"
+        },
+        "x-alga-products": [
+          "psa",
+          "algadesk"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "locationId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Client location deleted."
+          },
+          "400": {
+            "description": "Invalid ids.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientContactApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key missing/invalid or key user not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientContactApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Permission denied for client update.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientContactApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Client or location not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientContactApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Location still referenced by other records.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientContactApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected client location deletion failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientContactApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/contacts": {
       "get": {
         "summary": "List contacts",
@@ -44853,6 +45667,205 @@
           },
           "500": {
             "description": "Unexpected contact deletion failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientContactApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/contacts/{id}/avatar": {
+      "post": {
+        "summary": "Upload contact avatar",
+        "description": "Replaces the contact's avatar from the multipart form field `avatar`. Same storage path as the web contact page.",
+        "tags": [
+          "Contacts"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-rbac-resource": "contact",
+          "x-rbac-action": "update"
+        },
+        "x-alga-products": [
+          "psa",
+          "algadesk"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "avatar": {
+                    "type": "string",
+                    "description": "Multipart file field name expected by controller: avatar."
+                  }
+                },
+                "required": [
+                  "avatar"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Avatar stored.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContactAvatarResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Missing file or invalid id.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientContactApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key missing/invalid or key user not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientContactApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Permission denied for contact update.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientContactApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Contact not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientContactApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected avatar upload failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientContactApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete contact avatar",
+        "description": "Removes the contact's avatar.",
+        "tags": [
+          "Contacts"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-rbac-resource": "contact",
+          "x-rbac-action": "update"
+        },
+        "x-alga-products": [
+          "psa",
+          "algadesk"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Avatar removed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContactAvatarResult"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key missing/invalid or key user not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientContactApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Permission denied for contact update.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientContactApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Contact not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientContactApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected avatar deletion failure.",
             "content": {
               "application/json": {
                 "schema": {
@@ -48715,6 +49728,7 @@
                 "it",
                 "pl",
                 "pt",
+                "sv",
                 "xx",
                 "yy"
               ],
@@ -48850,6 +49864,7 @@
                 "it",
                 "pl",
                 "pt",
+                "sv",
                 "xx",
                 "yy"
               ],
@@ -49050,6 +50065,7 @@
                 "it",
                 "pl",
                 "pt",
+                "sv",
                 "xx",
                 "yy"
               ],
@@ -59063,6 +60079,58 @@
           },
           "403": {
             "description": "Caller lacks the required permission.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/countries": {
+      "get": {
+        "summary": "List countries",
+        "description": "Lists the active ISO 3166-1 countries (code, name, dialing code) available for client locations. Global reference data, identical for every tenant; any authenticated caller may read it.",
+        "tags": [
+          "Countries"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": false
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "responses": {
+          "200": {
+            "description": "Active countries sorted by name.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CountriesEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key missing/invalid.",
             "content": {
               "application/json": {
                 "schema": {
@@ -85874,6 +86942,493 @@
         }
       }
     },
+    "/api/v1/projects/tasks/{taskId}/comments": {
+      "get": {
+        "summary": "List project task comments",
+        "description": "Returns every comment on the task oldest first, soft-deleted rows included (note \"[deleted]\", deleted_at set) so reply threads stay well-formed, each with its aggregated emoji reactions. Task comments are always internal. Requires project_task:read.",
+        "tags": [
+          "Projects"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-header-required": true,
+          "x-rbac-resource": "project_task",
+          "x-rbac-action": "read"
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Project task UUID."
+            },
+            "required": true,
+            "description": "Project task UUID.",
+            "name": "taskId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Task comments returned.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectTaskCommentListEnvelope"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid identifiers or request payload.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication failed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks project_task:read, is not an internal user, or is editing someone else's comment.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Task not found, or the comment is not on this task.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Add a project task comment",
+        "description": "Adds a comment, or a reply when parent_comment_id is given (the parent must be a live comment on the same task). note is BlockNote JSON, exactly what the web composer stores; markdown is derived server-side. Publishes the same TASK_COMMENT_ADDED event as the web, so assignee and @mention notifications fire. Only internal users may comment.",
+        "tags": [
+          "Projects"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-header-required": true,
+          "x-rbac-resource": "project_task",
+          "x-rbac-action": "read"
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Project task UUID."
+            },
+            "required": true,
+            "description": "Project task UUID.",
+            "name": "taskId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProjectTaskCommentBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Comment created.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectTaskCommentEnvelope"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid identifiers or request payload.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication failed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks project_task:read, is not an internal user, or is editing someone else's comment.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Task not found, or the comment is not on this task.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/projects/tasks/{taskId}/comments/{commentId}": {
+      "put": {
+        "summary": "Edit a project task comment",
+        "description": "Replaces the comment note (BlockNote JSON) and stamps edited_at. Newly mentioned users are notified. Internal users may edit any comment; others only their own.",
+        "tags": [
+          "Projects"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-header-required": true,
+          "x-rbac-resource": "project_task",
+          "x-rbac-action": "read"
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Project task UUID."
+            },
+            "required": true,
+            "description": "Project task UUID.",
+            "name": "taskId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Task comment UUID."
+            },
+            "required": true,
+            "description": "Task comment UUID.",
+            "name": "commentId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProjectTaskCommentUpdateBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Comment updated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectTaskCommentEnvelope"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid identifiers or request payload.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication failed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks project_task:read, is not an internal user, or is editing someone else's comment.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Task not found, or the comment is not on this task.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete a project task comment",
+        "description": "Removes the comment. One that still has replies is soft-deleted (note becomes \"[deleted]\") so the thread keeps its shape; a leaf comment is removed outright.",
+        "tags": [
+          "Projects"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-header-required": true,
+          "x-rbac-resource": "project_task",
+          "x-rbac-action": "read"
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Project task UUID."
+            },
+            "required": true,
+            "description": "Project task UUID.",
+            "name": "taskId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Task comment UUID."
+            },
+            "required": true,
+            "description": "Task comment UUID.",
+            "name": "commentId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Comment deleted."
+          },
+          "400": {
+            "description": "Invalid identifiers or request payload.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication failed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks project_task:read, is not an internal user, or is editing someone else's comment.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Task not found, or the comment is not on this task.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/projects/tasks/{taskId}/comments/{commentId}/reactions": {
+      "post": {
+        "summary": "Toggle a reaction on a project task comment",
+        "description": "Adds the emoji reaction for the caller, or removes it when already present. Returns the comment's reactions after the change.",
+        "tags": [
+          "Projects"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-header-required": true,
+          "x-rbac-resource": "project_task",
+          "x-rbac-action": "read"
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Project task UUID."
+            },
+            "required": true,
+            "description": "Project task UUID.",
+            "name": "taskId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Task comment UUID."
+            },
+            "required": true,
+            "description": "Task comment UUID.",
+            "name": "commentId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProjectTaskCommentReactionBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Reaction toggled.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectTaskCommentReactionEnvelope"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid identifiers or request payload.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication failed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks project_task:read, is not an internal user, or is editing someone else's comment.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Task not found, or the comment is not on this task.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/projects": {
       "get": {
         "summary": "List projects",
@@ -86929,7 +88484,7 @@
       },
       "post": {
         "summary": "Create task checklist item",
-        "description": "Creates checklist item for project task UUID via ApiProjectController.createChecklistItem().",
+        "description": "Creates checklist item for project task UUID via ApiProjectController.createChecklistItem(). Body uses the table's item_name / completed names; item_text / is_completed remain accepted aliases.",
         "tags": [
           "Work Management v1"
         ],
@@ -87025,7 +88580,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/WorkV1GenericBody"
+                "$ref": "#/components/schemas/WorkV1ProjectTaskChecklistItemBody"
               }
             }
           }
@@ -87050,6 +88605,235 @@
                 }
               }
             }
+          },
+          "400": {
+            "description": "Validation or request parsing failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key missing/invalid or associated user missing.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "RBAC denied for project resource action.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Target resource not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected controller/service failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/projects/tasks/{taskId}/checklist/{itemId}": {
+      "put": {
+        "summary": "Update task checklist item",
+        "description": "Updates one checklist item of the task, typically `completed` to tick it done. 404 when the item is not on that task.",
+        "tags": [
+          "Work Management v1"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-auth-mechanism": "x-api-key validated in ApiBaseController.authenticate() or controller-specific equivalent",
+          "x-tenant-header": "x-tenant-id (optional; inferred from API key when omitted)",
+          "x-rbac-resource": "project"
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Project task UUID from project_tasks.task_id."
+            },
+            "required": true,
+            "description": "Project task UUID from project_tasks.task_id.",
+            "name": "taskId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Checklist item UUID from task_checklist_items.checklist_item_id."
+            },
+            "required": true,
+            "description": "Checklist item UUID from task_checklist_items.checklist_item_id.",
+            "name": "itemId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkV1ProjectTaskChecklistItemBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Operation succeeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiSuccess"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation or request parsing failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key missing/invalid or associated user missing.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "RBAC denied for project resource action.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Target resource not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected controller/service failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete task checklist item",
+        "description": "Deletes one checklist item of the task. 404 when the item is not on that task.",
+        "tags": [
+          "Work Management v1"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-auth-mechanism": "x-api-key validated in ApiBaseController.authenticate() or controller-specific equivalent",
+          "x-tenant-header": "x-tenant-id (optional; inferred from API key when omitted)",
+          "x-rbac-resource": "project"
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Project task UUID from project_tasks.task_id."
+            },
+            "required": true,
+            "description": "Project task UUID from project_tasks.task_id.",
+            "name": "taskId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Checklist item UUID from task_checklist_items.checklist_item_id."
+            },
+            "required": true,
+            "description": "Checklist item UUID from task_checklist_items.checklist_item_id.",
+            "name": "itemId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Operation succeeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiSuccess"
+                }
+              }
+            }
+          },
+          "204": {
+            "description": "Delete-like operation can return no content when implemented that way."
           },
           "400": {
             "description": "Validation or request parsing failure.",

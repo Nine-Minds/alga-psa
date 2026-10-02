@@ -27,6 +27,7 @@ tags:
   - name: Comments
   - name: Contacts
   - name: Contract Lines
+  - name: Countries
   - name: Documents
   - name: EE Inventory-Only Routes
   - name: Email
@@ -4976,6 +4977,18 @@ components:
           format: uuid
       required:
         - id
+    ClientLocationIdParams:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        locationId:
+          type: string
+          format: uuid
+      required:
+        - id
+        - locationId
     ContactIdParam:
       type: object
       properties:
@@ -5164,14 +5177,12 @@ components:
           type: string
         address_line1:
           type: string
-          minLength: 1
         address_line2:
           type: string
         address_line3:
           type: string
         city:
           type: string
-          minLength: 1
         state_province:
           type: string
         postal_code:
@@ -5203,8 +5214,6 @@ components:
         is_active:
           type: boolean
       required:
-        - address_line1
-        - city
         - country_code
         - country_name
     ContactListQuery:
@@ -6948,6 +6957,25 @@ components:
         blockData:
           description: Full BlockNote block array (or its JSON string). Replaces the
             existing notes document.
+    ContactAvatarResult:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            success:
+              type: boolean
+            message:
+              type: string
+            avatarUrl:
+              type:
+                - string
+                - "null"
+          required:
+            - success
+            - message
+      required:
+        - data
     ContractLineIdParam:
       type: object
       properties:
@@ -8035,6 +8063,7 @@ components:
             - it
             - pl
             - pt
+            - sv
             - xx
             - yy
           description: Filter to one language code.
@@ -9745,6 +9774,31 @@ components:
           type: integer
           minimum: 1
           maximum: 200
+    CountriesEnvelope:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            type: object
+            properties:
+              code:
+                type: string
+                minLength: 2
+                maxLength: 2
+                description: ISO 3166-1 alpha-2
+              name:
+                type: string
+              phone_code:
+                type:
+                  - string
+                  - "null"
+                description: International dialing prefix, e.g. +1
+            required:
+              - code
+              - name
+      required:
+        - data
     PriorityListQuery:
       type: object
       properties:
@@ -15675,6 +15729,31 @@ components:
           type: array
           items:
             type: string
+        service_id:
+          type:
+            - string
+            - "null"
+          format: uuid
+        is_closed:
+          type: boolean
+        phase_name:
+          type:
+            - string
+            - "null"
+        project_id:
+          type:
+            - string
+            - "null"
+          format: uuid
+        project_name:
+          type:
+            - string
+            - "null"
+        client_id:
+          type:
+            - string
+            - "null"
+          format: uuid
       required:
         - task_id
         - phase_id
@@ -15840,6 +15919,225 @@ components:
         project_status_mapping_id as a UUID from the project task status
         mappings endpoint. The phaseId path parameter selects which phase will
         receive the task.
+    ProjectTaskCommentParams:
+      type: object
+      properties:
+        taskId:
+          type: string
+          format: uuid
+          description: Project task UUID.
+        commentId:
+          type: string
+          format: uuid
+          description: Task comment UUID.
+      required:
+        - taskId
+        - commentId
+    ProjectTaskCommentResource:
+      type: object
+      properties:
+        task_comment_id:
+          type: string
+          format: uuid
+        task_id:
+          type: string
+          format: uuid
+        thread_id:
+          type:
+            - string
+            - "null"
+          format: uuid
+        parent_comment_id:
+          type:
+            - string
+            - "null"
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        author_type:
+          type: string
+          enum:
+            - internal
+        note:
+          type: string
+        markdown_content:
+          type:
+            - string
+            - "null"
+        created_at:
+          type: string
+        updated_at:
+          type:
+            - string
+            - "null"
+        edited_at:
+          type:
+            - string
+            - "null"
+        deleted_at:
+          type:
+            - string
+            - "null"
+        author:
+          type:
+            - object
+            - "null"
+          properties:
+            user_id:
+              type: string
+              format: uuid
+            first_name:
+              type:
+                - string
+                - "null"
+            last_name:
+              type:
+                - string
+                - "null"
+            email:
+              type:
+                - string
+                - "null"
+            avatar_url:
+              type:
+                - string
+                - "null"
+          required:
+            - user_id
+            - first_name
+            - last_name
+            - email
+            - avatar_url
+        reactions:
+          type: array
+          items:
+            type: object
+            properties:
+              emoji:
+                type: string
+              count:
+                type: integer
+              userIds:
+                type: array
+                items:
+                  type: string
+                  format: uuid
+              currentUserReacted:
+                type: boolean
+            required:
+              - emoji
+              - count
+              - userIds
+              - currentUserReacted
+        reaction_user_names:
+          type: object
+          additionalProperties:
+            type: string
+      required:
+        - task_comment_id
+        - task_id
+        - thread_id
+        - parent_comment_id
+        - user_id
+        - author_type
+        - note
+        - markdown_content
+        - created_at
+        - updated_at
+        - edited_at
+        - deleted_at
+        - author
+        - reactions
+        - reaction_user_names
+    ProjectTaskCommentEnvelope:
+      type: object
+      properties:
+        data:
+          $ref: "#/components/schemas/ProjectTaskCommentResource"
+      required:
+        - data
+    ProjectTaskCommentListEnvelope:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProjectTaskCommentResource"
+      required:
+        - data
+    ProjectTaskCommentBody:
+      type: object
+      properties:
+        note:
+          type: string
+          minLength: 1
+        parent_comment_id:
+          type:
+            - string
+            - "null"
+          format: uuid
+      required:
+        - note
+      additionalProperties: false
+    ProjectTaskCommentUpdateBody:
+      type: object
+      properties:
+        note:
+          type: string
+          minLength: 1
+      required:
+        - note
+      additionalProperties: false
+    ProjectTaskCommentReactionBody:
+      type: object
+      properties:
+        emoji:
+          type: string
+          minLength: 1
+          maxLength: 50
+      required:
+        - emoji
+      additionalProperties: false
+    ProjectTaskCommentReactionEnvelope:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            added:
+              type: boolean
+            reactions:
+              type: array
+              items:
+                type: object
+                properties:
+                  emoji:
+                    type: string
+                  count:
+                    type: integer
+                  userIds:
+                    type: array
+                    items:
+                      type: string
+                      format: uuid
+                  currentUserReacted:
+                    type: boolean
+                required:
+                  - emoji
+                  - count
+                  - userIds
+                  - currentUserReacted
+            reaction_user_names:
+              type: object
+              additionalProperties:
+                type: string
+          required:
+            - added
+            - reactions
+            - reaction_user_names
+      required:
+        - data
     WorkV1IdParam:
       type: object
       properties:
@@ -15872,6 +16170,48 @@ components:
           description: Project task UUID from project_tasks.task_id.
       required:
         - taskId
+    WorkV1ProjectTaskChecklistItemParams:
+      type: object
+      properties:
+        taskId:
+          type: string
+          format: uuid
+          description: Project task UUID from project_tasks.task_id.
+        itemId:
+          type: string
+          format: uuid
+          description: Checklist item UUID from task_checklist_items.checklist_item_id.
+      required:
+        - taskId
+        - itemId
+    WorkV1ProjectTaskChecklistItemBody:
+      type: object
+      properties:
+        item_name:
+          type: string
+          minLength: 1
+          description: Checklist item text. Required on create. `item_text` is accepted as
+            a legacy alias.
+        description:
+          type:
+            - string
+            - "null"
+        assigned_to:
+          type:
+            - string
+            - "null"
+          format: uuid
+        completed:
+          type: boolean
+          description: Mark the item done/undone. `is_completed` is accepted as a legacy
+            alias.
+        due_date:
+          type:
+            - string
+            - "null"
+        order_number:
+          type: integer
+          minimum: 0
     WorkV1SessionParam:
       type: object
       properties:
@@ -15921,7 +16261,7 @@ components:
           type: string
         sort:
           type: string
-          enum:
+          enum: &a164
             - client_name
             - closed_at
             - created_at
@@ -15941,7 +16281,7 @@ components:
             descending. Any other value is rejected with 400.
         order:
           type: string
-          enum:
+          enum: &a165
             - asc
             - desc
         fields:
@@ -16761,7 +17101,7 @@ components:
           type: string
         order:
           type: string
-          enum: &a164
+          enum: &a166
             - asc
             - desc
         search:
@@ -16770,12 +17110,12 @@ components:
           type: string
         include_items:
           type: string
-          enum: &a165
+          enum: &a167
             - "true"
             - "false"
         include_client:
           type: string
-          enum: &a166
+          enum: &a168
             - "true"
             - "false"
     QuotesContractsGenericBodyV1:
@@ -16979,14 +17319,14 @@ components:
       properties:
         status:
           type: string
-          enum: &a167
+          enum: &a169
             - open
             - won
             - lost
             - all
         stage:
           type: string
-          enum: &a168
+          enum: &a170
             - identified
             - qualified
             - assessment
@@ -17002,14 +17342,14 @@ components:
           format: uuid
         opportunity_type:
           type: string
-          enum: &a169
+          enum: &a171
             - new_logo
             - expansion
             - renewal
             - project
         stalled_only:
           type: string
-          enum: &a170
+          enum: &a172
             - "true"
             - "false"
         search:
@@ -17025,7 +17365,7 @@ components:
           default: "25"
         sort_by:
           type: string
-          enum: &a171
+          enum: &a173
             - next_action_due
             - expected_close_date
             - mrr_cents
@@ -17034,7 +17374,7 @@ components:
           default: next_action_due
         sort_direction:
           type: string
-          enum: &a172
+          enum: &a174
             - asc
             - desc
           default: asc
@@ -17090,7 +17430,7 @@ components:
           type:
             - string
             - "null"
-          pattern: ^\d{4}-\d{2}-\d{2}([T ].*)?$
+          pattern: ^\d{4}-\d{2}-\d{2}$
         next_action:
           type: string
           minLength: 1
@@ -17168,7 +17508,7 @@ components:
           type:
             - string
             - "null"
-          pattern: ^\d{4}-\d{2}-\d{2}([T ].*)?$
+          pattern: ^\d{4}-\d{2}-\d{2}$
         generator_key:
           type:
             - string
@@ -17239,7 +17579,7 @@ components:
           format: uuid
         project_start_date:
           type: string
-          pattern: ^\d{4}-\d{2}-\d{2}([T ].*)?$
+          pattern: ^\d{4}-\d{2}-\d{2}$
       additionalProperties: false
     LoseOpportunityBodyV1:
       type: object
@@ -17335,7 +17675,7 @@ components:
       properties:
         status:
           type: string
-          enum: &a173
+          enum: &a175
             - pending
             - accepted
             - dismissed
@@ -17371,7 +17711,7 @@ components:
           type:
             - string
             - "null"
-          pattern: ^\d{4}-\d{2}-\d{2}([T ].*)?$
+          pattern: ^\d{4}-\d{2}-\d{2}$
         next_action:
           type: string
           minLength: 1
@@ -17645,7 +17985,7 @@ components:
       properties:
         active_only:
           type: string
-          enum: &a174
+          enum: &a176
             - "true"
             - "false"
           description: When "true", only active channels are returned. Omit for all
@@ -17655,7 +17995,7 @@ components:
       properties:
         status:
           type: string
-          enum: &a175
+          enum: &a177
             - scheduled
             - awaiting-manual-publish
             - published
@@ -18095,7 +18435,7 @@ components:
           format: uuid
         is_closed:
           type: string
-          enum: &a176
+          enum: &a178
             - "true"
             - "false"
           description: Filter by status closure; 'false' also matches interactions with no
@@ -18633,7 +18973,7 @@ components:
           format: uuid
         low_stock:
           type: string
-          enum: &a179
+          enum: &a181
             - "true"
             - "false"
     InventoryLooseBodyV1:
@@ -18738,10 +19078,26 @@ components:
                   type: boolean
                 opportunitiesCreate:
                   type: boolean
+                projects:
+                  type: boolean
+                  description: Project tasks on mobile (project:read; PSA product only).
+                clientsCreate:
+                  type: boolean
+                clientsUpdate:
+                  type: boolean
+                contactsCreate:
+                  type: boolean
+                contactsUpdate:
+                  type: boolean
               required:
                 - inventory
                 - opportunities
                 - opportunitiesCreate
+                - projects
+                - clientsCreate
+                - clientsUpdate
+                - contactsCreate
+                - contactsUpdate
             formatting:
               type: object
               properties:
@@ -30066,6 +30422,11 @@ paths:
                   type: array
                   items:
                     type: string
+                deactivate_contacts:
+                  type: boolean
+                  description: "With is_inactive=true: also deactivate the client's contacts and
+                    their portal users (default true). Requires contact:update
+                    when true."
       responses:
         "200":
           description: Client updated.
@@ -30876,6 +31237,198 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ClientContactApiError"
+  /api/v1/clients/{id}/locations/{locationId}:
+    put:
+      summary: Update client location
+      description: Updates one location of client_id. This is where a client's phone,
+        email and address are edited; PUT /api/v1/clients/{id} rejects those
+        fields. Promoting is_default demotes the previous default; the last
+        active location cannot lose its default flag.
+      tags:
+        - Clients
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-rbac-resource: client
+        x-rbac-action: update
+      x-alga-products:
+        - psa
+        - algadesk
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: id
+          in: path
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: locationId
+          in: path
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: "#/components/schemas/ClientLocationBody"
+                - properties:
+                    location_name:
+                      type: string
+                    address_line1:
+                      type: string
+                    address_line2:
+                      type: string
+                    address_line3:
+                      type: string
+                    city:
+                      type: string
+                    state_province:
+                      type: string
+                    postal_code:
+                      type: string
+                    country_code:
+                      type: string
+                      minLength: 2
+                      maxLength: 3
+                    country_name:
+                      type: string
+                      minLength: 1
+                    region_code:
+                      type: string
+                    is_billing_address:
+                      type: boolean
+                    is_shipping_address:
+                      type: boolean
+                    is_default:
+                      type: boolean
+                    phone:
+                      type: string
+                    fax:
+                      type: string
+                    email:
+                      type:
+                        - string
+                        - "null"
+                      format: email
+                      description: null clears the email
+                    notes:
+                      type: string
+                    is_active:
+                      type: boolean
+      responses:
+        "200":
+          description: Client location updated.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClientLocationEnvelope"
+        "400":
+          description: Invalid ids or request payload.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClientContactApiError"
+        "401":
+          description: API key missing/invalid or key user not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClientContactApiError"
+        "403":
+          description: Permission denied for client update.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClientContactApiError"
+        "404":
+          description: Client or location not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClientContactApiError"
+        "409":
+          description: Default-location rule violated.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClientContactApiError"
+        "500":
+          description: Unexpected client location update failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClientContactApiError"
+    delete:
+      summary: Delete client location
+      description: Deletes one location of client_id. Refused while tickets or other
+        records still reference it.
+      tags:
+        - Clients
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-rbac-resource: client
+        x-rbac-action: update
+      x-alga-products:
+        - psa
+        - algadesk
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: id
+          in: path
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: locationId
+          in: path
+      responses:
+        "204":
+          description: Client location deleted.
+        "400":
+          description: Invalid ids.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClientContactApiError"
+        "401":
+          description: API key missing/invalid or key user not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClientContactApiError"
+        "403":
+          description: Permission denied for client update.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClientContactApiError"
+        "404":
+          description: Client or location not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClientContactApiError"
+        "409":
+          description: Location still referenced by other records.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClientContactApiError"
+        "500":
+          description: Unexpected client location deletion failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClientContactApiError"
   /api/v1/contacts:
     get:
       summary: List contacts
@@ -31240,6 +31793,130 @@ paths:
                 $ref: "#/components/schemas/ClientContactApiError"
         "500":
           description: Unexpected contact deletion failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClientContactApiError"
+  /api/v1/contacts/{id}/avatar:
+    post:
+      summary: Upload contact avatar
+      description: Replaces the contact's avatar from the multipart form field
+        `avatar`. Same storage path as the web contact page.
+      tags:
+        - Contacts
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-rbac-resource: contact
+        x-rbac-action: update
+      x-alga-products:
+        - psa
+        - algadesk
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: id
+          in: path
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                avatar:
+                  type: string
+                  description: "Multipart file field name expected by controller: avatar."
+              required:
+                - avatar
+      responses:
+        "200":
+          description: Avatar stored.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContactAvatarResult"
+        "400":
+          description: Missing file or invalid id.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClientContactApiError"
+        "401":
+          description: API key missing/invalid or key user not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClientContactApiError"
+        "403":
+          description: Permission denied for contact update.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClientContactApiError"
+        "404":
+          description: Contact not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClientContactApiError"
+        "500":
+          description: Unexpected avatar upload failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClientContactApiError"
+    delete:
+      summary: Delete contact avatar
+      description: Removes the contact's avatar.
+      tags:
+        - Contacts
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-rbac-resource: contact
+        x-rbac-action: update
+      x-alga-products:
+        - psa
+        - algadesk
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: id
+          in: path
+      responses:
+        "200":
+          description: Avatar removed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContactAvatarResult"
+        "401":
+          description: API key missing/invalid or key user not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClientContactApiError"
+        "403":
+          description: Permission denied for contact update.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClientContactApiError"
+        "404":
+          description: Contact not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClientContactApiError"
+        "500":
+          description: Unexpected avatar deletion failure.
           content:
             application/json:
               schema:
@@ -40398,6 +41075,39 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
         "403":
           description: Caller lacks the required permission.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Unexpected error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/countries:
+    get:
+      summary: List countries
+      description: Lists the active ISO 3166-1 countries (code, name, dialing code)
+        available for client locations. Global reference data, identical for
+        every tenant; any authenticated caller may read it.
+      tags:
+        - Countries
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: false
+      x-alga-products:
+        - psa
+      responses:
+        "200":
+          description: Active countries sorted by name.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CountriesEnvelope"
+        "401":
+          description: API key missing/invalid.
           content:
             application/json:
               schema:
@@ -58106,6 +58816,329 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/projects/tasks/{taskId}/comments:
+    get:
+      summary: List project task comments
+      description: Returns every comment on the task oldest first, soft-deleted rows
+        included (note "[deleted]", deleted_at set) so reply threads stay
+        well-formed, each with its aggregated emoji reactions. Task comments are
+        always internal. Requires project_task:read.
+      tags:
+        - Projects
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-header-required: true
+        x-rbac-resource: project_task
+        x-rbac-action: read
+      x-alga-products:
+        - psa
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Project task UUID.
+          required: true
+          description: Project task UUID.
+          name: taskId
+          in: path
+      responses:
+        "200":
+          description: Task comments returned.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProjectTaskCommentListEnvelope"
+        "400":
+          description: Invalid identifiers or request payload.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Authentication failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Caller lacks project_task:read, is not an internal user, or is
+            editing someone else's comment.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Task not found, or the comment is not on this task.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    post:
+      summary: Add a project task comment
+      description: Adds a comment, or a reply when parent_comment_id is given (the
+        parent must be a live comment on the same task). note is BlockNote JSON,
+        exactly what the web composer stores; markdown is derived server-side.
+        Publishes the same TASK_COMMENT_ADDED event as the web, so assignee and
+        @mention notifications fire. Only internal users may comment.
+      tags:
+        - Projects
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-header-required: true
+        x-rbac-resource: project_task
+        x-rbac-action: read
+      x-alga-products:
+        - psa
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Project task UUID.
+          required: true
+          description: Project task UUID.
+          name: taskId
+          in: path
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProjectTaskCommentBody"
+      responses:
+        "201":
+          description: Comment created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProjectTaskCommentEnvelope"
+        "400":
+          description: Invalid identifiers or request payload.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Authentication failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Caller lacks project_task:read, is not an internal user, or is
+            editing someone else's comment.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Task not found, or the comment is not on this task.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/projects/tasks/{taskId}/comments/{commentId}:
+    put:
+      summary: Edit a project task comment
+      description: Replaces the comment note (BlockNote JSON) and stamps edited_at.
+        Newly mentioned users are notified. Internal users may edit any comment;
+        others only their own.
+      tags:
+        - Projects
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-header-required: true
+        x-rbac-resource: project_task
+        x-rbac-action: read
+      x-alga-products:
+        - psa
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Project task UUID.
+          required: true
+          description: Project task UUID.
+          name: taskId
+          in: path
+        - schema:
+            type: string
+            format: uuid
+            description: Task comment UUID.
+          required: true
+          description: Task comment UUID.
+          name: commentId
+          in: path
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProjectTaskCommentUpdateBody"
+      responses:
+        "200":
+          description: Comment updated.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProjectTaskCommentEnvelope"
+        "400":
+          description: Invalid identifiers or request payload.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Authentication failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Caller lacks project_task:read, is not an internal user, or is
+            editing someone else's comment.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Task not found, or the comment is not on this task.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      summary: Delete a project task comment
+      description: Removes the comment. One that still has replies is soft-deleted
+        (note becomes "[deleted]") so the thread keeps its shape; a leaf comment
+        is removed outright.
+      tags:
+        - Projects
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-header-required: true
+        x-rbac-resource: project_task
+        x-rbac-action: read
+      x-alga-products:
+        - psa
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Project task UUID.
+          required: true
+          description: Project task UUID.
+          name: taskId
+          in: path
+        - schema:
+            type: string
+            format: uuid
+            description: Task comment UUID.
+          required: true
+          description: Task comment UUID.
+          name: commentId
+          in: path
+      responses:
+        "204":
+          description: Comment deleted.
+        "400":
+          description: Invalid identifiers or request payload.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Authentication failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Caller lacks project_task:read, is not an internal user, or is
+            editing someone else's comment.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Task not found, or the comment is not on this task.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/projects/tasks/{taskId}/comments/{commentId}/reactions:
+    post:
+      summary: Toggle a reaction on a project task comment
+      description: Adds the emoji reaction for the caller, or removes it when already
+        present. Returns the comment's reactions after the change.
+      tags:
+        - Projects
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-header-required: true
+        x-rbac-resource: project_task
+        x-rbac-action: read
+      x-alga-products:
+        - psa
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Project task UUID.
+          required: true
+          description: Project task UUID.
+          name: taskId
+          in: path
+        - schema:
+            type: string
+            format: uuid
+            description: Task comment UUID.
+          required: true
+          description: Task comment UUID.
+          name: commentId
+          in: path
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProjectTaskCommentReactionBody"
+      responses:
+        "200":
+          description: Reaction toggled.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProjectTaskCommentReactionEnvelope"
+        "400":
+          description: Invalid identifiers or request payload.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Authentication failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Caller lacks project_task:read, is not an internal user, or is
+            editing someone else's comment.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Task not found, or the comment is not on this task.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
   /api/v1/projects:
     get:
       summary: List projects
@@ -58762,7 +59795,9 @@ paths:
     post:
       summary: Create task checklist item
       description: Creates checklist item for project task UUID via
-        ApiProjectController.createChecklistItem().
+        ApiProjectController.createChecklistItem(). Body uses the table's
+        item_name / completed names; item_text / is_completed remain accepted
+        aliases.
       tags:
         - Work Management v1
       security:
@@ -58825,7 +59860,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/WorkV1GenericBody"
+              $ref: "#/components/schemas/WorkV1ProjectTaskChecklistItemBody"
       responses:
         "200":
           description: Operation succeeded.
@@ -58839,6 +59874,156 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/WorkV1ApiSuccess"
+        "400":
+          description: Validation or request parsing failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "401":
+          description: API key missing/invalid or associated user missing.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "403":
+          description: RBAC denied for project resource action.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "404":
+          description: Target resource not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "500":
+          description: Unexpected controller/service failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+  /api/v1/projects/tasks/{taskId}/checklist/{itemId}:
+    put:
+      summary: Update task checklist item
+      description: Updates one checklist item of the task, typically `completed` to
+        tick it done. 404 when the item is not on that task.
+      tags:
+        - Work Management v1
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-mechanism: x-api-key validated in ApiBaseController.authenticate() or
+          controller-specific equivalent
+        x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
+        x-rbac-resource: project
+      x-alga-products:
+        - psa
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Project task UUID from project_tasks.task_id.
+          required: true
+          description: Project task UUID from project_tasks.task_id.
+          name: taskId
+          in: path
+        - schema:
+            type: string
+            format: uuid
+            description: Checklist item UUID from task_checklist_items.checklist_item_id.
+          required: true
+          description: Checklist item UUID from task_checklist_items.checklist_item_id.
+          name: itemId
+          in: path
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkV1ProjectTaskChecklistItemBody"
+      responses:
+        "200":
+          description: Operation succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiSuccess"
+        "400":
+          description: Validation or request parsing failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "401":
+          description: API key missing/invalid or associated user missing.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "403":
+          description: RBAC denied for project resource action.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "404":
+          description: Target resource not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "500":
+          description: Unexpected controller/service failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+    delete:
+      summary: Delete task checklist item
+      description: Deletes one checklist item of the task. 404 when the item is not on
+        that task.
+      tags:
+        - Work Management v1
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-mechanism: x-api-key validated in ApiBaseController.authenticate() or
+          controller-specific equivalent
+        x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
+        x-rbac-resource: project
+      x-alga-products:
+        - psa
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Project task UUID from project_tasks.task_id.
+          required: true
+          description: Project task UUID from project_tasks.task_id.
+          name: taskId
+          in: path
+        - schema:
+            type: string
+            format: uuid
+            description: Checklist item UUID from task_checklist_items.checklist_item_id.
+          required: true
+          description: Checklist item UUID from task_checklist_items.checklist_item_id.
+          name: itemId
+          in: path
+      responses:
+        "200":
+          description: Operation succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiSuccess"
+        "204":
+          description: Delete-like operation can return no content when implemented that
+            way.
         "400":
           description: Validation or request parsing failure.
           content:
@@ -61392,18 +62577,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum:
-              - client_name
-              - closed_at
-              - created_at
-              - due_date
-              - entered_at
-              - latest_activity_at
-              - priority_name
-              - status_name
-              - ticket_number
-              - title
-              - updated_at
+            enum: *a164
             description: Sort field. Defaults to entered_at. `created_at` is a legacy alias
               for `entered_at` (tickets have no created_at column).
               `latest_activity_at` orders by the newest of the ticket's own
@@ -61421,7 +62595,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a163
+            enum: *a165
           required: false
           name: order
           in: query
@@ -67818,7 +68992,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a164
+            enum: *a166
           required: false
           name: order
           in: query
@@ -67834,13 +69008,13 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a165
+            enum: *a167
           required: false
           name: include_items
           in: query
         - schema:
             type: string
-            enum: *a166
+            enum: *a168
           required: false
           name: include_client
           in: query
@@ -67909,7 +69083,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a164
+            enum: *a166
           required: false
           name: order
           in: query
@@ -67925,13 +69099,13 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a165
+            enum: *a167
           required: false
           name: include_items
           in: query
         - schema:
             type: string
-            enum: *a166
+            enum: *a168
           required: false
           name: include_client
           in: query
@@ -69346,7 +70520,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a164
+            enum: *a166
           required: false
           name: order
           in: query
@@ -69362,13 +70536,13 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a165
+            enum: *a167
           required: false
           name: include_items
           in: query
         - schema:
             type: string
-            enum: *a166
+            enum: *a168
           required: false
           name: include_client
           in: query
@@ -69441,7 +70615,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a164
+            enum: *a166
           required: false
           name: order
           in: query
@@ -69457,13 +70631,13 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a165
+            enum: *a167
           required: false
           name: include_items
           in: query
         - schema:
             type: string
-            enum: *a166
+            enum: *a168
           required: false
           name: include_client
           in: query
@@ -69683,13 +70857,13 @@ paths:
       parameters:
         - schema:
             type: string
-            enum: *a167
+            enum: *a169
           required: false
           name: status
           in: query
         - schema:
             type: string
-            enum: *a168
+            enum: *a170
           required: false
           name: stage
           in: query
@@ -69707,13 +70881,13 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a169
+            enum: *a171
           required: false
           name: opportunity_type
           in: query
         - schema:
             type: string
-            enum: *a170
+            enum: *a172
           required: false
           name: stalled_only
           in: query
@@ -69739,14 +70913,14 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a171
+            enum: *a173
             default: next_action_due
           required: false
           name: sort_by
           in: query
         - schema:
             type: string
-            enum: *a172
+            enum: *a174
             default: asc
           required: false
           name: sort_direction
@@ -71090,7 +72264,7 @@ paths:
       parameters:
         - schema:
             type: string
-            enum: *a173
+            enum: *a175
           required: false
           name: status
           in: query
@@ -73014,7 +74188,7 @@ paths:
       parameters:
         - schema:
             type: string
-            enum: *a174
+            enum: *a176
             description: When "true", only active channels are returned. Omit for all
               channels.
           required: false
@@ -73434,7 +74608,7 @@ paths:
       parameters:
         - schema:
             type: string
-            enum: *a175
+            enum: *a177
           required: false
           name: status
           in: query
@@ -74283,9 +75457,9 @@ paths:
   /api/v1/interactions:
     get:
       summary: List interactions
-      tags: &a177
+      tags: &a179
         - Interactions v1
-      security: &a178
+      security: &a180
         - ApiKeyAuth: []
       extensions:
         x-tenant-scoped: true
@@ -74345,7 +75519,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a176
+            enum: *a178
             description: Filter by status closure; 'false' also matches interactions with no
               status.
           required: false
@@ -74421,8 +75595,8 @@ paths:
         to start_time plus duration (or 30 minutes). schedule_assigned_user_ids
         defaults to the API key owner; booking other users requires
         user_schedule:update. This does not create a Teams meeting.
-      tags: *a177
-      security: *a178
+      tags: *a179
+      security: *a180
       extensions:
         x-tenant-scoped: true
         x-auth-mechanism: x-api-key validated in ApiBaseController.authenticate()
@@ -74476,8 +75650,8 @@ paths:
   /api/v1/interactions/{id}:
     get:
       summary: Get an interaction
-      tags: *a177
-      security: *a178
+      tags: *a179
+      security: *a180
       extensions:
         x-tenant-scoped: true
         x-auth-mechanism: x-api-key validated in ApiBaseController.authenticate()
@@ -74534,8 +75708,8 @@ paths:
       description: Closes/reopens an interaction (status_id must be an interaction
         status) or replaces its notes. Title and timing are not editable here
         because they also re-sync the linked calendar entry.
-      tags: *a177
-      security: *a178
+      tags: *a179
+      security: *a180
       extensions:
         x-tenant-scoped: true
         x-auth-mechanism: x-api-key validated in ApiBaseController.authenticate()
@@ -74597,8 +75771,8 @@ paths:
     get:
       summary: List interaction statuses
       description: Tenant statuses of type interaction, in display order.
-      tags: *a177
-      security: *a178
+      tags: *a179
+      security: *a180
       extensions:
         x-tenant-scoped: true
         x-auth-mechanism: x-api-key validated in ApiBaseController.authenticate()
@@ -74647,8 +75821,8 @@ paths:
     get:
       summary: List interaction types
       description: Returns the union of system and tenant-defined interaction types.
-      tags: *a177
-      security: *a178
+      tags: *a179
+      security: *a180
       extensions:
         x-tenant-scoped: true
         x-auth-mechanism: x-api-key validated in ApiBaseController.authenticate()
@@ -74815,7 +75989,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a179
+            enum: *a181
           required: false
           name: low_stock
           in: query
@@ -74977,7 +76151,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a179
+            enum: *a181
           required: false
           name: low_stock
           in: query
@@ -75272,7 +76446,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a179
+            enum: *a181
           required: false
           name: low_stock
           in: query
@@ -75706,7 +76880,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a179
+            enum: *a181
           required: false
           name: low_stock
           in: query
@@ -75951,7 +77125,7 @@ paths:
           in: query
         - schema:
             type: string
-            enum: *a179
+            enum: *a181
           required: false
           name: low_stock
           in: query
