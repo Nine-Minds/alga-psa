@@ -217,6 +217,10 @@ const CustomSelect = ({
   const isModal = modal !== undefined ? modal : parentModal;
 
   const selectTriggerRef = useRef<HTMLButtonElement>(null);
+  const justClosedTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => {
+    if (justClosedTimeoutRef.current) clearTimeout(justClosedTimeoutRef.current);
+  }, []);
 
   const containerId = finalAutomationProps.id ? `${finalAutomationProps.id}-container` : undefined;
 
@@ -254,7 +258,9 @@ const CustomSelect = ({
           // This helps with the portal timing issue
           if (!open) {
             document.body.setAttribute('data-radix-select-just-closed', 'true');
-            setTimeout(() => {
+            if (justClosedTimeoutRef.current) clearTimeout(justClosedTimeoutRef.current);
+            justClosedTimeoutRef.current = setTimeout(() => {
+              justClosedTimeoutRef.current = null;
               document.body.removeAttribute('data-radix-select-just-closed');
             }, 100);
           }
