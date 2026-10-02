@@ -16,6 +16,8 @@ type CreatedIds = {
   clientId?: string;
   contractId?: string;
   contractLineId?: string;
+  /** Extra lines for multi-line drafts, cleaned up alongside contractLineId. */
+  contractLineIds?: string[];
   clientContractId?: string;
 };
 let createdIds: CreatedIds = {};
@@ -793,6 +795,148 @@ describe('createClientContractFromWizard', () => {
     expect(await readHourlyRate(db, tenantId, lineIdByType.get('Hourly')!, hourlyServiceId)).toBe(8888);
     expect(await readUsageRate(db, tenantId, lineIdByType.get('Usage')!, usageServiceId)).toBe(9999);
   });
+
+  // alga0002268: finalizing a draft rebuilds its lines, which deletes the old
+  // contract_line_service_configuration rows. Three child tables were never cleared first —
+  // contract_line_service_fixed_config, contract_line_service_hourly_configs and
+  // contract_line_service_rate_tiers — so production (which carries NO ACTION FKs on all
+  // three) raised 23503 and the wizard refused to finish. The orphan assertion below is what
+  // catches a regression on CI schemas that still lack those FKs.
+  it('T027: finalizing a draft clears every config child table before rebuilding its lines', async () => {
+    createdIds = {};
+    const serviceTypeId = await insertServiceType(db, tenantId, 'fixed');
+    createdIds.serviceTypeId = serviceTypeId;
+
+    const fixedServiceId = await insertCatalogItem(db, tenantId, {
+      serviceTypeId,
+      serviceName: 'Rivermark Managed Fixed',
+      billingMethod: 'fixed',
+      itemKind: 'service',
+      defaultRate: 5000,
+      unitOfMeasure: 'month',
+    });
+    const hourlyServiceId = await insertCatalogItem(db, tenantId, {
+      serviceTypeId,
+      serviceName: 'Rivermark Managed Hourly',
+      billingMethod: 'hourly',
+      itemKind: 'service',
+      defaultRate: 15000,
+      unitOfMeasure: 'hour',
+    });
+    const usageServiceId = await insertCatalogItem(db, tenantId, {
+      serviceTypeId,
+      serviceName: 'Rivermark Managed Usage',
+      billingMethod: 'usage',
+      itemKind: 'service',
+      defaultRate: 250,
+      unitOfMeasure: 'unit',
+    });
+    createdIds.serviceId = fixedServiceId;
+    createdIds.additionalServiceIds = [hourlyServiceId, usageServiceId];
+
+    const clientId = await insertClient(db, tenantId, 'Rivermark Credit Union');
+    createdIds.clientId = clientId;
+
+    const submission = {
+      contract_name: 'Managed services agreement',
+      description: 'converted from quote',
+      client_id: clientId,
+      start_date: '2025-10-01',
+      end_date: null,
+      billing_frequency: 'monthly',
+      enable_proration: true,
+      fixed_base_rate: 5000,
+      fixed_services: [{ service_id: fixedServiceId, quantity: 1 }],
+      hourly_services: [{ service_id: hourlyServiceId, hourly_rate: 15000 }],
+      usage_services: [{ service_id: usageServiceId, unit_rate: 250, unit_of_measure: 'unit' }],
+      minimum_billable_time: 15,
+      round_up_to_nearest: 15,
+      po_required: false,
+    } as any;
+
+    // Seed the draft the way a quote conversion leaves it.
+    const draft = await createClientContractFromWizard(submission, { isDraft: true });
+    expect('contract_id' in draft).toBe(true);
+    const contractId = (draft as { contract_id: string }).contract_id;
+    createdIds.contractId = contractId;
+
+    const draftLineIds = await tenantTable(db, tenantId, 'contract_lines')
+      .where({ tenant: tenantId, contract_id: contractId })
+      .pluck('contract_line_id');
+    expect(draftLineIds.length).toBeGreaterThan(1);
+    createdIds.contractLineIds = draftLineIds;
+
+    const draftConfigs = await tenantTable(db, tenantId, 'contract_line_service_configuration')
+      .whereIn('contract_line_id', draftLineIds)
+      .select('config_id', 'configuration_type');
+    const draftConfigIds = draftConfigs.map((row) => row.config_id as string);
+    expect(draftConfigIds.length).toBeGreaterThan(0);
+
+    // A quote-converted draft carries an active assignment, unlike a wizard-saved draft.
+    await tenantTable(db, tenantId, 'client_contracts')
+      .where({ tenant: tenantId, contract_id: contractId })
+      .update({ is_active: true });
+
+    // Tiers only exist on usage configs, and the wizard does not author them, so the
+    // quote-conversion shape has to be seeded explicitly.
+    const usageConfigId = draftConfigs.find((row) => row.configuration_type === 'Usage')?.config_id;
+    expect(usageConfigId).toBeTruthy();
+    await tenantTable(db, tenantId, 'contract_line_service_rate_tiers').insert({
+      tier_id: uuidv4(),
+      tenant: tenantId,
+      config_id: usageConfigId,
+      min_quantity: 1,
+      max_quantity: 100,
+      rate: 250,
+      created_at: db.fn.now(),
+      updated_at: db.fn.now(),
+    });
+
+    // All three previously-missed tables must be populated, or the test proves nothing.
+    const seededCounts = await Promise.all(
+      ['contract_line_service_fixed_config', 'contract_line_service_hourly_configs', 'contract_line_service_rate_tiers']
+        .map(async (table) => (await tenantTable(db, tenantId, table).whereIn('config_id', draftConfigIds)).length)
+    );
+    for (const count of seededCounts) {
+      expect(count).toBeGreaterThan(0);
+    }
+
+    // Finish Setup: same submission, now carrying the draft's contract_id.
+    const finalized = await createClientContractFromWizard({ ...submission, contract_id: contractId });
+    expect('contract_id' in finalized).toBe(true);
+    expect((finalized as { contract_id: string }).contract_id).toBe(contractId);
+
+    const finalLineIds = await tenantTable(db, tenantId, 'contract_lines')
+      .where({ tenant: tenantId, contract_id: contractId })
+      .pluck('contract_line_id');
+    createdIds.contractLineIds = [...new Set([...draftLineIds, ...finalLineIds])];
+
+    const contract = await tenantTable(db, tenantId, 'contracts')
+      .where({ tenant: tenantId, contract_id: contractId })
+      .first('status', 'is_active');
+    expect(contract?.status).toBe('active');
+    expect(contract?.is_active).toBe(true);
+
+    const clientContract = await tenantTable(db, tenantId, 'client_contracts')
+      .where({ tenant: tenantId, contract_id: contractId })
+      .first('client_contract_id');
+    expect(clientContract).toBeTruthy();
+    createdIds.clientContractId = clientContract?.client_contract_id;
+
+    // No child row may outlive its deleted parent configuration.
+    for (const table of [
+      'contract_line_service_configuration',
+      'contract_line_service_fixed_config',
+      'contract_line_service_hourly_configs',
+      'contract_line_service_hourly_config',
+      'contract_line_service_rate_tiers',
+      'contract_line_service_bucket_config',
+      'contract_line_service_usage_config',
+    ]) {
+      const leftovers = await tenantTable(db, tenantId, table).whereIn('config_id', draftConfigIds);
+      expect(leftovers, `${table} kept rows for the draft's old config_ids`).toHaveLength(0);
+    }
+  });
 });
 
 // The wizard persists resolved hourly rates on contract_line_service_hourly_configs
@@ -938,6 +1082,42 @@ async function cleanupCreatedRecords(db: Knex, tenantId: string, ids: CreatedIds
       tenant: tenantId,
       client_contract_id: ids.clientContractId
     });
+  }
+
+  // Config children are keyed by config_id, not contract_line_id, so they have to be cleared
+  // through their parent configuration rows — otherwise the composite FKs block the parent
+  // delete and the rows survive the suite.
+  const allLineIds = [
+    ...(ids.contractLineId ? [ids.contractLineId] : []),
+    ...(ids.contractLineIds ?? []),
+  ];
+  if (allLineIds.length > 0) {
+    let configIds: string[] = [];
+    try {
+      configIds = await tenantTable(db, tenantId, 'contract_line_service_configuration')
+        .whereIn('contract_line_id', allLineIds)
+        .pluck('config_id');
+    } catch {
+      // ignore cleanup issues
+    }
+    for (const table of [
+      'contract_line_service_rate_tiers',
+      'contract_line_service_fixed_config',
+      'contract_line_service_hourly_configs',
+      'contract_line_service_hourly_config',
+      'contract_line_service_bucket_config',
+      'contract_line_service_usage_config',
+    ]) {
+      await safeDeleteIn(table, 'config_id', configIds);
+    }
+    for (const table of [
+      'contract_line_service_configuration',
+      'contract_line_service_defaults',
+      'contract_line_services',
+      'contract_lines',
+    ]) {
+      await safeDeleteIn(table, 'contract_line_id', allLineIds);
+    }
   }
 
   if (ids.contractLineId) {

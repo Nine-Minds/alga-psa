@@ -919,6 +919,22 @@ export const createClientContractFromWizard = withAuth(async (
           .whereIn('config_id', configIds)
           .delete();
 
+        // Rate tiers hang off the usage config's config_id, and fixed/hourly_configs are the
+        // shapes a quote-converted draft is written with. All three carry NO ACTION FKs back to
+        // contract_line_service_configuration, so skipping them makes the parent delete below
+        // raise 23503 when the wizard finalizes such a draft.
+        await tenantDb(trx, tenant).table('contract_line_service_rate_tiers')
+          .whereIn('config_id', configIds)
+          .delete();
+
+        await tenantDb(trx, tenant).table('contract_line_service_fixed_config')
+          .whereIn('config_id', configIds)
+          .delete();
+
+        await tenantDb(trx, tenant).table('contract_line_service_hourly_configs')
+          .whereIn('config_id', configIds)
+          .delete();
+
         await tenantDb(trx, tenant).table('contract_line_service_configuration')
           .whereIn('config_id', configIds)
           .delete();
