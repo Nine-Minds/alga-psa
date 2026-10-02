@@ -84,6 +84,18 @@ exports.up = async function up(knex) {
     if (!(await knex.schema.hasTable(table))) continue;
     if (await hasConstraint(knex, table, constraint)) continue;
 
+    // The orphan DELETE below correlates child and parent on a subquery;
+    // Citus can only push that down when both sides share a distribution
+    // state (same as the FK itself). Probe before deleting, not just before
+    // adding the constraint - a distributed/local mismatch makes the DELETE
+    // itself fail, not only the ALTER TABLE.
+    if (!(await compatibleForConfigFk(knex, table))) {
+      console.log(
+        `${table} and ${PARENT_TABLE} have incompatible distribution - skipping cleanup and FK ${constraint}`
+      );
+      continue;
+    }
+
     // Unreachable rows: every reader of these tables joins through the parent
     // configuration, so a child without one can never be priced or invoiced.
     const deleted = await knex.raw(`
@@ -96,13 +108,6 @@ exports.up = async function up(knex) {
     `);
     if (deleted?.rowCount) {
       console.log(`  ✓ Removed ${deleted.rowCount} orphaned ${table} row(s)`);
-    }
-
-    if (!(await compatibleForConfigFk(knex, table))) {
-      console.log(
-        `${table} and ${PARENT_TABLE} have incompatible distribution - skipping FK ${constraint}`
-      );
-      continue;
     }
 
     await knex.raw(`
