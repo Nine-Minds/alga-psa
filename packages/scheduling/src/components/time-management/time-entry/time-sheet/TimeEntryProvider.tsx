@@ -171,8 +171,14 @@ export function TimeEntryProvider({ children }: { children: React.ReactNode }): 
       } else if (defaultStartTime && defaultEndTime) {
         const duration = calculateDuration(defaultStartTime, defaultEndTime);
         const isBillable = workItem.is_billable === false ? false : true;
-        const prefilledServiceId = workItem.type === 'project_task' && workItem.service_id
+        // Only prefill a default this form can hold: the service picker is
+        // hourly-only, so a default of any other billing method would render
+        // blank and then fail save validation. Better an empty picker.
+        const defaultServiceId = workItem.type === 'project_task' && workItem.service_id
           ? workItem.service_id
+          : '';
+        const prefilledServiceId = defaultServiceId && services.some(service => service.id === defaultServiceId)
+          ? defaultServiceId
           : '';
 
         console.log('Creating new time entry with defaults:', {
