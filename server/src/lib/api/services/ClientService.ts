@@ -11,7 +11,8 @@ import { getClientLogoUrl } from '@alga-psa/formatting/avatarUtils';
 import { availableCreditSubquerySql } from '@alga-psa/billing/lib/creditBalance';
 import { isEnterprise } from '@alga-psa/core';
 import { deleteEntityWithValidation } from '@alga-psa/core/server';
-import { ConflictError, NotFoundError, ValidationError } from '../../api/middleware/apiMiddleware';
+import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from '../../api/middleware/apiMiddleware';
+import { hasPermission } from '@alga-psa/auth/rbac';
 import {
   createLocation as createClientLocation,
   deleteLocation as deleteClientLocation,
@@ -74,6 +75,18 @@ export function stripLegacyClientTaxId<T>(client: T): T {
 function maybeUserActorFromContext(context: ServiceContext) {
   if (typeof context.userId !== 'string' || !context.userId) return undefined;
   return { actorType: 'USER' as const, actorUserId: context.userId };
+}
+
+/** The unique index on (tenant, client_name) surfaces as a 409 with the web's wording. */
+function throwClientWriteApiError(error: unknown, clientName?: string | null): never {
+  const dbError = error as { code?: string; constraint?: string };
+  if (dbError?.code === '23505') {
+    if (dbError.constraint?.includes('clients_tenant_client_name_unique')) {
+      throw new ConflictError(`A client with the name "${clientName || 'this name'}" already exists. Please choose a different name.`);
+    }
+    throw new ConflictError('A client with these details already exists. Please check the client name.');
+  }
+  throw error;
 }
 
 function throwClientLocationApiError(error: unknown): never {
@@ -384,7 +397,8 @@ export class ClientService extends BaseService<IClient> {
       };
 
       // Insert into clients table
-      const [client] = await tenantDb(trx, context.tenant).table('clients').insert(clientData).returning('*');
+      const [client] = await tenantDb(trx, context.tenant).table('clients').insert(clientData).returning('*')
+        .catch((error: unknown) => throwClientWriteApiError(error, data.client_name));
 
       // Terminal step of charge attribution — every client has exactly one.
       await ensureClientDefaultBillingProfile(trx, context.tenant, client.client_id, {
@@ -681,14 +695,19 @@ export class ClientService extends BaseService<IClient> {
       const [client] = await db.table('clients')
         .where('client_id', id)
         .update(updateData)
-        .returning('*');
+        .returning('*')
+        .catch((error: unknown) => throwClientWriteApiError(error, data.client_name));
 
       if (!client) {
         throw new NotFoundError('Client not found');
       }
 
-      // If the client is being set to inactive, update all associated contacts and users
-      if (data.is_inactive === true) {
+      // Deactivating a client also deactivates its contacts and their portal users
+      // unless the caller chose "client only" — the same choice the web dialog offers.
+      if (data.is_inactive === true && data.deactivate_contacts !== false) {
+        if (!before.is_inactive && !(await hasPermission(context.user, 'contact', 'update', knex))) {
+          throw new ForbiddenError('Permission denied: Cannot update contacts');
+        }
         // Get all contact IDs for this client
         const contacts = await db.table('contacts')
           .select('contact_name_id')

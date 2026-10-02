@@ -113,7 +113,13 @@ function rejectClientLocationFields(data: Record<string, unknown>, ctx: z.Refine
 }
 
 export const createClientSchema = clientBodySchema;
-export const updateClientSchema = createUpdateSchema(clientBodySchema).superRefine(rejectClientLocationFields);
+export const updateClientSchema = createUpdateSchema(clientBodySchema)
+  .extend({
+    // With is_inactive=true: also deactivate the client's contacts and portal users (default) or
+    // leave them active (false). Ignored otherwise; never written to the clients row.
+    deactivate_contacts: z.boolean().optional(),
+  })
+  .superRefine(rejectClientLocationFields);
 
 // Client filter schema
 export const clientFilterSchema = baseFilterSchema.extend({
@@ -175,10 +181,12 @@ export const clientResponseSchema = z.object({
 // Client location schemas
 export const createClientLocationSchema = z.object({
   location_name: z.string().optional(),
-  address_line1: z.string().min(1, 'Address line 1 is required'),
+  // A location may carry only a phone or email (a field tech logging a client
+  // from a call); the shared writer and the web quick-add allow an empty street.
+  address_line1: z.string().optional().default(''),
   address_line2: z.string().optional(),
   address_line3: z.string().optional(),
-  city: z.string().min(1, 'City is required'),
+  city: z.string().optional().default(''),
   state_province: z.string().optional(),
   postal_code: z.string().optional(),
   country_code: z.string().min(2).max(3),
@@ -196,7 +204,10 @@ export const createClientLocationSchema = z.object({
   is_active: z.boolean().optional().default(true)
 });
 
-export const updateClientLocationSchema = createUpdateSchema(createClientLocationSchema);
+export const updateClientLocationSchema = createUpdateSchema(createClientLocationSchema).extend({
+  // null clears the email; a blank string is "not sent" (the shared optional() helper drops it).
+  email: z.union([z.null(), locationEmailField]),
+});
 
 export const clientLocationResponseSchema = z.object({
   location_id: uuidSchema,
