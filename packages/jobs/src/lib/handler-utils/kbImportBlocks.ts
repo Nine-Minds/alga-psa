@@ -466,7 +466,7 @@ class DeadlineTokenizer extends Tokenizer {
  *
  * Exported for tests only.
  */
-export function splitInlineChunks(src: string, deadline = new Deadline()): string[] {
+export function splitInlineChunks(src: string, deadline: Deadline = new Deadline()): string[] {
   const chunks: string[] = [];
   let offset = 0;
 

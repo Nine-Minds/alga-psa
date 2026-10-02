@@ -241,6 +241,8 @@ interface DesignerState {
   showGuides: boolean;
   showRulers: boolean;
   canvasScale: number;
+  /** Bumped each time a workspace is loaded or reset, so views can react to a fresh document. */
+  workspaceLoadCount: number;
   metrics: DesignerMetrics;
   history: DesignerHistoryEntry[];
   historyIndex: number;
@@ -250,11 +252,17 @@ interface DesignerState {
     dropPoint: Point,
     options?: { defaults?: DesignerNodeDefaults; parentId?: string; index?: number }
   ) => void;
-  insertPreset: (presetId: string, dropPoint?: Point, parentId?: string) => void;
+  /** `index` places the preset's top-level blocks at that position in `parentId` (default: the end). */
+  insertPreset: (presetId: string, dropPoint?: Point, parentId?: string, index?: number) => void;
   applyPrintSettings: (settings: Partial<TemplatePrintSettings>) => void;
   // Generic patch API (primary path going forward).
   setNodeProp: (nodeId: string, path: string, value: unknown, commit?: boolean) => void;
   unsetNodeProp: (nodeId: string, path: string, commit?: boolean) => void;
+  /**
+   * Records the current document as an undo step if it changed since the last one:
+   * ends a gesture whose live updates were applied with `commit = false`.
+   */
+  commitHistory: () => void;
   /**
    * Points a Data Field at `bindingPath` as one undo step: format always follows,
    * the label follows unless the author typed their own, and a still-generated
@@ -1095,6 +1103,7 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
     showGuides: true,
     showRulers: true,
     canvasScale: 1,
+    workspaceLoadCount: 0,
     history: [createHistoryEntry(initialNodes, createEmptyDesignerTransformWorkspace())],
     historyIndex: 0,
     metrics: {
@@ -1208,7 +1217,7 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
       }, false, 'designer/addNodeFromPalette');
     },
 
-    insertPreset: (presetId, dropPoint = { x: 120, y: 120 }, parentId) => {
+    insertPreset: (presetId, dropPoint = { x: 120, y: 120 }, parentId, index) => {
       const preset = getPresetById(presetId);
       if (!preset) {
         console.warn('[Designer] unknown layout preset', presetId);
@@ -1320,6 +1329,7 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
         let nextNodes = nextNodesBase;
 
         // Attach children based on their parentId fields.
+        let rootInsertIndex = index;
         createdNodes.forEach((node) => {
           if (!node.parentId) {
             return;
@@ -1328,7 +1338,11 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
           if (!parent) {
             return;
           }
-          nextNodes = attachChildAtIndex(nextNodes, node.parentId, node.id);
+          const isTopLevel = node.parentId === resolvedParentId;
+          nextNodes = attachChildAtIndex(nextNodes, node.parentId, node.id, isTopLevel ? rootInsertIndex : undefined);
+          if (isTopLevel && typeof rootInsertIndex === 'number') {
+            rootInsertIndex += 1;
+          }
         });
 
         const { history, historyIndex } = appendHistory(state, nextNodes, state.transforms);
@@ -1369,6 +1383,21 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
         const { history, historyIndex } = appendHistory(state, nodes, state.transforms);
         return { nodes, history, historyIndex };
       }, false, 'designer/setNodeProp');
+    },
+
+    commitHistory: () => {
+      setWithIndex((state) => {
+        const current = state.history[state.historyIndex];
+        if (
+          current &&
+          JSON.stringify(current.nodes) === JSON.stringify(state.nodes) &&
+          JSON.stringify(current.transforms) === JSON.stringify(state.transforms)
+        ) {
+          return state;
+        }
+        const { history, historyIndex } = appendHistory(state, state.nodes, state.transforms);
+        return { history, historyIndex };
+      }, false, 'designer/commitHistory');
     },
 
     unsetNodeProp: (nodeId, path, commit = true) => {
@@ -1652,13 +1681,14 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
 
     resetWorkspace: () => {
       const nodes = createInitialNodes();
-      setWithIndex(() => ({
+      setWithIndex((state) => ({
         nodes,
         transforms: createEmptyDesignerTransformWorkspace(),
         selectedNodeId: null,
         hoverNodeId: null,
         history: [createHistoryEntry(nodes, createEmptyDesignerTransformWorkspace())],
         historyIndex: 0,
+        workspaceLoadCount: state.workspaceLoadCount + 1,
       }));
     },
 
@@ -1708,6 +1738,7 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
           showGuides: typeof workspace.showGuides === 'boolean' ? workspace.showGuides : state.showGuides,
           showRulers: typeof workspace.showRulers === 'boolean' ? workspace.showRulers : state.showRulers,
           canvasScale: typeof workspace.canvasScale === 'number' ? workspace.canvasScale : state.canvasScale,
+          workspaceLoadCount: state.workspaceLoadCount + 1,
           history: [createHistoryEntry(nextNodes, nextTransforms)],
           historyIndex: 0,
           selectedNodeId: null,
@@ -1751,6 +1782,7 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
       setWithIndex((state) => ({
         metrics: {
           ...state.metrics,
+          totalDrags: state.metrics.totalDrags + 1,
           completedDrops: state.metrics.completedDrops + (success ? 1 : 0),
           failedDrops: state.metrics.failedDrops + (success ? 0 : 1),
         },

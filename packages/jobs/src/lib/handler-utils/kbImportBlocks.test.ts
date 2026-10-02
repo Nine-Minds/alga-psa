@@ -529,13 +529,13 @@ describe('kbImportBlocks inline chunk splitting', () => {
 // Multi-MB inputs on a CI runner shared with dozens of other projects overrun
 // the default 10s per-test timeout that a dev laptop never notices.
 describe('kbImportBlocks pathological input stays linear', { timeout: 120_000 }, () => {
-  const timed = (fn: () => BlockNoteBlock[]): number => {
+  const timed = (fn: () => unknown): number => {
     const startedAt = Date.now();
     fn();
     return Date.now() - startedAt;
   };
 
-  const fastestOf = (runs: number, fn: () => BlockNoteBlock[]): number =>
+  const fastestOf = (runs: number, fn: () => unknown): number =>
     Math.min(...Array.from({ length: runs }, () => timed(fn)));
 
   // A hard millisecond budget is not portable -- CI parses several times slower

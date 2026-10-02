@@ -34,5 +34,23 @@ describe('designerStore history commit semantics', () => {
     expect(useInvoiceDesignerStore.getState().history.length).toBe(initialLength + 2);
     expect(useInvoiceDesignerStore.getState().historyIndex).toBe(initialIndex + 2);
   });
-});
 
+  it('commitHistory records live (uncommitted) changes as one step, and nothing when unchanged', () => {
+    const store = useInvoiceDesignerStore.getState();
+    const pageId = store.nodes.find((node) => node.type === 'page')?.id;
+    if (!pageId) throw new Error('page missing');
+    const initialLength = store.history.length;
+
+    store.commitHistory();
+    expect(useInvoiceDesignerStore.getState().history.length).toBe(initialLength);
+
+    store.setNodeProp(pageId, 'name', 'Live A', false);
+    store.unsetNodeProp(pageId, 'name', false);
+    store.setNodeProp(pageId, 'name', 'Live B', false);
+    store.commitHistory();
+    expect(useInvoiceDesignerStore.getState().history.length).toBe(initialLength + 1);
+
+    store.undo();
+    expect(useInvoiceDesignerStore.getState().nodes.find((node) => node.id === pageId)?.props?.name).not.toBe('Live B');
+  });
+});

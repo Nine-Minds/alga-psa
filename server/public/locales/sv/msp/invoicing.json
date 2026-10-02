@@ -1218,7 +1218,10 @@
         "drags": "Dragningar: {{count}}",
         "success": "Lyckade: {{count}}",
         "invalid": "Ogiltiga: {{count}}"
-      }
+      },
+      "zoomOut": "Zooma ut",
+      "zoomIn": "Zooma in",
+      "zoomFit": "Anpassa"
     },
     "palette": {
       "tabs": {
@@ -1925,7 +1928,8 @@
       "companyLogo": "Företagslogotyp",
       "insertionMarker": "Nästa block du lägger till hamnar här",
       "emptyContainer": "Tom – markera den och lägg till block från den vänstra panelen",
-      "localeChip": "Översatta etiketter visas på {{language}} (förhandsgranskningsspråk)"
+      "localeChip": "Översatta etiketter visas på {{language}} (förhandsgranskningsspråk)",
+      "badgeDragHint": "Dra för att flytta det här blocket"
     },
     "dragOverlay": {
       "component": "Komponent"
@@ -1972,6 +1976,19 @@
       "collapse": "Fäll ihop {{name}}",
       "expand": "Fäll ut {{name}}",
       "title": "Disposition"
+    },
+    "dragPreview": {
+      "noTarget": "Utanför sidan – släpp för att avbryta",
+      "noChange": "Stannar där det är",
+      "before": "Före {{block}}",
+      "after": "Efter {{block}}",
+      "inside": "I {{container}}",
+      "dropOnPage": "Släpp på sidan för att lägga till det här blocket.",
+      "cancelled": "Inte flyttat – släpp över sidan eller Dispositionen för att placera."
+    },
+    "resize": {
+      "handleHint": "Dra för att ändra storlek · dubbelklicka för att anpassa till innehållet",
+      "autoValue": "Automatisk ({{value}})"
     }
   },
   "projectBilling": {
