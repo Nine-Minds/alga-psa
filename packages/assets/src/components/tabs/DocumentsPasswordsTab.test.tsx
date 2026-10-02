@@ -1,7 +1,7 @@
 /* @vitest-environment jsdom */
 import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, cleanup, render, waitFor } from '@testing-library/react';
+import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
 import { SWRConfig } from 'swr';
 import { DocumentsPasswordsTab } from './DocumentsPasswordsTab';
 
@@ -16,6 +16,9 @@ vi.mock('@alga-psa/core/context/DocumentsCrossFeatureContext', () => ({
 }));
 vi.mock('./AssetCredentialsSection', () => ({ AssetCredentialsSection: () => <div data-testid="credentials" /> }));
 vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
+
+const stableT = (_key: string, options: any) => options?.defaultValue ?? _key;
+vi.mock('@alga-psa/ui/lib/i18n/client', () => ({ useTranslation: () => ({ t: stableT }) }));
 
 const asset = { asset_id: 'asset-1', tenant: 'tenant-1', client_id: 'client-1' } as any;
 const doc = (id: string) => ({ document_id: id, document_name: id, association_id: `assoc-${id}` });
@@ -85,12 +88,22 @@ describe('DocumentsPasswordsTab linked documents', () => {
     await waitFor(() => expect(lastProps().documents).toEqual([doc('d1'), doc('d2')]));
   });
 
-  it('shows an empty list without throwing when the action returns an error result', async () => {
+  it('renders an error state, not the empty list, when the action returns an error result', async () => {
     getAssetDocuments.mockResolvedValue({ permissionError: 'Permission denied: Cannot read asset documents' });
     renderTab();
 
-    await waitFor(() => expect(getAssetDocuments).toHaveBeenCalled());
-    await waitFor(() => expect(lastProps().isLoading).toBe(false));
-    expect(lastProps().documents).toEqual([]);
+    expect(await screen.findByTestId('asset-documents-error')).toBeTruthy();
+    expect(screen.getByText('Documents unavailable')).toBeTruthy();
+    expect(renderDocuments).not.toHaveBeenCalledWith(expect.objectContaining({ isLoading: false }));
+    expect(screen.getByTestId('credentials')).toBeTruthy();
+  });
+
+  it('renders an error state and keeps credentials when the fetch rejects', async () => {
+    getAssetDocuments.mockRejectedValue(new Error('column does not exist'));
+    renderTab();
+
+    expect(await screen.findByTestId('asset-documents-error')).toBeTruthy();
+    expect(screen.getByTestId('credentials')).toBeTruthy();
+    expect(renderDocuments).not.toHaveBeenCalledWith(expect.objectContaining({ isLoading: false }));
   });
 });

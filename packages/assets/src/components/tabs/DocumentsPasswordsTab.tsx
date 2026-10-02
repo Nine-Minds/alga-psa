@@ -6,6 +6,9 @@ import AssetDocuments from '../AssetDocuments';
 import { AssetCredentialsSection } from './AssetCredentialsSection';
 import { getAssetDocuments } from '../../actions/assetDocumentActions';
 import { unwrapAssetActionResult } from '../../actions/assetActionErrors';
+import { Alert, AlertDescription, AlertTitle } from '@alga-psa/ui/components/Alert';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { AlertCircle } from 'lucide-react';
 import type { Asset, IDocument } from '@alga-psa/types';
 
 interface DocumentsPasswordsTabProps {
@@ -19,22 +22,35 @@ const STABLE_EMPTY: IDocument[] = [];
 export const DocumentsPasswordsTab: React.FC<DocumentsPasswordsTabProps> = ({ asset }) => {
   // LEVERAGE: pattern asset-documents-fetch — the drawer (assetDrawerActions.safeGetAssetDocuments)
   // and this tab both hand-roll "fetch asset documents and unwrap the AssetActionError".
-  const { data, isLoading, mutate } = useSWR(
+  const { t } = useTranslation('msp/assets');
+  const { data, error, isLoading, mutate } = useSWR(
     asset.asset_id ? ['asset', asset.asset_id, 'documents'] : null,
     ([, id]) => getAssetDocuments(id).then(unwrapAssetActionResult)
   );
 
   return (
     <div className="space-y-6">
-      <AssetDocuments
-        assetId={asset.asset_id}
-        tenant={asset.tenant}
-        initialDocuments={data ?? STABLE_EMPTY}
-        isLoading={isLoading}
-        onDocumentCreated={async () => {
-          await mutate();
-        }}
-      />
+      {error ? (
+        <Alert variant="destructive" data-testid="asset-documents-error">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>{t('documentsTab.errors.title', { defaultValue: 'Documents unavailable' })}</AlertTitle>
+          <AlertDescription>
+            {t('documentsTab.errors.loadFailed', {
+              defaultValue: 'Linked documents could not be loaded. Reload the page or try again later.',
+            })}
+          </AlertDescription>
+        </Alert>
+      ) : (
+        <AssetDocuments
+          assetId={asset.asset_id}
+          tenant={asset.tenant}
+          initialDocuments={data ?? STABLE_EMPTY}
+          isLoading={isLoading}
+          onDocumentCreated={async () => {
+            await mutate();
+          }}
+        />
+      )}
 
       {/* Credentials vault section (EE + flag-gated; the dynamic import resolves
           to a render-null CE stub / nothing when the release flag is off). */}
