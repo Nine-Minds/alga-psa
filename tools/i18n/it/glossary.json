@@ -2356,7 +2356,9 @@
       "TeamViewer",
       "Gigabyte",
       "Terabyte",
-      "Volume"
+      "Volume",
+      "Auto",
+      "auto | 50% | 120px"
     ],
     "caseInsensitive": [
       "account",

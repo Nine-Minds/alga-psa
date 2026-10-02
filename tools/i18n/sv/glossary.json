@@ -739,7 +739,8 @@
       "{{amount}}/{{interval}}",
       "{{count}} {{licenseLabel}}",
       "Version {{version}}",
-      "(Standard)", "Gigabyte", "Terabyte", "Liter", "Kilogram", "Meter", "Epic", "Onboarding", "Try"
+      "(Standard)", "Gigabyte", "Terabyte", "Liter", "Kilogram", "Meter", "Epic", "Onboarding", "Try",
+      "Auto", "Normal (400)", "auto | 50% | 120px", "In"
     ],
     "caseInsensitive": [
       "adapter", "budget", "fax", "filter", "kanban", "layout", "offline", "online", "router", "server", "status", "support", "team", "webhook"

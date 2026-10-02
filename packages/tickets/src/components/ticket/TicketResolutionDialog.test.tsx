@@ -96,6 +96,31 @@ vi.mock("@alga-psa/ui/lib/i18n/client", () => ({
   }),
 }));
 
+// The real Radix switch needs ResizeObserver, which jsdom lacks; this keeps the
+// suite on the internal-flag behavior rather than the design system.
+vi.mock("@alga-psa/ui/components/Switch", () => ({
+  Switch: ({
+    id,
+    checked,
+    onCheckedChange,
+    disabled,
+  }: {
+    id: string;
+    checked: boolean;
+    onCheckedChange: (checked: boolean) => void;
+    disabled?: boolean;
+  }) => (
+    <button
+      id={id}
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      disabled={disabled}
+      onClick={() => onCheckedChange(!checked)}
+    />
+  ),
+}));
+
 vi.mock("@alga-psa/ui/components/CustomSelect", () => ({
   default: ({
     id,
@@ -187,6 +212,7 @@ describe("TicketResolutionDialog", () => {
         suppressContactNotifications: false,
         suppressInternalNotifications: false,
       },
+      false,
     );
     await waitFor(() => {
       expect(uploadSessionMock.resetDraftTracking).toHaveBeenCalledOnce();
@@ -334,9 +360,73 @@ describe("TicketResolutionDialog", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: "Resolve and close" }));
 
-    expect(onConfirm).toHaveBeenCalledWith("closed", expect.any(Array), {
-      suppressContactNotifications: true,
-      suppressInternalNotifications: true,
+    expect(onConfirm).toHaveBeenCalledWith(
+      "closed",
+      expect.any(Array),
+      {
+        suppressContactNotifications: true,
+        suppressInternalNotifications: true,
+      },
+      false,
+    );
+  });
+
+  // An internal resolution satisfies the board's resolution-comment close rule
+  // without the body reaching the client portal or the close email.
+  it("submits the resolution as internal when the toggle is on", () => {
+    const onConfirm = vi.fn().mockResolvedValue(true);
+    render(
+      <TicketResolutionDialog
+        id="ticket-resolution-close"
+        isOpen
+        ticketId="ticket-1"
+        statusOptions={[{ value: "closed", label: "Closed" }]}
+        onClose={vi.fn()}
+        onConfirm={onConfirm}
+      />,
+    );
+
+    const internalToggle = screen.getByRole("switch", { name: "Mark as Internal" });
+    expect(internalToggle).toHaveAttribute("aria-checked", "false");
+    fireEvent.click(internalToggle);
+    fireEvent.change(screen.getByLabelText("Resolution"), {
+      target: { value: "Swapped the PSU; no client-facing detail." },
     });
+    fireEvent.click(screen.getByRole("button", { name: "Resolve and close" }));
+
+    expect(onConfirm).toHaveBeenCalledWith(
+      "closed",
+      expect.any(Array),
+      {
+        suppressContactNotifications: false,
+        suppressInternalNotifications: false,
+      },
+      true,
+    );
+  });
+
+  it("resets the internal toggle whenever the dialog is opened again", () => {
+    const props = {
+      id: "ticket-resolution-close",
+      ticketId: "ticket-1",
+      statusOptions: [{ value: "closed", label: "Closed" }],
+      onClose: vi.fn(),
+      onConfirm: vi.fn().mockResolvedValue(true),
+    };
+    const { rerender } = render(<TicketResolutionDialog {...props} isOpen />);
+
+    fireEvent.click(screen.getByRole("switch", { name: "Mark as Internal" }));
+    expect(screen.getByRole("switch", { name: "Mark as Internal" })).toHaveAttribute(
+      "aria-checked",
+      "true",
+    );
+
+    rerender(<TicketResolutionDialog {...props} isOpen={false} />);
+    rerender(<TicketResolutionDialog {...props} isOpen />);
+
+    expect(screen.getByRole("switch", { name: "Mark as Internal" })).toHaveAttribute(
+      "aria-checked",
+      "false",
+    );
   });
 });

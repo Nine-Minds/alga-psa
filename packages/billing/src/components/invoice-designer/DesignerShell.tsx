@@ -59,6 +59,14 @@ import {
   ArrowUp,
   ArrowUpDown,
   BoxSelect,
+  ClipboardPaste,
+  Copy,
+  CopyPlus,
+  CornerLeftUp,
+  CornerRightDown,
+  PaintBucket,
+  Paintbrush,
+  Trash2,
   Maximize2,
   Scaling,
   Shrink,
@@ -66,18 +74,20 @@ import {
   Grid3X3,
 } from 'lucide-react';
 import { useDesignerShortcuts } from './hooks/useDesignerShortcuts';
-import { canNestWithinParent, getAllowedParentsForType } from './schema/componentSchema';
+import { useStructureCommands, type StructureCommand } from './hooks/useStructureCommands';
+import { planSubtreeRename, resolveInsertionTarget } from './utils/structureEditing';
+import { canNestWithinParent, getAllowedParentsForType, getComponentSchema } from './schema/componentSchema';
+import type { DesignerInspectorTab } from './schema/inspectorSchema';
 import { invoiceDesignerCollisionDetection } from './utils/dndCollision';
 import { resolveInsertPositionFromRects } from './utils/dropIndicator';
 import { DesignerSchemaInspector } from './inspector/DesignerSchemaInspector';
+import { NodeOverridesSummary } from './inspector/NodeOverridesSummary';
 import DocumentImagePickerWidget from './inspector/widgets/DocumentImagePickerWidget';
+import { normalizeCssLength } from './inspector/normalizers';
 import { getNodeLayout, getNodeMetadata, getNodeName, getNodeStyle } from './utils/nodeProps';
 import {
-  inferHeightMode,
-  inferWidthMode,
   resolveHeightValueForMode,
   resolveWidthValueForMode,
-  supportsSharedSizingModes,
   type DesignerHeightMode,
   type DesignerWidthMode,
 } from './utils/sizeModes';
@@ -219,6 +229,21 @@ const getPracticalMinimumSizeForType = (type: DesignerComponentType): { width: n
     default:
       return { width: 72, height: 24 };
   }
+};
+
+/** Every node below `rootId`, depth first. */
+const collectDescendants = (nodesById: Record<string, DesignerNode>, rootId: string): DesignerNode[] => {
+  const result: DesignerNode[] = [];
+  const visit = (id: string) => {
+    nodesById[id]?.children.forEach((childId) => {
+      const child = nodesById[childId];
+      if (!child) return;
+      result.push(child);
+      visit(childId);
+    });
+  };
+  visit(rootId);
+  return result;
 };
 
 const getSectionFitSizeFromChildren = (
@@ -386,16 +411,37 @@ const MEDIA_OBJECT_FIT_OPTIONS: IconToggleOption[] = [
   { value: 'scale-down', label: 'Scale Down', tooltip: 'Use intrinsic size unless it needs shrinking', icon: Shrink },
 ];
 
-const BLOCK_WIDTH_MODE_OPTIONS: IconToggleOption[] = [
-  { value: 'fixed', label: 'Fixed', tooltip: 'Use an explicit width', icon: BoxSelect },
-  { value: 'fill', label: 'Fill', tooltip: 'Stretch to the available width', icon: Maximize2 },
-  { value: 'hug', label: 'Hug', tooltip: 'Size to the content width', icon: Shrink },
+const INSPECTOR_TABS: DesignerInspectorTab[] = ['content', 'style', 'layout'];
+const INSPECTOR_TAB_LABELS: Record<DesignerInspectorTab, string> = {
+  content: 'Content',
+  style: 'Style',
+  layout: 'Layout & size',
+};
+// Blocks whose content is edited by shell controls rather than schema panels.
+const SHELL_CONTENT_TYPES = new Set<DesignerComponentType>(['image', 'logo', 'qr', 'attachment-list', 'field']);
+
+type SizeMode = 'auto' | 'fill' | 'fit' | 'fixed';
+
+const SIZE_WIDTH_MODE_OPTIONS: IconToggleOption[] = [
+  { value: 'auto', label: 'Auto', tooltip: 'Let the container decide (stretches in a vertical stack)', icon: ArrowUpDown },
+  { value: 'fill', label: 'Fill', tooltip: 'Fill the full width of the container', icon: Maximize2 },
+  { value: 'fit', label: 'Fit', tooltip: 'Shrink to fit the content', icon: Shrink },
+  { value: 'fixed', label: 'Fixed', tooltip: 'Use the exact width typed below', icon: BoxSelect },
 ];
 
-const BLOCK_HEIGHT_MODE_OPTIONS: IconToggleOption[] = [
-  { value: 'fixed', label: 'Fixed', tooltip: 'Use an explicit height', icon: BoxSelect },
-  { value: 'hug', label: 'Hug', tooltip: 'Grow only as tall as the content needs', icon: Shrink },
+const SIZE_HEIGHT_MODE_OPTIONS: IconToggleOption[] = [
+  { value: 'auto', label: 'Auto', tooltip: 'Grow with the content', icon: ArrowUpDown },
+  { value: 'fixed', label: 'Fixed', tooltip: 'Use the exact height typed below', icon: BoxSelect },
 ];
+
+const resolveSizeMode = (value: string): SizeMode => {
+  const normalized = value.trim().toLowerCase();
+  if (normalized === '' || normalized === 'auto') return 'auto';
+  if (normalized === '100%') return 'fill';
+  if (normalized === 'fit-content' || normalized === 'max-content' || normalized === 'min-content') return 'fit';
+  return 'fixed';
+};
+
 
 const FLEX_ITEM_PRESET_OPTIONS: Array<{
   value: Exclude<FlexItemPreset, 'custom'>;
@@ -696,18 +742,6 @@ export const DesignerShell: React.FC = () => {
     return layout?.display === 'flex' ? layout : null;
   }, [selectedParentNode]);
   const selectedSizingStyle = useMemo(() => getNodeStyle(selectedNode ?? undefined), [selectedNode]);
-  const selectedWidthMode = useMemo(
-    () => inferWidthMode(selectedSizingStyle),
-    [selectedSizingStyle]
-  );
-  const selectedHeightMode = useMemo(
-    () => inferHeightMode(selectedSizingStyle),
-    [selectedSizingStyle]
-  );
-  const selectedSupportsSharedSizingModes = useMemo(
-    () => Boolean(selectedNode && supportsSharedSizingModes(selectedNode.type)),
-    [selectedNode]
-  );
   const selectedFlexItemPreset = useMemo(
     () => inferFlexItemPreset(selectedSizingStyle),
     [selectedSizingStyle]
@@ -733,6 +767,52 @@ export const DesignerShell: React.FC = () => {
   }, [nodes, selectedNode]);
 
 	  useDesignerShortcuts();
+	  const structureCommands = useStructureCommands();
+	  const nameBeforeEditRef = useRef('');
+	  const [renameSuggestion, setRenameSuggestion] = useState<{
+	    nodeId: string;
+	    plan: Array<{ from: string; to: string }>;
+	  } | null>(null);
+	  // Offer to carry a renamed copy's new name onto its inner layers (from-label-2 -> bill-to-label).
+	  const suggestInnerLayerRename = useCallback((nodeId: string, previousName: string, nextName: string) => {
+	    const { nodesById: liveNodesById } = useInvoiceDesignerStore.getState();
+	    const descendantNames = collectDescendants(liveNodesById, nodeId)
+	      .map((node) => getNodeName(node))
+	      .filter((name) => name.length > 0);
+	    const plan = planSubtreeRename(previousName, nextName.trim(), descendantNames);
+	    setRenameSuggestion(plan ? { nodeId, plan } : null);
+	  }, []);
+	  const applyInnerLayerRename = useCallback(() => {
+	    if (!renameSuggestion) return;
+	    const renames = new Map(renameSuggestion.plan.map(({ from, to }) => [from, to] as const));
+	    const targets = collectDescendants(useInvoiceDesignerStore.getState().nodesById, renameSuggestion.nodeId).filter(
+	      (node) => renames.has(getNodeName(node))
+	    );
+	    targets.forEach((node, index) =>
+	      setNodeProp(node.id, 'name', renames.get(getNodeName(node)) ?? getNodeName(node), index === targets.length - 1)
+	    );
+	    setRenameSuggestion(null);
+	  }, [renameSuggestion, setNodeProp]);
+	  useEffect(() => {
+	    setRenameSuggestion((current) => (current && current.nodeId !== selectedNodeId ? null : current));
+	  }, [selectedNodeId]);
+	  const inspectorTab = useInvoiceDesignerStore((state) => state.inspectorTab);
+	  const setInspectorTab = useInvoiceDesignerStore((state) => state.setInspectorTab);
+	  const selectedHasContentTab = useMemo(
+	    () =>
+	      Boolean(selectedNode) &&
+	      (SHELL_CONTENT_TYPES.has(selectedNode!.type) ||
+	        (getComponentSchema(selectedNode!.type).inspector?.panels ?? []).some((panel) => (panel.tab ?? 'content') === 'content')),
+	    [selectedNode]
+	  );
+	  // The tab sticks while moving between blocks; one with nothing to fill in opens on Style.
+	  const activeInspectorTab: DesignerInspectorTab =
+	    inspectorTab === 'content' && !selectedHasContentTab ? 'style' : inspectorTab;
+	  const inspectorPanelRef = useRef<HTMLElement | null>(null);
+	  // Each block's inspector starts at its top, not wherever the last one was scrolled.
+	  useEffect(() => {
+	    inspectorPanelRef.current?.scrollTo?.({ top: 0 });
+	  }, [selectedNodeId]);
 	
 	  const [activeDrag, setActiveDrag] = useState<ActiveDragState>(null);
 	  const [dropIndicator, setDropIndicator] = useState<DropIndicator>(null);
@@ -751,24 +831,6 @@ export const DesignerShell: React.FC = () => {
   );
 
   const collisionDetection = useCallback<CollisionDetection>(invoiceDesignerCollisionDetection, []);
-
-  const [propertyDraft, setPropertyDraft] = useState(() => ({
-    x: 0,
-    y: 0,
-    width: 0,
-    height: 0,
-  }));
-
-  React.useEffect(() => {
-    if (selectedNode) {
-      setPropertyDraft({
-        x: selectedNode.position.x,
-        y: selectedNode.position.y,
-        width: selectedNode.size.width,
-        height: selectedNode.size.height,
-      });
-    }
-  }, [selectedNode]);
 
   React.useEffect(() => {
     if (selectedNodeId && !selectedNode) {
@@ -1112,7 +1174,7 @@ export const DesignerShell: React.FC = () => {
                   type="button"
                   onClick={() => onSelect(option.value)}
                   className={clsx(
-                    'h-8 rounded border transition-colors inline-flex items-center justify-center',
+                    'min-h-8 py-1 rounded border transition-colors inline-flex flex-col items-center justify-center gap-0.5',
                     isSelected
                       ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300'
                       : 'border-slate-200 dark:border-[rgb(var(--color-border-200))] text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800'
@@ -1121,7 +1183,8 @@ export const DesignerShell: React.FC = () => {
                   aria-label={`${label}: ${option.label}`}
                   data-automation-id={`designer-icon-group-${keyPrefix}-${option.value}`}
                 >
-                  <Icon className="h-4 w-4" />
+                  <Icon className="h-4 w-4" aria-hidden />
+                  <span className="text-[10px] leading-none">{option.label}</span>
                 </button>
               </Tooltip>
             );
@@ -1225,56 +1288,180 @@ export const DesignerShell: React.FC = () => {
     );
   };
 
-  const renderSharedSizingControls = () => {
-    if (!selectedNode || !selectedSupportsSharedSizingModes) {
+  const renderSizeControls = () => {
+    if (!selectedNode || selectedNode.type === 'document' || selectedNode.type === 'page') {
       return null;
     }
+    const style = getNodeStyle(selectedNode);
+    const widthValue = typeof style?.width === 'string' ? style.width : '';
+    const heightValue = typeof style?.height === 'string' ? style.height : '';
+    const widthMode = resolveSizeMode(widthValue);
+    const heightMode = resolveSizeMode(heightValue) === 'fixed' ? 'fixed' : 'auto';
 
-    const applyWidthMode = (mode: DesignerWidthMode) => {
-      setNodeProp(selectedNode.id, 'style.width', resolveWidthValueForMode(mode, selectedNode), true);
+    // Switching to Fixed keeps the block exactly as big as it currently renders.
+    const measureRenderedSize = (): Size => {
+      const element = typeof document !== 'undefined'
+        ? document.querySelector(`[data-automation-id="designer-canvas-node-${selectedNode.id}"]`)
+        : null;
+      const rect = element?.getBoundingClientRect();
+      return rect && rect.width > 0
+        ? { width: rect.width / canvasScale, height: rect.height / canvasScale }
+        : selectedNode.size;
     };
 
-    const applyHeightMode = (mode: DesignerHeightMode) => {
-      setNodeProp(selectedNode.id, 'style.height', resolveHeightValueForMode(mode, selectedNode), true);
+    const renderLimitInput = (
+      path: 'style.minWidth' | 'style.maxWidth' | 'style.minHeight' | 'style.maxHeight',
+      label: string
+    ) => {
+      const value = typeof style?.[path.slice('style.'.length) as 'minWidth'] === 'string'
+        ? (style?.[path.slice('style.'.length) as 'minWidth'] as string)
+        : '';
+      const id = `designer-size-${path.slice('style.'.length)}`;
+      return (
+        <div>
+          <label htmlFor={id} className="block text-[10px] text-slate-500 mb-0.5">{label}</label>
+          <Input
+            id={id}
+            key={`${id}-${selectedNode.id}-${value}`}
+            defaultValue={value}
+            placeholder="—"
+            aria-label={label}
+            onBlur={(event) => applyLength(path, event.target.value, true)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') applyLength(path, event.currentTarget.value, true);
+            }}
+          />
+        </div>
+      );
     };
 
-    const parentUsesFlowLayout = Boolean(
-      selectedParentNode && (() => {
-        const parentLayout = getNodeLayout(selectedParentNode);
-        return parentLayout?.display === 'flex' || parentLayout?.display === 'grid';
-      })()
-    );
+    const applyLength = (path: `style.${'width' | 'height' | 'minWidth' | 'maxWidth' | 'minHeight' | 'maxHeight'}`, raw: string, commit: boolean) => {
+      const normalized = normalizeCssLength(raw);
+      if (normalized === undefined) {
+        unsetNodeProp(selectedNode.id, path, commit);
+        return;
+      }
+      setNodeProp(selectedNode.id, path, normalized, commit);
+    };
+
+    const applyWidthMode = (mode: SizeMode) => {
+      const value =
+        mode === 'fill' ? '100%' : mode === 'fit' ? 'fit-content' : mode === 'auto' ? 'auto' : `${Math.round(measureRenderedSize().width)}px`;
+      setNodeProp(selectedNode.id, 'style.width', value, true);
+    };
+    const applyHeightMode = (mode: SizeMode) => {
+      const value = mode === 'fixed' ? `${Math.round(measureRenderedSize().height)}px` : 'auto';
+      setNodeProp(selectedNode.id, 'style.height', value, true);
+    };
 
     return (
       <div
         className="rounded border border-slate-200 dark:border-[rgb(var(--color-border-200))] bg-white dark:bg-[rgb(var(--color-card))] px-3 py-2 space-y-2"
-        data-automation-id="designer-shared-sizing-controls"
+        data-automation-id="designer-size-controls"
       >
-        <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">{t('designer.inspector.sizingMode', { defaultValue: 'Sizing Mode' })}</p>
+        <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">{t('designer.inspector.size', { defaultValue: 'Size' })}</p>
         {renderIconButtonGroup(
-          'block-width-mode',
-          'Width',
-          BLOCK_WIDTH_MODE_OPTIONS,
-          selectedWidthMode,
-          (value) => applyWidthMode(value as DesignerWidthMode),
-          3
+          'width-mode',
+          t('designer.inspector.width', { defaultValue: 'Width' }),
+          SIZE_WIDTH_MODE_OPTIONS.map((option) => ({
+            ...option,
+            label: t(`designer.inspector.sizeModes.${option.value}.label`, { defaultValue: option.label }),
+            tooltip: t(`designer.inspector.sizeModes.${option.value}.widthTooltip`, { defaultValue: option.tooltip }),
+          })),
+          widthMode,
+          (value) => applyWidthMode(value as SizeMode),
+          4
         )}
+        <Input
+          id="designer-size-width"
+          key={`width-${selectedNode.id}-${widthValue}`}
+          defaultValue={widthValue}
+          placeholder="auto | 300px | 50%"
+          aria-label={t('designer.inspector.widthValue', { defaultValue: 'Width value' })}
+          onBlur={(event) => applyLength('style.width', event.target.value, true)}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter') applyLength('style.width', event.currentTarget.value, true);
+          }}
+        />
+        <div className="grid grid-cols-2 gap-2">
+          {renderLimitInput('style.minWidth', t('designer.inspector.minWidth', { defaultValue: 'Min width' }))}
+          {renderLimitInput('style.maxWidth', t('designer.inspector.maxWidth', { defaultValue: 'Max width' }))}
+        </div>
         {renderIconButtonGroup(
-          'block-height-mode',
-          'Height',
-          BLOCK_HEIGHT_MODE_OPTIONS,
-          selectedHeightMode,
-          (value) => applyHeightMode(value as DesignerHeightMode),
+          'height-mode',
+          t('designer.inspector.height', { defaultValue: 'Height' }),
+          SIZE_HEIGHT_MODE_OPTIONS.map((option) => ({
+            ...option,
+            label: t(`designer.inspector.sizeModes.${option.value}.label`, { defaultValue: option.label }),
+            tooltip: t(`designer.inspector.sizeModes.${option.value}.heightTooltip`, { defaultValue: option.tooltip }),
+          })),
+          heightMode,
+          (value) => applyHeightMode(value as SizeMode),
           2
         )}
-        <p className="text-[11px] text-slate-500">
-          Width uses fill, fixed, or hug sizing. Height uses fixed or hug sizing so blocks can grow with their content.
-        </p>
-        {!parentUsesFlowLayout && (
-          <p className="text-[11px] text-amber-600 dark:text-amber-400">
-            Fill sizing works best inside stack or grid parents.
-          </p>
-        )}
+        <Input
+          id="designer-size-height"
+          key={`height-${selectedNode.id}-${heightValue}`}
+          defaultValue={heightValue}
+          placeholder="auto | 120px"
+          aria-label={t('designer.inspector.heightValue', { defaultValue: 'Height value' })}
+          onBlur={(event) => applyLength('style.height', event.target.value, true)}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter') applyLength('style.height', event.currentTarget.value, true);
+          }}
+        />
+        <div className="grid grid-cols-2 gap-2">
+          {renderLimitInput('style.minHeight', t('designer.inspector.minHeight', { defaultValue: 'Min height' }))}
+          {renderLimitInput('style.maxHeight', t('designer.inspector.maxHeight', { defaultValue: 'Max height' }))}
+        </div>
+      </div>
+    );
+  };
+
+  const renderArrangeControls = () => {
+    if (!selectedNode || selectedNode.type === 'document' || selectedNode.type === 'page') {
+      return null;
+    }
+    const buttons: Array<{ command: StructureCommand; label: string; hint: string; icon: LucideIcon; destructive?: boolean }> = [
+      { command: 'moveEarlier', label: t('designer.arrange.up', { defaultValue: 'Up' }), hint: t('designer.arrange.upHint', { defaultValue: 'Move earlier in its container (↑)' }), icon: ArrowUp },
+      { command: 'moveLater', label: t('designer.arrange.down', { defaultValue: 'Down' }), hint: t('designer.arrange.downHint', { defaultValue: 'Move later in its container (↓)' }), icon: ArrowDown },
+      { command: 'moveOut', label: t('designer.arrange.out', { defaultValue: 'Out' }), hint: t('designer.arrange.outHint', { defaultValue: 'Move out of its container, placing it right after (Alt+←)' }), icon: CornerLeftUp },
+      { command: 'moveInto', label: t('designer.arrange.into', { defaultValue: 'In' }), hint: t('designer.arrange.intoHint', { defaultValue: 'Move into the container just before it (Alt+→)' }), icon: CornerRightDown },
+      { command: 'copy', label: t('designer.arrange.copy', { defaultValue: 'Copy' }), hint: t('designer.arrange.copyHint', { defaultValue: 'Copy (Ctrl/⌘+C). Paste with Ctrl/⌘+V after selecting where it should go.' }), icon: Copy },
+      { command: 'paste', label: t('designer.arrange.paste', { defaultValue: 'Paste' }), hint: t('designer.arrange.pasteHint', { defaultValue: 'Paste into the selected container, or after the selected block (Ctrl/⌘+V)' }), icon: ClipboardPaste },
+      { command: 'duplicate', label: t('designer.arrange.duplicate', { defaultValue: 'Duplicate' }), hint: t('designer.arrange.duplicateHint', { defaultValue: 'Duplicate right after itself (Ctrl/⌘+D)' }), icon: CopyPlus },
+      { command: 'copyStyle', label: t('designer.arrange.copyStyle', { defaultValue: 'Copy style' }), hint: t('designer.arrange.copyStyleHint', { defaultValue: 'Copy colors, borders, spacing and text style (Ctrl/⌘+Alt+C)' }), icon: Paintbrush },
+      { command: 'pasteStyle', label: t('designer.arrange.pasteStyle', { defaultValue: 'Paste style' }), hint: t('designer.arrange.pasteStyleHint', { defaultValue: 'Give this block the copied style (Ctrl/⌘+Alt+V)' }), icon: PaintBucket },
+      { command: 'delete', label: t('designer.arrange.delete', { defaultValue: 'Delete' }), hint: t('designer.arrange.deleteHint', { defaultValue: 'Delete (Delete key)' }), icon: Trash2, destructive: true },
+    ];
+    return (
+      <div
+        className="rounded border border-slate-200 dark:border-[rgb(var(--color-border-200))] bg-white dark:bg-[rgb(var(--color-card))] px-3 py-2 space-y-1.5"
+        data-automation-id="designer-arrange-controls"
+      >
+        <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">{t('designer.arrange.title', { defaultValue: 'Arrange' })}</p>
+        <div className="grid grid-cols-5 gap-1">
+          {buttons.map(({ command, label, hint, icon: Icon, destructive }) => (
+            <Tooltip key={command} content={hint}>
+              <button
+                type="button"
+                id={`designer-arrange-${command}`}
+                disabled={!structureCommands.available[command]}
+                onClick={() => structureCommands.run[command]()}
+                aria-label={hint}
+                className={clsx(
+                  'flex h-12 flex-col items-center justify-center gap-0.5 rounded border text-[10px] transition-colors disabled:cursor-not-allowed disabled:opacity-40',
+                  destructive
+                    ? 'border-slate-200 dark:border-[rgb(var(--color-border-200))] text-destructive hover:bg-destructive/10'
+                    : 'border-slate-200 dark:border-[rgb(var(--color-border-200))] text-slate-600 dark:text-slate-300 hover:border-slate-300 dark:hover:border-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800'
+                )}
+              >
+                <Icon className="h-4 w-4" aria-hidden />
+                <span>{label}</span>
+              </button>
+            </Tooltip>
+          ))}
+        </div>
       </div>
     );
   };
@@ -1602,8 +1789,52 @@ export const DesignerShell: React.FC = () => {
 		      return (
 		        <div className="rounded border border-slate-200 dark:border-[rgb(var(--color-border-200))] bg-white dark:bg-[rgb(var(--color-card))] px-3 py-2 space-y-2">
 		          <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">{t('designer.inspector.media', { defaultValue: 'Media' })}</p>
+          {selectedNode.type !== 'qr' && (
+            <div className="grid grid-cols-2 gap-1" role="radiogroup" aria-label={t('designer.inspector.mediaSource', { defaultValue: 'Image source' })}>
+              {([
+                ['logo', t('designer.inspector.mediaSourceLogo', { defaultValue: 'Company logo' })],
+                ['custom', t('designer.inspector.mediaSourceCustom', { defaultValue: 'Custom image' })],
+              ] as const).map(([value, label]) => {
+                const isActive = (metadata.srcBinding === 'tenantLogo') === (value === 'logo');
+                return (
+                  <button
+                    key={value}
+                    type="button"
+                    role="radio"
+                    aria-checked={isActive}
+                    id={`designer-media-source-${value}`}
+                    className={clsx(
+                      'h-8 rounded border text-xs transition-colors',
+                      isActive
+                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300'
+                        : 'border-slate-200 dark:border-[rgb(var(--color-border-200))] text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+                    )}
+                    onClick={() => {
+                      if (value === 'logo') {
+                        setNodeProp(selectedNode.id, 'metadata.srcBinding', 'tenantLogo', true);
+                        return;
+                      }
+                      // Dropping the binding also drops an imported dynamic source,
+                      // so the typed URL below is what gets saved.
+                      unsetNodeProp(selectedNode.id, 'metadata.srcBinding', false);
+                      unsetNodeProp(selectedNode.id, 'metadata.astSrcExpression', true);
+                    }}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+          {metadata.srcBinding === 'tenantLogo' ? (
+            <p className="text-[11px] text-slate-500 dark:text-slate-400" data-automation-id="designer-media-logo-hint">
+              {t('designer.inspector.mediaSourceLogoHint', {
+                defaultValue: 'Shows the logo from your company branding settings on every document.',
+              })}
+            </p>
+          ) : (
 	          <div>
-            <label className="text-xs text-slate-500 dark:text-slate-400 block mb-1">Source URL</label>
+            <label className="text-xs text-slate-500 dark:text-slate-400 block mb-1">{t('designer.inspector.mediaSourceUrl', { defaultValue: 'Source URL' })}</label>
             <Input
               id="designer-media-src"
               value={metadata.src ?? metadata.url ?? ''}
@@ -1617,6 +1848,7 @@ export const DesignerShell: React.FC = () => {
               />
             </div>
           </div>
+          )}
           <div>
             <label className="text-xs text-slate-500 block mb-1">Alt text</label>
             <Input
@@ -1917,16 +2149,46 @@ export const DesignerShell: React.FC = () => {
   };
 
   const handleQuickInsertComponent = useCallback(
-    (componentType: DesignerComponentType) => {
+    (componentType: DesignerComponentType, options?: { after?: boolean }) => {
       clearDropFeedback();
-      const selectionAnchorId = useInvoiceDesignerStore.getState().selectedNodeId;
-      insertComponentWithResolution(componentType, {
-        strictSelectionPath: true,
-        selectedNodeIdOverride: selectionAnchorId,
-        preserveSelectionId: selectionAnchorId,
+      const state = useInvoiceDesignerStore.getState();
+      const blockLabel = t(`designer.blocks.${componentType}.label`, {
+        defaultValue: getDefinition(componentType)?.label ?? componentType,
       });
+      const target = resolveInsertionTarget(
+        state.nodes,
+        state.selectedNodeId,
+        componentType,
+        options?.after ? 'after' : state.insertPlacement
+      );
+      if (!target) {
+        recordDropResult(false);
+        showDropFeedback(
+          'error',
+          t('designer.feedback.cannotInsert', { defaultValue: '{{block}} cannot be added here.', block: blockLabel })
+        );
+        return;
+      }
+      // The new block becomes the selection, so its properties are ready to edit
+      // and the next insert lands right after it.
+      addNode(componentType, getDefaultInsertionPoint({ preferSelectionAnchor: true }), {
+        parentId: target.parentId,
+        index: target.index,
+      });
+      recordDropResult(true);
+      const parentNode = useInvoiceDesignerStore.getState().nodesById[target.parentId];
+      showDropFeedback(
+        'info',
+        parentNode?.type === 'page'
+          ? t('designer.feedback.insertedOnPage', { defaultValue: 'Added {{block}} to the page.', block: blockLabel })
+          : t('designer.feedback.insertedInto', {
+              defaultValue: 'Added {{block}} to {{parent}}.',
+              block: blockLabel,
+              parent: parentNode ? getNodeName(parentNode) : '',
+            })
+      );
     },
-    [clearDropFeedback, insertComponentWithResolution]
+    [addNode, clearDropFeedback, getDefaultInsertionPoint, recordDropResult, showDropFeedback, t]
   );
 
   const handleQuickInsertPreset = useCallback(
@@ -1963,6 +2225,16 @@ export const DesignerShell: React.FC = () => {
       }
 
       const liveSelectedNode = liveState.nodesById[liveSelectedNodeId];
+      // A selected Data Field takes the clicked field as its binding.
+      if (liveSelectedNode?.type === 'field') {
+        liveState.rebindDataField(liveSelectedNode.id, bindingPath);
+        showDropFeedback('info', t('designer.feedback.fieldRebound', {
+          defaultValue: '{{name}} now shows {{path}}.',
+          name: getNodeName(liveSelectedNode),
+          path: bindingPath,
+        }));
+        return;
+      }
       if (!liveSelectedNode || (liveSelectedNode.type !== 'text' && liveSelectedNode.type !== 'label')) {
         showDropFeedback('info', 'Focus a text field in the inspector to insert this variable.');
         return;
@@ -1992,7 +2264,7 @@ export const DesignerShell: React.FC = () => {
       }
       showDropFeedback('info', `Inserted ${token}.`);
     },
-    [clearDropFeedback, invoicePathOptions, setNodeProp, showDropFeedback]
+    [clearDropFeedback, invoicePathOptions, setNodeProp, showDropFeedback, t]
   );
 
   const simulateComponentDrop = useCallback(
@@ -2047,11 +2319,6 @@ export const DesignerShell: React.FC = () => {
     };
   }, [insertComponentWithResolution, insertPresetWithResolution, selectNode, simulateComponentDrop, simulatePresetDrop]);
 
-  const handlePropertyInput = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = event.target;
-    setPropertyDraft((prev) => ({ ...prev, [name]: Number(value) }));
-  };
-
   const runSectionFitAction = useCallback(
     (
       sectionId: string | null,
@@ -2104,40 +2371,6 @@ export const DesignerShell: React.FC = () => {
     [showDropFeedback, resizeNode]
   );
 
-  const commitPropertyChanges = () => {
-    if (!selectedNodeId) return;
-    const liveNodes = useInvoiceDesignerStore.getState().nodes;
-    const liveSelectedNode = liveNodes.find((node) => node.id === selectedNodeId) ?? null;
-    const widthMode = inferWidthMode(getNodeStyle(liveSelectedNode ?? undefined));
-    const heightMode = inferHeightMode(getNodeStyle(liveSelectedNode ?? undefined));
-
-    // Avoid creating a separate history entry just for position; the resize commit will snapshot both.
-    setNodeProp(selectedNodeId, 'position.x', propertyDraft.x, false);
-    setNodeProp(selectedNodeId, 'position.y', propertyDraft.y, false);
-    if (widthMode === 'fixed' || heightMode === 'fixed') {
-      resizeNode(
-        selectedNodeId,
-        { width: propertyDraft.width, height: propertyDraft.height },
-        true,
-        { widthMode, heightMode }
-      );
-    }
-
-    const resolvedNode = useInvoiceDesignerStore.getState().nodes.find((node) => node.id === selectedNodeId);
-    if (!resolvedNode) {
-      return;
-    }
-
-    const draftSize = {
-      width: widthMode === 'fixed' && Number.isFinite(propertyDraft.width) ? propertyDraft.width : resolvedNode.size.width,
-      height:
-        heightMode === 'fixed' && Number.isFinite(propertyDraft.height) ? propertyDraft.height : resolvedNode.size.height,
-    };
-    if ((widthMode === 'fixed' || heightMode === 'fixed') && wasSizeConstrainedFromDraft(draftSize, resolvedNode.size)) {
-      showDropFeedback('info', 'Size constrained to valid bounds.');
-    }
-  };
-
   const fitSelectedSectionToContents = useCallback(() => {
     const sectionId = selectedNode?.type === 'section' ? selectedNode.id : null;
     runSectionFitAction(sectionId, {
@@ -2189,7 +2422,9 @@ export const DesignerShell: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-[calc(100vh-8rem)] border border-slate-200 rounded-lg overflow-hidden">
+    // Sized so the editor page fits the window: the page never scrolls, so nothing
+    // shifts under the pointer while editing (panels scroll inside themselves).
+    <div className="relative flex flex-col h-[calc(100vh-24.75rem)] min-h-[480px] border border-slate-200 rounded-lg overflow-hidden">
       <DesignerToolbar
         snapToGrid={snapToGrid}
         showGuides={showGuides}
@@ -2231,12 +2466,13 @@ export const DesignerShell: React.FC = () => {
 	      </div>
 	      <DesignerBreadcrumbs nodes={nodes} selectedNodeId={selectedNodeId} onSelect={selectNode} />
 	      {dropFeedback && (
+	        // Floats over the designer: an in-flow banner would push the canvas down and back.
 	        <div
 	          className={clsx(
-            'border-b px-4 py-2 text-xs',
+            'pointer-events-none absolute left-1/2 top-28 z-50 -translate-x-1/2 rounded-md border px-4 py-2 text-xs shadow-md',
             dropFeedback.tone === 'error'
-              ? 'border-destructive/30 bg-destructive/10 text-destructive'
-              : 'border-primary/30 bg-primary/10 text-primary'
+              ? 'border-destructive/30 bg-[rgb(var(--color-card))] text-destructive'
+              : 'border-primary/30 bg-[rgb(var(--color-card))] text-primary'
           )}
           role="status"
           aria-live="polite"
@@ -2256,7 +2492,7 @@ export const DesignerShell: React.FC = () => {
             data-automation-id="designer-shell-panels"
           >
 	          <div
-              className="w-72 shrink-0 min-h-0 overflow-y-auto border-r border-slate-200 dark:border-[rgb(var(--color-border-200))]"
+              className="w-72 shrink-0 min-h-0 overflow-hidden flex flex-col border-r border-slate-200 dark:border-[rgb(var(--color-border-200))]"
               data-automation-id="designer-shell-palette-panel"
             >
 	              <ComponentPalette
@@ -2292,133 +2528,158 @@ export const DesignerShell: React.FC = () => {
 	            onDragCancel={handleDragCancel}
 	          />
           <aside
-            className="w-72 shrink-0 min-h-0 overflow-y-auto border-l border-slate-200 dark:border-[rgb(var(--color-border-200))] bg-slate-50 dark:bg-[rgb(var(--color-card))] p-4 space-y-4"
+            ref={inspectorPanelRef}
+            className="w-80 shrink-0 min-h-0 overflow-y-auto border-l border-slate-200 dark:border-[rgb(var(--color-border-200))] bg-slate-50 dark:bg-[rgb(var(--color-card))] p-4 space-y-4"
             data-automation-id="designer-shell-inspector-panel"
+            onKeyDown={(event) => {
+              // Text inputs swallow editor shortcuts, so Escape there just leaves the field.
+              const target = event.target as HTMLElement;
+              if (event.key === 'Escape' && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) {
+                target.blur();
+              }
+            }}
           >
             <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-200 uppercase tracking-wide">{t('designer.inspector.title', { defaultValue: 'Inspector' })}</h3>
-		          {selectedNode ? (
-		            <div className="space-y-3">
+          {selectedNode ? (
+            <div className="space-y-3">
+              {renderArrangeControls()}
               <div>
-                <label htmlFor="selected-name" className="text-xs text-slate-500 block mb-1">{t('designer.inspector.layerName', { defaultValue: 'Layer Name' })}</label>
+                <div className="mb-1 flex items-center justify-between gap-2">
+                  <label htmlFor="selected-name" className="text-xs text-slate-500">{t('designer.inspector.layerName', { defaultValue: 'Layer Name' })}</label>
+                  <span
+                    className="rounded bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 text-[10px] font-medium text-slate-600 dark:text-slate-300"
+                    data-automation-id="designer-selected-node-type"
+                  >
+                    {selectedNodeTypeLabel}
+                  </span>
+                </div>
                 <Input
                   id="selected-name"
                   value={getNodeName(selectedNode)}
+                  onFocus={(event) => {
+                    nameBeforeEditRef.current = event.target.value;
+                  }}
                   onChange={(event) => setNodeProp(selectedNode.id, 'name', event.target.value, false)}
-                  onBlur={(event) => setNodeProp(selectedNode.id, 'name', event.target.value, true)}
+                  onBlur={(event) => {
+                    setNodeProp(selectedNode.id, 'name', event.target.value, true);
+                    suggestInnerLayerRename(selectedNode.id, nameBeforeEditRef.current, event.target.value);
+                  }}
                 />
-              </div>
-              <div
-                className="rounded border border-slate-200 dark:border-[rgb(var(--color-border-200))] bg-white dark:bg-[rgb(var(--color-card))] px-3 py-2 space-y-1"
-                data-automation-id="designer-selected-node-type-panel"
-              >
-                <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">{t('designer.inspector.typeLabel', { defaultValue: 'Type' })}</p>
-                <p className="text-sm text-slate-700 dark:text-slate-300" data-automation-id="designer-selected-node-type">
-                  {selectedNodeTypeLabel}
-                </p>
-              </div>
-              {selectedFieldType && (
-                <div
-                  className="rounded border border-slate-200 dark:border-[rgb(var(--color-border-200))] bg-white dark:bg-[rgb(var(--color-card))] px-3 py-2 space-y-1"
-                  data-automation-id="designer-selected-field-type-panel"
-                >
-                  <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">{t('designer.inspector.fieldTypeLabel', { defaultValue: 'Field Type' })}</p>
-                  <p className="text-sm text-slate-700 dark:text-slate-300" data-automation-id="designer-selected-field-type">
-                    {selectedFieldType.label}
-                  </p>
-                  <p className="text-[11px] text-slate-500">{selectedFieldType.bindingKey || t('designer.inspector.noBindingKey', { defaultValue: 'No binding key set' })}</p>
-                </div>
-              )}
-              <div className="grid grid-cols-2 gap-3 text-xs text-slate-500">
-                <div>
-                  <label htmlFor="prop-x" className="block mb-1">X</label>
-                  <Input
-                    id="prop-x"
-                    name="x"
-                    type="number"
-                    value={propertyDraft.x}
-                    onChange={handlePropertyInput}
-                    onBlur={commitPropertyChanges}
-                    data-automation-id="designer-prop-x"
-                  />
-                </div>
-                <div>
-                  <label htmlFor="prop-y" className="block mb-1">Y</label>
-                  <Input
-                    id="prop-y"
-                    name="y"
-                    type="number"
-                    value={propertyDraft.y}
-                    onChange={handlePropertyInput}
-                    onBlur={commitPropertyChanges}
-                    data-automation-id="designer-prop-y"
-                  />
-                </div>
-                <div>
-                  <label htmlFor="prop-width" className="block mb-1">Width</label>
-                  <Input
-                    id="prop-width"
-                    name="width"
-                    type="number"
-                    value={propertyDraft.width}
-                    onChange={handlePropertyInput}
-                    onBlur={commitPropertyChanges}
-                    disabled={selectedSupportsSharedSizingModes && selectedWidthMode !== 'fixed'}
-                    data-automation-id="designer-prop-width"
-                  />
-                </div>
-                <div>
-                  <label htmlFor="prop-height" className="block mb-1">Height</label>
-                  <Input
-                    id="prop-height"
-                    name="height"
-                    type="number"
-                    value={propertyDraft.height}
-                    onChange={handlePropertyInput}
-                    onBlur={commitPropertyChanges}
-                    disabled={selectedSupportsSharedSizingModes && selectedHeightMode !== 'fixed'}
-                    data-automation-id="designer-prop-height"
-                  />
-                </div>
-              </div>
-              {selectedPreset && (
-                <div className="rounded border border-slate-200 dark:border-[rgb(var(--color-border-200))] bg-white dark:bg-[rgb(var(--color-card))] px-3 py-2 text-xs text-slate-600 dark:text-slate-400 space-y-1">
-                  <div className="flex items-center justify-between">
-                    <span className="font-semibold text-slate-700 dark:text-slate-300">{t('designer.inspector.layoutPreset', { defaultValue: 'Layout Preset' })}</span>
-	                    <button
-	                      type="button"
-	                      className="text-blue-600 hover:underline"
-	                      onClick={() => unsetNodeProp(selectedNode.id, 'layoutPresetId', true)}
-	                    >
-	                      {t('designer.inspector.clear', { defaultValue: 'Clear' })}
-	                    </button>
-	                  </div>
-	                  <div className="text-slate-500 text-[11px]">{selectedPreset.label}</div>
-	                  <p className="text-[11px] text-slate-500">{selectedPreset.description}</p>
-	                </div>
-		              )}
-                  {renderContainerLayoutControls()}
-                  {renderSharedSizingControls()}
-                  {renderFlexItemControls()}
-                  {renderFieldDisplayControls()}
-                  <DesignerSchemaInspector node={selectedNode} nodesById={nodesById} />
-			              {selectedNode.type === 'section' && (
-			                <div className="space-y-1">
-			                  <Button
-		                    id="designer-fit-section-to-contents"
-                    variant="outline"
-                    onClick={fitSelectedSectionToContents}
+                {renameSuggestion && renameSuggestion.nodeId === selectedNode.id && (
+                  <div
+                    className="mt-1 flex items-center justify-between gap-2 rounded border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/30 px-2 py-1 text-[11px] text-blue-700 dark:text-blue-300"
+                    data-automation-id="designer-inner-rename-suggestion"
                   >
-                    {t('designer.inspector.fitSectionToContents', { defaultValue: 'Fit Section to Contents' })}
-                  </Button>
-                  {!selectedSectionFitSize && (
-                    <p className="text-[11px] text-slate-500">{t('designer.inspector.sectionNoChildContent', { defaultValue: 'Section has no child content to fit.' })}</p>
-                  )}
-                </div>
-              )}
-              {renderMetadataInspector()}
-              <Button id="designer-inspector-apply" variant="outline" onClick={commitPropertyChanges}>
-                {t('designer.inspector.apply', { defaultValue: 'Apply' })}
-              </Button>
+                    <span className="min-w-0 truncate">
+                      {t('designer.inspector.renameInner', {
+                        defaultValue: 'Rename {{count}} inner layers too ({{from}} → {{to}}…)?',
+                        count: renameSuggestion.plan.length,
+                        from: renameSuggestion.plan[0].from,
+                        to: renameSuggestion.plan[0].to,
+                      })}
+                    </span>
+                    <span className="flex shrink-0 gap-2">
+                      <button type="button" id="designer-inner-rename-apply" className="font-medium underline" onClick={applyInnerLayerRename}>
+                        {t('designer.inspector.renameInnerApply', { defaultValue: 'Rename' })}
+                      </button>
+                      <button type="button" id="designer-inner-rename-dismiss" className="underline" onClick={() => setRenameSuggestion(null)}>
+                        {t('designer.inspector.renameInnerDismiss', { defaultValue: 'No' })}
+                      </button>
+                    </span>
+                  </div>
+                )}
+              </div>
+              <NodeOverridesSummary node={selectedNode} nodesById={nodesById} onJumpToTab={setInspectorTab} />
+              <div
+                className={clsx('grid gap-1 rounded-md bg-slate-100 dark:bg-slate-800 p-1', selectedHasContentTab ? 'grid-cols-3' : 'grid-cols-2')}
+                role="tablist"
+                aria-label={t('designer.inspector.tabsLabel', { defaultValue: 'Inspector sections' })}
+              >
+                {/* A block with nothing to fill in has no Content tab at all. */}
+                {INSPECTOR_TABS.filter((tab) => tab !== 'content' || selectedHasContentTab).map((tab) => {
+                  const active = activeInspectorTab === tab;
+                  return (
+                    <button
+                      key={tab}
+                      type="button"
+                      role="tab"
+                      id={`designer-inspector-tab-${tab}`}
+                      aria-selected={active}
+                      onClick={() => setInspectorTab(tab)}
+                      className={clsx(
+                        'h-7 rounded text-xs font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-40',
+                        active
+                          ? 'bg-white dark:bg-[rgb(var(--color-card))] text-slate-900 dark:text-slate-100 shadow-sm'
+                          : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                      )}
+                    >
+                      {t(`designer.inspector.tabs.${tab}`, { defaultValue: INSPECTOR_TAB_LABELS[tab] })}
+                    </button>
+                  );
+                })}
+              </div>
+              <div className="space-y-3" role="tabpanel" aria-labelledby={`designer-inspector-tab-${activeInspectorTab}`}>
+                {activeInspectorTab === 'content' && (
+                  <>
+                    {selectedFieldType && (
+                      <div
+                        className="rounded border border-slate-200 dark:border-[rgb(var(--color-border-200))] bg-white dark:bg-[rgb(var(--color-card))] px-3 py-2 space-y-1"
+                        data-automation-id="designer-selected-field-type-panel"
+                      >
+                        <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">{t('designer.inspector.fieldTypeLabel', { defaultValue: 'Field Type' })}</p>
+                        <p className="text-sm text-slate-700 dark:text-slate-300" data-automation-id="designer-selected-field-type">
+                          {selectedFieldType.label}
+                        </p>
+                        <p className="text-[11px] text-slate-500">{selectedFieldType.bindingKey || t('designer.inspector.noBindingKey', { defaultValue: 'No binding key set' })}</p>
+                      </div>
+                    )}
+                    <DesignerSchemaInspector node={selectedNode} nodesById={nodesById} tab="content" />
+                    {renderFieldDisplayControls()}
+                    {renderMetadataInspector()}
+                  </>
+                )}
+                {activeInspectorTab === 'style' && (
+                  <DesignerSchemaInspector node={selectedNode} nodesById={nodesById} tab="style" />
+                )}
+                {activeInspectorTab === 'layout' && (
+                  <>
+                    {renderContainerLayoutControls()}
+                    <DesignerSchemaInspector node={selectedNode} nodesById={nodesById} tab="layout" />
+                    {renderSizeControls()}
+                    {renderFlexItemControls()}
+                    {selectedNode.type === 'section' && (
+                      <div className="space-y-1">
+                        <Button
+                          id="designer-fit-section-to-contents"
+                          variant="outline"
+                          onClick={fitSelectedSectionToContents}
+                        >
+                          {t('designer.inspector.fitSectionToContents', { defaultValue: 'Fit Section to Contents' })}
+                        </Button>
+                        {!selectedSectionFitSize && (
+                          <p className="text-[11px] text-slate-500">{t('designer.inspector.sectionNoChildContent', { defaultValue: 'Section has no child content to fit.' })}</p>
+                        )}
+                      </div>
+                    )}
+                  </>
+                )}
+                {selectedPreset && (
+                  <div className="rounded border border-slate-200 dark:border-[rgb(var(--color-border-200))] bg-white dark:bg-[rgb(var(--color-card))] px-3 py-2 text-xs text-slate-600 dark:text-slate-400 space-y-1">
+                    <div className="flex items-center justify-between">
+                      <span className="font-semibold text-slate-700 dark:text-slate-300">{t('designer.inspector.layoutPreset', { defaultValue: 'Layout Preset' })}</span>
+                      <button
+                        type="button"
+                        className="text-blue-600 hover:underline"
+                        onClick={() => unsetNodeProp(selectedNode.id, 'layoutPresetId', true)}
+                      >
+                        {t('designer.inspector.clear', { defaultValue: 'Clear' })}
+                      </button>
+                    </div>
+                    <div className="text-slate-500 text-[11px]">{selectedPreset.label}</div>
+                    <p className="text-[11px] text-slate-500">{selectedPreset.description}</p>
+                  </div>
+                )}
+              </div>
             </div>
           ) : (
             <div className="space-y-4">
@@ -2437,6 +2698,7 @@ export const DesignerShell: React.FC = () => {
                     {t('designer.pageSetup.paperPreset', { defaultValue: 'Paper Preset' })}
                   </label>
                   <CustomSelect
+                    showPlaceholderInDropdown={false}
                     id="designer-paper-preset-select"
                     value={currentPrintSettings.paperPreset}
                     onValueChange={(value) => applyPrintSettings({ paperPreset: value as TemplatePrintSettings['paperPreset'] })}

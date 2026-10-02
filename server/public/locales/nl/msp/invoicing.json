@@ -790,7 +790,8 @@
       "back": "Terug naar Factuurlay-outs",
       "cancel": "Annuleren",
       "save": "Sjabloon opslaan",
-      "saving": "Opslaan..."
+      "saving": "Opslaan...",
+      "close": "Sluiten"
     },
     "titles": {
       "create": "Maak een nieuwe factuurlay-out",
@@ -800,7 +801,9 @@
       "templateName": "Sjabloonnaam",
       "templateAst": "Sjabloon AST (JSON)",
       "created": "Gemaakt",
-      "lastUpdated": "Laatst bijgewerkt"
+      "lastUpdated": "Laatst bijgewerkt",
+      "savedAt": "Opgeslagen {{time}}",
+      "notSaved": "Nog niet opgeslagen"
     },
     "tabs": {
       "visual": "Visueel",
@@ -816,6 +819,9 @@
       "templateNameRequired": "Sjabloonnaam is vereist",
       "astExportFailed": "Kan sjabloon AST niet exporteren uit de visuele werkruimte: {{message}}",
       "unknownAstExport": "Onbekende AST-exportfout"
+    },
+    "toast": {
+      "saved": "Lay-out \"{{name}}\" opgeslagen."
     }
   },
   "templates": {
@@ -1253,6 +1259,15 @@
         "content": "Inhoud",
         "media": "Media",
         "dynamic": "Dynamisch"
+      },
+      "insertTarget": {
+        "page": "Nieuwe blokken komen aan het einde van de pagina.",
+        "inside": "Nieuwe blokken komen in {{name}}.",
+        "after": "Nieuwe blokken komen direct na {{name}}.",
+        "label": "Waar nieuwe blokken komen",
+        "insideOption": "Erin",
+        "afterOption": "Erna",
+        "shiftHint": "Shift+click op + om het in plaats daarvan erna toe te voegen."
       }
     },
     "inspector": {
@@ -1272,7 +1287,70 @@
       "fitSectionToContents": "Sectie op inhoud aanpassen",
       "sectionNoChildContent": "Sectie heeft geen inhoud om op aan te passen.",
       "apply": "Toepassen",
-      "emptyHelp": "Selecteer een component om de eigenschappen te bewerken."
+      "emptyHelp": "Selecteer een component om de eigenschappen te bewerken.",
+      "size": "Grootte",
+      "width": "Breedte",
+      "widthValue": "Breedtewaarde",
+      "minWidth": "Min. breedte",
+      "maxWidth": "Max. breedte",
+      "height": "Hoogte",
+      "heightValue": "Hoogtewaarde",
+      "minHeight": "Min. hoogte",
+      "maxHeight": "Max. hoogte",
+      "mediaSource": "Afbeeldingsbron",
+      "mediaSourceLogo": "Bedrijfslogo",
+      "mediaSourceCustom": "Eigen afbeelding",
+      "mediaSourceLogoHint": "Toont op elk document het logo uit de huisstijlinstellingen van uw bedrijf.",
+      "mediaSourceUrl": "Bron-URL",
+      "renameInner": "Ook {{count}} onderliggende lagen hernoemen ({{from}} → {{to}}…)?",
+      "renameInnerApply": "Hernoemen",
+      "renameInnerDismiss": "Nee",
+      "tabsLabel": "Inspecteursecties",
+      "insertDataField": "+ Gegevensveld invoegen…",
+      "searchDataFields": "Gegevensvelden zoeken…",
+      "dataFields": "Gegevensvelden",
+      "box": {
+        "top": "Boven",
+        "right": "Rechts",
+        "bottom": "Onder",
+        "left": "Links",
+        "all": "Alle zijden",
+        "sameOnAllSides": "Gelijk aan alle zijden",
+        "unit": "Eenheid",
+        "customValue": "Aangepaste CSS-waarde blijft behouden tot u een zijde bewerkt: {{value}}"
+      },
+      "examplePlaceholder": "bijv. {{value}}",
+      "setCount": "{{count}} ingesteld",
+      "overrides": {
+        "none": "Gebruikt alleen standaardwaarden.",
+        "jump": "Bewerken op het tabblad {{tab}}",
+        "title": "Ingesteld op dit blok ({{count}}):"
+      },
+      "tabs": {
+        "content": "Inhoud",
+        "style": "Stijl",
+        "layout": "Lay-out en grootte"
+      },
+      "sizeModes": {
+        "auto": {
+          "label": "Auto",
+          "widthTooltip": "De container bepaalt het (rekt uit in een verticale stapel)",
+          "heightTooltip": "Meegroeien met de inhoud"
+        },
+        "fill": {
+          "label": "Vullen",
+          "widthTooltip": "De volledige breedte van de container vullen"
+        },
+        "fit": {
+          "label": "Passend",
+          "widthTooltip": "Verkleinen tot de grootte van de inhoud"
+        },
+        "fixed": {
+          "label": "Vast",
+          "widthTooltip": "De hieronder ingevoerde exacte breedte gebruiken",
+          "heightTooltip": "De hieronder ingevoerde exacte hoogte gebruiken"
+        }
+      }
     },
     "shell": {
       "selectedLabel": "Geselecteerd:",
@@ -1564,6 +1642,12 @@
             },
             "margin": {
               "label": "Marge"
+            },
+            "padding": {
+              "label": "Opvulling"
+            },
+            "containerPadding": {
+              "label": "Opvulling"
             }
           }
         },
@@ -1651,6 +1735,84 @@
         },
         "totals-rows": {
           "title": "Totaalrijen"
+        },
+        "typography": {
+          "title": "Typografie",
+          "fields": {
+            "fontSize": {
+              "label": "Grootte"
+            },
+            "fontWeight": {
+              "label": "Dikte",
+              "options": {
+                "400": "Normaal (400)",
+                "500": "Gemiddeld (500)",
+                "600": "Halfvet (600)",
+                "700": "Vet (700)"
+              }
+            },
+            "lineHeight": {
+              "label": "Regelhoogte"
+            },
+            "textAlign": {
+              "label": "Uitlijning",
+              "options": {
+                "left": "Links",
+                "center": "Midden",
+                "right": "Rechts",
+                "justify": "Uitvullen"
+              }
+            },
+            "fontStyle": {
+              "label": "Stijl",
+              "options": {
+                "normal": "Normaal",
+                "italic": "Cursief"
+              }
+            },
+            "color": {
+              "label": "Kleur"
+            }
+          }
+        },
+        "value-typography": {
+          "title": "Waardetekst",
+          "fields": {
+            "fontSize": {
+              "label": "Grootte"
+            },
+            "fontWeight": {
+              "label": "Dikte",
+              "options": {
+                "400": "Normaal (400)",
+                "500": "Gemiddeld (500)",
+                "600": "Halfvet (600)",
+                "700": "Vet (700)"
+              }
+            },
+            "lineHeight": {
+              "label": "Regelhoogte"
+            },
+            "textAlign": {
+              "label": "Uitlijning",
+              "options": {
+                "left": "Links",
+                "center": "Midden",
+                "right": "Rechts",
+                "justify": "Uitvullen"
+              }
+            },
+            "fontStyle": {
+              "label": "Stijl",
+              "options": {
+                "normal": "Normaal",
+                "italic": "Cursief"
+              }
+            },
+            "color": {
+              "label": "Kleur"
+            }
+          }
         }
       }
     },
@@ -1750,10 +1912,66 @@
     },
     "canvas": {
       "templateBoundary": "Sjabloongrens",
-      "translatableHint": "Wordt automatisch vertaald naar de taal van de ontvanger. Als u de tekst bewerkt, wordt uw eigen vaste tekst gebruikt."
+      "translatableHint": "Wordt automatisch vertaald naar de taal van de ontvanger. Als u de tekst bewerkt, wordt uw eigen vaste tekst gebruikt.",
+      "noLineItems": "Geen regels",
+      "moreRows": "+{{count}} extra rijen",
+      "subtotal": "Subtotaal",
+      "tax": "Btw",
+      "total": "Totaal",
+      "buttonLabel": "Knop",
+      "signatureLabel": "Handtekening",
+      "attachmentsLabel": "Bijlagen",
+      "spacerLabel": "Tussenruimte",
+      "companyLogo": "Bedrijfslogo",
+      "insertionMarker": "Het volgende blok dat u toevoegt, komt hier",
+      "emptyContainer": "Leeg — selecteer het en voeg blokken toe vanuit het linkerpaneel",
+      "localeChip": "Vertaalde labels worden getoond in {{language}} (Voorvertoningstaal)"
     },
     "dragOverlay": {
       "component": "Component"
+    },
+    "arrange": {
+      "up": "Omhoog",
+      "upHint": "Eerder plaatsen in de container (↑)",
+      "down": "Omlaag",
+      "downHint": "Later plaatsen in de container (↓)",
+      "out": "Eruit",
+      "outHint": "Uit de container halen en er direct na plaatsen (Alt+←)",
+      "into": "Erin",
+      "intoHint": "Verplaatsen naar de container direct ervoor (Alt+→)",
+      "copy": "Kopiëren",
+      "copyHint": "Kopiëren (Ctrl/⌘+C). Selecteer waar het moet komen en plak met Ctrl/⌘+V.",
+      "paste": "Plakken",
+      "pasteHint": "Plakken in de geselecteerde container of na het geselecteerde blok (Ctrl/⌘+V)",
+      "duplicate": "Dupliceren",
+      "duplicateHint": "Direct erna dupliceren (Ctrl/⌘+D)",
+      "copyStyle": "Stijl kopiëren",
+      "copyStyleHint": "Kleuren, randen, afstanden en tekststijl kopiëren (Ctrl/⌘+Alt+C)",
+      "pasteStyle": "Stijl plakken",
+      "pasteStyleHint": "Gekopieerde stijl op dit blok toepassen (Ctrl/⌘+Alt+V)",
+      "delete": "Verwijderen",
+      "deleteHint": "Verwijderen (Delete-toets)",
+      "title": "Schikken"
+    },
+    "feedback": {
+      "cannotInsert": "{{block}} kan hier niet worden toegevoegd.",
+      "insertedOnPage": "{{block}} aan de pagina toegevoegd.",
+      "insertedInto": "{{block}} aan {{parent}} toegevoegd.",
+      "fieldRebound": "{{name}} toont nu {{path}}."
+    },
+    "translation": {
+      "translatedAs": "Standaardlabel \"{{name}}\", vertaald voor elke ontvanger",
+      "useFixedText": "Vaste tekst gebruiken",
+      "pickStandardLabel": "Vaste tekst. Automatisch vertalen…",
+      "searchStandardLabels": "Standaardlabels zoeken…",
+      "standardLabels": "Standaardlabels",
+      "noMatches": "Geen standaardlabels gevonden.",
+      "cancel": "Annuleren"
+    },
+    "outline": {
+      "collapse": "{{name}} samenvouwen",
+      "expand": "{{name}} uitvouwen",
+      "title": "Overzicht"
     }
   },
   "projectBilling": {
@@ -2008,7 +2226,9 @@
         "addLine": "+ Regel",
         "clearLines": "Enkele regel",
         "stackedLinesHint": "Elke niet-lege regel wordt op een eigen rij weergegeven. Wanneer alle regels leeg zijn, wordt de hierboven vermelde bindingssleutel van de kolom weergegeven.",
-        "removeLine": "Regel {{index}} verwijderen"
+        "removeLine": "Regel {{index}} verwijderen",
+        "align": "Uitlijning",
+        "widthPlaceholder": "auto | 50% | 120px"
       },
       "columnTypes": {
         "text": "Tekst",
@@ -2043,6 +2263,12 @@
         "groupedRowKey": "Sleutel van gegroepeerde rij",
         "groupedRowItems": "Items van gegroepeerde rij",
         "availableBinding": "Beschikbare binding"
+      },
+      "columnAlign": {
+        "default": "Standaard",
+        "left": "Links",
+        "center": "Midden",
+        "right": "Rechts"
       }
     },
     "imagePicker": {
@@ -2061,7 +2287,14 @@
       "clearRowBackground": "Rij-achtergrondkleur wissen",
       "clearRowTextColor": "Rij-tekstkleur wissen",
       "labelColorOverrideNote": "Dit label behoudt zijn eigen opgeslagen kleur en erft niet de hierboven ingestelde rij-tekstkleur. Het bedrag volgt nog steeds de rij-tekstkleur.",
-      "noRows": "Dit totalenblok heeft nog geen opgeslagen rijen. Sla de sjabloon op en open deze opnieuw om rijkleuren te bewerken."
+      "noRows": "Dit totalenblok heeft nog geen opgeslagen rijen. Sla de sjabloon op en open deze opnieuw om rijkleuren te bewerken.",
+      "addRow": "Rij toevoegen:",
+      "empty": "Nog geen rijen. Voeg hieronder een rij toe.",
+      "moveUp": "{{row}} omhoog verplaatsen",
+      "moveDown": "{{row}} omlaag verplaatsen",
+      "remove": "{{row}} verwijderen",
+      "label": "Label",
+      "emphasize": "Benadrukken (stijl van eindtotaal)"
     }
   },
   "draftInvoiceDetails": {
