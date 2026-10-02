@@ -1785,6 +1785,7 @@
     "cap": {
       "title": "Limit budżetu",
       "hint": "Czas i materiały są rozliczane według stawek do opcjonalnego limitu maksymalnego.",
+      "currencyStale": "Zapisany limit jest w {{projectCurrency}}, w której ten klient nie jest już rozliczany. Wpisz limit w {{clientCurrency}}, aby przenieść ten projekt na {{clientCurrency}}; do tego czasu żaden limit nie jest stosowany.",
       "amount": "Kwota limitu ({{currency}})",
       "behavior": "Po osiągnięciu",
       "notify": "Tylko powiadom",
@@ -1835,7 +1836,8 @@
       "tmHardHint": "Twardy limit {{cap}} — rozliczanie zatrzymuje się na limicie",
       "tmNotifyHint": "Limit budżetu {{cap}} — tylko powiadomienie",
       "thresholdMarker": "Próg powiadomienia {{pct}}%",
-      "writtenDown": "Odpisano ponad limit: {{amount}}"
+      "writtenDown": "Odpisano ponad limit: {{amount}}",
+      "currencyStale": "Kwoty tutaj są w {{projectCurrency}}, ale ten klient jest rozliczany w {{clientCurrency}}. Faktury używają {{clientCurrency}}, a limit budżetu w innej walucie nie jest stosowany."
     },
     "economics": {
       "title": "Rentowność realizacji",

@@ -1757,6 +1757,7 @@
     "cap": {
       "title": "Budgetlimiet",
       "hint": "Tijd en materialen worden tegen tarieven gefactureerd tot een optionele maximumlimiet.",
+      "currencyStale": "De opgeslagen limiet staat in {{projectCurrency}}, de valuta waarin deze klant niet langer wordt gefactureerd. Voer de limiet in {{clientCurrency}} in om dit project naar {{clientCurrency}} over te zetten; tot die tijd wordt geen limiet toegepast.",
       "amount": "Limietbedrag ({{currency}})",
       "behavior": "Bij bereiken",
       "notify": "Alleen melden",
@@ -1807,7 +1808,8 @@
       "tmHardHint": "Harde limiet {{cap}} — facturering stopt bij de limiet",
       "tmNotifyHint": "Budgetlimiet {{cap}} — alleen melden",
       "thresholdMarker": "Meldingsdrempel {{pct}}%",
-      "writtenDown": "Boven limiet afgeboekt: {{amount}}"
+      "writtenDown": "Boven limiet afgeboekt: {{amount}}",
+      "currencyStale": "De bedragen hier staan in {{projectCurrency}}, maar deze klant wordt in {{clientCurrency}} gefactureerd. Facturen gebruiken {{clientCurrency}} en een budgetlimiet in een andere valuta wordt niet toegepast."
     },
     "economics": {
       "title": "Projectrendement",

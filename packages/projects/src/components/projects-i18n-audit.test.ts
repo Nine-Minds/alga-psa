@@ -329,6 +329,22 @@ describe('T011: /msp/projects/[id] detail page i18n coverage', () => {
     }
   });
 
+  it('the stranded-currency notices on the project billing cards are translated', () => {
+    const budgetCard = read(
+      '../../../billing/src/components/project-billing/BudgetVsActualCard.tsx'
+    );
+    expect(budgetCard).toContain("'billing.budget.currencyStale'");
+    expect(budgetCard).toContain('id="project-billing-currency-mismatch"');
+
+    const capPanel = read('../../../billing/src/components/project-billing/CapPanel.tsx');
+    expect(capPanel).toContain("'billing.cap.currencyStale'");
+    expect(capPanel).toContain('id="project-billing-cap-currency-stale"');
+
+    for (const key of ['billing.budget.currencyStale', 'billing.cap.currencyStale']) {
+      expect(getLeaf(pseudo, key), key).toMatch(pseudoPattern('xx'));
+    }
+  });
+
   it("the project billing queue says approved time is not reviewed there", () => {
     const reviewTab = read(
       '../../../billing/src/components/billing-dashboard/invoicing/ProjectBillingReviewTab.tsx'

@@ -408,9 +408,17 @@ export const getProjectBillingOverview = withAuth(withProjectBillingActionErrors
 ): Promise<ProjectBillingOverview> => {
   await assertBillingReadPermission(user);
   const { knex } = await createTenantKnex();
-  await requireProject(knex, tenant, projectId);
+  const project = await requireProject(knex, tenant, projectId);
   const config = await ProjectBillingConfig.getByProject(projectId, knex);
   const economicsPromise = getProjectEconomics(knex, tenant, projectId, config);
+  // Reading the overview must survive a client whose currency cannot be
+  // resolved (contracts in several currencies); the mismatch notice is simply
+  // not shown in that case.
+  const clientCurrencyPromise = resolveClientBillingCurrencyInternal(
+    knex,
+    tenant,
+    project.client_id,
+  ).catch(() => null);
 
   if (!config) {
     return {
@@ -420,15 +428,17 @@ export const getProjectBillingOverview = withAuth(withProjectBillingActionErrors
       cap_usage: null,
       economics: await economicsPromise,
       overrides: [],
+      client_billing_currency: await clientCurrencyPromise,
     };
   }
 
-  const [entries, rollup, capUsage, economics, overrides] = await Promise.all([
+  const [entries, rollup, capUsage, economics, overrides, clientCurrency] = await Promise.all([
     listScheduleEntryViews(config, knex),
     ProjectBillingConfig.getRollupByProject(projectId, knex),
     ProjectBillingCapUsage.getByConfig(config.config_id, knex),
     economicsPromise,
     listOverrideViews(projectId, knex, tenant),
+    clientCurrencyPromise,
   ]);
   return {
     config,
@@ -437,6 +447,7 @@ export const getProjectBillingOverview = withAuth(withProjectBillingActionErrors
     cap_usage: capUsage,
     economics,
     overrides,
+    client_billing_currency: clientCurrency,
   };
 }));
 

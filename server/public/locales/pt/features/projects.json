@@ -1757,6 +1757,7 @@
     "cap": {
       "title": "Limite orçamental",
       "hint": "O tempo e os materiais são faturados às tarifas definidas até um limite máximo opcional.",
+      "currencyStale": "O limite guardado está em {{projectCurrency}}, moeda em que este cliente já não é faturado. Introduza o limite em {{clientCurrency}} para passar este projeto a {{clientCurrency}}; até então não é aplicado nenhum limite.",
       "amount": "Montante do limite ({{currency}})",
       "behavior": "Ao atingir",
       "notify": "Apenas notificar",
@@ -1807,7 +1808,8 @@
       "tmHardHint": "Limite rígido de {{cap}} — a faturação para no limite",
       "tmNotifyHint": "Limite orçamental de {{cap}} — apenas notificar",
       "thresholdMarker": "Limiar de notificação de {{pct}}%",
-      "writtenDown": "Abatido acima do limite: {{amount}}"
+      "writtenDown": "Abatido acima do limite: {{amount}}",
+      "currencyStale": "Os montantes aqui estão em {{projectCurrency}}, mas este cliente é faturado em {{clientCurrency}}. As faturas usam {{clientCurrency}} e um limite orçamental noutra moeda não é aplicado."
     },
     "economics": {
       "title": "Rentabilidade da prestação",

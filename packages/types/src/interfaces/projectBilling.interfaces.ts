@@ -113,6 +113,13 @@ export interface ProjectBillingOverview {
   cap_usage: IProjectBillingCapUsage | null;
   economics: ProjectBillingEconomics;
   overrides: ProjectBillingPhaseRateOverrideView[];
+  /**
+   * Currency the client actually bills in. The config's currency is pinned to
+   * it on every write, but a client's currency can move afterwards, leaving a
+   * total or cap denominated in a currency no invoice will ever use. Null when
+   * it cannot be resolved (for example, contracts in several currencies).
+   */
+  client_billing_currency: string | null;
 }
 
 export type ProjectPaymentWarningKind =

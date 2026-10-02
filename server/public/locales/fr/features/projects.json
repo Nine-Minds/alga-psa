@@ -1757,6 +1757,7 @@
     "cap": {
       "title": "Plafond budgétaire",
       "hint": "Le temps et les matériaux sont facturés aux tarifs définis jusqu'à un plafond facultatif.",
+      "currencyStale": "Le plafond enregistré est en {{projectCurrency}}, devise dans laquelle ce client n’est plus facturé. Saisissez le plafond en {{clientCurrency}} pour basculer ce projet en {{clientCurrency}} ; d’ici là, aucun plafond n’est appliqué.",
       "amount": "Montant du plafond ({{currency}})",
       "behavior": "Une fois atteint",
       "notify": "Notifier uniquement",
@@ -1807,7 +1808,8 @@
       "tmHardHint": "Plafond strict de {{cap}} — la facturation s'arrête au plafond",
       "tmNotifyHint": "Plafond budgétaire de {{cap}} — notification uniquement",
       "thresholdMarker": "Seuil de notification à {{pct}} %",
-      "writtenDown": "Passé en perte au-delà du plafond : {{amount}}"
+      "writtenDown": "Passé en perte au-delà du plafond : {{amount}}",
+      "currencyStale": "Les montants affichés ici sont en {{projectCurrency}}, alors que ce client est facturé en {{clientCurrency}}. Les factures utilisent {{clientCurrency}} et un plafond budgétaire dans une autre devise n’est pas appliqué."
     },
     "economics": {
       "title": "Rentabilité de la prestation",

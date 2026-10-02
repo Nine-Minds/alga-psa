@@ -1757,6 +1757,7 @@
     "cap": {
       "title": "Budgetobergrenze",
       "hint": "Zeit und Material wird nach Sätzen bis zu einer optionalen Höchstgrenze abgerechnet.",
+      "currencyStale": "Die gespeicherte Obergrenze lautet auf {{projectCurrency}}, worin dieser Kunde nicht mehr abgerechnet wird. Geben Sie die Obergrenze in {{clientCurrency}} ein, um dieses Projekt auf {{clientCurrency}} umzustellen; bis dahin wird keine Obergrenze angewendet.",
       "amount": "Höchstbetrag ({{currency}})",
       "behavior": "Bei Erreichen",
       "notify": "Nur benachrichtigen",
@@ -1807,7 +1808,8 @@
       "tmHardHint": "Harte Obergrenze {{cap}} — die Abrechnung endet an der Obergrenze",
       "tmNotifyHint": "Budgetobergrenze {{cap}} — nur benachrichtigen",
       "thresholdMarker": "Benachrichtigungsschwelle {{pct}} %",
-      "writtenDown": "Über der Obergrenze abgeschrieben: {{amount}}"
+      "writtenDown": "Über der Obergrenze abgeschrieben: {{amount}}",
+      "currencyStale": "Die Beträge hier lauten auf {{projectCurrency}}, dieser Kunde wird jedoch in {{clientCurrency}} abgerechnet. Rechnungen verwenden {{clientCurrency}}, und eine Budgetobergrenze in einer anderen Währung wird nicht angewendet."
     },
     "economics": {
       "title": "Projektwirtschaftlichkeit",
