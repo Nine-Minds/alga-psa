@@ -234,7 +234,6 @@ async function seedFullTemplate(): Promise<Seeded> {
     template_line_id: lineIds.fixedA,
     base_rate: 250000,
     enable_proration: true,
-    billing_cycle_alignment: 'start',
   });
   await insertTemplateMember(lineIds.fixedA, serviceIds.fixedA1, 'Fixed', { quantity: 2, rate: 100000, order: 0 });
   await insertTemplateMember(lineIds.fixedA, serviceIds.fixedA2, 'Fixed', { quantity: 1, rate: 50000, order: 1 });
@@ -254,7 +253,6 @@ async function seedFullTemplate(): Promise<Seeded> {
     template_line_id: lineIds.fixedB,
     base_rate: 90000,
     enable_proration: false,
-    billing_cycle_alignment: 'start',
   });
   await insertTemplateMember(lineIds.fixedB, serviceIds.fixedB1, 'Fixed', { quantity: 1, rate: 90000 });
 
