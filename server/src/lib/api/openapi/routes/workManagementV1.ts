@@ -21,6 +21,24 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
     'WorkV1ProjectTaskParam',
     zOpenApi.object({ taskId: zOpenApi.string().uuid().describe('Project task UUID from project_tasks.task_id.') }),
   );
+  const ProjectTaskChecklistItemParams = registry.registerSchema(
+    'WorkV1ProjectTaskChecklistItemParams',
+    zOpenApi.object({
+      taskId: zOpenApi.string().uuid().describe('Project task UUID from project_tasks.task_id.'),
+      itemId: zOpenApi.string().uuid().describe('Checklist item UUID from task_checklist_items.checklist_item_id.'),
+    }),
+  );
+  const ProjectTaskChecklistItemBody = registry.registerSchema(
+    'WorkV1ProjectTaskChecklistItemBody',
+    zOpenApi.object({
+      item_name: zOpenApi.string().min(1).optional().describe('Checklist item text. Required on create. `item_text` is accepted as a legacy alias.'),
+      description: zOpenApi.string().nullable().optional(),
+      assigned_to: zOpenApi.string().uuid().nullable().optional(),
+      completed: zOpenApi.boolean().optional().describe('Mark the item done/undone. `is_completed` is accepted as a legacy alias.'),
+      due_date: zOpenApi.string().nullable().optional(),
+      order_number: zOpenApi.number().int().min(0).optional(),
+    }),
+  );
 
   const SessionParam = registry.registerSchema(
     'WorkV1SessionParam',
@@ -291,7 +309,9 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
     { method: 'get', path: '/api/v1/projects/search', summary: 'Search projects', description: 'Searches projects via ApiProjectController.search().', family: 'project' },
     { method: 'get', path: '/api/v1/projects/stats', summary: 'Get project stats', description: 'Returns project aggregate statistics for authorized projects.', family: 'project' },
     { method: 'get', path: '/api/v1/projects/tasks/{taskId}/checklist', summary: 'List task checklist items', description: 'Reads checklist items for project task UUID through ApiProjectController.getTaskChecklist().', family: 'project' },
-    { method: 'post', path: '/api/v1/projects/tasks/{taskId}/checklist', summary: 'Create task checklist item', description: 'Creates checklist item for project task UUID via ApiProjectController.createChecklistItem().', family: 'project' },
+    { method: 'post', path: '/api/v1/projects/tasks/{taskId}/checklist', summary: 'Create task checklist item', description: 'Creates checklist item for project task UUID via ApiProjectController.createChecklistItem(). Body uses the table\'s item_name / completed names; item_text / is_completed remain accepted aliases.', family: 'project' },
+    { method: 'put', path: '/api/v1/projects/tasks/{taskId}/checklist/{itemId}', summary: 'Update task checklist item', description: 'Updates one checklist item of the task, typically `completed` to tick it done. 404 when the item is not on that task.', family: 'project' },
+    { method: 'delete', path: '/api/v1/projects/tasks/{taskId}/checklist/{itemId}', summary: 'Delete task checklist item', description: 'Deletes one checklist item of the task. 404 when the item is not on that task.', family: 'project' },
     { method: 'delete', path: '/api/v1/projects/{id}', summary: 'Delete project', description: 'Deletes project by project UUID.', family: 'project' },
     { method: 'get', path: '/api/v1/projects/{id}', summary: 'Get project', description: 'Returns one project by project UUID.', family: 'project' },
     { method: 'put', path: '/api/v1/projects/{id}', summary: 'Update project', description: 'Updates project by project UUID.', family: 'project' },
@@ -428,7 +448,7 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
   function requestFor(def: Def) {
     const req: Record<string, unknown> = {};
 
-    if (def.path.includes('{taskId}')) req.params = ProjectTaskParam;
+    if (def.path.includes('{taskId}')) req.params = def.path.includes('{itemId}') ? ProjectTaskChecklistItemParams : ProjectTaskParam;
     if (def.path.includes('{id}/phases/{phaseId}')) req.params = ProjectPhaseParams;
     if (def.path.includes('{sessionId}')) req.params = SessionParam;
     if (def.path.includes('{entityType}/{entityId}')) req.params = TagEntityParams;
@@ -445,7 +465,9 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
       req.query = TicketListQuery;
     }
 
-    if (def.path.startsWith('/api/v1/projects') && (def.method === 'post' || def.method === 'put')) req.body = { schema: def.path === '/api/v1/projects' ? CreateProjectBody : GenericBody };
+    if (def.path.startsWith('/api/v1/projects') && (def.method === 'post' || def.method === 'put')) {
+      req.body = { schema: def.path === '/api/v1/projects' ? CreateProjectBody : def.path.includes('/checklist') ? ProjectTaskChecklistItemBody : GenericBody };
+    }
     if (def.path.startsWith('/api/v1/tickets') && (def.method === 'post' || def.method === 'put')) {
       let schema: ZodTypeAny = def.path === '/api/v1/tickets' ? CreateTicketBody : GenericBody;
       if (def.method === 'put' && def.path === '/api/v1/tickets/{id}') schema = TicketUpdateBody;
