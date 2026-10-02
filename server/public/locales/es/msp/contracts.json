@@ -1046,6 +1046,7 @@
       "published": "Publicada"
     },
     "toasts": {
+      "contractActivated": "Contrato activado",
       "draftDiscarded": "Borrador descartado",
       "failedToActivateContract": "No se pudo activar el contrato",
       "failedToDeleteContract": "No se pudo eliminar el contrato",

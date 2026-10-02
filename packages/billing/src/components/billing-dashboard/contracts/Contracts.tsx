@@ -37,7 +37,7 @@ import {
 import { ContractWizard } from './ContractWizard';
 import { TemplateWizard } from './template-wizard/TemplateWizard';
 import { ContractDialog } from './ContractDialog';
-import { updateClientContractForBilling } from '@alga-psa/billing/actions/billingClientsActions';
+import { activateClientContractForBilling, updateClientContractForBilling } from '@alga-psa/billing/actions/billingClientsActions';
 import {
   type ContractSubTab,
   getDraftTabBadgeCount,
@@ -285,11 +285,12 @@ const Contracts: React.FC = () => {
       if (!clientContractId) {
         throw new Error('Missing client contract identifier');
       }
-      const result = await updateClientContractForBilling(clientContractId, { is_active: true });
+      const result = await activateClientContractForBilling(clientContractId);
       if (isActionMessageError(result) || isActionPermissionError(result)) {
         toast.error(getErrorMessage(result));
         return;
       }
+      toast.success(t('contractsList.toasts.contractActivated', { defaultValue: 'Contract activated' }));
       await fetchContracts();
     } catch (err) {
       const message = err instanceof Error
