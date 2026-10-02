@@ -1202,7 +1202,7 @@
     "composition": {
       "addContractLinesBeforeManaging": "Aggiungi linee contrattuali a questo modello prima di gestire i servizi.",
       "additionalPlans": "Piani aggiuntivi",
-      "bucketSummary": "Pacchetto: {{minutes}} min • Eccesso ${{overage}}",
+      "bucketSummary": "Pacchetto: {{minutes}} min • Eccesso {{overage}}",
       "closeManager": "Chiudi gestore",
       "editRate": "Modifica tariffa",
       "fixedFeeBundles": "Pacchetti a tariffa fissa",

@@ -1202,7 +1202,7 @@
     "composition": {
       "addContractLinesBeforeManaging": "Dodaj linie kontraktowe do tego szablonu przed zarządzaniem usługami.",
       "additionalPlans": "Dodatkowe plany",
-      "bucketSummary": "Pakiet: {{minutes}} min • Nadwyżka ${{overage}}",
+      "bucketSummary": "Pakiet: {{minutes}} min • Nadwyżka {{overage}}",
       "closeManager": "Zamknij menedżera",
       "editRate": "Edytuj stawkę",
       "fixedFeeBundles": "Pakiety opłaty stałej",
