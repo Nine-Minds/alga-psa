@@ -803,7 +803,34 @@ describe('typing into a committed value without selecting it first', () => {
     expect([timeInput.selectionStart, timeInput.selectionEnd]).toEqual([3, 3]);
   });
 
-  describe('guard: only an untouched committed value is overwritten', () => {
+  it('keeps the selection on the date half when focus arrives from the time half', async () => {
+    const user = userEvent.setup();
+    render(<Controlled variant="datetime" initial={new Date(2026, 7, 13, 9, 0)} onCommit={() => {}} />);
+
+    const [dateInput, timeInput] = fields();
+    await user.click(timeInput);
+    expect(document.activeElement).toBe(timeInput);
+
+    // Chrome lands the click's caret after the focus handler has selected the
+    // text; jsdom does not, so stand in for it once React has seen the focus.
+    const collapse = (event: FocusEvent) => {
+      const target = event.target as HTMLInputElement;
+      target.setSelectionRange(3, 3);
+    };
+    document.addEventListener('focusin', collapse);
+
+    // The time half blurs while the date half is claiming its first click.
+    await user.pointer({ keys: '[MouseLeft]', target: dateInput, offset: 3 });
+    expect(document.activeElement).toBe(dateInput);
+    expect([dateInput.selectionStart, dateInput.selectionEnd]).toEqual([0, dateInput.value.length]);
+
+    // And the other way round.
+    await user.pointer({ keys: '[MouseLeft]', target: timeInput, offset: 2 });
+    expect([timeInput.selectionStart, timeInput.selectionEnd]).toEqual([0, timeInput.value.length]);
+    document.removeEventListener('focusin', collapse);
+  });
+
+  describe('guard: only an untouched committed value is overwritten, and only by an insertion that makes no valid entry', () => {
     it('judges a keystroke against text the user has already changed, as before', async () => {
       const user = userEvent.setup();
       const onChange = vi.fn();
@@ -830,6 +857,56 @@ describe('typing into a committed value without selecting it first', () => {
       await user.keyboard('{Backspace}');
       expect(input.value).toBe('2:3 PM');
       expect(onChange).not.toHaveBeenCalled();
+    });
+
+    it('keeps an insertion that makes a valid time: 2:30 PM with a 1 before the 2 is 12:30 PM', async () => {
+      const user = userEvent.setup();
+      const onChange = vi.fn();
+      render(<DateTimeField variant="time" value="14:30" onChange={onChange} timeFormat="12h" />);
+
+      const [input] = fields();
+      expect(input.value).toBe('2:30 PM');
+      input.focus();
+      input.setSelectionRange(0, 0);
+      await user.keyboard('1');
+      expect(input.value).toBe('12:30 PM');
+      await user.keyboard('{Enter}');
+      expect(onChange).toHaveBeenCalledWith('12:30');
+    });
+
+    it('keeps an insertion that makes a valid time: 1:30 PM with a 0 after the 1 is 10:30 PM', async () => {
+      const user = userEvent.setup();
+      const onChange = vi.fn();
+      render(<DateTimeField variant="time" value="13:30" onChange={onChange} timeFormat="12h" />);
+
+      const [input] = fields();
+      expect(input.value).toBe('1:30 PM');
+      input.focus();
+      input.setSelectionRange(1, 1);
+      await user.keyboard('0{Enter}');
+      expect(onChange).toHaveBeenCalledWith('22:30');
+    });
+
+    it('keeps an insertion that makes a valid date when the display is not padded', async () => {
+      const user = userEvent.setup();
+      const onChange = vi.fn();
+      render(
+        <DateTimeField
+          variant="date"
+          value={new Date(2026, 8, 5)}
+          displayFormat="M/d/yyyy"
+          onChange={onChange}
+        />
+      );
+
+      const [input] = fields();
+      expect(input.value).toBe('9/5/2026');
+      input.focus();
+      input.setSelectionRange(2, 2);
+      await user.keyboard('1');
+      expect(input.value).toBe('9/15/2026');
+      await user.keyboard('{Enter}');
+      expect(onChange.mock.calls[0][0]).toEqual(new Date(2026, 8, 15));
     });
 
     it('does not rewrite a selection that is replaced inside a committed value', async () => {
