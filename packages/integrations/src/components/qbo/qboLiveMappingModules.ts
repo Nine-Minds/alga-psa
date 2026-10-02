@@ -3,6 +3,7 @@ import {
   deleteExternalEntityMapping,
   getExternalEntityMappings,
   getQboAutomatedSalesTaxMode,
+  getQboCompanyCountryInfo,
   getQboItems,
   getQboTaxCodes,
   getQboTerms,
@@ -302,17 +303,30 @@ function createTaxCodeModule(tabLabel: string, t?: TFn): AccountingMappingModule
         loadAlgaEntities: getTaxRegions,
         loadExternalEntities: async (currentContext) => {
           const realmId = currentContext.realmId ?? null;
-          const [taxCodesResult, astResult] = await Promise.all([
+          const [taxCodesResult, astResult, countryResult] = await Promise.all([
             getQboTaxCodes({ realmId }),
-            getQboAutomatedSalesTaxMode({ realmId })
+            getQboAutomatedSalesTaxMode({ realmId }),
+            getQboCompanyCountryInfo({ realmId })
           ]);
           throwIfActionError(taxCodesResult);
           throwIfActionError(astResult);
+          throwIfActionError(countryResult);
+
+          const astEnabled = (astResult as { enabled: boolean }).enabled;
+
+          // On a US Automated Sales Tax company Intuit accepts only TAX and
+          // NON as a line tax code and faults on every other id ("Invalid Line
+          // TaxCode", 6100) — so offering the company's own catalog here is
+          // offering a trap. Non-US AST companies (Canadian "HST ON", "GST",
+          // "PST BC") use their custom codes for real, and keep the full list.
+          if (astEnabled && (countryResult as { isUnitedStates: boolean }).isUnitedStates) {
+            return getQboAstPseudoTaxCodes(t);
+          }
 
           const taxCodes = taxCodesResult as QboTaxCode[];
           const options = formatQboTaxCodeOptions(taxCodes, t);
 
-          if ((astResult as { enabled: boolean }).enabled) {
+          if (astEnabled) {
             const catalogIds = new Set(options.map((option) => option.id));
             return [
               ...getQboAstPseudoTaxCodes(t).filter((pseudo) => !catalogIds.has(pseudo.id)),
