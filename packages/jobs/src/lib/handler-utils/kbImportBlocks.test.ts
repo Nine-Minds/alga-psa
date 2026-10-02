@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import {
+  INLINE_CHUNK_SIZE,
   KbImportParseTimeoutError,
   fileContentToBlocks,
   htmlToBlocks,
@@ -446,18 +447,95 @@ describe('kbImportBlocks link sanitization', () => {
   });
 });
 
+// The split-point search used to be String#lastIndexOf from the window end,
+// which scans back to the start of the source when a run holds no whitespace:
+// quadratic in exactly the input chunking exists to protect. Its output was
+// identical, so only the work differs. A wall-clock ratio could not tell the
+// two apart on a loaded CI runner (an 8MB parse is dominated by the linear
+// lexer and GC), so count the characters the search inspects instead.
+describe('kbImportBlocks inline chunk splitting', () => {
+  // Stands in for the source string and tallies every character a search
+  // reads. Any other access throws, so a rewrite that reads the source some
+  // new way fails loudly here instead of going uncounted.
+  const countingSource = (text: string) => {
+    let inspected = 0;
+    const scanned = (from: number, found: number) => {
+      inspected += found === -1 ? from + 1 : from - found + 1;
+      return found;
+    };
+    const methods: Record<string, unknown> = {
+      length: text.length,
+      charCodeAt: (index: number) => {
+        inspected++;
+        return text.charCodeAt(index);
+      },
+      charAt: (index: number) => {
+        inspected++;
+        return text.charAt(index);
+      },
+      lastIndexOf: (search: string, from = text.length - 1) =>
+        scanned(Math.min(from, text.length - 1), text.lastIndexOf(search, from)),
+      slice: (start?: number, end?: number) => text.slice(start, end),
+    };
+    const source = new Proxy(methods, {
+      get(target, key) {
+        if (typeof key === 'string' && key in target) return target[key];
+        throw new Error(`countingSource does not model ${String(key)}; extend it to count that access`);
+      },
+    }) as unknown as string;
+    return { source, inspected: () => inspected };
+  };
+
+  it('inspects each character at most once while hard-splitting a whitespace-free run', () => {
+    const text = 'x'.repeat(INLINE_CHUNK_SIZE * 64 + 123);
+    const { source, inspected } = countingSource(text);
+
+    const chunks = splitInlineChunks(source);
+
+    // Linear: each window searches only its latter half for a break. The
+    // lastIndexOf regression inspects ~32x the source length at this size.
+    expect(inspected()).toBeLessThanOrEqual(text.length);
+    expect(chunks.join('')).toBe(text);
+    expect(chunks.slice(0, -1).every((chunk) => chunk.length === INLINE_CHUNK_SIZE)).toBe(true);
+    expect(chunks.at(-1)).toHaveLength(123);
+  });
+
+  it('breaks after the last whitespace in the latter half of each window', () => {
+    const late = INLINE_CHUNK_SIZE - 10;
+    const text = `${'x'.repeat(late)} ${'x'.repeat(INLINE_CHUNK_SIZE * 2)}`;
+    const chunks = splitInlineChunks(text);
+    expect(chunks[0]).toHaveLength(late + 1);
+    expect(chunks[0].endsWith(' ')).toBe(true);
+    expect(chunks.join('')).toBe(text);
+  });
+
+  it('hard-cuts rather than break at whitespace in the first half of a window', () => {
+    const text = `${'x'.repeat(100)}\n${'x'.repeat(INLINE_CHUNK_SIZE * 2)}`;
+    const chunks = splitInlineChunks(text);
+    expect(chunks[0]).toHaveLength(INLINE_CHUNK_SIZE);
+    expect(chunks.join('')).toBe(text);
+  });
+
+  it('round-trips a whitespace-free run larger than one chunk through the parser', () => {
+    const text = 'x'.repeat(INLINE_CHUNK_SIZE * 3 + 7);
+    const blocks = markdownToBlocks(text);
+    expect(types(blocks)).toEqual(['paragraph']);
+    expect(plainText(blocks[0])).toBe(text);
+  });
+});
+
 // Guards against reintroducing the quadratic/backtracking parser: every case
 // below used to be minutes of blocked event loop (or an OOM) on a web pod.
 // Multi-MB inputs on a CI runner shared with dozens of other projects overrun
 // the default 10s per-test timeout that a dev laptop never notices.
 describe('kbImportBlocks pathological input stays linear', { timeout: 120_000 }, () => {
-  const timed = (fn: () => BlockNoteBlock[]): number => {
+  const timed = (fn: () => unknown): number => {
     const startedAt = Date.now();
     fn();
     return Date.now() - startedAt;
   };
 
-  const fastestOf = (runs: number, fn: () => BlockNoteBlock[]): number =>
+  const fastestOf = (runs: number, fn: () => unknown): number =>
     Math.min(...Array.from({ length: runs }, () => timed(fn)));
 
   // A hard millisecond budget is not portable -- CI parses several times slower
@@ -541,55 +619,6 @@ describe('kbImportBlocks pathological input stays linear', { timeout: 120_000 },
     const half = fastestOf(3, () => markdownToBlocks('`a`'.repeat(42_500)));
     const full = fastestOf(3, () => markdownToBlocks('`a`'.repeat(85_000)));
     expect(full).toBeLessThan(Math.max(half, 20) * 4);
-  });
-
-  it('splits a whitespace-free inline run into whole hard-cut windows', () => {
-    const run = 'x'.repeat(100_000);
-    const chunks = splitInlineChunks(run);
-    expect(chunks.join('')).toBe(run);
-    expect(chunks.map((chunk) => chunk.length)).toEqual([32_768, 32_768, 32_768, 1_696]);
-  });
-
-  it('splits an inline run at the latest whitespace in the back half of each window', () => {
-    const run = `${'x'.repeat(20_000)} ${'x'.repeat(30_000)}`;
-    const chunks = splitInlineChunks(run);
-    expect(chunks.join('')).toBe(run);
-    expect(chunks[0]).toBe(`${'x'.repeat(20_000)} `);
-  });
-
-  it('scales linearly while finding hard splits in a whitespace-free inline run', () => {
-    // There is no preferred split point in this input. The fallback search
-    // must inspect only the current window rather than repeatedly scanning
-    // every preceding character as the source grows.
-    //
-    // Timing the whole markdown parse buried that scan under marked's own
-    // linear work (~5x fixed vs ~10x regressed per quadrupling), which a loaded
-    // runner could not separate. Timed on its own, the splitter costs ~4x per
-    // quadrupling while the whole-prefix scan costs ~16x (8M: ~7ms vs ~370ms),
-    // so an 8x bound sits well clear of both. Samples alternate between sizes
-    // so a slow stretch on the runner lands on both.
-    const quarterInput = 'x'.repeat(2_000_000);
-    const fullInput = 'x'.repeat(8_000_000);
-    const timedSplit = (input: string): number => {
-      const startedAt = Date.now();
-      splitInlineChunks(input);
-      return Date.now() - startedAt;
-    };
-    const quarterRuns: number[] = [];
-    const fullRuns: number[] = [];
-    for (let run = 0; run < 3; run++) {
-      quarterRuns.push(timedSplit(quarterInput));
-      fullRuns.push(timedSplit(fullInput));
-    }
-    const quarter = Math.min(...quarterRuns);
-    const full = Math.min(...fullRuns);
-    expect(full).toBeLessThan(Math.max(quarter, 20) * 8);
-  });
-
-  it('keeps every character of a multi-MB whitespace-free inline run', () => {
-    const run = 'x'.repeat(2_000_000);
-    const blocks = markdownToBlocks(run);
-    expect(blocks.map(plainText).join('')).toBe(run);
   });
 
   it('costs the same whether inline constructs sit in one block or many', () => {

@@ -39,7 +39,8 @@ const createNext = require('next') as CreateNext;
  *
  * This is the same Next app as the built-in dev server, but wrapped in an
  * `http.Server` whose single `upgrade` listener is `attachNextUpgradeHandler`:
- * `/_next/webpack-hmr` is delegated back to Next, `/hocuspocus` is proxied when
+ * `/_next/hmr` (and the legacy `/_next/webpack-hmr`) is delegated back to Next,
+ * `/hocuspocus` is proxied when
  * configured, and every other upgrade is promptly rejected. It intentionally
  * omits the production Express auth middleware from `index.ts` (which imports
  * client-only modules such as the `@alga-psa/auth` barrel and their CSS); the

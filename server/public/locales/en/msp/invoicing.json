@@ -1219,7 +1219,10 @@
         "drags": "Drags: {{count}}",
         "success": "Success: {{count}}",
         "invalid": "Invalid: {{count}}"
-      }
+      },
+      "zoomOut": "Zoom out",
+      "zoomIn": "Zoom in",
+      "zoomFit": "Fit"
     },
     "palette": {
       "tabs": {
@@ -1926,7 +1929,8 @@
       "companyLogo": "Company logo",
       "insertionMarker": "The next block you add goes here",
       "emptyContainer": "Empty — select it and add blocks from the left panel",
-      "localeChip": "Translated labels shown in {{language}} (Preview language)"
+      "localeChip": "Translated labels shown in {{language}} (Preview language)",
+      "badgeDragHint": "Drag to move this block"
     },
     "dragOverlay": {
       "component": "Component"
@@ -1973,6 +1977,19 @@
       "collapse": "Collapse {{name}}",
       "expand": "Expand {{name}}",
       "title": "Outline"
+    },
+    "dragPreview": {
+      "noTarget": "Outside the page — release to cancel",
+      "noChange": "Stays where it is",
+      "before": "Before {{block}}",
+      "after": "After {{block}}",
+      "inside": "Into {{container}}",
+      "dropOnPage": "Drop on the page to add this block.",
+      "cancelled": "Not moved — release over the page or the Outline to drop."
+    },
+    "resize": {
+      "handleHint": "Drag to resize · double-click to size to content",
+      "autoValue": "Auto ({{value}})"
     }
   },
   "projectBilling": {

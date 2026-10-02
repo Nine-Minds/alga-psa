@@ -1219,7 +1219,10 @@
         "drags": "Trascinamenti: {{count}}",
         "success": "Riusciti: {{count}}",
         "invalid": "Non validi: {{count}}"
-      }
+      },
+      "zoomOut": "Riduci",
+      "zoomIn": "Ingrandisci",
+      "zoomFit": "Adatta"
     },
     "palette": {
       "tabs": {
@@ -1926,7 +1929,8 @@
       "companyLogo": "Logo aziendale",
       "insertionMarker": "Il prossimo blocco che aggiungi andrà qui",
       "emptyContainer": "Vuoto — selezionalo e aggiungi blocchi dal pannello a sinistra",
-      "localeChip": "Etichette tradotte mostrate in {{language}} (Lingua di anteprima)"
+      "localeChip": "Etichette tradotte mostrate in {{language}} (Lingua di anteprima)",
+      "badgeDragHint": "Trascina per spostare questo blocco"
     },
     "dragOverlay": {
       "component": "Componente"
@@ -1973,6 +1977,19 @@
       "collapse": "Comprimi {{name}}",
       "expand": "Espandi {{name}}",
       "title": "Struttura"
+    },
+    "dragPreview": {
+      "noTarget": "Fuori dalla pagina: rilascia per annullare",
+      "noChange": "Resta dov'è",
+      "before": "Prima di {{block}}",
+      "after": "Dopo {{block}}",
+      "inside": "Dentro {{container}}",
+      "dropOnPage": "Rilascia sulla pagina per aggiungere questo blocco.",
+      "cancelled": "Non spostato: rilascia sopra la pagina o la Struttura per posizionarlo."
+    },
+    "resize": {
+      "handleHint": "Trascina per ridimensionare · doppio clic per adattare al contenuto",
+      "autoValue": "Automatico ({{value}})"
     }
   },
   "projectBilling": {
