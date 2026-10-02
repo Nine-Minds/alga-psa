@@ -82,7 +82,7 @@
     "noService": "Kein Service",
     "servicePlaceholder": "Standard-Service auswählen",
     "serviceHelp": "Wird für Zeiteinträge auf Aufgaben dieser Phase verwendet, wenn die Aufgabe selbst keinen Service festlegt.",
-    "serviceDisplayLabel": "Service"
+    "serviceDisplayLabel": "Dienst"
   },
   "projectList": {
     "addProject": "Projekt hinzufügen",
