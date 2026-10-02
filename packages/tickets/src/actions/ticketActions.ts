@@ -75,10 +75,12 @@ import { buildTicketCommunicationWorkflowEvents } from '../lib/workflowTicketCom
 import { getTicketOrigin, type ResolvedTicketOrigin } from '../lib/ticketOrigin';
 import { getClientContactVisibilityContext } from '../lib/clientPortalVisibility.server';
 import {
+  addTicketCommentWithCache,
   updateTicketWithCache,
   updateTicketInTransaction,
   type UpdateTicketInTransactionOptions,
 } from './optimizedTicketActions';
+import { createTicketRichTextParagraph } from '../lib/ticketRichText';
 import { revertBundlePropagationForChild } from './ticketBundleUtils';
 import {
   buildTicketResolutionSlaStageCompletionEvent,
@@ -148,6 +150,14 @@ export type TicketBulkStatusOptions = TicketNotificationSuppressionOptions & {
    * true propagates to affected children, false changes masters only.
    */
   propagateToChildren?: boolean;
+  /**
+   * Plain-text resolution recorded on every ticket the bulk change closes.
+   * Ignored when the target status does not close.
+   */
+  resolutionComment?: {
+    text: string;
+    isInternal?: boolean;
+  };
 };
 
 function tenantScopedTable(
@@ -2101,11 +2111,50 @@ export const bulkUpdateTicketStatus = withAuth(async (
   const updatedIds: string[] = [];
   const failed: Array<{ ticketId: string; message: string; closeRuleFailures?: CloseRuleFailure[] }> = [];
 
+  const { resolutionComment, ...statusOptions } = options;
+
+  // A bulk close may carry one resolution, written per ticket ahead of the
+  // status change so boards that gate closing on a resolution comment see it.
+  // Dropped outright when the target status does not close, so an ordinary
+  // bulk status change can never mint resolutions.
+  let resolutionContent: string | null = null;
+  const resolutionText = resolutionComment?.text?.trim();
+  if (resolutionText) {
+    const targetStatus = await tenantScopedTable(knex, 'statuses', tenant)
+      .where({ status_id: statusId })
+      .first();
+    if (targetStatus?.is_closed) {
+      resolutionContent = JSON.stringify(createTicketRichTextParagraph(resolutionText));
+    }
+  }
+
   // Per-ticket transactions preserve partial success: one bad ticket fails alone.
   for (const ticketId of uniqueIds) {
     try {
+      if (resolutionContent) {
+        const commentResult = await addTicketCommentWithCache(
+          ticketId,
+          resolutionContent,
+          resolutionComment?.isInternal === true,
+          true,
+          true,
+          {
+            suppressContactNotifications: statusOptions.suppressContactNotifications,
+            suppressInternalNotifications: statusOptions.suppressInternalNotifications,
+          },
+        );
+        if (isTicketActionError(commentResult)) {
+          const payload = commentResult as { actionError?: string; permissionError?: string };
+          failed.push({
+            ticketId,
+            message: payload.actionError ?? payload.permissionError ?? 'Failed to add resolution comment',
+          });
+          continue;
+        }
+      }
+
       await withTransaction(knex, (trx: Knex.Transaction) =>
-        updateTicketInTransaction(trx, user as IUserWithRoles, tenant, ticketId, { status_id: statusId }, options),
+        updateTicketInTransaction(trx, user as IUserWithRoles, tenant, ticketId, { status_id: statusId }, statusOptions),
       );
       updatedIds.push(ticketId);
     } catch (error: unknown) {

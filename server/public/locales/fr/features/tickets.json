@@ -742,7 +742,10 @@
       "success_other": "Statut mis à jour sur {{count}} tickets",
       "partialFailure": "Le statut n’a pas pu être mis à jour sur certains tickets",
       "failure": "Échec de la mise à jour du statut",
-      "failedHeading": "Le statut n’a pas pu être mis à jour sur les tickets suivants :"
+      "failedHeading": "Le statut n’a pas pu être mis à jour sur les tickets suivants :",
+      "resolutionLabel": "Commentaire de résolution (facultatif)",
+      "resolutionPlaceholder": "Décrivez comment ces tickets ont été résolus",
+      "resolutionHelper": "Enregistré comme résolution sur chaque ticket sélectionné et satisfait les tableaux qui en exigent une avant la clôture."
     },
     "priority": {
       "dialogTitle": "Changer la priorité des tickets sélectionnés",
@@ -946,6 +949,11 @@
     "closeReasonPlaceholder": "Raison de la fermeture malgré tout (facultatif, enregistrée dans le journal d'audit)",
     "closing": "Fermeture…",
     "closeAnyway": "Fermer malgré tout",
+    "markResolutionInternal": "Marquer comme interne",
+    "markResolutionInternalHelper": "Une résolution interne n’apparaît pas dans le portail client et n’est pas incluse dans l’e-mail de clôture.",
+    "closeTicketNowTitle": "Fermer le ticket maintenant ?",
+    "closeTicketNowPrompt": "Ce commentaire est désormais la résolution. Choisissez un statut de clôture pour fermer le ticket, ou laissez-le ouvert.",
+    "leaveTicketOpen": "Laisser ouvert",
     "timerActiveElsewhereTitle": "Minuteur actif ailleurs",
     "timerTakeoverMessage": "Le minuteur de ce ticket est actif dans une autre fenêtre. Voulez-vous le reprendre et le remplacer ici ?",
     "replaceHere": "Remplacer ici",
@@ -1790,7 +1798,6 @@
       "replyTo": "Répondre à {{name}}",
       "writeReply": "Écrire une réponse",
       "modeInternal": "Interne",
-      "modeResolution": "Résolution",
       "sending": "Envoi…",
       "send": "Envoyer",
       "systemActor": "Système",
@@ -1892,7 +1899,8 @@
       "remove": "Supprimer",
       "cancel": "Annuler",
       "save": "Enregistrer",
-      "menu": "Actions du lien"
+      "menu": "Actions du lien",
+      "openRecord": "Ouvrir la fiche externe"
     },
     "relationship": {
       "origin": "Origine",
@@ -1951,7 +1959,14 @@
       "systemLabelRequired": "Le libellé du système est obligatoire",
       "permissionDenied": "Permission refusée : impossible de gérer les systèmes externes",
       "systemRequired": "Choisissez un système externe.",
-      "urlRequired": "Une URL est requise pour les systèmes sans modèle d'URL."
+      "urlRequired": "Une URL est requise pour les systèmes sans modèle d'URL.",
+      "invalidVisibility": "Seuls les liens de ticket peuvent être partagés ; la visibilité doit être une valeur booléenne"
+    },
+    "visibility": {
+      "label": "Visibilité",
+      "internal": "Interne uniquement",
+      "shared": "Visible dans le portail client",
+      "help": "Les clients ayant accès à ce ticket peuvent voir ce lien. Le partage du lien ne donne pas accès au système externe."
     }
   },
   "smartSearch": {

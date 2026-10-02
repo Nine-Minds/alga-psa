@@ -8,6 +8,10 @@ import { ExternalLinkValidationError, type ExternalLinkErrorCode } from './exter
 export type ExternalLinkActionError = ActionMessageError | ActionPermissionError;
 
 const CODE_MESSAGES: Record<ExternalLinkErrorCode, { message: string; key: string }> = {
+  invalid_visibility: {
+    message: 'Only ticket links can be shared, using a boolean visibility value',
+    key: 'features/tickets:externalLinks.errors.invalidVisibility',
+  },
   ticket_not_found: {
     message: 'Ticket not found',
     key: 'features/tickets:externalLinks.errors.ticketNotFound',

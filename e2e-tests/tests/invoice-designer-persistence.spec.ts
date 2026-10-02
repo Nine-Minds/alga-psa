@@ -106,7 +106,10 @@ test('an administrator authors a billed-time date sort and reopens its persisted
   expect(saved.templateAst.bindings.collections[nestedTable.repeat.sourceBinding.bindingId].path).toBe('group.entries');
   expect(nestedTable.columns).toHaveLength(6);
   const primaryTable = tables.find(table => table.id !== detailTable.id && table.id !== nestedTable.id);
-  expect(primaryTable.repeat.sourceBinding.bindingId).toContain('items');
+  // The charges table binds under the document catalog's canonical id, the same
+  // one shipped templates use, and that binding still reads the invoice items.
+  expect(primaryTable.repeat.sourceBinding.bindingId).toBe('lineItems');
+  expect(saved.templateAst.bindings.collections.lineItems).toEqual({ id: 'lineItems', kind: 'collection', path: 'items' });
   expect(detailTable.columns.map((column: any) => column.value)).toEqual([
     'date', 'ticketNumber', 'title', 'hours', 'rateDisplay', 'amount',
   ].map(path => expect.objectContaining({ type: 'path', path })));
@@ -129,7 +132,15 @@ test('an administrator authors a billed-time date sort and reopens its persisted
   await page.locator('[data-automation-id="invoice-designer-design-tab"]').click();
   await page.locator(`[data-automation-id="designer-canvas-node-${detailTable.id}"]`).click();
   await expect(page.locator('#designer-table-source-binding')).toContainText(outputBinding);
-  await expect(page.locator('input[id^="column-header-"]')).toHaveCount(6);
+  // Each column reopens as a one-line summary; its editor opens on demand and
+  // carries the persisted header.
+  const columnToggles = page.locator('button[id^="designer-column-toggle-"]');
+  await expect(columnToggles).toHaveCount(6);
+  const [firstColumn] = detailTable.columns;
+  await page.locator(`#designer-column-toggle-${firstColumn.id}`).click();
+  await expect(page.locator(`#designer-column-toggle-${firstColumn.id}`)).toHaveAttribute('aria-expanded', 'true');
+  await expect(page.locator(`#column-header-${firstColumn.id}`))
+    .toHaveValue(typeof firstColumn.header === 'string' ? firstColumn.header : firstColumn.header.defaultValue);
   expect((await database('invoice_templates').where({ tenant: tenant.tenantId, template_id: saved.template_id }).first()).templateAst)
     .toEqual(persistedAst);
 
