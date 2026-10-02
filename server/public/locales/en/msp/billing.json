@@ -335,7 +335,8 @@
       "billingMethod": "Billing Method",
       "quantity": "Quantity",
       "defaultRate": "Default Rate",
-      "actions": "Actions"
+      "actions": "Actions",
+      "pricing": "Pricing"
     },
     "tooltip": {
       "defaultRate": "Service's standard rate, used for internal value allocation and reporting within the fixed plan total."
@@ -370,7 +371,17 @@
       "saveSuccess": "Contract line preset services saved successfully",
       "saveError": "Failed to save services"
     },
-    "unknownService": "Unknown Service"
+    "unknownService": "Unknown Service",
+    "pricing": {
+      "product": "Billed by unit quantity",
+      "bundle": "Part of the line total",
+      "unit": "Per seat / unit",
+      "unitRate": "Unit rate",
+      "unitRatePlaceholder": "Catalog price"
+    },
+    "errors": {
+      "recurringQuantityInvalid": "{{name}}: recurring quantity must be a whole number, zero or more."
+    }
   },
   "accountingExports": {
     "title": "Accounting Exports",

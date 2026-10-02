@@ -384,6 +384,7 @@
       "salesOrderNotInvoiceable": "Den försäljningsordern kan inte längre faktureras.",
       "USAGE_RECORDS_MISSING_ACK_REQUIRED": "Den här faktureringsperioden har fakturerbara debiteringar, men {{services}} saknar rapporterad förbrukning för tjänsteperioden {{periodStart}} till {{periodEnd}}. Registrera förbrukningen först eller bekräfta uttryckligen att fakturan ska skapas utan den – de orapporterade tjänsterna kan fortfarande faktureras senare.",
       "USAGE_PERIOD_TOTAL_STALE": "Förhandsgranskningen är inaktuell: {{details}}. Kör förhandsgranskningen igen för att se aktuella siffror och skapa sedan fakturan på nytt.",
+      "RECURRING_PRICING_STALE": "Förhandsgranskningen är inaktuell: {{details}}. Kör förhandsgranskningen igen för att se de aktuella siffrorna och generera sedan på nytt.",
       "USAGE_CALCULATION_ERROR": "Förbrukning för {{services}} under tjänsteperioden {{periodStart}} till {{periodEnd}} är registrerad men kunde inte prissättas. Rätta tjänstens prissättning (katalogpris i avtalsvalutan, en anpassad taxa eller prisnivåer) och försök igen. Registrera inte ersättande förbrukning.",
       "SOURCE_ALREADY_BILLED": "Vissa valda poster kan inte längre faktureras (redan fakturerade, inte godkända eller borttagna). Ladda om sidan och försök igen.",
       "SOURCE_NOT_ELIGIBLE": "En vald post hör inte till det här ärendets debiterbara poster eller kan inte längre faktureras. Ladda om sidan och försök igen.",

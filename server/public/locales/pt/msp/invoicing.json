@@ -388,6 +388,7 @@
       "SOURCE_ALREADY_BILLED": "Alguns itens selecionados já não são faturáveis (já faturados, não aprovados ou removidos). Atualize e tente novamente.",
       "SOURCE_NOT_ELIGIBLE": "Um item selecionado não pertence a este ticket ou já não é elegível. Atualize e tente novamente.",
       "SOURCE_CURRENCY_MISMATCH": "Alguns produtos selecionados estão cotados numa moeda diferente da moeda de faturação deste cliente e não podem ser adicionados. Fature-os separadamente na sua própria moeda.",
+      "RECURRING_PRICING_STALE": "A prévia está desatualizada: {{details}}. Execute a prévia novamente para ver os valores atuais e gere outra vez.",
       "BILLING_PROFILE_NOT_FOUND": "O perfil de faturação selecionado não está disponível para este cliente. Atualize a página e tente novamente."
     },
     "warnings": {

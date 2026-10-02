@@ -276,7 +276,10 @@
       "heading": "Festpreisdienste",
       "itemLabel": "Artikel {{index}}",
       "selectItemPlaceholder": "Wählen Sie einen Artikel aus",
-      "servicesAndProducts": "Dienstleistungen und Produkte"
+      "servicesAndProducts": "Dienstleistungen und Produkte",
+      "recurringQuantity": "Wiederkehrende Menge",
+      "unitRateOptional": "Optional. Lassen Sie den Stückpreis leer, um beim Erstellen einer Leistung aus diesem Preset den Katalogpreis des Services in der Währung des Kunden zu verwenden.",
+      "alertUnits": "Um einen Service stattdessen pro Arbeitsplatz oder Einheit abzurechnen, wählen Sie dafür die Preisgestaltung nach wiederkehrender Menge: Er wird in jedem Zeitraum als Menge × Stückpreis abgerechnet und ist nicht Teil des Grundpreises."
     },
     "hourly": {
       "addHourlyService": "Fügen Sie stündlichen Service hinzu",
@@ -333,7 +336,8 @@
       "serviceSelectRequired": "Dienst {{index}}: Bitte wählen Sie einen Dienst aus",
       "unitOfMeasureRequired": "Service {{index}}: Maßeinheit ist erforderlich",
       "unitRateRequired": "Service {{index}}: Einheitspreis ist erforderlich",
-      "usageServiceRequired": "Es ist mindestens ein nutzungsbasierter Dienst erforderlich"
+      "usageServiceRequired": "Es ist mindestens ein nutzungsbasierter Dienst erforderlich",
+      "recurringQuantityInvalid": "Service {{index}}: Die wiederkehrende Menge muss eine ganze Zahl von null oder mehr sein"
     }
   },
   "forms": {

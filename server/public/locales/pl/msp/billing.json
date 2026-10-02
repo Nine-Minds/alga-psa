@@ -335,7 +335,8 @@
       "billingMethod": "Metoda rozliczeniowa",
       "quantity": "Ilość",
       "defaultRate": "Stawka domyślna",
-      "actions": "Działania"
+      "actions": "Działania",
+      "pricing": "Cennik"
     },
     "tooltip": {
       "defaultRate": "Standardowa stawka usługi, używana do wewnętrznej alokacji wartości i raportowania w ramach ustalonej sumy planu."
@@ -370,7 +371,17 @@
       "saveSuccess": "Zapisano wstępnie ustawione usługi linii kontraktu",
       "saveError": "Nie udało się zapisać usług"
     },
-    "unknownService": "Nieznana usługa"
+    "unknownService": "Nieznana usługa",
+    "pricing": {
+      "product": "Rozliczane według liczby jednostek",
+      "bundle": "Część sumy linii",
+      "unit": "Za stanowisko / jednostkę",
+      "unitRate": "Stawka jednostkowa",
+      "unitRatePlaceholder": "Cena katalogowa"
+    },
+    "errors": {
+      "recurringQuantityInvalid": "{{name}}: ilość cykliczna musi być liczbą całkowitą równą zero lub większą."
+    }
   },
   "accountingExports": {
     "title": "Eksport księgowy",
