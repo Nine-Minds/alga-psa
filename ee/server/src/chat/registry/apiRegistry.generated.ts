@@ -35004,6 +35004,11 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         },
         "is_active": {
           "type": "boolean"
+        },
+        "display_order": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Sort position of the category (integer, 0 or greater). If omitted on create, the category is appended to the end of the list; if omitted on update, the existing value is left unchanged."
         }
       },
       "required": [
@@ -35112,6 +35117,11 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         },
         "is_active": {
           "type": "boolean"
+        },
+        "display_order": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Sort position of the category (integer, 0 or greater). If omitted on create, the category is appended to the end of the list; if omitted on update, the existing value is left unchanged."
         }
       },
       "required": [
