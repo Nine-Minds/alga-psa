@@ -3,6 +3,7 @@
 import React from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { countryDateFormat } from '@alga-psa/core/i18n/countryDateFormat';
 import { DateTimeField } from './DateTimeField';
 import { DateFormatProvider } from '../lib/dateFormat/useDateFormat';
@@ -11,6 +12,7 @@ import {
   formatTimeDisplay,
   getDatePlaceholder,
   isTypableDateText,
+  diffTextEdit,
   isTypableTimeText,
   parseDateInput,
   parseTimeInput,
@@ -618,5 +620,234 @@ describe('datetime: day pick, then a time other than the held one', () => {
         expect(parseTimeInput(formatTimeDisplay(option, format))).toBe(option);
       }
     }
+  });
+});
+
+/**
+ * alga-2026-0002591. Clicking into an input that already holds the cursor
+ * collapses its selection to a caret, so the typed entry used to run on after
+ * the committed text ("12:002 AM") and be refused. These tests force the caret
+ * explicitly: plain user.type clicks first, which re-selects and hid the bug.
+ */
+describe('typing into a committed value without selecting it first', () => {
+  function Controlled({
+    variant,
+    initial,
+    onCommit,
+    timeFormat = '12h',
+    minDate,
+  }: {
+    variant: 'date' | 'datetime';
+    initial?: Date;
+    onCommit: (date?: Date) => void;
+    timeFormat?: '12h' | '24h';
+    minDate?: Date;
+  }) {
+    const [value, setValue] = React.useState<Date | undefined>(initial);
+    return (
+      <DateTimeField
+        variant={variant}
+        value={value}
+        minDate={minDate}
+        timeFormat={timeFormat}
+        onChange={(next) => {
+          const date = next instanceof Date ? next : undefined;
+          setValue(date);
+          onCommit(date);
+        }}
+      />
+    );
+  }
+
+  const dayButton = (day: string) => {
+    const button = screen
+      .getAllByRole('button')
+      .find((candidate) => candidate.textContent === day && !(candidate as HTMLButtonElement).disabled);
+    if (!button) throw new Error(`no enabled day button ${day}`);
+    return button;
+  };
+
+  // focusField re-selects the text a frame after the day pick; wait that out so
+  // the caret placed by the test is the one the user would have.
+  const settle = () => new Promise((resolve) => setTimeout(resolve, 50));
+
+  const timeCases = [
+    { name: '12h', timeFormat: '12h' as const, typed: ['2:30 PM', '2:30p', '1430'], shown: '2:30 PM' },
+    { name: '24h', timeFormat: '24h' as const, typed: ['14:30', '1430'], shown: '14:30' },
+  ];
+  const minDates = [
+    { name: 'no minDate', minDate: undefined },
+    { name: 'minDate set', minDate: new Date(2026, 7, 13, 0, 0) },
+  ];
+  const carets = ['start', 'middle', 'end'] as const;
+
+  for (const c of timeCases) {
+    for (const m of minDates) {
+      for (const where of carets) {
+        for (const typed of c.typed) {
+          it(`replaces the held time with "${typed}" from a caret at the ${where} (${c.name}, ${m.name})`, async () => {
+            const user = userEvent.setup();
+            const seen: (Date | undefined)[] = [];
+            render(
+              <Controlled
+                variant="datetime"
+                initial={new Date(2026, 7, 13, 0, 0)}
+                minDate={m.minDate}
+                timeFormat={c.timeFormat}
+                onCommit={(d) => seen.push(d)}
+              />
+            );
+
+            const [dateInput, timeInput] = fields();
+            await user.click(dateInput);
+            await user.click(dayButton('17'));
+            await settle();
+
+            expect(document.activeElement).toBe(timeInput);
+            const held = timeInput.value;
+            const caret =
+              where === 'start' ? 0 : where === 'end' ? held.length : held.indexOf(':') + 3;
+            timeInput.setSelectionRange(caret, caret);
+
+            await user.keyboard(typed);
+            expect(timeInput.value).toBe(typed);
+            await user.keyboard('{Enter}');
+
+            const last = seen.at(-1) as Date;
+            expect(formatDateFns(last, 'yyyy-MM-dd HH:mm')).toBe('2026-08-17 14:30');
+            expect(timeInput.value).toBe(c.shown);
+            expect(timeInput.getAttribute('aria-invalid')).toBeNull();
+          });
+        }
+      }
+    }
+  }
+
+  it('also works on a time-only field whose caret was never moved off the end', async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(<DateTimeField variant="time" value="09:00" onChange={onChange} timeFormat="12h" />);
+
+    const [input] = fields();
+    input.focus();
+    input.setSelectionRange(input.value.length, input.value.length);
+    await user.keyboard('2:30 PM{Enter}');
+
+    expect(onChange).toHaveBeenCalledWith('14:30');
+  });
+
+  for (const minDate of [undefined, new Date(2026, 8, 1)]) {
+    for (const where of carets) {
+      it(`replaces the held date from a caret at the ${where} (${minDate ? 'minDate set' : 'no minDate'})`, async () => {
+        const user = userEvent.setup();
+        const seen: (Date | undefined)[] = [];
+        render(
+          <Controlled
+            variant="date"
+            initial={new Date(2026, 8, 30)}
+            minDate={minDate}
+            onCommit={(d) => seen.push(d)}
+          />
+        );
+
+        const [input] = fields();
+        expect(input.value).toBe('09/30/2026');
+        input.focus();
+        const caret = where === 'start' ? 0 : where === 'end' ? input.value.length : 3;
+        input.setSelectionRange(caret, caret);
+
+        await user.keyboard('10/05/2026');
+        expect(input.value).toBe('10/05/2026');
+        await user.keyboard('{Enter}');
+
+        expect(seen.at(-1)).toEqual(new Date(2026, 9, 5));
+      });
+    }
+  }
+
+  it('replaces the date half of a datetime from a caret, then the time half too', async () => {
+    const user = userEvent.setup();
+    const seen: (Date | undefined)[] = [];
+    render(<Controlled variant="datetime" initial={new Date(2026, 8, 30, 9, 0)} onCommit={(d) => seen.push(d)} />);
+
+    const [dateInput, timeInput] = fields();
+    dateInput.focus();
+    dateInput.setSelectionRange(dateInput.value.length, dateInput.value.length);
+    await user.keyboard('10/05/2026{Enter}');
+    await settle();
+    timeInput.focus();
+    timeInput.setSelectionRange(timeInput.value.length, timeInput.value.length);
+    await user.keyboard('2:30 PM{Enter}');
+
+    expect(formatDateFns(seen.at(-1) as Date, 'yyyy-MM-dd HH:mm')).toBe('2026-10-05 14:30');
+  });
+
+  it('keeps the whole value selected through the first click after a day pick', async () => {
+    const user = userEvent.setup();
+    render(<Controlled variant="datetime" initial={new Date(2026, 7, 13, 0, 0)} onCommit={() => {}} />);
+
+    const [dateInput, timeInput] = fields();
+    await user.click(dateInput);
+    await user.click(dayButton('17'));
+    await settle();
+
+    await user.pointer({ keys: '[MouseLeft]', target: timeInput, offset: 3 });
+    expect([timeInput.selectionStart, timeInput.selectionEnd]).toEqual([0, timeInput.value.length]);
+
+    // Typing now replaces the value, caret or no caret.
+    await user.keyboard('2:30 PM{Enter}');
+    expect(timeInput.value).toBe('2:30 PM');
+
+    // Only a later click lands a caret.
+    await user.pointer({ keys: '[MouseLeft]', target: timeInput, offset: 3 });
+    expect([timeInput.selectionStart, timeInput.selectionEnd]).toEqual([3, 3]);
+  });
+
+  describe('guard: only an untouched committed value is overwritten', () => {
+    it('judges a keystroke against text the user has already changed, as before', async () => {
+      const user = userEvent.setup();
+      const onChange = vi.fn();
+      render(<DateTimeField variant="time" value="09:00" onChange={onChange} timeFormat="12h" />);
+
+      const [input] = fields();
+      input.focus();
+      input.setSelectionRange(input.value.length, input.value.length);
+      await user.keyboard('2:30 PM');
+      expect(input.value).toBe('2:30 PM');
+
+      // A stray letter at the end is refused...
+      input.setSelectionRange(input.value.length, input.value.length);
+      await user.keyboard('x');
+      expect(input.value).toBe('2:30 PM');
+
+      // ...an insertion mid-text that makes no entry is refused, not turned into "5"...
+      input.setSelectionRange(4, 4);
+      await user.keyboard('5');
+      expect(input.value).toBe('2:30 PM');
+
+      // ...and a deliberate deletion still lands.
+      input.setSelectionRange(4, 4);
+      await user.keyboard('{Backspace}');
+      expect(input.value).toBe('2:3 PM');
+      expect(onChange).not.toHaveBeenCalled();
+    });
+
+    it('does not rewrite a selection that is replaced inside a committed value', async () => {
+      const user = userEvent.setup();
+      render(<DateTimeField variant="date" value={new Date(2026, 8, 30)} onChange={() => {}} />);
+
+      const [input] = fields();
+      input.focus();
+      input.setSelectionRange(3, 5);
+      await user.keyboard('1');
+      expect(input.value).toBe('09/1/2026');
+    });
+  });
+
+  it('describes a plain insertion by common prefix and suffix', () => {
+    expect(diffTextEdit('12:00 AM', '12:002 AM')).toEqual({ inserted: '2', removed: 0, start: 5 });
+    expect(diffTextEdit('12:00 AM', '12:0 AM')).toEqual({ inserted: '', removed: 1, start: 4 });
+    expect(diffTextEdit('09/30/2026', '09/1/2026')).toEqual({ inserted: '1', removed: 2, start: 3 });
+    expect(diffTextEdit('', '2')).toEqual({ inserted: '2', removed: 0, start: 0 });
   });
 });

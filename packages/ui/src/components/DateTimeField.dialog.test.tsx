@@ -112,4 +112,49 @@ describe('DateTimePicker inside a real Dialog', () => {
     await user.click(await screen.findByRole('option', { name: '2:15 PM' }));
     expect(seen.at(-1)?.getHours()).toBe(14);
   });
+
+  it.each([
+    ['at the end', (value: string) => value.length],
+    ['in the middle (12:00| AM)', (value: string) => value.indexOf(':') + 3],
+  ])('commits a time typed from a caret %s after a day pick', async (_name, caretOf) => {
+    const user = userEvent.setup();
+    const seen: (Date | undefined)[] = [];
+    const today = new Date();
+    render(
+      <Harness
+        minDate={new Date(today.getFullYear(), today.getMonth(), today.getDate())}
+        onValue={(d) => seen.push(d)}
+      />
+    );
+    const [dateInput, timeInput] = screen.getAllByRole('combobox') as HTMLInputElement[];
+    await user.click(dateInput);
+    await user.click(screen.getByRole('button', { name: 'Today' }));
+    await new Promise((r) => setTimeout(r, 50));
+
+    expect(timeInput.value).toBe('12:00 AM');
+    const caret = caretOf(timeInput.value);
+    timeInput.setSelectionRange(caret, caret);
+    await user.keyboard('2:30 PM{Enter}');
+
+    expect(timeInput.value).toBe('2:30 PM');
+    expect(seen.at(-1)?.getHours()).toBe(14);
+    expect(seen.at(-1)?.getMinutes()).toBe(30);
+  });
+
+  it('keeps the selection through the first click after a day pick, so typing replaces it', async () => {
+    const user = userEvent.setup();
+    const seen: (Date | undefined)[] = [];
+    render(<Harness onValue={(d) => seen.push(d)} />);
+    const [dateInput, timeInput] = screen.getAllByRole('combobox') as HTMLInputElement[];
+    await user.click(dateInput);
+    await user.click(screen.getByRole('button', { name: 'Today' }));
+    await new Promise((r) => setTimeout(r, 50));
+
+    await user.pointer({ keys: '[MouseLeft]', target: timeInput, offset: 3 });
+    await user.keyboard('14:30{Enter}');
+
+    expect(timeInput.value).toBe('2:30 PM');
+    expect(seen.at(-1)?.getHours()).toBe(14);
+    expect(seen.at(-1)?.getMinutes()).toBe(30);
+  });
 });

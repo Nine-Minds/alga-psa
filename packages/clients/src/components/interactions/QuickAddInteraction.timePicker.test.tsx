@@ -259,4 +259,69 @@ describe('QuickAddInteraction start/end pickers inside the real Dialog', () => {
     expect(data.start_time).toEqual(new Date(2026, 8, 10, 15, 47, 0, 0));
     expect(data.end_time).toEqual(new Date(2026, 8, 10, 15, 47, 0, 0));
   });
+
+  /**
+   * The typed-time tests above select the text with Ctrl+A first, which the
+   * customer's click does not. After a day pick the time half holds "12:00 AM"
+   * (or the held time) and a click inside it leaves a caret; the typed entry
+   * must still replace the value.
+   */
+  describe('typing from a caret inside the held time after a day pick', () => {
+    async function settleThenPlaceCaret(label: 'Start Time' | 'End Time', where: 'end' | 'middle') {
+      // focusField takes the selection again on the next frame; the user's click comes after it.
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      const input = timeInput(label);
+      expect(document.activeElement).toBe(input);
+      const caret = where === 'end' ? input.value.length : input.value.indexOf(':') + 3;
+      input.setSelectionRange(caret, caret);
+    }
+
+    for (const where of ['end', 'middle'] as const) {
+      it(`saves a Start typed from a caret at the ${where}`, async () => {
+        const user = await open();
+
+        await pickDay(user, 'Start Time', '17');
+        await settleThenPlaceCaret('Start Time', where);
+        await user.keyboard('2:30 PM{Enter}');
+        expect(timeInput('Start Time').value).toBe('2:30 PM');
+
+        await pickDay(user, 'End Time', '17');
+        await pickRailTime(user, 'End Time', '4:00 PM');
+
+        const [data] = await save();
+        expect(data.start_time).toEqual(new Date(2026, 8, 17, 14, 30));
+        expect(data.end_time).toEqual(new Date(2026, 8, 17, 16, 0));
+      });
+
+      it(`saves an End typed from a caret at the ${where}`, async () => {
+        const user = await open();
+
+        await pickDay(user, 'Start Time', '17');
+        await pickRailTime(user, 'Start Time', '1:00 PM');
+        await pickDay(user, 'End Time', '17');
+        await settleThenPlaceCaret('End Time', where);
+        await user.keyboard('1430{Enter}');
+        expect(timeInput('End Time').value).toBe('2:30 PM');
+
+        const [data] = await save();
+        expect(data.start_time).toEqual(new Date(2026, 8, 17, 13, 0));
+        expect(data.end_time).toEqual(new Date(2026, 8, 17, 14, 30));
+      });
+    }
+
+    it('saves a Start and an End typed after a click into the focused time input', async () => {
+      const user = await open();
+
+      for (const [label, typed] of [['Start Time', '2:30p'], ['End Time', '3:45 PM']] as const) {
+        await pickDay(user, label, '17');
+        await new Promise((resolve) => setTimeout(resolve, 50));
+        await user.pointer({ keys: '[MouseLeft]', target: timeInput(label), offset: 2 });
+        await user.keyboard(`${typed}{Enter}`);
+      }
+
+      const [data] = await save();
+      expect(data.start_time).toEqual(new Date(2026, 8, 17, 14, 30));
+      expect(data.end_time).toEqual(new Date(2026, 8, 17, 15, 45));
+    });
+  });
 });
