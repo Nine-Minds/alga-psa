@@ -1218,7 +1218,10 @@
         "drags": "Slepen: {{count}}",
         "success": "Gelukt: {{count}}",
         "invalid": "Ongeldig: {{count}}"
-      }
+      },
+      "zoomOut": "Uitzoomen",
+      "zoomIn": "Inzoomen",
+      "zoomFit": "Passend maken"
     },
     "palette": {
       "tabs": {
@@ -1925,7 +1928,8 @@
       "companyLogo": "Bedrijfslogo",
       "insertionMarker": "Het volgende blok dat u toevoegt, komt hier",
       "emptyContainer": "Leeg — selecteer het en voeg blokken toe vanuit het linkerpaneel",
-      "localeChip": "Vertaalde labels worden getoond in {{language}} (Voorvertoningstaal)"
+      "localeChip": "Vertaalde labels worden getoond in {{language}} (Voorvertoningstaal)",
+      "badgeDragHint": "Sleep om dit blok te verplaatsen"
     },
     "dragOverlay": {
       "component": "Component"
@@ -1972,6 +1976,19 @@
       "collapse": "{{name}} samenvouwen",
       "expand": "{{name}} uitvouwen",
       "title": "Overzicht"
+    },
+    "dragPreview": {
+      "noTarget": "Buiten de pagina — laat los om te annuleren",
+      "noChange": "Blijft waar het is",
+      "before": "Vóór {{block}}",
+      "after": "Na {{block}}",
+      "inside": "In {{container}}",
+      "dropOnPage": "Zet neer op de pagina om dit blok toe te voegen.",
+      "cancelled": "Niet verplaatst — laat los boven de pagina of het Overzicht om neer te zetten."
+    },
+    "resize": {
+      "handleHint": "Sleep om het formaat te wijzigen · dubbelklik om aan de inhoud aan te passen",
+      "autoValue": "Automatisch ({{value}})"
     }
   },
   "projectBilling": {

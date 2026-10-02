@@ -1268,7 +1268,10 @@
         "drags": "Przeciągnięć: {{count}}",
         "success": "Udanych: {{count}}",
         "invalid": "Błędnych: {{count}}"
-      }
+      },
+      "zoomOut": "Pomniejsz",
+      "zoomIn": "Powiększ",
+      "zoomFit": "Dopasuj"
     },
     "palette": {
       "tabs": {
@@ -1975,7 +1978,8 @@
       "companyLogo": "Logotyp firmy",
       "insertionMarker": "Następny dodany blok trafi tutaj",
       "emptyContainer": "Pusty — zaznacz go i dodaj bloki z lewego panelu",
-      "localeChip": "Przetłumaczone etykiety wyświetlane w języku: {{language}} (Język podglądu)"
+      "localeChip": "Przetłumaczone etykiety wyświetlane w języku: {{language}} (Język podglądu)",
+      "badgeDragHint": "Przeciągnij, aby przenieść ten blok"
     },
     "dragOverlay": {
       "component": "Komponent"
@@ -2022,6 +2026,19 @@
       "collapse": "Zwiń {{name}}",
       "expand": "Rozwiń {{name}}",
       "title": "Struktura"
+    },
+    "dragPreview": {
+      "noTarget": "Poza stroną — puść, aby anulować",
+      "noChange": "Pozostaje na miejscu",
+      "before": "Przed: {{block}}",
+      "after": "Po: {{block}}",
+      "inside": "Do: {{container}}",
+      "dropOnPage": "Upuść na stronie, aby dodać ten blok.",
+      "cancelled": "Nie przeniesiono — puść nad stroną lub Strukturą, aby upuścić."
+    },
+    "resize": {
+      "handleHint": "Przeciągnij, aby zmienić rozmiar · kliknij dwukrotnie, aby dopasować do zawartości",
+      "autoValue": "Automatycznie ({{value}})"
     }
   },
   "projectBilling": {

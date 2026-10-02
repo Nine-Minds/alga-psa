@@ -1218,7 +1218,10 @@
         "drags": "Ziehen: {{count}}",
         "success": "Erfolg: {{count}}",
         "invalid": "Ungültig: {{count}}"
-      }
+      },
+      "zoomOut": "Verkleinern",
+      "zoomIn": "Vergrößern",
+      "zoomFit": "Einpassen"
     },
     "palette": {
       "tabs": {
@@ -1925,7 +1928,8 @@
       "companyLogo": "Firmenlogo",
       "insertionMarker": "Der nächste Block, den Sie hinzufügen, wird hier eingefügt",
       "emptyContainer": "Leer – auswählen und Blöcke aus dem linken Bereich hinzufügen",
-      "localeChip": "Übersetzte Beschriftungen werden auf {{language}} angezeigt (Vorschausprache)"
+      "localeChip": "Übersetzte Beschriftungen werden auf {{language}} angezeigt (Vorschausprache)",
+      "badgeDragHint": "Ziehen, um diesen Block zu verschieben"
     },
     "dragOverlay": {
       "component": "Komponente"
@@ -1972,6 +1976,19 @@
       "collapse": "{{name}} einklappen",
       "expand": "{{name}} ausklappen",
       "title": "Gliederung"
+    },
+    "dragPreview": {
+      "noTarget": "Außerhalb der Seite – zum Abbrechen loslassen",
+      "noChange": "Bleibt an seiner Position",
+      "before": "Vor {{block}}",
+      "after": "Nach {{block}}",
+      "inside": "In {{container}}",
+      "dropOnPage": "Auf der Seite ablegen, um diesen Block hinzuzufügen.",
+      "cancelled": "Nicht verschoben – zum Ablegen über der Seite oder der Gliederung loslassen."
+    },
+    "resize": {
+      "handleHint": "Ziehen zum Ändern der Größe · Doppelklick passt an den Inhalt an",
+      "autoValue": "Automatisch ({{value}})"
     }
   },
   "projectBilling": {
