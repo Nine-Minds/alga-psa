@@ -15,6 +15,9 @@ import { listBoards, listClients, listContacts, listClientLocations, type BoardL
 import { listUsers, getUserDisplayName, type UserListItem } from "../api/users";
 import { getClientMetadataHeaders } from "../device/clientMetadata";
 import { invalidateTicketsListCache } from "../cache/ticketsCache";
+import { useCapabilities } from "../capabilities/CapabilitiesContext";
+import { ClientFormModal } from "../features/clients/components/ClientFormModal";
+import { ContactFormModal } from "../features/contacts/components/ContactFormModal";
 
 type Props = NativeStackScreenProps<RootStackParamList, "CreateTicket">;
 
@@ -37,6 +40,9 @@ export function CreateTicketScreen({ navigation }: Props) {
   }, [config, refreshSession, session]);
 
   const apiKey = session?.accessToken ?? "";
+  const { features } = useCapabilities();
+  const [newClientOpen, setNewClientOpen] = useState(false);
+  const [newContactOpen, setNewContactOpen] = useState(false);
 
   // --- Form state ---
   const [title, setTitle] = useState("");
@@ -367,6 +373,12 @@ export function CreateTicketScreen({ navigation }: Props) {
   };
 
   const currentPicker = activePicker ? pickerConfig[activePicker] : null;
+  const pickerCreate =
+    activePicker === "client" && features.clientsCreate
+      ? { label: t("create.newClient"), open: () => { setActivePicker(null); setNewClientOpen(true); } }
+      : activePicker === "contact" && features.contactsCreate
+        ? { label: t("create.newContact"), open: () => { setActivePicker(null); setNewContactOpen(true); } }
+        : null;
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
@@ -554,8 +566,37 @@ export function CreateTicketScreen({ navigation }: Props) {
           onSearch={currentPicker.searchable ? handlePickerSearch : undefined}
           onSelect={handlePickerSelect}
           onClose={() => setActivePicker(null)}
+          onCreate={pickerCreate?.open}
+          createLabel={pickerCreate?.label}
         />
       ) : null}
+
+      <ClientFormModal
+        visible={newClientOpen}
+        mode="create"
+        client={client}
+        apiKey={apiKey}
+        baseUrl={config.ok ? config.baseUrl : null}
+        onClose={() => setNewClientOpen(false)}
+        onSaved={(created) => {
+          setClientId(created.client_id);
+          setClientName(created.client_name);
+        }}
+      />
+      <ContactFormModal
+        visible={newContactOpen}
+        mode="create"
+        client={client}
+        apiKey={apiKey}
+        baseUrl={config.ok ? config.baseUrl : null}
+        presetClient={clientId ? { id: clientId, name: clientName } : null}
+        lockClient
+        onClose={() => setNewContactOpen(false)}
+        onSaved={(created) => {
+          setContactId(created.contact_name_id);
+          setContactName(created.full_name);
+        }}
+      />
     </View>
   );
 }
