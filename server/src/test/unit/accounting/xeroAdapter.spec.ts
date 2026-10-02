@@ -146,6 +146,9 @@ describe('XeroAdapter – spec validation scaffolding', () => {
   });
 
   afterEach(() => {
+    // Vitest 4's restoreAllMocks only restores vi.spyOn spies; reset the
+    // vi.fn() module mocks too so call history cannot leak between tests.
+    vi.resetAllMocks();
     vi.restoreAllMocks();
   });
 
@@ -977,6 +980,9 @@ describe('XeroAdapter realm requirements', () => {
   });
 
   afterEach(() => {
+    // Vitest 4's restoreAllMocks only restores vi.spyOn spies; reset the
+    // vi.fn() module mocks too so call history cannot leak between tests.
+    vi.resetAllMocks();
     vi.restoreAllMocks();
   });
 

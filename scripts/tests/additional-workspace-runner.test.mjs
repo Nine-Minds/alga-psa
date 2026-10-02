@@ -27,9 +27,9 @@ for (const [suite, directory, include, customConfig] of [
     'scripts/lib/test-discovery.mjs', 'scripts/lib/test-execution-evidence.mjs',
     'scripts/lib/test-revision.mjs', 'scripts/lib/vitest-progress-reporter.mjs', 'scripts/lib/test-sharding.mjs',
   ]) cpSync(path.join(repository, file), path.join(root, file));
-  symlinkSync(path.join(repository, 'server/node_modules'), path.join(root, 'server/node_modules'), 'dir');
+  symlinkSync(path.join(repository, 'node_modules'), path.join(root, 'node_modules'), 'dir');
   if (suite === 'ui-kit-showcase') {
-    symlinkSync(path.join(repository, 'server/node_modules'), path.join(root, 'ee/extensions/samples/ui-kit-showcase/node_modules'), 'dir');
+    symlinkSync(path.join(repository, 'node_modules'), path.join(root, 'ee/extensions/samples/ui-kit-showcase/node_modules'), 'dir');
   }
   writeFileSync(path.join(root, '.gitignore'), 'node_modules/\ntest-results/\n');
   const suffix = suite === 'api-e2e' ? 'e2e.test.ts' : 'test.ts';
@@ -133,7 +133,7 @@ test('enterprise aggregate requires all current shards and matching raw assertio
     'scripts/lib/test-sharding.mjs', 'scripts/lib/vitest-progress-reporter.mjs']) {
     cpSync(path.join(repository, file), path.join(root, file));
   }
-  symlinkSync(path.join(repository, 'server/node_modules'), path.join(root, 'server/node_modules'), 'dir');
+  symlinkSync(path.join(repository, 'node_modules'), path.join(root, 'node_modules'), 'dir');
   writeFileSync(path.join(root, '.gitignore'), 'node_modules/\ntest-results/\n');
   writeFileSync(path.join(root, 'ee/server/vitest.unit.config.ts'), `export default ${JSON.stringify({
     test: { include: ['src/__tests__/unit/**/*.test.ts'], globals: true, environment: 'node',

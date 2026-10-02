@@ -248,7 +248,7 @@
     "@types/ua-parser-js": "^0.7.39",
     "@typescript-eslint/eslint-plugin": "^8.19.1",
     "@typescript-eslint/parser": "^8.19.1",
-    "@vitest/coverage-v8": "3.2.4",
+    "@vitest/coverage-v8": "^4.1.11",
     "as-json": "^1.0.2",
     "assemblyscript": "^0.27.36",
     "copy-webpack-plugin": "^13.0.0",
@@ -262,7 +262,7 @@
     "tinyglobby": "^0.2.15",
     "tsx": "^4.20.3",
     "typescript-eslint": "^8.19.1",
-    "vitest": "^3.2.4"
+    "vitest": "^4.1.11"
   },
   "main": "eslint.config.js",
   "keywords": [],

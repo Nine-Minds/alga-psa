@@ -44,41 +44,41 @@ vi.mock('@alga-psa/core/secrets', () => ({
 // Stub the heavy provider adapters (googleapis/axios/google-auth-library) so the
 // EE actions module can be imported in jsdom without pulling server-only deps.
 vi.mock('@alga-psa/ee-calendar/lib/services/calendar/providers/GoogleCalendarAdapter', () => ({
-  GoogleCalendarAdapter: vi.fn().mockImplementation(() => ({
+  GoogleCalendarAdapter: vi.fn().mockImplementation(function () { return ({
     connect: vi.fn(async () => undefined),
     registerWebhookSubscription: mockRegisterWebhook,
     renewWebhookSubscription: mockRenewWebhook,
-  })),
+  }); }),
 }));
 
 vi.mock('@alga-psa/ee-calendar/lib/services/calendar/providers/MicrosoftCalendarAdapter', () => ({
-  MicrosoftCalendarAdapter: vi.fn().mockImplementation(() => ({
+  MicrosoftCalendarAdapter: vi.fn().mockImplementation(function () { return ({
     connect: vi.fn(async () => undefined),
     registerWebhookSubscription: mockRegisterWebhook,
     renewWebhookSubscription: mockRenewWebhook,
-  })),
+  }); }),
 }));
 
 vi.mock('@alga-psa/ee-calendar/lib/services/calendar/CalendarWebhookMaintenanceService', () => ({
-  CalendarWebhookMaintenanceService: vi.fn().mockImplementation(() => ({})),
+  CalendarWebhookMaintenanceService: vi.fn().mockImplementation(function () { return ({}); }),
 }));
 
 const mockGetProvider = vi.fn();
 const mockUpdateProviderStatus = vi.fn();
 vi.mock('@alga-psa/ee-calendar/lib/services/calendar/CalendarProviderService', () => ({
-  CalendarProviderService: vi.fn().mockImplementation(() => ({
+  CalendarProviderService: vi.fn().mockImplementation(function () { return ({
     getProvider: mockGetProvider,
     updateProviderStatus: mockUpdateProviderStatus,
-  }))
+  }); })
 }));
 
 const mockSyncScheduleEntryToExternal = vi.fn();
 const mockSyncExternalEventToSchedule = vi.fn();
 vi.mock('@alga-psa/ee-calendar/lib/services/calendar/CalendarSyncService', () => ({
-  CalendarSyncService: vi.fn().mockImplementation(() => ({
+  CalendarSyncService: vi.fn().mockImplementation(function () { return ({
     syncScheduleEntryToExternal: mockSyncScheduleEntryToExternal,
     syncExternalEventToSchedule: mockSyncExternalEventToSchedule,
-  }))
+  }); })
 }));
 
 import { syncCalendarProviderImpl } from '@alga-psa/ee-calendar/lib/actions/integrations/calendarActions';

@@ -1,8 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import path from 'node:path';
 import type { InternalNotification } from '@alga-psa/notifications';
 
-const SHARED_TEAMS_NOTIFICATION_MODULE =
-  '../../../../../packages/notifications/src/realtime/teamsNotificationDelivery';
+// Absolute: vitest 4 resolves a relative specifier held in a variable against
+// the project root, not this file.
+const SHARED_TEAMS_NOTIFICATION_MODULE = path.resolve(
+  __dirname,
+  '../../../../../packages/notifications/src/realtime/teamsNotificationDelivery'
+);
 
 // Teams notification delivery is consolidated into the EE implementation that
 // records teams_notification_deliveries rows. The shared notifications module

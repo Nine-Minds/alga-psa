@@ -40,7 +40,7 @@ function collectIntegrationFiles(args) {
   try {
     const list = spawnSync(
       process.execPath,
-      [path.join(serverDir, 'node_modules/vitest/vitest.mjs'), 'list', '--filesOnly', ...args, `--json=${output}`],
+      [path.join(repoRoot, 'node_modules/vitest/vitest.mjs'), 'list', '--filesOnly', ...args, `--json=${output}`],
       { cwd: serverDir, encoding: 'utf8' },
     );
     if (list.status !== 0) throw new Error(list.stderr || 'Vitest collection failed');
@@ -152,7 +152,7 @@ try {
   save('collected', collected);
   const testPath = path.join(output, 'collected-tests.json');
   const collection = spawnSync(process.execPath,
-    [path.join(serverDir, 'node_modules/vitest/vitest.mjs'), 'list', ...filters, `--json=${testPath}`],
+    [path.join(repoRoot, 'node_modules/vitest/vitest.mjs'), 'list', ...filters, `--json=${testPath}`],
     { cwd: serverDir, stdio: 'inherit' });
   if (collection.status !== 0) throw new Error('Integration test collection failed');
   const collectedTests = JSON.parse(readFileSync(testPath, 'utf8'));
@@ -163,7 +163,7 @@ try {
   // flake, judged below by the same policy every other lane uses.
   if (!args.some(arg => arg.startsWith('--retry'))) args.push('--retry=1');
   const result = spawnSync(process.execPath,
-    [path.join(serverDir, 'node_modules/vitest/vitest.mjs'), 'run', ...filters, '--coverage.enabled=false', ...args,
+    [path.join(repoRoot, 'node_modules/vitest/vitest.mjs'), 'run', ...filters, '--coverage.enabled=false', ...args,
       '--reporter=json', `--outputFile.json=${reportPath}`,
       `--reporter=${path.join(repoRoot, 'scripts/lib/vitest-flaky-reporter.mjs')}`],
     { cwd: serverDir, stdio: 'inherit',
