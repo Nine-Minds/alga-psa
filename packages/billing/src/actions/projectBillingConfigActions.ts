@@ -140,6 +140,18 @@ async function resolveClientBillingCurrencyInternal(
     throw new Error('Client not found for project');
   }
 
+  // The client's own currency outranks its contracts. A project is billed to
+  // the client, not through some unrelated active contract, and the client
+  // default is what the invoice run itself bills in when no contract line is
+  // due (billingEngine's billingCurrency) — which is every standalone project
+  // invoice. Letting a legacy contract win pinned new projects to its currency
+  // forever, with no stale-currency notice, because the stored and the freshly
+  // resolved currency always agreed. Quotes resolve in this order too.
+  if (client.default_currency_code) return client.default_currency_code.toUpperCase();
+
+  // No client currency: the active contracts are the only remaining record of
+  // what this client is billed in, so infer from them and only complain about
+  // disagreement here, where there is nothing better to fall back on.
   const effectiveDate = new Date().toISOString().slice(0, 10);
   const currenciesQuery = db.table('client_contracts as client_contract');
   db.tenantJoin(
@@ -165,7 +177,6 @@ async function resolveClientBillingCurrencyInternal(
     throw new Error(`Client has active contracts in multiple currencies (${currencies.join(', ')}).`);
   }
   if (currencies[0]) return currencies[0];
-  if (client.default_currency_code) return client.default_currency_code.toUpperCase();
 
   const settings = await db.table('default_billing_settings')
     .select('default_currency_code')

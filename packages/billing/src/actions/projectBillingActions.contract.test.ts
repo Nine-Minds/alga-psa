@@ -20,7 +20,7 @@ const state = vi.hoisted(() => ({
     project_id: '10000000-0000-4000-8000-000000000003',
     client_id: '10000000-0000-4000-8000-000000000004',
   },
-  clientCurrency: 'USD',
+  clientCurrency: 'USD' as string | null,
   contractCurrencies: [] as string[],
   config: null as any,
   entries: [] as any[],
@@ -363,6 +363,35 @@ describe('project billing config action contract', () => {
       invoice_mode: 'standalone',
     });
     expect(returnedErrorMessage(result)).toContain("must match the client's billing currency (EUR)");
+  });
+
+  // Reported from production: a client billing CHF kept getting new projects
+  // pinned to the USD of a legacy active contract, and nothing read as stale
+  // because the stored currency matched what the resolver kept returning.
+  it('T002: pins a new config to the client currency, not an active contract currency', async () => {
+    state.clientCurrency = 'CHF';
+    state.contractCurrencies = ['USD'];
+
+    const created = await createProjectBillingConfig({
+      project_id: IDS.project,
+      billing_model: 'time_and_materials',
+      invoice_mode: 'standalone',
+    });
+
+    expect(created).toMatchObject({ currency: 'CHF' });
+  });
+
+  it('T002: infers the contract currency when the client has none', async () => {
+    state.clientCurrency = null;
+    state.contractCurrencies = ['GBP'];
+
+    const created = await createProjectBillingConfig({
+      project_id: IDS.project,
+      billing_model: 'time_and_materials',
+      invoice_mode: 'standalone',
+    });
+
+    expect(created).toMatchObject({ currency: 'GBP' });
   });
 
   it('T003: allows billing-model changes before invoicing and rejects them afterward', async () => {
