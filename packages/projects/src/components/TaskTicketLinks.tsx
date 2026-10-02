@@ -285,16 +285,19 @@ const TaskTicketLinks = forwardRef<TaskTicketLinksRef, TaskTicketLinksProps>(fun
     }
   };
 
-  // Refresh links from the server when the task already has cached links
-  // (e.g. opened from the kanban board). The cached copy may be stale or
-  // filtered differently than the user's current permissions, so we re-fetch
-  // and report the result via onInitialLinksLoaded so the dirty-check can use
-  // the post-fetch state as its baseline rather than the stale prop.
+  // Load the saved links for any existing task. A cached copy (e.g. from the
+  // kanban board) may be stale or filtered differently than the user's current
+  // permissions, so the server answer always wins and is reported through
+  // onInitialLinksLoaded, giving the dirty-check a post-fetch baseline rather
+  // than the stale prop. This used to wait for a cached copy to exist, so a
+  // task opened by a caller that does not preload `ticket_links` showed an
+  // empty Associated Tickets section — and with it no way to reach the
+  // per-link billing toggle — while the ticket itself listed the link.
   useEffect(() => {
     let mounted = true;
 
     const fetchLinks = async () => {
-      if (taskId && initialLinks) {
+      if (taskId) {
         try {
           const links = await getTaskTicketLinksAction(taskId);
           if (isReturnedActionError(links)) {

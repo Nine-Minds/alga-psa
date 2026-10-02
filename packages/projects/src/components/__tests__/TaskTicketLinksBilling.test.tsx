@@ -127,6 +127,42 @@ describe('TaskTicketLinks billing choice', () => {
     await waitFor(() => expect(setTicketLinkBillingActionMock).toHaveBeenCalledWith('link-db-1', false));
   });
 
+  // Seen in the browser: a saved task showed an empty Associated Tickets
+  // section while the ticket itself listed the link, so the Wallet toggle —
+  // the only way to opt a ticket out — could not be reached. The component
+  // waited for a cached `ticket_links` prop before it would ask the server,
+  // and the caller that opened the task did not preload one.
+  it('loads saved links for an existing task with no cached copy', async () => {
+    getTaskTicketLinksActionMock.mockResolvedValue([
+      {
+        link_id: 'link-db-3',
+        task_id: 'task-1',
+        ticket_id: 'ticket-9',
+        ticket_number: 'TK-9',
+        title: 'Server room AC',
+        project_id: 'project-1',
+        phase_id: 'phase-1',
+        bill_under_project: false,
+        tenant: 'tenant-1',
+        created_at: new Date(),
+      },
+    ]);
+
+    const { container } = render(
+      <TicketIntegrationProvider value={mockCtx}>
+        <TaskTicketLinks taskId="task-1" phaseId="phase-1" projectId="project-1" users={[]} />
+      </TicketIntegrationProvider>
+    );
+
+    expect(await screen.findByText(/TK-9 - Server room AC/)).toBeInTheDocument();
+    expect(await screen.findByText('Billed at client level')).toBeInTheDocument();
+
+    const toggle = container.ownerDocument.querySelector('#toggle-link-billing-link-db-3-button') as HTMLButtonElement;
+    fireEvent.click(toggle);
+
+    await waitFor(() => expect(setTicketLinkBillingActionMock).toHaveBeenCalledWith('link-db-3', true));
+  });
+
   it('reflects the flag the server stored rather than the dialog state', async () => {
     addTicketLinkActionMock.mockResolvedValue({
       link_id: 'link-db-2',
