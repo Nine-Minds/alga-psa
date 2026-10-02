@@ -1,10 +1,11 @@
 'use client';
 
-import { Fragment } from 'react';
+import { Fragment, useEffect, useState } from 'react';
 import type { IProjectPhase } from '@alga-psa/types';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Upload } from 'lucide-react';
 import PhaseListItem from './PhaseListItem';
+import { getServices } from '../actions/serviceCatalogActions';
 import type { PhaseBillingBadge } from '@alga-psa/core';
 import styles from './ProjectDetail.module.css';
 import { useTranslation } from 'react-i18next';
@@ -20,6 +21,7 @@ interface ProjectPhasesProps {
   editingPhaseDescription: string | null;
   editingStartDate?: Date;
   editingEndDate?: Date;
+  editingPhaseServiceId?: string | null;
   phaseTaskCounts?: Record<string, number>;
   phaseDropTarget: {
     phaseId: string;
@@ -32,6 +34,7 @@ interface ProjectPhasesProps {
   onEditingPhaseDescriptionChange: (description: string | null) => void;
   onEditingStartDateChange?: (date: Date | undefined) => void;
   onEditingEndDateChange?: (date: Date | undefined) => void;
+  onEditingPhaseServiceChange?: (serviceId: string | null) => void;
   onAddTask: () => void;
   onAddPhase: () => void;
   onEditPhase: (phase: IProjectPhase) => void;
@@ -66,6 +69,7 @@ export const ProjectPhases: React.FC<ProjectPhasesProps> = ({
   editingPhaseDescription,
   editingStartDate,
   editingEndDate,
+  editingPhaseServiceId,
   phaseTaskCounts = {},
   phaseDropTarget,
   taskDraggingOverPhaseId,
@@ -81,6 +85,7 @@ export const ProjectPhases: React.FC<ProjectPhasesProps> = ({
   onEditingPhaseDescriptionChange,
   onEditingStartDateChange,
   onEditingEndDateChange,
+  onEditingPhaseServiceChange,
   onDragOver,
   onDragLeave,
   onDrop,
@@ -95,6 +100,21 @@ export const ProjectPhases: React.FC<ProjectPhasesProps> = ({
   onReopenPhase,
 }) => {
   const { t } = useTranslation(['features/projects', 'common']);
+  // One catalog load for the whole list — the picker in the phase editor and the
+  // service name on phases that already have a default both read from it.
+  const [services, setServices] = useState<{ service_id: string; service_name: string }[]>([]);
+  const needsServices = Boolean(editingPhaseId) || phases.some((phase) => Boolean(phase.service_id));
+  useEffect(() => {
+    if (!needsServices || services.length > 0) return;
+    let cancelled = false;
+    getServices(1, 999)
+      .then((response) => {
+        if (!cancelled) setServices(response.services as { service_id: string; service_name: string }[]);
+      })
+      .catch(() => { if (!cancelled) setServices([]); });
+    return () => { cancelled = true; };
+  }, [needsServices, services.length]);
+
   const handleContainerDragOver = (e: React.DragEvent) => {
     e.preventDefault();
     
@@ -261,6 +281,8 @@ export const ProjectPhases: React.FC<ProjectPhasesProps> = ({
               editingDescription={editingPhaseDescription}
               editingStartDate={editingStartDate}
               editingEndDate={editingEndDate}
+              editingServiceId={editingPhaseServiceId}
+              services={services}
               taskCount={phaseTaskCounts[phase.phase_id]}
               taskDraggingOverPhaseId={taskDraggingOverPhaseId}
               onSelect={onPhaseSelect}
@@ -272,6 +294,7 @@ export const ProjectPhases: React.FC<ProjectPhasesProps> = ({
               onDescriptionChange={onEditingPhaseDescriptionChange}
               onStartDateChange={onEditingStartDateChange}
               onEndDateChange={onEditingEndDateChange}
+              onServiceChange={onEditingPhaseServiceChange}
               onDragOver={onDragOver}
               onDragLeave={onDragLeave}
               onDrop={onDrop}

@@ -329,6 +329,7 @@ export default function ProjectDetail({
   const [editingStartDate, setEditingStartDate] = useState<Date | undefined>(undefined);
   const [editingEndDate, setEditingEndDate] = useState<Date | undefined>(undefined);
   const [editingPhaseDescription, setEditingPhaseDescription] = useState<string | null>(null);
+  const [editingPhaseServiceId, setEditingPhaseServiceId] = useState<string | null>(null);
   const [phaseDropTarget, setPhaseDropTarget] = useState<{
     phaseId: string;
     position: 'before' | 'after';
@@ -2921,6 +2922,7 @@ export default function ProjectDetail({
     setEditingPhaseId(phase.phase_id);
     setEditingPhaseName(phase.phase_name);
     setEditingPhaseDescription(phase.description);
+    setEditingPhaseServiceId(phase.service_id ?? null);
     // Always create new Date objects from the timestamps to ensure consistent format
     setEditingStartDate(phase.start_date ? new Date(phase.start_date) : undefined);
     setEditingEndDate(phase.end_date ? new Date(phase.end_date) : undefined);
@@ -2937,7 +2939,8 @@ export default function ProjectDetail({
         phase_name: editingPhaseName,
         description: editingPhaseDescription,
         start_date: editingStartDate || null,
-        end_date: editingEndDate || null
+        end_date: editingEndDate || null,
+        service_id: editingPhaseServiceId
       });
       if (isReturnedActionError(updatedPhase)) {
         handleError(getErrorMessage(updatedPhase));
@@ -2952,7 +2955,8 @@ export default function ProjectDetail({
                 phase_name: editingPhaseName,
                 description: updatedPhase.description,
                 start_date: updatedPhase.start_date,
-                end_date: updatedPhase.end_date
+                end_date: updatedPhase.end_date,
+                service_id: updatedPhase.service_id
               }
             : p
         )
@@ -2965,6 +2969,7 @@ export default function ProjectDetail({
       setEditingPhaseId(null);
       setEditingPhaseName('');
       setEditingPhaseDescription(null);
+      setEditingPhaseServiceId(null);
       setEditingStartDate(undefined);
       setEditingEndDate(undefined);
       toast.success(t('projectDetail.phaseUpdatedSuccess', 'Phase updated successfully!'));
@@ -2977,6 +2982,7 @@ export default function ProjectDetail({
     setEditingPhaseId(null);
     setEditingPhaseName('');
     setEditingPhaseDescription(null);
+    setEditingPhaseServiceId(null);
     setEditingStartDate(undefined);
     setEditingEndDate(undefined);
   };
@@ -4261,6 +4267,7 @@ export default function ProjectDetail({
                   editingPhaseDescription={editingPhaseDescription}
                   editingStartDate={editingStartDate}
                   editingEndDate={editingEndDate}
+                  editingPhaseServiceId={editingPhaseServiceId}
                   phaseTaskCounts={filteredPhaseTaskCounts}
                   phaseDropTarget={phaseDropTarget}
                   taskDraggingOverPhaseId={taskDraggingOverPhaseId}
@@ -4283,6 +4290,7 @@ export default function ProjectDetail({
                   onEditingPhaseDescriptionChange={setEditingPhaseDescription}
                   onEditingStartDateChange={setEditingStartDate}
                   onEditingEndDateChange={setEditingEndDate}
+                  onEditingPhaseServiceChange={setEditingPhaseServiceId}
                   onDragOver={handlePhaseDragOver}
                   onDragLeave={handlePhaseDragLeave}
                   onDrop={handlePhaseDropZone}

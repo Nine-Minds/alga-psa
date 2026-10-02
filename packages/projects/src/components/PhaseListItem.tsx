@@ -10,6 +10,7 @@ import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
+import { SearchableSelect } from '@alga-psa/ui/components/SearchableSelect';
 import { ProjectTaskStatusSettings } from './settings/projects/ProjectTaskStatusSettings';
 import { getProjectStatusMappings } from '../actions/projectTaskStatusActions';
 import { phaseBadgeClasses, type PhaseBillingBadge } from '@alga-psa/core';
@@ -27,6 +28,9 @@ interface PhaseListItemProps {
   editingDescription: string | null;
   editingStartDate?: Date;
   editingEndDate?: Date;
+  editingServiceId?: string | null;
+  /** Service catalog for the phase-level default picker; loaded once by the list. */
+  services?: { service_id: string; service_name: string }[];
   taskCount?: number;
   onSelect: (phase: IProjectPhase) => void;
   onEdit: (phase: IProjectPhase) => void;
@@ -37,6 +41,7 @@ interface PhaseListItemProps {
   onDescriptionChange: (description: string | null) => void;
   onStartDateChange?: (date: Date | undefined) => void;
   onEndDateChange?: (date: Date | undefined) => void;
+  onServiceChange?: (serviceId: string | null) => void;
   taskDraggingOverPhaseId?: string | null;
   onDragOver: (e: React.DragEvent, phaseId: string, dropPosition: 'before' | 'after' | '', isOverPhaseItemBody?: boolean) => void;
   onDragLeave: () => void;
@@ -66,6 +71,8 @@ export const PhaseListItem: React.FC<PhaseListItemProps> = ({
   editingDescription,
   editingStartDate,
   editingEndDate,
+  editingServiceId,
+  services = [],
   taskCount,
   onSelect,
   onEdit,
@@ -76,6 +83,7 @@ export const PhaseListItem: React.FC<PhaseListItemProps> = ({
   onDescriptionChange,
   onStartDateChange,
   onEndDateChange,
+  onServiceChange,
   onDragOver,
   onDragLeave,
   onDrop,
@@ -98,6 +106,9 @@ export const PhaseListItem: React.FC<PhaseListItemProps> = ({
   const effectiveIsEditing = isEditing && !isBillingView;
   const isCompleted = Boolean(phase.completed_at);
   const showCompletionNudge = !isBillingView && !isCompleted && Boolean(allTasksClosed) && (taskCount ?? 0) > 0;
+  const phaseServiceName = phase.service_id
+    ? services.find((service) => service.service_id === phase.service_id)?.service_name ?? null
+    : null;
   const [isDragging, setIsDragging] = useState(false);
   const [showStatusDialog, setShowStatusDialog] = useState(false);
   const [customStatusCount, setCustomStatusCount] = useState<number | null>(null);
@@ -335,6 +346,23 @@ export const PhaseListItem: React.FC<PhaseListItemProps> = ({
                 clearable={true}
               />
             </div>
+            {/* Default service for time entries logged against this phase's tasks */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-0.5">{t('phases.serviceLabel')}</label>
+              <SearchableSelect
+                id={`phase-service-select-${phase.phase_id}`}
+                value={editingServiceId || ''}
+                onChange={(value) => onServiceChange?.(value || null)}
+                options={[
+                  { value: '', label: t('phases.noService') },
+                  ...services.map((service) => ({ value: service.service_id, label: service.service_name })),
+                ]}
+                placeholder={t('phases.servicePlaceholder')}
+                className="w-full"
+                dropdownMode="overlay"
+              />
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{t('phases.serviceHelp')}</p>
+            </div>
             {/* Status columns indicator */}
             <div className="flex items-center justify-between mt-2 pt-2 border-t border-gray-100 dark:border-gray-700">
               <Tooltip content={`${t('phases.statusColumns')}: ${
@@ -459,6 +487,11 @@ export const PhaseListItem: React.FC<PhaseListItemProps> = ({
                   ? formatDate(new Date(phase.end_date), { dateStyle: 'medium' })
                   : t('phases.notSet')}
               </div>
+              {phase.service_id && (
+                <div>
+                  {t('phases.serviceDisplayLabel')}: {phaseServiceName ?? t('phases.notSet')}
+                </div>
+              )}
             </div>
           </div>
           {/* Hover Action Buttons — absolutely positioned so they don't consume layout space */}
