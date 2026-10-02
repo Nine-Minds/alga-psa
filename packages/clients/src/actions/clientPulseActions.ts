@@ -694,7 +694,10 @@ async function fetchMoney(
       })
       // Shared ticket→project resolver, so WIP time reaches the same project
       // every other consumer bills it under. Client attribution is unchanged:
-      // ticket time still matches through the ticket's client below.
+      // ticket time still matches through the ticket's client below — which
+      // makes this rollup's numbers identical either way. It is here so the one
+      // resolver is the only path from a ticket to a project: the next clause
+      // added to this query cannot quietly reintroduce the task-only join.
       .joinRaw(ticketProjectAttributionJoin('te'))
       .leftJoin('projects as pr', function joinWipProjects() {
         this.on(trx.raw(ticketProjectIdExpression('pp')) as unknown as string, '=', 'pr.project_id')

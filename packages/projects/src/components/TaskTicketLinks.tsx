@@ -684,6 +684,11 @@ const TaskTicketLinks = forwardRef<TaskTicketLinksRef, TaskTicketLinksProps>(fun
                 type="button"
                 variant="ghost"
                 onClick={() => onToggleLinkBilling(link)}
+                // The badge above carries the state for sighted users; an
+                // icon-only button has to say the same thing out loud.
+                aria-label={link.bill_under_project === false
+                  ? linkT('billingOffTooltip', "Bill this ticket's time as project time")
+                  : linkT('billingOnTooltip', "Stop billing this ticket's time as project time")}
                 title={link.bill_under_project === false
                   ? linkT('billingOffTooltip', "Bill this ticket's time as project time")
                   : linkT('billingOnTooltip', "Stop billing this ticket's time as project time")}
