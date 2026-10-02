@@ -17,6 +17,20 @@ const h = vi.hoisted(() => ({
   knex: undefined as any,
 }));
 
+// The QuickBooks Automated Sales Tax flag and the connected company's country
+// decide whether Intuit's "TAX/NON only on the line" rule applies. Both default
+// to off/non-US so every pre-existing expectation is untouched.
+const isQboAutomatedSalesTaxEnabledMock = vi.hoisted(() => vi.fn(async () => false));
+const isQboUnitedStatesCompanyMock = vi.hoisted(() => vi.fn(async () => false));
+
+vi.mock('@alga-psa/integrations/lib/qbo/qboTaxSettings', () => ({
+  isQboAutomatedSalesTaxEnabled: isQboAutomatedSalesTaxEnabledMock,
+}));
+
+vi.mock('@alga-psa/integrations/lib/qbo/qboCompanyCountry', () => ({
+  isQboUnitedStatesCompany: isQboUnitedStatesCompanyMock,
+}));
+
 vi.mock('../../src/repositories/accountingExportRepository', () => ({
   AccountingExportRepository: { create: vi.fn(async () => h.repo) },
 }));
@@ -151,6 +165,8 @@ async function run(state: FakeState, resolver = createFakeResolver()) {
 describe('AccountingExportValidation.ensureMappingsForBatch', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    isQboAutomatedSalesTaxEnabledMock.mockResolvedValue(false);
+    isQboUnitedStatesCompanyMock.mockResolvedValue(false);
   });
 
   it('throws when the batch does not exist', async () => {
@@ -355,6 +371,162 @@ describe('AccountingExportValidation.ensureMappingsForBatch', () => {
 
       expect(resolver.resolveTaxCodeMapping).not.toHaveBeenCalled();
       expect(repo.errors).toEqual([]);
+    });
+
+    /**
+     * Intuit accepts only the TAX/NON pseudo codes as a line TaxCodeRef on a
+     * US Automated Sales Tax company; anything else fails delivery with the
+     * opaque "Invalid Line TaxCode" (6100). A mapping that names a real
+     * catalog code used to pass validation and fail at delivery forever.
+     */
+    describe('Automated Sales Tax tax-code mappings', () => {
+      function astState(charge: Record<string, unknown> = {}) {
+        return qboState({
+          charges: [
+            {
+              item_id: 'charge-1',
+              invoice_id: 'inv-1',
+              service_id: 'svc-1',
+              tax_region: 'DEFAULT',
+              is_taxable: true,
+              ...charge,
+            },
+          ],
+        });
+      }
+
+      function mappedTo(externalEntityId: string, metadata: Record<string, unknown> = {}) {
+        return createFakeResolver({
+          resolveTaxCodeMapping: vi.fn(async () => ({
+            external_entity_id: externalEntityId,
+            metadata,
+            source: 'tax_code',
+          })),
+        });
+      }
+
+      it('flags a taxable line mapped to a catalog code on a US AST company', async () => {
+        isQboAutomatedSalesTaxEnabledMock.mockResolvedValue(true);
+        isQboUnitedStatesCompanyMock.mockResolvedValue(true);
+        const resolver = mappedTo('2', { externalDisplayName: 'Out of scope (0%)' });
+
+        const { repo } = await run(astState(), resolver);
+
+        expect(repo.errors).toEqual([
+          expect.objectContaining({
+            code: 'invalid_tax_mapping',
+            message:
+              'Tax region DEFAULT is mapped to QuickBooks tax code "Out of scope (0%)", which QuickBooks rejects on Automated Sales Tax companies. Map it to TAX or NON under Settings → Integrations → Accounting → QuickBooks → Tax Codes.',
+            metadata: expect.objectContaining({
+              tax_region: 'DEFAULT',
+              external_entity_id: '2',
+              external_display_name: 'Out of scope (0%)',
+            }),
+          }),
+        ]);
+        expect(repo.updateBatchStatus).toHaveBeenCalledWith('batch-1', { status: 'needs_attention' });
+      });
+
+      it('names the bare QuickBooks id when the mapping kept no display name', async () => {
+        isQboAutomatedSalesTaxEnabledMock.mockResolvedValue(true);
+        isQboUnitedStatesCompanyMock.mockResolvedValue(true);
+
+        const { repo } = await run(astState(), mappedTo('4'));
+
+        expect(repo.errors[0].message).toContain('QuickBooks tax code "4"');
+      });
+
+      it.each(['TAX', 'NON'])('accepts the %s pseudo code on a US AST company', async (pseudo) => {
+        isQboAutomatedSalesTaxEnabledMock.mockResolvedValue(true);
+        isQboUnitedStatesCompanyMock.mockResolvedValue(true);
+
+        const { repo } = await run(astState(), mappedTo(pseudo));
+
+        expect(repo.errors).toEqual([]);
+        expect(repo.updateBatchStatus).toHaveBeenCalledWith('batch-1', { status: 'ready' });
+      });
+
+      it('does not flag a non-taxable line: the exporter sends NON for it', async () => {
+        isQboAutomatedSalesTaxEnabledMock.mockResolvedValue(true);
+        isQboUnitedStatesCompanyMock.mockResolvedValue(true);
+        const resolver = mappedTo('2', { externalDisplayName: 'Out of scope (0%)' });
+
+        const { repo } = await run(astState({ is_taxable: false }), resolver);
+
+        expect(repo.errors).toEqual([]);
+      });
+
+      it('leaves a non-US AST company alone — custom codes are legitimate there', async () => {
+        // Canadian AST files really do bill through "HST ON" / "GST" / "PST BC".
+        isQboAutomatedSalesTaxEnabledMock.mockResolvedValue(true);
+        isQboUnitedStatesCompanyMock.mockResolvedValue(false);
+
+        const { repo } = await run(astState(), mappedTo('HST-ON'));
+
+        expect(repo.errors).toEqual([]);
+      });
+
+      it('leaves a non-AST realm alone and never reads the company country', async () => {
+        isQboAutomatedSalesTaxEnabledMock.mockResolvedValue(false);
+
+        const { repo } = await run(astState(), mappedTo('2'));
+
+        expect(repo.errors).toEqual([]);
+        expect(isQboUnitedStatesCompanyMock).not.toHaveBeenCalled();
+      });
+
+      it('still reports a missing mapping rather than an invalid one', async () => {
+        isQboAutomatedSalesTaxEnabledMock.mockResolvedValue(true);
+        isQboUnitedStatesCompanyMock.mockResolvedValue(true);
+        const resolver = createFakeResolver({ resolveTaxCodeMapping: vi.fn(async () => null) });
+
+        const { repo } = await run(astState(), resolver);
+
+        expect(repo.errors).toEqual([
+          expect.objectContaining({ code: 'missing_tax_mapping' }),
+        ]);
+      });
+
+      it('reports one invalid mapping per region, and judges each line taxability', async () => {
+        // The region's mapping is resolved once, but taxability is per charge:
+        // a non-taxable line must not consume the region's only check and hide
+        // a taxable line that follows it.
+        isQboAutomatedSalesTaxEnabledMock.mockResolvedValue(true);
+        isQboUnitedStatesCompanyMock.mockResolvedValue(true);
+        const state = qboState({
+          lines: [
+            makeCanonicalLine({ line_id: 'line-1', document_line_id: 'charge-1' }),
+            makeCanonicalLine({ line_id: 'line-2', document_line_id: 'charge-2' }),
+          ],
+          charges: [
+            { item_id: 'charge-1', invoice_id: 'inv-1', service_id: 'svc-1', tax_region: 'DEFAULT', is_taxable: false },
+            { item_id: 'charge-2', invoice_id: 'inv-1', service_id: 'svc-1', tax_region: 'DEFAULT', is_taxable: true },
+          ],
+          chargeDetails: [
+            { item_id: 'charge-1', service_period_start: P1_START, service_period_end: P1_END, billing_timing: 'advance' },
+            { item_id: 'charge-2', service_period_start: P1_START, service_period_end: P1_END, billing_timing: 'advance' },
+          ],
+        });
+        const resolver = mappedTo('2');
+
+        const { repo } = await run(state, resolver);
+
+        const invalid = repo.errors.filter((e: any) => e.code === 'invalid_tax_mapping');
+        expect(invalid).toHaveLength(1);
+        expect(invalid[0].line_id).toBe('line-2');
+        expect(resolver.resolveTaxCodeMapping).toHaveBeenCalledTimes(1);
+      });
+
+      it('does not apply the rule to QuickBooks CSV batches', async () => {
+        isQboAutomatedSalesTaxEnabledMock.mockResolvedValue(true);
+        isQboUnitedStatesCompanyMock.mockResolvedValue(true);
+        const state = astState();
+        state.batch = { batch_id: 'batch-1', tenant: TENANT, adapter_type: 'quickbooks_csv', target_realm: 'realm-9' };
+
+        const { repo } = await run(state, mappedTo('2'));
+
+        expect(repo.errors).toEqual([]);
+      });
     });
 
     it('flags invoices without a client association', async () => {
