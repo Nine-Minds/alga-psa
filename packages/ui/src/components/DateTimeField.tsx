@@ -26,6 +26,7 @@ import {
   isExactMinuteOption,
   isTypableDateText,
   isTypableTimeText,
+  diffTextEdit,
   isValidTimeValue,
   minutesToTime,
   parseDateInput,
@@ -364,8 +365,12 @@ export function DateTimeField({
   // Focusing a field opens the panel, so a programmatic re-focus after a commit
   // has to say whether it means to re-open it.
   const skipOpenOnFocusRef = React.useRef(false);
+  // Set while a field holds a whole-text selection that its first click would
+  // otherwise collapse to a caret; see the mouse handlers on the input.
+  const keepSelectionOnPointerUpRef = React.useRef(false);
   const focusField = React.useCallback((field: 'date' | 'time', reopen = false) => {
     skipOpenOnFocusRef.current = !reopen;
+    keepSelectionOnPointerUpRef.current = true;
     const input = field === 'date' ? dateInputRef.current : timeInputRef.current;
     input?.focus();
     input?.select();
@@ -606,11 +611,46 @@ export function DateTimeField({
           onChange={(event) => {
             const input = event.target as HTMLInputElement;
             const next = input.value;
-            const typable = isDateField
-              ? isTypableDateText(next, typableDateOptions)
-              : isTypableTimeText(next);
+            keepSelectionOnPointerUpRef.current = false;
+            const isTypable = (candidate: string) =>
+              isDateField
+                ? isTypableDateText(candidate, typableDateOptions)
+                : isTypableTimeText(candidate);
 
-            if (!typable) {
+            // A caret inside an untouched, committed value is not an edit of it:
+            // clicking into a field that was just selected collapses the
+            // selection, and the typed entry would then run on after the old
+            // text (12:002 AM) and be refused. While the text is still exactly
+            // what was committed, characters inserted at a caret replace it.
+            // Once the user has changed the text, every keystroke is judged
+            // against that text as before, so a deliberate mid-text edit is
+            // never rewritten.
+            const committedText = isDateField ? dateDisplay(dateValue) : timeDisplay(timeValue);
+            if (text === committedText) {
+              const { inserted, removed } = diffTextEdit(text, next);
+              if (removed === 0 && inserted !== '' && isTypable(inserted)) {
+                const setCaret = () => {
+                  // Not once the user has typed on: the caret is theirs by then.
+                  if (document.activeElement === input && input.value === inserted) {
+                    input.setSelectionRange(inserted.length, inserted.length);
+                  }
+                };
+                input.value = inserted;
+                setCaret();
+                // The controlled value is rewritten by the render this triggers.
+                window.requestAnimationFrame(setCaret);
+                if (isDateField) {
+                  setDateText(inserted);
+                  setDateError(false);
+                } else {
+                  setTimeText(inserted);
+                  setTimeError(false);
+                }
+                return;
+              }
+            }
+
+            if (!isTypable(next)) {
               // A character no valid entry can hold never lands: refusing the
               // keystroke beats accepting it and arguing at commit time.
               const caret = Math.min(
@@ -634,11 +674,29 @@ export function DateTimeField({
             event.target.select();
             if (!disabled && !skipOpenOnFocusRef.current) setOpen(true);
           }}
+          onMouseDown={(event) => {
+            // A click that is what focuses the input lands its caret after the
+            // focus handler has selected the text; so does a click on an input
+            // focusField selected. Either way the first click keeps the selection.
+            if (document.activeElement !== event.currentTarget) {
+              keepSelectionOnPointerUpRef.current = true;
+            }
+          }}
+          onMouseUp={(event) => {
+            if (!keepSelectionOnPointerUpRef.current) return;
+            keepSelectionOnPointerUpRef.current = false;
+            event.preventDefault();
+            event.currentTarget.select();
+          }}
           onBlur={() => {
+            keepSelectionOnPointerUpRef.current = false;
             if (isDateField) commitDateText();
             else commitTimeText();
           }}
-          onKeyDown={isDateField ? handleDateKeyDown : handleTimeKeyDown}
+          onKeyDown={(event) => {
+            keepSelectionOnPointerUpRef.current = false;
+            (isDateField ? handleDateKeyDown : handleTimeKeyDown)(event);
+          }}
         />
         {canClear && (
           <button
