@@ -1597,6 +1597,8 @@
     "deleteConfirmTitle": "⟦Ḓḗŀḗŧḗ ŧīḿḗ ḗƞŧřẏ?⟧",
     "deleteConfirmMessage": "⟦Ŧħīş ẇīŀŀ ƥḗřḿȧƞḗƞŧŀẏ ḓḗŀḗŧḗ ŧħḗ ŧīḿḗ ḗƞŧřẏ. Ŧħīş ȧƈŧīȯƞ ƈȧƞƞȯŧ ƀḗ ŭƞḓȯƞḗ.⟧",
     "deleteConfirmAction": "⟦Ḓḗŀḗŧḗ⟧",
+    "billable": "⟦Ɓīŀŀȧƀŀḗ⟧",
+    "nonBillable": "⟦Ƞȯƞ-ƀīŀŀȧƀŀḗ⟧",
     "duration": {
       "hr": "⟦ħř⟧",
       "hrs": "⟦ħřş⟧",
