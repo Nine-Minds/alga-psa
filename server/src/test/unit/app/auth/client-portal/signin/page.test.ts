@@ -8,6 +8,9 @@ const getSessionMock = vi.fn();
 const isRevokedMock = vi.fn();
 const getTenantBrandingByDomainMock = vi.fn();
 const getTenantLocaleByDomainMock = vi.fn();
+const getTenantSlugByDomainMock = vi.fn();
+const getTenantBrandingBySlugMock = vi.fn();
+const getTenantLocaleBySlugMock = vi.fn();
 const recordPortalDomainSeenMock = vi.fn();
 
 const ClientPortalSignInMock = () => null;
@@ -34,6 +37,9 @@ vi.mock('@alga-psa/db/models/UserSession', () => ({
 vi.mock('@alga-psa/tenancy/actions', () => ({
   getTenantBrandingByDomain: getTenantBrandingByDomainMock,
   getTenantLocaleByDomain: getTenantLocaleByDomainMock,
+  getTenantSlugByDomain: getTenantSlugByDomainMock,
+  getTenantBrandingBySlug: getTenantBrandingBySlugMock,
+  getTenantLocaleBySlug: getTenantLocaleBySlugMock,
 }));
 
 vi.mock('@alga-psa/tenancy/components', () => ({
@@ -72,6 +78,9 @@ describe('ClientPortalSignInPage', () => {
     isRevokedMock.mockReset();
     getTenantBrandingByDomainMock.mockReset();
     getTenantLocaleByDomainMock.mockReset();
+    getTenantSlugByDomainMock.mockReset();
+    getTenantBrandingBySlugMock.mockReset();
+    getTenantLocaleBySlugMock.mockReset();
     recordPortalDomainSeenMock.mockReset();
 
     if (typeof originalNextAuthUrl === 'undefined') {
@@ -82,6 +91,9 @@ describe('ClientPortalSignInPage', () => {
 
     getTenantBrandingByDomainMock.mockResolvedValue(null);
     getTenantLocaleByDomainMock.mockResolvedValue('es');
+    getTenantSlugByDomainMock.mockResolvedValue('abc123def456');
+    getTenantBrandingBySlugMock.mockResolvedValue(null);
+    getTenantLocaleBySlugMock.mockResolvedValue('en');
   });
 
   afterEach(() => {
@@ -156,6 +168,34 @@ describe('ClientPortalSignInPage', () => {
     expect(signIn?.props).toMatchObject({
       branding,
       portalDomain: 'portal.example.com',
+      // The vanity host names the tenant; without this the credentials call runs
+      // unscoped and an email in two portals signs in to an arbitrary one.
+      tenantSlug: 'abc123def456',
     });
+  });
+
+  it('falls back to tenant discovery when the vanity host has no active portal domain', async () => {
+    getSessionMock.mockResolvedValue(null);
+    getTenantSlugByDomainMock.mockResolvedValue(null);
+
+    const result = await ClientPortalSignInPage({
+      searchParams: Promise.resolve({ portalDomain: 'portal.example.com' }),
+    });
+
+    expect(getTenantSlugByDomainMock).toHaveBeenCalledWith('portal.example.com');
+    expect(inner(result)?.type).toBe(ClientPortalTenantDiscoveryMock);
+  });
+
+  it('prefers an explicit tenant slug over resolving the vanity host', async () => {
+    getSessionMock.mockResolvedValue(null);
+
+    const result = await ClientPortalSignInPage({
+      searchParams: Promise.resolve({ tenant: 'FEDCBA987654' }),
+    });
+    const children = (result as any).props.children as Array<React.ReactElement<{ tenantSlug?: string }>>;
+    const signIn = children.find((child) => child.type === ClientPortalSignInMock);
+
+    expect(getTenantSlugByDomainMock).not.toHaveBeenCalled();
+    expect(signIn?.props.tenantSlug).toBe('fedcba987654');
   });
 });
