@@ -971,7 +971,12 @@
     "emailNotificationLogs": "Loggar över e-postaviseringar",
     "ticketActivity": "Ärendeaktivitet",
     "discardChanges": "Kasta ändringar",
-    "saved": "Sparat"
+    "saved": "Sparat",
+    "changeContactTitle": "Ändra ärendets kontakt?",
+    "removeContactTitle": "Ta bort ärendets kontakt?",
+    "changeContactPrompt": "Kontakten, den ansvarige och bevakarna meddelas om den här ändringen om du inte stänger av deras aviseringar.",
+    "changeContact": "Ändra kontakt",
+    "removeContact": "Ta bort kontakt"
   },
   "properties": {
     "timeEntry": "Tidpost",
