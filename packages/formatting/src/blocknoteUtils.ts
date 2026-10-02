@@ -91,9 +91,10 @@ function isEffectivelyEmpty(html: string, text: string): boolean {
 // both: a fixed inline margin on every paragraph, and blank lines rendered as a
 // small spacer. Inline styles only — clients strip <style> blocks — and no
 // `height` on <p>, which Outlook/Word ignores (font-size + line-height on an
-// &nbsp; is the Outlook-safe spacer).
+// &nbsp; is the Outlook-safe spacer). Word treats `line-height` as a minimum
+// unless `mso-line-height-rule:exactly` pins it, so the spacer carries that too.
 const EMAIL_PARAGRAPH_MARGIN = 'margin:0 0 10px 0;';
-const EMAIL_BLANK_PARAGRAPH = `<p style="${EMAIL_PARAGRAPH_MARGIN}font-size:10px;line-height:10px;">&nbsp;</p>`;
+const EMAIL_BLANK_PARAGRAPH = `<p style="${EMAIL_PARAGRAPH_MARGIN}font-size:10px;line-height:10px;mso-line-height-rule:exactly;">&nbsp;</p>`;
 
 const BLANK_PARAGRAPH_SOURCE = '<p[^>]*>(?:\\s|&nbsp;|<br\\s*/?>)*</p>';
 const LEADING_BLANK_PARAGRAPHS = new RegExp(`^(?:\\s*${BLANK_PARAGRAPH_SOURCE})+`);

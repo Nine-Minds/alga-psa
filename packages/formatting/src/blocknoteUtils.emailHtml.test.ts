@@ -11,7 +11,8 @@ const paragraph = (text: string, props?: Record<string, unknown>) => ({
   content: text ? [{ type: 'text', text, styles: {} }] : [],
 });
 
-const SPACER = '<p style="margin:0 0 10px 0;font-size:10px;line-height:10px;">&nbsp;</p>';
+const SPACER =
+  '<p style="margin:0 0 10px 0;font-size:10px;line-height:10px;mso-line-height-rule:exactly;">&nbsp;</p>';
 
 describe('normalizeBlockHtmlForEmail', () => {
   it('renders a mid-content empty paragraph as a single small spacer', () => {
