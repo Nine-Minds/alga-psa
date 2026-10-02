@@ -69,7 +69,7 @@ const base = `/api/v1/projects/tasks/${taskId}/comments`;
 describe('project task comment routes', () => {
   it('lists comments in the documented resource shape behind project_task:read', async () => {
     const list = vi.fn().mockResolvedValue([resource]);
-    const controller = new TestController({ list });
+    const controller = new TestController({ listComments: list });
 
     const response = await controller.list()(request('GET', base));
 
@@ -81,7 +81,7 @@ describe('project task comment routes', () => {
 
   it('answers 404 when the task does not exist', async () => {
     const list = vi.fn();
-    const controller = new TestController({ list, assertTaskExists: vi.fn().mockRejectedValue(new NotFoundError('Task not found')) });
+    const controller = new TestController({ listComments: list, assertTaskExists: vi.fn().mockRejectedValue(new NotFoundError('Task not found')) });
 
     const response = await controller.list()(request('GET', base));
 
@@ -91,7 +91,7 @@ describe('project task comment routes', () => {
 
   it('creates a comment and validates the note and parent id', async () => {
     const create = vi.fn().mockResolvedValue(resource);
-    const controller = new TestController({ create });
+    const controller = new TestController({ createComment: create });
 
     const ok = await controller.create()(request('POST', base, { note: resource.note, parent_comment_id: null }));
     expect(ok.status).toBe(201);
@@ -109,7 +109,7 @@ describe('project task comment routes', () => {
   it('returns 404 from update and delete when the comment is not on this task', async () => {
     const update = vi.fn().mockRejectedValue(new NotFoundError('Comment not found'));
     const remove = vi.fn().mockRejectedValue(new NotFoundError('Comment not found'));
-    const controller = new TestController({ update, delete: remove });
+    const controller = new TestController({ updateComment: update, deleteComment: remove });
 
     const updated = await controller.update()(request('PUT', `${base}/${commentId}`, { note: 'edited' }));
     expect(updated.status).toBe(404);
@@ -122,7 +122,7 @@ describe('project task comment routes', () => {
 
   it('deletes with 204 and rejects a malformed comment id before the service', async () => {
     const remove = vi.fn().mockResolvedValue(undefined);
-    const controller = new TestController({ delete: remove });
+    const controller = new TestController({ deleteComment: remove });
 
     expect((await controller.delete()(request('DELETE', `${base}/${commentId}`))).status).toBe(204);
     expect((await controller.delete()(request('DELETE', `${base}/not-a-uuid`))).status).toBe(400);

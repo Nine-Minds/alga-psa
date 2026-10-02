@@ -89,7 +89,7 @@ export class ApiProjectTaskCommentController extends ApiBaseController {
 
   list() {
     return this.handle(false, async ({ taskId }, apiRequest) => {
-      const comments = await this.commentService.list(taskId, apiRequest.context);
+      const comments = await this.commentService.listComments(taskId, apiRequest.context);
       return createSuccessResponse(comments);
     });
   }
@@ -97,7 +97,7 @@ export class ApiProjectTaskCommentController extends ApiBaseController {
   create() {
     return this.handle(false, async ({ taskId }, apiRequest, req) => {
       const data = await this.parseBody(req, (body) => createProjectTaskCommentSchema.parse(body));
-      const comment = await this.commentService.create(taskId, data, apiRequest.context);
+      const comment = await this.commentService.createComment(taskId, data, apiRequest.context);
       return createSuccessResponse(comment, 201);
     });
   }
@@ -105,14 +105,14 @@ export class ApiProjectTaskCommentController extends ApiBaseController {
   update() {
     return this.handle(true, async ({ taskId, commentId }, apiRequest, req) => {
       const data = await this.parseBody(req, (body) => updateProjectTaskCommentSchema.parse(body));
-      const comment = await this.commentService.update(taskId, commentId!, data, apiRequest.context);
+      const comment = await this.commentService.updateComment(taskId, commentId!, data, apiRequest.context);
       return createSuccessResponse(comment);
     });
   }
 
   delete() {
     return this.handle(true, async ({ taskId, commentId }, apiRequest) => {
-      await this.commentService.delete(taskId, commentId!, apiRequest.context);
+      await this.commentService.deleteComment(taskId, commentId!, apiRequest.context);
       return new NextResponse(null, { status: 204 });
     });
   }

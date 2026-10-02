@@ -106,7 +106,7 @@ export class ProjectTaskCommentService extends BaseService<never> {
     };
   }
 
-  async list(taskId: string, context: ServiceContext): Promise<ProjectTaskCommentResponse[]> {
+  async listComments(taskId: string, context: ServiceContext): Promise<ProjectTaskCommentResponse[]> {
     const knex = await this.getDbForContext(context);
     const comments = await listTaskCommentsWithDb(knex, context.tenant, taskId);
     const batch = await getTaskCommentsReactionsBatchWithDb(
@@ -119,14 +119,14 @@ export class ProjectTaskCommentService extends BaseService<never> {
   }
 
   async getOne(taskId: string, commentId: string, context: ServiceContext): Promise<ProjectTaskCommentResponse> {
-    const [match] = (await this.list(taskId, context)).filter((comment) => comment.task_comment_id === commentId);
+    const [match] = (await this.listComments(taskId, context)).filter((comment) => comment.task_comment_id === commentId);
     if (!match) {
       throw new NotFoundError('Comment not found');
     }
     return match;
   }
 
-  async create(
+  async createComment(
     taskId: string,
     data: { note: string; parent_comment_id?: string | null },
     context: ServiceContext,
@@ -148,7 +148,7 @@ export class ProjectTaskCommentService extends BaseService<never> {
     return this.getOne(taskId, commentId, context);
   }
 
-  async update(
+  async updateComment(
     taskId: string,
     commentId: string,
     data: { note: string },
@@ -164,7 +164,7 @@ export class ProjectTaskCommentService extends BaseService<never> {
     return this.getOne(taskId, commentId, context);
   }
 
-  async delete(taskId: string, commentId: string, context: ServiceContext): Promise<void> {
+  async deleteComment(taskId: string, commentId: string, context: ServiceContext): Promise<void> {
     await this.requireCommentOnTask(taskId, commentId, context);
     const knex = await this.getDbForContext(context);
     try {

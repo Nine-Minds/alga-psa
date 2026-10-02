@@ -18,7 +18,8 @@ import {
 } from './common';
 import {
   clientCoreFieldsSchema,
-  clientLocationCoreFieldsSchema
+  clientLocationCoreFieldsSchema,
+  emailFieldSchema
 } from '@alga-psa/validation';
 
 // Structural rules for name/email/url/phone come from @alga-psa/validation so the
@@ -204,9 +205,12 @@ export const createClientLocationSchema = z.object({
   is_active: z.boolean().optional().default(true)
 });
 
-export const updateClientLocationSchema = createUpdateSchema(createClientLocationSchema).extend({
-  // null clears the email; a blank string is "not sent" (the shared optional() helper drops it).
-  email: z.union([z.null(), locationEmailField]),
+// Typed partial (createUpdateSchema takes ZodObject<any>, which would erase the email type).
+export const updateClientLocationSchema = createClientLocationSchema.partial().extend({
+  // null clears the email; a blank string is "not sent", matching the shared optional() helper.
+  email: z
+    .union([z.null(), z.literal('').transform(() => undefined), emailFieldSchema])
+    .optional(),
 });
 
 export const clientLocationResponseSchema = z.object({

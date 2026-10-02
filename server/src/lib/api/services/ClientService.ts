@@ -705,7 +705,7 @@ export class ClientService extends BaseService<IClient> {
       // Deactivating a client also deactivates its contacts and their portal users
       // unless the caller chose "client only" — the same choice the web dialog offers.
       if (data.is_inactive === true && data.deactivate_contacts !== false) {
-        if (!before.is_inactive && !(await hasPermission(context.user, 'contact', 'update', knex))) {
+        if (!before.is_inactive && !(await hasPermission(context.user, 'contact', 'update', trx))) {
           throw new ForbiddenError('Permission denied: Cannot update contacts');
         }
         // Get all contact IDs for this client
