@@ -77,7 +77,12 @@
     "markedComplete": "Phase als abgeschlossen markiert",
     "reopened": "Phase wieder geöffnet",
     "completeReadyToast": "{{description}} ist abrechnungsbereit",
-    "viewInBilling": "Anzeigen"
+    "viewInBilling": "Anzeigen",
+    "serviceLabel": "Standard-Service (für Zeiterfassung)",
+    "noService": "Kein Service",
+    "servicePlaceholder": "Standard-Service auswählen",
+    "serviceHelp": "Wird für Zeiteinträge auf Aufgaben dieser Phase verwendet, wenn die Aufgabe selbst keinen Service festlegt.",
+    "serviceDisplayLabel": "Service"
   },
   "projectList": {
     "addProject": "Projekt hinzufügen",
@@ -178,7 +183,11 @@
     "continueEditing": "Weiter bearbeiten",
     "discardChanges": "Änderungen verwerfen",
     "saveAndClose": "Speichern und schließen",
-    "saving": "Wird gespeichert..."
+    "saving": "Wird gespeichert...",
+    "serviceLabel": "Standard-Service (für Zeiterfassung)",
+    "noService": "Kein Service",
+    "servicePlaceholder": "Standard-Service auswählen",
+    "serviceHelp": "Wird für Zeiteinträge in diesem Projekt verwendet, wenn weder die Aufgabe noch ihre Phase einen Service festlegt."
   },
   "projectDetail": {
     "allAgents": "Alle Agenten",
@@ -409,7 +418,9 @@
     "movedSuccess": "Aufgabe erfolgreich verschoben",
     "duplicatedSuccess": "Aufgabe \"{{taskName}}\" erfolgreich dupliziert!",
     "willBeSetOnCreate": "Wird bei der Erstellung gesetzt",
-    "unknownPhase": "Unbekannte Phase"
+    "unknownPhase": "Unbekannte Phase",
+    "serviceInheritedFromPhase": "Übernimmt {{service}} von der Phase.",
+    "serviceInheritedFromProject": "Übernimmt {{service}} vom Projekt."
   },
   "taskDependencies": {
     "title": "Abhängigkeiten",

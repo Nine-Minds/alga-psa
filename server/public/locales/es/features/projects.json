@@ -77,7 +77,12 @@
     "markedComplete": "Fase marcada como completada",
     "reopened": "Fase reabierta",
     "completeReadyToast": "{{description}} está listo para facturar",
-    "viewInBilling": "Ver"
+    "viewInBilling": "Ver",
+    "serviceLabel": "Servicio predeterminado (para partes de tiempo)",
+    "noService": "Sin servicio",
+    "servicePlaceholder": "Seleccionar servicio predeterminado",
+    "serviceHelp": "Se usa en los partes de tiempo de las tareas de esta fase cuando la propia tarea no define un servicio.",
+    "serviceDisplayLabel": "Servicio"
   },
   "projectList": {
     "addProject": "Agregar proyecto",
@@ -178,7 +183,11 @@
     "continueEditing": "Seguir editando",
     "discardChanges": "Descartar cambios",
     "saveAndClose": "Guardar y cerrar",
-    "saving": "Guardando..."
+    "saving": "Guardando...",
+    "serviceLabel": "Servicio predeterminado (para partes de tiempo)",
+    "noService": "Sin servicio",
+    "servicePlaceholder": "Seleccionar servicio predeterminado",
+    "serviceHelp": "Se usa en los partes de tiempo de este proyecto cuando ni la tarea ni su fase definen un servicio."
   },
   "projectDetail": {
     "allAgents": "Todos los agentes",
@@ -409,7 +418,9 @@
     "movedSuccess": "Tarea movida correctamente",
     "duplicatedSuccess": "¡La tarea \"{{taskName}}\" se duplicó correctamente!",
     "willBeSetOnCreate": "Se establecerá al crearla",
-    "unknownPhase": "Fase desconocida"
+    "unknownPhase": "Fase desconocida",
+    "serviceInheritedFromPhase": "Hereda {{service}} de la fase.",
+    "serviceInheritedFromProject": "Hereda {{service}} del proyecto."
   },
   "taskDependencies": {
     "title": "Dependencias",

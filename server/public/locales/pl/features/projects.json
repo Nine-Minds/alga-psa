@@ -79,7 +79,12 @@
     "markedComplete": "Faza oznaczona jako ukończona",
     "reopened": "Faza otwarta ponownie",
     "completeReadyToast": "{{description}} jest gotowe do rozliczenia",
-    "viewInBilling": "Wyświetl"
+    "viewInBilling": "Wyświetl",
+    "serviceLabel": "Domyślna usługa (dla wpisów czasu)",
+    "noService": "Brak usługi",
+    "servicePlaceholder": "Wybierz domyślną usługę",
+    "serviceHelp": "Używana we wpisach czasu dla zadań tej fazy, gdy samo zadanie nie ustawia usługi.",
+    "serviceDisplayLabel": "Usługa"
   },
   "projectList": {
     "addProject": "Dodaj projekt",
@@ -180,7 +185,11 @@
     "continueEditing": "Kontynuuj edycję",
     "discardChanges": "Odrzuć zmiany",
     "saveAndClose": "Zapisz i zamknij",
-    "saving": "Zapisywanie..."
+    "saving": "Zapisywanie...",
+    "serviceLabel": "Domyślna usługa (dla wpisów czasu)",
+    "noService": "Brak usługi",
+    "servicePlaceholder": "Wybierz domyślną usługę",
+    "serviceHelp": "Używana we wpisach czasu tego projektu, gdy ani zadanie, ani jego faza nie ustawia usługi."
   },
   "projectDetail": {
     "allAgents": "Wszyscy agenci",
@@ -421,7 +430,9 @@
     "movedSuccess": "Zadanie zostało pomyślnie przeniesione",
     "duplicatedSuccess": "Zadanie „{{taskName}}” zostało pomyślnie zduplikowane!",
     "willBeSetOnCreate": "Zostanie ustawiony podczas tworzenia",
-    "unknownPhase": "Nieznana faza"
+    "unknownPhase": "Nieznana faza",
+    "serviceInheritedFromPhase": "Dziedziczy {{service}} z fazy.",
+    "serviceInheritedFromProject": "Dziedziczy {{service}} z projektu."
   },
   "taskDependencies": {
     "title": "Zależności",

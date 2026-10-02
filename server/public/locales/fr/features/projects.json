@@ -77,7 +77,12 @@
     "markedComplete": "Phase marquée comme terminée",
     "reopened": "Phase rouverte",
     "completeReadyToast": "{{description}} est prêt à facturer",
-    "viewInBilling": "Afficher"
+    "viewInBilling": "Afficher",
+    "serviceLabel": "Service par défaut (pour les saisies de temps)",
+    "noService": "Aucun service",
+    "servicePlaceholder": "Sélectionner un service par défaut",
+    "serviceHelp": "Utilisé pour les saisies de temps sur les tâches de cette phase lorsque la tâche elle-même ne définit aucun service.",
+    "serviceDisplayLabel": "Service"
   },
   "projectList": {
     "addProject": "Ajouter un projet",
@@ -178,7 +183,11 @@
     "continueEditing": "Continuer la modification",
     "discardChanges": "Ignorer les modifications",
     "saveAndClose": "Enregistrer et fermer",
-    "saving": "Enregistrement..."
+    "saving": "Enregistrement...",
+    "serviceLabel": "Service par défaut (pour les saisies de temps)",
+    "noService": "Aucun service",
+    "servicePlaceholder": "Sélectionner un service par défaut",
+    "serviceHelp": "Utilisé pour les saisies de temps de ce projet lorsque ni la tâche ni sa phase ne définit de service."
   },
   "projectDetail": {
     "allAgents": "Tous les agents",
@@ -409,7 +418,9 @@
     "movedSuccess": "Tâche déplacée avec succès",
     "duplicatedSuccess": "Tâche \"{{taskName}}\" dupliquée avec succès !",
     "willBeSetOnCreate": "Sera défini à la création",
-    "unknownPhase": "Phase inconnue"
+    "unknownPhase": "Phase inconnue",
+    "serviceInheritedFromPhase": "Hérite de {{service}} depuis la phase.",
+    "serviceInheritedFromProject": "Hérite de {{service}} depuis le projet."
   },
   "taskDependencies": {
     "title": "Dépendances",

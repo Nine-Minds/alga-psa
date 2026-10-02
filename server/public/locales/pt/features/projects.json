@@ -77,7 +77,12 @@
     "markedComplete": "Fase marcada como concluída",
     "reopened": "Fase reaberta",
     "completeReadyToast": "{{description}} está pronto para faturar",
-    "viewInBilling": "Ver"
+    "viewInBilling": "Ver",
+    "serviceLabel": "Serviço padrão (para entradas de horas)",
+    "noService": "Sem serviço",
+    "servicePlaceholder": "Selecione o serviço padrão",
+    "serviceHelp": "Usado nas entradas de horas das tarefas desta fase quando a própria tarefa não define um serviço.",
+    "serviceDisplayLabel": "Serviço"
   },
   "projectList": {
     "addProject": "Adicionar projeto",
@@ -178,7 +183,11 @@
     "continueEditing": "Continuar editando",
     "discardChanges": "Descartar alterações",
     "saveAndClose": "Salvar e fechar",
-    "saving": "Salvando..."
+    "saving": "Salvando...",
+    "serviceLabel": "Serviço padrão (para entradas de horas)",
+    "noService": "Sem serviço",
+    "servicePlaceholder": "Selecione o serviço padrão",
+    "serviceHelp": "Usado nas entradas de horas deste projeto quando nem a tarefa nem a sua fase define um serviço."
   },
   "projectDetail": {
     "allAgents": "Todos os agentes",
@@ -409,7 +418,9 @@
     "movedSuccess": "Tarefa movida com sucesso",
     "duplicatedSuccess": "Tarefa \"{{taskName}}\" duplicada com sucesso!",
     "willBeSetOnCreate": "Será definido na criação",
-    "unknownPhase": "Fase Desconhecida"
+    "unknownPhase": "Fase Desconhecida",
+    "serviceInheritedFromPhase": "Herda {{service}} da fase.",
+    "serviceInheritedFromProject": "Herda {{service}} do projeto."
   },
   "taskDependencies": {
     "title": "Dependências",

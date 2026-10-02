@@ -77,7 +77,12 @@
     "markedComplete": "Fasen har markerats som slutförd",
     "reopened": "Fasen har öppnats igen",
     "completeReadyToast": "{{description}} kan nu faktureras",
-    "viewInBilling": "Visa"
+    "viewInBilling": "Visa",
+    "serviceLabel": "Standardtjänst (för tidposter)",
+    "noService": "Ingen tjänst",
+    "servicePlaceholder": "Välj standardtjänst",
+    "serviceHelp": "Används för tidposter på den här fasens uppgifter när uppgiften själv inte anger någon tjänst.",
+    "serviceDisplayLabel": "Tjänst"
   },
   "projectList": {
     "addProject": "Lägg till projekt",
@@ -178,7 +183,11 @@
     "continueEditing": "Fortsätt redigera",
     "discardChanges": "Kasta ändringar",
     "saveAndClose": "Spara och stäng",
-    "saving": "Sparar…"
+    "saving": "Sparar…",
+    "serviceLabel": "Standardtjänst (för tidposter)",
+    "noService": "Ingen tjänst",
+    "servicePlaceholder": "Välj standardtjänst",
+    "serviceHelp": "Används för tidposter i det här projektet när varken uppgiften eller dess fas anger någon tjänst."
   },
   "projectDetail": {
     "allAgents": "Alla handläggare",
@@ -409,7 +418,9 @@
     "movedSuccess": "Uppgiften har flyttats",
     "duplicatedSuccess": "Uppgiften ”{{taskName}}” har duplicerats",
     "willBeSetOnCreate": "Anges när posten skapas",
-    "unknownPhase": "Okänd fas"
+    "unknownPhase": "Okänd fas",
+    "serviceInheritedFromPhase": "Ärver {{service}} från fasen.",
+    "serviceInheritedFromProject": "Ärver {{service}} från projektet."
   },
   "taskDependencies": {
     "title": "Beroenden",
