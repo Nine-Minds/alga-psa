@@ -6,6 +6,7 @@ import { tenantDb } from '@alga-psa/db';
 import type { IContractTemplateLine } from '@alga-psa/types';
 import { cloneTemplateLinePools } from '@alga-psa/shared/billingClients/templateClone';
 
+// LEVERAGE: pattern template-clone-substrate — older, divergent template->contract clone. The faithful one is cloneTemplateLineToContract in packages/billing/src/repositories/contractLineRepository.ts (alga-2026-0002371).
 interface CloneTemplateOptions {
   tenant: string;
   templateContractLineId: string;

@@ -1351,6 +1351,7 @@
       "hourlyServices": "Usługi godzinowe",
       "products": "Produkty",
       "reviewCreate": "Przejrzyj i utwórz",
+      "templateLines": "Pozycje szablonu",
       "usageBasedServices": "Usługi rozliczane według zużycia"
     },
     "title": {
@@ -1841,6 +1842,31 @@
       "itemDates": "Zweryfikuj daty rozpoczęcia i zakończenia",
       "itemEditLater": "Pamiętaj: możesz edytować umowę później, jeśli będzie to potrzebne"
     }
+  },
+  "wizardTemplateLines": {
+    "title": "Pozycje szablonu",
+    "description": "Każda pozycja szablonu jest tworzona w umowie z własną nazwą, częstotliwością rozliczeń, usługami i stawkami. Zmień dowolną wartość poniżej, aby zastąpić ją tylko dla tej umowy; niezmienione wartości są kopiowane z szablonu. Stawki są podane w {{currency}}.",
+    "loading": "Ładowanie pozycji szablonu...",
+    "noTemplate": "Wybierz szablon w pierwszym kroku.",
+    "emptyTemplate": "Ten szablon nie zawiera pozycji, więc nie ma czego tworzyć.",
+    "bucketPools_one": "{{count}} pakiet godzin skopiowany z szablonu",
+    "bucketPools_few": "{{count}} pakiety godzin skopiowane z szablonu",
+    "bucketPools_many": "{{count}} pakietów godzin skopiowanych z szablonu",
+    "bucketPools_other": "{{count}} pakietu godzin skopiowanego z szablonu",
+    "lineName": "Nazwa pozycji",
+    "billingFrequency": "Częstotliwość rozliczeń",
+    "fixedBaseRate": "Stała stawka podstawowa",
+    "fixedBaseRateHint": "Stawka z szablonu {{rate}}. Pozostaw puste, aby ją zachować.",
+    "fixedBaseRateNone": "Szablon nie ustawia stawki pozycji; usługi stosują ceny z katalogu.",
+    "minimumBillableTime": "Minimalny czas podlegający rozliczeniu (minuty)",
+    "roundUpToNearest": "Zaokrąglij w górę do najbliższych (minuty)",
+    "quantity": "Ilość",
+    "hourlyRate": "Stawka godzinowa",
+    "unitRate": "Stawka jednostkowa",
+    "serviceRate": "Stawka usługi",
+    "noCurrencyPrice": "Brak ceny w {{currency}} dla tej usługi. Wprowadź stawkę, w przeciwnym razie nie można utworzyć umowy.",
+    "templateRateNote": "Z szablonu (kwota nie ma przypisanej waluty).",
+    "reviewTitle": "Pozycje utworzone na podstawie szablonu"
   },
   "templateWizard": {
     "title": {

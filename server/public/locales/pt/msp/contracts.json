@@ -1351,6 +1351,7 @@
       "hourlyServices": "Serviços por hora",
       "products": "Produtos",
       "reviewCreate": "Revise e crie",
+      "templateLines": "Linhas do modelo",
       "usageBasedServices": "Serviços baseados em uso"
     },
     "title": {
@@ -1837,6 +1838,29 @@
       "itemDates": "Verifique as datas de início e término",
       "itemEditLater": "Lembre-se: você pode editar o contrato posteriormente, se necessário"
     }
+  },
+  "wizardTemplateLines": {
+    "title": "Linhas do modelo",
+    "description": "Cada linha do modelo é criada no contrato com seu próprio nome, frequência de cobrança, serviços e tarifas. Altere qualquer valor abaixo para substituí-lo somente neste contrato; os valores não alterados são copiados do modelo. As tarifas estão em {{currency}}.",
+    "loading": "Carregando linhas do modelo...",
+    "noTemplate": "Selecione um modelo na primeira etapa.",
+    "emptyTemplate": "Este modelo não tem linhas, portanto não há nada para criar.",
+    "bucketPools_one": "{{count}} banco de horas copiado do modelo",
+    "bucketPools_other": "{{count}} bancos de horas copiados do modelo",
+    "lineName": "Nome da linha",
+    "billingFrequency": "Frequência de cobrança",
+    "fixedBaseRate": "Tarifa base fixa",
+    "fixedBaseRateHint": "Tarifa do modelo {{rate}}. Deixe vazio para mantê-la.",
+    "fixedBaseRateNone": "O modelo não define tarifa de linha; os serviços seguem os preços do catálogo.",
+    "minimumBillableTime": "Tempo mínimo faturável (minutos)",
+    "roundUpToNearest": "Arredondar para o mais próximo (minutos)",
+    "quantity": "Quantidade",
+    "hourlyRate": "Tarifa por hora",
+    "unitRate": "Tarifa unitária",
+    "serviceRate": "Tarifa do serviço",
+    "noCurrencyPrice": "Não há preço em {{currency}} para este serviço. Informe uma tarifa ou o contrato não poderá ser criado.",
+    "templateRateNote": "Do modelo (o valor não está associado a uma moeda).",
+    "reviewTitle": "Linhas criadas a partir do modelo"
   },
   "templateWizard": {
     "title": {

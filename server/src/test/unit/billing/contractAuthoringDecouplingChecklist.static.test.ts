@@ -22,7 +22,7 @@ describe('contract authoring decoupling checklist guards', () => {
   });
 
   it('T004: template/draft resume paths preserve decoupled selections and mode-default prefill support', () => {
-    expect(contractWizardActionsSource).toContain('getContractTemplateSnapshotForClientWizard');
+    expect(contractWizardActionsSource).toContain('getContractTemplateLinesForClientWizard');
     expect(contractWizardActionsSource).toContain('getDraftContractForResume');
     expect(contractWizardActionsSource).toContain('fetchModeDefaultRatesByServiceId');
   });

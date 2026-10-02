@@ -1351,6 +1351,7 @@
       "hourlyServices": "Servizi orari",
       "products": "Prodotti",
       "reviewCreate": "Rivedi e crea",
+      "templateLines": "Righe del modello",
       "usageBasedServices": "Servizi basati su utilizzo"
     },
     "title": {
@@ -1837,6 +1838,29 @@
       "itemDates": "Verifica le date di inizio e fine",
       "itemEditLater": "Ricorda: puoi modificare il contratto in seguito se necessario"
     }
+  },
+  "wizardTemplateLines": {
+    "title": "Righe del modello",
+    "description": "Ogni riga del modello viene creata nel contratto con il proprio nome, la propria frequenza di fatturazione, i propri servizi e le proprie tariffe. Modifica qualsiasi valore qui sotto per sovrascriverlo solo per questo contratto; i valori non modificati vengono copiati dal modello. Le tariffe sono in {{currency}}.",
+    "loading": "Caricamento delle righe del modello...",
+    "noTemplate": "Seleziona un modello nel primo passaggio.",
+    "emptyTemplate": "Questo modello non ha righe, quindi non c’è nulla da creare.",
+    "bucketPools_one": "{{count}} pacchetto ore copiato dal modello",
+    "bucketPools_other": "{{count}} pacchetti ore copiati dal modello",
+    "lineName": "Nome della riga",
+    "billingFrequency": "Frequenza di fatturazione",
+    "fixedBaseRate": "Tariffa base fissa",
+    "fixedBaseRateHint": "Tariffa del modello {{rate}}. Lascia vuoto per mantenerla.",
+    "fixedBaseRateNone": "Il modello non imposta alcuna tariffa di riga; i servizi seguono i prezzi del loro catalogo.",
+    "minimumBillableTime": "Tempo minimo fatturabile (minuti)",
+    "roundUpToNearest": "Arrotonda per eccesso al più vicino (minuti)",
+    "quantity": "Quantità",
+    "hourlyRate": "Tariffa oraria",
+    "unitRate": "Tariffa unitaria",
+    "serviceRate": "Tariffa del servizio",
+    "noCurrencyPrice": "Nessun prezzo in {{currency}} per questo servizio. Inserisci una tariffa, altrimenti il contratto non può essere creato.",
+    "templateRateNote": "Dal modello (l’importo non è associato a una valuta).",
+    "reviewTitle": "Righe create dal modello"
   },
   "templateWizard": {
     "title": {

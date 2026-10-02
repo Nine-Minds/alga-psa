@@ -10,7 +10,6 @@ let db: Knex;
 let tenantId: string;
 let createContractTemplateFromWizard: typeof import('@alga-psa/billing/actions/contractWizardActions').createContractTemplateFromWizard;
 let createClientContractFromWizard: typeof import('@alga-psa/billing/actions/contractWizardActions').createClientContractFromWizard;
-let getContractTemplateSnapshotForClientWizard: typeof import('@alga-psa/billing/actions/contractWizardActions').getContractTemplateSnapshotForClientWizard;
 
 type CreatedIds = {
   serviceTypeId?: string;
@@ -122,7 +121,7 @@ describe('createContractTemplateFromWizard with Currency Support', () => {
     authRef.user = { user_id: wizardUserId, tenant: tenantId, user_type: 'internal', roles: [] };
     authRef.tenant = tenantId;
     setupCommonMocks({ tenantId, userId: wizardUserId, permissionCheck: () => true });
-    ({ createContractTemplateFromWizard, createClientContractFromWizard, getContractTemplateSnapshotForClientWizard } = await import('@alga-psa/billing/actions/contractWizardActions'));
+    ({ createContractTemplateFromWizard, createClientContractFromWizard } = await import('@alga-psa/billing/actions/contractWizardActions'));
   }, 120_000);
 
   afterAll(async () => {

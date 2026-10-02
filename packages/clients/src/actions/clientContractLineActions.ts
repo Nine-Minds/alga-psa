@@ -499,6 +499,7 @@ export const addClientContractLine = withAuth(async (
         })
         .returning('contract_line_id');
 
+      // LEVERAGE: pattern template-clone-substrate — legacy clone path; see cloneTemplateLineToContract (alga-2026-0002371).
       await cloneTemplateContractLineAsync(trx, {
         tenant,
         templateContractLineId: newBilling.contract_line_id,

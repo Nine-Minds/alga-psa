@@ -1351,6 +1351,7 @@
       "hourlyServices": "Servicios por hora",
       "products": "Productos",
       "reviewCreate": "Revisar y crear",
+      "templateLines": "Líneas de la plantilla",
       "usageBasedServices": "Servicios basados en uso"
     },
     "title": {
@@ -1837,6 +1838,29 @@
       "itemDates": "Verifique las fechas de inicio y finalización",
       "itemEditLater": "Recuerde: puede editar el contrato más tarde si es necesario"
     }
+  },
+  "wizardTemplateLines": {
+    "title": "Líneas de la plantilla",
+    "description": "Cada línea de la plantilla se crea en el contrato con su propio nombre, frecuencia de facturación, servicios y tarifas. Cambie cualquier valor a continuación para anularlo solo en este contrato; los valores sin modificar se copian de la plantilla. Las tarifas están en {{currency}}.",
+    "loading": "Cargando líneas de la plantilla...",
+    "noTemplate": "Seleccione una plantilla en el primer paso.",
+    "emptyTemplate": "Esta plantilla no tiene líneas, por lo que no hay nada que crear.",
+    "bucketPools_one": "{{count}} bolsa de horas copiada de la plantilla",
+    "bucketPools_other": "{{count}} bolsas de horas copiadas de la plantilla",
+    "lineName": "Nombre de la línea",
+    "billingFrequency": "Frecuencia de facturación",
+    "fixedBaseRate": "Tarifa base fija",
+    "fixedBaseRateHint": "Tarifa de la plantilla {{rate}}. Déjelo vacío para conservarla.",
+    "fixedBaseRateNone": "La plantilla no establece una tarifa de línea; los servicios siguen los precios de su catálogo.",
+    "minimumBillableTime": "Tiempo mínimo facturable (minutos)",
+    "roundUpToNearest": "Redondear al más cercano (minutos)",
+    "quantity": "Cantidad",
+    "hourlyRate": "Tarifa por hora",
+    "unitRate": "Tarifa unitaria",
+    "serviceRate": "Tarifa del servicio",
+    "noCurrencyPrice": "No hay precio en {{currency}} para este servicio. Introduzca una tarifa o no se podrá crear el contrato.",
+    "templateRateNote": "De la plantilla (el importe no tiene moneda asociada).",
+    "reviewTitle": "Líneas creadas a partir de la plantilla"
   },
   "templateWizard": {
     "title": {

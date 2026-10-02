@@ -1351,6 +1351,7 @@
       "hourlyServices": "Timdebiterade tjänster",
       "products": "Produkter",
       "reviewCreate": "Granska och skapa",
+      "templateLines": "Mallrader",
       "usageBasedServices": "Förbrukningsbaserade tjänster"
     },
     "title": {
@@ -1837,6 +1838,29 @@
       "itemDates": "Kontrollera start- och slutdatum",
       "itemEditLater": "Kom ihåg: du kan redigera avtalet senare vid behov"
     }
+  },
+  "wizardTemplateLines": {
+    "title": "Mallrader",
+    "description": "Varje rad i mallen skapas på avtalet med eget namn, faktureringsintervall, egna tjänster och taxor. Ändra något nedan för att åsidosätta det enbart för det här avtalet; orörda värden kopieras från mallen. Taxorna anges i {{currency}}.",
+    "loading": "Läser in mallrader…",
+    "noTemplate": "Välj en mall i det första steget.",
+    "emptyTemplate": "Den här mallen saknar rader, så det finns inget att skapa.",
+    "bucketPools_one": "{{count}} timpott kopierad från mallen",
+    "bucketPools_other": "{{count}} timpottar kopierade från mallen",
+    "lineName": "Radnamn",
+    "billingFrequency": "Faktureringsintervall",
+    "fixedBaseRate": "Fast grundtaxa",
+    "fixedBaseRateHint": "Mallens taxa {{rate}}. Lämna tomt för att behålla den.",
+    "fixedBaseRateNone": "Mallen anger ingen radtaxa; tjänsterna följer sina katalogpriser.",
+    "minimumBillableTime": "Minsta debiterbara tid (minuter)",
+    "roundUpToNearest": "Avrunda uppåt till närmaste (minuter)",
+    "quantity": "Antal",
+    "hourlyRate": "Timtaxa",
+    "unitRate": "Enhetstaxa",
+    "serviceRate": "Tjänstetaxa",
+    "noCurrencyPrice": "Inget pris i {{currency}} för den här tjänsten. Ange en taxa, annars kan avtalet inte skapas.",
+    "templateRateNote": "Från mallen (beloppet har ingen valutamärkning).",
+    "reviewTitle": "Rader som skapats från mallen"
   },
   "templateWizard": {
     "title": {

@@ -1351,6 +1351,7 @@
       "hourlyServices": "Uurservices",
       "products": "Producten",
       "reviewCreate": "Controleren en aanmaken",
+      "templateLines": "Sjabloonregels",
       "usageBasedServices": "Verbruiksgebaseerde services"
     },
     "title": {
@@ -1837,6 +1838,29 @@
       "itemDates": "Verifieer de start- en einddatums",
       "itemEditLater": "Onthoud: u kunt het contract later bewerken indien nodig"
     }
+  },
+  "wizardTemplateLines": {
+    "title": "Sjabloonregels",
+    "description": "Elke regel van het sjabloon wordt op het contract aangemaakt met een eigen naam, factureerfrequentie, services en tarieven. Wijzig hieronder een waarde om deze alleen voor dit contract te overschrijven; ongewijzigde waarden worden uit het sjabloon overgenomen. Tarieven zijn in {{currency}}.",
+    "loading": "Sjabloonregels laden...",
+    "noTemplate": "Selecteer een sjabloon in de eerste stap.",
+    "emptyTemplate": "Dit sjabloon heeft geen regels, dus er valt niets aan te maken.",
+    "bucketPools_one": "{{count}} urenbundel overgenomen uit het sjabloon",
+    "bucketPools_other": "{{count}} urenbundels overgenomen uit het sjabloon",
+    "lineName": "Naam van de regel",
+    "billingFrequency": "Factureerfrequentie",
+    "fixedBaseRate": "Vast basistarief",
+    "fixedBaseRateHint": "Sjabloontarief {{rate}}. Laat leeg om het te behouden.",
+    "fixedBaseRateNone": "Het sjabloon stelt geen regeltarief in; services volgen hun catalogusprijzen.",
+    "minimumBillableTime": "Minimum factureerbare tijd (minuten)",
+    "roundUpToNearest": "Naar boven afronden op dichtstbijzijnde (minuten)",
+    "quantity": "Hoeveelheid",
+    "hourlyRate": "Uurtarief",
+    "unitRate": "Tarief per eenheid",
+    "serviceRate": "Servicetarief",
+    "noCurrencyPrice": "Geen prijs in {{currency}} voor deze service. Voer een tarief in, anders kan het contract niet worden aangemaakt.",
+    "templateRateNote": "Uit het sjabloon (het bedrag heeft geen valutatag).",
+    "reviewTitle": "Regels aangemaakt op basis van het sjabloon"
   },
   "templateWizard": {
     "title": {

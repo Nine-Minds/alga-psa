@@ -20,11 +20,16 @@ import { HourlyServicesStep } from "./wizard-steps/HourlyServicesStep";
 import { UsageBasedServicesStep } from "./wizard-steps/UsageBasedServicesStep";
 import { ReviewContractStep } from "./wizard-steps/ReviewContractStep";
 import {
+  TemplateLinesStep,
+  TemplateLinesReview,
+} from "./wizard-steps/TemplateLinesStep";
+import {
   createClientContractFromWizard,
   listContractTemplatesForWizard,
-  getContractTemplateSnapshotForClientWizard,
+  getContractTemplateLinesForClientWizard,
   ClientContractWizardSubmission,
-  ClientTemplateSnapshot,
+  ClientTemplateLineEditInput,
+  ClientTemplateLinesView,
 } from "@alga-psa/billing/actions/contractWizardActions";
 import { getDefaultBillingSettings } from "@alga-psa/billing/actions/billingSettingsActions";
 import { getClientByIdForBilling } from "@alga-psa/billing/actions/billingClientsActions";
@@ -197,7 +202,13 @@ export interface ContractWizardData {
   bucket_pools?: BucketPoolDraft[];
   contract_id?: string;
   is_draft?: boolean;
+  /**
+   * Template the contract is created from. When set the server clones every
+   * template line; the flat `*_services` arrays above are unused in this mode.
+   */
   template_id?: string;
+  /** Per-line edits (keyed by template line id) applied on top of the clone. */
+  template_lines?: ClientTemplateLineEditInput[];
 }
 
 export const createDefaultContractWizardData = (): ContractWizardData => ({
@@ -225,6 +236,7 @@ export const createDefaultContractWizardData = (): ContractWizardData => ({
   usage_services: [],
   bucket_pools: [],
   template_id: undefined,
+  template_lines: undefined,
 });
 
 const normalizeRenewalMode = (
@@ -318,7 +330,16 @@ export function ContractWizard({
     null,
   );
   const [templateError, setTemplateError] = useState<string | null>(null);
-  const [isTemplateLoading, startTemplateTransition] = useTransition();
+  const [isTemplateLoading] = useTransition();
+  const [templateView, setTemplateView] =
+    useState<ClientTemplateLinesView | null>(null);
+  const [isTemplateViewLoading, setIsTemplateViewLoading] = useState(false);
+  const [templateViewError, setTemplateViewError] = useState<string | null>(
+    null,
+  );
+  // Template whose name/description/frequency should seed the basics once its
+  // per-line view has loaded (set on an explicit pick, not on draft resume).
+  const applyTemplateDefaultsFor = useRef<string | null>(null);
 
   const [wizardData, setWizardData] = useState<ContractWizardData>(() => ({
     ...buildInitialContractWizardData(editingContract),
@@ -329,8 +350,17 @@ export function ContractWizard({
     [],
   );
 
+  const isTemplateMode = Boolean(wizardData.template_id);
+
   const stepLabels = useMemo(
-    () => [
+    () =>
+      isTemplateMode
+        ? [
+            t("wizard.steps.contractBasics", { defaultValue: "Contract Basics" }),
+            t("wizard.steps.templateLines", { defaultValue: "Template Lines" }),
+            t("wizard.steps.reviewCreate", { defaultValue: "Review & Create" }),
+          ]
+        : [
       t("wizard.steps.contractBasics", { defaultValue: "Contract Basics" }),
       t("wizard.steps.fixedFeeServices", {
         defaultValue: "Fixed Fee Services",
@@ -342,8 +372,13 @@ export function ContractWizard({
       }),
       t("wizard.steps.reviewCreate", { defaultValue: "Review & Create" }),
     ],
-    [t],
+    [t, isTemplateMode],
   );
+
+  // In template mode the per-type steps (fixed/products/hourly/usage) collapse
+  // into the single per-line template step; `activeStep` maps the visible
+  // position back to the logical step id the validation/rendering switch on.
+  const activeStep = isTemplateMode ? [0, 1, 5][currentStep] ?? 0 : currentStep;
 
   useEffect(() => {
     if (!open) {
@@ -442,63 +477,84 @@ export function ContractWizard({
     onOpenChange(false);
   };
 
-  const applyTemplateSnapshot = (
-    snapshot: ClientTemplateSnapshot,
-    templateId: string,
-  ) => {
-    setWizardData((prev) => ({
-      ...prev,
-      template_id: templateId,
-      contract_name: snapshot.contract_name ?? prev.contract_name,
-      description: snapshot.description ?? prev.description,
-      billing_frequency: snapshot.billing_frequency ?? prev.billing_frequency,
-      cadence_owner: snapshot.cadence_owner ?? prev.cadence_owner,
-      billing_timing: snapshot.billing_timing ?? prev.billing_timing,
-      // currency_code is inherited from client, not from template (templates are currency-neutral)
-      fixed_services: snapshot.fixed_services ?? [],
-      product_services: snapshot.product_services ?? [],
-      fixed_base_rate: snapshot.fixed_base_rate,
-      enable_proration: snapshot.enable_proration ?? prev.enable_proration,
-      hourly_services: snapshot.hourly_services ?? [],
-      usage_services: snapshot.usage_services ?? [],
-      minimum_billable_time:
-        snapshot.minimum_billable_time ?? prev.minimum_billable_time,
-      round_up_to_nearest:
-        snapshot.round_up_to_nearest ?? prev.round_up_to_nearest,
-    }));
-  };
-
   const handleTemplateSelect = (templateId: string | null) => {
     setSelectedTemplateId(templateId);
+    setTemplateError(null);
+    setTemplateViewError(null);
     if (!templateId) {
-      setTemplateError(null);
-      updateData({ template_id: undefined });
+      applyTemplateDefaultsFor.current = null;
+      setTemplateView(null);
+      updateData({ template_id: undefined, template_lines: undefined });
       return;
     }
 
-    setTemplateError(null);
-    startTemplateTransition(async () => {
-      try {
-        const snapshot =
-          await getContractTemplateSnapshotForClientWizard(templateId);
-        if (
-          isActionMessageError(snapshot) ||
-          isActionPermissionError(snapshot)
-        ) {
-          setTemplateError(getErrorMessage(snapshot));
-          return;
-        }
-        applyTemplateSnapshot(snapshot, templateId);
-      } catch (error) {
-        console.error("Failed to load template snapshot", error);
-        setTemplateError(
-          t("wizard.errors.failedToLoadTemplateDetails", {
-            defaultValue: "Failed to load template details",
-          }),
-        );
-      }
+    // The template is cloned server-side line by line, so the flat per-type
+    // wizard state is cleared: it must not also be submitted.
+    applyTemplateDefaultsFor.current = templateId;
+    updateData({
+      template_id: templateId,
+      template_lines: [],
+      fixed_services: [],
+      product_services: [],
+      hourly_services: [],
+      usage_services: [],
+      bucket_pools: [],
+      fixed_base_rate: undefined,
     });
   };
+
+  // Load the template's per-line view whenever the template or the client
+  // (hence the contract currency) changes.
+  useEffect(() => {
+    const templateId = wizardData.template_id;
+    if (!open || !templateId) {
+      setTemplateView(null);
+      return;
+    }
+    let cancelled = false;
+    setIsTemplateViewLoading(true);
+    setTemplateViewError(null);
+    getContractTemplateLinesForClientWizard(
+      templateId,
+      wizardData.client_id || undefined,
+    )
+      .then((view) => {
+        if (cancelled) return;
+        if (isActionMessageError(view) || isActionPermissionError(view)) {
+          const message = getErrorMessage(view);
+          setTemplateView(null);
+          setTemplateViewError(message);
+          setTemplateError(message);
+          return;
+        }
+        setTemplateView(view);
+        if (applyTemplateDefaultsFor.current === templateId) {
+          applyTemplateDefaultsFor.current = null;
+          setWizardData((prev) => ({
+            ...prev,
+            contract_name: view.contract_name ?? prev.contract_name,
+            description: view.description ?? prev.description,
+            billing_frequency: view.billing_frequency ?? prev.billing_frequency,
+          }));
+        }
+      })
+      .catch((error) => {
+        if (cancelled) return;
+        console.error("Failed to load template lines", error);
+        const message = t("wizard.errors.failedToLoadTemplateDetails", {
+          defaultValue: "Failed to load template details",
+        });
+        setTemplateView(null);
+        setTemplateViewError(message);
+        setTemplateError(message);
+      })
+      .finally(() => {
+        if (!cancelled) setIsTemplateViewLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [open, wizardData.template_id, wizardData.client_id, t]);
 
   const buildSubmissionData =
     async (): Promise<ClientContractWizardSubmission> => {
@@ -565,6 +621,9 @@ export function ContractWizard({
         billing_frequency: wizardData.billing_frequency,
         currency_code: wizardData.currency_code,
         template_id: wizardData.template_id,
+        template_lines: wizardData.template_id
+          ? (wizardData.template_lines ?? [])
+          : undefined,
       };
 
       // Bucket authoring is line-level pools; conflicting legacy
@@ -782,6 +841,25 @@ export function ContractWizard({
         return true;
       }
       case 5: {
+        if (wizardData.template_id) {
+          // Template mode: the lines (and their services) come from the
+          // template; recurring-combination checks were applied when the
+          // template was authored and are not re-derived from flat state.
+          if (
+            !templateView ||
+            !templateView.lines.some((line) => line.services.length > 0)
+          ) {
+            setErrors((prev) => ({
+              ...prev,
+              [stepIndex]: t("wizard.validation.addAtLeastOneService", {
+                defaultValue:
+                  "Add at least one service before creating the contract",
+              }),
+            }));
+            return false;
+          }
+          return true;
+        }
         const hasServices =
           wizardData.fixed_services.length > 0 ||
           wizardData.product_services.length > 0 ||
@@ -813,7 +891,7 @@ export function ContractWizard({
   };
 
   const handleNext = () => {
-    if (!validateStep(currentStep)) {
+    if (!validateStep(activeStep)) {
       return;
     }
     if (currentStep < stepLabels.length - 1) {
@@ -831,7 +909,7 @@ export function ContractWizard({
   const handleSkip = () => {
     if (
       currentStep < stepLabels.length - 1 &&
-      !REQUIRED_STEPS.includes(currentStep)
+      !REQUIRED_STEPS.includes(activeStep)
     ) {
       setCurrentStep((prev) => prev + 1);
     }
@@ -849,7 +927,7 @@ export function ContractWizard({
   };
 
   const handleFinish = async () => {
-    if (!validateStep(currentStep)) {
+    if (!validateStep(activeStep)) {
       return;
     }
 
@@ -969,7 +1047,7 @@ export function ContractWizard({
   };
 
   const renderStep = () => {
-    switch (currentStep) {
+    switch (activeStep) {
       case 0:
         return (
           <ContractBasicsStep
@@ -979,11 +1057,22 @@ export function ContractWizard({
             isLoadingTemplates={isLoadingTemplates}
             selectedTemplateId={selectedTemplateId}
             onTemplateSelect={handleTemplateSelect}
-            isTemplateLoading={isTemplateLoading}
+            isTemplateLoading={isTemplateLoading || isTemplateViewLoading}
             templateError={templateError}
           />
         );
       case 1:
+        if (isTemplateMode) {
+          return (
+            <TemplateLinesStep
+              view={templateView}
+              isLoading={isTemplateViewLoading}
+              loadError={templateViewError}
+              edits={wizardData.template_lines ?? []}
+              onChange={(edits) => updateData({ template_lines: edits })}
+            />
+          );
+        }
         return (
           <FixedFeeServicesStep data={wizardData} updateData={updateData} />
         );
@@ -996,6 +1085,28 @@ export function ContractWizard({
           <UsageBasedServicesStep data={wizardData} updateData={updateData} />
         );
       case 5:
+        if (isTemplateMode) {
+          // Simulation of a template-derived draft is deferred: the simulator
+          // consumes the flat per-type payload, which template mode no longer builds.
+          return (
+            <div className="space-y-6">
+              <div className="space-y-1">
+                <h3 className="text-base font-semibold">
+                  {wizardData.contract_name}
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  {wizardData.start_date} · {wizardData.currency_code}
+                </p>
+              </div>
+              {templateView && (
+                <TemplateLinesReview
+                  view={templateView}
+                  edits={wizardData.template_lines ?? []}
+                />
+              )}
+            </div>
+          );
+        }
         return (
           <div className="space-y-6">
             <ReviewContractStep data={wizardData} />
@@ -1038,7 +1149,7 @@ export function ContractWizard({
       onFinish={handleFinish}
       onSaveDraft={handleSaveDraft}
       isNextDisabled={isLoading}
-      isSkipDisabled={REQUIRED_STEPS.includes(currentStep)}
+      isSkipDisabled={REQUIRED_STEPS.includes(activeStep)}
       isLoading={isLoading}
       showSaveDraft
       backLabel={t("wizard.nav.back", { defaultValue: "Back" })}
