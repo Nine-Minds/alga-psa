@@ -154,6 +154,7 @@
     "assignedTeam": "Assigned Team",
     "additionalAgents": "Additional Agents",
     "createdBy": "Created By",
+    "lastActivity": "Last Activity",
     "location": "Location",
     "contactPhone": "Contact Phone",
     "clientPhone": "Client Phone",
@@ -749,7 +750,10 @@
       "success_other": "Status updated on {{count}} tickets",
       "partialFailure": "Status could not be updated on some tickets",
       "failure": "Failed to update status on selected tickets",
-      "failedHeading": "Status could not be updated on the following tickets:"
+      "failedHeading": "Status could not be updated on the following tickets:",
+      "resolutionLabel": "Resolution comment (optional)",
+      "resolutionPlaceholder": "Describe how these tickets were resolved",
+      "resolutionHelper": "Saved as the resolution on each selected ticket, satisfying boards that require one before closing."
     },
     "priority": {
       "dialogTitle": "Change Priority for Selected Tickets",
@@ -953,6 +957,11 @@
     "closeReasonPlaceholder": "Reason for closing anyway (optional, recorded in the audit log)",
     "closing": "Closing…",
     "closeAnyway": "Close anyway",
+    "markResolutionInternal": "Mark as Internal",
+    "markResolutionInternalHelper": "An internal resolution stays out of the client portal and is left out of the close email.",
+    "closeTicketNowTitle": "Close the ticket now?",
+    "closeTicketNowPrompt": "This comment is now the resolution. Pick a close status to close the ticket, or leave it open.",
+    "leaveTicketOpen": "Leave open",
     "timerActiveElsewhereTitle": "Timer Active Elsewhere",
     "timerTakeoverMessage": "This ticket's timer is active in another window. Do you want to take over and replace it here?",
     "replaceHere": "Replace Here",
@@ -1844,7 +1853,6 @@
       "replyTo": "Reply to {{name}}",
       "writeReply": "Write a reply",
       "modeInternal": "Internal",
-      "modeResolution": "Resolution",
       "sending": "Sending…",
       "send": "Send",
       "systemActor": "System",
@@ -1891,7 +1899,8 @@
       "remove": "Remove",
       "cancel": "Cancel",
       "save": "Save",
-      "menu": "Link actions"
+      "menu": "Link actions",
+      "openRecord": "Open external record"
     },
     "relationship": {
       "origin": "Origin",
@@ -1950,7 +1959,14 @@
       "systemLabelRequired": "System label is required",
       "permissionDenied": "Permission denied: Cannot manage external systems",
       "systemRequired": "Choose an external system.",
-      "urlRequired": "A URL is required for systems without a URL template."
+      "urlRequired": "A URL is required for systems without a URL template.",
+      "invalidVisibility": "Only ticket links can be shared, using a boolean visibility value"
+    },
+    "visibility": {
+      "label": "Visibility",
+      "internal": "Internal only",
+      "shared": "Visible in client portal",
+      "help": "Customers with access to this ticket can see this link. Sharing the link does not grant access to the external system."
     }
   },
   "smartSearch": {

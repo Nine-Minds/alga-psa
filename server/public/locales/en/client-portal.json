@@ -655,7 +655,8 @@
       "adjustMark": "Adjust mark",
       "cropFromWide": "Crop from wide logo",
       "recropSuccess": "Mark updated.",
-      "recropError": "Failed to update the mark."
+      "recropError": "Failed to update the mark.",
+      "fileNameLabel": "Stored file"
     },
     "validation": {
       "clientNameRequired": "Client name is required",

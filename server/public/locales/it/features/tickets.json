@@ -146,6 +146,7 @@
     "assignedTeam": "Team assegnato",
     "additionalAgents": "Agenti aggiuntivi",
     "createdBy": "Creato da",
+    "lastActivity": "Ultima attività",
     "location": "Sede",
     "contactPhone": "Telefono contatto",
     "clientPhone": "Telefono cliente",
@@ -741,7 +742,10 @@
       "success_other": "Stato aggiornato su {{count}} ticket",
       "partialFailure": "Stato non aggiornato su alcuni ticket",
       "failure": "Impossibile aggiornare lo stato",
-      "failedHeading": "Stato non aggiornato sui seguenti ticket:"
+      "failedHeading": "Stato non aggiornato sui seguenti ticket:",
+      "resolutionLabel": "Commento di risoluzione (facoltativo)",
+      "resolutionPlaceholder": "Descrivi come sono stati risolti questi ticket",
+      "resolutionHelper": "Viene salvato come risoluzione su ogni ticket selezionato e soddisfa le bacheche che ne richiedono una prima della chiusura."
     },
     "priority": {
       "dialogTitle": "Cambia priorità dei ticket selezionati",
@@ -945,6 +949,11 @@
     "closeReasonPlaceholder": "Motivo della chiusura forzata (facoltativo, registrato nel log di controllo)",
     "closing": "Chiusura…",
     "closeAnyway": "Chiudi comunque",
+    "markResolutionInternal": "Segna come interno",
+    "markResolutionInternalHelper": "Una risoluzione interna non compare nel portale clienti e non viene inclusa nell’email di chiusura.",
+    "closeTicketNowTitle": "Chiudere il ticket adesso?",
+    "closeTicketNowPrompt": "Questo commento è ora la risoluzione. Scegli uno stato di chiusura per chiudere il ticket oppure lascialo aperto.",
+    "leaveTicketOpen": "Lascia aperto",
     "timerActiveElsewhereTitle": "Timer attivo altrove",
     "timerTakeoverMessage": "Il timer di questo ticket è attivo in un'altra finestra. Vuoi assumerne il controllo e sostituirlo qui?",
     "replaceHere": "Sostituisci qui",
@@ -1789,7 +1798,6 @@
       "replyTo": "Rispondi a {{name}}",
       "writeReply": "Scrivi una risposta",
       "modeInternal": "Interno",
-      "modeResolution": "Risoluzione",
       "sending": "Invio…",
       "send": "Invia",
       "systemActor": "Sistema",
@@ -1891,7 +1899,8 @@
       "remove": "Rimuovi",
       "cancel": "Annulla",
       "save": "Salva",
-      "menu": "Azioni del collegamento"
+      "menu": "Azioni del collegamento",
+      "openRecord": "Apri record esterno"
     },
     "relationship": {
       "origin": "Origine",
@@ -1950,7 +1959,14 @@
       "systemLabelRequired": "L'etichetta del sistema è obbligatoria",
       "permissionDenied": "Autorizzazione negata: impossibile gestire i sistemi esterni",
       "systemRequired": "Scegli un sistema esterno.",
-      "urlRequired": "Per i sistemi senza modello di URL è necessario un URL."
+      "urlRequired": "Per i sistemi senza modello di URL è necessario un URL.",
+      "invalidVisibility": "È possibile condividere solo i link dei ticket; la visibilità deve essere un valore booleano"
+    },
+    "visibility": {
+      "label": "Visibilità",
+      "internal": "Solo interno",
+      "shared": "Visibile nel portale clienti",
+      "help": "I clienti con accesso a questo ticket possono vedere questo link. La condivisione del link non concede accesso al sistema esterno."
     }
   },
   "smartSearch": {

@@ -178,6 +178,7 @@
     "assignedTeam": "Przypisany zespół",
     "additionalAgents": "Dodatkowi agenci",
     "createdBy": "Utworzone przez",
+    "lastActivity": "Ostatnia aktywność",
     "location": "Lokalizacja",
     "contactPhone": "Telefon kontaktowy",
     "clientPhone": "Telefon klienta",
@@ -830,6 +831,9 @@
       "partialFailure": "Status nie został zaktualizowany w niektórych zgłoszeniach",
       "failure": "Nie udało się zaktualizować statusu",
       "failedHeading": "Status nie został zaktualizowany w następujących zgłoszeniach:",
+      "resolutionLabel": "Komentarz rozwiązania (opcjonalnie)",
+      "resolutionPlaceholder": "Opisz, jak rozwiązano te zgłoszenia",
+      "resolutionHelper": "Zapisywany jako rozwiązanie w każdym wybranym zgłoszeniu i spełnia wymagania tablic, które wymagają go przed zamknięciem.",
       "confirm_few": "Zaktualizuj {{count}} zgłoszenia",
       "confirm_many": "Zaktualizuj {{count}} zgłoszeń",
       "success_few": "Status zaktualizowany w {{count}} zgłoszeniach",
@@ -1057,6 +1061,11 @@
     "closeReasonPlaceholder": "Powód zamknięcia mimo to (opcjonalnie, zapisywany w dzienniku audytu)",
     "closing": "Zamykanie…",
     "closeAnyway": "Zamknij mimo to",
+    "markResolutionInternal": "Oznacz jako wewnętrzne",
+    "markResolutionInternalHelper": "Wewnętrzne rozwiązanie nie pojawia się w portalu klienta ani w e-mailu o zamknięciu.",
+    "closeTicketNowTitle": "Zamknąć zgłoszenie teraz?",
+    "closeTicketNowPrompt": "Ten komentarz jest teraz rozwiązaniem. Wybierz status zamknięcia, aby zamknąć zgłoszenie, albo pozostaw je otwarte.",
+    "leaveTicketOpen": "Pozostaw otwarte",
     "timerActiveElsewhereTitle": "Licznik aktywny w innym miejscu",
     "timerTakeoverMessage": "Licznik tego zgłoszenia jest aktywny w innym oknie. Czy chcesz go przejąć i zastąpić tutaj?",
     "replaceHere": "Zastąp tutaj",
@@ -1935,7 +1944,6 @@
       "replyTo": "Odpowiedz {{name}}",
       "writeReply": "Napisz odpowiedź",
       "modeInternal": "Wewnętrzne",
-      "modeResolution": "Rozwiązanie",
       "sending": "Wysyłanie…",
       "send": "Wyślij",
       "systemActor": "System",
@@ -2037,7 +2045,8 @@
       "remove": "Usuń",
       "cancel": "Anuluj",
       "save": "Zapisz",
-      "menu": "Działania łącza"
+      "menu": "Działania łącza",
+      "openRecord": "Otwórz rekord zewnętrzny"
     },
     "relationship": {
       "origin": "Źródło",
@@ -2096,7 +2105,14 @@
       "systemLabelRequired": "Etykieta systemu jest wymagana",
       "permissionDenied": "Odmowa dostępu: nie można zarządzać systemami zewnętrznymi",
       "systemRequired": "Wybierz system zewnętrzny.",
-      "urlRequired": "Adres URL jest wymagany w przypadku systemów bez szablonu adresu URL."
+      "urlRequired": "Adres URL jest wymagany w przypadku systemów bez szablonu adresu URL.",
+      "invalidVisibility": "Można udostępniać tylko linki zgłoszeń; widoczność musi być wartością logiczną"
+    },
+    "visibility": {
+      "label": "Widoczność",
+      "internal": "Tylko wewnętrznie",
+      "shared": "Widoczny w portalu klienta",
+      "help": "Klienci z dostępem do tego zgłoszenia mogą zobaczyć ten link. Udostępnienie linku nie przyznaje dostępu do systemu zewnętrznego."
     }
   },
   "smartSearch": {

@@ -48,6 +48,43 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
     }),
   );
 
+  // GET /api/v1/tickets validates `sort` against an allowlist (TicketService
+  // TICKET_LIST_API_SORT_SQL): anything else is a 400, not a database error.
+  const TicketListQuery = registry.registerSchema(
+    'WorkV1TicketListQuery',
+    zOpenApi.object({
+      page: zOpenApi.string().optional(),
+      limit: zOpenApi.string().optional(),
+      sort: zOpenApi
+        .enum([
+          'client_name',
+          'closed_at',
+          'created_at',
+          'due_date',
+          'entered_at',
+          'latest_activity_at',
+          'priority_name',
+          'status_name',
+          'ticket_number',
+          'title',
+          'updated_at',
+        ])
+        .optional()
+        .describe(
+          'Sort field. Defaults to entered_at. `created_at` is a legacy alias for `entered_at` (tickets have no created_at column). `latest_activity_at` orders by the newest of the ticket\'s own timestamps and its newest visible comment; for client-portal callers only client-visible comments count. Ties break on ticket_id descending. Any other value is rejected with 400.',
+        ),
+      order: zOpenApi.enum(['asc', 'desc']).optional(),
+      fields: zOpenApi
+        .string()
+        .optional()
+        .describe(
+          'Comma-separated response fields. Accepts ticket_id, ticket_number, title, status_id, status_name, status_is_closed, priority_name, assigned_to_name, client_name, contact_name, updated_at, entered_at, closed_at, latest_activity_at, tags, master_ticket_id, bundle_master_ticket_number, bundle_child_count, or the mobile_list preset. Unknown names are rejected with 400.',
+        ),
+      search: zOpenApi.string().optional(),
+      query: zOpenApi.string().optional(),
+    }),
+  );
+
   const GenericBody = registry.registerSchema(
     'WorkV1GenericBody',
     zOpenApi.record(zOpenApi.unknown()).describe('Controller/service-specific payload; see source route/controller for exact required shape.'),
@@ -292,7 +329,7 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
     { method: 'put', path: '/api/v1/tags/{id}/colors', summary: 'Update tag colors', description: 'Updates tag color attributes.', family: 'tag' },
     { method: 'put', path: '/api/v1/tags/{id}/text', summary: 'Update tag text', description: 'Updates tag display text.', family: 'tag' },
 
-    { method: 'get', path: '/api/v1/tickets', summary: 'List tickets', description: 'Lists tickets via ApiTicketController.list() with authorization-aware pagination.', family: 'ticket' },
+    { method: 'get', path: '/api/v1/tickets', summary: 'List tickets', description: 'Lists tickets via ApiTicketController.list() with authorization-aware pagination. `sort` is validated against an allowlist (unknown values return 400) and supports latest_activity_at, which is also selectable through `fields`.', family: 'ticket' },
     { method: 'post', path: '/api/v1/tickets', summary: 'Create ticket', description: 'Creates ticket via ApiTicketController.create().', family: 'ticket' },
     { method: 'post', path: '/api/v1/tickets/from-asset', summary: 'Create ticket from asset', description: 'Creates ticket from asset context via ApiTicketController.createFromAsset().', family: 'ticket' },
     { method: 'get', path: '/api/v1/tickets/search', summary: 'Search tickets', description: 'Searches tickets via ApiTicketController.search().', family: 'ticket' },
@@ -402,6 +439,10 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
     }
     if (def.path.endsWith('/search') || def.path.endsWith('/export') || def.path.endsWith('/stats') || def.path.endsWith('/cloud') || def.path.endsWith('/templates') || def.path.endsWith('/entries') || def.path.endsWith('/summary') || def.path.endsWith('/comments') || def.path.endsWith('/checklist') || def.path.endsWith('/phases') || def.path.endsWith('/tickets') || def.path.endsWith('/current') || def.path.endsWith('/conflicts')) {
       req.query = ListQuery;
+    }
+
+    if (def.method === 'get' && def.path === '/api/v1/tickets') {
+      req.query = TicketListQuery;
     }
 
     if (def.path.startsWith('/api/v1/projects') && (def.method === 'post' || def.method === 'put')) req.body = { schema: def.path === '/api/v1/projects' ? CreateProjectBody : GenericBody };

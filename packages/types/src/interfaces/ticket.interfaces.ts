@@ -4,7 +4,7 @@ import { ITaggable } from './tag.interfaces';
 import { IClientLocation } from "./client.interfaces";
 import { IComment } from './comment.interface';
 import { IDocument } from './document.interface';
-import type { IExternalEntityLink } from './externalSystem.interfaces';
+import type { IExternalEntityLink, PortalTicketExternalLink } from './externalSystem.interfaces';
 
 /**
  * Response state tracking for tickets.
@@ -111,6 +111,8 @@ export interface ITicketListItem extends Omit<ITicket, 'status_id' | 'priority_i
   bundle_open_child_count?: number;
   bundle_master_ticket_number?: string | null;
   bundle_distinct_client_count?: number;
+  // Newest of the ticket's own timestamps and its newest published comment.
+  latest_activity_at?: string | null;
 }
 
 export interface ITicketListFilters {
@@ -190,6 +192,7 @@ export interface IAgentSchedule {
 }
 
 export interface ITicketWithDetails extends ITicket {
+  portalExternalLinks?: PortalTicketExternalLink[];
   status_name?: string;
   priority_name?: string;
   priority_color?: string;

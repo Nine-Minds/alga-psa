@@ -2411,7 +2411,10 @@
       "Teams Phone",
       "TeamViewer",
       "Gigabyte",
-      "Terabyte"
+      "Terabyte",
+      "Auto",
+      "Normal (400)",
+      "auto | 50% | 120px"
     ],
     "caseInsensitive": [
       "api",
