@@ -55,6 +55,11 @@ export default function CapPanel({ config, canManage, clientCurrency, onChanged 
 
   const handleSave = async () => {
     const hasCap = capText.trim() !== '';
+    // The amount field starts blank on a stale-currency project, so leaving it
+    // blank means "I only came for the thresholds" -- not "remove the cap".
+    // Keep the dormant figure and its currency: re-pinning the currency without
+    // a new amount would make the old number start biting as the new one.
+    const keepStaleCap = Boolean(staleCurrency) && !hasCap;
     let capAmount: number | null = null;
     if (hasCap) {
       const major = Number(capText);
@@ -73,10 +78,10 @@ export default function CapPanel({ config, canManage, clientCurrency, onChanged 
     setSaving(true);
     try {
       const result = await updateProjectBillingConfig(config.config_id, {
-        cap_amount: capAmount,
+        ...(keepStaleCap ? {} : { cap_amount: capAmount }),
         cap_behavior: hasCap ? 'hard_cap' : undefined,
         cap_notify_thresholds: thresholds,
-        ...(staleCurrency ? { currency: staleCurrency } : {}),
+        ...(staleCurrency && !keepStaleCap ? { currency: staleCurrency } : {}),
       });
       if (isActionMessageError(result) || isActionPermissionError(result)) {
         toast.error(getErrorMessage(result));

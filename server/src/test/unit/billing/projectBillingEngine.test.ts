@@ -624,7 +624,7 @@ describe("project T&M cap and override integration", () => {
     ).toEqual([100]);
   });
 
-  it("T025: a cap counted in another currency is left out of the invoice entirely", () => {
+  it("T031: a cap counted in another currency is left out of the invoice entirely", () => {
     // The client moved to ARS; the project's cap is still the USD figure the
     // biller typed. There is no exchange rate anywhere in the engine, so
     // comparing 1,000.00 USD with ARS charges would write almost everything
@@ -674,7 +674,7 @@ describe("project T&M cap and override integration", () => {
     expect(applied.currencyMismatchedConfigIds).toEqual([]);
   });
 
-  it("T026: the biller is warned once per run, and persistence skips the same cap", () => {
+  it("T032: the biller is warned once per run, and persistence skips the same cap", () => {
     const engine = new BillingEngine();
     const warnings = (engine as any).getProjectCapCurrencyWarnings(
       context(

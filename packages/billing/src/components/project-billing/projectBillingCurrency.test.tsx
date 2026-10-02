@@ -121,6 +121,42 @@ describe('project billing currency drift', () => {
     });
   });
 
+  it('keeps a dormant cap when only the thresholds are edited', async () => {
+    updateProjectBillingConfigMock.mockResolvedValue(tmConfig());
+    renderInTenant(
+      <CapPanel config={tmConfig()} canManage clientCurrency="ARS" onChanged={vi.fn()} />,
+    );
+
+    // The amount field is blank because the currency is stale, not because the
+    // biller cleared it, so a thresholds-only save must not discard the stored
+    // figure -- nor re-pin the currency and make that figure start biting.
+    fireEvent.change(document.getElementById('billing-cap-thresholds') as HTMLElement, {
+      target: { value: '50, 80' },
+    });
+    fireEvent.click(document.getElementById('billing-cap-save') as HTMLElement);
+
+    await waitFor(() => expect(updateProjectBillingConfigMock).toHaveBeenCalledTimes(1));
+    const payload = updateProjectBillingConfigMock.mock.calls[0][1];
+    expect(payload).not.toHaveProperty('cap_amount');
+    expect(payload).not.toHaveProperty('currency');
+    expect(payload.cap_notify_thresholds).toEqual([50, 80]);
+  });
+
+  it('still removes the cap when an aligned project is cleared', async () => {
+    updateProjectBillingConfigMock.mockResolvedValue(tmConfig({ currency: 'ARS', cap_amount: null }));
+    renderInTenant(
+      <CapPanel config={tmConfig({ currency: 'ARS' })} canManage clientCurrency="ARS" onChanged={vi.fn()} />,
+    );
+
+    fireEvent.change(document.getElementById('billing-cap-amount') as HTMLElement, {
+      target: { value: '' },
+    });
+    fireEvent.click(document.getElementById('billing-cap-save') as HTMLElement);
+
+    await waitFor(() => expect(updateProjectBillingConfigMock).toHaveBeenCalledTimes(1));
+    expect(updateProjectBillingConfigMock.mock.calls[0][1].cap_amount).toBeNull();
+  });
+
   it('leaves an aligned project exactly as it was', async () => {
     updateProjectBillingConfigMock.mockResolvedValue(tmConfig({ currency: 'ARS' }));
     renderInTenant(
