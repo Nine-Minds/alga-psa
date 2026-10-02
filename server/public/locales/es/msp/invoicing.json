@@ -1218,7 +1218,10 @@
         "drags": "Arrastres: {{count}}",
         "success": "Éxito: {{count}}",
         "invalid": "No válidos: {{count}}"
-      }
+      },
+      "zoomOut": "Alejar",
+      "zoomIn": "Acercar",
+      "zoomFit": "Ajustar"
     },
     "palette": {
       "tabs": {
@@ -1925,7 +1928,8 @@
       "companyLogo": "Logotipo de la empresa",
       "insertionMarker": "El siguiente bloque que añada irá aquí",
       "emptyContainer": "Vacío: selecciónelo y añada bloques desde el panel izquierdo",
-      "localeChip": "Etiquetas traducidas mostradas en {{language}} (Idioma de vista previa)"
+      "localeChip": "Etiquetas traducidas mostradas en {{language}} (Idioma de vista previa)",
+      "badgeDragHint": "Arrastra para mover este bloque"
     },
     "dragOverlay": {
       "component": "Componente"
@@ -1972,6 +1976,19 @@
       "collapse": "Contraer {{name}}",
       "expand": "Expandir {{name}}",
       "title": "Esquema"
+    },
+    "dragPreview": {
+      "noTarget": "Fuera de la página: suelta para cancelar",
+      "noChange": "Se queda donde está",
+      "before": "Antes de {{block}}",
+      "after": "Después de {{block}}",
+      "inside": "Dentro de {{container}}",
+      "dropOnPage": "Suelta en la página para añadir este bloque.",
+      "cancelled": "No se ha movido: suelta sobre la página o el Esquema para colocarlo."
+    },
+    "resize": {
+      "handleHint": "Arrastra para cambiar el tamaño · doble clic para ajustarlo al contenido",
+      "autoValue": "Automático ({{value}})"
     }
   },
   "projectBilling": {
