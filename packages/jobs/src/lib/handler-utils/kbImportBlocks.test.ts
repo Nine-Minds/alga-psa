@@ -6,6 +6,7 @@ import {
   fileContentToBlocks,
   htmlToBlocks,
   markdownToBlocks,
+  splitInlineChunks,
   titleFromFilename,
   type BlockNoteBlock,
   type InlineSegment,
@@ -450,13 +451,13 @@ describe('kbImportBlocks link sanitization', () => {
 // Multi-MB inputs on a CI runner shared with dozens of other projects overrun
 // the default 10s per-test timeout that a dev laptop never notices.
 describe('kbImportBlocks pathological input stays linear', { timeout: 120_000 }, () => {
-  const timed = (fn: () => BlockNoteBlock[]): number => {
+  const timed = (fn: () => unknown): number => {
     const startedAt = Date.now();
     fn();
     return Date.now() - startedAt;
   };
 
-  const fastestOf = (runs: number, fn: () => BlockNoteBlock[]): number =>
+  const fastestOf = (runs: number, fn: () => unknown): number =>
     Math.min(...Array.from({ length: runs }, () => timed(fn)));
 
   // A hard millisecond budget is not portable -- CI parses several times slower
@@ -546,9 +547,31 @@ describe('kbImportBlocks pathological input stays linear', { timeout: 120_000 },
     // There is no preferred split point in this input. The fallback search
     // must inspect only the current window rather than repeatedly scanning
     // every preceding character as the source grows.
-    const half = fastestOf(2, () => markdownToBlocks('x'.repeat(4_000_000)));
-    const full = fastestOf(2, () => markdownToBlocks('x'.repeat(8_000_000)));
-    expect(full).toBeLessThan(Math.max(half, 20) * 3);
+    //
+    // Timing the whole parse here could not tell the two apart: marked's linear
+    // work dominates, so the quadratic search grew ~3.4x per doubling against
+    // ~2.1x for the fix, and a 3x bound flaked on a loaded runner. Time the
+    // split alone, across a 4x size step, so linear costs ~4x and the
+    // quadratic search ~16x; an 8x bound sits 2x clear of both.
+    const quarter = 'x'.repeat(4_000_000);
+    const full = 'x'.repeat(16_000_000);
+    const quarterMs = fastestOf(3, () => splitInlineChunks(quarter));
+    const fullMs = fastestOf(3, () => splitInlineChunks(full));
+    expect(fullMs).toBeLessThan(Math.max(quarterMs, 20) * 8);
+  });
+
+  it('hard-splits a whitespace-free run into whole windows', () => {
+    const src = 'x'.repeat(100_000);
+    const chunks = splitInlineChunks(src);
+    expect(chunks.map((chunk) => chunk.length)).toEqual([32_768, 32_768, 32_768, 1_696]);
+    expect(chunks.join('')).toBe(src);
+  });
+
+  it('splits after the latest whitespace in the back half of a window', () => {
+    const src = `${'x'.repeat(30_000)} ${'y'.repeat(40_000)}`;
+    const chunks = splitInlineChunks(src);
+    expect(chunks[0]).toBe(`${'x'.repeat(30_000)} `);
+    expect(chunks.join('')).toBe(src);
   });
 
   it('costs the same whether inline constructs sit in one block or many', () => {
