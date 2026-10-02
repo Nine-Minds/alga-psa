@@ -193,6 +193,9 @@ const servicePeriodPostInventoryRefs = new Set([
   'packages/billing/src/actions/profitabilityReportActions.ts',
   'packages/billing/src/actions/recurringApprovalBlockers.ts',
   'packages/billing/src/actions/recurringServicePeriodActions.ts',
+  // Ticket-time project attribution added compute fixtures that stamp the
+  // service-period timing fields onto their time-charge inputs.
+  'server/src/test/unit/billing/projectBillingEngine.test.ts',
   // The charge-compute extraction (feature/billing-contract-simulator) moved
   // billingEngine.ts compute logic — including its service-period field
   // handling — into the pure compute layer; billingEngine.ts itself is

@@ -420,10 +420,13 @@ describe('non-contract due-work reader', () => {
     await getAvailableRecurringDueWork({ page: 1, pageSize: 10 });
 
     expect(unresolvedSpy).toHaveBeenCalledTimes(1);
+    // invoiceCurrency comes from the client metadata the listing already read,
+    // so project caps are only applied when their currency matches.
     expect(unresolvedSpy).toHaveBeenCalledWith({
       clientId: 'client-1',
       windowStart: '2025-03-01',
       windowEnd: '2025-04-01',
+      invoiceCurrency: 'USD',
     });
   });
 
