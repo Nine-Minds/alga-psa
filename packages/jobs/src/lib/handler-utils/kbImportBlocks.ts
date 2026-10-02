@@ -51,7 +51,7 @@ export class KbImportParseTimeoutError extends Error {
 
 const HTML_CHUNK_SIZE = 64 * 1024;
 const MARKDOWN_CHUNK_SIZE = 64 * 1024;
-const INLINE_CHUNK_SIZE = 32 * 1024;
+export const INLINE_CHUNK_SIZE = 32 * 1024;
 
 class Deadline {
   private readonly expiresAt: number | null;
