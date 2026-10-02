@@ -13,7 +13,7 @@ import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { SearchableSelect } from '@alga-psa/ui/components/SearchableSelect';
 import { ProjectTaskStatusSettings } from './settings/projects/ProjectTaskStatusSettings';
 import { getProjectStatusMappings } from '../actions/projectTaskStatusActions';
-import { phaseBadgeClasses, type PhaseBillingBadge } from '@alga-psa/core';
+import { phaseBadgeClasses, timeEntryServiceChoices, type PhaseBillingBadge, type TimeEntryServiceChoice } from '@alga-psa/core';
 import { useCurrencyFormat } from '@alga-psa/ui/lib';
 import styles from './ProjectDetail.module.css';
 
@@ -30,7 +30,7 @@ interface PhaseListItemProps {
   editingEndDate?: Date;
   editingServiceId?: string | null;
   /** Service catalog for the phase-level default picker; loaded once by the list. */
-  services?: { service_id: string; service_name: string }[];
+  services?: TimeEntryServiceChoice[];
   taskCount?: number;
   onSelect: (phase: IProjectPhase) => void;
   onEdit: (phase: IProjectPhase) => void;
@@ -355,7 +355,10 @@ export const PhaseListItem: React.FC<PhaseListItemProps> = ({
                 onChange={(value) => onServiceChange?.(value || null)}
                 options={[
                   { value: '', label: t('phases.noService') },
-                  ...services.map((service) => ({ value: service.service_id, label: service.service_name })),
+                  ...timeEntryServiceChoices(services, editingServiceId).map((service) => ({
+                    value: service.service_id,
+                    label: service.service_name,
+                  })),
                 ]}
                 placeholder={t('phases.servicePlaceholder')}
                 className="w-full"

@@ -11,6 +11,7 @@ import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { getProjectTreeData, getProjectDetails } from '../actions/projectActions';
 import { getAllPriorities } from '@alga-psa/reference-data/actions';
 import { getServices } from '@alga-psa/projects/actions/serviceCatalogActions';
+import { isTimeEntryService, timeEntryServiceChoices } from '@alga-psa/core';
 import { IService } from '@alga-psa/types';
 import {
   updateTaskWithChecklist,
@@ -273,6 +274,14 @@ export default function TaskForm({
     serviceName: string | null;
     source: 'phase' | 'project';
   } | null>(null);
+  // An inherited default only counts when a time entry can be filed against it.
+  const applicableInheritedService = useMemo(
+    () => (inheritedService
+      && isTimeEntryService(availableServices.find(service => service.service_id === inheritedService.serviceId))
+      ? inheritedService
+      : null),
+    [inheritedService, availableServices]
+  );
   const [taskDependencies, setTaskDependencies] = useState<{
     predecessors: IProjectTaskDependency[];
     successors: IProjectTaskDependency[];
@@ -1423,8 +1432,12 @@ export default function TaskForm({
             serviceName: availableServices.find(service => service.service_id === selectedServiceId)?.service_name ?? null,
             source: 'task' as const,
           }
-        : inheritedService
-          ? { serviceId: inheritedService.serviceId, serviceName: inheritedService.serviceName, source: inheritedService.source }
+        : applicableInheritedService
+          ? {
+              serviceId: applicableInheritedService.serviceId,
+              serviceName: applicableInheritedService.serviceName,
+              source: applicableInheritedService.source,
+            }
           : { serviceId: null, serviceName: null, source: null };
 
       await launchTimeEntry({
@@ -1758,7 +1771,7 @@ export default function TaskForm({
               onChange={(value) => setSelectedServiceId(value || null)}
               options={[
                 { value: '', label: taskFormT('noService', 'No service') },
-                ...availableServices.map(s => ({
+                ...timeEntryServiceChoices(availableServices, selectedServiceId).map(s => ({
                   value: s.service_id,
                   label: s.service_name
                 }))
@@ -1770,14 +1783,14 @@ export default function TaskForm({
             <p className="text-xs text-gray-500 mt-1">
               {taskFormT('serviceHelp', 'When set, this service will be automatically selected when creating time entries from this task.')}
             </p>
-            {!selectedServiceId && inheritedService && (
+            {!selectedServiceId && applicableInheritedService && (
               <p className="text-xs text-gray-500 mt-1" id="task-service-inherited-hint">
-                {inheritedService.source === 'phase'
+                {applicableInheritedService.source === 'phase'
                   ? taskFormT('serviceInheritedFromPhase', 'Inherits {{service}} from the phase.', {
-                      service: inheritedService.serviceName ?? '',
+                      service: applicableInheritedService.serviceName ?? '',
                     })
                   : taskFormT('serviceInheritedFromProject', 'Inherits {{service}} from the project.', {
-                      service: inheritedService.serviceName ?? '',
+                      service: applicableInheritedService.serviceName ?? '',
                     })}
               </p>
             )}

@@ -17,6 +17,7 @@ import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect
 import { TagManager } from '@alga-psa/tags/components';
 import { updateProject, getProjectStatuses } from '../actions/projectActions';
 import { getServices } from '../actions/serviceCatalogActions';
+import { timeEntryServiceChoices, type TimeEntryServiceChoice } from '@alga-psa/core';
 import { getAllUsersBasic, getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
 import { useClientIntegration } from '../context/ClientIntegrationContext';
 import { findTagsByEntityId, isTagActionError } from '@alga-psa/tags/actions';
@@ -77,7 +78,7 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
   const [contacts, setContacts] = useState<{ value: string; label: string }[]>([]);
   const [users, setUsers] = useState<IUser[]>([]);
   const [statuses, setStatuses] = useState<IStatus[]>([]);
-  const [services, setServices] = useState<{ service_id: string; service_name: string }[]>([]);
+  const [services, setServices] = useState<TimeEntryServiceChoice[]>([]);
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [projectTags, setProjectTags] = useState<ITag[]>([]);
@@ -96,7 +97,7 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
           getServices(1, 999)
         ]);
         setUsers(allUsers);
-        setServices(servicesResponse.services as { service_id: string; service_name: string }[]);
+        setServices(servicesResponse.services);
         if (isActionPermissionError(projectStatusesResult)) {
           handleError(projectStatusesResult.permissionError);
           return;
@@ -397,7 +398,7 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
               }}
               options={[
                 { value: '', label: t('projectEdit.noService', 'No service') },
-                ...services.map((service): SelectOption => ({
+                ...timeEntryServiceChoices(services, project.service_id).map((service): SelectOption => ({
                   value: service.service_id,
                   label: service.service_name
                 }))
