@@ -1351,6 +1351,7 @@
       "hourlyServices": "Hourly Services",
       "products": "Products",
       "reviewCreate": "Review & Create",
+      "templateLines": "Template Lines",
       "usageBasedServices": "Usage-Based Services"
     },
     "title": {
@@ -1837,6 +1838,29 @@
       "itemDates": "Verify the start and end dates",
       "itemEditLater": "Remember: you can edit the contract later if needed"
     }
+  },
+  "wizardTemplateLines": {
+    "title": "Template Lines",
+    "description": "Every line of the template is created on the contract with its own name, billing frequency, services and rates. Change anything below to override it for this contract only; untouched values are copied from the template. Rates are in {{currency}}.",
+    "loading": "Loading template lines...",
+    "noTemplate": "Select a template on the first step.",
+    "emptyTemplate": "This template has no lines, so there is nothing to create.",
+    "bucketPools_one": "{{count}} bucket pool copied from the template",
+    "bucketPools_other": "{{count}} bucket pools copied from the template",
+    "lineName": "Line name",
+    "billingFrequency": "Billing frequency",
+    "fixedBaseRate": "Fixed base rate",
+    "fixedBaseRateHint": "Template rate {{rate}}. Leave empty to keep it.",
+    "fixedBaseRateNone": "The template sets no line rate; services follow their catalog prices.",
+    "minimumBillableTime": "Minimum billable time (minutes)",
+    "roundUpToNearest": "Round up to nearest (minutes)",
+    "quantity": "Quantity",
+    "hourlyRate": "Hourly rate",
+    "unitRate": "Unit rate",
+    "serviceRate": "Service rate",
+    "noCurrencyPrice": "No {{currency}} price for this service. Enter a rate or the contract cannot be created.",
+    "templateRateNote": "From the template (amount is not currency-tagged).",
+    "reviewTitle": "Lines created from the template"
   },
   "templateWizard": {
     "title": {

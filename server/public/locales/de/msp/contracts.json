@@ -1351,6 +1351,7 @@
       "hourlyServices": "Stunden-Services",
       "products": "Produkte",
       "reviewCreate": "Überprüfen & Erstellen",
+      "templateLines": "Vorlagenlinien",
       "usageBasedServices": "Nutzungsbasierte Services"
     },
     "title": {
@@ -1837,6 +1838,29 @@
       "itemDates": "Start- und Enddaten überprüfen",
       "itemEditLater": "Denken Sie daran: Sie können den Vertrag später bei Bedarf bearbeiten"
     }
+  },
+  "wizardTemplateLines": {
+    "title": "Vorlagenlinien",
+    "description": "Jede Linie der Vorlage wird im Vertrag mit eigenem Namen, eigener Abrechnungsfrequenz sowie eigenen Services und Tarifen angelegt. Ändern Sie unten beliebige Werte, um sie nur für diesen Vertrag zu überschreiben; unveränderte Werte werden aus der Vorlage übernommen. Tarife in {{currency}}.",
+    "loading": "Vorlagenlinien werden geladen...",
+    "noTemplate": "Wählen Sie im ersten Schritt eine Vorlage aus.",
+    "emptyTemplate": "Diese Vorlage enthält keine Linien, daher gibt es nichts zu erstellen.",
+    "bucketPools_one": "{{count}} Stundenkontingent aus der Vorlage übernommen",
+    "bucketPools_other": "{{count}} Stundenkontingente aus der Vorlage übernommen",
+    "lineName": "Linienname",
+    "billingFrequency": "Abrechnungsfrequenz",
+    "fixedBaseRate": "Fester Grundtarif",
+    "fixedBaseRateHint": "Vorlagentarif {{rate}}. Leer lassen, um ihn beizubehalten.",
+    "fixedBaseRateNone": "Die Vorlage legt keinen Linientarif fest; die Services folgen ihren Katalogpreisen.",
+    "minimumBillableTime": "Mindestabrechnungszeit (Minuten)",
+    "roundUpToNearest": "Auf nächstes (Minuten) aufrunden",
+    "quantity": "Menge",
+    "hourlyRate": "Stundensatz",
+    "unitRate": "Tarif pro Einheit",
+    "serviceRate": "Service-Tarif",
+    "noCurrencyPrice": "Kein Preis in {{currency}} für diesen Service. Geben Sie einen Tarif ein, sonst kann der Vertrag nicht erstellt werden.",
+    "templateRateNote": "Aus der Vorlage (der Betrag ist nicht mit einer Währung gekennzeichnet).",
+    "reviewTitle": "Aus der Vorlage erstellte Linien"
   },
   "templateWizard": {
     "title": {

@@ -1351,6 +1351,7 @@
       "hourlyServices": "Services horaires",
       "products": "Produits",
       "reviewCreate": "Vérifier et créer",
+      "templateLines": "Lignes du modèle",
       "usageBasedServices": "Services à l'usage"
     },
     "title": {
@@ -1837,6 +1838,29 @@
       "itemDates": "Vérifiez les dates de début et de fin",
       "itemEditLater": "Rappel : vous pouvez modifier le contrat plus tard si nécessaire"
     }
+  },
+  "wizardTemplateLines": {
+    "title": "Lignes du modèle",
+    "description": "Chaque ligne du modèle est créée sur le contrat avec son propre nom, sa fréquence de facturation, ses services et ses tarifs. Modifiez n’importe quelle valeur ci-dessous pour la remplacer uniquement pour ce contrat ; les valeurs inchangées sont copiées du modèle. Les tarifs sont en {{currency}}.",
+    "loading": "Chargement des lignes du modèle...",
+    "noTemplate": "Sélectionnez un modèle à la première étape.",
+    "emptyTemplate": "Ce modèle ne contient aucune ligne, il n’y a donc rien à créer.",
+    "bucketPools_one": "{{count}} forfait d’heures copié depuis le modèle",
+    "bucketPools_other": "{{count}} forfaits d’heures copiés depuis le modèle",
+    "lineName": "Nom de la ligne",
+    "billingFrequency": "Fréquence de facturation",
+    "fixedBaseRate": "Tarif de base fixe",
+    "fixedBaseRateHint": "Tarif du modèle {{rate}}. Laissez vide pour le conserver.",
+    "fixedBaseRateNone": "Le modèle ne définit aucun tarif de ligne ; les services suivent les prix de leur catalogue.",
+    "minimumBillableTime": "Temps minimum facturable (minutes)",
+    "roundUpToNearest": "Arrondir au plus proche (minutes)",
+    "quantity": "Quantité",
+    "hourlyRate": "Taux horaire",
+    "unitRate": "Tarif unitaire",
+    "serviceRate": "Tarif du service",
+    "noCurrencyPrice": "Aucun prix en {{currency}} pour ce service. Saisissez un tarif, sinon le contrat ne peut pas être créé.",
+    "templateRateNote": "Issu du modèle (le montant n’est pas associé à une devise).",
+    "reviewTitle": "Lignes créées à partir du modèle"
   },
   "templateWizard": {
     "title": {
