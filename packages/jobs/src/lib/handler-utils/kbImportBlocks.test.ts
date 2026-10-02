@@ -6,6 +6,7 @@ import {
   fileContentToBlocks,
   htmlToBlocks,
   markdownToBlocks,
+  splitInlineChunks,
   titleFromFilename,
   type BlockNoteBlock,
   type InlineSegment,
@@ -542,28 +543,53 @@ describe('kbImportBlocks pathological input stays linear', { timeout: 120_000 },
     expect(full).toBeLessThan(Math.max(half, 20) * 4);
   });
 
+  it('splits a whitespace-free inline run into whole hard-cut windows', () => {
+    const run = 'x'.repeat(100_000);
+    const chunks = splitInlineChunks(run);
+    expect(chunks.join('')).toBe(run);
+    expect(chunks.map((chunk) => chunk.length)).toEqual([32_768, 32_768, 32_768, 1_696]);
+  });
+
+  it('splits an inline run at the latest whitespace in the back half of each window', () => {
+    const run = `${'x'.repeat(20_000)} ${'x'.repeat(30_000)}`;
+    const chunks = splitInlineChunks(run);
+    expect(chunks.join('')).toBe(run);
+    expect(chunks[0]).toBe(`${'x'.repeat(20_000)} `);
+  });
+
   it('scales linearly while finding hard splits in a whitespace-free inline run', () => {
     // There is no preferred split point in this input. The fallback search
     // must inspect only the current window rather than repeatedly scanning
     // every preceding character as the source grows.
     //
-    // At these sizes the linear parse still dominates the quadratic scan, so a
-    // doubling barely separates them (~2.1x fixed vs ~3.2x regressed) and a
-    // loaded runner flaked across a 3x bound. Quadrupling widens the gap
-    // (~5x fixed vs ~10x regressed), and 7x sits roughly evenly between the
-    // two. Samples alternate between sizes so a slow stretch on the runner
-    // lands on both, and inputs are built outside the timer.
+    // Timing the whole markdown parse buried that scan under marked's own
+    // linear work (~5x fixed vs ~10x regressed per quadrupling), which a loaded
+    // runner could not separate. Timed on its own, the splitter costs ~4x per
+    // quadrupling while the whole-prefix scan costs ~16x (8M: ~7ms vs ~370ms),
+    // so an 8x bound sits well clear of both. Samples alternate between sizes
+    // so a slow stretch on the runner lands on both.
     const quarterInput = 'x'.repeat(2_000_000);
     const fullInput = 'x'.repeat(8_000_000);
+    const timedSplit = (input: string): number => {
+      const startedAt = Date.now();
+      splitInlineChunks(input);
+      return Date.now() - startedAt;
+    };
     const quarterRuns: number[] = [];
     const fullRuns: number[] = [];
     for (let run = 0; run < 3; run++) {
-      quarterRuns.push(timed(() => markdownToBlocks(quarterInput)));
-      fullRuns.push(timed(() => markdownToBlocks(fullInput)));
+      quarterRuns.push(timedSplit(quarterInput));
+      fullRuns.push(timedSplit(fullInput));
     }
     const quarter = Math.min(...quarterRuns);
     const full = Math.min(...fullRuns);
-    expect(full).toBeLessThan(Math.max(quarter, 20) * 7);
+    expect(full).toBeLessThan(Math.max(quarter, 20) * 8);
+  });
+
+  it('keeps every character of a multi-MB whitespace-free inline run', () => {
+    const run = 'x'.repeat(2_000_000);
+    const blocks = markdownToBlocks(run);
+    expect(blocks.map(plainText).join('')).toBe(run);
   });
 
   it('costs the same whether inline constructs sit in one block or many', () => {

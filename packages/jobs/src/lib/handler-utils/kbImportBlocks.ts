@@ -464,7 +464,7 @@ class DeadlineTokenizer extends Tokenizer {
  * Splits one oversized inline run at the latest whitespace inside each window,
  * falling back to a hard cut when a chunk holds no break at all.
  */
-function splitInlineChunks(src: string, deadline: Deadline): string[] {
+export function splitInlineChunks(src: string, deadline: Deadline = new Deadline()): string[] {
   const chunks: string[] = [];
   let offset = 0;
 
