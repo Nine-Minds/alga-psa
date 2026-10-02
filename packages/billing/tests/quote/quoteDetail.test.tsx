@@ -3,7 +3,7 @@
  */
 import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 
 vi.mock('@alga-psa/email/senderActions', () => ({
   listSelectableSenders: vi.fn(async () => ({ senders: [], effectiveSenderId: null, effectiveSenderAddress: 'provider@example.test', effectiveSenderDisplayName: 'Provider', allowOverride: false })),
@@ -21,6 +21,9 @@ const listQuoteVersionsMock = vi.fn();
 const getQuoteApprovalSettingsMock = vi.fn();
 const getAllClientsForBillingMock = vi.fn();
 const getAllContactsMock = vi.fn();
+const markQuoteAcceptedMock = vi.fn();
+const requestQuoteApprovalChangesMock = vi.fn();
+const approveQuoteMock = vi.fn();
 
 vi.mock('next/navigation', () => ({
   useRouter: () => mockRouter,
@@ -122,7 +125,8 @@ vi.mock('../../src/actions/quoteDocumentTemplates', () => ({
 }));
 
 vi.mock('../../src/actions/quoteActions', () => ({
-  approveQuote: vi.fn(),
+  approveQuote: (...args: any[]) => approveQuoteMock(...args),
+  markQuoteAccepted: (...args: any[]) => markQuoteAcceptedMock(...args),
   convertQuoteToContract: vi.fn(),
   convertQuoteToInvoice: vi.fn(),
   convertQuoteToSalesOrder: (...args: any[]) => convertQuoteToSalesOrderMock(...args),
@@ -135,7 +139,7 @@ vi.mock('../../src/actions/quoteActions', () => ({
   getQuoteConversionPreview: (...args: any[]) => getQuoteConversionPreviewMock(...args),
   listQuoteVersions: (...args: any[]) => listQuoteVersionsMock(...args),
   renderQuotePreview: vi.fn(),
-  requestQuoteApprovalChanges: vi.fn(),
+  requestQuoteApprovalChanges: (...args: any[]) => requestQuoteApprovalChangesMock(...args),
   resendQuote: vi.fn(),
   saveQuoteAsTemplate: vi.fn(),
   sendQuote: vi.fn(),
@@ -354,4 +358,112 @@ describe('QuoteDetail accepted optional item review state', () => {
     expect(screen.queryByText('Create Draft Invoice')).toBeNull();
     expect(screen.getByText('Create Draft Contract')).toBeTruthy();
   });
+});
+
+
+// alga-2026-0002597: sole-approver notice, Request Changes from the UI, MSP "Mark as accepted".
+describe('QuoteDetail approval + mark-accepted workflow', () => {
+  const buildQuote = (status: string) => ({
+    quote_id: 'quote-wf-1',
+    quote_number: 'Q-0100',
+    version: 1,
+    client_id: 'client-1',
+    title: 'Workflow quote',
+    quote_date: '2026-03-10T00:00:00.000Z',
+    valid_until: '2026-03-25T00:00:00.000Z',
+    status,
+    currency_code: 'USD',
+    subtotal: 10000,
+    discount_total: 0,
+    tax: 0,
+    total_amount: 10000,
+    quote_items: [],
+    activities: [],
+  });
+
+  const renderDetail = async (status: string, settings: Record<string, unknown>) => {
+    getQuoteMock.mockResolvedValue(buildQuote(status));
+    getQuoteApprovalSettingsMock.mockResolvedValue(settings);
+    const QuoteDetail = (await import('../../src/components/billing-dashboard/quotes/QuoteDetail')).default;
+    render(<QuoteDetail quoteId="quote-wf-1" onBack={vi.fn()} onEdit={vi.fn()} onSelectVersion={vi.fn()} />);
+    await waitFor(() => expect(getQuoteMock).toHaveBeenCalledWith('quote-wf-1'));
+  };
+
+  beforeEach(() => {
+    cleanup();
+    vi.clearAllMocks();
+    (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
+    listQuoteVersionsMock.mockResolvedValue([]);
+    getAllClientsForBillingMock.mockResolvedValue([{ client_id: 'client-1', client_name: 'Acme Co' }]);
+    getAllContactsMock.mockResolvedValue([]);
+  });
+
+  it('tells the only approver they can approve their own pending quote (never looks stuck)', async () => {
+    await renderDetail('pending_approval', { approvalRequired: true, currentUserIsSoleApprover: true });
+
+    expect(await screen.findByText('You are the only quote approver')).toBeTruthy();
+    expect(screen.getByText(/you can approve this quote yourself/i)).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Approve' })).toBeTruthy();
+  });
+
+  it('shows the sole-approver notice on a draft when approval is required', async () => {
+    await renderDetail('draft', { approvalRequired: true, currentUserIsSoleApprover: true });
+    expect(await screen.findByText('You are the only quote approver')).toBeTruthy();
+    expect(screen.getByText(/you can approve it yourself and then send it/i)).toBeTruthy();
+  });
+
+  it('does not show the sole-approver notice when another approver exists or approval is off', async () => {
+    await renderDetail('pending_approval', { approvalRequired: true, currentUserIsSoleApprover: false });
+    await screen.findByRole('button', { name: 'Approve' });
+    expect(screen.queryByText('You are the only quote approver')).toBeNull();
+  });
+
+  it('Request Changes from the UI sends the comment to the action, returns the quote to draft and blocks an empty comment', async () => {
+    requestQuoteApprovalChangesMock.mockResolvedValue({ ...buildQuote('draft') });
+    await renderDetail('pending_approval', { approvalRequired: true, currentUserIsSoleApprover: false });
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Request Changes' }));
+    const confirmButton = document.getElementById('quote-approval-confirm') as HTMLButtonElement;
+    expect(confirmButton).toBeTruthy();
+    expect(confirmButton.disabled).toBe(true);
+
+    fireEvent.change(screen.getByPlaceholderText('Describe the changes needed...'), { target: { value: 'Lower the rate' } });
+    expect(confirmButton.disabled).toBe(false);
+    fireEvent.click(confirmButton);
+
+    await waitFor(() => expect(requestQuoteApprovalChangesMock).toHaveBeenCalledWith('quote-wf-1', 'Lower the rate'));
+    expect(await screen.findByText('Quote returned to draft with requested changes.')).toBeTruthy();
+  });
+
+  it('surfaces a Request Changes failure instead of failing silently', async () => {
+    requestQuoteApprovalChangesMock.mockResolvedValue({ permissionError: 'Permission denied: Cannot approve quotes' });
+    await renderDetail('pending_approval', { approvalRequired: true, currentUserIsSoleApprover: false });
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Request Changes' }));
+    fireEvent.change(await screen.findByPlaceholderText('Describe the changes needed...'), { target: { value: 'x' } });
+    fireEvent.click(document.getElementById('quote-approval-confirm') as HTMLButtonElement);
+
+    expect(await screen.findByText('Permission denied: Cannot approve quotes')).toBeTruthy();
+  });
+
+  it('offers Mark as accepted on a sent quote and records the optional note', async () => {
+    markQuoteAcceptedMock.mockResolvedValue({ ...buildQuote('accepted') });
+    await renderDetail('sent', { approvalRequired: false });
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Mark as accepted' }));
+    fireEvent.change(await screen.findByPlaceholderText('For example: Accepted by email on the 3rd'), { target: { value: 'Phone OK' } });
+    fireEvent.click(document.getElementById('quote-mark-accepted-confirm') as HTMLButtonElement);
+
+    await waitFor(() => expect(markQuoteAcceptedMock).toHaveBeenCalledWith('quote-wf-1', 'Phone OK'));
+    expect(await screen.findByText('Quote marked as accepted.')).toBeTruthy();
+  });
+
+  it.each(['draft', 'pending_approval', 'approved', 'accepted', 'rejected'])(
+    'does not offer Mark as accepted on a %s quote',
+    async (status) => {
+      await renderDetail(status, { approvalRequired: false });
+      await waitFor(() => expect(document.getElementById('quote-detail-mark-accepted')).toBeNull());
+      expect(screen.queryByRole('button', { name: 'Mark as accepted' })).toBeNull();
+    },
+  );
 });

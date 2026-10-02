@@ -27,7 +27,8 @@
       "sendToClient": "Wyślij do Klienta",
       "setAsDefault": "Ustaw jako domyślny",
       "submitForApproval": "Prześlij do zatwierdzenia",
-      "done": "Gotowe"
+      "done": "Gotowe",
+      "markAccepted": "Oznacz jako zaakceptowaną"
     },
     "badges": {
       "standard": "Standardowy"
@@ -158,7 +159,8 @@
       "backToQuotes": "Powrót do wycen",
       "backToTemplates": "Powrót do szablonów wycen",
       "convertToSalesOrder": "Konwertuj na zamówienie sprzedaży",
-      "convert": "Przekształć w…"
+      "convert": "Przekształć w…",
+      "markAccepted": "Oznacz jako zaakceptowaną"
     },
     "headings": {
       "editQuote": "Edytuj wycenę",
@@ -217,6 +219,12 @@
         "message": "Wiadomość",
         "from": "Od",
         "useDefault": "Użyj domyślnego nadawcy"
+      },
+      "markAccepted": {
+        "title": "Oznacz wycenę jako zaakceptowaną",
+        "description": "Zapisz, że klient zaakceptował tę wycenę poza portalem klienta (na przykład telefonicznie lub e-mailem). Wycena przechodzi do stanu Zaakceptowana i można ją przekształcić jak każdą zaakceptowaną wycenę. Zapisywane są Twoje imię i nazwisko oraz czas.",
+        "note": "Notatka (opcjonalnie)",
+        "notePlaceholder": "Na przykład: zaakceptowana e-mailem trzeciego"
       }
     },
     "errorActions": {
@@ -226,7 +234,8 @@
       "resendQuote": "ponownie wyślij wycenę",
       "sendQuote": "wyślij wycenę",
       "sendReminder": "wyślij przypomnienie",
-      "submitForApproval": "przesłać do zatwierdzenia"
+      "submitForApproval": "przesłać do zatwierdzenia",
+      "markAccepted": "oznaczyć wycenę jako zaakceptowaną"
     },
     "errors": {
       "convert": "Nie udało się przekonwertować wyceny",
@@ -252,7 +261,8 @@
       "requestedChanges": "Wycena wróciła do wersji roboczej z żądanymi zmianami.",
       "resent": "Wycena została wysłana ponownie.",
       "sent": "Wycena wysłana do klienta.",
-      "submittedForApproval": "Wycena została przesłana do wewnętrznego zatwierdzenia."
+      "submittedForApproval": "Wycena została przesłana do wewnętrznego zatwierdzenia.",
+      "markedAccepted": "Wycena oznaczona jako zaakceptowana."
     },
     "readOnlyNotice": "Ta wycena jest tylko do odczytu. Aby wprowadzić zmiany, utwórz nową wersję.",
     "validation": {
@@ -425,7 +435,8 @@
       "saveAsTemplate": "Nie udało się zapisać wyceny jako szablonu",
       "send": "Nie udało się wysłać wyceny",
       "sendReminder": "Nie udało się wysłać przypomnienia o wycenie",
-      "submitForApproval": "Nie udało się przesłać oferty do zatwierdzenia"
+      "submitForApproval": "Nie udało się przesłać oferty do zatwierdzenia",
+      "markAccepted": "Nie udało się oznaczyć wyceny jako zaakceptowanej"
     },
     "labels": {
       "phase": "Faza: {{phase}}",
@@ -444,7 +455,8 @@
       "submittedForApproval": "Wycena została przesłana do wewnętrznego zatwierdzenia.",
       "templateAssigned": "Przypisano szablon dokumentu.",
       "templateCleared": "Szablon dokumentu został wyczyszczony (przy użyciu ustawień domyślnych).",
-      "createdSalesOrder": "Utworzono wersję roboczą zamówienia sprzedaży {{number}}. Pozycje produktowe zostaną rozliczone przy realizacji."
+      "createdSalesOrder": "Utworzono wersję roboczą zamówienia sprzedaży {{number}}. Pozycje produktowe zostaną rozliczone przy realizacji.",
+      "markedAccepted": "Wycena oznaczona jako zaakceptowana."
     },
     "preview": {
       "loading": "Ładowanie podglądu..."
@@ -674,7 +686,14 @@
       "load": "Nie udało się wczytać zatwierdzeń ofert",
       "settings": "Nie udało się zaktualizować ustawień zatwierdzania wyceny"
     },
-    "loading": "Ładowanie kolejki zatwierdzeń..."
+    "loading": "Ładowanie kolejki zatwierdzeń...",
+    "soleApprover": {
+      "title": "Jesteś jedyną osobą zatwierdzającą wyceny",
+      "description": "Żaden inny aktywny użytkownik nie może zatwierdzać wycen, więc możesz zatwierdzać własne wyceny. Samodzielne zatwierdzenia są zapisywane w aktywności wyceny.",
+      "draftDescription": "Jesteś jedynym użytkownikiem, który może zatwierdzać wyceny. Po przesłaniu tej wyceny do zatwierdzenia możesz ją sam zatwierdzić, a następnie wysłać.",
+      "pendingDescription": "Jesteś jedynym użytkownikiem, który może zatwierdzać wyceny, więc możesz sam zatwierdzić tę wycenę. Wybierz Zatwierdź, aby była gotowa do wysłania.",
+      "dialogNote": "Jesteś jedyną osobą zatwierdzającą, więc zatwierdzenie własnej wyceny jest dozwolone. Zatwierdzenie zostanie zapisane jako samodzielne zatwierdzenie."
+    }
   },
   "quoteTemplates": {
     "title": "Szablony",
@@ -840,7 +859,9 @@
       "conflict": "Ta zmiana oferty jest sprzeczna z istniejącym rekordem. Odśwież stronę i spróbuj ponownie.",
       "notAllowed": "Jedna z wartości oferty jest niedozwolona. Sprawdź formularz i spróbuj ponownie.",
       "missingField": "Brakuje wymaganego pola oferty.",
-      "missingFieldNamed": "Brakuje wymaganego pola oferty: {{field}}."
+      "missingFieldNamed": "Brakuje wymaganego pola oferty: {{field}}.",
+      "templateCannotBeAccepted": "Szablonów wycen nie można oznaczyć jako zaakceptowanych",
+      "onlySentCanBeAccepted": "Jako zaakceptowane można oznaczyć tylko wysłane wyceny"
     }
   }
 }
