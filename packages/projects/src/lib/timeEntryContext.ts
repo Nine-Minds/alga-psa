@@ -1,4 +1,4 @@
-import type { TimeEntryWorkItemContext } from '@alga-psa/types';
+import type { ProjectServiceSource, TimeEntryWorkItemContext } from '@alga-psa/types';
 
 interface BuildTaskTimeEntryContextParams {
   taskId: string;
@@ -7,6 +7,7 @@ interface BuildTaskTimeEntryContextParams {
   phaseName?: string;
   serviceId?: string | null;
   serviceName?: string | null;
+  serviceSource?: ProjectServiceSource | null;
 }
 
 export function buildTaskTimeEntryContext({
@@ -16,6 +17,7 @@ export function buildTaskTimeEntryContext({
   phaseName,
   serviceId,
   serviceName,
+  serviceSource,
 }: BuildTaskTimeEntryContextParams): TimeEntryWorkItemContext {
   return {
     workItemId: taskId,
@@ -26,5 +28,6 @@ export function buildTaskTimeEntryContext({
     taskName,
     serviceId,
     serviceName,
+    serviceSource: serviceSource ?? undefined,
   };
 }

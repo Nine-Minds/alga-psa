@@ -202,6 +202,7 @@ export function TimeEntryProvider({ children }: { children: React.ReactNode }): 
           _isServicePrefilled: !!prefilledServiceId,
           _originalServiceId: prefilledServiceId || null,
           _serviceOverridden: false,
+          _serviceSource: prefilledServiceId ? workItem.service_source : undefined,
         }];
       } else {
         let startTime: Date, endTime: Date;

@@ -27,7 +27,8 @@ import {
   deleteTaskTicketLinksByTicketIdAction,
   duplicateTaskToPhase,
   getTaskDependencies,
-  addTaskDependency
+  addTaskDependency,
+  getEffectiveTaskService
 } from '../actions/projectTaskActions';
 import { getCurrentUser, getUserAvatarUrlsBatchAction, searchUsersForMentions } from '@alga-psa/user-composition/actions';
 import { findTagsByEntityId, createTagsForEntity, isTagActionError } from '@alga-psa/tags/actions';
@@ -266,6 +267,12 @@ export default function TaskForm({
   const [selectedPriorityId, setSelectedPriorityId] = useState<string | null>(task?.priority_id ?? null);
   const [availableServices, setAvailableServices] = useState<IService[]>([]);
   const [selectedServiceId, setSelectedServiceId] = useState<string | null>(task?.service_id ?? null);
+  // Phase/project default this task falls back to when it sets no service of its own.
+  const [inheritedService, setInheritedService] = useState<{
+    serviceId: string;
+    serviceName: string | null;
+    source: 'phase' | 'project';
+  } | null>(null);
   const [taskDependencies, setTaskDependencies] = useState<{
     predecessors: IProjectTaskDependency[];
     successors: IProjectTaskDependency[];
@@ -410,6 +417,14 @@ export default function TaskForm({
         }
 
         if (task?.task_id) {
+          // Phase/project service default, so the picker can say what a blank
+          // task-level service will fall back to.
+          const effectiveService = await getEffectiveTaskService(task.task_id);
+          if (!isReturnedActionError(effectiveService)) {
+            const { serviceId, serviceName, source } = effectiveService.inherited;
+            setInheritedService(serviceId && source ? { serviceId, serviceName, source } : null);
+          }
+
           // Use checklist items and resources from the task object if they exist
           if (task.checklist_items !== undefined) {
             console.log('Using checklist items from task object');
@@ -1401,7 +1416,16 @@ export default function TaskForm({
       };
 
       const projectName = findProjectName(projectTreeOptions, selectedPhaseId);
-      const serviceName = availableServices.find(service => service.service_id === selectedServiceId)?.service_name ?? null;
+      // The task's own service wins; otherwise fall back to the phase/project default.
+      const effectiveService = selectedServiceId
+        ? {
+            serviceId: selectedServiceId,
+            serviceName: availableServices.find(service => service.service_id === selectedServiceId)?.service_name ?? null,
+            source: 'task' as const,
+          }
+        : inheritedService
+          ? { serviceId: inheritedService.serviceId, serviceName: inheritedService.serviceName, source: inheritedService.source }
+          : { serviceId: null, serviceName: null, source: null };
 
       await launchTimeEntry({
         openDrawer,
@@ -1411,8 +1435,9 @@ export default function TaskForm({
           taskName: taskName || task.task_name,
           projectName,
           phaseName: selectedPhase.phase_name,
-          serviceId: selectedServiceId,
-          serviceName,
+          serviceId: effectiveService.serviceId,
+          serviceName: effectiveService.serviceName,
+          serviceSource: effectiveService.source,
         }),
       });
     } catch (error) {
@@ -1745,6 +1770,17 @@ export default function TaskForm({
             <p className="text-xs text-gray-500 mt-1">
               {taskFormT('serviceHelp', 'When set, this service will be automatically selected when creating time entries from this task.')}
             </p>
+            {!selectedServiceId && inheritedService && (
+              <p className="text-xs text-gray-500 mt-1" id="task-service-inherited-hint">
+                {inheritedService.source === 'phase'
+                  ? taskFormT('serviceInheritedFromPhase', 'Inherits {{service}} from the phase.', {
+                      service: inheritedService.serviceName ?? '',
+                    })
+                  : taskFormT('serviceInheritedFromProject', 'Inherits {{service}} from the project.', {
+                      service: inheritedService.serviceName ?? '',
+                    })}
+              </p>
+            )}
           </div>
 
           {/* 2 Column Grid Section */}
