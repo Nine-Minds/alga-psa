@@ -15,9 +15,15 @@ const UUID_RE =
 const HOSTED_TICKET_URL_RE =
   /^https:\/\/algapsa\.com\/msp\/tickets\/([0-9a-f-]{36})(?:[/?#].*)?$/i;
 
+// Web task links point at the project page with the task in the query string.
+const HOSTED_PROJECT_TASK_URL_RE =
+  /^https:\/\/algapsa\.com\/msp\/projects\/[0-9a-f-]{36}\?(?:.*&)?taskId=([0-9a-f-]{36})(?:[&#].*)?$/i;
+
 export function normalizeHostedTicketUrl(rawUrl: string): string {
   const match = HOSTED_TICKET_URL_RE.exec(rawUrl);
-  return match ? `alga://ticket/${match[1].toLowerCase()}` : rawUrl;
+  if (match) return `alga://ticket/${match[1].toLowerCase()}`;
+  const taskMatch = HOSTED_PROJECT_TASK_URL_RE.exec(rawUrl);
+  return taskMatch ? `alga://project-task/${taskMatch[1].toLowerCase()}` : rawUrl;
 }
 
 function isAllowedPath(path: string): boolean {
@@ -32,6 +38,8 @@ function isAllowedPath(path: string): boolean {
   if (path === "settings") return true;
   const ticketMatch = /^ticket\/(.+)$/.exec(path);
   if (ticketMatch) return UUID_RE.test(ticketMatch[1] ?? "");
+  const taskMatch = /^project-task\/(.+)$/.exec(path);
+  if (taskMatch) return UUID_RE.test(taskMatch[1] ?? "");
   return false;
 }
 
@@ -76,7 +84,7 @@ export async function hasPendingDeepLink(): Promise<boolean> {
 }
 
 function requiresSession(url: string): boolean {
-  return url.startsWith("alga://ticket/");
+  return url.startsWith("alga://ticket/") || url.startsWith("alga://project-task/");
 }
 
 function rejectUrl(url: string, message: string): void {
@@ -129,6 +137,7 @@ export const linking: LinkingOptions<RootStackParamList> = {
       ServerEntry: "server",
       AuthCallback: "auth/callback",
       TicketDetail: "ticket/:ticketId",
+      ProjectTaskDetail: "project-task/:taskId",
       Tabs: {
         screens: {
           TicketsTab: {
