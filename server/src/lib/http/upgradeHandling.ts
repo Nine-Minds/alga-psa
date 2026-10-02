@@ -12,8 +12,9 @@ import type { Duplex } from 'node:stream';
  * answered occupies that origin's connection slot and delays HMR and hydration.
  *
  * This module owns the server's single `upgrade` listener:
- *   - Next's own upgrade handler stays responsible for `/_next/webpack-hmr`
- *     (including query strings) so HMR keeps working.
+ *   - Next's own upgrade handler stays responsible for `/_next/hmr` (Next
+ *     16.3+) and the legacy `/_next/webpack-hmr`, including query strings, so
+ *     HMR keeps working.
  *   - `/hocuspocus` is proxied to the configured Hocuspocus upstream.
  *   - Every other upgrade request is answered with a prompt 404 and closed.
  *
@@ -22,7 +23,9 @@ import type { Duplex } from 'node:stream';
  * a misconfigured or stalled upstream cannot recreate the hanging handshake.
  */
 
-export const HMR_UPGRADE_PATH = '/_next/webpack-hmr';
+export const HMR_UPGRADE_PATH = '/_next/hmr';
+export const LEGACY_HMR_UPGRADE_PATH = '/_next/webpack-hmr';
+const HMR_UPGRADE_PATHS: ReadonlySet<string> = new Set([HMR_UPGRADE_PATH, LEGACY_HMR_UPGRADE_PATH]);
 export const HOCUSPOCUS_UPGRADE_PATH = '/hocuspocus';
 
 const NOT_FOUND = 'Not Found';
@@ -329,7 +332,7 @@ export function createUpgradeHandler(
 
     const pathname = parsePathname(req.url);
 
-    if (pathname === HMR_UPGRADE_PATH && options.nextUpgradeHandler) {
+    if (HMR_UPGRADE_PATHS.has(pathname) && options.nextUpgradeHandler) {
       options.nextUpgradeHandler(req, socket, head);
       return;
     }
@@ -353,7 +356,8 @@ export function attachUpgradeHandler(
 
 export interface AttachNextUpgradeHandlerOptions extends UpgradeHandlingOptions {
   /**
-   * Delegate `/_next/webpack-hmr` to Next's own upgrade handler. Enabled in
+   * Delegate HMR upgrades (`/_next/hmr`, legacy `/_next/webpack-hmr`) to
+   * Next's own upgrade handler. Enabled in
    * development; production keeps the path rejected.
    */
   delegateHmrToNext?: boolean;

@@ -45,10 +45,10 @@ index e51b340..fcd3b2b 100644
          if (shouldCache) {
              manifest = deepFreeze(manifest);
 diff --git a/node_modules/next/dist/esm/server/route-modules/route-module.js b/node_modules/next/dist/esm/server/route-modules/route-module.js
-index 453d7d3..9ae2221 100644
+index 271b66d..df649fc 100644
 --- a/node_modules/next/dist/esm/server/route-modules/route-module.js
 +++ b/node_modules/next/dist/esm/server/route-modules/route-module.js
-@@ -77,6 +77,30 @@ const dynamicImportEsmDefault = (id)=>import(/* webpackIgnore: true */ /* turbop
+@@ -82,6 +82,30 @@ const dynamicImportEsmDefault = (id)=>import(/* webpackIgnore: true */ /* turbop
              var _self___RSC_MANIFEST;
              const { getEdgePreviewProps } = require('../web/get-edge-preview-props');
              const maybeJSONParse = (str)=>str ? JSON.parse(str) : undefined;
@@ -79,7 +79,7 @@ index 453d7d3..9ae2221 100644
              result = {
                  buildId: process.env.__NEXT_BUILD_ID || '',
                  buildManifest: self.__BUILD_MANIFEST,
-@@ -107,7 +131,7 @@ const dynamicImportEsmDefault = (id)=>import(/* webpackIgnore: true */ /* turbop
+@@ -112,7 +136,7 @@ const dynamicImportEsmDefault = (id)=>import(/* webpackIgnore: true */ /* turbop
                  },
                  serverFilesManifest: self.__SERVER_FILES_MANIFEST,
                  clientReferenceManifest: (_self___RSC_MANIFEST = self.__RSC_MANIFEST) == null ? void 0 : _self___RSC_MANIFEST[srcPage],
@@ -87,9 +87,9 @@ index 453d7d3..9ae2221 100644
 +                serverActionsManifest: expandInternedModuleIds(maybeJSONParse(self.__RSC_SERVER_MANIFEST)),
                  subresourceIntegrityManifest: maybeJSONParse(self.__SUBRESOURCE_INTEGRITY_MANIFEST),
                  dynamicCssManifest: maybeJSONParse(self.__DYNAMIC_CSS_MANIFEST),
-                 interceptionRoutePatterns: (maybeJSONParse(self.__INTERCEPTION_ROUTE_REWRITE_MANIFEST) ?? []).map((rewrite)=>new RegExp(rewrite.regex))
+                 // Edge pages are always dynamic so prefetch inlining hints
 diff --git a/node_modules/next/dist/esm/shared/lib/turbopack/manifest-loader.js b/node_modules/next/dist/esm/shared/lib/turbopack/manifest-loader.js
-index 5c7a9a0..5f859e7 100644
+index 15c8689..9d8a8d7 100644
 --- a/node_modules/next/dist/esm/shared/lib/turbopack/manifest-loader.js
 +++ b/node_modules/next/dist/esm/shared/lib/turbopack/manifest-loader.js
 @@ -40,6 +40,53 @@ function readPartialManifestContent(distDir, name, pageName, type = 'pages') {
@@ -146,7 +146,7 @@ index 5c7a9a0..5f859e7 100644
  /// Helper class that stores a map of manifests and tracks if they have changed
  /// since the last time they were written to disk. This is used to avoid
  /// unnecessary writes to disk.
-@@ -151,7 +198,11 @@ export class TurbopackManifestLoader {
+@@ -154,7 +201,11 @@ export class TurbopackManifestLoader {
          const actionManifest = this.mergeActionManifests(this.actionManifests.values());
          const actionManifestJsonPath = join(this.distDir, 'server', `${SERVER_REFERENCE_MANIFEST}.json`);
          const actionManifestJsPath = join(this.distDir, 'server', `${SERVER_REFERENCE_MANIFEST}.js`);
@@ -206,10 +206,10 @@ index 40811b6..9d74381 100644
          if (shouldCache) {
              manifest = (0, _deepfreeze.deepFreeze)(manifest);
 diff --git a/node_modules/next/dist/server/route-modules/route-module.js b/node_modules/next/dist/server/route-modules/route-module.js
-index a6a70b6..10de1f3 100644
+index 3717a82..8e23fa5 100644
 --- a/node_modules/next/dist/server/route-modules/route-module.js
 +++ b/node_modules/next/dist/server/route-modules/route-module.js
-@@ -89,6 +89,30 @@ class RouteModule {
+@@ -94,6 +94,30 @@ class RouteModule {
              var _self___RSC_MANIFEST;
              const { getEdgePreviewProps } = require('../web/get-edge-preview-props');
              const maybeJSONParse = (str)=>str ? JSON.parse(str) : undefined;
@@ -240,7 +240,7 @@ index a6a70b6..10de1f3 100644
              result = {
                  buildId: process.env.__NEXT_BUILD_ID || '',
                  buildManifest: self.__BUILD_MANIFEST,
-@@ -119,7 +143,7 @@ class RouteModule {
+@@ -124,7 +148,7 @@ class RouteModule {
                  },
                  serverFilesManifest: self.__SERVER_FILES_MANIFEST,
                  clientReferenceManifest: (_self___RSC_MANIFEST = self.__RSC_MANIFEST) == null ? void 0 : _self___RSC_MANIFEST[srcPage],
@@ -248,9 +248,9 @@ index a6a70b6..10de1f3 100644
 +                serverActionsManifest: expandInternedModuleIds(maybeJSONParse(self.__RSC_SERVER_MANIFEST)),
                  subresourceIntegrityManifest: maybeJSONParse(self.__SUBRESOURCE_INTEGRITY_MANIFEST),
                  dynamicCssManifest: maybeJSONParse(self.__DYNAMIC_CSS_MANIFEST),
-                 interceptionRoutePatterns: (maybeJSONParse(self.__INTERCEPTION_ROUTE_REWRITE_MANIFEST) ?? []).map((rewrite)=>new RegExp(rewrite.regex))
+                 // Edge pages are always dynamic so prefetch inlining hints
 diff --git a/node_modules/next/dist/shared/lib/turbopack/manifest-loader.js b/node_modules/next/dist/shared/lib/turbopack/manifest-loader.js
-index ae17ac0..6167b6a 100644
+index 9b20714..038d873 100644
 --- a/node_modules/next/dist/shared/lib/turbopack/manifest-loader.js
 +++ b/node_modules/next/dist/shared/lib/turbopack/manifest-loader.js
 @@ -50,6 +50,53 @@ function readPartialManifestContent(distDir, name, pageName, type = 'pages') {
@@ -307,7 +307,7 @@ index ae17ac0..6167b6a 100644
  /// Helper class that stores a map of manifests and tracks if they have changed
  /// since the last time they were written to disk. This is used to avoid
  /// unnecessary writes to disk.
-@@ -161,7 +208,14 @@ class TurbopackManifestLoader {
+@@ -164,7 +211,14 @@ class TurbopackManifestLoader {
          const actionManifest = this.mergeActionManifests(this.actionManifests.values());
          const actionManifestJsonPath = (0, _path.join)(this.distDir, 'server', `${_constants.SERVER_REFERENCE_MANIFEST}.json`);
          const actionManifestJsPath = (0, _path.join)(this.distDir, 'server', `${_constants.SERVER_REFERENCE_MANIFEST}.js`);
