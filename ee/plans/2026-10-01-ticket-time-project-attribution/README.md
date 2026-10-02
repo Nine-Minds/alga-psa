@@ -136,6 +136,14 @@ project for past periods too, so a fixed-price project's historical ticket time 
 covered by the fee (revenue on the fee, not on the hours) rather than as separate hourly
 revenue. Client-level attribution of that time is unchanged — only the project rollup moves.
 
+### PR scope
+
+The branch carries **two** billing behavior changes: ticket-time attribution (work items 1–8)
+and the cross-currency cap guard of decision (g). They ship together because attribution is what
+makes caps reachable for far more charges, but the cap guard is separable — it stands on its own
+against today's `main`. The PR body must name both so a reviewer reading only the ticket title is
+not surprised by cap behavior in the diff.
+
 ## Work items, in order
 
 1. Migration + interface fields + `tenantTableMetadata` unchanged (still tenant-scoped).
