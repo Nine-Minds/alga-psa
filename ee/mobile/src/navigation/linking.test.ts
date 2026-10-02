@@ -123,4 +123,45 @@ describe("hosted ticket links", () => {
     setDeepLinkSignedIn(false);
     await expect(linking.getInitialURL?.()).resolves.toBe("alga://signin");
   });
+
+  it("reports a cold-start ticket link as pending so restored nav state does not override it", async () => {
+    const ExpoLinking = await import("expo-linking");
+    const url = "https://algapsa.com/msp/tickets/541b5b63-9e14-47b6-a8f0-0b664f079ed4";
+    (ExpoLinking.getInitialURL as any).mockResolvedValue(url);
+    vi.resetModules();
+    const { linking, hasPendingDeepLink, setDeepLinkSignedIn } = await import("./linking");
+    setDeepLinkSignedIn(true);
+
+    await expect(hasPendingDeepLink()).resolves.toBe(true);
+    await expect(linking.getInitialURL?.()).resolves.toBe("alga://ticket/541b5b63-9e14-47b6-a8f0-0b664f079ed4");
+    // Once followed, later remounts restore the saved screen again.
+    await expect(hasPendingDeepLink()).resolves.toBe(false);
+    (ExpoLinking.getInitialURL as any).mockReset();
+    (ExpoLinking.getInitialURL as any).mockResolvedValue(null);
+  });
+
+  it("reports a ticket link held during sign-in as pending", async () => {
+    const ExpoLinking = await import("expo-linking");
+    const url = "https://algapsa.com/msp/tickets/541b5b63-9e14-47b6-a8f0-0b664f079ed4";
+    (ExpoLinking.getInitialURL as any).mockResolvedValue(url);
+    vi.resetModules();
+    const { linking, hasPendingDeepLink, setDeepLinkSignedIn } = await import("./linking");
+    setDeepLinkSignedIn(false);
+    await expect(linking.getInitialURL?.()).resolves.toBeNull();
+
+    setDeepLinkSignedIn(true);
+    await expect(hasPendingDeepLink()).resolves.toBe(true);
+    (ExpoLinking.getInitialURL as any).mockReset();
+    (ExpoLinking.getInitialURL as any).mockResolvedValue(null);
+  });
+
+  it("does not report rejected or absent links as pending", async () => {
+    const ExpoLinking = await import("expo-linking");
+    vi.resetModules();
+    const { hasPendingDeepLink } = await import("./linking");
+    (ExpoLinking.getInitialURL as any).mockResolvedValueOnce(null);
+    await expect(hasPendingDeepLink()).resolves.toBe(false);
+    (ExpoLinking.getInitialURL as any).mockResolvedValueOnce("https://algapsa.com/msp/clients/541b5b63-9e14-47b6-a8f0-0b664f079ed4");
+    await expect(hasPendingDeepLink()).resolves.toBe(false);
+  });
 });
