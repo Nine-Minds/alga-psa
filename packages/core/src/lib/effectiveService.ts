@@ -57,3 +57,36 @@ export function resolveEffectiveServiceSource(serviceIds: {
   if (serviceIds.project) return 'project';
   return null;
 }
+
+/** The only billing method a time entry can be filed against. */
+const TIME_ENTRY_BILLING_METHOD = 'hourly';
+
+/** The catalog fields a default-service picker needs. */
+export interface TimeEntryServiceChoice {
+  service_id: string;
+  service_name: string;
+  billing_method?: string | null;
+}
+
+/**
+ * Whether a time entry can be filed against this service. The time entry form's
+ * own picker is hourly-only (`fetchServicesForTimeEntry`), so anything else is
+ * useless as a default: it would prefill a value that form refuses to save.
+ */
+export function isTimeEntryService(service: TimeEntryServiceChoice | null | undefined): boolean {
+  return service?.billing_method === TIME_ENTRY_BILLING_METHOD;
+}
+
+/**
+ * Catalog entries a task/phase/project may set as its default service. A value
+ * already stored on the row stays listed even when ineligible, so it remains
+ * visible and clearable instead of silently sticking around.
+ */
+export function timeEntryServiceChoices<T extends TimeEntryServiceChoice>(
+  services: readonly T[],
+  selectedServiceId?: string | null,
+): T[] {
+  return services.filter(
+    (service) => isTimeEntryService(service) || (!!selectedServiceId && service.service_id === selectedServiceId),
+  );
+}

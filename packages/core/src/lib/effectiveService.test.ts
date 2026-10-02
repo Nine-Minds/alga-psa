@@ -3,7 +3,9 @@ import {
   effectiveServiceIdSql,
   effectiveServiceNameSql,
   effectiveServiceSourceSql,
+  isTimeEntryService,
   resolveEffectiveServiceSource,
+  timeEntryServiceChoices,
 } from './effectiveService';
 
 const ALIASES = { task: 'pt', phase: 'pp', project: 'p' };
@@ -48,5 +50,32 @@ describe('resolveEffectiveServiceSource', () => {
   it('returns null when no level sets a service', () => {
     expect(resolveEffectiveServiceSource({ task: null, phase: null, project: null })).toBeNull();
     expect(resolveEffectiveServiceSource({})).toBeNull();
+  });
+});
+
+describe('time entry service eligibility', () => {
+  const hourly = { service_id: 'svc-hourly', service_name: 'Basic Support', billing_method: 'hourly' };
+  const fixed = { service_id: 'svc-fixed', service_name: 'Emerald City Security', billing_method: 'fixed' };
+  const usage = { service_id: 'svc-usage', service_name: 'Rabbit Tracking', billing_method: 'usage' };
+
+  it('only accepts hourly services, the one kind a time entry can be filed against', () => {
+    expect(isTimeEntryService(hourly)).toBe(true);
+    expect(isTimeEntryService(fixed)).toBe(false);
+    expect(isTimeEntryService(usage)).toBe(false);
+    expect(isTimeEntryService(undefined)).toBe(false);
+    expect(isTimeEntryService({ service_id: 'x', service_name: 'x' })).toBe(false);
+  });
+
+  it('offers only hourly services as a default', () => {
+    expect(timeEntryServiceChoices([hourly, fixed, usage])).toEqual([hourly]);
+  });
+
+  it('keeps an already stored ineligible default listed so it stays visible and clearable', () => {
+    expect(timeEntryServiceChoices([hourly, fixed, usage], 'svc-fixed')).toEqual([hourly, fixed]);
+  });
+
+  it('ignores a selected id that is not in the catalog', () => {
+    expect(timeEntryServiceChoices([hourly, fixed], 'svc-gone')).toEqual([hourly]);
+    expect(timeEntryServiceChoices([hourly, fixed], null)).toEqual([hourly]);
   });
 });
