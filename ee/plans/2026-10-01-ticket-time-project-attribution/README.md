@@ -125,6 +125,11 @@ project-scoped invoices, counts toward T&M caps, and is covered by a fixed-price
 being billed hourly. Already-invoiced time is unaffected. Untick 'Bill this ticket's time as
 project time' on a link to keep billing that ticket at the client level."
 
+"A budget cap is counted in the project's own billing currency. If that is not the currency the
+project's invoices use — which happens when a client's currency changed after the project was set
+up — the cap is not applied, and the invoice run says so. The project's billing tab names both
+currencies; re-entering the cap there moves the project to the client's currency."
+
 Reporting moves with it, and reporting looks backwards as well as forwards: project budget
 actuals, profitability and the client WIP rollup now count linked-ticket hours against the
 project for past periods too, so a fixed-price project's historical ticket time reads as
