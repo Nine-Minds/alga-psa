@@ -1,8 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import path from 'node:path';
 import { createRequire } from 'node:module';
-import { replaceTemplateVariables } from '../lib/replaceTemplateVariables';
+import { replaceTemplateVariables } from '@alga-psa/email/lib/replaceTemplateVariables';
 
+// Lives in server (not packages/email) because it requires the real template
+// straight out of server/migrations: a packages/email test reaching into
+// server/migrations registers as a package depending on the server app in the
+// Nx project graph, which is a cycle (server already depends on
+// @alga-psa/email) even though nothing here runs at build time.
 const require = createRequire(import.meta.url);
 
 type TenantRecoveryTranslation = {
@@ -13,7 +17,7 @@ type TenantRecoveryTranslation = {
 };
 
 const { getTemplate } = require(
-  path.resolve(__dirname, '../../../../server/migrations/utils/templates/email/auth/tenantRecovery.cjs')
+  '../../../../server/migrations/utils/templates/email/auth/tenantRecovery.cjs'
 ) as { getTemplate: () => { translations: TenantRecoveryTranslation[] } };
 
 const en = getTemplate().translations.find((translation) => translation.language === 'en')!;
