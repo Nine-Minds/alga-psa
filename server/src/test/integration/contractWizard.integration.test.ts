@@ -902,8 +902,13 @@ describe('createClientContractFromWizard', () => {
     }
 
     // Finish Setup: same submission, now carrying the draft's contract_id.
+    // Without the child-table deletes this returns the 23503 action error instead of a
+    // contract, which is the toast the ticket reported.
     const finalized = await createClientContractFromWizard({ ...submission, contract_id: contractId });
-    expect('contract_id' in finalized).toBe(true);
+    expect(
+      'contract_id' in finalized ? null : finalized,
+      'finalize returned an action error instead of a contract',
+    ).toBeNull();
     expect((finalized as { contract_id: string }).contract_id).toBe(contractId);
 
     const finalLineIds = await tenantTable(db, tenantId, 'contract_lines')
