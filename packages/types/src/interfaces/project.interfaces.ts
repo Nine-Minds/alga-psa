@@ -82,6 +82,12 @@ export interface IProjectStatusMapping extends TenantEntity {
 }
 
 
+/**
+ * Which level of the project hierarchy supplied a time entry's prefilled
+ * service. Resolution order is task → phase → project.
+ */
+export type ProjectServiceSource = 'task' | 'phase' | 'project';
+
 export interface IProject extends TenantEntity, ITaggable {
   project_id: string;
   client_id: string;
@@ -104,6 +110,8 @@ export interface IProject extends TenantEntity, ITaggable {
   budgeted_hours?: number | null;
   project_number: string; // e.g., "PRJ-0001"
   client_portal_config?: IClientPortalConfig;
+  /** Project-wide default service for time entries (lowest precedence). */
+  service_id?: string | null;
 }
 
 export interface IProjectPhase extends TenantEntity {
@@ -119,7 +127,9 @@ export interface IProjectPhase extends TenantEntity {
   order_key?: string;
   created_at: Date;
   updated_at: Date;
-  wbs_code: string;  
+  wbs_code: string;
+  /** Phase-wide default service for time entries; overridden by the task's own. */
+  service_id?: string | null;
 }
 
 export interface IProjectTask extends TenantEntity, ITaggable {
