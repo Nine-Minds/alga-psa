@@ -1,4 +1,5 @@
 import { applyProjectCapAdjustments } from './domain/projectCapAdjustments';
+import { capAppliesToInvoiceCurrency } from './compute/projectCapMath';
 import { resolveUsageMeasurementRevision } from './usageMeasurementTransitions';
 import { Knex } from "knex";
 import {
@@ -1767,6 +1768,11 @@ export class BillingEngine {
             billingPeriod,
             options.projectTarget,
           )),
+          ...this.getProjectCapCurrencyWarnings(
+            projectBillingContext,
+            billingCurrency,
+            options.projectTarget,
+          ),
         ]
       : projectMaterialWarnings;
 
@@ -2039,7 +2045,9 @@ export class BillingEngine {
       obligations: contractObligations,
       taxContexts: contractTaxContexts,
       supplementalCharges: totalCharges,
-      projectCaps: projectBillingContext ?? undefined,
+      projectCaps: projectBillingContext
+        ? { ...projectBillingContext, invoiceCurrency: billingCurrency }
+        : undefined,
       discountsAndAdjustments: {
         billingPeriod,
         discountCandidates: discountCandidates.map((discount) => ({
@@ -2201,6 +2209,32 @@ export class BillingEngine {
       (row) =>
         `${Number(row.count)} materials in ${row.currency_code} were skipped — invoice currency is ${invoiceCurrency}`,
     );
+  }
+
+  /**
+   * A budget cap is minor units of the project's own billing currency, and the
+   * engine has no exchange rate, so a cap denominated in anything other than
+   * this invoice's currency is not applied (see `capAppliesToInvoiceCurrency`).
+   * Reported here so the biller learns the cap is dormant from the run rather
+   * than from an unexpectedly large invoice.
+   */
+  private getProjectCapCurrencyWarnings(
+    context: ProjectBillingContext,
+    invoiceCurrency: string,
+    target?: CalculateBillingOptions["projectTarget"],
+  ): string[] {
+    return context.configs
+      .filter(
+        (config) =>
+          config.cap_amount !== null &&
+          (!target || config.project_id === target.projectId) &&
+          !capAppliesToInvoiceCurrency(config.currency, invoiceCurrency),
+      )
+      .map(
+        (config) =>
+          `${config.project_name}'s budget cap is set in ${config.currency} but this invoice bills in ${invoiceCurrency}, ` +
+          `so the cap was not applied. Set the project's billing currency to ${invoiceCurrency} and re-enter the cap.`,
+      );
   }
 
   private async calculateProjectMilestoneCharges(
@@ -2375,6 +2409,11 @@ export class BillingEngine {
     windowEnd: ISO8601String;
     selectedTimeEntryIds?: string[];
     selectedUsageRecordIds?: string[];
+    /**
+     * Currency this work would be invoiced in, so a cap in another currency is
+     * left out of the listing's arithmetic exactly as generation leaves it out.
+     */
+    invoiceCurrency?: string | null;
   }): Promise<IBillingCharge[]> {
     return this.withPinnedTransaction(async () => {
       const billingPeriod: IBillingPeriod = {
@@ -2399,7 +2438,10 @@ export class BillingEngine {
             selection,
           );
       return context
-        ? applyProjectCapAdjustments(charges, context).charges
+        ? applyProjectCapAdjustments(charges, {
+            ...context,
+            invoiceCurrency: input.invoiceCurrency,
+          }).charges
         : charges;
     });
   }

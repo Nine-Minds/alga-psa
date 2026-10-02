@@ -40,6 +40,14 @@ const billingEngineSource = readFileSync(
   ),
   "utf8",
 );
+// The authoritative cap write-down lives on the persistence side.
+const invoiceGenerationSource = readFileSync(
+  new URL(
+    "../../../../../packages/billing/src/actions/invoiceGeneration.ts",
+    import.meta.url,
+  ),
+  "utf8",
+);
 // Phase-override precedence math was extracted into the pure compute layer.
 const timeComputeSource = readFileSync(
   new URL(
@@ -614,6 +622,94 @@ describe("project T&M cap and override integration", () => {
     expect(
       overage.thresholdCrossings.map((crossing: any) => crossing.threshold),
     ).toEqual([100]);
+  });
+
+  it("T025: a cap counted in another currency is left out of the invoice entirely", () => {
+    // The client moved to ARS; the project's cap is still the USD figure the
+    // biller typed. There is no exchange rate anywhere in the engine, so
+    // comparing 1,000.00 USD with ARS charges would write almost everything
+    // down. The cap is dormant instead, and the run says so.
+    const projectConfig = config({
+      billing_model: "time_and_materials",
+      total_price: null,
+      currency: "USD",
+      cap_amount: 100_000,
+      cap_behavior: "hard_cap",
+    });
+    const billingContext: any = context([projectConfig], []);
+    billingContext.invoiceCurrency = "ARS";
+    const charges = [
+      {
+        type: "time",
+        total: 400_000,
+        tax_amount: 1_000,
+        project_billing_config_id: "config-1",
+      },
+    ];
+
+    const mismatched = applyProjectCapAdjustments(charges, billingContext);
+    expect(charges[0]).toMatchObject({ total: 400_000, tax_amount: 1_000 });
+    expect(charges[0]).not.toHaveProperty("write_down_reason");
+    expect(mismatched.thresholdCrossings).toEqual([]);
+    expect(mismatched.currencyMismatchedConfigIds).toEqual(["config-1"]);
+
+    // Same cap, same charges, matching currency: the cap bites as before.
+    const matching = [
+      {
+        type: "time",
+        total: 400_000,
+        tax_amount: 1_000,
+        project_billing_config_id: "config-1",
+      },
+    ];
+    const applied = applyProjectCapAdjustments(matching, {
+      ...billingContext,
+      invoiceCurrency: "usd",
+    });
+    expect(matching[0]).toMatchObject({
+      total: 100_000,
+      write_down_amount: 300_000,
+      write_down_reason: "project_cap",
+    });
+    expect(applied.currencyMismatchedConfigIds).toEqual([]);
+  });
+
+  it("T026: the biller is warned once per run, and persistence skips the same cap", () => {
+    const engine = new BillingEngine();
+    const warnings = (engine as any).getProjectCapCurrencyWarnings(
+      context(
+        [
+          config({
+            billing_model: "time_and_materials",
+            total_price: null,
+            currency: "USD",
+            cap_amount: 100_000,
+          }),
+          // No cap and a matching currency: nothing to warn about.
+          config({
+            config_id: "config-2",
+            project_id: "project-2",
+            currency: "ARS",
+            project_name: "Aligned project",
+          }),
+        ],
+        [],
+      ),
+      "ARS",
+    );
+    expect(warnings).toEqual([
+      "Implementation's budget cap is set in USD but this invoice bills in ARS, " +
+        "so the cap was not applied. Set the project's billing currency to ARS and re-enter the cap.",
+    ]);
+
+    // The engine's write-down is advisory; invoice persistence recomputes it,
+    // so the same currency guard has to stand there or the money still moves.
+    expect(invoiceGenerationSource).toContain(
+      "billingResult.currency_code ?? null",
+    );
+    expect(invoiceGenerationSource).toContain(
+      "if (!capAppliesToInvoiceCurrency(config.currency, invoiceCurrency)) {",
+    );
   });
 });
 

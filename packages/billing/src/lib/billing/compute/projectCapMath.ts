@@ -40,6 +40,25 @@ export function computeCapWriteDown(
   };
 }
 
+/**
+ * A cap is a number of minor units in the project's own billing currency, so it
+ * can only be compared with charges billed in that same currency. Tenants do
+ * drift apart — a project capped in USD under a client that bills ARS — and
+ * there is no exchange rate anywhere in the engine, so a cross-currency cap is
+ * not applied at all rather than written down against a meaningless number.
+ * An unknown currency on either side means "no evidence of a mismatch" and the
+ * cap applies as before.
+ */
+export function capAppliesToInvoiceCurrency(
+  capCurrency: string | null | undefined,
+  invoiceCurrency: string | null | undefined,
+): boolean {
+  const cap = capCurrency?.trim().toUpperCase();
+  const invoice = invoiceCurrency?.trim().toUpperCase();
+  if (!cap || !invoice) return true;
+  return cap === invoice;
+}
+
 /** First persisted hard-cap overage; used to dedupe workflow and user notifications. */
 export function isFirstProjectCapOverage(
   writtenDownBefore: number,

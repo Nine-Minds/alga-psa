@@ -33,6 +33,7 @@ here, so check it before relying on it.
 | d | **Ambiguity attributes nothing.** A ticket with flagged links into more than one distinct project is left unattributed and logged. Several tasks in one project is fine. | Guarantees the join can never fan out a time entry into N rows. |
 | e | **Invoiced entries are never touched** by flipping the flag either way. | Guarantee already exists; the tests assert it so nobody loosens it later. |
 | f | Entry-level override (`time_entries.project_id`) is **deferred** until a customer asks. | Would mirror `contract_line_id` but touches timesheet, mobile and API for a case nobody has reported. |
+| g | **A cap in another currency is dormant, never converted.** When `project_billing_configs.currency` is not the currency the invoice bills in, the budget cap is not applied, the run warns the biller, and the project billing cards name the client's currency. | Found in production: a CHF tenant, a client billing ARS and a project cap still counted in USD. The config currency is pinned to the client's on every write, but a client can change currency afterwards. Caps are minor units with no exchange rate anywhere in the engine, so comparing them across currencies writes work down against a meaningless number — exactly the silent money move this ticket is about, and now reachable by more charges because ticket time joins the project. Re-entering the cap on the T&M panel re-pins the project to the client's currency. |
 
 ## Design
 
