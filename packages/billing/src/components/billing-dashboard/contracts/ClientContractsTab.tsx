@@ -382,7 +382,9 @@ const ClientContractsTab: React.FC<ClientContractsTabProps> = ({ onRefreshNeeded
     },
     {
       title: t('clientContracts.columns.poIndicator', { defaultValue: 'PO' }),
-      dataIndex: 'contract_id',
+      // DataTable keys columns by dataIndex; sharing 'contract_id' with the Actions
+      // column made the Actions cell render this column's text instead of its menu.
+      dataIndex: 'po_required',
       width: '8rem',
       headerClassName: 'min-w-[8rem]',
       cellClassName: 'min-w-[8rem] max-w-none',

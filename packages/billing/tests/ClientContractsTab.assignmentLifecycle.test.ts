@@ -25,3 +25,15 @@ describe('ClientContractsTab assignment lifecycle wiring', () => {
     expect(source).not.toContain('checkClientHasActiveContract');
   });
 });
+
+describe('ClientContractsTab column ids', () => {
+  it('gives every client contract column a distinct dataIndex so Actions renders its menu', () => {
+    const start = source.indexOf('const clientContractColumns');
+    const end = source.indexOf('const filteredClientContracts');
+    const block = source.slice(start, end);
+    const dataIndexes = [...block.matchAll(/^ {6}dataIndex: '([^']+)'/gm)].map((match) => match[1]);
+    expect(dataIndexes.length).toBeGreaterThan(5);
+    expect(new Set(dataIndexes).size).toBe(dataIndexes.length);
+    expect(block).toContain("dataIndex: 'po_required'");
+  });
+});
