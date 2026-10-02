@@ -1,26 +1,18 @@
 /**
- * Ticket time → project attribution (alga-2026-0002622).
+ * Ticket time → project attribution (alga-2026-0002622), shared by the billing
+ * engine's two time-entry loaders, the contract-line attribution writer,
+ * project actuals, the profitability report and the client pulse WIP query.
  *
- * One resolver, reused by every consumer that rolls time up to a project: the
- * billing engine's two time-entry loaders, the pre-generation contract-line
- * attribution writer, project budget actuals, the profitability report and the
- * client pulse WIP query.
+ * `project_ticket_links` is unique only on (tenant, link_id), so a naive join
+ * would multiply a multi-linked ticket's time entries; the derived table
+ * collapses them to one row. `project_count = 1` means a ticket flagged into
+ * two projects attributes nothing — ambiguity is reported, not guessed at — so
+ * `MIN(project_id::text)` only has to be well-formed for the single case.
  *
- * `project_ticket_links` is unique only on (tenant, link_id), so one ticket can
- * carry several links and a naive join would multiply its time entries. The
- * derived table collapses a ticket's billable links into a single row, and the
- * `project_count = 1` predicate means a ticket flagged into two different
- * projects attributes nothing at all — ambiguity is reported to the biller, not
- * guessed at. `MIN(project_id::text)` only has to be well-formed for that
- * single-project case.
- *
- * Grouping by the Citus distribution column (`tenant`) keeps the derived table
- * pushdown-friendly, and the partial index
+ * Grouping by the distribution column (`tenant`) keeps this pushdown-friendly;
  * `idx_project_ticket_links_tenant_ticket_billable` matches it column for
- * column.
- *
- * It lives in shared/ rather than next to the engine because
- * `@alga-psa/clients` must not depend on `@alga-psa/billing`.
+ * column. Lives in shared/ because `@alga-psa/clients` must not depend on
+ * `@alga-psa/billing`.
  */
 
 export const TICKET_PROJECT_ATTRIBUTION_ALIAS = 'ticket_project';
@@ -29,13 +21,10 @@ export const TICKET_PROJECT_ATTRIBUTION_ALIAS = 'ticket_project';
  * Links that may carry a ticket's time: flagged on, and pointing at a project
  * of the ticket's *own* client.
  *
- * Nothing validates the client when a link is made — the link dialog lists
- * tickets unscoped — so without the client predicate a cross-client link would
- * move one client's hour onto another client's project invoice (the loaders'
- * `projects.client_id = ? OR tickets.client_id = ?` gate is satisfied through
- * the linked project). A foreign-client link is never a billing candidate, the
- * same invariant manual ticket invoices already enforce, so it is dropped here
- * rather than counted as ambiguity.
+ * Link creation never validates the client (the dialog lists tickets unscoped),
+ * so without this predicate a cross-client link would bill one client's hour
+ * onto another's project. Dropped rather than counted as ambiguity, matching
+ * what manual ticket invoices already enforce.
  */
 function billableTicketLinkSource(): string {
   return `FROM project_ticket_links link

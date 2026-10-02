@@ -511,7 +511,7 @@ const TaskTicketLinks = forwardRef<TaskTicketLinksRef, TaskTicketLinksProps>(fun
 
   // Links on an unsaved task have no persisted link_id yet, so their flag only
   // moves in local state until the task is saved.
-  const isPersistedLink = (linkId: string) => !linkId.startsWith('temp-') && !linkId.startsWith('new-');
+  const isPersistedLink = (linkId: string) => !linkId.startsWith('temp-');
 
   const onToggleLinkBilling = async (link: IProjectTicketLinkWithDetails) => {
     const nextValue = link.bill_under_project === false;
