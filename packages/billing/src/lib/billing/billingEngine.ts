@@ -1,5 +1,5 @@
 import { applyProjectCapAdjustments } from './domain/projectCapAdjustments';
-import { capAppliesToInvoiceCurrency } from './compute/projectCapMath';
+import { capAppliesToInvoiceCurrency, resolveInvoiceCurrency } from './compute/projectCapMath';
 import { resolveUsageMeasurementRevision } from './usageMeasurementTransitions';
 import { Knex } from "knex";
 import {
@@ -1687,18 +1687,10 @@ export class BillingEngine {
       };
     }
 
-    const uniqueCurrencies = Array.from(
-      new Set(
-        clientContractLines
-          .map((line) => line.currency_code)
-          .filter((code): code is string => !!code),
-      ),
+    const billingCurrency = resolveInvoiceCurrency(
+      clientContractLines.map((line) => line.currency_code),
+      client?.default_currency_code,
     );
-
-    const billingCurrency =
-      uniqueCurrencies.length === 1
-        ? uniqueCurrencies[0]
-        : client?.default_currency_code || "USD";
 
     console.log(
       `[BillingEngine] Resolved billing currency: ${billingCurrency}`,
@@ -2410,10 +2402,14 @@ export class BillingEngine {
     selectedTimeEntryIds?: string[];
     selectedUsageRecordIds?: string[];
     /**
-     * Currency this work would be invoiced in, so a cap in another currency is
-     * left out of the listing's arithmetic exactly as generation leaves it out.
+     * The client's own currency. Only the fallback: the listing resolves the
+     * currency this work would be invoiced in from the same contract lines
+     * generation reads (`resolveInvoiceCurrency`), so a cap left out of the
+     * listing's arithmetic is exactly the cap generation leaves out. Passing
+     * the client default as the answer made the two disagree for a client whose
+     * currency moved after a contract was signed.
      */
-    invoiceCurrency?: string | null;
+    clientDefaultCurrency?: string | null;
   }): Promise<IBillingCharge[]> {
     return this.withPinnedTransaction(async () => {
       const billingPeriod: IBillingPeriod = {
@@ -2421,6 +2417,17 @@ export class BillingEngine {
         endDate: toISODate(toPlainDate(input.windowEnd)),
       };
       const context = await this.loadProjectBillingContext(input.clientId);
+      const invoiceCurrency = context
+        ? resolveInvoiceCurrency(
+            (
+              await this.getClientContractLinesForBillingPeriod(
+                input.clientId,
+                billingPeriod,
+              )
+            ).map((line) => line.currency_code),
+            input.clientDefaultCurrency,
+          )
+        : null;
       const selection = {
         timeEntryIds: input.selectedTimeEntryIds,
         usageRecordIds: input.selectedUsageRecordIds,
@@ -2440,7 +2447,7 @@ export class BillingEngine {
       return context
         ? applyProjectCapAdjustments(charges, {
             ...context,
-            invoiceCurrency: input.invoiceCurrency,
+            invoiceCurrency,
           }).charges
         : charges;
     });

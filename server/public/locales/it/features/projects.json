@@ -1757,7 +1757,7 @@
     "cap": {
       "title": "Limite di budget",
       "hint": "Tempo e materiali vengono fatturati alle tariffe previste fino a un limite massimo facoltativo.",
-      "currencyStale": "Il limite salvato è in {{projectCurrency}}, valuta in cui questo cliente non viene più fatturato. Inserisci il limite in {{clientCurrency}} per portare questo progetto a {{clientCurrency}}; fino ad allora non viene applicato alcun limite.",
+      "currencyStale": "Il limite salvato è in {{projectCurrency}}, valuta in cui non vengono emesse le fatture di questo progetto. Inserisci il limite in {{invoiceCurrency}} per portare questo progetto a {{invoiceCurrency}}; fino ad allora non viene applicato alcun limite.",
       "amount": "Importo limite ({{currency}})",
       "behavior": "Al raggiungimento",
       "notify": "Solo notifica",
@@ -1809,7 +1809,7 @@
       "tmNotifyHint": "Limite di budget di {{cap}} — solo notifica",
       "thresholdMarker": "Soglia di notifica al {{pct}}%",
       "writtenDown": "Stornato oltre il limite: {{amount}}",
-      "currencyStale": "Gli importi qui sono in {{projectCurrency}}, ma questo cliente viene fatturato in {{clientCurrency}}. Le fatture usano {{clientCurrency}} e un limite di budget in un’altra valuta non viene applicato."
+      "currencyStale": "Gli importi qui sono in {{projectCurrency}}, ma le fatture di questo progetto vengono emesse in {{invoiceCurrency}}, quindi un limite di budget calcolato qui non viene applicato."
     },
     "economics": {
       "title": "Economia dell'erogazione",

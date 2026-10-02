@@ -1,4 +1,5 @@
 import { applyProjectCapAdjustments } from '@alga-psa/billing/lib/billing/domain/projectCapAdjustments';
+import { resolveInvoiceCurrency } from '@alga-psa/billing/lib/billing/compute/projectCapMath';
 import { readFileSync } from "node:fs";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { BillingEngine } from "@alga-psa/billing/services";
@@ -710,6 +711,90 @@ describe("project T&M cap and override integration", () => {
     expect(invoiceGenerationSource).toContain(
       "if (!capAppliesToInvoiceCurrency(config.currency, invoiceCurrency)) {",
     );
+  });
+
+  // The guard above only ever helps if everybody answers "which currency does
+  // this invoice bill in?" the same way. One rule, one place.
+  it("T033: one rule decides the invoice currency a cap is measured against", () => {
+    // A contract line's rates are denominated in its contract's currency, so a
+    // single contract currency decides the invoice — even for a client whose
+    // own currency has since moved to CHF.
+    expect(resolveInvoiceCurrency(["USD"], "CHF")).toBe("USD");
+    expect(resolveInvoiceCurrency(["USD", "USD", null], "CHF")).toBe("USD");
+    // Nothing to take it from: the client's own currency, which is every
+    // standalone project invoice.
+    expect(resolveInvoiceCurrency([], "CHF")).toBe("CHF");
+    expect(resolveInvoiceCurrency([null, undefined], null)).toBe("USD");
+    // Mixed currencies are rejected upstream; the fallback keeps this pure.
+    expect(resolveInvoiceCurrency(["USD", "EUR"], "CHF")).toBe("CHF");
+  });
+
+  it("T033: the due-work listing measures caps against the currency generation bills", async () => {
+    // The listing used to be handed the client's own currency as the answer,
+    // so for a CHF client invoiced through a legacy USD contract it skipped a
+    // USD cap that generation then applied — a preview that disagreed with the
+    // invoice. It resolves the currency itself now, from the same contract
+    // lines generation reads.
+    const engine = new BillingEngine();
+    (engine as any).tenant = "tenant-1";
+    vi.spyOn(engine as any, "initKnex").mockResolvedValue(undefined);
+    vi.spyOn(engine as any, "withPinnedTransaction").mockImplementation(
+      (work: any) => work(),
+    );
+    vi.spyOn(engine as any, "loadProjectBillingContext").mockImplementation(
+      async () =>
+        context(
+          [
+            config({
+              billing_model: "time_and_materials",
+              total_price: null,
+              currency: "USD",
+              cap_amount: 100_000,
+              cap_behavior: "hard_cap",
+            }),
+          ],
+          [],
+        ),
+    );
+    const contractLines = vi
+      .spyOn(engine as any, "getClientContractLinesForBillingPeriod")
+      .mockResolvedValue([{ currency_code: "USD" }] as any);
+    vi.spyOn(
+      engine as any,
+      "calculateUnresolvedNonContractCharges",
+    ).mockImplementation(async () => [
+      {
+        type: "time",
+        total: 400_000,
+        tax_amount: 0,
+        project_billing_config_id: "config-1",
+      },
+    ]);
+
+    const window = {
+      clientId: "client-1",
+      windowStart: PERIOD.startDate,
+      windowEnd: PERIOD.endDate,
+      clientDefaultCurrency: "CHF",
+    };
+    const throughContract = await (
+      engine as any
+    ).calculateUnresolvedNonContractChargesForExecutionWindow(window);
+    expect(throughContract[0]).toMatchObject({
+      total: 100_000,
+      write_down_amount: 300_000,
+      write_down_reason: "project_cap",
+    });
+
+    // No contract line to fix the currency: the client's own CHF decides, the
+    // USD cap is genuinely dormant, and the listing leaves the work at full
+    // value exactly as generation will.
+    contractLines.mockResolvedValue([] as any);
+    const throughClientDefault = await (
+      engine as any
+    ).calculateUnresolvedNonContractChargesForExecutionWindow(window);
+    expect(throughClientDefault[0]).toMatchObject({ total: 400_000 });
+    expect(throughClientDefault[0]).not.toHaveProperty("write_down_reason");
   });
 });
 

@@ -76,32 +76,32 @@ afterEach(() => {
 });
 
 describe('project billing currency drift', () => {
-  it('names the client currency when the budget card amounts are stranded', () => {
+  it('names the invoice currency when the budget card amounts are stranded', () => {
     renderInTenant(
-      <BudgetVsActualCard config={tmConfig()} rollup={null} capUsage={null} clientCurrency="ARS" />,
+      <BudgetVsActualCard config={tmConfig()} rollup={null} capUsage={null} invoiceCurrency="ARS" />,
     );
 
     const notice = document.getElementById('project-billing-currency-mismatch');
-    expect(notice).toHaveTextContent('Amounts here are in USD, but this client bills in ARS');
-    expect(notice).toHaveTextContent('a budget cap in another currency is not applied');
+    expect(notice).toHaveTextContent("Amounts here are in USD, but this project's invoices bill in ARS");
+    expect(notice).toHaveTextContent('a budget cap counted here is not applied');
   });
 
-  it('stays quiet when the project and the client agree', () => {
+  it('stays quiet when the project and the invoice currency agree', () => {
     renderInTenant(
-      <BudgetVsActualCard config={tmConfig({ currency: 'ars' })} rollup={null} capUsage={null} clientCurrency="ARS" />,
+      <BudgetVsActualCard config={tmConfig({ currency: 'ars' })} rollup={null} capUsage={null} invoiceCurrency="ARS" />,
     );
 
     expect(document.getElementById('project-billing-currency-mismatch')).toBeNull();
   });
 
-  it('asks for the cap in the client currency and re-pins the project on save', async () => {
+  it('asks for the cap in the invoice currency and re-pins the project on save', async () => {
     updateProjectBillingConfigMock.mockResolvedValue(tmConfig({ currency: 'ARS', cap_amount: 250_000 }));
     renderInTenant(
-      <CapPanel config={tmConfig()} canManage clientCurrency="ARS" onChanged={vi.fn()} />,
+      <CapPanel config={tmConfig()} canManage invoiceCurrency="ARS" onChanged={vi.fn()} />,
     );
 
     expect(document.getElementById('project-billing-cap-currency-stale')).toHaveTextContent(
-      'The saved cap is in USD, which this client no longer bills in',
+      "The saved cap is in USD, which this project's invoices do not bill in",
     );
     // Empty rather than the USD figure re-labelled as ARS: the stored number
     // means nothing in the new currency.
@@ -124,7 +124,7 @@ describe('project billing currency drift', () => {
   it('keeps a dormant cap when only the thresholds are edited', async () => {
     updateProjectBillingConfigMock.mockResolvedValue(tmConfig());
     renderInTenant(
-      <CapPanel config={tmConfig()} canManage clientCurrency="ARS" onChanged={vi.fn()} />,
+      <CapPanel config={tmConfig()} canManage invoiceCurrency="ARS" onChanged={vi.fn()} />,
     );
 
     // The amount field is blank because the currency is stale, not because the
@@ -145,7 +145,7 @@ describe('project billing currency drift', () => {
   it('still removes the cap when an aligned project is cleared', async () => {
     updateProjectBillingConfigMock.mockResolvedValue(tmConfig({ currency: 'ARS', cap_amount: null }));
     renderInTenant(
-      <CapPanel config={tmConfig({ currency: 'ARS' })} canManage clientCurrency="ARS" onChanged={vi.fn()} />,
+      <CapPanel config={tmConfig({ currency: 'ARS' })} canManage invoiceCurrency="ARS" onChanged={vi.fn()} />,
     );
 
     fireEvent.change(document.getElementById('billing-cap-amount') as HTMLElement, {
@@ -160,7 +160,7 @@ describe('project billing currency drift', () => {
   it('leaves an aligned project exactly as it was', async () => {
     updateProjectBillingConfigMock.mockResolvedValue(tmConfig({ currency: 'ARS' }));
     renderInTenant(
-      <CapPanel config={tmConfig({ currency: 'ARS' })} canManage clientCurrency="ARS" onChanged={vi.fn()} />,
+      <CapPanel config={tmConfig({ currency: 'ARS' })} canManage invoiceCurrency="ARS" onChanged={vi.fn()} />,
     );
 
     expect(document.getElementById('project-billing-cap-currency-stale')).toBeNull();

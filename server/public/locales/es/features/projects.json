@@ -1757,7 +1757,7 @@
     "cap": {
       "title": "Límite presupuestario",
       "hint": "El tiempo y los materiales se facturan según las tarifas hasta un límite máximo opcional.",
-      "currencyStale": "El límite guardado está en {{projectCurrency}}, moneda en la que ya no se factura a este cliente. Introduzca el límite en {{clientCurrency}} para pasar este proyecto a {{clientCurrency}}; hasta entonces no se aplica ningún límite.",
+      "currencyStale": "El límite guardado está en {{projectCurrency}}, moneda en la que no se emiten las facturas de este proyecto. Introduzca el límite en {{invoiceCurrency}} para pasar este proyecto a {{invoiceCurrency}}; hasta entonces no se aplica ningún límite.",
       "amount": "Importe del límite ({{currency}})",
       "behavior": "Al alcanzarlo",
       "notify": "Solo notificar",
@@ -1809,7 +1809,7 @@
       "tmNotifyHint": "Límite presupuestario de {{cap}} — solo notificar",
       "thresholdMarker": "Umbral de notificación del {{pct}} %",
       "writtenDown": "Dado de baja por encima del límite: {{amount}}",
-      "currencyStale": "Los importes aquí están en {{projectCurrency}}, pero este cliente se factura en {{clientCurrency}}. Las facturas usan {{clientCurrency}} y un límite presupuestario en otra moneda no se aplica."
+      "currencyStale": "Los importes aquí están en {{projectCurrency}}, pero las facturas de este proyecto se emiten en {{invoiceCurrency}}, por lo que un límite presupuestario contabilizado aquí no se aplica."
     },
     "economics": {
       "title": "Rentabilidad de la prestación",

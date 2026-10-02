@@ -1757,7 +1757,7 @@
     "cap": {
       "title": "Budget cap",
       "hint": "Time & materials bills at rates up to an optional not-to-exceed cap.",
-      "currencyStale": "The saved cap is in {{projectCurrency}}, which this client no longer bills in. Enter the cap in {{clientCurrency}} to move this project to {{clientCurrency}}; until then no cap is applied.",
+      "currencyStale": "The saved cap is in {{projectCurrency}}, which this project's invoices do not bill in. Enter the cap in {{invoiceCurrency}} to move this project to {{invoiceCurrency}}; until then no cap is applied.",
       "amount": "Cap amount ({{currency}})",
       "behavior": "When reached",
       "notify": "Notify only",
@@ -1809,7 +1809,7 @@
       "tmNotifyHint": "{{cap}} budget cap — notify only",
       "thresholdMarker": "{{pct}}% notify threshold",
       "writtenDown": "Written down past cap: {{amount}}",
-      "currencyStale": "Amounts here are in {{projectCurrency}}, but this client bills in {{clientCurrency}}. Invoices use {{clientCurrency}}, and a budget cap in another currency is not applied."
+      "currencyStale": "Amounts here are in {{projectCurrency}}, but this project's invoices bill in {{invoiceCurrency}}, so a budget cap counted here is not applied."
     },
     "economics": {
       "title": "Delivery economics",

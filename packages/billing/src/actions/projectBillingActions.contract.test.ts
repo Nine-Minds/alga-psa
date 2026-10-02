@@ -394,6 +394,57 @@ describe('project billing config action contract', () => {
     expect(created).toMatchObject({ currency: 'GBP' });
   });
 
+  // The invoice run tells the biller to set the project to the currency the
+  // invoice bills in and re-enter the cap. For a CHF client invoiced through a
+  // legacy USD contract that is USD, and the save has to accept it — otherwise
+  // the cap it names is dormant with nowhere to go.
+  it('T002: accepts a currency this client is invoiced in through a contract', async () => {
+    state.clientCurrency = 'CHF';
+    state.contractCurrencies = ['USD'];
+
+    const created = await createProjectBillingConfig({
+      project_id: IDS.project,
+      billing_model: 'time_and_materials',
+      currency: 'usd',
+      invoice_mode: 'standalone',
+    });
+
+    expect(created).toMatchObject({ currency: 'USD' });
+  });
+
+  it('T002: still rejects a currency this client is never billed in', async () => {
+    state.clientCurrency = 'CHF';
+    state.contractCurrencies = ['USD'];
+
+    const result = await createProjectBillingConfig({
+      project_id: IDS.project,
+      billing_model: 'time_and_materials',
+      currency: 'EUR',
+      invoice_mode: 'standalone',
+    });
+
+    expect(returnedErrorMessage(result)).toContain(
+      'must be one of the currencies this client is billed in (CHF, USD)',
+    );
+  });
+
+  it('T002: re-pins a stranded cap to the contract currency on update', async () => {
+    state.clientCurrency = 'CHF';
+    state.contractCurrencies = ['USD'];
+    state.config = makeConfig({
+      billing_model: 'time_and_materials',
+      total_price: null,
+      currency: 'CHF',
+      cap_amount: 50_000,
+      cap_behavior: 'hard_cap',
+    });
+
+    await expect(updateProjectBillingConfig(IDS.config, {
+      currency: 'USD',
+      cap_amount: 60_000,
+    })).resolves.toMatchObject({ currency: 'USD', cap_amount: 60_000 });
+  });
+
   it('T003: allows billing-model changes before invoicing and rejects them afterward', async () => {
     state.config = makeConfig();
     await expect(updateProjectBillingConfig(IDS.config, {

@@ -20,8 +20,8 @@ import { useCurrencyFormat } from '@alga-psa/ui/lib';
 interface CapPanelProps {
   config: IProjectBillingConfig;
   canManage: boolean;
-  /** Currency the client bills in; a cap in any other currency is never applied. */
-  clientCurrency: string | null;
+  /** Currency this project's invoices bill in; a cap in any other currency is never applied. */
+  invoiceCurrency: string | null;
   onChanged: () => void;
 }
 
@@ -35,16 +35,17 @@ function centsToMajor(cents: number | null, digits: number): string {
  * edits go through updateProjectBillingConfig, whose
  * server-side validation (F127) surfaces here as an error toast.
  */
-export default function CapPanel({ config, canManage, clientCurrency, onChanged }: CapPanelProps) {
+export default function CapPanel({ config, canManage, invoiceCurrency, onChanged }: CapPanelProps) {
   const { t, i18n } = useTranslation(['features/projects', 'common']);
   const { currencyCode, fractionDigits } = useCurrencyFormat();
   const currency = config.currency;
-  // A cap only bites when it is counted in the currency the invoice uses, so
-  // once the client's currency has moved on, the biller enters the cap in the
-  // client's currency and saving re-pins the project to it.
-  const staleCurrency = currency && clientCurrency
-    && currency.toUpperCase() !== clientCurrency.toUpperCase()
-    ? clientCurrency.toUpperCase()
+  // A cap only bites when it is counted in the currency the invoice bills in,
+  // so once the two have parted — the client changed currency, or an active
+  // contract bills this client in another one — the biller enters the cap in
+  // the invoice's currency and saving re-pins the project to it.
+  const staleCurrency = currency && invoiceCurrency
+    && currency.toUpperCase() !== invoiceCurrency.toUpperCase()
+    ? invoiceCurrency.toUpperCase()
     : null;
   const resolvedCurrency = staleCurrency ?? currency ?? currencyCode;
   const [capText, setCapText] = useState(
@@ -106,8 +107,8 @@ export default function CapPanel({ config, canManage, clientCurrency, onChanged 
         <p id="project-billing-cap-currency-stale" className="mt-2 text-xs text-amber-700 dark:text-amber-300">
           {t(
             'billing.cap.currencyStale',
-            'The saved cap is in {{projectCurrency}}, which this client no longer bills in. Enter the cap in {{clientCurrency}} to move this project to {{clientCurrency}}; until then no cap is applied.',
-            { projectCurrency: (currency ?? '').toUpperCase(), clientCurrency: staleCurrency },
+            'The saved cap is in {{projectCurrency}}, which this project\'s invoices do not bill in. Enter the cap in {{invoiceCurrency}} to move this project to {{invoiceCurrency}}; until then no cap is applied.',
+            { projectCurrency: (currency ?? '').toUpperCase(), invoiceCurrency: staleCurrency },
           )}
         </p>
       )}

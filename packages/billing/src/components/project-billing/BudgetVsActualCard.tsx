@@ -10,8 +10,8 @@ interface BudgetVsActualCardProps {
   config: IProjectBillingConfig;
   rollup: ProjectBillingRollup | null;
   capUsage: IProjectBillingCapUsage | null;
-  /** Currency the client bills in, for the stale-currency notice below. */
-  clientCurrency: string | null;
+  /** Currency this project's invoices bill in, for the stale-currency notice below. */
+  invoiceCurrency: string | null;
 }
 
 interface Segment {
@@ -32,25 +32,26 @@ function pct(part: number, whole: number): number {
  * approved / ready / remaining) against the contract total. T&M shows billed
  * consumption against the cap, with notify-threshold markers and any write-down.
  */
-export default function BudgetVsActualCard({ config, rollup, capUsage, clientCurrency }: BudgetVsActualCardProps) {
+export default function BudgetVsActualCard({ config, rollup, capUsage, invoiceCurrency }: BudgetVsActualCardProps) {
   const { t } = useTranslation('features/projects');
   const { money } = useCurrencyFormat();
   const currency = config.currency;
   const isFixed = config.billing_model === 'fixed_price';
   // The amounts on this card are minor units of config.currency, which is
-  // pinned to the client's billing currency on every write. A client that
-  // changed currency afterwards leaves them stranded: invoices bill in the
-  // client's currency and the cap is never applied, so say so here.
-  const staleCurrency = currency && clientCurrency
-    && currency.toUpperCase() !== clientCurrency.toUpperCase()
-    ? clientCurrency.toUpperCase()
+  // pinned to the client's billing currency on every write. That is not always
+  // the currency the project's invoices bill in — the client's currency moved,
+  // or an active contract bills them in another one — and then the figures are
+  // stranded and the cap is never applied, so say so here.
+  const staleCurrency = currency && invoiceCurrency
+    && currency.toUpperCase() !== invoiceCurrency.toUpperCase()
+    ? invoiceCurrency.toUpperCase()
     : null;
   const currencyNotice = staleCurrency && (
     <p id="project-billing-currency-mismatch" className="mt-2 text-xs text-amber-700 dark:text-amber-300">
       {t(
         'billing.budget.currencyStale',
-        'Amounts here are in {{projectCurrency}}, but this client bills in {{clientCurrency}}. Invoices use {{clientCurrency}}, and a budget cap in another currency is not applied.',
-        { projectCurrency: (currency ?? '').toUpperCase(), clientCurrency: staleCurrency },
+        'Amounts here are in {{projectCurrency}}, but this project\'s invoices bill in {{invoiceCurrency}}, so a budget cap counted here is not applied.',
+        { projectCurrency: (currency ?? '').toUpperCase(), invoiceCurrency: staleCurrency },
       )}
     </p>
   );

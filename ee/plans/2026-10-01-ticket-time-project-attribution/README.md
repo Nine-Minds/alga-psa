@@ -35,6 +35,7 @@ here, so check it before relying on it.
 | f | Entry-level override (`time_entries.project_id`) is **deferred** until a customer asks. | Would mirror `contract_line_id` but touches timesheet, mobile and API for a case nobody has reported. |
 | g | **A cap in another currency is dormant, never converted.** When `project_billing_configs.currency` is not the currency the invoice bills in, the budget cap is not applied, the run warns the biller, and the project billing cards name the client's currency. | Found in production: a CHF tenant, a client billing ARS and a project cap still counted in USD. The config currency is pinned to the client's on every write, but a client can change currency afterwards. Caps are minor units with no exchange rate anywhere in the engine, so comparing them across currencies writes work down against a meaningless number — exactly the silent money move this ticket is about, and now reachable by more charges because ticket time joins the project. Re-entering the cap on the T&M panel re-pins the project to the client's currency. |
 | h | **A client's own currency outranks its contracts** when pinning a project's billing currency. | "Pinned to the client's currency" in (g) was not actually true: both resolvers took any single active contract's `currency_code` first and only fell back to `clients.default_currency_code`. A client billing CHF with one legacy USD contract got every new project pinned to USD — and invisibly, because the stale-currency notice compares the stored currency against a fresh resolution, which agreed. Contract currency is now inference of last resort, for clients that never set one; quotes already resolve in this order (DD-2/F-2). |
+| i | **The cap's mismatch is measured against the currency the invoice bills in, and that currency can be re-pinned.** One rule (`resolveInvoiceCurrency`: a single contract-line currency, else the client's own) answers it for the engine, the due-work listing and the project billing cards; a project may be denominated in any currency its client is actually invoiced in. | (h) left the two sides disagreeing in the *unsafe* direction. The engine bills a contract-backed invoice in the contract's currency — it must, since a contract line's rates are denominated there — so a CHF client with a legacy USD contract got a cap pinned CHF and an invoice in USD: `capAppliesToInvoiceCurrency` false, cap applied by neither the engine nor persistence, where before (h) it bit. The run warning's own advice ("set the project's billing currency to USD and re-enter the cap") was rejected by the config validation, and the cards compared against the client's currency, so they agreed and stayed silent. A hard cap that silently stops limiting billing is exactly the money move this ticket is about. New configs still pin to the client's own currency per (h) — the surprise in the production report — but the mismatch is now named on the cards and the re-pin the warning asks for is accepted. Separately, the due-work listing was being handed the client's currency as the answer while generation resolved it from contract lines, so a preview could write a cap down that the invoice would not. |
 
 ## Design
 
@@ -127,9 +128,10 @@ being billed hourly. Already-invoiced time is unaffected. Untick 'Bill this tick
 project time' on a link to keep billing that ticket at the client level."
 
 "A budget cap is counted in the project's own billing currency. If that is not the currency the
-project's invoices use — which happens when a client's currency changed after the project was set
-up — the cap is not applied, and the invoice run says so. The project's billing tab names both
-currencies; re-entering the cap there moves the project to the client's currency."
+project's invoices bill in — which happens when a client's currency changed after the project was
+set up, or when the client is invoiced through a contract in another currency — the cap is not
+applied, and the invoice run says so. The project's billing tab names both currencies; re-entering
+the cap there moves the project to the currency its invoices use."
 
 Reporting moves with it, and reporting looks backwards as well as forwards: project budget
 actuals, profitability and the client WIP rollup now count linked-ticket hours against the
