@@ -16,6 +16,11 @@ import {
   type TimeSheetActionError,
 } from './timeSheetActionErrors';
 import { recalculateProjectTaskActualHours } from '@alga-psa/db';
+import {
+  effectiveServiceIdSql,
+  effectiveServiceNameSql,
+  effectiveServiceSourceSql,
+} from '@alga-psa/core';
 
 const NON_BILLABLE_FALLBACK_WORK_ITEM_ID = '__non_billable__';
 
@@ -87,7 +92,13 @@ export const fetchWorkItemsForTimeSheet = withAuth(async (
     );
   scopedDb.tenantJoin(projectTasksQuery, 'project_phases', 'project_tasks.phase_id', 'project_phases.phase_id');
   scopedDb.tenantJoin(projectTasksQuery, 'projects', 'project_phases.project_id', 'projects.project_id');
-  scopedDb.tenantJoin(projectTasksQuery, 'service_catalog', 'project_tasks.service_id', 'service_catalog.service_id', { type: 'left' });
+  // One catalog join per level so the effective service's name comes from the
+  // same row its id does (see effectiveServiceNameSql).
+  scopedDb.tenantJoin(projectTasksQuery, 'service_catalog as task_service', 'project_tasks.service_id', 'task_service.service_id', { type: 'left' });
+  scopedDb.tenantJoin(projectTasksQuery, 'service_catalog as phase_service', 'project_phases.service_id', 'phase_service.service_id', { type: 'left' });
+  scopedDb.tenantJoin(projectTasksQuery, 'service_catalog as project_service', 'projects.service_id', 'project_service.service_id', { type: 'left' });
+  const serviceAliases = { task: 'project_tasks', phase: 'project_phases', project: 'projects' };
+  const serviceCatalogAliases = { task: 'task_service', phase: 'phase_service', project: 'project_service' };
   const projectTasks = await projectTasksQuery
     .select(
       'task_id as work_item_id',
@@ -95,8 +106,9 @@ export const fetchWorkItemsForTimeSheet = withAuth(async (
       'project_tasks.description',
       'projects.project_name as project_name',
       'project_phases.phase_name as phase_name',
-      'project_tasks.service_id',
-      'service_catalog.service_name',
+      db.raw(`${effectiveServiceIdSql(serviceAliases)} as service_id`),
+      db.raw(`${effectiveServiceSourceSql(serviceAliases)} as service_source`),
+      db.raw(`${effectiveServiceNameSql(serviceCatalogAliases)} as service_name`),
       db.raw("'project_task' as type")
     );
 

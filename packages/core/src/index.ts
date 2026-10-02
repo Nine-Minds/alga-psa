@@ -37,6 +37,9 @@ export * from './lib/templateUtils';
 export * from './lib/formatters';
 export * from './lib/projectBillingStatus';
 
+// Task → phase → project service fallback (shared by scheduling + projects)
+export * from './lib/effectiveService';
+
 // Barcode / GTIN utilities
 export * from './lib/gtin';
 
