@@ -982,6 +982,7 @@
       "published": "Veröffentlicht"
     },
     "toasts": {
+      "contractActivated": "Vertrag aktiviert",
       "draftDiscarded": "Entwurf verworfen",
       "failedToActivateContract": "Vertrag konnte nicht aktiviert werden",
       "failedToDeleteContract": "Vertrag konnte nicht gelöscht werden",

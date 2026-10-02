@@ -982,6 +982,7 @@
       "published": "Publié"
     },
     "toasts": {
+      "contractActivated": "Contrat activé",
       "draftDiscarded": "Brouillon supprimé",
       "failedToActivateContract": "Échec de l'activation du contrat",
       "failedToDeleteContract": "Échec de la suppression du contrat",

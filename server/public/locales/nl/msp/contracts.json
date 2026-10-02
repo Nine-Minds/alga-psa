@@ -982,6 +982,7 @@
       "published": "Gepubliceerd"
     },
     "toasts": {
+      "contractActivated": "Contract geactiveerd",
       "draftDiscarded": "Concept verwijderd",
       "failedToActivateContract": "Contract activeren is mislukt",
       "failedToDeleteContract": "Contract verwijderen is mislukt",

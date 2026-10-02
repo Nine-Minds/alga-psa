@@ -37,7 +37,7 @@ import {
   type RenewalQueueAction,
   type RenewalQueueRow,
 } from '@alga-psa/billing/actions/renewalsQueueActions';
-import { updateClientContractForBilling } from '@alga-psa/billing/actions/billingClientsActions';
+import { activateClientContractForBilling, updateClientContractForBilling } from '@alga-psa/billing/actions/billingClientsActions';
 import { toPlainDate } from '@alga-psa/core';
 import { ContractWizard } from './ContractWizard';
 import { ContractDialog } from './ContractDialog';
@@ -223,11 +223,12 @@ const ClientContractsTab: React.FC<ClientContractsTabProps> = ({ onRefreshNeeded
       if (!clientContractId) {
         throw new Error('Missing client contract identifier');
       }
-      const result = await updateClientContractForBilling(clientContractId, { is_active: true });
+      const result = await activateClientContractForBilling(clientContractId);
       if (isActionMessageError(result) || isActionPermissionError(result)) {
         toast.error(getErrorMessage(result));
         return;
       }
+      toast.success(t('contractsList.toasts.contractActivated', { defaultValue: 'Contract activated' }));
       await fetchClientContracts();
       onRefreshNeeded?.();
     } catch (err) {

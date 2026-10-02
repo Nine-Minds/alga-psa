@@ -982,6 +982,7 @@
       "published": "Opublikowany"
     },
     "toasts": {
+      "contractActivated": "Umowa aktywowana",
       "draftDiscarded": "Wersja robocza odrzucona",
       "failedToActivateContract": "Nie udało się aktywować umowy",
       "failedToDeleteContract": "Nie udało się usunąć umowy",

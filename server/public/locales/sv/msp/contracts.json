@@ -982,6 +982,7 @@
       "published": "Publicerad"
     },
     "toasts": {
+      "contractActivated": "Avtalet har aktiverats",
       "draftDiscarded": "Utkastet har kastats",
       "failedToActivateContract": "Det gick inte att aktivera avtalet",
       "failedToDeleteContract": "Det gick inte att radera avtalet",

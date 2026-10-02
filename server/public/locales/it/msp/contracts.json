@@ -982,6 +982,7 @@
       "published": "Pubblicato"
     },
     "toasts": {
+      "contractActivated": "Contratto attivato",
       "draftDiscarded": "Bozza annullata",
       "failedToActivateContract": "Impossibile attivare il contratto",
       "failedToDeleteContract": "Impossibile eliminare il contratto",
