@@ -205,7 +205,10 @@
     "export": "Exportation",
     "reset": "Réinitialiser",
     "importSelected": "Importer la sélection",
-    "printOptions": "Options d'impression"
+    "printOptions": "Options d'impression",
+    "duplicate": "Dupliquer",
+    "rowActions": "Actions",
+    "openMenu": "Ouvrir le menu"
   },
   "messages": {
     "noTickets": "Aucun ticket trouvé",
@@ -815,7 +818,14 @@
     "clipboardUploadPartialFailure": "Ticket créé, mais les images collées n'ont pas pu être jointes à la description.",
     "teamAssignmentPartialFailure": "Ticket créé mais l'affectation de l'équipe a échoué",
     "tagCreatePartialFailure_one": "Impossible de créer la balise {{count}}",
-    "tagCreatePartialFailure_other": "Impossible de créer {{count}} balises"
+    "tagCreatePartialFailure_other": "Impossible de créer {{count}} balises",
+    "duplicateDialogTitle": "Dupliquer le ticket #{{number}}",
+    "duplicatingPill": "Duplication de #{{number}}",
+    "duplicateLoadFailed": "Le ticket à dupliquer n’a pas pu être chargé. Veuillez réessayer.",
+    "duplicateChecklistHeading": "Liste de contrôle de #{{number}}",
+    "duplicateChecklistRequired": "(obligatoire)",
+    "duplicateCopyChecklist": "Copier les éléments de la liste de contrôle (non cochés)",
+    "duplicateCustomFieldsNote": "Les valeurs des champs personnalisés sont copiées depuis #{{number}}."
   },
   "itil": {
     "calculatedPriority": "Priorité (calculée)",
@@ -1564,7 +1574,8 @@
       "closedMasterGating": "Les règles de clôture du tableau n’autorisent pas de tickets enfants ouverts sous un ticket principal clôturé ; il n’est donc pas possible de laisser le ticket principal clôturé."
     },
     "autoClose": "Sera fermé automatiquement le {{date}} en l'absence de nouvelle activité.",
-    "autoCloseWarned": "Le client a été prévenu."
+    "autoCloseWarned": "Le client a été prévenu.",
+    "duplicatedFrom": "Dupliqué depuis #{{number}}"
   },
   "invalidTicketData": "Données du ticket non valides",
   "timeEntries": {

@@ -205,7 +205,10 @@
     "export": "Exportieren",
     "reset": "Zurücksetzen",
     "importSelected": "Ausgewählte importieren",
-    "printOptions": "Druckoptionen"
+    "printOptions": "Druckoptionen",
+    "duplicate": "Duplizieren",
+    "rowActions": "Aktionen",
+    "openMenu": "Menü öffnen"
   },
   "messages": {
     "noTickets": "Keine Tickets gefunden",
@@ -815,7 +818,14 @@
     "clipboardUploadPartialFailure": "Ticket wurde erstellt, aber eingefügte Bilder konnten der Beschreibung nicht hinzugefügt werden.",
     "teamAssignmentPartialFailure": "Ticket wurde erstellt, aber die Teamzuweisung ist fehlgeschlagen",
     "tagCreatePartialFailure_one": "{{count}} Tag konnte nicht erstellt werden",
-    "tagCreatePartialFailure_other": "{{count}} Tags konnten nicht erstellt werden"
+    "tagCreatePartialFailure_other": "{{count}} Tags konnten nicht erstellt werden",
+    "duplicateDialogTitle": "Ticket #{{number}} duplizieren",
+    "duplicatingPill": "Dupliziere #{{number}}",
+    "duplicateLoadFailed": "Das zu duplizierende Ticket konnte nicht geladen werden. Bitte versuchen Sie es erneut.",
+    "duplicateChecklistHeading": "Checkliste von #{{number}}",
+    "duplicateChecklistRequired": "(erforderlich)",
+    "duplicateCopyChecklist": "Checklistenpunkte kopieren (nicht abgehakt)",
+    "duplicateCustomFieldsNote": "Werte der benutzerdefinierten Felder werden von #{{number}} übernommen."
   },
   "itil": {
     "calculatedPriority": "Priorität (berechnet)",
@@ -1564,7 +1574,8 @@
       "closedMasterGating": "Die Abschlussregeln des Boards lassen keine offenen Untertickets unter einem geschlossenen Haupt-Ticket zu. Daher ist es nicht möglich, das Haupt-Ticket geschlossen zu lassen."
     },
     "autoClose": "Wird am {{date}} automatisch geschlossen, sofern keine neue Aktivität erfolgt.",
-    "autoCloseWarned": "Der Kunde wurde benachrichtigt."
+    "autoCloseWarned": "Der Kunde wurde benachrichtigt.",
+    "duplicatedFrom": "Dupliziert von #{{number}}"
   },
   "invalidTicketData": "Ungültige Ticketdaten",
   "timeEntries": {

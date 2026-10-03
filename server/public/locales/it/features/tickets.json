@@ -205,7 +205,10 @@
     "export": "Esporta",
     "reset": "Reimposta",
     "importSelected": "Importa selezionati",
-    "printOptions": "Opzioni di stampa"
+    "printOptions": "Opzioni di stampa",
+    "duplicate": "Duplica",
+    "rowActions": "Azioni",
+    "openMenu": "Apri menu"
   },
   "messages": {
     "noTickets": "Nessun ticket trovato",
@@ -815,7 +818,14 @@
     "clipboardUploadPartialFailure": "Ticket creato, ma le immagini incollate non possono essere allegate alla descrizione.",
     "teamAssignmentPartialFailure": "Ticket creato, ma l'assegnazione al team non è riuscita",
     "tagCreatePartialFailure_one": "Impossibile creare {{count}} tag",
-    "tagCreatePartialFailure_other": "Impossibile creare {{count}} tag"
+    "tagCreatePartialFailure_other": "Impossibile creare {{count}} tag",
+    "duplicateDialogTitle": "Duplica ticket #{{number}}",
+    "duplicatingPill": "Duplicazione di #{{number}}",
+    "duplicateLoadFailed": "Impossibile caricare il ticket da duplicare. Riprova.",
+    "duplicateChecklistHeading": "Checklist di #{{number}}",
+    "duplicateChecklistRequired": "(obbligatorio)",
+    "duplicateCopyChecklist": "Copia gli elementi della checklist (non selezionati)",
+    "duplicateCustomFieldsNote": "I valori dei campi personalizzati vengono copiati da #{{number}}."
   },
   "itil": {
     "calculatedPriority": "Priorità (calcolata)",
@@ -1564,7 +1574,8 @@
       "closedMasterGating": "Le regole di chiusura della bacheca non consentono ticket figli aperti sotto un ticket principale chiuso, quindi non è possibile mantenere chiuso il ticket principale."
     },
     "autoClose": "Verrà chiuso automaticamente il {{date}} salvo nuove attività.",
-    "autoCloseWarned": "Il cliente è stato avvisato."
+    "autoCloseWarned": "Il cliente è stato avvisato.",
+    "duplicatedFrom": "Duplicato da #{{number}}"
   },
   "invalidTicketData": "Dati del ticket non validi",
   "timeEntries": {

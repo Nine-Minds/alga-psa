@@ -58,7 +58,7 @@ import {
 import { getBoardTicketStatuses } from '../actions/board-actions/boardTicketStatusActions';
 import { getBoardListStats, type BoardListStats } from '../actions/board-actions/boardActions';
 import { fetchBundleChildrenForMaster, fetchTicketsWithPagination, getAllMatchingTicketIds, getTicketBoardIds, loadTicketListItemsByIds } from '../actions/optimizedTicketActions';
-import { XCircle, Clock, Download, Upload, ChevronDown, Printer, Settings2, Filter, Sparkles } from 'lucide-react';
+import { XCircle, Clock, Download, Upload, ChevronDown, Printer, Settings2, Filter, Sparkles, MoreVertical, Copy } from 'lucide-react';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@alga-psa/ui/components/DropdownMenu';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
@@ -1590,7 +1590,63 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       },
     };
 
-    return [selectionColumn, ...baseColumns];
+    // Row actions live outside createTicketColumns: the menu needs navigation, which
+    // that shared column factory (also used by non-dashboard lists) does not have.
+    const actionsColumn: ColumnDefinition<ITicketListItem> = {
+      title: <span className="sr-only">{t('actions.rowActions', 'Actions')}</span>,
+      dataIndex: 'ticket_actions',
+      width: '4%',
+      headerClassName: 'text-center px-2',
+      cellClassName: 'text-center px-2',
+      sortable: false,
+      render: (_value: unknown, record: ITicketListItem) => {
+        const ticketId = record.ticket_id;
+        if (!ticketId) {
+          return null;
+        }
+
+        return (
+          <div
+            className="flex items-center justify-center"
+            onClick={(event) => event.stopPropagation()}
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  id={`ticket-actions-menu-${ticketId}`}
+                  variant="ghost"
+                  className="h-8 w-8 p-0"
+                  onClick={(event) => event.stopPropagation()}
+                >
+                  <span className="sr-only">{t('actions.openMenu', 'Open menu')}</span>
+                  <MoreVertical className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem
+                  id="duplicate-ticket-menu-item"
+                  onClick={(event) => {
+                    // Menu content is portaled, but React still bubbles the click to the
+                    // row's onClick (open ticket) unless it is stopped here.
+                    event.stopPropagation();
+                    navigateAwayTo(buildCreateTicketHref({
+                      duplicateFromTicketId: ticketId,
+                      isAlgaDeskMode: useAlgaDeskQuickAddForm,
+                    }));
+                  }}
+                >
+                  <Copy className="h-4 w-4 mr-2" />
+                  {t('actions.duplicate', 'Duplicate')}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        );
+      },
+    };
+
+    return [selectionColumn, ...baseColumns, actionsColumn];
   }, [
     categories,
     boards,
@@ -1616,6 +1672,8 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     toggleBundleExpanded,
     bundleView,
     densityClasses.tagSize,
+    navigateAwayTo,
+    useAlgaDeskQuickAddForm,
     t,
     locale,
     dateFormat,
