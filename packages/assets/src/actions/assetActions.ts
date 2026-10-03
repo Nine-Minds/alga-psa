@@ -894,6 +894,31 @@ function formatAssetForOutput(asset: any): Asset {
 }
 
 /**
+ * Post-commit side effects (workflow events, date-event emission) are
+ * best-effort: the asset write has already committed, so a failure here must
+ * never turn a successful save into a reported failure (alga0002283). Failures
+ * are logged with tenant / asset / event type and never re-thrown.
+ *
+ * Trade-off: ASSET_CREATED / ASSET_UPDATED / ASSET_ASSIGNED have no retry. Only
+ * ASSET_WARRANTY_EXPIRING is recovered, by the daily warranty scan, because
+ * emitDateDomainEventOnce deletes its dedupe row when publishing fails.
+ */
+async function runAssetPostCommitEffects(
+    eventType: string,
+    ctx: { tenant: string; assetId: string },
+    effect: () => Promise<unknown>
+): Promise<void> {
+    try {
+        await effect();
+    } catch (error) {
+        console.error(
+            `Post-commit effect failed (tenant=${ctx.tenant} asset_id=${ctx.assetId} event=${eventType}); the asset write is committed:`,
+            error
+        );
+    }
+}
+
+/**
  * Transaction-scoped asset creation core: validates, resolves the asset
  * type and location, and writes the asset, its extension row, and its
  * history record inside the caller's transaction. Callers own the commit,
@@ -978,8 +1003,11 @@ export async function createAssetInTransaction(
             // Get complete asset data including extension table data
             const completeAsset = await getAssetWithExtensions(trx, tenant, asset.asset_id);
 
-            // Format the asset data properly before returning
-            return formatAssetForOutput(completeAsset) as Asset;
+            // Format the asset data properly before returning. The output-schema
+            // check runs here, inside the transaction: a failure rolls the insert
+            // back and is reported honestly instead of failing a committed create
+            // (alga0002283).
+            return validateData(assetSchema, formatAssetForOutput(completeAsset)) as Asset;
 }
 
 /**
@@ -1011,17 +1039,16 @@ export async function createAssetRecord(
             throw new Error('Invalid asset input data. Review required fields and try again.');
         }
 
-        // Start transaction
-        const result = await knex.transaction(async (trx: Knex.Transaction) =>
+        // Start transaction. The output-schema check lives inside it.
+        const created = await knex.transaction(async (trx: Knex.Transaction) =>
             createAssetInTransaction(trx, tenant, actorUserId, data, options)
         );
 
-        // Validate the formatted output
-        try {
-            const created = validateData(assetSchema, result) as Asset;
-            const occurredAt = created.created_at || new Date().toISOString();
+        const occurredAt = created.created_at || new Date().toISOString();
+        const postCommit = { tenant, assetId: created.asset_id };
 
-            await publishWorkflowEvent({
+        await runAssetPostCommitEffects('ASSET_CREATED', postCommit, () =>
+            publishWorkflowEvent({
                 eventType: 'ASSET_CREATED',
                 payload: buildAssetCreatedPayload({
                     assetId: created.asset_id,
@@ -1036,16 +1063,18 @@ export async function createAssetRecord(
                     occurredAt,
                     actor: { actorType: 'USER', actorUserId },
                 },
-            });
+            })
+        );
 
-            const warranty = computeAssetWarrantyExpiring({
-                now: occurredAt,
-                previousExpiresAt: undefined,
-                newExpiresAt: created.warranty_end_date ?? null,
-                windowDays: 30,
-            });
+        const warranty = computeAssetWarrantyExpiring({
+            now: occurredAt,
+            previousExpiresAt: undefined,
+            newExpiresAt: created.warranty_end_date ?? null,
+            windowDays: 30,
+        });
 
-            if (warranty) {
+        if (warranty) {
+            await runAssetPostCommitEffects('ASSET_WARRANTY_EXPIRING', postCommit, async () => {
                 const warrantyDate = toTenantLocalDate(warranty.expiresAt, await resolveEffectiveTimeZone(knex, tenant));
                 await emitDateDomainEventOnce(knex, tenant, {
                     eventType: 'ASSET_WARRANTY_EXPIRING', entityId: created.asset_id,
@@ -1061,17 +1090,10 @@ export async function createAssetRecord(
                         actor: { actorType: 'USER', actorUserId },
                     },
                 });
-            }
-
-            return created;
-        } catch (error) {
-            console.error('Output validation error:', error);
-            // Extract Zod validation details if available
-            if (error instanceof z.ZodError) {
-                throw serializedAssetValidationError(error);
-            }
-            throw new Error('Server error: Invalid output data format');
+            });
         }
+
+        return created;
 
     } catch (error) {
         console.error('Error creating asset:', error);
@@ -1259,9 +1281,15 @@ export async function updateAssetRecord(
             const completeAsset = await getAssetWithExtensions(trx, tenant, asset_id);
             const afterFormatted = formatAssetForOutput(completeAsset) as unknown as Record<string, unknown>;
 
+            // Output-schema check inside the transaction: a failure rolls the write
+            // back and is reported honestly instead of failing a committed save
+            // (alga0002283).
+            const updated = validateData(assetSchema, afterFormatted) as Asset;
+
             return {
                 before: beforeFormatted,
                 after: afterFormatted,
+                updated,
                 validatedUpdate: validatedData as unknown as Record<string, unknown>,
             };
         });
@@ -1273,8 +1301,9 @@ export async function updateAssetRecord(
             revalidatePath(`/msp/assets/${asset_id}`);
         }
 
-        const updated = validateData(assetSchema, result.after) as Asset;
+        const { updated } = result;
         const occurredAt = new Date().toISOString();
+        const postCommit = { tenant, assetId: asset_id };
 
         const updatedPaths = collectAssetUpdatedPaths(result.validatedUpdate);
         const updatePayload = buildAssetUpdatedPayload({
@@ -1287,36 +1316,40 @@ export async function updateAssetRecord(
         });
 
         if (updatePayload.updatedFields || updatePayload.changes) {
-            await publishWorkflowEvent({
-                eventType: 'ASSET_UPDATED',
-                payload: updatePayload,
-                ctx: {
-                    tenantId: tenant,
-                    occurredAt,
-                    actor: { actorType: 'USER', actorUserId },
-                },
-            });
+            await runAssetPostCommitEffects('ASSET_UPDATED', postCommit, () =>
+                publishWorkflowEvent({
+                    eventType: 'ASSET_UPDATED',
+                    payload: updatePayload,
+                    ctx: {
+                        tenantId: tenant,
+                        occurredAt,
+                        actor: { actorType: 'USER', actorUserId },
+                    },
+                })
+            );
         }
 
         const previousClientId = (result.before as any)?.client_id as string | undefined;
         const newClientId = (result.after as any)?.client_id as string | undefined;
         if (previousClientId && newClientId && previousClientId !== newClientId) {
-            await publishWorkflowEvent({
-                eventType: 'ASSET_ASSIGNED',
-                payload: buildAssetAssignedPayload({
-                    assetId: asset_id,
-                    previousOwnerType: 'client',
-                    previousOwnerId: previousClientId,
-                    newOwnerType: 'client',
-                    newOwnerId: newClientId,
-                    assignedAt: occurredAt,
-                }),
-                ctx: {
-                    tenantId: tenant,
-                    occurredAt,
-                    actor: { actorType: 'USER', actorUserId },
-                },
-            });
+            await runAssetPostCommitEffects('ASSET_ASSIGNED', postCommit, () =>
+                publishWorkflowEvent({
+                    eventType: 'ASSET_ASSIGNED',
+                    payload: buildAssetAssignedPayload({
+                        assetId: asset_id,
+                        previousOwnerType: 'client',
+                        previousOwnerId: previousClientId,
+                        newOwnerType: 'client',
+                        newOwnerId: newClientId,
+                        assignedAt: occurredAt,
+                    }),
+                    ctx: {
+                        tenantId: tenant,
+                        occurredAt,
+                        actor: { actorType: 'USER', actorUserId },
+                    },
+                })
+            );
         }
 
         const warranty = computeAssetWarrantyExpiring({
@@ -1327,20 +1360,22 @@ export async function updateAssetRecord(
         });
 
         if (warranty) {
-            const warrantyDate = toTenantLocalDate(warranty.expiresAt, await resolveEffectiveTimeZone(knex, tenant));
-            await emitDateDomainEventOnce(knex, tenant, {
-                eventType: 'ASSET_WARRANTY_EXPIRING', entityId: asset_id,
-                cycleKey: warrantyDate, occursOn: warrantyDate,
-                payload: buildAssetWarrantyExpiringPayload({
-                    assetId: asset_id,
-                    clientId: newClientId || previousClientId,
-                    ...warranty,
-                }),
-                ctx: {
-                    tenantId: tenant,
-                    occurredAt,
-                    actor: { actorType: 'USER', actorUserId },
-                },
+            await runAssetPostCommitEffects('ASSET_WARRANTY_EXPIRING', postCommit, async () => {
+                const warrantyDate = toTenantLocalDate(warranty.expiresAt, await resolveEffectiveTimeZone(knex, tenant));
+                await emitDateDomainEventOnce(knex, tenant, {
+                    eventType: 'ASSET_WARRANTY_EXPIRING', entityId: asset_id,
+                    cycleKey: warrantyDate, occursOn: warrantyDate,
+                    payload: buildAssetWarrantyExpiringPayload({
+                        assetId: asset_id,
+                        clientId: newClientId || previousClientId,
+                        ...warranty,
+                    }),
+                    ctx: {
+                        tenantId: tenant,
+                        occurredAt,
+                        actor: { actorType: 'USER', actorUserId },
+                    },
+                });
             });
         }
 
