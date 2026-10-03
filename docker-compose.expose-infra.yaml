@@ -1,0 +1,33 @@
+# Opt-in overlay: publish postgres, pgbouncer and redis on the host.
+#
+# By default the prebuilt stacks and the production overlay publish none of
+# these services. They are reachable only on the compose network. Use this
+# overlay when a tool on the host needs direct access, for example psql, a BI
+# client or a host-side pg_dump.
+#
+# Usage (add it as the LAST -f file):
+#   docker compose -f docker-compose.prebuilt.base.yaml -f docker-compose.prebuilt.ce.yaml \
+#     -f docker-compose.expose-infra.yaml up -d
+#
+# The ports bind to 127.0.0.1 unless EXPOSE_INFRA_BIND_ADDR is set. To reach
+# them from another machine, prefer an SSH tunnel to the loopback port. If a
+# direct bind is required, set EXPOSE_INFRA_BIND_ADDR to one private or VPN
+# interface address and restrict it in the DOCKER-USER chain. Do not use
+# 0.0.0.0. See docs/getting-started/setup_guide.md, "Network Exposure".
+#
+# It must be the last -f file. Compose appends to `ports:` and never replaces
+# it, so the overlay only gives exactly these bindings when nothing earlier
+# publishes the same services. In the production overlay, the preceding
+# `ports: !reset []` entries guarantee that.
+services:
+  postgres:
+    ports:
+      - "${EXPOSE_INFRA_BIND_ADDR:-127.0.0.1}:${EXPOSE_DB_PORT:-5432}:5432"
+
+  pgbouncer:
+    ports:
+      - "${EXPOSE_INFRA_BIND_ADDR:-127.0.0.1}:${EXPOSE_PGBOUNCER_PORT:-6432}:6432"
+
+  redis:
+    ports:
+      - "${EXPOSE_INFRA_BIND_ADDR:-127.0.0.1}:${EXPOSE_REDIS_PORT:-6379}:6379"
