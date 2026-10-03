@@ -659,7 +659,11 @@ export const getAsset = withAuth(async (user, { tenant }, asset_id: string): Pro
         await assertAssetReadAllowed(trx, tenant, context, { asset_id: asset.asset_id, client_id: asset.client_id });
     });
 
-    return asset;
+    // Same normalisation every other read path applies (getAssetDetailBundle,
+    // create, update): pg returns NUMERIC columns as strings and timestamps as
+    // Date, neither of which matches the declared Asset contract or what the
+    // edit form can round-trip back through updateAssetSchema (alga0002283).
+    return formatAssetForOutput(asset);
     } catch (error) {
         const expected = expectedAssetActionError(error);
         if (expected) return expected;
