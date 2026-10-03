@@ -166,7 +166,7 @@ services:
     secrets:
       - postgres_password
     ports:
-      - "${EXPOSE_AI_GATEWAY_DB_PORT:-5433}:5432"
+      - "${EXPOSE_INFRA_BIND_ADDR:-127.0.0.1}:${EXPOSE_AI_GATEWAY_DB_PORT:-5433}:5432"
     volumes:
       - ai-gateway-postgres-data:/var/lib/postgresql/data
     networks:
@@ -182,8 +182,6 @@ services:
       POSTGRES_INITDB_ARGS: "--auth-host=md5 --auth-local=md5"
     secrets:
       - postgres_password
-    ports:
-      - "${EXPOSE_DB_PORT:-5432}:5432"
     networks:
       - app-network
 
@@ -194,8 +192,6 @@ services:
     #container_name: ${APP_NAME:-sebastian}_redis
     environment:
       <<: *shared-environment
-    ports:
-      - '${EXPOSE_REDIS_PORT:-6379}:6379'
     secrets:
       - redis_password
     networks:

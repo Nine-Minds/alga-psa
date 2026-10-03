@@ -6,7 +6,7 @@ services:
       POSTGRES_PASSWORD: ${PLAYWRIGHT_DB_ADMIN_PASSWORD:-postpass123}
       POSTGRES_DB: postgres
     ports:
-      - "${PLAYWRIGHT_DB_PORT:-5439}:5432"
+      - "${EXPOSE_INFRA_BIND_ADDR:-127.0.0.1}:${PLAYWRIGHT_DB_PORT:-5439}:5432"
     volumes:
       - playwright-postgres-data:/var/lib/postgresql/data
     healthcheck:
@@ -19,7 +19,7 @@ services:
     image: redis:7-alpine
     command: ["redis-server", "--requirepass", "${REDIS_PASSWORD:-sebastian123}"]
     ports:
-      - "${REDIS_PORT:-16379}:6379"
+      - "${EXPOSE_INFRA_BIND_ADDR:-127.0.0.1}:${REDIS_PORT:-16379}:6379"
     volumes:
       - playwright-redis-data:/data
     healthcheck:
