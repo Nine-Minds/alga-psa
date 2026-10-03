@@ -711,5 +711,26 @@ describe('Duplicate ticket (integration)', () => {
       );
       expect(column.rows).toHaveLength(1);
     });
+
+    it('down removes the column and is safe to run twice; up restores it', async () => {
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const migration = require('../../../migrations/20261003001628_add_duplicated_from_ticket_id_to_tickets.cjs');
+      const columnRows = async () =>
+        (
+          await context.db.raw(
+            `SELECT 1 FROM information_schema.columns WHERE table_name = 'tickets' AND column_name = 'duplicated_from_ticket_id'`
+          )
+        ).rows;
+
+      try {
+        await migration.down(context.db);
+        expect(await columnRows()).toHaveLength(0);
+        await expect(migration.down(context.db)).resolves.not.toThrow();
+      } finally {
+        // Always restore the column so later tests in this file keep a valid schema.
+        await migration.up(context.db);
+      }
+      expect(await columnRows()).toHaveLength(1);
+    });
   });
 });
