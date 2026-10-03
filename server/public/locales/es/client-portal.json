@@ -444,7 +444,8 @@
         "consent": "Autorizo cargos recurrentes a esta tarjeta por las facturas finalizadas.",
         "enable": "Activar el pago automático",
         "noCards": "Añada una tarjeta para activar el pago automático.",
-        "changeCard": "Usar esta tarjeta para el pago automático"
+        "changeCard": "Usar esta tarjeta para el pago automático",
+        "updateError": "No se pudo actualizar el pago automático. Inténtelo de nuevo."
       },
       "publicCardSetup": {
         "saved": "Tarjeta guardada",

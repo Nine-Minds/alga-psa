@@ -444,7 +444,8 @@
         "consent": "J'autorise des débits récurrents sur cette carte pour les factures finalisées.",
         "enable": "Activer le prélèvement automatique",
         "noCards": "Ajoutez une carte pour activer le prélèvement automatique.",
-        "changeCard": "Utiliser cette carte pour le prélèvement automatique"
+        "changeCard": "Utiliser cette carte pour le prélèvement automatique",
+        "updateError": "Impossible de mettre à jour le prélèvement automatique. Veuillez réessayer."
       },
       "publicCardSetup": {
         "saved": "Carte enregistrée",

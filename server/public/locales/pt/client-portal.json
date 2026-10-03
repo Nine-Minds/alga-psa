@@ -493,7 +493,8 @@
         "consent": "Autorizo cobranças recorrentes neste cartão para faturas finalizadas.",
         "enable": "Ativar o pagamento automático",
         "noCards": "Adicione um cartão para ativar o pagamento automático.",
-        "changeCard": "Usar este cartão para o pagamento automático"
+        "changeCard": "Usar este cartão para o pagamento automático",
+        "updateError": "Não foi possível atualizar o pagamento automático. Tente novamente."
       },
       "publicCardSetup": {
         "saved": "Cartão salvo",
