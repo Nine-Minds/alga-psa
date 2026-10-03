@@ -199,6 +199,30 @@ export const applyDerivedClientScope = <T extends RunDialogPickerFieldLike>(
   };
 };
 
+/**
+ * Narrows a ticket-status picker (previous/new status) to the board of a ticket already chosen
+ * elsewhere in the form, by declaring a ticket_id dependency and supplying its value. Statuses
+ * belong to a board, so without this the list repeats every board's copy of each name. Leaves the
+ * field alone when no ticket is chosen or it already declares its own board or ticket scope.
+ */
+export const applyDerivedTicketBoardScope = <T extends RunDialogPickerFieldLike>(
+  field: T,
+  rootInputMapping: Record<string, unknown>,
+  selectedTicketId: string | null
+): { field: T; rootInputMapping: Record<string, unknown> } => {
+  const kind = field.editor?.picker?.resource ?? field.picker?.kind;
+  const declared = field.editor?.dependencies ?? field.picker?.dependencies ?? [];
+  if (!selectedTicketId || kind !== 'ticket-status' || declared.includes('board_id') || declared.includes('ticket_id')) {
+    return { field, rootInputMapping };
+  }
+  return {
+    field: field.editor
+      ? { ...field, editor: { ...field.editor, dependencies: [...declared, 'ticket_id'] } }
+      : { ...field, picker: field.picker ? { ...field.picker, dependencies: [...declared, 'ticket_id'] } : field.picker },
+    rootInputMapping: { ...rootInputMapping, ticket_id: selectedTicketId },
+  };
+};
+
 // The pattern zod emits for dateOnlySchema (shared/workflow/runtime/schemas/commonEventPayloadSchemas.ts).
 const DATE_ONLY_PATTERNS = new Set(['^(\\d{4})-(\\d{2})-(\\d{2})$', '^\\d{4}-\\d{2}-\\d{2}$']);
 

@@ -23,6 +23,7 @@ import { getProjectTaskData } from '@alga-psa/projects/actions/projectTaskAction
 import { isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type { TFunction } from 'i18next';
+import { groupSharedStatusIds, toAnyBoardStatusValue } from './workflowStatusGroups';
 import type {
   IBoard,
   IClient,
@@ -394,7 +395,9 @@ const toClients = (ticketOptions: TicketFieldOptions | null): IClient[] =>
 
 const mapTicketFieldOptions = (
   kind: string,
-  ticketOptions: TicketFieldOptions | null
+  ticketOptions: TicketFieldOptions | null,
+  detailLabels: WorkflowPickerOptionDetailLabels,
+  includeAnyBoardStatus: boolean
 ): WorkflowPickerOption[] => {
   if (!ticketOptions) {
     return [];
@@ -411,11 +414,31 @@ const mapTicketFieldOptions = (
         value: client.id,
         label: client.name,
       }));
-    case 'ticket-status':
-      return ticketOptions.statuses.map((status) => ({
+    case 'ticket-status': {
+      // Statuses belong to a board, so the same name can appear once per board. Unscoped lists
+      // carry board_name and show it; board-scoped lists drop it (every row is the same board).
+      const statusOption = (status: TicketFieldOptions['statuses'][number]): WorkflowPickerOption => ({
         value: status.id,
-        label: status.name,
-      }));
+        label: status.board_name ? `${status.name} · ${status.board_name}` : status.name,
+        boardId: status.board_id ?? null,
+      });
+      if (!includeAnyBoardStatus) return ticketOptions.statuses.map(statusOption);
+      // "<name> (any board)" comes first, then that name's board-specific rows.
+      const shared = groupSharedStatusIds(ticketOptions.statuses);
+      const emitted = new Set<string>();
+      const options: WorkflowPickerOption[] = [];
+      for (const status of ticketOptions.statuses) {
+        if (!shared.has(status.name)) {
+          options.push(statusOption(status));
+          continue;
+        }
+        if (emitted.has(status.name)) continue;
+        emitted.add(status.name);
+        options.push({ value: toAnyBoardStatusValue(status.name), label: detailLabels.anyBoardStatus(status.name) });
+        options.push(...ticketOptions.statuses.filter((other) => other.name === status.name).map(statusOption));
+      }
+      return options;
+    }
     case 'ticket-priority':
       return ticketOptions.priorities.map((priority) => ({
         value: priority.id,
@@ -446,6 +469,7 @@ export type WorkflowPickerOptionDetailLabels = {
   noEndDate: string;
   warrantyEndsOn: (date: string) => string;
   noWarrantyEnd: string;
+  anyBoardStatus: (name: string) => string;
 };
 
 const DEFAULT_OPTION_DETAIL_LABELS: WorkflowPickerOptionDetailLabels = {
@@ -453,6 +477,7 @@ const DEFAULT_OPTION_DETAIL_LABELS: WorkflowPickerOptionDetailLabels = {
   noEndDate: 'No end date',
   warrantyEndsOn: (date) => `Warranty ends ${date}`,
   noWarrantyEnd: 'No warranty end date',
+  anyBoardStatus: (name) => `${name} (any board)`,
 };
 
 export const useWorkflowPickerOptionDetailLabels = (): WorkflowPickerOptionDetailLabels => {
@@ -462,6 +487,7 @@ export const useWorkflowPickerOptionDetailLabels = (): WorkflowPickerOptionDetai
     noEndDate: t('actionInputFixedPicker.details.noEndDate', { defaultValue: 'No end date' }),
     warrantyEndsOn: (date) => t('actionInputFixedPicker.details.warrantyEndsOn', { defaultValue: 'Warranty ends {{date}}', date }),
     noWarrantyEnd: t('actionInputFixedPicker.details.noWarrantyEnd', { defaultValue: 'No warranty end date' }),
+    anyBoardStatus: (name) => t('actionInputFixedPicker.details.anyBoardStatus', { defaultValue: '{{name}} (any board)', name }),
   }), [t]);
 };
 
@@ -470,7 +496,8 @@ const dateOnly = (value: string | null | undefined): string | null => (value ? v
 export const mapWorkflowPickerOptions = (
   kind: string,
   data: WorkflowPickerData,
-  detailLabels: WorkflowPickerOptionDetailLabels = DEFAULT_OPTION_DETAIL_LABELS
+  detailLabels: WorkflowPickerOptionDetailLabels = DEFAULT_OPTION_DETAIL_LABELS,
+  { includeAnyBoardStatus = false }: { includeAnyBoardStatus?: boolean } = {}
 ): WorkflowPickerOption[] => {
   switch (kind) {
     case 'project':
@@ -554,7 +581,7 @@ export const mapWorkflowPickerOptions = (
         label: ticket.ticket_number ? `${ticket.ticket_number} · ${ticket.title ?? ticket.ticket_id}` : (ticket.title ?? ticket.ticket_id),
       }));
     default:
-      return mapTicketFieldOptions(kind, data.ticketOptions);
+      return mapTicketFieldOptions(kind, data.ticketOptions, detailLabels, includeAnyBoardStatus);
   }
 };
 
@@ -780,7 +807,8 @@ const loadWorkflowPickerData = async (
         ...EMPTY_PICKER_DATA,
         ticketOptions: {
           ...EMPTY_TICKET_FIELD_OPTIONS,
-          statuses,
+          // One board, so the board name would only repeat on every row.
+          statuses: statuses.map(({ board_name: _boardName, ...status }) => status),
         },
       };
     }
@@ -1203,6 +1231,11 @@ export const WorkflowActionInputFixedPicker: React.FC<{
   disabled?: boolean;
   /** Hide the picker's own visible label when the caller already renders one for the field. */
   hideLabel?: boolean;
+  /**
+   * Ticket-status lists only: for a name that exists on several boards, offer "<name> (any board)"
+   * first. Its value is `toAnyBoardStatusValue(name)`, which the caller must translate.
+   */
+  includeAnyBoardStatus?: boolean;
 }> = ({
   field,
   value,
@@ -1211,6 +1244,7 @@ export const WorkflowActionInputFixedPicker: React.FC<{
   rootInputMapping,
   disabled,
   hideLabel,
+  includeAnyBoardStatus = false,
 }) => {
   const { t } = useTranslation('msp/workflows');
   const [data, setData] = useState<WorkflowPickerData>(EMPTY_PICKER_DATA);
@@ -1236,8 +1270,8 @@ export const WorkflowActionInputFixedPicker: React.FC<{
   );
   const baseOptions = useMemo(() => {
     if (!pickerKind) return [];
-    return mapWorkflowPickerOptions(pickerKind, data, optionDetailLabels);
-  }, [data, optionDetailLabels, pickerKind]);
+    return mapWorkflowPickerOptions(pickerKind, data, optionDetailLabels, { includeAnyBoardStatus });
+  }, [data, includeAnyBoardStatus, optionDetailLabels, pickerKind]);
   const clientScope = getWorkflowPickerClientScope(pickerKind, dependencyResolutions);
   const filteredOptions = useMemo(() => {
     if (!pickerKind) return [];

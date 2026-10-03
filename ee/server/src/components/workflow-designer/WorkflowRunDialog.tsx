@@ -36,6 +36,7 @@ import {
   describeWorkflowRunLaunchFailure,
   humanizeRunDialogFieldLabel,
   applyDerivedClientScope,
+  applyDerivedTicketBoardScope,
   buildBlankPayloadFromSchema,
   getRunDialogDateFormat,
   type WorkflowRunStartFailure
@@ -1086,8 +1087,14 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
   }, [activeSchema, currentTenantId, formValue, mode, runPayloadText]);
 
   // A changed payload is checked again from scratch.
+  // The "Fix these fields" banner goes with the per-field issues: once the values change it is stale.
+  const inputIssuesBannerShownRef = useRef(false);
   useEffect(() => {
     setServerPayloadIssues([]);
+    if (inputIssuesBannerShownRef.current) {
+      inputIssuesBannerShownRef.current = false;
+      setRunStartFailure(null);
+    }
   }, [formValue, runPayloadText, activeSchema]);
 
   // Client checks plus what the server reported, one message per field.
@@ -1312,6 +1319,7 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
       if (result.payloadValidation) {
         // Say which fields to fix, and show each problem next to its field.
         setServerPayloadIssues(result.payloadValidation.appliesTo === 'input' ? result.payloadValidation.issues : []);
+        inputIssuesBannerShownRef.current = result.payloadValidation.appliesTo === 'input';
         setRunStartFailure(describeRunPayloadValidationFailure(
           t,
           result.payloadValidation,
@@ -1716,11 +1724,13 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
 
     if (pickerField) {
       // A ticket picked elsewhere in the form narrows client-scoped pickers (contacts, locations).
-      const scoped = applyDerivedClientScope(
+      const clientScoped = applyDerivedClientScope(
         pickerField,
         isObjectRecord(formValue) ? formValue : {},
         selectedTicketClientId
       );
+      // Likewise a ticket narrows status pickers to that ticket's board.
+      const scoped = applyDerivedTicketBoardScope(clientScoped.field, clientScoped.rootInputMapping, selectedTicketId);
       return (
         <div className="space-y-1">
           {commonHeader}

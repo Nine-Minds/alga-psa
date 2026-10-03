@@ -5,6 +5,8 @@ import { useEffect, useState } from 'react';
 import { getTicketFieldOptions } from '@alga-psa/integrations/actions';
 import { getTeamsBasic, isTeamActionError } from '@alga-psa/teams/actions';
 
+import type { WorkflowStatusRef } from './workflowStatusGroups';
+
 /**
  * Display names for entity ids that workflow definitions store (boards, statuses, priorities,
  * categories, clients, users, locations, teams). Ids are uuids, so one id → name map serves every
@@ -12,12 +14,16 @@ import { getTeamsBasic, isTeamActionError } from '@alga-psa/teams/actions';
  */
 export type WorkflowEntityLabelMap = ReadonlyMap<string, string>;
 
-let entityLabelsPromise: Promise<WorkflowEntityLabelMap> | null = null;
-// Kept once loaded, so callers that mount later have names on their first render.
-let loadedEntityLabels: WorkflowEntityLabelMap | null = null;
+/** Every ticket status with its board, so one name on several boards can be told apart. */
+export type WorkflowEntityLabelData = { labels: WorkflowEntityLabelMap; statuses: readonly WorkflowStatusRef[] };
 
-const loadEntityLabels = async (): Promise<WorkflowEntityLabelMap> => {
+let entityLabelsPromise: Promise<WorkflowEntityLabelData> | null = null;
+// Kept once loaded, so callers that mount later have names on their first render.
+let loadedEntityLabels: WorkflowEntityLabelData | null = null;
+
+const loadEntityLabels = async (): Promise<WorkflowEntityLabelData> => {
   const labels = new Map<string, string>();
+  let statuses: WorkflowStatusRef[] = [];
   const [fieldOptionsResult, teamsResult] = await Promise.all([
     getTicketFieldOptions(),
     getTeamsBasic(),
@@ -25,6 +31,12 @@ const loadEntityLabels = async (): Promise<WorkflowEntityLabelMap> => {
 
   const options = 'options' in fieldOptionsResult ? fieldOptionsResult.options : null;
   if (options) {
+    statuses = (options.statuses ?? []).map((status) => ({
+      id: status.id,
+      name: status.name,
+      board_id: status.board_id ?? null,
+      board_name: status.board_name ?? null,
+    }));
     for (const list of [
       options.boards,
       options.statuses,
@@ -46,10 +58,10 @@ const loadEntityLabels = async (): Promise<WorkflowEntityLabelMap> => {
     }
   }
 
-  return labels;
+  return { labels, statuses };
 };
 
-export const loadWorkflowEntityLabels = (): Promise<WorkflowEntityLabelMap> => {
+export const loadWorkflowEntityLabels = (): Promise<WorkflowEntityLabelData> => {
   if (!entityLabelsPromise) {
     entityLabelsPromise = loadEntityLabels()
       .then((labels) => {
@@ -69,13 +81,20 @@ export type WorkflowEntityLabelsState = {
   labels: WorkflowEntityLabelMap;
   /** True once loading has finished, so an id missing from `labels` really has no known name. */
   loaded: boolean;
+  /** Ticket statuses with their boards; empty until loaded. */
+  statuses?: readonly WorkflowStatusRef[];
 };
 
 const EMPTY_LABELS: WorkflowEntityLabelMap = new Map();
+const toState = (data: WorkflowEntityLabelData): WorkflowEntityLabelsState => ({
+  labels: data.labels,
+  statuses: data.statuses,
+  loaded: true,
+});
 
 export const useWorkflowEntityLabels = (enabled = true): WorkflowEntityLabelsState => {
   const [state, setState] = useState<WorkflowEntityLabelsState>(() =>
-    loadedEntityLabels ? { labels: loadedEntityLabels, loaded: true } : { labels: EMPTY_LABELS, loaded: false }
+    loadedEntityLabels ? toState(loadedEntityLabels) : { labels: EMPTY_LABELS, loaded: false }
   );
 
   useEffect(() => {
@@ -83,7 +102,7 @@ export const useWorkflowEntityLabels = (enabled = true): WorkflowEntityLabelsSta
     let active = true;
     loadWorkflowEntityLabels()
       .then((loaded) => {
-        if (active) setState({ labels: loaded, loaded: true });
+        if (active) setState(toState(loaded));
       })
       .catch((error) => {
         console.error('Failed to load workflow entity names:', error);

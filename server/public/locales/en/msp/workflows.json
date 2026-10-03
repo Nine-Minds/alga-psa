@@ -1339,6 +1339,8 @@
         "is_not_empty": "is not empty"
       },
       "unknownEntity": "unknown {{field}}",
+      "anyBoardStatus": "{{name}} (any board)",
+      "boardStatus": "{{name}} ({{board}})",
       "cancelNewCondition": "Cancel new condition"
     },
     "draftBackup": {
@@ -1432,7 +1434,8 @@
       "endsOn": "Ends {{date}}",
       "noEndDate": "No end date",
       "warrantyEndsOn": "Warranty ends {{date}}",
-      "noWarrantyEnd": "No warranty end date"
+      "noWarrantyEnd": "No warranty end date",
+      "anyBoardStatus": "{{name}} (any board)"
     },
     "clientScope": {
       "showingAll": "Showing every client",

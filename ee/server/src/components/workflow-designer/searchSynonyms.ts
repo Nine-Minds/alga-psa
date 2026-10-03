@@ -15,7 +15,10 @@ export const WORKFLOW_SEARCH_SYNONYM_GROUPS: readonly (readonly string[])[] = [
   ['close', 'closes', 'closed', 'resolve', 'resolves', 'resolved', 'resolution'],
   ['reopen', 'reopens', 'reopened'],
   ['email', 'emails', 'mail', 'message', 'messages', 'inbound'],
-  ['ticket', 'tickets', 'case', 'cases', 'issue', 'issues', 'incident', 'incidents'],
+  ['ticket', 'tickets', 'service ticket', 'service tickets', 'case', 'cases', 'issue', 'issues', 'incident', 'incidents'],
+  // ConnectWise wording. Events exist for contracts and assets only, so product/service is not mapped.
+  ['contract', 'contracts', 'agreement', 'agreements'],
+  ['asset', 'assets', 'configuration', 'configurations'],
   ['client', 'clients', 'customer', 'customers', 'company', 'companies', 'account', 'accounts'],
   ['contact', 'contacts', 'person', 'people', 'end user'],
   ['user', 'users', 'technician', 'technicians', 'tech', 'techs', 'agent', 'agents', 'staff', 'member'],

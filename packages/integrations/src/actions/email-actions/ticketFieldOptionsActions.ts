@@ -12,7 +12,13 @@ import {
 } from '@alga-psa/ui/lib/errorHandling';
 
 type BoardOptionRow = { id: string; name: string; is_default: boolean | null };
-type StatusOptionRow = { id: string; name: string; is_default: boolean | null };
+type StatusOptionRow = {
+  id: string;
+  name: string;
+  is_default: boolean | null;
+  board_id: string | null;
+  board_name: string | null;
+};
 type PriorityOptionRow = { id: string; name: string };
 type CategoryOptionRow = { id: string; name: string; parent_id: string | null; board_id: string | null };
 type ClientOptionRow = { id: string; name: string };
@@ -66,6 +72,39 @@ function ticketFieldOptionsLoadError(optionSet: TicketFieldOptionSet): TicketFie
   );
 }
 
+
+// Ticket statuses belong to a board, so the same name can appear once per board.
+// Callers need board_id/board_name to tell those rows apart.
+async function selectStatusOptions(
+  knex: Awaited<ReturnType<typeof createTenantKnex>>['knex'],
+  tenant: string,
+  { boardId }: { boardId?: string }
+): Promise<NonNullable<TicketFieldOptions['statuses']>> {
+  const query = tenantDb(knex, tenant).table('statuses')
+    .where({ 'statuses.status_type': 'ticket' })
+    .orderBy('statuses.order_number', 'asc')
+    .orderBy('statuses.name', 'asc');
+  if (boardId) {
+    query.where({ 'statuses.board_id': boardId });
+  }
+  // Left join: legacy statuses without a board must still be listed.
+  tenantDb(knex, tenant).tenantJoin(query, 'boards', 'boards.board_id', 'statuses.board_id', { type: 'left' });
+  const rows = await query.select(
+    'statuses.status_id as id',
+    'statuses.name as name',
+    'statuses.is_default as is_default',
+    'statuses.board_id as board_id',
+    'boards.board_name as board_name'
+  );
+  return rowsAs<StatusOptionRow>(rows).map(row => ({
+    id: row.id,
+    name: row.name,
+    is_default: Boolean(row.is_default),
+    board_id: row.board_id ?? undefined,
+    board_name: row.board_name ?? undefined
+  }));
+}
+
 export const getTicketFieldOptions = withAuth(async (
   user,
   { tenant }
@@ -99,16 +138,7 @@ export const getTicketFieldOptions = withAuth(async (
         }))),
 
       // Statuses (ticket-only)
-      tenantDb(knex, tenant).table('statuses')
-        .where({ status_type: 'ticket' })
-        .orderBy('order_number', 'asc')
-        .orderBy('name', 'asc')
-        .select('status_id as id', 'name', 'is_default')
-        .then(rows => rowsAs<StatusOptionRow>(rows).map(row => ({
-          id: row.id,
-          name: row.name,
-          is_default: Boolean(row.is_default)
-        }))),
+      selectStatusOptions(knex, tenant, {}),
 
       // Priorities (ticket-only; no is_default column)
       tenantDb(knex, tenant).table('priorities')
@@ -227,16 +257,7 @@ export const getAvailableStatuses = withAuth(async (
       return { statuses: [] };
     }
 
-    const statuses = await tenantDb(knex, tenant).table('statuses')
-      .where({ status_type: 'ticket', board_id: boardId })
-      .orderBy('order_number', 'asc')
-      .orderBy('name', 'asc')
-      .select('status_id as id', 'name', 'is_default')
-      .then(rows => rowsAs<StatusOptionRow>(rows).map(row => ({
-        id: row.id,
-        name: row.name,
-        is_default: Boolean(row.is_default)
-      })));
+    const statuses = await selectStatusOptions(knex, tenant, { boardId });
 
     return { statuses };
   } catch (error) {

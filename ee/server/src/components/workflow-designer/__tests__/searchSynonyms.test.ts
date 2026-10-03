@@ -17,4 +17,11 @@ describe('workflow search synonyms', () => {
     expect(keywords).toContain('client');
     expect(keywords).toContain('ticket customer replied');
   });
+
+  it('maps ConnectWise wording to the matching terms', () => {
+    expect(getSearchSynonyms('agreement')).toEqual(expect.arrayContaining(['contract', 'contracts']));
+    expect(getSearchSynonyms('service ticket')).toEqual(expect.arrayContaining(['ticket', 'tickets']));
+    expect(getSearchSynonyms('configuration')).toEqual(expect.arrayContaining(['asset', 'assets']));
+    expect(buildSynonymKeywords(['Contract Renewal Upcoming'])).toContain('agreement');
+  });
 });

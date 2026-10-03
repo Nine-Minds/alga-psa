@@ -89,6 +89,31 @@ describe('Run dialog payload problems', () => {
     expect(screen.queryByText(/failed validation/i)).toBeNull();
   });
 
+  it('clears the "Fix these fields" banner once a field changes', async () => {
+    startWorkflowRunAction.mockResolvedValue({
+      runId: 'run-1',
+      status: 'FAILED',
+      payloadValidation: {
+        appliesTo: 'input',
+        issues: [{ path: ['messageId'], kind: 'format', format: 'uuid' }],
+      },
+    });
+    await renderDialog();
+    await act(async () => {
+      fireEvent.change(document.getElementById('run-form-messageId')!, { target: { value: 'reply-1' } });
+      fireEvent.change(document.getElementById('run-form-note')!, { target: { value: 'Hello' } });
+    });
+    await act(async () => {
+      fireEvent.click(document.getElementById('run-dialog-start-run')!);
+    });
+    expect(screen.getByText('Fix these fields, then start the run again')).toBeTruthy();
+
+    await act(async () => {
+      fireEvent.change(document.getElementById('run-form-note')!, { target: { value: 'Hello again' } });
+    });
+    expect(screen.queryByText('Fix these fields, then start the run again')).toBeNull();
+  });
+
   it('offers a test id for a synthetic id field', async () => {
     await renderDialog();
     await act(async () => {

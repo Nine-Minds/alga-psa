@@ -27,6 +27,13 @@ import {
 } from './WorkflowActionInputFixedPicker';
 import type { WorkflowConditionField } from './workflowConditionFields';
 import { useWorkflowEntityLabels, type WorkflowEntityLabelsState } from './workflowEntityLabels';
+import {
+  findAnyBoardStatusName,
+  parseAnyBoardStatusValue,
+  statusIdsForName,
+  toAnyBoardStatusValue,
+  type WorkflowStatusRef,
+} from './workflowStatusGroups';
 
 // Condition values have no picker dependencies; a shared constant keeps the picker's props stable.
 const NO_DEPENDENCY_MAPPING = {};
@@ -94,6 +101,41 @@ const normalizeClauseValue = (
   return value === undefined ? defaultValueForField(field) : value;
 };
 
+const isTicketStatusField = (field: WorkflowConditionField | undefined): boolean =>
+  field?.pickerKind === 'ticket-status';
+
+/**
+ * "Awaiting Wisdom (any board)" is saved as an `in` list of every status id with that name. For
+ * display, a list that exactly matches one shared name shows as "is" / "is not" with that choice.
+ */
+const toDisplayClause = (
+  clause: WorkflowConditionClause,
+  field: WorkflowConditionField | undefined,
+  statuses: readonly WorkflowStatusRef[] | undefined
+): WorkflowConditionClause => {
+  if (!isTicketStatusField(field) || !conditionOperatorTakesList(clause.operator)) return clause;
+  const name = findAnyBoardStatusName(statuses, Array.isArray(clause.value) ? clause.value : []);
+  if (!name) return clause;
+  return { ...clause, operator: clause.operator === 'not_in' ? 'not_equals' : 'equals', value: toAnyBoardStatusValue(name) };
+};
+
+/** Turns any-board choices back into the status ids they stand for (the inverse of toDisplayClause). */
+const toStoredClause = (
+  clause: WorkflowConditionClause,
+  field: WorkflowConditionField | undefined,
+  statuses: readonly WorkflowStatusRef[] | undefined
+): WorkflowConditionClause => {
+  if (!isTicketStatusField(field) || !conditionOperatorTakesValue(clause.operator)) return clause;
+  const values = Array.isArray(clause.value) ? clause.value : [clause.value ?? ''];
+  if (!values.some((value) => parseAnyBoardStatusValue(value) !== null)) return clause;
+  const ids = values.flatMap((value) => {
+    const name = parseAnyBoardStatusValue(value);
+    return name === null ? [value] : statusIdsForName(statuses, name);
+  });
+  const operator = clause.operator === 'not_equals' ? 'not_in' : clause.operator === 'equals' ? 'in' : clause.operator;
+  return { ...clause, operator, value: Array.from(new Set(ids)) };
+};
+
 const humanizeSegment = (segment: string): string => {
   const withoutIdSuffix = segment.replace(/(_ids?|Ids?)$/, '') || segment;
   return withoutIdSuffix
@@ -132,6 +174,15 @@ const formatLiteral = (
 ): string => {
   if (value === null) return 'null';
   if (typeof value !== 'string') return String(value);
+  // A ticket status is board-specific, so say which board's copy it is.
+  const status = entityLabels.statuses?.find((candidate) => candidate.id === value);
+  if (status?.board_name) {
+    return t('designer.conditionBuilder.boardStatus', {
+      defaultValue: '{{name}} ({{board}})',
+      name: status.name,
+      board: status.board_name,
+    });
+  }
   const name = entityLabels.labels.get(value);
   if (name) return name;
   if (!UUID_PATTERN.test(value)) return `"${value}"`;
@@ -157,6 +208,14 @@ export const describeWorkflowCondition = (
       const operator = operatorLabel(t, clause.operator);
       if (!conditionOperatorTakesValue(clause.operator)) return `${fieldName} ${operator}`;
       const values = Array.isArray(clause.value) ? clause.value : [clause.value ?? ''];
+      const anyBoardName = conditionOperatorTakesList(clause.operator)
+        ? findAnyBoardStatusName(entityLabels.statuses, values)
+        : null;
+      if (anyBoardName) {
+        const singleOperator = operatorLabel(t, clause.operator === 'not_in' ? 'not_equals' : 'equals');
+        const anyBoard = t('designer.conditionBuilder.anyBoardStatus', { defaultValue: '{{name}} (any board)', name: anyBoardName });
+        return `${fieldName} ${singleOperator} ${anyBoard}`;
+      }
       return `${fieldName} ${operator} ${values.map((value) => formatLiteral(t, value, entityLabels, humanizeConditionFieldName(clause.path))).join(', ')}`;
     })
     .join(` ${joinWord} `);
@@ -197,7 +256,9 @@ const ConditionValueInput: React.FC<{
   value: WorkflowConditionLiteral;
   onChange: (value: WorkflowConditionLiteral) => void;
   disabled?: boolean;
-}> = ({ idPrefix, field, value, onChange, disabled }) => {
+  /** Offer "<status> (any board)" choices; only for a single status, not a list of them. */
+  allowAnyBoardStatus?: boolean;
+}> = ({ idPrefix, field, value, onChange, disabled, allowAnyBoardStatus = false }) => {
   const { t } = useTranslation('msp/workflows');
 
   if (field && hasEntityPicker(field)) {
@@ -217,6 +278,7 @@ const ConditionValueInput: React.FC<{
         onChange={(next) => onChange(next ?? '')}
         rootInputMapping={NO_DEPENDENCY_MAPPING}
         disabled={disabled}
+        includeAnyBoardStatus={allowAnyBoardStatus && isTicketStatusField(field)}
       />
     );
   }
@@ -295,6 +357,7 @@ const ConditionValueEditor: React.FC<{
         value={Array.isArray(clause.value) ? clause.value[0] ?? '' : clause.value ?? ''}
         onChange={onChange}
         disabled={disabled}
+        allowAnyBoardStatus
       />
     );
   }
@@ -380,6 +443,7 @@ export const WorkflowConditionBuilder: React.FC<WorkflowConditionBuilderProps> =
   const canUseBuilder = parsed !== null;
   const effectiveMode = canUseBuilder ? mode : 'expression';
   const fieldsByPath = useMemo(() => new Map(fields.map((field) => [field.path, field])), [fields]);
+  const { statuses } = useWorkflowEntityLabels();
 
   const writeGroup = (group: WorkflowConditionGroup) => {
     onExpressionChange(serializeConditionGroup(group));
@@ -407,7 +471,7 @@ export const WorkflowConditionBuilder: React.FC<WorkflowConditionBuilderProps> =
     if (!parsed) return;
     const clauses = parsed.clauses.map((clause, clauseIndex) => {
       if (clauseIndex !== index) return clause;
-      const next = { ...clause, ...patch };
+      const next = { ...toDisplayClause(clause, fieldsByPath.get(clause.path), statuses), ...patch };
       const field = fieldsByPath.get(next.path);
       if (patch.path !== undefined && patch.path !== clause.path) {
         const allowed = getConditionOperatorsForField(field);
@@ -415,7 +479,7 @@ export const WorkflowConditionBuilder: React.FC<WorkflowConditionBuilderProps> =
         next.value = defaultValueForField(field);
       }
       next.value = normalizeClauseValue(next.operator, next.value, field);
-      return next;
+      return toStoredClause(next, field, statuses);
     });
     writeGroup({ ...parsed, clauses });
   };
@@ -508,8 +572,9 @@ export const WorkflowConditionBuilder: React.FC<WorkflowConditionBuilderProps> =
             </div>
           )}
 
-          {parsed?.clauses.map((clause, index) => {
-            const field = fieldsByPath.get(clause.path);
+          {parsed?.clauses.map((storedClause, index) => {
+            const field = fieldsByPath.get(storedClause.path);
+            const clause = toDisplayClause(storedClause, field, statuses);
             const operators = getConditionOperatorsForField(field);
             const operatorOptions = (operators.includes(clause.operator) ? operators : [...operators, clause.operator])
               .map((operator) => ({ value: operator, label: operatorLabel(t, operator) }));
