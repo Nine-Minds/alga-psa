@@ -105,6 +105,22 @@ describe('TimezonePicker search ranking', () => {
     expect(screen.getByRole('button').textContent).toContain('Not/AZone');
   });
 
+  it('does not build the zone list until the picker is expanded', () => {
+    // The descriptor cache is keyed by (locale, year); use a year no other test
+    // populated so the first expand is a cache miss.
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2031-07-15T12:00:00Z'));
+    const spy = vi.spyOn(Intl, 'supportedValuesOf');
+    try {
+      renderPicker('America/New_York');
+      expect(spy).not.toHaveBeenCalled();
+      fireEvent.click(screen.getByRole('button'));
+      expect(spy).toHaveBeenCalledWith('timeZone');
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
   it('offers UTC in the list', () => {
     const options = openAndSearch('America/Chicago', 'utc');
     expect(options.some((o) => o.textContent?.startsWith('UTC'))).toBe(true);

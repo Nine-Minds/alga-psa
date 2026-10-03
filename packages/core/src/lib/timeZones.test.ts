@@ -158,6 +158,16 @@ describe('rankTimeZoneSearch', () => {
       expect(ids([...bestMatches, ...otherMatches])).toContain('America/New_York');
     });
 
+    it('treats underscores in the query as spaces', () => {
+      const { bestMatches, otherMatches } = rankTimeZoneSearch(descriptors, 'new_york');
+      expect(ids([...bestMatches, ...otherMatches])).toContain('America/New_York');
+    });
+
+    it('does not use prefix or substring name matching below three characters', () => {
+      // "ea" would substring-match "Eastern ..." names; two characters must not.
+      expect(rankTimeZoneSearch(descriptors, 'ea').bestMatches).toEqual([]);
+    });
+
     it('a one-letter query produces no best matches', () => {
       expect(rankTimeZoneSearch(descriptors, 'e').bestMatches).toEqual([]);
     });

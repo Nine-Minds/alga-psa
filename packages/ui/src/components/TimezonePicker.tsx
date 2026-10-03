@@ -162,13 +162,12 @@ export default function TimezonePicker({ value, onValueChange, className }: Time
   if (!isExpanded) {
     // Fixed-offset zones are often correct (Arizona, Saskatchewan, Panama), so
     // this is a hint, not a warning. It is how a mistaken pick gets noticed.
-    // UTC is deliberately fixed and is not hinted. Legacy values (e.g. "EST")
-    // are described by Intl too, so they get the same hint.
+    // Legacy values (e.g. "EST") are described by Intl too, so they get the same
+    // hint; a value Intl rejects has no offset and gets none.
     const showNoDstHint = Boolean(
       selectedDescriptor
       && !selectedDescriptor.observesDst
-      && selectedDescriptor.standardOffset
-      && value !== 'UTC',
+      && selectedDescriptor.standardOffset,
     );
 
     return (
