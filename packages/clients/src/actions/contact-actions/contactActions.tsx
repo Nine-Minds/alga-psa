@@ -50,6 +50,7 @@ import {
   normalizePhone,
   parseSubmittedFields
 } from '@alga-psa/validation';
+import { collectReportContactIds } from '../../lib/managerSubtree';
 import { isStructuralFailure, type StructuralResult } from '../../lib/structuralResult';
 
 /**
@@ -462,6 +463,15 @@ export const deleteContact = withAuth(async (
       await tenantScopedTable(trx, 'comments', tenantId).where({ contact_id: contactId }).delete();
       await tenantScopedTable(trx, 'portal_invitations', tenantId).where({ contact_id: contactId }).delete();
 
+      // Reports-to and asset assignment are NO ACTION composite FKs (a composite
+      // SET NULL would null `tenant` too, and Citus refuses it), so clear them by hand.
+      await tenantScopedTable(trx, 'contacts', tenantId)
+        .where({ manager_contact_id: contactId })
+        .update({ manager_contact_id: null });
+      await tenantScopedTable(trx, 'assets', tenantId)
+        .where({ contact_name_id: contactId })
+        .update({ contact_name_id: null });
+
       // Unlink from any RMM org mapping using this contact as its default
       // notification contact (no FK; Citus rejects ON DELETE SET NULL).
       await tenantScopedTable(trx, 'rmm_organization_mappings', tenantId)
@@ -674,6 +684,7 @@ export const addContact = withAuth(async (
       additional_email_addresses: contactData.additional_email_addresses ?? [],
       phone_numbers: contactData.phone_numbers ?? [],
       client_id: contactData.client_id || undefined,
+      manager_contact_id: contactData.manager_contact_id || undefined,
       role: contactData.role ?? undefined,
       notes: contactData.notes || undefined,
       is_inactive: contactData.is_inactive ?? undefined
@@ -886,6 +897,10 @@ export const updateContact = withAuth(async (
       const updated = await ContactModel.updateContact(contactData.contact_name_id!, {
         full_name: contactData.full_name,
         client_id: contactData.client_id === '' ? undefined : contactData.client_id || undefined,
+        // undefined = leave unchanged; null/'' = clear. Validated (same client,
+        // acyclic) and reconciled with client changes inside ContactModel.
+        manager_contact_id:
+          contactData.manager_contact_id === undefined ? undefined : contactData.manager_contact_id || null,
         phone_numbers: contactData.phone_numbers,
         email: contactData.email ?? undefined,
         primary_email_canonical_type: contactData.primary_email_canonical_type ?? undefined,
@@ -1977,6 +1992,35 @@ export const getClientPortalVisibilityGroupsForContact = withAuth(async (
       return expected;
     }
     console.error('[contactActions.getClientPortalVisibilityGroupsForContact]', error);
+    throw error;
+  }
+});
+
+/** Number of people (transitively) reporting to this contact; drives the portal tab's "also sees" note. */
+export const getContactReportCount = withAuth(async (
+  user,
+  { tenant },
+  contactId: string
+): Promise<number | VisibilityGroupActionError> => {
+  try {
+    const { knex } = await createTenantKnex();
+
+    return withTransaction(knex, async (trx: Knex.Transaction) => {
+      const clientId = await resolveContactAndVerifyPermission(user, trx, tenant, contactId);
+
+      const edges = await tenantScopedTable(trx, 'contacts', tenant)
+        .where({ client_id: clientId })
+        .whereNotNull('manager_contact_id')
+        .select('contact_name_id', 'manager_contact_id') as Array<{ contact_name_id: string; manager_contact_id: string | null }>;
+
+      return collectReportContactIds(edges, contactId).size;
+    });
+  } catch (error) {
+    const expected = visibilityGroupActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
+    console.error('[contactActions.getContactReportCount]', error);
     throw error;
   }
 });

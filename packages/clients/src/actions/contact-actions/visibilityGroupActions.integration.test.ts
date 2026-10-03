@@ -102,6 +102,8 @@ function createVisibilityTrx(state: VisibilityState) {
               matches.forEach((row) => Object.assign(row, updates));
               return matches.length;
             },
+            // Reports-to edges: this fixture has no manager hierarchy.
+            whereNotNull: () => ({ select: async () => [] }),
           };
         },
       };

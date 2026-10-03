@@ -143,6 +143,7 @@ vi.mock('@alga-psa/ui/components/skeletons/SettingsTabSkeleton', () => ({
 vi.mock('../../actions/contact-actions/contactActions', () => ({
   updateContactPortalAdminStatus: vi.fn(),
   getUserByContactId: (...args: any[]) => getUserByContactIdMock(...args),
+  getContactReportCount: async () => 0,
   getClientPortalVisibilityBoardsByClient: (...args: any[]) =>
     getClientPortalVisibilityBoardsByClientMock(...args),
   getClientPortalVisibilityGroupById: (...args: any[]) =>

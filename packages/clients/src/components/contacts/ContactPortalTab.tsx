@@ -19,6 +19,7 @@ import type { IContact } from '@alga-psa/types';
 import {
   updateContactPortalAdminStatus,
   getUserByContactId,
+  getContactReportCount,
   getClientPortalVisibilityBoardsByClient,
   getClientPortalVisibilityGroupById,
   getClientPortalVisibilityGroupsForContact,
@@ -137,6 +138,7 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
   const [invitationHistory, setInvitationHistory] = useState<InvitationHistoryItem[]>([]);
   const [resendingInvitationId, setResendingInvitationId] = useState<string | null>(null);
   const [isRefreshingInvitationHistory, setIsRefreshingInvitationHistory] = useState(false);
+  const [reportCount, setReportCount] = useState(0);
   const [visibilityGroups, setVisibilityGroups] = useState<VisibilityGroup[]>([]);
   const [visibilityBoards, setVisibilityBoards] = useState<IBoard[]>([]);
   const [selectedVisibilityGroupId, setSelectedVisibilityGroupId] = useState<string | null>(
@@ -540,6 +542,28 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
         return 'default-muted';
     }
   };
+
+  const selectedGroupIsContactScoped =
+    visibilityGroups.find((group) => group.group_id === selectedVisibilityGroupId)?.ticket_scope === 'contact';
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!selectedGroupIsContactScoped || !contact.client_id) {
+      setReportCount(0);
+      return;
+    }
+    (async () => {
+      try {
+        const count = await getContactReportCount(contact.contact_name_id);
+        if (!cancelled) setReportCount(typeof count === 'number' ? count : 0);
+      } catch (err) {
+        if (!cancelled) setReportCount(0);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedGroupIsContactScoped, contact.client_id, contact.contact_name_id, contact.manager_contact_id]);
 
   const visibilityGroupSelectOptions = [
     { value: FULL_ACCESS_VALUE, label: 'Full access' },
@@ -960,6 +984,14 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
                 options={visibilityGroupSelectOptions}
                 placeholder="Select visibility assignment"
               />
+              {selectedGroupIsContactScoped && !isPortalAdmin && reportCount > 0 && (
+                <p className="text-sm text-muted-foreground" id="visibility-group-report-count">
+                  {t('portal.visibilityGroups.managerScopeNote', {
+                    count: reportCount,
+                    defaultValue: 'Also sees tickets of {{count}} people who report to them.'
+                  })}
+                </p>
+              )}
 
               <div>
                 <Label className="text-sm font-medium">Visibility groups for client</Label>
