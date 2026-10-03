@@ -14,7 +14,7 @@ services:
     secrets:
       - postgres_password
     ports:
-      - "5433:5432"
+      - "${EXPOSE_INFRA_BIND_ADDR:-127.0.0.1}:5433:5432"
     networks:
       - app-network
     healthcheck:
@@ -34,7 +34,7 @@ services:
     secrets:
       - redis_password
     ports:
-      - "6380:6379"
+      - "${EXPOSE_INFRA_BIND_ADDR:-127.0.0.1}:6380:6379"
     networks:
       - app-network
     healthcheck:
