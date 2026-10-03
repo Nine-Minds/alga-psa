@@ -61,6 +61,7 @@ export const MAINTENANCE_FANOUT_SCHEDULES: ReadonlyArray<{ jobName: string; cron
   { jobName: 'accounting-sync-cycle', cron: '*/15 * * * *' },
   { jobName: 'rmm-polling-reconcile', cron: '*/5 * * * *' },
   { jobName: 'recover-comment-publications', cron: '* * * * *' },
+  { jobName: 'generate-recurring-tickets', cron: '*/15 * * * *' },
 ];
 
 /**
