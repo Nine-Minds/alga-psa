@@ -1,6 +1,8 @@
 services:
   postgres-playwright:
-    image: ankane/pgvector:latest
+    extends:
+      file: ./docker-compose.images.yaml
+      service: pgvector
     environment:
       POSTGRES_USER: ${PLAYWRIGHT_DB_ADMIN_USER:-postgres}
       POSTGRES_PASSWORD: ${PLAYWRIGHT_DB_ADMIN_PASSWORD:-postpass123}

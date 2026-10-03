@@ -493,6 +493,23 @@ When upgrading from a previous version:
 
 6. Update configurations as needed and verify the application starts cleanly before removing the old backups.
 
+### Database image changes
+
+The bundled Postgres image moves to the maintained pgvector image and is pinned by digest in `docker-compose.images.yaml`; the Compose files and the Helm chart use that pinned image rather than a floating tag.
+
+For an existing data directory, the first `up` after upgrading runs the one-shot `postgres-extension-update` service before `setup`. It waits for the new server, brings the system catalogs and installed extensions (for example `vector`) up to date in every database, and logs each change; on a fresh volume or a repeat run it logs that there is nothing to do. It never touches an external database configured through `DB_HOST`.
+
+To check the result:
+
+```bash
+docker compose -f docker-compose.prebuilt.base.yaml -f docker-compose.prebuilt.ce.yaml \
+  --env-file server/.env --env-file .env.image logs postgres-extension-update
+```
+
+and, in each database, `SELECT extname, extversion FROM pg_extension;`.
+
+If you run your own Postgres instead of the bundled one, run `ALTER EXTENSION vector UPDATE;` in each database that uses it after changing the server or pgvector version. If you have custom objects in the bundled database, review the [PostgreSQL 15 release notes](https://www.postgresql.org/docs/release/) for the minor versions between your previous and current server version.
+
 ## Additional Resources
 
 - [Configuration Guide](configuration_guide.md)

@@ -3,7 +3,9 @@
 
 services:
   postgres-playwright:
-    image: ankane/pgvector:latest
+    extends:
+      file: ./docker-compose.images.yaml
+      service: pgvector
     container_name: extsched_playwright_postgres
     environment:
       POSTGRES_USER: postgres

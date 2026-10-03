@@ -103,7 +103,9 @@ secrets:
 services:
   # Test-specific PostgreSQL instance
   postgres-test:
-    image: ankane/pgvector:latest
+    extends:
+      file: ./docker-compose.images.yaml
+      service: pgvector
     container_name: ${APP_NAME:-sebastian}_postgres_test
     networks:
       - app-network

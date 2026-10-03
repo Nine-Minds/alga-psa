@@ -259,6 +259,15 @@ services:
     depends_on:
       postgres:
         condition: service_started
+      postgres-extension-update:
+        condition: service_completed_successfully
+
+  # One-shot reconciliation of an existing bundled data directory with the pinned
+  # image; defined once in docker-compose.base.yaml.
+  postgres-extension-update:
+    extends:
+      file: ./docker-compose.base.yaml
+      service: postgres-extension-update
 
   hocuspocus:
     extends:
@@ -277,7 +286,9 @@ services:
         condition: service_started
 
   postgres:
-    image: ankane/pgvector:latest
+    extends:
+      file: ./docker-compose.images.yaml
+      service: pgvector
     container_name: ${APP_NAME:-sebastian}_postgres
     networks:
       - app-network
