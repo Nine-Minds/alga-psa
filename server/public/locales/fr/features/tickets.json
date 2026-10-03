@@ -963,7 +963,12 @@
     "emailNotificationLogs": "Journaux de notification par e-mail",
     "ticketActivity": "Activité du ticket",
     "discardChanges": "Annuler les modifications",
-    "saved": "Enregistré"
+    "saved": "Enregistré",
+    "changeContactTitle": "Changer le contact du ticket ?",
+    "removeContactTitle": "Retirer le contact du ticket ?",
+    "changeContactPrompt": "Le contact, l'assigné et les observateurs sont informés de cette mise à jour, sauf si vous désactivez leurs notifications.",
+    "changeContact": "Changer le contact",
+    "removeContact": "Retirer le contact"
   },
   "properties": {
     "timeEntry": "Entrée de temps",

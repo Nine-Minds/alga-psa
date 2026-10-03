@@ -963,7 +963,12 @@
     "emailNotificationLogs": "Logboek e-mailmeldingen",
     "ticketActivity": "Ticketactiviteit",
     "discardChanges": "Wijzigingen verwerpen",
-    "saved": "Opgeslagen"
+    "saved": "Opgeslagen",
+    "changeContactTitle": "Ticketcontact wijzigen?",
+    "removeContactTitle": "Ticketcontact verwijderen?",
+    "changeContactPrompt": "De contactpersoon, de toegewezen medewerker en de volgers worden over deze wijziging geïnformeerd, tenzij u hun meldingen uitschakelt.",
+    "changeContact": "Contact wijzigen",
+    "removeContact": "Contact verwijderen"
   },
   "properties": {
     "timeEntry": "Tijdregistratie",

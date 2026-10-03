@@ -1075,7 +1075,12 @@
     "emailNotificationLogs": "Dzienniki powiadomień e-mail",
     "ticketActivity": "Aktywność zgłoszenia",
     "discardChanges": "Odrzuć zmiany",
-    "saved": "Zapisano"
+    "saved": "Zapisano",
+    "changeContactTitle": "Zmienić kontakt zgłoszenia?",
+    "removeContactTitle": "Usunąć kontakt zgłoszenia?",
+    "changeContactPrompt": "Kontakt, osoba przypisana i obserwujący zostaną powiadomieni o tej zmianie, chyba że wyłączysz ich powiadomienia.",
+    "changeContact": "Zmień kontakt",
+    "removeContact": "Usuń kontakt"
   },
   "properties": {
     "timeEntry": "Wpis czasu",

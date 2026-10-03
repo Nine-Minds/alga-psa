@@ -963,7 +963,12 @@
     "emailNotificationLogs": "E-Mail-Benachrichtigungsprotokolle",
     "ticketActivity": "Ticket-Aktivität",
     "discardChanges": "Änderungen verwerfen",
-    "saved": "Gespeichert"
+    "saved": "Gespeichert",
+    "changeContactTitle": "Ticketkontakt ändern?",
+    "removeContactTitle": "Ticketkontakt entfernen?",
+    "changeContactPrompt": "Kontakt, Bearbeiter und Beobachter werden über diese Änderung informiert, sofern Sie ihre Benachrichtigungen nicht ausschalten.",
+    "changeContact": "Kontakt ändern",
+    "removeContact": "Kontakt entfernen"
   },
   "properties": {
     "timeEntry": "Zeiteintrag",
