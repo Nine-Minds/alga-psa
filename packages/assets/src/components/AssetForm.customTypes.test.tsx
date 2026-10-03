@@ -10,7 +10,7 @@
 
 import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import AssetForm from './AssetForm';
@@ -357,5 +357,134 @@ describe('AssetForm custom asset types', () => {
     const [, payload] = mockUpdateAsset.mock.calls[0];
     expect(payload.asset_type).toBe('cloud_account');
     expect(payload.attributes).toEqual({ account_name: 'Migrated' });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// alga0002283: numeric inputs and returned validation results
+// ---------------------------------------------------------------------------
+
+// The mocked Input only labels fields that have an id, and the extension number
+// inputs have none — find them through their visible label instead.
+const numberInputFor = (labelText: string): HTMLInputElement => {
+  const label = screen.getByText(labelText);
+  const input = label.parentElement?.querySelector('input');
+  if (!input) throw new Error(`No input found under label "${labelText}"`);
+  return input as HTMLInputElement;
+};
+
+const networkDeviceAsset = {
+  ...baseAsset,
+  asset_type: 'network_device',
+  attributes: null,
+  network_device: {
+    tenant: TENANT,
+    asset_id: ASSET_ID,
+    device_type: 'switch',
+    management_ip: '10.0.0.2',
+    port_count: 24,
+    firmware_version: '1.0',
+    supports_poe: true,
+    power_draw_watts: 0,
+    vlan_config: {},
+    port_config: {},
+  },
+};
+
+describe('AssetForm numeric extension fields (alga0002283)', () => {
+  it('renders a stored 0 as "0", not blank', async () => {
+    mockGetAsset.mockResolvedValue(networkDeviceAsset);
+    await renderForm();
+
+    expect(numberInputFor('Power Draw (Watts)').value).toBe('0');
+    expect(numberInputFor('Port Count').value).toBe('24');
+  });
+
+  it('submits null for a cleared numeric input and keeps decimals for power draw', async () => {
+    const user = userEvent.setup();
+    mockGetAsset.mockResolvedValue(networkDeviceAsset);
+    await renderForm();
+
+    await user.clear(numberInputFor('Port Count'));
+    fireEvent.change(numberInputFor('Power Draw (Watts)'), { target: { value: '12.5' } });
+    await user.click(screen.getByRole('button', { name: 'Save Changes' }));
+
+    await waitFor(() => expect(mockUpdateAsset).toHaveBeenCalledTimes(1));
+    const [, payload] = mockUpdateAsset.mock.calls[0];
+    expect(payload.network_device.port_count).toBeNull();
+    expect(payload.network_device.power_draw_watts).toBe(12.5);
+  });
+
+  it('a form opened on a blank-numeric workstation submits nulls, never NaN or 0', async () => {
+    const user = userEvent.setup();
+    mockGetAsset.mockResolvedValue({
+      ...workstationAsset,
+      workstation: { ...workstationAsset.workstation, cpu_cores: null, ram_gb: null, storage_capacity_gb: null },
+    });
+    await renderForm();
+
+    expect(numberInputFor('CPU Cores').value).toBe('');
+    await user.click(screen.getByRole('button', { name: 'Save Changes' }));
+
+    await waitFor(() => expect(mockUpdateAsset).toHaveBeenCalledTimes(1));
+    const { workstation } = mockUpdateAsset.mock.calls[0][1];
+    expect(workstation.cpu_cores).toBeNull();
+    expect(workstation.ram_gb).toBeNull();
+    expect(workstation.storage_capacity_gb).toBeNull();
+  });
+});
+
+describe('AssetForm returned update results (alga0002283)', () => {
+  it('renders returned validationIssues inline and toasts the validation summary, not "Failed to update asset"', async () => {
+    const user = userEvent.setup();
+    mockGetAsset.mockResolvedValue(networkDeviceAsset);
+    mockUpdateAsset.mockResolvedValue({
+      actionError: 'network_device.power_draw_watts has the wrong type.',
+      validationIssues: [
+        { path: ['network_device', 'power_draw_watts'], code: 'invalid_type', message: 'Expected number, received string' },
+      ],
+    });
+    await renderForm();
+
+    await user.click(screen.getByRole('button', { name: 'Save Changes' }));
+
+    const inline = await waitFor(() => {
+      const node = document.getElementById('field-error-network-device-power-draw-watts');
+      expect(node).not.toBeNull();
+      return node!;
+    });
+    expect(inline.textContent).toBe('Expected number, received string');
+    // Rendered directly under the offending input.
+    expect(numberInputFor('Power Draw (Watts)').parentElement?.contains(inline)).toBe(true);
+
+    expect(mockToastError).toHaveBeenCalledWith('Please fix the highlighted fields before saving.');
+    expect(mockToastError).not.toHaveBeenCalledWith('Failed to update asset');
+    expect(mockPush).not.toHaveBeenCalled();
+  });
+
+  it('toasts the message of any other returned action error', async () => {
+    const user = userEvent.setup();
+    mockGetAsset.mockResolvedValue(workstationAsset);
+    mockUpdateAsset.mockResolvedValue({ actionError: 'Asset not found. It may have been deleted. Please refresh and try again.' });
+    await renderForm();
+
+    await user.click(screen.getByRole('button', { name: 'Save Changes' }));
+
+    await waitFor(() =>
+      expect(mockToastError).toHaveBeenCalledWith('Asset not found. It may have been deleted. Please refresh and try again.')
+    );
+    expect(mockPush).not.toHaveBeenCalled();
+  });
+
+  it('only a thrown error falls back to the generic "Failed to update asset"', async () => {
+    const user = userEvent.setup();
+    mockGetAsset.mockResolvedValue(workstationAsset);
+    mockUpdateAsset.mockRejectedValue(new Error('An error occurred in the Server Components render.'));
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    await renderForm();
+
+    await user.click(screen.getByRole('button', { name: 'Save Changes' }));
+
+    await waitFor(() => expect(mockToastError).toHaveBeenCalledWith('Failed to update asset'));
   });
 });

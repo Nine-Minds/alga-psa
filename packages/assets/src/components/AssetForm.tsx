@@ -23,7 +23,12 @@ import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import Spinner from '@alga-psa/ui/components/Spinner';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { getAsset, updateAsset } from '../actions/assetActions';
-import { unwrapAssetActionResult } from '../actions/assetActionErrors';
+import {
+  assetActionErrorFrom,
+  assetActionErrorMessage,
+  unwrapAssetActionResult,
+  isAssetValidationError,
+} from '../actions/assetActionErrors';
 import { formatClientLocation } from '../lib/formatClientLocation';
 import { parseNumberInput } from '../lib/numberInput';
 import { pickSchemaAttributes, validateAttributesAgainstSchema } from '../lib/assetTypeAttributes';
@@ -525,6 +530,18 @@ export default function AssetForm({ assetId, onSaved }: AssetFormProps) {
     }));
   };
 
+  // Inline server-side validation message for a field path such as
+  // `network_device.power_draw_watts`, so a highlighted field is never invisible.
+  const renderFieldError = (path: string) => {
+    const message = fieldErrors[path];
+    if (!message) return null;
+    return (
+      <p id={`field-error-${path.replace(/[^a-zA-Z0-9]+/g, '-')}`} role="alert" className="mt-1 text-sm text-red-600">
+        {message}
+      </p>
+    );
+  };
+
   const renderWorkstationFields = () => {
     if (!asset?.workstation) return null;
     if (!formData.workstation) return null;
@@ -572,6 +589,7 @@ export default function AssetForm({ assetId, onSaved }: AssetFormProps) {
             onChange={(e) => handleTypeSpecificChange('workstation', 'cpu_cores', parseNumberInput(e.target.value, { integer: true }))}
             className="mt-1"
           />
+          {renderFieldError('workstation.cpu_cores')}
         </div>
         <div>
           <label className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
@@ -583,6 +601,7 @@ export default function AssetForm({ assetId, onSaved }: AssetFormProps) {
             onChange={(e) => handleTypeSpecificChange('workstation', 'ram_gb', parseNumberInput(e.target.value, { integer: true }))}
             className="mt-1"
           />
+          {renderFieldError('workstation.ram_gb')}
         </div>
         <div>
           <label className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
@@ -605,6 +624,7 @@ export default function AssetForm({ assetId, onSaved }: AssetFormProps) {
             onChange={(e) => handleTypeSpecificChange('workstation', 'storage_capacity_gb', parseNumberInput(e.target.value, { integer: true }))}
             className="mt-1"
           />
+          {renderFieldError('workstation.storage_capacity_gb')}
         </div>
         <div>
           <label className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
@@ -657,6 +677,7 @@ export default function AssetForm({ assetId, onSaved }: AssetFormProps) {
             onChange={(e) => handleTypeSpecificChange('network_device', 'port_count', parseNumberInput(e.target.value, { integer: true }))}
             className="mt-1"
           />
+          {renderFieldError('network_device.port_count')}
         </div>
         <div>
           <label className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
@@ -679,6 +700,7 @@ export default function AssetForm({ assetId, onSaved }: AssetFormProps) {
             onChange={(e) => handleTypeSpecificChange('network_device', 'power_draw_watts', parseNumberInput(e.target.value, { integer: false }))}
             className="mt-1"
           />
+          {renderFieldError('network_device.power_draw_watts')}
         </div>
         <div className="flex items-center">
           <Checkbox
@@ -739,6 +761,7 @@ export default function AssetForm({ assetId, onSaved }: AssetFormProps) {
             onChange={(e) => handleTypeSpecificChange('server', 'cpu_cores', parseNumberInput(e.target.value, { integer: true }))}
             className="mt-1"
           />
+          {renderFieldError('server.cpu_cores')}
         </div>
         <div>
           <label className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
@@ -750,6 +773,7 @@ export default function AssetForm({ assetId, onSaved }: AssetFormProps) {
             onChange={(e) => handleTypeSpecificChange('server', 'ram_gb', parseNumberInput(e.target.value, { integer: true }))}
             className="mt-1"
           />
+          {renderFieldError('server.ram_gb')}
         </div>
         <div>
           <label className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
@@ -914,6 +938,7 @@ export default function AssetForm({ assetId, onSaved }: AssetFormProps) {
             onChange={(e) => handleTypeSpecificChange('printer', 'monthly_duty_cycle', parseNumberInput(e.target.value, { integer: true }))}
             className="mt-1"
           />
+          {renderFieldError('printer.monthly_duty_cycle')}
         </div>
         <div className="flex items-center space-x-6">
           <Checkbox
@@ -1076,7 +1101,33 @@ export default function AssetForm({ assetId, onSaved }: AssetFormProps) {
         )
       ) as UpdateAssetRequest;
 
-      unwrapAssetActionResult(await updateAsset(assetId, cleanedData));
+      // updateAsset RETURNS expected failures (validation, permission, not found)
+      // rather than throwing: Next.js masks thrown messages in production builds.
+      const result = await updateAsset(assetId, cleanedData);
+
+      if (isAssetValidationError(result)) {
+        const nextFieldErrors: Record<string, string> = {};
+        for (const issue of result.validationIssues) {
+          const key = issue.path.join('.');
+          if (key && !nextFieldErrors[key]) nextFieldErrors[key] = issue.message;
+        }
+        setFieldErrors(nextFieldErrors);
+        const summary = t('assetForm.errors.validation', {
+          defaultValue: 'Please fix the highlighted fields before saving.',
+        });
+        setSaveError(summary);
+        toast.error(summary);
+        return;
+      }
+
+      const expectedError = assetActionErrorFrom(result);
+      if (expectedError) {
+        const message = assetActionErrorMessage(expectedError);
+        setSaveError(message);
+        toast.error(message);
+        return;
+      }
+
       if (onSaved) {
         onSaved();
         router.refresh();
@@ -1085,29 +1136,11 @@ export default function AssetForm({ assetId, onSaved }: AssetFormProps) {
         router.refresh();
       }
     } catch (error) {
+      // Only an unexpected failure (network, server crash) lands here.
       console.error('Error updating asset:', error);
-
-      const message = error instanceof Error ? error.message : '';
-      let parsed: { kind?: string; issues?: Array<{ path?: unknown; message?: string }> } | null = null;
-      try { parsed = JSON.parse(message); } catch { /* not a structured error */ }
-
-      if (parsed?.kind === 'validation' && Array.isArray(parsed.issues)) {
-        const nextFieldErrors: Record<string, string> = {};
-        for (const issue of parsed.issues) {
-          const key = Array.isArray(issue.path) ? issue.path.join('.') : String(issue.path ?? '');
-          if (key) nextFieldErrors[key] = issue.message || 'Invalid';
-        }
-        setFieldErrors(nextFieldErrors);
-        const summary = t('assetForm.errors.validation', {
-          defaultValue: 'Please fix the highlighted fields before saving.',
-        });
-        setSaveError(summary);
-        toast.error(summary);
-      } else {
-        const summary = t('assetForm.errors.updateFailed', { defaultValue: 'Failed to update asset' });
-        setSaveError(summary);
-        toast.error(summary);
-      }
+      const summary = t('assetForm.errors.updateFailed', { defaultValue: 'Failed to update asset' });
+      setSaveError(summary);
+      toast.error(summary);
     } finally {
       setSaving(false);
     }

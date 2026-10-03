@@ -1337,15 +1337,17 @@ export const updateAsset = withAuth(async (
         throw new Error('Permission denied: Cannot update assets');
     }
 
-    return updateAssetRecord(knex, tenant, user.user_id, asset_id, data, opts, {
+    // `await` so a rejection from the core lands in the catch below and is returned.
+    return await updateAssetRecord(knex, tenant, user.user_id, asset_id, data, opts, {
         authorize: async (trx) => {
             await createAuthorizedAssetReadContextForUser(trx, tenant, user as AssetAuthUser, asset_id);
         },
     });
     } catch (error) {
-        if (isTypedAssetWriteError(error)) {
-            throw error;
-        }
+        // Validation and invalid-type failures are RETURNED, not thrown: Next.js
+        // masks thrown server-action messages in production builds, which turned
+        // every validation failure into the generic "Failed to update asset"
+        // (alga0002283). `updateAssetRecord` still throws for sessionless callers.
         const expected = expectedAssetActionError(error);
         if (expected) return expected;
         throw error;
