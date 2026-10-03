@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Label } from '@alga-psa/ui/components/Label';
 import { Input } from '@alga-psa/ui/components/Input';
+import { QuantityInput } from '../QuantityInput';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { BucketOverlayInput, ContractWizardData } from '../ContractWizard';
@@ -353,15 +354,11 @@ export function FixedFeeServicesStep({ data, updateData }: FixedFeeServicesStepP
                       ? t('wizardFixed.services.recurringQuantityLabel', { defaultValue: 'Recurring quantity' })
                       : t('wizardFixed.services.allocationQuantityLabel', { defaultValue: 'Allocation quantity' })}
                   </Label>
-                  <Input
+                  <QuantityInput
                     id={`quantity-${index}`}
-                    type="number"
                     value={service.quantity}
-                    onChange={(event) =>
-                      handleQuantityChange(index, Number(event.target.value))
-                    }
-                    min={isUnitFixedService(service) ? '0' : '1'}
-                    step="1"
+                    onCommit={(value) => handleQuantityChange(index, value)}
+                    min={isUnitFixedService(service) ? 0 : 1}
                     className="w-24"
                   />
                 </div>
