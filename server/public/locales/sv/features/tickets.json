@@ -1993,5 +1993,288 @@
     "failedCount": "Ej bedömda ärenden: {{count}}",
     "unscored": "Ej bedömt",
     "addOnRequired": "Smart sökning kräver tillägget AI Assistant"
+  },
+  "recurring": {
+    "actions": {
+      "done": "Klar",
+      "cancel": "Avbryt",
+      "saving": "Sparar…",
+      "save": "Spara",
+      "pause": "Pausa",
+      "resume": "Återuppta",
+      "archive": "Arkivera"
+    },
+    "clients": {
+      "addTitle": "Lägg till kunder",
+      "addHelp": "Välj en kund för att lägga till den. Dialogrutan förblir öppen så att du kan lägga till fler.",
+      "alreadyAdded": "Redan tillagd",
+      "pickerPlaceholder": "Välj en kund att lägga till",
+      "addedHeading": "Tillagda i den här dialogrutan",
+      "columns": {
+        "client": "Kund",
+        "overrides": "Åsidosättningar",
+        "contact": "Kontakt",
+        "location": "Plats",
+        "assets": "Tillgångar",
+        "nextDue": "Nästa förfallodag",
+        "active": "Aktiv"
+      },
+      "inheritsAll": "Ärver allt",
+      "set": "Angiven",
+      "actions": "Kundåtgärder",
+      "editOverrides": "Redigera åsidosättningar",
+      "remove": "Ta bort",
+      "add": "Lägg till kunder",
+      "empty": "Inga kunder ännu. Ärenden skapas bara för de kunder du lägger till här.",
+      "removeTitle": "Ta bort kund",
+      "removeMessage": "Sluta skapa ärenden för {{client}}? Redan skapade ärenden och historiken behålls."
+    },
+    "errors": {
+      "clientNotFound": "Kunden hittades inte i det här återkommande ärendet",
+      "definitionNotFound": "Det återkommande ärendet hittades inte",
+      "unknownTitleTokens": "Okänd(a) titelplatshållare: {{tokens}}. Tillgängliga platshållare: {{available}}",
+      "subcategoryNeedsCategory": "En underkategori kräver en kategori",
+      "definitionArchived": "Arkiverade återkommande ärenden är skrivskyddade",
+      "clientAlreadyAdded": "Den kunden ingår redan i det här återkommande ärendet",
+      "invalidReferences": "{{problems}}"
+    },
+    "overrides": {
+      "noneValue": "Ingen",
+      "inherited": "Använder inställningen från det återkommande ärendet: {{value}}",
+      "title": "Inställningar för {{client}}",
+      "intro": "Välj vilka ärendefält som den här kunden anger annorlunda än det återkommande ärendet. Allt annat ärvs och följer senare ändringar av det återkommande ärendet.",
+      "groups": {
+        "board": "Åsidosätt tavla och status",
+        "priority": "Åsidosätt prioritet",
+        "category": "Åsidosätt kategori",
+        "assignment": "Åsidosätt tilldelning"
+      },
+      "attachedTo": "Kopplas till det skapade ärendet",
+      "contact": "Kontakt",
+      "contactPlaceholder": "Ingen kontakt",
+      "location": "Plats",
+      "noLocation": "Ingen plats",
+      "assets": "Tillgångar",
+      "groupNames": {
+        "board": "Tavla och status",
+        "priority": "Prioritet",
+        "category": "Kategori",
+        "assignment": "Tilldelning"
+      }
+    },
+    "sections": {
+      "clients": "Kunder",
+      "history": "Historik",
+      "details": "Detaljer",
+      "template": "Ärendemall",
+      "schedule": "Schema",
+      "behaviour": "Beteende"
+    },
+    "fields": {
+      "board": "Tavla",
+      "boardPlaceholder": "Välj en tavla",
+      "status": "Status",
+      "statusBoardDefault": "Tavlans standard",
+      "priority": "Prioritet",
+      "priorityPlaceholder": "Välj en prioritet",
+      "category": "Kategori",
+      "categoryPlaceholder": "Ingen kategori",
+      "assignedTo": "Tilldelat till",
+      "additionalAgents": "Ytterligare handläggare",
+      "name": "Namn",
+      "title": "Ärendetitel",
+      "titleTokens": "Infoga:",
+      "description": "Beskrivning",
+      "descriptionPlaceholder": "Beskrivning",
+      "checklistTemplate": "Checklistmall",
+      "noChecklist": "Ingen"
+    },
+    "history": {
+      "columns": {
+        "due": "Förfaller",
+        "client": "Kund",
+        "status": "Status",
+        "ticket": "Ärende",
+        "reason": "Orsak"
+      },
+      "allStatuses": "Alla statusar",
+      "allClients": "Alla kunder",
+      "empty": "Inget har genererats ännu.",
+      "reasons": {
+        "clientInactive": "Kunden var inaktiv",
+        "previousOpen": "Ärende {{number}} från föregående tillfälle är fortfarande öppet"
+      },
+      "status": {
+        "created": "Skapat",
+        "skipped": "Hoppat över",
+        "missed": "Missat",
+        "failed": "Misslyckades"
+      }
+    },
+    "editor": {
+      "created": "Det återkommande ärendet har skapats. Lägg till de kunder det ska gälla för.",
+      "saved": "Det återkommande ärendet har sparats",
+      "back": "Återkommande ärenden",
+      "newTitle": "Nytt återkommande ärende",
+      "archivedNotice": "Det här återkommande ärendet är arkiverat och kan inte längre ändras.",
+      "clientsAfterSave": "Spara först det återkommande ärendet och lägg sedan till de kunder det ska gälla för.",
+      "archiveTitle": "Arkivera återkommande ärende",
+      "archiveMessage": "Arkivering stoppar alla framtida ärenden och kan inte ångras. Redan skapade ärenden och historiken behålls.",
+      "viewOnly": "Du kan visa det här återkommande ärendet men inte ändra det."
+    },
+    "loading": "Läser in…",
+    "schedule": {
+      "policy": {
+        "keep": "Behåll datumet",
+        "previous": "Flytta till föregående arbetsdag",
+        "next": "Flytta till nästa arbetsdag"
+      },
+      "startDate": "Startar den",
+      "createTime": "Skapa kl.",
+      "dueTime": "Förfaller kl.",
+      "leadDays": "Skapa dagar före förfallodagen",
+      "policyLabel": "När förfallodagen inte är en arbetsdag",
+      "calendarFallback": "Inget standardschema för arbetstid är angivet, så måndag till fredag räknas som arbetsdagar och helgdagar beaktas inte.",
+      "calendarNote": "Arbetsdagar följer ditt standardschema för arbetstid ({{name}}), inklusive dess helgdagar."
+    },
+    "status": {
+      "archived": "Arkiverat",
+      "active": "Aktivt",
+      "paused": "Pausat"
+    },
+    "preview": {
+      "heading": "Nästa 5 förfallodagar",
+      "none": "Inga kommande förfallodagar."
+    },
+    "behaviour": {
+      "openPrevious": "Om föregående ärende fortfarande är öppet",
+      "alwaysCreate": "Skapa nästa ärende ändå",
+      "skip": "Hoppa över det här tillfället",
+      "notifyClient": "Skicka e-post till kunden när ett ärende skapas",
+      "notifyClientHelp": "Av som standard. Interna aviseringar skickas alltid."
+    },
+    "list": {
+      "columns": {
+        "name": "Namn",
+        "schedule": "Schema",
+        "nextDue": "Nästa förfallodag",
+        "status": "Status",
+        "clients": "Kunder"
+      },
+      "new": "Nytt återkommande ärende",
+      "hasFailure": "Den senaste körningen misslyckades. Öppna den för att se varför.",
+      "title": "Återkommande ärenden",
+      "empty": "Inga återkommande ärenden här ännu.",
+      "filter": {
+        "active": "Aktiva",
+        "paused": "Pausade",
+        "archived": "Arkiverade",
+        "all": "Alla"
+      }
+    },
+    "clientTab": {
+      "clientPaused": "Pausat för den här kunden",
+      "pickDefinition": "Välj ett återkommande ärende",
+      "add": "Lägg till i återkommande ärende",
+      "empty": "Den här kunden ingår inte i något återkommande ärende.",
+      "removeTitle": "Ta bort från återkommande ärende",
+      "removeMessage": "Sluta skapa ärenden för den här kunden från {{name}}? Redan skapade ärenden och historiken behålls."
+    },
+    "badge": {
+      "source": "Återkommande: {{name}}"
+    },
+    "rule": {
+      "editor": {
+        "unit": {
+          "days": "dag(ar)",
+          "weeks": "vecka/veckor",
+          "months": "månad(er)",
+          "years": "år"
+        },
+        "lastDay": "Sista dagen",
+        "repeats": "Upprepas",
+        "every": "Var",
+        "weekdaysOnly": "Endast vardagar (måndag till fredag)",
+        "onDays": "På",
+        "monthlyOn": "På",
+        "mode": {
+          "dayOfMonth": "Dag i månaden",
+          "nthWeekday": "N:te veckodag"
+        },
+        "day": "Dag",
+        "nth": "Vilken",
+        "weekday": "Veckodag",
+        "clampHint": "I månader med färre dagar skapas ärendet på månadens sista dag.",
+        "month": "Månad",
+        "ends": "Slutar",
+        "end": {
+          "never": "Aldrig",
+          "onDate": "På ett datum",
+          "afterCount": "Efter ett antal ärenden"
+        },
+        "endDate": "Sista datum",
+        "endCount": "Tillfällen",
+        "frequency": {
+          "daily": "Dagligen",
+          "weekly": "Veckovis",
+          "monthly": "Månadsvis",
+          "yearly": "Årligen"
+        }
+      },
+      "weekdays": {
+        "mon": "måndag",
+        "tue": "tisdag",
+        "wed": "onsdag",
+        "thu": "torsdag",
+        "fri": "fredag",
+        "sat": "lördag",
+        "sun": "söndag"
+      },
+      "weekdaysShort": {
+        "mon": "mån",
+        "tue": "tis",
+        "wed": "ons",
+        "thu": "tors",
+        "fri": "fre",
+        "sat": "lör",
+        "sun": "sön"
+      },
+      "months": {
+        "1": "januari",
+        "2": "februari",
+        "3": "mars",
+        "4": "april",
+        "5": "maj",
+        "6": "juni",
+        "7": "juli",
+        "8": "augusti",
+        "9": "september",
+        "10": "oktober",
+        "11": "november",
+        "12": "december"
+      },
+      "ordinals": {
+        "1": "första",
+        "2": "andra",
+        "3": "tredje",
+        "4": "fjärde",
+        "last": "sista"
+      },
+      "listSeparator": ", ",
+      "endOnDate": ", till och med {{date}}",
+      "endAfterCount": ", {{n}} gånger",
+      "dailyWeekdays": "Varje vardag",
+      "daily": "Varje dag",
+      "dailyEvery": "Var {{n}}:e dag",
+      "weekly": "Varje vecka på {{days}}",
+      "weeklyEvery": "Var {{n}}:e vecka på {{days}}",
+      "everyMonth": "Varje månad",
+      "everyNMonths": "Var {{n}}:e månad",
+      "lastDay": "sista dagen",
+      "dayOfMonth": "dag {{day}}",
+      "monthlyOnDay": "{{every}} på {{day}}",
+      "monthlyOnNthWeekday": "{{every}} på {{ordinal}} {{weekday}}",
+      "yearly": "Varje år den {{day}} {{month}}"
+    }
   }
 }

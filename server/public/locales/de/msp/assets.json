@@ -1603,5 +1603,15 @@
       "missingField": "Erforderliches Assetfeld fehlt.",
       "missingFieldNamed": "Erforderliches Assetfeld fehlt: {{field}}."
     }
+  },
+  "clientAssetMultiSelect": {
+    "errors": {
+      "load": "Assets konnten nicht geladen werden"
+    },
+    "placeholder": "Asset hinzufügen...",
+    "searchPlaceholder": "Assets suchen",
+    "empty": "Keine passenden Assets für diesen Kunden",
+    "loading": "Wird geladen...",
+    "remove": "Asset entfernen"
   }
 }
