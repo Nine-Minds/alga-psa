@@ -64,6 +64,8 @@ export interface Asset {
   location_id?: string | null;
   /** The one contact this asset is assigned to (portal asset scope). */
   contact_name_id?: string | null;
+  /** Display name of the assigned contact; read-only, joined on read. */
+  contact_name?: string | null;
   location?: string;
   purchase_date?: string;
   warranty_end_date?: string;

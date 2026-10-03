@@ -24,6 +24,9 @@ vi.mock('../actions/assetActions', () => ({
 vi.mock('../actions/clientLookupActions', () => ({
   getAllClientsForAssets: vi.fn(async () => []),
   getClientLocationsForAssets: vi.fn(async () => []),
+  getClientContactsForAssets: vi.fn(async () => [
+    { contact_name_id: '11000000-0000-4000-8000-000000000001', client_id: 'b0000000-0000-4000-8000-00000000000b', full_name: 'Pat Person', email: null },
+  ]),
 }));
 
 vi.mock('../actions/assetTypeRegistryActions', () => ({
@@ -77,6 +80,24 @@ vi.mock('@alga-psa/ui/components/Input', () => ({
       placeholder={placeholder}
       className={className}
     />
+  ),
+}));
+
+vi.mock('@alga-psa/ui/components/ContactPicker', () => ({
+  ContactPicker: ({ id, contacts = [], value, onValueChange, placeholder, disabled }: any) => (
+    <select
+      aria-label={id ?? 'contact-picker'}
+      value={value ?? ''}
+      onChange={(event) => onValueChange(event.target.value)}
+      disabled={disabled}
+    >
+      <option value="">{placeholder ?? 'Select contact'}</option>
+      {contacts.map((contact: any) => (
+        <option key={contact.contact_name_id} value={contact.contact_name_id}>
+          {contact.full_name}
+        </option>
+      ))}
+    </select>
   ),
 }));
 
@@ -301,6 +322,27 @@ describe('QuickAddAsset custom asset types', () => {
       installed_software: [],
     });
     expect(payload.attributes).toBeUndefined();
+  });
+
+  it('submits the picked "Assigned to" contact and omits it (null) when none is picked', async () => {
+    const user = userEvent.setup();
+    const CONTACT_ID = '11000000-0000-4000-8000-000000000001';
+    const { typeSelect } = await renderQuickAdd();
+
+    await user.type(screen.getByLabelText('asset-name-input'), 'WS-03');
+    await user.type(screen.getByLabelText('asset-tag-input'), 'TAG-03');
+    await user.selectOptions(typeSelect, 'workstation');
+    await user.type(await screen.findByLabelText('workstation-os-type-input'), 'Windows');
+    await user.type(screen.getByLabelText('workstation-os-version-input'), '11');
+
+    const picker = (await screen.findByLabelText('asset-contact-picker')) as HTMLSelectElement;
+    expect(screen.getByText('Assigned to')).toBeTruthy();
+    await waitFor(() => expect(picker.options.length).toBeGreaterThan(1));
+    await user.selectOptions(picker, CONTACT_ID);
+    await user.click(screen.getByRole('button', { name: 'Create Asset' }));
+
+    await waitFor(() => expect(mockCreateAsset).toHaveBeenCalledTimes(1));
+    expect(mockCreateAsset.mock.calls[0][0].contact_name_id).toBe(CONTACT_ID);
   });
 
   it('renders and submits additional fields alongside built-in workstation fields', async () => {

@@ -104,6 +104,9 @@ export const assetSchema = z.object({
   name: z.string(),
   status: z.string(),
   location_id: z.string().uuid().nullable().optional(),
+  // Client contact the device is assigned to (portal contact-scoped visibility).
+  contact_name_id: z.string().uuid().nullable().optional(),
+  contact_name: z.string().nullable().optional(),
   location: z.string().optional(),
   purchase_date: z.string().optional(),
   warranty_end_date: z.string().optional(),
@@ -200,6 +203,8 @@ export const createAssetSchema = z.object({
   name: z.string(),
   status: z.string(),
   location_id: z.string().uuid().nullable().optional(),
+  // Client contact the device is assigned to (portal contact-scoped visibility).
+  contact_name_id: z.string().uuid().nullable().optional(),
   location: z.string().optional(),
   serial_number: z.string().optional(),
   purchase_date: z.string().optional(),
@@ -258,6 +263,7 @@ export const updateMaintenanceHistorySchema = createMaintenanceHistorySchema.par
 export const assetQuerySchema = z.object({
   client_id: z.string().uuid().optional(),
   location_id: z.string().uuid().optional(),
+  contact_name_id: z.string().uuid().optional(),
   asset_type: z.string().optional(),
   status: z.string().optional(),
   page: z.number().int().positive().optional(),
