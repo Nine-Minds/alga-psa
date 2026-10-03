@@ -175,7 +175,11 @@ services:
   postgres: # Renamed from postgres-base
     image: ankane/pgvector:latest
     #container_name: ${APP_NAME:-sebastian}_postgres
+    # Wrapper refuses/repairs legacy `trust` entries in pg_hba.conf, then execs the stock entrypoint.
+    entrypoint: ["/bin/bash", "/usr/local/bin/alga-postgres-entrypoint.sh"]
     command: postgres -c password_encryption=md5
+    volumes:
+      - ./postgres/alga-postgres-entrypoint.sh:/usr/local/bin/alga-postgres-entrypoint.sh:ro
     environment:
       <<: *shared-environment
       POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
