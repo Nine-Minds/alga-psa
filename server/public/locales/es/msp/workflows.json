@@ -1027,7 +1027,7 @@
           "description": "Esperar una duración o hasta una fecha/hora"
         },
         "transform.assign": {
-          "label": "Asignar",
+          "label": "Establecer variables",
           "description": "Asignar valores a la carga útil o a las variables"
         },
         "action.call": {

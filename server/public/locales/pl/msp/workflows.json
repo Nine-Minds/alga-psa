@@ -1027,7 +1027,7 @@
           "description": "Czekaj przez określony czas lub do konkretnej daty/godziny"
         },
         "transform.assign": {
-          "label": "Przypisz",
+          "label": "Ustaw zmienne",
           "description": "Przypisz wartości do payloadu lub zmiennych"
         },
         "action.call": {

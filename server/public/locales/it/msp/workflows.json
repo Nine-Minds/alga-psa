@@ -1027,7 +1027,7 @@
           "description": "Attendi una durata o fino a una data/ora"
         },
         "transform.assign": {
-          "label": "Assegna",
+          "label": "Imposta variabili",
           "description": "Assegna valori al payload o alle variabili"
         },
         "action.call": {

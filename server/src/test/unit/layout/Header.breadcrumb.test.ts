@@ -16,4 +16,9 @@ describe('getMenuItemNameByPath', () => {
   it('uses the specific settings route instead of the settings landing page', () => {
     expect(getMenuItemNameByPath('/msp/settings/integrations', translate)).toBe('Integrations');
   });
+
+  it('labels workflow run pages as Workflows instead of falling back to Dashboard', () => {
+    expect(getMenuItemNameByPath('/msp/workflows/runs/3f2c9a8e-0000-4000-8000-000000000001', translate)).toBe('Workflows');
+    expect(getMenuItemNameByPath('/msp/workflow-control', translate)).toBe('Control Panel');
+  });
 });

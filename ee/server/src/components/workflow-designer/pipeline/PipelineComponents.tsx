@@ -34,6 +34,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type { Step, IfBlock, ForEachBlock, TryCatchBlock, NodeStep } from '@alga-psa/workflows/runtime';
 import { formatTimeWaitDuration } from '../timeWaitDuration';
+import { WorkflowConditionSummary } from '../WorkflowConditionBuilder';
 import {
   formatWorkflowPatchChangeSummary,
   summarizeWorkflowPatchChanges,
@@ -209,46 +210,88 @@ export const PipelineStart: React.FC<{
 };
 
 /**
+ * The designer's current insertion point (where the next palette item lands), so connectors
+ * and empty branches can show it.
+ */
+export const WorkflowInsertionPointContext = React.createContext<{ pipePath: string; index: number } | null>(null);
+
+export const useIsInsertionPoint = (pipePath: string | undefined, index: number | undefined): boolean => {
+  const insertionPoint = React.useContext(WorkflowInsertionPointContext);
+  return Boolean(
+    insertionPoint &&
+    pipePath !== undefined &&
+    index !== undefined &&
+    insertionPoint.pipePath === pipePath &&
+    insertionPoint.index === index
+  );
+};
+
+/**
  * Pipeline Connector with Insert Button
- * Renders dashed line between steps with hover-activated plus button
+ * Renders the dashed line between steps with an always-visible "+" that sets the insertion point.
+ * The connector at the current insertion point is highlighted and labelled.
  */
 export const PipelineConnector: React.FC<{
   onInsert?: () => void;
   position?: 'start' | 'middle' | 'end';
   disabled?: boolean;
-}> = ({ onInsert, position = 'middle', disabled }) => {
+  pipePath?: string;
+  index?: number;
+}> = ({ onInsert, position = 'middle', disabled, pipePath, index }) => {
   const { t } = useTranslation('msp/workflows');
   const [isHovered, setIsHovered] = useState(false);
+  const isActive = useIsInsertionPoint(pipePath, index);
+  const showButton = Boolean(onInsert) && !disabled;
+  const buttonId = pipePath !== undefined && index !== undefined
+    ? `workflow-insert-${pipePath.replace(/[^a-zA-Z0-9_-]/g, '-')}-${index}`
+    : undefined;
 
   return (
     <div
       className="relative flex flex-col items-center py-1"
+      data-position={position}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
       {/* Dashed line */}
       <div
         className={`w-0.5 h-6 border-l-2 border-dashed ${
-          isHovered ? 'border-primary-400' : 'border-gray-300'
+          isActive || isHovered ? 'border-primary-400' : 'border-gray-300 dark:border-[rgb(var(--color-border-300))]'
         } transition-colors`}
       />
 
-      {/* Insert button - shows on hover */}
-      {onInsert && !disabled && (
+      {showButton && (
         <button
+          id={buttonId}
+          type="button"
           onClick={(e) => {
             e.stopPropagation();
-            onInsert();
+            onInsert?.();
           }}
-          className={`absolute top-1/2 -translate-y-1/2 flex items-center justify-center w-5 h-5 rounded-full
-            ${isHovered ? 'opacity-100 scale-100' : 'opacity-0 scale-75'}
-            bg-primary-500 hover:bg-primary-600 text-white shadow-sm
-            transition-all duration-150 ease-out z-10`}
+          className={`absolute top-1/2 -translate-y-1/2 flex items-center justify-center w-5 h-5 rounded-full border
+            ${isActive
+              ? 'bg-primary-500 border-primary-500 text-white ring-2 ring-primary-200 dark:ring-primary-500/40'
+              : isHovered
+                ? 'bg-primary-500 border-primary-500 text-white'
+                : 'bg-[rgb(var(--color-card))] border-gray-300 text-gray-400 dark:border-[rgb(var(--color-border-300))]'}
+            hover:bg-primary-600 hover:border-primary-600 hover:text-white
+            focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500
+            shadow-sm transition-colors duration-150 z-10`}
           title={t('pipeline.insertStepHere', { defaultValue: 'Insert step here' })}
+          aria-label={t('pipeline.insertStepHere', { defaultValue: 'Insert step here' })}
+          aria-pressed={isActive}
           data-testid="pipeline-insert-button"
         >
           <Plus className="h-3 w-3" />
         </button>
+      )}
+      {showButton && isActive && (
+        <span
+          className="absolute top-1/2 left-1/2 ml-4 -translate-y-1/2 whitespace-nowrap rounded bg-primary-50 px-1.5 py-0.5 text-[11px] font-medium text-primary-700 dark:bg-primary-500/20 dark:text-primary-300"
+          data-testid="pipeline-insertion-point-label"
+        >
+          {t('pipeline.insertionPointLabel', { defaultValue: 'New steps go here' })}
+        </span>
       )}
     </div>
   );
@@ -260,22 +303,57 @@ export const PipelineConnector: React.FC<{
 export const EmptyPipeline: React.FC<{
   onAddStep?: () => void;
   disabled?: boolean;
-}> = ({ onAddStep, disabled }) => {
+  compact?: boolean;
+  pipePath?: string;
+}> = ({ onAddStep, disabled, compact = false, pipePath }) => {
   const { t } = useTranslation('msp/workflows');
-  return (
-    <div
-      className="flex flex-col items-center justify-center py-8 px-4 border-2 border-dashed border-gray-300 rounded-lg bg-gray-50"
-      data-testid="empty-pipeline"
-    >
-      <div className="text-gray-400 mb-3">
-        <Plus className="h-8 w-8" />
+  const isActive = useIsInsertionPoint(pipePath, 0);
+  const canAdd = Boolean(onAddStep) && !disabled;
+  const message = disabled
+    ? t('pipeline.emptyDisabled', { defaultValue: 'No steps yet.' })
+    : compact
+      ? t('pipeline.emptyBranchPrompt', { defaultValue: 'Add a step to this branch' })
+      : t('pipeline.emptySelectPrompt', { defaultValue: 'Select a step from the panel to get started.' });
+  const className = `flex w-full flex-col items-center justify-center ${compact ? 'py-3 px-3' : 'py-8 px-4'} border-2 border-dashed rounded-lg transition-colors ${
+    isActive
+      ? 'border-primary-400 bg-primary-50 dark:bg-primary-500/15'
+      : 'border-gray-300 bg-gray-50 dark:border-[rgb(var(--color-border-300))] dark:bg-[rgb(var(--color-background))]'
+  } ${canAdd ? 'hover:border-primary-400 cursor-pointer' : ''}`;
+  const content = (
+    <>
+      <div className={`${isActive ? 'text-primary-500' : 'text-gray-400'} ${compact ? 'mb-1' : 'mb-3'}`}>
+        <Plus className={compact ? 'h-4 w-4' : 'h-8 w-8'} />
       </div>
-      <p className="text-sm text-gray-500 text-center">
-        {disabled
-          ? t('pipeline.emptyDisabled', { defaultValue: 'No steps yet.' })
-          : t('pipeline.emptySelectPrompt', { defaultValue: 'Select a step from the panel to get started.' })}
+      <p className={`text-center ${compact ? 'text-xs' : 'text-sm'} ${isActive ? 'text-primary-700 dark:text-primary-300' : 'text-gray-500'}`}>
+        {isActive && !disabled
+          ? t('pipeline.emptyActivePrompt', { defaultValue: 'New steps go here. Pick one from the palette.' })
+          : message}
       </p>
-    </div>
+    </>
+  );
+
+  if (!canAdd) {
+    return (
+      <div className={className} data-testid="empty-pipeline">
+        {content}
+      </div>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      id={pipePath ? `workflow-empty-pipe-${pipePath.replace(/[^a-zA-Z0-9_-]/g, '-')}` : undefined}
+      className={className}
+      data-testid="empty-pipeline"
+      aria-pressed={isActive}
+      onClick={(event) => {
+        event.stopPropagation();
+        onAddStep?.();
+      }}
+    >
+      {content}
+    </button>
   );
 };
 
@@ -324,12 +402,7 @@ export const StepCardSummary: React.FC<{
 
   if (step.type === 'control.if') {
     const ifStep = step as IfBlock;
-    const conditionPreview = ifStep.condition?.$expr?.slice(0, 30) || '';
-    return (
-      <span className="text-xs text-gray-500 font-mono truncate max-w-[200px]">
-        {conditionPreview}{conditionPreview.length >= 30 ? '...' : ''}
-      </span>
-    );
+    return <WorkflowConditionSummary expression={ifStep.condition?.$expr ?? ''} />;
   }
 
   if (step.type === 'control.forEach') {

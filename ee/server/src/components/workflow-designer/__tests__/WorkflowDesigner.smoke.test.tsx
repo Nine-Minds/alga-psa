@@ -193,7 +193,8 @@ vi.mock('@alga-psa/workflows/runtime', () => ({
   validateExpressionSource: vi.fn(() => []),
 }));
 
-vi.mock('@alga-psa/workflows/authoring', () => ({
+vi.mock('@alga-psa/workflows/authoring', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@alga-psa/workflows/authoring')>()),
   buildWorkflowDesignerActionCatalog: vi.fn(() => []),
   WORKFLOW_CLOCK_PAYLOAD_SCHEMA_REF: 'payload.WorkflowClock.v1',
   isWorkflowAiInferAction: vi.fn(() => false),

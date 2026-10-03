@@ -3,6 +3,8 @@ import { describe, expect, it } from 'vitest';
 import { applyCatalogActionChoiceToStep } from '../groupedActionSelection';
 import {
   buildActionInputEditorState,
+  findNonFailingNotFoundInputs,
+  getActionInputOptionLabel,
   type WorkflowDesignerActionRegistryItem,
 } from '../actionInputEditorState';
 import type { NodeStep } from '@alga-psa/workflows/runtime/client';
@@ -705,5 +707,48 @@ describe('action input editor state', () => {
     ]);
     expect(state.mappedRequiredInputFieldCount).toBe(3);
     expect(state.unmappedRequiredInputFieldCount).toBe(1);
+  });
+});
+
+describe('"nothing found" inputs', () => {
+  const findContact: WorkflowDesignerActionRegistryItem = {
+    id: 'contacts.find',
+    version: 1,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        contact_id: { type: 'string' },
+        on_not_found: {
+          type: 'string',
+          enum: ['return_null', 'error'],
+          default: 'return_null',
+          'x-workflow-option-labels': { return_null: 'Continue with an empty result', error: 'Fail the step' },
+          'x-workflow-failure-policy': { failValue: 'error' },
+        },
+      },
+    },
+    outputSchema: { type: 'object', properties: {} },
+  };
+  const stateFor = (inputMapping: Record<string, unknown>) =>
+    buildActionInputEditorState(
+      { type: 'action.call', config: { actionId: 'contacts.find', version: 1, inputMapping } },
+      [findContact]
+    );
+
+  it('reads option labels and the failing option from schema metadata', () => {
+    const field = stateFor({}).actionInputFields.find((candidate) => candidate.name === 'on_not_found') as
+      { optionLabels?: Record<string, string>; failurePolicy?: { failValue: string } };
+    expect(field.failurePolicy).toEqual({ failValue: 'error' });
+    expect(getActionInputOptionLabel(field, 'return_null')).toBe('Continue with an empty result');
+    expect(getActionInputOptionLabel(field, 'unknown_value')).toBe('unknown_value');
+  });
+
+  it('flags inputs left on a non-failing value (default or fixed), not computed or failing ones', () => {
+    const flagged = (mapping: Record<string, unknown>) =>
+      findNonFailingNotFoundInputs(stateFor(mapping).actionInputFields as never, mapping as never);
+    expect(flagged({})).toEqual([{ name: 'on_not_found', failValue: 'error', currentValue: 'return_null' }]);
+    expect(flagged({ on_not_found: 'return_null' })).toHaveLength(1);
+    expect(flagged({ on_not_found: 'error' })).toEqual([]);
+    expect(flagged({ on_not_found: { $expr: 'payload.mode' } })).toEqual([]);
   });
 });

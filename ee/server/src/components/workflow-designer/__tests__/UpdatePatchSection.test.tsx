@@ -129,11 +129,11 @@ describe('InputMappingEditor update patch UX', () => {
     expect(document.getElementById('update-patch-step-update-edit-changes')).toBeInTheDocument();
     // ticket_id still renders as a normal mapping row
     expect(
-      document.getElementById('mapping-step-update-ticket_id-source-mode-container')
+      document.getElementById('mapping-step-update-ticket_id-value-source-row')
     ).toBeInTheDocument();
     // patch children are not rendered as a flat field pile
     expect(
-      document.getElementById('mapping-step-update-patch.status_id-source-mode-container')
+      document.getElementById('mapping-step-update-patch.status_id-value-source-row')
     ).not.toBeInTheDocument();
   });
 
@@ -174,7 +174,7 @@ describe('InputMappingEditor update patch UX', () => {
 
     expect(document.querySelector('[data-automation-id="update-patch-step-ref-summary"]')).not.toBeInTheDocument();
     expect(
-      document.getElementById('mapping-step-ref-patch-source-mode-container')
+      document.getElementById('mapping-step-ref-patch-value-source-row')
     ).toBeInTheDocument();
   });
 

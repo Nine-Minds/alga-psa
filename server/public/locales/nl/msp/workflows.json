@@ -1027,7 +1027,7 @@
           "description": "Wachten op een duur of tot een datum/tijd"
         },
         "transform.assign": {
-          "label": "Toewijzen",
+          "label": "Variabelen instellen",
           "description": "Waarden toewijzen aan payload of variabelen"
         },
         "action.call": {

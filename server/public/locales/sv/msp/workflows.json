@@ -951,7 +951,7 @@
           "description": "Vänta en viss tid eller till ett datum och klockslag"
         },
         "transform.assign": {
-          "label": "Tilldela",
+          "label": "Ange variabler",
           "description": "Tilldela värden i nyttolasten (payload) eller variabler (vars)"
         },
         "action.call": {

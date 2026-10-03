@@ -1,7 +1,9 @@
 import { z } from 'zod';
+import { withWorkflowPicker } from '../jsonSchemaMetadata';
 import {
   BaseDomainEventPayloadSchema,
   changesSchema,
+  entityIdSchema,
   updatedFieldsSchema,
   uuidSchema,
 } from './commonEventPayloadSchemas';
@@ -14,9 +16,12 @@ import {
  * - These are intentionally higher-level and stable; they can be expanded/versioned as needed.
  */
 
-const ticketIdSchema = uuidSchema('Ticket ID');
-const userIdSchema = uuidSchema('User ID');
-const contactIdSchema = uuidSchema('Contact ID');
+const ticketIdSchema = entityIdSchema('Ticket ID', 'ticket');
+const userIdSchema = entityIdSchema('User ID', 'user');
+const contactIdSchema = entityIdSchema('Contact ID', 'contact');
+const assigneeIdSchema = (label: string) => entityIdSchema(label, 'user-or-team');
+const statusIdSchema = (label: string) => withWorkflowPicker(z.string().min(1), label, 'ticket-status');
+const priorityIdSchema = (label: string) => withWorkflowPicker(z.string().min(1), label, 'ticket-priority');
 const messageIdSchema = uuidSchema('Message ID');
 const noteIdSchema = uuidSchema('Note ID');
 const timeEntryIdSchema = uuidSchema('Time Entry ID');
@@ -63,9 +68,9 @@ export const ticketAssignedEventPayloadSchema = BaseDomainEventPayloadSchema.ext
   ticketId: ticketIdSchema,
   assignedToUserId: userIdSchema.optional().describe('Deprecated: user assigned to the ticket'),
   assignedByUserId: userIdSchema.optional().describe('User who performed the assignment'),
-  previousAssigneeId: z.string().uuid().optional(),
+  previousAssigneeId: assigneeIdSchema('Previous assignee ID').optional(),
   previousAssigneeType: assigneeTypeSchema.optional(),
-  newAssigneeId: z.string().uuid().optional(),
+  newAssigneeId: assigneeIdSchema('New assignee ID').optional(),
   newAssigneeType: assigneeTypeSchema.optional(),
   assignedAt: z.string().optional().describe('Assigned timestamp (ISO 8601)'),
   updatedFields: updatedFieldsSchema,
@@ -109,8 +114,8 @@ export type TicketResponseStateChangedEventPayload = z.infer<
 
 export const ticketStatusChangedEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
   ticketId: ticketIdSchema,
-  previousStatusId: z.string().min(1).describe('Previous status ID'),
-  newStatusId: z.string().min(1).describe('New status ID'),
+  previousStatusId: statusIdSchema('Previous status ID'),
+  newStatusId: statusIdSchema('New status ID'),
   reason: z.string().optional(),
   changedAt: z.string().datetime().optional().describe('Timestamp when status changed (ISO 8601)'),
 }).describe('Payload for TICKET_STATUS_CHANGED');
@@ -119,8 +124,8 @@ export type TicketStatusChangedEventPayload = z.infer<typeof ticketStatusChanged
 
 export const ticketPriorityChangedEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
   ticketId: ticketIdSchema,
-  previousPriorityId: z.string().min(1).describe('Previous priority ID'),
-  newPriorityId: z.string().min(1).describe('New priority ID'),
+  previousPriorityId: priorityIdSchema('Previous priority ID'),
+  newPriorityId: priorityIdSchema('New priority ID'),
   reason: z.string().optional(),
   changedAt: z.string().datetime().optional().describe('Timestamp when priority changed (ISO 8601)'),
 }).describe('Payload for TICKET_PRIORITY_CHANGED');
@@ -129,9 +134,9 @@ export type TicketPriorityChangedEventPayload = z.infer<typeof ticketPriorityCha
 
 export const ticketUnassignedEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
   ticketId: ticketIdSchema,
-  previousAssigneeId: z.string().uuid().describe('Previous assignee ID'),
+  previousAssigneeId: assigneeIdSchema('Previous assignee ID'),
   previousAssigneeType: assigneeTypeSchema.describe('Previous assignee type'),
-  newAssigneeId: z.string().uuid().optional().describe('New assignee ID (typically absent after unassignment)'),
+  newAssigneeId: assigneeIdSchema('New assignee ID (typically absent after unassignment)').optional(),
   newAssigneeType: assigneeTypeSchema.optional().describe('New assignee type (typically absent after unassignment)'),
   unassignedAt: z.string().datetime().optional(),
   reason: z.string().optional(),
@@ -141,8 +146,8 @@ export type TicketUnassignedEventPayload = z.infer<typeof ticketUnassignedEventP
 
 export const ticketReopenedEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
   ticketId: ticketIdSchema,
-  previousStatusId: z.string().min(1).describe('Previous status ID'),
-  newStatusId: z.string().min(1).describe('New status ID'),
+  previousStatusId: statusIdSchema('Previous status ID'),
+  newStatusId: statusIdSchema('New status ID'),
   reopenedAt: z.string().datetime().optional(),
   reason: z.string().optional(),
 }).describe('Payload for TICKET_REOPENED');
@@ -178,8 +183,8 @@ export type TicketTagsChangedEventPayload = z.infer<typeof ticketTagsChangedEven
 
 export const ticketQueueChangedEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
   ticketId: ticketIdSchema,
-  previousBoardId: z.string().uuid().optional(),
-  newBoardId: z.string().uuid().optional(),
+  previousBoardId: entityIdSchema('Previous board ID', 'board').optional(),
+  newBoardId: entityIdSchema('New board ID', 'board').optional(),
   changedAt: z.string().datetime().optional(),
 }).describe('Payload for TICKET_QUEUE_CHANGED');
 

@@ -80,6 +80,7 @@ import { registerTicketActions } from '../businessOperations/tickets';
 class FakeQueryBuilder {
   private conditions: Record<string, any> = {};
   private comparisons: Array<{ column: string; operator: string; value: any }> = [];
+  private inclusions: Array<{ column: string; values: any[] }> = [];
   private orderings: Array<{ column: string; direction: 'asc' | 'desc' }> = [];
   private joins: Array<{
     tableName: string;
@@ -137,6 +138,11 @@ class FakeQueryBuilder {
     return this.where(columnOrConditions as any, operatorOrValue);
   }
 
+  whereIn(column: string, values: any[]): this {
+    this.inclusions.push({ column, values });
+    return this;
+  }
+
   andWhereRaw(sql: string, bindings: any[]): this {
     if (sql.includes("attributes->>'external_ref'")) {
       this.rawExternalRef = String(bindings[0]);
@@ -191,6 +197,7 @@ class FakeQueryBuilder {
     const cloned = new FakeQueryBuilder(this.tableName, this.tables);
     cloned.conditions = { ...this.conditions };
     cloned.comparisons = [...this.comparisons];
+    cloned.inclusions = [...this.inclusions];
     cloned.orderings = [...this.orderings];
     cloned.joins = this.joins.map((join) => ({ ...join, clauses: [...join.clauses] }));
     cloned.selectedColumns = [...this.selectedColumns];
@@ -253,6 +260,7 @@ class FakeQueryBuilder {
 
   private matches(row: TableRow): boolean {
     return Object.entries(this.conditions).every(([column, value]) => this.valueFor(row, column) === value)
+      && this.inclusions.every(({ column, values }) => values.includes(this.valueFor(row, column)))
       && this.comparisons.every(({ column, operator, value }) => {
         const rowValue = this.valueFor(row, column);
         if (operator === '>') {
@@ -875,6 +883,92 @@ describe('ticket workflow runtime board-scoped statuses', () => {
     );
 
     expect(result.ticket.board_id).toBe(findIds.boardId);
+  });
+
+  it('tickets.find returns display names for related records alongside their ids', async () => {
+    setTenantTx({
+      tickets: [createFindTicket({ company_id: undefined, client_id: findIds.companyId })],
+      clients: [{ tenant: 'tenant-1', client_id: findIds.companyId, client_name: 'Acme Corp' }],
+      boards: [{ tenant: 'tenant-1', board_id: findIds.boardId, board_name: 'Urgent Matters' }],
+      contacts: [{ tenant: 'tenant-1', contact_name_id: findIds.contactId, full_name: 'Dana Contact' }],
+      statuses: [{ tenant: 'tenant-1', status_id: findIds.statusId, name: 'Open' }],
+      priorities: [{ tenant: 'tenant-1', priority_id: findIds.priorityId, priority_name: 'P1 - Critical' }],
+      categories: [
+        { tenant: 'tenant-1', category_id: findIds.categoryId, category_name: 'Network' },
+        { tenant: 'tenant-1', category_id: findIds.subcategoryId, category_name: 'VPN' },
+      ],
+      users: [{ tenant: 'tenant-1', user_id: findIds.assignedTo, first_name: 'Robin', last_name: 'Tech', username: 'robin' }],
+    });
+
+    const action = getAction('tickets.find');
+    const result = await action.handler({ ticket_id: findIds.ticketId }, createActionContext());
+
+    expect(result.ticket).toMatchObject({
+      client_id: findIds.companyId,
+      company_id: findIds.companyId,
+      client_name: 'Acme Corp',
+      board_name: 'Urgent Matters',
+      contact_name: 'Dana Contact',
+      status_name: 'Open',
+      priority_name: 'P1 - Critical',
+      category_name: 'Network',
+      subcategory_name: 'VPN',
+      assigned_to_name: 'Robin Tech',
+    });
+  });
+
+  it('tickets.find always returns the latest comment and the latest customer comment', async () => {
+    const comment = (id: string, createdAt: string, extra: TableRow) => ({
+      tenant: 'tenant-1',
+      ticket_id: findIds.ticketId,
+      comment_id: id,
+      note: `note ${id}`,
+      created_at: createdAt,
+      is_internal: false,
+      is_resolution: false,
+      user_id: null,
+      contact_id: null,
+      author_type: 'internal',
+      ...extra,
+    });
+    setTenantTx({
+      tickets: [createFindTicket()],
+      comments: [
+        comment('99999999-9999-4999-8999-999999999991', '2026-03-10T10:00:00.000Z', { author_type: 'client', contact_id: findIds.contactId }),
+        comment('99999999-9999-4999-8999-999999999992', '2026-03-10T11:00:00.000Z', { author_type: 'contact', is_internal: true }),
+        comment('99999999-9999-4999-8999-999999999993', '2026-03-10T12:00:00.000Z', { author_type: 'internal' }),
+      ],
+    });
+
+    const action = getAction('tickets.find');
+    const result = await action.handler({ ticket_id: findIds.ticketId }, createActionContext());
+
+    expect(result.latest_comment?.comment_id).toBe('99999999-9999-4999-8999-999999999993');
+    // Internal notes are never the customer's reply, even when authored as a contact.
+    expect(result.latest_customer_comment?.comment_id).toBe('99999999-9999-4999-8999-999999999991');
+    expect(result.latest_customer_comment?.note).toBe('note 99999999-9999-4999-8999-999999999991');
+    expect(result.comments).toBeUndefined();
+  });
+
+  it('tickets.find returns null latest comments for a ticket without comments', async () => {
+    setTenantTx({ tickets: [createFindTicket()] });
+    const action = getAction('tickets.find');
+    const result = await action.handler({ ticket_id: findIds.ticketId }, createActionContext());
+    expect(result.latest_comment).toBeNull();
+    expect(result.latest_customer_comment).toBeNull();
+  });
+
+  it('tickets.find returns null display names when related records are missing', async () => {
+    setTenantTx({
+      tickets: [createFindTicket({ board_id: null, assigned_to: null })],
+    });
+
+    const action = getAction('tickets.find');
+    const result = await action.handler({ ticket_id: findIds.ticketId }, createActionContext());
+
+    expect(result.ticket.board_name).toBeNull();
+    expect(result.ticket.assigned_to_name).toBeNull();
+    expect(result.ticket.priority_name).toBeNull();
   });
 
   it('T048: tickets.find tolerates a ticket without a board', async () => {
