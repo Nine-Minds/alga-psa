@@ -41,6 +41,8 @@ function buildTrx(params: {
   boards?: Array<{ board_id: string; client_portal_visible: boolean }>;
   profiles?: Array<{ billing_profile_id: string; is_default: boolean }>;
   grants?: Array<{ billing_profile_id: string }>;
+  /** (contact, manager) edges the hierarchy query returns for the client. */
+  reports?: Array<{ contact_name_id: string; manager_contact_id: string | null }>;
 }) {
   return ((table: string) => {
     if (table === 'boards') {
@@ -69,6 +71,9 @@ function buildTrx(params: {
       return {
         where: vi.fn().mockReturnValue({
           first: vi.fn().mockResolvedValue(params.contact),
+          whereNotNull: vi.fn().mockReturnValue({
+            select: vi.fn().mockResolvedValue(params.reports ?? []),
+          }),
         }),
       };
     }
@@ -277,6 +282,54 @@ describe('contact scope', () => {
       grantedTicketProfileIds: ['profile-north'],
       defaultBillingProfileId: 'profile-default',
     });
+  });
+
+  it('resolves me plus every direct and indirect report, and grants watcher visibility', async () => {
+    const result = await getClientContactVisibilityContext(buildTrx({
+      contact: { contact_name_id: 'contact-1', client_id: 'client-1', portal_visibility_group_id: 'g' },
+      group: { group_id: 'g', client_id: 'client-1', ticket_scope: 'contact' },
+      boardIds: ['board-1'],
+      reports: [
+        { contact_name_id: 'contact-2', manager_contact_id: 'contact-1' },
+        { contact_name_id: 'contact-3', manager_contact_id: 'contact-2' },
+        // Reports to someone outside my subtree.
+        { contact_name_id: 'contact-9', manager_contact_id: 'contact-8' },
+        // My own manager is above me, not below.
+        { contact_name_id: 'contact-1', manager_contact_id: 'contact-0' },
+      ],
+    }), 'tenant-1', 'contact-1');
+
+    expect(result.visibleContactIds).toEqual(['contact-1', 'contact-2', 'contact-3']);
+    expect(result.watchGrant).toBe(true);
+  });
+
+  it('terminates on a reporting cycle and never lists the contact twice', async () => {
+    const result = await getClientContactVisibilityContext(buildTrx({
+      contact: { contact_name_id: 'contact-1', client_id: 'client-1', portal_visibility_group_id: 'g' },
+      group: { group_id: 'g', client_id: 'client-1', ticket_scope: 'contact' },
+      boardIds: ['board-1'],
+      reports: [
+        { contact_name_id: 'contact-2', manager_contact_id: 'contact-1' },
+        { contact_name_id: 'contact-3', manager_contact_id: 'contact-2' },
+        { contact_name_id: 'contact-1', manager_contact_id: 'contact-3' },
+      ],
+    }), 'tenant-1', 'contact-1');
+
+    expect(result.visibleContactIds).toEqual(['contact-1', 'contact-2', 'contact-3']);
+  });
+
+  it('a contact with no group, a client-scoped group, or the admin override gets no hierarchy or watcher grant', async () => {
+    const contact = { contact_name_id: 'contact-1', client_id: 'client-1', portal_visibility_group_id: 'g' };
+    const reports = [{ contact_name_id: 'contact-2', manager_contact_id: 'contact-1' }];
+    const results = await Promise.all([
+      getClientContactVisibilityContext(buildTrx({ contact: { ...contact, portal_visibility_group_id: null }, reports }), 'tenant-1', 'contact-1'),
+      getClientContactVisibilityContext(buildTrx({ contact, group: { group_id: 'g', client_id: 'client-1', ticket_scope: 'client' }, boardIds: ['b'], reports }), 'tenant-1', 'contact-1'),
+      getClientContactVisibilityContext(buildTrx({ contact: { ...contact, is_client_admin: true }, group: { group_id: 'g', client_id: 'client-1', ticket_scope: 'contact' }, boardIds: ['b'], reports }), 'tenant-1', 'contact-1'),
+    ]);
+    for (const result of results) {
+      expect(result.visibleContactIds).toBeUndefined();
+      expect(result.watchGrant).toBeUndefined();
+    }
   });
 
   it('does not query grants for a client-scoped contact', async () => {

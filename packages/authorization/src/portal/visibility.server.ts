@@ -98,6 +98,61 @@ async function resolveGrantedTicketProfiles(
   };
 }
 
+/**
+ * Everyone below `contactId` in the reports-to tree, transitively, given every
+ * (contact, manager) edge of the client. Walks in memory with a visited set, so
+ * a cycle the database guard and `assertValidContactManager` both missed
+ * terminates instead of looping. The contact itself is never in the result.
+ */
+export function collectReportContactIds(
+  edges: ReadonlyArray<{ contact_name_id: string; manager_contact_id: string | null }>,
+  contactId: string
+): string[] {
+  const reportsByManager = new Map<string, string[]>();
+  for (const edge of edges) {
+    if (!edge.manager_contact_id) continue;
+    const list = reportsByManager.get(edge.manager_contact_id);
+    if (list) list.push(edge.contact_name_id);
+    else reportsByManager.set(edge.manager_contact_id, [edge.contact_name_id]);
+  }
+
+  const visited = new Set<string>([contactId]);
+  const reports: string[] = [];
+  const queue = [contactId];
+  while (queue.length > 0) {
+    const current = queue.shift() as string;
+    for (const report of reportsByManager.get(current) ?? []) {
+      if (visited.has(report)) continue;
+      visited.add(report);
+      reports.push(report);
+      queue.push(report);
+    }
+  }
+  return reports;
+}
+
+/**
+ * Me plus everyone who reports to me, directly or indirectly, within my own
+ * client. One query for the client's edges; the walk is in memory.
+ */
+async function resolveVisibleContactIds(
+  trx: Knex.Transaction,
+  tenant: string,
+  contactId: string,
+  clientId: string
+): Promise<string[]> {
+  const edges = await tenantScopedTable<{
+    contact_name_id: string;
+    manager_contact_id: string | null;
+    client_id: string | null;
+  }>(trx, 'contacts', tenant)
+    .where({ client_id: clientId })
+    .whereNotNull('manager_contact_id')
+    .select('contact_name_id', 'manager_contact_id');
+
+  return [contactId, ...collectReportContactIds(edges, contactId)];
+}
+
 export async function getClientContactVisibilityContext(
   trx: Knex.Transaction,
   tenant: string,
@@ -174,8 +229,15 @@ export async function getClientContactVisibilityContext(
     .then((rows: Array<{ board_id: string }>) => rows.map((row) => row.board_id));
 
   const effectiveTicketScope = contact.is_client_admin ? 'client' : group.ticket_scope;
-  const profileGrants = effectiveTicketScope === 'contact'
-    ? await resolveGrantedTicketProfiles(trx, tenant, contactId, contact.client_id)
+  // Profile, hierarchy and watcher grants only exist under contact scope. A
+  // client-scoped user (and a client admin, whose scope is forced to 'client')
+  // already sees every ticket of the client.
+  const contactGrants = effectiveTicketScope === 'contact'
+    ? {
+        ...(await resolveGrantedTicketProfiles(trx, tenant, contactId, contact.client_id)),
+        visibleContactIds: await resolveVisibleContactIds(trx, tenant, contactId, contact.client_id),
+        watchGrant: true,
+      }
     : { grantedTicketProfileIds: [], defaultBillingProfileId: null };
 
   return {
@@ -186,6 +248,6 @@ export async function getClientContactVisibilityContext(
     clientId: contact.client_id,
     visibilityGroupId: contact.portal_visibility_group_id,
     visibleBoardIds: await resolveVisibleBoardIds(trx, tenant, boardIds),
-    ...profileGrants,
+    ...contactGrants,
   };
 }

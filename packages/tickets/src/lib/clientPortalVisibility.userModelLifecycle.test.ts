@@ -82,6 +82,8 @@ function createUserModelTrx(state: UserModelState) {
           const matches = state.contacts.filter((row) => matchesFilters(row, filters));
           return {
             first: async (...columns: string[]) => pickFields(matches[0], columns),
+            // Hierarchy edges: onboarding never sets a manager.
+            whereNotNull: () => ({ select: async () => [] }),
           };
         },
       };
@@ -274,6 +276,9 @@ describe('portal user creation preserves client portal visibility assignments', 
       // A brand-new portal user holds no billing-profile ticket grants.
       grantedTicketProfileIds: [],
       defaultBillingProfileId: null,
+      // Contact scope adds the (empty) hierarchy and the watcher grant; admins
+      // and client-scoped users get neither.
+      ...(effectiveTicketScope === 'contact' ? { visibleContactIds: ['contact-1'], watchGrant: true } : {}),
     });
   });
 
