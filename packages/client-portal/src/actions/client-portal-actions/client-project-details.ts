@@ -9,6 +9,8 @@ import { v4 as uuidv4 } from 'uuid';
 import { getEntityImageUrlsBatch } from '@alga-psa/formatting/avatarUtils';
 import { withAuth, type AuthContext } from '@alga-psa/auth';
 import type { IUserWithRoles } from '@alga-psa/types';
+import { applyProjectVisibilityFilter } from '@alga-psa/authorization/portal/visibility';
+import { getPortalVisibilityForUser } from '../../lib/clientAuth';
 
 type ClientTaskDocument = {
   document_id: string;
@@ -52,19 +54,23 @@ async function getProjectWithConfigInternal(
   if (user.user_type !== 'client') return null;
   if (!user.contact_id) return null;
 
-  // Get client_id from user's contact -> client relationship
-  const contact = await tenantDb(knex, tenant).table('contacts')
-    .where({ contact_name_id: user.contact_id })
-    .first<any>();
-  if (!contact?.client_id) return null;
+  // The visibility resolver (not a hand-rolled contact -> client lookup) says
+  // which client this is and whether projects are narrowed to the contact.
+  const visibility = await withTransaction(knex, (trx: Knex.Transaction) =>
+    getPortalVisibilityForUser(trx, user, tenant)
+  );
+  if (!visibility) return null;
 
-  const project = await tenantDb(knex, tenant).table('projects')
-    .where({ project_id: projectId, client_id: contact.client_id, is_inactive: false })
-    .first<any>();
+  const project = await applyProjectVisibilityFilter(
+    tenantDb(knex, tenant).table('projects')
+      .where({ project_id: projectId, is_inactive: false }),
+    visibility,
+    { clientColumn: 'projects.client_id', contactColumn: 'projects.contact_name_id' }
+  ).first<any>();
   if (!project) return null;
 
   const config = project.client_portal_config ?? DEFAULT_CLIENT_PORTAL_CONFIG;
-  return { project, config, clientId: contact.client_id };
+  return { project, config, clientId: visibility.clientId };
 }
 
 /**
@@ -499,14 +505,14 @@ export const uploadClientTaskDocument = withAuth(async (
     return { success: false, error: 'Not authorized' };
   }
 
-  // Get client_id from user's contact
+  // Who is this portal user and which projects may they see?
   if (!user.contact_id) {
     return { success: false, error: 'User not associated with a contact' };
   }
-  const contact = await tenantDb(knex, tenant).table('contacts')
-    .where({ contact_name_id: user.contact_id })
-    .first<any>();
-  if (!contact?.client_id) {
+  const visibility = await withTransaction(knex, (trx: Knex.Transaction) =>
+    getPortalVisibilityForUser(trx, user, tenant)
+  );
+  if (!visibility) {
     return { success: false, error: 'Client not found' };
   }
 
@@ -516,8 +522,11 @@ export const uploadClientTaskDocument = withAuth(async (
   scopedDb.tenantJoin(taskQuery, 'project_phases as pp', 'pt.phase_id', 'pp.phase_id');
   scopedDb.tenantJoin(taskQuery, 'projects as p', 'pp.project_id', 'p.project_id');
 
-  const task = await taskQuery
-    .where({ 'pt.task_id': taskId, 'p.client_id': contact.client_id })
+  const task = await applyProjectVisibilityFilter(
+    taskQuery.where({ 'pt.task_id': taskId }),
+    visibility,
+    { clientColumn: 'p.client_id', contactColumn: 'p.contact_name_id' }
+  )
     .select('p.project_id', 'p.client_portal_config')
     .first<any>();
 
@@ -598,14 +607,14 @@ export const getClientTaskDocuments = withAuth(async (
     return { success: false, error: 'Not authorized' };
   }
 
-  // Get client_id from user's contact
+  // Who is this portal user and which projects may they see?
   if (!user.contact_id) {
     return { success: false, error: 'User not associated with a contact' };
   }
-  const contact = await tenantDb(knex, tenant).table('contacts')
-    .where({ contact_name_id: user.contact_id })
-    .first<any>();
-  if (!contact?.client_id) {
+  const visibility = await withTransaction(knex, (trx: Knex.Transaction) =>
+    getPortalVisibilityForUser(trx, user, tenant)
+  );
+  if (!visibility) {
     return { success: false, error: 'Client not found' };
   }
 
@@ -615,8 +624,11 @@ export const getClientTaskDocuments = withAuth(async (
   scopedDb.tenantJoin(taskQuery, 'project_phases as pp', 'pt.phase_id', 'pp.phase_id');
   scopedDb.tenantJoin(taskQuery, 'projects as p', 'pp.project_id', 'p.project_id');
 
-  const task = await taskQuery
-    .where({ 'pt.task_id': taskId, 'p.client_id': contact.client_id })
+  const task = await applyProjectVisibilityFilter(
+    taskQuery.where({ 'pt.task_id': taskId }),
+    visibility,
+    { clientColumn: 'p.client_id', contactColumn: 'p.contact_name_id' }
+  )
     .select('p.project_id', 'p.client_portal_config')
     .first<any>();
 
