@@ -176,8 +176,8 @@ export const WorkflowTextTemplateEditor: React.FC<{
     : '';
   // Literal {{…}} placeholders are passed as values so i18n interpolation leaves them intact.
   const placeholder = t('textTemplateEditor.placeholder', {
-    defaultValue: 'Type text. Use Insert field to add values, e.g. Contract ending for {{example}}',
-    example: '{{vars.client.client.client_name}}',
+    defaultValue: 'Type text. Use Insert field to add values, e.g. Ticket {{example}} was updated',
+    example: '{{vars.ticket.ticket.ticket_number}}',
     interpolation: { escapeValue: false },
   });
   const handleChange = (text: string) => onChange(compileTextTemplate(text, scope));

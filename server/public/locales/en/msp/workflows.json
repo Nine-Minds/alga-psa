@@ -948,23 +948,23 @@
       },
       "store.get": {
         "label": "Get Stored Value",
-        "description": "Read a value saved earlier, by namespace and key (e.g. namespace counters, key assignment-notices)."
+        "description": "Read a value saved earlier, by namespace and key."
       },
       "store.set": {
         "label": "Set Stored Value",
-        "description": "Save a value under a namespace and key (e.g. namespace counters, key assignment-notices) so later runs can read it."
+        "description": "Save a value under a namespace and key so later runs can read it."
       },
       "store.delete": {
         "label": "Delete Stored Value",
-        "description": "Delete a saved value by namespace and key (e.g. namespace counters, key assignment-notices)."
+        "description": "Delete a saved value by namespace and key."
       },
       "store.increment": {
         "label": "Increment Stored Number",
-        "description": "Add to a saved number, a counter or tally, by namespace and key (e.g. namespace counters, key assignment-notices)."
+        "description": "Add to a saved number, such as a counter or tally, by namespace and key."
       },
       "store.list": {
         "label": "List Stored Values",
-        "description": "List the values saved in one namespace (e.g. every key in namespace counters)."
+        "description": "List the values saved in one namespace."
       },
       "store.list_namespaces": {
         "label": "List Store Namespaces",
@@ -2996,7 +2996,7 @@
   },
   "textTemplateEditor": {
     "insertField": "Insert field",
-    "placeholder": "Type text. Use Insert field to add values, e.g. Contract ending for {{example}}",
+    "placeholder": "Type text. Use Insert field to add values, e.g. Ticket {{example}} was updated",
     "fieldsUsed": "Fields:",
     "hint": "Placeholders such as {{payloadExample}} or {{varsExample}} are filled in by the workflow. Other {{otherExample}} placeholders are kept as written, for example for an email template’s own data.",
     "expand": "Expand",

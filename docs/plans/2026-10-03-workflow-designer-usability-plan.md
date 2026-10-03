@@ -77,7 +77,7 @@ Scores: 4, 6, 6, 7, 6, 7, 7, 7, 8, 8, 8. The exit condition was three consecutiv
 ## 4. Remaining card steps
 
 - **Smoke Test:** run the five primary flows in the real UI. Build, publish (confirm), test-run against a real record, read the run outcome and pause.
-- **Before opening the PR:** handle follow-up 1 in the PRD, removing example copy taken from the evaluation scenarios.
+- **Done before Smoke Test:** PRD follow-up 1. Example copy taken from the evaluation scenarios was replaced with neutral wording.
 - **Pull Request, review preparation, human review, CI, merge and deploy:** as set by the board template.
 
 ## 5. Risks

@@ -3,11 +3,11 @@ import type { MappingValue } from '@alga-psa/workflows/runtime';
 
 /**
  * "Text with fields": plain text where `{{payload.x}}` / `{{vars.step.field}}` insert workflow data,
- * e.g. `Contract ending: {{vars.client.client.client_name}} on {{payload.endDate}}`.
+ * e.g. `Follow up with {{vars.client.client.client_name}} by {{payload.endDate}}`.
  *
  * The template is stored in the mapping contract the runtime already understands: text without
  * fields is a plain string, and text with fields compiles to a `&`-joined expression
- * (`"Contract ending: " & vars.client.client.client_name & …`). Reading a value back parses that
+ * (`"Follow up with " & vars.client.client.client_name & …`). Reading a value back parses that
  * expression shape, so the text editor and the Expression editor always agree.
  *
  * Only placeholders that start with a root the expression can read are fields: the workflow data

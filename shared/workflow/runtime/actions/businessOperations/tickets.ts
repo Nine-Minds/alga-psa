@@ -1593,7 +1593,7 @@ export function registerTicketActions(): void {
   };
 
   // Display names let workflows show and compare a ticket's related records by name
-  // (priority_name = "P1 - Critical") without looking up ids.
+  // (priority_name = "High") without looking up ids.
   const loadTicketDisplayNames = async (tx: TenantTxContext, ticket: any): Promise<TicketDisplayNames> => {
     const lookup = async (table: string, idColumn: string, id: unknown, read: (row: any) => unknown): Promise<string | null> => {
       if (typeof id !== 'string' || id.length === 0) return null;

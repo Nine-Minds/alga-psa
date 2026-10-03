@@ -12,7 +12,7 @@ import { getAutoGrowEditorHeight } from '../expression-editor/ExpressionEditorFi
 import { validateExpressionSource } from '@alga-psa/workflows/authoring';
 
 describe('text with fields', () => {
-  const template = 'Contract ending: {{vars.client.client.client_name}} on {{payload.endDate}}.';
+  const template = 'Follow up with {{vars.client.client.client_name}} by {{payload.endDate}}.';
 
   it('splits text and workflow fields, leaving other {{names}} as text', () => {
     expect(parseTextTemplate('Hi {{name}}, see {{ payload.ticket.title }}')).toEqual([
@@ -24,7 +24,7 @@ describe('text with fields', () => {
   it('saves text without fields as plain text and text with fields as a joined expression', () => {
     expect(compileTextTemplate('Hello {{name}}')).toBe('Hello {{name}}');
     const compiled = compileTextTemplate(template) as { $expr: string };
-    expect(compiled.$expr).toBe('"Contract ending: " & vars.client.client.client_name & " on " & payload.endDate & "."');
+    expect(compiled.$expr).toBe('"Follow up with " & vars.client.client.client_name & " by " & payload.endDate & "."');
     expect(() => validateExpressionSource(compiled.$expr)).not.toThrow();
   });
 
@@ -83,10 +83,10 @@ describe('expression preview with sample data', () => {
   });
 
   it('evaluates expressions and reports errors in plain words', async () => {
-    const compiled = compileTextTemplate('Contract ending: {{vars.client.client.client_name}} on {{payload.endDate}}') as { $expr: string };
+    const compiled = compileTextTemplate('Follow up with {{vars.client.client.client_name}} by {{payload.endDate}}') as { $expr: string };
     await expect(evaluateExpressionPreview(compiled.$expr, sample as unknown as Record<string, unknown>)).resolves.toEqual({
       status: 'ok',
-      text: 'Contract ending: [client name] on [end date]',
+      text: 'Follow up with [client name] by [end date]',
     });
     await expect(evaluateExpressionPreview('', {})).resolves.toEqual({ status: 'empty' });
     const broken = await evaluateExpressionPreview('payload.endDate &', sample as unknown as Record<string, unknown>);
@@ -107,12 +107,12 @@ describe('preview inside a loop', () => {
       vars: [],
       meta: [],
       error: [],
-      forEach: { itemVar: 'checklistItem', indexVar: 'index', itemsExpr: '["Welcome call", "Set up portal"]' },
+      forEach: { itemVar: 'checklistItem', indexVar: 'index', itemsExpr: '["First item", "Second item"]' },
     });
     const compiled = compileTextTemplate('TODO: {{checklistItem}} (#{{index}})', { localNames: ['checklistItem', 'index'] }) as { $expr: string };
     await expect(evaluateExpressionPreview(compiled.$expr, sample as unknown as Record<string, unknown>)).resolves.toEqual({
       status: 'ok',
-      text: 'TODO: Welcome call (#0)',
+      text: 'TODO: First item (#0)',
     });
   });
 

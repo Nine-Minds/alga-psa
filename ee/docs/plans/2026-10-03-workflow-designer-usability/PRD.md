@@ -218,11 +218,11 @@ These are behaviour changes visible to existing workflows or to other screens.
 
 Friction found after the code froze (rounds 9–11) is queued for the normal process. Ranked:
 
-1. **Remove scenario-specific example copy.** Generic product copy must not quote the evaluation scenarios. Examples:
-   - the Data Store help example "namespace counters, key assignment-notices"
-   - a text placeholder "Contract ending for {{…}}"
-
-   Audit the strings added on this branch for other scenario-specific names.
+1. **Remove scenario-specific example copy. Done before Smoke Test.** Product copy must not quote the evaluation scenarios.
+   - The Data Store descriptions and help no longer use the scenario's namespace/key example.
+   - The Text mode placeholder now reads "e.g. Ticket {{example}} was updated".
+   - Code comments and test fixtures that quoted scenario text use neutral wording.
+   - Fixture names that were already common on main (e.g. the seed users and boards) are unchanged.
 2. **Test runs on drafts and paused workflows.** Today you must publish (go live) to test, and Run is disabled while paused. Add a clearly labelled manual test path, ideally a dry run that doesn't write data. `simulateWorkflowDefinitionDraftAction` already exists and is API-only.
 3. **Email recipients from a single string.** Picking a contact's email string, or a contact or user record, for an email recipients list should wrap it as a recipient automatically.
 4. **Catch-branch suggestions.** Inside Catch, suggestions should prefer trigger data over the outputs of Try steps, which may be the step that failed. Show one group for the caught error, not both `error` and `vars.<captureAs>`.
