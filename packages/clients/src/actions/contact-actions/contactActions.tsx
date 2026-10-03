@@ -24,7 +24,7 @@ import {
   isMspUser,
 } from '../../lib/authHelpers';
 import type { IBoard } from '@alga-psa/types';
-import { assertContactIsNotSharedMailbox, ContactModel, CreateContactInput, UpdateContactInput } from '@alga-psa/shared/models/contactModel';
+import { assertContactIsNotSharedMailbox, clearContactLinksBeforeDelete, ContactModel, CreateContactInput, UpdateContactInput } from '@alga-psa/shared/models/contactModel';
 import { localizeActionError, withAuth } from '@alga-psa/auth';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import {
@@ -463,14 +463,7 @@ export const deleteContact = withAuth(async (
       await tenantScopedTable(trx, 'comments', tenantId).where({ contact_id: contactId }).delete();
       await tenantScopedTable(trx, 'portal_invitations', tenantId).where({ contact_id: contactId }).delete();
 
-      // Reports-to and asset assignment are NO ACTION composite FKs (a composite
-      // SET NULL would null `tenant` too, and Citus refuses it), so clear them by hand.
-      await tenantScopedTable(trx, 'contacts', tenantId)
-        .where({ manager_contact_id: contactId })
-        .update({ manager_contact_id: null });
-      await tenantScopedTable(trx, 'assets', tenantId)
-        .where({ contact_name_id: contactId })
-        .update({ contact_name_id: null });
+      await clearContactLinksBeforeDelete(trx, tenantId, contactId);
 
       // Unlink from any RMM org mapping using this contact as its default
       // notification contact (no FK; Citus rejects ON DELETE SET NULL).

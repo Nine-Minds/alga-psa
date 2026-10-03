@@ -6,7 +6,7 @@
 import { Knex } from 'knex';
 import { BaseService, ListResult, ServiceContext, withTransaction, tenantDb } from '@alga-psa/db';
 import { getContactAvatarUrl } from '@alga-psa/formatting/avatarUtils';
-import { ContactModel } from '@alga-psa/shared/models/contactModel';
+import { ContactModel, clearContactLinksBeforeDelete } from '@alga-psa/shared/models/contactModel';
 import { IContact } from 'server/src/interfaces/contact.interfaces';
 import { publishWorkflowEvent } from 'server/src/lib/eventBus/publishers';
 import {
@@ -408,14 +408,7 @@ export class ContactService extends BaseService<IContact> {
         throw new NotFoundError('Contact not found');
       }
 
-      // Reports-to and asset assignment are NO ACTION composite FKs; clear them
-      // here (same cleanup as the MSP deleteContact action).
-      await tenantDb(trx, context.tenant).table('contacts')
-        .where('manager_contact_id', id)
-        .update({ manager_contact_id: null });
-      await tenantDb(trx, context.tenant).table('assets')
-        .where('contact_name_id', id)
-        .update({ contact_name_id: null });
+      await clearContactLinksBeforeDelete(trx, context.tenant, id);
 
       await tenantDb(trx, context.tenant).table('contacts')
         .where('contact_name_id', id)

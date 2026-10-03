@@ -51,6 +51,24 @@ export async function assertContactIsNotSharedMailbox(
 /** Upper bound on the reports-to chain walked for cycle detection. */
 const MAX_MANAGER_CHAIN_DEPTH = 100;
 
+/** Nulls reports-to and asset-assignment references to a contact; call before hard-deleting it. */
+export async function clearContactLinksBeforeDelete(
+  db: Knex | Knex.Transaction,
+  tenant: string,
+  contactId: string
+): Promise<void> {
+  // Reports-to and asset assignment are NO ACTION composite FKs (a composite
+  // SET NULL would null `tenant` too, and Citus refuses it), so every code path
+  // that hard-deletes a contact must clear them first, in the same transaction.
+  const scoped = tenantDb(db, tenant);
+  await scoped.table('contacts')
+    .where({ manager_contact_id: contactId })
+    .update({ manager_contact_id: null });
+  await scoped.table('assets')
+    .where({ contact_name_id: contactId })
+    .update({ contact_name_id: null });
+}
+
 /**
  * Guards `contacts.manager_contact_id`. The database only guarantees the manager
  * exists in the tenant and is not the contact itself; everything else lives here
