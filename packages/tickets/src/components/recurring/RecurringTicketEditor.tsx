@@ -24,7 +24,7 @@ import { Label } from '@alga-psa/ui/components/Label';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { TimePicker } from '@alga-psa/ui/components/TimePicker';
 import { RecurrenceRuleEditor, defaultRuleForFrequency } from '@alga-psa/ui/components/recurrence/RecurrenceRuleEditor';
-import { TextEditor } from '@alga-psa/ui/editor';
+import { RichTextViewer, TextEditor } from '@alga-psa/ui/editor';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   archiveRecurringTicketDefinition,
@@ -442,13 +442,22 @@ export function RecurringTicketEditor({ definitionId }: RecurringTicketEditorPro
         <div>
           <Label htmlFor={`${ID}-description`}>{t('recurring.fields.description', 'Description')}</Label>
           <div className="min-w-0 w-full">
-            <TextEditor
-              key={`${ID}-description-${editorKey}`}
-              id={`${ID}-description`}
-              initialContent={form.description ?? undefined}
-              onContentChange={(content) => { if (!readOnly) patch({ description: content }); }}
-              placeholder={t('recurring.fields.descriptionPlaceholder', 'Description')}
-            />
+            {readOnly ? (
+              // TextEditor has no read-only mode, so a locked definition shows its description in the read-only viewer.
+              isBlankDocument(form.description as Record<string, unknown>[] | null) ? (
+                <p id={`${ID}-description`} className="text-sm text-[rgb(var(--color-text-500))]">—</p>
+              ) : (
+                <RichTextViewer id={`${ID}-description`} content={form.description as PartialBlock[]} />
+              )
+            ) : (
+              <TextEditor
+                key={`${ID}-description-${editorKey}`}
+                id={`${ID}-description`}
+                initialContent={form.description ?? undefined}
+                onContentChange={(content) => patch({ description: content })}
+                placeholder={t('recurring.fields.descriptionPlaceholder', 'Description')}
+              />
+            )}
           </div>
         </div>
         <BoardStatusFields
@@ -561,12 +570,12 @@ export function RecurringTicketEditor({ definitionId }: RecurringTicketEditorPro
             onValueChange={(value) => patch({ non_business_day_policy: value as NonBusinessDayPolicy })}
             options={NON_BUSINESS_DAY_POLICIES.map((policy) => ({ value: policy, label: policyLabels[policy] }))}
           />
-          {form.non_business_day_policy !== 'keep' && (
+          {form.non_business_day_policy !== 'keep' && preview?.calendar && (
             <p className="mt-1 text-xs text-[rgb(var(--color-text-500))]">
-              {preview?.calendar?.source === 'fallback'
-                ? t('recurring.schedule.calendarFallback', 'No default business-hours schedule is set, so Monday to Friday are business days and holidays are not considered.')
+              {preview.calendar.source === 'fallback'
+                ? t('recurring.schedule.calendarFallback', 'No default business-hours schedule is set, so business days are Monday to Friday plus your company-wide holidays.')
                 : t('recurring.schedule.calendarNote', 'Business days follow your default business-hours schedule ({{name}}), including its holidays.', {
-                  name: preview?.calendar?.schedule_name ?? '',
+                  name: preview.calendar.schedule_name ?? '',
                 })}
             </p>
           )}

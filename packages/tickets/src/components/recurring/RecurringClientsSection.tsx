@@ -17,6 +17,7 @@ import {
 import type { RecurringDefinitionClientRecord } from '../../lib/recurring/types';
 import { AddRecurringClientsDialog } from './AddRecurringClientsDialog';
 import { RecurringClientOverridesDialog } from './RecurringClientOverridesDialog';
+import { useRecurringTicketsCrossFeature } from './RecurringTicketsFeatureContext';
 import { formatInstant, overriddenGroups, recurringErrorMessage } from './recurringUi';
 
 export interface RecurringClientsSectionProps {
@@ -34,6 +35,8 @@ export function RecurringClientsSection({
   definitionId, clients, nextDueAt, timeZone, readOnly, onChanged,
 }: RecurringClientsSectionProps) {
   const { t, i18n } = useTranslation('features/tickets');
+  // Without an asset picker (AlgaDesk has no assets) the Assets column would be a meaningless 0.
+  const showAssets = useRecurringTicketsCrossFeature().renderAssetPicker !== undefined;
   const [adding, setAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [removing, setRemoving] = useState<RecurringDefinitionClientRecord | null>(null);
@@ -79,12 +82,12 @@ export function RecurringClientsSection({
       sortable: false,
       render: (value) => (value ? t('recurring.clients.set', 'Set') : '—'),
     },
-    {
+    ...(showAssets ? [{
       title: t('recurring.clients.columns.assets', 'Assets'),
       dataIndex: 'asset_ids',
       sortable: false,
       render: (value: string[]) => value.length,
-    },
+    } satisfies ColumnDefinition<RecurringDefinitionClientRecord>] : []),
     {
       title: t('recurring.clients.columns.nextDue', 'Next due'),
       dataIndex: 'definition_client_id',
@@ -136,7 +139,7 @@ export function RecurringClientsSection({
       ),
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  ], [t, i18n.language, nextDueAt, timeZone, readOnly]);
+  ], [t, i18n.language, nextDueAt, timeZone, readOnly, showAssets]);
 
   return (
     <section id="recurring-clients-section" className="space-y-3">

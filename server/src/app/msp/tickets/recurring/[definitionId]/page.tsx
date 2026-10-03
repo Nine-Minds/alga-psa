@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 import { MspRecurringTicketEditor } from '@alga-psa/msp-composition/tickets/MspRecurringTickets';
+import { getCurrentTenantProduct } from '@/lib/productAccess';
 
 export async function generateMetadata(): Promise<Metadata> {
   const { t } = await getServerTranslation(undefined, 'metadata');
@@ -23,5 +24,6 @@ export default async function RecurringTicketRoute({ params }: RecurringTicketRo
   if (definitionId !== 'new' && !UUID_PATTERN.test(definitionId)) {
     notFound();
   }
-  return <MspRecurringTicketEditor definitionId={definitionId} />;
+  const productCode = await getCurrentTenantProduct();
+  return <MspRecurringTicketEditor definitionId={definitionId} isAlgaDeskMode={productCode === 'algadesk'} />;
 }

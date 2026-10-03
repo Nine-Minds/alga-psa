@@ -974,8 +974,12 @@ async function handleTicketCreated(event: TicketCreatedEvent): Promise<void> {
       : '';
     const assignedEmail = safeString(ticket.assigned_to_email);
 
-    if (!primaryEmail && !assignedEmail) {
-      logger.warn('Could not send ticket created email - missing contact, client, and assigned user emails:', {
+    // Watchers are recipients too: a suppressed contact-facing email with no assignee must still
+    // reach the internal watchers.
+    const hasActiveWatchers = extractActiveWatcherEmails(ticket.attributes).length > 0;
+
+    if (!primaryEmail && !assignedEmail && !hasActiveWatchers) {
+      logger.warn('Could not send ticket created email - missing contact, client, assigned user, and watcher emails:', {
         eventId: event.id,
         ticketId: payload.ticketId
       });

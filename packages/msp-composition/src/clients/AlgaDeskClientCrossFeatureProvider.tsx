@@ -40,7 +40,7 @@ export function AlgaDeskClientCrossFeatureProvider({ children }: { children: Rea
   );
 
   const renderClientRecurringTickets = useCallback(
-    (props: ClientRecurringTicketsRenderProps) => <MspRecurringTicketsClientSection clientId={props.clientId} />,
+    (props: ClientRecurringTicketsRenderProps) => <MspRecurringTicketsClientSection clientId={props.clientId} isAlgaDeskMode />,
     []
   );
 

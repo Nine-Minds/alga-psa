@@ -28,6 +28,7 @@ vi.mock('../../lib/notifications/sendEventEmail', async (importOriginal) => ({
 describe('handleTicketCreated notification suppression (integration)', () => {
   let tenant: string;
   let ticketId: string;
+  let ticketBase: Record<string, unknown>;
   let handleTicketCreated: (event: any) => Promise<void>;
 
   beforeAll(async () => {
@@ -48,21 +49,25 @@ describe('handleTicketCreated notification suppression (integration)', () => {
     await scoped.table('boards').insert({ tenant, board_id: boardId, board_name: 'Main', is_default: true });
     await scoped.table('statuses').insert({ tenant, status_id: statusId, board_id: boardId, name: 'New', status_type: 'ticket', item_type: 'ticket', order_number: 1, is_default: true, is_closed: false });
     await scoped.table('priorities').insert({ tenant, priority_id: priorityId, priority_name: 'Medium', item_type: 'ticket', order_number: 1, color: '#ccc', created_by: assignee });
-    ticketId = uuidv4();
-    await scoped.table('tickets').insert({
+    ticketBase = {
       tenant,
-      ticket_id: ticketId,
-      ticket_number: `T-${uuidv4().slice(0, 6)}`,
       title: 'Generated',
       client_id: clientId,
       board_id: boardId,
       status_id: statusId,
       priority_id: priorityId,
-      assigned_to: assignee,
       contact_name_id: contactId,
       ticket_origin: 'recurring',
       entered_at: new Date(),
+    };
+    ticketId = uuidv4();
+    await scoped.table('tickets').insert({
+      ...ticketBase,
+      ticket_id: ticketId,
+      ticket_number: `T-${uuidv4().slice(0, 6)}`,
+      assigned_to: assignee,
     });
+    await createUser(testDb, tenant, { email: 'watcher@example.com' });
   }, 900_000);
 
   afterAll(async () => {
@@ -88,5 +93,27 @@ describe('handleTicketCreated notification suppression (integration)', () => {
   it('emails only the internal assignee when contact notifications are suppressed', async () => {
     await runWithTenant(tenant, () => handleTicketCreated(event({ suppressContactNotifications: true })));
     expect(sent.map((email) => email.to)).toEqual(['assignee@example.com']);
+  });
+
+  it('still emails an internal watcher when contact notifications are suppressed and nobody is assigned', async () => {
+    const unassignedId = uuidv4();
+    await tenantDb(testDb, tenant).table('tickets').insert({
+      ...ticketBase,
+      ticket_id: unassignedId,
+      ticket_number: `T-${uuidv4().slice(0, 6)}`,
+      assigned_to: null,
+      attributes: {
+        watch_list: [
+          { email: 'watcher@example.com', active: true },
+          { email: 'outsider@example.org', active: true },
+        ],
+      },
+    });
+    const unassignedEvent = event({ suppressContactNotifications: true });
+    unassignedEvent.payload.ticketId = unassignedId;
+
+    await runWithTenant(tenant, () => handleTicketCreated(unassignedEvent));
+
+    expect(sent.map((email) => email.to)).toEqual(['watcher@example.com']);
   });
 });
