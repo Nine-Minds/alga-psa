@@ -1820,6 +1820,8 @@
       "bundleStatusNotPropagated": "{{actor}} alterou o status do mestre do pacote (tickets filhos não atualizados)",
       "bundleStatusClosed": "{{actor}} fechou o mestre do pacote e {{count}} ticket(s) filho(s)",
       "bundleStatusReopened": "{{actor}} reabriu o mestre do pacote e {{count}} ticket(s) filho(s)",
+      "duplicatedFrom": "{{actor}} criou este ticket como duplicado de #{{number}}",
+      "duplicatedTo": "{{actor}} duplicou este ticket como #{{number}}",
       "title": "Linha do tempo",
       "replyVisibility": "Visibilidade da resposta",
       "modeClient": "Cliente",

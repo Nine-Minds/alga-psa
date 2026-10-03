@@ -1966,6 +1966,8 @@
       "bundleStatusNotPropagated": "{{actor}} zmienił status zgłoszenia nadrzędnego w pakiecie (zgłoszenia podrzędne nie zostały zaktualizowane)",
       "bundleStatusClosed": "{{actor}} zamknął zgłoszenie nadrzędne w pakiecie oraz {{count}} zgłoszeń podrzędnych",
       "bundleStatusReopened": "{{actor}} ponownie otworzył zgłoszenie nadrzędne w pakiecie oraz {{count}} zgłoszeń podrzędnych",
+      "duplicatedFrom": "{{actor}} utworzył(a) to zgłoszenie jako duplikat #{{number}}",
+      "duplicatedTo": "{{actor}} zduplikował(a) to zgłoszenie jako #{{number}}",
       "title": "Oś czasu",
       "replyVisibility": "Widoczność odpowiedzi",
       "modeClient": "Klient",

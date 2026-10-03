@@ -1875,6 +1875,8 @@
       "bundleStatusNotPropagated": "{{actor}} ändrade gruppens huvudärendestatus (underärenden uppdaterades inte)",
       "bundleStatusClosed": "{{actor}} stängde gruppens huvudärende och dess underärenden ({{count}})",
       "bundleStatusReopened": "{{actor}} öppnade gruppens huvudärende och dess underärenden igen ({{count}})",
+      "duplicatedFrom": "{{actor}} skapade detta ärende som en kopia av #{{number}}",
+      "duplicatedTo": "{{actor}} kopierade detta ärende som #{{number}}",
       "title": "Tidslinje",
       "replyVisibility": "Svarets synlighet",
       "modeClient": "Kund",

@@ -1820,6 +1820,8 @@
       "bundleStatusNotPropagated": "{{actor}} a modifié le statut du maître du lot (tickets enfants non mis à jour)",
       "bundleStatusClosed": "{{actor}} a fermé le maître du lot et {{count}} tickets enfants",
       "bundleStatusReopened": "{{actor}} a rouvert le maître du lot et {{count}} tickets enfants",
+      "duplicatedFrom": "{{actor}} a créé ce ticket comme doublon de #{{number}}",
+      "duplicatedTo": "{{actor}} a dupliqué ce ticket sous le n° #{{number}}",
       "title": "Chronologie",
       "replyVisibility": "Visibilité de la réponse",
       "modeClient": "Client",

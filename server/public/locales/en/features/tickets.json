@@ -1875,6 +1875,8 @@
       "bundleStatusNotPropagated": "{{actor}} changed the bundle master status (children not updated)",
       "bundleStatusClosed": "{{actor}} closed the bundle master and {{count}} child ticket(s)",
       "bundleStatusReopened": "{{actor}} reopened the bundle master and {{count}} child ticket(s)",
+      "duplicatedFrom": "{{actor}} created this ticket as a duplicate of #{{number}}",
+      "duplicatedTo": "{{actor}} duplicated this ticket as #{{number}}",
       "title": "Timeline",
       "replyVisibility": "Reply visibility",
       "modeClient": "Client",

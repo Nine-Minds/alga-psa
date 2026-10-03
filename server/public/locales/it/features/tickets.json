@@ -1820,6 +1820,8 @@
       "bundleStatusNotPropagated": "{{actor}} ha modificato lo stato del master del bundle (ticket figli non aggiornati)",
       "bundleStatusClosed": "{{actor}} ha chiuso il master del bundle e {{count}} ticket figli",
       "bundleStatusReopened": "{{actor}} ha riaperto il master del bundle e {{count}} ticket figli",
+      "duplicatedFrom": "{{actor}} ha creato questo ticket come duplicato di #{{number}}",
+      "duplicatedTo": "{{actor}} ha duplicato questo ticket come #{{number}}",
       "title": "Cronologia",
       "replyVisibility": "Visibilità della risposta",
       "modeClient": "Cliente",

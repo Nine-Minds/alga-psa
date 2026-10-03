@@ -215,7 +215,7 @@ function eventLabel(eventType: string, t: Translator): string {
 }
 
 /** Compact one-line description of a system (activity) entry. */
-function describeSystemEntry(entry: TicketTimelineEntry, t: Translator): string {
+export function describeSystemEntry(entry: TicketTimelineEntry, t: Translator): string {
   const activity = entry.activity;
   if (!activity) return t('bento.timeline.ticketUpdated', 'Ticket updated');
   const actor = activity.actor_display_name || t('bento.timeline.systemActor', 'System');
@@ -251,6 +251,36 @@ function describeSystemEntry(entry: TicketTimelineEntry, t: Translator): string 
           '{{actor}} closed the bundle master and {{count}} child ticket(s)',
           { actor, count },
         );
+  }
+
+  // Duplicate events name the other ticket. Missing/empty number falls through to
+  // the generic event label. Mirrors TicketActivityTimeline.describeActivity.
+  // String literals, not TICKET_ACTIVITY_EVENT: that constant is only exported from
+  // the shared ticketActivity index, which also pulls in server-only writers.
+  // LEVERAGE: pattern duplicate-event-labels — these branches duplicate the
+  // TICKET_DUPLICATED_FROM/TO wording in TicketActivityTimeline.tsx; same shared
+  // event-label function as propagation-event-labels would cover both.
+  if (activity.event_type === 'TICKET_DUPLICATED_FROM') {
+    const details = (activity.details ?? {}) as { source_ticket_number?: string | number | null };
+    const number = details.source_ticket_number == null ? '' : String(details.source_ticket_number).trim();
+    if (number) {
+      return t(
+        'bento.timeline.duplicatedFrom',
+        '{{actor}} created this ticket as a duplicate of #{{number}}',
+        { actor, number },
+      );
+    }
+  }
+  if (activity.event_type === 'TICKET_DUPLICATED_TO') {
+    const details = (activity.details ?? {}) as { duplicate_ticket_number?: string | number | null };
+    const number = details.duplicate_ticket_number == null ? '' : String(details.duplicate_ticket_number).trim();
+    if (number) {
+      return t(
+        'bento.timeline.duplicatedTo',
+        '{{actor}} duplicated this ticket as #{{number}}',
+        { actor, number },
+      );
+    }
   }
 
   const changes = activity.changes ?? {};

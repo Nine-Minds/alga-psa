@@ -1820,6 +1820,8 @@
       "bundleStatusNotPropagated": "{{actor}} hat den Master-Status des Bundles geändert (untergeordnete Tickets nicht aktualisiert)",
       "bundleStatusClosed": "{{actor}} hat den Bundle-Master und {{count}} untergeordnete Tickets geschlossen",
       "bundleStatusReopened": "{{actor}} hat den Bundle-Master und {{count}} untergeordnete Tickets wieder geöffnet",
+      "duplicatedFrom": "{{actor}} hat dieses Ticket als Duplikat von #{{number}} erstellt",
+      "duplicatedTo": "{{actor}} hat dieses Ticket als #{{number}} dupliziert",
       "title": "Zeitleiste",
       "replyVisibility": "Sichtbarkeit der Antwort",
       "modeClient": "Kunde",

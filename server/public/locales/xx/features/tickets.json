@@ -1875,6 +1875,8 @@
       "bundleStatusNotPropagated": "⟦{{actor}} ƈħȧƞɠḗḓ ŧħḗ ƀŭƞḓŀḗ ḿȧşŧḗř şŧȧŧŭş (ƈħīŀḓřḗƞ ƞȯŧ ŭƥḓȧŧḗḓ)⟧",
       "bundleStatusClosed": "⟦{{actor}} ƈŀȯşḗḓ ŧħḗ ƀŭƞḓŀḗ ḿȧşŧḗř ȧƞḓ {{count}} ƈħīŀḓ ŧīƈķḗŧ(ş)⟧",
       "bundleStatusReopened": "⟦{{actor}} řḗȯƥḗƞḗḓ ŧħḗ ƀŭƞḓŀḗ ḿȧşŧḗř ȧƞḓ {{count}} ƈħīŀḓ ŧīƈķḗŧ(ş)⟧",
+      "duplicatedFrom": "⟦{{actor}} ƈřḗȧŧḗḓ ŧħīş ŧīƈķḗŧ ȧş ȧ ḓŭƥŀīƈȧŧḗ ȯƒ #{{number}}⟧",
+      "duplicatedTo": "⟦{{actor}} ḓŭƥŀīƈȧŧḗḓ ŧħīş ŧīƈķḗŧ ȧş #{{number}}⟧",
       "title": "⟦Ŧīḿḗŀīƞḗ⟧",
       "replyVisibility": "⟦Řḗƥŀẏ ṽīşīƀīŀīŧẏ⟧",
       "modeClient": "⟦Ƈŀīḗƞŧ⟧",
