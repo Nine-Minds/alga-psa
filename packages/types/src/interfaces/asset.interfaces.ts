@@ -62,6 +62,8 @@ export interface Asset {
   name: string;
   status: string;
   location_id?: string | null;
+  /** The one contact this asset is assigned to (portal asset scope). */
+  contact_name_id?: string | null;
   location?: string;
   purchase_date?: string;
   warranty_end_date?: string;
@@ -476,6 +478,7 @@ export interface CreateAssetRequest {
   name: string;
   status: string;
   location_id?: string | null;
+  contact_name_id?: string | null;
   location?: string;
   serial_number?: string;
   purchase_date?: string;
@@ -537,6 +540,7 @@ export interface AssetQueryParams {
   client_id?: string;
   client_name?: string;
   location_id?: string;
+  contact_name_id?: string;
   /** Built-in slug or tenant asset_type_registry slug (custom type). */
   asset_type?: string;
   status?: string;
