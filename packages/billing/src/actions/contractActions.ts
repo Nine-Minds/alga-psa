@@ -785,7 +785,6 @@ export const getContractSummary = withAuth(async (user, { tenant }, contractId: 
       'cc.po_required',
       'cc.po_number',
       'co.status as contract_status',
-      'co.currency_code as contract_currency_code',
     ];
 
     const assignmentsQuery = tenantDb(knex, tenant).table('client_contracts as cc');
@@ -881,6 +880,7 @@ export const getContractAssignments = withAuth(async (user, { tenant }, contract
       'cc.billing_profile_id',
       'bp.name as billing_profile_name',
       'co.status as contract_status',
+      'co.currency_code as contract_currency_code',
     ];
 
     const facade = tenantDb(knex, tenant);
