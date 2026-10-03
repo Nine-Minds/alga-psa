@@ -742,7 +742,10 @@
       "success_other": "Status bijgewerkt op {{count}} tickets",
       "partialFailure": "Status kon niet bij alle tickets worden bijgewerkt",
       "failure": "Bijwerken van status is mislukt",
-      "failedHeading": "Status kon niet worden bijgewerkt bij de volgende tickets:"
+      "failedHeading": "Status kon niet worden bijgewerkt bij de volgende tickets:",
+      "resolutionLabel": "Oplossingscommentaar (optioneel)",
+      "resolutionPlaceholder": "Beschrijf hoe deze tickets zijn opgelost",
+      "resolutionHelper": "Wordt opgeslagen als de oplossing op elk geselecteerd ticket en voldoet aan borden die er een vereisen voordat ze sluiten."
     },
     "priority": {
       "dialogTitle": "Prioriteit wijzigen voor geselecteerde tickets",
@@ -946,6 +949,11 @@
     "closeReasonPlaceholder": "Reden om toch te sluiten (optioneel, vastgelegd in het auditlogboek)",
     "closing": "Sluiten…",
     "closeAnyway": "Toch sluiten",
+    "markResolutionInternal": "Markeren als intern",
+    "markResolutionInternalHelper": "Een interne oplossing verschijnt niet in het klantenportaal en wordt niet opgenomen in de afsluit-e-mail.",
+    "closeTicketNowTitle": "Ticket nu sluiten?",
+    "closeTicketNowPrompt": "Deze opmerking is nu de oplossing. Kies een afsluitstatus om het ticket te sluiten, of laat het open.",
+    "leaveTicketOpen": "Open laten",
     "timerActiveElsewhereTitle": "Timer actief op een andere plek",
     "timerTakeoverMessage": "De timer van dit ticket is actief in een ander venster. Wilt u deze overnemen en hier vervangen?",
     "replaceHere": "Hier vervangen",
@@ -955,7 +963,12 @@
     "emailNotificationLogs": "Logboek e-mailmeldingen",
     "ticketActivity": "Ticketactiviteit",
     "discardChanges": "Wijzigingen verwerpen",
-    "saved": "Opgeslagen"
+    "saved": "Opgeslagen",
+    "changeContactTitle": "Ticketcontact wijzigen?",
+    "removeContactTitle": "Ticketcontact verwijderen?",
+    "changeContactPrompt": "De contactpersoon, de toegewezen medewerker en de volgers worden over deze wijziging geïnformeerd, tenzij u hun meldingen uitschakelt.",
+    "changeContact": "Contact wijzigen",
+    "removeContact": "Contact verwijderen"
   },
   "properties": {
     "timeEntry": "Tijdregistratie",
@@ -1790,7 +1803,6 @@
       "replyTo": "Beantwoorden aan {{name}}",
       "writeReply": "Schrijf een reactie",
       "modeInternal": "Intern",
-      "modeResolution": "Oplossing",
       "sending": "Verzenden…",
       "send": "Verzenden",
       "systemActor": "Systeem",
@@ -1892,7 +1904,8 @@
       "remove": "Verwijderen",
       "cancel": "Annuleren",
       "save": "Opslaan",
-      "menu": "Koppelingsacties"
+      "menu": "Koppelingsacties",
+      "openRecord": "Extern record openen"
     },
     "relationship": {
       "origin": "Oorsprong",
@@ -1951,7 +1964,14 @@
       "systemLabelRequired": "Systeemlabel is vereist",
       "permissionDenied": "Toegang geweigerd",
       "systemRequired": "Kies een extern systeem.",
-      "urlRequired": "Voor systemen zonder URL-sjabloon is een URL vereist."
+      "urlRequired": "Voor systemen zonder URL-sjabloon is een URL vereist.",
+      "invalidVisibility": "Alleen ticketlinks kunnen worden gedeeld; zichtbaarheid moet een booleaanse waarde zijn"
+    },
+    "visibility": {
+      "label": "Zichtbaarheid",
+      "internal": "Alleen intern",
+      "shared": "Zichtbaar in het klantenportaal",
+      "help": "Klanten met toegang tot dit ticket kunnen deze link zien. Het delen van de link geeft geen toegang tot het externe systeem."
     }
   },
   "smartSearch": {

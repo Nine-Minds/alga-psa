@@ -30,7 +30,7 @@ import { TagManager } from "@alga-psa/tags/components";
 import { findTagsByEntityId, isTagActionError } from "@alga-psa/tags/actions";
 import { useTags } from '@alga-psa/tags/context';
 import TicketInfo from "./TicketInfo";
-import type { TicketNotificationSuppressionValue } from './TicketNotificationSuppressionControl';
+import TicketNotificationSuppressionControl, { type TicketNotificationSuppressionValue } from './TicketNotificationSuppressionControl';
 import TicketProperties from "./TicketProperties";
 import TicketDocumentsSection from "./TicketDocumentsSection";
 import { TicketCredentialsSection } from "./TicketCredentialsSection";
@@ -147,6 +147,11 @@ const LIVE_UPDATE_HIGHLIGHT_MS = 600;
 
 const isReturnedActionError = (value: unknown): value is ActionMessageError | ActionPermissionError =>
     isActionMessageError(value) || isActionPermissionError(value);
+
+const emptyNotificationSuppression = (): TicketNotificationSuppressionValue => ({
+    suppressContactNotifications: false,
+    suppressInternalNotifications: false,
+});
 
 const handleTicketActionError = (error: unknown, fallback: string) => {
     if (isReturnedActionError(error)) {
@@ -406,6 +411,15 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const [isSubmittingCloseOverride, setIsSubmittingCloseOverride] = useState(false);
     const [isResolutionCloseDialogOpen, setIsResolutionCloseDialogOpen] = useState(false);
     const [isSubmittingResolutionClose, setIsSubmittingResolutionClose] = useState(false);
+    // Flagging an existing comment as the resolution while editing it offers the
+    // close the composer's resolution toggle would have done inline. Declining
+    // leaves the comment flagged and the status untouched.
+    const [resolutionClosePrompt, setResolutionClosePrompt] = useState<{
+        isOpen: boolean;
+        statusId: string | null;
+        suppression: TicketNotificationSuppressionValue;
+    }>({ isOpen: false, statusId: null, suppression: emptyNotificationSuppression() });
+    const [isSubmittingResolutionClosePrompt, setIsSubmittingResolutionClosePrompt] = useState(false);
 
     // Bundle status propagation confirmation. The preview is fetched first; when
     // it crosses the open/closed boundary with affected children we suspend the
@@ -591,6 +605,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const addResolutionComment = useCallback(async (
         resolution: string,
         suppression: TicketNotificationSuppressionValue,
+        isInternal: boolean = false,
     ): Promise<boolean> => {
         const ticketId = ticket.ticket_id;
         if (!ticketId) {
@@ -604,7 +619,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                     const result = await addTicketCommentWithCache(
                         ticketId,
                         resolution,
-                        false,
+                        isInternal,
                         true,
                         true,
                         suppression,
@@ -2155,45 +2170,9 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
 
                 // If this was a resolution note and a closed status was selected, close the ticket.
                 if (!schedule && isResolution && closeStatusId && ticket.status_id !== closeStatusId) {
-                    if (options?.suppressContactNotifications) {
-                        // Mirror handleSelectChange's pre-close check so unmet
-                        // close rules open the override dialog (carrying the
-                        // suppression choice) instead of a generic failure.
-                        let closeBlocked = false;
-                        if (ticket.ticket_id) {
-                            try {
-                                const check = await checkTicketClosure(ticket.ticket_id, closeStatusId);
-                                if (check.wouldClose && !check.allowed) {
-                                    closeBlocked = true;
-                                    setCloseOverrideReason('');
-                                    setCloseBlockedDialog({
-                                        isOpen: true,
-                                        statusId: closeStatusId,
-                                        failures: check.failures,
-                                        canOverride: check.canOverride,
-                                        suppression: options,
-                                    });
-                                }
-                            } catch (checkError) {
-                                // Fall through to the write; the server still enforces.
-                                console.error('Close rules pre-check failed:', checkError);
-                            }
-                        }
-                        if (!closeBlocked) {
-                            // Backend clears response_state when closing; keep UI consistent.
-                            setTicket((prev: any) => ({ ...prev, response_state: null }));
-                            const closed = await handleBatchSaveChanges({ status_id: closeStatusId }, options);
-                            if (!closed) {
-                                toast.error(t('messages.closeFailed', 'Failed to close ticket'));
-                            }
-                        }
-                    } else {
-                        // Backend clears response_state when closing; keep UI consistent.
-                        setTicket((prev: any) => ({ ...prev, response_state: null }));
-                        await handleSelectChange('status_id', closeStatusId);
-                    }
+                    await closeTicketForResolution(closeStatusId, options);
                 }
-                
+
                 // Reset the comment input
                 setNewCommentContent([{
                     type: "paragraph",
@@ -2362,6 +2341,11 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const handleSave = async (updates: Partial<IComment>) => {
         if (!currentComment) return;
 
+        // An existing comment becoming the resolution carries the same close
+        // intent as the composer's resolution toggle, so offer that close once
+        // the edit lands.
+        const becameResolution = Boolean(updates.is_resolution) && !currentComment.is_resolution;
+
         try {
             // Extract plain text from the content for markdown
             const extractPlainText = (noteStr: string): string => {
@@ -2416,8 +2400,36 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
 
             setIsEditing(false);
             setCurrentComment(null);
+
+            if (becameResolution && !currentStatusIsClosed && closedStatusOptions.length > 0) {
+                setResolutionClosePrompt({
+                    isOpen: true,
+                    statusId: closedStatusOptions.length === 1 ? closedStatusOptions[0].value : null,
+                    suppression: emptyNotificationSuppression(),
+                });
+            }
         } catch (error) {
             handleTicketActionError(error, t('messages.saveCommentFailed'));
+        }
+    };
+
+    const closeResolutionClosePrompt = () => {
+        setResolutionClosePrompt({ isOpen: false, statusId: null, suppression: emptyNotificationSuppression() });
+    };
+
+    const confirmResolutionClosePrompt = async () => {
+        const closeStatusId = resolutionClosePrompt.statusId;
+        if (!closeStatusId) return;
+        const suppression = resolutionClosePrompt.suppression;
+        setIsSubmittingResolutionClosePrompt(true);
+        try {
+            await closeTicketForResolution(
+                closeStatusId,
+                suppression.suppressContactNotifications ? suppression : undefined,
+            );
+            closeResolutionClosePrompt();
+        } finally {
+            setIsSubmittingResolutionClosePrompt(false);
         }
     };
 const handleClose = () => {
@@ -2678,10 +2690,34 @@ const handleClose = () => {
         setTags(updatedTags);
     };
 
+    // Changing the contact is a ticket update that notifies the contact, assignee
+    // and watchers, so it asks the same notification question status changes do.
+    const [contactChangePrompt, setContactChangePrompt] = useState<{
+        isOpen: boolean;
+        contactId: string | null;
+        suppression: TicketNotificationSuppressionValue;
+    }>({ isOpen: false, contactId: null, suppression: emptyNotificationSuppression() });
+    const [isSubmittingContactChange, setIsSubmittingContactChange] = useState(false);
+
     const handleContactChange = async (newContactId: string | null) => {
+        if ((ticket.contact_name_id ?? null) === newContactId) {
+            setIsChangeContactDialogOpen(false);
+            return;
+        }
+        setContactChangePrompt({ isOpen: true, contactId: newContactId, suppression: emptyNotificationSuppression() });
+    };
+
+    const applyContactChange = async (
+        newContactId: string | null,
+        suppression?: TicketNotificationSuppressionValue,
+    ) => {
         try {
             await runWithPendingLiveFields(['contact_name_id'], async () => {
-                const result = await updateTicket(ticket.ticket_id!, { contact_name_id: newContactId });
+                const result = await updateTicket(
+                    ticket.ticket_id!,
+                    { contact_name_id: newContactId },
+                    suppression?.suppressContactNotifications ? suppression : undefined,
+                );
                 if (isReturnedActionError(result)) {
                     throw result;
                 }
@@ -2699,6 +2735,20 @@ const handleClose = () => {
             toast.success(t('messages.contactUpdated'));
         } catch (error) {
             handleTicketActionError(error, t('messages.updateContactFailed'));
+        }
+    };
+
+    const closeContactChangePrompt = () => {
+        setContactChangePrompt({ isOpen: false, contactId: null, suppression: emptyNotificationSuppression() });
+    };
+
+    const confirmContactChangePrompt = async () => {
+        setIsSubmittingContactChange(true);
+        try {
+            await applyContactChange(contactChangePrompt.contactId, contactChangePrompt.suppression);
+            closeContactChangePrompt();
+        } finally {
+            setIsSubmittingContactChange(false);
         }
     };
 
@@ -2861,10 +2911,55 @@ const handleClose = () => {
         ticket.ticket_id,
     ]);
 
+    // Shared by the composer's resolution toggle and the edit-to-resolution
+    // close prompt: mirror handleSelectChange's pre-close check so unmet close
+    // rules open the override dialog (carrying the suppression choice) instead
+    // of a generic failure.
+    const closeTicketForResolution = useCallback(async (
+        closeStatusId: string,
+        options?: TicketNotificationSuppressionValue,
+    ): Promise<void> => {
+        if (options?.suppressContactNotifications) {
+            let closeBlocked = false;
+            if (ticket.ticket_id) {
+                try {
+                    const check = await checkTicketClosure(ticket.ticket_id, closeStatusId);
+                    if (check.wouldClose && !check.allowed) {
+                        closeBlocked = true;
+                        setCloseOverrideReason('');
+                        setCloseBlockedDialog({
+                            isOpen: true,
+                            statusId: closeStatusId,
+                            failures: check.failures,
+                            canOverride: check.canOverride,
+                            suppression: options,
+                        });
+                    }
+                } catch (checkError) {
+                    // Fall through to the write; the server still enforces.
+                    console.error('Close rules pre-check failed:', checkError);
+                }
+            }
+            if (!closeBlocked) {
+                // Backend clears response_state when closing; keep UI consistent.
+                setTicket((prev: any) => ({ ...prev, response_state: null }));
+                const closed = await handleBatchSaveChanges({ status_id: closeStatusId }, options);
+                if (!closed) {
+                    toast.error(t('messages.closeFailed', 'Failed to close ticket'));
+                }
+            }
+        } else {
+            // Backend clears response_state when closing; keep UI consistent.
+            setTicket((prev: any) => ({ ...prev, response_state: null }));
+            await handleSelectChange('status_id', closeStatusId);
+        }
+    }, [handleBatchSaveChanges, handleSelectChange, t, ticket.ticket_id]);
+
     const handleResolveAndClose = useCallback(async (
         statusId: string,
         contentBlocks: PartialBlock[],
         suppression: TicketNotificationSuppressionValue,
+        isInternal: boolean = false,
     ) => {
         if (!ticket.ticket_id || !closedStatusOptions.some((option) => option.value === statusId)) {
             toast.error(t('messages.closeFailed', 'Failed to close ticket'));
@@ -2874,7 +2969,7 @@ const handleClose = () => {
         setIsSubmittingResolutionClose(true);
         let resolutionSaved = false;
         try {
-            const resolutionAdded = await addResolutionComment(JSON.stringify(contentBlocks), suppression);
+            const resolutionAdded = await addResolutionComment(JSON.stringify(contentBlocks), suppression, isInternal);
             if (!resolutionAdded) {
                 return false;
             }
@@ -3742,6 +3837,125 @@ const handleClose = () => {
                     deleteDraftTicketAttachmentImagesAction={deleteDraftTicketAttachmentImagesAction}
                     resolveTicketAttachmentViewUrl={resolveTicketAttachmentViewUrl}
                 />
+
+                {/* An edit just flagged a comment as the resolution: offer the
+                    close that the composer's resolution toggle does inline. */}
+                <Dialog
+                    id={`${id}-resolution-close-prompt`}
+                    isOpen={resolutionClosePrompt.isOpen}
+                    onClose={() => {
+                        if (!isSubmittingResolutionClosePrompt) {
+                            closeResolutionClosePrompt();
+                        }
+                    }}
+                    title={t('info.closeTicketNowTitle', 'Close the ticket now?')}
+                >
+                    <DialogContent>
+                        <p className="mb-4 text-sm text-[rgb(var(--color-text-600))]">
+                            {t(
+                                'info.closeTicketNowPrompt',
+                                'This comment is now the resolution. Pick a close status to close the ticket, or leave it open.',
+                            )}
+                        </p>
+                        <CustomSelect
+                            id={`${id}-resolution-close-prompt-status`}
+                            label={t('conversation.closeStatus', 'Close status')}
+                            value={resolutionClosePrompt.statusId}
+                            options={closedStatusOptions}
+                            onValueChange={(value: string) =>
+                                setResolutionClosePrompt((prev) => ({ ...prev, statusId: value }))
+                            }
+                            placeholder={t('info.selectCloseStatus', 'Select a close status')}
+                            disabled={isSubmittingResolutionClosePrompt}
+                        />
+                        <div className="mt-4">
+                            <TicketNotificationSuppressionControl
+                                idPrefix={`${id}-resolution-close-prompt-notification-suppression`}
+                                value={resolutionClosePrompt.suppression}
+                                onChange={(suppression) =>
+                                    setResolutionClosePrompt((prev) => ({ ...prev, suppression }))
+                                }
+                                disabled={isSubmittingResolutionClosePrompt}
+                            />
+                        </div>
+                        <DialogFooter>
+                            <Button
+                                id={`${id}-resolution-close-prompt-decline`}
+                                type="button"
+                                variant="outline"
+                                onClick={closeResolutionClosePrompt}
+                                disabled={isSubmittingResolutionClosePrompt}
+                            >
+                                {t('info.leaveTicketOpen', 'Leave open')}
+                            </Button>
+                            <Button
+                                id={`${id}-resolution-close-prompt-confirm`}
+                                type="button"
+                                onClick={confirmResolutionClosePrompt}
+                                disabled={!resolutionClosePrompt.statusId || isSubmittingResolutionClosePrompt}
+                            >
+                                {isSubmittingResolutionClosePrompt
+                                    ? t('info.closing', 'Closing…')
+                                    : t('info.closeTicketTitle', 'Close ticket')}
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
+
+                <Dialog
+                    id={`${id}-contact-change-prompt`}
+                    isOpen={contactChangePrompt.isOpen}
+                    onClose={() => {
+                        if (!isSubmittingContactChange) {
+                            closeContactChangePrompt();
+                        }
+                    }}
+                    title={
+                        contactChangePrompt.contactId
+                            ? t('info.changeContactTitle', 'Change the ticket contact?')
+                            : t('info.removeContactTitle', 'Remove the ticket contact?')
+                    }
+                >
+                    <DialogContent>
+                        <p className="mb-4 text-sm text-[rgb(var(--color-text-600))]">
+                            {t(
+                                'info.changeContactPrompt',
+                                'The contact, assignee and watchers are told about this update unless you turn their notifications off.',
+                            )}
+                        </p>
+                        <TicketNotificationSuppressionControl
+                            idPrefix={`${id}-contact-change-prompt-notification-suppression`}
+                            value={contactChangePrompt.suppression}
+                            onChange={(suppression) =>
+                                setContactChangePrompt((prev) => ({ ...prev, suppression }))
+                            }
+                            disabled={isSubmittingContactChange}
+                        />
+                        <DialogFooter>
+                            <Button
+                                id={`${id}-contact-change-prompt-cancel`}
+                                type="button"
+                                variant="outline"
+                                onClick={closeContactChangePrompt}
+                                disabled={isSubmittingContactChange}
+                            >
+                                {t('actions.cancel', 'Cancel')}
+                            </Button>
+                            <Button
+                                id={`${id}-contact-change-prompt-confirm`}
+                                type="button"
+                                onClick={() => void confirmContactChangePrompt()}
+                                disabled={isSubmittingContactChange}
+                            >
+                                {isSubmittingContactChange
+                                    ? t('info.saving', 'Saving…')
+                                    : contactChangePrompt.contactId
+                                        ? t('info.changeContact', 'Change contact')
+                                        : t('info.removeContact', 'Remove contact')}
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
 
                 {/* Sync-mode bundle master: choose whether a boundary-crossing
                     status change propagates to the affected children. */}

@@ -37,6 +37,9 @@ export { z } from 'zod';
 // Client-side validation helpers used by UI/forms
 export * from './lib/clientFormValidation';
 
+// English wording for the client/contact field validators, for apps that load it as an i18n resource
+export { CLIENT_VALIDATION_MESSAGES_EN, CLIENT_VALIDATION_RESOURCE_EN } from './lib/messages/clientValidationMessages.en';
+
 // Three-layer field validation result shape (normalize → validate → advise)
 export {
   buildFieldValidation,

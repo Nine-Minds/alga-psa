@@ -12,6 +12,7 @@ import {
   updateClientSchema,
   clientListQuerySchema,
   createClientLocationSchema,
+  updateClientLocationSchema,
   clientMergePreviewRequestSchema,
   clientMergeRequestSchema,
   setBillingProfileContactsSchema
@@ -169,6 +170,80 @@ export class ApiClientController extends ApiBaseController {
           );
           
           return createSuccessResponse(location, 201);
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  /** The `{id}/locations/{locationId}` segments of the request path. */
+  private locationPathIds(req: NextRequest): { clientId: string; locationId: string } {
+    const pathParts = new URL(req.url).pathname.split('/');
+    const clientsIndex = pathParts.findIndex(part => part === 'clients');
+    const clientId = pathParts[clientsIndex + 1];
+    const locationId = pathParts[pathParts.indexOf('locations', clientsIndex) + 1];
+    const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!clientId || !uuid.test(clientId)) throw new ValidationError('Invalid client ID format');
+    if (!locationId || !uuid.test(locationId)) throw new ValidationError('Invalid location ID format');
+    return { clientId, locationId };
+  }
+
+  /**
+   * Update client location
+   */
+  updateLocation() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        const apiRequest = await this.authenticate(req) as AuthenticatedApiRequest;
+        const { clientId, locationId } = this.locationPathIds(req);
+
+        return await runWithTenant(apiRequest.context.tenant, async () => {
+          await this.checkPermission(apiRequest, this.options.permissions?.update || 'update');
+
+          const client = await this.clientService.getById(clientId, apiRequest.context!);
+          if (!client) {
+            throw new NotFoundError('Client not found');
+          }
+
+          let data;
+          try {
+            data = updateClientLocationSchema.parse(await req.json());
+          } catch (error) {
+            if (error instanceof ZodError) {
+              throw new ValidationError('Validation failed', error.errors);
+            }
+            throw error;
+          }
+
+          const location = await this.clientService.updateLocation(clientId, locationId, data, apiRequest.context!);
+          return createSuccessResponse(location);
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  /**
+   * Delete client location
+   */
+  deleteLocation() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        const apiRequest = await this.authenticate(req) as AuthenticatedApiRequest;
+        const { clientId, locationId } = this.locationPathIds(req);
+
+        return await runWithTenant(apiRequest.context.tenant, async () => {
+          await this.checkPermission(apiRequest, this.options.permissions?.update || 'update');
+
+          const client = await this.clientService.getById(clientId, apiRequest.context!);
+          if (!client) {
+            throw new NotFoundError('Client not found');
+          }
+
+          await this.clientService.deleteLocation(clientId, locationId, apiRequest.context!);
+          return new NextResponse(null, { status: 204 });
         });
       } catch (error) {
         return handleApiError(error);

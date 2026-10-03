@@ -742,7 +742,10 @@
       "success_other": "Estado actualizado en {{count}} tickets",
       "partialFailure": "El estado no se pudo actualizar en algunos tickets",
       "failure": "Error al actualizar el estado",
-      "failedHeading": "No se pudo actualizar el estado en los siguientes tickets:"
+      "failedHeading": "No se pudo actualizar el estado en los siguientes tickets:",
+      "resolutionLabel": "Comentario de resolución (opcional)",
+      "resolutionPlaceholder": "Describa cómo se resolvieron estos tickets",
+      "resolutionHelper": "Se guarda como la resolución de cada ticket seleccionado y cumple con los tableros que exigen una antes de cerrar."
     },
     "priority": {
       "dialogTitle": "Cambiar prioridad de los tickets seleccionados",
@@ -946,6 +949,11 @@
     "closeReasonPlaceholder": "Motivo para cerrar de todos modos (opcional, se registra en el historial de auditoría)",
     "closing": "Cerrando…",
     "closeAnyway": "Cerrar de todos modos",
+    "markResolutionInternal": "Marcar como interno",
+    "markResolutionInternalHelper": "Una resolución interna no aparece en el portal del cliente ni se incluye en el correo electrónico de cierre.",
+    "closeTicketNowTitle": "¿Cerrar el ticket ahora?",
+    "closeTicketNowPrompt": "Este comentario es ahora la resolución. Elija un estado de cierre para cerrar el ticket o déjelo abierto.",
+    "leaveTicketOpen": "Dejar abierto",
     "timerActiveElsewhereTitle": "Temporizador activo en otra ventana",
     "timerTakeoverMessage": "El temporizador de este ticket está activo en otra ventana. ¿Deseas tomar el control y reemplazarlo aquí?",
     "replaceHere": "Reemplazar aquí",
@@ -955,7 +963,12 @@
     "emailNotificationLogs": "Registros de notificaciones por correo",
     "ticketActivity": "Actividad del ticket",
     "discardChanges": "Descartar cambios",
-    "saved": "Guardado"
+    "saved": "Guardado",
+    "changeContactTitle": "¿Cambiar el contacto del ticket?",
+    "removeContactTitle": "¿Quitar el contacto del ticket?",
+    "changeContactPrompt": "El contacto, el asignado y los observadores recibirán aviso de este cambio, salvo que desactive sus notificaciones.",
+    "changeContact": "Cambiar contacto",
+    "removeContact": "Quitar contacto"
   },
   "properties": {
     "timeEntry": "Entrada de tiempo",
@@ -1790,7 +1803,6 @@
       "replyTo": "Responder a {{name}}",
       "writeReply": "Escribir una respuesta",
       "modeInternal": "Interno",
-      "modeResolution": "Resolución",
       "sending": "Enviando…",
       "send": "Enviar",
       "systemActor": "Sistema",
@@ -1892,7 +1904,8 @@
       "remove": "Eliminar",
       "cancel": "Cancelar",
       "save": "Guardar",
-      "menu": "Acciones del vínculo"
+      "menu": "Acciones del vínculo",
+      "openRecord": "Abrir registro externo"
     },
     "relationship": {
       "origin": "Origen",
@@ -1951,7 +1964,14 @@
       "systemLabelRequired": "La etiqueta del sistema es obligatoria",
       "permissionDenied": "Permiso denegado: no se pueden administrar sistemas externos",
       "systemRequired": "Elija un sistema externo.",
-      "urlRequired": "Se requiere una URL para los sistemas sin plantilla de URL."
+      "urlRequired": "Se requiere una URL para los sistemas sin plantilla de URL.",
+      "invalidVisibility": "Solo se pueden compartir enlaces de tickets; la visibilidad debe ser un valor booleano"
+    },
+    "visibility": {
+      "label": "Visibilidad",
+      "internal": "Solo interno",
+      "shared": "Visible en el portal del cliente",
+      "help": "Los clientes con acceso a este ticket pueden ver este enlace. Compartir el enlace no concede acceso al sistema externo."
     }
   },
   "smartSearch": {

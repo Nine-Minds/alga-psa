@@ -40,5 +40,11 @@
     "glossary": "glossary.json",
     "reviewState": "review-state.json",
     "dialect": "pl-PL"
+  },
+  "sv": {
+    "dir": "tools/i18n/sv",
+    "glossary": "glossary.json",
+    "reviewState": "review-state.json",
+    "dialect": "sv-SE"
   }
 }

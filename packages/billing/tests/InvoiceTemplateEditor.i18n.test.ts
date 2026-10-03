@@ -31,7 +31,7 @@ describe('InvoiceTemplateEditor i18n wiring contract', () => {
 
     const keyChecks = [
       'templateEditor.actions.back',
-      'templateEditor.actions.cancel',
+      'templateEditor.actions.close',
       'templateEditor.actions.save',
       'templateEditor.actions.saving',
       'templateEditor.titles.create',
@@ -52,15 +52,16 @@ describe('InvoiceTemplateEditor i18n wiring contract', () => {
     }
   });
 
-  it('T026: validation, timestamp labels, and AST export/save errors resolve through msp/invoicing', () => {
+  it('T026: validation, save status, and AST export/save errors resolve through msp/invoicing', () => {
     const source = read('../src/components/billing-dashboard/InvoiceTemplateEditor.tsx');
     const en = readJson<Record<string, unknown>>(
       '../../../server/public/locales/en/msp/invoicing.json',
     );
 
     const keyChecks = [
-      'templateEditor.fields.created',
-      'templateEditor.fields.lastUpdated',
+      'templateEditor.fields.savedAt',
+      'templateEditor.fields.notSaved',
+      'templateEditor.toast.saved',
       'templateEditor.errors.loadFailed',
       'templateEditor.errors.saveFailed',
       'templateEditor.errors.unexpectedSave',

@@ -41,6 +41,8 @@ const context = {
   db,
 };
 
+const CRM_ALL = { clientsCreate: true, clientsUpdate: true, contactsCreate: true, contactsUpdate: true };
+
 const customTokens = (overrides: Record<string, string> = {}) => ({
   ...CUSTOM_THEME_PRESETS.forest.light,
   primary: '#123456',
@@ -64,9 +66,12 @@ describe('MobileCapabilitiesService', () => {
       inventory: true,
       opportunities: true,
       opportunitiesCreate: true,
+      projects: true,
+      ...CRM_ALL,
     });
     expect(result.formatting).toEqual(SYSTEM_DATE_FORMAT);
     expect(mocks.hasPermission).toHaveBeenCalledWith(user, 'inventory', 'read', db);
+    expect(mocks.hasPermission).toHaveBeenCalledWith(user, 'project', 'read', db);
     expect(mocks.hasPermission).toHaveBeenCalledWith(user, 'opportunities', 'read', db);
     expect(mocks.hasPermission).toHaveBeenCalledWith(user, 'opportunities', 'create', db);
   });
@@ -80,9 +85,33 @@ describe('MobileCapabilitiesService', () => {
       inventory: false,
       opportunities: false,
       opportunitiesCreate: false,
+      projects: false,
+      ...CRM_ALL,
     });
     expect(result.formatting).toEqual(SYSTEM_DATE_FORMAT);
-    expect(mocks.hasPermission).not.toHaveBeenCalled();
+    expect(mocks.hasPermission).not.toHaveBeenCalledWith(user, 'inventory', 'read', db);
+    expect(mocks.hasPermission).not.toHaveBeenCalledWith(user, 'project', 'read', db);
+    expect(mocks.hasPermission).not.toHaveBeenCalledWith(user, 'opportunities', 'read', db);
+  });
+
+  it('reports client and contact write permissions for every product', async () => {
+    mocks.getTenantProduct.mockResolvedValue('algadesk');
+    mocks.hasPermission.mockImplementation(async (_user, resource, action) => (
+      !(resource === 'client' && action === 'create') && !(resource === 'contact' && action === 'update')
+    ));
+    const service = new MobileCapabilitiesService();
+
+    const result = await service.getMyCapabilities(context);
+    expect(result.features).toMatchObject({
+      clientsCreate: false,
+      clientsUpdate: true,
+      contactsCreate: true,
+      contactsUpdate: false,
+    });
+    expect(mocks.hasPermission).toHaveBeenCalledWith(user, 'client', 'create', db);
+    expect(mocks.hasPermission).toHaveBeenCalledWith(user, 'client', 'update', db);
+    expect(mocks.hasPermission).toHaveBeenCalledWith(user, 'contact', 'create', db);
+    expect(mocks.hasPermission).toHaveBeenCalledWith(user, 'contact', 'update', db);
   });
 
   it.each([
@@ -101,6 +130,8 @@ describe('MobileCapabilitiesService', () => {
       inventory: expectedInventory,
       opportunities: expectedOpportunities,
       opportunitiesCreate: expectedOpportunities,
+      projects: true,
+      ...CRM_ALL,
     });
   });
 
@@ -115,6 +146,8 @@ describe('MobileCapabilitiesService', () => {
       inventory: true,
       opportunities: true,
       opportunitiesCreate: false,
+      projects: true,
+      ...CRM_ALL,
     });
   });
 
@@ -211,6 +244,8 @@ describe('MobileCapabilitiesService', () => {
         inventory: true,
         opportunities: true,
         opportunitiesCreate: true,
+        projects: true,
+        ...CRM_ALL,
       });
     });
 
@@ -243,5 +278,14 @@ describe('MobileCapabilitiesService', () => {
         formatting: SYSTEM_DATE_FORMAT,
       });
     });
+  });
+
+  it('turns projects off without project:read on a PSA tenant', async () => {
+    mocks.hasPermission.mockImplementation(async (_user, resource) => resource !== 'project');
+    const service = new MobileCapabilitiesService();
+
+    const result = await service.getMyCapabilities(context);
+    expect(result.features.projects).toBe(false);
+    expect(result.features.inventory).toBe(true);
   });
 });
