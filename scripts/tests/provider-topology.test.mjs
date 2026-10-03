@@ -44,7 +44,9 @@ function harness(t, edition = 'enterprise') {
     if (results[id] instanceof Error) throw results[id];
     return JSON.stringify({ status: 'passed', service: env.PROVIDER_PROBE_SERVICE, revision: env.E2E_CANDIDATE_REVISION, containerId: id, ...results[id] });
   };
-  return { config, ids, inspections, images, imageId, calls, results, outputDirectory, check: () => verifyProviderTopology({ edition, revision, run, outputDirectory, probeSource: 'synthetic probe payload' }) };
+  const records = {};
+  return { config, ids, inspections, images, imageId, calls, results, outputDirectory, records,
+    check: () => verifyProviderTopology({ edition, revision, run, outputDirectory, probeSource: 'synthetic probe payload', buildRecords: service => records[service] ?? null, runId: '500', runAttempt: 1 }) };
 }
 for (const edition of ['community', 'enterprise']) test(`probes every ${edition} replica and retains reconciled results`, t => {
   const h = harness(t, edition), result = h.check();
@@ -134,4 +136,26 @@ test('probe failures expose only controlled phase and service, never command sec
     assert.ok(!String(error).includes('private-command-output'));
     return true;
   });
+});
+
+function record(service, reuse) {
+  const id = `sha256:${'1'.repeat(64)}`, reported = `sha256:${'2'.repeat(64)}`;
+  return { schemaVersion: 1, kind: 'docker-archive-build', registryPublication: false, revision, build: { provider: 'github-actions', runId: '500', attempt: 1 },
+    service, image: `candidate-${service}`, dockerfile: 'Dockerfile', platform: 'linux/amd64', configImageId: id, buildReportedDigest: reported,
+    metadata: { 'containerimage.config.digest': id, 'containerimage.digest': reported }, archive: { filename: `${service}.tar.gz`, bytes: 10, sha256: reported },
+    ...(reuse ? { reuse: { sourceRevision: reuse, sourceRunId: '400', sourceAttempt: 1, artifactRunId: '400', inputs: { policy: 'scripts/image-inputs.json', sha256: reported, files: 3 } } } : {}) };
+}
+test('a reused image must carry its original build revision, as its verified record states', t => {
+  const source = 'c'.repeat(40);
+  const h = harness(t, 'enterprise');
+  h.records['workflow-worker'] = record('workflow-worker', source);
+  h.records['server-ee'] = record('server-ee');
+  assert.throws(h.check, /image: workflow-worker/, 'candidate label on a reused image is a mismatch');
+  h.images['candidate-workflow-worker'].Config.Labels['org.opencontainers.image.revision'] = source;
+  assert.equal(h.check().status, 'passed');
+  h.images['candidate-server'].Config.Labels['org.opencontainers.image.revision'] = source;
+  assert.throws(h.check, /image: server/, 'a built image must still carry the candidate revision');
+  h.images['candidate-server'].Config.Labels['org.opencontainers.image.revision'] = revision;
+  h.records['server-ee'].revision = 'd'.repeat(40);
+  assert.throws(h.check, /image: server/, 'a record for another candidate is rejected before the label is trusted');
 });

@@ -6,8 +6,11 @@ import { validateBrowserArtifactManifest } from './browser-artifact-manifest.mjs
 // error payloads or credentials from Playwright attachments into the scorecard.
 export function browserTestMetrics({ collected, report, evidence, root, revision,
   artifactManifest, artifactManifestRequired = false, runId, runAttempt }) {
+  // Journeys a recorded judgment deferred are accounted for, not missing.
+  const deferred = Array.isArray(evidence?.selection?.jev?.deferred) ? evidence.selection.jev.deferred : [];
+  const deferredKeys = new Set(deferred.map(entry => JSON.stringify(entry?.identity)));
   const verified = reconcilePlaywrightExecution({ collected, report, root, revision,
-    exitCode: evidence?.status === 'passed' ? 0 : 1 });
+    exitCode: evidence?.status === 'passed' ? 0 : 1, deferred });
   let expected = [], actual = [], readable = true;
   try { expected = playwrightTests(collected, root); } catch { readable = false; }
   try { actual = playwrightTests(report, root); } catch { readable = false; }
@@ -44,7 +47,12 @@ export function browserTestMetrics({ collected, report, evidence, root, revision
       });
     } catch { artifactFailure = true; }
   } else if (artifactManifestRequired) artifactFailure = true;
-  const journeys = expected.map(entry => project(entry, remaining.get(JSON.stringify(identity(entry)))?.shift(), true));
+  const journeys = expected.map(entry => {
+    const key = JSON.stringify(identity(entry));
+    const journey = project(entry, remaining.get(key)?.shift(), !deferredKeys.has(key));
+    if (deferredKeys.has(key) && !journey.observed) journey.outcome = 'deferred';
+    return journey;
+  });
   for (const entries of remaining.values()) for (const entry of entries) journeys.push(project(entry, entry, false));
   const missing = journeys.some(journey => journey.required && (!journey.observed || journey.firstAttempt === 'missing'));
   return {

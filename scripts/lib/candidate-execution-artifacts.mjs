@@ -11,9 +11,20 @@ export function readCandidateExecutionBundle({ id, format, directory, sourceRoot
   };
   const evidence = read('evidence', 'evidence.json');
   if (evidence.schemaVersion !== 1) throw new Error(`Unsupported execution evidence: ${id}`);
-  if (evidence.selection?.mode !== 'full') throw new Error(`Required execution must declare full selection: ${id}`);
+  const mode = evidence.selection?.mode;
+  // A judged run must carry its judgment: the revision it was made for, the
+  // threshold applied, and every excused identity with its probability.
+  if (mode === 'jev' && format === 'playwright') {
+    const jev = evidence.selection.jev;
+    if (!jev || typeof jev.threshold !== 'number' || !Array.isArray(jev.deferred) || jev.revision !== evidence.source?.before?.revision) {
+      throw new Error(`Judged execution must record threshold, deferred cases and its revision: ${id}`);
+    }
+  } else if (mode !== 'full') {
+    throw new Error(`Required execution must declare full selection: ${id}`);
+  }
   const bundle = { id, sourceRoot, outcome, source: evidence.source, producerStatus: evidence.status,
     filters: evidence.selection?.filters };
+  if (mode === 'jev') bundle.jev = { threshold: evidence.selection.jev.threshold, deferred: evidence.selection.jev.deferred, revision: evidence.selection.jev.revision };
   if (format === 'node-events') {
     // Node suite entry points reject CLI filters and label full selection.
     bundle.filters = evidence.selection?.mode === 'full' ? evidence.selection.filters ?? [] : undefined;
