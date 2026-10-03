@@ -53,17 +53,12 @@ interface AssetFormProps {
   onSaved?: () => void;
 }
 
-// Interim (alga0002283 step 2): the form already holds `null` for a cleared
-// numeric input; the shared extension types only say `number` until step 4
-// makes them `number | null` end to end, at which point this wrapper goes away.
-type WithNullableNumbers<T> = { [K in keyof T]: T[K] extends number | undefined ? T[K] | null : T[K] };
-
 type AssetFormData = Omit<CreateAssetRequest, 'workstation' | 'network_device' | 'server' | 'mobile_device' | 'printer'> & {
-  workstation?: WithNullableNumbers<Omit<WorkstationAsset, 'tenant' | 'asset_id'>>;
-  network_device?: WithNullableNumbers<Omit<NetworkDeviceAsset, 'tenant' | 'asset_id'>>;
-  server?: WithNullableNumbers<Omit<ServerAsset, 'tenant' | 'asset_id'>>;
+  workstation?: Omit<WorkstationAsset, 'tenant' | 'asset_id'>;
+  network_device?: Omit<NetworkDeviceAsset, 'tenant' | 'asset_id'>;
+  server?: Omit<ServerAsset, 'tenant' | 'asset_id'>;
   mobile_device?: Omit<MobileDeviceAsset, 'tenant' | 'asset_id'>;
-  printer?: WithNullableNumbers<Omit<PrinterAsset, 'tenant' | 'asset_id'>>;
+  printer?: Omit<PrinterAsset, 'tenant' | 'asset_id'>;
 };
 
 type ClientOptionSummary = { id: string; name: string };

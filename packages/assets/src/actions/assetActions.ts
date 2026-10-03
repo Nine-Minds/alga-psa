@@ -248,6 +248,15 @@ function pruneNullishValues(value: unknown): unknown {
     return value === null ? undefined : value;
 }
 
+// Extension number columns that are nullable in the database (see
+// 20241112031335_implement_asset_extension_tables.cjs); "empty" means unknown.
+const NULLABLE_EXTENSION_NUMBER_KEYS = {
+    workstation: ['cpu_cores', 'ram_gb', 'storage_capacity_gb'],
+    network_device: ['port_count', 'power_draw_watts'],
+    server: ['cpu_cores', 'ram_gb'],
+    printer: ['max_paper_size', 'monthly_duty_cycle'],
+} as const;
+
 function sanitizeUpdatePayload(data: UpdateAssetRequest): UpdateAssetRequest {
     const sanitized = {
         ...data,
@@ -277,6 +286,19 @@ function sanitizeUpdatePayload(data: UpdateAssetRequest): UpdateAssetRequest {
     const cleaned = pruneNullishValues(sanitized) as UpdateAssetRequest;
     if (data.location_id === null) {
         cleaned.location_id = null;
+    }
+    // pruneNullishValues deletes null, which would turn "clear this field" into
+    // "keep the stored value". An explicit null on a nullable extension number
+    // column means clear it (alga0002283), like location_id above.
+    for (const [type, keys] of Object.entries(NULLABLE_EXTENSION_NUMBER_KEYS) as Array<[keyof typeof NULLABLE_EXTENSION_NUMBER_KEYS, readonly string[]]>) {
+        const source = data[type] as Record<string, unknown> | undefined;
+        if (!source) continue;
+        const explicitNulls = keys.filter((key) => source[key] === null);
+        if (explicitNulls.length === 0) continue;
+        // pruneNullishValues drops a sub-object that ends up empty, so recreate it.
+        const target = ((cleaned as Record<string, unknown>)[type] ?? {}) as Record<string, unknown>;
+        for (const key of explicitNulls) target[key] = null;
+        (cleaned as Record<string, unknown>)[type] = target;
     }
     return cleaned;
 }
@@ -739,6 +761,14 @@ export const getAssetDetailBundle = withAuth(async (user, { tenant }, asset_id: 
     }
 });
 
+// pg returns NUMERIC as a string and integers as numbers; NULL stays null
+// ("unknown") instead of being coerced to 0.
+function nullableNumber(value: unknown): number | null {
+    if (value === null || value === undefined) return null;
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
+}
+
 function formatAssetForOutput(asset: any): Asset {
     // Format base asset data
     const formattedAsset = {
@@ -773,9 +803,15 @@ function formatAssetForOutput(asset: any): Asset {
         ...(asset.workstation && {
             workstation: {
                 ...asset.workstation,
-                cpu_cores: Number(asset.workstation.cpu_cores) || 0,
-                ram_gb: Number(asset.workstation.ram_gb) || 0,
-                storage_capacity_gb: Number(asset.workstation.storage_capacity_gb) || 0,
+                // Non-null string columns are `z.string()` in the output schema;
+                // legacy and RMM-created rows can hold NULL.
+                os_type: asset.workstation.os_type ?? '',
+                os_version: asset.workstation.os_version ?? '',
+                cpu_model: asset.workstation.cpu_model ?? '',
+                storage_type: asset.workstation.storage_type ?? '',
+                cpu_cores: nullableNumber(asset.workstation.cpu_cores),
+                ram_gb: nullableNumber(asset.workstation.ram_gb),
+                storage_capacity_gb: nullableNumber(asset.workstation.storage_capacity_gb),
                 gpu_model: asset.workstation.gpu_model || undefined,
                 last_login: asset.workstation.last_login
                     ? new Date(asset.workstation.last_login).toISOString()
@@ -789,8 +825,10 @@ function formatAssetForOutput(asset: any): Asset {
         ...(asset.network_device && {
             network_device: {
                 ...asset.network_device,
-                port_count: Number(asset.network_device.port_count) || 0,
-                power_draw_watts: Number(asset.network_device.power_draw_watts) || 0,
+                management_ip: asset.network_device.management_ip ?? '',
+                firmware_version: asset.network_device.firmware_version ?? '',
+                port_count: nullableNumber(asset.network_device.port_count),
+                power_draw_watts: nullableNumber(asset.network_device.power_draw_watts),
                 vlan_config: asset.network_device.vlan_config || {},
                 port_config: asset.network_device.port_config || {}
             }
@@ -799,8 +837,11 @@ function formatAssetForOutput(asset: any): Asset {
         ...(asset.server && {
             server: {
                 ...asset.server,
-                cpu_cores: Number(asset.server.cpu_cores) || 0,
-                ram_gb: Number(asset.server.ram_gb) || 0,
+                os_type: asset.server.os_type ?? '',
+                os_version: asset.server.os_version ?? '',
+                cpu_model: asset.server.cpu_model ?? '',
+                cpu_cores: nullableNumber(asset.server.cpu_cores),
+                ram_gb: nullableNumber(asset.server.ram_gb),
                 storage_config: Array.isArray(asset.server.storage_config)
                     ? asset.server.storage_config
                     : [],
@@ -819,6 +860,9 @@ function formatAssetForOutput(asset: any): Asset {
         ...(asset.mobile_device && {
             mobile_device: {
                 ...asset.mobile_device,
+                os_type: asset.mobile_device.os_type ?? '',
+                os_version: asset.mobile_device.os_version ?? '',
+                model: asset.mobile_device.model ?? '',
                 imei: asset.mobile_device.imei || undefined,
                 phone_number: asset.mobile_device.phone_number || undefined,
                 carrier: asset.mobile_device.carrier || undefined,
@@ -834,9 +878,10 @@ function formatAssetForOutput(asset: any): Asset {
         ...(asset.printer && {
             printer: {
                 ...asset.printer,
+                model: asset.printer.model ?? '',
                 ip_address: asset.printer.ip_address || undefined,
-                max_paper_size: asset.printer.max_paper_size != null ? Number(asset.printer.max_paper_size) : undefined,
-                monthly_duty_cycle: asset.printer.monthly_duty_cycle != null ? Number(asset.printer.monthly_duty_cycle) : undefined,
+                max_paper_size: nullableNumber(asset.printer.max_paper_size),
+                monthly_duty_cycle: nullableNumber(asset.printer.monthly_duty_cycle),
                 supported_paper_types: Array.isArray(asset.printer.supported_paper_types)
                     ? asset.printer.supported_paper_types
                     : [],
