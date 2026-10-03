@@ -2134,7 +2134,7 @@
       "dueTime": "Vence a las",
       "leadDays": "Crear días antes del vencimiento",
       "policyLabel": "Cuando la fecha de vencimiento no es un día hábil",
-      "calendarFallback": "No hay un horario laboral predeterminado configurado, por lo que se consideran días hábiles de lunes a viernes y no se tienen en cuenta los festivos.",
+      "calendarFallback": "No hay un horario laboral predeterminado configurado, por lo que los días hábiles son de lunes a viernes, además de los festivos de toda su empresa.",
       "calendarNote": "Los días hábiles siguen su horario laboral predeterminado ({{name}}), incluidos sus festivos."
     },
     "status": {

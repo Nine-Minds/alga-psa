@@ -2134,7 +2134,7 @@
       "dueTime": "Vervalt om",
       "leadDays": "Dagen vóór vervaldatum aanmaken",
       "policyLabel": "Als de vervaldatum geen werkdag is",
-      "calendarFallback": "Er is geen standaardwerktijdenschema ingesteld, dus maandag tot en met vrijdag zijn werkdagen en feestdagen worden niet meegerekend.",
+      "calendarFallback": "Er is geen standaardwerktijdenschema ingesteld, dus werkdagen zijn maandag tot en met vrijdag plus de feestdagen die voor uw hele bedrijf gelden.",
       "calendarNote": "Werkdagen volgen uw standaardwerktijdenschema ({{name}}), inclusief de feestdagen."
     },
     "status": {

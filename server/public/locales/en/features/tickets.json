@@ -2134,7 +2134,7 @@
       "dueTime": "Due at",
       "leadDays": "Create days before due",
       "policyLabel": "When the due date is not a business day",
-      "calendarFallback": "No default business-hours schedule is set, so Monday to Friday are business days and holidays are not considered.",
+      "calendarFallback": "No default business-hours schedule is set, so business days are Monday to Friday plus your company-wide holidays.",
       "calendarNote": "Business days follow your default business-hours schedule ({{name}}), including its holidays."
     },
     "status": {

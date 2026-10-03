@@ -2134,7 +2134,7 @@
       "dueTime": "Vence às",
       "leadDays": "Criar dias antes do vencimento",
       "policyLabel": "Quando a data de vencimento não é um dia útil",
-      "calendarFallback": "Nenhum agendamento de horário comercial padrão foi definido, então de segunda a sexta são dias úteis e os feriados não são considerados.",
+      "calendarFallback": "Nenhum agendamento de horário comercial padrão foi definido, então os dias úteis são de segunda a sexta, mais os feriados válidos para toda a empresa.",
       "calendarNote": "Os dias úteis seguem seu agendamento de horário comercial padrão ({{name}}), incluindo os feriados dele."
     },
     "status": {

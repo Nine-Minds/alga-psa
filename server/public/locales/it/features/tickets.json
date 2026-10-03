@@ -2134,7 +2134,7 @@
       "dueTime": "Scadenza alle",
       "leadDays": "Crea con giorni di anticipo sulla scadenza",
       "policyLabel": "Quando la scadenza non è un giorno lavorativo",
-      "calendarFallback": "Non è impostata alcuna pianificazione predefinita dell'orario lavorativo: i giorni lavorativi sono da lunedì a venerdì e le festività non vengono considerate.",
+      "calendarFallback": "Non è impostata alcuna pianificazione predefinita dell'orario lavorativo: i giorni lavorativi sono da lunedì a venerdì, più le festività valide per tutta l'azienda.",
       "calendarNote": "I giorni lavorativi seguono la pianificazione predefinita dell'orario lavorativo ({{name}}), comprese le sue festività."
     },
     "status": {

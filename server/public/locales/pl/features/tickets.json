@@ -2280,7 +2280,7 @@
       "dueTime": "Termin o",
       "leadDays": "Utwórz dni przed terminem",
       "policyLabel": "Gdy termin nie przypada na dzień roboczy",
-      "calendarFallback": "Nie ustawiono domyślnego harmonogramu godzin pracy, więc dniami roboczymi są od poniedziałku do piątku, a święta nie są uwzględniane.",
+      "calendarFallback": "Nie ustawiono domyślnego harmonogramu godzin pracy, więc dniami roboczymi są dni od poniedziałku do piątku oraz święta obowiązujące w całej firmie.",
       "calendarNote": "Dni robocze wynikają z domyślnego harmonogramu godzin pracy ({{name}}), wraz z jego świętami."
     },
     "status": {

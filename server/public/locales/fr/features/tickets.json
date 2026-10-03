@@ -2134,7 +2134,7 @@
       "dueTime": "Échéance à",
       "leadDays": "Créer ce nombre de jours avant l'échéance",
       "policyLabel": "Lorsque l'échéance n'est pas un jour ouvré",
-      "calendarFallback": "Aucun horaire d'ouverture par défaut n'est défini : les jours ouvrés sont donc du lundi au vendredi et les jours fériés ne sont pas pris en compte.",
+      "calendarFallback": "Aucun horaire d'ouverture par défaut n'est défini : les jours ouvrés sont donc du lundi au vendredi, plus les jours fériés communs à toute votre entreprise.",
       "calendarNote": "Les jours ouvrés suivent votre horaire d'ouverture par défaut ({{name}}), jours fériés compris."
     },
     "status": {

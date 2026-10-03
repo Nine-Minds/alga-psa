@@ -2134,7 +2134,7 @@
       "dueTime": "Förfaller kl.",
       "leadDays": "Skapa dagar före förfallodagen",
       "policyLabel": "När förfallodagen inte är en arbetsdag",
-      "calendarFallback": "Inget standardschema för arbetstid är angivet, så måndag till fredag räknas som arbetsdagar och helgdagar beaktas inte.",
+      "calendarFallback": "Inget standardschema för arbetstid är angivet, så arbetsdagar är måndag till fredag plus företagets gemensamma helgdagar.",
       "calendarNote": "Arbetsdagar följer ditt standardschema för arbetstid ({{name}}), inklusive dess helgdagar."
     },
     "status": {

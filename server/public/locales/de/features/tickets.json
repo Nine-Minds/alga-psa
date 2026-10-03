@@ -2134,7 +2134,7 @@
       "dueTime": "Fällig um",
       "leadDays": "Erstellen (Tage vor Fälligkeit)",
       "policyLabel": "Wenn das Fälligkeitsdatum kein Werktag ist",
-      "calendarFallback": "Es ist kein Standard-Geschäftszeitenplan festgelegt. Daher gelten Montag bis Freitag als Werktage, und Feiertage werden nicht berücksichtigt.",
+      "calendarFallback": "Es ist kein Standard-Geschäftszeitenplan festgelegt. Daher sind Werktage Montag bis Freitag zuzüglich der unternehmensweiten Feiertage.",
       "calendarNote": "Werktage richten sich nach Ihrem Standard-Geschäftszeitenplan ({{name}}), einschließlich der dort hinterlegten Feiertage."
     },
     "status": {
