@@ -567,7 +567,8 @@
       "avatarDescription": "Dieser Avatar wird dem MSP-Team angezeigt, wenn es Ihre Kontaktinformationen ansieht.",
       "emailAlreadyExists": "Ein Benutzer mit dieser E-Mail-Adresse existiert bereits",
       "reportsToSelf": "Ein Benutzer kann sich nicht selbst als Vorgesetzten zuweisen",
-      "reportsToCycle": "Dies würde eine zirkuläre Berichtskette erzeugen"
+      "reportsToCycle": "Dies würde eine zirkuläre Berichtskette erzeugen",
+      "invalidTimezone": "Wählen Sie eine Zeitzone mit Stadtbezug, z. B. America/New_York."
     },
     "imageUpload": {
       "uploadAvatar": "Avatar hochladen",

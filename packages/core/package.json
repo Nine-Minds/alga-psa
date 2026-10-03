@@ -26,6 +26,10 @@
       "import": "./dist/lib/workSchedule.js",
       "types": "./src/lib/workSchedule.ts"
     },
+    "./timeZones": {
+      "import": "./dist/lib/timeZones.js",
+      "types": "./src/lib/timeZones.ts"
+    },
     "./unitOfMeasure": {
       "import": "./dist/lib/unitOfMeasure.js",
       "types": "./src/lib/unitOfMeasure.ts"

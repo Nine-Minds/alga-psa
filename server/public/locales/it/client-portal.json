@@ -567,7 +567,8 @@
       "avatarDescription": "Questo avatar viene mostrato al personale MSP quando consulta le tue informazioni di contatto.",
       "emailAlreadyExists": "Esiste già un utente con questo indirizzo e-mail",
       "reportsToSelf": "Un utente non può riferire a se stesso",
-      "reportsToCycle": "Questo creerebbe una catena di riporto circolare"
+      "reportsToCycle": "Questo creerebbe una catena di riporto circolare",
+      "invalidTimezone": "Scegli un fuso orario basato su una città, ad esempio America/New_York."
     },
     "imageUpload": {
       "uploadAvatar": "Carica avatar",

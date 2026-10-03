@@ -1336,9 +1336,11 @@
   },
   "timezonePicker": {
     "selectPlaceholder": "Välj tidszon…",
-    "searchPlaceholder": "Sök tidszoner eller förkortningar (t.ex. EST)…",
+    "searchPlaceholder": "Sök efter stad, namn eller förkortning (t.ex. New York, EST)...",
     "noResults": "Inga tidszoner hittades",
     "matchingGroup": "Matchar ”{{query}}”",
+    "noDst": "Ingen sommartid",
+    "noDaylightSavingHint": "Ingen sommartid. Klockorna står på {{offset}} hela året.",
     "regions": {
       "Africa": "Afrika",
       "America": "Amerika",
