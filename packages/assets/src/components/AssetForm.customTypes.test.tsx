@@ -146,8 +146,19 @@ vi.mock('@alga-psa/ui/components/Checkbox', () => ({
 }));
 
 vi.mock('@alga-psa/ui/components/DatePicker', () => ({
-  DatePicker: ({ id, value }: any) => (
-    <input id={id} aria-label={id} readOnly value={value ? value.toISOString() : ''} />
+  // Interactive stand-in: typing "YYYY-MM-DD" emits what the real picker emits —
+  // a Date at LOCAL midnight of the chosen calendar day.
+  DatePicker: ({ id, value, onChange }: any) => (
+    <input
+      id={id}
+      aria-label={id}
+      data-local-day={value ? `${value.getFullYear()}-${value.getMonth() + 1}-${value.getDate()}` : ''}
+      value={value ? value.toISOString() : ''}
+      onChange={(e) => {
+        const [y, m, d] = e.target.value.split('-').map(Number);
+        onChange?.(new Date(y, m - 1, d));
+      }}
+    />
   ),
 }));
 
@@ -486,5 +497,37 @@ describe('AssetForm returned update results (alga0002283)', () => {
     await user.click(screen.getByRole('button', { name: 'Save Changes' }));
 
     await waitFor(() => expect(mockToastError).toHaveBeenCalledWith('Failed to update asset'));
+  });
+});
+
+describe('AssetForm date pickers use local calendar parts (alga0002283)', () => {
+  const originalTz = process.env.TZ;
+  afterEach(() => {
+    if (originalTz === undefined) delete process.env.TZ;
+    else process.env.TZ = originalTz;
+  });
+
+  it('under TZ=Australia/Brisbane, picking 31 Dec submits 2026-12-31T00:00:00.000Z', async () => {
+    process.env.TZ = 'Australia/Brisbane';
+    const user = userEvent.setup();
+    mockGetAsset.mockResolvedValue(workstationAsset);
+    await renderForm();
+
+    fireEvent.change(screen.getByLabelText('warranty_end_date'), { target: { value: '2026-12-31' } });
+    await user.click(screen.getByRole('button', { name: 'Save Changes' }));
+
+    await waitFor(() => expect(mockUpdateAsset).toHaveBeenCalled());
+    const payload = mockUpdateAsset.mock.calls[0][1];
+    expect(payload.warranty_end_date).toBe('2026-12-31T00:00:00.000Z');
+  });
+
+  it('under a western TZ, a stored date is shown on the same calendar day in the picker', async () => {
+    process.env.TZ = 'America/Los_Angeles';
+    mockGetAsset.mockResolvedValue({ ...workstationAsset, warranty_end_date: '2026-12-31T00:00:00.000Z' });
+    await renderForm();
+
+    await waitFor(() =>
+      expect(screen.getByLabelText('warranty_end_date').getAttribute('data-local-day')).toBe('2026-12-31')
+    );
   });
 });

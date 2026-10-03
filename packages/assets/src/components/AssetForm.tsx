@@ -31,6 +31,8 @@ import {
 } from '../actions/assetActionErrors';
 import { formatClientLocation } from '../lib/formatClientLocation';
 import { parseNumberInput } from '../lib/numberInput';
+import { calendarDateToLocalDate } from '../lib/calendarDate';
+import { toCalendarDateString } from '@alga-psa/core';
 import { pickSchemaAttributes, validateAttributesAgainstSchema } from '../lib/assetTypeAttributes';
 import { buildAssetTypeOptions, useAssetTypeRegistry } from './shared/useAssetTypeOptions';
 import { CustomTypeFieldsPanel } from './shared/CustomTypeFieldsPanel';
@@ -1390,11 +1392,11 @@ export default function AssetForm({ assetId, onSaved }: AssetFormProps) {
                   </label>
                   <DatePicker
                     id="purchase_date"
-                    value={formData.purchase_date ? new Date(formData.purchase_date) : undefined}
+                    value={calendarDateToLocalDate(formData.purchase_date)}
                     onChange={(date) => {
                       setFormData(prev => ({
                         ...prev,
-                        purchase_date: date ? date.toISOString().split('T')[0] : ''
+                        purchase_date: toCalendarDateString(date) ?? ''
                       }));
                     }}
                     placeholder={t('assetForm.placeholders.selectPurchaseDate', {
@@ -1410,11 +1412,11 @@ export default function AssetForm({ assetId, onSaved }: AssetFormProps) {
                   </label>
                   <DatePicker
                     id="warranty_end_date"
-                    value={formData.warranty_end_date ? new Date(formData.warranty_end_date) : undefined}
+                    value={calendarDateToLocalDate(formData.warranty_end_date)}
                     onChange={(date) => {
                       setFormData(prev => ({
                         ...prev,
-                        warranty_end_date: date ? date.toISOString().split('T')[0] : ''
+                        warranty_end_date: toCalendarDateString(date) ?? ''
                       }));
                     }}
                     placeholder={t('assetForm.placeholders.selectWarrantyEndDate', {
