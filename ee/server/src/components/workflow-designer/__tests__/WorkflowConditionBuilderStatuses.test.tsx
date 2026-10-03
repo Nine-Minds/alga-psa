@@ -4,6 +4,8 @@ import React from 'react';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+const { cache } = vi.hoisted(() => ({ cache: { passIds: true, statuses: [] as Array<{ id: string; name: string; board_id: string; board_name: string }> } }));
+
 const STATUSES = [
   { id: 's1', name: 'Awaiting Wisdom', board_id: 'b1', board_name: 'Urgent Matters' },
   { id: 's2', name: 'Awaiting Wisdom', board_id: 'b2', board_name: 'Support' },
@@ -25,19 +27,25 @@ vi.mock('@alga-psa/ui/components/CustomSelect', () => ({
   ),
 }));
 
+cache.statuses = STATUSES;
+
 vi.mock('../WorkflowActionInputFixedPicker', () => ({
   WORKFLOW_FIXED_PICKER_SUPPORTED_RESOURCES: new Set(['ticket-status']),
   WorkflowActionInputFixedPicker: ({ idPrefix, value, onChange, includeAnyBoardStatus }: {
     idPrefix: string;
     value: string | null;
-    onChange: (value: string | null) => void;
+    onChange: (value: string | null, meta?: { anyBoardStatusIds?: string[] }) => void;
     includeAnyBoardStatus?: boolean;
   }) => (
     <select
       data-testid={`${idPrefix}-picker`}
       data-any-board={String(Boolean(includeAnyBoardStatus))}
       value={value ?? ''}
-      onChange={(event) => onChange(event.target.value || null)}
+      onChange={(event) => onChange(
+        event.target.value || null,
+        // What the real picker passes: the ids it listed under that name.
+        cache.passIds && event.target.value.startsWith('any-board-status:') ? { anyBoardStatusIds: ['s1', 's2', 's3', 's5'] } : undefined
+      )}
     >
       <option value="">--</option>
       <option value="any-board-status:Awaiting Wisdom">Awaiting Wisdom (any board)</option>
@@ -48,8 +56,8 @@ vi.mock('../WorkflowActionInputFixedPicker', () => ({
 
 vi.mock('../workflowEntityLabels', () => ({
   useWorkflowEntityLabels: () => ({
-    labels: new Map(STATUSES.map((status) => [status.id, status.name])),
-    statuses: STATUSES,
+    labels: new Map(cache.statuses.map((status) => [status.id, status.name])),
+    statuses: cache.statuses,
     loaded: true,
   }),
 }));
@@ -95,7 +103,24 @@ describe('ticket status conditions across boards', () => {
     const picker = screen.getByTestId('cond-clause-0-value-picker');
     expect(picker.getAttribute('data-any-board')).toBe('true');
     fireEvent.change(picker, { target: { value: 'any-board-status:Awaiting Wisdom' } });
-    expect(onChange).toHaveBeenCalledWith(`${PATH} in ["s1", "s2", "s3"]`);
+    // The ids come from the picker's own list (including s5, newer than the loaded cache).
+    expect(onChange).toHaveBeenCalledWith(`${PATH} in ["s1", "s2", "s3", "s5"]`);
+  });
+
+  it('does not write an expression when the any-board ids cannot be resolved', () => {
+    cache.statuses = [];
+    cache.passIds = false;
+    try {
+      const onChange = renderBuilder(`${PATH} = ""`);
+      // The picker passes no ids and there is no loaded status list to fall back on.
+      fireEvent.change(screen.getByTestId('cond-clause-0-value-picker'), { target: { value: 'any-board-status:Awaiting Wisdom' } });
+      expect(onChange).toHaveBeenCalledTimes(1);
+      // The saved condition is rewritten unchanged, never as `in []` or a sentinel.
+      expect(onChange).toHaveBeenCalledWith(`${PATH} = ""`);
+    } finally {
+      cache.statuses = STATUSES;
+      cache.passIds = true;
+    }
   });
 
   it('compiles a board-specific choice to = id', () => {
@@ -107,7 +132,7 @@ describe('ticket status conditions across boards', () => {
   it('maps "is not" + any board to not_in', () => {
     const onChange = renderBuilder(`${PATH} != ""`);
     fireEvent.change(screen.getByTestId('cond-clause-0-value-picker'), { target: { value: 'any-board-status:Awaiting Wisdom' } });
-    expect(onChange).toHaveBeenCalledWith(`(${PATH} in ["s1", "s2", "s3"]) = false`);
+    expect(onChange).toHaveBeenCalledWith(`(${PATH} in ["s1", "s2", "s3", "s5"]) = false`);
   });
 
   it('reopens an in list that matches one name as that name (any board), not as chips', () => {

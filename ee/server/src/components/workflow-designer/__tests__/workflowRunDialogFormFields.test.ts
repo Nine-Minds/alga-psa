@@ -19,7 +19,7 @@ describe('applyDerivedClientScope', () => {
 
   it('narrows a contact picker to the client of the chosen ticket', () => {
     const scoped = applyDerivedClientScope(contactField, { ticketId: 't1' }, 'client-1');
-    expect(scoped.field.editor?.dependencies).toEqual(['client_id']);
+    expect((scoped.field.editor as { dependencies?: string[] }).dependencies).toEqual(['client_id']);
     expect(scoped.rootInputMapping).toEqual({ ticketId: 't1', client_id: 'client-1' });
   });
 

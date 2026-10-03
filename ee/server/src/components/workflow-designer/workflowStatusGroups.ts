@@ -53,3 +53,26 @@ export const findAnyBoardStatusName = (
 
 export const statusIdsForName = (statuses: readonly WorkflowStatusRef[] | undefined, name: string): string[] =>
   groupSharedStatusIds(statuses ?? []).get(name) ?? [];
+
+/**
+ * The same choice once the picker has resolved it: it carries the ids the picker itself listed, so
+ * saving never depends on a separately loaded (possibly stale) status list.
+ */
+export const RESOLVED_ANY_BOARD_STATUS_PREFIX = 'any-board-status-ids:';
+
+export const toResolvedAnyBoardStatusValue = (name: string, ids: readonly string[]): string =>
+  `${RESOLVED_ANY_BOARD_STATUS_PREFIX}${JSON.stringify({ name, ids })}`;
+
+/** Ids carried by a resolved any-board value, or null for any other value. */
+export const parseResolvedAnyBoardStatusValue = (value: unknown): string[] | null => {
+  if (typeof value !== 'string' || !value.startsWith(RESOLVED_ANY_BOARD_STATUS_PREFIX)) return null;
+  try {
+    const parsed = JSON.parse(value.slice(RESOLVED_ANY_BOARD_STATUS_PREFIX.length)) as { ids?: unknown };
+    return Array.isArray(parsed.ids) && parsed.ids.every((id) => typeof id === 'string') ? (parsed.ids as string[]) : null;
+  } catch {
+    return null;
+  }
+};
+
+export const isAnyBoardStatusValue = (value: unknown): boolean =>
+  parseAnyBoardStatusValue(value) !== null || parseResolvedAnyBoardStatusValue(value) !== null;

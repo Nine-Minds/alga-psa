@@ -29,9 +29,12 @@ import type { WorkflowConditionField } from './workflowConditionFields';
 import { useWorkflowEntityLabels, type WorkflowEntityLabelsState } from './workflowEntityLabels';
 import {
   findAnyBoardStatusName,
+  isAnyBoardStatusValue,
   parseAnyBoardStatusValue,
+  parseResolvedAnyBoardStatusValue,
   statusIdsForName,
   toAnyBoardStatusValue,
+  toResolvedAnyBoardStatusValue,
   type WorkflowStatusRef,
 } from './workflowStatusGroups';
 
@@ -119,19 +122,31 @@ const toDisplayClause = (
   return { ...clause, operator: clause.operator === 'not_in' ? 'not_equals' : 'equals', value: toAnyBoardStatusValue(name) };
 };
 
-/** Turns any-board choices back into the status ids they stand for (the inverse of toDisplayClause). */
+/**
+ * Turns any-board choices back into the status ids they stand for (the inverse of toDisplayClause).
+ * Ids come from the picker that offered the choice; the loaded status list is only a fallback.
+ * Returns null when a choice cannot be resolved to ids, so the caller keeps the saved condition
+ * instead of writing an empty or partial list.
+ */
 const toStoredClause = (
   clause: WorkflowConditionClause,
   field: WorkflowConditionField | undefined,
   statuses: readonly WorkflowStatusRef[] | undefined
-): WorkflowConditionClause => {
+): WorkflowConditionClause | null => {
   if (!isTicketStatusField(field) || !conditionOperatorTakesValue(clause.operator)) return clause;
   const values = Array.isArray(clause.value) ? clause.value : [clause.value ?? ''];
-  if (!values.some((value) => parseAnyBoardStatusValue(value) !== null)) return clause;
-  const ids = values.flatMap((value) => {
-    const name = parseAnyBoardStatusValue(value);
-    return name === null ? [value] : statusIdsForName(statuses, name);
-  });
+  if (!values.some((value) => isAnyBoardStatusValue(value))) return clause;
+  const ids: WorkflowConditionLiteral[] = [];
+  for (const value of values) {
+    if (!isAnyBoardStatusValue(value)) {
+      ids.push(value);
+      continue;
+    }
+    const resolved = parseResolvedAnyBoardStatusValue(value)
+      ?? statusIdsForName(statuses, parseAnyBoardStatusValue(value) ?? '');
+    if (resolved.length < 2) return null;
+    ids.push(...resolved);
+  }
   const operator = clause.operator === 'not_equals' ? 'not_in' : clause.operator === 'equals' ? 'in' : clause.operator;
   return { ...clause, operator, value: Array.from(new Set(ids)) };
 };
@@ -275,7 +290,13 @@ const ConditionValueInput: React.FC<{
           },
         }}
         value={typeof value === 'string' && value ? value : null}
-        onChange={(next) => onChange(next ?? '')}
+        onChange={(next, meta) => {
+          const anyBoardName = parseAnyBoardStatusValue(next);
+          // Carry the ids the picker listed, so saving does not depend on another status list.
+          onChange(anyBoardName !== null && meta?.anyBoardStatusIds
+            ? toResolvedAnyBoardStatusValue(anyBoardName, meta.anyBoardStatusIds)
+            : next ?? '');
+        }}
         rootInputMapping={NO_DEPENDENCY_MAPPING}
         disabled={disabled}
         includeAnyBoardStatus={allowAnyBoardStatus && isTicketStatusField(field)}
@@ -479,7 +500,8 @@ export const WorkflowConditionBuilder: React.FC<WorkflowConditionBuilderProps> =
         next.value = defaultValueForField(field);
       }
       next.value = normalizeClauseValue(next.operator, next.value, field);
-      return toStoredClause(next, field, statuses);
+      // An any-board choice that cannot be turned into ids leaves the saved condition as it was.
+      return toStoredClause(next, field, statuses) ?? clause;
     });
     writeGroup({ ...parsed, clauses });
   };

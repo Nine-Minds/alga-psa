@@ -40,6 +40,8 @@ import type { InputMapping, MappingValue } from '@alga-psa/workflows/runtime';
 /** Extra detail about a picked value, for pickers that mix entity kinds (users and teams). */
 export type WorkflowPickerChangeMeta = {
   assigneeType?: 'user' | 'team';
+  /** For a "(any board)" status choice: every status id the list offered under that name. */
+  anyBoardStatusIds?: string[];
 };
 
 export type WorkflowActionInputPickerField = {
@@ -78,6 +80,7 @@ type WorkflowPickerOption = SelectOption & {
   projectId?: string | null;
   phaseId?: string | null;
   assigneeType?: 'user' | 'team';
+  anyBoardStatusIds?: string[];
 };
 
 type WorkflowTicketSearchResult = {
@@ -434,7 +437,11 @@ const mapTicketFieldOptions = (
         }
         if (emitted.has(status.name)) continue;
         emitted.add(status.name);
-        options.push({ value: toAnyBoardStatusValue(status.name), label: detailLabels.anyBoardStatus(status.name) });
+        options.push({
+          value: toAnyBoardStatusValue(status.name),
+          label: detailLabels.anyBoardStatus(status.name),
+          anyBoardStatusIds: shared.get(status.name),
+        });
         options.push(...ticketOptions.statuses.filter((other) => other.name === status.name).map(statusOption));
       }
       return options;
@@ -1365,8 +1372,11 @@ export const WorkflowActionInputFixedPicker: React.FC<{
           options={pickerOptions}
           value={value ?? ''}
           onChange={(nextValue) => {
-            const assigneeType = pickerOptions.find((option) => option.value === nextValue)?.assigneeType;
-            onChange(nextValue || null, assigneeType ? { assigneeType } : undefined);
+            const picked = pickerOptions.find((option) => option.value === nextValue);
+            const meta: WorkflowPickerChangeMeta = {};
+            if (picked?.assigneeType) meta.assigneeType = picked.assigneeType;
+            if (picked?.anyBoardStatusIds) meta.anyBoardStatusIds = picked.anyBoardStatusIds;
+            onChange(nextValue || null, Object.keys(meta).length > 0 ? meta : undefined);
           }}
           placeholder={getWorkflowPickerPlaceholder(t, field, isLoading, disabledExplanation)}
           searchPlaceholder={getWorkflowPickerSearchPlaceholder(t, field)}
