@@ -25,6 +25,7 @@ import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { getAsset, updateAsset } from '../actions/assetActions';
 import { unwrapAssetActionResult } from '../actions/assetActionErrors';
 import { formatClientLocation } from '../lib/formatClientLocation';
+import { parseNumberInput } from '../lib/numberInput';
 import { pickSchemaAttributes, validateAttributesAgainstSchema } from '../lib/assetTypeAttributes';
 import { buildAssetTypeOptions, useAssetTypeRegistry } from './shared/useAssetTypeOptions';
 import { CustomTypeFieldsPanel } from './shared/CustomTypeFieldsPanel';
@@ -47,12 +48,17 @@ interface AssetFormProps {
   onSaved?: () => void;
 }
 
+// Interim (alga0002283 step 2): the form already holds `null` for a cleared
+// numeric input; the shared extension types only say `number` until step 4
+// makes them `number | null` end to end, at which point this wrapper goes away.
+type WithNullableNumbers<T> = { [K in keyof T]: T[K] extends number | undefined ? T[K] | null : T[K] };
+
 type AssetFormData = Omit<CreateAssetRequest, 'workstation' | 'network_device' | 'server' | 'mobile_device' | 'printer'> & {
-  workstation?: Omit<WorkstationAsset, 'tenant' | 'asset_id'>;
-  network_device?: Omit<NetworkDeviceAsset, 'tenant' | 'asset_id'>;
-  server?: Omit<ServerAsset, 'tenant' | 'asset_id'>;
+  workstation?: WithNullableNumbers<Omit<WorkstationAsset, 'tenant' | 'asset_id'>>;
+  network_device?: WithNullableNumbers<Omit<NetworkDeviceAsset, 'tenant' | 'asset_id'>>;
+  server?: WithNullableNumbers<Omit<ServerAsset, 'tenant' | 'asset_id'>>;
   mobile_device?: Omit<MobileDeviceAsset, 'tenant' | 'asset_id'>;
-  printer?: Omit<PrinterAsset, 'tenant' | 'asset_id'>;
+  printer?: WithNullableNumbers<Omit<PrinterAsset, 'tenant' | 'asset_id'>>;
 };
 
 type ClientOptionSummary = { id: string; name: string };
@@ -204,20 +210,20 @@ export default function AssetForm({ assetId, onSaved }: AssetFormProps) {
             os_type: data.workstation.os_type || '',
             os_version: data.workstation.os_version || '',
             cpu_model: data.workstation.cpu_model || '',
-            cpu_cores: data.workstation.cpu_cores || 0,
-            ram_gb: data.workstation.ram_gb || 0,
+            cpu_cores: data.workstation.cpu_cores ?? null,
+            ram_gb: data.workstation.ram_gb ?? null,
             storage_type: data.workstation.storage_type || '',
-            storage_capacity_gb: data.workstation.storage_capacity_gb || 0,
+            storage_capacity_gb: data.workstation.storage_capacity_gb ?? null,
             gpu_model: data.workstation.gpu_model || '',
             installed_software: data.workstation.installed_software || []
           } : undefined,
           network_device: data.network_device ? {
             device_type: data.network_device.device_type || '',
             management_ip: data.network_device.management_ip || '',
-            port_count: data.network_device.port_count || 0,
+            port_count: data.network_device.port_count ?? null,
             firmware_version: data.network_device.firmware_version || '',
             supports_poe: data.network_device.supports_poe || false,
-            power_draw_watts: data.network_device.power_draw_watts || 0,
+            power_draw_watts: data.network_device.power_draw_watts ?? null,
             vlan_config: data.network_device.vlan_config || {},
             port_config: data.network_device.port_config || {}
           } : undefined,
@@ -225,8 +231,8 @@ export default function AssetForm({ assetId, onSaved }: AssetFormProps) {
             os_type: data.server.os_type || '',
             os_version: data.server.os_version || '',
             cpu_model: data.server.cpu_model || '',
-            cpu_cores: data.server.cpu_cores || 0,
-            ram_gb: data.server.ram_gb || 0,
+            cpu_cores: data.server.cpu_cores ?? null,
+            ram_gb: data.server.ram_gb ?? null,
             storage_config: data.server.storage_config || [],
             raid_config: data.server.raid_config || '',
             is_virtual: data.server.is_virtual || false,
@@ -251,9 +257,9 @@ export default function AssetForm({ assetId, onSaved }: AssetFormProps) {
             is_network_printer: data.printer.is_network_printer || false,
             supports_color: data.printer.supports_color || false,
             supports_duplex: data.printer.supports_duplex || false,
-            max_paper_size: data.printer.max_paper_size || 0,
+            max_paper_size: data.printer.max_paper_size ?? null,
             supported_paper_types: data.printer.supported_paper_types || [],
-            monthly_duty_cycle: data.printer.monthly_duty_cycle || 0,
+            monthly_duty_cycle: data.printer.monthly_duty_cycle ?? null,
             supply_levels: data.printer.supply_levels || {}
           } : undefined
         });
@@ -562,8 +568,8 @@ export default function AssetForm({ assetId, onSaved }: AssetFormProps) {
           </label>
           <Input
             type="number"
-            value={formData.workstation.cpu_cores || ''}
-            onChange={(e) => handleTypeSpecificChange('workstation', 'cpu_cores', parseInt(e.target.value))}
+            value={formData.workstation.cpu_cores ?? ''}
+            onChange={(e) => handleTypeSpecificChange('workstation', 'cpu_cores', parseNumberInput(e.target.value, { integer: true }))}
             className="mt-1"
           />
         </div>
@@ -573,8 +579,8 @@ export default function AssetForm({ assetId, onSaved }: AssetFormProps) {
           </label>
           <Input
             type="number"
-            value={formData.workstation.ram_gb || ''}
-            onChange={(e) => handleTypeSpecificChange('workstation', 'ram_gb', parseInt(e.target.value))}
+            value={formData.workstation.ram_gb ?? ''}
+            onChange={(e) => handleTypeSpecificChange('workstation', 'ram_gb', parseNumberInput(e.target.value, { integer: true }))}
             className="mt-1"
           />
         </div>
@@ -595,8 +601,8 @@ export default function AssetForm({ assetId, onSaved }: AssetFormProps) {
           </label>
           <Input
             type="number"
-            value={formData.workstation.storage_capacity_gb || ''}
-            onChange={(e) => handleTypeSpecificChange('workstation', 'storage_capacity_gb', parseInt(e.target.value))}
+            value={formData.workstation.storage_capacity_gb ?? ''}
+            onChange={(e) => handleTypeSpecificChange('workstation', 'storage_capacity_gb', parseNumberInput(e.target.value, { integer: true }))}
             className="mt-1"
           />
         </div>
@@ -647,8 +653,8 @@ export default function AssetForm({ assetId, onSaved }: AssetFormProps) {
           </label>
           <Input
             type="number"
-            value={formData.network_device.port_count || ''}
-            onChange={(e) => handleTypeSpecificChange('network_device', 'port_count', parseInt(e.target.value))}
+            value={formData.network_device.port_count ?? ''}
+            onChange={(e) => handleTypeSpecificChange('network_device', 'port_count', parseNumberInput(e.target.value, { integer: true }))}
             className="mt-1"
           />
         </div>
@@ -668,8 +674,9 @@ export default function AssetForm({ assetId, onSaved }: AssetFormProps) {
           </label>
           <Input
             type="number"
-            value={formData.network_device.power_draw_watts || ''}
-            onChange={(e) => handleTypeSpecificChange('network_device', 'power_draw_watts', parseInt(e.target.value))}
+            step="0.01"
+            value={formData.network_device.power_draw_watts ?? ''}
+            onChange={(e) => handleTypeSpecificChange('network_device', 'power_draw_watts', parseNumberInput(e.target.value, { integer: false }))}
             className="mt-1"
           />
         </div>
@@ -728,8 +735,8 @@ export default function AssetForm({ assetId, onSaved }: AssetFormProps) {
           </label>
           <Input
             type="number"
-            value={formData.server.cpu_cores || ''}
-            onChange={(e) => handleTypeSpecificChange('server', 'cpu_cores', parseInt(e.target.value))}
+            value={formData.server.cpu_cores ?? ''}
+            onChange={(e) => handleTypeSpecificChange('server', 'cpu_cores', parseNumberInput(e.target.value, { integer: true }))}
             className="mt-1"
           />
         </div>
@@ -739,8 +746,8 @@ export default function AssetForm({ assetId, onSaved }: AssetFormProps) {
           </label>
           <Input
             type="number"
-            value={formData.server.ram_gb || ''}
-            onChange={(e) => handleTypeSpecificChange('server', 'ram_gb', parseInt(e.target.value))}
+            value={formData.server.ram_gb ?? ''}
+            onChange={(e) => handleTypeSpecificChange('server', 'ram_gb', parseNumberInput(e.target.value, { integer: true }))}
             className="mt-1"
           />
         </div>
@@ -903,8 +910,8 @@ export default function AssetForm({ assetId, onSaved }: AssetFormProps) {
           </label>
           <Input
             type="number"
-            value={formData.printer.monthly_duty_cycle || ''}
-            onChange={(e) => handleTypeSpecificChange('printer', 'monthly_duty_cycle', parseInt(e.target.value))}
+            value={formData.printer.monthly_duty_cycle ?? ''}
+            onChange={(e) => handleTypeSpecificChange('printer', 'monthly_duty_cycle', parseNumberInput(e.target.value, { integer: true }))}
             className="mt-1"
           />
         </div>
