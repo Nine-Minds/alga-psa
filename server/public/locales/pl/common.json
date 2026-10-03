@@ -1368,9 +1368,11 @@
   },
   "timezonePicker": {
     "selectPlaceholder": "Wybierz strefę czasową...",
-    "searchPlaceholder": "Wyszukaj strefy czasowe lub skróty (np. EST)...",
+    "searchPlaceholder": "Szukaj według miasta, nazwy lub skrótu (np. New York, EST)...",
     "noResults": "Nie znaleziono stref czasowych",
     "matchingGroup": "Wyniki dla \"{{query}}\"",
+    "noDst": "Bez czasu letniego",
+    "noDaylightSavingHint": "Brak czasu letniego. Zegary przez cały rok pokazują {{offset}}.",
     "regions": {
       "Africa": "Afryka",
       "America": "Ameryka",

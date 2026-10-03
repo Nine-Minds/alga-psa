@@ -1336,9 +1336,11 @@
   },
   "timezonePicker": {
     "selectPlaceholder": "⟦Şḗŀḗƈŧ ŧīḿḗẑȯƞḗ...⟧",
-    "searchPlaceholder": "⟦Şḗȧřƈħ ŧīḿḗẑȯƞḗş ȯř ȧƀƀřḗṽīȧŧīȯƞş (ḗ.ɠ. ḖŞŦ)...⟧",
+    "searchPlaceholder": "⟦Şḗȧřƈħ ƀẏ ƈīŧẏ, ƞȧḿḗ, ȯř ȧƀƀřḗṽīȧŧīȯƞ (ḗ.ɠ. Ƞḗẇ Ẏȯřķ, ḖŞŦ)...⟧",
     "noResults": "⟦Ƞȯ ŧīḿḗẑȯƞḗş ƒȯŭƞḓ⟧",
     "matchingGroup": "⟦Ḿȧŧƈħīƞɠ \"{{query}}\"⟧",
+    "noDst": "⟦Ƞȯ ḒŞŦ⟧",
+    "noDaylightSavingHint": "⟦Ƞȯ ḓȧẏŀīɠħŧ şȧṽīƞɠ ŧīḿḗ. Ƈŀȯƈķş şŧȧẏ ȧŧ {{offset}} ȧŀŀ ẏḗȧř.⟧",
     "regions": {
       "Africa": "⟦Ȧƒřīƈȧ⟧",
       "America": "⟦Ȧḿḗřīƈȧ⟧",

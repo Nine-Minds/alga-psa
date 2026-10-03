@@ -18,6 +18,7 @@ export const COMMON_IANA_TIMEZONES: string[] = [
 
 export type WorkflowScheduleTimezoneMode = 'common' | 'browse' | 'custom';
 
+// LEVERAGE: pattern iana-zone-catalog — builds its own zone list; see @alga-psa/core/timeZones (describeTimeZone / rankTimeZoneSearch)
 export const getSupportedTimezones = (): string[] => {
   try {
     return Intl.supportedValuesOf('timeZone');

@@ -52,6 +52,7 @@
         "fillRequiredFields": "Proszę wypełnić wszystkie wymagane pola",
         "loadFailed": "Nie udało się załadować profilu",
         "saveFailed": "Nie udało się zapisać profilu",
+        "invalidTimezone": "Wybierz strefę czasową powiązaną z miastem, np. America/New_York.",
         "errorPrefix": "Błąd: {{error}}"
       }
     },

@@ -617,6 +617,7 @@
       "emailAlreadyExists": "A user with this email address already exists",
       "reportsToSelf": "A user cannot report to themselves",
       "reportsToCycle": "This would create a circular reporting chain",
+      "invalidTimezone": "Choose a city-based time zone, such as America/New_York.",
       "photoUploaded": "Photo uploaded successfully",
       "photoRemoved": "Photo removed successfully",
       "userNotFound": "User not found",
