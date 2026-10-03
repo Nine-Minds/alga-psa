@@ -368,7 +368,7 @@ const ClientUserDetails: React.FC<ClientUserDetailsProps> = ({ userId, onUpdate 
             <p className="text-sm text-gray-500 mt-1">
               {tProfile(
                 'clientSettings.users.reportsToHelp',
-                "A manager can see the tickets of the people who report to them, when their visibility group is limited to their own contact."
+                "A manager can see the tickets, devices and projects of the people who report to them, when their visibility group is limited to their own records."
               )}
             </p>
           </div>

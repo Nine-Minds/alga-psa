@@ -187,7 +187,10 @@
     "updated": "Updated",
     "openInNewTab": "Open in new tab",
     "actions": "Actions",
-    "linkedAssets": "Linked assets"
+    "linkedAssets": "Linked assets",
+    "assetName": "Name",
+    "assetTag": "Asset tag",
+    "assetType": "Type"
   },
   "actions": {
     "view": "View",

@@ -245,6 +245,8 @@ describe('ContactPortalTab visibility groups', () => {
       description: 'HR-only boards',
       board_ids: ['board-2'],
       ticket_scope: 'contact',
+      asset_scope: 'contact',
+      project_scope: 'client',
     });
     updateClientPortalVisibilityGroupForContactMock.mockResolvedValue(undefined);
 
@@ -271,6 +273,8 @@ describe('ContactPortalTab visibility groups', () => {
         description: null,
         boardIds: ['board-2'],
         ticketScope: 'client',
+        assetScope: 'client',
+        projectScope: 'client',
       });
     });
 
@@ -301,6 +305,8 @@ describe('ContactPortalTab visibility groups', () => {
           description: 'HR-only boards',
           boardIds: ['board-2'],
           ticketScope: 'contact',
+          assetScope: 'contact',
+          projectScope: 'client',
         }
       );
     });

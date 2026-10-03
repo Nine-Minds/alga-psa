@@ -187,7 +187,10 @@
     "updated": "⟦Ŭƥḓȧŧḗḓ⟧",
     "openInNewTab": "⟦Ȯƥḗƞ īƞ ƞḗẇ ŧȧƀ⟧",
     "actions": "⟦Ȧƈŧīȯƞş⟧",
-    "linkedAssets": "⟦Ŀīƞķḗḓ ȧşşḗŧş⟧"
+    "linkedAssets": "⟦Ŀīƞķḗḓ ȧşşḗŧş⟧",
+    "assetName": "⟦Ƞȧḿḗ⟧",
+    "assetTag": "⟦Ȧşşḗŧ ŧȧɠ⟧",
+    "assetType": "⟦Ŧẏƥḗ⟧"
   },
   "actions": {
     "view": "⟦Ṽīḗẇ⟧",

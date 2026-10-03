@@ -179,7 +179,10 @@
     "updated": "Aktualisiert",
     "openInNewTab": "In neuem Tab öffnen",
     "actions": "Aktionen",
-    "linkedAssets": "Verknüpfte Assets"
+    "linkedAssets": "Verknüpfte Assets",
+    "assetName": "Name",
+    "assetTag": "Asset-Tag",
+    "assetType": "Typ"
   },
   "actions": {
     "view": "Anzeigen",

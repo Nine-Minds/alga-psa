@@ -187,7 +187,10 @@
     "updated": "Uppdaterad",
     "openInNewTab": "Öppna i ny flik",
     "actions": "Åtgärder",
-    "linkedAssets": "Kopplade tillgångar"
+    "linkedAssets": "Kopplade tillgångar",
+    "assetName": "Namn",
+    "assetTag": "Tillgångstagg",
+    "assetType": "Typ"
   },
   "actions": {
     "view": "Visa",

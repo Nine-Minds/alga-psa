@@ -126,7 +126,8 @@
       "location": "Locatie",
       "actions": "Acties",
       "patching": "Patches",
-      "coverage": "Dekking"
+      "coverage": "Dekking",
+      "assignedTo": "Toegewezen aan"
     },
     "metrics": {
       "totalAssets": {
@@ -565,7 +566,8 @@
       "clientsLoadFailed": "Kan klanten niet laden",
       "locationsLoadFailed": "Kan locaties voor deze klant niet laden",
       "updateFailed": "Kan item niet updaten",
-      "validation": "Corrigeer de gemarkeerde velden voordat u opslaat."
+      "validation": "Corrigeer de gemarkeerde velden voordat u opslaat.",
+      "contactsLoadFailed": "Contacten voor deze klant konden niet worden geladen"
     },
     "actions": {
       "viewClient": "Klant bekijken",
@@ -618,7 +620,8 @@
       "status": "Status",
       "purchaseDate": "Aankoopdatum",
       "warrantyEndDate": "Einddatum garantie",
-      "assetType": "Type"
+      "assetType": "Type",
+      "assignedTo": "Toegewezen aan"
     },
     "placeholders": {
       "loadingClients": "Klanten laden…",
@@ -628,7 +631,9 @@
       "selectClientFirst": "Selecteer eerst een klant",
       "customLocation": "Voer een aangepaste locatie of gebied in",
       "selectPurchaseDate": "Selecteer aankoopdatum",
-      "selectWarrantyEndDate": "Selecteer de einddatum van de garantie"
+      "selectWarrantyEndDate": "Selecteer de einddatum van de garantie",
+      "loadingContacts": "Contacten laden…",
+      "selectContact": "Selecteer een contact"
     },
     "statusOptions": {
       "active": "Actief",
@@ -664,7 +669,10 @@
       "printer": "Printerdetails",
       "custom": "{{typeName}}-details"
     },
-    "additionalFields": "Extra velden"
+    "additionalFields": "Extra velden",
+    "help": {
+      "assignedTo": "In het klantportaal zien personen met beperkte zichtbaarheid dit apparaat alleen als het aan hen of aan iemand die aan hen rapporteert is toegewezen."
+    }
   },
   "assetFormClient": {
     "title": "Activaformulier Klant",
@@ -978,7 +986,8 @@
       "status": "Status",
       "serialNumber": "Serienummer",
       "customLocationOption": "Aangepaste locatie",
-      "location": "Locatie"
+      "location": "Locatie",
+      "assignedTo": "Toegewezen aan"
     },
     "placeholders": {
       "workstationOsType": "bijvoorbeeld Windows, macOS, Linux",
@@ -998,7 +1007,9 @@
       "customLocation": "Voer een aangepaste locatie of gebied in",
       "loadingLocations": "Locaties laden...",
       "selectClientFirst": "Selecteer eerst een klant",
-      "selectLocation": "Selecteer locatie"
+      "selectLocation": "Selecteer locatie",
+      "loadingContacts": "Contacten laden...",
+      "selectContact": "Contact selecteren"
     },
     "sections": {
       "typeSpecificDetails": "Typespecifieke details"
@@ -1060,7 +1071,8 @@
       "model": "Model",
       "serialNumber": "Serienummer",
       "purchaseDate": "Aankoopdatum",
-      "warrantyEnd": "Einde garantie"
+      "warrantyEnd": "Einde garantie",
+      "assignedTo": "Toegewezen aan"
     },
     "values": {
       "unknownClient": "Onbekende klant",
@@ -1601,7 +1613,8 @@
       "conflict": "Deze assetwijziging conflicteert met een bestaand record. Vernieuw de pagina en probeer het opnieuw.",
       "notAllowed": "Een van de assetwaarden is niet toegestaan. Controleer het formulier en probeer het opnieuw.",
       "missingField": "Er ontbreekt een verplicht assetveld.",
-      "missingFieldNamed": "Er ontbreekt een verplicht assetveld: {{field}}."
+      "missingFieldNamed": "Er ontbreekt een verplicht assetveld: {{field}}.",
+      "contactUnavailable": "Het geselecteerde contact is niet beschikbaar voor deze klant."
     }
   }
 }

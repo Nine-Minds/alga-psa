@@ -484,7 +484,7 @@ const ContactDetailsEdit: React.FC<ContactDetailsEditProps> = ({
                 </div>
                 <Text size="1" className="text-gray-500 mt-1 block">
                   {t('contactDetailsEdit.fields.reportsToHelp', {
-                    defaultValue: 'Must be someone at the same client. Used for portal "my staff" ticket visibility.'
+                    defaultValue: 'Must be someone at the same client. Used for portal "my staff" visibility of tickets, devices and projects.'
                   })}
                 </Text>
               </td>

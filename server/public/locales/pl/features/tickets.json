@@ -211,7 +211,10 @@
     "updated": "Zaktualizowano",
     "openInNewTab": "Otwórz w nowej karcie",
     "actions": "Akcje",
-    "linkedAssets": "Powiązane zasoby"
+    "linkedAssets": "Powiązane zasoby",
+    "assetName": "Nazwa",
+    "assetTag": "Tag zasobu",
+    "assetType": "Typ"
   },
   "actions": {
     "view": "Wyświetl",

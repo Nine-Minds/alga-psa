@@ -179,7 +179,10 @@
     "updated": "Bijgewerkt",
     "openInNewTab": "Openen in nieuw tabblad",
     "actions": "Acties",
-    "linkedAssets": "Gekoppelde apparaten"
+    "linkedAssets": "Gekoppelde apparaten",
+    "assetName": "Naam",
+    "assetTag": "Assettag",
+    "assetType": "Type"
   },
   "actions": {
     "view": "Bekijken",
