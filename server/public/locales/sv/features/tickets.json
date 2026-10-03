@@ -400,7 +400,8 @@
     "clientPortal": "Skapat via kundportalen",
     "inboundEmail": "Skapat via inkommande e-post",
     "api": "Skapat via API",
-    "other": "Skapat via annan källa"
+    "other": "Skapat via annan källa",
+    "recurring": "Skapat av återkommande schema"
   },
   "responseSource": {
     "clientPortal": "Mottaget via kundportalen",

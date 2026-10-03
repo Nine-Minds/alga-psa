@@ -400,7 +400,8 @@
     "clientPortal": "Created via Client Portal",
     "inboundEmail": "Created via Inbound Email",
     "api": "Created via API",
-    "other": "Created via Other"
+    "other": "Created via Other",
+    "recurring": "Created by Recurring Schedule"
   },
   "responseSource": {
     "clientPortal": "Received via Client Portal",

@@ -392,7 +392,8 @@
     "clientPortal": "Über das Kundenportal erstellt",
     "inboundEmail": "Über eingehende E-Mail erstellt",
     "api": "Über API erstellt",
-    "other": "Über andere Quelle erstellt"
+    "other": "Über andere Quelle erstellt",
+    "recurring": "Durch wiederkehrenden Zeitplan erstellt"
   },
   "responseSource": {
     "clientPortal": "Empfangen über Kundenportal",

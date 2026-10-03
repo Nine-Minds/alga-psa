@@ -392,7 +392,8 @@
     "clientPortal": "Aangemaakt via Klantenportaal",
     "inboundEmail": "Aangemaakt via inkomende e-mail",
     "api": "Aangemaakt via API",
-    "other": "Aangemaakt via andere bron"
+    "other": "Aangemaakt via andere bron",
+    "recurring": "Aangemaakt door terugkerend schema"
   },
   "responseSource": {
     "clientPortal": "Ontvangen via Klantenportaal",

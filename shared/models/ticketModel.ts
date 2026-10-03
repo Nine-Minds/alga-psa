@@ -14,11 +14,13 @@ import type { IEventPublisher } from '@alga-psa/types';
 import { applyMatchingChecklistTemplates } from '../lib/ticketChecklists';
 import { SharedNumberingService } from '../services/numberingService';
 
+// LEVERAGE: pattern ticket-origins-duplicate — copy of TICKET_ORIGINS in @alga-psa/types (shared cannot import types); keep both in sync
 const TICKET_ORIGINS = {
   INTERNAL: 'internal',
   CLIENT_PORTAL: 'client_portal',
   INBOUND_EMAIL: 'inbound_email',
   API: 'api',
+  RECURRING: 'recurring',
 } as const;
 
 // =============================================================================

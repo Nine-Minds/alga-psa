@@ -78,6 +78,10 @@ function normalizeStoredOrigin(origin: unknown): ResolvedTicketOrigin | null {
     return TICKET_ORIGINS.API;
   }
 
+  if (normalized === TICKET_ORIGINS.RECURRING) {
+    return TICKET_ORIGINS.RECURRING;
+  }
+
   return TICKET_ORIGIN_OTHER;
 }
 

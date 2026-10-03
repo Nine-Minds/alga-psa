@@ -434,7 +434,8 @@
     "clientPortal": "Utworzono przez Portal Klienta",
     "inboundEmail": "Utworzono przez przychodzący e-mail",
     "api": "Utworzono przez API",
-    "other": "Utworzono przez inne źródło"
+    "other": "Utworzono przez inne źródło",
+    "recurring": "Utworzono przez harmonogram cykliczny"
   },
   "responseSource": {
     "clientPortal": "Otrzymano przez Portal Klienta",

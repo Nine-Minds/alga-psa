@@ -392,7 +392,8 @@
     "clientPortal": "Creado a través del Portal de Cliente",
     "inboundEmail": "Creado a través de correo entrante",
     "api": "Creado a través de API",
-    "other": "Creado a través de otro origen"
+    "other": "Creado a través de otro origen",
+    "recurring": "Creado por programación recurrente"
   },
   "responseSource": {
     "clientPortal": "Recibido vía Portal de Cliente",
