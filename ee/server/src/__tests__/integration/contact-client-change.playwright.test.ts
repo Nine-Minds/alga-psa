@@ -126,7 +126,7 @@ test.describe('Contact client change', () => {
       const seeded = await seedTriageContact(db, page);
 
       await page.goto(`${BASE_URL}/msp/clients/${seeded.triageClientId}?tab=contacts`, { waitUntil: 'networkidle' });
-      const list = page.locator('#client-contacts-list');
+      const list = page.locator('[data-automation-id="client-contacts-list"]');
       await expect(list.getByText(CONTACT_NAME, { exact: true })).toBeVisible();
 
       await list.locator('#client-contacts-actions-menu').first().click();
@@ -150,7 +150,7 @@ test.describe('Contact client change', () => {
       const seeded = await seedTriageContact(db, page);
 
       await page.goto(`${BASE_URL}/msp/clients/${seeded.triageClientId}?tab=contacts`, { waitUntil: 'networkidle' });
-      const list = page.locator('#client-contacts-list');
+      const list = page.locator('[data-automation-id="client-contacts-list"]');
       await list.getByText(CONTACT_NAME, { exact: true }).click();
 
       await page.locator('#contact-quick-view-edit-contact').click();
@@ -158,6 +158,7 @@ test.describe('Contact client change', () => {
       await moveToLifeLandscapingAndSave(page, 'contact-quick-view-edit', seeded.lifeClientId);
 
       await expectContactClient(db, seeded, seeded.lifeClientId);
+      await expect(list.getByText(CONTACT_NAME, { exact: true })).toHaveCount(0);
     } finally {
       await db.destroy().catch(() => undefined);
     }
