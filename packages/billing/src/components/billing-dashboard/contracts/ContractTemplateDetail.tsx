@@ -35,7 +35,6 @@ import { Label } from "@alga-psa/ui/components/Label";
 import { Input } from "@alga-psa/ui/components/Input";
 import { TextArea } from "@alga-psa/ui/components/TextArea";
 import CustomSelect from "@alga-psa/ui/components/CustomSelect";
-import CurrencyPicker from "@alga-psa/ui/components/CurrencyPicker";
 
 import { IContract, IContractAssignmentSummary } from "@alga-psa/types";
 import type { DetailedContractLine } from "../../../repositories/contractLineRepository";
@@ -61,7 +60,6 @@ import { toPlainDate } from "@alga-psa/core";
 import { useBillingFrequencyOptions } from "@alga-psa/billing/hooks/useBillingEnumOptions";
 import { useCurrencyFormat } from "@alga-psa/ui/lib";
 import { useTemplateNeutralRate } from "./templateNeutralRate";
-import { getDefaultBillingSettings } from "@alga-psa/billing/actions/billingSettingsActions";
 import { listContractSimulationClients } from "@alga-psa/billing/actions/contractSimulationActions";
 import GenericPlanServicesList from "../contract-lines/GenericContractLineServicesList";
 import { ContractLineEditDialog } from "./ContractLineEditDialog";
@@ -150,7 +148,6 @@ type BasicsFormState = {
   contract_name: string;
   contract_description: string;
   billing_frequency: string;
-  currency_code: string;
 };
 
 type GuidanceFormState = {
@@ -260,23 +257,8 @@ const ContractTemplateDetail: React.FC = () => {
   const searchParams = useSearchParams();
   const contractId = searchParams?.get("contractId") ?? undefined;
 
-  const [defaultCurrency, setDefaultCurrency] = useState("USD");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    getDefaultBillingSettings()
-      .then((settings) => {
-        const currency = settings.defaultCurrencyCode || "USD";
-        setDefaultCurrency(currency);
-        setBasicsForm((prev) =>
-          prev.currency_code === "USD"
-            ? { ...prev, currency_code: currency }
-            : prev,
-        );
-      })
-      .catch(() => {});
-  }, []);
 
   const [contract, setContract] = useState<IContract | null>(null);
   const [summary, setSummary] = useState<TemplateSummary | null>(null);
@@ -292,7 +274,6 @@ const ContractTemplateDetail: React.FC = () => {
     contract_name: "",
     contract_description: "",
     billing_frequency: "monthly",
-    currency_code: defaultCurrency,
   });
   const [isSavingBasics, setIsSavingBasics] = useState(false);
   const [basicsError, setBasicsError] = useState<string | null>(null);
@@ -388,7 +369,6 @@ const ContractTemplateDetail: React.FC = () => {
         contract_name: contract.contract_name ?? "",
         contract_description: contract.contract_description ?? "",
         billing_frequency: contract.billing_frequency ?? "monthly",
-        currency_code: contract.currency_code ?? "USD",
       });
     }
   }, [contract]);
@@ -616,7 +596,6 @@ const ContractTemplateDetail: React.FC = () => {
         contract_name: "",
         contract_description: "",
         billing_frequency: "monthly",
-        currency_code: defaultCurrency,
       });
       return;
     }
@@ -625,9 +604,8 @@ const ContractTemplateDetail: React.FC = () => {
       contract_name: contract.contract_name ?? "",
       contract_description: contract.contract_description ?? "",
       billing_frequency: contract.billing_frequency ?? "monthly",
-      currency_code: contract.currency_code ?? defaultCurrency,
     });
-  }, [contract, defaultCurrency]);
+  }, [contract]);
 
   const resetGuidanceForm = useCallback(() => {
     setGuidanceForm({
@@ -676,7 +654,6 @@ const ContractTemplateDetail: React.FC = () => {
           ? basicsForm.contract_description.trim()
           : null,
         billing_frequency: basicsForm.billing_frequency,
-        currency_code: basicsForm.currency_code,
       });
       if (isReturnedActionError(result)) {
         setBasicsError(getErrorMessage(result));
@@ -1087,29 +1064,6 @@ const ContractTemplateDetail: React.FC = () => {
                       )}
                     />
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="template-currency-code-inline">
-                      {t("common.labels.currency", {
-                        defaultValue: "Currency",
-                      })}
-                    </Label>
-                    <CurrencyPicker
-                      id="template-currency-code-inline"
-                      value={basicsForm.currency_code}
-                      onValueChange={(value) =>
-                        setBasicsForm((prev) => ({
-                          ...prev,
-                          currency_code: value,
-                        }))
-                      }
-                      placeholder={t(
-                        "templateDetail.form.currencyPlaceholder",
-                        {
-                          defaultValue: "Select currency",
-                        },
-                      )}
-                    />
-                  </div>
                 </div>
 
                 <div className="flex justify-end gap-2 pt-2">
@@ -1299,7 +1253,9 @@ const ContractTemplateDetail: React.FC = () => {
                   {t("common.labels.currency", { defaultValue: "Currency" })}
                 </span>
                 <span className="font-medium">
-                  {contract.currency_code ?? "USD"}
+                  {t("templateDetail.summary.clientCurrency", {
+                    defaultValue: "Client's currency",
+                  })}
                 </span>
               </div>
               <div className="flex items-center justify-between">
@@ -1590,10 +1546,13 @@ const ContractTemplateDetail: React.FC = () => {
                   </thead>
                   <tbody className="divide-y divide-[rgb(var(--color-border-100))]">
                     {assignments.map((assignment) => {
-                      const currencyCode = contract?.currency_code ?? "USD";
+                      // An assignment is a real client contract with its own currency.
                       const poAmount =
                         assignment.po_required && assignment.po_amount != null
-                          ? money(Number(assignment.po_amount), currencyCode)
+                          ? money(
+                              Number(assignment.po_amount),
+                              assignment.currency_code ?? undefined,
+                            )
                           : "—";
 
                       return (
@@ -1708,7 +1667,6 @@ const ContractTemplateDetail: React.FC = () => {
       {showServicesEditor && contract && (
         <TemplateServicesManager
           contractId={contract.contract_id}
-          currencyCode={contract.currency_code ?? "USD"}
           contractLines={templateLines}
           onServicesChanged={() => {
             if (contract.contract_id) {
@@ -2034,18 +1992,15 @@ const ContractTemplateDetail: React.FC = () => {
 
 type TemplateServicesManagerProps = {
   contractId: string;
-  currencyCode: string;
   contractLines: TemplateContractLine[];
   onServicesChanged: () => void;
 };
 
 const TemplateServicesManager: React.FC<TemplateServicesManagerProps> = ({
   contractId,
-  currencyCode,
   contractLines,
   onServicesChanged,
 }) => {
-  const { money } = useCurrencyFormat();
   const { t } = useTranslation("msp/contracts");
   const formatNeutralRate = useTemplateNeutralRate();
   const [editingLine, setEditingLine] = useState<TemplateContractLine | null>(
@@ -2166,7 +2121,6 @@ const TemplateServicesManager: React.FC<TemplateServicesManagerProps> = ({
           }}
           onClose={() => setEditingLine(null)}
           onSave={handleSaveRate}
-          currencyCode={currencyCode}
         />
       )}
     </Card>
