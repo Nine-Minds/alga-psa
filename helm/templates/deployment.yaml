@@ -1,6 +1,13 @@
 {{- if and (not .Values.devEnv.enabled) (not (include "sebastian.hostedEnvEnabled" .)) }}
-{{- $waitForBootstrapImageName := default .Values.setup.image.name .Values.setup.waitForBootstrap.image.name }}
-{{- $waitForBootstrapImageTag := default .Values.setup.image.tag .Values.setup.waitForBootstrap.image.tag }}
+{{- /* wait-for-bootstrap image: explicit setting, else the bundled DB image (has psql), else setup.image */}}
+{{- $waitForBootstrapImage := dict }}
+{{- if or .Values.setup.waitForBootstrap.image.name .Values.setup.waitForBootstrap.image.tag }}
+{{- $waitForBootstrapImage = dict "repository" (default .Values.setup.image.name .Values.setup.waitForBootstrap.image.name) "tag" (default .Values.setup.image.tag .Values.setup.waitForBootstrap.image.tag) "digest" .Values.setup.waitForBootstrap.image.digest }}
+{{- else if .Values.db.enabled }}
+{{- $waitForBootstrapImage = .Values.db.image }}
+{{- else }}
+{{- $waitForBootstrapImage = dict "repository" .Values.setup.image.name "tag" .Values.setup.image.tag }}
+{{- end }}
 {{- $waitForBootstrapPullPolicy := default .Values.setup.pullPolicy .Values.setup.waitForBootstrap.pullPolicy }}
 apiVersion: apps/v1
 kind: Deployment
@@ -116,7 +123,7 @@ spec:
         - name: wait-for-bootstrap
           securityContext:
             {{- toYaml .Values.securityContext | nindent 12 }}
-          image: "{{ $waitForBootstrapImageName }}:{{ $waitForBootstrapImageTag }}"
+          image: {{ include "sebastian.imageRef" $waitForBootstrapImage | quote }}
           imagePullPolicy: {{ $waitForBootstrapPullPolicy }}
           command: ["/bin/sh", "-ec"]
           args:

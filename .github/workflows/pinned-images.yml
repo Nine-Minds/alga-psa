@@ -1,0 +1,35 @@
+name: Pinned images
+
+# Resolves third-party image references from docker-compose.images.yaml, the
+# single source of truth. `jobs.<id>.services.<id>.image` can read the `needs`
+# context but not `env`, so consumers call this workflow and use
+# `${{ needs.images.outputs.<key> }}`.
+
+on:
+  workflow_call:
+    outputs:
+      pgvector:
+        description: Pinned pgvector image reference (name:tag@sha256:digest)
+        value: ${{ jobs.resolve.outputs.pgvector }}
+
+permissions:
+  contents: read
+
+jobs:
+  resolve:
+    name: Resolve pinned images
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      pgvector: ${{ steps.resolve.outputs.pgvector }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            docker-compose.images.yaml
+            scripts/lib/pinned-images.mjs
+          sparse-checkout-cone-mode: false
+
+      - name: Resolve image references
+        id: resolve
+        run: node scripts/lib/pinned-images.mjs --github-output >> "$GITHUB_OUTPUT"

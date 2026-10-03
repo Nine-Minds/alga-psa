@@ -165,9 +165,11 @@ sharedTenantSecrets:
 # by default → cloud/hosted rendering is unchanged.
 waitForBootstrap:
   enabled: false
+  # LEVERAGE: friction pinned-third-party-images — Helm values cannot read docker-compose.images.yaml; scripts/tests/pinned-images.test.mjs enforces equality
   image:
-    name: ankane/pgvector
-    tag: latest
+    name: pgvector/pgvector
+    tag: 0.8.7-pg15-bookworm
+    digest: sha256:47af0b65960b14f1c6945aa4ccae37836c632e9a6fe0eea9160936e616e5b2e9
   pullPolicy: IfNotPresent
 
 namespace: ""

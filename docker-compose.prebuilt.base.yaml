@@ -94,7 +94,9 @@ secrets:
 
 services:
   postgres:
-    image: ankane/pgvector:latest
+    extends:
+      file: ./docker-compose.images.yaml
+      service: pgvector
     environment:
       <<: *shared-environment
       POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
@@ -105,6 +107,13 @@ services:
       - "${EXPOSE_DB_PORT:-5432}:5432"
     networks:
       - app-network
+
+  # One-shot reconciliation of an existing bundled data directory with the pinned
+  # image; defined once in docker-compose.base.yaml.
+  postgres-extension-update:
+    extends:
+      file: ./docker-compose.base.yaml
+      service: postgres-extension-update
 
   redis:
     build:

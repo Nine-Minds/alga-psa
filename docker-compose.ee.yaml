@@ -211,6 +211,8 @@ services:
         condition: service_started
       pgbouncer:
         condition: service_started
+      postgres-extension-update:
+        condition: service_completed_successfully
     entrypoint: ["/opt/setup/ee-entrypoint.sh"]
 
   workflow-worker:
