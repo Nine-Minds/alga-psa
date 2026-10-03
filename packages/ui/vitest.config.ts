@@ -17,6 +17,8 @@ export default defineConfig({
       { find: /^@alga-psa\/ui(.*)$/, replacement: path.resolve(__dirname, 'src$1') },
       // Same reason: resolve the types package to its source so tests see the
       // current definitions rather than a stale dist/.
+      // The recurrence editor imports value exports from the shared package.
+      { find: /^@alga-psa\/shared\/(.*)$/, replacement: path.resolve(__dirname, '../../shared/$1') },
       { find: '@alga-psa/types', replacement: path.resolve(__dirname, '../types/src') },
       {
         find: /^@alga-psa\/core\/i18n\/countryDateFormat$/,
