@@ -641,6 +641,8 @@
       "catalogPriceMissing": "Aucun prix catalogue en {{currency}} ne couvre cette limite ; une quantité positive ne peut donc pas être facturée. Ajoutez un prix catalogue en {{currency}} ou choisissez « Remplacer le prix unitaire » avant d'enregistrer.",
       "invoiceImpact": "À partir du {{date}}, le sous-total récurrent de cet élément varie de {{delta}} pour atteindre {{total}} (avant remises et taxes). Les périodes déjà facturées restent inchangées.",
       "discardDirty": "Modifier la date d'effet recharge les valeurs en vigueur et annule votre modification non enregistrée. Continuer ?",
+      "discardDirtyTitle": "Abandonner la modification non enregistrée ?",
+      "discardDirtyConfirm": "Abandonner et recharger",
       "invalidQuantity": "La quantité doit être un nombre entier supérieur ou égal à 0.",
       "invalidRate": "Saisissez un prix unitaire supérieur ou égal à 0, ou revenez au prix catalogue.",
       "saved": "Planifié : {{quantity}} à compter du {{date}}.",
