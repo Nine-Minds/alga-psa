@@ -1099,7 +1099,7 @@ export const updateUser = withAuth(async (
         const stored = (existing?.timezone as string | null | undefined) ?? null;
         if (requested !== stored) {
           const validation = validateStorableTimeZone(requested);
-          if (!validation.ok) {
+          if (validation.ok === false) {
             return {
               success: false,
               code: 'INVALID_TIMEZONE',

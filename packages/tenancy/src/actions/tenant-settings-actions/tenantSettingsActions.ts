@@ -413,7 +413,7 @@ export async function setTenantTimezone(
   // Both failures are returned as action errors with a messageKey, so they never
   // reach the thrown-error 'Invalid timezone:' prefix mapping in tenantSettingsActionErrorFrom.
   const validation = validateStorableTimeZone(timezone);
-  if (!validation.ok) {
+  if (validation.ok === false) {
     return validation.reason === 'not_location'
       ? actionError(
           `${timezone} isn't a city-based time zone. Choose a zone such as America/New_York.`,

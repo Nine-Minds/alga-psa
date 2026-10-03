@@ -47,7 +47,10 @@ const openAndSearch = (value: string, query: string) => {
 const rowFor = (options: HTMLElement[], zoneId: string) =>
   options.find((o) => o.textContent?.startsWith(zoneId.replaceAll('_', ' ')));
 
-describe('TimezonePicker search ranking', () => {
+// Expanding renders all ~420 zone rows in jsdom, and the first expand also
+// builds every descriptor (thousands of Intl formatters). That takes ~1s locally
+// and ~7s on a loaded CI runner, which is past vitest's 5s default.
+describe('TimezonePicker search ranking', { timeout: 30_000 }, () => {
   afterEach(() => {
     cleanup();
     vi.useRealTimers();
