@@ -7,6 +7,7 @@ import type {
   CreateAssetRequest,
   IClient,
   IClientLocation,
+  IContact,
   MobileDeviceAsset,
   NetworkDeviceAsset,
   PrinterAsset,
@@ -20,6 +21,7 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
 import Spinner from '@alga-psa/ui/components/Spinner';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { getAsset, updateAsset } from '../actions/assetActions';
@@ -28,7 +30,7 @@ import { formatClientLocation } from '../lib/formatClientLocation';
 import { pickSchemaAttributes, validateAttributesAgainstSchema } from '../lib/assetTypeAttributes';
 import { buildAssetTypeOptions, useAssetTypeRegistry } from './shared/useAssetTypeOptions';
 import { CustomTypeFieldsPanel } from './shared/CustomTypeFieldsPanel';
-import { getAllClientsForAssets, getClientLocationsForAssets } from '../actions/clientLookupActions';
+import { getAllClientsForAssets, getClientContactsForAssets, getClientLocationsForAssets } from '../actions/clientLookupActions';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
 import { Monitor, Network, Server, Smartphone, Printer as PrinterIcon, Router, Shield, Radio, Scale, MapPin, ExternalLink } from 'lucide-react';
@@ -80,6 +82,9 @@ export default function AssetForm({ assetId, onSaved }: AssetFormProps) {
   const [locationsError, setLocationsError] = useState<string | null>(null);
   const [selectedLocationId, setSelectedLocationId] = useState<string>('');
   const [customLocation, setCustomLocation] = useState('');
+  const [clientContacts, setClientContacts] = useState<IContact[]>([]);
+  const [contactsLoading, setContactsLoading] = useState(false);
+  const [contactsError, setContactsError] = useState<string | null>(null);
   // F309: custom-type schema field values (assets.attributes[key]); kept
   // across type switches per PRD D4 so re-selecting a type restores values.
   const [customAttributes, setCustomAttributes] = useState<Record<string, unknown>>({});
@@ -100,6 +105,7 @@ export default function AssetForm({ assetId, onSaved }: AssetFormProps) {
     serial_number: '',
     status: '',
     location_id: null,
+    contact_name_id: null,
     location: '',
     purchase_date: '',
     warranty_end_date: ''
@@ -197,6 +203,7 @@ export default function AssetForm({ assetId, onSaved }: AssetFormProps) {
           serial_number: data.serial_number || '',
           status: data.status || 'active',
           location_id: data.location_id ?? null,
+          contact_name_id: data.contact_name_id ?? null,
           location: data.location || '',
           purchase_date: purchaseDate,
           warranty_end_date: warrantyEndDate,
@@ -371,6 +378,46 @@ export default function AssetForm({ assetId, onSaved }: AssetFormProps) {
     };
   }, [formData.client_id, t]);
 
+  // Contacts for the selected client. The assigned contact is passed along so
+  // an inactive assignee still renders instead of looking unassigned.
+  const savedContactId = asset?.contact_name_id ?? null;
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadContacts = async () => {
+      if (!formData.client_id) {
+        setClientContacts([]);
+        return;
+      }
+
+      try {
+        setContactsLoading(true);
+        setContactsError(null);
+        const contacts = await getClientContactsForAssets(formData.client_id, savedContactId);
+        if (!isMounted) return;
+        setClientContacts(contacts);
+      } catch (err) {
+        console.error('Error loading client contacts:', err);
+        if (isMounted) {
+          setContactsError(t('assetForm.errors.contactsLoadFailed', {
+            defaultValue: 'Unable to load contacts for this client'
+          }));
+          setClientContacts([]);
+        }
+      } finally {
+        if (isMounted) {
+          setContactsLoading(false);
+        }
+      }
+    };
+
+    void loadContacts();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [formData.client_id, savedContactId, t]);
+
   const getAssetTypeIcon = () => {
     const iconClass = "h-16 w-16 text-primary-500 mb-4";
     
@@ -421,11 +468,14 @@ export default function AssetForm({ assetId, onSaved }: AssetFormProps) {
       ...prev,
       client_id: clientId,
       location_id: null,
+      // The assignee belongs to the previous client.
+      contact_name_id: null,
       location: ''
     }));
     setSelectedLocationId('custom');
     setCustomLocation('');
     setClientLocations([]);
+    setClientContacts([]);
   };
 
   const handleLocationSelect = (value: string) => {
@@ -458,6 +508,10 @@ export default function AssetForm({ assetId, onSaved }: AssetFormProps) {
       location_id: null,
       location: value
     }));
+  };
+
+  const handleContactSelect = (value: string) => {
+    setFormData(prev => ({ ...prev, contact_name_id: value || null }));
   };
 
   const handleOpenClientDrawer = (initialPanel?: 'locations') => {
@@ -1272,6 +1326,37 @@ export default function AssetForm({ assetId, onSaved }: AssetFormProps) {
                       </Link>
                     )
                   )}
+                </div>
+
+                <div>
+                  <label htmlFor="asset-contact-select" className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
+                    {t('assetForm.fields.assignedTo', { defaultValue: 'Assigned to' })}
+                  </label>
+                  <ContactPicker
+                    id="asset-contact-select"
+                    label={t('assetForm.fields.assignedTo', { defaultValue: 'Assigned to' })}
+                    contacts={clientContacts}
+                    value={formData.contact_name_id ?? ''}
+                    onValueChange={handleContactSelect}
+                    clientId={formData.client_id || undefined}
+                    placeholder={formData.client_id
+                      ? (contactsLoading
+                        ? t('assetForm.placeholders.loadingContacts', { defaultValue: 'Loading contacts…' })
+                        : t('assetForm.placeholders.selectContact', { defaultValue: 'Select a contact' }))
+                      : t('assetForm.placeholders.selectClientFirst', {
+                        defaultValue: 'Select a client first'
+                      })}
+                    disabled={!formData.client_id || contactsLoading || saving}
+                    buttonWidth="full"
+                  />
+                  {contactsError && (
+                    <p className="mt-2 text-sm text-red-600">{contactsError}</p>
+                  )}
+                  <p className="mt-2 text-sm text-[rgb(var(--color-text-600))]">
+                    {t('assetForm.help.assignedTo', {
+                      defaultValue: 'In the client portal, people with limited visibility see this device only if it is assigned to them or to someone who reports to them.'
+                    })}
+                  </p>
                 </div>
               </div>
             </div>

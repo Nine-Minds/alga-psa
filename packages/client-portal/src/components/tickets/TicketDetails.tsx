@@ -110,6 +110,13 @@ export function TicketDetails({
     loading: boolean;
     error: string | null;
     fallbackName: string;
+    /**
+     * What the ticket itself says about the asset. Shown when the viewer is not
+     * allowed to open the device (a contact-scoped user sees a ticket's linked
+     * devices even when they are assigned to someone else), so the pill never
+     * dead-ends on "Asset not found".
+     */
+    summary?: { name: string; asset_tag: string | null; asset_type: string | null } | null;
   } | null>(null);
   const handleReturnedActionError = useCallback((result: unknown) => {
     const message = getErrorMessage(result);
@@ -735,7 +742,7 @@ export function TicketDetails({
             {/* Linked assets — populated from asset_associations on the server. */}
             {(() => {
               const linkedAssets = (ticket as ITicketWithDetails & {
-                linkedAssets?: Array<{ asset_id: string; name: string; asset_tag: string | null }>;
+                linkedAssets?: Array<{ asset_id: string; name: string; asset_tag: string | null; asset_type?: string | null }>;
               }).linkedAssets;
               if (!linkedAssets || linkedAssets.length === 0) return null;
 
@@ -743,7 +750,11 @@ export function TicketDetails({
                 assetId: string,
                 fallbackName: string,
               ) => {
-                setLinkedAssetPreview({ asset: null, loading: true, error: null, fallbackName });
+                const linked = linkedAssets.find((candidate) => candidate.asset_id === assetId);
+                const summary = linked
+                  ? { name: linked.name, asset_tag: linked.asset_tag ?? null, asset_type: linked.asset_type ?? null }
+                  : null;
+                setLinkedAssetPreview({ asset: null, loading: true, error: null, fallbackName, summary });
                 try {
                   const asset = await getClientAssetById(assetId);
                   if (isReturnedActionError(asset)) {
@@ -752,14 +763,18 @@ export function TicketDetails({
                       loading: false,
                       error: getErrorMessage(asset),
                       fallbackName,
+                      summary,
                     });
                     return;
                   }
                   setLinkedAssetPreview({
                     asset,
                     loading: false,
-                    error: asset ? null : t('messages.assetNotFound', 'Asset not found'),
+                    // No full record means the device is not one this user may open;
+                    // the ticket's own summary of it is shown instead of an error.
+                    error: asset || summary ? null : t('messages.assetNotFound', 'Asset not found'),
                     fallbackName,
+                    summary,
                   });
                 } catch (err) {
                   console.error('Failed to load linked asset', err);
@@ -768,6 +783,7 @@ export function TicketDetails({
                     loading: false,
                     error: t('messages.assetLoadFailed', 'Failed to load asset details'),
                     fallbackName,
+                    summary,
                   });
                 }
               };
@@ -962,6 +978,26 @@ export function TicketDetails({
       )}
       {linkedAssetPreview?.asset && !linkedAssetPreview.loading && (
         <AssetDetails asset={linkedAssetPreview.asset} />
+      )}
+      {linkedAssetPreview && !linkedAssetPreview.loading && !linkedAssetPreview.asset && !linkedAssetPreview.error && linkedAssetPreview.summary && (
+        <dl className="p-6 text-sm space-y-2" data-testid="ticket-linked-asset-summary">
+          <div>
+            <dt className="font-bold text-gray-900">{t('fields.assetName', 'Name')}</dt>
+            <dd className="text-gray-700">{linkedAssetPreview.summary.name}</dd>
+          </div>
+          {linkedAssetPreview.summary.asset_tag && (
+            <div>
+              <dt className="font-bold text-gray-900">{t('fields.assetTag', 'Asset tag')}</dt>
+              <dd className="text-gray-700">{linkedAssetPreview.summary.asset_tag}</dd>
+            </div>
+          )}
+          {linkedAssetPreview.summary.asset_type && (
+            <div>
+              <dt className="font-bold text-gray-900">{t('fields.assetType', 'Type')}</dt>
+              <dd className="text-gray-700">{linkedAssetPreview.summary.asset_type}</dd>
+            </div>
+          )}
+        </dl>
       )}
     </Dialog>
   );

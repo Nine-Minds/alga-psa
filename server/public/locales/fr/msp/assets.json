@@ -126,7 +126,8 @@
       "location": "Emplacement",
       "actions": "Actes",
       "patching": "Correctifs",
-      "coverage": "Couverture"
+      "coverage": "Couverture",
+      "assignedTo": "Attribué à"
     },
     "metrics": {
       "totalAssets": {
@@ -565,7 +566,8 @@
       "clientsLoadFailed": "Impossible de charger les clients",
       "locationsLoadFailed": "Impossible de charger les emplacements pour ce client",
       "updateFailed": "Échec de la mise à jour de l'élément",
-      "validation": "Veuillez corriger les champs mis en évidence avant d'enregistrer."
+      "validation": "Veuillez corriger les champs mis en évidence avant d'enregistrer.",
+      "contactsLoadFailed": "Impossible de charger les contacts de ce client"
     },
     "actions": {
       "viewClient": "Afficher le client",
@@ -618,7 +620,8 @@
       "status": "Statut",
       "purchaseDate": "Date d'achat",
       "warrantyEndDate": "Date de fin de garantie",
-      "assetType": "Type"
+      "assetType": "Type",
+      "assignedTo": "Attribué à"
     },
     "placeholders": {
       "loadingClients": "Chargement des clients…",
@@ -628,7 +631,9 @@
       "selectClientFirst": "Sélectionnez d'abord un client",
       "customLocation": "Entrez un emplacement ou une zone personnalisée",
       "selectPurchaseDate": "Sélectionnez la date d'achat",
-      "selectWarrantyEndDate": "Sélectionnez la date de fin de garantie"
+      "selectWarrantyEndDate": "Sélectionnez la date de fin de garantie",
+      "loadingContacts": "Chargement des contacts…",
+      "selectContact": "Sélectionnez un contact"
     },
     "statusOptions": {
       "active": "Actif",
@@ -664,7 +669,10 @@
       "printer": "Détails de l'imprimante",
       "custom": "Détails de {{typeName}}"
     },
-    "additionalFields": "Champs supplémentaires"
+    "additionalFields": "Champs supplémentaires",
+    "help": {
+      "assignedTo": "Dans le portail client, les personnes à visibilité limitée ne voient cet appareil que s’il leur est attribué ou attribué à une personne qui leur est rattachée."
+    }
   },
   "assetFormClient": {
     "title": "Client de formulaire d'actif",
@@ -978,7 +986,8 @@
       "status": "Statut",
       "serialNumber": "Numéro de série",
       "customLocationOption": "Emplacement personnalisé",
-      "location": "Emplacement"
+      "location": "Emplacement",
+      "assignedTo": "Attribué à"
     },
     "placeholders": {
       "workstationOsType": "par exemple, Windows, macOS, Linux",
@@ -998,7 +1007,9 @@
       "customLocation": "Entrez un emplacement ou une zone personnalisée",
       "loadingLocations": "Chargement des emplacements...",
       "selectClientFirst": "Sélectionnez d'abord un client",
-      "selectLocation": "Sélectionnez un emplacement"
+      "selectLocation": "Sélectionnez un emplacement",
+      "loadingContacts": "Chargement des contacts...",
+      "selectContact": "Sélectionner un contact"
     },
     "sections": {
       "typeSpecificDetails": "Détails spécifiques au type"
@@ -1060,7 +1071,8 @@
       "model": "Modèle",
       "serialNumber": "Numéro de série",
       "purchaseDate": "Date d'achat",
-      "warrantyEnd": "Fin de garantie"
+      "warrantyEnd": "Fin de garantie",
+      "assignedTo": "Attribué à"
     },
     "values": {
       "unknownClient": "Client inconnu",
@@ -1601,7 +1613,8 @@
       "conflict": "Cette modification de l’actif entre en conflit avec un enregistrement existant. Veuillez actualiser la page et réessayer.",
       "notAllowed": "L’une des valeurs de l’actif n’est pas autorisée. Veuillez vérifier le formulaire et réessayer.",
       "missingField": "Un champ obligatoire de l’actif est manquant.",
-      "missingFieldNamed": "Un champ obligatoire de l’actif est manquant : {{field}}."
+      "missingFieldNamed": "Un champ obligatoire de l’actif est manquant : {{field}}.",
+      "contactUnavailable": "Le contact sélectionné n’est pas disponible pour ce client."
     }
   }
 }

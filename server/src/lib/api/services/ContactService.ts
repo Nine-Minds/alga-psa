@@ -249,6 +249,7 @@ export class ContactService extends BaseService<IContact> {
         {
           full_name: data.full_name ?? '',
           client_id: data.client_id ?? undefined,
+          manager_contact_id: data.manager_contact_id ?? undefined,
           phone_numbers: data.phone_numbers ?? [],
           email: data.email ?? undefined,
           primary_email_canonical_type: data.primary_email_canonical_type ?? undefined,
@@ -433,6 +434,15 @@ export class ContactService extends BaseService<IContact> {
       if (!before) {
         throw new NotFoundError('Contact not found');
       }
+
+      // Reports-to and asset assignment are NO ACTION composite FKs; clear them
+      // here (same cleanup as the MSP deleteContact action).
+      await tenantDb(trx, context.tenant).table('contacts')
+        .where('manager_contact_id', id)
+        .update({ manager_contact_id: null });
+      await tenantDb(trx, context.tenant).table('assets')
+        .where('contact_name_id', id)
+        .update({ contact_name_id: null });
 
       await tenantDb(trx, context.tenant).table('contacts')
         .where('contact_name_id', id)

@@ -738,7 +738,10 @@
       "reportsToSelf": "A user cannot report to themselves",
       "reportsToCycle": "This would create a circular reporting chain",
       "createError": "Failed to create user",
-      "deleteError": "Failed to delete user"
+      "deleteError": "Failed to delete user",
+      "reportsTo": "Reports to",
+      "noManager": "No manager",
+      "reportsToHelp": "A manager can see the tickets, devices and projects of the people who report to them, when their visibility group is limited to their own records."
     },
     "messages": {
       "saveChanges": "Save Changes",
@@ -790,9 +793,22 @@
       "scopeClient": "All of this client’s tickets",
       "scopeContact": "Only their own tickets",
       "scopeClientDescription": "Members see every ticket for this client on the selected boards.",
-      "scopeContactDescription": "Members see only tickets they are listed as the contact on. Client admins see all tickets on the selected boards, including tickets with no contact.",
-      "assignmentHelp": "Assign a group to limit boards and ticket visibility, or keep full client access.",
-      "boardHiddenFromPortal": "Hidden from client portal"
+      "scopeContactDescription": "Members see tickets they are the contact on, tickets of people who report to them, and tickets they watch. Client admins always see everything on the selected boards, including tickets with no contact.",
+      "assignmentHelp": "Assign a group to limit boards and what this person sees of tickets, devices and projects, or keep full client access.",
+      "boardHiddenFromPortal": "Hidden from client portal",
+      "assetScopeLabel": "Device visibility",
+      "assetScopeClient": "All of this client’s devices",
+      "assetScopeContact": "Only their own devices",
+      "assetScopeClientDescription": "Members see every device for this client, including unassigned ones.",
+      "assetScopeContactDescription": "Members see only devices assigned to them or to people who report to them. Unassigned devices are hidden. Client admins always see everything.",
+      "projectScopeLabel": "Project visibility",
+      "projectScopeClient": "All of this client’s projects",
+      "projectScopeContact": "Only their own projects",
+      "projectScopeClientDescription": "Members see every project for this client.",
+      "projectScopeContactDescription": "Members see only projects whose contact is them or someone who reports to them. Projects with no contact are hidden. Client admins always see everything.",
+      "scopeSummary": "Tickets: {{tickets}} · Devices: {{devices}} · Projects: {{projects}}",
+      "scopeSummaryAll": "All",
+      "scopeSummaryOwn": "Own"
     },
     "domain": {
       "title": "Custom Domain",

@@ -124,7 +124,8 @@
       "location": "Plats",
       "actions": "Åtgärder",
       "patching": "Patchning",
-      "coverage": "Täckning"
+      "coverage": "Täckning",
+      "assignedTo": "Tilldelad till"
     },
     "metrics": {
       "totalAssets": {
@@ -558,7 +559,8 @@
       "clientsLoadFailed": "Det gick inte att läsa in kunder",
       "locationsLoadFailed": "Det gick inte att läsa in platser för den här kunden",
       "updateFailed": "Det gick inte att uppdatera tillgången",
-      "validation": "Korrigera de markerade fälten innan du sparar."
+      "validation": "Korrigera de markerade fälten innan du sparar.",
+      "contactsLoadFailed": "Det gick inte att läsa in kontakter för den här kunden"
     },
     "actions": {
       "viewClient": "Visa kund",
@@ -611,7 +613,8 @@
       "status": "Status",
       "purchaseDate": "Inköpsdatum",
       "warrantyEndDate": "Garantins slutdatum",
-      "assetType": "Typ"
+      "assetType": "Typ",
+      "assignedTo": "Tilldelad till"
     },
     "placeholders": {
       "loadingClients": "Läser in kunder…",
@@ -621,7 +624,9 @@
       "selectClientFirst": "Välj en kund först",
       "customLocation": "Ange en anpassad plats eller ett område",
       "selectPurchaseDate": "Välj inköpsdatum",
-      "selectWarrantyEndDate": "Välj garantins slutdatum"
+      "selectWarrantyEndDate": "Välj garantins slutdatum",
+      "loadingContacts": "Läser in kontakter…",
+      "selectContact": "Välj en kontakt"
     },
     "statusOptions": {
       "active": "Aktiv",
@@ -656,6 +661,9 @@
       "mobileDevice": "Detaljer om mobil enhet",
       "printer": "Skrivardetaljer",
       "custom": "Detaljer för {{typeName}}"
+    },
+    "help": {
+      "assignedTo": "I kundportalen ser personer med begränsad synlighet den här enheten bara om den är tilldelad dem eller någon som rapporterar till dem."
     }
   },
   "assetFormClient": {
@@ -962,7 +970,8 @@
       "status": "Status",
       "serialNumber": "Serienummer",
       "customLocationOption": "Anpassad plats",
-      "location": "Plats"
+      "location": "Plats",
+      "assignedTo": "Tilldelad till"
     },
     "placeholders": {
       "workstationOsType": "t.ex. Windows, macOS, Linux",
@@ -982,7 +991,9 @@
       "customLocation": "Ange en anpassad plats eller ett område",
       "loadingLocations": "Läser in platser…",
       "selectClientFirst": "Välj en kund först",
-      "selectLocation": "Välj plats"
+      "selectLocation": "Välj plats",
+      "loadingContacts": "Läser in kontakter...",
+      "selectContact": "Välj kontakt"
     },
     "sections": {
       "typeSpecificDetails": "Typspecifika detaljer"
@@ -1044,7 +1055,8 @@
       "model": "Modell",
       "serialNumber": "Serienummer",
       "purchaseDate": "Inköpsdatum",
-      "warrantyEnd": "Garantins slutdatum"
+      "warrantyEnd": "Garantins slutdatum",
+      "assignedTo": "Tilldelad till"
     },
     "values": {
       "unknownClient": "Okänd kund",
@@ -1573,7 +1585,8 @@
       "conflict": "Den här tillgångsändringen står i konflikt med en befintlig post. Ladda om sidan och försök igen.",
       "notAllowed": "Ett av tillgångsvärdena är inte tillåtet. Granska formuläret och försök igen.",
       "missingField": "Ett obligatoriskt tillgångsfält saknas.",
-      "missingFieldNamed": "Obligatoriskt tillgångsfält saknas: {{field}}."
+      "missingFieldNamed": "Obligatoriskt tillgångsfält saknas: {{field}}.",
+      "contactUnavailable": "Den valda kontakten är inte tillgänglig för den här kunden."
     }
   }
 }
