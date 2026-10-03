@@ -1257,6 +1257,9 @@
     },
     "loadingTemplate": "Sjabloon laden...",
     "servicesLabel": "Services",
+    "summary": {
+      "clientCurrency": "Valuta van de klant"
+    },
     "templateBadge": "Sjabloon",
     "templateNotFound": "Contractsjabloon niet gevonden",
     "templateSnapshotTitle": "Sjabloonmomentopname",

@@ -1257,6 +1257,9 @@
     },
     "loadingTemplate": "⟦Ŀȯȧḓīƞɠ ŧḗḿƥŀȧŧḗ...⟧",
     "servicesLabel": "⟦Şḗřṽīƈḗş⟧",
+    "summary": {
+      "clientCurrency": "⟦Ƈŀīḗƞŧ'ş ƈŭřřḗƞƈẏ⟧"
+    },
     "templateBadge": "⟦Ŧḗḿƥŀȧŧḗ⟧",
     "templateNotFound": "⟦Ƈȯƞŧřȧƈŧ ŧḗḿƥŀȧŧḗ ƞȯŧ ƒȯŭƞḓ⟧",
     "templateSnapshotTitle": "⟦Ŧḗḿƥŀȧŧḗ Şƞȧƥşħȯŧ⟧",
