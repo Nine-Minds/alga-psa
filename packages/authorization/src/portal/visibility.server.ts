@@ -186,6 +186,10 @@ export async function getClientContactVisibilityContext(
       // grant could only ever be a no-op here.
       grantedTicketProfileIds: [],
       defaultBillingProfileId: null,
+      assetScope: 'client',
+      effectiveAssetScope: 'client',
+      projectScope: 'client',
+      effectiveProjectScope: 'client',
     };
   }
 
@@ -193,11 +197,13 @@ export async function getClientContactVisibilityContext(
     group_id: string;
     client_id: string;
     ticket_scope: 'client' | 'contact';
+    asset_scope: 'client' | 'contact' | null;
+    project_scope: 'client' | 'contact' | null;
   }>(trx, 'client_portal_visibility_groups', tenant)
     .where({
       group_id: contact.portal_visibility_group_id
     })
-    .first('group_id', 'client_id', 'ticket_scope');
+    .first('group_id', 'client_id', 'ticket_scope', 'asset_scope', 'project_scope');
 
   if (!group) {
     throw new Error(VISIBILITY_GROUP_MISSING_ERROR);
@@ -209,6 +215,14 @@ export async function getClientContactVisibilityContext(
 
   if (group.ticket_scope !== 'client' && group.ticket_scope !== 'contact') {
     throw new Error('Assigned visibility group has an invalid ticket scope');
+  }
+
+  // The columns are NOT NULL DEFAULT 'client'; a row that arrives without them
+  // is a pre-migration read and has the default's meaning.
+  const assetScope = group.asset_scope ?? 'client';
+  const projectScope = group.project_scope ?? 'client';
+  if ((assetScope !== 'client' && assetScope !== 'contact') || (projectScope !== 'client' && projectScope !== 'contact')) {
+    throw new Error('Assigned visibility group has an invalid asset or project scope');
   }
 
   const boardIds = await tenantDb(trx, tenant)
@@ -229,16 +243,27 @@ export async function getClientContactVisibilityContext(
     .then((rows: Array<{ board_id: string }>) => rows.map((row) => row.board_id));
 
   const effectiveTicketScope = contact.is_client_admin ? 'client' : group.ticket_scope;
-  // Profile, hierarchy and watcher grants only exist under contact scope. A
+  const effectiveAssetScope = contact.is_client_admin ? 'client' : assetScope;
+  const effectiveProjectScope = contact.is_client_admin ? 'client' : projectScope;
+  // Profile and watcher grants only exist under contact ticket scope. A
   // client-scoped user (and a client admin, whose scope is forced to 'client')
   // already sees every ticket of the client.
-  const contactGrants = effectiveTicketScope === 'contact'
+  const contactTicketGrants = effectiveTicketScope === 'contact'
     ? {
         ...(await resolveGrantedTicketProfiles(trx, tenant, contactId, contact.client_id)),
-        visibleContactIds: await resolveVisibleContactIds(trx, tenant, contactId, contact.client_id),
         watchGrant: true,
       }
     : { grantedTicketProfileIds: [], defaultBillingProfileId: null };
+  // The reports-to subtree serves tickets, devices and projects alike, so it is
+  // resolved when any one of them is contact-scoped.
+  const needsSubtree =
+    effectiveTicketScope === 'contact' || effectiveAssetScope === 'contact' || effectiveProjectScope === 'contact';
+  const contactGrants = needsSubtree
+    ? {
+        ...contactTicketGrants,
+        visibleContactIds: await resolveVisibleContactIds(trx, tenant, contactId, contact.client_id),
+      }
+    : contactTicketGrants;
 
   return {
     ticketScope: group.ticket_scope,
@@ -248,6 +273,10 @@ export async function getClientContactVisibilityContext(
     clientId: contact.client_id,
     visibilityGroupId: contact.portal_visibility_group_id,
     visibleBoardIds: await resolveVisibleBoardIds(trx, tenant, boardIds),
+    assetScope,
+    effectiveAssetScope,
+    projectScope,
+    effectiveProjectScope,
     ...contactGrants,
   };
 }

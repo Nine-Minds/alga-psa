@@ -1,6 +1,10 @@
 import { afterAll, describe, expect, it } from 'vitest';
 import knexFactory from 'knex';
 import {
+  applyAssetVisibilityFilter,
+  applyProjectVisibilityFilter,
+  assetMatchesVisibility,
+  projectMatchesVisibility,
   applyTicketVisibilityFilter,
   extractActiveWatcherContactIds,
   ticketMatchesVisibility,
@@ -256,5 +260,66 @@ describe('kernel contact_visibility parity with the shared predicate', () => {
         name
       ).toBe(ticketMatchesVisibility(record, scope));
     }
+  });
+});
+
+describe('asset and project visibility filters', () => {
+  const owned = { contactId: 'c1', clientId: 'cl1' };
+  const assetCols = { contactColumn: 'assets.contact_name_id', clientColumn: 'assets.client_id' };
+  const projectCols = { contactColumn: 'projects.contact_name_id', clientColumn: 'projects.client_id' };
+  const assetSql = (ctx: Parameters<typeof applyAssetVisibilityFilter>[1]) =>
+    applyAssetVisibilityFilter(db('assets').select('*'), ctx, assetCols).toString();
+  const projectSql = (ctx: Parameters<typeof applyProjectVisibilityFilter>[1]) =>
+    applyProjectVisibilityFilter(db('projects').select('*'), ctx, projectCols).toString();
+
+  it('client scope is just the client restriction', () => {
+    expect(assetSql({ ...owned, effectiveAssetScope: 'client' })).toBe(
+      `select * from "assets" where "assets"."client_id" = 'cl1'`
+    );
+    expect(projectSql({ ...owned, effectiveProjectScope: 'client' })).toBe(
+      `select * from "projects" where "projects"."client_id" = 'cl1'`
+    );
+  });
+
+  it('contact scope restricts to me and my reports; unassigned rows never match', () => {
+    expect(assetSql({ ...owned, effectiveAssetScope: 'contact' })).toBe(
+      `select * from "assets" where "assets"."client_id" = 'cl1' and "assets"."contact_name_id" = 'c1'`
+    );
+    expect(projectSql({ ...owned, effectiveProjectScope: 'contact', visibleContactIds: ['c1', 'c2'] })).toBe(
+      `select * from "projects" where "projects"."client_id" = 'cl1' and "projects"."contact_name_id" in ('c1', 'c2')`
+    );
+  });
+
+  it('an absent effective scope narrows, and the scopes are independent', () => {
+    expect(assetSql({ ...owned })).toBe(assetSql({ ...owned, effectiveAssetScope: 'contact' }));
+    expect(projectSql({ ...owned })).toBe(projectSql({ ...owned, effectiveProjectScope: 'contact' }));
+    // Contact-scoped devices do not make projects contact-scoped.
+    expect(projectSql({ ...owned, effectiveAssetScope: 'contact', effectiveProjectScope: 'client' })).toBe(
+      `select * from "projects" where "projects"."client_id" = 'cl1'`
+    );
+  });
+
+  it('a context with no client matches nothing', () => {
+    expect(assetSql({ contactId: 'c1', clientId: '', effectiveAssetScope: 'client' })).toContain('1 = 0');
+  });
+
+  const records = [
+    { name: 'own', record: { clientId: 'cl1', contactId: 'c1' } },
+    { name: 'report', record: { clientId: 'cl1', contactId: 'c2' } },
+    { name: 'peer', record: { clientId: 'cl1', contactId: 'c3' } },
+    { name: 'unassigned', record: { clientId: 'cl1', contactId: null } },
+    { name: 'other client', record: { clientId: 'cl2', contactId: 'c1' } },
+  ];
+
+  it('the in-memory predicates agree with the SQL semantics', () => {
+    const contactScoped = { ...owned, visibleContactIds: ['c1', 'c2'], effectiveAssetScope: 'contact' as const, effectiveProjectScope: 'contact' as const };
+    const clientScoped = { ...owned, effectiveAssetScope: 'client' as const, effectiveProjectScope: 'client' as const };
+    const names = (fn: typeof assetMatchesVisibility, ctx: typeof contactScoped | typeof clientScoped) =>
+      records.filter(({ record }) => fn(record, ctx)).map(({ name }) => name);
+    for (const fn of [assetMatchesVisibility, projectMatchesVisibility]) {
+      expect(names(fn, contactScoped)).toEqual(['own', 'report']);
+      expect(names(fn, clientScoped)).toEqual(['own', 'report', 'peer', 'unassigned']);
+    }
+    expect(assetMatchesVisibility(records[0].record, null)).toBe(false);
   });
 });

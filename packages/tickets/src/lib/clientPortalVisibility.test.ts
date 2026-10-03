@@ -36,7 +36,7 @@ function capturedGroupedPredicate(query: any) {
 
 function buildTrx(params: {
   contact?: { contact_name_id: string; client_id: string | null; portal_visibility_group_id: string | null; is_client_admin?: boolean };
-  group?: { group_id: string; client_id: string; ticket_scope?: 'client' | 'contact' };
+  group?: { group_id: string; client_id: string; ticket_scope?: string; asset_scope?: string; project_scope?: string };
   boardIds?: string[];
   boards?: Array<{ board_id: string; client_portal_visible: boolean }>;
   profiles?: Array<{ billing_profile_id: string; is_default: boolean }>;
@@ -118,6 +118,10 @@ describe('client portal visibility resolver', () => {
     ).resolves.toEqual({
       ticketScope: 'client',
       effectiveTicketScope: 'client',
+      assetScope: 'client',
+      effectiveAssetScope: 'client',
+      projectScope: 'client',
+      effectiveProjectScope: 'client',
       isClientAdmin: false,
       contactId: 'contact-1',
       clientId: 'client-1',
@@ -147,6 +151,10 @@ describe('client portal visibility resolver', () => {
     ).resolves.toEqual({
       ticketScope: 'client',
       effectiveTicketScope: 'client',
+      assetScope: 'client',
+      effectiveAssetScope: 'client',
+      projectScope: 'client',
+      effectiveProjectScope: 'client',
       isClientAdmin: false,
       contactId: 'contact-1',
       clientId: 'client-1',
@@ -194,6 +202,10 @@ describe('client portal visibility resolver', () => {
     ).resolves.toEqual({
       ticketScope: 'client',
       effectiveTicketScope: 'client',
+      assetScope: 'client',
+      effectiveAssetScope: 'client',
+      projectScope: 'client',
+      effectiveProjectScope: 'client',
       isClientAdmin: false,
       contactId: 'contact-1',
       clientId: 'client-1',
@@ -330,6 +342,53 @@ describe('contact scope', () => {
       expect(result.visibleContactIds).toBeUndefined();
       expect(result.watchGrant).toBeUndefined();
     }
+  });
+
+  it('resolves asset and project scope independently of ticket scope, and the reports-to subtree for either', async () => {
+    const contact = { contact_name_id: 'contact-1', client_id: 'client-1', portal_visibility_group_id: 'g' };
+    const reports = [{ contact_name_id: 'contact-2', manager_contact_id: 'contact-1' }];
+    const group = { group_id: 'g', client_id: 'client-1', ticket_scope: 'client', asset_scope: 'contact', project_scope: 'client' };
+
+    const devicesOnly = await getClientContactVisibilityContext(buildTrx({ contact, group, boardIds: ['b'], reports }), 'tenant-1', 'contact-1');
+    expect(devicesOnly).toMatchObject({
+      effectiveTicketScope: 'client',
+      assetScope: 'contact',
+      effectiveAssetScope: 'contact',
+      projectScope: 'client',
+      effectiveProjectScope: 'client',
+      visibleContactIds: ['contact-1', 'contact-2'],
+    });
+    // Ticket grants stay off while tickets are client-scoped.
+    expect(devicesOnly.watchGrant).toBeUndefined();
+
+    const projectsOnly = await getClientContactVisibilityContext(
+      buildTrx({ contact, group: { ...group, asset_scope: 'client', project_scope: 'contact' }, boardIds: ['b'], reports }),
+      'tenant-1',
+      'contact-1'
+    );
+    expect(projectsOnly).toMatchObject({ effectiveAssetScope: 'client', effectiveProjectScope: 'contact', visibleContactIds: ['contact-1', 'contact-2'] });
+  });
+
+  it('the client-admin override forces asset and project scope to client, and no group means client', async () => {
+    const contact = { contact_name_id: 'contact-1', client_id: 'client-1', portal_visibility_group_id: 'g' };
+    const group = { group_id: 'g', client_id: 'client-1', ticket_scope: 'contact', asset_scope: 'contact', project_scope: 'contact' };
+    const admin = await getClientContactVisibilityContext(buildTrx({ contact: { ...contact, is_client_admin: true }, group, boardIds: ['b'] }), 'tenant-1', 'contact-1');
+    expect(admin).toMatchObject({ assetScope: 'contact', effectiveAssetScope: 'client', projectScope: 'contact', effectiveProjectScope: 'client', effectiveTicketScope: 'client' });
+    expect(admin.visibleContactIds).toBeUndefined();
+
+    const ungrouped = await getClientContactVisibilityContext(buildTrx({ contact: { ...contact, portal_visibility_group_id: null } }), 'tenant-1', 'contact-1');
+    expect(ungrouped).toMatchObject({ effectiveAssetScope: 'client', effectiveProjectScope: 'client' });
+  });
+
+  it('rejects a group with an invalid asset or project scope', async () => {
+    const contact = { contact_name_id: 'contact-1', client_id: 'client-1', portal_visibility_group_id: 'g' };
+    await expect(
+      getClientContactVisibilityContext(
+        buildTrx({ contact, group: { group_id: 'g', client_id: 'client-1', ticket_scope: 'client', asset_scope: 'everything' }, boardIds: ['b'] }),
+        'tenant-1',
+        'contact-1'
+      )
+    ).rejects.toThrow('invalid asset or project scope');
   });
 
   it('does not query grants for a client-scoped contact', async () => {

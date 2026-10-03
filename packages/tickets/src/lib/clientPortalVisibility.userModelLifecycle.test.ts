@@ -276,6 +276,11 @@ describe('portal user creation preserves client portal visibility assignments', 
       // A brand-new portal user holds no billing-profile ticket grants.
       grantedTicketProfileIds: [],
       defaultBillingProfileId: null,
+      // The fixture group predates asset/project scope: the column default applies.
+      assetScope: 'client',
+      effectiveAssetScope: 'client',
+      projectScope: 'client',
+      effectiveProjectScope: 'client',
       // Contact scope adds the (empty) hierarchy and the watcher grant; admins
       // and client-scoped users get neither.
       ...(effectiveTicketScope === 'contact' ? { visibleContactIds: ['contact-1'], watchGrant: true } : {}),

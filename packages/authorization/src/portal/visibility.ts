@@ -56,6 +56,24 @@ export interface ContactVisibilityContext extends TicketVisibilityScope {
   ticketScope: PortalVisibilityScope;
   isClientAdmin: boolean;
   visibilityGroupId: string | null;
+  /**
+   * Devices and projects are scoped independently of tickets
+   * (`client_portal_visibility_groups.asset_scope` / `project_scope`). The
+   * effective value is forced to 'client' for client admins and for contacts
+   * with no group, exactly like `effectiveTicketScope`. Absent = the producer
+   * predates the grant, which the filters below read as 'contact' (narrow).
+   */
+  assetScope?: PortalVisibilityScope;
+  effectiveAssetScope?: PortalVisibilityScope;
+  projectScope?: PortalVisibilityScope;
+  effectiveProjectScope?: PortalVisibilityScope;
+}
+
+/** What the asset / project predicates need from a context. */
+export interface ContactOwnedVisibilityScope {
+  contactId: string;
+  clientId: string;
+  visibleContactIds?: string[];
 }
 
 export const VISIBILITY_GROUP_MISMATCH_ERROR =
@@ -235,4 +253,100 @@ export function extractActiveWatcherContactIds(attributes: unknown): string[] {
     }
   }
   return Array.from(ids);
+}
+
+// ---------------------------------------------------------------------------
+// Assets and projects: one assigned contact per record
+// (`assets.contact_name_id`, `projects.contact_name_id`).
+//
+// Under client scope a record is visible when it belongs to the client; under
+// contact scope it must additionally be assigned to me or someone who reports
+// to me. Unassigned records are hidden from contact-scoped users, the same rule
+// contact-less tickets follow. A context with no effective scope reads as
+// 'contact', so an unaware producer narrows.
+// ---------------------------------------------------------------------------
+
+export interface ContactOwnedColumns {
+  /** The record's assigned-contact column, e.g. `assets.contact_name_id`. */
+  contactColumn: string;
+  /** When given, the client restriction is applied here too: one choke point. */
+  clientColumn?: string;
+}
+
+type ContactOwnedContext = ContactOwnedVisibilityScope & {
+  effectiveAssetScope?: PortalVisibilityScope;
+  effectiveProjectScope?: PortalVisibilityScope;
+};
+
+function applyContactOwnedFilter(
+  query: Knex.QueryBuilder,
+  scope: ContactOwnedVisibilityScope,
+  effectiveScope: PortalVisibilityScope | undefined,
+  { contactColumn, clientColumn }: ContactOwnedColumns
+): Knex.QueryBuilder {
+  if (!scope.clientId) {
+    query.whereRaw('1 = 0');
+    return query;
+  }
+  if (clientColumn) {
+    query.where(clientColumn, scope.clientId);
+  }
+  if (effectiveScope === 'client') {
+    return query;
+  }
+  if (!scope.contactId) {
+    query.whereRaw('1 = 0');
+    return query;
+  }
+  const contactIds = resolveVisibleContactIds(scope);
+  if (contactIds.length === 1) {
+    query.where(contactColumn, contactIds[0]);
+  } else {
+    query.whereIn(contactColumn, contactIds);
+  }
+  return query;
+}
+
+function contactOwnedMatches(
+  record: { clientId?: string | null; contactId?: string | null } | null | undefined,
+  scope: ContactOwnedVisibilityScope | null | undefined,
+  effectiveScope: PortalVisibilityScope | undefined
+): boolean {
+  if (!record || !scope || !scope.clientId) return false;
+  if (record.clientId !== scope.clientId) return false;
+  if (effectiveScope === 'client') return true;
+  if (!scope.contactId || !record.contactId) return false;
+  return resolveVisibleContactIds(scope).includes(record.contactId);
+}
+
+export function applyAssetVisibilityFilter(
+  query: Knex.QueryBuilder,
+  visibility: ContactOwnedContext,
+  columns: ContactOwnedColumns
+): Knex.QueryBuilder {
+  return applyContactOwnedFilter(query, visibility, visibility.effectiveAssetScope, columns);
+}
+
+export function applyProjectVisibilityFilter(
+  query: Knex.QueryBuilder,
+  visibility: ContactOwnedContext,
+  columns: ContactOwnedColumns
+): Knex.QueryBuilder {
+  return applyContactOwnedFilter(query, visibility, visibility.effectiveProjectScope, columns);
+}
+
+/** In-memory twin of `applyAssetVisibilityFilter` (client restriction included). Never throws. */
+export function assetMatchesVisibility(
+  record: { clientId?: string | null; contactId?: string | null } | null | undefined,
+  visibility: ContactOwnedContext | null | undefined
+): boolean {
+  return contactOwnedMatches(record, visibility, visibility?.effectiveAssetScope);
+}
+
+/** In-memory twin of `applyProjectVisibilityFilter` (client restriction included). Never throws. */
+export function projectMatchesVisibility(
+  record: { clientId?: string | null; contactId?: string | null } | null | undefined,
+  visibility: ContactOwnedContext | null | undefined
+): boolean {
+  return contactOwnedMatches(record, visibility, visibility?.effectiveProjectScope);
 }
