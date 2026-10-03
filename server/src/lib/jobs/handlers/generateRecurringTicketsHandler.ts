@@ -41,7 +41,7 @@ export async function generateRecurringTicketsHandler(
 
 /** Tenants with at least one active, unarchived definition: the EE fan-out only wakes these. */
 export const tenantsWithActiveRecurringTickets: TenantSelector = (db) => db
-  .unscoped<{ tenant: string }>('recurring_ticket_definitions', 'maintenance fanout narrows recurring-ticket generation to tenants with an active definition')
+  .unscoped<{ tenant: string; is_active: boolean; archived_at: Date | null }>('recurring_ticket_definitions', 'maintenance fanout narrows recurring-ticket generation to tenants with an active definition')
   .where({ is_active: true })
   .whereNull('archived_at')
   .distinct('tenant');

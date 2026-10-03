@@ -289,6 +289,7 @@ export const listRecurringTicketDefinitions = withAuth(async (
         client_count: count.total,
         next_due_at: status === 'active' && count.active > 0 ? nextDueAt(record, calendar, timeZone, now) : null,
         has_failure: failing.has(record.definition_id),
+        time_zone: timeZone,
       };
     });
   } catch (error) {
@@ -345,7 +346,7 @@ export const getRecurringTicketDefinition = withAuth(async (
 
     const calendar = await loadCalendarIfNeeded(knex, tenant, [definition.non_business_day_policy]);
     const timeZone = await loadTenantTimeZone(knex, tenant);
-    return { definition, clients, next_due_at: nextDueAt(definition, calendar, timeZone, new Date()) };
+    return { definition, clients, next_due_at: nextDueAt(definition, calendar, timeZone, new Date()), time_zone: timeZone };
   } catch (error) {
     const expected = recurringActionErrorFrom(error);
     if (expected) return expected;
@@ -834,6 +835,7 @@ export const listRecurringTicketsForClient = withAuth(async (
         is_client_active: row.client_is_active,
         recurrence: record.recurrence,
         next_due_at: status === 'active' && row.client_is_active ? nextDueAt(record, calendar, timeZone, now) : null,
+        time_zone: timeZone,
         overrides: recurringTicketOverridesSchema.parse(asJsonColumn(row.overrides ?? {})),
         contact_id: row.contact_id ?? null,
         location_id: row.location_id ?? null,

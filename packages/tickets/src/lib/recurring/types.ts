@@ -16,6 +16,8 @@ export interface RecurringDefinitionListItem {
   next_due_at: string | null;
   /** The latest occurrence of any client of this definition is `failed`. */
   has_failure: boolean;
+  /** Tenant timezone: due times are wall-clock in it, so the UI formats instants with it. */
+  time_zone: string;
 }
 
 export interface RecurringDefinitionRecord {
@@ -62,6 +64,7 @@ export interface RecurringDefinitionDetail {
   clients: RecurringDefinitionClientRecord[];
   /** Earliest upcoming due instant, shown per client row (the schedule is shared). */
   next_due_at: string | null;
+  time_zone: string;
 }
 
 export interface RecurringOccurrenceListItem {
@@ -103,6 +106,7 @@ export interface RecurringTicketForClient {
   is_client_active: boolean;
   recurrence: RecurrenceRule;
   next_due_at: string | null;
+  time_zone: string;
   overrides: RecurringTicketOverrides;
   contact_id: string | null;
   location_id: string | null;
