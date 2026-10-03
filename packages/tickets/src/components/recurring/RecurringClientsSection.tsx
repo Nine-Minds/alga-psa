@@ -108,8 +108,10 @@ export function RecurringClientsSection({
       ),
     },
     {
+      // The id DataTable derives from dataIndex must be unique per column, or this column's
+      // cell is replaced by the earlier one's and the menu never mounts.
       title: '',
-      dataIndex: 'definition_client_id',
+      dataIndex: 'actions',
       sortable: false,
       width: '56px',
       render: (_value, client) => (
