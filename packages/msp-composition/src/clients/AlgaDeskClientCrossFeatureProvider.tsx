@@ -6,6 +6,7 @@ import type {
   ClientCrossFeatureCallbacks,
   QuickAddTicketRenderProps,
   ClientTicketsRenderProps,
+  ClientRecurringTicketsRenderProps,
   ContactTicketsRenderProps,
   HourBlocksRenderProps,
 } from '@alga-psa/clients/context/ClientCrossFeatureContext';
@@ -14,6 +15,7 @@ import { QuickAddTicket } from '@alga-psa/tickets/components/QuickAddTicket';
 import { getTicketFormOptions } from '@alga-psa/tickets/actions/optimizedTicketActions';
 import MspClientTickets from './MspClientTickets';
 import MspContactTickets from './MspContactTickets';
+import { MspRecurringTicketsClientSection } from '../tickets/MspRecurringTickets';
 import { useTicketDetailsDrawer } from './useTicketDetailsDrawer';
 
 const renderNothing = () => null;
@@ -34,6 +36,11 @@ export function AlgaDeskClientCrossFeatureProvider({ children }: { children: Rea
         isAlgaDeskMode
       />
     ),
+    []
+  );
+
+  const renderClientRecurringTickets = useCallback(
+    (props: ClientRecurringTicketsRenderProps) => <MspRecurringTicketsClientSection clientId={props.clientId} />,
     []
   );
 
@@ -85,6 +92,7 @@ export function AlgaDeskClientCrossFeatureProvider({ children }: { children: Rea
       renderSurveySummaryCard: () => null,
       renderClientAssets: () => null,
       renderClientTickets,
+      renderClientRecurringTickets,
       renderContactTickets,
       renderContractWizard: () => renderNothing(),
       renderContractQuickAdd: () => renderNothing(),
@@ -92,7 +100,7 @@ export function AlgaDeskClientCrossFeatureProvider({ children }: { children: Rea
       openTicketDetails,
       getSlaPolicies: async () => [],
     }),
-    [renderQuickAddTicket, renderClientTickets, renderContactTickets, renderHourBlocks, openTicketDetails]
+    [renderQuickAddTicket, renderClientTickets, renderClientRecurringTickets, renderContactTickets, renderHourBlocks, openTicketDetails]
   );
 
   return (
