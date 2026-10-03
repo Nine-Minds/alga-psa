@@ -57,7 +57,7 @@ Click **Remove Branding** to delete only the rows that email branding previously
 
 Enterprise tenants see two additional controls on the **Email Branding** tab:
 
-- **Header logo** – Upload an image to inject as a header logo into branded templates. The logo is injected idempotently: re-applying branding after uploading a new logo replaces the old one without duplicating it.
+- **Header logo** – Upload an image to inject as a header logo into branded templates. The logo is injected idempotently: re-applying branding after uploading a new logo replaces the old one without duplicating it. At send time, AlgaPSA embeds the logo as a CID inline attachment rather than referencing a remote URL, so the logo renders automatically in Gmail, Outlook, Apple Mail, and other major clients without the recipient needing to enable remote images. Templates whose logo reference was written before inline embedding was introduced are repaired automatically on their next send — no manual re-apply is needed. The template editor shows a hint reminding you not to replace the `cid:` value in the logo's `src` attribute; replacing it with a plain URL or a document-storage path reverts the logo to a remotely-loaded image that most clients will block.
 - **Remove "Powered by AlgaPSA" attribution** – Toggle off the footer attribution line from all branded templates. The removal is idempotent; re-applying branding never re-inserts the line once it has been removed.
 
 Both controls apply only to templates that pass through the branding apply run. Customized templates excluded from the run keep whatever logo and footer state they had before.
