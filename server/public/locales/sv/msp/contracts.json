@@ -1257,6 +1257,9 @@
     },
     "loadingTemplate": "Läser in mall…",
     "servicesLabel": "Tjänster",
+    "summary": {
+      "clientCurrency": "Kundens valuta"
+    },
     "templateBadge": "Mall",
     "templateNotFound": "Avtalsmallen hittades inte",
     "templateSnapshotTitle": "Ögonblicksbild av mallen",

@@ -1257,6 +1257,9 @@
     },
     "loadingTemplate": "Loading template...",
     "servicesLabel": "Services",
+    "summary": {
+      "clientCurrency": "Client's currency"
+    },
     "templateBadge": "Template",
     "templateNotFound": "Contract template not found",
     "templateSnapshotTitle": "Template Snapshot",
