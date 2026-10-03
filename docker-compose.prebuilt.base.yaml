@@ -95,6 +95,10 @@ secrets:
 services:
   postgres:
     image: ankane/pgvector:latest
+    # LEVERAGE: pattern postgres-auth-entrypoint — the wrapper entrypoint and its bind mount are duplicated from docker-compose.base.yaml because this postgres service does not extend it; extending base would also change initdb args/command, so fold them together in a separate change
+    entrypoint: ["/bin/bash", "/usr/local/bin/alga-postgres-entrypoint.sh"]
+    volumes:
+      - ./postgres/alga-postgres-entrypoint.sh:/usr/local/bin/alga-postgres-entrypoint.sh:ro
     environment:
       <<: *shared-environment
       POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
