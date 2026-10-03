@@ -937,6 +937,9 @@ async function handleTicketCreated(event: TicketCreatedEvent): Promise<void> {
   const { tenantId } = payload;
   // Resolve userId from domain-specific field or base field, falling back to legacy
   const creatorUserId = (payload as any).createdByUserId || payload.actorUserId || (payload as any).userId;
+  // Creators such as recurring-ticket generation can ask for client-facing mail to be skipped.
+  // Internal recipients (assignee, internal watchers) are never affected by the contact flag.
+  const suppression = resolveTicketNotificationSuppression(payload);
 
   try {
     console.log('[EmailSubscriber] Creating database connection');
@@ -964,8 +967,11 @@ async function handleTicketCreated(event: TicketCreatedEvent): Promise<void> {
       return String(value).trim();
     };
 
-    // Send to contact email if available, otherwise client email
-    const primaryEmail = safeString(ticket.contact_email) || safeString(ticket.client_email);
+    // Send to contact email if available, otherwise client email. A suppressed
+    // contact-facing notification leaves no primary recipient.
+    const primaryEmail = shouldSendContactFacingTicketEmail(suppression)
+      ? safeString(ticket.contact_email) || safeString(ticket.client_email)
+      : '';
     const assignedEmail = safeString(ticket.assigned_to_email);
 
     if (!primaryEmail && !assignedEmail) {
@@ -976,7 +982,7 @@ async function handleTicketCreated(event: TicketCreatedEvent): Promise<void> {
       return;
     }
 
-    if (!primaryEmail) {
+    if (!primaryEmail && shouldSendContactFacingTicketEmail(suppression)) {
       logger.warn('Ticket created email missing contact and client emails, falling back to other recipients only:', {
         eventId: event.id,
         ticketId: payload.ticketId
@@ -1200,6 +1206,15 @@ async function handleTicketCreated(event: TicketCreatedEvent): Promise<void> {
       activeWatcherEmails,
       async (watcherEmail) => {
         const isInternalWatcher = internalWatcherEmails.has(normalizeRecipientEmail(watcherEmail));
+        if (!shouldSendTicketWatcherEmail(suppression, isInternalWatcher)) {
+          logger.debug('[TicketEmailSubscriber] Skipped ticket created watcher email due to suppression', {
+            eventId: event.id,
+            ticketId: payload.ticketId,
+            tenantId,
+            watcherType: isInternalWatcher ? 'internal' : 'external',
+          });
+          return;
+        }
         await sendIfUnique({
           tenantId,
           ...emailEntityContext,

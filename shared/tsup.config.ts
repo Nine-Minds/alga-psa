@@ -19,6 +19,7 @@ export default defineConfig({
     'services/email/microsoftEmailProviderConfig': 'services/email/microsoftEmailProviderConfig.ts',
     'services/email/providers/MicrosoftGraphAdapter': 'services/email/providers/MicrosoftGraphAdapter.ts',
     'services/diagnostics/index': 'services/diagnostics/index.ts',
+    'services/assets/assetTicketAssociation': 'services/assets/assetTicketAssociation.ts',
     'services/entra/entraCallbackUrl': 'services/entra/entraCallbackUrl.ts',
     'workflow/index': 'workflow/index.ts',
     'workflow/runtime/index': 'workflow/runtime/index.ts',

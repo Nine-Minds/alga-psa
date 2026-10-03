@@ -505,6 +505,7 @@ export const addTicket = withAuth(async (user, { tenant }, data: FormData): Prom
       const analyticsTracker = new TicketModelAnalyticsTracker();
 
       // Use shared TicketModel with retry logic
+      // LEVERAGE: pattern ticket-create-composition — creates a ticket then composes assets/agents/team/tags/checklist/activity/events by hand; see createTicketWithSideEffects (packages/tickets/src/lib/createTicketWithSideEffects.ts)
       const ticketResult = await TicketModel.createTicketWithRetry(
         createTicketInput,
         tenant,
