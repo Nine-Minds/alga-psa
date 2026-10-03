@@ -456,6 +456,12 @@
       "location": "Emplacement"
     }
   },
+  "documentsTab": {
+    "errors": {
+      "title": "Documents indisponibles",
+      "loadFailed": "Impossible de charger les documents liés. Rechargez la page ou réessayez plus tard."
+    }
+  },
   "assetDetails": {
     "title": "Détails de l'actif",
     "description": "Page complète de détails sur les actifs avec fiches récapitulatives, associations, documents et actions opérationnelles",
@@ -1581,8 +1587,7 @@
       "manageAssetTypes": "Autorisation refusée : impossible de gérer les types d’actif",
       "readDocuments": "Autorisation refusée : impossible de lire les documents de l’actif",
       "associateDocuments": "Autorisation refusée : impossible d’associer des documents aux actifs",
-      "removeDocuments": "Autorisation refusée : impossible de retirer des documents des actifs",
-      "updateDocumentNotes": "Autorisation refusée : impossible de mettre à jour les notes des documents de l’actif"
+      "removeDocuments": "Autorisation refusée : impossible de retirer des documents des actifs"
     },
     "asset": {
       "notFoundRefresh": "Actif introuvable. Il a peut-être été supprimé. Veuillez actualiser la page et réessayer.",
