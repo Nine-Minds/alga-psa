@@ -479,7 +479,7 @@
     },
     "startProgress": "Verbinden met de workflow-engine…",
     "issues": {
-      "item": "item {{position}}",
+      "item": "element {{position}}",
       "required": "{{field}} is verplicht",
       "type": "{{field}} moet {{type}} zijn",
       "typeUnknown": "{{field}} heeft het verkeerde soort waarde",
@@ -1073,11 +1073,11 @@
       "try": "TRY",
       "catch": "CATCH",
       "body": "BODY",
-      "thenLabel": "Then",
-      "elseLabel": "Else",
-      "tryLabel": "Try",
-      "catchLabel": "Catch",
-      "bodyLabel": "Body"
+      "thenLabel": "Dan",
+      "elseLabel": "Anders",
+      "tryLabel": "Proberen",
+      "catchLabel": "Afvangen",
+      "bodyLabel": "Inhoud"
     },
     "palette": {
       "showPalette": "Palet weergeven",
@@ -1430,7 +1430,7 @@
       "addValue": "Waarde toevoegen",
       "builderUnavailable": "De builder kan alleen condities tonen die een lijst van veldcontroles zijn, allemaal verbonden door \"and\" of allemaal door \"or\".",
       "modes": {
-        "builder": "Builder",
+        "builder": "Visueel",
         "expression": "Expressie"
       },
       "expressionOnlyNotice": "Deze conditie kan alleen als expressie worden bewerkt. Wis de conditie om opnieuw te beginnen in de builder.",
@@ -2279,8 +2279,8 @@
       "humanTask": "Handmatige taak",
       "setState": "Status instellen",
       "assign": "Toewijzen",
-      "return": "Return",
-      "callWorkflow": "Call Workflow"
+      "return": "Terugkeren",
+      "callWorkflow": "Workflow aanroepen"
     },
     "stepCard": {
       "lastStatus": "Laatste status: {{status}} ({{timestamp}})",

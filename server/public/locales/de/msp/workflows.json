@@ -1073,11 +1073,11 @@
       "try": "VERSUCHEN",
       "catch": "ABFANGEN",
       "body": "RUMPF",
-      "thenLabel": "Then",
-      "elseLabel": "Else",
-      "tryLabel": "Try",
-      "catchLabel": "Catch",
-      "bodyLabel": "Body"
+      "thenLabel": "Dann",
+      "elseLabel": "Sonst",
+      "tryLabel": "Versuchen",
+      "catchLabel": "Abfangen",
+      "bodyLabel": "Rumpf"
     },
     "palette": {
       "showPalette": "Palette anzeigen",
@@ -1430,7 +1430,7 @@
       "addValue": "Wert hinzufügen",
       "builderUnavailable": "Der Builder kann nur Bedingungen anzeigen, die aus einer Liste von Feldprüfungen bestehen, die alle mit „und“ oder alle mit „oder“ verknüpft sind.",
       "modes": {
-        "builder": "Builder",
+        "builder": "Visuell",
         "expression": "Ausdruck"
       },
       "expressionOnlyNotice": "Diese Bedingung kann nur als Ausdruck bearbeitet werden. Leeren Sie sie, um im Builder neu zu beginnen.",
@@ -2279,8 +2279,8 @@
       "humanTask": "Benutzeraufgabe",
       "setState": "Status setzen",
       "assign": "Zuweisen",
-      "return": "Return",
-      "callWorkflow": "Call Workflow"
+      "return": "Rückgabe",
+      "callWorkflow": "Workflow aufrufen"
     },
     "stepCard": {
       "lastStatus": "Letzter Status: {{status}} ({{timestamp}})",

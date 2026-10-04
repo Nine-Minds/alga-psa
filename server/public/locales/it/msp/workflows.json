@@ -1075,8 +1075,8 @@
       "body": "BODY",
       "thenLabel": "Allora",
       "elseLabel": "Altrimenti",
-      "tryLabel": "Try",
-      "catchLabel": "Catch",
+      "tryLabel": "Prova",
+      "catchLabel": "Cattura",
       "bodyLabel": "Corpo"
     },
     "palette": {
@@ -1430,7 +1430,7 @@
       "addValue": "Aggiungi valore",
       "builderUnavailable": "Il builder può mostrare solo condizioni formate da un elenco di controlli sui campi uniti tutti da “e” oppure tutti da “o”.",
       "modes": {
-        "builder": "Builder",
+        "builder": "Visuale",
         "expression": "Espressione"
       },
       "expressionOnlyNotice": "Questa condizione può essere modificata solo come espressione. Cancellala per ricominciare nel builder.",
@@ -1461,7 +1461,7 @@
         "is_not_empty": "non è vuoto"
       },
       "unknownEntity": "{{field}} sconosciuto",
-      "anyBoardStatus": "{{name}} (qualsiasi board)",
+      "anyBoardStatus": "{{name}} (qualsiasi bacheca)",
       "boardStatus": "{{name}} ({{board}})",
       "cancelNewCondition": "Annulla nuova condizione"
     },
@@ -1558,7 +1558,7 @@
       "noEndDate": "Nessuna data di fine",
       "warrantyEndsOn": "Garanzia fino al {{date}}",
       "noWarrantyEnd": "Nessuna data di fine garanzia",
-      "anyBoardStatus": "{{name}} (qualsiasi board)"
+      "anyBoardStatus": "{{name}} (qualsiasi bacheca)"
     },
     "clientScope": {
       "showingAll": "Tutti i clienti visualizzati",

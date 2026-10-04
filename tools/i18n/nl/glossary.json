@@ -2552,7 +2552,8 @@
       "Meter",
       "Volume",
       "Auto",
-      "auto | 50% | 120px"
+      "auto | 50% | 120px",
+      "is"
     ],
     "caseInsensitive": [
       "account",

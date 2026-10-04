@@ -1073,11 +1073,11 @@
       "try": "TRY",
       "catch": "CATCH",
       "body": "BODY",
-      "thenLabel": "Then",
-      "elseLabel": "Else",
-      "tryLabel": "Try",
-      "catchLabel": "Catch",
-      "bodyLabel": "Body"
+      "thenLabel": "Wtedy",
+      "elseLabel": "W przeciwnym razie",
+      "tryLabel": "Spróbuj",
+      "catchLabel": "Przechwyć",
+      "bodyLabel": "Treść"
     },
     "palette": {
       "showPalette": "Pokaż paletę",
@@ -2281,8 +2281,8 @@
       "humanTask": "Zadanie dla człowieka",
       "setState": "Ustaw stan",
       "assign": "Przypisz",
-      "return": "Return",
-      "callWorkflow": "Call Workflow"
+      "return": "Zwróć",
+      "callWorkflow": "Wywołaj workflow"
     },
     "stepCard": {
       "lastStatus": "Ostatni status: {{status}} ({{timestamp}})",

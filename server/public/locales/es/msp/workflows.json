@@ -1073,11 +1073,11 @@
       "try": "INTENTAR",
       "catch": "CAPTURAR",
       "body": "CUERPO",
-      "thenLabel": "Then",
-      "elseLabel": "Else",
-      "tryLabel": "Try",
-      "catchLabel": "Catch",
-      "bodyLabel": "Body"
+      "thenLabel": "Entonces",
+      "elseLabel": "Si no",
+      "tryLabel": "Intentar",
+      "catchLabel": "Capturar",
+      "bodyLabel": "Cuerpo"
     },
     "palette": {
       "showPalette": "Mostrar paleta",
@@ -2279,8 +2279,8 @@
       "humanTask": "Tarea humana",
       "setState": "Establecer estado",
       "assign": "Asignar",
-      "return": "Return",
-      "callWorkflow": "Call Workflow"
+      "return": "Retornar",
+      "callWorkflow": "Llamar flujo de trabajo"
     },
     "stepCard": {
       "lastStatus": "Último estado: {{status}} ({{timestamp}})",

@@ -479,7 +479,7 @@
     },
     "startProgress": "Conectando ao mecanismo de fluxo de trabalho…",
     "issues": {
-      "item": "item {{position}}",
+      "item": "elemento {{position}}",
       "required": "{{field}} é obrigatório",
       "type": "{{field}} deve ser {{type}}",
       "typeUnknown": "{{field}} tem um tipo de valor incorreto",
@@ -1019,11 +1019,11 @@
       "try": "TRY",
       "catch": "CATCH",
       "body": "BODY",
-      "thenLabel": "Then",
-      "elseLabel": "Else",
-      "tryLabel": "Try",
-      "catchLabel": "Catch",
-      "bodyLabel": "Body"
+      "thenLabel": "Então",
+      "elseLabel": "Senão",
+      "tryLabel": "Tentar",
+      "catchLabel": "Capturar",
+      "bodyLabel": "Corpo"
     },
     "palette": {
       "showPalette": "Mostrar paleta",
@@ -2157,8 +2157,8 @@
       "humanTask": "Tarefa Humana",
       "setState": "Definir estado",
       "assign": "Atribuir",
-      "return": "Return",
-      "callWorkflow": "Call Workflow"
+      "return": "Retornar",
+      "callWorkflow": "Chamar fluxo de trabalho"
     },
     "stepCard": {
       "lastStatus": "Último status: {{status}} ({{timestamp}})",

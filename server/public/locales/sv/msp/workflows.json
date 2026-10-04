@@ -1019,11 +1019,11 @@
       "try": "Try",
       "catch": "Catch",
       "body": "Innehåll",
-      "thenLabel": "Then",
-      "elseLabel": "Else",
-      "tryLabel": "Try",
-      "catchLabel": "Catch",
-      "bodyLabel": "Body"
+      "thenLabel": "Då",
+      "elseLabel": "Annars",
+      "tryLabel": "Försök",
+      "catchLabel": "Fånga",
+      "bodyLabel": "Innehåll"
     },
     "palette": {
       "showPalette": "Visa palett",
@@ -2157,8 +2157,8 @@
       "humanTask": "Manuell uppgift",
       "setState": "Ange tillstånd",
       "assign": "Tilldela",
-      "return": "Return",
-      "callWorkflow": "Call Workflow"
+      "return": "Retur",
+      "callWorkflow": "Anropa arbetsflöde"
     },
     "stepCard": {
       "lastStatus": "Senaste status: {{status}} ({{timestamp}})",
