@@ -2047,7 +2047,7 @@
         "board": "Remplacer le tableau et le statut",
         "priority": "Remplacer la priorité",
         "category": "Remplacer la catégorie",
-        "assignment": "Remplacer l'assignation"
+        "assignment": "Remplacer l'affectation"
       },
       "attachedTo": "Associé au ticket généré",
       "contact": "Contact",
@@ -2059,7 +2059,7 @@
         "board": "Tableau et statut",
         "priority": "Priorité",
         "category": "Catégorie",
-        "assignment": "Assignation"
+        "assignment": "Affectation"
       }
     },
     "sections": {

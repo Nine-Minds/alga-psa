@@ -2044,7 +2044,7 @@
       "title": "Impostazioni per {{client}}",
       "intro": "Scegli i campi del ticket che questo cliente imposta in modo diverso dal ticket ricorrente. Tutto il resto viene ereditato e segue le modifiche successive al ticket ricorrente.",
       "groups": {
-        "board": "Personalizza board e stato",
+        "board": "Personalizza bacheca e stato",
         "priority": "Personalizza priorità",
         "category": "Personalizza categoria",
         "assignment": "Personalizza assegnazione"
@@ -2056,7 +2056,7 @@
       "noLocation": "Nessuna sede",
       "assets": "Asset",
       "groupNames": {
-        "board": "Board e stato",
+        "board": "Bacheca e stato",
         "priority": "Priorità",
         "category": "Categoria",
         "assignment": "Assegnazione"
@@ -2071,10 +2071,10 @@
       "behaviour": "Comportamento"
     },
     "fields": {
-      "board": "Board",
-      "boardPlaceholder": "Seleziona una board",
+      "board": "Bacheca",
+      "boardPlaceholder": "Seleziona una bacheca",
       "status": "Stato",
-      "statusBoardDefault": "Predefinito della board",
+      "statusBoardDefault": "Predefinito della bacheca",
       "priority": "Priorità",
       "priorityPlaceholder": "Seleziona una priorità",
       "category": "Categoria",

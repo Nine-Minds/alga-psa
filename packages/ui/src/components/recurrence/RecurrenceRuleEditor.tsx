@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useCallback } from 'react';
-import { WEEKDAYS, type RecurrenceRule, type Weekday } from '@alga-psa/shared/lib/recurrence';
+import { WEEKDAYS, type RecurrenceRule, type Weekday } from '@alga-psa/types';
 import { Button } from '../Button';
 import { Checkbox } from '../Checkbox';
 import CustomSelect from '../CustomSelect';

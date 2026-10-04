@@ -259,6 +259,12 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   // Import/export
   'import_sources',
 
+  // Recurring tickets. Client asset links FK to definition clients and assets;
+  // definition clients FK to definitions and clients; occurrences FK to
+  // definitions only. All four go before assets and clients.
+  'recurring_ticket_client_assets', 'recurring_ticket_occurrences',
+  'recurring_ticket_definition_clients', 'recurring_ticket_definitions',
+
   // Asset details
   'asset_remote_access_links',
   'asset_maintenance_occurrences',

@@ -2044,7 +2044,7 @@
       "title": "Instellingen voor {{client}}",
       "intro": "Kies de ticketvelden die deze klant anders instelt dan het terugkerende ticket. Al het overige wordt overgenomen en volgt latere wijzigingen aan het terugkerende ticket.",
       "groups": {
-        "board": "Board en status overschrijven",
+        "board": "Bord en status overschrijven",
         "priority": "Prioriteit overschrijven",
         "category": "Categorie overschrijven",
         "assignment": "Toewijzing overschrijven"
@@ -2056,7 +2056,7 @@
       "noLocation": "Geen locatie",
       "assets": "Assets",
       "groupNames": {
-        "board": "Board en status",
+        "board": "Bord en status",
         "priority": "Prioriteit",
         "category": "Categorie",
         "assignment": "Toewijzing"
@@ -2071,10 +2071,10 @@
       "behaviour": "Gedrag"
     },
     "fields": {
-      "board": "Board",
-      "boardPlaceholder": "Selecteer een board",
+      "board": "Bord",
+      "boardPlaceholder": "Selecteer een bord",
       "status": "Status",
-      "statusBoardDefault": "Standaard van het board",
+      "statusBoardDefault": "Standaard van het bord",
       "priority": "Prioriteit",
       "priorityPlaceholder": "Selecteer een prioriteit",
       "category": "Categorie",

@@ -8,9 +8,29 @@
  * inline recurrence UI in EntryPopup should eventually move onto this rule type.
  */
 import { z } from 'zod';
+import {
+  WEEKDAYS,
+  type DailyRule,
+  type MonthlyOn,
+  type MonthlyRule,
+  type RecurrenceEnd,
+  type RecurrenceRule,
+  type WeeklyRule,
+  type YearlyRule,
+} from '@alga-psa/types';
 
-export const WEEKDAYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] as const;
-export type Weekday = (typeof WEEKDAYS)[number];
+// The rule types live in @alga-psa/types so packages below `shared` (the UI editor) can use them.
+export {
+  WEEKDAYS,
+  type DailyRule,
+  type MonthlyOn,
+  type MonthlyRule,
+  type RecurrenceEnd,
+  type RecurrenceRule,
+  type WeeklyRule,
+  type YearlyRule,
+};
+export type { Weekday } from '@alga-psa/types';
 
 export const weekdaySchema = z.enum(WEEKDAYS);
 
@@ -33,7 +53,6 @@ export const recurrenceEndSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('onDate'), date: dateStringSchema }),
   z.object({ type: z.literal('afterCount'), count: z.number().int().min(1).max(10000) }),
 ]);
-export type RecurrenceEnd = z.infer<typeof recurrenceEndSchema>;
 
 const endField = recurrenceEndSchema.default({ type: 'never' });
 
@@ -92,7 +111,7 @@ const yearlyRuleSchema = z.object({
  *   weekday vs. every Nth weekday), so the combination is rejected instead of guessing.
  * - Yearly day must exist in the month (Feb 29 is allowed and clamps to Feb 28 in non-leap years).
  */
-export const recurrenceRuleSchema = z
+const inferredRecurrenceRuleSchema = z
   .discriminatedUnion('frequency', [dailyRuleSchema, weeklyRuleSchema, monthlyRuleSchema, yearlyRuleSchema])
   .superRefine((rule, ctx) => {
     if (rule.frequency === 'daily' && rule.weekdaysOnly && rule.interval !== 1) {
@@ -111,12 +130,39 @@ export const recurrenceRuleSchema = z
     }
   });
 
-export type RecurrenceRule = z.infer<typeof recurrenceRuleSchema>;
-export type DailyRule = z.infer<typeof dailyRuleSchema>;
-export type WeeklyRule = z.infer<typeof weeklyRuleSchema>;
-export type MonthlyRule = z.infer<typeof monthlyRuleSchema>;
-export type YearlyRule = z.infer<typeof yearlyRuleSchema>;
-export type MonthlyOn = z.infer<typeof monthlyOnSchema>;
+/**
+ * Compile-time proof that each schema validates exactly its hand-written type (both directions).
+ *
+ * `DeepRequired` strips the optional markers `z.infer` adds when a package compiles with
+ * `strict: false` (this one does), so the comparison means the same thing in every consumer.
+ */
+type DeepRequired<T> = T extends readonly (infer U)[]
+  ? DeepRequired<U>[]
+  : T extends object
+    ? { [K in keyof T]-?: DeepRequired<T[K]> }
+    : T;
+type Exactly<A, B> = [A] extends [B] ? ([B] extends [A] ? true : false) : false;
+type MatchesSchema<S extends z.ZodTypeAny, T> = Exactly<DeepRequired<z.infer<S>>, T>;
+const schemasMatchTypes: [
+  MatchesSchema<typeof inferredRecurrenceRuleSchema, RecurrenceRule>,
+  MatchesSchema<typeof dailyRuleSchema, DailyRule>,
+  MatchesSchema<typeof weeklyRuleSchema, WeeklyRule>,
+  MatchesSchema<typeof monthlyRuleSchema, MonthlyRule>,
+  MatchesSchema<typeof yearlyRuleSchema, YearlyRule>,
+  MatchesSchema<typeof monthlyOnSchema, MonthlyOn>,
+  MatchesSchema<typeof recurrenceEndSchema, RecurrenceEnd>,
+] = [true, true, true, true, true, true, true];
+void schemasMatchTypes;
+
+/**
+ * The rule schema, typed with the hand-written output so `.parse()` yields a `RecurrenceRule` even
+ * under `strict: false`. The assertion above is what makes this cast safe.
+ */
+export const recurrenceRuleSchema = inferredRecurrenceRuleSchema as unknown as z.ZodType<
+  RecurrenceRule,
+  z.ZodTypeDef,
+  z.input<typeof inferredRecurrenceRuleSchema>
+>;
 
 export type NonBusinessDayPolicy = 'keep' | 'previous' | 'next';
 export const NON_BUSINESS_DAY_POLICIES = ['keep', 'previous', 'next'] as const;

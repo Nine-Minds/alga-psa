@@ -725,6 +725,84 @@ describe('client merge into a billing profile (TM010, TM011, TM012, TM016)', () 
       .toMatchObject({ is_entity_logo: true, entity_logo_variant: 'wide' });
   }, HOOK_TIMEOUT);
 
+  it('TM020: moves recurring ticket enrolments and run history; a shared definition keeps the target\'s enrolment', async () => {
+    const target = await seedClient('Recurring Group');
+    const source = await seedClient('Recurring North');
+    await ensureDefaultBillingProfile({ db, tenantId }, target);
+    await ensureDefaultBillingProfile({ db, tenantId }, source);
+
+    const seedDefinition = async (name: string): Promise<string> => {
+      const definitionId = uuidv4();
+      await table('recurring_ticket_definitions').insert({
+        tenant: tenantId,
+        definition_id: definitionId,
+        name,
+        title_template: `${name} — {{month}}`,
+        board_id: uuidv4(),
+        priority_id: uuidv4(),
+        recurrence: JSON.stringify({ frequency: 'monthly', interval: 1, on: { type: 'dayOfMonth', day: 1 }, end: { type: 'never' } }),
+        start_date: '2026-01-01',
+      });
+      return definitionId;
+    };
+    const enrol = async (definitionId: string, clientId: string): Promise<string> => {
+      const definitionClientId = uuidv4();
+      await table('recurring_ticket_definition_clients').insert({
+        tenant: tenantId,
+        definition_client_id: definitionClientId,
+        definition_id: definitionId,
+        client_id: clientId,
+        evaluated_through: new Date('2026-01-01T00:00:00Z'),
+      });
+      return definitionClientId;
+    };
+
+    // Only the source is enrolled in `patching`; both are enrolled in `backups`.
+    const patching = await seedDefinition('Patching');
+    const backups = await seedDefinition('Backups');
+    const sourcePatching = await enrol(patching, source);
+    const sourceBackups = await enrol(backups, source);
+    const targetBackups = await enrol(backups, target);
+
+    const assetId = uuidv4();
+    await table('assets').insert({
+      tenant: tenantId, asset_id: assetId, asset_type: 'workstation', client_id: source,
+      asset_tag: 'RT-1', name: 'RT-1', status: 'active',
+    });
+    await table('recurring_ticket_client_assets').insert([
+      { tenant: tenantId, definition_client_id: sourcePatching, asset_id: assetId },
+      { tenant: tenantId, definition_client_id: sourceBackups, asset_id: assetId },
+    ]);
+    for (const [definitionId, definitionClientId] of [[patching, sourcePatching], [backups, sourceBackups]]) {
+      await table('recurring_ticket_occurrences').insert({
+        tenant: tenantId, definition_id: definitionId, definition_client_id: definitionClientId,
+        client_id: source, occurrence_date: '2026-02-01', due_date: '2026-02-01', status: 'created',
+      });
+    }
+
+    await db.transaction((trx) =>
+      executeClientMerge(trx, tenantId, userId, { sourceClientId: source, targetClientId: target }));
+
+    // Nothing is left generating tickets for the archived client.
+    expect(await table('recurring_ticket_definition_clients').where({ client_id: source })).toEqual([]);
+    const enrolments = await table('recurring_ticket_definition_clients')
+      .where({ client_id: target })
+      .select('definition_id', 'definition_client_id');
+    expect(enrolments.map((row: any) => [row.definition_id, row.definition_client_id]).sort())
+      .toEqual([[patching, sourcePatching], [backups, targetBackups]].sort());
+
+    // The moved enrolment keeps its id, so its asset links and idempotency ledger
+    // come with it; the superseded one takes its asset links with it.
+    expect((await table('recurring_ticket_client_assets').where({ asset_id: assetId }))
+      .map((row: any) => row.definition_client_id)).toEqual([sourcePatching]);
+
+    // Run history follows the tickets, including the superseded enrolment's.
+    const runs = await table('recurring_ticket_occurrences')
+      .whereIn('definition_client_id', [sourcePatching, sourceBackups]);
+    expect(runs).toHaveLength(2);
+    expect(runs.every((row: any) => row.client_id === target)).toBe(true);
+  }, HOOK_TIMEOUT);
+
   it('TM019: accounts for every client-keyed table in the schema', async () => {
     // A table nobody thought about does not fail loudly — its rows just stay on
     // the archived client, keeping a live write path aimed at a tombstone. The
