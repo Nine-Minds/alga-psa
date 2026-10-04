@@ -37,6 +37,40 @@ vi.mock('@alga-psa/ui/components/CustomSelect', () => ({
   ),
 }));
 
+// Non-dedicated picker kinds (priority, status, category, role, ...) render a searchable select.
+vi.mock('@alga-psa/ui/components/SearchableSelect', () => ({
+  __esModule: true,
+  default: ({
+    id,
+    options,
+    value,
+    onChange,
+    disabled,
+  }: {
+    id?: string;
+    options: Array<{ value: string; label: string }>;
+    value?: string;
+    onChange?: (value: string) => void;
+    disabled?: boolean;
+  }) => (
+    <div id={id ? `${id}-container` : undefined}>
+      <select
+        data-testid={id}
+        value={value ?? ''}
+        disabled={disabled}
+        onChange={(event) => onChange?.(event.target.value)}
+      >
+        <option value="">--</option>
+        {options.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+    </div>
+  ),
+}));
+
 vi.mock('@alga-psa/ui/components/settings/general/BoardPicker', () => ({
   BoardPicker: ({
     id,
@@ -379,6 +413,14 @@ vi.mock('@alga-psa/teams/actions', () => ({
   getTeamAvatarUrlsBatchAction: vi.fn().mockResolvedValue({}),
 }));
 
+vi.mock('@alga-psa/auth/actions', () => ({
+  getRoles: vi.fn(async () => [
+    { role_id: 'role-admin', role_name: 'Admin', msp: true },
+    { role_id: 'role-tech', role_name: 'Technician', msp: true },
+    { role_id: 'role-portal', role_name: 'Client Portal User', msp: false },
+  ]),
+}));
+
 vi.mock('@alga-psa/user-composition/actions', () => ({
   getAllUsersBasic: vi.fn().mockResolvedValue([
     {
@@ -697,6 +739,46 @@ describe('InputMappingEditor picker-backed fields', () => {
     );
   });
 
+  it('renders entity picker arrays other than users as a removable list with an add picker', async () => {
+    const onChange = vi.fn();
+    await act(async () => {
+      render(
+        <InputMappingEditor
+          value={{ role_ids: ['role-admin'] }}
+          onChange={onChange}
+          targetFields={[
+            {
+              name: 'role_ids',
+              type: 'array',
+              editor: {
+                kind: 'picker',
+                inline: { mode: 'picker-summary' },
+                fixedValueHint: 'Search roles',
+                allowsDynamicReference: true,
+                picker: { resource: 'role' },
+              },
+              constraints: { itemType: 'string' },
+            },
+          ]}
+          fieldOptions={[]}
+          stepId="step-role-picker"
+          positionsHandlers={positionsHandlers}
+        />
+      );
+    });
+
+    await waitFor(() => expect(screen.getByText('Admin')).toBeInTheDocument());
+    // Client-portal roles are not offered, and already-picked roles are not offered twice.
+    await waitFor(() =>
+      expect(getSelectValues('mapping-step-role-picker-role_ids-literal-picker')).toEqual(['', 'role-tech'])
+    );
+
+    fireEvent.change(screen.getByTestId('mapping-step-role-picker-role_ids-literal-picker'), {
+      target: { value: 'role-tech' },
+    });
+    expect(onChange).toHaveBeenLastCalledWith({ role_ids: ['role-admin', 'role-tech'] });
+  });
+
   it('T167/T168/T191/T192/T193/T194/T195/T196/T197/T198/T199/T309: picker-backed fields can switch to reference and back to fixed without losing picker UI', async () => {
     const changeSpy = vi.fn();
 
@@ -735,20 +817,20 @@ describe('InputMappingEditor picker-backed fields', () => {
     ).toBeInTheDocument();
 
     await act(async () => {
-      fireEvent.change(screen.getByTestId('mapping-step-picker-modes-board_id-source-mode'), {
-        target: { value: 'reference' },
+      fireEvent.change(screen.getByTestId('mapping-step-picker-modes-board_id-value-source'), {
+        target: { value: 'payload.board.id' },
       });
     });
 
     expect(changeSpy).toHaveBeenLastCalledWith({
       board_id: {
-        $expr: '',
+        $expr: 'payload.board.id',
       },
     });
 
     await act(async () => {
-      fireEvent.change(screen.getByTestId('mapping-step-picker-modes-board_id-source-mode'), {
-        target: { value: 'fixed' },
+      fireEvent.change(screen.getByTestId('mapping-step-picker-modes-board_id-value-source'), {
+        target: { value: '__workflow-value-source:fixed' },
       });
     });
 
@@ -1214,13 +1296,13 @@ describe('InputMappingEditor picker-backed fields', () => {
     expect(screen.getByText('Choose a fixed Client first to load location options.')).toBeVisible();
 
     await act(async () => {
-      fireEvent.change(screen.getByTestId('mapping-step-dynamic-client-scope-contact_id-source-mode'), {
-        target: { value: 'reference' },
+      fireEvent.change(screen.getByTestId('mapping-step-dynamic-client-scope-contact_id-value-source'), {
+        target: { value: 'payload.ticket.id' },
       });
     });
 
     expect(screen.getByTestId('dynamic-client-mapping-value').textContent).toContain(
-      '"contact_id":{"$expr":""}'
+      '"contact_id":{"$expr":"payload.ticket.id"}'
     );
 
     cleanup();

@@ -1,4 +1,5 @@
 import type { ExpressionContext } from './expression-editor';
+import { WORKFLOW_CAUGHT_ERROR_SCHEMA } from '@alga-psa/workflows/authoring';
 import { inferTypeFromJsonSchema } from './mapping/typeCompatibility';
 import type { WorkflowDataContext } from './mapping/MappingPanel';
 import type { JsonSchema } from './workflowDataContext';
@@ -76,13 +77,7 @@ export const buildWorkflowReferenceExpressionContext = (
 
   const errorSchema: JsonSchema | undefined = ctx.inCatchBlock
     ? {
-        type: 'object',
-        properties: {
-          name: { type: 'string', description: 'Error name' },
-          message: { type: 'string', description: 'Error message' },
-          stack: { type: 'string', description: 'Stack trace' },
-          nodePath: { type: 'string', description: 'Error location in workflow' },
-        },
+        ...(WORKFLOW_CAUGHT_ERROR_SCHEMA as unknown as JsonSchema),
       }
     : undefined;
 

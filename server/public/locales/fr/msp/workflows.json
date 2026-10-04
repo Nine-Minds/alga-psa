@@ -1027,7 +1027,7 @@
           "description": "Attendre une durée ou jusqu’à une date/heure"
         },
         "transform.assign": {
-          "label": "Assigner",
+          "label": "Définir des variables",
           "description": "Assigner des valeurs à la charge utile ou aux variables"
         },
         "action.call": {

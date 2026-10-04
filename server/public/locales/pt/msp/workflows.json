@@ -951,7 +951,7 @@
           "description": "Aguarde um período ou até uma data/hora"
         },
         "transform.assign": {
-          "label": "Atribuir",
+          "label": "Definir variáveis",
           "description": "Atribuir valores em payload ou vars"
         },
         "action.call": {

@@ -1027,7 +1027,7 @@
           "description": "Auf eine Dauer oder bis zu einem Datum/Uhrzeit warten"
         },
         "transform.assign": {
-          "label": "Zuweisen",
+          "label": "Variablen setzen",
           "description": "Werte in Nutzdaten oder Variablen zuweisen"
         },
         "action.call": {
