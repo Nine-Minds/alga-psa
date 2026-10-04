@@ -139,6 +139,13 @@ class FakeQueryBuilder {
   }
 
   whereIn(column: string, values: any[]): this {
+    if (column === 'author_type') {
+      // Postgres rejects values outside the comment_author_type enum, so the mock does too.
+      const invalid = values.filter((value) => !['internal', 'client', 'unknown'].includes(value));
+      if (invalid.length > 0) {
+        throw new Error(`invalid input value for enum comment_author_type: "${invalid[0]}"`);
+      }
+    }
     this.inclusions.push({ column, values });
     return this;
   }
@@ -444,7 +451,7 @@ function createFindComments(): TableRow[] {
       created_at: '2026-03-10T10:00:00.000Z',
       user_id: null,
       contact_id: findIds.contactId,
-      author_type: 'contact',
+      author_type: 'client',
     },
     {
       tenant: 'tenant-1',
@@ -470,7 +477,7 @@ function createFindComments(): TableRow[] {
       created_at: '2026-03-10T12:00:00.000Z',
       user_id: null,
       contact_id: findIds.contactId,
-      author_type: 'contact',
+      author_type: 'client',
     },
   ];
 }
@@ -935,7 +942,7 @@ describe('ticket workflow runtime board-scoped statuses', () => {
       tickets: [createFindTicket()],
       comments: [
         comment('99999999-9999-4999-8999-999999999991', '2026-03-10T10:00:00.000Z', { author_type: 'client', contact_id: findIds.contactId }),
-        comment('99999999-9999-4999-8999-999999999992', '2026-03-10T11:00:00.000Z', { author_type: 'contact', is_internal: true }),
+        comment('99999999-9999-4999-8999-999999999992', '2026-03-10T11:00:00.000Z', { author_type: 'client', is_internal: true }),
         comment('99999999-9999-4999-8999-999999999993', '2026-03-10T12:00:00.000Z', { author_type: 'internal' }),
       ],
     });
@@ -944,7 +951,7 @@ describe('ticket workflow runtime board-scoped statuses', () => {
     const result = await action.handler({ ticket_id: findIds.ticketId }, createActionContext());
 
     expect(result.latest_comment?.comment_id).toBe('99999999-9999-4999-8999-999999999993');
-    // Internal notes are never the customer's reply, even when authored as a contact.
+    // Internal notes are never the customer's reply, even when authored by a client.
     expect(result.latest_customer_comment?.comment_id).toBe('99999999-9999-4999-8999-999999999991');
     expect(result.latest_customer_comment?.note).toBe('note 99999999-9999-4999-8999-999999999991');
     expect(result.comments).toBeUndefined();
