@@ -316,7 +316,10 @@ export const buildActionInputEditorState = (
   } = flattenRequiredActionInputFields(actionInputFields, inputMapping);
   const mappedInputFieldCount = Object.keys(inputMapping).length;
 
-  const oneOfNames = selectedAction?.inputSchema?.['x-workflow-require-one-of'] ?? [];
+  // The registry serializes a named schema as a $ref into definitions; the rule sits on the definition.
+  const oneOfNames = selectedAction?.inputSchema
+    ? resolveSchema(selectedAction.inputSchema, selectedAction.inputSchema)['x-workflow-require-one-of'] ?? []
+    : [];
   const oneOfFields = actionInputFields.filter((field) => oneOfNames.includes(field.name));
   const requireOneOf =
     oneOfFields.length > 0

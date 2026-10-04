@@ -757,15 +757,21 @@ describe('require-one-of inputs', () => {
   const lookupAction: WorkflowDesignerActionRegistryItem = {
     id: 'contacts.find',
     version: 1,
+    // As the registry serializes it: a named schema, so the rule lives on the referenced definition.
     inputSchema: {
-      type: 'object',
-      properties: {
-        contact_id: { type: 'string' },
-        email: { type: 'string' },
-        phone: { type: 'string' },
-        client_id: { type: 'string' },
+      $ref: '#/definitions/contacts.find@1.input',
+      definitions: {
+        'contacts.find@1.input': {
+          type: 'object',
+          properties: {
+            contact_id: { type: 'string' },
+            email: { type: 'string' },
+            phone: { type: 'string' },
+            client_id: { type: 'string' },
+          },
+          'x-workflow-require-one-of': ['contact_id', 'email', 'phone'],
+        },
       },
-      'x-workflow-require-one-of': ['contact_id', 'email', 'phone'],
     },
     outputSchema: { type: 'object' },
   };
