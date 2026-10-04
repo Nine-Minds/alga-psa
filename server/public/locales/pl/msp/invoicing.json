@@ -2105,7 +2105,8 @@
         "selectedCount": "Zaznaczono {{count}}",
         "clear": "Wyczyść zaznaczenie"
       }
-    }
+    },
+    "emptyTimeHint": "Zatwierdzony czas i materiały nigdy nie trafiają do tej kolejki — są rozliczane w zwykłym przebiegu fakturowania lub przyciskiem Wygeneruj fakturę projektu."
   },
   "invoiceDesigner": {
     "transforms": {

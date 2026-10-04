@@ -159,6 +159,8 @@ export interface IProjectTicketLink extends TenantEntity {
   phase_id: string | null;
   task_id: string | null;
   ticket_id: string;
+  /** Bills this ticket's time as project time. Default true; untick for reference-only links. */
+  bill_under_project: boolean;
   created_at: Date;
 }
 
@@ -180,6 +182,7 @@ export interface ITicketLinkedTask {
   phase_name: string | null;
   status_name: string | null;
   is_closed: boolean | null;
+  bill_under_project: boolean;
   restricted?: boolean;
 }
 

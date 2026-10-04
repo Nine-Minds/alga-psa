@@ -509,7 +509,14 @@
     "linkedToTaskSuccess": "Ticket collegato all’attività con successo",
     "failedLoadTask": "Impossibile caricare l’attività",
     "clientFallback": "Cliente",
-    "defaultNewStatus": "Nuovo"
+    "defaultNewStatus": "Nuovo",
+    "billUnderProjectLabel": "Fattura le ore di questo ticket come ore di progetto",
+    "billingOffBadge": "Fatturato a livello cliente",
+    "billingOnTooltip": "Non fatturare più le ore di questo ticket come ore di progetto",
+    "billingOffTooltip": "Fattura le ore di questo ticket come ore di progetto",
+    "billingOnSuccess": "Le ore di questo ticket saranno fatturate come ore di progetto",
+    "billingOffSuccess": "Le ore di questo ticket saranno fatturate a livello cliente",
+    "billingUpdateFailed": "Impossibile aggiornare la fatturazione del ticket"
   },
   "materials": {
     "title": "Materiali del progetto",
@@ -804,7 +811,9 @@
       "task": "Attività",
       "tasks": "Attività",
       "badgeCount_other": "{{count}} Attività",
-      "badgeCount_one": "{{count}} Attività"
+      "badgeCount_one": "{{count}} Attività",
+      "billsToProject": "Le ore sono fatturate come ore di progetto",
+      "billsToClient": "Le ore sono fatturate a livello cliente"
     },
     "bulkMoveTask": {
       "title": "Sposta attività",
@@ -1748,6 +1757,7 @@
     "cap": {
       "title": "Limite di budget",
       "hint": "Tempo e materiali vengono fatturati alle tariffe previste fino a un limite massimo facoltativo.",
+      "currencyStale": "Il limite salvato è in {{projectCurrency}}, valuta in cui non vengono emesse le fatture di questo progetto. Inserisci il limite in {{invoiceCurrency}} per portare questo progetto a {{invoiceCurrency}}; fino ad allora non viene applicato alcun limite.",
       "amount": "Importo limite ({{currency}})",
       "behavior": "Al raggiungimento",
       "notify": "Solo notifica",
@@ -1798,7 +1808,8 @@
       "tmHardHint": "Limite rigido di {{cap}} — la fatturazione si arresta al limite",
       "tmNotifyHint": "Limite di budget di {{cap}} — solo notifica",
       "thresholdMarker": "Soglia di notifica al {{pct}}%",
-      "writtenDown": "Stornato oltre il limite: {{amount}}"
+      "writtenDown": "Stornato oltre il limite: {{amount}}",
+      "currencyStale": "Gli importi qui sono in {{projectCurrency}}, ma le fatture di questo progetto vengono emesse in {{invoiceCurrency}}, quindi un limite di budget calcolato qui non viene applicato."
     },
     "economics": {
       "title": "Economia dell'erogazione",

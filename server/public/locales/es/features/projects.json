@@ -509,7 +509,14 @@
     "linkedToTaskSuccess": "Ticket vinculado a la tarea correctamente",
     "failedLoadTask": "No se pudo cargar la tarea",
     "clientFallback": "Cliente",
-    "defaultNewStatus": "Nuevo"
+    "defaultNewStatus": "Nuevo",
+    "billUnderProjectLabel": "Facturar el tiempo de este ticket como tiempo del proyecto",
+    "billingOffBadge": "Facturado a nivel de cliente",
+    "billingOnTooltip": "Dejar de facturar el tiempo de este ticket como tiempo del proyecto",
+    "billingOffTooltip": "Facturar el tiempo de este ticket como tiempo del proyecto",
+    "billingOnSuccess": "El tiempo de este ticket se facturará como tiempo del proyecto",
+    "billingOffSuccess": "El tiempo de este ticket se facturará a nivel de cliente",
+    "billingUpdateFailed": "No se pudo actualizar la facturación del ticket"
   },
   "materials": {
     "title": "Materiales del proyecto",
@@ -804,7 +811,9 @@
       "task": "Tarea",
       "tasks": "Tareas",
       "badgeCount_other": "{{count}} Tareas",
-      "badgeCount_one": "{{count}} Tarea"
+      "badgeCount_one": "{{count}} Tarea",
+      "billsToProject": "El tiempo se factura como tiempo del proyecto",
+      "billsToClient": "El tiempo se factura a nivel de cliente"
     },
     "bulkMoveTask": {
       "title": "Mover tareas",
@@ -1748,6 +1757,7 @@
     "cap": {
       "title": "Límite presupuestario",
       "hint": "El tiempo y los materiales se facturan según las tarifas hasta un límite máximo opcional.",
+      "currencyStale": "El límite guardado está en {{projectCurrency}}, moneda en la que no se emiten las facturas de este proyecto. Introduzca el límite en {{invoiceCurrency}} para pasar este proyecto a {{invoiceCurrency}}; hasta entonces no se aplica ningún límite.",
       "amount": "Importe del límite ({{currency}})",
       "behavior": "Al alcanzarlo",
       "notify": "Solo notificar",
@@ -1798,7 +1808,8 @@
       "tmHardHint": "Límite estricto de {{cap}} — la facturación se detiene en el límite",
       "tmNotifyHint": "Límite presupuestario de {{cap}} — solo notificar",
       "thresholdMarker": "Umbral de notificación del {{pct}} %",
-      "writtenDown": "Dado de baja por encima del límite: {{amount}}"
+      "writtenDown": "Dado de baja por encima del límite: {{amount}}",
+      "currencyStale": "Los importes aquí están en {{projectCurrency}}, pero las facturas de este proyecto se emiten en {{invoiceCurrency}}, por lo que un límite presupuestario contabilizado aquí no se aplica."
     },
     "economics": {
       "title": "Rentabilidad de la prestación",

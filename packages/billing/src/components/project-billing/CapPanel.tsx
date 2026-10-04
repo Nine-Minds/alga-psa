@@ -20,6 +20,8 @@ import { useCurrencyFormat } from '@alga-psa/ui/lib';
 interface CapPanelProps {
   config: IProjectBillingConfig;
   canManage: boolean;
+  /** Currency this project's invoices bill in; a cap in any other currency is never applied. */
+  invoiceCurrency: string | null;
   onChanged: () => void;
 }
 
@@ -33,17 +35,32 @@ function centsToMajor(cents: number | null, digits: number): string {
  * edits go through updateProjectBillingConfig, whose
  * server-side validation (F127) surfaces here as an error toast.
  */
-export default function CapPanel({ config, canManage, onChanged }: CapPanelProps) {
+export default function CapPanel({ config, canManage, invoiceCurrency, onChanged }: CapPanelProps) {
   const { t, i18n } = useTranslation(['features/projects', 'common']);
   const { currencyCode, fractionDigits } = useCurrencyFormat();
   const currency = config.currency;
-  const resolvedCurrency = currency ?? currencyCode;
-  const [capText, setCapText] = useState(centsToMajor(config.cap_amount, fractionDigits(currency ?? undefined)));
+  // A cap only bites when it is counted in the currency the invoice bills in,
+  // so once the two have parted — the client changed currency, or an active
+  // contract bills this client in another one — the biller enters the cap in
+  // the invoice's currency and saving re-pins the project to it.
+  const staleCurrency = currency && invoiceCurrency
+    && currency.toUpperCase() !== invoiceCurrency.toUpperCase()
+    ? invoiceCurrency.toUpperCase()
+    : null;
+  const resolvedCurrency = staleCurrency ?? currency ?? currencyCode;
+  const [capText, setCapText] = useState(
+    staleCurrency ? '' : centsToMajor(config.cap_amount, fractionDigits(currency ?? undefined)),
+  );
   const [thresholdsText, setThresholdsText] = useState((config.cap_notify_thresholds ?? []).join(', '));
   const [saving, setSaving] = useState(false);
 
   const handleSave = async () => {
     const hasCap = capText.trim() !== '';
+    // The amount field starts blank on a stale-currency project, so leaving it
+    // blank means "I only came for the thresholds" -- not "remove the cap".
+    // Keep the dormant figure and its currency: re-pinning the currency without
+    // a new amount would make the old number start biting as the new one.
+    const keepStaleCap = Boolean(staleCurrency) && !hasCap;
     let capAmount: number | null = null;
     if (hasCap) {
       const major = Number(capText);
@@ -62,9 +79,10 @@ export default function CapPanel({ config, canManage, onChanged }: CapPanelProps
     setSaving(true);
     try {
       const result = await updateProjectBillingConfig(config.config_id, {
-        cap_amount: capAmount,
+        ...(keepStaleCap ? {} : { cap_amount: capAmount }),
         cap_behavior: hasCap ? 'hard_cap' : undefined,
         cap_notify_thresholds: thresholds,
+        ...(staleCurrency && !keepStaleCap ? { currency: staleCurrency } : {}),
       });
       if (isActionMessageError(result) || isActionPermissionError(result)) {
         toast.error(getErrorMessage(result));
@@ -85,6 +103,15 @@ export default function CapPanel({ config, canManage, onChanged }: CapPanelProps
       <p className="mt-0.5 text-xs text-[rgb(var(--color-text-500))]">
         {t('billing.cap.hint', 'Time & materials bills at rates up to an optional not-to-exceed cap.')}
       </p>
+      {staleCurrency && (
+        <p id="project-billing-cap-currency-stale" className="mt-2 text-xs text-amber-700 dark:text-amber-300">
+          {t(
+            'billing.cap.currencyStale',
+            'The saved cap is in {{projectCurrency}}, which this project\'s invoices do not bill in. Enter the cap in {{invoiceCurrency}} to move this project to {{invoiceCurrency}}; until then no cap is applied.',
+            { projectCurrency: (currency ?? '').toUpperCase(), invoiceCurrency: staleCurrency },
+          )}
+        </p>
+      )}
 
       <div className="mt-3 grid grid-cols-2 gap-3">
         <div>

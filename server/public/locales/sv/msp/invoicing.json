@@ -2055,7 +2055,8 @@
         "selectedCount": "Markerade: {{count}}",
         "clear": "Rensa"
       }
-    }
+    },
+    "emptyTimeHint": "Godkänd tid och godkänt material köas aldrig här – de faktureras via den vanliga faktureringskörningen eller projektets knapp Skapa projektfaktura."
   },
   "invoiceDesigner": {
     "transforms": {

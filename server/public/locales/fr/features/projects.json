@@ -509,7 +509,14 @@
     "linkedToTaskSuccess": "Ticket lié à la tâche avec succès",
     "failedLoadTask": "Échec du chargement de la tâche",
     "clientFallback": "Client",
-    "defaultNewStatus": "Nouveau"
+    "defaultNewStatus": "Nouveau",
+    "billUnderProjectLabel": "Facturer le temps de ce ticket comme temps de projet",
+    "billingOffBadge": "Facturé au niveau du client",
+    "billingOnTooltip": "Ne plus facturer le temps de ce ticket comme temps de projet",
+    "billingOffTooltip": "Facturer le temps de ce ticket comme temps de projet",
+    "billingOnSuccess": "Le temps de ce ticket sera facturé comme temps de projet",
+    "billingOffSuccess": "Le temps de ce ticket sera facturé au niveau du client",
+    "billingUpdateFailed": "Impossible de mettre à jour la facturation du ticket"
   },
   "materials": {
     "title": "Matériaux du projet",
@@ -804,7 +811,9 @@
       "task": "Tâche",
       "tasks": "Tâches",
       "badgeCount_other": "{{count}} Tâches",
-      "badgeCount_one": "{{count}} Tâche"
+      "badgeCount_one": "{{count}} Tâche",
+      "billsToProject": "Le temps est facturé comme temps de projet",
+      "billsToClient": "Le temps est facturé au niveau du client"
     },
     "bulkMoveTask": {
       "title": "Déplacer les tâches",
@@ -1748,6 +1757,7 @@
     "cap": {
       "title": "Plafond budgétaire",
       "hint": "Le temps et les matériaux sont facturés aux tarifs définis jusqu'à un plafond facultatif.",
+      "currencyStale": "Le plafond enregistré est en {{projectCurrency}}, devise dans laquelle les factures de ce projet ne sont pas émises. Saisissez le plafond en {{invoiceCurrency}} pour basculer ce projet en {{invoiceCurrency}} ; d’ici là, aucun plafond n’est appliqué.",
       "amount": "Montant du plafond ({{currency}})",
       "behavior": "Une fois atteint",
       "notify": "Notifier uniquement",
@@ -1798,7 +1808,8 @@
       "tmHardHint": "Plafond strict de {{cap}} — la facturation s'arrête au plafond",
       "tmNotifyHint": "Plafond budgétaire de {{cap}} — notification uniquement",
       "thresholdMarker": "Seuil de notification à {{pct}} %",
-      "writtenDown": "Passé en perte au-delà du plafond : {{amount}}"
+      "writtenDown": "Passé en perte au-delà du plafond : {{amount}}",
+      "currencyStale": "Les montants affichés ici sont en {{projectCurrency}}, alors que les factures de ce projet sont émises en {{invoiceCurrency}} ; un plafond budgétaire compté ici n’est donc pas appliqué."
     },
     "economics": {
       "title": "Rentabilité de la prestation",

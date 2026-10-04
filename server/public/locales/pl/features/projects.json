@@ -521,7 +521,14 @@
     "linkedToTaskSuccess": "Pomyślnie powiązano zgłoszenie z zadaniem",
     "failedLoadTask": "Nie udało się załadować zadania",
     "clientFallback": "Klient",
-    "defaultNewStatus": "Nowy"
+    "defaultNewStatus": "Nowy",
+    "billUnderProjectLabel": "Rozliczaj czas tego zgłoszenia jako czas projektu",
+    "billingOffBadge": "Rozliczane na poziomie klienta",
+    "billingOnTooltip": "Przestań rozliczać czas tego zgłoszenia jako czas projektu",
+    "billingOffTooltip": "Rozliczaj czas tego zgłoszenia jako czas projektu",
+    "billingOnSuccess": "Czas tego zgłoszenia będzie rozliczany jako czas projektu",
+    "billingOffSuccess": "Czas tego zgłoszenia będzie rozliczany na poziomie klienta",
+    "billingUpdateFailed": "Nie udało się zaktualizować rozliczenia zgłoszenia"
   },
   "materials": {
     "title": "Materiały projektowe",
@@ -826,7 +833,9 @@
       "badgeCount_other": "{{count}} Zadania",
       "badgeCount_one": "{{count}} Zadanie",
       "badgeCount_few": "{{count}} Zadania",
-      "badgeCount_many": "{{count}} Zadań"
+      "badgeCount_many": "{{count}} Zadań",
+      "billsToProject": "Czas rozliczany jako czas projektu",
+      "billsToClient": "Czas rozliczany na poziomie klienta"
     },
     "bulkMoveTask": {
       "title": "Przenieś zadania",
@@ -1776,6 +1785,7 @@
     "cap": {
       "title": "Limit budżetu",
       "hint": "Czas i materiały są rozliczane według stawek do opcjonalnego limitu maksymalnego.",
+      "currencyStale": "Zapisany limit jest w {{projectCurrency}}, w której nie są wystawiane faktury tego projektu. Wpisz limit w {{invoiceCurrency}}, aby przenieść ten projekt na {{invoiceCurrency}}; do tego czasu żaden limit nie jest stosowany.",
       "amount": "Kwota limitu ({{currency}})",
       "behavior": "Po osiągnięciu",
       "notify": "Tylko powiadom",
@@ -1826,7 +1836,8 @@
       "tmHardHint": "Twardy limit {{cap}} — rozliczanie zatrzymuje się na limicie",
       "tmNotifyHint": "Limit budżetu {{cap}} — tylko powiadomienie",
       "thresholdMarker": "Próg powiadomienia {{pct}}%",
-      "writtenDown": "Odpisano ponad limit: {{amount}}"
+      "writtenDown": "Odpisano ponad limit: {{amount}}",
+      "currencyStale": "Kwoty tutaj są w {{projectCurrency}}, ale faktury tego projektu są wystawiane w {{invoiceCurrency}}, więc limit budżetu liczony tutaj nie jest stosowany."
     },
     "economics": {
       "title": "Rentowność realizacji",
