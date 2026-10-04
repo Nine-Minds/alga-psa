@@ -1,20 +1,18 @@
-/* eslint-disable custom-rules/no-feature-to-feature-imports -- Export pre-validation must judge a mapping against the connected QuickBooks company's tax settings */
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { AccountingExportRepository } from '../repositories/accountingExportRepository';
 import { AccountingMappingResolver, type MappingResolution } from './accountingMappingResolver';
 import { getAccountingSyncSettings } from './accountingSync/accountingSyncSettings';
-import type { AccountingExportLine, AccountingExportServicePeriodSource } from '@alga-psa/types';
+import type {
+  AccountingExportAdapter,
+  AccountingExportLine,
+  AccountingExportServicePeriodSource
+} from '@alga-psa/types';
 import { normalizeAccountingExportCalendarDate } from './accountingExportDateUtils';
-import { isQboAutomatedSalesTaxEnabled } from '@alga-psa/integrations/lib/qbo/qboTaxSettings';
-import { isQboUnitedStatesCompany } from '@alga-psa/integrations/lib/qbo/qboCompanyCountry';
 
-/**
- * The only line-level tax codes Intuit accepts on a US Automated Sales Tax
- * company. Any other id — including a real code from the company's own tax-code
- * list — is rejected at delivery with "Invalid Line TaxCode" (6100), so a
- * mapping that names one is caught here rather than three retries later.
- */
-const QBO_AST_PSEUDO_TAX_CODES = new Set(['TAX', 'NON']);
+/** Adapter lookup for provider-specific rules; AccountingAdapterRegistry satisfies it. */
+export type AccountingExportAdapterLookup = {
+  get(adapterType: string): AccountingExportAdapter | undefined;
+};
 
 function readExternalDisplayName(metadata: unknown): string | null {
   if (!metadata || typeof metadata !== 'object') return null;
@@ -98,7 +96,7 @@ function mergeErrorMetadata(
 }
 
 export class AccountingExportValidation {
-  static async ensureMappingsForBatch(batchId: string): Promise<void> {
+  static async ensureMappingsForBatch(batchId: string, adapters?: AccountingExportAdapterLookup): Promise<void> {
     const repo = await AccountingExportRepository.create();
     const batch = await repo.getBatch(batchId);
     if (!batch) {
@@ -316,19 +314,15 @@ export class AccountingExportValidation {
     const checkedServiceMappings = new Set<string>();
     const missingServiceMappings = new Set<string>();
 
-    // Resolved at most once per batch, and only once a tax mapping actually
-    // needs judging: reading the company country costs a QuickBooks round trip,
-    // and the pseudo-code rule binds US Automated Sales Tax companies only.
-    let qboAstUsCompany: boolean | null = null;
-    const isQboAstUsCompany = async (): Promise<boolean> => {
-      if (qboAstUsCompany === null) {
-        qboAstUsCompany =
-          adapterType === 'quickbooks_online' &&
-          Boolean(batch.target_realm) &&
-          (await isQboAutomatedSalesTaxEnabled(knex, tenant, batch.target_realm)) &&
-          (await isQboUnitedStatesCompany(tenant, batch.target_realm));
+    // Asked of the adapter at most once per batch, and only once a tax mapping
+    // actually needs judging: the answer can cost a provider round trip.
+    let allowedLineTaxCodes: ReadonlySet<string> | null | undefined;
+    const getAllowedLineTaxCodes = async (): Promise<ReadonlySet<string> | null> => {
+      if (allowedLineTaxCodes === undefined) {
+        allowedLineTaxCodes =
+          (await adapters?.get(adapterType)?.allowedLineTaxCodes?.(tenant, batch.target_realm)) ?? null;
       }
-      return qboAstUsCompany;
+      return allowedLineTaxCodes;
     };
 
     const serviceIds = new Set<string>();
@@ -519,8 +513,7 @@ export class AccountingExportValidation {
           resolvedTaxMapping &&
           charge.is_taxable !== false &&
           !invalidTaxRegions.has(cacheKey) &&
-          !QBO_AST_PSEUDO_TAX_CODES.has(resolvedTaxMapping.external_entity_id) &&
-          (await isQboAstUsCompany())
+          (await getAllowedLineTaxCodes())?.has(resolvedTaxMapping.external_entity_id) === false
         ) {
           const mappedName =
             readExternalDisplayName(resolvedTaxMapping.metadata) ?? resolvedTaxMapping.external_entity_id;

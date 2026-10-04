@@ -30,6 +30,7 @@ import {
 } from '@alga-psa/ui/lib/errorHandling';
 import { getStoredQboCredentialsMap, QboClientService } from '../lib/qbo/qboClientService';
 import { isQboAutomatedSalesTaxEnabled } from '../lib/qbo/qboTaxSettings';
+import { QBO_AST_PSEUDO_TAX_CODES } from '../lib/qbo/types';
 import { getStoredXeroConnections, XeroClientService } from '../lib/xero/xeroClientService';
 import {
   normalizeXeroConnectionSelection,
@@ -376,15 +377,6 @@ const QBO_REMOTE_ENTITY_TYPE: Record<string, string> = {
 };
 
 /**
- * QuickBooks' Automated Sales Tax pseudo tax codes. Intuit accepts exactly
- * these two as a line-level TaxCodeRef on a US AST company and rejects every
- * other id with "Invalid Line TaxCode" (6100) — but they are not readable
- * TaxCode records, so `GET /taxcode/NON` 404s. Existence is therefore proven
- * by the realm's AST setting rather than by a read-by-id.
- */
-const QBO_AST_PSEUDO_TAX_CODES = new Set(['TAX', 'NON']);
-
-/**
  * Xero record kind a catalog mapping of the given local entity type must name.
  * Only the entity types the live Xero mapping screen can produce are listed;
  * the stored external id is the human-facing code the exporter consumes
@@ -429,6 +421,8 @@ async function assertQboRemoteEntityExists(
     );
   }
 
+  // The pseudo codes are not readable TaxCode records (`GET /taxcode/NON`
+  // 404s), so the realm's AST setting proves them instead of a read-by-id.
   if (algaEntityType === 'tax_code' && QBO_AST_PSEUDO_TAX_CODES.has(externalEntityId)) {
     const { knex } = await createTenantKnex();
     if (!(await isQboAutomatedSalesTaxEnabled(knex, tenant, realm))) {

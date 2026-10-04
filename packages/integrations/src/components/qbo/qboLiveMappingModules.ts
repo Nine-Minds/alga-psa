@@ -16,6 +16,7 @@ import {
   type UpdateMappingData
 } from '@alga-psa/integrations/actions';
 import type { IService, ITaxRegion } from '@alga-psa/types';
+import { QBO_PSEUDO_TAX_CODE_NON_TAXABLE, QBO_PSEUDO_TAX_CODE_TAXABLE } from '../../lib/qbo/types';
 import type {
   AccountingMappingContext,
   AccountingMappingLoadResult,
@@ -81,7 +82,7 @@ function interpolate(template: string, vars?: Record<string, unknown>): string {
 export function getQboAstPseudoTaxCodes(t?: TFn): Array<{ id: string; name: string }> {
   return [
     {
-      id: 'TAX',
+      id: QBO_PSEUDO_TAX_CODE_TAXABLE,
       name: translate(
         t,
         'integrations.qbo.taxCodes.pseudo.taxable',
@@ -89,7 +90,7 @@ export function getQboAstPseudoTaxCodes(t?: TFn): Array<{ id: string; name: stri
       )
     },
     {
-      id: 'NON',
+      id: QBO_PSEUDO_TAX_CODE_NON_TAXABLE,
       name: translate(t, 'integrations.qbo.taxCodes.pseudo.nonTaxable', 'NON — non-taxable')
     }
   ];
