@@ -149,7 +149,8 @@
     "header": {
       "runIdLabel": "ID de execução",
       "workflowIdLabel": "ID do fluxo de trabalho:",
-      "triggerLabel": "Acionar:"
+      "triggerLabel": "Acionar:",
+      "workflowTriggerLabel": "Gatilho do fluxo de trabalho:"
     },
     "actions": {
       "cancel": "Cancelar",
@@ -179,7 +180,8 @@
       "identity": "Identidade",
       "runErrorFallback": "Erro de execução",
       "errorCategoryFallback": "Erro",
-      "technicalDetailLabel": "Detalhe técnico:"
+      "technicalDetailLabel": "Detalhe técnico:",
+      "runSourceLabel": "Origem da execução"
     },
     "stepTimeline": {
       "title": "Linha do tempo da etapa",
@@ -199,7 +201,8 @@
         "error": "Erro",
         "action": "Ação"
       },
-      "empty": "Ainda não há histórico de etapas."
+      "empty": "Ainda não há histórico de etapas.",
+      "neverStarted": "Esta execução nunca chegou ao mecanismo de fluxo de trabalho, então nenhuma etapa foi executada."
     },
     "stepDetails": {
       "title": "Detalhes da etapa",
@@ -338,7 +341,10 @@
       "savePreset": "Salvar predefinição",
       "show": "Mostrar",
       "startRun": "Iniciar execução",
-      "starting": "Começando..."
+      "starting": "Começando...",
+      "viewRun": "Ver execução",
+      "viewFailedRun": "Ver execução com falha",
+      "tryAgain": "Tentar novamente"
     },
     "eventCatalog": {
       "title": "Catálogo de eventos",
@@ -361,7 +367,11 @@
       "manualTrigger": "Manual",
       "workflowStatusLabel": "Status do fluxo de trabalho",
       "statusActive": "ativo",
-      "statusPaused": "pausado"
+      "statusPaused": "pausado",
+      "runSourceLabel": "Origem da execução",
+      "runSourceManualTest": "Teste manual",
+      "workflowTriggerLabel": "Gatilho do fluxo de trabalho",
+      "noTrigger": "Nenhum (só é executado quando iniciado manualmente)"
     },
     "form": {
       "booleanTrue": "Verdadeiro",
@@ -370,7 +380,12 @@
       "mapEntriesPrompt": "Insira a chave/caminho do campo",
       "mapEntriesDescription": "Para objetos no estilo mapa, adicione chaves e defina cada valor.",
       "mapEntriesEmpty": "Nenhuma entrada de mapa adicionada.",
-      "noSchema": "Nenhum esquema disponível para renderizar um formulário."
+      "noSchema": "Nenhum esquema disponível para renderizar um formulário.",
+      "recordFillHint": "Escolha um registro real (por exemplo, um contrato, ticket ou cliente) e os campos vazios ao lado são preenchidos com os dados desse registro.",
+      "recordFillHintField": "Escolha um registro real em {{field}} e estes campos são preenchidos com os dados dele quando estiverem vazios: {{targets}}.",
+      "recordFillKeepsTyped": "Os valores que você digitou são mantidos; os campos para os quais o registro não tem valor permanecem como estão.",
+      "recordFillGap": "O registro escolhido não tem {{fields}}, então esse campo continua vazio.",
+      "recordNeverFires": "Este gatilho nunca é executado para este registro: ele não tem data para execução. Escolha outro ou informe as datas manualmente."
     },
     "noPublishedVersion": {
       "title": "Nenhuma versão publicada",
@@ -380,7 +395,9 @@
       "largePayloadWarning": "O tamanho da carga excede 256 KB; as execuções podem ser mais lentas.",
       "payloadJsonLabel": "Carga útil (JSON)",
       "payloadLabel": "carga útil",
-      "payloadSize": "Tamanho da carga útil: {{size}} KB"
+      "payloadSize": "Tamanho da carga útil: {{size}} KB",
+      "uuidPlaceholder": "Um ID (UUID), por exemplo 3f2c1a5e-0b7d-4c1e-9a2f-6d8e4b1c7a90",
+      "generateTestId": "Gerar ID de teste"
     },
     "presets": {
       "presetNameLabel": "Nome predefinido",
@@ -438,7 +455,8 @@
       "presetSaved": "Predefinição salva.",
       "providePresetName": "Forneça um nome predefinido.",
       "startRunFailed": "Falha ao iniciar a execução",
-      "triggerMappingMissing": "O mapeamento de gatilho é necessário para esse esquema de evento, mas não está configurado no fluxo de trabalho."
+      "triggerMappingMissing": "O mapeamento de gatilho é necessário para esse esquema de evento, mas não está configurado no fluxo de trabalho.",
+      "runStarted": "Execução iniciada."
     },
     "validation": {
       "invalidJson": "JSON inválido",
@@ -450,6 +468,74 @@
     "sections": {
       "schemaAndEvents": "Esquema e eventos",
       "payloadTools": "Ferramentas de carga útil"
+    },
+    "startFailure": {
+      "engineUnavailableTitle": "Não foi possível acessar o mecanismo de fluxo de trabalho",
+      "engineUnavailableDescription": "A execução foi registrada, mas não pôde ser iniciada, por isso foi marcada como com falha. Tente novamente em alguns minutos. Se o problema persistir, peça a um administrador que verifique o serviço de fluxo de trabalho.",
+      "launchFailedTitle": "Não foi possível iniciar a execução",
+      "launchFailedDescription": "A execução foi registrada e marcada como com falha. Abra-a para ver o erro.",
+      "genericTitle": "A execução não foi iniciada",
+      "technicalDetails": "Detalhes técnicos"
+    },
+    "startProgress": "Conectando ao mecanismo de fluxo de trabalho…",
+    "issues": {
+      "item": "item {{position}}",
+      "required": "{{field}} é obrigatório",
+      "type": "{{field}} deve ser {{type}}",
+      "typeUnknown": "{{field}} tem um tipo de valor incorreto",
+      "formatUuid": "{{field}} deve ser um ID (UUID), como 3f2c1a5e-0b7d-4c1e-9a2f-6d8e4b1c7a90",
+      "formatEmail": "{{field}} deve ser um endereço de e-mail",
+      "formatDate": "{{field}} deve ser uma data (YYYY-MM-DD)",
+      "formatDateTime": "{{field}} deve ser uma data e hora, como 2026-10-03T09:00:00Z",
+      "formatTime": "{{field}} deve ser uma hora (HH:MM)",
+      "formatUrl": "{{field}} deve ser um endereço web",
+      "formatOther": "{{field}} não está no formato esperado",
+      "choice": "{{field}} deve ser um destes: {{options}}",
+      "choiceUnknown": "{{field}} não é um dos valores permitidos",
+      "tooShort": "{{field}} deve ter pelo menos {{limit}} caracteres",
+      "tooFewItems": "{{field}} precisa de pelo menos {{limit}} itens",
+      "tooSmall": "{{field}} deve ser no mínimo {{limit}}",
+      "tooLong": "{{field}} deve ter no máximo {{limit}} caracteres",
+      "tooManyItems": "{{field}} pode ter no máximo {{limit}} itens",
+      "tooBig": "{{field}} deve ser no máximo {{limit}}",
+      "unknownField": "{{field}} não faz parte desta carga útil",
+      "invalidWithMessage": "{{field}}: {{message}}",
+      "invalid": "{{field}} não é válido",
+      "more": "+{{count}} mais",
+      "inputTitle": "Corrija estes campos e inicie a execução novamente",
+      "mappedTitle": "O mapeamento do gatilho gerou uma carga útil que o fluxo de trabalho não aceita",
+      "mappedDescription": "{{issues}} Verifique o mapeamento do gatilho nas configurações do fluxo de trabalho ou os campos do evento que ele lê.",
+      "types": {
+        "string": "texto",
+        "number": "um número",
+        "integer": "um número inteiro",
+        "boolean": "verdadeiro ou falso",
+        "object": "um grupo de campos",
+        "array": "uma lista"
+      }
+    },
+    "draft": {
+      "restored": "A última carga útil de teste deste fluxo de trabalho foi restaurada. Ela fica aqui até você recomeçar.",
+      "kept": "Esta carga útil é mantida se você fechar a caixa de diálogo.",
+      "startOver": "Recomeçar"
+    },
+    "dateTrigger": {
+      "help": {
+        "occursOn": "A data a que esta execução se refere: {{dateName}}. Preenchida a partir do registro escolhido.",
+        "offsetDays": "Dias entre essa data e a execução, definidos pelo gatilho ({{timing}}). Negativo significa antes, positivo significa depois.",
+        "fireDate": "O dia em que o agendador iniciaria esta execução: a data acima mais o deslocamento."
+      },
+      "timing": {
+        "before": "{{days}} dias antes",
+        "after": "{{days}} dias depois",
+        "onTheDay": "no próprio dia"
+      },
+      "dateNames": {
+        "anniversary": "o próximo aniversário do cliente",
+        "renewal": "a data de decisão de renovação do contrato",
+        "contractEnd": "a data de término do contrato",
+        "warrantyEnd": "a data de término da garantia do ativo"
+      }
     }
   },
   "eventList": {
@@ -582,7 +668,9 @@
       "loading": "Carregando entradas de auditoria..."
     },
     "values": {
-      "system": "sistema"
+      "system": "sistema",
+      "unknownUser": "Usuário desconhecido",
+      "byUser": "Por {{user}}"
     },
     "toasts": {
       "loadFailed": "Falha ao carregar registros de auditoria",
@@ -633,7 +721,26 @@
       "validation": {
         "lastValidated": "Última validação: {{timestamp}}",
         "unknown": "Status de validação desconhecido"
-      }
+      },
+      "publishedVersionBadge": "Publicado v{{version}}",
+      "notPublishedBadge": "Não publicado",
+      "pausedToast": "Fluxo de trabalho pausado. Novos eventos não iniciarão execuções.",
+      "resumedToast": "Fluxo de trabalho ativo. Novos eventos voltam a iniciar execuções.",
+      "resumeTitle": "Pausado: novos eventos não iniciam execuções. Clique para ativá-lo.",
+      "pauseTitle": "Ativo: novos eventos iniciam execuções. Clique para pausar.",
+      "pausedBadge": "Pausado",
+      "activeBadge": "Ativo",
+      "runPausedReason": "Pausado: retome o fluxo de trabalho para executá-lo.",
+      "pauseTitleDate": "Ativo: as execuções começam nas datas que este fluxo de trabalho monitora. Clique para pausar.",
+      "resumeTitleDate": "Pausado: as datas monitoradas não iniciam execuções. Clique para ativá-lo.",
+      "pausedToastDate": "Fluxo de trabalho pausado. As datas monitoradas não iniciarão execuções.",
+      "resumedToastDate": "Fluxo de trabalho ativo. As datas monitoradas voltam a iniciar execuções.",
+      "pauseTitleManual": "Ativo: agendamentos podem iniciar execuções. Clique para pausar.",
+      "resumeTitleManual": "Pausado: agendamentos não iniciam execuções. Clique para ativá-lo.",
+      "pausedToastManual": "Fluxo de trabalho pausado. Agendamentos não iniciarão execuções.",
+      "resumedToastManual": "Fluxo de trabalho ativo. Agendamentos voltam a iniciar execuções.",
+      "newWorkflowTitle": "Inicie um novo fluxo de trabalho vazio. Este permanece como foi salvo por último.",
+      "newWorkflowShort": "Novo fluxo de trabalho"
     },
     "form": {
       "nameLabel": "Nome do fluxo de trabalho",
@@ -691,7 +798,17 @@
       "timezoneOptional": "Fuso horário (opcional)",
       "tenantTimezoneDefault": "Fuso horário do locatário",
       "dateTriggerSummary": "Executa {{days}} {{direction}} {{source}} às {{time}} ({{timezone}})",
-      "inputDataDatePrefix": "Este fluxo de trabalho recebe a carga útil definida por"
+      "inputDataDatePrefix": "Este fluxo de trabalho recebe a carga útil definida por",
+      "searchEventCategories": "Pesquisar categorias",
+      "searchAllEvents": "Pesquisar todos os eventos",
+      "selectEventToFinish": "Selecione um evento para concluir a configuração deste gatilho.",
+      "searchOrPickCategory": "Pesquise todos os eventos ou escolha uma categoria para reduzir a lista.",
+      "nextVersionLabel": "Próxima versão a publicar",
+      "publishedAndNextVersion": "Publicado: v{{published}}. Você está editando um rascunho; publicá-lo cria a v{{next}}.",
+      "notPublishedNextVersion": "Ainda não publicado. Publicar cria a v{{next}}.",
+      "tenantTimezoneOption": "Fuso horário do locatário (padrão)",
+      "searchTimezones": "Pesquisar fusos horários",
+      "inputDataEventPending": "Escolha o evento acima; suas etapas lerão os dados que esse evento envia."
     },
     "stepPanel": {
       "readOnly": "Acesso somente leitura: a edição de etapas está desativada.",
@@ -732,7 +849,12 @@
       "untilInput": "Até a entrada",
       "specificDateTime": "Data e hora específicas",
       "untilExpression": "Até expressão",
-      "returnNotice": "Return interrompe a execução do fluxo de trabalho."
+      "returnNotice": "Return interrompe a execução do fluxo de trabalho.",
+      "duration": "Duração",
+      "durationSummary": "Aguarda {{duration}}.",
+      "durationEmpty": "Informe quanto tempo esperar, em qualquer uma destas unidades.",
+      "notFoundInTry": "Esta etapa está dentro de um Try. Se nada for encontrado, ela atualmente continua, então o ramo Catch não será executado. Faça-a falhar para que o Catch trate um registro ausente.",
+      "notFoundFailAction": "Falhar para o Catch tratar"
     },
     "mappingExpr": {
       "add": "Adicionar",
@@ -896,7 +1018,12 @@
       "else": "ELSE",
       "try": "TRY",
       "catch": "CATCH",
-      "body": "BODY"
+      "body": "BODY",
+      "thenLabel": "Then",
+      "elseLabel": "Else",
+      "tryLabel": "Try",
+      "catchLabel": "Catch",
+      "bodyLabel": "Body"
     },
     "palette": {
       "showPalette": "Mostrar paleta",
@@ -913,7 +1040,9 @@
         "Apps": "Aplicativos",
         "Action": "Ação",
         "Email": "E-mail",
-        "Nodes": "Nós"
+        "Nodes": "Nós",
+        "Actions": "Ações",
+        "Results": "Resultados"
       },
       "controlBlocks": {
         "control.if": {
@@ -1016,6 +1145,13 @@
           "label": "Armazenamento de dados",
           "description": "Leia e grave o estado do fluxo de trabalho durável em todas as execuções."
         }
+      },
+      "noMatches": {
+        "title": "Nenhum resultado para “{{query}}”",
+        "tipWords": "Tente uma palavra mais curta ou diferente, como “ticket”, “e-mail” ou “esperar”.",
+        "tipVerb": "Pesquise pelo que a etapa faz: criar, encontrar, atualizar, notificar.",
+        "tipBrowse": "Limpe a pesquisa para ver todas as categorias.",
+        "clear": "Limpar pesquisa"
       }
     },
     "stepCard": {
@@ -1058,7 +1194,8 @@
       "published": "Fluxo de trabalho publicado",
       "publishFailed": "Falha ao publicar o fluxo de trabalho",
       "publishValidationErrors": "Falha na publicação – corrija erros de validação",
-      "systemEventMissingSchema": "Este evento do sistema não possui um esquema válido e não pode ser selecionado até ser corrigido."
+      "systemEventMissingSchema": "Este evento do sistema não possui um esquema válido e não pode ser selecionado até ser corrigido.",
+      "publishedVersion": "Versão {{version}} publicada. Novas execuções usam esta versão."
     },
     "propsPanel": {
       "resizeAria": "Redimensionar painel de propriedades",
@@ -1070,7 +1207,8 @@
       "unlimited": "Ilimitado",
       "autoPauseFailureRate": "Pausa automática na taxa de falha",
       "failureRateThreshold": "Limite de taxa de falha",
-      "minRunsBeforeAutoPause": "Mínimo de execuções antes da pausa automática"
+      "minRunsBeforeAutoPause": "Mínimo de execuções antes da pausa automática",
+      "resizeHint": "Arraste para redimensionar. Clique duas vezes para alargar ou estreitar."
     },
     "trigger": {
       "summary": "Resumo do gatilho",
@@ -1102,7 +1240,8 @@
     },
     "expression": {
       "insertField": "Inserir campo",
-      "enterPlaceholder": "Digite a expressão..."
+      "enterPlaceholder": "Digite a expressão...",
+      "conditionPlaceholder": "ex.: payload.status = \"open\" and payload.count > 3"
     },
     "dataContext": {
       "availableDataAtStep": "Dados disponíveis nesta etapa",
@@ -1123,6 +1262,114 @@
       "clientSecret": "Segredo do cliente:",
       "tenantId": "ID do tenant:",
       "userEmail": "Email do usuário:"
+    },
+    "entityLookup": {
+      "added": "“{{action}}” adicionada. As etapas seguintes podem usar a saída dela em vars.{{saveAs}}.",
+      "message": "Este gatilho inclui apenas o ID de {{entity}} (payload.{{field}}). Para usar os detalhes de {{entity}}, como nome ou status, adicione antes “{{action}}”.",
+      "addButton": "Adicionar “{{action}}”",
+      "entities": {
+        "ticket": "ticket",
+        "client": "cliente",
+        "contact": "contato",
+        "project": "projeto"
+      },
+      "messageWithCarried": "Este gatilho já inclui {{fields}}. Para outros detalhes de {{entity}}, adicione “{{action}}”, que busca {{entity}} a partir de payload.{{field}}.",
+      "tips": {
+        "customerReplyText": {
+          "available": "O texto da resposta não está no próprio gatilho. Use {{path}} (“{{action}}” › último comentário do cliente).",
+          "afterLookup": "O texto da resposta não está no próprio gatilho. Depois de “{{action}}”, ele fica disponível como “{{action}}” › {{detail}}."
+        }
+      }
+    },
+    "insertion": {
+      "afterStepIn": "Depois de “{{step}}” em {{container}}",
+      "afterStep": "Depois de “{{step}}”",
+      "startOf": "Início de {{container}}",
+      "startOfWorkflow": "Início do fluxo de trabalho",
+      "endOf": "Fim de {{container}}",
+      "endOfWorkflow": "Fim do fluxo de trabalho",
+      "paletteLabel": "Adiciona em:",
+      "reset": "Redefinir"
+    },
+    "conditionBuilder": {
+      "triggerSource": "Gatilho",
+      "expressionLabel": "Expressão da condição",
+      "joinWords": {
+        "and": "e",
+        "or": "ou"
+      },
+      "noConditionSummary": "Nenhuma condição definida",
+      "selectValue": "Selecione um valor",
+      "booleanTrue": "verdadeiro",
+      "booleanFalse": "falso",
+      "numberPlaceholder": "Número",
+      "textPlaceholder": "Valor",
+      "removeValue": "Remover valor",
+      "addValue": "Adicionar valor",
+      "builderUnavailable": "O construtor só consegue mostrar condições que sejam uma lista de verificações de campo unidas por \"and\" ou por \"or\", sem misturar.",
+      "modes": {
+        "builder": "Construtor",
+        "expression": "Expressão"
+      },
+      "expressionOnlyNotice": "Esta condição só pode ser editada como expressão. Limpe-a para recomeçar no construtor.",
+      "matchPrefix": "Continuar quando",
+      "joinAll": "todas",
+      "joinAny": "qualquer uma",
+      "matchSuffix": "destas forem verdadeiras",
+      "selectField": "Escolha um campo",
+      "searchFields": "Pesquisar campos",
+      "noFields": "Nenhum campo correspondente",
+      "removeCondition": "Remover condição",
+      "emptyHint": "Adicione uma condição para escolher quando o ramo Then é executado. Caso contrário, o ramo Else é executado.",
+      "noFieldsHint": "Ainda não há campos disponíveis. Escolha um gatilho ou adicione antes desta uma etapa que salve sua saída.",
+      "addCondition": "Adicionar condição",
+      "operators": {
+        "equals": "é",
+        "not_equals": "não é",
+        "in": "é qualquer um de",
+        "not_in": "não é nenhum de",
+        "gt": "é maior que",
+        "gte": "é pelo menos",
+        "lt": "é menor que",
+        "lte": "é no máximo",
+        "contains": "contém",
+        "starts_with": "começa com",
+        "ends_with": "termina com",
+        "is_empty": "está vazio",
+        "is_not_empty": "não está vazio"
+      },
+      "unknownEntity": "{{field}} desconhecido",
+      "anyBoardStatus": "{{name}} (qualquer quadro)",
+      "boardStatus": "{{name}} ({{board}})",
+      "cancelNewCondition": "Cancelar nova condição"
+    },
+    "draftBackup": {
+      "message": "Este navegador guardou alterações não salvas deste fluxo de trabalho de {{time}}. Restaurá-las?",
+      "restore": "Restaurar alterações",
+      "discard": "Descartar"
+    },
+    "sessionExpired": {
+      "title": "Sua sessão terminou",
+      "backToEditing": "Voltar à edição",
+      "signIn": "Entrar em uma nova guia",
+      "message": "Sua sessão terminou. Entre novamente em uma nova guia, depois volte e salve — suas alterações foram mantidas."
+    },
+    "firstPublish": {
+      "messageEvent": "Publicar inicia este fluxo de trabalho. A partir de agora, ele é executado sempre que “{{event}}” ocorrer. Você pode pausá-lo a qualquer momento.",
+      "messageDate": "Publicar inicia este fluxo de trabalho. A partir de agora, ele é executado nas datas selecionadas pelo seu gatilho de data. Você pode pausá-lo a qualquer momento.",
+      "messageManual": "Publicar torna este fluxo de trabalho disponível para execução. Nada o inicia automaticamente: execute-o com Executar ou adicione um agendamento no Painel de Controle do Fluxo de Trabalho.",
+      "title": "Publicar e iniciar este fluxo de trabalho?",
+      "confirm": "Publicar",
+      "cancel": "Cancelar"
+    },
+    "saveStatus": {
+      "justNow": "agora mesmo",
+      "minutesAgo": "há {{count}} min",
+      "atTime": "às {{time}}",
+      "notSavedYet": "Ainda não salvo",
+      "unsaved": "Alterações não salvas",
+      "savedAgo": "Salvo · {{ago}}",
+      "saved": "Salvo"
     }
   },
   "actionInputFieldInfo": {
@@ -1135,10 +1382,13 @@
     "range": "Faixa: {{min}} - {{max}}",
     "any": "qualquer",
     "defaultPrefix": "Padrão:",
-    "examplePrefix": "Exemplo:"
+    "examplePrefix": "Exemplo:",
+    "atMost": "No máximo {{max}}",
+    "atLeast": "No mínimo {{min}}"
   },
   "actionInputSection": {
-    "heading": "Entradas de ação"
+    "heading": "Entradas de ação",
+    "requireOneOf": "Preencha pelo menos um de: {{fields}}"
   },
   "actionInputFixedPicker": {
     "loadingOptions": "Carregando opções...",
@@ -1175,6 +1425,25 @@
         "board_id": "Escolha primeiro um quadro fixo para carregar as opções de subcategoria.",
         "category_id": "Escolha primeiro uma categoria fixa para carregar as opções de subcategoria."
       }
+    },
+    "ticketNoMatches": "Nenhum ticket encontrado. Tente o número do ticket (por exemplo, 1122) ou palavras do título.",
+    "addValue": "Adicionar um valor",
+    "removeValue": "Remover {{label}}",
+    "searchPlaceholder": "Pesquisar",
+    "noMatchingOptions": "Nenhuma opção correspondente",
+    "details": {
+      "endsOn": "Termina em {{date}}",
+      "noEndDate": "Sem data de término",
+      "warrantyEndsOn": "Garantia termina em {{date}}",
+      "noWarrantyEnd": "Sem data de término da garantia",
+      "anyBoardStatus": "{{name}} (qualquer quadro)"
+    },
+    "clientScope": {
+      "showingAll": "Mostrando todos os clientes",
+      "filteredTo": "Filtrado por {{client}}",
+      "filteredToChosen": "Filtrado pelo cliente escolhido",
+      "filterAgain": "Somente este cliente",
+      "showAll": "Mostrar todos os clientes"
     }
   },
   "serverErrors": {
@@ -1217,7 +1486,17 @@
     "schedulePinnedSchemaRequired": "As programações só são suportadas para fluxos de trabalho com um esquema de carga fixada.",
     "scheduleSchemaNotRegistered": "A versão mais recente do fluxo de trabalho publicada não possui um esquema de carga fixada registrado.",
     "schedulePayloadInvalid": "A carga útil do agendamento falhou na validação em relação ao esquema de carga útil do fluxo de trabalho.",
-    "processEventFailed": "Falha ao processar o evento de fluxo de trabalho."
+    "processEventFailed": "Falha ao processar o evento de fluxo de trabalho.",
+    "workflowEngineUnavailable": "Não foi possível acessar o mecanismo de fluxo de trabalho. Tente novamente em alguns minutos. Se o problema persistir, peça a um administrador que verifique o serviço de fluxo de trabalho.",
+    "invalidFields": "Alguns valores não são válidos: {{details}}",
+    "sessionExpired": "Sua sessão foi encerrada. Entre novamente e tente de novo.",
+    "fieldValue": "Um valor",
+    "issue": {
+      "required": "{{field}} é obrigatório",
+      "number": "{{field}} deve ser um número",
+      "tooSmall": "{{field}} deve ser no mínimo {{minimum}}",
+      "tooBig": "{{field}} deve ser no máximo {{maximum}}"
+    }
   },
   "taskInbox": {
     "title": "Caixa de entrada de tarefas",
@@ -1403,7 +1682,11 @@
     "emptySelectPrompt": "Selecione uma etapa no painel para começar.",
     "patchSummary": {
       "unchanged": "outros campos inalterados"
-    }
+    },
+    "insertionPointLabel": "Novas etapas entram aqui",
+    "emptyBranchPrompt": "Adicione uma etapa a este ramo",
+    "emptyActivePrompt": "Novas etapas entram aqui. Escolha uma na paleta.",
+    "stepCount": "({{count}} etapas)"
   },
   "expressionEditor": {
     "ariaLabel": "Editor de expressão",
@@ -1411,10 +1694,67 @@
     "textAreaPlaceholder": "Insira a expressão JSONata...",
     "field": {
       "placeholder": "Digite a expressão...",
-      "insertFieldPlaceholder": "Inserir campo"
+      "insertFieldPlaceholder": "Inserir campo",
+      "expand": "Abrir um editor maior",
+      "expandShort": "Expandir",
+      "expandedTitle": "Editar expressão",
+      "done": "Concluído"
     },
     "clear": "Limpar",
-    "clearAriaLabel": "Limpar expressão"
+    "clearAriaLabel": "Limpar expressão",
+    "syntaxHelp": {
+      "toggle": "Ajuda de sintaxe",
+      "intro": "As expressões calculam um valor a partir dos dados do fluxo de trabalho. Padrões comuns:",
+      "examples": {
+        "field": {
+          "label": "Campo",
+          "description": "Um valor do gatilho (payload.…) ou o resultado salvo de uma etapa (vars.…)."
+        },
+        "text": {
+          "label": "Texto",
+          "description": "Coloque o texto entre aspas duplas. Una valores com &."
+        },
+        "equals": {
+          "label": "Igual",
+          "description": "Use = para igual e != para diferente."
+        },
+        "compare": {
+          "label": "Comparar",
+          "description": "Compare números com >, >=, < e <=."
+        },
+        "andOr": {
+          "label": "E / ou",
+          "description": "Combine condições com and, or e parênteses."
+        },
+        "oneOf": {
+          "label": "Um de",
+          "description": "Verdadeiro quando o valor corresponde a qualquer item da lista."
+        },
+        "hasValue": {
+          "label": "Tem um valor",
+          "description": "Verdadeiro quando o campo está presente e não está vazio (null)."
+        },
+        "notTrue": {
+          "label": "Não",
+          "description": "Negue uma condição comparando-a com false."
+        },
+        "choose": {
+          "label": "Escolher um valor",
+          "description": "condição ? valor se verdadeira : valor se falsa."
+        },
+        "list": {
+          "label": "Lista",
+          "description": "Coloque os valores entre colchetes, separados por vírgulas, para entradas que aceitam uma lista."
+        }
+      },
+      "functionsHeading": "Funções",
+      "transformsPointer": "Para um trabalho mais pesado com texto, adicione uma etapa Transform: Truncate Text, Compose Text, Split Text, Regex Extract, Regex Replace e mais. Pesquise \"text\" ou \"regex\" na paleta."
+    },
+    "preview": {
+      "title": "Pré-visualização com dados de exemplo",
+      "emptyResult": "(vazio)",
+      "cannotPreview": "Ainda não é possível pré-visualizar: {{message}}"
+    }
   },
   "sourceDataTree": {
     "searchPlaceholder": "Campos de pesquisa...",
@@ -1550,7 +1890,24 @@
         "fromExpression": "o {{record}} escolhido por uma expressão",
         "fixed": "um {{record}} específico"
       }
-    }
+    },
+    "ticketAssignment": {
+      "editFields": "Editar como campos individuais"
+    },
+    "reference": {
+      "firstItem": "(primeiro item)",
+      "lastItem": "(último item)",
+      "wholeResult": "Resultado completo",
+      "oneItemList": "Este valor único é enviado como uma lista de um item."
+    },
+    "setOptionalField": "Definir",
+    "unsetOptionalField": "Deixar {{name}} sem definir",
+    "textWithFieldsMode": "Texto",
+    "textModeUnavailable": "Esta expressão faz mais do que unir texto e campos, então só pode ser editada como expressão. Limpe-a para recomeçar como texto.",
+    "partialMatchSuffix": "(nome semelhante: verifique antes de usar)",
+    "kindMatchSuffix": "(mesmo tipo de registro)",
+    "kindMatchSuffixAn": "(também {{kind}})",
+    "kindMatchSuffixA": "(também {{kind}})"
   },
   "schemaReference": {
     "selectAction": "Selecione uma ação para ver seu esquema de entrada/saída",
@@ -1611,7 +1968,14 @@
     "eventWithType": "Evento: {{eventType}}",
     "oneTimeSchedule": "Agendamento único",
     "recurringSchedule": "Cronograma recorrente",
-    "date": "Data"
+    "date": "Data",
+    "manualWithEvent": "Teste manual com evento: {{eventType}}",
+    "dateTiming": {
+      "before": "{{count}} dias antes",
+      "after": "{{count}} dias depois",
+      "onTheDay": "no próprio dia"
+    },
+    "dateWithTiming": "{{source}}, {{timing}}"
   },
   "scheduleStatus": {
     "unknown": "Desconhecido",
@@ -1792,7 +2156,9 @@
       "waitForTime": "Espere pelo tempo",
       "humanTask": "Tarefa Humana",
       "setState": "Definir estado",
-      "assign": "Atribuir"
+      "assign": "Atribuir",
+      "return": "Return",
+      "callWorkflow": "Call Workflow"
     },
     "stepCard": {
       "lastStatus": "Último status: {{status}} ({{timestamp}})",
@@ -1824,7 +2190,13 @@
     },
     "lastRefreshed": "{{time}} atualizado pela última vez",
     "navigation": {
-      "backToRuns": "← Voltar para execuções de fluxo de trabalho"
+      "backToRuns": "← Voltar para execuções de fluxo de trabalho",
+      "breadcrumbLabel": "Local da execução",
+      "workflows": "Fluxos de trabalho",
+      "runs": "Execuções",
+      "currentRunOf": "Execução de {{workflow}}",
+      "currentRun": "Execução {{id}}",
+      "backToWorkflow": "Voltar ao fluxo de trabalho"
     },
     "title": "Estúdio de execução de fluxo de trabalho"
   },
@@ -2264,7 +2636,9 @@
       },
       "tableValues": {
         "system": "Sistema",
-        "draftVersion": "Rascunho: v{{version}}"
+        "draftVersion": "Rascunho: v{{version}}",
+        "unpublishedChangesTitle": "O rascunho salvo tem alterações que ainda não foram publicadas. As execuções usam a v{{version}}.",
+        "unpublishedChanges": "Alterações não publicadas"
       },
       "rowMenu": {
         "ariaLabel": "Ações de fluxo de trabalho",
@@ -2272,7 +2646,12 @@
         "pause": "Pausa",
         "duplicate": "Duplicado",
         "viewRuns": "Ver execuções",
-        "delete": "Excluir"
+        "delete": "Excluir",
+        "ariaLabelNamed": "Ações para {{name}}",
+        "open": "Abrir no editor",
+        "runPaused": "Executar (retome antes)",
+        "run": "Executar…",
+        "title": "Ações do fluxo de trabalho"
       },
       "states": {
         "errorTitle": "Falha ao carregar fluxos de trabalho",
@@ -2590,24 +2969,86 @@
       }
     }
   },
-  "mappingEditor": {
-    "error": {
-      "retry": "Tentar novamente",
-      "title": "Falha ao carregar o esquema",
-      "retryWithCount": "Tentar novamente ({{retryCount}}/{{maxRetries}})",
-      "attemptOfMax": "Tentativa {{retryCount}} de {{maxRetries}}",
-      "maxRetriesReached": "Número máximo de tentativas atingido.",
-      "contactSupport": "Falar com o suporte →"
-    }
-  },
   "toggle": {
     "disableTitle": "Desativar fluxo de trabalho",
     "enableTitle": "Ativar fluxo de trabalho",
     "confirmDisable": "Tem certeza de que deseja desativar este fluxo de trabalho?",
     "confirmEnable": "Tem certeza de que deseja ativar este fluxo de trabalho?"
   },
+  "mappingEditor": {
+    "error": {
+      "title": "Falha ao carregar o esquema",
+      "retry": "Tentar novamente",
+      "retryWithCount": "Tentar novamente ({{retryCount}}/{{maxRetries}})",
+      "attemptOfMax": "Tentativa {{retryCount}} de {{maxRetries}}",
+      "maxRetriesReached": "Número máximo de tentativas atingido.",
+      "contactSupport": "Falar com o suporte →"
+    }
+  },
   "actionInputTypeHint": {
     "coercible": "O tipo \"{{sourceType}}\" será convertido para \"{{targetType}}\"",
     "incompatible": "O tipo \"{{sourceType}}\" é incompatível com o tipo esperado \"{{targetType}}\""
+  },
+  "ticketAssignmentEditor": {
+    "assignTo": "Atribuir a",
+    "assigneeHint": "Pesquise usuários ou equipes",
+    "teamMode": "Como atribuir a equipe",
+    "teamModeLead": "Líder da equipe, com os membros adicionados como agentes adicionais",
+    "teamModeQueue": "Fila: o primeiro membro da equipe",
+    "additionalUsers": "Atribuir também (opcional)",
+    "additionalUsersHint": "Pesquisar usuários"
+  },
+  "textTemplateEditor": {
+    "insertField": "Inserir campo",
+    "placeholder": "Digite o texto. Use Inserir campo para adicionar valores, ex.: O ticket {{example}} foi atualizado",
+    "fieldsUsed": "Campos:",
+    "hint": "Marcadores como {{payloadExample}} ou {{varsExample}} são preenchidos pelo fluxo de trabalho. Outros marcadores {{otherExample}} são mantidos como escritos, por exemplo para os dados do próprio modelo de e-mail.",
+    "expand": "Expandir",
+    "expandedTitle": "Editar texto",
+    "done": "Concluído",
+    "hintInLoop": "Marcadores como {{itemExample}}, {{indexExample}}, {{payloadExample}} ou {{varsExample}} são preenchidos pelo fluxo de trabalho. Outros marcadores {{otherExample}} são mantidos como escritos, por exemplo para os dados do próprio modelo de e-mail."
+  },
+  "valueSourceChooser": {
+    "origin": {
+      "trigger": "Gatilho",
+      "loop": "Item atual do loop",
+      "error": "Erro capturado",
+      "workflow": "Execução do fluxo de trabalho"
+    },
+    "chooseSpecific": "Escolher {{entity}} específico…",
+    "typeText": "Digite texto (insira campos conforme necessário)…",
+    "enterValue": "Informar um valor fixo…",
+    "tierSameName": "Mesmo nome",
+    "tierSameKind": "Mesmo tipo de registro",
+    "tierActor": "Quem fez, não o registro em si",
+    "writeExpression": "Escrever uma expressão…",
+    "placeholder": "Escolha um campo de etapas anteriores ou do gatilho",
+    "noMatches": "Nenhum campo adequado. Escolha um valor fixo ou escreva uma expressão.",
+    "groupSuggested": "Sugeridos",
+    "currentSpecific": "Um {{entity}} específico",
+    "currentText": "Texto",
+    "currentFixed": "Valor fixo",
+    "currentExpression": "Expressão",
+    "label": "Valor de",
+    "tierSameKindAn": "Também {{kind}}",
+    "tierSameKindA": "Também {{kind}}"
+  },
+  "notificationRecipientsEditor": {
+    "users": "Notificar usuários",
+    "usersHint": "Pesquisar usuários",
+    "roles": "Notificar todos com estas funções",
+    "rolesHint": "Adicionar uma função",
+    "roleNames": "Nomes de funções (opcional)",
+    "roleNamesPlaceholder": "ex.: Técnico, Despachante (correspondência por nome quando o fluxo de trabalho é executado)",
+    "empty": "Escolha pelo menos um usuário ou função para notificar."
+  },
+  "emailRecipientsEditor": {
+    "remove": "Remover {{email}}",
+    "placeholder": "Digite um endereço e pressione Enter, ex.: Ada Lovelace <ada@example.com>",
+    "invalid": "Não é um endereço de e-mail: {{entries}}"
+  },
+  "fieldPicker": {
+    "searchPlaceholder": "Pesquisar campos",
+    "noMatches": "Nenhum campo correspondente"
   }
 }

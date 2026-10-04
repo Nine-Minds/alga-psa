@@ -149,7 +149,8 @@
     "header": {
       "runIdLabel": "ID d’exécution",
       "workflowIdLabel": "ID du workflow :",
-      "triggerLabel": "Déclencheur :"
+      "triggerLabel": "Déclencheur :",
+      "workflowTriggerLabel": "Déclencheur du workflow :"
     },
     "actions": {
       "cancel": "Annuler",
@@ -179,7 +180,8 @@
       "identity": "Identité",
       "runErrorFallback": "Erreur d’exécution",
       "errorCategoryFallback": "Erreur",
-      "technicalDetailLabel": "Détail technique :"
+      "technicalDetailLabel": "Détail technique :",
+      "runSourceLabel": "Source de l’exécution"
     },
     "stepTimeline": {
       "title": "Chronologie des étapes",
@@ -199,7 +201,8 @@
         "error": "Erreur",
         "action": "Action"
       },
-      "empty": "Aucun historique d’étape pour l’instant."
+      "empty": "Aucun historique d’étape pour l’instant.",
+      "neverStarted": "Cette exécution n’a jamais atteint le moteur de workflow ; aucune étape n’a donc été exécutée."
     },
     "stepDetails": {
       "title": "Détails de l’étape",
@@ -338,7 +341,10 @@
       "savePreset": "Enregistrer le préréglage",
       "show": "Afficher",
       "startRun": "Démarrer l’exécution",
-      "starting": "Démarrage…"
+      "starting": "Démarrage…",
+      "viewRun": "Voir l’exécution",
+      "viewFailedRun": "Voir l’exécution échouée",
+      "tryAgain": "Réessayer"
     },
     "eventCatalog": {
       "title": "Catalogue d’événements",
@@ -361,7 +367,11 @@
       "manualTrigger": "Manuel",
       "workflowStatusLabel": "Statut du workflow",
       "statusActive": "actif",
-      "statusPaused": "en pause"
+      "statusPaused": "en pause",
+      "runSourceLabel": "Source de l’exécution",
+      "runSourceManualTest": "Test manuel",
+      "workflowTriggerLabel": "Déclencheur du workflow",
+      "noTrigger": "Aucun (s’exécute uniquement lorsqu’il est lancé manuellement)"
     },
     "form": {
       "booleanTrue": "Vrai",
@@ -370,7 +380,12 @@
       "mapEntriesPrompt": "Saisissez une clé/un chemin de champ",
       "mapEntriesDescription": "Pour les objets de type carte, ajoutez des clés et définissez chaque valeur.",
       "mapEntriesEmpty": "Aucune entrée de carte ajoutée.",
-      "noSchema": "Aucun schéma disponible pour afficher un formulaire."
+      "noSchema": "Aucun schéma disponible pour afficher un formulaire.",
+      "recordFillHint": "Choisissez un enregistrement réel (par exemple un contrat, un ticket ou un client) et les champs vides voisins se remplissent à partir de cet enregistrement.",
+      "recordFillHintField": "Choisissez un enregistrement réel dans {{field}} et ces champs se remplissent à partir de celui-ci s’ils sont vides : {{targets}}.",
+      "recordFillKeepsTyped": "Les valeurs que vous avez saisies vous-même sont conservées ; les champs pour lesquels l’enregistrement n’a pas de valeur restent inchangés.",
+      "recordFillGap": "L’enregistrement choisi n’a pas de {{fields}} ; ce champ reste donc vide.",
+      "recordNeverFires": "Ce déclencheur ne s’exécute jamais pour cet enregistrement : il n’a pas de date d’exécution. Choisissez-en un autre ou saisissez les dates vous-même."
     },
     "noPublishedVersion": {
       "title": "Aucune version publiée",
@@ -380,7 +395,9 @@
       "largePayloadWarning": "La charge utile dépasse 256 Ko ; les exécutions peuvent être plus lentes.",
       "payloadJsonLabel": "Charge utile (JSON)",
       "payloadLabel": "charge utile",
-      "payloadSize": "Taille de la charge utile : {{size}} Ko"
+      "payloadSize": "Taille de la charge utile : {{size}} Ko",
+      "uuidPlaceholder": "Un identifiant (UUID), p. ex. 3f2c1a5e-0b7d-4c1e-9a2f-6d8e4b1c7a90",
+      "generateTestId": "Générer un identifiant de test"
     },
     "presets": {
       "presetNameLabel": "Nom du préréglage",
@@ -438,7 +455,8 @@
       "presetSaved": "Préréglage enregistré.",
       "providePresetName": "Indiquez un nom de préréglage.",
       "startRunFailed": "Échec du démarrage de l’exécution",
-      "triggerMappingMissing": "Un mappage de déclencheur est requis pour ce schéma d’événement mais n’est pas configuré sur le workflow."
+      "triggerMappingMissing": "Un mappage de déclencheur est requis pour ce schéma d’événement mais n’est pas configuré sur le workflow.",
+      "runStarted": "Exécution démarrée."
     },
     "validation": {
       "invalidJson": "JSON invalide",
@@ -450,6 +468,74 @@
     "sections": {
       "schemaAndEvents": "Schéma et événements",
       "payloadTools": "Outils de charge utile"
+    },
+    "startFailure": {
+      "engineUnavailableTitle": "Le moteur de workflow est injoignable",
+      "engineUnavailableDescription": "L’exécution a été enregistrée mais n’a pas pu démarrer ; elle est donc marquée comme échouée. Réessayez dans quelques minutes. Si le problème persiste, demandez à un administrateur de vérifier le service de workflow.",
+      "launchFailedTitle": "L’exécution n’a pas pu démarrer",
+      "launchFailedDescription": "L’exécution a été enregistrée et marquée comme échouée. Ouvrez-la pour voir l’erreur.",
+      "genericTitle": "L’exécution n’a pas démarré",
+      "technicalDetails": "Détails techniques"
+    },
+    "startProgress": "Connexion au moteur de workflow…",
+    "issues": {
+      "item": "élément {{position}}",
+      "required": "{{field}} est obligatoire",
+      "type": "{{field}} doit être {{type}}",
+      "typeUnknown": "{{field}} a un type de valeur incorrect",
+      "formatUuid": "{{field}} doit être un identifiant (UUID), comme 3f2c1a5e-0b7d-4c1e-9a2f-6d8e4b1c7a90",
+      "formatEmail": "{{field}} doit être une adresse e-mail",
+      "formatDate": "{{field}} doit être une date (YYYY-MM-DD)",
+      "formatDateTime": "{{field}} doit être une date et une heure, comme 2026-10-03T09:00:00Z",
+      "formatTime": "{{field}} doit être une heure (HH:MM)",
+      "formatUrl": "{{field}} doit être une adresse web",
+      "formatOther": "{{field}} n’est pas au format attendu",
+      "choice": "{{field}} doit être l’une des valeurs suivantes : {{options}}",
+      "choiceUnknown": "{{field}} ne fait pas partie des valeurs autorisées",
+      "tooShort": "{{field}} doit contenir au moins {{limit}} caractères",
+      "tooFewItems": "{{field}} nécessite au moins {{limit}} éléments",
+      "tooSmall": "{{field}} doit être au moins {{limit}}",
+      "tooLong": "{{field}} doit contenir au plus {{limit}} caractères",
+      "tooManyItems": "{{field}} peut contenir au plus {{limit}} éléments",
+      "tooBig": "{{field}} doit être au plus {{limit}}",
+      "unknownField": "{{field}} ne fait pas partie de cette charge utile",
+      "invalidWithMessage": "{{field}} : {{message}}",
+      "invalid": "{{field}} n’est pas valide",
+      "more": "+{{count}} de plus",
+      "inputTitle": "Corrigez ces champs, puis relancez l’exécution",
+      "mappedTitle": "Le mappage du déclencheur a produit une charge utile que le workflow n’accepte pas",
+      "mappedDescription": "{{issues}} Vérifiez le mappage du déclencheur dans les paramètres du workflow, ou les champs d’événement qu’il lit.",
+      "types": {
+        "string": "du texte",
+        "number": "un nombre",
+        "integer": "un nombre entier",
+        "boolean": "vrai ou faux",
+        "object": "un groupe de champs",
+        "array": "une liste"
+      }
+    },
+    "draft": {
+      "restored": "Votre dernière charge utile de test pour ce workflow est de retour. Elle reste ici jusqu’à ce que vous recommenciez.",
+      "kept": "Cette charge utile est conservée si vous fermez la boîte de dialogue.",
+      "startOver": "Recommencer"
+    },
+    "dateTrigger": {
+      "help": {
+        "occursOn": "La date concernée par cette exécution : {{dateName}}. Renseignée à partir de l’enregistrement choisi.",
+        "offsetDays": "Nombre de jours entre cette date et l’exécution, selon le déclencheur ({{timing}}). Une valeur négative signifie avant, positive après.",
+        "fireDate": "Le jour où le planificateur lancerait cette exécution : la date ci-dessus plus le décalage."
+      },
+      "timing": {
+        "before": "{{days}} jours avant",
+        "after": "{{days}} jours après",
+        "onTheDay": "le jour même"
+      },
+      "dateNames": {
+        "anniversary": "le prochain anniversaire du client",
+        "renewal": "la date de décision de renouvellement du contrat",
+        "contractEnd": "la date de fin du contrat",
+        "warrantyEnd": "la date de fin de garantie de l’actif"
+      }
     }
   },
   "eventList": {
@@ -582,7 +668,9 @@
       "loading": "Chargement des entrées d'audit..."
     },
     "values": {
-      "system": "système"
+      "system": "système",
+      "unknownUser": "Utilisateur inconnu",
+      "byUser": "Par {{user}}"
     },
     "toasts": {
       "loadFailed": "Échec du chargement des journaux d’audit",
@@ -633,7 +721,26 @@
       "validation": {
         "lastValidated": "Dernière validation : {{timestamp}}",
         "unknown": "Statut de validation inconnu"
-      }
+      },
+      "publishedVersionBadge": "Publié v{{version}}",
+      "notPublishedBadge": "Non publié",
+      "pausedToast": "Workflow en pause. Les nouveaux événements ne lanceront pas d’exécutions.",
+      "resumedToast": "Workflow actif. Les nouveaux événements lancent de nouveau des exécutions.",
+      "resumeTitle": "En pause : les nouveaux événements ne lancent pas d’exécutions. Cliquez pour l’activer.",
+      "pauseTitle": "Actif : les nouveaux événements lancent des exécutions. Cliquez pour le mettre en pause.",
+      "pausedBadge": "En pause",
+      "activeBadge": "Actif",
+      "runPausedReason": "En pause : reprenez le workflow pour l’exécuter.",
+      "pauseTitleDate": "Actif : les exécutions démarrent aux dates surveillées par ce workflow. Cliquez pour le mettre en pause.",
+      "resumeTitleDate": "En pause : les dates surveillées ne lancent pas d’exécutions. Cliquez pour l’activer.",
+      "pausedToastDate": "Workflow en pause. Les dates surveillées ne lanceront pas d’exécutions.",
+      "resumedToastDate": "Workflow actif. Les dates surveillées lancent de nouveau des exécutions.",
+      "pauseTitleManual": "Actif : les planifications peuvent lancer des exécutions. Cliquez pour le mettre en pause.",
+      "resumeTitleManual": "En pause : les planifications ne lancent pas d’exécutions. Cliquez pour l’activer.",
+      "pausedToastManual": "Workflow en pause. Les planifications ne lanceront pas d’exécutions.",
+      "resumedToastManual": "Workflow actif. Les planifications lancent de nouveau des exécutions.",
+      "newWorkflowTitle": "Démarrer un nouveau workflow vide. Celui-ci reste tel qu’il a été enregistré en dernier.",
+      "newWorkflowShort": "Nouveau workflow"
     },
     "form": {
       "nameLabel": "Nom du workflow",
@@ -691,7 +798,17 @@
       "timezoneOptional": "Fuseau horaire (facultatif)",
       "tenantTimezoneDefault": "Fuseau horaire du locataire",
       "dateTriggerSummary": "S’exécute {{days}} {{direction}} {{source}} à {{time}} ({{timezone}})",
-      "inputDataDatePrefix": "Ce workflow reçoit la charge utile définie par"
+      "inputDataDatePrefix": "Ce workflow reçoit la charge utile définie par",
+      "searchEventCategories": "Rechercher des catégories",
+      "searchAllEvents": "Rechercher dans tous les événements",
+      "selectEventToFinish": "Sélectionnez un événement pour terminer la configuration de ce déclencheur.",
+      "searchOrPickCategory": "Recherchez dans tous les événements, ou choisissez une catégorie pour affiner la liste.",
+      "nextVersionLabel": "Prochaine version à publier",
+      "publishedAndNextVersion": "Publié : v{{published}}. Vous modifiez un brouillon ; sa publication crée la v{{next}}.",
+      "notPublishedNextVersion": "Pas encore publié. La publication crée la v{{next}}.",
+      "tenantTimezoneOption": "Fuseau horaire du locataire (par défaut)",
+      "searchTimezones": "Rechercher des fuseaux horaires",
+      "inputDataEventPending": "Choisissez l’événement ci-dessus ; vos étapes liront les données que cet événement envoie."
     },
     "stepPanel": {
       "readOnly": "Accès en lecture seule : l’édition des étapes est désactivée.",
@@ -732,7 +849,12 @@
       "untilInput": "Entrée jusqu'à",
       "specificDateTime": "Date et heure spécifiques",
       "untilExpression": "Expression jusqu'à",
-      "returnNotice": "Return arrête l'exécution du workflow."
+      "returnNotice": "Return arrête l'exécution du workflow.",
+      "duration": "Durée",
+      "durationSummary": "Attend {{duration}}.",
+      "durationEmpty": "Saisissez la durée d’attente, dans l’une de ces unités.",
+      "notFoundInTry": "Cette étape se trouve dans un bloc Tenter. Si rien n’est trouvé, elle continue actuellement, et la branche Capturer ne s’exécutera donc pas. Faites-la échouer pour que Capturer gère un enregistrement manquant.",
+      "notFoundFailAction": "Échouer pour que Capturer le gère"
     },
     "mappingExpr": {
       "add": "Ajouter",
@@ -950,7 +1072,12 @@
       "else": "SINON",
       "try": "ESSAI",
       "catch": "CAPTURE",
-      "body": "CORPS"
+      "body": "CORPS",
+      "thenLabel": "Alors",
+      "elseLabel": "Sinon",
+      "tryLabel": "Tenter",
+      "catchLabel": "Capturer",
+      "bodyLabel": "Corps"
     },
     "palette": {
       "showPalette": "Afficher la palette",
@@ -967,7 +1094,9 @@
         "Apps": "Applications",
         "Action": "Action",
         "Email": "E-mail",
-        "Nodes": "Nœuds"
+        "Nodes": "Nœuds",
+        "Actions": "Actions",
+        "Results": "Résultats"
       },
       "controlBlocks": {
         "control.if": {
@@ -1138,6 +1267,13 @@
           "label": "Magasin de données",
           "description": "Lire et écrire un état de workflow durable d'une exécution à l'autre."
         }
+      },
+      "noMatches": {
+        "title": "Aucun résultat pour « {{query}} »",
+        "tipWords": "Essayez un mot plus court ou différent, comme « ticket », « e-mail » ou « attendre ».",
+        "tipVerb": "Recherchez selon ce que fait l’étape : créer, trouver, mettre à jour, notifier.",
+        "tipBrowse": "Effacez la recherche pour parcourir toutes les catégories.",
+        "clear": "Effacer la recherche"
       }
     },
     "stepCard": {
@@ -1180,7 +1316,8 @@
       "published": "Workflow publié",
       "publishFailed": "Échec de la publication du workflow",
       "publishValidationErrors": "Échec de la publication — corrigez les erreurs de validation",
-      "systemEventMissingSchema": "Cet événement système n’a pas de schéma valide et ne peut pas être sélectionné tant qu’il n’est pas corrigé."
+      "systemEventMissingSchema": "Cet événement système n’a pas de schéma valide et ne peut pas être sélectionné tant qu’il n’est pas corrigé.",
+      "publishedVersion": "Version {{version}} publiée. Les nouvelles exécutions utilisent cette version."
     },
     "propsPanel": {
       "resizeAria": "Redimensionner le panneau des propriétés",
@@ -1192,7 +1329,8 @@
       "unlimited": "Illimité",
       "autoPauseFailureRate": "Mise en pause automatique sur taux d'échec",
       "failureRateThreshold": "Seuil de taux d'échec",
-      "minRunsBeforeAutoPause": "Exécutions minimum avant mise en pause automatique"
+      "minRunsBeforeAutoPause": "Exécutions minimum avant mise en pause automatique",
+      "resizeHint": "Faites glisser pour redimensionner. Double-cliquez pour élargir ou rétrécir."
     },
     "trigger": {
       "summary": "Résumé du déclencheur",
@@ -1224,7 +1362,8 @@
     },
     "expression": {
       "insertField": "Insérer un champ",
-      "enterPlaceholder": "Entrer l'expression..."
+      "enterPlaceholder": "Entrer l'expression...",
+      "conditionPlaceholder": "p. ex. payload.status = \"open\" and payload.count > 3"
     },
     "dataContext": {
       "availableDataAtStep": "Données disponibles à cette étape",
@@ -1245,6 +1384,114 @@
       "clientSecret": "Secret client :",
       "tenantId": "ID de locataire :",
       "userEmail": "E-mail de l'utilisateur :"
+    },
+    "entityLookup": {
+      "added": "« {{action}} » ajouté. Les étapes suivantes peuvent utiliser sa sortie sous vars.{{saveAs}}.",
+      "message": "Ce déclencheur n’inclut que l’identifiant du {{entity}} (payload.{{field}}). Pour utiliser les détails du {{entity}}, comme son nom ou son statut, ajoutez d’abord « {{action}} ».",
+      "addButton": "Ajouter « {{action}} »",
+      "entities": {
+        "ticket": "ticket",
+        "client": "client",
+        "contact": "contact",
+        "project": "projet"
+      },
+      "messageWithCarried": "Ce déclencheur inclut déjà {{fields}}. Pour les autres détails du {{entity}}, ajoutez « {{action}} », qui recherche le {{entity}} à partir de payload.{{field}}.",
+      "tips": {
+        "customerReplyText": {
+          "available": "Le texte de la réponse n’est pas dans le déclencheur lui-même. Utilisez {{path}} (« {{action}} » › dernier commentaire du client).",
+          "afterLookup": "Le texte de la réponse n’est pas dans le déclencheur lui-même. Après « {{action}} », il est disponible sous « {{action}} » › {{detail}}."
+        }
+      }
+    },
+    "insertion": {
+      "afterStepIn": "Après « {{step}} » dans {{container}}",
+      "afterStep": "Après « {{step}} »",
+      "startOf": "Début de {{container}}",
+      "startOfWorkflow": "Début du workflow",
+      "endOf": "Fin de {{container}}",
+      "endOfWorkflow": "Fin du workflow",
+      "paletteLabel": "Ajoute à :",
+      "reset": "Réinitialiser"
+    },
+    "conditionBuilder": {
+      "triggerSource": "Déclencheur",
+      "expressionLabel": "Expression de condition",
+      "joinWords": {
+        "and": "et",
+        "or": "ou"
+      },
+      "noConditionSummary": "Aucune condition définie",
+      "selectValue": "Sélectionner une valeur",
+      "booleanTrue": "vrai",
+      "booleanFalse": "faux",
+      "numberPlaceholder": "Nombre",
+      "textPlaceholder": "Valeur",
+      "removeValue": "Supprimer la valeur",
+      "addValue": "Ajouter une valeur",
+      "builderUnavailable": "Le générateur ne peut afficher que les conditions constituées d’une liste de vérifications de champs reliées uniquement par « et » ou uniquement par « ou ».",
+      "modes": {
+        "builder": "Générateur",
+        "expression": "Expression"
+      },
+      "expressionOnlyNotice": "Cette condition ne peut être modifiée que sous forme d’expression. Effacez-la pour recommencer dans le générateur.",
+      "matchPrefix": "Continuer lorsque",
+      "joinAll": "toutes",
+      "joinAny": "au moins une",
+      "matchSuffix": "de ces conditions sont vraies",
+      "selectField": "Choisir un champ",
+      "searchFields": "Rechercher des champs",
+      "noFields": "Aucun champ correspondant",
+      "removeCondition": "Supprimer la condition",
+      "emptyHint": "Ajoutez une condition pour choisir quand la branche Alors s’exécute. Sinon, la branche Sinon s’exécute.",
+      "noFieldsHint": "Aucun champ n’est encore disponible. Choisissez un déclencheur, ou ajoutez avant cette étape une étape qui enregistre sa sortie.",
+      "addCondition": "Ajouter une condition",
+      "operators": {
+        "equals": "est",
+        "not_equals": "n’est pas",
+        "in": "est l’un de",
+        "not_in": "n’est aucun de",
+        "gt": "est supérieur à",
+        "gte": "est au moins",
+        "lt": "est inférieur à",
+        "lte": "est au plus",
+        "contains": "contient",
+        "starts_with": "commence par",
+        "ends_with": "se termine par",
+        "is_empty": "est vide",
+        "is_not_empty": "n’est pas vide"
+      },
+      "unknownEntity": "{{field}} inconnu",
+      "anyBoardStatus": "{{name}} (tous les tableaux)",
+      "boardStatus": "{{name}} ({{board}})",
+      "cancelNewCondition": "Annuler la nouvelle condition"
+    },
+    "draftBackup": {
+      "message": "Ce navigateur a conservé des modifications non enregistrées de ce workflow datant de {{time}}. Les restaurer ?",
+      "restore": "Restaurer les modifications",
+      "discard": "Ignorer"
+    },
+    "sessionExpired": {
+      "title": "Votre session a pris fin",
+      "backToEditing": "Retour à la modification",
+      "signIn": "Se connecter dans un nouvel onglet",
+      "message": "Votre session a pris fin. Reconnectez-vous dans un nouvel onglet, puis revenez et enregistrez — vos modifications sont conservées."
+    },
+    "firstPublish": {
+      "messageEvent": "La publication démarre ce workflow. Désormais, il s’exécute chaque fois que « {{event}} » se produit. Vous pouvez le mettre en pause à tout moment.",
+      "messageDate": "La publication démarre ce workflow. Désormais, il s’exécute aux dates sélectionnées par son déclencheur de date. Vous pouvez le mettre en pause à tout moment.",
+      "messageManual": "La publication rend ce workflow disponible à l’exécution. Rien ne le lance automatiquement : exécutez-le avec Exécuter, ou ajoutez une planification dans le panneau de contrôle des workflows.",
+      "title": "Publier et démarrer ce workflow ?",
+      "confirm": "Publier",
+      "cancel": "Annuler"
+    },
+    "saveStatus": {
+      "justNow": "à l’instant",
+      "minutesAgo": "il y a {{count}} min",
+      "atTime": "à {{time}}",
+      "notSavedYet": "Pas encore enregistré",
+      "unsaved": "Modifications non enregistrées",
+      "savedAgo": "Enregistré · {{ago}}",
+      "saved": "Enregistré"
     }
   },
   "actionInputFieldInfo": {
@@ -1257,10 +1504,13 @@
     "range": "Plage : {{min}} - {{max}}",
     "any": "n’importe quel",
     "defaultPrefix": "Par défaut :",
-    "examplePrefix": "Exemple :"
+    "examplePrefix": "Exemple :",
+    "atMost": "Au plus {{max}}",
+    "atLeast": "Au moins {{min}}"
   },
   "actionInputSection": {
-    "heading": "Entrées d’action"
+    "heading": "Entrées d’action",
+    "requireOneOf": "Renseignez au moins l’un de : {{fields}}"
   },
   "actionInputFixedPicker": {
     "loadingOptions": "Chargement des options…",
@@ -1297,6 +1547,25 @@
         "board_id": "Choisissez d’abord un tableau fixe pour charger les options de sous-catégorie.",
         "category_id": "Choisissez d’abord une catégorie fixe pour charger les options de sous-catégorie."
       }
+    },
+    "ticketNoMatches": "Aucun ticket ne correspond. Essayez le numéro du ticket (par exemple 1122) ou des mots du titre.",
+    "addValue": "Ajouter une valeur",
+    "removeValue": "Supprimer {{label}}",
+    "searchPlaceholder": "Rechercher",
+    "noMatchingOptions": "Aucune option correspondante",
+    "details": {
+      "endsOn": "Se termine le {{date}}",
+      "noEndDate": "Aucune date de fin",
+      "warrantyEndsOn": "Garantie jusqu’au {{date}}",
+      "noWarrantyEnd": "Aucune date de fin de garantie",
+      "anyBoardStatus": "{{name}} (tous les tableaux)"
+    },
+    "clientScope": {
+      "showingAll": "Tous les clients affichés",
+      "filteredTo": "Filtré sur {{client}}",
+      "filteredToChosen": "Filtré sur le client choisi",
+      "filterAgain": "Uniquement ce client",
+      "showAll": "Afficher tous les clients"
     }
   },
   "serverErrors": {
@@ -1339,7 +1608,17 @@
     "schedulePinnedSchemaRequired": "Les planifications ne sont prises en charge que pour les workflows avec un schéma de charge utile épinglé.",
     "scheduleSchemaNotRegistered": "La dernière version publiée du workflow n’a pas de schéma de charge utile épinglé enregistré.",
     "schedulePayloadInvalid": "La charge utile de la planification n’a pas été validée par rapport au schéma du workflow.",
-    "processEventFailed": "Échec du traitement de l’événement du workflow."
+    "processEventFailed": "Échec du traitement de l’événement du workflow.",
+    "workflowEngineUnavailable": "Le moteur de workflow est injoignable. Réessayez dans quelques minutes. Si le problème persiste, demandez à un administrateur de vérifier le service de workflow.",
+    "invalidFields": "Certaines valeurs ne sont pas valides : {{details}}",
+    "sessionExpired": "Votre session a pris fin. Reconnectez-vous, puis réessayez.",
+    "fieldValue": "Une valeur",
+    "issue": {
+      "required": "{{field}} est obligatoire",
+      "number": "{{field}} doit être un nombre",
+      "tooSmall": "{{field}} doit être au moins {{minimum}}",
+      "tooBig": "{{field}} doit être au plus {{maximum}}"
+    }
   },
   "taskInbox": {
     "title": "Boîte de tâches",
@@ -1525,7 +1804,11 @@
     "emptySelectPrompt": "Sélectionnez une étape dans le panneau pour commencer.",
     "patchSummary": {
       "unchanged": "autres champs inchangés"
-    }
+    },
+    "insertionPointLabel": "Les nouvelles étapes vont ici",
+    "emptyBranchPrompt": "Ajoutez une étape à cette branche",
+    "emptyActivePrompt": "Les nouvelles étapes vont ici. Choisissez-en une dans la palette.",
+    "stepCount": "({{count}} étapes)"
   },
   "expressionEditor": {
     "ariaLabel": "Éditeur d’expression",
@@ -1533,10 +1816,67 @@
     "textAreaPlaceholder": "Saisir une expression JSONata...",
     "field": {
       "placeholder": "Saisir une expression...",
-      "insertFieldPlaceholder": "Insérer un champ"
+      "insertFieldPlaceholder": "Insérer un champ",
+      "expand": "Ouvrir un éditeur plus grand",
+      "expandShort": "Agrandir",
+      "expandedTitle": "Modifier l’expression",
+      "done": "Terminé"
     },
     "clear": "Effacer",
-    "clearAriaLabel": "Effacer l'expression"
+    "clearAriaLabel": "Effacer l'expression",
+    "syntaxHelp": {
+      "toggle": "Aide sur la syntaxe",
+      "intro": "Les expressions calculent une valeur à partir des données du workflow. Modèles courants :",
+      "examples": {
+        "field": {
+          "label": "Champ",
+          "description": "Une valeur du déclencheur (payload.…) ou le résultat enregistré d’une étape (vars.…)."
+        },
+        "text": {
+          "label": "Texte",
+          "description": "Placez le texte entre guillemets doubles. Joignez les valeurs avec &."
+        },
+        "equals": {
+          "label": "Égal à",
+          "description": "Utilisez = pour « égal à » et != pour « différent de »."
+        },
+        "compare": {
+          "label": "Comparer",
+          "description": "Comparez des nombres avec >, >=, < et <=."
+        },
+        "andOr": {
+          "label": "Et / ou",
+          "description": "Combinez des conditions avec and, or et des parenthèses."
+        },
+        "oneOf": {
+          "label": "L’un de",
+          "description": "Vrai lorsque la valeur correspond à n’importe quel élément de la liste."
+        },
+        "hasValue": {
+          "label": "A une valeur",
+          "description": "Vrai lorsque le champ est présent et non vide (null)."
+        },
+        "notTrue": {
+          "label": "Non",
+          "description": "Inversez une condition en la comparant à false."
+        },
+        "choose": {
+          "label": "Choisir une valeur",
+          "description": "condition ? valeur si vrai : valeur si faux."
+        },
+        "list": {
+          "label": "Liste",
+          "description": "Placez les valeurs entre crochets, séparées par des virgules, pour les entrées qui acceptent une liste."
+        }
+      },
+      "functionsHeading": "Fonctions",
+      "transformsPointer": "Pour un traitement de texte plus poussé, ajoutez plutôt une étape Transformer : Tronquer le texte, Composer du texte, Fractionner le texte, Extraction par regex, Remplacement par regex, et plus. Recherchez « text » ou « regex » dans la palette."
+    },
+    "preview": {
+      "title": "Aperçu avec des données d’exemple",
+      "emptyResult": "(vide)",
+      "cannotPreview": "Aperçu impossible pour le moment : {{message}}"
+    }
   },
   "sourceDataTree": {
     "searchPlaceholder": "Rechercher des champs...",
@@ -1586,6 +1926,11 @@
     "addItem": "Ajouter un élément",
     "fill": "Remplir",
     "clearValues": "Effacer les valeurs",
+    "askAi": {
+      "ariaLabel": "Demander de l’aide à l’IA pour les transformations",
+      "title": "Demander à l’IA",
+      "shortcutHint": "Ouvrir Quick Ask pour l’aide sur les transformations"
+    },
     "applySuggestions": "Appliquer les suggestions ({{count}})",
     "applySuggestionTitle": "Appliquer la suggestion : {{sourcePath}}",
     "fuzzySuffix": "(approximatif)",
@@ -1630,11 +1975,6 @@
       "apply": "Appliquer",
       "cancel": "Annuler"
     },
-    "askAi": {
-      "ariaLabel": "Demander de l’aide à l’IA pour les transformations",
-      "title": "Demander à l’IA",
-      "shortcutHint": "Ouvrir Quick Ask pour l’aide sur les transformations"
-    },
     "softEnumPlaceholder": "Sélectionner ou saisir une valeur",
     "softEnumSearchPlaceholder": "Rechercher ou saisir une valeur personnalisée",
     "softEnumNoResults": "Aucune suggestion",
@@ -1672,7 +2012,24 @@
         "fromExpression": "le {{record}} choisi par une expression",
         "fixed": "un {{record}} spécifique"
       }
-    }
+    },
+    "ticketAssignment": {
+      "editFields": "Modifier champ par champ"
+    },
+    "reference": {
+      "firstItem": "(premier élément)",
+      "lastItem": "(dernier élément)",
+      "wholeResult": "Résultat complet",
+      "oneItemList": "Cette valeur unique est envoyée sous forme de liste d’un élément."
+    },
+    "setOptionalField": "Définir",
+    "unsetOptionalField": "Laisser {{name}} non défini",
+    "textWithFieldsMode": "Texte",
+    "textModeUnavailable": "Cette expression fait plus que joindre du texte et des champs ; elle ne peut donc être modifiée que sous forme d’expression. Effacez-la pour recommencer en mode texte.",
+    "partialMatchSuffix": "(nom similaire : vérifiez avant d’utiliser)",
+    "kindMatchSuffix": "(même type d’enregistrement)",
+    "kindMatchSuffixAn": "(également de type {{kind}})",
+    "kindMatchSuffixA": "(également de type {{kind}})"
   },
   "schemaReference": {
     "selectAction": "Sélectionnez une action pour voir son schéma d’entrée/sortie",
@@ -1733,7 +2090,14 @@
     "eventWithType": "Événement : {{eventType}}",
     "oneTimeSchedule": "Planification ponctuelle",
     "recurringSchedule": "Planification récurrente",
-    "date": "Date"
+    "date": "Date",
+    "manualWithEvent": "Test manuel avec l’événement : {{eventType}}",
+    "dateTiming": {
+      "before": "{{count}} jours avant",
+      "after": "{{count}} jours après",
+      "onTheDay": "le jour même"
+    },
+    "dateWithTiming": "{{source}}, {{timing}}"
   },
   "scheduleStatus": {
     "unknown": "Inconnu",
@@ -1914,7 +2278,9 @@
       "waitForTime": "Attendre un délai",
       "humanTask": "Tâche utilisateur",
       "setState": "Définir l’état",
-      "assign": "Assigner"
+      "assign": "Assigner",
+      "return": "Retourner",
+      "callWorkflow": "Appeler un workflow"
     },
     "stepCard": {
       "lastStatus": "Dernier statut : {{status}} ({{timestamp}})",
@@ -1946,7 +2312,13 @@
     },
     "lastRefreshed": "Dernière actualisation {{time}}",
     "navigation": {
-      "backToRuns": "← Retour aux exécutions de workflow"
+      "backToRuns": "← Retour aux exécutions de workflow",
+      "breadcrumbLabel": "Emplacement de l’exécution",
+      "workflows": "Workflows",
+      "runs": "Exécutions",
+      "currentRunOf": "Exécution de {{workflow}}",
+      "currentRun": "Exécution {{id}}",
+      "backToWorkflow": "Retour au workflow"
     },
     "title": "Studio d'exécution de workflow"
   },
@@ -2386,7 +2758,9 @@
       },
       "tableValues": {
         "system": "Système",
-        "draftVersion": "Brouillon : v{{version}}"
+        "draftVersion": "Brouillon : v{{version}}",
+        "unpublishedChangesTitle": "Le brouillon enregistré contient des modifications non encore publiées. Les exécutions utilisent la v{{version}}.",
+        "unpublishedChanges": "Modifications non publiées"
       },
       "rowMenu": {
         "ariaLabel": "Actions du workflow",
@@ -2394,7 +2768,12 @@
         "pause": "Mettre en pause",
         "duplicate": "Dupliquer",
         "viewRuns": "Voir les exécutions",
-        "delete": "Supprimer"
+        "delete": "Supprimer",
+        "ariaLabelNamed": "Actions pour {{name}}",
+        "open": "Ouvrir dans l’éditeur",
+        "runPaused": "Exécuter (reprendre d’abord)",
+        "run": "Exécuter…",
+        "title": "Actions du workflow"
       },
       "states": {
         "errorTitle": "Échec du chargement des workflows",
@@ -2712,24 +3091,86 @@
       }
     }
   },
-  "mappingEditor": {
-    "error": {
-      "retry": "Réessayer",
-      "title": "Échec du chargement du schéma",
-      "retryWithCount": "Réessayer ({{retryCount}}/{{maxRetries}})",
-      "attemptOfMax": "Tentative {{retryCount}} sur {{maxRetries}}",
-      "maxRetriesReached": "Nombre maximal de tentatives atteint.",
-      "contactSupport": "Contacter l'assistance →"
-    }
-  },
   "toggle": {
     "disableTitle": "Désactiver le workflow",
     "enableTitle": "Activer le workflow",
     "confirmDisable": "Voulez-vous vraiment désactiver ce workflow ?",
     "confirmEnable": "Voulez-vous vraiment activer ce workflow ?"
   },
+  "mappingEditor": {
+    "error": {
+      "title": "Échec du chargement du schéma",
+      "retry": "Réessayer",
+      "retryWithCount": "Réessayer ({{retryCount}}/{{maxRetries}})",
+      "attemptOfMax": "Tentative {{retryCount}} sur {{maxRetries}}",
+      "maxRetriesReached": "Nombre maximal de tentatives atteint.",
+      "contactSupport": "Contacter l'assistance →"
+    }
+  },
   "actionInputTypeHint": {
     "coercible": "Le type « {{sourceType}} » sera converti en « {{targetType}} »",
     "incompatible": "Le type « {{sourceType}} » est incompatible avec le type attendu « {{targetType}} »"
+  },
+  "ticketAssignmentEditor": {
+    "assignTo": "Assigner à",
+    "assigneeHint": "Rechercher des utilisateurs ou des équipes",
+    "teamMode": "Comment assigner l’équipe",
+    "teamModeLead": "Responsable d’équipe, avec les membres de l’équipe ajoutés comme agents supplémentaires",
+    "teamModeQueue": "File d’attente : le premier membre de l’équipe",
+    "additionalUsers": "Assigner aussi (facultatif)",
+    "additionalUsersHint": "Rechercher des utilisateurs"
+  },
+  "textTemplateEditor": {
+    "insertField": "Insérer un champ",
+    "placeholder": "Saisissez du texte. Utilisez Insérer un champ pour ajouter des valeurs, p. ex. Le ticket {{example}} a été mis à jour",
+    "fieldsUsed": "Champs :",
+    "hint": "Les espaces réservés tels que {{payloadExample}} ou {{varsExample}} sont renseignés par le workflow. Les autres espaces réservés {{otherExample}} sont conservés tels quels, par exemple pour les données propres à un modèle d’e-mail.",
+    "expand": "Agrandir",
+    "expandedTitle": "Modifier le texte",
+    "done": "Terminé",
+    "hintInLoop": "Les espaces réservés tels que {{itemExample}}, {{indexExample}}, {{payloadExample}} ou {{varsExample}} sont renseignés par le workflow. Les autres espaces réservés {{otherExample}} sont conservés tels quels, par exemple pour les données propres à un modèle d’e-mail."
+  },
+  "valueSourceChooser": {
+    "origin": {
+      "trigger": "Déclencheur",
+      "loop": "Élément de boucle courant",
+      "error": "Erreur capturée",
+      "workflow": "Exécution du workflow"
+    },
+    "chooseSpecific": "Choisir un {{entity}} précis…",
+    "typeText": "Saisir du texte (insérez des champs au fur et à mesure)…",
+    "enterValue": "Saisir une valeur fixe…",
+    "tierSameName": "Même nom",
+    "tierSameKind": "Même type d’enregistrement",
+    "tierActor": "Qui l’a fait, pas l’enregistrement lui-même",
+    "writeExpression": "Écrire une expression…",
+    "placeholder": "Choisissez un champ des étapes précédentes ou du déclencheur",
+    "noMatches": "Aucun champ adapté. Choisissez une valeur fixe ou écrivez une expression.",
+    "groupSuggested": "Suggestions",
+    "currentSpecific": "Un {{entity}} précis",
+    "currentText": "Texte",
+    "currentFixed": "Valeur fixe",
+    "currentExpression": "Expression",
+    "label": "Valeur provenant de",
+    "tierSameKindAn": "Également de type {{kind}}",
+    "tierSameKindA": "Également de type {{kind}}"
+  },
+  "notificationRecipientsEditor": {
+    "users": "Notifier des utilisateurs",
+    "usersHint": "Rechercher des utilisateurs",
+    "roles": "Notifier toutes les personnes ayant ces rôles",
+    "rolesHint": "Ajouter un rôle",
+    "roleNames": "Noms de rôles (facultatif)",
+    "roleNamesPlaceholder": "p. ex. Technicien, Répartiteur (correspondance par nom à l’exécution du workflow)",
+    "empty": "Choisissez au moins un utilisateur ou un rôle à notifier."
+  },
+  "emailRecipientsEditor": {
+    "remove": "Supprimer {{email}}",
+    "placeholder": "Saisissez une adresse et appuyez sur Entrée, p. ex. Ada Lovelace <ada@example.com>",
+    "invalid": "Adresse e-mail non valide : {{entries}}"
+  },
+  "fieldPicker": {
+    "searchPlaceholder": "Rechercher des champs",
+    "noMatches": "Aucun champ correspondant"
   }
 }
