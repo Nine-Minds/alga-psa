@@ -48,7 +48,7 @@ import { buildReferenceExpression, getOneItemListReferencePath, getReferenceExpr
 import {
   findAutoMappingSuggestions,
   selectBulkApplicableSuggestions,
-  isStrongSuggestion,
+  isFillableSuggestion,
   type AutoMappingSuggestion,
 } from './autoMappingSuggestions';
 import { getTextTemplateScope, textTemplateFromValue } from './textTemplate';
@@ -2081,10 +2081,11 @@ export const InputMappingEditor: React.FC<InputMappingEditorProps> = ({
   const handleAddMapping = useCallback((fieldName: string) => {
     const field = targetFields.find((candidate) => candidate.name === fieldName);
     if (!field) return;
-    // A same-name, type-matched source fills the input directly; otherwise start in the field's
-    // natural editor (picker, text, structured fields).
+    // The suggestion shown beside the field fills it directly (a same-name, type-matched source, or
+    // a same-kind record on a picker); otherwise start in the field's natural editor (picker,
+    // text, structured fields).
     const suggestion = suggestionMap.get(fieldName);
-    if (isStrongSuggestion(suggestion, field)) {
+    if (isFillableSuggestion(suggestion, field)) {
       onChange({ ...value, [fieldName]: { $expr: suggestion!.expression } });
       return;
     }

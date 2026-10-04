@@ -222,6 +222,18 @@ export const isStrongSuggestion = (
     (target.editor?.kind === 'picker' || ID_FIELD_NAME.test(target.name))
   );
 
+/**
+ * What a field's own Fill button applies: everything strong, plus a same-kind match on a picker
+ * input (a contact id from "Contact name ID"), where the field and the source name the same kind
+ * of record. Similar-name guesses stay hints, because they say "check before using".
+ */
+export const isFillableSuggestion = (
+  suggestion: AutoMappingSuggestion | undefined,
+  target?: { name: string; editor?: { kind?: string } }
+): boolean =>
+  isStrongSuggestion(suggestion, target) ||
+  Boolean(suggestion && suggestion.confidence === 'kind' && target?.editor?.kind === 'picker');
+
 export type RankedSource = {
   source: AutoMappingSource;
   /** Lower is better: 0 same name, 1 same kind of record, 2 similar name, 3 fits the type, 4 who-acted fields. */

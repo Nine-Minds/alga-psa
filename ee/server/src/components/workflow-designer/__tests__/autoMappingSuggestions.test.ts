@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   findAutoMappingSuggestions,
   isApplicableSuggestion,
+  isFillableSuggestion,
   isStrongSuggestion,
   rankSourcesForTarget,
   selectBulkApplicableSuggestions,
@@ -105,6 +106,11 @@ describe('semantic suggestion rules', () => {
     );
     expect(suggestion).toMatchObject({ sourcePath: 'vars.ticketDetails.ticket.contact_name_id', confidence: 'kind' });
     expect(isApplicableSuggestion(suggestion)).toBe(false);
+    // The field's own Fill button applies it (the same kind of record), though bulk apply does not.
+    expect(isFillableSuggestion(suggestion, target)).toBe(true);
+    // A similar-name guess is only ever a hint, and a same-kind match needs a picker input.
+    expect(isFillableSuggestion({ ...suggestion, confidence: 'partial' }, target)).toBe(false);
+    expect(isFillableSuggestion(suggestion, { name: 'contact_id', editor: { kind: 'text' } })).toBe(false);
   });
 
   it('rejects a different kind of record even with the same name', () => {
