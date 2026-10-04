@@ -5,7 +5,7 @@ import { tenantDb } from '@alga-psa/db';
 import { isEnterprise } from '@alga-psa/core';
 import { deleteEntityWithValidation } from '@alga-psa/core/server';
 import { getActionRegistryV2 } from '../../registries/actionRegistry';
-import { withWorkflowPicker, withWorkflowNotFoundPolicy } from '../../jsonSchemaMetadata';
+import { withWorkflowPicker, withWorkflowNotFoundPolicy, withWorkflowRequireOneOf } from '../../jsonSchemaMetadata';
 import { ContactModel } from '../../../../models/contactModel';
 import type {
   ContactEmailAddressInput as ContactModelEmailInput,
@@ -665,25 +665,28 @@ export function registerContactActions(): void {
   registry.register({
     id: 'contacts.find',
     version: 1,
-    inputSchema: z
-      .object({
-        contact_id: withWorkflowPicker(uuidSchema.optional(), 'Contact id', 'contact'),
-        email: z.string().email().optional(),
-        phone: z.string().optional().describe('Phone number (normalized digits match)'),
-        phone_match: z
-          .enum(phoneMatchModes)
-          .default('exact')
-          .describe('Phone matching mode. last7/last10 can match multiple contacts.'),
-        client_id: withWorkflowPicker(uuidSchema.optional(), 'Optional client scope', 'client'),
-        on_not_found: withWorkflowNotFoundPolicy(z.enum(['return_null', 'error']).default('return_null'), 'What to do when nothing is found'),
-        match_strategy: z
-          .enum(['first_created', 'most_recent'])
-          .default('first_created')
-          .describe('Deterministic ordering when multiple matches exist'),
-      })
-      .refine((val) => Boolean(val.contact_id || val.email || val.phone), {
-        message: 'contact_id, email, or phone required',
-      }),
+    inputSchema: withWorkflowRequireOneOf(
+      z
+        .object({
+          contact_id: withWorkflowPicker(uuidSchema.optional(), 'Contact id', 'contact'),
+          email: z.string().email().optional(),
+          phone: z.string().optional().describe('Phone number (normalized digits match)'),
+          phone_match: z
+            .enum(phoneMatchModes)
+            .default('exact')
+            .describe('Phone matching mode. last7/last10 can match multiple contacts.'),
+          client_id: withWorkflowPicker(uuidSchema.optional(), 'Optional client scope', 'client'),
+          on_not_found: withWorkflowNotFoundPolicy(z.enum(['return_null', 'error']).default('return_null'), 'What to do when nothing is found'),
+          match_strategy: z
+            .enum(['first_created', 'most_recent'])
+            .default('first_created')
+            .describe('Deterministic ordering when multiple matches exist'),
+        })
+        .refine((val) => Boolean(val.contact_id || val.email || val.phone), {
+          message: 'contact_id, email, or phone required',
+        }),
+      ['contact_id', 'email', 'phone']
+    ),
     outputSchema: z.object({
       contact: contactSummarySchema.nullable(),
     }),

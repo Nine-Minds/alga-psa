@@ -5,7 +5,7 @@ import type {
 } from '@alga-psa/workflows/runtime';
 
 import type { ActionInputField } from './mapping';
-import { flattenRequiredActionInputFields } from './mapping/mappingValueState';
+import { flattenRequiredActionInputFields, isMappingValueSet } from './mapping/mappingValueState';
 import { applyWorkflowActionPresentationHints } from './workflowActionPresentation';
 import { resolveWorkflowSchemaFieldEditor } from './workflowSchemaFieldEditor';
 
@@ -33,6 +33,7 @@ type JsonSchema = {
   'x-workflow-option-labels'?: Record<string, string>;
   'x-workflow-failure-policy'?: import('@alga-psa/shared/workflow/runtime').WorkflowFailurePolicyMetadata;
   'x-workflow-explicit-choice'?: import('@alga-psa/shared/workflow/runtime').WorkflowExplicitChoiceMetadata;
+  'x-workflow-require-one-of'?: string[];
 };
 
 export type WorkflowDesignerActionRegistryItem = {
@@ -56,6 +57,11 @@ export type ActionInputEditorState = {
   mappedInputFieldCount: number;
   mappedRequiredInputFieldCount: number;
   unmappedRequiredInputFieldCount: number;
+  /**
+   * An "at least one of these" rule (Find Contact: id, email or phone). It counts as one required
+   * input, so the step badge and the panel flag it like any other missing input.
+   */
+  requireOneOf?: { fields: ActionInputField[]; satisfied: boolean };
 };
 
 const asRecord = (value: unknown): Record<string, unknown> | undefined =>
@@ -310,13 +316,29 @@ export const buildActionInputEditorState = (
   } = flattenRequiredActionInputFields(actionInputFields, inputMapping);
   const mappedInputFieldCount = Object.keys(inputMapping).length;
 
+  const oneOfNames = selectedAction?.inputSchema?.['x-workflow-require-one-of'] ?? [];
+  const oneOfFields = actionInputFields.filter((field) => oneOfNames.includes(field.name));
+  const requireOneOf =
+    oneOfFields.length > 0
+      ? {
+          fields: oneOfFields,
+          satisfied: oneOfFields.some((field) =>
+            isMappingValueSet(inputMapping[field.name] as MappingValue | undefined, field.type)
+          ),
+        }
+      : undefined;
+  const oneOfRequiredCount = requireOneOf ? 1 : 0;
+  const oneOfMappedCount = requireOneOf?.satisfied ? 1 : 0;
+
   return {
     selectedAction,
     actionInputFields,
     requiredActionInputFields,
     inputMapping,
     mappedInputFieldCount,
-    mappedRequiredInputFieldCount: mappedRequiredFieldCount,
-    unmappedRequiredInputFieldCount: requiredActionInputFields.length - mappedRequiredFieldCount,
+    mappedRequiredInputFieldCount: mappedRequiredFieldCount + oneOfMappedCount,
+    unmappedRequiredInputFieldCount:
+      requiredActionInputFields.length + oneOfRequiredCount - (mappedRequiredFieldCount + oneOfMappedCount),
+    requireOneOf,
   };
 };

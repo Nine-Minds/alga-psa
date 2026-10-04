@@ -730,9 +730,11 @@ const buildActionInputMappingStatusByStepId = (
     pipeSteps.forEach((step) => {
       if (step.type === 'action.call') {
         const inputEditorState = buildActionInputEditorState(step, actionRegistry);
-        if (inputEditorState.requiredActionInputFields.length > 0) {
+        const requiredCount =
+          inputEditorState.requiredActionInputFields.length + (inputEditorState.requireOneOf ? 1 : 0);
+        if (requiredCount > 0) {
           statusByStepId.set(step.id, {
-            requiredCount: inputEditorState.requiredActionInputFields.length,
+            requiredCount,
             mappedRequiredCount: inputEditorState.mappedRequiredInputFieldCount,
             unmappedRequiredCount: inputEditorState.unmappedRequiredInputFieldCount
           });
@@ -7941,6 +7943,7 @@ export const StepConfigPanel: React.FC<{
           mappedInputFieldCount={mappedInputFieldCount}
           requiredActionInputFields={requiredActionInputFields}
           unmappedRequiredInputFieldCount={unmappedRequiredInputFieldCount}
+          requireOneOf={actionInputEditorState.requireOneOf}
           disabled={!editable}
         />
       )}

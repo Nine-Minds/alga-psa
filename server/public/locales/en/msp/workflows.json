@@ -1387,7 +1387,8 @@
     "atLeast": "At least {{min}}"
   },
   "actionInputSection": {
-    "heading": "Action inputs"
+    "heading": "Action inputs",
+    "requireOneOf": "Fill at least one of: {{fields}}"
   },
   "actionInputFixedPicker": {
     "loadingOptions": "Loading options...",

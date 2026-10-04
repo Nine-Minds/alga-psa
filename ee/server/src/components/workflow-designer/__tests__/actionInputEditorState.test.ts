@@ -752,3 +752,50 @@ describe('"nothing found" inputs', () => {
     expect(flagged({ on_not_found: { $expr: 'payload.mode' } })).toEqual([]);
   });
 });
+
+describe('require-one-of inputs', () => {
+  const lookupAction: WorkflowDesignerActionRegistryItem = {
+    id: 'contacts.find',
+    version: 1,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        contact_id: { type: 'string' },
+        email: { type: 'string' },
+        phone: { type: 'string' },
+        client_id: { type: 'string' },
+      },
+      'x-workflow-require-one-of': ['contact_id', 'email', 'phone'],
+    },
+    outputSchema: { type: 'object' },
+  };
+  const stateFor = (inputMapping: Record<string, unknown>) =>
+    buildActionInputEditorState(
+      { type: 'action.call', config: { actionId: 'contacts.find', version: 1, inputMapping } },
+      [lookupAction]
+    );
+
+  it('counts the group as one missing input until an alternative is set', () => {
+    const empty = stateFor({});
+    expect(empty.requireOneOf?.satisfied).toBe(false);
+    expect(empty.requireOneOf?.fields.map((field) => field.name)).toEqual(['contact_id', 'email', 'phone']);
+    expect(empty.unmappedRequiredInputFieldCount).toBe(1);
+
+    const filled = stateFor({ contact_id: { $expr: 'vars.ticket.contact_name_id' } });
+    expect(filled.requireOneOf?.satisfied).toBe(true);
+    expect(filled.unmappedRequiredInputFieldCount).toBe(0);
+  });
+
+  it('ignores an alternative that is only an empty string', () => {
+    expect(stateFor({ email: '' }).unmappedRequiredInputFieldCount).toBe(1);
+  });
+
+  it('does not count anything for actions without the rule', () => {
+    const plain = buildActionInputEditorState(
+      { type: 'action.call', config: { actionId: 'other', version: 1, inputMapping: {} } },
+      [{ ...lookupAction, id: 'other', inputSchema: { type: 'object', properties: { a: { type: 'string' } } } }]
+    );
+    expect(plain.requireOneOf).toBeUndefined();
+    expect(plain.unmappedRequiredInputFieldCount).toBe(0);
+  });
+});

@@ -1,5 +1,6 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import { z } from 'zod';
+import { withWorkflowRequireOneOf } from '../../jsonSchemaMetadata';
 import { validateWorkflowDefinition } from '../publishValidation';
 import { registerDefaultNodes } from '../../nodes/registerDefaultNodes';
 import { getNodeTypeRegistry } from '../../registries/nodeTypeRegistry';
@@ -11,6 +12,22 @@ beforeAll(() => {
     registerDefaultNodes();
   }
   const actions = getActionRegistryV2();
+  if (!actions.get('publish.lookup', 1)) {
+    actions.register({
+      id: 'publish.lookup',
+      version: 1,
+      sideEffectful: false,
+      idempotency: { mode: 'engineProvided' },
+      inputSchema: withWorkflowRequireOneOf(
+        z
+          .object({ id: z.string().optional(), email: z.string().optional(), note: z.string().optional() })
+          .refine((val) => Boolean(val.id || val.email), { message: 'id or email required' }),
+        ['id', 'email']
+      ),
+      outputSchema: z.object({}),
+      handler: async () => ({}),
+    });
+  }
   if (!actions.get('publish.email', 1)) {
     actions.register({
       id: 'publish.email',
@@ -113,5 +130,28 @@ describe('validateWorkflowDefinition expressions', () => {
     );
     expect(result.errors[0].code).toBe('INVALID_EXPR');
     expect(result.errors[0].message).toMatch(/^Invalid expression: .+/);
+  });
+});
+
+describe('require-one-of inputs', () => {
+  const lookupStep = (inputMapping: Record<string, unknown>) => ({
+    id: 'lookup',
+    type: 'action.call',
+    config: { actionId: 'publish.lookup', version: 1, inputMapping },
+  });
+  const oneOfErrors = (inputMapping: Record<string, unknown>) =>
+    validateWorkflowDefinition(definitionWith([lookupStep(inputMapping)])).errors.filter(
+      (error) => error.code === 'MISSING_REQUIRED_MAPPING'
+    );
+
+  it('blocks publish when none of the alternatives is mapped', () => {
+    const errors = oneOfErrors({ note: 'only a note' });
+    expect(errors).toHaveLength(1);
+    expect(errors[0].message).toContain('At least one of "id", "email"');
+  });
+
+  it('accepts any one of the alternatives', () => {
+    expect(oneOfErrors({ id: { $expr: 'payload.id' } })).toHaveLength(0);
+    expect(oneOfErrors({ email: 'a@example.test' })).toHaveLength(0);
   });
 });

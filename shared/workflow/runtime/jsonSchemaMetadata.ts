@@ -65,6 +65,12 @@ export type WorkflowJsonSchemaMetadata = WorkflowPickerJsonSchemaMetadata & {
    * is unchanged, so workflows saved without a choice keep behaving as before.
    */
   'x-workflow-explicit-choice'?: WorkflowExplicitChoiceMetadata;
+  /**
+   * On an input object: its fields are each optional, but at least one of these must be set (a
+   * lookup by id, email or phone). Publish validation and the designer's "required missing" count
+   * enforce it, instead of the run failing on a runtime refine.
+   */
+  'x-workflow-require-one-of'?: string[];
 };
 
 export type WorkflowExplicitChoiceMetadata = {
@@ -187,6 +193,20 @@ export const withWorkflowExplicitChoice = <T extends ZodTypeAny>(
   withWorkflowJsonSchemaMetadata(schema, description, {
     'x-workflow-explicit-choice': { prompt },
     'x-workflow-option-labels': optionLabels,
+  });
+
+/**
+ * Marks an input object whose fields are individually optional but of which at least one must be
+ * set. Pair it with the runtime `.refine` that enforces the same rule, so the designer and publish
+ * validation catch the gap before a run does.
+ */
+export const withWorkflowRequireOneOf = <T extends ZodTypeAny>(
+  schema: T,
+  fields: string[],
+  description?: string
+): T =>
+  withWorkflowJsonSchemaMetadata(schema, description ?? '', {
+    'x-workflow-require-one-of': fields,
   });
 
 /** Plain-language labels for comment visibility, shared by every action that writes a comment. */
