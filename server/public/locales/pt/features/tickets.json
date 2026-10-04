@@ -205,7 +205,10 @@
     "export": "Exportar",
     "reset": "Reiniciar",
     "importSelected": "Importar selecionado",
-    "printOptions": "Opções de impressão"
+    "printOptions": "Opções de impressão",
+    "duplicate": "Duplicar",
+    "rowActions": "Ações",
+    "openMenu": "Abrir menu"
   },
   "messages": {
     "noTickets": "Nenhum ticket encontrado",
@@ -815,7 +818,14 @@
     "clipboardUploadPartialFailure": "Ticket criado, mas não foi possível anexar imagens coladas à descrição.",
     "teamAssignmentPartialFailure": "Ticket criado, mas falha na atribuição da equipe",
     "tagCreatePartialFailure_one": "Não foi possível criar a tag {{count}}",
-    "tagCreatePartialFailure_other": "Não foi possível criar tags {{count}}"
+    "tagCreatePartialFailure_other": "Não foi possível criar tags {{count}}",
+    "duplicateDialogTitle": "Duplicar ticket #{{number}}",
+    "duplicatingPill": "A duplicar #{{number}}",
+    "duplicateLoadFailed": "Não foi possível carregar o ticket a duplicar. Tente novamente.",
+    "duplicateChecklistHeading": "Lista de verificação de #{{number}}",
+    "duplicateChecklistRequired": "(obrigatório)",
+    "duplicateCopyChecklist": "Copiar itens da lista de verificação (desmarcados)",
+    "duplicateCustomFieldsNote": "Os valores dos campos personalizados são copiados de #{{number}}."
   },
   "itil": {
     "calculatedPriority": "Prioridade (calculada)",
@@ -1569,7 +1579,8 @@
       "closedMasterGating": "As regras de fechamento do quadro não permitem tickets filhos abertos sob um ticket principal fechado, portanto manter o ticket principal fechado não é uma opção."
     },
     "autoClose": "Será fechado automaticamente em {{date}}, a menos que haja nova atividade.",
-    "autoCloseWarned": "O cliente foi avisado."
+    "autoCloseWarned": "O cliente foi avisado.",
+    "duplicatedFrom": "Duplicado de #{{number}}"
   },
   "invalidTicketData": "Dados de ticket inválidos",
   "timeEntries": {
@@ -1814,6 +1825,8 @@
       "bundleStatusNotPropagated": "{{actor}} alterou o status do mestre do pacote (tickets filhos não atualizados)",
       "bundleStatusClosed": "{{actor}} fechou o mestre do pacote e {{count}} ticket(s) filho(s)",
       "bundleStatusReopened": "{{actor}} reabriu o mestre do pacote e {{count}} ticket(s) filho(s)",
+      "duplicatedFrom": "{{actor}} criou este ticket como duplicado de #{{number}}",
+      "duplicatedTo": "{{actor}} duplicou este ticket como #{{number}}",
       "title": "Linha do tempo",
       "replyVisibility": "Visibilidade da resposta",
       "modeClient": "Cliente",

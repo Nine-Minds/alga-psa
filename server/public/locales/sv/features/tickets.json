@@ -213,7 +213,10 @@
     "export": "Exportera",
     "reset": "Återställ",
     "importSelected": "Importera markerade",
-    "printOptions": "Utskriftsalternativ"
+    "printOptions": "Utskriftsalternativ",
+    "duplicate": "Duplicera",
+    "rowActions": "Åtgärder",
+    "openMenu": "Öppna meny"
   },
   "messages": {
     "noTickets": "Inga ärenden hittades",
@@ -823,7 +826,14 @@
     "clipboardUploadPartialFailure": "Ärendet har skapats, men de inklistrade bilderna kunde inte bifogas till beskrivningen.",
     "teamAssignmentPartialFailure": "Ärendet har skapats, men teamtilldelningen misslyckades",
     "tagCreatePartialFailure_one": "{{count}} tagg kunde inte skapas",
-    "tagCreatePartialFailure_other": "{{count}} taggar kunde inte skapas"
+    "tagCreatePartialFailure_other": "{{count}} taggar kunde inte skapas",
+    "duplicateDialogTitle": "Duplicera ärende #{{number}}",
+    "duplicatingPill": "Duplicerar #{{number}}",
+    "duplicateLoadFailed": "Ärendet som ska dupliceras kunde inte laddas. Försök igen.",
+    "duplicateChecklistHeading": "Checklista från #{{number}}",
+    "duplicateChecklistRequired": "(obligatorisk)",
+    "duplicateCopyChecklist": "Kopiera checklistpunkter (obockade)",
+    "duplicateCustomFieldsNote": "Värden för anpassade fält kopieras från #{{number}}."
   },
   "itil": {
     "calculatedPriority": "Prioritet (beräknad)",
@@ -1577,7 +1587,8 @@
       "closedMasterGating": "Tavlans stängningsregler tillåter inte öppna underärenden under ett stängt huvudärende. Därför går det inte att behålla huvudärendet stängt."
     },
     "autoClose": "Stängs automatiskt {{date}} om ingen ny aktivitet sker.",
-    "autoCloseWarned": "Kunden har varnats."
+    "autoCloseWarned": "Kunden har varnats.",
+    "duplicatedFrom": "Duplicerat från #{{number}}"
   },
   "invalidTicketData": "Ogiltiga ärendedata",
   "timeEntries": {
@@ -1869,6 +1880,8 @@
       "bundleStatusNotPropagated": "{{actor}} ändrade gruppens huvudärendestatus (underärenden uppdaterades inte)",
       "bundleStatusClosed": "{{actor}} stängde gruppens huvudärende och dess underärenden ({{count}})",
       "bundleStatusReopened": "{{actor}} öppnade gruppens huvudärende och dess underärenden igen ({{count}})",
+      "duplicatedFrom": "{{actor}} skapade detta ärende som en kopia av #{{number}}",
+      "duplicatedTo": "{{actor}} kopierade detta ärende som #{{number}}",
       "title": "Tidslinje",
       "replyVisibility": "Svarets synlighet",
       "modeClient": "Kund",

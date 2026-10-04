@@ -205,7 +205,10 @@
     "export": "Exporteren",
     "reset": "Opnieuw instellen",
     "importSelected": "Selectie importeren",
-    "printOptions": "Afdrukopties"
+    "printOptions": "Afdrukopties",
+    "duplicate": "Dupliceren",
+    "rowActions": "Acties",
+    "openMenu": "Menu openen"
   },
   "messages": {
     "noTickets": "Geen tickets gevonden",
@@ -815,7 +818,14 @@
     "clipboardUploadPartialFailure": "Ticket aangemaakt, maar geplakte afbeeldingen konden niet aan de beschrijving worden gekoppeld.",
     "teamAssignmentPartialFailure": "Ticket aangemaakt, maar teamtoewijzing is mislukt",
     "tagCreatePartialFailure_one": "{{count}} tag kon niet worden aangemaakt",
-    "tagCreatePartialFailure_other": "{{count}} tags konden niet worden aangemaakt"
+    "tagCreatePartialFailure_other": "{{count}} tags konden niet worden aangemaakt",
+    "duplicateDialogTitle": "Ticket #{{number}} dupliceren",
+    "duplicatingPill": "#{{number}} wordt gedupliceerd",
+    "duplicateLoadFailed": "Het te dupliceren ticket kon niet worden geladen. Probeer het opnieuw.",
+    "duplicateChecklistHeading": "Checklist van #{{number}}",
+    "duplicateChecklistRequired": "(verplicht)",
+    "duplicateCopyChecklist": "Checklistitems kopiëren (niet afgevinkt)",
+    "duplicateCustomFieldsNote": "Waarden van aangepaste velden worden gekopieerd van #{{number}}."
   },
   "itil": {
     "calculatedPriority": "Prioriteit (berekend)",
@@ -1569,7 +1579,8 @@
       "closedMasterGating": "De sluitregels van het bord staan geen open onderliggende tickets onder een gesloten hoofdticket toe, dus het hoofdticket gesloten houden is geen optie."
     },
     "autoClose": "Wordt automatisch gesloten op {{date}}, tenzij er nieuwe activiteit is.",
-    "autoCloseWarned": "De klant is gewaarschuwd."
+    "autoCloseWarned": "De klant is gewaarschuwd.",
+    "duplicatedFrom": "Gedupliceerd van #{{number}}"
   },
   "invalidTicketData": "Ongeldige ticketgegevens",
   "timeEntries": {
@@ -1814,6 +1825,8 @@
       "bundleStatusNotPropagated": "{{actor}} heeft de masterstatus van de bundel gewijzigd (kindtickets niet bijgewerkt)",
       "bundleStatusClosed": "{{actor}} heeft de bundelmaster en {{count}} kindtickets gesloten",
       "bundleStatusReopened": "{{actor}} heeft de bundelmaster en {{count}} kindtickets heropend",
+      "duplicatedFrom": "{{actor}} heeft dit ticket aangemaakt als duplicaat van #{{number}}",
+      "duplicatedTo": "{{actor}} heeft dit ticket gedupliceerd als #{{number}}",
       "title": "Tijdlijn",
       "replyVisibility": "Zichtbaarheid van reactie",
       "modeClient": "Klant",

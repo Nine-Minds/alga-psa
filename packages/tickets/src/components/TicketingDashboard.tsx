@@ -7,6 +7,7 @@ import BulkBundleDialog from './BulkBundleDialog';
 import { ITicket, ITicketListItem, ITicketCategory, ITicketListFilters } from '@alga-psa/types';
 import { ITag } from '@alga-psa/types';
 import { buildCreateTicketHref } from '../lib/createTicketRoute';
+import { createTicketActionsColumn } from './ticketActionsColumn';
 import { CategoryPicker } from './CategoryPicker';
 import { BoardFilterPicker, NO_BOARD_VALUE } from './BoardFilterPicker';
 import BoardTabStrip from './BoardTabStrip';
@@ -1590,7 +1591,17 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       },
     };
 
-    return [selectionColumn, ...baseColumns];
+    // Row actions live outside createTicketColumns: the menu needs navigation, which
+    // that shared column factory (also used by non-dashboard lists) does not have.
+    const actionsColumn = createTicketActionsColumn({
+      t,
+      onDuplicate: (ticketId) => navigateAwayTo(buildCreateTicketHref({
+        duplicateFromTicketId: ticketId,
+        isAlgaDeskMode: useAlgaDeskQuickAddForm,
+      })),
+    });
+
+    return [selectionColumn, ...baseColumns, actionsColumn];
   }, [
     categories,
     boards,
@@ -1616,6 +1627,8 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     toggleBundleExpanded,
     bundleView,
     densityClasses.tagSize,
+    navigateAwayTo,
+    useAlgaDeskQuickAddForm,
     t,
     locale,
     dateFormat,

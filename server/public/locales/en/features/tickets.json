@@ -213,7 +213,10 @@
     "export": "Export",
     "reset": "Reset",
     "importSelected": "Import Selected",
-    "printOptions": "Print options"
+    "printOptions": "Print options",
+    "duplicate": "Duplicate",
+    "rowActions": "Actions",
+    "openMenu": "Open menu"
   },
   "messages": {
     "noTickets": "No tickets found",
@@ -823,7 +826,14 @@
     "clipboardUploadPartialFailure": "Ticket created, but pasted images could not be attached to the description.",
     "teamAssignmentPartialFailure": "Ticket created but team assignment failed",
     "tagCreatePartialFailure_one": "{{count}} tag could not be created",
-    "tagCreatePartialFailure_other": "{{count}} tags could not be created"
+    "tagCreatePartialFailure_other": "{{count}} tags could not be created",
+    "duplicateDialogTitle": "Duplicate ticket #{{number}}",
+    "duplicatingPill": "Duplicating #{{number}}",
+    "duplicateLoadFailed": "The ticket to duplicate could not be loaded. Please try again.",
+    "duplicateChecklistHeading": "Checklist from #{{number}}",
+    "duplicateChecklistRequired": "(required)",
+    "duplicateCopyChecklist": "Copy checklist items (unchecked)",
+    "duplicateCustomFieldsNote": "Custom field values are copied from #{{number}}."
   },
   "itil": {
     "calculatedPriority": "Priority (Calculated)",
@@ -1577,7 +1587,8 @@
       "closedMasterGating": "The board's close rules do not allow open children under a closed master, so keeping the master closed is not an option."
     },
     "autoClose": "Will close automatically on {{date}} unless there's new activity.",
-    "autoCloseWarned": "The customer has been warned."
+    "autoCloseWarned": "The customer has been warned.",
+    "duplicatedFrom": "Duplicated from #{{number}}"
   },
   "invalidTicketData": "Invalid ticket data",
   "timeEntries": {
@@ -1869,6 +1880,8 @@
       "bundleStatusNotPropagated": "{{actor}} changed the bundle master status (children not updated)",
       "bundleStatusClosed": "{{actor}} closed the bundle master and {{count}} child ticket(s)",
       "bundleStatusReopened": "{{actor}} reopened the bundle master and {{count}} child ticket(s)",
+      "duplicatedFrom": "{{actor}} created this ticket as a duplicate of #{{number}}",
+      "duplicatedTo": "{{actor}} duplicated this ticket as #{{number}}",
       "title": "Timeline",
       "replyVisibility": "Reply visibility",
       "modeClient": "Client",
