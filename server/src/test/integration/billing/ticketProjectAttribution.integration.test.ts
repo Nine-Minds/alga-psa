@@ -10,6 +10,7 @@ import {
 import { BillingEngine } from '@alga-psa/billing/services';
 import { reconcileWindowAttribution } from '@alga-psa/billing/lib/billing/contractLineAttributionWriter';
 import { ProjectService } from '@/lib/api/services/ProjectService';
+import ProjectTaskModel from '@alga-psa/projects/models/projectTask';
 import {
   createProjectTicketLinkSchema,
   type CreateProjectTicketLinkData,
@@ -360,6 +361,16 @@ describe('ticket time project attribution', () => {
     const ambiguous = await ambiguousTicketIds();
     expect(ambiguous.has(twoProjects)).toBe(true);
     expect(ambiguous.has(twoTasks)).toBe(false);
+
+    // The ticket-side badge reports what the resolver does, not the raw flag.
+    const badge = async (ticketId: string) =>
+      (await ProjectTaskModel.getLinkedTasksForTicket(db, tenant, ticketId)).map(
+        (task) => task.bills_as_project_time,
+      );
+    expect(await badge(oneLink)).toEqual([true]);
+    expect(await badge(twoTasks)).toEqual([true, true]);
+    expect(await badge(twoProjects)).toEqual([false, false]);
+    expect(await badge(flagOff)).toEqual([false]);
   });
 
   it('never attributes a ticket to another client\'s project, and ignores such a link when weighing ambiguity', async () => {
@@ -546,5 +557,17 @@ describe('ticket time project attribution', () => {
 
     const links = await table('project_ticket_links').where({ ticket_id: defaulted });
     expect(links).toHaveLength(1);
+
+    // A phase or task from another project would bill under this project
+    // while pointing at that one.
+    const misfiled = await createTicket('rest-misfiled', 'REST link with a foreign task');
+    await expect(
+      service.createTicketLink(
+        projectAId,
+        { ticket_id: misfiled, phase_id: phaseBId, task_id: taskBId, bill_under_project: true },
+        context as any,
+      ),
+    ).rejects.toThrow(/does not belong to this project/i);
+    expect(await table('project_ticket_links').where({ ticket_id: misfiled })).toHaveLength(0);
   });
 });

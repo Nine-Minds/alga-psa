@@ -183,6 +183,8 @@ export interface ITicketLinkedTask {
   status_name: string | null;
   is_closed: boolean | null;
   bill_under_project: boolean;
+  /** What the billing resolver will do: flagged, same client, and the ticket's only billable project. */
+  bills_as_project_time?: boolean;
   restricted?: boolean;
 }
 

@@ -9,6 +9,7 @@ import type {
   ITicketLinkedTask,
 } from '@alga-psa/types';
 import { tenantDb } from '@alga-psa/db';
+import { billableTicketProjectsQuery } from '@alga-psa/shared/billingClients/ticketProjectAttribution';
 import ProjectModel from './project';
 
 function tenantScopedTable<Row extends object = Record<string, any>>(
@@ -792,7 +793,20 @@ const ProjectTaskModel = {
           knexOrTrx.raw('COALESCE(psm.custom_name, s.name, ss.name) as status_name'),
           knexOrTrx.raw('COALESCE(s.is_closed, ss.is_closed, false) as is_closed')
         );
-      return links;
+      if (links.length === 0) {
+        return links;
+      }
+      // The flag alone is not where time bills: the resolver drops a ticket
+      // flagged into two projects, and a link into another client's project.
+      const billable = await knexOrTrx.raw(billableTicketProjectsQuery(), [tenant, ticketId]);
+      const billableProjectIds: string[] = (billable.rows ?? []).map(
+        (row: { project_id: string }) => row.project_id,
+      );
+      const billingProjectId = billableProjectIds.length === 1 ? billableProjectIds[0] : null;
+      return links.map((link: ITicketLinkedTask) => ({
+        ...link,
+        bills_as_project_time: link.bill_under_project && link.project_id === billingProjectId,
+      }));
     } catch (error) {
       console.error('Error getting linked tasks for ticket:', error);
       throw error;

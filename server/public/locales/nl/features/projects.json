@@ -1757,7 +1757,7 @@
     "cap": {
       "title": "Budgetlimiet",
       "hint": "Tijd en materialen worden tegen tarieven gefactureerd tot een optionele maximumlimiet.",
-      "currencyStale": "De opgeslagen limiet staat in {{projectCurrency}}, de valuta waarin de facturen van dit project niet worden opgemaakt. Voer de limiet in {{invoiceCurrency}} in om dit project naar {{invoiceCurrency}} over te zetten; tot die tijd wordt geen limiet toegepast.",
+      "currencyStale": "De opgeslagen limiet staat in {{projectCurrency}}, de valuta waarin de facturen van dit project niet worden opgemaakt. Voer de limiet in {{invoiceCurrency}} in om dit project naar {{invoiceCurrency}} over te zetten; tot die tijd wordt geen limiet toegepast. De nieuwe limiet telt vanaf nul: reeds gefactureerde bedragen worden niet meegenomen.",
       "amount": "Limietbedrag ({{currency}})",
       "behavior": "Bij bereiken",
       "notify": "Alleen melden",

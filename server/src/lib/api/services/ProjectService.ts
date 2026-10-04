@@ -984,6 +984,32 @@ export class ProjectService extends BaseService<IProject> {
         created_at: new Date()
       };
 
+      // The resolver bills by the link's project, so a phase or task from
+      // another project would leave a link that says one thing and bills another.
+      if (linkData.phase_id) {
+        const phase = await tenantDb(knex, context.tenant).table('project_phases')
+          .where({ phase_id: linkData.phase_id, project_id: projectId })
+          .first('phase_id');
+        if (!phase) {
+          throw new ValidationError('Phase does not belong to this project');
+        }
+      }
+      if (linkData.task_id) {
+        const taskQuery = tenantDb(knex, context.tenant).table('project_tasks');
+        tenantDb(knex, context.tenant).tenantJoin(
+          taskQuery, 'project_phases', 'project_tasks.phase_id', 'project_phases.phase_id',
+        );
+        const task = await taskQuery
+          .where({ 'project_tasks.task_id': linkData.task_id, 'project_phases.project_id': projectId })
+          .modify((query) => {
+            if (linkData.phase_id) query.where('project_tasks.phase_id', linkData.phase_id);
+          })
+          .first('project_tasks.task_id');
+        if (!task) {
+          throw new ValidationError('Task does not belong to this project');
+        }
+      }
+
       // Same guard the model applies on the UI path. The table is unique only
       // on (tenant, link_id), so without it one ticket collects duplicate
       // links and the biller has to clean them up by hand.

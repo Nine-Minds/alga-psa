@@ -1757,7 +1757,7 @@
     "cap": {
       "title": "Plafond budgétaire",
       "hint": "Le temps et les matériaux sont facturés aux tarifs définis jusqu'à un plafond facultatif.",
-      "currencyStale": "Le plafond enregistré est en {{projectCurrency}}, devise dans laquelle les factures de ce projet ne sont pas émises. Saisissez le plafond en {{invoiceCurrency}} pour basculer ce projet en {{invoiceCurrency}} ; d’ici là, aucun plafond n’est appliqué.",
+      "currencyStale": "Le plafond enregistré est en {{projectCurrency}}, devise dans laquelle les factures de ce projet ne sont pas émises. Saisissez le plafond en {{invoiceCurrency}} pour basculer ce projet en {{invoiceCurrency}} ; d’ici là, aucun plafond n’est appliqué. Le nouveau plafond repart de zéro : les montants déjà facturés ne sont pas repris.",
       "amount": "Montant du plafond ({{currency}})",
       "behavior": "Une fois atteint",
       "notify": "Notifier uniquement",

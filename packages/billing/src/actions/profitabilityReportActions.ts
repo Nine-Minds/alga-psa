@@ -381,17 +381,19 @@ async function fetchRevenueFacts(
           JOIN time_entries te
             ON te.tenant = ite.tenant
            AND te.entry_id = ite.entry_id
-          LEFT JOIN project_tasks task
+          -- Task time only, on purpose: the ticket resolver reads today's links,
+          -- so using it here would zero hourly ticket revenue that was really
+          -- invoiced, and rewrite past periods whenever a link is toggled.
+          JOIN project_tasks task
             ON task.tenant = te.tenant
            AND te.work_item_type = 'project_task'
            AND task.task_id = te.work_item_id
-          LEFT JOIN project_phases phase
+          JOIN project_phases phase
             ON phase.tenant = task.tenant
            AND phase.phase_id = task.phase_id
-          ${ticketProjectAttributionJoin('te')}
           JOIN project_billing_configs config
-            ON config.tenant = te.tenant
-           AND config.project_id = ${ticketProjectIdExpression('phase')}
+            ON config.tenant = phase.tenant
+           AND config.project_id = phase.project_id
            AND config.billing_model = 'fixed_price'
           WHERE ite.tenant = ic.tenant
             AND ite.item_id = ic.item_id

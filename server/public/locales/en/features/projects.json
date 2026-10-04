@@ -1757,7 +1757,7 @@
     "cap": {
       "title": "Budget cap",
       "hint": "Time & materials bills at rates up to an optional not-to-exceed cap.",
-      "currencyStale": "The saved cap is in {{projectCurrency}}, which this project's invoices do not bill in. Enter the cap in {{invoiceCurrency}} to move this project to {{invoiceCurrency}}; until then no cap is applied.",
+      "currencyStale": "The saved cap is in {{projectCurrency}}, which this project's invoices do not bill in. Enter the cap in {{invoiceCurrency}} to move this project to {{invoiceCurrency}}; until then no cap is applied. The new cap counts from zero: amounts already billed are not carried over.",
       "amount": "Cap amount ({{currency}})",
       "behavior": "When reached",
       "notify": "Notify only",

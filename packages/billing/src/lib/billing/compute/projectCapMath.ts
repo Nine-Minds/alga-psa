@@ -63,8 +63,9 @@ export function capAppliesToInvoiceCurrency(
  * The currency an invoice bills in, from the contract lines it carries and the
  * client's own currency. A contract line's rates are denominated in its
  * contract's currency, so a single contract currency on the invoice decides it;
- * with no contract line — every standalone project invoice — the client's own
- * currency does.
+ * with no contract line due, or lines in several currencies, the client's own
+ * currency does. A standalone project invoice is no exception: the engine
+ * loads the period's contract lines for a project-target run too.
  *
  * One rule in one place: a cap is only applied when it is counted in this
  * currency (`capAppliesToInvoiceCurrency`), so the engine, the due-work listing

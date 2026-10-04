@@ -84,3 +84,15 @@ export function ambiguousTicketProjectLinksQuery(): string {
       GROUP BY link.tenant, link.ticket_id
       HAVING COUNT(DISTINCT link.project_id) > 1`;
 }
+
+/**
+ * The distinct projects one ticket's billable links point at, for callers that
+ * show where a single ticket bills: exactly one row means that project carries
+ * its time, anything else means none does. Bindings: `[tenant, ticketId]`.
+ */
+export function billableTicketProjectsQuery(): string {
+  return `SELECT DISTINCT link.project_id
+      ${billableTicketLinkSource()}
+        AND link.tenant = ?
+        AND link.ticket_id = ?`;
+}

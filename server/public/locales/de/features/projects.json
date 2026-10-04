@@ -1757,7 +1757,7 @@
     "cap": {
       "title": "Budgetobergrenze",
       "hint": "Zeit und Material wird nach Sätzen bis zu einer optionalen Höchstgrenze abgerechnet.",
-      "currencyStale": "Die gespeicherte Obergrenze lautet auf {{projectCurrency}}, worin die Rechnungen dieses Projekts nicht ausgestellt werden. Geben Sie die Obergrenze in {{invoiceCurrency}} ein, um dieses Projekt auf {{invoiceCurrency}} umzustellen; bis dahin wird keine Obergrenze angewendet.",
+      "currencyStale": "Die gespeicherte Obergrenze lautet auf {{projectCurrency}}, worin die Rechnungen dieses Projekts nicht ausgestellt werden. Geben Sie die Obergrenze in {{invoiceCurrency}} ein, um dieses Projekt auf {{invoiceCurrency}} umzustellen; bis dahin wird keine Obergrenze angewendet. Die neue Obergrenze zählt ab null: bereits abgerechnete Beträge werden nicht übernommen.",
       "amount": "Höchstbetrag ({{currency}})",
       "behavior": "Bei Erreichen",
       "notify": "Nur benachrichtigen",

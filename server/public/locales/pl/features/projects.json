@@ -1785,7 +1785,7 @@
     "cap": {
       "title": "Limit budżetu",
       "hint": "Czas i materiały są rozliczane według stawek do opcjonalnego limitu maksymalnego.",
-      "currencyStale": "Zapisany limit jest w {{projectCurrency}}, w której nie są wystawiane faktury tego projektu. Wpisz limit w {{invoiceCurrency}}, aby przenieść ten projekt na {{invoiceCurrency}}; do tego czasu żaden limit nie jest stosowany.",
+      "currencyStale": "Zapisany limit jest w {{projectCurrency}}, w której nie są wystawiane faktury tego projektu. Wpisz limit w {{invoiceCurrency}}, aby przenieść ten projekt na {{invoiceCurrency}}; do tego czasu żaden limit nie jest stosowany. Nowy limit liczy się od zera: kwoty już zafakturowane nie są przenoszone.",
       "amount": "Kwota limitu ({{currency}})",
       "behavior": "Po osiągnięciu",
       "notify": "Tylko powiadom",

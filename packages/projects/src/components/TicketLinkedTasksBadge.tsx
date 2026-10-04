@@ -213,9 +213,9 @@ export default function TicketLinkedTasksBadge({
                   {/* Where this ticket's time bills, so the tech on the ticket
                       can see it without opening the project. */}
                   <div className="text-xs text-[rgb(var(--color-text-400))]">
-                    {task.bill_under_project === false
-                      ? t('dialogs.ticketLinkedTasks.billsToClient', 'Time bills at the client level')
-                      : t('dialogs.ticketLinkedTasks.billsToProject', 'Time bills as project time')}
+                    {(task.bills_as_project_time ?? task.bill_under_project !== false)
+                      ? t('dialogs.ticketLinkedTasks.billsToProject', 'Time bills as project time')
+                      : t('dialogs.ticketLinkedTasks.billsToClient', 'Time bills at the client level')}
                   </div>
                 </div>
                 <div className="flex-shrink-0">

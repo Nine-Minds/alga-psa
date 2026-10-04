@@ -188,8 +188,8 @@ async function resolveClientBillingCurrencyInternal(
 ): Promise<string> {
   // The client's own currency outranks its contracts. A project is billed to
   // the client, not through some unrelated active contract, and the client
-  // default is what the invoice run itself bills in when no contract line is
-  // due — which is every standalone project invoice. Letting a legacy contract
+  // default is what the invoice run itself bills in when no single contract
+  // currency is due in the period. Letting a legacy contract
   // win pinned new projects to its currency forever, with no stale-currency
   // notice, because the stored and the freshly resolved currency always agreed.
   // Quotes resolve in this order too.
@@ -637,6 +637,17 @@ export const updateProjectBillingConfig = withAuth(withProjectBillingActionError
     const candidate = { ...existing, ...parsed };
     validateConfigModelFields(candidate);
     const updated = await persistProjectBillingConfigUpdate(configId, parsed, entries, trx);
+
+    // Cap usage is minor units of the old currency, and nothing billed while
+    // the cap slept was ever counted, so neither figure means anything against
+    // a cap in the new one. The re-pinned cap counts from zero.
+    if (
+      parsed.currency
+      && existing.currency
+      && parsed.currency.toUpperCase() !== existing.currency.toUpperCase()
+    ) {
+      await ProjectBillingCapUsage.reset(configId, trx);
+    }
 
     let allocationWarning: string | null = null;
     if (Object.prototype.hasOwnProperty.call(parsed, 'total_price')) {

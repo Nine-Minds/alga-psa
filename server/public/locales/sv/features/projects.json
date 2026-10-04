@@ -1757,7 +1757,7 @@
     "cap": {
       "title": "Budgettak",
       "hint": "Vid löpande räkning debiteras arbete och material enligt taxor upp till ett valfritt takbelopp.",
-      "currencyStale": "Det sparade taket anges i {{projectCurrency}}, men projektets fakturor utfärdas inte i den valutan. Ange taket i {{invoiceCurrency}} för att flytta projektet till {{invoiceCurrency}}. Till dess tillämpas inget tak.",
+      "currencyStale": "Det sparade taket anges i {{projectCurrency}}, men projektets fakturor utfärdas inte i den valutan. Ange taket i {{invoiceCurrency}} för att flytta projektet till {{invoiceCurrency}}. Till dess tillämpas inget tak. Det nya taket räknas från noll: redan fakturerade belopp förs inte över.",
       "amount": "Takbelopp ({{currency}})",
       "behavior": "När taket nås",
       "notify": "Avisera endast",

@@ -159,10 +159,12 @@ describe('profitability report action SQL contracts', () => {
     expect(budgetActuals).toContain('LEFT JOIN project_tasks task');
     expect(budgetActuals).toContain("AND ${ticketProjectIdExpression('phase')} = ?");
 
-    // Fixed-price coverage of ticket time: the config join keys off the
-    // resolved project, not the phase alone.
-    expect(source).toContain("AND config.project_id = ${ticketProjectIdExpression('phase')}");
-    expect(source).toContain('LEFT JOIN project_phases phase');
+    // Revenue stays what was invoiced: the fixed-price classification is
+    // task-only, so an hourly ticket charge billed before (or despite) a link
+    // is never zeroed after the fact. Only labor cost follows the resolver.
+    expect(source).toContain('AND config.project_id = phase.project_id');
+    expect(source).not.toContain("AND config.project_id = ${ticketProjectIdExpression('phase')}");
+    expect(source).toContain("AND p.project_id = ${ticketProjectIdExpression('pp')}");
 
     // The writer's own projects join must run on the resolved project, not on
     // 'project_phases.project_id', or its fixed-price exclusion and

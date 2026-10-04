@@ -107,7 +107,7 @@ export default function CapPanel({ config, canManage, invoiceCurrency, onChanged
         <p id="project-billing-cap-currency-stale" className="mt-2 text-xs text-amber-700 dark:text-amber-300">
           {t(
             'billing.cap.currencyStale',
-            'The saved cap is in {{projectCurrency}}, which this project\'s invoices do not bill in. Enter the cap in {{invoiceCurrency}} to move this project to {{invoiceCurrency}}; until then no cap is applied.',
+            'The saved cap is in {{projectCurrency}}, which this project\'s invoices do not bill in. Enter the cap in {{invoiceCurrency}} to move this project to {{invoiceCurrency}}; until then no cap is applied. The new cap counts from zero: amounts already billed are not carried over.',
             { projectCurrency: (currency ?? '').toUpperCase(), invoiceCurrency: staleCurrency },
           )}
         </p>

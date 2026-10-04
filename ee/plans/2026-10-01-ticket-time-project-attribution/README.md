@@ -28,7 +28,7 @@ here, so check it before relying on it.
 | # | Decision | Why |
 |---|---|---|
 | a | **The link carries the billing choice**: `project_ticket_links.bill_under_project boolean not null default true`. | Linking a ticket to a project task almost always means project work; reference-only links are the exception and should carry the click. Keeps ticket billing flexible per ticket without touching time entries, timesheets, mobile or the v1 time API. |
-| b | **Backfill existing links to true.** | Backfilling false leaves the reporting customer with the bug until they edit every link. Attribution only changes billing on projects that have a `project_billing_configs` row (July 2026 feature), so the blast radius is tenants who set up project billing and expect exactly this. Release note required. |
+| b | **Backfill existing links to true.** | Backfilling false leaves the reporting customer with the bug until they edit every link. Fixed-price coverage, caps and project-scoped invoices only change on projects that have a `project_billing_configs` row (July 2026 feature). One effect reaches further, config or not: ticket time with no billing profile of its own now inherits its project's (`COALESCE(tickets.billing_profile_id, projects.billing_profile_id)`), which decides the invoice it lands on and the contract line it is attributed to. Release note required for both. |
 | c | **Opt-out, never implicit rerouting.** Flag off ⇒ today's behavior: billed hourly at client level, not counted toward the project. | A link can be made from the task card, create-task-from-ticket, REST, and workflow auto-link. None of those should silently move money. |
 | d | **Ambiguity attributes nothing.** A ticket with flagged links into more than one distinct project is left unattributed and logged. Several tasks in one project is fine. | Guarantees the join can never fan out a time entry into N rows. |
 | e | **Invoiced entries are never touched** by flipping the flag either way. | Guarantee already exists; the tests assert it so nobody loosens it later. |
@@ -36,6 +36,8 @@ here, so check it before relying on it.
 | j | **The task-hours figures in the project header and task list stay task-only.** Attribution moves billing and the three money rollups named below; it does not move `project_tasks.actual_hours`. | That column is denormalized minutes maintained when time is logged *against a task*, and the header simply sums it. A linked ticket has no task to carry its minutes, so after this change a fixed-price project can read 0.0 hours in the header while Delivery economics counts the ticket's 3.0 — the economics card asks the time entries, the header asks the column. Writing ticket minutes into a task's `actual_hours` would corrupt per-task estimates-vs-actuals, and re-deriving the header from `time_entries` is a separate (and heavier) change. Noted so the discrepancy reads as a known boundary, not a bug. |
 | g | **A cap in another currency is dormant, never converted.** When `project_billing_configs.currency` is not the currency the invoice bills in, the budget cap is not applied, the run warns the biller, and the project billing cards name the client's currency. | Found in production: a CHF tenant, a client billing ARS and a project cap still counted in USD. The config currency is pinned to the client's on every write, but a client can change currency afterwards. Caps are minor units with no exchange rate anywhere in the engine, so comparing them across currencies writes work down against a meaningless number — exactly the silent money move this ticket is about, and now reachable by more charges because ticket time joins the project. Re-entering the cap on the T&M panel re-pins the project to the client's currency. |
 | h | **A client's own currency outranks its contracts** when pinning a project's billing currency. | "Pinned to the client's currency" in (g) was not actually true: both resolvers took any single active contract's `currency_code` first and only fell back to `clients.default_currency_code`. A client billing CHF with one legacy USD contract got every new project pinned to USD — and invisibly, because the stale-currency notice compares the stored currency against a fresh resolution, which agreed. Contract currency is now inference of last resort, for clients that never set one; quotes already resolve in this order (DD-2/F-2). |
+| k | **Invoiced revenue is never reclassified.** The profitability report's fixed-price revenue classification stays task-only; only labor cost, budget actuals and WIP follow the resolver. | The resolver reads today's links. In the revenue classification it zeroed hourly ticket charges that were really invoiced before this change, and rewrote past periods whenever a link was toggled, so the report stopped reconciling to invoices and AR. |
+| l | **Re-pinning a project's currency restarts its cap usage at zero.** Deleting an invoice billed in the old currency no longer rolls anything back. | Usage is minor units of the old currency, and charges billed while the cap slept were never counted, so neither figure is comparable with a cap in the new currency. There is no per-charge record to rebuild usage from, so the cap counts from the re-pin and the panel says so. |
 | i | **The cap's mismatch is measured against the currency the invoice bills in, and that currency can be re-pinned.** One rule (`resolveInvoiceCurrency`: a single contract-line currency, else the client's own) answers it for the engine, the due-work listing and the project billing cards; a project may be denominated in any currency its client is actually invoiced in. | (h) left the two sides disagreeing in the *unsafe* direction. The engine bills a contract-backed invoice in the contract's currency — it must, since a contract line's rates are denominated there — so a CHF client with a legacy USD contract got a cap pinned CHF and an invoice in USD: `capAppliesToInvoiceCurrency` false, cap applied by neither the engine nor persistence, where before (h) it bit. The run warning's own advice ("set the project's billing currency to USD and re-enter the cap") was rejected by the config validation, and the cards compared against the client's currency, so they agreed and stayed silent. A hard cap that silently stops limiting billing is exactly the money move this ticket is about. New configs still pin to the client's own currency per (h) — the surprise in the production report — but the mismatch is now named on the cards and the re-pin the warning asks for is accepted. Separately, the due-work listing was being handed the client's currency as the answer while generation resolved it from contract lines, so a preview could write a cap down that the invoice would not. |
 
 ## Design
@@ -94,8 +96,8 @@ warning channel so the biller can fix the links.
 * `getProjectEconomics` (`projectBillingConfigActions.ts:249`): replace the inner join chain with
   `LEFT JOIN project_tasks/phases` plus the resolver, filter on
   `COALESCE(phase.project_id, ticket_project.project_id) = ?`.
-* `profitabilityReportActions.ts` labor facts and `is_fixed_project_time_charge`: same
-  substitution. Client attribution for ticket time stays `t.client_id`; only the project rollup
+* `profitabilityReportActions.ts` labor facts: same substitution. `is_fixed_project_time_charge`
+  stays task-only (decision k). Client attribution for ticket time stays `t.client_id`; only the project rollup
   changes.
 * `clientPulseActions.ts:700`: same.
 
@@ -134,11 +136,20 @@ set up, or when the client is invoiced through a contract in another currency �
 applied, and the invoice run says so. The project's billing tab names both currencies; re-entering
 the cap there moves the project to the currency its invoices use."
 
+"Ticket time that has no billing profile of its own now takes its linked project's billing
+profile, so it can move to that profile's invoice and contract line."
+
+"Re-entering a cap in a new currency restarts the cap's usage at zero; amounts billed before the
+change are not carried over."
+
 Reporting moves with it, and reporting looks backwards as well as forwards: project budget
-actuals, profitability and the client WIP rollup now count linked-ticket hours against the
-project for past periods too, so a fixed-price project's historical ticket time reads as
-covered by the fee (revenue on the fee, not on the hours) rather than as separate hourly
-revenue. Client-level attribution of that time is unchanged — only the project rollup moves.
+actuals, profitability labor cost and the client WIP rollup now count linked-ticket hours against
+the project for past periods too. Revenue does not move: an hourly ticket charge that was invoiced
+stays revenue in its period (decision k). Client-level attribution of that time is unchanged —
+only the project rollup moves.
+
+Moving a task to another project moves its ticket links with it, so the linked tickets' unbilled
+time follows the task to the new project.
 
 ### PR scope
 

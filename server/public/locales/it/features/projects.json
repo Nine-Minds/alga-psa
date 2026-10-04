@@ -1757,7 +1757,7 @@
     "cap": {
       "title": "Limite di budget",
       "hint": "Tempo e materiali vengono fatturati alle tariffe previste fino a un limite massimo facoltativo.",
-      "currencyStale": "Il limite salvato è in {{projectCurrency}}, valuta in cui non vengono emesse le fatture di questo progetto. Inserisci il limite in {{invoiceCurrency}} per portare questo progetto a {{invoiceCurrency}}; fino ad allora non viene applicato alcun limite.",
+      "currencyStale": "Il limite salvato è in {{projectCurrency}}, valuta in cui non vengono emesse le fatture di questo progetto. Inserisci il limite in {{invoiceCurrency}} per portare questo progetto a {{invoiceCurrency}}; fino ad allora non viene applicato alcun limite. Il nuovo limite parte da zero: gli importi già fatturati non vengono riportati.",
       "amount": "Importo limite ({{currency}})",
       "behavior": "Al raggiungimento",
       "notify": "Solo notifica",

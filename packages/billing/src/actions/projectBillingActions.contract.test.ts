@@ -27,6 +27,7 @@ const state = vi.hoisted(() => ({
   transitionFailure: false,
   configUpdateFailure: false,
   publishedEvents: [] as any[],
+  capUsageResets: [] as string[],
   generatedInvoiceResult: {
     invoice_id: '10000000-0000-4000-8000-000000000009',
     warnings: [] as string[],
@@ -168,7 +169,10 @@ vi.mock('../models/projectBillingConfig', () => ({
 }));
 
 vi.mock('../models/projectBillingCapUsage', () => ({
-  default: { getByConfig: vi.fn(async () => null) },
+  default: {
+    getByConfig: vi.fn(async () => null),
+    reset: vi.fn(async (configId: string) => { state.capUsageResets.push(configId); }),
+  },
 }));
 
 vi.mock('../models/projectPhaseRateOverride', () => ({
@@ -321,6 +325,7 @@ beforeEach(() => {
   state.transitionFailure = false;
   state.configUpdateFailure = false;
   state.publishedEvents = [];
+  state.capUsageResets = [];
   state.generatedInvoiceResult = {
     invoice_id: IDS.invoice,
     warnings: [],
@@ -443,6 +448,23 @@ describe('project billing config action contract', () => {
       currency: 'USD',
       cap_amount: 60_000,
     })).resolves.toMatchObject({ currency: 'USD', cap_amount: 60_000 });
+    // Usage counted in CHF says nothing about a USD cap.
+    expect(state.capUsageResets).toEqual([IDS.config]);
+  });
+
+  it('T002: keeps cap usage when the currency does not change', async () => {
+    state.clientCurrency = 'CHF';
+    state.config = makeConfig({
+      billing_model: 'time_and_materials',
+      total_price: null,
+      currency: 'CHF',
+      cap_amount: 50_000,
+      cap_behavior: 'hard_cap',
+    });
+
+    await updateProjectBillingConfig(IDS.config, { currency: 'chf', cap_amount: 60_000 });
+
+    expect(state.capUsageResets).toEqual([]);
   });
 
   it('T003: allows billing-model changes before invoicing and rejects them afterward', async () => {
