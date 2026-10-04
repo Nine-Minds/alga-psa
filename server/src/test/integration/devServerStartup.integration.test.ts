@@ -1,15 +1,17 @@
 import http from 'node:http';
 import type { Duplex } from 'node:stream';
-import { existsSync } from 'node:fs';
-import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { readdirSync, rmSync, statSync } from 'node:fs';
+import { mkdir, mkdtemp, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { createRequire } from 'node:module';
+import { chromium, expect as expectBrowser } from '@playwright/test';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import {
   startDevServer,
   type RunningDevServer,
 } from '../../../dev-server';
+import { HMR_UPGRADE_PATH } from '../../lib/http/upgradeHandling';
 
 // Load the same singleton used by Next server actions immediately after the
 // custom entrypoint, before beforeAll calls app.prepare(). This guards the
@@ -27,12 +29,18 @@ const { workAsyncStorageInstance } = require(
  * event (server/dev-server.ts), not Next's built-in dev server, which leaves
  * unrecognized upgrades hanging and stalls HMR/hydration.
  *
- * Each suite boots the real entrypoint against a throwaway Next fixture app at
+ * The suite boots the real entrypoint against a throwaway Next fixture app at
  * the repository root (its own `package.json` boundary and its own `.next`
  * dir). Keeping the fixture out of `server/` avoids inheriting the real
  * project's config/instrumentation, and its own build dir means the suite
  * never contends with the user's running dev service for the shared
  * `server/.next/dev` lock. Hocuspocus is configured explicitly.
+ *
+ * One fixture per process: a Next 16 custom server bundles with Turbopack
+ * unless `webpack: true` is passed, so `npm run dev` and `dev:turbo` share the
+ * same bundler, and since Next 16.3 the Turbopack loader worker pool registers
+ * with the native binding once per process, so a second project in the same
+ * process fails with "Worker creator already registered".
  */
 
 const DEADLINE_MS = 5_000;
@@ -44,7 +52,7 @@ type UpgradeOutcome =
   | { kind: 'response'; statusCode: number }
   | { kind: 'error'; error: Error };
 
-function requestUpgrade(port: number, path: string): Promise<UpgradeOutcome> {
+function requestUpgrade(port: number, path: string, origin?: string): Promise<UpgradeOutcome> {
   return new Promise((resolve) => {
     let settled = false;
     const finish = (outcome: UpgradeOutcome) => {
@@ -74,6 +82,7 @@ function requestUpgrade(port: number, path: string): Promise<UpgradeOutcome> {
         Upgrade: 'websocket',
         'Sec-WebSocket-Key': 'dGhlIHNhbXBsZSBub25jZQ==',
         'Sec-WebSocket-Version': '13',
+        ...(origin ? { Origin: origin } : {}),
       },
     });
     req.on('upgrade', (res, socket) => {
@@ -106,34 +115,56 @@ function findUnusedPort(): Promise<number> {
  * without a symlink (Turbopack rejects symlinks that leave the project root).
  */
 async function createFixtureApp(): Promise<string> {
-  const dir = await mkdtemp(path.join(REPO_ROOT, '.tmp-dev-server-fixture-'));
-  await mkdir(path.join(dir, 'pages'), { recursive: true });
+  const dir = await mkdtemp(path.join(REPO_ROOT, FIXTURE_PREFIX));
+  await mkdir(path.join(dir, 'app'), { recursive: true });
   await writeFile(
     path.join(dir, 'package.json'),
     JSON.stringify({ name: 'alga-dev-server-fixture', private: true, version: '0.0.0' }),
   );
   await writeFile(
     path.join(dir, 'next.config.mjs'),
-    `export default { allowedDevOrigins: ['127.0.0.1'], turbopack: { root: ${JSON.stringify(REPO_ROOT)} } };\n`,
+    `import { getAllowedDevOrigins } from ${JSON.stringify(path.join(SERVER_DIR, 'src/lib/http/devAllowedOrigins.mjs'))};\n` +
+      `export default { allowedDevOrigins: getAllowedDevOrigins(), turbopack: { root: ${JSON.stringify(REPO_ROOT)} } };\n`,
   );
   await writeFile(
-    path.join(dir, 'pages', 'index.js'),
-    'export default function Home() { return <main>fixture</main>; }\n',
+    path.join(dir, 'app', 'layout.js'),
+    'export default function RootLayout({ children }) { return <html><body>{children}</body></html>; }\n',
+  );
+  await writeFile(
+    path.join(dir, 'app', 'Counter.js'),
+    '"use client";\nimport { useState } from "react";\n' +
+      'export default function Counter() { const [count, setCount] = useState(0); return <button id="hydration-counter" onClick={() => setCount(value => value + 1)}>Count: {count}</button>; }\n',
+  );
+  await writeFile(
+    path.join(dir, 'app', 'page.js'),
+    'import Counter from "./Counter";\n' +
+      'async function InitialServerData() { await new Promise(resolve => setTimeout(resolve, 25)); return <p id="initial-rsc">Initial RSC ready</p>; }\n' +
+      'export default function Home() { return <main><Counter /><InitialServerData /></main>; }\n',
   );
   return dir;
 }
 
-async function removeFixtureApp(dir: string | undefined): Promise<void> {
-  if (!dir) return;
-  // Next/Turbopack can keep flushing files into the fixture's .next for a
-  // moment after close, recreating the directory right after a remove. Remove,
-  // settle, then verify it stayed gone; retry until the writers stop.
-  for (let attempt = 0; attempt < 20; attempt += 1) {
-    await rm(dir, { recursive: true, force: true }).catch(() => undefined);
-    await new Promise((resolve) => setTimeout(resolve, 300));
-    if (!existsSync(dir)) return;
+const FIXTURE_PREFIX = '.tmp-dev-server-fixture-';
+const STALE_FIXTURE_MS = 30 * 60 * 1000;
+
+/**
+ * Next's dev file watcher outlives `close()`; removing the fixture while it is
+ * still running triggers a route-matcher rescan of the deleted `app` dir that
+ * surfaces as an unhandled ENOENT rejection. Fixtures are therefore removed by
+ * the vitest globalSetup teardown (server/vitest.globalSetup.js) once the
+ * worker has exited; this sweep only clears what a killed run left behind.
+ */
+function sweepStaleFixtureApps(): void {
+  for (const entry of readdirSync(REPO_ROOT)) {
+    if (!entry.startsWith(FIXTURE_PREFIX)) continue;
+    const dir = path.join(REPO_ROOT, entry);
+    try {
+      if (Date.now() - statSync(dir).mtimeMs < STALE_FIXTURE_MS) continue;
+      rmSync(dir, { recursive: true, force: true });
+    } catch {
+      // Another run may own it; leave it alone.
+    }
   }
-  await rm(dir, { recursive: true, force: true }).catch(() => undefined);
 }
 
 async function bootFixture(
@@ -149,22 +180,25 @@ async function bootFixture(
   return { running, fixtureDir };
 }
 
-describe('development server startup path (npm run dev)', () => {
+describe('development server startup path (npm run dev / dev:turbo)', () => {
   let fixtureDir: string;
   let running: RunningDevServer;
 
   beforeAll(async () => {
+    sweepStaleFixtureApps();
     const unusedUpstreamPort = await findUnusedPort();
     ({ running, fixtureDir } = await bootFixture({
+      // Match the common dev setup: listen on all interfaces, then browse via
+      // loopback. The HMR Origin must be allowed independently of hostname.
+      hostname: '0.0.0.0',
       // Controlled Hocuspocus config: configured, but nothing listens there.
       hocuspocusHost: '127.0.0.1',
       hocuspocusPort: unusedUpstreamPort,
     }));
-  }, 180_000);
+  }, 240_000);
 
   afterAll(async () => {
     if (running) await running.close();
-    await removeFixtureApp(fixtureDir);
   });
 
   it('initializes Next server actions with Node AsyncLocalStorage at import time', () => {
@@ -202,7 +236,8 @@ describe('development server startup path (npm run dev)', () => {
 
     const outcome = await requestUpgrade(
       running.port,
-      '/_next/webpack-hmr?id=startup-test',
+      `${HMR_UPGRADE_PATH}?id=startup-test`,
+      `http://127.0.0.1:${running.port}`,
     );
     expect(outcome.kind).toBe('upgrade');
     if (outcome.kind === 'upgrade') {
@@ -210,43 +245,68 @@ describe('development server startup path (npm run dev)', () => {
       outcome.socket.destroy();
     }
   });
-});
 
-describe('development server turbopack entrypoint (dev:turbo)', () => {
-  let fixtureDir: string;
-  let running: RunningDevServer;
+  it('hydrates an App Router client control while opened through loopback on a differently named host', async () => {
+    const browser = await chromium.launch({
+      headless: true,
+      args: ['--no-sandbox'],
+      ...(process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH
+        ? { executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH }
+        : {}),
+    });
+    try {
+      const page = await browser.newPage();
+      const browserErrors: string[] = [];
+      const hmrErrors: string[] = [];
+      const failedBootstrapResources: string[] = [];
+      page.on('pageerror', (error) => browserErrors.push(error.message));
+      page.on('console', (message) => {
+        if (message.type() !== 'error') return;
+        if (message.text().includes('/_next/hmr') || message.text().includes('/_next/webpack-hmr')) hmrErrors.push(message.text());
+      });
+      page.on('response', (resource) => {
+        if (resource.status() < 400) return;
+        const type = resource.request().resourceType();
+        if (type === 'script' || type === 'fetch') {
+          failedBootstrapResources.push(`${resource.status()} ${resource.url()}`);
+        }
+      });
 
-  beforeAll(async () => {
-    ({ running, fixtureDir } = await bootFixture({
-      turbopack: true,
-      // No upstream configured: /hocuspocus must still be rejected promptly.
-      hocuspocusHost: undefined,
-      hocuspocusPort: undefined,
-    }));
-  }, 240_000);
+      const response = await page.goto(`http://127.0.0.1:${running.port}/`, {
+        waitUntil: 'load',
+        timeout: 60_000,
+      });
+      expect(response?.status()).toBe(200);
+      const inlineFlightChunks = await page.locator('script').evaluateAll((scripts) =>
+        scripts.filter((script) => script.textContent?.includes('__next_f.push')).length,
+      );
+      expect(inlineFlightChunks).toBeGreaterThan(0);
+      await expectBrowser(page.locator('#initial-rsc')).toHaveText('Initial RSC ready');
+      const inlineFlightQueue = await page.evaluate(() => ({
+        flight: (window as Window & { __next_f?: unknown[] }).__next_f,
+      })).then(({ flight }) => ({
+        length: flight?.length ?? null,
+      }));
+      expect(inlineFlightQueue.length).toBe(0);
+      expect(failedBootstrapResources).toEqual([]);
 
-  afterAll(async () => {
-    if (running) await running.close();
-    await removeFixtureApp(fixtureDir);
-  });
+      const counter = page.locator('#hydration-counter');
+      await expectBrowser(counter).toHaveText('Count: 0');
+      const hasReactProps = await counter.evaluate((element) =>
+        Object.keys(element).some((key) => key.startsWith('__reactProps')),
+      );
+      expect(
+        hasReactProps,
+        JSON.stringify({ inlineFlightQueue, browserErrors, hmrErrors, failedBootstrapResources }),
+      ).toBe(true);
+      await counter.click();
+      await expectBrowser(counter).toHaveText('Count: 1');
 
-  it('boots with the custom upgrade handler and rejects unknown paths', async () => {
-    expect(running.server.listenerCount('upgrade')).toBe(1);
-    const outcome = await requestUpgrade(running.port, '/unknown-turbo');
-    expect(outcome.kind).toBe('response');
-    if (outcome.kind === 'response') expect(outcome.statusCode).toBe(404);
-  });
-
-  it('still delegates HMR to Next under turbopack', async () => {
-    await fetch(`http://127.0.0.1:${running.port}/`).catch(() => undefined);
-    const outcome = await requestUpgrade(
-      running.port,
-      '/_next/webpack-hmr?id=turbo-test',
-    );
-    expect(outcome.kind).toBe('upgrade');
-    if (outcome.kind === 'upgrade') {
-      expect(outcome.statusCode).toBe(101);
-      outcome.socket.destroy();
+      expect(browserErrors).toEqual([]);
+      expect(hmrErrors).toEqual([]);
+      expect(failedBootstrapResources).toEqual([]);
+    } finally {
+      await browser.close();
     }
-  });
+  }, 90_000);
 });

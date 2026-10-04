@@ -58,8 +58,22 @@
     },
     "clients": {
       "title": "Sua empresa",
-      "help": "O cliente marcado como sua empresa representa sua própria organização. O nome, o endereço e o logotipo desse cliente aparecem em faturas, orçamentos e comunicações com clientes.",
+      "help": "O cliente marcado como sua empresa representa sua própria organização. O nome, o endereço e o logotipo desse cliente aparecem em faturas, orçamentos e comunicações com clientes, e o país do endereço dele define o formato de data e o país pré-selecionado em novos cadastros.",
       "currentDefault": "Atualmente, sua empresa é {{name}}.",
+      "defaults": {
+        "title": "O que sua empresa define",
+        "intro": "O país do endereço de {{name}} define o seguinte para todo o aplicativo MSP:",
+        "country": "Novos clientes, contatos e endereços vêm com {{country}} pré-selecionado.",
+        "countryMissing": "Novos clientes, contatos e endereços não vêm com país pré-selecionado.",
+        "phoneCode": "Os telefones começam com o código {{code}}.",
+        "phoneCodeMissing": "Os telefones começam sem código de país.",
+        "dateFormat": "As datas são escritas como {{pattern}} — {{example}} — com relógio de {{clock}}.",
+        "clock12": "12 horas",
+        "clock24": "24 horas",
+        "noCountry": "{{name}} não tem país no endereço, então os três voltam ao padrão {{pattern}}. Adicione a {{name}} um endereço com país para alterá-los — não existe uma configuração separada de formato de data.",
+        "portalNote": "No portal do cliente, as datas seguem o formato do próprio cliente, vindo do país do endereço dele e não do seu.",
+        "changeIntro": "Mudar para {{name}} também altera estes padrões:"
+      },
       "yourCompanyBadge": "Sua empresa",
       "table": {
         "name": "Nome",
@@ -97,6 +111,18 @@
         "setDefaultClient": "Falha ao definir o cliente padrão",
         "loadClients": "Falha ao carregar clientes"
       }
+    }
+  },
+  "dashboardWelcome": {
+    "label": "Usar o nome da sua empresa na saudação do painel",
+    "help": "Desativado por padrão: o painel MSP mostra “Bem-vindo ao seu centro de comando MSP”. Ao ativar, ele mostra o nome do cliente marcado como sua empresa. Esta opção é salva na hora e de forma independente.",
+    "noCompany": "Nenhum cliente está marcado como sua empresa ainda. Escolha um em Configurações → Geral para que o nome dele possa aparecer aqui.",
+    "previewLabel": "Sua equipe verá:",
+    "preview": "Bem-vindo ao centro de comando de {{companyName}}",
+    "previewDefault": "Bem-vindo ao seu centro de comando MSP",
+    "messages": {
+      "saved": "Saudação do painel atualizada",
+      "saveFailed": "Não foi possível atualizar a saudação do painel"
     }
   },
   "experimentalFeatures": {
@@ -1229,6 +1255,7 @@
         "followThemeActive": "As cores abaixo ficam salvas, mas não são aplicadas enquanto o portal seguir o tema da organização."
       },
       "cropHelp": "Arraste e amplie para escolher a parte mostrada no painel lateral do portal e em todas as molduras circulares. O seu logotipo largo não é alterado.",
+      "cropHelpFromSquare": "Arraste e amplie para escolher a parte mostrada no painel lateral do portal e em todas as molduras circulares. Apenas a marca é alterada, então você pode ajustá-la novamente depois.",
       "heroGradient": {
         "primaryShades": "Cor primária para tom primário",
         "primarySecondary": "Cor primária para cor secundária"
@@ -1502,6 +1529,11 @@
       "description": "Envie seu logotipo uma vez. Ele substitui a marca Alga no menu lateral MSP, e o portal do cliente usa as mesmas imagens.",
       "logoHelp": "A marca quadrada é usada sempre que o espaço é quadrado: no menu lateral recolhido e nas molduras circulares. Solte um logotipo largo num espaço quadrado e escolha qual parte se torna a marca; depois de enviar um logotipo largo, também pode recortar a marca diretamente a partir dele. O logotipo largo opcional substitui a marca e o nome no menu lateral expandido, então envie um que já contenha o nome da sua empresa. O menu lateral segue o próprio fundo: usa as variantes para fundos escuros quando o menu é escuro e as claras quando é claro, recorrendo à variante que você enviou.",
       "cropHelp": "Arraste e amplie para escolher a parte mostrada no menu lateral recolhido e em todas as molduras circulares. O seu logotipo largo não é alterado.",
+      "cropHelpFromSquare": "Arraste e amplie para escolher a parte mostrada no menu lateral recolhido e em todas as molduras circulares. Apenas a marca é alterada, então você pode ajustá-la novamente depois.",
+      "linkDocument": {
+        "title": "Usar uma imagem já enviada",
+        "description": "Escolha uma imagem que você já enviou para Documentos. O documento em si permanece como está."
+      },
       "fields": {
         "mark": "Marca quadrada",
         "markDark": "Marca quadrada para fundos escuros",

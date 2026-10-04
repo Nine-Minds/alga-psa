@@ -283,6 +283,8 @@
     },
     "captchaRequired": "Bitte schließen Sie die untenstehende Verifizierung ab und melden Sie sich anschließend erneut an.",
     "tooManyAttempts": "Zu viele fehlgeschlagene Anmeldeversuche. Bitte warten Sie einige Minuten, bevor Sie es erneut versuchen.",
+    "tenantRequiredMessage": "Ihre E-Mail-Adresse ist mit mehreren Organisationen verknüpft – wählen Sie Ihre Organisation aus, um fortzufahren.",
+    "tenantRequiredLink": "Organisation auswählen",
     "tenantDiscovery": {
       "title": "Finden Sie Ihre Organisation",
       "description": "Geben Sie Ihre E-Mail-Adresse ein, und wir senden Ihnen Anmeldelinks für alle Organisationen, auf die Sie Zugriff haben.",
@@ -600,7 +602,8 @@
       "adjustMark": "Zeichen anpassen",
       "cropFromWide": "Aus breitem Logo ausschneiden",
       "recropSuccess": "Zeichen aktualisiert.",
-      "recropError": "Das Zeichen konnte nicht aktualisiert werden."
+      "recropError": "Das Zeichen konnte nicht aktualisiert werden.",
+      "fileNameLabel": "Gespeicherte Datei"
     },
     "validation": {
       "clientNameRequired": "Firmenname ist erforderlich",

@@ -283,6 +283,8 @@
     },
     "captchaRequired": "Voltooi de onderstaande verificatie en meld u daarna opnieuw aan.",
     "tooManyAttempts": "Te veel mislukte aanmeldpogingen. Wacht een paar minuten voordat u het opnieuw probeert.",
+    "tenantRequiredMessage": "Uw e-mailadres is gekoppeld aan meer dan één organisatie — kies uw organisatie om door te gaan.",
+    "tenantRequiredLink": "Kies uw organisatie",
     "tenantDiscovery": {
       "title": "Vind uw organisatie",
       "description": "Voer uw e-mailadres in en wij sturen u aanmeldlinks voor alle organisaties waartoe u toegang heeft.",
@@ -600,7 +602,8 @@
       "adjustMark": "Beeldmerk aanpassen",
       "cropFromWide": "Uitsnijden uit breed logo",
       "recropSuccess": "Beeldmerk bijgewerkt.",
-      "recropError": "Het beeldmerk kon niet worden bijgewerkt."
+      "recropError": "Het beeldmerk kon niet worden bijgewerkt.",
+      "fileNameLabel": "Opgeslagen bestand"
     },
     "validation": {
       "clientNameRequired": "Bedrijfsnaam is verplicht",

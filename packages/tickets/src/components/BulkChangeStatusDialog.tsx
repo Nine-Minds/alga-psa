@@ -5,7 +5,10 @@ import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import CustomSelect, { type SelectOption } from '@alga-psa/ui/components/CustomSelect';
+import { Label } from '@alga-psa/ui/components/Label';
 import { RadioGroup } from '@alga-psa/ui/components/RadioGroup';
+import { Switch } from '@alga-psa/ui/components/Switch';
+import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { useTranslation } from 'react-i18next';
 import { isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { previewBulkBundleStatusPropagationAction } from '../actions/ticketBundleActions';
@@ -18,6 +21,10 @@ export type BulkStatusConfirmOptions = {
   suppressContactNotifications?: boolean;
   suppressInternalNotifications?: boolean;
   propagateToChildren?: boolean;
+  resolutionComment?: {
+    text: string;
+    isInternal?: boolean;
+  };
 };
 
 interface BulkChangeStatusDialogProps {
@@ -26,6 +33,8 @@ interface BulkChangeStatusDialogProps {
   ticketCount: number;
   ticketIds: string[];
   statuses: SelectOption[];
+  /** Status ids that close a ticket; picking one unlocks the resolution field. */
+  closedStatusIds?: string[];
   isLoadingStatuses: boolean;
   failed: Array<{ ticketId: string; message: string; label?: string }>;
   isSubmitting: boolean;
@@ -39,6 +48,7 @@ export default function BulkChangeStatusDialog({
   ticketCount,
   ticketIds,
   statuses,
+  closedStatusIds,
   isLoadingStatuses,
   failed,
   isSubmitting,
@@ -54,6 +64,8 @@ export default function BulkChangeStatusDialog({
   const [bundlePreviews, setBundlePreviews] = useState<Record<string, BundleStatusPropagationPreview>>({});
   const [isLoadingPreviews, setIsLoadingPreviews] = useState(false);
   const [propagationMode, setPropagationMode] = useState<'children' | 'masters'>('children');
+  const [resolution, setResolution] = useState('');
+  const [resolutionIsInternal, setResolutionIsInternal] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -64,6 +76,8 @@ export default function BulkChangeStatusDialog({
       });
       setBundlePreviews({});
       setPropagationMode('children');
+      setResolution('');
+      setResolutionIsInternal(false);
     }
   }, [isOpen]);
 
@@ -110,6 +124,10 @@ export default function BulkChangeStatusDialog({
   const hasBundleMasters = bundleMasterIds.length > 0;
 
   const canConfirm = !!selectedStatusId && !isLoadingStatuses && !isLoadingPreviews;
+  // A closing status is the only one a resolution comment belongs to; the
+  // server drops the text for any other status anyway.
+  const isClosingStatus = !!selectedStatusId && (closedStatusIds ?? []).includes(selectedStatusId);
+  const trimmedResolution = resolution.trim();
 
   const handleConfirm = async () => {
     if (!selectedStatusId) return;
@@ -117,6 +135,9 @@ export default function BulkChangeStatusDialog({
       ...(notificationSuppression.suppressContactNotifications ? notificationSuppression : {}),
       ...(hasBundleMasters
         ? { propagateToChildren: propagationMode === 'children' }
+        : {}),
+      ...(isClosingStatus && trimmedResolution
+        ? { resolutionComment: { text: trimmedResolution, isInternal: resolutionIsInternal } }
         : {}),
     };
     const hasOptions = Object.keys(options).length > 0;
@@ -165,6 +186,39 @@ export default function BulkChangeStatusDialog({
             disabled={isLoadingStatuses || isSubmitting}
           />
         </div>
+        {isClosingStatus && (
+          <div className="mb-4 space-y-2">
+            <TextArea
+              id={`${idPrefix}-resolution`}
+              label={t('bulk.status.resolutionLabel', 'Resolution comment (optional)')}
+              value={resolution}
+              onChange={(event) => setResolution(event.target.value)}
+              placeholder={t(
+                'bulk.status.resolutionPlaceholder',
+                'Describe how these tickets were resolved',
+              )}
+              rows={3}
+              disabled={isSubmitting}
+            />
+            <div className="flex items-center gap-2">
+              <Switch
+                id={`${idPrefix}-resolution-internal`}
+                checked={resolutionIsInternal}
+                onCheckedChange={setResolutionIsInternal}
+                disabled={isSubmitting}
+              />
+              <Label htmlFor={`${idPrefix}-resolution-internal`}>
+                {t('info.markResolutionInternal', 'Mark as Internal')}
+              </Label>
+            </div>
+            <p className="text-xs text-gray-600">
+              {t(
+                'bulk.status.resolutionHelper',
+                'Saved as the resolution on each selected ticket, satisfying boards that require one before closing.',
+              )}
+            </p>
+          </div>
+        )}
         {hasBundleMasters && (
           <Alert variant="warning" className="mb-4">
             <AlertDescription>

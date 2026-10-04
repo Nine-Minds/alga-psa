@@ -13,4 +13,5 @@ export const SERVER_MAINTENANCE_JOBS = {
   createNextTimePeriods: 'create-next-time-periods',
   createClientContractLineCycles: 'create-client-contract-line-cycles',
   rmmPollingReconcile: 'rmm-polling-reconcile',
+  generateRecurringTickets: 'generate-recurring-tickets',
 } as const;

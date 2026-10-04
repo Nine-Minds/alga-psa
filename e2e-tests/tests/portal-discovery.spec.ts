@@ -32,6 +32,20 @@ test('a tenant hint selects credential sign-in instead of organization discovery
   await expect(page.locator('#tenant-discovery-form')).toBeHidden();
 });
 
+test('tenant sign-in loads and renders while every third-party host is unresponsive', async ({ page, baseURL }) => {
+  // A CDN that accepts the connection and then stalls must not hold the page:
+  // anything render-blocking served cross-origin leaves it blank with no load event.
+  const appOrigin = new URL(baseURL!).origin;
+  const stalled: string[] = [];
+  await page.route(url => url.origin !== appOrigin, route => { stalled.push(route.request().url()); });
+  await page.goto('/auth/client-portal/signin?tenant=abc123def456', { timeout: 30_000 });
+  await expect(page.locator('#client-sign-in-button')).toBeVisible();
+  await expect(page.locator('input[type="email"]')).toBeVisible();
+  const blocking = await page.evaluate(() => [...document.querySelectorAll<HTMLLinkElement>('link[rel="stylesheet"]')]
+    .map(link => link.href).filter(href => new URL(href).origin !== location.origin));
+  expect(blocking, `stalled requests: ${stalled.join(', ')}`).toEqual([]);
+});
+
 test('unknown email receives generic confirmation and can restart discovery with its callback intact', async ({ page }) => {
   const callback = '/client-portal/tickets';
   await page.goto(`/auth/client-portal/signin?${new URLSearchParams({ callbackUrl: callback })}`);

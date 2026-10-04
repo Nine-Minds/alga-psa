@@ -1,4 +1,6 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi, type Mock } from 'vitest';
+
+type PayloadMock = Mock<(payload: Record<string, unknown>) => void>;
 
 import { createClientContractAssignment, updateClientContractAssignment } from '../clientContracts';
 
@@ -10,7 +12,7 @@ import { createClientContractAssignment, updateClientContractAssignment } from '
 
 type Rows = { profile?: { client_id: string } | null };
 
-function createMockQuery(table: string, initialFilters: Record<string, unknown>, rows: Rows, insert: ReturnType<typeof vi.fn>) {
+function createMockQuery(table: string, initialFilters: Record<string, unknown>, rows: Rows, insert: PayloadMock) {
   let filters = { ...initialFilters };
 
   const query: any = {
@@ -49,7 +51,7 @@ function createMockQuery(table: string, initialFilters: Record<string, unknown>,
   return query;
 }
 
-function createMockTransaction(rows: Rows, insert: ReturnType<typeof vi.fn>) {
+function createMockTransaction(rows: Rows, insert: PayloadMock) {
   return ((table: string) => ({
     where(filters: Record<string, unknown>) {
       return createMockQuery(table, filters, rows, insert);
@@ -67,7 +69,7 @@ const baseInput = {
 
 describe('createClientContractAssignment billing profile', () => {
   it('stores the chosen profile on the assignment', async () => {
-    const insert = vi.fn();
+    const insert: PayloadMock = vi.fn();
     const created = await createClientContractAssignment(
       createMockTransaction({ profile: { client_id: 'client-1' } }, insert),
       'tenant-1',
@@ -81,7 +83,7 @@ describe('createClientContractAssignment billing profile', () => {
   });
 
   it('rejects a profile that belongs to another client', async () => {
-    const insert = vi.fn();
+    const insert: PayloadMock = vi.fn();
     await expect(
       createClientContractAssignment(
         createMockTransaction({ profile: { client_id: 'client-2' } }, insert),
@@ -93,7 +95,7 @@ describe('createClientContractAssignment billing profile', () => {
   });
 
   it('leaves the assignment unattributed when no profile is chosen', async () => {
-    const insert = vi.fn();
+    const insert: PayloadMock = vi.fn();
     await createClientContractAssignment(
       createMockTransaction({ profile: null }, insert),
       'tenant-1',
@@ -128,7 +130,7 @@ const existingAssignment = {
 
 function createUpdateMockTransaction(
   profile: { client_id: string } | null,
-  update: ReturnType<typeof vi.fn>,
+  update: PayloadMock,
 ) {
   const makeQuery = (table: string): any => {
     const query: any = {
@@ -160,7 +162,7 @@ function createUpdateMockTransaction(
 
 describe('updateClientContractAssignment billing profile', () => {
   it('re-points the assignment at another profile of the same client', async () => {
-    const update = vi.fn();
+    const update: PayloadMock = vi.fn();
     const updated = await updateClientContractAssignment(
       createUpdateMockTransaction({ client_id: 'client-1' }, update),
       'tenant-1',
@@ -175,7 +177,7 @@ describe('updateClientContractAssignment billing profile', () => {
   });
 
   it('rejects a profile that belongs to another client', async () => {
-    const update = vi.fn();
+    const update: PayloadMock = vi.fn();
     await expect(
       updateClientContractAssignment(
         createUpdateMockTransaction({ client_id: 'client-2' }, update),
@@ -188,7 +190,7 @@ describe('updateClientContractAssignment billing profile', () => {
   });
 
   it('clears the assignment back to the client default', async () => {
-    const update = vi.fn();
+    const update: PayloadMock = vi.fn();
     await updateClientContractAssignment(
       createUpdateMockTransaction(null, update),
       'tenant-1',

@@ -28,6 +28,10 @@ import { CURRENCY_OPTIONS } from "@alga-psa/core";
 // lowering the count fails the honesty test, adding one fails the growth test.
 const KNOWN_HARDCODED_CURRENCY: Record<string, { count: number; why: string }> =
   {
+    "packages/validation/src/lib/messages/clientValidationMessages.en.ts": {
+      count: 1,
+      why: "deliberate: English source of common.json clients.validation.annualRevenue.invalid, already allow-listed below as a locale string",
+    },
     "ee/server/src/components/settings/account/AccountManagement.tsx": {
       count: 15,
       why: "deliberate: Nine Minds subscription billing is USD (Stripe)",

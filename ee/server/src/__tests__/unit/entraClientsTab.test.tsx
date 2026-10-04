@@ -7,6 +7,7 @@ import type { EntraConfirmedMapping } from '@alga-psa/integrations/actions';
 
 const {
   getEntraSyncRunDetailMock,
+  getEntraSyncWorkerAvailabilityMock,
   runEntraPreflightMock,
   startEntraSyncMock,
   unmapEntraTenantMock,
@@ -15,6 +16,7 @@ const {
   updateEntraManagedTenantUserFilterMock,
 } = vi.hoisted(() => ({
   getEntraSyncRunDetailMock: vi.fn(),
+  getEntraSyncWorkerAvailabilityMock: vi.fn(),
   runEntraPreflightMock: vi.fn(),
   startEntraSyncMock: vi.fn(),
   unmapEntraTenantMock: vi.fn(),
@@ -30,6 +32,7 @@ vi.mock('@alga-psa/ui/lib/i18n/client', async () => {
 
 vi.mock('@alga-psa/integrations/actions', () => ({
   getEntraSyncRunDetail: getEntraSyncRunDetailMock,
+  getEntraSyncWorkerAvailability: getEntraSyncWorkerAvailabilityMock,
   runEntraPreflight: runEntraPreflightMock,
   startEntraSync: startEntraSyncMock,
   unmapEntraTenant: unmapEntraTenantMock,
@@ -87,6 +90,7 @@ const rowText = () =>
 describe('EntraClientsTab', () => {
   beforeEach(() => {
     getEntraSyncRunDetailMock.mockReset();
+    getEntraSyncWorkerAvailabilityMock.mockReset();
     runEntraPreflightMock.mockReset();
     startEntraSyncMock.mockReset();
     unmapEntraTenantMock.mockReset();
@@ -101,6 +105,7 @@ describe('EntraClientsTab', () => {
       success: true,
       data: { run: { status: 'completed' }, tenantResults: [] },
     });
+    getEntraSyncWorkerAvailabilityMock.mockResolvedValue({ success: true, data: { workerEvidence: 'available', taskQueue: 'tenant-workflows' } });
     unmapEntraTenantMock.mockResolvedValue({ success: true, data: {} });
     getEntraManagedTenantUserFilterMock.mockResolvedValue({ success: true, data: { defaults: { version: 1, memberUsersOnly: false, licensedUsersOnly: false, includeGroupIds: [], excludeGroupIds: [], exclusionPatterns: [], deactivateExcludedContacts: false }, override: null, effective: { version: 1, memberUsersOnly: false, licensedUsersOnly: false, includeGroupIds: [], excludeGroupIds: [], exclusionPatterns: [], deactivateExcludedContacts: false } } });
     listEntraMappingGroupsMock.mockResolvedValue({ success: true, data: { groups: [] } });

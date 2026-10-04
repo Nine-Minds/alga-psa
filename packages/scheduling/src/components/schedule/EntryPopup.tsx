@@ -1721,6 +1721,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
           )}
         </div>
         <div className="space-y-4">
+          {/* LEVERAGE: pattern recurrence-engine — inline recurrence UI should move onto RecurrenceRuleEditor / shared/lib/recurrence */}
           <div className="relative z-10">
             <CustomSelect
               label={t('entryPopup.recurrence.label', { defaultValue: 'Recurrence' })}

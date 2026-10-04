@@ -293,7 +293,8 @@
       "clientPortal": "Utworzone przez portal klienta",
       "inboundEmail": "Utworzone przez e-mail przychodzący",
       "api": "Utworzone przez API",
-      "other": "Utworzone przez inne źródło"
+      "other": "Utworzone przez inne źródło",
+      "recurring": "Utworzono przez harmonogram cykliczny"
     }
   },
   "time": {

@@ -219,7 +219,8 @@
       "clientPortal": "Creado a través del portal del cliente",
       "inboundEmail": "Creado a través de correo entrante",
       "api": "Creado a través de API",
-      "other": "Creado a través de otro"
+      "other": "Creado a través de otro",
+      "recurring": "Creado por programación recurrente"
     }
   },
   "errors": {

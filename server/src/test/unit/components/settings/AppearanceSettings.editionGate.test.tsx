@@ -2,13 +2,18 @@
  * @vitest-environment jsdom
  */
 import React from 'react';
-import { cleanup, render, screen, waitFor } from '@testing-library/react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
   useTranslation: () => ({
-    t: (_key: string, options?: { defaultValue?: string } | string) =>
-      typeof options === 'string' ? options : options?.defaultValue ?? _key,
+    t: (_key: string, options?: Record<string, unknown> | string) => {
+      if (typeof options === 'string') return options;
+      const template = (options?.defaultValue as string | undefined) ?? _key;
+      return template.replace(/\{\{(\w+)\}\}/g, (match, name: string) =>
+        options?.[name] === undefined ? match : String(options[name])
+      );
+    },
   }),
 }));
 
@@ -16,7 +21,10 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({ refresh: vi.fn(), push: vi.fn() }),
 }));
 
-vi.mock('@alga-psa/ui/lib/errorHandling', () => ({ handleError: vi.fn() }));
+vi.mock('@alga-psa/ui/lib/errorHandling', () => ({
+  handleError: vi.fn(),
+  isActionPermissionError: vi.fn(() => false),
+}));
 vi.mock('react-hot-toast', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 vi.mock('@alga-psa/ui/components/EntityImageUpload', () => ({
   default: () => <div data-testid="entity-image-upload" />,
@@ -29,10 +37,18 @@ vi.mock('@alga-psa/tenancy/actions/tenant-actions/tenantThemeActions', () => ({
 vi.mock('@alga-psa/tenancy/actions/tenant-actions/tenantBrandingActions', () => ({
   getTenantBrandingAction: vi.fn(async () => null),
 }));
+const setDashboardWelcomeUseCompanyName = vi.hoisted(() => vi.fn(async () => undefined));
+vi.mock('@alga-psa/tenancy/actions/tenant-settings-actions/dashboardWelcomeActions', () => ({
+  getDashboardWelcomeSettingsAction: vi.fn(async () => ({ useCompanyName: false, companyName: 'Nine Minds' })),
+  setDashboardWelcomeUseCompanyNameAction: (...args: unknown[]) =>
+    setDashboardWelcomeUseCompanyName(...(args as [])),
+}));
 vi.mock('@alga-psa/tenancy/actions/tenant-actions/tenantLogoActions', () => ({
   uploadTenantLogo: vi.fn(),
   deleteTenantLogo: vi.fn(),
   recropTenantLogo: vi.fn(),
+  linkDocumentAsTenantLogo: vi.fn(),
+  getTenantLogoInfoAction: vi.fn(async () => null),
 }));
 vi.mock('@alga-psa/user-composition/actions/userQueryActions', () => ({
   getCurrentUser: vi.fn(async () => ({ user_id: 'user-1', tenant: 'tenant-1' })),
@@ -55,6 +71,10 @@ async function renderAppearance(edition: string) {
 }
 
 describe('AppearanceSettings edition gate', () => {
+  beforeEach(() => {
+    setDashboardWelcomeUseCompanyName.mockClear();
+  });
+
   afterEach(() => {
     cleanup();
     vi.unstubAllEnvs();
@@ -73,6 +93,21 @@ describe('AppearanceSettings edition gate', () => {
     expect(screen.getByText('Wide logo (optional)')).toBeTruthy();
     expect(screen.getByText('Browser icon (favicon)')).toBeTruthy();
     expect(screen.getByText('Enable MSP UI customization')).toBeTruthy();
+  });
+
+  it('saves the dashboard welcome opt-in on its own and previews the branded title', async () => {
+    await renderAppearance('enterprise');
+
+    expect(screen.getByText('Welcome to Your MSP Command Center')).toBeTruthy();
+
+    const toggle = document.querySelector('#dashboard-welcome-company-name-toggle') as HTMLElement;
+    expect(toggle).toBeTruthy();
+    fireEvent.click(toggle);
+
+    await waitFor(() => expect(setDashboardWelcomeUseCompanyName).toHaveBeenCalledWith(true));
+    await waitFor(() =>
+      expect(screen.getByText('Welcome to the Nine Minds Command Center')).toBeTruthy()
+    );
   });
 
   it('draws the Enterprise boundary in Community instead of the pair picker', async () => {

@@ -27,6 +27,10 @@ import {
 import { buildContactAvatarUri, getContactReachLine, type ContactListItem } from "../api/contacts";
 import { getClientMetadataHeaders } from "../device/clientMetadata";
 import { AccountManagerPickerModal } from "../features/clients/components/AccountManagerPickerModal";
+import { ClientFormModal } from "../features/clients/components/ClientFormModal";
+import { ContactFormModal } from "../features/contacts/components/ContactFormModal";
+import { useCapabilities } from "../capabilities/CapabilitiesContext";
+import { IconButton } from "../ui/components/IconButton";
 import { ClientNotesSection } from "../features/clients/components/ClientNotesSection";
 import { useTheme } from "../ui/ThemeContext";
 import type { Theme } from "../ui/themes";
@@ -84,12 +88,29 @@ export function ClientDetailScreen({ navigation, route }: Props) {
   const [managerError, setManagerError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [editOpen, setEditOpen] = useState(false);
+  const [addContactOpen, setAddContactOpen] = useState(false);
+  const { features } = useCapabilities();
 
   useEffect(() => {
     return () => {
       abortRef.current?.abort();
     };
   }, []);
+
+  useEffect(() => {
+    if (!features.clientsUpdate || !detail) return;
+    navigation.setOptions({
+      headerRight: () => (
+        <IconButton
+          testID="client-detail-edit"
+          icon={<Feather name="edit-2" size={20} color={theme.colors.text} />}
+          onPress={() => setEditOpen(true)}
+          accessibilityLabel={t("detail.edit")}
+        />
+      ),
+    });
+  }, [detail, features.clientsUpdate, navigation, t, theme.colors.text]);
 
   const load = useCallback(async () => {
     if (!client || !session) return;
@@ -300,8 +321,9 @@ export function ClientDetailScreen({ navigation, route }: Props) {
       icon: "user",
       label: t("detail.accountManager"),
       value: detail.account_manager_full_name,
-      onPress: openManagerPicker,
-      accessory: "edit-2",
+      // Same permission as every other client edit.
+      onPress: features.clientsUpdate ? openManagerPicker : undefined,
+      accessory: features.clientsUpdate ? "edit-2" : undefined,
     },
   ];
 
@@ -368,9 +390,26 @@ export function ClientDetailScreen({ navigation, route }: Props) {
 
       {contactsVisible ? (
         <>
-          <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary, marginTop: theme.spacing.lg }}>
-            {t("detail.contacts", { defaultValue: "Contacts" })}
-          </Text>
+          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: theme.spacing.lg }}>
+            <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary }}>
+              {t("detail.contacts", { defaultValue: "Contacts" })}
+            </Text>
+            {features.contactsCreate ? (
+              <Pressable
+                testID="client-detail-add-contact"
+                onPress={() => setAddContactOpen(true)}
+                accessibilityRole="button"
+                accessibilityLabel={t("detail.addContact")}
+                hitSlop={8}
+                style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", opacity: pressed ? 0.7 : 1 })}
+              >
+                <Feather name="plus" size={14} color={theme.colors.primary} />
+                <Text style={{ ...theme.typography.caption, color: theme.colors.primary, fontWeight: "600", marginLeft: 2 }}>
+                  {t("detail.addContact")}
+                </Text>
+              </Pressable>
+            ) : null}
+          </View>
           {contacts.length === 0 ? (
             <Card style={{ marginTop: theme.spacing.sm }}>
               <Text style={{ ...theme.typography.body, color: theme.colors.textSecondary }}>
@@ -498,6 +537,27 @@ export function ClientDetailScreen({ navigation, route }: Props) {
         </>
       ) : null}
 
+      <ClientFormModal
+        visible={editOpen}
+        mode="edit"
+        client={client}
+        apiKey={session.accessToken}
+        baseUrl={config.baseUrl}
+        initial={{ detail, locations }}
+        onClose={() => setEditOpen(false)}
+        onSaved={() => void load()}
+      />
+      <ContactFormModal
+        visible={addContactOpen}
+        mode="create"
+        client={client}
+        apiKey={session.accessToken}
+        baseUrl={config.baseUrl}
+        presetClient={{ id: clientId, name: detail.client_name }}
+        lockClient
+        onClose={() => setAddContactOpen(false)}
+        onSaved={() => void load()}
+      />
       <AccountManagerPickerModal
         visible={managerPickerOpen}
         updating={managerUpdating}
