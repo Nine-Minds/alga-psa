@@ -283,6 +283,8 @@
     },
     "captchaRequired": "Complete la verificación a continuación y vuelva a iniciar sesión.",
     "tooManyAttempts": "Demasiados intentos fallidos de inicio de sesión. Espere unos minutos antes de volver a intentarlo.",
+    "tenantRequiredMessage": "Su correo electrónico está vinculado a más de una organización: elija su organización para continuar.",
+    "tenantRequiredLink": "Elegir su organización",
     "tenantDiscovery": {
       "title": "Encuentre su organización",
       "description": "Ingrese su correo electrónico y le enviaremos enlaces de inicio de sesión para todas las organizaciones a las que tiene acceso.",

@@ -283,6 +283,8 @@
     },
     "captchaRequired": "Ukończ poniższą weryfikację, a następnie zaloguj się ponownie.",
     "tooManyAttempts": "Zbyt wiele nieudanych prób logowania. Poczekaj kilka minut przed kolejną próbą.",
+    "tenantRequiredMessage": "Twój adres e-mail jest powiązany z więcej niż jedną organizacją — wybierz swoją organizację, aby kontynuować.",
+    "tenantRequiredLink": "Wybierz swoją organizację",
     "tenantDiscovery": {
       "title": "Znajdź swoją organizację",
       "description": "Wpisz swój adres e-mail, a wyślemy Ci linki logowania do wszystkich organizacji, do których masz dostęp.",

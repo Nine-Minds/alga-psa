@@ -803,6 +803,48 @@ describe('client merge into a billing profile (TM010, TM011, TM012, TM016)', () 
     expect(runs.every((row: any) => row.client_id === target)).toBe(true);
   }, HOOK_TIMEOUT);
 
+  it('moves pending mid-period quantity true-ups so they can still settle on the parent', async () => {
+    const target = await seedClient('True-up Group');
+    const source = await seedClient('True-up North');
+    await ensureDefaultBillingProfile({ db, tenantId }, target);
+    await ensureDefaultBillingProfile({ db, tenantId }, source);
+
+    // Settlement refuses a ledger row whose client differs from the draft's
+    // (reconcileContractChangeAdjustments), and every draft the absorbed client
+    // had is about to belong to the parent.
+    const adjustmentId = uuidv4();
+    await table('contract_recurring_unit_adjustments').insert({
+      tenant: tenantId,
+      adjustment_id: adjustmentId,
+      contract_line_id: uuidv4(),
+      service_id: uuidv4(),
+      config_id: uuidv4(),
+      client_id: source,
+      revision_id: uuidv4(),
+      revision_version: 1,
+      adjustment_period_start: JANUARY_START,
+      adjustment_period_end: FEBRUARY_START,
+      mid_period_effective_date: '2025-01-16',
+      previous_quantity: 2,
+      new_quantity: 5,
+      quantity_delta: 3,
+      unit_rate_cents: 1000,
+      covered_days: 16,
+      full_period_days: 31,
+      amount_cents: 1548,
+      reason: 'Mid-period quantity increase',
+      status: 'pending',
+    });
+
+    const result = await db.transaction((trx) =>
+      executeClientMerge(trx, tenantId, userId, { sourceClientId: source, targetClientId: target }));
+
+    expect(result.counts['recurring quantity true-up']).toBe(1);
+    expect(await table('contract_recurring_unit_adjustments').where({ client_id: source })).toEqual([]);
+    expect(await table('contract_recurring_unit_adjustments').where({ adjustment_id: adjustmentId }).first())
+      .toMatchObject({ client_id: target, status: 'pending' });
+  }, HOOK_TIMEOUT);
+
   it('TM019: accounts for every client-keyed table in the schema', async () => {
     // A table nobody thought about does not fail loudly — its rows just stay on
     // the archived client, keeping a live write path aimed at a tombstone. The

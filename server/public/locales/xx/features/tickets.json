@@ -213,7 +213,10 @@
     "export": "⟦Ḗẋƥȯřŧ⟧",
     "reset": "⟦Řḗşḗŧ⟧",
     "importSelected": "⟦Īḿƥȯřŧ Şḗŀḗƈŧḗḓ⟧",
-    "printOptions": "⟦Ƥřīƞŧ ȯƥŧīȯƞş⟧"
+    "printOptions": "⟦Ƥřīƞŧ ȯƥŧīȯƞş⟧",
+    "duplicate": "⟦Ḓŭƥŀīƈȧŧḗ⟧",
+    "rowActions": "⟦Ȧƈŧīȯƞş⟧",
+    "openMenu": "⟦Ȯƥḗƞ ḿḗƞŭ⟧"
   },
   "messages": {
     "noTickets": "⟦Ƞȯ ŧīƈķḗŧş ƒȯŭƞḓ⟧",
@@ -824,7 +827,14 @@
     "clipboardUploadPartialFailure": "⟦Ŧīƈķḗŧ ƈřḗȧŧḗḓ, ƀŭŧ ƥȧşŧḗḓ īḿȧɠḗş ƈȯŭŀḓ ƞȯŧ ƀḗ ȧŧŧȧƈħḗḓ ŧȯ ŧħḗ ḓḗşƈřīƥŧīȯƞ.⟧",
     "teamAssignmentPartialFailure": "⟦Ŧīƈķḗŧ ƈřḗȧŧḗḓ ƀŭŧ ŧḗȧḿ ȧşşīɠƞḿḗƞŧ ƒȧīŀḗḓ⟧",
     "tagCreatePartialFailure_one": "⟦{{count}} ŧȧɠ ƈȯŭŀḓ ƞȯŧ ƀḗ ƈřḗȧŧḗḓ⟧",
-    "tagCreatePartialFailure_other": "⟦{{count}} ŧȧɠş ƈȯŭŀḓ ƞȯŧ ƀḗ ƈřḗȧŧḗḓ⟧"
+    "tagCreatePartialFailure_other": "⟦{{count}} ŧȧɠş ƈȯŭŀḓ ƞȯŧ ƀḗ ƈřḗȧŧḗḓ⟧",
+    "duplicateDialogTitle": "⟦Ḓŭƥŀīƈȧŧḗ ŧīƈķḗŧ #{{number}}⟧",
+    "duplicatingPill": "⟦Ḓŭƥŀīƈȧŧīƞɠ #{{number}}⟧",
+    "duplicateLoadFailed": "⟦Ŧħḗ ŧīƈķḗŧ ŧȯ ḓŭƥŀīƈȧŧḗ ƈȯŭŀḓ ƞȯŧ ƀḗ ŀȯȧḓḗḓ. Ƥŀḗȧşḗ ŧřẏ ȧɠȧīƞ.⟧",
+    "duplicateChecklistHeading": "⟦Ƈħḗƈķŀīşŧ ƒřȯḿ #{{number}}⟧",
+    "duplicateChecklistRequired": "⟦(řḗʠŭīřḗḓ)⟧",
+    "duplicateCopyChecklist": "⟦Ƈȯƥẏ ƈħḗƈķŀīşŧ īŧḗḿş (ŭƞƈħḗƈķḗḓ)⟧",
+    "duplicateCustomFieldsNote": "⟦Ƈŭşŧȯḿ ƒīḗŀḓ ṽȧŀŭḗş ȧřḗ ƈȯƥīḗḓ ƒřȯḿ #{{number}}.⟧"
   },
   "itil": {
     "calculatedPriority": "⟦Ƥřīȯřīŧẏ (Ƈȧŀƈŭŀȧŧḗḓ)⟧",
@@ -972,7 +982,12 @@
     "emailNotificationLogs": "⟦Ḗḿȧīŀ Ƞȯŧīƒīƈȧŧīȯƞ Ŀȯɠş⟧",
     "ticketActivity": "⟦Ŧīƈķḗŧ Ȧƈŧīṽīŧẏ⟧",
     "discardChanges": "⟦Ḓīşƈȧřḓ Ƈħȧƞɠḗş⟧",
-    "saved": "⟦Şȧṽḗḓ⟧"
+    "saved": "⟦Şȧṽḗḓ⟧",
+    "changeContactTitle": "⟦Ƈħȧƞɠḗ ŧħḗ ŧīƈķḗŧ ƈȯƞŧȧƈŧ?⟧",
+    "removeContactTitle": "⟦Řḗḿȯṽḗ ŧħḗ ŧīƈķḗŧ ƈȯƞŧȧƈŧ?⟧",
+    "changeContactPrompt": "⟦Ŧħḗ ƈȯƞŧȧƈŧ, ȧşşīɠƞḗḗ ȧƞḓ ẇȧŧƈħḗřş ȧřḗ ŧȯŀḓ ȧƀȯŭŧ ŧħīş ŭƥḓȧŧḗ ŭƞŀḗşş ẏȯŭ ŧŭřƞ ŧħḗīř ƞȯŧīƒīƈȧŧīȯƞş ȯƒƒ.⟧",
+    "changeContact": "⟦Ƈħȧƞɠḗ ƈȯƞŧȧƈŧ⟧",
+    "removeContact": "⟦Řḗḿȯṽḗ ƈȯƞŧȧƈŧ⟧"
   },
   "properties": {
     "timeEntry": "⟦Ŧīḿḗ Ḗƞŧřẏ⟧",
@@ -1573,7 +1588,8 @@
       "closedMasterGating": "⟦Ŧħḗ ƀȯȧřḓ'ş ƈŀȯşḗ řŭŀḗş ḓȯ ƞȯŧ ȧŀŀȯẇ ȯƥḗƞ ƈħīŀḓřḗƞ ŭƞḓḗř ȧ ƈŀȯşḗḓ ḿȧşŧḗř, şȯ ķḗḗƥīƞɠ ŧħḗ ḿȧşŧḗř ƈŀȯşḗḓ īş ƞȯŧ ȧƞ ȯƥŧīȯƞ.⟧"
     },
     "autoClose": "⟦Ẇīŀŀ ƈŀȯşḗ ȧŭŧȯḿȧŧīƈȧŀŀẏ ȯƞ {{date}} ŭƞŀḗşş ŧħḗřḗ'ş ƞḗẇ ȧƈŧīṽīŧẏ.⟧",
-    "autoCloseWarned": "⟦Ŧħḗ ƈŭşŧȯḿḗř ħȧş ƀḗḗƞ ẇȧřƞḗḓ.⟧"
+    "autoCloseWarned": "⟦Ŧħḗ ƈŭşŧȯḿḗř ħȧş ƀḗḗƞ ẇȧřƞḗḓ.⟧",
+    "duplicatedFrom": "⟦Ḓŭƥŀīƈȧŧḗḓ ƒřȯḿ #{{number}}⟧"
   },
   "invalidTicketData": "⟦Īƞṽȧŀīḓ ŧīƈķḗŧ ḓȧŧȧ⟧",
   "timeEntries": {
@@ -1865,6 +1881,8 @@
       "bundleStatusNotPropagated": "⟦{{actor}} ƈħȧƞɠḗḓ ŧħḗ ƀŭƞḓŀḗ ḿȧşŧḗř şŧȧŧŭş (ƈħīŀḓřḗƞ ƞȯŧ ŭƥḓȧŧḗḓ)⟧",
       "bundleStatusClosed": "⟦{{actor}} ƈŀȯşḗḓ ŧħḗ ƀŭƞḓŀḗ ḿȧşŧḗř ȧƞḓ {{count}} ƈħīŀḓ ŧīƈķḗŧ(ş)⟧",
       "bundleStatusReopened": "⟦{{actor}} řḗȯƥḗƞḗḓ ŧħḗ ƀŭƞḓŀḗ ḿȧşŧḗř ȧƞḓ {{count}} ƈħīŀḓ ŧīƈķḗŧ(ş)⟧",
+      "duplicatedFrom": "⟦{{actor}} ƈřḗȧŧḗḓ ŧħīş ŧīƈķḗŧ ȧş ȧ ḓŭƥŀīƈȧŧḗ ȯƒ #{{number}}⟧",
+      "duplicatedTo": "⟦{{actor}} ḓŭƥŀīƈȧŧḗḓ ŧħīş ŧīƈķḗŧ ȧş #{{number}}⟧",
       "title": "⟦Ŧīḿḗŀīƞḗ⟧",
       "replyVisibility": "⟦Řḗƥŀẏ ṽīşīƀīŀīŧẏ⟧",
       "modeClient": "⟦Ƈŀīḗƞŧ⟧",

@@ -19,6 +19,8 @@ export interface CreateTicketPrefill {
   dueDate?: string;
   additionalAgents?: { user_id: string; name?: string }[];
   isAlgaDeskMode?: boolean;
+  /** Ticket to prefill the form from ("Duplicate"). The form loads the source itself. */
+  duplicateFromTicketId?: string;
 }
 
 type SearchParamValue = string | string[] | undefined;
@@ -46,6 +48,7 @@ export function buildCreateTicketHref(prefill: CreateTicketPrefill = {}): string
   if (prefill.additionalAgents?.length) {
     params.set('agents', JSON.stringify(prefill.additionalAgents));
   }
+  if (prefill.duplicateFromTicketId) params.set('duplicateFrom', prefill.duplicateFromTicketId);
   if (prefill.isAlgaDeskMode) params.set('form', 'algadesk');
 
   const qs = params.toString();
@@ -77,6 +80,7 @@ export function parseCreateTicketPrefill(searchParams: SearchParams): CreateTick
     assignedTo: first(searchParams.assignedTo),
     dueDate: first(searchParams.dueDate),
     additionalAgents,
+    duplicateFromTicketId: first(searchParams.duplicateFrom),
     isAlgaDeskMode: first(searchParams.form) === 'algadesk',
   };
 }

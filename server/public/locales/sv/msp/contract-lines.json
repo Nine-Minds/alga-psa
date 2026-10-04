@@ -276,7 +276,10 @@
       "heading": "Tjänster med fast avgift",
       "itemLabel": "Post {{index}}",
       "selectItemPlaceholder": "Välj en post",
-      "servicesAndProducts": "Tjänster och produkter"
+      "servicesAndProducts": "Tjänster och produkter",
+      "recurringQuantity": "Återkommande antal",
+      "unitRateOptional": "Valfritt. Lämna enhetspriset tomt för att använda tjänstens katalogpris i kundens valuta när en rad skapas från den här förinställningen.",
+      "alertUnits": "Om du i stället vill debitera en tjänst per licens eller enhet väljer du prissättning med återkommande antal för den: den debiteras antal × enhetspris varje period och ingår inte i grundpriset."
     },
     "hourly": {
       "addHourlyService": "Lägg till timdebiterad tjänst",
@@ -333,7 +336,8 @@
       "serviceSelectRequired": "Tjänst {{index}}: Välj en tjänst",
       "unitOfMeasureRequired": "Tjänst {{index}}: Måttenhet krävs",
       "unitRateRequired": "Tjänst {{index}}: Enhetstaxa krävs",
-      "usageServiceRequired": "Minst en förbrukningsbaserad tjänst krävs"
+      "usageServiceRequired": "Minst en förbrukningsbaserad tjänst krävs",
+      "recurringQuantityInvalid": "Tjänst {{index}}: Det återkommande antalet måste vara ett heltal, noll eller mer"
     }
   },
   "forms": {

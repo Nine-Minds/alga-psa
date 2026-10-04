@@ -51,7 +51,7 @@ export class KbImportParseTimeoutError extends Error {
 
 const HTML_CHUNK_SIZE = 64 * 1024;
 const MARKDOWN_CHUNK_SIZE = 64 * 1024;
-const INLINE_CHUNK_SIZE = 32 * 1024;
+export const INLINE_CHUNK_SIZE = 32 * 1024;
 
 class Deadline {
   private readonly expiresAt: number | null;
@@ -463,8 +463,10 @@ class DeadlineTokenizer extends Tokenizer {
 /**
  * Splits one oversized inline run at the latest whitespace inside each window,
  * falling back to a hard cut when a chunk holds no break at all.
+ *
+ * Exported for tests only.
  */
-function splitInlineChunks(src: string, deadline: Deadline): string[] {
+export function splitInlineChunks(src: string, deadline: Deadline = new Deadline()): string[] {
   const chunks: string[] = [];
   let offset = 0;
 

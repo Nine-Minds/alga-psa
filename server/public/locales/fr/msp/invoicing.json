@@ -388,6 +388,7 @@
       "SOURCE_ALREADY_BILLED": "Certains éléments sélectionnés ne sont plus facturables (déjà facturés, non approuvés ou supprimés). Actualisez et réessayez.",
       "SOURCE_NOT_ELIGIBLE": "Un élément sélectionné n'appartient pas à ce ticket ou n'est plus éligible. Actualisez et réessayez.",
       "SOURCE_CURRENCY_MISMATCH": "Certains produits sélectionnés sont facturés dans une autre devise que celle de ce client et ne peuvent pas être ajoutés. Facturez-les séparément dans leur devise.",
+      "RECURRING_PRICING_STALE": "L'aperçu n'est plus à jour : {{details}}. Relancez l'aperçu pour afficher les montants actuels, puis générez de nouveau.",
       "BILLING_PROFILE_NOT_FOUND": "Le profil de facturation sélectionné n'est pas disponible pour ce client. Actualisez la page et réessayez."
     },
     "warnings": {
@@ -1218,7 +1219,10 @@
         "drags": "Glisser : {{count}}",
         "success": "Succès : {{count}}",
         "invalid": "Invalide : {{count}}"
-      }
+      },
+      "zoomOut": "Zoom arrière",
+      "zoomIn": "Zoom avant",
+      "zoomFit": "Ajuster"
     },
     "palette": {
       "tabs": {
@@ -1925,7 +1929,8 @@
       "companyLogo": "Logo de l'entreprise",
       "insertionMarker": "Le prochain bloc que vous ajoutez sera placé ici",
       "emptyContainer": "Vide — sélectionnez-le et ajoutez des blocs depuis le panneau de gauche",
-      "localeChip": "Libellés traduits affichés en {{language}} (Langue d'aperçu)"
+      "localeChip": "Libellés traduits affichés en {{language}} (Langue d'aperçu)",
+      "badgeDragHint": "Faites glisser pour déplacer ce bloc"
     },
     "dragOverlay": {
       "component": "Composant"
@@ -1972,6 +1977,19 @@
       "collapse": "Réduire {{name}}",
       "expand": "Développer {{name}}",
       "title": "Plan"
+    },
+    "dragPreview": {
+      "noTarget": "Hors de la page — relâchez pour annuler",
+      "noChange": "Reste à sa place",
+      "before": "Avant {{block}}",
+      "after": "Après {{block}}",
+      "inside": "Dans {{container}}",
+      "dropOnPage": "Déposez sur la page pour ajouter ce bloc.",
+      "cancelled": "Non déplacé — relâchez au-dessus de la page ou du Plan pour déposer."
+    },
+    "resize": {
+      "handleHint": "Faites glisser pour redimensionner · double-cliquez pour ajuster au contenu",
+      "autoValue": "Automatique ({{value}})"
     }
   },
   "projectBilling": {

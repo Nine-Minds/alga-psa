@@ -62,6 +62,10 @@ export interface ITicket extends TenantEntity, ITaggable {
   /** Denormalized close flag kept in sync with the selected status. */
   is_closed?: boolean;
   due_date?: string;         // Optional due date for the ticket
+  /** Source ticket this one was duplicated from (create-only provenance, no FK). */
+  duplicated_from_ticket_id?: string | null;
+  /** Display-only: number of the source ticket, joined on read. */
+  duplicated_from_ticket_number?: string | null;
   attributes: Record<string, unknown> | null; // Changed from any to unknown
   priority_id?: string; // Used for both custom and ITIL priorities (unified system)
   estimated_hours?: number;

@@ -1520,7 +1520,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
         <div className="bg-white p-6 rounded-lg shadow-sm">
           <ClientContactsList
             clientId={client.client_id}
-            clients={[client]}
+            client={client}
           />
         </div>
       )

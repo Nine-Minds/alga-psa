@@ -328,7 +328,8 @@
       "serviceCountOther": "{{count}} servicios",
       "previouslyConfiguredQuantity": "Cantidad configurada previamente: {{count}} — no se utiliza para la facturación",
       "billedOnPeriodCount": "Facturado según la cantidad informada en cada periodo",
-      "recurringSeats": "{{count}} × {{rate}} (puestos recurrentes)",
+      "recurringSeats": "{{count}} × {{rate}} = {{amount}} (puestos recurrentes)",
+      "recurringSeatsCatalogRate": "{{count}} × precio de catálogo (puestos recurrentes)",
       "bundleAllocation": "Reparto del precio del paquete — no son puestos facturables",
       "setUpRecurringSeats": "Configurar puestos recurrentes",
       "reportPeriodCount": "Informar una cantidad del periodo"
@@ -615,6 +616,69 @@
       "standard": "Estándar",
       "custom": "Personalizado",
       "unreviewed": "Sin revisar"
+    },
+    "recurringSchedule": {
+      "openPanel": "Programar cambio recurrente e historial",
+      "systemActor": "Sistema",
+      "unknownActor": "Usuario desconocido",
+      "midPeriodToggle": "Aplicar un ajuste de regularización único a mitad de período",
+      "midPeriodToggleHelp": "Solo cantidad. La nueva cantidad permanente comienza en el límite indicado arriba, y un único cargo o crédito prorrateado cubre los días desde la fecha del cambio hasta ese límite. Déjelo desactivado para cambiar solo en el límite.",
+      "midPeriodDate": "La cantidad cambia el",
+      "midPeriodQuantityOnly": "Un ajuste de regularización a mitad de período solo puede cambiar la cantidad. En su lugar, programe el cambio de precio unitario en un límite del período de servicio.",
+      "midPeriodAffected": "El período afectado del {{start}} al {{end}} cambia en {{delta}} unidades.",
+      "midPeriodMath": "{{delta}} unidades × {{rate}} × {{covered}}/{{full}} días = {{amount}} de {{effect}}.",
+      "credit": "crédito",
+      "charge": "cargo",
+      "midPeriodStanding": "A partir del {{boundary}}, la cantidad permanente es {{quantity}}. El ajuste de regularización se agrega al siguiente borrador editable que corresponda (con los descuentos e impuestos aplicables).",
+      "midPeriodNote": "Ajuste de regularización a mitad de período: la nueva cantidad permanente comienza en el límite indicado, y un único cargo o crédito prorrateado cubre el período parcial. Los importes facturados anteriormente nunca se reescriben.",
+      "midPeriodDateRequired": "Elija una fecha dentro de un próximo período sin facturar para el ajuste de regularización único a mitad de período.",
+      "midPeriodFrom": "ajuste de regularización desde el {{date}}",
+      "previewImpact": "Vista previa del impacto en la factura",
+      "invoiceWindowMidPeriod": "Factura estimada del cliente del {{start}} al {{end}}. Incluye los demás artículos de esta ventana de facturación y el ajuste de regularización único a mitad de período.",
+      "invoiceWindowBoundaryOnly": "Factura estimada del cliente del {{start}} al {{end}}. Incluye los demás artículos de esta ventana de facturación; sin ajuste a mitad de período.",
+      "invoiceTotals": "Subtotal después de descuentos: {{subtotal}}. Impuesto: {{tax}}. Total: {{before}} → {{after}}.",
+      "olderUnbilled": "Este límite está en el pasado. La facturación pendiente a partir de esta fecha usará los valores programados; los períodos facturados anteriormente no cambian.",
+      "catalogPriceMissing": "Ningún precio de catálogo en {{currency}} cubre este límite, por lo que no se puede facturar una cantidad positiva. Agregue un precio de catálogo en {{currency}} o elija \"Anular precio unitario\" antes de guardar.",
+      "invoiceImpact": "A partir del {{date}}, el subtotal recurrente de este artículo cambia en {{delta}} hasta {{total}} (antes de descuentos e impuestos). Los períodos facturados anteriormente no cambian.",
+      "discardDirty": "Al cambiar la fecha de entrada en vigor se vuelven a cargar los valores vigentes y se descarta su edición sin guardar. ¿Desea continuar?",
+      "invalidQuantity": "La cantidad debe ser un número entero igual o mayor que 0.",
+      "invalidRate": "Introduzca un precio unitario igual o mayor que 0, o cambie al precio de catálogo.",
+      "saved": "Programado: {{quantity}} a partir del {{date}}.",
+      "openPeriod": "próximo límite",
+      "title": "Calendario recurrente de cantidades y precios",
+      "kindProduct": "Producto",
+      "kindService": "Servicio por unidad",
+      "historyLoadError": "No se pudo cargar el historial programado: {{error}}",
+      "protectedPeriod": "Este período ya está {{state}} y está protegido. Elija un límite de período de servicio posterior y sin facturar; los importes de facturas ya facturados nunca se reescriben.",
+      "existingRevisionNotice": "Ya hay un cambio programado vigente desde el {{date}}. Si vuelve a guardar en este mismo límite, se reemplazará (versión {{version}}); los períodos anteriores no cambian.",
+      "boundaryOnly": "Los cambios se aplican solo en un límite del período de servicio. No hay prorrateo, ajuste de regularización ni crédito a mitad de período: los importes facturados anteriormente no cambian y la nueva cantidad o precio se aplica a partir del límite indicado.",
+      "stopHelp": "Cero detiene la facturación recurrente a partir de este período. Se conservan el artículo, su historial y los demás artículos del contrato; agregue una revisión posterior para reanudarla.",
+      "pricingSource": "Origen del precio unitario",
+      "useCatalog": "Usar precio de catálogo",
+      "override": "Anular precio unitario",
+      "inherited": "Heredado del catálogo",
+      "currentEffective": "Vigente para los períodos desde el {{date}}: {{quantity}} × {{rate}} ({{source}}).",
+      "sourceCatalog": "precio de catálogo",
+      "sourceOverride": "precio anulado explícitamente",
+      "coverage": "Abarca del {{start}} al {{end}} ({{currency}}).",
+      "catalogSource": "Precio de catálogo {{priceId}} vigente desde el {{effectiveDate}}; al ser heredado, cualquier cambio posterior en el catálogo se aplica automáticamente.",
+      "baselineRow": "Valores originales (sin revisión): {{quantity}} × {{rate}}.",
+      "replace": "Reemplazar cambio programado",
+      "schedule": "Programar cambio",
+      "scheduledPeriods": "Períodos programados",
+      "effectiveDate": "Vigente desde",
+      "quantity": "Cantidad",
+      "unitPrice": "Precio unitario",
+      "version": "Versión",
+      "status": "Estado",
+      "actor": "Autor",
+      "baselineLabel": "Valores originales",
+      "catalogLabel": "Catálogo",
+      "statusInForce": "Vigente",
+      "statusScheduled": "Programado",
+      "statusSuperseded": "Reemplazado",
+      "supersededHistory": "Ediciones pendientes reemplazadas ({{count}})",
+      "supersededBy": "Reemplazado por"
     }
   },
   "contractLineEdit": {
@@ -982,6 +1046,7 @@
       "published": "Publicada"
     },
     "toasts": {
+      "contractActivated": "Contrato activado",
       "draftDiscarded": "Borrador descartado",
       "failedToActivateContract": "No se pudo activar el contrato",
       "failedToDeleteContract": "No se pudo eliminar el contrato",
@@ -1160,7 +1225,12 @@
       "serviceFallback": "Servicio",
       "title": "Composición de la plantilla",
       "unitLabel": "Unidad:",
-      "usageBasedPlans": "Planes basados en uso"
+      "usageBasedPlans": "Planes basados en uso",
+      "recurringQuantityLabel": "Cantidad recurrente:",
+      "unitRateLabel": "Tarifa unitaria:",
+      "unitRateFromCatalog": "Precio de catálogo en la moneda del cliente",
+      "unitAmountLabel": "Importe recurrente:",
+      "unitAmountValue": "{{count}} × {{rate}} = {{amount}}"
     },
     "editBasicsTitle": "Editar información básica de la plantilla",
     "editGuidanceTitle": "Editar orientación de la plantilla",
@@ -1386,7 +1456,10 @@
       "selectClientBeforeDraft": "Seleccione un cliente antes de guardar como borrador",
       "selectProductForEachLine": "Seleccione un producto para cada línea de producto",
       "startDateRequired": "La fecha de inicio es obligatoria",
-      "unsupportedRecurringAuthoringCombination": "Combinación de creación recurrente no admitida para servicios de {{lineType}}: la cadencia de aniversario de contrato actualmente admite las frecuencias de facturación {{supportedFrequencies}}. {{billingFrequency}} aún no es compatible. Use una de las frecuencias admitidas o facture según el calendario de facturación del cliente en su lugar."
+      "unsupportedRecurringAuthoringCombination": "Combinación de creación recurrente no admitida para servicios de {{lineType}}: la cadencia de aniversario de contrato actualmente admite las frecuencias de facturación {{supportedFrequencies}}. {{billingFrequency}} aún no es compatible. Use una de las frecuencias admitidas o facture según el calendario de facturación del cliente en su lugar.",
+      "recurringUnitRateRequired": "Introduzca una tarifa unitaria para cada servicio recurrente.",
+      "recurringQuantityWholeNumber": "La cantidad recurrente debe ser un número entero.",
+      "fixedQuantityInvalid": "La cantidad debe ser cero o mayor."
     },
     "nav": {
       "back": "Atrás",
@@ -1538,7 +1611,8 @@
     "baseRate": {
       "hint": "Tarifa recurrente total para todos los servicios fijos combinados.",
       "label": "Tarifa base recurrente",
-      "placeholder": "0.00"
+      "placeholder": "0.00",
+      "hintWithUnits": "Tarifa recurrente total de los servicios del paquete. Los puestos/unidades recurrentes se facturan aparte como cantidad × tarifa unitaria y no forman parte de esta tarifa."
     },
     "description": "Configure servicios que se facturan a una tarifa fija en cada ciclo de facturación. Todavía puede registrar tiempo, pero la facturación se basa en este importe fijo.",
     "emptyState": "Aún no se han agregado servicios de tarifa fija. Haga clic en “Agregar servicio” arriba o “Omitir” para continuar.",
@@ -1555,12 +1629,15 @@
         "invoiceWindow": "Ventana de facturación:",
         "recurringRate": "Tarifa recurrente:",
         "service": "Servicio:",
-        "services": "Servicios:"
+        "services": "Servicios:",
+        "recurringUnits": "Puestos/unidades recurrentes:",
+        "recurringTotal": "Total por período:"
       },
       "materializedPeriods": {
         "tooltip": "Vista previa de los próximos periodos de servicio y las ventanas de facturación que se generarían para ellos según la configuración actual. Permiten verificar la cadencia antes de guardar — las facturas reales se generan después en la ejecución de facturación."
       },
-      "title": "Vista previa recurrente antes de guardar"
+      "title": "Vista previa recurrente antes de guardar",
+      "unitRow": "{{serviceName}}: {{quantity}} × {{rate}} = {{amount}}"
     },
     "proration": {
       "label": "Ajustar por períodos parciales",
@@ -1571,7 +1648,10 @@
       "label": "Servicios",
       "quantityLabel": "Cantidad",
       "selectServicePlaceholder": "Seleccione un servicio",
-      "serviceItemLabel": "Servicio {{index}}"
+      "serviceItemLabel": "Servicio {{index}}",
+      "recurringQuantityLabel": "Cantidad recurrente",
+      "allocationQuantityLabel": "Cantidad de asignación",
+      "noCurrencyPrice": "No hay precio en {{currency}} en el catálogo. Introduzca una tarifa unitaria."
     }
   },
   "wizardProducts": {
@@ -1768,7 +1848,8 @@
         "other": "{{count}} servicios"
       },
       "monthlyBaseRate": "Tarifa base mensual:",
-      "partialPeriodAdjustment": "Ajuste por período parcial:"
+      "partialPeriodAdjustment": "Ajuste por período parcial:",
+      "recurringUnitRow": "{{serviceName}}: {{quantity}} × {{rate}} = {{amount}}"
     },
     "recurring": {
       "cadenceOwner": {
@@ -1879,7 +1960,8 @@
           "hourly": "Por hora",
           "usage": "Uso"
         }
-      }
+      },
+      "recurringQuantityInvalid": "La cantidad recurrente de «{{serviceName}}» debe ser un número entero de cero o más, y cualquier tarifa unitaria debe ser un importe válido."
     }
   },
   "templateBasics": {
@@ -1929,7 +2011,8 @@
       "adjustPartialPeriods": "Ajustar por períodos parciales",
       "services": "Servicios",
       "serviceNumber": "Servicio {{index}}",
-      "quantityOptional": "Cantidad (opcional)"
+      "quantityOptional": "Cantidad (opcional)",
+      "recurringQuantity": "Cantidad recurrente"
     },
     "placeholders": {
       "billingTiming": "Seleccione el momento de facturación",
@@ -1937,7 +2020,9 @@
     },
     "help": {
       "adjustPartialPeriods": "Use esta opción cuando los contratos creados a partir de la plantilla deban escalar la tarifa recurrente si el servicio comienza o termina dentro de un período.",
-      "quantity": "Cantidad sugerida al crear contratos"
+      "quantity": "Cantidad sugerida al crear contratos",
+      "recurringQuantity": "Número inicial de puestos/unidades. Se puede ajustar al crear un contrato a partir de esta plantilla.",
+      "unitRateOptional": "Opcional. Deje la tarifa unitaria vacía para usar el precio de catálogo de este servicio en la moneda del cliente al crear un contrato."
     },
     "preview": {
       "unknownService": "Servicio desconocido",
@@ -2059,7 +2144,8 @@
       "quantity": "Cantidad:",
       "bucket": "Bloque:",
       "enabled": "Habilitado",
-      "disabled": "Deshabilitado"
+      "disabled": "Deshabilitado",
+      "recurringQuantity": "Cantidad recurrente:"
     },
     "fixed": {
       "cadenceOwnerLabel": "Propietario de la cadencia:",
@@ -2074,7 +2160,10 @@
       },
       "partialPeriodLabel": "Ajuste por período parcial:",
       "serviceLabel": "Servicio:",
-      "invoiceWindowLabel": "Ventana de facturación:"
+      "invoiceWindowLabel": "Ventana de facturación:",
+      "unitRateLabel": "Tarifa unitaria:",
+      "unitRateFromCatalog": "Precio de catálogo en la moneda del cliente",
+      "unitRateNeutral": "{{rate}} en la moneda del cliente"
     },
     "hourly": {
       "minimumBillableTimeLabel": "Tiempo mínimo facturable:",
@@ -2104,7 +2193,8 @@
     },
     "selectedHeading": "Servicios seleccionados de {{type}} ({{count}})",
     "labels": {
-      "qty": "Cant.:"
+      "qty": "Cant.:",
+      "recurringUnits": "Puestos/unidades recurrentes"
     },
     "removeDialog": {
       "title": "Quitar preajuste de línea de contrato",

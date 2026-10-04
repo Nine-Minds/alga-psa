@@ -404,6 +404,11 @@ export const CLIENT_OWNED_MOVE_TABLES: ClientOwnedMoveTable[] = [
   { table: 'client_tax_rates', label: 'tax rate' },
   { table: 'client_billing_settings', label: 'billing setting', conflictKeyColumns: [], onCollision: 'drop' },
   { table: 'contract_line_discounts', label: 'contract line discount' },
+  // Mid-period true-ups settle only onto a draft whose `client_id` matches the
+  // ledger row's (reconcileContractChangeAdjustments). The invoices and the
+  // contract assignments have just moved, so a row left behind would be released
+  // from its draft and then never be eligible for any invoice again.
+  { table: 'contract_recurring_unit_adjustments', label: 'recurring quantity true-up' },
   // Prepaid hours carry no profile column, so the segment they were bought for
   // cannot be preserved; moving makes them spendable across the parent, which is
   // still better than stranding them on a client that will never file a ticket.

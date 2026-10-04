@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
 
-const source = readFileSync(resolve(__dirname, 'projectTaskCommentReactionActions.ts'), 'utf8');
+// The queries moved to the shared service (also behind the REST API); the actions are thin auth wrappers.
+const source = readFileSync(resolve(__dirname, '../lib/taskComments/taskCommentService.ts'), 'utf8');
 
 describe('project task comment reaction tenant-scoped query contract', () => {
   it('uses structural tenant scoping for reaction and user roots', () => {

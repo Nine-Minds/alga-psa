@@ -304,6 +304,42 @@ export const searchServiceCatalogForPicker = withAuth(async (
   });
 });
 
+/**
+ * Catalog price per service in one currency, keyed by service id (null when the
+ * service has no price in that currency). Same source as the picker's
+ * `currency_rate`, for callers that already hold service ids — e.g. prefilling
+ * the unit rate of a per-seat service that arrived from a contract template,
+ * which is currency-neutral.
+ */
+export const getServiceCatalogRatesForCurrency = withAuth(async (
+  user,
+  { tenant },
+  serviceIds: string[],
+  currencyCode: string
+): Promise<Record<string, number | null>> => {
+  const uniqueServiceIds = Array.from(new Set(serviceIds.filter(Boolean)));
+  const result: Record<string, number | null> = Object.fromEntries(
+    uniqueServiceIds.map((serviceId) => [serviceId, null])
+  );
+  if (uniqueServiceIds.length === 0 || !currencyCode) {
+    return result;
+  }
+
+  const { knex: db } = await createTenantKnex();
+  return withTransaction(db, async (trx: Knex.Transaction) => {
+    const rows = await tenantDb(trx, tenant)
+      .table('service_prices')
+      .whereIn('service_id', uniqueServiceIds)
+      .where('currency_code', currencyCode)
+      .select('service_id', trx.raw('CAST(rate AS FLOAT) as rate')) as Array<{ service_id: string; rate: number | null }>;
+
+    for (const row of rows) {
+      result[row.service_id] = row.rate != null && row.rate > 0 ? Math.round(row.rate) : null;
+    }
+    return result;
+  });
+});
+
 export const getServices = withAuth(async (
   user,
   { tenant },

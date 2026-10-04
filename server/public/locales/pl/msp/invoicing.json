@@ -406,6 +406,7 @@
       "SOURCE_ALREADY_BILLED": "Niektóre wybrane pozycje nie są już rozliczalne (już rozliczone, niezatwierdzone lub usunięte). Odśwież i spróbuj ponownie.",
       "SOURCE_NOT_ELIGIBLE": "Wybrana pozycja nie należy do tego zgłoszenia lub nie jest już kwalifikowalna. Odśwież i spróbuj ponownie.",
       "SOURCE_CURRENCY_MISMATCH": "Niektóre wybrane produkty są wycenione w innej walucie niż waluta fakturowania tego klienta, więc nie można ich dodać. Rozlicz je osobno w ich własnej walucie.",
+      "RECURRING_PRICING_STALE": "Podgląd jest nieaktualny: {{details}}. Uruchom podgląd ponownie, aby zobaczyć bieżące wartości, a następnie wygeneruj ponownie.",
       "BILLING_PROFILE_NOT_FOUND": "Wybrany profil rozliczeniowy nie jest dostępny dla tego klienta. Odśwież stronę i spróbuj ponownie."
     },
     "warnings": {
@@ -1268,7 +1269,10 @@
         "drags": "Przeciągnięć: {{count}}",
         "success": "Udanych: {{count}}",
         "invalid": "Błędnych: {{count}}"
-      }
+      },
+      "zoomOut": "Pomniejsz",
+      "zoomIn": "Powiększ",
+      "zoomFit": "Dopasuj"
     },
     "palette": {
       "tabs": {
@@ -1975,7 +1979,8 @@
       "companyLogo": "Logotyp firmy",
       "insertionMarker": "Następny dodany blok trafi tutaj",
       "emptyContainer": "Pusty — zaznacz go i dodaj bloki z lewego panelu",
-      "localeChip": "Przetłumaczone etykiety wyświetlane w języku: {{language}} (Język podglądu)"
+      "localeChip": "Przetłumaczone etykiety wyświetlane w języku: {{language}} (Język podglądu)",
+      "badgeDragHint": "Przeciągnij, aby przenieść ten blok"
     },
     "dragOverlay": {
       "component": "Komponent"
@@ -2022,6 +2027,19 @@
       "collapse": "Zwiń {{name}}",
       "expand": "Rozwiń {{name}}",
       "title": "Struktura"
+    },
+    "dragPreview": {
+      "noTarget": "Poza stroną — puść, aby anulować",
+      "noChange": "Pozostaje na miejscu",
+      "before": "Przed: {{block}}",
+      "after": "Po: {{block}}",
+      "inside": "Do: {{container}}",
+      "dropOnPage": "Upuść na stronie, aby dodać ten blok.",
+      "cancelled": "Nie przeniesiono — puść nad stroną lub Strukturą, aby upuścić."
+    },
+    "resize": {
+      "handleHint": "Przeciągnij, aby zmienić rozmiar · kliknij dwukrotnie, aby dopasować do zawartości",
+      "autoValue": "Automatycznie ({{value}})"
     }
   },
   "projectBilling": {

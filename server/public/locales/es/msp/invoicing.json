@@ -388,6 +388,7 @@
       "SOURCE_ALREADY_BILLED": "Algunos elementos seleccionados ya no son facturables (ya facturados, no aprobados o eliminados). Actualiza e inténtalo de nuevo.",
       "SOURCE_NOT_ELIGIBLE": "Uno de los elementos seleccionados no pertenece a este ticket o ya no es elegible. Actualiza e inténtalo de nuevo.",
       "SOURCE_CURRENCY_MISMATCH": "Algunos productos seleccionados tienen un precio en una moneda distinta a la de facturación de este cliente, por lo que no se pueden añadir. Factúralos por separado en su propia moneda.",
+      "RECURRING_PRICING_STALE": "La vista previa está desactualizada: {{details}}. Vuelva a ejecutar la vista previa para ver los valores actuales y, luego, genere de nuevo.",
       "BILLING_PROFILE_NOT_FOUND": "El perfil de facturación seleccionado no está disponible para este cliente. Actualice la página e inténtelo de nuevo."
     },
     "warnings": {
@@ -1218,7 +1219,10 @@
         "drags": "Arrastres: {{count}}",
         "success": "Éxito: {{count}}",
         "invalid": "No válidos: {{count}}"
-      }
+      },
+      "zoomOut": "Alejar",
+      "zoomIn": "Acercar",
+      "zoomFit": "Ajustar"
     },
     "palette": {
       "tabs": {
@@ -1925,7 +1929,8 @@
       "companyLogo": "Logotipo de la empresa",
       "insertionMarker": "El siguiente bloque que añada irá aquí",
       "emptyContainer": "Vacío: selecciónelo y añada bloques desde el panel izquierdo",
-      "localeChip": "Etiquetas traducidas mostradas en {{language}} (Idioma de vista previa)"
+      "localeChip": "Etiquetas traducidas mostradas en {{language}} (Idioma de vista previa)",
+      "badgeDragHint": "Arrastra para mover este bloque"
     },
     "dragOverlay": {
       "component": "Componente"
@@ -1972,6 +1977,19 @@
       "collapse": "Contraer {{name}}",
       "expand": "Expandir {{name}}",
       "title": "Esquema"
+    },
+    "dragPreview": {
+      "noTarget": "Fuera de la página: suelta para cancelar",
+      "noChange": "Se queda donde está",
+      "before": "Antes de {{block}}",
+      "after": "Después de {{block}}",
+      "inside": "Dentro de {{container}}",
+      "dropOnPage": "Suelta en la página para añadir este bloque.",
+      "cancelled": "No se ha movido: suelta sobre la página o el Esquema para colocarlo."
+    },
+    "resize": {
+      "handleHint": "Arrastra para cambiar el tamaño · doble clic para ajustarlo al contenido",
+      "autoValue": "Automático ({{value}})"
     }
   },
   "projectBilling": {

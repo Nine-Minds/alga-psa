@@ -17,6 +17,10 @@ export default defineConfig({
       'src/lib/taxRateApplicability.test.ts',
       'src/lib/billing/compute/**/*.test.ts',
       'src/lib/billing/pricing/**/*.test.ts',
+      // Preview/generation consistency for scheduled recurring quantity/price
+      // revisions — listed explicitly so this package's own `npm test` target
+      // covers the stale-source comparison, not only the server-wide glob.
+      'src/lib/billing/recurringPricingIdentity.test.ts',
       'src/schemas/**/*.test.ts',
       'src/constants/billingQuoteValidity.test.ts',
       // Colocated suites for the document-preview tenant-branding seam. Most
@@ -70,6 +74,10 @@ export default defineConfig({
       'src/lib/invoice-template-ast/fieldFormatting.country.test.ts',
       'src/lib/invoice-template-ast/react-renderer.country.test.tsx',
       'src/services/pdfGenerationService.renderCountry.test.ts',
+      // Per-seat unit-rate rendering on the template detail page and the
+      // currency-neutral template review step — listed for the same reason as above.
+      'src/components/billing-dashboard/contracts/ContractTemplateDetail.unitRate.test.tsx',
+      'src/components/billing-dashboard/contracts/template-wizard/steps/TemplateReviewContractStep.unitRate.test.tsx',
       // Template saves must stay valid upserts on Citus distributed tables.
       'src/models/templateSaveUpsert.citus.test.ts',
     ],

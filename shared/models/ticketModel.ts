@@ -97,7 +97,9 @@ export const ticketSchema = z.object({
   itil_urgency: z.number().int().min(1).max(5).nullable().optional(),
   itil_priority_level: z.number().int().min(1).max(5).nullable().optional(),
   itil_category: z.string().nullable().optional(),
-  itil_subcategory: z.string().nullable().optional()
+  itil_subcategory: z.string().nullable().optional(),
+  // Provenance for a ticket created via "Duplicate". Create-only; no FK.
+  duplicated_from_ticket_id: z.string().uuid().nullable().optional()
 });
 
 // Ticket update schema. Classification references (severity/urgency/impact)
@@ -112,6 +114,7 @@ export const ticketUpdateSchema = ticketSchema.partial().omit({
   severity_id: true,
   urgency_id: true,
   impact_id: true,
+  duplicated_from_ticket_id: true,
 });
 
 // Comment validation schema
@@ -169,6 +172,8 @@ export interface CreateTicketInput {
   closed_at?: string;
   is_closed?: boolean;
   due_date?: string;
+  /** Source ticket this one was duplicated from (provenance, create-only). */
+  duplicated_from_ticket_id?: string;
 }
 
 export interface CreateTicketFromAssetInput {
@@ -427,6 +432,7 @@ export const INPUT_DRIVEN_TICKET_COLUMNS = [
   'itil_impact',
   'itil_urgency',
   'due_date',
+  'duplicated_from_ticket_id',
 ] as const;
 
 type InputDrivenTicketColumn = (typeof INPUT_DRIVEN_TICKET_COLUMNS)[number];
@@ -515,6 +521,7 @@ const CREATE_TICKET_FIELD_HANDLING: { [K in keyof CreateTicketInput]-?: TicketCr
   closed_at: { kind: 'excluded', reason: 'tickets are created open' },
   is_closed: { kind: 'excluded', reason: 'tickets are created open' },
   due_date: { kind: 'column', column: 'due_date' },
+  duplicated_from_ticket_id: { kind: 'column', column: 'duplicated_from_ticket_id', nullish: true },
 };
 
 type TicketCreateRowBase = {

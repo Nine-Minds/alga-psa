@@ -388,6 +388,7 @@
       "SOURCE_ALREADY_BILLED": "Einige ausgewählte Positionen sind nicht mehr abrechenbar (bereits abgerechnet, nicht genehmigt oder entfernt). Aktualisieren und erneut versuchen.",
       "SOURCE_NOT_ELIGIBLE": "Eine ausgewählte Position gehört nicht zu den abrechenbaren Positionen dieses Tickets oder ist nicht mehr zulässig. Aktualisieren und erneut versuchen.",
       "SOURCE_CURRENCY_MISMATCH": "Einige ausgewählte Produkte sind in einer anderen Währung bepreist als die Rechnungswährung dieses Kunden. Sie können nicht hinzugefügt werden. Rechnen Sie sie in ihrer eigenen Währung getrennt ab.",
+      "RECURRING_PRICING_STALE": "Die Vorschau ist veraltet: {{details}}. Führen Sie die Vorschau erneut aus, um die aktuellen Zahlen zu sehen, und erstellen Sie die Rechnung dann erneut.",
       "BILLING_PROFILE_NOT_FOUND": "Das ausgewählte Abrechnungsprofil ist für diesen Kunden nicht verfügbar. Aktualisiere die Seite und versuche es erneut."
     },
     "warnings": {
@@ -1218,7 +1219,10 @@
         "drags": "Ziehen: {{count}}",
         "success": "Erfolg: {{count}}",
         "invalid": "Ungültig: {{count}}"
-      }
+      },
+      "zoomOut": "Verkleinern",
+      "zoomIn": "Vergrößern",
+      "zoomFit": "Einpassen"
     },
     "palette": {
       "tabs": {
@@ -1925,7 +1929,8 @@
       "companyLogo": "Firmenlogo",
       "insertionMarker": "Der nächste Block, den Sie hinzufügen, wird hier eingefügt",
       "emptyContainer": "Leer – auswählen und Blöcke aus dem linken Bereich hinzufügen",
-      "localeChip": "Übersetzte Beschriftungen werden auf {{language}} angezeigt (Vorschausprache)"
+      "localeChip": "Übersetzte Beschriftungen werden auf {{language}} angezeigt (Vorschausprache)",
+      "badgeDragHint": "Ziehen, um diesen Block zu verschieben"
     },
     "dragOverlay": {
       "component": "Komponente"
@@ -1972,6 +1977,19 @@
       "collapse": "{{name}} einklappen",
       "expand": "{{name}} ausklappen",
       "title": "Gliederung"
+    },
+    "dragPreview": {
+      "noTarget": "Außerhalb der Seite – zum Abbrechen loslassen",
+      "noChange": "Bleibt an seiner Position",
+      "before": "Vor {{block}}",
+      "after": "Nach {{block}}",
+      "inside": "In {{container}}",
+      "dropOnPage": "Auf der Seite ablegen, um diesen Block hinzuzufügen.",
+      "cancelled": "Nicht verschoben – zum Ablegen über der Seite oder der Gliederung loslassen."
+    },
+    "resize": {
+      "handleHint": "Ziehen zum Ändern der Größe · Doppelklick passt an den Inhalt an",
+      "autoValue": "Automatisch ({{value}})"
     }
   },
   "projectBilling": {

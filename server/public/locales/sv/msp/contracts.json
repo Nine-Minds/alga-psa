@@ -328,7 +328,8 @@
       "serviceCountOther": "{{count}} tjänster",
       "previouslyConfiguredQuantity": "Tidigare konfigurerat antal: {{count}} – används inte för debitering",
       "billedOnPeriodCount": "Debiteras efter antalet som rapporteras för varje period",
-      "recurringSeats": "{{count}} × {{rate}} (återkommande användarlicenser)",
+      "recurringSeats": "{{count}} × {{rate}} = {{amount}} (återkommande användarlicenser)",
+      "recurringSeatsCatalogRate": "{{count}} × katalogpris (återkommande användarlicenser)",
       "bundleAllocation": "Fördelning av paketpriset – inte debiterbara användarlicenser",
       "setUpRecurringSeats": "Konfigurera återkommande användarlicenser",
       "reportPeriodCount": "Rapportera periodens antal"
@@ -615,6 +616,69 @@
       "standard": "Standard",
       "custom": "Anpassad",
       "unreviewed": "Ej granskad"
+    },
+    "recurringSchedule": {
+      "openPanel": "Schemalägg återkommande ändring och historik",
+      "systemActor": "System",
+      "unknownActor": "Okänd användare",
+      "midPeriodToggle": "Tillämpa en engångsjustering mitt i perioden",
+      "midPeriodToggleHelp": "Endast antal. Det nya stående antalet börjar gälla vid periodgränsen ovan, och en proportionerlig debitering eller kreditering täcker dagarna från ändringsdatumet till den gränsen. Lämna avstängt för att endast ändra vid periodgränsen.",
+      "midPeriodDate": "Antalet ändras den",
+      "midPeriodQuantityOnly": "En justering mitt i perioden får endast ändra antalet. Schemalägg i stället en ändring av enhetspriset vid en gräns för tjänsteperioden.",
+      "midPeriodAffected": "Den berörda perioden {{start}} till {{end}} ändras med {{delta}} enheter.",
+      "midPeriodMath": "{{delta}} enheter × {{rate}} × {{covered}}/{{full}} dagar = {{amount}} {{effect}}.",
+      "credit": "kreditering",
+      "charge": "debitering",
+      "midPeriodStanding": "Från {{boundary}} är det stående antalet {{quantity}}. Justeringen hamnar på nästa redigerbara utkast som är aktuellt (med tillämpliga rabatter och moms).",
+      "midPeriodNote": "Justering mitt i perioden: det nya stående antalet börjar gälla vid den visade periodgränsen, och en proportionerlig debitering eller kreditering täcker delperioden. Tidigare fakturerade belopp skrivs aldrig om.",
+      "midPeriodDateRequired": "Välj ett datum inom en kommande ofakturerad period för engångsjusteringen mitt i perioden.",
+      "midPeriodFrom": "justering från {{date}}",
+      "previewImpact": "Förhandsgranska påverkan på fakturan",
+      "invoiceWindowMidPeriod": "Uppskattad kundfaktura för {{start}} till {{end}}. Omfattar andra poster i detta faktureringsfönster och engångsjusteringen mitt i perioden.",
+      "invoiceWindowBoundaryOnly": "Uppskattad kundfaktura för {{start}} till {{end}}. Omfattar andra poster i detta faktureringsfönster; ingen justering mitt i perioden.",
+      "invoiceTotals": "Delsumma efter rabatter: {{subtotal}}. Moms: {{tax}}. Totalt: {{before}} → {{after}}.",
+      "olderUnbilled": "Den här periodgränsen ligger i det förflutna. Väntande fakturering från detta datum och framåt använder de schemalagda värdena; tidigare fakturerade perioder förblir oförändrade.",
+      "catalogPriceMissing": "Inget katalogpris i {{currency}} täcker den här periodgränsen, så ett positivt antal kan inte debiteras. Lägg till ett katalogpris i {{currency}} eller välj \"Åsidosätt enhetspris\" innan du sparar.",
+      "invoiceImpact": "Från {{date}} ändras den återkommande delsumman för den här posten med {{delta}} till {{total}} (före rabatter och moms). Tidigare fakturerade perioder är oförändrade.",
+      "discardDirty": "Om du ändrar giltighetsdatumet laddas de gällande värdena om och din osparade ändring tas bort. Vill du fortsätta?",
+      "invalidQuantity": "Antalet måste vara ett heltal som är 0 eller mer.",
+      "invalidRate": "Ange ett enhetspris som är 0 eller mer, eller byt till katalogprissättning.",
+      "saved": "Schemalagt: {{quantity}} gäller från {{date}}.",
+      "openPeriod": "nästa periodgräns",
+      "title": "Schema för återkommande antal och prissättning",
+      "kindProduct": "Produkt",
+      "kindService": "Enhetstjänst",
+      "historyLoadError": "Det gick inte att läsa in den schemalagda historiken: {{error}}",
+      "protectedPeriod": "Den här perioden är redan {{state}} och är skyddad. Välj en senare, ofakturerad gräns för tjänsteperioden; fakturerade belopp skrivs aldrig om.",
+      "existingRevisionNotice": "En schemalagd ändring gäller redan från {{date}}. Om du sparar igen vid samma periodgräns ersätts den (version {{version}}); tidigare perioder förblir oförändrade.",
+      "boundaryOnly": "Ändringar träder endast i kraft vid en gräns för tjänsteperioden. Det sker ingen proportionering, justering eller kreditering mitt i perioden: tidigare fakturerade belopp förblir oförändrade och det nya antalet/priset gäller från den visade periodgränsen.",
+      "stopHelp": "Noll stoppar den återkommande faktureringen från den här perioden. Posten, dess historik och avtalets övriga poster behålls; lägg till en senare revision för att återuppta.",
+      "pricingSource": "Källa för enhetspris",
+      "useCatalog": "Använd katalogpris",
+      "override": "Åsidosätt enhetspris",
+      "inherited": "Ärvt från katalogen",
+      "currentEffective": "Gäller för perioder från {{date}}: {{quantity}} × {{rate}} ({{source}}).",
+      "sourceCatalog": "katalogpris",
+      "sourceOverride": "uttryckligt åsidosättande",
+      "coverage": "Täcker {{start}} till {{end}} ({{currency}}).",
+      "catalogSource": "Katalogpris {{priceId}} gäller från {{effectiveDate}}; ärvt, så en senare katalogändring följer med automatiskt.",
+      "baselineRow": "Utgångsläge (ingen revision): {{quantity}} × {{rate}}.",
+      "replace": "Ersätt schemalagd ändring",
+      "schedule": "Schemalägg ändring",
+      "scheduledPeriods": "Schemalagda perioder",
+      "effectiveDate": "Gäller från",
+      "quantity": "Antal",
+      "unitPrice": "Enhetspris",
+      "version": "Version",
+      "status": "Status",
+      "actor": "Utförd av",
+      "baselineLabel": "Utgångsläge",
+      "catalogLabel": "Katalog",
+      "statusInForce": "Gäller",
+      "statusScheduled": "Schemalagd",
+      "statusSuperseded": "Ersatt",
+      "supersededHistory": "Ersatta väntande ändringar ({{count}})",
+      "supersededBy": "Ersatt av"
     }
   },
   "contractLineEdit": {
@@ -982,6 +1046,7 @@
       "published": "Publicerad"
     },
     "toasts": {
+      "contractActivated": "Avtalet har aktiverats",
       "draftDiscarded": "Utkastet har kastats",
       "failedToActivateContract": "Det gick inte att aktivera avtalet",
       "failedToDeleteContract": "Det gick inte att radera avtalet",
@@ -1160,7 +1225,12 @@
       "serviceFallback": "Tjänst",
       "title": "Mallens sammansättning",
       "unitLabel": "Enhet:",
-      "usageBasedPlans": "Förbrukningsbaserade avtalsrader"
+      "usageBasedPlans": "Förbrukningsbaserade avtalsrader",
+      "recurringQuantityLabel": "Återkommande antal:",
+      "unitRateLabel": "Enhetspris:",
+      "unitRateFromCatalog": "Katalogpris i kundens valuta",
+      "unitAmountLabel": "Återkommande belopp:",
+      "unitAmountValue": "{{count}} × {{rate}} = {{amount}}"
     },
     "editBasicsTitle": "Redigera mallens grunduppgifter",
     "editGuidanceTitle": "Redigera mallens vägledning",
@@ -1386,7 +1456,10 @@
       "selectClientBeforeDraft": "Välj en kund innan du sparar som utkast",
       "selectProductForEachLine": "Välj en produkt för varje produktrad",
       "startDateRequired": "Startdatum krävs",
-      "unsupportedRecurringAuthoringCombination": "Den här kombinationen stöds inte för återkommande tjänster av typen {{lineType}}: schemat för avtalets årsdag stöder för närvarande faktureringsintervallen {{supportedFrequencies}}. {{billingFrequency}} stöds inte ännu. Använd ett av de intervall som stöds eller fakturera enligt kundens faktureringsschema."
+      "unsupportedRecurringAuthoringCombination": "Den här kombinationen stöds inte för återkommande tjänster av typen {{lineType}}: schemat för avtalets årsdag stöder för närvarande faktureringsintervallen {{supportedFrequencies}}. {{billingFrequency}} stöds inte ännu. Använd ett av de intervall som stöds eller fakturera enligt kundens faktureringsschema.",
+      "recurringUnitRateRequired": "Ange ett enhetspris för varje återkommande tjänst.",
+      "recurringQuantityWholeNumber": "Det återkommande antalet måste vara ett heltal.",
+      "fixedQuantityInvalid": "Antalet måste vara noll eller större."
     },
     "nav": {
       "back": "Tillbaka",
@@ -1538,7 +1611,8 @@
     "baseRate": {
       "hint": "Total återkommande avgift för alla tjänster med fast avgift tillsammans.",
       "label": "Återkommande grundavgift",
-      "placeholder": "0,00"
+      "placeholder": "0,00",
+      "hintWithUnits": "Total återkommande avgift för pakettjänsterna. Återkommande licenser/enheter debiteras separat som antal × enhetspris och ingår inte i detta pris."
     },
     "description": "Konfigurera tjänster som debiteras med en fast avgift varje faktureringsperiod. Du kan fortfarande registrera tid, men debiteringen baseras på det fasta beloppet.",
     "emptyState": "Inga tjänster med fast avgift har lagts till ännu. Klicka på ”Lägg till tjänst” ovan eller på ”Hoppa över” för att gå vidare.",
@@ -1555,12 +1629,15 @@
         "invoiceWindow": "Faktureringsperiod:",
         "recurringRate": "Återkommande avgift:",
         "service": "Tjänst:",
-        "services": "Tjänster:"
+        "services": "Tjänster:",
+        "recurringUnits": "Återkommande licenser/enheter:",
+        "recurringTotal": "Totalt per period:"
       },
       "materializedPeriods": {
         "tooltip": "En förhandsgranskning av de närmaste tjänsteperioderna och de faktureringsperioder som skulle skapas för dem med nuvarande inställningar. Här kan du kontrollera schemat innan du sparar – de faktiska fakturorna skapas senare vid faktureringskörningen."
       },
-      "title": "Förhandsgranska återkommande fakturering innan du sparar"
+      "title": "Förhandsgranska återkommande fakturering innan du sparar",
+      "unitRow": "{{serviceName}}: {{quantity}} × {{rate}} = {{amount}}"
     },
     "proration": {
       "label": "Justera för delperioder",
@@ -1571,7 +1648,10 @@
       "label": "Tjänster",
       "quantityLabel": "Antal",
       "selectServicePlaceholder": "Välj en tjänst",
-      "serviceItemLabel": "Tjänst {{index}}"
+      "serviceItemLabel": "Tjänst {{index}}",
+      "recurringQuantityLabel": "Återkommande antal",
+      "allocationQuantityLabel": "Tilldelningsantal",
+      "noCurrencyPrice": "Inget pris i {{currency}} i katalogen. Ange ett enhetspris."
     }
   },
   "wizardProducts": {
@@ -1768,7 +1848,8 @@
         "other": "{{count}} tjänster"
       },
       "monthlyBaseRate": "Grundavgift per månad:",
-      "partialPeriodAdjustment": "Delperiodsjustering:"
+      "partialPeriodAdjustment": "Delperiodsjustering:",
+      "recurringUnitRow": "{{serviceName}}: {{quantity}} × {{rate}} = {{amount}}"
     },
     "recurring": {
       "cadenceOwner": {
@@ -1879,7 +1960,8 @@
           "hourly": "Per timme",
           "usage": "Förbrukning"
         }
-      }
+      },
+      "recurringQuantityInvalid": "Det återkommande antalet för \"{{serviceName}}\" måste vara ett heltal, noll eller mer, och ett eventuellt enhetspris måste vara ett giltigt belopp."
     }
   },
   "templateBasics": {
@@ -1929,7 +2011,8 @@
       "adjustPartialPeriods": "Justera för delperioder",
       "services": "Tjänster",
       "serviceNumber": "Tjänst {{index}}",
-      "quantityOptional": "Antal (valfritt)"
+      "quantityOptional": "Antal (valfritt)",
+      "recurringQuantity": "Återkommande antal"
     },
     "placeholders": {
       "billingTiming": "Välj faktureringstidpunkt",
@@ -1937,7 +2020,9 @@
     },
     "help": {
       "adjustPartialPeriods": "Använd detta när avtal som skapas från mallen ska anpassa den återkommande avgiften om tjänsten börjar eller slutar under en period.",
-      "quantity": "Föreslaget antal när avtal skapas"
+      "quantity": "Föreslaget antal när avtal skapas",
+      "recurringQuantity": "Startantal licenser/enheter. Det kan justeras när ett avtal skapas från den här mallen.",
+      "unitRateOptional": "Valfritt. Lämna enhetspriset tomt för att använda tjänstens katalogpris i kundens valuta när ett avtal skapas."
     },
     "preview": {
       "unknownService": "Okänd tjänst",
@@ -2059,7 +2144,8 @@
       "quantity": "Antal:",
       "bucket": "Pott:",
       "enabled": "Aktiverad",
-      "disabled": "Inaktiverad"
+      "disabled": "Inaktiverad",
+      "recurringQuantity": "Återkommande antal:"
     },
     "fixed": {
       "cadenceOwnerLabel": "Styrande schema:",
@@ -2074,7 +2160,10 @@
       },
       "partialPeriodLabel": "Delperiodsjustering:",
       "serviceLabel": "Tjänst:",
-      "invoiceWindowLabel": "Faktureringsperiod:"
+      "invoiceWindowLabel": "Faktureringsperiod:",
+      "unitRateLabel": "Enhetspris:",
+      "unitRateFromCatalog": "Katalogpris i kundens valuta",
+      "unitRateNeutral": "{{rate}} i kundens valuta"
     },
     "hourly": {
       "minimumBillableTimeLabel": "Minsta debiterbara tid:",
@@ -2104,7 +2193,8 @@
     },
     "selectedHeading": "Valda tjänster av typen {{type}} ({{count}})",
     "labels": {
-      "qty": "Antal:"
+      "qty": "Antal:",
+      "recurringUnits": "Återkommande licenser/enheter"
     },
     "removeDialog": {
       "title": "Ta bort förinställning för avtalsrad",
