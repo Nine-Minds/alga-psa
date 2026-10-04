@@ -1,4 +1,4 @@
-import { initializeScheduler, scheduleExpiredCreditsJob, scheduleExpiringCreditsNotificationJob, schedulePrepaidBalanceAlertScanJob, scheduleExpiredHourBlocksJob, scheduleExpiringHourBlocksNotificationJob, scheduleQuoteAutoExpirationJob, scheduleReconcileBucketUsageJob, scheduleReconcileHourBlockAllocationsJob, scheduleCleanupTemporaryFormsJob, scheduleCleanupWebhookDeliveriesJob, scheduleMicrosoftWebhookRenewalJob, scheduleGooglePubSubVerificationJob, scheduleGoogleGmailWatchRenewalJob, scheduleEmailWebhookMaintenanceJob, scheduleRenewalQueueProcessingJob, scheduleDateTriggerScanJob, scheduleSlaTimerJob, scheduleSearchReconcileJob, scheduleAutoCloseTicketsJob, scheduleLowStockNotificationJob, scheduleOpportunityDisciplineJob, scheduleOpportunityWeeklyDigestJob, scheduleOpportunityGeneratorsJob, scheduleMarketingFlipDuePostsJob, scheduleMarketingExpireStaleTargetsJob, scheduleMarketingSendSequenceStepsJob, scheduleProjectDateReadinessJob, scheduleInboundEmailRecoveryJob, scheduleProviderDisconnectRetryJob } from './index';
+import { initializeScheduler, scheduleExpiredCreditsJob, scheduleExpiringCreditsNotificationJob, schedulePrepaidBalanceAlertScanJob, scheduleExpiredHourBlocksJob, scheduleExpiringHourBlocksNotificationJob, scheduleQuoteAutoExpirationJob, scheduleReconcileBucketUsageJob, scheduleReconcileHourBlockAllocationsJob, scheduleCleanupTemporaryFormsJob, scheduleCleanupWebhookDeliveriesJob, scheduleMicrosoftWebhookRenewalJob, scheduleGooglePubSubVerificationJob, scheduleGoogleGmailWatchRenewalJob, scheduleEmailWebhookMaintenanceJob, scheduleRenewalQueueProcessingJob, scheduleDateTriggerScanJob, scheduleGenerateRecurringTicketsJob, scheduleSlaTimerJob, scheduleSearchReconcileJob, scheduleAutoCloseTicketsJob, scheduleLowStockNotificationJob, scheduleOpportunityDisciplineJob, scheduleOpportunityWeeklyDigestJob, scheduleOpportunityGeneratorsJob, scheduleMarketingFlipDuePostsJob, scheduleMarketingExpireStaleTargetsJob, scheduleMarketingSendSequenceStepsJob, scheduleProjectDateReadinessJob, scheduleInboundEmailRecoveryJob, scheduleProviderDisconnectRetryJob } from './index';
 import logger from '@alga-psa/core/logger';
 import { getConnection } from 'server/src/lib/db/db';
 import { tenantDb } from '@alga-psa/db';
@@ -170,6 +170,8 @@ export async function initializeScheduledJobs(): Promise<void> {
       }
 
       try { await scheduleDateTriggerScanJob(tenantId, '5 * * * *'); } catch (error) { logger.error(`Failed to schedule workflow date trigger scan for tenant ${tenantId}`, error); }
+
+      try { await scheduleGenerateRecurringTicketsJob(tenantId); } catch (error) { logger.error(`Failed to schedule recurring ticket generation for tenant ${tenantId}`, error); }
 
       await scheduleMarketingJobsForTenant({
         tenantId,

@@ -38,11 +38,14 @@ function tenantScopedTable(
  * assignee (existing one, else the team lead), and records the team's active
  * members as `team_member` additional agents. Returns the resolved primary
  * assignee so the caller can publish TICKET_ASSIGNED after the commit.
+ *
+ * `actorUserId` is null for system-initiated work (e.g. recurring-ticket
+ * generation); `tickets.updated_by` is nullable, so no stand-in user is recorded.
  */
 export async function assignTeamToTicketCore(
   trx: Knex.Transaction,
   tenant: string,
-  actorUserId: string,
+  actorUserId: string | null,
   ticketId: string,
   teamId: string
 ): Promise<string> {

@@ -395,7 +395,8 @@
     "clientPortal": "Creato tramite Portale Clienti",
     "inboundEmail": "Creato tramite e-mail in entrata",
     "api": "Creato tramite API",
-    "other": "Creato tramite altra origine"
+    "other": "Creato tramite altra origine",
+    "recurring": "Creato da pianificazione ricorrente"
   },
   "responseSource": {
     "clientPortal": "Ricevuto tramite Portale Clienti",
@@ -2010,5 +2011,288 @@
     "failedCount": "{{count}} ticket non sono stati valutati",
     "unscored": "Non valutati",
     "addOnRequired": "La ricerca intelligente richiede il componente aggiuntivo Assistente IA"
+  },
+  "recurring": {
+    "actions": {
+      "done": "Fatto",
+      "cancel": "Annulla",
+      "saving": "Salvataggio…",
+      "save": "Salva",
+      "pause": "Metti in pausa",
+      "resume": "Riprendi",
+      "archive": "Archivia"
+    },
+    "clients": {
+      "addTitle": "Aggiungi clienti",
+      "addHelp": "Seleziona un cliente per aggiungerlo. La finestra resta aperta, così puoi aggiungerne altri.",
+      "alreadyAdded": "Già aggiunto",
+      "pickerPlaceholder": "Seleziona un cliente da aggiungere",
+      "addedHeading": "Aggiunti in questa finestra",
+      "columns": {
+        "client": "Cliente",
+        "overrides": "Personalizzazioni",
+        "contact": "Contatto",
+        "location": "Sede",
+        "assets": "Asset",
+        "nextDue": "Prossima scadenza",
+        "active": "Attivo"
+      },
+      "inheritsAll": "Eredita tutto",
+      "set": "Impostato",
+      "actions": "Azioni cliente",
+      "editOverrides": "Modifica personalizzazioni",
+      "remove": "Rimuovi",
+      "add": "Aggiungi clienti",
+      "empty": "Nessun cliente per ora. I ticket vengono creati solo per i clienti che aggiungi qui.",
+      "removeTitle": "Rimuovi cliente",
+      "removeMessage": "Interrompere la creazione di ticket per {{client}}? I ticket già creati e la cronologia vengono conservati."
+    },
+    "errors": {
+      "clientNotFound": "Cliente non trovato in questo ticket ricorrente",
+      "definitionNotFound": "Ticket ricorrente non trovato",
+      "unknownTitleTokens": "Token del titolo sconosciuti: {{tokens}}. Token disponibili: {{available}}",
+      "subcategoryNeedsCategory": "Una sottocategoria richiede una categoria",
+      "definitionArchived": "I ticket ricorrenti archiviati sono di sola lettura",
+      "clientAlreadyAdded": "Questo cliente fa già parte di questo ticket ricorrente",
+      "invalidReferences": "{{problems}}"
+    },
+    "overrides": {
+      "noneValue": "Nessuno",
+      "inherited": "Usa l'impostazione del ticket ricorrente: {{value}}",
+      "title": "Impostazioni per {{client}}",
+      "intro": "Scegli i campi del ticket che questo cliente imposta in modo diverso dal ticket ricorrente. Tutto il resto viene ereditato e segue le modifiche successive al ticket ricorrente.",
+      "groups": {
+        "board": "Personalizza bacheca e stato",
+        "priority": "Personalizza priorità",
+        "category": "Personalizza categoria",
+        "assignment": "Personalizza assegnazione"
+      },
+      "attachedTo": "Collegato al ticket generato",
+      "contact": "Contatto",
+      "contactPlaceholder": "Nessun contatto",
+      "location": "Sede",
+      "noLocation": "Nessuna sede",
+      "assets": "Asset",
+      "groupNames": {
+        "board": "Bacheca e stato",
+        "priority": "Priorità",
+        "category": "Categoria",
+        "assignment": "Assegnazione"
+      }
+    },
+    "sections": {
+      "clients": "Clienti",
+      "history": "Cronologia",
+      "details": "Dettagli",
+      "template": "Modello di ticket",
+      "schedule": "Pianificazione",
+      "behaviour": "Comportamento"
+    },
+    "fields": {
+      "board": "Bacheca",
+      "boardPlaceholder": "Seleziona una bacheca",
+      "status": "Stato",
+      "statusBoardDefault": "Predefinito della bacheca",
+      "priority": "Priorità",
+      "priorityPlaceholder": "Seleziona una priorità",
+      "category": "Categoria",
+      "categoryPlaceholder": "Nessuna categoria",
+      "assignedTo": "Assegnato a",
+      "additionalAgents": "Agenti aggiuntivi",
+      "name": "Nome",
+      "title": "Titolo del ticket",
+      "titleTokens": "Inserisci:",
+      "description": "Descrizione",
+      "descriptionPlaceholder": "Descrizione",
+      "checklistTemplate": "Modello di checklist",
+      "noChecklist": "Nessuno"
+    },
+    "history": {
+      "columns": {
+        "due": "Scadenza",
+        "client": "Cliente",
+        "status": "Stato",
+        "ticket": "Ticket",
+        "reason": "Motivo"
+      },
+      "allStatuses": "Tutti gli stati",
+      "allClients": "Tutti i clienti",
+      "empty": "Non è stato ancora generato nulla.",
+      "reasons": {
+        "clientInactive": "Il cliente era inattivo",
+        "previousOpen": "Il ticket {{number}} dell'occorrenza precedente è ancora aperto"
+      },
+      "status": {
+        "created": "Creato",
+        "skipped": "Saltato",
+        "missed": "Mancato",
+        "failed": "Non riuscito"
+      }
+    },
+    "editor": {
+      "created": "Ticket ricorrente creato. Aggiungi i clienti per cui deve essere eseguito.",
+      "saved": "Ticket ricorrente salvato",
+      "back": "Ticket ricorrenti",
+      "newTitle": "Nuovo ticket ricorrente",
+      "archivedNotice": "Questo ticket ricorrente è archiviato e non può più essere modificato.",
+      "clientsAfterSave": "Salva prima il ticket ricorrente, poi aggiungi i clienti per cui deve essere eseguito.",
+      "archiveTitle": "Archivia ticket ricorrente",
+      "archiveMessage": "L'archiviazione interrompe tutti i ticket futuri e non può essere annullata. I ticket già creati e la cronologia vengono conservati.",
+      "viewOnly": "Puoi visualizzare questo ticket ricorrente ma non modificarlo."
+    },
+    "loading": "Caricamento…",
+    "schedule": {
+      "policy": {
+        "keep": "Mantieni la data",
+        "previous": "Sposta al giorno lavorativo precedente",
+        "next": "Sposta al giorno lavorativo successivo"
+      },
+      "startDate": "Inizia il",
+      "createTime": "Crea alle",
+      "dueTime": "Scadenza alle",
+      "leadDays": "Crea con giorni di anticipo sulla scadenza",
+      "policyLabel": "Quando la scadenza non è un giorno lavorativo",
+      "calendarFallback": "Non è impostata alcuna pianificazione predefinita dell'orario lavorativo: i giorni lavorativi sono da lunedì a venerdì, più le festività valide per tutta l'azienda.",
+      "calendarNote": "I giorni lavorativi seguono la pianificazione predefinita dell'orario lavorativo ({{name}}), comprese le sue festività."
+    },
+    "status": {
+      "archived": "Archiviato",
+      "active": "Attivo",
+      "paused": "In pausa"
+    },
+    "preview": {
+      "heading": "Prossime 5 scadenze",
+      "none": "Nessuna scadenza in programma."
+    },
+    "behaviour": {
+      "openPrevious": "Se il ticket precedente è ancora aperto",
+      "alwaysCreate": "Crea comunque il ticket successivo",
+      "skip": "Salta questa occorrenza",
+      "notifyClient": "Invia un'email al cliente quando viene creato un ticket",
+      "notifyClientHelp": "Disattivato per impostazione predefinita. Le notifiche interne vengono sempre inviate."
+    },
+    "list": {
+      "columns": {
+        "name": "Nome",
+        "schedule": "Pianificazione",
+        "nextDue": "Prossima scadenza",
+        "status": "Stato",
+        "clients": "Clienti"
+      },
+      "new": "Nuovo ticket ricorrente",
+      "hasFailure": "L'ultima esecuzione non è riuscita. Aprilo per vedere il motivo.",
+      "title": "Ticket ricorrenti",
+      "empty": "Nessun ticket ricorrente qui per ora.",
+      "filter": {
+        "active": "Attivi",
+        "paused": "In pausa",
+        "archived": "Archiviati",
+        "all": "Tutti"
+      }
+    },
+    "clientTab": {
+      "clientPaused": "In pausa per questo cliente",
+      "pickDefinition": "Scegli un ticket ricorrente",
+      "add": "Aggiungi al ticket ricorrente",
+      "empty": "Questo cliente non fa parte di nessun ticket ricorrente.",
+      "removeTitle": "Rimuovi dal ticket ricorrente",
+      "removeMessage": "Interrompere la creazione di ticket per questo cliente da {{name}}? I ticket già creati e la cronologia vengono conservati."
+    },
+    "badge": {
+      "source": "Ricorrente: {{name}}"
+    },
+    "rule": {
+      "editor": {
+        "unit": {
+          "days": "giorno/i",
+          "weeks": "settimana/e",
+          "months": "mese/i",
+          "years": "anno/i"
+        },
+        "lastDay": "Ultimo giorno",
+        "repeats": "Si ripete",
+        "every": "Ogni",
+        "weekdaysOnly": "Solo giorni feriali (da lunedì a venerdì)",
+        "onDays": "Il",
+        "monthlyOn": "Il",
+        "mode": {
+          "dayOfMonth": "Giorno del mese",
+          "nthWeekday": "N-esimo giorno della settimana"
+        },
+        "day": "Giorno",
+        "nth": "Quale",
+        "weekday": "Giorno della settimana",
+        "clampHint": "Nei mesi con meno giorni, il ticket viene creato l'ultimo giorno del mese.",
+        "month": "Mese",
+        "ends": "Termina",
+        "end": {
+          "never": "Mai",
+          "onDate": "In una data",
+          "afterCount": "Dopo un numero di ticket"
+        },
+        "endDate": "Ultima data",
+        "endCount": "Occorrenze",
+        "frequency": {
+          "daily": "Giornaliera",
+          "weekly": "Settimanale",
+          "monthly": "Mensile",
+          "yearly": "Annuale"
+        }
+      },
+      "weekdays": {
+        "mon": "lunedì",
+        "tue": "martedì",
+        "wed": "mercoledì",
+        "thu": "giovedì",
+        "fri": "venerdì",
+        "sat": "sabato",
+        "sun": "domenica"
+      },
+      "weekdaysShort": {
+        "mon": "lun",
+        "tue": "mar",
+        "wed": "mer",
+        "thu": "gio",
+        "fri": "ven",
+        "sat": "sab",
+        "sun": "dom"
+      },
+      "months": {
+        "1": "gennaio",
+        "2": "febbraio",
+        "3": "marzo",
+        "4": "aprile",
+        "5": "maggio",
+        "6": "giugno",
+        "7": "luglio",
+        "8": "agosto",
+        "9": "settembre",
+        "10": "ottobre",
+        "11": "novembre",
+        "12": "dicembre"
+      },
+      "ordinals": {
+        "1": "primo",
+        "2": "secondo",
+        "3": "terzo",
+        "4": "quarto",
+        "last": "ultimo"
+      },
+      "listSeparator": ", ",
+      "endOnDate": ", fino al {{date}}",
+      "endAfterCount": ", {{n}} volte",
+      "dailyWeekdays": "Ogni giorno feriale",
+      "daily": "Ogni giorno",
+      "dailyEvery": "Ogni {{n}} giorni",
+      "weekly": "Ogni settimana: {{days}}",
+      "weeklyEvery": "Ogni {{n}} settimane: {{days}}",
+      "everyMonth": "Ogni mese",
+      "everyNMonths": "Ogni {{n}} mesi",
+      "lastDay": "l'ultimo giorno",
+      "dayOfMonth": "il giorno {{day}}",
+      "monthlyOnDay": "{{every}}, {{day}}",
+      "monthlyOnNthWeekday": "{{every}}, {{ordinal}} {{weekday}}",
+      "yearly": "Ogni anno il {{day}} {{month}}"
+    }
   }
 }

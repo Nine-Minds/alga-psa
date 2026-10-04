@@ -1603,5 +1603,15 @@
       "missingField": "Manca un campo obbligatorio dell’asset.",
       "missingFieldNamed": "Manca un campo obbligatorio dell’asset: {{field}}."
     }
+  },
+  "clientAssetMultiSelect": {
+    "errors": {
+      "load": "Impossibile caricare gli asset"
+    },
+    "placeholder": "Aggiungi un asset...",
+    "searchPlaceholder": "Cerca asset",
+    "empty": "Nessun asset corrispondente per questo cliente",
+    "loading": "Caricamento...",
+    "remove": "Rimuovi asset"
   }
 }

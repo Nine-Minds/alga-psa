@@ -20,6 +20,7 @@ export const TICKET_ORIGINS = {
   CLIENT_PORTAL: 'client_portal',
   INBOUND_EMAIL: 'inbound_email',
   API: 'api',
+  RECURRING: 'recurring',
 } as const;
 
 export type TicketOrigin =

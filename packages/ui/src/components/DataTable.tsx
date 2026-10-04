@@ -396,6 +396,23 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
   // Every column the caller defined, hidden or not: a width remembered for a
   // column a view hides must survive until the column is shown again.
   const columnIds = useMemo(() => inputColumns.map(col => getColumnId(col.dataIndex)), [inputColumns]);
+
+  // Columns are keyed by their id, so two columns sharing a dataIndex silently collapse into one.
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'production') return;
+    const seen = new Set<string>();
+    const duplicates = new Set<string>();
+    for (const columnId of columnIds) {
+      if (seen.has(columnId)) duplicates.add(columnId);
+      seen.add(columnId);
+    }
+    if (duplicates.size > 0) {
+      console.warn(
+        `DataTable${id ? ` "${id}"` : ''}: multiple columns share the same column id (dataIndex): ${[...duplicates].map((d) => `"${d}"`).join(', ')}. ` +
+        'Only one cell per id renders; give each column a unique dataIndex.'
+      );
+    }
+  }, [columnIds, id]);
   const columnSizingStorageKey = id ? `datatable-column-sizing:${id}` : null;
   const [columnSizing, setColumnSizing] = useState<ColumnSizingState>({});
   const [hasLoadedColumnSizing, setHasLoadedColumnSizing] = useState(false);

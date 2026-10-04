@@ -102,7 +102,9 @@
     "jobMonitoring": "Övervakning av bakgrundsjobb",
     "jobs": "Bakgrundsjobb",
     "emailLogs": "E-postloggar",
-    "extensions": "Tillägg"
+    "extensions": "Tillägg",
+    "ticketsAll": "Alla ärenden",
+    "ticketsRecurring": "Återkommande ärenden"
   },
   "marketing": {
     "dialogs": {
