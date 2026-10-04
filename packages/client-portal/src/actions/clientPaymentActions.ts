@@ -23,6 +23,7 @@ import {
   expireInvoicePaymentLinksForTerminalStatus,
 } from '@alga-psa/billing/actions/paymentActions';
 import { PaymentLinkError } from '@alga-psa/billing/actions/paymentLinkError';
+import { isOfflinePaymentMethod } from '@alga-psa/shared/billingClients/paymentPreferences';
 import { withAuth, type AuthContext } from '@alga-psa/auth';
 import type { IUserWithRoles } from '@alga-psa/types';
 
@@ -35,6 +36,7 @@ export type ClientPaymentErrorCode =
   | 'already_paid'
   | 'invoice_cancelled'
   | 'no_amount_due'
+  | 'offline_payment_method'
   | 'payment_not_configured'
   | 'payment_link_creation_failed'
   | 'invalid_session';
@@ -147,6 +149,15 @@ export const getClientPortalInvoicePaymentLink = withAuth(async (
     const amountDue = Number(invoice.total_amount ?? 0) - Number(invoice.credit_applied ?? 0);
     if (invoice.invoice_type === 'credit_note' || amountDue <= 0) {
       return actionError('no_amount_due', 'Invoice has no amount due');
+    }
+
+    // Issued for payment by check or bank transfer: no card checkout, even
+    // when someone reaches this page directly.
+    if (isOfflinePaymentMethod(invoice.payment_method)) {
+      return actionError(
+        'offline_payment_method',
+        'This invoice is paid by check or bank transfer, not online.'
+      );
     }
 
     let paymentUrl: string | null;

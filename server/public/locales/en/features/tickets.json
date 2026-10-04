@@ -86,7 +86,8 @@
     "paused": "Paused",
     "allResponseStatuses": "All Response Statuses",
     "responseStatus": "Response Status",
-    "board": "Filter by board"
+    "board": "Filter by board",
+    "searchSmart": "Search tickets and comments… Enter for smart search"
   },
   "create": {
     "title": "Create Support Ticket",
@@ -153,6 +154,7 @@
     "assignedTeam": "Assigned Team",
     "additionalAgents": "Additional Agents",
     "createdBy": "Created By",
+    "lastActivity": "Last Activity",
     "location": "Location",
     "contactPhone": "Contact Phone",
     "clientPhone": "Client Phone",
@@ -211,7 +213,10 @@
     "export": "Export",
     "reset": "Reset",
     "importSelected": "Import Selected",
-    "printOptions": "Print options"
+    "printOptions": "Print options",
+    "duplicate": "Duplicate",
+    "rowActions": "Actions",
+    "openMenu": "Open menu"
   },
   "messages": {
     "noTickets": "No tickets found",
@@ -343,6 +348,8 @@
     "deleteUploadedImages": "Delete Images",
     "keepUploadedImages": "Keep Images",
     "bundledUpdate": "Bundled update",
+    "bundledUpdateFrom": "Bundled update from {{number}}",
+    "systemAuthor": "System",
     "clientSuffix": " (Client)",
     "internalCommentTooltip": "Internal Comment",
     "resolutionCommentTooltip": "Resolution Comment",
@@ -396,7 +403,8 @@
     "clientPortal": "Created via Client Portal",
     "inboundEmail": "Created via Inbound Email",
     "api": "Created via API",
-    "other": "Created via Other"
+    "other": "Created via Other",
+    "recurring": "Created by Recurring Schedule"
   },
   "responseSource": {
     "clientPortal": "Received via Client Portal",
@@ -563,7 +571,8 @@
       "dueDate": "Due Date",
       "statusDisabledMultiBoard": "Selected tickets are on different boards",
       "statusResolvingBoards": "Checking the boards of selected tickets…",
-      "more": "More"
+      "more": "More",
+      "bundleNeedsOne": "Select at least 1 ticket to bundle"
     },
     "moveDialogTitle": "Move Selected Tickets",
     "moveDialogDescription": "Select a destination board and status, then confirm moving the selected tickets.",
@@ -596,7 +605,7 @@
     "bundleMasterLabel": "Select Master Ticket",
     "bundleMasterPlaceholder": "Select master ticket...",
     "bundleSyncUpdates": "Sync updates from master to children (public replies + workflow changes)",
-    "bundleSyncUpdatesHelp": "Child tickets keep their current status when bundled. Workflow fields are locked on children by default. Internal notes stay on the master.",
+    "bundleSyncUpdatesHelp": "Children keep their current status when bundled. Afterwards, closing or reopening the master closes or reopens all children, and status, assignee and priority changes on the master apply to children. Workflow fields are locked on children. Internal notes stay on the master.",
     "bundleSelectAtLeastTwo": "Select at least two tickets to bundle.",
     "bundleSelectMaster": "Select a master ticket.",
     "bundleSuccess": "Tickets bundled",
@@ -659,12 +668,28 @@
       "masterTicket": "Select Master Ticket",
       "selectMasterTicket": "Select master ticket...",
       "syncUpdates": "Sync updates from master to children (public replies + workflow changes)",
-      "syncUpdatesHelp": "Child tickets keep their current status when bundled. Workflow fields are locked on children by default. Internal notes stay on the master.",
+      "syncUpdatesHelp": "Children keep their current status when bundled. Afterwards, closing or reopening the master closes or reopens all children, and status, assignee and priority changes on the master apply to children. Workflow fields are locked on children. Internal notes stay on the master.",
       "childrenDescription": "Children keep their current status; workflow fields are locked on children. Inbound child replies are surfaced below as view-only.",
       "checkingMasters": "Checking existing bundles...",
       "existingMasterSuffix": "(existing master)",
       "existingMasterLocked": "One selected ticket is already a bundle master. It will be used as the master; the others will be added as children.",
-      "multipleExistingMasters": "Multiple selected tickets are already bundle masters ({{count}}). Unbundle all but one before bundling."
+      "multipleExistingMasters": "Multiple selected tickets are already bundle masters ({{count}}). Unbundle all but one before bundling.",
+      "propagationSummary": "{{masters}} selected ticket(s) are sync-mode bundle masters; this change will close/reopen {{children}} child ticket(s).",
+      "masterSummary": "{{children}} child ticket(s)",
+      "applyToChildren": "Apply to children",
+      "mastersOnly": "Masters only",
+      "membersLabel": "Tickets in this bundle",
+      "addTicketSearchPlaceholder": "Search tickets by number or title",
+      "addTicketEmpty": "Search for tickets to add",
+      "badgeAdded": "Added",
+      "badgeInBundle": "In bundle #{{number}}",
+      "badgeMaster": "Bundle master",
+      "masterTag": "Master",
+      "removeMember": "Remove",
+      "needMoreTickets": "Add at least one more ticket to bundle.",
+      "unresolvedSelectedTickets_one": "Could not load {{count}} selected ticket.",
+      "unresolvedSelectedTickets_other": "Could not load {{count}} selected tickets.",
+      "badgeClosed": "Closed"
     },
     "auth": {
       "moveRequired": "You must be logged in to move tickets",
@@ -729,7 +754,10 @@
       "success_other": "Status updated on {{count}} tickets",
       "partialFailure": "Status could not be updated on some tickets",
       "failure": "Failed to update status on selected tickets",
-      "failedHeading": "Status could not be updated on the following tickets:"
+      "failedHeading": "Status could not be updated on the following tickets:",
+      "resolutionLabel": "Resolution comment (optional)",
+      "resolutionPlaceholder": "Describe how these tickets were resolved",
+      "resolutionHelper": "Saved as the resolution on each selected ticket, satisfying boards that require one before closing."
     },
     "priority": {
       "dialogTitle": "Change Priority for Selected Tickets",
@@ -799,7 +827,14 @@
     "clipboardUploadPartialFailure": "Ticket created, but pasted images could not be attached to the description.",
     "teamAssignmentPartialFailure": "Ticket created but team assignment failed",
     "tagCreatePartialFailure_one": "{{count}} tag could not be created",
-    "tagCreatePartialFailure_other": "{{count}} tags could not be created"
+    "tagCreatePartialFailure_other": "{{count}} tags could not be created",
+    "duplicateDialogTitle": "Duplicate ticket #{{number}}",
+    "duplicatingPill": "Duplicating #{{number}}",
+    "duplicateLoadFailed": "The ticket to duplicate could not be loaded. Please try again.",
+    "duplicateChecklistHeading": "Checklist from #{{number}}",
+    "duplicateChecklistRequired": "(required)",
+    "duplicateCopyChecklist": "Copy checklist items (unchecked)",
+    "duplicateCustomFieldsNote": "Custom field values are copied from #{{number}}."
   },
   "itil": {
     "calculatedPriority": "Priority (Calculated)",
@@ -933,6 +968,11 @@
     "closeReasonPlaceholder": "Reason for closing anyway (optional, recorded in the audit log)",
     "closing": "Closing…",
     "closeAnyway": "Close anyway",
+    "markResolutionInternal": "Mark as Internal",
+    "markResolutionInternalHelper": "An internal resolution stays out of the client portal and is left out of the close email.",
+    "closeTicketNowTitle": "Close the ticket now?",
+    "closeTicketNowPrompt": "This comment is now the resolution. Pick a close status to close the ticket, or leave it open.",
+    "leaveTicketOpen": "Leave open",
     "timerActiveElsewhereTitle": "Timer Active Elsewhere",
     "timerTakeoverMessage": "This ticket's timer is active in another window. Do you want to take over and replace it here?",
     "replaceHere": "Replace Here",
@@ -942,7 +982,12 @@
     "emailNotificationLogs": "Email Notification Logs",
     "ticketActivity": "Ticket Activity",
     "discardChanges": "Discard Changes",
-    "saved": "Saved"
+    "saved": "Saved",
+    "changeContactTitle": "Change the ticket contact?",
+    "removeContactTitle": "Remove the ticket contact?",
+    "changeContactPrompt": "The contact, assignee and watchers are told about this update unless you turn their notifications off.",
+    "changeContact": "Change contact",
+    "removeContact": "Remove contact"
   },
   "properties": {
     "timeEntry": "Time Entry",
@@ -1016,6 +1061,13 @@
       "filterByBoard": "Filter by board",
       "addCategory": "Add Category",
       "importStandardCategories": "Import from Standard Categories",
+      "copyToBoard": "Copy categories to another board",
+      "copyTitle": "Copy categories to another board",
+      "copySourceBoard": "Select source board",
+      "copyTargetBoard": "Select target board",
+      "copySelected": "Copy selected",
+      "copySuccess": "Copied {{created}} categories; skipped {{skipped}} already present.",
+      "copyFailed": "Failed to copy categories",
       "editCategory": "Edit Category",
       "categoryName": "Category Name *",
       "enterCategoryName": "Enter category name",
@@ -1075,7 +1127,14 @@
       "selectParentCategory": "Select parent category",
       "parentHelpWithBoard": "Select a parent to create a subcategory, or leave empty for top-level",
       "parentHelpWithoutBoard": "Select a board first, or pick a parent category to inherit its board",
-      "creating": "Creating..."
+      "creating": "Creating...",
+      "copySourceLabel": "Source board",
+      "copyTargetLabel": "Target board",
+      "copyEmpty": "No categories on this board.",
+      "copying": "Copying…",
+      "copyBoardTypeMismatch": "Ticket categories can only be copied between boards with the same category type.",
+      "copyConflicts_one": "{{count}} skipped category has a different parent on the target board.",
+      "copyConflicts_other": "{{count}} skipped categories have a different parent on the target board."
     },
     "display": {
       "responseStateTrackingTitle": "Response State Tracking",
@@ -1084,7 +1143,8 @@
       "responseStateTrackingDisabled": "Response state tracking disabled",
       "title": "Ticket Display Preferences",
       "description": "Configure how your Ticketing dashboard displays columns and timestamps for your team.",
-      "dateTimeFormat": "Date/Time Format",
+      "showWeekday": "Show weekday in timestamps",
+      "countryDrivesFormat": "Date and time format follows your company country. Set it under Settings → General.",
       "ticketListColumns": "Ticket List Columns",
       "showTags": "Show Tags",
       "displayUnderTitle": "Display under Title",
@@ -1382,7 +1442,13 @@
       "alreadyBundled": "Ticket is already bundled: {{ticket}}",
       "masterAsChild": "Master ticket cannot also be a child ticket.",
       "noChildren": "No child tickets provided.",
-      "childrenOnBundledChild": "Cannot add children to a bundled child ticket."
+      "childrenOnBundledChild": "Cannot add children to a bundled child ticket.",
+      "concurrent": "One or more selected tickets were bundled concurrently. Please refresh and try again.",
+      "closedMasterChoiceRequired": "This bundle's master is closed. Choose how to add the child: {{choices}}.",
+      "closedMasterChoiceNotAllowed": "That choice is not allowed for this master. Choose one of: {{choices}}.",
+      "choiceOnOpenMaster": "That choice only applies when the bundle master is closed.",
+      "closeRuleFailed": "This ticket cannot be closed yet: {{reason}}",
+      "reopenUnavailable": "The master cannot be reopened because no open ticket status is configured."
     },
     "ticket": {
       "validationDetails": "Please fix the ticket details: {{details}}",
@@ -1448,7 +1514,11 @@
       "missingField": "Missing required checklist field.",
       "missingFieldNamed": "Missing required checklist field: {{field}}.",
       "referenceInvalid": "The selected ticket, checklist template, or rule filter is no longer valid. Please refresh and try again.",
-      "invalidValue": "One of the checklist values is invalid. Please refresh and try again."
+      "invalidValue": "One of the checklist values is invalid. Please refresh and try again.",
+      "ruleCategoryBoardMismatch": "The selected category belongs to a different board than the rule.",
+      "ruleCategoryInvalid": "The selected category is not a top-level category.",
+      "ruleSubcategoryInvalid": "The selected subcategory does not belong to the selected category.",
+      "ruleSubcategoryRequiresCategory": "Select a category before choosing a subcategory."
     }
   },
   "ticketSection": {
@@ -1477,7 +1547,7 @@
   },
   "details": {
     "bundle": {
-      "childrenDescription": "Child tickets bundled in this master ticket",
+      "childrenDescription": "Children keep their current status when bundled. Afterwards, closing or reopening the master closes or reopens all children, and status, assignee and priority changes on the master apply to children. Workflow fields are locked on children. Internal notes stay on the master.",
       "title": "Bundle",
       "masterBanner": "This ticket is the master of a bundle ({{count}} children). Mode: {{mode}}.",
       "multipleClients": "Multiple clients",
@@ -1489,10 +1559,37 @@
       "remove": "Remove",
       "noChildren": "No children in this bundle.",
       "addChildMultiClientMessage": "This will add {{ticket}} from a different client into the bundle. Confirm you want to proceed.",
-      "thisTicket": "this ticket"
+      "thisTicket": "this ticket",
+      "propagation": {
+        "closeTitle": "Close {{count}} child tickets too?",
+        "reopenTitle": "Reopen {{count}} child tickets too?",
+        "closeBody": "This master is in sync mode. Closing it will also close the {{count}} open child ticket(s) listed below.",
+        "reopenBody": "This master is in sync mode. Reopening it will reopen the {{count}} child ticket(s) it closed. Children closed independently stay closed.",
+        "stayClosedHeading": "Stay closed (closed independently)",
+        "boardRulesNote": "Board close rules are not checked on children.",
+        "closeConfirm": "Close master and {{count}} children",
+        "reopenConfirm": "Reopen master and {{count}} children",
+        "masterOnlyClose": "Close master only",
+        "masterOnlyReopen": "Reopen master only"
+      },
+      "openChildrenBadge": "{{count}} open children",
+      "openChildrenBadgeShort": "{{count}} open",
+      "childOpenStatus": "Open",
+      "childClosedStatus": "Closed",
+      "closedMasterDialogTitle": "This bundle's master is closed",
+      "closedMasterDialogIntro": "The master is closed. Choose what should happen to the child when it is added.",
+      "keepClosedLabel": "Add and keep master closed",
+      "keepClosedHelp": "The child stays open with its own SLA clock. The bundle will show as inconsistent until the child is resolved.",
+      "applyResolutionLabel": "Add and apply the master's resolution to this child",
+      "applyResolutionHelp": "Closes the child with status {{status}} and posts the master's resolution to the child as a public comment.",
+      "applyResolutionHelpNoComment": "Closes the child with status {{status}}. The master has no public resolution comment to post.",
+      "reopenMasterLabel": "Add and reopen master",
+      "reopenMasterHelp": "Reopens only the master. Already-closed children in this bundle stay closed; reopen notifications and SLA apply to the master.",
+      "closedMasterGating": "The board's close rules do not allow open children under a closed master, so keeping the master closed is not an option."
     },
     "autoClose": "Will close automatically on {{date}} unless there's new activity.",
-    "autoCloseWarned": "The customer has been warned."
+    "autoCloseWarned": "The customer has been warned.",
+    "duplicatedFrom": "Duplicated from #{{number}}"
   },
   "invalidTicketData": "Invalid ticket data",
   "timeEntries": {
@@ -1760,7 +1857,8 @@
         "checklist_template_applied": "checklist template applied",
         "close_rules_overridden": "close rules overridden",
         "close_rules_bypassed": "close rules bypassed",
-        "auto_close_warning_sent": "auto-close warning sent"
+        "auto_close_warning_sent": "auto-close warning sent",
+        "bundle_child_added": "bundle child added"
       },
       "filterEverything": "Everything",
       "filterReplies": "Replies",
@@ -1772,7 +1870,6 @@
       "replyTo": "Reply to {{name}}",
       "writeReply": "Write a reply",
       "modeInternal": "Internal",
-      "modeResolution": "Resolution",
       "sending": "Sending…",
       "send": "Send",
       "systemActor": "System",
@@ -1781,6 +1878,11 @@
       "fieldChanged": "{{actor}} changed {{field}}: {{from}} → {{to}}",
       "fieldSet": "{{field}} set to {{to}}",
       "actorEvent": "{{actor}} · {{eventName}}",
+      "bundleStatusNotPropagated": "{{actor}} changed the bundle master status (children not updated)",
+      "bundleStatusClosed": "{{actor}} closed the bundle master and {{count}} child ticket(s)",
+      "bundleStatusReopened": "{{actor}} reopened the bundle master and {{count}} child ticket(s)",
+      "duplicatedFrom": "{{actor}} created this ticket as a duplicate of #{{number}}",
+      "duplicatedTo": "{{actor}} duplicated this ticket as #{{number}}",
       "title": "Timeline",
       "replyVisibility": "Reply visibility",
       "modeClient": "Client",
@@ -1816,7 +1918,8 @@
       "remove": "Remove",
       "cancel": "Cancel",
       "save": "Save",
-      "menu": "Link actions"
+      "menu": "Link actions",
+      "openRecord": "Open external record"
     },
     "relationship": {
       "origin": "Origin",
@@ -1875,7 +1978,321 @@
       "systemLabelRequired": "System label is required",
       "permissionDenied": "Permission denied: Cannot manage external systems",
       "systemRequired": "Choose an external system.",
-      "urlRequired": "A URL is required for systems without a URL template."
+      "urlRequired": "A URL is required for systems without a URL template.",
+      "invalidVisibility": "Only ticket links can be shared, using a boolean visibility value"
+    },
+    "visibility": {
+      "label": "Visibility",
+      "internal": "Internal only",
+      "shared": "Visible in client portal",
+      "help": "Customers with access to this ticket can see this link. Sharing the link does not grant access to the external system."
+    }
+  },
+  "smartSearch": {
+    "run": "Smart search",
+    "runTitle": "Score the filtered tickets against this query",
+    "relevanceColumn": "Match",
+    "relevance": "{{percent}}% relevant",
+    "strong": "Strong matches",
+    "possible": "Possible matches",
+    "unlikely": "Unlikely matches",
+    "emptyBucketRunning": "None yet",
+    "emptyBucket": "None",
+    "scoring": "Scored {{scored}} of {{total}} tickets",
+    "summary": "Scored {{total}} tickets · {{strong}} strong · {{possible}} possible",
+    "cancelled": "Search cancelled after {{scored}} of {{total}} tickets",
+    "errorTitle": "Smart search stopped",
+    "starting": "Starting smart search…",
+    "rerun": "Filters changed. Run again",
+    "retry": "Retry",
+    "cancel": "Cancel",
+    "exit": "Back to list",
+    "notConfigured": "Smart search is not configured on this server",
+    "failedCount": "{{count}} tickets could not be scored",
+    "unscored": "Could not be scored",
+    "addOnRequired": "Smart search requires the AI Assistant add-on"
+  },
+  "recurring": {
+    "actions": {
+      "done": "Done",
+      "cancel": "Cancel",
+      "saving": "Saving…",
+      "save": "Save",
+      "pause": "Pause",
+      "resume": "Resume",
+      "archive": "Archive"
+    },
+    "clients": {
+      "addTitle": "Add clients",
+      "addHelp": "Pick a client to add it. The dialog stays open so you can add more.",
+      "alreadyAdded": "Already added",
+      "pickerPlaceholder": "Select a client to add",
+      "addedHeading": "Added in this dialog",
+      "columns": {
+        "client": "Client",
+        "overrides": "Overrides",
+        "contact": "Contact",
+        "location": "Location",
+        "assets": "Assets",
+        "nextDue": "Next due",
+        "active": "Active"
+      },
+      "inheritsAll": "Inherits everything",
+      "set": "Set",
+      "actions": "Client actions",
+      "editOverrides": "Edit overrides",
+      "remove": "Remove",
+      "add": "Add clients",
+      "empty": "No clients yet. Tickets are only created for the clients you add here.",
+      "removeTitle": "Remove client",
+      "removeMessage": "Stop creating tickets for {{client}}? Tickets already created and the history are kept."
+    },
+    "errors": {
+      "clientNotFound": "Client not found on this recurring ticket",
+      "definitionNotFound": "Recurring ticket not found",
+      "unknownTitleTokens": "Unknown title token(s) {{tokens}}. Available tokens: {{available}}",
+      "subcategoryNeedsCategory": "A subcategory requires a category",
+      "definitionArchived": "Archived recurring tickets are read-only",
+      "clientAlreadyAdded": "That client is already part of this recurring ticket",
+      "invalidReferences": "{{problems}}"
+    },
+    "overrides": {
+      "noneValue": "None",
+      "inherited": "Uses the recurring ticket setting: {{value}}",
+      "title": "Settings for {{client}}",
+      "intro": "Choose the ticket fields this client sets differently from the recurring ticket. Everything else is inherited and follows later changes to the recurring ticket.",
+      "groups": {
+        "board": "Override board and status",
+        "priority": "Override priority",
+        "category": "Override category",
+        "assignment": "Override assignment"
+      },
+      "attachedTo": "Attached to the generated ticket",
+      "contact": "Contact",
+      "contactPlaceholder": "No contact",
+      "location": "Location",
+      "noLocation": "No location",
+      "assets": "Assets",
+      "groupNames": {
+        "board": "Board and status",
+        "priority": "Priority",
+        "category": "Category",
+        "assignment": "Assignment"
+      }
+    },
+    "sections": {
+      "clients": "Clients",
+      "history": "History",
+      "details": "Details",
+      "template": "Ticket template",
+      "schedule": "Schedule",
+      "behaviour": "Behaviour"
+    },
+    "fields": {
+      "board": "Board",
+      "boardPlaceholder": "Select a board",
+      "status": "Status",
+      "statusBoardDefault": "Board default",
+      "priority": "Priority",
+      "priorityPlaceholder": "Select a priority",
+      "category": "Category",
+      "categoryPlaceholder": "No category",
+      "assignedTo": "Assigned to",
+      "additionalAgents": "Additional agents",
+      "name": "Name",
+      "title": "Ticket title",
+      "titleTokens": "Insert:",
+      "description": "Description",
+      "descriptionPlaceholder": "Description",
+      "checklistTemplate": "Checklist template",
+      "noChecklist": "None"
+    },
+    "history": {
+      "columns": {
+        "due": "Due",
+        "client": "Client",
+        "status": "Status",
+        "ticket": "Ticket",
+        "reason": "Reason"
+      },
+      "allStatuses": "All statuses",
+      "allClients": "All clients",
+      "empty": "Nothing has been generated yet.",
+      "reasons": {
+        "clientInactive": "The client was inactive",
+        "previousOpen": "Ticket {{number}} from the previous occurrence is still open"
+      },
+      "status": {
+        "created": "Created",
+        "skipped": "Skipped",
+        "missed": "Missed",
+        "failed": "Failed"
+      }
+    },
+    "editor": {
+      "created": "Recurring ticket created. Add the clients it should run for.",
+      "saved": "Recurring ticket saved",
+      "back": "Recurring tickets",
+      "newTitle": "New recurring ticket",
+      "archivedNotice": "This recurring ticket is archived and can no longer be changed.",
+      "clientsAfterSave": "Save the recurring ticket first, then add the clients it should run for.",
+      "archiveTitle": "Archive recurring ticket",
+      "archiveMessage": "Archiving stops all future tickets and cannot be undone. Tickets already created and the history are kept.",
+      "viewOnly": "You can view this recurring ticket but not change it."
+    },
+    "loading": "Loading…",
+    "schedule": {
+      "policy": {
+        "keep": "Keep the date",
+        "previous": "Move to the previous business day",
+        "next": "Move to the next business day"
+      },
+      "startDate": "Starts on",
+      "createTime": "Create at",
+      "dueTime": "Due at",
+      "leadDays": "Create days before due",
+      "policyLabel": "When the due date is not a business day",
+      "calendarFallback": "No default business-hours schedule is set, so business days are Monday to Friday plus your company-wide holidays.",
+      "calendarNote": "Business days follow your default business-hours schedule ({{name}}), including its holidays."
+    },
+    "status": {
+      "archived": "Archived",
+      "active": "Active",
+      "paused": "Paused"
+    },
+    "preview": {
+      "heading": "Next 5 due dates",
+      "none": "No upcoming due dates."
+    },
+    "behaviour": {
+      "openPrevious": "If the previous ticket is still open",
+      "alwaysCreate": "Create the next ticket anyway",
+      "skip": "Skip this occurrence",
+      "notifyClient": "Email the client when a ticket is created",
+      "notifyClientHelp": "Off by default. Internal notifications are always sent."
+    },
+    "list": {
+      "columns": {
+        "name": "Name",
+        "schedule": "Schedule",
+        "nextDue": "Next due",
+        "status": "Status",
+        "clients": "Clients"
+      },
+      "new": "New recurring ticket",
+      "hasFailure": "The latest run failed. Open it to see why.",
+      "title": "Recurring tickets",
+      "empty": "No recurring tickets here yet.",
+      "filter": {
+        "active": "Active",
+        "paused": "Paused",
+        "archived": "Archived",
+        "all": "All"
+      }
+    },
+    "clientTab": {
+      "clientPaused": "Paused for this client",
+      "pickDefinition": "Choose a recurring ticket",
+      "add": "Add to recurring ticket",
+      "empty": "This client is not part of any recurring ticket.",
+      "removeTitle": "Remove from recurring ticket",
+      "removeMessage": "Stop creating tickets for this client from {{name}}? Tickets already created and the history are kept."
+    },
+    "badge": {
+      "source": "Recurring: {{name}}"
+    },
+    "rule": {
+      "editor": {
+        "unit": {
+          "days": "day(s)",
+          "weeks": "week(s)",
+          "months": "month(s)",
+          "years": "year(s)"
+        },
+        "lastDay": "Last day",
+        "repeats": "Repeats",
+        "every": "Every",
+        "weekdaysOnly": "Weekdays only (Monday to Friday)",
+        "onDays": "On",
+        "monthlyOn": "On",
+        "mode": {
+          "dayOfMonth": "Day of the month",
+          "nthWeekday": "Nth weekday"
+        },
+        "day": "Day",
+        "nth": "Which",
+        "weekday": "Weekday",
+        "clampHint": "In months with fewer days, the ticket is created on the last day of the month.",
+        "month": "Month",
+        "ends": "Ends",
+        "end": {
+          "never": "Never",
+          "onDate": "On a date",
+          "afterCount": "After a number of tickets"
+        },
+        "endDate": "Last date",
+        "endCount": "Occurrences",
+        "frequency": {
+          "daily": "Daily",
+          "weekly": "Weekly",
+          "monthly": "Monthly",
+          "yearly": "Yearly"
+        }
+      },
+      "weekdays": {
+        "mon": "Monday",
+        "tue": "Tuesday",
+        "wed": "Wednesday",
+        "thu": "Thursday",
+        "fri": "Friday",
+        "sat": "Saturday",
+        "sun": "Sunday"
+      },
+      "weekdaysShort": {
+        "mon": "Mon",
+        "tue": "Tue",
+        "wed": "Wed",
+        "thu": "Thu",
+        "fri": "Fri",
+        "sat": "Sat",
+        "sun": "Sun"
+      },
+      "months": {
+        "1": "January",
+        "2": "February",
+        "3": "March",
+        "4": "April",
+        "5": "May",
+        "6": "June",
+        "7": "July",
+        "8": "August",
+        "9": "September",
+        "10": "October",
+        "11": "November",
+        "12": "December"
+      },
+      "ordinals": {
+        "1": "first",
+        "2": "second",
+        "3": "third",
+        "4": "fourth",
+        "last": "last"
+      },
+      "listSeparator": ", ",
+      "endOnDate": ", until {{date}}",
+      "endAfterCount": ", {{n}} times",
+      "dailyWeekdays": "Every weekday",
+      "daily": "Every day",
+      "dailyEvery": "Every {{n}} days",
+      "weekly": "Every week on {{days}}",
+      "weeklyEvery": "Every {{n}} weeks on {{days}}",
+      "everyMonth": "Every month",
+      "everyNMonths": "Every {{n}} months",
+      "lastDay": "the last day",
+      "dayOfMonth": "day {{day}}",
+      "monthlyOnDay": "{{every}} on {{day}}",
+      "monthlyOnNthWeekday": "{{every}} on the {{ordinal}} {{weekday}}",
+      "yearly": "Every year on {{month}} {{day}}"
     }
   }
 }

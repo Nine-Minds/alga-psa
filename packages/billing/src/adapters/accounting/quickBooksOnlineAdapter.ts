@@ -11,12 +11,17 @@ import {
   AccountingExportDeliveryResult,
   AccountingExportTransformResult,
   AccountingExportDocument,
+  AccountingExternalChange,
+  AccountingProviderOperations,
   ExternalInvoiceFetchResult,
   ExternalInvoiceData,
   ExternalInvoiceChargeTax,
   ExternalTaxComponent,
+  NormalizedExternalDocumentPayload,
+  NormalizedExternalPaymentPayload,
   PendingTaxImportRecord
 } from '@alga-psa/types';
+import { createQboProviderOperations } from './qboProviderOperations';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { lockInvoiceForExternalSync } from '../../lib/invoiceExternalSyncLock';
 import { AccountingMappingResolver, MappingResolution } from '../../services/accountingMappingResolver';
@@ -218,13 +223,34 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
       supportsInvoiceFetch: true,
       supportsTaxComponentImport: true, // QBO provides tax components at invoice level via TxnTaxDetail.TaxLine
       supportsChangePolling: true,
-      supportsPaymentRecording: true
+      supportsPaymentRecording: true,
+      supportsOutboundPayment: true,
+      supportsOutboundCredit: true,
+      supportsOutboundVoid: true
     };
   }
 
+  providerOperations(tenantId: string, targetRealm: string): Promise<AccountingProviderOperations> {
+    return createQboProviderOperations(tenantId, targetRealm);
+  }
+
   async fetchChanges(tenantId: string, since: string, targetRealm?: string | null): Promise<AccountingChangeSet> {
+    // Conservative pre-poll watermark mirrors the Xero adapter: next cycle
+    // re-fetches anything written after this instant, so a long fetch cannot
+    // skip a record it failed to reach.
+    const watermark = new Date().toISOString();
     const qboClient = await QboClientService.create(tenantId, targetRealm ?? null);
-    return qboClient.fetchChanges(since);
+    const changeSet = await qboClient.fetchChanges(since);
+    const changes = changeSet.changes.map((change) => normalizeQboChange(change));
+
+    // No nextCursor: QBO's CDC cap is per-entity and the shared timestamp
+    // cannot describe which entity feed is unfinished. A truncated poll keeps
+    // the cursor so no unread change is skipped.
+    return {
+      changes,
+      truncated: changeSet.truncated,
+      fetchedAt: watermark
+    };
   }
 
   async transform(context: AccountingExportAdapterContext): Promise<AccountingExportTransformResult> {
@@ -1695,6 +1721,80 @@ function mappingFromResolution(
     external_realm_id: targetRealm,
     metadata: resolution.metadata ?? null
   };
+}
+
+function normalizeQboChange(change: AccountingExternalChange): AccountingExternalChange {
+  const payload = change.payload as Record<string, any> | undefined;
+
+  if (change.entityType === 'Payment') {
+    return { ...change, normalized: normalizeQboPayment(payload, change.externalId) };
+  }
+
+  if (change.entityType === 'Invoice' || change.entityType === 'CreditMemo') {
+    return { ...change, normalized: normalizeQboDocument(payload) };
+  }
+
+  // Customers/refunds keep their raw payload; the customer applier is QBO-only
+  // and refunds are counted, not applied.
+  return change;
+}
+
+function normalizeQboPayment(
+  payload: Record<string, any> | undefined,
+  externalId: string
+): NormalizedExternalPaymentPayload {
+  const lines = Array.isArray(payload?.Line) ? (payload!.Line as any[]) : [];
+  const allocations: NormalizedExternalPaymentPayload['allocations'] = [];
+  let isCreditApplication = false;
+
+  for (const line of lines) {
+    const linkedTxns = Array.isArray(line?.LinkedTxn) ? line.LinkedTxn : [];
+    if (linkedTxns.some((txn: any) => txn?.TxnType === 'CreditMemo')) {
+      isCreditApplication = true;
+    }
+    const invoiceTxn = linkedTxns.find((txn: any) => txn?.TxnType === 'Invoice' && txn?.TxnId);
+    const amountCents = Math.round(Number(line?.Amount) * 100);
+    if (invoiceTxn && Number.isFinite(amountCents) && amountCents > 0) {
+      allocations.push({ externalInvoiceId: String(invoiceTxn.TxnId), amountCents });
+    }
+  }
+
+  const ref = payload?.PaymentRefNum;
+  const reference = typeof ref === 'string' && ref.trim().length > 0 ? ref.trim() : externalId;
+  const currency =
+    typeof payload?.CurrencyRef?.value === 'string' ? String(payload.CurrencyRef.value) : undefined;
+  const txnDate = typeof payload?.TxnDate === 'string' ? payload.TxnDate : undefined;
+  const totalCents = Number.isFinite(Number(payload?.TotalAmt))
+    ? Math.round(Number(payload?.TotalAmt) * 100)
+    : undefined;
+  const unappliedCents = Number.isFinite(Number(payload?.UnappliedAmt))
+    ? Math.round(Number(payload?.UnappliedAmt) * 100)
+    : undefined;
+
+  return {
+    reference,
+    currency,
+    txnDate,
+    totalCents,
+    unappliedCents,
+    allocations,
+    isCreditApplication,
+    providerMetadata: {
+      qbo_payment_kind: isCreditApplication ? 'credit_application' : 'payment',
+      ...(txnDate ? { qbo_txn_date: txnDate } : {})
+    }
+  };
+}
+
+function normalizeQboDocument(payload: Record<string, any> | undefined): NormalizedExternalDocumentPayload {
+  const totalAmount = Number.isFinite(Number(payload?.TotalAmt)) ? Number(payload?.TotalAmt) : null;
+  const docNumber = payload?.DocNumber !== undefined && payload?.DocNumber !== null ? String(payload.DocNumber) : null;
+  const isVoided =
+    totalAmount === 0 &&
+    typeof payload?.PrivateNote === 'string' &&
+    /voided/i.test(String(payload?.PrivateNote));
+
+  return { totalAmount, docNumber, isVoided };
 }
 
 function groupBy<T>(items: T[], iteratee: (item: T) => string): Map<string, T[]> {

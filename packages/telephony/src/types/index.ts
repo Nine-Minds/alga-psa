@@ -15,7 +15,7 @@ export type CallModality = (typeof CALL_MODALITIES)[number];
 export const CALL_MATCH_STATUSES = ['matched', 'ambiguous', 'unmatched', 'resolved'] as const;
 export type CallMatchStatus = (typeof CALL_MATCH_STATUSES)[number];
 
-export const TELEPHONY_PROVIDERS = ['teams-phone'] as const;
+export const TELEPHONY_PROVIDERS = ['teams-phone', '3cx'] as const;
 export type TelephonyProviderKind = (typeof TELEPHONY_PROVIDERS)[number];
 
 export const canonicalPhoneNumberSchema = z.object({
@@ -46,7 +46,7 @@ export interface CallMatchCandidate {
   clientId?: string | null;
   contactName?: string | null;
   clientName?: string | null;
-  source: 'contact_phone' | 'client_location_phone';
+  source: 'contact_phone' | 'client_location_phone' | 'contact_email' | 'contact_entity';
 }
 
 export interface CallMatchResult {
@@ -55,6 +55,29 @@ export interface CallMatchResult {
   clientId: string | null;
   candidates: CallMatchCandidate[];
 }
+
+/**
+ * Vendor-neutral live-chat model (3CX chat journaling first). The adapter
+ * mints `providerChatId` so a re-delivered report is idempotent.
+ */
+export const canonicalChatRecordSchema = z.object({
+  provider: z.string().min(1),
+  providerChatId: z.string().min(1),
+  agentEmail: z.string(),
+  number: z.string().optional(),
+  email: z.string().optional(),
+  name: z.string().optional(),
+  queueExtension: z.string().optional(),
+  startedAt: z.string().datetime({ offset: true }),
+  endedAt: z.string().datetime({ offset: true }).optional(),
+  durationSeconds: z.number().int().nonnegative().optional(),
+  messages: z.string(),
+  entityId: z.string().optional(),
+  entityType: z.string().optional(),
+  raw: z.record(z.unknown()).optional(),
+});
+
+export type CanonicalChatRecord = z.infer<typeof canonicalChatRecordSchema>;
 
 export interface TelephonyCallRecordRow {
   tenant: string;
@@ -85,6 +108,31 @@ export interface TelephonyCallRecordRow {
   updated_at: string | Date;
 }
 
+export interface TelephonyChatRecordRow {
+  tenant: string;
+  chat_record_id: string;
+  provider: string;
+  provider_chat_id: string;
+  agent_user_id: string | null;
+  party_number_raw: string | null;
+  party_number_e164: string | null;
+  party_email: string | null;
+  party_name: string | null;
+  queue_extension: string | null;
+  started_at: string | Date | null;
+  ended_at: string | Date | null;
+  duration_seconds: number | null;
+  messages: string;
+  match_status: CallMatchStatus;
+  matched_contact_id: string | null;
+  matched_client_id: string | null;
+  match_candidates: CallMatchCandidate[];
+  interaction_id: string | null;
+  raw: Record<string, unknown>;
+  created_at: string | Date;
+  updated_at: string | Date;
+}
+
 export const CALL_ARTIFACT_TYPES = ['recording', 'transcript'] as const;
 export type CallArtifactType = (typeof CALL_ARTIFACT_TYPES)[number];
 
@@ -103,6 +151,8 @@ export interface CallArtifactPayload {
   contentUrl: string | null;
   createdDateTime: string | null;
   transcriptContent?: string;
+  /** Provider-side summary of the call, appended to the interaction notes. */
+  summary?: string | null;
 }
 
 export interface TelephonyCallArtifactRow {
@@ -136,3 +186,5 @@ export interface TelephonyProviderRow {
   created_at: string | Date;
   updated_at: string | Date;
 }
+
+export * from './incomingCall';

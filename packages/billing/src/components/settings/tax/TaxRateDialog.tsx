@@ -18,6 +18,8 @@ import {
   isActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
 import { addTaxRate, updateTaxRate } from '../../../actions/taxRateActions';
+import { TaxCapFields } from '../../billing-dashboard/TaxCapFields';
+import { createTaxCapDraft, taxCapPayload, type TaxCapDraft } from '../../billing-dashboard/taxCapForm';
 
 export interface TaxRateDialogProps {
   isOpen: boolean;
@@ -33,9 +35,11 @@ export interface TaxRateDialogProps {
 const toDateInput = (date: string | null | undefined): string => (date ? toPlainDate(date).toString() : '');
 
 export function TaxRateDialog({ isOpen, region, rate, onClose, onSaved }: TaxRateDialogProps) {
-  const { t } = useTranslation('msp/service-catalog');
+  const { t, i18n } = useTranslation('msp/service-catalog');
   const isEditing = rate !== null;
   const [draft, setDraft] = useState<Partial<ITaxRate>>({});
+  const [capDraft, setCapDraft] = useState<TaxCapDraft>(() => createTaxCapDraft({}, i18n.language));
+  const [capError, setCapError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -44,7 +48,7 @@ export function TaxRateDialog({ isOpen, region, rate, onClose, onSaved }: TaxRat
     if (!isOpen) {
       return;
     }
-    setDraft(rate
+    const nextDraft: Partial<ITaxRate> = rate
       ? {
           ...rate,
           // The driver returns numerics as strings; the number input wants 6, not "6.0000".
@@ -52,10 +56,15 @@ export function TaxRateDialog({ isOpen, region, rate, onClose, onSaved }: TaxRat
           start_date: toDateInput(rate.start_date),
           end_date: toDateInput(rate.end_date),
         }
-      : { region_code: region.region_code, is_active: true });
+      : { region_code: region.region_code, is_active: true };
+    // Cap fields are owned by the cap draft so omission still preserves them.
+    const { cap_amount: _cap, currency_code: _currency, ...rateDraft } = nextDraft;
+    setDraft(rateDraft);
+    setCapDraft(createTaxCapDraft(rate ?? {}, i18n.language));
     setError(null);
+    setCapError(null);
     setHasAttemptedSubmit(false);
-  }, [isOpen, rate, region.region_code]);
+  }, [isOpen, rate, region.region_code, i18n.language]);
 
   const update = (patch: Partial<ITaxRate>) => {
     setDraft((current) => ({ ...current, ...patch }));
@@ -73,15 +82,28 @@ export function TaxRateDialog({ isOpen, region, rate, onClose, onSaved }: TaxRat
 
   const handleSubmit = async () => {
     setHasAttemptedSubmit(true);
+    setCapError(null);
     if (validationErrors.length > 0) {
+      return;
+    }
+    let capChanges: { cap_amount?: number | null; currency_code?: string | null };
+    try {
+      capChanges = taxCapPayload(capDraft, i18n.language, isEditing);
+    } catch (caught) {
+      const code = caught instanceof Error ? caught.message : 'invalid';
+      const message = t(`taxRates.cap.errors.${code}`, { defaultValue: t('taxRates.cap.errors.invalid') });
+      setCapError(message);
+      document.getElementById(code === 'currency' ? 'tax-rate-currency-field' : 'tax-rate-cap-field')?.focus();
       return;
     }
     setIsSubmitting(true);
     try {
+      const { cap_amount: _cap, currency_code: _currency, ...rateFields } = draft;
       const payload = {
-        ...draft,
+        ...rateFields,
         region_code: region.region_code,
         end_date: draft.end_date || null,
+        ...capChanges,
       } as ITaxRate;
       const result = isEditing
         ? await updateTaxRate(payload)
@@ -212,6 +234,13 @@ export function TaxRateDialog({ isOpen, region, rate, onClose, onSaved }: TaxRat
                 onChange={(date) => update({ end_date: dateToString(date) || null })}
               />
             </div>
+            <TaxCapFields
+              draft={capDraft}
+              onChange={(next) => { setCapDraft(next); setCapError(null); }}
+              error={capError}
+              composite={rate?.is_composite}
+              disabled={isSubmitting}
+            />
             <div className="flex items-center justify-between">
               <div>
                 <Label htmlFor="tax-rate-active-field">

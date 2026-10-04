@@ -28,6 +28,7 @@ describe('emulator suite', () => {
       'qbo',
       'smtp-sink',
       'stripe',
+      'threecx',
       'webhook-sink',
       'xero',
     ]);
@@ -36,6 +37,12 @@ describe('emulator suite', () => {
     for (const emu of catalog.emulators) {
       expect(emu.stateViews.length).toBeGreaterThan(0);
     }
+  });
+
+  it('threecx owns its listener through serve() so the PBX WebSocket shares the port', () => {
+    const threecx = SUITE_EMULATORS.find((emulator) => emulator.id === 'threecx')!;
+    expect(typeof threecx.serve).toBe('function');
+    expect(threecx.wire).toBeUndefined();
   });
 
   it('runs the bundled scenarios end to end', async () => {

@@ -1,6 +1,7 @@
 import { TenantEntity } from './index';
 import type { ISO8601String } from '../lib/temporal';
 import type { CadenceOwner } from './recurringTiming.interfaces';
+import type { FixedPricingBasis } from './contractLineServiceConfiguration.interfaces';
 
 export interface IBillingPeriod extends TenantEntity {
   startDate: ISO8601String;
@@ -190,6 +191,8 @@ export interface IRecurringChargeDetailPeriod {
   billingTiming?: 'arrears' | 'advance' | null;
 }
 export interface IBillingCharge extends TenantEntity {
+  unit_code?: string | null;
+  unit_label?: string | null;
   type: ChargeType;
   serviceId?: string;
   config_id?: string;
@@ -226,6 +229,54 @@ export interface IBillingCharge extends TenantEntity {
   servicePeriodRecordId?: string | null;
   billingTiming?: 'arrears' | 'advance';
   recurringDetailPeriods?: IRecurringChargeDetailPeriod[];
+  /**
+   * Effective recurring pricing provenance for a charge priced by a scheduled
+   * quantity/price revision (product, license or unit-priced service). Present
+   * only when a revision applied. Carried through preview, persisted on the
+   * invoice detail, and used to reject generation after the reviewed revision or
+   * its catalog source changed.
+   */
+  recurringPricingSource?: IRecurringPricingSource | null;
+  /**
+   * Set on the one-time mid-period quantity true-up line. Carries the companion
+   * provenance contract (source kind, revision id + version, affected period and
+   * reason) so generation can persist a source-linked row and reconcile it
+   * instead of duplicating on regeneration.
+   */
+  contractChangeAdjustment?: IContractChangeAdjustmentSource | null;
+}
+
+export interface IContractChangeAdjustmentSource {
+  adjustmentId: string;
+  sourceKind: 'contract_change';
+  revisionId: string;
+  /** Revision version at time of settlement; generation rejects a changed source. */
+  revisionVersion: number;
+  /** Affected canonical period, half-open [start, end). */
+  periodStart: string;
+  periodEnd: string;
+  /** Signed minor units: positive charge, negative credit. */
+  amountCents: number;
+  reason: string;
+  /** Standing quantity that begins at the next boundary. */
+  newQuantity: number;
+  previousQuantity: number;
+  quantityDelta: number;
+  unitRateCents: number;
+  coveredDays: number;
+  fullPeriodDays: number;
+}
+
+export interface IRecurringPricingSource {
+  revisionId: string;
+  version: number;
+  pricePolicy: 'override' | 'catalog';
+  unitRateCents: number | null;
+  /** Canonical service-period boundary the revision took effect at. */
+  effectivePeriodStart: string;
+  /** `service_prices` row that supplied a catalog-policy rate, when applicable. */
+  catalogPriceId?: string | null;
+  catalogEffectiveDate?: string | null;
 }
 
 export interface IDiscount extends TenantEntity {
@@ -434,6 +485,7 @@ export interface IService extends TenantEntity {
   default_rate: number; // Convenience field: primary rate (typically first/USD price)
   category_id: string | null;
   unit_of_measure: string;
+  unit_code?: string | null;
   item_kind?: 'service' | 'product'; // Catalog kind (Products are a filtered subset)
   is_active?: boolean;
   sku?: string | null;
@@ -562,8 +614,15 @@ export interface IContractLinePresetService extends TenantEntity {
   preset_id: string;
   service_id: string;
   quantity?: number;
+  /**
+   * Hourly/Usage: the service rate. Fixed 'unit' services: the optional default
+   * unit rate in minor units (null follows the catalog in the contract currency).
+   */
   custom_rate?: number | null;
+  /** Fixed services only. Absent/null/'bundle' = quantity allocates a share of the line total. */
+  pricing_basis?: FixedPricingBasis | null;
   unit_of_measure?: string;
+  unit_code?: string | null;
   // Bucket overlay fields - recommended bucket configuration
   bucket_total_minutes?: number;
   bucket_overage_rate?: number;
@@ -608,6 +667,8 @@ export interface IBucketUsage extends TenantEntity {
 export interface PaymentMethod extends TenantEntity {
   payment_method_id: string;
   client_id: string;
+  /** The billing profile this saved method belongs to (never shared across profiles). */
+  billing_profile_id: string;
   type: 'credit_card' | 'bank_account';
   last4: string;
   exp_month?: string;
@@ -780,8 +841,11 @@ export interface ITaxRate extends TenantEntity {
   is_active?: boolean;
   conditions?: Record<string, any>;
   name?: string;
-  /** Maximum tax per calculation, in the smallest currency unit. Null means uncapped. */
+  /** Safe integer tax cap in rate-currency minor units; null is uncapped, zero is intentional.
+   * Applied per rate contribution/per period segment, not to component-based composite totals. */
   cap_amount?: number | null;
+  /** Explicit invoice currency, or null for a universal rate. */
+  currency_code?: string | null;
 }
 
 export interface IClientTaxRate extends TenantEntity {
@@ -798,6 +862,8 @@ export interface IDefaultBillingSettings extends TenantEntity {
   enable_credit_expiration: boolean;
   credit_expiration_days: number;
   credit_expiration_notification_days: number[];
+  default_notice_period_days?: number;
+  default_quote_validity_days?: number;
   default_recurring_cadence_owner?: CadenceOwner;
   recurring_cadence_rollout_state?: 'mixed_enabled';
   recurring_cadence_rollout_message?: string;

@@ -335,7 +335,8 @@
       "billingMethod": "Méthode de facturation",
       "quantity": "Quantité",
       "defaultRate": "Taux par défaut",
-      "actions": "Actions"
+      "actions": "Actions",
+      "pricing": "Tarification"
     },
     "tooltip": {
       "defaultRate": "Taux standard du service, utilisé pour l'allocation de valeur interne et le reporting dans le cadre du total fixe du plan."
@@ -370,7 +371,17 @@
       "saveSuccess": "Services prédéfinis de ligne de contrat enregistrés avec succès",
       "saveError": "Échec de l'enregistrement des services"
     },
-    "unknownService": "Service inconnu"
+    "unknownService": "Service inconnu",
+    "pricing": {
+      "product": "Facturé à la quantité d'unités",
+      "bundle": "Inclus dans le total de la ligne",
+      "unit": "Par poste / unité",
+      "unitRate": "Tarif unitaire",
+      "unitRatePlaceholder": "Prix catalogue"
+    },
+    "errors": {
+      "recurringQuantityInvalid": "{{name}} : la quantité récurrente doit être un nombre entier, zéro ou plus."
+    }
   },
   "accountingExports": {
     "title": "Exportations comptables",
@@ -390,7 +401,8 @@
       "execute": "Exécuter",
       "createBatch": "Créer un lot",
       "creating": "Création...",
-      "cancelBatch": "Annuler le lot"
+      "cancelBatch": "Annuler le lot",
+      "retry": "Réessayer"
     },
     "states": {
       "loadingBatches": "Chargement des lots...",
@@ -417,7 +429,12 @@
         "invoiceStatuses": "Séparés par des virgules (facultatif), par ex. finalisé, publié",
         "notes": "Notes facultatives"
       },
-      "defaultRealmLabel": "{{realmId}} (par défaut)"
+      "defaultRealmLabel": "{{realmId}} (par défaut)",
+      "loadingConnections": "Chargement des connexions comptables...",
+      "connectionLoadError": "Impossible de charger les connexions comptables. Vérifiez vos paramètres de connexion et réessayez.",
+      "ambiguousRealm": "Votre organisation comptable par défaut est partagée par plusieurs connexions. Choisissez une connexion pour continuer.",
+      "noXeroConnection": "Aucune connexion Xero n'est disponible. Connectez Xero dans les paramètres comptables pour exporter.",
+      "noQboConnection": "Aucune connexion QuickBooks Online n'est disponible. Connectez-la dans les paramètres comptables pour exporter."
     },
     "detailDialog": {
       "title": "Lot d'export comptable",
@@ -441,7 +458,8 @@
       "createError": "Échec de la création du lot d'exportation",
       "executeError": "Échec de l'exécution du lot",
       "cancelled": "Lot annulé",
-      "cancelError": "Échec de l'annulation du lot"
+      "cancelError": "Échec de l'annulation du lot",
+      "realmRequired": "Choisissez une société comptable connectée avant de créer l'exportation."
     },
     "status": {
       "pending": "En attente",

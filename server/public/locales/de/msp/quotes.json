@@ -107,7 +107,9 @@
         "message": "Nachricht",
         "messageOptional": "Nachricht (optional)",
         "messagePlaceholder": "Fügen Sie eine persönliche Notiz für den Empfänger hinzu...",
-        "title": "Angebot senden"
+        "title": "Angebot senden",
+        "from": "Von",
+        "useDefault": "Standardabsender verwenden"
       }
     },
     "errors": {
@@ -212,7 +214,9 @@
         "description": "Dadurch wird das Angebot per E-Mail an die Rechnungskontakte des Kunden gesendet und sein Status in „Gesendet“ geändert.",
         "title": "Angebot an den Kunden senden",
         "additionalEmails": "Zusätzliche Empfänger",
-        "message": "Nachricht"
+        "message": "Nachricht",
+        "from": "Von",
+        "useDefault": "Standardabsender verwenden"
       }
     },
     "errorActions": {
@@ -315,7 +319,8 @@
       "title": "Kundensichtbarer Text",
       "subtitle": "Erscheint im PDF unter den Summen.",
       "notes": "Notizen an den Kunden (optional)",
-      "terms": "Geschäftsbedingungen (optional)"
+      "terms": "Geschäftsbedingungen (optional)",
+      "termsPlaceholder": "Bedingungen, Links und Absätze hinzufügen…"
     },
     "moreDetails": {
       "title": "Weitere Details",

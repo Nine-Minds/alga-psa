@@ -107,7 +107,9 @@
         "message": "Message",
         "messageOptional": "Message (optional)",
         "messagePlaceholder": "Add a personal note for the recipient...",
-        "title": "Send Quote"
+        "title": "Send Quote",
+        "from": "From",
+        "useDefault": "Use default sender"
       }
     },
     "errors": {
@@ -212,7 +214,9 @@
         "description": "This will email the quote to the client's billing contacts and change its status to \"Sent\".",
         "title": "Send Quote to Client",
         "additionalEmails": "Additional Recipients",
-        "message": "Message"
+        "message": "Message",
+        "from": "From",
+        "useDefault": "Use default sender"
       }
     },
     "errorActions": {
@@ -315,7 +319,8 @@
       "title": "Client-facing text",
       "subtitle": "Appears on the PDF, below the totals.",
       "notes": "Notes to client (Optional)",
-      "terms": "Terms & conditions (Optional)"
+      "terms": "Terms & conditions (Optional)",
+      "termsPlaceholder": "Add terms, links and paragraphs…"
     },
     "moreDetails": {
       "title": "More details",

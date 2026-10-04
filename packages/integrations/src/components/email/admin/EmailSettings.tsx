@@ -26,8 +26,8 @@ import {
 } from '../../../actions/email-actions/emailSettingsActions';
 import { getEmailProviders } from '../../../actions/email-actions/emailProviderActions';
 import type { EmailProvider } from '../types';
-import { EmailSenderIdentityCards } from './EmailSenderIdentityCards';
 import { OutboundEmailDiagnosticsDialog } from './OutboundEmailDiagnosticsDialog';
+import { EmailSenderAddressesCard, EmailSenderCardsProvider, EmailSenderRoutingCard } from './EmailSenderRoutingCards';
 import {
   getEmailDomains,
   addEmailDomain,
@@ -700,61 +700,10 @@ export const EmailSettings: React.FC<EmailSettingsProps> = () => {
             </CardContent>
           </Card>
 
-            <EmailSenderIdentityCards
-              copy={{
-                ticketTitle: t('email.senderIdentities.ticket.title'),
-                ticketDescription: t('email.senderIdentities.ticket.description'),
-                connectedInboxLabel: t('email.senderIdentities.ticket.connectedInboxLabel'),
-                connectedInboxHelp: t('email.senderIdentities.ticket.connectedInboxHelp'),
-                customAddressOption: t('email.senderIdentities.ticket.customAddressOption'),
-                ticketAddressLabel: t('email.senderIdentities.ticket.addressLabel'),
-                ticketAddressPlaceholder: t('email.senderIdentities.ticket.addressPlaceholder'),
-                ticketAddressHelp: t('email.senderIdentities.ticket.addressHelp'),
-                ticketNameLabel: t('email.senderIdentities.ticket.nameLabel'),
-                ticketNamePlaceholder: t('email.senderIdentities.ticket.namePlaceholder'),
-                ticketNameHelp: t('email.senderIdentities.ticket.nameHelp'),
-                warningTitle: t('email.senderIdentities.warningTitle'),
-                errorTitle: t('email.senderIdentities.errorTitle'),
-                notificationTitle: t('email.senderIdentities.notification.title'),
-                notificationDescription: t('email.senderIdentities.notification.description'),
-                notificationAddressLabel: t('email.senderIdentities.notification.addressLabel'),
-                // Effective fallback sender goes in the placeholder, never the value:
-                // rendering it as the value makes an unsaved field look configured.
-                notificationAddressPlaceholder: settings.effectiveNotificationFrom.email,
-                notificationAddressHelp: t('email.senderIdentities.notification.addressHelp'),
-                notificationNameLabel: t('email.senderIdentities.notification.nameLabel'),
-                notificationNamePlaceholder: t('email.senderIdentities.notification.namePlaceholder'),
-                notificationNameHelp: t('email.senderIdentities.notification.nameHelp', {
-                  company: settings.tenantCompanyName || t('email.senderIdentities.notification.companyFallback'),
-                }),
-              }}
-              ticketAddress={settings.ticketingFromEmail || ''}
-              ticketName={settings.ticketingFromName || ''}
-              connectedInboxes={inboundProviders.map(provider => provider.mailbox).filter(Boolean)}
-              ticketWarning={
-                settings.ticketingFromEmail
-                && inboundProviders.length > 0
-                && !inboundProviders.some(provider =>
-                  provider.mailbox.toLowerCase() === settings.ticketingFromEmail?.toLowerCase()
-                )
-                  ? t('email.senderIdentities.ticket.notConnectedWarning')
-                  : null
-              }
-              ticketError={ticketIdentityError}
-              notificationAddress={getCurrentProviderConfig()?.config.from || ''}
-              notificationName={getCurrentProviderConfig()?.config.fromName || ''}
-              notificationAddressReadOnly={selectedProvider === 'microsoft'}
-              onTicketAddressChange={(value) => setSettings({ ...settings, ticketingFromEmail: value || null })}
-              onTicketNameChange={(value) => setSettings({ ...settings, ticketingFromName: value || null })}
-              onNotificationAddressChange={(value) => {
-                const config = getCurrentProviderConfig();
-                if (config) updateProviderConfig(config.providerId, { from: value });
-              }}
-              onNotificationNameChange={(value) => {
-                const config = getCurrentProviderConfig();
-                if (config) updateProviderConfig(config.providerId, { fromName: value });
-              }}
-            />
+            <EmailSenderCardsProvider>
+              <EmailSenderAddressesCard transport={selectedProvider} verifiedDomains={domains.filter(domain => domain.status === 'verified').map(domain => domain.domain)} microsoftMailboxes={microsoftMailboxes.map(mailbox => ({ providerId: mailbox.providerId, mailbox: mailbox.mailbox, providerName: mailbox.providerName }))} />
+              <EmailSenderRoutingCard transport={selectedProvider} />
+            </EmailSenderCardsProvider>
 
 
 

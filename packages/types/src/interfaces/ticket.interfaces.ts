@@ -4,7 +4,7 @@ import { ITaggable } from './tag.interfaces';
 import { IClientLocation } from "./client.interfaces";
 import { IComment } from './comment.interface';
 import { IDocument } from './document.interface';
-import type { IExternalEntityLink } from './externalSystem.interfaces';
+import type { IExternalEntityLink, PortalTicketExternalLink } from './externalSystem.interfaces';
 
 /**
  * Response state tracking for tickets.
@@ -20,6 +20,7 @@ export const TICKET_ORIGINS = {
   CLIENT_PORTAL: 'client_portal',
   INBOUND_EMAIL: 'inbound_email',
   API: 'api',
+  RECURRING: 'recurring',
 } as const;
 
 export type TicketOrigin =
@@ -32,6 +33,11 @@ export interface ITicket extends TenantEntity, ITaggable {
   ticket_number: string;
   title: string;
   url: string | null;
+  // Nullable classification references (server/API create only; distinct from
+  // the numeric itil_impact/itil_urgency fields below).
+  severity_id?: string | null;
+  urgency_id?: string | null;
+  impact_id?: string | null;
   board_id: string;
   client_id: string | null;
   location_id?: string | null;
@@ -53,7 +59,13 @@ export interface ITicket extends TenantEntity, ITaggable {
   entered_at: string | null; // Changed from Date to string
   updated_at: string | null; // Changed from Date to string
   closed_at: string | null;  // Changed from Date to string
+  /** Denormalized close flag kept in sync with the selected status. */
+  is_closed?: boolean;
   due_date?: string;         // Optional due date for the ticket
+  /** Source ticket this one was duplicated from (create-only provenance, no FK). */
+  duplicated_from_ticket_id?: string | null;
+  /** Display-only: number of the source ticket, joined on read. */
+  duplicated_from_ticket_number?: string | null;
   attributes: Record<string, unknown> | null; // Changed from any to unknown
   priority_id?: string; // Used for both custom and ITIL priorities (unified system)
   estimated_hours?: number;
@@ -101,8 +113,11 @@ export interface ITicketListItem extends Omit<ITicket, 'status_id' | 'priority_i
   additional_agents?: { user_id: string; name: string }[];  // Additional agents for tooltip display with avatars
   assigned_team_name?: string | null;
   bundle_child_count?: number;
+  bundle_open_child_count?: number;
   bundle_master_ticket_number?: string | null;
   bundle_distinct_client_count?: number;
+  // Newest of the ticket's own timestamps and its newest published comment.
+  latest_activity_at?: string | null;
 }
 
 export interface ITicketListFilters {
@@ -182,6 +197,7 @@ export interface IAgentSchedule {
 }
 
 export interface ITicketWithDetails extends ITicket {
+  portalExternalLinks?: PortalTicketExternalLink[];
   status_name?: string;
   priority_name?: string;
   priority_color?: string;

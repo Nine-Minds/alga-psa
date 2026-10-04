@@ -319,6 +319,7 @@ export function ApplyEmailBrandingDialog({
         <EmailTemplatePreview
           id="preview-branding-template-frame"
           htmlContent={entry.preview.plannedHtml}
+          brandLogoUrls={status.logoOptions}
           templateName={entry.preview.name}
           subject={entry.preview.subject}
         />

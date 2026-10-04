@@ -11,6 +11,7 @@ import { Knex } from 'knex';
 import { resolveCreditDrawdownPolicy } from '@shared/billingClients/billingSettings';
 import type { CreditDrawdownPolicy } from '@shared/billingClients/billingSettings';
 import { getAvailableCredit } from '../lib/creditBalance';
+import { resolveCreditExpirationDate } from '../lib/creditExpirationDate';
 import { resolvePaymentBillingProfileId } from '@alga-psa/shared/billingClients/billingProfilePayments';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
@@ -22,7 +23,8 @@ import {
     buildCreditNoteCreatedPayload,
 } from '@alga-psa/workflow-streams';
 import { enqueueCreditApplication } from '../services/accountingSync/syncProducers';
-import { getAccountingSyncSettings, resolveDefaultRealm } from '../services/accountingSync/accountingSyncSettings';
+import { getAccountingSyncSettings } from '../services/accountingSync/accountingSyncSettings';
+import { resolveConnectedAccountingIntegration } from '../services/accountingSync/connectedAccountingIntegration';
 import { notifyInvoiceTerminalStatus } from '../services/accountingSync/invoiceTerminalStatusHandlers';
 import {
     actionError,
@@ -102,26 +104,29 @@ async function resolveCreditSyncEnqueueDecision(
     tenant: string,
     user: IUser,
     collectedOps: boolean
-): Promise<{ shouldEnqueue: boolean; realm: string | null }> {
+): Promise<{ shouldEnqueue: boolean; realm: string | null; adapterType: string | null }> {
     if (!collectedOps) {
-        return { shouldEnqueue: false, realm: null };
+        return { shouldEnqueue: false, realm: null, adapterType: null };
     }
     if (!isEnterpriseEdition()) {
-        return { shouldEnqueue: false, realm: null };
+        return { shouldEnqueue: false, realm: null, adapterType: null };
     }
     const settings = await getAccountingSyncSettings(trx, tenant);
     if (!settings.autoSyncEnabled) {
-        return { shouldEnqueue: false, realm: null };
+        return { shouldEnqueue: false, realm: null, adapterType: null };
     }
-    const realm = await resolveDefaultRealm(trx, tenant);
-    if (!realm) {
-        return { shouldEnqueue: false, realm: null };
+    // Resolve the connected provider + organisation rather than assuming QBO,
+    // so a Xero tenant's credit applications reach the same capability gate as
+    // any other outbound operation.
+    const integration = await resolveConnectedAccountingIntegration(trx, tenant);
+    if (!integration) {
+        return { shouldEnqueue: false, realm: null, adapterType: null };
     }
     if (!(await hasPermission(user, 'accounting_integrations', 'remote_mutate', trx))) {
         // Generic denial: never hint whether the integration exists.
         throw new Error('Permission denied: applying credits that sync to the accounting integration requires the accounting remote-mutate permission.');
     }
-    return { shouldEnqueue: true, realm };
+    return { shouldEnqueue: true, realm: integration.targetRealm, adapterType: integration.adapterType };
 }
 
 function creditActionErrorFrom(error: unknown): CreditActionError | null {
@@ -472,56 +477,7 @@ export async function validateTransactionBalance(
     }
 }
 
-/**
- * Resolve the expiration date for a newly issued credit: an explicit date wins;
- * otherwise the client's billing settings (falling back to tenant defaults)
- * decide whether and when the credit expires.
- */
-export async function resolveCreditExpirationDate(
-    trx: Knex.Transaction,
-    tenant: string,
-    clientId: string,
-    manualExpirationDate?: string
-): Promise<string | undefined> {
-    const clientSettings = await tenantScopedTable(trx, tenant, 'client_billing_settings')
-        .where({ client_id: clientId, tenant })
-        .first();
-
-    const defaultSettings = await tenantScopedTable(trx, tenant, 'default_billing_settings')
-        .first();
-
-    let isCreditExpirationEnabled = true;
-    if (typeof clientSettings?.enable_credit_expiration === 'boolean') {
-        isCreditExpirationEnabled = clientSettings.enable_credit_expiration;
-    } else if (typeof defaultSettings?.enable_credit_expiration === 'boolean') {
-        isCreditExpirationEnabled = defaultSettings.enable_credit_expiration;
-    }
-
-    if (!isCreditExpirationEnabled) {
-        return undefined;
-    }
-
-    if (manualExpirationDate) {
-        return manualExpirationDate;
-    }
-
-    let expirationDays: number | undefined;
-    if (typeof clientSettings?.credit_expiration_days === 'number') {
-        expirationDays = clientSettings.credit_expiration_days;
-    } else if (typeof defaultSettings?.credit_expiration_days === 'number') {
-        expirationDays = defaultSettings.credit_expiration_days;
-    }
-
-    if (expirationDays && expirationDays > 0) {
-        const expDate = new Date();
-        expDate.setDate(expDate.getDate() + expirationDays);
-        return expDate.toISOString();
-    }
-
-    return undefined;
-}
-
-export { resolveCreditDrawdownPolicy };
+export { resolveCreditDrawdownPolicy, resolveCreditExpirationDate };
 
 /**
  * Server-action wrapper over resolveCreditDrawdownPolicy so client components
@@ -916,9 +872,10 @@ export async function applyCreditToInvoiceInternal(
     // Authoritative decision, computed inside the transaction below, that the
     // post-commit enqueue derives from strictly. Unset until the transaction
     // body runs; reading it outside the transaction is the creditSyncOps guard.
-    let creditSyncDecision: { shouldEnqueue: boolean; realm: string | null } = {
+    let creditSyncDecision: { shouldEnqueue: boolean; realm: string | null; adapterType: string | null } = {
         shouldEnqueue: false,
         realm: null,
+        adapterType: null,
     };
 
     await withTransaction(knex, async (trx: Knex.Transaction) => {

@@ -8,6 +8,7 @@ import logger from '@alga-psa/core/logger';
 import { TenantEmailService } from '@alga-psa/email';
 import { StaticTemplateProcessor } from '@alga-psa/email';
 import { EmailProviderError } from '@alga-psa/types';
+import type { OutboundMailClass } from '@alga-psa/types';
 import { getUserInfoForEmail, resolveEmailLocale } from '@alga-psa/notifications/notifications/emailLocaleResolver';
 import { SupportedLocale } from '@alga-psa/core/i18n/config';
 import Handlebars from 'handlebars';
@@ -53,6 +54,9 @@ interface ReplyMarkerPayload {
 }
 
 export interface SendEmailParams {
+  mailClass: OutboundMailClass;
+  boardId?: string;
+  senderId?: string;
   tenantId: string;
   to: string;
   subject: string;
@@ -521,6 +525,9 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
         'unknown', 'unknown', false, 'COMMENT_DELIVERY_RECONCILIATION_REQUIRED', { requiresReconciliation: true });
     }
     const result = await service.sendEmail({
+      mailClass: params.mailClass,
+      boardId: params.boardId,
+      senderId: params.senderId,
       revalidateCommentOnRetry: managedCommentDelivery,
       to: params.to,
       tenantId: params.tenantId,

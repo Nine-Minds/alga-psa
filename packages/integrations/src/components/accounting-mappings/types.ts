@@ -19,13 +19,14 @@ export type AccountingMappingLoadResult = {
 
 export type AccountingMappingContext = {
   /**
-   * Adapter/realm specific identifier (e.g., QBO realm ID, Xero tenant ID).
-   * Optional so configurations that do not require a realm/context can omit it.
+   * Canonical mapping identity the external entity is stored against (e.g.,
+   * QBO realm id, Xero connection id). Optional so configurations that do not
+   * require a realm/context can omit it.
    */
   realmId?: string | null;
   /**
-   * Optional identifier used solely for authenticated API calls (e.g., Xero connectionId).
-   * When provided, components can use this for catalog lookups while persisting realmId separately.
+   * Optional identifier used for authenticated API calls (e.g., Xero
+   * connectionId, which for Xero is the same canonical identity as realmId).
    */
   connectionId?: string | null;
   /**

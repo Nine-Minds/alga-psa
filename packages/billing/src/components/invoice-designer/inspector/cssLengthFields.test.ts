@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
 import {
-  areCssLengthBoxValuesLinked,
   formatCssLength,
   formatCssLengthBox,
   getCssLengthStep,
@@ -56,11 +55,6 @@ describe('invoice designer css length helpers', () => {
       unit: 'px',
       isCustom: false,
     });
-  });
-
-  it('detects when box values are fully linked', () => {
-    expect(areCssLengthBoxValuesLinked({ top: 8, right: 8, bottom: 8, left: 8 })).toBe(true);
-    expect(areCssLengthBoxValuesLinked({ top: 8, right: 16, bottom: 8, left: 16 })).toBe(false);
   });
 
   it('formats css box values into optimized shorthand', () => {

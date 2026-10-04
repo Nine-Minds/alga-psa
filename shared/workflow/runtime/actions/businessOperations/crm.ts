@@ -786,6 +786,7 @@ async function sendQuoteEmailBestEffort(params: {
     );
 
     const emailResult = await service.sendEmail({
+      mailClass: 'sales',
       tenantId: params.tenantId,
       to: params.recipients.map((email) => ({ email })),
       templateProcessor,
@@ -1620,6 +1621,11 @@ export function registerCrmActions(): void {
 
         const createdQuote = await Quote.create(tx.trx, tx.tenantId, {
           ...(parsedQuote as any),
+          // Carry the template's authored rich terms through the duplicate path.
+          // The workflow input schema stays string-only (FR11); the block column
+          // is copied internally so a template created with rich terms does not
+          // lose them.
+          terms_and_conditions_block: templateWithItems.terms_and_conditions_block ?? null,
           subtotal: 0,
           discount_total: 0,
           tax: 0,

@@ -1,9 +1,23 @@
 import { TenantEntity } from ".";
 
-export type DocumentAssociationEntityType = 'user' | 'ticket' | 'client' | 'contact' | 'asset' | 'project_task' | 'contract' | 'tenant' | 'quote' | 'invoice' | 'sales_order' | 'document';
+export type DocumentAssociationEntityType = 'user' | 'ticket' | 'client' | 'contact' | 'asset' | 'project_task' | 'contract' | 'tenant' | 'quote' | 'invoice' | 'sales_order' | 'document' | 'opportunity';
 
 /** Logo slot for entity logos: light/dark mark, landscape wordmark, or favicon. */
 export type EntityLogoVariant = 'default' | 'dark' | 'wide' | 'wide-dark' | 'favicon';
+
+/**
+ * The square zone of a logo shown in avatar-sized slots, as fractions of the
+ * source image. 0..1 spans the image; a zone may reach past it (the user
+ * zoomed out) and is padded with transparency there. Fractions survive EXIF
+ * rotation, SVG rasterization and browser downscaling, which pixel offsets
+ * would not.
+ */
+export interface LogoCropRect {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+}
 
 export interface IDocumentAssociation extends TenantEntity {
     association_id: string;

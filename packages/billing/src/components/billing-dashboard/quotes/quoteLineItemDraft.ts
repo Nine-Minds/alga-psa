@@ -24,6 +24,7 @@ export type DraftQuoteItem = {
   /** True when the service has no price in the quote's currency and the user must enter one. */
   needs_price?: boolean;
   unit_of_measure?: string | null;
+  unit_code?: string | null;
   phase?: string | null;
   is_optional: boolean;
   is_selected: boolean;
@@ -71,6 +72,7 @@ export function createDraftQuoteItemFromQuoteItem(item: IQuoteItem): DraftQuoteI
     cost: item.cost ?? null,
     cost_currency: item.cost_currency ?? null,
     unit_of_measure: item.unit_of_measure ?? null,
+    unit_code: item.unit_code ?? null,
     phase: item.phase ?? null,
     is_optional: Boolean(item.is_optional),
     is_selected: item.is_selected ?? true,
@@ -110,6 +112,7 @@ export function createDraftQuoteItemFromService(item: CatalogPickerItem, quoteCu
     cost_currency: item.item_kind === 'product' ? (item.cost_currency ?? null) : null,
     needs_price: needsPrice,
     unit_of_measure: item.unit_of_measure ?? null,
+    unit_code: item.unit_code ?? null,
     phase: null,
     is_optional: false,
     is_selected: true,

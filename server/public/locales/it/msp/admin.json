@@ -9,7 +9,8 @@
       "edit": "Modifica",
       "delete": "Elimina",
       "deleting": "Eliminazione in corso…",
-      "verify": "Verifica"
+      "verify": "Verifica",
+      "cancel": "Annulla"
     },
     "states": {
       "active": "Attivo",
@@ -226,7 +227,53 @@
         "companyFallback": "l’azienda del tuo tenant"
       },
       "warningTitle": "Controlla l’instradamento delle risposte",
-      "errorTitle": "Correggi l’identità dei ticket"
+      "errorTitle": "Correggi l’identità dei ticket",
+      "addresses": {
+        "title": "Indirizzi mittente",
+        "description": "Crea indirizzi nominativi per le email in uscita."
+      },
+      "routing": {
+        "title": "Instradamento mittenti",
+        "description": "Scegli quale mittente usare per ogni classe di email.",
+        "default": "Predefinito (tutte le altre email)",
+        "useDefault": "Usa predefinito",
+        "sender": "Mittente",
+        "displayName": "Nome visualizzato",
+        "boardSummary": "I mittenti dei ticket per scheda si gestiscono nelle impostazioni di ciascuna scheda.",
+        "ticket": "Email ticket",
+        "project": "Email progetto",
+        "billing": "Email fatturazione",
+        "sales": "Email vendite",
+        "scheduling": "Email pianificazione",
+        "survey": "Email sondaggio",
+        "account": "Email account",
+        "general": "Email generica",
+        "noneProviderFrom": "Nessuno (usa il mittente del provider)",
+        "confirmSmtp": "Confermo che il relay SMTP accetta questo indirizzo mittente.",
+        "inboundReplyWarning": "Le risposte in entrata continuano a raggiungere la casella configurata; cambiare questo indirizzo non modifica l’instradamento delle risposte.",
+        "unknownBoard": "Bacheca sconosciuta"
+      },
+      "actions": {
+        "add": "Aggiungi mittente",
+        "verify": "Verifica",
+        "delete": "Elimina"
+      },
+      "fields": {
+        "address": "Indirizzo email",
+        "localPart": "Nome indirizzo",
+        "domain": "Dominio verificato",
+        "sendThrough": "Invia tramite",
+        "displayName": "Nome visualizzato",
+        "displayNamePlaceholder": "Team di supporto"
+      },
+      "smtpHelp": "Il relay SMTP deve consentire questo indirizzo.",
+      "microsoftHelp": "La casella connessa deve avere l’autorizzazione Exchange Send As per questo indirizzo.",
+      "errors": {
+        "duplicateAddress": "Questo indirizzo mittente esiste già.",
+        "saveFailed": "Impossibile aggiungere il mittente. Controlla l’indirizzo e riprova.",
+        "duplicateRoute": "Questa regola mittente esiste già.",
+        "saveRoutingFailed": "Impossibile salvare la regola mittente. Riprova."
+      }
     }
   },
   "microsoft365": {
@@ -253,7 +300,8 @@
     },
     "states": {
       "running": "Diagnostica in esecuzione...",
-      "diagnosticsFailed": "Diagnostica non riuscita"
+      "diagnosticsFailed": "Diagnostica non riuscita",
+      "callbackDiagnosticsCaptured": "Diagnostica del callback acquisita il {{timestamp}}."
     },
     "statuses": {
       "pass": "Superato",

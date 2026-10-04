@@ -1,7 +1,6 @@
 'use client';
 
 import { isBilledTimeCollection } from '../utils/billedTimeUi';
-import { useFeatureFlag } from '@alga-psa/ui/hooks/useFeatureFlag';
 import { INVOICE_COLLECTION_DESCRIPTORS, humanizeCollectionBindingLabel, resolveCollectionDescriptor } from '../../../lib/invoice-template-ast/collectionDescriptors';
 
 import React, { useEffect, useMemo, useState } from 'react';
@@ -273,7 +272,6 @@ const TransformsWorkspace: React.FC<Props> = ({
   loadExistingInvoiceOptions,
 }) => {
   const { t } = useTranslation('msp/invoicing');
-  const { enabled: releaseV16Enabled } = useFeatureFlag('release-v1-6-feature');
   const nodes = useInvoiceDesignerStore((state) => state.nodes);
   const rootId = useInvoiceDesignerStore((state) => state.rootId);
   const snapToGrid = useInvoiceDesignerStore((state) => state.snapToGrid);
@@ -414,8 +412,8 @@ const TransformsWorkspace: React.FC<Props> = ({
       });
     }
 
-    return options.filter(option => releaseV16Enabled || option.value === transforms.sourceBindingId || !isBilledTimeCollection(option.path)).sort((left, right) => left.label.localeCompare(right.label));
-  }, [baseAst, collectionPathById, previewData, sourceCollection.length, transforms.sourceBindingId, t, previewDocumentKind, releaseV16Enabled]);
+    return options.sort((left, right) => left.label.localeCompare(right.label));
+  }, [baseAst, collectionPathById, previewData, sourceCollection.length, transforms.sourceBindingId, t, previewDocumentKind]);
 
   const selectedSourceOption = useMemo(
     () => sourceCollectionOptions.find((option) => option.value === transforms.sourceBindingId) ?? null,
@@ -703,6 +701,7 @@ const TransformsWorkspace: React.FC<Props> = ({
               {t('invoiceDesigner.transforms.inspector.field', { defaultValue: 'Field' })}
             </label>
             <CustomSelect
+              showPlaceholderInDropdown={false}
               id={`transform-filter-field-${selectedOperation.id}`}
               options={sourceFieldPaths.map((path) => ({ value: path, label: path }))}
               value={predicate.path}
@@ -726,6 +725,7 @@ const TransformsWorkspace: React.FC<Props> = ({
               {t('invoiceDesigner.transforms.inspector.operator', { defaultValue: 'Operator' })}
             </label>
             <CustomSelect
+              showPlaceholderInDropdown={false}
               id={`transform-filter-operator-${selectedOperation.id}`}
               options={buildFilterOperatorOptions(t)}
               value={predicate.op}
@@ -824,6 +824,7 @@ const TransformsWorkspace: React.FC<Props> = ({
                   {t('invoiceDesigner.transforms.inspector.field', { defaultValue: 'Field' })}
                 </label>
                 <CustomSelect
+                  showPlaceholderInDropdown={false}
                   id={`transform-sort-field-${selectedOperation.id}-${index}`}
                   options={sourceFieldPaths.map((path) => ({ value: path, label: path }))}
                   value={key.path}
@@ -845,6 +846,7 @@ const TransformsWorkspace: React.FC<Props> = ({
                   {t('invoiceDesigner.transforms.inspector.direction', { defaultValue: 'Direction' })}
                 </label>
                 <CustomSelect
+                  showPlaceholderInDropdown={false}
                   id={`transform-sort-direction-${selectedOperation.id}-${index}`}
                   options={buildSortDirectionOptions(t)}
                   value={key.direction ?? 'asc'}
@@ -890,6 +892,7 @@ const TransformsWorkspace: React.FC<Props> = ({
               {t('invoiceDesigner.transforms.inspector.groupField', { defaultValue: 'Group field' })}
             </label>
             <CustomSelect
+              showPlaceholderInDropdown={false}
               id={`transform-group-key-${selectedOperation.id}`}
               options={sourceFieldPaths.map((path) => ({ value: path, label: path }))}
               value={selectedOperation.key}
@@ -994,6 +997,7 @@ const TransformsWorkspace: React.FC<Props> = ({
                   {t('invoiceDesigner.transforms.inspector.operation', { defaultValue: 'Operation' })}
                 </label>
                 <CustomSelect
+                  showPlaceholderInDropdown={false}
                   id={`transform-aggregate-op-${selectedOperation.id}-${index}`}
                   options={buildAggregationOptions(t)}
                   value={aggregation.op}
@@ -1022,6 +1026,7 @@ const TransformsWorkspace: React.FC<Props> = ({
                     {t('invoiceDesigner.transforms.inspector.field', { defaultValue: 'Field' })}
                   </label>
                   <CustomSelect
+                    showPlaceholderInDropdown={false}
                     id={`transform-aggregate-path-${selectedOperation.id}-${index}`}
                     options={sourceFieldPaths.map((path) => ({ value: path, label: path }))}
                     value={aggregation.path ?? ''}
@@ -1107,8 +1112,9 @@ const TransformsWorkspace: React.FC<Props> = ({
                     {t('invoiceDesigner.transforms.source.sampleScenario', { defaultValue: 'Sample scenario' })}
                   </label>
                   <CustomSelect
+                    showPlaceholderInDropdown={false}
                     id="invoice-designer-transforms-sample-select"
-                    options={sampleScenarios.filter(scenario => releaseV16Enabled || scenario.id !== 'sample-ticket-time-detail').map((scenario) => ({
+                    options={sampleScenarios.map((scenario) => ({
                       value: scenario.id,
                       label: scenario.label,
                     }))}
@@ -1159,6 +1165,7 @@ const TransformsWorkspace: React.FC<Props> = ({
               {t('invoiceDesigner.transforms.source.collection', { defaultValue: 'Source collection' })}
             </label>
             <CustomSelect
+              showPlaceholderInDropdown={false}
               id="invoice-designer-transforms-source-binding"
               options={sourceCollectionOptions.map((option) => ({
                 value: option.value,

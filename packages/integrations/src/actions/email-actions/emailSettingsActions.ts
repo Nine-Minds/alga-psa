@@ -28,8 +28,6 @@ import { isValidEmail } from '@alga-psa/validation';
 
 type EmailSettingsUpdateInput = Omit<Partial<TenantEmailSettings>, 'defaultFromDomain' | 'ticketingFromEmail' | 'ticketingFromName'> & {
   defaultFromDomain?: string | null;
-  ticketingFromEmail?: string | null;
-  ticketingFromName?: string | null;
 };
 
 // getEmailSettings masks stored secrets as this sentinel so they are never
@@ -123,10 +121,11 @@ async function toEmailSettingsView(
 }
 
 export const getEmailSettings = withAuth(async (
-  _user,
+  user,
   { tenant }
 ): Promise<EmailSettingsView | null | ActionMessageError> => {
   const { knex } = await createTenantKnex();
+  if (!await hasPermission(user, 'settings', 'read', knex)) return actionError('You do not have permission to read email settings', 'errors.permissionDenied');
 
   try {
     // Use TenantEmailService to get email settings
@@ -138,8 +137,6 @@ export const getEmailSettings = withAuth(async (
       const defaultSettings: TenantEmailSettings = {
         tenantId: tenant || '',
         defaultFromDomain: process.env.EMAIL_FROM ? extractDomain(process.env.EMAIL_FROM) || undefined : undefined,
-        ticketingFromEmail: undefined,
-        ticketingFromName: null,
         customDomains: [],
         emailProvider: 'smtp',
         providerConfigs: [{
@@ -182,11 +179,12 @@ export const getEmailSettings = withAuth(async (
 });
 
 export const updateEmailSettings = withAuth(async (
-  _user,
+  user,
   { tenant },
   updates: EmailSettingsUpdateInput
 ): Promise<EmailSettingsView | ActionMessageError> => {
   const { knex } = await createTenantKnex();
+  if (!await hasPermission(user, 'settings', 'update', knex)) return actionError('You do not have permission to update email settings', 'errors.permissionDenied');
 
   try {
     const now = new Date();
@@ -196,12 +194,6 @@ export const updateEmailSettings = withAuth(async (
     let nextDefaultFromDomain = hasOwnUpdate(updates, 'defaultFromDomain')
       ? updates.defaultFromDomain?.trim() || undefined
       : existingSettings?.defaultFromDomain;
-    let nextTicketingFromEmail = hasOwnUpdate(updates, 'ticketingFromEmail')
-      ? updates.ticketingFromEmail?.trim() || null
-      : existingSettings?.ticketingFromEmail ?? null;
-    const nextTicketingFromName = hasOwnUpdate(updates, 'ticketingFromName')
-      ? normalizeOptionalString(updates.ticketingFromName)
-      : existingSettings?.ticketingFromName ?? null;
 
     let mergedProviderConfigs = updates.providerConfigs
       ? mergeProviderSecrets(updates.providerConfigs, existingSettings?.providerConfigs)
@@ -228,17 +220,6 @@ export const updateEmailSettings = withAuth(async (
       }
       if (microsoftProvider.status !== 'connected') {
         return actionError('Reconnect the selected Microsoft 365 mailbox before using it for outbound email', 'msp/email-providers:errors.settings.mailboxReconnect');
-      }
-
-      if (
-        nextTicketingFromEmail
-        && nextTicketingFromEmail.toLowerCase() !== microsoftProvider.mailbox.toLowerCase()
-      ) {
-        return actionError(
-          `Ticket email identity must use the selected Microsoft 365 mailbox (${microsoftProvider.mailbox}). Update the Ticket emails address before saving.`,
-          'msp/email-providers:errors.settings.ticketIdentityMustMatchMailbox',
-          { mailbox: microsoftProvider.mailbox },
-        );
       }
 
       const notificationFromName = normalizeOptionalString(
@@ -268,11 +249,29 @@ export const updateEmailSettings = withAuth(async (
       isEnabled: config.providerType === selectedProviderType,
     }));
 
+    const senderRows = await tenantDb(knex, tenant || '').table('email_sender_addresses').select('*');
+    const invalidSenders: string[] = [];
+    for (const sender of senderRows) {
+      if (selectedProviderType === 'resend') {
+        const domain = extractDomain(sender.email_address);
+        const verifiedDomain = domain && await tenantDb(knex, tenant || '').table('email_domains')
+          .where({ domain_name: domain, status: 'verified' }).first('domain_name');
+        if (!verifiedDomain) invalidSenders.push(sender.email_address);
+      } else if (selectedProviderType === 'microsoft') {
+        const provider = sender.microsoft_provider_id && await tenantDb(knex, tenant || '').table('email_providers')
+          .where({ id: sender.microsoft_provider_id, provider_type: 'microsoft', is_active: true, status: 'connected' }).first('id');
+        if (!provider) invalidSenders.push(sender.email_address);
+      } else if (selectedProviderType === 'smtp' && !isValidEmail(sender.email_address)) {
+        invalidSenders.push(sender.email_address);
+      }
+    }
+    if (invalidSenders.length) {
+      return actionError(`Cannot change transport. These sender addresses would no longer work: ${invalidSenders.join(', ')}`, 'msp/email-providers:errors.settings.transportInvalidatesSenders', { senders: invalidSenders.join(', ') });
+    }
+
     const mergedSettings: TenantEmailSettings = {
       tenantId: tenant || '',
       defaultFromDomain: nextDefaultFromDomain,
-      ticketingFromEmail: nextTicketingFromEmail,
-      ticketingFromName: nextTicketingFromName,
       customDomains: updates.customDomains ?? existingSettings?.customDomains ?? [],
       emailProvider: selectedProviderType,
       providerConfigs: normalizedProviderConfigs,
@@ -310,36 +309,15 @@ export const updateEmailSettings = withAuth(async (
         );
       }
     }
-    if (
-      hasOwnUpdate(updates, 'ticketingFromEmail')
-      && mergedSettings.ticketingFromEmail
-      && !isValidEmail(mergedSettings.ticketingFromEmail)
-    ) {
-      return actionError('Ticketing From address must be a valid email address', 'msp/email-providers:errors.settings.ticketingFromInvalid');
-    }
-
     const targetDomain = mergedSettings.defaultFromDomain?.trim().toLowerCase();
     // Same schema as the address checks: a domain is valid iff an address on it is.
     if (hasOwnUpdate(updates, 'defaultFromDomain') && targetDomain && !isValidEmail(`sender@${targetDomain}`)) {
       return actionError('Outbound sending domain must be a valid domain (e.g. example.com)', 'msp/email-providers:errors.settings.outboundDomainInvalid');
     }
-    if (mergedSettings.ticketingFromEmail) {
-      if (!targetDomain) {
-        return actionError('Configure an outbound domain before choosing a ticketing From address', 'msp/email-providers:errors.settings.outboundDomainRequired');
-      }
-
-      const fromDomain = extractDomain(mergedSettings.ticketingFromEmail);
-      if (!fromDomain || fromDomain !== targetDomain) {
-        return actionError('Ticketing From address must use the configured outbound domain', 'msp/email-providers:errors.settings.ticketingFromDomainMismatch');
-      }
-    }
-
     // Prepare data for database
     const settingsData = {
       tenant: tenant,
       default_from_domain: mergedSettings.defaultFromDomain ?? null,
-      ticketing_from_email: mergedSettings.ticketingFromEmail || null,
-      ticketing_from_name: mergedSettings.ticketingFromName || null,
       custom_domains: JSON.stringify(mergedSettings.customDomains || []),
       email_provider: mergedSettings.emailProvider,
       provider_configs: JSON.stringify(mergedSettings.providerConfigs || []),
@@ -348,22 +326,29 @@ export const updateEmailSettings = withAuth(async (
       updated_at: now
     };
 
-    const settingsTable = () => tenantDb(knex, tenant).table('tenant_email_settings');
+    await knex.transaction(async (trx) => {
+      const settingsTable = () => tenantDb(trx, tenant).table('tenant_email_settings');
 
-    // Check if settings exist
-    const existing = await settingsTable().first();
+      // Check if settings exist
+      const existing = await settingsTable().first();
 
-    if (existing) {
-      // Update existing settings
-      await settingsTable().update(settingsData);
-    } else {
-      // Create new settings
-      await settingsTable()
-        .insert({
-          ...settingsData,
-          created_at: now
-        });
-    }
+      if (existing) {
+        // Update settings and transport-specific sender links together.
+        await settingsTable().update(settingsData);
+      } else {
+        await settingsTable()
+          .insert({
+            ...settingsData,
+            created_at: now
+          });
+      }
+
+      if (selectedProviderType.toLowerCase() !== 'microsoft') {
+        await tenantDb(trx, tenant).table('email_sender_addresses')
+          .whereNotNull('microsoft_provider_id')
+          .update({ microsoft_provider_id: null, updated_at: now });
+      }
+    });
 
     // Refresh any process-local singleton immediately. TenantEmailService also
     // checks persisted settings before every send, covering other processes and

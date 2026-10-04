@@ -1,5 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
+import axios from 'axios';
 import { MicrosoftGraphAdapter } from '../MicrosoftGraphAdapter';
+import { runMicrosoftOAuthCallbackDiagnostic } from '../../microsoftOAuthCallbackDiagnostic';
 
 function makeJwt(payload: Record<string, any>) {
   const header = Buffer.from(JSON.stringify({ alg: 'none', typ: 'JWT' })).toString('base64url');
@@ -7,7 +9,7 @@ function makeJwt(payload: Record<string, any>) {
   return `${header}.${body}.sig`;
 }
 
-function makeAdapter(overrides?: Partial<any>) {
+function makeAdapter(overrides?: Partial<any>, adapterOptions?: { persistRefreshedCredentials?: boolean }) {
   const config: any = {
     id: 'provider-1',
     tenant: 'tenant-1',
@@ -23,12 +25,13 @@ function makeAdapter(overrides?: Partial<any>) {
     provider_config: {
       access_token: makeJwt({ tid: 'tid', scp: 'Mail.Read Mail.Read.Shared', aud: 'graph' }),
       refresh_token: 'refresh-token',
+      client_secret: 'client-secret-value',
       token_expires_at: new Date(Date.now() + 60_000).toISOString(),
     },
     ...overrides,
   };
 
-  const adapter = new MicrosoftGraphAdapter(config);
+  const adapter = new MicrosoftGraphAdapter(config, adapterOptions);
 
   const get = async (path: string) => {
     if (path === '/me') {
@@ -115,7 +118,14 @@ describe('MicrosoftGraphAdapter.runMicrosoft365Diagnostics', () => {
     expect(subStep?.status).toBe('pass');
     expect((subStep?.data as any)?.createdSubscriptionId).toBe('sub-1');
     expect((subStep?.data as any)?.deletedSubscriptionId).toBe('sub-1');
+
+    const serialized = JSON.stringify(report);
+    expect(serialized).not.toContain('refresh-token');
+    expect(serialized).not.toContain('Authorization');
+    expect(serialized).not.toContain('client-secret-value');
+    expect(serialized).not.toContain(makeJwt({ tid: 'tid', scp: 'Mail.Read Mail.Read.Shared', aud: 'graph' }));
   });
+
 
   it('warns when delegated scopes are missing', async () => {
     const adapter = makeAdapter({
@@ -136,6 +146,33 @@ describe('MicrosoftGraphAdapter.runMicrosoft365Diagnostics', () => {
     expect(report.recommendations.join('\n')).toContain('Mail.Read.Shared');
   });
 
+  it('warns on unavailable mailbox directory and root listing while Inbox succeeds', async () => {
+    const adapter = makeAdapter();
+    (adapter as any).httpClient = {
+      get: async (path: string) => {
+        if (path === '/me') return { status: 200, data: { id: 'me', userPrincipalName: 'admin@example.com' }, headers: {} };
+        if (path === '/users/support%40example.com') throw {
+          config: { url: path }, response: { status: 404, headers: { 'request-id': 'rid-directory' }, data: { error: { code: 'ErrorItemNotFound', message: 'Not found' } } },
+        };
+        if (path === '/users/support%40example.com/mailFolders/inbox') return { status: 200, data: { id: 'inbox-id', displayName: 'Inbox' }, headers: { 'request-id': 'rid-inbox' } };
+        if (path === '/users/support%40example.com/mailFolders') throw {
+          config: { url: path }, response: { status: 404, headers: { 'request-id': 'rid-root' }, data: { error: { code: 'ErrorItemNotFound', message: 'Default folder Root not found' } } },
+        };
+        if (path === '/users/support%40example.com/mailFolders/inbox/messages') return { status: 200, data: { value: [] }, headers: {} };
+        throw new Error(`Unexpected GET ${path}`);
+      },
+    };
+
+    const report = await adapter.runMicrosoft365Diagnostics({ includeIdentifiers: true, liveSubscriptionTest: false });
+    const directory = report.steps.find((step) => step.id === 'mailbox_directory');
+    const root = report.steps.find((step) => step.id === 'folder_list');
+    const inbox = report.steps.find((step) => step.id === 'inbox_well_known');
+    expect(directory).toMatchObject({ status: 'warn', http: { status: 404, requestId: 'rid-directory' } });
+    expect(root).toMatchObject({ status: 'warn', http: { status: 404, requestId: 'rid-root' } });
+    expect(inbox?.status).toBe('pass');
+    expect(report.recommendations.join('\n')).not.toContain('Root folder listing');
+  });
+
   it('returns raw MIME bytes from downloadMessageSource', async () => {
     const adapter = makeAdapter();
     (adapter as any).httpClient = {
@@ -149,6 +186,77 @@ describe('MicrosoftGraphAdapter.runMicrosoft365Diagnostics', () => {
 
     const buffer = await adapter.downloadMessageSource('message-1');
     expect(buffer.toString('utf8')).toContain('From: sender@example.com');
+  });
+
+  it('does not persist a token refresh during diagnostics when persistence is disabled', async () => {
+    const adapter = makeAdapter({
+      provider_config: {
+        client_id: 'client-id',
+        client_secret: 'client-secret-value',
+        access_token: makeJwt({ tid: 'tid', scp: 'Mail.Read Mail.Read.Shared', aud: 'graph' }),
+        refresh_token: 'refresh-token',
+        token_expires_at: new Date(Date.now() - 60_000).toISOString(),
+      },
+    }, { persistRefreshedCredentials: false });
+    const postSpy = vi.spyOn(axios, 'post').mockResolvedValue({
+      data: { access_token: 'refreshed-access-token', refresh_token: 'refreshed-refresh-token', expires_in: 3600 },
+    } as any);
+    const getAdminConnection = await import('../../../../db/admin');
+    const dbPackage = await import('@alga-psa/db');
+    const adminSpy = vi.spyOn(getAdminConnection, 'getAdminConnection').mockRejectedValue(new Error('DB write must not be attempted'));
+    const tenantDbSpy = vi.spyOn(dbPackage, 'tenantDb');
+    const originalHttpClient = (adapter as any).httpClient;
+    const originalGet = originalHttpClient.get;
+    originalHttpClient.get = async (path: string, options?: any) => {
+      await (adapter as any).ensureValidToken();
+      return originalGet(path, options);
+    };
+
+    try {
+      const report = await adapter.runMicrosoft365Diagnostics({ includeIdentifiers: true, liveSubscriptionTest: false });
+      expect(postSpy).toHaveBeenCalledOnce();
+      expect(report.steps.find((step) => step.id === 'tokens_present')?.status).toBe('pass');
+      expect(adminSpy).not.toHaveBeenCalled();
+      expect(tenantDbSpy).not.toHaveBeenCalled();
+    } finally {
+      postSpy.mockRestore();
+      adminSpy.mockRestore();
+      tenantDbSpy.mockRestore();
+    }
+  });
+
+  it('returns a redacted callback diagnostic envelope using only in-memory tokens', async () => {
+    const callbackAccessToken = 'callback-access-token-secret';
+    const callbackRefreshToken = 'callback-refresh-token-secret';
+    const stored = await runMicrosoftOAuthCallbackDiagnostic({
+      provider: {
+        id: 'provider-callback', tenant: 'tenant-1', provider_name: 'Support', mailbox: 'support@example.com',
+        is_active: true, status: 'error', created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
+      },
+      vendorConfig: { client_secret: 'stored-client-secret-value' },
+      accessToken: callbackAccessToken,
+      refreshToken: callbackRefreshToken,
+      expiresAt: new Date(Date.now() + 60_000),
+    }, (config) => {
+      const adapter = new MicrosoftGraphAdapter(config, { persistRefreshedCredentials: false });
+      (adapter as any).httpClient = { get: async (path: string) => {
+        if (path === '/me') return { status: 200, data: { id: 'me', userPrincipalName: 'admin@example.com' }, headers: {} };
+        if (path === '/users/support%40example.com') return { status: 200, data: { id: 'support' }, headers: {} };
+        if (path === '/users/support%40example.com/mailFolders/inbox') return { status: 200, data: { id: 'inbox-id', displayName: 'Inbox' }, headers: {} };
+        if (path === '/users/support%40example.com/mailFolders') return { status: 200, data: { value: [{ id: 'inbox-id', displayName: 'Inbox' }] }, headers: {} };
+        if (path === '/users/support%40example.com/mailFolders/inbox/messages') return { status: 200, data: { value: [] }, headers: {} };
+        throw new Error(`Unexpected GET ${path}`);
+      } };
+      return adapter;
+    });
+
+    expect(stored).toMatchObject({ source: 'oauth_callback', report: { summary: { providerId: 'provider-callback' } } });
+    expect(Number.isNaN(Date.parse(stored.createdAt))).toBe(false);
+    const serialized = JSON.stringify(stored);
+    expect(serialized).not.toContain(callbackAccessToken);
+    expect(serialized).not.toContain(callbackRefreshToken);
+    expect(serialized).not.toContain('stored-client-secret-value');
+    expect(serialized).not.toContain('Authorization');
   });
 
   it('requests html bodies and preserves html for inline image extraction', async () => {

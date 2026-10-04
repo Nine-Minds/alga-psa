@@ -165,6 +165,27 @@
         "loadStatuses": "Der Status des Verlängerungstickets konnte nicht geladen werden",
         "save": "Die Einstellungen für die Verlängerungsautomatisierung konnten nicht gespeichert werden"
       }
+    },
+    "quotes": {
+      "title": "Angebote",
+      "description": "Legen Sie die standardmäßige Gültigkeitsdauer für neue Angebote fest.",
+      "fields": {
+        "validityDays": {
+          "label": "Standardgültigkeitsdauer (Tage)",
+          "help": "Neue Angebote sind für diese Anzahl von Tagen gültig."
+        }
+      },
+      "actions": {
+        "save": "Speichern"
+      },
+      "toast": {
+        "updated": "Angebotseinstellungen wurden aktualisiert."
+      },
+      "errors": {
+        "load": "Einstellungen konnten nicht geladen werden",
+        "save": "Einstellungen konnten nicht gespeichert werden",
+        "range": "Geben Sie eine ganze Zahl von 1 bis 365 ein."
+      }
     }
   },
   "quoting": {
@@ -178,6 +199,8 @@
     }
   },
   "tax": {
+    "defaultRate": { "title": "Standardsteuersatz", "tooltip": "Wählen Sie den Steuersatz, den neue Kunden, Produkte und Services übernehmen.", "description": "Legen Sie den Steuersatz für neue Kunden und Katalogeinträge fest. Bestehende Datensätze bleiben unverändert.", "loading": "Standardsteuersatz wird geladen...", "empty": "Erstellen Sie einen aktiven Steuersatz, bevor Sie einen Standard auswählen.", "invalid": "Der konfigurierte Standard ist nicht mehr aktiv oder gültig. Wählen Sie einen anderen Satz.", "field": { "label": "Standardsteuersatz" }, "options": { "none": "Kein Mandantenstandard" }, "help": "Ohne Standard bleiben neue Katalogeinträge steuerfrei; neue Kunden verwenden, falls vorhanden, den ältesten aktiven Satz.", "actions": { "save": "Standard speichern", "saving": "Wird gespeichert..." }, "toast": { "saved": "Standardsteuersatz gespeichert." }, "errors": { "load": "Standardsteuersatz konnte nicht geladen werden.", "save": "Standardsteuersatz konnte nicht gespeichert werden." } },
+    "backfill": { "title": "Standard auf bestehende Katalogeinträge anwenden", "description": "Zeigen Sie Produkte und Services ohne Steuersatz in der Vorschau an.", "warning": "Dies ändert die zukünftige Besteuerung und schreibt ausgestellte Rechnungen nicht neu.", "loading": "Vorschau wird geladen...", "empty": "Keine geeigneten Produkte oder Services gefunden.", "target": "Zielsatz: {{rate}}", "count": "{{count}} geeignete Einträge", "dialog": { "title": "Standardsteuersatz anwenden" }, "actions": { "preview": "Bestehende Einträge prüfen", "apply": "Auswahl anwenden", "applying": "Wird angewendet..." }, "toast": { "applied": "Standardsteuersatz auf ausgewählte Einträge angewendet." }, "errors": { "preview": "Katalogvorschau konnte nicht geladen werden.", "apply": "Standardsteuersatz konnte nicht angewendet werden." } },
     "taxRegions": {
       "title": "Steuerregionen",
       "description": "Steuerregionen und zugehörige Einstellungen verwalten."
@@ -704,7 +727,8 @@
       "allServiceTypes": "Alle Servicetypen",
       "serviceTypePlaceholder": "Nach Servicetyp filtern...",
       "allBillingMethods": "Alle Abrechnungsmethoden",
-      "billingMethodPlaceholder": "Nach Abrechnungsmethode filtern..."
+      "billingMethodPlaceholder": "Nach Abrechnungsmethode filtern...",
+      "searchPlaceholder": "Dienste nach Name, SKU oder Beschreibung suchen..."
     },
     "fields": {
       "serviceName": {
@@ -826,7 +850,9 @@
       "validateDelete": "Der Löschvorgang konnte nicht bestätigt werden. Bitte versuchen Sie es erneut.",
       "delete": "Der Dienst konnte nicht gelöscht werden",
       "deactivate": "Der Dienst konnte nicht deaktiviert werden"
-    }
+    },
+    "emptySearch": "Keine Dienste entsprechen Ihrer Suche.",
+    "clearFilters": "Filter zurücksetzen"
   },
   "products": {
     "title": "Produkte",
@@ -949,14 +975,14 @@
         }
       },
       "unitOfMeasure": {
-        "label": "Maßeinheit *",
+        "label": "Maßeinheit",
         "placeholder": "z. B. GB, API-Aufruf, Benutzer",
         "help": "Die messbare Einheit für die Abrechnung (z. B. GB, API-Aufruf, Benutzer)"
       },
       "taxRate": {
         "label": "Steuersatz (optional)",
         "placeholder": "Steuersatz auswählen (optional)",
-        "loading": "Steuersätze werden geladen..."
+        "loading": "Steuersätze werden geladen...", "inherit": "Mandantenstandard verwenden", "inheritNamed": "Mandantenstandard verwenden ({{rate}})", "nonTaxable": "Nicht steuerpflichtig"
       },
       "sku": {
         "label": "Artikelnummer",
@@ -983,7 +1009,8 @@
       "billingMethodRequired": "Abrechnungsmethode ist erforderlich",
       "skuRequiredForHardware": "Für Hardware ist eine SKU erforderlich",
       "licenseTermRequired": "Für Softwarelizenzen ist eine Lizenzlaufzeit erforderlich",
-      "selectedTypeNotFound": "Ausgewählter Diensttyp nicht gefunden"
+      "selectedTypeNotFound": "Ausgewählter Diensttyp nicht gefunden",
+      "unitOfMeasureRequired": "Maßeinheit ist erforderlich"
     },
     "errors": {
       "fetchCategories": "Kategorien konnten nicht abgerufen werden",
@@ -1021,7 +1048,8 @@
       },
       "label": {
         "label": "Kategoriebezeichnung",
-        "placeholder": "Optionale freie Bezeichnung"
+        "placeholder": "Optionale freie Bezeichnung",
+        "help": "Interner Bezeichner wie Hersteller/Modell; durchsuchbar, wird Kunden nie angezeigt."
       },
       "vendor": {
         "label": "Verkäufer"
@@ -1050,13 +1078,13 @@
       "taxRate": {
         "label": "Steuersatz",
         "placeholder": "Nicht steuerpflichtig",
-        "loading": "Laden..."
+        "loading": "Laden...", "inherit": "Mandantenstandard verwenden", "inheritNamed": "Mandantenstandard verwenden ({{rate}})", "nonTaxable": "Nicht steuerpflichtig"
       },
       "active": {
         "label": "Aktiv"
       },
       "unitOfMeasure": {
-        "label": "Maßeinheit *",
+        "label": "Maßeinheit",
         "placeholder": "z. B. „jeder“, „Artikel“, „Lizenz“."
       },
       "license": {
@@ -1293,7 +1321,10 @@
       "regionInvalid": "Die ausgewählte Steuerregion ist nicht mehr gültig. Bitte aktualisieren Sie die Seite und wählen Sie eine andere Region.",
       "duplicate": "Für diese Region und diesen Zeitraum existiert bereits ein Steuersatz.",
       "missingField": "Erforderliches Steuersatzfeld fehlt.",
-      "missingFieldNamed": "Erforderliches Steuersatzfeld fehlt: {{field}}."
+      "missingFieldNamed": "Erforderliches Steuersatzfeld fehlt: {{field}}.",
+      "capInvalid": "Die Steuerobergrenze muss eine nicht negative, sicher darstellbare ganze Zahl in kleinsten Währungseinheiten sein.",
+      "capCurrencyRequired": "Wählen Sie eine Währung, bevor Sie eine Steuerobergrenze festlegen oder ändern.",
+      "currencyInvalid": "Wählen Sie eine unterstützte Währung für den Steuersatz."
     },
     "tax": {
       "defaultRequiresActiveRate": "Konfigurieren Sie mindestens einen aktiven Steuersatz, bevor Sie Standard-Steuereinstellungen erstellen.",
@@ -1422,6 +1453,15 @@
       "actions": {
         "save": "Einstellungen speichern",
         "saving": "Wird gespeichert..."
+      },
+      "autopay": {
+        "label": "Automatische Zahlung zulassen",
+        "description": "Abrechnungsprofilen erlauben, automatische Kartenzahlungen zu autorisieren.",
+        "chargeTiming": "Belastungszeitpunkt",
+        "onFinalize": "Bei Abschluss der Rechnung",
+        "onDueDate": "Am Fälligkeitsdatum",
+        "retryDays": "Wiederholungsintervalle (Tage)",
+        "consentText": "Einwilligungstext für die automatische Zahlung"
       }
     },
     "stripe": {

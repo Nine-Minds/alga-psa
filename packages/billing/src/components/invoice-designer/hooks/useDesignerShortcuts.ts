@@ -1,55 +1,27 @@
 import { useCallback } from 'react';
 import { useCatalogShortcut, useShortcutScope } from '@alga-psa/ui/keyboard-shortcuts';
 import { useInvoiceDesignerStore } from '../state/designerStore';
-import { DESIGNER_CANVAS_BOUNDS } from '../constants/layout';
+import { useStructureCommands } from './useStructureCommands';
+
+// Keys typed in a panel control, or in an open dropdown/menu/dialog (portaled to
+// the body, so outside the panels), belong to that control, never to the block.
+const NON_CANVAS_TARGET_SELECTOR = [
+  '[data-automation-id="designer-shell-inspector-panel"]',
+  '[data-automation-id="designer-shell-palette-panel"]',
+  '[role="listbox"]',
+  '[role="menu"]',
+  '[role="dialog"]',
+  '[data-radix-popper-content-wrapper]',
+].join(', ');
 
 export const useDesignerShortcuts = () => {
   const undo = useInvoiceDesignerStore((state) => state.undo);
   const redo = useInvoiceDesignerStore((state) => state.redo);
-  const deleteSelectedNode = useInvoiceDesignerStore((state) => state.deleteSelectedNode);
   const selectNode = useInvoiceDesignerStore((state) => state.selectNode);
   const selectedNodeId = useInvoiceDesignerStore((state) => state.selectedNodeId);
-  const nodesById = useInvoiceDesignerStore((state) => state.nodesById);
-  const setNodeProp = useInvoiceDesignerStore((state) => state.setNodeProp);
-  const snapToGrid = useInvoiceDesignerStore((state) => state.snapToGrid);
-  const gridSize = useInvoiceDesignerStore((state) => state.gridSize);
+  const { available, run } = useStructureCommands();
 
   useShortcutScope('editor');
-
-  const moveSelectedNode = useCallback((dx: number, dy: number) => {
-    if (!selectedNodeId) {
-      return false;
-    }
-
-    const delta = snapToGrid ? gridSize : 4;
-    const node = nodesById[selectedNodeId];
-    if (!node) {
-      return false;
-    }
-
-    const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
-    const desired = {
-      x: node.position.x + dx * delta,
-      y: node.position.y + dy * delta,
-    };
-    const clamped = {
-      x: clamp(desired.x, 0, DESIGNER_CANVAS_BOUNDS.width - 10),
-      y: clamp(desired.y, 0, DESIGNER_CANVAS_BOUNDS.height - 10),
-    };
-
-    if (dx !== 0 && dy !== 0) {
-      setNodeProp(selectedNodeId, 'position.x', clamped.x, false);
-      setNodeProp(selectedNodeId, 'position.y', clamped.y, true);
-      return;
-    }
-    if (dx !== 0) {
-      setNodeProp(selectedNodeId, 'position.x', clamped.x, true);
-      return;
-    }
-    if (dy !== 0) {
-      setNodeProp(selectedNodeId, 'position.y', clamped.y, true);
-    }
-  }, [gridSize, nodesById, selectedNodeId, setNodeProp, snapToGrid]);
 
   const undoShortcut = useCallback(() => {
     undo();
@@ -57,25 +29,50 @@ export const useDesignerShortcuts = () => {
   const redoShortcut = useCallback(() => {
     redo();
   }, [redo]);
-  const deleteSelectionShortcut = useCallback(() => {
+  const cancelShortcut = useCallback((event: KeyboardEvent) => {
     if (!selectedNodeId) return false;
-    deleteSelectedNode();
-  }, [deleteSelectedNode, selectedNodeId]);
-  const cancelShortcut = useCallback(() => {
-    if (!selectedNodeId) return false;
+    const target = event.target instanceof Element ? event.target : null;
+    // Escape that closes a dropdown or popover belongs to that control alone.
+    if (target?.closest('[role="listbox"], [role="menu"], [data-radix-popper-content-wrapper]')) {
+      return false;
+    }
+    // From inside the inspector, Escape first leaves the control; the next one deselects.
+    if (target?.closest('[data-automation-id="designer-shell-inspector-panel"]')) {
+      (target as HTMLElement).blur?.();
+      return true;
+    }
     selectNode(null);
   }, [selectNode, selectedNodeId]);
-  const moveUpShortcut = useCallback(() => moveSelectedNode(0, -1), [moveSelectedNode]);
-  const moveDownShortcut = useCallback(() => moveSelectedNode(0, 1), [moveSelectedNode]);
-  const moveLeftShortcut = useCallback(() => moveSelectedNode(-1, 0), [moveSelectedNode]);
-  const moveRightShortcut = useCallback(() => moveSelectedNode(1, 0), [moveSelectedNode]);
 
+  // Structural keys act on the selected block only when focus is not on a panel
+  // control: an arrow key on an inspector button must not move the block.
+  const onBlock = useCallback(
+    (command: () => boolean) => (event: KeyboardEvent) => {
+      const target = event.target instanceof Element ? event.target : null;
+      if (target?.closest(NON_CANVAS_TARGET_SELECTOR)) {
+        return false;
+      }
+      return command();
+    },
+    []
+  );
+
+  // Blocks flow in their container, so arrow keys reorder them (as in auto-layout
+  // editors) instead of nudging coordinates the layout ignores.
   useCatalogShortcut('editor.undo', undoShortcut);
   useCatalogShortcut('editor.redo', redoShortcut);
-  useCatalogShortcut('editor.deleteSelection', deleteSelectionShortcut, { enabled: Boolean(selectedNodeId) });
+  useCatalogShortcut('editor.deleteSelection', onBlock(run.delete), { enabled: available.delete });
   useCatalogShortcut('editor.cancel', cancelShortcut, { enabled: Boolean(selectedNodeId) });
-  useCatalogShortcut('editor.moveUp', moveUpShortcut, { enabled: Boolean(selectedNodeId) });
-  useCatalogShortcut('editor.moveDown', moveDownShortcut, { enabled: Boolean(selectedNodeId) });
-  useCatalogShortcut('editor.moveLeft', moveLeftShortcut, { enabled: Boolean(selectedNodeId) });
-  useCatalogShortcut('editor.moveRight', moveRightShortcut, { enabled: Boolean(selectedNodeId) });
+  useCatalogShortcut('editor.moveUp', onBlock(run.moveEarlier), { enabled: available.moveEarlier });
+  useCatalogShortcut('editor.moveLeft', onBlock(run.moveEarlier), { enabled: available.moveEarlier });
+  useCatalogShortcut('editor.moveDown', onBlock(run.moveLater), { enabled: available.moveLater });
+  useCatalogShortcut('editor.moveRight', onBlock(run.moveLater), { enabled: available.moveLater });
+  useCatalogShortcut('editor.moveOut', onBlock(run.moveOut), { enabled: available.moveOut });
+  useCatalogShortcut('editor.moveInto', onBlock(run.moveInto), { enabled: available.moveInto });
+  useCatalogShortcut('editor.copy', onBlock(run.copy), { enabled: available.copy });
+  useCatalogShortcut('editor.cut', onBlock(run.cut), { enabled: available.cut });
+  useCatalogShortcut('editor.paste', onBlock(run.paste), { enabled: available.paste });
+  useCatalogShortcut('editor.duplicate', onBlock(run.duplicate), { enabled: available.duplicate });
+  useCatalogShortcut('editor.copyStyle', onBlock(run.copyStyle), { enabled: available.copyStyle });
+  useCatalogShortcut('editor.pasteStyle', onBlock(run.pasteStyle), { enabled: available.pasteStyle });
 };

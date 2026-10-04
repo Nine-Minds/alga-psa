@@ -27,6 +27,7 @@ describe('tierFeatures', () => {
       expect(TIER_FEATURES.CIPP).toBe('CIPP');
       expect(TIER_FEATURES.SCIM_PROVISIONING).toBe('SCIM_PROVISIONING');
       expect(TIER_FEATURES.ADVANCED_AUTHORIZATION_BUNDLES).toBe('ADVANCED_AUTHORIZATION_BUNDLES');
+      expect(TIER_FEATURES.PBX_TELEPHONY).toBe('PBX_TELEPHONY');
     });
   });
 
@@ -42,7 +43,7 @@ describe('tierFeatures', () => {
       ]);
     });
 
-    it('pro tier includes every paid feature without add-on-only Teams integration', () => {
+    it('pro tier includes every paid feature', () => {
       expect(TIER_FEATURE_MAP.pro).toEqual([
         TIER_FEATURES.INTEGRATIONS,
         TIER_FEATURES.EXTENSIONS,
@@ -53,8 +54,10 @@ describe('tierFeatures', () => {
         TIER_FEATURES.MOBILE_ACCESS,
         TIER_FEATURES.ENTRA_SYNC,
         TIER_FEATURES.CIPP,
+        TIER_FEATURES.TEAMS_INTEGRATION,
         TIER_FEATURES.SCIM_PROVISIONING,
         TIER_FEATURES.ADVANCED_AUTHORIZATION_BUNDLES,
+        TIER_FEATURES.PBX_TELEPHONY,
         TIER_FEATURES.OPPORTUNITY_MANAGEMENT,
         TIER_FEATURES.CONTRACT_SIMULATOR,
         TIER_FEATURES.CREDENTIALS,
@@ -77,8 +80,14 @@ describe('tierFeatures', () => {
       expect(tierHasFeature('solo', TIER_FEATURES.TEAMS_INTEGRATION)).toBe(false);
     });
 
-    it('pro cannot access add-on-only Teams integration by tier', () => {
-      expect(tierHasFeature('pro', TIER_FEATURES.TEAMS_INTEGRATION)).toBe(false);
+    it('pro can access Teams integration by tier now the add-on is gone', () => {
+      expect(tierHasFeature('pro', TIER_FEATURES.TEAMS_INTEGRATION)).toBe(true);
+    });
+
+    it('PBX telephony requires pro; essentials and solo are locked out', () => {
+      expect(tierHasFeature('essentials', TIER_FEATURES.PBX_TELEPHONY)).toBe(false);
+      expect(tierHasFeature('solo', TIER_FEATURES.PBX_TELEPHONY)).toBe(false);
+      expect(tierHasFeature('pro', TIER_FEATURES.PBX_TELEPHONY)).toBe(true);
     });
 
     it('contract simulator requires pro; essentials and solo are locked out', () => {
@@ -113,8 +122,12 @@ describe('tierFeatures', () => {
       expect(FEATURE_MINIMUM_TIER[TIER_FEATURES.MOBILE_ACCESS]).toBe('solo');
     });
 
-    it('keeps historical minimum tier metadata for add-on-only Teams integration', () => {
+    it('keeps Teams integration at the Pro minimum tier', () => {
       expect(FEATURE_MINIMUM_TIER[TIER_FEATURES.TEAMS_INTEGRATION]).toBe('pro');
+    });
+
+    it('maps PBX telephony to Pro', () => {
+      expect(FEATURE_MINIMUM_TIER[TIER_FEATURES.PBX_TELEPHONY]).toBe('pro');
     });
 
     it('maps every paid feature to Pro', () => {

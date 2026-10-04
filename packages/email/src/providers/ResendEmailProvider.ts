@@ -36,6 +36,8 @@ interface ResendEmailRequest {
     filename: string;
     content: string;
     content_type?: string;
+    /** Referenced from the HTML as <img src="cid:...">, so it renders inline. */
+    content_id?: string;
   }>;
   headers?: Record<string, string>;
   tags?: Array<{ name: string; value: string }>;
@@ -362,6 +364,7 @@ export class ResendEmailProvider implements IEmailProvider {
         filename: a.filename,
         content: a.content.toString('base64'),
         content_type: a.contentType,
+        ...(a.cid ? { content_id: a.cid } : {}),
       }));
     }
 

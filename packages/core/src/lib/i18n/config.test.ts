@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { filterPseudoLocales, getBestMatchingLocale, getTranslationLanguageCode, INCOMPLETE_LOCALES, normalizeLocale, PREVIEW_LOCALES, LOCALE_CONFIG } from './config';
+import { filterPseudoLocales, getBestMatchingLocale, INCOMPLETE_LOCALES, normalizeLocale, PREVIEW_LOCALES, LOCALE_CONFIG } from './config';
 
 describe('filterPseudoLocales', () => {
   afterEach(() => {
@@ -30,7 +30,6 @@ describe('filterPseudoLocales', () => {
 
   it('strips incomplete locales in both modes', () => {
     const sample = [...LOCALE_CONFIG.supportedLocales, 'en'] as const;
-    // INCOMPLETE_LOCALES is currently empty; guard the contract for future entries.
     for (const incomplete of INCOMPLETE_LOCALES) {
       vi.stubEnv('NODE_ENV', 'development');
       expect(filterPseudoLocales(sample)).not.toContain(incomplete);
@@ -39,23 +38,39 @@ describe('filterPseudoLocales', () => {
     }
   });
 
+  it('exposes sv as a production locale (no longer preview-gated)', () => {
+    expect(PREVIEW_LOCALES).not.toContain('sv');
+    expect(INCOMPLETE_LOCALES).not.toContain('sv');
+    vi.stubEnv('NODE_ENV', 'development');
+    expect(filterPseudoLocales(LOCALE_CONFIG.supportedLocales)).toContain('sv');
+    vi.stubEnv('NODE_ENV', 'production');
+    expect(filterPseudoLocales(LOCALE_CONFIG.supportedLocales)).toContain('sv');
+  });
+
   it('labels pt as Brazilian Portuguese', () => {
     expect(LOCALE_CONFIG.localeNames.pt).toBe('Português (Brasil)');
   });
 
-  it('labels en-AU as English (Australia)', () => {
-    expect(LOCALE_CONFIG.localeNames['en-AU']).toBe('English (Australia)');
+  it('registers Swedish as Svenska before the pseudo-locales', () => {
+    expect(LOCALE_CONFIG.supportedLocales).toEqual([
+      'en', 'fr', 'es', 'de', 'nl', 'it', 'pl', 'pt', 'sv', 'xx', 'yy',
+    ]);
+    expect(LOCALE_CONFIG.localeNames.sv).toBe('Svenska');
   });
 
   it('keeps production locales untouched', () => {
     vi.stubEnv('NODE_ENV', 'production');
     expect(filterPseudoLocales(LOCALE_CONFIG.supportedLocales)).toEqual([
-      'en', 'en-AU', 'fr', 'es', 'de', 'nl', 'it', 'pl', 'pt',
+      'en', 'fr', 'es', 'de', 'nl', 'it', 'pl', 'pt', 'sv',
     ]);
   });
 });
 
 describe('normalizeLocale', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
   // The packs are language-only, so region-tagged values stored by imports and
   // older UIs (a real 'pt_BR' sat in clients.properties.defaultLocale) used to
   // fail a bare isSupportedLocale check and silently do nothing.
@@ -66,16 +81,22 @@ describe('normalizeLocale', () => {
     ['en-US', 'en'],
     ['  de  ', 'de'],
     ['fr', 'fr'],
+    ['sv', 'sv'],
+    ['sv-SE', 'sv'],
+    ['SV_se', 'sv'],
   ])('normalizes %s to %s', (input, expected) => {
     expect(normalizeLocale(input)).toBe(expected);
   });
 
+  // en-AU shipped only to buy DD/MM dates; the country decides that now, so the
+  // two tenant preferences and one user preference still holding it normalise to
+  // 'en' on read rather than needing a migration.
   it.each([
-    ['en-AU', 'en-AU'],
-    ['en-au', 'en-AU'],
-    ['en_AU', 'en-AU'],
-    ['EN-AU', 'en-AU'],
-  ])('preserves the en-AU regional tag from %s', (input, expected) => {
+    ['en-AU', 'en'],
+    ['en-au', 'en'],
+    ['en_AU', 'en'],
+    ['EN-AU', 'en'],
+  ])('collapses the retired en-AU tag from %s to its language', (input, expected) => {
     expect(normalizeLocale(input)).toBe(expected);
   });
 
@@ -99,14 +120,26 @@ describe('normalizeLocale', () => {
 
   it('lets Accept-Language matching share the same rules', () => {
     expect(getBestMatchingLocale(['pt_BR'])).toBe('pt');
-    expect(getBestMatchingLocale(['en-AU', 'fr-CA'])).toBe('en-AU');
+    expect(getBestMatchingLocale(['en-AU', 'fr-CA'])).toBe('en');
     expect(getBestMatchingLocale(['zh-CN', 'fr-CA'])).toBe('fr');
     expect(getBestMatchingLocale(['zh-CN'])).toBe(LOCALE_CONFIG.defaultLocale);
   });
 
-  it('exposes the translation language code for region-tagged locales', () => {
-    expect(getTranslationLanguageCode('en-AU')).toBe('en');
-    expect(getTranslationLanguageCode('fr')).toBe('fr');
-    expect(getTranslationLanguageCode('xx')).toBe('xx');
+  // An Accept-Language header is a guess about the visitor, not a language they
+  // chose, so it must not reach a locale the pickers withhold.
+  it('will not auto-assign a withheld locale from Accept-Language in production', () => {
+    vi.stubEnv('NODE_ENV', 'production');
+    expect(getBestMatchingLocale(['xx', 'en'])).toBe('en');
+    expect(getBestMatchingLocale(['xx'])).toBe(LOCALE_CONFIG.defaultLocale);
+  });
+
+  it('matches Swedish from Accept-Language in production', () => {
+    vi.stubEnv('NODE_ENV', 'production');
+    expect(getBestMatchingLocale(['sv-SE', 'en'])).toBe('sv');
+  });
+
+  it('normalizes an explicitly stored Swedish preference', () => {
+    vi.stubEnv('NODE_ENV', 'production');
+    expect(normalizeLocale('sv-SE')).toBe('sv');
   });
 });

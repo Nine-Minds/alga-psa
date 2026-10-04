@@ -20,6 +20,7 @@ import { expiringHourBlocksNotificationHandler } from './handlers/expiringHourBl
 import { handleReconcileBucketUsage } from './handlers/reconcileBucketUsageHandler';
 import { handleReconcileHourBlockAllocations } from './handlers/reconcileHourBlockAllocationsHandler';
 import { processRenewalQueueHandler } from './handlers/processRenewalQueueHandler';
+import { createDateTriggerScanHandler, type DateWorkflowLauncher } from './handlers/dateTriggerScanHandler';
 import { autoCloseTicketsHandler } from './handlers/autoCloseTicketsHandler';
 import { SEARCH_RECONCILE_JOB_NAME, searchReconcileHandler } from './handlers/searchReconcileHandler';
 import { verifyGoogleCalendarProvisioning } from './handlers/calendarWebhookMaintenanceHandler';
@@ -31,6 +32,9 @@ import {
   telephonyCallArtifactSweepHandler,
 } from './handlers/telephonyCallArtifactHandler';
 import { teamsMeetingSweepHandler, TEAMS_MEETING_SWEEP_JOB } from './handlers/teamsMeetingSweepHandler';
+import { reconcileThreecxCallControlHandler, THREECX_CALL_CONTROL_RECONCILE_JOB } from './handlers/threecxCallControlReconcileHandler';
+import { backfillThreecxCdrHandler, THREECX_CDR_BACKFILL_JOB } from './handlers/threecxCdrBackfillHandler';
+import { reconcileThreecxPhonebookHandler, THREECX_PHONEBOOK_RECONCILE_JOB } from './handlers/threecxPhonebookHandlers';
 import { workflowQuotaResumeScanHandler } from './handlers/workflowQuotaResumeScanHandler';
 import { cleanupAiSessionKeysHandler } from './handlers/cleanupAiSessionKeysHandler';
 import { cleanupTemporaryFormsJob } from './handlers/cleanupTemporaryFormsJob';
@@ -39,12 +43,18 @@ import { inboundEmailRecoveryHandler } from './handlers/inboundEmailRecoveryHand
 import { providerDisconnectRetryHandler } from './handlers/providerDisconnectRetryHandler';
 
 const RENEWAL_HORIZON_DAYS = 90;
+let enterpriseDateWorkflowLauncher: DateWorkflowLauncher | undefined;
+
+/** Inject the EE workflow launcher from server startup; this package stays CE-safe. */
+export function configureDateTriggerWorkflowLauncher(launcher?: DateWorkflowLauncher): void {
+  enterpriseDateWorkflowLauncher = launcher;
+}
 const WORKFLOW_QUOTA_RESUME_BATCH_SIZE = 100;
 
 // Narrows a tenant job to the tenants that can actually do its work (the
 // integration is configured), so the fan-out does not burn a pooled connection
 // per tenant just to discover there is nothing to do. Returns distinct tenant ids.
-type TenantSelector = (db: TenantDb) => PromiseLike<Array<{ tenant: string }>>;
+export type TenantSelector = (db: TenantDb) => PromiseLike<Array<{ tenant: string }>>;
 
 /**
  * Aggregate outcome a system job may report so partial failures are not
@@ -57,7 +67,7 @@ export type MaintenanceJobExecutionOutcome = {
   failed: number;
 };
 
-type MaintenanceJobDef =
+export type MaintenanceJobDef =
   | { scope: 'tenant'; run: (tenantId: string) => Promise<unknown>; tenants?: TenantSelector; concurrency?: number }
   // System jobs may return anything; a result carrying numeric total/succeeded/
   // failed is treated as an execution outcome, everything else is a single unit.
@@ -83,6 +93,27 @@ const tenantsWithActiveTeamsPhone: TenantSelector = (db) => db
   .where('status', 'active')
   .distinct('tenant');
 
+// '3cx' mirrors THREECX_PROVIDER in @alga-psa/ee-threecx, which this CE package cannot import.
+const tenantsWithActiveThreecx: TenantSelector = (db) => db
+  .unscoped<{ tenant: string }>('telephony_providers', 'maintenance fanout narrows 3CX call-control reconciliation to tenants with an active 3CX provider')
+  .where('provider', '3cx')
+  .where('status', 'active')
+  .distinct('tenant');
+
+const tenantsWithThreecxCdrImport: TenantSelector = (db) => db
+  .unscoped<{ tenant: string }>('telephony_providers', 'maintenance fanout narrows 3CX call-history import to tenants that opted in')
+  .where('provider', '3cx')
+  .where('status', 'active')
+  .whereRaw("config->'cdr'->>'enabled' = 'true'")
+  .distinct('tenant');
+
+const tenantsWithThreecxPhonebookSync: TenantSelector = (db) => db
+  .unscoped<{ tenant: string }>('telephony_providers', 'maintenance fanout narrows 3CX phonebook reconciliation to tenants that opted in')
+  .where('provider', '3cx')
+  .where('status', 'active')
+  .whereRaw("config->'phonebook'->>'enabled' = 'true'")
+  .distinct('tenant');
+
 const tenantsWithPendingCallArtifacts: TenantSelector = (db) => db
   .unscoped<{ tenant: string }>('telephony_call_records', 'maintenance fanout narrows the call artifact sweep to tenants with calls awaiting artifacts')
   .where('artifact_status', 'pending')
@@ -99,6 +130,7 @@ const MAINTENANCE_JOBS: Record<string, MaintenanceJobDef> = {
   'expiring-hour-blocks-notification': { scope: 'tenant', run: (tenantId) => expiringHourBlocksNotificationHandler({ tenantId }) },
   'reconcile-bucket-usage': { scope: 'tenant', run: (tenantId) => handleReconcileBucketUsage({ id: `fanout:${tenantId}`, data: { tenantId } } as any) },
   'reconcile-hour-block-allocations': { scope: 'tenant', run: (tenantId) => handleReconcileHourBlockAllocations({ id: `fanout:${tenantId}`, data: { tenantId } } as any) },
+  'date-trigger-scan': { scope: 'tenant', run: (tenantId) => createDateTriggerScanHandler(enterpriseDateWorkflowLauncher)({ tenantId }) },
   'process-renewal-queue': { scope: 'tenant', run: (tenantId) => processRenewalQueueHandler({ tenantId, horizonDays: RENEWAL_HORIZON_DAYS }) },
   'auto-close-tickets': { scope: 'tenant', run: (tenantId) => autoCloseTicketsHandler({ tenantId }) },
   [SEARCH_RECONCILE_JOB_NAME]: { scope: 'tenant', run: (tenantId) => searchReconcileHandler({ tenantId }) },
@@ -108,6 +140,9 @@ const MAINTENANCE_JOBS: Record<string, MaintenanceJobDef> = {
   'renew-telephony-call-subscriptions': { scope: 'tenant', run: (tenantId) => renewTelephonyCallSubscriptions({ tenantId }), tenants: tenantsWithActiveTeamsPhone },
   [TELEPHONY_CALL_ARTIFACT_SWEEP_JOB]: { scope: 'tenant', run: (tenantId) => telephonyCallArtifactSweepHandler({ tenantId }), tenants: tenantsWithPendingCallArtifacts },
   [TEAMS_MEETING_SWEEP_JOB]: { scope: 'tenant', run: (tenantId) => teamsMeetingSweepHandler({ tenantId }), tenants: tenantsWithActiveTeams },
+  [THREECX_CALL_CONTROL_RECONCILE_JOB]: { scope: 'tenant', run: (tenantId) => reconcileThreecxCallControlHandler({ tenantId }), tenants: tenantsWithActiveThreecx },
+  [THREECX_CDR_BACKFILL_JOB]: { scope: 'tenant', run: (tenantId) => backfillThreecxCdrHandler({ tenantId }), tenants: tenantsWithThreecxCdrImport },
+  [THREECX_PHONEBOOK_RECONCILE_JOB]: { scope: 'tenant', run: (tenantId) => reconcileThreecxPhonebookHandler({ tenantId }), tenants: tenantsWithThreecxPhonebookSync },
   'workflow-quota-resume-scan': { scope: 'system', run: () => workflowQuotaResumeScanHandler({ tenantId: 'system', batchSize: WORKFLOW_QUOTA_RESUME_BATCH_SIZE }) },
   'cleanup-temporary-workflow-forms': { scope: 'system', run: () => cleanupTemporaryFormsJob() },
   'cleanup-webhook-deliveries': { scope: 'system', run: () => cleanupWebhookDeliveriesJob() },
@@ -145,6 +180,19 @@ export type MaintenanceJobResult = {
   succeeded: number;
   failed: number;
 };
+
+/**
+ * Add a job whose handler cannot live in this package (it needs the server's
+ * domain graph) to the fan-out registry. The server registers these before it
+ * subscribes to MAINTENANCE_JOB_REQUESTED, so the Temporal maintenance schedule
+ * for the job resolves to a known definition. Re-registering replaces the
+ * definition, which keeps dev hot-reload and repeated boots idempotent.
+ */
+export function registerMaintenanceJob(jobName: string, def: MaintenanceJobDef): void {
+  MAINTENANCE_JOBS[jobName] = def;
+}
+
+export const listMaintenanceJobNames = (): string[] => Object.keys(MAINTENANCE_JOBS);
 
 export const isKnownMaintenanceJob = (jobName: string): boolean =>
   Object.prototype.hasOwnProperty.call(MAINTENANCE_JOBS, jobName);

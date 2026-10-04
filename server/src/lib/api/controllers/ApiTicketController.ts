@@ -2044,6 +2044,7 @@ export class ApiTicketController extends ApiBaseController {
             masterTicketId,
             childTicketIds: data.child_ticket_ids,
             mode: data.mode,
+            onClosedMaster: data.on_closed_master,
           });
           return createSuccessResponse(result, 201, undefined, apiRequest);
         });
@@ -2086,6 +2087,7 @@ export class ApiTicketController extends ApiBaseController {
           const result = await this.ticketService.addBundleChildren(apiRequest.context, {
             masterTicketId,
             childTicketIds: data.child_ticket_ids,
+            onClosedMaster: data.on_closed_master,
           });
           return createSuccessResponse(result, 200, undefined, apiRequest);
         });

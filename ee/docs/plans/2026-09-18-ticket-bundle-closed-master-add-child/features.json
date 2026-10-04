@@ -1,0 +1,218 @@
+[
+  {
+    "id": "F001",
+    "description": "Add a server-only closed-master policy module in packages/tickets/src/actions/ticketBundleUtils.ts exporting the ClosedMasterChoice type ('keep_closed' | 'apply_resolution' | 'reopen_master') and a pure resolveClosedMasterChoices({ isClosed, requireNoOpenChildren }) that returns the allowed choices (empty when the master is open).",
+    "implemented": true,
+    "prdRefs": [
+      "The three choices",
+      "FR1",
+      "FR8"
+    ]
+  },
+  {
+    "id": "F002",
+    "description": "Add getBundleMasterClosedContext(trx, tenant, masterTicketId) returning { isClosed, statusId, statusName, boardId, requireNoOpenChildren, allowedChoices, resolutionComment | null, openChildrenCount } by joining statuses, reading board_close_rules via getBoardCloseRulesRow, and selecting the master's latest public resolution comment (is_resolution = true or metadata->>'closes_ticket' = 'true', is_internal = false).",
+    "implemented": true,
+    "prdRefs": [
+      "FR7",
+      "FR9"
+    ]
+  },
+  {
+    "id": "F003",
+    "description": "Add a single openBundleChildrenCount(trx, tenant, masterTicketId) helper (closed_at IS NULL predicate) and use it from validateTicketClosure's require_no_open_children gate and from the closed-context so the definition of 'open child' exists once.",
+    "implemented": true,
+    "prdRefs": [
+      "FR11"
+    ]
+  },
+  {
+    "id": "F004",
+    "description": "Extract the master-only reopen row update + activity write from maybeReopenBundleMasterFromChildReply into reopenBundleMasterOnly(trx, tenant, masterTicketId, { actor, source, trigger, openStatusId? }) returning { previousStatusId, newStatusId, reopenedAt }; maybeReopenBundleMasterFromChildReply calls it with the SYSTEM actor and 'child_reply' trigger with no behaviour change.",
+    "implemented": true,
+    "prdRefs": [
+      "FR6"
+    ]
+  },
+  {
+    "id": "F005",
+    "description": "Extract the per-child mirrored-comment insertion (comment_threads + comments + ticket_bundle_mirrors, is_system_generated, idempotent on the mirrors table) from addTicketComment's sync_updates loop into mirrorCommentToChild(trx, tenant, { sourceComment, childTicketId, isResolution }) and have addTicketComment use it.",
+    "implemented": true,
+    "prdRefs": [
+      "FR5"
+    ]
+  },
+  {
+    "id": "F006",
+    "description": "Add applyClosedMasterChoice(trx, tenant, { master, childTicketIds, choice, actor, source, occurredAt }) that performs the chosen consequence inside the caller's transaction and returns the after-commit publications (child TICKET_CLOSED payloads for apply_resolution; master TICKET_UPDATED + TICKET_REOPENED transition payloads for reopen_master) so the caller can registerAfterCommit them.",
+    "implemented": true,
+    "prdRefs": [
+      "FR4",
+      "FR5",
+      "FR6"
+    ]
+  },
+  {
+    "id": "F007",
+    "description": "keep_closed writes a TICKET_BUNDLE_CHILD_ADDED activity on each child and on the master with details { master_was_closed: true, closed_master_choice: 'keep_closed', ... } and makes no other writes.",
+    "implemented": true,
+    "prdRefs": [
+      "FR4"
+    ]
+  },
+  {
+    "id": "F008",
+    "description": "apply_resolution closes each added child with the master's status_id (is_closed = true, closed_at = occurredAt, closed_by = actor), enforces the child's board close rules via enforceTicketCloseRules as a human close, writes a TICKET_CLOSED activity on the child with the closed_master_choice detail, and mirrors the master's public resolution comment onto the child as a public is_resolution comment when one exists.",
+    "implemented": true,
+    "prdRefs": [
+      "FR5",
+      "FR7"
+    ]
+  },
+  {
+    "id": "F009",
+    "description": "reopen_master calls reopenBundleMasterOnly with the USER actor and 'add_child' trigger and never updates rows where master_ticket_id = master (no sync_updates propagation); the added children keep their status.",
+    "implemented": true,
+    "prdRefs": [
+      "FR6"
+    ]
+  },
+  {
+    "id": "F010",
+    "description": "Add TICKET_BUNDLE_CHILD_ADDED to TICKET_ACTIVITY_EVENT in shared/lib/ticketActivity/types.ts and a bento.timeline.event.bundle_child_added locale label; write this activity for all three choices (and when the master is open) so linking always leaves a timeline entry.",
+    "implemented": true,
+    "prdRefs": [
+      "FR4",
+      "Data / API / integrations"
+    ]
+  },
+  {
+    "id": "F011",
+    "description": "Extract the shared attach engine attachChildrenToBundle(trx, tenant, { masterTicketId, childTicketIds, mode?, choice?, actor }) that performs the existing invariant checks (master exists, master not a child, children exist, not already bundled, not masters), the closed-master evaluation, the link update with the concurrency guard, optional ticket_bundle_settings upsert, and applyClosedMasterChoice; it returns a discriminated result with stable failure codes instead of throwing UI/API-specific errors.",
+    "implemented": true,
+    "prdRefs": [
+      "FR1",
+      "Goals"
+    ]
+  },
+  {
+    "id": "F012",
+    "description": "addChildrenToBundleAction and bundleTicketsAction accept an optional onClosedMaster input, delegate to attachChildrenToBundle, map failure codes to actionError with i18n keys (new keys: errors.bundle.closedMasterChoiceRequired with the allowed choices, errors.bundle.closedMasterChoiceNotAllowed, errors.bundle.choiceOnOpenMaster), and register the returned after-commit publications.",
+    "implemented": true,
+    "prdRefs": [
+      "FR1",
+      "FR2",
+      "FR3"
+    ]
+  },
+  {
+    "id": "F013",
+    "description": "TicketService.addBundleChildren and TicketService.bundleTickets accept onClosedMaster, delegate to attachChildrenToBundle, and map failure codes: choice required -> ConflictError (409) whose message lists the allowed choices; choice not allowed or choice on open master -> ValidationError (400); existing codes keep their current error classes.",
+    "implemented": true,
+    "prdRefs": [
+      "FR1",
+      "FR12"
+    ]
+  },
+  {
+    "id": "F014",
+    "description": "addBundleChildrenSchema and createBundleSchema gain on_closed_master: z.enum(['keep_closed','apply_resolution','reopen_master']).optional(); ApiTicketController passes it through for POST /tickets/{id}/bundle/children and POST /tickets/{id}/bundle.",
+    "implemented": true,
+    "prdRefs": [
+      "FR12"
+    ]
+  },
+  {
+    "id": "F015",
+    "description": "Update the OpenAPI route descriptions in workManagementV1.ts for both POST bundle routes to document on_closed_master and the 409, and regenerate the MCP registry if it derives from these routes.",
+    "implemented": true,
+    "prdRefs": [
+      "FR12"
+    ]
+  },
+  {
+    "id": "F016",
+    "description": "Add getBundleMasterClosedContextAction({ masterTicketId }) server action (ticket:read) returning { isClosed, allowedChoices, hasResolutionComment, masterStatusName, openChildrenCount } for the UI.",
+    "implemented": true,
+    "prdRefs": [
+      "FR9"
+    ]
+  },
+  {
+    "id": "F017",
+    "description": "Create a shared ClosedMasterChoiceFields component (radio group + helper copy, id-prefixed) in packages/tickets/src/components that renders only the allowed choices, defaults to keep_closed when allowed and to no selection otherwise, adapts the apply_resolution helper to hasResolutionComment/masterStatusName, and explains the gating when keep_closed is absent.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI notes"
+    ]
+  },
+  {
+    "id": "F018",
+    "description": "Ticket detail bundle panel: performAddChildToBundle fetches the closed-context first; when the master is closed it opens a ClosedMasterChoiceDialog (Dialog + ClosedMasterChoiceFields + Cancel/Add) and passes the selection as onClosedMaster; the multi-client confirmation still precedes it.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and primary flows",
+      "UX / UI notes"
+    ]
+  },
+  {
+    "id": "F019",
+    "description": "Ticket list bulk bundle dialog: once a master is selected/locked, fetch the closed-context; when closed, render ClosedMasterChoiceFields inside the dialog, disable confirm until a choice exists, and pass onClosedMaster to bundleTicketsAction (after the multi-client confirmation when applicable).",
+    "implemented": true,
+    "prdRefs": [
+      "Users and primary flows",
+      "UX / UI notes"
+    ]
+  },
+  {
+    "id": "F020",
+    "description": "Ticket list query: extend the bundleStats subquery with COUNT(*) FILTER (WHERE tc.closed_at IS NULL)::int AS bundle_open_child_count, select/normalise it in fetchTicketsWithPagination, and add it to ticket.schema.ts and ITicketListItem.",
+    "implemented": true,
+    "prdRefs": [
+      "FR10"
+    ]
+  },
+  {
+    "id": "F021",
+    "description": "ticket-columns.tsx renders an amber 'N open' badge beside the 'Bundle · N' badge when the row is a bundle master, record.is_closed is true, and bundle_open_child_count > 0 (both bundled and individual views).",
+    "implemented": true,
+    "prdRefs": [
+      "FR10",
+      "UX / UI notes"
+    ]
+  },
+  {
+    "id": "F022",
+    "description": "getConsolidatedTicketData: include is_closed and closed_at on bundle children and openChildrenCount on the bundle object (authorization-filtered children only).",
+    "implemented": true,
+    "prdRefs": [
+      "FR10"
+    ]
+  },
+  {
+    "id": "F023",
+    "description": "Ticket detail master banner and bundle panel show the amber 'N open children' badge when the master is closed and openChildrenCount > 0, and each child row shows an open/closed indicator.",
+    "implemented": true,
+    "prdRefs": [
+      "FR10",
+      "UX / UI notes"
+    ]
+  },
+  {
+    "id": "F024",
+    "description": "All new user-facing strings (dialog title, three choice labels and helpers, gating explanation, badges, error messages, timeline label) are added to server/public/locales/en/features/tickets.json and mirrored to the sibling locale files following the repo's convention for new keys.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI notes"
+    ]
+  },
+  {
+    "id": "F025",
+    "description": "TICKET_MERGED continues to be published per added child for every choice, and no TICKET_CLOSED/TICKET_REOPENED/TICKET_UPDATED event is emitted for the master under keep_closed or apply_resolution.",
+    "implemented": true,
+    "prdRefs": [
+      "FR13",
+      "Principle"
+    ]
+  }
+]

@@ -123,7 +123,8 @@ describe('SMTPEmailProvider mail options construction', () => {
     expect(mailOptions.replyTo).toBe('reply@example.com');
     expect(mailOptions.headers).toEqual({ 'X-Custom': 'yes' });
     expect(mailOptions.attachments).toEqual([
-      { filename: 'invoice.pdf', content, contentType: 'application/pdf', cid: 'inv-1' },
+      // A cid attachment is inline, not a file Outlook lists beside the message.
+      { filename: 'invoice.pdf', content, contentType: 'application/pdf', cid: 'inv-1', contentDisposition: 'inline' },
       { filename: 'note.txt', content: 'hello' }
     ]);
   });

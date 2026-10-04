@@ -748,7 +748,7 @@
       "domainRemovalScheduledWithClear": "Zaplanowano usunięcie domeny i wyczyszczono adres nadawcy zgłoszeń",
       "removeDomainFailed": "Nie udało się usunąć domeny",
       "testOutboundFailed": "Nie udało się przetestować poczty wychodzącej",
-      "senderIdentitiesUpdated": "Zaktualizowano tożsamości nadawców."
+      "senderSettingsUpdated": "Zaktualizowano tożsamości nadawców."
     },
     "tabs": {
       "inboundEmail": "Poczta przychodząca",
@@ -1045,7 +1045,12 @@
       "saving": "Zapisywanie…",
       "startDelimiter": "Ogranicznik początkowy",
       "update": "Zaktualizuj regułę",
-      "valuePlaceholder": "Wartość"
+      "valuePlaceholder": "Wartość",
+      "matchTargets": "Dopasuj wyodrębnioną wartość do",
+      "matchClientName": "Nazwa klienta lub alias",
+      "matchContactEmail": "E-mail kontaktu",
+      "matchAssetName": "Nazwa urządzenia (zasobu)",
+      "matchTargetRequired": "Wybierz co najmniej jeden cel."
     },
     "header": {
       "description": "Dopasowuj przychodzące e-maile według nadawcy lub tematu, aby pomijać szum, przypisywać właściwego klienta lub kierować do miejsca docelowego. Reguły działają w kolejności; wygrywa pierwsze dopasowanie.",
@@ -1103,7 +1108,10 @@
       "running": "Testowanie…",
       "subject": "Temat",
       "title": "Przetestuj tę regułę",
-      "to": "Do"
+      "to": "Do",
+      "contactEmail": "e-mail kontaktu",
+      "deviceName": "nazwa urządzenia",
+      "ambiguous": "{{target}} pasuje do {{count}} klientów — nie przypisano"
     }
   },
   "errors": {

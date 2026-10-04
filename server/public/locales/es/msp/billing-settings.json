@@ -165,6 +165,27 @@
         "loadStatuses": "No se pudieron cargar los estados de los tickets de renovación",
         "save": "No se pudo guardar la configuración de automatización de renovación"
       }
+    },
+    "quotes": {
+      "title": "Cotizaciones",
+      "description": "Establezca el período de validez predeterminado para nuevas cotizaciones.",
+      "fields": {
+        "validityDays": {
+          "label": "Período de validez predeterminado (días)",
+          "help": "Las nuevas cotizaciones son válidas durante este número de días."
+        }
+      },
+      "actions": {
+        "save": "Guardar"
+      },
+      "toast": {
+        "updated": "Se actualizaron los ajustes de cotizaciones."
+      },
+      "errors": {
+        "load": "No se pudieron cargar los ajustes",
+        "save": "No se pudieron guardar los ajustes",
+        "range": "Introduzca un número entero del 1 al 365."
+      }
     }
   },
   "quoting": {
@@ -178,6 +199,8 @@
     }
   },
   "tax": {
+    "defaultRate": { "title": "Tasa impositiva predeterminada", "tooltip": "Elija la tasa que heredarán los nuevos clientes, productos y servicios.", "description": "Establezca la tasa asignada a nuevos clientes y elementos del catálogo. Los registros existentes no cambian.", "loading": "Cargando tasa predeterminada...", "empty": "Cree una tasa activa antes de elegir una predeterminada.", "invalid": "La tasa predeterminada ya no está activa o no es válida. Elija otra.", "field": { "label": "Tasa impositiva predeterminada" }, "options": { "none": "Sin valor predeterminado del inquilino" }, "help": "Si no se establece, los nuevos elementos no serán imponibles y los clientes usarán la tasa activa más antigua si existe.", "actions": { "save": "Guardar valor predeterminado", "saving": "Guardando..." }, "toast": { "saved": "Tasa predeterminada guardada." }, "errors": { "load": "No se pudo cargar la tasa predeterminada.", "save": "No se pudo guardar la tasa predeterminada." } },
+    "backfill": { "title": "Aplicar el valor predeterminado al catálogo existente", "description": "Previsualice productos y servicios sin tasa impositiva.", "warning": "Esto cambia la tributación futura y no modifica las facturas emitidas.", "loading": "Cargando vista previa...", "empty": "No se encontraron productos ni servicios aptos.", "target": "Tasa de destino: {{rate}}", "count": "{{count}} elementos aptos", "dialog": { "title": "Aplicar tasa predeterminada" }, "actions": { "preview": "Previsualizar elementos", "apply": "Aplicar seleccionados", "applying": "Aplicando..." }, "toast": { "applied": "Tasa predeterminada aplicada a los elementos seleccionados." }, "errors": { "preview": "No se pudo previsualizar el catálogo.", "apply": "No se pudo aplicar la tasa predeterminada." } },
     "taxRegions": {
       "title": "Regiones fiscales",
       "description": "Administre regiones fiscales y configuraciones relacionadas."
@@ -704,7 +727,8 @@
       "allServiceTypes": "Todos los tipos de servicios",
       "serviceTypePlaceholder": "Filtrar por tipo de servicio...",
       "allBillingMethods": "Todos los métodos de facturación",
-      "billingMethodPlaceholder": "Filtrar por método de facturación..."
+      "billingMethodPlaceholder": "Filtrar por método de facturación...",
+      "searchPlaceholder": "Buscar servicios por nombre, SKU o descripción..."
     },
     "fields": {
       "serviceName": {
@@ -826,7 +850,9 @@
       "validateDelete": "No se pudo validar la eliminación. Por favor inténtalo de nuevo.",
       "delete": "No se pudo eliminar el servicio",
       "deactivate": "No se pudo desactivar el servicio"
-    }
+    },
+    "emptySearch": "Ningún servicio coincide con su búsqueda.",
+    "clearFilters": "Borrar filtros"
   },
   "products": {
     "title": "Productos",
@@ -949,14 +975,14 @@
         }
       },
       "unitOfMeasure": {
-        "label": "Unidad de medida *",
+        "label": "Unidad de medida",
         "placeholder": "por ejemplo, GB, llamada API, usuario",
         "help": "La unidad medible para la facturación (por ejemplo, GB, llamada API, usuario)"
       },
       "taxRate": {
         "label": "Tasa impositiva (opcional)",
         "placeholder": "Seleccionar tasa impositiva (opcional)",
-        "loading": "Cargando tasas impositivas..."
+        "loading": "Cargando tasas impositivas...", "inherit": "Usar valor predeterminado", "inheritNamed": "Usar valor predeterminado ({{rate}})", "nonTaxable": "No imponible"
       },
       "sku": {
         "label": "SKU",
@@ -983,7 +1009,8 @@
       "billingMethodRequired": "Se requiere método de facturación",
       "skuRequiredForHardware": "Se requiere SKU para hardware",
       "licenseTermRequired": "Se requiere un plazo de licencia para las licencias de software",
-      "selectedTypeNotFound": "Tipo de servicio seleccionado no encontrado"
+      "selectedTypeNotFound": "Tipo de servicio seleccionado no encontrado",
+      "unitOfMeasureRequired": "Se requiere unidad de medida"
     },
     "errors": {
       "fetchCategories": "No se han podido recuperar las categorías",
@@ -1021,7 +1048,8 @@
       },
       "label": {
         "label": "Etiqueta de categoría",
-        "placeholder": "Etiqueta libre opcional"
+        "placeholder": "Etiqueta libre opcional",
+        "help": "Identificador interno como fabricante/modelo; se puede buscar, nunca se muestra a los clientes."
       },
       "vendor": {
         "label": "Proveedor"
@@ -1050,13 +1078,13 @@
       "taxRate": {
         "label": "Tasa impositiva",
         "placeholder": "No imponible",
-        "loading": "Cargando..."
+        "loading": "Cargando...", "inherit": "Usar valor predeterminado", "inheritNamed": "Usar valor predeterminado ({{rate}})", "nonTaxable": "No imponible"
       },
       "active": {
         "label": "Activo"
       },
       "unitOfMeasure": {
-        "label": "Unidad de medida *",
+        "label": "Unidad de medida",
         "placeholder": "por ejemplo, cada, artículo, licencia"
       },
       "license": {
@@ -1293,7 +1321,10 @@
       "regionInvalid": "La región fiscal seleccionada ya no es válida. Actualice la página y elija otra región.",
       "duplicate": "Ya existe una tasa de impuesto para esta región e intervalo de fechas.",
       "missingField": "Falta un campo obligatorio de la tasa de impuesto.",
-      "missingFieldNamed": "Falta un campo obligatorio de la tasa de impuesto: {{field}}."
+      "missingFieldNamed": "Falta un campo obligatorio de la tasa de impuesto: {{field}}.",
+      "capInvalid": "El límite debe ser un entero no negativo representable con precisión en unidades mínimas.",
+      "capCurrencyRequired": "Seleccione una moneda antes de establecer o cambiar un límite de impuesto.",
+      "currencyInvalid": "Seleccione una moneda admitida para la tasa."
     },
     "tax": {
       "defaultRequiresActiveRate": "Configure al menos una tasa de impuesto activa antes de crear los ajustes fiscales predeterminados.",
@@ -1422,6 +1453,15 @@
       "actions": {
         "save": "Guardar configuración",
         "saving": "Guardando..."
+      },
+      "autopay": {
+        "label": "Permitir el pago automático",
+        "description": "Permite que los perfiles de facturación autoricen pagos automáticos con tarjeta.",
+        "chargeTiming": "Momento del cargo",
+        "onFinalize": "Al finalizar la factura",
+        "onDueDate": "En la fecha de vencimiento",
+        "retryDays": "Intervalos de reintento (días)",
+        "consentText": "Texto de consentimiento del pago automático"
       }
     },
     "stripe": {

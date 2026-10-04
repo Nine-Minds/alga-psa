@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { toast } from 'react-hot-toast';
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Card, Box } from '@radix-ui/themes';
 import { Alert, AlertDescription, AlertTitle } from '@alga-psa/ui/components/Alert';
@@ -9,6 +10,8 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import { buildSenderOptions, DEFAULT_SENDER_SELECTION, senderIdForSend } from '@alga-psa/email/senderSelection';
+import { listSelectableSenders } from '@alga-psa/email/senderActions';
 import CurrencyPicker from '@alga-psa/ui/components/CurrencyPicker';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
@@ -38,6 +41,10 @@ import {
 import { QuoteSendRecipientsField, type QuoteRecipient } from './QuoteSendRecipientsField';
 import QuoteStatusBadge from './QuoteStatusBadge';
 import { calculateDraftMonthlyRecurringNet, calculateDraftQuoteTotals, createDraftQuoteItemFromQuoteItem, formatDraftQuoteMoney, type DraftQuoteItem } from './quoteLineItemDraft';
+import { QuoteTermsContent, TextEditor } from '@alga-psa/ui/editor';
+import type { PartialBlock } from '@blocknote/core';
+import { flattenBlockContentToPlainText } from '@alga-psa/formatting/blocknoteUtils';
+import { getQuoteValidityDays } from '../../../constants/billing';
 
 interface QuoteFormProps {
   quoteId?: string | null;
@@ -56,6 +63,14 @@ interface QuoteFormProps {
   };
   onCancel: () => void;
   onSaved: (quoteId: string) => void;
+  /**
+   * Notifies the owning list that a successful in-form workflow action changed
+   * this quote's persisted status (send, resend, approve). Awaited while the
+   * action remains busy so the parent snapshot is current before the buttons
+   * re-enable; a parent refresh failure never turns the successful mutation
+   * into a visible action error.
+   */
+  onQuoteStatusChanged?: () => void | Promise<void>;
 }
 
 interface QuoteFormState {
@@ -87,6 +102,32 @@ const EMPTY_FORM: QuoteFormState = {
   currency_code: 'USD',
 };
 
+/**
+ * Legacy Terms & Conditions are plain text with newlines as paragraph breaks.
+ * Seed the editor with one paragraph per line so line breaks survive the
+ * structured round-trip (a single paragraph carrying "\n" would collapse in the
+ * HTML converter).
+ */
+const termsBlocksFromLegacyText = (text?: string | null): PartialBlock[] => {
+  const value = typeof text === 'string' ? text : '';
+  const lines = value.length > 0 ? value.split('\n') : [''];
+  return lines.map((line) => ({
+    type: 'paragraph',
+    props: { textAlignment: 'left', backgroundColor: 'default', textColor: 'default' },
+    content: line.length > 0 ? [{ type: 'text', text: line, styles: {} }] : [],
+  })) as PartialBlock[];
+};
+
+const seedTermsBlocks = (block: unknown, text?: string | null): PartialBlock[] => {
+  if (Array.isArray(block) && block.length > 0) {
+    return block as PartialBlock[];
+  }
+  return termsBlocksFromLegacyText(text);
+};
+
+const hasTermsContent = (blocks: PartialBlock[]): boolean =>
+  flattenBlockContentToPlainText(blocks).trim().length > 0;
+
 const toDateInputValue = (value?: string | Date | null): string => {
   if (!value) return '';
   if (value instanceof Date) return value.toISOString().slice(0, 10);
@@ -116,6 +157,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
   initialContext,
   onCancel,
   onSaved,
+  onQuoteStatusChanged,
 }) => {
   const { t } = useTranslation('msp/quotes');
   const { formatCurrency: formatLocalizedCurrency, formatDate } = useFormatters();
@@ -123,6 +165,12 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
   const isEditMode = Boolean(quoteId && quoteId !== 'new');
   const [defaultCurrency, setDefaultCurrency] = useState('USD');
   const [form, setForm] = useState<QuoteFormState>(EMPTY_FORM);
+  const [termsBlock, setTermsBlock] = useState<PartialBlock[]>(() => termsBlocksFromLegacyText(''));
+  // Bumped only when the editor's content is replaced from outside (quote load,
+  // template selection). TextEditor builds its document once from
+  // `initialContent`, so a remount is how an external replacement becomes
+  // visible; ordinary typing leaves the key alone and keeps cursor/undo.
+  const [termsEditorKey, setTermsEditorKey] = useState(0);
   const [clientLocations, setClientLocations] = useState<BillingLocationSummary[]>([]);
   /**
    * True once the user has explicitly clicked "+ Add location" OR loaded a quote
@@ -139,15 +187,6 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
    */
   const [extraGroupLocationIds, setExtraGroupLocationIds] = useState<string[]>([]);
 
-  useEffect(() => {
-    getDefaultBillingSettings()
-      .then((settings) => {
-        const currency = settings.defaultCurrencyCode || 'USD';
-        setDefaultCurrency(currency);
-        setForm((prev) => prev.currency_code === 'USD' ? { ...prev, currency_code: currency } : prev);
-      })
-      .catch(() => {});
-  }, []);
   const [isTemplate, setIsTemplate] = useState(initialIsTemplate);
   const [clients, setClients] = useState<IClient[]>([]);
   const [contacts, setContacts] = useState<IContact[]>([]);
@@ -174,6 +213,9 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
   const [isWorking, setIsWorking] = useState(false);
   const [approvalRequired, setApprovalRequired] = useState(false);
   const [isSendDialogOpen, setIsSendDialogOpen] = useState(false);
+  const [quoteSenders, setQuoteSenders] = useState<Array<{ sender_id: string; email_address: string }>>([]);
+  const [quoteEffectiveSenderAddress, setQuoteEffectiveSenderAddress] = useState('');
+  const [quoteSenderId, setQuoteSenderId] = useState(DEFAULT_SENDER_SELECTION);
   const [sendRecipients, setSendRecipients] = useState<QuoteRecipient[]>([]);
   const [sendAdditionalEmails, setSendAdditionalEmails] = useState('');
   const [sendMessage, setSendMessage] = useState('');
@@ -268,13 +310,23 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
     try {
       setIsLoading(true);
 
-      const [fetchedClients, fetchedContacts, fetchedTemplates, fetchedDocTemplates, approvalSettings] = await Promise.all([
+      const [fetchedClients, fetchedContacts, fetchedTemplates, fetchedDocTemplates, approvalSettings, billingSettingsResult] = await Promise.all([
         getAllClientsForBilling(false),
         getContactsForPicker('active'),
         listQuotes({ is_template: true, pageSize: 200 }),
         getQuoteDocumentTemplates(),
         getQuoteApprovalSettings(),
+        // Quote creation must remain available to users who cannot read billing settings.
+        // A rejected request and a returned permission/action error both use legacy defaults.
+        getDefaultBillingSettings().catch(() => null),
       ]);
+
+      const billingSettings = billingSettingsResult && !isReturnedActionError(billingSettingsResult)
+        ? billingSettingsResult
+        : null;
+      const validityDays = getQuoteValidityDays(billingSettings?.defaultQuoteValidityDays);
+      const currency = billingSettings?.defaultCurrencyCode || 'USD';
+      setDefaultCurrency(currency);
 
       setApprovalRequired(!isActionPermissionError(approvalSettings) && approvalSettings.approvalRequired === true);
       if (isActionPermissionError(fetchedContacts) || isActionMessageError(fetchedContacts)) {
@@ -316,25 +368,28 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
           po_number: quote.po_number || '',
           client_notes: quote.client_notes || '',
           terms_and_conditions: quote.terms_and_conditions || '',
-          currency_code: quote.currency_code || defaultCurrency,
+          currency_code: quote.currency_code || currency,
         });
+        setTermsBlock(seedTermsBlocks(quote.terms_and_conditions_block, quote.terms_and_conditions));
+        setTermsEditorKey((key) => key + 1);
         setLineItems((quote.quote_items || []).map(createDraftQuoteItemFromQuoteItem));
         setPersistedQuoteItemIds((quote.quote_items || []).map((item) => item.quote_item_id));
         setLastSavedAt(quote.updated_at || quote.created_at || null);
       } else {
         const today = new Date();
         const validUntil = new Date(today);
-        validUntil.setDate(validUntil.getDate() + 30);
+        validUntil.setDate(validUntil.getDate() + validityDays);
 
         setForm({
           ...EMPTY_FORM,
           client_id: initialContext?.clientId ?? '',
           contact_id: initialContext?.contactId ?? '',
           title: initialContext?.title ?? '',
-          currency_code: defaultCurrency,
+          currency_code: currency,
           quote_date: today.toISOString().slice(0, 10),
           valid_until: validUntil.toISOString().slice(0, 10),
         });
+        setTermsBlock(termsBlocksFromLegacyText(''));
         setLineItems([]);
         setPersistedQuoteItemIds([]);
         setLastSavedAt(null);
@@ -432,6 +487,13 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
         po_number: current.po_number || template.po_number || '',
       }));
 
+      setTermsBlock((currentBlock) =>
+        hasTermsContent(currentBlock)
+          ? currentBlock
+          : seedTermsBlocks(template.terms_and_conditions_block, template.terms_and_conditions),
+      );
+      setTermsEditorKey((key) => key + 1);
+
       if (template.quote_items?.length) {
         setLineItems(template.quote_items.map((item) => ({
           ...createDraftQuoteItemFromQuoteItem(item),
@@ -479,6 +541,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
         po_number: form.po_number || null,
         client_notes: form.client_notes || null,
         terms_and_conditions: form.terms_and_conditions || null,
+        terms_and_conditions_block: hasTermsContent(termsBlock) ? termsBlock : null,
         subtotal: 0,
         discount_total: 0,
         tax: 0,
@@ -528,6 +591,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
             quantity: item.quantity,
             unit_price: item.unit_price,
             unit_of_measure: item.unit_of_measure ?? null,
+            unit_code: item.unit_code ?? null,
             phase: item.phase ?? null,
             is_optional: item.is_optional,
             is_selected: item.is_selected,
@@ -643,7 +707,11 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
 
   const quoteStatus = (quote?.status ?? 'draft') as QuoteStatus;
 
-  const runWorkflowAction = async (label: string, action: () => Promise<IQuote | { permissionError: string }>) => {
+  const runWorkflowAction = async (
+    label: string,
+    action: () => Promise<IQuote | { permissionError: string }>,
+    options?: { notifyStatusChanged?: boolean },
+  ) => {
     try {
       setIsWorking(true);
       setError(null);
@@ -653,6 +721,16 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
         throw new Error(getErrorMessage(result));
       }
       setQuote(result as IQuote);
+      if (options?.notifyStatusChanged) {
+        // Isolate a parent-refresh failure: the status mutation already
+        // succeeded, so a list refetch error must not render as a failed
+        // send/resend/approve. The callback owns its own error reporting.
+        try {
+          await onQuoteStatusChanged?.();
+        } catch (refreshError) {
+          console.error('Quote status change refresh failed:', refreshError);
+        }
+      }
       return result;
     } catch (actionError) {
       setError(
@@ -686,7 +764,9 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
       () => sendQuote(quote.quote_id, {
         message: sendMessage.trim() || undefined,
         email_addresses: combined.length > 0 ? combined : undefined,
+        senderId: senderIdForSend(quoteSenderId),
       }),
+      { notifyStatusChanged: true },
     );
     if (result) {
       setIsSendDialogOpen(false);
@@ -699,11 +779,21 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
     }
   };
 
+  useEffect(() => {
+    if (!isSendDialogOpen) return;
+    void listSelectableSenders({ mailClass: 'sales' }).then((result) => {
+      setQuoteSenders(result.senders);
+      setQuoteEffectiveSenderAddress(result.effectiveSenderAddress);
+      setQuoteSenderId(DEFAULT_SENDER_SELECTION);
+    }).catch((reason) => setError(reason instanceof Error ? reason.message : 'Could not load sender addresses.'));
+  }, [isSendDialogOpen]);
+
   const handleResendQuote = async () => {
     if (!quote) return;
     const result = await runWorkflowAction(
       t('quoteForm.errorActions.resendQuote', { defaultValue: 'resend quote' }),
       () => resendQuote(quote.quote_id),
+      { notifyStatusChanged: true },
     );
     if (result) {
       setNotice(t('quoteForm.notices.resent', { defaultValue: 'Quote resent.' }));
@@ -745,6 +835,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
     const result = await runWorkflowAction(
       t('quoteForm.errorActions.approveQuote', { defaultValue: 'approve quote' }),
       () => approveQuote(quote.quote_id, approvalComment),
+      { notifyStatusChanged: true },
     );
     if (result) {
       setApprovalDialogMode(null);
@@ -859,6 +950,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
     return Boolean((quote?.quote_items || []).some((item) => item.is_recurring && !item.is_discount && (!item.is_optional || item.is_selected !== false)));
   }, [quote]);
   const canConvertToInvoice = useMemo(() => {
+    if (quote?.converted_invoice_id) return false;
     const oneTimeItems = (quote?.quote_items || []).filter((item) => !item.is_recurring && (!item.is_optional || item.is_selected !== false));
     return oneTimeItems.some((item) => !item.is_discount);
   }, [quote]);
@@ -866,7 +958,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
   const canConvertToSalesOrder = useMemo(
     () =>
       Boolean(
-        (quote?.quote_items || []).some(
+        !quote?.converted_invoice_id && (quote?.quote_items || []).some(
           (item) =>
             item.service_item_kind === 'product' &&
             !item.is_recurring &&
@@ -920,12 +1012,12 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
         const result = await convertQuoteToInvoice(quote.quote_id);
         if (isActionMessageError(result) || isActionPermissionError(result)) throw new Error(getErrorMessage(result));
         setQuote(result.quote);
-        setNotice(
-          t('quoteForm.notices.createdDraftInvoice', {
-            defaultValue: 'Created draft invoice {{name}}.',
-            name: result.invoice.invoice_number,
-          }),
-        );
+        const message = t('quoteForm.notices.createdDraftInvoice', {
+          defaultValue: 'Created draft invoice {{name}}.',
+          name: result.invoice.invoice_number,
+        });
+        setNotice(message);
+        toast.success(message);
       } else if (mode === 'sales_order') {
         const result = await convertQuoteToSalesOrder(quote.quote_id);
         if (isActionMessageError(result) || isActionPermissionError(result)) throw new Error(getErrorMessage(result));
@@ -940,11 +1032,11 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
       setIsConversionDialogOpen(false);
       setConversionPreview(null);
     } catch (conversionError) {
-      setError(
-        conversionError instanceof Error
-          ? conversionError.message
-          : t('quoteForm.errors.convert', { defaultValue: 'Failed to convert quote' }),
-      );
+      const message = conversionError instanceof Error
+        ? conversionError.message
+        : t('quoteForm.errors.convert', { defaultValue: 'Failed to convert quote' });
+      setError(message);
+      toast.error(message);
     } finally {
       setIsWorking(false);
     }
@@ -1319,6 +1411,21 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
           </Alert>
         )}
 
+        {quote?.converted_invoice_id && (
+          <Alert>
+            <AlertTitle>{t('quoteForm.noticeTitle', { defaultValue: 'Quote' })}</AlertTitle>
+            <AlertDescription>
+              <a
+                id="quote-form-open-converted-invoice"
+                className="text-primary-600 underline"
+                href={`/msp/billing?tab=invoicing&subtab=drafts&invoiceId=${quote.converted_invoice_id}`}
+              >
+                {t('quoteDetail.actions.openConvertedInvoice', { defaultValue: 'Open Converted Invoice' })}
+              </a>
+            </AlertDescription>
+          </Alert>
+        )}
+
         {/* Notice / error alerts */}
         {notice && (
           <Alert>
@@ -1416,6 +1523,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
                   <div className="flex flex-col gap-1 text-sm font-medium">
                     <label htmlFor="quote-date">{t('quoteForm.essentials.quoteDate', { defaultValue: 'Quote date' })}</label>
                     <DatePicker
+                      id="quote-date"
                       value={form.quote_date ? new Date(form.quote_date + 'T00:00:00') : undefined}
                       onChange={(date) => { if (!isReadOnly) handleChange('quote_date', date ? date.toISOString().slice(0, 10) : ''); }}
                       className="w-full"
@@ -1428,6 +1536,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
                   <div className="flex flex-col gap-1 text-sm font-medium">
                     <label htmlFor="quote-valid-until">{t('quoteForm.essentials.validUntil', { defaultValue: 'Valid until' })}</label>
                     <DatePicker
+                      id="quote-valid-until"
                       value={form.valid_until ? new Date(form.valid_until + 'T00:00:00') : undefined}
                       onChange={(date) => { if (!isReadOnly) handleChange('valid_until', date ? date.toISOString().slice(0, 10) : ''); }}
                       className="w-full"
@@ -1521,10 +1630,37 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
                   <TextArea value={form.client_notes} onChange={(event) => handleChange('client_notes', event.target.value)} rows={3} disabled={isReadOnly} />
                 </label>
 
-                <label className="flex flex-col gap-1 text-sm font-medium">
-                  {t('quoteForm.clientFacing.terms', { defaultValue: 'Terms & conditions (Optional)' })}
-                  <TextArea value={form.terms_and_conditions} onChange={(event) => handleChange('terms_and_conditions', event.target.value)} rows={4} disabled={isReadOnly} />
-                </label>
+                <div className="flex flex-col gap-1 text-sm font-medium">
+                  <label htmlFor="quote-terms-editor">{t('quoteForm.clientFacing.terms', { defaultValue: 'Terms & conditions (Optional)' })}</label>
+                  {isReadOnly ? (
+                    <QuoteTermsContent
+                      id="quote-terms-readonly"
+                      block={hasTermsContent(termsBlock) ? termsBlock : null}
+                      text={form.terms_and_conditions}
+                      textClassName="text-sm text-foreground"
+                      richClassName="text-sm text-foreground"
+                      emptyFallback="—"
+                    />
+                  ) : (
+                    <div id="quote-terms-editor" className="rounded-md border border-border bg-background">
+                      <TextEditor
+                        key={`quote-terms-editor-${termsEditorKey}`}
+                        id="quote-terms-editor-input"
+                        initialContent={termsBlock}
+                        onContentChange={(blocks) => {
+                          setTermsBlock(blocks);
+                          setForm((current) => ({
+                            ...current,
+                            terms_and_conditions: flattenBlockContentToPlainText(blocks),
+                          }));
+                        }}
+                        placeholder={t('quoteForm.clientFacing.termsPlaceholder', {
+                          defaultValue: 'Add terms, links and paragraphs…',
+                        })}
+                      />
+                    </div>
+                  )}
+                </div>
               </div>
             </section>
 
@@ -1739,6 +1875,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
             })}
           </DialogDescription>
           <div className="space-y-3 py-2">
+            {quoteSenders.length > 1 && <div className="space-y-1"><label htmlFor="quote-form-send-sender" className="text-sm font-medium">{t('quoteForm.dialogs.send.from', { defaultValue: 'From' })}</label><CustomSelect id="quote-form-send-sender" value={quoteSenderId} onValueChange={setQuoteSenderId} options={buildSenderOptions(quoteSenders, quoteEffectiveSenderAddress, t('quoteForm.dialogs.send.useDefault', { defaultValue: 'Use default' }))} /></div>}
             <label className="flex flex-col gap-1 text-sm font-medium">
               {t('quoteForm.fields.recipients', { defaultValue: 'Recipients' })}
               <QuoteSendRecipientsField
@@ -1861,7 +1998,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
                 {t('quoteConversion.actions.contract', { defaultValue: 'Create Draft Contract' })}
               </Button>
             )}
-            {conversionPreview && conversionPreview.invoice_items.length > 0 && (
+            {conversionPreview && !quote?.converted_invoice_id && conversionPreview.invoice_items.length > 0 && (
               <Button
                 id="quote-form-conversion-invoice"
                 // Secondary while it competes with the sales-order path: both

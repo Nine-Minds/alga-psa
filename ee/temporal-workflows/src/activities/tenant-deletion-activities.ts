@@ -54,6 +54,10 @@ export {
  * Synced from cli/cleanup-tenant.nu
  */
 const TENANT_TABLES_DELETION_ORDER: string[] = [
+  // Outbound sender routes reference sender addresses and boards; addresses
+  // also reference email providers. Delete the route rows first, then senders,
+  // before any of those parent tables.
+  'email_sender_routes', 'email_sender_addresses',
   // === LEVEL 0: Sessions (CRITICAL - must be deleted before users/tenants) ===
   'sessions',
 
@@ -80,6 +84,8 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   // Workflow data store + entity links (standalone; created_by_run_id is a soft
   // ref with no FK, so order among these does not matter)
   'workflow_data_store', 'workflow_entity_links',
+  // Date trigger emission ledger (FK only to tenants)
+  'date_trigger_emissions',
   'workflow_runs', 'tenant_workflow_schedule', 'workflow_definitions',
 
   // === Marketing module (children first; campaigns/channels last).
@@ -125,7 +131,7 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   // Invoice details
   'invoice_charges', 'invoice_annotations', 'invoice_time_entries', 'invoice_usage_records',
   'invoice_charge_details', 'invoice_charge_fixed_details', 'invoice_items',
-  'invoice_payment_links', 'invoice_payments', 'invoice_template_assignments',
+  'invoice_autopay_attempts', 'billing_profile_autopay', 'invoice_payment_links', 'invoice_payments', 'invoice_template_assignments',
 
   // Prepaid hour blocks. The three child tables FK to hour_blocks, so they go
   // first; hour_blocks itself FKs to time_entries, service_catalog, invoices and
@@ -168,7 +174,7 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   'teams_integrations', 'microsoft_profiles',
 
   // Telephony (artifacts hang off call records; providers hold the subscription)
-  'telephony_call_artifacts', 'telephony_call_intents', 'telephony_call_records', 'telephony_providers',
+  'telephony_call_artifacts', 'telephony_call_intents', 'telephony_call_records', 'telephony_chat_records', 'telephony_providers',
 
   // Authorization bundles
   // assignments/rules must be deleted before revisions and bundles; revisions and
@@ -253,7 +259,14 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   // Import/export
   'import_sources',
 
+  // Recurring tickets. Client asset links FK to definition clients and assets;
+  // definition clients FK to definitions and clients; occurrences FK to
+  // definitions only. All four go before assets and clients.
+  'recurring_ticket_client_assets', 'recurring_ticket_occurrences',
+  'recurring_ticket_definition_clients', 'recurring_ticket_definitions',
+
   // Asset details
+  'asset_remote_access_links',
   'asset_maintenance_occurrences',
   'asset_maintenance_notifications', 'asset_maintenance_history', 'asset_service_history',
   'asset_ticket_associations', 'asset_document_associations', 'asset_relationships',
@@ -281,6 +294,9 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   // External references depend on tickets and their creating users. Purge them
   // explicitly before either parent, along with the tenant's custom systems.
   'external_entity_links', 'tenant_external_systems',
+
+  // Named list views reference their owning user; purge before users.
+  'list_views',
 
   // SLA leaf tables (must be before tickets, statuses, priorities, boards)
   // ticket_audit_logs sits with sla_audit_log: same shape, FKs to tickets/users,
@@ -314,8 +330,10 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   // outlive whatever made a usage row unmappable), so it can drop anywhere.
   // Usage semantics stores are FK-less leaves (they reference contract lines,
   // clients, and configs by id only), as are the seat-pricing revision store
-  // and the per-tenant billing-semantics lock row.
+  // and the per-tenant billing-semantics lock row. The seat-pricing revision
+  // history and the mid-period true-up ledger are FK-less leaves too.
   'usage_period_total_requests', 'usage_period_totals', 'usage_measurement_revisions',
+  'contract_line_unit_pricing_revision_history', 'contract_recurring_unit_adjustments',
   'contract_line_unit_pricing_revisions', 'billing_semantics_locks',
   'usage_tracking', 'bucket_usage', 'bucket_usage_unmappable_archive', 'recurring_service_periods', 'transactions',
   'accounting_export_errors', 'accounting_export_lines', 'accounting_export_batches',
@@ -340,6 +358,7 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   'contract_template_line_defaults',
   'contract_template_line_bucket_services', 'contract_template_line_buckets',
   'contract_template_line_fixed_config', 'contract_template_line_service_bucket_config',
+  'contract_template_line_service_fixed_config',
   'contract_template_line_service_hourly_config',
   'contract_template_line_service_usage_config',
   'contract_template_line_service_configuration',
@@ -354,6 +373,7 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
 
   // Entra integration (dependent rows first, then parents)
   'entra_contact_reconciliation_queue', 'entra_contact_links',
+  'entra_managed_tenant_user_filters',
   'entra_client_tenant_mappings', 'entra_sync_run_tenants',
   'entra_sync_runs', 'entra_managed_tenants',
   'entra_partner_connections', 'entra_sync_settings',
@@ -383,6 +403,9 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   'workflow_task_definitions',
 
   // Service request runtime and published snapshots
+  // Applications restrict deletion of mapping versions; remove their results first.
+  'service_request_submission_application_results', 'service_request_submission_applications',
+  'service_request_answer_mapping_versions', 'service_request_answer_mappings',
   'service_request_submission_attachments', 'service_request_submissions',
   'service_request_definition_versions', 'service_request_definitions',
 
@@ -415,8 +438,14 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   // Schedule entries
   'schedule_entries',
 
+  // Shared calendars (schedule_entries.calendar_id → calendars; shares → calendars;
+  // calendars.owner_user_id → users, so this block precedes users)
+  'calendar_shares', 'calendars',
+
   // Service catalog
   'service_catalog', 'service_types', 'service_categories',
+  // Tenant custom units of measure (no FKs; referenced by unit_code text only)
+  'tenant_units_of_measure',
 
   // Settings that might be referenced
   'approval_thresholds',
@@ -456,8 +485,10 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   'board_close_rules',
 
   // === LEVEL 5: Tickets and related ===
-  // Ticket bundle settings and entity links must be deleted BEFORE tickets
-  'ticket_bundle_settings', 'ticket_entity_links',
+  // Ticket bundle settings and entity links must be deleted BEFORE tickets.
+  // ticket_bundle_status_propagations FKs to tickets twice (master and child),
+  // so it belongs in the same pre-tickets group.
+  'ticket_bundle_settings', 'ticket_entity_links', 'ticket_bundle_status_propagations',
 
   // Tickets MUST be deleted BEFORE categories, statuses, etc that it references
   // AND BEFORE client_locations that tickets reference via location_id
@@ -498,7 +529,7 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   // - clients.account_manager → users
 
   // Tax configuration (no dependencies on core entities)
-  'tax_components', 'tax_rates', 'tax_regions',
+  'tax_components',
 
   // Permissions and roles (must be deleted before users)
   'permissions', 'roles', 'teams',
@@ -533,8 +564,17 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   // those and before clients. The portal access grants reference profiles, so
   // they go first (S12).
   'client_portal_user_billing_profiles',
+  // Profile contacts reference both a profile and a contact; contacts are
+  // deleted after clients, so this has to go before the profiles it hangs off.
+  'billing_profile_contacts',
   'client_billing_profiles',
-  'clients',    // Delete clients FIRST (after NULLing account_manager references)
+  // Merge audit rows reference nothing but the tenant, so the position is
+  // advisory — listed beside the clients they describe so the order reads.
+  'client_merges',
+  // Tax ID consolidation audit rows store client_id without an FK, so the
+  // position is advisory as well.
+  'client_tax_id_migration_conflicts',
+  'clients',   // Delete clients FIRST (after NULLing account_manager references)
   'contacts',   // Delete contacts SECOND (after clients, before users that have NOT NULL contact_id)
   'contact_email_type_definitions', // contacts.primary_email_custom_type_id → this table (RESTRICT)
   'password_reset_tokens',     // password_reset_tokens.user_id → users with NO ACTION
@@ -641,7 +681,7 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
 
   // Tenant add-ons and settings last (before tenant itself)
   'tenant_addons',
-  'tenant_settings',
+  'tenant_settings', 'tax_rates', 'tax_regions',
 ];
 
 const TENANT_TABLES_DELETION_SET = new Set(TENANT_TABLES_DELETION_ORDER);
@@ -1621,6 +1661,24 @@ async function breakCircularDependencies(
   } catch (error) {
     // Ignore if table/column doesn't exist (older schemas without Opportunities).
     log.debug('Could not clear suggestion_id in opportunities (table or column may not exist)', {
+      error: error instanceof Error ? error.message : 'Unknown',
+    });
+  }
+
+  // Step 8: NULL out tenant_settings.default_tax_rate_id so tax_rates (deleted
+  // earlier in the order) is not blocked by the composite RESTRICT FK. The
+  // setting row itself is deleted later; clearing the reference first keeps the
+  // tenant from being left with orphaned tax rates.
+  try {
+    const result8 = await tenantScopedDb.table('tenant_settings')
+      .whereNotNull('default_tax_rate_id')
+      .update({ default_tax_rate_id: null });
+    if (result8 > 0) {
+      log.info('Cleared default_tax_rate_id references in tenant_settings', { count: result8 });
+    }
+  } catch (error) {
+    // Ignore if table/column doesn't exist (older schemas before the setting).
+    log.debug('Could not clear default_tax_rate_id in tenant_settings (table or column may not exist)', {
       error: error instanceof Error ? error.message : 'Unknown',
     });
   }

@@ -4,6 +4,12 @@ import {
   type ServiceContext,
 } from '@alga-psa/db';
 import { hasPermission } from '@alga-psa/auth/rbac';
+import { resolveDateFormatCountry } from '@alga-psa/tenancy/lib/tenantDefaultCountry';
+import {
+  countryDateFormat,
+  SYSTEM_DATE_FORMAT,
+  type CountryDateFormat,
+} from '@alga-psa/core/i18n/countryDateFormat';
 import { getTenantProduct } from '@/lib/productAccess';
 import { getTenantThemeByTenantId } from '@alga-psa/tenancy/actions/tenant-actions/tenantThemeActions';
 import {
@@ -36,7 +42,20 @@ export interface MobileFeatureCapabilities {
     inventory: boolean;
     opportunities: boolean;
     opportunitiesCreate: boolean;
+    /** Project tasks on mobile; PSA only, like the Projects module itself. */
+    projects: boolean;
+    /** Client/contact writes follow RBAC alone: both products have clients and contacts. */
+    clientsCreate: boolean;
+    clientsUpdate: boolean;
+    contactsCreate: boolean;
+    contactsUpdate: boolean;
   };
+  /**
+   * How this user's dates are written, resolved from their country exactly as
+   * the web layouts resolve it. The device locale must not decide this: a
+   * technician with a UK phone working for a US MSP reads the MSP's dates.
+   */
+  formatting: CountryDateFormat;
   theme: MobileTheme;
 }
 
@@ -85,25 +104,49 @@ export class MobileCapabilitiesService extends BaseService<never> {
     });
   }
 
+  private async getFormatting(context: ServiceContext): Promise<CountryDateFormat> {
+    try {
+      const knex = await this.getDbForContext(context);
+      const country = await resolveDateFormatCountry(knex, context.tenant, context.user);
+      return countryDateFormat(country?.code ?? null);
+    } catch {
+      return SYSTEM_DATE_FORMAT;
+    }
+  }
+
   async getMyCapabilities(context: ServiceContext): Promise<MobileFeatureCapabilities> {
+    const formatting = await this.getFormatting(context);
     const theme = await this.resolveTheme(context.tenant);
     const productCode = await getTenantProduct(context.tenant);
+    const knex = await this.getDbForContext(context);
+
+    const [clientsCreate, clientsUpdate, contactsCreate, contactsUpdate] = await Promise.all([
+      hasPermission(context.user, 'client', 'create', knex),
+      hasPermission(context.user, 'client', 'update', knex),
+      hasPermission(context.user, 'contact', 'create', knex),
+      hasPermission(context.user, 'contact', 'update', knex),
+    ]);
+    const crm = { clientsCreate, clientsUpdate, contactsCreate, contactsUpdate };
+
     if (productCode !== 'psa') {
       return {
         features: {
           inventory: false,
           opportunities: false,
           opportunitiesCreate: false,
+          projects: false,
+          ...crm,
         },
+        formatting,
         theme,
       };
     }
 
-    const knex = await this.getDbForContext(context);
-    const [inventory, opportunities, opportunitiesCreate] = await Promise.all([
+    const [inventory, opportunities, opportunitiesCreate, projects] = await Promise.all([
       hasPermission(context.user, 'inventory', 'read', knex),
       hasPermission(context.user, 'opportunities', 'read', knex),
       hasPermission(context.user, 'opportunities', 'create', knex),
+      hasPermission(context.user, 'project', 'read', knex),
     ]);
 
     return {
@@ -111,7 +154,10 @@ export class MobileCapabilitiesService extends BaseService<never> {
         inventory,
         opportunities,
         opportunitiesCreate,
+        projects,
+        ...crm,
       },
+      formatting,
       theme,
     };
   }

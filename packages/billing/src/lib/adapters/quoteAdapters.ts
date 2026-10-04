@@ -1,5 +1,5 @@
 import type { IQuote, QuoteViewModel, QuoteViewModelLineItem, QuoteViewModelLocation, QuoteViewModelLocationGroup, QuoteViewModelParty, QuoteViewModelPhase } from '@alga-psa/types';
-import { getClientLogoUrl } from '@alga-psa/formatting/avatarUtils';
+import { getClientDocumentLogoUrl } from '@alga-psa/formatting/avatarUtils';
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 
@@ -98,6 +98,7 @@ const mapQuoteItemToViewModel = (
     tax_amount: toFiniteNumber(item.tax_amount),
     net_amount: toFiniteNumber(item.net_amount),
     unit_of_measure: item.unit_of_measure ?? null,
+    unit_code: item.unit_code ?? null,
     phase: item.phase ?? null,
     is_optional: Boolean(item.is_optional),
     is_selected: item.is_selected !== false,
@@ -409,7 +410,7 @@ async function fetchClientParty(
     return null;
   }
 
-  const logoUrl = await getClientLogoUrl(clientId, tenant).catch(() => null);
+  const logoUrl = await getClientDocumentLogoUrl(clientId, tenant).catch(() => null);
 
   return {
     name: asTrimmedString(client.client_name) || 'Client',
@@ -581,6 +582,8 @@ export async function mapLoadedQuoteToViewModel(
     tax: derivedTax,
     total_amount: derivedTotal,
     terms_and_conditions: quote.terms_and_conditions ?? null,
+    terms_and_conditions_block: quote.terms_and_conditions_block ?? null,
+    terms_and_conditions_rich: quote.terms_and_conditions_block ?? quote.terms_and_conditions ?? null,
     client_notes: quote.client_notes ?? null,
     client_id: quote.client_id ?? null,
     contact_id: quote.contact_id ?? null,

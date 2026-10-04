@@ -25,7 +25,8 @@ import {
   resolvePaymentBillingProfileId,
 } from '@alga-psa/shared/billingClients/billingProfilePayments';
 import { auditLog } from '../../logging/auditLog';
-import { TaxService } from '@alga-psa/billing/services/taxService';
+import { TaxService, normalizeTaxCapAmount } from '@alga-psa/billing/services/taxService';
+import { assertPsaOnlyTenantAccess, ProductAccessError } from '@shared/services/productAccessGuard';
 import { v4 as uuidv4 } from 'uuid';
 import { SharedNumberingService } from '@shared/services/numberingService';
 import { applyCreditToInvoiceInternal } from '@alga-psa/billing/actions/creditActions';
@@ -91,6 +92,8 @@ import {
   CreateTaxRateRequest,
   UpdateTaxRateRequest,
   TaxRateResponse,
+  TaxRateListQuery,
+  taxRateResponseSchema,
   
   // Reporting types
   AccountBalanceReport,
@@ -289,6 +292,49 @@ export class FinancialService extends BaseService<ITransaction> {
     if (!await hasPermission(context.user, resource, operation)) {
       throw new ForbiddenError(`Permission denied: Cannot ${operation} ${resource}`);
     }
+  }
+
+  /** List the tax resource, with API financial permission checked by the controller. */
+  async listTaxRates(query: TaxRateListQuery, context: ServiceContext): Promise<ListResult<TaxRateResponse>> {
+    await this.validatePermissions('read', 'billing', context);
+    try {
+      await assertPsaOnlyTenantAccess(context.tenant, 'billing_actions');
+    } catch (error) {
+      if (error instanceof ProductAccessError) throw new ForbiddenError('Billing tax rates are not available for this tenant.');
+      throw error;
+    }
+    const { knex } = await this.getKnex();
+    const { page = 1, limit = 25, sort = 'created_at', order = 'desc' } = query;
+    const rates = tenantDb(knex, context.tenant).table('tax_rates');
+    if (query.region_code !== undefined) rates.where('region_code', query.region_code);
+    if (query.is_active !== undefined) rates.where('is_active', query.is_active);
+    if (query.effective_date !== undefined) {
+      rates.where('start_date', '<=', query.effective_date)
+        .where(builder => builder.whereNull('end_date').orWhere('end_date', '>', query.effective_date!));
+    }
+    if (query.search) {
+      rates.where(builder => builder.whereILike('region_code', `%${query.search}%`).orWhereILike('description', `%${query.search}%`));
+    }
+    for (const [field, value, operator] of [
+      ['created_at', query.created_from, '>='], ['created_at', query.created_to, '<='],
+      ['updated_at', query.updated_from, '>='], ['updated_at', query.updated_to, '<='],
+    ] as const) {
+      if (value !== undefined) rates.where(field, operator, value);
+    }
+    const count = await rates.clone().count('* as total').first();
+    const rows = await rates.orderBy(sort, order).orderBy('tax_rate_id', 'asc').limit(limit).offset((page - 1) * limit).select('*');
+    const dateValue = (value: unknown) => value instanceof Date ? value.toISOString() : value;
+    return {
+      total: Number(count?.total ?? 0),
+      data: rows.map(row => taxRateResponseSchema.parse({
+        ...row,
+        tax_percentage: Number(row.tax_percentage),
+        cap_amount: normalizeTaxCapAmount(row.cap_amount),
+        currency_code: row.currency_code ?? null,
+        start_date: dateValue(row.start_date), end_date: dateValue(row.end_date),
+        created_at: dateValue(row.created_at), updated_at: dateValue(row.updated_at),
+      })),
+    };
   }
 
   // ============================================================================

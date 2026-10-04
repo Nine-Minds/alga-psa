@@ -1,14 +1,21 @@
 import { useState } from "react";
-import { createTimeEntry } from "../../../api/timeEntries";
+import { createTimeEntry, type WorkItemType } from "../../../api/timeEntries";
 import { getClientMetadataHeaders } from "../../../device/clientMetadata";
 import type { TicketDetailDeps } from "../types";
 import { getApiErrorMessage } from "../utils";
 
 export function useTimeEntry(
   deps: TicketDetailDeps,
-  options?: { onCreated?: () => void },
+  options?: {
+    onCreated?: () => void;
+    /** Log against something other than the ticket in `deps` (a project task, say). */
+    workItem?: { id: string; type: WorkItemType };
+    /** Service to start the form with; a task carries its own. */
+    defaultServiceId?: string | null;
+  },
 ) {
   const { client, session, ticketId, showToast, t } = deps;
+  const workItem = options?.workItem ?? { id: ticketId, type: "ticket" as WorkItemType };
 
   const [timeEntryOpen, setTimeEntryOpen] = useState(false);
   const [timeEntryDate, setTimeEntryDate] = useState(new Date());
@@ -45,7 +52,7 @@ export function useTimeEntry(
 
     setTimeEntryDate(baseDate);
     setTimeEntryNotes("");
-    setTimeEntryServiceId(null);
+    setTimeEntryServiceId(options?.defaultServiceId ?? null);
     setTimeEntryOpen(true);
   };
 
@@ -85,8 +92,8 @@ export function useTimeEntry(
       const auditHeaders = await getClientMetadataHeaders();
       const res = await createTimeEntry(client, {
         apiKey: session.accessToken,
-        work_item_type: "ticket",
-        work_item_id: ticketId,
+        work_item_type: workItem.type,
+        work_item_id: workItem.id,
         service_id: timeEntryServiceId,
         start_time: start.toISOString(),
         end_time: end.toISOString(),

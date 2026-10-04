@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const mocks = vi.hoisted(() => ({
   getTenantProduct: vi.fn(),
   hasPermission: vi.fn(),
+  resolveDateFormatCountry: vi.fn(),
   getTenantThemeByTenantId: vi.fn(),
 }));
 
@@ -14,10 +15,15 @@ vi.mock('@alga-psa/auth/rbac', () => ({
   hasPermission: mocks.hasPermission,
 }));
 
+vi.mock('@alga-psa/tenancy/lib/tenantDefaultCountry', () => ({
+  resolveDateFormatCountry: mocks.resolveDateFormatCountry,
+}));
+
 vi.mock('@alga-psa/tenancy/actions/tenant-actions/tenantThemeActions', () => ({
   getTenantThemeByTenantId: mocks.getTenantThemeByTenantId,
 }));
 
+import { countryDateFormat, SYSTEM_DATE_FORMAT } from '@alga-psa/core/i18n/countryDateFormat';
 import { CUSTOM_THEME_PRESETS, CUSTOM_THEME_TOKEN_KEYS } from '@alga-psa/tenancy/lib/customTheme';
 import { PREDEFINED_THEME_PAIR_IDS, getThemePairMeta } from '@alga-psa/tenancy/lib/themePairs';
 import { MobileCapabilitiesService } from '../../../lib/api/services/MobileCapabilitiesService';
@@ -35,6 +41,8 @@ const context = {
   db,
 };
 
+const CRM_ALL = { clientsCreate: true, clientsUpdate: true, contactsCreate: true, contactsUpdate: true };
+
 const customTokens = (overrides: Record<string, string> = {}) => ({
   ...CUSTOM_THEME_PRESETS.forest.light,
   primary: '#123456',
@@ -46,6 +54,7 @@ describe('MobileCapabilitiesService', () => {
     vi.clearAllMocks();
     mocks.getTenantProduct.mockResolvedValue('psa');
     mocks.hasPermission.mockResolvedValue(true);
+    mocks.resolveDateFormatCountry.mockResolvedValue(null);
     mocks.getTenantThemeByTenantId.mockResolvedValue({ pairId: 'alga' });
   });
 
@@ -57,8 +66,12 @@ describe('MobileCapabilitiesService', () => {
       inventory: true,
       opportunities: true,
       opportunitiesCreate: true,
+      projects: true,
+      ...CRM_ALL,
     });
+    expect(result.formatting).toEqual(SYSTEM_DATE_FORMAT);
     expect(mocks.hasPermission).toHaveBeenCalledWith(user, 'inventory', 'read', db);
+    expect(mocks.hasPermission).toHaveBeenCalledWith(user, 'project', 'read', db);
     expect(mocks.hasPermission).toHaveBeenCalledWith(user, 'opportunities', 'read', db);
     expect(mocks.hasPermission).toHaveBeenCalledWith(user, 'opportunities', 'create', db);
   });
@@ -72,8 +85,33 @@ describe('MobileCapabilitiesService', () => {
       inventory: false,
       opportunities: false,
       opportunitiesCreate: false,
+      projects: false,
+      ...CRM_ALL,
     });
-    expect(mocks.hasPermission).not.toHaveBeenCalled();
+    expect(result.formatting).toEqual(SYSTEM_DATE_FORMAT);
+    expect(mocks.hasPermission).not.toHaveBeenCalledWith(user, 'inventory', 'read', db);
+    expect(mocks.hasPermission).not.toHaveBeenCalledWith(user, 'project', 'read', db);
+    expect(mocks.hasPermission).not.toHaveBeenCalledWith(user, 'opportunities', 'read', db);
+  });
+
+  it('reports client and contact write permissions for every product', async () => {
+    mocks.getTenantProduct.mockResolvedValue('algadesk');
+    mocks.hasPermission.mockImplementation(async (_user, resource, action) => (
+      !(resource === 'client' && action === 'create') && !(resource === 'contact' && action === 'update')
+    ));
+    const service = new MobileCapabilitiesService();
+
+    const result = await service.getMyCapabilities(context);
+    expect(result.features).toMatchObject({
+      clientsCreate: false,
+      clientsUpdate: true,
+      contactsCreate: true,
+      contactsUpdate: false,
+    });
+    expect(mocks.hasPermission).toHaveBeenCalledWith(user, 'client', 'create', db);
+    expect(mocks.hasPermission).toHaveBeenCalledWith(user, 'client', 'update', db);
+    expect(mocks.hasPermission).toHaveBeenCalledWith(user, 'contact', 'create', db);
+    expect(mocks.hasPermission).toHaveBeenCalledWith(user, 'contact', 'update', db);
   });
 
   it.each([
@@ -92,6 +130,8 @@ describe('MobileCapabilitiesService', () => {
       inventory: expectedInventory,
       opportunities: expectedOpportunities,
       opportunitiesCreate: expectedOpportunities,
+      projects: true,
+      ...CRM_ALL,
     });
   });
 
@@ -106,6 +146,8 @@ describe('MobileCapabilitiesService', () => {
       inventory: true,
       opportunities: true,
       opportunitiesCreate: false,
+      projects: true,
+      ...CRM_ALL,
     });
   });
 
@@ -197,11 +239,13 @@ describe('MobileCapabilitiesService', () => {
       const service = new MobileCapabilitiesService();
 
       const result = await service.getMyCapabilities(context);
-      expect(Object.keys(result).sort()).toEqual(['features', 'theme']);
+      expect(Object.keys(result).sort()).toEqual(['features', 'formatting', 'theme']);
       expect(result.features).toEqual({
         inventory: true,
         opportunities: true,
         opportunitiesCreate: true,
+        projects: true,
+        ...CRM_ALL,
       });
     });
 
@@ -214,5 +258,34 @@ describe('MobileCapabilitiesService', () => {
       expect(result.theme.pairId).toBe('alga');
       expect(result.theme.light).toEqual(CUSTOM_THEME_PRESETS.alga.light);
     });
+  });
+
+  describe('date formatting block', () => {
+    it("answers the resolved country's date shape so the device locale cannot decide it", async () => {
+      mocks.resolveDateFormatCountry.mockResolvedValue({ code: 'AU', name: 'Australia' });
+      const service = new MobileCapabilitiesService();
+
+      const capabilities = await service.getMyCapabilities(context);
+      expect(capabilities.formatting).toEqual(countryDateFormat('AU'));
+      expect(capabilities.formatting.datePattern).toBe('dd/MM/yyyy');
+    });
+
+    it('answers the fixed system default when the country cannot be resolved', async () => {
+      mocks.resolveDateFormatCountry.mockRejectedValue(new Error('no connection'));
+      const service = new MobileCapabilitiesService();
+
+      await expect(service.getMyCapabilities(context)).resolves.toMatchObject({
+        formatting: SYSTEM_DATE_FORMAT,
+      });
+    });
+  });
+
+  it('turns projects off without project:read on a PSA tenant', async () => {
+    mocks.hasPermission.mockImplementation(async (_user, resource) => resource !== 'project');
+    const service = new MobileCapabilitiesService();
+
+    const result = await service.getMyCapabilities(context);
+    expect(result.features.projects).toBe(false);
+    expect(result.features.inventory).toBe(true);
   });
 });

@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import path from 'node:path';
@@ -8,6 +8,18 @@ import {
 } from '../../actions/_dbTestUtils';
 import { SyncMappingLedger } from './syncMappingLedger';
 import { KnexInvoiceMappingRepository } from '../../repositories/invoiceMappingRepository';
+
+type XeroConnectionIdentity = { connectionId: string; xeroTenantId: string };
+const xeroConnectionsState = vi.hoisted(() => ({
+  value: {
+    'xero-conn-1': { connectionId: 'xero-conn-1', xeroTenantId: 'org-1' },
+    'xero-conn-2': { connectionId: 'xero-conn-2', xeroTenantId: 'org-2' },
+  } as Record<string, XeroConnectionIdentity>,
+}));
+
+vi.mock('@alga-psa/integrations/lib/xero/xeroClientService', () => ({
+  getStoredXeroConnections: async () => xeroConnectionsState.value,
+}));
 
 // Load the migration under test via a computed path so Nx's static graph does
 // not record a billing -> server project edge for a test-only fixture (mirrors
@@ -282,5 +294,105 @@ describe('unlink-then-export suppression and explicit relink', () => {
       .where({ tenant: tenantA, alga_entity_type: 'invoice', alga_entity_id: invoiceId })
       .whereNull('deleted_at');
     expect(rows).toHaveLength(1);
+  });
+});
+
+describe('Xero connection-id identity with historical organisation-keyed mappings', () => {
+  function xeroRow(overrides: Record<string, unknown>): Record<string, unknown> {
+    return mappingRow({
+      integration_type: 'xero',
+      external_realm_id: 'xero-conn-1',
+      ...overrides,
+    });
+  }
+
+  beforeEach(async () => {
+    await db('tenant_external_entity_mappings')
+      .where({ tenant: tenantA })
+      .orWhere({ tenant: tenantB })
+      .del();
+    xeroConnectionsState.value = {
+      'xero-conn-1': { connectionId: 'xero-conn-1', xeroTenantId: 'org-1' },
+      'xero-conn-2': { connectionId: 'xero-conn-2', xeroTenantId: 'org-2' },
+    };
+  });
+
+  it('resolves a historical organisation-keyed mapping for its owning connection', async () => {
+    const invoiceId = uuidv4();
+    await db('tenant_external_entity_mappings').insert(
+      xeroRow({ alga_entity_id: invoiceId, external_realm_id: 'org-1' })
+    );
+
+    const ledger = new SyncMappingLedger(db, tenantA, 'xero');
+    const resolved = await ledger.findByAlgaId('invoice', invoiceId, 'xero-conn-1');
+    expect(resolved?.external_realm_id).toBe('org-1');
+
+    // The organisation alias is not the connection's own key: the exact
+    // organisation-id target also resolves via its owning connection id.
+    const byOrg = await ledger.findByAlgaId('invoice', invoiceId, 'org-1');
+    expect(byOrg?.external_realm_id).toBe('org-1');
+  });
+
+  it('never resolves another organisation or tenant through the alias', async () => {
+    const invoiceId = uuidv4();
+    await db('tenant_external_entity_mappings').insert([
+      xeroRow({ alga_entity_id: invoiceId, external_realm_id: 'org-2' }),
+      xeroRow({ tenant: tenantB, alga_entity_id: invoiceId, external_realm_id: 'org-1' }),
+    ]);
+
+    const ledgerA = new SyncMappingLedger(db, tenantA, 'xero');
+    // org-2 is owned by a different connection: invisible to xero-conn-1.
+    expect(await ledgerA.findByAlgaId('invoice', invoiceId, 'xero-conn-1')).toBeUndefined();
+    // The wrong-organisation row surfaces as non-consumable for an actionable abort.
+    const blocked = await ledgerA.findNonConsumable('invoice', invoiceId, 'xero-conn-1');
+    expect(blocked?.external_realm_id).toBe('org-2');
+
+    // Cross-tenant org-1 rows stay invisible even though the realm id matches.
+    const ledgerB = new SyncMappingLedger(db, tenantB, 'xero');
+    expect(await ledgerB.findByAlgaId('invoice', invoiceId, 'xero-conn-2')).toBeUndefined();
+    expect(await ledgerB.findByAlgaId('invoice', invoiceId, 'xero-conn-1')).toBeDefined();
+  });
+
+  it('prefers the exact connection-id mapping over a conflicting organisation-keyed row', async () => {
+    const invoiceId = uuidv4();
+    await db('tenant_external_entity_mappings').insert([
+      xeroRow({ alga_entity_id: invoiceId, external_realm_id: 'org-1', external_entity_id: 'historical' }),
+      xeroRow({ alga_entity_id: invoiceId, external_realm_id: 'xero-conn-1', external_entity_id: 'canonical' }),
+    ]);
+
+    const ledger = new SyncMappingLedger(db, tenantA, 'xero');
+    const resolved = await ledger.findByAlgaId('invoice', invoiceId, 'xero-conn-1');
+    expect(resolved?.external_realm_id).toBe('xero-conn-1');
+    expect(resolved?.external_entity_id).toBe('canonical');
+  });
+
+  it('fails closed when the organisation is owned by more than one connection', async () => {
+    xeroConnectionsState.value = {
+      'xero-conn-1': { connectionId: 'xero-conn-1', xeroTenantId: 'org-shared' },
+      'xero-conn-2': { connectionId: 'xero-conn-2', xeroTenantId: 'org-shared' },
+    };
+    const invoiceId = uuidv4();
+    await db('tenant_external_entity_mappings').insert(
+      xeroRow({ alga_entity_id: invoiceId, external_realm_id: 'org-shared' })
+    );
+
+    const ledger = new SyncMappingLedger(db, tenantA, 'xero');
+    expect(await ledger.findByAlgaId('invoice', invoiceId, 'xero-conn-1')).toBeUndefined();
+  });
+
+  it('the invoice export repository resolves a historical organisation-keyed invoice mapping', async () => {
+    const invoiceId = uuidv4();
+    await db('tenant_external_entity_mappings').insert(
+      xeroRow({ alga_entity_id: invoiceId, external_realm_id: 'org-1', external_entity_id: 'xero-inv-1' })
+    );
+
+    const repo = new KnexInvoiceMappingRepository(db);
+    const found = await repo.findInvoiceMapping({
+      tenantId: tenantA,
+      adapterType: 'xero',
+      invoiceId,
+      targetRealm: 'xero-conn-1',
+    });
+    expect(found?.externalInvoiceId).toBe('xero-inv-1');
   });
 });

@@ -156,10 +156,10 @@ describe('Xero OAuth routes', () => {
     });
     getXeroRedirectUriMock.mockResolvedValue('https://example.com/api/integrations/xero/callback');
     getXeroOAuthScopesStringMock.mockReturnValue(
-      'offline_access accounting.settings.read accounting.invoices accounting.contacts'
+      'offline_access accounting.settings.read accounting.invoices accounting.payments.read accounting.contacts'
     );
     getXeroOAuthScopeConfigMock.mockReturnValue({
-      scopes: ['offline_access', 'accounting.settings.read', 'accounting.invoices', 'accounting.contacts'],
+      scopes: ['offline_access', 'accounting.settings.read', 'accounting.invoices', 'accounting.payments.read', 'accounting.contacts'],
       source: 'default'
     });
     upsertStoredXeroConnectionsMock.mockResolvedValue({});
@@ -170,7 +170,7 @@ describe('Xero OAuth routes', () => {
         refresh_token: 'refresh-token',
         expires_in: 1800,
         refresh_token_expires_in: 3600,
-        scope: 'offline_access accounting.settings.read accounting.invoices accounting.contacts'
+        scope: 'offline_access accounting.settings.read accounting.invoices accounting.payments.read accounting.contacts'
       }
     });
     axiosGetMock.mockResolvedValue({
@@ -265,10 +265,11 @@ describe('Xero OAuth routes', () => {
     expect(location).toContain('client_id=tenant-client-id');
     // URLSearchParams form-encodes spaces as '+'.
     expect(location).toContain(
-      'scope=offline_access+accounting.settings.read+accounting.invoices+accounting.contacts'
+      'scope=offline_access+accounting.settings.read+accounting.invoices+accounting.payments.read+accounting.contacts'
     );
     expect(location).not.toContain('banktransactions');
-    expect(location).not.toContain('accounting.payments');
+    // Read-only payments scope only — the write scope is never requested.
+    expect(location).not.toMatch(/accounting\.payments($|[+&])/);
     expect(location).toContain(
       encodeURIComponent('https://example.com/api/integrations/xero/callback')
     );
@@ -286,7 +287,7 @@ describe('Xero OAuth routes', () => {
       userId: 'user-1',
       credentialSource: 'tenant',
       scopeSource: 'default',
-      scopes: ['offline_access', 'accounting.settings.read', 'accounting.invoices', 'accounting.contacts']
+      scopes: ['offline_access', 'accounting.settings.read', 'accounting.invoices', 'accounting.payments.read', 'accounting.contacts']
     });
     expect(JSON.stringify(loggerInfoMock.mock.calls)).not.toContain('tenant-client-secret');
   });

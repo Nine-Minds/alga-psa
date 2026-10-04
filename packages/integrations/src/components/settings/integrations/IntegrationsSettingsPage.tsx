@@ -148,6 +148,7 @@ interface IntegrationsSettingsPageProps {
   canUseCipp?: boolean;
   /** Slot for QBO sync health panel (injected from billing to avoid a circular dep) */
   qboSyncHealthSlot?: React.ReactNode;
+  xeroSyncHealthSlot?: React.ReactNode;
   /** Slot for QBO onboarding wizard entry (injected from billing to avoid a circular dep) */
   qboOnboardingSlot?: React.ReactNode;
 }
@@ -214,6 +215,7 @@ const IntegrationsSettingsPage: React.FC<IntegrationsSettingsPageProps> = ({
   canUseEntraSync = true,
   canUseCipp = true,
   qboSyncHealthSlot,
+  xeroSyncHealthSlot,
   qboOnboardingSlot,
 }) => {
   const { t } = useTranslation('msp/settings');
@@ -247,7 +249,7 @@ const IntegrationsSettingsPage: React.FC<IntegrationsSettingsPageProps> = ({
           id: 'accounting-setup',
           name: t('integrations.items.accountingSetup.name'),
           description: t('integrations.items.accountingSetup.description'),
-          content: <AccountingIntegrationsSetup canUseLiveIntegrations={canUseIntegrations} qboSyncHealthSlot={qboSyncHealthSlot} qboOnboardingSlot={qboOnboardingSlot} />,
+          content: <AccountingIntegrationsSetup canUseLiveIntegrations={canUseIntegrations} qboSyncHealthSlot={qboSyncHealthSlot} xeroSyncHealthSlot={xeroSyncHealthSlot} qboOnboardingSlot={qboOnboardingSlot} />,
         }
       ],
     },
@@ -406,7 +408,7 @@ const IntegrationsSettingsPage: React.FC<IntegrationsSettingsPageProps> = ({
         }] : []),
       ],
     },
-  ], [canUseIntegrations, canUseCipp, canUseEntraSync, isEEAvailable, isHuduEnabled, qboSyncHealthSlot, qboOnboardingSlot, t]);
+  ], [canUseIntegrations, canUseCipp, canUseEntraSync, isEEAvailable, isHuduEnabled, qboSyncHealthSlot, xeroSyncHealthSlot, qboOnboardingSlot, t]);
 
   // Filter out empty categories
   const visibleCategories = categories.filter((category) => {
@@ -433,17 +435,15 @@ const IntegrationsSettingsPage: React.FC<IntegrationsSettingsPageProps> = ({
     content: (
       <div className="space-y-6">
         {category.id !== 'providers' && (
-          <div className="rounded-xl border bg-muted/30 px-6 py-8 text-center">
-            <div className="mx-auto flex max-w-3xl flex-col items-center gap-3">
-              <div className="flex items-center justify-center gap-3">
-                <category.icon className="h-7 w-7 text-primary" />
-                <h2 className="text-3xl font-bold tracking-tight">
+          <div className="rounded-xl border bg-muted/30 px-5 py-4">
+            <div className="flex items-start gap-3">
+              <category.icon className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
+              <div className="space-y-1">
+                <h2 className="text-xl font-semibold tracking-tight">
                   {t('integrations.categoryHeading', { label: category.label })}
                 </h2>
+                <p className="text-sm text-muted-foreground">{category.description}</p>
               </div>
-              <p className="max-w-2xl text-sm text-muted-foreground">
-                {category.description}
-              </p>
             </div>
           </div>
         )}
@@ -476,6 +476,12 @@ const IntegrationsSettingsPage: React.FC<IntegrationsSettingsPageProps> = ({
       {/* Category tabs */}
       <CustomTabs
         tabs={tabContent}
+        tabStyles={{
+          root: 'min-w-0',
+          list: 'max-w-full flex-wrap gap-y-1',
+          trigger: 'shrink-0',
+          content: 'min-w-0'
+        }}
         defaultTab={currentCategory?.id ?? 'accounting'}
         onTabChange={(tabId) => {
           const category = visibleCategories.find(cat => cat.id === tabId);

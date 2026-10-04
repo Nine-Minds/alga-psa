@@ -17,6 +17,7 @@ import CreditExpirationSettings from './CreditExpirationSettings';
 import CreditDrawdownSettings from './CreditDrawdownSettings';
 import RenewalAutomationSettings from './RenewalAutomationSettings';
 import CostRatesSettings from './CostRatesSettings';
+import QuoteSettings from './QuoteSettings';
 
 // Payment Settings Skeleton Component
 const PaymentSettingsSkeleton: React.FC = () => {
@@ -178,6 +179,14 @@ const BillingSettings: React.FC = () => {
             <CardContent>
               <DefaultCurrencySettings />
             </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>{t('general.quotes.title', { defaultValue: 'Quotes' })}</CardTitle>
+              <CardDescription>{t('general.quotes.description', { defaultValue: 'Set the default validity period for new quotes.' })}</CardDescription>
+            </CardHeader>
+            <CardContent><QuoteSettings /></CardContent>
           </Card>
 
           <Card>

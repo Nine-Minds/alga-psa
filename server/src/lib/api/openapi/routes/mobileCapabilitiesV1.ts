@@ -36,6 +36,21 @@ export function registerMobileCapabilitiesV1Routes(registry: ApiOpenApiRegistry)
           inventory: zOpenApi.boolean(),
           opportunities: zOpenApi.boolean(),
           opportunitiesCreate: zOpenApi.boolean(),
+          projects: zOpenApi.boolean().describe('Project tasks on mobile (project:read; PSA product only).'),
+          clientsCreate: zOpenApi.boolean(),
+          clientsUpdate: zOpenApi.boolean(),
+          contactsCreate: zOpenApi.boolean(),
+          contactsUpdate: zOpenApi.boolean(),
+        }),
+        // Date shape resolved from the user's country, so the device locale
+        // never decides how a tenant's dates read.
+        formatting: zOpenApi.object({
+          country: zOpenApi.string().nullable(),
+          order: zOpenApi.array(zOpenApi.enum(['day', 'month', 'year'])),
+          separator: zOpenApi.string(),
+          hour12: zOpenApi.boolean(),
+          datePattern: zOpenApi.string(),
+          dateTimePattern: zOpenApi.string(),
         }),
         theme: zOpenApi.object({
           pairId: zOpenApi.string().describe("Tenant theme pair id, e.g. 'forest' or 'custom'."),
@@ -62,7 +77,7 @@ export function registerMobileCapabilitiesV1Routes(registry: ApiOpenApiRegistry)
     method: 'get',
     path: '/api/v1/mobile/me/capabilities',
     summary: 'Get current mobile feature capabilities',
-    description: 'Returns tenant-product and RBAC-derived mobile feature availability for the authenticated API-key user.',
+    description: 'Returns tenant-product and RBAC-derived mobile feature availability, plus the country-derived date format, for the authenticated API-key user.',
     tags: ['Mobile v1'],
     security: [{ ApiKeyAuth: [] }],
     responses: {

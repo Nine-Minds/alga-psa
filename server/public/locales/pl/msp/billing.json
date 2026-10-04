@@ -335,7 +335,8 @@
       "billingMethod": "Metoda rozliczeniowa",
       "quantity": "Ilość",
       "defaultRate": "Stawka domyślna",
-      "actions": "Działania"
+      "actions": "Działania",
+      "pricing": "Cennik"
     },
     "tooltip": {
       "defaultRate": "Standardowa stawka usługi, używana do wewnętrznej alokacji wartości i raportowania w ramach ustalonej sumy planu."
@@ -370,7 +371,17 @@
       "saveSuccess": "Zapisano wstępnie ustawione usługi linii kontraktu",
       "saveError": "Nie udało się zapisać usług"
     },
-    "unknownService": "Nieznana usługa"
+    "unknownService": "Nieznana usługa",
+    "pricing": {
+      "product": "Rozliczane według liczby jednostek",
+      "bundle": "Część sumy linii",
+      "unit": "Za stanowisko / jednostkę",
+      "unitRate": "Stawka jednostkowa",
+      "unitRatePlaceholder": "Cena katalogowa"
+    },
+    "errors": {
+      "recurringQuantityInvalid": "{{name}}: ilość cykliczna musi być liczbą całkowitą równą zero lub większą."
+    }
   },
   "accountingExports": {
     "title": "Eksport księgowy",
@@ -390,7 +401,8 @@
       "execute": "Wykonaj",
       "createBatch": "Utwórz partię",
       "creating": "Tworzenie...",
-      "cancelBatch": "Anuluj partię"
+      "cancelBatch": "Anuluj partię",
+      "retry": "Ponów"
     },
     "states": {
       "loadingBatches": "Ładowanie partii...",
@@ -417,7 +429,12 @@
         "invoiceStatuses": "Oddzielone przecinkami (opcjonalnie), np. sfinalizowane, wysłane",
         "notes": "Opcjonalne notatki"
       },
-      "defaultRealmLabel": "{{realmId}} (domyślny)"
+      "defaultRealmLabel": "{{realmId}} (domyślny)",
+      "loadingConnections": "Ładowanie połączeń księgowych...",
+      "connectionLoadError": "Nie udało się załadować połączeń księgowych. Sprawdź ustawienia połączenia i spróbuj ponownie.",
+      "ambiguousRealm": "Zapisana domyślna organizacja księgowa jest współdzielona przez więcej niż jedno połączenie. Wybierz połączenie, aby kontynuować.",
+      "noXeroConnection": "Brak dostępnego połączenia Xero. Połącz Xero w ustawieniach księgowych, aby wyeksportować.",
+      "noQboConnection": "Brak dostępnego połączenia QuickBooks Online. Połącz je w ustawieniach księgowych, aby wyeksportować."
     },
     "detailDialog": {
       "title": "Księgowa partia eksportowa",
@@ -441,7 +458,8 @@
       "createError": "Nie udało się utworzyć partii eksportu",
       "executeError": "Nie udało się wykonać partii",
       "cancelled": "Partia anulowana",
-      "cancelError": "Nie udało się anulować partii"
+      "cancelError": "Nie udało się anulować partii",
+      "realmRequired": "Wybierz połączoną firmę księgową przed utworzeniem eksportu."
     },
     "status": {
       "pending": "Oczekujące",

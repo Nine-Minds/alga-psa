@@ -21,6 +21,24 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
     'WorkV1ProjectTaskParam',
     zOpenApi.object({ taskId: zOpenApi.string().uuid().describe('Project task UUID from project_tasks.task_id.') }),
   );
+  const ProjectTaskChecklistItemParams = registry.registerSchema(
+    'WorkV1ProjectTaskChecklistItemParams',
+    zOpenApi.object({
+      taskId: zOpenApi.string().uuid().describe('Project task UUID from project_tasks.task_id.'),
+      itemId: zOpenApi.string().uuid().describe('Checklist item UUID from task_checklist_items.checklist_item_id.'),
+    }),
+  );
+  const ProjectTaskChecklistItemBody = registry.registerSchema(
+    'WorkV1ProjectTaskChecklistItemBody',
+    zOpenApi.object({
+      item_name: zOpenApi.string().min(1).optional().describe('Checklist item text. Required on create. `item_text` is accepted as a legacy alias.'),
+      description: zOpenApi.string().nullable().optional(),
+      assigned_to: zOpenApi.string().uuid().nullable().optional(),
+      completed: zOpenApi.boolean().optional().describe('Mark the item done/undone. `is_completed` is accepted as a legacy alias.'),
+      due_date: zOpenApi.string().nullable().optional(),
+      order_number: zOpenApi.number().int().min(0).optional(),
+    }),
+  );
 
   const SessionParam = registry.registerSchema(
     'WorkV1SessionParam',
@@ -43,6 +61,43 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
       sort: zOpenApi.string().optional(),
       order: zOpenApi.enum(['asc', 'desc']).optional(),
       fields: zOpenApi.string().optional(),
+      search: zOpenApi.string().optional(),
+      query: zOpenApi.string().optional(),
+    }),
+  );
+
+  // GET /api/v1/tickets validates `sort` against an allowlist (TicketService
+  // TICKET_LIST_API_SORT_SQL): anything else is a 400, not a database error.
+  const TicketListQuery = registry.registerSchema(
+    'WorkV1TicketListQuery',
+    zOpenApi.object({
+      page: zOpenApi.string().optional(),
+      limit: zOpenApi.string().optional(),
+      sort: zOpenApi
+        .enum([
+          'client_name',
+          'closed_at',
+          'created_at',
+          'due_date',
+          'entered_at',
+          'latest_activity_at',
+          'priority_name',
+          'status_name',
+          'ticket_number',
+          'title',
+          'updated_at',
+        ])
+        .optional()
+        .describe(
+          'Sort field. Defaults to entered_at. `created_at` is a legacy alias for `entered_at` (tickets have no created_at column). `latest_activity_at` orders by the newest of the ticket\'s own timestamps and its newest visible comment; for client-portal callers only client-visible comments count. Ties break on ticket_id descending. Any other value is rejected with 400.',
+        ),
+      order: zOpenApi.enum(['asc', 'desc']).optional(),
+      fields: zOpenApi
+        .string()
+        .optional()
+        .describe(
+          'Comma-separated response fields. Accepts ticket_id, ticket_number, title, status_id, status_name, status_is_closed, priority_name, assigned_to_name, client_name, contact_name, updated_at, entered_at, closed_at, latest_activity_at, tags, master_ticket_id, bundle_master_ticket_number, bundle_child_count, or the mobile_list preset. Unknown names are rejected with 400.',
+        ),
       search: zOpenApi.string().optional(),
       query: zOpenApi.string().optional(),
     }),
@@ -71,10 +126,14 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
     zOpenApi.object({
       title: zOpenApi.string().optional(),
       summary: zOpenApi.string().optional(),
+      url: zOpenApi.string().url().optional().describe('Optional link-out for the ticket; any URL accepted by the ticket create schema. Omit or supply a valid URL; null is rejected.'),
       client_id: zOpenApi.string().uuid().optional(),
       board_id: zOpenApi.string().uuid().optional(),
       priority_id: zOpenApi.string().uuid().optional(),
       status_id: zOpenApi.string().uuid().optional(),
+      severity_id: zOpenApi.string().uuid().optional().describe('Optional severity reference (same tenant); stored as a nullable UUID. Distinct from numeric itil_impact/itil_urgency; null is rejected.'),
+      urgency_id: zOpenApi.string().uuid().optional().describe('Optional urgency reference (same tenant); stored as a nullable UUID. Distinct from numeric itil_impact/itil_urgency; null is rejected.'),
+      impact_id: zOpenApi.string().uuid().optional().describe('Optional impact reference (same tenant); stored as a nullable UUID. Distinct from numeric itil_impact/itil_urgency; null is rejected.'),
       external_links: zOpenApi.array(zOpenApi.object({
         system: zOpenApi.string().min(1).describe('Built-in system key or custom:<slug>.'),
         external_id: zOpenApi.string().min(1).describe('Identifier of the record in the external system.'),
@@ -115,6 +174,9 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
       tags: zOpenApi.array(zOpenApi.string()).optional(),
       override_close_rules: zOpenApi.boolean().optional(),
       override_close_rules_reason: zOpenApi.string().nullable().optional(),
+      propagateToChildren: zOpenApi.boolean().optional().describe(
+        'Sync-mode bundle masters only. When a status change would close or reopen child tickets, true propagates to the affected children and false changes the master only. Omit to receive 409 with the affected children.',
+      ),
       ...ticketNotificationSuppressionProperties,
     }).describe('Ticket fields to update. Notification suppression applies only to this operation.'),
   );
@@ -127,6 +189,9 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
       closed_by: zOpenApi.string().uuid().optional(),
       override_close_rules: zOpenApi.boolean().optional(),
       override_close_rules_reason: zOpenApi.string().nullable().optional(),
+      propagateToChildren: zOpenApi.boolean().optional().describe(
+        'Sync-mode bundle masters only. When a status change would close or reopen child tickets, true propagates to the affected children and false changes the master only. Omit to receive 409 with the affected children.',
+      ),
       ...ticketNotificationSuppressionProperties,
     }),
   );
@@ -244,7 +309,9 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
     { method: 'get', path: '/api/v1/projects/search', summary: 'Search projects', description: 'Searches projects via ApiProjectController.search().', family: 'project' },
     { method: 'get', path: '/api/v1/projects/stats', summary: 'Get project stats', description: 'Returns project aggregate statistics for authorized projects.', family: 'project' },
     { method: 'get', path: '/api/v1/projects/tasks/{taskId}/checklist', summary: 'List task checklist items', description: 'Reads checklist items for project task UUID through ApiProjectController.getTaskChecklist().', family: 'project' },
-    { method: 'post', path: '/api/v1/projects/tasks/{taskId}/checklist', summary: 'Create task checklist item', description: 'Creates checklist item for project task UUID via ApiProjectController.createChecklistItem().', family: 'project' },
+    { method: 'post', path: '/api/v1/projects/tasks/{taskId}/checklist', summary: 'Create task checklist item', description: 'Creates checklist item for project task UUID via ApiProjectController.createChecklistItem(). Body uses the table\'s item_name / completed names; item_text / is_completed remain accepted aliases.', family: 'project' },
+    { method: 'put', path: '/api/v1/projects/tasks/{taskId}/checklist/{itemId}', summary: 'Update task checklist item', description: 'Updates one checklist item of the task, typically `completed` to tick it done. 404 when the item is not on that task.', family: 'project' },
+    { method: 'delete', path: '/api/v1/projects/tasks/{taskId}/checklist/{itemId}', summary: 'Delete task checklist item', description: 'Deletes one checklist item of the task. 404 when the item is not on that task.', family: 'project' },
     { method: 'delete', path: '/api/v1/projects/{id}', summary: 'Delete project', description: 'Deletes project by project UUID.', family: 'project' },
     { method: 'get', path: '/api/v1/projects/{id}', summary: 'Get project', description: 'Returns one project by project UUID.', family: 'project' },
     { method: 'put', path: '/api/v1/projects/{id}', summary: 'Update project', description: 'Updates project by project UUID.', family: 'project' },
@@ -282,7 +349,7 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
     { method: 'put', path: '/api/v1/tags/{id}/colors', summary: 'Update tag colors', description: 'Updates tag color attributes.', family: 'tag' },
     { method: 'put', path: '/api/v1/tags/{id}/text', summary: 'Update tag text', description: 'Updates tag display text.', family: 'tag' },
 
-    { method: 'get', path: '/api/v1/tickets', summary: 'List tickets', description: 'Lists tickets via ApiTicketController.list() with authorization-aware pagination.', family: 'ticket' },
+    { method: 'get', path: '/api/v1/tickets', summary: 'List tickets', description: 'Lists tickets via ApiTicketController.list() with authorization-aware pagination. `sort` is validated against an allowlist (unknown values return 400) and supports latest_activity_at, which is also selectable through `fields`.', family: 'ticket' },
     { method: 'post', path: '/api/v1/tickets', summary: 'Create ticket', description: 'Creates ticket via ApiTicketController.create().', family: 'ticket' },
     { method: 'post', path: '/api/v1/tickets/from-asset', summary: 'Create ticket from asset', description: 'Creates ticket from asset context via ApiTicketController.createFromAsset().', family: 'ticket' },
     { method: 'get', path: '/api/v1/tickets/search', summary: 'Search tickets', description: 'Searches tickets via ApiTicketController.search().', family: 'ticket' },
@@ -296,9 +363,9 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
     { method: 'put', path: '/api/v1/tickets/{id}/status', summary: 'Update ticket status', description: 'Updates ticket status, with optional per-operation notification suppression.', family: 'ticket' },
     { method: 'get', path: '/api/v1/tickets/{id}/time-entries', summary: 'List ticket time entries', description: 'Returns the caller\'s time entries on the ticket plus, when permitted, other team members\' entries (or an anonymized aggregate when the caller lacks timesheet:read_all).', family: 'ticket' },
     { method: 'get', path: '/api/v1/tickets/{id}/bundle', summary: 'Get ticket bundle', description: 'Returns bundle membership for the ticket: role (master, child, or standalone), the master ticket, child tickets, and bundle settings.', family: 'ticket' },
-    { method: 'post', path: '/api/v1/tickets/{id}/bundle', summary: 'Create ticket bundle', description: 'Bundles the given child tickets under ticket {id} as the master, with a sync mode of link_only or sync_updates.', family: 'ticket' },
+    { method: 'post', path: '/api/v1/tickets/{id}/bundle', summary: 'Create ticket bundle', description: 'Bundles the given child tickets under ticket {id} as the master, with a sync mode of link_only or sync_updates. When the master is closed, on_closed_master selects the consequence: keep_closed (link only, the default), apply_resolution (close each child with the master\'s resolution), or reopen_master. Omitting it while the master is closed returns 409 naming the allowed choices; supplying it while the master is open returns 400.', family: 'ticket' },
     { method: 'delete', path: '/api/v1/tickets/{id}/bundle', summary: 'Unbundle ticket', description: 'Unbundles master {id}, detaching all child tickets and removing bundle settings.', family: 'ticket' },
-    { method: 'post', path: '/api/v1/tickets/{id}/bundle/children', summary: 'Add bundle children', description: 'Adds child tickets to the existing bundle mastered by {id}.', family: 'ticket' },
+    { method: 'post', path: '/api/v1/tickets/{id}/bundle/children', summary: 'Add bundle children', description: 'Adds child tickets to the existing bundle mastered by {id}. When the master is closed, on_closed_master selects the consequence: keep_closed (link only, the default), apply_resolution (close each child with the master\'s resolution), or reopen_master. Omitting it while the master is closed returns 409 naming the allowed choices; supplying it while the master is open returns 400.', family: 'ticket' },
     { method: 'delete', path: '/api/v1/tickets/{id}/bundle/children/{childId}', summary: 'Remove bundle child', description: 'Removes child {childId} from its bundle; removes bundle settings when no children remain.', family: 'ticket' },
     { method: 'post', path: '/api/v1/tickets/{id}/bundle/promote', summary: 'Promote bundle master', description: 'Promotes a child ticket to be the new bundle master, re-pointing the remaining children.', family: 'ticket' },
     { method: 'put', path: '/api/v1/tickets/{id}/bundle/settings', summary: 'Update ticket bundle settings', description: 'Updates the bundle mode and/or reopen-on-child-reply policy for master {id}.', family: 'ticket' },
@@ -371,10 +438,17 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
     'delete /api/v1/tickets/{id}',
   ]);
 
+  // Status writes that can propagate to bundle children return 409 when the
+  // caller omits `propagateToChildren` on a boundary-crossing sync master.
+  const BUNDLE_PROPAGATION_CONFLICT_OPS = new Set([
+    'put /api/v1/tickets/{id}',
+    'put /api/v1/tickets/{id}/status',
+  ]);
+
   function requestFor(def: Def) {
     const req: Record<string, unknown> = {};
 
-    if (def.path.includes('{taskId}')) req.params = ProjectTaskParam;
+    if (def.path.includes('{taskId}')) req.params = def.path.includes('{itemId}') ? ProjectTaskChecklistItemParams : ProjectTaskParam;
     if (def.path.includes('{id}/phases/{phaseId}')) req.params = ProjectPhaseParams;
     if (def.path.includes('{sessionId}')) req.params = SessionParam;
     if (def.path.includes('{entityType}/{entityId}')) req.params = TagEntityParams;
@@ -387,7 +461,13 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
       req.query = ListQuery;
     }
 
-    if (def.path.startsWith('/api/v1/projects') && (def.method === 'post' || def.method === 'put')) req.body = { schema: def.path === '/api/v1/projects' ? CreateProjectBody : GenericBody };
+    if (def.method === 'get' && def.path === '/api/v1/tickets') {
+      req.query = TicketListQuery;
+    }
+
+    if (def.path.startsWith('/api/v1/projects') && (def.method === 'post' || def.method === 'put')) {
+      req.body = { schema: def.path === '/api/v1/projects' ? CreateProjectBody : def.path.includes('/checklist') ? ProjectTaskChecklistItemBody : GenericBody };
+    }
     if (def.path.startsWith('/api/v1/tickets') && (def.method === 'post' || def.method === 'put')) {
       let schema: ZodTypeAny = def.path === '/api/v1/tickets' ? CreateTicketBody : GenericBody;
       if (def.method === 'put' && def.path === '/api/v1/tickets/{id}') schema = TicketUpdateBody;
@@ -439,6 +519,13 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
     if (DEPENDENCY_VALIDATED_DELETES.has(`${def.method} ${def.path}`)) {
       responses[409] = {
         description: 'Deletion blocked: the resource has dependent records that must be removed or reassigned first. The error details list the blocking dependencies.',
+        schema: ApiError,
+      };
+    }
+
+    if (BUNDLE_PROPAGATION_CONFLICT_OPS.has(`${def.method} ${def.path}`)) {
+      responses[409] = {
+        description: 'Confirmation required: the status change would close or reopen child tickets of a sync-mode bundle master. Retry with propagateToChildren=true or false. The error details carry crossesBoundary and the affected/unaffected children.',
         schema: ApiError,
       };
     }

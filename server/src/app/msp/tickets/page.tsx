@@ -4,8 +4,10 @@ import { getTicketingDisplaySettings } from '@alga-psa/tickets/actions/ticketDis
 import { getTeams, isTeamActionError } from '@alga-psa/teams/actions';
 import type { ITicketListFilters } from '@alga-psa/types';
 import MspTicketsPageClient from '@alga-psa/msp-composition/tickets/MspTicketsPageClient';
+import { getSmartSearchAvailability } from '@enterprise/lib/actions/smartSearchActions';
 import { findBoardById } from '@alga-psa/tickets/actions/board-actions/boardActions';
 import {
+  isTicketListSortKey,
   isTicketStatusOpenFilter,
   TICKET_STATUS_FILTER_OPEN,
 } from '@alga-psa/tickets/lib';
@@ -62,6 +64,12 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
       const { redirect } = await import('next/navigation');
       redirect('/auth/signin?callbackUrl=%2Fmsp%2Ftickets');
     }
+
+    // Decided on the server so the Smart search affordance is right on first
+    // paint. The CE stub answers false; any failure hides it.
+    const smartSearchAvailable = await getSmartSearchAvailability('ticket')
+      .then((result) => result?.available === true)
+      .catch(() => false);
 
     // Await searchParams as required in Next.js 15
     const params = await searchParams;
@@ -191,22 +199,9 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
         filtersFromURL.slaStatusFilter = params.slaStatusFilter as ITicketListFilters['slaStatusFilter'];
       }
     }
-    const allowedSortKeys = [
-      'ticket_number',
-      'title',
-      'status_name',
-      'priority_name',
-      'board_name',
-      'category_name',
-      'client_name',
-      'entered_at',
-      'entered_by_name',
-      'due_date'
-    ] as const;
-
     if (params?.sortBy && typeof params.sortBy === 'string') {
-      if ((allowedSortKeys as readonly string[]).includes(params.sortBy)) {
-        filtersFromURL.sortBy = params.sortBy as ITicketListFilters['sortBy'];
+      if (isTicketListSortKey(params.sortBy)) {
+        filtersFromURL.sortBy = params.sortBy;
       }
     }
     if (params?.sortDirection && typeof params.sortDirection === 'string') {
@@ -365,6 +360,7 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
           initialTeams={initialTeams}
           canUpdateTickets={canUpdateTickets}
           allowSlaStatusFilter={allowSlaStatusFilter}
+          smartSearchAvailable={smartSearchAvailable}
           useAlgaDeskQuickAddForm={useAlgaDeskQuickAddForm}
         />
       </div>

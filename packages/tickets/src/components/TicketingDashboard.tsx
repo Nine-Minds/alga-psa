@@ -2,14 +2,31 @@
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
+import dynamic from 'next/dynamic';
+import BulkBundleDialog from './BulkBundleDialog';
 import { ITicket, ITicketListItem, ITicketCategory, ITicketListFilters } from '@alga-psa/types';
 import { ITag } from '@alga-psa/types';
 import { buildCreateTicketHref } from '../lib/createTicketRoute';
+import { createTicketActionsColumn } from './ticketActionsColumn';
 import { CategoryPicker } from './CategoryPicker';
 import { BoardFilterPicker, NO_BOARD_VALUE } from './BoardFilterPicker';
 import BoardTabStrip from './BoardTabStrip';
 import BulkTicketActionBar from './BulkTicketActionBar';
+import type { SmartSearchResultsProps } from '@alga-psa/ui/components/SmartSearchResults';
+import type { TicketSmartSearchRowMetadata } from '../lib/smartTicketSearch/types';
+import {
+  buildSelectedTicketDetails,
+  collectSelectedTicketRows,
+  createSmartSearchRunCache,
+  mergeSmartSearchRunRows,
+  pruneSelectedTicketIds,
+  selectAllMatchingFallbackIds,
+  selectAllMatchingScope,
+  selectMatchingTickets,
+  smartSearchRunCandidateIds,
+  smartSearchRunRows,
+  type SmartSearchRunCache,
+} from '../lib/smartSearchSelection';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import { PrioritySelect } from '@alga-psa/ui/components/tickets/PrioritySelect';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -41,9 +58,8 @@ import {
 } from '../actions/ticketActions';
 import { getBoardTicketStatuses } from '../actions/board-actions/boardTicketStatusActions';
 import { getBoardListStats, type BoardListStats } from '../actions/board-actions/boardActions';
-import { bundleTicketsAction, getBundleMasterStatusAction } from '../actions/ticketBundleActions';
-import { fetchBundleChildrenForMaster, fetchTicketsWithPagination, getAllMatchingTicketIds, getTicketBoardIds } from '../actions/optimizedTicketActions';
-import { XCircle, Clock, Download, Upload, ChevronDown, Printer, Settings2, Filter } from 'lucide-react';
+import { fetchBundleChildrenForMaster, fetchTicketsWithPagination, getAllMatchingTicketIds, getTicketBoardIds, loadTicketListItemsByIds } from '../actions/optimizedTicketActions';
+import { XCircle, Clock, Download, Upload, ChevronDown, Printer, Settings2, Filter, Sparkles } from 'lucide-react';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@alga-psa/ui/components/DropdownMenu';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
@@ -102,6 +118,21 @@ import TicketNotificationSuppressionControl, {
   type TicketNotificationSuppressionValue,
 } from './ticket/TicketNotificationSuppressionControl';
 
+type AnySmartSearchResultsProps = SmartSearchResultsProps<unknown, Record<string, unknown>, unknown>;
+
+const EnterpriseSmartSearchResults = dynamic(
+  () => import('@enterprise/components/smartSearch/SmartSearchResults').then(
+    (mod) => mod.SmartSearchResults as unknown as React.ComponentType<AnySmartSearchResultsProps>
+  ),
+  { ssr: false, loading: () => null }
+);
+
+function SmartSearchResults<TScope, TRow extends object, TMetadata>(
+  props: SmartSearchResultsProps<TScope, TRow, TMetadata>
+) {
+  return <EnterpriseSmartSearchResults {...(props as unknown as AnySmartSearchResultsProps)} />;
+}
+
 const defaultNotificationSuppression = (): TicketNotificationSuppressionValue => ({
   suppressContactNotifications: false,
   suppressInternalNotifications: false,
@@ -144,6 +175,8 @@ interface TicketingDashboardProps {
    */
   onNavigateAway?: () => void;
   allowSlaStatusFilter?: boolean;
+  /** Decided by the page's server component: every smart search gate passed for this caller. */
+  smartSearchAvailable?: boolean;
   useAlgaDeskQuickAddForm?: boolean;
   /**
    * The resolved board→tenant→catalog view. Owned by the container so that
@@ -157,6 +190,11 @@ interface TicketingDashboardProps {
   /** True when this tab has a stored document of its own (Reset has work to do). */
   hasStoredDefaultView?: boolean;
   onSavedViewChanged?: (boardId: string | null, saved: TicketViewSettings | null) => void;
+  /** Named-view picker, rendered beside the View menu (the container owns its state). */
+  listViewPicker?: React.ReactNode;
+  /** Controlled column widths for the ticket table (named views capture and apply them). */
+  columnSizing?: Record<string, number>;
+  onColumnSizingChange?: (columnSizing: Record<string, number>) => void;
 }
 
 const useDebounce = <T,>(value: T, delay: number): T => {
@@ -223,6 +261,8 @@ const TICKET_LIST_DENSITY_PRESETS: ReadonlyArray<{
 
 // Module scope has no hook to read the app locale from, so the printing helpers
 // take it as an argument rather than defaulting to the browser's.
+type FormatDate = (date: Date | string, options?: Intl.DateTimeFormatOptions) => string;
+
 function formatPrintDate(value: string | null | undefined, locale: string): string {
   if (!value) return '';
   const date = new Date(value);
@@ -230,11 +270,13 @@ function formatPrintDate(value: string | null | undefined, locale: string): stri
   return date.toLocaleDateString(locale, { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
-function formatPrintDateTime(value: string | null | undefined, locale: string): string {
+// Printed timestamps keep a NAMED month (the language's job) but take their
+// 12/24h clock from the country, so they route through the central formatter.
+function formatPrintDateTime(value: string | null | undefined, formatDate: FormatDate): string {
   if (!value) return '';
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return '';
-  return date.toLocaleString(locale, {
+  return formatDate(date, {
     month: 'short',
     day: 'numeric',
     year: 'numeric',
@@ -250,9 +292,17 @@ function getTicketColumnValue(ticket: ITicketListItem, dataIndex: string | strin
   ), ticket);
 }
 
-function formatTicketPrintValue(value: unknown, locale: string): string {
+function formatTicketPrintValue(value: unknown, formatDate: FormatDate): string {
   if (value === null || value === undefined || value === '') return '';
-  if (value instanceof Date) return value.toLocaleString(locale);
+  if (value instanceof Date) {
+    return formatDate(value, {
+      year: 'numeric',
+      month: 'numeric',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+    });
+  }
   if (Array.isArray(value)) return value.filter(Boolean).join(', ');
   if (typeof value === 'object') return JSON.stringify(value);
   return String(value);
@@ -289,19 +339,22 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   canUpdateTickets = true,
   onNavigateAway,
   allowSlaStatusFilter = true,
+  smartSearchAvailable = false,
   useAlgaDeskQuickAddForm = false,
   viewPresentation,
   onViewPresentationChange,
   savedViewSettings,
   hasStoredDefaultView = false,
   onSavedViewChanged,
+  listViewPicker,
+  columnSizing,
+  onColumnSizingChange,
 }) => {
   const BUNDLE_VIEW_STORAGE_KEY = 'tickets_bundle_view';
   const router = useRouter();
   const { t } = useTranslation('features/tickets');
   // These followed the browser locale, so a German UI printed American dates.
-  const { formatDate } = useFormatters();
-  const { locale } = useFormatters();
+  const { locale, dateFormat, formatDate } = useFormatters();
   // Pre-fetch tag permissions to prevent individual API calls
   useTagPermissions(['ticket']);
 
@@ -324,6 +377,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   const currentUser = user || null;
   const { openDrawer, replaceDrawer } = useDrawer();
   const [isBulkDeleteDialogOpen, setIsBulkDeleteDialogOpen] = useState(false);
+  const [isBundleDialogOpen, setIsBundleDialogOpen] = useState(false);
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
   const [bulkDeleteErrors, setBulkDeleteErrors] = useState<Array<{ ticketId: string; message: string }>>([]);
   const [isBulkMoveDialogOpen, setIsBulkMoveDialogOpen] = useState(false);
@@ -338,13 +392,6 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     useState<TicketNotificationSuppressionValue>(() => defaultNotificationSuppression());
   const [additionalAgentAvatarUrls, setAdditionalAgentAvatarUrls] = useState<Record<string, string | null>>(initialAgentAvatarUrls);
   const [teamAvatarUrls, setTeamAvatarUrls] = useState<Record<string, string | null>>(initialTeamAvatarUrls);
-  const [isBundleDialogOpen, setIsBundleDialogOpen] = useState(false);
-  const [bundleMasterTicketId, setBundleMasterTicketId] = useState<string | null>(null);
-  const [bundleSyncUpdates, setBundleSyncUpdates] = useState(true);
-  const [bundleError, setBundleError] = useState<string | null>(null);
-  const [bundleExistingMasterIds, setBundleExistingMasterIds] = useState<Set<string>>(new Set());
-  const [isLoadingBundleMasterStatus, setIsLoadingBundleMasterStatus] = useState(false);
-  const [isMultiClientBundleConfirmOpen, setIsMultiClientBundleConfirmOpen] = useState(false);
   const [printTickets, setPrintTickets] = useState<ITicketListItem[] | null>(null);
   const [isPrintOptionsOpen, setIsPrintOptionsOpen] = useState(false);
 
@@ -396,6 +443,37 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
 
   // Search query needs local state for responsive typing, debounced before emitting
   const [searchQuery, setSearchQuery] = useState<string>(filterValues.searchQuery ?? '');
+
+  // Smart search (enterprise): Enter or the Smart search button switches the box
+  // into Jev mode over the chip-filtered set. Deliberately not URL-mirrored so a
+  // reload never spends tokens. `scope` is the candidate set captured when the
+  // run started and is the only scope the active run ever enumerates, hydrates,
+  // prints, or selects over; `filtersKey` is the same chip set as a string, so a
+  // later chip change can offer a rerun instead of silently rerunning.
+  const [smartSearch, setSmartSearch] = useState<{
+    active: boolean;
+    query: string;
+    runToken: number;
+    filtersKey: string;
+    scope: ITicketListFilters | null;
+  }>({
+    active: false,
+    query: '',
+    runToken: 0,
+    filtersKey: '',
+    scope: null,
+  });
+
+  // Rows the current smart search run has streamed, keyed by id. The ordinary
+  // paginated list never holds a streamed off-page row, so this is the
+  // authoritative source for bulk actions, the bundle master picker, and
+  // printing while smart mode is active. Scoped to one run: a rerun clears it
+  // and a stale report from a superseded run is discarded, so board A's rows
+  // never leak into board B's candidate set.
+  const smartSearchGenerationRef = useRef(0);
+  const [smartSearchRunCache, setSmartSearchRunCache] = useState<SmartSearchRunCache<ITicketListItem>>(
+    () => createSmartSearchRunCache<ITicketListItem>(String(smartSearch.runToken), smartSearchGenerationRef.current)
+  );
 
   // Assignee filter values from props
   const selectedAssignees = filterValues.assignedToIds ?? EMPTY_STRING_ARRAY;
@@ -543,6 +621,10 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   useEffect(() => {
     if (isFirstSearchEmit.current) {
       isFirstSearchEmit.current = false;
+      return;
+    }
+    if (smartSearch.active) {
+      // In smart mode the typed text is the Jev query, not a keyword filter.
       return;
     }
     lastEmittedSearchRef.current = debouncedSearchQuery;
@@ -983,31 +1065,13 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     [ticketsWithIds]
   );
 
+  // Drop selections the ordinary list no longer holds after a page refresh.
+  // While smart mode is active the candidate set comes from the panel, not this
+  // page, so a streamed off-page selection must survive; exiting smart mode
+  // clears the selection explicitly.
   useEffect(() => {
-    setSelectedTicketIds(prev => {
-      if (prev.size === 0) {
-        return prev;
-      }
-
-      const validIds = new Set(selectableTicketIds);
-      let changed = false;
-      const next = new Set<string>();
-
-      prev.forEach(id => {
-        if (validIds.has(id)) {
-          next.add(id);
-        } else {
-          changed = true;
-        }
-      });
-
-      if (!changed && next.size === prev.size) {
-        return prev;
-      }
-
-      return next;
-    });
-  }, [selectableTicketIds]);
+    setSelectedTicketIds(prev => pruneSelectedTicketIds(prev, new Set(selectableTicketIds), smartSearch.active));
+  }, [selectableTicketIds, smartSearch.active]);
 
   const rangeSelect = useRangeSelection<string>({
     items: visibleTicketIds,
@@ -1057,48 +1121,190 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     });
   }, [visibleTicketIds]);
 
-  const handleSelectAllMatchingTickets = useCallback(async () => {
-    try {
-      const filters: ITicketListFilters = {
-        boardIds: selectedBoards.length > 0 ? selectedBoards : undefined,
-        excludeBoardIds: excludedBoards.length > 0 ? excludedBoards : undefined,
-        statusId: selectedStatus,
-        priorityId: selectedPriority,
-        categoryIds: selectedCategories.length > 0 ? selectedCategories : undefined,
-        excludeCategoryIds: excludedCategories.length > 0 ? excludedCategories : undefined,
-        clientId: selectedClient ?? undefined,
-        searchQuery: debouncedSearchQuery,
-        boardFilterState: boardFilterState,
-        showOpenOnly: isTicketStatusOpenFilter(selectedStatus),
-        tags: selectedTags.length > 0 ? selectedTags : undefined,
-        assignedToIds: selectedAssignees.length > 0 ? selectedAssignees : undefined,
-        assignedTeamIds: selectedTeams.length > 0 ? selectedTeams : undefined,
-        includeUnassigned: includeUnassigned || undefined,
-        dueDateFilter: selectedDueDateFilter !== 'all' ? selectedDueDateFilter as ITicketListFilters['dueDateFilter'] : undefined,
-        responseState: selectedResponseState !== 'all' ? selectedResponseState : undefined,
-        slaStatusFilter: allowSlaStatusFilter && selectedSlaStatus !== 'all' ? selectedSlaStatus as ITicketListFilters['slaStatusFilter'] : undefined,
-        bundleView,
-      };
-      const allIds = await getAllMatchingTicketIds(filters);
-      if (isActionMessageError(allIds) || isActionPermissionError(allIds)) {
-        toast.error(getErrorMessage(allIds));
-        setSelectedTicketIds(new Set(selectableTicketIds));
-        setAllMatchingMode(true);
-        return;
-      }
-      setSelectedTicketIds(new Set(allIds));
-      setAllMatchingMode(true);
-    } catch (error) {
-      console.error('Failed to fetch all matching ticket IDs:', error);
-      // Fall back to selecting current page only
-      setSelectedTicketIds(new Set(selectableTicketIds));
-      setAllMatchingMode(true);
-    }
-  }, [
+  const clearSelection = useCallback(() => {
+    setSelectedTicketIds(prev => (prev.size === 0 ? prev : new Set<string>()));
+    setAllMatchingMode(false);
+    setOffPageBoardById(prev => (Object.keys(prev).length === 0 ? prev : {}));
+  }, []);
+
+  const exportFilters = useMemo((): ITicketListFilters => ({
+    boardIds: selectedBoards.length > 0 ? selectedBoards : undefined,
+    excludeBoardIds: excludedBoards.length > 0 ? excludedBoards : undefined,
+    statusId: selectedStatus,
+    priorityId: selectedPriority,
+    categoryIds: selectedCategories.length > 0 ? selectedCategories : undefined,
+    excludeCategoryIds: excludedCategories.length > 0 ? excludedCategories : undefined,
+    clientId: selectedClient ?? undefined,
+    searchQuery: debouncedSearchQuery,
+    boardFilterState: boardFilterState,
+    showOpenOnly: isTicketStatusOpenFilter(selectedStatus),
+    tags: selectedTags.length > 0 ? selectedTags : undefined,
+    assignedToIds: selectedAssignees.length > 0 ? selectedAssignees : undefined,
+    assignedTeamIds: selectedTeams.length > 0 ? selectedTeams : undefined,
+    includeUnassigned: includeUnassigned || undefined,
+    dueDateFilter: selectedDueDateFilter !== 'all' ? selectedDueDateFilter as ITicketListFilters['dueDateFilter'] : undefined,
+    dueDateFrom: filterValues.dueDateFrom,
+    dueDateTo: filterValues.dueDateTo,
+    responseState: selectedResponseState !== 'all' ? selectedResponseState : undefined,
+    slaStatusFilter: allowSlaStatusFilter && selectedSlaStatus !== 'all' ? selectedSlaStatus as ITicketListFilters['slaStatusFilter'] : undefined,
+    sortBy,
+    sortDirection,
+    bundleView,
+  }), [
     selectedBoards, excludedBoards, selectedStatus, selectedPriority, selectedCategories, excludedCategories,
     selectedClient, debouncedSearchQuery, boardFilterState, selectedTags,
     selectedAssignees, selectedTeams, includeUnassigned, selectedDueDateFilter,
-    selectedResponseState, allowSlaStatusFilter, selectedSlaStatus, bundleView, selectableTicketIds,
+    filterValues.dueDateFrom, filterValues.dueDateTo, selectedResponseState,
+    allowSlaStatusFilter, selectedSlaStatus, sortBy, sortDirection, bundleView,
+  ]);
+
+  // Smart search runs over the chips alone; the typed text is the Jev query.
+  const smartSearchFilters = useMemo((): ITicketListFilters => ({ ...exportFilters, searchQuery: '' }), [exportFilters]);
+  const smartSearchFiltersKey = useMemo(() => JSON.stringify(smartSearchFilters), [smartSearchFilters]);
+  const smartSearchFiltersStale = smartSearch.active && smartSearch.filtersKey !== smartSearchFiltersKey;
+
+  const smartSearchRunKey = String(smartSearch.runToken);
+  const activeSmartSearchRunKey = smartSearch.active ? smartSearchRunKey : null;
+
+  // Begin a fresh run: bump the generation so any in-flight report from the
+  // previous run is discarded, and replace the cache so its rows cannot leak
+  // into the new candidate set.
+  const beginSmartSearchRun = useCallback((runToken: number) => {
+    const generation = smartSearchGenerationRef.current + 1;
+    smartSearchGenerationRef.current = generation;
+    setSmartSearchRunCache(createSmartSearchRunCache<ITicketListItem>(String(runToken), generation));
+  }, []);
+
+  const runSmartSearch = useCallback((rawQuery: string) => {
+    const query = rawQuery.trim();
+    if (!smartSearchAvailable || query.length === 0) {
+      return;
+    }
+    beginSmartSearchRun(smartSearch.runToken + 1);
+    clearSelection();
+    // Leave keyword mode: the container must not keep filtering by the typed text.
+    if ((filterValues.searchQuery ?? '') !== '') {
+      lastEmittedSearchRef.current = '';
+      onFilterChange({ searchQuery: '' });
+    }
+    setSmartSearch(() => ({
+      active: true,
+      query,
+      runToken: smartSearch.runToken + 1,
+      filtersKey: smartSearchFiltersKey,
+      scope: smartSearchFilters,
+    }));
+  }, [smartSearchAvailable, smartSearch.runToken, beginSmartSearchRun, clearSelection, filterValues.searchQuery, onFilterChange, smartSearchFilters, smartSearchFiltersKey]);
+
+  const rerunSmartSearch = useCallback(() => {
+    // A rerun captures the latest chips and scores that different candidate set,
+    // so the previous selections and streamed rows are no longer actionable;
+    // clear them with the old rows.
+    beginSmartSearchRun(smartSearch.runToken + 1);
+    clearSelection();
+    setSmartSearch((prev) => ({
+      ...prev,
+      runToken: prev.runToken + 1,
+      filtersKey: smartSearchFiltersKey,
+      scope: smartSearchFilters,
+    }));
+  }, [smartSearch.runToken, beginSmartSearchRun, clearSelection, smartSearchFilters, smartSearchFiltersKey]);
+
+  const exitSmartSearch = useCallback(() => {
+    smartSearchGenerationRef.current += 1;
+    setSmartSearchRunCache(createSmartSearchRunCache<ITicketListItem>('', smartSearchGenerationRef.current));
+    clearSelection();
+    setSmartSearch((prev) => (prev.active ? { ...prev, active: false } : prev));
+  }, [clearSelection]);
+
+  // Rows streamed by smart search carry their own tags and avatar urls; fold
+  // them into the same stores the main table's columns read from.
+  const handleSmartSearchRowMetadata = useCallback((metadata: TicketSmartSearchRowMetadata) => {
+    ticketTagsRef.current = { ...ticketTagsRef.current, ...metadata.ticketTags };
+    setTagsVersion((v) => v + 1);
+    setAdditionalAgentAvatarUrls((prev) => ({ ...prev, ...metadata.agentAvatarUrls }));
+    setTeamAvatarUrls((prev) => ({ ...prev, ...metadata.teamAvatarUrls }));
+  }, []);
+
+  // Every row the current run's panel holds, streamed or hydrated, so a
+  // selection made from a bucket resolves against an authoritative row even
+  // when the ordinary list has never loaded it. The run key and generation are
+  // frozen into this callback: a report from a previous run is dropped instead
+  // of merging into the current cache.
+  const mergeSmartSearchRows = useMemo(() => {
+    const runKey = smartSearchRunKey;
+    // The cache carries the generation of the run it belongs to; freezing it
+    // here means a callback from an earlier run reports the old generation and
+    // is dropped by mergeSmartSearchRunRows.
+    const generation = smartSearchRunCache.generation;
+    return (rows: ITicketListItem[]) => {
+      setSmartSearchRunCache((prev) => mergeSmartSearchRunRows(prev, { runKey, generation, rows }));
+    };
+  }, [smartSearchRunKey, smartSearchRunCache.generation]);
+  const smartSearchRows = useMemo(
+    () => smartSearchRunRows(smartSearchRunCache, activeSmartSearchRunKey),
+    [smartSearchRunCache, activeSmartSearchRunKey]
+  );
+  const smartCandidateIds = useMemo(
+    () => smartSearchRunCandidateIds(smartSearchRunCache, activeSmartSearchRunKey),
+    [smartSearchRunCache, activeSmartSearchRunKey]
+  );
+
+  // The panel hydrates rows the stream could not score through the same by-id
+  // loader the server uses, so they render with identical columns.
+  const hydrateSmartSearchRows = useCallback(async (scope: ITicketListFilters, ids: string[]) => {
+    const result = await loadTicketListItemsByIds(scope, ids);
+    if (isActionMessageError(result) || isActionPermissionError(result)) {
+      return result;
+    }
+    return { rows: result.tickets, metadata: result.metadata };
+  }, []);
+  const smartSearchRowId = useCallback((record: ITicketListItem) => record.ticket_id as string, []);
+
+  // Clearing the box (or Escape) leaves smart mode and restores the keyword list.
+  useEffect(() => {
+    if (smartSearch.active && searchQuery === '') {
+      exitSmartSearch();
+    }
+  }, [smartSearch.active, searchQuery, exitSmartSearch]);
+
+  const handleSelectAllMatchingTickets = useCallback(async () => {
+    // Smart mode's candidate set is the scope captured when the active run
+    // started; the typed text is the Jev query, so enumerating the export
+    // filters would keep the keyword narrowing and select far fewer tickets.
+    // The current chips are deliberately not used here: they may have changed
+    // while the run is still showing (the rerun prompt is up), and enumerating
+    // them would enumerate a set the panel never scored.
+    const scope = selectAllMatchingScope(smartSearch.active, smartSearch.scope ?? smartSearchFilters, exportFilters);
+    const fallbackIds = selectAllMatchingFallbackIds(smartSearch.active, smartCandidateIds, selectableTicketIds);
+    const generation = smartSearchGenerationRef.current;
+    await selectMatchingTickets({
+      loadIds: async () => {
+        const allIds = await getAllMatchingTicketIds(scope);
+        if (isActionMessageError(allIds) || isActionPermissionError(allIds)) {
+          throw new Error(getErrorMessage(allIds));
+        }
+        return allIds;
+      },
+      // Both successful enumeration and fallback must belong to this run.
+      isCurrent: () => generation === smartSearchGenerationRef.current,
+      fallbackIds,
+      onSelect: (ids) => {
+        setSelectedTicketIds(new Set(ids));
+        setAllMatchingMode(true);
+      },
+      onError: (error) => {
+        console.error('Failed to fetch all matching ticket IDs:', error);
+        toast.error(getErrorMessage(error));
+      },
+    });
+  }, [
+    smartSearch.active,
+    smartSearch.scope,
+    smartSearchFilters,
+    exportFilters,
+    smartCandidateIds,
+    selectableTicketIds,
   ]);
 
   const handleBulkMoveBoardChange = useCallback(async (boardId: string) => {
@@ -1144,11 +1350,6 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     }
   }, [t]);
 
-  const clearSelection = useCallback(() => {
-    setSelectedTicketIds(prev => (prev.size === 0 ? prev : new Set<string>()));
-    setAllMatchingMode(false);
-    setOffPageBoardById(prev => (Object.keys(prev).length === 0 ? prev : {}));
-  }, []);
 
   const visibleTicketIdSet = useMemo(() => new Set(visibleTicketIds.filter((id): id is string => !!id)), [visibleTicketIds]);
   const allVisibleTicketsSelected = visibleTicketIds.length > 0 && visibleTicketIds.every(id => selectedTicketIds.has(id));
@@ -1158,42 +1359,14 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     [selectedTicketIdsArray, visibleTicketIdSet]
   );
   const isSelectionIndeterminate = selectedTicketIds.size > 0 && !allVisibleTicketsSelected;
-  const selectedTicketDetails = useMemo(() => {
-    if (selectedTicketIds.size === 0) {
-      return [] as Array<{ ticket_id: string; ticket_number?: string; title?: string; client_id?: string | null; client_name?: string; board_id?: string | null }>;
-    }
+  // Resolved against the ordinary list and the rows smart search streamed, so a
+  // streamed off-page selection still reaches the bundle master picker, the
+  // cross-client warning, and the bulk-error labels.
+  const selectedTicketDetails = useMemo(
+    () => buildSelectedTicketDetails(selectedTicketIds, [tickets, smartSearchRows]),
+    [tickets, selectedTicketIds, smartSearchRows]
+  );
 
-    const selectedSet = new Set(selectedTicketIds);
-
-    return tickets
-      .filter(ticket => ticket.ticket_id && selectedSet.has(ticket.ticket_id))
-      .map(ticket => ({
-        ticket_id: ticket.ticket_id as string,
-        ticket_number: ticket.ticket_number,
-        title: ticket.title,
-        client_id: ticket.client_id ?? null,
-        client_name: ticket.client_name,
-        board_id: ticket.board_id ?? null,
-      }))
-      .sort((a, b) => {
-        if (a.ticket_number && b.ticket_number) {
-          return a.ticket_number.localeCompare(b.ticket_number, undefined, { numeric: true, sensitivity: 'base' });
-        }
-        if (a.title && b.title) {
-          return a.title.localeCompare(b.title, undefined, { sensitivity: 'base' });
-        }
-        return 0;
-      });
-  }, [tickets, selectedTicketIds]);
-
-  const isSelectedBundleMultiClient = useMemo(() => {
-    const uniqueClientIds = new Set(
-      selectedTicketDetails
-        .map(detail => detail.client_id)
-        .filter((id): id is string => typeof id === 'string' && id.length > 0)
-    );
-    return uniqueClientIds.size > 1;
-  }, [selectedTicketDetails]);
 
   // Board id for every ticket currently rendered on the page.
   const onPageBoardById = useMemo(() => {
@@ -1323,6 +1496,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       onToggleBundleExpanded: bundleView === 'bundled' ? toggleBundleExpanded : undefined,
       t,
       locale,
+      dateFormat,
     });
 
     const selectionColumn: ColumnDefinition<ITicketListItem> = {
@@ -1417,7 +1591,17 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       },
     };
 
-    return [selectionColumn, ...baseColumns];
+    // Row actions live outside createTicketColumns: the menu needs navigation, which
+    // that shared column factory (also used by non-dashboard lists) does not have.
+    const actionsColumn = createTicketActionsColumn({
+      t,
+      onDuplicate: (ticketId) => navigateAwayTo(buildCreateTicketHref({
+        duplicateFromTicketId: ticketId,
+        isAlgaDeskMode: useAlgaDeskQuickAddForm,
+      })),
+    });
+
+    return [selectionColumn, ...baseColumns, actionsColumn];
   }, [
     categories,
     boards,
@@ -1443,7 +1627,11 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     toggleBundleExpanded,
     bundleView,
     densityClasses.tagSize,
+    navigateAwayTo,
+    useAlgaDeskQuickAddForm,
     t,
+    locale,
+    dateFormat,
   ]);
 
   const handleBulkDeleteClose = useCallback(() => {
@@ -1588,148 +1776,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     }
   }, [selectedTicketIdsArray, clearSelection, currentUser, t]);
 
-  // When the bundle dialog opens, check which of the selected tickets are already
-  // bundle masters of other bundles. Masters can't be added as children, so we must
-  // either force them to BE the master or block the operation entirely.
-  useEffect(() => {
-    if (!isBundleDialogOpen || selectedTicketIdsArray.length === 0) {
-      return;
-    }
-    let cancelled = false;
-    setIsLoadingBundleMasterStatus(true);
-    (async () => {
-      try {
-        const masterStatus = await getBundleMasterStatusAction({ ticketIds: selectedTicketIdsArray });
-        if (cancelled) return;
-        if (isActionMessageError(masterStatus) || isActionPermissionError(masterStatus)) {
-          setBundleExistingMasterIds(new Set());
-          setBundleError(getErrorMessage(masterStatus));
-          return;
-        }
-        const { masterTicketIds } = masterStatus;
-        const masterSet = new Set(masterTicketIds);
-        setBundleExistingMasterIds(masterSet);
-        if (masterSet.size === 1) {
-          // Exactly one of the selected tickets is already a master; force it to be THE master.
-          const [onlyMaster] = Array.from(masterSet);
-          setBundleMasterTicketId(onlyMaster);
-        } else if (masterSet.size > 1) {
-          // Can't bundle: multiple existing masters can't be merged without unbundling first.
-          setBundleError(
-            t(
-              'bulk.bundle.multipleExistingMasters',
-              'Multiple selected tickets are already bundle masters ({{count}}). Unbundle all but one before bundling.',
-              { count: masterSet.size }
-            )
-          );
-          setBundleMasterTicketId(null);
-        } else {
-          setBundleError(null);
-        }
-      } catch (error) {
-        if (!cancelled) {
-          console.error('Failed to load bundle master status', error);
-          setBundleExistingMasterIds(new Set());
-        }
-      } finally {
-        if (!cancelled) setIsLoadingBundleMasterStatus(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [isBundleDialogOpen, selectedTicketIdsArray, t]);
 
-  const hasMultipleExistingMasters = bundleExistingMasterIds.size > 1;
-
-  const performBundleTickets = useCallback(async () => {
-    if (selectedTicketIdsArray.length < 2) {
-      setBundleError(t('bulk.bundle.selectAtLeastTwo', 'Select at least two tickets to bundle.'));
-      return;
-    }
-    if (!bundleMasterTicketId) {
-      setBundleError(t('bulk.bundle.selectMaster', 'Select a master ticket.'));
-      return;
-    }
-    if (hasMultipleExistingMasters) {
-      return;
-    }
-
-    setBundleError(null);
-    try {
-      const result = await bundleTicketsAction({
-        masterTicketId: bundleMasterTicketId,
-        childTicketIds: selectedTicketIdsArray.filter((id) => id !== bundleMasterTicketId),
-        mode: bundleSyncUpdates ? 'sync_updates' : 'link_only',
-      });
-
-      if (isActionMessageError(result) || isActionPermissionError(result)) {
-        const message = getErrorMessage(result);
-        setBundleError(message);
-        toast.error(message);
-        return;
-      }
-
-      toast.success(t('bulk.bundle.success', 'Tickets bundled'));
-      setIsBundleDialogOpen(false);
-      clearSelection();
-
-      // Re-fetch with current filters after bundling
-      onFilterChange({});
-    } catch (error) {
-      const message = getErrorMessage(error);
-      setBundleError(message);
-      handleError(error);
-    }
-  }, [
-    selectedTicketIdsArray,
-    bundleMasterTicketId,
-    bundleSyncUpdates,
-    currentUser,
-    clearSelection,
-    onFilterChange,
-    hasMultipleExistingMasters,
-    t,
-  ]);
-
-  const handleConfirmBundleTickets = useCallback(() => {
-    if (isSelectedBundleMultiClient) {
-      setIsMultiClientBundleConfirmOpen(true);
-      return;
-    }
-    void performBundleTickets();
-  }, [isSelectedBundleMultiClient, performBundleTickets]);
-
-  const exportFilters = useMemo((): ITicketListFilters => ({
-    boardIds: selectedBoards.length > 0 ? selectedBoards : undefined,
-    excludeBoardIds: excludedBoards.length > 0 ? excludedBoards : undefined,
-    statusId: selectedStatus,
-    priorityId: selectedPriority,
-    categoryIds: selectedCategories.length > 0 ? selectedCategories : undefined,
-    excludeCategoryIds: excludedCategories.length > 0 ? excludedCategories : undefined,
-    clientId: selectedClient ?? undefined,
-    searchQuery: debouncedSearchQuery,
-    boardFilterState: boardFilterState,
-    showOpenOnly: isTicketStatusOpenFilter(selectedStatus),
-    tags: selectedTags.length > 0 ? selectedTags : undefined,
-    assignedToIds: selectedAssignees.length > 0 ? selectedAssignees : undefined,
-    assignedTeamIds: selectedTeams.length > 0 ? selectedTeams : undefined,
-    includeUnassigned: includeUnassigned || undefined,
-    dueDateFilter: selectedDueDateFilter !== 'all' ? selectedDueDateFilter as ITicketListFilters['dueDateFilter'] : undefined,
-    dueDateFrom: filterValues.dueDateFrom,
-    dueDateTo: filterValues.dueDateTo,
-    responseState: selectedResponseState !== 'all' ? selectedResponseState : undefined,
-    slaStatusFilter: allowSlaStatusFilter && selectedSlaStatus !== 'all' ? selectedSlaStatus as ITicketListFilters['slaStatusFilter'] : undefined,
-    sortBy,
-    sortDirection,
-    bundleView,
-  }), [
-    selectedBoards, excludedBoards, selectedStatus, selectedPriority, selectedCategories, excludedCategories,
-    selectedClient, debouncedSearchQuery, boardFilterState, selectedTags,
-    selectedAssignees, selectedTeams, includeUnassigned, selectedDueDateFilter,
-    filterValues.dueDateFrom, filterValues.dueDateTo, selectedResponseState,
-    allowSlaStatusFilter, selectedSlaStatus, sortBy, sortDirection, bundleView,
-  ]);
 
   useEffect(() => {
     setTicketsRouteFilters(exportFilters);
@@ -1782,8 +1829,9 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
         return additionalAgents.length > 0 ? `${primary}; +${additionalAgents.length}: ${additionalAgents.join(', ')}` : primary;
       },
       due_date: (ticket) => formatPrintDate(ticket.due_date, locale) || t('dashboard.print.noDueDate', 'No due date'),
-      entered_at: (ticket) => formatPrintDateTime(ticket.entered_at, locale) || t('dashboard.print.emptyValue', '—'),
+      entered_at: (ticket) => formatPrintDateTime(ticket.entered_at, formatDate) || t('dashboard.print.emptyValue', '—'),
       entered_by_name: (ticket) => ticket.entered_by_name || t('dashboard.print.emptyValue', '—'),
+      latest_activity_at: (ticket) => formatPrintDateTime(ticket.latest_activity_at, formatDate) || t('dashboard.print.emptyValue', '—'),
       tags: (ticket) => {
         const tags = ticket.ticket_id ? ticketTagsRef.current[ticket.ticket_id] ?? [] : [];
         return tags.length > 0
@@ -1805,11 +1853,11 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
           ? 'tickets-print-number-column'
           : dataIndexKey === 'title'
             ? 'tickets-print-title-column'
-            : dataIndexKey === 'due_date' || dataIndexKey === 'entered_at'
+            : dataIndexKey === 'due_date' || dataIndexKey === 'entered_at' || dataIndexKey === 'latest_activity_at'
               ? 'tickets-print-date-column'
               : undefined,
         render: knownRenderer ?? ((ticket) => (
-          formatTicketPrintValue(getTicketColumnValue(ticket, dataIndexKey), locale)
+          formatTicketPrintValue(getTicketColumnValue(ticket, dataIndexKey), formatDate)
           || t('dashboard.print.emptyValue', '—')
         )),
       };
@@ -1828,11 +1876,44 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   } = usePrintColumnSelection('print-columns:tickets-list', printColumns);
 
   const preparePrintTickets = useCallback(async () => {
+    // An active run prints the candidate set captured at run start, not the
+    // current chips, so a stale-filter prompt cannot change what is printed.
+    const scope = smartSearch.active ? smartSearch.scope ?? smartSearchFilters : exportFilters;
+
     if (hasSelection && !allMatchingMode) {
-      const selectedRows = displayedTickets.filter((ticket) => (
-        Boolean(ticket.ticket_id && selectedTicketIds.has(ticket.ticket_id))
-      ));
-      setPrintTickets(selectedRows);
+      // Rows the ordinary list does not hold (streamed smart results, or an
+      // off-page paginate-then-select) are hydrated through the same authorized
+      // by-id loader the stream uses rather than silently dropped from the print.
+      const { rows, missingIds } = collectSelectedTicketRows(selectedTicketIdsArray, [
+        displayedTickets,
+        smartSearchRows,
+      ]);
+      if (missingIds.length === 0) {
+        setPrintTickets(rows);
+        return;
+      }
+      const generation = smartSearchGenerationRef.current;
+      const hydrated = await loadTicketListItemsByIds(scope, missingIds);
+      // A rerun or exit while hydrating makes this result actionable for a run
+      // that no longer exists; drop it rather than print stale rows.
+      if (generation !== smartSearchGenerationRef.current) {
+        return;
+      }
+      if (isActionMessageError(hydrated) || isActionPermissionError(hydrated)) {
+        toast.error(getErrorMessage(hydrated));
+        setPrintTickets(rows);
+        return;
+      }
+      mergeSmartSearchRows(hydrated.tickets);
+      ticketTagsRef.current = {
+        ...ticketTagsRef.current,
+        ...hydrated.metadata.ticketTags,
+      };
+      const hydratedById = new Map(hydrated.tickets.map((ticket) => [ticket.ticket_id, ticket]));
+      const complete = selectedTicketIdsArray
+        .map((id) => hydratedById.get(id) ?? rows.find((row) => row.ticket_id === id))
+        .filter((ticket): ticket is ITicketListItem => Boolean(ticket));
+      setPrintTickets(complete);
       return;
     }
 
@@ -1842,7 +1923,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       pageSize,
       TICKET_PRINT_FALLBACK_PAGE_SIZE
     );
-    const result = await fetchTicketsWithPagination(exportFilters, 1, printPageSize);
+    const result = await fetchTicketsWithPagination(scope, 1, printPageSize);
     if (isActionMessageError(result) || isActionPermissionError(result)) {
       toast.error(getErrorMessage(result));
       setPrintTickets([]);
@@ -1861,8 +1942,14 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     displayedTickets,
     exportFilters,
     hasSelection,
+    mergeSmartSearchRows,
     pageSize,
     selectedTicketIds,
+    selectedTicketIdsArray,
+    smartSearch.active,
+    smartSearch.scope,
+    smartSearchFilters,
+    smartSearchRows,
     totalCount,
   ]);
 
@@ -1943,9 +2030,9 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   const handleResetFilters = useCallback(() => {
     setSearchQuery('');
     lastEmittedSearchRef.current = '';
+    exitSmartSearch();
     setClientFilterState('active');
     setClientTypeFilter('all');
-    clearSelection();
 
     onFilterChange({
       boardId: undefined,
@@ -1971,7 +2058,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       slaStatusFilter: undefined,
       bundleView: 'bundled',
     });
-  }, [onFilterChange, clearSelection]);
+  }, [onFilterChange, exitSmartSearch]);
 
   // LEVERAGE: pattern filter-descriptor-table — per-dimension "is-active / label / clear" logic is
   // now duplicated three ways (toolbar controls, activeFilterCount, activeFilterChips). One
@@ -2184,12 +2271,36 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
               <div className="flex items-center gap-2 flex-wrap">
                 <Input
                   id={`${id}-search-tickets-input`}
-                  placeholder={t('filters.search', 'Search tickets and comments...')}
+                  placeholder={smartSearchAvailable
+                    ? t('filters.searchSmart', 'Search tickets and comments… Enter for smart search')
+                    : t('filters.search', 'Search tickets and comments...')}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && smartSearchAvailable && searchQuery.trim().length > 0) {
+                      e.preventDefault();
+                      runSmartSearch(searchQuery);
+                    } else if (e.key === 'Escape' && smartSearch.active) {
+                      e.preventDefault();
+                      setSearchQuery('');
+                    }
+                  }}
                   className="h-[38px] w-full text-sm"
                   containerClassName="flex-1 min-w-[260px] max-w-[460px]"
                 />
+                {smartSearchAvailable && (
+                  <Button
+                    id={`${id}-smart-search-run`}
+                    variant={smartSearch.active ? 'soft' : 'outline'}
+                    onClick={() => runSmartSearch(searchQuery)}
+                    disabled={searchQuery.trim().length === 0}
+                    className="shrink-0 flex items-center gap-1.5 h-[38px]"
+                    title={t('smartSearch.runTitle', 'Score the filtered tickets against this query')}
+                  >
+                    <Sparkles className="h-4 w-4" />
+                    {t('smartSearch.run', 'Smart search')}
+                  </Button>
+                )}
                 <Button
                   id={`${id}-toggle-filters`}
                   variant={showFilters ? 'soft' : 'outline'}
@@ -2228,6 +2339,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
                     />
                   </div>
                   <div className="h-6 w-px bg-gray-200 mx-1 shrink-0" />
+                  {listViewPicker}
                   {viewPresentation && onViewPresentationChange && (
                     <TicketViewMenu
                       id={`${id}-view-menu`}
@@ -2473,8 +2585,11 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
         </div>
 
         <div className={densityClasses.bodyPadding}>
-        {/* isLoadingMore prop now correctly reflects loading state from container for pagination or filter changes */}
-        {isLoadingMore ? (
+        {/* The smart search panel owns its run: an ordinary-list refresh (a chip
+            change, pagination, or a background fetch) must not unmount it, or it
+            would restart its stream over whatever scope it remounts with. Only
+            the ordinary table gets replaced by the loading spinner. */}
+        {isLoadingMore && !smartSearch.active ? (
           <Spinner size="md" className="h-32 w-full" />
         ) : (
           <>
@@ -2521,9 +2636,44 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
               </Alert>
             )}
             <ShortcutActiveRegion id="tickets-shortcut-region" className="outline-none">
+              {smartSearch.active ? (
+                <SmartSearchResults<ITicketListFilters, ITicketListItem, TicketSmartSearchRowMetadata>
+                  // Each run is a fresh panel: the old one unmounts, so its
+                  // in-flight hydration cannot report into the new run.
+                  key={smartSearch.runToken}
+                  id={id}
+                  entity="ticket"
+                  i18nNamespace="features/tickets"
+                  scope={smartSearch.scope ?? smartSearchFilters}
+                  query={smartSearch.query}
+                  runToken={smartSearch.runToken}
+                  scopeStale={smartSearchFiltersStale}
+                  onRerun={rerunSmartSearch}
+                  columns={columns}
+                  relevanceColumnIndex={1}
+                  rowId={smartSearchRowId}
+                  hydrateRows={hydrateSmartSearchRows}
+                  rowClassName={(record: ITicketListItem) =>
+                    `${densityClasses.tableRowDensity} cursor-pointer outline-none focus:outline-none focus-visible:outline-none focus-within:outline-none focus-visible:ring-0 hover:!bg-table-hover ${record.ticket_id && selectedTicketIds.has(record.ticket_id)
+                      ? '!bg-table-selected'
+                      : ''}`
+                  }
+                  onRowClick={(record: ITicketListItem) => {
+                    if (record.ticket_id) {
+                      handleTicketClick(record.ticket_id);
+                    }
+                  }}
+                  onVisibleRowsChange={handleVisibleRowsChange}
+                  onRowsChange={mergeSmartSearchRows}
+                  onRowMetadata={handleSmartSearchRowMetadata}
+                  onExit={exitSmartSearch}
+                />
+              ) : (
               <DataTable
                 key={`${currentPage}-${pageSize}`}
                 {...withDataAutomationId({ id: `${id}-tickets-table` })}
+                id={`${id}-tickets-table`}
+                persistPageSize={false}
                 data={ticketsWithIds}
                 columns={columns}
                 pagination={true}
@@ -2547,7 +2697,10 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
                 sortBy={sortBy}
                 sortDirection={sortDirection}
                 onSortChange={handleTableSortChange}
+                columnSizing={columnSizing}
+                onColumnSizingChange={onColumnSizingChange}
               />
+              )}
             </ShortcutActiveRegion>
           </>
         )}
@@ -2604,19 +2757,6 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
         }
       />
 
-      <ConfirmationDialog
-        id={`${id}-bundle-multi-client-confirm`}
-        isOpen={isMultiClientBundleConfirmOpen}
-        onClose={() => setIsMultiClientBundleConfirmOpen(false)}
-        onConfirm={async () => {
-          setIsMultiClientBundleConfirmOpen(false);
-          await performBundleTickets();
-        }}
-        title={t('bulk.bundle.multiClientTitle', 'Bundle spans multiple clients')}
-        message={t('bulk.bundle.multiClientMessage', 'This bundle includes tickets from multiple clients. Confirm that you want to proceed.')}
-        confirmLabel={t('bulk.bundle.proceed', 'Proceed')}
-        cancelLabel={t('actions.cancel', 'Cancel')}
-      />
       {(() => {
         const bulkMoveFooter = (
           <div className="flex justify-end space-x-2">
@@ -2834,120 +2974,14 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
         );
       })()}
 
-      {(() => {
-        const bundleFooter = (
-          <div className="flex justify-end space-x-2">
-            <Button
-              id={`${id}-bundle-cancel`}
-              variant="outline"
-              onClick={() => {
-                setIsBundleDialogOpen(false);
-                setBundleError(null);
-                setBundleExistingMasterIds(new Set());
-              }}
-            >
-              {t('actions.cancel', 'Cancel')}
-            </Button>
-            <Button
-              id={`${id}-bundle-confirm`}
-              onClick={handleConfirmBundleTickets}
-              disabled={
-                selectedTicketIdsArray.length < 2 ||
-                !bundleMasterTicketId ||
-                isLoadingBundleMasterStatus ||
-                hasMultipleExistingMasters
-              }
-            >
-              {t('bulk.bundleTickets', 'Bundle Tickets')}
-            </Button>
-          </div>
-        );
-        return (
-      <Dialog
-        isOpen={isBundleDialogOpen && selectedTicketIds.size >= 2}
-        onClose={() => {
-          setIsBundleDialogOpen(false);
-          setBundleError(null);
-          setBundleExistingMasterIds(new Set());
-        }}
-        id={`${id}-bundle-dialog`}
-        title={t('bulk.bundle.dialogTitle', 'Bundle Tickets')}
-        footer={bundleFooter}
-      >
-        <DialogContent>
-          {bundleError && (
-            <Alert variant="destructive" className="mb-3">
-              <AlertDescription>{bundleError}</AlertDescription>
-            </Alert>
-          )}
-          {bundleExistingMasterIds.size === 1 && !bundleError && (
-            <Alert variant="warning" className="mb-3">
-              <AlertDescription>
-                {t(
-                  'bulk.bundle.existingMasterLocked',
-                  'One selected ticket is already a bundle master. It will be used as the master; the others will be added as children.'
-                )}
-              </AlertDescription>
-            </Alert>
-          )}
-          {(() => {
-            if (!isSelectedBundleMultiClient) return null;
-            return (
-              <Alert variant="warning" className="mb-3">
-                <AlertDescription>{t('bulk.bundle.crossClientWarning', 'This bundle spans multiple clients. You\'ll be asked to confirm before bundling.')}</AlertDescription>
-              </Alert>
-            );
-          })()}
-          <div className="space-y-4">
-            <div>
-              <div className="text-sm font-medium text-gray-700 mb-1">{t('bulk.bundle.masterTicket', 'Select Master Ticket')}</div>
-              <CustomSelect
-                id={`${id}-bundle-master-select`}
-                value={bundleMasterTicketId || ''}
-                options={selectedTicketDetails.map(detail => {
-                  const baseLabel = detail.ticket_number || detail.title || detail.ticket_id;
-                  const isExistingMaster = bundleExistingMasterIds.has(detail.ticket_id);
-                  return {
-                    value: detail.ticket_id,
-                    label: isExistingMaster
-                      ? `${baseLabel} ${t('bulk.bundle.existingMasterSuffix', '(existing master)')}`
-                      : baseLabel,
-                  };
-                })}
-                onValueChange={(value) => setBundleMasterTicketId(value)}
-                placeholder={
-                  isLoadingBundleMasterStatus
-                    ? t('bulk.bundle.checkingMasters', 'Checking existing bundles...')
-                    : t('bulk.bundle.selectMasterTicket', 'Select master ticket...')
-                }
-                disabled={
-                  isLoadingBundleMasterStatus ||
-                  hasMultipleExistingMasters ||
-                  bundleExistingMasterIds.size === 1
-                }
-              />
-            </div>
-
-            <div className="flex items-center gap-2">
-              <Checkbox
-                id={`${id}-bundle-sync-updates`}
-                checked={bundleSyncUpdates}
-                onChange={(event: React.ChangeEvent<HTMLInputElement>) => setBundleSyncUpdates(event.target.checked)}
-                skipRegistration
-              />
-              <label htmlFor={`${id}-bundle-sync-updates`} className="text-sm text-gray-700">
-                {t('bulk.bundle.syncUpdates', 'Sync updates from master to children (public replies + workflow changes)')}
-              </label>
-            </div>
-
-            <div className="text-xs text-gray-500">
-              {t('bulk.bundle.syncUpdatesHelp', 'Child tickets keep their current status when bundled. Workflow fields are locked on children by default. Internal notes stay on the master.')}
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-        );
-      })()}
+      <BulkBundleDialog
+        id={id}
+        isOpen={isBundleDialogOpen}
+        onClose={() => setIsBundleDialogOpen(false)}
+        initialTicketIds={selectedTicketIdsArray}
+        knownRows={[tickets, smartSearchRows]}
+        onBundled={() => { clearSelection(); onFilterChange({}); }}
+      />
       <BulkTicketActionBar
         idPrefix={`${id}-bulk`}
         count={selectedTicketIds.size}
@@ -2972,10 +3006,6 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
           setIsBulkMoveDialogOpen(true);
         }}
         onBundle={() => {
-          setBundleError(null);
-          const first = Array.from(selectedTicketIds)[0] || null;
-          setBundleMasterTicketId(first);
-          setBundleSyncUpdates(true);
           setIsBundleDialogOpen(true);
         }}
         onAssign={() => {

@@ -5,7 +5,7 @@ import type { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import BulkChangeStatusDialog from '@alga-psa/tickets/components/BulkChangeStatusDialog';
 import {
   bulkUpdateTicketStatus,
-  type TicketNotificationSuppressionOptions,
+  type TicketBulkStatusOptions,
 } from '@alga-psa/tickets/actions/ticketActions';
 import { getBoardTicketStatuses } from '@alga-psa/tickets/actions/board-actions/boardTicketStatusActions';
 import {
@@ -28,6 +28,7 @@ export default function BulkChangeStatusRouteClient({ closeMode }: BulkChangeSta
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [failed, setFailed] = useState<TicketBulkFailure[]>([]);
   const [statuses, setStatuses] = useState<SelectOption[]>([]);
+  const [closedStatusIds, setClosedStatusIds] = useState<string[]>([]);
   const [isLoadingStatuses, setIsLoadingStatuses] = useState(false);
   const { selectedTicketsSharedBoardId, isResolvingSelectedBoards } = useTicketsRouteState();
   const {
@@ -46,6 +47,7 @@ export default function BulkChangeStatusRouteClient({ closeMode }: BulkChangeSta
   useEffect(() => {
     if (isResolvingSelectedBoards || !selectedTicketsSharedBoardId) {
       setStatuses([]);
+      setClosedStatusIds([]);
       setIsLoadingStatuses(false);
       return;
     }
@@ -58,17 +60,24 @@ export default function BulkChangeStatusRouteClient({ closeMode }: BulkChangeSta
         if (isActionMessageError(rows) || isActionPermissionError(rows)) {
           handleError(rows, getErrorMessage(rows));
           setStatuses([]);
+          setClosedStatusIds([]);
           return;
         }
         setStatuses(rows.map((status: { status_id: string; name: string }) => ({
           value: status.status_id,
           label: status.name,
         })));
+        setClosedStatusIds(
+          rows
+            .filter((status: { is_closed?: boolean }) => !!status.is_closed)
+            .map((status: { status_id: string }) => status.status_id),
+        );
       })
       .catch((error) => {
         if (cancelled) return;
         console.error('[BulkChangeStatusRouteClient] Failed to load bulk status options:', error);
         setStatuses([]);
+        setClosedStatusIds([]);
       })
       .finally(() => {
         if (!cancelled) setIsLoadingStatuses(false);
@@ -79,7 +88,10 @@ export default function BulkChangeStatusRouteClient({ closeMode }: BulkChangeSta
     };
   }, [handleError, isResolvingSelectedBoards, selectedTicketsSharedBoardId]);
 
-  const handleConfirm = async (statusId: string, options?: TicketNotificationSuppressionOptions) => {
+  const handleConfirm = async (
+    statusId: string,
+    options?: TicketBulkStatusOptions,
+  ) => {
     if (selectedTicketIdsArray.length === 0) return;
 
     setIsSubmitting(true);
@@ -90,13 +102,12 @@ export default function BulkChangeStatusRouteClient({ closeMode }: BulkChangeSta
         ? await bulkUpdateTicketStatus(selectedTicketIdsArray, statusId, options)
         : await bulkUpdateTicketStatus(selectedTicketIdsArray, statusId);
 
-      if (result.updatedIds.length > 0) {
-        refreshList();
-      }
-
       if (result.failed.length > 0) {
         setFailed(result.failed);
         keepFailedSelection(result.failed);
+        if (result.updatedIds.length > 0) {
+          refreshList();
+        }
         toastBulkResult(result, {
           partialFailure: t('bulk.status.partialFailure', 'Status could not be updated on some tickets'),
           success: (count) => t('bulk.status.success', {
@@ -127,7 +138,9 @@ export default function BulkChangeStatusRouteClient({ closeMode }: BulkChangeSta
       isOpen={true}
       onClose={close}
       ticketCount={selectedTicketCount}
+      ticketIds={selectedTicketIdsArray}
       statuses={statuses}
+      closedStatusIds={closedStatusIds}
       isLoadingStatuses={isResolvingSelectedBoards || isLoadingStatuses}
       failed={labelFailures(failed)}
       isSubmitting={isSubmitting}

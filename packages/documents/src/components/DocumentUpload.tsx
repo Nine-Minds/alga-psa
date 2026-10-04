@@ -16,7 +16,7 @@ interface DocumentUploadProps {
     id: string; // Made required since it's needed for reflection registration
     userId: string;
     entityId?: string;
-    entityType?: 'ticket' | 'client' | 'contact' | 'asset' | 'project_task' | 'contract';
+    entityType?: 'ticket' | 'client' | 'contact' | 'asset' | 'project_task' | 'contract' | 'opportunity';
     folderPath?: string | null;
     onUploadComplete: (result: { success: boolean; document: IDocument }) => void;
     /** Called after all files in a multi-file upload have been processed */
@@ -34,6 +34,7 @@ interface UploadOptions {
     assetId?: string;
     projectTaskId?: string;
     contractId?: string;
+    opportunityId?: string;
     folder_path?: string | null;
 }
 
@@ -51,6 +52,7 @@ const UPLOAD_ASSOCIATION_ENTITY_TYPES: PickerAssociationEntityType[] = [
     'asset',
     'project_task',
     'contract',
+    'opportunity',
 ];
 
 export default function DocumentUpload({
@@ -192,6 +194,9 @@ export default function DocumentUpload({
                         break;
                     case 'contract':
                         options.contractId = effectiveEntityId;
+                        break;
+                    case 'opportunity':
+                        options.opportunityId = effectiveEntityId;
                         break;
                 }
             }

@@ -2,7 +2,7 @@
  * SMTP Email Provider - Implements email sending via SMTP protocol
  */
 
-import nodemailer from 'nodemailer';
+import nodemailer, { type Transporter } from 'nodemailer';
 import logger from '@alga-psa/core/logger';
 import {
   IEmailProvider,
@@ -76,7 +76,7 @@ export class SMTPEmailProvider implements IEmailProvider {
     maxRecipientsPerMessage: 100
   };
 
-  private transporter: nodemailer.Transporter | null = null;
+  private transporter: Transporter | null = null;
   private config: SMTPConfig | null = null;
   private initialized = false;
 
@@ -325,6 +325,9 @@ export class SMTPEmailProvider implements IEmailProvider {
 
     if (attachment.cid) {
       result.cid = attachment.cid;
+      // Nodemailer puts it in the related part either way; saying so explicitly
+      // keeps Outlook from also listing the logo as a file attachment.
+      result.contentDisposition = 'inline';
     }
 
     return result;

@@ -107,6 +107,7 @@ export class MicrosoftGraphEmailProvider implements IEmailProvider {
         metadata,
       };
     } catch (error: any) {
+      if (error && typeof error === 'object') error.fromAddress = message.from?.email || this.mailbox;
       throw this.toProviderError(error);
     }
   }
@@ -190,6 +191,7 @@ export class MicrosoftGraphEmailProvider implements IEmailProvider {
         content: message.html || message.text || '',
       },
       toRecipients: message.to.map(address => this.toRecipient(address)),
+      from: { emailAddress: { address: message.from?.email || this.mailbox, name: message.from?.name || '' } },
     };
 
     if (message.cc?.length) graphMessage.ccRecipients = message.cc.map(address => this.toRecipient(address));
@@ -211,11 +213,11 @@ export class MicrosoftGraphEmailProvider implements IEmailProvider {
       || headers.some(name => !name.toLowerCase().startsWith('x-'));
 
     if (!requiresMime) {
-      return { kind: 'json', message: this.buildGraphMessage(message) };
+      return { kind: 'json', message: this.buildGraphMessage(message), fromAddress: message.from?.email || this.mailbox };
     }
 
     const mime = await this.buildMimeMessage(message);
-    return { kind: 'mime', content: mime.toString('base64') };
+    return { kind: 'mime', content: mime.toString('base64'), fromAddress: message.from?.email || this.mailbox };
   }
 
   private async buildMimeMessage(message: EmailMessage): Promise<Buffer> {
@@ -232,7 +234,7 @@ export class MicrosoftGraphEmailProvider implements IEmailProvider {
     const specialHeaders = this.extractSpecialHeaders(message.headers || {});
     const mail: Mail.Options = {
       from: {
-        address: this.mailbox,
+        address: message.from?.email || this.mailbox,
         name: message.from?.name || '',
       },
       to: message.to.map(address => ({ address: address.email, name: address.name || '' })),
@@ -377,7 +379,7 @@ export class MicrosoftGraphEmailProvider implements IEmailProvider {
     if (status === 401) {
       message = 'Microsoft authorization expired. Reconnect the mailbox and try again.';
     } else if (status === 403) {
-      message = 'Microsoft rejected the send. Reconnect to grant Mail.Send and verify Send As permission for the configured mailbox.';
+      message = `Send As not granted for ${error?.fromAddress || 'the requested sender'} via ${this.mailbox}. Verify Exchange Send As permission and Mail.Send.Shared consent.`;
     } else if (status === 429) {
       message = 'Microsoft Graph throttled the send. Try again later.';
     } else if (status && status >= 500) {

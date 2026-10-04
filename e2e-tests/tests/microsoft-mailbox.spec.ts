@@ -72,11 +72,22 @@ test('Microsoft mailbox OAuth receives a ticket, sends a UI reply through Graph 
     await page.getByRole('option', { name: 'Microsoft 365 (Microsoft Graph)', exact: true }).click();
     await page.locator('#microsoft-outbound-mailbox').click();
     await page.getByRole('option', { name: `${name} — ${mailbox}`, exact: true }).click();
-    await page.locator('#ticket-from-inbox').click();
-    await page.getByRole('option', { name: mailbox, exact: true }).click();
-    await page.locator(enterprise ? '#save-outbound-settings' : '#save-email-settings').click();
+    if (!enterprise) await page.locator('#save-email-settings').click();
     await expect.poll(async () => database('tenant_email_settings').where(scope).first())
-      .toMatchObject({ email_provider: 'microsoft', ticketing_from_email: mailbox });
+      .toMatchObject({ email_provider: 'microsoft' });
+
+    // Add a named outbound identity tied to the connected Graph mailbox. The
+    // identity is mailbox-verified and can be routed independently from inbound.
+    await page.locator('#email-sender-add-open').click();
+    const addSenderDialog = page.getByRole('dialog', { name: 'Add sender' });
+    await expect(addSenderDialog).toBeVisible();
+    await addSenderDialog.locator('#email-sender-address').fill(mailbox);
+    await addSenderDialog.locator('#email-sender-mailbox').click();
+    await page.getByRole('option', { name: mailbox, exact: true }).click();
+    await addSenderDialog.locator('#email-sender-add').click();
+    await expect(addSenderDialog).toBeHidden();
+    await expect.poll(async () => database('email_sender_addresses').where({ ...scope, email_address: mailbox }).first())
+      .toMatchObject({ verification_status: 'verified', microsoft_provider_id: provider.id });
 
     // Fetching the message and processing the durable pointer happen in the
     // shipped email worker; no direct ticket creation or adapter interception.

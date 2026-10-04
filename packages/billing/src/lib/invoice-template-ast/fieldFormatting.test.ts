@@ -14,14 +14,14 @@ describe('formatTemplateFieldValue', () => {
           format: 'date',
           currencyCode: 'USD',
         })
-      ).toEqual({ text: '7/13/2026', multiline: false });
+      ).toEqual({ text: '07/13/2026', multiline: false });
       expect(
         formatTemplateFieldValue({
           value: '2026-08-12',
           format: 'date',
           currencyCode: 'USD',
         })
-      ).toEqual({ text: '8/12/2026', multiline: false });
+      ).toEqual({ text: '08/12/2026', multiline: false });
     } finally {
       if (previousTimeZone === undefined) {
         delete process.env.TZ;
@@ -38,7 +38,7 @@ describe('formatTemplateFieldValue', () => {
         format: 'date',
         currencyCode: 'USD',
       })
-    ).toEqual({ text: '7/17/2026', multiline: false });
+    ).toEqual({ text: '07/17/2026', multiline: false });
   });
 
   it('returns null text for invalid Date instances', () => {

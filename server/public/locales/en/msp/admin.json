@@ -9,7 +9,8 @@
       "edit": "Edit",
       "delete": "Delete",
       "deleting": "Deleting…",
-      "verify": "Verify"
+      "verify": "Verify",
+      "cancel": "Cancel"
     },
     "states": {
       "active": "Active",
@@ -226,7 +227,53 @@
         "companyFallback": "your tenant company"
       },
       "warningTitle": "Check reply routing",
-      "errorTitle": "Fix the ticket identity"
+      "errorTitle": "Fix the ticket identity",
+      "addresses": {
+        "title": "Sender addresses",
+        "description": "Create named addresses to use across your outbound email."
+      },
+      "routing": {
+        "title": "Sender routing",
+        "description": "Choose which sender each mail class uses.",
+        "default": "Default (all other mail)",
+        "useDefault": "Use default",
+        "sender": "Sender",
+        "displayName": "Display name",
+        "boardSummary": "Board-specific ticket senders are managed in each board’s settings.",
+        "ticket": "Ticket email",
+        "project": "Project email",
+        "billing": "Billing email",
+        "sales": "Sales email",
+        "scheduling": "Scheduling email",
+        "survey": "Survey email",
+        "account": "Account email",
+        "general": "General email",
+        "noneProviderFrom": "None (use provider From)",
+        "confirmSmtp": "I confirm the SMTP relay accepts this sender address.",
+        "inboundReplyWarning": "Inbound replies still go to the configured inbound mailbox; changing this From address does not change reply routing.",
+        "unknownBoard": "Unknown board"
+      },
+      "actions": {
+        "add": "Add sender",
+        "verify": "Verify",
+        "delete": "Delete"
+      },
+      "fields": {
+        "address": "Email address",
+        "localPart": "Address name",
+        "domain": "Verified domain",
+        "sendThrough": "Send through",
+        "displayName": "Display name",
+        "displayNamePlaceholder": "Support team"
+      },
+      "smtpHelp": "Your SMTP relay must allow this address.",
+      "microsoftHelp": "The connected mailbox needs Exchange Send As permission for this address.",
+      "errors": {
+        "duplicateAddress": "This sender address already exists.",
+        "saveFailed": "Could not add sender. Check the address and try again.",
+        "duplicateRoute": "That sender route already exists.",
+        "saveRoutingFailed": "Could not save sender routing. Please try again."
+      }
     }
   },
   "microsoft365": {
@@ -253,7 +300,8 @@
     },
     "states": {
       "running": "Running diagnostics...",
-      "diagnosticsFailed": "Diagnostics failed"
+      "diagnosticsFailed": "Diagnostics failed",
+      "callbackDiagnosticsCaptured": "Callback-time diagnostics captured at {{timestamp}}."
     },
     "statuses": {
       "pass": "Pass",

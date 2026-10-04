@@ -19,6 +19,10 @@ export async function getHuduAutoSyncDesiredState(
   return null;
 }
 
+export async function listHuduAutoSyncTenants(_db: unknown): Promise<Array<{ tenant: string }>> {
+  return [];
+}
+
 export interface HuduTenantSyncSummary {
   sync_type: 'import' | 'sync';
   started_at: string;

@@ -12,4 +12,14 @@ describe('getMenuItemNameByPath', () => {
     expect(getMenuItemNameByPath('/msp/assets', translate)).toBe('All Assets');
     expect(getMenuItemNameByPath('/msp/documents', translate)).toBe('All Documents');
   });
+
+  it('labels the tickets list and the recurring tickets page', () => {
+    expect(getMenuItemNameByPath('/msp/tickets', translate)).toBe('All Tickets');
+    expect(getMenuItemNameByPath('/msp/tickets/recurring', translate)).toBe('Recurring Tickets');
+    expect(getMenuItemNameByPath('/msp/tickets/recurring/new', translate)).toBe('Recurring Tickets');
+  });
+
+  it('uses the specific settings route instead of the settings landing page', () => {
+    expect(getMenuItemNameByPath('/msp/settings/integrations', translate)).toBe('Integrations');
+  });
 });

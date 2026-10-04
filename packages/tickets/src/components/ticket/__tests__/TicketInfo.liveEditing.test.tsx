@@ -101,11 +101,11 @@ vi.mock('@alga-psa/ui/components/UserAndTeamPicker', () => ({
   default: () => <button type="button">Assignee</button>,
 }));
 
-vi.mock('../CategoryPicker', () => ({
+vi.mock('../../CategoryPicker', () => ({
   CategoryPicker: () => <button type="button">Category</button>,
 }));
 
-vi.mock('../QuickAddCategory', () => ({
+vi.mock('../../QuickAddCategory', () => ({
   __esModule: true,
   default: () => null,
 }));
@@ -122,7 +122,7 @@ vi.mock('@alga-psa/tags/components', () => ({
   TagManager: () => <div data-testid="tag-manager" />,
 }));
 
-vi.mock('../ResponseStateSelect', () => ({
+vi.mock('../../ResponseStateSelect', () => ({
   ResponseStateDisplay: () => <button type="button">Response state</button>,
 }));
 
@@ -188,12 +188,12 @@ vi.mock('@alga-psa/reference-data/actions', () => ({
   getTicketStatuses: (...args: unknown[]) => getTicketStatusesMock(...args),
 }));
 
-vi.mock('@alga-psa/tickets/actions', () => ({
+vi.mock('../../../actions/ticketCategoryActions', () => ({
   getTicketCategories: vi.fn().mockResolvedValue({ categories: [], boardConfig: { category_type: 'none', priority_type: 'custom', display_itil_impact: false, display_itil_urgency: false } }),
   getTicketCategoriesByBoard: vi.fn().mockResolvedValue({ categories: [], boardConfig: { category_type: 'none', priority_type: 'custom', display_itil_impact: false, display_itil_urgency: false } }),
 }));
 
-vi.mock('../../lib/ticketRichText', () => ({
+vi.mock('../../../lib/ticketRichText', () => ({
   parseTicketRichTextContent: vi.fn().mockReturnValue([]),
   serializeTicketRichTextContent: vi.fn().mockReturnValue('[]'),
 }));

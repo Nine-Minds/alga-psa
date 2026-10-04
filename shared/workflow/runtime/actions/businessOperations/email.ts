@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { tenantDb } from '@alga-psa/db';
 import { getActionRegistryV2 } from '../../registries/actionRegistry';
 import { getWorkflowEmailProvider } from '../../registries/workflowEmailRegistry';
+import { withWorkflowJsonSchemaMetadata } from '../../jsonSchemaMetadata';
 import { EmailProviderError } from '@alga-psa/types';
 import {
   uuidSchema,
@@ -14,6 +15,28 @@ import {
   MAX_ATTACHMENT_BYTES,
   isAllowedAttachmentMimeType
 } from './shared';
+
+export function resolveDeprecatedWorkflowFrom(input: {
+  from?: { email?: string };
+  senderId?: string;
+  senders: Array<{ sender_id: string; email_address: string }>;
+  effectiveDefaultEmail: string;
+}): string | undefined {
+  if (!input.from) return input.senderId;
+  if (!input.from.email) throw new Error('The saved From address is missing an email address. Choose a sender identity.');
+  const address = input.from.email.trim().toLowerCase();
+  if (input.senderId) {
+    const selected = input.senders.find((sender) => sender.sender_id === input.senderId);
+    if (!selected || selected.email_address.toLowerCase() !== address) {
+      throw new Error('The saved From address conflicts with the selected sender identity. Choose a matching sender identity.');
+    }
+    return input.senderId;
+  }
+  const matchingSender = input.senders.find((sender) => sender.email_address.toLowerCase() === address);
+  if (matchingSender) return matchingSender.sender_id;
+  if (input.effectiveDefaultEmail.toLowerCase() === address) return undefined;
+  throw new Error('The saved From address is not a configured sender or the effective default. Choose a sender identity.');
+}
 
 export function registerEmailActions(): void {
   const registry = getActionRegistryV2();
@@ -29,6 +52,12 @@ export function registerEmailActions(): void {
       cc: z.array(z.object({ email: z.string().email(), name: z.string().optional() })).optional(),
       bcc: z.array(z.object({ email: z.string().email(), name: z.string().optional() })).optional(),
       from: z.object({ email: z.string().email(), name: z.string().optional() }).optional().describe('Optional from override'),
+      sender_id: withWorkflowJsonSchemaMetadata(uuidSchema.optional(), 'Configured outbound sender identity', {
+        'x-workflow-picker-kind': 'email-sender',
+        'x-workflow-picker-fixed-value-hint': 'Select sender identity',
+        'x-workflow-picker-allow-dynamic-reference': true,
+      }),
+      mail_class: z.enum(['ticket', 'project', 'billing', 'sales', 'scheduling', 'survey', 'account', 'general']).optional().default('general'),
       subject: z.string().min(1).describe('Subject template (supports {{var}})'),
       html: z.string().optional().describe('HTML template (supports {{var}})'),
       text: z.string().optional().describe('Text template (supports {{var}})'),
@@ -71,7 +100,7 @@ export function registerEmailActions(): void {
       }
 
       const manager = new EmailProviderManager();
-      await manager.initialize({ ...settings, providerConfigs } as any);
+      await manager.initialize({ ...settings, providerConfigs });
       const providers = await manager.getAvailableProviders(tx.tenantId);
       const provider = providers[0] ?? null;
       if (!provider) {
@@ -80,34 +109,30 @@ export function registerEmailActions(): void {
 
       // Build content via static templating.
       const templateProcessor = new StaticTemplateProcessor(input.subject, input.html ?? '', input.text);
-      const content = await templateProcessor.process({ templateData: (input.template_data ?? {}) as any });
+      const content = await templateProcessor.process({ templateData: input.template_data ?? {} });
 
-      // Resolve from address.
-      const resolveDefaultFrom = (): { email: string; name?: string } => {
-        const fallbackDomain = settings.defaultFromDomain || settings.customDomains?.[0];
-        const email = settings.ticketingFromEmail || (fallbackDomain ? `no-reply@${fallbackDomain}` : null);
-        if (!email) {
-          throwActionError(ctx, { category: 'ValidationError', code: 'VALIDATION_ERROR', message: 'No default From address configured for tenant' });
+      // `from` remains for saved workflows for one release. Accept it only if
+      // it matches a configured sender; delivery still uses the central resolver.
+      let senderId = input.sender_id;
+      if (input.from) {
+        const effectiveDefault = await TenantEmailService.resolveOutboundSenderForTenant({ tenantId: tx.tenantId, mailClass: input.mail_class ?? 'general' }, settings, tx.trx);
+        try {
+          senderId = resolveDeprecatedWorkflowFrom({
+            from: input.from,
+            senderId,
+            senders: Array.isArray(settings.outboundSenders) ? settings.outboundSenders : [],
+            effectiveDefaultEmail: effectiveDefault.from.email,
+          });
+        } catch (error) {
+          throwActionError(ctx, { category: 'ValidationError', code: 'VALIDATION_ERROR', message: error instanceof Error ? error.message : String(error) });
         }
-        return { email };
-      };
-      const from = input.from ?? resolveDefaultFrom();
-
-      // From domain constraints: allow tenant custom domains or the defaultFromDomain.
-      const fromDomain = String(from.email).split('@')[1]?.toLowerCase() ?? '';
-      const allowedDomains = new Set<string>([
-        ...(settings.customDomains ?? []).map((d: string) => String(d).toLowerCase()),
-        ...(settings.defaultFromDomain ? [String(settings.defaultFromDomain).toLowerCase()] : [])
-      ]);
-      if (fromDomain && allowedDomains.size > 0 && !allowedDomains.has(fromDomain)) {
-        throwActionError(ctx, { category: 'ValidationError', code: 'VALIDATION_ERROR', message: 'From address domain is not allowed for this tenant' });
       }
 
       // Attachments via storage file refs.
       const attachmentFileIds = Array.isArray(input.attachment_file_ids) ? input.attachment_file_ids : [];
       const attachments: Array<{ filename: string; content: Buffer; contentType?: string }> = [];
       if (attachmentFileIds.length) {
-        const { StorageProviderFactory } = await import('@alga-psa/storage');
+        const { StorageProviderFactory } = await import('@alga-psa/storage/StorageProviderFactory');
         if (!provider.capabilities.supportsAttachments) {
           throwActionError(ctx, { category: 'ValidationError', code: 'VALIDATION_ERROR', message: 'Email provider does not support attachments' });
         }
@@ -143,9 +168,9 @@ export function registerEmailActions(): void {
       }
 
       try {
-        const result = await manager.sendEmail(
-          {
-            from,
+        const result = await TenantEmailService.getInstance(tx.tenantId).sendEmail({
+            mailClass: input.mail_class,
+            senderId,
             to: input.to,
             cc: input.cc,
             bcc: input.bcc,
@@ -153,9 +178,7 @@ export function registerEmailActions(): void {
             html: content.html,
             text: content.text,
             attachments: attachments.length ? attachments : undefined
-          } as any,
-          tx.tenantId
-        );
+          });
 
         if (!result.success) {
           throwActionError(ctx, { category: 'TransientError', code: 'TRANSIENT_FAILURE', message: result.error ?? 'Email send failed' });
@@ -164,7 +187,7 @@ export function registerEmailActions(): void {
         await writeRunAudit(ctx, tx, {
           operation: 'workflow_action:email.send',
           changedData: { to_count: input.to.length, cc_count: input.cc?.length ?? 0, bcc_count: input.bcc?.length ?? 0 },
-          details: { action_id: 'email.send', action_version: 1, provider_id: result.providerId, provider_type: result.providerType, message_id: result.messageId ?? null }
+          details: { action_id: 'email.send', action_version: 1, message_id: result.messageId ?? null }
         });
 
         return {

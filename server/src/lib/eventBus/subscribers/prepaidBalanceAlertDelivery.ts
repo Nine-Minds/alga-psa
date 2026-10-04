@@ -1166,6 +1166,7 @@ async function processDelivery(
     // marked afterwards. A provider-acceptance/process-crash window can
     // duplicate an email, so delivery is explicitly at-least-once.
     await sendEventEmail({
+      mailClass: 'billing',
       tenantId,
       to: delivery.recipient_email,
       subject: 'Prepaid balance alert',

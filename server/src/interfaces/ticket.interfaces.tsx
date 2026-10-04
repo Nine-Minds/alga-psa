@@ -20,6 +20,11 @@ export interface ITicket extends TenantEntity, ITaggable {
   ticket_number: string;
   title: string;
   url: string | null;
+  // Nullable classification references (server/API create only; distinct from
+  // the numeric itil_impact/itil_urgency fields below).
+  severity_id?: string | null;
+  urgency_id?: string | null;
+  impact_id?: string | null;
   board_id: string;
   client_id: string | null;
   location_id?: string | null;
@@ -46,6 +51,9 @@ export interface ITicket extends TenantEntity, ITaggable {
   itil_priority_level?: number; // 1-5 calculated ITIL priority based on impact × urgency matrix
   // Response state tracking (who needs to respond next)
   response_state?: TicketResponseState;
+  // List-only: newest of the ticket's own timestamps and its newest visible
+  // comment. Computed in SQL, never stored on the tickets table.
+  latest_activity_at?: string | null;
 }
 
 export interface ITicketListItem extends Omit<ITicket, 'status_id' | 'priority_id' | 'board_id' | 'entered_by' | 'category_id' | 'subcategory_id'> {

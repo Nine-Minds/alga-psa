@@ -58,6 +58,49 @@ export class ApiContactController extends ApiBaseController {
   }
 
   /**
+   * Upload contact avatar (multipart field `avatar`)
+   */
+  uploadAvatar() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        const apiRequest = await this.authenticate(req);
+        return await runWithTenant(apiRequest.context!.tenant, async () => {
+          await this.checkPermission(apiRequest, 'update');
+          const contactId = await this.extractIdFromPath(apiRequest);
+          const formData = await req.formData();
+          const file = formData.get('avatar');
+          if (!(file instanceof File)) {
+            throw new ValidationError('Avatar file is required');
+          }
+          const result = await this.contactService.uploadAvatar(contactId, file, apiRequest.context!);
+          return createSuccessResponse(result);
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  /**
+   * Delete contact avatar
+   */
+  deleteAvatar() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        const apiRequest = await this.authenticate(req);
+        return await runWithTenant(apiRequest.context!.tenant, async () => {
+          await this.checkPermission(apiRequest, 'update');
+          const contactId = await this.extractIdFromPath(apiRequest);
+          const result = await this.contactService.deleteAvatar(contactId, apiRequest.context!);
+          return createSuccessResponse(result);
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  /**
    * Search contacts
    */
   search() {

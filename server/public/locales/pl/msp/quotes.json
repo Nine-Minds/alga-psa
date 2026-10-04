@@ -107,7 +107,9 @@
         "message": "Wiadomość",
         "messageOptional": "Wiadomość (opcjonalnie)",
         "messagePlaceholder": "Dodaj osobistą notatkę dla odbiorcy...",
-        "title": "Wyślij wycenę"
+        "title": "Wyślij wycenę",
+        "from": "Od",
+        "useDefault": "Użyj domyślnego nadawcy"
       }
     },
     "errors": {
@@ -212,7 +214,9 @@
         "description": "Spowoduje to wysłanie wyceny e-mailem do kontaktów rozliczeniowych klienta i zmianę jej statusu na „Wysłane”.",
         "title": "Wyślij wycenę do klienta",
         "additionalEmails": "Dodatkowi odbiorcy",
-        "message": "Wiadomość"
+        "message": "Wiadomość",
+        "from": "Od",
+        "useDefault": "Użyj domyślnego nadawcy"
       }
     },
     "errorActions": {
@@ -315,7 +319,8 @@
       "title": "Tekst widoczny dla klienta",
       "subtitle": "Pojawia się na PDF, pod sumami.",
       "notes": "Uwagi dla klienta (opcjonalnie)",
-      "terms": "Warunki (opcjonalnie)"
+      "terms": "Warunki (opcjonalnie)",
+      "termsPlaceholder": "Dodaj warunki, linki i akapity…"
     },
     "moreDetails": {
       "title": "Więcej szczegółów",

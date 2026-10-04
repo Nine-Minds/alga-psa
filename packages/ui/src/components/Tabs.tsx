@@ -51,7 +51,7 @@ export function TabsList({ children, className, ...props }: TabsListProps) {
   return (
     <div
       className={cn(
-        'flex border-b border-gray-200',
+        'flex border-b border-[rgb(var(--color-border-200))]',
         className
       )}
       {...props}
@@ -87,8 +87,8 @@ export function TabsTrigger({
       className={cn(
         'px-4 py-2 focus:outline-none transition-colors relative',
         isSelected
-          ? 'text-gray-900 font-medium border-b-2 border-primary'
-          : 'text-gray-500 hover:text-gray-700',
+          ? 'text-[rgb(var(--color-text-900))] font-medium border-b-2 border-primary'
+          : 'text-[rgb(var(--color-text-600))] hover:text-[rgb(var(--color-text-900))]',
         disabled && 'opacity-50 cursor-not-allowed',
         className
       )}

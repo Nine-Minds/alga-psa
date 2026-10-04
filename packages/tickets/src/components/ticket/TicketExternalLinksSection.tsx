@@ -83,6 +83,7 @@ function ExternalSystemIcon({ iconName, className = 'h-4 w-4' }: { iconName: str
 }
 
 interface LinkFormState {
+  portalVisible: boolean;
   system: string;
   externalId: string;
   realm: string;
@@ -93,6 +94,7 @@ interface LinkFormState {
 }
 
 const EMPTY_FORM: LinkFormState = {
+  portalVisible: false,
   system: '',
   externalId: '',
   realm: '',
@@ -305,6 +307,7 @@ const TicketExternalLinksSection: React.FC<TicketExternalLinksSectionProps> = ({
     (link: ITicketExternalLinkView) => {
       setEditingLink(link);
       setForm({
+        portalVisible: link.portal_visible === true,
         system: link.system,
         externalId: link.external_id,
         realm: link.realm ?? '',
@@ -356,6 +359,7 @@ const TicketExternalLinksSection: React.FC<TicketExternalLinksSectionProps> = ({
       if (editingLink) {
         result = await updateExternalLink(editingLink.link_id, {
           relationship: form.relationship,
+          portal_visible: form.portalVisible,
           url: form.url.trim() || null,
           actor,
         });
@@ -368,6 +372,7 @@ const TicketExternalLinksSection: React.FC<TicketExternalLinksSectionProps> = ({
           realm: form.realm.trim() || null,
           url: form.url.trim() || null,
           relationship: form.relationship,
+          portal_visible: form.portalVisible,
           actor,
         });
       }
@@ -500,7 +505,7 @@ const TicketExternalLinksSection: React.FC<TicketExternalLinksSectionProps> = ({
                   className="group flex items-center gap-2 rounded-md px-2 py-1.5 transition-colors hover:bg-[rgb(var(--color-border-50))]"
                 >
                   <ExternalSystemIcon iconName={link.display.icon} />
-                  <div className="flex min-w-0 flex-1 items-center gap-2">
+                  <div className="flex min-w-0 flex-1 flex-col items-start gap-1">
                     {link.display.href ? (
                       <a
                         id={`${id}-link-${link.link_id}`}
@@ -508,31 +513,38 @@ const TicketExternalLinksSection: React.FC<TicketExternalLinksSectionProps> = ({
                         target="_blank"
                         rel="noopener noreferrer"
                         title={`${link.display.label} · ${labelText}`}
-                        className="truncate text-sm text-primary-600 hover:underline dark:text-primary-400"
+                        className="flex max-w-full flex-col text-sm text-primary-600 hover:underline dark:text-primary-400"
                       >
-                        <span className="font-medium">{link.display.label}</span>
-                        <span className="ml-1 text-[rgb(var(--color-text-600))]">{labelText}</span>
+                        <span className="truncate font-medium">{link.display.label}</span>
+                        <span className="truncate text-[rgb(var(--color-text-600))]">{labelText}</span>
                       </a>
                     ) : (
                       <span
-                        className="truncate text-sm"
+                        className="flex max-w-full flex-col text-sm"
                         title={t(
                           'externalLinks.noUrl',
                           'No URL available for this reference',
                         )}
                       >
-                        <span className="font-medium">{link.display.label}</span>
-                        <span className="ml-1 text-[rgb(var(--color-text-600))]">{labelText}</span>
+                        <span className="truncate font-medium">{link.display.label}</span>
+                        <span className="truncate text-[rgb(var(--color-text-600))]">{labelText}</span>
                       </span>
                     )}
-                    <Badge size="sm" variant={link.relationship === 'origin' ? 'info' : 'default-muted'}>
-                      {relationshipLabel(link.relationship)}
-                    </Badge>
-                    {link.actor?.handle ? (
-                      <span className="truncate text-xs text-[rgb(var(--color-text-500))]">
-                        @{link.actor.handle}
-                      </span>
-                    ) : null}
+                    <div className="flex flex-wrap items-center gap-1">
+                      <Badge size="sm" variant={link.relationship === 'origin' ? 'info' : 'default-muted'}>
+                        {relationshipLabel(link.relationship)}
+                      </Badge>
+                      <Badge size="sm" variant={link.portal_visible ? 'info' : 'default-muted'}>
+                        {link.portal_visible
+                          ? t('externalLinks.visibility.shared', 'Visible in client portal')
+                          : t('externalLinks.visibility.internal', 'Internal only')}
+                      </Badge>
+                      {link.actor?.handle ? (
+                        <span className="truncate text-xs text-[rgb(var(--color-text-500))]">
+                          @{link.actor.handle}
+                        </span>
+                      ) : null}
+                    </div>
                   </div>
 
                   {!disabled ? (
@@ -690,6 +702,24 @@ const TicketExternalLinksSection: React.FC<TicketExternalLinksSectionProps> = ({
                   )}
                 </p>
               ) : null}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor={`${id}-visibility`}>
+                {t('externalLinks.visibility.label', 'Visibility')}
+              </Label>
+              <CustomSelect
+                id={`${id}-visibility`}
+                value={form.portalVisible ? 'shared' : 'internal'}
+                options={[
+                  { value: 'internal', label: t('externalLinks.visibility.internal', 'Internal only') },
+                  { value: 'shared', label: t('externalLinks.visibility.shared', 'Visible in client portal') },
+                ]}
+                onValueChange={(value) => setForm((prev) => ({ ...prev, portalVisible: value === 'shared' }))}
+              />
+              <p className="text-xs text-[rgb(var(--color-text-500))]">
+                {t('externalLinks.visibility.help', 'Customers with access to this ticket can see this link. Sharing the link does not grant access to the external system.')}
+              </p>
             </div>
 
             <div className="space-y-2">

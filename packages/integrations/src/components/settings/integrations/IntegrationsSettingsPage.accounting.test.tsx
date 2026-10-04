@@ -62,26 +62,25 @@ afterEach(() => { cleanup(); vi.unstubAllEnvs(); });
 describe('accounting settings across parent refreshes', () => {
   it('preserves an unsaved Xero credential draft when slot props refresh', async () => {
     const view = render(settings());
-    fireEvent.change(await screen.findByLabelText('Xero Client ID'), { target: { value: 'draft-client' } });
-    fireEvent.change(screen.getByLabelText('Xero Client Secret'), { target: { value: 'draft-secret' } });
+    fireEvent.change(await screen.findByLabelText('Client ID'), { target: { value: 'draft-client' } });
+    fireEvent.change(screen.getByLabelText('Client Secret'), { target: { value: 'draft-secret' } });
     view.rerender(settings());
-    expect(await screen.findByLabelText('Xero Client ID')).toHaveValue('draft-client');
-    expect(screen.getByLabelText('Xero Client Secret')).toHaveValue('draft-secret');
+    expect(await screen.findByLabelText('Client ID')).toHaveValue('draft-client');
+    expect(screen.getByLabelText('Client Secret')).toHaveValue('draft-secret');
     expect(actions.save).not.toHaveBeenCalled();
   });
 
   it('retains the Xero save confirmation and enables OAuth after revalidation', async () => {
     const view = render(settings());
-    fireEvent.change(await screen.findByLabelText('Xero Client ID'), { target: { value: 'browser-xero-client' } });
-    fireEvent.change(screen.getByLabelText('Xero Client Secret'), { target: { value: 'browser-xero-secret' } });
+    fireEvent.change(await screen.findByLabelText('Client ID'), { target: { value: 'browser-xero-client' } });
+    fireEvent.change(screen.getByLabelText('Client Secret'), { target: { value: 'browser-xero-secret' } });
     actions.status.mockResolvedValue(status(true));
-    fireEvent.click(screen.getByRole('button', { name: 'Save Xero Credentials' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Save credentials' }));
     const confirmation = 'Xero credentials saved. You can now start the live Xero OAuth flow.';
     expect(await screen.findByText(confirmation)).toBeVisible();
     await waitFor(() => expect(screen.getByRole('button', { name: 'Connect Xero' })).toBeEnabled());
     view.rerender(settings());
-    await screen.findByLabelText('Xero Client ID');
-    expect(screen.getByText(confirmation)).toBeVisible();
+    await waitFor(() => expect(screen.getByText(confirmation)).toBeVisible());
     expect(screen.getByRole('button', { name: 'Connect Xero' })).toBeEnabled();
     expect(actions.save).toHaveBeenCalledExactlyOnceWith({ clientId: 'browser-xero-client', clientSecret: 'browser-xero-secret' });
   });
