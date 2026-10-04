@@ -38,14 +38,28 @@ const KNOWN_HARDCODED_CURRENCY: Record<string, { count: number; why: string }> =
     },
     "ee/server/src/components/workflow-designer/expression-editor/functionDefinitions.ts":
       {
-        count: 1,
+        count: 2,
         why: "deliberate: builds $functionName tokens for the expression language, not currency",
+      },
+    "ee/server/src/components/workflow-designer/expression-editor/hoverProvider.ts":
+      {
+        count: 1,
+        why: "deliberate: looks up $functionName tokens for the expression language, not currency",
       },
     "ee/server/src/components/workflow-designer/expression-editor/insertionText.ts":
       {
         count: 1,
         why: 'deliberate: "$0" is the snippet cursor placeholder, not currency',
       },
+    "ee/server/src/components/workflow-designer/expression-editor/signatureHelpProvider.ts":
+      {
+        count: 2,
+        why: "deliberate: resolves $functionName tokens for the expression language, not currency",
+      },
+    "ee/server/src/components/workflow-designer/mapping/textTemplate.ts": {
+      count: 1,
+      why: "deliberate: builds JSONata $variable paths such as $index, not currency",
+    },
     "ee/server/src/lib/scim/credentials.ts": {
       count: 2,
       why: 'deliberate: "$" delimits the algorithm/salt/digest fields of the scrypt hash encoding, not currency',

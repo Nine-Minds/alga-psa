@@ -10,54 +10,52 @@ const pickerState = vi.hoisted(() => ({ userAndTeamMounts: 0 }));
 // user's pick is lost.
 vi.mock('@alga-psa/ui/components/UserAndTeamPicker', async () => {
   const ReactModule = await import('react');
-  return {
-    __esModule: true,
-    default: ({
-      id,
-      users,
-      teams,
-      value,
-      onValueChange,
-      onTeamSelect,
-    }: {
-      id?: string;
-      users: Array<{ user_id: string; first_name?: string; last_name?: string }>;
-      teams: Array<{ team_id: string; team_name: string }>;
-      value: string;
-      onValueChange: (value: string) => void;
-      onTeamSelect?: (value: string) => void;
-    }) => {
-      const [open, setOpen] = ReactModule.useState(false);
-      ReactModule.useEffect(() => {
-        pickerState.userAndTeamMounts += 1;
-      }, []);
-      return (
-        <div>
-          <button type="button" data-testid={`${id}-trigger`} onClick={() => setOpen(true)}>
-            {value || 'Search users or teams'}
-          </button>
-          {open && (
-            <ul data-testid={`${id}-list`}>
-              {users.map((user) => (
-                <li key={user.user_id}>
-                  <button type="button" onClick={() => { onValueChange(user.user_id); setOpen(false); }}>
-                    {`${user.first_name ?? ''} ${user.last_name ?? ''}`.trim()}
-                  </button>
-                </li>
-              ))}
-              {teams.map((team) => (
-                <li key={team.team_id}>
-                  <button type="button" onClick={() => { onTeamSelect?.(team.team_id); setOpen(false); }}>
-                    {team.team_name}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      );
-    },
+  const MockUserAndTeamPicker = ({
+    id,
+    users,
+    teams,
+    value,
+    onValueChange,
+    onTeamSelect,
+  }: {
+    id?: string;
+    users: Array<{ user_id: string; first_name?: string; last_name?: string }>;
+    teams: Array<{ team_id: string; team_name: string }>;
+    value: string;
+    onValueChange: (value: string) => void;
+    onTeamSelect?: (value: string) => void;
+  }) => {
+    const [open, setOpen] = ReactModule.useState(false);
+    ReactModule.useEffect(() => {
+      pickerState.userAndTeamMounts += 1;
+    }, []);
+    return (
+      <div>
+        <button type="button" data-testid={`${id}-trigger`} onClick={() => setOpen(true)}>
+          {value || 'Search users or teams'}
+        </button>
+        {open && (
+          <ul data-testid={`${id}-list`}>
+            {users.map((user) => (
+              <li key={user.user_id}>
+                <button type="button" onClick={() => { onValueChange(user.user_id); setOpen(false); }}>
+                  {`${user.first_name ?? ''} ${user.last_name ?? ''}`.trim()}
+                </button>
+              </li>
+            ))}
+            {teams.map((team) => (
+              <li key={team.team_id}>
+                <button type="button" onClick={() => { onTeamSelect?.(team.team_id); setOpen(false); }}>
+                  {team.team_name}
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    );
   };
+  return { __esModule: true, default: MockUserAndTeamPicker };
 });
 
 vi.mock('@alga-psa/ui/components/MultiUserAndTeamPicker', () => ({ __esModule: true, default: () => null }));
