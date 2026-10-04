@@ -1575,5 +1575,15 @@
       "missingField": "Ett obligatoriskt tillgångsfält saknas.",
       "missingFieldNamed": "Obligatoriskt tillgångsfält saknas: {{field}}."
     }
+  },
+  "clientAssetMultiSelect": {
+    "errors": {
+      "load": "Det gick inte att läsa in tillgångar"
+    },
+    "placeholder": "Lägg till en tillgång...",
+    "searchPlaceholder": "Sök tillgångar",
+    "empty": "Inga matchande tillgångar för den här kunden",
+    "loading": "Läser in...",
+    "remove": "Ta bort tillgång"
   }
 }

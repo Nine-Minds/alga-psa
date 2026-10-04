@@ -857,7 +857,8 @@
       "clientPortal": "Aangemaakt via klantenportaal",
       "inboundEmail": "Aangemaakt via inkomende e-mail",
       "api": "Aangemaakt via API",
-      "other": "Aangemaakt via overig"
+      "other": "Aangemaakt via overig",
+      "recurring": "Aangemaakt door terugkerend schema"
     }
   },
   "surveys": {

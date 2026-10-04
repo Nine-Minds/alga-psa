@@ -403,7 +403,8 @@
     "clientPortal": "Created via Client Portal",
     "inboundEmail": "Created via Inbound Email",
     "api": "Created via API",
-    "other": "Created via Other"
+    "other": "Created via Other",
+    "recurring": "Created by Recurring Schedule"
   },
   "responseSource": {
     "clientPortal": "Received via Client Portal",
@@ -2010,5 +2011,288 @@
     "failedCount": "{{count}} tickets could not be scored",
     "unscored": "Could not be scored",
     "addOnRequired": "Smart search requires the AI Assistant add-on"
+  },
+  "recurring": {
+    "actions": {
+      "done": "Done",
+      "cancel": "Cancel",
+      "saving": "Saving…",
+      "save": "Save",
+      "pause": "Pause",
+      "resume": "Resume",
+      "archive": "Archive"
+    },
+    "clients": {
+      "addTitle": "Add clients",
+      "addHelp": "Pick a client to add it. The dialog stays open so you can add more.",
+      "alreadyAdded": "Already added",
+      "pickerPlaceholder": "Select a client to add",
+      "addedHeading": "Added in this dialog",
+      "columns": {
+        "client": "Client",
+        "overrides": "Overrides",
+        "contact": "Contact",
+        "location": "Location",
+        "assets": "Assets",
+        "nextDue": "Next due",
+        "active": "Active"
+      },
+      "inheritsAll": "Inherits everything",
+      "set": "Set",
+      "actions": "Client actions",
+      "editOverrides": "Edit overrides",
+      "remove": "Remove",
+      "add": "Add clients",
+      "empty": "No clients yet. Tickets are only created for the clients you add here.",
+      "removeTitle": "Remove client",
+      "removeMessage": "Stop creating tickets for {{client}}? Tickets already created and the history are kept."
+    },
+    "errors": {
+      "clientNotFound": "Client not found on this recurring ticket",
+      "definitionNotFound": "Recurring ticket not found",
+      "unknownTitleTokens": "Unknown title token(s) {{tokens}}. Available tokens: {{available}}",
+      "subcategoryNeedsCategory": "A subcategory requires a category",
+      "definitionArchived": "Archived recurring tickets are read-only",
+      "clientAlreadyAdded": "That client is already part of this recurring ticket",
+      "invalidReferences": "{{problems}}"
+    },
+    "overrides": {
+      "noneValue": "None",
+      "inherited": "Uses the recurring ticket setting: {{value}}",
+      "title": "Settings for {{client}}",
+      "intro": "Choose the ticket fields this client sets differently from the recurring ticket. Everything else is inherited and follows later changes to the recurring ticket.",
+      "groups": {
+        "board": "Override board and status",
+        "priority": "Override priority",
+        "category": "Override category",
+        "assignment": "Override assignment"
+      },
+      "attachedTo": "Attached to the generated ticket",
+      "contact": "Contact",
+      "contactPlaceholder": "No contact",
+      "location": "Location",
+      "noLocation": "No location",
+      "assets": "Assets",
+      "groupNames": {
+        "board": "Board and status",
+        "priority": "Priority",
+        "category": "Category",
+        "assignment": "Assignment"
+      }
+    },
+    "sections": {
+      "clients": "Clients",
+      "history": "History",
+      "details": "Details",
+      "template": "Ticket template",
+      "schedule": "Schedule",
+      "behaviour": "Behaviour"
+    },
+    "fields": {
+      "board": "Board",
+      "boardPlaceholder": "Select a board",
+      "status": "Status",
+      "statusBoardDefault": "Board default",
+      "priority": "Priority",
+      "priorityPlaceholder": "Select a priority",
+      "category": "Category",
+      "categoryPlaceholder": "No category",
+      "assignedTo": "Assigned to",
+      "additionalAgents": "Additional agents",
+      "name": "Name",
+      "title": "Ticket title",
+      "titleTokens": "Insert:",
+      "description": "Description",
+      "descriptionPlaceholder": "Description",
+      "checklistTemplate": "Checklist template",
+      "noChecklist": "None"
+    },
+    "history": {
+      "columns": {
+        "due": "Due",
+        "client": "Client",
+        "status": "Status",
+        "ticket": "Ticket",
+        "reason": "Reason"
+      },
+      "allStatuses": "All statuses",
+      "allClients": "All clients",
+      "empty": "Nothing has been generated yet.",
+      "reasons": {
+        "clientInactive": "The client was inactive",
+        "previousOpen": "Ticket {{number}} from the previous occurrence is still open"
+      },
+      "status": {
+        "created": "Created",
+        "skipped": "Skipped",
+        "missed": "Missed",
+        "failed": "Failed"
+      }
+    },
+    "editor": {
+      "created": "Recurring ticket created. Add the clients it should run for.",
+      "saved": "Recurring ticket saved",
+      "back": "Recurring tickets",
+      "newTitle": "New recurring ticket",
+      "archivedNotice": "This recurring ticket is archived and can no longer be changed.",
+      "clientsAfterSave": "Save the recurring ticket first, then add the clients it should run for.",
+      "archiveTitle": "Archive recurring ticket",
+      "archiveMessage": "Archiving stops all future tickets and cannot be undone. Tickets already created and the history are kept.",
+      "viewOnly": "You can view this recurring ticket but not change it."
+    },
+    "loading": "Loading…",
+    "schedule": {
+      "policy": {
+        "keep": "Keep the date",
+        "previous": "Move to the previous business day",
+        "next": "Move to the next business day"
+      },
+      "startDate": "Starts on",
+      "createTime": "Create at",
+      "dueTime": "Due at",
+      "leadDays": "Create days before due",
+      "policyLabel": "When the due date is not a business day",
+      "calendarFallback": "No default business-hours schedule is set, so business days are Monday to Friday plus your company-wide holidays.",
+      "calendarNote": "Business days follow your default business-hours schedule ({{name}}), including its holidays."
+    },
+    "status": {
+      "archived": "Archived",
+      "active": "Active",
+      "paused": "Paused"
+    },
+    "preview": {
+      "heading": "Next 5 due dates",
+      "none": "No upcoming due dates."
+    },
+    "behaviour": {
+      "openPrevious": "If the previous ticket is still open",
+      "alwaysCreate": "Create the next ticket anyway",
+      "skip": "Skip this occurrence",
+      "notifyClient": "Email the client when a ticket is created",
+      "notifyClientHelp": "Off by default. Internal notifications are always sent."
+    },
+    "list": {
+      "columns": {
+        "name": "Name",
+        "schedule": "Schedule",
+        "nextDue": "Next due",
+        "status": "Status",
+        "clients": "Clients"
+      },
+      "new": "New recurring ticket",
+      "hasFailure": "The latest run failed. Open it to see why.",
+      "title": "Recurring tickets",
+      "empty": "No recurring tickets here yet.",
+      "filter": {
+        "active": "Active",
+        "paused": "Paused",
+        "archived": "Archived",
+        "all": "All"
+      }
+    },
+    "clientTab": {
+      "clientPaused": "Paused for this client",
+      "pickDefinition": "Choose a recurring ticket",
+      "add": "Add to recurring ticket",
+      "empty": "This client is not part of any recurring ticket.",
+      "removeTitle": "Remove from recurring ticket",
+      "removeMessage": "Stop creating tickets for this client from {{name}}? Tickets already created and the history are kept."
+    },
+    "badge": {
+      "source": "Recurring: {{name}}"
+    },
+    "rule": {
+      "editor": {
+        "unit": {
+          "days": "day(s)",
+          "weeks": "week(s)",
+          "months": "month(s)",
+          "years": "year(s)"
+        },
+        "lastDay": "Last day",
+        "repeats": "Repeats",
+        "every": "Every",
+        "weekdaysOnly": "Weekdays only (Monday to Friday)",
+        "onDays": "On",
+        "monthlyOn": "On",
+        "mode": {
+          "dayOfMonth": "Day of the month",
+          "nthWeekday": "Nth weekday"
+        },
+        "day": "Day",
+        "nth": "Which",
+        "weekday": "Weekday",
+        "clampHint": "In months with fewer days, the ticket is created on the last day of the month.",
+        "month": "Month",
+        "ends": "Ends",
+        "end": {
+          "never": "Never",
+          "onDate": "On a date",
+          "afterCount": "After a number of tickets"
+        },
+        "endDate": "Last date",
+        "endCount": "Occurrences",
+        "frequency": {
+          "daily": "Daily",
+          "weekly": "Weekly",
+          "monthly": "Monthly",
+          "yearly": "Yearly"
+        }
+      },
+      "weekdays": {
+        "mon": "Monday",
+        "tue": "Tuesday",
+        "wed": "Wednesday",
+        "thu": "Thursday",
+        "fri": "Friday",
+        "sat": "Saturday",
+        "sun": "Sunday"
+      },
+      "weekdaysShort": {
+        "mon": "Mon",
+        "tue": "Tue",
+        "wed": "Wed",
+        "thu": "Thu",
+        "fri": "Fri",
+        "sat": "Sat",
+        "sun": "Sun"
+      },
+      "months": {
+        "1": "January",
+        "2": "February",
+        "3": "March",
+        "4": "April",
+        "5": "May",
+        "6": "June",
+        "7": "July",
+        "8": "August",
+        "9": "September",
+        "10": "October",
+        "11": "November",
+        "12": "December"
+      },
+      "ordinals": {
+        "1": "first",
+        "2": "second",
+        "3": "third",
+        "4": "fourth",
+        "last": "last"
+      },
+      "listSeparator": ", ",
+      "endOnDate": ", until {{date}}",
+      "endAfterCount": ", {{n}} times",
+      "dailyWeekdays": "Every weekday",
+      "daily": "Every day",
+      "dailyEvery": "Every {{n}} days",
+      "weekly": "Every week on {{days}}",
+      "weeklyEvery": "Every {{n}} weeks on {{days}}",
+      "everyMonth": "Every month",
+      "everyNMonths": "Every {{n}} months",
+      "lastDay": "the last day",
+      "dayOfMonth": "day {{day}}",
+      "monthlyOnDay": "{{every}} on {{day}}",
+      "monthlyOnNthWeekday": "{{every}} on the {{ordinal}} {{weekday}}",
+      "yearly": "Every year on {{month}} {{day}}"
+    }
   }
 }

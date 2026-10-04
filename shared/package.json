@@ -55,12 +55,15 @@
     "./lib/ticketChecklists/index.js": "./dist/lib/ticketChecklists/index.js",
     "./lib/ticketCloseRules": "./dist/lib/ticketCloseRules/index.js",
     "./lib/ticketCloseRules/index.js": "./dist/lib/ticketCloseRules/index.js",
+    "./lib/recurrence": "./dist/lib/recurrence/index.js",
+    "./lib/recurrence/index.js": "./dist/lib/recurrence/index.js",
     "./*": "./dist/*"
   },
   "scripts": {
     "build": "tsup",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "test:recurrence-tz": "TZ=Pacific/Auckland vitest run lib/recurrence lib/businessHours"
   },
   "dependencies": {
     "@alga-psa/authorization": "file:../packages/authorization",

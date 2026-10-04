@@ -344,7 +344,8 @@
     "inboundDomainAutoCreateContacts": "Twórz kontakty dla nowych nadawców",
     "inboundDomainAutoCreateHelp": "Przypisane domeny mogą tworzyć kontakt dla zaufanego nowego nadawcy.",
     "inboundDomainAutoCreateUpdated": "Zaktualizowano ustawienie kontaktów nadawców.",
-    "inboundDomainAutoCreateUpdateFailed": "Nie udało się zaktualizować ustawienia kontaktów nadawców."
+    "inboundDomainAutoCreateUpdateFailed": "Nie udało się zaktualizować ustawienia kontaktów nadawców.",
+    "recurringTickets": "Zgłoszenia cykliczne"
   },
   "clientCommandCenter": {
     "cards": {

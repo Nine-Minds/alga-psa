@@ -290,6 +290,11 @@ describe('maintenance schedule / fan-out registry parity', () => {
     expect(definitions.filter((jobName) => !scheduled.includes(jobName))).toEqual([]);
   });
 
+  it('runs recurring-ticket generation every 15 minutes, matching the CE pg-boss schedule', () => {
+    expect(SERVER_MAINTENANCE_JOBS.generateRecurringTickets).toBe('generate-recurring-tickets');
+    expect(MAINTENANCE_FANOUT_SCHEDULES).toContainEqual({ jobName: 'generate-recurring-tickets', cron: '*/15 * * * *' });
+  });
+
   it('schedules each job exactly once', () => {
     expect(new Set(scheduled).size).toBe(scheduled.length);
   });

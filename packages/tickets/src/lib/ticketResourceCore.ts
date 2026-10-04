@@ -46,11 +46,15 @@ export async function publishTicketResourceEvent(event: TicketResourceEvent): Pr
  * paths apply the same promote-to-primary rule and duplicate check. The event
  * is returned rather than published so the caller can emit it after the
  * transaction commits.
+ *
+ * `actorUserId` is null for system-initiated work (e.g. recurring-ticket
+ * generation): `tickets.updated_by` is nullable and the event omits
+ * `assignedByUserId`, so no stand-in user is ever recorded.
  */
 export async function addTicketResourceCore(
   trx: Knex.Transaction,
   tenant: string,
-  actorUserId: string,
+  actorUserId: string | null,
   ticketId: string,
   additionalUserId: string,
   role: string,
@@ -87,7 +91,7 @@ export async function addTicketResourceCore(
           tenantId: tenant,
           ticketId: ticketId,
           userId: additionalUserId,
-          assignedByUserId: actorUserId,
+          ...(actorUserId ? { assignedByUserId: actorUserId } : {}),
           ...notificationSuppression,
         }
       }
@@ -128,7 +132,7 @@ export async function addTicketResourceCore(
         ticketId: ticketId,
         primaryAgentId: ticket.assigned_to,
         additionalAgentId: additionalUserId,
-        assignedByUserId: actorUserId,
+        ...(actorUserId ? { assignedByUserId: actorUserId } : {}),
         ...notificationSuppression,
       }
     }

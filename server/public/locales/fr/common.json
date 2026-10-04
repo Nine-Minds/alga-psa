@@ -857,7 +857,8 @@
       "clientPortal": "Créé via le portail client",
       "inboundEmail": "Créé via e-mail entrant",
       "api": "Créé via API",
-      "other": "Créé via autre"
+      "other": "Créé via autre",
+      "recurring": "Créé par une planification récurrente"
     }
   },
   "surveys": {
