@@ -1615,7 +1615,7 @@
     "deleteConfirmMessage": "Detta raderar tidposten permanent. Åtgärden kan inte ångras.",
     "deleteConfirmAction": "Radera",
     "billable": "Debiterbar",
-    "nonBillable": "Ej debiterbar",
+    "nonBillable": "Icke-debiterbar",
     "duration": {
       "hr": "h",
       "hrs": "h",
