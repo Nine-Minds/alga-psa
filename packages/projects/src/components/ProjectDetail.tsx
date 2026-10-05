@@ -32,6 +32,7 @@ import TaskQuickAdd from './TaskQuickAdd';
 import TaskEdit from './TaskEdit';
 import PhaseQuickAdd from './PhaseQuickAdd';
 import TaskListView from './TaskListView';
+import { useDependencyGuard } from './useDependencyGuard';
 import ProjectGanttView, { DEFAULT_GANTT_SETTINGS, type GanttSettings } from './ProjectGanttView';
 import ViewSwitcher from '@alga-psa/ui/components/ViewSwitcher';
 import { getProjectTaskStatuses, getProjectStatusesByPhase, updatePhase, deletePhase, getProjectTreeData, reorderPhase, markPhaseComplete, reopenPhase } from '../actions/projectActions';
@@ -921,6 +922,14 @@ export default function ProjectDetail({
     return summary;
   }, [allChecklistItems]);
 
+  const { confirmTaskChanges, dependencyGuardDialog } = useDependencyGuard({
+    tasks: allProjectTasks,
+    phases: projectPhases,
+    taskDependencies: allTaskDependencies,
+    statuses: projectStatuses,
+    statusesByPhase,
+  });
+
   // Calculate filtered phase task counts (like list view's phaseGroups)
   // Falls back to server-fetched counts while allProjectTasks is loading
   const filteredPhaseTaskCounts = useMemo(() => {
@@ -1457,6 +1466,11 @@ export default function ProjectDetail({
     beforeTaskId: string | null,
     afterTaskId: string | null
   ) => {
+    const movedTaskIds = selectedTaskIds.has(taskId) && selectedTaskIds.size > 1 ? [...selectedTaskIds] : [taskId];
+    if (!(await confirmTaskChanges(movedTaskIds.map(id => ({ taskId: id, change: { project_status_mapping_id: newStatusMappingId } }))))) {
+      return;
+    }
+
     // Bulk move: when the dragged task is part of a multi-selection, move them all
     if (selectedTaskIds.has(taskId) && selectedTaskIds.size > 1) {
       // Sort selected tasks by current order_key so they land in their existing
@@ -2026,6 +2040,9 @@ export default function ProjectDetail({
     // Selected tasks across every phase (not just the current board)
     const allSelected = allProjectTasks.filter(t => selectedTaskIds.has(t.task_id));
     if (allSelected.length === 0) return;
+    if (!(await confirmTaskChanges(allSelected.map(t => ({ taskId: t.task_id, change: { project_status_mapping_id: targetStatusId } }))))) {
+      return;
+    }
 
     const samePhaseTasks = allSelected
       .filter(t => t.phase_id === currentPhaseId)
@@ -2156,6 +2173,13 @@ export default function ProjectDetail({
 
     if (!task) {
       console.error('Task not found');
+      return;
+    }
+
+    if (
+      task.project_status_mapping_id !== targetStatusId &&
+      !(await confirmTaskChanges([{ taskId: draggedTaskId, change: { project_status_mapping_id: targetStatusId } }]))
+    ) {
       return;
     }
 
@@ -2846,6 +2870,15 @@ export default function ProjectDetail({
   // due date, hours). Mirrors handleAssigneeChange: spread the existing task,
   // apply the partial, persist, then sync both task arrays.
   const handleListTaskUpdate = async (taskId: string, updates: Partial<IProjectTask>) => {
+    // Inline status and date edits, and timeline drags, all save through here.
+    if ('project_status_mapping_id' in updates || 'start_date' in updates || 'due_date' in updates) {
+      const change: Parameters<typeof confirmTaskChanges>[0][number]['change'] = {};
+      if ('project_status_mapping_id' in updates) change.project_status_mapping_id = updates.project_status_mapping_id;
+      if ('start_date' in updates) change.start_date = updates.start_date ?? null;
+      if ('due_date' in updates) change.due_date = updates.due_date ?? null;
+      if (!(await confirmTaskChanges([{ taskId, change }]))) return;
+    }
+
     try {
       const task = projectTasks.find(t => t.task_id === taskId) || allProjectTasks.find(t => t.task_id === taskId);
       if (!task) {
@@ -4533,6 +4566,7 @@ export default function ProjectDetail({
             phases={projectPhases}
             onClose={handleCloseQuickAdd}
             onTaskUpdated={handleTaskUpdated}
+            confirmBeforeSave={(taskId, change) => confirmTaskChanges([{ taskId, change }])}
             projectStatuses={projectStatuses}
             users={users}
             projectTreeData={projectTreeData}
@@ -4817,6 +4851,7 @@ export default function ProjectDetail({
         }}
       />
 
+      {dependencyGuardDialog}
       <RemoveTeamDialog
         id="project-detail-team-switch-dialog"
         isOpen={isTeamSwitchDialogOpen}

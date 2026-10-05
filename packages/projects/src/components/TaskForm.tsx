@@ -113,6 +113,8 @@ interface TaskFormProps {
   projectTreeData?: any[]; // Add projectTreeData prop
   prefillData?: TaskFormPrefillData;
   onCommentCountChange?: (taskId: string, count: number) => void;
+  /** Asked before an edit is saved; resolving false keeps the form open. */
+  confirmBeforeSave?: (taskId: string, change: { start_date: Date | null; due_date: Date | null; project_status_mapping_id: string }) => Promise<boolean>;
   printButton?: React.ReactNode;
   printableHeader?: React.ReactNode;
   printTitle?: string;
@@ -133,6 +135,7 @@ export default function TaskForm({
   projectTreeData = [],
   prefillData,
   onCommentCountChange,
+  confirmBeforeSave,
   printButton,
   printableHeader,
   printTitle,
@@ -868,6 +871,15 @@ export default function TaskForm({
 
       // Convert empty string to null for database
       const finalAssignedTo = !assignedUser || assignedUser === '' ? null : assignedUser;
+
+      if (mode === 'edit' && task?.task_id && confirmBeforeSave) {
+        const proceed = await confirmBeforeSave(task.task_id, {
+          start_date: startDate ?? null,
+          due_date: dueDate ?? null,
+          project_status_mapping_id: selectedStatusId,
+        });
+        if (!proceed) return;
+      }
 
       if (mode === 'edit' && task?.task_id) {
         // Check if phase or status actually changed
@@ -1881,18 +1893,6 @@ export default function TaskForm({
                 {taskFormT('actualHoursDerivedHelp', 'Calculated from linked time entries')}
               </p>
             </div>
-            {/* Row 5: Assigned To and Additional Agents in one row */}
-            <div className="col-span-2">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">{taskFormT('assignedToLabel', 'Assigned To')}</label>
-                  <UserAndTeamPicker
-                    label=""
-                    value={assignedUser ?? ''}
-                    onValueChange={(value) => {
-                      setAssignedUser(value === '' ? null : value);
-                    }}
-                    onTeamSelect={handleAssignTeam}
             {/* Read-only metadata stays out of the field grid. */}
             {mode === 'edit' && task?.created_at && (
               <p id="task-created-at" className="col-span-2 -mt-2 text-xs text-[rgb(var(--color-text-500))]">
@@ -1906,6 +1906,18 @@ export default function TaskForm({
                 })}
               </p>
             )}
+            {/* Row 5: Assigned To and Additional Agents in one row */}
+            <div className="col-span-2">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{taskFormT('assignedToLabel', 'Assigned To')}</label>
+                  <UserAndTeamPicker
+                    label=""
+                    value={assignedUser ?? ''}
+                    onValueChange={(value) => {
+                      setAssignedUser(value === '' ? null : value);
+                    }}
+                    onTeamSelect={handleAssignTeam}
                     size="sm"
                     users={users.filter(u =>
                       !([...taskResources, ...tempTaskResources])
