@@ -408,6 +408,9 @@ export default function ProjectDetail({
   const { tags: allTags } = useTags();
   const hasNotifiedParent = useRef(false);
   const hasOpenedInitialTask = useRef(false);
+  // The URL task that is already open (or was opened by a click), so a later
+  // data refresh does not open it a second time.
+  const handledInitialTaskId = useRef<string | null>(null);
 
   // Auto-select phase based on URL param or default to first phase
   useEffect(() => {
@@ -1873,9 +1876,16 @@ export default function ProjectDetail({
   // Handle opening task from URL parameter (e.g., from notifications)
   // First effect: Fetch task and select its phase
   useEffect(() => {
-    if (!initialTaskId || projectPhases.length === 0) return;
+    if (!initialTaskId) {
+      handledInitialTaskId.current = null;
+      return;
+    }
+    if (projectPhases.length === 0) return;
 
-    // Reset the flag when initialTaskId changes
+    // Re-arm only for a task that has not been opened yet. Clicking a task also
+    // writes it to the URL; re-arming for that one reopened the dialog after
+    // saving whenever the task was not on the current kanban board (timeline view).
+    if (handledInitialTaskId.current === initialTaskId) return;
     hasOpenedInitialTask.current = false;
 
     const loadTaskAndSelectPhase = async () => {
@@ -1928,6 +1938,7 @@ export default function ProjectDetail({
       setCurrentPhase(selectedPhase);
       setShowQuickAdd(true);
       hasOpenedInitialTask.current = true; // Mark that we've opened the task
+      handledInitialTaskId.current = initialTaskId;
     }
   }, [initialTaskId, projectTasks]);
 
@@ -2812,6 +2823,8 @@ export default function ProjectDetail({
     // Log that we're using the cached project tree data for editing
     console.log('Using cached project tree data for edit task dialog');
 
+    handledInitialTaskId.current = task.task_id;
+    hasOpenedInitialTask.current = true;
     setSelectedTask(task);
     const taskPhase = phases.find(phase => phase.phase_id === task.phase_id) || null;
     setCurrentPhase(taskPhase);
