@@ -22,6 +22,17 @@ server:
   livenessProbe:
     initialDelaySeconds: 300
     periodSeconds: 20
+  # The chart default 512Mi limit OOMKilled temporal-server on field appliances
+  # (steady state ~220Mi, spikes past 512Mi during history/matching bursts),
+  # and its 500m CPU limit throttled it continuously (1.7k throttled periods,
+  # ~13% CPU pressure) while the node had idle cores.
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 1000m
+      memory: 1Gi
 
 temporal:
   db: postgres12

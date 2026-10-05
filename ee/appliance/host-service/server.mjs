@@ -8,6 +8,8 @@ import { URL } from 'node:url';
 import { WebSocketServer } from 'ws';
 import { collectStatusSnapshotAsync } from './status-engine.mjs';
 import { createKubectlQueue } from './kubectl-queue.mjs';
+import { createClusterReader } from './cluster-reader.mjs';
+import { hostCapabilities, createDiskLatencyMonitor } from './host-capabilities.mjs';
 import { createSetupRetry, installStateRunning } from './setup-retry.mjs';
 import { createSetupEngineLog, DEFAULT_SETUP_ENGINE_LOG_MAX_BYTES } from './setup-engine-log.mjs';
 import { createDnsReconciler } from './dns-reconcile-runner.mjs';
@@ -26,6 +28,7 @@ import { createUpdateCoordinator } from './update-controller.mjs';
 import { DEFAULT_UPDATE_OWNER_MAX_AGE_MS, isPidAlive } from './update-ownership.mjs';
 import {
   collectManageStatus,
+  createLicenseStatusCache,
   readLicenseStatus,
   applyLicense,
   redeemClaimCode,
@@ -35,7 +38,7 @@ import {
 import { SupportControlClient } from './support-control-client.mjs';
 import { SupportSessionError, SupportSessionManager } from './support-session-manager.mjs';
 import { supportErrorPayload } from './support-api-errors.mjs';
-import { APPLIANCE_HELM_RELEASES, APPLIANCE_HELM_RELEASE_NAMESPACE, recoverAppRelease, setHelmReleasesSuspended } from './helm-release-recovery.mjs';
+import { APPLIANCE_HELM_RELEASES, APPLIANCE_HELM_RELEASE_NAMESPACE, recoverAppRelease, recoverStalledReleases, setHelmReleasesSuspended } from './helm-release-recovery.mjs';
 import {
   readInitialAdminIdentity,
   runInitialAdminPasswordReset,
@@ -65,7 +68,7 @@ const updateHistoryFile = process.env.ALGA_APPLIANCE_UPDATE_HISTORY_FILE || '/va
 const hostAgentSocket = process.env.ALGA_APPLIANCE_HOST_AGENT_SOCKET || '/run/alga-appliance/host-agent.sock';
 const STATUS_CACHE_TTL_MS = Number(process.env.ALGA_APPLIANCE_STATUS_CACHE_TTL_MS || 10_000);
 const KUBECTL_REQUEST_TIMEOUT_MS = Number(process.env.ALGA_APPLIANCE_KUBECTL_REQUEST_TIMEOUT_MS || 20_000);
-const KUBECTL_STATUS_TIMEOUT_MS = Number(process.env.ALGA_APPLIANCE_KUBECTL_STATUS_TIMEOUT_MS || 20_000);
+const CLUSTER_STATUS_TIMEOUT_MS = Number(process.env.ALGA_APPLIANCE_CLUSTER_STATUS_TIMEOUT_MS || 15_000);
 const KUBECTL_API_TIMEOUT_MS = Number(process.env.ALGA_APPLIANCE_KUBECTL_API_TIMEOUT_MS || 30_000);
 const KUBECTL_LOG_TIMEOUT_MS = Number(process.env.ALGA_APPLIANCE_KUBECTL_LOG_TIMEOUT_MS || 60_000);
 const NETWORK_PROBE_TTL_MS = Number(process.env.ALGA_APPLIANCE_NETWORK_PROBE_TTL_MS || 20_000);
@@ -76,7 +79,19 @@ const UPDATE_OWNER_MAX_AGE_MS = Number(
 if (!Number.isFinite(UPDATE_OWNER_MAX_AGE_MS) || UPDATE_OWNER_MAX_AGE_MS <= 0) {
   throw new Error('ALGA_APPLIANCE_UPDATE_OWNER_MAX_AGE_MS must be a positive number.');
 }
-const kubectlQueue = createKubectlQueue({ name: 'host-service-kubectl' });
+const kubectlQueue = createKubectlQueue({
+  name: 'host-service-kubectl',
+  // The queue is serial: one slow command delays every caller behind it. Log
+  // the slow ones so a sluggish UI can be traced to the command that held it.
+  onSlowCommand: ({ command, queuedMs, durationMs, status }) => {
+    console.warn(`[kubectl-queue] slow command (queued ${queuedMs}ms, ran ${durationMs}ms, exit ${status}): ${command.replace(/--kubeconfig \S+ /, '')}`);
+  }
+});
+// Reads for the status UI (Overview, Deployments, Pods, Logs) use the API
+// directly and concurrently; see cluster-reader.mjs. kubectl remains for
+// mutations, in-pod execs, and the diagnostics bundle.
+const clusterReader = createClusterReader({ kubeconfigPath });
+const diskLatencyMonitor = createDiskLatencyMonitor();
 const podAccessAdapter = createNativeKubernetesAdapter({ kubeconfigPath });
 const podExecManager = new PodExecManager({ adapter: podAccessAdapter });
 const portForwardManager = new PortForwardManager({ adapter: podAccessAdapter });
@@ -98,6 +113,8 @@ ensurePodAccessRbac(podAccessAdapter).then((result) => {
 });
 let cachedStatusSnapshot = null;
 let cachedStatusSnapshotAt = 0;
+let statusSnapshotInFlight = null;
+let statusSnapshotGeneration = 0;
 let cachedNetworkProbe = null;
 let cachedNetworkProbeAt = 0;
 let networkProbeConsecutiveFailures = 0;
@@ -861,6 +878,63 @@ async function runKubectlJson(args, timeoutMs = KUBECTL_API_TIMEOUT_MS, signal) 
   }
 }
 
+function statusSnapshotOptions() {
+  const installStateForProbe = readInstallStateSafe();
+  return {
+    stateFile,
+    setupInputsFile,
+    releaseSelectionFile,
+    kubeconfigPath,
+    clusterReader,
+    clusterTimeoutMs: CLUSTER_STATUS_TIMEOUT_MS,
+    networkProbe: networkProbeRelevant(installStateForProbe) ? () => getNetworkProbe() : undefined,
+    autoRetry: computeAutoRetrySummary(installStateForProbe),
+    setupEngineLog: { file: setupEngineLogFile, error: setupEngineLog.error },
+    dnsReconcile: dnsReconciler.readResult(),
+    hostHealth: () => ({ cpu: hostCapabilities(), disk: diskLatencyMonitor.sample() })
+  };
+}
+
+// One status collection serves every viewer: concurrent requests (several
+// tabs, or a poll overlapping a slow collection) join the in-flight one, and a
+// fresh result is reused for STATUS_CACHE_TTL_MS. The shared collection is not
+// tied to any single request's abort signal; its reads carry their own
+// timeouts. The diagnostics bundle is per-request and never cached.
+function readStatusSnapshot({ includeDiagnostics = false, signal } = {}) {
+  if (includeDiagnostics) {
+    return collectStatusSnapshotAsync({
+      ...statusSnapshotOptions(),
+      includeDiagnostics: true,
+      runCommand: (command, options = {}) => runQueuedKubectl(command, { timeoutMs: options.timeoutMs || KUBECTL_API_TIMEOUT_MS, signal })
+    });
+  }
+  if (cachedStatusSnapshot && Date.now() - cachedStatusSnapshotAt < STATUS_CACHE_TTL_MS) {
+    return Promise.resolve(cachedStatusSnapshot);
+  }
+  if (!statusSnapshotInFlight) {
+    const generation = statusSnapshotGeneration;
+    const flight = collectStatusSnapshotAsync(statusSnapshotOptions())
+      .then((snapshot) => {
+        if (generation === statusSnapshotGeneration) {
+          cachedStatusSnapshot = snapshot;
+          cachedStatusSnapshotAt = Date.now();
+        }
+        return snapshot;
+      })
+      .finally(() => { if (statusSnapshotInFlight === flight) statusSnapshotInFlight = null; });
+    statusSnapshotInFlight = flight;
+  }
+  return statusSnapshotInFlight;
+}
+
+// After an action that changes cluster state, the next poll must collect
+// afresh rather than reuse (or join) a snapshot taken before the change.
+function invalidateStatusSnapshot() {
+  statusSnapshotGeneration += 1;
+  cachedStatusSnapshot = null;
+  statusSnapshotInFlight = null;
+}
+
 // kubectl adapter for manage-engine: json/run/apply/quote backed by the queue.
 const manageKube = {
   json: (args) => runKubectlJson(args),
@@ -963,10 +1037,13 @@ try {
   // authenticated appliance management UI from starting.
   supportControlClient = new SupportControlClient({ baseUrl: undefined });
 }
+const licenseStatusCache = createLicenseStatusCache({
+  read: () => readLicenseStatus({ kube: manageKube, namespace: 'msp', secretName: 'appliance-license-seed' })
+});
 const supportSessionManager = new SupportSessionManager({
   central: supportControlClient,
   kube: manageKube,
-  getLicense: () => readLicenseStatus({ kube: manageKube, namespace: 'msp', secretName: 'appliance-license-seed' }),
+  getLicense: () => licenseStatusCache.get(),
   getCredential: readSupportApplianceCredential,
   getSupportAgentImage: async () => {
     const selection = readJsonFileForSupport(releaseSelectionFile) || {};
@@ -1002,10 +1079,11 @@ function validContainerName(value) {
   return typeof value === 'string' && /^[A-Za-z0-9_.-]+$/.test(value);
 }
 
-function namespaceFlag(namespace) {
-  if (!namespace || namespace === 'all' || namespace === '_all') return '-A';
+// { namespace } for one namespace, {} for all, null when invalid.
+function namespaceScope(namespace) {
+  if (!namespace || namespace === 'all' || namespace === '_all') return {};
   if (!validKubeName(namespace)) return null;
-  return `-n ${shellQuote(namespace)}`;
+  return { namespace };
 }
 
 function summarizeDeployment(item, replicaSets = []) {
@@ -1286,30 +1364,7 @@ const server = http.createServer(async (req, res) => {
 
     const signal = requestAbortSignal(req, res);
     const includeDiagnostics = url.searchParams.get('diagnostics') === '1';
-    const now = Date.now();
-    const cacheUsable = !includeDiagnostics && cachedStatusSnapshot && now - cachedStatusSnapshotAt < STATUS_CACHE_TTL_MS;
-    const installStateForProbe = readInstallStateSafe();
-    const wantNetworkProbe = networkProbeRelevant(installStateForProbe);
-    const snapshot = cacheUsable
-      ? cachedStatusSnapshot
-      : await collectStatusSnapshotAsync({
-        stateFile,
-        setupInputsFile,
-        releaseSelectionFile,
-        kubeconfigPath,
-        includeDiagnostics,
-        kubectlTimeoutMs: KUBECTL_STATUS_TIMEOUT_MS,
-        kubectlRequestTimeoutMs: KUBECTL_REQUEST_TIMEOUT_MS,
-        networkProbe: wantNetworkProbe ? () => getNetworkProbe() : undefined,
-        autoRetry: computeAutoRetrySummary(installStateForProbe),
-        setupEngineLog: { file: setupEngineLogFile, error: setupEngineLog.error },
-        dnsReconcile: dnsReconciler.readResult(),
-        runCommand: (command, options = {}) => runQueuedKubectl(command, { timeoutMs: options.timeoutMs || KUBECTL_STATUS_TIMEOUT_MS, signal })
-      });
-    if (!includeDiagnostics && !cacheUsable) {
-      cachedStatusSnapshot = snapshot;
-      cachedStatusSnapshotAt = now;
-    }
+    const snapshot = await readStatusSnapshot({ includeDiagnostics, signal });
     if (res.destroyed || res.writableEnded) return;
     res.writeHead(200, { 'content-type': 'application/json' });
     // setupReEditable / setupRecovery are computed live (not from the cached
@@ -1324,13 +1379,13 @@ const server = http.createServer(async (req, res) => {
   if (url.pathname === '/api/k8s/namespaces') {
     if (!requireAuth(req, res)) return;
     const signal = requestAbortSignal(req, res);
-    const result = await runKubectlJson('get namespaces', KUBECTL_API_TIMEOUT_MS, signal);
+    const result = await clusterReader.listNamespaces({ signal, timeoutMs: KUBECTL_API_TIMEOUT_MS });
     if (!result.ok) {
-      jsonResponse(res, 502, { error: result.stderr || result.stdout || 'Unable to list namespaces.' });
+      if (!res.writableEnded) jsonResponse(res, 502, { error: result.error || 'Unable to list namespaces.' });
       return;
     }
     jsonResponse(res, 200, {
-      namespaces: (result.value?.items || []).map((item) => ({
+      namespaces: result.items.map((item) => ({
         name: item.metadata?.name || 'unknown',
         phase: item.status?.phase || 'Unknown',
         createdAt: item.metadata?.creationTimestamp || null
@@ -1341,21 +1396,23 @@ const server = http.createServer(async (req, res) => {
 
   if (url.pathname === '/api/k8s/deployments') {
     if (!requireAuth(req, res)) return;
-    const nsFlag = namespaceFlag(url.searchParams.get('namespace') || 'msp');
-    if (!nsFlag) {
+    const scope = namespaceScope(url.searchParams.get('namespace') || 'msp');
+    if (!scope) {
       jsonResponse(res, 400, { error: 'Invalid namespace.' });
       return;
     }
     const signal = requestAbortSignal(req, res);
-    const deployments = await runKubectlJson(`${nsFlag} get deployments`, KUBECTL_API_TIMEOUT_MS, signal);
-    const replicaSets = await runKubectlJson(`${nsFlag} get replicasets`, KUBECTL_API_TIMEOUT_MS, signal);
+    const [deployments, replicaSets] = await Promise.all([
+      clusterReader.listDeployments({ ...scope, signal, timeoutMs: KUBECTL_API_TIMEOUT_MS }),
+      clusterReader.listReplicaSets({ ...scope, signal, timeoutMs: KUBECTL_API_TIMEOUT_MS })
+    ]);
     if (!deployments.ok) {
-      jsonResponse(res, 502, { error: deployments.stderr || deployments.stdout || 'Unable to list deployments.' });
+      if (!res.writableEnded) jsonResponse(res, 502, { error: deployments.error || 'Unable to list deployments.' });
       return;
     }
     jsonResponse(res, 200, {
       namespace: url.searchParams.get('namespace') || 'msp',
-      deployments: (deployments.value?.items || []).map((item) => summarizeDeployment(item, replicaSets.value?.items || []))
+      deployments: deployments.items.map((item) => summarizeDeployment(item, replicaSets.ok ? replicaSets.items : []))
         .sort((a, b) => `${a.namespace}/${a.name}`.localeCompare(`${b.namespace}/${b.name}`))
     });
     return;
@@ -1363,20 +1420,20 @@ const server = http.createServer(async (req, res) => {
 
   if (url.pathname === '/api/k8s/pods') {
     if (!requireAuth(req, res)) return;
-    const nsFlag = namespaceFlag(url.searchParams.get('namespace') || 'msp');
-    if (!nsFlag) {
+    const scope = namespaceScope(url.searchParams.get('namespace') || 'msp');
+    if (!scope) {
       jsonResponse(res, 400, { error: 'Invalid namespace.' });
       return;
     }
     const signal = requestAbortSignal(req, res);
-    const pods = await runKubectlJson(`${nsFlag} get pods`, KUBECTL_API_TIMEOUT_MS, signal);
+    const pods = await clusterReader.listPods({ ...scope, signal, timeoutMs: KUBECTL_API_TIMEOUT_MS });
     if (!pods.ok) {
-      jsonResponse(res, 502, { error: pods.stderr || pods.stdout || 'Unable to list pods.' });
+      if (!res.writableEnded) jsonResponse(res, 502, { error: pods.error || 'Unable to list pods.' });
       return;
     }
     jsonResponse(res, 200, {
       namespace: url.searchParams.get('namespace') || 'msp',
-      pods: (pods.value?.items || []).map(summarizePod)
+      pods: pods.items.map(summarizePod)
         .sort((a, b) => `${a.namespace}/${a.name}`.localeCompare(`${b.namespace}/${b.name}`))
     });
     return;
@@ -1393,15 +1450,13 @@ const server = http.createServer(async (req, res) => {
       jsonResponse(res, 400, { error: 'Invalid namespace, pod, or container.' });
       return;
     }
-    const containerArg = container ? ` -c ${shellQuote(container)}` : '';
-    const previousArg = previous ? ' --previous' : '';
     const signal = requestAbortSignal(req, res);
-    const result = await runQueuedKubectl(kubectlCommand(`-n ${shellQuote(namespace)} logs ${shellQuote(pod)}${containerArg} --tail=${tail}${previousArg}`, KUBECTL_LOG_TIMEOUT_MS), { timeoutMs: KUBECTL_LOG_TIMEOUT_MS, signal });
+    const result = await clusterReader.readPodLog({ namespace, pod, container: container || undefined, tailLines: tail, previous, signal, timeoutMs: KUBECTL_LOG_TIMEOUT_MS });
     if (!result.ok) {
-      jsonResponse(res, 502, { error: result.stderr || result.stdout || 'Unable to read logs.' });
+      if (!res.writableEnded) jsonResponse(res, 502, { error: result.error || 'Unable to read logs.' });
       return;
     }
-    const lines = result.stdout.split(/\r?\n/);
+    const lines = result.text.split(/\r?\n/);
     if (lines.at(-1) === '') lines.pop();
     jsonResponse(res, 200, { namespace, pod, container: container || null, tail, previous, lines });
     return;
@@ -1556,6 +1611,7 @@ const server = http.createServer(async (req, res) => {
     const result = await recoverAppRelease({
       runKubectl: (args) => runQueuedKubectl(kubectlCommand(args, KUBECTL_API_TIMEOUT_MS), { timeoutMs: KUBECTL_API_TIMEOUT_MS, signal })
     });
+    invalidateStatusSnapshot();
     const helmRelease = `${APPLIANCE_HELM_RELEASE_NAMESPACE}/${APPLIANCE_HELM_RELEASES[0].name}`;
     if (!result.ok) {
       jsonResponse(res, 502, { error: result.error || 'Failed to trigger reconcile.', step: result.step, helmRelease });
@@ -1571,16 +1627,54 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // Re-run only the HelmReleases stuck in a terminal failure (see
+  // recoverStalledReleases). Offered by the Overview when a release blocker is
+  // shown; unlike /api/recover it does not re-run the app bootstrap.
+  if (url.pathname === '/api/recover-releases') {
+    if (!requireAuth(req, res)) return;
+    if ((req.method || 'GET').toUpperCase() !== 'POST') {
+      jsonResponse(res, 405, { error: 'Method not allowed. Use POST.' });
+      return;
+    }
+    const result = await recoverStalledReleases({
+      runKubectl: (args) => runQueuedKubectl(kubectlCommand(args, KUBECTL_API_TIMEOUT_MS), { timeoutMs: KUBECTL_API_TIMEOUT_MS })
+    });
+    invalidateStatusSnapshot();
+    if (!result.ok) {
+      jsonResponse(res, 502, { error: result.error || 'Failed to recover releases.', step: result.step, recovered: result.recovered });
+      return;
+    }
+    jsonResponse(res, 200, {
+      ok: true,
+      recovered: result.recovered,
+      requestedAt: result.at,
+      message: result.recovered.length
+        ? `Re-running ${result.recovered.join(', ')}. Flux upgrades each release again; this usually takes a few minutes.`
+        : 'No releases are stuck; nothing to recover.'
+    });
+    return;
+  }
+
   if (url.pathname === '/api/manage/status') {
     if (!requireAuth(req, res)) return;
+    // scope=updates is the Overview's "update available" banner: release and
+    // control-plane availability only, without the license, admin-identity,
+    // and Support Mode reads the Manage view needs.
+    const updatesOnly = url.searchParams.get('scope') === 'updates';
     const status = await collectManageStatus({
       kube: manageKube,
       releaseSelectionFile,
       installStateFile: stateFile,
       cpUpgradeStatusFile,
       resolveControlPlaneRef,
-      resolveReleaseManifest: resolveReleaseManifestCached
+      resolveReleaseManifest: resolveReleaseManifestCached,
+      readLicense: () => licenseStatusCache.get(),
+      includeLicense: !updatesOnly
     });
+    if (updatesOnly) {
+      jsonResponse(res, 200, { app: status.app, controlPlane: status.controlPlane });
+      return;
+    }
     try {
       const identity = await readInitialAdminIdentity(manageKube);
       status.adminPasswordReset = {
@@ -1648,6 +1742,7 @@ const server = http.createServer(async (req, res) => {
     }
     const payload = await readJsonBody(req);
     const result = await applyLicense({ licenseKey: payload?.licenseKey, kube: manageKube });
+    licenseStatusCache.invalidate();
     if (result.ok) jsonResponse(res, 200, { ok: true });
     else jsonResponse(res, result.status || 400, { error: result.error });
     return;
@@ -1661,6 +1756,7 @@ const server = http.createServer(async (req, res) => {
     }
     const payload = await readJsonBody(req);
     const result = await redeemClaimCode({ claimCode: payload?.claimCode, kube: manageKube });
+    licenseStatusCache.invalidate();
     if (result.ok) jsonResponse(res, 200, { ok: true, result: result.result });
     else jsonResponse(res, result.status || 400, { error: result.error });
     return;
@@ -1892,22 +1988,7 @@ const server = http.createServer(async (req, res) => {
 
   if (mode === 'status') {
     res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
-    const signal = requestAbortSignal(req, res);
-    const installStateForProbe = readInstallStateSafe();
-    const wantNetworkProbe = networkProbeRelevant(installStateForProbe);
-    const snapshot = await collectStatusSnapshotAsync({
-      stateFile,
-      setupInputsFile,
-      releaseSelectionFile,
-        kubeconfigPath,
-      kubectlTimeoutMs: KUBECTL_STATUS_TIMEOUT_MS,
-      kubectlRequestTimeoutMs: KUBECTL_REQUEST_TIMEOUT_MS,
-      networkProbe: wantNetworkProbe ? () => getNetworkProbe() : undefined,
-      autoRetry: computeAutoRetrySummary(installStateForProbe),
-      setupEngineLog: { file: setupEngineLogFile, error: setupEngineLog.error },
-      dnsReconcile: dnsReconciler.readResult(),
-      runCommand: (command, options = {}) => runQueuedKubectl(command, { timeoutMs: options.timeoutMs || KUBECTL_STATUS_TIMEOUT_MS, signal })
-    });
+    const snapshot = await readStatusSnapshot();
     const failureItems = (snapshot.failures || [])
       .map((failure) => {
         const retryLine = failure.autoRetry

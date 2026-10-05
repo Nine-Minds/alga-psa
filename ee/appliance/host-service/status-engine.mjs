@@ -70,27 +70,6 @@ function runCommand(command, options = {}) {
   };
 }
 
-function collectDiagnostics(kubectlPrefix) {
-  const commands = [
-    ['host-service-status', 'systemctl --no-pager --full status alga-appliance.service alga-appliance-console.service'],
-    ['host-service-journal', 'journalctl -u alga-appliance.service -u alga-appliance-console.service -n 200 --no-pager'],
-    ['k3s-status', 'systemctl --no-pager --full status k3s'],
-    ['kubernetes-namespaces', `${kubectlPrefix} get namespaces -o wide`],
-    ['kubernetes-nodes', `${kubectlPrefix} get nodes -o wide`],
-    ['kubernetes-pods', `${kubectlPrefix} get pods -A -o wide`],
-    ['kubernetes-jobs', `${kubectlPrefix} get jobs -A -o wide`],
-    ['kubernetes-helmreleases', `${kubectlPrefix} get helmreleases.helm.toolkit.fluxcd.io -A`],
-    ['kubernetes-storageclasses', `${kubectlPrefix} get storageclass -o wide`],
-    ['kubernetes-pv-pvc', `${kubectlPrefix} get pv,pvc -A -o wide`],
-    ['kubernetes-events', `${kubectlPrefix} get events -A --sort-by=.lastTimestamp | tail -n 150`]
-  ];
-
-  return commands.map(([name, command]) => ({
-    name,
-    ...runCommand(command, { timeoutMs: 8_000 })
-  }));
-}
-
 function classifyFailureCategory(phase, status, failure) {
   const lowerPhase = (phase || '').toLowerCase();
   const lowerStatus = (status || '').toLowerCase();
@@ -137,35 +116,21 @@ function isEarlyKubernetesBootstrapPhase(phase) {
   ].some((earlyPhase) => normalized.includes(earlyPhase));
 }
 
-function commandUnavailableText(result) {
-  return `${result?.stderr || ''}\n${result?.stdout || ''}`.toLowerCase();
-}
+// Cluster queries return the cluster reader's result shape:
+// { ok: true, items } or { ok: false, reason, status, error } where reason is
+// one of timeout | unreachable | unavailable | not-found | forbidden | error.
+const CLUSTER_UNAVAILABLE_REASONS = new Set(['timeout', 'unreachable', 'unavailable']);
 
 function isKubernetesQueryUnavailable(result) {
-  if (result?.ok) {
-    return false;
-  }
-
-  const output = commandUnavailableText(result);
-  return result?.status === 124 ||
-    output.includes('kubectl: not found') ||
-    output.includes('kubectl: command not found') ||
-    output.includes('no such file or directory') ||
-    output.includes('connection refused') ||
-    output.includes('the connection to the server') ||
-    output.includes('unable to connect to the server') ||
-    output.includes('kubeconfig') ||
-    output.includes('command timed out');
+  return !result?.ok && CLUSTER_UNAVAILABLE_REASONS.has(result?.reason);
 }
 
-function skippedKubernetesQuery(command, reason) {
-  return {
-    ok: true,
-    status: 0,
-    command,
-    stdout: '',
-    stderr: `Skipped after ${reason}.`
-  };
+function skippedKubernetesQuery(reason) {
+  return { ok: true, items: [], skipped: `Skipped after ${reason}.` };
+}
+
+function queryError(result) {
+  return String(result?.error || 'unknown error').trim();
 }
 
 function isExpectedEarlyKubernetesUnavailable(installState, results) {
@@ -177,30 +142,104 @@ function isExpectedEarlyKubernetesUnavailable(installState, results) {
     return false;
   }
 
-  return results.some((result) => {
-    if (result?.ok) {
-      return false;
-    }
-    const output = commandUnavailableText(result);
-    return output.includes('kubectl: not found') ||
-      output.includes('kubectl: command not found') ||
-      output.includes('no such file or directory') ||
-      output.includes('connection refused') ||
-      output.includes('the connection to the server') ||
-      output.includes('unable to connect to the server') ||
-      output.includes('kubeconfig') ||
-      output.includes('command timed out');
-  });
+  return results.some(isKubernetesQueryUnavailable);
 }
 
+// Flux CRDs are applied by the setup workflow after k3s is up, so a missing
+// HelmRelease resource type is progress, not a failure.
 function isExpectedHelmReleaseCrdUnavailable(installState, result) {
   if (installState?.failure || result?.ok) {
     return false;
   }
 
-  const output = commandUnavailableText(result);
-  return output.includes("the server doesn't have a resource type") &&
-    output.includes('helmreleases');
+  return result?.reason === 'not-found';
+}
+
+// --- Kubernetes objects -> the records the readiness logic reasons about ----
+
+function timestampString(value) {
+  if (!value) return null;
+  return value instanceof Date ? value.toISOString() : String(value);
+}
+
+// The pod STATUS kubectl prints: the most specific waiting/terminated reason,
+// otherwise the phase ("Completed" for a succeeded pod).
+export function podDisplayStatus(pod) {
+  if (pod?.metadata?.deletionTimestamp) return 'Terminating';
+  const phase = pod?.status?.phase || 'Unknown';
+  let reason = pod?.status?.reason || '';
+
+  const initStatuses = pod?.status?.initContainerStatuses || [];
+  for (let i = 0; i < initStatuses.length; i += 1) {
+    const state = initStatuses[i].state || {};
+    if (state.terminated && state.terminated.exitCode === 0) continue;
+    if (state.terminated) return `Init:${state.terminated.reason || 'Error'}`;
+    if (state.waiting?.reason && state.waiting.reason !== 'PodInitializing') return `Init:${state.waiting.reason}`;
+    return `Init:${i}/${initStatuses.length}`;
+  }
+
+  for (const status of [...(pod?.status?.containerStatuses || [])].reverse()) {
+    const state = status.state || {};
+    if (state.waiting?.reason) reason = state.waiting.reason;
+    else if (state.terminated?.reason) reason = state.terminated.reason;
+  }
+
+  if (reason && !(reason === 'Completed' && phase === 'Running')) return reason;
+  return phase === 'Succeeded' ? 'Completed' : phase;
+}
+
+function podRecord(pod) {
+  const statuses = pod?.status?.containerStatuses || [];
+  const status = podDisplayStatus(pod);
+  return {
+    namespace: pod?.metadata?.namespace || 'default',
+    name: pod?.metadata?.name || 'unknown',
+    status,
+    ready: `${statuses.filter((item) => item.ready).length}/${(pod?.spec?.containers || []).length || statuses.length}`,
+    restarts: statuses.reduce((sum, item) => sum + (item.restartCount || 0), 0),
+    healthy: status === 'Running' || status === 'Completed'
+  };
+}
+
+function jobRecord(job) {
+  const completions = job?.spec?.completions ?? 1;
+  const succeeded = job?.status?.succeeded || 0;
+  return {
+    name: job?.metadata?.name || 'unknown',
+    completions: `${succeeded}/${completions}`,
+    completed: succeeded >= completions,
+    failed: (job?.status?.conditions || []).some((condition) => condition.type === 'Failed' && condition.status === 'True')
+  };
+}
+
+function helmReleaseRecord(release) {
+  const ready = (release?.status?.conditions || []).find((condition) => condition.type === 'Ready');
+  return {
+    name: release?.metadata?.name || 'unknown',
+    ready: ready?.status || 'Unknown',
+    reason: ready?.reason || null,
+    message: ready?.message || null
+  };
+}
+
+function nodeRecord(node) {
+  return {
+    name: node?.metadata?.name || 'unknown',
+    ready: (node?.status?.conditions || []).some((condition) => condition.type === 'Ready' && condition.status === 'True')
+  };
+}
+
+function eventRecord(item) {
+  return {
+    type: item.type || 'Normal',
+    reason: item.reason || 'Event',
+    namespace: item.metadata?.namespace || item.involvedObject?.namespace || 'default',
+    involvedObject: item.involvedObject
+      ? `${item.involvedObject.kind || 'Object'}/${item.involvedObject.name || 'unknown'}`
+      : 'Object/unknown',
+    message: item.message || '',
+    timestamp: timestampString(item.lastTimestamp || item.eventTime || item.metadata?.creationTimestamp)
+  };
 }
 
 function appUrlFromInput(value) {
@@ -285,21 +324,20 @@ function networkFailureSummary(probe, { resolved }) {
   };
 }
 
-function helmReleaseIssues(helmLines) {
-  const seen = new Set();
-  const issues = helmLines.filter((line) => {
-    const fields = line.trim().split(/\s+/);
-    if (fields.length < 3) {
-      return false;
-    }
-    seen.add(fields[0]);
-    return fields[2] !== 'True';
-  });
+// Releases whose failure leaves login working (see deriveReadiness): their
+// blockers are background-severity, not login blockers.
+const BACKGROUND_HELM_RELEASES = new Set(['email-service', 'temporal', 'temporal-worker', 'workflow-worker']);
 
-  if (helmLines.length > 0) {
+function helmReleaseIssues(releases) {
+  const issues = releases
+    .filter((release) => release.ready !== 'True')
+    .map((release) => ({ release: release.name, text: `${release.name}: ${release.message || release.reason || 'not ready'}` }));
+
+  if (releases.length > 0) {
+    const seen = new Set(releases.map((release) => release.name));
     for (const name of EXPECTED_HELM_RELEASES) {
       if (!seen.has(name)) {
-        issues.push(`${name} missing from alga-system HelmReleases`);
+        issues.push({ release: name, text: `${name} missing from alga-system HelmReleases` });
       }
     }
   }
@@ -308,7 +346,7 @@ function helmReleaseIssues(helmLines) {
 }
 
 function isTransientHelmReleaseConvergenceIssue(issue) {
-  const lower = String(issue || '').toLowerCase();
+  const lower = String(issue?.text || '').toLowerCase();
   return lower.includes("running 'install' action with timeout") ||
     lower.includes('running "install" action with timeout') ||
     lower.includes("dependency 'alga-system/alga-core' is not ready") ||
@@ -323,7 +361,7 @@ function blockingHelmReleaseIssues(installState, helmIssues) {
   return helmIssues.filter((issue) => !isTransientHelmReleaseConvergenceIssue(issue));
 }
 
-function deriveFailureSummary(installState, podLines, helmIssues, warnings) {
+function deriveFailureSummary(installState, pods, helmIssues, warnings) {
   const summaries = [];
   const phase = installState?.phase || 'unknown';
   const status = installState?.status || 'unknown';
@@ -347,17 +385,13 @@ function deriveFailureSummary(installState, podLines, helmIssues, warnings) {
     });
   }
 
-  const backgroundHints = ['email-service', 'temporal', 'workflow-worker', 'temporal-worker'];
-  const backgroundIssueLines = podLines.filter((line) => {
-    const lower = line.toLowerCase();
-    return backgroundHints.some((hint) => lower.includes(hint)) && !lower.includes(' running') && !lower.includes(' completed');
-  });
-  if (backgroundIssueLines.length > 0) {
+  const backgroundIssuePods = backgroundPodIssues(pods);
+  if (backgroundIssuePods.length > 0) {
     summaries.push({
       category: 'background-services',
       phase: 'background-services',
       lastAction: 'Background services are degraded.',
-      suspectedCause: `Detected ${backgroundIssueLines.length} unhealthy background workload(s).`,
+      suspectedCause: `Detected ${backgroundIssuePods.length} unhealthy background workload(s).`,
       suggestedNextStep: guidanceForCategory('background-services'),
       retrySafe: true,
       logs: ['kubectl --kubeconfig /etc/rancher/k3s/k3s.yaml get pods -A']
@@ -369,9 +403,13 @@ function deriveFailureSummary(installState, podLines, helmIssues, warnings) {
       category: 'flux',
       phase: 'flux',
       lastAction: 'One or more Helm releases are not ready.',
-      suspectedCause: helmIssues.join('; '),
-      suggestedNextStep: 'Run `flux reconcile helmrelease <name> -n alga-system --force --reset` after fixing the underlying pod or values issue.',
+      suspectedCause: helmIssues.map((issue) => issue.text).join('; '),
+      suggestedNextStep: 'Once the release\'s pods are healthy, use Recovery → "Recover releases" on the Overview to re-run the stalled upgrade (equivalent to `flux reconcile helmrelease <name> -n alga-system --force --reset`).',
       retrySafe: true,
+      // A stalled email/temporal/workflow release degrades background work but
+      // leaves login working; only core releases block login.
+      background: helmIssues.every((issue) => BACKGROUND_HELM_RELEASES.has(issue.release)),
+      releases: helmIssues.map((issue) => issue.release),
       logs: ['kubectl --kubeconfig /etc/rancher/k3s/k3s.yaml -n alga-system get helmreleases']
     });
   }
@@ -391,30 +429,22 @@ function deriveFailureSummary(installState, podLines, helmIssues, warnings) {
   return summaries;
 }
 
-function lineLooksHealthy(line) {
-  const lower = line.toLowerCase();
-  return lower.includes(' running') || lower.includes(' completed');
+const BACKGROUND_SERVICE_HINTS = ['email-service', 'temporal', 'workflow-worker', 'temporal-worker'];
+
+function backgroundPodIssues(pods) {
+  return pods.filter((pod) => BACKGROUND_SERVICE_HINTS.some((hint) => pod.name.includes(hint)) && !pod.healthy);
 }
 
-function deriveReadiness(installState, nodes, podLines, jobLines, helmLines, helmIssues, warnings) {
+function deriveReadiness(installState, nodes, pods, jobs, releases, helmIssues, warnings) {
   const readyNodeCount = nodes.filter((node) => node.ready).length;
   const platformReady = readyNodeCount > 0;
-  const coreReady = platformReady && podLines.some((line) => {
-    const lower = line.toLowerCase();
-    return lower.startsWith('msp ') && lower.includes('alga-core') && lineLooksHealthy(line);
-  });
+  const coreReady = platformReady && pods.some((pod) => pod.namespace === 'msp' && pod.name.includes('alga-core') && pod.healthy);
   const bootstrapReady = coreReady && (
-    jobLines.some((line) => line.toLowerCase().includes('bootstrap') && /\s1\/1\s/.test(line)) ||
-    helmLines.some((line) => line.toLowerCase().startsWith('alga-core') && line.toLowerCase().includes('true'))
+    jobs.some((job) => job.name.includes('bootstrap') && job.completed) ||
+    releases.some((release) => release.name === 'alga-core' && release.ready === 'True')
   );
 
-  const backgroundServiceHints = ['email-service', 'temporal', 'workflow-worker', 'temporal-worker'];
-  const backgroundIssues = podLines.filter((line) => {
-    const lower = line.toLowerCase();
-    const isBackground = backgroundServiceHints.some((hint) => lower.includes(hint));
-    const looksHealthy = lineLooksHealthy(line);
-    return isBackground && !looksHealthy;
-  });
+  const backgroundIssues = backgroundPodIssues(pods).map((pod) => `${pod.namespace}/${pod.name} ${pod.status}`);
 
   // Login readiness is gated by core/bootstrap, not background workloads.
   const loginReady = platformReady && coreReady && bootstrapReady;
@@ -466,7 +496,7 @@ function normalizeReadinessTiers(tiers) {
 }
 
 function blockerFromFailure(failure) {
-  const isBackground = failure.category === 'background-services';
+  const isBackground = failure.category === 'background-services' || failure.background === true;
   // A pending DNS activation is actionable but not a hard failure: show it so the
   // operator is not told "no blockers" while setup is gated, without styling it
   // as a critical login blocker.
@@ -504,7 +534,7 @@ function rollupFromState(installState, tiers, failures) {
     };
   }
 
-  const criticalFailure = failures.find((failure) => failure.category !== 'background-services');
+  const criticalFailure = failures.find((failure) => failure.category !== 'background-services' && failure.background !== true);
   if (criticalFailure) {
     return {
       state: 'blocked',
@@ -529,57 +559,30 @@ function rollupFromState(installState, tiers, failures) {
   };
 }
 
-function parseEventsJson(output) {
-  try {
-    const parsed = JSON.parse(output || '{}');
-    return (parsed.items || []).map((item) => ({
-      type: item.type || 'Normal',
-      reason: item.reason || 'Event',
-      namespace: item.metadata?.namespace || item.involvedObject?.namespace || 'default',
-      involvedObject: item.involvedObject
-        ? `${item.involvedObject.kind || 'Object'}/${item.involvedObject.name || 'unknown'}`
-        : 'Object/unknown',
-      message: item.message || '',
-      timestamp: item.lastTimestamp || item.eventTime || item.metadata?.creationTimestamp || null
-    })).sort((a, b) => String(a.timestamp || '').localeCompare(String(b.timestamp || '')));
-  } catch {
-    return [];
-  }
-}
-
-function deriveActiveOperations(podLines) {
-  return podLines
-    .filter((line) => /\b(ContainerCreating|PodInitializing|Pending|ImagePullBackOff|ErrImagePull|CrashLoopBackOff)\b/i.test(line))
+function deriveActiveOperations(pods) {
+  return pods
+    .filter((pod) => /\b(ContainerCreating|PodInitializing|Pending|ImagePullBackOff|ErrImagePull|CrashLoopBackOff)\b/i.test(pod.status))
     .slice(0, 8)
-    .map((line) => {
-      const fields = line.trim().split(/\s+/);
-      const namespace = fields[0] || 'unknown';
-      const pod = fields[1] || 'unknown';
-      const status = fields[3] || fields[2] || 'unknown';
-      return {
-        component: `${namespace}/${pod}`,
-        image: null,
-        message: `${pod} is ${status}.`,
-        estimatedSizeHuman: null,
-        elapsedSeconds: null,
-        progressAvailable: false,
-        progressPercent: null
-      };
-    });
+    .map((pod) => ({
+      component: `${pod.namespace}/${pod.name}`,
+      image: null,
+      message: `${pod.name} is ${pod.status}.`,
+      estimatedSizeHuman: null,
+      elapsedSeconds: null,
+      progressAvailable: false,
+      progressPercent: null
+    }));
 }
 
-function deriveBootstrapInfo(jobLines) {
-  const jobLine = jobLines.find((line) => line.toLowerCase().includes('bootstrap'));
-  if (!jobLine) {
+function deriveBootstrapInfo(jobs) {
+  const job = jobs.find((item) => item.name.includes('bootstrap'));
+  if (!job) {
     return {
       job: { name: null, state: 'not_created', failed: false, completed: false },
       logs: { available: false, pod: null, container: null, tail: [], detectedErrors: [] }
     };
   }
-  const fields = jobLine.split(/\s+/);
-  const name = fields[0];
-  const completed = /\s1\/1\s/.test(jobLine);
-  const failed = /failed/i.test(jobLine);
+  const { name, completed, failed } = job;
   return {
     job: { name, state: completed ? 'completed' : failed ? 'failed' : 'running', failed, completed },
     logs: { available: false, pod: null, container: null, tail: [], detectedErrors: [] }
@@ -595,6 +598,7 @@ function buildStatusSnapshot({
   autoRetry,
   setupEngineLog,
   dnsReconcile,
+  hostHealth,
   nodeResult,
   podResult,
   jobResult,
@@ -640,35 +644,17 @@ function buildStatusSnapshot({
     ? installState
     : { ...(installState || {}), failure: effectiveFailure };
 
-  let nodes = [];
-  if (nodeResult.ok) {
-    try {
-      const parsed = JSON.parse(nodeResult.stdout);
-      nodes = (parsed.items || []).map((item) => ({
-        name: item.metadata?.name || 'unknown',
-        ready: (item.status?.conditions || []).some((c) => c.type === 'Ready' && c.status === 'True')
-      }));
-    } catch {
-      nodes = [];
-    }
-  }
+  const records = (result, toRecord) => (result.ok ? (result.items || []).map(toRecord) : []);
+  const nodes = records(nodeResult, nodeRecord);
+  const pods = records(podResult, podRecord);
+  const jobs = records(jobResult, jobRecord);
+  const releases = records(helmResult, helmReleaseRecord);
 
-  const podLines = podResult.ok
-    ? podResult.stdout.split(/\r?\n/).map((line) => line.trim()).filter(Boolean)
-    : [];
-
-  const jobLines = jobResult.ok
-    ? jobResult.stdout.split(/\r?\n/).map((line) => line.trim()).filter(Boolean)
-    : [];
-  const helmLines = helmResult.ok
-    ? helmResult.stdout.split(/\r?\n/).map((line) => line.trim()).filter(Boolean)
-    : [];
-
-  const helmIssues = helmReleaseIssues(helmLines);
+  const helmIssues = helmReleaseIssues(releases);
   const blockingHelmIssues = blockingHelmReleaseIssues(failureState, helmIssues);
-  const nodeWarnings = nodeResult.ok ? [] : [`node query failed: ${nodeResult.stderr.trim() || nodeResult.stdout.trim() || 'unknown error'}`];
-  const podWarnings = podResult.ok ? [] : [`pod query failed: ${podResult.stderr.trim() || podResult.stdout.trim() || 'unknown error'}`];
-  const helmWarnings = helmResult.ok ? [] : [`helm release query failed: ${helmResult.stderr.trim() || helmResult.stdout.trim() || 'unknown error'}`];
+  const nodeWarnings = nodeResult.ok ? [] : [`node query failed: ${queryError(nodeResult)}`];
+  const podWarnings = podResult.ok ? [] : [`pod query failed: ${queryError(podResult)}`];
+  const helmWarnings = helmResult.ok ? [] : [`helm release query failed: ${queryError(helmResult)}`];
   const suppressKubernetesWarnings = isExpectedEarlyKubernetesUnavailable(failureState, [
     nodeResult,
     podResult,
@@ -685,8 +671,8 @@ function buildStatusSnapshot({
     ? [...nodeWarnings, ...podWarnings, ...helmWarnings]
     : (suppressTransientHelmReleaseWarning ? helmWarnings : []);
   const readinessWarnings = [...warnings, ...(suppressTransientHelmReleaseWarning ? helmWarnings : [])];
-  const tiers = deriveReadiness(failureState, nodes, podLines, jobLines, helmLines, helmIssues, readinessWarnings);
-  const derivedFailures = deriveFailureSummary(failureState, podLines, blockingHelmIssues, warnings);
+  const tiers = deriveReadiness(failureState, nodes, pods, jobs, releases, helmIssues, readinessWarnings);
+  const derivedFailures = deriveFailureSummary(failureState, pods, blockingHelmIssues, warnings);
   const failures = liveNetworkBlocker ? [liveNetworkBlocker, ...derivedFailures] : derivedFailures;
 
   // During a retry the engine writes running states whose phase may momentarily
@@ -785,9 +771,19 @@ function buildStatusSnapshot({
   }
 
   const topBlockers = failures.map(blockerFromFailure);
-  const recentEvents = eventsResult.ok ? parseEventsJson(eventsResult.stdout).slice(-40) : [];
-  const activeOperations = deriveActiveOperations(podLines);
-  const bootstrap = deriveBootstrapInfo(jobLines);
+  const recentEvents = records(eventsResult, eventRecord)
+    .sort((a, b) => String(a.timestamp || '').localeCompare(String(b.timestamp || '')))
+    .slice(-40);
+  const activeOperations = deriveActiveOperations(pods);
+  const bootstrap = deriveBootstrapInfo(jobs);
+
+  // Host hardware advisories (CPU features, disk latency). Shown alongside the
+  // blockers but kept out of failures/tiers/rollup: a slow VM is a reason the
+  // appliance is sluggish, not a reason it is unhealthy or login-blocked.
+  const host = hostHealth || null;
+  const hostAdvisories = [...(host?.cpu?.warnings || []), ...(host?.disk?.warnings || [])]
+    .map((warning) => ({ ...warning, loginBlocking: false }));
+  topBlockers.push(...hostAdvisories);
 
   return {
     source: 'ubuntu-host-service',
@@ -816,35 +812,25 @@ function buildStatusSnapshot({
     release: releaseSelection,
     kubernetes: {
       nodes,
-      podCount: podLines.length,
-      jobCount: jobLines.length,
-      helmReleaseCount: helmLines.length,
+      podCount: pods.length,
+      jobCount: jobs.length,
+      helmReleaseCount: releases.length,
       warnings,
       suppressedWarnings
     },
+    host: host ? { cpu: host.cpu || null, disk: host.disk?.latest || null } : null,
     diagnostics
   };
 }
 
-function statusSnapshotCommandContext(options = {}) {
-  const stateFile = options.stateFile || DEFAULT_STATE_FILE;
-  const setupInputsFile = options.setupInputsFile || DEFAULT_SETUP_INPUTS_FILE;
-  const releaseSelectionFile = options.releaseSelectionFile || DEFAULT_RELEASE_SELECTION_FILE;
+function statusSnapshotContext(options = {}) {
   const kubeconfigPath = options.kubeconfigPath || DEFAULT_KUBECONFIG;
-  const requestTimeoutSeconds = Math.max(1, Math.ceil((options.kubectlRequestTimeoutMs || 20_000) / 1000));
-  const kubectlPrefix = options.kubectlPrefix || `kubectl --request-timeout=${requestTimeoutSeconds}s --kubeconfig ${kubeconfigPath}`;
-
   return {
-    stateFile,
-    setupInputsFile,
-    releaseSelectionFile,
+    stateFile: options.stateFile || DEFAULT_STATE_FILE,
+    setupInputsFile: options.setupInputsFile || DEFAULT_SETUP_INPUTS_FILE,
+    releaseSelectionFile: options.releaseSelectionFile || DEFAULT_RELEASE_SELECTION_FILE,
     kubeconfigPath,
-    kubectlPrefix,
-    nodeCommand: `${kubectlPrefix} get nodes -o json`,
-    podCommand: `${kubectlPrefix} get pods -A --no-headers`,
-    jobCommand: `${kubectlPrefix} -n msp get jobs --no-headers`,
-    helmCommand: `${kubectlPrefix} -n alga-system get helmreleases.helm.toolkit.fluxcd.io --no-headers`,
-    eventsCommand: `${kubectlPrefix} get events -A -o json`
+    kubectlPrefix: options.kubectlPrefix || `kubectl --request-timeout=20s --kubeconfig ${kubeconfigPath}`
   };
 }
 
@@ -870,50 +856,34 @@ async function collectDiagnosticsAsync(kubectlPrefix, runner) {
   return diagnostics;
 }
 
-export function collectStatusSnapshot(options = {}) {
-  const context = statusSnapshotCommandContext(options);
-  const timeoutMs = options.kubectlTimeoutMs || 20_000;
-
-  const nodeResult = runCommand(context.nodeCommand, { timeoutMs });
-  const skipClusterQueries = isKubernetesQueryUnavailable(nodeResult);
-  const skipReason = 'node query failed or timed out';
-  const podResult = skipClusterQueries ? skippedKubernetesQuery(context.podCommand, skipReason) : runCommand(context.podCommand, { timeoutMs });
-  const jobResult = skipClusterQueries ? skippedKubernetesQuery(context.jobCommand, skipReason) : runCommand(context.jobCommand, { timeoutMs });
-  const helmResult = skipClusterQueries ? skippedKubernetesQuery(context.helmCommand, skipReason) : runCommand(context.helmCommand, { timeoutMs });
-  const eventsResult = skipClusterQueries ? skippedKubernetesQuery(context.eventsCommand, skipReason) : runCommand(context.eventsCommand, { timeoutMs });
-  const diagnostics = options.includeDiagnostics === true ? collectDiagnostics(context.kubectlPrefix) : [];
-
-  return buildStatusSnapshot({
-    ...context,
-    networkProbe: options.networkProbe,
-    autoRetry: options.autoRetry,
-    setupEngineLog: options.setupEngineLog,
-    dnsReconcile: options.dnsReconcile,
-    nodeResult,
-    podResult,
-    jobResult,
-    helmResult,
-    eventsResult,
-    diagnostics
-  });
-}
-
+// Cluster reads go through `clusterReader` (cluster-reader.mjs) and run
+// concurrently; `runCommand` is only used for the opt-in diagnostics bundle.
 export async function collectStatusSnapshotAsync(options = {}) {
-  const context = statusSnapshotCommandContext(options);
-  const timeoutMs = options.kubectlTimeoutMs || 20_000;
+  const reader = options.clusterReader;
+  if (!reader) {
+    throw new Error('collectStatusSnapshotAsync requires options.clusterReader (see cluster-reader.mjs).');
+  }
+  const context = statusSnapshotContext(options);
+  const timeoutMs = options.clusterTimeoutMs || 15_000;
   const runner = options.runCommand || ((command, commandOptions) => Promise.resolve(runCommand(command, commandOptions)));
 
-  const nodeResult = await runner(context.nodeCommand, { timeoutMs });
-  const skipClusterQueries = isKubernetesQueryUnavailable(nodeResult);
-  const skipReason = 'node query failed or timed out';
-  const podResult = skipClusterQueries ? skippedKubernetesQuery(context.podCommand, skipReason) : await runner(context.podCommand, { timeoutMs });
-  const jobResult = skipClusterQueries ? skippedKubernetesQuery(context.jobCommand, skipReason) : await runner(context.jobCommand, { timeoutMs });
-  const helmResult = skipClusterQueries ? skippedKubernetesQuery(context.helmCommand, skipReason) : await runner(context.helmCommand, { timeoutMs });
-  const eventsResult = skipClusterQueries ? skippedKubernetesQuery(context.eventsCommand, skipReason) : await runner(context.eventsCommand, { timeoutMs });
+  const [nodeResult, ...rest] = await Promise.all([
+    reader.listNodes({ timeoutMs }),
+    reader.listPods({ timeoutMs }),
+    reader.listJobs({ namespace: 'msp', timeoutMs }),
+    reader.listHelmReleases({ namespace: 'alga-system', timeoutMs }),
+    reader.listEvents({ timeoutMs })
+  ]);
+  // When the API itself is down, report that once (on the node query) rather
+  // than as five identical warnings.
+  const [podResult, jobResult, helmResult, eventsResult] = isKubernetesQueryUnavailable(nodeResult)
+    ? rest.map(() => skippedKubernetesQuery('node query failed or timed out'))
+    : rest;
   const diagnostics = options.includeDiagnostics === true ? await collectDiagnosticsAsync(context.kubectlPrefix, runner) : [];
   const networkProbe = options.networkProbe
     ? (typeof options.networkProbe === 'function' ? await options.networkProbe() : options.networkProbe)
     : undefined;
+  const hostHealth = typeof options.hostHealth === 'function' ? options.hostHealth() : options.hostHealth;
 
   return buildStatusSnapshot({
     ...context,
@@ -921,6 +891,7 @@ export async function collectStatusSnapshotAsync(options = {}) {
     autoRetry: options.autoRetry,
     setupEngineLog: options.setupEngineLog,
     dnsReconcile: options.dnsReconcile,
+    hostHealth,
     nodeResult,
     podResult,
     jobResult,
