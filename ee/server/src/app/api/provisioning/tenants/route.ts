@@ -2,37 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { TenantService, TenantProvisioningError } from '../../../../services/provisioning';
 import { CreateTenantSchema } from '../../../../services/provisioning/types/tenant.schema';
 import { ZodError } from 'zod';
-import { getSession, hasPermission } from '@alga-psa/auth';
-import { getCurrentUser } from '@alga-psa/user-composition/actions';
+import { assertMasterTenantAccess, MASTER_TENANT_ERRORS, isMasterTenantAuthError } from '@ee/lib/auth/masterTenantAccess';
 
 export async function POST(req: NextRequest) {
   try {
-    // Check authentication
-    const session = await getSession();
-    if (!session) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-
-    // Get full user details
-    const currentUser = await getCurrentUser();
-    if (!currentUser) {
-      return NextResponse.json(
-        { error: 'User not found' },
-        { status: 401 }
-      );
-    }
-
-    // Check authorization
-    const canProvisionTenants = await hasPermission(currentUser, 'tenant', 'create');
-    if (!canProvisionTenants) {
-      return NextResponse.json(
-        { error: 'Insufficient permissions' },
-        { status: 403 }
-      );
-    }
+    // Provisioning a tenant is a platform-operator action: master tenant + system_settings:update.
+    await assertMasterTenantAccess(req);
 
     const body = await req.json();
     const validatedData = CreateTenantSchema.parse(body);
@@ -40,6 +15,14 @@ export async function POST(req: NextRequest) {
     
     return NextResponse.json(tenant, { status: 201 });
   } catch (error) {
+    if (isMasterTenantAuthError(error)) {
+      const unauthenticated = (error as Error).message === MASTER_TENANT_ERRORS.unauthenticated;
+      return NextResponse.json(
+        { error: unauthenticated ? 'Unauthorized' : 'Insufficient permissions' },
+        { status: unauthenticated ? 401 : 403 }
+      );
+    }
+
     if (error instanceof ZodError) {
       return NextResponse.json(
         { error: 'Validation error', details: error.errors },

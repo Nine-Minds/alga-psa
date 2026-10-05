@@ -151,7 +151,8 @@
     "tryAgain": "Intentar de nuevo",
     "backToBilling": "Volver a facturación",
     "retryFailed": "Aún no pudimos iniciar el pago. Inténtelo de nuevo en un momento.",
-    "loading": "Cargando..."
+    "loading": "Cargando...",
+    "offlinePaymentMethod": "Esta factura se paga con cheque o transferencia bancaria, por lo que no se puede pagar en línea. Siga las instrucciones de pago de la factura."
   },
   "quotes": {
     "pendingQuotes": "Cotizaciones pendientes",

@@ -490,6 +490,19 @@ export async function createClientContractAssignment(
     }
   }
 
+  // Step 3 of the charge-attribution chain, chosen at creation time rather than
+  // left for a later edit. A profile of another client would silently
+  // misattribute every charge the contract produces, so it is rejected here.
+  const billingProfileId = input.billing_profile_id ?? null;
+  if (billingProfileId) {
+    const profile = await db.table('client_billing_profiles')
+      .where({ billing_profile_id: billingProfileId })
+      .first('client_id');
+    if (!profile || profile.client_id !== input.client_id) {
+      throw new Error('That billing profile belongs to a different client.');
+    }
+  }
+
   const timestamp = new Date().toISOString();
   const insertPayload: Record<string, unknown> = {
     client_contract_id: uuidv4(),
@@ -499,6 +512,7 @@ export async function createClientContractAssignment(
     start_date: input.start_date,
     end_date: input.end_date,
     is_active: input.is_active,
+    billing_profile_id: billingProfileId,
     tenant,
     created_at: timestamp,
     updated_at: timestamp,
@@ -580,6 +594,17 @@ export async function updateClientContractAssignment(
     throw new Error(`Client contract ${clientContractId} not found`);
   }
 
+  // Re-pointing a contract at another profile moves every charge it produces,
+  // so the same cross-client guard that applies at creation applies here.
+  if (updateData.billing_profile_id) {
+    const profile = await tenantDb(knexOrTrx, tenant).table('client_billing_profiles')
+      .where({ billing_profile_id: updateData.billing_profile_id })
+      .first('client_id');
+    if (!profile || profile.client_id !== existing.client_id) {
+      throw new Error('That billing profile belongs to a different client.');
+    }
+  }
+
   const sanitized: Partial<IClientContract> = {
     ...updateData,
     tenant: undefined as any,
@@ -627,4 +652,61 @@ export async function updateClientContractAssignment(
   }
 
   return normalizeClientContract(updated);
+}
+
+/**
+ * Promote a draft assignment to active. "Set to Active" used to flip only
+ * client_contracts.is_active, which left contracts.status = 'draft' behind, so the derived
+ * status stayed Draft and the action looked like a no-op. Activation belongs to the contract
+ * header and the assignment together, so both move here.
+ */
+export async function activateClientContractAssignment(
+  knexOrTrx: Knex | Knex.Transaction,
+  tenant: string,
+  clientContractId: string
+): Promise<IClientContract> {
+  const existing = await getClientContractById(knexOrTrx, tenant, clientContractId);
+  if (!existing) {
+    throw new Error(`Client contract ${clientContractId} not found`);
+  }
+
+  const db = tenantDb(knexOrTrx, tenant);
+  const contract = await db.table('contracts')
+    .where({ contract_id: existing.contract_id })
+    .first('contract_id', 'status', 'is_active', 'currency_code', 'contract_name');
+  if (!contract) {
+    throw new Error(`Contract ${existing.contract_id} not found`);
+  }
+
+  const needsHeaderActivation = contract.status === 'draft' || contract.is_active === false;
+
+  if (needsHeaderActivation) {
+    // Same rule createClientContractAssignment enforces: a client cannot hold active
+    // contracts in two currencies.
+    const targetCurrencyCode =
+      typeof contract.currency_code === 'string' ? contract.currency_code : null;
+    const mixedCurrencyConflict = await findMixedCurrencyActiveAssignment(knexOrTrx, tenant, {
+      clientId: existing.client_id,
+      targetCurrencyCode,
+    });
+    if (mixedCurrencyConflict) {
+      const contractLabel = mixedCurrencyConflict.contract_name
+        ? ` ("${mixedCurrencyConflict.contract_name}")`
+        : '';
+      throw new Error(
+        `Client already has an active contract in ${mixedCurrencyConflict.currency_code}${contractLabel}. ` +
+        `Cannot create a contract in ${targetCurrencyCode}. Mixed-currency contracts for the same client are not supported.`
+      );
+    }
+
+    await db.table('contracts')
+      .where({ contract_id: existing.contract_id })
+      .update({
+        status: 'active',
+        is_active: true,
+        updated_at: new Date().toISOString(),
+      });
+  }
+
+  return updateClientContractAssignment(knexOrTrx, tenant, clientContractId, { is_active: true });
 }

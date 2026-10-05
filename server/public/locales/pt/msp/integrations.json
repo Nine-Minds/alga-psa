@@ -17,7 +17,7 @@
         "noKindOptions": "Nenhum registro utilizável desse tipo foi encontrado na organização conectada.",
         "realmIdLabel": "ID do reino",
         "saveMapping": "Salvar mapeamento",
-        "saving": "Salvando…",
+        "saving": "A guardar…",
         "selectPlaceholder": "Selecione {{field}}..."
       },
       "manager": {
@@ -469,7 +469,8 @@
           "previousCount": "Anterior",
           "syncFinished": "Sincronização concluída para {{client}}.",
           "syncing": "Sincronizando…",
-          "syncTrackingFailed": "A sincronização foi iniciada, mas esta página não conseguiu acompanhá-la até o fim. Atualize-a para ver o resultado mais recente."
+          "syncTrackingFailed": "A sincronização foi iniciada, mas esta página não conseguiu acompanhá-la até o fim. Atualize-a para ver o resultado mais recente.",
+          "syncWorkerUnavailable": "A sincronização está na fila, mas nada está processando a fila em segundo plano no momento. Ela será executada quando o worker voltar; se continuar travada, reinicie o serviço temporal-worker."
         },
         "connection": {
           "changeAction": "Alterar conexão",
@@ -1148,6 +1149,47 @@
           "unmatched": "Incomparável"
         },
         "title": "Visualização do mapeamento de locatário"
+      },
+      "userImportFilter": {
+        "title": "Filtro de importação",
+        "licensed": "Somente membros licenciados",
+        "include": "Incluir grupo de segurança",
+        "exclude": "Excluir grupo de segurança",
+        "patterns": "Padrões de exclusão adicionais (uma expressão regular por linha)",
+        "save": "Salvar filtro",
+        "loading": "Carregando filtro de importação…",
+        "saved": "Salvo",
+        "invalid": "Expressão regular inválida: {{pattern}}",
+        "exclusions": "Exclusões do filtro de importação",
+        "unknown": "Os dados do provedor necessários ao filtro estão indisponíveis. Os usuários afetados foram mantidos.",
+        "userType": "Tipo de usuário indisponível: {{count}}.",
+        "license": "Dados de licença indisponíveis: {{count}}.",
+        "transitive": "A associação é transitiva no Direct; o CIPP pode retornar apenas membros diretos.",
+        "defaultsDescription": "Estas definições são aplicadas por predefinição aos clientes geridos. Cada cliente pode substituí-las.",
+        "memberUsersOnly": "Apenas membros",
+        "licensedUsersOnly": "Apenas utilizadores licenciados",
+        "patternPlaceholder": "Expressão regular de exclusão",
+        "invalidPattern": "Expressão regular inválida.",
+        "addPattern": "Adicionar padrão",
+        "remove": "Remover",
+        "saving": "A guardar…",
+        "saveFailed": "Não foi possível guardar o filtro de importação.",
+        "broadGroupWarning": "Este filtro inclui ou exclui um grupo abrangente, como Todos os usuários. Verifique o impacto antes de salvar.",
+        "deactivateExcludedContacts": "Desativar contatos vinculados excluídos por este filtro",
+        "importSharedMailboxes": "Importar caixas de correio partilhadas",
+        "sharedMailboxReason": "Caixa de correio partilhada",
+        "effectivePatterns": "Padrões efetivos: {{patterns}}",
+        "inherited": "Herdado",
+        "overridden": "Substituído",
+        "preview": "Pré-visualizar",
+        "previewing": "Pré-visualizando…",
+        "reset": "Redefinir",
+        "retry": "Tentar novamente",
+        "recommendedHint": "Recomendado para novas configurações: somente membros e somente usuários licenciados. Valores desmarcados refletem a política salva.",
+        "excludedContactInactive": "Excluído pelo filtro de importação; o contato vinculado seria marcado como inativo. Nada é excluído.",
+        "recommendedUnsaved": "Recomendado — não salvo",
+        "unsavedChange": "Alteração não salva",
+        "unsavedNotice": "Estes filtros só terão efeito depois de serem salvos."
       }
     },
     "google": {
@@ -3675,7 +3717,8 @@
         "failedTitle": "Falha na configuração do webhook",
         "failedBody": "Falha na configuração automática do webhook. Clique em tentar novamente para tentar a configuração novamente.",
         "configuring": "Configurando...",
-        "retry": "Tentar novamente a configuração"
+        "retry": "Tentar novamente a configuração",
+        "eventsOutOfDate": "Os eventos do webhook estão desatualizados. Tente configurar o webhook novamente para atualizá-los."
       },
       "disconnectDialog": {
         "title": "Desconectar faixa",
@@ -3730,6 +3773,12 @@
         "error": "Erro",
         "disabled": "Desativado",
         "notConfigured": "Não configurado"
+      },
+      "setup": {
+        "configure": "Configurar integração",
+        "selectedAction": "Selecionada",
+        "currentIntegration": "Integração de telefonia",
+        "changeIntegration": "Escolher outra"
       },
       "providers": {
         "teamsPhone": {

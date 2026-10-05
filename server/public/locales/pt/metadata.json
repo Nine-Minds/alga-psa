@@ -44,7 +44,12 @@
           "title": "Detalhes da cotação"
         }
       },
-      "title": "Faturamento"
+      "title": "Faturamento",
+      "paymentMethods": {
+        "setupComplete": {
+          "title": "Configuração do cartão"
+        }
+      }
     },
     "clientSettings": {
       "description": "Gerencie as configurações da sua empresa",
@@ -292,6 +297,9 @@
       "detail": {
         "title": "Ticket nº {{ticketNumber}} - {{ticketTitle}}",
         "fallbackTitle": "Detalhes do ticket"
+      },
+      "recurring": {
+        "title": "Tickets recorrentes"
       }
     },
     "userActivities": {
@@ -613,6 +621,11 @@
       "layout": {
         "title": "Política de privacidade"
       }
+    }
+  },
+  "paymentMethods": {
+    "setupComplete": {
+      "title": "Configuração do cartão"
     }
   }
 }

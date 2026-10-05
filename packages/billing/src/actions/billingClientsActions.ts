@@ -14,6 +14,7 @@ import {
   getDetailedClientContract,
   createClientContractAssignment,
   updateClientContractAssignment,
+  activateClientContractAssignment,
   checkAndReactivateExpiredContract,
   type ClientPaginationParams,
   type ClientContractAssignmentCreateInput,
@@ -23,6 +24,8 @@ import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import type { IUserWithRoles } from '@alga-psa/types';
 import { getClientLogoUrl, getClientLogoUrlsBatch } from '@alga-psa/formatting/avatarUtils';
+import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import { buildContractCreatedPayload } from '@alga-psa/workflow-streams';
 import { syncRecurringServicePeriodsForContract } from './recurringServicePeriodSync';
 import {
   actionError,
@@ -295,5 +298,53 @@ export const updateClientContractForBilling = withAuth(async (
 
   await checkAndReactivateExpiredContract(knex, tenant, updated.contract_id);
   return updated;
+  });
+});
+
+export const activateClientContractForBilling = withAuth(async (
+  user,
+  { tenant },
+  clientContractId: string
+): Promise<IClientContract | BillingClientsActionError> => {
+  return withBillingClientsActionErrors(async () => {
+  if (!await hasPermission(user, 'client', 'update')) {
+    throw new Error('Permission denied: Cannot update client contract assignments');
+  }
+  const { knex } = await createTenantKnex();
+
+  const activated = await withTransaction(knex, async (trx: Knex.Transaction) => {
+    await assertClientContractAssignmentIsAuthorable(trx, tenant, clientContractId);
+    const activatedAssignment = await activateClientContractAssignment(trx, tenant, clientContractId);
+    await syncRecurringServicePeriodsForContract(trx, {
+      tenant,
+      contractId: activatedAssignment.contract_id,
+      sourceRunPrefix: 'client_contract_activate',
+    });
+    return activatedAssignment;
+  });
+
+  // Quote-converted contracts never emitted CONTRACT_CREATED, so activation is their first
+  // chance to. The wizard's idempotency key shape dedupes the drafts it already announced.
+  const occurredAt = new Date().toISOString();
+  await publishWorkflowEvent({
+    eventType: 'CONTRACT_CREATED',
+    payload: buildContractCreatedPayload({
+      contractId: activated.contract_id,
+      clientId: activated.client_id,
+      createdByUserId: user.user_id,
+      createdAt: occurredAt,
+      startDate: activated.start_date ?? undefined,
+      endDate: activated.end_date ?? null,
+      status: 'active',
+    }),
+    ctx: {
+      tenantId: tenant,
+      occurredAt,
+      actor: user.user_id ? { actorType: 'USER' as const, actorUserId: user.user_id } : undefined,
+    },
+    idempotencyKey: `contract_created:${activated.contract_id}:${activated.client_id}`,
+  });
+
+  return activated;
   });
 });

@@ -53,6 +53,22 @@ describe('createTicketRoute href encode/decode', () => {
     expect(href).toBe(CREATE_TICKET_PATH);
   });
 
+  it('round-trips duplicateFrom and leaves it absent when unset', () => {
+    const sourceId = '3f0c1a52-8a53-4c6e-9d0e-0d6f3b1c2a77';
+    expect(roundTrip({ duplicateFromTicketId: sourceId }).duplicateFromTicketId).toBe(sourceId);
+    expect(buildCreateTicketHref({ duplicateFromTicketId: sourceId })).toBe(
+      `${CREATE_TICKET_PATH}?duplicateFrom=${sourceId}`,
+    );
+    expect(buildCreateTicketHref({ title: 'x' })).not.toContain('duplicateFrom');
+    expect(parseCreateTicketPrefill({}).duplicateFromTicketId).toBeUndefined();
+  });
+
+  it('keeps duplicateFrom alongside the AlgaDesk flag', () => {
+    const out = roundTrip({ duplicateFromTicketId: 'abc', isAlgaDeskMode: true });
+    expect(out.duplicateFromTicketId).toBe('abc');
+    expect(out.isAlgaDeskMode).toBe(true);
+  });
+
   it('ignores a malformed agents param instead of throwing', () => {
     const result = parseCreateTicketPrefill({ agents: 'not-json' });
     expect(result.additionalAgents).toBeUndefined();

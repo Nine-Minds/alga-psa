@@ -30,6 +30,7 @@ describe('recover-comment-publications worker forwarding', () => {
     const validated = EventSchemas.MAINTENANCE_JOB_REQUESTED.parse({ id: randomUUID(), timestamp: new Date().toISOString(), ...event });
     // The server handler reads the tenant from the forwarded job data.
     expect(validated.payload).toMatchObject({ tenantId, jobId, jobName: 'recover-comment-publications', data: { tenantId } });
+
     // Forwarding failures surface to the worker so Temporal retries the activity.
     mocks.publish.mockRejectedValueOnce(new Error('Redis unavailable'));
     expect(await executeJobHandler({ jobName: 'recover-comment-publications', jobId, tenantId, jobExecutionId: randomUUID(), data: {} })).toEqual({ success: false, error: 'Redis unavailable' });

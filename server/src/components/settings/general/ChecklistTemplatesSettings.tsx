@@ -369,6 +369,14 @@ const ChecklistTemplatesSettings: React.FC = () => {
     if (field === 'category_id') {
       nextRule.subcategory_id = null;
     }
+    if (field === 'board_id' && nextRule.board_id && nextRule.category_id) {
+      // Categories belong to one board; a category from another board could never match this rule.
+      const selectedCategory = categories.find((category) => category.category_id === nextRule.category_id);
+      if (selectedCategory?.board_id && selectedCategory.board_id !== nextRule.board_id) {
+        nextRule.category_id = null;
+        nextRule.subcategory_id = null;
+      }
+    }
     setApplyRules((prev) => prev.map((r) =>
       r.apply_rule_id === rule.apply_rule_id ? nextRule : r
     ));
@@ -423,15 +431,41 @@ const ChecklistTemplatesSettings: React.FC = () => {
       .filter((option) => option.value),
   ];
 
-  const categoryOptions: SelectOption[] = [
-    anyOption,
-    ...categories
-      .filter((category) => !category.parent_category)
-      .map((category): SelectOption => ({
-        value: category.category_id,
-        label: category.category_name,
-      })),
-  ];
+  const boardNameById = new Map(boards.map((board) => [board.board_id, board.board_name || '-']));
+  const boardRank = new Map(boardOptions.map((option, rank) => [option.value, rank]));
+
+  // Category ids are board-scoped, so a rule's category must come from the rule's board.
+  // With no board selected, every board's categories are offered, grouped and labelled by board.
+  const categoryOptionsFor = (boardId: string | null): SelectOption[] => {
+    const topLevel = categories.filter((category) => !category.parent_category);
+    if (boardId) {
+      return [
+        anyOption,
+        ...topLevel
+          .filter((category) => category.board_id === boardId)
+          .map((category): SelectOption => ({
+            value: category.category_id,
+            label: category.category_name,
+          })),
+      ];
+    }
+    return [
+      anyOption,
+      ...topLevel
+        .slice()
+        .sort((a, b) =>
+          (boardRank.get(a.board_id || '') ?? Number.MAX_SAFE_INTEGER) -
+          (boardRank.get(b.board_id || '') ?? Number.MAX_SAFE_INTEGER)
+        )
+        .map((category): SelectOption => {
+          const boardName = category.board_id ? boardNameById.get(category.board_id) : undefined;
+          return {
+            value: category.category_id,
+            label: boardName ? `${category.category_name} (${boardName})` : category.category_name,
+          };
+        }),
+    ];
+  };
 
   const subcategoryOptionsFor = (categoryId: string | null): SelectOption[] => [
     anyOption,
@@ -756,6 +790,7 @@ const ChecklistTemplatesSettings: React.FC = () => {
                         onValueChange={(value) => handleRuleChange(rule, 'board_id', value)}
                         options={boardOptions}
                         placeholder={t('ticketing.checklistTemplates.fields.rules.any')}
+                        showPlaceholderInDropdown={false}
                       />
                     </div>
                     <div>
@@ -764,8 +799,9 @@ const ChecklistTemplatesSettings: React.FC = () => {
                         id={`checklist-template-rule-category-${index}`}
                         value={rule.category_id || ''}
                         onValueChange={(value) => handleRuleChange(rule, 'category_id', value)}
-                        options={categoryOptions}
+                        options={categoryOptionsFor(rule.board_id)}
                         placeholder={t('ticketing.checklistTemplates.fields.rules.any')}
+                        showPlaceholderInDropdown={false}
                       />
                     </div>
                     <div>
@@ -776,6 +812,7 @@ const ChecklistTemplatesSettings: React.FC = () => {
                         onValueChange={(value) => handleRuleChange(rule, 'subcategory_id', value)}
                         options={subcategoryOptionsFor(rule.category_id)}
                         placeholder={t('ticketing.checklistTemplates.fields.rules.any')}
+                        showPlaceholderInDropdown={false}
                         disabled={!rule.category_id}
                       />
                     </div>
@@ -787,6 +824,7 @@ const ChecklistTemplatesSettings: React.FC = () => {
                         onValueChange={(value) => handleRuleChange(rule, 'priority_id', value)}
                         options={priorityOptions}
                         placeholder={t('ticketing.checklistTemplates.fields.rules.any')}
+                        showPlaceholderInDropdown={false}
                       />
                     </div>
                     <Button

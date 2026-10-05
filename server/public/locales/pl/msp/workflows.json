@@ -674,7 +674,24 @@
       "workflowStepsListHint": "Przeciągnij kroki, aby zmienić kolejność lub przenieść między potokami.",
       "workflowStepsGraphHint": "Przesuwaj/powiększaj graf. Gałęzie są wyświetlane w oddzielnych torach.",
       "workflowStepsViewAria": "Widok kroków workflow",
-      "warningsCount": "{{count}} ostrzeżeń"
+      "warningsCount": "{{count}} ostrzeżeń",
+      "dateSource": "Źródło daty",
+      "dateSourceAnniversary": "Rocznica współpracy z klientem",
+      "dateSourceRenewal": "Data decyzji o odnowieniu umowy",
+      "dateSourceContractEnd": "Data zakończenia umowy",
+      "dateSourceWarranty": "Koniec gwarancji zasobu",
+      "dateOffset": "Dni",
+      "dateDirection": "Moment",
+      "before": "Przed",
+      "onDate": "W dniu zdarzenia",
+      "after": "Po",
+      "daysBefore": "dni przed",
+      "daysAfter": "dni po",
+      "localTime": "Czas lokalny",
+      "timezoneOptional": "Strefa czasowa (opcjonalnie)",
+      "tenantTimezoneDefault": "Strefa czasowa organizacji",
+      "dateTriggerSummary": "Uruchamia się {{days}} {{direction}} {{source}} o {{time}} ({{timezone}})",
+      "inputDataDatePrefix": "Ten workflow otrzymuje payload zdefiniowany przez"
     },
     "stepPanel": {
       "readOnly": "Dostęp tylko do odczytu: edycja kroków jest wyłączona.",
@@ -1717,7 +1734,8 @@
     "event": "Zdarzenie",
     "eventWithType": "Zdarzenie: {{eventType}}",
     "oneTimeSchedule": "Harmonogram jednorazowy",
-    "recurringSchedule": "Harmonogram cykliczny"
+    "recurringSchedule": "Harmonogram cykliczny",
+    "date": "Data"
   },
   "scheduleStatus": {
     "unknown": "Nieznany",
@@ -2325,13 +2343,15 @@
         "event": "Oparty na zdarzeniu",
         "schedule": "Harmonogram jednorazowy",
         "recurring": "Harmonogram cykliczny",
-        "manual": "Ręczny"
+        "manual": "Ręczny",
+        "date": "Oparty na dacie"
       },
       "triggerLabels": {
         "manual": "Ręczny",
         "schedule": "Harmonogram jednorazowy",
         "recurring": "Harmonogram cykliczny",
-        "event": "Zdarzenie"
+        "event": "Zdarzenie",
+        "date": "Data"
       },
       "bulk": {
         "selectedSingular": "Wybrano {{count}} workflow",

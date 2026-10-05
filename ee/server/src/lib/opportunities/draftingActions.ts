@@ -194,6 +194,7 @@ export const sendOpportunityFollowUp = withAuth(async (
     .replaceAll('>', '&gt;')
     .replaceAll('\n', '<br />');
   const result = await TenantEmailService.getInstance(tenant).sendEmail({
+    mailClass: 'sales',
     tenantId: tenant,
     to: [recipient],
     subject: data.subject,

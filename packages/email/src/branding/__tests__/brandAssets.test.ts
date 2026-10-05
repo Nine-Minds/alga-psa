@@ -1,14 +1,19 @@
 import { describe, expect, it } from 'vitest';
 import {
   applyBrandLogo,
+  brandLogoCid,
   containsBrandAttribution,
   decorateBrandedHtml,
   findBrandLogoCid,
+  parseBrandLogoVariant,
+  pickBrandLogoVariant,
   resolveBrandLogoForPreview,
   stripBrandAttribution,
   withImgSrc,
+  BRAND_LOGO_CIDS,
   BRAND_LOGO_MARKER,
 } from '../brandAssets';
+import { isDarkEmailHeader } from '../color';
 import { loadSystemTemplate } from './systemTemplateFixtures';
 
 const LOGO = { variant: 'wide' as const, alt: 'Acme MSP' };
@@ -57,11 +62,115 @@ describe('applyBrandLogo', () => {
   });
 });
 
+describe('brand logo content-ids', () => {
+  it('gives every variant, dark artwork included, its own content-id', () => {
+    expect(BRAND_LOGO_CIDS).toEqual({
+      default: 'alga-brand-logo',
+      dark: 'alga-brand-logo-dark',
+      wide: 'alga-brand-logo-wide',
+      'wide-dark': 'alga-brand-logo-wide-dark',
+    });
+    expect(new Set(Object.values(BRAND_LOGO_CIDS)).size).toBe(4);
+  });
+
+  it('round-trips each variant through its cid', () => {
+    for (const variant of Object.keys(BRAND_LOGO_CIDS) as (keyof typeof BRAND_LOGO_CIDS)[]) {
+      expect(parseBrandLogoVariant(`cid:${brandLogoCid(variant)}`)).toBe(variant);
+    }
+  });
+
+  it('does not read the wide-dark cid as the wide one', () => {
+    expect(parseBrandLogoVariant('cid:alga-brand-logo-wide-dark')).toBe('wide-dark');
+    expect(findBrandLogoCid(applyBrandLogo('<body><h1>Hi</h1></body>', { variant: 'wide-dark' })))
+      .toBe('alga-brand-logo-wide-dark');
+  });
+});
+
+describe('pickBrandLogoVariant', () => {
+  const ALL = {
+    logoUrl: '/square',
+    logoDarkUrl: '/square-dark',
+    logoWideUrl: '/wide',
+    logoWideDarkUrl: '/wide-dark',
+  };
+
+  it('takes the dark artwork of the chosen shape onto a dark header', () => {
+    expect(pickBrandLogoVariant('wide', true, ALL)).toBe('wide-dark');
+    expect(pickBrandLogoVariant('default', true, ALL)).toBe('dark');
+  });
+
+  it('keeps the light artwork on a light header', () => {
+    expect(pickBrandLogoVariant('wide', false, ALL)).toBe('wide');
+    expect(pickBrandLogoVariant('default', false, ALL)).toBe('default');
+  });
+
+  it('settles for the light artwork when no dark one was uploaded', () => {
+    expect(pickBrandLogoVariant('wide', true, { logoUrl: ALL.logoUrl, logoWideUrl: ALL.logoWideUrl }))
+      .toBe('wide');
+    expect(pickBrandLogoVariant('default', true, { logoUrl: ALL.logoUrl })).toBe('default');
+  });
+
+  it('falls back to the square shape when no wordmark was uploaded', () => {
+    expect(pickBrandLogoVariant('wide', true, { logoUrl: ALL.logoUrl, logoDarkUrl: ALL.logoDarkUrl }))
+      .toBe('dark');
+    expect(pickBrandLogoVariant('wide', false, { logoUrl: ALL.logoUrl })).toBe('default');
+  });
+
+  it('takes a dark-only upload of the chosen shape', () => {
+    expect(pickBrandLogoVariant('wide', true, { logoWideDarkUrl: ALL.logoWideDarkUrl })).toBe('wide-dark');
+  });
+
+  it('names no variant when nothing usable is uploaded', () => {
+    expect(pickBrandLogoVariant('wide', true, {})).toBeNull();
+    expect(pickBrandLogoVariant('default', false, { logoDarkUrl: ALL.logoDarkUrl })).toBeNull();
+  });
+
+  it('agrees with the header the palette paints', () => {
+    // The AlgaPSA purple header is dark; a pastel one is not.
+    expect(pickBrandLogoVariant('wide', isDarkEmailHeader({ primary: '#8a4dea', secondary: '#6b46c1' }), ALL))
+      .toBe('wide-dark');
+    expect(pickBrandLogoVariant('wide', isDarkEmailHeader({ primary: '#fde68a', secondary: '#fcd34d' }), ALL))
+      .toBe('wide');
+  });
+});
+
 describe('resolveBrandLogoForPreview', () => {
   const URLS = {
     logoUrl: '/api/documents/view/square-file?t=1',
     logoWideUrl: '/api/documents/view/wide-file?t=2',
   };
+
+  const DARK_URLS = {
+    ...URLS,
+    logoDarkUrl: '/api/documents/view/square-dark-file?t=3',
+    logoWideDarkUrl: '/api/documents/view/wide-dark-file?t=4',
+  };
+
+  it('points each dark variant at its own branding URL', () => {
+    const wideDark = resolveBrandLogoForPreview(
+      applyBrandLogo('<body><h1>Hi</h1></body>', { variant: 'wide-dark' }),
+      DARK_URLS,
+    );
+    const dark = resolveBrandLogoForPreview(
+      applyBrandLogo('<body><h1>Hi</h1></body>', { variant: 'dark' }),
+      DARK_URLS,
+    );
+
+    expect(wideDark).toContain(`src="${DARK_URLS.logoWideDarkUrl}"`);
+    expect(dark).toContain(`src="${DARK_URLS.logoDarkUrl}"`);
+  });
+
+  it('walks the same fallback chain the send path does', () => {
+    const wideDark = applyBrandLogo('<body><h1>Hi</h1></body>', { variant: 'wide-dark' });
+    const dark = applyBrandLogo('<body><h1>Hi</h1></body>', { variant: 'dark' });
+
+    // wide-dark → wide → default
+    expect(resolveBrandLogoForPreview(wideDark, URLS)).toContain(`src="${URLS.logoWideUrl}"`);
+    expect(resolveBrandLogoForPreview(wideDark, { logoUrl: URLS.logoUrl })).toContain(`src="${URLS.logoUrl}"`);
+    // dark → default
+    expect(resolveBrandLogoForPreview(dark, URLS)).toContain(`src="${URLS.logoUrl}"`);
+    expect(resolveBrandLogoForPreview(dark, {})).toBe(dark);
+  });
 
   it('points each variant at the branding URL an iframe can resolve', () => {
     const wide = resolveBrandLogoForPreview(applyBrandLogo('<body><h1>Hi</h1></body>', LOGO), URLS);

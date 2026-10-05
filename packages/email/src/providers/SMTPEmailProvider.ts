@@ -2,7 +2,7 @@
  * SMTP Email Provider - Implements email sending via SMTP protocol
  */
 
-import nodemailer from 'nodemailer';
+import nodemailer, { type Transporter } from 'nodemailer';
 import logger from '@alga-psa/core/logger';
 import {
   IEmailProvider,
@@ -41,7 +41,7 @@ export class SMTPEmailProvider implements IEmailProvider {
     maxRecipientsPerMessage: 100
   };
 
-  private transporter: nodemailer.Transporter | null = null;
+  private transporter: Transporter | null = null;
   private config: SMTPConfig | null = null;
   private initialized = false;
 

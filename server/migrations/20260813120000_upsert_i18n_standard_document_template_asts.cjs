@@ -74,6 +74,8 @@ const LABEL_KEYS = {
   Source: 'labels.source',
   Shipped: 'labels.shipped',
   Picked: 'labels.picked',
+  'Serial numbers': 'labels.serialNumbers',
+  'Allocated serial numbers; subject to change at fulfillment.': 'labels.allocatedSerialsNote',
   Invoice: 'labels.invoice',
   Notes: 'labels.notes',
   'Terms & Conditions': 'labels.termsAndConditions',

@@ -102,7 +102,9 @@
     "jobMonitoring": "⟦Ĵȯƀ Ḿȯƞīŧȯřīƞɠ⟧",
     "jobs": "⟦Ĵȯƀş⟧",
     "emailLogs": "⟦Ḗḿȧīŀ Ŀȯɠş⟧",
-    "extensions": "⟦Ḗẋŧḗƞşīȯƞş⟧"
+    "extensions": "⟦Ḗẋŧḗƞşīȯƞş⟧",
+    "ticketsAll": "⟦Ȧŀŀ Ŧīƈķḗŧş⟧",
+    "ticketsRecurring": "⟦Řḗƈŭřřīƞɠ Ŧīƈķḗŧş⟧"
   },
   "marketing": {
     "dialogs": {

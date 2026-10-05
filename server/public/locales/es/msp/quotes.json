@@ -107,7 +107,9 @@
         "message": "Mensaje",
         "messageOptional": "Mensaje (opcional)",
         "messagePlaceholder": "Añade una nota personal para el destinatario...",
-        "title": "Enviar cotización"
+        "title": "Enviar cotización",
+        "from": "De",
+        "useDefault": "Usar remitente predeterminado"
       }
     },
     "errors": {
@@ -212,7 +214,9 @@
         "description": "Esto enviará la cotización por correo electrónico a los contactos de facturación del cliente y cambiará su estado a \"Enviado\".",
         "title": "Enviar cotización al cliente",
         "additionalEmails": "Destinatarios adicionales",
-        "message": "Mensaje"
+        "message": "Mensaje",
+        "from": "De",
+        "useDefault": "Usar remitente predeterminado"
       }
     },
     "errorActions": {

@@ -69,6 +69,7 @@ interface SendQuoteInput {
   email_addresses?: string[];
   subject?: string;
   message?: string;
+  senderId?: string;
 }
 
 const requireBillingCreatePermission = async (user: unknown): Promise<ActionPermissionError | null> => {
@@ -582,6 +583,7 @@ const sendQuoteEmailWithAttachment = async ({
   subject,
   html,
   text,
+  senderId,
 }: {
   tenant: string;
   quote: IQuote;
@@ -590,12 +592,15 @@ const sendQuoteEmailWithAttachment = async ({
   subject: string;
   html: string;
   text: string;
+  senderId?: string;
 }) => {
   const actorId = getActorUserId(user);
   const pdfBuffer = await createPDFGenerationService(tenant).generatePDF({ quoteId: quote.quote_id, userId: actorId ?? '' });
   const resolvedQuoteNumber = quote.quote_number ?? quote.quote_id;
 
   return await TenantEmailService.getInstance(tenant).sendEmail({
+    mailClass: 'sales',
+    senderId,
     tenantId: tenant,
     to: recipients,
     subject,
@@ -1613,6 +1618,7 @@ export const sendQuote = withAuth(async (
         subject,
         html: renderedEmail.html,
         text: renderedEmail.text,
+        senderId: input.senderId,
       });
 
       emailSent = emailResult.success;
@@ -1713,6 +1719,7 @@ export const resendQuote = withAuth(async (
         subject,
         html: renderedEmail.html,
         text: renderedEmail.text,
+        senderId: input.senderId,
       });
 
       emailSent = emailResult.success;
@@ -1809,6 +1816,7 @@ export const sendQuoteReminder = withAuth(async (
         subject,
         html: renderedEmail.html,
         text: renderedEmail.text,
+        senderId: input.senderId,
       });
 
       emailSent = emailResult.success;

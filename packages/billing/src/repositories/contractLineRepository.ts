@@ -1,4 +1,5 @@
 import { Knex } from 'knex';
+import { withUnitCode } from '@alga-psa/core/unitOfMeasure';
 import { v4 as uuidv4 } from 'uuid';
 
 import { tenantDb } from '@alga-psa/db';
@@ -12,7 +13,7 @@ import {
   normalizeLiveRecurringStorage,
   normalizeTemplateRecurringStorage,
 } from '@alga-psa/shared/billingClients/recurrenceStorageModel';
-import { cloneTemplateLinePools } from '@alga-psa/shared/billingClients/templateClone';
+import { cloneTemplateLinePools, cloneTemplateServiceFixedConfig } from '@alga-psa/shared/billingClients/templateClone';
 import { resolveClonedRate } from '../lib/billing/pricing/resolveFixedLineRate';
 
 export type DetailedContractLine = IContractLineMapping & {
@@ -464,11 +465,19 @@ async function cloneTemplateLineToContract(
         await tenantScopedTable(trx, tenant, 'contract_line_service_usage_config').insert({
           tenant,
           config_id: newConfigId,
-          unit_of_measure: usageConfig.unit_of_measure,
+          ...withUnitCode({ unit_of_measure: usageConfig.unit_of_measure, unit_code: usageConfig.unit_code }),
           enable_tiered_pricing: usageConfig.enable_tiered_pricing,
           created_at: usageConfig.created_at ?? now,
           updated_at: now,
         });
+      }
+
+      // Pricing basis + default unit rate: without this a template's per-seat
+      // service would silently demote to a bundle allocation on the clone.
+      // LEVERAGE: pattern template-pool-roundtrip — this path re-enumerates the
+      // template config tables inline instead of sharing cloneTemplateContractLine.
+      if (configuration.configuration_type === 'Fixed') {
+        await cloneTemplateServiceFixedConfig(trx, tenant, configuration.config_id, newConfigId);
       }
     }
   }

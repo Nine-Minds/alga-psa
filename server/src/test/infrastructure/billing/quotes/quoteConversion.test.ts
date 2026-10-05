@@ -39,6 +39,7 @@ import {
   convertQuoteToDraftSalesOrder,
 } from '../../../../../../packages/billing/src/services/quoteConversionService';
 import { recalculatePercentageDiscountInvoiceCharges } from '../../../../../../packages/billing/src/services/invoiceService';
+import { registerTenantUnit } from '../../../../../../shared/billingClients/tenantUnitsOfMeasure';
 
 const {
   beforeAll: setupContext,
@@ -477,6 +478,52 @@ describe('Quote conversion infrastructure', () => {
     const refreshedQuote = await Quote.getById(context.db, context.tenantId, quote.quote_id);
 
     expect(refreshedQuote?.converted_invoice_id).toBe(result.invoice.invoice_id);
+  });
+
+  it('keeps quote item unit labels and codes together on create and update', async () => {
+    const serviceId = await createTestService(context, {
+      service_name: 'Gigabyte catalog item', billing_method: 'fixed', default_rate: 100,
+      unit_of_measure: 'Gigabyte',
+    });
+    const quote = await Quote.create(context.db, context.tenantId, {
+      client_id: context.clientId, title: 'Unit snapshot', quote_date: QUOTE_DATE,
+      valid_until: VALID_UNTIL, subtotal: 0, discount_total: 0, tax: 0,
+      total_amount: 0, currency_code: 'USD', is_template: false, created_by: context.userId,
+    } as any);
+    const item = await QuoteItem.create(context.db, context.tenantId, {
+      quote_id: quote.quote_id, service_id: serviceId, description: 'Storage',
+      quantity: 1, unit_price: 100, unit_of_measure: 'Terabyte', created_by: context.userId,
+    } as any);
+    expect(item).toMatchObject({ unit_of_measure: 'Terabyte', unit_code: '4L' });
+
+    const changedBack = await QuoteItem.update(context.db, context.tenantId, item.quote_item_id, {
+      unit_of_measure: 'Gigabyte',
+    } as any);
+    expect(changedBack).toMatchObject({ unit_of_measure: 'Gigabyte', unit_code: 'E34' });
+    const changed = await QuoteItem.update(context.db, context.tenantId, item.quote_item_id, {
+      unit_of_measure: 'Terabyte',
+    } as any);
+    expect(changed).toMatchObject({ unit_of_measure: 'Terabyte', unit_code: '4L' });
+    const custom = await registerTenantUnit(context.db, context.tenantId, 'Smoke Unit', 'BX');
+    const customChanged = await QuoteItem.update(context.db, context.tenantId, item.quote_item_id, {
+      unit_of_measure: custom.label,
+    } as any);
+    expect(customChanged).toMatchObject({ unit_of_measure: 'Smoke Unit', unit_code: 'BX' });
+  });
+
+  it('copies quote unit snapshots onto base and discount invoice charges', async () => {
+    const { quote, items } = await createAcceptedQuote([
+      { description: 'Storage', unit_price: 1000, billing_method: 'fixed', unit_of_measure: 'Gigabyte' },
+      { description: 'Storage discount', unit_price: 100, is_discount: true, discount_type: 'fixed' },
+    ]);
+    const result = await context.db.transaction((trx) =>
+      convertQuoteToDraftInvoice(trx, context.tenantId, quote.quote_id, context.userId));
+    const charges = await context.db('invoice_charges').where({ tenant: context.tenantId, invoice_id: result.invoice.invoice_id });
+    const base = charges.find((row: any) => row.description === 'Storage');
+    const discount = charges.find((row: any) => row.description === 'Storage discount');
+    expect(base).toMatchObject({ unit_code: 'E34', unit_label: 'Gigabyte' });
+    expect(discount.unit_code).toBeTruthy();
+    expect(discount.unit_label).toBeTruthy();
   });
 
   it('T113: combined conversion creates both a draft contract and draft invoice in one transaction', async () => {

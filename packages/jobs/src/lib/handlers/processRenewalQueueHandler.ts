@@ -166,6 +166,7 @@ const createRenewalTicketDirectly = async (params: {
   idempotencyKey: string;
   attributes: Record<string, unknown>;
 }): Promise<string> => {
+  // LEVERAGE: pattern ticket-create-composition — creates a ticket then composes assets/agents/team/tags/checklist/activity/events by hand; see createTicketWithSideEffects (packages/tickets/src/lib/createTicketWithSideEffects.ts)
   const created = await TicketModel.createTicketWithRetry(
     {
       title: params.title,

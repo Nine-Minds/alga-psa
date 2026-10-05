@@ -10,6 +10,7 @@ import type {
   QuoteConversionPreviewItem,
 } from '@alga-psa/types';
 import { tenantDb } from '@alga-psa/db';
+import { resolveUnitOfMeasure } from '@alga-psa/core/unitOfMeasure';
 import { v4 as uuidv4 } from 'uuid';
 import { SharedNumberingService } from '@shared/services/numberingService';
 import { isPendingOptional, isQuoteItemIncluded } from '../lib/quoteItemInclusion';
@@ -137,6 +138,7 @@ interface ContractLineMapping {
   item: IQuoteItem;
   contractLineId: string;
   contractLineType: 'Fixed' | 'Hourly' | 'Usage';
+  isUnitPriced: boolean;
 }
 
 function mapQuoteItemToContractLineType(item: IQuoteItem): 'Fixed' | 'Hourly' | 'Usage' {
@@ -149,6 +151,30 @@ function mapQuoteItemToContractLineType(item: IQuoteItem): 'Fixed' | 'Hourly' | 
   }
 
   return 'Fixed';
+}
+
+/**
+ * A recurring catalog service on a Fixed line converts to a per-unit service:
+ * the quoted quantity is the seat count and the quoted unit price is the rate
+ * per unit (contract_line_service_fixed_config.pricing_basis = 'unit'), so a
+ * later quantity change reprices through the normal revision path. Products are
+ * never units, custom items without a catalog service have nothing to attach a
+ * per-unit configuration to, and a fractional quantity is not a seat count;
+ * those keep the bundle pricing they always had.
+ */
+function isUnitPricedRecurringItem(
+  item: IQuoteItem,
+  contractLineType: 'Fixed' | 'Hourly' | 'Usage',
+  productServiceIds: Set<string>
+): boolean {
+  if (contractLineType !== 'Fixed' || !item.service_id) {
+    return false;
+  }
+  if (isProductQuoteItem(item, productServiceIds)) {
+    return false;
+  }
+  const quantity = Number(item.quantity);
+  return Number.isInteger(quantity) && quantity >= 0;
 }
 
 function getContractLineBillingTiming(item: IQuoteItem): 'arrears' | 'advance' {
@@ -653,15 +679,20 @@ export async function convertQuoteToDraftContract(
   });
 
   const nowIso = new Date().toISOString();
-  const contractLineMappings: ContractLineMapping[] = recurringItems.map((item) => ({
-    item,
-    contractLineId: uuidv4(),
-    contractLineType: mapQuoteItemToContractLineType(item),
-  }));
+  const productServiceIds = await resolveProductServiceIds(knexOrTrx, tenant, recurringItems);
+  const contractLineMappings: ContractLineMapping[] = recurringItems.map((item) => {
+    const contractLineType = mapQuoteItemToContractLineType(item);
+    return {
+      item,
+      contractLineId: uuidv4(),
+      contractLineType,
+      isUnitPriced: isUnitPricedRecurringItem(item, contractLineType, productServiceIds),
+    };
+  });
 
   const db = tenantDb(knexOrTrx, tenant);
   await db.table('contract_lines').insert(
-    contractLineMappings.map(({ item, contractLineId, contractLineType }, index) => ({
+    contractLineMappings.map(({ item, contractLineId, contractLineType, isUnitPriced }, index) => ({
       tenant,
       contract_line_id: contractLineId,
       contract_id: contract.contract_id,
@@ -672,7 +703,8 @@ export async function convertQuoteToDraftContract(
       contract_line_type: contractLineType,
       billing_timing: getContractLineBillingTiming(item),
       display_order: index,
-      custom_rate: contractLineType === 'Fixed' ? item.unit_price : null,
+      // A per-unit line has no bundle total: quantity x unit rate is the charge.
+      custom_rate: contractLineType === 'Fixed' && !isUnitPriced ? item.unit_price : null,
       enable_proration: false,
       billing_cycle_alignment: 'start',
       minimum_billable_time: contractLineType === 'Hourly' ? 15 : null,
@@ -686,10 +718,11 @@ export async function convertQuoteToDraftContract(
 
   const configRows = contractLineMappings
     .filter(({ item }) => Boolean(item.service_id))
-    .map(({ item, contractLineId, contractLineType }) => ({
+    .map(({ item, contractLineId, contractLineType, isUnitPriced }) => ({
       item,
       contractLineId,
       contractLineType,
+      isUnitPriced,
       configId: uuidv4(),
       serviceId: item.service_id as string,
     }));
@@ -698,12 +731,12 @@ export async function convertQuoteToDraftContract(
     knexOrTrx,
     tenant,
     'contract_line_services',
-    configRows.map(({ contractLineId, serviceId, item }) => ({
+    configRows.map(({ contractLineId, serviceId, item, isUnitPriced }) => ({
       tenant,
       contract_line_id: contractLineId,
       service_id: serviceId,
       quantity: item.quantity,
-      custom_rate: item.unit_price,
+      custom_rate: isUnitPriced ? null : item.unit_price,
       created_at: nowIso,
       updated_at: nowIso,
     }))
@@ -711,13 +744,13 @@ export async function convertQuoteToDraftContract(
 
   if (configRows.length > 0) {
     await db.table('contract_line_service_configuration').insert(
-      configRows.map(({ configId, contractLineId, contractLineType, serviceId, item }) => ({
+      configRows.map(({ configId, contractLineId, contractLineType, serviceId, item, isUnitPriced }) => ({
         tenant,
         config_id: configId,
         contract_line_id: contractLineId,
         service_id: serviceId,
         configuration_type: contractLineType,
-        custom_rate: item.unit_price,
+        custom_rate: isUnitPriced ? null : item.unit_price,
         quantity: item.quantity,
         created_at: nowIso,
         updated_at: nowIso,
@@ -728,10 +761,13 @@ export async function convertQuoteToDraftContract(
   const fixedConfigRows = configRows.filter((row) => row.contractLineType === 'Fixed');
   if (fixedConfigRows.length > 0) {
     await db.table('contract_line_service_fixed_config').insert(
-      fixedConfigRows.map(({ configId, item }) => ({
+      fixedConfigRows.map(({ configId, item, isUnitPriced }) => ({
         tenant,
         config_id: configId,
+        // Unit rows: base_rate is the rate per unit; the quantity is on the configuration row.
         base_rate: item.unit_price,
+        // Bundle rows are written exactly as before (column defaults).
+        ...(isUnitPriced ? { pricing_basis: 'unit', rate_provenance: 'custom' } : {}),
         created_at: nowIso,
         updated_at: nowIso,
       }))
@@ -775,7 +811,8 @@ export async function convertQuoteToDraftContract(
       usageConfigRows.map(({ configId, item }) => ({
         tenant,
         config_id: configId,
-        unit_of_measure: item.unit_of_measure || 'unit',
+        unit_of_measure: item.unit_of_measure || resolveUnitOfMeasure({ fallback: 'C62' }).label,
+        unit_code: item.unit_code || resolveUnitOfMeasure({ fallback: 'C62' }).code,
         enable_tiered_pricing: false,
         minimum_usage: 0,
         base_rate: item.unit_price,
@@ -1112,6 +1149,7 @@ export async function convertQuoteToDraftInvoice(
 
     const isDiscount = source.is_discount === true;
     const taxAmount = isDiscount ? 0 : Number(source.tax_amount ?? 0);
+    const unit = resolveUnitOfMeasure({ catalog: { code: source.unit_code, label: source.unit_of_measure }, fallback: 'C62' });
 
     return {
       tenant,
@@ -1121,6 +1159,8 @@ export async function convertQuoteToDraftInvoice(
       service_item_kind: source.service_item_kind ?? null,
       service_sku: source.service_sku ?? null,
       service_name: source.service_name ?? null,
+      unit_code: unit.code,
+      unit_label: unit.label,
       description: source.description,
       quantity: isDiscount ? 1 : source.quantity,
       unit_price: isDiscount ? -Math.abs(netAmount) : source.unit_price,

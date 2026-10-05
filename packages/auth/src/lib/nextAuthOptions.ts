@@ -1436,6 +1436,7 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
                 twoFactorCode: { label: "2FA Code", type: "text" },
                 userType: { label: "User Type", type: "text" },
                 tenant: { label: "Tenant", type: "text" },
+                portalDomain: { label: "Portal Domain", type: "text" },
                 captchaToken: { label: "Captcha Token", type: "text" },
             },
             async authorize(credentials, request): Promise<ExtendedUser | null> {
@@ -1458,6 +1459,12 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
                 try {
                     const tenantSlug = typeof credentials?.tenant === 'string'
                         ? credentials.tenant.trim().toLowerCase()
+                        : undefined;
+                    // Vanity sign-in that round-tripped through the query string has
+                    // the portal host but no slug; authenticateUser resolves the
+                    // tenant from it so the lookup is never unscoped.
+                    const portalDomainHint = typeof credentials?.portalDomain === 'string'
+                        ? credentials.portalDomain.trim().toLowerCase() || undefined
                         : undefined;
 
                     if (tenantSlug && !isValidTenantSlug(tenantSlug)) {
@@ -1502,6 +1509,7 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
                         credentials.userType as string,
                         {
                             tenantSlug,
+                            portalDomain: portalDomainHint,
                             requireTenantMatch: Boolean(tenantSlug),
                         }
                     );
@@ -2256,6 +2264,7 @@ export const options: NextAuthConfig = {
                 twoFactorCode: { label: "2FA Code", type: "text" },
                 userType: { label: "User Type", type: "text" },
                 tenant: { label: "Tenant", type: "text" },
+                portalDomain: { label: "Portal Domain", type: "text" },
                 captchaToken: { label: "Captcha Token", type: "text" },
             },
             async authorize(credentials, request): Promise<ExtendedUser | null> {
@@ -2278,6 +2287,12 @@ export const options: NextAuthConfig = {
                 try {
                     const tenantSlug = typeof credentials?.tenant === 'string'
                         ? credentials.tenant.trim().toLowerCase()
+                        : undefined;
+                    // Vanity sign-in that round-tripped through the query string has
+                    // the portal host but no slug; authenticateUser resolves the
+                    // tenant from it so the lookup is never unscoped.
+                    const portalDomainHint = typeof credentials?.portalDomain === 'string'
+                        ? credentials.portalDomain.trim().toLowerCase() || undefined
                         : undefined;
 
                     if (tenantSlug && !isValidTenantSlug(tenantSlug)) {
@@ -2319,6 +2334,7 @@ export const options: NextAuthConfig = {
                         credentials.userType as string,
                         {
                             tenantSlug,
+                            portalDomain: portalDomainHint,
                             requireTenantMatch: Boolean(tenantSlug),
                         }
                     );

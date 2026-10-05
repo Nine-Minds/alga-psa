@@ -107,7 +107,9 @@
         "message": "Wiadomość",
         "messageOptional": "Wiadomość (opcjonalnie)",
         "messagePlaceholder": "Dodaj osobistą notatkę dla odbiorcy...",
-        "title": "Wyślij wycenę"
+        "title": "Wyślij wycenę",
+        "from": "Od",
+        "useDefault": "Użyj domyślnego nadawcy"
       }
     },
     "errors": {
@@ -212,7 +214,9 @@
         "description": "Spowoduje to wysłanie wyceny e-mailem do kontaktów rozliczeniowych klienta i zmianę jej statusu na „Wysłane”.",
         "title": "Wyślij wycenę do klienta",
         "additionalEmails": "Dodatkowi odbiorcy",
-        "message": "Wiadomość"
+        "message": "Wiadomość",
+        "from": "Od",
+        "useDefault": "Użyj domyślnego nadawcy"
       }
     },
     "errorActions": {

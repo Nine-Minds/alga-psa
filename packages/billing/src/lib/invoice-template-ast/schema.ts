@@ -403,16 +403,20 @@ type NodeInput =
       }>;
     };
 
+const nodeNameSchema = z.string().min(1).max(200).optional();
+
 const nodeSchema: z.ZodTypeAny = z.lazy(() =>
   z.discriminatedUnion('type', [
     z.object({
       id: z.string().min(1),
+      name: nodeNameSchema,
       type: z.literal('document'),
       style: nodeStyleRefSchema.optional(),
       children: z.array(nodeSchema),
     }).strict(),
     z.object({
       id: z.string().min(1),
+      name: nodeNameSchema,
       type: z.literal('section'),
       title: i18nTextSchema.optional(),
       style: nodeStyleRefSchema.optional(),
@@ -420,6 +424,7 @@ const nodeSchema: z.ZodTypeAny = z.lazy(() =>
     }).strict(),
     z.object({
       id: z.string().min(1),
+      name: nodeNameSchema,
       type: z.literal('stack'),
       direction: z.enum(['row', 'column']).optional(),
       style: nodeStyleRefSchema.optional(),
@@ -432,18 +437,21 @@ const nodeSchema: z.ZodTypeAny = z.lazy(() =>
     }).strict(),
     z.object({
       id: z.string().min(1),
+      name: nodeNameSchema,
       type: z.literal('text'),
       style: nodeStyleRefSchema.optional(),
       content: valueExpressionSchema,
     }).strict(),
     z.object({
       id: z.string().min(1),
+      name: nodeNameSchema,
       type: z.literal('richText'),
       style: nodeStyleRefSchema.optional(),
       content: valueExpressionSchema,
     }).strict(),
     z.object({
       id: z.string().min(1),
+      name: nodeNameSchema,
       type: z.literal('field'),
       style: nodeStyleRefSchema.optional(),
       binding: bindingRefSchema,
@@ -457,6 +465,7 @@ const nodeSchema: z.ZodTypeAny = z.lazy(() =>
     }).strict(),
     z.object({
       id: z.string().min(1),
+      name: nodeNameSchema,
       type: z.literal('image'),
       style: nodeStyleRefSchema.optional(),
       src: valueExpressionSchema,
@@ -464,11 +473,13 @@ const nodeSchema: z.ZodTypeAny = z.lazy(() =>
     }).strict(),
     z.object({
       id: z.string().min(1),
+      name: nodeNameSchema,
       type: z.literal('divider'),
       style: nodeStyleRefSchema.optional(),
     }).strict(),
     z.object({
       id: z.string().min(1),
+      name: nodeNameSchema,
       type: z.literal('table'),
       style: nodeStyleRefSchema.optional(),
       headerStyle: nodeStyleRefSchema.optional(),
@@ -479,6 +490,7 @@ const nodeSchema: z.ZodTypeAny = z.lazy(() =>
     }).strict(),
     z.object({
       id: z.string().min(1),
+      name: nodeNameSchema,
       type: z.literal('dynamic-table'),
       style: nodeStyleRefSchema.optional(),
       headerStyle: nodeStyleRefSchema.optional(),
@@ -492,6 +504,7 @@ const nodeSchema: z.ZodTypeAny = z.lazy(() =>
     }).strict(),
     z.object({
       id: z.string().min(1),
+      name: nodeNameSchema,
       type: z.literal('totals'),
       style: nodeStyleRefSchema.optional(),
       sourceBinding: bindingRefSchema,

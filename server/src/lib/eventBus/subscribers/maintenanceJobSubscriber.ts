@@ -19,6 +19,8 @@ import { runMaintenanceJob, isKnownMaintenanceJob } from '@alga-psa/jobs/fanout'
 import { executeJobHandler } from '../../jobs/jobHandlerRegistry';
 import { runWithTenant } from '@alga-psa/db';
 import { acquireMaintenanceJobLock } from './maintenanceJobLock';
+import { configureEditionDateTriggerWorkflowLauncher } from '../../jobs/dateTriggerWorkflowLauncher';
+import { isEnterpriseEdition } from '../../features';
 
 let isRegistered = false;
 
@@ -27,6 +29,16 @@ export async function registerMaintenanceJobSubscriber(): Promise<void> {
     return;
   }
 
+  // Configure the fanout's EE date-workflow launcher before accepting Temporal
+  // requests, so an early date-trigger-scan cannot run without it. This does
+  // not depend on job-runner startup order and starts no runner.
+  configureEditionDateTriggerWorkflowLauncher(isEnterpriseEdition());
+  // Server-local jobs must be in the fan-out registry before the first request
+  // arrives, or isKnownMaintenanceJob would route them to the forwarded-job path.
+  // Loaded lazily: the handlers pull the domain graph, which this module's
+  // importers (event bus bootstrap, tests) should not have to load.
+  const { registerServerMaintenanceJobs } = await import('../../jobs/registerServerMaintenanceJobs');
+  registerServerMaintenanceJobs();
   await getEventBus().subscribe('MAINTENANCE_JOB_REQUESTED', handleMaintenanceJobRequested);
 
   isRegistered = true;
@@ -49,7 +61,11 @@ async function handleMaintenanceJobRequested(event: unknown): Promise<void> {
   const { jobName, jobId, data, tenantId } = validated.payload;
 
   try {
-    if (isKnownMaintenanceJob(jobName)) {
+    // Maintenance schedules publish a bare jobName; forwarded jobs always carry
+    // the originating jobId. A job can be both (e.g. accounting-sync-cycle while
+    // legacy per-tenant schedules drain), and a forwarded tenant tick must stay a
+    // single-tenant run rather than trigger an all-tenant fan-out.
+    if (isKnownMaintenanceJob(jobName) && !jobId) {
       // Global maintenance fan-out: run once / across all tenants, and never
       // concurrently with another run of the same job anywhere in the cluster.
       const lock = await acquireMaintenanceJobLock(jobName);
