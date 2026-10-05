@@ -314,7 +314,8 @@
     "inboundDomainAutoCreateContacts": "Skapa kontakter för nya avsändare",
     "inboundDomainAutoCreateHelp": "Mappade domäner kan valfritt skapa en kontakt för en betrodd ny avsändare. Domäner måste vara unika för varje kund.",
     "inboundDomainAutoCreateUpdated": "Inställningen för avsändarkontakter har uppdaterats.",
-    "inboundDomainAutoCreateUpdateFailed": "Det gick inte att uppdatera inställningen för avsändarkontakter."
+    "inboundDomainAutoCreateUpdateFailed": "Det gick inte att uppdatera inställningen för avsändarkontakter.",
+    "recurringTickets": "Återkommande ärenden"
   },
   "clientCommandCenter": {
     "cards": {

@@ -641,6 +641,8 @@
       "catalogPriceMissing": "Żadna cena katalogowa w walucie {{currency}} nie obejmuje tej granicy, więc dodatnia ilość nie może zostać rozliczona. Przed zapisaniem dodaj cenę katalogową w walucie {{currency}} lub wybierz „Nadpisz cenę jednostkową”.",
       "invoiceImpact": "Od {{date}} cykliczna suma częściowa tej pozycji zmienia się o {{delta}} do {{total}} (przed rabatami i podatkiem). Wcześniej zafakturowane okresy pozostają bez zmian.",
       "discardDirty": "Zmiana daty wejścia w życie ponownie wczyta obowiązujące wartości i odrzuci niezapisaną edycję. Kontynuować?",
+      "discardDirtyTitle": "Odrzucić niezapisaną edycję?",
+      "discardDirtyConfirm": "Odrzuć i wczytaj ponownie",
       "invalidQuantity": "Ilość musi być liczbą całkowitą równą 0 lub większą.",
       "invalidRate": "Wprowadź cenę jednostkową równą 0 lub większą albo przełącz na cenę katalogową.",
       "saved": "Zaplanowano: {{quantity}} od {{date}}.",

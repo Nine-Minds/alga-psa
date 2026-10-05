@@ -46,6 +46,7 @@ export const ticketCreatedEventPayloadSchema = BaseDomainEventPayloadSchema.exte
   changes: changesSchema,
   externalLinks: z.array(z.record(z.unknown())).optional()
     .describe('Ticket-level external links created with the ticket'),
+  ...notificationSuppressionPayloadFields,
 }).describe('Payload for TICKET_CREATED');
 
 export type TicketCreatedEventPayload = z.infer<typeof ticketCreatedEventPayloadSchema>;

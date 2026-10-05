@@ -314,7 +314,8 @@
     "inboundDomainAutoCreateContacts": "Create contacts for new senders",
     "inboundDomainAutoCreateHelp": "Mapped domains can optionally create a contact for a trusted new sender. Domains must be unique across clients.",
     "inboundDomainAutoCreateUpdated": "Sender contact setting updated.",
-    "inboundDomainAutoCreateUpdateFailed": "Could not update sender contact setting."
+    "inboundDomainAutoCreateUpdateFailed": "Could not update sender contact setting.",
+    "recurringTickets": "Recurring tickets"
   },
   "clientCommandCenter": {
     "cards": {

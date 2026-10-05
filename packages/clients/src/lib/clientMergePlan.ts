@@ -364,6 +364,19 @@ export const CLIENT_OWNED_MOVE_TABLES: ClientOwnedMoveTable[] = [
   { table: 'appointment_requests', label: 'appointment request' },
   { table: 'telephony_call_intents', label: 'call intent' },
 
+  // Recurring tickets. An enrolment left behind keeps generating tickets for
+  // the archived client. Where the target is already enrolled in the same
+  // definition its enrolment supersedes the source's, whose linked assets
+  // cascade away with it. Run history follows the tickets it created; its
+  // idempotency key does not include `client_id`, so re-stamping cannot collide.
+  {
+    table: 'recurring_ticket_definition_clients',
+    label: 'recurring ticket enrolment',
+    conflictKeyColumns: ['definition_id'],
+    onCollision: 'drop',
+  },
+  { table: 'recurring_ticket_occurrences', label: 'recurring ticket run' },
+
   // Pre-sales. An opportunity or quote left behind disappears from the parent's
   // pipeline while still counting against the archived client.
   { table: 'opportunities', label: 'opportunity' },

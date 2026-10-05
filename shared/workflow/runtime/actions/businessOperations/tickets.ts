@@ -607,6 +607,7 @@ export function registerTicketActions(): void {
 
       let created: any;
       try {
+        // LEVERAGE: pattern ticket-create-composition — creates a ticket then composes assets/agents/team/tags/checklist/activity/events by hand; see createTicketWithSideEffects (packages/tickets/src/lib/createTicketWithSideEffects.ts)
         created = await TicketModel.createTicket(
           {
             title: input.title,

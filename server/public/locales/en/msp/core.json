@@ -102,7 +102,9 @@
     "jobMonitoring": "Job Monitoring",
     "jobs": "Jobs",
     "emailLogs": "Email Logs",
-    "extensions": "Extensions"
+    "extensions": "Extensions",
+    "ticketsAll": "All Tickets",
+    "ticketsRecurring": "Recurring Tickets"
   },
   "marketing": {
     "dialogs": {
