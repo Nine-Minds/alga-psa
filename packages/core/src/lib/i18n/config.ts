@@ -25,7 +25,7 @@ export const LOCALE_CONFIG = {
    * the tenant's country — see countryDateFormat — so a locale names a language
    * and nothing else.
    */
-  supportedLocales: ['en', 'fr', 'es', 'de', 'nl', 'it', 'pl', 'pt', 'xx', 'yy'] as const,
+  supportedLocales: ['en', 'fr', 'es', 'de', 'nl', 'it', 'pl', 'pt', 'sv', 'xx', 'yy'] as const,
 
   /**
    * Human-readable names for each locale
@@ -40,6 +40,7 @@ export const LOCALE_CONFIG = {
     it: 'Italiano',
     pl: 'Polski',
     pt: 'Português (Brasil)',
+    sv: 'Svenska',
     xx: 'Pseudo (xx)',
     yy: 'Pseudo (yy)',
   } as const,
@@ -102,14 +103,23 @@ export function normalizeLocale(value: unknown): SupportedLocale | null {
 }
 
 /**
- * Get the best matching locale from a list of preferred locales
+ * Get the best matching locale from a list of preferred locales.
+ *
+ * Only Accept-Language resolution calls this, and a browser header is a guess
+ * about the visitor rather than a language they chose, so it may only land on a
+ * locale we actually offer: the same filter that hides non-production locales
+ * from the pickers applies here. Otherwise a production visitor sending
+ * `Accept-Language: sv-SE` with no stored preference was auto-assigned the very
+ * pack we withhold from the picker pending native review. Explicit selections
+ * still reach those locales — the cookie, user, client and tenant preferences
+ * resolve through normalizeLocale, not through here.
  */
 export function getBestMatchingLocale(
   preferredLocales: readonly string[],
 ): SupportedLocale {
   for (const locale of preferredLocales) {
     const normalized = normalizeLocale(locale);
-    if (normalized) {
+    if (normalized && filterPseudoLocales([normalized]).length > 0) {
       return normalized;
     }
   }
@@ -148,6 +158,9 @@ export const PSEUDO_LOCALES: ReadonlyArray<SupportedLocale> = ['xx', 'yy'];
  * QA'd, hidden from production language pickers — but they are genuine
  * translations, not QA fills. Promote to a production locale by removing the
  * code from this list once review passes.
+ *
+ * Empty today: 'sv' was previewed here and promoted after its glossary pass.
+ * Keep server/src/middleware/i18nConfig.ts in sync.
  */
 export const PREVIEW_LOCALES: ReadonlyArray<SupportedLocale> = [];
 
@@ -156,6 +169,8 @@ export const PREVIEW_LOCALES: ReadonlyArray<SupportedLocale> = [];
  * offered in any picker, dev or prod. Translations remain on disk so existing
  * users who already selected them keep working, and so we can continue
  * iterating on them, but they won't appear as new selections.
+ *
+ * Empty today.
  */
 export const INCOMPLETE_LOCALES: ReadonlyArray<SupportedLocale> = [];
 

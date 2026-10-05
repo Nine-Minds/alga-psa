@@ -9,6 +9,7 @@ import { accountingSyncCycleHandler } from './handlers/accountingSyncCycleHandle
 import { huduAutoSyncHandler } from './handlers/huduAutoSyncHandler';
 import { reconcileScheduledCommentPublications } from './handlers/publishScheduledCommentHandler';
 import { createClientContractLineCyclesForAllTenants, createNextTimePeriodForTenant } from './tenantPeriodMaintenance';
+import { generateRecurringTicketsHandler, tenantsWithActiveRecurringTickets } from './handlers/generateRecurringTicketsHandler';
 import { initializeJobRunner } from './initializeJobRunner';
 import { SERVER_MAINTENANCE_JOBS } from './serverMaintenanceJobNames';
 
@@ -76,6 +77,13 @@ export function registerServerMaintenanceJobs(): void {
   registerMaintenanceJob(SERVER_MAINTENANCE_JOBS.createClientContractLineCycles, {
     scope: 'system',
     run: () => createClientContractLineCyclesForAllTenants(),
+  });
+  // Narrow to tenants with an active definition: most tenants have none, and the sweep runs every 15 minutes.
+  registerMaintenanceJob(SERVER_MAINTENANCE_JOBS.generateRecurringTickets, {
+    scope: 'tenant',
+    run: (tenantId) => generateRecurringTicketsHandler({ tenantId }),
+    tenants: tenantsWithActiveRecurringTickets,
+    concurrency: 5,
   });
   // Converges per-integration RMM polling schedules with rmm_integrations.
   registerMaintenanceJob(SERVER_MAINTENANCE_JOBS.rmmPollingReconcile, {

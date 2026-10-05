@@ -4,7 +4,11 @@ import type { Knex } from 'knex';
 import cronParser from 'cron-parser';
 import type { WorkflowScheduleDayTypeFilter } from '@alga-psa/workflows/persistence';
 import { workflowTenantTable } from './workflowTenantDb';
-import { toCalendarDateString } from '@alga-psa/core';
+import {
+  classifyInstant,
+  normalizeHolidayDate,
+  type DayClassification
+} from '@alga-psa/shared/lib/businessHours/businessDayCalendar';
 const { parseExpression } = cronParser;
 
 type BusinessHoursScheduleRow = {
@@ -60,22 +64,7 @@ type ResolveResult =
   | { ok: true; value: WorkflowBusinessDayResolution | null }
   | { ok: false; issue: WorkflowBusinessDayValidationIssue };
 
-export type WorkflowDayClassification = 'business' | 'non_business';
-
-type LocalDateInfo = {
-  localDate: string;
-  dayOfWeek: number;
-};
-
-const WEEKDAY_TO_INDEX: Record<string, number> = {
-  sun: 0,
-  mon: 1,
-  tue: 2,
-  wed: 3,
-  thu: 4,
-  fri: 5,
-  sat: 6
-};
+export type WorkflowDayClassification = DayClassification;
 
 const BOUNDED_NEXT_ELIGIBLE_LIMIT = 366;
 const BOUNDED_NEXT_ELIGIBLE_OCCURRENCES = 512;
@@ -89,51 +78,11 @@ export const normalizeWorkflowDayTypeFilter = (
   return 'any';
 };
 
-const toLocalDateInfo = (occurrence: Date, timezone: string): LocalDateInfo => {
-  const formatter = new Intl.DateTimeFormat('en-US', {
-    timeZone: timezone || 'UTC',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    weekday: 'short'
-  });
-  const parts = formatter.formatToParts(occurrence);
-  const year = parts.find((part) => part.type === 'year')?.value ?? '1970';
-  const month = parts.find((part) => part.type === 'month')?.value ?? '01';
-  const day = parts.find((part) => part.type === 'day')?.value ?? '01';
-  const weekday = (parts.find((part) => part.type === 'weekday')?.value ?? 'Sun').toLowerCase().slice(0, 3);
-  return {
-    localDate: `${year}-${month}-${day}`,
-    dayOfWeek: WEEKDAY_TO_INDEX[weekday] ?? 0
-  };
-};
-
-const normalizeHolidayDate = (value: string | Date): string => {
-  try {
-    return toCalendarDateString(value) ?? '';
-  } catch {
-    return '';
-  }
-};
-
 const normalizeHolidayRows = (holidays: HolidayRow[]): HolidayRow[] => holidays.flatMap((holiday) => {
   // LEVERAGE: pattern holiday-date-normalize — skip malformed DATE rows at the workflow loader boundary.
   const holidayDate = normalizeHolidayDate(holiday.holiday_date);
   return holidayDate ? [{ ...holiday, holiday_date: holidayDate }] : [];
 });
-
-const isHolidayForLocalDate = (
-  holidays: HolidayRow[],
-  localDate: string
-): boolean => {
-  const monthDay = localDate.slice(5);
-  return holidays.some((holiday) => {
-    const holidayDate = normalizeHolidayDate(holiday.holiday_date);
-    return holiday.is_recurring
-      ? holidayDate.slice(5) === monthDay
-      : holidayDate === localDate;
-  });
-};
 
 export const classifyWorkflowOccurrenceDay = (params: {
   occurrence: Date;
@@ -141,20 +90,7 @@ export const classifyWorkflowOccurrenceDay = (params: {
   resolution: WorkflowBusinessDayResolution;
 }): WorkflowDayClassification => {
   const classificationTimezone = params.resolution.scheduleTimezone || params.occurrenceTimezone;
-  const localDateInfo = toLocalDateInfo(params.occurrence, classificationTimezone);
-  if (isHolidayForLocalDate(params.resolution.holidays, localDateInfo.localDate)) {
-    return 'non_business';
-  }
-
-  if (params.resolution.is24x7) {
-    return 'business';
-  }
-
-  const entry = params.resolution.entries.find((candidate) => candidate.day_of_week === localDateInfo.dayOfWeek);
-  if (!entry || !entry.is_enabled) {
-    return 'non_business';
-  }
-  return 'business';
+  return classifyInstant(params.occurrence, classificationTimezone, params.resolution);
 };
 
 export const isWorkflowOccurrenceEligible = (params: {

@@ -4,7 +4,7 @@ import { NavigationContainer, useNavigationContainerRef } from "@react-navigatio
 import type { InitialState } from "@react-navigation/native";
 import { getAppConfig, hydrateAppConfig, setActiveBaseUrl } from "../config/appConfig";
 import { clearStoredHost, loadStoredHost, saveStoredHost } from "../config/hostStore";
-import { linking, setDeepLinkSignedIn } from "../navigation/linking";
+import { hasPendingDeepLink, linking, setDeepLinkSignedIn } from "../navigation/linking";
 import { stripTransientRouteParams } from "../navigation/navStatePersistence";
 import type { RootStackParamList } from "../navigation/types";
 import { RootNavigator } from "../navigation/RootNavigator";
@@ -132,6 +132,14 @@ export function AppRoot() {
       }
 
       setNavStateLoaded(false);
+      // A pending deep link (e.g. a ticket link tapped in an email) must win over
+      // the restored screen; React Navigation ignores links when initialState is set.
+      if (await hasPendingDeepLink()) {
+        if (canceled) return;
+        setNavInitialState(undefined);
+        setNavStateLoaded(true);
+        return;
+      }
       const stored = await getSecureJson<InitialState>(`alga.mobile.navState.${userId}`);
       if (canceled) return;
       setNavInitialState(stripTransientRouteParams(stored ?? undefined));

@@ -887,6 +887,48 @@ export const getEntraSyncRunDetail = withAuth(async (user, _ctx, runId: string) 
   });
 });
 
+export type EntraSyncWorkerEvidence = 'available' | 'none' | 'unknown';
+
+/**
+ * Whether anything is polling the queue a sync lands on.
+ *
+ * startEntraSync only proves Temporal accepted the workflow. When no worker
+ * polls tenant-workflows (a worker that died inside a still-"healthy" pod,
+ * issue #3408) the run sits queued and no entra_sync_runs row ever appears, so
+ * a page following it would otherwise see "not found" for half an hour.
+ * Read-only: it describes the task queue and nothing else. `unknown` means
+ * the question could not be answered, not that the worker is missing.
+ */
+export const getEntraSyncWorkerAvailability = withAuth(async (user) => {
+  if (isClientPortalUser(user)) {
+    return { success: false, error: 'Forbidden' } as const;
+  }
+
+  const canRead = await hasPermission(user as any, 'system_settings', 'read');
+  if (!canRead) {
+    return { success: false, error: 'Forbidden: insufficient permissions to view Entra integration' } as const;
+  }
+
+  try {
+    const { probeTemporalReadiness } = await import(
+      '@enterprise/lib/integrations/entra/diagnostics/temporalReadiness'
+    );
+    const readiness = await probeTemporalReadiness();
+    const workerEvidence: EntraSyncWorkerEvidence = readiness.reachable
+      ? readiness.workerEvidence
+      : 'unknown';
+    return {
+      success: true,
+      data: { workerEvidence, taskQueue: readiness.taskQueue || null },
+    } as const;
+  } catch {
+    return {
+      success: true,
+      data: { workerEvidence: 'unknown' as EntraSyncWorkerEvidence, taskQueue: null },
+    } as const;
+  }
+});
+
 export const getEntraReconciliationQueue = withAuth(async (user, { tenant }, limit: number = 50) => {
   if (isClientPortalUser(user)) {
     return { success: false, error: 'Forbidden' } as const;

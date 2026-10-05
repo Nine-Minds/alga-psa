@@ -314,7 +314,8 @@
     "inboundDomainAutoCreateContacts": "Contacten maken voor nieuwe afzenders",
     "inboundDomainAutoCreateHelp": "Gekoppelde domeinen kunnen een contact maken voor een vertrouwde nieuwe afzender.",
     "inboundDomainAutoCreateUpdated": "Instelling voor afzendercontacten bijgewerkt.",
-    "inboundDomainAutoCreateUpdateFailed": "Instelling voor afzendercontacten kan niet worden bijgewerkt."
+    "inboundDomainAutoCreateUpdateFailed": "Instelling voor afzendercontacten kan niet worden bijgewerkt.",
+    "recurringTickets": "Terugkerende tickets"
   },
   "clientCommandCenter": {
     "cards": {

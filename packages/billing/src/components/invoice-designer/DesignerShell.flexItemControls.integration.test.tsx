@@ -107,6 +107,8 @@ afterEach(() => {
 describe('DesignerShell flex item controls', () => {
   beforeEach(() => {
     useInvoiceDesignerStore.getState().resetWorkspace();
+    // Layout, size and flex controls live on the inspector's "Layout & size" tab.
+    useInvoiceDesignerStore.getState().setInspectorTab('layout');
   });
 
   it('applies share preset and advanced preferred size edits for flex children', () => {

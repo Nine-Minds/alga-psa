@@ -67,7 +67,15 @@ export const opportunitySettingsSchema = z.object({
   }
 });
 
-const expectedCloseDateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Expected close date must use YYYY-MM-DD format');
+// A calendar date, but GET used to hand back a full ISO datetime, so
+// integrations coded against that shape keep working: the datetime form is
+// accepted and truncated to its date part.
+const expectedCloseDateSchema = z.string()
+  .regex(
+    /^\d{4}-\d{2}-\d{2}([T ].*)?$/,
+    'Expected close date must use YYYY-MM-DD format',
+  )
+  .transform((value) => value.slice(0, 10));
 const centsSchema = z.number().int().nonnegative();
 
 export const createOpportunitySchema = z.object({

@@ -7,6 +7,7 @@ import { Badge } from '@alga-psa/ui/components/Badge';
 import { getRecurringAuthoringPreview } from '../../recurringAuthoringPreview';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useFormatBillingFrequency } from '@alga-psa/billing/hooks/useBillingEnumOptions';
+import { useTemplateNeutralRate } from '../../templateNeutralRate';
 
 interface TemplateReviewContractStepProps {
   data: TemplateWizardData;
@@ -18,6 +19,9 @@ export function TemplateReviewContractStep({
 }: TemplateReviewContractStepProps) {
   const { t } = useTranslation('msp/contracts');
   const formatBillingFrequency = useFormatBillingFrequency();
+
+  // Templates are currency-neutral: rates render as a plain number (see useTemplateNeutralRate).
+  const formatNeutralRate = useTemplateNeutralRate();
 
   const recurringPreview = getRecurringAuthoringPreview({
     cadenceOwner: data.cadence_owner,
@@ -218,9 +222,24 @@ export function TemplateReviewContractStep({
                         t('templateReview.fallback.unnamedService', { defaultValue: 'Unnamed Service' })}
                     </p>
                     <div className="text-xs text-[rgb(var(--color-text-500))] mt-1">
-                      {t('templateReview.common.quantity', { defaultValue: 'Quantity:' })}{' '}
-                      {service.quantity ?? 1}
+                      {service.pricing_basis === 'unit'
+                        ? t('templateReview.common.recurringQuantity', { defaultValue: 'Recurring quantity:' })
+                        : t('templateReview.common.quantity', { defaultValue: 'Quantity:' })}{' '}
+                      {service.quantity ?? (service.pricing_basis === 'unit' ? 0 : 1)}
                     </div>
+                    {service.pricing_basis === 'unit' && (
+                      <div className="text-xs text-[rgb(var(--color-text-500))] mt-1">
+                        {t('templateReview.fixed.unitRateLabel', { defaultValue: 'Unit rate:' })}{' '}
+                        {service.unit_rate != null
+                          ? t('templateReview.fixed.unitRateNeutral', {
+                              rate: formatNeutralRate(service.unit_rate),
+                              defaultValue: "{{rate}} in the client's currency",
+                            })
+                          : t('templateReview.fixed.unitRateFromCatalog', {
+                              defaultValue: "Catalog price in the client's currency",
+                            })}
+                      </div>
+                    )}
                   </div>
                 ))}
               </>

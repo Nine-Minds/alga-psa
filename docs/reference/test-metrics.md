@@ -348,6 +348,34 @@ The same two counts roll up onto the `metrics` row as `files_measured` /
 headline percentage cannot be read as covering the whole tree without opening
 the detail tab.
 
+## Workflow health and flaky tests
+
+Two tabs track CI maintenance in the same workbook, so nothing about CI health
+lives in GitHub issues.
+
+`workflow_health` gets one row per **failed** run of `Reconcile browser metrics
+exports` and `Browser metrics retention`
+(`scripts/record-workflow-health.mjs`, run from each workflow's `if: failure()`
+step): `timestamp_utc`, `workflow`, `conclusion`, `run_url`, `run_attempt`,
+`event_name`, `revision`, then whatever the failing job's diagnostics carried:
+`phase` and `code` from `browser-metric-collection.json`, `status` and the
+distinct per-record `issues` from `browser-metric-reconciliation.json`. A green
+run writes nothing, so the most recent row is the last failure and a gap after it
+means the workflow recovered.
+
+`flaky_tests` gets the weekly `Flaky test report` (`scripts/record-flaky-tests.mjs`):
+one row per test per report with `reported_at_utc`, the ISO `week`, `window_days`,
+`since`, `suite`, `test_id`, `jobs`, `main_occurrences`, `pr_occurrences`,
+`occurrences`, `first_seen`, `last_seen` and the report run's id and URL. The
+script reads the `report_run_id` column first and appends nothing for a run it
+already recorded, so a re-run attempt cannot duplicate a week. An empty window
+appends nothing.
+
+Owners, status and fix PRs are tracked by hand in a tab of your own (for example
+`flaky_test_owners`, keyed by `test_id`) and joined with a lookup; no script writes
+to it, so nothing typed there is overwritten. Both tabs are created with their
+header on first append, like every other tab here.
+
 ## One-time setup
 
 1. In Google Cloud Console, create a service account (any project) and enable

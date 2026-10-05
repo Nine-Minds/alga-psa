@@ -172,7 +172,13 @@ jobs:
   server-unit:
     name: Server unit shard ${{ matrix.shard }}
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # Shards land at 27-29 minutes (~6 min collection, ~8 min tests, then v8
+    # spends ~14 silent minutes on coverage after the last test module), so 30
+    # left no headroom: shard 4 was killed at exactly 30m0s with all 776 of its
+    # files already green, and the null evidence it uploaded then failed the
+    # server-unit-complete, inventory and readiness gates. Same 45 the
+    # nx-affected job above uses.
+    timeout-minutes: 45
     strategy:
       fail-fast: false
       matrix:
@@ -192,8 +198,10 @@ jobs:
           cache: 'npm'
       - name: Upgrade npm to version 11
         run: npm install -g npm@11
-      - name: Install dependencies
-        run: npm ci
+      - name: Install server unit dependencies with bounded download recovery
+        env:
+          FFMPEG_STATIC_DOWNLOAD_RETRY: 'true'
+        run: node scripts/install-api-test-dependencies.mjs
       # A few contract tests shell out to ripgrep; it isn't on the runner by
       # default. Installed from its GitHub release, not apt (the apt mirror hang
       # here once stalled this job for ~6h). See the composite action for why.

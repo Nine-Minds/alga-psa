@@ -371,6 +371,7 @@ export const DesignerVisualWorkspace: React.FC<DesignerVisualWorkspaceProps> = (
               </label>
               <div className="w-fit">
                 <CustomSelect
+                  showPlaceholderInDropdown={false}
                   id="invoice-designer-preview-sample-select"
                   options={INVOICE_PREVIEW_SAMPLE_SCENARIOS.map((scenario) => ({
                     value: scenario.id,

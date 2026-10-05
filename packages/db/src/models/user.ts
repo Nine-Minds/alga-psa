@@ -120,6 +120,24 @@ const User = {
     }
   },
 
+  /**
+   * Every user of this type with this email, across tenants. The `.first()`
+   * sibling above answers an arbitrary one of them, which is wrong for sign-in
+   * when no tenant is known: callers need to see the ambiguity to refuse it.
+   */
+  findUsersByEmailAndType: async (email: string, userType: 'internal' | 'client'): Promise<IUser[]> => {
+    const db = await getAdminConnection();
+    try {
+      return await tenantDb(db, USER_MODEL_DISCOVERY_TENANT)
+        .unscoped<IUser>('users', USER_DISCOVERY_BY_EMAIL_AND_TYPE_REASON)
+        .select('*')
+        .where({ email: email.toLowerCase(), user_type: userType });
+    } catch (error) {
+      logger.error(`Error finding users with email ${email} and type ${userType}:`, error);
+      throw error;
+    }
+  },
+
   findUserByEmailTenantAndType: async (
     email: string,
     tenantId: string,

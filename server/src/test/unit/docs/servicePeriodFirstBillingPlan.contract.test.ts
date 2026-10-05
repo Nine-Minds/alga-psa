@@ -125,6 +125,9 @@ const billingCycleAlignmentPostInventoryRefs = new Set([
   // after the pass-0 snapshot.
   'packages/billing/src/components/billing-dashboard/contracts/CreateCustomContractLineDialog.tsx',
   'packages/billing/tests/ContractLineServiceForm.fixedPricingBasis.test.tsx',
+  // Per-seat recurring services (feature/contract-services-per-seat-recurring-quantities)
+  // seed billing_cycle_alignment in their preset fixtures after the snapshot.
+  'server/src/test/integration/contractServicesPerSeatPreset.integration.test.ts',
 ]);
 
 // Files whose billing_cycle_alignment references were removed after the pass-0
@@ -294,6 +297,15 @@ const servicePeriodPostInventoryRefs = new Set([
   // persisted boundaries and were added after the historical snapshot.
   'packages/billing/src/actions/contractCadenceCoverageAudit.ts',
   'server/src/test/infrastructure/billing/invoices/contractCadenceCoverageAudit.test.ts',
+  // Scheduled recurring quantity/price revisions (per-seat recurring services)
+  // resolve their boundaries and true-up windows from persisted service periods.
+  'packages/billing/src/components/billing-dashboard/contracts/RecurringUnitSchedulePanel.tsx',
+  // Its discard-prompt acceptance suite stubs the effective-pricing reader,
+  // which is keyed by the persisted service_period_start boundary.
+  'packages/billing/tests/RecurringUnitSchedulePanel.discardDialog.test.tsx',
+  'packages/billing/src/lib/billing/reconcileAutomaticInvoiceDiscounts.ts',
+  'packages/billing/src/lib/billing/recurringPricingIdentity.ts',
+  'packages/billing/src/lib/billing/recurringPricingIdentity.test.ts',
 ]);
 
 // Files whose persisted service-period field references were removed after the
