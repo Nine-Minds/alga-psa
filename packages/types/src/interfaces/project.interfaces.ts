@@ -26,6 +26,7 @@ export const DEFAULT_CLIENT_PORTAL_CONFIG: IClientPortalConfig = {
 export const CONFIGURABLE_TASK_FIELDS = [
   { key: 'task_name', label: 'Task Name', required: true },
   { key: 'description', label: 'Description', required: false },
+  { key: 'start_date', label: 'Start Date', required: false },
   { key: 'due_date', label: 'Due Date', required: false },
   { key: 'status', label: 'Status', required: false },
   { key: 'assigned_to', label: 'Assigned To', required: false },
