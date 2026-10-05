@@ -203,6 +203,11 @@ async function seedWorkflow(knex, tenantId, workflow) {
 }
 
 exports.up = async function up(knex) {
+  // EE-only table: CE has no workflow runtime, so there is nothing to seed.
+  if (!(await knex.schema.hasTable('tenant_workflow_schedule'))) {
+    return;
+  }
+
   const { tenantDb } = require('./utils/tenantDb.cjs');
   const migrationDb = tenantDb(knex, MIGRATION_TENANT);
   const tenants = await migrationDb.unscoped('tenants', ENUMERATION_REASON).select('tenant');
@@ -226,7 +231,9 @@ exports.down = async function down(knex) {
     .select('workflow_id');
   const ids = definitions.map((row) => row.workflow_id);
   if (ids.length) {
-    await migrationDb.unscoped('tenant_workflow_schedule', ROLLBACK_REASON).whereIn('workflow_id', ids).del();
+    if (await knex.schema.hasTable('tenant_workflow_schedule')) {
+      await migrationDb.unscoped('tenant_workflow_schedule', ROLLBACK_REASON).whereIn('workflow_id', ids).del();
+    }
     await migrationDb.unscoped('workflow_definition_versions', ROLLBACK_REASON).whereIn('workflow_id', ids).del();
     await migrationDb.unscoped('workflow_definitions', ROLLBACK_REASON).whereIn('workflow_id', ids).del();
   }
