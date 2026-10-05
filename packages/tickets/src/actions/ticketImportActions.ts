@@ -454,7 +454,12 @@ export const importTickets = withAuth(async (
       throw new Error('Permission denied: Cannot create priorities. Change unmatched priorities to "Map to existing" or "Use default".');
     }
 
-    const hasContactCreates = contactResolutions.some(r => r.action === 'create');
+    // Contact creation is driven by the __create__ placeholders the insert path
+    // consumes, not by the resolution metadata — gate on both so a crafted
+    // payload cannot smuggle placeholders past an empty resolution array.
+    const hasContactCreates =
+      processedTickets.some(t => t.contact_id?.startsWith('__create__:')) ||
+      contactResolutions.some(r => r.action === 'create');
     if (hasContactCreates && !await hasPermission(user, 'contact', 'create', trx)) {
       throw new Error('Permission denied: Cannot create contacts. Change unmatched contacts to "Map to existing" or "Skip".');
     }
