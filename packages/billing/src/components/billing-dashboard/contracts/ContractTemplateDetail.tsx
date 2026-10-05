@@ -252,6 +252,10 @@ function isUsageConfig(
 const ContractTemplateDetail: React.FC = () => {
   const { money } = useCurrencyFormat();
   const { t } = useTranslation("msp/contracts");
+  // Loading depends on the contract ID, not on the identity of the translator.
+  // Keep error messages current without restarting the load on every render.
+  const translateRef = useRef(t);
+  translateRef.current = t;
   const billingFrequencyOptions = useBillingFrequencyOptions();
   const formatNeutralRate = useTemplateNeutralRate();
   const formatTemplateRate = (minorUnits?: number | null) =>
@@ -394,7 +398,7 @@ const ContractTemplateDetail: React.FC = () => {
   }, [contract]);
 
   useEffect(() => {
-    const currentContractId = contract?.contract_id ?? null;
+    const currentContractId = contractId ?? null;
     if (!currentContractId) {
       return;
     }
@@ -403,7 +407,7 @@ const ContractTemplateDetail: React.FC = () => {
       setShowServicesEditor(false);
       lastContractIdRef.current = currentContractId;
     }
-  }, [contract?.contract_id]);
+  }, [contractId]);
 
   useEffect(() => {
     setGuidanceForm({
@@ -551,7 +555,7 @@ const ContractTemplateDetail: React.FC = () => {
           setSummary(null);
           setAssignments([]);
           setError(
-            t("templateDetail.templateNotFound", {
+            translateRef.current("templateDetail.templateNotFound", {
               defaultValue: "Contract template not found",
             }),
           );
@@ -598,7 +602,7 @@ const ContractTemplateDetail: React.FC = () => {
       } catch (loadError) {
         console.error("Error loading contract template detail:", loadError);
         setError(
-          t("templateDetail.failedToLoadTemplate", {
+          translateRef.current("templateDetail.failedToLoadTemplate", {
             defaultValue: "Failed to load contract template",
           }),
         );
@@ -607,7 +611,7 @@ const ContractTemplateDetail: React.FC = () => {
         setIsLoading(false);
       }
     },
-    [enrichServices, t],
+    [enrichServices],
   );
 
   const resetBasicsForm = useCallback(() => {

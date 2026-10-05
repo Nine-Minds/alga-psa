@@ -1914,6 +1914,15 @@
       "notThisClient": "Einer der ausgewählten Kontakte gehört nicht zum Kunden dieses Abrechnungsprofils."
     }
   },
+  "clientDefaultTimeEntryServiceSettings": {
+    "title": "Standarddienst für Zeiteinträge",
+    "label": "Standarddienst für Zeiteinträge",
+    "placeholder": "Standard des Mandanten verwenden",
+    "help": "Wird für neue Zeiteinträge in Tickets dieses Kunden verwendet. Auswahl aufheben, um den Standard des Mandanten zu verwenden.",
+    "updatedSuccess": "Standarddienst für Zeiteinträge aktualisiert.",
+    "saveError": "Standarddienst für Zeiteinträge konnte nicht gespeichert werden",
+    "loadError": "Standarddienst für Zeiteinträge konnte nicht geladen werden"
+  },
   "clientAutopay": {
     "setupLinkTitle": "Link zur Karteneinrichtung",
     "setupLinkFallback": "Kopieren Sie diesen Link, um ihn mit Ihrem Kunden zu teilen.",

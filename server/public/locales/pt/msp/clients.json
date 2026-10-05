@@ -1914,6 +1914,15 @@
       "notThisClient": "Um dos contatos selecionados não pertence ao cliente deste perfil de faturamento."
     }
   },
+  "clientDefaultTimeEntryServiceSettings": {
+    "title": "Serviço padrão para registros de tempo",
+    "label": "Serviço padrão para registros de tempo",
+    "placeholder": "Usar o padrão da organização",
+    "help": "Usado em novos registros de tempo em tickets deste cliente. Limpe a seleção para usar o padrão da organização.",
+    "updatedSuccess": "Serviço padrão para registros de tempo atualizado.",
+    "saveError": "Falha ao salvar o serviço padrão para registros de tempo",
+    "loadError": "Falha ao carregar o serviço padrão para registros de tempo"
+  },
   "clientAutopay": {
     "setupLinkTitle": "Link de configuração do cartão",
     "setupLinkFallback": "Copie este link para compartilhá-lo com o seu cliente.",
