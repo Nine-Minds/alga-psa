@@ -213,12 +213,20 @@ function jobRecord(job) {
 }
 
 function helmReleaseRecord(release) {
-  const ready = (release?.status?.conditions || []).find((condition) => condition.type === 'Ready');
+  const conditions = release?.status?.conditions || [];
+  const ready = conditions.find((condition) => condition.type === 'Ready');
+  // A stalled release (retries exhausted) keeps Ready=Unknown "reconciliation
+  // in progress" forever; the actual Helm error is on Released.
+  const stalled = conditions.find((condition) => condition.type === 'Stalled' && condition.status === 'True');
+  const released = conditions.find((condition) => condition.type === 'Released' && condition.status === 'False');
   return {
     name: release?.metadata?.name || 'unknown',
     ready: ready?.status || 'Unknown',
-    reason: ready?.reason || null,
-    message: ready?.message || null
+    reason: stalled?.reason || ready?.reason || null,
+    message: stalled
+      ? [stalled.message, released?.message].filter(Boolean).join(': ') || null
+      : (ready?.message || null),
+    stalled: Boolean(stalled)
   };
 }
 
@@ -345,6 +353,29 @@ function helmReleaseIssues(releases) {
   return issues;
 }
 
+// Fold the automatic release recovery's view of each release into its blocker
+// text: a release it already re-ran is "waiting for Flux", one it left alone
+// says why, so the operator knows whether to act.
+function annotateHelmIssuesWithAutoRecovery(helmIssues, autoRecovery) {
+  if (!autoRecovery) return helmIssues;
+  return helmIssues.map((issue) => {
+    const pending = (autoRecovery.recent || []).find((attempt) => attempt.release === issue.release && attempt.outcome === 'pending');
+    if (pending) {
+      const verified = (pending.verified || []).join(', ') || 'its workloads';
+      return {
+        ...issue,
+        autoRecovery: 'pending',
+        text: `${issue.text} — re-run automatically at ${pending.at}: revision ${pending.failedRevision} failed only on a rollout timeout and ${verified} became healthy afterwards; waiting for Flux to finish the upgrade.`
+      };
+    }
+    const deferred = (autoRecovery.deferred || []).find((entry) => entry.release === issue.release);
+    if (deferred) {
+      return { ...issue, autoRecovery: 'deferred', text: `${issue.text} — not re-run automatically: ${deferred.reason}.` };
+    }
+    return issue;
+  });
+}
+
 function isTransientHelmReleaseConvergenceIssue(issue) {
   const lower = String(issue?.text || '').toLowerCase();
   return lower.includes("running 'install' action with timeout") ||
@@ -399,12 +430,15 @@ function deriveFailureSummary(installState, pods, helmIssues, warnings) {
   }
 
   if (helmIssues.length > 0) {
+    const allAutoRecovering = helmIssues.every((issue) => issue.autoRecovery === 'pending');
     summaries.push({
       category: 'flux',
       phase: 'flux',
       lastAction: 'One or more Helm releases are not ready.',
       suspectedCause: helmIssues.map((issue) => issue.text).join('; '),
-      suggestedNextStep: 'Once the release\'s pods are healthy, use Recovery → "Recover releases" on the Overview to re-run the stalled upgrade (equivalent to `flux reconcile helmrelease <name> -n alga-system --force --reset`).',
+      suggestedNextStep: allAutoRecovering
+        ? 'No action needed: the control plane re-ran these releases automatically and Flux is finishing the upgrade. This usually takes a few minutes.'
+        : 'Once the release\'s pods are healthy, use Recovery → "Recover releases" on the Overview to re-run the stalled upgrade (equivalent to `flux reconcile helmrelease <name> -n alga-system --force --reset`).',
       retrySafe: true,
       // A stalled email/temporal/workflow release degrades background work but
       // leaves login working; only core releases block login.
@@ -599,6 +633,7 @@ function buildStatusSnapshot({
   setupEngineLog,
   dnsReconcile,
   hostHealth,
+  releaseAutoRecovery,
   nodeResult,
   podResult,
   jobResult,
@@ -650,7 +685,7 @@ function buildStatusSnapshot({
   const jobs = records(jobResult, jobRecord);
   const releases = records(helmResult, helmReleaseRecord);
 
-  const helmIssues = helmReleaseIssues(releases);
+  const helmIssues = annotateHelmIssuesWithAutoRecovery(helmReleaseIssues(releases), releaseAutoRecovery);
   const blockingHelmIssues = blockingHelmReleaseIssues(failureState, helmIssues);
   const nodeWarnings = nodeResult.ok ? [] : [`node query failed: ${queryError(nodeResult)}`];
   const podWarnings = podResult.ok ? [] : [`pod query failed: ${queryError(podResult)}`];
@@ -721,13 +756,19 @@ function buildStatusSnapshot({
     });
   } else if (dnsReconcile && dnsReconcile.state === 'submitted' && dnsReconcile.ok === null) {
     removeDnsStepFailures();
+    // `activation` is the host record as it was when this reconcile started;
+    // a failed one is the attempt being retried, not the current outcome.
+    const previousFailure = dnsReconcile.activation?.stage === 'failed' ? dnsReconcile.activation.error : null;
+    const inProgress = previousFailure
+      ? 'Cluster DNS activation is being retried; setup is gated until it completes.'
+      : 'Cluster DNS activation is in progress; setup is gated until it completes.';
     failures.push({
       category: 'dns',
       phase: 'dns',
       step: 'reconcile-cluster-dns',
-      lastAction: 'Cluster DNS activation is in progress; setup is gated until it completes.',
-      suspectedCause: 'Cluster DNS activation is in progress; setup is gated until it completes.',
-      details: dnsReconcile.activation?.error || null,
+      lastAction: inProgress,
+      suspectedCause: inProgress,
+      details: previousFailure ? `Previous attempt failed: ${previousFailure}` : null,
       suggestedNextStep: 'Wait for DNS activation to finish (watch the reconcile log); if it stalls, run setup again to retry.',
       retrySafe: true,
       pending: true,
@@ -797,6 +838,7 @@ function buildStatusSnapshot({
     lastRecordedError: resolvedNetworkFailure,
     engineLog: setupEngineLog || null,
     dnsReconcile: dnsReconcile || null,
+    releaseAutoRecovery: releaseAutoRecovery || null,
     tiers,
     failures,
     readinessTiers,
@@ -884,6 +926,7 @@ export async function collectStatusSnapshotAsync(options = {}) {
     ? (typeof options.networkProbe === 'function' ? await options.networkProbe() : options.networkProbe)
     : undefined;
   const hostHealth = typeof options.hostHealth === 'function' ? options.hostHealth() : options.hostHealth;
+  const releaseAutoRecovery = typeof options.releaseAutoRecovery === 'function' ? options.releaseAutoRecovery() : options.releaseAutoRecovery;
 
   return buildStatusSnapshot({
     ...context,
@@ -892,6 +935,7 @@ export async function collectStatusSnapshotAsync(options = {}) {
     setupEngineLog: options.setupEngineLog,
     dnsReconcile: options.dnsReconcile,
     hostHealth,
+    releaseAutoRecovery,
     nodeResult,
     podResult,
     jobResult,

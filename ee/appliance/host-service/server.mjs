@@ -25,7 +25,8 @@ import { PortForwardManager } from './port-forward-manager.mjs';
 import { ensurePodAccessRbac } from './pod-access-rbac.mjs';
 import { accessError, PodAccessError, requestHasSameOrigin } from './pod-access-common.mjs';
 import { createUpdateCoordinator } from './update-controller.mjs';
-import { DEFAULT_UPDATE_OWNER_MAX_AGE_MS, isPidAlive } from './update-ownership.mjs';
+import { DEFAULT_UPDATE_OWNER_MAX_AGE_MS, isPidAlive, isUpdateInProgressStatus } from './update-ownership.mjs';
+import { createReleaseAutoRecovery, summarizeAutoRecoveryRecord } from './release-auto-recovery.mjs';
 import {
   collectManageStatus,
   createLicenseStatusCache,
@@ -348,6 +349,28 @@ const dnsReconciler = createDnsReconciler({
     const state = readInstallStateSafe();
     return installStateRunning(state) && setupWorkflowOwnerAlive(state);
   },
+  logger: console
+});
+
+// Re-runs HelmReleases that stalled on a rollout timeout once their workloads
+// are healthy (release-auto-recovery.mjs). It stands down while setup or an app
+// update owns the releases: those drive and judge the releases themselves.
+const releaseAutoRecovery = createReleaseAutoRecovery({
+  clusterReader,
+  runKubectl: (args) => runQueuedKubectl(kubectlCommand(args, KUBECTL_API_TIMEOUT_MS), { timeoutMs: KUBECTL_API_TIMEOUT_MS }),
+  stateFile,
+  disabled: process.env.ALGA_APPLIANCE_DISABLE_RELEASE_AUTO_RECOVERY === '1',
+  intervalMs: Number(process.env.ALGA_APPLIANCE_RELEASE_AUTO_RECOVERY_INTERVAL_MS || 0) || undefined,
+  startupDelayMs: process.env.ALGA_APPLIANCE_RELEASE_AUTO_RECOVERY_STARTUP_DELAY_MS !== undefined
+    ? Number(process.env.ALGA_APPLIANCE_RELEASE_AUTO_RECOVERY_STARTUP_DELAY_MS)
+    : undefined,
+  shouldSkip: () => {
+    const state = readInstallStateSafe();
+    if (isUpdateInProgressStatus(state?.status)) return `an app update is in progress (${state.status})`;
+    if (installStateRunning(state)) return `setup is running (${state.status})`;
+    return null;
+  },
+  onChange: () => invalidateStatusSnapshot(),
   logger: console
 });
 
@@ -891,6 +914,7 @@ function statusSnapshotOptions() {
     autoRetry: computeAutoRetrySummary(installStateForProbe),
     setupEngineLog: { file: setupEngineLogFile, error: setupEngineLog.error },
     dnsReconcile: dnsReconciler.readResult(),
+    releaseAutoRecovery: () => summarizeAutoRecoveryRecord(releaseAutoRecovery.readRecord()),
     hostHealth: () => ({ cpu: hostCapabilities(), disk: diskLatencyMonitor.sample() })
   };
 }
@@ -2113,6 +2137,7 @@ function shutdownControlPlane(signal) {
   podExecManager.shutdown();
   portForwardManager.shutdown();
   dnsReconciler.shutdown();
+  releaseAutoRecovery.shutdown();
   execWebSocketServer.close();
   server.close(() => process.exit(0));
   const forceExit = setTimeout(() => process.exit(0), 5_000);
@@ -2129,4 +2154,5 @@ if (!AUTO_RETRY_DISABLED) {
 }
 
 dnsReconciler.start();
+releaseAutoRecovery.start();
 

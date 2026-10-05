@@ -134,6 +134,12 @@ export function createClusterReader({
     listReplicaSets: ({ namespace, ...options } = {}) => list((api, o) => (namespace
       ? api.apps.listNamespacedReplicaSet({ namespace }, o)
       : api.apps.listReplicaSetForAllNamespaces({}, o)), options),
+    listStatefulSets: ({ namespace, ...options } = {}) => list((api, o) => (namespace
+      ? api.apps.listNamespacedStatefulSet({ namespace }, o)
+      : api.apps.listStatefulSetForAllNamespaces({}, o)), options),
+    listDaemonSets: ({ namespace, ...options } = {}) => list((api, o) => (namespace
+      ? api.apps.listNamespacedDaemonSet({ namespace }, o)
+      : api.apps.listDaemonSetForAllNamespaces({}, o)), options),
     listEvents: (options) => list((api, o) => api.core.listEventForAllNamespaces({}, o), options),
     listHelmReleases: ({ namespace, ...options } = {}) => list((api, o) => api.custom.listNamespacedCustomObject({
       group: FLUX_HELM_GROUP,

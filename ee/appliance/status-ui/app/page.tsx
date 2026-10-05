@@ -148,6 +148,11 @@ type StatusResponse = {
     at?: string | null;
     logFile?: string | null;
   } | null;
+  releaseAutoRecovery?: {
+    lastCheck?: { at?: string; outcome?: string; detail?: string } | null;
+    recent?: AutoRecoveryAttempt[];
+    deferred?: Array<{ release: string; reason: string }>;
+  } | null;
   kubernetes?: {
     nodes?: Array<{ name?: string; ready?: boolean }>;
     podCount?: number;
@@ -164,6 +169,33 @@ type StatusResponse = {
     stderr?: string;
   }>;
 };
+
+type AutoRecoveryAttempt = {
+  release: string;
+  failedRevision: number;
+  at: string;
+  failure?: string;
+  verified?: string[];
+  outcome: "pending" | "recovered" | "failed-again" | "unresolved" | "error";
+  outcomeAt?: string;
+  outcomeMessage?: string;
+  recoveredRevision?: number;
+};
+
+function autoRecoveryOutcome(attempt: AutoRecoveryAttempt): string {
+  switch (attempt.outcome) {
+    case "recovered":
+      return `Recovered (revision ${attempt.recoveredRevision ?? "?"} deployed).`;
+    case "pending":
+      return "Flux is re-running the upgrade.";
+    case "failed-again":
+      return `The re-run failed again: ${attempt.outcomeMessage || "see the release status"}. Use Recover releases once the pods are healthy, or collect a support bundle.`;
+    case "unresolved":
+      return "The re-run has not finished; check the release status.";
+    default:
+      return `Could not start the re-run: ${attempt.outcomeMessage || "unknown error"}.`;
+  }
+}
 
 type NamespaceItem = { name: string; phase?: string };
 type Deployment = {
@@ -1164,6 +1196,36 @@ export default function StatusPage() {
 
             <article className={styles.panel}>
               <h2>Recovery</h2>
+              {(status?.releaseAutoRecovery?.recent || []).length > 0 ? (
+                <div id="appliance-auto-recovery">
+                  <p className={styles.muted}>
+                    Releases the control plane re-ran automatically in the last
+                    24 hours. Each had stalled after an upgrade that timed out
+                    waiting for its pods, and its workloads had become healthy
+                    since.
+                  </p>
+                  {(status?.releaseAutoRecovery?.recent || []).map((attempt) => (
+                    <div className={styles.operation} key={`${attempt.release}-${attempt.failedRevision}-${attempt.at}`}>
+                      <strong>{attempt.release}</strong>
+                      <p>
+                        Revision {attempt.failedRevision} failed
+                        {attempt.verified?.length ? ` while ${attempt.verified.join(", ")} was still rolling out` : " on a rollout timeout"};
+                        re-run automatically at {new Date(attempt.at).toLocaleString()}.{" "}
+                        {autoRecoveryOutcome(attempt)}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+              {releaseBlocker && (status?.releaseAutoRecovery?.deferred || []).length > 0 ? (
+                <div>
+                  {(status?.releaseAutoRecovery?.deferred || []).map((entry) => (
+                    <p className={styles.helpText} key={entry.release}>
+                      <strong>{entry.release}</strong> was not re-run automatically: {entry.reason}.
+                    </p>
+                  ))}
+                </div>
+              ) : null}
               {releaseBlocker || recoverReleasesMsg ? (
                 <>
                   <p className={styles.muted}>
