@@ -171,7 +171,7 @@ export function buildWorkflowAuthoringGuide(): WorkflowAuthoringGuide {
         'Expressions are JSONata programs written as { "$expr": "<source>" } objects.',
         '`==` is normalized to JSONata `=` for equality; use `!=`, `>`, `>=`, `<`, `<=` for comparisons and `and` / `or` for boolean logic. `$not(...)` is NOT allowlisted — negate with the conditional `expr ? false : true` (treats a missing value as false-y, like $not would), or compare explicitly (`vars.flag = false`); note comparisons against a missing field evaluate to false.',
         'String concatenation uses `&` (e.g. payload.name & "!"). String literals use double quotes inside the source.',
-        'Only these five functions are allowed, exhaustively: nowIso, coalesce, len, toString, append. They may be called with or without a $ prefix; any other function name fails validation.',
+        `Only these functions are allowed, exhaustively: ${listWorkflowExpressionFunctions().map((fn) => fn.name).join(', ')}. They may be called with or without a $ prefix; any other function name, JSONata built-ins such as $length or $split included, fails validation.`,
         'Results must be JSON-serializable and under 256KiB.',
       ],
       contexts: [

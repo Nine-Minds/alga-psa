@@ -14,6 +14,7 @@ export {
   getQboTaxCodes,
   getQboAutomatedSalesTaxMode,
   setQboAutomatedSalesTaxMode,
+  getQboCompanyCountryInfo,
   getQboTerms,
   getQboCustomers,
   resetQboCatalogCacheForTenant,

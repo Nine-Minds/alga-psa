@@ -1,12 +1,12 @@
 import { z } from 'zod';
-import { BaseDomainEventPayloadSchema, uuidSchema } from './commonEventPayloadSchemas';
+import { BaseDomainEventPayloadSchema, uuidSchema, entityIdSchema } from './commonEventPayloadSchemas';
 
 const appointmentIdSchema = uuidSchema('Appointment ID');
-const ticketIdSchema = uuidSchema('Ticket ID');
+const ticketIdSchema = entityIdSchema('Ticket ID', 'ticket');
 const scheduleBlockIdSchema = uuidSchema('Schedule Block ID');
 const scheduleEntryIdSchema = uuidSchema('Schedule Entry ID');
 const teamIdSchema = uuidSchema('Team ID');
-const userIdSchema = uuidSchema('User ID');
+const userIdSchema = entityIdSchema('User ID', 'user');
 const appointmentRequestIdSchema = uuidSchema('Appointment Request ID');
 const serviceIdSchema = uuidSchema('Service ID');
 
@@ -187,12 +187,12 @@ export const appointmentRequestEventPayloadSchema = BaseDomainEventPayloadSchema
   requesterEmail: z.string().email(),
   requesterName: z.string().nullable().optional(),
   requesterPhone: z.string().nullable().optional(),
-  clientId: z.string().uuid().optional(),
-  contactId: z.string().uuid().optional(),
+  clientId: entityIdSchema('Client ID', 'client').optional(),
+  contactId: entityIdSchema('Contact ID', 'contact').optional(),
   clientUserId: z.string().uuid().optional(),
   preferredAssignedUserId: z.string().uuid().optional(),
   companyName: z.string().optional(),
-  ticketId: z.string().uuid().optional(),
+  ticketId: entityIdSchema('Ticket ID', 'ticket').optional(),
   description: z.string().optional(),
   approvedByUserId: z.string().uuid().optional(),
   assignedUserId: z.string().uuid().optional(),

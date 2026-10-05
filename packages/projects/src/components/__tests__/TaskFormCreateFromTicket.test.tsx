@@ -416,7 +416,7 @@ describe('TaskForm create-from-ticket flow', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Save' }));
 
     await waitFor(() => expect(addTaskToPhaseMock).toHaveBeenCalled());
-    expect(addTicketLinkActionMock).toHaveBeenCalledWith('project-1', 'task-1', 'ticket-1', 'phase-1');
+    expect(addTicketLinkActionMock).toHaveBeenCalledWith('project-1', 'task-1', 'ticket-1', 'phase-1', true);
   });
 
   it('does not add ticket link when auto-link is off', async () => {
