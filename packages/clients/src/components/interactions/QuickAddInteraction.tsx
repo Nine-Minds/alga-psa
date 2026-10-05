@@ -31,7 +31,7 @@ import { getCurrentUserPermissions, getUserAvatarUrlsBatchAction } from '@alga-p
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
 import { getAllUsersBasicAsync } from '../../lib/usersHelpers';
-import { clampDuration } from '../../lib/durationHelpers';
+import { clampDuration, durationFromRange } from '../../lib/durationHelpers';
 import { IUser } from '@shared/interfaces/user.interfaces';
 import { IContact } from '@alga-psa/types';
 import { IClient } from '@alga-psa/types';
@@ -53,6 +53,11 @@ import {
 
 const isReturnedActionError = (value: unknown): value is ActionMessageError | ActionPermissionError =>
   isActionMessageError(value) || isActionPermissionError(value);
+
+// The duration fields cannot represent more than a day, so the date pickers must not
+// accept a range they would have to misreport. Same rule the server reconciles against.
+const END_BEFORE_START_MESSAGE = 'End time must be on or after the start time.';
+const RANGE_TOO_LONG_MESSAGE = "Interactions can't be longer than 24 hours.";
 
 // Keyed by the capability reason the Teams service returns, so the copy under
 // interactions.quickAdd.teams.reason.* stays greppable despite the dynamic key.
@@ -389,16 +394,29 @@ export function QuickAddInteraction({
       // Convert duration from total minutes to hours and minutes
       if (editingInteraction.duration) {
         const totalMinutes = editingInteraction.duration;
-        const hours = Math.floor(totalMinutes / 60);
-        const minutes = totalMinutes % 60;
+        // A legacy row may carry a duration the fields cannot hold; clamp it so the form
+        // never shows a value it would silently change on save.
+        const { hours, minutes } = clampDuration(
+          Math.floor(totalMinutes / 60).toString(),
+          (totalMinutes % 60).toString(),
+        );
         setDurationHours(hours > 0 ? hours.toString() : '');
         setDurationMinutes(minutes > 0 ? minutes.toString() : '');
       } else {
         setDurationHours('');
         setDurationMinutes('');
       }
-      setStartTime(editingInteraction.start_time ? new Date(editingInteraction.start_time) : undefined);
-      setEndTime(editingInteraction.end_time ? new Date(editingInteraction.end_time) : undefined);
+      const storedStart = editingInteraction.start_time ? new Date(editingInteraction.start_time) : undefined;
+      const storedEnd = editingInteraction.end_time ? new Date(editingInteraction.end_time) : undefined;
+      setStartTime(storedStart);
+      setEndTime(storedEnd);
+      // Surface a stored range that exceeds the cap so saving the edit forces the user to
+      // reconcile it rather than re-submitting the mismatch.
+      setEndTimeError(
+        storedStart && storedEnd && durationFromRange(storedStart, storedEnd).exceedsCap
+          ? RANGE_TOO_LONG_MESSAGE
+          : '',
+      );
       setSelectedUserId(editingInteraction.user_id || '');
       setSelectedContactId(editingInteraction.contact_name_id || '');
       setSelectedClientId(editingInteraction.client_id || '');
@@ -593,7 +611,7 @@ export function QuickAddInteraction({
     return [];
   }, [meetingContactId, contacts, clientDefaultEmail, clientDefaultName]);
 
-  // Helper to get total duration in minutes from hours and minutes state (max 24h 59m = 1499 minutes)
+  // Helper to get total duration in minutes from hours and minutes state (max 24h = 1440 minutes)
   const getTotalDurationMinutes = (): number => {
     return clampDuration(durationHours, durationMinutes).totalMinutes;
   };
@@ -612,17 +630,18 @@ export function QuickAddInteraction({
     }
 
     if (endTime) {
-      const diffMilliseconds = endTime.getTime() - date.getTime();
-      if (diffMilliseconds < 0) {
+      const { hours, minutes, totalMinutes: rangeMinutes, exceedsCap } = durationFromRange(date, endTime);
+      if (rangeMinutes < 0) {
         // Auto-correct: set end time to match start time
         setEndTime(date);
         setEndTimeError(''); // Clear error since we auto-corrected
         setDurationHours('');
         setDurationMinutes('');
+      } else if (exceedsCap) {
+        // The duration fields cannot hold this range, so flag it instead of writing
+        // an out-of-range duration the submit would then clamp away.
+        setEndTimeError(RANGE_TOO_LONG_MESSAGE);
       } else {
-        const totalMinutesFromEnd = Math.round(diffMilliseconds / 60000);
-        const hours = Math.floor(totalMinutesFromEnd / 60);
-        const minutes = totalMinutesFromEnd % 60;
         setDurationHours(hours > 0 ? hours.toString() : '');
         setDurationMinutes(minutes > 0 ? minutes.toString() : '');
         setEndTimeError('');
@@ -632,28 +651,29 @@ export function QuickAddInteraction({
 
   // Handle end time change
   const handleEndTimeChange = (date: Date) => {
-    // Validate: end time must be after or equal to start time
-    if (startTime && date.getTime() < startTime.getTime()) {
-      // Don't allow setting end time before start time
-      setEndTimeError('End time must be on or after the start time.');
-      return;
+    // Validate: end time must be after or equal to start time, and within the cap the
+    // duration fields can represent.
+    if (startTime) {
+      const { totalMinutes, exceedsCap } = durationFromRange(startTime, date);
+      if (totalMinutes < 0) {
+        // Don't allow setting end time before start time
+        setEndTimeError(END_BEFORE_START_MESSAGE);
+        return;
+      }
+      if (exceedsCap) {
+        setEndTimeError(RANGE_TOO_LONG_MESSAGE);
+        return;
+      }
     }
 
     setEndTime(date);
     setEndTimeError('');
 
-    // If we have a start time, calculate and update duration (hours and minutes)
+    // If we have a start time, the duration is exactly the range it spans
     if (startTime) {
-      const diffMilliseconds = date.getTime() - startTime.getTime();
-      const totalMinutes = Math.round(diffMilliseconds / 60000);
-
-      // Only update duration if the difference is positive
-      if (totalMinutes >= 0) {
-        const hours = Math.floor(totalMinutes / 60);
-        const minutes = totalMinutes % 60;
-        setDurationHours(hours > 0 ? hours.toString() : '');
-        setDurationMinutes(minutes > 0 ? minutes.toString() : '');
-      }
+      const { hours, minutes } = durationFromRange(startTime, date);
+      setDurationHours(hours > 0 ? hours.toString() : '');
+      setDurationMinutes(minutes > 0 ? minutes.toString() : '');
     }
   };
 
@@ -735,9 +755,17 @@ export function QuickAddInteraction({
         defaultValue: 'Select a client for this interaction',
       }));
     }
-    if (startTime && endTime && endTime.getTime() < startTime.getTime()) {
-      errors.push('End time must be on or after the start time');
-      setEndTimeError('End time must be on or after the start time.');
+    // No state path may submit a range the duration field cannot represent: the payload
+    // duration below is always exactly end − start.
+    if (startTime && endTime) {
+      const { totalMinutes, exceedsCap } = durationFromRange(startTime, endTime);
+      if (totalMinutes < 0) {
+        errors.push('End time must be on or after the start time');
+        setEndTimeError(END_BEFORE_START_MESSAGE);
+      } else if (exceedsCap) {
+        errors.push(RANGE_TOO_LONG_MESSAGE);
+        setEndTimeError(RANGE_TOO_LONG_MESSAGE);
+      }
     }
     if (createTeamsMeeting && canCreateTeamsMeeting) {
       if (!startTime) {
