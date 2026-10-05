@@ -46,9 +46,11 @@ import {
   isTimeTriggeredRun
 } from './workflowRunTriggerPresentation';
 import {
+  useDescribeWorkflowTrigger,
   useFormatWorkflowRunTrigger,
   useFormatWorkflowScheduleStatus,
 } from './useWorkflowRunTriggerPresentation';
+import { toRunDialogDateTrigger } from './workflowRunDateTrigger';
 
 type WorkflowDefinitionSummary = {
   workflow_id: string;
@@ -195,6 +197,7 @@ const WorkflowRunList: React.FC<WorkflowRunListProps> = ({
   const { t } = useTranslation('msp/workflows');
   const formatWorkflowRunStatus = useFormatWorkflowRunStatus();
   const formatWorkflowRunTrigger = useFormatWorkflowRunTrigger();
+  const describeWorkflowTrigger = useDescribeWorkflowTrigger();
   const formatWorkflowScheduleStatus = useFormatWorkflowScheduleStatus();
   const formatDateTime = useFormatDateTime();
   const workflowRunStatusOptions = useWorkflowRunStatusOptions();
@@ -241,24 +244,14 @@ const WorkflowRunList: React.FC<WorkflowRunListProps> = ({
     () => new Map(definitions.map((definition) => [definition.workflow_id, definition.name])),
     [definitions]
   );
+  // What starts each workflow ("Contract end date, 30 days before"), as opposed to what started a run.
   const workflowTriggerMap = useMemo(() => {
     const map = new Map<string, string | null>();
     definitions.forEach((definition) => {
-      const trigger = definition.trigger ?? null;
-      if (!trigger) {
-        map.set(definition.workflow_id, null);
-        return;
-      }
-      map.set(
-        definition.workflow_id,
-        formatWorkflowRunTrigger(
-          typeof (trigger as any)?.type === 'string' ? (trigger as any).type : null,
-          typeof (trigger as any)?.eventName === 'string' ? (trigger as any).eventName : null
-        )
-      );
+      map.set(definition.workflow_id, describeWorkflowTrigger(definition.trigger ?? null));
     });
     return map;
-  }, [definitions, formatWorkflowRunTrigger]);
+  }, [definitions, describeWorkflowTrigger]);
   const workflowScheduleStateMap = useMemo(
     () => new Map(definitions.map((definition) => [definition.workflow_id, definition.schedule_state ?? null])),
     [definitions]
@@ -982,10 +975,8 @@ const WorkflowRunList: React.FC<WorkflowRunListProps> = ({
                       )}
                       <div className="flex flex-wrap items-center gap-1">
                         <Badge className="bg-gray-100 text-gray-700 border-gray-200 text-[10px]">
-                          {run.trigger_type
-                            ? formatWorkflowRunTrigger(run.trigger_type)
-                            : (workflowTriggerMap.get(run.workflow_id)
-                              ?? t('runList.table.trigger.manual', { defaultValue: 'Manual' }))}
+                          {/* How this run started; runs without a trigger type were started by hand. */}
+                          {formatWorkflowRunTrigger(run.trigger_type ?? null, run.trigger_type ? null : (run as { event_type?: string | null }).event_type ?? null)}
                         </Badge>
                         {isTimeTriggeredRun(run.trigger_type) && workflowScheduleStateMap.get(run.workflow_id)?.status ? (
                           <Badge
@@ -1229,12 +1220,8 @@ const WorkflowRunList: React.FC<WorkflowRunListProps> = ({
         onClose={() => setIsRunDialogOpen(false)}
         workflowId={activeDefinition?.workflow_id ?? null}
         workflowName={activeDefinition?.name ?? ''}
-        triggerLabel={
-          activeDefinition
-            ? workflowTriggerMap.get(activeDefinition.workflow_id)
-              ?? t('runList.table.trigger.manual', { defaultValue: 'Manual' })
-            : t('runList.table.trigger.manual', { defaultValue: 'Manual' })
-        }
+        triggerLabel={activeDefinition ? workflowTriggerMap.get(activeDefinition.workflow_id) ?? null : null}
+        dateTrigger={toRunDialogDateTrigger(activeDefinition?.trigger)}
         triggerEventName={activeDefinition ? (activeDefinition.trigger as any)?.eventName ?? null : null}
         payloadSchemaRef={activeDefinition?.payload_schema_ref ?? null}
         publishedVersion={activeDefinition?.published_version ?? null}

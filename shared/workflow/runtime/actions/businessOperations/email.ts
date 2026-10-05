@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { tenantDb } from '@alga-psa/db';
 import { getActionRegistryV2 } from '../../registries/actionRegistry';
 import { getWorkflowEmailProvider } from '../../registries/workflowEmailRegistry';
-import { withWorkflowJsonSchemaMetadata } from '../../jsonSchemaMetadata';
+import { withWorkflowJsonSchemaMetadata, withWorkflowPicker, type WorkflowJsonSchemaMetadata } from '../../jsonSchemaMetadata';
 import { EmailProviderError } from '@alga-psa/types';
 import {
   uuidSchema,
@@ -38,6 +38,23 @@ export function resolveDeprecatedWorkflowFrom(input: {
   throw new Error('The saved From address is not a configured sender or the effective default. Choose a sender identity.');
 }
 
+const emailRecipientListSchema = z.array(z.object({ email: z.string().email(), name: z.string().optional() }));
+
+// The designer edits recipient lists as one list of addresses rather than rows of email/name fields.
+const withEmailRecipientsEditor = <T extends z.ZodTypeAny>(schema: T, description: string): T =>
+  withWorkflowJsonSchemaMetadata(schema, description, {
+    'x-workflow-editor': { kind: 'custom', custom: { component: 'email-recipients' } },
+  });
+
+// Email bodies are paragraphs, so they get a multi-line editor.
+const emailBodyEditorMetadata: WorkflowJsonSchemaMetadata = {
+  'x-workflow-editor': {
+    kind: 'text',
+    inline: { mode: 'textarea' },
+    dialog: { mode: 'large-text' },
+  },
+};
+
 export function registerEmailActions(): void {
   const registry = getActionRegistryV2();
 
@@ -48,20 +65,24 @@ export function registerEmailActions(): void {
     id: 'email.send',
     version: 1,
     inputSchema: z.object({
-      to: z.array(z.object({ email: z.string().email(), name: z.string().optional() })).min(1).describe('Recipients'),
-      cc: z.array(z.object({ email: z.string().email(), name: z.string().optional() })).optional(),
-      bcc: z.array(z.object({ email: z.string().email(), name: z.string().optional() })).optional(),
+      to: withEmailRecipientsEditor(emailRecipientListSchema.min(1), 'Recipients'),
+      cc: withEmailRecipientsEditor(emailRecipientListSchema.optional(), 'Cc recipients'),
+      bcc: withEmailRecipientsEditor(emailRecipientListSchema.optional(), 'Bcc recipients'),
       from: z.object({ email: z.string().email(), name: z.string().optional() }).optional().describe('Optional from override'),
-      sender_id: withWorkflowJsonSchemaMetadata(uuidSchema.optional(), 'Configured outbound sender identity', {
-        'x-workflow-picker-kind': 'email-sender',
-        'x-workflow-picker-fixed-value-hint': 'Select sender identity',
-        'x-workflow-picker-allow-dynamic-reference': true,
-      }),
+      sender_id: withWorkflowPicker(uuidSchema.optional(), 'Configured outbound sender identity', 'email-sender'),
       mail_class: z.enum(['ticket', 'project', 'billing', 'sales', 'scheduling', 'survey', 'account', 'general']).optional().default('general'),
-      subject: z.string().min(1).describe('Subject template (supports {{var}})'),
-      html: z.string().optional().describe('HTML template (supports {{var}})'),
-      text: z.string().optional().describe('Text template (supports {{var}})'),
-      template_data: z.record(z.unknown()).optional().describe('Template data for {{var}} replacement'),
+      subject: z.string().min(1).describe('Subject. Insert workflow fields directly; any other {{name}} is filled from template_data'),
+      html: withWorkflowJsonSchemaMetadata(
+        z.string().optional(),
+        'HTML body. Insert workflow fields directly; any other {{name}} is filled from template_data',
+        emailBodyEditorMetadata
+      ),
+      text: withWorkflowJsonSchemaMetadata(
+        z.string().optional(),
+        'Plain-text body. Insert workflow fields directly; any other {{name}} is filled from template_data',
+        emailBodyEditorMetadata
+      ),
+      template_data: z.record(z.unknown()).optional().describe('Values for {{name}} placeholders in the subject and body (only needed for names that are not workflow fields)'),
       attachment_file_ids: z.array(uuidSchema).optional().describe('Attachment file ids (external_files.file_id)'),
       provider_id: z.string().optional().describe('Optional provider override (providerId from tenant email settings)'),
       idempotency_key: z.string().optional().describe('Optional external idempotency key')

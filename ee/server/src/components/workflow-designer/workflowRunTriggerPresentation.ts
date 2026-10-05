@@ -12,7 +12,8 @@ export const getWorkflowRunTriggerLabel = (
   if (triggerType === 'recurring') return 'Recurring schedule';
   if (triggerType === 'date') return 'Date';
   if (triggerType === 'event') return eventType ? `Event: ${eventType}` : 'Event';
-  return 'Manual';
+  // A run started by hand (e.g. from the Run dialog) can carry a sample event; it was not fired by that event.
+  return eventType ? `Manual test with event: ${eventType}` : 'Manual test';
 };
 
 export const getWorkflowScheduleStatusLabel = (status: WorkflowScheduleStatus): string => {

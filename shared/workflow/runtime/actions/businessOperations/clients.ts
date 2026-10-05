@@ -6,7 +6,7 @@ import { deleteEntityWithValidation } from '@alga-psa/core/server';
 import { tenantDb } from '@alga-psa/db';
 import { ensureDefaultContractForClientIfBillingConfigured } from '../../../../billingClients/defaultContract';
 import { getActionRegistryV2 } from '../../registries/actionRegistry';
-import { withWorkflowJsonSchemaMetadata } from '../../jsonSchemaMetadata';
+import { withWorkflowPicker, withWorkflowNotFoundPolicy } from '../../jsonSchemaMetadata';
 import { ClientModel } from '../../../../models/clientModel';
 import { buildClientArchivedPayload, buildClientCreatedPayload, buildClientUpdatedPayload } from '../../../streams/domainEventBuilders/clientEventBuilders';
 import { buildInteractionLoggedPayload, buildNoteCreatedPayload } from '../../../streams/domainEventBuilders/crmInteractionNoteEventBuilders';
@@ -26,26 +26,6 @@ import {
   type PhoneMatchMode,
   type TenantTxContext,
 } from './shared';
-
-const WORKFLOW_PICKER_HINTS = {
-  client: 'Search clients',
-  ticket: 'Search tickets',
-  contact: 'Search contacts',
-  'client-location': 'Search locations',
-} as const;
-
-const withWorkflowPicker = <T extends z.ZodTypeAny>(
-  schema: T,
-  description: string,
-  kind: keyof typeof WORKFLOW_PICKER_HINTS,
-  dependencies?: string[]
-): T =>
-  withWorkflowJsonSchemaMetadata(schema, description, {
-    'x-workflow-picker-kind': kind,
-    'x-workflow-picker-dependencies': dependencies,
-    'x-workflow-picker-fixed-value-hint': WORKFLOW_PICKER_HINTS[kind],
-    'x-workflow-picker-allow-dynamic-reference': true,
-  });
 
 const CLIENT_TABLE_ALLOWED_FIELDS = new Set([
   'client_name',
@@ -92,22 +72,22 @@ const LOCATION_TABLE_ALLOWED_FIELDS = new Set([
 ]);
 
 const clientSummarySchema = z.object({
-  client_id: uuidSchema,
-  client_name: z.string(),
-  client_type: z.string().nullable().optional(),
-  url: z.string().nullable(),
-  billing_email: z.string().nullable().optional(),
-  is_inactive: z.boolean(),
-  properties: z.record(z.unknown()).nullable(),
-  updated_at: isoDateTimeSchema.optional(),
+  client_id: withWorkflowPicker(uuidSchema, 'Client', 'client'),
+  client_name: z.string().describe('Client name'),
+  client_type: z.string().nullable().optional().describe('Client type'),
+  url: z.string().nullable().describe('Website'),
+  billing_email: z.string().nullable().optional().describe('Billing email address'),
+  is_inactive: z.boolean().describe('Is inactive'),
+  properties: z.record(z.unknown()).nullable().describe('Custom properties'),
+  updated_at: isoDateTimeSchema.optional().describe('Last updated at'),
 });
 
 const contactSummarySchema = z.object({
-  contact_name_id: uuidSchema,
-  full_name: z.string().nullable(),
-  email: z.string().nullable(),
-  phone: z.string().nullable(),
-  client_id: uuidSchema.nullable(),
+  contact_name_id: withWorkflowPicker(uuidSchema, 'Contact', 'contact'),
+  full_name: z.string().nullable().describe('Full name'),
+  email: z.string().nullable().describe('Email address'),
+  phone: z.string().nullable().describe('Phone number'),
+  client_id: withWorkflowPicker(uuidSchema.nullable(), 'Client', 'client'),
 });
 
 const matchedLocationSchema = z.object({
@@ -145,7 +125,7 @@ const clientCreateInputSchema = z.object({
   notes: z.string().optional(),
   client_since: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'client_since must be a YYYY-MM-DD date').optional(),
   properties: z.record(z.unknown()).optional(),
-  parent_client_id: nullableUuidSchema.optional(),
+  parent_client_id: withWorkflowPicker(nullableUuidSchema.optional(), 'Parent client id', 'client'),
   contract_line_id: nullableUuidSchema.optional(),
   is_default: z.boolean().optional(),
   tags: z.array(z.string()).optional(),
@@ -169,7 +149,7 @@ const clientUpdatePatchSchema = z
     notes: z.string().nullable().optional(),
     client_since: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'client_since must be a YYYY-MM-DD date').nullable().optional(),
     properties: z.record(z.unknown()).nullable().optional(),
-    parent_client_id: nullableUuidSchema.optional(),
+    parent_client_id: withWorkflowPicker(nullableUuidSchema.optional(), 'Parent client id', 'client'),
     contract_line_id: nullableUuidSchema.optional(),
     is_default: z.boolean().nullable().optional(),
     is_inactive: z.boolean().optional(),
@@ -975,7 +955,7 @@ export function registerClientActions(): void {
           .default('exact')
           .describe('Phone matching mode. last7/last10 can match multiple client locations; branch on matched_count.'),
         include_primary_contact: z.boolean().default(false),
-        on_not_found: z.enum(['return_null', 'error']).default('return_null'),
+        on_not_found: withWorkflowNotFoundPolicy(z.enum(['return_null', 'error']).default('return_null'), 'What to do when nothing is found'),
       })
       .refine((val) => Boolean(val.client_id || val.name || val.external_ref || val.phone), {
         message: 'client_id, name, external_ref, or phone required',
@@ -1494,7 +1474,7 @@ export function registerClientActions(): void {
       client_id: withWorkflowPicker(uuidSchema, 'Client id', 'client'),
     }),
     outputSchema: z.object({
-      client_id: uuidSchema,
+      client_id: withWorkflowPicker(uuidSchema, 'Client id', 'client'),
       archived: z.boolean(),
       previous_is_inactive: z.boolean(),
       current_is_inactive: z.boolean(),
@@ -1569,11 +1549,11 @@ export function registerClientActions(): void {
     inputSchema: z.object({
       client_id: withWorkflowPicker(uuidSchema, 'Client id', 'client'),
       confirm: z.boolean().refine((value) => value === true, { message: 'confirm must be true to delete a client' }),
-      on_not_found: z.enum(['error', 'return_false']).default('error'),
+      on_not_found: withWorkflowNotFoundPolicy(z.enum(['error', 'return_false']).default('error'), 'What to do when nothing is found'),
     }),
     outputSchema: z.object({
       deleted: z.boolean(),
-      client_id: uuidSchema,
+      client_id: withWorkflowPicker(uuidSchema, 'Client id', 'client'),
     }),
     sideEffectful: true,
     idempotency: { mode: 'engineProvided' },
@@ -1823,7 +1803,7 @@ export function registerClientActions(): void {
       idempotency_key: z.string().optional().describe('Optional external idempotency key'),
     }),
     outputSchema: z.object({
-      client_id: uuidSchema,
+      client_id: withWorkflowPicker(uuidSchema, 'Client id', 'client'),
       added: z.array(tagResultSchema),
       existing: z.array(tagResultSchema),
       added_count: z.number().int(),
@@ -1883,11 +1863,11 @@ export function registerClientActions(): void {
       comment: z.string().optional().describe('Optional internal comment/audit detail for the reassignment'),
     }),
     outputSchema: z.object({
-      ticket_id: uuidSchema,
-      previous_client_id: nullableUuidSchema,
-      current_client_id: nullableUuidSchema,
-      previous_contact_id: nullableUuidSchema,
-      current_contact_id: nullableUuidSchema,
+      ticket_id: withWorkflowPicker(uuidSchema, 'Ticket id', 'ticket'),
+      previous_client_id: withWorkflowPicker(nullableUuidSchema, 'Previous client id', 'client'),
+      current_client_id: withWorkflowPicker(nullableUuidSchema, 'Current client id', 'client'),
+      previous_contact_id: withWorkflowPicker(nullableUuidSchema, 'Previous contact id', 'contact'),
+      current_contact_id: withWorkflowPicker(nullableUuidSchema, 'Current contact id', 'contact'),
       previous_location_id: nullableUuidSchema,
       current_location_id: nullableUuidSchema,
     }),
@@ -2011,7 +1991,7 @@ export function registerClientActions(): void {
       idempotency_key: z.string().optional().describe('Optional external idempotency key'),
     }),
     outputSchema: z.object({
-      client_id: uuidSchema,
+      client_id: withWorkflowPicker(uuidSchema, 'Client id', 'client'),
       document_id: uuidSchema,
       created_document: z.boolean(),
       updated_at: isoDateTimeSchema,
@@ -2090,9 +2070,9 @@ export function registerClientActions(): void {
     }),
     outputSchema: z.object({
       interaction_id: uuidSchema,
-      client_id: uuidSchema,
-      contact_id: nullableUuidSchema,
-      ticket_id: nullableUuidSchema,
+      client_id: withWorkflowPicker(uuidSchema, 'Client id', 'client'),
+      contact_id: withWorkflowPicker(nullableUuidSchema, 'Contact id', 'contact'),
+      ticket_id: withWorkflowPicker(nullableUuidSchema, 'Ticket id', 'ticket'),
       type_id: uuidSchema,
       status_id: nullableUuidSchema,
       title: z.string(),
@@ -2101,7 +2081,7 @@ export function registerClientActions(): void {
       start_time: isoDateTimeSchema.nullable(),
       end_time: isoDateTimeSchema.nullable(),
       duration: z.number().int().nullable(),
-      user_id: uuidSchema,
+      user_id: withWorkflowPicker(uuidSchema, 'User id', 'user'),
     }),
     sideEffectful: true,
     idempotency: { mode: 'actionProvided', key: actionProvidedKey },

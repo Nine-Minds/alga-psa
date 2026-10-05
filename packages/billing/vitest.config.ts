@@ -52,6 +52,9 @@ export default defineConfig({
       // Behavioral coverage for realm-exact QBO mapping resolution — listed
       // explicitly for the same reason as the suites above.
       'src/services/accountingSync/realmScopedOperations.test.ts',
+      // Project billing-currency drift notices and cap re-pinning — listed for
+      // the same reason as the suites above.
+      'src/components/project-billing/projectBillingCurrency.test.tsx',
       // Ticket-level billed-time detail: snapshot aggregation, standard-template
       // bindings, and render parity — listed for the same reason as above.
       'src/lib/adapters/invoiceAdapters.test.ts',

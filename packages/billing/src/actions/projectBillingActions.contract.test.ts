@@ -20,13 +20,14 @@ const state = vi.hoisted(() => ({
     project_id: '10000000-0000-4000-8000-000000000003',
     client_id: '10000000-0000-4000-8000-000000000004',
   },
-  clientCurrency: 'USD',
+  clientCurrency: 'USD' as string | null,
   contractCurrencies: [] as string[],
   config: null as any,
   entries: [] as any[],
   transitionFailure: false,
   configUpdateFailure: false,
   publishedEvents: [] as any[],
+  capUsageResets: [] as string[],
   generatedInvoiceResult: {
     invoice_id: '10000000-0000-4000-8000-000000000009',
     warnings: [] as string[],
@@ -168,7 +169,10 @@ vi.mock('../models/projectBillingConfig', () => ({
 }));
 
 vi.mock('../models/projectBillingCapUsage', () => ({
-  default: { getByConfig: vi.fn(async () => null) },
+  default: {
+    getByConfig: vi.fn(async () => null),
+    reset: vi.fn(async (configId: string) => { state.capUsageResets.push(configId); }),
+  },
 }));
 
 vi.mock('../models/projectPhaseRateOverride', () => ({
@@ -321,6 +325,7 @@ beforeEach(() => {
   state.transitionFailure = false;
   state.configUpdateFailure = false;
   state.publishedEvents = [];
+  state.capUsageResets = [];
   state.generatedInvoiceResult = {
     invoice_id: IDS.invoice,
     warnings: [],
@@ -363,6 +368,103 @@ describe('project billing config action contract', () => {
       invoice_mode: 'standalone',
     });
     expect(returnedErrorMessage(result)).toContain("must match the client's billing currency (EUR)");
+  });
+
+  // Reported from production: a client billing CHF kept getting new projects
+  // pinned to the USD of a legacy active contract, and nothing read as stale
+  // because the stored currency matched what the resolver kept returning.
+  it('T002: pins a new config to the client currency, not an active contract currency', async () => {
+    state.clientCurrency = 'CHF';
+    state.contractCurrencies = ['USD'];
+
+    const created = await createProjectBillingConfig({
+      project_id: IDS.project,
+      billing_model: 'time_and_materials',
+      invoice_mode: 'standalone',
+    });
+
+    expect(created).toMatchObject({ currency: 'CHF' });
+  });
+
+  it('T002: infers the contract currency when the client has none', async () => {
+    state.clientCurrency = null;
+    state.contractCurrencies = ['GBP'];
+
+    const created = await createProjectBillingConfig({
+      project_id: IDS.project,
+      billing_model: 'time_and_materials',
+      invoice_mode: 'standalone',
+    });
+
+    expect(created).toMatchObject({ currency: 'GBP' });
+  });
+
+  // The invoice run tells the biller to set the project to the currency the
+  // invoice bills in and re-enter the cap. For a CHF client invoiced through a
+  // legacy USD contract that is USD, and the save has to accept it — otherwise
+  // the cap it names is dormant with nowhere to go.
+  it('T002: accepts a currency this client is invoiced in through a contract', async () => {
+    state.clientCurrency = 'CHF';
+    state.contractCurrencies = ['USD'];
+
+    const created = await createProjectBillingConfig({
+      project_id: IDS.project,
+      billing_model: 'time_and_materials',
+      currency: 'usd',
+      invoice_mode: 'standalone',
+    });
+
+    expect(created).toMatchObject({ currency: 'USD' });
+  });
+
+  it('T002: still rejects a currency this client is never billed in', async () => {
+    state.clientCurrency = 'CHF';
+    state.contractCurrencies = ['USD'];
+
+    const result = await createProjectBillingConfig({
+      project_id: IDS.project,
+      billing_model: 'time_and_materials',
+      currency: 'EUR',
+      invoice_mode: 'standalone',
+    });
+
+    expect(returnedErrorMessage(result)).toContain(
+      'must be one of the currencies this client is billed in (CHF, USD)',
+    );
+  });
+
+  it('T002: re-pins a stranded cap to the contract currency on update', async () => {
+    state.clientCurrency = 'CHF';
+    state.contractCurrencies = ['USD'];
+    state.config = makeConfig({
+      billing_model: 'time_and_materials',
+      total_price: null,
+      currency: 'CHF',
+      cap_amount: 50_000,
+      cap_behavior: 'hard_cap',
+    });
+
+    await expect(updateProjectBillingConfig(IDS.config, {
+      currency: 'USD',
+      cap_amount: 60_000,
+    })).resolves.toMatchObject({ currency: 'USD', cap_amount: 60_000 });
+    // Usage counted in CHF says nothing about a USD cap.
+    expect(state.capUsageResets).toEqual([IDS.config]);
+  });
+
+  it('T002: keeps cap usage when the currency does not change', async () => {
+    state.clientCurrency = 'CHF';
+    state.config = makeConfig({
+      billing_model: 'time_and_materials',
+      total_price: null,
+      currency: 'CHF',
+      cap_amount: 50_000,
+      cap_behavior: 'hard_cap',
+    });
+
+    await updateProjectBillingConfig(IDS.config, { currency: 'chf', cap_amount: 60_000 });
+
+    expect(state.capUsageResets).toEqual([]);
   });
 
   it('T003: allows billing-model changes before invoicing and rejects them afterward', async () => {

@@ -24,6 +24,7 @@ import ProjectBillingCapUsage from '../models/projectBillingCapUsage';
 import ProjectBillingConfig from '../models/projectBillingConfig';
 import ProjectBillingScheduleEntry from '../models/projectBillingScheduleEntry';
 import {
+  capAppliesToInvoiceCurrency,
   computeCapWriteDown,
   detectThresholdCrossings,
   isFirstProjectCapOverage,
@@ -380,6 +381,7 @@ type ProjectCapPersistenceDelta = {
 async function prepareProjectCapChargesForPersistence(
   trx: Knex.Transaction,
   charges: IBillingCharge[],
+  invoiceCurrency: string | null,
 ): Promise<ProjectCapPersistenceDelta[]> {
   type ProjectCapCharge = IBillingCharge & {
     project_billing_config_id: string;
@@ -410,6 +412,11 @@ async function prepareProjectCapChargesForPersistence(
   for (const [configId, configCharges] of chargesByConfig) {
     const config = await ProjectBillingConfig.getById(configId, trx);
     if (!config || config.cap_amount === null) {
+      continue;
+    }
+    // A cap counted in another currency would write these charges down against
+    // a number that means nothing here; the engine warns the biller instead.
+    if (!capAppliesToInvoiceCurrency(config.currency, invoiceCurrency)) {
       continue;
     }
 
@@ -4068,6 +4075,7 @@ export async function createInvoiceFromBillingResultImpl(
     const capDeltas = await prepareProjectCapChargesForPersistence(
       trx,
       scopedCharges,
+      billingResult.currency_code ?? null,
     );
     persistedCapDeltas = capDeltas;
     const projectScheduleCharges = scopedCharges.filter(isProjectScheduleCharge);

@@ -1,5 +1,8 @@
 import { Temporal } from '@js-temporal/polyfill';
 
+// LEVERAGE: pattern annual-occurrence-rule — shared/workflow/runtime/dateTriggerOccurrence.ts
+// (nextAnnualOccurrenceOnOrAfter) states the same rule for Run dialog test payloads; import it here once
+// packages/jobs can take that subpath, so the two can't drift.
 /** Returns yearly occurrences in an inclusive local-calendar date range. Feb 29 maps to Feb 28 in non-leap years. */
 export function nextAnnualOccurrence(anchor: string, from: string, to: string): Array<{ occursOn: string; yearsAsClient: number }> {
   const start = Temporal.PlainDate.from(anchor);
