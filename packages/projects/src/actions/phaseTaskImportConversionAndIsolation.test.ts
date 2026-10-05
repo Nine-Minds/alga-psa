@@ -121,6 +121,18 @@ vi.mock('@alga-psa/workflow-streams', () => ({
   buildProjectTaskAssignedPayload: vi.fn(() => ({})),
   buildProjectTaskCreatedPayload: vi.fn(() => ({})),
 }));
+// The import gates on record-level project read authorization before it writes.
+vi.mock('@alga-psa/authorization/kernel', () => ({
+  BuiltinAuthorizationKernelProvider: class {},
+  BundleAuthorizationKernelProvider: class {
+    constructor(_options: unknown) {}
+  },
+  RequestLocalAuthorizationCache: class {},
+  createAuthorizationKernel: () => ({ authorizeResource: async () => ({ allowed: true }) }),
+}));
+vi.mock('@alga-psa/authorization/bundles/service', () => ({
+  resolveBundleNarrowingRulesForEvaluation: async () => [],
+}));
 
 import { groupRowsIntoPhases, importPhasesAndTasks } from './phaseTaskImportActions';
 
