@@ -122,7 +122,12 @@ vi.mock('@alga-psa/workflow-streams', () => ({
   buildProjectTaskCreatedPayload: vi.fn(() => ({})),
 }));
 
-import { groupRowsIntoPhases, importPhasesAndTasks } from './phaseTaskImportActions';
+import {
+  generatePhaseTaskCSVTemplate,
+  groupRowsIntoPhases,
+  importPhasesAndTasks,
+  validatePhaseTaskImportDataWithReferenceData,
+} from './phaseTaskImportActions';
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -169,6 +174,74 @@ describe('groupRowsIntoPhases estimated hours', () => {
   });
 });
 
+describe('groupRowsIntoPhases task dates', () => {
+  it('reads start_date alongside due_date and drops a start after the due date', async () => {
+    const grouped = await groupRowsIntoPhases(
+      [
+        row({ task_name: 'Both', start_date: '2026-10-05', due_date: '2026-10-09' }),
+        row({ task_name: 'Start only', start_date: '10/05/2026' }),
+        // What the exporter writes, so an export re-imports unchanged.
+        row({ task_name: 'Exported', start_date: '2026-10-05T00:00:00.000Z', due_date: '2026-10-09T00:00:00.000Z' }),
+        row({ task_name: 'Inverted', start_date: '2026-10-12', due_date: '2026-10-09' }),
+        row({ task_name: 'Garbage', start_date: 'next week' }),
+        row({ task_name: 'Neither' }),
+      ],
+      {},
+      {},
+      {},
+    );
+    const byName = Object.fromEntries(grouped[0].tasks.map((task) => [task.task_name, task]));
+
+    expect(byName['Both'].start_date).toEqual(new Date('2026-10-05'));
+    expect(byName['Both'].due_date).toEqual(new Date('2026-10-09'));
+    expect(byName['Start only'].start_date).toEqual(new Date(2026, 9, 5));
+    expect(byName['Start only'].due_date).toBeNull();
+    expect(byName['Exported'].start_date).toEqual(new Date('2026-10-05T00:00:00.000Z'));
+    expect(byName['Inverted'].start_date).toBeNull();
+    expect(byName['Inverted'].due_date).toEqual(new Date('2026-10-09'));
+    expect(byName['Garbage'].start_date).toBeNull();
+    expect(byName['Neither'].start_date).toBeNull();
+  });
+});
+
+describe('validatePhaseTaskImportDataWithReferenceData start_date', () => {
+  const referenceData = {
+    userLookup: {},
+    priorityLookup: {},
+    serviceLookup: {},
+    statusLookup: {},
+  } as any;
+
+  it('warns about an unreadable start date and one that falls after the due date', async () => {
+    const response = await validatePhaseTaskImportDataWithReferenceData(
+      [
+        row({ task_name: 'Fine', start_date: '2026-10-05', due_date: '2026-10-09' }),
+        row({ task_name: 'Garbage', start_date: 'next week' }),
+        row({ task_name: 'Inverted', start_date: '2026-10-12', due_date: '2026-10-09' }),
+      ],
+      referenceData,
+    );
+    const warnings = response.validationResults.map((result) => result.warnings.join(' | '));
+
+    expect(warnings[0]).not.toMatch(/start_date/);
+    expect(warnings[1]).toMatch(/Invalid date format for start_date/);
+    expect(warnings[2]).toMatch(/is after due_date/);
+    expect(response.validationResults.every((result) => result.isValid)).toBe(true);
+  });
+});
+
+describe('generatePhaseTaskCSVTemplate', () => {
+  it('offers a start_date column', async () => {
+    // unparseCSV is mocked in this file, so assert on what it is asked to write.
+    const { unparseCSV } = await import('@alga-psa/core');
+    await generatePhaseTaskCSVTemplate();
+    const [rows, fields] = vi.mocked(unparseCSV).mock.calls.at(-1) as unknown as [Array<Record<string, string>>, string[]];
+
+    expect(fields.indexOf('start_date')).toBe(fields.indexOf('due_date') - 1);
+    expect(rows[0].start_date).toBeTruthy();
+  });
+});
+
 describe('importPhasesAndTasks row isolation', () => {
   const groupedPhases = [
     {
@@ -182,6 +255,7 @@ describe('importPhasesAndTasks row isolation', () => {
           additional_agent_ids: [],
           estimated_hours: 960,
           actual_hours: null,
+          start_date: null,
           due_date: null,
           priority_id: null,
           service_id: null,
@@ -198,6 +272,7 @@ describe('importPhasesAndTasks row isolation', () => {
           additional_agent_ids: [],
           estimated_hours: 15,
           actual_hours: null,
+          start_date: null,
           due_date: null,
           priority_id: null,
           service_id: null,
@@ -214,6 +289,7 @@ describe('importPhasesAndTasks row isolation', () => {
           additional_agent_ids: [],
           estimated_hours: 30,
           actual_hours: null,
+          start_date: null,
           due_date: null,
           priority_id: null,
           service_id: null,
