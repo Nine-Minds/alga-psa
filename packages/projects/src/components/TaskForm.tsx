@@ -1825,25 +1825,7 @@ export default function TaskForm({
               </>
             )}
 
-            {/* Row 3: Created At (Edit mode only) and Due Date */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">{taskFormT('createdAtLabel', 'Created At')}</label>
-              {mode === 'edit' && task ? (
-                <div className="p-2 bg-gray-50 border border-gray-200 rounded-md text-gray-700">
-                  {formatDate(new Date(task.created_at), {
-                    month: 'short',
-                    day: 'numeric',
-                    year: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit'
-                  })}
-                </div>
-              ) : (
-                <div className="p-2 bg-gray-50 border border-gray-200 rounded-md text-gray-500">
-                  {taskFormT('willBeSetOnCreate', 'Will be set on creation')}
-                </div>
-              )}
-            </div>
+            {/* Row 3: Start Date and Due Date */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">{taskFormT('startDateLabel', 'Start Date')}</label>
               <DatePicker
@@ -1911,6 +1893,19 @@ export default function TaskForm({
                       setAssignedUser(value === '' ? null : value);
                     }}
                     onTeamSelect={handleAssignTeam}
+            {/* Read-only metadata stays out of the field grid. */}
+            {mode === 'edit' && task?.created_at && (
+              <p id="task-created-at" className="col-span-2 -mt-2 text-xs text-[rgb(var(--color-text-500))]">
+                {taskFormT('createdAtLabel', 'Created At')}:{' '}
+                {formatDate(new Date(task.created_at), {
+                  month: 'short',
+                  day: 'numeric',
+                  year: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit'
+                })}
+              </p>
+            )}
                     size="sm"
                     users={users.filter(u =>
                       !([...taskResources, ...tempTaskResources])

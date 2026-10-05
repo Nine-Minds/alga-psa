@@ -1,5 +1,5 @@
 'use client';
- 
+
 import React, { useCallback, useEffect, useState } from 'react';
 import { AlertCircle, Building, CheckCircle, Loader2, Mail, User } from 'lucide-react';
 import { Button } from '@alga-psa/ui/components/Button';
