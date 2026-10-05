@@ -674,7 +674,24 @@
       "workflowStepsListHint": "〖Ḓřȧɠ şŧḗƥş ŧȯ řḗȯřḓḗř ȯř ḿȯṽḗ ƀḗŧẇḗḗƞ ƥīƥḗş. ··················〗",
       "workflowStepsGraphHint": "〖Ƥȧƞ/ẑȯȯḿ ŧħḗ ɠřȧƥħ. Ɓřȧƞƈħḗş řḗƞḓḗř ȧş şḗƥȧřȧŧḗ ŀȧƞḗş. ······················〗",
       "workflowStepsViewAria": "〖Ẇȯřķƒŀȯẇ şŧḗƥş ṽīḗẇ ········〗",
-      "warningsCount": "〖{{count}} ẇȧřƞīƞɠş ········〗"
+      "warningsCount": "〖{{count}} ẇȧřƞīƞɠş ········〗",
+      "dateSource": "〖Ḓȧŧḗ şȯŭřƈḗ ·····〗",
+      "dateSourceAnniversary": "〖Ƈŀīḗƞŧ ȧƞƞīṽḗřşȧřẏ ········〗",
+      "dateSourceRenewal": "〖Ƈȯƞŧřȧƈŧ řḗƞḗẇȧŀ ḓḗƈīşīȯƞ ḓȧŧḗ ············〗",
+      "dateSourceContractEnd": "〖Ƈȯƞŧřȧƈŧ ḗƞḓ ḓȧŧḗ ·······〗",
+      "dateSourceWarranty": "〖Ȧşşḗŧ ẇȧřřȧƞŧẏ ḗƞḓ ········〗",
+      "dateOffset": "〖Ḓȧẏş ··〗",
+      "dateDirection": "〖Ŧīḿīƞɠ ···〗",
+      "before": "〖Ɓḗƒȯřḗ ···〗",
+      "onDate": "〖Ȯƞ ŧħḗ ḓȧẏ ····〗",
+      "after": "〖Ȧƒŧḗř ··〗",
+      "daysBefore": "〖ḓȧẏş ƀḗƒȯřḗ ·····〗",
+      "daysAfter": "〖ḓȧẏş ȧƒŧḗř ····〗",
+      "localTime": "〖Ŀȯƈȧŀ ŧīḿḗ ····〗",
+      "timezoneOptional": "〖Ŧīḿḗẑȯƞḗ (ȯƥŧīȯƞȧŀ) ········〗",
+      "tenantTimezoneDefault": "〖Ŧḗƞȧƞŧ ŧīḿḗẑȯƞḗ ······〗",
+      "dateTriggerSummary": "〖Řŭƞş {{days}} {{direction}} {{source}} ȧŧ {{time}} ({{timezone}}) ··························〗",
+      "inputDataDatePrefix": "〖Ŧħīş ẇȯřķƒŀȯẇ řḗƈḗīṽḗş ŧħḗ ƥȧẏŀȯȧḓ ḓḗƒīƞḗḓ ƀẏ ··················〗"
     },
     "stepPanel": {
       "readOnly": "〖Řḗȧḓ-ȯƞŀẏ ȧƈƈḗşş: şŧḗƥ ḗḓīŧīƞɠ īş ḓīşȧƀŀḗḓ. ··················〗",
@@ -1593,7 +1610,8 @@
     "event": "〖Ḗṽḗƞŧ ··〗",
     "eventWithType": "〖Ḗṽḗƞŧ: {{eventType}} ········〗",
     "oneTimeSchedule": "〖Ȯƞḗ-ŧīḿḗ şƈħḗḓŭŀḗ ·······〗",
-    "recurringSchedule": "〖Řḗƈŭřřīƞɠ şƈħḗḓŭŀḗ ········〗"
+    "recurringSchedule": "〖Řḗƈŭřřīƞɠ şƈħḗḓŭŀḗ ········〗",
+    "date": "〖Ḓȧŧḗ ··〗"
   },
   "scheduleStatus": {
     "unknown": "〖Ŭƞķƞȯẇƞ ···〗",
@@ -2201,13 +2219,15 @@
         "event": "〖Ḗṽḗƞŧ-ƀȧşḗḓ ·····〗",
         "schedule": "〖Ȯƞḗ-ŧīḿḗ şƈħḗḓŭŀḗ ·······〗",
         "recurring": "〖Řḗƈŭřřīƞɠ şƈħḗḓŭŀḗ ········〗",
-        "manual": "〖Ḿȧƞŭȧŀ ···〗"
+        "manual": "〖Ḿȧƞŭȧŀ ···〗",
+        "date": "〖Ḓȧŧḗ-ƀȧşḗḓ ····〗"
       },
       "triggerLabels": {
         "manual": "〖Ḿȧƞŭȧŀ ···〗",
         "schedule": "〖Ȯƞḗ-ŧīḿḗ şƈħḗḓŭŀḗ ·······〗",
         "recurring": "〖Řḗƈŭřřīƞɠ şƈħḗḓŭŀḗ ········〗",
-        "event": "〖Ḗṽḗƞŧ ··〗"
+        "event": "〖Ḗṽḗƞŧ ··〗",
+        "date": "〖Ḓȧŧḗ ··〗"
       },
       "bulk": {
         "selectedSingular": "〖{{count}} ẇȯřķƒŀȯẇ şḗŀḗƈŧḗḓ ···········〗",

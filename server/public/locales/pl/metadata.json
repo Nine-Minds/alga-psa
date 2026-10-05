@@ -41,7 +41,12 @@
           "title": "Szczegóły wyceny"
         }
       },
-      "title": "Rozliczenia"
+      "title": "Rozliczenia",
+      "paymentMethods": {
+        "setupComplete": {
+          "title": "Konfiguracja karty"
+        }
+      }
     },
     "clientSettings": {
       "description": "Zarządzaj ustawieniami i konfiguracją swojej firmy",
@@ -277,6 +282,9 @@
       "detail": {
         "title": "Zgłoszenie #{{ticketNumber}} - {{ticketTitle}}",
         "fallbackTitle": "Szczegóły zgłoszenia"
+      },
+      "recurring": {
+        "title": "Zgłoszenia cykliczne"
       }
     },
     "workflowEditor": {
@@ -613,6 +621,11 @@
     },
     "tab": {
       "title": "Zespoły"
+    }
+  },
+  "paymentMethods": {
+    "setupComplete": {
+      "title": "Konfiguracja karty"
     }
   }
 }

@@ -5,12 +5,20 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
+import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Dialog, DialogContent, DialogDescription } from '@alga-psa/ui/components/Dialog';
+import {
+  buildSenderOptions,
+  DEFAULT_SENDER_SELECTION,
+  senderIdForSend,
+  type SelectableSender,
+} from '@alga-psa/email/senderSelection';
 import { QuoteSendRecipientsField, type QuoteRecipient } from './QuoteSendRecipientsField';
 
 export interface QuoteSendDialogPayload {
   email_addresses?: string[];
   message?: string;
+  senderId?: string;
 }
 
 interface QuoteSendDialogProps {
@@ -22,6 +30,13 @@ interface QuoteSendDialogProps {
   isSending: boolean;
   onClose: () => void;
   onConfirm: (payload: QuoteSendDialogPayload) => void;
+  /** Senders offered in the From selector. The selector only appears when there is a real choice. */
+  senders?: SelectableSender[];
+  /** Address shown for the default sender option. */
+  effectiveSenderAddress?: string;
+  /** Currently selected sender id (or DEFAULT_SENDER_SELECTION). */
+  senderId?: string;
+  onSenderChange?: (senderId: string) => void;
 }
 
 /**
@@ -36,6 +51,10 @@ export function QuoteSendDialog({
   isSending,
   onClose,
   onConfirm,
+  senders = [],
+  effectiveSenderAddress = '',
+  senderId,
+  onSenderChange,
 }: QuoteSendDialogProps): React.JSX.Element {
   const { t } = useTranslation('msp/quotes');
   const [recipients, setRecipients] = useState<QuoteRecipient[]>([]);
@@ -77,10 +96,18 @@ export function QuoteSendDialog({
       combined.push(normalized);
     }
 
-    onConfirm({
+    const payload: QuoteSendDialogPayload = {
       email_addresses: combined.length > 0 ? combined : undefined,
       message: message.trim() || undefined,
-    });
+    };
+    // Only surface a sender override when one was actually chosen, so the
+    // default path keeps the server-side routing decision.
+    const resolvedSenderId = senderIdForSend(senderId);
+    if (resolvedSenderId) {
+      payload.senderId = resolvedSenderId;
+    }
+
+    onConfirm(payload);
   };
 
   return (
@@ -110,6 +137,24 @@ export function QuoteSendDialog({
           })}
         </DialogDescription>
         <div className="space-y-3 py-2">
+          {senders.length > 1 && onSenderChange && (
+            <div className="space-y-1">
+              <label htmlFor={`${idPrefix}-sender`} className="text-sm font-medium">
+                {t('quoteForm.dialogs.send.from', { defaultValue: 'From' })}
+              </label>
+              <CustomSelect
+                id={`${idPrefix}-sender`}
+                value={senderId ?? DEFAULT_SENDER_SELECTION}
+                onValueChange={onSenderChange}
+                options={buildSenderOptions(
+                  senders,
+                  effectiveSenderAddress,
+                  t('quoteForm.dialogs.send.useDefault', { defaultValue: 'Use default' })
+                )}
+                disabled={isSending}
+              />
+            </div>
+          )}
           <label className="flex flex-col gap-1 text-sm font-medium">
             {t('quoteForm.fields.recipients', { defaultValue: 'Recipients' })}
             <QuoteSendRecipientsField

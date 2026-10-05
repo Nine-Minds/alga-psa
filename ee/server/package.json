@@ -33,14 +33,15 @@
     "fzstd": "^0.1.1",
     "gm": "^1.25.0",
     "lucide-react": "^0.475.0",
-    "next": "16.2.12",
+    "next": "16.3.8",
     "openai": "^4.59.0",
     "react": "^19",
     "react-dom": "^19",
     "sharp": "^0.35.4",
     "tar-stream": "^3.1.7",
     "uuid": "^11.0.5",
-    "@alga-psa/workflow-inference": "*"
+    "@alga-psa/workflow-inference": "*",
+    "@typesafe-ai/sdk": "^0.6.0"
   },
   "devDependencies": {
     "@playwright/test": "^1.40.0",

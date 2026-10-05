@@ -14,6 +14,7 @@ import { existsSync, readFileSync, mkdtempSync, rmSync, mkdirSync, writeFileSync
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { applyFlakyPolicy, resetFlakyPublication } from './lib/flaky-policy.mjs';
 import { readChangedFiles, selectIntegration } from './lib/integration-selection.mjs';
 import { reconcileExecution } from './lib/test-execution-evidence.mjs';
 import { reconcileDiscovery, repositoryTestFiles } from './lib/test-discovery.mjs';
@@ -73,7 +74,12 @@ const extraArgs = process.argv.slice(2);
 const output = path.join(repoRoot, 'test-results/integration');
 mkdirSync(output, { recursive: true });
 const save = (name, value) => writeFileSync(path.join(output, `${name}.json`), JSON.stringify(value, null, 2) + '\n');
-for (const name of ['collected', 'collected-tests', 'discovery', 'evidence', 'results']) save(name, null);
+for (const name of ['collected', 'collected-tests', 'discovery', 'evidence', 'results', 'flaky-tests']) save(name, null);
+// The flaky journal rides along in this shard's diagnostics artifact; the copy
+// the weekly report downloads is published only when something retried.
+const flakyPath = path.join(output, 'flaky-tests.json');
+const flakyUpload = path.join(repoRoot, 'test-results/integration-flaky');
+resetFlakyPublication(flakyUpload);
 // Preserve the existing metrics/report destination supplied by CI or developers.
 const reportArg = extraArgs.findLast(arg => /^--outputFile(?:\.json)?=/.test(arg));
 const reportPath = path.resolve(serverDir, reportArg ? reportArg.slice(reportArg.indexOf('=') + 1) : 'test-results-integration.json');
@@ -152,10 +158,18 @@ try {
   const collectedTests = JSON.parse(readFileSync(testPath, 'utf8'));
   const args = extraArgs.filter(arg => !/^--outputFile(?:\.json)?=/.test(arg) && arg !== '--reporter=json');
   if (!args.some(arg => arg.startsWith('--reporter'))) args.push('--reporter=default');
+  // --retry=1 and the flaky reporter live here, never in a shared vitest config:
+  // a fail-then-pass stops being an invisible rerun and becomes a recorded
+  // flake, judged below by the same policy every other lane uses.
+  if (!args.some(arg => arg.startsWith('--retry'))) args.push('--retry=1');
   const result = spawnSync(process.execPath,
     [path.join(serverDir, 'node_modules/vitest/vitest.mjs'), 'run', ...filters, '--coverage.enabled=false', ...args,
-      '--reporter=json', `--outputFile.json=${reportPath}`],
-    { cwd: serverDir, stdio: 'inherit' });
+      '--reporter=json', `--outputFile.json=${reportPath}`,
+      `--reporter=${path.join(repoRoot, 'scripts/lib/vitest-flaky-reporter.mjs')}`],
+    { cwd: serverDir, stdio: 'inherit',
+      env: { ...process.env, FLAKY_TESTS_PATH: flakyPath, FLAKY_SUITE: 'integration',
+        FLAKY_JOB: `integration shard ${index}/${total}`,
+        FLAKY_SHARD_INDEX: String(index), FLAKY_SHARD_TOTAL: String(total) } });
   const report = JSON.parse(readFileSync(reportPath, 'utf8'));
   save('results', report);
   evidence = reconcileExecution({ collected, collectedTests, report, root: repoRoot,
@@ -174,6 +188,12 @@ evidence.workingTreeDirty = Boolean(before.dirty || after.dirty);
 if (before.revision !== after.revision) {
   evidence.status = 'failed';
   evidence.failures.push('Repository revision changed during integration execution');
+}
+const flaky = applyFlakyPolicy({ documentPath: flakyPath, directory: flakyUpload,
+  eventName: process.env.GITHUB_EVENT_NAME });
+if (flaky.failures.length) {
+  evidence.status = 'failed';
+  evidence.failures.push(...flaky.failures);
 }
 save('evidence', evidence);
 for (const failure of evidence.failures) console.error(failure);

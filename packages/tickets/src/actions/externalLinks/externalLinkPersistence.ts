@@ -49,7 +49,8 @@ export type ExternalLinkErrorCode =
   | 'system_in_use'
   | 'invalid_system_key'
   | 'system_label_required'
-  | 'url_required';
+  | 'url_required'
+  | 'invalid_visibility';
 
 export class ExternalLinkValidationError extends Error {
   readonly code: ExternalLinkErrorCode;
@@ -62,6 +63,7 @@ export class ExternalLinkValidationError extends Error {
 }
 
 export interface AddExternalLinkInput {
+  portal_visible?: boolean;
   ticket_id: string;
   entity_type?: ExternalEntityLinkEntityType;
   /** Required when entity_type === 'comment'. */
@@ -79,6 +81,7 @@ export interface AddExternalLinkInput {
 }
 
 export interface UpdateExternalLinkPatch {
+  portal_visible?: boolean;
   relationship?: ExternalLinkRelationship;
   url?: string | null;
   actor?: ExternalSystemActor | null;
@@ -112,6 +115,16 @@ export async function requireTicket(
     throw new ExternalLinkValidationError('ticket_not_found', 'Ticket not found');
   }
   return ticket;
+}
+
+export function validatePortalVisibility(value: unknown, entityType: ExternalEntityLinkEntityType): boolean {
+  if (value !== undefined && typeof value !== 'boolean') {
+    throw new ExternalLinkValidationError('invalid_visibility', 'Visibility must be a boolean');
+  }
+  if (value === true && entityType !== 'ticket') {
+    throw new ExternalLinkValidationError('invalid_visibility', 'Only ticket-level links can be shared');
+  }
+  return value === true;
 }
 
 function normalizeRelationship(value: unknown): ExternalLinkRelationship {
@@ -161,6 +174,7 @@ export function assertLinkDestination(
 }
 
 export interface PreparedExternalLink {
+  portal_visible: boolean;
   entity_type: ExternalEntityLinkEntityType;
   entity_id: string;
   ticket_id: string;
@@ -187,6 +201,7 @@ export async function prepareExternalLink(
 ): Promise<PreparedExternalLink> {
   const entityType = normalizeEntityType(input.entity_type);
   const relationship = normalizeRelationship(input.relationship);
+  const portalVisible = validatePortalVisibility(input.portal_visible, entityType);
 
   const externalId = typeof input.external_id === 'string' ? input.external_id.trim() : '';
   if (!externalId) {
@@ -232,6 +247,7 @@ export async function prepareExternalLink(
   }
 
   return {
+    portal_visible: portalVisible,
     entity_type: entityType,
     entity_id: entityId,
     ticket_id: input.ticket_id,
@@ -375,7 +391,8 @@ export async function persistExternalLinksForCreate(
   const tenantSystems = await loadTenantExternalSystems(trx, tenant);
   const inserted: IExternalEntityLink[] = [];
   for (const link of links) {
-    const prepared = await prepareExternalLink(trx, tenant, { ...link, ticket_id: ticketId });
+    // Imports and inline entity creation never share links; use an authorized explicit link mutation.
+    const prepared = await prepareExternalLink(trx, tenant, { ...link, ticket_id: ticketId, portal_visible: false });
     const row = await insertExternalLink(trx, tenant, prepared, createdBy);
 
     await writeTicketActivity(trx, {
@@ -396,6 +413,7 @@ export async function persistExternalLinksForCreate(
         external_id: row.external_id,
         relationship: row.relationship,
         entity_type: row.entity_type,
+        portal_visible: row.portal_visible === true,
       },
     });
 

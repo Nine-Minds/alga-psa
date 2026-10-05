@@ -33,6 +33,9 @@ vi.mock('../../../actions/billingClientLocationActions', () => ({
 vi.mock('../../../actions/quoteDocumentTemplates', () => ({
   getQuoteDocumentTemplates: vi.fn(),
 }));
+vi.mock('@alga-psa/email/senderActions', () => ({
+  listSelectableSenders: vi.fn().mockResolvedValue({ senders: [], effectiveSenderAddress: '' }),
+}));
 vi.mock('@alga-psa/user-composition/actions/contactQueryActions', () => ({
   getContactsForPicker: vi.fn(),
 }));

@@ -1114,9 +1114,10 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
                           <div key={`${phase.phase_name}-${index}`} className="flex items-center gap-2 py-1 text-sm">
                             <span className="text-[rgb(var(--color-text-400))]">•</span>
                             <span>{task.task_name}</span>
-                            {task.estimated_hours && (
-                              <span className="text-[rgb(var(--color-text-500))]">{importT('estimatedHoursSummary', '({{hours}}h)', { hours: task.estimated_hours })}</span>
-                            )}
+                            {task.estimated_hours ? (
+                              // Grouped rows carry minutes (project_tasks.estimated_hours); the preview shows hours.
+                              <span className="text-[rgb(var(--color-text-500))]">{importT('estimatedHoursSummary', '({{hours}}h)', { hours: Number((task.estimated_hours / 60).toFixed(2)) })}</span>
+                            ) : null}
                           </div>
                         ))}
                       </div>

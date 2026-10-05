@@ -123,8 +123,10 @@ describe('MicrosoftGraphEmailProvider', () => {
 
     expect(sendMailMock).toHaveBeenCalledWith({
       kind: 'json',
+      fromAddress: 'ignored@example.net',
       message: {
         subject: 'Ticket reply',
+        from: { emailAddress: { address: 'ignored@example.net', name: '' } },
         body: { contentType: 'HTML', content: '<p>HTML reply</p>' },
         toRecipients: [{ emailAddress: { address: 'customer@example.net', name: 'Customer' } }],
         ccRecipients: [{ emailAddress: { address: 'cc@example.net' } }],
@@ -164,9 +166,20 @@ describe('MicrosoftGraphEmailProvider', () => {
       const payload = sendMailMock.mock.calls[0]?.[0];
       expect(payload.kind).toBe('mime');
       const mime = Buffer.from(payload.content, 'base64').toString('utf8');
-      expect(mime).toContain(`From: ${fromName} <support+desk@example.com>`);
+        expect(mime).toContain(`From: ${fromName} <ignored@example.net>`);
     }
   );
+
+  it('sends as the routed address in Graph payloads', async () => {
+    const provider = new MicrosoftGraphEmailProvider('microsoft-provider-1');
+    await provider.initialize(providerConfig());
+    await provider.sendEmail(message({ from: { email: 'projects@example.com' }, headers: undefined }), 'tenant-1');
+    expect(sendMailMock).toHaveBeenCalledWith(expect.objectContaining({
+      kind: 'json',
+      fromAddress: 'projects@example.com',
+      message: expect.objectContaining({ from: { emailAddress: { address: 'projects@example.com', name: '' } } }),
+    }));
+  });
 
   it('uses MIME to retain ticket threading headers that Graph JSON cannot set', async () => {
     const provider = new MicrosoftGraphEmailProvider('microsoft-provider-1');
@@ -178,7 +191,7 @@ describe('MicrosoftGraphEmailProvider', () => {
     const payload = sendMailMock.mock.calls[0]?.[0];
     expect(payload.kind).toBe('mime');
     const mime = Buffer.from(payload.content, 'base64').toString('utf8');
-    expect(mime).toContain('From: Ignored sender <support+desk@example.com>');
+    expect(mime).toContain('From: Ignored sender <ignored@example.net>');
     expect(mime).toContain('Reply-To: Ticket replies <replies@example.com>');
     expect(mime).toContain('Message-ID: <ticket-anchor@example.com>');
     expect(mime).toContain('In-Reply-To: <customer-message@example.net>');
@@ -265,7 +278,7 @@ describe('MicrosoftGraphEmailProvider', () => {
     expect(parsed.html).toBe(html);
     expect(parsed.text).toBe(text);
 
-    expect(parsed.from?.value[0]).toEqual({ address: 'support+desk@example.com', name: fromName });
+    expect(parsed.from?.value[0]).toEqual({ address: 'ignored@example.net', name: fromName });
     expect(parsed.replyTo?.value[0]).toEqual({ address: 'replies@example.com', name: 'Ticket replies' });
     expect(parsed.to?.value).toEqual([{ address: 'customer@example.net', name: 'Customer' }]);
     expect(parsed.cc?.value).toEqual([{ address: 'cc@example.net', name: '' }]);

@@ -290,6 +290,48 @@ test('applyAppUrl requires a hostname', async () => {
   assert.equal(res.status, 400);
 });
 
+test('applyAppUrl persists the DNS/app selection into setup inputs for the host DNS reconciler', async () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'alga-manage-dns-'));
+  const releaseSelectionFile = path.join(tmp, 'release-selection.json');
+  const setupInputsFile = path.join(tmp, 'setup-inputs.json');
+  fs.writeFileSync(releaseSelectionFile, JSON.stringify({ selectedChannel: 'stable' }));
+  fs.writeFileSync(setupInputsFile, JSON.stringify({ channel: 'stable', installCode: 'KEEP', adminPassword: 'secret' }));
+
+  const coreYaml = 'appUrl: https://alga.local\nhost: alga.local\ndomainSuffix: alga.local\n';
+  const temporalWorkerYaml = 'publicBaseUrl: https://alga.local\n';
+  const kube = fakeKube({
+    json: (args) => {
+      if (args.includes('configmap appliance-values-alga-core')) {
+        return { ok: true, value: { data: { 'alga-core.single-node.yaml': coreYaml } } };
+      }
+      if (args.includes('configmap appliance-values-temporal-worker')) {
+        return { ok: true, value: { data: { 'temporal-worker.single-node.yaml': temporalWorkerYaml } } };
+      }
+      return { ok: true, value: {} };
+    }
+  });
+
+  const res = await applyAppUrl({
+    appHostname: 'https://psa.example.test',
+    dnsMode: 'custom',
+    dnsServers: '203.0.113.10, 203.0.113.11',
+    kube,
+    releaseSelectionFile,
+    setupInputsFile
+  });
+  assert.equal(res.ok, true);
+
+  // The host DNS reconciler reads setup-inputs.json; the selection must land
+  // there or a custom resolver chosen in the Manage UI would never be applied.
+  const inputs = JSON.parse(fs.readFileSync(setupInputsFile, 'utf8'));
+  assert.equal(inputs.dnsMode, 'custom');
+  assert.equal(inputs.dnsServers, '203.0.113.10, 203.0.113.11');
+  assert.equal(inputs.appHostname, 'https://psa.example.test');
+  // Unrelated setup inputs (install code, admin password) are preserved.
+  assert.equal(inputs.installCode, 'KEEP');
+  assert.equal(inputs.adminPassword, 'secret');
+});
+
 test('collectManageStatus reports upgradeAvailable on digest mismatch', async () => {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'alga-manage-status-'));
   const releaseSelectionFile = path.join(tmp, 'release-selection.json');

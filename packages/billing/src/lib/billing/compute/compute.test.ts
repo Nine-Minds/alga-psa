@@ -12,6 +12,7 @@ import {
 } from "./computeBucketCharges";
 import { computeRecurringQuantityCharges } from "./computeRecurringQuantityCharges";
 import { computeDiscountsAndAdjustments } from "./computeDiscountsAndAdjustments";
+import type { DiscountComputeCandidate } from "./computeDiscountsAndAdjustments";
 import type { ChargeComputeTaxPorts, ChargeComputeTiming } from "./types";
 
 const TEN_PERCENT_PORTS: ChargeComputeTaxPorts = {
@@ -1232,6 +1233,332 @@ describe("computeRecurringQuantityCharges", () => {
         TEN_PERCENT_PORTS,
       ),
     ).toThrow(/Missing pricing for product/);
+  });
+
+  it("keeps the legacy zero-to-one coercion until a revision is scheduled", async () => {
+    const result = await computeRecurringQuantityCharges(
+      {
+        clientContractLine: line(),
+        client: CLIENT,
+        timing: timing(),
+        chargeType: "product",
+        services: [
+          {
+            ...service,
+            configuration_quantity: 0,
+            configuration_custom_rate: null,
+            service_line_custom_rate: null,
+            price_rate: 3100,
+          },
+        ],
+        contractCurrency: "USD",
+      },
+      TEN_PERCENT_PORTS,
+    );
+    expect(result.charges[0]).toMatchObject({ quantity: 1, total: 3100 });
+  });
+
+  it("bills a scheduled revision quantity at an explicit override rate", async () => {
+    const result = await computeRecurringQuantityCharges(
+      {
+        clientContractLine: line(),
+        client: CLIENT,
+        timing: timing(),
+        chargeType: "product",
+        services: [
+          {
+            ...service,
+            effective_pricing: {
+              quantity: 23,
+              pricePolicy: "override",
+              unitRateCents: 10000,
+              revisionId: "rev-1",
+              version: 1,
+              effectivePeriodStart: "2026-08-01",
+            },
+          },
+        ],
+        contractCurrency: "USD",
+      },
+      TEN_PERCENT_PORTS,
+    );
+    expect(result.charges[0]).toMatchObject({
+      quantity: 23,
+      rate: 10000,
+      total: 230000,
+      tax_amount: 23000,
+    });
+    expect(result.explanations[0].inputs).toContainEqual({
+      label: "Rate source",
+      value: "scheduled override",
+    });
+    expect(result.explanations[0].markers).toContain("scheduled_revision");
+  });
+
+  it("honors an explicit zero override as a real free unit price", async () => {
+    const result = await computeRecurringQuantityCharges(
+      {
+        clientContractLine: line(),
+        client: CLIENT,
+        timing: timing(),
+        chargeType: "product",
+        services: [
+          {
+            ...service,
+            effective_pricing: {
+              quantity: 5,
+              pricePolicy: "override",
+              unitRateCents: 0,
+              revisionId: "rev-free",
+              version: 1,
+              effectivePeriodStart: "2026-08-01",
+            },
+          },
+        ],
+        contractCurrency: "USD",
+      },
+      TEN_PERCENT_PORTS,
+    );
+    expect(result.charges[0]).toMatchObject({ quantity: 5, rate: 0, total: 0, tax_amount: 0 });
+  });
+
+  it("inherits the currency catalog price for a catalog-policy revision", async () => {
+    const result = await computeRecurringQuantityCharges(
+      {
+        clientContractLine: line(),
+        client: CLIENT,
+        timing: timing(),
+        chargeType: "product",
+        services: [
+          {
+            ...service,
+            effective_pricing: {
+              quantity: 4,
+              pricePolicy: "catalog",
+              unitRateCents: null,
+              revisionId: "rev-cat",
+              version: 2,
+              effectivePeriodStart: "2026-08-01",
+            },
+          },
+        ],
+        contractCurrency: "USD",
+      },
+      TEN_PERCENT_PORTS,
+    );
+    expect(result.charges[0]).toMatchObject({ quantity: 4, rate: 3100, total: 12400 });
+    expect(result.explanations[0].inputs).toContainEqual({
+      label: "Rate source",
+      value: "scheduled catalog price",
+    });
+  });
+
+  it("turns a revision quantity zero into a deliberate zero charge with no NaN", async () => {
+    const result = await computeRecurringQuantityCharges(
+      {
+        clientContractLine: line(),
+        client: CLIENT,
+        timing: timing(),
+        chargeType: "product",
+        services: [
+          {
+            ...service,
+            effective_pricing: {
+              quantity: 0,
+              pricePolicy: "override",
+              unitRateCents: 10000,
+              revisionId: "rev-stop",
+              version: 1,
+              effectivePeriodStart: "2026-08-01",
+            },
+          },
+        ],
+        contractCurrency: "USD",
+      },
+      TEN_PERCENT_PORTS,
+    );
+    expect(result.charges[0]).toMatchObject({ quantity: 0, total: 0, tax_amount: 0 });
+    expect(Number.isNaN(result.charges[0].rate)).toBe(false);
+    expect(result.explanations[0].markers).toContain("zero_quantity");
+  });
+
+  it("lets a stopped catalog item reach zero without a currency price, but blocks a billable one", async () => {
+    const stopped = await computeRecurringQuantityCharges(
+      {
+        clientContractLine: line(),
+        client: CLIENT,
+        timing: timing(),
+        chargeType: "product",
+        services: [
+          {
+            ...service,
+            price_rate: null,
+            configuration_custom_rate: null,
+            service_line_custom_rate: null,
+            effective_pricing: {
+              quantity: 0,
+              pricePolicy: "catalog",
+              unitRateCents: null,
+              revisionId: "rev-stop-catalog",
+              version: 1,
+              effectivePeriodStart: "2026-08-01",
+            },
+          },
+        ],
+        contractCurrency: "USD",
+      },
+      TEN_PERCENT_PORTS,
+    );
+    expect(stopped.charges[0]).toMatchObject({ quantity: 0, total: 0 });
+
+    expect(() =>
+      computeRecurringQuantityCharges(
+        {
+          clientContractLine: line(),
+          client: CLIENT,
+          timing: timing(),
+          chargeType: "product",
+          services: [
+            {
+              ...service,
+              price_rate: null,
+              configuration_custom_rate: null,
+              service_line_custom_rate: null,
+              effective_pricing: {
+                quantity: 3,
+                pricePolicy: "catalog",
+                unitRateCents: null,
+                revisionId: "rev-resume-catalog",
+                version: 1,
+                effectivePeriodStart: "2026-08-01",
+              },
+            },
+          ],
+          contractCurrency: "USD",
+        },
+        TEN_PERCENT_PORTS,
+      ),
+    ).toThrow(/Missing pricing for product/);
+  });
+
+  it("prices the 20/30/2 baseline and the 23-user revision to the plan amounts", async () => {
+    const bundle = [
+      { service_id: "users", service_name: "Users", config_id: "cfg-users", configuration_quantity: 20, configuration_custom_rate: null, service_line_custom_rate: null, price_rate: 10000, tax_rate_id: null },
+      { service_id: "endpoints", service_name: "Endpoints", config_id: "cfg-endpoints", configuration_quantity: 30, configuration_custom_rate: null, service_line_custom_rate: null, price_rate: 5000, tax_rate_id: null },
+      { service_id: "locations", service_name: "Locations", config_id: "cfg-locations", configuration_quantity: 2, configuration_custom_rate: null, service_line_custom_rate: null, price_rate: 20000, tax_rate_id: null },
+    ];
+
+    const baseline = await computeRecurringQuantityCharges(
+      { clientContractLine: line(), client: CLIENT, timing: timing(), chargeType: "product", services: bundle, contractCurrency: "USD" },
+      TEN_PERCENT_PORTS,
+    );
+    expect(baseline.charges.reduce((sum, charge) => sum + charge.total, 0)).toBe(390000);
+
+    const revised = await computeRecurringQuantityCharges(
+      {
+        clientContractLine: line(),
+        client: CLIENT,
+        timing: timing(),
+        chargeType: "product",
+        services: bundle.map((row) =>
+          row.service_id === "users"
+            ? {
+                ...row,
+                effective_pricing: {
+                  quantity: 23,
+                  pricePolicy: "override" as const,
+                  unitRateCents: 10000,
+                  revisionId: "rev-users",
+                  version: 1,
+                  effectivePeriodStart: "2026-09-01",
+                },
+              }
+            : row,
+        ),
+        contractCurrency: "USD",
+      },
+      TEN_PERCENT_PORTS,
+    );
+    expect(revised.charges.reduce((sum, charge) => sum + charge.total, 0)).toBe(420000);
+  });
+
+  it("feeds effective recurring subtotals through automatic percentage and fixed discounts", async () => {
+    const bundle = [
+      { service_id: "users", service_name: "Users", config_id: "cfg-users", configuration_quantity: 20, configuration_custom_rate: null, service_line_custom_rate: null, price_rate: 10000, tax_rate_id: null },
+      { service_id: "endpoints", service_name: "Endpoints", config_id: "cfg-endpoints", configuration_quantity: 30, configuration_custom_rate: null, service_line_custom_rate: null, price_rate: 5000, tax_rate_id: null },
+      { service_id: "locations", service_name: "Locations", config_id: "cfg-locations", configuration_quantity: 2, configuration_custom_rate: null, service_line_custom_rate: null, price_rate: 20000, tax_rate_id: null },
+    ];
+    const buildBillingResult = async (revised: boolean): Promise<IBillingResult> => {
+      const result = await computeRecurringQuantityCharges(
+        {
+          clientContractLine: line(),
+          client: CLIENT,
+          timing: timing(),
+          chargeType: "product",
+          services: revised
+            ? bundle.map((row) =>
+                row.service_id === "users"
+                  ? {
+                      ...row,
+                      effective_pricing: {
+                        quantity: 23,
+                        pricePolicy: "override" as const,
+                        unitRateCents: 10000,
+                        revisionId: "rev-users",
+                        version: 1,
+                        effectivePeriodStart: "2026-09-01",
+                      },
+                    }
+                  : row,
+              )
+            : bundle,
+          contractCurrency: "USD",
+        },
+        TEN_PERCENT_PORTS,
+      );
+      const subtotal = result.charges.reduce((sum, charge) => sum + charge.total, 0);
+      return {
+        charges: result.charges,
+        totalAmount: subtotal,
+        discounts: [],
+        adjustments: [],
+        finalAmount: subtotal,
+        currency_code: "USD",
+      };
+    };
+
+    const finalAfter = (billingResult: IBillingResult, candidate: DiscountComputeCandidate) =>
+      computeDiscountsAndAdjustments({
+        billingResult,
+        billingPeriod: PERIOD,
+        discountCandidates: [candidate],
+        adjustments: [],
+      }).billingResult.finalAmount;
+
+    const baseline = await buildBillingResult(false);
+    const revised = await buildBillingResult(true);
+    expect(baseline.totalAmount).toBe(390000);
+    expect(revised.totalAmount).toBe(420000);
+
+    const tenPercent: DiscountComputeCandidate = {
+      discount_id: "pct",
+      discount_name: "Ten percent",
+      discount_type: "percentage",
+      value: 0.1,
+      start_date: "2026-01-01",
+    };
+    const hundredOff: DiscountComputeCandidate = {
+      discount_id: "fixed",
+      discount_name: "Hundred off",
+      discount_type: "fixed",
+      value: 10000,
+      start_date: "2026-01-01",
+    };
+
+    expect(finalAfter(await buildBillingResult(false), tenPercent)).toBe(351000);
+    expect(finalAfter(await buildBillingResult(true), tenPercent)).toBe(378000);
+    expect(finalAfter(await buildBillingResult(false), hundredOff)).toBe(380000);
+    expect(finalAfter(await buildBillingResult(true), hundredOff)).toBe(410000);
   });
 });
 

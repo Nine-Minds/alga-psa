@@ -32,6 +32,8 @@ function renderHook(opts?: {
   session?: any;
   ticketId?: string;
   onCreated?: () => void;
+  workItem?: { id: string; type: "ticket" | "project_task" };
+  defaultServiceId?: string | null;
 }) {
   const showToast = vi.fn();
   const t = vi.fn((key: string, vars?: Record<string, unknown>) => {
@@ -53,7 +55,7 @@ function renderHook(opts?: {
         showToast,
         t,
       },
-      { onCreated: opts?.onCreated },
+      { onCreated: opts?.onCreated, workItem: opts?.workItem, defaultServiceId: opts?.defaultServiceId },
     );
     return null;
   }
@@ -370,6 +372,27 @@ describe("useTimeEntry", () => {
       });
 
       expect(onCreated).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("work items other than the ticket", () => {
+    it("logs against the given work item and starts from its service", async () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date("2026-05-05T14:30:00"));
+      mockCreateTimeEntry.mockResolvedValue({ ok: true, data: { data: { entry_id: "e1" } } });
+      const { latest } = renderHook({ workItem: { id: "task-7", type: "project_task" }, defaultServiceId: "svc-task" });
+
+      act(() => latest.current.openTimeEntryModal());
+      expect(latest.current.timeEntryServiceId).toBe("svc-task");
+      await act(async () => {
+        await latest.current.submitTimeEntry();
+      });
+
+      expect(mockCreateTimeEntry).toHaveBeenCalledWith(fakeClient, expect.objectContaining({
+        work_item_type: "project_task",
+        work_item_id: "task-7",
+        service_id: "svc-task",
+      }));
     });
   });
 });

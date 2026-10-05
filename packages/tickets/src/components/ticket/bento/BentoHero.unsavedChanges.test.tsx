@@ -27,6 +27,38 @@ vi.mock('../../../actions/ticketCategoryActions', () => ({
   getTicketCategoriesByBoard: (...args: unknown[]) => getTicketCategoriesByBoardMock(...args),
 }));
 
+vi.mock('../../CategoryPicker', () => ({
+  CategoryPicker: ({
+    id,
+    categories,
+    selectedCategories,
+    onSelect,
+  }: {
+    id: string;
+    categories: Array<{ category_id: string; category_name: string; parent_category?: string }>;
+    selectedCategories: string[];
+    onSelect: (ids: string[], excluded: string[]) => void;
+  }) => {
+    const selected = categories.find((category) => category.category_id === selectedCategories[0]);
+    const parent = selected?.parent_category
+      ? categories.find((category) => category.category_id === selected.parent_category)
+      : undefined;
+    return (
+      <div>
+        <button id={id} data-testid={id} type="button">
+          {parent && <><strong>{parent.category_name}</strong> → </>}{selected?.category_name}
+        </button>
+        {categories.map((category) => (
+          <button key={category.category_id} type="button" onClick={() => onSelect([category.category_id], [])}>
+            {category.category_name}
+          </button>
+        ))}
+        <button type="button" onClick={() => onSelect([], [])}>Clear category</button>
+      </div>
+    );
+  },
+}));
+
 vi.mock('@alga-psa/ui/context', () => ({
   useRegisterUnsavedChanges: (...args: unknown[]) => useRegisterUnsavedChangesMock(...args),
 }));
@@ -339,7 +371,7 @@ describe('BentoHero unsaved change model', () => {
     });
 
     expect(screen.getByTestId('bento-hero-status-select')).toHaveValue('');
-    expect(screen.getByTestId('bento-hero-category-select')).toHaveValue('');
+    expect(screen.getByTestId('bento-hero-category-select')).toHaveTextContent('');
     expect(screen.getByText('Select a status for the new board before saving.')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Save Changes/i })).toBeDisabled();
 
@@ -349,9 +381,7 @@ describe('BentoHero unsaved change model', () => {
     fireEvent.change(screen.getByTestId('bento-hero-status-select'), {
       target: { value: 'status-b' },
     });
-    fireEvent.change(screen.getByTestId('bento-hero-category-select'), {
-      target: { value: 'cat-b' },
-    });
+    fireEvent.click(screen.getByRole('button', { name: 'Project category' }));
 
     const saveButton = screen.getByRole('button', { name: /Save Changes/i });
     expect(saveButton).not.toBeDisabled();
@@ -376,7 +406,7 @@ describe('BentoHero unsaved change model', () => {
     // Wait for the board-a fetches to be APPLIED (not merely called): the
     // category option proves the categories fetch committed savedBoardConfig.
     await waitFor(() => {
-      expect(screen.getByRole('option', { name: 'Support category' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Support category' })).toBeInTheDocument();
     });
 
     fireEvent.change(screen.getByTestId('bento-hero-board-select'), {
@@ -391,7 +421,7 @@ describe('BentoHero unsaved change model', () => {
     // and syncing here removes the fetch-ordering races that flaked in CI.
     await waitFor(() => {
       expect(screen.getByRole('option', { name: 'New board open' })).toBeInTheDocument();
-      expect(screen.getByRole('option', { name: 'Project category' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Project category' })).toBeInTheDocument();
       expect(onLiveDirtyFieldsChange).toHaveBeenLastCalledWith(
         expect.arrayContaining(['board_id', 'priority_id']),
       );
@@ -411,6 +441,48 @@ describe('BentoHero unsaved change model', () => {
     });
     expect(screen.queryByText('Select a status for the new board before saving.')).not.toBeInTheDocument();
     expect(screen.getByTestId('bento-hero-status-select')).toHaveValue('status-a');
+  });
+
+  it('shows the selected parent in bold and buffers both IDs when a child is selected', async () => {
+    const onBatchSelectChange = vi.fn().mockResolvedValue(true);
+    getTicketCategoriesByBoardMock.mockResolvedValue({
+      categories: [
+        { category_id: 'cat-parent', category_name: 'Magical Artifacts' },
+        { category_id: 'cat-child-current', category_name: 'Other Enchanted Item', parent_category: 'cat-parent' },
+        { category_id: 'cat-parent-2', category_name: 'Mystic Tools' },
+        { category_id: 'cat-child', category_name: 'Enchanted Accessories', parent_category: 'cat-parent-2' },
+      ],
+      boardConfig: { category_type: 'custom', priority_type: 'custom' },
+    });
+    renderHero({
+      ticket: { ...baseTicket, category_id: 'cat-parent', subcategory_id: 'cat-child-current' } as any,
+      onBatchSelectChange,
+    });
+
+    const trigger = await screen.findByTestId('bento-hero-category-select');
+    expect(trigger.querySelector('strong')).toHaveTextContent('Magical Artifacts');
+    expect(trigger).toHaveTextContent('Other Enchanted Item');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Enchanted Accessories' }));
+    fireEvent.click(screen.getByRole('button', { name: /Save Changes/i }));
+    await waitFor(() => expect(onBatchSelectChange).toHaveBeenCalledWith(expect.objectContaining({
+      category_id: 'cat-parent-2',
+      subcategory_id: 'cat-child',
+    })));
+  });
+
+  it('clears the staged subcategory when a top-level category is selected', async () => {
+    const onBatchSelectChange = vi.fn().mockResolvedValue(true);
+    renderHero({ onBatchSelectChange, ticket: { ...baseTicket, category_id: 'cat-parent', subcategory_id: 'cat-child' } as any });
+    await screen.findByRole('button', { name: 'Support category' });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Support category' }));
+    fireEvent.click(screen.getByRole('button', { name: /Save Changes/i }));
+
+    await waitFor(() => expect(onBatchSelectChange).toHaveBeenCalledWith(expect.objectContaining({
+      category_id: 'cat-a',
+      subcategory_id: null,
+    })));
   });
 
   it('keeps the ticket\'s current status selectable when the board fetch omits it', async () => {

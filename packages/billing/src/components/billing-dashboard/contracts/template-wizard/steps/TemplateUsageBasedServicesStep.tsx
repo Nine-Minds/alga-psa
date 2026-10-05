@@ -5,7 +5,8 @@ import { BucketOverlayInput, TemplateWizardData } from '../TemplateWizard';
 import { Label } from '@alga-psa/ui/components/Label';
 import { ServiceCatalogPicker, ServiceCatalogPickerItem } from '../../ServiceCatalogPicker';
 import { Button } from '@alga-psa/ui/components/Button';
-import { Input } from '@alga-psa/ui/components/Input';
+import { UnitOfMeasureInput } from '@alga-psa/ui/components/UnitOfMeasureInput';
+import { listTenantUnitsOfMeasure, registerTenantUnitOfMeasure } from '@alga-psa/billing/actions/unitOfMeasureActions';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import { BarChart3, Plus, X } from 'lucide-react';
 import { TemplateServicePreviewSection } from '../TemplateServicePreviewSection';
@@ -193,14 +194,13 @@ export function TemplateUsageBasedServicesStep({
                       defaultValue: 'Unit of Measure (Optional)',
                     })}
                   </Label>
-                  <Input
+                  <UnitOfMeasureInput
                     id={`template-unit-${index}`}
-                    type="text"
                     value={service.unit_of_measure ?? ''}
-                    onChange={(event) => handleUnitChange(index, event.target.value)}
-                    placeholder={t('templateUsage.placeholders.unitOfMeasure', {
-                      defaultValue: 'e.g., GB, API call, user',
-                    })}
+                    onChange={(unit: string) => handleUnitChange(index, unit)}
+                    allowClear
+                    loadCustomUnits={listTenantUnitsOfMeasure}
+                    registerCustomUnit={registerTenantUnitOfMeasure}
                   />
                   <p className="text-xs text-[rgb(var(--color-text-400))]">
                     {t('templateUsage.help.unitOfMeasure', {

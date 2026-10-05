@@ -909,6 +909,10 @@ export class InvoiceService extends BaseService<IInvoice> {
     });
 
     await publishDeferredEvents(deferredEvents);
+    // Deletion may hard-delete an unissued invoice or mark an invoice with
+    // payment history cancelled. In either case, stop any pending auto-pay
+    // workflow after the transaction has committed.
+    await notifyInvoiceTerminalStatus({ knex, tenantId: context.tenant, invoiceId: id, newStatus: 'cancelled' });
   }
 
   // ============================================================================

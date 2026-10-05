@@ -20,6 +20,7 @@ export interface RmmAssetDeviceActions {
   /** Send an immediate reboot. Throws with a user-readable message on failure. */
   reboot(ref: RmmAssetDeviceRef): Promise<void>;
   runScript?(ref: RmmAssetDeviceRef, scriptId: string): Promise<{ jobId?: string }>;
+  remoteControlTypes?(ref: RmmAssetDeviceRef): Promise<RmmRemoteConnectionType[]>;
   remoteControlUrl?(ref: RmmAssetDeviceRef, connectionType: RmmRemoteConnectionType): Promise<string | null>;
 }
 

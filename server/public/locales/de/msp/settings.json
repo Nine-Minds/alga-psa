@@ -58,8 +58,22 @@
     },
     "clients": {
       "title": "Ihr Unternehmen",
-      "help": "Der als Ihr Unternehmen markierte Kunde ist Ihre eigene Organisation. Name, Adresse und Logo dieses Kunden erscheinen auf Rechnungen, Angeboten und in der Kundenkommunikation.",
+      "help": "Der als Ihr Unternehmen markierte Kunde ist Ihre eigene Organisation. Name, Adresse und Logo dieses Kunden erscheinen auf Rechnungen, Angeboten und in der Kundenkommunikation; das Land seines Standorts bestimmt außerdem Ihr Datumsformat und das Land, das in neuen Datensätzen vorausgewählt wird.",
       "currentDefault": "Ihr Unternehmen ist derzeit {{name}}.",
+      "defaults": {
+        "title": "Was Ihr Unternehmen bestimmt",
+        "intro": "Das Land am Standort von {{name}} bestimmt für alle in der MSP-App Folgendes:",
+        "country": "Neue Kunden, Kontakte und Standorte wählen {{country}} vor.",
+        "countryMissing": "Neue Kunden, Kontakte und Standorte wählen kein Land vor.",
+        "phoneCode": "Telefonnummern beginnen mit der Vorwahl {{code}}.",
+        "phoneCodeMissing": "Telefonnummern beginnen ohne Vorwahl.",
+        "dateFormat": "Datumsangaben werden als {{pattern}} geschrieben – {{example}} – mit {{clock}}-Anzeige.",
+        "clock12": "12-Stunden",
+        "clock24": "24-Stunden",
+        "noCountry": "Für {{name}} ist am Standort kein Land hinterlegt, daher gilt für alle drei der Standard {{pattern}}. Hinterlegen Sie für {{name}} einen Standort mit Land, um sie zu ändern – eine separate Einstellung für das Datumsformat gibt es nicht.",
+        "portalNote": "Im Kundenportal sehen Benutzer Datumsangaben im Format ihres eigenen Kunden, das sich aus dessen Standortland ergibt und nicht aus Ihrem.",
+        "changeIntro": "Der Wechsel zu {{name}} ändert außerdem diese Standardwerte:"
+      },
       "yourCompanyBadge": "Ihr Unternehmen",
       "table": {
         "name": "Name",
@@ -97,6 +111,18 @@
         "setDefaultClient": "Standardkunde konnte nicht festgelegt werden",
         "loadClients": "Kunden konnten nicht geladen werden"
       }
+    }
+  },
+  "dashboardWelcome": {
+    "label": "Firmennamen in der Dashboard-Begrüßung verwenden",
+    "help": "Standardmäßig deaktiviert: Das MSP-Dashboard zeigt „Willkommen in Ihrer MSP-Kommandozentrale“. Wenn Sie dies aktivieren, erscheint stattdessen der Name des als Ihr Unternehmen markierten Kunden. Dieser Schalter wird sofort und unabhängig gespeichert.",
+    "noCompany": "Bisher ist kein Kunde als Ihr Unternehmen markiert. Legen Sie unter Einstellungen → Allgemein einen fest, damit dessen Name hier erscheinen kann.",
+    "previewLabel": "Ihr Team sieht:",
+    "preview": "Willkommen in der Kommandozentrale von {{companyName}}",
+    "previewDefault": "Willkommen in Ihrer MSP-Kommandozentrale",
+    "messages": {
+      "saved": "Dashboard-Begrüßung aktualisiert",
+      "saveFailed": "Dashboard-Begrüßung konnte nicht aktualisiert werden"
     }
   },
   "experimentalFeatures": {
@@ -830,7 +856,17 @@
         }
       },
       "empty": "Keine Boards gefunden.",
-      "searchPlaceholder": "Boards suchen…"
+      "searchPlaceholder": "Boards suchen…",
+      "emailSender": {
+        "useDefault": "Ticket-Standard verwenden",
+        "duplicateRoute": "Diese Absenderroute ist bereits vorhanden.",
+        "saveFailed": "Ticket-Absender konnte nicht gespeichert werden. Bitte versuchen Sie es erneut.",
+        "label": "Absender für ausgehende E-Mails",
+        "inboundWarning": "Dieser Absender wird für ausgehende Ticket-E-Mails verwendet. Die Einstellungen für eingehende E-Mails bleiben unverändert.",
+        "displayName": "Anzeigename",
+        "save": "Absender speichern",
+        "saved": "Absender gespeichert"
+      }
     },
     "priorities": {
       "title": {
@@ -1218,6 +1254,8 @@
         "followTheme": "Wenn aktiviert, verwendet das Kundenportal das unter Einstellungen → Erscheinungsbild gewählte Design. Wenn deaktiviert, überschreiben die Farben unten dieses Design.",
         "followThemeActive": "Die Farben unten bleiben gespeichert, werden aber nicht angewendet, solange das Portal dem Organisationsdesign folgt."
       },
+      "cropHelp": "Ziehen und zoomen Sie, um den Ausschnitt zu wählen, der im Seitenbereich des Portals und in allen runden Rahmen erscheint. Ihr breites Logo bleibt unverändert.",
+      "cropHelpFromSquare": "Ziehen und zoomen Sie, um den Ausschnitt zu wählen, der im Seitenbereich des Portals und in allen runden Rahmen erscheint. Nur das Zeichen wird geändert, sodass Sie es später erneut anpassen können.",
       "heroGradient": {
         "primaryShades": "Primärfarbe zu Primärfarbton",
         "primarySecondary": "Primärfarbe zu Sekundärfarbe"
@@ -1312,7 +1350,7 @@
     },
     "domain": {
       "title": "Benutzerdefinierte Domain",
-      "description": "Konfigurieren Sie einen markenspezifischen Hostnamen für Ihr Kundenportal. TLS-Zertifikate werden automatisch bereitgestellt, sobald DNS verifiziert ist.",
+      "description": "Konfigurieren Sie einen markenspezifischen Hostnamen für Ihr Kundenportal.",
       "currentStatus": "Aktueller Status",
       "noDomainConfigured": "Keine benutzerdefinierte Domain konfiguriert",
       "defaultStatusMessage": "Noch keine benutzerdefinierte Domain registriert.",
@@ -1354,7 +1392,8 @@
         "step3": "Beschaffen und pflegen Sie das TLS-Zertifikat für die Domain auf Ihrem Proxy.",
         "step4": "Speichern Sie die Domain hier — sie wird sofort aktiviert. Richten Sie zuerst DNS und Ihren Proxy ein, da Portal-Links sofort auf diese Domain umgestellt werden.",
         "docLinkText": "Anleitung zur Reverse-Proxy-Einrichtung und Fehlerbehebung",
-        "neverSeenWarning": "Es haben noch keine Anfragen {{domain}} erreicht. Prüfen Sie, ob Ihr Reverse-Proxy den ursprünglichen Host-Header weiterleitet."
+        "neverSeenWarning": "Es haben noch keine Anfragen {{domain}} erreicht. Prüfen Sie, ob Ihr Reverse-Proxy den ursprünglichen Host-Header weiterleitet.",
+        "tlsNote": "TLS endet an Ihrem Reverse-Proxy, der das Zertifikat verwaltet."
       },
       "badges": {
         "pending_dns": "DNS ausstehend",
@@ -1379,7 +1418,8 @@
         "refreshFailed": "Domain-Status konnte nicht aktualisiert werden.",
         "retryFailed": "Wiederholung fehlgeschlagen.",
         "disableFailed": "Benutzerdefinierte Domain konnte nicht deaktiviert werden."
-      }
+      },
+      "hostedTlsNote": "TLS-Zertifikate werden automatisch bereitgestellt, sobald DNS verifiziert ist."
     },
     "yourCompanyName": "Name Ihres Unternehmens",
     "brandingPreviewMode": "Branding-Vorschau-Themenmodus",
@@ -1487,7 +1527,13 @@
     "whiteLabel": {
       "title": "MSP-App mit eigener Marke",
       "description": "Laden Sie Ihr Logo einmal hoch. Es ersetzt die Alga-Marke im MSP-Seitenmenü, und das Kundenportal verwendet dieselben Bilder.",
-      "logoHelp": "Das quadratische Zeichen wird überall dort verwendet, wo der Platz quadratisch ist: im eingeklappten Seitenmenü und in runden Rahmen. Das optionale breite Logo ersetzt im ausgeklappten Seitenmenü das Zeichen und den Namen — laden Sie daher eines hoch, das Ihren Firmennamen bereits enthält. Das Seitenmenü richtet sich nach seinem eigenen Hintergrund: bei dunklem Menü die Varianten für dunkle Hintergründe, bei hellem Menü die hellen — und andernfalls die Variante, die Sie hochgeladen haben.",
+      "logoHelp": "Das quadratische Zeichen wird überall dort verwendet, wo der Platz quadratisch ist: im eingeklappten Seitenmenü und in runden Rahmen. Legen Sie ein breites Logo in ein quadratisches Feld, wählen Sie, welcher Ausschnitt zum Zeichen wird; sobald ein breites Logo hochgeladen ist, können Sie das Zeichen auch direkt daraus ausschneiden. Das optionale breite Logo ersetzt im ausgeklappten Seitenmenü das Zeichen und den Namen — laden Sie daher eines hoch, das Ihren Firmennamen bereits enthält. Das Seitenmenü richtet sich nach seinem eigenen Hintergrund: bei dunklem Menü die Varianten für dunkle Hintergründe, bei hellem Menü die hellen — und andernfalls die Variante, die Sie hochgeladen haben.",
+      "cropHelp": "Ziehen und zoomen Sie, um den Ausschnitt zu wählen, der im eingeklappten Seitenmenü und in allen runden Rahmen erscheint. Ihr breites Logo bleibt unverändert.",
+      "cropHelpFromSquare": "Ziehen und zoomen Sie, um den Ausschnitt zu wählen, der im eingeklappten Seitenmenü und in allen runden Rahmen erscheint. Nur das Zeichen wird geändert, sodass Sie es später erneut anpassen können.",
+      "linkDocument": {
+        "title": "Hochgeladenes Bild verwenden",
+        "description": "Wählen Sie ein Bild aus, das Sie bereits unter Dokumente hochgeladen haben. Das Dokument selbst bleibt unverändert."
+      },
       "fields": {
         "mark": "Quadratisches Zeichen",
         "markDark": "Quadratisches Zeichen für dunkle Hintergründe",
@@ -2177,6 +2223,18 @@
       "comingSoon": "Zuordnungsvorlagen und geplante Importe werden hier verfügbar sein. Speichern Sie Spaltenzuordnungen, teilen Sie sie mit dem Team und konfigurieren Sie wiederkehrende Aufträge."
     },
     "migration": {
+      "customFields": {
+        "required": "erforderlich",
+        "title": "Felder für {{name}}",
+        "mapping": "Zuordnung benutzerdefinierter Felder",
+        "description": "Ordnen Sie beibehaltene CSV-Spalten den Feldern dieses Asset-Typs zu.",
+        "empty": "Für diesen Asset-Typ wurden keine benutzerdefinierten Spalten beibehalten.",
+        "samples_one": "{{sample}} · {{count}} Datensatz",
+        "samples_other": "{{sample}} · {{count}} Datensätze",
+        "noSample": "Kein Beispiel",
+        "missingRequired": "Nicht zugeordnete Pflichtfelder: {{fields}}",
+        "duplicate": "Ein benutzerdefiniertes Feld wurde mehrfach zugeordnet. Wählen Sie für jede Quelle ein eindeutiges Ziel."
+      },
       "actions": {
         "back": "Zurück zu Migrationen",
         "upload": "Paket hochladen"
@@ -3053,7 +3111,7 @@
     "assetTypes": {
       "tab": "Assets",
       "title": "Asset-Typen",
-      "description": "Verwalten Sie die in Ihrem Asset-Modul verfügbaren Asset-Typen. Benutzerdefinierte Typen tragen ein Feldschema, das ihre Erstell-/Bearbeitungsformulare bestimmt.",
+      "description": "Benutzerdefinierte Typen verwenden ein Feldschema für Erstellungs- und Bearbeitungsformulare; integrierte Typen unterstützen zusätzliche Felder.",
       "loading": "Asset-Typen werden geladen...",
       "table": {
         "name": "Name",
@@ -3081,7 +3139,7 @@
         "namePlaceholder": "z. B. Firewall",
         "displayOrderLabel": "Anzeigereihenfolge",
         "iconLabel": "Symbol",
-        "builtinSchemaHint": "Integrierte Typen verwenden feste, von AlgaPSA verwaltete Formulare; ihr Feldschema kann daher nicht bearbeitet werden. Sie können den Typ weiterhin umbenennen oder sein Symbol ändern."
+        "builtinSchemaHint": "Das standardmäßige integrierte Formular bleibt unverändert. Diese zusätzlichen Felder werden vom jeweiligen Mandanten definiert."
       },
       "deleteDialog": {
         "title": "Asset-Typ löschen",
@@ -3139,7 +3197,8 @@
           "invalidOptions": "Optionen dürfen nicht leer sein.",
           "invalidField": "Dieses Feld ist ungültig."
         }
-      }
+      },
+      "additionalFields": "Zusätzliche Felder"
     }
   },
   "mcpServer": {
@@ -3459,5 +3518,8 @@
       "nothingToRetry": "Es gibt keine fehlgeschlagene Registrierung einer eigenen Domain, die wiederholt werden könnte.",
       "retryOnlyAfterFailure": "Ein erneuter Versuch ist nur nach einer fehlgeschlagenen Registrierung möglich."
     }
+  },
+  "common": {
+    "saving": "Wird gespeichert…"
   }
 }

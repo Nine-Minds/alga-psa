@@ -134,6 +134,51 @@ describe('createCommentFromEmail response source metadata', () => {
     expect(createCommentInput.metadata.email.providerType).toBe('microsoft');
   });
 
+  it('backfills the sender address so an unmatched sender still has a display identity', async () => {
+    const { createCommentFromEmail } = await import('../emailWorkflowActions');
+
+    await createCommentFromEmail(
+      {
+        ticket_id: 'ticket-1',
+        content: 'hello',
+        inboundReplyEvent: {
+          messageId: 'message-3',
+          from: 'stranger@example.com',
+          to: ['support@example.com'],
+          provider: 'google',
+          matchedBy: 'thread_headers',
+        },
+      },
+      'tenant-1'
+    );
+
+    const createCommentInput = createCommentMock.mock.calls[0][0];
+    expect(createCommentInput.metadata.email.fromAddress).toBe('stranger@example.com');
+  });
+
+  it('never overwrites a sender address the parser already captured', async () => {
+    const { createCommentFromEmail } = await import('../emailWorkflowActions');
+
+    await createCommentFromEmail(
+      {
+        ticket_id: 'ticket-1',
+        content: 'hello',
+        metadata: { email: { fromAddress: 'parsed@example.com' } },
+        inboundReplyEvent: {
+          messageId: 'message-4',
+          from: 'envelope@example.com',
+          to: ['support@example.com'],
+          provider: 'google',
+          matchedBy: 'thread_headers',
+        },
+      },
+      'tenant-1'
+    );
+
+    const createCommentInput = createCommentMock.mock.calls[0][0];
+    expect(createCommentInput.metadata.email.fromAddress).toBe('parsed@example.com');
+  });
+
   it.each([
     ['google', 'T017'],
     ['microsoft', 'T018'],

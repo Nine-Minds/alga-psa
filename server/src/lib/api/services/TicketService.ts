@@ -32,6 +32,10 @@ import {
   type ClosedMasterChoice,
 } from '@alga-psa/tickets/lib/ticketBundlePolicy';
 import { deleteTicketChildRecords } from '@alga-psa/tickets/lib/deleteTicketChildRecords';
+import {
+  TICKET_LATEST_ACTIVITY_PUBLIC_SQL,
+  TICKET_LATEST_ACTIVITY_SQL,
+} from '@alga-psa/tickets/actions/ticketListSortSql';
 import { enforceTicketCloseRules, TicketCloseValidationError } from '@alga-psa/tickets/lib/validateTicketClosure';
 import { prepareTicketResourceReassignment } from '@alga-psa/db/reassignTicketResources';
 import {
@@ -54,6 +58,8 @@ import {
   publishExternalLinkEvent,
 } from '@alga-psa/tickets/actions/externalLinks/externalLinkPersistence';
 import { NotFoundError, ValidationError, ConflictError, ForbiddenError } from '../middleware/apiMiddleware';
+import { locationAddressSql } from './locationAddressSql';
+import { inboundSenderLabel } from './ticketCommentAuthor';
 import { hasPermission } from '../../auth/rbac';
 import { TicketModel, CreateTicketInput } from '@shared/models/ticketModel';
 import {
@@ -121,7 +127,58 @@ const BUNDLE_CHILD_LOCKED_FIELDS = ['status_id', 'assigned_to', 'priority_id'] a
 const TICKET_LIST_FIELD_ALLOWLIST = new Set<string>([
   ...TICKET_MOBILE_LIST_FIELDS,
   'mobile_list',
+  // Selectable on its own; deliberately not part of the mobile_list preset, so
+  // that payload (and its cost) is unchanged for existing mobile callers.
+  'latest_activity_at',
 ]);
+
+/**
+ * The sort keys `GET /api/v1/tickets` accepts, mapped to the physical ORDER BY
+ * term under this service's own join aliases (comp/stat/pri, not the web list's
+ * comp/s/p). This is an allowlist on purpose: the query schema only checks that
+ * `sort` is a string, so before this map an unknown value reached
+ * `orderBy('t.<value>')` and surfaced as a 500 from Postgres instead of a 400.
+ *
+ * `latest_activity_at` carries no fixed SQL — the expression depends on whether
+ * the caller is a client-portal contact (see TICKET_LATEST_ACTIVITY_PUBLIC_SQL).
+ */
+type TicketApiSortSpec = { column?: string; activity?: true };
+
+const TICKET_LIST_API_SORT_SQL: Record<string, TicketApiSortSpec> = {
+  ticket_number: { column: 't.ticket_number' },
+  title: { column: 't.title' },
+  entered_at: { column: 't.entered_at' },
+  updated_at: { column: 't.updated_at' },
+  closed_at: { column: 't.closed_at' },
+  due_date: { column: 't.due_date' },
+  client_name: { column: 'comp.client_name' },
+  status_name: { column: 'stat.name' },
+  priority_name: { column: 'pri.priority_name' },
+  latest_activity_at: { activity: true },
+};
+
+/** Long-standing API alias: tickets have no created_at column. */
+const TICKET_LIST_API_SORT_ALIASES: Record<string, string> = {
+  created_at: 'entered_at',
+};
+
+export const TICKET_LIST_API_SORT_KEYS = Object.keys(TICKET_LIST_API_SORT_SQL).sort();
+
+export function resolveTicketListApiSort(sort: string): { field: string; spec: TicketApiSortSpec } {
+  const field = TICKET_LIST_API_SORT_ALIASES[sort] ?? sort;
+  const spec = TICKET_LIST_API_SORT_SQL[field];
+  if (!spec) {
+    throw new ValidationError(
+      `Unknown sort field: ${sort}. Supported values: ${[
+        ...TICKET_LIST_API_SORT_KEYS,
+        ...Object.keys(TICKET_LIST_API_SORT_ALIASES),
+      ]
+        .sort()
+        .join(', ')}`
+    );
+  }
+  return { field, spec };
+}
 
 type TicketNotificationSuppressionInput = {
   suppressContactNotifications?: boolean;
@@ -351,7 +408,11 @@ export class TicketService extends BaseService<ITicket> {
     visibility: ContactVisibilityContext
   ): Knex.QueryBuilder {
     query = query.where('t.client_id', visibility.clientId);
-    return applyTicketVisibilityFilter(query, visibility, { boardColumn: 't.board_id', contactColumn: 't.contact_name_id' });
+    return applyTicketVisibilityFilter(query, visibility, {
+      boardColumn: 't.board_id',
+      contactColumn: 't.contact_name_id',
+      billingProfileColumn: 't.billing_profile_id',
+    });
   }
 
   /**
@@ -454,11 +515,17 @@ export class TicketService extends BaseService<ITicket> {
       options.applyAuthorization(countScopedQuery.withBuilder(countQuery));
     }
 
-    // Apply sorting
+    // Apply sorting. Unknown keys are rejected here (400) rather than
+    // interpolated into `t.<key>` and failing as a database error (500).
     const sortField = sort || this.defaultSort;
-    const sortOrder = order || this.defaultOrder;
-    // Map created_at to entered_at for tickets table
-    const mappedSortField = sortField === 'created_at' ? 'entered_at' : sortField;
+    const sortDirection = (order || this.defaultOrder) === 'asc' ? 'asc' : 'desc';
+    const { field: mappedSortField, spec: sortSpec } = resolveTicketListApiSort(sortField);
+
+    // Client-portal callers must not be able to read the timing of internal
+    // notes off this column, nor have them reorder the portal list.
+    const latestActivitySql = clientVisibility
+      ? TICKET_LATEST_ACTIVITY_PUBLIC_SQL
+      : TICKET_LATEST_ACTIVITY_SQL;
 
     const wants = (field: string) => Boolean(selectedFields && selectedFields.includes(field));
 
@@ -499,16 +566,14 @@ export class TicketService extends BaseService<ITicket> {
       dataQuery = scopedDb.tenantJoin(dataQuery, 'users as assigned_user', 't.assigned_to', 'assigned_user.user_id', { type: 'left' });
     }
 
-    // Handle sorting by related fields
-    if (mappedSortField === 'client_name') {
-      dataQuery = dataQuery.orderBy('comp.client_name', sortOrder);
-    } else if (mappedSortField === 'status_name') {
-      dataQuery = dataQuery.orderBy('stat.name', sortOrder);
-    } else if (mappedSortField === 'priority_name') {
-      dataQuery = dataQuery.orderBy('pri.priority_name', sortOrder);
+    // Order by the allowlisted term, then ticket_id desc so pages stay stable
+    // across a tie (parity with applyTicketListSort on the web list).
+    if (sortSpec.activity) {
+      dataQuery = dataQuery.orderByRaw(`${latestActivitySql} ${sortDirection}`);
     } else {
-      dataQuery = dataQuery.orderBy(`t.${mappedSortField}`, sortOrder);
+      dataQuery = dataQuery.orderBy(sortSpec.column!, sortDirection);
     }
+    dataQuery = dataQuery.orderBy('t.ticket_id', 'desc');
 
     // Apply pagination
     const offset = (page - 1) * limit;
@@ -544,6 +609,9 @@ export class TicketService extends BaseService<ITicket> {
             THEN CONCAT(assigned_user.first_name, ' ', assigned_user.last_name) 
             ELSE NULL 
           END as assigned_to_name`),
+          // Same expression the latest_activity_at sort orders by, so the
+          // reported value is exactly the one the ordering used.
+          knex.raw(`${latestActivitySql} as latest_activity_at`),
         );
     } else {
       const selectParts: any[] = [];
@@ -561,6 +629,9 @@ export class TicketService extends BaseService<ITicket> {
       if (selectedFields.includes('entered_at')) selectParts.push('t.entered_at');
       if (selectedFields.includes('closed_at')) selectParts.push('t.closed_at');
       if (selectedFields.includes('master_ticket_id')) selectParts.push('t.master_ticket_id');
+      if (selectedFields.includes('latest_activity_at')) {
+        selectParts.push(knex.raw(`${latestActivitySql} as latest_activity_at`));
+      }
       if (needsBundleMaster) selectParts.push('mt.ticket_number as bundle_master_ticket_number');
       if (needsBundleChildCount) selectParts.push(bundleChildCountSelect);
 
@@ -590,6 +661,14 @@ export class TicketService extends BaseService<ITicket> {
       dataQuery,
       countQuery.count('* as count')
     ]);
+
+    // GREATEST() comes back as a Date; the list contract is an ISO string
+    // (same normalization as mapTicketListItems on the web list).
+    for (const ticket of tickets as Array<Record<string, unknown>>) {
+      if (ticket.latest_activity_at instanceof Date) {
+        ticket.latest_activity_at = ticket.latest_activity_at.toISOString();
+      }
+    }
 
     if (wants('tags')) {
       await this.attachTicketTags(knex, context.tenant, tickets as Array<Record<string, unknown>>);
@@ -706,6 +785,8 @@ export class TicketService extends BaseService<ITicket> {
         ),
         'comp.client_name',
         'cl.location_name as location_name',
+        // One-line postal address for map links; the name alone is a poor geocoding query.
+        knex.raw(`${locationAddressSql('cl')} as location_address`),
         'cl.email as client_email',
         'cl.phone as client_phone',
         'cont.full_name as contact_name',
@@ -2230,6 +2311,8 @@ export class TicketService extends BaseService<ITicket> {
     const commentsQuery = tenantScopedTable(knex, 'comments as tc', context.tenant);
     scopedDb.tenantJoin(commentsQuery, 'users as u', 'tc.user_id', 'u.user_id', { type: 'left' });
     scopedDb.tenantJoin(commentsQuery, 'contacts as c', 'tc.contact_id', 'c.contact_name_id', { type: 'left' });
+    // Client-portal comments carry only user_id; the user's contact names them when the user row has no name.
+    scopedDb.tenantJoin(commentsQuery, 'contacts as uc', 'u.contact_id', 'uc.contact_name_id', { type: 'left' });
 
     const clientVisibility = await this.resolveClientTicketVisibility(context);
     if (clientVisibility) {
@@ -2251,11 +2334,11 @@ export class TicketService extends BaseService<ITicket> {
     const comments = await commentsQuery
       .select(
         'tc.*',
-        knex.raw(`CASE 
-          WHEN u.first_name IS NOT NULL AND u.last_name IS NOT NULL 
-          THEN CONCAT(u.first_name, ' ', u.last_name) 
-          ELSE NULL 
-        END as created_by_name`),
+        knex.raw(`COALESCE(
+          NULLIF(TRIM(CONCAT_WS(' ', u.first_name, u.last_name)), ''),
+          NULLIF(TRIM(uc.full_name), ''),
+          NULLIF(TRIM(u.email), '')
+        ) as created_by_name`),
         'c.contact_name_id as author_contact_id',
         'c.full_name as author_contact_name',
         'c.email as author_contact_email'
@@ -2321,7 +2404,7 @@ export class TicketService extends BaseService<ITicket> {
           created_at: comment.created_at,
           updated_at: comment.updated_at,
           created_by: comment.user_id ?? null,
-          created_by_name: comment.created_by_name || comment.author_contact_name || null,
+          created_by_name: comment.created_by_name || comment.author_contact_name || inboundSenderLabel(comment.metadata),
           author_contact_id: comment.author_contact_id || comment.contact_id || null,
           author_contact_name: comment.author_contact_name || null,
           // Threading fields (mobile threaded comments) — explicitly enumerated
@@ -2340,7 +2423,7 @@ export class TicketService extends BaseService<ITicket> {
         markdown_content: comment.markdown_content || null,
         comment_html: renderTicketRichTextHtml(comment.note),
         created_by: comment.user_id ?? null,
-        created_by_name: comment.created_by_name || comment.author_contact_name || null,
+        created_by_name: comment.created_by_name || comment.author_contact_name || inboundSenderLabel(comment.metadata),
         created_by_avatar_url: comment.user_id ? (avatarMap[comment.user_id] ?? null) : null,
         author_contact_id: comment.author_contact_id || comment.contact_id || null,
         author_contact_name: comment.author_contact_name || null,

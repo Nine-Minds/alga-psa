@@ -16,6 +16,10 @@
       "import": "./dist/actions/index.mjs",
       "require": "./dist/actions/index.js"
     },
+    "./emailSenderActions": {
+      "types": "./src/actions/email-actions/emailSenderActions.ts",
+      "import": "./src/actions/email-actions/emailSenderActions.ts"
+    },
     "./runtime": {
       "types": "./src/runtime.ts",
       "import": "./src/runtime.ts"
@@ -51,7 +55,7 @@
     "@alga-psa/validation": "file:../validation",
     "@alga-psa/workflow-streams": "file:../workflow-streams",
     "@alga-psa/workflows": "file:../../ee/packages/workflows",
-    "axios": "^1.18.0",
+    "axios": "^1.20.0",
     "imapflow": "^1.2.18",
     "knex": "^3.1.0",
     "zod": "^3.22.4"

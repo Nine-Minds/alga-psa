@@ -276,7 +276,10 @@
       "heading": "Diensten met een vast tarief",
       "itemLabel": "Artikel {{index}}",
       "selectItemPlaceholder": "Selecteer een artikel",
-      "servicesAndProducts": "Diensten & Producten"
+      "servicesAndProducts": "Diensten & Producten",
+      "recurringQuantity": "Terugkerende hoeveelheid",
+      "unitRateOptional": "Optioneel. Laat het eenheidstarief leeg om de catalogusprijs van de dienst in de valuta van de klant te gebruiken wanneer een regel uit deze preset wordt gemaakt.",
+      "alertUnits": "Om een dienst in plaats daarvan per gebruiker of eenheid te factureren, kiest u hiervoor prijsstelling op basis van terugkerende hoeveelheid: er wordt elke periode hoeveelheid × eenheidstarief gefactureerd en het maakt geen deel uit van het basistarief."
     },
     "hourly": {
       "addHourlyService": "Uurservice toevoegen",
@@ -333,7 +336,8 @@
       "serviceSelectRequired": "Service {{index}}: Selecteer een service",
       "unitOfMeasureRequired": "Service {{index}}: Maateenheid is vereist",
       "unitRateRequired": "Service {{index}}: Eenheidstarief is vereist",
-      "usageServiceRequired": "Er is minimaal één op gebruik gebaseerde service vereist"
+      "usageServiceRequired": "Er is minimaal één op gebruik gebaseerde service vereist",
+      "recurringQuantityInvalid": "Dienst {{index}}: De terugkerende hoeveelheid moet een geheel getal van nul of meer zijn"
     }
   },
   "forms": {
@@ -455,7 +459,8 @@
         "defaultRatePerUnit": "Tarief per eenheid (gebruikt als gedifferentieerde prijzen zijn uitgeschakeld).",
         "minimumUsage": "Minimaal factureerbare eenheden per periode.",
         "unitOfMeasure": "bijvoorbeeld GB, Gebruiker, Apparaat."
-      }
+      },
+      "catalogUnitPrecedence": "De catalogus-eenheid heeft voorrang op de eenheid in deze gebruiksconfiguratie."
     }
   },
   "list": {

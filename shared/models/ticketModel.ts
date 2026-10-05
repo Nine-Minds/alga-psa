@@ -1,4 +1,4 @@
-import { persistCommentPublication } from '../lib/ticketCommentAttachments';
+import { persistCommentPublication, resolveCommentAuthorDisplay } from '../lib/ticketCommentAttachments';
 /**
  * Shared Ticket Model - Core business logic for ticket operations
  * This model contains the essential ticket business logic extracted from
@@ -14,11 +14,13 @@ import type { IEventPublisher } from '@alga-psa/types';
 import { applyMatchingChecklistTemplates } from '../lib/ticketChecklists';
 import { SharedNumberingService } from '../services/numberingService';
 
+// LEVERAGE: pattern ticket-origins-duplicate — copy of TICKET_ORIGINS in @alga-psa/types (shared cannot import types); keep both in sync
 const TICKET_ORIGINS = {
   INTERNAL: 'internal',
   CLIENT_PORTAL: 'client_portal',
   INBOUND_EMAIL: 'inbound_email',
   API: 'api',
+  RECURRING: 'recurring',
 } as const;
 
 // =============================================================================
@@ -95,7 +97,9 @@ export const ticketSchema = z.object({
   itil_urgency: z.number().int().min(1).max(5).nullable().optional(),
   itil_priority_level: z.number().int().min(1).max(5).nullable().optional(),
   itil_category: z.string().nullable().optional(),
-  itil_subcategory: z.string().nullable().optional()
+  itil_subcategory: z.string().nullable().optional(),
+  // Provenance for a ticket created via "Duplicate". Create-only; no FK.
+  duplicated_from_ticket_id: z.string().uuid().nullable().optional()
 });
 
 // Ticket update schema. Classification references (severity/urgency/impact)
@@ -110,6 +114,7 @@ export const ticketUpdateSchema = ticketSchema.partial().omit({
   severity_id: true,
   urgency_id: true,
   impact_id: true,
+  duplicated_from_ticket_id: true,
 });
 
 // Comment validation schema
@@ -119,6 +124,7 @@ export const createCommentSchema = z.object({
   parent_comment_id: z.string().uuid('Parent comment ID must be a valid UUID').optional(),
   is_internal: z.boolean().optional(),
   is_resolution: z.boolean().optional(),
+  is_system_generated: z.boolean().optional(),
   author_type: z.enum(['internal', 'contact', 'system']).optional(),
   author_id: z.string().uuid('Author ID must be a valid UUID').optional(),
   contact_id: z.string().uuid('Contact ID must be a valid UUID').optional(),
@@ -166,6 +172,8 @@ export interface CreateTicketInput {
   closed_at?: string;
   is_closed?: boolean;
   due_date?: string;
+  /** Source ticket this one was duplicated from (provenance, create-only). */
+  duplicated_from_ticket_id?: string;
 }
 
 export interface CreateTicketFromAssetInput {
@@ -224,6 +232,7 @@ export interface CreateCommentValidationInput {
   parent_comment_id?: string;
   is_internal?: boolean;
   is_resolution?: boolean;
+  is_system_generated?: boolean;
   author_type?: 'internal' | 'contact' | 'system';
   author_id?: string;
   contact_id?: string;
@@ -252,6 +261,7 @@ export interface CreateCommentInput {
   parent_comment_id?: string;
   is_internal?: boolean;
   is_resolution?: boolean;
+  is_system_generated?: boolean;
   author_type?: 'internal' | 'contact' | 'system';
   author_id?: string;
   contact_id?: string;
@@ -422,6 +432,7 @@ export const INPUT_DRIVEN_TICKET_COLUMNS = [
   'itil_impact',
   'itil_urgency',
   'due_date',
+  'duplicated_from_ticket_id',
 ] as const;
 
 type InputDrivenTicketColumn = (typeof INPUT_DRIVEN_TICKET_COLUMNS)[number];
@@ -510,6 +521,7 @@ const CREATE_TICKET_FIELD_HANDLING: { [K in keyof CreateTicketInput]-?: TicketCr
   closed_at: { kind: 'excluded', reason: 'tickets are created open' },
   is_closed: { kind: 'excluded', reason: 'tickets are created open' },
   due_date: { kind: 'column', column: 'due_date' },
+  duplicated_from_ticket_id: { kind: 'column', column: 'duplicated_from_ticket_id', nullish: true },
 };
 
 type TicketCreateRowBase = {
@@ -1477,6 +1489,7 @@ export class TicketModel {
       note: validatedData.content,
       is_internal: commentIsInternal,
       is_resolution: validatedData.is_resolution || false,
+      is_system_generated: validatedData.is_system_generated ?? false,
       author_type: dbAuthorType as any,
       user_id: validatedData.author_id || null,
       contact_id: validatedData.contact_id || null,
@@ -1536,26 +1549,23 @@ export class TicketModel {
     if (eventPublisher) {
       try {
         // Resolve a display name so notification templates render the author/body.
-        let authorName: string | undefined;
-        if (validatedData.contact_id) {
-          const c = await db.table('contacts')
-            .select('full_name')
-            .where({ contact_name_id: validatedData.contact_id })
-            .first();
-          authorName = c?.full_name || undefined;
-        } else if (validatedData.author_id) {
-          const u = await db.table('users')
-            .select('first_name', 'last_name')
-            .where({ user_id: validatedData.author_id })
-            .first();
-          authorName = u ? `${u.first_name ?? ''} ${u.last_name ?? ''}`.trim() || undefined : undefined;
-        }
+        // Inbound-email comments frequently match no contact and no user; the
+        // shared resolver falls back to the stored sender identity, never to a
+        // placeholder, and never leaves the schema-required field empty.
+        const authorName = await resolveCommentAuthorDisplay(trx, tenant, {
+          contact_id: validatedData.contact_id,
+          user_id: validatedData.author_id,
+          metadata: validatedData.metadata,
+        });
+        // The event schema requires a uuid; user-less comments reuse the ticket
+        // id as the sentinel actor, matching the inbound-email outbox publisher.
+        const eventUserId = userId || validatedData.author_id || validatedData.ticket_id;
 
         const event = {
           tenantId: tenant,
           ticketId: validatedData.ticket_id,
           commentId: commentId,
-          userId: userId,
+          userId: eventUserId,
           metadata: {
             author_type: dbAuthorType,
             is_internal: validatedData.is_internal,
@@ -1570,7 +1580,7 @@ export class TicketModel {
           await eventPublisher.publishCommentCreated(event);
         } else {
           await persistCommentPublication(trx, { eventType: 'TICKET_COMMENT_ADDED', payload: {
-            tenantId: tenant, ticketId: validatedData.ticket_id, commentId, userId,
+            tenantId: tenant, ticketId: validatedData.ticket_id, commentId, userId: eventUserId,
             comment: { id: commentId, content: validatedData.content, author: authorName,
               isInternal: commentIsInternal, authorType: dbAuthorType },
           } });

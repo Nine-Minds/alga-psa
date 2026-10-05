@@ -4,11 +4,14 @@ const state = {
   invoice: {
     invoice_id: 'invoice-1',
     tenant: 'tenant-1',
+    client_id: 'client-1',
     status: 'draft',
     finalized_at: null,
     invoice_number: 'INV-1001',
+    billing_profile_id: null,
   } as Record<string, any> | null,
   duplicateInvoice: null as Record<string, any> | null,
+  billingProfiles: {} as Record<string, Record<string, any>>,
   updates: [] as Array<{ table: string; payload: Record<string, any> }>,
 };
 
@@ -39,6 +42,8 @@ function createBuilder(table: string) {
     return builder;
   });
   builder.whereIn = vi.fn(() => builder);
+  builder.whereNull = vi.fn(() => builder);
+  builder.orWhereNull = vi.fn(() => builder);
   builder.whereNot = vi.fn((arg1: unknown, arg2?: unknown) => {
     whereNotClauses.push(normalizeWhereArg(arg1, arg2));
     return builder;
@@ -50,6 +55,11 @@ function createBuilder(table: string) {
     return 1;
   });
   builder.first = vi.fn(async () => {
+    if (table === 'client_billing_profiles') {
+      const mergedWhere = Object.assign({}, ...whereClauses);
+      return state.billingProfiles[mergedWhere.billing_profile_id as string];
+    }
+
     if (table !== 'invoices') {
       return undefined;
     }
@@ -135,11 +145,18 @@ describe('updateDraftInvoiceProperties', () => {
     state.invoice = {
       invoice_id: 'invoice-1',
       tenant: 'tenant-1',
+      client_id: 'client-1',
       status: 'draft',
       finalized_at: null,
       invoice_number: 'INV-1001',
+      billing_profile_id: 'profile-a',
     };
     state.duplicateInvoice = null;
+    state.billingProfiles = {
+      'profile-a': { client_id: 'client-1', is_active: true, name: 'Head office' },
+      'profile-b': { client_id: 'client-1', is_active: true, name: 'Northern branch' },
+      'profile-elsewhere': { client_id: 'client-2', is_active: true, name: 'Another customer' },
+    };
     state.updates = [];
     recalculateInvoiceMock.mockClear();
   });
@@ -158,6 +175,8 @@ describe('updateDraftInvoiceProperties', () => {
       invoiceNumber: 'INV-2001',
       invoiceDate: '2026-04-20',
       dueDate: null,
+      billingProfileId: 'profile-a',
+      billingProfileName: 'Head office',
     });
 
     expect(state.updates).toEqual([
@@ -211,5 +230,109 @@ describe('updateDraftInvoiceProperties', () => {
     });
 
     expect(state.updates).toHaveLength(0);
+  });
+  it('re-points a draft at another profile of the same client, charges included', async () => {
+    const { updateDraftInvoiceProperties } = await import('../src/actions/invoiceModification.ts');
+
+    await expect(
+      updateDraftInvoiceProperties('invoice-1', {
+        invoiceNumber: 'INV-1001',
+        invoiceDate: '2026-04-20',
+        dueDate: null,
+        billingProfileId: 'profile-b',
+      })
+    ).resolves.toEqual({
+      invoiceId: 'invoice-1',
+      invoiceNumber: 'INV-1001',
+      invoiceDate: '2026-04-20',
+      dueDate: null,
+      billingProfileId: 'profile-b',
+      billingProfileName: 'Northern branch',
+    });
+
+    // The number/date edit lands first: its own duplicate-number failure must
+    // not leave a moved profile behind in a transaction that then commits.
+    expect(state.updates).toEqual([
+      {
+        table: 'invoices',
+        payload: expect.objectContaining({ invoice_number: 'INV-1001' }),
+      },
+      { table: 'invoice_charges', payload: { billing_profile_id: 'profile-b' } },
+      { table: 'invoices', payload: { billing_profile_id: 'profile-b' } },
+    ]);
+  });
+
+  it('moves nothing when the invoice number is rejected', async () => {
+    state.duplicateInvoice = { invoice_id: 'invoice-2' };
+    const { updateDraftInvoiceProperties } = await import('../src/actions/invoiceModification.ts');
+
+    await expect(
+      updateDraftInvoiceProperties('invoice-1', {
+        invoiceNumber: 'INV-0001',
+        invoiceDate: '2026-04-20',
+        dueDate: null,
+        billingProfileId: 'profile-b',
+      })
+    ).resolves.toEqual({
+      actionError: 'Invoice number already exists. Choose a different number.',
+      messageKey: 'msp/invoicing:errors.invoice.numberExists',
+    });
+
+    expect(state.updates).toHaveLength(0);
+  });
+
+  it('unassigns a draft back to the client default', async () => {
+    const { updateDraftInvoiceProperties } = await import('../src/actions/invoiceModification.ts');
+
+    await expect(
+      updateDraftInvoiceProperties('invoice-1', {
+        invoiceNumber: 'INV-1001',
+        invoiceDate: '2026-04-20',
+        dueDate: null,
+        billingProfileId: null,
+      })
+    ).resolves.toEqual({
+      invoiceId: 'invoice-1',
+      invoiceNumber: 'INV-1001',
+      invoiceDate: '2026-04-20',
+      dueDate: null,
+      billingProfileId: null,
+      billingProfileName: null,
+    });
+
+    expect(state.updates).toContainEqual({
+      table: 'invoices',
+      payload: { billing_profile_id: null },
+    });
+  });
+
+  it('rejects a profile belonging to another client', async () => {
+    const { updateDraftInvoiceProperties } = await import('../src/actions/invoiceModification.ts');
+
+    await expect(
+      updateDraftInvoiceProperties('invoice-1', {
+        invoiceNumber: 'INV-1001',
+        invoiceDate: '2026-04-20',
+        dueDate: null,
+        billingProfileId: 'profile-elsewhere',
+      })
+    ).resolves.toEqual({
+      actionError: 'The selected billing profile is not available for this client',
+      messageKey: 'msp/invoicing:errors.invoice.billingProfileUnavailable',
+    });
+
+    expect(state.updates).toHaveLength(0);
+  });
+
+  it('leaves the attribution alone when no profile is supplied', async () => {
+    const { updateDraftInvoiceProperties } = await import('../src/actions/invoiceModification.ts');
+
+    await updateDraftInvoiceProperties('invoice-1', {
+      invoiceNumber: 'INV-1001',
+      invoiceDate: '2026-04-20',
+      dueDate: null,
+    });
+
+    expect(state.updates.filter((update) => 'billing_profile_id' in update.payload)).toHaveLength(0);
   });
 });

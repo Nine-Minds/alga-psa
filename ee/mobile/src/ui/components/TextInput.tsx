@@ -44,6 +44,9 @@ export function TextInput({
   autoCorrect,
   accessibilityLabel,
   rightElement,
+  onBlur,
+  onFocus,
+  testID,
 }: {
   value: string;
   onChangeText: (text: string) => void;
@@ -61,6 +64,10 @@ export function TextInput({
   autoCorrect?: boolean;
   accessibilityLabel?: string;
   rightElement?: ReactNode;
+  /** Forms validate a field when the user leaves it, as the web forms do. */
+  onBlur?: () => void;
+  onFocus?: () => void;
+  testID?: string;
 }) {
   const theme = useTheme();
   const hasError = Boolean(error);
@@ -103,6 +110,9 @@ export function TextInput({
           keyboardType={effectiveKeyboardType}
           autoCapitalize={autoCapitalize}
           autoCorrect={autoCorrect}
+          onBlur={onBlur}
+          onFocus={onFocus}
+          testID={testID}
           accessibilityLabel={accessibilityLabel ?? label}
           style={[
             {

@@ -5,6 +5,7 @@ import type { ApiClient } from "../../../api";
 import { createProduct, listServiceTypes, type ServiceTypeItem } from "../../../api/materials";
 import { useTheme } from "../../../ui/ThemeContext";
 import { PrimaryButton, TextInput } from "../../../ui/components";
+import { DEFAULT_PRODUCT_UNIT, PRODUCT_UNITS, type ProductUnit } from "../unitOfMeasure";
 
 /** Prefer a product-ish service type as the default pick. */
 export function defaultServiceType(types: ServiceTypeItem[]): ServiceTypeItem | null {
@@ -40,6 +41,7 @@ export function CreateProductModal({
   const [typeId, setTypeId] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [sku, setSku] = useState("");
+  const [unit, setUnit] = useState<ProductUnit>(DEFAULT_PRODUCT_UNIT);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
@@ -47,6 +49,7 @@ export function CreateProductModal({
     if (!visible) return;
     setName("");
     setSku("");
+    setUnit(DEFAULT_PRODUCT_UNIT);
     setSubmitError(null);
     if (!client || !apiKey) return;
     let canceled = false;
@@ -86,7 +89,8 @@ export function CreateProductModal({
       data: {
         service_name: trimmed,
         custom_service_type_id: typeId,
-        unit_of_measure: "each",
+        unit_of_measure: unit.label,
+        unit_code: unit.code,
         sku: sku.trim() || null,
         barcode,
       },
@@ -97,7 +101,7 @@ export function CreateProductModal({
       return;
     }
     onCreated(result.data.data.service_id, trimmed);
-  }, [apiKey, barcode, client, name, onCreated, sku, submitting, t, typeId]);
+  }, [apiKey, barcode, client, name, onCreated, sku, submitting, t, typeId, unit]);
 
   if (!visible) return null;
 
@@ -123,6 +127,29 @@ export function CreateProductModal({
             placeholder={t("createProduct.namePlaceholder", "e.g. HP 26A Toner Cartridge")}
             accessibilityLabel="inventory-create-product-name"
           />
+          <View>
+            <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary, marginBottom: theme.spacing.xs }}>
+              {t("createProduct.unitLabel", "Unit of measure")}
+            </Text>
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: theme.spacing.sm }}>
+              {PRODUCT_UNITS.map((option) => {
+                const selected = option.key === unit.key;
+                return (
+                  <Pressable
+                    key={option.key}
+                    onPress={() => setUnit(option)}
+                    accessibilityRole="radio"
+                    accessibilityState={{ checked: selected }}
+                    accessibilityLabel={`inventory-create-product-unit-${option.key}`}
+                  >
+                    <Text style={{ color: selected ? theme.colors.primary : theme.colors.textSecondary }}>
+                      {t(option.labelKey, option.label)}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </View>
           <TextInput
             value={sku}
             onChangeText={setSku}

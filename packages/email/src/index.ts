@@ -46,8 +46,9 @@ export {
   capReferences
 } from './BaseEmailService';
 
-// Send-time brand logo embedding, for the paths that render a tenant template
-// and hand it straight to a provider instead of going through BaseEmailService.
+// Send-time passes, for the paths that render a template and hand it straight
+// to a provider instead of going through BaseEmailService.
+export { addGradientFallback } from './branding/gradientFallback';
 export {
   embedBrandLogo,
   type EmbedBrandLogoOptions,
