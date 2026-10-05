@@ -829,11 +829,11 @@
       "uploaded": "Uppladdad",
       "failed": "Misslyckades",
       "failureSummary": "{{failed}} av {{total}} filer kunde inte laddas upp. Granska felen nedan.",
-      "outcomeSummary": "{{succeeded}} av {{total}} filer har laddats upp",
+      "outcomeSummary": "{{succeeded}} av {{total}} filer uppladdade",
       "emptyDropTitle": "Inga filer togs emot",
-      "emptyDropMessage": "Inga filer togs emot. Spara bilagan eller e-postmeddelandet på datorn och dra sedan den sparade filen hit eller använd Bläddra bland filer.",
+      "emptyDropMessage": "Inga filer togs emot. Spara bilagan eller e-postmeddelandet på din dator och dra sedan den sparade filen hit eller använd Bläddra bland filer.",
       "uploadInProgress": "En uppladdning pågår redan. Vänta tills den är klar innan du lägger till fler filer.",
-      "refreshFailed": "Filerna har laddats upp, men dokumentlistan kunde inte uppdateras. Ladda om sidan för att se dem.",
+      "refreshFailed": "Dina filer laddades upp, men dokumentlistan kunde inte uppdateras. Läs in sidan på nytt för att se dem.",
       "clearResults": "Rensa resultat"
     },
     "folders": {
