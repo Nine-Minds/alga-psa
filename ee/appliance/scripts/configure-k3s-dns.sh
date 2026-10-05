@@ -362,6 +362,19 @@ k3s_start_token() {
   bash -c "$DNS_K3S_START_COMMAND" 2>/dev/null || true
 }
 
+# True when k3s last started after both resolver files were last written, so
+# its kubelet is already running with them and a restart would change nothing.
+# Only systemd's ActiveEnterTimestamp format (e.g. "Mon 2026-10-05 22:00:25
+# UTC") is interpreted; any other token means "unknown" and returns false.
+k3s_started_after_files() {
+  local token="$1" started resolv_mtime dropin_mtime
+  [[ "$token" =~ ^[A-Z][a-z]{2}\ [0-9]{4}-[0-9]{2}-[0-9]{2}\ [0-9]{2}:[0-9]{2}:[0-9]{2} ]] || return 1
+  started="$(date -d "$token" +%s 2>/dev/null)" || return 1
+  resolv_mtime="$(stat -c %Y "$RESOLV_TARGET" 2>/dev/null)" || return 1
+  dropin_mtime="$(stat -c %Y "$DROPIN_TARGET" 2>/dev/null)" || return 1
+  [ -n "$started" ] && [ "$started" -gt "$resolv_mtime" ] && [ "$started" -gt "$dropin_mtime" ]
+}
+
 acquire_lock() {
   if $DRY_RUN; then
     return 0
@@ -394,12 +407,34 @@ acquire_lock() {
   trap 'rm -f "$DNS_LOCK_FILE" 2>/dev/null || true' EXIT INT TERM
 }
 
+# k3s is Type=notify, so without this drop-in systemd's default 90s start
+# timeout kills a k3s whose apiserver is slow to become ready (a large
+# datastore on a slow disk) and Restart=always starts it over, forever. Units
+# written by older appliance images have no TimeoutStartSec, so the helper
+# that restarts k3s ensures the drop-in first. Mirrors bootstrap-control-plane.sh.
+K3S_START_TIMEOUT_DROPIN="${ALGA_APPLIANCE_K3S_START_TIMEOUT_DROPIN:-/etc/systemd/system/${K3S_SERVICE}.service.d/10-start-timeout.conf}"
+
+ensure_k3s_start_timeout() {
+  local target desired=$'[Service]\nTimeoutStartSec=0'
+  target="$(rooted "$K3S_START_TIMEOUT_DROPIN")"
+  if [ -f "$target" ] && [ "$(cat "$target")" = "$desired" ]; then
+    return 0
+  fi
+  mkdir -p "$(dirname "$target")"
+  printf '%s\n' "$desired" > "$target"
+  log "Removed the systemd start timeout for ${K3S_SERVICE} so a slow apiserver start is not killed."
+  if [ -z "$ROOT_PREFIX" ] && command -v systemctl >/dev/null 2>&1; then
+    systemctl daemon-reload
+  fi
+}
+
 restart_k3s() {
   if [ -n "$DNS_RESTART_COMMAND" ]; then
     bash -c "$DNS_RESTART_COMMAND"
     return
   fi
   if command -v systemctl >/dev/null 2>&1; then
+    ensure_k3s_start_timeout
     systemctl restart "$K3S_SERVICE"
     return
   fi
@@ -523,6 +558,14 @@ activate() {
     restart_already_done=true
   fi
 
+  # The same proof without a usable record (none yet, or one left by a failed
+  # attempt whose k3s came up later): k3s started after the files were written.
+  if ! $restart_already_done && k3s_started_after_files "$current_token"; then
+    log "k3s started (${current_token}) after the resolver files were written; it already uses them, so no restart is needed."
+    RESTART_TOKEN="$current_token"
+    restart_already_done=true
+  fi
+
   if $restart_already_done; then
     log "Resuming a pending DNS activation; k3s was already restarted for fingerprint ${DESIRED_FINGERPRINT:0:12}."
     write_status restart-confirmed
@@ -551,12 +594,20 @@ do_restart() {
   log "Restarting k3s once to apply the resolver configuration."
   RESTART_FROM="$current_token"
   write_status restarting
+  # A non-zero exit does not mean k3s stayed down: systemctl reports failure
+  # when the start job times out, while Restart=always keeps starting k3s. The
+  # API and the start token decide whether the restart happened.
+  local restart_failed=false
   if ! restart_k3s; then
-    write_status failed "k3s restart command failed."
-    return 1
+    restart_failed=true
+    log "The k3s restart command reported failure; waiting for the Kubernetes API before deciding."
   fi
   if ! wait_for_api; then
-    write_status failed "Kubernetes API did not become ready after the k3s restart."
+    if $restart_failed; then
+      write_status failed "k3s restart command failed and the Kubernetes API did not become ready."
+    else
+      write_status failed "Kubernetes API did not become ready after the k3s restart."
+    fi
     return 1
   fi
   local after

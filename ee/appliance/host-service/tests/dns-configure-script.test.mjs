@@ -353,6 +353,32 @@ test('a failed rollout is recoverable without restarting k3s again', () => {
   assert.equal(readActivation(harness).stage, 'active');
 });
 
+// `systemctl restart k3s` exits non-zero when systemd's start timeout fires,
+// yet k3s (Restart=always) keeps starting and comes up later. Seen on a field
+// appliance with a large datastore: the activation recorded "k3s restart
+// command failed" although k3s was up with the new resolver.
+test('a restart command that fails while k3s still comes up is judged by the API and start token', () => {
+  const harness = createRoot({ systemdResolv: 'nameserver 192.0.2.53\n' });
+  const restartThenFail = path.join(harness.root, 'bin', 'restart-then-fail');
+  fs.writeFileSync(restartThenFail, `#!/usr/bin/env bash
+"${path.join(harness.root, 'bin', 'fakerestart')}"
+exit 1
+`, { mode: 0o755 });
+  const result = runHelper(harness, ['--activate'], { ALGA_APPLIANCE_DNS_RESTART_COMMAND: restartThenFail });
+  assert.equal(result.status, 0, result.stderr || result.stdout);
+  assert.match(result.stdout, /reported failure; waiting for the Kubernetes API/);
+  assert.equal(readActivation(harness).stage, 'active');
+});
+
+test('a restart that fails and never changes the k3s start token is still a failure', () => {
+  const harness = createRoot({ systemdResolv: 'nameserver 192.0.2.53\n' });
+  const result = runHelper(harness, ['--activate'], { ALGA_APPLIANCE_DNS_RESTART_COMMAND: 'exit 1' });
+  assert.notEqual(result.status, 0);
+  const activation = readActivation(harness);
+  assert.equal(activation.stage, 'failed');
+  assert.match(activation.error, /start time did not change/);
+});
+
 test('rollout readiness failure is recorded as a durable failure', () => {
   const harness = createRoot({ systemdResolv: 'nameserver 192.0.2.53\n' });
   fs.writeFileSync(harness.rolloutFailMarker, 'fail');
