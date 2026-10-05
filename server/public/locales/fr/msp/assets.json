@@ -1603,5 +1603,15 @@
       "missingField": "Un champ obligatoire de l’actif est manquant.",
       "missingFieldNamed": "Un champ obligatoire de l’actif est manquant : {{field}}."
     }
+  },
+  "clientAssetMultiSelect": {
+    "errors": {
+      "load": "Échec du chargement des actifs"
+    },
+    "placeholder": "Ajouter un actif...",
+    "searchPlaceholder": "Rechercher des actifs",
+    "empty": "Aucun actif correspondant pour ce client",
+    "loading": "Chargement...",
+    "remove": "Retirer l'actif"
   }
 }

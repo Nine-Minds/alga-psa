@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { ActivityIndicator, Alert, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { useTranslation } from "react-i18next";
+import { Feather } from "@expo/vector-icons";
 import { useTheme } from "../../../ui/ThemeContext";
 import { Avatar } from "../../../ui/components/Avatar";
 import { listContacts, type ContactListItem } from "../../../api/referenceData";
@@ -20,6 +21,8 @@ export function ContactPickerModal({
   clientId,
   onApply,
   onClose,
+  onCreateContact,
+  preselect = null,
   client,
   apiKey,
   baseUrl,
@@ -32,6 +35,10 @@ export function ContactPickerModal({
   clientId: string | null | undefined;
   onApply: (contactNameId: string | null, notificationSuppression: ReturnType<typeof activeTicketNotificationSuppression>) => void;
   onClose: () => void;
+  /** Present when the user may create contacts; opens the contact form for this ticket's client. */
+  onCreateContact?: () => void;
+  /** A contact to start with selected, e.g. one just created from this picker. */
+  preselect?: { id: string; name: string; email?: string | null } | null;
   client: ApiClient | null;
   apiKey: string;
   baseUrl: string | null;
@@ -89,7 +96,7 @@ export function ContactPickerModal({
   useEffect(() => {
     if (visible) {
       setSearch("");
-      setSelectedContact(null);
+      setSelectedContact(preselect ? { id: preselect.id, name: preselect.name } : null);
       setSuppression(DEFAULT_TICKET_NOTIFICATION_SUPPRESSION);
       void fetchContacts("");
     } else {
@@ -97,7 +104,12 @@ export function ContactPickerModal({
       setContacts([]);
       setError(null);
     }
-  }, [visible, fetchContacts]);
+  }, [visible, fetchContacts, preselect]);
+
+  // A just-created contact may not be in the first page yet; keep it visible at the top.
+  const listedContacts = preselect && !contacts.some((contact) => contact.contact_name_id === preselect.id)
+    ? [{ contact_name_id: preselect.id, full_name: preselect.name, email: preselect.email ?? null } as ContactListItem, ...contacts]
+    : contacts;
 
   const handleSearchChange = (text: string) => {
     setSearch(text);
@@ -191,12 +203,38 @@ export function ContactPickerModal({
           </Text>
         ) : (
           <ScrollView style={{ paddingHorizontal: spacing.lg }} keyboardShouldPersistTaps="handled">
-            {contacts.length === 0 && !loading ? (
+            {onCreateContact ? (
+              <Pressable
+                testID="contact-picker-create"
+                accessibilityRole="button"
+                accessibilityLabel={t("contactPicker.create")}
+                disabled={busy}
+                onPress={onCreateContact}
+                style={({ pressed }) => ({
+                  flexDirection: "row",
+                  alignItems: "center",
+                  paddingVertical: spacing.sm,
+                  paddingHorizontal: spacing.md,
+                  borderRadius: 12,
+                  borderWidth: 1,
+                  borderStyle: "dashed",
+                  borderColor: colors.primary,
+                  opacity: busy ? 0.65 : pressed ? 0.95 : 1,
+                  marginBottom: spacing.sm,
+                })}
+              >
+                <Feather name="plus-circle" size={18} color={colors.primary} />
+                <Text style={{ ...typography.body, color: colors.primary, fontWeight: "600", marginLeft: spacing.sm }}>
+                  {t("contactPicker.create")}
+                </Text>
+              </Pressable>
+            ) : null}
+            {listedContacts.length === 0 && !loading ? (
               <Text style={{ ...typography.body, color: colors.textSecondary, paddingVertical: spacing.sm }}>
                 {t("contactPicker.noResults")}
               </Text>
             ) : null}
-            {contacts.map((contact) => {
+            {listedContacts.map((contact) => {
               const avatarUri = contact.avatarUrl && baseUrl ? `${baseUrl}${contact.avatarUrl}` : undefined;
               return (
                 <Pressable

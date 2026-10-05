@@ -239,6 +239,17 @@ function validateRequiredAgainstSchema(
     const properties = (normalized as { properties?: Record<string, JsonSchema> }).properties ?? {};
     const required = (normalized as { required?: string[] }).required ?? [];
 
+    const oneOf = (normalized as { 'x-workflow-require-one-of'?: string[] })['x-workflow-require-one-of'];
+    if (oneOf && oneOf.length > 0 && !oneOf.some((key) => Object.prototype.hasOwnProperty.call(currentMapping, key))) {
+      errors.push({
+        severity: 'error',
+        stepPath: options.stepPath,
+        stepId: options.stepId,
+        code: 'MISSING_REQUIRED_MAPPING',
+        message: `At least one of ${oneOf.map((key) => `"${key}"`).join(', ')} must be mapped in ${options.fieldName}`
+      });
+    }
+
     for (const key of required) {
       if (!Object.prototype.hasOwnProperty.call(currentMapping, key)) {
         errors.push({

@@ -22,9 +22,10 @@ type TenantBranding = {
 interface ClientPortalSignInProps {
   branding?: TenantBranding | null;
   portalDomain?: string;
+  tenantSlug?: string;
 }
 
-export default function ClientPortalSignIn({ branding, portalDomain }: ClientPortalSignInProps) {
+export default function ClientPortalSignIn({ branding, portalDomain, tenantSlug: tenantSlugProp }: ClientPortalSignInProps) {
   const { t } = useTranslation('client-portal');
   const [isAlertOpen, setIsAlertOpen] = useState(false);
   const [alertInfo, setAlertInfo] = useState<AlertProps>({ type: 'success', title: '', message: '' });
@@ -34,8 +35,12 @@ export default function ClientPortalSignIn({ branding, portalDomain }: ClientPor
   const callbackUrl = searchParams?.get('callbackUrl') || '/client-portal/dashboard';
   const error = searchParams?.get('error');
   const registered = searchParams?.get('registered');
+  // Same precedence as portalDomain below: the page resolves the tenant (from the
+  // `?tenant=` slug or from the vanity host's portal_domains row) and hands it
+  // down, and the query parameter is only the fallback for the handoff
+  // round-trip. Without a tenant the credentials call runs unscoped.
   const tenantSlug = (() => {
-    const slug = searchParams?.get('tenant') || '';
+    const slug = tenantSlugProp || searchParams?.get('tenant') || '';
     return isValidTenantSlug(slug) ? slug.toLowerCase() : undefined;
   })();
   // The page can hand us the tenant's vanity host directly; the OAuth handoff

@@ -31,6 +31,12 @@ export function registerServiceCategoryRoutes(
         category_name: zOpenApi.string().min(1).max(255),
         description: zOpenApi.string().max(1000).optional(),
         is_active: zOpenApi.boolean().optional(),
+        display_order: zOpenApi
+          .number()
+          .int()
+          .min(0)
+          .optional()
+          .describe('Sort position of the category (integer, 0 or greater). If omitted on create, the category is appended to the end of the list; if omitted on update, the existing value is left unchanged.'),
       })
       .describe('Payload for creating a service category.'),
   );

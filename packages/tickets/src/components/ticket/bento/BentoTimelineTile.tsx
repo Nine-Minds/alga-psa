@@ -42,7 +42,7 @@ import { BentoTile, BentoTileEmpty } from '@alga-psa/ui/components/bento/BentoTi
 import TicketNotificationSuppressionControl, {
   type TicketNotificationSuppressionValue,
 } from '../TicketNotificationSuppressionControl';
-import { dateToWallTimeString, getUserTimeZone, zonedWallTimeToUtc } from '@alga-psa/core';
+import { dateToWallTimeString, getUserTimeZone, workedMinutes, zonedWallTimeToUtc } from '@alga-psa/core';
 
 const TextEditor = dynamic(() => import('@alga-psa/ui/editor').then((mod) => mod.TextEditor), {
   loading: () => <RichTextEditorSkeleton height="120px" />,
@@ -144,6 +144,14 @@ function formatMinutes(minutes: number): string {
   return rest > 0 ? `${hours}h ${rest}m` : `${hours}h`;
 }
 
+// Theme-aware classification chip; the Badge component renders a `div`, which
+// is invalid inside the timeline row's `<p>`, so this mirrors its token classes.
+function billabilityChipClasses(isBillable: boolean): string {
+  return isBillable
+    ? 'border-[rgb(var(--badge-success-border))] bg-[rgb(var(--badge-success-bg))] text-[rgb(var(--badge-success-text))]'
+    : 'border-[rgb(var(--badge-default-border))] bg-[rgb(var(--badge-default-bg))] text-[rgb(var(--badge-default-text))]';
+}
+
 type Translator = (key: string, fallback: string, opts?: Record<string, unknown>) => string;
 
 // English defaults for the curated ticket fields the activity log can change,
@@ -215,7 +223,7 @@ function eventLabel(eventType: string, t: Translator): string {
 }
 
 /** Compact one-line description of a system (activity) entry. */
-function describeSystemEntry(entry: TicketTimelineEntry, t: Translator): string {
+export function describeSystemEntry(entry: TicketTimelineEntry, t: Translator): string {
   const activity = entry.activity;
   if (!activity) return t('bento.timeline.ticketUpdated', 'Ticket updated');
   const actor = activity.actor_display_name || t('bento.timeline.systemActor', 'System');
@@ -251,6 +259,36 @@ function describeSystemEntry(entry: TicketTimelineEntry, t: Translator): string 
           '{{actor}} closed the bundle master and {{count}} child ticket(s)',
           { actor, count },
         );
+  }
+
+  // Duplicate events name the other ticket. Missing/empty number falls through to
+  // the generic event label. Mirrors TicketActivityTimeline.describeActivity.
+  // String literals, not TICKET_ACTIVITY_EVENT: that constant is only exported from
+  // the shared ticketActivity index, which also pulls in server-only writers.
+  // LEVERAGE: pattern duplicate-event-labels — these branches duplicate the
+  // TICKET_DUPLICATED_FROM/TO wording in TicketActivityTimeline.tsx; same shared
+  // event-label function as propagation-event-labels would cover both.
+  if (activity.event_type === 'TICKET_DUPLICATED_FROM') {
+    const details = (activity.details ?? {}) as { source_ticket_number?: string | number | null };
+    const number = details.source_ticket_number == null ? '' : String(details.source_ticket_number).trim();
+    if (number) {
+      return t(
+        'bento.timeline.duplicatedFrom',
+        '{{actor}} created this ticket as a duplicate of #{{number}}',
+        { actor, number },
+      );
+    }
+  }
+  if (activity.event_type === 'TICKET_DUPLICATED_TO') {
+    const details = (activity.details ?? {}) as { duplicate_ticket_number?: string | number | null };
+    const number = details.duplicate_ticket_number == null ? '' : String(details.duplicate_ticket_number).trim();
+    if (number) {
+      return t(
+        'bento.timeline.duplicatedTo',
+        '{{actor}} duplicated this ticket as #{{number}}',
+        { actor, number },
+      );
+    }
   }
 
   const changes = activity.changes ?? {};
@@ -1134,6 +1172,8 @@ function TimelineNodeView({ id, node, t }: { id: string; node: TimelineNode; t: 
   const { formatDate } = useFormatters();
   if (node.lane === 'time' && node.entry?.timeEntry) {
     const timeEntry = node.entry.timeEntry;
+    // Worked duration is elapsed time; billability is the separate billing value.
+    const isBillable = timeEntry.billable_duration > 0;
     return (
       <div id={`${id}-${node.sortId}`} className="flex gap-2.5 items-baseline pt-1">
         <p className="text-sm text-[rgb(var(--color-text-600))] min-w-0">
@@ -1142,7 +1182,14 @@ function TimelineNodeView({ id, node, t }: { id: string; node: TimelineNode; t: 
           </span>{' '}
           {t('bento.timeline.logged', 'logged')}{' '}
           <span className="chip-primary inline-block rounded px-1.5 text-xs font-semibold">
-            {formatMinutes(timeEntry.billable_duration)}
+            {formatMinutes(workedMinutes(timeEntry))}
+          </span>{' '}
+          <span
+            className={`inline-block rounded-full border px-1.5 align-middle text-[10px] font-semibold ${billabilityChipClasses(isBillable)}`}
+          >
+            {isBillable
+              ? t('timeEntries.billable', 'Billable')
+              : t('timeEntries.nonBillable', 'Non-billable')}
           </span>
           {timeEntry.notes ? <> — {timeEntry.notes}</> : null}
         </p>

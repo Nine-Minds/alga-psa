@@ -117,6 +117,7 @@ export const projectTicketLinkSchema = tenantSchema.extend({
   phase_id: z.string().nullable(),
   task_id: z.string().nullable(),
   ticket_id: z.string(),
+  bill_under_project: z.boolean(),
   created_at: z.date()
 });
 

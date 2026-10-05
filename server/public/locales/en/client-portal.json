@@ -338,6 +338,8 @@
     },
     "captchaRequired": "Please complete the verification below, then sign in again.",
     "tooManyAttempts": "Too many failed sign-in attempts. Please wait a few minutes before trying again.",
+    "tenantRequiredMessage": "Your email is linked to more than one organization — choose your organization to continue.",
+    "tenantRequiredLink": "Choose your organization",
     "tenantDiscovery": {
       "title": "Find Your Organization",
       "description": "Enter your email address and we'll send you login links for all organizations you have access to.",

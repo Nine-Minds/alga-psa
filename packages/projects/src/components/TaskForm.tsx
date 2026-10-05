@@ -365,6 +365,7 @@ export default function TaskForm({
         created_at: new Date(),
         project_id: phase.project_id,
         phase_id: phase.phase_id,
+        bill_under_project: true,
         status_name: ticket.status_name || 'New',
         is_closed: ticket.is_closed ?? ticket.closed_at != null
       };
@@ -989,7 +990,7 @@ export default function TaskForm({
 
             // Add ticket links using the actual task ID and phase ID
             for (const link of pendingTicketLinks) {
-              const linkResult = await addTicketLinkAction(phase.project_id, resultTask.task_id, link.ticket_id, phase.phase_id);
+              const linkResult = await addTicketLinkAction(phase.project_id, resultTask.task_id, link.ticket_id, phase.phase_id, link.bill_under_project ?? true);
               if (isReturnedActionError(linkResult)) {
                 throw new Error(getErrorMessage(linkResult));
               }

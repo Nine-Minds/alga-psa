@@ -1093,6 +1093,7 @@ async function fetchUnresolvedNonContractDueWorkRows(
             clientId: period.client_id,
             windowStart: period.period_start_date,
             windowEnd: period.period_end_date,
+            clientDefaultCurrency: clientMetadataById.get(period.client_id)?.currencyCode ?? null,
         }).catch((error) => {
             if (error instanceof Error && error.message.includes('tenant context not found')) {
                 return [];

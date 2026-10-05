@@ -2055,7 +2055,8 @@
         "selectedCount": "{{count}} selecionado",
         "clear": "Limpar seleção"
       }
-    }
+    },
+    "emptyTimeHint": "Horas e materiais aprovados nunca entram nesta fila — são faturados na execução normal de faturamento ou pelo botão Gerar fatura do projeto."
   },
   "invoiceDesigner": {
     "transforms": {

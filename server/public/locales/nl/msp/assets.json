@@ -1603,5 +1603,15 @@
       "missingField": "Er ontbreekt een verplicht assetveld.",
       "missingFieldNamed": "Er ontbreekt een verplicht assetveld: {{field}}."
     }
+  },
+  "clientAssetMultiSelect": {
+    "errors": {
+      "load": "Assets laden mislukt"
+    },
+    "placeholder": "Een asset toevoegen...",
+    "searchPlaceholder": "Assets zoeken",
+    "empty": "Geen overeenkomende assets voor deze klant",
+    "loading": "Laden...",
+    "remove": "Asset verwijderen"
   }
 }

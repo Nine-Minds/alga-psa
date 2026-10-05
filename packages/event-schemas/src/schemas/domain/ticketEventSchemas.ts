@@ -46,6 +46,7 @@ export const ticketCreatedEventPayloadSchema = BaseDomainEventPayloadSchema.exte
     url: z.string().nullable().optional(),
     relationship: z.enum(['origin', 'mirror', 'reference']).optional(),
   })).optional().describe('Ticket-level external links created with the ticket'),
+  ...suppressionFlagsSchema,
 }).describe('Payload for TICKET_CREATED');
 
 export type TicketCreatedEventPayload = z.infer<typeof ticketCreatedEventPayloadSchema>;

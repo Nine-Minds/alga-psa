@@ -27,7 +27,8 @@ export type RootStackParamList = {
   MutedUsers: undefined;
   ClientDetail: { clientId: string; clientName?: string };
   ContactDetail: { contactId: string; contactName?: string };
-  ProjectTaskDetail: { activity: ProjectTaskActivity };
+  /** Push and deep links only know the id; the activity row seeds the first paint when present. */
+  ProjectTaskDetail: { taskId: string; activity?: ProjectTaskActivity };
   WorkflowTaskDetail: { taskId: string };
   StockProductDetail: { serviceId: string; serviceName?: string };
   StockUnitDetail: { unitId: string };

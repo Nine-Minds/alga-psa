@@ -1603,5 +1603,15 @@
       "missingField": "Falta um campo obrigatório do ativo.",
       "missingFieldNamed": "Falta um campo obrigatório do ativo: {{field}}."
     }
+  },
+  "clientAssetMultiSelect": {
+    "errors": {
+      "load": "Falha ao carregar os ativos"
+    },
+    "placeholder": "Adicionar um ativo...",
+    "searchPlaceholder": "Pesquisar ativos",
+    "empty": "Nenhum ativo correspondente para este cliente",
+    "loading": "Carregando...",
+    "remove": "Remover ativo"
   }
 }

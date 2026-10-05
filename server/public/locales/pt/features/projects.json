@@ -524,7 +524,14 @@
     "linkedToTaskSuccess": "Ticket vinculado à tarefa com sucesso",
     "failedLoadTask": "Falha ao carregar a tarefa",
     "clientFallback": "Cliente",
-    "defaultNewStatus": "Novo"
+    "defaultNewStatus": "Novo",
+    "billUnderProjectLabel": "Faturar as horas deste ticket como horas do projeto",
+    "billingOffBadge": "Faturado no nível do cliente",
+    "billingOnTooltip": "Parar de faturar as horas deste ticket como horas do projeto",
+    "billingOffTooltip": "Faturar as horas deste ticket como horas do projeto",
+    "billingOnSuccess": "As horas deste ticket serão faturadas como horas do projeto",
+    "billingOffSuccess": "As horas deste ticket serão faturadas no nível do cliente",
+    "billingUpdateFailed": "Não foi possível atualizar o faturamento do ticket"
   },
   "materials": {
     "title": "Materiais do Projeto",
@@ -819,7 +826,9 @@
       "tasks": "Tarefas",
       "badgeCount_other": "Tarefas {{count}}",
       "restrictedTooltip": "Detalhes limitados – você não está designado para esta tarefa",
-      "badgeCount_one": "Tarefa {{count}}"
+      "badgeCount_one": "Tarefa {{count}}",
+      "billsToProject": "Horas faturadas como horas do projeto",
+      "billsToClient": "Horas faturadas no nível do cliente"
     },
     "bulkMoveTask": {
       "title": "Mover tarefas",
@@ -1767,6 +1776,7 @@
     "cap": {
       "title": "Limite orçamental",
       "hint": "O tempo e os materiais são faturados às tarifas definidas até um limite máximo opcional.",
+      "currencyStale": "O limite guardado está em {{projectCurrency}}, moeda em que não são emitidas as faturas deste projeto. Introduza o limite em {{invoiceCurrency}} para passar este projeto a {{invoiceCurrency}}; até então não é aplicado nenhum limite. O novo limite conta a partir de zero: os montantes já faturados não são transportados.",
       "amount": "Montante do limite ({{currency}})",
       "behavior": "Ao atingir",
       "notify": "Apenas notificar",
@@ -1817,7 +1827,8 @@
       "tmHardHint": "Limite rígido de {{cap}} — a faturação para no limite",
       "tmNotifyHint": "Limite orçamental de {{cap}} — apenas notificar",
       "thresholdMarker": "Limiar de notificação de {{pct}}%",
-      "writtenDown": "Abatido acima do limite: {{amount}}"
+      "writtenDown": "Abatido acima do limite: {{amount}}",
+      "currencyStale": "Os montantes aqui estão em {{projectCurrency}}, mas as faturas deste projeto são emitidas em {{invoiceCurrency}}, pelo que um limite orçamental contabilizado aqui não é aplicado."
     },
     "economics": {
       "title": "Rentabilidade da prestação",

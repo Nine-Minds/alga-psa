@@ -8,7 +8,8 @@ describe('project authorization kernel contracts', () => {
   const projectActionsSource = readSource('projectActions.ts');
   const projectTaskActionsSource = readSource('projectTaskActions.ts');
   const projectTaskStatusActionsSource = readSource('projectTaskStatusActions.ts');
-  const commentActionsSource = readSource('projectTaskCommentActions.ts');
+  // The comment rules live in the shared service used by the web actions and the REST API.
+  const commentActionsSource = readSource('../lib/taskComments/taskCommentService.ts');
 
   it('T020: preserves own-comment/internal-user behavior and supports bundle narrowing on project list/detail', () => {
     expect(commentActionsSource).toContain('if (user.user_type === \'internal\') {');

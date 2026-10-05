@@ -1225,7 +1225,10 @@ export const addTicketLinkAction = withAuth(async (
     projectId: string,
     taskId: string | null,
     ticketId: string,
-    phaseId: string
+    phaseId: string,
+    // Linking a ticket to a task means its time is project work unless the
+    // linker says otherwise (alga-2026-0002622).
+    billUnderProject: boolean = true
 ): Promise<IProjectTicketLink | ProjectTaskActionError> => {
     try {
         const {knex: db} = await createTenantKnex();
@@ -1240,7 +1243,7 @@ export const addTicketLinkAction = withAuth(async (
                 }
                 await assertProjectReadAllowedById(trx, tenant, user as IUserWithRoles, taskProjectId);
             }
-            return await ProjectTaskModel.addTaskTicketLink(trx, tenant, projectId, taskId, ticketId, phaseId);
+            return await ProjectTaskModel.addTaskTicketLink(trx, tenant, projectId, taskId, ticketId, phaseId, billUnderProject);
         });
     } catch (error) {
         const expected = projectTaskActionErrorFrom(error);
@@ -1248,6 +1251,33 @@ export const addTicketLinkAction = withAuth(async (
             return expected;
         }
         console.error('Error adding ticket link:', error);
+        throw error;
+    }
+});
+
+export const setTicketLinkBillingAction = withAuth(async (
+    user,
+    { tenant },
+    linkId: string,
+    billUnderProject: boolean
+): Promise<void | ProjectTaskActionError> => {
+    try {
+        const {knex: db} = await createTenantKnex();
+        await withTransaction(db, async (trx: Knex.Transaction) => {
+            await checkPermission(user, 'project', 'update', trx);
+            const projectId = await resolveProjectIdForTaskTicketLink(trx, tenant, linkId);
+            if (!projectId) {
+                throw new Error('Project not found for task ticket link');
+            }
+            await assertProjectReadAllowedById(trx, tenant, user as IUserWithRoles, projectId);
+            await ProjectTaskModel.setTicketLinkBilling(trx, tenant, linkId, billUnderProject);
+        });
+    } catch (error) {
+        const expected = projectTaskActionErrorFrom(error);
+        if (expected) {
+            return expected;
+        }
+        console.error('Error updating ticket link billing:', error);
         throw error;
     }
 });
@@ -2384,8 +2414,18 @@ export const duplicateTaskToPhase = withAuth(async (
                     if (!allowedTicketIds.has(link.ticket_id)) {
                         continue;
                     }
-                    // addTaskTicketLink expects projectId, taskId, ticketId, phaseId
-                    await ProjectTaskModel.addTaskTicketLink(trx, tenant, newPhase.project_id, newTask.task_id, link.ticket_id, newPhaseId);
+                    // addTaskTicketLink expects projectId, taskId, ticketId, phaseId.
+                    // A reference-only link stays reference-only on the copy:
+                    // duplicating a task must never start billing its time.
+                    await ProjectTaskModel.addTaskTicketLink(
+                        trx,
+                        tenant,
+                        newPhase.project_id,
+                        newTask.task_id,
+                        link.ticket_id,
+                        newPhaseId,
+                        link.bill_under_project ?? true
+                    );
                 }
             }
 

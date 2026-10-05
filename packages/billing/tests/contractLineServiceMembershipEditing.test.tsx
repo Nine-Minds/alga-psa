@@ -76,9 +76,11 @@ vi.mock('@alga-psa/billing/actions/billingClientLocationActions', () => ({
   getActiveClientLocationsForBilling: actionMocks.getActiveClientLocationsForBilling,
 }));
 
-const translate = (_key: string, options?: Record<string, unknown>) => {
-  let value = String(options?.defaultValue ?? _key);
-  for (const [name, replacement] of Object.entries(options ?? {})) {
+// DatePicker calls t(key, 'fallback'); the editors call t(key, { defaultValue, ...vars }).
+const translate = (_key: string, second?: string | Record<string, unknown>) => {
+  const options = typeof second === 'object' && second ? second : {};
+  let value = String((typeof second === 'string' ? second : options.defaultValue) ?? _key);
+  for (const [name, replacement] of Object.entries(options)) {
     value = value.replace(`{{${name}}}`, String(replacement));
   }
   return value;
@@ -86,8 +88,10 @@ const translate = (_key: string, options?: Record<string, unknown>) => {
 
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
   useTranslation: () => ({ t: translate }),
+  useOptionalI18n: () => ({ locale: 'en' }),
   useFormatters: () => ({
     formatCurrency: (value: number, currency: string) => `${currency} ${value}`,
+    formatDate: (value: string) => value,
   }),
 }));
 
@@ -102,7 +106,10 @@ vi.mock('@alga-psa/ui/lib/errorHandling', () => ({
   isActionPermissionError: () => false,
 }));
 
-vi.mock('@alga-psa/core', () => ({
+// Partial mock: the recurring-unit schedule panel needs the real calendar-date
+// helpers to render its DatePicker values.
+vi.mock('@alga-psa/core', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@alga-psa/core')>()),
   getCurrencySymbol: () => '$',
 }));
 

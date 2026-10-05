@@ -641,6 +641,8 @@
       "catalogPriceMissing": "Nessun prezzo di catalogo in {{currency}} copre questo confine, quindi una quantità positiva non può essere fatturata. Aggiungi un prezzo di catalogo in {{currency}} o scegli \"Personalizza il prezzo unitario\" prima di salvare.",
       "invoiceImpact": "Dal {{date}} il subtotale ricorrente di questo elemento varia di {{delta}} fino a {{total}} (al lordo di sconti e imposte). I periodi già fatturati restano invariati.",
       "discardDirty": "Modificando la data di decorrenza si ricaricano i valori in vigore e si annulla la modifica non salvata. Continuare?",
+      "discardDirtyTitle": "Scartare la modifica non salvata?",
+      "discardDirtyConfirm": "Scarta e ricarica",
       "invalidQuantity": "La quantità deve essere un numero intero pari o superiore a 0.",
       "invalidRate": "Inserisci un prezzo unitario pari o superiore a 0, oppure passa al prezzo di catalogo.",
       "saved": "Pianificato: {{quantity}} con decorrenza {{date}}.",
@@ -1046,6 +1048,7 @@
       "published": "Pubblicato"
     },
     "toasts": {
+      "contractActivated": "Contratto attivato",
       "draftDiscarded": "Bozza annullata",
       "failedToActivateContract": "Impossibile attivare il contratto",
       "failedToDeleteContract": "Impossibile eliminare il contratto",

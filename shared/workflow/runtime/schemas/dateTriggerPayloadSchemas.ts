@@ -1,13 +1,19 @@
 import { z } from 'zod';
+import { withWorkflowPicker } from '../jsonSchemaMetadata';
 import { dateOnlySchema } from './commonEventPayloadSchemas';
 
 const date = dateOnlySchema('Calendar date (YYYY-MM-DD)');
-const common = { occursOn: date, fireDate: date, offsetDays: z.number().int().min(-365).max(365), clientId: z.string().optional(), clientName: z.string().optional() };
+// Entity ids are marked with their kind so the Run dialog and designer offer pickers. The contract
+// picker narrows to the payload's client.
+const clientId = withWorkflowPicker(z.string(), 'Client', 'client');
+const contractId = withWorkflowPicker(z.string(), 'Contract', 'contract', ['clientId']);
+const assetId = withWorkflowPicker(z.string(), 'Asset', 'asset');
+const common = { occursOn: date, fireDate: date, offsetDays: z.number().int().min(-365).max(365), clientId: clientId.optional(), clientName: z.string().optional() };
 export const dateTriggerPayloadSchemas = {
-  'payload.ClientAnniversary.v1': z.object({ ...common, clientId: z.string(), clientName: z.string(), yearsAsClient: z.number().int().positive(), anniversarySource: z.enum(['client_since', 'created_at']) }).passthrough(),
-  'payload.ContractRenewalDate.v1': z.object({ ...common, contractId: z.string(), clientId: z.string(), renewalMode: z.string().optional(), renewalCycleKey: z.string().optional() }).passthrough(),
-  'payload.ContractEndDate.v1': z.object({ ...common, contractId: z.string(), clientId: z.string(), endDate: z.string() }).passthrough(),
-  'payload.AssetWarrantyEnd.v1': z.object({ ...common, assetId: z.string(), warrantyEndDate: z.string() }).passthrough(),
+  'payload.ClientAnniversary.v1': z.object({ ...common, clientId, clientName: z.string(), yearsAsClient: z.number().int().positive(), anniversarySource: z.enum(['client_since', 'created_at']) }).passthrough(),
+  'payload.ContractRenewalDate.v1': z.object({ ...common, contractId, clientId, renewalMode: z.string().optional(), renewalCycleKey: z.string().optional() }).passthrough(),
+  'payload.ContractEndDate.v1': z.object({ ...common, contractId, clientId, endDate: dateOnlySchema('Contract end date (YYYY-MM-DD)') }).passthrough(),
+  'payload.AssetWarrantyEnd.v1': z.object({ ...common, assetId, warrantyEndDate: dateOnlySchema('Warranty end date (YYYY-MM-DD)') }).passthrough(),
 } as const;
 
 // Date trigger sources: the fixed set of dates a `date` workflow trigger can fire on.

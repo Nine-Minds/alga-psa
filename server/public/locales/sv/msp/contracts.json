@@ -641,6 +641,8 @@
       "catalogPriceMissing": "Inget katalogpris i {{currency}} täcker den här periodgränsen, så ett positivt antal kan inte debiteras. Lägg till ett katalogpris i {{currency}} eller välj \"Åsidosätt enhetspris\" innan du sparar.",
       "invoiceImpact": "Från {{date}} ändras den återkommande delsumman för den här posten med {{delta}} till {{total}} (före rabatter och moms). Tidigare fakturerade perioder är oförändrade.",
       "discardDirty": "Om du ändrar giltighetsdatumet laddas de gällande värdena om och din osparade ändring tas bort. Vill du fortsätta?",
+      "discardDirtyTitle": "Förkasta den osparade ändringen?",
+      "discardDirtyConfirm": "Förkasta och ladda om",
       "invalidQuantity": "Antalet måste vara ett heltal som är 0 eller mer.",
       "invalidRate": "Ange ett enhetspris som är 0 eller mer, eller byt till katalogprissättning.",
       "saved": "Schemalagt: {{quantity}} gäller från {{date}}.",
@@ -1046,6 +1048,7 @@
       "published": "Publicerad"
     },
     "toasts": {
+      "contractActivated": "Avtalet har aktiverats",
       "draftDiscarded": "Utkastet har kastats",
       "failedToActivateContract": "Det gick inte att aktivera avtalet",
       "failedToDeleteContract": "Det gick inte att radera avtalet",
