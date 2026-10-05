@@ -13,6 +13,7 @@ const actionMocks = vi.hoisted(() => ({
   applyContractLineServiceMembershipChanges: vi.fn(),
   checkContractHasInvoices: vi.fn(),
   deleteBucketOverlay: vi.fn(),
+  listBucketPoolsForLine: vi.fn(),
   getActiveClientLocationsForBilling: vi.fn(),
   getContractLineServicesWithConfigurations: vi.fn(),
   getDetailedContractLines: vi.fn(),
@@ -77,6 +78,11 @@ vi.mock('@alga-psa/billing/actions/contractLineServiceConfigurationActions', () 
 
 vi.mock('@alga-psa/billing/actions/bucketOverlayActions', () => ({
   deleteBucketOverlay: actionMocks.deleteBucketOverlay,
+}));
+
+vi.mock('@alga-psa/billing/actions/bucketPoolActions', () => ({
+  listBucketBusinessHoursSchedules: vi.fn(async () => []),
+  listBucketPoolsForLine: actionMocks.listBucketPoolsForLine,
 }));
 
 vi.mock('@alga-psa/billing/actions/billingClientLocationActions', () => ({
@@ -224,6 +230,35 @@ const savedOverlay = {
 const withOverlay = () => hourlyService('svc-bucketed', 'Bucketed support', 'config-bucketed', savedOverlay);
 const withoutOverlay = () => hourlyService('svc-plain', 'Plain support', 'config-plain', null);
 
+/**
+ * A bucket enabled from this screen is persisted as a single-member pool, so
+ * that is how a saved overlay comes back on reload.
+ */
+const singleMemberPool = (serviceId: string) => ({
+  bucket_id: `pool-${serviceId}`,
+  contract_line_id: 'line-1',
+  bucket_name: null,
+  total_minutes: 600,
+  overage_rate: 18000,
+  allow_rollover: false,
+  billing_period: 'monthly' as const,
+  covers_all_services: false,
+  after_hours_multiplier: null,
+  business_hours_schedule_id: null,
+  members: [{ service_id: serviceId, service_name: serviceId, burn_multiplier: 1 }],
+  dormant: false,
+});
+
+const sharedPool = (serviceIds: string[]) => ({
+  ...singleMemberPool('shared'),
+  bucket_id: 'pool-shared',
+  members: serviceIds.map((serviceId) => ({
+    service_id: serviceId,
+    service_name: serviceId,
+    burn_multiplier: 1,
+  })),
+});
+
 const renderContractLines = () => render(
   <ContractLines
     contract={{
@@ -243,6 +278,7 @@ describe('disabling a bucket on a contract line service', () => {
     actionMocks.getActiveClientLocationsForBilling.mockResolvedValue([]);
     actionMocks.getTemplateLineServicesWithConfigurations.mockResolvedValue([]);
     actionMocks.deleteBucketOverlay.mockResolvedValue(undefined);
+    actionMocks.listBucketPoolsForLine.mockResolvedValue([]);
     actionMocks.getDetailedContractLines.mockResolvedValue([{
       tenant: 'tenant-1',
       contract_id: 'contract-1',
@@ -299,6 +335,69 @@ describe('disabling a bucket on a contract line service', () => {
 
     // The reloaded line no longer renders the overlay summary.
     await waitFor(() => expect(screen.queryByText('Bucket Configuration')).toBeNull());
+  });
+
+  it('starts switched on for a pool-backed overlay and deletes it on save', async () => {
+    // Buckets saved from this screen land in a pool, not in a per-service
+    // Bucket configuration row, so the switch has to read the pool back or the
+    // disable intent is lost.
+    actionMocks.getContractLineServicesWithConfigurations.mockResolvedValue([
+      hourlyService('svc-bucketed', 'Bucketed support', 'config-bucketed', null),
+      withoutOverlay(),
+    ]);
+    actionMocks.listBucketPoolsForLine
+      .mockResolvedValueOnce([singleMemberPool('svc-bucketed')])
+      .mockResolvedValue([]);
+
+    renderContractLines();
+
+    fireEvent.click(await screen.findByLabelText('Expand contract line'));
+    fireEvent.click(await screen.findByRole('button', { name: 'Edit' }));
+
+    const switches = await waitFor(() => {
+      const found = screen.getAllByLabelText('Enable bucket usage tracking') as HTMLInputElement[];
+      expect(found[0].checked).toBe(true);
+      return found;
+    });
+    expect(switches[1].checked).toBe(false);
+
+    fireEvent.click(switches[0]);
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    await waitFor(() => expect(actionMocks.deleteBucketOverlay).toHaveBeenCalledWith('line-1', 'svc-bucketed'));
+    expect(actionMocks.deleteBucketOverlay).toHaveBeenCalledTimes(1);
+    expect(actionMocks.upsertBucketConfiguration).not.toHaveBeenCalled();
+
+    // Re-entering edit after the save reads the pools again: the bucket stays off.
+    fireEvent.click(await screen.findByRole('button', { name: 'Edit' }));
+    await waitFor(() => {
+      const found = screen.getAllByLabelText('Enable bucket usage tracking') as HTMLInputElement[];
+      expect(found[0].checked).toBe(false);
+    });
+  });
+
+  it('leaves a service that draws from a shared pool to the pool editor', async () => {
+    actionMocks.getContractLineServicesWithConfigurations.mockResolvedValue([
+      hourlyService('svc-bucketed', 'Bucketed support', 'config-bucketed', null),
+      withoutOverlay(),
+    ]);
+    actionMocks.listBucketPoolsForLine.mockResolvedValue([sharedPool(['svc-bucketed', 'svc-plain'])]);
+
+    renderContractLines();
+
+    fireEvent.click(await screen.findByLabelText('Expand contract line'));
+    fireEvent.click(await screen.findByRole('button', { name: 'Edit' }));
+    await waitFor(() => expect(screen.getAllByLabelText('Enable bucket usage tracking')).toHaveLength(2));
+
+    for (const toggle of screen.getAllByLabelText('Enable bucket usage tracking') as HTMLInputElement[]) {
+      expect(toggle.checked).toBe(false);
+    }
+
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    await waitFor(() => expect(actionMocks.updateContractLine).toHaveBeenCalled());
+    expect(actionMocks.deleteBucketOverlay).not.toHaveBeenCalled();
+    expect(actionMocks.upsertBucketConfiguration).not.toHaveBeenCalled();
   });
 
   it('leaves an untouched overlay alone', async () => {
