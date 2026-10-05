@@ -22,12 +22,17 @@ vi.mock('@alga-psa/db', () => {
   const builder: any = {
     where: () => builder,
     whereNull: () => builder,
+    whereIn: () => builder,
+    orWhere: () => builder,
     del: vi.fn().mockResolvedValue(0),
     select: vi.fn().mockResolvedValue([]),
   };
+  // resolveCalendarAccess (real, for non-admin viewers) issues tenant-scoped
+  // joins; the stub returns no shares/teams so access resolves to self only.
+  const scopedDb: any = { table: () => builder, tenantJoin: () => builder };
   return {
     createTenantKnex: async () => ({ knex: {}, tenant: 'tenant-1' }),
-    tenantDb: () => ({ table: () => builder }),
+    tenantDb: () => scopedDb,
     withTransaction: async (_db: unknown, fn: (trx: unknown) => Promise<unknown>) => fn({}),
   };
 });
@@ -128,29 +133,53 @@ describe('schedule entry mutation permissions', () => {
     });
   });
 
-  it.each([undefined, ['user-1']])('denies own-entry update without update permission (assignment %j)', async (assigned_user_ids) => {
+  it.each([undefined, ['user-1']])('denies own-entry update without schedule read permission (assignment %j)', async (assigned_user_ids) => {
     const { updateScheduleEntry } = await import('../src/actions/scheduleActions');
     hasPermissionMock.mockResolvedValue(false);
     scheduleEntryGetMock.mockResolvedValue({ ...EXISTING_ENTRY, assigned_user_ids: ['user-1'] });
     const result = await updateScheduleEntry('entry-1', { title: 'Changed', assigned_user_ids });
     expect(result).toMatchObject({ success: false, error: expect.stringContaining('Permission denied') });
-    expect(hasPermissionMock).toHaveBeenCalledWith(authState.currentUser, 'user_schedule', 'update', expect.anything());
+    // Read is the floor for any schedule mutation; without it we deny before
+    // resolving calendar access.
+    expect(hasPermissionMock).toHaveBeenCalledWith(authState.currentUser, 'user_schedule', 'read', expect.anything());
     expect(scheduleEntryUpdateMock).not.toHaveBeenCalled();
     expect(publishEventMock).not.toHaveBeenCalled();
     expect(maybePublishCapacityThresholdReachedMock).not.toHaveBeenCalled();
   });
 
-  it.each(['user-1', 'user-2'])('denies deletion of non-private entries assigned to %s without update permission', async (assignee) => {
+  it.each(['user-1', 'user-2'])('denies deletion of non-private entries assigned to %s without schedule read permission', async (assignee) => {
     const { deleteScheduleEntry } = await import('../src/actions/scheduleActions');
     hasPermissionMock.mockResolvedValue(false);
     scheduleEntryGetMock.mockResolvedValue({ ...EXISTING_ENTRY, assigned_user_ids: [assignee] });
     const result = await deleteScheduleEntry('entry-1');
     expect(result).toMatchObject({ success: false, canDelete: false, code: 'PERMISSION_DENIED' });
-    expect(hasPermissionMock).toHaveBeenCalledWith(authState.currentUser, 'user_schedule', 'update', expect.anything());
+    expect(hasPermissionMock).toHaveBeenCalledWith(authState.currentUser, 'user_schedule', 'read', expect.anything());
     expect(deleteEntityWithValidationMock).not.toHaveBeenCalled();
     expect(scheduleEntryDeleteMock).not.toHaveBeenCalled();
     expect(deleteTeamsMeetingMock).not.toHaveBeenCalled();
     expect(publishEventMock).not.toHaveBeenCalled();
+  });
+
+  // Regression: a sole assignee owns their entry and may mutate it with only
+  // user_schedule:read. The global user_schedule:update permission is an
+  // escalation (edit on every calendar), never a prerequisite for editing one's
+  // own entry or an entry on a calendar one holds an edit share for. Guards the
+  // shared-calendar delegate flow exercised in
+  // sharedCalendars.integration.test.ts.
+  it('lets a sole assignee update and delete their own entry with only read permission', async () => {
+    const { updateScheduleEntry, deleteScheduleEntry } = await import('../src/actions/scheduleActions');
+    hasPermissionMock.mockImplementation(async (_user, resource, action) =>
+      resource === 'user_schedule' && action === 'read'
+    );
+    scheduleEntryGetMock.mockResolvedValue({ ...EXISTING_ENTRY, assigned_user_ids: ['user-1'] });
+
+    const patch = { title: 'Rescheduled' };
+    const updated = await updateScheduleEntry('entry-1', patch);
+    expect(updated).toMatchObject({ success: true });
+    expect(scheduleEntryUpdateMock).toHaveBeenCalled();
+
+    const deleted = await deleteScheduleEntry('entry-1');
+    expect(deleted).toMatchObject({ success: true, deleted: true });
   });
 
   it('updates and reschedules an entry with update permission using the authenticated tenant', async () => {
