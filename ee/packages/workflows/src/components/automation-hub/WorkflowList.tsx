@@ -17,7 +17,7 @@ import {
   Play,
   Pause,
   Trash2,
-  Copy,
+  Pencil,
   MoreVertical,
   Calendar,
   Zap,
@@ -98,6 +98,8 @@ export interface WorkflowDefinitionListItem {
   status: string;
   draft_version: number;
   published_version?: number | null;
+  /** True when the draft differs from the latest published version; null when never published. */
+  has_unpublished_changes?: boolean | null;
   is_system?: boolean;
   is_visible?: boolean;
   is_paused?: boolean;
@@ -115,6 +117,8 @@ interface WorkflowListProps {
   onSelectWorkflow?: (workflowId: string) => void;
   onCreateNew?: () => void;
   onOpenEventCatalog?: () => void;
+  /** Starts a run of a published workflow (e.g. by opening the host's Run dialog). Hides "Run" when absent. */
+  onRunWorkflow?: (workflowId: string) => void;
   editorBasePath?: string;
   controlPanelBasePath?: string;
 }
@@ -191,6 +195,7 @@ export default function WorkflowList({
   onSelectWorkflow,
   onCreateNew,
   onOpenEventCatalog,
+  onRunWorkflow,
   editorBasePath = '/msp/workflow-editor',
   controlPanelBasePath = '/msp/workflow-control'
 }: WorkflowListProps) {
@@ -371,10 +376,9 @@ export default function WorkflowList({
     }
   };
 
-  const handleDuplicate = async (workflow: WorkflowDefinitionListItem, e: React.MouseEvent) => {
-    e.stopPropagation();
-    // TODO: Implement duplicate functionality
-    console.log('Duplicate workflow:', workflow.workflow_id);
+  const handleRun = (workflow: WorkflowDefinitionListItem) => {
+    clearSearchDebounce();
+    onRunWorkflow?.(workflow.workflow_id);
   };
 
   const handleViewRuns = (workflow: WorkflowDefinitionListItem, e: React.MouseEvent) => {
@@ -626,9 +630,16 @@ export default function WorkflowList({
           <span className="text-sm text-[rgb(var(--color-text-700))]">
             v{record.published_version ?? record.draft_version}
           </span>
-          {record.published_version && record.draft_version > record.published_version && (
-            <span className="text-xs text-[rgb(var(--color-accent-500))]">
-              {t('automation.workflowList.tableValues.draftVersion', { defaultValue: 'Draft: v{{version}}', version: record.draft_version })}
+          {record.published_version != null && record.has_unpublished_changes === true && (
+            <span
+              id={`workflow-list-unpublished-changes-${record.workflow_id}`}
+              className="text-xs text-[rgb(var(--color-accent-500))]"
+              title={t('automation.workflowList.tableValues.unpublishedChangesTitle', {
+                defaultValue: 'The saved draft has changes that are not published yet. Runs use v{{version}}.',
+                version: record.published_version,
+              })}
+            >
+              {t('automation.workflowList.tableValues.unpublishedChanges', { defaultValue: 'Unpublished changes' })}
             </span>
           )}
         </div>
@@ -662,64 +673,96 @@ export default function WorkflowList({
     },
     {
       title: t('automation.workflowList.columns.actions', { defaultValue: 'Actions' }),
-      dataIndex: 'workflow_id',
+      // Must not share a dataIndex with another column: DataTable keys columns (and finds their
+      // render functions) by dataIndex, so reusing 'workflow_id' rendered the selection checkbox here.
+      dataIndex: 'actions',
       sortable: false,
       width: '80px',
-      render: (value: unknown, record: WorkflowDefinitionListItem) => (
+      render: (value: unknown, record: WorkflowDefinitionListItem) => {
+        const canRun = Boolean(onRunWorkflow) && record.published_version != null;
+        return (
         <div className="flex items-center justify-end" onClick={(e) => e.stopPropagation()}>
           <DropdownMenu.Root>
             <DropdownMenu.Trigger asChild>
               <button
+                id={`workflow-list-row-menu-${record.workflow_id}`}
+                type="button"
                 className="p-1.5 rounded-md hover:bg-[rgb(var(--color-border-100))] transition-colors"
-                aria-label={t('automation.workflowList.rowMenu.ariaLabel', { defaultValue: 'Workflow actions' })}
+                aria-label={t('automation.workflowList.rowMenu.ariaLabelNamed', {
+                  defaultValue: 'Actions for {{name}}',
+                  name: record.name,
+                })}
+                title={t('automation.workflowList.rowMenu.title', { defaultValue: 'Workflow actions' })}
               >
-                <MoreVertical className="w-4 h-4 text-[rgb(var(--color-text-500))]" />
+                <MoreVertical className="w-4 h-4 text-[rgb(var(--color-text-500))]" aria-hidden="true" />
               </button>
             </DropdownMenu.Trigger>
             <DropdownMenu.Portal>
               <DropdownMenu.Content
-                className="min-w-[160px] bg-white rounded-lg shadow-lg border border-[rgb(var(--color-border-200))] py-1 z-50"
+                className="min-w-[180px] bg-[rgb(var(--color-card))] rounded-lg shadow-lg border border-[rgb(var(--color-border-200))] py-1 z-50"
                 sideOffset={5}
                 align="end"
+                aria-label={t('automation.workflowList.rowMenu.ariaLabelNamed', {
+                  defaultValue: 'Actions for {{name}}',
+                  name: record.name,
+                })}
+                onClick={(e) => e.stopPropagation()}
               >
                 <DropdownMenu.Item
-                  className="flex items-center gap-2 px-3 py-2 text-sm text-[rgb(var(--color-text-700))] hover:bg-[rgb(var(--color-border-50))] cursor-pointer outline-none"
+                  id={`workflow-list-row-open-${record.workflow_id}`}
+                  className="flex items-center gap-2 px-3 py-2 text-sm text-[rgb(var(--color-text-700))] hover:bg-[rgb(var(--color-border-50))] data-[highlighted]:bg-[rgb(var(--color-border-50))] cursor-pointer outline-none data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50"
+                  onSelect={() => handleRowClick(record)}
+                >
+                  <Pencil className="w-4 h-4" aria-hidden="true" />
+                  {t('automation.workflowList.rowMenu.open', { defaultValue: 'Open in editor' })}
+                </DropdownMenu.Item>
+                {canRun && (
+                  <DropdownMenu.Item
+                    id={`workflow-list-row-run-${record.workflow_id}`}
+                    className="flex items-center gap-2 px-3 py-2 text-sm text-[rgb(var(--color-text-700))] hover:bg-[rgb(var(--color-border-50))] data-[highlighted]:bg-[rgb(var(--color-border-50))] cursor-pointer outline-none data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50"
+                    disabled={Boolean(record.is_paused)}
+                    onSelect={() => handleRun(record)}
+                  >
+                    <Play className="w-4 h-4" aria-hidden="true" />
+                    {record.is_paused
+                      ? t('automation.workflowList.rowMenu.runPaused', { defaultValue: 'Run (resume first)' })
+                      : t('automation.workflowList.rowMenu.run', { defaultValue: 'Run…' })}
+                  </DropdownMenu.Item>
+                )}
+                <DropdownMenu.Item
+                  id={`workflow-list-row-toggle-pause-${record.workflow_id}`}
+                  className="flex items-center gap-2 px-3 py-2 text-sm text-[rgb(var(--color-text-700))] hover:bg-[rgb(var(--color-border-50))] data-[highlighted]:bg-[rgb(var(--color-border-50))] cursor-pointer outline-none data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50"
                   onSelect={(e) => handleTogglePause(record, e as unknown as React.MouseEvent)}
                 >
                   {record.is_paused ? (
                     <>
-                      <Play className="w-4 h-4" />
+                      <Play className="w-4 h-4" aria-hidden="true" />
                       {t('automation.workflowList.rowMenu.resume', { defaultValue: 'Resume' })}
                     </>
                   ) : (
                     <>
-                      <Pause className="w-4 h-4" />
+                      <Pause className="w-4 h-4" aria-hidden="true" />
                       {t('automation.workflowList.rowMenu.pause', { defaultValue: 'Pause' })}
                     </>
                   )}
                 </DropdownMenu.Item>
                 <DropdownMenu.Item
-                  className="flex items-center gap-2 px-3 py-2 text-sm text-[rgb(var(--color-text-700))] hover:bg-[rgb(var(--color-border-50))] cursor-pointer outline-none"
-                  onSelect={(e) => handleDuplicate(record, e as unknown as React.MouseEvent)}
-                >
-                  <Copy className="w-4 h-4" />
-                  {t('automation.workflowList.rowMenu.duplicate', { defaultValue: 'Duplicate' })}
-                </DropdownMenu.Item>
-                <DropdownMenu.Item
-                  className="flex items-center gap-2 px-3 py-2 text-sm text-[rgb(var(--color-text-700))] hover:bg-[rgb(var(--color-border-50))] cursor-pointer outline-none"
+                  id={`workflow-list-row-runs-${record.workflow_id}`}
+                  className="flex items-center gap-2 px-3 py-2 text-sm text-[rgb(var(--color-text-700))] hover:bg-[rgb(var(--color-border-50))] data-[highlighted]:bg-[rgb(var(--color-border-50))] cursor-pointer outline-none data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50"
                   onSelect={(e) => handleViewRuns(record, e as unknown as React.MouseEvent)}
                 >
-                  <History className="w-4 h-4" />
+                  <History className="w-4 h-4" aria-hidden="true" />
                   {t('automation.workflowList.rowMenu.viewRuns', { defaultValue: 'View Runs' })}
                 </DropdownMenu.Item>
                 {!record.is_system && (
                   <>
                     <DropdownMenu.Separator className="h-px bg-[rgb(var(--color-border-200))] my-1" />
                     <DropdownMenu.Item
-                      className="flex items-center gap-2 px-3 py-2 text-sm text-[rgb(var(--color-destructive))] hover:bg-destructive/10 cursor-pointer outline-none"
+                      id={`workflow-list-row-delete-${record.workflow_id}`}
+                      className="flex items-center gap-2 px-3 py-2 text-sm text-[rgb(var(--color-destructive))] hover:bg-destructive/10 data-[highlighted]:bg-destructive/10 cursor-pointer outline-none"
                       onSelect={(e) => handleDeleteClick(record, e as unknown as React.MouseEvent)}
                     >
-                      <Trash2 className="w-4 h-4" />
+                      <Trash2 className="w-4 h-4" aria-hidden="true" />
                       {t('automation.workflowList.rowMenu.delete', { defaultValue: 'Delete' })}
                     </DropdownMenu.Item>
                   </>
@@ -728,7 +771,8 @@ export default function WorkflowList({
             </DropdownMenu.Portal>
           </DropdownMenu.Root>
         </div>
-      )
+        );
+      }
     }
   ];
 

@@ -31,7 +31,7 @@ describe('buildWorkflowAuthoringGuide', () => {
     }
 
     const fnNames = guide.expressionLanguage.functions.map((fn) => fn.name);
-    expect(fnNames).toEqual(['nowIso', 'coalesce', 'len', 'toString', 'append']);
+    expect(fnNames).toEqual(['nowIso', 'coalesce', 'len', 'toString', 'append', 'contains', 'startsWith', 'endsWith', 'lower', 'upper', 'truncate', 'substring']);
     for (const fn of guide.expressionLanguage.functions) {
       expect(fn.description.length).toBeGreaterThan(0);
       expect(fn.signature.length).toBeGreaterThan(0);
@@ -42,7 +42,7 @@ describe('buildWorkflowAuthoringGuide', () => {
     const guide = buildWorkflowAuthoringGuide();
     const grammar = guide.expressionLanguage.grammar.join(' ');
 
-    expect(grammar).toContain('Only these five functions are allowed, exhaustively: nowIso, coalesce, len, toString, append');
+    expect(grammar).toContain('Only these functions are allowed, exhaustively: nowIso, coalesce, len, toString, append, contains, startsWith, endsWith, lower, upper, truncate, substring.');
     // $not is not allowlisted; the guide must offer a working negation idiom
     // instead of recommending a function that fails validation.
     expect(grammar).toContain('`$not(...)` is NOT allowlisted');
