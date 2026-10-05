@@ -844,40 +844,6 @@
         "loadFailed": "Det gick inte att läsa in Microsoft 365-postlådor.",
         "saved": "Avsändarpostlådan för utgående e-post har uppdaterats."
       },
-      "senderIdentities": {
-        "ticket": {
-          "title": "E-postidentitet för ärenden",
-          "description": "Svar på ärendemejl måste skickas tillbaka till den här adressen så att de kan matchas och läggas till i ärendet. Använd en ansluten, bevakad inkorg.",
-          "connectedInboxLabel": "Ansluten inkorg",
-          "connectedInboxHelp": "En ansluten inkorg håller kundens svar kvar i ärendets konversation.",
-          "customAddressOption": "Använd en annan adress",
-          "addressLabel": "Frånadress",
-          "addressPlaceholder": "support@example.com",
-          "addressHelp": "Den här adressen styr svarsroutningen endast för ärendemejl.",
-          "smtpAddressHelp": "Den här adressen anger domänen för SMTP-avsändaren ovan. Svar måste nå en ansluten inkorg för att visas i ärenden.",
-          "microsoftAddressHelp": "Microsoft 365 kräver att ärendemejl använder den valda skickande brevlådan ({{mailbox}}).",
-          "nameLabel": "Avsändarens visningsnamn",
-          "namePlaceholder": "Support",
-          "nameHelp": "Lämna tomt för att använda den anslutna brevlådans namn eller ärendetavlans namn."
-        },
-        "notification": {
-          "title": "Alla andra e-postidentiteter",
-          "description": "Varumärkesportalens inbjudningar, lösenordsåterställningar, fakturor, projektuppdateringar och allmänna aviseringar oberoende av ärendesrutten.",
-          "addressLabel": "Frånadress",
-          "addressPlaceholder": "notifications@example.com",
-          "smtpAddressHelp": "Anges av Frånadressen i SMTP-konfigurationen ovan. All e-post som inte gäller ärenden skickas från den.",
-          "lockedAddressHelp": "Den här adressen bestäms av den aktiva hanterade domänen eller den valda Microsoft 365-brevlådan.",
-          "nameLabel": "Avsändarens visningsnamn",
-          "namePlaceholder": "Ditt företagsnamn",
-          "nameHelp": "Lämna tomt för att använda {{company}} automatiskt.",
-          "companyFallback": "ditt klientföretag"
-        },
-        "warningTitle": "Kontrollera svarsroutningen",
-        "errorTitle": "Åtgärda ärendeidentiteten",
-        "clearButton": "Rensa ärendeidentitet",
-        "savingButton": "Sparar...",
-        "saveButton": "Spara avsändaridentiteter"
-      },
       "diagnosticsButton": "Kör diagnostik för utgående e-post",
       "saveSettings": "Spara utgående inställningar",
       "discardChanges": "Ignorera ändringar",

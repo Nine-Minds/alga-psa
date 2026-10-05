@@ -22,6 +22,35 @@ function leaves(value: Record<string, unknown>, prefix: string): Array<[string, 
 }
 
 describe('outbound email locale resolution', () => {
+  it.each(['en', ...locales])('%s resolves sender identities only from the admin namespace', async (locale) => {
+    const i18n = createInstance();
+    await i18n.init({
+      lng: locale,
+      fallbackLng: false,
+      ns: namespaces,
+      resources: {
+        [locale]: Object.fromEntries(namespaces.map((ns) => [ns, readPack(locale, ns)])),
+      },
+      interpolation: { escapeValue: false },
+    });
+
+    const senderLabels = leaves(readPack('en', 'msp/admin').email.senderIdentities, 'email.senderIdentities');
+    for (const [key, english] of senderLabels) {
+      const variables = Object.fromEntries(
+        [...english.matchAll(/\{\{(\w+)\}\}/g)].map((match) => [match[1], `value-${match[1]}`]),
+      );
+      const result = i18n.t(key, { ns: 'msp/admin', ...variables, returnDetails: true });
+      expect(result.res, `${locale}:${key}`).not.toBe(key);
+      expect(result.res).not.toBe('');
+      for (const value of Object.values(variables)) expect(result.res).toContain(value);
+      if (locale === 'xx' || locale === 'yy') expect(result.res).toMatch(pseudoPattern(locale));
+    }
+
+    // The retired provider-specific identity form must not offer stale labels
+    // alongside the shared sender routing UI.
+    expect(i18n.exists('managed.outbound.senderIdentities', { ns: 'msp/email-providers' })).toBe(false);
+  });
+
   it.each(locales)('%s resolves diagnostics and outbound settings without English fallback', async (locale) => {
     const english = Object.fromEntries(namespaces.map((ns) => [ns, readPack('en', ns)]));
     const translated = Object.fromEntries(namespaces.map((ns) => [ns, readPack(locale, ns)]));

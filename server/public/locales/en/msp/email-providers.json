@@ -844,40 +844,6 @@
         "loadFailed": "Could not load Microsoft 365 mailboxes.",
         "saved": "Outbound sending mailbox updated."
       },
-      "senderIdentities": {
-        "ticket": {
-          "title": "Ticket email identity",
-          "description": "Replies to ticket emails must return to this address so they can be matched and added to the ticket. Use a connected, monitored inbox.",
-          "connectedInboxLabel": "Connected inbox",
-          "connectedInboxHelp": "A connected inbox keeps client replies in the ticket conversation.",
-          "customAddressOption": "Use another address",
-          "addressLabel": "From address",
-          "addressPlaceholder": "support@example.com",
-          "addressHelp": "This address controls reply routing for ticket email only.",
-          "smtpAddressHelp": "This address sets the domain for the SMTP sender above. Replies must reach a connected inbox to appear on tickets.",
-          "microsoftAddressHelp": "Microsoft 365 requires ticket email to use the selected sending mailbox ({{mailbox}}).",
-          "nameLabel": "Sender display name",
-          "namePlaceholder": "Support",
-          "nameHelp": "Leave blank to use the connected mailbox name or ticket board name."
-        },
-        "notification": {
-          "title": "All other email identity",
-          "description": "Brand portal invitations, password resets, invoices, project updates, and general notifications independently from ticket routing.",
-          "addressLabel": "From address",
-          "addressPlaceholder": "notifications@example.com",
-          "smtpAddressHelp": "Set by the From Address in the SMTP configuration above. All non-ticket email is sent from it.",
-          "lockedAddressHelp": "This address is determined by the active managed domain or selected Microsoft 365 mailbox.",
-          "nameLabel": "Sender display name",
-          "namePlaceholder": "Your company name",
-          "nameHelp": "Leave blank to use {{company}} automatically.",
-          "companyFallback": "your tenant company"
-        },
-        "warningTitle": "Check reply routing",
-        "errorTitle": "Fix the ticket identity",
-        "clearButton": "Clear ticket identity",
-        "savingButton": "Saving...",
-        "saveButton": "Save sender identities"
-      },
       "diagnosticsButton": "Run Outbound Diagnostics",
       "saveSettings": "Save outbound settings",
       "discardChanges": "Discard changes",
