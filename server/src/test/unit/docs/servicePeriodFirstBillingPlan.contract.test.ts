@@ -300,6 +300,9 @@ const servicePeriodPostInventoryRefs = new Set([
   // Scheduled recurring quantity/price revisions (per-seat recurring services)
   // resolve their boundaries and true-up windows from persisted service periods.
   'packages/billing/src/components/billing-dashboard/contracts/RecurringUnitSchedulePanel.tsx',
+  // Its discard-prompt acceptance suite stubs the effective-pricing reader,
+  // which is keyed by the persisted service_period_start boundary.
+  'packages/billing/tests/RecurringUnitSchedulePanel.discardDialog.test.tsx',
   'packages/billing/src/lib/billing/reconcileAutomaticInvoiceDiscounts.ts',
   'packages/billing/src/lib/billing/recurringPricingIdentity.ts',
   'packages/billing/src/lib/billing/recurringPricingIdentity.test.ts',
