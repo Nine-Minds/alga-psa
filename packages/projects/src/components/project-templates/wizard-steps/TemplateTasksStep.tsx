@@ -161,6 +161,7 @@ export function TemplateTasksStep({
       description: '',
       estimated_hours: undefined,
       duration_days: undefined,
+      start_offset_days: undefined,
       task_type_key: 'task',
       priority_id: undefined,
       template_status_mapping_id: defaultStatusMappingId,
@@ -322,7 +323,7 @@ export function TemplateTasksStep({
                           </p>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-3">
+                        <div className="grid grid-cols-3 gap-3">
                           <div>
                             <Label>{t('templates.wizard.tasks.estimatedHours', 'Estimated Hours')}</Label>
                             <Input
@@ -334,6 +335,24 @@ export function TemplateTasksStep({
                                 updateTask(task.temp_id, {
                                   estimated_hours: e.target.value
                                     ? parseFloat(e.target.value)
+                                    : undefined,
+                                })
+                              }
+                              placeholder={t('templates.wizard.phases.optionalPlaceholder', 'Optional')}
+                            />
+                          </div>
+
+                          <div>
+                            <Label>{t('templates.wizard.tasks.startOffset', 'Start offset (days)')}</Label>
+                            <Input
+                              id={`template-task-start-offset-${task.temp_id}`}
+                              type="number"
+                              min="0"
+                              value={task.start_offset_days ?? ''}
+                              onChange={(e) =>
+                                updateTask(task.temp_id, {
+                                  start_offset_days: e.target.value !== ''
+                                    ? Math.max(0, parseInt(e.target.value))
                                     : undefined,
                                 })
                               }

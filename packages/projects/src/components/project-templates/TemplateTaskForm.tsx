@@ -135,6 +135,7 @@ export function TemplateTaskForm({
   const initialDescriptionSerializedRef = useRef<string | null>(null);
   const [estimatedHours, setEstimatedHours] = useState<string>('');
   const [durationDays, setDurationDays] = useState<string>('');
+  const [startOffsetDays, setStartOffsetDays] = useState<string>('');
   const [taskTypeKey, setTaskTypeKey] = useState('');
   const [priorityId, setPriorityId] = useState('');
   const [assignedTo, setAssignedTo] = useState('');
@@ -175,6 +176,7 @@ export function TemplateTaskForm({
     descriptionSerialized: string;
     estimatedHours: string;
     durationDays: string;
+    startOffsetDays: string;
     taskTypeKey: string;
     priorityId: string;
     assignedTo: string;
@@ -248,6 +250,8 @@ export function TemplateTaskForm({
           : serializeTaskRichTextContent(descriptionBlocks);
         const estimatedHoursVal = task.estimated_hours ? (Number(task.estimated_hours) / 60).toString() : '';
         const durationDaysVal = task.duration_days?.toString() || '';
+        // 0 is a real offset (starts with the phase), so only null/undefined is blank.
+        const startOffsetDaysVal = task.start_offset_days != null ? String(task.start_offset_days) : '';
         const taskTypeKeyVal = task.task_type_key || '';
         const priorityIdVal = task.priority_id || '';
         const assignedToVal = task.assigned_to || '';
@@ -289,6 +293,7 @@ export function TemplateTaskForm({
         setDescriptionEditorKey(prev => prev + 1);
         setEstimatedHours(estimatedHoursVal);
         setDurationDays(durationDaysVal);
+        setStartOffsetDays(startOffsetDaysVal);
         setTaskTypeKey(taskTypeKeyVal);
         setPriorityId(priorityIdVal);
         setAssignedTo(assignedToVal);
@@ -305,6 +310,7 @@ export function TemplateTaskForm({
           descriptionSerialized: descriptionSerializedVal,
           estimatedHours: estimatedHoursVal,
           durationDays: durationDaysVal,
+          startOffsetDays: startOffsetDaysVal,
           taskTypeKey: taskTypeKeyVal,
           priorityId: priorityIdVal,
           assignedTo: assignedToVal,
@@ -324,6 +330,7 @@ export function TemplateTaskForm({
         setDescriptionEditorKey(prev => prev + 1);
         setEstimatedHours('');
         setDurationDays('');
+        setStartOffsetDays('');
         setTaskTypeKey('');
         setPriorityId('');
         setAssignedTo('');
@@ -340,6 +347,7 @@ export function TemplateTaskForm({
           descriptionSerialized: '',
           estimatedHours: '',
           durationDays: '',
+          startOffsetDays: '',
           taskTypeKey: '',
           priorityId: '',
           assignedTo: '',
@@ -430,6 +438,8 @@ export function TemplateTaskForm({
           // Convert from hours (display) to minutes (storage)
           estimated_hours: estimatedHours ? Math.round(parseFloat(estimatedHours) * 60) : undefined,
           duration_days: durationDays ? parseInt(durationDays) : undefined,
+          // null (not undefined) so clearing the field clears the stored offset.
+          start_offset_days: startOffsetDays !== '' ? Math.max(0, parseInt(startOffsetDays)) : null,
           task_type_key: taskTypeKey || undefined,
           priority_id: priorityId || undefined,
           assigned_to: assignedTo || undefined,
@@ -630,6 +640,7 @@ export function TemplateTaskForm({
     if (currentDescriptionSerialized !== baselineDescriptionSerialized) return true;
     if (estimatedHours !== initialValues.estimatedHours) return true;
     if (durationDays !== initialValues.durationDays) return true;
+    if (startOffsetDays !== initialValues.startOffsetDays) return true;
     if (taskTypeKey !== initialValues.taskTypeKey) return true;
     if (priorityId !== initialValues.priorityId) return true;
     if (assignedTo !== initialValues.assignedTo) return true;
@@ -798,8 +809,8 @@ export function TemplateTaskForm({
               />
             </div>
 
-            {/* Two-column layout for smaller fields */}
-            <div className="grid grid-cols-2 gap-4">
+            {/* Estimate and the two phase-relative day counts share one row */}
+            <div className="grid grid-cols-3 gap-4">
               {/* Estimated Hours */}
               <div>
                 <Label htmlFor="estimated-hours" className="block text-sm font-medium text-gray-700 mb-1">
@@ -813,6 +824,22 @@ export function TemplateTaskForm({
                   value={estimatedHours}
                   onChange={(e) => setEstimatedHours(e.target.value)}
                   placeholder="0"
+                  disabled={isSubmitting}
+                />
+              </div>
+
+              {/* Start offset */}
+              <div>
+                <Label htmlFor="start-offset-days" className="block text-sm font-medium text-gray-700 mb-1">
+                  {t('templates.taskForm.startOffsetLabel', 'Start offset (days)')}
+                </Label>
+                <Input
+                  id="start-offset-days"
+                  type="number"
+                  min="0"
+                  value={startOffsetDays}
+                  onChange={(e) => setStartOffsetDays(e.target.value)}
+                  placeholder={t('templates.taskForm.startOffsetPlaceholder', 'No start date')}
                   disabled={isSubmitting}
                 />
               </div>
@@ -833,6 +860,9 @@ export function TemplateTaskForm({
                 />
               </div>
             </div>
+            <p className="-mt-2 text-xs text-[rgb(var(--color-text-500))]">
+              {t('templates.taskForm.phaseRelativeHint', 'Start offset and duration count days from the phase start: the task starts after the offset and is due after the duration.')}
+            </p>
 
             <div className="grid grid-cols-2 gap-4">
               {/* Task Type */}
