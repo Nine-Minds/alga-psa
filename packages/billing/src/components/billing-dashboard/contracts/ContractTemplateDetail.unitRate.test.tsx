@@ -180,6 +180,27 @@ describe('ContractTemplateDetail per-seat unit rate (currency-neutral)', () => {
     expect(screen.queryByTestId(`template-recurring-amount-${SERVICE_ID}`)).not.toBeInTheDocument();
   });
 
+  it('does not reload the template when a render receives a new translator', async () => {
+    primeTemplate({ unitRate: 25000 });
+
+    const view = renderDetail();
+    await screen.findByTestId(`template-recurring-amount-${SERVICE_ID}`);
+    expect(getContractByIdMock).toHaveBeenCalledTimes(1);
+
+    // The i18n mock returns a fresh t function on each render. A parent render
+    // must not turn that into another request or an update loop.
+    view.rerender(
+      <CurrencyFormatProvider currencyCode="USD">
+        <ContractTemplateDetail />
+      </CurrencyFormatProvider>,
+    );
+
+    expect(getContractByIdMock).toHaveBeenCalledTimes(1);
+    expect(screen.getByTestId(`template-recurring-amount-${SERVICE_ID}`)).toHaveTextContent(
+      "Recurring amount: 2 × 250.00 = 500.00 in the client's currency",
+    );
+  });
+
   it('renders the fixed-fee base rate in the services manager neutrally, and "Not set" when absent', async () => {
     primeTemplate({ unitRate: 25000, lineRate: 10000 });
 
