@@ -41,7 +41,12 @@
           "title": "Offertegegevens"
         }
       },
-      "title": "Facturatie"
+      "title": "Facturatie",
+      "paymentMethods": {
+        "setupComplete": {
+          "title": "Kaart instellen"
+        }
+      }
     },
     "clientSettings": {
       "description": "Beheer uw bedrijfsinstellingen en configuraties",
@@ -261,6 +266,9 @@
       "detail": {
         "title": "Ticket nr. {{ticketNumber}} - {{ticketTitle}}",
         "fallbackTitle": "Ticketgegevens"
+      },
+      "recurring": {
+        "title": "Terugkerende tickets"
       }
     },
     "timeEntry": {
@@ -613,6 +621,11 @@
       "layout": {
         "title": "Privacybeleid"
       }
+    }
+  },
+  "paymentMethods": {
+    "setupComplete": {
+      "title": "Kaart instellen"
     }
   }
 }

@@ -140,19 +140,31 @@ describe('server/shared runtime tenant facade roots', () => {
 
     const ticketCreator = read('shared/rmm/alerts/ticketCreator.ts');
     expect(ticketCreator).toContain("import { tenantDb } from '@alga-psa/db'");
-    expect(ticketCreator).toContain("db.table('asset_associations')");
+    expect(ticketCreator).toContain(
+      "import { associateAssetWithTicket } from '../../services/assets/assetTicketAssociation'"
+    );
     expect(ticketCreator).not.toMatch(
       directRootPattern(['tickets', 'comment_threads', 'comments', 'users', 'asset_associations', 'boards', 'priorities'])
     );
+
+    const assetTicketAssociation = read('shared/services/assets/assetTicketAssociation.ts');
+    expect(assetTicketAssociation).toContain("import { tenantDb } from '@alga-psa/db'");
+    expect(assetTicketAssociation).toContain('const db = tenantDb(trx, tenantId);');
+    expect(assetTicketAssociation).toContain("db.table('users')");
+    expect(assetTicketAssociation).toContain("db.table('asset_associations')");
+    expect(assetTicketAssociation).not.toMatch(directRootPattern(['users', 'asset_associations']));
   });
 
   it('routes shared client and ticket model tenant roots through tenantDb', () => {
     const clientModel = read('shared/models/clientModel.ts');
     expect(clientModel).toContain("import { tenantDb } from '@alga-psa/db'");
     expect(clientModel).toContain("tenantDb(trx, tenant).table('clients')");
-    expect(clientModel).toContain("db.table('tax_rates')");
-    expect(clientModel).toContain("db.table('client_tax_rates')");
-    expect(clientModel).toContain("db.table('client_tax_settings')");
+    expect(clientModel).toContain("initializeClientDefaultTax(trx, tenant, clientId)");
+    const defaultTaxRate = read('shared/billingClients/defaultTaxRate.ts');
+    expect(defaultTaxRate).toMatch(/db\s*\n\s*\.table<ITaxRate>\('tax_rates'\)/);
+    expect(defaultTaxRate).not.toMatch(directRootPattern(['tax_rates']));
+    expect(defaultTaxRate).toContain(".table('client_tax_rates')");
+    expect(defaultTaxRate).toContain(".table<IClientTaxSettings>('client_tax_settings')");
     expect(clientModel).not.toMatch(directRootPattern(['clients', 'tax_rates', 'client_tax_rates', 'client_tax_settings']));
 
     const ticketModel = read('shared/models/ticketModel.ts');

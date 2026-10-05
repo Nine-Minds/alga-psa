@@ -28,9 +28,8 @@ const stableT = (key: string, options?: Record<string, unknown>) => {
   return template.replace(/\{\{(\w+)\}\}/g, (_match, name: string) =>
     String(options?.[name] ?? `{{${name}}}`));
 };
-const releaseFlag = vi.hoisted(() => ({ enabled: true }));
 vi.mock('@alga-psa/ui/hooks/useFeatureFlag', () => ({
-  useFeatureFlag: () => ({ enabled: releaseFlag.enabled, loading: false, error: null }),
+  useFeatureFlag: () => ({ enabled: true, loading: false, error: null }),
 }));
 
 vi.mock('@alga-psa/ui/lib/i18n/client', async (importOriginal) => ({

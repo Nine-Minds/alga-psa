@@ -97,6 +97,7 @@ type WorkflowPickerData = {
   projects: WorkflowProjectPickerProject[];
   projectTasks: WorkflowProjectTaskPickerTask[];
   projectStatuses: WorkflowProjectStatusPickerStatus[];
+  emailSenders: Array<{ sender_id: string; email_address: string; display_name?: string | null }>;
 };
 
 const EMPTY_PICKER_DATA: WorkflowPickerData = {
@@ -108,6 +109,7 @@ const EMPTY_PICKER_DATA: WorkflowPickerData = {
   projects: [],
   projectTasks: [],
   projectStatuses: [],
+  emailSenders: [],
 };
 
 const EMPTY_TICKET_FIELD_OPTIONS: TicketFieldOptions = {
@@ -137,6 +139,7 @@ export type WorkflowPickerActions = {
   }) => Promise<{ tickets?: WorkflowTicketSearchResult[] } | null>;
   getProjectsWithPhases: () => Promise<WorkflowProjectPickerProject[] | { permissionError: string }>;
   getProjectTaskData: (projectId: string) => Promise<{ tasks: WorkflowProjectTaskPickerTask[] } | { permissionError: string }>;
+  getSelectableEmailSenders: () => Promise<Array<{ sender_id: string; email_address: string; display_name?: string | null }>>;
 };
 
 type TFn = (key: string, options?: Record<string, unknown>) => string;
@@ -198,6 +201,7 @@ export const WORKFLOW_FIXED_PICKER_SUPPORTED_RESOURCES = new Set([
   'ticket-category',
   'ticket-subcategory',
   'client-location',
+  'email-sender',
 ]);
 
 const DEDICATED_PICKER_KINDS = new Set([
@@ -367,6 +371,11 @@ const mapWorkflowPickerOptions = (
   data: WorkflowPickerData
 ): WorkflowPickerOption[] => {
   switch (kind) {
+    case 'email-sender':
+      return data.emailSenders.map((sender) => ({
+        value: sender.sender_id,
+        label: sender.display_name ? `${sender.display_name} <${sender.email_address}>` : sender.email_address,
+      }));
     case 'project':
       return data.projects.map((project) => ({
         value: project.project_id,
@@ -533,6 +542,8 @@ const loadWorkflowPickerData = async (
   actions: WorkflowPickerActions
 ): Promise<WorkflowPickerData> => {
   switch (kind) {
+    case 'email-sender':
+      return { ...EMPTY_PICKER_DATA, emailSenders: await actions.getSelectableEmailSenders() };
     case 'project': {
       const projects = await actions.getProjectsWithPhases();
       return {
@@ -988,6 +999,10 @@ export const WorkflowActionInputFixedPicker: React.FC<{
   }, [dependencySignature, filteredOptions, hasResolvedDependencies, loadedDependencySignature, onChange, value]);
 
   if (!pickerKind) {
+    return null;
+  }
+
+  if (pickerKind === 'email-sender' && !isLoading && data.emailSenders.length <= 1) {
     return null;
   }
 

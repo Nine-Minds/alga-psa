@@ -606,6 +606,7 @@ export function registerTicketActions(): void {
 
       let created: any;
       try {
+        // LEVERAGE: pattern ticket-create-composition — creates a ticket then composes assets/agents/team/tags/checklist/activity/events by hand; see createTicketWithSideEffects (packages/tickets/src/lib/createTicketWithSideEffects.ts)
         created = await TicketModel.createTicket(
           {
             title: input.title,
@@ -1323,6 +1324,8 @@ export function registerTicketActions(): void {
         const text = input.email?.text ?? `Your ticket has been closed.\nResolution: ${input.resolution.code}`;
         const templateProcessor = new StaticTemplateProcessor(subject, html, text);
         const result = await service.sendEmail({
+          mailClass: 'ticket',
+          boardId: ticket.board_id ?? undefined,
           tenantId: tx.tenantId,
           to: { email },
           templateProcessor,

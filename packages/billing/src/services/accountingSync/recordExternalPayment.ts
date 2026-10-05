@@ -3,7 +3,7 @@ import { tenantDb } from '@alga-psa/db';
 import { v4 as uuidv4 } from 'uuid';
 import { enqueueExternalPaymentPush } from './syncProducers';
 import { notifyInvoiceTerminalStatus } from './invoiceTerminalStatusHandlers';
-import { settlePrepaidReplenishmentInvoice } from '../../actions/invoiceModification';
+import { settlePrepaidReplenishmentInvoice } from '../prepaidReplenishmentSettlement';
 
 /**
  * Provider-agnostic landing for payments observed in an external system
@@ -56,6 +56,15 @@ export interface ExternalPaymentInput {
    * settling session's own link is never retired alongside stale links.
    */
   externalLinkId?: string;
+  /**
+   * Treat an existing payment with the same provider + reference on this invoice
+   * as the same settlement and return it instead of inserting again. Only for
+   * references that identify exactly one settlement (a Stripe PaymentIntent id,
+   * which both the auto-pay charge path and its webhook land). Accounting-sync
+   * appliers must leave this off: they key idempotency on their sync ledger, and
+   * a replaced allocation legitimately re-applies under the reversed one's reference.
+   */
+  dedupeByReference?: boolean;
 }
 
 export interface ExternalPaymentResult {
@@ -66,6 +75,8 @@ export interface ExternalPaymentResult {
   totalPaid?: number;
   clientId?: string;
   error?: string;
+  /** True when this provider reference was already landed for the invoice. */
+  alreadyRecorded?: boolean;
 }
 
 type InvoiceRow = {
@@ -179,14 +190,25 @@ export async function recordExternalPayment(
     };
   }
 
-  const { paymentId, newStatus, totalPaid } = await knex.transaction(async (trx) => {
+  const { paymentId, newStatus, totalPaid, alreadyRecorded } = await knex.transaction(async (trx) => {
     // Row lock so concurrent providers can't race the status computation.
     await tenantDb(trx, tenantId).table('invoices')
       .where({ invoice_id: input.invoiceId })
       .forUpdate()
       .first();
 
-    const [payment] = await tenantDb(trx, tenantId).table('invoice_payments')
+    const payments = tenantDb(trx, tenantId).table('invoice_payments');
+    const existing = input.dedupeByReference
+      ? await tenantDb(trx, tenantId).table('invoice_payments')
+        .where({ invoice_id: input.invoiceId, payment_method: input.provider, reference_number: input.referenceNumber })
+        .first<{ payment_id: string }>()
+      : undefined;
+    if (existing) {
+      const paid = await sumPayments(trx, tenantId, input.invoiceId);
+      return { paymentId: existing.payment_id, newStatus: invoice.status, totalPaid: paid, alreadyRecorded: true };
+    }
+
+    const [payment] = await payments
       .insert({
         tenant: tenantId,
         invoice_id: input.invoiceId,
@@ -220,8 +242,12 @@ export async function recordExternalPayment(
       }
     });
 
-    return { paymentId: payment.payment_id as string, newStatus: status, totalPaid: paid };
+    return { paymentId: payment.payment_id as string, newStatus: status, totalPaid: paid, alreadyRecorded: false };
   });
+
+  if (alreadyRecorded) {
+    return { success: true, paymentRecorded: false, paymentId, newStatus, totalPaid, clientId: invoice.client_id, alreadyRecorded: true };
+  }
 
   // Fire-and-forget: push the payment to QBO on the next sync cycle.
   // Must never throw — a producer failure must not fail the payment action.

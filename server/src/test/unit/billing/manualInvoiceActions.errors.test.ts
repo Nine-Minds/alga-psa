@@ -1,6 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ManualInvoiceError } from '../../../../../packages/billing/src/errors/manualInvoiceErrors';
 
+// Manual invoices read terms and payment method from the client's default
+// billing profile; these suites mock knex, so the identity is stubbed.
+vi.mock('@alga-psa/shared/billingClients/billingProfileSettings', async (importOriginal) =>
+  (await import('../../../../test-utils/billingProfileUnitStub')).billingProfileSettingsModuleStub(importOriginal as any));
+
 const mocks = vi.hoisted(() => {
   const warn = vi.fn();
   const error = vi.fn();

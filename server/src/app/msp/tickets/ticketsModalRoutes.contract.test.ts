@@ -35,6 +35,32 @@ describe('tickets modal route infrastructure', () => {
     expect(defaultSlot).toContain('return null');
   });
 
+  it('never lets an intercepted modal path reach the ticket detail route as an id', () => {
+    const detailPage = read('server/src/app/msp/tickets/[id]/page.tsx');
+
+    // Next resolves the intercepted bulk routes to a marker path ('/msp/tickets/(.)bulk-tags').
+    // When the router hands that path to this dynamic route instead, the marker used to travel
+    // on as a ticket id, and Postgres' uuid cast came back as "One of the selected ticket values
+    // is invalid. Please refresh and try again." on the screen the user opened as a bulk dialog.
+    const guard = detailPage.slice(
+      detailPage.indexOf('export default async function TicketDetailsPage'),
+      detailPage.indexOf('const resolvedSearchParams'),
+    );
+    expect(guard).toContain('!TICKET_ID_PATTERN.test(id)');
+    expect(guard).toContain('notFound()');
+    expect(detailPage).toContain("import { notFound } from 'next/navigation'");
+
+    const patternSource = detailPage.match(/const TICKET_ID_PATTERN = \/(.+)\/i;/)?.[1];
+    expect(patternSource).toBeDefined();
+    const ticketIdPattern = new RegExp(patternSource ?? '$^', 'i');
+
+    for (const segment of ['bulk-assign', 'bulk-due-date', 'bulk-priority', 'bulk-status', 'bulk-tags', 'export', 'import']) {
+      expect(ticketIdPattern.test(`(.)${segment}`)).toBe(false);
+      expect(ticketIdPattern.test(segment)).toBe(false);
+    }
+    expect(ticketIdPattern.test('6f1b0e3c-6a4f-4d5e-9b2a-7c8d9e0f1a2b')).toBe(true);
+  });
+
   it('routes Import through plain and intercepted route entries', () => {
     const plainRoute = read('server/src/app/msp/tickets/import/page.tsx');
     const modalRoute = read('server/src/app/msp/tickets/@modal/(.)import/page.tsx');
@@ -88,7 +114,7 @@ describe('tickets modal route infrastructure', () => {
     expect(dashboard).toContain('setTicketsRoutePriorityOptions(priorityOptions)');
   });
 
-  it('routes all extracted bulk dialogs through plain and intercepted entries', () => {
+  it('routes all extracted bulk dialogs through intercepted entries and bounces direct loads', () => {
     const cases = [
       ['bulk-assign', 'BulkAssignTicketsRouteContent', 'BulkAssignTicketsDialog', 'bulkAssignTickets'],
       ['bulk-tags', 'BulkAddTagsRouteClient', 'BulkAddTagsDialog', 'bulkAddTagsToTickets(selectedTicketIdsArray, tagTexts)'],
@@ -101,8 +127,15 @@ describe('tickets modal route infrastructure', () => {
       const plainRoute = read(`server/src/app/msp/tickets/${segment}/page.tsx`);
       const modalRoute = read(`server/src/app/msp/tickets/@modal/(.)${segment}/page.tsx`);
 
-      expect(plainRoute).toContain('closeMode="replace"');
-      expect(plainRoute).toContain(routeComponent);
+      // A refresh (or any hard load) of a bulk URL renders this plain route, not the
+      // @modal slot. Rendering the dialog here is what kept it on screen after a refresh —
+      // the persisted selection rehydrated and the dialog came straight back — so the
+      // plain route sends the user to the list and leaves the dialog to the interception.
+      expect(plainRoute).toContain("import { redirect } from 'next/navigation'");
+      expect(plainRoute).toContain("redirect('/msp/tickets')");
+      expect(plainRoute).not.toContain(routeComponent);
+      expect(plainRoute).not.toContain('closeMode');
+
       expect(modalRoute).toContain('closeMode="back"');
       expect(modalRoute).toContain(routeComponent);
 
@@ -120,10 +153,38 @@ describe('tickets modal route infrastructure', () => {
       expect(routeClient).toContain(dialogName);
       expect(routeClient).toContain('useTicketBulkRouteDialog(closeMode)');
       expect(routeClient).toContain(actionCall);
-      expect(routeClient).toContain('keepFailedSelection(result.failed)');
-      expect(routeClient).toContain('refreshList()');
-      expect(routeClient).toContain('refreshAndClose()');
+
+      // Full success refreshes exactly once, from inside the shared helper. An extra
+      // refreshList() here would fire a second router.refresh() that races the close the
+      // helper hands to the empty-selection effect.
+      const branchSplit = routeClient.indexOf('\n      } else {');
+      expect(branchSplit).toBeGreaterThan(0);
+      const partialFailureBranch = routeClient.slice(
+        routeClient.indexOf('if (result.failed.length > 0) {'),
+        branchSplit,
+      );
+      const fullSuccessBranch = routeClient.slice(branchSplit);
+
+      expect(partialFailureBranch).toContain('keepFailedSelection(result.failed)');
+      expect(partialFailureBranch).toContain('refreshList()');
+      expect(fullSuccessBranch).toContain('refreshAndClose()');
+      expect(fullSuccessBranch).not.toContain('refreshList()');
     }
+
+    // Clearing the selection is what makes the close state-driven and stops a hard reload
+    // of a bulk route from rehydrating a stale selection and re-opening the dialog.
+    const helper = read('server/src/app/msp/tickets/_components/TicketBulkRouteHelpers.ts');
+    const refreshAndCloseBody = helper.slice(
+      helper.indexOf('const refreshAndClose = () => {'),
+      helper.indexOf('const refreshList = () => {'),
+    );
+
+    expect(helper).toContain('clearSelectedTicketIds');
+    expect(refreshAndCloseBody).toContain('clearSelectedTicketIds()');
+    expect(refreshAndCloseBody).toContain('router.refresh()');
+    expect(refreshAndCloseBody).not.toContain('close()');
+    // One close per mount, so the effect can never pop a second history entry.
+    expect(helper).toContain('hasClosedRef');
   });
 
   it('keeps the bulk action bar in the list while navigating to bulk modal routes', () => {
@@ -141,20 +202,27 @@ describe('tickets modal route infrastructure', () => {
   });
 
   it('threads optional notification suppression through eligible bulk dialogs and excludes tag writes', () => {
+    // The status client carries the bulk close extras (bundle propagation, the
+    // optional resolution comment) on top of the suppression flags, so it
+    // threads the wider TicketBulkStatusOptions alias instead.
     const routedBulkClients = [
-      ['server/src/app/msp/tickets/_components/BulkAssignTicketsRouteClient.tsx', 'bulkAssignTickets(selectedTicketIdsArray, selection, options)'],
-      ['server/src/app/msp/tickets/_components/BulkSetDueDateRouteClient.tsx', 'bulkUpdateTicketDueDate(selectedTicketIdsArray, dueDateIso, options)'],
-      ['server/src/app/msp/tickets/_components/BulkChangeStatusRouteClient.tsx', 'bulkUpdateTicketStatus(selectedTicketIdsArray, statusId, options)'],
-      ['server/src/app/msp/tickets/_components/BulkChangePriorityRouteClient.tsx', 'bulkUpdateTicketPriority(selectedTicketIdsArray, priorityId, options)'],
+      ['server/src/app/msp/tickets/_components/BulkAssignTicketsRouteClient.tsx', 'bulkAssignTickets(selectedTicketIdsArray, selection, options)', 'TicketNotificationSuppressionOptions'],
+      ['server/src/app/msp/tickets/_components/BulkSetDueDateRouteClient.tsx', 'bulkUpdateTicketDueDate(selectedTicketIdsArray, dueDateIso, options)', 'TicketNotificationSuppressionOptions'],
+      ['server/src/app/msp/tickets/_components/BulkChangeStatusRouteClient.tsx', 'bulkUpdateTicketStatus(selectedTicketIdsArray, statusId, options)', 'TicketBulkStatusOptions'],
+      ['server/src/app/msp/tickets/_components/BulkChangePriorityRouteClient.tsx', 'bulkUpdateTicketPriority(selectedTicketIdsArray, priorityId, options)', 'TicketNotificationSuppressionOptions'],
     ] as const;
 
-    for (const [routeClientPath, silentCall] of routedBulkClients) {
+    for (const [routeClientPath, silentCall, optionsType] of routedBulkClients) {
       const routeClient = read(routeClientPath);
 
-      expect(routeClient).toContain('type TicketNotificationSuppressionOptions');
-      expect(routeClient).toContain('options?: TicketNotificationSuppressionOptions');
+      expect(routeClient).toContain(`type ${optionsType}`);
+      expect(routeClient).toContain(`options?: ${optionsType}`);
       expect(routeClient).toContain(silentCall);
     }
+
+    expect(read('packages/tickets/src/actions/ticketActions.ts')).toContain(
+      'export type TicketBulkStatusOptions = TicketNotificationSuppressionOptions &',
+    );
 
     for (const dialogPath of [
       'packages/tickets/src/components/BulkAssignTicketsDialog.tsx',

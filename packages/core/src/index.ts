@@ -37,6 +37,9 @@ export * from './lib/templateUtils';
 export * from './lib/formatters';
 export * from './lib/projectBillingStatus';
 
+// Time-entry worked duration (billability-independent)
+export * from './lib/timeEntryDuration';
+
 // Barcode / GTIN utilities
 export * from './lib/gtin';
 
@@ -54,3 +57,5 @@ export * from './constants/currency';
 
 // Types barrel export
 export * from './types/index';
+
+export { isPreviewableDocumentMimeType } from './lib/documentMimeType';

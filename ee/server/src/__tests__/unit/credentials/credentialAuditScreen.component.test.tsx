@@ -289,6 +289,20 @@ describe('CredentialAuditScreen — data + paging', () => {
     expect(summary?.textContent).toContain('2People active');
   });
 
+  it('renders a deleted credential with its snapshot name, else the deleted label', async () => {
+    getCredentialAuditEventsMock.mockResolvedValue({
+      events: [
+        event({ auditId: 'c', operation: 'credential_deleted', credentialName: 'Retired Firewall' }),
+        event({ auditId: 'd', operation: 'credential_deleted', credentialName: null }),
+      ],
+      nextCursor: null,
+    });
+    await renderScreen();
+    expect(document.body.textContent).toContain('Deleted the credential');
+    expect(document.body.textContent).toContain('Retired Firewall');
+    expect(document.body.textContent).toContain('Deleted credential');
+  });
+
   it('renders the empty state without filters and the filtered-empty state with them', async () => {
     getCredentialAuditEventsMock.mockResolvedValue({ events: [], nextCursor: null });
     await renderScreen();

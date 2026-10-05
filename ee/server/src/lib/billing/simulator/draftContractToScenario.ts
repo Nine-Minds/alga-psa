@@ -11,6 +11,7 @@ import type {
 import { tenantDb } from "@alga-psa/db";
 import { toISODate, toPlainDate } from "@alga-psa/core";
 import { getClientBillingCycleAnchor } from "@alga-psa/shared/billingClients/billingSchedule";
+import { resolveUnitOfMeasure } from "@alga-psa/core/unitOfMeasure";
 import { assumptionKey } from "./syntheticActivity";
 
 const midnight = (value: string): string =>
@@ -205,7 +206,7 @@ export async function draftContractToScenario(
     const services = (draft.usage_services ?? []).flatMap((item) => {
       const primary = service(item.service_id, 1, item.unit_rate ?? null, {
         configuration_type: "Usage",
-        unit_of_measure: item.unit_of_measure || "unit",
+        unit_of_measure: item.unit_of_measure || resolveUnitOfMeasure({ fallback: 'C62' }).label,
         enable_tiered_pricing: false,
         minimum_usage: null,
         base_rate: item.unit_rate ?? null,

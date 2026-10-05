@@ -665,6 +665,7 @@ describe('QuickAddTicket prefills', () => {
       document: {
         document_id: 'doc-1',
         file_id: 'file-1',
+        mime_type: 'image/png',
       },
     });
   });

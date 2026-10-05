@@ -52,6 +52,9 @@ import {
   handleReconcileHourBlockAllocations,
   ReconcileHourBlockAllocationsJobData,
 } from '@alga-psa/jobs/handlers/reconcileHourBlockAllocationsHandler';
+import { createDateTriggerScanHandler, dateTriggerScanHandler, DateTriggerScanJobData } from '@alga-psa/jobs/handlers/dateTriggerScanHandler';
+import { generateRecurringTicketsHandler, GENERATE_RECURRING_TICKETS_JOB, GenerateRecurringTicketsJobData } from './handlers/generateRecurringTicketsHandler';
+import { configureEditionDateTriggerWorkflowLauncher } from './dateTriggerWorkflowLauncher';
 import {
   processRenewalQueueHandler,
   RenewalQueueProcessorJobData,
@@ -513,6 +516,19 @@ export async function registerAllJobHandlers(
       handler: async (jobId, data) => {
         await handleReconcileHourBlockAllocations({ id: jobId, data } as Job<ReconcileHourBlockAllocationsJobData>);
       },
+      retry: { maxAttempts: 3 },
+    },
+    registerOpts
+  );
+
+  const dateTriggerLauncher = configureEditionDateTriggerWorkflowLauncher(includeEnterprise);
+  const runDateTriggerScan = dateTriggerLauncher ? createDateTriggerScanHandler(dateTriggerLauncher) : dateTriggerScanHandler;
+  JobHandlerRegistry.register<DateTriggerScanJobData & BaseJobData>({ name: 'date-trigger-scan', handler: async (_jobId, data) => { await runDateTriggerScan(data); }, retry: { maxAttempts: 3 } }, registerOpts);
+
+  JobHandlerRegistry.register<GenerateRecurringTicketsJobData & BaseJobData>(
+    {
+      name: GENERATE_RECURRING_TICKETS_JOB,
+      handler: async (_jobId, data) => { await generateRecurringTicketsHandler(data); },
       retry: { maxAttempts: 3 },
     },
     registerOpts

@@ -14,7 +14,11 @@ export type ChargeComputeMarker =
   | 'overtime'
   | 'rate_tier'
   | 'pricing_schedule_override'
-  | 'fmv_allocation';
+  | 'fmv_allocation'
+  /** A scheduled revision supplied the effective quantity/rate for this period. */
+  | 'scheduled_revision'
+  /** Quantity zero deliberately stops recurring billing for this item. */
+  | 'zero_quantity';
 
 export interface ChargeExplanationInput {
   label: string;

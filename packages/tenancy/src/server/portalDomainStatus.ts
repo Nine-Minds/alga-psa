@@ -39,6 +39,7 @@ function formatResponse(record: PortalDomain | null, canonicalHost: string): Por
     updatedAt: toIsoString(record?.updatedAt),
     isEditable: false,
     edition: 'ce',
+    mode: 'direct',
   };
 }
 

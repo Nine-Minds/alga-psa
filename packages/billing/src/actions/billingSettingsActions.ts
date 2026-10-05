@@ -10,6 +10,7 @@ import { assertBoardScopedTicketStatusSelection } from '@shared/lib/boardScopedT
 import { CONTRACT_CADENCE_ROLLOUT_BLOCK_MESSAGE } from '@shared/billingClients/cadenceOwnerRollout';
 import { updateClientBillingSettings as updateClientBillingSettingsShared } from '@shared/billingClients/billingSettings';
 import type { CadenceOwner } from '@alga-psa/types';
+import { DEFAULT_QUOTE_VALIDITY_DAYS, isValidQuoteValidityDays } from '../constants/billing';
 
 function tenantScopedTable(
   conn: Knex | Knex.Transaction,
@@ -49,6 +50,7 @@ export interface BillingSettings {
   externalCreditNote?: string | null;
   defaultRenewalMode?: RenewalMode;
   defaultNoticePeriodDays?: number;
+  defaultQuoteValidityDays?: number;
   renewalDueDateActionPolicy?: RenewalDueDateActionPolicy;
   renewalTicketBoardId?: string;
   renewalTicketStatusId?: string;
@@ -92,6 +94,7 @@ export const getDefaultBillingSettings = withAuth(async (
       creditExpirationNotificationDays: [30, 7, 1],
       defaultRenewalMode: DEFAULT_RENEWAL_MODE,
       defaultNoticePeriodDays: DEFAULT_NOTICE_PERIOD_DAYS,
+      defaultQuoteValidityDays: DEFAULT_QUOTE_VALIDITY_DAYS,
       renewalDueDateActionPolicy: DEFAULT_RENEWAL_DUE_DATE_ACTION_POLICY,
       renewalTicketBoardId: undefined,
       renewalTicketStatusId: undefined,
@@ -125,6 +128,7 @@ export const getDefaultBillingSettings = withAuth(async (
       creditExpirationNotificationDays: settings.credit_expiration_notification_days ?? [30, 7, 1],
       defaultRenewalMode: renewalMode,
       defaultNoticePeriodDays: settings.default_notice_period_days ?? DEFAULT_NOTICE_PERIOD_DAYS,
+      defaultQuoteValidityDays: settings.default_quote_validity_days ?? DEFAULT_QUOTE_VALIDITY_DAYS,
       renewalDueDateActionPolicy,
       renewalTicketBoardId: settings.renewal_ticket_board_id ?? undefined,
       renewalTicketStatusId: settings.renewal_ticket_status_id ?? undefined,
@@ -155,6 +159,10 @@ export const updateDefaultBillingSettings = withAuth(async (
   // row; only keys present in `data` are written, so one section's save can't
   // clobber another section's just-saved values with its stale snapshot.
   const has = (key: keyof BillingSettings) => Object.prototype.hasOwnProperty.call(data, key);
+
+  if (has('defaultQuoteValidityDays') && !isValidQuoteValidityDays(data.defaultQuoteValidityDays)) {
+    return actionError('Default quote validity must be between 1 and 365 days', 'msp/billing-settings:general.quotes.errors.range');
+  }
 
   try {
     await withTransaction(knex, async (trx: Knex.Transaction) => {
@@ -193,6 +201,7 @@ export const updateDefaultBillingSettings = withAuth(async (
     if (has('defaultCurrencyCode')) columnValues.default_currency_code = data.defaultCurrencyCode || 'USD';
     if (has('defaultRenewalMode')) columnValues.default_renewal_mode = renewalMode;
     if (has('defaultNoticePeriodDays')) columnValues.default_notice_period_days = noticePeriodDays;
+    if (has('defaultQuoteValidityDays')) columnValues.default_quote_validity_days = data.defaultQuoteValidityDays;
     if (has('renewalDueDateActionPolicy')) columnValues.renewal_due_date_action_policy = renewalDueDateActionPolicy;
     if (has('renewalTicketBoardId')) columnValues.renewal_ticket_board_id = data.renewalTicketBoardId ?? null;
     if (has('renewalTicketStatusId')) columnValues.renewal_ticket_status_id = data.renewalTicketStatusId ?? null;
@@ -249,6 +258,7 @@ export const updateDefaultBillingSettings = withAuth(async (
         default_currency_code: data.defaultCurrencyCode || 'USD',
         default_renewal_mode: renewalMode,
         default_notice_period_days: noticePeriodDays,
+        default_quote_validity_days: data.defaultQuoteValidityDays ?? DEFAULT_QUOTE_VALIDITY_DAYS,
         renewal_due_date_action_policy: renewalDueDateActionPolicy,
         renewal_ticket_board_id: data.renewalTicketBoardId ?? null,
         renewal_ticket_status_id: data.renewalTicketStatusId ?? null,

@@ -35,6 +35,7 @@
     "title": "Contacts Page",
     "description": "Main contacts management page with search, filters, list view, and bulk actions",
     "heading": "Contacts",
+    "sharedMailbox": "Shared mailbox",
     "addContact": "+ Add Contact",
     "actions": "Actions",
     "searchPlaceholder": "Search contacts, notes, and interactions",

@@ -165,6 +165,27 @@
         "loadStatuses": "Impossibile caricare gli stati dei ticket di rinnovo",
         "save": "Impossibile salvare le impostazioni di automazione del rinnovo"
       }
+    },
+    "quotes": {
+      "title": "Preventivi",
+      "description": "Imposta il periodo di validità predefinito per i nuovi preventivi.",
+      "fields": {
+        "validityDays": {
+          "label": "Periodo di validità predefinito (giorni)",
+          "help": "I nuovi preventivi sono validi per questo numero di giorni."
+        }
+      },
+      "actions": {
+        "save": "Salva"
+      },
+      "toast": {
+        "updated": "Impostazioni dei preventivi aggiornate."
+      },
+      "errors": {
+        "load": "Impossibile caricare le impostazioni",
+        "save": "Impossibile salvare le impostazioni",
+        "range": "Inserisci un numero intero da 1 a 365."
+      }
     }
   },
   "quoting": {
@@ -178,6 +199,8 @@
     }
   },
   "tax": {
+    "defaultRate": { "title": "Aliquota fiscale predefinita", "tooltip": "Scegli l'aliquota ereditata da nuovi clienti, prodotti e servizi.", "description": "Imposta l'aliquota assegnata a nuovi clienti e voci di catalogo. I record esistenti non cambiano.", "loading": "Caricamento aliquota predefinita...", "empty": "Crea un'aliquota attiva prima di scegliere quella predefinita.", "invalid": "L'aliquota configurata non è più attiva o valida. Scegline un'altra.", "field": { "label": "Aliquota fiscale predefinita" }, "options": { "none": "Nessun valore predefinito del tenant" }, "help": "Se non impostata, le nuove voci restano non imponibili e i clienti usano l'aliquota attiva meno recente, se presente.", "actions": { "save": "Salva predefinita", "saving": "Salvataggio..." }, "toast": { "saved": "Aliquota predefinita salvata." }, "errors": { "load": "Impossibile caricare l'aliquota predefinita.", "save": "Impossibile salvare l'aliquota predefinita." } },
+    "backfill": { "title": "Applica l'aliquota predefinita al catalogo esistente", "description": "Visualizza prodotti e servizi senza aliquota fiscale.", "warning": "Questo modifica l'imponibilità futura e non riscrive le fatture emesse.", "loading": "Caricamento anteprima...", "empty": "Nessun prodotto o servizio idoneo.", "target": "Aliquota di destinazione: {{rate}}", "count": "{{count}} voci idonee", "dialog": { "title": "Applica aliquota predefinita" }, "actions": { "preview": "Visualizza voci esistenti", "apply": "Applica selezionate", "applying": "Applicazione..." }, "toast": { "applied": "Aliquota predefinita applicata alle voci selezionate." }, "errors": { "preview": "Impossibile visualizzare il catalogo.", "apply": "Impossibile applicare l'aliquota predefinita." } },
     "taxRegions": {
       "title": "Regioni fiscali",
       "description": "Gestisci le regioni fiscali e le relative impostazioni."
@@ -704,7 +727,8 @@
       "allServiceTypes": "Tutti i tipi di servizio",
       "serviceTypePlaceholder": "Filtra per tipo di servizio...",
       "allBillingMethods": "Tutti i metodi di fatturazione",
-      "billingMethodPlaceholder": "Filtra per metodo di fatturazione..."
+      "billingMethodPlaceholder": "Filtra per metodo di fatturazione...",
+      "searchPlaceholder": "Cerca servizi per nome, SKU o descrizione..."
     },
     "fields": {
       "serviceName": {
@@ -826,7 +850,9 @@
       "validateDelete": "Impossibile convalidare l'eliminazione. Per favore riprova.",
       "delete": "Impossibile eliminare il servizio",
       "deactivate": "Impossibile disattivare il servizio"
-    }
+    },
+    "emptySearch": "Nessun servizio corrisponde alla ricerca.",
+    "clearFilters": "Cancella filtri"
   },
   "products": {
     "title": "Prodotti",
@@ -949,14 +975,14 @@
         }
       },
       "unitOfMeasure": {
-        "label": "Unità di misura *",
+        "label": "Unità di misura",
         "placeholder": "ad esempio GB, chiamata API, utente",
         "help": "L'unità misurabile per la fatturazione (ad esempio GB, chiamata API, utente)"
       },
       "taxRate": {
         "label": "Aliquota fiscale (facoltativa)",
         "placeholder": "Seleziona aliquota fiscale (facoltativo)",
-        "loading": "Caricamento aliquote fiscali..."
+        "loading": "Caricamento aliquote fiscali...", "inherit": "Usa predefinita del tenant", "inheritNamed": "Usa predefinita del tenant ({{rate}})", "nonTaxable": "Non imponibile"
       },
       "sku": {
         "label": "SKU",
@@ -983,7 +1009,8 @@
       "billingMethodRequired": "Il metodo di fatturazione è obbligatorio",
       "skuRequiredForHardware": "Lo SKU è richiesto per l'hardware",
       "licenseTermRequired": "La durata della licenza è richiesta per le licenze software",
-      "selectedTypeNotFound": "Tipo di servizio selezionato non trovato"
+      "selectedTypeNotFound": "Tipo di servizio selezionato non trovato",
+      "unitOfMeasureRequired": "L'unità di misura è obbligatoria"
     },
     "errors": {
       "fetchCategories": "Impossibile recuperare le categorie",
@@ -1021,7 +1048,8 @@
       },
       "label": {
         "label": "Etichetta categoria",
-        "placeholder": "Etichetta libera opzionale"
+        "placeholder": "Etichetta libera opzionale",
+        "help": "Identificatore interno come produttore/modello; ricercabile, mai mostrato ai clienti."
       },
       "vendor": {
         "label": "Venditore"
@@ -1050,13 +1078,13 @@
       "taxRate": {
         "label": "Aliquota fiscale",
         "placeholder": "Non imponibile",
-        "loading": "Caricamento..."
+        "loading": "Caricamento...", "inherit": "Usa predefinita del tenant", "inheritNamed": "Usa predefinita del tenant ({{rate}})", "nonTaxable": "Non imponibile"
       },
       "active": {
         "label": "Attivo"
       },
       "unitOfMeasure": {
-        "label": "Unità di misura *",
+        "label": "Unità di misura",
         "placeholder": "ad esempio, ciascun articolo, licenza"
       },
       "license": {
@@ -1425,6 +1453,15 @@
       "actions": {
         "save": "Salva impostazioni",
         "saving": "Salvataggio in corso..."
+      },
+      "autopay": {
+        "label": "Consenti il pagamento automatico",
+        "description": "Consenti ai profili di fatturazione di autorizzare pagamenti automatici con carta.",
+        "chargeTiming": "Momento dell’addebito",
+        "onFinalize": "Alla finalizzazione della fattura",
+        "onDueDate": "Alla data di scadenza",
+        "retryDays": "Intervalli tra i tentativi (giorni)",
+        "consentText": "Testo di consenso al pagamento automatico"
       }
     },
     "stripe": {

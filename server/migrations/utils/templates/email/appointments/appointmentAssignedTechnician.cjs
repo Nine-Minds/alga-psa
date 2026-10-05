@@ -232,6 +232,7 @@ const COPY = {
   },
 };
 SUBJECTS.pt = 'Agendamento atribuído - {{serviceName}} em {{appointmentDate}}';
+SUBJECTS.sv = 'Bokning tilldelad – {{serviceName}} den {{appointmentDate}}';
 COPY.pt = {
   headerLabel: 'Agendamento atribuído',
   headerSub: 'Você tem um novo agendamento',
@@ -260,12 +261,40 @@ COPY.pt = {
   textCalendar: 'Adicionar ao calendário',
 };
 
+COPY.sv = {
+  headerLabel: 'Bokning tilldelad',
+  headerSub: 'Du har en ny bokning',
+  greeting: 'Hej {{technicianName}},',
+  intro: 'Du har tilldelats en ny bokning. Granska detaljerna nedan.',
+  appointmentTitle: 'Bokningsdetaljer',
+  service: 'Tjänst',
+  date: 'Datum',
+  time: 'Tid',
+  duration: 'Längd',
+  durationUnit: 'minuter',
+  clientTitle: 'Kund',
+  notesTitle: 'Anteckningar',
+  calendarButton: 'Lägg till i kalendern',
+  contactMsg: 'Om du har frågor, kontakta {{contactEmail}}{{#if contactPhone}} eller ring {{contactPhone}}{{/if}}.',
+  footer: 'Drivs av AlgaPSA &middot; För samspelta team',
+  textHeader: 'Bokning tilldelad',
+  textAppointmentHeader: 'Bokningsdetaljer',
+  textService: 'Tjänst',
+  textDate: 'Datum',
+  textTime: 'Tid',
+  textDuration: 'Längd',
+  textDurationUnit: 'minuter',
+  textClient: 'Kund',
+  textNotes: 'Anteckningar',
+  textCalendar: 'Lägg till i kalendern',
+};
+
 /* eslint-enable max-len */
 
 function buildBodyHtml(c) {
   return `<p style="margin:0 0 16px 0;font-size:15px;color:#1f2933;line-height:1.5;">${c.greeting}</p>
                 <p style="margin:0 0 16px 0;font-size:15px;color:#1f2933;line-height:1.5;">${c.intro}</p>
-                <div style="margin:24px 0;padding:24px;border-radius:8px;background:linear-gradient(135deg,${INFO_BOX_BG} 0%,#ede9fe 100%);border:2px solid ${BRAND_PRIMARY};text-align:center;">
+                <div style="margin:24px 0;padding:24px;border-radius:8px;background-color:${INFO_BOX_BG};background:linear-gradient(135deg,${INFO_BOX_BG} 0%,#ede9fe 100%);border:2px solid ${BRAND_PRIMARY};text-align:center;">
                   <div style="font-weight:600;color:${BRAND_DARK};font-size:18px;margin-bottom:20px;">${c.appointmentTitle}</div>
                   <div style="margin:12px 0;">
                     <div style="color:${BRAND_DARK};font-size:14px;text-transform:uppercase;letter-spacing:0.5px;font-weight:600;margin-bottom:4px;">${c.service}</div>

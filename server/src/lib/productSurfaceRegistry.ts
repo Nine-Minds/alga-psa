@@ -158,6 +158,7 @@ export const API_RULES: readonly ApiRule[] = [
       '/api/v1/boards',
       '/api/v1/statuses',
       '/api/v1/priorities',
+      '/api/v1/countries',
       '/api/v1/tags',
       '/api/v1/knowledge-base',
       '/api/v1/kb-articles',

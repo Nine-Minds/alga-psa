@@ -135,6 +135,25 @@ function buildCommentPayload(parsedEmail: any, emailData: any) {
   return { content, format, metadata };
 }
 
+/**
+ * Stamp the inbound sender onto comment metadata, matching the shape
+ * processInboundEmailInApp stores. An email from an unmatched sender otherwise
+ * produces a comment with no identity and a notification with no author.
+ */
+function withEmailSenderMetadata(metadata: any, from?: { email?: string; name?: string }) {
+  if (!from?.email && !from?.name) return metadata;
+  const base = metadata && typeof metadata === 'object' && !Array.isArray(metadata) ? { ...metadata } : {};
+  const email = base.email && typeof base.email === 'object' && !Array.isArray(base.email) ? base.email : {};
+  return {
+    ...base,
+    email: {
+      ...(from.email ? { fromAddress: from.email } : {}),
+      ...(from.name ? { fromName: from.name } : {}),
+      ...email,
+    },
+  };
+}
+
 /** Schema for client data */
 const clientOutputSchema = z.object({
   client_id: z.string().describe('Unique identifier for the client'),
@@ -587,7 +606,7 @@ export function registerEmailWorkflowActionsV2(): void {
         contact_id: input.targetContactId ?? undefined,
         // First comment on a new ticket: covered by the TICKET_CREATED email, so keep in-app only.
         suppressTechEmailNotification: true,
-        metadata: commentPayload.metadata
+        metadata: withEmailSenderMetadata(commentPayload.metadata, emailData.from)
       }, tenant);
 
       return {
@@ -654,7 +673,10 @@ export function registerEmailWorkflowActionsV2(): void {
           provider: string;
           matchedBy: string;
         } | undefined,
-        metadata: input.metadata
+        metadata: withEmailSenderMetadata(
+          input.metadata,
+          input.inboundReplyEvent ? { email: input.inboundReplyEvent.from } : undefined
+        )
       }, ctx.tenantId ?? '');
       return { comment_id: commentId };
     }
@@ -698,7 +720,7 @@ export function registerEmailWorkflowActionsV2(): void {
         author_type: resolvedAuthorType,
         author_id: resolvedAuthorId,
         contact_id: resolvedContactId,
-        metadata: commentPayload.metadata
+        metadata: withEmailSenderMetadata(commentPayload.metadata, input.emailData?.from)
       }, tenant);
       return { comment_id: commentId };
     }

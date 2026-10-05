@@ -171,6 +171,11 @@ const ACTIVE_PERMISSIONS = [
 
   { resource: 'job', action: 'delete', msp: true, client: false, description: 'Clear job monitoring history', products: ['psa'], defaultGrants: { psa: ['msp:Admin'] } },
 
+  // Named list views. Owners always manage their own views; these gate
+  // publishing to everyone and administering other users' shared views.
+  { resource: 'list_view', action: 'manage', msp: true, client: false, description: "Edit or delete other users' shared list views", products: ['algadesk', 'psa'], defaultGrants: { algadesk: ['msp:Admin'], psa: ['msp:Admin'] } },
+  { resource: 'list_view', action: 'share', msp: true, client: false, description: 'Publish list views shared with every user of the list', products: ['algadesk', 'psa'], defaultGrants: { algadesk: ['msp:Admin'], psa: ['msp:Admin', 'msp:Dispatcher', 'msp:Manager'] } },
+
   { resource: 'marketing', action: 'manage', msp: true, client: false, description: 'Manage marketing campaigns, content, posts, sequences, and forms', products: ['algadesk', 'psa'], defaultGrants: { algadesk: ['msp:Admin'], psa: ['msp:Admin'] } },
   { resource: 'marketing', action: 'read', msp: true, client: false, description: 'View marketing campaigns, content, posts, and sequences', products: ['algadesk', 'psa'], defaultGrants: { algadesk: ['msp:Admin'], psa: ['msp:Admin'] } },
 
@@ -204,6 +209,10 @@ const ACTIVE_PERMISSIONS = [
   { resource: 'purchase_order', action: 'update', msp: true, client: false, description: 'Update purchase orders', products: ['psa'], defaultGrants: { psa: ['msp:Admin'] } },
 
   { resource: 'quotes', action: 'approve', msp: true, client: false, description: 'Approve or request changes to quotes pending internal approval', products: ['algadesk', 'psa'], defaultGrants: { algadesk: ['msp:Admin'], psa: ['msp:Admin'] } },
+  { resource: 'recurring_ticket', action: 'create', msp: true, client: false, description: 'Create recurring ticket definitions', products: ['algadesk', 'psa'], defaultGrants: { algadesk: ['msp:Admin'], psa: ['msp:Admin', 'msp:Dispatcher', 'msp:Manager'] } },
+  { resource: 'recurring_ticket', action: 'delete', msp: true, client: false, description: 'Archive recurring ticket definitions', products: ['algadesk', 'psa'], defaultGrants: { algadesk: ['msp:Admin'], psa: ['msp:Admin', 'msp:Dispatcher', 'msp:Manager'] } },
+  { resource: 'recurring_ticket', action: 'read', msp: true, client: false, description: 'View recurring ticket definitions and run history', products: ['algadesk', 'psa'], defaultGrants: { algadesk: ['msp:Admin', 'msp:Agent'], psa: ['msp:Admin', 'msp:Dispatcher', 'msp:Manager', 'msp:Technician'] } },
+  { resource: 'recurring_ticket', action: 'update', msp: true, client: false, description: 'Modify recurring ticket definitions, clients and schedules', products: ['algadesk', 'psa'], defaultGrants: { algadesk: ['msp:Admin'], psa: ['msp:Admin', 'msp:Dispatcher', 'msp:Manager'] } },
 
   { resource: 'reports', action: 'create', msp: true, client: false, description: 'Create reports', products: ['algadesk', 'psa'], defaultGrants: { algadesk: ['msp:Admin'], psa: ['msp:Admin'] } },
   { resource: 'reports', action: 'delete', msp: true, client: false, description: 'Delete reports', products: ['algadesk', 'psa'], defaultGrants: { algadesk: ['msp:Admin'], psa: ['msp:Admin'] } },

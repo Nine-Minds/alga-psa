@@ -1,6 +1,6 @@
 {
   "name": "@alga-psa/core",
-  "version": "1.6.2",
+  "version": "1.6.8",
   "private": true,
   "type": "module",
   "main": "./dist/index.js",
@@ -25,6 +25,10 @@
     "./workSchedule": {
       "import": "./dist/lib/workSchedule.js",
       "types": "./src/lib/workSchedule.ts"
+    },
+    "./unitOfMeasure": {
+      "import": "./dist/lib/unitOfMeasure.js",
+      "types": "./src/lib/unitOfMeasure.ts"
     },
     "./secrets": {
       "import": "./dist/lib/secrets/index.js",

@@ -22,6 +22,7 @@ export const inventoryProductSchema = z.object({
   is_serialized: z.boolean(),
   track_stock: z.boolean().optional().default(true),
   unit_of_measure: z.string().nullable().optional(),
+  unit_code: z.string().nullable().optional(),
 });
 
 export const stockLevelSchema = z.object({

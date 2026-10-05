@@ -3,6 +3,28 @@ import { toPlainDate } from '@alga-psa/core';
 import { lockTenantBilling } from './billingMutationLock';
 import { tenantDb } from '@alga-psa/db';
 import type { IContractLineUnitPricingRevision } from '@alga-psa/types';
+import type {
+  RecurringPricePolicy,
+  RecurringUnitKind,
+  RecurringUnitRevisionRow,
+} from '@alga-psa/shared/billingClients/recurringUnitPricing';
+import {
+  normalizeRecurringBoundary,
+  resolveRecurringUnitBaseline,
+  selectEffectiveRecurringUnitPricing,
+  toRecurringUnitRevisionCandidate,
+  type EffectiveRecurringUnitPricing,
+} from '@alga-psa/shared/billingClients/recurringUnitPricing';
+import {
+  selectEffectiveServicePrice,
+  type ServicePriceRateRow,
+} from '@alga-psa/shared/billingClients/resolveFixedLineRate';
+import {
+  computeRecurringUnitMidPeriodAdjustment,
+  daysBetweenOnly,
+  formatRecurringUnitMidPeriodReason,
+  isValidDateOnly,
+} from '@alga-psa/shared/billingClients/recurringUnitMidPeriodAdjustment';
 
 /**
  * Transactional core of prospective recurring-seat (unit pricing) revisions.
@@ -98,6 +120,36 @@ export async function rejectBilledSeatBoundary(params: {
 }
 
 /**
+ * Refuse to delete a configuration that is referenced by issued invoices or
+ * carries scheduled recurring-unit revisions: deleting it would erase billing
+ * provenance (invoice_charge_details.config_id) and orphan effective history.
+ * The operator stops the item by scheduling a zero quantity instead, which
+ * keeps the item and its history. Returns an actionable message, or null when
+ * deletion is safe.
+ */
+export async function configurationDeletionGuard(params: {
+  trx: Knex.Transaction;
+  tenant: string;
+  configId: string;
+}): Promise<string | null> {
+  const { trx, tenant, configId } = params;
+  const revision = await tenantScopedTable(trx, tenant, 'contract_line_unit_pricing_revisions')
+    .where({ tenant, config_id: configId })
+    .first('revision_id');
+  if (revision) {
+    return 'This item has scheduled recurring quantity/price revisions. Stop it by scheduling a zero quantity — that keeps the item and its history — instead of removing it.';
+  }
+  const billed = await tenantDb(trx, tenant)
+    .table('invoice_charge_details')
+    .where({ config_id: configId })
+    .first('item_detail_id');
+  if (billed) {
+    return 'This item appears on an issued invoice. Removing it would erase billing history; stop it by scheduling a zero quantity instead.';
+  }
+  return null;
+}
+
+/**
  * The seat quantity/unit rate in force for periods starting at the given
  * boundary: the latest revision at/before it, else the live configuration
  * values (base_rate, then custom_rate).
@@ -181,6 +233,326 @@ export async function validateProspectivePricingBoundary(trx: Knex.Transaction, 
   return rejectBilledSeatBoundary({trx, tenant, contractLineId: lineId, effectivePeriodStart: boundary});
 }
 
+/**
+ * The single canonical, not-yet-billed service period that strictly contains
+ * `midDate` (`start <= midDate < end`), or null when no such period exists. A
+ * mid-period quantity change is only allowed inside an eligible unbilled
+ * period; billed/locked/superseded periods are never eligible.
+ */
+export async function resolveMidPeriodServicePeriod(params: {
+  trx: Knex.Transaction;
+  tenant: string;
+  contractLineId: string;
+  midDate: string;
+}): Promise<{ start: string; end: string } | null> {
+  const period = await tenantScopedTable(params.trx, params.tenant, 'recurring_service_periods')
+    .where({ tenant: params.tenant, obligation_id: params.contractLineId })
+    .whereNotIn('lifecycle_state', ['billed', 'locked', 'superseded', 'archived'])
+    .where('service_period_start', '<=', params.midDate)
+    .andWhere('service_period_end', '>', params.midDate)
+    .orderBy('service_period_start', 'asc')
+    .first<{ service_period_start: unknown; service_period_end: unknown }>(
+      'service_period_start',
+      'service_period_end',
+    );
+  if (!period) return null;
+  return {
+    start: toBoundaryDay(period.service_period_start),
+    end: toBoundaryDay(period.service_period_end),
+  };
+}
+
+/**
+ * Resolve the canonical next boundary and the standing values for a chosen
+ * mid-period date. The scheduler UI uses this to display the true boundary (not
+ * the date the operator picked) and to look up the exact revision version at
+ * that boundary, so server and UI agree on where the standing quantity starts.
+ */
+export async function resolveRecurringUnitMidPeriodContext(params: {
+  trx: Knex.Transaction;
+  tenant: string;
+  contractLineId: string;
+  serviceId: string;
+  configId: string;
+  kind: RecurringUnitKind;
+  midDate: string;
+}): Promise<
+  | {
+      periodStart: string;
+      periodEnd: string;
+      previousQuantity: number;
+      unitRateCents: number | null;
+      pricePolicy: RecurringPricePolicy;
+      currencyCode: string;
+    }
+  | { error: string }
+> {
+  const period = await resolveMidPeriodServicePeriod({
+    trx: params.trx,
+    tenant: params.tenant,
+    contractLineId: params.contractLineId,
+    midDate: params.midDate,
+  });
+  if (!period) {
+    return {
+      error:
+        'That date is not inside an unbilled service period for this contract. Choose a date within an upcoming unbilled period, or a service-period boundary.',
+    };
+  }
+  const display = await resolveRecurringUnitDisplayPricing({
+    trx: params.trx,
+    tenant: params.tenant,
+    contractLineId: params.contractLineId,
+    serviceId: params.serviceId,
+    configId: params.configId,
+    kind: params.kind,
+    boundary: period.start,
+  });
+  return {
+    periodStart: period.start,
+    periodEnd: period.end,
+    previousQuantity: display.quantity,
+    unitRateCents: display.resolvedUnitRateCents,
+    pricePolicy: display.pricePolicy,
+    currencyCode: display.currencyCode,
+  };
+}
+
+/**
+ * Cancel a pending mid-period true-up for a canonical revision. Used when an
+ * operator returns to boundary-only scheduling, edits the change to a zero
+ * delta, or otherwise removes the partial-period effect.
+ */
+export async function cancelRecurringUnitAdjustmentForRevision(
+  trx: Knex.Transaction,
+  tenant: string,
+  revisionId: string,
+  userId: string | null,
+): Promise<string | null> {
+  const existing = await tenantScopedTable(trx, tenant, 'contract_recurring_unit_adjustments')
+    .where({ tenant, revision_id: revisionId })
+    .first<{ adjustment_id: string; status: string; settled_invoice_id: string | null } | undefined>(
+      'adjustment_id',
+      'status',
+      'settled_invoice_id',
+    );
+  if (!existing) return null;
+  if (existing.status === 'settled' && existing.settled_invoice_id) {
+    const settledInvoice = await tenantScopedTable(trx, tenant, 'invoices')
+      .where({ tenant, invoice_id: existing.settled_invoice_id })
+      .first<{ status: string | null; finalized_at: string | Date | null } | undefined>(
+        'status',
+        'finalized_at',
+      );
+    if (settledInvoice && (settledInvoice.finalized_at || settledInvoice.status !== 'draft')) {
+      // A finalized/paid/exported settlement is permanent; never reset it.
+      return null;
+    }
+    // Settled on an editable draft: mark cancelled but keep the invoice link so
+    // reconciliation can remove the row from that draft.
+    await tenantScopedTable(trx, tenant, 'contract_recurring_unit_adjustments')
+      .where({ tenant, adjustment_id: existing.adjustment_id })
+      .update({ status: 'cancelled', updated_at: trx.fn.now(), updated_by: userId });
+    return existing.settled_invoice_id;
+  }
+  await tenantScopedTable(trx, tenant, 'contract_recurring_unit_adjustments')
+    .where({ tenant, adjustment_id: existing.adjustment_id })
+    .update({
+      status: 'cancelled',
+      updated_at: trx.fn.now(),
+      updated_by: userId,
+      settled_invoice_id: null,
+      settled_charge_id: null,
+      settled_at: null,
+    });
+  return null;
+}
+
+/**
+ * Upsert the durable, source-linked true-up for a canonical revision. Keyed by
+ * `(tenant, revision_id)` so editing a pending version reconciles the existing
+ * adjustment in place instead of leaving duplicate billable versions. A zero
+ * amount cancels the pending adjustment.
+ */
+export async function upsertRecurringUnitAdjustment(params: {
+  trx: Knex.Transaction;
+  tenant: string;
+  userId: string | null;
+  revisionId: string;
+  revisionVersion: number;
+  contractLineId: string;
+  serviceId: string;
+  configId: string;
+  midPeriodEffectiveDate: string;
+  adjustmentPeriodStart: string;
+  adjustmentPeriodEnd: string;
+  previousQuantity: number;
+  newQuantity: number;
+  unitRateCents: number;
+  coveredDays: number;
+  fullPeriodDays: number;
+  amountCents: number;
+  pricePolicy: RecurringPricePolicy;
+  reason: string;
+}): Promise<string | null> {
+  const {
+    trx, tenant, userId, revisionId, revisionVersion, contractLineId, serviceId, configId,
+    midPeriodEffectiveDate, adjustmentPeriodStart, adjustmentPeriodEnd,
+    previousQuantity, newQuantity, unitRateCents, coveredDays, fullPeriodDays,
+    amountCents, pricePolicy, reason,
+  } = params;
+
+  if (amountCents === 0) {
+    return cancelRecurringUnitAdjustmentForRevision(trx, tenant, revisionId, userId);
+  }
+
+  const line = await tenantScopedTable(trx, tenant, 'contract_lines')
+    .where({ tenant, contract_line_id: contractLineId })
+    .first<{ contract_id: string | null } | undefined>('contract_id');
+  const contract = line?.contract_id
+    ? await tenantScopedTable(trx, tenant, 'contracts')
+        .where({ tenant, contract_id: line.contract_id })
+        .first<{ currency_code: string | null; owner_client_id: string | null } | undefined>(
+          'currency_code',
+          'owner_client_id',
+        )
+    : undefined;
+  const assignment = line?.contract_id
+    ? await tenantScopedTable(trx, tenant, 'client_contracts')
+        .where({ tenant, contract_id: line.contract_id, is_active: true })
+        .orderBy('start_date', 'asc')
+        .first<{ client_contract_id: string; client_id: string } | undefined>(
+          'client_contract_id',
+          'client_id',
+        )
+    : undefined;
+
+  const values = {
+    tenant,
+    contract_line_id: contractLineId,
+    service_id: serviceId,
+    config_id: configId,
+    contract_id: line?.contract_id ?? null,
+    client_contract_id: assignment?.client_contract_id ?? null,
+    client_id: assignment?.client_id ?? contract?.owner_client_id ?? null,
+    currency_code: (contract?.currency_code && String(contract.currency_code).trim()) || 'USD',
+    revision_id: revisionId,
+    revision_version: revisionVersion,
+    adjustment_period_start: adjustmentPeriodStart,
+    adjustment_period_end: adjustmentPeriodEnd,
+    mid_period_effective_date: midPeriodEffectiveDate,
+    previous_quantity: previousQuantity,
+    new_quantity: newQuantity,
+    quantity_delta: newQuantity - previousQuantity,
+    unit_rate_cents: Math.round(unitRateCents),
+    covered_days: coveredDays,
+    full_period_days: fullPeriodDays,
+    amount_cents: amountCents,
+    price_policy: pricePolicy,
+    reason,
+    updated_at: trx.fn.now(),
+  };
+
+  const existing = await tenantScopedTable(trx, tenant, 'contract_recurring_unit_adjustments')
+    .where({ tenant, revision_id: revisionId })
+    .first<{ adjustment_id: string; status: string; settled_invoice_id: string | null } | undefined>(
+      'adjustment_id',
+      'status',
+      'settled_invoice_id',
+    );
+  if (!existing) {
+    await tenantScopedTable(trx, tenant, 'contract_recurring_unit_adjustments').insert({
+      ...values,
+      status: 'pending',
+      created_by: userId,
+    });
+    return null;
+  }
+
+  if (existing.status === 'settled' && existing.settled_invoice_id) {
+    const settledInvoice = await tenantScopedTable(trx, tenant, 'invoices')
+      .where({ tenant, invoice_id: existing.settled_invoice_id })
+      .first<{ status: string | null; finalized_at: string | Date | null } | undefined>(
+        'status',
+        'finalized_at',
+      );
+    if (settledInvoice && (settledInvoice.finalized_at || settledInvoice.status !== 'draft')) {
+      // Never reset or replace a finalized/paid/exported settlement.
+      return null;
+    }
+    // Editable draft: update the source values in place, keep it settled there
+    // so reconciliation refreshes that draft's row rather than duplicating.
+    await tenantScopedTable(trx, tenant, 'contract_recurring_unit_adjustments')
+      .where({ tenant, adjustment_id: existing.adjustment_id })
+      .update({
+        ...values,
+        revision_version: revisionVersion,
+        status: 'settled',
+        settled_invoice_id: existing.settled_invoice_id,
+        updated_by: userId,
+      });
+    return existing.settled_invoice_id;
+  }
+
+  // Pending or cancelled row: (re)activate as pending.
+  await tenantScopedTable(trx, tenant, 'contract_recurring_unit_adjustments')
+    .where({ tenant, adjustment_id: existing.adjustment_id })
+    .update({
+      ...values,
+      revision_version: revisionVersion,
+      status: 'pending',
+      settled_invoice_id: null,
+      settled_charge_id: null,
+      settled_at: null,
+      updated_by: userId,
+    });
+  return null;
+}
+
+export interface IScheduleRecurringUnitRevisionParams {
+  trx: Knex.Transaction;
+  tenant: string;
+  userId: string | null;
+  contractLineId: string;
+  serviceId: string;
+  configId: string;
+  kind: RecurringUnitKind;
+  quantity: number;
+  pricePolicy: RecurringPricePolicy;
+  /** Required and >= 0 for `override`; must be null/omitted for `catalog`. */
+  unitRateCents: number | null;
+  effectivePeriodStart: string;
+  /**
+   * Explicit opt-in to a quantity-only mid-period change. When true,
+   * `effectivePeriodStart` must be the affected period's next canonical
+   * boundary and `midPeriodEffectiveDate` the true in-period date.
+   */
+  allowMidPeriod?: boolean;
+  midPeriodEffectiveDate?: string | null;
+  /**
+   * Optimistic-concurrency expectation for the target boundary:
+   *  - `undefined`: internal/legacy unconditional upsert (configuration service);
+   *  - `null`: the caller loaded the boundary and saw no revision — creation is
+   *    expected, so an existing row means another editor created one first and
+   *    the write is rejected;
+   *  - a number: compare-and-set on the stored pending version.
+   */
+  expectedVersion?: number | null;
+}
+
+export type ScheduleRecurringUnitRevisionResult =
+  | {
+      ok: true;
+      revision: IContractLineUnitPricingRevision;
+      /**
+       * Editable draft whose materialized true-up changed, if any. Callers
+       * outside the transaction recalculate that draft's tax/totals so an
+       * edited or cancelled adjustment is reflected.
+       */
+      settledInvoiceId?: string | null;
+    }
+  | { ok: false; error: string };
+
 export interface IScheduleSeatRevisionParams {
   trx: Knex.Transaction;
   tenant: string;
@@ -193,17 +565,241 @@ export interface IScheduleSeatRevisionParams {
   effectivePeriodStart: string;
 }
 
-export type ScheduleSeatRevisionResult =
-  | { ok: true; revision: IContractLineUnitPricingRevision }
-  | { ok: false; error: string };
+export type ScheduleSeatRevisionResult = ScheduleRecurringUnitRevisionResult;
+
+async function loadRecurringUnitRevisions(
+  trx: Knex.Transaction,
+  tenant: string,
+  params: { contractLineId: string; serviceId: string; configId: string },
+): Promise<RecurringUnitRevisionRow[]> {
+  return (await tenantScopedTable(trx, tenant, 'contract_line_unit_pricing_revisions')
+    .where({
+      tenant,
+      contract_line_id: params.contractLineId,
+      service_id: params.serviceId,
+      config_id: params.configId,
+    })
+    .orderBy('effective_period_start', 'asc')
+    .orderBy('created_at', 'asc')) as unknown as RecurringUnitRevisionRow[];
+}
 
 /**
- * Validates the seat scope (explicitly unit-priced Fixed service on a Fixed
- * line), refuses billed boundaries, and upserts the revision for the boundary.
+ * Resolve the baseline (no-revision) quantity/rate policy for a recurring unit
+ * from its live configuration, honoring kind-specific precedence: an
+ * explicitly unit-priced service reads fixed base_rate first; a product reads
+ * only the contract override chain and never the wizard placeholder base_rate.
  */
-export async function scheduleSeatRevisionInTransaction(
-  params: IScheduleSeatRevisionParams,
-): Promise<ScheduleSeatRevisionResult> {
+async function loadRecurringUnitBaseline(
+  trx: Knex.Transaction,
+  tenant: string,
+  params: { contractLineId: string; serviceId: string; configId: string; kind: RecurringUnitKind },
+) {
+  const config = await tenantScopedTable(trx, tenant, 'contract_line_service_configuration')
+    .where({
+      tenant,
+      contract_line_id: params.contractLineId,
+      service_id: params.serviceId,
+      config_id: params.configId,
+    })
+    .first<{ quantity: number | null; custom_rate: number | string | null } | undefined>(
+      'quantity',
+      'custom_rate',
+    );
+  const serviceLine = await tenantScopedTable(trx, tenant, 'contract_line_services')
+    .where({
+      tenant,
+      contract_line_id: params.contractLineId,
+      service_id: params.serviceId,
+    })
+    .first<{ quantity: number | null; custom_rate: number | string | null } | undefined>(
+      'quantity',
+      'custom_rate',
+    );
+  const fixedConfig = await tenantScopedTable(trx, tenant, 'contract_line_service_fixed_config')
+    .where({ tenant, config_id: params.configId })
+    .first<{ base_rate: number | string | null } | undefined>('base_rate');
+  return resolveRecurringUnitBaseline({
+    kind: params.kind,
+    quantity: config?.quantity ?? serviceLine?.quantity,
+    configurationCustomRate: config?.custom_rate,
+    serviceLineCustomRate: serviceLine?.custom_rate,
+    fixedBaseRate: fixedConfig?.base_rate,
+  });
+}
+
+/**
+ * The full effective (revision-aware) quantity/rate policy in force for periods
+ * starting at `boundary`, using the same shared selection rules as billing.
+ */
+export async function resolveEffectiveRecurringUnitPricingInTransaction(params: {
+  trx: Knex.Transaction;
+  tenant: string;
+  contractLineId: string;
+  serviceId: string;
+  configId: string;
+  kind: RecurringUnitKind;
+  boundary: string;
+}): Promise<EffectiveRecurringUnitPricing> {
+  const baseline = await loadRecurringUnitBaseline(params.trx, params.tenant, {
+    contractLineId: params.contractLineId,
+    serviceId: params.serviceId,
+    configId: params.configId,
+    kind: params.kind,
+  });
+  const rows = await loadRecurringUnitRevisions(params.trx, params.tenant, {
+    contractLineId: params.contractLineId,
+    serviceId: params.serviceId,
+    configId: params.configId,
+  });
+  return selectEffectiveRecurringUnitPricing({
+    boundary: params.boundary,
+    baseline,
+    revisions: rows.map(toRecurringUnitRevisionCandidate),
+  });
+}
+
+export interface EffectiveRecurringUnitDisplayPricing extends EffectiveRecurringUnitPricing {
+  /** Currency/period catalog price when the policy inherits it, else the override. */
+  resolvedUnitRateCents: number | null;
+  /** `service_prices` identity that supplied a catalog-policy rate. */
+  catalogPriceId: string | null;
+  catalogEffectiveDate: string | null;
+  /**
+   * The currency/period catalog price resolved for the selected boundary
+   * independently of the currently-effective policy, so the operator can
+   * preview an override→catalog switch. Null when no currency catalog price
+   * applies; products never fall back to the unqualified `default_rate`
+   * because product billing rejects a missing currency price.
+   */
+  catalogUnitRateCents: number | null;
+  catalogUnitPriceId: string | null;
+  catalogUnitEffectiveDate: string | null;
+  /** Covered service period containing the boundary, when materialized. */
+  coveredStart: string;
+  coveredEnd: string | null;
+  /** Lifecycle state of the covering period (e.g. `billed` = protected). */
+  protectedLifecycle: string | null;
+  currencyCode: string;
+  /** Legacy baseline quantity/rate before any applicable revision. */
+  baselineQuantity: number;
+  baselineUnitRateCents: number | null;
+}
+
+/**
+ * Read-side companion for the scheduling panel: the effective policy plus the
+ * resolved catalog price it will actually bill (not N/A), the covered dates and
+ * whether the period is protected. Used only for display; billing resolves
+ * independently through the same shared rules.
+ */
+export async function resolveRecurringUnitDisplayPricing(params: {
+  trx: Knex.Transaction;
+  tenant: string;
+  contractLineId: string;
+  serviceId: string;
+  configId: string;
+  kind: RecurringUnitKind;
+  boundary: string;
+}): Promise<EffectiveRecurringUnitDisplayPricing> {
+  const effective = await resolveEffectiveRecurringUnitPricingInTransaction(params);
+  const { trx, tenant, contractLineId, serviceId, configId, boundary } = params;
+  const db = tenantDb(trx, tenant);
+
+  const line = await db
+    .table('contract_lines')
+    .where({ tenant, contract_line_id: contractLineId })
+    .first<{ contract_id: string | null } | undefined>('contract_id');
+  const contract = line?.contract_id
+    ? await db
+        .table('contracts')
+        .where({ tenant, contract_id: line.contract_id })
+        .first<{ currency_code: string | null } | undefined>('currency_code')
+    : undefined;
+  const currencyCode =
+    (contract?.currency_code && String(contract.currency_code).trim()) || 'USD';
+
+  // Resolve the currency/period catalog price for the selected boundary
+  // independently of the currently-effective policy, so switching an override
+  // to catalog inherits the real catalog price rather than the old override.
+  const prices = (await db
+    .table('service_prices')
+    .where({ tenant, service_id: serviceId, currency_code: currencyCode })
+    .select('price_id', 'service_id', 'currency_code', 'rate', 'effective_date', 'created_at')) as ServicePriceRateRow[];
+  const selectedCatalogPrice = selectEffectiveServicePrice(prices, serviceId, currencyCode, boundary);
+  let catalogUnitRateCents: number | null = null;
+  let catalogUnitPriceId: string | null = null;
+  let catalogUnitEffectiveDate: string | null = null;
+  if (selectedCatalogPrice) {
+    catalogUnitRateCents = selectedCatalogPrice.rateCents;
+    catalogUnitPriceId = selectedCatalogPrice.price_id;
+    catalogUnitEffectiveDate = selectedCatalogPrice.effectiveDate;
+  } else if (params.kind !== 'product') {
+    // Legacy unit-services may still fall back to the tenant-currency
+    // `service_catalog.default_rate`. Products must not: product billing
+    // resolves the contract-currency `service_prices` row and rejects a
+    // missing price, so a fallback here would show a billable amount that
+    // generation later refuses.
+    const catalogRow = await db
+      .table('service_catalog')
+      .where({ tenant, service_id: serviceId })
+      .first<{ default_rate: number | string | null } | undefined>('default_rate');
+    const legacy = catalogRow?.default_rate == null ? null : Number(catalogRow.default_rate);
+    catalogUnitRateCents = Number.isFinite(legacy) ? legacy : null;
+  }
+
+  // The effective bill rate follows the policy in force; catalog-policy
+  // revisions inherit the resolved catalog price, override revisions bill
+  // their explicit rate.
+  const resolvedUnitRateCents =
+    effective.pricePolicy === 'catalog' ? catalogUnitRateCents : effective.unitRateCents;
+  const catalogPriceId =
+    effective.pricePolicy === 'catalog' ? catalogUnitPriceId : null;
+  const catalogEffectiveDate =
+    effective.pricePolicy === 'catalog' ? catalogUnitEffectiveDate : null;
+
+  const period = await db
+    .table('recurring_service_periods')
+    .where({ tenant, obligation_id: contractLineId })
+    .where('service_period_start', '<=', boundary)
+    .andWhere('service_period_end', '>', boundary)
+    .first<{
+      service_period_start: unknown;
+      service_period_end: unknown;
+      lifecycle_state: string | null;
+    }>('service_period_start', 'service_period_end', 'lifecycle_state');
+
+  const baseline = await loadRecurringUnitBaseline(trx, tenant, {
+    contractLineId,
+    serviceId,
+    configId,
+    kind: params.kind,
+  });
+
+  return {
+    ...effective,
+    resolvedUnitRateCents,
+    catalogPriceId,
+    catalogEffectiveDate,
+    catalogUnitRateCents,
+    catalogUnitPriceId,
+    catalogUnitEffectiveDate,
+    coveredStart: period ? toBoundaryDay(period.service_period_start) : boundary,
+    coveredEnd: period ? toBoundaryDay(period.service_period_end) : null,
+    protectedLifecycle: period?.lifecycle_state ?? null,
+    currencyCode,
+    baselineQuantity: baseline.quantity,
+    baselineUnitRateCents: baseline.unitRateCents,
+  };
+}
+
+/**
+ * Validates the recurring-unit scope (an explicitly unit-priced Fixed service
+ * or a catalog product on a Fixed line), refuses billed boundaries, enforces
+ * compare-and-set for pending replacements, records the superseded pending edit
+ * in history, and upserts the revision for the boundary.
+ */
+export async function scheduleRecurringUnitRevisionInTransaction(
+  params: IScheduleRecurringUnitRevisionParams,
+): Promise<ScheduleRecurringUnitRevisionResult> {
   const {
     trx,
     tenant,
@@ -211,19 +807,37 @@ export async function scheduleSeatRevisionInTransaction(
     contractLineId,
     serviceId,
     configId,
+    kind,
     quantity,
+    pricePolicy,
     unitRateCents,
     effectivePeriodStart,
+    allowMidPeriod,
+    midPeriodEffectiveDate,
+    expectedVersion,
   } = params;
 
   if (!Number.isInteger(quantity) || quantity < 0) {
     return { ok: false, error: 'Quantity must be a whole number of 0 or more.' };
   }
-  if (!Number.isFinite(unitRateCents) || unitRateCents < 0 || !Number.isInteger(unitRateCents)) {
-    return { ok: false, error: 'Unit rate must be a whole number of minor units (cents) of 0 or more.' };
+  if (pricePolicy !== 'override' && pricePolicy !== 'catalog') {
+    return { ok: false, error: 'Price policy must be either an explicit override or catalog inheritance.' };
   }
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(effectivePeriodStart)) {
-    return { ok: false, error: 'Effective date must be a calendar date (YYYY-MM-DD) at a service-period boundary.' };
+  if (pricePolicy === 'override') {
+    if (
+      unitRateCents === null ||
+      unitRateCents === undefined ||
+      !Number.isFinite(unitRateCents) ||
+      unitRateCents < 0 ||
+      !Number.isInteger(unitRateCents)
+    ) {
+      return { ok: false, error: 'An explicit unit price override must be a whole number of minor units (cents) of 0 or more.' };
+    }
+  } else if (unitRateCents !== null && unitRateCents !== undefined) {
+    return { ok: false, error: 'Catalog inheritance stores no unit rate; omit the override amount or choose explicit pricing.' };
+  }
+  if (!isValidDateOnly(effectivePeriodStart)) {
+    return { ok: false, error: 'Effective date must be a valid calendar date (YYYY-MM-DD) at a service-period boundary.' };
   }
 
   await lockTenantBilling(trx, tenant);
@@ -240,12 +854,20 @@ export async function scheduleSeatRevisionInTransaction(
   if (!fixedConfig) {
     return { ok: false, error: 'The selected service is not a Fixed configuration on that contract line.' };
   }
-  if (fixedConfig.pricing_basis !== 'unit') {
+  if (kind === 'service' && fixedConfig.pricing_basis !== 'unit') {
     return {
       ok: false,
       error:
         'Only explicitly unit-priced (recurring seats/units) services can carry scheduled quantity/rate changes. This service uses bundle pricing.',
     };
+  }
+  if (kind === 'product') {
+    const catalogItem = await tenantScopedTable(trx, tenant, 'service_catalog')
+      .where({ tenant, service_id: serviceId })
+      .first<{ item_kind: string | null } | undefined>('item_kind');
+    if (catalogItem?.item_kind !== 'product') {
+      return { ok: false, error: 'The selected item is not a recurring catalog product.' };
+    }
   }
   const line = await tenantScopedTable(trx, tenant, 'contract_lines')
     .where({ tenant, contract_line_id: contractLineId, contract_line_type: 'Fixed' })
@@ -254,10 +876,155 @@ export async function scheduleSeatRevisionInTransaction(
     return { ok: false, error: 'The selected contract line is not a Fixed line.' };
   }
 
-  const boundaryConflict = await validateProspectivePricingBoundary(trx, tenant, contractLineId, effectivePeriodStart);
+  // Boundary-only is the default. An explicit opt-in may make a *quantity-only*
+  // change inside an eligible unbilled period: the canonical revision keeps the
+  // next boundary as its effective date (the standing quantity begins there) and
+  // `mid_period_effective_date` records the true date so one prorated true-up
+  // can be derived. No new mid-period price policy is introduced here.
+  let canonicalBoundary = effectivePeriodStart;
+  let storedMidDate: string | null = null;
+  let pendingAdjustment: {
+    midDate: string;
+    periodStart: string;
+    periodEnd: string;
+    previousQuantity: number;
+    unitRateCents: number;
+    coveredDays: number;
+    fullPeriodDays: number;
+    amountCents: number;
+  } | null = null;
+
+  if (allowMidPeriod) {
+    const requestedMidDate = String(midPeriodEffectiveDate ?? effectivePeriodStart);
+    if (!isValidDateOnly(requestedMidDate)) {
+      return { ok: false, error: 'The mid-period effective date must be a valid calendar date (YYYY-MM-DD).' };
+    }
+    const period = await resolveMidPeriodServicePeriod({
+      trx, tenant, contractLineId, midDate: requestedMidDate,
+    });
+    if (!period) {
+      return {
+        ok: false,
+        error:
+          'That date is not inside an unbilled service period for this contract. Choose a date within an upcoming unbilled period, or a service-period boundary.',
+      };
+    }
+    // The standing quantity must begin at the containing period's next
+    // boundary. Reject a client-supplied boundary that disagrees (the UI
+    // resolves the boundary from the change date) rather than silently
+    // replacing it and reporting a different standing start than reviewed.
+    if (effectivePeriodStart !== period.end) {
+      return {
+        ok: false,
+        error: `The standing quantity must change at the next service-period boundary, ${period.end}. Reload the mid-period date so the scheduler can re-resolve it.`,
+      };
+    }
+    const current = await resolveEffectiveRecurringUnitPricingInTransaction({
+      trx, tenant, contractLineId, serviceId, configId, kind, boundary: period.start,
+    });
+    if (pricePolicy !== current.pricePolicy) {
+      return {
+        ok: false,
+        error:
+          'A mid-period change may only change quantity. Schedule a price change at a service-period boundary instead.',
+      };
+    }
+    let currentRate = current.unitRateCents;
+    if (current.pricePolicy === 'catalog') {
+      const display = await resolveRecurringUnitDisplayPricing({
+        trx, tenant, contractLineId, serviceId, configId, kind, boundary: period.start,
+      });
+      currentRate = display.resolvedUnitRateCents;
+      if (currentRate === null) {
+        return {
+          ok: false,
+          error: `No ${display.currencyCode} catalog price covers ${period.start}. Add a currency price or choose an explicit unit price override at a boundary.`,
+        };
+      }
+    }
+    if (currentRate === null || !Number.isFinite(currentRate) || currentRate < 0) {
+      return { ok: false, error: 'The effective unit rate for the affected period could not be resolved.' };
+    }
+    if (pricePolicy === 'override' && Number(unitRateCents) !== Number(currentRate)) {
+      return {
+        ok: false,
+        error:
+          'A mid-period change may only change quantity, not the unit price. Schedule the price change at a service-period boundary instead.',
+      };
+    }
+    const fullPeriodDays = daysBetweenOnly(period.start, period.end);
+    const coveredDays = daysBetweenOnly(requestedMidDate, period.end);
+    const adjustment = computeRecurringUnitMidPeriodAdjustment({
+      quantityDelta: quantity - current.quantity,
+      unitRateCents: Number(currentRate),
+      coveredDays,
+      fullPeriodDays,
+    });
+    canonicalBoundary = period.end;
+    storedMidDate = requestedMidDate;
+    pendingAdjustment = {
+      midDate: requestedMidDate,
+      periodStart: period.start,
+      periodEnd: period.end,
+      previousQuantity: current.quantity,
+      unitRateCents: Number(currentRate),
+      coveredDays,
+      fullPeriodDays,
+      amountCents: adjustment.amountCents,
+    };
+  }
+
+  const boundaryConflict = await validateProspectivePricingBoundary(trx, tenant, contractLineId, canonicalBoundary);
   if (boundaryConflict) {
     return { ok: false, error: boundaryConflict };
   }
+
+  if (kind === 'product' && pricePolicy === 'catalog' && quantity > 0) {
+    const pricing = await resolveRecurringUnitDisplayPricing({
+      trx, tenant, contractLineId, serviceId, configId, kind, boundary: canonicalBoundary,
+    });
+    if (pricing.catalogUnitRateCents === null) {
+      return { ok: false, error: `No ${pricing.currencyCode} catalog price covers this boundary. Add a currency price or choose an explicit unit price override.` };
+    }
+  }
+
+  // Reconcile the durable true-up when the revision is finally known. A
+  // boundary-only save cancels any pending mid-period adjustment on the same
+  // canonical revision, so returning to boundary scheduling reconciles rather
+  // than leaving a duplicate billable version.
+  let settledInvoiceId: string | null = null;
+  const reconcileAdjustment = async (revision: IContractLineUnitPricingRevision): Promise<void> => {
+    if (pendingAdjustment && storedMidDate) {
+      settledInvoiceId = await upsertRecurringUnitAdjustment({
+        trx, tenant, userId,
+        revisionId: String(revision.revision_id),
+        revisionVersion: Number(revision.version ?? 1),
+        contractLineId, serviceId, configId,
+        midPeriodEffectiveDate: storedMidDate,
+        adjustmentPeriodStart: pendingAdjustment.periodStart,
+        adjustmentPeriodEnd: pendingAdjustment.periodEnd,
+        previousQuantity: pendingAdjustment.previousQuantity,
+        newQuantity: quantity,
+        unitRateCents: pendingAdjustment.unitRateCents,
+        coveredDays: pendingAdjustment.coveredDays,
+        fullPeriodDays: pendingAdjustment.fullPeriodDays,
+        amountCents: pendingAdjustment.amountCents,
+        pricePolicy,
+        reason: formatRecurringUnitMidPeriodReason({
+          previousQuantity: pendingAdjustment.previousQuantity,
+          newQuantity: quantity,
+          coveredDays: pendingAdjustment.coveredDays,
+          fullPeriodDays: pendingAdjustment.fullPeriodDays,
+          periodStart: pendingAdjustment.periodStart,
+          periodEndExclusive: pendingAdjustment.periodEnd,
+        }),
+      });
+    } else {
+      settledInvoiceId = await cancelRecurringUnitAdjustmentForRevision(
+        trx, tenant, String(revision.revision_id), userId,
+      );
+    }
+  };
 
   const existing = await tenantScopedTable(trx, tenant, 'contract_line_unit_pricing_revisions')
     .where({
@@ -265,20 +1032,94 @@ export async function scheduleSeatRevisionInTransaction(
       contract_line_id: contractLineId,
       service_id: serviceId,
       config_id: configId,
-      effective_period_start: effectivePeriodStart,
+      effective_period_start: canonicalBoundary,
     })
-    .first<{ revision_id: string }>('revision_id');
+    .first<{
+      revision_id: string;
+      quantity: number;
+      unit_rate_cents: number | string | null;
+      price_policy: string | null;
+      version: number | string | null;
+      mid_period_effective_date: string | Date | null;
+      created_by: string | null;
+      created_at: string | Date | null;
+      updated_by: string | null;
+      updated_at: string | Date | null;
+    }>('revision_id', 'quantity', 'unit_rate_cents', 'price_policy', 'version', 'mid_period_effective_date', 'created_by', 'created_at', 'updated_by', 'updated_at');
 
   if (existing) {
+    const storedVersion = Number(existing.version ?? 1);
+    // The caller expected to *create* at an empty boundary, but another editor
+    // won the race and a revision now exists: reject rather than silently
+    // replacing their edit.
+    if (expectedVersion === null) {
+      return {
+        ok: false,
+        error:
+          'Another change was created at this effective date by someone else. Reload the period and review the newer values before saving.',
+      };
+    }
+    // A replacement requires a matching version. Legacy/internal writers that
+    // omit `expectedVersion` (the configuration service) keep unconditional
+    // upsert semantics.
+    if (expectedVersion !== undefined && Number(expectedVersion) !== storedVersion) {
+      return {
+        ok: false,
+        error: 'This pending change was updated by someone else. Reload the period and review the newer values before saving.',
+      };
+    }
+    // Append-only audit of the superseded pending edit, preserving both the
+    // original author/timestamps and the replacing actor. The canonical row
+    // stays the single source billing reads.
+    await tenantScopedTable(trx, tenant, 'contract_line_unit_pricing_revision_history').insert({
+      tenant,
+      revision_id: existing.revision_id,
+      contract_line_id: contractLineId,
+      service_id: serviceId,
+      config_id: configId,
+      quantity: Number(existing.quantity),
+      unit_rate_cents: existing.unit_rate_cents === null ? null : Number(existing.unit_rate_cents),
+      price_policy: existing.price_policy === 'catalog' ? 'catalog' : 'override',
+      effective_period_start: canonicalBoundary,
+      mid_period_effective_date:
+        existing.mid_period_effective_date == null
+          ? null
+          : toBoundaryDay(existing.mid_period_effective_date),
+      version: storedVersion,
+      superseded_by: userId ?? 'system',
+      recorded_by: userId,
+      original_created_by: existing.created_by,
+      original_created_at: existing.created_at,
+      original_updated_by: existing.updated_by,
+      original_updated_at: existing.updated_at,
+    });
     const [updated] = await tenantScopedTable(trx, tenant, 'contract_line_unit_pricing_revisions')
       .where({ tenant, revision_id: existing.revision_id })
       .update({
         quantity,
-        unit_rate_cents: unitRateCents,
-        created_by: userId,
+        unit_rate_cents: pricePolicy === 'override' ? unitRateCents : null,
+        price_policy: pricePolicy,
+        mid_period_effective_date: storedMidDate,
+        version: storedVersion + 1,
+        updated_by: userId,
+        updated_at: trx.fn.now(),
+        // `created_by`/`created_at` are the original author's and are preserved;
+        // replacement attribution lives on `updated_by` and in history.
       })
       .returning('*');
-    return { ok: true, revision: updated as unknown as IContractLineUnitPricingRevision };
+    const revision = updated as unknown as IContractLineUnitPricingRevision;
+    await reconcileAdjustment(revision);
+    return { ok: true, revision, settledInvoiceId };
+  }
+
+  // A caller that expected to replace (a version number) but finds no row — or
+  // an explicit create-expectation that is satisfied — falls through to insert.
+  // Only an explicit version mismatch (a replacement expectation) is stale.
+  if (expectedVersion !== null && expectedVersion !== undefined) {
+    return {
+      ok: false,
+      error: 'This pending change no longer exists at that boundary. Reload the period before saving.',
+    };
   }
 
   const [inserted] = await tenantScopedTable(trx, tenant, 'contract_line_unit_pricing_revisions')
@@ -288,10 +1129,196 @@ export async function scheduleSeatRevisionInTransaction(
       service_id: serviceId,
       config_id: configId,
       quantity,
-      unit_rate_cents: unitRateCents,
-      effective_period_start: effectivePeriodStart,
+      unit_rate_cents: pricePolicy === 'override' ? unitRateCents : null,
+      price_policy: pricePolicy,
+      version: 1,
+      effective_period_start: canonicalBoundary,
+      mid_period_effective_date: storedMidDate,
       created_by: userId,
+      updated_by: userId,
     })
     .returning('*');
-  return { ok: true, revision: inserted as unknown as IContractLineUnitPricingRevision };
+  const revision = inserted as unknown as IContractLineUnitPricingRevision;
+  await reconcileAdjustment(revision);
+  return { ok: true, revision, settledInvoiceId };
+}
+
+/** Backwards-compatible seat wrapper: unit-priced Fixed service, explicit rate. */
+export async function scheduleSeatRevisionInTransaction(
+  params: IScheduleSeatRevisionParams,
+): Promise<ScheduleSeatRevisionResult> {
+  return scheduleRecurringUnitRevisionInTransaction({
+    ...params,
+    kind: 'service',
+    pricePolicy: 'override',
+    unitRateCents: params.unitRateCents,
+  });
+}
+
+export interface IRecurringUnitPricingRevisionListRow {
+  revision_id: string;
+  quantity: number;
+  unit_rate_cents: number | null;
+  price_policy: RecurringPricePolicy;
+  version: number;
+  effective_period_start: string;
+  /** True mid-period date when this revision opted in; null on the boundary path. */
+  mid_period_effective_date: string | null;
+  created_by: string | null;
+  updated_by: string | null;
+  /** Display names for the actor columns; null when the user no longer resolves. */
+  created_by_name: string | null;
+  updated_by_name: string | null;
+  created_at: string | Date | null;
+  updated_at: string | Date | null;
+}
+
+const USER_ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+// LEVERAGE: pattern user-display-name — user-id → "First Last" (email/username
+// fallback) is re-derived per feature (ticket activity, assets, inventory,
+// ProjectService); a shared tenant-scoped batch resolver belongs in @alga-psa/db.
+/**
+ * Resolve audit actor ids to display names in one tenant-scoped query.
+ * Non-UUID actors (e.g. the literal 'system') are skipped, not queried.
+ */
+async function loadUserDisplayNames(
+  conn: Knex | Knex.Transaction,
+  tenant: string,
+  ids: Array<string | null | undefined>,
+): Promise<Map<string, string>> {
+  const userIds = [...new Set(ids.filter((id): id is string => !!id && USER_ID_PATTERN.test(id)))];
+  const names = new Map<string, string>();
+  if (userIds.length === 0) return names;
+  const rows = (await tenantScopedTable(conn, tenant, 'users')
+    .where({ tenant })
+    .whereIn('user_id', userIds)
+    .select('user_id', 'first_name', 'last_name', 'email')) as Array<{
+    user_id: string;
+    first_name: string | null;
+    last_name: string | null;
+    email: string | null;
+  }>;
+  for (const row of rows) {
+    const full = [row.first_name, row.last_name].map((part) => (part ?? '').trim()).filter(Boolean).join(' ');
+    const name = full || row.email?.trim();
+    if (name) names.set(String(row.user_id), name);
+  }
+  return names;
+}
+
+/**
+ * Canonical scheduled revisions for one configuration, earliest boundary first.
+ * These are the rows billing reads; a replacement keeps the same revision id
+ * and bumps `version`, so the latest row per boundary is authoritative.
+ */
+export async function listRecurringUnitPricingRevisions(params: {
+  trx: Knex.Transaction | Knex;
+  tenant: string;
+  contractLineId: string;
+  serviceId: string;
+  configId: string;
+}): Promise<IRecurringUnitPricingRevisionListRow[]> {
+  const rows = await loadRecurringUnitRevisions(params.trx as Knex.Transaction, params.tenant, {
+    contractLineId: params.contractLineId,
+    serviceId: params.serviceId,
+    configId: params.configId,
+  });
+  const names = await loadUserDisplayNames(
+    params.trx,
+    params.tenant,
+    rows.flatMap((row) => [row.created_by, row.updated_by].map((id) => (id == null ? null : String(id)))),
+  );
+  return rows.map((row) => ({
+    revision_id: String(row.revision_id),
+    quantity: Number(row.quantity),
+    unit_rate_cents:
+      row.unit_rate_cents === null || row.unit_rate_cents === undefined
+        ? null
+        : Number(row.unit_rate_cents),
+    price_policy: row.price_policy === 'catalog' ? 'catalog' : 'override',
+    version: Number(row.version ?? 1),
+    effective_period_start: normalizeRecurringBoundary(row.effective_period_start),
+    mid_period_effective_date:
+      row.mid_period_effective_date == null
+        ? null
+        : normalizeRecurringBoundary(row.mid_period_effective_date),
+    created_by: row.created_by == null ? null : String(row.created_by),
+    updated_by: row.updated_by == null ? null : String(row.updated_by),
+    created_by_name: row.created_by == null ? null : names.get(String(row.created_by)) ?? null,
+    updated_by_name: row.updated_by == null ? null : names.get(String(row.updated_by)) ?? null,
+    created_at: (row.created_at as string | Date | null) ?? null,
+    updated_at: (row.updated_at as string | Date | null) ?? null,
+  }));
+}
+
+export interface IRecurringUnitPricingHistoryRow {
+  history_id: string;
+  revision_id: string;
+  quantity: number;
+  unit_rate_cents: number | null;
+  price_policy: RecurringPricePolicy;
+  effective_period_start: string;
+  /** True mid-period date when the superseded edit opted in; null otherwise. */
+  mid_period_effective_date: string | null;
+  version: number;
+  /** Actor who performed the replacement (the superseding writer). */
+  superseded_by: string;
+  /** Display name for `superseded_by`; null for 'system' or an unresolvable user. */
+  superseded_by_name: string | null;
+  recorded_by: string | null;
+  /** Author of the superseded revision values (may differ from `superseded_by`). */
+  original_created_by: string | null;
+  original_created_at: string | Date | null;
+  original_updated_by: string | null;
+  original_updated_at: string | Date | null;
+  created_at: string | Date | null;
+}
+
+/**
+ * Read the append-only superseded-edit log for one configuration, newest first.
+ */
+export async function listRecurringUnitPricingHistory(params: {
+  trx: Knex.Transaction | Knex;
+  tenant: string;
+  contractLineId: string;
+  serviceId: string;
+  configId: string;
+}): Promise<IRecurringUnitPricingHistoryRow[]> {
+  const rows = (await tenantScopedTable(params.trx, params.tenant, 'contract_line_unit_pricing_revision_history')
+    .where({
+      tenant: params.tenant,
+      contract_line_id: params.contractLineId,
+      service_id: params.serviceId,
+      config_id: params.configId,
+    })
+    .orderBy('created_at', 'desc')) as Array<Record<string, unknown>>;
+  const names = await loadUserDisplayNames(
+    params.trx,
+    params.tenant,
+    rows.map((row) => (row.superseded_by == null ? null : String(row.superseded_by))),
+  );
+  return rows.map((row) => ({
+    history_id: String(row.history_id),
+    revision_id: String(row.revision_id),
+    quantity: Number(row.quantity),
+    unit_rate_cents: row.unit_rate_cents === null || row.unit_rate_cents === undefined ? null : Number(row.unit_rate_cents),
+    price_policy: row.price_policy === 'catalog' ? 'catalog' : 'override',
+    effective_period_start: normalizeRecurringBoundary(row.effective_period_start),
+    mid_period_effective_date:
+      row.mid_period_effective_date == null
+        ? null
+        : normalizeRecurringBoundary(row.mid_period_effective_date),
+    version: Number(row.version ?? 1),
+    superseded_by: String(row.superseded_by ?? ''),
+    superseded_by_name: row.superseded_by == null ? null : names.get(String(row.superseded_by)) ?? null,
+    recorded_by: row.recorded_by == null ? null : String(row.recorded_by),
+    original_created_by:
+      row.original_created_by == null ? null : String(row.original_created_by),
+    original_created_at: (row.original_created_at as string | Date | null) ?? null,
+    original_updated_by:
+      row.original_updated_by == null ? null : String(row.original_updated_by),
+    original_updated_at: (row.original_updated_at as string | Date | null) ?? null,
+    created_at: (row.created_at as string | Date | null) ?? null,
+  }));
 }

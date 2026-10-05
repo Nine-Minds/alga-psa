@@ -227,7 +227,8 @@ function createConnectionStub(responses: Record<string, any | any[]>) {
 
 // Mirrors the subscription list in internalNotificationSubscriber's
 // registerInternalNotificationSubscriber (additional-agent split 81a4a60b09,
-// appointment requests a58b44ab3e, comment-update events 65c688f47a).
+// appointment requests a58b44ab3e, comment-update events 65c688f47a,
+// calendar sharing 2df11875a8).
 const expectedEventTypes = [
   'TICKET_CREATED',
   'TICKET_ASSIGNED',
@@ -251,7 +252,8 @@ const expectedEventTypes = [
   'APPOINTMENT_REQUEST_CREATED',
   'APPOINTMENT_REQUEST_APPROVED',
   'APPOINTMENT_REQUEST_DECLINED',
-  'APPOINTMENT_REQUEST_CANCELLED'
+  'APPOINTMENT_REQUEST_CANCELLED',
+  'CALENDAR_SHARE_GRANTED'
 ];
 
 let registerInternalNotificationSubscriber: typeof import('server/src/lib/eventBus/subscribers/internalNotificationSubscriber').registerInternalNotificationSubscriber;

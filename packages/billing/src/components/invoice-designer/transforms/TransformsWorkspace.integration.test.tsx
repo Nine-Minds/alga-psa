@@ -16,9 +16,8 @@ import {
   getPreviewSampleScenarioById,
 } from '../preview/sampleScenarios';
 
-const releaseFlag = vi.hoisted(() => ({ enabled: true }));
 vi.mock('@alga-psa/ui/hooks/useFeatureFlag', () => ({
-  useFeatureFlag: () => ({ enabled: releaseFlag.enabled, loading: false, error: null }),
+  useFeatureFlag: () => ({ enabled: true, loading: false, error: null }),
 }));
 
 const previewInvoice = {
@@ -120,7 +119,6 @@ const selectCustomOption = async (triggerId: string, optionText: string) => {
 
 describe('TransformsWorkspace', () => {
   beforeEach(() => {
-    releaseFlag.enabled = true;
     Object.defineProperty(Element.prototype, 'scrollIntoView', {
       configurable: true,
       writable: true,

@@ -6,12 +6,10 @@
  * disagree. Checks in order, cheapest first:
  *
  *   1. the caller can read the entity (`<resource>:read`)
- *   2. the `release-v1-6-feature` flag is on for this tenant/user
- *   3. the tenant has the AI Assistant add-on
- *   4. a TypeSafe key is configured
+ *   2. the tenant has the AI Assistant add-on
+ *   3. a TypeSafe key is configured
  */
 
-import { RELEASE_V1_6_FEATURE_FLAG, isFeatureFlagEnabled } from '@alga-psa/core';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { ADD_ONS, type IUserWithRoles } from '@alga-psa/types';
 import { AddOnAccessError, assertTenantAddOnAccess } from 'server/src/lib/tier-gating/assertAddOnAccess';
@@ -20,7 +18,6 @@ import { isSmartSearchConfigured } from './typesafeClient';
 
 export type SmartSearchDenialReason =
   | 'FORBIDDEN'
-  | 'FEATURE_FLAG_OFF'
   | 'ADD_ON_REQUIRED'
   | 'SMART_SEARCH_NOT_CONFIGURED';
 
@@ -28,7 +25,6 @@ export type SmartSearchAccess =
   | { allowed: true }
   | { allowed: false; reason: SmartSearchDenialReason; message: string };
 
-export const SMART_SEARCH_FEATURE_FLAG = RELEASE_V1_6_FEATURE_FLAG;
 export const SMART_SEARCH_ADD_ON = ADD_ONS.AI_ASSISTANT;
 
 export interface SmartSearchAccessTarget {
@@ -44,14 +40,6 @@ export async function evaluateSmartSearchAccess(
 ): Promise<SmartSearchAccess> {
   if (!(await hasPermission(user as IUserWithRoles, target.permissionResource, 'read'))) {
     return { allowed: false, reason: 'FORBIDDEN', message: `You do not have permission to view ${target.noun}` };
-  }
-
-  const flagOn = await isFeatureFlagEnabled(SMART_SEARCH_FEATURE_FLAG, {
-    tenantId: user.tenant,
-    userId: user.user_id,
-  });
-  if (!flagOn) {
-    return { allowed: false, reason: 'FEATURE_FLAG_OFF', message: 'Smart search is not enabled for this tenant' };
   }
 
   try {

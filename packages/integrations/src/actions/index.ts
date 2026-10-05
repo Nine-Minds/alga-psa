@@ -91,6 +91,16 @@ export type {
   MicrosoftOutboundMailboxOption,
 } from './email-actions/emailSettingsActions';
 export {
+  listEmailSenders,
+  listSelectableSenders,
+  createEmailSender,
+  updateEmailSender,
+  deleteEmailSender,
+  verifyEmailSender,
+  setEmailSenderRoute,
+  clearEmailSenderRoute,
+} from './email-actions/emailSenderActions';
+export {
   getInboundTicketDefaults,
   createInboundTicketDefaults,
   updateInboundTicketDefaults,
@@ -211,6 +221,7 @@ export {
   disconnectEntraIntegration,
   getEntraSyncRunHistory,
   getEntraSyncRunDetail,
+  getEntraSyncWorkerAvailability,
   discoverEntraManagedTenants,
   getEntraMappingPreview,
   listEntraMappingGroups,
@@ -222,6 +233,7 @@ export {
   startEntraSync,
   type EntraConnectionType,
   type EntraSyncScope,
+  type EntraSyncWorkerEvidence,
   type EntraStatusResponse,
   type EntraMappingPreviewResponse,
   type EntraMappingGroupOption,
@@ -238,6 +250,10 @@ export {
   type EntraPreflightIdentity,
   type EntraPreflightResponse,
   type EntraSyncScheduleSettings,
+  getEntraUserFilterDefaults,
+  updateEntraUserFilterDefaults,
+  getEntraManagedTenantUserFilter,
+  updateEntraManagedTenantUserFilter,
 } from './integrations/entraActions';
 export {
   runEntraConnectionDiagnostics,
@@ -310,5 +326,6 @@ export {
   triggerRmmReboot,
   triggerRmmScript,
   getAssetRemoteControlUrl,
+  getAssetRemoteControlTypes,
   type RmmCommandResult,
 } from './integrations/assetRmmActions';

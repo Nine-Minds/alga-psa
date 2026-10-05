@@ -47,6 +47,7 @@ export function CommentComposer({
   mentionAuthToken,
   scheduleAt,
   onChangeScheduleAt,
+  variant = "ticket",
 }: {
   draftContent: string;
   draftPlainText: string;
@@ -70,13 +71,15 @@ export function CommentComposer({
   mentionAuthToken?: string;
   /** Withhold the (client-visible) comment until this instant. */
   scheduleAt?: Date | null;
+  /** Task comments are always internal and never scheduled, so those controls are hidden. */
+  variant?: "ticket" | "task";
   onChangeScheduleAt?: (value: Date | null) => void;
 }) {
   const { colors, spacing, typography } = useTheme();
   const { t } = useTranslation("tickets");
   const [suppression, setSuppression] = useState(DEFAULT_TICKET_NOTIFICATION_SUPPRESSION);
   const [scheduleOpen, setScheduleOpen] = useState(false);
-  const canSchedule = Boolean(onChangeScheduleAt);
+  const canSchedule = variant === "ticket" && (Boolean(onChangeScheduleAt));
   const isScheduled = Boolean(scheduleAt);
 
   // Only client-visible comments can be withheld: switching to Internal drops
@@ -150,8 +153,12 @@ export function CommentComposer({
           </Text>
 
           <View style={{ flexDirection: "row", flexWrap: "wrap", marginTop: spacing.sm, gap: spacing.sm }}>
-            <ActionChip label={isInternal ? t("comments.internalChecked") : t("comments.internal")} onPress={() => onChangeIsInternal(true)} />
-            <ActionChip label={!isInternal ? t("comments.clientChecked") : t("comments.client")} onPress={() => onChangeIsInternal(false)} />
+            {variant === "ticket" ? (
+              <>
+                <ActionChip label={isInternal ? t("comments.internalChecked") : t("comments.internal")} onPress={() => onChangeIsInternal(true)} />
+                <ActionChip label={!isInternal ? t("comments.clientChecked") : t("comments.client")} onPress={() => onChangeIsInternal(false)} />
+              </>
+            ) : null}
             {onChangeIsResolution ? (
               <ActionChip
                 label={isResolution ? t("comments.resolutionChecked") : t("comments.resolution")}

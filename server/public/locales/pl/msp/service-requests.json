@@ -212,7 +212,140 @@
       "historyOperations": {
         "service_request_submission_created": "Zgłoszenie utworzone",
         "service_request_submission_execution_succeeded": "Wykonanie powiodło się",
-        "service_request_submission_execution_failed": "Wykonanie nie powiodło się"
+        "service_request_submission_execution_failed": "Wykonanie nie powiodło się",
+        "service_request_submission_mapping_applied": "Zastosowano mapowanie odpowiedzi",
+        "service_request_submission_mapping_field_applied": "Zaktualizowano zmapowane pole",
+        "service_request_submission_mapping_field_failed": "Zmapowane pole nie powiodło się"
+      },
+      "mapping": {
+        "title": "Mapowanie odpowiedzi",
+        "description": "Zastosuj opublikowane mapowanie odpowiedzi, aby zaktualizować konto i jego zasoby na podstawie tego zgłoszenia. Oryginalna odpowiedź nigdy nie jest zmieniana.",
+        "noPublishedMapping": "Brak opublikowanego mapowania odpowiedzi dla tej definicji. Opublikuj je w sekcji „Mapowanie odpowiedzi” powyżej.",
+        "preview": "Podgląd",
+        "previewing": "Generowanie podglądu…",
+        "apply": "Zastosuj mapowanie",
+        "applying": "Stosowanie…",
+        "previewTitle": "Podgląd (bez zapisu zmian) · mapowanie v{{version}}",
+        "resultsTitle": "Zastosowane uruchomienia",
+        "noRuns": "Do tego zgłoszenia nie zastosowano jeszcze mapowania.",
+        "runLabel": "Uruchomienie {{date}} · {{status}}",
+        "runActor": "przez {{actor}}",
+        "replayed": "To uruchomienie zostało już zastosowane; wyświetlany jest zapisany wynik.",
+        "summary": "{{applied}} zastosowano · {{skipped}} pominięto · {{failed}} nie powiodło się",
+        "columns": {
+          "question": "Pytanie",
+          "destination": "Miejsce docelowe",
+          "target": "Cel",
+          "before": "Przed",
+          "after": "Po",
+          "status": "Wynik",
+          "detail": "Szczegóły"
+        },
+        "emptyValue": "—",
+        "unresolvedTarget": "Nie rozwiązano",
+        "status": {
+          "applied": "Zastosowano",
+          "skipped_answer_absent": "Pominięto — brak odpowiedzi",
+          "skipped_no_change": "Pominięto — już aktualne",
+          "failed_validation": "Błąd — nieprawidłowa wartość",
+          "failed_type_conversion": "Błąd — niewłaściwy typ",
+          "failed_permission": "Błąd — brak uprawnień",
+          "failed_asset_unresolved": "Błąd — nie znaleziono zasobu",
+          "failed_asset_ambiguous": "Błąd — pasuje wiele zasobów"
+        },
+        "runStatus": {
+          "pending": "W toku",
+          "applied": "Zastosowano",
+          "partially_applied": "Zastosowano częściowo",
+          "failed": "Niepowodzenie",
+          "no_op": "Brak zmian"
+        }
+      }
+    },
+    "answerMapping": {
+      "title": "Mapowanie odpowiedzi",
+      "description": "Przypisz pytania do pól konta i zasobów. Zastosowanie zgłoszenia aktualizuje tylko zmapowane pola i nigdy nie zmienia zapisanych odpowiedzi.",
+      "loading": "Ładowanie mapowania…",
+      "noQuestions": "Dodaj pola formularza przed mapowaniem odpowiedzi.",
+      "noRules": "Brak reguł mapowania.",
+      "addRule": "Dodaj regułę",
+      "editRule": "Edytuj",
+      "removeRule": "Usuń",
+      "actionsFor": "Działania dla {{question}}",
+      "selection": {
+        "selectPage": "Zaznacz reguły na tej stronie",
+        "selectRule": "Zaznacz {{question}}",
+        "selectedCount": "Zaznaczono: {{count}}",
+        "removeSelected": "Usuń zaznaczone",
+        "clear": "Wyczyść",
+        "confirmTitle": "Usunąć zaznaczone reguły?",
+        "confirmMessage": "Usunąć {{count}} zaznaczonych reguł z wersji roboczej? Opublikowane wersje pozostaną bez zmian do czasu ponownej publikacji."
+      },
+      "save": "Zapisz regułę",
+      "cancel": "Anuluj",
+      "publish": "Opublikuj mapowanie",
+      "publishing": "Publikowanie…",
+      "state": {
+        "neverPublished": "Nigdy nie opublikowano",
+        "published": "Opublikowano v{{version}}",
+        "unpublishedChanges": "Nieopublikowane zmiany",
+        "upToDate": "Opublikowana wersja jest aktualna"
+      },
+      "fields": {
+        "question": "Pytanie",
+        "destinationKind": "Miejsce docelowe",
+        "targetField": "Pole",
+        "assetStrategy": "Jak znaleźć zasób",
+        "assetRefQuestion": "Pytanie, którego odpowiedź identyfikuje zasób",
+        "matchAttribute": "Dopasuj według",
+        "matchQuestion": "Pytanie, którego odpowiedź jest dopasowywana",
+        "attributeKey": "Klucz atrybutu niestandardowego"
+      },
+      "placeholders": {
+        "question": "Wybierz pytanie",
+        "destinationKind": "Wybierz miejsce docelowe",
+        "targetField": "Wybierz pole",
+        "attributeKey": "np. rack_position"
+      },
+      "targetFieldGroups": {
+        "attribute": "Atrybut niestandardowy…"
+      },
+      "strategies": {
+        "answer-asset-ref": "Odpowiedź jest zasobem",
+        "match-attribute": "Dopasuj odpowiedź do atrybutu zasobu"
+      },
+      "matchAttributes": {
+        "asset_tag": "Tag zasobu",
+        "serial_number": "Numer seryjny",
+        "name": "Nazwa zasobu"
+      },
+      "columns": {
+        "question": "Pytanie",
+        "destination": "Miejsce docelowe",
+        "field": "Pole",
+        "selector": "Wybór zasobu",
+        "actions": "Akcje"
+      },
+      "selectorSummary": {
+        "account": "Konto zgłoszenia",
+        "answerAssetRef": "Zasób z „{{question}}”",
+        "matchAttribute": "{{attribute}} = „{{question}}”"
+      },
+      "unknownQuestion": "Brakujące pytanie ({{key}})",
+      "messages": {
+        "ruleSaved": "Zapisano regułę mapowania",
+        "ruleRemoved": "Usunięto regułę mapowania",
+        "rulesRemoved_one": "Usunięto regułę mapowania",
+        "rulesRemoved_few": "Usunięto {{count}} reguły mapowania",
+        "rulesRemoved_many": "Usunięto {{count}} reguł mapowania",
+        "rulesRemoved_other": "Usunięto reguły mapowania: {{count}}",
+        "published": "Opublikowano mapowanie odpowiedzi",
+        "saveFailed": "Nie udało się zapisać reguły mapowania",
+        "removeFailed": "Nie udało się usunąć reguły mapowania",
+        "publishFailed": "Nie udało się opublikować mapowania odpowiedzi",
+        "previewFailed": "Nie udało się wygenerować podglądu mapowania",
+        "applyFailed": "Nie udało się zastosować mapowania odpowiedzi",
+        "applied": "Zastosowano mapowanie odpowiedzi"
       }
     }
   },

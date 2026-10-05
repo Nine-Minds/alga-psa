@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync, spawnSync } from 'node:child_process';
-import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -26,7 +26,8 @@ test('actual infrastructure runner partitions, executes and rejects missing or s
   };
   for (const file of ['scripts/run-infrastructure-tests.mjs', 'scripts/verify-infrastructure-shards.mjs',
     'scripts/lib/test-discovery.mjs', 'scripts/lib/test-execution-evidence.mjs', 'scripts/lib/test-revision.mjs', 'scripts/lib/test-sharding.mjs',
-    'scripts/lib/infrastructure-selection.mjs', 'scripts/lib/integration-selection.mjs']) {
+    'scripts/lib/infrastructure-selection.mjs', 'scripts/lib/integration-selection.mjs',
+    'scripts/lib/flaky-policy.mjs', 'scripts/lib/vitest-flaky-reporter.mjs']) {
     write(file, readFileSync(path.join(source, file), 'utf8'));
   }
   write('.gitignore', 'node_modules/\ntest-results/\n');
@@ -39,7 +40,10 @@ test('actual infrastructure runner partitions, executes and rejects missing or s
   git('add', '.'); git('commit', '-qm', 'fixture');
   const run = (script, index = 1, mode = 'full', total = 3, environment = {}) => spawnSync(process.execPath, [path.join(root, 'scripts', script)], {
     cwd: root, encoding: 'utf8', timeout: 30_000,
+    // GITHUB_EVENT_NAME drives the retry-only-pass policy, so it is pinned here
+    // rather than inherited from whatever run executes this test.
     env: { ...process.env, CI: '1', GITHUB_SHA: git('rev-parse', 'HEAD').trim(), TIER1_BASE_SHA: git('rev-parse', 'HEAD').trim(),
+      GITHUB_EVENT_NAME: 'pull_request', GITHUB_HEAD_REF: 'feature/flakes', GITHUB_REF_NAME: '',
       INFRA_SELECTION_RESULT: 'success', INFRA_EVENT: 'pull_request', INFRA_JOB_RESULT: 'success', INFRA_MODE: mode,
       INFRA_SHARD_INDEX: String(index), INFRA_SHARD_TOTAL: String(total), ...environment },
   });
@@ -156,6 +160,48 @@ test('actual infrastructure runner partitions, executes and rejects missing or s
   git('add', '.'); git('commit', '-qm', 'runtime change');
   assert.equal(run('verify-infrastructure-shards.mjs', 1, 'tier1', 1,
     { ...skipped, TIER1_BASE_SHA: beforeRuntime }).status, 1);
+
+  // The runner owns --retry=1 and the flaky reporter, so a fail-then-pass is
+  // recorded instead of vanishing into a rerun: a warning on a pull request, a
+  // failure on a push, and an upload copy only when something retried.
+  const marker = JSON.stringify(path.join(root, 'test-results/infrastructure-marker'));
+  write('server/src/test/infrastructure/recovers.test.ts', [
+    "import { existsSync, mkdirSync, writeFileSync } from 'node:fs';",
+    "import nodePath from 'node:path';",
+    "test('recovers on retry', () => {",
+    `  if (!existsSync(${marker})) {`,
+    `    mkdirSync(nodePath.dirname(${marker}), { recursive: true });`,
+    `    writeFileSync(${marker}, 'attempted');`,
+    "    throw new Error('deliberate first-attempt failure');",
+    '  }',
+    '  expect(2 + 3).toBe(5);',
+    '});',
+  ].join('\n') + '\n');
+  git('add', '.'); git('commit', '-qm', 'add a deliberately flaky infrastructure suite');
+  const flakyId = 'src/test/infrastructure/recovers.test.ts > recovers on retry';
+  const onPullRequest = run('run-infrastructure-tests.mjs', 1, 'full', 1);
+  assert.equal(onPullRequest.status, 0, onPullRequest.stdout + onPullRequest.stderr);
+  assert.ok(onPullRequest.stderr.includes(`::warning::Flaky test passed only on retry: ${flakyId}`), onPullRequest.stderr);
+  const document = read('test-results/infrastructure/flaky-tests.json');
+  assert.deepEqual([document.suite, document.job, document.eventName, document.branch],
+    ['infrastructure', 'infrastructure shard 1/1', 'pull_request', 'feature/flakes']);
+  assert.deepEqual(document.tests.map(entry => entry.testId), [flakyId]);
+  assert.deepEqual(read('test-results/infrastructure-flaky/flaky-tests.json'), document);
+
+  rmSync(path.join(root, 'test-results/infrastructure-marker'));
+  const onPush = run('run-infrastructure-tests.mjs', 1, 'full', 1,
+    { GITHUB_EVENT_NAME: 'push', GITHUB_HEAD_REF: '', GITHUB_REF_NAME: 'main' });
+  assert.equal(onPush.status, 1, onPush.stdout);
+  const pushEvidence = read('test-results/infrastructure/evidence.json');
+  assert.equal(pushEvidence.status, 'failed');
+  assert.ok(pushEvidence.failures.includes(`retry-only pass on push run: ${flakyId}`), pushEvidence.failures.join('\n'));
+
+  const stable = run('run-infrastructure-tests.mjs', 1, 'full', 1);
+  assert.equal(stable.status, 0, stable.stdout + stable.stderr);
+  assert.deepEqual(read('test-results/infrastructure/flaky-tests.json').tests, []);
+  assert.equal(existsSync(path.join(root, 'test-results/infrastructure-flaky')), false);
+  rmSync(path.join(root, 'server/src/test/infrastructure/recovers.test.ts'));
+  git('add', '.'); git('commit', '-qm', 'remove the deliberately flaky suite');
 
   // Reproduce the CI failure: omitting a mandatory catalog-pricing suite must
   // still fail collection even when every remaining fixture test passes.

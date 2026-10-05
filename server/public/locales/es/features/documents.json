@@ -217,7 +217,19 @@
     "subtitle": "Vea y descargue sus documentos compartidos",
     "searchPlaceholder": "Buscar documentos...",
     "showing": "{{count}} documentos",
-    "loadError": "Error al cargar los documentos. Inténtelo de nuevo."
+    "loadError": "Error al cargar los documentos. Inténtelo de nuevo.",
+    "view": "Ver",
+    "download": "Descargar",
+    "downloadPdf": "Descargar PDF",
+    "downloadMarkdown": "Descargar Markdown",
+    "previewUnavailable": "La vista previa no está disponible para este tipo de archivo.",
+    "previewError": "No se pudo cargar la vista previa. Inténtelo de nuevo.",
+    "downloadError": "No se pudo descargar este documento. Inténtelo de nuevo.",
+    "notFound": "Este documento ya no está disponible.",
+    "noContent": "Este documento no tiene contenido para exportar.",
+    "accessDenied": "No tiene acceso a este documento.",
+    "loadingPreview": "Cargando vista previa…",
+    "exportFailed": "La exportación a PDF falló. Pruebe con Markdown."
   },
   "kb": {
     "title": "Base de conocimientos",

@@ -28,14 +28,11 @@ export default defineConfig({
     exclude: [...configDefaults.exclude, 'src/__tests__/integration/**'],
     environment: 'node',
     setupFiles: ['./src/test-utils/setup.ts'],
+    globalSetup: ['./src/test-utils/time-skipping-server.global-setup.ts'],
     testTimeout: 120000, // 2 minutes for E2E tests
     hookTimeout: 60000, // 1 minute for setup/teardown
     pool: 'forks', // Required for Temporal tests
-    poolOptions: {
-      forks: {
-        singleFork: true, // Prevent issues with concurrent Temporal environments
-      },
-    },
+    maxWorkers: 1, // Prevent issues with concurrent Temporal environments
     // Different configurations for different test types
     env: {
       NODE_ENV: 'test',
