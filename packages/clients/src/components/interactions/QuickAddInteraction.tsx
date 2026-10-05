@@ -391,8 +391,16 @@ export function QuickAddInteraction({
     if (isEditMode && editingInteraction) {
       setTitle(editingInteraction.title || '');
       // type_id / status_id are set from fetchData, once their options exist.
+      const storedStart = editingInteraction.start_time ? new Date(editingInteraction.start_time) : undefined;
+      const storedEnd = editingInteraction.end_time ? new Date(editingInteraction.end_time) : undefined;
       // Convert duration from total minutes to hours and minutes
-      if (editingInteraction.duration) {
+      const storedRange = storedStart && storedEnd ? durationFromRange(storedStart, storedEnd) : null;
+      if (storedRange && !storedRange.exceedsCap && storedRange.totalMinutes >= 0) {
+        // The range is what the server will store, so show that rather than a legacy
+        // duration that disagrees with it and would be rewritten on save.
+        setDurationHours(storedRange.hours > 0 ? storedRange.hours.toString() : '');
+        setDurationMinutes(storedRange.minutes > 0 ? storedRange.minutes.toString() : '');
+      } else if (editingInteraction.duration) {
         const totalMinutes = editingInteraction.duration;
         // A legacy row may carry a duration the fields cannot hold; clamp it so the form
         // never shows a value it would silently change on save.
@@ -406,8 +414,6 @@ export function QuickAddInteraction({
         setDurationHours('');
         setDurationMinutes('');
       }
-      const storedStart = editingInteraction.start_time ? new Date(editingInteraction.start_time) : undefined;
-      const storedEnd = editingInteraction.end_time ? new Date(editingInteraction.end_time) : undefined;
       setStartTime(storedStart);
       setEndTime(storedEnd);
       // Surface a stored range that exceeds the cap so saving the edit forces the user to
@@ -616,6 +622,17 @@ export function QuickAddInteraction({
     return clampDuration(durationHours, durationMinutes).totalMinutes;
   };
 
+  // A stored duration is exactly end − start, so the range wins whenever the form holds
+  // both ends of it; the duration fields only speak for themselves when it doesn't.
+  // Submission already rejects an inverted or over-cap range, so this stays within the cap.
+  const getSubmittedDurationMinutes = (): number => {
+    if (startTime && endTime) {
+      const { totalMinutes } = durationFromRange(startTime, endTime);
+      if (totalMinutes >= 0) return totalMinutes;
+    }
+    return getTotalDurationMinutes();
+  };
+
   // Handle start time change
   const handleStartTimeChange = (date: Date) => {
     setStartTime(date);
@@ -792,7 +809,7 @@ export function QuickAddInteraction({
         title,
         notes: JSON.stringify(notesContent),
         type_id: typeId,
-        duration: getTotalDurationMinutes() > 0 ? getTotalDurationMinutes() : null,
+        duration: getSubmittedDurationMinutes() > 0 ? getSubmittedDurationMinutes() : null,
         start_time: startTime,
         end_time: endTime,
         status_id: statusId,

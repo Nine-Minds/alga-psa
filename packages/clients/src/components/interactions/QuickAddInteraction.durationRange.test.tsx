@@ -240,6 +240,38 @@ describe('QuickAddInteraction duration/range agreement', () => {
     }));
   });
 
+  it('shows and saves the range when a stored sub-cap duration disagrees with it', async () => {
+    render(<QuickAddInteraction {...props} editingInteraction={{
+      interaction_id: 'interaction-1',
+      type_id: 'call',
+      type_name: 'Call',
+      title: 'Quick call',
+      status_id: 'open',
+      user_id: 'creator',
+      client_id: 'client',
+      contact_name_id: null,
+      // Legacy row: 90 minutes logged against a 30-minute window.
+      duration: 90,
+      start_time: new Date(START),
+      end_time: new Date('2026-10-01T09:30:00.000Z'),
+    } as any} />);
+    await screen.findByRole('option', { name: 'Call' });
+
+    // The range is authoritative, so the user sees what saving will store.
+    expect(hoursField()).toHaveValue(null);
+    expect(minutesField()).toHaveValue(30);
+    expect(screen.queryByText(TOO_LONG)).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Update Interaction' }));
+
+    await waitFor(() => expect(mocks.updateInteraction).toHaveBeenCalledOnce());
+    expect(mocks.updateInteraction).toHaveBeenCalledWith('interaction-1', expect.objectContaining({
+      duration: 30,
+      start_time: new Date(START),
+      end_time: new Date('2026-10-01T09:30:00.000Z'),
+    }));
+  });
+
   it('rejects an over-cap range submitted around the disabled save button', async () => {
     // Submitting the form itself (Enter in a field) bypasses the disabled footer button,
     // so handleSubmit carries its own guard.
