@@ -18,7 +18,8 @@ vi.mock('@alga-psa/db', () => ({
   withTransaction: async (_knex: unknown, fn: (trx: unknown) => unknown) => fn({}),
 }));
 
-vi.mock('../lib/adapters/quoteAdapters', () => ({
+vi.mock('../lib/adapters/quoteAdapters', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../lib/adapters/quoteAdapters')>()),
   mapDbQuoteToViewModel: (...args: unknown[]) => mapDbQuoteToViewModelMock(...args),
 }));
 
@@ -126,7 +127,26 @@ describe('on-screen previews render in the recipient locale', () => {
     expect(preview.html).toContain('03/04/2026');
   });
 
-  it('localizes data-driven cadence band names and the Optional section for a grouped quote', async () => {
+  it.each([
+    {
+      locale: 'de',
+      monthly: 'Monatlich',
+      annually: 'Jährlich',
+      optional: 'Optional (falls ausgewählt)',
+      monthlyTotal: 'Monatlich gesamt',
+      annualTotal: 'Jährlich gesamt',
+      optionalTotal: 'Optional falls ausgewählt',
+    },
+    {
+      locale: 'sv',
+      monthly: 'Månadsvis',
+      annually: 'Årligen',
+      optional: 'Tillval (om valt)',
+      monthlyTotal: 'Månadsvis totalt',
+      annualTotal: 'Årligen totalt',
+      optionalTotal: 'Tillval om valt',
+    },
+  ])('localizes grouped quote cadence bands and optional totals in $locale', async ({ locale, monthly, annually, optional, monthlyTotal, annualTotal, optionalTotal }) => {
     const cadenceTemplateAst: TemplateAst = {
       kind: 'invoice-template-ast',
       version: TEMPLATE_AST_VERSION,
@@ -271,16 +291,17 @@ describe('on-screen previews render in the recipient locale', () => {
     };
     mapDbQuoteToViewModelMock.mockResolvedValue(cadenceViewModel);
 
-    const service = buildService('de', 'GB');
+    const service = buildService(locale, 'GB');
     const preview = await service.renderQuotePreview({ quoteId: 'quote-3', templateAst: cadenceTemplateAst });
 
     // Data-driven band names are localized from the documents namespace.
-    expect(preview.html).toContain('Monatlich');
-    expect(preview.html).toContain('Jährlich');
-    expect(preview.html).toContain('Optional (falls ausgewählt)');
+    expect(preview.html).toContain(monthly);
+    expect(preview.html).toContain(annually);
+    expect(preview.html).toContain(optional);
+    expect(preview.html).toContain(optionalTotal);
     // Band footers interpolate the localized cadence into `labels.cadenceTotal`.
-    expect(preview.html).toContain('Monatlich gesamt');
-    expect(preview.html).toContain('Jährlich gesamt');
+    expect(preview.html).toContain(monthlyTotal);
+    expect(preview.html).toContain(annualTotal);
     // An unknown cadence has no translation: it keeps the English fallback name
     // and the `${name} Total` footer rather than rendering a raw key/blank.
     expect(preview.html).toContain('Biweekly');
