@@ -1871,12 +1871,12 @@
     }
   },
   "clientDefaultTimeEntryServiceSettings": {
-    "title": "Default time-entry service",
-    "label": "Default time-entry service",
-    "placeholder": "Use tenant default",
-    "help": "Used for new ticket time entries for this client. Clear the selection to use the tenant default.",
-    "updatedSuccess": "Default time-entry service updated.",
-    "saveError": "Failed to save default time-entry service",
-    "loadError": "Failed to load default time-entry service"
+    "title": "Standarddienst für Zeiteinträge",
+    "label": "Standarddienst für Zeiteinträge",
+    "placeholder": "Standard des Mandanten verwenden",
+    "help": "Wird für neue Zeiteinträge in Tickets dieses Kunden verwendet. Auswahl aufheben, um den Standard des Mandanten zu verwenden.",
+    "updatedSuccess": "Standarddienst für Zeiteinträge aktualisiert.",
+    "saveError": "Standarddienst für Zeiteinträge konnte nicht gespeichert werden",
+    "loadError": "Standarddienst für Zeiteinträge konnte nicht geladen werden"
   }
 }

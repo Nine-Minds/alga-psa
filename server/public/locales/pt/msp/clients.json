@@ -1871,12 +1871,12 @@
     }
   },
   "clientDefaultTimeEntryServiceSettings": {
-    "title": "Default time-entry service",
-    "label": "Default time-entry service",
-    "placeholder": "Use tenant default",
-    "help": "Used for new ticket time entries for this client. Clear the selection to use the tenant default.",
-    "updatedSuccess": "Default time-entry service updated.",
-    "saveError": "Failed to save default time-entry service",
-    "loadError": "Failed to load default time-entry service"
+    "title": "Serviço padrão para registros de tempo",
+    "label": "Serviço padrão para registros de tempo",
+    "placeholder": "Usar o padrão da organização",
+    "help": "Usado em novos registros de tempo em tickets deste cliente. Limpe a seleção para usar o padrão da organização.",
+    "updatedSuccess": "Serviço padrão para registros de tempo atualizado.",
+    "saveError": "Falha ao salvar o serviço padrão para registros de tempo",
+    "loadError": "Falha ao carregar o serviço padrão para registros de tempo"
   }
 }

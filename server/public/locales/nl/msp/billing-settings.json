@@ -167,17 +167,17 @@
       }
     },
     "timeEntryService": {
-      "title": "Default time-entry service",
-      "description": "Fallback service used for new ticket time entries. Per-client defaults take precedence.",
-      "label": "Default time-entry service",
-      "placeholder": "No default service",
-      "help": "Used for new ticket time entries when the client has no default of its own. The service must still be active and covered by the client contract.",
+      "title": "Standaarddienst voor tijdregistraties",
+      "description": "Terugvaldienst voor nieuwe tijdregistraties op tickets. Klantspecifieke standaardinstellingen hebben voorrang.",
+      "label": "Standaarddienst voor tijdregistraties",
+      "placeholder": "Geen standaarddienst",
+      "help": "Wordt gebruikt voor nieuwe tijdregistraties op tickets als de klant geen eigen standaard heeft. De dienst moet actief zijn en onder het klantcontract vallen.",
       "toast": {
-        "updated": "Default time-entry service updated."
+        "updated": "Standaarddienst voor tijdregistraties bijgewerkt."
       },
       "errors": {
-        "load": "Failed to load default time-entry service",
-        "save": "Failed to save default time-entry service"
+        "load": "Standaarddienst voor tijdregistraties kan niet worden geladen",
+        "save": "Standaarddienst voor tijdregistraties kan niet worden opgeslagen"
       }
     }
   },

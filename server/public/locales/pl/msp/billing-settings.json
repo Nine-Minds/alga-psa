@@ -167,17 +167,17 @@
       }
     },
     "timeEntryService": {
-      "title": "Default time-entry service",
-      "description": "Fallback service used for new ticket time entries. Per-client defaults take precedence.",
-      "label": "Default time-entry service",
-      "placeholder": "No default service",
-      "help": "Used for new ticket time entries when the client has no default of its own. The service must still be active and covered by the client contract.",
+      "title": "Domyślna usługa dla wpisów czasu",
+      "description": "Usługa zastępcza dla nowych wpisów czasu w zgłoszeniach. Ustawienia klienta mają pierwszeństwo.",
+      "label": "Domyślna usługa dla wpisów czasu",
+      "placeholder": "Brak domyślnej usługi",
+      "help": "Używana dla nowych wpisów czasu w zgłoszeniach, gdy klient nie ma własnej usługi domyślnej. Usługa musi być aktywna i objęta umową z klientem.",
       "toast": {
-        "updated": "Default time-entry service updated."
+        "updated": "Zaktualizowano domyślną usługę dla wpisów czasu."
       },
       "errors": {
-        "load": "Failed to load default time-entry service",
-        "save": "Failed to save default time-entry service"
+        "load": "Nie udało się wczytać domyślnej usługi dla wpisów czasu",
+        "save": "Nie udało się zapisać domyślnej usługi dla wpisów czasu"
       }
     }
   },

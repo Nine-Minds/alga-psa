@@ -167,17 +167,17 @@
       }
     },
     "timeEntryService": {
-      "title": "Default time-entry service",
-      "description": "Fallback service used for new ticket time entries. Per-client defaults take precedence.",
-      "label": "Default time-entry service",
-      "placeholder": "No default service",
-      "help": "Used for new ticket time entries when the client has no default of its own. The service must still be active and covered by the client contract.",
+      "title": "Servizio predefinito per le registrazioni di tempo",
+      "description": "Servizio alternativo per le nuove registrazioni di tempo nei ticket. Le impostazioni del cliente hanno la precedenza.",
+      "label": "Servizio predefinito per le registrazioni di tempo",
+      "placeholder": "Nessun servizio predefinito",
+      "help": "Utilizzato per le nuove registrazioni di tempo nei ticket quando il cliente non ha un servizio predefinito. Il servizio deve essere attivo e coperto dal contratto del cliente.",
       "toast": {
-        "updated": "Default time-entry service updated."
+        "updated": "Servizio predefinito per le registrazioni di tempo aggiornato."
       },
       "errors": {
-        "load": "Failed to load default time-entry service",
-        "save": "Failed to save default time-entry service"
+        "load": "Impossibile caricare il servizio predefinito per le registrazioni di tempo",
+        "save": "Impossibile salvare il servizio predefinito per le registrazioni di tempo"
       }
     }
   },
