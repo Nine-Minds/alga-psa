@@ -32,7 +32,7 @@ import TaskQuickAdd from './TaskQuickAdd';
 import TaskEdit from './TaskEdit';
 import PhaseQuickAdd from './PhaseQuickAdd';
 import TaskListView from './TaskListView';
-import ProjectGanttView from './ProjectGanttView';
+import ProjectGanttView, { DEFAULT_GANTT_SETTINGS, type GanttSettings } from './ProjectGanttView';
 import ViewSwitcher from '@alga-psa/ui/components/ViewSwitcher';
 import { getProjectTaskStatuses, getProjectStatusesByPhase, updatePhase, deletePhase, getProjectTreeData, reorderPhase, markPhaseComplete, reopenPhase } from '../actions/projectActions';
 import { checkCurrentUserPermissions } from '@alga-psa/auth/actions';
@@ -40,7 +40,7 @@ import type { ProjectBillingOverview } from '@alga-psa/types';
 import { useProjectBillingIntegration } from '../context/ProjectBillingIntegrationContext';
 import { derivePhaseBillingBadges, getCurrentDateInUserTimeZone } from '@alga-psa/core';
 import { useCurrencyFormat } from '@alga-psa/ui/lib';
-import { updateTaskStatus, reorderTask, reorderTasksInStatus, moveTaskToPhase, updateTaskWithChecklist, getTaskChecklistItems, getTaskResourcesAction, getTaskTicketLinksAction, duplicateTaskToPhase, deleteTask as deleteTaskAction, getTasksForPhase, getTaskById, getProjectTaskData, assignTeamToProjectTask, removeTeamFromProjectTask, bulkAddTagsToTasks } from '../actions/projectTaskActions';
+import { updateTaskStatus, reorderTask, reorderTasksInStatus, moveTaskToPhase, updateTaskWithChecklist, getTaskChecklistItems, getTaskResourcesAction, getTaskTicketLinksAction, duplicateTaskToPhase, deleteTask as deleteTaskAction, getTasksForPhase, getTaskById, getProjectTaskData, addTaskDependency, removeTaskDependency, assignTeamToProjectTask, removeTeamFromProjectTask, bulkAddTagsToTasks } from '../actions/projectTaskActions';
 import styles from './ProjectDetail.module.css';
 import { toast } from 'react-hot-toast';
 import {
@@ -90,6 +90,7 @@ const PROJECT_KANBAN_STICKY_STATUS_NAMES_SETTING = 'project_kanban_sticky_status
 // Purely visual (does not change the admin `is_visible` config) — it just
 // declutters the board to make dragging across columns easier.
 const PROJECT_LIST_DENSITY_LEVEL_SETTING = 'project_list_density_level';
+const PROJECT_GANTT_SETTINGS_SETTING = 'project_gantt_settings';
 const PROJECT_LIST_COLUMN_WIDTHS_SETTING = 'project_list_column_widths';
 // Legacy localStorage key previously used by TaskListView; reused for one-time
 // hydration so existing per-project widths survive the move to server prefs.
@@ -270,6 +271,7 @@ export default function ProjectDetail({
     { key: PROJECT_KANBAN_STICKY_STATUS_NAMES_SETTING, defaultValue: false, debounceMs: 300 },
     { key: hiddenStatusesPrefKey, defaultValue: [] as string[], debounceMs: 300 },
     { key: PROJECT_LIST_DENSITY_LEVEL_SETTING, defaultValue: PROJECT_LIST_DENSITY_DEFAULT, debounceMs: 300 },
+    { key: PROJECT_GANTT_SETTINGS_SETTING, defaultValue: DEFAULT_GANTT_SETTINGS as GanttSettings, debounceMs: 300 },
     {
       key: columnWidthsPrefKey,
       defaultValue: {} as Record<string, number>,
@@ -285,6 +287,7 @@ export default function ProjectDetail({
   const { value: hiddenKanbanStatusIds, setValue: setHiddenKanbanStatusIds } = prefs[hiddenStatusesPrefKey];
   const { value: listDensityLevel, setValue: setListDensityLevel } = prefs[PROJECT_LIST_DENSITY_LEVEL_SETTING];
   const { value: listColumnWidths, setValue: setListColumnWidths } = prefs[columnWidthsPrefKey];
+  const { value: ganttSettings, setValue: setGanttSettings } = prefs[PROJECT_GANTT_SETTINGS_SETTING];
   const listDensity = useMemo(() => {
     const index = Math.min(
       PROJECT_LIST_DENSITY_PRESETS.length - 1,
@@ -893,6 +896,30 @@ export default function ProjectDetail({
 
     return filtered;
   }, [allProjectTasks, matchesSearch, searchQuery, selectedPriorityFilter, selectedTaskTypeFilter, selectedTaskTags, allProjectTaskTags, selectedAgentFilter, selectedTeamFilter, includeUnassignedAgents, primaryAgentOnly, allProjectTaskResources]);
+
+  const hasActiveTaskFilters = Boolean(
+    searchQuery.trim() ||
+    selectedTaskTags.length > 0 ||
+    selectedAgentFilter.length > 0 ||
+    selectedTeamFilter.length > 0 ||
+    includeUnassignedAgents ||
+    selectedPriorityFilter !== 'all' ||
+    selectedTaskTypeFilter !== 'all'
+  );
+  const ganttVisibleTaskIds = useMemo(
+    () => new Set(allFilteredTasks.map(task => task.task_id)),
+    [allFilteredTasks]
+  );
+  const ganttChecklistSummary = useMemo(() => {
+    const summary: Record<string, { total: number; completed: number }> = {};
+    for (const [taskId, items] of Object.entries(allChecklistItems)) {
+      summary[taskId] = {
+        total: items.length,
+        completed: items.filter((item: any) => item.completed).length,
+      };
+    }
+    return summary;
+  }, [allChecklistItems]);
 
   // Calculate filtered phase task counts (like list view's phaseGroups)
   // Falls back to server-fetched counts while allProjectTasks is loading
@@ -2850,6 +2877,54 @@ export default function ProjectDetail({
     }
   };
 
+  // Timeline: a dependency drawn from one bar to another is a blocking link.
+  const handleGanttAddDependency = async (predecessorTaskId: string, successorTaskId: string) => {
+    try {
+      const dependency = await addTaskDependency(predecessorTaskId, successorTaskId, 'blocks');
+      if (isReturnedActionError(dependency)) {
+        toast.error(getErrorMessage(dependency));
+        return;
+      }
+      setAllTaskDependencies(prev => ({
+        ...prev,
+        [predecessorTaskId]: {
+          predecessors: prev[predecessorTaskId]?.predecessors ?? [],
+          successors: [...(prev[predecessorTaskId]?.successors ?? []), dependency],
+        },
+        [successorTaskId]: {
+          predecessors: [...(prev[successorTaskId]?.predecessors ?? []), dependency],
+          successors: prev[successorTaskId]?.successors ?? [],
+        },
+      }));
+      toast.success(t('gantt.dependencyAdded', 'Dependency added'));
+    } catch (error) {
+      handleError(error, 'Failed to add dependency. Please try again.');
+    }
+  };
+
+  const handleGanttRemoveDependency = async (dependencyId: string) => {
+    try {
+      const result = await removeTaskDependency(dependencyId);
+      if (isReturnedActionError(result)) {
+        toast.error(getErrorMessage(result));
+        return;
+      }
+      setAllTaskDependencies(prev => {
+        const next: typeof prev = {};
+        for (const [taskId, entry] of Object.entries(prev)) {
+          next[taskId] = {
+            predecessors: entry.predecessors.filter(dep => dep.dependency_id !== dependencyId),
+            successors: entry.successors.filter(dep => dep.dependency_id !== dependencyId),
+          };
+        }
+        return next;
+      });
+      toast.success(t('gantt.dependencyRemoved', 'Dependency removed'));
+    } catch (error) {
+      handleError(error, 'Failed to remove dependency. Please try again.');
+    }
+  };
+
   const refreshTaskAfterTeamChange = async (taskId: string) => {
     const [updatedTaskResult, resourcesResult] = await Promise.all([
       getTaskById(taskId),
@@ -3503,33 +3578,18 @@ export default function ProjectDetail({
       );
     }
 
-    // Timeline header: the Gantt carries its own scale/dependency controls, so
-    // only the heading and the view switcher belong here.
-    if (viewMode === 'gantt') {
-      return (
-        <div className="mb-4 flex-shrink-0">
-          <div className="flex flex-wrap items-center gap-3">
-            <h2 className="text-xl font-bold">{t('projectDetail.timeline', 'Timeline')}</h2>
-            <div className="ml-auto">
-              <ViewSwitcher
-                currentView={viewMode}
-                onChange={(v) => setViewMode(v as ProjectViewMode)}
-                options={viewSwitcherOptions}
-              />
-            </div>
-          </div>
-        </div>
-      );
-    }
-
-    if (viewMode === 'list') {
+    // The timeline shares the list view's search and filters; its own scale and
+    // display controls live inside the chart toolbar.
+    if (viewMode === 'list' || viewMode === 'gantt') {
       return (
         <div className="mb-4 space-y-3 flex-shrink-0">
           {/* Top row: Title + Density + Pin + View Switcher */}
           <div className="flex justify-between items-center">
-            <h2 className="text-xl font-bold">{t('projectDetail.taskList', 'Task List')}</h2>
+            <h2 className="text-xl font-bold">
+              {viewMode === 'gantt' ? t('projectDetail.timeline', 'Timeline') : t('projectDetail.taskList', 'Task List')}
+            </h2>
             <div className="flex items-center gap-4">
-              <ViewDensityControl
+              {viewMode === 'list' && <ViewDensityControl
                 idPrefix="project-task-list-density"
                 value={listDensityLevel ?? PROJECT_LIST_DENSITY_DEFAULT}
                 onChange={setListDensityLevel}
@@ -3540,7 +3600,7 @@ export default function ProjectDetail({
                 decreaseTitle={t('projectDetail.spacing.decrease', 'Decrease list spacing')}
                 increaseTitle={t('projectDetail.spacing.increase', 'Increase list spacing')}
                 resetTitle={t('projectDetail.spacing.reset', 'Reset list spacing')}
-              />
+              />}
               <Tooltip content={isHeaderPinned ? t('projectDetail.unpinHeader', 'Unpin header') : t('projectDetail.pinHeader', 'Pin header to top')}>
                 <Button
                   id="pin-header-toggle-list"
@@ -4081,12 +4141,31 @@ export default function ProjectDetail({
 
       return (
         <ProjectGanttView
+          projectName={project.project_name}
           phases={projectPhases}
           tasks={allProjectTasks}
+          visibleTaskIds={hasActiveTaskFilters ? ganttVisibleTaskIds : undefined}
+          hasActiveFilters={hasActiveTaskFilters}
           statuses={projectStatuses}
           statusesByPhase={statusesByPhase}
           taskDependencies={allTaskDependencies}
+          checklistSummary={ganttChecklistSummary}
+          users={users}
+          settings={ganttSettings}
+          onSettingsChange={setGanttSettings}
+          canEdit={canCompletePhase}
           onTaskClick={handleTaskSelected}
+          onTaskDatesChange={handleListTaskUpdate}
+          onAddDependency={handleGanttAddDependency}
+          onRemoveDependency={handleGanttRemoveDependency}
+          onAddPhase={() => setShowPhaseQuickAdd(true)}
+          onAddTask={(phaseId) => {
+            const phase = projectPhases.find(p => p.phase_id === phaseId);
+            if (phase) {
+              setCurrentPhase(phase);
+              setShowQuickAdd(true);
+            }
+          }}
         />
       );
     }
