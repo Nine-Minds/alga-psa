@@ -194,3 +194,37 @@ describe('ContractLineDialog service removal keeps rates with their rows', () =>
     expect(screen.getByText('$200.00/unit')).not.toBeNull();
   });
 });
+
+describe('ContractLineDialog number inputs ignore the mouse wheel', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    actionMocks.getContractLinePresetFixedConfig.mockResolvedValue(null);
+    actionMocks.getContractLinePresetServices.mockResolvedValue([presetService('svc-a', 10000)]);
+    actionMocks.getServiceById.mockResolvedValue({ service_name: 'Service A', item_kind: 'service' });
+  });
+
+  it('blurs the hourly rounding fields instead of stepping their value', async () => {
+    renderDialog('Hourly');
+
+    const minimumBillable = await waitFor(() => {
+      const node = document.getElementById('minimum-billable-time') as HTMLInputElement | null;
+      expect(node).not.toBeNull();
+      return node!;
+    });
+    fireEvent.change(minimumBillable, { target: { value: '15' } });
+    minimumBillable.focus();
+    expect(document.activeElement).toBe(minimumBillable);
+
+    fireEvent.wheel(minimumBillable, { deltaY: -100 });
+
+    expect(document.activeElement).not.toBe(minimumBillable);
+    expect(minimumBillable.value).toBe('15');
+
+    const roundUp = document.getElementById('round-up-to-nearest') as HTMLInputElement;
+    fireEvent.change(roundUp, { target: { value: '30' } });
+    roundUp.focus();
+    fireEvent.wheel(roundUp, { deltaY: 100 });
+    expect(document.activeElement).not.toBe(roundUp);
+    expect(roundUp.value).toBe('30');
+  });
+});

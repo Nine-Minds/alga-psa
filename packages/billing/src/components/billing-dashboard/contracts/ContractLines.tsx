@@ -1557,6 +1557,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
                                           minimum_billable_time: e.target.value ? parseInt(e.target.value) : undefined
                                         })}
                                         placeholder="15"
+                                        onWheel={(e) => (e.target as HTMLInputElement).blur()}
                                         className="mt-1"
                                       />
                                     ) : (
@@ -1585,6 +1586,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
                                           round_up_to_nearest: e.target.value ? parseInt(e.target.value) : undefined
                                         })}
                                         placeholder="15"
+                                        onWheel={(e) => (e.target as HTMLInputElement).blur()}
                                         className="mt-1"
                                       />
                                     ) : (
@@ -1761,6 +1763,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
                                                     quantity: e.target.value ? parseInt(e.target.value) : undefined
                                                   }
                                                 })}
+                                                onWheel={(e) => (e.target as HTMLInputElement).blur()}
                                                 className="mt-1"
                                               />
                                             ) : (
@@ -1813,6 +1816,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
                                                     });
                                                   }
                                                 }}
+                                                onWheel={(e) => (e.target as HTMLInputElement).blur()}
                                                 className="pl-10"
                                               />
                                             </div>

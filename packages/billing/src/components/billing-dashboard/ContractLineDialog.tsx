@@ -709,6 +709,7 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
                       );
                     }}
                     min={isUnitFixedService(service) ? '0' : '1'}
+                    onWheel={(e) => (e.target as HTMLInputElement).blur()}
                     className="w-24"
                   />
                   {isUnitFixedService(service) && (
@@ -824,6 +825,7 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
                 placeholder={t('dialog.hourly.minutesPlaceholder', { defaultValue: '15' })}
                 min="0"
                 step="15"
+                onWheel={(e) => (e.target as HTMLInputElement).blur()}
                 className="w-32"
               />
               <p className="text-xs text-muted-foreground">
@@ -848,6 +850,7 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
                 placeholder={t('dialog.hourly.minutesPlaceholder', { defaultValue: '15' })}
                 min="0"
                 step="15"
+                onWheel={(e) => (e.target as HTMLInputElement).blur()}
                 className="w-32"
               />
               <p className="text-xs text-muted-foreground">

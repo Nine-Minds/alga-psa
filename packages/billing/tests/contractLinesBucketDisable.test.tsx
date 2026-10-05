@@ -322,3 +322,59 @@ describe('disabling a bucket on a contract line service', () => {
     });
   });
 });
+
+describe('contract line number inputs ignore the mouse wheel', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    actionMocks.checkContractHasInvoices.mockResolvedValue(false);
+    actionMocks.getActiveClientLocationsForBilling.mockResolvedValue([]);
+    actionMocks.getTemplateLineServicesWithConfigurations.mockResolvedValue([]);
+    actionMocks.getContractLineServicesWithConfigurations.mockResolvedValue([withoutOverlay()]);
+    actionMocks.getDetailedContractLines.mockResolvedValue([{
+      tenant: 'tenant-1',
+      contract_id: 'contract-1',
+      contract_line_id: 'line-1',
+      display_order: 1,
+      created_at: new Date(),
+      contract_line_name: 'Managed Services line',
+      billing_frequency: 'monthly',
+      billing_timing: 'arrears',
+      cadence_owner: 'client',
+      contract_line_type: 'Hourly',
+      default_rate: 15000,
+      minimum_billable_time: 15,
+      round_up_to_nearest: 15,
+      location_id: null,
+    }]);
+    actionMocks.getServices.mockResolvedValue({ services: [], totalCount: 0 });
+  });
+
+  it('blurs the rate and rounding fields instead of stepping their values', async () => {
+    renderContractLines();
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Edit' }));
+
+    const rate = await waitFor(() => {
+      const node = document.getElementById('rate-config-plain') as HTMLInputElement | null;
+      expect(node).not.toBeNull();
+      return node!;
+    });
+
+    for (const field of [
+      rate,
+      document.getElementById('min-billable-line-1') as HTMLInputElement,
+      document.getElementById('round-up-line-1') as HTMLInputElement,
+    ]) {
+      const before = field.value;
+      field.focus();
+      expect(document.activeElement).toBe(field);
+
+      fireEvent.wheel(field, { deltaY: -100 });
+
+      expect(document.activeElement).not.toBe(field);
+      expect(field.value).toBe(before);
+    }
+
+    expect(rate.value).toBe('150.00');
+  });
+});
