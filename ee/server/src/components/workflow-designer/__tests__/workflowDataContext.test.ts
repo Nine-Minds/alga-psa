@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { buildDataContext } from '../workflowDataContext';
 import { buildWorkflowReferenceFieldOptions } from '../workflowReferenceOptions';
+import { collectWorkflowConditionFields } from '../workflowConditionFields';
 import { applyCatalogActionChoiceToStep } from '../groupedActionSelection';
 import type { NodeStep, WorkflowDefinition } from '@alga-psa/workflows/runtime/client';
 import type { WorkflowDesignerCatalogAction } from '@alga-psa/workflows/runtime/designer/actionCatalog';
@@ -425,11 +426,131 @@ describe('workflow data context', () => {
 
     const context = buildDataContext(definition, 'loop-step', actionRegistry, null);
 
-    expect(context.forEach).toEqual({
+    // The runtime binds the loop position as the bare local `index`.
+    expect(context.forEach).toMatchObject({
       itemVar: 'ticketItem',
-      indexVar: '$index',
+      indexVar: 'index',
       itemType: 'any',
     });
+  });
+
+  it('keeps the loop items expression for previews and hides loop-body results after the loop', () => {
+    const definition: WorkflowDefinition = {
+      id: 'workflow-loop-scope',
+      version: 1,
+      name: 'Loop scope',
+      payloadSchemaRef: 'system:default',
+      trigger: { type: 'event', eventName: 'ticket.created' },
+      steps: [
+        {
+          id: 'foreach-1',
+          type: 'control.forEach',
+          items: { $expr: '["Call", "Email"]' },
+          itemVar: 'checklistItem',
+          concurrency: 1,
+          body: [
+            {
+              id: 'loop-step',
+              type: 'action.call',
+              config: { actionId: 'tickets.create', version: 1, saveAs: 'loopTicket' },
+            },
+            {
+              id: 'loop-later',
+              type: 'action.call',
+              config: { actionId: 'tickets.create', version: 1 },
+            },
+          ],
+        },
+        {
+          id: 'after-loop',
+          type: 'action.call',
+          config: { actionId: 'tickets.create', version: 1 },
+        },
+      ],
+    };
+
+    const insideLoop = buildDataContext(definition, 'loop-later', actionRegistry, null);
+    expect(insideLoop.forEach).toMatchObject({ itemVar: 'checklistItem', itemsExpr: '["Call", "Email"]' });
+    expect(insideLoop.steps.map((step) => step.saveAs)).toContain('loopTicket');
+
+    const afterLoop = buildDataContext(definition, 'after-loop', actionRegistry, null);
+    expect(afterLoop.forEach).toBeUndefined();
+    expect(afterLoop.steps.map((step) => step.saveAs)).not.toContain('loopTicket');
+  });
+
+  it('reachability: a step in Else never sees what the sibling Then branch saved; after the If both are available', () => {
+    const definition: WorkflowDefinition = {
+      id: 'workflow-if-scope',
+      version: 1,
+      name: 'If scope',
+      payloadSchemaRef: 'system:default',
+      trigger: { type: 'event', eventName: 'ticket.created' },
+      steps: [
+        {
+          id: 'before-if',
+          type: 'action.call',
+          config: { actionId: 'tickets.create', version: 1, saveAs: 'firstTicket' },
+        },
+        {
+          id: 'if-1',
+          type: 'control.if',
+          condition: { $expr: 'true' },
+          then: [
+            {
+              id: 'then-step',
+              type: 'action.call',
+              config: { actionId: 'tickets.create', version: 1, saveAs: 'thenTicket' },
+            },
+            {
+              id: 'then-assign',
+              type: 'transform.assign',
+              config: { assign: { 'vars.thenFlag': { $expr: 'true' } } },
+            },
+            {
+              id: 'then-later',
+              type: 'action.call',
+              config: { actionId: 'tickets.create', version: 1 },
+            },
+          ],
+          else: [
+            {
+              id: 'else-step',
+              type: 'action.call',
+              config: { actionId: 'tickets.create', version: 1, saveAs: 'elseTicket' },
+            },
+            {
+              id: 'else-later',
+              type: 'action.call',
+              config: { actionId: 'tickets.create', version: 1 },
+            },
+          ],
+        },
+        {
+          id: 'after-if',
+          type: 'action.call',
+          config: { actionId: 'tickets.create', version: 1 },
+        },
+      ],
+    } as WorkflowDefinition;
+
+    const saved = (stepId: string) =>
+      buildDataContext(definition, stepId, actionRegistry, null).steps.map((step) => step.saveAs);
+
+    expect(saved('then-later')).toEqual(['firstTicket', 'thenTicket', 'thenFlag']);
+
+    const inElse = buildDataContext(definition, 'else-later', actionRegistry, null);
+    expect(inElse.steps.map((step) => step.saveAs)).toEqual(['firstTicket', 'elseTicket']);
+    // Every consumer reads the same context: reference options and condition fields agree.
+    const elseOptions = buildWorkflowReferenceFieldOptions(null, inElse).map((option) => option.value);
+    expect(elseOptions.some((value) => value.startsWith('vars.thenTicket'))).toBe(false);
+    expect(elseOptions.some((value) => value.startsWith('vars.thenFlag'))).toBe(false);
+    expect(elseOptions).toContain('vars.elseTicket.ticket_id');
+    const elseConditionFields = collectWorkflowConditionFields(null, inElse, { trigger: 'Trigger' })
+      .map((field) => field.path);
+    expect(elseConditionFields).toContain('vars.elseTicket.ticket_id');
+    expect(elseConditionFields.some((path) => path.startsWith('vars.thenTicket'))).toBe(false);
+
+    expect(saved('after-if')).toEqual(['firstTicket', 'thenTicket', 'elseTicket', 'thenFlag']);
   });
 
   it('T160: preserves catch and loop context when grouped steps move within the same block', () => {
