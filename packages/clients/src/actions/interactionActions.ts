@@ -22,6 +22,10 @@ import {
 import { createTenantKnex } from '@alga-psa/db';
 import { assertMspPermission, hasPermissionAsync } from '../lib/authHelpers';
 import {
+  reconcileInteractionDuration,
+  type InteractionDurationRejectionReason,
+} from '../lib/durationHelpers';
+import {
   actionError,
   permissionError,
   type ActionMessageError,
@@ -29,6 +33,27 @@ import {
 } from '@alga-psa/ui/lib/errorHandling';
 
 type InteractionActionError = ActionMessageError | ActionPermissionError;
+
+const DURATION_REJECTION_MESSAGES: Record<InteractionDurationRejectionReason, string> = {
+  end_before_start: 'End time must be on or after the start time.',
+  range_exceeds_cap: "Interactions can't be longer than 24 hours.",
+};
+
+/**
+ * A stored duration must always equal end − start, so a payload that disagrees is
+ * normalised to the range it was submitted with — or refused when the range itself is
+ * impossible. Thrown so the surrounding transaction rolls back; the catch turns it back
+ * into the action error the caller sees.
+ */
+class InteractionDurationRejection extends Error {
+  constructor(readonly reason: InteractionDurationRejectionReason) {
+    super(DURATION_REJECTION_MESSAGES[reason]);
+    this.name = 'InteractionDurationRejection';
+  }
+}
+
+const durationRejectionError = (reason: InteractionDurationRejectionReason): ActionMessageError =>
+  actionError(DURATION_REJECTION_MESSAGES[reason]);
 
 export type { InteractionPageFilters, InteractionPageResult } from '../models/interactions';
 
@@ -115,6 +140,14 @@ export const addInteraction = withAuth(async (
       throw new Error('Either client_id or contact_name_id must be provided');
     }
 
+    const reconciled = reconcileInteractionDuration(interactionData);
+    if (!reconciled.ok) {
+      return durationRejectionError(reconciled.reason);
+    }
+    const normalizedData = reconciled.duration === (interactionData.duration ?? null)
+      ? interactionData
+      : { ...interactionData, duration: reconciled.duration };
+
     const scheduleAssignedUserIds = resolveScheduleAssignees(user.user_id, options.scheduleAssignedUserIds);
     if (options.createScheduleEntry && scheduleAssignedUserIds.some((id) => id !== user.user_id)) {
       // Same gate addScheduleEntry applies: booking someone else's calendar is an update
@@ -135,7 +168,7 @@ export const addInteraction = withAuth(async (
         tenant,
         trx,
         user,
-        interactionData,
+        interactionData: normalizedData,
       });
       publishSideEffects = result.publishSideEffects;
 
@@ -266,8 +299,32 @@ export const updateInteraction = withAuth(async (
     const { knex } = await createTenantKnex();
     const touchesScheduleEntry = (['start_time', 'end_time', 'duration', 'title'] as const)
       .some((field) => updateData[field] !== undefined);
+    const touchesDurationWindow = (['start_time', 'end_time', 'duration'] as const)
+      .some((field) => updateData[field] !== undefined);
     const updatedInteraction = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      const interaction = await InteractionModel.updateInteraction(interactionId, updateData, tenant, trx);
+      // A partial update only carries the fields that changed, so the rule is applied to
+      // the stored row merged with them — otherwise an end-time-only edit would leave the
+      // old duration (and the calendar block it sizes) behind.
+      let effectiveUpdate = updateData;
+      if (touchesDurationWindow) {
+        const current = await InteractionModel.getById(interactionId, tenant, trx);
+        if (!current) {
+          throw new Error('Interaction not found');
+        }
+        const merged = {
+          start_time: updateData.start_time !== undefined ? updateData.start_time : current.start_time,
+          end_time: updateData.end_time !== undefined ? updateData.end_time : current.end_time,
+          duration: updateData.duration !== undefined ? updateData.duration : current.duration,
+        };
+        const reconciled = reconcileInteractionDuration(merged);
+        if (!reconciled.ok) {
+          throw new InteractionDurationRejection(reconciled.reason);
+        }
+        if (reconciled.duration !== (merged.duration ?? null)) {
+          effectiveUpdate = { ...updateData, duration: reconciled.duration };
+        }
+      }
+      const interaction = await InteractionModel.updateInteraction(interactionId, effectiveUpdate, tenant, trx);
       // Keep the calendar block in step with the interaction it represents.
       if (touchesScheduleEntry) {
         await syncInteractionScheduleEntries(trx, tenant, interaction);
@@ -284,6 +341,9 @@ export const updateInteraction = withAuth(async (
     return updatedInteraction;
   } catch (error) {
     console.error('Error updating interaction:', error);
+    if (error instanceof InteractionDurationRejection) {
+      return durationRejectionError(error.reason);
+    }
     const expected = interactionActionErrorFrom(error);
     if (expected) return expected;
     throw error;
