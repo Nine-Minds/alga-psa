@@ -172,11 +172,14 @@ function tenantScopedTable(
 interface EffectiveTaskService {
     serviceId: string | null;
     serviceName: string | null;
+    /** Carried so callers can apply isTimeEntryService without the catalog. */
+    billingMethod: string | null;
     source: ProjectServiceSource | null;
     /** The phase → project fallback alone, ignoring the task's own service. */
     inherited: {
         serviceId: string | null;
         serviceName: string | null;
+        billingMethod: string | null;
         source: 'phase' | 'project' | null;
     };
 }
@@ -3222,7 +3225,10 @@ export const getEffectiveTaskService = withAuth(async (
                     'p.service_id as project_service_id',
                     'task_service.service_name as task_service_name',
                     'phase_service.service_name as phase_service_name',
-                    'project_service.service_name as project_service_name'
+                    'project_service.service_name as project_service_name',
+                    'task_service.billing_method as task_billing_method',
+                    'phase_service.billing_method as phase_billing_method',
+                    'project_service.billing_method as project_billing_method'
                 );
 
             const ids = {
@@ -3235,6 +3241,11 @@ export const getEffectiveTaskService = withAuth(async (
                 phase: row?.phase_service_name ?? null,
                 project: row?.project_service_name ?? null,
             };
+            const billingMethods: Record<ProjectServiceSource, string | null> = {
+                task: row?.task_billing_method ?? null,
+                phase: row?.phase_billing_method ?? null,
+                project: row?.project_billing_method ?? null,
+            };
 
             const source = resolveEffectiveServiceSource(ids);
             // The phase → project fallback on its own, so the task form can name
@@ -3244,10 +3255,12 @@ export const getEffectiveTaskService = withAuth(async (
             return {
                 serviceId: source ? ids[source] : null,
                 serviceName: source ? names[source] : null,
+                billingMethod: source ? billingMethods[source] : null,
                 source,
                 inherited: {
                     serviceId: inheritedSource ? ids[inheritedSource] : null,
                     serviceName: inheritedSource ? names[inheritedSource] : null,
+                    billingMethod: inheritedSource ? billingMethods[inheritedSource] : null,
                     source: inheritedSource as 'phase' | 'project' | null,
                 },
             };
