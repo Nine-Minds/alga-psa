@@ -22,6 +22,52 @@ import {
 import ScheduleEntry from '@alga-psa/shared/models/scheduleEntry';
 import { v4 as uuidv4 } from 'uuid';
 import { publishEvent } from '../../eventBus/publishers';
+import { hasPermission } from '@alga-psa/auth';
+import { evaluateEntryAccess, resolveCalendarAccess } from '@alga-psa/scheduling/lib/calendarAccess';
+
+/**
+ * True when a provider call failed because the event no longer exists there.
+ * Google answers 404 (410 for an already-deleted event); Microsoft answers 404
+ * with code ErrorItemNotFound.
+ */
+function isProviderEventGone(error: any): boolean {
+  return error?.status === 404 || error?.status === 410
+    || error?.code === 404 || error?.code === 410
+    || error?.code === 'ErrorItemNotFound';
+}
+
+/**
+ * Providers round-trip notes differently (Outlook returns HTML bodies), so
+ * compare notes as whitespace-collapsed text.
+ */
+function comparableNotes(notes: string | null | undefined): string {
+  return (notes ?? '')
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+const timeOf = (value: Date | string | null | undefined): number | null =>
+  value ? new Date(value).getTime() : null;
+
+/**
+ * True when an inbound provider edit changed something that syncs to other
+ * assignees' copies. Echoes of Alga's own pushes compare equal, which keeps
+ * fan-out from bouncing between assignees' calendars.
+ */
+function changesSyncedFields(before: IScheduleEntry, after: IScheduleEntry): boolean {
+  const sortedIds = (ids: string[] | undefined) => [...(ids ?? [])].sort().join(',');
+  return before.title !== after.title
+    || comparableNotes(before.notes) !== comparableNotes(after.notes)
+    || timeOf(before.scheduled_start) !== timeOf(after.scheduled_start)
+    || timeOf(before.scheduled_end) !== timeOf(after.scheduled_end)
+    || !!before.is_all_day !== !!after.is_all_day
+    || (before.status ?? null) !== (after.status ?? null)
+    || !!before.is_private !== !!after.is_private
+    || sortedIds(before.assigned_user_ids) !== sortedIds(after.assigned_user_ids)
+    || JSON.stringify(before.recurrence_pattern ?? null) !== JSON.stringify(after.recurrence_pattern ?? null);
+}
 
 export class CalendarSyncService {
   private providerService: CalendarProviderService;
@@ -83,73 +129,75 @@ export class CalendarSyncService {
       const existingMapping = await this.getMappingByScheduleEntry(entryId, calendarProviderId, tenant);
 
       const result = await withTransaction(knex, async (trx) => {
+        const externalEvent = await mapScheduleEntryToExternalEvent(entry, provider.provider_type);
+
         if (existingMapping) {
-          // Update existing event
-          const externalEvent = await mapScheduleEntryToExternalEvent(entry, provider.provider_type);
-          
-          // Update event in external calendar
-          const updatedEvent = await adapter.updateEvent(existingMapping.external_event_id, externalEvent);
-          
-          // Update mapping
+          const updatedEvent = await this.updateProviderEventIfPresent(adapter, existingMapping.external_event_id, externalEvent);
+          if (updatedEvent) {
+            await tenantDb(trx, tenant).table('calendar_event_mappings')
+              .where('id', existingMapping.id)
+              .update({
+                sync_status: 'synced',
+                last_synced_at: new Date().toISOString(),
+                alga_last_modified: entry.updated_at instanceof Date ? entry.updated_at.toISOString() : new Date(entry.updated_at).toISOString(),
+                external_last_modified: updatedEvent.updated,
+                sync_error_message: null,
+                updated_at: new Date().toISOString()
+              });
+
+            const syncResult = {
+              success: true,
+              mapping: {
+                ...existingMapping,
+                sync_status: 'synced' as const,
+                last_synced_at: new Date().toISOString(),
+                alga_last_modified: entry.updated_at instanceof Date ? entry.updated_at.toISOString() : new Date(entry.updated_at).toISOString(),
+                external_last_modified: updatedEvent.updated
+              },
+              externalEventId: updatedEvent.id
+            };
+
+            await this.markProviderConnected(provider.id);
+            return syncResult;
+          }
+
+          // The provider copy was removed without Alga processing the change (a missed
+          // notification, or a delete while its calendar was archived). Drop the stale
+          // mapping and create a fresh copy instead of failing the sync.
           await tenantDb(trx, tenant).table('calendar_event_mappings')
             .where('id', existingMapping.id)
-            .update({
-              sync_status: 'synced',
-              last_synced_at: new Date().toISOString(),
-              alga_last_modified: entry.updated_at instanceof Date ? entry.updated_at.toISOString() : new Date(entry.updated_at).toISOString(),
-              external_last_modified: updatedEvent.updated,
-              sync_error_message: null,
-              updated_at: new Date().toISOString()
-            });
-
-          const syncResult = {
-            success: true,
-            mapping: {
-              ...existingMapping,
-              sync_status: 'synced' as const,
-              last_synced_at: new Date().toISOString(),
-              alga_last_modified: entry.updated_at instanceof Date ? entry.updated_at.toISOString() : new Date(entry.updated_at).toISOString(),
-              external_last_modified: updatedEvent.updated
-            },
-            externalEventId: updatedEvent.id
-          };
-
-          await this.markProviderConnected(provider.id);
-          return syncResult;
-        } else {
-          // Create new event
-          const externalEvent = await mapScheduleEntryToExternalEvent(entry, provider.provider_type);
-          
-          // Create event in external calendar
-          const createdEvent = await adapter.createEvent(externalEvent);
-          
-          // Create mapping
-          const [mapping] = await tenantDb(trx, tenant).table('calendar_event_mappings')
-            .insert({
-              id: uuidv4(),
-              tenant,
-              calendar_provider_id: calendarProviderId,
-              schedule_entry_id: entryId,
-              external_event_id: createdEvent.id,
-              sync_status: 'synced',
-              last_synced_at: new Date().toISOString(),
-              sync_direction: 'to_external',
-              alga_last_modified: entry.updated_at instanceof Date ? entry.updated_at.toISOString() : new Date(entry.updated_at).toISOString(),
-              external_last_modified: createdEvent.updated,
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString()
-            })
-            .returning('*');
-
-          const syncResult = {
-            success: true,
-            mapping: this.mapDbRowToMapping(mapping),
-            externalEventId: createdEvent.id
-          };
-
-          await this.markProviderConnected(provider.id);
-          return syncResult;
+            .del();
         }
+
+        // Create event in external calendar
+        const createdEvent = await adapter.createEvent(externalEvent);
+
+        // Create mapping
+        const [mapping] = await tenantDb(trx, tenant).table('calendar_event_mappings')
+          .insert({
+            id: uuidv4(),
+            tenant,
+            calendar_provider_id: calendarProviderId,
+            schedule_entry_id: entryId,
+            external_event_id: createdEvent.id,
+            sync_status: 'synced',
+            last_synced_at: new Date().toISOString(),
+            sync_direction: 'to_external',
+            alga_last_modified: entry.updated_at instanceof Date ? entry.updated_at.toISOString() : new Date(entry.updated_at).toISOString(),
+            external_last_modified: createdEvent.updated,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          })
+          .returning('*');
+
+        const syncResult = {
+          success: true,
+          mapping: this.mapDbRowToMapping(mapping),
+          externalEventId: createdEvent.id
+        };
+
+        await this.markProviderConnected(provider.id);
+        return syncResult;
       });
       return result;
     } catch (error: any) {
@@ -231,7 +279,7 @@ export class CalendarSyncService {
         // If event returns 404, it was deleted - handle as deletion
         // Google returns status: 404, code: 404 (numeric)
         // Microsoft returns status: 404, code: 'ErrorItemNotFound' (string)
-        const isNotFound = error.status === 404 || error.code === 404 || error.code === 'ErrorItemNotFound';
+        const isNotFound = isProviderEventGone(error);
         if (isNotFound) {
           console.log('[CalendarSyncService] External event not found (likely deleted)', {
             externalEventId,
@@ -242,12 +290,7 @@ export class CalendarSyncService {
           const existingMapping = await this.getMappingByExternalEvent(externalEventId, calendarProviderId, tenant);
           if (existingMapping) {
             // Delete the corresponding schedule entry (skip external delete since it's already gone)
-            const deleteResult = await this.deleteScheduleEntry(
-              existingMapping.schedule_entry_id,
-              calendarProviderId,
-              'all',
-              true // skipExternalDelete - event already deleted in external calendar
-            );
+            const deleteResult = await this.handleInboundProviderDelete(existingMapping.schedule_entry_id, calendarProviderId);
             if (deleteResult.success) {
               return {
                 success: true,
@@ -276,6 +319,30 @@ export class CalendarSyncService {
       // Check for existing mapping
       const existingMapping = await this.getMappingByExternalEvent(externalEventId, calendarProviderId, tenant);
 
+      // Ignore a provider version already acknowledged by this mapping. This
+      // makes stale webhook redelivery idempotent after an Alga-authoritative push.
+      const incomingModifiedAt = externalEvent.updated ? new Date(externalEvent.updated).getTime() : NaN;
+      const mappedModifiedAt = existingMapping?.external_last_modified
+        ? new Date(existingMapping.external_last_modified).getTime()
+        : NaN;
+      if (Number.isFinite(incomingModifiedAt) && incomingModifiedAt === mappedModifiedAt) {
+        return { success: true, skipped: true, reason: 'External version already synchronized' };
+      }
+
+      // Archived group calendars are frozen: provider events cannot change Alga.
+      if (existingMapping) {
+        const mappedEntry = await ScheduleEntry.get(knex, tenant, existingMapping.schedule_entry_id);
+        if (mappedEntry?.calendar_id) {
+          const archived = await tenantDb(knex, tenant).table('calendars')
+            .where({ calendar_id: mappedEntry.calendar_id, calendar_type: 'group', is_archived: true })
+            .first();
+          if (archived) return { success: true, skipped: true, reason: 'Calendar is archived' };
+        }
+      }
+
+      let rePushEntryId: string | null = null;
+      // Assigned inside the transaction callback; the cast keeps TS from narrowing it to null.
+      let acceptedEdit = null as { before: IScheduleEntry; after: IScheduleEntry } | null;
       const result = await withTransaction(knex, async (trx) => {
         if (existingMapping) {
           // Update existing schedule entry
@@ -285,6 +352,15 @@ export class CalendarSyncService {
               success: false,
               error: 'Schedule entry not found for existing mapping'
             };
+          }
+
+          const providerAccess = await this.resolveProviderUserAccess(trx, tenant, provider.user_id);
+          if (!providerAccess) return { success: true, skipped: true, reason: 'Provider has no user' };
+          const decision = evaluateEntryAccess(existingEntry, providerAccess);
+          if (!decision.canEdit) {
+            // Push after this transaction commits so the outbound mapping timestamp is authoritative.
+            rePushEntryId = existingEntry.entry_id;
+            return { success: true, skipped: true, reason: 'Provider user cannot edit this entry' };
           }
 
           // Check for conflicts
@@ -370,6 +446,9 @@ export class CalendarSyncService {
               error: 'Failed to update schedule entry'
             };
           }
+          if (changesSyncedFields(existingEntry, updatedEntry)) {
+            acceptedEdit = { before: existingEntry, after: updatedEntry };
+          }
 
           // Update mapping
           await tenantDb(trx, tenant).table('calendar_event_mappings')
@@ -410,6 +489,10 @@ export class CalendarSyncService {
             // Check if the entry already exists
             const existingEntry = await ScheduleEntry.get(trx, tenant!, algaEntryId);
             if (existingEntry) {
+              if (existingEntry.calendar_id && await tenantDb(trx, tenant).table('calendars')
+                .where({ calendar_id: existingEntry.calendar_id, calendar_type: 'group', is_archived: true }).first()) {
+                return { success: true, skipped: true, reason: 'Calendar is archived' };
+              }
               // Entry exists but mapping doesn't - create mapping and skip creating duplicate
               const [mapping] = await tenantDb(trx, tenant).table('calendar_event_mappings')
                 .insert({
@@ -525,6 +608,13 @@ export class CalendarSyncService {
           return syncResult;
         }
       });
+      if (rePushEntryId) {
+        const pushed = await this.syncScheduleEntryToExternal(rePushEntryId, provider.id, true);
+        if (!pushed.success) return pushed;
+      }
+      if (acceptedEdit) {
+        await this.publishInboundEdit(tenant, provider, acceptedEdit.before, acceptedEdit.after);
+      }
       return result;
     } catch (error: any) {
       console.error(`Failed to sync external event ${externalEventId} to schedule entry:`, error);
@@ -705,6 +795,78 @@ export class CalendarSyncService {
     }
   }
 
+  /** Apply a provider delete under the provider user's shared-calendar rights. */
+  async handleInboundProviderDelete(entryId: string, providerId: string): Promise<{ success: boolean; error?: string }> {
+    const { knex, tenant } = await createTenantKnex();
+    if (!tenant) return { success: false, error: 'Tenant context is required' };
+    const provider = await this.providerService.getProvider(providerId, tenant);
+    if (!provider?.user_id) return { success: false, error: 'Provider user not found' };
+    const entry = await ScheduleEntry.get(knex, tenant, entryId);
+    if (!entry) return { success: true };
+    if (entry.calendar_id) {
+      const archived = await tenantDb(knex, tenant).table('calendars')
+        .where({ calendar_id: entry.calendar_id, calendar_type: 'group', is_archived: true }).first();
+      if (archived) return { success: true };
+    }
+    const access = await this.resolveProviderUserAccess(knex, tenant, provider.user_id);
+    if (!access) return { success: false, error: 'Provider user not found' };
+    const decision = evaluateEntryAccess(entry, access);
+    if (decision.canEdit && entry.assigned_user_ids.length === 1) {
+      return this.deleteScheduleEntry(entryId, providerId, 'all', true);
+    }
+    if (!entry.assigned_user_ids.includes(provider.user_id)) {
+      await tenantDb(knex, tenant).table('calendar_event_mappings')
+        .where({ schedule_entry_id: entryId, calendar_provider_id: providerId }).del();
+      return { success: true };
+    }
+    // A read-only sole assignee may be removed, leaving group or personal entries unassigned intentionally.
+    const updated = await ScheduleEntry.update(knex, tenant, entryId, {
+      ...entry,
+      assigned_user_ids: entry.assigned_user_ids.filter((id: string) => id !== provider.user_id),
+    });
+    if (!updated) return { success: false, error: 'Failed to remove provider user from entry' };
+    await tenantDb(knex, tenant).table('calendar_event_mappings')
+      .where({ schedule_entry_id: entryId, calendar_provider_id: providerId }).del();
+    return { success: true };
+  }
+
+  private async resolveProviderUserAccess(
+    knex: any,
+    tenant: string,
+    providerUserId?: string | null
+  ) {
+    if (!providerUserId) return null;
+    const user = await tenantDb(knex, tenant).table('users').where('user_id', providerUserId).first();
+    if (!user) return null;
+    const viewer = { user_id: user.user_id, user_type: user.user_type, tenant } as any;
+    // scheduleActions.ts uses this same user_schedule:update check before resolveCalendarAccess.
+    const canViewAll = await hasPermission(viewer, 'user_schedule', 'update', knex);
+    return resolveCalendarAccess(knex, tenant, viewer, canViewAll);
+  }
+
+  async removeProviderCopy(entryId: string, providerId: string): Promise<void> {
+    const { knex, tenant } = await createTenantKnex();
+    if (!tenant) throw new Error('Tenant context is required for calendar synchronization');
+    const mapping = await this.getMappingByScheduleEntry(entryId, providerId, tenant);
+    if (!mapping) return;
+    const provider = await this.providerService.getProvider(providerId, tenant);
+    if (provider) {
+      try {
+        const adapter = await this.createAdapter(provider);
+        await adapter.connect();
+        await adapter.deleteEvent(mapping.external_event_id);
+      } catch (error: any) {
+        // Already gone on the provider side: the copy is removed, so the mapping must go too,
+        // or a later restore would try to update an event that no longer exists.
+        if (!isProviderEventGone(error)) {
+          console.warn(`Failed to delete external event ${mapping.external_event_id}:`, error.message);
+          throw error;
+        }
+      }
+    }
+    await tenantDb(knex, tenant).table('calendar_event_mappings').where('id', mapping.id).del();
+  }
+
   /**
    * Friendly pre-check used before any adapter work: a provider whose OAuth
    * flow was never completed has no tokens and every sync attempt would fail
@@ -716,6 +878,23 @@ export class CalendarSyncService {
       return 'Calendar provider is not authorized yet. Complete OAuth authorization before syncing.';
     }
     return null;
+  }
+
+  /**
+   * Update a mapped provider event; resolves to null when the event no longer
+   * exists on the provider side.
+   */
+  private async updateProviderEventIfPresent(
+    adapter: BaseCalendarAdapter,
+    externalEventId: string,
+    event: ExternalCalendarEvent
+  ): Promise<ExternalCalendarEvent | null> {
+    try {
+      return await adapter.updateEvent(externalEventId, event);
+    } catch (error: any) {
+      if (isProviderEventGone(error)) return null;
+      throw error;
+    }
   }
 
   /**
@@ -853,6 +1032,40 @@ export class CalendarSyncService {
       console.warn('[CalendarSyncService] Failed to update provider status to error', {
         providerId,
         error: statusError instanceof Error ? statusError.message : statusError
+      });
+    }
+  }
+
+  /**
+   * Announce an accepted provider edit like any other schedule update, so the
+   * other assignees' copies (and search, workflows) pick it up. The source
+   * provider already holds this version and is skipped by the sync subscriber.
+   */
+  private async publishInboundEdit(
+    tenant: string,
+    provider: CalendarProviderConfig,
+    before: IScheduleEntry,
+    after: IScheduleEntry
+  ): Promise<void> {
+    try {
+      await publishEvent({
+        eventType: 'SCHEDULE_ENTRY_UPDATED',
+        payload: {
+          tenantId: tenant,
+          userId: provider.user_id,
+          entryId: after.entry_id,
+          changes: {
+            before: { assignedUserIds: before.assigned_user_ids ?? [] },
+            after: { assignedUserIds: after.assigned_user_ids ?? [] },
+            sourceCalendarProviderId: provider.id,
+          },
+        },
+      });
+    } catch (error) {
+      console.warn('[CalendarSyncService] Failed to publish inbound edit', {
+        providerId: provider.id,
+        entryId: after.entry_id,
+        error: error instanceof Error ? error.message : error
       });
     }
   }

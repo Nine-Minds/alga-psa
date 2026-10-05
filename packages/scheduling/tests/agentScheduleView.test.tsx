@@ -4,12 +4,15 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { act, render, waitFor } from '@testing-library/react';
 import AgentScheduleView from '../src/components/schedule/AgentScheduleView';
 import toast from 'react-hot-toast';
+import { createForWorkItem } from '../src/lib/scheduleEntryLauncher';
+import { defaultWorkItemSlot } from '../src/lib/workItemScheduling';
 
 // vi.hoisted: mock factories run while this module's imports evaluate —
 // plain consts would still be in their temporal dead zone at that point.
-const { calendarSpy, getScheduleEntries, addScheduleEntry, updateScheduleEntry, deleteScheduleEntry, getScheduleEntryById, getCurrentUser, getCurrentUserPermissions, useUsers } =
+const { calendarSpy, getCalendarsVisibleToMe, getScheduleEntries, addScheduleEntry, updateScheduleEntry, deleteScheduleEntry, getScheduleEntryById, getCurrentUser, getCurrentUserPermissions, useUsers } =
   vi.hoisted(() => ({
     calendarSpy: vi.fn(),
+    getCalendarsVisibleToMe: vi.fn(),
     getScheduleEntries: vi.fn(),
     addScheduleEntry: vi.fn(),
     updateScheduleEntry: vi.fn(),
@@ -28,6 +31,7 @@ vi.mock('next/dynamic', () => ({
 }));
 
 vi.mock('@alga-psa/scheduling/actions', () => ({
+  getCalendarsVisibleToMe,
   getScheduleEntries,
   addScheduleEntry,
   updateScheduleEntry,
@@ -104,7 +108,16 @@ beforeEach(() => {
   deleteScheduleEntry.mockClear();
   deleteScheduleEntry.mockResolvedValue({ success: true, deleted: true, canDelete: true, dependencies: [], alternatives: [] });
   getCurrentUser.mockResolvedValue({ user_id: 'user-1' });
-  getCurrentUserPermissions.mockResolvedValue(['user_schedule:read:all', 'user_schedule:update']);
+  getCurrentUserPermissions.mockResolvedValue(['user_schedule:read', 'user_schedule:update']);
+  // Shared calendars: agent-1 and user-2 have shared their calendars with the viewer.
+  const shared = (key: string) => ({
+    key, calendar_type: 'personal', calendar_id: null, owner_user_id: key,
+    name: key, color: '#2563eb', access_level: 'read',
+  });
+  getCalendarsVisibleToMe.mockResolvedValue({
+    success: true,
+    data: { viewerUserId: 'user-1', canViewAll: false, me: shared('user-1'), people: [shared('agent-1'), shared('user-2')], groups: [] },
+  });
 });
 
 describe('AgentScheduleView', () => {
@@ -278,7 +291,7 @@ describe('AgentScheduleView', () => {
   });
 
   it('keeps the grid static without update permission', async () => {
-    getCurrentUserPermissions.mockResolvedValueOnce(['user_schedule:read:all']);
+    getCurrentUserPermissions.mockResolvedValueOnce(['user_schedule:read']);
     render(<AgentScheduleView agentId="agent-1" />);
     await waitFor(() => expect(getScheduleEntries).toHaveBeenCalledTimes(1));
     const props = calendarSpy.mock.calls.at(-1)[0];
@@ -325,6 +338,10 @@ describe('AgentScheduleView', () => {
   it('restricts users with user_schedule:read to their own schedule', async () => {
     getCurrentUser.mockResolvedValue({ user_id: 'user-1' });
     getCurrentUserPermissions.mockResolvedValue(['user_schedule:read']);
+    getCalendarsVisibleToMe.mockResolvedValue({
+      success: true,
+      data: { viewerUserId: 'user-1', canViewAll: false, me: null, people: [], groups: [] },
+    });
 
     const { getByText } = render(<AgentScheduleView agentId="user-2" />);
 
@@ -332,9 +349,9 @@ describe('AgentScheduleView', () => {
     expect(getScheduleEntries).not.toHaveBeenCalled();
   });
 
-  it('allows users with user_schedule:read:all to view any agent', async () => {
+  it('allows users to view an agent whose calendar is shared with them', async () => {
     getCurrentUser.mockResolvedValue({ user_id: 'user-1' });
-    getCurrentUserPermissions.mockResolvedValue(['user_schedule:read:all']);
+    getCurrentUserPermissions.mockResolvedValue(['user_schedule:read']);
 
     render(<AgentScheduleView agentId="user-2" />);
 
@@ -373,7 +390,7 @@ describe('AgentScheduleView', () => {
   });
 
   it('keeps selection disabled for a work item context without update permission', async () => {
-    getCurrentUserPermissions.mockResolvedValue(['user_schedule:read:all']);
+    getCurrentUserPermissions.mockResolvedValue(['user_schedule:read']);
 
     render(
       <AgentScheduleView
@@ -500,7 +517,7 @@ describe('AgentScheduleView', () => {
   });
 
   it('explains the read-only calendar when the user lacks update permission', async () => {
-    getCurrentUserPermissions.mockResolvedValueOnce(['user_schedule:read:all']);
+    getCurrentUserPermissions.mockResolvedValueOnce(['user_schedule:read']);
     const { findByText } = render(
       <AgentScheduleView
         agentId="agent-1"
@@ -517,7 +534,7 @@ describe('AgentScheduleView', () => {
     expect(queryByText(/Drag to create, move or resize entries/)).toBeNull();
   });
 
-  it('pins month-view slots to 8am for the default one-hour duration', async () => {
+  it('uses the launcher time for month-view slots with the default one-hour duration', async () => {
     const { getByTestId } = render(
       <AgentScheduleView
         agentId="agent-1"
@@ -535,6 +552,7 @@ describe('AgentScheduleView', () => {
     });
 
     const monthProps = calendarSpy.mock.calls.at(-1)[0];
+    const expectedStart = defaultWorkItemSlot().start;
     act(() => {
       monthProps.onSelectSlot({
         start: new Date(2026, 0, 5),
@@ -547,8 +565,8 @@ describe('AgentScheduleView', () => {
     await waitFor(() => expect(getByTestId('entry-popup')).toBeTruthy());
 
     const popupProps = entryPopupSpy.mock.calls.at(-1)[0];
-    expect(popupProps.slot.start.getHours()).toBe(8);
-    expect(popupProps.slot.start.getMinutes()).toBe(0);
+    expect(popupProps.slot.start.getHours()).toBe(expectedStart.getHours());
+    expect(popupProps.slot.start.getMinutes()).toBe(expectedStart.getMinutes());
     expect(popupProps.slot.end.getTime() - popupProps.slot.start.getTime()).toBe(60 * 60 * 1000);
   });
 
@@ -615,5 +633,28 @@ describe('AgentScheduleView', () => {
       expect(props.allDayAccessor(sameDay)).toBe(false);
       await waitFor(() => expect(rowHidden(container)).toBe(true));
     });
+  });
+});
+
+describe('createForWorkItem shared drafts', () => {
+  const context = { workItemId: 'ticket-1', workItemType: 'ticket' as const, title: 'Printer offline', defaultAssigneeId: 'ticket-assignee' };
+  const now = new Date('2026-09-17T10:07:30');
+
+  it('defaults the tile to the ticket assignee and the agent drawer to its locked viewed agent', () => {
+    expect(createForWorkItem(context, { now }).assigneeIds).toEqual(['ticket-assignee']);
+    expect(createForWorkItem(context, { now, viewedAgentId: 'viewed-agent' }).assigneeIds).toEqual(['viewed-agent']);
+    expect(createForWorkItem({ ...context, defaultAssigneeId: null }, { now }).assigneeIds).toBeUndefined();
+  });
+
+  it('uses the launcher time and duration on the selected month date', () => {
+    const tile = createForWorkItem(context, { now });
+    const month = createForWorkItem(context, { now, view: 'month', selection: { start: new Date('2026-09-22T00:00:00'), end: new Date('2026-09-23T00:00:00') } });
+    expect(month.slot.start).toEqual(new Date('2026-09-22T10:15:00'));
+    expect(month.slot.end.getTime() - month.slot.start.getTime()).toBe(tile.slot.end.getTime() - tile.slot.start.getTime());
+  });
+
+  it('keeps the selected timed range when dragging', () => {
+    const selection = { start: new Date('2026-09-22T13:00:00'), end: new Date('2026-09-22T15:00:00'), action: 'select' as const };
+    expect(createForWorkItem(context, { now, view: 'week', selection }).slot).toEqual({ start: selection.start, end: selection.end });
   });
 });

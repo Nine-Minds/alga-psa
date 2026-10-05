@@ -101,7 +101,6 @@ function errorCodeOf(error: unknown): string | undefined {
 
 const DENIAL_STATUS: Record<string, number> = {
   FORBIDDEN: 403,
-  FEATURE_FLAG_OFF: 404,
   ADD_ON_REQUIRED: 402,
   SMART_SEARCH_NOT_CONFIGURED: 503,
 };

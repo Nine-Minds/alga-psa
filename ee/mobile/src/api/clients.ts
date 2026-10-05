@@ -22,6 +22,7 @@ export type ClientListItem = {
 export type ClientDetail = ClientListItem & {
   account_manager_id?: string | null;
   notes?: string | null;
+  tags?: string[];
   updated_at?: string | null;
   properties?: ({ industry?: string | null } & Record<string, unknown>) | null;
 } & Record<string, unknown>;
@@ -35,7 +36,9 @@ export type ClientLocation = {
   state_province?: string | null;
   postal_code?: string | null;
   country_name?: string | null;
+  country_code?: string | null;
   phone?: string | null;
+  phone_extension?: string | null;
   email?: string | null;
   is_default?: boolean;
 };
@@ -84,9 +87,45 @@ export function getClient(
   });
 }
 
-export type UpdateClientInput = {
-  account_manager_id?: string;
+/** Writable client fields. Phone, email and address live on the default location. */
+export type ClientWriteInput = {
+  client_name?: string;
+  client_type?: "company" | "individual";
+  url?: string;
+  account_manager_id?: string | null;
+  is_inactive?: boolean;
+  /** With is_inactive: also deactivate contacts and portal users (server default true). */
+  deactivate_contacts?: boolean;
+  notes?: string;
+  tags?: string[];
+  properties?: { industry?: string };
 };
+
+export type UpdateClientInput = ClientWriteInput;
+
+export type CreateClientInput = ClientWriteInput & { client_name: string };
+
+export function createClient(
+  client: ApiClient,
+  params: {
+    apiKey: string;
+    data: CreateClientInput;
+    auditHeaders?: Record<string, string | undefined>;
+    signal?: AbortSignal;
+  },
+): Promise<ApiResult<SuccessResponse<ClientDetail>>> {
+  return client.request<SuccessResponse<ClientDetail>>({
+    method: "POST",
+    path: "/api/v1/clients",
+    signal: params.signal,
+    headers: {
+      "x-api-key": params.apiKey,
+      ...params.auditHeaders,
+    },
+    // billing_cycle is required by the API; monthly is the web quick-add default.
+    body: { billing_cycle: "monthly", ...params.data },
+  });
+}
 
 export function updateClient(
   client: ApiClient,
@@ -139,6 +178,61 @@ export function getClientLocations(
     headers: {
       "x-api-key": params.apiKey,
     },
+  });
+}
+
+export type ClientLocationWriteInput = {
+  location_name?: string;
+  address_line1?: string;
+  address_line2?: string;
+  city?: string;
+  state_province?: string;
+  postal_code?: string;
+  country_code?: string;
+  country_name?: string;
+  phone?: string;
+  phone_extension?: string;
+  /** null clears a stored email on update. */
+  email?: string | null;
+  is_default?: boolean;
+};
+
+export function createClientLocation(
+  client: ApiClient,
+  params: {
+    apiKey: string;
+    clientId: string;
+    data: ClientLocationWriteInput & { country_code: string; country_name: string };
+    auditHeaders?: Record<string, string | undefined>;
+    signal?: AbortSignal;
+  },
+): Promise<ApiResult<SuccessResponse<ClientLocation>>> {
+  return client.request<SuccessResponse<ClientLocation>>({
+    method: "POST",
+    path: `/api/v1/clients/${params.clientId}/locations`,
+    signal: params.signal,
+    headers: { "x-api-key": params.apiKey, ...params.auditHeaders },
+    body: params.data,
+  });
+}
+
+export function updateClientLocation(
+  client: ApiClient,
+  params: {
+    apiKey: string;
+    clientId: string;
+    locationId: string;
+    data: ClientLocationWriteInput;
+    auditHeaders?: Record<string, string | undefined>;
+    signal?: AbortSignal;
+  },
+): Promise<ApiResult<SuccessResponse<ClientLocation>>> {
+  return client.request<SuccessResponse<ClientLocation>>({
+    method: "PUT",
+    path: `/api/v1/clients/${params.clientId}/locations/${params.locationId}`,
+    signal: params.signal,
+    headers: { "x-api-key": params.apiKey, ...params.auditHeaders },
+    body: params.data,
   });
 }
 

@@ -117,4 +117,37 @@ describe('ticket lifecycle notification suppression event schemas', () => {
       suppressInternalNotifications: true,
     }));
   });
+
+  describe('TICKET_CREATED', () => {
+    const systemCreatedPayload = {
+      tenantId: '00000000-0000-4000-8000-000000000003',
+      ticketId: '00000000-0000-4000-8000-000000000002',
+      occurredAt: '2026-07-09T12:00:00.000Z',
+      actorType: 'SYSTEM',
+      source: 'recurring_ticket',
+    };
+
+    it('keeps contact suppression on a system-created payload (no userId) instead of stripping it', () => {
+      const result = EventSchemas.TICKET_CREATED.parse({
+        ...baseEvent,
+        eventType: 'TICKET_CREATED',
+        payload: { ...systemCreatedPayload, suppressContactNotifications: true },
+      });
+
+      expect(result.payload).toEqual(expect.objectContaining({ suppressContactNotifications: true }));
+    });
+
+    it('defaults suppression flags to false so creators that never set them are unchanged', () => {
+      const result = EventSchemas.TICKET_CREATED.parse({
+        ...baseEvent,
+        eventType: 'TICKET_CREATED',
+        payload: systemCreatedPayload,
+      });
+
+      expect(result.payload).toEqual(expect.objectContaining({
+        suppressContactNotifications: false,
+        suppressInternalNotifications: false,
+      }));
+    });
+  });
 });

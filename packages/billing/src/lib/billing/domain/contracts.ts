@@ -238,6 +238,19 @@ export type ResolvedContractBillingChargeFacts =
         configurationQuantity?: number | string | null;
         configurationCustomRate?: number | string | null;
         priceRate?: number | string | null;
+        /**
+         * Effective scheduled revision for the covered service period. Carried
+         * through the domain facts boundary so billing computes the same
+         * quantity/rate the resolver selected; never a delta.
+         */
+        effectivePricing?: {
+          quantity: number;
+          pricePolicy: "override" | "catalog";
+          unitRateCents: number | null;
+          revisionId: string;
+          version: number;
+          effectivePeriodStart: string;
+        } | null;
       }>;
     });
 

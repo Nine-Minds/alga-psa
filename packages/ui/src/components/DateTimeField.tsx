@@ -59,6 +59,11 @@ export interface DateTimeFieldProps {
   minDate?: Date;
   /** Latest selectable date (inclusive) */
   maxDate?: Date;
+  /**
+   * Per-day rule for gaps inside the min/max range. A disabled day cannot be
+   * clicked, typed, or reached through the "Today" shortcut.
+   */
+  isDateDisabled?: (date: Date) => boolean;
   /** Fixed date-fns display pattern; overrides the country-derived format */
   displayFormat?: string;
   /** Time format preference; when unset, derived from the active country */
@@ -104,6 +109,7 @@ export function DateTimeField({
   required,
   minDate,
   maxDate,
+  isDateDisabled,
   displayFormat,
   timeFormat,
   minuteStep = 15,
@@ -143,7 +149,8 @@ export function DateTimeField({
   const [open, setOpen] = React.useState(false);
   const [dateText, setDateText] = React.useState(() => dateDisplay(dateValue));
   const [timeText, setTimeText] = React.useState(() => timeDisplay(timeValue));
-  const [dateError, setDateError] = React.useState(false);
+  // 'unavailable' is a real date the caller ruled out, which deserves different words than bad text.
+  const [dateError, setDateError] = React.useState<false | 'invalid' | 'unavailable'>(false);
   const [timeError, setTimeError] = React.useState(false);
 
   const fieldsRef = React.useRef<HTMLDivElement>(null);
@@ -193,6 +200,10 @@ export function DateTimeField({
     [timeText]
   );
   const panelDate = parsedDateText ?? (dateValue ? startOfDay(dateValue) : undefined);
+  // The calendar follows typed text to its month, but a ruled-out day is never
+  // shown as selected; the committed value stays marked until a valid day lands.
+  const selectedPanelDate =
+    panelDate && isDateDisabled?.(panelDate) ? (dateValue ? startOfDay(dateValue) : undefined) : panelDate;
   const panelTime = parsedTimeText ?? timeValue;
 
   const timeOptions = React.useMemo(
@@ -204,8 +215,9 @@ export function DateTimeField({
     const matchers: Matcher[] = [];
     if (minDate) matchers.push({ before: minDate });
     if (maxDate) matchers.push({ after: maxDate });
+    if (isDateDisabled) matchers.push(isDateDisabled);
     return matchers.length > 0 ? matchers : undefined;
-  }, [minDate, maxDate]);
+  }, [minDate, maxDate, isDateDisabled]);
 
   const automationType = AUTOMATION_TYPE[variant];
   const { automationIdProps, updateMetadata } = useAutomationIdAndRegister<
@@ -283,12 +295,17 @@ export function DateTimeField({
     const parsed = parseDateInput(raw, dateFormat, { relativeWords });
     if (!parsed) {
       // Bad text never becomes a guess and never becomes empty: the old value stands.
-      setDateError(true);
+      setDateError('invalid');
       return false;
     }
 
-    setDateError(false);
     const clamped = clampDate(parsed, minDate, maxDate);
+    if (isDateDisabled?.(clamped)) {
+      // Same rule as bad text: a day the caller has ruled out is not committed.
+      setDateError('unavailable');
+      return false;
+    }
+    setDateError(false);
     setDateText(dateDisplay(clamped));
     if (!dateValue || startOfDay(dateValue).getTime() !== clamped.getTime()) {
       commitValue(clamped, panelTime);
@@ -304,6 +321,7 @@ export function DateTimeField({
     relativeWords,
     minDate,
     maxDate,
+    isDateDisabled,
     commitValue,
     panelTime,
   ]);
@@ -365,6 +383,7 @@ export function DateTimeField({
     (day: Date | undefined) => {
       if (!day) return;
       const picked = startOfDay(day);
+      if (isDateDisabled?.(picked)) return;
       setDateError(false);
       setDateText(dateDisplay(picked));
       commitValue(picked, panelTime);
@@ -377,7 +396,7 @@ export function DateTimeField({
         focusField('date');
       }
     },
-    [dateDisplay, commitValue, panelTime, variant, focusField]
+    [dateDisplay, commitValue, panelTime, variant, focusField, isDateDisabled]
   );
 
   const handleTimeSelect = React.useCallback(
@@ -548,7 +567,7 @@ export function DateTimeField({
 
   const renderField = (field: 'date' | 'time') => {
     const isDateField = field === 'date';
-    const hasError = isDateField ? dateError : timeError;
+    const hasError = isDateField ? Boolean(dateError) : timeError;
     const text = isDateField ? dateText : timeText;
     const fieldPlaceholder = (isDateField ? datePlaceholder : timePlaceholder) ?? '';
     // In the pair the value is one thing, so it clears from one place: the date half.
@@ -667,7 +686,11 @@ export function DateTimeField({
 
         {(dateError || timeError) && (
           <p className="dtf-error" role="status">
-            {dateError
+            {dateError === 'unavailable'
+              ? t('dateTimePicker.unavailableDate', 'That day can’t be chosen — kept {{value}}', {
+                  value: dateDisplay(dateValue) || t('dateTimePicker.empty', 'nothing'),
+                })
+              : dateError
               ? t('dateTimePicker.invalidDate', 'Not a date — kept {{value}}', {
                   value: dateDisplay(dateValue) || t('dateTimePicker.empty', 'nothing'),
                 })
@@ -700,7 +723,7 @@ export function DateTimeField({
                 <div className="dtf-panel-calendar">
                   <Calendar
                     mode="single"
-                    selected={panelDate}
+                    selected={selectedPanelDate}
                     month={panelDate}
                     onSelect={handleDaySelect}
                     fromDate={minDate}
@@ -748,6 +771,7 @@ export function DateTimeField({
                   <button
                     type="button"
                     className="dtf-footer-button"
+                    disabled={isDateDisabled?.(clampDate(startOfDay(new Date()), minDate, maxDate))}
                     onClick={() => handleDaySelect(clampDate(startOfDay(new Date()), minDate, maxDate))}
                   >
                     {t('datePicker.today', 'Today')}

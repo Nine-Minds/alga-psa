@@ -61,6 +61,13 @@ export async function resolveInvoiceProfileScope(
 ): Promise<InvoiceProfileScope> {
   const defaultProfileId = await ensureClientDefaultBillingProfile(knex, tenant, clientId);
   const billingProfileId = cycleBillingProfileId ?? defaultProfileId;
+  const ownedProfile = await tenantDb(knex, tenant)
+    .table('client_billing_profiles')
+    .where({ billing_profile_id: billingProfileId, client_id: clientId })
+    .first('billing_profile_id');
+  if (!ownedProfile) {
+    throw new Error(`Billing profile ${billingProfileId} does not belong to client ${clientId} in this tenant.`);
+  }
   const isDefaultProfile = billingProfileId === defaultProfileId;
 
   if (!(await perProfileInvoicingEnabled(tenant, options?.userId))) {
@@ -116,10 +123,14 @@ export async function getCycleBillingProfileId(
   knex: Knex | Knex.Transaction,
   tenant: string,
   billingCycleId: string,
+  expectedClientId?: string,
 ): Promise<string | null> {
   const row = await tenantDb(knex, tenant)
     .table('client_billing_cycles')
     .where({ billing_cycle_id: billingCycleId })
-    .first('billing_profile_id');
+    .first('billing_profile_id', 'client_id');
+  if (expectedClientId && (!row || row.client_id !== expectedClientId)) {
+    throw new Error(`Billing cycle ${billingCycleId} does not belong to client ${expectedClientId} in this tenant.`);
+  }
   return (row?.billing_profile_id as string | null) ?? null;
 }

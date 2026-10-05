@@ -68,6 +68,7 @@ import {
   clientMergedEventPayloadSchema,
   clientOwnerAssignedEventPayloadSchema,
   clientStatusChangedEventPayloadSchema,
+  clientAnniversaryUpcomingEventPayloadSchema,
   clientUpdatedEventPayloadSchema,
   contactArchivedEventPayloadSchema,
   contactCreatedEventPayloadSchema,
@@ -280,6 +281,7 @@ export const workflowEventPayloadSchemas: Record<string, ZodTypeAny> = {
 
   // CRM
   'payload.ClientCreated.v1': clientCreatedEventPayloadSchema,
+  'payload.ClientAnniversaryUpcoming.v1': clientAnniversaryUpcomingEventPayloadSchema,
   'payload.ClientUpdated.v1': clientUpdatedEventPayloadSchema,
   'payload.ClientStatusChanged.v1': clientStatusChangedEventPayloadSchema,
   'payload.ClientOwnerAssigned.v1': clientOwnerAssignedEventPayloadSchema,

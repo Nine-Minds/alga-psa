@@ -131,17 +131,44 @@ describe('StorageService.uploadFile favicon processing', () => {
       .rejects.toThrow(/favicons/);
   });
 
-  it('leaves the logo branch alone: aspect preserved, webp, 1024 ceiling', async () => {
-    fileTypeMock.mockResolvedValue({ ext: 'png', mime: 'image/png' } as any);
+  it('stores a logo as PNG with its aspect preserved under the 1024 ceiling', async () => {
+    fileTypeMock.mockResolvedValue({ ext: 'webp', mime: 'image/webp' } as any);
 
-    await upload('wordmark.png', { mime_type: 'image/png', isEntityLogo: true });
+    await upload('wordmark.webp', { mime_type: 'image/webp', isEntityLogo: true });
 
     expect(sharpMocks.resize).toHaveBeenCalledWith(
       1024,
       1024,
       expect.objectContaining({ fit: 'inside', withoutEnlargement: true }),
     );
-    expect(sharpMocks.webp).toHaveBeenCalled();
-    expect(sharpMocks.png).not.toHaveBeenCalled();
+    // Outlook renders no WebP, and a logo goes out in email.
+    expect(sharpMocks.png).toHaveBeenCalled();
+    expect(sharpMocks.webp).not.toHaveBeenCalled();
+    expect(uploadMock).toHaveBeenCalledWith(
+      expect.any(Buffer),
+      expect.any(String),
+      { mime_type: 'image/png' },
+    );
+    expect(fileCreateMock).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ mime_type: 'image/png', original_name: 'wordmark.png' }),
+    );
+  });
+
+  it('keeps avatars on the WebP cover-crop path', async () => {
+    fileTypeMock.mockResolvedValue({ ext: 'png', mime: 'image/png' } as any);
+
+    await upload('face.png', { mime_type: 'image/png' });
+
+    expect(sharpMocks.resize).toHaveBeenCalledWith(
+      256,
+      256,
+      expect.objectContaining({ fit: 'cover', withoutEnlargement: true }),
+    );
+    expect(sharpMocks.webp).toHaveBeenCalledWith({ quality: 85 });
+    expect(fileCreateMock).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ mime_type: 'image/webp', original_name: 'face.webp' }),
+    );
   });
 });

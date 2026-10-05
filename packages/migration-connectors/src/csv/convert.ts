@@ -138,10 +138,11 @@ export async function runConversion(options: RunConversionOptions): Promise<CsvC
   requireNonEmpty(options.producerVersion, 'producerVersion');
 
   const diagnostics: CsvConversionDiagnostic[] = [];
-  const { entityRows, rowCounts } = buildEntityRows(options.inputs, options.namespace, diagnostics);
+  const { entityRows, customFieldValues, rowCounts } = buildEntityRows(options.inputs, options.namespace, diagnostics);
 
   const rows = {
     ...entityRows,
+    custom_field_values: customFieldValues,
     package_diagnostics: toDiagnosticRows(diagnostics),
   } as AmpPackageRows;
 

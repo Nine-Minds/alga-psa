@@ -150,6 +150,21 @@ describe('msgraph emulator', { shuffle: false }, () => {
     expect(delegatedScopes(refreshedTokens.access_token)).toBe('Mail.Read Mail.Send offline_access');
     accessToken = refreshedTokens.access_token;
     refreshToken = refreshedTokens.refresh_token;
+
+    const delegatedHeaders = { authorization: `Bearer ${accessToken}` };
+    await controlPost('/control/msgraph/seed/mailbox-folder-permission', {
+      mailbox: 'support@umbraunit.com', delegate: 'premise-app', folders: ['inbox'],
+    });
+    const mailboxBase = `${base}/v1.0/users/support%40umbraunit.com/mailFolders`;
+    const rootDenied = await fetch(mailboxBase, { headers: delegatedHeaders });
+    expect(rootDenied.status).toBe(404);
+    expect(await rootDenied.json()).toMatchObject({ error: { code: 'ErrorItemNotFound', message: 'Default folder Root not found' } });
+    expect((await fetch(`${mailboxBase}/inbox`, { headers: delegatedHeaders })).status).toBe(200);
+    expect((await fetch(`${mailboxBase}/inbox/messages`, { headers: delegatedHeaders })).status).toBe(200);
+    await controlPost('/control/msgraph/seed/mailbox-folder-permission', {
+      mailbox: 'support@umbraunit.com', delegate: 'premise-app', folders: [],
+    });
+    expect((await fetch(`${mailboxBase}/inbox`, { headers: delegatedHeaders })).status).toBe(404);
   });
 
   it('supports guided Entra application creation and administrator consent', async () => {

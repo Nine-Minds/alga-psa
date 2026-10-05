@@ -2,7 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { CheckCircle2, CircleDollarSign, FileText, Gauge, Users } from 'lucide-react';
+import { CheckCircle2, CircleDollarSign, FileText, Gauge, MessageSquare, Users } from 'lucide-react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { BentoTile, BentoTileAddButton, BentoTileEmptyAction } from '@alga-psa/ui/components/bento';
@@ -17,6 +17,7 @@ import type { IOpportunityDetail, IUser, OpportunityConfidence } from '@alga-psa
 import { oneTimeCents } from '../../lib/pipelineReporting';
 import type { OpportunityStepAssignee } from '../../actions/opportunityStepActions';
 import { WhySentenceText } from '../WhySentenceText';
+import { OpportunityDocumentsTile } from './OpportunityDocumentsTile';
 
 const OPPORTUNITY_TYPE_DEFAULTS = {
   new_logo: 'New client',
@@ -31,6 +32,8 @@ export interface OpportunityDetailViewProps {
   timeline?: React.ReactNode;
   /** EE commitments ledger, injected by the host app when the management tier allows it. */
   commitments?: React.ReactNode;
+  /** Notes & interactions feed, injected by the server-app layer (clients package boundary). */
+  activity?: React.ReactNode;
   /** Internal users the deal can be handed to. */
   assignees?: OpportunityStepAssignee[];
   onAssignOwner?: (opportunityId: string, userId: string) => void;
@@ -56,6 +59,7 @@ export function OpportunityDetailView({
   detail,
   timeline,
   commitments,
+  activity,
   assignees = [],
   onAssignOwner,
   onConfidenceChange,
@@ -254,6 +258,8 @@ export function OpportunityDetailView({
         ) : null}
       </BentoTile>
 
+      <OpportunityDocumentsTile opportunityId={detail.opportunity_id} />
+
       {commitments}
 
       {open ? (
@@ -408,6 +414,18 @@ export function OpportunityDetailView({
         </div>
         <div className="order-3 lg:col-span-12 xl:col-span-3">{rightRail}</div>
       </div>
+
+      {activity ? (
+        <div className="mt-4">
+          <BentoTile
+            id="opportunity-detail-activity-tile"
+            title={t('opportunities.detail.notesAndInteractions', 'Notes & interactions')}
+            icon={<MessageSquare className="h-4 w-4" aria-hidden="true" />}
+          >
+            {activity}
+          </BentoTile>
+        </div>
+      ) : null}
     </div>
   );
 }

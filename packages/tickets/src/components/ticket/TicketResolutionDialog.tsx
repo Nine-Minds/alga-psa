@@ -7,6 +7,8 @@ import { Button } from "@alga-psa/ui/components/Button";
 import CustomSelect from "@alga-psa/ui/components/CustomSelect";
 import { ConfirmationDialog } from "@alga-psa/ui/components/ConfirmationDialog";
 import { Dialog, DialogContent } from "@alga-psa/ui/components/Dialog";
+import { Label } from "@alga-psa/ui/components/Label";
+import { Switch } from "@alga-psa/ui/components/Switch";
 import RichTextEditorSkeleton from "@alga-psa/ui/components/skeletons/RichTextEditorSkeleton";
 import { useTranslation } from "@alga-psa/ui/lib/i18n/client";
 import { searchUsersForMentions } from "@alga-psa/user-composition/actions";
@@ -44,6 +46,7 @@ interface TicketResolutionDialogProps {
     statusId: string,
     contentBlocks: PartialBlock[],
     suppression: TicketNotificationSuppressionValue,
+    isInternal: boolean,
   ) => Promise<boolean>;
   onClipboardImageUploaded?: () => Promise<void> | void;
   uploadTicketAttachmentAction?: (
@@ -83,6 +86,7 @@ export default function TicketResolutionDialog({
     DEFAULT_RESOLUTION_BLOCK,
   );
   const [editorKey, setEditorKey] = useState(0);
+  const [isInternal, setIsInternal] = useState(false);
   const [notificationSuppression, setNotificationSuppression] =
     useState<TicketNotificationSuppressionValue>(
       defaultNotificationSuppression,
@@ -112,6 +116,7 @@ export default function TicketResolutionDialog({
       setStatusId(statusOptions.length === 1 ? statusOptions[0].value : null);
       setContent(DEFAULT_RESOLUTION_BLOCK);
       setEditorKey((currentKey) => currentKey + 1);
+      setIsInternal(false);
       setNotificationSuppression(defaultNotificationSuppression());
       resetDraftTracking();
     }
@@ -126,6 +131,7 @@ export default function TicketResolutionDialog({
       statusId,
       content,
       notificationSuppression,
+      isInternal,
     );
     if (resolutionSaved) {
       uploadSession.resetDraftTracking();
@@ -208,6 +214,25 @@ export default function TicketResolutionDialog({
                   autoFocus
                 />
               </Suspense>
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <Switch
+                  id={`${id}-internal-toggle`}
+                  checked={isInternal}
+                  onCheckedChange={setIsInternal}
+                  disabled={isSubmitting}
+                />
+                <Label htmlFor={`${id}-internal-toggle`}>
+                  {t("info.markResolutionInternal", "Mark as Internal")}
+                </Label>
+              </div>
+              <p className="mt-1 text-xs text-[rgb(var(--color-text-600))]">
+                {t(
+                  "info.markResolutionInternalHelper",
+                  "An internal resolution stays out of the client portal and is left out of the close email.",
+                )}
+              </p>
             </div>
             <TicketNotificationSuppressionControl
               idPrefix={`${id}-notification-suppression`}

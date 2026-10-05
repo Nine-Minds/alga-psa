@@ -5,7 +5,7 @@
   "main": "dist/services/workflow-worker/src/index.js",
   "type": "module",
   "scripts": {
-    "build": "tsc -p tsconfig.json && tsc-alias -p tsconfig.json -f --resolve-full-paths && node scripts/fix-relative-import-extensions.mjs && node scripts/validate-runtime-imports.mjs",
+    "build": "tsc -p tsconfig.json && tsc-alias -p tsconfig.json -f --resolve-full-paths && node scripts/fix-relative-import-extensions.mjs && node scripts/validate-runtime-imports.mjs && node scripts/validate-native-storage-imports.mjs",
     "start": "node .",
     "dev": "WORKFLOW_RUNTIME_V2_TEMPORAL_USE_SOURCE_PATHS=true tsx watch src/index.ts ../../shared ../../ee/temporal-workflows/src ../../ee/packages/workflows/src",
     "check:build-workspaces": "node scripts/check-build-workspaces.mjs",
@@ -26,7 +26,7 @@
     "@temporalio/workflow": "~1.14.1",
     "ajv": "^8.12.0",
     "ajv-formats": "^2.1.1",
-    "axios": "^1.18.0",
+    "axios": "^1.20.0",
     "dotenv": "^16.4.5",
     "express": "^4.21.3",
     "knex": "^3.1.0",

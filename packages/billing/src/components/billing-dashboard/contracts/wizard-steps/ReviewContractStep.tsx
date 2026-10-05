@@ -15,17 +15,28 @@ import {
   CheckCircle2,
   FileCheck,
   Repeat,
+  Wallet,
 } from 'lucide-react';
 import { CURRENCY_OPTIONS } from '@alga-psa/core';
 import { parse } from 'date-fns';
 import { getClientByIdForBilling } from '@alga-psa/billing/actions/billingClientsActions';
+import { getClientBillingProfilesForBilling } from '@alga-psa/billing/actions/billingProfileActions';
+import { useClientBillingProfiles } from '@alga-psa/ui/hooks/useClientBillingProfiles';
 import { getRecurringAuthoringPreview } from '../recurringAuthoringPreview';
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import {
+  fixedServicesRecurringTotalCents,
+  hasBundleFixedService,
+  isUnitFixedService,
+  unitFixedServiceAmountCents,
+} from '../../../../lib/fixedServiceBasis';
 import { isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import {
   useBillingFrequencyOptions,
   useFormatBillingFrequency,
 } from '@alga-psa/billing/hooks/useBillingEnumOptions';
+
+const loadBillingProfiles = (clientId: string) => getClientBillingProfilesForBilling(clientId);
 
 interface ReviewContractStepProps {
   data: ContractWizardData;
@@ -62,6 +73,17 @@ export function ReviewContractStep({ data }: ReviewContractStepProps) {
 
     void loadClientName();
   }, [data.client_id, t]);
+
+  // Mirrors the picker on the basics step: silent for a single-profile client,
+  // and for a segmented one it states where the contract will bill — the pick
+  // or the client default it falls back to.
+  const { profiles: billingProfiles, isSegmented: isProfileSegmented } = useClientBillingProfiles(
+    data.client_id || null,
+    loadBillingProfiles,
+  );
+  const selectedBillingProfileName = data.billing_profile_id
+    ? billingProfiles.find((profile) => profile.billing_profile_id === data.billing_profile_id)?.name
+    : null;
 
   const currencyCode = data.currency_code || 'USD';
   const recurringPreview = getRecurringAuthoringPreview({
@@ -162,7 +184,10 @@ export function ReviewContractStep({ data }: ReviewContractStepProps) {
     return formatDateInLocale(local);
   };
 
-  const calculateTotalMonthly = () => data.fixed_base_rate ?? 0;
+  // Unit members bill quantity × unit rate; the base rate is the bundle total and
+  // counts only when an allocation member exists.
+  const calculateTotalMonthly = () =>
+    fixedServicesRecurringTotalCents(data.fixed_services, data.fixed_base_rate);
 
   const hasFixedServices = data.fixed_services.length > 0;
   const hasProducts = data.product_services.length > 0;
@@ -263,6 +288,22 @@ export function ReviewContractStep({ data }: ReviewContractStepProps) {
               </p>
             </div>
           </div>
+          {isProfileSegmented && (
+            <div className="flex items-start gap-2">
+              <Wallet className="h-4 w-4 mt-0.5 text-[rgb(var(--color-text-300))]" />
+              <div>
+                <p className="text-[rgb(var(--color-text-500))]">
+                  {t('wizardReview.fields.billingProfile', { defaultValue: 'Billing Profile' })}
+                </p>
+                <p className="font-medium">
+                  {selectedBillingProfileName ||
+                    t('wizardReview.billingProfile.clientDefault', {
+                      defaultValue: "The client's default profile",
+                    })}
+                </p>
+              </div>
+            </div>
+          )}
           <div className="flex items-start gap-2">
             <FileText className="h-4 w-4 mt-0.5 text-[rgb(var(--color-text-300))]" />
             <div>
@@ -437,22 +478,34 @@ export function ReviewContractStep({ data }: ReviewContractStepProps) {
             </Badge>
           </div>
           <div className="space-y-2 text-sm">
-            <div className="flex items-center gap-2">
-              <Coins className="h-4 w-4 text-[rgb(var(--color-text-300))]" />
-              <span className="font-medium">
-                {t('wizardReview.fixed.monthlyBaseRate', { defaultValue: 'Monthly Base Rate:' })}
-              </span>
-              <span>{formatMinorCurrency(data.fixed_base_rate)}</span>
-            </div>
+            {hasBundleFixedService(data.fixed_services) && (
+              <div className="flex items-center gap-2">
+                <Coins className="h-4 w-4 text-[rgb(var(--color-text-300))]" />
+                <span className="font-medium">
+                  {t('wizardReview.fixed.monthlyBaseRate', { defaultValue: 'Monthly Base Rate:' })}
+                </span>
+                <span>{formatMinorCurrency(data.fixed_base_rate)}</span>
+              </div>
+            )}
             <ul className="list-disc list-inside space-y-1 ml-2">
               {data.fixed_services.map((service, idx) => (
                 <li key={idx} className="space-y-1">
                   <span className="font-medium">
-                    {t('wizardReview.common.serviceQuantityRow', {
-                      serviceName: service.service_name || service.service_id,
-                      quantity: service.quantity,
-                      defaultValue: '{{serviceName}} (Qty: {{quantity}})',
-                    })}
+                    {isUnitFixedService(service)
+                      ? t('wizardReview.fixed.recurringUnitRow', {
+                          serviceName: service.service_name || service.service_id,
+                          quantity: service.quantity,
+                          rate: formatMinorCurrency(service.unit_rate),
+                          amount: formatMinorCurrency(
+                            unitFixedServiceAmountCents(service.quantity, service.unit_rate ?? 0),
+                          ),
+                          defaultValue: '{{serviceName}}: {{quantity}} × {{rate}} = {{amount}}',
+                        })
+                      : t('wizardReview.common.serviceQuantityRow', {
+                          serviceName: service.service_name || service.service_id,
+                          quantity: service.quantity,
+                          defaultValue: '{{serviceName}} (Qty: {{quantity}})',
+                        })}
                   </span>
                   {formatBucketSummary(service.bucket_overlay, 'hours') && (
                     <p className="text-xs text-[rgb(var(--color-secondary-600))] pl-4">

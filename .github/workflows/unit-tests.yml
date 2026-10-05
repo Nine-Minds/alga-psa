@@ -21,7 +21,7 @@ jobs:
           # "node:sqlite is unavailable in this runtime".
           node-version: '22'
       - name: Verify test selection and execution accounting
-        run: node --test scripts/tests/integration-selection.test.mjs scripts/tests/test-execution-evidence.test.mjs scripts/tests/test-discovery.test.mjs scripts/tests/playwright-execution-evidence.test.mjs scripts/tests/test-sharding.test.mjs
+        run: node --test scripts/tests/integration-selection.test.mjs scripts/tests/test-execution-evidence.test.mjs scripts/tests/test-discovery.test.mjs scripts/tests/playwright-execution-evidence.test.mjs scripts/tests/test-sharding.test.mjs scripts/tests/react-test-environment.test.mjs
       - name: Check skip budget
         run: node scripts/check-skip-budget.mjs
 
@@ -172,7 +172,13 @@ jobs:
   server-unit:
     name: Server unit shard ${{ matrix.shard }}
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # Shards land at 27-29 minutes (~6 min collection, ~8 min tests, then v8
+    # spends ~14 silent minutes on coverage after the last test module), so 30
+    # left no headroom: shard 4 was killed at exactly 30m0s with all 776 of its
+    # files already green, and the null evidence it uploaded then failed the
+    # server-unit-complete, inventory and readiness gates. Same 45 the
+    # nx-affected job above uses.
+    timeout-minutes: 45
     strategy:
       fail-fast: false
       matrix:
@@ -192,8 +198,10 @@ jobs:
           cache: 'npm'
       - name: Upgrade npm to version 11
         run: npm install -g npm@11
-      - name: Install dependencies
-        run: npm ci
+      - name: Install server unit dependencies with bounded download recovery
+        env:
+          FFMPEG_STATIC_DOWNLOAD_RETRY: 'true'
+        run: node scripts/install-api-test-dependencies.mjs
       # A few contract tests shell out to ripgrep; it isn't on the runner by
       # default. Installed from its GitHub release, not apt (the apt mirror hang
       # here once stalled this job for ~6h). See the composite action for why.
@@ -224,12 +232,17 @@ jobs:
               ../packages/integrations/src/utils/calendar/eventMapping.allDaySemantics.test.ts \
               ../packages/integrations/src/utils/calendar/eventMapping.timedTimezone.test.ts \
               ../packages/billing/src/components/settings/billing/PriceChangeRolloutDialog.contract.test.tsx \
-              --poolOptions.forks.singleFork=false --maxWorkers=2 \
+              --maxWorkers=2 \
               --reporter=default --reporter=json --outputFile.json="../test-results/calendar-timezones/$report.json"
           done
         env:
           NODE_OPTIONS: '--max-old-space-size=8192'
           SKIP_DB_TESTS: '1'
+          # A fresh fork per file. Passing --poolOptions.forks.singleFork=false
+          # on the CLI stopped working when the config grew projects (vitest
+          # forwards only a whitelist of CLI options into them); the config
+          # reads this instead.
+          VITEST_RECYCLE_FORKS: '1'
           DB_USER_ADMIN: ''
           DB_PASSWORD_ADMIN: ''
       - name: Upload calendar timezone execution
@@ -267,6 +280,19 @@ jobs:
           path: test-results/server-coverage/
           if-no-files-found: error
           retention-days: 7
+      # The shard bundle above expires in a week; the weekly flaky report reads
+      # this one, and only when this shard actually retried a test. A shard that
+      # retried nothing (or died before the reporter ran) publishes nothing, so
+      # the weekly job never spends its API budget downloading empty documents;
+      # the always-written document stays in the shard bundle above.
+      - name: Retain shard flaky-test evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: flaky-tests-unit-shard-${{ matrix.shard }}
+          path: test-results/server-unit-flaky/
+          if-no-files-found: ignore
+          retention-days: 30
 
   server-unit-complete:
     name: Server unit execution complete

@@ -577,12 +577,12 @@ test('live network probe clears a stale recorded network failure and unpoisons k
   const stateFile = writeStateFile({
     phase: 'network',
     status: 'preflight-blocked',
-    lastAction: 'Network failure while fetching GitHub channel metadata.',
+    lastAction: 'Network failure while contacting ghcr.io.',
     failure: {
       phase: 'network',
-      step: 'fetch-channel-metadata',
-      message: 'Network failure while fetching GitHub channel metadata.',
-      suspectedCause: 'Network failure while fetching GitHub channel metadata.',
+      step: 'reach-ghcr',
+      message: 'Network failure while contacting ghcr.io.',
+      suspectedCause: 'Network failure while contacting ghcr.io.',
       suggestedNextStep: 'Check outbound HTTPS and proxy settings. Invalid IP address: undefined',
       retrySafe: true
     }
@@ -613,7 +613,7 @@ test('live network probe failure surfaces a fresh blocker instead of the recorde
   const stateFile = writeStateFile({
     phase: 'network',
     status: 'preflight-blocked',
-    failure: { phase: 'network', step: 'fetch-channel-metadata', message: 'old recorded text', suspectedCause: 'old recorded text', suggestedNextStep: 'old', retrySafe: true }
+    failure: { phase: 'network', step: 'reach-ghcr', message: 'old recorded text', suspectedCause: 'old recorded text', suggestedNextStep: 'old', retrySafe: true }
   });
 
   const snapshot = await collectStatusSnapshotAsync({
@@ -654,6 +654,156 @@ test('live network probe does not alter a recorded non-network (k3s) failure', a
   assert.equal(snapshot.network.ok, true);
   assert.equal(snapshot.lastRecordedError, null);
   assert.equal(snapshot.failures.some((f) => f.category === 'k3s'), true);
+});
+
+test('a healthy network probe does not clear a licensing redemption failure', async () => {
+  const stateFile = writeStateFile({
+    phase: 'registry-release-source',
+    status: 'runtime-values-blocked',
+    lastAction: 'Could not redeem the install code.',
+    failure: {
+      phase: 'registry-release-source',
+      step: 'redeem-install-code',
+      message: 'Could not redeem the install code.',
+      suspectedCause: 'Could not redeem the install code.',
+      details: 'Destination: lic.example; DNS servers: 192.0.2.53; resolved addresses: none.',
+      suggestedNextStep: 'Verify the license service is reachable and retry.',
+      retrySafe: true
+    }
+  });
+
+  const snapshot = await collectStatusSnapshotAsync({
+    stateFile,
+    kubeconfigPath: '/tmp/k3s.yaml',
+    kubectlPrefix: 'kubectl --kubeconfig /tmp/k3s.yaml',
+    runCommand: kubectlUnavailableRunner,
+    networkProbe: { ok: true, checkedAt: '2026-05-28T23:59:00.000Z', failure: null }
+  });
+
+  assert.equal(snapshot.network.ok, true);
+  assert.equal(snapshot.lastRecordedError, null);
+  const licensing = snapshot.failures.find((failure) => failure.step === 'redeem-install-code');
+  assert.ok(licensing, 'redemption failure must remain visible');
+  assert.match(licensing.details, /lic\.example/);
+  assert.equal(snapshot.topBlockers.some((blocker) => String(blocker.reason).includes('redeem')), true);
+});
+
+test('retry diagnostics stay visible while an automatic retry is in progress', async () => {
+  const stateFile = writeStateFile({
+    phase: 'registry-release-source',
+    status: 'runtime-values-running',
+    lastAction: 'Redeeming install code.',
+    failure: {
+      phase: 'registry-release-source',
+      step: 'redeem-install-code',
+      message: 'Could not redeem the install code.',
+      details: 'Destination: lic.example',
+      retrySafe: true
+    }
+  });
+
+  const snapshot = await collectStatusSnapshotAsync({
+    stateFile,
+    kubeconfigPath: '/tmp/k3s.yaml',
+    kubectlPrefix: 'kubectl --kubeconfig /tmp/k3s.yaml',
+    runCommand: kubectlUnavailableRunner,
+    autoRetry: {
+      willRetry: true,
+      exhausted: false,
+      attempts: 2,
+      maxAttempts: 5,
+      nextAttemptInSeconds: 15,
+      lastFailure: { attempt: 2, step: 'redeem-install-code', category: 'registry-release-source', message: 'Could not redeem the install code.', details: 'Destination: lic.example' }
+    }
+  });
+
+  const failure = snapshot.failures.find((item) => item.step === 'redeem-install-code');
+  assert.ok(failure, 'retained failure must be shown during the retry');
+  assert.equal(failure.autoRetry.maxAttempts, 5);
+  assert.match(failure.suggestedNextStep, /retry attempt 3 of 5/);
+  assert.notEqual(snapshot.rollup.state, 'fully_healthy');
+});
+
+test('the durable retry failure snapshot is surfaced even when install state lost it', async () => {
+  const stateFile = writeStateFile({ phase: 'preflight', status: 'preflight-running', failure: null });
+
+  const snapshot = await collectStatusSnapshotAsync({
+    stateFile,
+    kubeconfigPath: '/tmp/k3s.yaml',
+    kubectlPrefix: 'kubectl --kubeconfig /tmp/k3s.yaml',
+    runCommand: kubectlUnavailableRunner,
+    autoRetry: {
+      willRetry: false,
+      exhausted: true,
+      attempts: 10,
+      maxAttempts: 10,
+      lastFailure: { attempt: 10, step: 'reach-ghcr', phase: 'network', category: 'network', message: 'Network failure while contacting ghcr.io.', details: 'Check outbound HTTPS.' }
+    }
+  });
+
+  const failure = snapshot.failures.find((item) => item.step === 'reach-ghcr');
+  assert.ok(failure, 'exhausted retry evidence must remain visible');
+  assert.equal(failure.autoRetry.exhausted, true);
+  assert.match(failure.suggestedNextStep, /retries are exhausted/);
+  assert.notEqual(snapshot.topBlockers.length, 0);
+});
+
+test('a failed cluster-DNS reconcile is a distinct blocker', async () => {
+  const stateFile = writeStateFile({ phase: 'preflight', status: 'preflight-running', failure: null });
+
+  const snapshot = await collectStatusSnapshotAsync({
+    stateFile,
+    kubeconfigPath: '/tmp/k3s.yaml',
+    kubectlPrefix: 'kubectl --kubeconfig /tmp/k3s.yaml',
+    runCommand: kubectlUnavailableRunner,
+    dnsReconcile: { ok: false, error: 'no usable upstream resolver was found', at: '2026-09-22T00:00:00.000Z', logFile: '/var/lib/alga-appliance/dns-reconcile.log' }
+  });
+
+  const blocker = snapshot.failures.find((item) => item.step === 'reconcile-cluster-dns');
+  assert.ok(blocker, 'DNS reconcile failure must surface');
+  assert.match(blocker.suspectedCause, /no usable upstream/);
+  assert.equal(snapshot.dnsReconcile.ok, false);
+  assert.equal(snapshot.topBlockers.some((item) => item.step === 'reconcile-cluster-dns'), true);
+});
+
+test('a pending cluster-DNS activation surfaces an actionable blocker', async () => {
+  const stateFile = writeStateFile({ phase: 'dns', status: 'setup-blocked', failure: {
+    step: 'reconcile-cluster-dns', phase: 'dns', message: 'Cluster DNS is not ready.', retrySafe: true
+  } });
+
+  const snapshot = await collectStatusSnapshotAsync({
+    stateFile,
+    kubeconfigPath: '/tmp/k3s.yaml',
+    kubectlPrefix: 'kubectl --kubeconfig /tmp/k3s.yaml',
+    runCommand: kubectlUnavailableRunner,
+    dnsReconcile: {
+      ok: null,
+      state: 'submitted',
+      at: '2026-09-22T00:00:00.000Z',
+      logFile: '/var/lib/alga-appliance/dns-reconcile.log'
+    }
+  });
+
+  const blocker = snapshot.failures.find((item) => item.step === 'reconcile-cluster-dns');
+  assert.ok(blocker, 'pending DNS activation must surface as a blocker');
+  assert.equal(blocker.pending, true);
+  assert.match(blocker.suspectedCause, /in progress/i);
+  const topBlocker = snapshot.topBlockers.find((item) => item.step === 'reconcile-cluster-dns');
+  assert.ok(topBlocker, 'pending activation must appear in top blockers');
+  assert.equal(topBlocker.loginBlocking, false);
+  assert.equal(snapshot.dnsReconcile.ok, null);
+});
+
+test('a successful or absent DNS reconcile adds no blocker', async () => {
+  const stateFile = writeStateFile({ phase: 'preflight', status: 'preflight-running', failure: null });
+  const snapshot = await collectStatusSnapshotAsync({
+    stateFile,
+    kubeconfigPath: '/tmp/k3s.yaml',
+    kubectlPrefix: 'kubectl --kubeconfig /tmp/k3s.yaml',
+    runCommand: kubectlUnavailableRunner,
+    dnsReconcile: { ok: true, at: '2026-09-22T00:00:00.000Z', logFile: '/var/lib/alga-appliance/dns-reconcile.log' }
+  });
+  assert.equal(snapshot.failures.some((item) => item.step === 'reconcile-cluster-dns'), false);
 });
 
 test('collectStatusSnapshot maps failure phases to expected categories', () => {

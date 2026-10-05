@@ -27,11 +27,19 @@ export interface EntraProviderAdapter {
   listSecurityGroupsForTenant(
     input: EntraListUsersForTenantInput
   ): Promise<Array<{ id: string; displayName: string | null }>>;
+  listSharedMailboxIds?(input: EntraListUsersForTenantInput): Promise<Set<string> | null>;
   isUserInSecurityGroup(input: {
     tenant: string;
     managedTenantId: string;
     userEntraObjectId: string;
     groupId: string;
-    membershipMode: 'transitive';
+    membershipMode: 'direct' | 'transitive';
   }): Promise<boolean>;
+  listSecurityGroupMemberIds(input: {
+    tenant: string;
+    managedTenantId: string;
+    groupId: string;
+    membershipMode: 'direct' | 'transitive';
+    users?: EntraManagedUserRecord[];
+  }): Promise<Set<string>>;
 }

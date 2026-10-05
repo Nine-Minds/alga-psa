@@ -317,14 +317,16 @@
       "client": "Client",
       "invoiceNumber": "Invoice Number",
       "invoiceNumberOptional": "Invoice Number (Optional)",
-      "sourceSalesOrder": "Source sales order (optional)"
+      "sourceSalesOrder": "Source sales order (optional)",
+      "billingProfile": "Billing Profile"
     },
     "placeholders": {
       "selectClient": "Select a client",
       "invoiceNumberOptional": "Leave blank to auto-generate",
       "sourceSalesOrder": "Select a fulfilled or manually billable sales order",
       "searchSalesOrders": "Search sales orders...",
-      "noInvoiceableSalesOrders": "No invoiceable sales orders found."
+      "noInvoiceableSalesOrders": "No invoiceable sales orders found.",
+      "selectBillingProfile": "Select a billing profile"
     },
     "automatedItems": {
       "title": "Automated Line Items",
@@ -346,7 +348,8 @@
       "clearSalesOrderSource": "Clear sales order source"
     },
     "labels": {
-      "total": "Total"
+      "total": "Total",
+      "defaultBillingProfile": "{{name}} (default)"
     },
     "prepayment": {
       "label": "This is a prepayment invoice (creates credit)",
@@ -381,10 +384,12 @@
       "salesOrderNotInvoiceable": "That sales order is no longer available to invoice.",
       "USAGE_RECORDS_MISSING_ACK_REQUIRED": "This invoice window has billable charges, but {{services}} have no usage reported for the service period {{periodStart}} to {{periodEnd}}. Record the usage first, or explicitly acknowledge generating without it — the unreported services stay billable later.",
       "USAGE_PERIOD_TOTAL_STALE": "The preview is out of date: {{details}}. Re-run the preview to see the current numbers, then generate again.",
+      "RECURRING_PRICING_STALE": "The preview is out of date: {{details}}. Re-run the preview to see the current numbers, then generate again.",
       "USAGE_CALCULATION_ERROR": "Usage for {{services}} in the service period {{periodStart}} to {{periodEnd}} is recorded but could not be priced. Fix the service pricing (catalog price in the contract currency, a custom rate, or rate tiers), then try again. Do not record replacement usage.",
       "SOURCE_ALREADY_BILLED": "Some selected items are no longer billable (already invoiced, not approved, or removed). Refresh and try again.",
       "SOURCE_NOT_ELIGIBLE": "A selected item is not one of this ticket's billable items, or it is no longer eligible. Refresh and try again.",
-      "SOURCE_CURRENCY_MISMATCH": "Some selected products are priced in a different currency than this client invoices in, so they cannot be added. Invoice them separately in their own currency."
+      "SOURCE_CURRENCY_MISMATCH": "Some selected products are priced in a different currency than this client invoices in, so they cannot be added. Invoice them separately in their own currency.",
+      "BILLING_PROFILE_NOT_FOUND": "The selected billing profile is not available for this client. Refresh and try again."
     },
     "warnings": {
       "noBillingEmail": "This client has no billing email. Set a billing contact, a client billing email, or an email on the billing or default location before generating the invoice."
@@ -395,6 +400,9 @@
     },
     "salesOrderContext": {
       "summary": "{{quantity}} item(s) ready to invoice from {{lineCount}} line(s). This draft will be linked back to the sales order."
+    },
+    "hints": {
+      "billingProfile": "The invoice and its lines are billed to this profile."
     }
   },
   "quickInvoice": {
@@ -489,7 +497,8 @@
       "finalizedDate": "Finalized Date",
       "status": "Status",
       "actions": "Actions",
-      "quickbooks": "QuickBooks"
+      "quickbooks": "QuickBooks",
+      "autopay": "Auto-pay"
     },
     "actions": {
       "downloadPdfs": "Download PDFs",
@@ -521,6 +530,9 @@
         "selectedCount": "{{count}} selected",
         "clear": "Clear"
       }
+    },
+    "autopay": {
+      "scheduled": "Auto-pay {{status}}"
     }
   },
   "recurringServicePeriods": {
@@ -725,7 +737,9 @@
     "title": "Invoice Preview",
     "templatePlaceholder": "Select invoice template...",
     "labels": {
-      "standard": " (Standard)"
+      "standard": " (Standard)",
+      "billingProfile": "Billing profile: {{name}}",
+      "billingProfileDefault": "the client's default profile"
     },
     "actions": {
       "finalizeInvoice": "Finalize Invoice",
@@ -777,7 +791,8 @@
       "back": "Back to Invoice Layouts",
       "cancel": "Cancel",
       "save": "Save Template",
-      "saving": "Saving..."
+      "saving": "Saving...",
+      "close": "Close"
     },
     "titles": {
       "create": "Create New Invoice Layout",
@@ -787,7 +802,9 @@
       "templateName": "Template Name",
       "templateAst": "Template AST (JSON)",
       "created": "Created",
-      "lastUpdated": "Last Updated"
+      "lastUpdated": "Last Updated",
+      "savedAt": "Saved {{time}}",
+      "notSaved": "Not saved yet"
     },
     "tabs": {
       "visual": "Visual",
@@ -803,6 +820,9 @@
       "templateNameRequired": "Template name is required",
       "astExportFailed": "Failed to export template AST from visual workspace: {{message}}",
       "unknownAstExport": "Unknown AST export error"
+    },
+    "toast": {
+      "saved": "Layout \"{{name}}\" saved."
     }
   },
   "templates": {
@@ -980,12 +1000,17 @@
       "billingEmail": "Billing Email",
       "clientEmail": "Client Email",
       "noEmailFound": "No Email Found",
-      "notConfigured": "No email address is configured for this client."
+      "notConfigured": "No email address is configured for this client.",
+      "billingProfile": "Billing Profile",
+      "billingProfileNamed": "Billing profile: {{name}}",
+      "billingProfileDefault": "the client's default profile"
     },
     "fields": {
       "due": "Due",
       "additionalMessage": "Additional Message",
-      "additionalMessagePlaceholder": "Add a personal note to include in the email..."
+      "additionalMessagePlaceholder": "Add a personal note to include in the email...",
+      "from": "From",
+      "useDefault": "Use default sender"
     },
     "preview": "Emails will be sent from {{fromEmail}} on behalf of {{companyName}}. Each invoice will be attached as a PDF.",
     "values": {
@@ -1194,7 +1219,10 @@
         "drags": "Drags: {{count}}",
         "success": "Success: {{count}}",
         "invalid": "Invalid: {{count}}"
-      }
+      },
+      "zoomOut": "Zoom out",
+      "zoomIn": "Zoom in",
+      "zoomFit": "Fit"
     },
     "palette": {
       "tabs": {
@@ -1235,6 +1263,15 @@
         "content": "Content",
         "media": "Media",
         "dynamic": "Dynamic"
+      },
+      "insertTarget": {
+        "page": "New blocks go at the end of the page.",
+        "inside": "New blocks go inside {{name}}.",
+        "after": "New blocks go right after {{name}}.",
+        "label": "Where new blocks go",
+        "insideOption": "Inside it",
+        "afterOption": "After it",
+        "shiftHint": "Shift+click + to add after it instead."
       }
     },
     "inspector": {
@@ -1254,7 +1291,70 @@
       "fitSectionToContents": "Fit Section to Contents",
       "sectionNoChildContent": "Section has no child content to fit.",
       "apply": "Apply",
-      "emptyHelp": "Select a component to edit its properties."
+      "emptyHelp": "Select a component to edit its properties.",
+      "size": "Size",
+      "width": "Width",
+      "widthValue": "Width value",
+      "minWidth": "Min width",
+      "maxWidth": "Max width",
+      "height": "Height",
+      "heightValue": "Height value",
+      "minHeight": "Min height",
+      "maxHeight": "Max height",
+      "mediaSource": "Image source",
+      "mediaSourceLogo": "Company logo",
+      "mediaSourceCustom": "Custom image",
+      "mediaSourceLogoHint": "Shows the logo from your company branding settings on every document.",
+      "mediaSourceUrl": "Source URL",
+      "renameInner": "Rename {{count}} inner layers too ({{from}} → {{to}}…)?",
+      "renameInnerApply": "Rename",
+      "renameInnerDismiss": "No",
+      "tabsLabel": "Inspector sections",
+      "insertDataField": "+ Insert data field…",
+      "searchDataFields": "Search data fields…",
+      "dataFields": "Data fields",
+      "box": {
+        "top": "Top",
+        "right": "Right",
+        "bottom": "Bottom",
+        "left": "Left",
+        "all": "All sides",
+        "sameOnAllSides": "Same on all sides",
+        "unit": "Unit",
+        "customValue": "Custom CSS value kept until you edit a side: {{value}}"
+      },
+      "examplePlaceholder": "e.g. {{value}}",
+      "setCount": "{{count}} set",
+      "overrides": {
+        "none": "Uses defaults only.",
+        "jump": "Edit in the {{tab}} tab",
+        "title": "Set on this block ({{count}}):"
+      },
+      "tabs": {
+        "content": "Content",
+        "style": "Style",
+        "layout": "Layout & size"
+      },
+      "sizeModes": {
+        "auto": {
+          "label": "Auto",
+          "widthTooltip": "Let the container decide (stretches in a vertical stack)",
+          "heightTooltip": "Grow with the content"
+        },
+        "fill": {
+          "label": "Fill",
+          "widthTooltip": "Fill the full width of the container"
+        },
+        "fit": {
+          "label": "Fit",
+          "widthTooltip": "Shrink to fit the content"
+        },
+        "fixed": {
+          "label": "Fixed",
+          "widthTooltip": "Use the exact width typed below",
+          "heightTooltip": "Use the exact height typed below"
+        }
+      }
     },
     "shell": {
       "selectedLabel": "Selected:",
@@ -1546,6 +1646,12 @@
             },
             "margin": {
               "label": "Margin"
+            },
+            "padding": {
+              "label": "Padding"
+            },
+            "containerPadding": {
+              "label": "Padding"
             }
           }
         },
@@ -1633,6 +1739,84 @@
         },
         "totals-rows": {
           "title": "Totals Rows"
+        },
+        "typography": {
+          "title": "Typography",
+          "fields": {
+            "fontSize": {
+              "label": "Size"
+            },
+            "fontWeight": {
+              "label": "Weight",
+              "options": {
+                "400": "Normal (400)",
+                "500": "Medium (500)",
+                "600": "Semibold (600)",
+                "700": "Bold (700)"
+              }
+            },
+            "lineHeight": {
+              "label": "Line height"
+            },
+            "textAlign": {
+              "label": "Align",
+              "options": {
+                "left": "Left",
+                "center": "Center",
+                "right": "Right",
+                "justify": "Justify"
+              }
+            },
+            "fontStyle": {
+              "label": "Style",
+              "options": {
+                "normal": "Normal",
+                "italic": "Italic"
+              }
+            },
+            "color": {
+              "label": "Color"
+            }
+          }
+        },
+        "value-typography": {
+          "title": "Value Text",
+          "fields": {
+            "fontSize": {
+              "label": "Size"
+            },
+            "fontWeight": {
+              "label": "Weight",
+              "options": {
+                "400": "Normal (400)",
+                "500": "Medium (500)",
+                "600": "Semibold (600)",
+                "700": "Bold (700)"
+              }
+            },
+            "lineHeight": {
+              "label": "Line height"
+            },
+            "textAlign": {
+              "label": "Align",
+              "options": {
+                "left": "Left",
+                "center": "Center",
+                "right": "Right",
+                "justify": "Justify"
+              }
+            },
+            "fontStyle": {
+              "label": "Style",
+              "options": {
+                "normal": "Normal",
+                "italic": "Italic"
+              }
+            },
+            "color": {
+              "label": "Color"
+            }
+          }
         }
       }
     },
@@ -1732,10 +1916,80 @@
     },
     "canvas": {
       "templateBoundary": "Template Boundary",
-      "translatableHint": "Translated automatically into the recipient's language. Edit it to use your own fixed text instead."
+      "translatableHint": "Translated automatically into the recipient's language. Edit it to use your own fixed text instead.",
+      "noLineItems": "No line items",
+      "moreRows": "+{{count}} more rows",
+      "subtotal": "Subtotal",
+      "tax": "Tax",
+      "total": "Total",
+      "buttonLabel": "Button",
+      "signatureLabel": "Signature",
+      "attachmentsLabel": "Attachments",
+      "spacerLabel": "Spacer",
+      "companyLogo": "Company logo",
+      "insertionMarker": "The next block you add goes here",
+      "emptyContainer": "Empty — select it and add blocks from the left panel",
+      "localeChip": "Translated labels shown in {{language}} (Preview language)",
+      "badgeDragHint": "Drag to move this block"
     },
     "dragOverlay": {
       "component": "Component"
+    },
+    "arrange": {
+      "up": "Up",
+      "upHint": "Move earlier in its container (↑)",
+      "down": "Down",
+      "downHint": "Move later in its container (↓)",
+      "out": "Out",
+      "outHint": "Move out of its container, placing it right after (Alt+←)",
+      "into": "In",
+      "intoHint": "Move into the container just before it (Alt+→)",
+      "copy": "Copy",
+      "copyHint": "Copy (Ctrl/⌘+C). Paste with Ctrl/⌘+V after selecting where it should go.",
+      "paste": "Paste",
+      "pasteHint": "Paste into the selected container, or after the selected block (Ctrl/⌘+V)",
+      "duplicate": "Duplicate",
+      "duplicateHint": "Duplicate right after itself (Ctrl/⌘+D)",
+      "copyStyle": "Copy style",
+      "copyStyleHint": "Copy colors, borders, spacing and text style (Ctrl/⌘+Alt+C)",
+      "pasteStyle": "Paste style",
+      "pasteStyleHint": "Give this block the copied style (Ctrl/⌘+Alt+V)",
+      "delete": "Delete",
+      "deleteHint": "Delete (Delete key)",
+      "title": "Arrange"
+    },
+    "feedback": {
+      "cannotInsert": "{{block}} cannot be added here.",
+      "insertedOnPage": "Added {{block}} to the page.",
+      "insertedInto": "Added {{block}} to {{parent}}.",
+      "fieldRebound": "{{name}} now shows {{path}}."
+    },
+    "translation": {
+      "translatedAs": "Standard label \"{{name}}\", translated for each recipient",
+      "useFixedText": "Use fixed text",
+      "pickStandardLabel": "Fixed text. Translate automatically…",
+      "searchStandardLabels": "Search standard labels…",
+      "standardLabels": "Standard labels",
+      "noMatches": "No standard label matches.",
+      "cancel": "Cancel"
+    },
+    "outline": {
+      "collapse": "Collapse {{name}}",
+      "expand": "Expand {{name}}",
+      "title": "Outline"
+    },
+    "dragPreview": {
+      "noTarget": "Outside the page — release to cancel",
+      "noChange": "Stays where it is",
+      "before": "Before {{block}}",
+      "after": "After {{block}}",
+      "inside": "Into {{container}}",
+      "dropOnPage": "Drop on the page to add this block.",
+      "cancelled": "Not moved — release over the page or the Outline to drop."
+    },
+    "resize": {
+      "handleHint": "Drag to resize · double-click to size to content",
+      "autoValue": "Auto ({{value}})"
     }
   },
   "projectBilling": {
@@ -1801,7 +2055,8 @@
         "selectedCount": "{{count}} selected",
         "clear": "Clear"
       }
-    }
+    },
+    "emptyTimeHint": "Approved time and materials are never queued here — they bill through the normal invoice run or the project's Generate project invoice button."
   },
   "invoiceDesigner": {
     "transforms": {
@@ -1990,7 +2245,9 @@
         "addLine": "+ Line",
         "clearLines": "Single line",
         "stackedLinesHint": "Each non-empty line renders on its own row. When all lines are empty the column’s binding key above is shown.",
-        "removeLine": "Remove line {{index}}"
+        "removeLine": "Remove line {{index}}",
+        "align": "Align",
+        "widthPlaceholder": "auto | 50% | 120px"
       },
       "columnTypes": {
         "text": "Text",
@@ -2025,6 +2282,12 @@
         "groupedRowKey": "Grouped row key",
         "groupedRowItems": "Grouped row items",
         "availableBinding": "Available binding"
+      },
+      "columnAlign": {
+        "default": "Default",
+        "left": "Left",
+        "center": "Center",
+        "right": "Right"
       }
     },
     "imagePicker": {
@@ -2043,7 +2306,14 @@
       "clearRowBackground": "Clear row background color",
       "clearRowTextColor": "Clear row text color",
       "labelColorOverrideNote": "This label keeps its own saved color and does not inherit the row text color set above. The amount still follows the row text color.",
-      "noRows": "This totals block has no saved rows yet. Save the template and reopen it to edit row colors."
+      "noRows": "This totals block has no saved rows yet. Save the template and reopen it to edit row colors.",
+      "addRow": "Add row:",
+      "empty": "No rows yet. Add one below.",
+      "moveUp": "Move {{row}} up",
+      "moveDown": "Move {{row}} down",
+      "remove": "Remove {{row}}",
+      "label": "Label",
+      "emphasize": "Emphasize (grand total style)"
     }
   },
   "draftInvoiceDetails": {
@@ -2055,6 +2325,13 @@
     "errors": {
       "invoiceNumberRequired": "Invoice number is required.",
       "invoiceDateRequired": "Invoice date is required."
+    },
+    "labels": {
+      "billingProfile": "Billing Profile",
+      "billingProfileDefault": "The client's default profile"
+    },
+    "hints": {
+      "billingProfile": "The invoice, its lines and its emailed copy follow this profile."
     }
   },
   "documentTemplates": {
@@ -2165,7 +2442,8 @@
       "referenceMissing": "The selected invoice, client, contract, or billing record no longer exists. Please refresh and try again.",
       "duplicate": "A conflicting invoice already exists. Please refresh and try again.",
       "missingField": "Missing required invoice field.",
-      "missingFieldNamed": "Missing required invoice field: {{field}}."
+      "missingFieldNamed": "Missing required invoice field: {{field}}.",
+      "billingProfileUnavailable": "The selected billing profile is not available for this client."
     },
     "billingCycle": {
       "notFoundRefresh": "Billing cycle not found. It may have been updated or deleted. Please refresh and try again.",

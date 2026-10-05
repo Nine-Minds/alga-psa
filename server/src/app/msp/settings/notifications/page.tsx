@@ -11,7 +11,6 @@ import { CustomTabs } from "@alga-psa/ui/components/CustomTabs";
 import ViewSwitcher, { ViewSwitcherOption } from "@alga-psa/ui/components/ViewSwitcher";
 import { Card } from "@alga-psa/ui/components/Card";
 import { UnsavedChangesProvider, useUnsavedChanges } from "@alga-psa/ui";
-import { useFeatureFlag } from "@alga-psa/ui/hooks";
 import { useTranslation } from "@alga-psa/ui/lib/i18n/client";
 import { useProduct } from "@/context/ProductContext";
 
@@ -44,7 +43,6 @@ function NotificationsSettingsContent() {
   const { confirmNavigation } = useUnsavedChanges();
   const { productCode } = useProduct();
   const isAlgaDesk = productCode === 'algadesk';
-  const { enabled: emailBrandingEnabled } = useFeatureFlag('release-v1-6-feature');
 
   // Determine initial view and tab from URL
   const getInitialView = (): NotificationView => {
@@ -56,7 +54,7 @@ function NotificationsSettingsContent() {
     const requestedTab = tabParam?.toLowerCase();
     const emailTabIds = isAlgaDesk ? ALGA_DESK_EMAIL_TAB_IDS : EMAIL_NOTIFICATION_TAB_IDS;
     const validTabs: readonly string[] = view === 'email'
-      ? [...emailTabIds, ...(!isAlgaDesk && emailBrandingEnabled ? ['email-branding'] : [])]
+      ? [...emailTabIds, ...(isAlgaDesk ? [] : ['email-branding'])]
       : INTERNAL_NOTIFICATION_TAB_IDS;
     const defaultTab = view === 'email' ? DEFAULT_EMAIL_TAB : DEFAULT_INTERNAL_TAB;
 
@@ -82,7 +80,7 @@ function NotificationsSettingsContent() {
     } else if (newTab !== currentTab) {
       setCurrentTab(newTab);
     }
-  }, [viewParam, tabParam, currentView, currentTab, isAlgaDesk, emailBrandingEnabled]);
+  }, [viewParam, tabParam, currentView, currentTab, isAlgaDesk]);
 
   // Update URL helper
   const updateURL = useCallback((view: NotificationView, tabId: string) => {
@@ -157,7 +155,7 @@ function NotificationsSettingsContent() {
         </Suspense>
       ),
     }]),
-    ...(isAlgaDesk || !emailBrandingEnabled ? [] : [{
+    ...(isAlgaDesk ? [] : [{
       id: 'email-branding',
       label: t('notifications.emailTabs.emailBranding'),
       content: (

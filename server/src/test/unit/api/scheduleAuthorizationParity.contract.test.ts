@@ -20,11 +20,13 @@ describe('Schedule endpoints authorization parity contract', () => {
     expect(source).toContain("'user_schedule',");
   });
 
-  it('scopes list to the requesting user without user_schedule:update', () => {
-    const source = readControllerSource();
+  it('scopes schedule reads through the shared-calendar resolver', () => {
+    const source = readServiceSource();
 
-    expect(source).toContain('user_id: canViewAllSchedules');
-    expect(source).toContain(': user.user_id');
+    expect(source).toContain('resolveCalendarAccess(');
+    expect(source).toContain('buildVisibilityFilter(access)');
+    expect(source).toContain('evaluateEntryAccess(');
+    expect(source).toContain('maskApiScheduleEntry(');
   });
 
   it('requires user_schedule:update to assign entries to other users on create', () => {
@@ -36,7 +38,6 @@ describe('Schedule endpoints authorization parity contract', () => {
   it('guards single-entry get/update/delete by ownership for non-update users', () => {
     const source = readControllerSource();
 
-    expect(source).toContain('Permission denied: Cannot read schedules of other users');
     expect(source).toContain('const canUpdateAll = await hasPermission(');
     expect(source).toContain('const canDeleteAll = await hasPermission(');
     expect(source).toContain('const isOwnEntry = existing.created_by === user.user_id ||');

@@ -501,7 +501,7 @@ const TeamDetails: React.FC<TeamDetailsProps> = ({ teamId, onUpdate }): React.JS
       {/* Team Members */}
       <div>
         <Label className="mb-2">{t('teams.details.table.teamMembers')}</Label>
-        <DataTable
+        <DataTable id="team-members-table"
           columns={memberColumns}
           data={displayMembers}
           pagination={true}

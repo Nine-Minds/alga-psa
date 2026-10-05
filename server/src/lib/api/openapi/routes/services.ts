@@ -35,6 +35,7 @@ export function registerServiceRoutes(
       billing_method: zOpenApi.enum(['fixed', 'hourly', 'usage']),
       default_rate: zOpenApi.number(),
       unit_of_measure: zOpenApi.string(),
+      unit_code: zOpenApi.string().nullable().optional(),
       category_id: zOpenApi.string().uuid().nullable().optional(),
       tax_rate_id: zOpenApi.string().uuid().nullable().optional(),
       description: zOpenApi.string().nullable().optional(),

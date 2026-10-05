@@ -3,6 +3,7 @@ import { createTenantKnex } from 'server/src/lib/db';
 import { tenantDb, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { generateICS, type ICSEventData } from '@alga-psa/scheduling';
+import { resolveTenantDefaultCompanyName } from '@alga-psa/tenancy/lib/tenantDefaultCompanyName';
 import {
   getAppointmentIcsSigningSecret,
   verifyAppointmentIcsToken,
@@ -98,13 +99,18 @@ export async function GET(
       const tenantSettings = await scopedDb.table('tenant_settings')
         .first();
 
+      // The MSP's own client record names the organization when tenant settings
+      // carry no explicit companyName.
+      const defaultCompanyName = await resolveTenantDefaultCompanyName(trx, entry.tenant);
+
       return {
         entry,
         appointmentRequest,
         service,
         assignee,
         contact,
-        tenantSettings
+        tenantSettings,
+        defaultCompanyName
       };
     });
 
@@ -115,10 +121,10 @@ export async function GET(
       );
     }
 
-    const { entry, appointmentRequest, service, assignee, contact, tenantSettings } = scheduleEntry;
+    const { entry, appointmentRequest, service, assignee, contact, tenantSettings, defaultCompanyName } = scheduleEntry;
 
     // Prepare ICS event data
-    const companyName = tenantSettings?.settings?.companyName || 'Your MSP';
+    const companyName = tenantSettings?.settings?.companyName || defaultCompanyName || 'Your MSP';
     const supportEmail = tenantSettings?.settings?.supportEmail || tenantSettings?.settings?.contactEmail || 'support@company.com';
 
     const eventData: ICSEventData = {

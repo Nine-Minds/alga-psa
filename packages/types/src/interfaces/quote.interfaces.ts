@@ -47,6 +47,7 @@ export interface IQuoteItem extends TenantEntity {
   tax_amount: number;
   net_amount: number;
   unit_of_measure?: string | null;
+  unit_code?: string | null;
   display_order: number;
   phase?: string | null;
   is_optional: boolean;
@@ -222,6 +223,7 @@ export interface QuoteViewModelLineItem {
   tax_amount: number;
   net_amount: number;
   unit_of_measure?: string | null;
+  unit_code?: string | null;
   phase?: string | null;
   is_optional: boolean;
   is_selected: boolean;

@@ -1,0 +1,28 @@
+# alga-2026-0002564 smoke procedure
+
+## Environment and access
+
+- Use the board-managed application at `http://127.0.0.1:3212/` as the primary URL; do not start an app server in this worktree. This avoids shared `localhost` cookies and exercises the configured loopback HMR origin.
+- Confirm the service is listening and running from this worktree before using the UI. The database dependencies use PgBouncer on host port 6472 and PostgreSQL on 5472.
+- Use a fresh isolated browser profile. Obtain the dev-login credential directly from the board dev-server terminal history and enter it only in the browser. Never copy credentials, cookie values, or tokens into commands, logs, screenshots, evidence, or Git.
+- Use a tenant-appropriate account with `billing_settings:read`, `billing_settings:update`, and quote creation permission. Confirm permissions before mutations. Do not reset a shared account password.
+- Keep test mutations on that tenant and record its non-secret identifier in private evidence only if needed to correlate the database row.
+
+## Authentication and environment preflight
+
+1. Verify the board app is available on port 3212. If absent, stop authenticated smoke work and report board-service restoration as an external prerequisite; do not start it locally.
+2. Sign in through the isolated browser profile. If an authenticated route returns HTTP 431, capture request cookie names, count, and aggregate/per-cookie byte sizes without recording values. Compare aggregate header size with the active server/proxy header limit and inspect server logs for the rejecting layer.
+3. Verify the login page and authenticated screens visibly render at `127.0.0.1`. Inspect translation and other asset requests, response status, HMR handshake, origin/host handling, and authentication configuration. A successful sign-in response alone is not proof that the application rendered. If translation loading still stalls, investigate it independently of HMR and record the cause and evidence.
+4. Confirm Billing Settings > General and the Quotes screen load. Confirm Quote Numbering remains under Numbering.
+
+## Behavior checks
+
+1. **Unconfigured default:** In a tenant without a stored quote-validity value, confirm Billing Settings shows 30 days. Start a new quote and confirm Valid Until is quote date plus 30 calendar days.
+2. **Persist 15 days:** Set the tenant default to 15 and save. Reload Billing Settings and confirm 15 remains. Query the `default_billing_settings` row for the signed-in tenant and confirm `default_quote_validity_days = 15`. Start a new quote and confirm Valid Until is quote date plus 15 calendar days. Save the quote, reload it, and confirm the saved date remains.
+3. **Invalid input:** In the UI, try 0, 366, a fractional value such as 1.5, and empty input; confirm invalid values cannot be saved. Separately call the server action with out-of-range and fractional numeric values and confirm validation rejects them without changing the tenant row.
+4. **Existing quote stability:** Keep a saved quote created with the 15-day default. Change the tenant default to 30, reload settings, and confirm the existing quote keeps its previously saved Valid Until date. Confirm Valid Until remains manually editable when creating or editing a quote.
+5. After verification, restore the tenant default to its prior value if the smoke account's tenant is shared, and record the final database value. Do not alter unrelated settings.
+
+## Evidence to capture
+
+Record timestamps, route/screen labels, pass/fail outcomes, tenant row correlation without credentials, and sanitized database query results. Screenshots must not contain credentials or session material. Store evidence outside Git unless it is sanitized. Prior attempt artifacts are at `/tmp/alga-smoke-evidence/alga-2026-0002564-20260926T0005/`; that run documented HTTP 431 and the loopback translation-loading symptom but did not verify feature mutations.

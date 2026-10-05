@@ -1,0 +1,58 @@
+{
+  "generatedBy": "ee/mobile/scripts/generate-unit-of-measure-fixture.mjs",
+  "generatedFrom": "packages/core/src/lib/unitOfMeasure.ts",
+  "productDefault": {
+    "code": "C62",
+    "label": "Each"
+  },
+  "countUnits": [
+    {
+      "key": "each",
+      "code": "C62",
+      "label": "Each",
+      "labelKey": "unitOfMeasure.labels.each"
+    },
+    {
+      "key": "piece",
+      "code": "H87",
+      "label": "Piece",
+      "labelKey": "unitOfMeasure.labels.piece"
+    },
+    {
+      "key": "box",
+      "code": "BX",
+      "label": "Box",
+      "labelKey": "unitOfMeasure.labels.box"
+    },
+    {
+      "key": "seat",
+      "code": "C62",
+      "label": "Seat",
+      "labelKey": "unitOfMeasure.labels.seat"
+    },
+    {
+      "key": "license",
+      "code": "C62",
+      "label": "License",
+      "labelKey": "unitOfMeasure.labels.license"
+    },
+    {
+      "key": "device",
+      "code": "C62",
+      "label": "Device",
+      "labelKey": "unitOfMeasure.labels.device"
+    },
+    {
+      "key": "user",
+      "code": "C62",
+      "label": "User",
+      "labelKey": "unitOfMeasure.labels.user"
+    },
+    {
+      "key": "kit",
+      "code": "C62",
+      "label": "Kit",
+      "labelKey": "unitOfMeasure.labels.kit"
+    }
+  ]
+}

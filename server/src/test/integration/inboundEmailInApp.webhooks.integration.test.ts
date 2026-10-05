@@ -24,7 +24,7 @@ const SEEDED_TENANT_DISCOVERY_REASON = 'seeded test tenant discovery before tena
 let gmailListMessagesSinceMock = vi.fn();
 let gmailGetMessageDetailsMock = vi.fn();
 let microsoftGetMessageDetailsMock = vi.fn();
-let microsoftDownloadMessageSourceMock = vi.fn();
+let microsoftDownloadMessageSourceMock = vi.fn(async (_messageId: string) => Buffer.from('From: sender@example.com\r\n\r\nmessage source'));
 const enqueueUnifiedInboundEmailQueueJobMock = vi.fn(async () => ({
   job: { jobId: 'test-enqueued-job' },
   queueDepth: 1,
@@ -75,6 +75,9 @@ vi.mock('@alga-psa/shared/services/email/providers/GmailAdapter', () => {
   return {
     GmailAdapter: class GmailAdapter {
       async connect() {}
+      async downloadMessageSource() {
+        return Buffer.from('From: sender@example.com\r\n\r\nmessage source');
+      }
       async listMessagesSince() {
         return gmailListMessagesSinceMock();
       }
@@ -1413,7 +1416,13 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
     });
 
     const comments = await tenantTable('comments').where({ ticket_id: ticket.ticket_id });
-    expect(comments).toHaveLength(1);
+    expect(comments).toHaveLength(2);
+    expect(comments.filter(comment => !comment.is_internal)).toHaveLength(1);
+    const trail = comments.find(comment => comment.is_internal);
+    expect(trail).toMatchObject({ is_system_generated: true, user_id: null, contact_id: null });
+    expect(trail.metadata.inboundAttachmentTrail.files).toEqual([expect.objectContaining({
+      status: 'failed', reason: 'simulated upload failure',
+    })]);
 
     const failedAttachmentRow = await tenantTable('email_processed_attachments')
       .where({
@@ -4065,15 +4074,16 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
   });
 
   it('Attachments: attachment failure does not prevent ticket creation', async () => {
-    const emailActions = await import('@alga-psa/workflows/actions/emailWorkflowActions');
-    const spy = vi.spyOn(emailActions, 'processEmailAttachment').mockRejectedValueOnce(new Error('boom'));
+    storageUploadMock.mockImplementation(async (buffer: Buffer, storagePath: string) => {
+      if (buffer.toString() === 'attachment') throw new Error('simulated upload failure');
+      return { path: storagePath };
+    });
 
     const providerId = uuidv4();
     const mailbox = `support-attach-${uuidv4().slice(0, 6)}@example.com`;
     const { defaultsId } = await setupInboundDefaults({ providerId, mailbox });
 
     cleanup.push(async () => {
-      spy.mockRestore();
       await tenantTable('gmail_processed_history').where({ provider_id: providerId }).delete();
       await tenantTable('google_email_provider_config').where({ email_provider_id: providerId }).delete();
       await tenantTable('email_providers').where({ id: providerId }).delete();
@@ -4093,7 +4103,7 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
         to: [{ email: mailbox, name: 'Support' }],
         subject: 'Attachment failure subject',
         body: { text: 'Hello', html: undefined },
-        attachments: [{ id: 'att-1', name: 'file.txt', contentType: 'text/plain', size: 10 }],
+        attachments: [{ id: 'att-1', name: 'file.txt', contentType: 'text/plain', size: 10, content: Buffer.from('attachment').toString('base64') }],
       } as any,
     });
 
@@ -4105,7 +4115,13 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
     expect(ticket).toBeDefined();
 
     const comments = await tenantTable('comments').where({ ticket_id: ticket.ticket_id });
-    expect(comments).toHaveLength(1);
+    expect(comments).toHaveLength(2);
+    expect(comments.filter(comment => !comment.is_internal)).toHaveLength(1);
+    const trail = comments.find(comment => comment.is_internal);
+    expect(trail).toMatchObject({ is_system_generated: true, user_id: null, contact_id: null });
+    expect(trail.metadata.inboundAttachmentTrail.files).toEqual([expect.objectContaining({
+      status: 'failed', reason: 'simulated upload failure',
+    })]);
 
     cleanup.push(async () => {
       await tenantTable('comments').where({ ticket_id: ticket.ticket_id }).delete();
@@ -4114,8 +4130,10 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
   });
 
   it('Attachments: attachment failure does not prevent reply comment creation', async () => {
-    const emailActions = await import('@alga-psa/workflows/actions/emailWorkflowActions');
-    const spy = vi.spyOn(emailActions, 'processEmailAttachment').mockRejectedValueOnce(new Error('boom'));
+    storageUploadMock.mockImplementation(async (buffer: Buffer, storagePath: string) => {
+      if (buffer.toString() === 'attachment') throw new Error('simulated upload failure');
+      return { path: storagePath };
+    });
 
     const providerId = uuidv4();
     const mailbox = `support-reply-attach-${uuidv4().slice(0, 6)}@example.com`;
@@ -4126,7 +4144,6 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
     });
 
     cleanup.push(async () => {
-      spy.mockRestore();
       await tenantTable('microsoft_email_provider_config').where({ email_provider_id: providerId }).delete();
       await tenantTable('email_providers').where({ id: providerId }).delete();
       await tenantTable('inbound_ticket_defaults').where({ id: defaultsId }).delete();
@@ -4180,14 +4197,20 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
           text: `Customer reply\n\n[ALGA-REPLY-TOKEN ${replyToken}]\n\nOlder content`,
           html: undefined,
         },
-        attachments: [{ id: 'att-1', name: 'file.txt', contentType: 'text/plain', size: 10 }],
+        attachments: [{ id: 'att-1', name: 'file.txt', contentType: 'text/plain', size: 10, content: Buffer.from('attachment').toString('base64') }],
       } as any,
     });
 
     expect(result.outcome).toBe('replied');
 
     const comments = await tenantTable('comments').where({ ticket_id: ticketId });
-    expect(comments).toHaveLength(1);
+    expect(comments).toHaveLength(2);
+    expect(comments.filter(comment => !comment.is_internal)).toHaveLength(1);
+    const trail = comments.find(comment => comment.is_internal);
+    expect(trail).toMatchObject({ is_system_generated: true, user_id: null, contact_id: null });
+    expect(trail.metadata.inboundAttachmentTrail.files).toEqual([expect.objectContaining({
+      status: 'failed', reason: 'simulated upload failure',
+    })]);
   });
 
   it('Idempotency: replay same reply email does not create duplicate comments', async () => {

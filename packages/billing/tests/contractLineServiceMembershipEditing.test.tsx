@@ -22,12 +22,25 @@ const actionMocks = vi.hoisted(() => ({
   upsertBucketConfiguration: vi.fn(),
 }));
 
-const releaseFlag = vi.hoisted(() => ({ enabled: true }));
 vi.mock('@alga-psa/ui/hooks/useFeatureFlag', () => ({
-  useFeatureFlag: () => ({ enabled: releaseFlag.enabled, loading: false, error: null }),
+  useFeatureFlag: () => ({ enabled: true, loading: false, error: null }),
 }));
 
 vi.mock('@alga-psa/billing/actions/contractLineSemanticsActions', () => ({getNextContractServiceBoundary: vi.fn(async () => '2026-10-01')}));
+
+// The contract-line expansion mounts the recurring schedule panel. Stub its
+// server actions so this jsdom suite never loads the server-only billing graph
+// (which imports node storage/fs) through the panel.
+vi.mock('@alga-psa/billing/actions/contractLineUnitPricingActions', () => ({
+  getEffectiveRecurringUnitPricing: vi.fn(async () => null),
+  scheduleRecurringUnitPricingRevision: vi.fn(async () => null),
+  listRecurringUnitPricingRevisions: vi.fn(async () => []),
+  listRecurringUnitPricingRevisionHistory: vi.fn(async () => []),
+  resolveRecurringUnitMidPeriod: vi.fn(async () => null),
+}));
+vi.mock('@alga-psa/billing/actions/invoiceGeneration', () => ({
+  previewRecurringRevisionInvoiceImpact: vi.fn(async () => ({ success: false, error: 'not used' })),
+}));
 
 vi.mock('@alga-psa/billing/actions/serviceActions', () => ({
   getServices: actionMocks.getServices,
@@ -63,9 +76,11 @@ vi.mock('@alga-psa/billing/actions/billingClientLocationActions', () => ({
   getActiveClientLocationsForBilling: actionMocks.getActiveClientLocationsForBilling,
 }));
 
-const translate = (_key: string, options?: Record<string, unknown>) => {
-  let value = String(options?.defaultValue ?? _key);
-  for (const [name, replacement] of Object.entries(options ?? {})) {
+// DatePicker calls t(key, 'fallback'); the editors call t(key, { defaultValue, ...vars }).
+const translate = (_key: string, second?: string | Record<string, unknown>) => {
+  const options = typeof second === 'object' && second ? second : {};
+  let value = String((typeof second === 'string' ? second : options.defaultValue) ?? _key);
+  for (const [name, replacement] of Object.entries(options)) {
     value = value.replace(`{{${name}}}`, String(replacement));
   }
   return value;
@@ -73,8 +88,10 @@ const translate = (_key: string, options?: Record<string, unknown>) => {
 
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
   useTranslation: () => ({ t: translate }),
+  useOptionalI18n: () => ({ locale: 'en' }),
   useFormatters: () => ({
     formatCurrency: (value: number, currency: string) => `${currency} ${value}`,
+    formatDate: (value: string) => value,
   }),
 }));
 
@@ -89,7 +106,10 @@ vi.mock('@alga-psa/ui/lib/errorHandling', () => ({
   isActionPermissionError: () => false,
 }));
 
-vi.mock('@alga-psa/core', () => ({
+// Partial mock: the recurring-unit schedule panel needs the real calendar-date
+// helpers to render its DatePicker values.
+vi.mock('@alga-psa/core', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@alga-psa/core')>()),
   getCurrencySymbol: () => '$',
 }));
 
@@ -236,7 +256,6 @@ const renderContractLines = () => render(
 
 describe('contract line service membership editing', () => {
   beforeEach(() => {
-    releaseFlag.enabled = true;
     vi.clearAllMocks();
     actionMocks.applyContractLineServiceMembershipChanges.mockResolvedValue(true);
     actionMocks.checkContractHasInvoices.mockResolvedValue(false);
@@ -335,7 +354,7 @@ describe('contract line service membership editing', () => {
     fireEvent.click(await screen.findByRole('button', {name: 'Edit'}));
     await waitFor(() => expect((document.getElementById('quantity-existing-config') as HTMLInputElement)?.value).toBe('10'));
     expect((document.getElementById('quantity-effective-line-1') as HTMLInputElement).value).toBe('2026-10-01');
-    expect(screen.getByText('Recurring seats/units')).not.toBeNull();
+    expect(screen.getAllByText('Recurring seats/units').length).toBeGreaterThan(0);
     fireEvent.change(document.getElementById('quantity-existing-config')!, {target: {value: '0'}});
     fireEvent.click(screen.getByRole('button', {name: 'Save'}));
     await waitFor(() => expect(actionMocks.updateConfiguration).toHaveBeenCalledWith('existing-config', expect.objectContaining({quantity: 0}), expect.objectContaining({effective_period_start: '2026-10-01', base_rate: 10000})));

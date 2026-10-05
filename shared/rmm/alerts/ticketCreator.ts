@@ -16,6 +16,7 @@ import type {
   RmmAlertRuleActions,
 } from './contracts';
 import { resolveRmmTicketContactId } from './resolveContact';
+import { associateAssetWithTicket } from '../../services/assets/assetTicketAssociation';
 
 export interface CreateAlertTicketParams {
   event: NormalizedRmmAlertEvent;
@@ -89,7 +90,7 @@ export async function createTicketForAlert(
     .returning(['ticket_id', 'ticket_number']);
 
   if (params.assetId) {
-    await associateAsset(trx, tenantId, params.assetId, ticket.ticket_id, now);
+    await associateAssetWithTicket(trx, tenantId, params.assetId, ticket.ticket_id, now);
   }
 
   await addAlertInternalNote(trx, tenantId, ticket.ticket_id, initialNote(event));
@@ -136,30 +137,6 @@ export async function addAlertInternalNote(
     is_internal: true,
     is_resolution: false,
     is_system_generated: true,
-    created_at: now,
-  });
-}
-
-async function associateAsset(
-  trx: Knex.Transaction,
-  tenantId: string,
-  assetId: string,
-  ticketId: string,
-  now: string
-): Promise<void> {
-  const db = tenantDb(trx, tenantId);
-
-  // asset_associations.created_by is NOT NULL with an FK to users; attribute
-  // system-created links to the tenant's earliest user (Huntress convention).
-  const auditUser = await db.table('users').orderBy('created_at', 'asc').first('user_id');
-  if (!auditUser) return;
-  await db.table('asset_associations').insert({
-    tenant: tenantId,
-    asset_id: assetId,
-    entity_id: ticketId,
-    entity_type: 'ticket',
-    relationship_type: 'related',
-    created_by: auditUser.user_id,
     created_at: now,
   });
 }

@@ -6,8 +6,6 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Button } from '@alga-psa/ui/components/Button';
 import { Phone } from 'lucide-react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { useFeatureFlag } from '@alga-psa/ui/hooks';
-import { RELEASE_V1_6_FEATURE_FLAG } from '@alga-psa/core/features';
 import {
   getTelephonyOverview,
   setTelephonyAutoTicketPolicy,
@@ -43,7 +41,6 @@ function ProviderMark() {
 export function TelephonyIntegrationSettings() {
   const { t } = useTranslation('msp/integrations');
   const searchParams = useSearchParams();
-  const threecxFlag = useFeatureFlag(RELEASE_V1_6_FEATURE_FLAG);
   const [overview, setOverview] = useState<TelephonyOverview | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -92,16 +89,16 @@ export function TelephonyIntegrationSettings() {
   const providers = overview?.providers ?? [];
   const canManage = Boolean(overview?.canManage);
 
-  // The 3CX surface is self-gating on the server (edition + Pro tier) and on the
-  // client (release flag); the chooser honours both so an unentitled tenant is
-  // never offered a card that leads to an empty page.
+  // The 3CX surface is self-gating on the server (edition + Pro tier); the
+  // chooser honours that so an unentitled tenant is never offered a card that
+  // leads to an empty page.
   const visibleProviders = useMemo(
     () =>
       providers.filter((provider) => {
         if (provider.provider !== '3cx') return true;
-        return threecxFlag.enabled && provider.providerAvailability?.enabled !== false;
+        return provider.providerAvailability?.enabled !== false;
       }),
-    [providers, threecxFlag.enabled],
+    [providers],
   );
 
   const providerLabel = (provider: string) => {
