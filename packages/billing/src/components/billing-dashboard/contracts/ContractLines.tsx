@@ -31,6 +31,7 @@ import {
   getConfigurationWithDetails,
   upsertPlanServiceBucketConfigurationAction as upsertContractLineServiceBucketConfigurationAction
 } from '@alga-psa/billing/actions/contractLineServiceConfigurationActions';
+import { deleteBucketOverlay } from '@alga-psa/billing/actions/bucketOverlayActions';
 import {
   getActiveClientLocationsForBilling,
   type BillingLocationSummary,
@@ -905,6 +906,15 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
           );
           if (isReturnedActionError(bucketResult)) {
             setError(getErrorMessage(bucketResult));
+            return;
+          }
+        } else if (!bucketConfig && serviceById.get(serviceId)?.bucketConfig) {
+          // The switch was turned off on a service that has a saved overlay.
+          // Without this the draft null is simply skipped and the overlay
+          // reappears on reload.
+          const deleteResult = await deleteBucketOverlay(contractLineId, serviceId);
+          if (isReturnedActionError(deleteResult)) {
+            setError(getErrorMessage(deleteResult));
             return;
           }
         }
