@@ -14,10 +14,11 @@ const getContractSummaryMock = vi.hoisted(() => vi.fn());
 const getDetailedContractLinesMock = vi.hoisted(() => vi.fn());
 const getContractAssignmentsMock = vi.hoisted(() => vi.fn());
 const getTemplateLineServicesMock = vi.hoisted(() => vi.fn());
+const route = vi.hoisted(() => ({ contractId: 'template-1' }));
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: vi.fn(), replace: vi.fn(), back: vi.fn() }),
-  useSearchParams: () => new URLSearchParams('contractId=template-1'),
+  useSearchParams: () => new URLSearchParams(`contractId=${route.contractId}`),
 }));
 
 vi.mock('next/dynamic', () => ({
@@ -143,6 +144,7 @@ function renderDetail() {
 describe('ContractTemplateDetail per-seat unit rate (currency-neutral)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    route.contractId = 'template-1';
   });
 
   afterEach(() => {
@@ -223,5 +225,32 @@ describe('ContractTemplateDetail per-seat unit rate (currency-neutral)', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Manage Services' }));
 
     expect(await screen.findByText(/Fixed Fee Rate:/)).toHaveTextContent('Fixed Fee Rate: Not set');
+  });
+
+  it('closes the services manager when the route changes before the next template loads', async () => {
+    primeTemplate({ unitRate: 25000, lineRate: null });
+    const view = renderDetail();
+    await screen.findByTestId(`template-recurring-amount-${SERVICE_ID}`);
+    fireEvent.click(screen.getByRole('button', { name: 'Manage Services' }));
+    expect(screen.getByText(/Fixed Fee Rate:/)).toHaveTextContent('Fixed Fee Rate: Not set');
+
+    // Keep the second template loading, then return to the first. A reset tied
+    // to loaded contract data misses this route transition entirely.
+    getContractByIdMock.mockImplementationOnce(() => new Promise(() => {}));
+    route.contractId = 'template-2';
+    view.rerender(
+      <CurrencyFormatProvider currencyCode="USD">
+        <ContractTemplateDetail />
+      </CurrencyFormatProvider>,
+    );
+    route.contractId = 'template-1';
+    view.rerender(
+      <CurrencyFormatProvider currencyCode="USD">
+        <ContractTemplateDetail />
+      </CurrencyFormatProvider>,
+    );
+
+    expect(await screen.findByRole('button', { name: 'Manage Services' })).toBeInTheDocument();
+    expect(screen.queryByText(/Fixed Fee Rate:/)).not.toBeInTheDocument();
   });
 });

@@ -398,7 +398,7 @@ const ContractTemplateDetail: React.FC = () => {
   }, [contract]);
 
   useEffect(() => {
-    const currentContractId = contract?.contract_id ?? null;
+    const currentContractId = contractId ?? null;
     if (!currentContractId) {
       return;
     }
@@ -407,7 +407,7 @@ const ContractTemplateDetail: React.FC = () => {
       setShowServicesEditor(false);
       lastContractIdRef.current = currentContractId;
     }
-  }, [contract?.contract_id]);
+  }, [contractId]);
 
   useEffect(() => {
     setGuidanceForm({
