@@ -318,6 +318,21 @@ describe('TimeEntryDialog save lifecycle (real dialog)', () => {
     expect(screen.getByTestId('dialog-service-select')).toHaveValue('service-1');
   });
 
+  it('prefills the default even when the surface supplies no start and end time', async () => {
+    // Surfaces that open an entry without default times (the 08:00 fallback)
+    // used to hardcode an empty service, losing the task/phase/project default.
+    primeProvider();
+    renderDialog({
+      onSave: vi.fn().mockResolvedValue(undefined),
+      defaultStartTime: undefined,
+      defaultEndTime: undefined,
+      workItem: { ...projectTask, service_source: 'project' },
+    });
+    await waitForForm();
+
+    expect(screen.getByTestId('dialog-service-select')).toHaveValue('service-1');
+  });
+
   it('drops a default service the hourly-only picker cannot hold', async () => {
     // A phase (or task, or project) default set to a fixed/usage service used to
     // prefill an id the picker had no option for: the field looked blank and the

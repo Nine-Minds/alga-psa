@@ -156,6 +156,17 @@ export function TimeEntryProvider({ children }: { children: React.ReactNode }): 
 
       let newEntries: ITimeEntryWithNew[] = [];
 
+      // The task → phase → project default, but only when this form can hold it:
+      // the service picker is hourly-only, so a default of any other billing
+      // method would render blank and then fail save validation. Shared by both
+      // new-entry branches so a work item keeps its default however it was opened.
+      const defaultServiceId = workItem.type === 'project_task' && workItem.service_id
+        ? workItem.service_id
+        : '';
+      const prefilledServiceId = defaultServiceId && services.some(service => service.id === defaultServiceId)
+        ? defaultServiceId
+        : '';
+
       if (existingEntries?.length) {
         newEntries = existingEntries.map(({ ...rest }): ITimeEntryWithNew => ({
           ...rest,
@@ -171,15 +182,6 @@ export function TimeEntryProvider({ children }: { children: React.ReactNode }): 
       } else if (defaultStartTime && defaultEndTime) {
         const duration = calculateDuration(defaultStartTime, defaultEndTime);
         const isBillable = workItem.is_billable === false ? false : true;
-        // Only prefill a default this form can hold: the service picker is
-        // hourly-only, so a default of any other billing method would render
-        // blank and then fail save validation. Better an empty picker.
-        const defaultServiceId = workItem.type === 'project_task' && workItem.service_id
-          ? workItem.service_id
-          : '';
-        const prefilledServiceId = defaultServiceId && services.some(service => service.id === defaultServiceId)
-          ? defaultServiceId
-          : '';
 
         console.log('Creating new time entry with defaults:', {
           isBillable,
@@ -252,11 +254,15 @@ export function TimeEntryProvider({ children }: { children: React.ReactNode }): 
           created_at: formatISO(new Date()),
           updated_at: formatISO(new Date()),
           approval_status: 'DRAFT',
-          service_id: '',
+          service_id: prefilledServiceId,
           tax_region: defaultTaxRegion || '',
           isNew: true,
           tempId: generateUUID(),
           client_id: clientId || undefined,
+          _isServicePrefilled: !!prefilledServiceId,
+          _originalServiceId: prefilledServiceId || null,
+          _serviceOverridden: false,
+          _serviceSource: prefilledServiceId ? workItem.service_source : undefined,
         }];
       }
 
