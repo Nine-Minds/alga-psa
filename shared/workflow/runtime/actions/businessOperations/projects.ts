@@ -1218,7 +1218,8 @@ export function registerProjectActions(): void {
         type: z.enum(['user', 'team']).describe('Assignee type'),
         id: uuidSchema.describe('User id or team id')
       }).optional().describe('Optional assignee'),
-      link_ticket_id: withWorkflowPicker(uuidSchema.optional(), 'Optional ticket id to link', 'ticket')
+      link_ticket_id: withWorkflowPicker(uuidSchema.optional(), 'Optional ticket id to link', 'ticket'),
+      bill_under_project: z.boolean().optional().describe("Bill the linked ticket's time as project time (default true)")
     }),
     outputSchema: z.object({
       task_id: uuidSchema,
@@ -1326,6 +1327,9 @@ export function registerProjectActions(): void {
           phase_id: phaseId,
           task_id: taskId,
           ticket_id: input.link_ticket_id,
+          // Consistent with every other link path: project work unless the
+          // automation says otherwise.
+          bill_under_project: input.bill_under_project ?? true,
           created_at: nowIso
         }).catch(() => undefined);
 
