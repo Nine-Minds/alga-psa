@@ -49,6 +49,27 @@ const isReturnedActionError = (value: unknown) =>
 
 type PlanType = 'Fixed' | 'Hourly' | 'Usage';
 
+/**
+ * Rate text is held in index-keyed maps alongside the service rows. Removing a
+ * row shifts every later row down one, so the stored strings have to shift with
+ * them or each remaining row would be paired with its predecessor's rate.
+ */
+export const reindexRateInputs = (
+  inputs: Record<number, string>,
+  removedIndex: number,
+): Record<number, string> => {
+  const next: Record<number, string> = {};
+  for (const [key, value] of Object.entries(inputs)) {
+    const index = Number(key);
+    if (index < removedIndex) {
+      next[index] = value;
+    } else if (index > removedIndex) {
+      next[index - 1] = value;
+    }
+  }
+  return next;
+};
+
 const BILLING_TIMING_OPTIONS = [
   {
     value: 'arrears',
@@ -759,9 +780,7 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
     const handleRemoveHourlyService = (index: number) => {
       const newServices = hourlyServices.filter((_, i) => i !== index);
       setHourlyServices(newServices);
-      const newInputs = { ...hourlyServiceRateInputs };
-      delete newInputs[index];
-      setHourlyServiceRateInputs(newInputs);
+      setHourlyServiceRateInputs((prev) => reindexRateInputs(prev, index));
       markDirty();
     };
 
@@ -1028,9 +1047,7 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
     const handleRemoveUsageService = (index: number) => {
       const newServices = usageServices.filter((_, i) => i !== index);
       setUsageServices(newServices);
-      const newInputs = { ...usageServiceRateInputs };
-      delete newInputs[index];
-      setUsageServiceRateInputs(newInputs);
+      setUsageServiceRateInputs((prev) => reindexRateInputs(prev, index));
       markDirty();
     };
 
