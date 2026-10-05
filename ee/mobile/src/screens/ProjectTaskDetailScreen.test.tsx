@@ -148,6 +148,52 @@ describe("ProjectTaskDetailScreen", () => {
     const modal = renderer.root.find((n) => n.type === ("MockTimeEntryModal" as never));
     expect(modal.props.visible).toBe(true);
     expect(modal.props.serviceId).toBe("svc-1");
+    expect(modal.props.serviceSource).toBe("task");
+  });
+
+  it("prefills, times and marks a service the task inherits from its phase", async () => {
+    mocks.getProjectTask.mockResolvedValue({ ok: true, data: { data: {
+      ...task,
+      project_id: "proj-1",
+      project_status_mapping_id: "map-1",
+      service_id: null,
+      effective_service_id: "svc-2",
+      service_source: "phase",
+      service_name: "Remote Support",
+    } } });
+    const renderer = await renderScreen();
+
+    // The detail row says the service is not the task's own.
+    expect(texts(renderer)).toContain("projectTask.serviceFrom.phase");
+
+    const chip = renderer.root.find((n) => n.type === ("MockTimerChip" as never));
+    expect(chip.props.preferredService).toEqual({ service_id: "svc-2", service_name: "Remote Support" });
+
+    act(() => renderer.root.find((n) => n.props?.testID === "project-task-log-time").props.onPress());
+    const modal = renderer.root.find((n) => n.type === ("MockTimeEntryModal" as never));
+    expect(modal.props.serviceId).toBe("svc-2");
+    expect(modal.props.serviceSource).toBe("phase");
+  });
+
+  it("leaves the service blank when no level of the hierarchy sets one", async () => {
+    mocks.getProjectTask.mockResolvedValue({ ok: true, data: { data: {
+      ...task,
+      project_id: "proj-1",
+      project_status_mapping_id: "map-1",
+      service_id: null,
+      effective_service_id: null,
+      service_source: null,
+      service_name: null,
+    } } });
+    const renderer = await renderScreen();
+
+    const chip = renderer.root.find((n) => n.type === ("MockTimerChip" as never));
+    expect(chip.props.preferredService).toBeNull();
+
+    act(() => renderer.root.find((n) => n.props?.testID === "project-task-log-time").props.onPress());
+    const modal = renderer.root.find((n) => n.type === ("MockTimeEntryModal" as never));
+    expect(modal.props.serviceId).toBeNull();
+    expect(modal.props.serviceSource).toBeNull();
   });
 
   it("paints from the activity row while the task loads and reloads after the timer stops here", async () => {

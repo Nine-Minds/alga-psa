@@ -23,6 +23,7 @@ import {
   updateProjectTask,
   updateTaskChecklistItem,
   type ProjectTaskDetail,
+  type ProjectTaskServiceSource,
   type TaskChecklistItem,
   type TaskStatusMapping,
 } from "../api/projectTasks";
@@ -190,9 +191,27 @@ export function ProjectTaskDetailScreen({ route }: Props) {
     if (timerLastStoppedAt) void load();
   }, [timerLastStoppedAt]);
 
+  // The service a time entry here should prefill: the task's own, else its
+  // phase's default, else its project's. The API resolves that fallback; a
+  // server without it sends only the task's own service_id.
+  const effectiveServiceId = task?.effective_service_id ?? task?.service_id ?? null;
+  const effectiveServiceSource: ProjectTaskServiceSource | null = effectiveServiceId
+    ? task?.service_source ?? (task?.service_id ? "task" : null)
+    : null;
+  const effectiveService = useMemo<ServiceOption | null>(() => {
+    if (!effectiveServiceId) return null;
+    const name = task?.service_name ?? services.find((service) => service.service_id === effectiveServiceId)?.service_name;
+    return name ? { service_id: effectiveServiceId, service_name: name } : null;
+  }, [effectiveServiceId, services, task?.service_name]);
+
   const timeEntryHook = useTimeEntry(
     { client, session, ticketId: taskId, showToast, t: tTickets },
-    { workItem: { id: taskId, type: "project_task" }, defaultServiceId: task?.service_id ?? null, onCreated: () => void load() },
+    {
+      workItem: { id: taskId, type: "project_task" },
+      defaultServiceId: effectiveServiceId,
+      defaultServiceSource: effectiveServiceSource,
+      onCreated: () => void load(),
+    },
   );
 
   const commentDraftHook = useCommentDraft({
@@ -294,12 +313,6 @@ export function ProjectTaskDetailScreen({ route }: Props) {
     }
   }, [checklistBusyId, client, session, showToast, t, taskId]);
 
-  const taskService = useMemo<ServiceOption | null>(() => {
-    const id = task?.service_id;
-    if (!id) return null;
-    return services.find((service) => service.service_id === id) ?? null;
-  }, [services, task?.service_id]);
-
   const imageAuth = useMemo(() => (config.ok && session ? { baseUrl: config.baseUrl, apiKey: session.accessToken } : undefined), [config, session]);
 
   if (!config.ok) {
@@ -358,7 +371,7 @@ export function ProjectTaskDetailScreen({ route }: Props) {
           </Pressable>
           {activity ? <Badge label={humanize(activity.priorityName ?? activity.priority)} tone={priorityTone(activity.priority)} /> : null}
           <View style={{ marginLeft: "auto" }}>
-            <WorkItemTimerChip workItemId={taskId} workItemType="project_task" preferredService={taskService} />
+            <WorkItemTimerChip workItemId={taskId} workItemType="project_task" preferredService={effectiveService} />
           </View>
         </View>
 
@@ -376,7 +389,14 @@ export function ProjectTaskDetailScreen({ route }: Props) {
             actual: formatMinutesDuration(actual),
           })}
         />
-        {taskService ? <Section label={t("projectTask.serviceLabel")} value={taskService.service_name} /> : null}
+        {effectiveService ? (
+          <Section
+            label={t("projectTask.serviceLabel")}
+            value={effectiveServiceSource && effectiveServiceSource !== "task"
+              ? t(`projectTask.serviceFrom.${effectiveServiceSource}`, { service: effectiveService.service_name })
+              : effectiveService.service_name}
+          />
+        ) : null}
 
         <Text style={{ ...typography.caption, color: colors.textSecondary, marginTop: spacing.lg }}>{t("projectTask.descriptionLabel")}</Text>
         <Text style={{ ...typography.body, color: description ? colors.text : colors.textSecondary, marginTop: spacing.xs }}>
@@ -530,6 +550,7 @@ export function ProjectTaskDetailScreen({ route }: Props) {
         onChangeNotes={timeEntryHook.setTimeEntryNotes}
         serviceId={timeEntryHook.timeEntryServiceId}
         onChangeServiceId={timeEntryHook.setTimeEntryServiceId}
+        serviceSource={timeEntryHook.timeEntryServiceSource}
         client={client}
         apiKey={session.accessToken}
         updating={timeEntryHook.timeEntryUpdating}
