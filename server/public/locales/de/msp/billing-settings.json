@@ -166,6 +166,20 @@
         "save": "Die Einstellungen für die Verlängerungsautomatisierung konnten nicht gespeichert werden"
       }
     },
+    "timeEntryService": {
+      "title": "Standarddienst für Zeiteinträge",
+      "description": "Ersatzdienst für neue Zeiteinträge in Tickets. Kundenspezifische Vorgaben haben Vorrang.",
+      "label": "Standarddienst für Zeiteinträge",
+      "placeholder": "Kein Standarddienst",
+      "help": "Wird für neue Zeiteinträge in Tickets verwendet, wenn der Kunde keinen eigenen Standard festgelegt hat. Der Dienst muss weiterhin aktiv und durch den Kundenvertrag abgedeckt sein.",
+      "toast": {
+        "updated": "Standarddienst für Zeiteinträge aktualisiert."
+      },
+      "errors": {
+        "load": "Standarddienst für Zeiteinträge konnte nicht geladen werden",
+        "save": "Standarddienst für Zeiteinträge konnte nicht gespeichert werden"
+      }
+    },
     "quotes": {
       "title": "Angebote",
       "description": "Legen Sie die standardmäßige Gültigkeitsdauer für neue Angebote fest.",
