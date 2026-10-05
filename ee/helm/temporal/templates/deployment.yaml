@@ -9,6 +9,9 @@ metadata:
     app.kubernetes.io/component: server
 spec:
   replicas: {{ .Values.server.replicaCount }}
+  {{- if .Values.server.progressDeadlineSeconds }}
+  progressDeadlineSeconds: {{ .Values.server.progressDeadlineSeconds }}
+  {{- end }}
   selector:
     matchLabels:
       {{- include "temporal.selectorLabels" . | nindent 6 }}
