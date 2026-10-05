@@ -107,7 +107,9 @@
         "message": "Mensagem",
         "messageOptional": "Mensagem (opcional)",
         "messagePlaceholder": "Adicione uma nota pessoal para o destinatário...",
-        "title": "Enviar cotação"
+        "title": "Enviar cotação",
+        "from": "De",
+        "useDefault": "Usar remetente predefinido"
       }
     },
     "errors": {
@@ -212,7 +214,9 @@
         "description": "Isso enviará a cotação por e-mail aos contatos de cobrança do cliente e alterará seu status para \"Enviado\".",
         "title": "Enviar cotação ao cliente",
         "additionalEmails": "Destinatários Adicionais",
-        "message": "Mensagem"
+        "message": "Mensagem",
+        "from": "De",
+        "useDefault": "Usar remetente predefinido"
       }
     },
     "errorActions": {

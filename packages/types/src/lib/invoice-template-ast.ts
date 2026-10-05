@@ -60,6 +60,12 @@ export type TemplateNodeType =
 export interface TemplateNodeBase {
   id: string;
   type: TemplateNodeType;
+  /**
+   * Author-facing layer name shown in the designer's outline and canvas. It is
+   * presentation metadata only: rendering never reads it, and `id` stays the
+   * stable identity.
+   */
+  name?: string;
   style?: TemplateNodeStyleRef;
   children?: TemplateNode[];
 }

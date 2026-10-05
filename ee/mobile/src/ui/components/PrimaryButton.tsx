@@ -9,16 +9,19 @@ export function PrimaryButton({
   disabled,
   accessibilityLabel,
   accessibilityHint,
+  testID,
 }: {
   children: ReactNode;
   onPress: () => void;
   disabled?: boolean;
   accessibilityLabel?: string;
   accessibilityHint?: string;
+  testID?: string;
 }) {
   const theme = useTheme();
   return (
     <Pressable
+      testID={testID}
       onPress={onPress}
       disabled={disabled}
       accessibilityRole="button"

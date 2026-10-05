@@ -318,6 +318,32 @@ export async function ensureTemplateLineSnapshot(
   if (configs.length > 0) {
     const configIds = (configs as any[]).map((c: any) => c.config_id);
 
+    // Per-seat services: carry the pricing basis (and the unit rate the line
+    // currently bills, unless it follows the catalog) onto the template so a
+    // contract created from it stays per-seat. Bundle services keep no row.
+    const unitFixedConfigs = await tenantScopedTable(knex, tenant, 'contract_line_service_fixed_config')
+      .whereIn('config_id', configIds)
+      .where({ pricing_basis: 'unit' });
+
+    for (const fixed of unitFixedConfigs) {
+      const unitRate = fixed.rate_provenance === 'inherited' ? null : (fixed.base_rate ?? null);
+      await tenantScopedTable(knex, tenant, 'contract_template_line_service_fixed_config')
+        .insert({
+          tenant,
+          config_id: fixed.config_id,
+          base_rate: unitRate,
+          pricing_basis: 'unit',
+          created_at: fixed.created_at ?? now,
+          updated_at: now,
+        })
+        .onConflict(['tenant', 'config_id'])
+        .merge({
+          base_rate: unitRate,
+          pricing_basis: 'unit',
+          updated_at: now,
+        });
+    }
+
     const hourlyConfigs = await tenantScopedTable(knex, tenant, 'contract_line_service_hourly_config')
       .whereIn('config_id', configIds);
 

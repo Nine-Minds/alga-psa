@@ -128,6 +128,10 @@ async function handleScheduleEntryCreated(event: ScheduleEntryCreatedEvent): Pro
       tenantId,
       error: error.message || error
     });
+    // Keep the stream delivery pending. Infrastructure failures such as an
+    // exhausted database pool are transient, and acknowledging here loses the
+    // only event that can create the external calendar mapping.
+    throw error;
   }
 }
 
@@ -207,7 +211,17 @@ async function handleScheduleEntryUpdated(event: ScheduleEntryUpdatedEvent): Pro
           continue;
         }
 
+        // An edit made in this provider's calendar already holds the new version there.
+        if (userIsAssigned && provider.id === changes?.sourceCalendarProviderId) {
+          continue;
+        }
+
         try {
+          if (changes?.calendarArchived === true) {
+            await syncService.removeProviderCopy(entryId, provider.id);
+            continue;
+          }
+
           // If user was assigned but no longer is, delete from their calendar
           if (userWasAssigned && !userIsAssigned && provider.user_id) {
             const result = await syncService.deleteScheduleEntry(entryId, provider.id, 'all');
@@ -250,6 +264,7 @@ async function handleScheduleEntryUpdated(event: ScheduleEntryUpdatedEvent): Pro
       tenantId,
       error: error.message || error
     });
+    throw error;
   }
 }
 
@@ -355,6 +370,7 @@ async function handleScheduleEntryDeleted(event: ScheduleEntryDeletedEvent): Pro
       tenantId,
       error: error.message || error
     });
+    throw error;
   }
 }
 
@@ -490,6 +506,7 @@ async function handleCalendarConflictDetected(event: CalendarConflictDetectedEve
       scheduleEntryId,
       error: error.message || error
     });
+    throw error;
   }
 }
 

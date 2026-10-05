@@ -12,6 +12,13 @@ describe('shouldSkipApiKeyAuth', () => {
     expect(shouldSkipApiKeyAuth('/api/scim-malicious/v2/connection-id/Users')).toBe(false);
   });
 
+  it('lets the smart ticket search stream authenticate its session in the route handler', () => {
+    expect(shouldSkipApiKeyAuth('/api/smart-search/ticket/stream')).toBe(true);
+    expect(shouldSkipApiKeyAuth('/api/smart-search/project/stream')).toBe(true);
+    // Other ticket API routes still need an API key.
+    expect(shouldSkipApiKeyAuth('/api/tickets/123')).toBe(false);
+  });
+
   it('allows the Teams package download route to use session auth', () => {
     expect(shouldSkipApiKeyAuth('/api/teams/package/download')).toBe(true);
   });
@@ -28,6 +35,19 @@ describe('shouldSkipApiKeyAuth', () => {
   it('allows document download/content routes to use session auth (e.g. meeting transcripts)', () => {
     expect(shouldSkipApiKeyAuth('/api/documents/123/download')).toBe(true);
     expect(shouldSkipApiKeyAuth('/api/documents/123/content')).toBe(true);
+  });
+
+  it('lets only client portal document file and export handlers authenticate the portal session', () => {
+    const documentId = '2187d639-b796-4b0e-b760-8a2576bb435f';
+    expect(shouldSkipApiKeyAuth(`/api/client-portal/documents/${documentId}/file`)).toBe(true);
+    expect(shouldSkipApiKeyAuth(`/api/client-portal/documents/${documentId}/export`)).toBe(true);
+
+    // The exception is bound to the two intended handlers and one document ID segment.
+    expect(shouldSkipApiKeyAuth(`/api/client-portal/documents/${documentId}/content`)).toBe(false);
+    expect(shouldSkipApiKeyAuth(`/api/client-portal/documents/${documentId}/file/other`)).toBe(false);
+    expect(shouldSkipApiKeyAuth('/api/client-portal/documents/file')).toBe(false);
+    expect(shouldSkipApiKeyAuth(`/api/client-portal/documents/${documentId}/export-malicious`)).toBe(false);
+    expect(shouldSkipApiKeyAuth('/api/instanceinfo')).toBe(false);
   });
 
   it('allows the Teams online-meeting recording proxy to use session auth', () => {

@@ -48,6 +48,12 @@ vi.mock('../context/AssetCrossFeatureContext', () => ({
   useAssetCrossFeature: () => ({ renderQuickAddTicket: () => null }),
 }));
 
+// Named views have their own tests; here they only need to stay out of the way
+// (the real hook reaches the server actions and the auth stack).
+vi.mock('@alga-psa/list-views/hooks', () => ({
+  useListViews: () => ({}),
+}));
+vi.mock('@alga-psa/list-views/components', () => ({ ListViewPicker: () => null }));
 vi.mock('./QuickAddAsset', () => ({ QuickAddAsset: () => null }));
 vi.mock('./AssetCommandPalette', () => ({ AssetCommandPalette: () => null }));
 vi.mock('./AssetDetailDrawerClient', () => ({ AssetDetailDrawerClient: () => null }));

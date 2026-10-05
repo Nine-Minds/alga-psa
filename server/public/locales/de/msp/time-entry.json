@@ -480,7 +480,8 @@
       "onlyDraftRemovable": "Nur Stundenzettel im Entwurf können entfernt werden.",
       "removeEntriesFirst": "Entfernen Sie die Zeiteinträge, bevor Sie diesen Stundenzettel entfernen.",
       "onlyApprovedReopenable": "Nur genehmigte Stundenzettel können wieder geöffnet werden.",
-      "invoicedCannotReopen": "Dieser Stundenzettel enthält abgerechnete Zeit und kann nicht wieder geöffnet werden."
+      "invoicedCannotReopen": "Dieser Stundenzettel enthält abgerechnete Zeit und kann nicht wieder geöffnet werden.",
+      "notEditable": "Dieser Stundenzettel ist gesperrt. Wählen Sie einen Entwurf oder einen Stundenzettel mit angeforderten Änderungen."
     },
     "timeEntry": {
       "notFoundRefresh": "Zeiteintrag nicht gefunden. Er wurde möglicherweise gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
@@ -506,5 +507,33 @@
       "missingField": "Erforderliches Feld der Zeitraumeinstellung fehlt.",
       "missingFieldNamed": "Erforderliches Feld der Zeitraumeinstellung fehlt: {{field}}."
     }
+  },
+  "workItemEntry": {
+    "sheetStatus": {
+      "DRAFT": "Entwurf",
+      "SUBMITTED": "Eingereicht",
+      "APPROVED": "Genehmigt",
+      "CHANGES_REQUESTED": "Änderungen angefordert",
+      "UNKNOWN": "Unbekannt"
+    },
+    "sheetHint": "Stundenzettel: {{range}} · {{status}}",
+    "defaultMoved": {
+      "supplied": "Die Zeiten des Timers fallen auf einen Tag, der keine neue Zeit annimmt, daher beginnt der Eintrag am {{date}} um 08:00.",
+      "todayLocked": "Der heutige Stundenzettel hat den Status „{{status}}“, daher beginnt der Eintrag am {{date}}, dem nächsten Tag, der Zeit annimmt.",
+      "todayUncovered": "Kein Zeitraum umfasst den heutigen Tag, daher beginnt der Eintrag am {{date}}, dem nächsten Tag, der Zeit annimmt."
+    },
+    "save": {
+      "noPeriod": "Kein Zeitraum umfasst den {{date}}. Wählen Sie einen Tag innerhalb eines Zeitraums.",
+      "sheetLocked": "Der Stundenzettel für den {{date}} hat den Status „{{status}}“. Wählen Sie einen Tag auf einem Entwurf oder einem Stundenzettel mit angeforderten Änderungen."
+    }
+  },
+  "launch": {
+    "noUser": "Der aktuelle Benutzer für den Zeiteintrag konnte nicht geladen werden.",
+    "entryNotFound": "Zeiteintrag nicht gefunden.",
+    "entryMissingSheet": "Dieser Zeiteintrag ist keinem Stundenzettel zugeordnet und kann hier nicht bearbeitet werden.",
+    "entryMissingPeriod": "Dem Stundenzettel dieses Eintrags fehlt der Zeitraum und er kann nicht geöffnet werden.",
+    "noPeriods": "Es sind noch keine Zeiträume eingerichtet, daher kann keine Zeit erfasst werden. Bitten Sie einen Administrator, unter Einstellungen → Zeiterfassung Zeiträume anzulegen.",
+    "noEditablePeriods": "Alle Stundenzettel sind eingereicht oder genehmigt, daher gibt es keinen Tag, an dem Zeit erfasst werden kann. Bitten Sie einen Genehmiger, einen Stundenzettel wieder zu öffnen, oder einen Administrator, einen Zeitraum anzulegen.",
+    "prepareFailed": "Beim Vorbereiten des Zeiteintrags ist ein Fehler aufgetreten. Bitte versuchen Sie es erneut."
   }
 }

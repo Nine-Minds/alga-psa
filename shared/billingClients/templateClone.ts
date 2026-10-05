@@ -217,7 +217,7 @@ async function cloneServiceConfiguration(
     }
 
     if (configuration.configuration_type === 'Fixed') {
-      await cloneFixedConfig(trx, tenant, configuration.config_id, newConfigId);
+      await cloneTemplateServiceFixedConfig(trx, tenant, configuration.config_id, newConfigId);
     }
   }
 }
@@ -331,25 +331,44 @@ async function cloneUsageConfig(trx: Knex.Transaction, tenant: string, sourceCon
   });
 }
 
-async function cloneFixedConfig(trx: Knex.Transaction, tenant: string, sourceConfigId: string, targetConfigId: string) {
+/**
+ * Copy a template service's fixed-config row (pricing basis + optional default
+ * unit rate) onto the contract line's service configuration. Shared by every
+ * template → contract copy path so a per-seat service can never silently
+ * demote to a bundle allocation because one path forgot the row.
+ *
+ * Templates carry no provenance column: a stored template base_rate is an
+ * intentional clone-time snapshot (`custom`); a null one follows the live
+ * catalog in the contract's currency (`inherited`). Never copy a template-row
+ * provenance verbatim.
+ *
+ * LEVERAGE: pattern template-pool-roundtrip — third template → contract copy
+ * that must remember a template-side table (pools, fixed config); a single
+ * "clone everything hanging off a template service config" layer would stop
+ * each path from having to enumerate them.
+ */
+export async function cloneTemplateServiceFixedConfig(
+  trx: Knex | Knex.Transaction,
+  tenant: string,
+  sourceConfigId: string,
+  targetConfigId: string
+): Promise<void> {
   const db = tenantDb(trx, tenant);
-  const fixedConfig = await db.table('contract_template_line_service_fixed_config')
+  const fixedConfig = await db.table<{ base_rate: number | string | null; pricing_basis: string | null }>(
+    'contract_template_line_service_fixed_config'
+  )
     .where('config_id', sourceConfigId)
-    .first();
+    .first('base_rate', 'pricing_basis');
 
   if (!fixedConfig) return;
 
-  // Templates carry no provenance column: a stored template base_rate is an
-  // intentional clone-time snapshot (`custom`); a null one follows the live
-  // catalog (`inherited`). Never copy a template-row provenance verbatim.
-  const templateBaseRate = fixedConfig.base_rate ?? null;
-  const { rate_provenance: _ignoredProvenance, ...rest } = fixedConfig as Record<string, unknown>;
+  const templateBaseRate = normalizeNumeric(fixedConfig.base_rate);
 
   await db.table('contract_line_service_fixed_config').insert({
-    ...rest,
     tenant,
     config_id: targetConfigId,
     base_rate: templateBaseRate,
+    pricing_basis: fixedConfig.pricing_basis ?? null,
     rate_provenance: templateBaseRate === null ? 'inherited' : 'custom',
     created_at: trx.fn.now(),
     updated_at: trx.fn.now()

@@ -11,6 +11,7 @@ import {
 } from '@alga-psa/ui/lib/errorHandling';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
+import { DrawerFooter } from '@alga-psa/ui/components/Drawer';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { deleteTimeEntry, fetchTimeEntriesForTimeSheet } from '../../../../actions/timeEntryActions';
@@ -28,6 +29,8 @@ import TimeEntrySkeletons from './TimeEntrySkeletons';
 import SingleTimeEntryForm from './SingleTimeEntryForm';
 import { validateTimeEntry } from './utils';
 import { useSchedulingCrossFeatureOptional } from '../../../../context/SchedulingCrossFeatureContext';
+import { TimeEntrySaveRejectedError } from '../../../../lib/timeEntrySaveAdapter';
+import type { CatalogPeriod } from '../../../../lib/timeEntryPeriodSelection';
 
 function isReturnedActionError(value: unknown): value is { actionError: string } | { permissionError: string } {
   return isActionMessageError(value) || isActionPermissionError(value);
@@ -41,7 +44,15 @@ interface TimeEntryDialogProps {
   workItem: Omit<IExtendedWorkItem, 'tenant'>;
   date: Date;
   existingEntries?: ITimeEntryWithWorkItem[];
-  timePeriod: ITimePeriodView;
+  /** The one period the entry is bounded to (existing entries, time sheet page). */
+  timePeriod?: ITimePeriodView;
+  /**
+   * Every period the subject user could file against, with sheet statuses. When
+   * given instead of `timePeriod`, the date field spans the editable periods and
+   * shows which sheet the chosen day lands on; the caller's `onSave` resolves the
+   * sheet from the date.
+   */
+  periodCatalog?: readonly CatalogPeriod[];
   isEditable: boolean;
   defaultStartTime?: Date;
   defaultEndTime?: Date;
@@ -49,6 +60,12 @@ interface TimeEntryDialogProps {
   timeSheetId?: string;
   onTimeEntriesUpdate?: (entries: ITimeEntryWithWorkItemString[]) => void;
   inDrawer?: boolean;
+  /** Optional selected-period context shown under the drawer title. */
+  periodContextLabel?: string;
+  /** Optional explanation shown above the form, e.g. why the default date moved. */
+  notice?: string;
+  /** IANA timezone the entry's work_date is derived in (the subject user's). */
+  workTimeZone?: string;
 }
 
 function splitPaymentWarning(message: string): [string, string] {
@@ -67,6 +84,7 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
     date,
     existingEntries,
     timePeriod,
+    periodCatalog,
     isEditable,
     defaultStartTime,
     defaultEndTime,
@@ -74,6 +92,9 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
     timeSheetId,
     onTimeEntriesUpdate,
     inDrawer,
+    periodContextLabel,
+    notice,
+    workTimeZone,
   } = props;
   const { t } = useTranslation('msp/time-entry');
   // Injected from the composition layer (billing owns the warning action).
@@ -167,7 +188,7 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
       // is nothing to validate here. See billingEngine.getTaxInfoFromService.
     }
 
-    if (!validateTimeEntry(entry)) {
+    if (!validateTimeEntry(entry, workTimeZone)) {
       toast.error(t('messages.invalidTimeEntry'));
       return;
     }
@@ -215,11 +236,16 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
       onClose();
     } catch (error) {
       toast.dismiss(loadingToast);
-      handleError(error, 'Failed to save time entry. Please try again.');
+      // A rejection already says what to do (locked sheet, no period); only
+      // unexpected failures get the generic copy.
+      handleError(
+        error,
+        error instanceof TimeEntrySaveRejectedError ? undefined : 'Failed to save time entry. Please try again.',
+      );
     } finally {
       setIsSaving(false);
     }
-  }, [entries, isEditable, isSaving, onClose, onSave, onTimeEntriesUpdate, services, timeSheetId, workItem]);
+  }, [entries, isEditable, isSaving, onClose, onSave, onTimeEntriesUpdate, services, timeSheetId, workItem, workTimeZone]);
 
   const deleteTimeEntryAtIndex = async (index: number) => {
     try {
@@ -340,6 +366,14 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
       data-automation-type="container"
     >
       {inDrawer && <h2 className="mb-4 text-lg font-semibold">{title}</h2>}
+      {inDrawer && periodContextLabel && (
+        <p className="mb-3 text-sm text-[rgb(var(--color-text-600))]">{periodContextLabel}</p>
+      )}
+      {notice && (
+        <Alert id={`${id}-notice`} variant="info" className="mb-3">
+          <AlertDescription>{notice}</AlertDescription>
+        </Alert>
+      )}
       {hasProjectPaymentWarning && (
         <Alert id={`${id}-project-payment-warning`} variant="warning" className="mb-3">
           <AlertDescription>
@@ -382,13 +416,15 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
             onUpdateEntry={updateEntry}
             onUpdateTimeInputs={updateTimeInputs}
             timePeriod={timePeriod}
+            periodCatalog={periodCatalog}
             date={date}
+            workTimeZone={workTimeZone}
             isNewEntry={!hasExistingEntry}
           />
         </div>
       ) : null}
 
-      {inDrawer && <div className="mt-4">{footerActions}</div>}
+      {inDrawer && <DrawerFooter>{footerActions}</DrawerFooter>}
     </div>
   );
 

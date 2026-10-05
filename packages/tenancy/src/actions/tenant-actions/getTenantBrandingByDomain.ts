@@ -1,6 +1,6 @@
 'use server';
 
-import { getConnection, getTenantIdBySlug, tenantDb } from '@alga-psa/db';
+import { buildTenantPortalSlug, getConnection, getTenantIdBySlug, tenantDb } from '@alga-psa/db';
 import { TenantBranding } from './tenantBrandingActions';
 import { unstable_cache } from 'next/cache';
 import { LOCALE_CONFIG, SupportedLocale, isSupportedLocale, normalizeLocale } from '@alga-psa/core/i18n/config';
@@ -32,6 +32,19 @@ async function getTenantSettings(tenantId: string) {
   const tenantKnex = await getConnection(tenantId);
   return tenantSettingsQuery(tenantKnex, tenantId)
     .first();
+}
+
+function normalizePortalHost(domain: string): string {
+  return domain
+    .toLowerCase()
+    .replace(/^https?:\/\//, '')
+    .replace(/^www\./, '')
+    .replace(/:\d+$/, '')
+    .replace(/\/$/, '');
+}
+
+function isDevPortalHost(normalizedDomain: string): boolean {
+  return DEV_HOSTS.has(normalizedDomain) || normalizedDomain.endsWith('.localhost');
 }
 
 async function lookupTenantSettingsByDomain(normalizedDomain: string) {
@@ -84,16 +97,11 @@ async function fetchTenantPortalConfig(domain: string): Promise<TenantPortalConf
   console.log('[getTenantBrandingByDomain] Input domain:', domain);
 
   try {
-    const normalizedDomain = domain
-      .toLowerCase()
-      .replace(/^https?:\/\//, '')
-      .replace(/^www\./, '')
-      .replace(/:\d+$/, '')
-      .replace(/\/$/, '');
+    const normalizedDomain = normalizePortalHost(domain);
 
     console.log('[getTenantBrandingByDomain] Normalized domain:', normalizedDomain);
 
-    if (DEV_HOSTS.has(normalizedDomain) || normalizedDomain.endsWith('.localhost')) {
+    if (isDevPortalHost(normalizedDomain)) {
       console.log('[getTenantBrandingByDomain] Skipping portal config lookup for dev host');
       return { branding: null, locale: null, theme: DEFAULT_TENANT_THEME };
     }
@@ -139,6 +147,79 @@ const getTenantPortalConfigCached = unstable_cache(
     tags: ['tenant-portal-config'],
   }
 );
+
+/**
+ * Tenant that owns an *active* portal host, by the same two resolution paths the
+ * branding lookup uses (custom domain, and the `<prefix>.portal.*` canonical
+ * host). Unlike branding this refuses non-active rows: sign-in scoping hangs off
+ * this answer, and authenticating against a domain that is not serving yet would
+ * be worse than asking the visitor which organization they meant.
+ */
+async function lookupActivePortalDomainTenant(normalizedDomain: string): Promise<string | null> {
+  if (normalizedDomain.includes('.algapsa.com') || normalizedDomain.includes('.9minds.ai')) {
+    const parts = normalizedDomain.split('.');
+    if (parts.length >= 3 && parts[1] === 'portal') {
+      const knex = await getConnection();
+      const portalDomain = await tenantDb(knex, PORTAL_DOMAIN_TENANT_DISCOVERY)
+        .unscoped('portal_domains', 'tenant discovery from client portal subdomain')
+        .where('canonical_host', 'like', `${parts[0]}.portal.%`)
+        .andWhere('status', 'active')
+        .first();
+
+      return portalDomain?.tenant ?? null;
+    }
+
+    return null;
+  }
+
+  const knex = await getConnection();
+  const portalDomain = await tenantDb(knex, PORTAL_DOMAIN_TENANT_DISCOVERY)
+    .unscoped('portal_domains', 'tenant discovery from client portal custom domain')
+    .whereRaw('lower(domain) = ?', [normalizedDomain])
+    .andWhere('status', 'active')
+    .first();
+
+  return portalDomain?.tenant ?? null;
+}
+
+async function fetchTenantSlugByDomain(domain: string): Promise<string | null> {
+  try {
+    const normalizedDomain = normalizePortalHost(domain);
+    if (isDevPortalHost(normalizedDomain)) {
+      return null;
+    }
+
+    const tenantId = await lookupActivePortalDomainTenant(normalizedDomain);
+    if (!tenantId) {
+      console.log('[getTenantSlugByDomain] No active portal domain for:', normalizedDomain);
+      return null;
+    }
+
+    return buildTenantPortalSlug(tenantId);
+  } catch (error) {
+    console.error('[getTenantSlugByDomain] Error resolving tenant from domain:', error);
+    return null;
+  }
+}
+
+const getTenantSlugByDomainCached = unstable_cache(
+  fetchTenantSlugByDomain,
+  ['tenant-portal-slug-by-domain'],
+  {
+    revalidate: 300,
+    tags: ['tenant-portal-config'],
+  },
+);
+
+/**
+ * Public portal slug of the tenant that owns a vanity host, or null when no
+ * active portal domain claims it. A vanity sign-in has to carry this into the
+ * credentials call; without it the lookup runs unscoped and an email that exists
+ * in two tenants lands in whichever row the database returned first.
+ */
+export async function getTenantSlugByDomain(domain: string): Promise<string | null> {
+  return getTenantSlugByDomainCached(domain);
+}
 
 async function fetchTenantPortalConfigBySlug(slug: string): Promise<TenantPortalConfig> {
   try {

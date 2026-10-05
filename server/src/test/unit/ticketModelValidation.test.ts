@@ -260,6 +260,21 @@ describe('TicketModel Validation Logic', () => {
       expect(result.data).toEqual(input);
     });
 
+    test('should preserve is_system_generated on a system-authored comment', () => {
+      const input = {
+        ticket_id: '123e4567-e89b-12d3-a456-426614174000',
+        content: 'Attachment "voicemail.wav" was not attached',
+        is_internal: true,
+        is_system_generated: true,
+        author_type: 'system' as const
+      };
+
+      const result = TicketModel.validateCreateCommentInput(input);
+
+      expect(result.valid).toBe(true);
+      expect(result.data).toMatchObject({ is_system_generated: true, author_type: 'system' });
+    });
+
     test('should reject empty content', () => {
       const input = {
         ticket_id: '123e4567-e89b-12d3-a456-426614174000',

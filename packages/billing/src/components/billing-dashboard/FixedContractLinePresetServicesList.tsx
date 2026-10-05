@@ -5,6 +5,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { Input } from '@alga-psa/ui/components/Input';
+import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Plus, MoreVertical, HelpCircle, Save } from 'lucide-react';
 import {
   DropdownMenu,
@@ -33,6 +34,7 @@ import {
 } from '@alga-psa/ui/lib/errorHandling';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useCurrencyFormat } from '@alga-psa/ui/lib';
+import { getFixedServiceBasisIssue, isUnitFixedService } from '../../lib/fixedServiceBasis';
 
 const isReturnedActionError = (value: unknown) =>
   isActionMessageError(value) || isActionPermissionError(value);
@@ -51,11 +53,18 @@ interface SimplePresetService {
   billing_method?: 'fixed' | 'hourly' | 'usage' | null;
   default_rate?: number;
   quantity?: number;
+  /** Catalog item kind; a product is billed by unit quantity and is never a recurring seat. */
+  item_kind?: string;
+  /** 'unit' = recurring seats billed quantity x unit rate; 'bundle' = quantity only allocates the line total. */
+  pricing_basis: 'bundle' | 'unit';
+  /** Optional default unit rate in minor units; empty follows the catalog in the contract currency. */
+  unit_rate?: number | null;
 }
 
 const FixedContractLinePresetServicesList: React.FC<FixedContractLinePresetServicesListProps> = ({ planId, onServiceAdded }) => {
   const { t } = useTranslation('msp/billing');
-  const { money } = useCurrencyFormat();
+  const { money, symbol } = useCurrencyFormat();
+  const [unitRateDrafts, setUnitRateDrafts] = useState<Record<string, string>>({});
   const [presetServices, setPresetServices] = useState<SimplePresetService[]>([]);
   const [originalServices, setOriginalServices] = useState<SimplePresetService[]>([]);
   const [availableServices, setAvailableServices] = useState<IService[]>([]);
@@ -108,10 +117,15 @@ const FixedContractLinePresetServicesList: React.FC<FixedContractLinePresetServi
           service_type_name: serviceDetails?.service_type_name || t('common.notAvailable', { defaultValue: 'N/A' }),
           billing_method: serviceDetails?.billing_method,
           default_rate: serviceDetails?.default_rate,
-          quantity: presetService.quantity || 1
+          item_kind: serviceDetails?.item_kind,
+          pricing_basis: isUnitFixedService(presetService) ? 'unit' : 'bundle',
+          // A stored zero seat count is legitimate for recurring units.
+          quantity: isUnitFixedService(presetService) ? presetService.quantity ?? 0 : presetService.quantity || 1,
+          unit_rate: isUnitFixedService(presetService) ? presetService.custom_rate ?? null : undefined,
         };
       });
 
+      setUnitRateDrafts({});
       setPresetServices(enhancedServices);
       setOriginalServices(enhancedServices);
       setAvailableServices(allAvailableServices);
@@ -136,8 +150,10 @@ const FixedContractLinePresetServicesList: React.FC<FixedContractLinePresetServi
       const original = originalServices.find(o => o.service_id === service.service_id);
       if (!original) return true;
 
-      // Compare quantity
+      // Compare quantity and per-seat pricing
       if (service.quantity !== original.quantity) return true;
+      if (service.pricing_basis !== original.pricing_basis) return true;
+      if ((service.unit_rate ?? null) !== (original.unit_rate ?? null)) return true;
 
       return false;
     });
@@ -203,6 +219,9 @@ const FixedContractLinePresetServicesList: React.FC<FixedContractLinePresetServi
         service_type_name: service?.service_type_name || t('common.notAvailable', { defaultValue: 'N/A' }),
         billing_method: service?.billing_method,
         default_rate: service?.default_rate,
+        item_kind: service?.item_kind,
+        pricing_basis: 'bundle',
+        unit_rate: undefined,
         quantity: 1
       };
     });
@@ -218,8 +237,36 @@ const FixedContractLinePresetServicesList: React.FC<FixedContractLinePresetServi
   const handleQuantityChange = (serviceId: string, newQuantity: number) => {
     setPresetServices(currentServices => currentServices.map(s => ({
       ...s,
-      quantity: s.service_id === serviceId ? Math.max(1, newQuantity) : s.quantity
+      // Recurring units may be zero; an allocation keeps its minimum of 1.
+      quantity: s.service_id === serviceId ? Math.max(isUnitFixedService(s) ? 0 : 1, newQuantity) : s.quantity
     })));
+  };
+
+  const handlePricingBasisChange = (serviceId: string, basis: 'bundle' | 'unit') => {
+    setPresetServices(currentServices => currentServices.map(s => {
+      if (s.service_id !== serviceId) return s;
+      return {
+        ...s,
+        pricing_basis: basis,
+        unit_rate: basis === 'unit' ? s.unit_rate ?? null : undefined,
+        quantity: basis === 'bundle' ? Math.max(1, s.quantity || 1) : s.quantity,
+      };
+    }));
+    if (basis === 'bundle') {
+      setUnitRateDrafts(({ [serviceId]: _dropped, ...rest }) => rest);
+    }
+  };
+
+  const handleUnitRateChange = (serviceId: string, raw: string) => {
+    const sanitized = raw.replace(/[^0-9.]/g, '');
+    if ((sanitized.match(/\./g) || []).length > 1) return;
+    setUnitRateDrafts(drafts => ({ ...drafts, [serviceId]: sanitized }));
+    const parsed = parseFloat(sanitized);
+    setPresetServices(currentServices => currentServices.map(s =>
+      s.service_id === serviceId
+        ? { ...s, unit_rate: sanitized.trim() === '' || !Number.isFinite(parsed) ? null : Math.round(parsed * 100) }
+        : s
+    ));
   };
 
   const handleSave = async () => {
@@ -229,10 +276,23 @@ const FixedContractLinePresetServicesList: React.FC<FixedContractLinePresetServi
     setError(null);
 
     try {
+      const invalid = presetServices.find(s => getFixedServiceBasisIssue(s, { requireUnitRate: false }));
+      if (invalid) {
+        setError(t('presetServices.errors.recurringQuantityInvalid', {
+          defaultValue: '{{name}}: recurring quantity must be a whole number, zero or more.',
+          name: invalid.service_name,
+        }));
+        return;
+      }
+
       const servicesToSave = presetServices.map(s => ({
         preset_id: s.preset_id,
         service_id: s.service_id,
-        quantity: s.quantity || 1
+        quantity: isUnitFixedService(s) ? s.quantity ?? 0 : s.quantity || 1,
+        // Preserve per-seat pricing: for a recurring-unit service custom_rate is the
+        // optional default unit rate; an allocation carries none.
+        custom_rate: isUnitFixedService(s) ? s.unit_rate ?? null : null,
+        pricing_basis: isUnitFixedService(s) ? 'unit' as const : 'bundle' as const,
       }));
 
       const result = await updateContractLinePresetServices(planId, servicesToSave);
@@ -262,6 +322,7 @@ const FixedContractLinePresetServicesList: React.FC<FixedContractLinePresetServi
 
   const handleReset = () => {
     setPresetServices([...originalServices]);
+    setUnitRateDrafts({});
     setSelectedServicesToAdd([]);
     setError(null);
   };
@@ -285,16 +346,59 @@ const FixedContractLinePresetServicesList: React.FC<FixedContractLinePresetServi
       dataIndex: 'quantity',
       render: (value, record) => (
         <Input
+          id={`preset-service-quantity-${record.service_id}`}
           type="number"
-          min="1"
-          value={value ?? 1}
+          min={isUnitFixedService(record) ? '0' : '1'}
+          step="1"
+          value={value ?? (isUnitFixedService(record) ? 0 : 1)}
           onChange={(e) => {
-            const newValue = parseInt(e.target.value) || 1;
-            handleQuantityChange(record.service_id, newValue);
+            const parsed = parseInt(e.target.value);
+            handleQuantityChange(
+              record.service_id,
+              isUnitFixedService(record) ? (Number.isNaN(parsed) ? 0 : parsed) : parsed || 1,
+            );
           }}
           className="w-20"
           onClick={(e) => e.stopPropagation()}
         />
+      ),
+    },
+    {
+      title: t('presetServices.table.pricing', { defaultValue: 'Pricing' }),
+      dataIndex: 'pricing_basis',
+      render: (_value, record) => (
+        <div className="space-y-2 min-w-[12rem]" onClick={(e) => e.stopPropagation()}>
+          {record.item_kind === 'product' ? (
+            <span className="text-sm text-muted-foreground">
+              {t('presetServices.pricing.product', { defaultValue: 'Billed by unit quantity' })}
+            </span>
+          ) : (
+            <CustomSelect
+              id={`preset-service-pricing-basis-${record.service_id}`}
+              value={record.pricing_basis}
+              onValueChange={(value) => handlePricingBasisChange(record.service_id, value === 'unit' ? 'unit' : 'bundle')}
+              options={[
+                { value: 'bundle', label: t('presetServices.pricing.bundle', { defaultValue: 'Part of the line total' }) },
+                { value: 'unit', label: t('presetServices.pricing.unit', { defaultValue: 'Per seat / unit' }) },
+              ]}
+            />
+          )}
+          {isUnitFixedService(record) && (
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">{symbol()}</span>
+              <Input
+                id={`preset-service-unit-rate-${record.service_id}`}
+                type="text"
+                inputMode="decimal"
+                aria-label={t('presetServices.pricing.unitRate', { defaultValue: 'Unit rate' })}
+                placeholder={t('presetServices.pricing.unitRatePlaceholder', { defaultValue: 'Catalog price' })}
+                value={unitRateDrafts[record.service_id] ?? (record.unit_rate == null ? '' : (record.unit_rate / 100).toFixed(2))}
+                onChange={(e) => handleUnitRateChange(record.service_id, e.target.value)}
+                className="pl-10"
+              />
+            </div>
+          )}
+        </div>
       ),
     },
     {

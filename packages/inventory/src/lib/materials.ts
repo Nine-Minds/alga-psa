@@ -437,6 +437,7 @@ export interface CatalogPickerQueryRow {
   unit_of_measure: string | null;
   item_kind: string;
   sku: string | null;
+  product_category?: string | null;
   default_rate: number;
   cost: number | null;
   cost_currency: string | null;
@@ -470,7 +471,8 @@ export async function queryCatalogPickerItems(
     base.andWhere((qb) => {
       qb.whereILike('sc.service_name', searchTerm)
         .orWhereILike('sc.description', searchTerm)
-        .orWhereILike('sc.sku', searchTerm);
+        .orWhereILike('sc.sku', searchTerm)
+        .orWhereILike('sc.product_category', searchTerm);
     });
   }
 
@@ -489,6 +491,7 @@ export async function queryCatalogPickerItems(
       'sc.unit_of_measure',
       'sc.item_kind',
       'sc.sku',
+      'sc.product_category',
       trx.raw('CAST(sc.default_rate AS FLOAT) as default_rate'),
       trx.raw('CAST(sc.cost AS FLOAT) as cost'),
       'sc.cost_currency',

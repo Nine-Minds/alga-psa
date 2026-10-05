@@ -110,7 +110,8 @@
     "paused": "Wstrzymane",
     "allResponseStatuses": "Wszystkie statusy odpowiedzi",
     "responseStatus": "Status odpowiedzi",
-    "board": "Filtruj według tablicy"
+    "board": "Filtruj według tablicy",
+    "searchSmart": "Szukaj zgłoszeń i komentarzy… Enter dla inteligentnego wyszukiwania"
   },
   "create": {
     "title": "Utwórz zgłoszenie wsparcia",
@@ -177,6 +178,7 @@
     "assignedTeam": "Przypisany zespół",
     "additionalAgents": "Dodatkowi agenci",
     "createdBy": "Utworzone przez",
+    "lastActivity": "Ostatnia aktywność",
     "location": "Lokalizacja",
     "contactPhone": "Telefon kontaktowy",
     "clientPhone": "Telefon klienta",
@@ -235,7 +237,10 @@
     "export": "Eksportuj",
     "reset": "Resetuj",
     "importSelected": "Importuj zaznaczone",
-    "printOptions": "Opcje drukowania"
+    "printOptions": "Opcje drukowania",
+    "duplicate": "Duplikuj",
+    "rowActions": "Akcje",
+    "openMenu": "Otwórz menu"
   },
   "messages": {
     "noTickets": "Brak zgłoszeń",
@@ -432,7 +437,8 @@
     "clientPortal": "Utworzono przez Portal Klienta",
     "inboundEmail": "Utworzono przez przychodzący e-mail",
     "api": "Utworzono przez API",
-    "other": "Utworzono przez inne źródło"
+    "other": "Utworzono przez inne źródło",
+    "recurring": "Utworzono przez harmonogram cykliczny"
   },
   "responseSource": {
     "clientPortal": "Otrzymano przez Portal Klienta",
@@ -717,7 +723,21 @@
       "propagationSummary": "{{masters}} wybranych zgłoszeń to zgłoszenia nadrzędne w trybie synchronizacji; ta zmiana zamknie lub ponownie otworzy {{children}} zgłoszeń podrzędnych.",
       "masterSummary": "{{children}} zgłoszeń podrzędnych",
       "applyToChildren": "Zastosuj do podrzędnych",
-      "mastersOnly": "Tylko nadrzędne"
+      "mastersOnly": "Tylko nadrzędne",
+      "membersLabel": "Zgłoszenia w tym pakiecie",
+      "addTicketSearchPlaceholder": "Szukaj zgłoszeń po numerze lub tytule",
+      "addTicketEmpty": "Wyszukaj zgłoszenia do dodania",
+      "badgeAdded": "Dodano",
+      "badgeInBundle": "W pakiecie #{{number}}",
+      "badgeMaster": "Zgłoszenie nadrzędne pakietu",
+      "masterTag": "Nadrzędne",
+      "removeMember": "Usuń",
+      "needMoreTickets": "Dodaj co najmniej jedno zgłoszenie do pakietu.",
+      "unresolvedSelectedTickets_one": "Nie udało się załadować {{count}} wybranego zgłoszenia.",
+      "unresolvedSelectedTickets_other": "Nie udało się załadować {{count}} wybranego zgłoszenia.",
+      "badgeClosed": "Zamknięte",
+      "unresolvedSelectedTickets_few": "Nie udało się załadować {{count}} wybranych zgłoszeń.",
+      "unresolvedSelectedTickets_many": "Nie udało się załadować {{count}} wybranego zgłoszenia."
     },
     "auth": {
       "moveRequired": "Musisz być zalogowany, aby przenosić zgłoszenia",
@@ -745,7 +765,8 @@
       "statusResolvingBoards": "Sprawdzanie tablic wybranych zgłoszeń…",
       "more": "Więcej",
       "selectedCount_few": "Zaznaczono {{count}}",
-      "selectedCount_many": "Zaznaczono {{count}}"
+      "selectedCount_many": "Zaznaczono {{count}}",
+      "bundleNeedsOne": "Wybierz co najmniej 1 zgłoszenie do połączenia"
     },
     "assign": {
       "dialogTitle": "Przypisz wybrane zgłoszenia",
@@ -814,6 +835,9 @@
       "partialFailure": "Status nie został zaktualizowany w niektórych zgłoszeniach",
       "failure": "Nie udało się zaktualizować statusu",
       "failedHeading": "Status nie został zaktualizowany w następujących zgłoszeniach:",
+      "resolutionLabel": "Komentarz rozwiązania (opcjonalnie)",
+      "resolutionPlaceholder": "Opisz, jak rozwiązano te zgłoszenia",
+      "resolutionHelper": "Zapisywany jako rozwiązanie w każdym wybranym zgłoszeniu i spełnia wymagania tablic, które wymagają go przed zamknięciem.",
       "confirm_few": "Zaktualizuj {{count}} zgłoszenia",
       "confirm_many": "Zaktualizuj {{count}} zgłoszeń",
       "success_few": "Status zaktualizowany w {{count}} zgłoszeniach",
@@ -907,7 +931,14 @@
     "tagCreatePartialFailure_few": "Nie udało się utworzyć {{count}} tagów",
     "tagCreatePartialFailure_many": "Nie udało się utworzyć {{count}} tagów",
     "tagCreationFailed_few": "Nie udało się utworzyć {{count}} tagów",
-    "tagCreationFailed_many": "Nie udało się utworzyć {{count}} tagów"
+    "tagCreationFailed_many": "Nie udało się utworzyć {{count}} tagów",
+    "duplicateDialogTitle": "Duplikuj zgłoszenie #{{number}}",
+    "duplicatingPill": "Duplikowanie #{{number}}",
+    "duplicateLoadFailed": "Nie udało się wczytać zgłoszenia do zduplikowania. Spróbuj ponownie.",
+    "duplicateChecklistHeading": "Lista kontrolna z #{{number}}",
+    "duplicateChecklistRequired": "(wymagane)",
+    "duplicateCopyChecklist": "Kopiuj elementy listy kontrolnej (niezaznaczone)",
+    "duplicateCustomFieldsNote": "Wartości pól niestandardowych są kopiowane ze zgłoszenia #{{number}}."
   },
   "itil": {
     "calculatedPriority": "Priorytet (obliczony)",
@@ -1041,6 +1072,11 @@
     "closeReasonPlaceholder": "Powód zamknięcia mimo to (opcjonalnie, zapisywany w dzienniku audytu)",
     "closing": "Zamykanie…",
     "closeAnyway": "Zamknij mimo to",
+    "markResolutionInternal": "Oznacz jako wewnętrzne",
+    "markResolutionInternalHelper": "Wewnętrzne rozwiązanie nie pojawia się w portalu klienta ani w e-mailu o zamknięciu.",
+    "closeTicketNowTitle": "Zamknąć zgłoszenie teraz?",
+    "closeTicketNowPrompt": "Ten komentarz jest teraz rozwiązaniem. Wybierz status zamknięcia, aby zamknąć zgłoszenie, albo pozostaw je otwarte.",
+    "leaveTicketOpen": "Pozostaw otwarte",
     "timerActiveElsewhereTitle": "Licznik aktywny w innym miejscu",
     "timerTakeoverMessage": "Licznik tego zgłoszenia jest aktywny w innym oknie. Czy chcesz go przejąć i zastąpić tutaj?",
     "replaceHere": "Zastąp tutaj",
@@ -1050,7 +1086,12 @@
     "emailNotificationLogs": "Dzienniki powiadomień e-mail",
     "ticketActivity": "Aktywność zgłoszenia",
     "discardChanges": "Odrzuć zmiany",
-    "saved": "Zapisano"
+    "saved": "Zapisano",
+    "changeContactTitle": "Zmienić kontakt zgłoszenia?",
+    "removeContactTitle": "Usunąć kontakt zgłoszenia?",
+    "changeContactPrompt": "Kontakt, osoba przypisana i obserwujący zostaną powiadomieni o tej zmianie, chyba że wyłączysz ich powiadomienia.",
+    "changeContact": "Zmień kontakt",
+    "removeContact": "Usuń kontakt"
   },
   "properties": {
     "timeEntry": "Wpis czasu",
@@ -1183,7 +1224,23 @@
       "selectParentCategory": "Wybierz kategorię nadrzędną",
       "parentHelpWithBoard": "Wybierz kategorię nadrzędną, aby utworzyć podkategorię, lub pozostaw puste dla poziomu najwyższego",
       "parentHelpWithoutBoard": "Najpierw wybierz tablicę albo kategorię nadrzędną, aby odziedziczyć jej tablicę",
-      "creating": "Tworzenie..."
+      "creating": "Tworzenie...",
+      "copyToBoard": "Kopiuj kategorie do innej tablicy",
+      "copyTitle": "Kopiuj kategorie do innej tablicy",
+      "copySourceLabel": "Wybierz tablicę źródłową",
+      "copyTargetLabel": "Wybierz tablicę docelową",
+      "copySelected": "Kopiuj wybrane",
+      "copySuccess": "Skopiowano {{created}} kategorii; pominięto {{skipped}} już istniejących.",
+      "copyFailed": "Nie udało się skopiować kategorii",
+      "copyEmpty": "Brak kategorii na tej tablicy.",
+      "copying": "Kopiowanie…",
+      "copySourceBoard": "Wybierz tablicę źródłową",
+      "copyTargetBoard": "Wybierz tablicę docelową",
+      "copyBoardTypeMismatch": "Kategorie zgłoszeń można kopiować tylko między tablicami tego samego typu kategorii.",
+      "copyConflicts_one": "{{count}} pominięta kategoria ma inną kategorię nadrzędną na tablicy docelowej.",
+      "copyConflicts_other": "{{count}} pominięte kategorie mają inną kategorię nadrzędną na tablicy docelowej.",
+      "copyConflicts_few": "{{count}} pominięte kategorie mają inną kategorię nadrzędną na tablicy docelowej.",
+      "copyConflicts_many": "{{count}} pominiętych kategorii ma inną kategorię nadrzędną na tablicy docelowej."
     },
     "display": {
       "responseStateTrackingTitle": "Śledzenie stanu odpowiedzi",
@@ -1587,7 +1644,11 @@
       "missingField": "Brakuje wymaganego pola listy kontrolnej.",
       "missingFieldNamed": "Brakuje wymaganego pola listy kontrolnej: {{field}}.",
       "referenceInvalid": "Wybrane zgłoszenie, szablon listy kontrolnej lub filtr reguły nie jest już prawidłowy. Odśwież stronę i spróbuj ponownie.",
-      "invalidValue": "Jedna z wartości listy kontrolnej jest nieprawidłowa. Odśwież stronę i spróbuj ponownie."
+      "invalidValue": "Jedna z wartości listy kontrolnej jest nieprawidłowa. Odśwież stronę i spróbuj ponownie.",
+      "ruleCategoryBoardMismatch": "Wybrana kategoria należy do innej tablicy niż reguła.",
+      "ruleCategoryInvalid": "Wybrana kategoria nie jest kategorią najwyższego poziomu.",
+      "ruleSubcategoryInvalid": "Wybrana podkategoria nie należy do wybranej kategorii.",
+      "ruleSubcategoryRequiresCategory": "Wybierz kategorię przed wybraniem podkategorii."
     }
   },
   "ticketSection": {
@@ -1657,7 +1718,8 @@
       "closedMasterGating": "Reguły zamykania tablicy nie zezwalają na otwarte zgłoszenia podrzędne w ramach zamkniętego zgłoszenia nadrzędnego, więc pozostawienie zgłoszenia nadrzędnego zamkniętego nie jest możliwe."
     },
     "autoClose": "Zostanie automatycznie zamknięte {{date}}, jeśli nie pojawi się nowa aktywność.",
-    "autoCloseWarned": "Klient został powiadomiony."
+    "autoCloseWarned": "Klient został powiadomiony.",
+    "duplicatedFrom": "Zduplikowano ze zgłoszenia #{{number}}"
   },
   "invalidTicketData": "Nieprawidłowe dane zgłoszenia",
   "timeEntries": {
@@ -1682,6 +1744,8 @@
     "deleteConfirmTitle": "Usunąć wpis czasu?",
     "deleteConfirmMessage": "Wpis czasu zostanie trwale usunięty. Tej akcji nie można cofnąć.",
     "deleteConfirmAction": "Usuń",
+    "billable": "Rozliczalne",
+    "nonBillable": "Nierozliczalne",
     "duration": {
       "hr": "godz.",
       "hrs": "godz.",
@@ -1899,7 +1963,6 @@
       "replyTo": "Odpowiedz {{name}}",
       "writeReply": "Napisz odpowiedź",
       "modeInternal": "Wewnętrzne",
-      "modeResolution": "Rozwiązanie",
       "sending": "Wysyłanie…",
       "send": "Wyślij",
       "systemActor": "System",
@@ -1911,6 +1974,8 @@
       "bundleStatusNotPropagated": "{{actor}} zmienił status zgłoszenia nadrzędnego w pakiecie (zgłoszenia podrzędne nie zostały zaktualizowane)",
       "bundleStatusClosed": "{{actor}} zamknął zgłoszenie nadrzędne w pakiecie oraz {{count}} zgłoszeń podrzędnych",
       "bundleStatusReopened": "{{actor}} ponownie otworzył zgłoszenie nadrzędne w pakiecie oraz {{count}} zgłoszeń podrzędnych",
+      "duplicatedFrom": "{{actor}} utworzył(a) to zgłoszenie jako duplikat #{{number}}",
+      "duplicatedTo": "{{actor}} zduplikował(a) to zgłoszenie jako #{{number}}",
       "title": "Oś czasu",
       "replyVisibility": "Widoczność odpowiedzi",
       "modeClient": "Klient",
@@ -2001,7 +2066,8 @@
       "remove": "Usuń",
       "cancel": "Anuluj",
       "save": "Zapisz",
-      "menu": "Działania łącza"
+      "menu": "Działania łącza",
+      "openRecord": "Otwórz rekord zewnętrzny"
     },
     "relationship": {
       "origin": "Źródło",
@@ -2060,7 +2126,321 @@
       "systemLabelRequired": "Etykieta systemu jest wymagana",
       "permissionDenied": "Odmowa dostępu: nie można zarządzać systemami zewnętrznymi",
       "systemRequired": "Wybierz system zewnętrzny.",
-      "urlRequired": "Adres URL jest wymagany w przypadku systemów bez szablonu adresu URL."
+      "urlRequired": "Adres URL jest wymagany w przypadku systemów bez szablonu adresu URL.",
+      "invalidVisibility": "Można udostępniać tylko linki zgłoszeń; widoczność musi być wartością logiczną"
+    },
+    "visibility": {
+      "label": "Widoczność",
+      "internal": "Tylko wewnętrznie",
+      "shared": "Widoczny w portalu klienta",
+      "help": "Klienci z dostępem do tego zgłoszenia mogą zobaczyć ten link. Udostępnienie linku nie przyznaje dostępu do systemu zewnętrznego."
+    }
+  },
+  "smartSearch": {
+    "run": "Inteligentne wyszukiwanie",
+    "runTitle": "Oceń przefiltrowane zgłoszenia względem tego zapytania",
+    "relevanceColumn": "Dopasowanie",
+    "relevance": "{{percent}}% trafności",
+    "strong": "Silne dopasowania",
+    "possible": "Możliwe dopasowania",
+    "unlikely": "Mało prawdopodobne dopasowania",
+    "emptyBucketRunning": "Jeszcze brak",
+    "emptyBucket": "Brak",
+    "scoring": "Oceniono {{scored}} z {{total}} zgłoszeń",
+    "summary": "Oceniono {{total}} zgłoszeń · {{strong}} silnych · {{possible}} możliwych",
+    "cancelled": "Wyszukiwanie anulowano po {{scored}} z {{total}} zgłoszeń",
+    "errorTitle": "Inteligentne wyszukiwanie zatrzymane",
+    "starting": "Uruchamianie inteligentnego wyszukiwania…",
+    "rerun": "Filtry się zmieniły. Uruchom ponownie",
+    "retry": "Ponów",
+    "cancel": "Anuluj",
+    "exit": "Wróć do listy",
+    "notConfigured": "Inteligentne wyszukiwanie nie jest skonfigurowane na tym serwerze",
+    "failedCount": "Nie udało się ocenić {{count}} zgłoszeń",
+    "unscored": "Nieocenione",
+    "addOnRequired": "Inteligentne wyszukiwanie wymaga dodatku Asystent AI"
+  },
+  "recurring": {
+    "actions": {
+      "done": "Gotowe",
+      "cancel": "Anuluj",
+      "saving": "Zapisywanie…",
+      "save": "Zapisz",
+      "pause": "Wstrzymaj",
+      "resume": "Wznów",
+      "archive": "Archiwizuj"
+    },
+    "clients": {
+      "addTitle": "Dodaj klientów",
+      "addHelp": "Wybierz klienta, aby go dodać. Okno pozostaje otwarte, aby można było dodać kolejnych.",
+      "alreadyAdded": "Już dodano",
+      "pickerPlaceholder": "Wybierz klienta do dodania",
+      "addedHeading": "Dodani w tym oknie",
+      "columns": {
+        "client": "Klient",
+        "overrides": "Nadpisania",
+        "contact": "Kontakt",
+        "location": "Lokalizacja",
+        "assets": "Zasoby",
+        "nextDue": "Następny termin",
+        "active": "Aktywny"
+      },
+      "inheritsAll": "Dziedziczy wszystko",
+      "set": "Ustawiono",
+      "actions": "Akcje klienta",
+      "editOverrides": "Edytuj nadpisania",
+      "remove": "Usuń",
+      "add": "Dodaj klientów",
+      "empty": "Brak klientów. Zgłoszenia są tworzone tylko dla klientów dodanych tutaj.",
+      "removeTitle": "Usuń klienta",
+      "removeMessage": "Zatrzymać tworzenie zgłoszeń dla klienta {{client}}? Utworzone już zgłoszenia i historia zostaną zachowane."
+    },
+    "errors": {
+      "clientNotFound": "Nie znaleziono klienta w tym zgłoszeniu cyklicznym",
+      "definitionNotFound": "Nie znaleziono zgłoszenia cyklicznego",
+      "unknownTitleTokens": "Nieznane znaczniki tytułu: {{tokens}}. Dostępne znaczniki: {{available}}",
+      "subcategoryNeedsCategory": "Podkategoria wymaga wybrania kategorii",
+      "definitionArchived": "Zarchiwizowane zgłoszenia cykliczne są tylko do odczytu",
+      "clientAlreadyAdded": "Ten klient jest już częścią tego zgłoszenia cyklicznego",
+      "invalidReferences": "{{problems}}"
+    },
+    "overrides": {
+      "noneValue": "Brak",
+      "inherited": "Używa ustawienia zgłoszenia cyklicznego: {{value}}",
+      "title": "Ustawienia dla klienta {{client}}",
+      "intro": "Wybierz pola zgłoszenia, które ten klient ustawia inaczej niż zgłoszenie cykliczne. Wszystko pozostałe jest dziedziczone i uwzględnia późniejsze zmiany zgłoszenia cyklicznego.",
+      "groups": {
+        "board": "Nadpisz tablicę i status",
+        "priority": "Nadpisz priorytet",
+        "category": "Nadpisz kategorię",
+        "assignment": "Nadpisz przypisanie"
+      },
+      "attachedTo": "Dołączone do wygenerowanego zgłoszenia",
+      "contact": "Kontakt",
+      "contactPlaceholder": "Brak kontaktu",
+      "location": "Lokalizacja",
+      "noLocation": "Brak lokalizacji",
+      "assets": "Zasoby",
+      "groupNames": {
+        "board": "Tablica i status",
+        "priority": "Priorytet",
+        "category": "Kategoria",
+        "assignment": "Przypisanie"
+      }
+    },
+    "sections": {
+      "clients": "Klienci",
+      "history": "Historia",
+      "details": "Szczegóły",
+      "template": "Szablon zgłoszenia",
+      "schedule": "Harmonogram",
+      "behaviour": "Zachowanie"
+    },
+    "fields": {
+      "board": "Tablica",
+      "boardPlaceholder": "Wybierz tablicę",
+      "status": "Status",
+      "statusBoardDefault": "Domyślny dla tablicy",
+      "priority": "Priorytet",
+      "priorityPlaceholder": "Wybierz priorytet",
+      "category": "Kategoria",
+      "categoryPlaceholder": "Brak kategorii",
+      "assignedTo": "Przypisano do",
+      "additionalAgents": "Dodatkowi agenci",
+      "name": "Nazwa",
+      "title": "Tytuł zgłoszenia",
+      "titleTokens": "Wstaw:",
+      "description": "Opis",
+      "descriptionPlaceholder": "Opis",
+      "checklistTemplate": "Szablon listy kontrolnej",
+      "noChecklist": "Brak"
+    },
+    "history": {
+      "columns": {
+        "due": "Termin",
+        "client": "Klient",
+        "status": "Status",
+        "ticket": "Zgłoszenie",
+        "reason": "Powód"
+      },
+      "allStatuses": "Wszystkie statusy",
+      "allClients": "Wszyscy klienci",
+      "empty": "Nic jeszcze nie zostało wygenerowane.",
+      "reasons": {
+        "clientInactive": "Klient był nieaktywny",
+        "previousOpen": "Zgłoszenie {{number}} z poprzedniego wystąpienia jest nadal otwarte"
+      },
+      "status": {
+        "created": "Utworzono",
+        "skipped": "Pominięto",
+        "missed": "Przegapiono",
+        "failed": "Niepowodzenie"
+      }
+    },
+    "editor": {
+      "created": "Utworzono zgłoszenie cykliczne. Dodaj klientów, dla których ma działać.",
+      "saved": "Zapisano zgłoszenie cykliczne",
+      "back": "Zgłoszenia cykliczne",
+      "newTitle": "Nowe zgłoszenie cykliczne",
+      "archivedNotice": "To zgłoszenie cykliczne jest zarchiwizowane i nie można go już zmieniać.",
+      "clientsAfterSave": "Najpierw zapisz zgłoszenie cykliczne, a następnie dodaj klientów, dla których ma działać.",
+      "archiveTitle": "Archiwizuj zgłoszenie cykliczne",
+      "archiveMessage": "Archiwizacja zatrzymuje wszystkie przyszłe zgłoszenia i nie można jej cofnąć. Utworzone już zgłoszenia i historia zostaną zachowane.",
+      "viewOnly": "Możesz wyświetlić to zgłoszenie cykliczne, ale nie możesz go zmieniać."
+    },
+    "loading": "Ładowanie…",
+    "schedule": {
+      "policy": {
+        "keep": "Zachowaj datę",
+        "previous": "Przenieś na poprzedni dzień roboczy",
+        "next": "Przenieś na następny dzień roboczy"
+      },
+      "startDate": "Start od",
+      "createTime": "Utwórz o",
+      "dueTime": "Termin o",
+      "leadDays": "Utwórz dni przed terminem",
+      "policyLabel": "Gdy termin nie przypada na dzień roboczy",
+      "calendarFallback": "Nie ustawiono domyślnego harmonogramu godzin pracy, więc dniami roboczymi są dni od poniedziałku do piątku oraz święta obowiązujące w całej firmie.",
+      "calendarNote": "Dni robocze wynikają z domyślnego harmonogramu godzin pracy ({{name}}), wraz z jego świętami."
+    },
+    "status": {
+      "archived": "Zarchiwizowane",
+      "active": "Aktywne",
+      "paused": "Wstrzymane"
+    },
+    "preview": {
+      "heading": "Następne 5 terminów",
+      "none": "Brak nadchodzących terminów."
+    },
+    "behaviour": {
+      "openPrevious": "Jeśli poprzednie zgłoszenie jest nadal otwarte",
+      "alwaysCreate": "Mimo to utwórz następne zgłoszenie",
+      "skip": "Pomiń to wystąpienie",
+      "notifyClient": "Wyślij klientowi e-mail po utworzeniu zgłoszenia",
+      "notifyClientHelp": "Domyślnie wyłączone. Powiadomienia wewnętrzne są zawsze wysyłane."
+    },
+    "list": {
+      "columns": {
+        "name": "Nazwa",
+        "schedule": "Harmonogram",
+        "nextDue": "Następny termin",
+        "status": "Status",
+        "clients": "Klienci"
+      },
+      "new": "Nowe zgłoszenie cykliczne",
+      "hasFailure": "Ostatnie uruchomienie nie powiodło się. Otwórz, aby zobaczyć powód.",
+      "title": "Zgłoszenia cykliczne",
+      "empty": "Brak zgłoszeń cyklicznych.",
+      "filter": {
+        "active": "Aktywne",
+        "paused": "Wstrzymane",
+        "archived": "Zarchiwizowane",
+        "all": "Wszystkie"
+      }
+    },
+    "clientTab": {
+      "clientPaused": "Wstrzymane dla tego klienta",
+      "pickDefinition": "Wybierz zgłoszenie cykliczne",
+      "add": "Dodaj do zgłoszenia cyklicznego",
+      "empty": "Ten klient nie jest częścią żadnego zgłoszenia cyklicznego.",
+      "removeTitle": "Usuń ze zgłoszenia cyklicznego",
+      "removeMessage": "Zatrzymać tworzenie zgłoszeń dla tego klienta z {{name}}? Utworzone już zgłoszenia i historia zostaną zachowane."
+    },
+    "badge": {
+      "source": "Cykliczne: {{name}}"
+    },
+    "rule": {
+      "editor": {
+        "unit": {
+          "days": "dni",
+          "weeks": "tyg.",
+          "months": "mies.",
+          "years": "lat"
+        },
+        "lastDay": "Ostatni dzień",
+        "repeats": "Powtarzaj",
+        "every": "Co",
+        "weekdaysOnly": "Tylko dni robocze (od poniedziałku do piątku)",
+        "onDays": "W dni",
+        "monthlyOn": "W dniu",
+        "mode": {
+          "dayOfMonth": "Dzień miesiąca",
+          "nthWeekday": "N-ty dzień tygodnia"
+        },
+        "day": "Dzień",
+        "nth": "Który",
+        "weekday": "Dzień tygodnia",
+        "clampHint": "W miesiącach z mniejszą liczbą dni zgłoszenie jest tworzone ostatniego dnia miesiąca.",
+        "month": "Miesiąc",
+        "ends": "Zakończenie",
+        "end": {
+          "never": "Nigdy",
+          "onDate": "W określonym dniu",
+          "afterCount": "Po określonej liczbie zgłoszeń"
+        },
+        "endDate": "Ostatnia data",
+        "endCount": "Liczba wystąpień",
+        "frequency": {
+          "daily": "Codziennie",
+          "weekly": "Co tydzień",
+          "monthly": "Co miesiąc",
+          "yearly": "Co rok"
+        }
+      },
+      "weekdays": {
+        "mon": "poniedziałek",
+        "tue": "wtorek",
+        "wed": "środa",
+        "thu": "czwartek",
+        "fri": "piątek",
+        "sat": "sobota",
+        "sun": "niedziela"
+      },
+      "weekdaysShort": {
+        "mon": "pon.",
+        "tue": "wt.",
+        "wed": "śr.",
+        "thu": "czw.",
+        "fri": "pt.",
+        "sat": "sob.",
+        "sun": "niedz."
+      },
+      "months": {
+        "1": "styczeń",
+        "2": "luty",
+        "3": "marzec",
+        "4": "kwiecień",
+        "5": "maj",
+        "6": "czerwiec",
+        "7": "lipiec",
+        "8": "sierpień",
+        "9": "wrzesień",
+        "10": "październik",
+        "11": "listopad",
+        "12": "grudzień"
+      },
+      "ordinals": {
+        "1": "1.",
+        "2": "2.",
+        "3": "3.",
+        "4": "4.",
+        "last": "ostatni"
+      },
+      "listSeparator": ", ",
+      "endOnDate": ", do {{date}}",
+      "endAfterCount": ", {{n}} razy",
+      "dailyWeekdays": "Każdego dnia roboczego",
+      "daily": "Codziennie",
+      "dailyEvery": "Co {{n}} dni",
+      "weekly": "Co tydzień: {{days}}",
+      "weeklyEvery": "Co {{n}} tyg.: {{days}}",
+      "everyMonth": "Co miesiąc",
+      "everyNMonths": "Co {{n}} mies.",
+      "lastDay": "ostatni dzień",
+      "dayOfMonth": "dzień {{day}}",
+      "monthlyOnDay": "{{every}}, {{day}}",
+      "monthlyOnNthWeekday": "{{every}}, {{ordinal}} {{weekday}}",
+      "yearly": "Co rok (miesiąc: {{month}}, dzień: {{day}})"
     }
   }
 }

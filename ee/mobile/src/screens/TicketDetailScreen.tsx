@@ -1,5 +1,7 @@
+import { formatPhoneForDisplay, formatPhoneLabel } from "../../../../packages/validation/src/lib/phone";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { Linking, Platform, Pressable, RefreshControl, ScrollView, Text, TextInput, View } from "react-native";
+import { Linking, Pressable, RefreshControl, ScrollView, Text, TextInput, View } from "react-native";
+import { buildMapsUrl } from "../urls/mapsUrl";
 import { useTranslation } from "react-i18next";
 import type { RootStackParamList } from "../navigation/types";
 import { useTheme } from "../ui/ThemeContext";
@@ -51,6 +53,8 @@ import { PriorityPickerModal } from "../features/ticketDetail/components/Priorit
 import { StatusPickerModal } from "../features/ticketDetail/components/StatusPickerModal";
 import { AgentPickerModal } from "../features/ticketDetail/components/AgentPickerModal";
 import { ContactPickerModal } from "../features/ticketDetail/components/ContactPickerModal";
+import { ContactFormModal } from "../features/contacts/components/ContactFormModal";
+import { useCapabilities } from "../capabilities/CapabilitiesContext";
 import {
   activeTicketNotificationSuppression,
   DEFAULT_TICKET_NOTIFICATION_SUPPRESSION,
@@ -128,6 +132,9 @@ export function TicketDetailBody({
   const { colors, spacing, typography } = theme;
   const { showToast } = useToast();
   const { t } = useTranslation("tickets");
+  const { features } = useCapabilities();
+  const [newContactOpen, setNewContactOpen] = useState(false);
+  const [createdContact, setCreatedContact] = useState<{ id: string; name: string; email?: string | null } | null>(null);
   const placeCall = usePlaceCall();
   const [callsReloadKey, setCallsReloadKey] = useState(0);
   const network = useNetworkStatus();
@@ -613,7 +620,7 @@ export function TicketDetailBody({
                 testID="ticket-detail-call-contact"
                 onPress={() => placeCall({
                   origin: { kind: "ticket", id: ticketId },
-                  phone: contactPhone,
+                  phone: formatPhoneForDisplay(contactPhone).e164 || contactPhone,
                   name: ticket.contact_name ?? null,
                   contactId: ticketContactId ?? null,
                   clientId: ticketClientId ?? null,
@@ -624,7 +631,7 @@ export function TicketDetailBody({
                 style={{ marginTop: spacing.xs, paddingVertical: spacing.xs }}
               >
                 <Text style={{ ...typography.caption, color: colors.primary }}>
-                  {t("detail.contactPhone")}: {ticket.contact_phone}
+                  {t("detail.contactPhone")}: {formatPhoneLabel(formatPhoneForDisplay(ticket.contact_phone), t("detail.phoneExtension", { defaultValue: "ext." }))}
                 </Text>
               </Pressable>
             ) : null}
@@ -667,7 +674,7 @@ export function TicketDetailBody({
                 testID="ticket-detail-call-client"
                 onPress={() => placeCall({
                   origin: { kind: "ticket", id: ticketId },
-                  phone: clientPhone,
+                  phone: formatPhoneForDisplay(clientPhone).e164 || clientPhone,
                   name: ticket.client_name ?? null,
                   contactId: null,
                   clientId: ticketClientId ?? null,
@@ -677,7 +684,7 @@ export function TicketDetailBody({
                 style={{ marginTop: spacing.xs, paddingVertical: spacing.xs }}
               >
                 <Text style={{ ...typography.caption, color: colors.primary }}>
-                  {t("detail.contactPhone")}: {ticket.client_phone}
+                  {t("detail.contactPhone")}: {formatPhoneLabel(formatPhoneForDisplay(ticket.client_phone), t("detail.phoneExtension", { defaultValue: "ext." }))}
                 </Text>
               </Pressable>
             ) : null}
@@ -694,19 +701,16 @@ export function TicketDetailBody({
             ) : null}
             {ticket.location_name ? (
               <Pressable
-                onPress={() => {
-                  const query = encodeURIComponent(ticket.location_name ?? "");
-                  const url = Platform.OS === "ios"
-                    ? `maps:0,0?q=${query}`
-                    : `geo:0,0?q=${query}`;
-                  void Linking.openURL(url);
-                }}
+                onPress={() => void Linking.openURL(buildMapsUrl(ticket.location_address || ticket.location_name || ""))}
                 accessibilityRole="button"
                 accessibilityLabel={t("detail.openInMaps")}
                 style={{ marginTop: spacing.xs, paddingVertical: spacing.xs }}
               >
                 <Text style={{ ...typography.caption, color: colors.textSecondary }}>{t("detail.location")}</Text>
                 <Text style={{ ...typography.caption, color: colors.primary, marginTop: 2 }}>{ticket.location_name}</Text>
+                {ticket.location_address ? (
+                  <Text style={{ ...typography.caption, color: colors.primary, marginTop: 2 }}>{ticket.location_address}</Text>
+                ) : null}
               </Pressable>
             ) : null}
             {ticketClientId ? (
@@ -895,10 +899,34 @@ export function TicketDetailBody({
           if (contactNameId) void contactHook.selectContact(contactNameId, notificationSuppression);
           else void contactHook.removeContact(notificationSuppression);
         }}
-        onClose={contactHook.closeContactPicker}
+        onClose={() => {
+          setCreatedContact(null);
+          contactHook.closeContactPicker();
+        }}
+        onCreateContact={features.contactsCreate && ticketClientId ? () => {
+          contactHook.closeContactPicker();
+          setNewContactOpen(true);
+        } : undefined}
+        preselect={createdContact}
         client={client}
         apiKey={session?.accessToken ?? ""}
         baseUrl={config.ok ? config.baseUrl : null}
+      />
+      <ContactFormModal
+        visible={newContactOpen}
+        mode="create"
+        client={client}
+        apiKey={session?.accessToken ?? ""}
+        baseUrl={config.ok ? config.baseUrl : null}
+        presetClient={ticketClientId ? { id: ticketClientId, name: ticket.client_name ?? "" } : null}
+        lockClient
+        onClose={() => setNewContactOpen(false)}
+        onSaved={(created) => {
+          // Back to the picker with the new contact selected, so the notification
+          // choice is made the same way as for an existing contact.
+          setCreatedContact({ id: created.contact_name_id, name: created.full_name, email: created.email ?? null });
+          contactHook.openContactPicker();
+        }}
       />
     </>
   );

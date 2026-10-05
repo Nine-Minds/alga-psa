@@ -263,6 +263,80 @@ describe('the exit contract', () => {
   });
 });
 
+describe('ruled-out days', () => {
+  // Aug 17–23 2026 is off limits; everything else in range is fine.
+  const lockedWeek = (day: Date) => day >= new Date(2026, 7, 17) && day <= new Date(2026, 7, 23);
+
+  it('refuses a typed day the caller has ruled out and keeps the previous value', () => {
+    const onChange = vi.fn();
+    render(
+      <DateFormatProvider countryCode="DE">
+        <DateTimeField variant="date" value={new Date(2026, 7, 13)} onChange={onChange} isDateDisabled={lockedWeek} />
+      </DateFormatProvider>
+    );
+
+    const [input] = fields();
+    fireEvent.change(input, { target: { value: '18.08.2026' } });
+    fireEvent.blur(input);
+
+    expect(onChange).not.toHaveBeenCalled();
+    expect(input.getAttribute('aria-invalid')).toBe('true');
+    // A real date that is merely unavailable is not described as "not a date".
+    expect(screen.getByRole('status').textContent).toMatch(/^That day can’t be chosen/);
+  });
+
+  it('still commits a typed day the rule allows', () => {
+    const onChange = vi.fn();
+    render(
+      <DateFormatProvider countryCode="DE">
+        <DateTimeField variant="date" value={new Date(2026, 7, 13)} onChange={onChange} isDateDisabled={lockedWeek} />
+      </DateFormatProvider>
+    );
+
+    const [input] = fields();
+    fireEvent.change(input, { target: { value: '25.08.2026' } });
+    fireEvent.blur(input);
+
+    expect(onChange).toHaveBeenCalledTimes(1);
+    expect(onChange.mock.calls[0][0]).toEqual(new Date(2026, 7, 25));
+  });
+
+  it('disables ruled-out days in the calendar and ignores clicks on them', () => {
+    const onChange = vi.fn();
+    render(<DateTimeField variant="date" value={new Date(2026, 7, 13)} onChange={onChange} isDateDisabled={lockedWeek} />);
+
+    fireEvent.focus(fields()[0]);
+    const dayButton = (day: number) =>
+      screen.getAllByRole('button').find((button) => button.textContent === String(day) && button.closest('[role="grid"]'))!;
+
+    expect((dayButton(18) as HTMLButtonElement).disabled).toBe(true);
+    expect((dayButton(12) as HTMLButtonElement).disabled).toBe(false);
+    fireEvent.click(dayButton(18));
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it('follows typed text to a ruled-out day without marking it selected', () => {
+    render(<DateTimeField variant="date" value={new Date(2026, 7, 13)} onChange={() => {}} isDateDisabled={lockedWeek} />);
+
+    const [input] = fields();
+    fireEvent.focus(input);
+    fireEvent.change(input, { target: { value: '08/18/2026' } });
+
+    const day = (n: number) =>
+      screen.getAllByRole('button').find((button) => button.textContent === String(n) && button.closest('[role="grid"]'))!;
+    expect(day(18).closest('[aria-selected="true"]')).toBeNull();
+    expect(day(13).closest('[aria-selected="true"]')).not.toBeNull();
+  });
+
+  it('disables the Today shortcut when today is ruled out', () => {
+    render(<DateTimeField variant="date" value={new Date(2026, 7, 13)} onChange={() => {}} isDateDisabled={() => true} />);
+
+    fireEvent.focus(fields()[0]);
+
+    expect((screen.getByRole('button', { name: 'Today' }) as HTMLButtonElement).disabled).toBe(true);
+  });
+});
+
 describe('clearing', () => {
   it('clears from the button when the field is clearable', () => {
     const onChange = vi.fn();

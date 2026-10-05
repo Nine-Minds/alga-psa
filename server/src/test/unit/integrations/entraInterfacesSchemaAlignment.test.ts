@@ -207,4 +207,29 @@ describe('Entra interfaces and migration schema alignment', () => {
       expect(migration).toContain(`'${column}'`);
     }
   });
+
+  it('managed tenant user-filter migration uses tenant-scoped colocated keys', () => {
+    const migration = readRepoFile('ee/server/migrations/20260923120000_entra_managed_tenant_user_filters.cjs');
+    expect(migration).toContain("table.primary(['tenant', 'managed_tenant_id'])");
+    expect(migration).toContain("colocate_with => 'entra_managed_tenants'");
+    expect(migration).toContain("table.foreign(['tenant', 'managed_tenant_id'])");
+  });
+
+  it('contact_kind migration and contact contracts allow only person and shared_mailbox', () => {
+    const migration = readRepoFile('server/migrations/20260924120000_add_contact_kind.cjs');
+    const contactModel = readRepoFile('shared/models/contactModel.ts');
+    const contactSchema = readRepoFile('server/src/lib/api/schemas/contact.ts');
+    const contactInterfaces = readRepoFile('shared/interfaces/contact.interfaces.ts');
+    expect(migration).toContain("contact_kind text NOT NULL DEFAULT 'person'");
+    expect(migration).toContain("CHECK (contact_kind IN ('person', 'shared_mailbox'))");
+    expect(contactModel).toContain("z.enum(['person', 'shared_mailbox'])");
+    expect(contactSchema).toContain("z.enum(['person', 'shared_mailbox'])");
+    expect(contactInterfaces).toContain("contact_kind?: 'person' | 'shared_mailbox'");
+  });
+
+  it('REST contact updates cannot change contact kind or set client-admin status', () => {
+    const contactSchema = readRepoFile('server/src/lib/api/schemas/contact.ts');
+    expect(contactSchema).toContain('createUpdateSchema(createContactSchema).omit({ contact_kind: true })');
+    expect(contactSchema).not.toMatch(/is_client_admin\s*:/);
+  });
 });

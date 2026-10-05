@@ -18,6 +18,7 @@ import {
   getUnsupportedRecurringAuthoringCombinationMessage,
 } from '@shared/billingClients/recurringAuthoringValidation';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { getFixedServiceBasisIssue } from '../../../../lib/fixedServiceBasis';
 
 const TEMPLATE_STEPS_COUNT = 6;
 const RECURRING_LINE_TYPE_KEYS = {
@@ -49,6 +50,13 @@ export interface TemplateWizardData {
     service_id: string;
     service_name?: string;
     quantity?: number;
+    /** 'bundle' (default) allocates a share of the line total; 'unit' bills quantity × unit rate. */
+    pricing_basis?: 'bundle' | 'unit';
+    /**
+     * Optional default unit rate in minor units. Templates are currency-neutral, so an
+     * empty rate means "use the service's catalog price in the contract currency".
+     */
+    unit_rate?: number | null;
   }>;
   product_services: Array<{
     service_id: string;
@@ -300,6 +308,22 @@ export function TemplateWizard({ open, onOpenChange, onComplete }: TemplateWizar
         const recurringAuthoringError = getRecurringAuthoringValidationError();
         if (recurringAuthoringError) {
           setErrors((prev) => ({ ...prev, [stepIndex]: recurringAuthoringError }));
+          return false;
+        }
+        const invalidUnitService = wizardData.fixed_services.find((service) => {
+          if (!service.service_id) return false;
+          const issue = getFixedServiceBasisIssue(service, { requireUnitRate: false });
+          return issue === 'quantity_invalid' || issue === 'unit_quantity_not_whole' || issue === 'unit_rate_required';
+        });
+        if (invalidUnitService) {
+          setErrors((prev) => ({
+            ...prev,
+            [stepIndex]: t('templateWizard.validation.recurringQuantityInvalid', {
+              defaultValue:
+                'Recurring quantity for "{{serviceName}}" must be a whole number of zero or more, and any unit rate must be a valid amount.',
+              serviceName: invalidUnitService.service_name || invalidUnitService.service_id,
+            }),
+          }));
           return false;
         }
         return true;

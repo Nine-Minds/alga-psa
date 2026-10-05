@@ -58,6 +58,7 @@ import {
   Users,
   Star,
   Target,
+  Repeat,
   Ticket,
   BadgeCheck,
   Wrench
@@ -108,7 +109,10 @@ export const navigationSections: NavigationSection[] = [
         name: 'Tickets',
         translationKey: 'nav.tickets',
         icon: Ticket,
-        href: '/msp/tickets'
+        subItems: [
+          { name: 'All Tickets', translationKey: 'nav.ticketsAll', icon: Ticket, href: '/msp/tickets' },
+          { name: 'Recurring Tickets', translationKey: 'nav.ticketsRecurring', icon: Repeat, href: '/msp/tickets/recurring', requiredPermission: 'recurring_ticket:read' }
+        ]
       },
       {
         name: 'Service Requests',

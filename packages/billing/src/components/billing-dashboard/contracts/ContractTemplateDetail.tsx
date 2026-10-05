@@ -60,11 +60,13 @@ import {
 import { toPlainDate } from "@alga-psa/core";
 import { useBillingFrequencyOptions } from "@alga-psa/billing/hooks/useBillingEnumOptions";
 import { useCurrencyFormat } from "@alga-psa/ui/lib";
+import { useTemplateNeutralRate } from "./templateNeutralRate";
 import { getDefaultBillingSettings } from "@alga-psa/billing/actions/billingSettingsActions";
 import { listContractSimulationClients } from "@alga-psa/billing/actions/contractSimulationActions";
 import GenericPlanServicesList from "../contract-lines/GenericContractLineServicesList";
 import { ContractLineEditDialog } from "./ContractLineEditDialog";
 import { useTranslation } from "@alga-psa/ui/lib/i18n/client";
+import { unitFixedServiceAmountCents } from "../../../lib/fixedServiceBasis";
 import {
   getErrorMessage,
   isActionMessageError,
@@ -111,6 +113,10 @@ type TemplateLineService = {
   minimum_billable_time?: number | null;
   round_up_to_nearest?: number | null;
   quantity?: number | null;
+  /** 'unit' = per-seat service billed quantity × unit rate; otherwise a bundle allocation. */
+  pricing_basis?: "unit" | "bundle" | null;
+  /** Default unit rate in minor units; null follows the catalog price in the contract currency. */
+  unit_rate?: number | null;
 };
 
 type TemplateSummary = {
@@ -172,6 +178,29 @@ const formatDate = (value?: string | Date | null): string => {
   }
 };
 
+/**
+ * Formats a template money amount (minor units) currency-neutrally, or
+ * "Not set" when absent. Templates have no currency (a contract created from one
+ * uses the client's currency), so the rate is a plain number followed by the
+ * "in the client's currency" note - never a symbol or code. Shared by the detail
+ * view and the services manager so both render rates identically.
+ */
+const formatTemplateMinorUnits = (
+  formatNeutralRate: (minorUnits: number) => string,
+  t: (key: string, options?: Record<string, unknown>) => string,
+  minorUnits?: number | null,
+): string => {
+  if (minorUnits === null || minorUnits === undefined) {
+    return t("templateDetail.composition.notSet", {
+      defaultValue: "Not set",
+    });
+  }
+  return t("templateReview.fixed.unitRateNeutral", {
+    rate: formatNeutralRate(minorUnits),
+    defaultValue: "{{rate}} in the client's currency",
+  });
+};
+
 const humanize = (value?: string | null): string => {
   if (!value) {
     return "";
@@ -224,6 +253,9 @@ const ContractTemplateDetail: React.FC = () => {
   const { money } = useCurrencyFormat();
   const { t } = useTranslation("msp/contracts");
   const billingFrequencyOptions = useBillingFrequencyOptions();
+  const formatNeutralRate = useTemplateNeutralRate();
+  const formatTemplateRate = (minorUnits?: number | null) =>
+    formatTemplateMinorUnits(formatNeutralRate, t, minorUnits);
   const router = useRouter();
   const searchParams = useSearchParams();
   const contractId = searchParams?.get("contractId") ?? undefined;
@@ -453,6 +485,12 @@ const ContractTemplateDetail: React.FC = () => {
                 typeConfig.unit_of_measure ?? base.unit_of_measure;
             } else if (configuration.configuration_type === "Fixed") {
               base.quantity = configuration.quantity ?? base.quantity;
+              const fixedTypeConfig = typeConfig as { pricing_basis?: string | null; base_rate?: number | string | null } | null;
+              if (fixedTypeConfig?.pricing_basis === "unit") {
+                base.pricing_basis = "unit";
+                base.unit_rate =
+                  fixedTypeConfig.base_rate != null ? Number(fixedTypeConfig.base_rate) : null;
+              }
             }
 
             if (configuration.custom_rate != null) {
@@ -1857,12 +1895,59 @@ const ContractTemplateDetail: React.FC = () => {
                                 {service.quantity != null &&
                                   service.configuration.configuration_type !== "Usage" && (
                                   <span>
-                                    {t(
-                                      "templateDetail.composition.quantityLabel",
-                                      { defaultValue: "Quantity:" },
-                                    )}{" "}
+                                    {service.pricing_basis === "unit"
+                                      ? t(
+                                          "templateDetail.composition.recurringQuantityLabel",
+                                          { defaultValue: "Recurring quantity:" },
+                                        )
+                                      : t(
+                                          "templateDetail.composition.quantityLabel",
+                                          { defaultValue: "Quantity:" },
+                                        )}{" "}
                                     <span className="font-medium">
                                       {service.quantity}
+                                    </span>
+                                  </span>
+                                )}
+                                {service.pricing_basis === "unit" && (
+                                  <span>
+                                    {t(
+                                      "templateDetail.composition.unitRateLabel",
+                                      { defaultValue: "Unit rate:" },
+                                    )}{" "}
+                                    <span className="font-medium">
+                                      {service.unit_rate != null
+                                        ? formatTemplateRate(service.unit_rate)
+                                        : t(
+                                            "templateDetail.composition.unitRateFromCatalog",
+                                            { defaultValue: "Catalog price in the client's currency" },
+                                          )}
+                                    </span>
+                                  </span>
+                                )}
+                                {service.pricing_basis === "unit" &&
+                                  service.quantity != null &&
+                                  service.unit_rate != null && (
+                                  <span data-testid={`template-recurring-amount-${service.service_id}`}>
+                                    {t(
+                                      "templateDetail.composition.unitAmountLabel",
+                                      { defaultValue: "Recurring amount:" },
+                                    )}{" "}
+                                    <span className="font-medium">
+                                      {t("templateReview.fixed.unitRateNeutral", {
+                                        rate: t(
+                                          "templateDetail.composition.unitAmountValue",
+                                          {
+                                            count: service.quantity,
+                                            rate: formatNeutralRate(service.unit_rate),
+                                            amount: formatNeutralRate(
+                                              unitFixedServiceAmountCents(service.quantity, service.unit_rate),
+                                            ),
+                                            defaultValue: "{{count}} × {{rate}} = {{amount}}",
+                                          },
+                                        ),
+                                        defaultValue: "{{rate}} in the client's currency",
+                                      })}
                                     </span>
                                   </span>
                                 )}
@@ -1960,19 +2045,16 @@ const TemplateServicesManager: React.FC<TemplateServicesManagerProps> = ({
   contractLines,
   onServicesChanged,
 }) => {
+  const { money } = useCurrencyFormat();
   const { t } = useTranslation("msp/contracts");
+  const formatNeutralRate = useTemplateNeutralRate();
   const [editingLine, setEditingLine] = useState<TemplateContractLine | null>(
     null,
   );
 
-  const formatCurrency = (minorUnits?: number | null) => {
-    if (minorUnits === null || minorUnits === undefined) {
-      return t("templateDetail.composition.notSet", {
-        defaultValue: "Not set",
-      });
-    }
-    return money(Math.round(Number(minorUnits)), currencyCode);
-  };
+  // LEVERAGE: pattern template-minor-unit-formatter — parent and manager each bind money/t/currency around one shared helper
+  const formatTemplateRate = (minorUnits?: number | null) =>
+    formatTemplateMinorUnits(formatNeutralRate, t, minorUnits);
 
   const handleSaveRate = async (
     contractLineId: string,
@@ -2046,7 +2128,7 @@ const TemplateServicesManager: React.FC<TemplateServicesManagerProps> = ({
                     {t("templateDetail.composition.fixedFeeRate", {
                       defaultValue: "Fixed Fee Rate:",
                     })}{" "}
-                    {formatCurrency(line.rate)}
+                    {formatTemplateRate(line.rate)}
                   </Badge>
                   {line.contract_line_type === "Fixed" && (
                     <Button

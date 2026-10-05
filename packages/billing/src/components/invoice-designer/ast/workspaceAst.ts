@@ -1,6 +1,7 @@
 import type {
   TemplateAst,
   TemplateFieldBorderStyle,
+  TemplateImageNode,
   TemplateNode,
   TemplatePrintSettings,
   TemplateNodeStyleRef,
@@ -33,11 +34,15 @@ import type {
 import { createEmptyDesignerTransformWorkspace, DOCUMENT_NODE_ID } from '../state/designerStore';
 import {
   getDocumentTokenPaths,
+  isDocumentLogoRenderPath,
+  resolveDocumentCanonicalBindings,
   resolveDocumentDisplayPath,
+  resolveDocumentLogoRenderPath,
   resolveDocumentRenderPath,
 } from '../fields/documentBindingCatalog';
 import { resolveDocumentKindFromBindingCatalog, type DesignerDocumentKind } from '../utils/documentKind';
 import { getDefinition } from '../constants/componentCatalog';
+import { createPageLayout } from '../schema/componentSchema';
 import { DESIGNER_CANVAS_BOUNDS } from '../constants/layout';
 import { resolveMediaFrameSize } from '../utils/mediaSizing';
 import {
@@ -965,10 +970,27 @@ const getAstNodeId = (node: WorkspaceNode): string => {
   return originalId.length > 0 ? originalId : node.id;
 };
 
-const createBaseNode = (node: WorkspaceNode): Pick<TemplateNode, 'id' | 'style'> => ({
-  id: getAstNodeId(node),
-  style: createNodeStyle(node),
-});
+// The layer name travels only when it says something the id does not; imported
+// nodes are named after their id, so unrenamed layers export byte-identically.
+const resolveAstNodeName = (node: WorkspaceNode, astId: string): string | undefined => {
+  // Document and page names are designer scaffolding, not authored layers.
+  if (node.type === 'document' || node.type === 'page') {
+    return undefined;
+  }
+  const props = isRecord(node.props) ? node.props : {};
+  const name = asTrimmedString(props.name);
+  return name.length > 0 && name !== astId ? name.slice(0, 200) : undefined;
+};
+
+const createBaseNode = (node: WorkspaceNode): Pick<TemplateNode, 'id' | 'name' | 'style'> => {
+  const id = getAstNodeId(node);
+  const name = resolveAstNodeName(node, id);
+  return {
+    id,
+    ...(name ? { name } : {}),
+    style: createNodeStyle(node),
+  };
+};
 
 const getWorkspaceNodeSize = (node: WorkspaceNode | undefined): { width?: number; height?: number } => {
   if (!node || !isRecord(node.props)) {
@@ -1374,10 +1396,20 @@ const mapDesignerNodeToAstNode = (
           })()
         : false;
 
+      // A logo-bound image keeps its imported binding verbatim, or binds the
+      // document's logo path when it was authored in the designer.
+      const boundToLogo = metadata.srcBinding === 'tenantLogo';
+      const logoSrcExpression: TemplateValueExpression | null = boundToLogo
+        ? preservedSrcExpression && preservedSrcExpression.type !== 'literal'
+          ? preservedSrcExpression
+          : { type: 'path', path: resolveDocumentLogoRenderPath(documentKind) }
+        : null;
+
       return {
         ...createBaseNode(node),
         type: 'image',
-        src: (!srcChanged && preservedSrcExpression) ? preservedSrcExpression : { type: 'literal', value: src },
+        src: logoSrcExpression
+          ?? ((!srcChanged && preservedSrcExpression) ? preservedSrcExpression : { type: 'literal', value: src }),
         alt: (!altChanged && preservedAltExpression) ? preservedAltExpression : { type: 'literal', value: alt },
       };
     }
@@ -1492,11 +1524,32 @@ export const exportWorkspaceToTemplateAst = (
     return `${preferredId}_${index}`;
   };
 
+  // New bindings take the document catalog's id (and fallback) for a known path, so
+  // a designed layout binds exactly like a shipped one.
+  const canonicalBindings = resolveDocumentCanonicalBindings(documentKind);
+  const canonicalValueByPath = new Map(
+    Object.values(canonicalBindings.values ?? {}).map((binding) => [binding.path, binding] as const)
+  );
+  const canonicalCollectionByPath = new Map(
+    Object.values(canonicalBindings.collections ?? {}).map((binding) => [binding.path, binding] as const)
+  );
+
   const registerValueBinding = (path: string): string => {
     const normalizedPath = normalizeInvoiceBindingPath(path, documentKind);
     const existingBindingId = valueBindingPathToId.get(normalizedPath);
     if (existingBindingId) {
       return existingBindingId;
+    }
+    const canonical = canonicalValueByPath.get(normalizedPath);
+    if (canonical && !valueBindings[canonical.id]) {
+      valueBindings[canonical.id] = {
+        id: canonical.id,
+        kind: 'value',
+        path: canonical.path,
+        ...(Object.prototype.hasOwnProperty.call(canonical, 'fallback') ? { fallback: canonical.fallback } : {}),
+      };
+      valueBindingPathToId.set(normalizedPath, canonical.id);
+      return canonical.id;
     }
     const preferredBindingId = sanitizeId(`value.${normalizedPath}`) || `value.${Object.keys(valueBindings).length + 1}`;
     const bindingId = createUniqueBindingId(preferredBindingId, valueBindings);
@@ -1516,6 +1569,12 @@ export const exportWorkspaceToTemplateAst = (
     const existingBindingId = collectionBindingPathToId.get(normalizedPath);
     if (existingBindingId) {
       return existingBindingId;
+    }
+    const canonical = canonicalCollectionByPath.get(normalizedPath);
+    if (canonical && !collectionBindings[canonical.id]) {
+      collectionBindings[canonical.id] = { id: canonical.id, kind: 'collection', path: canonical.path };
+      collectionBindingPathToId.set(normalizedPath, canonical.id);
+      return canonical.id;
     }
     const preferredBindingId =
       sanitizeId(`collection.${normalizedPath}`) || `collection.${Object.keys(collectionBindings).length + 1}`;
@@ -1738,14 +1797,7 @@ export const importTemplateAstToWorkspace = (
       // Always materialize a page node as the canvas root so sizing/margins are stable and consistent.
       // If the AST uses a single top-level section wrapper, treat it as the page node.
       const pageLayoutBase =
-        coerceContainerLayoutFromInlineStyle(pageSectionInline) ?? {
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '32px',
-          padding: '40px',
-          justifyContent: 'flex-start',
-          alignItems: 'stretch',
-        };
+        coerceContainerLayoutFromInlineStyle(pageSectionInline) ?? createPageLayout('40px');
       const pageLayout =
         resolvedPrintSettings.source === 'legacy-unresolved'
           ? pageLayoutBase
@@ -1813,14 +1865,7 @@ export const importTemplateAstToWorkspace = (
         const isFixedFrame = designerType === 'document' || designerType === 'page';
         const defaultContainerLayout: DesignerContainerLayout | undefined =
           designerType === 'page'
-            ? {
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '32px',
-                padding: '40px',
-                justifyContent: 'flex-start',
-                alignItems: 'stretch',
-              }
+            ? createPageLayout('40px')
             : designerType === 'document'
               ? {
                   display: 'flex',
@@ -1866,7 +1911,7 @@ export const importTemplateAstToWorkspace = (
           id: inputNode.id,
           type: designerType,
           props: {
-            name: inputNode.id,
+            name: typeof inputNode.name === 'string' && inputNode.name.trim().length > 0 ? inputNode.name : inputNode.id,
             metadata: { ...(def?.defaultMetadata ?? {}) },
             layout: resolvedLayout,
             style: styleFromInline,
@@ -1897,7 +1942,18 @@ export const importTemplateAstToWorkspace = (
           totals: 'totals',
         };
 
-        const designerType = typeMap[inputNode.type];
+        // An image bound to the company logo is what the designer calls a Logo block,
+        // so it reopens as the block it was built from.
+        const resolveImageSrcPath = (node: TemplateImageNode): string =>
+          node.src.type === 'path'
+            ? node.src.path
+            : node.src.type === 'binding'
+              ? astInput.bindings?.values?.[node.src.bindingId]?.path ?? ''
+              : '';
+        const designerType =
+          inputNode.type === 'image' && isDocumentLogoRenderPath(resolveImageSrcPath(inputNode))
+            ? 'logo'
+            : typeMap[inputNode.type];
         if (!designerType) {
           // Fail loudly: silently dropping an unrecognized node would delete
           // content when a layout is opened and saved in the designer.
@@ -1946,7 +2002,11 @@ export const importTemplateAstToWorkspace = (
           } else {
             metadata.fieldBorderStyle = 'none';
           }
+          // The label is exactly what the AST says: a new field's default label must
+          // not appear on a field that was saved without one.
           const importedLabel = importI18nText(inputNode.label);
+          delete metadata.label;
+          delete metadata.__astLabelI18n;
           if (importedLabel.text) {
             metadata.label = importedLabel.text;
           }
@@ -2067,6 +2127,9 @@ export const importTemplateAstToWorkspace = (
             // record an empty sentinel so the export can detect when the user
             // replaces the dynamic expression with a typed URL.
             metadata.__astSrcPreviewValue = '';
+            if (designerType === 'logo') {
+              metadata.srcBinding = 'tenantLogo';
+            }
           }
           if (inputNode.alt) {
             metadata.astAltExpression = inputNode.alt;
