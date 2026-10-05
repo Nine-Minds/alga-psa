@@ -94,7 +94,8 @@ vi.mock('../src/components/billing-dashboard/service-configurations/FixedService
   FixedServiceConfigPanel: () => null,
 }));
 
-import { ContractLineDialog, reindexRateInputs } from '../src/components/billing-dashboard/ContractLineDialog';
+import { ContractLineDialog } from '../src/components/billing-dashboard/ContractLineDialog';
+import { reindexRateInputs } from '../src/lib/serviceRateInputs';
 
 const presetService = (serviceId: string, customRate: number) => ({
   service_id: serviceId,
