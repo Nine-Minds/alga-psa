@@ -29,6 +29,21 @@ vi.mock('@alga-psa/ui/components/TextArea', () => ({
   TextArea: (props: React.TextareaHTMLAttributes<HTMLTextAreaElement>) => <textarea {...props} />,
 }));
 
+vi.mock('@alga-psa/ui/components/CustomSelect', () => ({
+  default: ({ id, value, onValueChange, options }: {
+    id: string;
+    value: string;
+    onValueChange: (value: string) => void;
+    options: Array<{ value: string; label: string }>;
+  }) => (
+    <select id={id} value={value} onChange={(event) => onValueChange(event.target.value)}>
+      {options.map((option) => (
+        <option key={option.value} value={option.value}>{option.label}</option>
+      ))}
+    </select>
+  ),
+}));
+
 vi.mock('./QuoteSendRecipientsField', () => ({
   QuoteSendRecipientsField: ({ value, onChange, disabled, id, clientId }: {
     value: Array<{ email: string }>;
@@ -54,6 +69,7 @@ vi.mock('./QuoteSendRecipientsField', () => ({
 }));
 
 import { QuoteSendDialog } from './QuoteSendDialog';
+import { DEFAULT_SENDER_SELECTION } from '@alga-psa/email/senderSelection';
 
 const baseProps = {
   idPrefix: 'send-quote',
@@ -97,6 +113,49 @@ describe('QuoteSendDialog', () => {
     expect(onConfirm).toHaveBeenCalledWith({
       email_addresses: undefined,
       message: undefined,
+    });
+  });
+
+  it('omits the shared default sender and sends an explicitly selected override', () => {
+    const onConfirm = vi.fn();
+    const senders = [
+      { sender_id: 'sender-1', email_address: 'one@example.com' },
+      { sender_id: 'sender-2', email_address: 'two@example.com' },
+    ];
+    const { rerender } = render(
+      <QuoteSendDialog
+        {...baseProps}
+        senders={senders}
+        effectiveSenderAddress="provider@example.com"
+        senderId={DEFAULT_SENDER_SELECTION}
+        onSenderChange={vi.fn()}
+        onConfirm={onConfirm}
+      />
+    );
+
+    const senderSelect = document.getElementById('send-quote-sender') as HTMLSelectElement;
+    expect(senderSelect.options[0]?.textContent).toBe('Use default (provider@example.com)');
+    fireEvent.click(document.getElementById('send-quote-confirm') as HTMLButtonElement);
+    expect(onConfirm).toHaveBeenLastCalledWith({
+      email_addresses: undefined,
+      message: undefined,
+    });
+
+    rerender(
+      <QuoteSendDialog
+        {...baseProps}
+        senders={senders}
+        effectiveSenderAddress="provider@example.com"
+        senderId="sender-2"
+        onSenderChange={vi.fn()}
+        onConfirm={onConfirm}
+      />
+    );
+    fireEvent.click(document.getElementById('send-quote-confirm') as HTMLButtonElement);
+    expect(onConfirm).toHaveBeenLastCalledWith({
+      email_addresses: undefined,
+      message: undefined,
+      senderId: 'sender-2',
     });
   });
 
