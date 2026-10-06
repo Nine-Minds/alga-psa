@@ -5,6 +5,7 @@ import { tenantDb } from '@alga-psa/db';
 import { getActionRegistryV2 } from '../../registries/actionRegistry';
 import { getWorkflowEmailProvider } from '../../registries/workflowEmailRegistry';
 import { TicketModel } from '../../../../models/ticketModel';
+import { createTicketWithSideEffects } from '../../../../services/tickets/createTicketWithSideEffects';
 import { auditCloseRulesBypassIfGated } from '../../../../lib/ticketCloseRules';
 import { TICKET_ACTIVITY_ACTOR, TICKET_ACTIVITY_SOURCE } from '../../../../lib/ticketActivity';
 import { applyChecklistTemplateToTicket } from '../../../../lib/ticketChecklists';
@@ -356,34 +357,6 @@ const reconcileWorkflowTicketAdditionalUsers = async (
   );
 };
 
-const generateTagColors = (text: string): { backgroundColor: string; textColor: string } => {
-  let hash = 0;
-  for (let i = 0; i < text.length; i += 1) {
-    hash = text.charCodeAt(i) + ((hash << 5) - hash);
-  }
-
-  const hue = Math.abs(hash) % 360;
-  const saturation = 70;
-  const lightness = 85;
-
-  const hslToHex = (h: number, s: number, l: number): string => {
-    const normalizedLightness = l / 100;
-    const a = (s * Math.min(normalizedLightness, 1 - normalizedLightness)) / 100;
-    const f = (n: number) => {
-      const k = (n + h / 30) % 12;
-      const color = normalizedLightness - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
-      return Math.round(255 * color).toString(16).padStart(2, '0');
-    };
-
-    return `#${f(0)}${f(8)}${f(4)}`.toUpperCase();
-  };
-
-  return {
-    backgroundColor: hslToHex(hue, saturation, lightness),
-    textColor: '#2C3E50',
-  };
-};
-
 const normalizeTicketTags = (tags: string[] | undefined): string[] => {
   if (!Array.isArray(tags)) return [];
 
@@ -398,89 +371,6 @@ const normalizeTicketTags = (tags: string[] | undefined): string[] => {
   });
 
   return normalized;
-};
-
-const ensureTicketTagMappings = async (
-  tx: TenantTxContext,
-  ticketId: string,
-  tags: string[] | undefined
-): Promise<void> => {
-  const normalizedTags = normalizeTicketTags(tags);
-  if (normalizedTags.length === 0) {
-    return;
-  }
-
-  for (const tagText of normalizedTags) {
-    const { backgroundColor, textColor } = generateTagColors(tagText);
-
-    let definition = await tenantScopedTable(tx, 'tag_definitions')
-      .where({
-        tag_text: tagText,
-        tagged_type: 'ticket',
-      })
-      .first();
-
-    if (!definition) {
-      const definitionRow = {
-        tenant: tx.tenantId,
-        tag_id: uuidv4(),
-        tag_text: tagText,
-        tagged_type: 'ticket',
-        board_id: null,
-        background_color: backgroundColor,
-        text_color: textColor,
-      };
-
-      try {
-        await tenantScopedTable(tx, 'tag_definitions').insert(definitionRow);
-        definition = definitionRow;
-      } catch (error: unknown) {
-        const errorCode =
-          typeof error === 'object' && error !== null && 'code' in error
-            ? String((error as { code?: unknown }).code)
-            : undefined;
-        const errorMessage = error instanceof Error ? error.message : String(error);
-
-        if (errorCode === '23505' || /duplicate|unique/i.test(errorMessage)) {
-          definition = await tenantScopedTable(tx, 'tag_definitions')
-            .where({
-              tag_text: tagText,
-              tagged_type: 'ticket',
-            })
-            .first();
-        } else {
-          throw error;
-        }
-      }
-    }
-
-    if (!definition?.tag_id) {
-      throw new Error(`Failed to resolve ticket tag definition for "${tagText}"`);
-    }
-
-    try {
-      await tenantScopedTable(tx, 'tag_mappings').insert({
-        tenant: tx.tenantId,
-        mapping_id: uuidv4(),
-        tag_id: definition.tag_id,
-        tagged_id: ticketId,
-        tagged_type: 'ticket',
-        created_by: tx.actorUserId,
-      });
-    } catch (error: unknown) {
-      const errorCode =
-        typeof error === 'object' && error !== null && 'code' in error
-          ? String((error as { code?: unknown }).code)
-          : undefined;
-      const errorMessage = error instanceof Error ? error.message : String(error);
-
-      if (errorCode === '23505' || /duplicate|unique/i.test(errorMessage)) {
-        continue;
-      }
-
-      throw error;
-    }
-  }
 };
 
 export function registerTicketActions(): void {
@@ -544,6 +434,15 @@ export function registerTicketActions(): void {
         filename: z.string().optional(),
         visibility: z.enum(['public', 'internal']).optional()
       })).optional().describe('Optional attachments (documents)'),
+      notify: z.object({
+        internal: z.boolean().default(true)
+          .describe('Notify the assignee or dispatch team (in-app and email) that the ticket was created'),
+        contact: withWorkflowExplicitChoice(
+          z.boolean().default(false),
+          'Email and notify the customer that the ticket was created',
+          'Should the customer be told this ticket was created?'
+        ),
+      }).optional().describe('Who is notified that this ticket was created. SLA, search, webhooks and event-triggered workflows always run.'),
       idempotency_key: z.string().optional().describe('Optional external idempotency key')
     }),
     outputSchema: z.object({
@@ -605,11 +504,17 @@ export function registerTicketActions(): void {
         input.assignment,
       );
 
-      let created: any;
+      let created: { ticketId: string; ticketNumber: string };
       try {
-        // LEVERAGE: pattern ticket-create-composition — creates a ticket then composes assets/agents/team/tags/checklist/activity/events by hand; see createTicketWithSideEffects (packages/tickets/src/lib/createTicketWithSideEffects.ts)
-        created = await TicketModel.createTicket(
-          {
+        created = await createTicketWithSideEffects(tx.trx, tx.tenantId, {
+          actor: {
+            type: 'workflow',
+            userId: tx.actorUserId,
+            runId: ctx.runId,
+            workflowId: tx.workflowId,
+            lineage: tx.lineage,
+          },
+          ticket: {
             title: input.title,
             description: input.description ?? '',
             client_id: input.client_id,
@@ -619,37 +524,41 @@ export function registerTicketActions(): void {
             status_id: input.status_id,
             priority_id: input.priority_id,
             assigned_to: resolvedAssignment.assignedTo ?? undefined,
-            assigned_team_id: resolvedAssignment.assignedTeamId ?? undefined,
             category_id: input.category_id ?? undefined,
             subcategory_id: input.subcategory_id ?? undefined,
-            entered_by: tx.actorUserId,
-            attributes: mergedAttributes
+            source: 'workflow',
+            attributes: mergedAttributes,
           },
-          tx.tenantId,
-          tx.trx,
-          {},
-          undefined,
-          undefined,
-          tx.actorUserId
-        );
+          // The service adds the team's members; the workflow passes only the
+          // explicit `support` agents, which keeps the resolved set unchanged.
+          teamId: resolvedAssignment.assignedTeamId,
+          additionalAgentIds: resolvedAssignment.additionalUsers
+            .filter((user) => user.role === 'support')
+            .map((user) => user.userId),
+          tags: normalizedTags,
+          // Absent `notify` keeps today's behaviour: no customer email. Internal
+          // notifications are on unless the author turns them off.
+          notificationSuppression: {
+            suppressInternalNotifications: input.notify?.internal === false,
+            suppressContactNotifications: input.notify?.contact !== true,
+          },
+        });
       } catch (error) {
         rethrowAsStandardError(ctx, error);
       }
 
-      await ensureTicketTagMappings(tx, created.ticket_id, normalizedTags);
-
-      await reconcileWorkflowTicketAdditionalUsers(
-        tx,
-        created.ticket_id,
-        resolvedAssignment.assignedTo,
-        resolvedAssignment.additionalUsers
-      );
+      const createdTicket = await tenantScopedTable(tx, 'tickets')
+        .where({ ticket_id: created.ticketId })
+        .first();
+      if (!createdTicket) {
+        throwActionError(ctx, { category: 'ActionError', code: 'INTERNAL_ERROR', message: 'Created ticket could not be reloaded' });
+      }
 
       if (input.initial_comment?.body) {
         try {
           await TicketModel.createComment(
             {
-              ticket_id: created.ticket_id,
+              ticket_id: created.ticketId,
               content: input.initial_comment.body,
               is_internal: input.initial_comment.visibility === 'internal',
               is_resolution: false,
@@ -670,7 +579,7 @@ export function registerTicketActions(): void {
 
       if (input.attachments?.length) {
         for (const attachment of input.attachments) {
-          await attachDocumentToTicket(ctx, tx, created.ticket_id, {
+          await attachDocumentToTicket(ctx, tx, created.ticketId, {
             source: attachment.source,
             filename: attachment.filename ?? null,
             visibility: attachment.visibility
@@ -680,16 +589,16 @@ export function registerTicketActions(): void {
 
       await writeRunAudit(ctx, tx, {
         operation: 'workflow_action:tickets.create',
-        changedData: { ticket_id: created.ticket_id, ticket_number: created.ticket_number },
-        details: { action_id: 'tickets.create', action_version: 1, ticket_id: created.ticket_id }
+        changedData: { ticket_id: created.ticketId, ticket_number: created.ticketNumber },
+        details: { action_id: 'tickets.create', action_version: 1, ticket_id: created.ticketId }
       });
 
       return {
-        ticket_id: created.ticket_id,
-        ticket_number: created.ticket_number,
-        url: (created as any).url ?? null,
-        created_at: created.entered_at,
-        status_id: created.status_id,
+        ticket_id: created.ticketId,
+        ticket_number: created.ticketNumber,
+        url: null,
+        created_at: createdTicket.entered_at,
+        status_id: createdTicket.status_id,
         priority_id: input.priority_id
       };
     })

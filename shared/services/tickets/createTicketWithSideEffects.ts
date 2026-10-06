@@ -1,6 +1,6 @@
 import type { Knex } from 'knex';
 import { registerAfterCommit, tenantDb } from '@alga-psa/db';
-import { publishEvent, publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import { publishWorkflowEvent, type WorkflowActor } from '@alga-psa/event-bus/publishers';
 import { TicketModel, type CreateTicketInput } from '@alga-psa/shared/models/ticketModel';
 import { TagModel } from '@alga-psa/shared/models/tagModel';
 import { associateAssetWithTicket } from '@alga-psa/shared/services/assets/assetTicketAssociation';
@@ -13,16 +13,67 @@ import {
   writeTicketActivity,
 } from '@alga-psa/shared/lib/ticketActivity';
 import { TicketModelEventPublisher } from './ticketModelEventPublisher';
-import { addTicketResourceCore, publishTicketResourceEvent } from './ticketResourceCore';
+import { addTicketResourceCore } from './ticketResourceCore';
 import { assignTeamToTicketCore } from './teamAssignmentCore';
 import { buildTicketResolutionSlaStageEnteredEvent } from './ticketSlaStageEvents';
 
 /**
- * Who is creating the ticket. A `system` actor (scheduler, generator) is stored
- * as such everywhere: `entered_by` stays null, the activity row and workflow
- * events carry a SYSTEM actor, and no stand-in user id is ever invented.
+ * Who is creating the ticket.
+ *
+ * - `system` (scheduler, generator): `entered_by` stays null, the activity row and
+ *   bus events carry a SYSTEM actor, and no stand-in user id is ever invented.
+ * - `user`: a human acting through the UI.
+ * - `workflow`: a workflow run acting as its run actor. `entered_by` is that user;
+ *   the activity row says WORKFLOW; bus events use the USER actor (the event bus
+ *   has no WORKFLOW actor type) and carry `workflowRunId` / `workflowLineage`.
  */
-export type CreateTicketActor = { type: 'system' } | { type: 'user'; userId: string };
+export type CreateTicketActor =
+  | { type: 'system' }
+  | { type: 'user'; userId: string }
+  | { type: 'workflow'; userId: string; runId: string; workflowId: string; lineage: string[] };
+
+export interface CreateTicketActorEffects {
+  /** Value for `tickets.entered_by`, and the user id passed to cores/tags/`updated_by`. */
+  actorUserId: string | null;
+  activityActor: Parameters<typeof writeTicketActivity>[1]['actor'];
+  activitySource: (typeof TICKET_ACTIVITY_SOURCE)[keyof typeof TICKET_ACTIVITY_SOURCE];
+  busActor: WorkflowActor;
+  /** Merged into the payload of every event published for a workflow actor. */
+  provenance: { workflowRunId?: string; workflowLineage?: string[] };
+}
+
+/** The one place an actor is turned into stored and published attribution. */
+export function resolveActorEffects(actor: CreateTicketActor): CreateTicketActorEffects {
+  switch (actor.type) {
+    case 'system':
+      return {
+        actorUserId: null,
+        activityActor: { actorType: TICKET_ACTIVITY_ACTOR.SYSTEM },
+        activitySource: TICKET_ACTIVITY_SOURCE.SYSTEM,
+        busActor: { actorType: 'SYSTEM' },
+        provenance: {},
+      };
+    case 'user':
+      return {
+        actorUserId: actor.userId,
+        activityActor: { actorType: TICKET_ACTIVITY_ACTOR.USER, userId: actor.userId },
+        activitySource: TICKET_ACTIVITY_SOURCE.UI,
+        busActor: { actorType: 'USER', actorUserId: actor.userId },
+        provenance: {},
+      };
+    case 'workflow':
+      return {
+        actorUserId: actor.userId,
+        activityActor: { actorType: TICKET_ACTIVITY_ACTOR.WORKFLOW, userId: actor.userId },
+        activitySource: TICKET_ACTIVITY_SOURCE.WORKFLOW,
+        busActor: { actorType: 'USER', actorUserId: actor.userId },
+        provenance: {
+          workflowRunId: actor.runId,
+          workflowLineage: [...actor.lineage, actor.workflowId],
+        },
+      };
+  }
+}
 
 export interface CreateTicketWithSideEffectsInput {
   actor: CreateTicketActor;
@@ -39,11 +90,15 @@ export interface CreateTicketWithSideEffectsInput {
   /** Checklist template applied in addition to any auto-applying templates. */
   checklistTemplateId?: string | null;
   /**
-   * Notification suppression carried on the published events. Contact-facing
-   * suppression is honoured by the TICKET_CREATED email subscriber and by the
-   * assignment events published here.
+   * Notification suppression carried on every published ticket event
+   * (TICKET_CREATED, TICKET_ASSIGNED and the additional-agent events). The
+   * subscribers skip the suppressed audience; SLA, search, webhooks and workflow
+   * triggers are unaffected.
    */
-  notificationSuppression?: { suppressContactNotifications?: boolean };
+  notificationSuppression?: {
+    suppressContactNotifications?: boolean;
+    suppressInternalNotifications?: boolean;
+  };
 }
 
 export interface CreateTicketWithSideEffectsResult {
@@ -74,13 +129,15 @@ export async function createTicketWithSideEffects(
   tenant: string,
   input: CreateTicketWithSideEffectsInput,
 ): Promise<CreateTicketWithSideEffectsResult> {
-  const { actor } = input;
-  const actorUserId = actor.type === 'user' ? actor.userId : null;
-  const suppressContact = input.notificationSuppression?.suppressContactNotifications === true;
-  const suppressionPayload = suppressContact ? { suppressContactNotifications: true } : {};
+  const { actorUserId, activityActor, activitySource, busActor, provenance } = resolveActorEffects(input.actor);
+  const suppressionPayload = {
+    suppressContactNotifications: input.notificationSuppression?.suppressContactNotifications === true,
+    suppressInternalNotifications: input.notificationSuppression?.suppressInternalNotifications === true,
+  };
+  const eventExtras = { ...suppressionPayload, ...provenance };
 
   const eventPublisher = new TicketModelEventPublisher(trx, {
-    ticketCreatedPayload: suppressionPayload,
+    ticketCreatedPayload: eventExtras,
   });
 
   const created = await TicketModel.createTicketWithRetry(
@@ -101,10 +158,27 @@ export async function createTicketWithSideEffects(
     await assignTeamToTicketCore(trx, tenant, actorUserId, ticketId, input.teamId);
   }
 
+  // Skip agents the team step already recorded as `team_member` resources:
+  // addTicketResourceCore treats an existing resource as a conflict. Filter up
+  // front rather than catching the error, which would hide real conflicts.
+  const requestedAgentIds = [...new Set(input.additionalAgentIds ?? [])];
+  const existingAgentIds = new Set<string>();
+  if (requestedAgentIds.length > 0) {
+    const existing = await db
+      .table('ticket_resources')
+      .where({ ticket_id: ticketId })
+      .whereIn('additional_user_id', requestedAgentIds)
+      .select('additional_user_id');
+    for (const row of existing as Array<{ additional_user_id: string }>) {
+      existingAgentIds.add(row.additional_user_id);
+    }
+  }
+
   // Agent events are published after commit. A promotion event (resource === null)
   // is dropped: the single TICKET_ASSIGNED published below covers it.
   const agentEvents: Awaited<ReturnType<typeof addTicketResourceCore>>['event'][] = [];
-  for (const agentId of new Set(input.additionalAgentIds ?? [])) {
+  for (const agentId of requestedAgentIds) {
+    if (existingAgentIds.has(agentId)) continue;
     const result = await addTicketResourceCore(
       trx,
       tenant,
@@ -149,10 +223,8 @@ export async function createTicketWithSideEffects(
     eventType: TICKET_ACTIVITY_EVENT.CREATED,
     entityType: TICKET_ACTIVITY_ENTITY.TICKET,
     entityId: ticketId,
-    actor: actor.type === 'user'
-      ? { actorType: TICKET_ACTIVITY_ACTOR.USER, userId: actor.userId }
-      : { actorType: TICKET_ACTIVITY_ACTOR.SYSTEM },
-    source: actor.type === 'user' ? TICKET_ACTIVITY_SOURCE.UI : TICKET_ACTIVITY_SOURCE.SYSTEM,
+    actor: activityActor,
+    source: activitySource,
     occurredAt: toIso(fullTicket.entered_at),
     details: {
       title: fullTicket.title,
@@ -165,20 +237,28 @@ export async function createTicketWithSideEffects(
     },
   });
 
+  const publishTicketEvent = (
+    eventType: string,
+    payload: Record<string, unknown>,
+    extra: { occurredAt?: string; idempotencyKey?: string; provenanceOnly?: boolean } = {},
+  ) =>
+    publishWorkflowEvent({
+      eventType: eventType as any,
+      payload: { ...payload, ...(extra.provenanceOnly ? provenance : eventExtras) },
+      ctx: { tenantId: tenant, actor: busActor, ...(extra.occurredAt ? { occurredAt: extra.occurredAt } : {}) },
+      ...(extra.idempotencyKey ? { idempotencyKey: extra.idempotencyKey } : {}),
+    });
+
   const assignee: string | null = fullTicket.assigned_to ?? null;
   if (assignee) {
     registerAfterCommit(
       trx,
       () =>
-        publishEvent({
-          eventType: 'TICKET_ASSIGNED',
-          payload: {
-            tenantId: tenant,
-            ticketId,
-            userId: assignee,
-            ...(actorUserId ? { assignedByUserId: actorUserId } : {}),
-            ...suppressionPayload,
-          },
+        publishTicketEvent('TICKET_ASSIGNED', {
+          tenantId: tenant,
+          ticketId,
+          userId: assignee,
+          ...(actorUserId ? { assignedByUserId: actorUserId } : {}),
         }),
       `TICKET_ASSIGNED ticket=${ticketId}`,
     );
@@ -187,7 +267,7 @@ export async function createTicketWithSideEffects(
   for (const event of agentEvents) {
     registerAfterCommit(
       trx,
-      () => publishTicketResourceEvent(event),
+      () => publishTicketEvent(event.eventType, event.payload as Record<string, unknown>),
       `${event.eventType} ticket=${ticketId}`,
     );
   }
@@ -202,17 +282,11 @@ export async function createTicketWithSideEffects(
     registerAfterCommit(
       trx,
       () =>
-        publishWorkflowEvent({
-          eventType: enteredSlaEvent.eventType,
-          payload: enteredSlaEvent.payload,
-          ctx: {
-            tenantId: tenant,
-            actor: actorUserId
-              ? { actorType: 'USER' as const, actorUserId }
-              : { actorType: 'SYSTEM' as const },
-            occurredAt: toIso(fullTicket.entered_at),
-          },
+        publishTicketEvent(enteredSlaEvent.eventType, enteredSlaEvent.payload, {
+          occurredAt: toIso(fullTicket.entered_at),
           idempotencyKey: enteredSlaEvent.idempotencyKey,
+          // Suppression flags describe notifications; an SLA stage event has none.
+          provenanceOnly: true,
         }),
       `${enteredSlaEvent.eventType} ticket=${ticketId}`,
     );

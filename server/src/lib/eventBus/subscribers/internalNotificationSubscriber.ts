@@ -80,6 +80,19 @@ function shouldCreateTicketCommentNotification(
 async function handleTicketCreated(event: TicketCreatedEvent, opts?: InternalNotificationHandlerOptions): Promise<void> {
   const { payload } = event;
   const { tenantId, ticketId, userId } = payload;
+  // Creators can suppress either audience (e.g. a workflow that sends its own
+  // notification, or a renewal ticket that is internal MSP work).
+  const suppression = resolveTicketNotificationSuppression(payload);
+  const notifyStaff = shouldCreateStaffTicketNotification(suppression);
+  const notifyContactPortal = shouldCreateContactPortalTicketNotification(suppression);
+
+  if (!notifyStaff && !notifyContactPortal) {
+    logger.debug('[InternalNotificationSubscriber] Skipped ticket created notifications: all audiences suppressed', {
+      ticketId,
+      tenantId
+    });
+    return;
+  }
 
   try {
     const db = opts?.db ?? await getConnection(tenantId);
@@ -141,7 +154,12 @@ async function handleTicketCreated(event: TicketCreatedEvent, opts?: InternalNot
       });
     };
 
-    if (ticket.assigned_to) {
+    if (!notifyStaff) {
+      logger.debug('[InternalNotificationSubscriber] Skipped staff ticket created notifications due to suppression', {
+        ticketId,
+        tenantId
+      });
+    } else if (ticket.assigned_to) {
       // Primary assignee — single, direct notification.
       await notifyMspUser(ticket.assigned_to);
 
@@ -184,7 +202,7 @@ async function handleTicketCreated(event: TicketCreatedEvent, opts?: InternalNot
     }
 
     // Create notification for client contact if they have portal access
-    if (ticket.contact_name_id && portalUrl) {
+    if (notifyContactPortal && ticket.contact_name_id && portalUrl) {
       // Check if contact has a user account
       const contactUser = await tenantScopedTable(db, 'users', tenantId)
         .select('user_id', 'user_type')
