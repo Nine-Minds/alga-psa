@@ -125,6 +125,8 @@ export class InboundEmailOutboxEventPublisher implements IEventPublisher {
       payload: {
         tenantId: data.tenantId,
         ticketId: data.ticketId,
+        // Required by the TICKET_STATUS_CHANGED domain schema the subscribers validate against.
+        occurredAt: data.changedAt,
         ...(data.userId ? { userId: data.userId, actorUserId: data.userId, actorType: 'USER' } : {}),
         previousStatusId: data.previousStatusId,
         newStatusId: data.newStatusId,

@@ -59,6 +59,22 @@ vi.mock('@alga-psa/core/secrets', () => ({
   })),
 }));
 
+// checkInboundReopenRateLimit fails closed without a Redis client; in-memory counters keep the
+// reopen backstop real.
+const reopenCounters = new Map<string, number>();
+vi.mock('@alga-psa/shared/services/email/unifiedInboundEmailQueue', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@alga-psa/shared/services/email/unifiedInboundEmailQueue')>()),
+  getInboundEmailRedisClient: async () => ({
+    incr: async (key: string) => {
+      const next = (reopenCounters.get(key) ?? 0) + 1;
+      reopenCounters.set(key, next);
+      return next;
+    },
+    expire: async () => 1,
+    ttl: async () => 3600,
+  }),
+}));
+
 vi.mock('@alga-psa/shared/services/email/inboundReplyAcknowledgementDecider', () => ({
   resolveInboundReplyAcknowledgementDecider: vi.fn(async () => ({
     decide: async () => ({ decision: 'NOT_ACK', source: 'default', attempted: false, reason: 'test', model: null, rawOutput: null, error: null }),
@@ -70,6 +86,7 @@ vi.mock('@alga-psa/db', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@alga-psa/db')>();
   return {
     ...actual,
+    withAdminTransaction: async (callback: (trx: Knex.Transaction) => Promise<unknown>) => testDb.transaction(callback),
     getUserWithRoles: async (userId: string, tenant: string) => {
       const user = await actual.tenantDb(testDb, tenant).table('users').where({ user_id: userId }).first();
       return user ? { ...user, roles: [] } : null;
@@ -91,6 +108,7 @@ describe('board notification rules: inbound email durable path (integration)', (
   let clientId: string;
   let boardId: string;
   let statusId: string;
+  let closedStatusId: string;
   let priorityId: string;
   let providerId: string;
   let users: Record<string, string>;
@@ -142,6 +160,25 @@ describe('board notification rules: inbound email durable path (integration)', (
       { tenant, rule_id: ruleId, recipient_type: 'user', user_id: users.techB },
       { tenant, rule_id: ruleId, recipient_type: 'team', team_id: ruleTeamId },
     ]);
+
+    // Reply-reopen scenario: a closed status, and a second rule triggered by entering the open
+    // ("New") status the board reopens into (no explicit reopen status -> board default).
+    closedStatusId = uuidv4();
+    await scoped.table('statuses').insert({ tenant, status_id: closedStatusId, board_id: boardId, name: 'Closed', status_type: 'ticket', item_type: 'ticket', order_number: 9, is_default: false, is_closed: true });
+    const statusRuleId = uuidv4();
+    await scoped.table('board_notification_rules').insert({ tenant, rule_id: statusRuleId, board_id: boardId, notify_on_create: false });
+    await scoped.table('board_notification_rule_statuses').insert({ tenant, rule_id: statusRuleId, status_id: statusId });
+    await scoped.table('board_notification_rule_recipients').insert([
+      { tenant, rule_id: statusRuleId, recipient_type: 'user', user_id: users.techA },
+      { tenant, rule_id: statusRuleId, recipient_type: 'user', user_id: users.techB },
+      { tenant, rule_id: statusRuleId, recipient_type: 'team', team_id: ruleTeamId },
+    ]);
+    await scoped.table('boards').where({ board_id: boardId }).update({
+      inbound_reply_reopen_enabled: true,
+      inbound_reply_reopen_cutoff_hours: 72,
+      inbound_reply_reopen_status_id: null,
+      inbound_reply_ai_ack_suppression_enabled: false,
+    });
 
     const defaultsId = uuidv4();
     providerId = uuidv4();
@@ -275,6 +312,20 @@ describe('board notification rules: inbound email durable path (integration)', (
     return delivered;
   }
 
+  /** Same stand-in for TICKET_STATUS_CHANGED events (the reopen transition's lifecycle event). */
+  async function deliverPublishedStatusChanged(): Promise<number> {
+    const batch = published.splice(0);
+    let delivered = 0;
+    for (const evt of batch) {
+      if (evt.eventType !== 'TICKET_STATUS_CHANGED') continue;
+      delivered += 1;
+      const event = { id: evt.id, eventType: evt.eventType, timestamp: new Date().toISOString(), payload: evt.payload };
+      await runWithTenant(tenant, () => emailHandler(event));
+      await runWithTenant(tenant, () => inAppHandler(event));
+    }
+    return delivered;
+  }
+
   const ruleEmails = () => sent.filter((email) => email.template === RULE_TEMPLATE).map((email) => email.to).sort();
   async function ruleInApp(): Promise<string[]> {
     const rows = await scoped.table('internal_notifications').where({ template_name: RULE_TEMPLATE });
@@ -342,15 +393,82 @@ describe('board notification rules: inbound email durable path (integration)', (
     expect(ticketRows).toHaveLength(1);
   }, 120_000);
 
-  // TODO(board-notification-rules): enable once the TICKET_STATUS_CHANGED handlers (status-entered
-  // trigger, plan §5.5/§7) are implemented. Scenario: a rule with status "Open" as trigger; an
-  // email ticket exists in a closed status; a customer reply reopens it (reply-reopen moves the
-  // ticket to the board's open status and the lifecycle helper publishes TICKET_STATUS_CHANGED
-  // through the inbound outbox). Dispatch + force-republish the outbox, deliver to both
-  // TICKET_STATUS_CHANGED handlers, and assert each rule recipient gets exactly one email and one
-  // in-app notification (template for status-entered), with assigned_to unchanged and the watch
-  // list untouched.
-  it('reply-reopen firing a status-entered rule notifies each recipient exactly once (needs TICKET_STATUS_CHANGED handlers)', async () => {
-    // Intentionally empty until the handlers exist.
-  });
+  it('reply-reopen firing a status-entered rule notifies each recipient exactly once', async () => {
+    const STATUS_TEMPLATE = 'ticket-board-status-entered';
+    const originalMessageId = `orig-${uuidv4()}@acme-customer.example.com`;
+    const senderEmail = 'customer@acme-customer.example.com';
+    const contactId = uuidv4();
+    await scoped.table('contacts').insert({
+      tenant,
+      contact_name_id: contactId,
+      full_name: 'Customer',
+      email: senderEmail,
+      client_id: clientId,
+      created_at: testDb.fn.now(),
+      updated_at: testDb.fn.now(),
+    });
+    const ticketId = uuidv4();
+    await scoped.table('tickets').insert({
+      tenant,
+      ticket_id: ticketId,
+      ticket_number: `REOPEN-${uuidv4().slice(0, 6)}`,
+      title: 'Closed printer ticket',
+      client_id: clientId,
+      status_id: closedStatusId,
+      priority_id: priorityId,
+      board_id: boardId,
+      entered_by: users.techA,
+      is_closed: true,
+      closed_at: testDb.raw(`now() - interval '2 hours'`),
+      closed_by: users.techA,
+      ticket_origin: 'inbound_email',
+      email_metadata: JSON.stringify({ messageId: originalMessageId, threadId: `thread-${uuidv4()}` }),
+      entered_at: testDb.fn.now(),
+      updated_at: testDb.fn.now(),
+    });
+
+    const { inboxId, result } = await processDurably({
+      ...buildEmail(`reply-${uuidv4()}@acme-customer.example.com`, 'Re: Closed printer ticket'),
+      inReplyTo: originalMessageId,
+      references: [originalMessageId],
+      headers: { 'authentication-results': 'mx.example.com; dkim=pass header.d=acme-customer.example.com; dmarc=pass header.from=acme-customer.example.com' },
+    });
+    expect(result.outcome).toBe('replied');
+    expect(result.ticketId).toBe(ticketId);
+
+    const reopened = await scoped.table('tickets').where({ ticket_id: ticketId }).first();
+    expect(reopened.status_id).toBe(statusId);
+    expect(reopened.is_closed).toBe(false);
+
+    const statusOutbox = await scoped.table('inbound_email_outbox').where({ inbox_id: inboxId, event_type: 'TICKET_STATUS_CHANGED' });
+    expect(statusOutbox).toHaveLength(1);
+
+    await dispatchOutbox(inboxId);
+    expect(await deliverPublishedStatusChanged()).toBe(1);
+
+    const statusEmails = () => sent.filter((email) => email.template === STATUS_TEMPLATE).map((email) => email.to).sort();
+    const statusInApp = async () =>
+      (await scoped.table('internal_notifications').where({ template_name: STATUS_TEMPLATE })).map((row: any) => row.user_id as string).sort();
+    const expectedUsers = [users.techA, users.techB, users.member1, users.member2].sort();
+
+    expect(statusEmails()).toEqual(expectedEmails);
+    expect(await statusInApp()).toEqual(expectedUsers);
+
+    const after = await scoped.table('tickets').where({ ticket_id: ticketId }).first();
+    expect(after.assigned_to).toBeNull();
+    expect(after.assigned_team_id ?? null).toBeNull();
+    const watchEmails = ((after.attributes?.watch_list ?? []) as Array<{ email?: string }>).map((entry) => entry.email);
+    for (const email of expectedEmails) expect(watchEmails).not.toContain(email);
+    // The create-trigger rule must not fire for a reopen.
+    expect(ruleEmails()).toEqual([]);
+
+    // Recovery sweeper path: force republish twice must not duplicate.
+    for (let i = 0; i < 2; i += 1) {
+      await republishOutbox(inboxId);
+      expect(published.every((evt) => evt.force)).toBe(true);
+      await deliverPublishedStatusChanged();
+    }
+    expect(statusEmails()).toEqual(expectedEmails);
+    expect(await statusInApp()).toEqual(expectedUsers);
+  }, 120_000);
 });
