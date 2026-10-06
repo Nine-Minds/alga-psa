@@ -131,6 +131,7 @@ export const ticketStatusChangedEventPayloadSchema = BaseDomainEventPayloadSchem
   newStatusId: z.string().min(1).describe('New status ID'),
   reason: z.string().optional(),
   changedAt: z.string().datetime().optional().describe('Timestamp when status changed (ISO 8601)'),
+  ...suppressionFlagsSchema,
 }).describe('Payload for TICKET_STATUS_CHANGED');
 
 export type TicketStatusChangedEventPayload = z.infer<typeof ticketStatusChangedEventPayloadSchema>;

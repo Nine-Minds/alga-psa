@@ -268,6 +268,96 @@ async function handleTicketCreated(event: TicketCreatedEvent, opts?: InternalNot
 }
 
 /**
+ * Handle ticket status changed events. Drives the "status entered" trigger of
+ * board notification rules: one in-app alert per rule recipient. Does not fire
+ * at creation, never assigns, never touches the watch list.
+ */
+async function handleTicketStatusChanged(
+  event: { payload: any },
+  opts?: InternalNotificationHandlerOptions
+): Promise<void> {
+  const { payload } = event;
+  const { tenantId, ticketId, newStatusId } = payload;
+
+  try {
+    if (!shouldCreateStaffTicketNotification(resolveTicketNotificationSuppression(payload))) {
+      return;
+    }
+    const db = opts?.db ?? await getConnection(tenantId);
+    const scopedDb = tenantDb(db, tenantId);
+    const ticketQuery = tenantScopedTable(db, 'tickets as t', tenantId)
+      .select(
+        't.ticket_id',
+        't.ticket_number',
+        't.title',
+        't.board_id',
+        't.status_id',
+        'c.client_name',
+        'b.board_name',
+        's.name as status_name'
+      );
+    scopedDb.tenantJoin(ticketQuery, 'clients as c', 't.client_id', 'c.client_id', { type: 'left' });
+    scopedDb.tenantJoin(ticketQuery, 'boards as b', 't.board_id', 'b.board_id', { type: 'left' });
+    scopedDb.tenantJoin(ticketQuery, 'statuses as s', 't.status_id', 's.status_id', { type: 'left' });
+    const ticket = await ticketQuery.where('t.ticket_id', ticketId).first();
+    if (!ticket?.board_id) return;
+
+    const statusId = newStatusId ?? ticket.status_id;
+    const enteredStatusName = statusId === ticket.status_id
+      ? ticket.status_name
+      : (await tenantScopedTable(db, 'statuses', tenantId).select('name').where({ status_id: statusId }).first())?.name;
+
+    const assignees = await getAllTicketAssignees(db, tenantId, ticketId);
+    const recipients = await resolveBoardNotificationRecipients(
+      db,
+      tenantId,
+      { kind: 'status_entered', statusId },
+      { excludeUserIds: [...assignees, payload.actorUserId, payload.userId] }
+    );
+    if (recipients.length === 0) return;
+    const visibleRecipients = await filterRecipientsWhoCanReadTicket(db, tenantId, ticketId, recipients);
+    if (visibleRecipients.length === 0) return;
+
+    const { internalUrl } = await resolveNotificationLinks(db, tenantId, {
+      type: 'ticket',
+      ticketId,
+      ticketNumber: ticket.ticket_number
+    });
+    for (const recipient of visibleRecipients) {
+      await createNotificationFromTemplateInternal(db, {
+        tenant: tenantId,
+        user_id: recipient.userId,
+        template_name: 'ticket-board-status-entered',
+        type: 'info',
+        category: 'tickets',
+        link: internalUrl,
+        data: {
+          ticketId: ticket.ticket_number || 'Ticket',
+          ticketTitle: ticket.title,
+          clientName: ticket.client_name || 'Unknown',
+          boardName: ticket.board_name || '',
+          statusName: enteredStatusName || ticket.status_name || ''
+        }
+      });
+    }
+    logger.info('[InternalNotificationSubscriber] Created board notification rule notifications for status entered', {
+      ticketId,
+      boardId: ticket.board_id,
+      statusId,
+      recipientCount: visibleRecipients.length,
+      tenantId
+    });
+  } catch (error) {
+    logger.error('[InternalNotificationSubscriber] Error handling ticket status changed', {
+      error,
+      ticketId,
+      tenantId
+    });
+    if (opts?.propagateErrors) throw error;
+  }
+}
+
+/**
  * Get all users assigned to a project task (primary + additional agents)
  */
 async function getAllTaskAssignees(
@@ -3195,6 +3285,9 @@ async function dispatchInternalNotificationHandlers(
     case 'TICKET_CREATED':
       await handleTicketCreated(validatedEvent as TicketCreatedEvent, opts);
       break;
+    case 'TICKET_STATUS_CHANGED':
+      await handleTicketStatusChanged(validatedEvent, opts);
+      break;
     case 'TICKET_ASSIGNED':
       await handleTicketAssigned(validatedEvent as TicketAssignedEvent, opts);
       break;
@@ -3276,6 +3369,7 @@ export const internalNotificationSubscriberTestHarness = {
   shouldCreateStaffTicketNotification,
   shouldCreateTicketCommentNotification,
   handleTicketCreated,
+  handleTicketStatusChanged,
   handleTicketAssigned,
   handleTicketUpdated,
   handleTicketClosed,
@@ -3294,6 +3388,7 @@ export async function registerInternalNotificationSubscriber(): Promise<void> {
 
     const eventTypes: EventType[] = [
       'TICKET_CREATED',
+      'TICKET_STATUS_CHANGED',
       'TICKET_ASSIGNED',
       'TICKET_ADDITIONAL_AGENT_ASSIGNED',
       'TICKET_UPDATED',
@@ -3341,6 +3436,7 @@ export async function unregisterInternalNotificationSubscriber(): Promise<void> 
   try {
     const eventTypes: EventType[] = [
       'TICKET_CREATED',
+      'TICKET_STATUS_CHANGED',
       'TICKET_ASSIGNED',
       'TICKET_ADDITIONAL_AGENT_ASSIGNED',
       'TICKET_UPDATED',

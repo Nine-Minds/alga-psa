@@ -350,7 +350,7 @@ describe('board notification rules: inbound email durable path (integration)', (
   // TICKET_STATUS_CHANGED handlers, and assert each rule recipient gets exactly one email and one
   // in-app notification (template for status-entered), with assigned_to unchanged and the watch
   // list untouched.
-  it.skip('reply-reopen firing a status-entered rule notifies each recipient exactly once (needs TICKET_STATUS_CHANGED handlers)', async () => {
+  it('reply-reopen firing a status-entered rule notifies each recipient exactly once (needs TICKET_STATUS_CHANGED handlers)', async () => {
     // Intentionally empty until the handlers exist.
   });
 });

@@ -25,6 +25,7 @@ import {
   resolveBoardNotificationRecipients,
   type ResolvedRecipient,
 } from '@alga-psa/shared/lib/tickets/boardNotificationRules';
+import { getAllTicketAssignees } from '@alga-psa/shared/lib/tickets/ticketAssignees';
 import { filterRecipientsWhoCanReadTicket } from '../../notifications/boardNotificationAudience';
 import { buildTenantPortalSlug } from '@shared/utils/tenantSlug';
 import { TenantEmailService } from '@alga-psa/email';
@@ -937,6 +938,175 @@ function formatTicketDateTime(
 /**
  * Handle ticket created events
  */
+/**
+ * Shared "ticket summary" email context (the ticket-created body variables).
+ * Used by the ticket-created handler and the board status-entered handler.
+ */
+async function buildTicketSummaryEmailContext(
+  db: Knex,
+  tenantId: string,
+  ticket: NonNullable<TicketEmailRow>,
+  creatorUserId: string | undefined
+) {
+  const safeString = (value?: unknown) => {
+    if (typeof value === 'string') {
+      return value.trim();
+    }
+    if (value === null || value === undefined) {
+      return '';
+    }
+    return String(value).trim();
+  };
+
+  const emailTimeZone = await resolveEffectiveTimeZone(db, tenantId, creatorUserId);
+  // Date/time strings are baked into a shared email context reused across all
+  // recipients, so the exact per-recipient locale isn't known here. Use the
+  // tenant default locale (falls back to system default 'en').
+  const emailLocale = await getTenantDefaultLocale(tenantId);
+
+  const priorityName = safeString(ticket.priority_name) || 'Unspecified';
+  const statusName = safeString(ticket.status_name) || 'Unknown';
+  const metaLine = `Ticket #${ticket.ticket_number} · ${priorityName} Priority · ${statusName}`;
+  const priorityColor = safeString(ticket.priority_color) || '#8A4DEA';
+
+  const clientName = safeString(ticket.client_name) || 'Unassigned Client';
+
+  const emailDateFormat = await getTenantDateFormat(tenantId);
+  const createdAt = formatTicketDateTime(
+    ticket.entered_at as string | Date | null,
+    emailTimeZone,
+    emailLocale,
+    emailDateFormat
+  );
+  const createdByName = safeString(ticket.created_by_name) || 'System';
+  const createdDetails = `${createdAt} · ${createdByName}`;
+
+  const assignedToName = safeString(ticket.assigned_to_name) || 'Unassigned';
+  const rawAssignedEmail = safeString(ticket.assigned_to_email);
+  const assignedToEmailRaw = assignedToName === 'Unassigned' ? '' : rawAssignedEmail;
+  const assignedToEmailDisplay = assignedToName === 'Unassigned'
+    ? 'Not assigned'
+    : assignedToEmailRaw || 'Not provided';
+  const assignedDetails = assignedToName === 'Unassigned'
+    ? 'Unassigned'
+    : assignedToEmailRaw
+      ? `${assignedToName} (${assignedToEmailRaw})`
+      : assignedToName;
+
+  const requesterName = safeString(ticket.contact_name) || 'Not specified';
+  const requesterEmail = safeString(ticket.contact_email) || 'Not provided';
+  const requesterPhone = safeString(ticket.contact_phone) || 'Not provided';
+  const requesterContactParts: string[] = [];
+  if (requesterEmail && requesterEmail !== 'Not provided') {
+    requesterContactParts.push(requesterEmail);
+  }
+  if (requesterPhone && requesterPhone !== 'Not provided') {
+    requesterContactParts.push(requesterPhone);
+  }
+  const requesterDetailsParts: string[] = [];
+  if (requesterName && requesterName !== 'Not specified') {
+    requesterDetailsParts.push(requesterName);
+  }
+  requesterDetailsParts.push(...requesterContactParts);
+  const requesterContact = requesterContactParts.length > 0 ? requesterContactParts.join(' · ') : 'Not provided';
+  const requesterDetails = requesterDetailsParts.length > 0 ? requesterDetailsParts.join(' · ') : 'Not specified';
+
+  const boardName = safeString(ticket.board_name) || 'Not specified';
+  const categoryName = safeString(ticket.category_name);
+  const subcategoryName = safeString(ticket.subcategory_name);
+  const categoryDetails = categoryName && subcategoryName
+    ? `${categoryName} / ${subcategoryName}`
+    : categoryName || subcategoryName || 'Not categorized';
+
+  const locationSegments: string[] = [];
+  const locationName = safeString(ticket.location_name);
+  if (locationName) {
+    locationSegments.push(locationName);
+  }
+  const addressLines = [displayAddressField(safeString(ticket.address_line1)), safeString(ticket.address_line2)].filter(Boolean);
+  const cityState = [displayAddressField(safeString(ticket.city)), safeString(ticket.state_province)].filter(Boolean).join(', ');
+  const postalCountry = [safeString(ticket.postal_code), displayCountry(undefined, safeString(ticket.country_code))].filter(Boolean).join(' ');
+  const locationDetailsParts = [...addressLines];
+  if (cityState) {
+    locationDetailsParts.push(cityState);
+  }
+  if (postalCountry) {
+    locationDetailsParts.push(postalCountry);
+  }
+  if (locationDetailsParts.length > 0) {
+    locationSegments.push(locationDetailsParts.join(' · '));
+  }
+  const locationSummary = locationSegments.length > 0 ? locationSegments.join(' • ') : 'Not specified';
+
+  let rawDescription = '';
+  if (ticket.attributes && typeof ticket.attributes === 'object' && 'description' in ticket.attributes) {
+    rawDescription = safeString((ticket.attributes as Record<string, unknown>).description);
+  }
+  if (!rawDescription && 'description' in ticket) {
+    rawDescription = safeString((ticket as Record<string, unknown>).description);
+  }
+  // Email-ingested tickets store the inbound body as the first comment, not
+  // on the ticket row. Fall back to the initial-description comment (or the
+  // oldest comment) so the "New Ticket" email carries the user's original
+  // message instead of "No description provided".
+  if (!rawDescription) {
+    const descriptionComment = await tenantDb(db, tenantId).table('comments')
+      .select('note')
+      .where({ ticket_id: ticket.ticket_id })
+      .orderBy('created_at', 'asc')
+      .first();
+    if (descriptionComment?.note) {
+      rawDescription = safeString(descriptionComment.note);
+    }
+  }
+  // formatBlockNoteContent returns { html:'', text:'' } when the input is
+  // empty or is a BlockNote blob that has no extractable text — do NOT fall
+  // back to rawDescription here because it may be raw JSON which we'd
+  // otherwise leak into the email body.
+  const descriptionFormatting = formatBlockNoteContent(rawDescription);
+  const descriptionText = descriptionFormatting.text.trim();
+  const description = descriptionText || 'No description provided.';
+  const descriptionHtml = descriptionText
+    ? descriptionFormatting.html
+    : `<p>${description}</p>`;
+
+  const requesterDetailsForText = requesterDetails;
+  const assignedDetailsForText = assignedDetails;
+
+  const { internalUrl, portalUrl } = await resolveTicketLinks(db, tenantId, ticket.ticket_id, ticket.ticket_number);
+
+  const baseTicketContext = {
+    id: ticket.ticket_number,
+    title: ticket.title,
+    description,
+    descriptionText: description,
+    descriptionHtml: descriptionHtml,
+    priority: priorityName,
+    priorityColor,
+    status: statusName,
+    createdAt,
+    createdBy: createdByName,
+    createdDetails,
+    assignedToName,
+    assignedToEmail: assignedToEmailDisplay,
+    assignedDetails: assignedDetailsForText,
+    requesterName,
+    requesterEmail,
+    requesterPhone,
+    requesterContact,
+    requesterDetails: requesterDetailsForText,
+    board: boardName,
+    category: categoryName || 'Not categorized',
+    subcategory: subcategoryName || 'Not specified',
+    categoryDetails,
+    locationSummary,
+    clientName,
+    metaLine
+  };
+
+  return { baseTicketContext, priorityName, boardName, internalUrl, portalUrl };
+}
+
 async function handleTicketCreated(event: TicketCreatedEvent): Promise<void> {
   const { payload } = event;
   const { tenantId } = payload;
@@ -1024,151 +1194,8 @@ async function handleTicketCreated(event: TicketCreatedEvent): Promise<void> {
       });
     }
 
-    const emailTimeZone = await resolveEffectiveTimeZone(db, tenantId, creatorUserId);
-    // Date/time strings are baked into a shared email context reused across all
-    // recipients, so the exact per-recipient locale isn't known here. Use the
-    // tenant default locale (falls back to system default 'en').
-    const emailLocale = await getTenantDefaultLocale(tenantId);
-
-    const priorityName = safeString(ticket.priority_name) || 'Unspecified';
-    const statusName = safeString(ticket.status_name) || 'Unknown';
-    const metaLine = `Ticket #${ticket.ticket_number} · ${priorityName} Priority · ${statusName}`;
-    const priorityColor = safeString(ticket.priority_color) || '#8A4DEA';
-
-    const clientName = safeString(ticket.client_name) || 'Unassigned Client';
-
-    const emailDateFormat = await getTenantDateFormat(tenantId);
-    const createdAt = formatTicketDateTime(
-      ticket.entered_at as string | Date | null,
-      emailTimeZone,
-      emailLocale,
-      emailDateFormat
-    );
-    const createdByName = safeString(ticket.created_by_name) || 'System';
-    const createdDetails = `${createdAt} · ${createdByName}`;
-
-    const assignedToName = safeString(ticket.assigned_to_name) || 'Unassigned';
-    const rawAssignedEmail = assignedEmail;
-    const assignedToEmailRaw = assignedToName === 'Unassigned' ? '' : rawAssignedEmail;
-    const assignedToEmailDisplay = assignedToName === 'Unassigned'
-      ? 'Not assigned'
-      : assignedToEmailRaw || 'Not provided';
-    const assignedDetails = assignedToName === 'Unassigned'
-      ? 'Unassigned'
-      : assignedToEmailRaw
-        ? `${assignedToName} (${assignedToEmailRaw})`
-        : assignedToName;
-
-    const requesterName = safeString(ticket.contact_name) || 'Not specified';
-    const requesterEmail = safeString(ticket.contact_email) || 'Not provided';
-    const requesterPhone = safeString(ticket.contact_phone) || 'Not provided';
-    const requesterContactParts: string[] = [];
-    if (requesterEmail && requesterEmail !== 'Not provided') {
-      requesterContactParts.push(requesterEmail);
-    }
-    if (requesterPhone && requesterPhone !== 'Not provided') {
-      requesterContactParts.push(requesterPhone);
-    }
-    const requesterDetailsParts: string[] = [];
-    if (requesterName && requesterName !== 'Not specified') {
-      requesterDetailsParts.push(requesterName);
-    }
-    requesterDetailsParts.push(...requesterContactParts);
-    const requesterContact = requesterContactParts.length > 0 ? requesterContactParts.join(' · ') : 'Not provided';
-    const requesterDetails = requesterDetailsParts.length > 0 ? requesterDetailsParts.join(' · ') : 'Not specified';
-
-    const boardName = safeString(ticket.board_name) || 'Not specified';
-    const categoryName = safeString(ticket.category_name);
-    const subcategoryName = safeString(ticket.subcategory_name);
-    const categoryDetails = categoryName && subcategoryName
-      ? `${categoryName} / ${subcategoryName}`
-      : categoryName || subcategoryName || 'Not categorized';
-
-    const locationSegments: string[] = [];
-    const locationName = safeString(ticket.location_name);
-    if (locationName) {
-      locationSegments.push(locationName);
-    }
-    const addressLines = [displayAddressField(safeString(ticket.address_line1)), safeString(ticket.address_line2)].filter(Boolean);
-    const cityState = [displayAddressField(safeString(ticket.city)), safeString(ticket.state_province)].filter(Boolean).join(', ');
-    const postalCountry = [safeString(ticket.postal_code), displayCountry(undefined, safeString(ticket.country_code))].filter(Boolean).join(' ');
-    const locationDetailsParts = [...addressLines];
-    if (cityState) {
-      locationDetailsParts.push(cityState);
-    }
-    if (postalCountry) {
-      locationDetailsParts.push(postalCountry);
-    }
-    if (locationDetailsParts.length > 0) {
-      locationSegments.push(locationDetailsParts.join(' · '));
-    }
-    const locationSummary = locationSegments.length > 0 ? locationSegments.join(' • ') : 'Not specified';
-
-    let rawDescription = '';
-    if (ticket.attributes && typeof ticket.attributes === 'object' && 'description' in ticket.attributes) {
-      rawDescription = safeString((ticket.attributes as Record<string, unknown>).description);
-    }
-    if (!rawDescription && 'description' in ticket) {
-      rawDescription = safeString((ticket as Record<string, unknown>).description);
-    }
-    // Email-ingested tickets store the inbound body as the first comment, not
-    // on the ticket row. Fall back to the initial-description comment (or the
-    // oldest comment) so the "New Ticket" email carries the user's original
-    // message instead of "No description provided".
-    if (!rawDescription) {
-      const descriptionComment = await tenantDb(db, tenantId).table('comments')
-        .select('note')
-        .where({ ticket_id: ticket.ticket_id })
-        .orderBy('created_at', 'asc')
-        .first();
-      if (descriptionComment?.note) {
-        rawDescription = safeString(descriptionComment.note);
-      }
-    }
-    // formatBlockNoteContent returns { html:'', text:'' } when the input is
-    // empty or is a BlockNote blob that has no extractable text — do NOT fall
-    // back to rawDescription here because it may be raw JSON which we'd
-    // otherwise leak into the email body.
-    const descriptionFormatting = formatBlockNoteContent(rawDescription);
-    const descriptionText = descriptionFormatting.text.trim();
-    const description = descriptionText || 'No description provided.';
-    const descriptionHtml = descriptionText
-      ? descriptionFormatting.html
-      : `<p>${description}</p>`;
-
-    const requesterDetailsForText = requesterDetails;
-    const assignedDetailsForText = assignedDetails;
-
-    const { internalUrl, portalUrl } = await resolveTicketLinks(db, tenantId, ticket.ticket_id, ticket.ticket_number);
-
-    const baseTicketContext = {
-      id: ticket.ticket_number,
-      title: ticket.title,
-      description,
-      descriptionText: description,
-      descriptionHtml: descriptionHtml,
-      priority: priorityName,
-      priorityColor,
-      status: statusName,
-      createdAt,
-      createdBy: createdByName,
-      createdDetails,
-      assignedToName,
-      assignedToEmail: assignedToEmailDisplay,
-      assignedDetails: assignedDetailsForText,
-      requesterName,
-      requesterEmail,
-      requesterPhone,
-      requesterContact,
-      requesterDetails: requesterDetailsForText,
-      board: boardName,
-      category: categoryName || 'Not categorized',
-      subcategory: subcategoryName || 'Not specified',
-      categoryDetails,
-      locationSummary,
-      clientName,
-      metaLine
-    };
+    const { baseTicketContext, priorityName, boardName, internalUrl, portalUrl } =
+      await buildTicketSummaryEmailContext(db, tenantId, ticket, creatorUserId);
 
     const buildContext = (url: string) => ({
       ticket: {
@@ -1282,6 +1309,100 @@ async function handleTicketCreated(event: TicketCreatedEvent): Promise<void> {
       error,
       eventId: event.id,
       ticketId: payload.ticketId
+    });
+    throw error;
+  }
+}
+
+/**
+ * Board notification rules (trigger: status entered). Sends one email per rule recipient,
+ * immediately — deliberately bypassing NotificationAccumulator so a status change is never
+ * merged into a later digest. Not fired at creation; never assigns or touches the watch list.
+ */
+async function handleTicketStatusChanged(event: { id?: string; payload: any }): Promise<void> {
+  const { payload } = event;
+  const { tenantId } = payload;
+  const actorUserId = payload.actorUserId || payload.userId;
+  const suppression = resolveTicketNotificationSuppression(payload);
+
+  try {
+    if (!shouldSendInternalTicketEmail(suppression)) {
+      return;
+    }
+    const db = await getConnection(tenantId);
+    const ticket = await fetchTicketForEmail(db, tenantId, payload.ticketId);
+    if (!ticket?.board_id) {
+      return;
+    }
+
+    const enteredStatusId: string = payload.newStatusId ?? ticket.status_id;
+    const assignees = await getAllTicketAssignees(db, tenantId, payload.ticketId);
+    const resolved = await resolveBoardNotificationRecipients(
+      db,
+      tenantId,
+      { kind: 'status_entered', statusId: enteredStatusId },
+      { excludeUserIds: [...assignees, actorUserId] }
+    );
+    if (resolved.length === 0) {
+      return;
+    }
+
+    // Active internal watchers already follow the ticket and get the standard update emails.
+    const watcherEmails = extractActiveWatcherEmails(ticket.attributes);
+    const internalWatchers = await resolveInternalWatcherEmails(db, tenantId, watcherEmails);
+    const notWatchers = resolved.filter(
+      (recipient) => !internalWatchers.has(normalizeRecipientEmail(recipient.email))
+    );
+    const recipients = notWatchers.length > 0
+      ? await filterRecipientsWhoCanReadTicket(db, tenantId, payload.ticketId, notWatchers)
+      : [];
+    if (recipients.length === 0) {
+      return;
+    }
+
+    const { baseTicketContext, priorityName, boardName, internalUrl } =
+      await buildTicketSummaryEmailContext(db, tenantId, ticket, actorUserId);
+
+    const statusNames = await tenantDb(db, tenantId).table('statuses')
+      .select('status_id', 'name')
+      .whereIn('status_id', [enteredStatusId, payload.previousStatusId].filter(Boolean));
+    const statusNameById = new Map<string, string>(
+      statusNames.map((row: { status_id: string; name: string }) => [row.status_id, row.name])
+    );
+    const enteredStatus = statusNameById.get(enteredStatusId) || baseTicketContext.status;
+    const previousStatus = statusNameById.get(payload.previousStatusId) || 'Unknown';
+
+    const context = {
+      ticket: {
+        ...baseTicketContext,
+        status: enteredStatus,
+        enteredStatus,
+        previousStatus,
+        url: internalUrl,
+      },
+    };
+    const sentEmails = new Set<string>();
+    for (const recipient of recipients) {
+      const key = normalizeRecipientEmail(recipient.email);
+      if (!isValidEmail(recipient.email) || sentEmails.has(key)) continue;
+      sentEmails.add(key);
+      await sendNotificationIfEnabled({
+        tenantId,
+        entityType: 'ticket',
+        entityId: ticket.ticket_id || payload.ticketId,
+        to: recipient.email,
+        subject: `Ticket Entered ${enteredStatus} on ${boardName} • ${ticket.title} (${priorityName})`,
+        template: 'ticket-board-status-entered',
+        context,
+        mailClass: 'ticket',
+        boardId: ticket.board_id,
+      }, 'Board Ticket Status Entered', recipient.userId);
+    }
+  } catch (error) {
+    logger.error('Error handling ticket status changed email:', {
+      eventId: event.id,
+      ticketId: payload.ticketId,
+      error,
     });
     throw error;
   }
@@ -3445,6 +3566,9 @@ async function dispatchTicketEmailHandlers(validatedEvent: any): Promise<void> {
     case 'TICKET_CREATED':
       await handleTicketCreated(validatedEvent as TicketCreatedEvent);
       break;
+    case 'TICKET_STATUS_CHANGED':
+      await handleTicketStatusChanged(validatedEvent);
+      break;
     case 'TICKET_UPDATED':
       await handleTicketUpdated(validatedEvent as TicketUpdatedEvent);
       break;
@@ -3474,6 +3598,7 @@ export const ticketEmailSubscriberTestHarness = {
   shouldSendTicketClosedWatcherEmail,
   resolveCloseEmailResolutions,
   handleTicketCreated,
+  handleTicketStatusChanged,
   handleTicketUpdated,
   handleTicketAssigned,
   handleTicketCommentAdded,
@@ -3491,6 +3616,7 @@ export async function registerTicketEmailSubscriber(): Promise<void> {
     // Subscribe to all ticket events with a single handler
     const ticketEventTypes = [
       'TICKET_CREATED',
+      'TICKET_STATUS_CHANGED',
       'TICKET_UPDATED',
       'TICKET_CLOSED',
       'TICKET_ASSIGNED',
@@ -3520,6 +3646,7 @@ export async function unregisterTicketEmailSubscriber(): Promise<void> {
   try {
     const ticketEventTypes = [
       'TICKET_CREATED',
+      'TICKET_STATUS_CHANGED',
       'TICKET_UPDATED',
       'TICKET_CLOSED',
       'TICKET_ASSIGNED',

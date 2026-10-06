@@ -125,7 +125,7 @@ export class InboundEmailOutboxEventPublisher implements IEventPublisher {
       payload: {
         tenantId: data.tenantId,
         ticketId: data.ticketId,
-        ...(data.userId ? { userId: data.userId } : {}),
+        ...(data.userId ? { userId: data.userId, actorUserId: data.userId, actorType: 'USER' } : {}),
         previousStatusId: data.previousStatusId,
         newStatusId: data.newStatusId,
         changedAt: data.changedAt,

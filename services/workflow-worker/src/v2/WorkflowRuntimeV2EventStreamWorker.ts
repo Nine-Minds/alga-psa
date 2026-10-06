@@ -1,3 +1,4 @@
+import { evaluateWorkflowSelfTrigger } from '@alga-psa/workflows/lib/workflowSelfTriggerGuard';
 import logger from '@shared/core/logger.js';
 import {
   RedisStreamClient,
@@ -411,6 +412,25 @@ export class WorkflowRuntimeV2EventStreamWorker {
         continue;
       }
 
+      const selfTrigger = await evaluateWorkflowSelfTrigger(knex, {
+        tenant: event.tenant,
+        originExecutionId: event.execution_id,
+        candidateWorkflowId: workflow.workflow_id,
+      });
+      if (!selfTrigger.allow) {
+        logger.warn('[WorkflowRuntimeV2EventStreamWorker] Skipping workflow launch: event was caused by this workflow chain', {
+          workerId: this.workerId,
+          eventId: event.event_id,
+          eventType: event.event_type,
+          tenant: event.tenant,
+          workflowId: workflow.workflow_id,
+          originExecutionId: event.execution_id,
+          reason: selfTrigger.reason,
+          causationDepth: selfTrigger.causationDepth,
+        });
+        continue;
+      }
+
       try {
         const launched = await launchPublishedWorkflowRun(knex, {
           workflowId: workflow.workflow_id,
@@ -421,7 +441,8 @@ export class WorkflowRuntimeV2EventStreamWorker {
           triggerMetadata: {
             eventType: event.event_type,
             sourcePayloadSchemaRef: effectiveSourceSchemaRef,
-            triggerMappingApplied: mappingApplied
+            triggerMappingApplied: mappingApplied,
+            ...(selfTrigger.causationDepth > 0 ? { causationDepth: selfTrigger.causationDepth } : {}),
           },
           eventType: event.event_type,
           sourcePayloadSchemaRef: effectiveSourceSchemaRef,
