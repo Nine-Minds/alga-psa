@@ -379,7 +379,7 @@ jobs:
           name: infrastructure-shard-${{ matrix.shard }}
           path: test-results/infrastructure/
           if-no-files-found: error
-          retention-days: 7
+          retention-days: 30
 
   infrastructure-complete:
     name: Infrastructure execution complete
@@ -417,7 +417,7 @@ jobs:
           name: infrastructure-execution-evidence
           path: test-results/infrastructure/
           if-no-files-found: error
-          retention-days: 7
+          retention-days: 30
       - name: Record full infrastructure metrics to Google Sheet
         if: always() && env.INFRA_MODE == 'full' && needs.infrastructure-tests.result != 'skipped'
         continue-on-error: true
@@ -547,7 +547,7 @@ jobs:
           name: workspace-db-evidence
           path: test-results/workspace-db/
           if-no-files-found: error
-          retention-days: 14
+          retention-days: 30
 
   workspace-db-complete:
     name: Workspace database execution complete
