@@ -880,6 +880,11 @@ export class TicketModel {
     analyticsTracker?: IAnalyticsTracker,
     userId?: string
   ): Promise<CreateTicketOutput> {
+    if (!eventPublisher) {
+      throw new Error(
+        'TicketModel.createTicket requires an eventPublisher (or silentTicketCreation(reason)); refusing to create a ticket that would never publish TICKET_CREATED'
+      );
+    }
     // Validate required tenant
     if (!tenant) {
       throw new Error('Tenant is required');
