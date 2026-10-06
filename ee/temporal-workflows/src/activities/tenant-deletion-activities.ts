@@ -484,6 +484,12 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   'checklist_template_apply_rules', 'checklist_template_items', 'checklist_templates',
   'board_close_rules',
 
+  // === Board notification rules (2026-10-06) ===
+  // Children first; these FK to boards, statuses, users and teams, so they must be
+  // deleted before all of those.
+  'board_notification_rule_recipients', 'board_notification_rule_statuses',
+  'board_notification_rules', 'board_default_watchers',
+
   // === LEVEL 5: Tickets and related ===
   // Ticket bundle settings and entity links must be deleted BEFORE tickets.
   // ticket_bundle_status_propagations FKs to tickets twice (master and child),
