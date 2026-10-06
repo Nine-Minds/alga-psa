@@ -40,6 +40,10 @@ import {
   readXeroServiceTargetKind,
   XERO_SALES_ACCOUNT_TYPES,
 } from '../lib/xero/xeroServiceMappingTarget';
+import {
+  AUTOMATIC_DISCOUNT_MAPPING_ID,
+  DISCOUNT_MAPPING_ENTITY_TYPE,
+} from '../lib/accountingDiscountMapping';
 
 const MAPPING_CACHE_TTL_MS = 30_000;
 
@@ -135,6 +139,7 @@ const CATALOG_ENTITY_TYPES = new Set([
   'tax_code',
   'payment_term',
   'client',
+  DISCOUNT_MAPPING_ENTITY_TYPE,
 ]);
 
 /**
@@ -261,6 +266,14 @@ async function assertLocalEntityOwnership(
       }
       return;
     }
+    case DISCOUNT_MAPPING_ENTITY_TYPE: {
+      if (entityId !== AUTOMATIC_DISCOUNT_MAPPING_ID) {
+        throw new ExpectedExternalMappingError(
+          `Cannot map discount ${entityId}: unknown discount.`
+        );
+      }
+      return;
+    }
     case 'client': {
       const row = await db.table('clients').where({ client_id: entityId }).first('client_id');
       if (!row) {
@@ -374,6 +387,7 @@ const QBO_REMOTE_ENTITY_TYPE: Record<string, string> = {
   payment_term: 'Term',
   client: 'Customer',
   invoice: 'Invoice',
+  [DISCOUNT_MAPPING_ENTITY_TYPE]: 'Item',
 };
 
 /**
@@ -394,7 +408,11 @@ type XeroCatalogKind = 'item' | 'taxRate' | 'account';
 const XERO_CATALOG_KIND: Record<string, XeroCatalogKind> = {
   service: 'item',
   tax_code: 'taxRate',
+  [DISCOUNT_MAPPING_ENTITY_TYPE]: 'item',
 };
+
+/** Entity types whose Xero target may be an Item or a revenue Account. */
+const XERO_ITEM_OR_ACCOUNT_ENTITY_TYPES = new Set(['service', DISCOUNT_MAPPING_ENTITY_TYPE]);
 
 /** A Xero catalog record in DELETED/ARCHIVED state is treated as non-existent. */
 function isXeroRecordUsable(status: string | undefined): boolean {
@@ -464,7 +482,7 @@ async function assertXeroRemoteEntityExists(
     );
   }
 
-  if (algaEntityType === 'service') {
+  if (XERO_ITEM_OR_ACCOUNT_ENTITY_TYPES.has(algaEntityType)) {
     // The declared target kind decides which catalog proves existence. It is
     // read from explicit metadata only — a present-but-unrecognised value is
     // rejected rather than defaulted, so garbage can never save as item mode.

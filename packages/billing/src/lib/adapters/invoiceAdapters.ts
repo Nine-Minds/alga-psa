@@ -262,8 +262,8 @@ export function buildInvoiceLocationGroups(items: WasmInvoiceLineItem[]): WasmIn
   return order.map((key) => grouped.get(key)!);
 }
 
-/** Round minor-unit minutes to display hours (2dp, minutes stay authoritative). */
-const minutesToHours = (minutes: number): number => Math.round((minutes / 60) * 100) / 100;
+/** Round minutes to display hours (6dp, like invoice_charges.quantity; minutes stay authoritative). */
+const minutesToHours = (minutes: number): number => Math.round((minutes / 60) * 1e6) / 1e6;
 
 /** Snapshot input for the billed-time collections: entry + owning charge id. */
 export type InvoiceTimeCollectionSource = IInvoiceChargeTimeEntrySnapshot & {
@@ -436,23 +436,31 @@ function attachTicketPresentation(
 ): void {
   const byId = new Map(charges.map((charge) => [charge.item_id, charge]));
   const conflicts = new Set<string>();
-  const owners = new Map<string, string[]>();
+  const owners = new Map<string, Array<{ itemId: string; segment: string | null }>>();
   for (const charge of charges) {
     for (const link of charge.time_entry_links ?? []) {
       const prior = owners.get(link.entryId) ?? [];
-      prior.push(charge.item_id);
+      const segment = (link.snapshot as { segment?: unknown } | null)?.segment;
+      prior.push({ itemId: charge.item_id, segment: typeof segment === 'string' ? segment : null });
       owners.set(link.entryId, prior);
     }
   }
-  for (const ids of owners.values()) if (ids.length > 1) ids.forEach((id) => conflicts.add(id));
-  const eligible = new Set<string>();
-  const sources: InvoiceTimeCollectionSource[] = [];
+  // An overtime entry is billed as two charges, each linking the entry with
+  // its own segment snapshot (regular + overtime). Anything else claiming one
+  // entry from several charges is a conflict.
+  const isSegmentPair = (links: Array<{ segment: string | null }>): boolean =>
+    links.length === 2 && new Set(links.map((link) => link.segment)).size === 2 && links.every((link) => link.segment !== null);
+  for (const links of owners.values()) {
+    if (links.length > 1 && !isSegmentPair(links)) links.forEach((link) => conflicts.add(link.itemId));
+  }
   const isTime = (id: string): boolean => {
     const charge = byId.get(id);
     return charge?.billing_charge_type != null
       ? charge.billing_charge_type === 'time'
       : Boolean(charge?.time_entry_links?.length);
   };
+  const eligible = new Set<string>();
+  const sources: InvoiceTimeCollectionSource[] = [];
   const canonicalRow = (item: WasmInvoiceViewModel['items'][number]): InvoiceTicketPresentationRow => ({
     ...item, timePresentation: true, label: '', rate: isTime(item.id) ? null : item.unitPrice,
     ...(isTime(item.id) ? { rateKind: 'unknown' as const } : {}),
