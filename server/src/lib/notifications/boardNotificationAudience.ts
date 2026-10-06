@@ -13,6 +13,14 @@ import type { ResolvedRecipient } from '@alga-psa/shared/lib/tickets/boardNotifi
  * Lives in server/ because it depends on @alga-psa/auth and @alga-psa/tickets,
  * which shared/ must not import.
  */
+/** The error `authorizeTicketRecordAccess` throws for a denial (or a ticket the user cannot see). */
+function isAccessDenied(error: unknown): boolean {
+  return (
+    error instanceof Error &&
+    (error.message.startsWith('Permission denied') || error.message === 'Ticket not found')
+  );
+}
+
 export async function filterRecipientsWhoCanReadTicket(
   db: Knex | Knex.Transaction,
   tenant: string,
@@ -27,8 +35,12 @@ export async function filterRecipientsWhoCanReadTicket(
       if (!(await hasPermission(user, 'ticket', 'read', db))) continue;
       await authorizeTicketRecordAccess({ trx: db, tenant, user, ticketId, action: 'read' });
       allowed.push(recipient);
-    } catch {
-      // Denied (or unresolvable) recipients are dropped rather than failing the whole event.
+    } catch (error) {
+      // Only an actual access denial drops the recipient. Anything else (notably a
+      // database error) must propagate: on the inbound outbox path `db` is the ledger
+      // transaction, which a DB error aborts, so swallowing it would only defer the
+      // failure to the next statement with a misleading 'transaction is aborted'.
+      if (!isAccessDenied(error)) throw error;
     }
   }
   return allowed;
