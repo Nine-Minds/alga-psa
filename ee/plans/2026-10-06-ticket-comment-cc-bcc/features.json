@@ -52,9 +52,9 @@
   {"id": "F039", "commitGroup": "timeline-display", "prdRefs": ["FR27", "FR29"], "implemented": true, "description": "MSP comment timeline shows muted 'Cc: …' and 'Bcc: …' lines (names when known, else email) under the comment header"},
   {"id": "F040", "commitGroup": "timeline-display", "prdRefs": ["FR28", "FR29"], "implemented": true, "description": "Client portal comment actions strip email_recipients.bcc before returning; portal timeline shows Cc only"},
 
-  {"id": "F041", "commitGroup": "mobile", "prdRefs": ["UX: Mobile"], "implemented": false, "description": "ee/mobile addTicketComment API client sends cc/bcc"},
-  {"id": "F042", "commitGroup": "mobile", "prdRefs": ["UX: Mobile"], "implemented": false, "description": "Mobile comment composer has an expandable Cc/Bcc section with email chips and contact suggestions, hidden for internal comments, reset after send"},
-  {"id": "F043", "commitGroup": "mobile", "prdRefs": ["UX: Mobile"], "implemented": false, "description": "Mobile comment list shows Cc/Bcc lines"},
+  {"id": "F041", "commitGroup": "mobile", "prdRefs": ["UX: Mobile"], "implemented": true, "description": "ee/mobile addTicketComment API client sends cc/bcc"},
+  {"id": "F042", "commitGroup": "mobile", "prdRefs": ["UX: Mobile"], "implemented": true, "description": "Mobile comment composer has an expandable Cc/Bcc section with email chips and contact suggestions, hidden for internal comments, reset after send"},
+  {"id": "F043", "commitGroup": "mobile", "prdRefs": ["UX: Mobile"], "implemented": true, "description": "Mobile comment list shows Cc/Bcc lines"},
 
   {"id": "F044", "commitGroup": "i18n", "prdRefs": ["UX: i18n"], "implemented": true, "description": "All new MSP, client-portal and mobile strings use t() keys added to every locale file"}
 ]

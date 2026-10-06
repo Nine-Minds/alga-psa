@@ -587,6 +587,10 @@ export function TicketDetailBody({
             closeStatusId={commentDraftHook.commentCloseStatusId}
             scheduleAt={commentDraftHook.commentScheduleAt}
             onChangeScheduleAt={commentDraftHook.setCommentScheduleAt}
+            cc={commentDraftHook.commentCc}
+            bcc={commentDraftHook.commentBcc}
+            onChangeCc={commentDraftHook.setCommentCc}
+            onChangeBcc={commentDraftHook.setCommentBcc}
             onChangeCloseStatusId={commentDraftHook.setCommentCloseStatusId}
             onSend={(notificationSuppression) => void commentDraftHook.sendComment(notificationSuppression)}
             sending={commentDraftHook.commentSending}
