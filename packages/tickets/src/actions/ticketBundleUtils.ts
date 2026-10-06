@@ -311,6 +311,10 @@ export type MirrorCommentSource = {
  * ticket_bundle_mirrors. Idempotent on (source_comment_id, child_ticket_id):
  * returns null when a mirror already exists. Shared with addTicketComment's
  * sync_updates loop so the mirrored shape is defined once.
+ *
+ * `MirrorCommentSource` deliberately omits `metadata`: a one-off Cc/Bcc belongs
+ * to the ticket it was added to, so the mirrored child copy never inherits
+ * `metadata.email_recipients` and never mails those addresses again.
  */
 export async function mirrorCommentToChild(
   trx: Knex.Transaction,

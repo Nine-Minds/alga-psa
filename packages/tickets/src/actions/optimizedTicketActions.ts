@@ -4,6 +4,10 @@ import type { ContactVisibilityContext } from '../lib/clientPortalVisibility';
 import { persistCommentPublication } from '@alga-psa/shared/lib/ticketCommentAttachments';
 
 import { reconcileCommentAttachments } from '@shared/lib/ticketCommentAttachments';
+import {
+  prepareCommentEmailRecipients,
+  type CommentEmailRecipientsInput,
+} from '@shared/lib/tickets/commentEmailRecipients';
 import type {
   ITicket,
   ITicketListItem,
@@ -3302,6 +3306,7 @@ export const addTicketCommentWithCache = withAuth(async (
     'suppressContactNotifications' | 'suppressInternalNotifications'
   >,
   schedule?: ScheduledCommentPublication | null,
+  emailRecipients?: CommentEmailRecipientsInput | null,
 ): Promise<IComment | TicketActionError> => {
   const {knex: db} = await createTenantKnex();
 
@@ -3385,6 +3390,14 @@ export const addTicketCommentWithCache = withAuth(async (
     const effectiveIsInternal = authorType === 'internal' ? isInternal : false;
     const nowIso = new Date().toISOString();
 
+    // One-off Cc/Bcc for this comment only. Validation rejects internal notes,
+    // so the check runs against the effective visibility, not the raw flag.
+    const resolvedEmailRecipients = await prepareCommentEmailRecipients(trx, tenant, {
+      cc: emailRecipients?.cc,
+      bcc: emailRecipients?.bcc,
+      isInternal: effectiveIsInternal,
+    });
+
     await tenantDb(trx, tenant).table('comment_threads').insert({
       tenant,
       thread_id: threadId,
@@ -3422,7 +3435,14 @@ export const addTicketCommentWithCache = withAuth(async (
       // The email subscriber reads metadata.closes_ticket and skips the
       // comment-added email so the close email is the single source of
       // truth when the UI is closing the ticket immediately after.
-      ...(effectiveClosesTicket ? { metadata: { closes_ticket: true } } : {}),
+      ...(effectiveClosesTicket || resolvedEmailRecipients
+        ? {
+            metadata: {
+              ...(effectiveClosesTicket ? { closes_ticket: true } : {}),
+              ...(resolvedEmailRecipients ? { email_recipients: resolvedEmailRecipients } : {}),
+            },
+          }
+        : {}),
     }).returning('*');
 
       await reconcileCommentAttachments(trx, tenant, newComment.comment_id!, user.user_id);
@@ -3630,6 +3650,7 @@ export async function addTicketCommentWithCacheForCurrentUser(
     'suppressContactNotifications' | 'suppressInternalNotifications'
   >,
   schedule?: ScheduledCommentPublication | null,
+  emailRecipients?: CommentEmailRecipientsInput | null,
 ): Promise<IComment | TicketActionError> {
   return addTicketCommentWithCache(
     ticketId,
@@ -3639,6 +3660,7 @@ export async function addTicketCommentWithCacheForCurrentUser(
     closesTicket,
     notificationSuppression,
     schedule,
+    emailRecipients,
   );
 }
 

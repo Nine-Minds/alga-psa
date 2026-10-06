@@ -33,6 +33,9 @@ export interface NormalizeCommentEmailRecipientsInput {
   isInternal?: boolean;
 }
 
+/** One-off Cc/Bcc a caller supplies for a single public comment. */
+export type CommentEmailRecipientsInput = { cc?: string[]; bcc?: string[] };
+
 function toInputList(value: readonly string[] | null | undefined): string[] {
   if (!Array.isArray(value)) {
     return [];
