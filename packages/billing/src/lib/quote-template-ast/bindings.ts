@@ -54,6 +54,9 @@ export const QUOTE_TEMPLATE_VALUE_BINDINGS: QuoteTemplateValueBindings = {
   productSubtotal: { id: 'productSubtotal', kind: 'value', path: 'product_subtotal' },
   productTax: { id: 'productTax', kind: 'value', path: 'product_tax' },
   productTotal: { id: 'productTotal', kind: 'value', path: 'product_total' },
+  optionalSubtotal: { id: 'optionalSubtotal', kind: 'value', path: 'optional_subtotal' },
+  optionalTax: { id: 'optionalTax', kind: 'value', path: 'optional_tax' },
+  optionalTotal: { id: 'optionalTotal', kind: 'value', path: 'optional_total' },
 };
 
 export const QUOTE_TEMPLATE_COLLECTION_BINDINGS: QuoteTemplateCollectionBindings = {
@@ -63,6 +66,16 @@ export const QUOTE_TEMPLATE_COLLECTION_BINDINGS: QuoteTemplateCollectionBindings
   // "bands" (one location + address header + rows + per-location subtotal).
   // Mirrors the `phases` binding shape.
   groupsByLocation: { id: 'groupsByLocation', kind: 'collection', path: 'groups_by_location' },
+  // Pre-computed cadence bands (one cadence + rows + per-band subtotal/tax/
+  // total). `groupsByCadence` holds the required bands; the optional add-on
+  // bands live in `groupsByCadenceWithOptionals` so empty optional sections
+  // are omitted without a node-level conditional.
+  groupsByCadence: { id: 'groupsByCadence', kind: 'collection', path: 'groups_by_cadence' },
+  groupsByCadenceWithOptionals: {
+    id: 'groupsByCadenceWithOptionals',
+    kind: 'collection',
+    path: 'groups_by_cadence_with_optionals',
+  },
   recurringItems: { id: 'recurringItems', kind: 'collection', path: 'recurring_items' },
   onetimeItems: { id: 'onetimeItems', kind: 'collection', path: 'onetime_items' },
   serviceItems: { id: 'serviceItems', kind: 'collection', path: 'service_items' },

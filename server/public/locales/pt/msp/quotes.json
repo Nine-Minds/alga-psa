@@ -351,6 +351,14 @@
       "subtotal": "Subtotal",
       "discounts": "Descontos",
       "tax": "Imposto",
+      "optionalIfSelected": "Opcional se selecionado",
+      "cadence": {
+        "monthly": "Mensal",
+        "quarterly": "Trimestral",
+        "semiAnnually": "Semestral",
+        "annually": "Anual",
+        "oneTime": "Único"
+      },
       "statusLabel": "Status",
       "approvalLabel": "Aprovação",
       "approvalMessage": "As cotações precisam da aprovação do líder de vendas antes do envio.",
@@ -505,6 +513,7 @@
       "noPriceInCurrency": "Sem preço em {{currencyCode}}",
       "optional": "Opcional",
       "phaseSection": "Fase/Seção",
+      "preselected": "Pré-selecionado",
       "recurring": "Recorrente",
       "service": "serviço",
       "setPrice": "Definir preço",

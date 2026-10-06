@@ -28,6 +28,7 @@ import QuoteStatusBadge from './QuoteStatusBadge';
 import { QuoteTermsContent } from '@alga-psa/ui/editor';
 import { ArrowLeft } from 'lucide-react';
 import { QuoteSendDialog, type QuoteSendDialogPayload } from './QuoteSendDialog';
+import { isQuoteItemIncluded } from '../../../lib/quoteItemInclusion';
 
 interface QuoteDetailProps {
   quoteId: string;
@@ -42,11 +43,11 @@ function formatQuoteNumber(quote: IQuote, templateQuoteLabel: string): string {
 }
 
 function hasConvertibleRecurringItems(quote: IQuote | null): boolean {
-  return Boolean((quote?.quote_items || []).some((item) => item.is_recurring && !item.is_discount && (!item.is_optional || item.is_selected !== false)));
+  return Boolean((quote?.quote_items || []).some((item) => item.is_recurring && !item.is_discount && isQuoteItemIncluded(item)));
 }
 
 function hasConvertibleOneTimeItems(quote: IQuote | null): boolean {
-  const oneTimeItems = (quote?.quote_items || []).filter((item) => !item.is_recurring && (!item.is_optional || item.is_selected !== false));
+  const oneTimeItems = (quote?.quote_items || []).filter((item) => !item.is_recurring && isQuoteItemIncluded(item));
   if (oneTimeItems.some((item) => !item.is_discount)) {
     return true;
   }
@@ -68,7 +69,7 @@ function hasConvertibleProductOneTimeItems(quote: IQuote | null): boolean {
         item.service_item_kind === 'product' &&
         !item.is_recurring &&
         !item.is_discount &&
-        (!item.is_optional || item.is_selected !== false),
+        isQuoteItemIncluded(item),
     ),
   );
 }
@@ -105,7 +106,7 @@ function renderQuoteDetailRow(
   availability?: ProductAvailability | null,
 ) {
   const showClientSelection = quote.status === 'accepted' && item.is_optional;
-  const clientSelected = item.is_selected !== false;
+  const clientSelected = isQuoteItemIncluded(item);
 
   return (
     <tr
@@ -1178,7 +1179,7 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
               <div className="space-y-4">
                 {locationGroups.map((group) => {
                   const subtotal = group.items
-                    .filter((item) => !item.is_discount && (!item.is_optional || item.is_selected !== false))
+                    .filter((item) => !item.is_discount && isQuoteItemIncluded(item))
                     .reduce((sum, item) => sum + (Number(item.total_price) || 0), 0);
                   return (
                     <div key={group.key} className="overflow-hidden rounded-md border border-border">

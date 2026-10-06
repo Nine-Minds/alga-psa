@@ -351,6 +351,14 @@
       "subtotal": "Suma częściowa",
       "discounts": "Rabaty",
       "tax": "Podatek",
+      "optionalIfSelected": "Opcjonalne po wybraniu",
+      "cadence": {
+        "monthly": "Miesięcznie",
+        "quarterly": "Kwartalnie",
+        "semiAnnually": "Półrocznie",
+        "annually": "Rocznie",
+        "oneTime": "Jednorazowo"
+      },
       "statusLabel": "Status",
       "approvalLabel": "Zatwierdzenie",
       "approvalMessage": "Oferty wymagają zatwierdzenia przez kierownika sprzedaży przed wysłaniem.",
@@ -505,6 +513,7 @@
       "noPriceInCurrency": "Brak ceny w {{currencyCode}}",
       "optional": "Fakultatywny",
       "phaseSection": "Faza / sekcja",
+      "preselected": "Wstępnie wybrane",
       "recurring": "Powtarzający się",
       "service": "praca",
       "setPrice": "Ustal cenę",

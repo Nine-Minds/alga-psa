@@ -40,11 +40,23 @@ import {
 } from '../locations/locationGrouping';
 import { QuoteSendRecipientsField, type QuoteRecipient } from './QuoteSendRecipientsField';
 import QuoteStatusBadge from './QuoteStatusBadge';
-import { calculateDraftMonthlyRecurringNet, calculateDraftQuoteTotals, createDraftQuoteItemFromQuoteItem, formatDraftQuoteMoney, type DraftQuoteItem } from './quoteLineItemDraft';
+import { calculateDraftCadenceSummary, calculateDraftMonthlyRecurringNet, calculateDraftQuoteTotals, createDraftQuoteItemFromQuoteItem, formatDraftQuoteMoney, type DraftQuoteItem } from './quoteLineItemDraft';
 import { QuoteTermsContent, TextEditor } from '@alga-psa/ui/editor';
 import type { PartialBlock } from '@blocknote/core';
 import { flattenBlockContentToPlainText } from '@alga-psa/formatting/blocknoteUtils';
 import { getQuoteValidityDays } from '../../../constants/billing';
+import { isQuoteItemIncluded } from '../../../lib/quoteItemInclusion';
+
+// Cadence key -> the `quoteForm.sidebar.cadence.*` leaf. Unknown cadences fall
+// back to the adapter's English `entry.name` so a new cadence never renders a
+// raw key.
+const CADENCE_SIDEBAR_LABEL_KEYS: Record<string, string> = {
+  monthly: 'monthly',
+  quarterly: 'quarterly',
+  'semi-annually': 'semiAnnually',
+  annually: 'annually',
+  onetime: 'oneTime',
+};
 
 interface QuoteFormProps {
   quoteId?: string | null;
@@ -461,6 +473,13 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
   // monthly rows through the allocation.
   const recurringMonthlySubtotal = useMemo(
     () => calculateDraftMonthlyRecurringNet(lineItems),
+    [lineItems],
+  );
+
+  // Per-cadence required nets and optional add-on totals, so the editor
+  // summary shows the same cadence bands the grouped PDF renders.
+  const cadenceSummary = useMemo(
+    () => calculateDraftCadenceSummary(lineItems),
     [lineItems],
   );
 
@@ -1022,11 +1041,11 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
   };
 
   const canConvertToContract = useMemo(() => {
-    return Boolean((quote?.quote_items || []).some((item) => item.is_recurring && !item.is_discount && (!item.is_optional || item.is_selected !== false)));
+    return Boolean((quote?.quote_items || []).some((item) => item.is_recurring && !item.is_discount && isQuoteItemIncluded(item)));
   }, [quote]);
   const canConvertToInvoice = useMemo(() => {
     if (quote?.converted_invoice_id) return false;
-    const oneTimeItems = (quote?.quote_items || []).filter((item) => !item.is_recurring && (!item.is_optional || item.is_selected !== false));
+    const oneTimeItems = (quote?.quote_items || []).filter((item) => !item.is_recurring && isQuoteItemIncluded(item));
     return oneTimeItems.some((item) => !item.is_discount);
   }, [quote]);
   // Product one-time lines are what convert to a sales order (F002/D2).
@@ -1038,7 +1057,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
             item.service_item_kind === 'product' &&
             !item.is_recurring &&
             !item.is_discount &&
-            (!item.is_optional || item.is_selected !== false),
+            isQuoteItemIncluded(item),
         ),
       ),
     [quote],
@@ -1317,6 +1336,17 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
   const formattedRecurringMonthly = recurringMonthlySubtotal > 0
     ? formatDraftQuoteMoney(recurringMonthlySubtotal, form.currency_code)
     : null;
+  const formattedOptionalTotal = draftTotals.optional_total > 0
+    ? formatDraftQuoteMoney(draftTotals.optional_total, form.currency_code)
+    : null;
+  const formattedCadenceSummary = cadenceSummary
+    .filter((entry) => entry.net > 0)
+    .map((entry) => ({
+      cadence_key: entry.cadence_key,
+      name: entry.name,
+      labelKey: CADENCE_SIDEBAR_LABEL_KEYS[entry.cadence_key] ?? null,
+      amount: formatDraftQuoteMoney(entry.net, form.currency_code),
+    }));
 
   const headerTitle = isTemplate
     ? (isEditMode
@@ -1865,6 +1895,22 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
                     <dt className="text-muted-foreground">{t('quoteForm.sidebar.tax', { defaultValue: 'Tax' })}</dt>
                     <dd>{formattedTax}</dd>
                   </div>
+                  {formattedCadenceSummary.map((entry) => (
+                    <div key={entry.cadence_key} className="flex items-center justify-between">
+                      <dt className="text-muted-foreground">
+                        {entry.labelKey
+                          ? t(`quoteForm.sidebar.cadence.${entry.labelKey}`, { defaultValue: entry.name })
+                          : entry.name}
+                      </dt>
+                      <dd>{entry.amount}</dd>
+                    </div>
+                  ))}
+                  {formattedOptionalTotal && (
+                    <div className="flex items-center justify-between">
+                      <dt className="text-muted-foreground">{t('quoteForm.sidebar.optionalIfSelected', { defaultValue: 'Optional if selected' })}</dt>
+                      <dd>{formattedOptionalTotal}</dd>
+                    </div>
+                  )}
                 </dl>
               </section>
 

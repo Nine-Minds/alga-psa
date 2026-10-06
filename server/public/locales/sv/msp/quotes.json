@@ -351,6 +351,14 @@
       "subtotal": "Delsumma",
       "discounts": "Rabatter",
       "tax": "Moms",
+      "optionalIfSelected": "Tillval om valt",
+      "cadence": {
+        "monthly": "Månadsvis",
+        "quarterly": "Kvartalsvis",
+        "semiAnnually": "Halvårsvis",
+        "annually": "Årligen",
+        "oneTime": "Engångsdebitering"
+      },
       "statusLabel": "Status",
       "approvalLabel": "Godkännande",
       "approvalMessage": "Offerter måste godkännas av försäljningsansvarig innan de skickas.",
@@ -504,6 +512,7 @@
       "itemCountOther": "{{count}} rader",
       "noPriceInCurrency": "Inget pris i {{currencyCode}}",
       "optional": "Valfri",
+      "preselected": "Förvald",
       "phaseSection": "Fas / avsnitt",
       "recurring": "Återkommande",
       "service": "tjänst",

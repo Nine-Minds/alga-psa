@@ -351,6 +351,14 @@
       "subtotal": "Subtotal",
       "discounts": "Discounts",
       "tax": "Tax",
+      "optionalIfSelected": "Optional if selected",
+      "cadence": {
+        "monthly": "Monthly",
+        "quarterly": "Quarterly",
+        "semiAnnually": "Semi-annually",
+        "annually": "Annually",
+        "oneTime": "One-time"
+      },
       "statusLabel": "Status",
       "approvalLabel": "Approval",
       "approvalMessage": "Quotes need sales lead approval before sending.",
@@ -505,6 +513,7 @@
       "noPriceInCurrency": "No price in {{currencyCode}}",
       "optional": "Optional",
       "phaseSection": "Phase / Section",
+      "preselected": "Pre-selected",
       "recurring": "Recurring",
       "service": "service",
       "setPrice": "Set price",
