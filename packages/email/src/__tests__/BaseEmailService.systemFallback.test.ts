@@ -35,6 +35,7 @@ describe('BaseEmailService system-Resend fallback smoke', () => {
     vi.spyOn(service as any, 'logEmailSendResult').mockResolvedValue(undefined);
 
     await expect(service.sendEmail({
+      mailClass: 'general',
       tenantId: 'tenant-1',
       to: 'customer@example.test',
       subject: 'Status',

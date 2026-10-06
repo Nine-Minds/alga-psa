@@ -1422,7 +1422,7 @@ export const cancelAppointmentRequest = withAuth(async (
         // Email to client confirming cancellation
         const cancellationRecipient = contact.email || currentUser.email;
         if (isValidEmail(cancellationRecipient)) {
-          await emailService.sendEmail({
+          await emailService.sendTenantScopedEmail({
             to: cancellationRecipient,
             subject: 'Appointment Request Cancelled',
           html: `
@@ -1439,7 +1439,7 @@ export const cancelAppointmentRequest = withAuth(async (
             <p>If you would like to reschedule, please submit a new appointment request.</p>
           `,
             tenantId: tenant
-          });
+          }, 'scheduling');
         }
 
         // Send internal notification to CLIENT

@@ -1,6 +1,10 @@
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import { toISODate, toPlainDate } from '@alga-psa/core';
+import {
+  ticketProjectAttributionJoin,
+  ticketProjectIdExpression,
+} from '@alga-psa/shared/billingClients/ticketProjectAttribution';
 import type { ISO8601String } from '@alga-psa/types';
 import {
   buildContractLineAttributionDecision,
@@ -114,9 +118,24 @@ async function loadWindowRecords(params: {
     .filter((projectId: unknown): projectId is string => typeof projectId === 'string');
 
   const timeQuery = db.table<any>('time_entries');
+  // This writer runs inside the generation transaction immediately before the
+  // engine's loaders, and it repeats their fixed-price exclusion and
+  // billing-profile COALESCE. It therefore has to resolve the project the same
+  // way they do, or it would pre-write a contract line for ticket time the
+  // engine then refuses to bill, and choose that line without the project's
+  // billing profile.
+  timeQuery.joinRaw(ticketProjectAttributionJoin('time_entries'));
   db.tenantJoin(timeQuery, 'project_tasks', 'time_entries.work_item_id', 'project_tasks.task_id', { type: 'left' });
   db.tenantJoin(timeQuery, 'project_phases', 'project_tasks.phase_id', 'project_phases.phase_id', { type: 'left' });
-  db.tenantJoin(timeQuery, 'projects', 'project_phases.project_id', 'projects.project_id', { type: 'left' });
+  db.tenantJoin(
+    timeQuery,
+    'projects',
+    trx.raw(ticketProjectIdExpression('project_phases')) as unknown as string,
+    'projects.project_id',
+    // project_phases is null for ticket time, so the tenant predicate comes
+    // from the time entry rather than the (inferred) phase.
+    { type: 'left', rootTenantColumn: 'time_entries.tenant' },
+  );
   db.tenantJoin(timeQuery, 'tickets', 'time_entries.work_item_id', 'tickets.ticket_id', { type: 'left' });
 
   const timeEntriesQuery = timeQuery

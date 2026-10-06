@@ -1,11 +1,12 @@
 import { z } from 'zod';
 import type { WorkflowDefinition, PublishError, Step, NodeStep, InputMapping } from '../types';
 import { workflowDefinitionSchema } from '../types';
+import { dateTriggerPayloadSchemaRefs } from '../schemas/dateTriggerPayloadSchemas';
 import { getNodeTypeRegistry } from '../registries/nodeTypeRegistry';
 import { getActionRegistryV2 } from '../registries/actionRegistry';
 import { validateExpressionSource, describeExpressionError } from '../expressionEngine';
 import { WORKFLOW_RUNTIME_ALLOWED_FUNCTIONS } from '../expressionFunctions';
-import { zodToJsonSchema } from 'zod-to-json-schema';
+import { zodToWorkflowJsonSchema } from '../jsonSchemaMetadata';
 import { didYouMean } from './didYouMean';
 import { validateInputMapping, validateInputMappingSchema, collectSecretRefsFromConfig } from './mappingValidator';
 import { getWorkflowEventCorrelationPaths } from '../correlationDefaults';
@@ -53,6 +54,30 @@ export function validateWorkflowDefinition(
         code: 'INVALID_WORKFLOW_DEFINITION',
         message: 'Workflow definition failed schema validation'
       });
+    }
+  }
+
+  if (definition.trigger?.type === 'date') {
+    const expectedSchemaRef = dateTriggerPayloadSchemaRefs[definition.trigger.source];
+    if (definition.payloadSchemaRef !== expectedSchemaRef) {
+      errors.push({
+        severity: 'error',
+        stepPath: 'trigger',
+        code: 'DATE_TRIGGER_SCHEMA_MISMATCH',
+        message: `Date trigger source "${definition.trigger.source}" requires payload schema "${expectedSchemaRef}".`
+      });
+    }
+    if (definition.trigger.timezone) {
+      try {
+        new Intl.DateTimeFormat('en-US', { timeZone: definition.trigger.timezone });
+      } catch {
+        errors.push({
+          severity: 'error',
+          stepPath: 'trigger',
+          code: 'INVALID_TRIGGER_TIMEZONE',
+          message: `Date trigger timezone "${definition.trigger.timezone}" is not a valid IANA timezone.`,
+        });
+      }
     }
   }
 
@@ -283,7 +308,7 @@ function validateNodeStep(
             }
           }
 
-          const actionSchemaJson = zodToJsonSchema(action.inputSchema, { name: `${action.id}@${action.version}.input` }) as Record<string, unknown>;
+          const actionSchemaJson = zodToWorkflowJsonSchema(action.inputSchema, `${action.id}@${action.version}.input`);
           const requiredErrors = validateInputMappingSchema(config.inputMapping, actionSchemaJson, {
             stepPath,
             stepId: step.id,

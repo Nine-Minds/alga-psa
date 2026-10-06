@@ -8,6 +8,7 @@ import logger from '@alga-psa/core/logger';
 import { TenantEmailService } from '@alga-psa/email';
 import { StaticTemplateProcessor } from '@alga-psa/email';
 import { EmailProviderError } from '@alga-psa/types';
+import type { OutboundMailClass } from '@alga-psa/types';
 import { getUserInfoForEmail, resolveEmailLocale } from '@alga-psa/notifications/notifications/emailLocaleResolver';
 import { SupportedLocale } from '@alga-psa/core/i18n/config';
 import Handlebars from 'handlebars';
@@ -23,6 +24,27 @@ function isEmailServiceDisabledErrorMessage(message: unknown): boolean {
   return message.includes(EMAIL_SERVICE_DISABLED_MESSAGE) || message.includes('disabled or not configured');
 }
 
+/**
+ * Extract provider failure identifiers for the notification failure log.
+ * EmailProviderError stores its provider code in errorCode (not code) and
+ * carries provider status/request-id on metadata; ordinary Error and non-Error
+ * throws must not throw here.
+ */
+export function extractProviderErrorLogFields(error: unknown): {
+  errorCode?: string;
+  status?: number;
+  requestId?: string;
+} {
+  const providerError = (error ?? undefined) as
+    | { errorCode?: unknown; metadata?: Record<string, unknown> | undefined }
+    | undefined;
+  const errorCode = typeof providerError?.errorCode === 'string' ? providerError.errorCode : undefined;
+  const metadata = providerError?.metadata;
+  const status = metadata && Number.isFinite(Number(metadata.status)) ? Number(metadata.status) : undefined;
+  const requestId = typeof metadata?.requestId === 'string' ? metadata.requestId : undefined;
+  return { errorCode, status, requestId };
+}
+
 interface ReplyMarkerPayload {
   token: string;
   ticketId?: string;
@@ -32,6 +54,9 @@ interface ReplyMarkerPayload {
 }
 
 export interface SendEmailParams {
+  mailClass: OutboundMailClass;
+  boardId?: string;
+  senderId?: string;
   tenantId: string;
   to: string;
   subject: string;
@@ -500,6 +525,9 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
         'unknown', 'unknown', false, 'COMMENT_DELIVERY_RECONCILIATION_REQUIRED', { requiresReconciliation: true });
     }
     const result = await service.sendEmail({
+      mailClass: params.mailClass,
+      boardId: params.boardId,
+      senderId: params.senderId,
       revalidateCommentOnRetry: managedCommentDelivery,
       to: params.to,
       tenantId: params.tenantId,
@@ -631,6 +659,12 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
       return;
     }
 
+    // EmailProviderError stores its provider code in errorCode (not code) and
+    // carries provider status/request-id on metadata. Log them explicitly so
+    // the logger does not depend on serializing the raw error's non-enumerable
+    // provider-specific properties.
+    const { errorCode, status: providerStatus, requestId } = extractProviderErrorLogFields(error);
+
     logger.error('[SendEventEmail] Failed to publish email event:', {
       error,
       to: params.to,
@@ -638,6 +672,9 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
       tenantId: params.tenantId,
       template: params.template,
       errorMessage,
+      errorCode,
+      status: providerStatus,
+      requestId,
       errorStack: error instanceof Error ? error.stack : undefined
     });
     throw error;

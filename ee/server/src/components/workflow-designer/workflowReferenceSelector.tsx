@@ -9,6 +9,7 @@ import { resolveLocalJsonSchemaRef } from './jsonSchemaRefs';
 import type { DataTreeContext } from './mapping/SourceDataTree';
 import {
   TypeCompatibility,
+  canSendAsOneItemList,
   getTypeCompatibility,
 } from './mapping/typeCompatibility';
 
@@ -48,18 +49,55 @@ const pushUniqueReferenceField = (
   target.push(option);
 };
 
+export type ReferenceItemLabels = {
+  /** Suffix for a list's first item, e.g. "(first item)". */
+  firstItem: string;
+  /** Suffix for a list's last item, e.g. "(last item)". */
+  lastItem: string;
+  /** Label for a step's entire saved result, e.g. "Entire result". */
+  wholeResult?: string;
+};
+
+const DEFAULT_ITEM_LABELS: ReferenceItemLabels = {
+  firstItem: '(first item)',
+  lastItem: '(last item)',
+  wholeResult: 'Entire result',
+};
+
 const flattenReferenceFields = (
   fields: DataTreeContext['payload'],
-  labelPrefix: string
+  labelPrefix: string,
+  itemLabels: ReferenceItemLabels = DEFAULT_ITEM_LABELS
 ): ReferenceFieldOption[] => {
   const flattened: ReferenceFieldOption[] = [];
   const visit = (field: DataTreeContext['payload'][number]) => {
+    const relativeLabel = toRelativeLabel(field.path, labelPrefix, field.name);
+    const description = field.description?.trim();
     pushUniqueReferenceField(flattened, {
       value: field.path,
-      label: toRelativeLabel(field.path, labelPrefix, field.name),
+      label: description && description.toLowerCase() !== field.name.toLowerCase()
+        ? `${description} (${relativeLabel})`
+        : relativeLabel,
       type: field.type,
     });
     field.children?.forEach((child) => visit(child));
+
+    // A list of records also offers its first and last record's fields directly (e.g. the
+    // newest comment's note), so picking one item doesn't need a hand-written [0] or [-1].
+    if (field.type === 'array' && field.children?.length && !field.path.includes('[')) {
+      for (const [index, suffix] of [[0, itemLabels.firstItem], [-1, itemLabels.lastItem]] as const) {
+        const itemPath = `${field.path}[${index}]`;
+        for (const child of field.children) {
+          if (!child.path.startsWith(`${field.path}.`)) continue;
+          const childPath = `${itemPath}${child.path.slice(field.path.length)}`;
+          pushUniqueReferenceField(flattened, {
+            value: childPath,
+            label: `${toRelativeLabel(childPath, labelPrefix, child.name)} ${suffix}`,
+            type: child.type,
+          });
+        }
+      }
+    }
   };
   fields.forEach((field) => visit(field));
   return flattened;
@@ -195,23 +233,30 @@ export function inferTypeFromPath(path: string): string | undefined {
   if (path === 'payload' || path === 'vars' || path === 'meta' || path === 'error') return 'object';
   if (path === 'meta.state') return 'string';
   if (path === 'meta.traceId') return 'string';
-  if (path === 'error.message' || path === 'error.name' || path === 'error.stack') return 'string';
+  if (path === 'error.message' || path === 'error.code' || path === 'error.category' || path === 'error.nodePath') return 'string';
 
   return undefined;
 }
 
+const PRIMARY_PATH_TOKEN = /[A-Za-z_$][A-Za-z0-9_$]*(?:\.[A-Za-z_$][A-Za-z0-9_$]*|\[-?\d+\]|\[\])*/;
+const STRING_LITERALS = /"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'/g;
+
+/**
+ * The first field path in an expression, keeping index segments (`comments[-1].note`) and looking
+ * inside a one-item-list reference (`[vars.x.y]` → `vars.x.y`). Text in quotes is skipped.
+ */
 export function extractPrimaryPath(expression: string | undefined): string | null {
   if (!expression) return null;
-  const trimmed = expression.trim();
-  if (!trimmed) return null;
-  const token = trimmed.split(/[\s+\-*/%()[\]{},<>=!&|?:]+/)[0];
-  return token || null;
+  const withoutStrings = expression.replace(STRING_LITERALS, ' ').trim();
+  if (!withoutStrings) return null;
+  return PRIMARY_PATH_TOKEN.exec(withoutStrings)?.[0] ?? null;
 }
 
 export const buildReferenceSourceModel = (
   referenceBrowseContext: DataTreeContext | undefined,
   fieldOptions: SelectOption[],
-  payloadSchema?: JsonSchema
+  payloadSchema?: JsonSchema,
+  itemLabels: ReferenceItemLabels = DEFAULT_ITEM_LABELS
 ): ReferenceSourceModel => {
   const model: ReferenceSourceModel = {
     payload: [],
@@ -225,17 +270,17 @@ export const buildReferenceSourceModel = (
     pushUniqueReferenceField(model.payload, option)
   );
   referenceBrowseContext?.payload.forEach((field) => {
-    flattenReferenceFields([field], 'payload').forEach((option) =>
+    flattenReferenceFields([field], 'payload', itemLabels).forEach((option) =>
       pushUniqueReferenceField(model.payload, option)
     );
   });
   referenceBrowseContext?.meta.forEach((field) => {
-    flattenReferenceFields([field], 'meta').forEach((option) =>
+    flattenReferenceFields([field], 'meta', itemLabels).forEach((option) =>
       pushUniqueReferenceField(model.meta, option)
     );
   });
   referenceBrowseContext?.error.forEach((field) => {
-    flattenReferenceFields([field], 'error').forEach((option) =>
+    flattenReferenceFields([field], 'error', itemLabels).forEach((option) =>
       pushUniqueReferenceField(model.error, option)
     );
   });
@@ -244,7 +289,7 @@ export const buildReferenceSourceModel = (
     model.vars.push({
       value: step.saveAs,
       label: `${step.stepName} (${step.saveAs})`,
-      fields: flattenReferenceFields(step.fields, prefix),
+      fields: flattenReferenceFields(step.fields, prefix, itemLabels),
     });
   });
   if (referenceBrowseContext?.forEach) {
@@ -288,8 +333,9 @@ export const buildReferenceSourceModel = (
       }
       pushUniqueReferenceField(step.fields, {
         value: path,
-        label: rest.length > 0 ? rest.join('.') : stepKey,
-        type: inferredType,
+        // The bare `vars.<saveAs>` path is the step's whole result, not a field named after it.
+        label: rest.length > 0 ? rest.join('.') : (itemLabels.wholeResult ?? DEFAULT_ITEM_LABELS.wholeResult ?? stepKey),
+        type: rest.length > 0 ? inferredType : 'object',
       });
       return;
     }
@@ -366,8 +412,11 @@ const filterReferenceFieldOptions = (
   const exact = options.filter(
     (option) => getTypeCompatibility(option.type, targetType) === TypeCompatibility.EXACT
   );
+  // Single values offered for a list input are sent as a one-item list.
   const coercible = options.filter(
-    (option) => getTypeCompatibility(option.type, targetType) === TypeCompatibility.COERCIBLE
+    (option) =>
+      getTypeCompatibility(option.type, targetType) === TypeCompatibility.COERCIBLE ||
+      canSendAsOneItemList(option.type, targetType)
   );
   const unknown = options.filter(
     (option) => getTypeCompatibility(option.type, targetType) === TypeCompatibility.UNKNOWN

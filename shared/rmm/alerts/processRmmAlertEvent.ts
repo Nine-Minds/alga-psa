@@ -112,17 +112,21 @@ async function processTriggered(
         integration_id: event.integrationId,
         external_alert_id: event.externalAlertId,
       })
-      .first('alert_id', 'status', 'ticket_id');
+      .first('alert_id', 'status', 'ticket_id', 'device_name');
 
-    // Same external alert in a live state again = redelivery; nothing to do.
-    // Suppressed alerts fall through when reconciliation reprocesses them.
+    // Same external alert in a live state again = redelivery. Refresh only a
+    // previously missing name so re-polled enrichment reaches stored alerts;
+    // otherwise the duplicate is a no-op. Suppressed alerts fall through
+    // when reconciliation reprocesses them.
     const duplicateStatuses = options.reprocessSuppressed
       ? ['active', 'acknowledged']
       : ['active', 'acknowledged', 'suppressed'];
     if (existing && duplicateStatuses.includes(existing.status)) {
+      const refresh: Record<string, unknown> = { updated_at: new Date().toISOString() };
+      if (existing.device_name == null && event.deviceName != null) refresh.device_name = event.deviceName;
       await db.table('rmm_alerts')
         .where({ alert_id: existing.alert_id })
-        .update({ updated_at: new Date().toISOString() });
+        .update(refresh);
       return {
         outcome: 'skipped',
         alertId: existing.alert_id,
@@ -330,6 +334,21 @@ async function processReset(
     if (wasSuppressed) {
       resolvedQuietly = true;
       return { outcome: 'resolved', alertId: existing.alert_id, warnings };
+    }
+
+    // rmm_alerts.ticket_id has no FK, so the linked ticket may have been
+    // deleted; detach it instead of noting against a missing ticket.
+    if (existing.ticket_id) {
+      const ticket = await db.table('tickets')
+        .where({ ticket_id: existing.ticket_id })
+        .first('ticket_id');
+      if (!ticket) {
+        await db.table('rmm_alerts')
+          .where({ alert_id: existing.alert_id })
+          .update({ ticket_id: null });
+        warnings.push(`Linked ticket ${existing.ticket_id} no longer exists; alert resolved without ticket update`);
+        existing.ticket_id = null;
+      }
     }
 
     if (existing.ticket_id && existing.matched_rule_id) {

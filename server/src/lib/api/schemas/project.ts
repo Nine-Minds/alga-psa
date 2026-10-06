@@ -211,10 +211,17 @@ export const projectTaskResponseSchema = z.object({
   tenant: uuidSchema,
   tags: z.array(z.string()).optional(),
   
+  service_id: uuidSchema.nullable().optional(),
+
   // Joined fields
-  assigned_user_name: z.string().optional(),
+  assigned_user_name: z.string().nullable().optional(),
   priority_name: z.string().optional(),
-  status_name: z.string().optional()
+  status_name: z.string().nullable().optional(),
+  is_closed: z.boolean().optional(),
+  phase_name: z.string().nullable().optional(),
+  project_id: uuidSchema.nullable().optional(),
+  project_name: z.string().nullable().optional(),
+  client_id: uuidSchema.nullable().optional()
 });
 
 export const projectTaskStatusMappingResponseSchema = z.object({
@@ -232,25 +239,73 @@ export const projectTaskStatusMappingResponseSchema = z.object({
   is_closed: z.boolean(),
 });
 
-// Project task checklist schemas
-export const createTaskChecklistItemSchema = z.object({
-  item_text: z.string().min(1, 'Item text is required'),
-  is_completed: z.boolean().optional().default(false),
-  order_number: z.number().min(0).optional()
-});
-
-export const updateTaskChecklistItemSchema = z.object({
-  item_text: z.string().optional(),
+// Project task checklist schemas. The table columns are item_name / completed;
+// the first cut of this API spelled them item_text / is_completed, which the
+// service then wrote straight to the table and failed. Both spellings are
+// accepted on input and normalised to the column names.
+const checklistItemInputFields = {
+  item_name: z.string().min(1, 'Item name is required').optional(),
+  /** @deprecated alias of item_name */
+  item_text: z.string().min(1, 'Item name is required').optional(),
+  description: z.string().nullable().optional(),
+  assigned_to: uuidSchema.nullable().optional(),
+  completed: z.boolean().optional(),
+  /** @deprecated alias of completed */
   is_completed: z.boolean().optional(),
-  order_number: z.number().min(0).optional()
-});
+  due_date: z.string().nullable().optional(),
+  order_number: z.number().int().min(0).optional()
+};
+
+type ChecklistItemInput = {
+  item_name?: string;
+  item_text?: string;
+  completed?: boolean;
+  is_completed?: boolean;
+  description?: string | null;
+  assigned_to?: string | null;
+  due_date?: string | null;
+  order_number?: number;
+};
+
+function normalizeChecklistItemInput<T extends ChecklistItemInput>(input: T) {
+  const { item_text, is_completed, ...rest } = input;
+  const normalized: Omit<T, 'item_text' | 'is_completed'> & { item_name?: string; completed?: boolean } = { ...rest };
+  if (normalized.item_name === undefined && item_text !== undefined) normalized.item_name = item_text;
+  if (normalized.completed === undefined && is_completed !== undefined) normalized.completed = is_completed;
+  return normalized;
+}
+
+export const createTaskChecklistItemSchema = z.object(checklistItemInputFields)
+  .transform(normalizeChecklistItemInput)
+  .pipe(z.object({
+    item_name: z.string().min(1, 'Item name is required'),
+    description: z.string().nullable().optional(),
+    assigned_to: uuidSchema.nullable().optional(),
+    completed: z.boolean().optional().default(false),
+    due_date: z.string().nullable().optional(),
+    order_number: z.number().int().min(0).optional()
+  }));
+
+export const updateTaskChecklistItemSchema = z.object(checklistItemInputFields)
+  .transform(normalizeChecklistItemInput)
+  .pipe(z.object({
+    item_name: z.string().min(1, 'Item name is required').optional(),
+    description: z.string().nullable().optional(),
+    assigned_to: uuidSchema.nullable().optional(),
+    completed: z.boolean().optional(),
+    due_date: z.string().nullable().optional(),
+    order_number: z.number().int().min(0).optional()
+  }));
 
 export const taskChecklistItemResponseSchema = z.object({
   checklist_item_id: uuidSchema,
   task_id: uuidSchema,
-  item_text: z.string(),
-  is_completed: z.boolean(),
-  order_number: z.number(),
+  item_name: z.string(),
+  description: z.string().nullable().optional(),
+  assigned_to: uuidSchema.nullable().optional(),
+  completed: z.boolean(),
+  due_date: z.string().nullable().optional(),
+  order_number: z.number().nullable(),
   created_at: z.string().datetime(),
   updated_at: z.string().datetime(),
   tenant: uuidSchema
@@ -259,17 +314,20 @@ export const taskChecklistItemResponseSchema = z.object({
 // Project ticket link schemas
 export const createProjectTicketLinkSchema = z.object({
   ticket_id: uuidSchema,
-  link_type: z.enum(['blocks', 'blocked_by', 'related', 'duplicate']).optional().default('related'),
-  notes: z.string().optional()
+  phase_id: uuidSchema.optional(),
+  task_id: uuidSchema.optional(),
+  // Linking a ticket to a project means its time is project work; untick to
+  // keep billing it at the client level (alga-2026-0002622).
+  bill_under_project: z.boolean().optional().default(true)
 });
 
 export const projectTicketLinkResponseSchema = z.object({
   link_id: uuidSchema,
   project_id: uuidSchema,
+  phase_id: uuidSchema.nullable(),
   task_id: uuidSchema.nullable(),
   ticket_id: uuidSchema,
-  link_type: z.string(),
-  notes: z.string().nullable(),
+  bill_under_project: z.boolean(),
   created_at: z.string().datetime(),
   tenant: uuidSchema,
   
@@ -392,6 +450,7 @@ export type CreateProjectTaskData = z.infer<typeof createProjectTaskSchema>;
 export type UpdateProjectTaskData = z.infer<typeof updateProjectTaskSchema>;
 export type ProjectTaskResponse = z.infer<typeof projectTaskResponseSchema>;
 export type CreateTaskChecklistItemData = z.infer<typeof createTaskChecklistItemSchema>;
+export type UpdateTaskChecklistItemData = z.infer<typeof updateTaskChecklistItemSchema>;
 export type TaskChecklistItemResponse = z.infer<typeof taskChecklistItemResponseSchema>;
 export type CreateProjectTicketLinkData = z.infer<typeof createProjectTicketLinkSchema>;
 export type ProjectTicketLinkResponse = z.infer<typeof projectTicketLinkResponseSchema>;

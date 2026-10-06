@@ -8,9 +8,8 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getCurrentUser } from '@alga-psa/user-composition/actions';
-import { ApiKeyServiceForApi } from '@/lib/services/apiKeyServiceForApi';
 import { ENTRA_PHASE1_FLAG_DEFINITIONS, PostHogFeatureFlagService } from '@ee/lib/platformFeatureFlags';
+import { assertMasterTenantAccess } from '@ee/lib/auth/masterTenantAccess';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -37,43 +36,6 @@ function platformFeatureFlagsRouteError(error: unknown): { status: number; error
   }
 
   return { status: 500, error: 'Internal server error' };
-}
-
-async function assertMasterTenantAccess(request: NextRequest): Promise<{ tenantId: string; userId?: string; userEmail?: string }> {
-  if (!MASTER_BILLING_TENANT_ID) {
-    throw new Error('MASTER_BILLING_TENANT_ID not configured on server');
-  }
-
-  const extensionId = request.headers.get('x-alga-extension');
-  const apiKey = request.headers.get('x-api-key');
-
-  if (apiKey) {
-    const keyRecord = await ApiKeyServiceForApi.validateApiKeyAnyTenant(apiKey);
-    if (keyRecord) {
-      if (keyRecord.tenant === MASTER_BILLING_TENANT_ID) {
-        const headerUserId = request.headers.get('x-user-id');
-        const headerUserEmail = request.headers.get('x-user-email');
-        const userId = headerUserId || (extensionId ? `extension:${extensionId}` : keyRecord.user_id);
-        const userEmail = headerUserEmail || undefined;
-        return { tenantId: MASTER_BILLING_TENANT_ID, userId, userEmail };
-      }
-      throw new Error('Access denied: API key not authorized for platform feature flags');
-    }
-  }
-
-  const user = await getCurrentUser();
-  if (!user) {
-    throw new Error('Authentication required');
-  }
-  if (user.tenant !== MASTER_BILLING_TENANT_ID) {
-    throw new Error('Access denied: Platform feature flags require master tenant access');
-  }
-
-  return {
-    tenantId: MASTER_BILLING_TENANT_ID,
-    userId: user.user_id,
-    userEmail: user.email,
-  };
 }
 
 /**

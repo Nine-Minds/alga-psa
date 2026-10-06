@@ -748,7 +748,7 @@
       "domainRemovalScheduledWithClear": "Remoção de domínio agendada e emissão de tickets Do endereço apagado",
       "removeDomainFailed": "Falha ao remover o domínio",
       "testOutboundFailed": "Falha ao testar o e-mail de saída",
-      "senderIdentitiesUpdated": "Identidades dos remetentes atualizadas."
+      "senderSettingsUpdated": "Identidades dos remetentes atualizadas."
     },
     "tabs": {
       "inboundEmail": "E-mail de entrada",
@@ -803,7 +803,8 @@
           "recipientPlaceholder": "voce@exemplo.com",
           "testingButton": "Testando...",
           "runButton": "Testar conexão"
-        }
+        },
+        "ticketIdentityRequired": "Escolha uma identidade de email de tickets abaixo para definir o domínio de envio."
       },
       "ticketingFrom": {
         "title": "Emissão de tickets no endereço",
@@ -843,39 +844,17 @@
         "loadFailed": "Não foi possível carregar as caixas de correio do Microsoft 365.",
         "saved": "Caixa de correio de envio atualizada."
       },
-      "senderIdentities": {
-        "ticket": {
-          "title": "Identidade de email dos tickets",
-          "description": "As respostas aos emails de tickets precisam retornar a este endereço para serem associadas e adicionadas ao ticket. Use uma caixa de entrada conectada e monitorada.",
-          "connectedInboxLabel": "Caixa de entrada conectada",
-          "connectedInboxHelp": "Uma caixa de entrada conectada mantém as respostas dos clientes na conversa do ticket.",
-          "customAddressOption": "Usar outro endereço",
-          "addressLabel": "Endereço do remetente",
-          "addressPlaceholder": "support@example.com",
-          "addressHelp": "Este endereço controla somente o roteamento das respostas aos emails de tickets.",
-          "microsoftAddressHelp": "O Microsoft 365 exige que o email dos tickets use a caixa de correio de envio selecionada ({{mailbox}}).",
-          "nameLabel": "Nome de exibição do remetente",
-          "namePlaceholder": "Suporte",
-          "nameHelp": "Deixe em branco para usar o nome da caixa de entrada conectada ou do quadro de tickets."
-        },
-        "notification": {
-          "title": "Identidade de todos os outros emails",
-          "description": "Personalize convites do portal, redefinições de senha, faturas, atualizações de projetos e notificações gerais, independentemente do roteamento de tickets.",
-          "addressLabel": "Endereço do remetente",
-          "addressPlaceholder": "notifications@example.com",
-          "smtpAddressHelp": "Definido pelo endereço do remetente na configuração SMTP acima. Todos os emails que não são de tickets são enviados a partir dele.",
-          "lockedAddressHelp": "Este endereço é determinado pelo domínio gerenciado ativo ou pela caixa de correio selecionada do Microsoft 365.",
-          "nameLabel": "Nome de exibição do remetente",
-          "namePlaceholder": "Nome da sua empresa",
-          "nameHelp": "Deixe em branco para usar {{company}} automaticamente.",
-          "companyFallback": "a empresa do seu tenant"
-        },
-        "warningTitle": "Verifique o roteamento das respostas",
-        "errorTitle": "Corrija a identidade dos tickets",
-        "clearButton": "Limpar identidade dos tickets",
-        "savingButton": "Salvando...",
-        "saveButton": "Salvar identidades dos remetentes"
-      }
+      "diagnosticsButton": "Executar diagnóstico de e-mail de saída",
+      "saveSettings": "Salvar configurações de saída",
+      "discardChanges": "Descartar alterações",
+      "unsaved": "Alterações não salvas",
+      "noPendingChanges": "Nenhuma alteração não salva",
+      "saving": "Salvando as configurações de saída…",
+      "saved": "Configurações de saída salvas.",
+      "saveFailed": "Não foi possível salvar as configurações de saída. Suas alterações ainda estão aqui. Tente novamente.",
+      "diagnosticsSaveHelp": "Salve ou descarte suas alterações antes de verificar as configurações de saída.",
+      "saveBeforeDomainRemoval": "Salve ou descarte suas alterações de saída antes de remover um domínio.",
+      "senderAddressAfterSave": "Exibido após salvar."
     },
     "inbound": {
       "intro": "Configure o roteamento de e-mail de entrada e a automação específica do provedor."
@@ -1032,7 +1011,12 @@
       "saving": "Salvando…",
       "startDelimiter": "Iniciar delimitador",
       "update": "Atualizar regra",
-      "valuePlaceholder": "Valor"
+      "valuePlaceholder": "Valor",
+      "matchTargets": "Comparar valor extraído com",
+      "matchClientName": "Nome ou alias do cliente",
+      "matchContactEmail": "E-mail do contato",
+      "matchAssetName": "Nome do dispositivo (ativo)",
+      "matchTargetRequired": "Selecione pelo menos um destino."
     },
     "header": {
       "description": "Combine e-mails recebidos por remetente ou assunto para evitar ruídos, atribuir o cliente certo ou direcionar para um destino. As regras são executadas em ordem; a primeira partida vence.",
@@ -1090,7 +1074,10 @@
       "running": "Testando…",
       "subject": "Assunto",
       "title": "Teste esta regra",
-      "to": "Para"
+      "to": "Para",
+      "contactEmail": "e-mail do contato",
+      "deviceName": "nome do dispositivo",
+      "ambiguous": "{{target}} corresponde a {{count}} clientes — não atribuído"
     }
   },
   "errors": {

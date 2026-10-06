@@ -1,0 +1,134 @@
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+// Single source of truth for which server-lane test files run under jsdom.
+// The vitest configs partition their lanes with it and
+// scripts/verify-react-test-environment.mjs gates new React tests against it,
+// so the rule can never mean two different things in two places.
+//
+// Nothing here may import a package: the gate and its unit tests run in CI jobs
+// that only check out the repository (production-regression's inventory job and
+// unit-tests' skip-budget job), so an import off anything but node: builtins
+// fails them with ERR_MODULE_NOT_FOUND. Callers that do have node_modules —
+// the vitest configs — bring their own globber and hand the file list in.
+//
+// Per-file `@vitest-environment` docblocks still win over whatever project a
+// file lands in (verified on vitest 3.2.7 and 4.1.11, both directions), so the
+// 49 files that deliberately pin themselves to `node` keep running on node even
+// inside the jsdom project, and the pre-existing jsdom docblocks outside these
+// globs keep working untouched.
+export const JSDOM_TEST_GLOBS = [
+  // Anything with JSX in it renders components.
+  '**/*.{test,spec}.?(c|m)[jt]sx',
+  // Component suites that assert on rendered output without JSX of their own.
+  '**/components/**/*.{test,spec}.?(c|m)[jt]s',
+];
+
+// React suites whose path the globs above cannot express. Repository-relative.
+export const JSDOM_EXTRA_FILES = [
+  'packages/scheduling/tests/schedulingProvider.launchParams.test.ts',
+  'server/src/test/unit/app/auth/msp/signin/page.test.ts',
+  'server/src/test/unit/app/auth/client-portal/signin/page.test.ts',
+];
+
+// Escape hatch for suites the glob claims but that genuinely need node (fetch,
+// Buffer, structuredClone and friends differ under jsdom). Repository-relative.
+// Prefer fixing the test; a pin is a standing exception, not a resting place.
+//
+// All eight below read their subject's source with
+// `readFileSync(new URL('./Component.tsx', import.meta.url))`. Under jsdom
+// `import.meta.url` resolves against the environment's http base, so the URL
+// stops being a file: URL and readFileSync throws "The URL must be of scheme
+// file". They sit under a components/ directory and read JSX, but they never
+// render anything.
+export const NODE_PINNED_FILES = [
+  'packages/billing/src/components/accounting/accountingSyncTranslations.test.ts',
+  'packages/billing/src/components/billing-dashboard/contracts/ContractWizard.renewalFields.test.ts',
+  'packages/billing/src/components/billing-dashboard/contracts/wizard-steps/ContractBasicsStep.renewalCards.test.ts',
+  'packages/billing/src/components/billing-dashboard/contracts/wizard-steps/ReviewContractStep.renewalPreview.test.ts',
+  'packages/clients/src/components/clients/ClientDetails.huduDocumentsSection.wiring.test.ts',
+  'packages/clients/src/components/clients/ClientDetails.inboundDestination.wiring.test.ts',
+  'packages/clients/src/components/clients/ClientDetails.pulseRefresh.wiring.test.ts',
+  'packages/clients/src/components/contacts/ContactDetails.inboundDestination.wiring.test.ts',
+];
+
+// Compiles the glob dialect the patterns above are written in — `**/`, `*`,
+// `{a,b}`, `?(a|b)` and `[ab]` — to a RegExp, so the rule needs no matcher
+// package (see the header). Anything richer belongs in a named extra, not in a
+// cleverer pattern.
+function globToRegExp(glob) {
+  const literal = (text) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  let source = '';
+  for (let index = 0; index < glob.length; index += 1) {
+    const character = glob[index];
+    if (character === '*' && glob[index + 1] === '*') {
+      index += 1;
+      // `**/` spans zero or more directories; a trailing `**` takes the rest.
+      if (glob[index + 1] === '/') { index += 1; source += '(?:[^/]+/)*'; } else source += '.*';
+    } else if (character === '*') {
+      source += '[^/]*';
+    } else if (character === '?' && glob[index + 1] === '(') {
+      const end = glob.indexOf(')', index);
+      source += `(?:${glob.slice(index + 2, end).split('|').map(literal).join('|')})?`;
+      index = end;
+    } else if (character === '{') {
+      const end = glob.indexOf('}', index);
+      source += `(?:${glob.slice(index + 1, end).split(',').map(literal).join('|')})`;
+      index = end;
+    } else if (character === '[') {
+      const end = glob.indexOf(']', index);
+      source += glob.slice(index, end + 1);
+      index = end;
+    } else if (character === '?') {
+      source += '[^/]';
+    } else {
+      source += literal(character);
+    }
+  }
+  return new RegExp(`^${source}$`);
+}
+
+const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
+const globPatterns = JSDOM_TEST_GLOBS.map(globToRegExp);
+const matchesGlob = (file) => globPatterns.some((pattern) => pattern.test(file));
+const extraFiles = new Set(JSDOM_EXTRA_FILES);
+const pinnedFiles = new Set(NODE_PINNED_FILES);
+
+for (const file of pinnedFiles) {
+  if (extraFiles.has(file)) {
+    throw new Error(`A file cannot be both a jsdom extra and a node pin: ${file}`);
+  }
+}
+
+// Repository-relative POSIX identity, the same spelling the test inventory and
+// the execution evidence use.
+export function toRepositoryPath(file, from = repositoryRoot) {
+  return path.relative(repositoryRoot, path.resolve(from, file)).split(path.sep).join('/');
+}
+
+export function matchesJsdomGlob(file) {
+  const identity = toRepositoryPath(file);
+  if (pinnedFiles.has(identity)) return false;
+  return extraFiles.has(identity) || matchesGlob(identity);
+}
+
+// Splits an already-resolved file list into the two projects. `files` are
+// relative to `cwd` and come back in the same spelling, so the union of the two
+// halves reproduces the caller's list exactly.
+export function partitionByEnvironment(files, cwd = repositoryRoot) {
+  const jsdom = [];
+  const node = [];
+  for (const file of files) (matchesJsdomGlob(path.resolve(cwd, file)) ? jsdom : node).push(file);
+  return { jsdom: jsdom.sort(), node: node.sort() };
+}
+
+// The two vitest projects a partition becomes. `extends: true` re-reads the
+// lane's own config file so each project keeps its aliases, setup files and
+// pool settings; vite concatenates merged arrays, so a project can only narrow
+// through `exclude` — each one drops the other half by explicit path.
+export function environmentProjects({ jsdom, node }) {
+  return [
+    { extends: true, test: { name: 'jsdom', environment: 'jsdom', exclude: node } },
+    { extends: true, test: { name: 'node', environment: 'node', exclude: jsdom } },
+  ];
+}

@@ -52,6 +52,15 @@ vi.mock('@alga-psa/core', () => ({
   getCurrencySymbol: () => '$',
 }));
 
+// The merged step formats currency through the shared hook; stub it so the
+// suite does not depend on the core currency-formatting module.
+vi.mock('@alga-psa/ui/lib', () => ({
+  useCurrencyFormat: () => ({
+    money: (cents: number) => `$${((cents ?? 0) / 100).toFixed(2)}`,
+    symbol: () => '$',
+  }),
+}));
+
 const translate = (key: string, options?: Record<string, unknown>) => {
   let value = String(options?.defaultValue ?? key);
   for (const [name, replacement] of Object.entries(options ?? {})) {
@@ -62,6 +71,9 @@ const translate = (key: string, options?: Record<string, unknown>) => {
 
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
   useTranslation: () => ({ t: translate }),
+  // The merged step uses the shared currency formatter, which reads the
+  // optional i18n locale; provide it alongside the translation hook.
+  useOptionalI18n: () => ({ locale: 'en' }),
 }));
 
 import { FixedFeeServicesStep } from '../src/components/billing-dashboard/contracts/wizard-steps/FixedFeeServicesStep';

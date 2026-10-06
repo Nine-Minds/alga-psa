@@ -17,6 +17,7 @@ import { Switch } from '@alga-psa/ui/components/Switch';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { usePageSaveShortcut, usePanelSubmitShortcut } from '@alga-psa/ui/keyboard-shortcuts';
 import { useInsideDrawer } from '@alga-psa/ui/components/ModalityContext';
+import { DrawerFooter } from '@alga-psa/ui/components/Drawer';
 import { useAutomationIdAndRegister } from '@alga-psa/ui/ui-reflection/useAutomationIdAndRegister';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import { ButtonComponent, FormFieldComponent } from '@alga-psa/ui/ui-reflection/types';
@@ -466,7 +467,7 @@ const ContactDetailsEdit: React.FC<ContactDetailsEditProps> = ({
             </tr>
           </tbody>
         </table>
-        <div className="mt-6 flex justify-end space-x-4">
+        <DrawerFooter className="gap-4">
           <Button
             id={`${id}-cancel-button`}
             variant="soft"
@@ -481,7 +482,7 @@ const ContactDetailsEdit: React.FC<ContactDetailsEditProps> = ({
           >
             {t('common.actions.save', { defaultValue: 'Save' })}
           </Button>
-        </div>
+        </DrawerFooter>
       </div>
     </ReflectionContainer>
   );

@@ -153,6 +153,21 @@ vi.mock('@alga-psa/email', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@alga-psa/email')>();
   return {
     ...actual,
+    TenantEmailService: {
+      ...actual.TenantEmailService,
+      getInstance: () => ({
+        sendEmail: async (params: any) => {
+          capturedEmails.push({
+            message: {
+              ...params,
+              to: Array.isArray(params.to) ? params.to : [params.to],
+            },
+            tenant: params.tenantId,
+          });
+          return { success: true };
+        },
+      }),
+    },
     SystemEmailProviderFactory: {
       getConfigFingerprint: () => 'test-capture',
       createProvider: vi.fn(async () => ({

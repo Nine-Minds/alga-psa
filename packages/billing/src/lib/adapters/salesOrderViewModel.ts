@@ -51,6 +51,7 @@ export interface SalesOrderLineRowForDocument {
   quantity_fulfilled?: number | string | null;
   unit_price: number | string;
   fulfillment_type?: string | null;
+  allocated_serials?: string[];
 }
 
 /**
@@ -63,13 +64,18 @@ export function assembleSalesOrderViewModel(input: {
   servicesById: Map<string, ServiceNameRecord>;
   customer: SalesOrderDocumentParty | null;
   tenantParty: SalesOrderDocumentParty | null;
+  allocatedSerialsByLine?: Map<string, string[]>;
 }): SalesOrderViewModel {
-  const { so, lines, servicesById, customer, tenantParty } = input;
+  const { so, lines, servicesById, customer, tenantParty, allocatedSerialsByLine = new Map() } = input;
 
   const lineItems: SalesOrderViewModelLineItem[] = lines.map((line) => {
     const service = line.service_id ? servicesById.get(line.service_id) ?? null : null;
     const quantityOrdered = toFiniteNumber(line.quantity_ordered);
     const unitPrice = toFiniteNumber(line.unit_price);
+    const allocatedSerials = line.fulfillment_type === 'drop_ship'
+      ? []
+      : (allocatedSerialsByLine.get(line.so_line_id) ?? line.allocated_serials ?? [])
+        .slice(0, Math.max(0, quantityOrdered - toFiniteNumber(line.quantity_fulfilled)));
     return {
       so_line_id: line.so_line_id,
       service_id: line.service_id ?? null,
@@ -82,6 +88,8 @@ export function assembleSalesOrderViewModel(input: {
       amount: quantityOrdered * unitPrice,
       fulfillment_type: line.fulfillment_type ?? null,
       is_drop_ship: line.fulfillment_type === 'drop_ship',
+      allocated_serials: allocatedSerials,
+      allocated_serials_display: allocatedSerials.join(', '),
     };
   });
 

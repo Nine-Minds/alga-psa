@@ -9,7 +9,8 @@
       "edit": "Editar",
       "delete": "Eliminar",
       "deleting": "Eliminando…",
-      "verify": "Verificar"
+      "verify": "Verificar",
+      "cancel": "Cancelar"
     },
     "states": {
       "active": "Activo",
@@ -226,7 +227,53 @@
         "companyFallback": "la empresa de su inquilino"
       },
       "warningTitle": "Revise el enrutamiento de respuestas",
-      "errorTitle": "Corrija la identidad de tickets"
+      "errorTitle": "Corrija la identidad de tickets",
+      "addresses": {
+        "title": "Direcciones de remitente",
+        "description": "Cree direcciones con nombre para sus correos salientes."
+      },
+      "routing": {
+        "title": "Enrutamiento de remitentes",
+        "description": "Elige qué remitente se usa para cada tipo de correo.",
+        "default": "Predeterminado (todo el resto del correo)",
+        "useDefault": "Usar predeterminado",
+        "sender": "Remitente",
+        "displayName": "Nombre mostrado",
+        "boardSummary": "Los remitentes de tickets por tablero se administran en la configuración de cada tablero.",
+        "ticket": "Correo de tickets",
+        "project": "Correo de proyectos",
+        "billing": "Correo de facturación",
+        "sales": "Correo de ventas",
+        "scheduling": "Correo de programación",
+        "survey": "Correo de encuestas",
+        "account": "Correo de cuentas",
+        "general": "Correo general",
+        "noneProviderFrom": "Ninguno (usar remitente del proveedor)",
+        "confirmSmtp": "Confirmo que el servidor SMTP acepta esta dirección del remitente.",
+        "inboundReplyWarning": "Las respuestas entrantes seguirán llegando al buzón configurado; cambiar esta dirección no cambia el enrutamiento de respuestas.",
+        "unknownBoard": "Tablero desconocido"
+      },
+      "actions": {
+        "add": "Añadir remitente",
+        "verify": "Verificar",
+        "delete": "Eliminar"
+      },
+      "fields": {
+        "address": "Dirección de correo",
+        "localPart": "Nombre de dirección",
+        "domain": "Dominio verificado",
+        "sendThrough": "Enviar mediante",
+        "displayName": "Nombre mostrado",
+        "displayNamePlaceholder": "Equipo de soporte"
+      },
+      "smtpHelp": "Su servidor SMTP debe permitir esta dirección.",
+      "microsoftHelp": "El buzón conectado necesita permiso Send As de Exchange para esta dirección.",
+      "errors": {
+        "duplicateAddress": "Esta dirección de remitente ya existe.",
+        "saveFailed": "No se pudo añadir el remitente. Compruebe la dirección e inténtelo de nuevo.",
+        "duplicateRoute": "Esta ruta de remitente ya existe.",
+        "saveRoutingFailed": "No se pudo guardar la ruta del remitente. Inténtelo de nuevo."
+      }
     }
   },
   "microsoft365": {
@@ -253,7 +300,8 @@
     },
     "states": {
       "running": "Ejecutando diagnósticos...",
-      "diagnosticsFailed": "Los diagnósticos fallaron"
+      "diagnosticsFailed": "Los diagnósticos fallaron",
+      "callbackDiagnosticsCaptured": "Diagnóstico de devolución de llamada capturado el {{timestamp}}."
     },
     "statuses": {
       "pass": "Aprobado",
@@ -658,6 +706,79 @@
       "fail": "Fallido",
       "skip": "Omitido"
     }
+  },
+  "outboundDiagnostics": {
+    "title": "Diagnóstico de correo saliente",
+    "description": "Ejecuta la configuración saliente guardada mediante una lista de comprobación del proveedor. No se envía ningún mensaje a menos que active explícitamente la opción de envío real a continuación.",
+    "unsavedNotice": "Los cambios sin guardar en esta pantalla no se incluyen. Guarde la configuración antes de ejecutar el diagnóstico.",
+    "states": {
+      "running": "Ejecutando diagnóstico...",
+      "failed": "El diagnóstico falló",
+      "copyFailed": "No se pudo copiar el paquete de soporte. Use Descargar para guardarlo como archivo.",
+      "checking": "Comprobando la configuración de correo electrónico…"
+    },
+    "actions": {
+      "retry": "Reintentar",
+      "rerun": "Ejecutar de nuevo",
+      "copyBundle": "Copiar paquete de soporte",
+      "copied": "Copiado",
+      "downloadBundle": "Descargar"
+    },
+    "labels": {
+      "overall": "General:",
+      "provider": "Proveedor:",
+      "effectiveSender": "Remitente efectivo:",
+      "authorizedUser": "Usuario autorizado:",
+      "mailboxRoute": "Ruta del buzón:",
+      "recommendations": "Recomendaciones",
+      "error": "Error",
+      "redacted": "La exportación de soporte oculta los identificadores de buzón de forma predeterminada."
+    },
+    "statuses": {
+      "pass": "Correcto",
+      "warn": "Advertencia",
+      "fail": "Error",
+      "skip": "Omitido"
+    },
+    "liveSend": {
+      "label": "Enviar un mensaje de prueba (real)",
+      "recipient": "Destinatario",
+      "run": "Ejecutar con envío real",
+      "invalidRecipient": "Introduzca una dirección de correo del destinatario válida.",
+      "permissionHelp": "Envíe un correo electrónico de prueba para confirmar que esta cuenta puede enviar desde el buzón seleccionado.",
+      "enableTest": "Enviar un correo electrónico de prueba",
+      "sendTo": "Enviar a",
+      "sendTest": "Enviar correo electrónico de prueba",
+      "sending": "Enviando correo electrónico de prueba…",
+      "unconfirmed": "No se pudo confirmar si se envió el correo electrónico de prueba. Revise la bandeja de entrada del destinatario antes de volver a intentarlo."
+    },
+    "introduction": "Compruebe la configuración de correo electrónico guardada. Enviar un correo electrónico de prueba es opcional.",
+    "checkStatus": {
+      "pass": "Correcto",
+      "warn": "Requiere atención",
+      "fail": "Falló",
+      "skip": "Sin comprobar"
+    },
+    "result": {
+      "pass": "Las comprobaciones de configuración fueron satisfactorias",
+      "warn": "No se pudieron completar algunas comprobaciones",
+      "fail": "Falló una comprobación de correo electrónico",
+      "skip": "No se pudieron completar algunas comprobaciones"
+    },
+    "noTestSent": "Estas comprobaciones no enviaron ningún correo electrónico.",
+    "emailService": "Servicio de correo electrónico",
+    "sender": "De",
+    "connectedAccount": "Cuenta conectada",
+    "checkAgain": "Volver a comprobar",
+    "nextSteps": "Próximos pasos",
+    "limitedChecksHelp": "Parte de la información de la cuenta no estuvo disponible para estas comprobaciones. Envíe un correo electrónico de prueba para comprobar si el envío funciona.",
+    "sentItemsHelp": "No se pudo comprobar la carpeta Elementos enviados. Después de enviar un correo electrónico de prueba, compruebe que aparezca una copia en la carpeta Elementos enviados del buzón remitente.",
+    "copyReport": "Copiar informe",
+    "downloadReport": "Descargar informe",
+    "copyConfirmed": "Informe copiado al portapapeles.",
+    "copyReportFailed": "No se pudo copiar el informe. Use Descargar informe para guardarlo como archivo.",
+    "shareHelp": "Comparta este informe con soporte. Las direcciones de correo electrónico y los identificadores de cuenta están ocultos.",
+    "technicalDetails": "Detalles técnicos para soporte"
   },
   "integrations": {
     "entra": {

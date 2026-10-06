@@ -123,6 +123,8 @@ describe('contract wizard client projection', () => {
     expect(updateData).toHaveBeenCalledWith({
       client_id: 'client-cool',
       currency_code: 'USD',
+      // Changing the client clears any previously chosen billing profile.
+      billing_profile_id: null,
     });
   });
 

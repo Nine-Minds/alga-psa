@@ -107,7 +107,9 @@
         "message": "Bericht",
         "messageOptional": "Bericht (optioneel)",
         "messagePlaceholder": "Voeg een persoonlijke noot toe voor de ontvanger...",
-        "title": "Offerte verzenden"
+        "title": "Offerte verzenden",
+        "from": "Van",
+        "useDefault": "Standaardafzender gebruiken"
       }
     },
     "errors": {
@@ -212,7 +214,9 @@
         "description": "Hierdoor wordt de offerte per e-mail naar de factureringscontacten van de klant verzonden en wordt de status ervan gewijzigd in \"Verzonden\".",
         "title": "Offerte naar klant sturen",
         "additionalEmails": "Extra ontvangers",
-        "message": "Bericht"
+        "message": "Bericht",
+        "from": "Van",
+        "useDefault": "Standaardafzender gebruiken"
       }
     },
     "errorActions": {
@@ -299,7 +303,15 @@
       "currencyPlaceholder": "Valuta selecteren",
       "quoteDate": "Offertedatum",
       "validUntil": "Geldig tot",
-      "validUntilHelp": "Offerte verloopt automatisch op deze datum."
+      "validUntilHelp": "Offerte verloopt automatisch op deze datum.",
+      "currencySource": {
+        "tenant": "Standaard van tenant",
+        "client": "Klantstandaard voor {{clientName}}",
+        "template": "Van offertesjabloon {{templateTitle}}",
+        "saved": "Opgeslagen op deze offerte",
+        "savedTemplate": "Opgeslagen op dit sjabloon",
+        "manual": "Handmatig geselecteerd"
+      }
     },
     "lineItems": {
       "title": "Regels",

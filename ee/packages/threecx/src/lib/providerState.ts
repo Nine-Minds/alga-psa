@@ -87,7 +87,7 @@ export interface ThreecxProviderState {
 }
 
 /** The current template contract version stamped on downloads. */
-export const THREECX_TEMPLATE_VERSION = 2;
+export const THREECX_TEMPLATE_VERSION = 3;
 
 export const THREECX_DEFAULT_CDR_LOOKBACK_DAYS = 30;
 

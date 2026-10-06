@@ -25,6 +25,8 @@ export interface EmailMessage {
   attachments?: EmailAttachment[];
   headers?: Record<string, string>;
   tags?: Record<string, string>;
+  /** Internal provider selection for routed Microsoft send-as identities. */
+  microsoftProviderId?: string;
   replyTo?: EmailAddress;
 }
 
@@ -103,6 +105,43 @@ export interface TenantEmailSettings {
   maxDailyEmails?: number;
   createdAt: Date;
   updatedAt: Date;
+  outboundSenders?: OutboundEmailSender[];
+  outboundRoutes?: OutboundEmailRoute[];
+}
+
+export type OutboundMailClass =
+  | 'ticket'
+  | 'project'
+  | 'billing'
+  | 'sales'
+  | 'scheduling'
+  | 'survey'
+  | 'account'
+  | 'general';
+
+export interface OutboundEmailSender {
+  tenant: string;
+  sender_id: string;
+  email_address: string;
+  display_name: string | null;
+  microsoft_provider_id: string | null;
+  verification_status: 'unverified' | 'verified' | 'failed';
+  verified_at: Date | null;
+  last_verification_error: string | null;
+  created_at: Date;
+  updated_at: Date;
+}
+
+export interface OutboundEmailRoute {
+  tenant: string;
+  route_id: string;
+  route_type: 'default' | 'mail_class' | 'board';
+  mail_class: OutboundMailClass | null;
+  board_id: string | null;
+  sender_id: string | null;
+  display_name: string | null;
+  created_at: Date;
+  updated_at: Date;
 }
 
 export interface IEmailProvider {
@@ -194,7 +233,7 @@ export interface InboundTicketDefaults {
  */
 export interface TicketFieldOptions {
   boards: Array<{ id: string; name: string; is_default: boolean }>;
-  statuses: Array<{ id: string; name: string; is_default?: boolean }>;
+  statuses: Array<{ id: string; name: string; is_default?: boolean; board_id?: string; board_name?: string }>;
   priorities: Array<{ id: string; name: string; is_default?: boolean }>;
   categories: Array<{ id: string; name: string; parent_id?: string; board_id?: string }>;
   clients: Array<{ id: string; name: string }>;

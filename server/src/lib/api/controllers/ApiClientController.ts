@@ -11,7 +11,11 @@ import {
   createClientSchema,
   updateClientSchema,
   clientListQuerySchema,
-  createClientLocationSchema
+  createClientLocationSchema,
+  updateClientLocationSchema,
+  clientMergePreviewRequestSchema,
+  clientMergeRequestSchema,
+  setBillingProfileContactsSchema
 } from '../schemas/client';
 import { 
   runWithTenant 
@@ -173,6 +177,80 @@ export class ApiClientController extends ApiBaseController {
     };
   }
 
+  /** The `{id}/locations/{locationId}` segments of the request path. */
+  private locationPathIds(req: NextRequest): { clientId: string; locationId: string } {
+    const pathParts = new URL(req.url).pathname.split('/');
+    const clientsIndex = pathParts.findIndex(part => part === 'clients');
+    const clientId = pathParts[clientsIndex + 1];
+    const locationId = pathParts[pathParts.indexOf('locations', clientsIndex) + 1];
+    const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!clientId || !uuid.test(clientId)) throw new ValidationError('Invalid client ID format');
+    if (!locationId || !uuid.test(locationId)) throw new ValidationError('Invalid location ID format');
+    return { clientId, locationId };
+  }
+
+  /**
+   * Update client location
+   */
+  updateLocation() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        const apiRequest = await this.authenticate(req) as AuthenticatedApiRequest;
+        const { clientId, locationId } = this.locationPathIds(req);
+
+        return await runWithTenant(apiRequest.context.tenant, async () => {
+          await this.checkPermission(apiRequest, this.options.permissions?.update || 'update');
+
+          const client = await this.clientService.getById(clientId, apiRequest.context!);
+          if (!client) {
+            throw new NotFoundError('Client not found');
+          }
+
+          let data;
+          try {
+            data = updateClientLocationSchema.parse(await req.json());
+          } catch (error) {
+            if (error instanceof ZodError) {
+              throw new ValidationError('Validation failed', error.errors);
+            }
+            throw error;
+          }
+
+          const location = await this.clientService.updateLocation(clientId, locationId, data, apiRequest.context!);
+          return createSuccessResponse(location);
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  /**
+   * Delete client location
+   */
+  deleteLocation() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        const apiRequest = await this.authenticate(req) as AuthenticatedApiRequest;
+        const { clientId, locationId } = this.locationPathIds(req);
+
+        return await runWithTenant(apiRequest.context.tenant, async () => {
+          await this.checkPermission(apiRequest, this.options.permissions?.update || 'update');
+
+          const client = await this.clientService.getById(clientId, apiRequest.context!);
+          if (!client) {
+            throw new NotFoundError('Client not found');
+          }
+
+          await this.clientService.deleteLocation(clientId, locationId, apiRequest.context!);
+          return new NextResponse(null, { status: 204 });
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
   /**
    * Get client locations
    */
@@ -203,6 +281,187 @@ export class ApiClientController extends ApiBaseController {
           );
           
           return createSuccessResponse(locations);
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  /**
+   * Path ids for the merge and billing-profile routes.
+   *
+   * The existing helpers in this controller re-derive the client id from the
+   * URL on every call; these routes nest one level deeper, so the segment
+   * lookup is done once and by name rather than by offset.
+   */
+  private pathSegmentAfter(req: NextRequest, segment: string): string | undefined {
+    const parts = new URL(req.url).pathname.split('/');
+    const index = parts.findIndex((part) => part === segment);
+    return index === -1 ? undefined : parts[index + 1];
+  }
+
+  private async parseBody<T>(req: NextRequest, schema: { parse: (value: unknown) => T }): Promise<T> {
+    try {
+      return schema.parse(await req.json());
+    } catch (error) {
+      if (error instanceof ZodError) {
+        throw new ValidationError('Validation failed', error.errors);
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Dry run of a merge. Read-only, but a POST because the source client is a
+   * body parameter rather than a filter — and because a preview is a request
+   * to compute something, not a resource to fetch. Writes nothing, so it is
+   * gated on `client:update` alone; the merge itself additionally requires
+   * `client:delete`.
+   */
+  mergePreview() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        const apiRequest = await this.authenticate(req) as AuthenticatedApiRequest;
+        const clientId = this.pathSegmentAfter(req, 'clients');
+
+        return await runWithTenant(apiRequest.context.tenant, async () => {
+          await this.checkPermission(apiRequest, this.options.permissions?.update || 'update');
+
+          const client = clientId ? await this.clientService.getById(clientId, apiRequest.context!) : null;
+          if (!client || !clientId) {
+            throw new NotFoundError('Client not found');
+          }
+
+          const body = await this.parseBody(req, clientMergePreviewRequestSchema);
+          const preview = await this.clientService.previewMerge(
+            clientId,
+            body.source_client_id,
+            apiRequest.context!
+          );
+          return createSuccessResponse(preview);
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  /**
+   * Absorbs another client into this one as a billing profile.
+   *
+   * Requires delete as well as update: it retires the source client, and an
+   * API key that may only edit clients must not be able to retire one.
+   */
+  merge() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        const apiRequest = await this.authenticate(req) as AuthenticatedApiRequest;
+        const clientId = this.pathSegmentAfter(req, 'clients');
+
+        return await runWithTenant(apiRequest.context.tenant, async () => {
+          await this.checkPermission(apiRequest, this.options.permissions?.update || 'update');
+          await this.checkPermission(apiRequest, this.options.permissions?.delete || 'delete');
+
+          const client = clientId ? await this.clientService.getById(clientId, apiRequest.context!) : null;
+          if (!client || !clientId) {
+            throw new NotFoundError('Client not found');
+          }
+
+          const body = await this.parseBody(req, clientMergeRequestSchema);
+          const result = await this.clientService.mergeClient(
+            clientId,
+            {
+              sourceClientId: body.source_client_id,
+              contactAssignments: body.contact_assignments?.map((entry) => ({
+                contactNameId: entry.contact_name_id,
+                billingProfileId: entry.billing_profile_id,
+                isManager: entry.is_manager,
+                canViewProfileTickets: entry.can_view_profile_tickets,
+              })),
+              contractDecisions: body.contract_decisions?.map((entry) => ({
+                clientContractId: entry.client_contract_id,
+                choice: entry.choice,
+                cutoverDate: entry.cutover_date ?? null,
+              })),
+              pinPortalGrants: body.pin_portal_grants,
+              externalRemapChoices: body.external_remap_choices?.map((entry) => ({
+                mappingId: entry.mapping_id,
+                apply: entry.apply,
+              })),
+            },
+            apiRequest.context!
+          );
+
+          return createSuccessResponse({
+            merge_id: result.mergeId,
+            source_client_id: result.sourceClientId,
+            target_client_id: result.targetClientId,
+            moved_profile_ids: result.movedProfileIds,
+            moved_default_profile_id: result.movedDefaultProfileId,
+            counts: result.counts,
+            remapped_external_mapping_ids: result.remappedExternalMappingIds,
+            skipped_external_mapping_ids: result.skippedExternalMappingIds,
+          });
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  getBillingProfileContacts() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        const apiRequest = await this.authenticate(req) as AuthenticatedApiRequest;
+        const clientId = this.pathSegmentAfter(req, 'clients');
+        const profileId = this.pathSegmentAfter(req, 'billing-profiles');
+
+        return await runWithTenant(apiRequest.context.tenant, async () => {
+          await this.checkPermission(apiRequest, this.options.permissions?.read || 'read');
+          if (!clientId || !profileId) {
+            throw new NotFoundError('Billing profile not found for this client');
+          }
+          const contacts = await this.clientService.getBillingProfileContacts(
+            clientId,
+            profileId,
+            apiRequest.context!
+          );
+          return createSuccessResponse(contacts);
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  setBillingProfileContacts() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        const apiRequest = await this.authenticate(req) as AuthenticatedApiRequest;
+        const clientId = this.pathSegmentAfter(req, 'clients');
+        const profileId = this.pathSegmentAfter(req, 'billing-profiles');
+
+        return await runWithTenant(apiRequest.context.tenant, async () => {
+          await this.checkPermission(apiRequest, this.options.permissions?.update || 'update');
+          if (!clientId || !profileId) {
+            throw new NotFoundError('Billing profile not found for this client');
+          }
+
+          const body = await this.parseBody(req, setBillingProfileContactsSchema);
+          await this.clientService.setBillingProfileContacts(
+            clientId,
+            profileId,
+            body.contacts,
+            apiRequest.context!
+          );
+
+          const contacts = await this.clientService.getBillingProfileContacts(
+            clientId,
+            profileId,
+            apiRequest.context!
+          );
+          return createSuccessResponse(contacts);
         });
       } catch (error) {
         return handleApiError(error);

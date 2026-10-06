@@ -294,13 +294,29 @@ describe('QuickAddAsset custom asset types', () => {
       os_type: 'Windows',
       os_version: '11',
       cpu_model: '',
-      cpu_cores: 0,
-      ram_gb: 0,
+      cpu_cores: null,
+      ram_gb: null,
       storage_type: '',
-      storage_capacity_gb: 0,
+      storage_capacity_gb: null,
       installed_software: [],
     });
     expect(payload.attributes).toBeUndefined();
+  });
+
+  it('renders and submits additional fields alongside built-in workstation fields', async () => {
+    const user = userEvent.setup();
+    mockGetAssetTypes.mockResolvedValue(REGISTRY.map((entry: any) => entry.slug === 'workstation'
+      ? { ...entry, fields_schema: [{ key: 'sc_session', label: 'ScreenConnect Session', kind: 'text' }] }
+      : entry));
+    const { typeSelect } = await renderQuickAdd();
+    await user.type(screen.getByLabelText('asset-name-input'), 'WS-02');
+    await user.type(screen.getByLabelText('asset-tag-input'), 'TAG-02');
+    await user.selectOptions(typeSelect, 'workstation');
+    expect(await screen.findByLabelText('workstation-os-type-input')).toBeTruthy();
+    await user.type(screen.getByLabelText('quick-add-asset-additional-field-sc_session'), 'sess-2562-abc');
+    await user.click(screen.getByRole('button', { name: 'Create Asset' }));
+    await waitFor(() => expect(mockCreateAsset).toHaveBeenCalledTimes(1));
+    expect(mockCreateAsset.mock.calls[0][0].attributes).toEqual({ sc_session: 'sess-2562-abc' });
   });
 
   it('D4: switching type keeps entered attribute values; fields simply stop rendering', async () => {

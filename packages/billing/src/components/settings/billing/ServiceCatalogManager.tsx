@@ -3,6 +3,9 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
+import { UnitOfMeasureInput, type UnitSelection } from '@alga-psa/ui/components/UnitOfMeasureInput';
+import { listTenantUnitsOfMeasure, registerTenantUnitOfMeasure } from '@alga-psa/billing/actions/unitOfMeasureActions';
+import { SearchInput } from '@alga-psa/ui/components/SearchInput';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import CurrencyPicker from '@alga-psa/ui/components/CurrencyPicker';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
@@ -85,6 +88,8 @@ const ServiceCatalogManager: React.FC = () => {
   // Using Service Type filter instead of categories
   const [selectedServiceType, setSelectedServiceType] = useState<string>('all');
   const [selectedBillingMethod, setSelectedBillingMethod] = useState<string>('all');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [searchInputValue, setSearchInputValue] = useState('');
   // State for tax rates - Use full ITaxRate
   const [taxRates, setTaxRates] = useState<ITaxRate[]>([]);
   const [isLoadingTaxRates, setIsLoadingTaxRates] = useState(true);
@@ -116,13 +121,8 @@ const ServiceCatalogManager: React.FC = () => {
   // the read-only dialog it opens with no pending price change.
   const [usageByService, setUsageByService] = useState<Record<string, ServiceContractUsage>>({});
   const [reviewingService, setReviewingService] = useState<IService | null>(null);
-  const filteredServices = services.filter(service => {
-    // Filter by Service Type
-    const serviceTypeMatch = selectedServiceType === 'all' || service.custom_service_type_id === selectedServiceType;
-    const billingMethodMatch = selectedBillingMethod === 'all' || service.billing_method === selectedBillingMethod;
-    return serviceTypeMatch && billingMethodMatch;
-  });
-  const memoizedFilteredServices = useMemo(() => filteredServices, [JSON.stringify(filteredServices)]);
+  // LEVERAGE: pattern catalog-list-query — keep catalog filters server-paginated and guard overlapping requests.
+  const memoizedFilteredServices = useMemo(() => services, [services]);
   const [selectedServiceIds, setSelectedServiceIds] = useState<Set<string>>(new Set());
   const [isBulkProcessing, setIsBulkProcessing] = useState(false);
   const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState(false);
@@ -177,6 +177,9 @@ const ServiceCatalogManager: React.FC = () => {
   // Track when page changes are from user interaction vs. programmatic updates
   const [userChangedPage, setUserChangedPage] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
+  const latestRequestRef = useRef(0);
+  const isInitialMountRef = useRef(true);
   const serviceToDeleteName = useMemo(() => {
     if (!serviceToDelete) {
       return t('serviceCatalog.table.thisService', { defaultValue: 'this service' });
@@ -198,16 +201,14 @@ const ServiceCatalogManager: React.FC = () => {
 
   // Add effect to refetch when filters change
   useEffect(() => {
-    // Only run this effect after initial load
-    if (services.length > 0) {
-      console.log("Filters changed, resetting to page 1 and fetching data");
-      setCurrentPage(1); // Reset to page 1 when filters change
-      // The rows behind the selection are about to change, so the selection is
-      // no longer something the operator can see or verify.
-      clearSelection();
-      fetchServices(false);
+    if (isInitialMountRef.current) {
+      isInitialMountRef.current = false;
+      return;
     }
-  }, [selectedServiceType, selectedBillingMethod]);
+    setCurrentPage(1);
+    clearSelection();
+    fetchServices(false);
+  }, [selectedServiceType, selectedBillingMethod, searchTerm]);
 
   useEffect(() => {
     fetchServices(false); // Initial fetch starts at page 1
@@ -301,48 +302,28 @@ const ServiceCatalogManager: React.FC = () => {
   }, []);
 
   const fetchServices = async (preservePage = false) => {
+    const requestId = ++latestRequestRef.current;
     setIsLoading(true);
     try {
       const pageToFetch = preservePage ? currentPage : 1;
-      console.log(`Fetching services for page: ${pageToFetch}, preserve page: ${preservePage}, filters: serviceType=${selectedServiceType}, billingMethod=${selectedBillingMethod}`);
-      
-      // If we're filtering, we need to fetch all services and filter client-side
-      // Otherwise, we can use server-side pagination
-      let response;
-      
-      if (selectedServiceType !== 'all' || selectedBillingMethod !== 'all') {
-        // When filtering, fetch all services (with a large page size)
-        console.log("Using client-side filtering - fetching all services");
-        response = await getServices(1, 1000, { item_kind: 'service' });
-        if (isActionMessageError(response) || isActionPermissionError(response)) {
-          setError(getErrorMessage(response));
-          setServices([]);
-          setTotalCount(0);
-          return;
-        }
-        
-        // Update total count based on filtered results
-        const filteredCount = response.services.filter(service => {
-          const serviceTypeMatch = selectedServiceType === 'all' || service.custom_service_type_id === selectedServiceType;
-          const billingMethodMatch = selectedBillingMethod === 'all' || service.billing_method === selectedBillingMethod;
-          return serviceTypeMatch && billingMethodMatch;
-        }).length;
-        
-        setTotalCount(filteredCount);
-      } else {
-        // No filtering, use server-side pagination
-        console.log("Using server-side pagination");
-        response = await getServices(pageToFetch, pageSize, { item_kind: 'service' });
-        if (isActionMessageError(response) || isActionPermissionError(response)) {
-          setError(getErrorMessage(response));
-          setServices([]);
-          setTotalCount(0);
-          return;
-        }
-        setTotalCount(response.totalCount);
+      const response = await getServices(pageToFetch, pageSize, {
+        item_kind: 'service',
+        search: searchTerm.trim() || undefined,
+        custom_service_type_id: selectedServiceType === 'all' ? undefined : selectedServiceType,
+        billing_method: selectedBillingMethod === 'all'
+          ? undefined
+          : selectedBillingMethod as 'fixed' | 'hourly' | 'usage',
+        sort: 'service_name',
+        order: 'asc',
+      });
+      if (requestId !== latestRequestRef.current) return;
+      if (isActionMessageError(response) || isActionPermissionError(response)) {
+        setError(getErrorMessage(response));
+        setServices([]);
+        setTotalCount(0);
+        return;
       }
-      
-      // Update state with the paginated response
+      setTotalCount(response.totalCount);
       setServices(response.services);
       
       // If we're preserving the page and response came back with a different page
@@ -353,26 +334,21 @@ const ServiceCatalogManager: React.FC = () => {
       
       setError(null);
     } catch (error) {
+      if (requestId !== latestRequestRef.current) return;
       console.error('Error fetching services:', error);
       setError(t('serviceCatalog.errors.fetchServices', { defaultValue: 'Failed to fetch services' }));
     } finally {
-      setIsLoading(false);
+      if (requestId === latestRequestRef.current) {
+        setIsLoading(false);
+        setHasLoadedOnce(true);
+      }
     }
   };
 
   // Load the "used on N contracts" count for the services actually on screen.
-  // Server-side pagination already hands us the page; client-side filtering
-  // paginates `filteredServices` locally, so slice the visible page there.
   useEffect(() => {
-    const isFiltering = selectedServiceType !== 'all' || selectedBillingMethod !== 'all';
-    const pageServices = isFiltering
-      ? filteredServices.slice((currentPage - 1) * pageSize, currentPage * pageSize)
-      : services;
-    void loadUsageCounts(pageServices);
-    // `filteredServices` is derived from the listed inputs;
-    // `loadUsageCounts` is stable (useCallback with no deps).
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [services, currentPage, pageSize, selectedServiceType, selectedBillingMethod, loadUsageCounts]);
+    void loadUsageCounts(services);
+  }, [services, loadUsageCounts]);
 
   const fetchCategories = async () => {
     try {
@@ -1122,9 +1098,26 @@ const ServiceCatalogManager: React.FC = () => {
           {errorTaxRates && <div className="text-red-500 mb-4">{errorTaxRates}</div>} {/* Show tax rate error */}
           <div className="space-y-4">
             <div className="flex justify-between items-center">
-              <div className="flex space-x-2">
+              <div className="flex flex-wrap gap-2">
+                <SearchInput
+                  id="service-catalog-search"
+                  value={searchInputValue}
+                  onInput={(event) => setSearchInputValue(event.currentTarget.value)}
+                  onChange={(event) => setSearchTerm(event.target.value)}
+                  debounceMs={300}
+                  onClear={() => {
+                    setSearchInputValue('');
+                    setSearchTerm('');
+                  }}
+                  placeholder={t('serviceCatalog.filters.searchPlaceholder', {
+                    defaultValue: 'Search services by name, SKU, or description...',
+                  })}
+                  className="w-[280px]"
+                  loading={isLoading && hasLoadedOnce}
+                />
                 {/* Service Type filter */}
                 <CustomSelect
+                  id="service-catalog-service-type-filter"
                   options={[
                     { value: 'all', label: t('serviceCatalog.filters.allServiceTypes', { defaultValue: 'All Service Types' }) },
                     ...allServiceTypes.map(type => ({
@@ -1140,6 +1133,7 @@ const ServiceCatalogManager: React.FC = () => {
                   className="w-[200px]"
                 />
                 <CustomSelect
+                  id="service-catalog-billing-method-filter"
                   options={[{
                     value: 'all',
                     label: t('serviceCatalog.filters.allBillingMethods', { defaultValue: 'All Billing Methods' })
@@ -1158,13 +1152,30 @@ const ServiceCatalogManager: React.FC = () => {
                 onServiceTypesChange={fetchAllServiceTypes}
               /> {/* Pass prop */}
             </div>
-            {isLoading ? (
+            {isLoading && services.length === 0 && !hasLoadedOnce ? (
               <LoadingIndicator
                 layout="stacked"
                 className="py-10 text-muted-foreground"
                 spinnerProps={{ size: 'md' }}
                 text={t('serviceCatalog.loading', { defaultValue: 'Loading services' })}
               />
+            ) : totalCount === 0 && (searchTerm.trim() || selectedServiceType !== 'all' || selectedBillingMethod !== 'all') ? (
+              <div className="flex flex-col items-center gap-3 py-10 text-center">
+                <p>{t('serviceCatalog.emptySearch', { defaultValue: 'No services match your search.' })}</p>
+                <Button
+                  id="service-catalog-clear-filters-button"
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setSearchInputValue('');
+                    setSearchTerm('');
+                    setSelectedServiceType('all');
+                    setSelectedBillingMethod('all');
+                  }}
+                >
+                  {t('serviceCatalog.clearFilters', { defaultValue: 'Clear filters' })}
+                </Button>
+              </div>
             ) : (
               <DataTable
                 id="service-catalog-manager-table"
@@ -1508,23 +1519,24 @@ const ServiceCatalogManager: React.FC = () => {
               </p>
             </div>
 
-            {/* Unit of Measure for usage-based services */}
-            {editingService?.billing_method === 'usage' && (
+            {/* Catalog unit */}
+            {editingService && (
               <>
                 <div>
                   <label htmlFor="unit-of-measure" className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">
-                    {t('serviceCatalog.fields.unitOfMeasure.label', { defaultValue: 'Unit of Measure *' })}
+                    {t('serviceCatalog.fields.unitOfMeasure.label', { defaultValue: `Unit of Measure${editingService.billing_method === 'usage' ? ' *' : ''}` })}
                   </label>
-                  <Input
+                  <UnitOfMeasureInput
                     id="unit-of-measure"
-                    type="text"
-                    value={editingService?.unit_of_measure || ''}
-                    onChange={(e) => setEditingService({ ...editingService!, unit_of_measure: e.target.value })}
+                    value={{ code: editingService.unit_code || '', label: editingService.unit_of_measure || '' }}
+                    onChange={(value: UnitSelection | string) => { if (typeof value !== 'string') setEditingService({ ...editingService, unit_of_measure: value.label, unit_code: value.code }); }}
+                    loadCustomUnits={listTenantUnitsOfMeasure}
+                    registerCustomUnit={registerTenantUnitOfMeasure}
+                    required={editingService.billing_method === 'usage'}
+                    serviceType={editingService.billing_method}
                     placeholder={t('serviceCatalog.fields.unitOfMeasure.placeholder', {
                       defaultValue: 'e.g., GB, API call, user'
                     })}
-                    required
-                    className="w-full"
                   />
                   <p className="text-xs text-muted-foreground mt-1">
                     {t('serviceCatalog.fields.unitOfMeasure.help', {

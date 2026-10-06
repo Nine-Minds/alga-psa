@@ -9,7 +9,7 @@ import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect
 import { createAsset } from '../actions/assetActions';
 import { unwrapAssetActionResult } from '../actions/assetActionErrors';
 import { formatClientLocation } from '../lib/formatClientLocation';
-import { pickSchemaAttributes, validateAttributesAgainstSchema } from '../lib/assetTypeAttributes';
+import { isBuiltinAssetTypeSlug, pickSchemaAttributes, validateAttributesAgainstSchema } from '../lib/assetTypeAttributes';
 import { buildAssetTypeOptions, findCustomAssetType, useAssetTypeRegistry } from './shared/useAssetTypeOptions';
 import { CustomTypeFieldsPanel } from './shared/CustomTypeFieldsPanel';
 import type { CreateAssetRequest, IClient, IClientLocation } from '@alga-psa/types';
@@ -128,9 +128,9 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
     attributes: {}
   });
 
-  // F309: registry entry for the selected slug when it is a custom type.
-  const selectedCustomType = findCustomAssetType(registryEntries, formData.asset_type);
-  const customTypeFields = selectedCustomType?.fields_schema ?? [];
+  // Built-in entries may also define tenant-specific additional fields.
+  const selectedTypeEntry = registryEntries?.find((entry) => entry.slug === formData.asset_type) ?? null;
+  const customTypeFields = selectedTypeEntry?.fields_schema ?? [];
 
   useEffect(() => {
     if (defaultOpen) {
@@ -231,7 +231,7 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
     setHasAttemptedSubmit(true);
 
     // F309: required enforcement for custom-type schema fields.
-    const attributeIssues = selectedCustomType
+    const attributeIssues = customTypeFields.length > 0
       ? validateAttributesAgainstSchema(customTypeFields, formData.attributes, { requireAll: true })
       : [];
     setAttributeErrors(Object.fromEntries(attributeIssues.map((issue) => [issue.key, issue.message])));
@@ -268,21 +268,22 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
       };
 
       // F309: custom-type schema values land in payload.attributes.
-      if (selectedCustomType) {
+      if (customTypeFields.length > 0) {
         assetData.attributes = pickSchemaAttributes(customTypeFields, formData.attributes);
       }
 
-      // Add type-specific data based on the selected type
+      // Add type-specific data based on the selected type. Quick Add doesn't ask
+      // for hardware numbers, so they are unknown (null), not 0 (alga0002283).
       switch (formData.asset_type) {
         case 'workstation':
           assetData.workstation = {
             os_type: formData.workstation.os_type,
             os_version: formData.workstation.os_version,
             cpu_model: '',
-            cpu_cores: 0,
-            ram_gb: 0,
+            cpu_cores: null,
+            ram_gb: null,
             storage_type: '',
-            storage_capacity_gb: 0,
+            storage_capacity_gb: null,
             installed_software: []
           };
           break;
@@ -290,10 +291,10 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
           assetData.network_device = {
             device_type: formData.network_device.device_type,
             management_ip: formData.network_device.management_ip,
-            port_count: 0,
+            port_count: null,
             firmware_version: '',
             supports_poe: false,
-            power_draw_watts: 0,
+            power_draw_watts: null,
             vlan_config: {},
             port_config: {}
           };
@@ -303,8 +304,8 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
             os_type: formData.server.os_type,
             os_version: formData.server.os_version,
             cpu_model: '',
-            cpu_cores: 0,
-            ram_gb: 0,
+            cpu_cores: null,
+            ram_gb: null,
             storage_config: [],
             is_virtual: false,
             network_interfaces: [],
@@ -371,7 +372,7 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
 
     // F309: custom types render their fields_schema instead of the built-in
     // extension panels; values read/write formData.attributes[key].
-    if (selectedCustomType) {
+    if (selectedTypeEntry && !selectedTypeEntry.is_builtin) {
       return (
         <CustomTypeFieldsPanel
           fields={customTypeFields}
@@ -785,7 +786,7 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
               />
             </div>
 
-            {formData.asset_type && (!selectedCustomType || customTypeFields.length > 0) && (
+            {formData.asset_type && (isBuiltinAssetTypeSlug(formData.asset_type) || (!selectedTypeEntry?.is_builtin && customTypeFields.length > 0)) && (
               <div {...withDataAutomationId({ id: 'type-specific-details' })} className="border-t pt-4">
                 <h3 className="text-sm font-medium text-gray-700 mb-4">
                   {t('quickAddAsset.sections.typeSpecificDetails', {
@@ -793,6 +794,7 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
                   })}
                 </h3>
                 {renderTypeSpecificFields()}
+                {selectedTypeEntry?.is_builtin && customTypeFields.length > 0 && <CustomTypeFieldsPanel fields={customTypeFields} values={formData.attributes} errors={attributeErrors} onChange={(key, value) => setFormData((prev) => ({ ...prev, attributes: { ...prev.attributes, [key]: value } }))} idPrefix="quick-add-asset-additional" />}
               </div>
             )}
           </form>

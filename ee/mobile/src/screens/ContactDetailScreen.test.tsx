@@ -5,7 +5,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 Object.assign(globalThis, { React });
 
-const { getContactMock, placeCallMock, translate, authValue } = vi.hoisted(() => ({
+const { getContactMock, placeCallMock, translate, authValue, capabilities } = vi.hoisted(() => ({
+  capabilities: { features: { clientsCreate: false, clientsUpdate: false, contactsCreate: false, contactsUpdate: false }, defaultCountry: "US", loaded: true },
   getContactMock: vi.fn(),
   placeCallMock: vi.fn(),
   // Stable identity across renders so the screen's fetch callback does not refire on every render.
@@ -29,6 +30,10 @@ vi.mock("../api/contacts", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../api/contacts")>()),
   getContact: (...args: unknown[]) => getContactMock(...args),
 }));
+vi.mock("../capabilities/CapabilitiesContext", () => ({ useCapabilities: () => capabilities }));
+vi.mock("../features/contacts/components/ContactFormModal", () => ({
+  ContactFormModal: (props: Record<string, unknown>) => React.createElement("MockContactFormModal", props),
+}));
 vi.mock("../ui/components/Avatar", () => ({ Avatar: () => null }));
 vi.mock("../logging/logger", () => ({ logger: { error: vi.fn(), warn: vi.fn(), info: vi.fn(), debug: vi.fn() } }));
 vi.mock("../features/interactions/hooks/usePlaceCall", () => ({ usePlaceCall: () => placeCallMock }));
@@ -49,8 +54,8 @@ const CONTACT = {
       client_name: "Acme",
       email: "jane@acme.com",
       phone_numbers: [
-        { contact_phone_number_id: "p1", phone_number: "+15550100", canonical_type: "mobile", is_default: true },
-        { contact_phone_number_id: "p2", phone_number: "+15550101", canonical_type: "work" },
+        { contact_phone_number_id: "p1", phone_number: "+13202521658", canonical_type: "mobile", is_default: true },
+        { contact_phone_number_id: "p2", phone_number: "+442079460958", canonical_type: "work" },
       ],
     },
   },
@@ -62,7 +67,7 @@ async function renderScreen(): Promise<ReactTestRenderer> {
     renderer = create(
       React.createElement(ContactDetailScreen, {
         route: { params: { contactId: "contact-1", contactName: "Jane Doe" } } as never,
-        navigation: { navigate: vi.fn(), setParams: vi.fn(), dispatch: vi.fn() } as never,
+        navigation: { navigate: vi.fn(), setParams: vi.fn(), dispatch: vi.fn(), setOptions: vi.fn() } as never,
       }),
     );
   });
@@ -84,13 +89,13 @@ describe("ContactDetailScreen calls", () => {
 
   it("dials a phone number through the shared call flow, attributed to this contact and their client", async () => {
     const renderer = await renderScreen();
-    expect(texts(renderer)).toEqual(expect.arrayContaining(["+15550100", "+15550101"]));
+    expect(texts(renderer)).toEqual(expect.arrayContaining(["+1 320 252 1658", "+44 20 7946 0958"]));
 
     act(() => renderer.root.find((n) => n.props?.testID === "contact-detail-call-p2").props.onPress());
 
     expect(placeCallMock).toHaveBeenCalledWith({
       origin: { kind: "contact", id: "contact-1" },
-      phone: "+15550101",
+      phone: "+442079460958",
       name: "Jane Doe",
       contactId: "contact-1",
       clientId: "client-1",

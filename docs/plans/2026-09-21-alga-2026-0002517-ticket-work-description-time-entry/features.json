@@ -1,0 +1,34 @@
+[
+  {
+    "id": "F001",
+    "description": "A new time entry initialized with explicit default start and end times uses the work-item description as its initial notes.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > 1"
+    ]
+  },
+  {
+    "id": "F002",
+    "description": "A new time entry initialized without explicit default start and end times uses the work-item description as its initial notes.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > 2"
+    ]
+  },
+  {
+    "id": "F003",
+    "description": "New time entries use an empty notes string when the work-item description is nullish.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > 4"
+    ]
+  },
+  {
+    "id": "F004",
+    "description": "Existing time entries retain their saved notes when initialized for editing.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements > 3"
+    ]
+  }
+]

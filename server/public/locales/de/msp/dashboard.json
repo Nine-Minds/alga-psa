@@ -1,6 +1,7 @@
 {
   "welcome": {
     "title": "Willkommen in Ihrer MSP-Kommandozentrale",
+    "titleBranded": "Willkommen in der Kommandozentrale von {{companyName}}",
     "description": "Verfolgen Sie den Onboarding-Fortschritt, konfigurieren Sie kritische Services und sorgen Sie für ein konsistentes Kundenerlebnis.",
     "titleCommunity": "Willkommen zurück",
     "descriptionCommunity": "Springen Sie von Ihrem Dashboard direkt zu Tickets, Planung, Projekten und Berichten."
@@ -110,7 +111,9 @@
       "hiding": "Wird ausgeblendet...",
       "hide": "Ausblenden",
       "dismiss": "Ausblenden {{title}}",
-      "restoring": "Wird wiederhergestellt..."
+      "restoring": "Wird wiederhergestellt...",
+      "hideSection": "Abschnitt ausblenden",
+      "hidingSection": "Abschnitt wird ausgeblendet…"
     },
     "hidden": {
       "title": "Ausgeblendete Setup-Karten ({{count}})",
@@ -179,7 +182,14 @@
     },
     "errors": {
       "dismissFailed": "Onboarding-Schritt konnte nicht ausgeblendet werden.",
-      "restoreFailed": "Onboarding-Schritt konnte nicht wiederhergestellt werden."
+      "restoreFailed": "Onboarding-Schritt konnte nicht wiederhergestellt werden.",
+      "dismissSectionFailed": "Der Onboarding-Abschnitt konnte nicht ausgeblendet werden.",
+      "restoreSectionFailed": "Der Onboarding-Abschnitt konnte nicht wiederhergestellt werden."
+    },
+    "preferences": {
+      "title": "Einstellungen für das Dashboard",
+      "description": "Der abgeschlossene Onboarding-Abschnitt ist in Ihrem Dashboard ausgeblendet.",
+      "restoreSection": "Onboarding-Abschnitt wiederherstellen"
     }
   },
   "greeting": {

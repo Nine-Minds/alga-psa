@@ -1,6 +1,8 @@
 import type { IService } from '@/interfaces/billing.interfaces';
-import { BaseService, ServiceContext, ListResult, tenantDb } from '@alga-psa/db';
+import { BaseService, ServiceContext, ListResult, tenantDb, withTransaction } from '@alga-psa/db';
+import { resolveCatalogUnitForCreate, resolveCatalogUnitForUpdate } from '@alga-psa/shared/billingClients/tenantUnitsOfMeasure';
 import { splitServicePricesByEffectiveDate } from '@alga-psa/billing/models/service';
+import { resolveCatalogTaxRateIdForCreate } from '@alga-psa/shared/billingClients/defaultTaxRate';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
 import { ListOptions } from '../controllers/types';
 import { NotFoundError, ValidationError } from '../middleware/apiMiddleware';
@@ -54,7 +56,7 @@ export class ServiceCatalogService extends BaseService<IService> {
       tableName: 'service_catalog',
       primaryKey: 'service_id',
       tenantColumn: 'tenant',
-      searchableFields: ['service_name', 'description', 'sku'],
+      searchableFields: ['service_name', 'description', 'sku', 'product_category'],
       defaultSort: 'service_name',
       defaultOrder: 'asc'
     });
@@ -105,7 +107,8 @@ export class ServiceCatalogService extends BaseService<IService> {
           builder
             .whereILike('sc.service_name', term)
             .orWhereILike('sc.description', term)
-            .orWhereILike('sc.sku', term);
+            .orWhereILike('sc.sku', term)
+            .orWhereILike('sc.product_category', term);
         });
       }
       return query;
@@ -229,14 +232,6 @@ export class ServiceCatalogService extends BaseService<IService> {
     const tenant = context.tenant;
 
     const { custom_service_type_id } = data;
-    if (custom_service_type_id) {
-      const serviceType = await tenantDb(knex, tenant).table('service_types')
-        .where('id', custom_service_type_id)
-        .first();
-      if (!serviceType) {
-        throw new ValidationError(`ServiceType ID '${custom_service_type_id}' not found for tenant '${tenant}'.`);
-      }
-    }
 
     const rawData = data as any;
     const {
@@ -245,27 +240,55 @@ export class ServiceCatalogService extends BaseService<IService> {
       ...serviceInput
     } = rawData;
 
-    const serviceData = {
-      category_id: serviceInput.category_id ?? null,
-      ...serviceInput,
-      tenant,
-      default_rate: typeof serviceInput.default_rate === 'string'
-        ? parseFloat(serviceInput.default_rate) || 0
-        : serviceInput.default_rate,
-      tax_rate_id: serviceInput.tax_rate_id || null,
-    };
+    // Resolve inherited defaults and units in the transaction, holding the
+    // documented rate/region locks until the catalog row is persisted.
+    // Publication happens only after commit so search consumers can read it.
+    const createdResult = await withTransaction(knex, async (trx) => {
+      if (custom_service_type_id) {
+        const serviceType = await tenantDb(trx, tenant).table('service_types')
+          .where('id', custom_service_type_id)
+          .first();
+        if (!serviceType) {
+          throw new ValidationError(`ServiceType ID '${custom_service_type_id}' not found for tenant '${tenant}'.`);
+        }
+      }
 
-    const [created] = await tenantDb(knex, tenant).table('service_catalog')
-      .insert(serviceData)
-      .returning('*');
+      const serviceData = {
+        category_id: serviceInput.category_id ?? null,
+        ...serviceInput,
+        ...(await resolveCatalogUnitForCreate(trx, tenant, serviceInput)),
+        tenant,
+        default_rate: typeof serviceInput.default_rate === 'string'
+          ? parseFloat(serviceInput.default_rate) || 0
+          : serviceInput.default_rate,
+        // Omitted inherits the tenant default; explicit null stays non-taxable.
+        tax_rate_id: await resolveCatalogTaxRateIdForCreate(
+          trx,
+          tenant,
+          serviceInput.tax_rate_id,
+          undefined,
+          { lock: true },
+        ),
+      };
 
-    await publishServiceCatalogSearchEvent('SERVICE_CATALOG_CREATED', tenant, created.service_id, {
-      userId: context.userId,
-      itemKind: created.item_kind,
-      changedFields: Object.keys(serviceData),
+      const [created] = await tenantDb(trx, tenant).table('service_catalog')
+        .insert(serviceData)
+        .returning('*');
+
+      return {
+        serviceId: created.service_id,
+        itemKind: created.item_kind,
+        changedFields: Object.keys(serviceData),
+      };
     });
 
-    return this.getById(created.service_id, context) as Promise<IService>;
+    await publishServiceCatalogSearchEvent('SERVICE_CATALOG_CREATED', tenant, createdResult.serviceId, {
+      userId: context.userId,
+      itemKind: createdResult.itemKind,
+      changedFields: createdResult.changedFields,
+    });
+
+    return this.getById(createdResult.serviceId, context) as Promise<IService>;
   }
 
   async update(id: string, data: Partial<IService>, context: ServiceContext): Promise<IService> {
@@ -279,6 +302,7 @@ export class ServiceCatalogService extends BaseService<IService> {
       currency_code: _currency_code,
       ...updateData
     } = data as any;
+    Object.assign(updateData, await resolveCatalogUnitForUpdate(knex, tenant, updateData));
 
     const [updated] = await tenantDb(knex, tenant).table('service_catalog')
       .where('service_id', id)

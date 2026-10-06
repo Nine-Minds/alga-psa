@@ -118,6 +118,9 @@
       "renewalHandling": "Umgang mit Erneuerungen"
     },
     "clientAssignment": {
+      "billingProfile": "Abrechnungsprofil",
+      "billingProfileLabel": "Abrechnungsprofil der Zuordnung",
+      "billingProfileNone": "Standardprofil des Kunden verwenden",
       "clientContractId": "Kundenvertrags-ID: {{id}}",
       "creditDrawdownOptOut": "Von der Guthabenverrechnung ausschließen",
       "empty": "Dieser Vertrag ist noch keinem Kunden zugewiesen.",
@@ -325,7 +328,8 @@
       "serviceCountOther": "{{count}} Services",
       "previouslyConfiguredQuantity": "Zuvor konfigurierte Menge: {{count}} — wird nicht für die Abrechnung verwendet",
       "billedOnPeriodCount": "Abrechnung nach der je Zeitraum gemeldeten Menge",
-      "recurringSeats": "{{count}} × {{rate}} (wiederkehrende Plätze)",
+      "recurringSeats": "{{count}} × {{rate}} = {{amount}} (wiederkehrende Plätze)",
+      "recurringSeatsCatalogRate": "{{count}} × Katalogpreis (wiederkehrende Plätze)",
       "bundleAllocation": "Verteilung des Paketpreises — keine abrechenbaren Plätze",
       "setUpRecurringSeats": "Wiederkehrende Plätze einrichten",
       "reportPeriodCount": "Menge für den Zeitraum melden"
@@ -399,7 +403,10 @@
       "selectClientFirst": "Wählen Sie zuerst einen Kunden aus",
       "startDateLabel": "Startdatum *",
       "useTenantDefaultsDescription": "Einstellungen für Verlängerungsmodus und Kündigungsfrist auf Organisationsebene anwenden.",
-      "useTenantDefaultsLabel": "Mandanten-Verlängerungsstandards verwenden"
+      "useTenantDefaultsLabel": "Mandanten-Verlängerungsstandards verwenden",
+      "billingProfileLabel": "Abrechnungsprofil",
+      "billingProfileNone": "Standardprofil des Kunden verwenden",
+      "billingProfileHint": "Positionen dieses Vertrags werden diesem Profil zugeordnet."
     },
     "po": {
       "amountLabel": "Bestellbetrag (optional)",
@@ -609,6 +616,71 @@
       "standard": "Standard",
       "custom": "Benutzerdefiniert",
       "unreviewed": "Ungeprüft"
+    },
+    "recurringSchedule": {
+      "openPanel": "Wiederkehrende Änderung planen & Verlauf",
+      "systemActor": "System",
+      "unknownActor": "Unbekannter Benutzer",
+      "midPeriodToggle": "Einmaligen Ausgleich innerhalb des Zeitraums anwenden",
+      "midPeriodToggleHelp": "Nur für die Menge. Die neue dauerhafte Menge gilt ab der oben angezeigten Grenze, und eine anteilige Belastung oder Gutschrift deckt die Tage vom Änderungsdatum bis zu dieser Grenze ab. Deaktiviert lassen, um nur an der Grenze zu ändern.",
+      "midPeriodDate": "Menge ändert sich am",
+      "midPeriodQuantityOnly": "Ein Ausgleich innerhalb des Zeitraums kann nur die Menge ändern. Planen Sie eine Änderung des Einzelpreises stattdessen an einer Leistungszeitraumgrenze.",
+      "midPeriodAffected": "Der betroffene Zeitraum {{start}} bis {{end}} ändert sich um {{delta}} Einheiten.",
+      "midPeriodMath": "{{delta}} Einheiten × {{rate}} × {{covered}}/{{full}} Tage = {{amount}} {{effect}}.",
+      "credit": "Gutschrift",
+      "charge": "Belastung",
+      "midPeriodStanding": "Ab {{boundary}} beträgt die dauerhafte Menge {{quantity}}. Der Ausgleich wird auf den nächsten geeigneten, bearbeitbaren Rechnungsentwurf gebucht (mit geltenden Rabatten und Steuern).",
+      "midPeriodNote": "Ausgleich innerhalb des Zeitraums: Die neue dauerhafte Menge gilt ab der angezeigten Grenze, und eine anteilige Belastung oder Gutschrift deckt den Teilzeitraum ab. Früher abgerechnete Beträge werden nie geändert.",
+      "midPeriodDateRequired": "Geben Sie für den einmaligen Ausgleich innerhalb des Zeitraums ein Datum in einem kommenden, noch nicht abgerechneten Zeitraum an.",
+      "midPeriodFrom": "Ausgleich ab {{date}}",
+      "previewImpact": "Auswirkung auf die Rechnung anzeigen",
+      "invoiceWindowMidPeriod": "Voraussichtliche Kundenrechnung für {{start}} bis {{end}}. Enthält andere Positionen in diesem Rechnungsfenster sowie den einmaligen Ausgleich innerhalb des Zeitraums.",
+      "invoiceWindowBoundaryOnly": "Voraussichtliche Kundenrechnung für {{start}} bis {{end}}. Enthält andere Positionen in diesem Rechnungsfenster; kein Ausgleich innerhalb des Zeitraums.",
+      "invoiceTotals": "Zwischensumme nach Rabatten: {{subtotal}}. Steuer: {{tax}}. Gesamt: {{before}} → {{after}}.",
+      "olderUnbilled": "Diese Grenze liegt in der Vergangenheit. Ausstehende Abrechnungen ab diesem Datum verwenden die geplanten Werte; früher abgerechnete Zeiträume bleiben unverändert.",
+      "catalogPriceMissing": "Für diese Grenze gibt es keinen Katalogpreis in {{currency}}, daher kann eine positive Menge nicht abgerechnet werden. Fügen Sie einen Katalogpreis in {{currency}} hinzu oder aktivieren Sie vor dem Speichern „Einzelpreis überschreiben“.",
+      "invoiceImpact": "Ab {{date}} ändert sich die wiederkehrende Zwischensumme dieser Position um {{delta}} auf {{total}} (vor Rabatten und Steuern). Früher abgerechnete Zeiträume bleiben unverändert.",
+      "discardDirty": "Wenn Sie das Gültigkeitsdatum ändern, werden die geltenden Werte neu geladen und Ihre ungespeicherte Änderung verworfen. Fortfahren?",
+      "discardDirtyTitle": "Ungespeicherte Änderung verwerfen?",
+      "discardDirtyConfirm": "Verwerfen und neu laden",
+      "invalidQuantity": "Die Menge muss eine ganze Zahl ab 0 sein.",
+      "invalidRate": "Geben Sie einen Einzelpreis ab 0 ein oder wechseln Sie zum Katalogpreis.",
+      "saved": "Geplant: {{quantity}} gültig ab {{date}}.",
+      "openPeriod": "nächste Zeitraumgrenze",
+      "title": "Zeitplan für wiederkehrende Mengen und Preise",
+      "kindProduct": "Produkt",
+      "kindService": "Einheitenbasierter Dienst",
+      "historyLoadError": "Der geplante Verlauf konnte nicht geladen werden: {{error}}",
+      "protectedPeriod": "Dieser Zeitraum ist bereits {{state}} und geschützt. Verwenden Sie eine spätere, noch nicht abgerechnete Leistungszeitraumgrenze; bereits abgerechnete Rechnungsbeträge werden nie geändert.",
+      "existingRevisionNotice": "Ab {{date}} gilt bereits eine geplante Änderung. Erneutes Speichern an derselben Grenze ersetzt sie (Fassung {{version}}); frühere Zeiträume bleiben unverändert.",
+      "boundaryOnly": "Änderungen werden nur an einer Leistungszeitraumgrenze wirksam. Es gibt keine anteilige Berechnung innerhalb des Zeitraums, keinen Ausgleich und keine Gutschrift: Früher abgerechnete Beträge bleiben unverändert, und die neue Menge bzw. der neue Preis gilt ab der angezeigten Grenze.",
+      "stopHelp": "Null beendet die wiederkehrende Abrechnung ab diesem Zeitraum. Die Position, ihr Verlauf und andere Vertragspositionen bleiben erhalten; fügen Sie eine spätere Änderung hinzu, um fortzufahren.",
+      "pricingSource": "Quelle des Einzelpreises",
+      "useCatalog": "Katalogpreis verwenden",
+      "override": "Einzelpreis überschreiben",
+      "inherited": "Aus dem Katalog übernommen",
+      "currentEffective": "Gilt für Zeiträume ab {{date}}: {{quantity}} × {{rate}} ({{source}}).",
+      "sourceCatalog": "Katalogpreis",
+      "sourceOverride": "explizit überschrieben",
+      "coverage": "Umfasst {{start}} bis {{end}} ({{currency}}).",
+      "catalogSource": "Katalogpreis {{priceId}}, gültig ab {{effectiveDate}}; übernommen, daher wird eine spätere Katalogänderung automatisch berücksichtigt.",
+      "baselineRow": "Ausgangsstand (keine Änderung): {{quantity}} × {{rate}}.",
+      "replace": "Geplante Änderung ersetzen",
+      "schedule": "Änderung planen",
+      "scheduledPeriods": "Geplante Zeiträume",
+      "effectiveDate": "Gültig ab",
+      "quantity": "Menge",
+      "unitPrice": "Einzelpreis",
+      "version": "Fassung",
+      "status": "Zustand",
+      "actor": "Geändert von",
+      "baselineLabel": "Ausgangsstand",
+      "catalogLabel": "Katalog",
+      "statusInForce": "In Kraft",
+      "statusScheduled": "Geplant",
+      "statusSuperseded": "Ersetzt",
+      "supersededHistory": "Ersetzte ausstehende Änderungen ({{count}})",
+      "supersededBy": "Ersetzt durch"
     }
   },
   "contractLineEdit": {
@@ -976,6 +1048,7 @@
       "published": "Veröffentlicht"
     },
     "toasts": {
+      "contractActivated": "Vertrag aktiviert",
       "draftDiscarded": "Entwurf verworfen",
       "failedToActivateContract": "Vertrag konnte nicht aktiviert werden",
       "failedToDeleteContract": "Vertrag konnte nicht gelöscht werden",
@@ -1154,7 +1227,12 @@
       "serviceFallback": "Dienst",
       "title": "Vorlagenzusammensetzung",
       "unitLabel": "Einheit:",
-      "usageBasedPlans": "Nutzungsbasierte Pläne"
+      "usageBasedPlans": "Nutzungsbasierte Pläne",
+      "recurringQuantityLabel": "Wiederkehrende Menge:",
+      "unitRateLabel": "Stückpreis:",
+      "unitRateFromCatalog": "Katalogpreis in der Währung des Kunden",
+      "unitAmountLabel": "Wiederkehrender Betrag:",
+      "unitAmountValue": "{{count}} × {{rate}} = {{amount}}"
     },
     "editBasicsTitle": "Vorlagengrundlagen bearbeiten",
     "editGuidanceTitle": "Vorlagenhinweise bearbeiten",
@@ -1380,7 +1458,10 @@
       "selectClientBeforeDraft": "Wählen Sie einen Kunden aus, bevor Sie als Entwurf speichern",
       "selectProductForEachLine": "Bitte wählen Sie für jede Produktlinie ein Produkt aus",
       "startDateRequired": "Startdatum ist erforderlich",
-      "unsupportedRecurringAuthoringCombination": "Nicht unterstützte Kombination für wiederkehrende Erstellung bei {{lineType}}-Services: Der Vertragsjubiläumsrhythmus unterstützt derzeit {{supportedFrequencies}} Abrechnungsfrequenzen. {{billingFrequency}} wird noch nicht unterstützt. Verwenden Sie eine der unterstützten Frequenzen oder rechnen Sie stattdessen nach dem Kundenabrechnungsplan ab."
+      "unsupportedRecurringAuthoringCombination": "Nicht unterstützte Kombination für wiederkehrende Erstellung bei {{lineType}}-Services: Der Vertragsjubiläumsrhythmus unterstützt derzeit {{supportedFrequencies}} Abrechnungsfrequenzen. {{billingFrequency}} wird noch nicht unterstützt. Verwenden Sie eine der unterstützten Frequenzen oder rechnen Sie stattdessen nach dem Kundenabrechnungsplan ab.",
+      "recurringUnitRateRequired": "Geben Sie für jeden wiederkehrenden Service einen Stückpreis ein.",
+      "recurringQuantityWholeNumber": "Die wiederkehrende Menge muss eine ganze Zahl sein.",
+      "fixedQuantityInvalid": "Die Menge muss null oder größer sein."
     },
     "nav": {
       "back": "Zurück",
@@ -1520,6 +1601,11 @@
       },
       "selectTemplateOptional": "Vorlage auswählen (optional)",
       "startFromTemplate": "Aus Vorlage starten"
+    },
+    "billingProfile": {
+      "label": "Abrechnungsprofil",
+      "none": "Standardprofil des Kunden verwenden",
+      "hint": "Positionen dieses Vertrags werden diesem Profil zugeordnet, sofern keine Vertragsposition dies überschreibt."
     }
   },
   "wizardFixed": {
@@ -1527,7 +1613,8 @@
     "baseRate": {
       "hint": "Gesamte wiederkehrende Gebühr für alle festen Services zusammen.",
       "label": "Wiederkehrender Grundtarif",
-      "placeholder": "0.00"
+      "placeholder": "0.00",
+      "hintWithUnits": "Wiederkehrende Gesamtgebühr für die Paketleistungen. Wiederkehrende Plätze/Einheiten werden separat als Menge × Stückpreis abgerechnet und sind nicht Teil dieses Preises."
     },
     "description": "Konfigurieren Sie Services, die in jedem Abrechnungszyklus zu einem festen Tarif abgerechnet werden. Sie können weiterhin Zeiten erfassen, aber die Abrechnung basiert auf diesem Pauschalbetrag.",
     "emptyState": "Noch keine Festgebühren-Services hinzugefügt. Klicken Sie oben auf „Service hinzufügen“ oder „Überspringen“, um fortzufahren.",
@@ -1544,12 +1631,15 @@
         "invoiceWindow": "Rechnungsfenster:",
         "recurringRate": "Wiederkehrender Tarif:",
         "service": "Dienst:",
-        "services": "Dienste:"
+        "services": "Dienste:",
+        "recurringUnits": "Wiederkehrende Plätze/Einheiten:",
+        "recurringTotal": "Gesamt pro Zeitraum:"
       },
       "materializedPeriods": {
         "tooltip": "Eine Vorschau der nächsten Servicezeiträume und der Rechnungsfenster, die auf Grundlage der aktuellen Einstellungen für sie erzeugt würden. Damit lässt sich die Kadenz vor dem Speichern überprüfen – die tatsächlichen Rechnungen werden später vom Abrechnungslauf erstellt."
       },
-      "title": "Wiederkehrende Vorschau vor dem Speichern"
+      "title": "Wiederkehrende Vorschau vor dem Speichern",
+      "unitRow": "{{serviceName}}: {{quantity}} × {{rate}} = {{amount}}"
     },
     "proration": {
       "label": "Für Teilperioden anpassen",
@@ -1561,7 +1651,10 @@
       "quantityLabel": "Menge",
       "selectServicePlaceholder": "Service auswählen",
       "serviceItemLabel": "Dienst {{index}}",
-      "catalogDefaultHint": "Kein {{currency}}-Katalogpreis; es wird der Katalogstandard verwendet."
+      "catalogDefaultHint": "Kein {{currency}}-Katalogpreis; es wird der Katalogstandard verwendet.",
+      "recurringQuantityLabel": "Wiederkehrende Menge",
+      "allocationQuantityLabel": "Zuordnungsmenge",
+      "noCurrencyPrice": "Kein Preis in {{currency}} im Katalog. Geben Sie einen Stückpreis ein."
     }
   },
   "wizardProducts": {
@@ -1695,6 +1788,7 @@
     },
     "fields": {
       "client": "Kunde",
+      "billingProfile": "Abrechnungsprofil",
       "contractName": "Vertragsname",
       "billingFrequency": "Abrechnungsfrequenz",
       "currency": "Währung",
@@ -1703,6 +1797,9 @@
       "renewalMode": "Verlängerungsmodus",
       "noticePeriod": "Kündigungsfrist",
       "renewalTerm": "Verlängerungszeitraum"
+    },
+    "billingProfile": {
+      "clientDefault": "Das Standardprofil des Kunden"
     },
     "fallback": {
       "notSelected": "Nicht ausgewählt",
@@ -1756,7 +1853,8 @@
         "other": "{{count}} Services"
       },
       "monthlyBaseRate": "Monatlicher Grundtarif:",
-      "partialPeriodAdjustment": "Teilperiodenanpassung:"
+      "partialPeriodAdjustment": "Teilperiodenanpassung:",
+      "recurringUnitRow": "{{serviceName}}: {{quantity}} × {{rate}} = {{amount}}"
     },
     "recurring": {
       "cadenceOwner": {
@@ -1867,7 +1965,8 @@
           "hourly": "Stundenbasiert",
           "usage": "Nutzung"
         }
-      }
+      },
+      "recurringQuantityInvalid": "Die wiederkehrende Menge für „{{serviceName}}“ muss eine ganze Zahl ab null sein, und ein Stückpreis muss ein gültiger Betrag sein."
     }
   },
   "templateBasics": {
@@ -1917,7 +2016,8 @@
       "adjustPartialPeriods": "Für Teilperioden anpassen",
       "services": "Dienste",
       "serviceNumber": "Dienst {{index}}",
-      "quantityOptional": "Menge (optional)"
+      "quantityOptional": "Menge (optional)",
+      "recurringQuantity": "Wiederkehrende Menge"
     },
     "placeholders": {
       "billingTiming": "Abrechnungszeitpunkt auswählen",
@@ -1925,7 +2025,9 @@
     },
     "help": {
       "adjustPartialPeriods": "Verwenden Sie dies, wenn aus der Vorlage erstellte Verträge die wiederkehrende Gebühr skalieren sollen, falls der Service innerhalb einer Periode beginnt oder endet.",
-      "quantity": "Vorgeschlagene Menge beim Erstellen von Verträgen"
+      "quantity": "Vorgeschlagene Menge beim Erstellen von Verträgen",
+      "recurringQuantity": "Anfängliche Anzahl an Plätzen/Einheiten. Sie kann angepasst werden, wenn aus dieser Vorlage ein Vertrag erstellt wird.",
+      "unitRateOptional": "Optional. Lassen Sie den Stückpreis leer, um beim Erstellen eines Vertrags den Katalogpreis dieses Services in der Währung des Kunden zu verwenden."
     },
     "preview": {
       "unknownService": "Unbekannter Service",
@@ -2047,7 +2149,8 @@
       "quantity": "Menge:",
       "bucket": "Kontingent:",
       "enabled": "Aktiviert",
-      "disabled": "Deaktiviert"
+      "disabled": "Deaktiviert",
+      "recurringQuantity": "Wiederkehrende Menge:"
     },
     "fixed": {
       "cadenceOwnerLabel": "Rhythmus-Eigentümer:",
@@ -2062,7 +2165,10 @@
       },
       "partialPeriodLabel": "Teilperiodenanpassung:",
       "serviceLabel": "Dienst:",
-      "invoiceWindowLabel": "Rechnungsfenster:"
+      "invoiceWindowLabel": "Rechnungsfenster:",
+      "unitRateLabel": "Stückpreis:",
+      "unitRateFromCatalog": "Katalogpreis in der Währung des Kunden",
+      "unitRateNeutral": "{{rate}} in der Währung des Kunden"
     },
     "hourly": {
       "minimumBillableTimeLabel": "Minimale abrechenbare Zeit:",
@@ -2092,7 +2198,8 @@
     },
     "selectedHeading": "Ausgewählte {{type}}-Services ({{count}})",
     "labels": {
-      "qty": "Menge:"
+      "qty": "Menge:",
+      "recurringUnits": "Wiederkehrende Plätze/Einheiten"
     },
     "removeDialog": {
       "title": "Vertragslinien-Vorlagenbaustein entfernen",

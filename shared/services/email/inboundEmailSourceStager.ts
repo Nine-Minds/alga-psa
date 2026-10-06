@@ -15,6 +15,7 @@
 
 import { createHash } from 'node:crypto';
 import { simpleParser } from 'mailparser';
+import { INBOUND_MIME_PARSE_OPTIONS } from './inboundMimeParseOptions';
 import type { EmailMessageDetails } from '../../interfaces/inbound-email.interfaces';
 import { buildInboundSourceObjectKey, normalizeInboundMessageIdentity } from './inboundEmailIdentity';
 import { extractMessageIds } from './inboundEmailMimeHelpers';
@@ -118,7 +119,7 @@ export async function parseStagedMimeIntoEmailDetails(params: {
   uidValidity?: string | null;
   uid?: string | number | null;
 }): Promise<ParsedStagedMime> {
-  const parsed: any = await simpleParser(params.rawMime);
+  const parsed: any = await simpleParser(params.rawMime, INBOUND_MIME_PARSE_OPTIONS);
   const rfcMessageId = typeof parsed?.messageId === 'string' ? parsed.messageId : null;
   const identity = normalizeInboundMessageIdentity({
     providerType: params.providerType,

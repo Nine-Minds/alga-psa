@@ -107,7 +107,9 @@
         "message": "Wiadomość",
         "messageOptional": "Wiadomość (opcjonalnie)",
         "messagePlaceholder": "Dodaj osobistą notatkę dla odbiorcy...",
-        "title": "Wyślij wycenę"
+        "title": "Wyślij wycenę",
+        "from": "Od",
+        "useDefault": "Użyj domyślnego nadawcy"
       }
     },
     "errors": {
@@ -212,7 +214,9 @@
         "description": "Spowoduje to wysłanie wyceny e-mailem do kontaktów rozliczeniowych klienta i zmianę jej statusu na „Wysłane”.",
         "title": "Wyślij wycenę do klienta",
         "additionalEmails": "Dodatkowi odbiorcy",
-        "message": "Wiadomość"
+        "message": "Wiadomość",
+        "from": "Od",
+        "useDefault": "Użyj domyślnego nadawcy"
       }
     },
     "errorActions": {
@@ -299,7 +303,15 @@
       "currencyPlaceholder": "Wybierz walutę",
       "quoteDate": "Data oferty",
       "validUntil": "Ważne do",
-      "validUntilHelp": "Oferta automatycznie wygasa w tym dniu."
+      "validUntilHelp": "Oferta automatycznie wygasa w tym dniu.",
+      "currencySource": {
+        "tenant": "Domyślna organizacji",
+        "client": "Domyślna klienta dla {{clientName}}",
+        "template": "Z szablonu oferty {{templateTitle}}",
+        "saved": "Zapisano w tej ofercie",
+        "savedTemplate": "Zapisano w tym szablonie",
+        "manual": "Wybrano ręcznie"
+      }
     },
     "lineItems": {
       "title": "Pozycje",

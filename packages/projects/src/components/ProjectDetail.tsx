@@ -298,6 +298,9 @@ export default function ProjectDetail({
   const [showQuickAdd, setShowQuickAdd] = useState(false);
   const [showPhaseQuickAdd, setShowPhaseQuickAdd] = useState(false);
   const [showImportDialog, setShowImportDialog] = useState(false);
+  // A partial import persists some rows; the refresh is deferred until the user
+  // dismisses the dialog so the per-row error list stays readable.
+  const partialImportNeedsRefresh = useRef(false);
   const [currentPhase, setCurrentPhase] = useState<IProjectPhase | null>(null);
   const [selectedPhase, setSelectedPhase] = useState<IProjectPhase | null>(null);
 
@@ -4658,26 +4661,36 @@ export default function ProjectDetail({
       {/* Phase/Task Import Dialog */}
       <PhaseTaskImportDialog
         isOpen={showImportDialog}
-        onClose={() => setShowImportDialog(false)}
+        onClose={() => {
+          setShowImportDialog(false);
+          if (partialImportNeedsRefresh.current) {
+            partialImportNeedsRefresh.current = false;
+            window.location.reload();
+          }
+        }}
         projectId={project.project_id}
         onImportComplete={(result) => {
-          setShowImportDialog(false);
-          if (result.success || result.tasksCreated > 0) {
-            toast.success(
-              t('projectDetail.importSuccess', 'Imported {{phases}} phases and {{tasks}} tasks', {
-                phases: result.phasesCreated,
-                tasks: result.tasksCreated,
-              }),
-            );
-            // Refresh the page to show imported data
-            window.location.reload();
-          } else if (result.errors.length > 0) {
+          if (result.errors.length > 0) {
+            // Keep the dialog open on its own completion step: it lists the failed
+            // rows with their CSV row numbers. Reloading here would throw them away.
+            partialImportNeedsRefresh.current = result.phasesCreated > 0 || result.tasksCreated > 0;
             toast.error(
               t('projectDetail.importFailed', 'Import failed: {{error}}', {
                 error: result.errors[0],
               }),
             );
+            return;
           }
+
+          setShowImportDialog(false);
+          toast.success(
+            t('projectDetail.importSuccess', 'Imported {{phases}} phases and {{tasks}} tasks', {
+              phases: result.phasesCreated,
+              tasks: result.tasksCreated,
+            }),
+          );
+          // Refresh the page to show imported data
+          window.location.reload();
         }}
       />
 

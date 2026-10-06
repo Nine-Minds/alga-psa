@@ -243,6 +243,12 @@
       "@alga-psa/assets/*": [
         "../packages/assets/src/*"
       ],
+      "@alga-psa/list-views": [
+        "../packages/list-views/src"
+      ],
+      "@alga-psa/list-views/*": [
+        "../packages/list-views/src/*"
+      ],
       "@alga-psa/surveys": [
         "../packages/surveys/src"
       ],

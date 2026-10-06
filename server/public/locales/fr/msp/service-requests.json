@@ -212,7 +212,138 @@
       "historyOperations": {
         "service_request_submission_created": "Soumission créée",
         "service_request_submission_execution_succeeded": "Exécution réussie",
-        "service_request_submission_execution_failed": "Échec de l'exécution"
+        "service_request_submission_execution_failed": "Échec de l'exécution",
+        "service_request_submission_mapping_applied": "Correspondance des réponses appliquée",
+        "service_request_submission_mapping_field_applied": "Champ mappé mis à jour",
+        "service_request_submission_mapping_field_failed": "Échec du champ mappé"
+      },
+      "mapping": {
+        "title": "Correspondance des réponses",
+        "description": "Appliquez la correspondance publiée pour mettre à jour le compte et ses actifs à partir de cette soumission. La réponse d’origine n’est jamais modifiée.",
+        "noPublishedMapping": "Aucune correspondance publiée pour cette définition. Publiez-en une dans la section « Correspondance des réponses » ci-dessus.",
+        "preview": "Aperçu",
+        "previewing": "Aperçu en cours…",
+        "apply": "Appliquer la correspondance",
+        "applying": "Application…",
+        "previewTitle": "Aperçu (aucune modification écrite) · correspondance v{{version}}",
+        "resultsTitle": "Exécutions appliquées",
+        "noRuns": "Aucune correspondance n’a encore été appliquée à cette soumission.",
+        "runLabel": "Exécution {{date}} · {{status}}",
+        "runActor": "par {{actor}}",
+        "replayed": "Cette exécution a déjà été appliquée ; le résultat enregistré est affiché.",
+        "summary": "{{applied}} appliqués · {{skipped}} ignorés · {{failed}} en échec",
+        "columns": {
+          "question": "Question",
+          "destination": "Destination",
+          "target": "Cible",
+          "before": "Avant",
+          "after": "Après",
+          "status": "Résultat",
+          "detail": "Détail"
+        },
+        "emptyValue": "—",
+        "unresolvedTarget": "Non résolu",
+        "status": {
+          "applied": "Appliqué",
+          "skipped_answer_absent": "Ignoré — pas de réponse",
+          "skipped_no_change": "Ignoré — déjà à jour",
+          "failed_validation": "Échec — valeur invalide",
+          "failed_type_conversion": "Échec — type incorrect",
+          "failed_permission": "Échec — permission refusée",
+          "failed_asset_unresolved": "Échec — actif introuvable",
+          "failed_asset_ambiguous": "Échec — plusieurs actifs correspondent"
+        },
+        "runStatus": {
+          "pending": "En cours",
+          "applied": "Appliqué",
+          "partially_applied": "Partiellement appliqué",
+          "failed": "Échec",
+          "no_op": "Aucun changement"
+        }
+      }
+    },
+    "answerMapping": {
+      "title": "Correspondance des réponses",
+      "description": "Associez des questions aux champs du compte et des actifs. L’application d’une soumission met à jour uniquement les champs mappés et ne modifie jamais les réponses enregistrées.",
+      "loading": "Chargement de la correspondance…",
+      "noQuestions": "Ajoutez des champs au formulaire avant de mapper des réponses.",
+      "noRules": "Aucune règle de correspondance pour l’instant.",
+      "addRule": "Ajouter une règle",
+      "editRule": "Modifier",
+      "removeRule": "Supprimer",
+      "actionsFor": "Actions pour {{question}}",
+      "selection": {
+        "selectPage": "Sélectionner les règles de cette page",
+        "selectRule": "Sélectionner {{question}}",
+        "selectedCount": "{{count}} sélectionnées",
+        "removeSelected": "Supprimer la sélection",
+        "clear": "Effacer",
+        "confirmTitle": "Supprimer les règles sélectionnées ?",
+        "confirmMessage": "Supprimer {{count}} règles sélectionnées du brouillon ? Les versions publiées restent inchangées jusqu’à une nouvelle publication."
+      },
+      "save": "Enregistrer la règle",
+      "cancel": "Annuler",
+      "publish": "Publier la correspondance",
+      "publishing": "Publication…",
+      "state": {
+        "neverPublished": "Jamais publiée",
+        "published": "Publiée v{{version}}",
+        "unpublishedChanges": "Modifications non publiées",
+        "upToDate": "La version publiée est à jour"
+      },
+      "fields": {
+        "question": "Question",
+        "destinationKind": "Destination",
+        "targetField": "Champ",
+        "assetStrategy": "Comment trouver l’actif",
+        "assetRefQuestion": "Question dont la réponse identifie l’actif",
+        "matchAttribute": "Correspondre sur",
+        "matchQuestion": "Question dont la réponse est comparée",
+        "attributeKey": "Clé de l’attribut personnalisé"
+      },
+      "placeholders": {
+        "question": "Sélectionnez une question",
+        "destinationKind": "Sélectionnez une destination",
+        "targetField": "Sélectionnez un champ",
+        "attributeKey": "ex. rack_position"
+      },
+      "targetFieldGroups": {
+        "attribute": "Attribut personnalisé…"
+      },
+      "strategies": {
+        "answer-asset-ref": "La réponse est l’actif",
+        "match-attribute": "Comparer une réponse à un attribut de l’actif"
+      },
+      "matchAttributes": {
+        "asset_tag": "Étiquette d’actif",
+        "serial_number": "Numéro de série",
+        "name": "Nom de l’actif"
+      },
+      "columns": {
+        "question": "Question",
+        "destination": "Destination",
+        "field": "Champ",
+        "selector": "Sélection de l’actif",
+        "actions": "Actions"
+      },
+      "selectorSummary": {
+        "account": "Compte de la soumission",
+        "answerAssetRef": "Actif issu de « {{question}} »",
+        "matchAttribute": "{{attribute}} = « {{question}} »"
+      },
+      "unknownQuestion": "Question manquante ({{key}})",
+      "messages": {
+        "ruleSaved": "Règle de correspondance enregistrée",
+        "ruleRemoved": "Règle de correspondance supprimée",
+        "rulesRemoved_one": "Règle de correspondance supprimée",
+        "rulesRemoved_other": "{{count}} règles de correspondance supprimées",
+        "published": "Correspondance des réponses publiée",
+        "saveFailed": "Impossible d’enregistrer la règle",
+        "removeFailed": "Impossible de supprimer la règle",
+        "publishFailed": "Impossible de publier la correspondance",
+        "previewFailed": "Impossible de générer l’aperçu",
+        "applyFailed": "Impossible d’appliquer la correspondance",
+        "applied": "Correspondance des réponses appliquée"
       }
     }
   },

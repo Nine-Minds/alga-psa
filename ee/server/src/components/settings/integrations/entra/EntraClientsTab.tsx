@@ -11,6 +11,7 @@ import type { ColumnDefinition } from '@alga-psa/types';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   getEntraSyncRunDetail,
+  getEntraSyncWorkerAvailability,
   runEntraPreflight,
   startEntraSync,
   unmapEntraTenant,
@@ -22,10 +23,8 @@ import { ContactPreflightReport } from './ContactPreflightReport';
 
 /** Two hundred mapped clients is a real number; ten rows a page is the app default. */
 const CLIENTS_PAGE_SIZE = 10;
-const SYNC_STATUS_POLL_INTERVAL_MS = 2_000;
-const SYNC_STATUS_POLL_ATTEMPTS = 900;
-const TERMINAL_SYNC_STATUSES = new Set(['completed', 'partial', 'failed']);
 import { wasEntraSyncAccepted } from './syncStart';
+import { EntraSyncWorkerUnavailableError, waitForEntraSyncTerminal } from './syncTracking';
 import {
   ENTRA_CLIENT_FILTERS,
   ENTRA_CLIENT_HEALTH_BADGE_VARIANTS,
@@ -37,6 +36,7 @@ import {
   type EntraClientFilter,
 } from './entraClientHealth';
 import { RelativeTime } from './RelativeTime';
+import { ManagedTenantUserFilterPanel } from './ManagedTenantUserFilterPanel';
 
 interface EntraClientsTabProps {
   mappings: EntraConfirmedMapping[];
@@ -48,26 +48,6 @@ interface EntraClientsTabProps {
 
 function clientLabel(mapping: EntraConfirmedMapping): string {
   return mapping.clientName || mapping.displayName || mapping.primaryDomain || mapping.entraTenantId;
-}
-
-async function waitForEntraSyncTerminal(runReference: string): Promise<string> {
-  for (let attempt = 0; attempt < SYNC_STATUS_POLL_ATTEMPTS; attempt += 1) {
-    const result = await getEntraSyncRunDetail(runReference);
-    if (!('error' in result)) {
-      const status = String(result.data?.run?.status || '').toLowerCase();
-      if (TERMINAL_SYNC_STATUSES.has(status)) {
-        return status;
-      }
-    } else if (!/not found/i.test(result.error || '')) {
-      throw new Error(result.error || 'Entra sync status could not be loaded.');
-    }
-
-    if (attempt < SYNC_STATUS_POLL_ATTEMPTS - 1) {
-      await new Promise((resolve) => setTimeout(resolve, SYNC_STATUS_POLL_INTERVAL_MS));
-    }
-  }
-
-  throw new Error('Timed out waiting for the Entra sync to finish.');
 }
 
 /**
@@ -195,13 +175,20 @@ export function EntraClientsTab({
         throw new Error('The Entra sync started without a workflow reference.');
       }
 
-      await waitForEntraSyncTerminal(runReference);
+      await waitForEntraSyncTerminal(runReference, {
+        getRunDetail: getEntraSyncRunDetail,
+        getWorkerAvailability: getEntraSyncWorkerAvailability,
+      });
       await onChanged();
       setMessage(
         t('integrations.entra.console.clients.syncFinished', { client: clientLabel(mapping) })
       );
-    } catch {
-      setError(t('integrations.entra.console.clients.syncTrackingFailed'));
+    } catch (trackingError) {
+      setError(
+        trackingError instanceof EntraSyncWorkerUnavailableError
+          ? t('integrations.entra.console.clients.syncWorkerUnavailable')
+          : t('integrations.entra.console.clients.syncTrackingFailed')
+      );
     } finally {
       setBusyRow(null);
     }
@@ -493,13 +480,13 @@ export function EntraClientsTab({
               );
             }
 
-            return preview ? (
+            return <div><ManagedTenantUserFilterPanel mapping={mapping} onSaved={() => void runPreview(mapping)} />{preview ? (
               <ContactPreflightReport
                 report={preview}
                 onRecheck={() => void runPreview(mapping)}
                 rechecking={busy}
               />
-            ) : null;
+            ) : null}</div>;
           }}
         />
       )}

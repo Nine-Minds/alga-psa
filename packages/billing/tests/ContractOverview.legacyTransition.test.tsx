@@ -20,9 +20,8 @@ const actionMocks = vi.hoisted(() => ({
   setUsageMeasurementMode: vi.fn(),
 }));
 
-const releaseFlag = vi.hoisted(() => ({ enabled: true }));
 vi.mock('@alga-psa/ui/hooks/useFeatureFlag', () => ({
-  useFeatureFlag: () => ({ enabled: releaseFlag.enabled, loading: false, error: null }),
+  useFeatureFlag: () => ({ enabled: true, loading: false, error: null }),
 }));
 
 vi.mock('@alga-psa/billing/actions/contractActions', () => ({
@@ -115,7 +114,6 @@ const renderOverview = async () => {
 
 describe('contract overview legacy usage transition', () => {
   beforeEach(() => {
-    releaseFlag.enabled = true;
     vi.clearAllMocks();
     actionMocks.getContractOverview.mockResolvedValue(structuredClone(usageOverview));
     actionMocks.setUsageMeasurementMode.mockResolvedValue({ measurement_mode: 'period_total' });

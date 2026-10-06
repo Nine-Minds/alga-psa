@@ -122,7 +122,8 @@
       "taskType": "Type",
       "actions": "Actions"
     },
-    "unknownUser": "Unknown"
+    "unknownUser": "Unknown",
+    "searchSmart": "Search projects, tasks, and comments… Enter for smart search"
   },
   "quickAdd": {
     "title": "Add New Project",
@@ -508,7 +509,14 @@
     "linkedToTaskSuccess": "Ticket linked to task successfully",
     "failedLoadTask": "Failed to load task",
     "clientFallback": "Client",
-    "defaultNewStatus": "New"
+    "defaultNewStatus": "New",
+    "billUnderProjectLabel": "Bill this ticket's time as project time",
+    "billingOffBadge": "Billed at client level",
+    "billingOnTooltip": "Stop billing this ticket's time as project time",
+    "billingOffTooltip": "Bill this ticket's time as project time",
+    "billingOnSuccess": "This ticket's time will bill as project time",
+    "billingOffSuccess": "This ticket's time will bill at the client level",
+    "billingUpdateFailed": "Failed to update ticket billing"
   },
   "materials": {
     "title": "Project Materials",
@@ -803,7 +811,9 @@
       "tasks": "Tasks",
       "badgeCount_other": "{{count}} Tasks",
       "restrictedTooltip": "Limited details — you are not assigned to this task",
-      "badgeCount_one": "{{count}} Task"
+      "badgeCount_one": "{{count}} Task",
+      "billsToProject": "Time bills as project time",
+      "billsToClient": "Time bills at the client level"
     },
     "bulkMoveTask": {
       "title": "Move Tasks",
@@ -1747,6 +1757,7 @@
     "cap": {
       "title": "Budget cap",
       "hint": "Time & materials bills at rates up to an optional not-to-exceed cap.",
+      "currencyStale": "The saved cap is in {{projectCurrency}}, which this project's invoices do not bill in. Enter the cap in {{invoiceCurrency}} to move this project to {{invoiceCurrency}}; until then no cap is applied. The new cap counts from zero: amounts already billed are not carried over.",
       "amount": "Cap amount ({{currency}})",
       "behavior": "When reached",
       "notify": "Notify only",
@@ -1797,7 +1808,8 @@
       "tmHardHint": "{{cap}} hard cap — billing stops at the cap",
       "tmNotifyHint": "{{cap}} budget cap — notify only",
       "thresholdMarker": "{{pct}}% notify threshold",
-      "writtenDown": "Written down past cap: {{amount}}"
+      "writtenDown": "Written down past cap: {{amount}}",
+      "currencyStale": "Amounts here are in {{projectCurrency}}, but this project's invoices bill in {{invoiceCurrency}}, so a budget cap counted here is not applied."
     },
     "economics": {
       "title": "Delivery economics",
@@ -1871,5 +1883,29 @@
       "loadRecipient": "Failed to load recipient information",
       "sendFailed": "Failed to send the status update"
     }
+  },
+  "smartSearch": {
+    "run": "Smart search",
+    "runTitle": "Score the filtered projects against this query",
+    "relevanceColumn": "Match",
+    "relevance": "{{percent}}% relevant",
+    "strong": "Strong matches",
+    "possible": "Possible matches",
+    "unlikely": "Unlikely matches",
+    "emptyBucketRunning": "None yet",
+    "emptyBucket": "None",
+    "scoring": "Scored {{scored}} of {{total}} projects",
+    "summary": "Scored {{total}} projects · {{strong}} strong · {{possible}} possible",
+    "cancelled": "Search cancelled after {{scored}} of {{total}} projects",
+    "errorTitle": "Smart search stopped",
+    "starting": "Starting smart search…",
+    "rerun": "Filters changed. Run again",
+    "retry": "Retry",
+    "cancel": "Cancel",
+    "exit": "Back to list",
+    "notConfigured": "Smart search is not configured on this server",
+    "failedCount": "{{count}} projects could not be scored",
+    "unscored": "Could not be scored",
+    "addOnRequired": "Smart search requires the AI Assistant add-on"
   }
 }

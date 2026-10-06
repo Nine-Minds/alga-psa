@@ -1,9 +1,9 @@
 import { z } from 'zod';
-import { BaseDomainEventPayloadSchema, changesSchema, updatedFieldsSchema, uuidSchema } from './commonEventPayloadSchemas';
+import { BaseDomainEventPayloadSchema, changesSchema, updatedFieldsSchema, uuidSchema, entityIdSchema } from './commonEventPayloadSchemas';
 
-const projectIdSchema = uuidSchema('Project ID');
+const projectIdSchema = entityIdSchema('Project ID', 'project');
 const taskIdSchema = uuidSchema('Task ID');
-const userIdSchema = uuidSchema('User ID');
+const userIdSchema = entityIdSchema('User ID', 'user');
 const taskCommentIdSchema = uuidSchema('Task Comment ID');
 
 const assignedToTypeSchema = z.enum(['user', 'team']).describe('Assignee type');

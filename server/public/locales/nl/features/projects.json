@@ -122,7 +122,8 @@
       "taskType": "Type",
       "actions": "Acties"
     },
-    "unknownUser": "Onbekend"
+    "unknownUser": "Onbekend",
+    "searchSmart": "Projecten, taken en opmerkingen doorzoeken… Enter voor slim zoeken"
   },
   "quickAdd": {
     "title": "Nieuw project toevoegen",
@@ -508,7 +509,14 @@
     "linkedToTaskSuccess": "Ticket gekoppeld aan taak",
     "failedLoadTask": "Kan taak niet laden",
     "clientFallback": "Klant",
-    "defaultNewStatus": "Nieuw"
+    "defaultNewStatus": "Nieuw",
+    "billUnderProjectLabel": "Tijd van dit ticket als projecttijd factureren",
+    "billingOffBadge": "Gefactureerd op klantniveau",
+    "billingOnTooltip": "Tijd van dit ticket niet meer als projecttijd factureren",
+    "billingOffTooltip": "Tijd van dit ticket als projecttijd factureren",
+    "billingOnSuccess": "De tijd van dit ticket wordt als projecttijd gefactureerd",
+    "billingOffSuccess": "De tijd van dit ticket wordt op klantniveau gefactureerd",
+    "billingUpdateFailed": "Facturatie van het ticket kon niet worden bijgewerkt"
   },
   "materials": {
     "title": "Projectmaterialen",
@@ -803,7 +811,9 @@
       "task": "Taak",
       "tasks": "Taken",
       "badgeCount_other": "{{count}} Taken",
-      "badgeCount_one": "{{count}} Taak"
+      "badgeCount_one": "{{count}} Taak",
+      "billsToProject": "Tijd wordt als projecttijd gefactureerd",
+      "billsToClient": "Tijd wordt op klantniveau gefactureerd"
     },
     "bulkMoveTask": {
       "title": "Taken verplaatsen",
@@ -1747,6 +1757,7 @@
     "cap": {
       "title": "Budgetlimiet",
       "hint": "Tijd en materialen worden tegen tarieven gefactureerd tot een optionele maximumlimiet.",
+      "currencyStale": "De opgeslagen limiet staat in {{projectCurrency}}, de valuta waarin de facturen van dit project niet worden opgemaakt. Voer de limiet in {{invoiceCurrency}} in om dit project naar {{invoiceCurrency}} over te zetten; tot die tijd wordt geen limiet toegepast. De nieuwe limiet telt vanaf nul: reeds gefactureerde bedragen worden niet meegenomen.",
       "amount": "Limietbedrag ({{currency}})",
       "behavior": "Bij bereiken",
       "notify": "Alleen melden",
@@ -1797,7 +1808,8 @@
       "tmHardHint": "Harde limiet {{cap}} — facturering stopt bij de limiet",
       "tmNotifyHint": "Budgetlimiet {{cap}} — alleen melden",
       "thresholdMarker": "Meldingsdrempel {{pct}}%",
-      "writtenDown": "Boven limiet afgeboekt: {{amount}}"
+      "writtenDown": "Boven limiet afgeboekt: {{amount}}",
+      "currencyStale": "De bedragen hier staan in {{projectCurrency}}, maar de facturen van dit project worden in {{invoiceCurrency}} opgemaakt, dus een hier getelde budgetlimiet wordt niet toegepast."
     },
     "economics": {
       "title": "Projectrendement",
@@ -1871,5 +1883,29 @@
       "loadRecipient": "Ontvangersgegevens konden niet worden geladen",
       "sendFailed": "Statusupdate kon niet worden verstuurd"
     }
+  },
+  "smartSearch": {
+    "run": "Slim zoeken",
+    "runTitle": "Gefilterde projecten beoordelen op deze zoekopdracht",
+    "relevanceColumn": "Overeenkomst",
+    "relevance": "{{percent}}% overeenkomst",
+    "strong": "Sterke matches",
+    "possible": "Mogelijke matches",
+    "unlikely": "Onwaarschijnlijke matches",
+    "emptyBucketRunning": "Nog geen",
+    "emptyBucket": "Geen",
+    "scoring": "{{scored}} van {{total}} projecten beoordeeld",
+    "summary": "{{total}} projecten beoordeeld · {{strong}} sterk · {{possible}} mogelijk",
+    "cancelled": "Zoeken geannuleerd na {{scored}} van {{total}} projecten",
+    "errorTitle": "Slim zoeken gestopt",
+    "starting": "Slim zoeken wordt gestart…",
+    "rerun": "Filters gewijzigd. Opnieuw uitvoeren",
+    "retry": "Opnieuw proberen",
+    "cancel": "Annuleren",
+    "exit": "Terug naar lijst",
+    "notConfigured": "Slim zoeken is niet geconfigureerd op deze server",
+    "failedCount": "{{count}} projecten konden niet worden beoordeeld",
+    "unscored": "Niet beoordeeld",
+    "addOnRequired": "Slim zoeken vereist de AI-assistent-add-on"
   }
 }
