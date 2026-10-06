@@ -34,9 +34,9 @@
   {"id": "T030", "commitGroup": "email-delivery", "featureIds": ["F018"], "implemented": true, "description": "Subscriber: requester address included in cc is dropped from cc (not duplicated in To and Cc)"},
   {"id": "T031", "commitGroup": "email-delivery", "featureIds": ["F019"], "implemented": true, "description": "Subscriber: internal comment row carrying email_recipients (forced via DB) sends no cc/bcc"},
   {"id": "T032", "commitGroup": "email-delivery", "featureIds": ["F020"], "implemented": false, "description": "Subscriber: combined send with comment attachments delivers attachments in the single message and writes one delivery claim keyed on To"},
-  {"id": "T033", "commitGroup": "email-delivery", "featureIds": ["F020"], "implemented": false, "description": "Email log row for the combined send has cc_addresses and bcc_addresses populated and is visible in TicketEmailNotifications"},
+  {"id": "T033", "commitGroup": "email-delivery", "featureIds": ["F020"], "implemented": true, "description": "Email log row for the combined send has cc_addresses and bcc_addresses populated and is visible in TicketEmailNotifications"},
   {"id": "T034", "commitGroup": "email-delivery", "featureIds": ["F021"], "implemented": true, "description": "Combined message includes the reply token marker and In-Reply-To/References headers; Message-ID appended to email_metadata.references once"},
-  {"id": "T035", "commitGroup": "email-delivery", "featureIds": ["F016"], "implemented": false, "description": "Regression: comment without email_recipients produces the same recipient set and send count as before"},
+  {"id": "T035", "commitGroup": "email-delivery", "featureIds": ["F016"], "implemented": true, "description": "Regression: comment without email_recipients produces the same recipient set and send count as before"},
   {"id": "T036", "commitGroup": "email-delivery", "featureIds": ["F015"], "implemented": false, "description": "Subscriber: next public comment on same ticket (no cc) does not email previously cc'd addresses"},
 
   {"id": "T037", "commitGroup": "inbound-replies", "featureIds": ["F022"], "implemented": true, "description": "Integration: getTicketOneOffRecipients returns union across comments, lower-cased, scoped by tenant and ticket"},
