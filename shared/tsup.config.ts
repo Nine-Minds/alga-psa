@@ -95,6 +95,7 @@ export default defineConfig({
     'billingClients/drawAdjustments': 'billingClients/drawAdjustments.ts',
     'billingClients/templateClone': 'billingClients/templateClone.ts',
     'billingClients/ticketProjectAttribution': 'billingClients/ticketProjectAttribution.ts',
+    'billingClients/renewalTicket': 'billingClients/renewalTicket.ts',
     'lib/quoteTerms': 'lib/quoteTerms.ts',
     'lib/ticketActivity/index': 'lib/ticketActivity/index.ts',
     'lib/ticketActivity/types': 'lib/ticketActivity/types.ts',

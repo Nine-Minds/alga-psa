@@ -13,11 +13,14 @@ const runtimeState = vi.hoisted(() => ({
   currentTenantTx: null as {
     tenantId: string;
     actorUserId: string;
+    workflowId: string;
+    lineage: string[];
     trx: any;
   } | null,
   createTicketMock: vi.fn(),
   updateTicketMock: vi.fn(),
   createCommentMock: vi.fn(),
+  createWithEffectsMock: vi.fn(),
   dbUpdates: [] as Array<{
     tableName: string;
     conditions: Record<string, any>;
@@ -62,6 +65,10 @@ vi.mock('../../../../models/ticketModel', async (importOriginal) => {
     },
   };
 });
+
+vi.mock('../../../../services/tickets/createTicketWithSideEffects', () => ({
+  createTicketWithSideEffects: runtimeState.createWithEffectsMock,
+}));
 
 vi.mock('../../registries/workflowEmailRegistry', () => ({
   getWorkflowEmailProvider: () => ({
@@ -369,6 +376,8 @@ function setTenantTx(tables: TableMap): void {
   runtimeState.currentTenantTx = {
     tenantId: 'tenant-1',
     actorUserId: 'user-1',
+    workflowId: 'workflow-1',
+    lineage: [],
     trx: createFakeTrx(tables),
   };
 }
@@ -489,6 +498,7 @@ describe('ticket workflow runtime board-scoped statuses', () => {
     runtimeState.createTicketMock.mockReset();
     runtimeState.updateTicketMock.mockReset();
     runtimeState.createCommentMock.mockReset();
+    runtimeState.createWithEffectsMock.mockReset();
     runtimeState.dbUpdates.length = 0;
     registerTicketActions();
   });
@@ -532,7 +542,7 @@ describe('ticket workflow runtime board-scoped statuses', () => {
       message: 'Invalid status_id for selected board',
     });
 
-    expect(runtimeState.createTicketMock).not.toHaveBeenCalled();
+    expect(runtimeState.createWithEffectsMock).not.toHaveBeenCalled();
   });
 
   it('T038: tickets.update_fields rejects a cross-board status id for the current ticket board', async () => {
@@ -747,16 +757,13 @@ describe('ticket workflow runtime board-scoped statuses', () => {
     );
   });
 
-  it('T040: tickets.create writes real ticket tag mappings while preserving mirrored attributes.tags', async () => {
-    const tables: TableMap = { statuses: [], tag_definitions: [], tag_mappings: [] };
+  it('T040: tickets.create hands tags to the creation service and preserves mirrored attributes.tags', async () => {
+    const tables: TableMap = {
+      statuses: [],
+      tickets: [{ tenant: 'tenant-1', ticket_id: 'ticket-1', status_id: 'status-board-a-open', created_at: '2026-03-14T00:00:00.000Z' }],
+    };
     setTenantTx(tables);
-    runtimeState.createTicketMock.mockResolvedValue({
-      ticket_id: 'ticket-1',
-      ticket_number: 'T-1',
-      entered_at: '2026-03-14T00:00:00.000Z',
-      status_id: 'status-board-a-open',
-      priority_id: 'priority-1',
-    });
+    runtimeState.createWithEffectsMock.mockResolvedValue({ ticketId: 'ticket-1', ticketNumber: 'T-1' });
 
     const action = getAction('tickets.create');
 
@@ -772,66 +779,22 @@ describe('ticket workflow runtime board-scoped statuses', () => {
       createActionContext()
     );
 
-    expect(runtimeState.createTicketMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        attributes: expect.objectContaining({
-          tags: ['Look at the spaces'],
-        }),
-      }),
-      'tenant-1',
-      expect.any(Function),
-      {},
-      undefined,
-      undefined,
-      'user-1'
-    );
-
-    expect(tables.tag_definitions).toHaveLength(1);
-    expect(tables.tag_definitions[0]).toMatchObject({
-      tenant: 'tenant-1',
-      tag_text: 'Look at the spaces',
-      tagged_type: 'ticket',
-      text_color: '#2C3E50',
-    });
-
-    expect(tables.tag_mappings).toHaveLength(1);
-    expect(tables.tag_mappings[0]).toMatchObject({
-      tenant: 'tenant-1',
-      tag_id: tables.tag_definitions[0]?.tag_id,
-      tagged_id: 'ticket-1',
-      tagged_type: 'ticket',
-      created_by: 'user-1',
-    });
+    expect(runtimeState.createWithEffectsMock).toHaveBeenCalledTimes(1);
+    const [, tenant, serviceInput] = runtimeState.createWithEffectsMock.mock.calls[0];
+    expect(tenant).toBe('tenant-1');
+    expect(serviceInput.tags).toEqual(['Look at the spaces']);
+    expect(serviceInput.ticket.attributes).toEqual(expect.objectContaining({ tags: ['Look at the spaces'] }));
+    // Definitions and mappings are written by the service (TagModel), not by the action.
+    expect(tables.tag_definitions).toBeUndefined();
+    expect(tables.tag_mappings).toBeUndefined();
   });
 
-  it("T041: tickets.create returns the selected board's default status when workflow input omits status_id", async () => {
+  it("T041: tickets.create returns the stored status of the created ticket when workflow input omits status_id", async () => {
     setTenantTx({
-      statuses: [
-        {
-          tenant: 'tenant-1',
-          status_id: 'status-board-a-default',
-          status_type: 'ticket',
-          board_id: 'board-a',
-          is_default: true,
-          order_number: 2,
-        },
-        {
-          tenant: 'tenant-1',
-          status_id: 'status-board-b-default',
-          status_type: 'ticket',
-          board_id: 'board-b',
-          is_default: true,
-          order_number: 1,
-        },
-      ],
+      statuses: [],
+      tickets: [{ tenant: 'tenant-1', ticket_id: 'ticket-2', status_id: 'status-board-a-default', created_at: '2026-03-14T00:00:00.000Z' }],
     });
-    runtimeState.createTicketMock.mockImplementation(async (input, tenant, trx) => ({
-      ticket_id: 'ticket-2',
-      ticket_number: 'T-2',
-      entered_at: '2026-03-14T00:00:00.000Z',
-      status_id: input.status_id ?? (await TicketModel.getDefaultStatusId(tenant, trx, input.board_id)),
-      priority_id: input.priority_id,
-    }));
+    runtimeState.createWithEffectsMock.mockResolvedValue({ ticketId: 'ticket-2', ticketNumber: 'T-2' });
 
     const action = getAction('tickets.create');
 
@@ -846,18 +809,8 @@ describe('ticket workflow runtime board-scoped statuses', () => {
       createActionContext()
     );
 
-    expect(runtimeState.createTicketMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        board_id: 'board-a',
-        status_id: undefined,
-      }),
-      'tenant-1',
-      expect.any(Function),
-      {},
-      undefined,
-      undefined,
-      'user-1'
-    );
+    const [, , serviceInput] = runtimeState.createWithEffectsMock.mock.calls[0];
+    expect(serviceInput.ticket).toEqual(expect.objectContaining({ board_id: 'board-a', status_id: undefined }));
     expect(result.status_id).toBe('status-board-a-default');
   });
 

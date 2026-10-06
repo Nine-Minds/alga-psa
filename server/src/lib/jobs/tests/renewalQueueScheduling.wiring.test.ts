@@ -21,6 +21,10 @@ const renewalHandlerSource = readFileSync(
   new URL('../../../../../packages/jobs/src/lib/handlers/processRenewalQueueHandler.ts', import.meta.url),
   'utf8'
 );
+const renewalTicketSource = readFileSync(
+  new URL('../../../../../shared/billingClients/renewalTicket.ts', import.meta.url),
+  'utf8'
+);
 const temporalRunnerSource = readFileSync(
   new URL('../../../../../packages/jobs/src/lib/jobs/runners/TemporalJobRunner.ts', import.meta.url),
   'utf8'
@@ -95,37 +99,39 @@ describe('renewal queue scheduling wiring', () => {
     expect(renewalHandlerSource).toContain('const shouldCreateTicketAtDueDate =');
     expect(renewalHandlerSource).toContain("effectiveDueDateActionPolicy === 'create_ticket'");
     expect(renewalHandlerSource).toContain('decisionDueDate <= today;');
-    expect(renewalHandlerSource).toContain('createRenewalTicketDirectly({');
+    expect(renewalHandlerSource).toContain('await createRenewalTicket(trx, tenantId, {');
+    expect(renewalHandlerSource).toContain("actor: { type: 'system' },");
     expect(renewalHandlerSource).toContain('updates.created_ticket_id = createdTicketId;');
     expect(renewalHandlerSource).toContain('createdTicketCount += 1;');
   });
 
-  it('calls workflow runtime tickets.create action for renewal ticket creation path', () => {
-    expect(renewalHandlerSource).toContain("import { getActionRegistryV2, initializeWorkflowRuntimeV2 } from '@alga-psa/workflows/runtime';");
-    expect(renewalHandlerSource).toContain('const tryCreateRenewalTicketViaWorkflowAction = async (params: {');
-    expect(renewalHandlerSource).toContain('initializeWorkflowRuntimeV2();');
-    expect(renewalHandlerSource).toContain("const ticketCreateAction = getActionRegistryV2().get('tickets.create', 1);");
-    expect(renewalHandlerSource).toContain('const actionInput = ticketCreateAction.inputSchema.parse({');
-    expect(renewalHandlerSource).toContain('const actionResult = await ticketCreateAction.handler(actionInput, {');
-    expect(renewalHandlerSource).toContain("stepPath: RENEWAL_QUEUE_ACTION_STEP_PATH,");
+  it('creates renewal tickets through the shared service in an owned withTransaction frame, not the workflow runtime', () => {
+    expect(renewalHandlerSource).toContain("import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';");
+    expect(renewalHandlerSource).toContain('await withTransaction(knex, async (trx: Knex.Transaction) =>');
+    expect(renewalHandlerSource).not.toContain('@alga-psa/workflows/runtime');
+    expect(renewalHandlerSource).not.toContain('TicketModel');
+    expect(renewalHandlerSource).not.toContain('workflow_runs');
+    expect(renewalHandlerSource).not.toContain('knex.transaction(');
+    expect(renewalTicketSource).toContain('createTicketWithSideEffects(trx, tenant, {');
+    expect(renewalTicketSource).toContain('notificationSuppression: { suppressContactNotifications: true }');
   });
 
   it('populates renewal ticket title with client and contract context', () => {
-    expect(renewalHandlerSource).toContain('const buildRenewalTicketTitle = (row: Record<string, unknown>, decisionDueDate: string): string => {');
-    expect(renewalHandlerSource).toContain("const clientName = typeof row.client_name === 'string' && row.client_name.trim().length > 0");
-    expect(renewalHandlerSource).toContain("const contractName = typeof row.contract_name === 'string' && row.contract_name.trim().length > 0");
-    expect(renewalHandlerSource).toContain('return `Renewal Decision Due ${decisionDueDate}: ${clientName} / ${contractName}`;');
-    expect(renewalHandlerSource).toContain('const ticketTitle = buildRenewalTicketTitle(row as Record<string, unknown>, decisionDueDate);');
+    expect(renewalTicketSource).toContain('export const buildRenewalTicketTitle = (row: Record<string, unknown>, decisionDueDate: string): string => {');
+    expect(renewalTicketSource).toContain("typeof row.client_name === 'string' && row.client_name.trim().length > 0");
+    expect(renewalTicketSource).toContain("typeof row.contract_name === 'string' && row.contract_name.trim().length > 0");
+    expect(renewalTicketSource).toContain('return `Renewal Decision Due ${decisionDueDate}: ${clientName} / ${contractName}`;');
+    expect(renewalTicketSource).toContain('title: buildRenewalTicketTitle(row, decisionDueDate),');
   });
 
   it('populates renewal ticket description with due date and renewal settings context', () => {
-    expect(renewalHandlerSource).toContain('const buildRenewalTicketDescription = (');
-    expect(renewalHandlerSource).toContain("const renewalMode = typeof normalized.effective_renewal_mode === 'string'");
-    expect(renewalHandlerSource).toContain("const noticePeriod = typeof normalized.effective_notice_period_days === 'number'");
-    expect(renewalHandlerSource).toContain('`Decision due date: ${decisionDueDate}`');
-    expect(renewalHandlerSource).toContain('`Renewal mode: ${renewalMode}`');
-    expect(renewalHandlerSource).toContain('`Notice period (days): ${noticePeriod}`');
-    expect(renewalHandlerSource).toContain('const ticketDescription = buildRenewalTicketDescription(');
+    expect(renewalTicketSource).toContain('export const buildRenewalTicketDescription = (');
+    expect(renewalTicketSource).toContain("typeof normalized.effective_renewal_mode === 'string'");
+    expect(renewalTicketSource).toContain("typeof normalized.effective_notice_period_days === 'number'");
+    expect(renewalTicketSource).toContain('`Decision due date: ${decisionDueDate}`');
+    expect(renewalTicketSource).toContain('`Renewal mode: ${renewalMode}`');
+    expect(renewalTicketSource).toContain('`Notice period (days): ${noticePeriod}`');
+    expect(renewalTicketSource).toContain('description: buildRenewalTicketDescription(row, normalized, decisionDueDate),');
   });
 
   it('populates renewal ticket routing fields from effective renewal ticket defaults', () => {
@@ -137,10 +143,8 @@ describe('renewal queue scheduling wiring', () => {
     expect(renewalHandlerSource).toContain("schema?.hasColumn?.('client_contracts', 'renewal_ticket_status_id') ?? false");
     expect(renewalHandlerSource).toContain("schema?.hasColumn?.('client_contracts', 'renewal_ticket_priority') ?? false");
     expect(renewalHandlerSource).toContain("schema?.hasColumn?.('client_contracts', 'renewal_ticket_assignee_id') ?? false");
-    expect(renewalHandlerSource).toContain('const boardId = useTenantRenewalDefaults ? tenantBoardId : (contractBoardId ?? tenantBoardId);');
-    expect(renewalHandlerSource).toContain('const statusId = useTenantRenewalDefaults ? tenantStatusId : (contractStatusId ?? tenantStatusId);');
-    expect(renewalHandlerSource).toContain('const priorityId = useTenantRenewalDefaults ? tenantPriorityId : (contractPriorityId ?? tenantPriorityId);');
-    expect(renewalHandlerSource).toContain('const assignedTo = useTenantRenewalDefaults ? tenantAssignedTo : (contractAssignedTo ?? tenantAssignedTo);');
+    expect(renewalHandlerSource).toContain('resolveRenewalTicketRouting(row as Record<string, unknown>, useTenantRenewalDefaults)');
+    expect(renewalTicketSource).toContain('(useTenantDefaults ? tenant[key] : (contract[key] ?? tenant[key]))');
   });
 
   it('persists created ticket id on renewal work item after successful ticket creation', () => {
@@ -160,11 +164,10 @@ describe('renewal queue scheduling wiring', () => {
   });
 
   it('uses tenant/client-contract/cycle idempotency key for renewal ticket creation', () => {
-    expect(renewalHandlerSource).toContain('const buildRenewalTicketIdempotencyKey = (params: {');
-    expect(renewalHandlerSource).toContain('): string => `renewal-ticket:${params.tenantId}:${params.clientContractId}:${params.cycleKey}`;');
+    expect(renewalTicketSource).toContain('export const buildRenewalTicketIdempotencyKey = (params: {');
+    expect(renewalTicketSource).toContain('}): string => `renewal-ticket:${params.tenantId}:${params.clientContractId}:${params.cycleKey}`;');
     expect(renewalHandlerSource).toContain('const idempotencyKey = buildRenewalTicketIdempotencyKey({');
-    expect(renewalHandlerSource).toContain('idempotency_key: params.idempotencyKey,');
-    expect(renewalHandlerSource).toContain('idempotency_key: params.idempotencyKey,');
+    expect(renewalTicketSource).toContain('idempotency_key: idempotencyKey,');
   });
 
   it('T253: creates or links at most one ticket per tenant/client-contract/cycle key under create_ticket policy', () => {
@@ -279,7 +282,7 @@ describe('renewal queue scheduling wiring', () => {
   });
 
   it('keeps ticket idempotency behavior parity because both runners execute the same renewal handler core', () => {
-    expect(renewalHandlerSource).toContain('const buildRenewalTicketIdempotencyKey = (params: {');
+    expect(renewalTicketSource).toContain('export const buildRenewalTicketIdempotencyKey = (params: {');
     expect(renewalHandlerSource).toContain("whereRaw(\"(attributes::jsonb ->> 'idempotency_key') = ?\", [idempotencyKey])");
     expect(renewalHandlerSource).toContain('const existingTicketId = normalizeOptionalUuid(existingTicket?.ticket_id);');
     expect(renewalHandlerSource).toContain('duplicateTicketSkipCount += 1;');
