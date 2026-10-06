@@ -83,6 +83,16 @@ describe('per-comment Cc/Bcc delivery over isolated SMTP', () => {
     requesterEmail?: string;
     isInternal?: boolean;
     recipients?: { cc?: { email: string; name?: string }[]; bcc?: { email: string; name?: string }[] };
+    /** Entries for tickets.attributes.watch_list. */
+    watchers?: string[];
+    /** Email of an internal user to assign the ticket to. */
+    assignedEmail?: string;
+    /** Original inbound Message-ID, so the send carries thread headers. */
+    inboundMessageId?: string;
+    /** Author-less comment, as a workflow's tickets.add_comment writes it. */
+    systemAuthored?: boolean;
+    suppressContactNotifications?: boolean;
+    threadedReply?: boolean;
   }) {
     const ticket = randomUUID(), comment = randomUUID(), thread = randomUUID();
     let contact: string | null = null;
@@ -90,11 +100,36 @@ describe('per-comment Cc/Bcc delivery over isolated SMTP', () => {
       contact = randomUUID();
       await table('contacts').insert({ tenant, contact_name_id: contact, client_id: client, full_name: 'Requester', email: options.requesterEmail });
     }
-    await table('tickets').insert({ tenant, ticket_id: ticket, ticket_number: `CCBCC-${ticket.slice(0, 8)}`, client_id: client, contact_name_id: contact, title: 'Cc/Bcc delivery', entered_by: agent });
+    let assignedTo: string | null = null;
+    if (options.assignedEmail) {
+      assignedTo = randomUUID();
+      await table('users').insert({ tenant, user_id: assignedTo, username: assignedTo, email: options.assignedEmail, hashed_password: 'unused', user_type: 'internal', is_inactive: false, first_name: 'Assigned', last_name: 'Agent' });
+    }
+    await table('tickets').insert({
+      tenant, ticket_id: ticket, ticket_number: `CCBCC-${ticket.slice(0, 8)}`, client_id: client,
+      contact_name_id: contact, title: 'Cc/Bcc delivery', entered_by: agent, assigned_to: assignedTo,
+      ...(options.watchers?.length
+        ? { attributes: JSON.stringify({ watch_list: options.watchers.map(email => ({ email, active: true })) }) }
+        : {}),
+      ...(options.inboundMessageId
+        ? { email_metadata: JSON.stringify({ messageId: options.inboundMessageId, threadId: `thread-${ticket.slice(0, 8)}`, references: [] }) }
+        : {}),
+    });
     await table('comment_threads').insert({ tenant, thread_id: thread, ticket_id: ticket, root_comment_id: comment, is_internal: Boolean(options.isInternal), created_by: agent });
     const note = JSON.stringify([{ type: 'paragraph', content: [{ type: 'text', text: 'Copy of the reply for the one-off recipients.', styles: {} }] }]);
+    let parentCommentId: string | null = null;
+    if (options.threadedReply) {
+      parentCommentId = randomUUID();
+      await table('comments').insert({
+        tenant, comment_id: parentCommentId, thread_id: thread, ticket_id: ticket, user_id: agent, author_type: 'internal',
+        note, is_internal: false, is_resolution: false, metadata: JSON.stringify({ closes_ticket: false }),
+      });
+    }
     await table('comments').insert({
-      tenant, comment_id: comment, thread_id: thread, ticket_id: ticket, user_id: agent, author_type: 'internal',
+      tenant, comment_id: comment, thread_id: thread, ticket_id: ticket,
+      // A workflow comment stores author_type 'internal' with no user row.
+      user_id: options.systemAuthored ? null : agent, author_type: 'internal',
+      parent_comment_id: parentCommentId,
       note, is_internal: Boolean(options.isInternal), is_resolution: false,
       metadata: JSON.stringify({ closes_ticket: false, ...(options.recipients ? { email_recipients: options.recipients } : {}) }),
     });
@@ -102,11 +137,31 @@ describe('per-comment Cc/Bcc delivery over isolated SMTP', () => {
       id: randomUUID(),
       eventType: 'TICKET_COMMENT_ADDED',
       payload: {
-        tenantId: tenant, ticketId: ticket, actorUserId: agent,
+        tenantId: tenant, ticketId: ticket, actorUserId: options.systemAuthored ? undefined : agent,
+        ...(options.suppressContactNotifications ? { suppressContactNotifications: true } : {}),
         comment: { id: comment, content: note, author: 'Agent Smith', isInternal: Boolean(options.isInternal) },
       },
     };
-    return { ticket, comment, event };
+    return { ticket, comment, thread, event };
+  }
+
+  // A second public comment on an existing ticket+thread, carrying no one-off
+  // recipients — used to prove the Cc list does not stick to the ticket.
+  async function followUpComment(ticket: string, thread: string) {
+    const comment = randomUUID();
+    const note = JSON.stringify([{ type: 'paragraph', content: [{ type: 'text', text: 'A later reply nobody was copied on.', styles: {} }] }]);
+    await table('comments').insert({
+      tenant, comment_id: comment, thread_id: thread, ticket_id: ticket, user_id: agent, author_type: 'internal',
+      note, is_internal: false, is_resolution: false, metadata: JSON.stringify({ closes_ticket: false }),
+    });
+    return {
+      id: randomUUID(),
+      eventType: 'TICKET_COMMENT_ADDED',
+      payload: {
+        tenantId: tenant, ticketId: ticket, actorUserId: agent,
+        comment: { id: comment, content: note, author: 'Agent Smith', isInternal: false },
+      },
+    };
   }
 
   async function deliver(event: unknown) {
@@ -189,6 +244,174 @@ describe('per-comment Cc/Bcc delivery over isolated SMTP', () => {
 
     expect(await inbox(cc)).toHaveLength(0);
     expect(await inbox(bcc)).toHaveLength(0);
+  }, 60_000);
+
+  it('T028: a watcher who is also cc\'d receives exactly one message — the combined one', async () => {
+    const requester = address('requester'), watcher = address('watcher');
+    const { event } = await commentFixture({
+      requesterEmail: requester,
+      watchers: [watcher],
+      recipients: { cc: [{ email: watcher }] },
+    });
+
+    await deliver(event);
+
+    const [requesterMail] = await inbox(requester);
+    expect(addressText(requesterMail.cc)).toContain(watcher);
+    const watcherCopies = await inbox(watcher);
+    expect(watcherCopies).toHaveLength(1);
+    // Same Message-ID as the requester's: the separate watcher send was skipped.
+    expect(watcherCopies[0].messageId).toBe(requesterMail.messageId);
+  }, 60_000);
+
+  it('T029: the assigned agent who is also bcc\'d receives exactly one message', async () => {
+    const requester = address('requester'), assignee = address('assignee');
+    const { event } = await commentFixture({
+      requesterEmail: requester,
+      assignedEmail: assignee,
+      recipients: { bcc: [{ email: assignee }] },
+    });
+
+    await deliver(event);
+
+    const [requesterMail] = await inbox(requester);
+    expect(requesterMail).toBeDefined();
+    const assigneeCopies = await inbox(assignee);
+    expect(assigneeCopies).toHaveLength(1);
+    expect(assigneeCopies[0].messageId).toBe(requesterMail.messageId);
+    expect(assigneeCopies[0].headerLines.some(line => line.key === 'bcc')).toBe(false);
+  }, 60_000);
+
+  it('T030: the requester\'s own address in cc is dropped instead of duplicated', async () => {
+    const requester = address('requester'), cc = address('cc');
+    const { event } = await commentFixture({
+      requesterEmail: requester,
+      recipients: { cc: [{ email: requester.toUpperCase() }, { email: cc }] },
+    });
+
+    await deliver(event);
+
+    const requesterCopies = await inbox(requester);
+    expect(requesterCopies).toHaveLength(1);
+    expect(addressText(requesterCopies[0].cc)).toContain(cc);
+    expect(addressText(requesterCopies[0].cc)?.toLowerCase()).not.toContain(requester);
+
+    const log = await table('email_sending_logs').where({ tenant }).first();
+    expect(addressList(log.cc_addresses)).toEqual([cc]);
+  }, 60_000);
+
+  it('T025: a suppressed requester notification still delivers the chosen Cc', async () => {
+    const requester = address('requester'), cc = address('cc');
+    const { event } = await commentFixture({
+      requesterEmail: requester,
+      suppressContactNotifications: true,
+      recipients: { cc: [{ email: cc }] },
+    });
+
+    await deliver(event);
+
+    expect(await inbox(requester)).toHaveLength(0);
+    const [combined] = await inbox(cc);
+    expect(combined).toBeDefined();
+    expect(addressText(combined.to)).toBe(cc);
+  }, 60_000);
+
+  it('T027: a tenant that switched comment notifications off mails nobody, Cc included', async () => {
+    const requester = address('requester'), cc = address('cc'), bcc = address('bcc');
+    // The tenant-wide kill switch wins over an explicit Cc: when the requester
+    // is not emailed because notifications are off, the copies are off too.
+    await table('notification_settings').insert({ tenant, is_enabled: false });
+    const { event } = await commentFixture({
+      requesterEmail: requester,
+      recipients: { cc: [{ email: cc }], bcc: [{ email: bcc }] },
+    });
+
+    await deliver(event);
+
+    for (const recipient of [requester, cc, bcc]) {
+      expect(await inbox(recipient)).toHaveLength(0);
+    }
+    expect(await table('email_sending_logs').where({ tenant })).toHaveLength(0);
+  }, 60_000);
+
+  it('T034: the combined message and the Cc fallback both carry the thread headers', async () => {
+    const inboundMessageId = `<original-${randomUUID()}@example.test>`;
+    const requester = address('requester'), cc = address('cc');
+    const { event } = await commentFixture({
+      requesterEmail: requester,
+      inboundMessageId,
+      recipients: { cc: [{ email: cc }] },
+    });
+
+    await deliver(event);
+
+    const [requesterMail] = await inbox(requester);
+    expect(requesterMail.inReplyTo).toBe(inboundMessageId);
+    expect(requesterMail.references).toContain(inboundMessageId);
+
+    // Same ticket thread, no requester this time: the fallback message must be
+    // threaded too, or the copies start a new conversation in the recipient's
+    // mail client. Both the subscriber's headers and the ticket-scoped headers
+    // the email service applies have to survive the fallback shape.
+    const fallbackCc = address('fallback-cc');
+    const fallback = await commentFixture({
+      inboundMessageId,
+      recipients: { cc: [{ email: fallbackCc }] },
+    });
+    await deliver(fallback.event);
+
+    const [combined] = await inbox(fallbackCc);
+    expect(combined).toBeDefined();
+    expect(combined.inReplyTo).toBe(inboundMessageId);
+    expect(combined.references).toContain(inboundMessageId);
+  }, 60_000);
+
+  it('T036: a later comment without Cc does not reach the previously copied address', async () => {
+    const requester = address('requester'), cc = address('cc');
+    const { ticket, thread, event } = await commentFixture({
+      requesterEmail: requester,
+      recipients: { cc: [{ email: cc }] },
+    });
+
+    await deliver(event);
+    expect(await inbox(cc)).toHaveLength(1);
+
+    await deliver(await followUpComment(ticket, thread));
+
+    // The requester got both comments; the one-off recipient got only the one
+    // they were copied on — a Cc never joins the ticket.
+    expect(await inbox(requester)).toHaveLength(2);
+    expect(await inbox(cc)).toHaveLength(1);
+  }, 60_000);
+
+  it('T072: a threaded reply carrying Cc is delivered like a top-level comment', async () => {
+    const requester = address('requester'), cc = address('cc');
+    const { event } = await commentFixture({
+      requesterEmail: requester,
+      threadedReply: true,
+      recipients: { cc: [{ email: cc }] },
+    });
+
+    await deliver(event);
+
+    const [requesterMail] = await inbox(requester);
+    expect(addressText(requesterMail.cc)).toContain(cc);
+    const ccCopies = await inbox(cc);
+    expect(ccCopies).toHaveLength(1);
+    expect(ccCopies[0].messageId).toBe(requesterMail.messageId);
+  }, 60_000);
+
+  it('T044: an author-less workflow comment still reaches its Cc recipients', async () => {
+    const cc = address('workflow-cc');
+    // tickets.add_comment runs without an actor: the row has no user_id, so the
+    // "from an agent" check cannot see a user — the stored author_type does.
+    const { event } = await commentFixture({ systemAuthored: true, recipients: { cc: [{ email: cc }] } });
+
+    await deliver(event);
+
+    const [combined] = await inbox(cc);
+    expect(combined).toBeDefined();
+    expect(addressText(combined.to)).toBe(cc);
   }, 60_000);
 
   it('T035: a comment without email_recipients is delivered exactly as before', async () => {

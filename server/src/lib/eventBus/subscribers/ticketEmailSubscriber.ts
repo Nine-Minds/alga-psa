@@ -507,12 +507,17 @@ function toRetryableAccumulatorError(
  * @param params - Same params as sendEventEmail
  * @param subtypeName - Name of the notification subtype (e.g., "Ticket Created")
  * @param recipientUserId - Optional user ID for preference checking (only for internal users)
+ * @returns whether a message was actually handed to the email service; false
+ *          when a gate (tenant kill switch, subtype, category, user opt-out)
+ *          or an invalid address silently skipped the send. Callers that need
+ *          to know whether a recipient was reached — the per-comment Cc/Bcc
+ *          fallback — depend on this being truthful.
  */
 async function sendNotificationIfEnabled(
   params: SendEmailParams,
   subtypeName: string,
   recipientUserId?: string
-): Promise<void> {
+): Promise<boolean> {
   try {
     if (!isValidEmail(params.to)) {
       logger.warn('[TicketEmailSubscriber] Skipping email send due to invalid recipient address:', {
@@ -520,7 +525,7 @@ async function sendNotificationIfEnabled(
         subtypeName,
         tenantId: params.tenantId
       });
-      return;
+      return false;
     }
 
     const { knex } = await createTenantKnex();
@@ -534,7 +539,7 @@ async function sendNotificationIfEnabled(
         recipient: params.to,
         subtypeName
       });
-      return;
+      return false;
     }
 
     if (gate.kind === 'subtype-missing') {
@@ -543,7 +548,7 @@ async function sendNotificationIfEnabled(
         recipient: params.to
       });
       await sendEventEmail(params);
-      return;
+      return true;
     }
 
     if (gate.kind === 'subtype-disabled') {
@@ -552,7 +557,7 @@ async function sendNotificationIfEnabled(
         tenantId: params.tenantId,
         recipient: params.to
       });
-      return;
+      return false;
     }
 
     if (gate.kind === 'category-disabled') {
@@ -561,7 +566,7 @@ async function sendNotificationIfEnabled(
         tenantId: params.tenantId,
         recipient: params.to
       });
-      return;
+      return false;
     }
 
     const subtype = gate.subtype;
@@ -582,7 +587,7 @@ async function sendNotificationIfEnabled(
           subtypeName,
           recipient: params.to
         });
-        return;
+        return false;
       }
 
       // Rate limiting is now centralized in TenantEmailService.sendEmail()
@@ -617,6 +622,7 @@ async function sendNotificationIfEnabled(
       }
     }
 
+    return true;
   } catch (error) {
     const isEmailProviderError =
       typeof error === 'object' &&
@@ -631,7 +637,7 @@ async function sendNotificationIfEnabled(
         recipient: params.to,
         tenantId: params.tenantId
       });
-      return;
+      return false;
     }
 
     if (isEmailProviderError && (error as any).isRetryable === true) {
@@ -650,7 +656,9 @@ async function sendNotificationIfEnabled(
           recipient: params.to,
           tenantId: params.tenantId
         });
-        return;
+        // The queued params carry the Cc/Bcc headers, so the retry delivers
+        // the combined message: treat it as sent, not as a dropped recipient.
+        return true;
       }
     }
 
@@ -2451,6 +2459,7 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
 
     let commentAuthorUserId: string | null = commentUserId || null;
     let commentAuthorContactId: string | null = null;
+    let commentAuthorType = '';
     let commentAuthorEmail = '';
     let commentClosesTicket = false;
     // Read from the comment row, never the event payload: the payload schema
@@ -2461,7 +2470,7 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
     if (payload.comment?.id) {
       const scopedDb = tenantDb(db, tenantId);
       const commentAuthorQuery = scopedDb.table('comments as cm')
-        .select({ comment_user_id: 'cm.user_id', comment_metadata: 'cm.metadata', comment_contact_id: 'cu.contact_id', comment_user_email: 'cu.email', comment_contact_email: 'cc.email' });
+        .select({ comment_user_id: 'cm.user_id', comment_author_type: 'cm.author_type', comment_metadata: 'cm.metadata', comment_contact_id: 'cu.contact_id', comment_user_email: 'cu.email', comment_contact_email: 'cc.email' });
       scopedDb.tenantJoin(commentAuthorQuery, 'users as cu', 'cm.user_id', 'cu.user_id', { type: 'left' });
       scopedDb.tenantJoin(commentAuthorQuery, 'contacts as cc', 'cu.contact_id', 'cc.contact_name_id', {
         type: 'left',
@@ -2472,6 +2481,7 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
         .where({ 'cm.comment_id': payload.comment.id })
         .first<{
           comment_user_id?: string | null;
+          comment_author_type?: string | null;
           comment_metadata?: Record<string, unknown> | null;
           comment_contact_id?: string | null;
           comment_user_email?: string | null;
@@ -2480,6 +2490,7 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
 
       if (commentAuthor) {
         commentAuthorUserId = commentAuthor.comment_user_id ?? null;
+        commentAuthorType = safeString(commentAuthor.comment_author_type);
         commentAuthorContactId = commentAuthor.comment_contact_id ?? null;
         commentAuthorEmail =
           safeString(commentAuthor.comment_user_email) ||
@@ -2684,8 +2695,10 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
         return false;
       }
       sentEmails.add(key);
-      await sendNotificationIfEnabled({ ...params, mailClass: 'ticket', boardId: params.boardId ?? ticket.board_id }, subtypeName, recipientUserId ?? undefined);
-      return true;
+      // The returned flag reports whether a message really went out: a
+      // notification gate can skip the send silently, and the Cc/Bcc fallback
+      // must not treat that as "the requester was reached".
+      return sendNotificationIfEnabled({ ...params, mailClass: 'ticket', boardId: params.boardId ?? ticket.board_id }, subtypeName, recipientUserId ?? undefined);
     };
 
     // Only notify external contacts (primaryEmail) if the comment is public and from an internal agent.
@@ -2755,6 +2768,29 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
       String(ticket.contact_name_id).trim() === commentAuthorContactId
     );
 
+    // A comment row written without a user — a system- or workflow-authored
+    // one — has nobody to classify, so `isFromAgent` is false for it while the
+    // stored author_type still says the comment came from the MSP side.
+    // Explicit Cc/Bcc on such a comment is an instruction to mail someone, so
+    // the one-off fallback runs for it too; a client-authored comment never
+    // gets it.
+    const isMspAuthoredComment = isFromAgent || (!commentAuthorUserId && commentAuthorType === 'internal');
+
+    // Extract threading info from ticket metadata. Every copy of this comment
+    // — the requester message and the Cc/Bcc fallback alike — carries the same
+    // thread headers so replies land on this ticket's thread.
+    const commentThreadMessageId = emailMetadata.messageId; // Original message ID from inbound email
+    const commentThreadHeaders: Record<string, string> = {};
+    if (commentThreadMessageId) {
+      commentThreadHeaders['In-Reply-To'] = commentThreadMessageId;
+      const refs = Array.isArray(emailMetadata.references) ? emailMetadata.references : [];
+      // Append original messageId to references to maintain chain
+      commentThreadHeaders['References'] = [...refs, commentThreadMessageId].join(' ');
+    }
+    const commentThreadHeaderParams = Object.keys(commentThreadHeaders).length > 0
+      ? { headers: commentThreadHeaders }
+      : {};
+
     // Send to primary email if available - external user, no userId
     let requesterEmailSent = false;
     if (
@@ -2764,17 +2800,6 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
       !isPrimaryContactAuthor &&
       shouldSendTicketCommentNotification(suppression, 'contact')
     ) {
-      // Extract threading info from ticket metadata
-      const messageId = emailMetadata.messageId; // Original message ID from inbound email
-      
-      const headers: Record<string, string> = {};
-      if (messageId) {
-          headers['In-Reply-To'] = messageId;
-          const refs = Array.isArray(emailMetadata.references) ? emailMetadata.references : [];
-          // Append original messageId to references to maintain chain
-          headers['References'] = [...refs, messageId].join(' ');
-      }
-
       // For client portal users (contacts), pass the clientId so locale resolution respects client preferences
       const emailParams: TicketNotificationParams = {
         tenantId,
@@ -2790,7 +2815,7 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
           threadId: ticket.email_metadata?.threadId
         },
         attachments: inlineCommentImageAttachments,
-        headers: Object.keys(headers).length > 0 ? headers : undefined,
+        ...commentThreadHeaderParams,
         // Real Cc/Bcc headers, so the requester sees who was copied and
         // reply-all reaches them. One message, one Message-ID, one reply token.
         ...oneOffHeaderParams,
@@ -2812,7 +2837,10 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
     // comment directly rather than dropping it. A message with several Bcc
     // addresses and an empty To is rejected by some providers, so a Bcc-only
     // list becomes one message per address.
-    if (hasOneOffRecipients && isFromAgent && !requesterEmailSent) {
+    // A tenant that switched comment notifications off also lands here, and the
+    // fallback goes through the same gate: the kill switch wins and nobody is
+    // mailed, one-off recipients included.
+    if (hasOneOffRecipients && isMspAuthoredComment && !requesterEmailSent) {
       const fallbackReplyContext = {
         ticketId: ticket.ticket_id || payload.ticketId,
         commentId: payload.comment?.id,
@@ -2826,6 +2854,7 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
         context: buildContext(portalUrl),
         replyContext: fallbackReplyContext,
         attachments: inlineCommentImageAttachments,
+        ...commentThreadHeaderParams,
         ...(ticket.client_id ? { recipientClientId: ticket.client_id } : {}),
       };
 
