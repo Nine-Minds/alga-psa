@@ -10,7 +10,9 @@
  *
  * invoice_items is a compatibility view over invoice_charges; Postgres refuses
  * to change the type of a column a view selects, so the view is dropped and
- * recreated around the change.
+ * recreated around the change. It is recreated with the column list it has
+ * carried since 20251026120000 (not SELECT *), so it never depends on columns
+ * added later and their migrations can still roll back.
  *
  * Citus note: both tables are distributed. Force sequential multi-shard
  * modification so the type change applies cleanly across all shards within
@@ -22,6 +24,14 @@ const isCitusEnabled = async (knex) => {
   return Boolean(r.rows?.[0]?.enabled);
 };
 
+const INVOICE_ITEMS_VIEW_COLUMNS = [
+  'tenant', 'item_id', 'invoice_id', 'service_id', 'description', 'quantity', 'unit_price',
+  'total_price', 'tax_region', 'tax_rate', 'tax_amount', 'net_amount', 'is_manual',
+  'created_by', 'updated_by', 'created_at', 'updated_at', 'is_discount', 'discount_type',
+  'applies_to_item_id', 'discount_percentage', 'is_taxable', 'applies_to_service_id',
+  'client_contract_id',
+];
+
 const alterQuantityColumns = async (knex, type, using) => {
   if (await isCitusEnabled(knex)) {
     await knex.raw("SET LOCAL citus.multi_shard_modify_mode TO 'sequential'");
@@ -30,7 +40,9 @@ const alterQuantityColumns = async (knex, type, using) => {
   await knex.raw('DROP VIEW IF EXISTS invoice_items');
   await knex.raw(`ALTER TABLE invoice_charges ALTER COLUMN quantity TYPE ${type} USING ${using}`);
   await knex.raw(`ALTER TABLE invoice_charge_details ALTER COLUMN quantity TYPE ${type} USING ${using}`);
-  await knex.raw('CREATE VIEW invoice_items AS SELECT * FROM invoice_charges');
+  await knex.raw(
+    `CREATE VIEW invoice_items AS SELECT ${INVOICE_ITEMS_VIEW_COLUMNS.join(', ')} FROM invoice_charges`
+  );
 };
 
 exports.up = async function (knex) {

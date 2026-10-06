@@ -9,7 +9,7 @@ import { resolveXeroRealmAliases } from './accountingSync/xeroRealmIdentity';
 import {
   AUTOMATIC_DISCOUNT_MAPPING_ID,
   DISCOUNT_MAPPING_ENTITY_TYPE
-} from '@alga-psa/integrations/lib/accountingDiscountMapping';
+} from '@alga-psa/types';
 
 export interface MappingResolution {
   external_entity_id: string;

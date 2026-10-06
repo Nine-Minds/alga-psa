@@ -32,7 +32,7 @@ import {
 import {
   AUTOMATIC_DISCOUNT_MAPPING_ID,
   DISCOUNT_MAPPING_ENTITY_TYPE
-} from '../../lib/accountingDiscountMapping';
+} from '@alga-psa/types';
 
 const ADAPTER_TYPE = 'xero';
 

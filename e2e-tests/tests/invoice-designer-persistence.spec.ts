@@ -180,7 +180,8 @@ test('an administrator authors a billed-time date sort and reopens its persisted
     const readCharges = () => database('invoice_charges')
       .where({ tenant: tenant.tenantId, invoice_id: invoiceId }).orderBy('item_id');
     const charges = await readCharges();
-    expect(snapshots).toHaveLength(4);
+    // Three entries plus the overtime entry, which links twice (regular + overtime segment).
+    expect(snapshots).toHaveLength(5);
     await page.goto(`/msp/billing?tab=invoicing&subtab=drafts&invoiceId=${invoiceId}`);
     const text = await readInvoiceDownload(page, testInfo, invoice.invoice_number);
     const compact = text.replace(/\s/g, '');
@@ -205,7 +206,8 @@ test('an administrator authors a billed-time date sort and reopens its persisted
             ? null : history === 'v1' ? { ...snapshot.work_item_snapshot, version: 1 } : snapshot.work_item_snapshot;
           if (history === 'fallbacks') {
             // Disclosed legacy shapes, not a claim that today's authoring UI
-            // produces orphan work. Preserve the actual mixed overtime rate.
+            // produces orphan work. A pre-split blended overtime snapshot
+            // ('mixed') keeps its rate; everything else degrades to v1.
             if (index === 0) workItemSnapshot = { ...workItemSnapshot, workItemType: 'ad_hoc',
               workItemId: null, ticketNumber: null, title: null, description: 'Frozen historical public work' };
             if (index === 1) workItemSnapshot = { ...workItemSnapshot, workItemType: 'project_task',

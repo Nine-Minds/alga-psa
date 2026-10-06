@@ -20,7 +20,7 @@ import { QBO_PSEUDO_TAX_CODE_NON_TAXABLE, QBO_PSEUDO_TAX_CODE_TAXABLE } from '..
 import {
   AUTOMATIC_DISCOUNT_MAPPING_ID,
   DISCOUNT_MAPPING_ENTITY_TYPE
-} from '../../lib/accountingDiscountMapping';
+} from '@alga-psa/types';
 import type {
   AccountingMappingContext,
   AccountingMappingLoadResult,

@@ -289,7 +289,14 @@ const AD_HOC_GROUP_LABEL = '';
 export function buildInvoiceTimeCollections(
   sources: InvoiceTimeCollectionSource[],
 ): { timeEntries: WasmInvoiceTimeEntry[]; ticketGroups: WasmInvoiceTicketGroup[] } {
-  const timeEntries: WasmInvoiceTimeEntry[] = sources
+  // Segment links of one overtime entry share id and date; order them
+  // regular-then-overtime (then by item) so output never depends on input order.
+  const segmentRank = (source: InvoiceTimeCollectionSource): number =>
+    source.segment === 'regular' ? 0 : source.segment === 'overtime' ? 1 : 2;
+  const timeEntries: WasmInvoiceTimeEntry[] = [...sources]
+    .sort((left, right) =>
+      segmentRank(left) - segmentRank(right) || String(left.itemId ?? '').localeCompare(String(right.itemId ?? ''))
+    )
     .filter(isValidInvoiceTimeSnapshot)
     .map((source): WasmInvoiceTimeEntry => ({
       timePresentation: true,
