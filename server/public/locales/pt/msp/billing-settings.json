@@ -168,6 +168,20 @@
         "save": "Falha ao salvar as configurações de automação de renovação"
       }
     },
+    "timeEntryService": {
+      "title": "Serviço padrão para registros de tempo",
+      "description": "Serviço alternativo usado em novos registros de tempo em tickets. O padrão do cliente tem prioridade.",
+      "label": "Serviço padrão para registros de tempo",
+      "placeholder": "Nenhum serviço padrão",
+      "help": "Usado em novos registros de tempo em tickets quando o cliente não tem um padrão próprio. O serviço ainda deve estar ativo e coberto pelo contrato do cliente.",
+      "toast": {
+        "updated": "Serviço padrão para registros de tempo atualizado."
+      },
+      "errors": {
+        "load": "Falha ao carregar o serviço padrão para registros de tempo",
+        "save": "Falha ao salvar o serviço padrão para registros de tempo"
+      }
+    },
     "quotes": {
       "title": "Cotações",
       "description": "Defina o período de validade padrão para novas cotações.",

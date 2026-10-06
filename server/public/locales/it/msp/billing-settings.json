@@ -168,6 +168,20 @@
         "save": "Impossibile salvare le impostazioni di automazione del rinnovo"
       }
     },
+    "timeEntryService": {
+      "title": "Servizio predefinito per le registrazioni di tempo",
+      "description": "Servizio alternativo per le nuove registrazioni di tempo nei ticket. Le impostazioni del cliente hanno la precedenza.",
+      "label": "Servizio predefinito per le registrazioni di tempo",
+      "placeholder": "Nessun servizio predefinito",
+      "help": "Utilizzato per le nuove registrazioni di tempo nei ticket quando il cliente non ha un servizio predefinito. Il servizio deve essere attivo e coperto dal contratto del cliente.",
+      "toast": {
+        "updated": "Servizio predefinito per le registrazioni di tempo aggiornato."
+      },
+      "errors": {
+        "load": "Impossibile caricare il servizio predefinito per le registrazioni di tempo",
+        "save": "Impossibile salvare il servizio predefinito per le registrazioni di tempo"
+      }
+    },
     "quotes": {
       "title": "Preventivi",
       "description": "Imposta il periodo di validità predefinito per i nuovi preventivi.",

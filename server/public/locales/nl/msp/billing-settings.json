@@ -168,6 +168,20 @@
         "save": "Kan de automatiseringsinstellingen voor verlenging niet opslaan"
       }
     },
+    "timeEntryService": {
+      "title": "Standaarddienst voor tijdregistraties",
+      "description": "Terugvaldienst voor nieuwe tijdregistraties op tickets. Klantspecifieke standaardinstellingen hebben voorrang.",
+      "label": "Standaarddienst voor tijdregistraties",
+      "placeholder": "Geen standaarddienst",
+      "help": "Wordt gebruikt voor nieuwe tijdregistraties op tickets als de klant geen eigen standaard heeft. De dienst moet actief zijn en onder het klantcontract vallen.",
+      "toast": {
+        "updated": "Standaarddienst voor tijdregistraties bijgewerkt."
+      },
+      "errors": {
+        "load": "Standaarddienst voor tijdregistraties kan niet worden geladen",
+        "save": "Standaarddienst voor tijdregistraties kan niet worden opgeslagen"
+      }
+    },
     "quotes": {
       "title": "Offertes",
       "description": "Stel de standaardgeldigheidsduur voor nieuwe offertes in.",

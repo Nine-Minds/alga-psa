@@ -9,6 +9,10 @@ import type { ActionMessageError, ActionPermissionError } from '@alga-psa/ui/lib
 import { assertBoardScopedTicketStatusSelection } from '@shared/lib/boardScopedTicketStatusValidation';
 import { CONTRACT_CADENCE_ROLLOUT_BLOCK_MESSAGE } from '@shared/billingClients/cadenceOwnerRollout';
 import { updateClientBillingSettings as updateClientBillingSettingsShared } from '@shared/billingClients/billingSettings';
+import {
+  assertValidTenantDefaultTimeEntryService,
+  InvalidDefaultTimeEntryServiceError,
+} from '@shared/billingClients/defaultTimeEntryServiceValidation';
 import type { CadenceOwner } from '@alga-psa/types';
 import { DEFAULT_QUOTE_VALIDITY_DAYS, isValidQuoteValidityDays } from '../constants/billing';
 
@@ -89,6 +93,8 @@ export interface BillingSettings {
   creditServiceTypeRestrictionMode?: 'all' | 'restricted' | null;
   /** null = no restriction; array = restrict credit application to these service type ids. */
   creditEligibleServiceTypeIds?: string[] | null;
+  /** undefined = leave unchanged; a service id = override; null = clear (tenant) / revert to tenant default (client). */
+  defaultTimeEntryServiceId?: string | null;
 }
 
 export const getDefaultBillingSettings = withAuth(async (
@@ -125,6 +131,7 @@ export const getDefaultBillingSettings = withAuth(async (
       defaultRecurringCadenceOwner: DEFAULT_RECURRING_CADENCE_OWNER,
       recurringCadenceRolloutState: DEFAULT_RECURRING_CADENCE_ROLLOUT_STATE,
       recurringCadenceRolloutMessage: CONTRACT_CADENCE_ROLLOUT_BLOCK_MESSAGE,
+      defaultTimeEntryServiceId: undefined,
     };
   }
 
@@ -165,6 +172,7 @@ export const getDefaultBillingSettings = withAuth(async (
         ? 'restricted'
         : 'all',
       creditEligibleServiceTypeIds: settings.credit_eligible_service_type_ids ?? null,
+      defaultTimeEntryServiceId: settings.default_time_entry_service_id ?? undefined,
     };
   });
 
@@ -244,6 +252,12 @@ export const updateDefaultBillingSettings = withAuth(async (
         });
       }
 
+      // The migration has no FK, so validate a non-null default before writing it.
+      // Null (clear) and undefined (leave unchanged) skip validation.
+      if (has('defaultTimeEntryServiceId') && data.defaultTimeEntryServiceId != null) {
+        await assertValidTenantDefaultTimeEntryService(trx, tenant, data.defaultTimeEntryServiceId);
+      }
+
       const renewalMode =
         data.defaultRenewalMode === 'none' ||
         data.defaultRenewalMode === 'manual' ||
@@ -279,6 +293,7 @@ export const updateDefaultBillingSettings = withAuth(async (
       if (has('creditExpirationNotificationDays')) columnValues.credit_expiration_notification_days = data.creditExpirationNotificationDays;
       if (has('creditAutoApplyEnabled')) columnValues.credit_auto_apply_enabled = data.creditAutoApplyEnabled ?? true;
       if (has('creditApplicationOrder')) columnValues.credit_application_order = data.creditApplicationOrder ?? 'expiration_first';
+      if (has('defaultTimeEntryServiceId')) columnValues.default_time_entry_service_id = data.defaultTimeEntryServiceId ?? null;
 
       // Service-type restriction: mode is the source of truth; derive a single
       // consistent mode + ids pair so the DB CHECK constraints always hold.
@@ -334,6 +349,7 @@ export const updateDefaultBillingSettings = withAuth(async (
           credit_application_order: data.creditApplicationOrder ?? 'expiration_first',
           credit_service_type_restriction_mode: creditRestriction?.mode ?? 'all',
           credit_eligible_service_type_ids: creditRestriction?.ids ?? null,
+          default_time_entry_service_id: data.defaultTimeEntryServiceId ?? null,
         });
       }
 
@@ -347,6 +363,9 @@ export const updateDefaultBillingSettings = withAuth(async (
     });
   } catch (error) {
     if (error instanceof Error && error.name === 'BoardScopedTicketStatusSelectionError') {
+      return actionError(error.message);
+    }
+    if (error instanceof InvalidDefaultTimeEntryServiceError) {
       return actionError(error.message);
     }
     throw error;
@@ -403,6 +422,7 @@ export const getClientContractLineSettings = withAuth(async (
       ? settings.credit_service_type_restriction_mode
       : undefined,
     creditEligibleServiceTypeIds: settings.credit_eligible_service_type_ids ?? null,
+    defaultTimeEntryServiceId: settings.default_time_entry_service_id ?? null,
   };
 });
 
@@ -417,28 +437,36 @@ export const updateClientContractLineSettings = withAuth(async (
   }
   const { knex } = await createTenantKnex();
 
-  await withTransaction(knex, async (trx: Knex.Transaction) => {
-    await updateClientBillingSettingsShared(
-      trx,
-      tenant,
-      clientId,
-      data
-        ? {
-            zeroDollarInvoiceHandling: data.zeroDollarInvoiceHandling,
-            suppressZeroDollarInvoices: data.suppressZeroDollarInvoices,
-            enableCreditExpiration: data.enableCreditExpiration,
-            creditExpirationDays: data.creditExpirationDays,
-            creditExpirationNotificationDays: data.creditExpirationNotificationDays,
-            hasExternalCredit: data.hasExternalCredit,
-            externalCreditNote: data.externalCreditNote,
-            creditAutoApplyEnabled: data.creditAutoApplyEnabled,
-            creditApplicationOrder: data.creditApplicationOrder,
-            creditServiceTypeRestrictionMode: data.creditServiceTypeRestrictionMode,
-            creditEligibleServiceTypeIds: data.creditEligibleServiceTypeIds,
-          }
-        : null
-    );
-  });
+  try {
+    await withTransaction(knex, async (trx: Knex.Transaction) => {
+      await updateClientBillingSettingsShared(
+        trx,
+        tenant,
+        clientId,
+        data
+          ? {
+              zeroDollarInvoiceHandling: data.zeroDollarInvoiceHandling,
+              suppressZeroDollarInvoices: data.suppressZeroDollarInvoices,
+              enableCreditExpiration: data.enableCreditExpiration,
+              creditExpirationDays: data.creditExpirationDays,
+              creditExpirationNotificationDays: data.creditExpirationNotificationDays,
+              hasExternalCredit: data.hasExternalCredit,
+              externalCreditNote: data.externalCreditNote,
+              creditAutoApplyEnabled: data.creditAutoApplyEnabled,
+              creditApplicationOrder: data.creditApplicationOrder,
+              creditServiceTypeRestrictionMode: data.creditServiceTypeRestrictionMode,
+              creditEligibleServiceTypeIds: data.creditEligibleServiceTypeIds,
+              defaultTimeEntryServiceId: data.defaultTimeEntryServiceId,
+            }
+          : null
+      );
+    });
+  } catch (error) {
+    if (error instanceof InvalidDefaultTimeEntryServiceError) {
+      return actionError(error.message);
+    }
+    throw error;
+  }
 
   return { success: true };
 });

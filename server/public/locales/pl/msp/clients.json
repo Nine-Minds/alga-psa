@@ -1966,6 +1966,15 @@
       "notThisClient": "Jeden z wybranych kontaktów nie należy do klienta tego profilu rozliczeniowego."
     }
   },
+  "clientDefaultTimeEntryServiceSettings": {
+    "title": "Domyślna usługa dla wpisów czasu",
+    "label": "Domyślna usługa dla wpisów czasu",
+    "placeholder": "Użyj ustawienia domyślnego organizacji",
+    "help": "Używana dla nowych wpisów czasu w zgłoszeniach tego klienta. Wyczyść wybór, aby użyć ustawienia domyślnego organizacji.",
+    "updatedSuccess": "Zaktualizowano domyślną usługę dla wpisów czasu.",
+    "saveError": "Nie udało się zapisać domyślnej usługi dla wpisów czasu",
+    "loadError": "Nie udało się wczytać domyślnej usługi dla wpisów czasu"
+  },
   "clientAutopay": {
     "setupLinkTitle": "Link do konfiguracji karty",
     "setupLinkFallback": "Skopiuj ten link, aby udostępnić go klientowi.",

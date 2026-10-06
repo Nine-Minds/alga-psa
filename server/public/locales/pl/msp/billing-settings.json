@@ -168,6 +168,20 @@
         "save": "Nie udało się zapisać ustawień automatyzacji odnawiania"
       }
     },
+    "timeEntryService": {
+      "title": "Domyślna usługa dla wpisów czasu",
+      "description": "Usługa zastępcza dla nowych wpisów czasu w zgłoszeniach. Ustawienia klienta mają pierwszeństwo.",
+      "label": "Domyślna usługa dla wpisów czasu",
+      "placeholder": "Brak domyślnej usługi",
+      "help": "Używana dla nowych wpisów czasu w zgłoszeniach, gdy klient nie ma własnej usługi domyślnej. Usługa musi być aktywna i objęta umową z klientem.",
+      "toast": {
+        "updated": "Zaktualizowano domyślną usługę dla wpisów czasu."
+      },
+      "errors": {
+        "load": "Nie udało się wczytać domyślnej usługi dla wpisów czasu",
+        "save": "Nie udało się zapisać domyślnej usługi dla wpisów czasu"
+      }
+    },
     "quotes": {
       "title": "Oferty",
       "description": "Ustaw domyślny okres ważności nowych ofert.",

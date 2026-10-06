@@ -388,6 +388,7 @@
         "emailAlreadyExists": "A user with this email address already exists",
         "reportsToSelf": "A user cannot report to themselves",
         "reportsToCycle": "This would create a circular reporting chain",
+        "invalidTimezone": "Choose a city-based time zone, such as America/New_York.",
         "passwordTooShort": "Password must be at least 8 characters long",
         "passwordChangeFailed": "Failed to change password",
         "passwordChangeError": "An error occurred while changing password",
@@ -3470,6 +3471,7 @@
       "missingField": "Missing required tenant settings field.",
       "missingFieldNamed": "Missing required tenant settings field: {{field}}.",
       "invalidTimezone": "Invalid timezone: {{timezone}}",
+      "nonLocationTimezone": "{{timezone}} isn't a city-based time zone. Choose a zone such as America/New_York.",
       "permissions": {
         "clearOnboarding": "Permission denied: Only admin users can clear onboarding data.",
         "update": "Permission denied: Cannot update settings",

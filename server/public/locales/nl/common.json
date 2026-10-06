@@ -1346,9 +1346,11 @@
   },
   "timezonePicker": {
     "selectPlaceholder": "Tijdzone selecteren...",
-    "searchPlaceholder": "Tijdzones of afkortingen zoeken (bijv. EST)...",
+    "searchPlaceholder": "Zoek op stad, naam of afkorting (bijv. New York, EST)...",
     "noResults": "Geen tijdzones gevonden",
     "matchingGroup": "Overeenkomsten met \"{{query}}\"",
+    "noDst": "Geen zomertijd",
+    "noDaylightSavingHint": "Geen zomertijd. De klokken blijven het hele jaar op {{offset}}.",
     "regions": {
       "Africa": "Afrika",
       "America": "Amerika",

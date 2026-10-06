@@ -168,6 +168,20 @@
         "save": "Échec de l'enregistrement des paramètres d'automatisation du renouvellement"
       }
     },
+    "timeEntryService": {
+      "title": "Service par défaut pour les saisies de temps",
+      "description": "Service de remplacement pour les nouvelles saisies de temps sur les tickets. Les paramètres propres au client sont prioritaires.",
+      "label": "Service par défaut pour les saisies de temps",
+      "placeholder": "Aucun service par défaut",
+      "help": "Utilisé pour les nouvelles saisies de temps sur les tickets lorsque le client ne dispose pas de son propre service par défaut. Le service doit rester actif et couvert par le contrat du client.",
+      "toast": {
+        "updated": "Service par défaut pour les saisies de temps mis à jour."
+      },
+      "errors": {
+        "load": "Impossible de charger le service par défaut pour les saisies de temps",
+        "save": "Impossible d’enregistrer le service par défaut pour les saisies de temps"
+      }
+    },
     "quotes": {
       "title": "Devis",
       "description": "Définissez la durée de validité par défaut des nouveaux devis.",

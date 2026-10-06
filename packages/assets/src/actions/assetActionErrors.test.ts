@@ -55,6 +55,8 @@ describe('assetActionErrorFrom', () => {
       actionError: 'client_id has an invalid format.',
       messageKey: 'common:errors.validation.invalidFormat',
       messageParams: { field: 'client_id' },
+      // alga0002283: the full issue list rides along so the form can highlight fields.
+      validationIssues: [{ path: ['client_id'], code: 'invalid_string', message: 'Invalid uuid' }],
     });
   });
 });

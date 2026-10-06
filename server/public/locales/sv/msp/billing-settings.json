@@ -35,6 +35,20 @@
       "title": "Numrering av kreditfakturor",
       "description": "Anpassa hur kreditfakturanummer genereras och visas."
     },
+    "timeEntryService": {
+      "title": "Standardtjänst för tidposter",
+      "description": "Reservtjänst för nya tidposter på ärenden. Kundens standardtjänst har företräde.",
+      "label": "Standardtjänst för tidposter",
+      "placeholder": "Ingen standardtjänst",
+      "help": "Används för nya tidposter på ärenden när kunden saknar en egen standardtjänst. Tjänsten måste fortfarande vara aktiv och omfattas av kundens avtal.",
+      "toast": {
+        "updated": "Standardtjänsten för tidposter har uppdaterats."
+      },
+      "errors": {
+        "load": "Det gick inte att läsa in standardtjänsten för tidposter",
+        "save": "Det gick inte att spara standardtjänsten för tidposter"
+      }
+    },
     "zeroDollar": {
       "title": "Fakturor med nollbelopp",
       "description": "Ange hur fakturor utan avgifter hanteras.",
