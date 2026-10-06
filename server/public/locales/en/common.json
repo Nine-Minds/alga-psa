@@ -1740,5 +1740,9 @@
     "customPlaceholder": "Name this unit",
     "register": "Add",
     "selectPlaceholder": "Select a unit"
+  },
+  "emailRecipients": {
+    "remove": "Remove {{email}}",
+    "placeholder": "Type an address and press Enter"
   }
 }

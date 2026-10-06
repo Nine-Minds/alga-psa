@@ -1740,5 +1740,9 @@
     "customPlaceholder": "Assegna un nome a questa unità",
     "register": "Aggiungi",
     "selectPlaceholder": "Seleziona un’unità"
+  },
+  "emailRecipients": {
+    "remove": "Rimuovi {{email}}",
+    "placeholder": "Digita un indirizzo e premi Invio"
   }
 }

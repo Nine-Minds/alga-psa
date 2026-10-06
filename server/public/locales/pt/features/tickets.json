@@ -373,7 +373,12 @@
     "schedule": "Agendar",
     "scheduled": "Agendado",
     "showMore": "Mostrar mais",
-    "showLess": "Mostrar menos"
+    "showLess": "Mostrar menos",
+    "ccBcc": "Cc/Cco",
+    "cc": "Cc",
+    "bcc": "Cco",
+    "ccBccInvalid": "Corrija os endereços destacados antes de enviar.",
+    "ccBccNotSentOnInternal": "Cc e Cco não são enviados com uma nota interna. Desative Interna para usá-los."
   },
   "responseState": {
     "awaitingYourResponse": "Aguardando sua resposta",

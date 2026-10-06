@@ -1740,5 +1740,9 @@
     "customPlaceholder": "Geef deze eenheid een naam",
     "register": "Toevoegen",
     "selectPlaceholder": "Selecteer een eenheid"
+  },
+  "emailRecipients": {
+    "remove": "{{email}} verwijderen",
+    "placeholder": "Typ een adres en druk op Enter"
   }
 }

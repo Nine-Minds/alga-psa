@@ -381,7 +381,12 @@
     "schedule": "Schemalägg",
     "scheduled": "Schemalagd",
     "showMore": "Visa mer",
-    "showLess": "Visa mindre"
+    "showLess": "Visa mindre",
+    "ccBcc": "Kopia/Hemlig kopia",
+    "cc": "Kopia",
+    "bcc": "Hemlig kopia",
+    "ccBccInvalid": "Rätta de markerade adresserna innan du skickar.",
+    "ccBccNotSentOnInternal": "Kopia och hemlig kopia skickas inte med en intern anteckning. Stäng av Intern för att använda dem."
   },
   "responseState": {
     "awaitingYourResponse": "Väntar på ditt svar",

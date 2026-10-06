@@ -373,7 +373,12 @@
     "schedule": "Planen",
     "scheduled": "Geplant",
     "showMore": "Mehr anzeigen",
-    "showLess": "Weniger anzeigen"
+    "showLess": "Weniger anzeigen",
+    "ccBcc": "Cc/Bcc",
+    "cc": "Cc",
+    "bcc": "Bcc",
+    "ccBccInvalid": "Korrigieren Sie die markierten Adressen, bevor Sie senden.",
+    "ccBccNotSentOnInternal": "Cc und Bcc werden bei einer internen Notiz nicht gesendet. Deaktivieren Sie „Intern“, um sie zu verwenden."
   },
   "responseState": {
     "awaitingYourResponse": "Warten auf Ihre Antwort",

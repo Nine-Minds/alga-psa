@@ -381,7 +381,12 @@
     "schedule": "Schedule",
     "scheduled": "Scheduled",
     "showMore": "Show more",
-    "showLess": "Show less"
+    "showLess": "Show less",
+    "ccBcc": "Cc/Bcc",
+    "cc": "Cc",
+    "bcc": "Bcc",
+    "ccBccInvalid": "Fix the highlighted addresses before sending.",
+    "ccBccNotSentOnInternal": "Cc and Bcc are not sent with an internal note. Turn Internal off to use them."
   },
   "responseState": {
     "awaitingYourResponse": "Awaiting Your Response",

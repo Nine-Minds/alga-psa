@@ -4,7 +4,7 @@ import {
   MAX_COMMENT_EMAIL_RECIPIENTS,
   normalizeCommentEmailRecipients,
   readCommentEmailRecipients,
-} from '../commentEmailRecipients';
+} from '../commentEmailRecipientsCore';
 
 const addresses = (count: number, prefix = 'person') =>
   Array.from({ length: count }, (_, index) => `${prefix}${index}@example.com`);

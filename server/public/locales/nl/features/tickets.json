@@ -373,7 +373,12 @@
     "schedule": "Plannen",
     "scheduled": "Gepland",
     "showMore": "Meer tonen",
-    "showLess": "Minder tonen"
+    "showLess": "Minder tonen",
+    "ccBcc": "Cc/Bcc",
+    "cc": "Cc",
+    "bcc": "Bcc",
+    "ccBccInvalid": "Corrigeer de gemarkeerde adressen voordat u verzendt.",
+    "ccBccNotSentOnInternal": "Cc en Bcc worden niet verzonden bij een interne notitie. Zet Intern uit om ze te gebruiken."
   },
   "responseState": {
     "awaitingYourResponse": "Wacht op uw reactie",

@@ -1774,5 +1774,9 @@
     "customPlaceholder": "Nazwij tę jednostkę",
     "register": "Dodaj",
     "selectPlaceholder": "Wybierz jednostkę"
+  },
+  "emailRecipients": {
+    "remove": "Usuń {{email}}",
+    "placeholder": "Wpisz adres i naciśnij Enter"
   }
 }

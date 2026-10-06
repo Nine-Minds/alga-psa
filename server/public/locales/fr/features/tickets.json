@@ -373,7 +373,12 @@
     "schedule": "Planifier",
     "scheduled": "Planifié",
     "showMore": "Afficher plus",
-    "showLess": "Afficher moins"
+    "showLess": "Afficher moins",
+    "ccBcc": "Cc/Cci",
+    "cc": "Cc",
+    "bcc": "Cci",
+    "ccBccInvalid": "Corrigez les adresses signalées avant d’envoyer.",
+    "ccBccNotSentOnInternal": "Cc et Cci ne sont pas envoyés avec une note interne. Désactivez Interne pour les utiliser."
   },
   "responseState": {
     "awaitingYourResponse": "En attente de votre réponse",

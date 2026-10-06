@@ -415,7 +415,12 @@
     "schedule": "Zaplanuj",
     "scheduled": "Zaplanowano",
     "showMore": "Pokaż więcej",
-    "showLess": "Pokaż mniej"
+    "showLess": "Pokaż mniej",
+    "ccBcc": "Dw/Udw",
+    "cc": "Dw",
+    "bcc": "Udw",
+    "ccBccInvalid": "Popraw wyróżnione adresy przed wysłaniem.",
+    "ccBccNotSentOnInternal": "Dw i Udw nie są wysyłane z notatką wewnętrzną. Wyłącz opcję Wewnętrzna, aby ich użyć."
   },
   "responseState": {
     "awaitingYourResponse": "Oczekuje na Twoją odpowiedź",

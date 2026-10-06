@@ -1740,5 +1740,9 @@
     "customPlaceholder": "⟦Ƞȧḿḗ ŧħīş ŭƞīŧ⟧",
     "register": "⟦Ȧḓḓ⟧",
     "selectPlaceholder": "⟦Şḗŀḗƈŧ ȧ ŭƞīŧ⟧"
+  },
+  "emailRecipients": {
+    "remove": "⟦Řḗḿȯṽḗ {{email}}⟧",
+    "placeholder": "⟦Ŧẏƥḗ ȧƞ ȧḓḓřḗşş ȧƞḓ ƥřḗşş Ḗƞŧḗř⟧"
   }
 }

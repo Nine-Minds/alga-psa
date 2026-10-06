@@ -38,6 +38,7 @@ import { TicketCredentialsSection } from "./TicketCredentialsSection";
 import { TicketExternalLinksSection } from "./TicketExternalLinksSection";
 import TicketEmailNotifications from "./TicketEmailNotifications";
 import TicketConversation from "./TicketConversation";
+import type { CommentEmailRecipientsPayload } from "./CommentEmailRecipientsControl";
 import { TicketActivityTimeline } from "./TicketActivityTimeline";
 import { useSession } from 'next-auth/react';
 import { toast } from 'react-hot-toast';
@@ -207,7 +208,7 @@ interface TicketDetailsProps {
         changes: Record<string, unknown>,
         options?: Partial<TicketNotificationSuppressionValue> & { propagateToChildren?: boolean }
     ) => Promise<boolean>;
-    onAddComment?: (content: string, isInternal: boolean, isResolution: boolean, closesTicket?: boolean, schedule?: { publishAt: string; timeZone: string } | null) => Promise<void>;
+    onAddComment?: (content: string, isInternal: boolean, isResolution: boolean, closesTicket?: boolean, schedule?: { publishAt: string; timeZone: string } | null, emailRecipients?: CommentEmailRecipientsPayload) => Promise<void>;
     onUpdateDescription?: (content: string) => Promise<boolean>;
     isSubmitting?: boolean;
     /**
@@ -2117,6 +2118,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         closeStatusId: string | null = null,
         options?: TicketNotificationSuppressionValue,
         schedule?: { publishAt: string; timeZone: string } | null,
+        emailRecipients?: CommentEmailRecipientsPayload,
     ): Promise<boolean> => {
         // Check if content is empty
         const contentStr = JSON.stringify(newCommentContent);
@@ -2166,6 +2168,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                     isResolution,
                     willCloseTicket,
                     schedule,
+                    emailRecipients,
                 );
                 await refreshTicketDocuments();
 
@@ -2235,7 +2238,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                         } : {}),
                         // See email-subscriber suppression note above.
                         ...(willCloseTicket ? { metadata: { closes_ticket: true } } : {})
-                    });
+                    }, emailRecipients);
                     if (isReturnedActionError(newComment)) {
                         handleTicketActionError(newComment, t('messages.addCommentFailed', 'Failed to add comment'));
                         return false;
@@ -2297,7 +2300,8 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const handleAddReplyComment = async (
         content: PartialBlock[],
         parentCommentId: string,
-        isInternal: boolean
+        isInternal: boolean,
+        emailRecipients?: CommentEmailRecipientsPayload,
     ): Promise<boolean> => {
         const contentStr = JSON.stringify(content);
         const hasContent = contentStr !== JSON.stringify([{
@@ -2327,7 +2331,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                 user_id: userId,
                 author_type: 'internal',
                 parent_comment_id: parentCommentId
-            });
+            }, emailRecipients);
             if (isReturnedActionError(result)) {
                 throw result;
             }
@@ -4489,6 +4493,7 @@ const handleClose = () => {
                                     canViewCommentMetadataDebug={canViewCommentMetadataDebug}
                                     reactionRefreshVersion={reactionRefreshVersion}
                                     externalLinksByCommentId={externalLinksByCommentId}
+                                    allowEmailRecipients
                                 />
                             </div>
                         </Suspense>

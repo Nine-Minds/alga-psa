@@ -1740,5 +1740,9 @@
     "customPlaceholder": "Namnge enheten",
     "register": "Lägg till",
     "selectPlaceholder": "Välj en måttenhet"
+  },
+  "emailRecipients": {
+    "remove": "Ta bort {{email}}",
+    "placeholder": "Skriv en adress och tryck på Retur"
   }
 }

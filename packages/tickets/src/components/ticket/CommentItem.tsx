@@ -24,6 +24,7 @@ import { resolveCommentAuthor } from '../../lib/commentAuthorResolution';
 import ResponseSourceBadge from '../ResponseSourceBadge';
 import type { ITicketExternalLinkView } from '../../actions/externalLinks/externalLinkActions';
 import { normalizeEmailAddress } from '@shared/lib/email/addressUtils';
+import { readCommentEmailRecipients } from '@shared/lib/tickets/commentEmailRecipientsCore';
 import { parseTicketRichTextContent } from '../../lib/ticketRichText';
 import { extractTicketRichTextPlainText } from '../../lib/ticketRichText';
 import { extractTicketRichTextHtml } from '../../lib/ticketRichTextHtml';
@@ -258,6 +259,22 @@ const CommentItem: React.FC<CommentItemProps> = ({
     [conversation]
   );
   const authorEmail = getAuthorEmail();
+
+  // One-off Cc/Bcc for this single comment. Bcc is MSP-only: the client-portal
+  // loaders and actions strip it before the comment ever reaches this render.
+  const emailRecipientLines = useMemo(() => {
+    const recipients = readCommentEmailRecipients(conversation.metadata);
+    if (!recipients) return [] as Array<{ label: string; names: string }>;
+    const describe = (entry: { email: string; name?: string }) => entry.name || entry.email;
+    const lines: Array<{ label: string; names: string }> = [];
+    if (recipients.cc.length > 0) {
+      lines.push({ label: t('conversation.cc', 'Cc'), names: recipients.cc.map(describe).join(', ') });
+    }
+    if (recipients.bcc.length > 0) {
+      lines.push({ label: t('conversation.bcc', 'Bcc'), names: recipients.bcc.map(describe).join(', ') });
+    }
+    return lines;
+  }, [conversation.metadata, t]);
   const isDeleted = Boolean(conversation.deleted_at);
 
   // Only allow users to edit their own comments
@@ -672,6 +689,18 @@ const CommentItem: React.FC<CommentItemProps> = ({
                       </span>
                     )}
                   </p>
+                </div>
+              )}
+              {emailRecipientLines.length > 0 && (
+                <div
+                  {...withDataAutomationId({ id: `${commentId}-email-recipients` })}
+                  className="flex flex-col min-w-0 text-xs text-gray-500 dark:text-[rgb(var(--color-text-400))]"
+                >
+                  {emailRecipientLines.map((line) => (
+                    <span key={line.label} className="break-words min-w-0">
+                      {line.label}: {line.names}
+                    </span>
+                  ))}
                 </div>
               )}
             </div>
