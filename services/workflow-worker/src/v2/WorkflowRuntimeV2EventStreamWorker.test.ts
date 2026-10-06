@@ -23,7 +23,8 @@ const {
   loggerInfoMock,
   loggerWarnMock,
   loggerDebugMock,
-  loggerErrorMock
+  loggerErrorMock,
+  insertOutboxRowMock
 } = vi.hoisted(() => ({
   redisInitializeMock: vi.fn(async () => undefined),
   redisRegisterConsumerMock: vi.fn(),
@@ -47,7 +48,8 @@ const {
   loggerInfoMock: vi.fn(),
   loggerWarnMock: vi.fn(),
   loggerDebugMock: vi.fn(),
-  loggerErrorMock: vi.fn()
+  loggerErrorMock: vi.fn(),
+  insertOutboxRowMock: vi.fn(async () => undefined)
 }));
 
 let registeredConsumer: ((event: unknown) => Promise<void>) | null = null;
@@ -145,13 +147,22 @@ vi.mock('@alga-psa/workflows/secrets', () => ({
   }))
 }));
 
+vi.mock('../../../../shared/services/email/inboundEmailDurableStore', () => ({
+  insertOutboxRow: (...args: unknown[]) => insertOutboxRowMock(...args)
+}));
+
+import { convertToWorkflowEvent } from '../../../../packages/event-schemas/src/schemas/eventBusSchema';
+import { workflowEventPayloadSchemas } from '../../../../packages/event-schemas/src/schemas/domain/workflowEventPayloadSchemas';
+import { InboundEmailOutboxEventPublisher } from '../../../../shared/workflow/adapters/inboundEmailOutboxEventPublisher';
 import { WorkflowRuntimeV2EventStreamWorker } from './WorkflowRuntimeV2EventStreamWorker';
+
+let catalogSchemaRef = 'payload.WorkflowEvent.v1';
 
 const knexMock: any = (table: string) => {
   if (table === 'event_catalog' || table === 'system_event_catalog') {
     return {
       where: vi.fn().mockReturnThis(),
-      first: vi.fn(async () => ({ payload_schema_ref: 'payload.WorkflowEvent.v1' })),
+      first: vi.fn(async () => ({ payload_schema_ref: catalogSchemaRef })),
     };
   }
 
@@ -162,6 +173,8 @@ describe('WorkflowRuntimeV2EventStreamWorker', () => {
   beforeEach(() => {
     delete process.env.WORKFLOW_RUNTIME_V2_EVENT_CORRELATION_PATHS_JSON;
     registeredConsumer = null;
+    catalogSchemaRef = 'payload.WorkflowEvent.v1';
+    insertOutboxRowMock.mockClear();
 
     redisInitializeMock.mockReset();
     redisRegisterConsumerMock.mockReset();
@@ -490,6 +503,115 @@ describe('WorkflowRuntimeV2EventStreamWorker', () => {
         error_message: expect.stringContaining('Payload validation failed for workflow workflow-key'),
       }),
       'tenant-1'
+    );
+  });
+
+  it('persists a schema-mismatch skip onto the event row instead of skipping silently (alga-2026-0002379)', async () => {
+    workflowRuntimeEventCreateMock.mockResolvedValue({ event_id: 'event-mismatch' });
+    workflowRunWaitListEventWaitCandidatesMock.mockResolvedValue([]);
+    workflowDefinitionListMock.mockResolvedValue([
+      {
+        workflow_id: 'workflow-mismatch',
+        key: 'workflow-mismatch-key',
+        status: 'published',
+        trigger: { type: 'event', eventName: 'PING' }
+      }
+    ]);
+    workflowDefinitionVersionListByWorkflowMock.mockResolvedValue([
+      {
+        version: 1,
+        definition_json: {
+          id: 'workflow-mismatch',
+          version: 1,
+          payloadSchemaRef: 'payload.Other.v1',
+          trigger: { type: 'event', eventName: 'PING' },
+          steps: []
+        }
+      }
+    ]);
+    schemaRegistryHasMock.mockReturnValue(true);
+
+    const worker = new WorkflowRuntimeV2EventStreamWorker('worker-1');
+    await worker.start();
+
+    await registeredConsumer?.({
+      event_id: 'event-mismatch',
+      event_type: 'PING',
+      workflow_correlation_key: 'corr-mismatch',
+      tenant: 'tenant-1',
+      payload: { foo: 'bar' }
+    });
+
+    expect(launchPublishedWorkflowRunMock).not.toHaveBeenCalled();
+    expect(workflowRuntimeEventUpdateMock).toHaveBeenCalledWith(
+      knexMock,
+      'event-mismatch',
+      expect.objectContaining({
+        error_message: expect.stringContaining('workflow-mismatch-key'),
+      }),
+      'tenant-1'
+    );
+  });
+
+  it('launches a published TICKET_CREATED workflow for an inbound-email ticket (alga-2026-0002379)', async () => {
+    catalogSchemaRef = 'payload.TicketCreated.v1';
+    const tenant = '91a53464-0b67-4e3f-ae88-922d9c5af6ed';
+    const ticketId = '7fa265ac-3a50-4ad6-9454-4a860d884996';
+
+    // Real durable-inbound publisher -> row payload the dispatcher replays -> the
+    // conversion EventBus.publish applies before XADD to workflow:events:global.
+    await new InboundEmailOutboxEventPublisher({ trx: {} as any, tenantId: tenant, inboxId: 'inbox-1' })
+      .publishTicketCreated({ tenantId: tenant, ticketId, metadata: { source: 'email' } });
+    const row = (insertOutboxRowMock.mock.calls[0] as unknown[])[1] as { event_type: string; payload: Record<string, unknown> };
+    const streamed = convertToWorkflowEvent({
+      eventType: row.event_type,
+      payload: row.payload,
+      id: 'c9f1f8d4-7c1f-4a0c-9b0e-5a2f1f7f3a11',
+      timestamp: new Date().toISOString()
+    } as any);
+
+    workflowRuntimeEventCreateMock.mockResolvedValue({ event_id: streamed.event_id });
+    workflowRunWaitListEventWaitCandidatesMock.mockResolvedValue([]);
+    workflowDefinitionListMock.mockResolvedValue([
+      {
+        workflow_id: 'workflow-new-ticket-email',
+        key: 'new-ticket-email',
+        status: 'published',
+        trigger: { type: 'event', eventName: 'TICKET_CREATED' }
+      }
+    ]);
+    workflowDefinitionVersionListByWorkflowMock.mockResolvedValue([
+      {
+        version: 3,
+        definition_json: {
+          id: 'workflow-new-ticket-email',
+          version: 3,
+          payloadSchemaRef: 'payload.TicketCreated.v1',
+          trigger: { type: 'event', eventName: 'TICKET_CREATED' },
+          steps: []
+        }
+      }
+    ]);
+    schemaRegistryHasMock.mockReturnValue(true);
+    schemaRegistryGetMock.mockImplementation((ref: string) => workflowEventPayloadSchemas[ref]);
+
+    const worker = new WorkflowRuntimeV2EventStreamWorker('worker-1');
+    await worker.start();
+    await registeredConsumer?.({
+      event_id: streamed.event_id,
+      event_type: streamed.event_type,
+      tenant: streamed.tenant,
+      payload: streamed.payload
+    });
+
+    expect(launchPublishedWorkflowRunMock).toHaveBeenCalledTimes(1);
+    expect(launchPublishedWorkflowRunMock).toHaveBeenCalledWith(
+      knexMock,
+      expect.objectContaining({
+        workflowId: 'workflow-new-ticket-email',
+        tenantId: tenant,
+        payload: expect.objectContaining({ ticketId, tenantId: tenant, occurredAt: expect.any(String) })
+      })
     );
   });
 

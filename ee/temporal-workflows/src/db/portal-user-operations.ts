@@ -62,7 +62,7 @@ async function findExistingClientPortalUser(
   tenantId: string,
   normalizedEmail: string,
   expected: { contactId: string; clientId: string }
-): Promise<{ userId: string; roleId: string } | null> {
+): Promise<{ userId: string; roleId: string; isInactive: boolean } | null> {
   const existingUser = await retryOnAdminReadOnly(
     async () => {
       const knex = await getAdminConnection();
@@ -117,7 +117,11 @@ async function findExistingClientPortalUser(
     { logLabel: 'findExistingPortalUserRole' }
   );
 
-  return { userId: existingUser.user_id, roleId: existingRole?.role_id ?? '' };
+  return {
+    userId: existingUser.user_id,
+    roleId: existingRole?.role_id ?? '',
+    isInactive: !!existingUser.is_inactive,
+  };
 }
 
 /**
@@ -143,17 +147,31 @@ export async function createPortalUserInDB(
     // Reuse an existing client-portal user instead of letting the shared model
     // throw. The shared model's duplicate guard is intentionally left intact for
     // the rest of the app; reuse is handled here, at the EE boundary. We return
-    // the existing account untouched: no password re-hash, no role assignment,
-    // no reactivation.
+    // the existing account with no password re-hash and no role assignment. An
+    // account deactivated by tenant deletion is reactivated for the returning
+    // customer.
     const existing = await findExistingClientPortalUser(input.tenantId, normalizedEmail, {
       contactId: input.contactId,
       clientId: input.clientId,
     });
     if (existing) {
+      if (existing.isInactive) {
+        await retryOnAdminReadOnly(
+          async () => {
+            const knex = await getAdminConnection();
+            await tenantDb(knex, input.tenantId).table('users')
+              .where({ user_id: existing.userId })
+              .update({ is_inactive: false, updated_at: knex.fn.now() });
+          },
+          { logLabel: 'reactivateExistingPortalUser' }
+        );
+      }
+
       log.info('Reusing existing portal user (not modifying password or roles)', {
         userId: existing.userId,
         tenantId: input.tenantId,
-        roleId: existing.roleId
+        roleId: existing.roleId,
+        reactivated: existing.isInactive
       });
 
       return {
