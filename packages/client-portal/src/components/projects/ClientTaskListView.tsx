@@ -39,6 +39,7 @@ interface Task {
   project_status_mapping_id: string;
   task_name?: string;
   description?: string;
+  start_date?: Date | null;
   due_date?: Date | null;
   status_name?: string;
   custom_name?: string;
@@ -124,6 +125,7 @@ export default function ClientTaskListView({
     { key: 'expand', minWidth: 40, priority: 0, alwaysShow: true },
     { key: 'task_name', minWidth: 200, priority: 1, alwaysShow: true },
     { key: 'assigned_to', minWidth: 220, priority: 2 },
+    { key: 'start_date', minWidth: 110, priority: 3.5 },
     { key: 'due_date', minWidth: 110, priority: 3 },
     { key: 'checklist_progress', minWidth: 80, priority: 4 },
     { key: 'dependencies', minWidth: 70, priority: 5 },
@@ -163,6 +165,7 @@ export default function ClientTaskListView({
       assigned_to: 18,
       estimated_hours: 8,
       actual_hours: 8,
+      start_date: 10,
       due_date: 10,
       document_uploads: 10,
     };
@@ -172,7 +175,7 @@ export default function ClientTaskListView({
     const visibleCols: string[] = [];
 
     // Only include columns that pass both config AND responsive checks
-    const columnKeys = ['task_name', 'dependencies', 'checklist_progress', 'assigned_to', 'estimated_hours', 'actual_hours', 'due_date', 'document_uploads'];
+    const columnKeys = ['task_name', 'dependencies', 'checklist_progress', 'assigned_to', 'estimated_hours', 'actual_hours', 'start_date', 'due_date', 'document_uploads'];
 
     columnKeys.forEach(key => {
       // Check if enabled in config
@@ -338,6 +341,11 @@ export default function ClientTaskListView({
               {shouldShowColumn('actual_hours') && (
                 <th className="px-3 py-3 text-left text-xs font-medium text-gray-500">
                   {t('tasks.hoursLogged')}
+                </th>
+              )}
+              {shouldShowColumn('start_date') && (
+                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500">
+                  {t('tasks.startDate', 'Start Date')}
                 </th>
               )}
               {shouldShowColumn('due_date') && (
@@ -680,6 +688,13 @@ export default function ClientTaskListView({
                                   {shouldShowColumn('actual_hours') && (
                                     <td className="px-3 py-3 text-sm text-gray-700">
                                       {task.actual_hours != null && (task.actual_hours / 60).toFixed(1)}
+                                    </td>
+                                  )}
+
+                                  {/* Start Date */}
+                                  {shouldShowColumn('start_date') && (
+                                    <td className="px-3 py-3 text-sm text-gray-700">
+                                      {task.start_date && format(new Date(task.start_date), 'PP', { locale: dateLocale })}
                                     </td>
                                   )}
 

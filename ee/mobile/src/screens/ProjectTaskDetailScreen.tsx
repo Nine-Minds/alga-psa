@@ -339,6 +339,8 @@ export function ProjectTaskDetailScreen({ route }: Props) {
   const statusLabel = task?.status_name ?? (activity ? humanize(activity.status) : null) ?? t("common:unknown");
   const isClosed = task?.is_closed ?? activity?.isClosed ?? false;
   const projectLine = [task?.project_name ?? activity?.projectName, task?.phase_name ?? activity?.phaseName].filter(Boolean).join(" • ");
+  // The activity feed carries no start date, so it only shows once the task has loaded.
+  const startDate = task?.start_date ?? null;
   const dueDate = task ? task.due_date ?? null : activity?.dueDate ?? null;
   const assignees = task?.assigned_user_name ? [task.assigned_user_name] : activity?.assignedToNames ?? [];
   const estimated = task ? task.estimated_hours ?? null : activity?.estimatedHours ?? null;
@@ -380,6 +382,7 @@ export function ProjectTaskDetailScreen({ route }: Props) {
         ) : null}
 
         {projectLine ? <Section label={t("projectTask.projectLabel")} value={projectLine} /> : null}
+        {startDate ? <Section label={t("projectTask.startDateLabel")} value={formatDateShort(startDate)} /> : null}
         {dueDate ? <Section label={t("projectTask.dueDateLabel")} value={formatDateShort(dueDate)} /> : null}
         {assignees.length > 0 ? <Section label={t("projectTask.assignedLabel")} value={assignees.join(", ")} /> : null}
         <Section

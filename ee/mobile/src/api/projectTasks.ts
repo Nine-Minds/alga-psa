@@ -22,6 +22,7 @@ export type ProjectTaskDetail = {
   assigned_user_name?: string | null;
   estimated_hours?: number | null;
   actual_hours?: number | null;
+  start_date?: string | null;
   due_date?: string | null;
   service_id?: string | null;
   /** The task's own service, else its phase's default, else its project's. */

@@ -170,6 +170,7 @@ export const projectPhaseResponseSchema = z.object({
     assigned_to: uuidSchema.nullable(),
     estimated_hours: z.number().nullable(),
     actual_hours: z.number().nullable(),
+    start_date: dateSchema.nullable().optional(),
     due_date: dateSchema.nullable(),
     status: z.string(),
     wbs_code: z.string()
@@ -182,6 +183,7 @@ export const createProjectTaskSchema = z.object({
   description: z.string().optional(),
   assigned_to: uuidSchema.optional(),
   estimated_hours: z.number().min(0).optional(),
+  start_date: dateSchema.optional(),
   due_date: dateSchema.optional(),
   priority_id: uuidSchema.optional(),
   task_type_key: z.string().optional().default('general'),
@@ -201,6 +203,7 @@ export const projectTaskResponseSchema = z.object({
   estimated_hours: z.number().nullable(),
   actual_hours: z.number().nullable(),
   project_status_mapping_id: uuidSchema,
+  start_date: dateSchema.nullable(),
   due_date: dateSchema.nullable(),
   priority_id: uuidSchema.nullable(),
   task_type_key: z.string(),
