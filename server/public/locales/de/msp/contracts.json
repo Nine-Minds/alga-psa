@@ -641,6 +641,8 @@
       "catalogPriceMissing": "Für diese Grenze gibt es keinen Katalogpreis in {{currency}}, daher kann eine positive Menge nicht abgerechnet werden. Fügen Sie einen Katalogpreis in {{currency}} hinzu oder aktivieren Sie vor dem Speichern „Einzelpreis überschreiben“.",
       "invoiceImpact": "Ab {{date}} ändert sich die wiederkehrende Zwischensumme dieser Position um {{delta}} auf {{total}} (vor Rabatten und Steuern). Früher abgerechnete Zeiträume bleiben unverändert.",
       "discardDirty": "Wenn Sie das Gültigkeitsdatum ändern, werden die geltenden Werte neu geladen und Ihre ungespeicherte Änderung verworfen. Fortfahren?",
+      "discardDirtyTitle": "Ungespeicherte Änderung verwerfen?",
+      "discardDirtyConfirm": "Verwerfen und neu laden",
       "invalidQuantity": "Die Menge muss eine ganze Zahl ab 0 sein.",
       "invalidRate": "Geben Sie einen Einzelpreis ab 0 ein oder wechseln Sie zum Katalogpreis.",
       "saved": "Geplant: {{quantity}} gültig ab {{date}}.",

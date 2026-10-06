@@ -1914,6 +1914,15 @@
       "notThisClient": "Uno dei contatti selezionati non appartiene al cliente di questo profilo di fatturazione."
     }
   },
+  "clientDefaultTimeEntryServiceSettings": {
+    "title": "Servizio predefinito per le registrazioni di tempo",
+    "label": "Servizio predefinito per le registrazioni di tempo",
+    "placeholder": "Usa il valore predefinito dell’organizzazione",
+    "help": "Utilizzato per le nuove registrazioni di tempo nei ticket di questo cliente. Cancella la selezione per usare il valore predefinito dell’organizzazione.",
+    "updatedSuccess": "Servizio predefinito per le registrazioni di tempo aggiornato.",
+    "saveError": "Impossibile salvare il servizio predefinito per le registrazioni di tempo",
+    "loadError": "Impossibile caricare il servizio predefinito per le registrazioni di tempo"
+  },
   "clientAutopay": {
     "setupLinkTitle": "Link di configurazione della carta",
     "setupLinkFallback": "Copia questo link per condividerlo con il tuo cliente.",

@@ -23,6 +23,10 @@ export default defineConfig({
         replacement: path.resolve(__dirname, '../core/src/lib/i18n/countryDateFormat.ts'),
       },
       {
+        find: /^@alga-psa\/core\/timeZones$/,
+        replacement: path.resolve(__dirname, '../core/src/lib/timeZones.ts'),
+      },
+      {
         find: /^@alga-psa\/core\/unitOfMeasure$/,
         replacement: path.resolve(__dirname, '../core/src/lib/unitOfMeasure.ts'),
       },

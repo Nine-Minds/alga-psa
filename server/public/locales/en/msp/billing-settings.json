@@ -33,6 +33,20 @@
       "title": "Credit Note Numbering",
       "description": "Customize how credit note numbers are generated and displayed."
     },
+    "timeEntryService": {
+      "title": "Default time-entry service",
+      "description": "Fallback service used for new ticket time entries. Per-client defaults take precedence.",
+      "label": "Default time-entry service",
+      "placeholder": "No default service",
+      "help": "Used for new ticket time entries when the client has no default of its own. The service must still be active and covered by the client contract.",
+      "toast": {
+        "updated": "Default time-entry service updated."
+      },
+      "errors": {
+        "load": "Failed to load default time-entry service",
+        "save": "Failed to save default time-entry service"
+      }
+    },
     "zeroDollar": {
       "title": "Zero-Dollar Invoices",
       "description": "Control how invoices with no charges are handled.",

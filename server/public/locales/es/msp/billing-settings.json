@@ -166,6 +166,20 @@
         "save": "No se pudo guardar la configuración de automatización de renovación"
       }
     },
+    "timeEntryService": {
+      "title": "Servicio predeterminado para registros de tiempo",
+      "description": "Servicio alternativo para nuevos registros de tiempo en tickets. Los valores predeterminados de cada cliente tienen prioridad.",
+      "label": "Servicio predeterminado para registros de tiempo",
+      "placeholder": "Sin servicio predeterminado",
+      "help": "Se usa para nuevos registros de tiempo en tickets cuando el cliente no tiene uno propio. El servicio debe seguir activo y estar cubierto por el contrato del cliente.",
+      "toast": {
+        "updated": "Servicio predeterminado para registros de tiempo actualizado."
+      },
+      "errors": {
+        "load": "No se pudo cargar el servicio predeterminado para registros de tiempo",
+        "save": "No se pudo guardar el servicio predeterminado para registros de tiempo"
+      }
+    },
     "quotes": {
       "title": "Cotizaciones",
       "description": "Establezca el período de validez predeterminado para nuevas cotizaciones.",

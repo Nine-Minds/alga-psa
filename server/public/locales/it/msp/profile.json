@@ -52,6 +52,7 @@
         "fillRequiredFields": "Compila tutti i campi obbligatori",
         "loadFailed": "Impossibile caricare il profilo",
         "saveFailed": "Impossibile salvare il profilo",
+        "invalidTimezone": "Scegli un fuso orario basato su una città, ad esempio America/New_York.",
         "errorPrefix": "Errore: {{error}}"
       }
     },

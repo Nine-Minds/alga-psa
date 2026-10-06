@@ -825,7 +825,16 @@
       "fileError": "Falha ao carregar o arquivo",
       "associatedEntityTypeLabel": "Associar-se a",
       "noAssociation": "Nenhuma associação",
-      "selectAssociatedEntityError": "Selecione uma entidade associada antes de fazer upload."
+      "selectAssociatedEntityError": "Selecione uma entidade associada antes de fazer upload.",
+      "uploaded": "Carregado",
+      "failed": "Falhou",
+      "failureSummary": "Não foi possível enviar {{failed}} de {{total}} arquivos. Revise os erros abaixo.",
+      "outcomeSummary": "{{succeeded}} de {{total}} arquivos enviados",
+      "emptyDropTitle": "Nenhum arquivo recebido",
+      "emptyDropMessage": "Nenhum arquivo foi recebido. Guarde o anexo ou o e-mail no computador e, em seguida, arraste o arquivo guardado para aqui ou use «Procurar arquivos».",
+      "uploadInProgress": "Já existe um envio em andamento. Aguarde a conclusão antes de adicionar mais arquivos.",
+      "refreshFailed": "Os seus arquivos foram enviados, mas a lista de documentos não pôde ser atualizada. Recarregue a página para vê-los.",
+      "clearResults": "Limpar resultados"
     },
     "folders": {
       "root": "Raiz",
@@ -1337,9 +1346,11 @@
   },
   "timezonePicker": {
     "selectPlaceholder": "Selecione o fuso horário...",
-    "searchPlaceholder": "Pesquise fusos horários ou abreviações (por exemplo, EST)...",
+    "searchPlaceholder": "Pesquisar por cidade, nome ou abreviação (p. ex., New York, EST)...",
     "noResults": "Nenhum fuso horário encontrado",
     "matchingGroup": "Correspondente \"{{query}}\"",
+    "noDst": "Sem horário de verão",
+    "noDaylightSavingHint": "Sem horário de verão. Os relógios permanecem em {{offset}} o ano todo.",
     "regions": {
       "Africa": "África",
       "America": "América",

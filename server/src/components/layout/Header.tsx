@@ -172,7 +172,8 @@ export const getMenuItemNameByPath = (
 
   const matchingItems = (items: MenuItem[]): MenuItem[] => items.flatMap((item) => {
     const matchesPath = item.href === path
-      || (item.href !== undefined && (item.href === topLevelPath || path.startsWith(item.href)));
+      || (item.href !== undefined && (item.href === topLevelPath || path.startsWith(item.href)))
+      || (item.relatedPaths?.some((relatedPath) => path.startsWith(relatedPath)) ?? false);
     return [
       ...(matchesPath ? [item] : []),
       ...(item.subItems ? matchingItems(item.subItems) : []),

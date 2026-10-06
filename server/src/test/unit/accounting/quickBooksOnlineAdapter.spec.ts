@@ -17,6 +17,15 @@ vi.mock('@alga-psa/integrations/lib/qbo/qboTaxSettings', () => ({
   isQboAutomatedSalesTaxEnabled: isQboAutomatedSalesTaxEnabledMock
 }));
 
+const getQboCompanyCountryMock = vi.hoisted(() => vi.fn(async (): Promise<string | null> => 'US'));
+
+vi.mock('@alga-psa/integrations/lib/qbo/qboCompanyCountry', () => ({
+  getQboCompanyCountry: getQboCompanyCountryMock,
+  isUnitedStatesQboCountry: (country: string | null | undefined) => country === 'US',
+  isQboUnitedStatesCompany: async (tenantId: string, realmId: string | null | undefined) =>
+    (await getQboCompanyCountryMock(tenantId, realmId)) === 'US'
+}));
+
 vi.mock('@alga-psa/integrations/lib/qbo/qboClientService', () => ({
   QboClientService: { create: qboClientCreateMock },
   getDefaultQboRealmId: getDefaultQboRealmIdMock
@@ -1376,6 +1385,8 @@ describe('QuickBooksOnlineAdapter Automated Sales Tax mode', () => {
     mockResolver.resolveTaxCodeMapping.mockReset();
     isQboAutomatedSalesTaxEnabledMock.mockReset();
     isQboAutomatedSalesTaxEnabledMock.mockResolvedValue(false);
+    getQboCompanyCountryMock.mockReset();
+    getQboCompanyCountryMock.mockResolvedValue('US');
     vi.spyOn(dbModule, 'createTenantKnex').mockResolvedValue({ knex: makeKnexMock() as any, tenant: TENANT_ID });
     vi.spyOn(AccountingMappingResolver, 'create').mockResolvedValue(
       mockResolver as unknown as AccountingMappingResolver
@@ -1463,6 +1474,118 @@ describe('QuickBooksOnlineAdapter Automated Sales Tax mode', () => {
     });
 
     expect(invoice.Line[0].SalesItemLineDetail.TaxCodeRef).toEqual({ value: 'NON' });
+  });
+
+  // Internal-tax mode on an AST realm still puts a tax code on the line, and
+  // Intuit accepts only TAX/NON there — a mapped catalog code faults the whole
+  // invoice with "Invalid Line TaxCode" (6100). This is the shape of invoice
+  // I001287: one non-taxable line, tax_source switched to internal.
+  it('AST on, internal-tax mode: a non-taxable charge carries NON, not the mapped code', async () => {
+    const invoice = await transformWith({
+      astEnabled: true,
+      taxDelegationMode: 'none',
+      excludeTaxFromExport: false,
+      charge: { is_taxable: false, tax_amount: 0 },
+      taxCodeMapping: { external_entity_id: '2', metadata: { externalDisplayName: 'Out of scope (0%)' } }
+    });
+
+    expect(invoice.Line[0].SalesItemLineDetail.TaxCodeRef).toEqual({ value: 'NON' });
+  });
+
+  it('AST on, internal-tax mode, non-US company: a non-taxable charge keeps the mapped code', async () => {
+    getQboCompanyCountryMock.mockResolvedValue('CA');
+    const invoice = await transformWith({
+      astEnabled: true,
+      taxDelegationMode: 'none',
+      excludeTaxFromExport: false,
+      charge: { is_taxable: false, tax_amount: 0 },
+      taxCodeMapping: { external_entity_id: '7', metadata: { externalDisplayName: 'Exempt' } }
+    });
+
+    expect(invoice.Line[0].SalesItemLineDetail.TaxCodeRef).toEqual({ value: '7' });
+  });
+
+  it('AST on, internal-tax mode, unreadable country: a non-taxable charge still carries NON', async () => {
+    getQboCompanyCountryMock.mockResolvedValue(null);
+    const invoice = await transformWith({
+      astEnabled: true,
+      taxDelegationMode: 'none',
+      excludeTaxFromExport: false,
+      charge: { is_taxable: false, tax_amount: 0 },
+      taxCodeMapping: { external_entity_id: '2', metadata: {} }
+    });
+
+    expect(invoice.Line[0].SalesItemLineDetail.TaxCodeRef).toEqual({ value: 'NON' });
+  });
+
+  it('AST on, delegate mode, non-US company: lines keep their mapped codes, no pseudo codes', async () => {
+    getQboCompanyCountryMock.mockResolvedValue('AU');
+    const exempt = await transformWith({
+      astEnabled: true,
+      taxDelegationMode: 'delegate',
+      excludeTaxFromExport: true,
+      charge: { is_taxable: false, tax_amount: 0 },
+      taxCodeMapping: { external_entity_id: '5', metadata: {} }
+    });
+    expect(exempt.Line[0].SalesItemLineDetail.TaxCodeRef).toEqual({ value: '5' });
+
+    const unmapped = await transformWith({
+      astEnabled: true,
+      taxDelegationMode: 'delegate',
+      excludeTaxFromExport: true,
+      charge: { is_taxable: true },
+      taxCodeMapping: null
+    });
+    expect(unmapped.Line[0].SalesItemLineDetail.TaxCodeRef).toBeUndefined();
+  });
+
+  describe('allowedLineTaxCodes', () => {
+    it('restricts a US AST company to TAX/NON', async () => {
+      isQboAutomatedSalesTaxEnabledMock.mockResolvedValue(true);
+      const allowed = await new QuickBooksOnlineAdapter().allowedLineTaxCodes('tenant-1', 'realm-9');
+      expect(allowed && [...allowed].sort()).toEqual(['NON', 'TAX']);
+    });
+
+    it.each(['CA', null])('restricts nothing when the country reads as %s', async (country) => {
+      isQboAutomatedSalesTaxEnabledMock.mockResolvedValue(true);
+      getQboCompanyCountryMock.mockResolvedValue(country);
+      expect(await new QuickBooksOnlineAdapter().allowedLineTaxCodes('tenant-1', 'realm-9')).toBeNull();
+    });
+
+    it('restricts nothing off AST or without a realm, and never reads the country', async () => {
+      const adapter = new QuickBooksOnlineAdapter();
+      expect(await adapter.allowedLineTaxCodes('tenant-1', 'realm-9')).toBeNull();
+      isQboAutomatedSalesTaxEnabledMock.mockResolvedValue(true);
+      expect(await adapter.allowedLineTaxCodes('tenant-1', null)).toBeNull();
+      expect(getQboCompanyCountryMock).not.toHaveBeenCalled();
+    });
+  });
+
+  it('AST on, internal-tax mode: a taxable charge keeps the mapped tax code', async () => {
+    const invoice = await transformWith({
+      astEnabled: true,
+      taxDelegationMode: 'none',
+      excludeTaxFromExport: false,
+      charge: { is_taxable: true },
+      taxCodeMapping: { external_entity_id: 'TAX-NY', metadata: {} }
+    });
+
+    expect(invoice.Line[0].SalesItemLineDetail.TaxCodeRef).toEqual({ value: 'TAX-NY' });
+    expect(invoice.TxnTaxDetail).toEqual({ TotalTax: 17.75 });
+  });
+
+  it('AST off, internal-tax mode: a non-taxable charge still carries the mapped code', async () => {
+    // Off the AST path nothing changes: a non-AST company accepts its own
+    // zero-rate codes, and silently rewriting them to NON would be a new bug.
+    const invoice = await transformWith({
+      astEnabled: false,
+      taxDelegationMode: 'none',
+      excludeTaxFromExport: false,
+      charge: { is_taxable: false, tax_amount: 0 },
+      taxCodeMapping: { external_entity_id: '2', metadata: {} }
+    });
+
+    expect(invoice.Line[0].SalesItemLineDetail.TaxCodeRef).toEqual({ value: '2' });
   });
 
   it('never emits GlobalTaxCalculation, which faults on US companies', async () => {

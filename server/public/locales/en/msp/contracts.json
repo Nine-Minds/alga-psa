@@ -641,6 +641,8 @@
       "catalogPriceMissing": "No {{currency}} catalog price covers this boundary, so a positive quantity cannot bill. Add a {{currency}} catalog price or choose \"Override unit price\" before saving.",
       "invoiceImpact": "From {{date}} the recurring subtotal for this item changes by {{delta}} to {{total}} (before discounts and tax). Earlier billed periods are unchanged.",
       "discardDirty": "Changing the effective date reloads the values in force and discards your unsaved edit. Continue?",
+      "discardDirtyTitle": "Discard unsaved edit?",
+      "discardDirtyConfirm": "Discard and reload",
       "invalidQuantity": "Quantity must be a whole number of 0 or more.",
       "invalidRate": "Enter a unit price of 0 or more, or switch to catalog pricing.",
       "saved": "Scheduled: {{quantity}} effective {{date}}.",

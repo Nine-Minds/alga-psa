@@ -29,9 +29,15 @@ vi.mock('@alga-psa/billing/actions/invoiceGeneration', () => ({ previewRecurring
 // reproduce the bug where one key's translation shadowed the mid-period branch.
 vi.mock('@alga-psa/ui/lib/i18n/client', async () => {
   const { useTranslation } = await import('react-i18next');
+  const { formatDateValue } = await import('@alga-psa/ui/lib/i18n/formatDateValue');
+  const { countryDateFormat } = await import('@alga-psa/core/i18n/countryDateFormat');
   return {
     useTranslation: (namespace?: string | string[]) => useTranslation(namespace as any),
-    useFormatters: () => ({ formatCurrency: (amount: number) => `$${amount.toFixed(2)}` }),
+    useFormatters: () => ({
+      formatCurrency: (amount: number) => `$${amount.toFixed(2)}`,
+      // The tenant's country decides the order: AU writes day first.
+      formatDate: (value: string) => formatDateValue(value, 'en', undefined, countryDateFormat('AU')),
+    }),
   };
 });
 
@@ -39,6 +45,18 @@ vi.mock('@alga-psa/ui/components/CustomSelect', () => ({ default: ({ value, onVa
   <select id={id} value={value} onChange={event => onValueChange(event.target.value)}>{options.map((option: any) => <option key={option.value} value={option.value}>{option.label}</option>)}</select> }));
 vi.mock('@alga-psa/ui/components/Button', () => ({ Button: ({ children, variant, size, ...props }: any) => <button {...props}>{children}</button> }));
 vi.mock('@alga-psa/ui/components/Input', () => ({ Input: (props: any) => <input {...props} /> }));
+vi.mock('@alga-psa/ui/components/DatePicker', () => ({
+  DatePicker: ({ id, value, onChange }: { id?: string; value?: Date; onChange: (date: Date | undefined) => void }) => (
+    <input
+      id={id}
+      type="date"
+      value={value
+        ? `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, '0')}-${String(value.getDate()).padStart(2, '0')}`
+        : ''}
+      onChange={(event) => onChange(event.target.value ? new Date(`${event.target.value}T00:00:00`) : undefined)}
+    />
+  ),
+}));
 vi.mock('@alga-psa/ui/components/Label', () => ({ Label: (props: any) => <label {...props} /> }));
 vi.mock('@alga-psa/ui/components/Badge', () => ({ Badge: ({ children }: any) => <span>{children}</span> }));
 vi.mock('@alga-psa/ui/components/Alert', () => ({ Alert: ({ children }: any) => <div role="alert">{children}</div>, AlertDescription: ({ children }: any) => <div>{children}</div> }));
@@ -94,7 +112,7 @@ describe('Recurring unit schedule panel (loaded translations)', () => {
     // The standing change begins on the resolved next boundary (2026-11-01),
     // not the 2026-10-16 true-up date.
     await waitFor(() => expect((document.querySelector('#recurring-effective-config') as HTMLInputElement).value).toBe('2026-11-01'));
-    await screen.findByText(/From 2026-11-01 the standing quantity is 26/);
+    await screen.findByText(/From 01\/11\/2026 the standing quantity is 26/);
     // 3 units x $100 x 16/31 days -> $154.84 charge, matching the reproduction.
     expect(screen.getByText(/3 units × \$100\.00 × 16\/31 days = \$154\.84 charge/)).toBeTruthy();
 

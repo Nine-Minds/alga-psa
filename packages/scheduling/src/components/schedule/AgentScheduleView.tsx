@@ -21,10 +21,7 @@ import { droppedEntryDates, movedEntryUpdate, resizedEntryDates } from '../../li
 import { useScheduleViewer } from '../../hooks/useScheduleViewer';
 import { useUsers } from '@alga-psa/user-composition/hooks';
 import { hasAllDayDates, occupiesAllDayRow } from '../../lib/calendarDateDisplay';
-import {
-  WORK_ITEM_ENTRY_DEFAULT_DURATION_MS,
-  slotFromCalendarSelection,
-} from '../../lib/workItemScheduling';
+import { createForWorkItem } from '../../lib/scheduleEntryLauncher';
 
 const DynamicBigCalendar = dynamic(() => import('./DynamicBigCalendar'), {
   loading: () => <CalendarSkeleton height="100%" view="week" showSidebar={false} />,
@@ -188,12 +185,7 @@ const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({ agentId, workItem
 
   const handleSelectSlot = (slotInfo: SlotInfo) => {
     if (!workItemContext) return;
-    const slot = slotFromCalendarSelection(slotInfo, view, {
-      durationMs: WORK_ITEM_ENTRY_DEFAULT_DURATION_MS,
-    });
-    // The viewed agent is the assignee, so an entry created from their drawer
-    // lands on the calendar the user is looking at.
-    setEditorTarget({ kind: 'create', slot, assigneeIds: [agentId] });
+    setEditorTarget(createForWorkItem(workItemContext, { selection: slotInfo, view, viewedAgentId: agentId }));
   };
 
   const closeEditor = () => setEditorTarget(null);

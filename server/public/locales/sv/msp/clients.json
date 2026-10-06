@@ -1932,6 +1932,15 @@
       "notThisClient": "En av de valda kontakterna tillhör inte den kund som faktureringsprofilen hör till."
     }
   },
+  "clientDefaultTimeEntryServiceSettings": {
+    "title": "Standardtjänst för tidposter",
+    "label": "Standardtjänst för tidposter",
+    "placeholder": "Använd organisationens standardtjänst",
+    "help": "Används för nya tidposter på den här kundens ärenden. Rensa valet för att använda organisationens standardtjänst.",
+    "updatedSuccess": "Standardtjänsten för tidposter har uppdaterats.",
+    "saveError": "Det gick inte att spara standardtjänsten för tidposter",
+    "loadError": "Det gick inte att läsa in standardtjänsten för tidposter"
+  },
   "mergeClients": {
     "title": "Slå samman en kund med den här",
     "description": "Kunden du väljer blir en faktureringsprofil hos målkunden. Dess fakturor, faktureringscykler, betalningsmetoder och tillgodohavanden stannar kopplade till profilen; dess ärenden, kontakter, tillgångar och avtal flyttas över. Åtgärden kan inte ångras.",

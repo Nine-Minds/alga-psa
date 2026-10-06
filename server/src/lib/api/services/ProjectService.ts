@@ -971,18 +971,64 @@ export class ProjectService extends BaseService<IProject> {
 
   async createTicketLink(projectId: string, data: CreateProjectTicketLinkData, context: ServiceContext): Promise<IProjectTicketLink> {
       const { knex } = await this.getKnex();
-      
+
       const linkData = {
-        ...data,
         project_id: projectId,
+        phase_id: data.phase_id ?? null,
+        task_id: data.task_id ?? null,
+        ticket_id: data.ticket_id,
+        // Default true, like every other link path: ticket time bills as
+        // project time unless the caller opts out (alga-2026-0002622).
+        bill_under_project: data.bill_under_project ?? true,
         tenant: context.tenant,
         created_at: new Date()
       };
-  
+
+      // The resolver bills by the link's project, so a phase or task from
+      // another project would leave a link that says one thing and bills another.
+      if (linkData.phase_id) {
+        const phase = await tenantDb(knex, context.tenant).table('project_phases')
+          .where({ phase_id: linkData.phase_id, project_id: projectId })
+          .first('phase_id');
+        if (!phase) {
+          throw new ValidationError('Phase does not belong to this project');
+        }
+      }
+      if (linkData.task_id) {
+        const taskQuery = tenantDb(knex, context.tenant).table('project_tasks');
+        tenantDb(knex, context.tenant).tenantJoin(
+          taskQuery, 'project_phases', 'project_tasks.phase_id', 'project_phases.phase_id',
+        );
+        const task = await taskQuery
+          .where({ 'project_tasks.task_id': linkData.task_id, 'project_phases.project_id': projectId })
+          .modify((query) => {
+            if (linkData.phase_id) query.where('project_tasks.phase_id', linkData.phase_id);
+          })
+          .first('project_tasks.task_id');
+        if (!task) {
+          throw new ValidationError('Task does not belong to this project');
+        }
+      }
+
+      // Same guard the model applies on the UI path. The table is unique only
+      // on (tenant, link_id), so without it one ticket collects duplicate
+      // links and the biller has to clean them up by hand.
+      const existing = await tenantDb(knex, context.tenant).table('project_ticket_links')
+        .where({
+          project_id: linkData.project_id,
+          phase_id: linkData.phase_id,
+          task_id: linkData.task_id,
+          ticket_id: linkData.ticket_id
+        })
+        .first();
+      if (existing) {
+        throw new ConflictError('This ticket is already linked to this project task');
+      }
+
       const [link] = await tenantDb(knex, context.tenant).table('project_ticket_links')
         .insert(linkData)
         .returning('*');
-  
+
       return link;
     }
 

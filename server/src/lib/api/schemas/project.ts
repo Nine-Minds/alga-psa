@@ -314,17 +314,20 @@ export const taskChecklistItemResponseSchema = z.object({
 // Project ticket link schemas
 export const createProjectTicketLinkSchema = z.object({
   ticket_id: uuidSchema,
-  link_type: z.enum(['blocks', 'blocked_by', 'related', 'duplicate']).optional().default('related'),
-  notes: z.string().optional()
+  phase_id: uuidSchema.optional(),
+  task_id: uuidSchema.optional(),
+  // Linking a ticket to a project means its time is project work; untick to
+  // keep billing it at the client level (alga-2026-0002622).
+  bill_under_project: z.boolean().optional().default(true)
 });
 
 export const projectTicketLinkResponseSchema = z.object({
   link_id: uuidSchema,
   project_id: uuidSchema,
+  phase_id: uuidSchema.nullable(),
   task_id: uuidSchema.nullable(),
   ticket_id: uuidSchema,
-  link_type: z.string(),
-  notes: z.string().nullable(),
+  bill_under_project: z.boolean(),
   created_at: z.string().datetime(),
   tenant: uuidSchema,
   
