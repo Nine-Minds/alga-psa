@@ -1,7 +1,8 @@
 'use server';
 
+import { WorkflowEventPublisher } from '@shared/workflow/adapters/workflowEventPublisher';
 import { randomUUID } from 'node:crypto';
-import { createTenantKnex, tenantDb } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { actionError, permissionError } from '@alga-psa/ui/lib/errorHandling';
@@ -1001,7 +1002,7 @@ export const retryRenewalQueueTicketCreation = withAuth(async (
 
   const { knex } = await createTenantKnex();
 
-  return knex.transaction(async (trx) => {
+  return withTransaction(knex, async (trx) => {
     const db = tenantDb(trx, tenant);
     const defaultSelections: string[] = [
       'dbs.renewal_due_date_action_policy as tenant_renewal_due_date_action_policy',
@@ -1144,7 +1145,9 @@ export const retryRenewalQueueTicketCreation = withAuth(async (
           },
         },
         tenant,
-        trx
+        trx,
+        {},
+        new WorkflowEventPublisher({ transaction: trx })
       );
 
       await db.table('client_contracts')

@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { WorkflowEventPublisher } from '@shared/workflow/adapters/workflowEventPublisher';
 import logger from '@alga-psa/core/logger';
 import { getSSORegistry } from '@alga-psa/auth';
 import { tenantDb, withAdminTransaction } from '@alga-psa/db';
@@ -294,6 +295,8 @@ export async function createTeamsGuestTicket(params: {
         },
         tenantId,
         trx,
+        {},
+        new WorkflowEventPublisher({ transaction: trx }),
       );
     });
 

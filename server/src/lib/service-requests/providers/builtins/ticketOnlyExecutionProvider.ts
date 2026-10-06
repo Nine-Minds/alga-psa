@@ -1,6 +1,7 @@
 import { SERVICE_REQUEST_EXECUTION_MODES } from '../../domain';
+import { WorkflowEventPublisher } from '@shared/workflow/adapters/workflowEventPublisher';
 import type { ServiceRequestExecutionProvider } from '../contracts';
-import { tenantDb } from '@alga-psa/db';
+import { tenantDb, withTransaction } from '@alga-psa/db';
 import { TicketModel } from '@shared/models/ticketModel';
 import { calculateItilPriority } from '@alga-psa/tickets/lib/itilUtils';
 
@@ -119,7 +120,7 @@ export const ticketOnlyExecutionProvider: ServiceRequestExecutionProvider = {
   validateConfig: validateTicketOnlyExecutionConfig,
   async execute(context) {
     try {
-      return await context.knex.transaction(async (trx) => {
+      return await withTransaction(context.knex, async (trx) => {
         const db = tenantDb(trx, context.tenant);
         const configuredBoardId = getStringConfig(context.config, 'boardId');
         const configuredStatusId = getStringConfig(context.config, 'statusId');
@@ -207,7 +208,7 @@ export const ticketOnlyExecutionProvider: ServiceRequestExecutionProvider = {
           context.tenant,
           trx,
           {},
-          undefined,
+          new WorkflowEventPublisher({ transaction: trx }),
           undefined,
           context.requesterUserId,
           1

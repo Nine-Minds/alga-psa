@@ -1,4 +1,5 @@
 import logger from '@alga-psa/core/logger';
+import { WorkflowEventPublisher } from '@alga-psa/shared/workflow/adapters/workflowEventPublisher';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import type { TelephonyCallRecordRow } from '../types';
 import { buildCallInteractionNotes, buildCallInteractionTitle } from '../lib/callInteractions';
@@ -78,7 +79,7 @@ export async function autoCreateTicketForCall(
       input.tenantId,
       trx,
       {},
-      undefined,
+      new WorkflowEventPublisher({ transaction: trx }),
       undefined,
       undefined,
       3,

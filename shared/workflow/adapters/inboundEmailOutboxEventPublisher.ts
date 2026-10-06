@@ -111,6 +111,28 @@ export class InboundEmailOutboxEventPublisher implements IEventPublisher {
     });
   }
 
+  async publishTicketStatusChanged(data: {
+    tenantId: string;
+    ticketId: string;
+    userId?: string;
+    previousStatusId: string;
+    newStatusId: string;
+    changedAt: string;
+  }): Promise<void> {
+    await this.enqueue({
+      eventKey: 'ticket-status-changed',
+      eventType: 'TICKET_STATUS_CHANGED',
+      payload: {
+        tenantId: data.tenantId,
+        ticketId: data.ticketId,
+        ...(data.userId ? { userId: data.userId } : {}),
+        previousStatusId: data.previousStatusId,
+        newStatusId: data.newStatusId,
+        changedAt: data.changedAt,
+      },
+    });
+  }
+
   async publishTicketClosed(data: {
     tenantId: string;
     ticketId: string;

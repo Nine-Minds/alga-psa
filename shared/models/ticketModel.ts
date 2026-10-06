@@ -11,6 +11,7 @@ import { tenantDb } from '@alga-psa/db';
 import { v4 as uuidv4 } from 'uuid';
 import { z } from 'zod';
 import type { IEventPublisher } from '@alga-psa/types';
+import { isSilentTicketCreation, type TicketCreationEvents } from '../lib/tickets/ticketLifecycleEvents';
 import { applyMatchingChecklistTemplates } from '../lib/ticketChecklists';
 import { SharedNumberingService } from '../services/numberingService';
 import { applyBoardDefaultWatchers } from '../lib/tickets/boardDefaultWatchers';
@@ -810,8 +811,8 @@ export class TicketModel {
     input: CreateTicketInput,
     tenant: string,
     trx: Knex.Transaction,
-    validationOptions: ValidationOptions = {},
-    eventPublisher?: IEventPublisher,
+    validationOptions: ValidationOptions,
+    eventPublisher: TicketCreationEvents,
     analyticsTracker?: IAnalyticsTracker,
     userId?: string,
     maxRetries: number = 3
@@ -874,8 +875,8 @@ export class TicketModel {
     input: CreateTicketInput,
     tenant: string,
     trx: Knex.Transaction,
-    validationOptions: ValidationOptions = {},
-    eventPublisher?: IEventPublisher,
+    validationOptions: ValidationOptions,
+    eventPublisher: TicketCreationEvents,
     analyticsTracker?: IAnalyticsTracker,
     userId?: string
   ): Promise<CreateTicketOutput> {
@@ -1000,7 +1001,7 @@ export class TicketModel {
     }
 
     // Publish event if publisher provided
-    if (eventPublisher) {
+    if (!isSilentTicketCreation(eventPublisher)) {
       try {
         await eventPublisher.publishTicketCreated({
           tenantId: tenant,
@@ -1076,7 +1077,7 @@ export class TicketModel {
     enteredBy: string,
     tenant: string,
     trx: Knex.Transaction,
-    eventPublisher?: IEventPublisher,
+    eventPublisher: TicketCreationEvents,
     analyticsTracker?: IAnalyticsTracker
   ): Promise<CreateTicketOutput> {
     // Validate input data

@@ -1,5 +1,6 @@
 'use server'
 
+import { publishTicketTransitionsAfterCommit } from '@alga-psa/shared/lib/tickets/ticketLifecycleEvents';
 import { loadPortalTicketExternalLinks } from '../../lib/portalTicketExternalLinks';
 import { persistCommentPublication } from '@alga-psa/shared/lib/ticketCommentAttachments';
 
@@ -1021,6 +1022,29 @@ export const updateTicketStatus = withAuth(async (
           updated_at: occurredAt,
           updated_by: userId
         });
+
+      // TICKET_STATUS_CHANGED is the event board notification rules (and
+      // workflows) key on; TICKET_CLOSED / TICKET_REOPENED / TICKET_UPDATED
+      // below already cover their own subscribers.
+      await publishTicketTransitionsAfterCommit(trx, {
+        tenant,
+        before: {
+          ticketId,
+          statusId: oldStatusId,
+          priorityId: ticket.priority_id ?? null,
+          assignedTo: ticket.assigned_to ?? null,
+          boardId: ticket.board_id,
+        },
+        after: {
+          ticketId,
+          statusId: newStatusId,
+          priorityId: ticket.priority_id ?? null,
+          assignedTo: ticket.assigned_to ?? null,
+          boardId: ticket.board_id,
+        },
+        actorUserId: userId,
+        only: ['TICKET_STATUS_CHANGED'],
+      });
 
       // A bundled child reopened from the portal has left the "closed by
       // master" state. Revert its active propagation row in the same

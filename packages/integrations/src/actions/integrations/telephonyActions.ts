@@ -1,5 +1,6 @@
 'use server';
 
+import { WorkflowEventPublisher } from '@alga-psa/shared/workflow/adapters/workflowEventPublisher';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { withAuth } from '@alga-psa/auth/withAuth';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
@@ -1309,7 +1310,7 @@ export const createTicketFromTelephonyCall = withAuth(async (
         tenant,
         trx,
         {},
-        undefined,
+        new WorkflowEventPublisher({ transaction: trx }),
         undefined,
         (user as any)?.user_id,
         3,

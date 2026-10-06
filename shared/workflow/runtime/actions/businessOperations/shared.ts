@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import type { Knex } from 'knex';
-import { tenantDb } from '@alga-psa/db';
+import { tenantDb, withTransaction } from '@alga-psa/db';
 import { v4 as uuidv4 } from 'uuid';
 import type { ActionContext } from '../../registries/actionRegistry';
 
@@ -8,6 +8,8 @@ export type TenantTxContext = {
   tenantId: string;
   actorUserId: string;
   trx: Knex.Transaction;
+  /** Workflow run id; used as the originating execution id on events published by the action. */
+  runId?: string;
 };
 
 export type ActionErrorCategory = 'ValidationError' | 'ActionError' | 'TransientError';
@@ -238,13 +240,14 @@ export async function withTenantTransaction<T>(
     throwActionError(ctx, { category: 'ActionError', code: 'INTERNAL_ERROR', message: 'Database connection unavailable' });
   }
 
-  return await knex.transaction(async (trx) => {
+  // withTransaction (not knex.transaction) so after-commit hooks registered by the action flush.
+  return await withTransaction(knex, async (trx) => {
     await setTenantContext(trx, tenantId);
     const actorUserId = await resolveRunActorUserId(trx, tenantId, ctx.runId);
     if (!actorUserId) {
       throwActionError(ctx, { category: 'ActionError', code: 'INTERNAL_ERROR', message: 'Workflow actor user not found' });
     }
-    return await fn({ tenantId, actorUserId, trx });
+    return await fn({ tenantId, actorUserId, trx, runId: ctx.runId });
   });
 }
 

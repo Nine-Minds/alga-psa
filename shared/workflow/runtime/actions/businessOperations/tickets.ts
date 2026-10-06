@@ -1,10 +1,15 @@
 import { z } from 'zod';
+import { WorkflowEventPublisher } from '../../../adapters/workflowEventPublisher';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { tenantDb } from '@alga-psa/db';
 import { getActionRegistryV2 } from '../../registries/actionRegistry';
 import { getWorkflowEmailProvider } from '../../registries/workflowEmailRegistry';
 import { TicketModel } from '../../../../models/ticketModel';
+import {
+  captureTicketTransitionSnapshot,
+  publishTicketTransitionsAfterCommit,
+} from '../../../../lib/tickets/ticketLifecycleEvents';
 import { auditCloseRulesBypassIfGated } from '../../../../lib/ticketCloseRules';
 import { TICKET_ACTIVITY_ACTOR, TICKET_ACTIVITY_SOURCE } from '../../../../lib/ticketActivity';
 import { applyChecklistTemplateToTicket } from '../../../../lib/ticketChecklists';
@@ -628,7 +633,7 @@ export function registerTicketActions(): void {
           tx.tenantId,
           tx.trx,
           {},
-          undefined,
+          new WorkflowEventPublisher({ transaction: tx.trx, workflowExecutionId: tx.runId }),
           undefined,
           tx.actorUserId
         );
@@ -931,6 +936,7 @@ export function registerTicketActions(): void {
             .delete();
         }
 
+        const transitionBefore = await captureTicketTransitionSnapshot(tx.trx, tx.tenantId, input.ticket_id);
         updated = await TicketModel.updateTicket(
           input.ticket_id,
           {
@@ -956,6 +962,13 @@ export function registerTicketActions(): void {
           undefined,
           tx.actorUserId
         );
+
+        await publishTicketTransitionsAfterCommit(tx.trx, {
+          tenant: tx.tenantId,
+          before: transitionBefore,
+          actorUserId: tx.actorUserId ?? undefined,
+          correlationId: tx.runId,
+        });
 
         if (resolvedAssignment) {
           await reconcileWorkflowTicketAdditionalUsers(
@@ -1088,6 +1101,7 @@ export function registerTicketActions(): void {
           .where('ticket_id', input.ticket_id)
           .delete();
 
+        const transitionBefore = await captureTicketTransitionSnapshot(tx.trx, tx.tenantId, input.ticket_id);
         updated = await TicketModel.updateTicket(
           input.ticket_id,
           {
@@ -1102,6 +1116,13 @@ export function registerTicketActions(): void {
           undefined,
           tx.actorUserId
         );
+
+        await publishTicketTransitionsAfterCommit(tx.trx, {
+          tenant: tx.tenantId,
+          before: transitionBefore,
+          actorUserId: tx.actorUserId ?? undefined,
+          correlationId: tx.runId,
+        });
 
         await reconcileWorkflowTicketAdditionalUsers(
           tx,
@@ -1257,6 +1278,7 @@ export function registerTicketActions(): void {
         TICKET_ACTIVITY_SOURCE.WORKFLOW
       );
 
+      const transitionBefore = await captureTicketTransitionSnapshot(tx.trx, tx.tenantId, input.ticket_id);
       // Update ticket closure fields.
       await tenantScopedTable(tx, 'tickets')
         .where('ticket_id', input.ticket_id)
@@ -1269,6 +1291,13 @@ export function registerTicketActions(): void {
           updated_at: nowIso,
           updated_by: tx.actorUserId
         });
+
+      await publishTicketTransitionsAfterCommit(tx.trx, {
+        tenant: tx.tenantId,
+        before: transitionBefore,
+        actorUserId: tx.actorUserId ?? undefined,
+        correlationId: tx.runId,
+      });
 
       if (input.public_note) {
         await TicketModel.createComment(

@@ -1,4 +1,9 @@
+import {
+  captureTicketTransitionSnapshot,
+  publishTicketTransitionsAfterCommit,
+} from '@shared/lib/tickets/ticketLifecycleEvents';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
+import { WorkflowEventPublisher } from '@alga-psa/shared/workflow/adapters/workflowEventPublisher';
 import {
   TicketModel,
   type CreateCommentInput,
@@ -127,7 +132,7 @@ const createTicketAction: InboundActionDefinition<CreateTicketMappedValues> = {
         ticket_origin: 'api',
       };
 
-      const created = await TicketModel.createTicketWithRetry(input, ctx.tenant, trx, {}, undefined, undefined, undefined, 3);
+      const created = await TicketModel.createTicketWithRetry(input, ctx.tenant, trx, {}, new WorkflowEventPublisher({ transaction: trx }), undefined, undefined, 3);
 
       if (mappedValues.asset_id) {
         await tenantDb(trx, ctx.tenant).table('asset_associations').insert({
@@ -219,7 +224,14 @@ const updateTicketByExternalIdAction: InboundActionDefinition<UpdateTicketByExte
         };
       }
 
-      return TicketModel.updateTicket(lookup.algaEntityId, updateInput, ctx.tenant, trx);
+      const transitionBefore = await captureTicketTransitionSnapshot(trx, ctx.tenant, lookup.algaEntityId);
+      const updated = await TicketModel.updateTicket(lookup.algaEntityId, updateInput, ctx.tenant, trx);
+      await publishTicketTransitionsAfterCommit(trx, {
+        tenant: ctx.tenant,
+        before: transitionBefore,
+        correlationId: ctx.deliveryId,
+      });
+      return updated;
     });
 
     if (!updatedTicket) {
@@ -350,7 +362,14 @@ const changeTicketStatusByExternalIdAction: InboundActionDefinition<ChangeTicket
       };
       assignIfPresent(updateInput, 'board_id', mappedValues.board_id);
 
-      return TicketModel.updateTicket(lookup.algaEntityId, updateInput, ctx.tenant, trx);
+      const transitionBefore = await captureTicketTransitionSnapshot(trx, ctx.tenant, lookup.algaEntityId);
+      const updated = await TicketModel.updateTicket(lookup.algaEntityId, updateInput, ctx.tenant, trx);
+      await publishTicketTransitionsAfterCommit(trx, {
+        tenant: ctx.tenant,
+        before: transitionBefore,
+        correlationId: ctx.deliveryId,
+      });
+      return updated;
     });
 
     if (!updatedTicket) {

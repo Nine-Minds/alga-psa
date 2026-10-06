@@ -1,4 +1,5 @@
-import { createTenantKnex, tenantDb } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
+import { WorkflowEventPublisher } from '@shared/workflow/adapters/workflowEventPublisher';
 import logger from '@alga-psa/core/logger';
 import { normalizeClientContract } from '@shared/billingClients/clientContracts';
 import { getActionRegistryV2, initializeWorkflowRuntimeV2 } from '@alga-psa/workflows/runtime';
@@ -183,7 +184,9 @@ const createRenewalTicketDirectly = async (params: {
       },
     },
     params.tenantId,
-    params.trx
+    params.trx,
+    {},
+    new WorkflowEventPublisher({ transaction: params.trx })
   );
   return created.ticket_id;
 };
@@ -555,7 +558,7 @@ export async function processRenewalQueueHandler(data: RenewalQueueProcessorJobD
         if (!createdTicketId) {
           workflowTicketCreateFallbackCount += 1;
           try {
-            createdTicketId = await knex.transaction(async (trx: Knex.Transaction) => (
+            createdTicketId = await withTransaction(knex, async (trx: Knex.Transaction) => (
               createRenewalTicketDirectly({
                 trx,
                 tenantId,
