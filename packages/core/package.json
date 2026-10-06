@@ -1,6 +1,6 @@
 {
   "name": "@alga-psa/core",
-  "version": "1.6.8",
+  "version": "1.6.9",
   "private": true,
   "type": "module",
   "main": "./dist/index.js",
@@ -25,6 +25,10 @@
     "./workSchedule": {
       "import": "./dist/lib/workSchedule.js",
       "types": "./src/lib/workSchedule.ts"
+    },
+    "./timeZones": {
+      "import": "./dist/lib/timeZones.js",
+      "types": "./src/lib/timeZones.ts"
     },
     "./unitOfMeasure": {
       "import": "./dist/lib/unitOfMeasure.js",

@@ -90,4 +90,55 @@ describe('expressionEngine guardrails', () => {
       })
     ).resolves.toBe('fallback@example.com');
   });
+
+  describe('truncate and substring', () => {
+    const run = (source: string, payload: Record<string, unknown> = {}) => evaluateExpressionSource(source, { payload });
+
+    it('truncates to at most length characters, ending included', async () => {
+      await expect(run('truncate(payload.note, 10)', { note: 'The printer is on fire again' })).resolves.toBe('The pri...');
+      await expect(run('truncate(payload.note, 10, "")', { note: 'The printer is on fire again' })).resolves.toBe('The printe');
+      await expect(run('truncate(payload.note, 10, " (more)")', { note: 'The printer is on fire again' })).resolves.toBe('The (more)');
+      await expect(run('truncate(payload.note, 50)', { note: 'short' })).resolves.toBe('short');
+      await expect(run('$truncate(payload.note, 2)', { note: 'abcdef' })).resolves.toBe('..');
+    });
+
+    it('counts characters, not UTF-16 units, so emoji are never split', async () => {
+      await expect(run('truncate(payload.note, 3, "")', { note: '😀😀😀😀' })).resolves.toBe('😀😀😀');
+      await expect(run('substring(payload.note, 1, 2)', { note: 'a😀b😀' })).resolves.toBe('😀b');
+    });
+
+    it('treats missing text as empty and rejects a missing length', async () => {
+      await expect(run('truncate(payload.missing, 5)')).resolves.toBe('');
+      await expect(run('substring(payload.missing, 0, 5)')).resolves.toBe('');
+      await expect(run('truncate(payload.note, payload.missing)', { note: 'abc' })).rejects.toThrow('truncate: length must be a number');
+    });
+
+    it('takes part of the text, counting a negative start from the end', async () => {
+      await expect(run('substring(payload.s, 0, 5)', { s: 'Hello world' })).resolves.toBe('Hello');
+      await expect(run('substring(payload.s, 6)', { s: 'Hello world' })).resolves.toBe('world');
+      await expect(run('substring(payload.s, -5)', { s: 'Hello world' })).resolves.toBe('world');
+      await expect(run('substring(payload.s, 50)', { s: 'Hello world' })).resolves.toBe('');
+      await expect(run('substring(payload.s, 2, -1)', { s: 'Hello world' })).resolves.toBe('');
+      await expect(run('substring(payload.s, 1.9, 2.9)', { s: 'Hello world' })).resolves.toBe('el');
+    });
+
+    it('stays linear on large text', async () => {
+      // Guards against quadratic helpers, not the 25ms production budget: a
+      // loaded, coverage-instrumented CI shard overshoots 25ms on linear work,
+      // while a quadratic walk of 200k characters takes seconds.
+      const budgetMs = 1_000;
+      const big = 'x'.repeat(200_000);
+      await expect(
+        evaluateExpressionSource('len(truncate(payload.big, 1000000))', { payload: { big } }, budgetMs)
+      ).resolves.toBe(100_000);
+      await expect(
+        evaluateExpressionSource('len(substring(payload.big, -10))', { payload: { big } }, budgetMs)
+      ).resolves.toBe(10);
+    });
+
+    it('is accepted by the validator the designer uses', () => {
+      expect(() => validateExpressionSource('truncate(payload.a, 10) & substring(payload.b, 0, 3)')).not.toThrow();
+    });
+  });
 });
+

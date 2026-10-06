@@ -518,7 +518,14 @@
     "linkedToTaskSuccess": "Ticket erfolgreich mit Aufgabe verknüpft",
     "failedLoadTask": "Aufgabe konnte nicht geladen werden",
     "clientFallback": "Kunde",
-    "defaultNewStatus": "Neu"
+    "defaultNewStatus": "Neu",
+    "billUnderProjectLabel": "Zeit dieses Tickets als Projektzeit abrechnen",
+    "billingOffBadge": "Auf Kundenebene abgerechnet",
+    "billingOnTooltip": "Zeit dieses Tickets nicht mehr als Projektzeit abrechnen",
+    "billingOffTooltip": "Zeit dieses Tickets als Projektzeit abrechnen",
+    "billingOnSuccess": "Die Zeit dieses Tickets wird als Projektzeit abgerechnet",
+    "billingOffSuccess": "Die Zeit dieses Tickets wird auf Kundenebene abgerechnet",
+    "billingUpdateFailed": "Abrechnung des Tickets konnte nicht aktualisiert werden"
   },
   "materials": {
     "title": "Projektmaterialien",
@@ -815,7 +822,9 @@
       "task": "Aufgabe",
       "tasks": "Aufgaben",
       "badgeCount_other": "{{count}} Aufgaben",
-      "badgeCount_one": "{{count}} Aufgabe"
+      "badgeCount_one": "{{count}} Aufgabe",
+      "billsToProject": "Zeit wird als Projektzeit abgerechnet",
+      "billsToClient": "Zeit wird auf Kundenebene abgerechnet"
     },
     "bulkMoveTask": {
       "title": "Aufgaben verschieben",
@@ -1765,6 +1774,7 @@
     "cap": {
       "title": "Budgetobergrenze",
       "hint": "Zeit und Material wird nach Sätzen bis zu einer optionalen Höchstgrenze abgerechnet.",
+      "currencyStale": "Die gespeicherte Obergrenze lautet auf {{projectCurrency}}, worin die Rechnungen dieses Projekts nicht ausgestellt werden. Geben Sie die Obergrenze in {{invoiceCurrency}} ein, um dieses Projekt auf {{invoiceCurrency}} umzustellen; bis dahin wird keine Obergrenze angewendet. Die neue Obergrenze zählt ab null: bereits abgerechnete Beträge werden nicht übernommen.",
       "amount": "Höchstbetrag ({{currency}})",
       "behavior": "Bei Erreichen",
       "notify": "Nur benachrichtigen",
@@ -1815,7 +1825,8 @@
       "tmHardHint": "Harte Obergrenze {{cap}} — die Abrechnung endet an der Obergrenze",
       "tmNotifyHint": "Budgetobergrenze {{cap}} — nur benachrichtigen",
       "thresholdMarker": "Benachrichtigungsschwelle {{pct}} %",
-      "writtenDown": "Über der Obergrenze abgeschrieben: {{amount}}"
+      "writtenDown": "Über der Obergrenze abgeschrieben: {{amount}}",
+      "currencyStale": "Die Beträge hier lauten auf {{projectCurrency}}, die Rechnungen dieses Projekts werden jedoch in {{invoiceCurrency}} ausgestellt, sodass eine hier erfasste Budgetobergrenze nicht angewendet wird."
     },
     "economics": {
       "title": "Projektwirtschaftlichkeit",

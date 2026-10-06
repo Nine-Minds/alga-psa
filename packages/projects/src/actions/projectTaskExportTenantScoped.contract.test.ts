@@ -69,6 +69,21 @@ vi.mock('@alga-psa/ui/lib/errorHandling', () => ({
   actionError: (message: string) => ({ error: message }),
   permissionError: (message: string) => ({ error: message }),
 }));
+// The export gates on record-level project read authorization before it touches tasks.
+vi.mock('../models/project', () => ({
+  default: { getById: vi.fn(async () => ({ project_id: 'project-1' })) },
+}));
+vi.mock('@alga-psa/authorization/kernel', () => ({
+  BuiltinAuthorizationKernelProvider: class {},
+  BundleAuthorizationKernelProvider: class {
+    constructor(_options: unknown) {}
+  },
+  RequestLocalAuthorizationCache: class {},
+  createAuthorizationKernel: () => ({ authorizeResource: async () => ({ allowed: true }) }),
+}));
+vi.mock('@alga-psa/authorization/bundles/service', () => ({
+  resolveBundleNarrowingRulesForEvaluation: async () => [],
+}));
 
 import { exportProjectTasksToCSV } from './projectTaskExportActions';
 

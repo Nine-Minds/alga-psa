@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { getActionRegistryV2 } from '../../registries/actionRegistry';
-import { withWorkflowJsonSchemaMetadata } from '../../jsonSchemaMetadata';
+import { withWorkflowPicker } from '../../jsonSchemaMetadata';
 import { withTenantTransaction, requirePermission, throwActionError, uuidSchema, type TenantTxContext } from './shared';
 import type { ActionContext } from '../../registries/actionRegistry';
 
@@ -13,14 +13,6 @@ interface ActivityGroup {
 }
 
 // LEVERAGE: pattern workflow-picker-metadata — same helper is private to tickets.ts
-const withWorkflowPicker = <T extends z.ZodTypeAny>(schema: T, description: string, kind: 'user'): T =>
-  withWorkflowJsonSchemaMetadata(schema, description, {
-    'x-workflow-picker-kind': kind,
-    'x-workflow-picker-dependencies': undefined,
-    'x-workflow-picker-fixed-value-hint': 'Search users',
-    'x-workflow-picker-allow-dynamic-reference': true,
-  });
-
 const groupSelectorFields = {
   groupId: uuidSchema.optional().describe('Activity group id'),
   groupName: z.string().min(1).optional().describe('Activity group name (case-insensitive)'),

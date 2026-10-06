@@ -16,12 +16,28 @@ vi.mock('@alga-psa/billing/actions/invoiceGeneration', () => ({ previewRecurring
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
   useTranslation: () => ({ t: (_key: string, options: Record<string, any> = {}) =>
     String(options.defaultValue ?? _key).replace(/\{\{(\w+)\}\}/g, (_, key) => String(options[key])) }),
-  useFormatters: () => ({ formatCurrency: (amount: number) => `$${amount.toFixed(2)}` }),
+  useFormatters: () => ({
+    formatCurrency: (amount: number) => `$${amount.toFixed(2)}`,
+    // Distinguishable from the ISO wire value so a raw date can never pass for a formatted one.
+    formatDate: (value: string) => `D(${value})`,
+  }),
 }));
 vi.mock('@alga-psa/ui/components/CustomSelect', () => ({ default: ({ value, onValueChange, options, id }: any) =>
   <select id={id} value={value} onChange={event => onValueChange(event.target.value)}>{options.map((option: any) => <option key={option.value} value={option.value}>{option.label}</option>)}</select> }));
 vi.mock('@alga-psa/ui/components/Button', () => ({ Button: ({ children, variant, size, ...props }: any) => <button {...props}>{children}</button> }));
 vi.mock('@alga-psa/ui/components/Input', () => ({ Input: (props: any) => <input {...props} /> }));
+vi.mock('@alga-psa/ui/components/DatePicker', () => ({
+  DatePicker: ({ id, value, onChange }: { id?: string; value?: Date; onChange: (date: Date | undefined) => void }) => (
+    <input
+      id={id}
+      type="date"
+      value={value
+        ? `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, '0')}-${String(value.getDate()).padStart(2, '0')}`
+        : ''}
+      onChange={(event) => onChange(event.target.value ? new Date(`${event.target.value}T00:00:00`) : undefined)}
+    />
+  ),
+}));
 vi.mock('@alga-psa/ui/components/Label', () => ({ Label: (props: any) => <label {...props} /> }));
 vi.mock('@alga-psa/ui/components/Badge', () => ({ Badge: ({ children }: any) => <span>{children}</span> }));
 vi.mock('@alga-psa/ui/components/Alert', () => ({ Alert: ({ children }: any) => <div role="alert">{children}</div>, AlertDescription: ({ children }: any) => <div>{children}</div> }));
@@ -100,7 +116,8 @@ describe('Recurring unit schedule panel', () => {
     fireEvent.change(document.querySelector('#recurring-mid-period-date-config')!, { target: { value: '2027-01-16' } });
     await waitFor(() => expect(actions.resolve).toHaveBeenCalledWith(expect.objectContaining({ mid_period_date: '2027-01-16' })));
     // 3 x $120 x 16/31 -> the displayed math names the charge and the standing boundary.
-    await screen.findByText(/From 2027-02-01 the standing quantity is 23/);
+    await screen.findByText(/From D\(2027-02-01\) the standing quantity is 23/);
+    expect(screen.getByText(/Affected period D\(2027-01-01\) to D\(2027-02-01\) changes by 3 units/)).toBeTruthy();
     expect(screen.getByText(/3 units × \$120\.00/)).toBeTruthy();
 
     fireEvent.click(screen.getByRole('button', { name: 'Preview invoice impact' }));
@@ -117,6 +134,43 @@ describe('Recurring unit schedule panel', () => {
       mid_period_effective_date: '2027-01-16',
       effective_period_start: '2027-02-01',
     })));
+  });
+  it('renders every displayed date through the tenant formatter while the wire values stay ISO', async () => {
+    actions.read.mockResolvedValue({ quantity: 20, pricePolicy: 'catalog', unitRateCents: null,
+      resolvedUnitRateCents: 10000, catalogUnitRateCents: 10000, baselineQuantity: 20,
+      baselineUnitRateCents: 10000, currencyCode: 'USD', source: 'revision', version: 2,
+      effectivePeriodStart: '2027-01-01', coveredStart: '2027-01-01', coveredEnd: '2027-02-01',
+      catalogPriceId: 'price-1', catalogEffectiveDate: '2026-12-15' });
+    actions.revisions.mockResolvedValue([{ revision_id: 'r1', quantity: 30, unit_rate_cents: 12000, price_policy: 'override',
+      version: 2, effective_period_start: '2027-02-01', mid_period_effective_date: '2027-01-16',
+      created_by: null, updated_by: null, created_by_name: null, updated_by_name: null }]);
+    actions.history.mockResolvedValue([{ history_id: 'h1', revision_id: 'r1', quantity: 25, unit_rate_cents: 11000,
+      price_policy: 'override', effective_period_start: '2027-03-01', version: 1, superseded_by: 'system', superseded_by_name: null }]);
+    actions.preview.mockResolvedValue({ success: true, windowStart: '2027-02-01', windowEnd: '2027-03-01',
+      before: { total: 1000, currencyCode: 'USD' }, after: { subtotal: 1000, tax: 0, total: 1000, currencyCode: 'USD', items: [] } });
+    const panelText = () => document.body.textContent ?? '';
+    await mount();
+    await screen.findByText(/A scheduled change is already in force from D\(2027-01-01\)/);
+    expect(screen.getByText(/In force for periods from D\(2027-01-01\)/)).toBeTruthy();
+    expect(screen.getByText(/Covers D\(2027-01-01\) to D\(2027-02-01\)/)).toBeTruthy();
+    expect(screen.getByText(/Catalog price price-1 effective D\(2026-12-15\)/)).toBeTruthy();
+    expect(screen.getByText(/From D\(2027-01-01\) the recurring subtotal/)).toBeTruthy();
+    // Revisions table: the Effective-from cell and the true-up note.
+    expect(screen.getByText('true-up from D(2027-01-16)')).toBeTruthy();
+    expect(screen.getAllByText(/D\(2027-02-01\)/).length).toBeGreaterThan(0);
+    // History table lives in a collapsed <details>, which is still in the DOM.
+    expect(screen.getByText('D(2027-03-01)')).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Preview invoice impact' }));
+    await screen.findByText(/Estimated client invoice for D\(2027-02-01\) to D\(2027-03-01\)/);
+
+    fireEvent.change(document.querySelector('#recurring-quantity-config')!, { target: { value: '21' } });
+    fireEvent.click(screen.getByRole('button', { name: /Schedule change|Replace scheduled change/ }));
+    await waitFor(() => expect(actions.save).toHaveBeenCalledWith(expect.objectContaining({ effective_period_start: '2027-01-01' })));
+    await screen.findByText('Scheduled: 21 effective D(2027-01-01).');
+
+    // The date inputs carry the ISO wire value (through the picker shim); no other raw ISO text remains.
+    expect(panelText().replace(/D\(\d{4}-\d{2}-\d{2}\)/g, '')).not.toMatch(/\d{4}-\d{2}-\d{2}/);
   });
   it('shows preview errors without inventing a total', async () => {
     actions.preview.mockResolvedValue({ success: false, error: 'Prepare service periods in Billing.' });

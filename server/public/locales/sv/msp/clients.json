@@ -738,6 +738,7 @@
     "status": "Status",
     "actions": "Åtgärder",
     "openMenu": "Öppna meny",
+    "viewDetails": "Visa detaljer",
     "unassign": "Ta bort tilldelning",
     "loading": "Läser in avtal…",
     "empty": "Inga avtal har tilldelats kunden ännu.",
@@ -1931,6 +1932,15 @@
       "duplicateManager": "En faktureringsprofil kan bara ha en ansvarig.",
       "notThisClient": "En av de valda kontakterna tillhör inte den kund som faktureringsprofilen hör till."
     }
+  },
+  "clientDefaultTimeEntryServiceSettings": {
+    "title": "Standardtjänst för tidposter",
+    "label": "Standardtjänst för tidposter",
+    "placeholder": "Använd organisationens standardtjänst",
+    "help": "Används för nya tidposter på den här kundens ärenden. Rensa valet för att använda organisationens standardtjänst.",
+    "updatedSuccess": "Standardtjänsten för tidposter har uppdaterats.",
+    "saveError": "Det gick inte att spara standardtjänsten för tidposter",
+    "loadError": "Det gick inte att läsa in standardtjänsten för tidposter"
   },
   "mergeClients": {
     "title": "Slå samman en kund med den här",

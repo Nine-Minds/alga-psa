@@ -17,6 +17,8 @@ import { IProjectPhase } from '@alga-psa/types';
 import { IPriority } from '@alga-psa/types';
 import { IService } from '@alga-psa/types';
 import { IUser } from '@shared/interfaces/user.interfaces';
+import type { IUserWithRoles } from '@alga-psa/types';
+import { assertProjectReadAllowed } from '../lib/projectReadAuthorization';
 import {
   buildProjectTaskAssignedPayload,
   buildProjectTaskCreatedPayload,
@@ -456,6 +458,12 @@ export const getImportReferenceData = withAuth(async (
   const { knex: db } = await createTenantKnex();
 
   return await withTransaction(db, async (trx: Knex.Transaction) => {
+    // The phases and statuses below belong to one project, so the caller has to
+    // be allowed to read that project and not merely projects in general.
+    if (projectId && tenant) {
+      await assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, projectId);
+    }
+
     // Fetch all reference data in parallel within the same transaction
     const [users, priorities, services, phases, statusReferenceData] = await Promise.all([
       // Users (only active internal/MSP agents - exclude client portal users)
@@ -686,6 +694,12 @@ export const validatePhaseTaskImportData = withAuth(async (
   rows: ITaskImportRow[],
   projectId?: string
 ): Promise<IPhaseTaskValidationResponse> => {
+  // Same gates as its replacement (getImportReferenceData): the tenant user
+  // directory plus, when a project is named, that project's status library.
+  if (!await hasPermission(_user, 'project', 'read')) {
+    throw new Error('Permission denied: Cannot read project import reference data');
+  }
+
   const { knex: db } = await createTenantKnex();
 
   // Fetch lookup data
@@ -722,6 +736,7 @@ export const validatePhaseTaskImportData = withAuth(async (
   const unmatchedStatuses: Array<{ phaseName: string; statusName: string }> = [];
 
   if (projectId && tenant) {
+    await assertProjectReadAllowed(db, tenant, _user as IUserWithRoles, projectId);
     const statusReferenceData = await getImportStatusReferenceData(db, tenant, projectId);
     Object.assign(statusLookup, statusReferenceData.statusLookup);
     statusLookupByPhase = statusReferenceData.statusLookupByPhase;
@@ -894,11 +909,9 @@ export const importPhasesAndTasks = withAuth(async (
         throw new Error('Permission denied: Cannot update projects');
       }
 
-    // Verify project exists
-    const project = await ProjectModel.getById(trx, tenant, projectId);
-    if (!project) {
-      throw new Error('Project not found');
-    }
+    // Verify the project exists and this caller may reach that specific project —
+    // project:update alone does not grant access to every project in the tenant.
+    const project = await assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, projectId);
 
     // Get existing status mappings
     let statusMappings = await ProjectModel.getProjectStatusMappings(trx, tenant, projectId);

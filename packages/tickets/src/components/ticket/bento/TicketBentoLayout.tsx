@@ -4,6 +4,7 @@ import React, { Suspense, useRef } from 'react';
 import type { PartialBlock } from '@blocknote/core';
 import { User, Play, Pause, StopCircle, Clock, Users, Pencil } from 'lucide-react';
 import { Button } from '@alga-psa/ui/components/Button';
+import Spinner from '@alga-psa/ui/components/Spinner';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
 import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
@@ -196,6 +197,8 @@ export interface TicketBentoLayoutProps {
   onPause: () => void;
   onStop: () => void;
   onAddTimeEntry: () => void;
+  /** True while the time-entry launch chain is in flight; disables the button. */
+  isLaunchingTimeEntry?: boolean;
   userId?: string;
   showWeekday?: boolean;
   timeEntriesRefreshKey?: number;
@@ -678,7 +681,11 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
         type="button"
         className="w-full mb-3"
         onClick={props.onAddTimeEntry}
+        disabled={props.isLaunchingTimeEntry}
       >
+        {props.isLaunchingTimeEntry ? (
+          <Spinner size="button" variant="inverted" className="mr-2" />
+        ) : null}
         {t('bento.tiles.addTimeEntry', 'Add time entry')}
       </Button>
 
