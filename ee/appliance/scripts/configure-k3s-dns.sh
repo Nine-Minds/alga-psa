@@ -513,12 +513,16 @@ resolver_loaded_epoch() {
 # without recreating the pods that still carry the old resolver.
 plan_namespace() {
   local namespace="$1" loaded_epoch="$2"
-  local workloads pods status stderr_file message
+  local workloads_file pods_file status stderr_file message
+  # The lists go through files, not argv/env: a namespace's pod JSON easily
+  # exceeds the kernel's 128 KiB limit for a single argument or variable.
   stderr_file="$(mktemp)"
-  workloads="$("$KUBECTL_BIN" --kubeconfig "$KUBECONFIG_PATH" -n "$namespace" get deploy,statefulset,daemonset -o json 2>"$stderr_file")" && status=0 || status=$?
+  workloads_file="$(mktemp)"
+  pods_file="$(mktemp)"
+  "$KUBECTL_BIN" --kubeconfig "$KUBECONFIG_PATH" -n "$namespace" get deploy,statefulset,daemonset -o json >"$workloads_file" 2>"$stderr_file" && status=0 || status=$?
   message="$(cat "$stderr_file" 2>/dev/null || true)"
   if [ "$status" -ne 0 ]; then
-    rm -f "$stderr_file"
+    rm -f "$stderr_file" "$workloads_file" "$pods_file"
     # A namespace that does not exist yet (fresh install / not installed) is
     # legitimately empty; any other failure (RBAC, API down) must fail activation.
     if printf '%s' "$message" | grep -qiE 'not found|no resources found'; then
@@ -528,17 +532,20 @@ plan_namespace() {
     echo "Could not list workloads in ${namespace}: ${message:-kubectl exited ${status}}" >&2
     return 1
   fi
-  pods="$("$KUBECTL_BIN" --kubeconfig "$KUBECONFIG_PATH" -n "$namespace" get pods -o json 2>"$stderr_file")" && status=0 || status=$?
+  "$KUBECTL_BIN" --kubeconfig "$KUBECONFIG_PATH" -n "$namespace" get pods -o json >"$pods_file" 2>"$stderr_file" && status=0 || status=$?
   message="$(cat "$stderr_file" 2>/dev/null || true)"
   rm -f "$stderr_file"
   if [ "$status" -ne 0 ]; then
+    rm -f "$workloads_file" "$pods_file"
     echo "Could not list pods in ${namespace}: ${message:-kubectl exited ${status}}" >&2
     return 1
   fi
-  PLAN_WORKLOADS="$workloads" PLAN_PODS="$pods" PLAN_LOADED_EPOCH="$loaded_epoch" node -e '
-    const parse = (text) => { try { return JSON.parse(text || "{}"); } catch { return null; } };
-    const workloads = parse(process.env.PLAN_WORKLOADS);
-    const pods = parse(process.env.PLAN_PODS);
+  status=0
+  PLAN_LOADED_EPOCH="$loaded_epoch" node -e '
+    const fs = require("fs");
+    const parse = (file) => { try { return JSON.parse(fs.readFileSync(file, "utf8") || "{}"); } catch { return null; } };
+    const workloads = parse(process.argv[1]);
+    const pods = parse(process.argv[2]);
     if (!workloads || !pods) { console.error("Unparseable workload or pod list."); process.exit(1); }
     const loadedAt = Number(process.env.PLAN_LOADED_EPOCH) * 1000;
     const live = (pods.items || []).filter((pod) => !pod.metadata?.deletionTimestamp
@@ -567,7 +574,9 @@ plan_namespace() {
       else if (stale) console.log(`restart ${ref}`);
       else console.log(`current ${ref}`);
     }
-  '
+  ' "$workloads_file" "$pods_file" || status=$?
+  rm -f "$workloads_file" "$pods_file"
+  return "$status"
 }
 
 # Bring a namespace onto the current resolver one workload at a time: on a

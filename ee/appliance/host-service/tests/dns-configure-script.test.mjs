@@ -103,6 +103,7 @@ if (line.includes('get pods -o json')) {
     const owner = kind === 'Deployment' ? { kind: 'ReplicaSet', name: name + '-abc' } : { kind, name };
     return {
       metadata: { name: name + '-pod', namespace, labels: { 'pod-template-hash': 'abc' }, ownerReferences: [owner],
+        annotations: process.env.FAKE_POD_ANNOTATION_BYTES ? { padding: 'x'.repeat(Number(process.env.FAKE_POD_ANNOTATION_BYTES)) } : {},
         creationTimestamp: w.restarted ? '2099-01-01T00:00:00Z' : '2000-01-01T00:00:00Z' },
       status: { phase: 'Running' }
     };
@@ -514,6 +515,17 @@ test('a resumed activation recreates only the workloads whose pods predate the r
   assert.equal(resumed.status, 0, resumed.stderr || resumed.stdout);
   assert.deepEqual(kubectlCalls(harness, /rollout restart/).map((line) => line.replace(/.* rollout restart /, '')), ['statefulset/db']);
   assert.equal(readActivation(harness).stage, 'active');
+});
+
+// The field appliance's msp pod list is larger than the kernel allows for one
+// argument or environment variable; the first on-host run of the planner
+// failed with "node: Argument list too long".
+test('pod lists larger than the argument limit are planned, not mistaken for a discovery failure', () => {
+  const harness = createRoot({ systemdResolv: 'nameserver 192.0.2.53\n', workloads: MSP_WORKLOADS });
+  const result = runHelper(harness, ['--activate'], { FAKE_POD_ANNOTATION_BYTES: String(700 * 1024) });
+  assert.equal(result.status, 0, result.stderr || result.stdout);
+  assert.equal(readActivation(harness).stage, 'active');
+  assert.equal(kubectlCalls(harness, /rollout restart.*-n msp|-n msp.*rollout restart/).length, 3);
 });
 
 test('a workload discovery error aborts activation instead of recording active', () => {
