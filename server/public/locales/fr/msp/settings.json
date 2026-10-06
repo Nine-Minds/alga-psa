@@ -391,6 +391,7 @@
         "emailAlreadyExists": "Un utilisateur avec cette adresse e-mail existe déjà",
         "reportsToSelf": "Un utilisateur ne peut pas être son propre responsable",
         "reportsToCycle": "Cela créerait une chaîne hiérarchique circulaire",
+        "invalidTimezone": "Choisissez un fuseau horaire basé sur une ville, comme America/New_York.",
         "permissionDenied": "Vous n'avez pas la permission de modifier les rôles des utilisateurs.",
         "invalidCapacity": "La capacité hebdomadaire doit être un nombre positif.",
         "invalidWorkSchedule": "Les heures de travail doivent former une plage valide se terminant après son début."
@@ -3470,6 +3471,7 @@
       "missingField": "Un champ obligatoire des paramètres du locataire est manquant.",
       "missingFieldNamed": "Un champ obligatoire des paramètres du locataire est manquant : {{field}}.",
       "invalidTimezone": "Fuseau horaire non valide : {{timezone}}",
+      "nonLocationTimezone": "{{timezone}} n'est pas un fuseau horaire basé sur une ville. Choisissez un fuseau comme America/New_York.",
       "permissions": {
         "clearOnboarding": "Autorisation refusée : seuls les administrateurs peuvent effacer les données d’onboarding.",
         "update": "Autorisation refusée : impossible de mettre à jour les paramètres",

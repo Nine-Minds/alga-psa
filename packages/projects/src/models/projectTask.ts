@@ -109,9 +109,15 @@ const ProjectTaskModel = {
             case 'priority_id':
               finalTaskData[typedKey] = value === '' ? null : value as string | null;
               break;
-            case 'task_name':
             case 'description':
             case 'description_rich_text':
+              // The editor sends null for an emptied description; writing it is
+              // how clearing a description sticks.
+              if (typeof value === 'string' || value === null) {
+                finalTaskData[typedKey] = value as string | null;
+              }
+              break;
+            case 'task_name':
             case 'wbs_code':
             case 'project_status_mapping_id':
             case 'order_key':

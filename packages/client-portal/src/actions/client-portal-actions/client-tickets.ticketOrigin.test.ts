@@ -2,6 +2,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { TICKET_ORIGINS } from '@alga-psa/types';
 
+const TICKET_1 = '00000000-0000-4000-8000-000000000001';
+
 vi.mock('../../lib/portalTicketExternalLinks', () => ({ loadPortalTicketExternalLinks: vi.fn(async () => []) }));
 
 let currentUser: any;
@@ -68,7 +70,7 @@ vi.mock('@alga-psa/users/actions', () => ({
 
 function makeTicket(overrides: Record<string, unknown> = {}) {
   return {
-    ticket_id: 'ticket-1',
+    ticket_id: TICKET_1,
     ticket_number: 'T-2001',
     title: 'Portal Ticket',
     board_id: 'board-1',
@@ -196,7 +198,7 @@ describe('getClientTicketDetails ticket origin derivation', () => {
     );
 
     const { getClientTicketDetails } = await import('./client-tickets');
-    const ticket = await getClientTicketDetails('ticket-1');
+    const ticket = await getClientTicketDetails(TICKET_1);
 
     expect(ticket.ticket_origin).toBe(TICKET_ORIGINS.INTERNAL);
   });
@@ -215,7 +217,7 @@ describe('getClientTicketDetails ticket origin derivation', () => {
     );
 
     const { getClientTicketDetails } = await import('./client-tickets');
-    const ticket = await getClientTicketDetails('ticket-1');
+    const ticket = await getClientTicketDetails(TICKET_1);
 
     expect(ticket.ticket_origin).toBe(TICKET_ORIGINS.INBOUND_EMAIL);
   });
@@ -234,7 +236,7 @@ describe('getClientTicketDetails ticket origin derivation', () => {
     );
 
     const { getClientTicketDetails } = await import('./client-tickets');
-    const ticket = await getClientTicketDetails('ticket-1');
+    const ticket = await getClientTicketDetails(TICKET_1);
 
     expect(ticket.ticket_origin).toBe(TICKET_ORIGINS.CLIENT_PORTAL);
   });
@@ -253,7 +255,7 @@ describe('getClientTicketDetails ticket origin derivation', () => {
     );
 
     const { getClientTicketDetails } = await import('./client-tickets');
-    const ticket = await getClientTicketDetails('ticket-1');
+    const ticket = await getClientTicketDetails(TICKET_1);
 
     expect(ticket.ticket_origin).toBe(TICKET_ORIGINS.API);
   });
