@@ -19,6 +19,7 @@ const catalog = resolveCeMaintenanceSchedules({});
 
 let db: Knex;
 const tenantId = randomUUID();
+const foreignName = `ce-cadence-test-foreign-${randomUUID()}`;
 
 const scheduleRows = () => db.withSchema('pgboss').from('schedule').where('name', 'like', `${PREFIX}%`);
 
@@ -52,6 +53,16 @@ describe('CE maintenance fan-out durable pg-boss schedules', () => {
     try {
       await db?.withSchema('pgboss').from('schedule').where('name', 'like', `${PREFIX}%`).delete();
       await db?.withSchema('pgboss').from('job').where('name', 'like', `${PREFIX}%`).delete();
+      await db?.withSchema('pgboss').from('archive').where('name', 'like', `${PREFIX}%`).delete();
+      await db?.withSchema('pgboss').from('schedule').where({ name: foreignName }).delete();
+      await db?.withSchema('pgboss').from('job').where({ name: foreignName }).delete();
+      // pgboss.delete_queue drops the queue row and its job partitions.
+      const queues = await db.withSchema('pgboss').from('queue')
+        .where((q) => q.where('name', 'like', `${PREFIX}%`).orWhere({ name: foreignName }))
+        .select('name');
+      for (const { name } of queues) {
+        await db.raw('SELECT pgboss.delete_queue(?)', [name]);
+      }
     } catch {
       // pgboss schema may not have been created
     }
@@ -126,8 +137,12 @@ describe('CE maintenance fan-out durable pg-boss schedules', () => {
     await runner.getBoss().createQueue(`${PREFIX}obsolete`);
     await runner.getBoss().schedule(`${PREFIX}obsolete`, '0 3 * * *', {}, { tz: 'UTC' });
     expect(await db.withSchema('pgboss').from('schedule').where({ name: `${PREFIX}obsolete` })).toHaveLength(1);
+    await runner.getBoss().createQueue(foreignName);
+    await runner.getBoss().schedule(foreignName, '0 3 * * *', {}, { tz: 'UTC' });
     await convergeCeMaintenanceSchedules(runner, {});
     expect(await db.withSchema('pgboss').from('schedule').where({ name: `${PREFIX}obsolete` })).toHaveLength(0);
+    expect(await db.withSchema('pgboss').from('schedule').where({ name: foreignName })).toHaveLength(1);
+    await runner.getBoss().unschedule(foreignName);
     expect(await scheduleRows()).toHaveLength(catalog.length);
 
     // 7. Restart: schedules persist and a fresh runner still receives deliveries.
