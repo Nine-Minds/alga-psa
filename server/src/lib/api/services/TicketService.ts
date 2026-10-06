@@ -66,6 +66,7 @@ import {
   CommentEmailRecipientsError,
   prepareCommentEmailRecipients,
   readCommentEmailRecipients,
+  stripCommentBccFromMetadata,
 } from '@shared/lib/tickets/commentEmailRecipients';
 import {
   TICKET_ACTIVITY_ACTOR,
@@ -2420,10 +2421,19 @@ export class TicketService extends BaseService<ITicket> {
         };
       }
 
+      // Bcc is MSP-only. The raw row is spread below, so a client-visible
+      // caller gets the metadata with the bcc list emptied before anything
+      // reads it — the mask lives here rather than at the route so no future
+      // client-facing caller of this service can leak it.
+      const metadata = clientVisibility
+        ? stripCommentBccFromMetadata(comment.metadata)
+        : comment.metadata;
+
       // Full branch: select('tc.*') above means ...comment already carries
       // thread_id / parent_comment_id / deleted_at — no explicit mapping needed.
       return {
         ...comment,
+        metadata,
         comment_text: comment.note,
         markdown_content: comment.markdown_content || null,
         comment_html: renderTicketRichTextHtml(comment.note),
@@ -2435,7 +2445,7 @@ export class TicketService extends BaseService<ITicket> {
         author_contact_email: comment.author_contact_email || null,
         reactions: reactionsMap[comment.comment_id] ?? [],
         reaction_user_names: reactionUserNames,
-        email_recipients: readCommentEmailRecipients(comment.metadata),
+        email_recipients: readCommentEmailRecipients(metadata),
       };
     });
   }

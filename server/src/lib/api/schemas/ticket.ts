@@ -393,12 +393,25 @@ function validateTicketCommentEmailRecipients(
       }
     }
   }
-  if (total > MAX_TICKET_COMMENT_EMAIL_RECIPIENTS) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ['cc'],
-      message: `At most ${MAX_TICKET_COMMENT_EMAIL_RECIPIENTS} Cc and Bcc recipients are allowed on one comment`,
-    });
+  // Counted the way the normalizer counts: distinct addresses, case-insensitive,
+  // with the error on the list that carried the address over the ceiling.
+  const seen = new Set<string>();
+  for (const field of ['cc', 'bcc'] as const) {
+    for (const entry of data[field] ?? []) {
+      const key = entry.trim().toLowerCase();
+      if (!key || seen.has(key)) {
+        continue;
+      }
+      if (seen.size >= MAX_TICKET_COMMENT_EMAIL_RECIPIENTS) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: [field],
+          message: `At most ${MAX_TICKET_COMMENT_EMAIL_RECIPIENTS} Cc and Bcc recipients are allowed on one comment`,
+        });
+        return;
+      }
+      seen.add(key);
+    }
   }
 }
 
@@ -440,6 +453,22 @@ export const updateTicketCommentSchema = z.object({
 export type UpdateTicketCommentData = z.infer<typeof updateTicketCommentSchema>;
 export type CreateTicketMaterialData = z.infer<typeof createTicketMaterialSchema>;
 
+/**
+ * One-off recipient as stored on the comment and returned on comment reads.
+ * Client-portal callers get the `bcc` list emptied before serialization.
+ */
+export const ticketCommentEmailRecipientSchema = z.object({
+  email: z.string().email(),
+  name: z.string().optional(),
+  contact_id: uuidSchema.optional(),
+  user_id: uuidSchema.optional(),
+});
+
+export const ticketCommentEmailRecipientsSchema = z.object({
+  cc: z.array(ticketCommentEmailRecipientSchema),
+  bcc: z.array(ticketCommentEmailRecipientSchema),
+});
+
 export const ticketCommentResponseSchema = z.object({
   comment_id: uuidSchema,
   ticket_id: uuidSchema,
@@ -462,7 +491,10 @@ export const ticketCommentResponseSchema = z.object({
   created_by_name: z.string().nullable().optional(),
   author_contact_id: uuidSchema.nullable().optional(),
   author_contact_name: z.string().nullable().optional(),
-  author_contact_email: z.string().nullable().optional()
+  author_contact_email: z.string().nullable().optional(),
+
+  // One-off Cc/Bcc carried by this comment's email, null when none were set.
+  email_recipients: ticketCommentEmailRecipientsSchema.nullable().optional()
 });
 
 // Ticket bulk operations schemas
