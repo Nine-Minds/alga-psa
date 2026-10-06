@@ -12,6 +12,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { z } from 'zod';
 import type { IEventPublisher } from '@alga-psa/types';
 import { applyMatchingChecklistTemplates } from '../lib/ticketChecklists';
+import { prepareCommentEmailRecipients } from '../lib/tickets/commentEmailRecipients';
 import { SharedNumberingService } from '../services/numberingService';
 
 // LEVERAGE: pattern ticket-origins-duplicate — copy of TICKET_ORIGINS in @alga-psa/types (shared cannot import types); keep both in sync
@@ -128,7 +129,11 @@ export const createCommentSchema = z.object({
   author_type: z.enum(['internal', 'contact', 'system']).optional(),
   author_id: z.string().uuid('Author ID must be a valid UUID').optional(),
   contact_id: z.string().uuid('Contact ID must be a valid UUID').optional(),
-  metadata: z.record(z.unknown()).optional()
+  metadata: z.record(z.unknown()).optional(),
+  emailRecipients: z.object({
+    cc: z.array(z.string()).optional(),
+    bcc: z.array(z.string()).optional(),
+  }).optional(),
 });
 
 // =============================================================================
@@ -266,6 +271,11 @@ export interface CreateCommentInput {
   author_id?: string;
   contact_id?: string;
   metadata?: Record<string, any>;
+  /**
+   * One-off Cc/Bcc for this comment's outbound email. Persisted into
+   * `metadata.email_recipients`; rejected on internal comments.
+   */
+  emailRecipients?: { cc?: string[]; bcc?: string[] };
 }
 
 export interface CreateCommentOutput {
@@ -1482,6 +1492,17 @@ export class TicketModel {
       commentIsInternal = Boolean(parent.thread_is_internal);
     }
 
+    // One-off Cc/Bcc ride along in metadata. Visibility is resolved above, so a
+    // reply inheriting an internal thread is rejected here too.
+    const emailRecipients = await prepareCommentEmailRecipients(trx, tenant, {
+      cc: validatedData.emailRecipients?.cc,
+      bcc: validatedData.emailRecipients?.bcc,
+      isInternal: commentIsInternal,
+    });
+    const commentMetadata = emailRecipients
+      ? { ...(validatedData.metadata ?? {}), email_recipients: emailRecipients }
+      : validatedData.metadata;
+
     const baseCommentData: any = {
       comment_id: commentId,
       tenant,
@@ -1493,7 +1514,7 @@ export class TicketModel {
       author_type: dbAuthorType as any,
       user_id: validatedData.author_id || null,
       contact_id: validatedData.contact_id || null,
-      metadata: validatedData.metadata ? JSON.stringify(validatedData.metadata) : null,
+      metadata: commentMetadata ? JSON.stringify(commentMetadata) : null,
       thread_id: threadId,
       parent_comment_id: parentCommentId,
       created_at: now,
