@@ -444,7 +444,8 @@
         "consent": "J'autorise des débits récurrents sur cette carte pour les factures finalisées.",
         "enable": "Activer le prélèvement automatique",
         "noCards": "Ajoutez une carte pour activer le prélèvement automatique.",
-        "changeCard": "Utiliser cette carte pour le prélèvement automatique"
+        "changeCard": "Utiliser cette carte pour le prélèvement automatique",
+        "updateError": "Impossible de mettre à jour le prélèvement automatique. Veuillez réessayer."
       },
       "publicCardSetup": {
         "saved": "Carte enregistrée",
@@ -567,7 +568,8 @@
       "avatarDescription": "Cet avatar est affiché au personnel MSP lorsqu'il consulte vos informations de contact.",
       "emailAlreadyExists": "Un utilisateur avec cette adresse e-mail existe déjà",
       "reportsToSelf": "Un utilisateur ne peut pas être son propre responsable",
-      "reportsToCycle": "Cela créerait une chaîne hiérarchique circulaire"
+      "reportsToCycle": "Cela créerait une chaîne hiérarchique circulaire",
+      "invalidTimezone": "Choisissez un fuseau horaire basé sur une ville, comme America/New_York."
     },
     "imageUpload": {
       "uploadAvatar": "Téléverser un avatar",

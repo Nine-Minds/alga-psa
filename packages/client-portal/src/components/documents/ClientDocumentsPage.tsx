@@ -11,7 +11,7 @@ import { Card, CardContent } from '@alga-psa/ui/components/Card';
 import type { IDocument, IFolderNode } from '@alga-psa/types';
 import { getClientDocuments, getClientDocumentFolders, getClientDocumentContent, ClientDocumentFilters } from '@alga-psa/client-portal/actions/client-portal-actions/client-documents';
 import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossFeatureContext';
-import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import { getErrorMessage, isActionMessageError, isActionPermissionError, UserFacingError, userFacingErrorMessage } from '@alga-psa/ui/lib/errorHandling';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { DocumentRequestError, fetchAndSaveFile } from '../../lib/fetchAndSaveFile';
 import { toast } from 'react-hot-toast';
@@ -299,11 +299,12 @@ export default function ClientDocumentsPage() {
     try {
       const content = await getClientDocumentContent(doc.document_id);
       if (requestId !== previewRequestId.current) return;
-      if (isReturnedActionError(content) || !content || !('content' in content)) throw new Error(getErrorMessage(content));
+      if (isReturnedActionError(content)) throw new UserFacingError(getErrorMessage(content));
+      if (!content || !('content' in content)) throw new Error('Document preview returned no content');
       if (content.content.kind === 'file' && (doc.mime_type === 'application/pdf' || doc.mime_type?.startsWith('image/') && doc.mime_type !== 'image/svg+xml')) {
         const response = await fetch(`/api/client-portal/documents/${encodeURIComponent(doc.document_id)}/file?disposition=inline`, { credentials: 'include' });
         if (requestId !== previewRequestId.current) return;
-        if (!response.ok) throw new Error(t('portal.previewError', 'Could not load this preview. Please try again.'));
+        if (!response.ok) throw new UserFacingError(t('portal.previewError', 'Could not load this preview. Please try again.'));
         const objectUrl = URL.createObjectURL(await response.blob());
         if (requestId !== previewRequestId.current) { URL.revokeObjectURL(objectUrl); return; }
         previewUrlRef.current = objectUrl;
@@ -311,7 +312,7 @@ export default function ClientDocumentsPage() {
       }
       if (requestId === previewRequestId.current) setPreviewContent(content);
     } catch (error) {
-      if (requestId === previewRequestId.current) setPreviewError(error instanceof Error ? error.message : t('portal.previewError', 'Could not load this preview. Please try again.'));
+      if (requestId === previewRequestId.current) setPreviewError(userFacingErrorMessage(error, t('portal.previewError', 'Could not load this preview. Please try again.')));
     } finally {
       if (requestId === previewRequestId.current) setIsPreviewLoading(false);
     }

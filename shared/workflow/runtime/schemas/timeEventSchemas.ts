@@ -1,8 +1,8 @@
 import { z } from 'zod';
-import { BaseDomainEventPayloadSchema, uuidSchema } from './commonEventPayloadSchemas';
+import { BaseDomainEventPayloadSchema, uuidSchema, entityIdSchema } from './commonEventPayloadSchemas';
 
 const timeEntryIdSchema = uuidSchema('Time Entry ID');
-const userIdSchema = uuidSchema('User ID');
+const userIdSchema = entityIdSchema('User ID', 'user');
 const workItemIdSchema = uuidSchema('Work Item ID');
 
 const workItemTypeSchema = z.enum(['TICKET', 'PROJECT_TASK']).describe('Work item type');

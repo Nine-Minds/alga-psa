@@ -2,6 +2,7 @@ import { Temporal } from '@js-temporal/polyfill';
 import type { Knex } from 'knex';
 import { listPublishedWorkflowDefinitions } from '@alga-psa/workflows/persistence';
 import { getSchemaRegistry, initializeWorkflowRuntimeV2 } from '@alga-psa/workflows/runtime/core';
+import { computeDateTriggerFireDate } from '../../../../../shared/workflow/runtime/dateTriggerOccurrence';
 import { launchPublishedWorkflowRun } from './workflowRunLauncher';
 import logger from '@alga-psa/core/logger';
 import type { DateTriggerSource } from './dateTriggerSource';
@@ -88,7 +89,9 @@ export async function launchDateTriggeredWorkflows(params: {
         logger.warn('Skipping date workflow with payload schema mismatch', { tenantId: params.tenantId, workflowId: workflow.workflow_id, source: trigger.source, entityId: occurrence.entityId, expectedSchemaRef, actualSchemaRef: schemaRef });
         continue;
       }
-      const fireDate = Temporal.PlainDate.from(occurrence.occursOn).add({ days: offsetDays }).toString();
+      // occursOn + offsetDays ("30 days before" is -30): the same rule the Run dialog uses for test payloads.
+      const fireDate = computeDateTriggerFireDate(occurrence.occursOn, offsetDays);
+      if (!fireDate) continue;
       const missedDays = Temporal.PlainDate.from(fireDate).until(Temporal.PlainDate.from(workflowToday), { largestUnit: 'day' }).days;
       if (missedDays < 0 || missedDays > LOOKBACK_DAYS) continue;
       const payload = { ...occurrence.payload, occursOn: occurrence.occursOn, fireDate, offsetDays };

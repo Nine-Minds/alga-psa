@@ -518,7 +518,14 @@
     "linkedToTaskSuccess": "Ärendet har länkats till uppgiften",
     "failedLoadTask": "Det gick inte att läsa in uppgiften",
     "clientFallback": "Kund",
-    "defaultNewStatus": "Nytt"
+    "defaultNewStatus": "Nytt",
+    "billUnderProjectLabel": "Debitera ärendets tid som projekttid",
+    "billingOffBadge": "Debiteras på kundnivå",
+    "billingOnTooltip": "Sluta debitera ärendets tid som projekttid",
+    "billingOffTooltip": "Debitera ärendets tid som projekttid",
+    "billingOnSuccess": "Ärendets tid debiteras som projekttid",
+    "billingOffSuccess": "Ärendets tid debiteras på kundnivå",
+    "billingUpdateFailed": "Det gick inte att uppdatera debiteringen av ärendet"
   },
   "materials": {
     "title": "Projektmaterial",
@@ -815,7 +822,9 @@
       "tasks": "Uppgifter",
       "badgeCount_other": "{{count}} uppgifter",
       "restrictedTooltip": "Begränsade detaljer – du är inte tilldelad den här uppgiften",
-      "badgeCount_one": "{{count}} uppgift"
+      "badgeCount_one": "{{count}} uppgift",
+      "billsToProject": "Tiden debiteras som projekttid",
+      "billsToClient": "Tiden debiteras på kundnivå"
     },
     "bulkMoveTask": {
       "title": "Flytta uppgifter",
@@ -1765,6 +1774,7 @@
     "cap": {
       "title": "Budgettak",
       "hint": "Vid löpande räkning debiteras arbete och material enligt taxor upp till ett valfritt takbelopp.",
+      "currencyStale": "Det sparade taket anges i {{projectCurrency}}, men projektets fakturor utfärdas inte i den valutan. Ange taket i {{invoiceCurrency}} för att flytta projektet till {{invoiceCurrency}}. Till dess tillämpas inget tak. Det nya taket räknas från noll: redan fakturerade belopp förs inte över.",
       "amount": "Takbelopp ({{currency}})",
       "behavior": "När taket nås",
       "notify": "Avisera endast",
@@ -1815,7 +1825,8 @@
       "tmHardHint": "{{cap}} fast tak – faktureringen stoppas vid taket",
       "tmNotifyHint": "{{cap}} budgettak – endast avisering",
       "thresholdMarker": "Aviseringströskel: {{pct}} %",
-      "writtenDown": "Nedskrivet utöver taket: {{amount}}"
+      "writtenDown": "Nedskrivet utöver taket: {{amount}}",
+      "currencyStale": "Beloppen här anges i {{projectCurrency}}, men projektets fakturor utfärdas i {{invoiceCurrency}}, så ett budgettak som räknas här tillämpas inte."
     },
     "economics": {
       "title": "Leveransekonomi",

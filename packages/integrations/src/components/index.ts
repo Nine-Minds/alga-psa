@@ -10,6 +10,7 @@ export {
   EmailSenderAddressesCard,
   EmailSenderCardsProvider,
   EmailSenderRoutingCard,
+  OutboundEmailDiagnosticsDialog,
   INBOUND_DEFAULTS_WARNING,
   providerNeedsInboundDefaults,
   InboundTicketDefaultsManager,

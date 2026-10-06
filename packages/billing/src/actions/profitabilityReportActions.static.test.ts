@@ -132,6 +132,51 @@ describe('profitability report action SQL contracts', () => {
     expect(source).toContain('ON sc.tenant = ?');
   });
 
+  it('rolls ticket time up to its project through the one shared resolver', () => {
+    const budgetActuals = readFileSync(path.resolve(testDir, 'projectBillingConfigActions.ts'), 'utf8');
+    const clientPulse = readFileSync(
+      path.resolve(repoRoot, 'packages/clients/src/actions/clientPulseActions.ts'),
+      'utf8',
+    );
+    // Runs inside the generation transaction just before the engine and repeats
+    // its fixed-price exclusion, so it must resolve the same project or
+    // pre-written attribution diverges from what bills.
+    const attributionWriter = readFileSync(
+      path.resolve(repoRoot, 'packages/billing/src/lib/billing/contractLineAttributionWriter.ts'),
+      'utf8',
+    );
+
+    for (const consumer of [source, budgetActuals, clientPulse, attributionWriter]) {
+      expect(consumer).toContain(
+        "from '@alga-psa/shared/billingClients/ticketProjectAttribution'",
+      );
+      expect(consumer).toMatch(/ticketProjectAttributionJoin\('(te|pp)?[a-z_]*'\)/);
+      expect(consumer).toContain('ticketProjectIdExpression(');
+    }
+
+    // Budget actuals must reach ticket time at all: the inner-join chain that
+    // hid it is gone and the project filter runs on the COALESCE.
+    expect(budgetActuals).toContain('LEFT JOIN project_tasks task');
+    expect(budgetActuals).toContain("AND ${ticketProjectIdExpression('phase')} = ?");
+
+    // Revenue stays what was invoiced: the fixed-price classification is
+    // task-only, so an hourly ticket charge billed before (or despite) a link
+    // is never zeroed after the fact. Only labor cost follows the resolver.
+    expect(source).toContain('AND config.project_id = phase.project_id');
+    expect(source).not.toContain("AND config.project_id = ${ticketProjectIdExpression('phase')}");
+    expect(source).toContain("AND p.project_id = ${ticketProjectIdExpression('pp')}");
+
+    // The writer's own projects join must run on the resolved project, not on
+    // 'project_phases.project_id', or its fixed-price exclusion and
+    // billing-profile COALESCE stay blind to ticket time.
+    expect(attributionWriter).toContain(
+      "trx.raw(ticketProjectIdExpression('project_phases')) as unknown as string",
+    );
+    expect(attributionWriter).not.toContain(
+      "'projects', 'project_phases.project_id', 'projects.project_id'",
+    );
+  });
+
   it('removes the old contract-report profitability stub and registry definition', () => {
     const contractReportActions = readFileSync(path.resolve(testDir, 'contractReportActions.ts'), 'utf8');
     const reportRegistry = readFileSync(path.resolve(repoRoot, 'packages/reporting/src/lib/reports/core/ReportRegistry.ts'), 'utf8');

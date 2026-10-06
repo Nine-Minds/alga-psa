@@ -493,7 +493,8 @@
         "consent": "Autorizo cobranças recorrentes neste cartão para faturas finalizadas.",
         "enable": "Ativar o pagamento automático",
         "noCards": "Adicione um cartão para ativar o pagamento automático.",
-        "changeCard": "Usar este cartão para o pagamento automático"
+        "changeCard": "Usar este cartão para o pagamento automático",
+        "updateError": "Não foi possível atualizar o pagamento automático. Tente novamente."
       },
       "publicCardSetup": {
         "saved": "Cartão salvo",
@@ -611,6 +612,7 @@
       "emailAlreadyExists": "Já existe um usuário com este endereço de e-mail",
       "reportsToSelf": "Um usuário não pode reportar a si mesmo",
       "reportsToCycle": "Isto criaria uma cadeia circular de relatórios",
+      "invalidTimezone": "Escolha um fuso horário baseado em uma cidade, como America/New_York.",
       "photoUploaded": "Foto enviada com sucesso",
       "photoRemoved": "Foto removida com sucesso",
       "userNotFound": "Usuário não encontrado",
