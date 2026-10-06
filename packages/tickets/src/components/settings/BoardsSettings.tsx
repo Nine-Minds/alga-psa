@@ -211,6 +211,29 @@ function normalizeManagedTicketStatuses(statuses: ManagedTicketStatus[]) {
     .filter((status) => status.name.length > 0);
 }
 
+// Maps the status ids the editor held before create (source-board ids in copy mode) onto the
+// freshly created board's statuses. createBoard recreates statuses from the submitted list with
+// new ids, preserving name and order (index * 10), so match by normalized name first (names are
+// validated unique) and fall back to position in the submitted list.
+function buildStatusIdRemap(
+  submitted: Array<{ status_id?: string; name: string }>,
+  created: Array<{ status_id?: string; name: string; order_number?: number }>
+): Map<string, string> {
+  const normalize = (name: string) => name.trim().toLowerCase();
+  const createdByName = new Map<string, string>();
+  for (const status of created) {
+    if (status.status_id) createdByName.set(normalize(status.name), status.status_id);
+  }
+  const createdByPosition = [...created].sort((a, b) => (a.order_number ?? 0) - (b.order_number ?? 0));
+  const remap = new Map<string, string>();
+  submitted.forEach((status, index) => {
+    if (!status.status_id) return;
+    const match = createdByName.get(normalize(status.name)) ?? createdByPosition[index]?.status_id;
+    if (match) remap.set(status.status_id, match);
+  });
+  return remap;
+}
+
 type ManagedTicketStatusValidationCode =
   | 'STATUS_REQUIRED'
   | 'DUPLICATE_STATUS_NAME'
@@ -1055,9 +1078,9 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
     }
   };
 
-  const persistNotificationSettings = (boardId: string) =>
+  const persistNotificationSettings = (boardId: string, rulesToSave: EditableNotificationRule[] = notificationRules) =>
     saveBoardNotificationSettings(boardId, {
-      rules: notificationRules.map((rule) => ({
+      rules: rulesToSave.map((rule) => ({
         rule_id: rule.rule_id,
         notify_on_create: rule.notify_on_create,
         status_ids: rule.status_ids,
@@ -1268,13 +1291,62 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
 
         // The board exists now, so its notification settings can be saved.
         if (notificationRules.length > 0 || defaultWatcherUserIds.length > 0) {
-          const notificationResult = await persistNotificationSettings(createdBoard.board_id!);
-          if (isReturnedActionError(notificationResult)) {
-            // The board is already created: keep editing it so a retry updates
-            // instead of creating a duplicate.
+          // The board is already created: on any failure keep editing it (so a retry updates
+          // instead of creating a duplicate) and reload what is actually persisted, which also
+          // drops copy/seed mode and the source-board status ids from the form and rules.
+          const recoverIntoCreatedBoard = async (message: string) => {
             setEditingBoard(createdBoard);
+            setFormData((prev) => ({
+              ...prev,
+              status_seed_mode: 'copy_existing' as TicketStatusSeedMode,
+              copy_ticket_statuses_from_board_id: '',
+            }));
+            setFormSnapshot(null);
             await fetchBoards();
-            failInSection('notifications', getErrorMessage(notificationResult));
+            await reloadBoardEditorData(createdBoard);
+            failInSection('notifications', message);
+          };
+
+          try {
+            // Rule status ids were picked from the editor's statuses (the source board's ids in
+            // copy mode); createBoard recreated them with fresh ids, so remap to the new board.
+            let rulesToSave = notificationRules;
+            if (notificationRules.some((rule) => rule.status_ids.length > 0)) {
+              const createdStatuses = await getBoardTicketStatuses(createdBoard.board_id!);
+              if (isReturnedActionError(createdStatuses)) {
+                await recoverIntoCreatedBoard(getErrorMessage(createdStatuses));
+                return;
+              }
+              const remap = buildStatusIdRemap(normalizedTicketStatuses, createdStatuses);
+              const unmatched = notificationRules.some((rule) =>
+                rule.status_ids.some((id) => !remap.has(id))
+              );
+              if (unmatched) {
+                // Never silently drop a status trigger: surface it so the rule can be re-added.
+                await recoverIntoCreatedBoard(
+                  t(
+                    'ticketing.boards.editor.sections.notificationsStatusRemapFailed',
+                    'The board was created, but a notification rule status could not be matched to the new board. Re-add the notification rules.'
+                  )
+                );
+                return;
+              }
+              rulesToSave = notificationRules.map((rule) => ({
+                ...rule,
+                status_ids: rule.status_ids.map((id) => remap.get(id)!),
+              }));
+            }
+
+            const notificationResult = await persistNotificationSettings(createdBoard.board_id!, rulesToSave);
+            if (isReturnedActionError(notificationResult)) {
+              await recoverIntoCreatedBoard(getErrorMessage(notificationResult));
+              return;
+            }
+          } catch (postCreateError) {
+            console.error('Error saving notification settings for new board:', postCreateError);
+            await recoverIntoCreatedBoard(
+              postCreateError instanceof Error ? postCreateError.message : t('ticketing.boards.messages.error.saveFailed')
+            );
             return;
           }
         }

@@ -3,7 +3,7 @@
 
 import React from 'react';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import BoardsSettings from '../BoardsSettings';
 import { toast } from 'react-hot-toast';
 
@@ -480,5 +480,115 @@ describe('BoardsSettings notifications section', () => {
       default_watcher_user_ids: ['user-2'],
     });
     expect(updateBoardMock).toHaveBeenCalled();
+  });
+  describe('creating a board by copying statuses', () => {
+    const SOURCE_IDS = ['status-new', 'status-done'];
+
+    const startCopyCreateWithStatusRule = async () => {
+      getBoardTicketStatusesMock.mockImplementation(async (boardId: string) => {
+        // Real calls cross the network; a macrotask hop keeps the editor's loading flags from
+        // being batched away so the dirty baseline is re-captured like in the browser.
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        return boardId === 'board-created'
+          ? [
+              { status_id: 'created-new', name: 'New', is_closed: false, is_default: true, order_number: 10 },
+              { status_id: 'created-done', name: 'Done', is_closed: true, is_default: false, order_number: 20 },
+            ]
+          : [
+              { status_id: 'status-new', name: 'New', is_closed: false, is_default: true, order_number: 10 },
+              { status_id: 'status-done', name: 'Done', is_closed: true, is_default: false, order_number: 20 },
+            ];
+      });
+      createBoardMock.mockResolvedValue({ board_id: 'board-created', board_name: 'Fresh' });
+      renderBoardsSettings();
+      await waitFor(() => {
+        expect(document.querySelector('[id^="board-row-"]')).toBeTruthy();
+      });
+      click('add-board-button');
+      await waitFor(() => {
+        expect(document.getElementById('board_name')).toBeTruthy();
+      });
+      fireEvent.change(document.getElementById('board_name')!, { target: { value: 'Fresh' } });
+      if (!findById('copy-ticket-statuses-select')) expandSection('statuses');
+      fireEvent.change(findById('copy-ticket-statuses-select')!, { target: { value: 'board-source' } });
+      await waitFor(() => {
+        expect(getBoardTicketStatusesMock).toHaveBeenCalledWith('board-source');
+      });
+      if (!findById('add-board-notification-rule-button')) expandSection('notifications');
+      click('add-board-notification-rule-button');
+      click('board-notification-rule-0-create');
+      await waitFor(() => {
+        expect(findById('board-notification-rule-0-status-status-done')).toBeTruthy();
+      });
+      click('board-notification-rule-0-status-status-done');
+      click('board-notification-rule-0-recipients-pick-user');
+    };
+
+    const savedStatusIds = () =>
+      saveBoardNotificationSettingsMock.mock.calls.flatMap(([, input]: any) =>
+        input.rules.flatMap((rule: any) => rule.status_ids)
+      );
+
+    it('remaps rule status ids to the created board before saving notifications', async () => {
+      await startCopyCreateWithStatusRule();
+      click('save-board-button');
+
+      await waitFor(() => {
+        expect(saveBoardNotificationSettingsMock).toHaveBeenCalledTimes(1);
+      });
+      const [boardId, payload] = saveBoardNotificationSettingsMock.mock.calls[0];
+      expect(boardId).toBe('board-created');
+      expect(payload.rules).toHaveLength(1);
+      expect(payload.rules[0].status_ids).toEqual(['created-done']);
+      expect(savedStatusIds()).not.toEqual(expect.arrayContaining(SOURCE_IDS));
+      expect(screen.queryByTestId('board-editor-section-error-notifications')).toBeNull();
+    });
+
+    it('reloads the created board after a failed notification save and never resends source ids or re-creates', async () => {
+      saveBoardNotificationSettingsMock
+        .mockResolvedValueOnce({ actionError: 'boom' })
+        .mockImplementation(async (_id: string, input: any) => input);
+      await startCopyCreateWithStatusRule();
+      click('save-board-button');
+
+      await waitFor(() => {
+        expect(screen.getByTestId('board-editor-section-error-notifications')).toHaveTextContent('boom');
+      });
+      await waitFor(() => {
+        expect(getBoardTicketStatusesMock).toHaveBeenCalledWith('board-created');
+        expect(getBoardNotificationSettingsMock).toHaveBeenCalledWith('board-created');
+      });
+      expect(createBoardMock).toHaveBeenCalledTimes(1);
+
+      // Retry: rules reloaded from the server (empty), so add one against the new board's statuses.
+      await waitFor(() => {
+        expect(document.getElementById('board-notification-rule-0')).toBeNull();
+      });
+      // Let the reload (statuses, close rules, notification settings) settle before editing.
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 50));
+      });
+      click('add-board-notification-rule-button');
+      click('board-notification-rule-0-create');
+      await waitFor(() => {
+        expect(findById('board-notification-rule-0-status-created-done')).toBeTruthy();
+      });
+      expect(findById('board-notification-rule-0-status-status-done')).toBeNull();
+      click('board-notification-rule-0-status-created-done');
+      click('board-notification-rule-0-recipients-pick-user');
+      click('save-board-button');
+
+      await waitFor(() => {
+        expect(saveBoardNotificationSettingsMock).toHaveBeenCalledTimes(2);
+      });
+      expect(createBoardMock).toHaveBeenCalledTimes(1);
+      expect(updateBoardMock).toHaveBeenCalledWith('board-created', expect.objectContaining({
+        ticket_statuses: expect.arrayContaining([expect.objectContaining({ status_id: 'created-new' })]),
+      }));
+      const updateStatuses = updateBoardMock.mock.calls[0][1].ticket_statuses.map((s: any) => s.status_id);
+      expect(updateStatuses).not.toEqual(expect.arrayContaining(SOURCE_IDS));
+      const retryIds = saveBoardNotificationSettingsMock.mock.calls[1][1].rules.flatMap((r: any) => r.status_ids);
+      expect(retryIds).toEqual(['created-done']);
+    });
   });
 });
