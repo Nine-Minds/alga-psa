@@ -20,8 +20,15 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createInstance } from 'i18next';
-import englishClients from '../../../../../server/public/locales/en/msp/clients.json';
-import swedishClients from '../../../../../server/public/locales/sv/msp/clients.json';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+
+// Locale catalogs are served assets, not modules: importing them here creates
+// a clients -> server dependency cycle in the Nx project graph.
+const readClientsLocale = (locale: string) => JSON.parse(readFileSync(
+  resolve(__dirname, `../../../../../server/public/locales/${locale}/msp/clients.json`),
+  'utf8',
+));
 
 const pushMock = vi.hoisted(() => vi.fn());
 const translateMock = vi.hoisted(() => vi.fn());
@@ -184,22 +191,25 @@ describe('ClientContractAssignment contract-detail navigation', () => {
     expect(screen.queryByTestId('client-contract-dialog')).toBeNull();
   });
 
-  it('renders the details action in Swedish and navigates to the assigned contract', async () => {
+  it.each([
+    ['en', 'View details', 'Visa detaljer'],
+    ['sv', 'Visa detaljer', 'View details'],
+  ])('renders the details action in %s and navigates to the assigned contract', async (locale, label, otherLabel) => {
     const i18n = createInstance();
     await i18n.init({
-      lng: 'sv',
+      lng: locale,
       fallbackLng: 'en',
       resources: {
-        en: { 'msp/clients': englishClients },
-        sv: { 'msp/clients': swedishClients },
+        en: { 'msp/clients': readClientsLocale('en') },
+        sv: { 'msp/clients': readClientsLocale('sv') },
       },
     });
-    translateMock.mockImplementation(i18n.getFixedT('sv', 'msp/clients'));
+    translateMock.mockImplementation(i18n.getFixedT(locale, 'msp/clients'));
 
     render(<ClientContractAssignment clientId="client-1" />);
 
-    const viewDetails = await screen.findByRole('button', { name: 'Visa detaljer' });
-    expect(screen.queryByRole('button', { name: 'View details' })).toBeNull();
+    const viewDetails = await screen.findByRole('button', { name: label });
+    expect(screen.queryByRole('button', { name: otherLabel })).toBeNull();
     await userEvent.click(viewDetails);
 
     expect(pushMock).toHaveBeenCalledTimes(1);
