@@ -444,7 +444,8 @@
         "consent": "Upoważniam do cyklicznego obciążania tej karty za zatwierdzone faktury.",
         "enable": "Włącz płatność automatyczną",
         "noCards": "Dodaj kartę, aby włączyć płatność automatyczną.",
-        "changeCard": "Użyj tej karty do płatności automatycznej"
+        "changeCard": "Użyj tej karty do płatności automatycznej",
+        "updateError": "Nie udało się zaktualizować płatności automatycznej. Spróbuj ponownie."
       },
       "publicCardSetup": {
         "saved": "Karta zapisana",
@@ -569,7 +570,8 @@
       "avatarDescription": "Ten awatar jest widoczny dla personelu MSP podczas przeglądania danych kontaktowych.",
       "emailAlreadyExists": "Użytkownik o tym adresie e-mail już istnieje",
       "reportsToSelf": "Użytkownik nie może podlegać samemu sobie",
-      "reportsToCycle": "Spowodowałoby to cykliczną strukturę podległości"
+      "reportsToCycle": "Spowodowałoby to cykliczną strukturę podległości",
+      "invalidTimezone": "Wybierz strefę czasową powiązaną z miastem, np. America/New_York."
     },
     "imageUpload": {
       "uploadAvatar": "Prześlij awatar",

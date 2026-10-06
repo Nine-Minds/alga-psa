@@ -69,6 +69,9 @@ const styleDeclarationSchema = z.object({
   fontStyle: z.string().optional(),
   lineHeight: z.union([z.string(), z.number()]).optional(),
   textAlign: z.enum(['left', 'center', 'right', 'justify']).optional(),
+  breakInside: z.enum(['auto', 'avoid', 'avoid-page']).optional(),
+  breakAfter: z.enum(['auto', 'avoid', 'avoid-page', 'page']).optional(),
+  breakBefore: z.enum(['auto', 'avoid', 'avoid-page', 'page']).optional(),
 }).strict();
 
 const nodeStyleRefSchema = z.object({
@@ -153,6 +156,7 @@ const tableColumnLineSchema: z.ZodTypeAny = z.lazy(() =>
     value: valueExpressionSchema,
     format: valueFormatSchema.optional(),
     style: nodeStyleRefSchema.optional(),
+    supplemental: z.boolean().optional(),
   }).strict()
 );
 
@@ -510,6 +514,7 @@ const nodeSchema: z.ZodTypeAny = z.lazy(() =>
         value: valueExpressionSchema,
         format: valueFormatSchema.optional(),
         emphasize: z.boolean().optional(),
+        hideWhenZero: z.boolean().optional(),
         style: nodeStyleRefSchema.optional(),
         labelStyle: nodeStyleRefSchema.optional(),
       }).strict()).min(1),
