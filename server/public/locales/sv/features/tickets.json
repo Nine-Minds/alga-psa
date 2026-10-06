@@ -386,6 +386,7 @@
     "cc": "Kopia",
     "bcc": "Hemlig kopia",
     "ccBccInvalid": "Rätta de markerade adresserna innan du skickar.",
+    "ccBccTooMany": "Högst {{max}} mottagare med kopia och hemlig kopia kan kopieras på en kommentar.",
     "ccBccNotSentOnInternal": "Kopia och hemlig kopia skickas inte med en intern anteckning. Stäng av Intern för att använda dem."
   },
   "responseState": {

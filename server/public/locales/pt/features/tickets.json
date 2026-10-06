@@ -378,6 +378,7 @@
     "cc": "Cc",
     "bcc": "Cco",
     "ccBccInvalid": "Corrija os endereços destacados antes de enviar.",
+    "ccBccTooMany": "No máximo {{max}} destinatários Cc e Cco podem ser copiados em um comentário.",
     "ccBccNotSentOnInternal": "Cc e Cco não são enviados com uma nota interna. Desative Interna para usá-los."
   },
   "responseState": {

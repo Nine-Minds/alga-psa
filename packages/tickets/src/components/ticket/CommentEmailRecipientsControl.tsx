@@ -9,6 +9,7 @@ import {
   type EmailRecipientSuggestion,
 } from '@alga-psa/ui/components/EmailRecipientsInput';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { MAX_COMMENT_EMAIL_RECIPIENTS } from '@shared/lib/tickets/commentEmailRecipientsCore';
 import { getContactsByClient } from '../../actions/clientLookupActions';
 import { getAllUsers } from '@alga-psa/user-composition/actions/userQueryActions';
 
@@ -30,12 +31,22 @@ export const emptyCommentEmailRecipientsDraft = (): CommentEmailRecipientsDraft 
   invalidBcc: [],
 });
 
-/** True while an entered address is not a valid email: Send stays disabled. */
-export const commentEmailRecipientsDraftHasErrors = (draft: CommentEmailRecipientsDraft): boolean =>
-  draft.invalidCc.length > 0 || draft.invalidBcc.length > 0;
-
 export const commentEmailRecipientsDraftCount = (draft: CommentEmailRecipientsDraft): number =>
   draft.cc.length + draft.bcc.length;
+
+/** True once the draft carries more recipients than the server will accept. */
+export const commentEmailRecipientsDraftOverLimit = (draft: CommentEmailRecipientsDraft): boolean =>
+  commentEmailRecipientsDraftCount(draft) > MAX_COMMENT_EMAIL_RECIPIENTS;
+
+/**
+ * True while an entered address is not a valid email, or the list is over the
+ * ceiling the server enforces: either way Send stays disabled with an inline
+ * message rather than failing in the action.
+ */
+export const commentEmailRecipientsDraftHasErrors = (draft: CommentEmailRecipientsDraft): boolean =>
+  draft.invalidCc.length > 0 ||
+  draft.invalidBcc.length > 0 ||
+  commentEmailRecipientsDraftOverLimit(draft);
 
 /** What the composers hand to the server actions. */
 export type CommentEmailRecipientsPayload = { cc?: string[]; bcc?: string[] };
@@ -220,9 +231,17 @@ export function CommentEmailRecipientsControl({
         disabled={disabled}
         searchSuggestions={searchSuggestions}
       />
-      {commentEmailRecipientsDraftHasErrors(value) && (
+      {(value.invalidCc.length > 0 || value.invalidBcc.length > 0) && (
         <p role="alert" className="text-xs text-destructive">
           {t('conversation.ccBccInvalid', 'Fix the highlighted addresses before sending.')}
+        </p>
+      )}
+      {commentEmailRecipientsDraftOverLimit(value) && (
+        <p id={`${idPrefix}-email-recipients-limit`} role="alert" className="text-xs text-destructive">
+          {t('conversation.ccBccTooMany', {
+            defaultValue: 'At most {{max}} Cc and Bcc recipients can be copied on one comment.',
+            max: MAX_COMMENT_EMAIL_RECIPIENTS,
+          })}
         </p>
       )}
     </div>

@@ -60,6 +60,26 @@ describe('normalizeCommentEmailRecipients', () => {
     ).toThrow(CommentEmailRecipientsError);
   });
 
+  it('T004: the ceiling counts distinct people and the error names the overflowing list', () => {
+    // 21 entries, but one is a repeat: 20 distinct recipients, so accepted.
+    const deduped = normalizeCommentEmailRecipients({
+      cc: [...addresses(10, 'cc'), 'CC0@example.com'],
+      bcc: addresses(10, 'bcc'),
+    });
+    expect(deduped?.cc).toHaveLength(10);
+    expect(deduped?.bcc).toHaveLength(10);
+
+    try {
+      normalizeCommentEmailRecipients({ cc: addresses(20, 'cc'), bcc: ['one-too-many@example.com'] });
+      throw new Error('expected a validation error');
+    } catch (error) {
+      expect(error).toBeInstanceOf(CommentEmailRecipientsError);
+      const typed = error as CommentEmailRecipientsError;
+      expect(typed.field).toBe('bcc');
+      expect(typed.value).toBe('one-too-many@example.com');
+    }
+  });
+
   it('T005: non-empty cc/bcc with isInternal=true throws; empty lists are accepted', () => {
     expect(() =>
       normalizeCommentEmailRecipients({ cc: ['someone@example.com'], isInternal: true })

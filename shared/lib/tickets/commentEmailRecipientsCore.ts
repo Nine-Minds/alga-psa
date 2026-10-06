@@ -71,13 +71,6 @@ export function normalizeCommentEmailRecipients(
     );
   }
 
-  if (cc.length + bcc.length > MAX_COMMENT_EMAIL_RECIPIENTS) {
-    throw new CommentEmailRecipientsError(
-      `At most ${MAX_COMMENT_EMAIL_RECIPIENTS} Cc and Bcc recipients are allowed on one comment`,
-      cc.length > 0 ? 'cc' : 'bcc'
-    );
-  }
-
   const seen = new Set<string>();
   const collect = (values: string[], field: 'cc' | 'bcc'): CommentEmailRecipient[] => {
     const result: CommentEmailRecipient[] = [];
@@ -92,6 +85,16 @@ export function normalizeCommentEmailRecipients(
       const key = value.toLowerCase();
       if (seen.has(key)) {
         continue;
+      }
+      // The ceiling counts people, not keystrokes: a list that only exceeds
+      // 20 because the same address was typed twice is accepted, and the
+      // error names the list the extra address was in.
+      if (seen.size >= MAX_COMMENT_EMAIL_RECIPIENTS) {
+        throw new CommentEmailRecipientsError(
+          `At most ${MAX_COMMENT_EMAIL_RECIPIENTS} Cc and Bcc recipients are allowed on one comment`,
+          field,
+          value
+        );
       }
       seen.add(key);
       result.push({ email: value });

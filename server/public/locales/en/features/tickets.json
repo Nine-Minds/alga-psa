@@ -386,6 +386,7 @@
     "cc": "Cc",
     "bcc": "Bcc",
     "ccBccInvalid": "Fix the highlighted addresses before sending.",
+    "ccBccTooMany": "At most {{max}} Cc and Bcc recipients can be copied on one comment.",
     "ccBccNotSentOnInternal": "Cc and Bcc are not sent with an internal note. Turn Internal off to use them."
   },
   "responseState": {
