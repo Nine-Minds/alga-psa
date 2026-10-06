@@ -86,6 +86,21 @@ export function EmailRecipientsInput({
     setSuggestions([]);
   };
 
+  /**
+   * Leaving the field commits what was typed, but a suggestion query ("ja")
+   * is not an address attempt: turning it into an error chip would block Send
+   * for someone who simply clicked away from the picker. Only text that is
+   * trying to be an address is committed; a bare query stays as draft text.
+   */
+  const handleBlur = () => {
+    setSuggestions([]);
+    const text = draft.trim();
+    if (text && !text.includes('@')) {
+      return;
+    }
+    commitDraft();
+  };
+
   useEffect(() => {
     if (!searchSuggestions) return;
     const query = draft.trim();
@@ -175,7 +190,7 @@ export function EmailRecipientsInput({
             onChange(value.slice(0, -1));
           }
         }}
-        onBlur={commitDraft}
+        onBlur={handleBlur}
       />
       {suggestions.length > 0 && (
         <ul
@@ -188,6 +203,10 @@ export function EmailRecipientsInput({
                 id={`${id}-suggestion-${suggestion.email}`}
                 type="button"
                 className="flex w-full flex-col items-start px-2 py-1 text-left hover:bg-[rgb(var(--color-border-50))]"
+                // Keep focus in the input: without this the pointer press blurs
+                // the field, the blur handler unmounts the list and the click
+                // never lands on the suggestion.
+                onMouseDown={(event) => event.preventDefault()}
                 onClick={() => {
                   addRecipients([{
                     email: suggestion.email,

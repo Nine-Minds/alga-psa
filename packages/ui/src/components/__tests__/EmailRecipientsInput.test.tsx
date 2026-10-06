@@ -106,9 +106,36 @@ describe('EmailRecipientsInput', () => {
       'cc-suggestion-tech@msp.test',
     ]);
 
+    // A pointer press on a suggestion must not blur the input: the blur
+    // handler closes the list, so a list that gave up focus would unmount
+    // before the click landed and the picker would be mouse-unusable.
+    expect(fireEvent.mouseDown(options[0])).toBe(false);
     fireEvent.click(options[0]);
     expect(chips()).toEqual([
       { email: 'jane@client.com', name: 'Jane Doe', contact_id: 'contact-1' },
     ]);
+  });
+
+  it('T049: leaving the field with a half-typed query keeps it out of the error chips', async () => {
+    const searchSuggestions = vi.fn(async () => [
+      { email: 'jane@client.com', name: 'Jane Doe', contact_id: 'contact-1' },
+    ]);
+    render(<Harness searchSuggestions={searchSuggestions} />);
+    const input = screen.getByRole('textbox');
+
+    fireEvent.change(input, { target: { value: 'ja' } });
+    await waitFor(() => expect(document.getElementById('cc-suggestions')).not.toBeNull());
+
+    fireEvent.blur(input);
+
+    // The query is a search, not an address: no error chip, so Send stays
+    // enabled. A real address attempt still commits on blur.
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(chips()).toEqual([]);
+    expect(document.getElementById('cc-suggestions')).toBeNull();
+
+    fireEvent.change(input, { target: { value: 'jane@client.com' } });
+    fireEvent.blur(input);
+    expect(chips()).toEqual([{ email: 'jane@client.com' }]);
   });
 });
