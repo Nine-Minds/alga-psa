@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { WorkflowEventPublisher } from '../../../adapters/workflowEventPublisher';
+import { contactSuppressedTicketCreation } from '../../../../lib/tickets/ticketLifecycleEvents';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { tenantDb } from '@alga-psa/db';
@@ -633,7 +634,10 @@ export function registerTicketActions(): void {
           tx.tenantId,
           tx.trx,
           {},
-          new WorkflowEventPublisher({ transaction: tx.trx, workflowExecutionId: tx.runId }),
+          contactSuppressedTicketCreation(
+            new WorkflowEventPublisher({ transaction: tx.trx, workflowExecutionId: tx.runId }),
+            'workflow tickets.create never sent a client-facing new-ticket notification before TICKET_CREATED became mandatory'
+          ),
           undefined,
           tx.actorUserId
         );

@@ -13,6 +13,14 @@ import { createClient, createTenant, createUser } from '../../../test-utils/test
 const sent: Array<{ to: string; template: string }> = [];
 let testDb: Knex;
 const deniedUserIds = new Set<string>();
+const publishedBusEvents: Array<{ eventType: string; payload: Record<string, any> }> = [];
+
+vi.mock('@alga-psa/event-bus/publishers', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@alga-psa/event-bus/publishers')>()),
+  publishEvent: vi.fn(async (event: any) => {
+    publishedBusEvents.push({ eventType: event.eventType, payload: event.payload });
+  }),
+}));
 
 vi.mock('../../lib/db/db', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../lib/db/db')>()),
@@ -277,5 +285,40 @@ describe('board notification rules: create trigger delivery (integration)', () =
     expect(emailsFor('ticket-board-created')).toEqual([]);
     expect(await inAppFor(ticketId, 'ticket-board-created')).toEqual([]);
     expect(emailsFor('ticket-created')).toEqual(['assignee@example.com']);
+  });
+
+  it('a contact-suppressed creation (renewal/telephony-style source) notifies rule recipients and the assignee, never the contact', async () => {
+    await clearInApp();
+    publishedBusEvents.length = 0;
+    const contactId = uuidv4();
+    await scoped.table('contacts').insert({ tenant, contact_name_id: contactId, full_name: 'Casey Contact', email: 'casey@client.example', client_id: clientId });
+    const { TicketModel } = await import('../../../../shared/models/ticketModel');
+    const { WorkflowEventPublisher } = await import('../../../../shared/workflow/adapters/workflowEventPublisher');
+    const { contactSuppressedTicketCreation } = await import('../../../../shared/lib/tickets/ticketLifecycleEvents');
+    const { withTransaction } = await import('@alga-psa/db');
+
+    let ticketId = '';
+    await withTransaction(testDb, async (trx) => {
+      ticketId = (await TicketModel.createTicket(
+        {
+          title: 'Renewal due', client_id: clientId, contact_id: contactId, board_id: boardId, status_id: statusId,
+          priority_id: priorityId, assigned_to: users.assignee, entered_by: users.dispatcher, source: 'renewal',
+        } as any,
+        tenant, trx, {},
+        contactSuppressedTicketCreation(new WorkflowEventPublisher({ transaction: trx }), 'test'),
+        undefined, users.dispatcher
+      )).ticket_id;
+    });
+
+    const published = publishedBusEvents.find((e) => e.eventType === 'TICKET_CREATED' && e.payload.ticketId === ticketId);
+    expect(published?.payload.suppressContactNotifications).toBe(true);
+    const busEvent = { id: uuidv4(), eventType: 'TICKET_CREATED', timestamp: new Date().toISOString(), payload: { occurredAt: new Date().toISOString(), actorType: 'SYSTEM', ...published!.payload } };
+    await runWithTenant(tenant, () => emailHandler(busEvent));
+    await runWithTenant(tenant, () => inAppHandler(busEvent, { propagateErrors: true }));
+
+    expect(emailsFor('ticket-board-created')).toEqual(['a@example.com', 'b@example.com', 'm1@example.com', 'm2@example.com']);
+    expect(emailsFor('ticket-created')).toEqual(['assignee@example.com']);
+    expect(sent.map((email) => email.to)).not.toContain('casey@client.example');
+    expect(await inAppFor(ticketId, 'ticket-created')).toEqual([users.assignee]);
   });
 });

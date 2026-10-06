@@ -1,5 +1,6 @@
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { WorkflowEventPublisher } from '@shared/workflow/adapters/workflowEventPublisher';
+import { contactSuppressedTicketCreation } from '@shared/lib/tickets/ticketLifecycleEvents';
 import logger from '@alga-psa/core/logger';
 import { normalizeClientContract } from '@shared/billingClients/clientContracts';
 import { getActionRegistryV2, initializeWorkflowRuntimeV2 } from '@alga-psa/workflows/runtime';
@@ -186,7 +187,10 @@ const createRenewalTicketDirectly = async (params: {
     params.tenantId,
     params.trx,
     {},
-    new WorkflowEventPublisher({ transaction: params.trx })
+    contactSuppressedTicketCreation(
+      new WorkflowEventPublisher({ transaction: params.trx }),
+      'contract renewal tickets never sent a client-facing new-ticket notification before TICKET_CREATED became mandatory'
+    )
   );
   return created.ticket_id;
 };

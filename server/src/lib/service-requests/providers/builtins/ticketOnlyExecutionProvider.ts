@@ -243,6 +243,9 @@ export const ticketOnlyExecutionProvider: ServiceRequestExecutionProvider = {
             board_id: boardId,
             priority_id: priorityId,
             client_id: context.clientId,
+            // Ticket-only service requests never sent a client new-ticket notification
+            // before TICKET_CREATED became mandatory; keep that (see contactSuppressedTicketCreation).
+            suppressContactNotifications: true,
           },
         });
 

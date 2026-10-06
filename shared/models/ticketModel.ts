@@ -11,7 +11,7 @@ import { tenantDb } from '@alga-psa/db';
 import { v4 as uuidv4 } from 'uuid';
 import { z } from 'zod';
 import type { IEventPublisher } from '@alga-psa/types';
-import { isSilentTicketCreation, type TicketCreationEvents } from '../lib/tickets/ticketLifecycleEvents';
+import { isSilentTicketCreation, isTicketCreationWithPayloadExtras, type TicketCreationEvents } from '../lib/tickets/ticketLifecycleEvents';
 import { applyMatchingChecklistTemplates } from '../lib/ticketChecklists';
 import { SharedNumberingService } from '../services/numberingService';
 import { applyBoardDefaultWatchers } from '../lib/tickets/boardDefaultWatchers';
@@ -1007,8 +1007,12 @@ export class TicketModel {
 
     // Publish event if publisher provided
     if (!isSilentTicketCreation(eventPublisher)) {
+      const createdPublisher = isTicketCreationWithPayloadExtras(eventPublisher)
+        ? eventPublisher.publisher
+        : eventPublisher;
+      const payloadExtras = isTicketCreationWithPayloadExtras(eventPublisher) ? eventPublisher.payloadExtras : {};
       try {
-        await eventPublisher.publishTicketCreated({
+        await createdPublisher.publishTicketCreated({
           tenantId: tenant,
           ticketId: ticketId,
           userId: userId,
@@ -1016,14 +1020,15 @@ export class TicketModel {
             source: cleanedInput.source,
             board_id: cleanedInput.board_id,
             priority_id: cleanedInput.priority_id,
-            client_id: cleanedInput.client_id
+            client_id: cleanedInput.client_id,
+            ...payloadExtras
           }
         });
       } catch (error) {
         console.error('Failed to publish ticket created event:', error);
         // The transactional outbox adapter (durable inbound path) must
         // propagate so an outbox insert failure rolls back the core transaction.
-        if (eventPublisher && (eventPublisher as any).__inboundOutboxPublisher === true) {
+        if ((createdPublisher as any).__inboundOutboxPublisher === true) {
           throw error;
         }
         // Don't throw - event publishing failure shouldn't break ticket creation

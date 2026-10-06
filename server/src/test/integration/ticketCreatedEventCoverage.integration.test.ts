@@ -162,6 +162,64 @@ describe('TICKET_CREATED coverage across creation sites (integration)', () => {
     });
   });
 
+  const expectContactSuppressedOnly = (payload: Record<string, any>) => {
+    expect(payload.suppressContactNotifications).toBe(true);
+    expect(payload.suppressInternalNotifications).not.toBe(true);
+  };
+
+  describe('contactSuppressedTicketCreation', () => {
+    it('publishes TICKET_CREATED with suppressContactNotifications only, keeping the standard metadata', async () => {
+      const { TicketModel } = await import('../../../../shared/models/ticketModel');
+      const { WorkflowEventPublisher } = await import('../../../../shared/workflow/adapters/workflowEventPublisher');
+      const { contactSuppressedTicketCreation } = await import('../../../../shared/lib/tickets/ticketLifecycleEvents');
+      let ticketId = '';
+      await withTransaction(testDb, async (trx) => {
+        ticketId = (await TicketModel.createTicket(
+          baseInput('Contact suppressed'), tenant, trx, {},
+          contactSuppressedTicketCreation(new WorkflowEventPublisher({ transaction: trx }), 'test'), undefined, actorId
+        )).ticket_id;
+      });
+      expect(created()).toHaveLength(1);
+      expect(created()[0].payload).toMatchObject({ tenantId: tenant, ticketId, board_id: boardId, client_id: clientId });
+      expectContactSuppressedOnly(created()[0].payload);
+    });
+
+    it('a plain publisher still publishes no suppression flag (existing sources unchanged)', async () => {
+      const { TicketModel } = await import('../../../../shared/models/ticketModel');
+      const { WorkflowEventPublisher } = await import('../../../../shared/workflow/adapters/workflowEventPublisher');
+      await withTransaction(testDb, async (trx) => {
+        await TicketModel.createTicket(
+          baseInput('Plain'), tenant, trx, {}, new WorkflowEventPublisher({ transaction: trx }), undefined, actorId
+        );
+      });
+      expect(created()[0].payload.suppressContactNotifications).toBeUndefined();
+      expect(created()[0].payload.suppressInternalNotifications).toBeUndefined();
+    });
+  });
+
+  describe('newly publishing sources suppress contact notifications', () => {
+    it.each([
+      ['renewal manual retry', 'packages/billing/src/actions/renewalsQueueActions.ts'],
+      ['renewal job fallback', 'packages/jobs/src/lib/handlers/processRenewalQueueHandler.ts'],
+      ['manual telephony ticket', 'packages/integrations/src/actions/integrations/telephonyActions.ts'],
+      ['auto telephony ticket', 'packages/telephony/src/services/autoTicketFromCall.ts'],
+      ['inbound webhook create', 'packages/tickets/src/actions/inboundActions.ts'],
+      ['Teams guest intake', 'ee/packages/microsoft-teams/src/lib/teams/bot/teamsGuestIntake.ts'],
+      ['workflow tickets.create', 'shared/workflow/runtime/actions/businessOperations/tickets.ts'],
+    ])('%s creates through contactSuppressedTicketCreation', (_name, file) => {
+      const src = readSource(file);
+      expect(src).toMatch(
+        /createTicket(WithRetry)?\([\s\S]{0,900}contactSuppressedTicketCreation\(\s*new WorkflowEventPublisher\(/
+      );
+    });
+
+    it('ticket-only service request provider publishes with suppressContactNotifications: true', () => {
+      const src = readSource('server/src/lib/service-requests/providers/builtins/ticketOnlyExecutionProvider.ts');
+      expect(src).toMatch(/publishTicketCreated\([\s\S]{0,600}suppressContactNotifications: true/);
+      expect(src).not.toMatch(/suppressInternalNotifications: true/);
+    });
+  });
+
   describe('silent opt-outs are explicit', () => {
     it('ticketImportActions creates tickets with silentTicketCreation', () => {
       const src = readSource('packages/tickets/src/actions/ticketImportActions.ts');
@@ -199,6 +257,7 @@ describe('TICKET_CREATED coverage across creation sites (integration)', () => {
       expect(events).toHaveLength(1);
       expect(events[0].payload).toMatchObject({ tenantId: tenant, ticketId: result.ticket_id });
       expect(events[0].options?.workflow?.executionId).toBe(runId);
+      expectContactSuppressedOnly(events[0].payload);
     });
 
     it('telephony autoCreateTicketForCall publishes one TICKET_CREATED and none on the already-ticketed replay', async () => {
@@ -214,6 +273,7 @@ describe('TICKET_CREATED coverage across creation sites (integration)', () => {
       expect(outcome.status).toBe('created');
       expect(created()).toHaveLength(1);
       expect(created()[0].payload.ticketId).toBe(outcome.ticketId);
+      expectContactSuppressedOnly(created()[0].payload);
 
       busEvents.length = 0;
       expect(((await autoCreateTicketForCall(input)) as any).status).toBe('skipped');

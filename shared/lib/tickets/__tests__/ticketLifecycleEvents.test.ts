@@ -34,6 +34,8 @@ import {
   isSilentTicketCreation,
   publishTicketTransitionsAfterCommit,
   silentTicketCreation,
+  contactSuppressedTicketCreation,
+  isTicketCreationWithPayloadExtras,
   ticketCreatedPublishedByCaller,
   type TicketTransitionSnapshot,
 } from '../ticketLifecycleEvents';
@@ -270,6 +272,16 @@ describe('captureTicketTransitionSnapshot', () => {
 });
 
 describe('silent ticket creation markers', () => {
+  it('contactSuppressedTicketCreation carries the publisher and suppresses only contact notifications', () => {
+    const publisher: any = { publishTicketCreated: () => {} };
+    const c = contactSuppressedTicketCreation(publisher, 'renewal tickets');
+    expect(isTicketCreationWithPayloadExtras(c)).toBe(true);
+    expect(c.publisher).toBe(publisher);
+    expect(c.payloadExtras).toEqual({ suppressContactNotifications: true });
+    expect(isSilentTicketCreation(c)).toBe(false);
+    expect(() => contactSuppressedTicketCreation(publisher, ' ')).toThrow();
+  });
+
   it('silentTicketCreation produces a silent marker', () => {
     const m = silentTicketCreation('bulk import');
     expect(m).toMatchObject({ __silentTicketCreation: true, kind: 'silent', reason: 'bulk import' });

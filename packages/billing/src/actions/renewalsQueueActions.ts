@@ -1,6 +1,7 @@
 'use server';
 
 import { WorkflowEventPublisher } from '@shared/workflow/adapters/workflowEventPublisher';
+import { contactSuppressedTicketCreation } from '@shared/lib/tickets/ticketLifecycleEvents';
 import { randomUUID } from 'node:crypto';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
@@ -1147,7 +1148,10 @@ export const retryRenewalQueueTicketCreation = withAuth(async (
         tenant,
         trx,
         {},
-        new WorkflowEventPublisher({ transaction: trx })
+        contactSuppressedTicketCreation(
+          new WorkflowEventPublisher({ transaction: trx }),
+          'contract renewal tickets never sent a client-facing new-ticket notification before TICKET_CREATED became mandatory'
+        )
       );
 
       await db.table('client_contracts')

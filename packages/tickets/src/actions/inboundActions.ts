@@ -1,5 +1,6 @@
 import {
   captureTicketTransitionSnapshot,
+  contactSuppressedTicketCreation,
   publishTicketTransitionsAfterCommit,
 } from '@shared/lib/tickets/ticketLifecycleEvents';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
@@ -132,7 +133,7 @@ const createTicketAction: InboundActionDefinition<CreateTicketMappedValues> = {
         ticket_origin: 'api',
       };
 
-      const created = await TicketModel.createTicketWithRetry(input, ctx.tenant, trx, {}, new WorkflowEventPublisher({ transaction: trx }), undefined, undefined, 3);
+      const created = await TicketModel.createTicketWithRetry(input, ctx.tenant, trx, {}, contactSuppressedTicketCreation(new WorkflowEventPublisher({ transaction: trx }), 'inbound webhook tickets never sent a client-facing new-ticket notification before TICKET_CREATED became mandatory'), undefined, undefined, 3);
 
       if (mappedValues.asset_id) {
         await tenantDb(trx, ctx.tenant).table('asset_associations').insert({

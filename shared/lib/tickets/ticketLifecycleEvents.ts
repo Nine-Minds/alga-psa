@@ -179,7 +179,47 @@ export interface SilentTicketCreation {
   readonly kind: 'silent' | 'caller_published';
 }
 
-export type TicketCreationEvents = IEventPublisher | SilentTicketCreation;
+/**
+ * A publisher plus extra TICKET_CREATED payload fields, merged into the published
+ * metadata by `TicketModel.createTicket`.
+ */
+export interface TicketCreationWithPayloadExtras {
+  readonly __ticketCreationWithPayloadExtras: true;
+  readonly reason: string;
+  readonly publisher: IEventPublisher;
+  readonly payloadExtras: Readonly<Record<string, unknown>>;
+}
+
+export type TicketCreationEvents = IEventPublisher | SilentTicketCreation | TicketCreationWithPayloadExtras;
+
+/**
+ * Publish TICKET_CREATED (internal notifications, board rules, watchers, workflows)
+ * but keep the client contact silent. Required for creation sources that did not
+ * publish TICKET_CREATED before it became mandatory, so the contact does not start
+ * receiving "New Ticket" mail/in-app notifications. `suppressInternalNotifications`
+ * stays unset. Turning client mail on for a source is a separate product decision.
+ */
+export function contactSuppressedTicketCreation(
+  publisher: IEventPublisher,
+  reason: string
+): TicketCreationWithPayloadExtras {
+  if (!reason || !reason.trim()) {
+    throw new Error('contactSuppressedTicketCreation requires a reason');
+  }
+  if (!publisher) {
+    throw new Error('contactSuppressedTicketCreation requires a publisher');
+  }
+  return {
+    __ticketCreationWithPayloadExtras: true,
+    reason,
+    publisher,
+    payloadExtras: { suppressContactNotifications: true },
+  };
+}
+
+export function isTicketCreationWithPayloadExtras(value: unknown): value is TicketCreationWithPayloadExtras {
+  return !!value && (value as TicketCreationWithPayloadExtras).__ticketCreationWithPayloadExtras === true;
+}
 
 export function silentTicketCreation(reason: string): SilentTicketCreation {
   if (!reason || !reason.trim()) {
