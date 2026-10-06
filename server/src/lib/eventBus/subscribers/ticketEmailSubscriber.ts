@@ -2812,7 +2812,7 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
     // comment directly rather than dropping it. A message with several Bcc
     // addresses and an empty To is rejected by some providers, so a Bcc-only
     // list becomes one message per address.
-    if (hasOneOffRecipients && !requesterEmailSent) {
+    if (hasOneOffRecipients && isFromAgent && !requesterEmailSent) {
       const fallbackReplyContext = {
         ticketId: ticket.ticket_id || payload.ticketId,
         commentId: payload.comment?.id,

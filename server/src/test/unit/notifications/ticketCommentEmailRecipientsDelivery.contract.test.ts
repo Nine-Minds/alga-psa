@@ -60,13 +60,13 @@ describe('per-comment Cc/Bcc delivery contract', () => {
   });
 
   it('T024/T026: the fallback sends one Cc message, or one message per Bcc address', () => {
-    expect(subscriberSource).toContain('if (hasOneOffRecipients && !requesterEmailSent) {');
+    expect(subscriberSource).toContain('if (hasOneOffRecipients && isFromAgent && !requesterEmailSent) {');
     expect(subscriberSource).toContain('const [primaryOneOff, ...remainingCc] = oneOffCc;');
     expect(subscriberSource).toContain('for (const entry of oneOffBcc) {');
   });
 
   it('T034: the combined message keeps the normal ticket reply context and thread headers', () => {
-    const fallbackStart = subscriberSource.indexOf('if (hasOneOffRecipients && !requesterEmailSent) {');
+    const fallbackStart = subscriberSource.indexOf('if (hasOneOffRecipients && isFromAgent && !requesterEmailSent) {');
     const fallbackSection = subscriberSource.slice(fallbackStart, fallbackStart + 1800);
     expect(fallbackSection).toContain('replyContext: fallbackReplyContext');
     expect(fallbackSection).toContain("template: 'ticket-comment-added'");
