@@ -13,11 +13,6 @@ import { createTenant, createUser } from '../../../test-utils/testDataFactory';
 describe('board notification rules: resolve + expand (integration)', () => {
   let db: Knex;
   let tenant: string;
-  let boardA: string;
-  let boardB: string;
-  let statusA1: string;
-  let statusA2: string;
-  let statusB1: string;
   let alice: string;
   let bob: string;
   let carol: string;
@@ -58,6 +53,22 @@ describe('board notification rules: resolve + expand (integration)', () => {
     return ruleId;
   }
 
+  /** Each test builds its own board and statuses so no test depends on rows another creates or deletes. */
+  async function makeBoard(name: string, statusCount = 1): Promise<{ boardId: string; statusIds: string[] }> {
+    const boardId = uuidv4();
+    await scoped.table('boards').insert({ tenant, board_id: boardId, board_name: name, is_default: false });
+    const statusIds: string[] = [];
+    for (let i = 0; i < statusCount; i++) {
+      const statusId = uuidv4();
+      statusIds.push(statusId);
+      await scoped.table('statuses').insert({
+        tenant, status_id: statusId, board_id: boardId, name: `S${i + 1}`, status_type: 'ticket', item_type: 'ticket',
+        order_number: i + 1, is_default: i === 0, is_closed: false,
+      });
+    }
+    return { boardId, statusIds };
+  }
+
   beforeAll(async () => {
     db = await createTestDbConnection();
     tenant = await createTenant(db, `Rules ${uuidv4().slice(0, 6)}`);
@@ -68,20 +79,6 @@ describe('board notification rules: resolve + expand (integration)', () => {
     dave = await createUser(db, tenant, { email: 'dave@example.com' });
     inactive = await createUser(db, tenant, { email: 'gone@example.com', is_inactive: true });
 
-    boardA = uuidv4();
-    boardB = uuidv4();
-    statusA1 = uuidv4();
-    statusA2 = uuidv4();
-    statusB1 = uuidv4();
-    await scoped.table('boards').insert([
-      { tenant, board_id: boardA, board_name: 'A', is_default: true },
-      { tenant, board_id: boardB, board_name: 'B', is_default: false },
-    ]);
-    await scoped.table('statuses').insert([
-      { tenant, status_id: statusA1, board_id: boardA, name: 'New', status_type: 'ticket', item_type: 'ticket', order_number: 1, is_default: true, is_closed: false },
-      { tenant, status_id: statusA2, board_id: boardA, name: 'Waiting', status_type: 'ticket', item_type: 'ticket', order_number: 2, is_default: false, is_closed: false },
-      { tenant, status_id: statusB1, board_id: boardB, name: 'New', status_type: 'ticket', item_type: 'ticket', order_number: 1, is_default: true, is_closed: false },
-    ]);
     teamId = uuidv4();
     await scoped.table('teams').insert({ tenant, team_id: teamId, team_name: 'Techs', manager_id: alice });
     await scoped.table('team_members').insert([
@@ -95,24 +92,28 @@ describe('board notification rules: resolve + expand (integration)', () => {
   });
 
   it('created trigger matches only its board and only enabled rules with notify_on_create', async () => {
-    const onA = await addRule({ boardId: boardA, notifyOnCreate: true, userIds: [alice] });
-    await addRule({ boardId: boardA, notifyOnCreate: true, enabled: false, userIds: [carol] });
-    await addRule({ boardId: boardA, notifyOnCreate: false, statusIds: [statusA1], userIds: [dave] });
-    await addRule({ boardId: boardB, notifyOnCreate: true, userIds: [dave] });
+    const { boardId: own, statusIds: [ownStatus] } = await makeBoard('Created own');
+    const { boardId: other } = await makeBoard('Created other');
+    const onOwn = await addRule({ boardId: own, notifyOnCreate: true, userIds: [alice] });
+    await addRule({ boardId: own, notifyOnCreate: true, enabled: false, userIds: [carol] });
+    await addRule({ boardId: own, notifyOnCreate: false, statusIds: [ownStatus], userIds: [dave] });
+    await addRule({ boardId: other, notifyOnCreate: true, userIds: [dave] });
 
-    const rulesA = await loadMatchingRules(db, tenant, { kind: 'created', boardId: boardA });
-    expect(rulesA.map((r) => r.rule_id)).toEqual([onA]);
-    const recipients = await resolveBoardNotificationRecipients(db, tenant, { kind: 'created', boardId: boardA });
+    const rules = await loadMatchingRules(db, tenant, { kind: 'created', boardId: own });
+    expect(rules.map((r) => r.rule_id)).toEqual([onOwn]);
+    const recipients = await resolveBoardNotificationRecipients(db, tenant, { kind: 'created', boardId: own });
     expect(recipients.map((r) => r.email)).toEqual(['alice@example.com']);
   });
 
   it('status trigger matches only rules naming that status; disabled rules are ignored', async () => {
-    const statusRule = await addRule({ boardId: boardA, statusIds: [statusA2], userIds: [carol] });
-    await addRule({ boardId: boardA, enabled: false, statusIds: [statusA2], userIds: [dave] });
+    const { boardId: own, statusIds: [, waiting] } = await makeBoard('Status own', 2);
+    const { statusIds: [otherStatus] } = await makeBoard('Status other');
+    const statusRule = await addRule({ boardId: own, statusIds: [waiting], userIds: [carol] });
+    await addRule({ boardId: own, enabled: false, statusIds: [waiting], userIds: [dave] });
 
-    const matched = await loadMatchingRules(db, tenant, { kind: 'status_entered', statusId: statusA2 });
+    const matched = await loadMatchingRules(db, tenant, { kind: 'status_entered', statusId: waiting });
     expect(matched.map((r) => r.rule_id)).toEqual([statusRule]);
-    const none = await loadMatchingRules(db, tenant, { kind: 'status_entered', statusId: statusB1 });
+    const none = await loadMatchingRules(db, tenant, { kind: 'status_entered', statusId: otherStatus });
     expect(none).toEqual([]);
   });
 
@@ -146,6 +147,9 @@ describe('board notification rules: resolve + expand (integration)', () => {
   });
 
   it('blocks deleting a status that a rule references (FK)', async () => {
-    await expect(scoped.table('statuses').where({ status_id: statusA2 }).delete()).rejects.toThrow();
+    const { boardId, statusIds: [statusId] } = await makeBoard('FK own');
+    await addRule({ boardId, statusIds: [statusId], userIds: [alice] });
+    await expect(scoped.table('statuses').where({ status_id: statusId }).delete()).rejects.toThrow();
+    expect(await scoped.table('statuses').where({ status_id: statusId }).first()).toBeTruthy();
   });
 });
