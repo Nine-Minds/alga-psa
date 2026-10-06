@@ -29,9 +29,9 @@
   {"id": "F024", "commitGroup": "inbound-replies", "prdRefs": ["FR25"], "implemented": true, "description": "Reply To/Cc watch-list additions on matched replies exclude one-off recipients (covers requester reply-all)"},
   {"id": "F025", "commitGroup": "inbound-replies", "prdRefs": ["FR26"], "implemented": true, "description": "Thread-header-only match treats a one-off recipient sender as allowed (not quarantined), same as an active watcher"},
 
-  {"id": "F026", "commitGroup": "workflow", "prdRefs": ["FR12"], "implemented": false, "description": "tickets.add_comment input schema gains optional cc/bcc email arrays; rejected when is_internal"},
-  {"id": "F027", "commitGroup": "workflow", "prdRefs": ["FR21"], "implemented": false, "description": "When cc or bcc is non-empty, tickets.add_comment passes a workflow event publisher to TicketModel.createComment so TICKET_COMMENT_ADDED is emitted; otherwise unchanged (no event)"},
-  {"id": "F028", "commitGroup": "workflow", "prdRefs": ["FR22"], "implemented": false, "description": "Workflow designer renders cc/bcc as email-list inputs accepting literal lists and expressions"},
+  {"id": "F026", "commitGroup": "workflow", "prdRefs": ["FR12"], "implemented": true, "description": "tickets.add_comment input schema gains optional cc/bcc email arrays; rejected when is_internal"},
+  {"id": "F027", "commitGroup": "workflow", "prdRefs": ["FR21"], "implemented": true, "description": "When cc or bcc is non-empty, tickets.add_comment passes a workflow event publisher to TicketModel.createComment so TICKET_COMMENT_ADDED is emitted; otherwise unchanged (no event)"},
+  {"id": "F028", "commitGroup": "workflow", "prdRefs": ["FR22"], "implemented": true, "description": "Workflow designer renders cc/bcc as email-list inputs accepting literal lists and expressions"},
 
   {"id": "F029", "commitGroup": "recipient-input", "prdRefs": ["UX"], "implemented": false, "description": "Reusable EmailRecipientsInput chip component in packages/ui: free-text entry with Enter/comma/semicolon/paste splitting, invalid-chip state, removable chips, id prop for UI reflection"},
   {"id": "F030", "commitGroup": "recipient-input", "prdRefs": ["UX"], "implemented": false, "description": "EmailRecipientsInput supports async suggestions (contacts of the ticket client first, then internal users) and stores name/contact_id/user_id on picked chips"},

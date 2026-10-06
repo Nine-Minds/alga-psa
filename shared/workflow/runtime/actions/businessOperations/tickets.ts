@@ -45,6 +45,32 @@ const commentVisibilityChoice = () =>
     WORKFLOW_COMMENT_VISIBILITY_LABELS
   );
 
+/**
+ * One-off Cc/Bcc on a workflow-authored comment. Same shape and designer
+ * editor as `email.send`'s recipient lists, so a literal list and an
+ * expression resolving to a list both work.
+ */
+const commentEmailRecipientListSchema = (label: 'Cc' | 'Bcc') =>
+  withWorkflowJsonSchemaMetadata(
+    z.array(z.object({ email: z.string().email(), name: z.string().optional() })).optional(),
+    `Optional ${label} recipients for this comment's email only (public comments)`,
+    { 'x-workflow-editor': { kind: 'custom', custom: { component: 'email-recipients' } } }
+  );
+
+/**
+ * Marker publisher: TicketModel.createComment only needs a non-inbound
+ * publisher to persist the TICKET_COMMENT_ADDED publication intent in the same
+ * transaction. The after-commit dispatcher then delivers it like any other
+ * comment event, so no method on it is ever called here.
+ */
+const workflowCommentEventPublisher = {
+  publishTicketCreated: async () => undefined,
+  publishTicketUpdated: async () => undefined,
+  publishTicketClosed: async () => undefined,
+  publishCommentCreated: async () => undefined,
+  publishTicketAssigned: async () => undefined,
+} as unknown as import('@alga-psa/types').IEventPublisher;
+
 const workflowTicketAssignmentPrimaryTypeSchema = z.enum(['user', 'team', 'queue']);
 
 type WorkflowTicketAssignmentInput = {
@@ -710,6 +736,8 @@ export function registerTicketActions(): void {
         source: attachmentSourceSchema,
         filename: z.string().optional()
       })).optional().describe('Optional attachments (added to ticket)'),
+      cc: commentEmailRecipientListSchema('Cc'),
+      bcc: commentEmailRecipientListSchema('Bcc'),
       idempotency_key: z.string().optional().describe('Optional external idempotency key')
     }),
     outputSchema: z.object({
@@ -729,21 +757,37 @@ export function registerTicketActions(): void {
 
       const content = input.mentions?.length ? buildBlockNoteWithMentions({ body: input.body, mentions: input.mentions }) : input.body;
 
+      const isInternalComment = input.visibility === 'internal';
+      const ccAddresses = (input.cc ?? []).map((recipient) => recipient.email);
+      const bccAddresses = (input.bcc ?? []).map((recipient) => recipient.email);
+      const hasEmailRecipients = ccAddresses.length > 0 || bccAddresses.length > 0;
+      if (hasEmailRecipients && isInternalComment) {
+        throwActionError(ctx, {
+          category: 'ValidationError',
+          code: 'VALIDATION_ERROR',
+          message: 'Cc/Bcc recipients cannot be added to an internal comment'
+        });
+      }
+
       let created: any;
       try {
         created = await TicketModel.createComment(
           {
             ticket_id: input.ticket_id,
             content,
-            is_internal: input.visibility === 'internal',
+            is_internal: isInternalComment,
             is_resolution: false,
             author_type: 'system',
             author_id: tx.actorUserId,
-            metadata: { source: 'workflow', run_id: ctx.runId, step_path: ctx.stepPath }
+            metadata: { source: 'workflow', run_id: ctx.runId, step_path: ctx.stepPath },
+            ...(hasEmailRecipients ? { emailRecipients: { cc: ccAddresses, bcc: bccAddresses } } : {})
           },
           tx.tenantId,
           tx.trx,
-          undefined,
+          // A workflow comment is silent by default. Explicit Cc/Bcc are an
+          // instruction to mail someone, so the comment publishes
+          // TICKET_COMMENT_ADDED and the normal subscriber delivery applies.
+          hasEmailRecipients ? workflowCommentEventPublisher : undefined,
           undefined,
           tx.actorUserId
         );
