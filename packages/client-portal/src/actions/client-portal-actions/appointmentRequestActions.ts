@@ -32,6 +32,7 @@ import {
   getAvailableDates as getDatesFromService
 } from '../../services/availabilityService';
 import { createNotificationFromTemplateInternal } from '@alga-psa/notifications/actions/internal-notification-actions/internalNotificationActions';
+import { buildAppointmentRequestReviewPath, buildAppointmentRequestReviewUrl } from '@alga-psa/scheduling/lib/appointmentRequestLinks';
 import { resolveAppointmentApproverUserIds } from '@alga-psa/msp-composition/scheduling/appointmentApprovers';
 import { isValidEmail, enqueueImmediateJob } from '@alga-psa/core';
 import { isEnterprise } from '@alga-psa/core/features';
@@ -712,7 +713,7 @@ export const createAppointmentRequest = withAuth(async (
           referenceNumber: appointmentRequest.appointment_request_id.slice(0, 8).toUpperCase(),
           submittedAt: new Date().toLocaleString(),
           isAuthenticated: true,
-          approvalLink: `${process.env.NEXT_PUBLIC_APP_URL}/msp/schedule`,
+          approvalLink: buildAppointmentRequestReviewUrl(appointmentRequest.appointment_request_id),
           contactEmail: tenantSettings.contactEmail,
           contactPhone: tenantSettings.contactPhone
         }, {
@@ -749,7 +750,7 @@ export const createAppointmentRequest = withAuth(async (
           template_name: 'appointment-request-created-staff',
           type: 'info',
           category: 'appointments',
-          link: `/msp/schedule?requestId=${appointmentRequest.appointment_request_id}`,
+          link: buildAppointmentRequestReviewPath(appointmentRequest.appointment_request_id),
           data: {
             requesterName: contact.full_name || 'Unknown',
             clientName: clientCompanyName,
@@ -1475,7 +1476,7 @@ export const cancelAppointmentRequest = withAuth(async (
             template_name: 'appointment-request-cancelled-staff',
             type: 'info',
             category: 'appointments',
-            link: `/msp/schedule?requestId=${request.appointment_request_id}`,
+            link: buildAppointmentRequestReviewPath(request.appointment_request_id),
             data: {
               requesterName: contact.full_name || 'Unknown',
               serviceName: service?.service_name || 'service',

@@ -3,6 +3,7 @@ import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import path from 'node:path';
 import { tenantDb } from '@alga-psa/db';
+import { buildAppointmentRequestReviewUrl } from '@alga-psa/scheduling/lib/appointmentRequestLinks';
 
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { createTenant, createClient, createUser } from '../../../test-utils/testDataFactory';
@@ -338,10 +339,13 @@ describe('Appointment Notification System Integration Tests', () => {
         description: 'Staff notification test'
       };
 
+      let appointmentRequestId = '';
       await runWithTenant(tenantId, async () => {
         const result = await createAppointmentRequest(requestData);
         expect(result.success).toBe(true);
+        appointmentRequestId = (result as any).data.appointment_request_id;
       });
+      expect(appointmentRequestId).toBeTruthy();
 
       // Should send to all staff with schedule permissions (2 users)
       expect(sendNewAppointmentRequestMock).toHaveBeenCalledTimes(2);
@@ -362,6 +366,12 @@ describe('Appointment Notification System Integration Tests', () => {
       expect(emailData.contactEmail).toBe('support@testmsp.com');
       expect(emailData.contactPhone).toBe('555-0100');
       expect(call1[2].tenantId).toBe(tenantId);
+
+      // Review & Approve link deep-links to this request
+      for (const call of [call1, call2]) {
+        expect(call[1].approvalLink).toBe(buildAppointmentRequestReviewUrl(appointmentRequestId));
+        expect(call[1].approvalLink.endsWith(`?requestId=${appointmentRequestId}`)).toBe(true);
+      }
     });
 
     it('should send appointment approved email with correct locale', async () => {

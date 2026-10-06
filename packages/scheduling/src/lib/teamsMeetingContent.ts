@@ -1,5 +1,6 @@
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
+import { buildAppointmentRequestReviewUrl } from './appointmentRequestLinks';
 import type {
   TeamsMeetingAttendee,
   TeamsMeetingSkipReason,
@@ -87,8 +88,7 @@ export function buildAppointmentMeetingBodyHtml(params: {
   appointmentRequestId: string;
   description?: string | null;
 }): string {
-  const baseUrl = (process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000').replace(/\/+$/, '');
-  const psaLink = `${baseUrl}/msp/schedule?requestId=${encodeURIComponent(params.appointmentRequestId)}`;
+  const psaLink = buildAppointmentRequestReviewUrl(params.appointmentRequestId);
   const lines = [
     `<p>Appointment: ${escapeHtml(params.serviceName)}</p>`,
     ...(params.description?.trim() ? [`<p>${escapeHtml(params.description.trim())}</p>`] : []),

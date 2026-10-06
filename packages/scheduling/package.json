@@ -49,6 +49,10 @@
       "import": "./src/lib/timeEntryLauncher.tsx",
       "types": "./src/lib/timeEntryLauncher.tsx"
     },
+    "./lib/appointmentRequestLinks": {
+      "import": "./src/lib/appointmentRequestLinks.ts",
+      "types": "./src/lib/appointmentRequestLinks.ts"
+    },
     "./lib/appointmentApprovers": {
       "import": "./src/lib/appointmentApprovers.ts",
       "types": "./src/lib/appointmentApprovers.ts"
