@@ -76,7 +76,7 @@ The resolver follows these rules:
    - `assigned` resolves to `tickets.assigned_to`, when it is set.
    - `assigned_and_additional` adds every non-null `ticket_resources.additional_user_id` for the ticket, in `assigned_at` order. This includes team-member rows written by team assignment.
    - A ticket with nobody assigned contributes nobody. That is not an error at this layer.
-   - The additional-resources query reuses `getCurrentTicketAdditionalUserIds` (`tickets.ts:123`), with an `orderBy(assigned_at)` added. Export it, or move it next to the resolver.
+   - The additional-resources query reuses `getCurrentTicketAdditionalUserIds` (`tickets.ts:123`), with an `orderBy('assigned_at')` added. Export it, or move it next to the resolver.
 5. **Dedupe by `user_id`.** The resolver merges `sources` and keeps first-seen order: ticket assigned, ticket additional, users, then roles.
 6. **No status filtering.** The resolver returns inactive users, client users and users without an address, classified. Each caller applies its own delivery policy (§3.2, §3.3).
 
