@@ -80,7 +80,7 @@ import { ticketSlaBreachedBindings, ticketSlaBreachedSql } from '../lib/ticketSl
 import { getClientContactVisibilityContext } from '../lib/clientPortalVisibility.server';
 import { buildTicketTransitionWorkflowEvents } from '../lib/workflowTicketTransitionEvents';
 import { buildTicketCommunicationWorkflowEvents } from '../lib/workflowTicketCommunicationEvents';
-import { buildTicketResolutionSlaStageCompletionEvent } from '../lib/workflowTicketSlaStageEvents';
+import { buildTicketResolutionSlaStageCompletionEvent } from '@alga-psa/shared/services/tickets/ticketSlaStageEvents';
 import { diffTicketFields, publishTicketUpdate } from '../lib/liveUpdates';
 import {
   propagateBundleMasterStatus,

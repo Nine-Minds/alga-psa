@@ -8,13 +8,13 @@ import {
 import {
   buildTicketResolutionSlaStageCompletionEvent,
   buildTicketResolutionSlaStageEnteredEvent,
-} from '../workflowTicketSlaStageEvents';
+} from '../ticketSlaStageEvents';
 
 const TENANT_ID = '00000000-0000-0000-0000-000000000000';
 const TICKET_ID = '11111111-1111-1111-1111-111111111111';
 const USER_ID = '22222222-2222-2222-2222-222222222222';
 
-describe('workflowTicketSlaStageEvents', () => {
+describe('ticketSlaStageEvents', () => {
   it('emits resolution stage entered with deterministic targetAt', () => {
     const enteredAt = '2026-01-23T12:00:00.000Z';
     const entered = buildTicketResolutionSlaStageEnteredEvent({

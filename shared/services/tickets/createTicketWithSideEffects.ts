@@ -2,9 +2,7 @@ import type { Knex } from 'knex';
 import { registerAfterCommit, tenantDb } from '@alga-psa/db';
 import { publishEvent, publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import { TicketModel, type CreateTicketInput } from '@alga-psa/shared/models/ticketModel';
-import TagDefinition from '@alga-psa/tags/models/tagDefinition';
-import TagMapping from '@alga-psa/tags/models/tagMapping';
-import { generateEntityColor } from '@alga-psa/tags/lib/colorUtils';
+import { TagModel } from '@alga-psa/shared/models/tagModel';
 import { associateAssetWithTicket } from '@alga-psa/shared/services/assets/assetTicketAssociation';
 import { applyChecklistTemplateToTicket } from '@alga-psa/shared/lib/ticketChecklists';
 import {
@@ -14,11 +12,10 @@ import {
   TICKET_ACTIVITY_SOURCE,
   writeTicketActivity,
 } from '@alga-psa/shared/lib/ticketActivity';
-import { TicketModelEventPublisher } from './adapters/TicketModelEventPublisher';
-import { TicketModelAnalyticsTracker } from './adapters/TicketModelAnalyticsTracker';
+import { TicketModelEventPublisher } from './ticketModelEventPublisher';
 import { addTicketResourceCore, publishTicketResourceEvent } from './ticketResourceCore';
 import { assignTeamToTicketCore } from './teamAssignmentCore';
-import { buildTicketResolutionSlaStageEnteredEvent } from './workflowTicketSlaStageEvents';
+import { buildTicketResolutionSlaStageEnteredEvent } from './ticketSlaStageEvents';
 
 /**
  * Who is creating the ticket. A `system` actor (scheduler, generator) is stored
@@ -92,7 +89,7 @@ export async function createTicketWithSideEffects(
     trx,
     {},
     eventPublisher,
-    new TicketModelAnalyticsTracker(),
+    undefined,
     actorUserId ?? undefined,
     3,
   );
@@ -121,15 +118,13 @@ export async function createTicketWithSideEffects(
   }
 
   for (const tagText of new Set((input.tags ?? []).map((tag) => tag.trim()).filter(Boolean))) {
-    const colors = generateEntityColor(tagText);
-    const definition = await TagDefinition.getOrCreate(trx, tenant, tagText, 'ticket', {
-      background_color: colors.background,
-      text_color: colors.text,
-    });
-    await TagMapping.insert(
-      trx,
+    const definition = await TagModel.getOrCreateTagDefinition(tagText, 'ticket', tenant, trx);
+    await TagModel.createTagMapping(
+      definition.tag_id,
+      ticketId,
+      'ticket',
       tenant,
-      { tag_id: definition.tag_id, tagged_id: ticketId, tagged_type: 'ticket' },
+      trx,
       actorUserId ?? undefined,
     );
   }

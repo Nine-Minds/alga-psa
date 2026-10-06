@@ -1125,7 +1125,7 @@ export const retryRenewalQueueTicketCreation = withAuth(async (
     const description = buildRenewalTicketDescription(sourceRow as Record<string, unknown>, normalized, decisionDueDate);
 
     try {
-      // LEVERAGE: pattern ticket-create-composition — creates a ticket then composes assets/agents/team/tags/checklist/activity/events by hand; see createTicketWithSideEffects (packages/tickets/src/lib/createTicketWithSideEffects.ts)
+      // LEVERAGE: pattern ticket-create-composition — creates a ticket then composes assets/agents/team/tags/checklist/activity/events by hand; see createTicketWithSideEffects (shared/services/tickets/createTicketWithSideEffects.ts)
       const createdTicket = await TicketModel.createTicketWithRetry(
         {
           title,
