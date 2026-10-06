@@ -141,7 +141,7 @@ export const addInteraction = withAuth(async (
     }
 
     const reconciled = reconcileInteractionDuration(interactionData);
-    if (!reconciled.ok) {
+    if (reconciled.ok === false) {
       return durationRejectionError(reconciled.reason);
     }
     const normalizedData = reconciled.duration === (interactionData.duration ?? null)
@@ -317,7 +317,7 @@ export const updateInteraction = withAuth(async (
           duration: updateData.duration !== undefined ? updateData.duration : current.duration,
         };
         const reconciled = reconcileInteractionDuration(merged);
-        if (!reconciled.ok) {
+        if (reconciled.ok === false) {
           throw new InteractionDurationRejection(reconciled.reason);
         }
         if (reconciled.duration !== (merged.duration ?? null)) {
