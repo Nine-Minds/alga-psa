@@ -313,6 +313,52 @@ describe('WorkflowRuntimeV2EventStreamWorker', () => {
     expect(redisCloseMock).toHaveBeenCalledTimes(1);
   });
 
+  describe('workflow lineage guard', () => {
+    const fire = async (payload: Record<string, unknown>) => {
+      const worker = new WorkflowRuntimeV2EventStreamWorker('worker-1');
+      await worker.start();
+      await registeredConsumer?.({
+        event_id: 'event-1',
+        event_type: 'PING',
+        workflow_correlation_key: 'corr-1',
+        tenant: 'tenant-1',
+        payload,
+      });
+      await worker.stop();
+    };
+
+    it('skips a workflow whose id is already in the event lineage and warns', async () => {
+      await fire({ foo: 'bar', workflowLineage: ['workflow-1'] });
+
+      expect(launchPublishedWorkflowRunMock).not.toHaveBeenCalled();
+      expect(loggerWarnMock).toHaveBeenCalledWith(
+        expect.stringContaining('already in the event lineage'),
+        expect.objectContaining({ workflowId: 'workflow-1', workflowLineage: ['workflow-1'] })
+      );
+    });
+
+    it('still launches a workflow that is not in the lineage and records the lineage on the run', async () => {
+      await fire({ foo: 'bar', workflowLineage: ['workflow-upstream'] });
+
+      expect(launchPublishedWorkflowRunMock).toHaveBeenCalledTimes(1);
+      expect(launchPublishedWorkflowRunMock).toHaveBeenCalledWith(
+        knexMock,
+        expect.objectContaining({
+          workflowId: 'workflow-1',
+          triggerMetadata: expect.objectContaining({ workflowLineage: ['workflow-upstream'] }),
+        })
+      );
+    });
+
+    it('adds no workflowLineage to trigger metadata for events without one', async () => {
+      await fire({ foo: 'bar' });
+
+      expect(launchPublishedWorkflowRunMock).toHaveBeenCalledTimes(1);
+      const arg = launchPublishedWorkflowRunMock.mock.calls[0][1];
+      expect(arg.triggerMetadata).not.toHaveProperty('workflowLineage');
+    });
+  });
+
   it('ignores duplicate ingested events without relaunching workflows', async () => {
     workflowRuntimeEventGetByIdMock.mockResolvedValueOnce({ event_id: 'event-1' });
 
