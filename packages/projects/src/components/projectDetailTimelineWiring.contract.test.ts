@@ -105,6 +105,21 @@ describe('ProjectDetail timeline wiring', () => {
   });
 });
 
+describe('ProjectDetail timeline release flag', () => {
+  it('offers the Timeline view only when release-v2-0-feature is on', () => {
+    expect(source).toContain("useFeatureFlag('release-v2-0-feature', { defaultValue: false })");
+    const options = handlerBody('const viewSwitcherOptions = useMemo(() => {');
+    expect(options).toMatch(/if \(timelineEnabled\) \{\s*options\.push\(\{ value: 'gantt'/);
+    expect(options).toContain('[t, timelineEnabled, canViewBilling, billingIntegration]');
+  });
+
+  it('falls back to kanban when the saved view or a deep link names the gated timeline', () => {
+    expect(source).toContain("const viewMode: ProjectViewMode = storedViewMode === 'gantt' && !timelineEnabled ? 'kanban' : storedViewMode;");
+    // The fallback is derived, not written back, so the preference returns once the flag is on.
+    expect(source).not.toMatch(/timelineEnabled[^\n]*setViewMode|setViewMode\([^)]*timelineEnabled/);
+  });
+});
+
 describe('ProjectDetail opening a task from the URL', () => {
   it('uses the open-once guard in both effects and when a task is clicked', () => {
     expect(source).toContain('const urlTaskOpenGuard = useUrlTaskOpenGuard();');

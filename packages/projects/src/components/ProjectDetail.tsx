@@ -32,6 +32,7 @@ import TaskQuickAdd from './TaskQuickAdd';
 import TaskEdit from './TaskEdit';
 import PhaseQuickAdd from './PhaseQuickAdd';
 import TaskListView from './TaskListView';
+import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import { useDependencyGuard } from './useDependencyGuard';
 import { useUrlTaskOpenGuard } from './useUrlTaskOpenGuard';
 import { addDependencyToMap, removeDependencyFromMap } from '../lib/taskDependencyMap';
@@ -282,7 +283,11 @@ export default function ProjectDetail({
       debounceMs: 500,
     },
   ]);
-  const { value: viewMode, setValue: setViewMode, isLoading: isViewModeLoading } = prefs[PROJECT_VIEW_MODE_SETTING];
+  const { value: storedViewMode, setValue: setViewMode, isLoading: isViewModeLoading } = prefs[PROJECT_VIEW_MODE_SETTING];
+  // The timeline ships dark behind the 2.0 release flag. Only its entry point is
+  // gated: a saved preference or ?view=gantt falls back to kanban while it is off.
+  const { enabled: timelineEnabled } = useFeatureFlag('release-v2-0-feature', { defaultValue: false });
+  const viewMode: ProjectViewMode = storedViewMode === 'gantt' && !timelineEnabled ? 'kanban' : storedViewMode;
   const { value: isPhasesPanelVisible, setValue: setIsPhasesPanelVisible } = prefs[PROJECT_PHASES_PANEL_VISIBLE_SETTING];
   const { value: kanbanZoomLevel, setValue: setKanbanZoomLevel } = prefs[PROJECT_KANBAN_ZOOM_LEVEL_SETTING];
   const { value: isHeaderPinned, setValue: setIsHeaderPinned } = prefs[PROJECT_HEADER_PINNED_SETTING];
@@ -784,13 +789,15 @@ export default function ProjectDetail({
     const options: { value: ProjectViewMode; label: string; icon: typeof LayoutGrid }[] = [
       { value: 'kanban', label: t('kanbanView', 'Kanban'), icon: LayoutGrid },
       { value: 'list', label: t('listView', 'List'), icon: List },
-      { value: 'gantt', label: t('ganttView', 'Timeline'), icon: GanttChart },
     ];
+    if (timelineEnabled) {
+      options.push({ value: 'gantt', label: t('ganttView', 'Timeline'), icon: GanttChart });
+    }
     if (canViewBilling && billingIntegration) {
       options.push({ value: 'billing', label: t('billingView', 'Billing'), icon: Receipt });
     }
     return options;
-  }, [t, canViewBilling, billingIntegration]);
+  }, [t, timelineEnabled, canViewBilling, billingIntegration]);
 
   const readyEntryCount = useMemo(
     () => (billingOverview?.entries ?? []).filter((entry) => entry.status === 'ready').length,
