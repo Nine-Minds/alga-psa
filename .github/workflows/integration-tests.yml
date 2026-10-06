@@ -405,7 +405,7 @@ jobs:
           name: infrastructure-shard-${{ matrix.shard }}
           path: test-results/infrastructure/
           if-no-files-found: error
-          retention-days: 7
+          retention-days: 30
 
       # Published only when this shard retried something. The shard bundle above
       # expires in a week; the weekly flaky report reads this one.
@@ -454,7 +454,7 @@ jobs:
           name: infrastructure-execution-evidence
           path: test-results/infrastructure/
           if-no-files-found: error
-          retention-days: 7
+          retention-days: 30
       - name: Record full infrastructure metrics to Google Sheet
         if: always() && env.INFRA_MODE == 'full' && needs.infrastructure-tests.result != 'skipped'
         continue-on-error: true
@@ -584,7 +584,7 @@ jobs:
           name: workspace-db-evidence
           path: test-results/workspace-db/
           if-no-files-found: error
-          retention-days: 14
+          retention-days: 30
 
   workspace-db-complete:
     name: Workspace database execution complete

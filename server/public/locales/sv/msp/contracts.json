@@ -1651,6 +1651,7 @@
       "quantityLabel": "Antal",
       "selectServicePlaceholder": "Välj en tjänst",
       "serviceItemLabel": "Tjänst {{index}}",
+      "catalogDefaultHint": "Inget katalogpris i {{currency}}; katalogstandardtaxan används.",
       "recurringQuantityLabel": "Återkommande antal",
       "allocationQuantityLabel": "Tilldelningsantal",
       "noCurrencyPrice": "Inget pris i {{currency}} i katalogen. Ange ett enhetspris."
@@ -1701,7 +1702,8 @@
       "serviceItem": "Tjänst {{index}}",
       "setBucketOfHours": "Ange timpott",
       "noCurrencyPriceEnterRate": "Inget pris i {{currency}} finns i katalogen. Ange en timtaxa.",
-      "noCurrencyPriceWithLegacyHint": "Inget pris i {{currency}} finns i katalogen. Äldre standardtaxa: {{rate}}. Ange en timtaxa i {{currency}}."
+      "noCurrencyPriceWithLegacyHint": "Inget pris i {{currency}} finns i katalogen. Äldre standardtaxa: {{rate}}. Ange en timtaxa i {{currency}}.",
+      "catalogDefaultRateHint": "Inget katalogpris i {{currency}}; katalogstandardtaxan används."
     },
     "minimumBillableTime": {
       "hint": "T.ex. 15 minuter – kortare tidposter avrundas uppåt",
@@ -1761,7 +1763,8 @@
       "unitOfMeasureHint": "Välj den enhet som tjänsten debiteras efter.",
       "unitOfMeasurePlaceholder": "T.ex. GB, API-anrop, användare",
       "noCurrencyPriceEnterRate": "Inget pris i {{currency}} finns i katalogen. Ange en enhetstaxa.",
-      "noCurrencyPriceWithLegacyHint": "Inget pris i {{currency}} finns i katalogen. Äldre standardtaxa: {{rate}}. Ange en enhetstaxa i {{currency}}."
+      "noCurrencyPriceWithLegacyHint": "Inget pris i {{currency}} finns i katalogen. Äldre standardtaxa: {{rate}}. Ange en enhetstaxa i {{currency}}.",
+      "catalogDefaultRateHint": "Inget katalogpris i {{currency}}; katalogstandardtaxan används."
     },
     "summary": {
       "labels": {
