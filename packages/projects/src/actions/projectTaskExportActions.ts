@@ -1,9 +1,10 @@
 'use server'
 
-import type { ITag } from '@alga-psa/types';
+import type { ITag, IUserWithRoles } from '@alga-psa/types';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
+import { assertProjectReadAllowed } from '../lib/projectReadAuthorization';
 import { findTagsByEntityIds } from '@alga-psa/tags/actions/tagActions';
 import { isTagActionError } from '@alga-psa/tags/actions/tagActionErrors';
 import { Knex } from 'knex';
@@ -141,6 +142,9 @@ function projectTaskExportErrorFrom(error: unknown): ProjectTaskExportActionErro
     }
     if (message.includes('Product access denied')) {
       return permissionError(message);
+    }
+    if (message === 'Project not found') {
+      return actionError(message, 'projects:errors.project.notFound');
     }
   }
 
@@ -368,6 +372,10 @@ export const exportProjectTasksToCSV = withAuth(async (
       if (!hasRead) {
         throw new Error('Permission denied: Cannot read project');
       }
+
+      // project:read is tenant-wide; the export dumps one project's tasks, so the
+      // caller also has to be allowed to read that specific project record.
+      await assertProjectReadAllowed(trx, tenant, _user as IUserWithRoles, projectId);
 
       let tasks: TaskRow[];
 

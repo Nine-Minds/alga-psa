@@ -454,7 +454,12 @@ export const importTickets = withAuth(async (
       throw new Error('Permission denied: Cannot create priorities. Change unmatched priorities to "Map to existing" or "Use default".');
     }
 
-    const hasContactCreates = contactResolutions.some(r => r.action === 'create');
+    // Contact creation is driven by the __create__ placeholders the insert path
+    // consumes, not by the resolution metadata — gate on both so a crafted
+    // payload cannot smuggle placeholders past an empty resolution array.
+    const hasContactCreates =
+      processedTickets.some(t => t.contact_id?.startsWith('__create__:')) ||
+      contactResolutions.some(r => r.action === 'create');
     if (hasContactCreates && !await hasPermission(user, 'contact', 'create', trx)) {
       throw new Error('Permission denied: Cannot create contacts. Change unmatched contacts to "Map to existing" or "Skip".');
     }
@@ -847,6 +852,13 @@ export const importTickets = withAuth(async (
       if (!batchOk) {
         // Fall back to per-ticket savepoints for this batch
         for (const rt of batch) {
+          // A row can create a contact and then fail on the ticket insert; the
+          // savepoint rollback removes the contact row, so the in-memory state
+          // has to be restored too or later rows reuse an id that no longer exists.
+          const rowContactMap = new Map(createdContactMap);
+          const rowEnteredLen = enteredAtUpdates.length;
+          const rowClosedLen = closedUpdates.length;
+
           const created = await safeInsert(
             `Row ${rt.ticket.rowNumber}: Failed to create ticket "${rt.ticket.title}"`,
             () => createSingleTicket(rt)
@@ -856,6 +868,10 @@ export const importTickets = withAuth(async (
             if (created.ticket_number) ticketNumbers.push(created.ticket_number);
           } else {
             ticketsSkipped++;
+            createdContactMap.clear();
+            for (const [k, v] of rowContactMap) createdContactMap.set(k, v);
+            enteredAtUpdates.length = rowEnteredLen;
+            closedUpdates.length = rowClosedLen;
           }
         }
       }
