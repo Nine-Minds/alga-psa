@@ -21,6 +21,9 @@ import {
   newInboundDeliveryOwner,
 } from '@alga-psa/shared/services/email/inboundEmailConsumerDedupe';
 import { isInboundOutboxEvent } from '@alga-psa/shared/services/email/inboundEmailDurableStore';
+import { resolveBoardNotificationRecipients } from '@alga-psa/shared/lib/tickets/boardNotificationRules';
+import { getAllTicketAssignees } from '@alga-psa/shared/lib/tickets/ticketAssignees';
+import { filterRecipientsWhoCanReadTicket } from '../../notifications/boardNotificationAudience';
 
 /** Consumers of the inbound outbox events use this stable ledger consumer id. */
 const INBOUND_OUTBOX_NOTIFICATION_CONSUMER = 'internal-notification';
@@ -99,6 +102,7 @@ async function handleTicketCreated(event: TicketCreatedEvent, opts?: InternalNot
         't.contact_name_id',
         't.client_id',
         'c.client_name',
+        'b.board_name',
         'b.default_assigned_team_id as board_default_team_id'
       );
     scopedDb.tenantJoin(ticketQuery, 'clients as c', 't.client_id', 'c.client_id', { type: 'left' });
@@ -129,7 +133,12 @@ async function handleTicketCreated(event: TicketCreatedEvent, opts?: InternalNot
       clientName: ticket.client_name || 'Unknown'
     };
 
+    // Everyone who gets the standard ticket-created notification; board
+    // notification rule recipients in this set are skipped (no duplicates).
+    const notifiedUserIds = new Set<string>();
+
     const notifyMspUser = async (userId: string) => {
+      notifiedUserIds.add(userId);
       await createNotificationFromTemplateInternal(db, {
         tenant: tenantId,
         user_id: userId,
@@ -157,9 +166,11 @@ async function handleTicketCreated(event: TicketCreatedEvent, opts?: InternalNot
       // languish until someone manually scans the board.
       const teamId = ticket.assigned_team_id || ticket.board_default_team_id;
       if (teamId) {
-        const teamMembers = await tenantScopedTable(db, 'team_members', tenantId)
-          .select('user_id')
-          .where({ team_id: teamId });
+        const teamMembersQuery = tenantScopedTable(db, 'team_members', tenantId);
+        scopedDb.tenantJoin(teamMembersQuery, 'users', 'team_members.user_id', 'users.user_id');
+        const teamMembers = await teamMembersQuery
+          .select('team_members.user_id as user_id')
+          .where({ 'team_members.team_id': teamId, 'users.is_inactive': false });
 
         await Promise.all(
           teamMembers
@@ -178,6 +189,37 @@ async function handleTicketCreated(event: TicketCreatedEvent, opts?: InternalNot
         logger.info('[InternalNotificationSubscriber] Unassigned ticket has no team — no MSP notification dispatched', {
           ticketId,
           boardId: ticket.board_id,
+          tenantId
+        });
+      }
+    }
+
+    // Board notification rules (trigger: created). One-shot queue alert to the
+    // rule's users and teams; never assigns and never touches the watch list.
+    if (ticket.board_id && shouldCreateStaffTicketNotification(resolveTicketNotificationSuppression(payload))) {
+      const ruleRecipients = await resolveBoardNotificationRecipients(
+        db,
+        tenantId,
+        { kind: 'created', boardId: ticket.board_id },
+        { excludeUserIds: [...notifiedUserIds, userId] }
+      );
+      if (ruleRecipients.length > 0) {
+        const visibleRecipients = await filterRecipientsWhoCanReadTicket(db, tenantId, ticketId, ruleRecipients);
+        for (const recipient of visibleRecipients) {
+          await createNotificationFromTemplateInternal(db, {
+            tenant: tenantId,
+            user_id: recipient.userId,
+            template_name: 'ticket-board-created',
+            type: 'info',
+            category: 'tickets',
+            link: internalUrl,
+            data: { ...baseData, boardName: ticket.board_name || '' }
+          });
+        }
+        logger.info('[InternalNotificationSubscriber] Created board notification rule notifications for ticket created', {
+          ticketId,
+          boardId: ticket.board_id,
+          recipientCount: visibleRecipients.length,
           tenantId
         });
       }
@@ -223,40 +265,6 @@ async function handleTicketCreated(event: TicketCreatedEvent, opts?: InternalNot
     });
     if (opts?.propagateErrors) throw error;
   }
-}
-
-/**
- * Get all users assigned to a ticket (primary + additional agents)
- */
-async function getAllTicketAssignees(
-  db: Knex,
-  tenantId: string,
-  ticketId: string
-): Promise<string[]> {
-  // Get primary assignee
-  const ticket = await tenantScopedTable(db, 'tickets', tenantId)
-    .select('assigned_to')
-    .where({ ticket_id: ticketId })
-    .first();
-
-  const assignees: string[] = [];
-  if (ticket?.assigned_to) {
-    assignees.push(ticket.assigned_to);
-  }
-
-  // Get additional agents
-  const additionalAgents = await tenantScopedTable(db, 'ticket_resources', tenantId)
-    .select('additional_user_id')
-    .where({ ticket_id: ticketId })
-    .whereNotNull('additional_user_id');
-
-  for (const agent of additionalAgents) {
-    if (agent.additional_user_id && !assignees.includes(agent.additional_user_id)) {
-      assignees.push(agent.additional_user_id);
-    }
-  }
-
-  return assignees;
 }
 
 /**
@@ -3267,6 +3275,7 @@ export const internalNotificationSubscriberTestHarness = {
   shouldCreateContactPortalTicketNotification,
   shouldCreateStaffTicketNotification,
   shouldCreateTicketCommentNotification,
+  handleTicketCreated,
   handleTicketAssigned,
   handleTicketUpdated,
   handleTicketClosed,

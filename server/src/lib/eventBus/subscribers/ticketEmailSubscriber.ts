@@ -21,6 +21,11 @@ import { getEmailEventChannel } from '@alga-psa/notifications';
 import { tenantDb } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import { getPortalDomain } from 'server/src/models/PortalDomainModel';
+import {
+  resolveBoardNotificationRecipients,
+  type ResolvedRecipient,
+} from '@alga-psa/shared/lib/tickets/boardNotificationRules';
+import { filterRecipientsWhoCanReadTicket } from '../../notifications/boardNotificationAudience';
 import { buildTenantPortalSlug } from '@shared/utils/tenantSlug';
 import { TenantEmailService } from '@alga-psa/email';
 import {
@@ -978,7 +983,33 @@ async function handleTicketCreated(event: TicketCreatedEvent): Promise<void> {
     // reach the internal watchers.
     const hasActiveWatchers = extractActiveWatcherEmails(ticket.attributes).length > 0;
 
-    if (!primaryEmail && !assignedEmail && !hasActiveWatchers) {
+    // Board notification rules (trigger: created): one-shot queue alert to the rule's users and
+    // teams. Never assigns and never touches the watch list. Skipped for the assignee and the
+    // actor, and for active internal watchers (who already get the standard ticket-created email).
+    let boardRuleRecipients: ResolvedRecipient[] = [];
+    if (ticket.board_id && shouldSendInternalTicketEmail(suppression)) {
+      const resolved = await resolveBoardNotificationRecipients(
+        db,
+        tenantId,
+        { kind: 'created', boardId: ticket.board_id },
+        { excludeUserIds: [ticket.assigned_to, creatorUserId] }
+      );
+      if (resolved.length > 0) {
+        const internalWatchers = await resolveInternalWatcherEmails(
+          db,
+          tenantId,
+          extractActiveWatcherEmails(ticket.attributes)
+        );
+        const notWatchers = resolved.filter(
+          (recipient) => !internalWatchers.has(normalizeRecipientEmail(recipient.email))
+        );
+        boardRuleRecipients = notWatchers.length > 0
+          ? await filterRecipientsWhoCanReadTicket(db, tenantId, payload.ticketId, notWatchers)
+          : [];
+      }
+    }
+
+    if (!primaryEmail && !assignedEmail && !hasActiveWatchers && boardRuleRecipients.length === 0) {
       logger.warn('Could not send ticket created email - missing contact, client, assigned user, and watcher emails:', {
         eventId: event.id,
         ticketId: payload.ticketId
@@ -1203,6 +1234,18 @@ async function handleTicketCreated(event: TicketCreatedEvent): Promise<void> {
         context: buildContext(internalUrl),
         replyContext,
       }, 'Ticket Created', ticket.assigned_to);
+    }
+
+    for (const recipient of boardRuleRecipients) {
+      await sendIfUnique({
+        tenantId,
+        ...emailEntityContext,
+        to: recipient.email,
+        subject: `New Ticket on ${boardName} • ${ticket.title} (${priorityName})`,
+        template: 'ticket-board-created',
+        context: buildContext(internalUrl),
+        replyContext,
+      }, 'Board Ticket Created', recipient.userId);
     }
 
     const internalWatcherEmails = await resolveInternalWatcherEmails(db, tenantId, activeWatcherEmails);

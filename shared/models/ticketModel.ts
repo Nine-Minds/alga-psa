@@ -13,6 +13,7 @@ import { z } from 'zod';
 import type { IEventPublisher } from '@alga-psa/types';
 import { applyMatchingChecklistTemplates } from '../lib/ticketChecklists';
 import { SharedNumberingService } from '../services/numberingService';
+import { applyBoardDefaultWatchers } from '../lib/tickets/boardDefaultWatchers';
 
 // LEVERAGE: pattern ticket-origins-duplicate — copy of TICKET_ORIGINS in @alga-psa/types (shared cannot import types); keep both in sync
 const TICKET_ORIGINS = {
@@ -935,10 +936,15 @@ export class TicketModel {
     );
 
     // Prepare attributes object - description goes into attributes.description
-    const attributes = { ...cleanedInput.attributes };
+    const baseAttributes = { ...cleanedInput.attributes };
     if (cleanedInput.description) {
-      attributes.description = cleanedInput.description;
+      baseAttributes.description = cleanedInput.description;
     }
+    // Board default watchers are seeded in the creating transaction so the
+    // watch list exists before TICKET_CREATED is published. Existing entries
+    // (e.g. inbound To/Cc watchers) win over the defaults.
+    const attributes: Record<string, unknown> =
+      (await applyBoardDefaultWatchers(trx, tenant, cleanedInput.board_id, baseAttributes)) ?? {};
 
     // Assemble the insert row through the exhaustive field-handling map so
     // every CreateTicketInput key is either persisted, transformed, or
