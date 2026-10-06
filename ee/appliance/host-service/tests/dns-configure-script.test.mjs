@@ -54,33 +54,79 @@ function createRoot(options = {}) {
   const restartLog = path.join(root, 'restart.log');
   fs.writeFileSync(kubectlLog, '');
   fs.writeFileSync(restartLog, '');
-  fs.writeFileSync(path.join(root, 'bin', 'fakekubectl'), `#!/usr/bin/env bash
-echo "$*" >> "$FAKE_KUBECTL_LOG"
-namespace=""
-previous=""
-for argument in "$@"; do
-  if [ "$previous" = "-n" ]; then namespace="$argument"; fi
-  previous="$argument"
-done
-case "$*" in
-  *"get deploy,statefulset,daemonset -o name"*)
-    if [ -n "$FAKE_LIST_FAIL_NAMESPACE" ] && [ "$namespace" = "$FAKE_LIST_FAIL_NAMESPACE" ]; then
-      echo "Error from server (Forbidden): deployments.apps is forbidden: cannot list resource \"deployments\" in namespace \"$namespace\"" >&2
-      exit 1
-    fi
-    if [ -n "$namespace" ] && [ -f "$FAKE_RESOURCES_DIR/$namespace" ]; then
-      cat "$FAKE_RESOURCES_DIR/$namespace"
-    else
-      echo "Error from server (NotFound): namespaces \"$namespace\" not found" >&2
-      exit 1
-    fi
-    ;;
-  *"get pods -o json"*) echo '{"items":[]}' ;;
-  *"rollout status"*)
-    if [ -f "$FAKE_ROLLOUT_FAIL_MARKER" ]; then echo "rollout did not finish" >&2; exit 1; fi
-    ;;
-esac
-exit 0
+  // A small stateful cluster: every workload runs one pod. A pod is "old"
+  // (created 2000-01-01, before any resolver load) until its workload is
+  // restarted; a slow workload's restart leaves its rollout in progress until
+  // a later `rollout status` finds it no longer slow.
+  const clusterFile = path.join(root, 'cluster.json');
+  const cluster = {};
+  for (const namespace of fs.readdirSync(resourcesDir)) {
+    cluster[namespace] = fs.readFileSync(path.join(resourcesDir, namespace), 'utf8').split('\n').filter(Boolean)
+      .map((ref) => ({ ref, restarted: false, inProgress: false }));
+  }
+  fs.writeFileSync(clusterFile, JSON.stringify(cluster));
+  fs.writeFileSync(path.join(root, 'bin', 'fakekubectl'), `#!/usr/bin/env node
+const fs = require('fs');
+const args = process.argv.slice(2);
+fs.appendFileSync(process.env.FAKE_KUBECTL_LOG, args.join(' ') + '\\n');
+const line = args.join(' ');
+const nsIndex = args.indexOf('-n');
+const namespace = nsIndex >= 0 ? args[nsIndex + 1] : '';
+const state = JSON.parse(fs.readFileSync(process.env.FAKE_CLUSTER_FILE, 'utf8'));
+const save = () => fs.writeFileSync(process.env.FAKE_CLUSTER_FILE, JSON.stringify(state));
+const slow = (name) => fs.existsSync(process.env.FAKE_ROLLOUT_FAIL_MARKER)
+  || (process.env.FAKE_SLOW_WORKLOADS || '').split(',').filter(Boolean).includes(name);
+const KINDS = { deployment: 'Deployment', statefulset: 'StatefulSet', daemonset: 'DaemonSet' };
+const parseRef = (ref) => { const [type, name] = ref.split('/'); return { kind: KINDS[type.split('.')[0]], name }; };
+const find = (ref) => { const { kind, name } = parseRef(ref); return (state[namespace] || []).find((w) => { const p = parseRef(w.ref); return p.kind === kind && p.name === name; }); };
+const fail = (message) => { process.stderr.write(message + '\\n'); process.exit(1); };
+if (line.includes('get --raw=/readyz')) process.exit(0);
+if (line.includes('get deploy,statefulset,daemonset -o json')) {
+  if (process.env.FAKE_LIST_FAIL_NAMESPACE && namespace === process.env.FAKE_LIST_FAIL_NAMESPACE) {
+    fail('Error from server (Forbidden): deployments.apps is forbidden: cannot list resource "deployments" in namespace "' + namespace + '"');
+  }
+  if (!state[namespace]) fail('Error from server (NotFound): namespaces "' + namespace + '" not found');
+  const items = state[namespace].map((w) => {
+    const { kind, name } = parseRef(w.ref);
+    const ready = w.inProgress ? 0 : 1;
+    const status = kind === 'DaemonSet'
+      ? { observedGeneration: 1, desiredNumberScheduled: 1, updatedNumberScheduled: ready, numberAvailable: ready }
+      : { observedGeneration: 1, replicas: 1, updatedReplicas: ready, readyReplicas: ready, availableReplicas: ready };
+    return { kind, metadata: { name, namespace, generation: 1 }, spec: { replicas: 1 }, status };
+  });
+  process.stdout.write(JSON.stringify({ kind: 'List', items }));
+  process.exit(0);
+}
+if (line.includes('get pods -o json')) {
+  const items = (state[namespace] || []).map((w) => {
+    const { kind, name } = parseRef(w.ref);
+    const owner = kind === 'Deployment' ? { kind: 'ReplicaSet', name: name + '-abc' } : { kind, name };
+    return {
+      metadata: { name: name + '-pod', namespace, labels: { 'pod-template-hash': 'abc' }, ownerReferences: [owner],
+        creationTimestamp: w.restarted ? '2099-01-01T00:00:00Z' : '2000-01-01T00:00:00Z' },
+      status: { phase: 'Running' }
+    };
+  });
+  process.stdout.write(JSON.stringify({ items }));
+  process.exit(0);
+}
+const restartIndex = args.indexOf('restart');
+if (args.includes('rollout') && restartIndex >= 0) {
+  const workload = find(args[restartIndex + 1]);
+  if (!workload) fail('not found');
+  if (slow(parseRef(workload.ref).name)) workload.inProgress = true; else workload.restarted = true;
+  save();
+  process.exit(0);
+}
+const statusIndex = args.indexOf('status');
+if (args.includes('rollout') && statusIndex >= 0) {
+  const workload = find(args[statusIndex + 1]);
+  if (!workload) fail('not found');
+  if (slow(parseRef(workload.ref).name)) fail('rollout did not finish');
+  if (workload.inProgress) { workload.inProgress = false; workload.restarted = true; save(); }
+  process.exit(0);
+}
+process.exit(0);
 `, { mode: 0o755 });
   fs.writeFileSync(path.join(root, 'bin', 'fakerestart'), `#!/usr/bin/env bash
 echo restart >> "$FAKE_RESTART_LOG"
@@ -89,7 +135,7 @@ echo $((current + 1)) > "$FAKE_TOKEN_FILE"
 exit 0
 `, { mode: 0o755 });
 
-  return { root, kubectlLog, restartLog, tokenFile, rolloutFailMarker, resourcesDir };
+  return { root, kubectlLog, restartLog, tokenFile, rolloutFailMarker, resourcesDir, clusterFile };
 }
 
 function runHelper(harness, args = [], extraEnv = {}) {
@@ -112,6 +158,7 @@ function runHelper(harness, args = [], extraEnv = {}) {
       FAKE_RESOURCES_DIR: harness.resourcesDir,
       FAKE_ROLLOUT_FAIL_MARKER: harness.rolloutFailMarker,
       FAKE_TOKEN_FILE: harness.tokenFile,
+      FAKE_CLUSTER_FILE: harness.clusterFile,
       ...extraEnv
     }
   });
@@ -412,6 +459,61 @@ test('repeated rollout failures preserve restart evidence and never restart k3s 
   const after = readActivation(harness);
   assert.equal(after.stage, 'active');
   assert.equal(after.restartFrom, '1');
+});
+
+const MSP_WORKLOADS = {
+  ...NAMESPACE_WORKLOADS,
+  msp: 'deployment.apps/alga-core-sebastian\ndeployment.apps/temporal-worker\nstatefulset.apps/db\n'
+};
+
+function kubectlCalls(harness, pattern) {
+  return fs.readFileSync(harness.kubectlLog, 'utf8').split('\n').filter((line) => pattern.test(line));
+}
+
+// Field appliance, 2026-10-05: alga-core and two workers took longer than the
+// rollout timeout, the activation recorded `failed`, and every resume
+// restarted every workload in every namespace again (app down ~20 minutes per
+// round). A resume must only wait for the rollouts still in progress.
+test('a slow rollout is waited for on the next attempt, and nothing that finished is restarted again', () => {
+  const harness = createRoot({ systemdResolv: 'nameserver 192.0.2.53\n', workloads: MSP_WORKLOADS });
+  const slow = runHelper(harness, ['--activate'], { FAKE_SLOW_WORKLOADS: 'alga-core-sebastian' });
+  assert.notEqual(slow.status, 0);
+  assert.match(slow.stderr, /alga-core-sebastian in msp did not complete .* waits for it without restarting it again/);
+  assert.equal(readActivation(harness).stage, 'failed');
+  // One workload at a time, and the slow one did not stop the rest.
+  assert.equal(kubectlCalls(harness, /rollout restart/).length, 8);
+  assert.ok(kubectlCalls(harness, /rollout restart.*appliance-control-plane/).length === 1);
+
+  fs.writeFileSync(harness.kubectlLog, '');
+  const resumed = runHelper(harness, ['--activate']);
+  assert.equal(resumed.status, 0, resumed.stderr || resumed.stdout);
+  assert.match(resumed.stdout, /Waiting for the rollout already in progress for deployment\/alga-core-sebastian in msp/);
+  assert.deepEqual(kubectlCalls(harness, /rollout restart/), [], 'a resume must not restart any workload again');
+  assert.equal(restartCount(harness), 1);
+  assert.equal(readActivation(harness).stage, 'active');
+});
+
+test('a resumed activation recreates only the workloads whose pods predate the resolver', () => {
+  const harness = createRoot({ systemdResolv: 'nameserver 192.0.2.53\n', workloads: MSP_WORKLOADS });
+  assert.equal(runHelper(harness, ['--activate']).status, 0);
+  // A pod of db is recreated from an old template outside the helper (e.g. a
+  // node drain restored an old pod): only db is stale now.
+  const cluster = JSON.parse(fs.readFileSync(harness.clusterFile, 'utf8'));
+  cluster.msp.find((w) => w.ref.endsWith('/db')).restarted = false;
+  fs.writeFileSync(harness.clusterFile, JSON.stringify(cluster));
+  writeActivation(harness, { ...readActivation(harness), stage: 'rolling-out', finishedAt: null });
+
+  const plan = runHelper(harness, ['--rollout-plan']);
+  assert.equal(plan.status, 0, plan.stderr || plan.stdout);
+  assert.match(plan.stdout, /^restart\s+msp\/statefulset\/db$/m);
+  assert.match(plan.stdout, /^current\s+msp\/deployment\/alga-core-sebastian$/m);
+  assert.deepEqual(kubectlCalls(harness, /rollout restart/).length, 8, '--rollout-plan is read-only');
+
+  fs.writeFileSync(harness.kubectlLog, '');
+  const resumed = runHelper(harness, ['--activate']);
+  assert.equal(resumed.status, 0, resumed.stderr || resumed.stdout);
+  assert.deepEqual(kubectlCalls(harness, /rollout restart/).map((line) => line.replace(/.* rollout restart /, '')), ['statefulset/db']);
+  assert.equal(readActivation(harness).stage, 'active');
 });
 
 test('a workload discovery error aborts activation instead of recording active', () => {
