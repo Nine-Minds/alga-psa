@@ -139,6 +139,15 @@ describe("ProjectTaskDetailScreen", () => {
     expect(all).toContain("Cabling");
   });
 
+  it("shows the start date only when the task has one", async () => {
+    expect(texts(await renderScreen())).not.toContain("projectTask.startDateLabel");
+
+    mocks.getProjectTask.mockResolvedValue({ ok: true, data: { data: { ...task, start_date: "2026-10-05" } } });
+    const all = texts(await renderScreen());
+    expect(all).toContain("projectTask.startDateLabel");
+    expect(all.indexOf("projectTask.startDateLabel")).toBeLessThan(all.indexOf("projectTask.dueDateLabel"));
+  });
+
   it("times the task with its own service and opens the log-time form against the task", async () => {
     const renderer = await renderScreen();
     const chip = renderer.root.find((n) => n.type === ("MockTimerChip" as never));

@@ -41511,6 +41511,10 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "type": "number",
           "minimum": 0
         },
+        "start_date": {
+          "type": "string",
+          "format": "date-time"
+        },
         "due_date": {
           "type": "string",
           "format": "date-time"
@@ -41648,6 +41652,10 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "estimated_hours": {
           "type": "number",
           "minimum": 0
+        },
+        "start_date": {
+          "type": "string",
+          "format": "date-time"
         },
         "due_date": {
           "type": "string",

@@ -107,6 +107,7 @@ describe('project task export duration units', () => {
           created_at: new Date('2026-09-22T00:00:00.000Z'),
           updated_at: new Date('2026-09-22T00:00:00.000Z'),
           wbs_code: '1.1',
+          start_date: new Date('2026-10-05T00:00:00.000Z'),
           due_date: null,
           priority_id: null,
           task_type_key: 'task',
@@ -134,5 +135,17 @@ describe('project task export duration units', () => {
 
     expect(values[headers.indexOf('Estimated Hours')]).toBe('16');
     expect(values[headers.indexOf('Actual Hours')]).toBe('1.5');
+  });
+
+  it('writes the task start date next to its due date', async () => {
+    const result = await exportProjectTasksToCSV('project-1', ['phase-1']);
+
+    const [headerLine, dataLine] = (result as { csv: string }).csv.split('\n');
+    const headers = headerLine.split(',');
+    const values = dataLine.split(',');
+
+    expect(headers.indexOf('Start Date')).toBe(headers.indexOf('Due Date') - 1);
+    expect(values[headers.indexOf('Start Date')]).toBe('2026-10-05T00:00:00.000Z');
+    expect(values[headers.indexOf('Due Date')]).toBe('');
   });
 });
