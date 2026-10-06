@@ -185,7 +185,7 @@ test('an administrator authors a billed-time date sort and reopens its persisted
     await page.goto(`/msp/billing?tab=invoicing&subtab=drafts&invoiceId=${invoiceId}`);
     const text = await readInvoiceDownload(page, testInfo, invoice.invoice_number);
     const compact = text.replace(/\s/g, '');
-    for (const value of ['Date', 'Ticket', 'Description', 'Hours', 'Rate', 'Amount', 'Public ticket 0', 'Public ticket 1', 'Mixed rates', '$375.00', '$150.00']) {
+    for (const value of ['Date', 'Ticket', 'Description', 'Hours', 'Rate', 'Amount', 'Public ticket 0', 'Public ticket 1', '(overtime)', '$225.00', '$150.00']) {
       expect(compact).toContain(value.replace(/\s/g, ''));
     }
     expect(compact).toContain(`Total$${(Number(invoice.total_amount) / 100).toFixed(2)}`);
@@ -230,9 +230,9 @@ test('an administrator authors a billed-time date sort and reopens its persisted
               `${invoice.invoice_number}-${history}-${locale}`);
             const localized = pdfText.replace(/\s/g, '');
             const french = locale === 'fr';
-            if (history === 'current') expect(localized).toContain(french ? 'Tarifsvariables' : 'Mixedrates');
             if (history === 'v1' || history === 'fallbacks') expect(localized).toContain(french ? 'Tarifindisponible' : 'Rateunavailable');
-            expect(localized).toContain(french ? '375,00' : '$375.00');
+            // The overtime entry renders as its own $225 segment line.
+            expect(localized).toContain(french ? '225,00' : '$225.00');
             expect(localized).toContain(new Intl.NumberFormat(french ? 'fr-FR' : 'en-US', {
               minimumFractionDigits: 2, maximumFractionDigits: 2,
             }).format(Number(invoice.total_amount) / 100).replace(/\s/g, ''));
@@ -241,9 +241,6 @@ test('an administrator authors a billed-time date sort and reopens its persisted
             } else if (history === 'fallbacks') {
               expect(localized).toContain(french ? 'Autretempsfacturé' : 'Otherbilledtime');
               expect(localized).toContain(french ? 'Tâchedeprojet' : 'Projecttask');
-              // This authored template binds Description to title; legacy
-              // description is preserved in storage, not substituted for it.
-              expect(localized).toContain(french ? 'Tarifsvariables' : 'Mixedrates');
             } else {
               expect(localized).toContain('Publicticket0');
               expect(localized).toContain('Publicticket1');
@@ -285,7 +282,8 @@ test('an administrator authors a billed-time date sort and reopens its persisted
         .where({ tenant: tenant.tenantId, invoice_id: longInvoice.invoice_id }).orderBy('invoice_time_entry_id');
       const longCharges = await database('invoice_charges')
         .where({ tenant: tenant.tenantId, invoice_id: longInvoice.invoice_id }).orderBy('item_id');
-      expect(longLinks).toHaveLength(74);
+      // 73 entries, with the overtime entry linked twice (regular + overtime segment).
+      expect(longLinks).toHaveLength(75);
       expect([...new Set(longCharges.map(charge => Number(charge.tax_rate)))].sort((a, b) => a - b)).toEqual([10, 20]);
       // 36 single-hour entries at 20%; remaining $5,925 of time at 10%.
       expect(Number(longInvoice.subtotal)).toBe(1_132_500);
@@ -301,16 +299,16 @@ test('an administrator authors a billed-time date sort and reopens its persisted
         expect(document.pages.length).toBeGreaterThan(1);
         await testInfo.attach(`long-invoice-pagination-${locale}`, {
           body: JSON.stringify({ pages: document.pages.length, invoiceId: longInvoice.invoice_id,
-            sourceEntries: longLinks.length, expectedDetailRows: 148, subtotal: longInvoice.subtotal,
+            sourceEntries: longLinks.length, expectedDetailRows: 150, subtotal: longInvoice.subtotal,
             tax: longInvoice.tax, total: longInvoice.total_amount }), contentType: 'application/json',
         });
-        expect(document.text.match(countryOrderedDate) ?? []).toHaveLength(148);
+        expect(document.text.match(countryOrderedDate) ?? []).toHaveLength(150);
         for (const pageText of document.pages.filter(text => text.match(countryOrderedDate))) {
           expect(pageText).toContain('Date');
           expect(pageText).toContain('Ticket');
         }
         const compact = document.text.replace(/\s/g, '');
-        expect(compact).toContain(locale === 'fr' ? 'Tarifsvariables' : 'Mixedrates');
+        expect(compact).toContain(locale === 'fr' ? '225,00' : '$225.00');
         expect(compact).toContain(new Intl.NumberFormat(locale === 'fr' ? 'fr-FR' : 'en-US', {
           minimumFractionDigits: 2, maximumFractionDigits: 2,
         }).format(Number(longInvoice.total_amount) / 100).replace(/\s/g, ''));
