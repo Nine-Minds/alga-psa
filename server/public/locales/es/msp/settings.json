@@ -391,6 +391,7 @@
         "emailAlreadyExists": "Ya existe un usuario con esta dirección de correo electrónico",
         "reportsToSelf": "Un usuario no puede reportarse a sí mismo",
         "reportsToCycle": "Esto crearía una cadena de reporte circular",
+        "invalidTimezone": "Elige una zona horaria basada en una ciudad, como America/New_York.",
         "permissionDenied": "No tiene permiso para cambiar los roles de usuario.",
         "invalidCapacity": "La capacidad semanal debe ser un número positivo.",
         "invalidWorkSchedule": "El horario laboral debe ser un intervalo válido que termine después de comenzar."
@@ -3470,6 +3471,7 @@
       "missingField": "Falta un campo obligatorio de la configuración del inquilino.",
       "missingFieldNamed": "Falta un campo obligatorio de la configuración del inquilino: {{field}}.",
       "invalidTimezone": "Zona horaria no válida: {{timezone}}",
+      "nonLocationTimezone": "{{timezone}} no es una zona horaria basada en una ciudad. Elige una zona como America/New_York.",
       "permissions": {
         "clearOnboarding": "Permiso denegado: solo los administradores pueden borrar los datos de incorporación.",
         "update": "Permiso denegado: no se puede actualizar la configuración",

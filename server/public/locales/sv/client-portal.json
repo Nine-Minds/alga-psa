@@ -617,6 +617,7 @@
       "emailAlreadyExists": "Det finns redan en användare med den här e-postadressen",
       "reportsToSelf": "En användare kan inte ha sig själv som chef",
       "reportsToCycle": "Detta skulle skapa en cirkulär chefshierarki",
+      "invalidTimezone": "Välj en tidszon baserad på en stad, till exempel America/New_York.",
       "photoUploaded": "Fotot har laddats upp",
       "photoRemoved": "Fotot har tagits bort",
       "userNotFound": "Användaren hittades inte",

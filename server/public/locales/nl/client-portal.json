@@ -567,7 +567,8 @@
       "avatarDescription": "Deze avatar wordt getoond aan het MSP-team wanneer zij uw contactgegevens bekijken.",
       "emailAlreadyExists": "Er bestaat al een gebruiker met dit e-mailadres",
       "reportsToSelf": "Een gebruiker kan niet aan zichzelf rapporteren",
-      "reportsToCycle": "Dit zou een circulaire rapportagelijn creëren"
+      "reportsToCycle": "Dit zou een circulaire rapportagelijn creëren",
+      "invalidTimezone": "Kies een tijdzone op basis van een stad, zoals America/New_York."
     },
     "imageUpload": {
       "uploadAvatar": "Avatar uploaden",
