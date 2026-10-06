@@ -341,12 +341,21 @@ describe('WorkflowRuntimeV2EventStreamWorker', () => {
     };
 
     it('skips a workflow whose id is already in the event lineage and warns', async () => {
+      workflowRunWaitListEventWaitCandidatesMock.mockResolvedValue([]);
       await fire({ foo: 'bar', workflowLineage: ['workflow-1'] });
 
       expect(launchPublishedWorkflowRunMock).not.toHaveBeenCalled();
       expect(loggerWarnMock).toHaveBeenCalledWith(
         expect.stringContaining('already in the event lineage'),
         expect.objectContaining({ workflowId: 'workflow-1', workflowLineage: ['workflow-1'] })
+      );
+      expect(workflowRuntimeEventUpdateMock).toHaveBeenCalledWith(
+        knexMock,
+        'event-1',
+        expect.objectContaining({
+          error_message: expect.stringContaining('workflow is already in the event lineage (trigger loop guard)'),
+        }),
+        'tenant-1'
       );
     });
 

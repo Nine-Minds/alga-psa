@@ -337,8 +337,11 @@ export class WorkflowRuntimeV2EventStreamWorker {
         break;
       }
 
+      const skipLabel = `workflow ${workflow.key ?? workflow.workflow_id} (${workflow.workflow_id})`;
+
       if (eventLineage.includes(workflow.workflow_id)) {
         skipStats.workflowCycle += 1;
+        skipDiagnostics.push(`Skipped ${skipLabel}: workflow is already in the event lineage (trigger loop guard)`);
         logger.warn('[WorkflowRuntimeV2EventStreamWorker] Workflow is already in the event lineage; skipping launch to avoid a trigger loop', {
           workerId: this.workerId,
           eventId: event.event_id,
@@ -355,7 +358,6 @@ export class WorkflowRuntimeV2EventStreamWorker {
         (typeof latestDefinition?.payloadSchemaRef === 'string' ? latestDefinition.payloadSchemaRef : null) ??
         (typeof (workflow as any)?.payload_schema_ref === 'string' ? String((workflow as any).payload_schema_ref) : null);
 
-      const skipLabel = `workflow ${workflow.key ?? workflow.workflow_id} (${workflow.workflow_id})`;
       if (!workflowPayloadSchemaRef) {
         skipStats.missingSchemaRef += 1;
         skipDiagnostics.push(`Skipped ${skipLabel}: no payload schema reference is set on the workflow`);
