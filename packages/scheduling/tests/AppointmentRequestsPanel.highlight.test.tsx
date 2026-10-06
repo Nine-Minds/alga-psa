@@ -1,7 +1,7 @@
 /* @vitest-environment jsdom */
 
 import React from 'react';
-import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import AppointmentRequestsPanel from '../src/components/schedule/AppointmentRequestsPanel';
@@ -230,5 +230,83 @@ describe('AppointmentRequestsPanel highlightedRequestId (deep link target)', () 
     renderPanel(PENDING_ID);
     expect(await screen.findByText(detailsId(PENDING_ID))).toBeTruthy();
     expect(toastMock.error).not.toHaveBeenCalled();
+  });
+
+  describe('highlight is consumed once', () => {
+    const OTHER_ID = 'cccccccc-3333-4333-8333-333333333333';
+
+    // After the action succeeds, the reload returns the request as no longer pending.
+    function reloadAs(status: 'approved' | 'declined') {
+      getAppointmentRequests.mockResolvedValue({
+        success: true,
+        data: [
+          { ...base, appointment_request_id: PENDING_ID, status },
+          { ...base, appointment_request_id: OTHER_ID, status: 'pending' },
+        ],
+      });
+    }
+
+    async function selectPending() {
+      getAppointmentRequests.mockResolvedValue({
+        success: true,
+        data: [
+          { ...base, appointment_request_id: PENDING_ID, status: 'pending' },
+          { ...base, appointment_request_id: OTHER_ID, status: 'pending' },
+        ],
+      });
+      const view = renderPanel(PENDING_ID);
+      expect(await screen.findByText(detailsId(PENDING_ID))).toBeTruthy();
+      return view;
+    }
+
+    it('approve: selection clears and the stale pending pane is not re-selected', async () => {
+      getAllUsersBasic.mockResolvedValue([{ user_id: 'tech-1', first_name: 'Tech', last_name: 'One' }]);
+      approveAppointmentRequest.mockResolvedValue({ success: true });
+      await selectPending();
+
+      const callsBefore = getAppointmentRequests.mock.calls.length;
+      reloadAs('approved');
+      const approve = await screen.findByRole('button', { name: /^approve$/i });
+      await waitFor(() => expect((approve as HTMLButtonElement).disabled).toBe(false));
+      fireEvent.click(approve);
+
+      await waitFor(() => expect(approveAppointmentRequest).toHaveBeenCalledTimes(1));
+      await waitFor(() => expect(getAppointmentRequests.mock.calls.length).toBeGreaterThan(callsBefore));
+      await waitFor(() => expect(screen.queryByText(detailsId(PENDING_ID))).toBeNull());
+      await new Promise((r) => setTimeout(r, 50));
+
+      expect(screen.queryByText(detailsId(PENDING_ID))).toBeNull();
+      expect(screen.queryByRole('button', { name: /^approve$/i })).toBeNull();
+      expect(approveAppointmentRequest).toHaveBeenCalledTimes(1);
+    });
+
+    it('decline: selection clears and the request is not re-selected', async () => {
+      declineAppointmentRequest.mockResolvedValue({ success: true });
+      await selectPending();
+
+      const callsBefore = getAppointmentRequests.mock.calls.length;
+      reloadAs('declined');
+      fireEvent.click(await screen.findByRole('button', { name: /^decline$/i }));
+      const reason = document.querySelector('textarea') as HTMLTextAreaElement;
+      fireEvent.change(reason, { target: { value: 'No capacity' } });
+      const confirm = (await screen.findAllByRole('button', { name: /decline/i })).pop() as HTMLButtonElement;
+      fireEvent.click(confirm);
+
+      await waitFor(() => expect(declineAppointmentRequest).toHaveBeenCalledTimes(1));
+      await waitFor(() => expect(getAppointmentRequests.mock.calls.length).toBeGreaterThan(callsBefore));
+      await waitFor(() => expect(screen.queryByText(detailsId(PENDING_ID))).toBeNull());
+      await new Promise((r) => setTimeout(r, 50));
+
+      expect(screen.queryByText(detailsId(PENDING_ID))).toBeNull();
+      expect(declineAppointmentRequest).toHaveBeenCalledTimes(1);
+    });
+
+    it('a different highlightedRequestId still auto-selects that request', async () => {
+      const view = await selectPending();
+      view.rerender(
+        <AppointmentRequestsPanel isOpen onClose={() => {}} highlightedRequestId={OTHER_ID} />,
+      );
+      expect(await screen.findByText(detailsId(OTHER_ID))).toBeTruthy();
+    });
   });
 });
