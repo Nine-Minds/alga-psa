@@ -18,12 +18,14 @@
         }
       },
       "toast": {
-        "updated": "A moeda padrão foi atualizada."
+        "updated": "A moeda padrão foi atualizada.",
+        "propagated": "Moeda padrão alterada para {{currency}}. {{updated}} padrões de clientes atualizados; {{preserved}} substituições de clientes preservadas."
       },
       "errors": {
         "load": "Falha ao carregar as configurações",
         "save": "Falha ao salvar as configurações"
-      }
+      },
+      "propagationNote": "Alterar isso atualiza os clientes que ainda usam a moeda padrão anterior. Clientes com uma moeda diferente são preservados, e documentos e modelos existentes não mudam."
     },
     "invoiceNumbering": {
       "title": "Numeração da fatura",

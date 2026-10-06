@@ -18,12 +18,14 @@
         }
       },
       "toast": {
-        "updated": "La devise par défaut a été mise à jour."
+        "updated": "La devise par défaut a été mise à jour.",
+        "propagated": "Devise par défaut remplacée par {{currency}}. {{updated}} devises par défaut de clients mises à jour ; {{preserved}} remplacements de clients conservés."
       },
       "errors": {
         "load": "Échec du chargement des paramètres",
         "save": "Échec de l'enregistrement des paramètres"
-      }
+      },
+      "propagationNote": "La modification met à jour les clients qui utilisent encore la devise par défaut précédente. Les clients utilisant une autre devise sont préservés, et les documents et modèles existants ne changent pas."
     },
     "invoiceNumbering": {
       "title": "Numérotation des factures",

@@ -18,12 +18,14 @@
         }
       },
       "toast": {
-        "updated": "Die Standardwährung wurde aktualisiert."
+        "updated": "Die Standardwährung wurde aktualisiert.",
+        "propagated": "Standardwährung geändert zu {{currency}}. {{updated}} Kundenstandards aktualisiert; {{preserved}} Kundenüberschreibungen beibehalten."
       },
       "errors": {
         "load": "Die Einstellungen konnten nicht geladen werden",
         "save": "Einstellungen konnten nicht gespeichert werden"
-      }
+      },
+      "propagationNote": "Wenn Sie dies ändern, werden Kunden aktualisiert, die noch die vorherige Standardwährung verwenden. Kunden mit einer anderen Währung bleiben unverändert, und bestehende Dokumente und Vorlagen werden nicht geändert."
     },
     "invoiceNumbering": {
       "title": "Rechnungsnummerierung",
