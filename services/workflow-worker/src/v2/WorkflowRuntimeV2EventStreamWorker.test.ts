@@ -332,6 +332,88 @@ describe('WorkflowRuntimeV2EventStreamWorker', () => {
     expect(signalWorkflowRuntimeV2EventMock).not.toHaveBeenCalled();
   });
 
+  describe('workflow self-trigger guard', () => {
+    const baseEvent = {
+      event_id: 'event-1',
+      event_type: 'PING',
+      workflow_correlation_key: 'corr-1',
+      tenant: 'tenant-1',
+      payload: { foo: 'bar' },
+    };
+
+    async function deliver(event: Record<string, unknown>) {
+      workflowRunWaitListEventWaitCandidatesMock.mockResolvedValue([]);
+      const worker = new WorkflowRuntimeV2EventStreamWorker('worker-1');
+      await worker.start();
+      await registeredConsumer?.({ ...baseEvent, ...event });
+      await worker.stop();
+    }
+
+    it('does not launch a workflow from an event published by its own run', async () => {
+      workflowRunGetByIdMock.mockResolvedValue({ run_id: 'run-origin', workflow_id: 'workflow-1', trigger_metadata_json: null });
+
+      await deliver({ execution_id: 'run-origin' });
+
+      expect(workflowRunGetByIdMock).toHaveBeenCalledWith(knexMock, 'run-origin', 'tenant-1');
+      expect(launchPublishedWorkflowRunMock).not.toHaveBeenCalled();
+      expect(loggerWarnMock).toHaveBeenCalledWith(
+        expect.stringContaining('Skipping workflow launch'),
+        expect.objectContaining({ workflowId: 'workflow-1', reason: 'self_trigger' })
+      );
+    });
+
+    it('launches a workflow for another definition and carries causationDepth in trigger metadata', async () => {
+      workflowRunGetByIdMock.mockResolvedValue({
+        run_id: 'run-origin',
+        workflow_id: 'other-workflow',
+        trigger_metadata_json: { causationDepth: 2 },
+      });
+
+      await deliver({ execution_id: 'run-origin' });
+
+      expect(launchPublishedWorkflowRunMock).toHaveBeenCalledTimes(1);
+      expect(launchPublishedWorkflowRunMock).toHaveBeenCalledWith(
+        knexMock,
+        expect.objectContaining({
+          workflowId: 'workflow-1',
+          triggerMetadata: expect.objectContaining({ causationDepth: 3 }),
+        })
+      );
+    });
+
+    it('refuses chains deeper than the causation cap', async () => {
+      workflowRunGetByIdMock.mockResolvedValue({
+        run_id: 'run-origin',
+        workflow_id: 'other-workflow',
+        trigger_metadata_json: { causationDepth: 5 },
+      });
+
+      await deliver({ execution_id: 'run-origin' });
+
+      expect(launchPublishedWorkflowRunMock).not.toHaveBeenCalled();
+      expect(loggerWarnMock).toHaveBeenCalledWith(
+        expect.stringContaining('Skipping workflow launch'),
+        expect.objectContaining({ reason: 'causation_depth_exceeded', causationDepth: 6 })
+      );
+    });
+
+    it('launches normally without an origin run and omits causationDepth', async () => {
+      await deliver({});
+
+      expect(workflowRunGetByIdMock).not.toHaveBeenCalled();
+      const args = launchPublishedWorkflowRunMock.mock.calls[0][1];
+      expect(args.triggerMetadata).not.toHaveProperty('causationDepth');
+    });
+
+    it('launches when the origin run id is unknown', async () => {
+      workflowRunGetByIdMock.mockResolvedValue(null);
+
+      await deliver({ execution_id: 'ghost-run' });
+
+      expect(launchPublishedWorkflowRunMock).toHaveBeenCalledTimes(1);
+    });
+  });
+
   it('derives correlation key from configured payload paths when explicit key is absent', async () => {
     process.env.WORKFLOW_RUNTIME_V2_EVENT_CORRELATION_PATHS_JSON = JSON.stringify({
       PING: ['ticket.id']
