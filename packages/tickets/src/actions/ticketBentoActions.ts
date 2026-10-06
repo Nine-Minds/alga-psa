@@ -5,6 +5,7 @@ import type { Knex } from 'knex';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
+import { workedMinutes } from '@alga-psa/core';
 import { ticketActionErrorFrom, type TicketActionError } from './ticketActionErrors';
 
 function tenantScopedTable(
@@ -47,6 +48,14 @@ type TicketBillingRollupTotals = Omit<TicketBillingRollup, 'contractName'>;
 interface TicketLookupRow {
   ticket_id: string;
   client_id: string | null;
+}
+
+interface TicketTimeEntryDurationRow {
+  entry_id: string;
+  start_time: string | Date | null;
+  end_time: string | Date | null;
+  billable_duration: number | string | null;
+  invoiced: unknown;
 }
 
 function assertInternalUser(user: { user_type?: string }): void {
@@ -132,16 +141,6 @@ function toStringArray(value: unknown): string[] {
 
 function isInvoiced(value: unknown): boolean {
   return value === true || value === 'true' || value === 't';
-}
-
-function workedMinutes(row: Record<string, unknown>): number {
-  if (row.start_time !== null && row.start_time !== undefined && row.end_time !== null && row.end_time !== undefined) {
-    const start = toDate(row.start_time, 'time_entries.start_time');
-    const end = toDate(row.end_time, 'time_entries.end_time');
-    return Math.round((end.getTime() - start.getTime()) / 60000);
-  }
-
-  return normalizeNumberOrZero(row.billable_duration, 'time_entries.billable_duration');
 }
 
 function validateLimit(limit: number | undefined): number {
@@ -313,7 +312,7 @@ export const getTicketBillingRollup = withAuth(
           work_item_id: ticketId,
           work_item_type: 'ticket',
         })
-        .select('entry_id', 'start_time', 'end_time', 'billable_duration', 'invoiced')) as Array<Record<string, unknown>>;
+        .select('entry_id', 'start_time', 'end_time', 'billable_duration', 'invoiced')) as TicketTimeEntryDurationRow[];
 
       const rollup = timeEntryRows.reduce<TicketBillingRollupTotals>(
         (acc, row) => {

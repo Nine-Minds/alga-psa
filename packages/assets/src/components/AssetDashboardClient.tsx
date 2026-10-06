@@ -786,13 +786,13 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
 
   const renderAssetDetails = useCallback((asset: Asset): string => {
     if (asset.workstation) {
-      return `${asset.workstation.os_type} - ${asset.workstation.cpu_model} - ${asset.workstation.ram_gb}GB RAM`;
+      return `${asset.workstation.os_type} - ${asset.workstation.cpu_model} - ${asset.workstation.ram_gb != null ? `${asset.workstation.ram_gb}GB RAM` : t('assetDetailDrawer.typeDetails.notProvided', { defaultValue: 'Not provided' })}`;
     }
     if (asset.network_device) {
       return `${asset.network_device.device_type} - ${asset.network_device.management_ip || t('assetDashboardClient.details.noIp', { defaultValue: 'No IP' })}`;
     }
     if (asset.server) {
-      return `${asset.server.os_type} - ${asset.server.cpu_model} - ${asset.server.ram_gb}GB RAM`;
+      return `${asset.server.os_type} - ${asset.server.cpu_model} - ${asset.server.ram_gb != null ? `${asset.server.ram_gb}GB RAM` : t('assetDetailDrawer.typeDetails.notProvided', { defaultValue: 'Not provided' })}`;
     }
     if (asset.mobile_device) {
       return `${asset.mobile_device.os_type} - ${asset.mobile_device.model}`;

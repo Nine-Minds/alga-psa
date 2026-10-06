@@ -16,6 +16,10 @@ export function registerClientContactRoutes(registry: ApiOpenApiRegistry) {
   const contractTag = 'Client Contract Lines';
 
   const ClientIdParam = registry.registerSchema('ClientIdParam', zOpenApi.object({ id: zOpenApi.string().uuid() }));
+  const ClientLocationIdParams = registry.registerSchema(
+    'ClientLocationIdParams',
+    zOpenApi.object({ id: zOpenApi.string().uuid(), locationId: zOpenApi.string().uuid() }),
+  );
   const ContactIdParam = registry.registerSchema('ContactIdParam', zOpenApi.object({ id: zOpenApi.string().uuid() }));
   const ClientContractLineIdParam = registry.registerSchema(
     'ClientContractLineIdParam',
@@ -87,16 +91,20 @@ export function registerClientContactRoutes(registry: ApiOpenApiRegistry) {
     }),
   );
 
-  const ClientUpdateBody = ClientBody.omit({ email: true, phone_no: true, address: true });
+  const ClientUpdateBody = ClientBody.omit({ email: true, phone_no: true, address: true }).extend({
+    deactivate_contacts: zOpenApi.boolean().optional().describe(
+      'With is_inactive=true: also deactivate the client\'s contacts and their portal users (default true). Requires contact:update when true.',
+    ),
+  });
 
   const ClientLocationBody = registry.registerSchema(
     'ClientLocationBody',
     zOpenApi.object({
       location_name: zOpenApi.string().optional(),
-      address_line1: zOpenApi.string().min(1),
+      address_line1: zOpenApi.string().optional(),
       address_line2: zOpenApi.string().optional(),
       address_line3: zOpenApi.string().optional(),
-      city: zOpenApi.string().min(1),
+      city: zOpenApi.string().optional(),
       state_province: zOpenApi.string().optional(),
       postal_code: zOpenApi.string().optional(),
       country_code: zOpenApi.string().min(2).max(3),
@@ -816,6 +824,48 @@ export function registerClientContactRoutes(registry: ApiOpenApiRegistry) {
   });
 
   registry.registerRoute({
+    method: 'put',
+    path: '/api/v1/clients/{id}/locations/{locationId}',
+    summary: 'Update client location',
+    description: 'Updates one location of client_id. This is where a client\'s phone, email and address are edited; PUT /api/v1/clients/{id} rejects those fields. Promoting is_default demotes the previous default; the last active location cannot lose its default flag.',
+    tags: [clientTag],
+    security: [{ ApiKeyAuth: [] }],
+    request: { params: ClientLocationIdParams, body: { schema: ClientLocationBody.partial().extend({ email: zOpenApi.string().email().nullable().optional().describe('null clears the email') }) } },
+    responses: {
+      200: { description: 'Client location updated.', schema: ClientLocationEnvelope },
+      400: { description: 'Invalid ids or request payload.', schema: ApiError },
+      401: { description: 'API key missing/invalid or key user not found.', schema: ApiError },
+      403: { description: 'Permission denied for client update.', schema: ApiError },
+      404: { description: 'Client or location not found.', schema: ApiError },
+      409: { description: 'Default-location rule violated.', schema: ApiError },
+      500: { description: 'Unexpected client location update failure.', schema: ApiError },
+    },
+    extensions: { 'x-tenant-scoped': true, 'x-rbac-resource': 'client', 'x-rbac-action': 'update' },
+    edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'delete',
+    path: '/api/v1/clients/{id}/locations/{locationId}',
+    summary: 'Delete client location',
+    description: 'Deletes one location of client_id. Refused while tickets or other records still reference it.',
+    tags: [clientTag],
+    security: [{ ApiKeyAuth: [] }],
+    request: { params: ClientLocationIdParams },
+    responses: {
+      204: { description: 'Client location deleted.', emptyBody: true },
+      400: { description: 'Invalid ids.', schema: ApiError },
+      401: { description: 'API key missing/invalid or key user not found.', schema: ApiError },
+      403: { description: 'Permission denied for client update.', schema: ApiError },
+      404: { description: 'Client or location not found.', schema: ApiError },
+      409: { description: 'Location still referenced by other records.', schema: ApiError },
+      500: { description: 'Unexpected client location deletion failure.', schema: ApiError },
+    },
+    extensions: { 'x-tenant-scoped': true, 'x-rbac-resource': 'client', 'x-rbac-action': 'update' },
+    edition: 'both',
+  });
+
+  registry.registerRoute({
     method: 'get',
     path: '/api/v1/contacts',
     summary: 'List contacts',
@@ -888,6 +938,54 @@ export function registerClientContactRoutes(registry: ApiOpenApiRegistry) {
       403: { description: 'Permission denied for contact update.', schema: ApiError },
       404: { description: 'Contact not found.', schema: ApiError },
       500: { description: 'Unexpected contact update failure.', schema: ApiError },
+    },
+    extensions: { 'x-tenant-scoped': true, 'x-rbac-resource': 'contact', 'x-rbac-action': 'update' },
+    edition: 'both',
+  });
+
+  const ContactAvatarResult = registry.registerSchema(
+    'ContactAvatarResult',
+    zOpenApi.object({
+      data: zOpenApi.object({
+        success: zOpenApi.boolean(),
+        message: zOpenApi.string(),
+        avatarUrl: zOpenApi.string().nullable().optional(),
+      }),
+    }),
+  );
+  registry.registerRoute({
+    method: 'post',
+    path: '/api/v1/contacts/{id}/avatar',
+    summary: 'Upload contact avatar',
+    description: 'Replaces the contact\'s avatar from the multipart form field `avatar`. Same storage path as the web contact page.',
+    tags: [contactTag],
+    security: [{ ApiKeyAuth: [] }],
+    request: { params: ContactIdParam, body: { schema: zOpenApi.object({ avatar: zOpenApi.string().describe('Multipart file field name expected by controller: avatar.') }) } },
+    responses: {
+      200: { description: 'Avatar stored.', schema: ContactAvatarResult },
+      400: { description: 'Missing file or invalid id.', schema: ApiError },
+      401: { description: 'API key missing/invalid or key user not found.', schema: ApiError },
+      403: { description: 'Permission denied for contact update.', schema: ApiError },
+      404: { description: 'Contact not found.', schema: ApiError },
+      500: { description: 'Unexpected avatar upload failure.', schema: ApiError },
+    },
+    extensions: { 'x-tenant-scoped': true, 'x-rbac-resource': 'contact', 'x-rbac-action': 'update' },
+    edition: 'both',
+  });
+  registry.registerRoute({
+    method: 'delete',
+    path: '/api/v1/contacts/{id}/avatar',
+    summary: 'Delete contact avatar',
+    description: 'Removes the contact\'s avatar.',
+    tags: [contactTag],
+    security: [{ ApiKeyAuth: [] }],
+    request: { params: ContactIdParam },
+    responses: {
+      200: { description: 'Avatar removed.', schema: ContactAvatarResult },
+      401: { description: 'API key missing/invalid or key user not found.', schema: ApiError },
+      403: { description: 'Permission denied for contact update.', schema: ApiError },
+      404: { description: 'Contact not found.', schema: ApiError },
+      500: { description: 'Unexpected avatar deletion failure.', schema: ApiError },
     },
     extensions: { 'x-tenant-scoped': true, 'x-rbac-resource': 'contact', 'x-rbac-action': 'update' },
     edition: 'both',

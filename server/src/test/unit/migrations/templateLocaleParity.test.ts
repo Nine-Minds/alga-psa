@@ -197,16 +197,14 @@ function emailTemplateDefs() {
   return defs;
 }
 
+// Sourced from the newest per-locale migration, which carries every internal
+// template module. The previous list (the Portuguese migration plus four
+// hand-appended modules) had drifted behind it and left calendar-share-granted
+// and prepaid-replenishment-created outside the parity guard entirely — the
+// first of those then shipped without a Swedish variant unnoticed.
 function internalTemplateDefs() {
-  const { ALL_TEMPLATES } = require(path.join(migrationsDir, '20260625121000_add_portuguese_internal_notification_templates.cjs'));
-  const load = (module: string) => require(path.join(migrationsDir, `utils/templates/internal/${module}.cjs`)).TEMPLATES;
-  return [
-    ...ALL_TEMPLATES,
-    ...load('opportunities'),
-    ...load('rmm'),
-    ...load('inventory'),
-    ...load('prepaidBalanceAlerts'),
-  ];
+  const { ALL_TEMPLATES } = require(path.join(migrationsDir, '20260924071125_add_swedish_internal_notification_templates.cjs'));
+  return [...ALL_TEMPLATES];
 }
 
 /**

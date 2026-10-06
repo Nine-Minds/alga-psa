@@ -500,6 +500,10 @@ const ProjectBillingReviewTab: React.FC<ProjectBillingReviewTabProps> = ({
             {t('projectBilling.empty', {
               defaultValue: 'Nothing is waiting for review. Ready milestones and deposits will appear here.',
             })}
+            {' '}
+            {t('projectBilling.emptyTimeHint', {
+              defaultValue: "Approved time and materials are never queued here — they bill through the normal invoice run or the project's Generate project invoice button.",
+            })}
           </div>
         </Card>
       ) : (

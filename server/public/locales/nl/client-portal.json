@@ -283,6 +283,8 @@
     },
     "captchaRequired": "Voltooi de onderstaande verificatie en meld u daarna opnieuw aan.",
     "tooManyAttempts": "Te veel mislukte aanmeldpogingen. Wacht een paar minuten voordat u het opnieuw probeert.",
+    "tenantRequiredMessage": "Uw e-mailadres is gekoppeld aan meer dan één organisatie — kies uw organisatie om door te gaan.",
+    "tenantRequiredLink": "Kies uw organisatie",
     "tenantDiscovery": {
       "title": "Vind uw organisatie",
       "description": "Voer uw e-mailadres in en wij sturen u aanmeldlinks voor alle organisaties waartoe u toegang heeft.",
@@ -442,7 +444,8 @@
         "consent": "Ik machtig terugkerende afschrijvingen van deze kaart voor definitieve facturen.",
         "enable": "Automatische betaling inschakelen",
         "noCards": "Voeg een kaart toe om automatische betaling in te schakelen.",
-        "changeCard": "Deze kaart gebruiken voor automatische betaling"
+        "changeCard": "Deze kaart gebruiken voor automatische betaling",
+        "updateError": "De automatische betaling kon niet worden bijgewerkt. Probeer het opnieuw."
       },
       "publicCardSetup": {
         "saved": "Kaart opgeslagen",
@@ -565,7 +568,8 @@
       "avatarDescription": "Deze avatar wordt getoond aan het MSP-team wanneer zij uw contactgegevens bekijken.",
       "emailAlreadyExists": "Er bestaat al een gebruiker met dit e-mailadres",
       "reportsToSelf": "Een gebruiker kan niet aan zichzelf rapporteren",
-      "reportsToCycle": "Dit zou een circulaire rapportagelijn creëren"
+      "reportsToCycle": "Dit zou een circulaire rapportagelijn creëren",
+      "invalidTimezone": "Kies een tijdzone op basis van een stad, zoals America/New_York."
     },
     "imageUpload": {
       "uploadAvatar": "Avatar uploaden",
@@ -600,7 +604,8 @@
       "adjustMark": "Beeldmerk aanpassen",
       "cropFromWide": "Uitsnijden uit breed logo",
       "recropSuccess": "Beeldmerk bijgewerkt.",
-      "recropError": "Het beeldmerk kon niet worden bijgewerkt."
+      "recropError": "Het beeldmerk kon niet worden bijgewerkt.",
+      "fileNameLabel": "Opgeslagen bestand"
     },
     "validation": {
       "clientNameRequired": "Bedrijfsnaam is verplicht",

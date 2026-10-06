@@ -6,7 +6,7 @@
  */
 
 import type * as monaco from 'monaco-editor';
-import { builtinFunctions, type FunctionDefinition } from './functionDefinitions';
+import { builtinFunctions, findRuntimeFunction, type FunctionDefinition } from './functionDefinitions';
 import { LANGUAGE_ID } from './jsonataLanguage';
 
 /**
@@ -50,6 +50,13 @@ function findFunctionContext(
         if (functionName.startsWith('$')) {
           return {
             functionName,
+            parameterIndex: commaCount,
+          };
+        }
+        // Runtime functions may be written without the $ prefix (truncate(...)).
+        if (functionName && findRuntimeFunction(`$${functionName}`)) {
+          return {
+            functionName: `$${functionName}`,
             parameterIndex: commaCount,
           };
         }

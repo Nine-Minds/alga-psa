@@ -122,9 +122,11 @@ describe('useListViews', () => {
 
     const { result, onApply } = renderListViews();
 
-    await waitFor(() => expect(onApply).toHaveBeenCalledTimes(1));
+    // onApply fires inside the resolving effect; activeView commits on the next
+    // render, so wait for the settled hook state rather than the callback.
+    await waitFor(() => expect(result.current.activeView?.view_id).toBe(VIEW_A));
+    expect(onApply).toHaveBeenCalledTimes(1);
     expect(onApply).toHaveBeenCalledWith({ status: 'inactive', tags: ['vip'] }, { viewId: VIEW_A });
-    expect(result.current.activeView?.view_id).toBe(VIEW_A);
     expect(new URLSearchParams(window.location.search).get('view')).toBe(VIEW_A);
   });
 

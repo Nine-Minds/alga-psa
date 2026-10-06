@@ -1608,5 +1608,15 @@
       "missingField": "Falta un campo obligatorio del activo.",
       "missingFieldNamed": "Falta un campo obligatorio del activo: {{field}}."
     }
+  },
+  "clientAssetMultiSelect": {
+    "errors": {
+      "load": "No se pudieron cargar los activos"
+    },
+    "placeholder": "Agregar un activo...",
+    "searchPlaceholder": "Buscar activos",
+    "empty": "No hay activos coincidentes para este cliente",
+    "loading": "Cargando...",
+    "remove": "Quitar activo"
   }
 }

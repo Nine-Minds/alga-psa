@@ -159,6 +159,10 @@ const ContractTemplateModel = {
             .whereIn('config_id', configIds)
             .delete();
 
+          await tenantScopedTable(trx, tenant, 'contract_template_line_service_fixed_config')
+            .whereIn('config_id', configIds)
+            .delete();
+
           await tenantScopedTable(trx, tenant, 'contract_template_line_service_hourly_config')
             .whereIn('config_id', configIds)
             .delete();

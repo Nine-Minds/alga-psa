@@ -6,7 +6,7 @@ import { getNodeTypeRegistry } from '../registries/nodeTypeRegistry';
 import { getActionRegistryV2 } from '../registries/actionRegistry';
 import { validateExpressionSource, describeExpressionError } from '../expressionEngine';
 import { WORKFLOW_RUNTIME_ALLOWED_FUNCTIONS } from '../expressionFunctions';
-import { zodToJsonSchema } from 'zod-to-json-schema';
+import { zodToWorkflowJsonSchema } from '../jsonSchemaMetadata';
 import { didYouMean } from './didYouMean';
 import { validateInputMapping, validateInputMappingSchema, collectSecretRefsFromConfig } from './mappingValidator';
 import { getWorkflowEventCorrelationPaths } from '../correlationDefaults';
@@ -308,7 +308,7 @@ function validateNodeStep(
             }
           }
 
-          const actionSchemaJson = zodToJsonSchema(action.inputSchema, { name: `${action.id}@${action.version}.input` }) as Record<string, unknown>;
+          const actionSchemaJson = zodToWorkflowJsonSchema(action.inputSchema, `${action.id}@${action.version}.input`);
           const requiredErrors = validateInputMappingSchema(config.inputMapping, actionSchemaJson, {
             stepPath,
             stepId: step.id,

@@ -53,6 +53,7 @@ export const TICKET_COLUMNS = [
   { key: 'due_date',      dataIndex: 'due_date',         kind: 'optional', defaultVisible: true,  titleKey: 'fields.dueDate',      titleFallback: 'Due Date' },
   { key: 'created',       dataIndex: 'entered_at',       kind: 'optional', defaultVisible: false, titleKey: 'fields.created',      titleFallback: 'Created' },
   { key: 'created_by',    dataIndex: 'entered_by_name',  kind: 'optional', defaultVisible: false, titleKey: 'fields.createdBy',    titleFallback: 'Created By' },
+  { key: 'last_activity', dataIndex: 'latest_activity_at', kind: 'optional', defaultVisible: false, titleKey: 'fields.lastActivity', titleFallback: 'Last Activity' },
   { key: 'tags',          dataIndex: 'tags',             kind: 'tags',     defaultVisible: true,  titleKey: 'fields.tags',         titleFallback: 'Tags' },
 ] as const satisfies readonly TicketColumnSpec[];
 

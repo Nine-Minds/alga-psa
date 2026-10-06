@@ -13,6 +13,8 @@ interface ServiceItem {
   id: string;
   name: string;
   quantity?: number;
+  /** Per-seat service: the quantity is a billable standing count (zero allowed), not an allocation. */
+  recurringUnits?: boolean;
   fromPreset?: {
     presetId: string;
     presetName: string;
@@ -120,6 +122,11 @@ export function TemplateServicePreviewSection({
                     <span className="text-sm font-medium text-[rgb(var(--color-text-900))]">
                       {service.name}
                     </span>
+                    {service.recurringUnits && (
+                      <span className="chip-primary px-2 py-0.5 border border-[rgb(var(--color-primary-200))] rounded text-xs">
+                        {t('templatePreview.labels.recurringUnits', { defaultValue: 'Recurring seats/units' })}
+                      </span>
+                    )}
                     {service.fromPreset && (
                       <div className="chip-primary flex items-center gap-1 px-2 py-0.5 border border-[rgb(var(--color-primary-200))] rounded text-xs">
                         <Sparkles className="h-3 w-3" />
@@ -137,9 +144,16 @@ export function TemplateServicePreviewSection({
                     <Input
                       id={`preview-quantity-${service.id}`}
                       type="number"
-                      min="1"
+                      min={service.recurringUnits ? '0' : '1'}
                       value={service.quantity}
-                      onChange={(e) => onQuantityChange(service.id, Math.max(1, Number(e.target.value) || 1))}
+                      onChange={(e) =>
+                        onQuantityChange(
+                          service.id,
+                          service.recurringUnits
+                            ? Math.max(0, Math.floor(Number(e.target.value) || 0))
+                            : Math.max(1, Number(e.target.value) || 1)
+                        )
+                      }
                       className="w-20 h-8 text-sm"
                     />
                   </div>

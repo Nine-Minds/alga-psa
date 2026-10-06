@@ -332,6 +332,8 @@
     },
     "captchaRequired": "Conclua a verificação abaixo e faça login novamente.",
     "tooManyAttempts": "Muitas tentativas de login malsucedidas. Aguarde alguns minutos antes de tentar novamente.",
+    "tenantRequiredMessage": "Seu e-mail está vinculado a mais de uma organização — escolha sua organização para continuar.",
+    "tenantRequiredLink": "Escolher sua organização",
     "tenantDiscovery": {
       "title": "Encontre sua organização",
       "description": "Digite seu e-mail e enviaremos links de login para todas as organizações às quais você tem acesso.",
@@ -491,7 +493,8 @@
         "consent": "Autorizo cobranças recorrentes neste cartão para faturas finalizadas.",
         "enable": "Ativar o pagamento automático",
         "noCards": "Adicione um cartão para ativar o pagamento automático.",
-        "changeCard": "Usar este cartão para o pagamento automático"
+        "changeCard": "Usar este cartão para o pagamento automático",
+        "updateError": "Não foi possível atualizar o pagamento automático. Tente novamente."
       },
       "publicCardSetup": {
         "saved": "Cartão salvo",
@@ -609,6 +612,7 @@
       "emailAlreadyExists": "Já existe um usuário com este endereço de e-mail",
       "reportsToSelf": "Um usuário não pode reportar a si mesmo",
       "reportsToCycle": "Isto criaria uma cadeia circular de relatórios",
+      "invalidTimezone": "Escolha um fuso horário baseado em uma cidade, como America/New_York.",
       "photoUploaded": "Foto enviada com sucesso",
       "photoRemoved": "Foto removida com sucesso",
       "userNotFound": "Usuário não encontrado",
@@ -649,7 +653,8 @@
       "adjustMark": "Ajustar marca",
       "cropFromWide": "Recortar do logotipo largo",
       "recropSuccess": "Marca atualizada.",
-      "recropError": "Não foi possível atualizar a marca."
+      "recropError": "Não foi possível atualizar a marca.",
+      "fileNameLabel": "Arquivo armazenado"
     },
     "validation": {
       "clientNameRequired": "O nome do cliente é obrigatório",

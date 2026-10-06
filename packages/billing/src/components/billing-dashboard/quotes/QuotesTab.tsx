@@ -11,7 +11,7 @@ import { DataTable } from '@alga-psa/ui/components/DataTable';
 import ClientNameCell from '@alga-psa/ui/components/ClientNameCell';
 import { Button } from '@alga-psa/ui/components/Button';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
-import { buildSenderOptions, DEFAULT_SENDER_SELECTION, senderIdForSend } from '@alga-psa/email/senderSelection';
+import { DEFAULT_SENDER_SELECTION } from '@alga-psa/email/senderSelection';
 import { listSelectableSenders } from '@alga-psa/email/senderActions';
 import {
   DropdownMenu,
@@ -20,9 +20,6 @@ import {
   DropdownMenuTrigger,
 } from '@alga-psa/ui/components/DropdownMenu';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
-import { Dialog, DialogContent, DialogDescription } from '@alga-psa/ui/components/Dialog';
-import { TextArea } from '@alga-psa/ui/components/TextArea';
-import { Input } from '@alga-psa/ui/components/Input';
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { MoreVertical, Edit, Send, Copy, Download, Trash2, RefreshCw, Bell, FileText, XCircle, FilePenLine } from 'lucide-react';
@@ -32,6 +29,7 @@ import { getQuoteDocumentTemplates } from '../../../actions/quoteDocumentTemplat
 import QuoteApprovalDashboard from './QuoteApprovalDashboard';
 import QuoteForm from './QuoteForm';
 import QuotePreviewPanel from './QuotePreviewPanel';
+import { QuoteSendDialog, type QuoteSendDialogPayload } from './QuoteSendDialog';
 import QuoteStatusBadge from './QuoteStatusBadge';
 
 type QuoteSubTab = 'active' | 'sent' | 'closed' | 'approval';
@@ -56,7 +54,7 @@ interface QuoteSubTabContentProps {
   onOpen: () => void;
   onDownload: () => Promise<void>;
   onEdit: (quoteId: string) => void;
-  onSend: (quoteId: string) => void;
+  onSend: (quote: IQuoteListItem) => void;
   onResend: (quoteId: string) => Promise<void>;
   onSendReminder: (quoteId: string) => Promise<void>;
   onRevise: (quoteId: string) => Promise<void>;
@@ -164,7 +162,7 @@ const QuoteSubTabContent: React.FC<QuoteSubTabContentProps> = ({
                 </DropdownMenuItem>
                 {['draft', 'approved'].includes(status) && (
                   <DropdownMenuItem
-                    onClick={() => onSend(record.quote_id)}
+                    onClick={() => onSend(record)}
                     className="flex items-center gap-2"
                     id={`send-quote-${record.quote_id}-menu-item`}
                   >
@@ -308,10 +306,8 @@ const QuotesTab: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [deleteDialogState, setDeleteDialogState] = useState<{ isOpen: boolean; quoteId: string | null }>({ isOpen: false, quoteId: null });
   const [isDeleting, setIsDeleting] = useState(false);
-  const [sendDialogState, setSendDialogState] = useState<{ isOpen: boolean; quoteId: string | null }>({ isOpen: false, quoteId: null });
+  const [sendDialogState, setSendDialogState] = useState<{ isOpen: boolean; quoteId: string | null; clientId: string | null }>({ isOpen: false, quoteId: null, clientId: null });
   const [isSending, setIsSending] = useState(false);
-  const [sendAdditionalEmails, setSendAdditionalEmails] = useState('');
-  const [sendMessage, setSendMessage] = useState('');
   const [quoteSenders, setQuoteSenders] = useState<Array<{ sender_id: string; email_address: string }>>([]);
   const [quoteEffectiveSenderAddress, setQuoteEffectiveSenderAddress] = useState('');
   const [quoteSenderId, setQuoteSenderId] = useState(DEFAULT_SENDER_SELECTION);
@@ -429,31 +425,20 @@ const QuotesTab: React.FC = () => {
     await triggerPdfDownload(selectedQuoteId);
   };
 
-  const handleConfirmSendQuote = async () => {
+  const handleConfirmSendQuote = async (payload: QuoteSendDialogPayload) => {
     const quoteId = sendDialogState.quoteId;
     if (!quoteId) return;
-
-    const parsedEmails = sendAdditionalEmails
-      .split(',')
-      .map((e) => e.trim())
-      .filter((e) => e.length > 0);
 
     setIsSending(true);
     setError(null);
     try {
-      const result = await sendQuote(quoteId, {
-        email_addresses: parsedEmails.length > 0 ? parsedEmails : undefined,
-        message: sendMessage.trim() || undefined,
-        senderId: senderIdForSend(quoteSenderId),
-      });
+      const result = await sendQuote(quoteId, payload);
       if (isReturnedActionError(result)) {
         setError(getErrorMessage(result));
       } else {
         void loadData();
       }
-      setSendDialogState({ isOpen: false, quoteId: null });
-      setSendAdditionalEmails('');
-      setSendMessage('');
+      setSendDialogState({ isOpen: false, quoteId: null, clientId: null });
     } catch (err) {
       console.error('Failed to send quote:', err);
       setError(
@@ -665,7 +650,7 @@ const QuotesTab: React.FC = () => {
                   onOpen={handleOpenQuote}
                   onDownload={handleDownloadPdf}
                   onEdit={(id) => router.push(`/msp/billing?tab=quotes&quoteId=${id}&mode=edit`)}
-                  onSend={(id) => setSendDialogState({ isOpen: true, quoteId: id })}
+                  onSend={(quote) => setSendDialogState({ isOpen: true, quoteId: quote.quote_id, clientId: quote.client_id ?? null })}
                   onResend={handleResendQuote}
                   onSendReminder={handleSendReminder}
                   onRevise={handleReviseQuote}
@@ -688,7 +673,7 @@ const QuotesTab: React.FC = () => {
                   onOpen={handleOpenQuote}
                   onDownload={handleDownloadPdf}
                   onEdit={(id) => router.push(`/msp/billing?tab=quotes&quoteId=${id}&mode=edit`)}
-                  onSend={(id) => setSendDialogState({ isOpen: true, quoteId: id })}
+                  onSend={(quote) => setSendDialogState({ isOpen: true, quoteId: quote.quote_id, clientId: quote.client_id ?? null })}
                   onResend={handleResendQuote}
                   onSendReminder={handleSendReminder}
                   onRevise={handleReviseQuote}
@@ -711,7 +696,7 @@ const QuotesTab: React.FC = () => {
                   onOpen={handleOpenQuote}
                   onDownload={handleDownloadPdf}
                   onEdit={(id) => router.push(`/msp/billing?tab=quotes&quoteId=${id}&mode=edit`)}
-                  onSend={(id) => setSendDialogState({ isOpen: true, quoteId: id })}
+                  onSend={(quote) => setSendDialogState({ isOpen: true, quoteId: quote.quote_id, clientId: quote.client_id ?? null })}
                   onResend={handleResendQuote}
                   onSendReminder={handleSendReminder}
                   onRevise={handleReviseQuote}
@@ -745,69 +730,18 @@ const QuotesTab: React.FC = () => {
         isConfirming={isDeleting}
       />
 
-      <Dialog
-        id="send-quote-dialog"
+      <QuoteSendDialog
+        idPrefix="send-quote"
         isOpen={sendDialogState.isOpen}
-        onClose={() => { setSendDialogState({ isOpen: false, quoteId: null }); setSendAdditionalEmails(''); setSendMessage(''); }}
-        title={t('quotesTab.dialogs.send.title', { defaultValue: 'Send Quote' })}
-        footer={(
-          <div className="flex justify-end space-x-2">
-            <Button id="send-quote-cancel" variant="outline" onClick={() => { setSendDialogState({ isOpen: false, quoteId: null }); setSendAdditionalEmails(''); setSendMessage(''); }} disabled={isSending}>{t('common.actions.cancel', { defaultValue: 'Cancel' })}</Button>
-            <Button id="send-quote-confirm" onClick={() => void handleConfirmSendQuote()} disabled={isSending}>
-              {isSending
-                ? t('common.states.sending', { defaultValue: 'Sending...' })
-                : t('quoteForm.actions.sendQuote', { defaultValue: 'Send Quote' })}
-            </Button>
-          </div>
-        )}
-      >
-        <DialogContent>
-          <DialogDescription>
-            {t('quotesTab.dialogs.send.description', {
-              defaultValue:
-                'This will email the quote PDF to the client\'s billing contacts and change its status to "Sent".',
-            })}
-          </DialogDescription>
-          <div className="space-y-3 py-2">
-            {quoteSenders.length > 1 && (
-              <div className="space-y-1">
-                <label htmlFor="send-quote-sender" className="text-sm font-medium">{t('quotesTab.dialogs.send.from', { defaultValue: 'From' })}</label>
-                <CustomSelect
-                  id="send-quote-sender"
-                  value={quoteSenderId}
-                  onValueChange={setQuoteSenderId}
-                  options={buildSenderOptions(quoteSenders, quoteEffectiveSenderAddress, t('quoteForm.dialogs.send.useDefault', { defaultValue: 'Use default' }))}
-                />
-              </div>
-            )}
-            <label className="flex flex-col gap-1 text-sm font-medium">
-              {t('quotesTab.dialogs.send.additionalRecipients', {
-                defaultValue: 'Additional recipients (comma-separated)',
-              })}
-              <Input
-                id="send-quote-additional-emails"
-                value={sendAdditionalEmails}
-                onChange={(event) => setSendAdditionalEmails(event.target.value)}
-                placeholder={t('quoteForm.placeholders.additionalEmails', {
-                  defaultValue: 'email@example.com, another@example.com',
-                })}
-              />
-            </label>
-            <label className="flex flex-col gap-1 text-sm font-medium">
-              {t('quotesTab.dialogs.send.messageOptional', { defaultValue: 'Message (optional)' })}
-              <TextArea
-                id="send-quote-message"
-                value={sendMessage}
-                onChange={(event) => setSendMessage(event.target.value)}
-                rows={3}
-                placeholder={t('quotesTab.dialogs.send.messagePlaceholder', {
-                  defaultValue: 'Add a personal note for the recipient...',
-                })}
-              />
-            </label>
-          </div>
-        </DialogContent>
-      </Dialog>
+        clientId={sendDialogState.clientId}
+        isSending={isSending}
+        senders={quoteSenders}
+        effectiveSenderAddress={quoteEffectiveSenderAddress}
+        senderId={quoteSenderId}
+        onSenderChange={setQuoteSenderId}
+        onClose={() => setSendDialogState({ isOpen: false, quoteId: null, clientId: null })}
+        onConfirm={(payload) => void handleConfirmSendQuote(payload)}
+      />
     </div>
   );
 };

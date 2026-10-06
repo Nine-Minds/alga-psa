@@ -142,6 +142,7 @@ export const getClientProjectTasks = withAuth(async (
   const selectColumns: string[] = ['pt.task_id', 'pt.phase_id', 'pt.project_status_mapping_id'];
   if (visibleFields.includes('task_name')) selectColumns.push('pt.task_name');
   if (visibleFields.includes('description')) selectColumns.push('pt.description');
+  if (visibleFields.includes('start_date')) selectColumns.push('pt.start_date');
   if (visibleFields.includes('due_date')) selectColumns.push('pt.due_date');
   if (visibleFields.includes('estimated_hours')) selectColumns.push('pt.estimated_hours');
   if (visibleFields.includes('actual_hours')) selectColumns.push('pt.actual_hours');

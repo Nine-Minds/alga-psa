@@ -338,6 +338,8 @@
     },
     "captchaRequired": "Please complete the verification below, then sign in again.",
     "tooManyAttempts": "Too many failed sign-in attempts. Please wait a few minutes before trying again.",
+    "tenantRequiredMessage": "Your email is linked to more than one organization — choose your organization to continue.",
+    "tenantRequiredLink": "Choose your organization",
     "tenantDiscovery": {
       "title": "Find Your Organization",
       "description": "Enter your email address and we'll send you login links for all organizations you have access to.",
@@ -476,7 +478,8 @@
         "consent": "I authorize recurring charges to this card for finalized invoices.",
         "enable": "Enable auto-pay",
         "noCards": "Add a card to enable auto-pay.",
-        "changeCard": "Use this card for auto-pay"
+        "changeCard": "Use this card for auto-pay",
+        "updateError": "Could not update auto-pay. Please try again."
       },
       "publicCardSetup": {
         "saved": "Card saved",
@@ -615,6 +618,7 @@
       "emailAlreadyExists": "A user with this email address already exists",
       "reportsToSelf": "A user cannot report to themselves",
       "reportsToCycle": "This would create a circular reporting chain",
+      "invalidTimezone": "Choose a city-based time zone, such as America/New_York.",
       "photoUploaded": "Photo uploaded successfully",
       "photoRemoved": "Photo removed successfully",
       "userNotFound": "User not found",
@@ -655,7 +659,8 @@
       "adjustMark": "Adjust mark",
       "cropFromWide": "Crop from wide logo",
       "recropSuccess": "Mark updated.",
-      "recropError": "Failed to update the mark."
+      "recropError": "Failed to update the mark.",
+      "fileNameLabel": "Stored file"
     },
     "validation": {
       "clientNameRequired": "Client name is required",

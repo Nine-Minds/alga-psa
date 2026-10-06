@@ -77,17 +77,21 @@ test('an administrator authors a billed-time date sort and reopens its persisted
   await page.locator('#designer-palette-add-totals').click();
   await page.getByRole('button', { name: 'PRESETS', exact: true }).click();
   await page.locator('#designer-palette-add-preset-billed-time-by-ticket').click();
-  await page.getByRole('button', { name: 'OUTLINE', exact: true }).click();
-  await page.getByText('Entries in this ticket group', { exact: true }).and(page.locator('span')).click();
+  // The outline stays open under the palette while blocks are added.
+  await expect(page.locator('#designer-outline-toggle')).toHaveAttribute('aria-expanded', 'true');
+  await page.getByRole('tree', { name: 'Outline' }).getByText('Entries in this ticket group', { exact: true }).click();
   await expect(page.locator('#designer-table-source-binding')).toContainText('group.entries');
   await page.locator('#designer-add-column-preset-entry-title').click();
   await page.locator('#save-template-button').click();
-  await expect(page).not.toHaveURL(/templateId=/);
+  // Saving keeps the author in the editor; the URL takes the new layout's id so a
+  // reload reopens it instead of a blank layout.
+  await expect(page).toHaveURL(/templateId=[0-9a-f-]{36}/);
 
   // The operation under test saves through the application; SQL only verifies
   // its durable result. No template or completed layout is seeded by this test.
   const saved = await database('invoice_templates').where({ tenant: tenant.tenantId, name }).first();
   expect(saved).toBeTruthy();
+  expect(new URL(page.url()).searchParams.get('templateId')).toBe(saved.template_id);
   expect(saved.templateAst.transforms).toMatchObject({
     sourceBindingId: 'timeEntries', outputBindingId: outputBinding,
     operations: [{ type: 'sort', keys: [{ path: 'date', direction: 'desc' }] }],
@@ -102,7 +106,10 @@ test('an administrator authors a billed-time date sort and reopens its persisted
   expect(saved.templateAst.bindings.collections[nestedTable.repeat.sourceBinding.bindingId].path).toBe('group.entries');
   expect(nestedTable.columns).toHaveLength(6);
   const primaryTable = tables.find(table => table.id !== detailTable.id && table.id !== nestedTable.id);
-  expect(primaryTable.repeat.sourceBinding.bindingId).toContain('items');
+  // The charges table binds under the document catalog's canonical id, the same
+  // one shipped templates use, and that binding still reads the invoice items.
+  expect(primaryTable.repeat.sourceBinding.bindingId).toBe('lineItems');
+  expect(saved.templateAst.bindings.collections.lineItems).toEqual({ id: 'lineItems', kind: 'collection', path: 'items' });
   expect(detailTable.columns.map((column: any) => column.value)).toEqual([
     'date', 'ticketNumber', 'title', 'hours', 'rateDisplay', 'amount',
   ].map(path => expect.objectContaining({ type: 'path', path })));
@@ -125,7 +132,15 @@ test('an administrator authors a billed-time date sort and reopens its persisted
   await page.locator('[data-automation-id="invoice-designer-design-tab"]').click();
   await page.locator(`[data-automation-id="designer-canvas-node-${detailTable.id}"]`).click();
   await expect(page.locator('#designer-table-source-binding')).toContainText(outputBinding);
-  await expect(page.locator('input[id^="column-header-"]')).toHaveCount(6);
+  // Each column reopens as a one-line summary; its editor opens on demand and
+  // carries the persisted header.
+  const columnToggles = page.locator('button[id^="designer-column-toggle-"]');
+  await expect(columnToggles).toHaveCount(6);
+  const [firstColumn] = detailTable.columns;
+  await page.locator(`#designer-column-toggle-${firstColumn.id}`).click();
+  await expect(page.locator(`#designer-column-toggle-${firstColumn.id}`)).toHaveAttribute('aria-expanded', 'true');
+  await expect(page.locator(`#column-header-${firstColumn.id}`))
+    .toHaveValue(typeof firstColumn.header === 'string' ? firstColumn.header : firstColumn.header.defaultValue);
   expect((await database('invoice_templates').where({ tenant: tenant.tenantId, template_id: saved.template_id }).first()).templateAst)
     .toEqual(persistedAst);
 

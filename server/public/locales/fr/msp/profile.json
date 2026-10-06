@@ -52,6 +52,7 @@
         "fillRequiredFields": "Veuillez remplir tous les champs obligatoires",
         "loadFailed": "Échec du chargement du profil",
         "saveFailed": "Échec de l'enregistrement du profil",
+        "invalidTimezone": "Choisissez un fuseau horaire basé sur une ville, comme America/New_York.",
         "errorPrefix": "Erreur : {{error}}"
       }
     },

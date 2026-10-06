@@ -4,7 +4,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 Object.assign(globalThis, { React });
 
-const { getClientMock, getClientContactsMock, getClientLocationsMock, placeCallMock, translate, authValue } = vi.hoisted(() => ({
+const { getClientMock, getClientContactsMock, getClientLocationsMock, placeCallMock, translate, authValue, capabilities } = vi.hoisted(() => ({
+  capabilities: { features: { clientsCreate: false, clientsUpdate: false, contactsCreate: false, contactsUpdate: false }, defaultCountry: "US", loaded: true },
   getClientMock: vi.fn(),
   getClientContactsMock: vi.fn(),
   getClientLocationsMock: vi.fn(),
@@ -34,6 +35,13 @@ vi.mock("../api/clients", () => ({
 }));
 vi.mock("../api/contacts", () => ({ buildContactAvatarUri: () => null, getContactReachLine: () => null }));
 vi.mock("../device/clientMetadata", () => ({ getClientMetadataHeaders: async () => ({}) }));
+vi.mock("../capabilities/CapabilitiesContext", () => ({ useCapabilities: () => capabilities }));
+vi.mock("../features/clients/components/ClientFormModal", () => ({
+  ClientFormModal: (props: Record<string, unknown>) => React.createElement("MockClientFormModal", props),
+}));
+vi.mock("../features/contacts/components/ContactFormModal", () => ({
+  ContactFormModal: (props: Record<string, unknown>) => React.createElement("MockContactFormModal", props),
+}));
 vi.mock("../ui/components/Avatar", () => ({ Avatar: () => null }));
 vi.mock("../features/clients/components/AccountManagerPickerModal", () => ({ AccountManagerPickerModal: () => null }));
 vi.mock("../features/clients/components/ClientNotesSection", () => ({ ClientNotesSection: () => null }));
@@ -51,7 +59,7 @@ async function renderScreen(): Promise<ReactTestRenderer> {
     renderer = create(
       React.createElement(ClientDetailScreen, {
         route: { params: { clientId: "client-1", clientName: "Acme" } } as never,
-        navigation: { navigate: vi.fn(), setParams: vi.fn(), dispatch: vi.fn() } as never,
+        navigation: { navigate: vi.fn(), setParams: vi.fn(), dispatch: vi.fn(), setOptions: vi.fn() } as never,
       }),
     );
   });
@@ -134,5 +142,63 @@ describe("ClientDetailScreen maps", () => {
     act(() => link.props.onPress());
 
     expect(openUrl.mock.calls[0][0]).toMatch(/^(maps|geo):0,0\?q=9%20Dock%20Rd%2C%20Springfield%2C%20IL%2C%2062701%2C%20United%20States$/);
+  });
+});
+
+describe("ClientDetailScreen editing", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    capabilities.features = { clientsCreate: false, clientsUpdate: false, contactsCreate: false, contactsUpdate: false };
+    getClientMock.mockResolvedValue({ ok: true, data: { data: { client_id: "client-1", client_name: "Acme", phone_no: null, email: null, url: null } } });
+    getClientLocationsMock.mockResolvedValue({ ok: true, data: { data: [] } });
+    getClientContactsMock.mockResolvedValue({ ok: true, data: { data: [], pagination: { total: 0 } } });
+  });
+
+  it("hides the edit and add-contact actions without write permission", async () => {
+    const renderer = await renderScreen();
+    expect(renderer.root.findAll((n) => n.props?.testID === "client-detail-add-contact")).toHaveLength(0);
+    const editModal = renderer.root.findByType("MockClientFormModal" as never);
+    expect(editModal.props.visible).toBe(false);
+  });
+
+  it("offers add-contact and opens the contact form locked to this client", async () => {
+    capabilities.features = { ...capabilities.features, contactsCreate: true };
+    const renderer = await renderScreen();
+
+    const add = renderer.root.find((n) => n.props?.testID === "client-detail-add-contact");
+    act(() => add.props.onPress());
+
+    const modal = renderer.root.findByType("MockContactFormModal" as never);
+    expect(modal.props.visible).toBe(true);
+    expect(modal.props.presetClient).toEqual({ id: "client-1", name: "Acme" });
+    expect(modal.props.lockClient).toBe(true);
+  });
+
+  it("opens the edit form from the header when the user may update clients", async () => {
+    capabilities.features = { ...capabilities.features, clientsUpdate: true };
+    const renderer = await renderScreen();
+    const setOptions = (renderer.root.findByType(ClientDetailScreen).props.navigation as { setOptions: ReturnType<typeof vi.fn> }).setOptions;
+    const headerRight = setOptions.mock.calls.at(-1)?.[0]?.headerRight;
+    expect(typeof headerRight).toBe("function");
+
+    let header!: ReactTestRenderer;
+    act(() => { header = create(headerRight()); });
+    act(() => header.root.find((n) => n.props?.testID === "client-detail-edit").props.onPress());
+
+    const modal = renderer.root.findByType("MockClientFormModal" as never);
+    expect(modal.props.visible).toBe(true);
+    expect(modal.props.mode).toBe("edit");
+    expect(modal.props.initial.detail.client_name).toBe("Acme");
+  });
+
+  it("only offers the account manager change to users who may update clients", async () => {
+    const withoutRights = await renderScreen();
+    // A read-only row renders without a pressable wrapper.
+    expect(withoutRights.root.findAll((n) => typeof n.props?.accessibilityLabel === "string" && n.props.accessibilityLabel.startsWith("detail.accountManager"))).toHaveLength(0);
+
+    capabilities.features = { ...capabilities.features, clientsUpdate: true };
+    const withRights = await renderScreen();
+    const editable = withRights.root.find((n) => typeof n.props?.accessibilityLabel === "string" && n.props.accessibilityLabel.startsWith("detail.accountManager") && n.props.accessibilityRole === "button");
+    expect(typeof editable.props.onPress).toBe("function");
   });
 });

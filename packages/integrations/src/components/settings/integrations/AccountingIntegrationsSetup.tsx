@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Badge } from '@alga-psa/ui/components/Badge';
+import { FeatureUpgradeNotice } from '@alga-psa/ui/components/tier-gating/FeatureUpgradeNotice';
 import CSVIntegrationSettings from './CSVIntegrationSettings';
 import QboIntegrationSettings from './QboIntegrationSettings';
 import XeroIntegrationSettings from './XeroIntegrationSettings';
@@ -63,12 +64,13 @@ function IntegrationMark({ option }: { option: AccountingIntegrationOption }) {
 }
 
 interface AccountingIntegrationsSetupProps {
+  canUseLiveIntegrations?: boolean;
   qboSyncHealthSlot?: React.ReactNode;
   xeroSyncHealthSlot?: React.ReactNode;
   qboOnboardingSlot?: React.ReactNode;
 }
 
-export default function AccountingIntegrationsSetup({ qboSyncHealthSlot, xeroSyncHealthSlot, qboOnboardingSlot }: AccountingIntegrationsSetupProps = {}) {
+export default function AccountingIntegrationsSetup({ canUseLiveIntegrations = true, qboSyncHealthSlot, xeroSyncHealthSlot, qboOnboardingSlot }: AccountingIntegrationsSetupProps = {}) {
   const { t } = useTranslation('msp/integrations');
   const caps = useAccountingCapabilities();
   const searchParams = useSearchParams();
@@ -319,7 +321,9 @@ export default function AccountingIntegrationsSetup({ qboSyncHealthSlot, xeroSyn
           </h3>
         </div> : null}
 
-        {selected === 'quickbooks_csv' ? (
+        {!canUseLiveIntegrations && (selected === 'quickbooks_online' || selected === 'xero') ? (
+          <FeatureUpgradeNotice featureName={selected === 'xero' ? 'Xero' : 'QuickBooks Online'} requiredTier="pro" />
+        ) : selected === 'quickbooks_csv' ? (
           <CSVIntegrationSettings />
         ) : selected === 'quickbooks_online' ? (
           <QboIntegrationSettings syncHealthSlot={qboSyncHealthSlot} onboardingSlot={qboOnboardingSlot} />

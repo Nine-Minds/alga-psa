@@ -588,6 +588,9 @@ export async function recalculatePercentageDiscountInvoiceCharges(
   const percentageDiscountItems = invoiceItems.filter(
     (item) =>
       item.is_discount === true &&
+      // Source-linked automatic discounts were already resolved once by the
+      // shared evaluator; this legacy recalculator owns manual rows only.
+      (item as ManualInvoiceItem & { adjustment_source_kind?: string }).adjustment_source_kind !== 'discount' &&
       item.discount_type === 'percentage' &&
       item.discount_percentage != null,
   );
@@ -1335,6 +1338,9 @@ async function persistFixedInvoiceCharges(
         service_period_start: detail.servicePeriodStart ?? null,
         service_period_end: detail.servicePeriodEnd ?? null,
         billing_timing: detail.billingTiming ?? null,
+        effective_pricing: detail.recurringPricingSource
+          ? JSON.stringify(detail.recurringPricingSource)
+          : null,
         created_at: now,
         updated_at: now,
         tenant
@@ -1569,6 +1575,9 @@ export async function persistInvoiceCharges(
         service_period_start: charge.servicePeriodStart ?? null,
         service_period_end: charge.servicePeriodEnd ?? null,
         billing_timing: charge.billingTiming ?? null,
+        effective_pricing: charge.recurringPricingSource
+          ? JSON.stringify(charge.recurringPricingSource)
+          : null,
         created_at: now,
         updated_at: now,
         tenant
@@ -1614,7 +1623,6 @@ export async function persistInvoiceCharges(
 
   return fixedSubtotal + otherSubtotal; // Return total subtotal
 }
-
 
 export async function calculateAndDistributeTax(
   tx: Knex.Transaction,

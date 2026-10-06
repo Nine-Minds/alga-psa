@@ -259,6 +259,12 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   // Import/export
   'import_sources',
 
+  // Recurring tickets. Client asset links FK to definition clients and assets;
+  // definition clients FK to definitions and clients; occurrences FK to
+  // definitions only. All four go before assets and clients.
+  'recurring_ticket_client_assets', 'recurring_ticket_occurrences',
+  'recurring_ticket_definition_clients', 'recurring_ticket_definitions',
+
   // Asset details
   'asset_remote_access_links',
   'asset_maintenance_occurrences',
@@ -324,8 +330,10 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   // outlive whatever made a usage row unmappable), so it can drop anywhere.
   // Usage semantics stores are FK-less leaves (they reference contract lines,
   // clients, and configs by id only), as are the seat-pricing revision store
-  // and the per-tenant billing-semantics lock row.
+  // and the per-tenant billing-semantics lock row. The seat-pricing revision
+  // history and the mid-period true-up ledger are FK-less leaves too.
   'usage_period_total_requests', 'usage_period_totals', 'usage_measurement_revisions',
+  'contract_line_unit_pricing_revision_history', 'contract_recurring_unit_adjustments',
   'contract_line_unit_pricing_revisions', 'billing_semantics_locks',
   'usage_tracking', 'bucket_usage', 'bucket_usage_unmappable_archive', 'recurring_service_periods', 'transactions',
   'accounting_export_errors', 'accounting_export_lines', 'accounting_export_batches',
@@ -350,6 +358,7 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   'contract_template_line_defaults',
   'contract_template_line_bucket_services', 'contract_template_line_buckets',
   'contract_template_line_fixed_config', 'contract_template_line_service_bucket_config',
+  'contract_template_line_service_fixed_config',
   'contract_template_line_service_hourly_config',
   'contract_template_line_service_usage_config',
   'contract_template_line_service_configuration',
@@ -1074,8 +1083,35 @@ export async function removeClientCanceledTag(tenantId: string): Promise<void> {
 }
 
 /**
- * Deactivate the client and its contacts in the management tenant.
- * This is called when a tenant is marked for deletion to disable their
+ * Flip is_inactive on the client-portal users linked to a management-tenant
+ * client's contacts. Contact ids are selected first (Citus: no subquery UPDATE).
+ */
+async function setMasterClientPortalUsersInactive(
+  knex: Knex,
+  managementTenantId: string,
+  clientId: string,
+  inactive: boolean
+): Promise<number> {
+  const managementDb = tenantDb(knex, managementTenantId);
+
+  const contacts = await managementDb.table('contacts')
+    .where({ client_id: clientId })
+    .select('contact_name_id');
+  const contactIds = (contacts as Array<{ contact_name_id: string }>)
+    .map((contact) => contact.contact_name_id);
+  if (contactIds.length === 0) {
+    return 0;
+  }
+
+  return await managementDb.table('users')
+    .whereIn('contact_id', contactIds)
+    .andWhere({ user_type: 'client', is_inactive: !inactive })
+    .update({ is_inactive: inactive, updated_at: knex.fn.now() });
+}
+
+/**
+ * Deactivate the client, its contacts and their portal users in the management
+ * tenant. This is called when a tenant is marked for deletion to disable their
  * customer record in Nine Minds' CRM.
  */
 export async function deactivateMasterTenantClient(
@@ -1132,10 +1168,25 @@ export async function deactivateMasterTenantClient(
       contactsDeactivated: contactsUpdated,
     });
 
+    // Deactivate the contacts' support-portal users so the email is free for a later signup
+    const portalUsersUpdated = await setMasterClientPortalUsersInactive(
+      adminKnex,
+      managementTenantId,
+      clientId,
+      true
+    );
+
+    log.info('Deactivated portal users for client in master tenant', {
+      tenantId,
+      clientId,
+      portalUsersDeactivated: portalUsersUpdated,
+    });
+
     return {
       clientId,
       clientDeactivated: true,
       contactsDeactivated: contactsUpdated,
+      portalUsersDeactivated: portalUsersUpdated,
     };
   } catch (error) {
     log.error('Failed to deactivate client in master tenant', {
@@ -1188,6 +1239,8 @@ export async function reactivateMasterTenantClient(tenantId: string): Promise<vo
     await managementDb.table('contacts')
       .where({ client_id: clientId })
       .update({ is_inactive: false, updated_at: adminKnex.fn.now() });
+
+    await setMasterClientPortalUsersInactive(adminKnex, managementTenantId, clientId, false);
 
     log.info('Reactivated client and contacts in master tenant', {
       tenantId,

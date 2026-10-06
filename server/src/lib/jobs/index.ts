@@ -37,6 +37,7 @@ import {
 import { renewGoogleGmailWatchSubscriptions, GoogleGmailWatchRenewalJobData } from '@alga-psa/jobs/handlers/googleGmailWatchRenewalHandler';
 import { processRenewalQueueHandler, RenewalQueueProcessorJobData } from '@alga-psa/jobs/handlers/processRenewalQueueHandler';
 import { createDateTriggerScanHandler, dateTriggerScanHandler, DateTriggerScanJobData } from '@alga-psa/jobs/handlers/dateTriggerScanHandler';
+import { GENERATE_RECURRING_TICKETS_CRON, GENERATE_RECURRING_TICKETS_JOB, type GenerateRecurringTicketsJobData } from './handlers/generateRecurringTicketsHandler';
 import { resolveDateTriggerWorkflowLauncher } from './dateTriggerWorkflowLauncher';
 import { autoCloseTicketsHandler, AutoCloseTicketsJobData } from '@alga-psa/jobs/handlers/autoCloseTicketsHandler';
 import { lowStockNotificationHandler, LowStockNotificationJobData } from './handlers/lowStockNotificationHandler';
@@ -1056,6 +1057,28 @@ export const scheduleDateTriggerScanJob = async (tenantId: string, cronExpressio
     { tenantId },
     cronExpression,
     { singletonKey: `date-trigger-scan:${tenantId}` }
+  );
+  return result.jobId;
+};
+
+/**
+ * Recurring-ticket generation sweep. CE runs it as a per-tenant pg-boss schedule; EE runs it from the
+ * global maintenance fan-out schedule (generate-recurring-tickets), so this returns null there.
+ *
+ * Goes through the job runner, not the legacy JobScheduler: that one degrades a sub-daily cron to once
+ * every 24 hours, which would turn a 15-minute sweep into a daily one.
+ */
+export const scheduleGenerateRecurringTicketsJob = async (
+  tenantId: string,
+  cronExpression: string = GENERATE_RECURRING_TICKETS_CRON
+): Promise<string | null> => {
+  if (isEnterpriseWorkflowEdition()) return null;
+  const runner = await getJobRunnerInstance();
+  const result = await runner.scheduleRecurringJob<GenerateRecurringTicketsJobData>(
+    GENERATE_RECURRING_TICKETS_JOB,
+    { tenantId },
+    cronExpression,
+    { singletonKey: `${GENERATE_RECURRING_TICKETS_JOB}:${tenantId}` }
   );
   return result.jobId;
 };

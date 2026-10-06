@@ -1608,5 +1608,15 @@
       "missingField": "Brakuje wymaganego pola zasobu.",
       "missingFieldNamed": "Brakuje wymaganego pola zasobu: {{field}}."
     }
+  },
+  "clientAssetMultiSelect": {
+    "errors": {
+      "load": "Nie udało się wczytać zasobów"
+    },
+    "placeholder": "Dodaj zasób...",
+    "searchPlaceholder": "Szukaj zasobów",
+    "empty": "Brak pasujących zasobów dla tego klienta",
+    "loading": "Ładowanie...",
+    "remove": "Usuń zasób"
   }
 }

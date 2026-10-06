@@ -26,6 +26,7 @@ import {
 import WorkflowDefinitionVersionModelV2 from '@alga-psa/workflows/persistence/workflowDefinitionVersionModelV2';
 import WorkflowDefinitionModelV2 from '@alga-psa/workflows/persistence/workflowDefinitionModelV2';
 import WorkflowRunModelV2 from '@alga-psa/workflows/persistence/workflowRunModelV2';
+import { INTERACTIVE_ENGINE_CONNECT_TIMEOUT_MS } from '@alga-psa/workflows/lib/workflowRunLauncher';
 import WorkflowRunStepModelV2 from '@alga-psa/workflows/persistence/workflowRunStepModelV2';
 import WorkflowRunWaitModelV2 from '@alga-psa/workflows/persistence/workflowRunWaitModelV2';
 import { WorkflowRuntimeV2, getActionRegistryV2, getNodeTypeRegistry, getSchemaRegistry } from '@alga-psa/workflows/runtime';
@@ -803,12 +804,14 @@ describe('workflow runtime v2 publish + registry + run integration tests', () =>
     const runResult = await startWorkflowRunAction({ workflowId, workflowVersion: 1, payload: {} });
     const run = await WorkflowRunModelV2.getById(db, runResult.runId);
 
+    // Someone is waiting in the Run dialog, so the engine connection uses the short timeout.
     expect(startWorkflowRuntimeV2TemporalRunMock).toHaveBeenCalledWith(
       expect.objectContaining({
         runId: runResult.runId,
         workflowId,
         workflowVersion: 1,
-      })
+      }),
+      { connectTimeoutMs: INTERACTIVE_ENGINE_CONNECT_TIMEOUT_MS }
     );
     expect(run?.engine).toBe('temporal');
     expect(run?.temporal_workflow_id).toBe('workflow-runtime-v2:run:run-replayed');
@@ -955,7 +958,8 @@ describe('workflow runtime v2 publish + registry + run integration tests', () =>
     expect(replayRecord?.temporal_workflow_id).toBe('workflow-runtime-v2:run:run-replayed');
     expect(replayRecord?.temporal_run_id).toBe('temporal-run-replayed');
     expect(startWorkflowRuntimeV2TemporalRunMock).toHaveBeenCalledWith(
-      expect.objectContaining({ runId: replayResult.runId, workflowId })
+      expect.objectContaining({ runId: replayResult.runId, workflowId }),
+      { connectTimeoutMs: INTERACTIVE_ENGINE_CONNECT_TIMEOUT_MS }
     );
   });
 
@@ -1038,7 +1042,7 @@ it('starts the shipped email workflow through the application action and rejects
   expect(startWorkflowRuntimeV2TemporalRunMock).toHaveBeenCalledOnce();
   expect(startWorkflowRuntimeV2TemporalRunMock).toHaveBeenCalledWith(expect.objectContaining({
     runId: result.runId, tenantId, workflowId, workflowVersion: definition.version,
-  }));
+  }), { connectTimeoutMs: INTERACTIVE_ENGINE_CONNECT_TIMEOUT_MS });
   await expect(startWorkflowRunAction({ workflowId, workflowVersion: definition.version, payload: {
     ...payload, emailData: { ...payload.emailData, from: { email: 'invalid-address' } },
   } })).rejects.toMatchObject({ status: 400 });

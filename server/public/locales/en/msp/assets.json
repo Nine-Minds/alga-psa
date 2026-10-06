@@ -1608,5 +1608,15 @@
       "missingField": "Missing required asset field.",
       "missingFieldNamed": "Missing required asset field: {{field}}."
     }
+  },
+  "clientAssetMultiSelect": {
+    "errors": {
+      "load": "Failed to load assets"
+    },
+    "placeholder": "Add an asset...",
+    "searchPlaceholder": "Search assets",
+    "empty": "No matching assets for this client",
+    "loading": "Loading...",
+    "remove": "Remove asset"
   }
 }

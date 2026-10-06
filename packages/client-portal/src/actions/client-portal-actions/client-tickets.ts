@@ -1,4 +1,6 @@
 'use server'
+
+import { loadPortalTicketExternalLinks } from '../../lib/portalTicketExternalLinks';
 import { persistCommentPublication } from '@alga-psa/shared/lib/ticketCommentAttachments';
 
 /* eslint-disable custom-rules/no-feature-to-feature-imports -- Client portal ticket actions intentionally compose ticketing feature APIs for client-facing workflows. */
@@ -6,7 +8,7 @@ import { persistCommentPublication } from '@alga-psa/shared/lib/ticketCommentAtt
 import { registerAfterCommit } from '@alga-psa/db';
 import Comment from '@alga-psa/tickets/models/comment';
 import { reconcileCommentAttachments, filterReadableCommentAttachments, withdrawCommentAttachments } from '@shared/lib/ticketCommentAttachments';
-import { validateData } from '@alga-psa/validation';
+import { isUuidShaped, validateData } from '@alga-psa/validation';
 import { COMMENT_RESPONSE_SOURCES, IComment, IStatus, ITicket, ITicketListItem, ITicketWithDetails, TICKET_ORIGINS } from '@alga-psa/types';
 import { IDocument } from '@alga-psa/types';
 import { IUser } from '@alga-psa/types';
@@ -104,6 +106,10 @@ function toClientTicketActionError(error: unknown): ClientTicketActionError | nu
   }
 
   return null;
+}
+
+function ticketNotFoundError(): ClientTicketActionError {
+  return actionError('Ticket not found or access denied', 'client-portal:errors.tickets.notFoundOrDenied');
 }
 
 function expectedOrThrow(error: unknown, logMessage: string): ClientTicketActionError {
@@ -319,6 +325,11 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
       return permissionError('Insufficient permissions to view ticket details', 'common:errors.permissions.tickets.readDetails');
     }
 
+    // A malformed id gets the same response as a hidden ticket, and never reaches the database.
+    if (!isUuidShaped(ticketId)) {
+      return ticketNotFoundError();
+    }
+
     const result = await withTransaction(db, async (trx: Knex.Transaction) => {
       const { visibility } = await resolvePortalVisibility(trx, tenant, userId);
       const scopedDb = tenantDb(trx, tenant);
@@ -467,11 +478,13 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
         linkedAssetsQuery
       ]);
 
-      return { ticket, conversations, documents: await filterReadableCommentAttachments(trx, tenant, userId, documents), users, linkedAssets };
+      // Never fetch link data until the existing client/board/contact ticket scope succeeds.
+      const portalExternalLinks = ticket ? await loadPortalTicketExternalLinks(trx, tenant, ticketId) : [];
+      return { ticket, portalExternalLinks, conversations, documents: await filterReadableCommentAttachments(trx, tenant, userId, documents), users, linkedAssets };
     }) as any;
 
     if (!result.ticket) {
-      return actionError('Ticket not found or access denied', 'client-portal:errors.tickets.notFoundOrDenied');
+      return ticketNotFoundError();
     }
 
     // Create user map, including avatar URLs
@@ -569,6 +582,7 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
       // the consumer side via a small augmentation since ITicketWithDetails
       // doesn't model this today.
       linkedAssets: result.linkedAssets,
+      portalExternalLinks: result.portalExternalLinks,
       userMap,
       contactMap
     };
@@ -610,6 +624,11 @@ export const addClientTicketComment = withAuth(async (
     const canUpdate = await hasPermission(userForPermission, 'ticket', 'update', db);
     if (!canUpdate) {
       return permissionError('Insufficient permissions to add comments', 'common:errors.permissions.tickets.addComments');
+    }
+
+    // A malformed id gets the same response as a hidden ticket, and never reaches the database.
+    if (!isUuidShaped(ticketId) || (parentCommentId !== undefined && parentCommentId !== null && !isUuidShaped(parentCommentId))) {
+      return ticketNotFoundError();
     }
 
     await withTransaction(db, async (trx: Knex.Transaction) => {
@@ -902,6 +921,11 @@ export const updateTicketStatus = withAuth(async (
       return permissionError('Insufficient permissions to update ticket status', 'common:errors.permissions.tickets.updateStatus');
     }
 
+    // A malformed id gets the same response as a hidden ticket, and never reaches the database.
+    if (!isUuidShaped(ticketId)) {
+      return ticketNotFoundError();
+    }
+
     await withTransaction(db, async (trx: Knex.Transaction) => {
       const userRecord = await tenantDb(trx, tenant).table('users')
         .where({
@@ -1183,6 +1207,11 @@ export const getClientTicketDocuments = withAuth(async (user, { tenant }, ticket
     const canRead = await hasPermission(userForPermission, 'ticket', 'read', db);
     if (!canRead) {
       return permissionError('Insufficient permissions to view ticket documents', 'common:errors.permissions.tickets.viewDocuments');
+    }
+
+    // A malformed id gets the same response as a hidden ticket, and never reaches the database.
+    if (!isUuidShaped(ticketId)) {
+      return ticketNotFoundError();
     }
 
     const documents = await withTransaction(db, async (trx: Knex.Transaction) => {
