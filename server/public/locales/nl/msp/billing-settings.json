@@ -18,12 +18,14 @@
         }
       },
       "toast": {
-        "updated": "De standaardvaluta is bijgewerkt."
+        "updated": "De standaardvaluta is bijgewerkt.",
+        "propagated": "Standaardvaluta gewijzigd naar {{currency}}. {{updated}} klantstandaarden bijgewerkt; {{preserved}} klantoverschrijvingen behouden."
       },
       "errors": {
         "load": "Kan instellingen niet laden",
         "save": "Kan instellingen niet opslaan"
-      }
+      },
+      "propagationNote": "Het wijzigen hiervan werkt klanten bij die nog de vorige standaardvaluta gebruiken. Klanten met een andere valuta blijven ongewijzigd en bestaande documenten en sjablonen veranderen niet."
     },
     "invoiceNumbering": {
       "title": "Factuurnummering",

@@ -303,7 +303,15 @@
       "currencyPlaceholder": "⟦Şḗŀḗƈŧ ƈŭřřḗƞƈẏ⟧",
       "quoteDate": "⟦Ɋŭȯŧḗ ḓȧŧḗ⟧",
       "validUntil": "⟦Ṽȧŀīḓ ŭƞŧīŀ⟧",
-      "validUntilHelp": "⟦Ɋŭȯŧḗ ȧŭŧȯ-ḗẋƥīřḗş ȯƞ ŧħīş ḓȧŧḗ.⟧"
+      "validUntilHelp": "⟦Ɋŭȯŧḗ ȧŭŧȯ-ḗẋƥīřḗş ȯƞ ŧħīş ḓȧŧḗ.⟧",
+      "currencySource": {
+        "tenant": "⟦Ŧḗƞȧƞŧ ḓḗƒȧŭŀŧ⟧",
+        "client": "⟦Ƈŀīḗƞŧ ḓḗƒȧŭŀŧ ƒȯř {{clientName}}⟧",
+        "template": "⟦Ƒřȯḿ ʠŭȯŧḗ ŧḗḿƥŀȧŧḗ {{templateTitle}}⟧",
+        "saved": "⟦Şȧṽḗḓ ȯƞ ŧħīş ʠŭȯŧḗ⟧",
+        "savedTemplate": "⟦Şȧṽḗḓ ȯƞ ŧħīş ŧḗḿƥŀȧŧḗ⟧",
+        "manual": "⟦Şḗŀḗƈŧḗḓ ḿȧƞŭȧŀŀẏ⟧"
+      }
     },
     "lineItems": {
       "title": "⟦Ŀīƞḗ īŧḗḿş⟧",
@@ -343,6 +351,14 @@
       "subtotal": "⟦Şŭƀŧȯŧȧŀ⟧",
       "discounts": "⟦Ḓīşƈȯŭƞŧş⟧",
       "tax": "⟦Ŧȧẋ⟧",
+      "optionalIfSelected": "⟦Ȯƥŧīȯƞȧŀ īƒ şḗŀḗƈŧḗḓ⟧",
+      "cadence": {
+        "monthly": "⟦Ḿȯƞŧħŀẏ⟧",
+        "quarterly": "⟦Ɋŭȧřŧḗřŀẏ⟧",
+        "semiAnnually": "⟦Şḗḿī-ȧƞƞŭȧŀŀẏ⟧",
+        "annually": "⟦Ȧƞƞŭȧŀŀẏ⟧",
+        "oneTime": "⟦Ȯƞḗ-ŧīḿḗ⟧"
+      },
       "statusLabel": "⟦Şŧȧŧŭş⟧",
       "approvalLabel": "⟦Ȧƥƥřȯṽȧŀ⟧",
       "approvalMessage": "⟦Ɋŭȯŧḗş ƞḗḗḓ şȧŀḗş ŀḗȧḓ ȧƥƥřȯṽȧŀ ƀḗƒȯřḗ şḗƞḓīƞɠ.⟧",
@@ -497,6 +513,7 @@
       "noPriceInCurrency": "⟦Ƞȯ ƥřīƈḗ īƞ {{currencyCode}}⟧",
       "optional": "⟦Ȯƥŧīȯƞȧŀ⟧",
       "phaseSection": "⟦Ƥħȧşḗ / Şḗƈŧīȯƞ⟧",
+      "preselected": "⟦Ƥřḗ-şḗŀḗƈŧḗḓ⟧",
       "recurring": "⟦Řḗƈŭřřīƞɠ⟧",
       "service": "⟦şḗřṽīƈḗ⟧",
       "setPrice": "⟦Şḗŧ ƥřīƈḗ⟧",

@@ -1693,6 +1693,18 @@ export type WorkflowPublishHooks = {
  * This ensures compatibility between the event bus and workflow systems
  */
 export function convertToWorkflowEvent(event: Event, hooks?: WorkflowPublishHooks): any {
+  // Workflow trigger payload schemas (BaseDomainEventPayloadSchema) require
+  // `occurredAt`. Publishers that hand publishEvent a raw payload (inbound
+  // email, legacy call sites) never stamp it, and the worker then skips every
+  // matching workflow at payload validation. Default it at the stream boundary
+  // so no publisher can silently opt out of workflow triggers (alga-2026-0002379).
+  // LEVERAGE: friction workflow-payload-occurred-at — publishers should build payloads with
+  // buildWorkflowPayload; this default is the backstop for the raw publishEvent callers.
+  const rawPayload = event.payload as Record<string, unknown> | undefined;
+  const payload =
+    rawPayload && typeof rawPayload === 'object' && typeof rawPayload.occurredAt !== 'string'
+      ? { ...rawPayload, occurredAt: event.timestamp }
+      : event.payload;
   return {
     event_id: event.id,
     execution_id: hooks?.executionId,
@@ -1704,6 +1716,6 @@ export function convertToWorkflowEvent(event: Event, hooks?: WorkflowPublishHook
     from_state: hooks?.fromState,
     to_state: hooks?.toState,
     user_id: event.payload?.actorUserId ?? event.payload?.userId,
-    payload: event.payload
+    payload
   };
 }

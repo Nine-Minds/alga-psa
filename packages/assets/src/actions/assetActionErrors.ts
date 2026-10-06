@@ -9,6 +9,52 @@ import {
 
 export type AssetActionError = ActionMessageError | ActionPermissionError;
 
+/** One field-level validation failure, as the form needs it to highlight an input. */
+export type AssetValidationIssue = {
+  path: Array<string | number>;
+  code?: string;
+  message: string;
+};
+
+/**
+ * A returned (not thrown) validation failure: the first issue's localizable
+ * action error plus the full issue list. `localizeActionError` spreads the
+ * payload at the `withAuth` boundary, so `validationIssues` reaches the client
+ * — unlike a thrown message, which Next.js masks in production builds
+ * (alga0002283).
+ */
+export type AssetValidationError = { actionError: string; validationIssues: AssetValidationIssue[] };
+
+export function assetValidationError(
+  issues: ReadonlyArray<{
+    code?: unknown;
+    path?: ReadonlyArray<string | number>;
+    message?: unknown;
+    received?: unknown;
+    params?: { messageKey?: unknown; messageParams?: unknown };
+  }>,
+): AssetActionError {
+  return {
+    // ActionMessageError is a nominal (never) type; the runtime value is a plain object.
+    ...(actionErrorFromValidationIssue(issues[0]) as unknown as object),
+    validationIssues: issues.map(({ path, code, message }) => ({
+      path: [...(path ?? [])],
+      ...(typeof code === 'string' ? { code } : {}),
+      message: typeof message === 'string' && message ? message : 'Invalid value',
+    })),
+  } as unknown as AssetActionError;
+}
+
+export function isAssetValidationError(value: unknown): value is AssetValidationError {
+  const candidate = value as { actionError?: unknown; validationIssues?: unknown } | null;
+  return (
+    !!candidate &&
+    typeof candidate === 'object' &&
+    typeof candidate.actionError === 'string' &&
+    Array.isArray(candidate.validationIssues)
+  );
+}
+
 export function assetActionErrorMessage(error: unknown): string {
   const candidate = error as { permissionError?: unknown; actionError?: unknown };
   return typeof candidate.permissionError === 'string' ? candidate.permissionError : String(candidate.actionError ?? 'Action failed');
@@ -105,8 +151,7 @@ export function assetActionErrorFrom(error: unknown): AssetActionError | null {
           );
         }
         if (parsed.kind === 'validation' && Array.isArray(parsed.issues)) {
-          const firstIssue = parsed.issues[0];
-          return firstIssue ? actionErrorFromValidationIssue(firstIssue) : null;
+          return parsed.issues.length > 0 ? assetValidationError(parsed.issues) : null;
         }
       } catch {
         // Not a structured validation message.
