@@ -24,6 +24,7 @@ import {
   setTicketWatchListOnAttributes,
   type TicketWatchListRecipientInput,
 } from '../../lib/tickets/watchList';
+import { getTicketOneOffRecipients } from '../../lib/tickets/commentEmailRecipients';
 import {
   resolveInboundReplyAcknowledgementDecider,
   type InboundReplyAckDeciderResult,
@@ -430,6 +431,26 @@ function isClosedTicketBeyondReopenCutoff(params: {
 
   const cutoffMs = params.cutoffHours * 60 * 60 * 1000;
   return (receivedAtMs - closedAtMs) > cutoffMs;
+}
+
+/**
+ * The addresses an agent Cc'd or Bcc'd on one of this ticket's comments. They
+ * were deliberately looped in for a single reply, so a reply from one of them
+ * is trusted but never promoted to the ticket watch list.
+ */
+async function loadTicketOneOffRecipients(tenantId: string, ticketId: string): Promise<Set<string>> {
+  try {
+    return await withTenantAdminTransaction(tenantId, async (trx: any) =>
+      getTicketOneOffRecipients(trx, tenantId, ticketId)
+    );
+  } catch (error) {
+    console.warn('processInboundEmailInApp: one-off recipient lookup failed (continuing)', {
+      tenantId,
+      ticketId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return new Set<string>();
+  }
 }
 
 async function loadInboundReplyPolicyContext(params: {
@@ -1136,8 +1157,17 @@ export async function processInboundEmailInApp(
     authResults: senderAuthResults,
   });
 
-  const buildUnmatchedSenderWatchListRecipients = (matchedContactId?: string | null) => {
+  const buildUnmatchedSenderWatchListRecipients = (
+    matchedContactId?: string | null,
+    oneOffRecipients?: Set<string>
+  ) => {
     if (matchedContactId || !senderEmail || senderIsProviderMailbox) {
+      return [] as TicketWatchListRecipientInput[];
+    }
+
+    // A one-off Cc/Bcc recipient was looped in for a single comment. Replying
+    // must not turn them into a watcher that receives every later comment.
+    if (oneOffRecipients?.has(normalizeEmailAddress(senderEmail) ?? '')) {
       return [] as TicketWatchListRecipientInput[];
     }
 
@@ -1222,6 +1252,8 @@ export async function processInboundEmailInApp(
       }, diagnostics);
     }
 
+    const oneOffRecipients = await loadTicketOneOffRecipients(tenantId, params.ticketId);
+
     const parsedHtml = parsedEmail?.sanitizedHtml ?? emailData.body?.html;
     const parsedText = parsedEmail?.sanitizedText ?? emailData.body?.text;
     const blocks = await blocksFromEmailBody({
@@ -1260,8 +1292,18 @@ export async function processInboundEmailInApp(
       const senderIsActiveWatcher = Boolean(
         senderEmail && policyContext && getActiveWatchListEmails(policyContext.attributes).includes(senderEmail)
       );
+      // An agent explicitly Cc'd or Bcc'd this address on a comment of this
+      // ticket, so it is an allowed sender here exactly like an active watcher.
+      const senderIsOneOffRecipient = Boolean(
+        senderEmail && oneOffRecipients.has(normalizeEmailAddress(senderEmail) ?? '')
+      );
 
-      if (!senderIsTicketClientContact && !matchedSenderIsInternalUser && !senderIsActiveWatcher) {
+      if (
+        !senderIsTicketClientContact
+        && !matchedSenderIsInternalUser
+        && !senderIsActiveWatcher
+        && !senderIsOneOffRecipient
+      ) {
         // Keep this a structured security log rather than creating a ticket by default.
         // Operations can route this event through their log/audit pipeline without giving
         // an untrusted sender another ticket-creation side effect.
@@ -1278,6 +1320,7 @@ export async function processInboundEmailInApp(
             senderIsTicketClientContact,
             senderIsInternalUser: Boolean(matchedSenderIsInternalUser),
             senderIsActiveWatcher,
+            senderIsOneOffRecipient,
           },
           securityBoardTicketHookEnabled:
             process.env.INBOUND_THREAD_HEADER_QUARANTINE_CREATE_SECURITY_TICKET === 'true',
@@ -1439,17 +1482,25 @@ export async function processInboundEmailInApp(
       }
     }
 
+    // Reply-all from the requester (or from a copied address) carries the
+    // one-off Cc list in its own To/Cc. Those addresses were loaned to a single
+    // comment, so they are excluded from the watch-list additions here. A
+    // genuinely new address on the reply is still picked up as before.
+    const withoutOneOffRecipients = (recipients: TicketWatchListRecipientInput[]) =>
+      recipients.filter(
+        (recipient) => !oneOffRecipients.has(normalizeEmailAddress(recipient.email) ?? '')
+      );
     const watchListRecipients = params.matchedBy === 'thread_headers'
-      ? buildInboundWatchListRecipients({
+      ? withoutOneOffRecipients(buildInboundWatchListRecipients({
           to: emailData.to,
           cc: emailData.cc,
           senderEmail: emailData.from?.email,
           providerMailboxEmail,
           requireMatchedContact: true,
-        })
+        }))
       : mergeTicketWatchListRecipients(
-          inboundWatchListRecipients,
-          buildUnmatchedSenderWatchListRecipients(matchedSenderContactId ?? null)
+          withoutOneOffRecipients(inboundWatchListRecipients),
+          buildUnmatchedSenderWatchListRecipients(matchedSenderContactId ?? null, oneOffRecipients)
         );
     const commentId = await createCommentFromEmail(
       {
