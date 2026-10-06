@@ -125,6 +125,10 @@ const billingCycleAlignmentPostInventoryRefs = new Set([
   // after the pass-0 snapshot.
   'packages/billing/src/components/billing-dashboard/contracts/CreateCustomContractLineDialog.tsx',
   'packages/billing/tests/ContractLineServiceForm.fixedPricingBasis.test.tsx',
+  // Contract service catalog-rate prefill added fixed recurring base-rate
+  // seeding coverage whose config fixtures carry the legacy alignment field;
+  // it landed after the pass-0 snapshot.
+  'packages/billing/tests/fixedContractLineConfiguration.baseRateSeed.test.tsx',
   // Per-seat recurring services (feature/contract-services-per-seat-recurring-quantities)
   // seed billing_cycle_alignment in their preset fixtures after the snapshot.
   'server/src/test/integration/contractServicesPerSeatPreset.integration.test.ts',

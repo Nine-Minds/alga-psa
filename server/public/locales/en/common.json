@@ -1346,9 +1346,11 @@
   },
   "timezonePicker": {
     "selectPlaceholder": "Select timezone...",
-    "searchPlaceholder": "Search timezones or abbreviations (e.g. EST)...",
+    "searchPlaceholder": "Search by city, name, or abbreviation (e.g. New York, EST)...",
     "noResults": "No timezones found",
     "matchingGroup": "Matching \"{{query}}\"",
+    "noDst": "No DST",
+    "noDaylightSavingHint": "No daylight saving time. Clocks stay at {{offset}} all year.",
     "regions": {
       "Africa": "Africa",
       "America": "America",

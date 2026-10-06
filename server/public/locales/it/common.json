@@ -1346,9 +1346,11 @@
   },
   "timezonePicker": {
     "selectPlaceholder": "Seleziona fuso orario...",
-    "searchPlaceholder": "Cerca fusi orari o abbreviazioni (es. EST)...",
+    "searchPlaceholder": "Cerca per città, nome o abbreviazione (ad es. New York, EST)...",
     "noResults": "Nessun fuso orario trovato",
     "matchingGroup": "Corrispondenze per \"{{query}}\"",
+    "noDst": "Niente ora legale",
+    "noDaylightSavingHint": "Nessuna ora legale. Gli orologi restano su {{offset}} tutto l'anno.",
     "regions": {
       "Africa": "Africa",
       "America": "America",

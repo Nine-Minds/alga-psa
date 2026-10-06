@@ -7,6 +7,13 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { PlusCircle } from 'lucide-react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
+// Extension numerics are nullable ("unknown", never 0) — show that instead of a bare "null cores".
+const formatCpu = (model: string | null | undefined, cores: number | null | undefined): string => {
+  const trimmedModel = model?.trim() ?? '';
+  if (cores == null) return trimmedModel || 'Not provided';
+  return trimmedModel ? `${trimmedModel} (${cores} cores)` : `${cores} cores`;
+};
+
 interface AssetDetailsProps {
   asset: Asset;
   onCreateTicket?: (asset: Asset) => void;
@@ -37,15 +44,15 @@ export function AssetDetails({ asset, onCreateTicket }: AssetDetailsProps) {
             </div>
             <div>
               <p className="text-sm text-gray-500">CPU</p>
-              <p className="mt-1">{asset.workstation.cpu_model} ({asset.workstation.cpu_cores} cores)</p>
+              <p className="mt-1">{formatCpu(asset.workstation.cpu_model, asset.workstation.cpu_cores)}</p>
             </div>
             <div>
               <p className="text-sm text-gray-500">RAM</p>
-              <p className="mt-1">{asset.workstation.ram_gb}GB</p>
+              <p className="mt-1">{asset.workstation.ram_gb != null ? `${asset.workstation.ram_gb}GB` : 'Not provided'}</p>
             </div>
             <div>
               <p className="text-sm text-gray-500">Storage</p>
-              <p className="mt-1">{asset.workstation.storage_type} {asset.workstation.storage_capacity_gb}GB</p>
+              <p className="mt-1">{asset.workstation.storage_capacity_gb != null ? `${asset.workstation.storage_type} ${asset.workstation.storage_capacity_gb}GB` : (asset.workstation.storage_type || 'Not provided')}</p>
             </div>
           </div>
         </div>
@@ -67,7 +74,7 @@ export function AssetDetails({ asset, onCreateTicket }: AssetDetailsProps) {
             </div>
             <div>
               <p className="text-sm text-gray-500">Ports</p>
-              <p className="mt-1">{asset.network_device.port_count}</p>
+              <p className="mt-1">{asset.network_device.port_count ?? 'Not provided'}</p>
             </div>
             <div>
               <p className="text-sm text-gray-500">Firmware</p>
@@ -89,11 +96,11 @@ export function AssetDetails({ asset, onCreateTicket }: AssetDetailsProps) {
             </div>
             <div>
               <p className="text-sm text-gray-500">CPU</p>
-              <p className="mt-1">{asset.server.cpu_model} ({asset.server.cpu_cores} cores)</p>
+              <p className="mt-1">{formatCpu(asset.server.cpu_model, asset.server.cpu_cores)}</p>
             </div>
             <div>
               <p className="text-sm text-gray-500">RAM</p>
-              <p className="mt-1">{asset.server.ram_gb}GB</p>
+              <p className="mt-1">{asset.server.ram_gb != null ? `${asset.server.ram_gb}GB` : 'Not provided'}</p>
             </div>
             <div>
               <p className="text-sm text-gray-500">Type</p>

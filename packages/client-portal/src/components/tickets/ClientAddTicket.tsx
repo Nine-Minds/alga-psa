@@ -22,6 +22,7 @@ import {
   getErrorMessage,
   isActionMessageError,
   isActionPermissionError,
+  UserFacingError,
 } from '@alga-psa/ui/lib/errorHandling';
 
 const isReturnedActionError = (value: unknown) =>
@@ -179,7 +180,7 @@ export function ClientAddTicket({
     try {
       const validationErrors = validateForm();
       if (validationErrors.length > 0) {
-        throw new Error(validationErrors.join('\n'));
+        throw new UserFacingError(validationErrors.join('\n'));
       }
 
       const formData = new FormData();
@@ -204,12 +205,9 @@ export function ClientAddTicket({
       onTicketAdded?.();
     } catch (error) {
       console.error('Error creating ticket:', error);
-      // Map backend error messages to translation keys
-      let errorMessage = t('create.errors.createFailed');
-      if (error instanceof Error) {
-        errorMessage = mapCreateTicketError(error.message);
-      }
-      setError(errorMessage);
+      // Only the returned-action-error branch above carries user-safe text; a thrown
+      // error may hold server detail, so it gets the generic message.
+      setError(error instanceof UserFacingError ? error.message : t('create.errors.createFailed'));
     } finally {
       setIsSubmitting(false);
     }

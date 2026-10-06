@@ -478,7 +478,8 @@
         "consent": "Jag godkänner återkommande debiteringar på det här kortet för fastställda fakturor.",
         "enable": "Aktivera automatisk betalning",
         "noCards": "Lägg till ett kort för att aktivera automatisk betalning.",
-        "changeCard": "Använd det här kortet för automatisk betalning"
+        "changeCard": "Använd det här kortet för automatisk betalning",
+        "updateError": "Det gick inte att uppdatera den automatiska betalningen. Försök igen."
       },
       "publicCardSetup": {
         "saved": "Kortet har sparats",
@@ -617,6 +618,7 @@
       "emailAlreadyExists": "Det finns redan en användare med den här e-postadressen",
       "reportsToSelf": "En användare kan inte ha sig själv som chef",
       "reportsToCycle": "Detta skulle skapa en cirkulär chefshierarki",
+      "invalidTimezone": "Välj en tidszon baserad på en stad, till exempel America/New_York.",
       "photoUploaded": "Fotot har laddats upp",
       "photoRemoved": "Fotot har tagits bort",
       "userNotFound": "Användaren hittades inte",

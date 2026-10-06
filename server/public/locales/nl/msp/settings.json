@@ -391,6 +391,7 @@
         "emailAlreadyExists": "Er bestaat al een gebruiker met dit e-mailadres",
         "reportsToSelf": "Een gebruiker kan niet aan zichzelf rapporteren",
         "reportsToCycle": "Dit zou een circulaire rapportagelijn creëren",
+        "invalidTimezone": "Kies een tijdzone op basis van een stad, zoals America/New_York.",
         "permissionDenied": "U heeft geen toestemming om gebruikersrollen te wijzigen.",
         "invalidCapacity": "Wekelijkse capaciteit moet een positief getal zijn.",
         "invalidWorkSchedule": "Werktijden moeten geldige tijdvakken zijn die eindigen na de starttijd."
@@ -3470,6 +3471,7 @@
       "missingField": "Er ontbreekt een verplicht veld van de tenantinstellingen.",
       "missingFieldNamed": "Er ontbreekt een verplicht veld van de tenantinstellingen: {{field}}.",
       "invalidTimezone": "Ongeldige tijdzone: {{timezone}}",
+      "nonLocationTimezone": "{{timezone}} is geen tijdzone op basis van een stad. Kies een zone zoals America/New_York.",
       "permissions": {
         "clearOnboarding": "Toestemming geweigerd: alleen beheerders kunnen onboardinggegevens wissen.",
         "update": "Toestemming geweigerd: de instellingen kunnen niet worden bijgewerkt",

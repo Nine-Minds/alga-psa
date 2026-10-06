@@ -53,6 +53,7 @@
         "fillRequiredFields": "Fyll i alla obligatoriska fält",
         "loadFailed": "Det gick inte att läsa in profilen",
         "saveFailed": "Det gick inte att spara profilen",
+        "invalidTimezone": "Välj en tidszon baserad på en stad, till exempel America/New_York.",
         "errorPrefix": "Fel: {{error}}"
       }
     },

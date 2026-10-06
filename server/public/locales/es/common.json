@@ -1346,9 +1346,11 @@
   },
   "timezonePicker": {
     "selectPlaceholder": "Seleccione zona horaria...",
-    "searchPlaceholder": "Buscar zonas horarias o abreviaturas (p. ej. EST)...",
+    "searchPlaceholder": "Buscar por ciudad, nombre o abreviatura (p. ej., New York, EST)...",
     "noResults": "No se encontraron zonas horarias",
     "matchingGroup": "Coincidencias con «{{query}}»",
+    "noDst": "Sin horario de verano",
+    "noDaylightSavingHint": "Sin horario de verano. Los relojes se mantienen en {{offset}} todo el año.",
     "regions": {
       "Africa": "África",
       "America": "América",
