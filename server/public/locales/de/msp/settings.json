@@ -391,6 +391,7 @@
         "emailAlreadyExists": "Ein Benutzer mit dieser E-Mail-Adresse existiert bereits",
         "reportsToSelf": "Ein Benutzer kann sich nicht selbst als Vorgesetzten zuweisen",
         "reportsToCycle": "Dies würde eine zirkuläre Berichtskette erzeugen",
+        "invalidTimezone": "Wählen Sie eine Zeitzone mit Stadtbezug, z. B. America/New_York.",
         "permissionDenied": "Sie haben keine Berechtigung, Benutzerrollen zu ändern.",
         "invalidCapacity": "Die Wochenkapazität muss eine positive Zahl sein.",
         "invalidWorkSchedule": "Arbeitszeiten müssen gültige Zeiträume sein, die nach ihrem Beginn enden."
@@ -3470,6 +3471,7 @@
       "missingField": "Erforderliches Feld der Mandanteneinstellungen fehlt.",
       "missingFieldNamed": "Erforderliches Feld der Mandanteneinstellungen fehlt: {{field}}.",
       "invalidTimezone": "Ungültige Zeitzone: {{timezone}}",
+      "nonLocationTimezone": "{{timezone}} ist keine Zeitzone mit Stadtbezug. Wählen Sie eine Zone wie America/New_York.",
       "permissions": {
         "clearOnboarding": "Berechtigung verweigert: Nur Administratoren können Onboarding-Daten löschen.",
         "update": "Berechtigung verweigert: Einstellungen können nicht aktualisiert werden",
