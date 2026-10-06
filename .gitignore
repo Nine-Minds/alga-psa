@@ -219,6 +219,7 @@ server/coverage
 coverage-nyc/
 server/coverage
 packages/product-extension-storage-api/coverage
+shared/coverage
 
 
 
