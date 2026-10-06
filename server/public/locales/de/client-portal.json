@@ -444,7 +444,8 @@
         "consent": "Ich autorisiere wiederkehrende Belastungen dieser Karte für abgeschlossene Rechnungen.",
         "enable": "Automatische Zahlung aktivieren",
         "noCards": "Fügen Sie eine Karte hinzu, um die automatische Zahlung zu aktivieren.",
-        "changeCard": "Diese Karte für die automatische Zahlung verwenden"
+        "changeCard": "Diese Karte für die automatische Zahlung verwenden",
+        "updateError": "Die automatische Zahlung konnte nicht aktualisiert werden. Bitte versuchen Sie es erneut."
       },
       "publicCardSetup": {
         "saved": "Karte gespeichert",

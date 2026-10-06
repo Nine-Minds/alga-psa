@@ -444,7 +444,8 @@
         "consent": "Autorizzo addebiti ricorrenti su questa carta per le fatture finalizzate.",
         "enable": "Attiva il pagamento automatico",
         "noCards": "Aggiungi una carta per attivare il pagamento automatico.",
-        "changeCard": "Usa questa carta per il pagamento automatico"
+        "changeCard": "Usa questa carta per il pagamento automatico",
+        "updateError": "Impossibile aggiornare il pagamento automatico. Riprova."
       },
       "publicCardSetup": {
         "saved": "Carta salvata",

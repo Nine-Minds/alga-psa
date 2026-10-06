@@ -444,7 +444,8 @@
         "consent": "Ik machtig terugkerende afschrijvingen van deze kaart voor definitieve facturen.",
         "enable": "Automatische betaling inschakelen",
         "noCards": "Voeg een kaart toe om automatische betaling in te schakelen.",
-        "changeCard": "Deze kaart gebruiken voor automatische betaling"
+        "changeCard": "Deze kaart gebruiken voor automatische betaling",
+        "updateError": "De automatische betaling kon niet worden bijgewerkt. Probeer het opnieuw."
       },
       "publicCardSetup": {
         "saved": "Kaart opgeslagen",

@@ -444,7 +444,8 @@
         "consent": "Upoważniam do cyklicznego obciążania tej karty za zatwierdzone faktury.",
         "enable": "Włącz płatność automatyczną",
         "noCards": "Dodaj kartę, aby włączyć płatność automatyczną.",
-        "changeCard": "Użyj tej karty do płatności automatycznej"
+        "changeCard": "Użyj tej karty do płatności automatycznej",
+        "updateError": "Nie udało się zaktualizować płatności automatycznej. Spróbuj ponownie."
       },
       "publicCardSetup": {
         "saved": "Karta zapisana",
