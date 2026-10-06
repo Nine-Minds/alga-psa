@@ -1082,8 +1082,35 @@ export async function removeClientCanceledTag(tenantId: string): Promise<void> {
 }
 
 /**
- * Deactivate the client and its contacts in the management tenant.
- * This is called when a tenant is marked for deletion to disable their
+ * Flip is_inactive on the client-portal users linked to a management-tenant
+ * client's contacts. Contact ids are selected first (Citus: no subquery UPDATE).
+ */
+async function setMasterClientPortalUsersInactive(
+  knex: Knex,
+  managementTenantId: string,
+  clientId: string,
+  inactive: boolean
+): Promise<number> {
+  const managementDb = tenantDb(knex, managementTenantId);
+
+  const contacts = await managementDb.table('contacts')
+    .where({ client_id: clientId })
+    .select('contact_name_id');
+  const contactIds = (contacts as Array<{ contact_name_id: string }>)
+    .map((contact) => contact.contact_name_id);
+  if (contactIds.length === 0) {
+    return 0;
+  }
+
+  return await managementDb.table('users')
+    .whereIn('contact_id', contactIds)
+    .andWhere({ user_type: 'client', is_inactive: !inactive })
+    .update({ is_inactive: inactive, updated_at: knex.fn.now() });
+}
+
+/**
+ * Deactivate the client, its contacts and their portal users in the management
+ * tenant. This is called when a tenant is marked for deletion to disable their
  * customer record in Nine Minds' CRM.
  */
 export async function deactivateMasterTenantClient(
@@ -1140,10 +1167,25 @@ export async function deactivateMasterTenantClient(
       contactsDeactivated: contactsUpdated,
     });
 
+    // Deactivate the contacts' support-portal users so the email is free for a later signup
+    const portalUsersUpdated = await setMasterClientPortalUsersInactive(
+      adminKnex,
+      managementTenantId,
+      clientId,
+      true
+    );
+
+    log.info('Deactivated portal users for client in master tenant', {
+      tenantId,
+      clientId,
+      portalUsersDeactivated: portalUsersUpdated,
+    });
+
     return {
       clientId,
       clientDeactivated: true,
       contactsDeactivated: contactsUpdated,
+      portalUsersDeactivated: portalUsersUpdated,
     };
   } catch (error) {
     log.error('Failed to deactivate client in master tenant', {
@@ -1196,6 +1238,8 @@ export async function reactivateMasterTenantClient(tenantId: string): Promise<vo
     await managementDb.table('contacts')
       .where({ client_id: clientId })
       .update({ is_inactive: false, updated_at: adminKnex.fn.now() });
+
+    await setMasterClientPortalUsersInactive(adminKnex, managementTenantId, clientId, false);
 
     log.info('Reactivated client and contacts in master tenant', {
       tenantId,
