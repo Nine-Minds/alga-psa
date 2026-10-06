@@ -5,7 +5,7 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { ITimeEntry, ITimeEntryWithWorkItem, ITimePeriod, ITimePeriodView } from '@alga-psa/types';
 import { IExtendedWorkItem } from '@alga-psa/types';
 import { TaxRegion } from '@alga-psa/types';
-import { fetchClientTaxRateForWorkItem, fetchScheduleEntryForWorkItem, fetchServicesForTimeEntry, fetchTaxRegions } from '../../../../actions/timeEntryActions';
+import { fetchClientTaxRateForWorkItem, fetchScheduleEntryForWorkItem, fetchServicesForTimeEntry, fetchTaxRegions, resolveDefaultTicketTimeEntryService } from '../../../../actions/timeEntryActions';
 import { getClientIdForWorkItem } from '../../../../lib/contractLineDisambiguation';
 import { formatISO, parseISO } from 'date-fns';
 import { generateUUID } from '@alga-psa/core';
@@ -154,15 +154,44 @@ export function TimeEntryProvider({ children }: { children: React.ReactNode }): 
         payload: { services, taxRegions },
       });
 
+      // New ticket entries default to the client/tenant configured service (if
+      // one resolves to a service still offered in the selector). Existing
+      // entries and an explicitly supplied service are never overwritten.
+      const serviceIds = new Set(services.map((service) => service.id));
+      let ticketDefaultServiceId = '';
+      if (workItem.type === 'ticket' && !existingEntries?.length && clientId) {
+        if (workItem.service_id && serviceIds.has(workItem.service_id)) {
+          ticketDefaultServiceId = workItem.service_id;
+        } else {
+          try {
+            const resolved = await resolveDefaultTicketTimeEntryService({
+              clientId,
+              effectiveDate: defaultStartTime ?? date,
+            });
+            if (
+              resolved &&
+              'serviceId' in resolved &&
+              resolved.serviceId &&
+              serviceIds.has(resolved.serviceId)
+            ) {
+              ticketDefaultServiceId = resolved.serviceId;
+            }
+          } catch (error) {
+            console.warn('Unable to resolve default ticket time entry service:', error);
+          }
+        }
+      }
+
       let newEntries: ITimeEntryWithNew[] = [];
 
       // The task → phase → project default, but only when this form can hold it:
       // the service picker is hourly-only, so a default of any other billing
-      // method would render blank and then fail save validation. Shared by both
-      // new-entry branches so a work item keeps its default however it was opened.
+      // method would render blank and then fail save validation. Tickets fall
+      // back to the client/tenant configured service resolved above. Shared by
+      // all new-entry branches so a work item keeps its default however it was opened.
       const defaultServiceId = workItem.type === 'project_task' && workItem.service_id
         ? workItem.service_id
-        : '';
+        : (workItem.type === 'ticket' ? ticketDefaultServiceId : '');
       const prefilledServiceId = defaultServiceId && services.some(service => service.id === defaultServiceId)
         ? defaultServiceId
         : '';

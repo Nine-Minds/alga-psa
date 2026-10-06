@@ -303,7 +303,15 @@
       "currencyPlaceholder": "Select currency",
       "quoteDate": "Quote date",
       "validUntil": "Valid until",
-      "validUntilHelp": "Quote auto-expires on this date."
+      "validUntilHelp": "Quote auto-expires on this date.",
+      "currencySource": {
+        "tenant": "Tenant default",
+        "client": "Client default for {{clientName}}",
+        "template": "From quote template {{templateTitle}}",
+        "saved": "Saved on this quote",
+        "savedTemplate": "Saved on this template",
+        "manual": "Selected manually"
+      }
     },
     "lineItems": {
       "title": "Line items",
@@ -343,6 +351,14 @@
       "subtotal": "Subtotal",
       "discounts": "Discounts",
       "tax": "Tax",
+      "optionalIfSelected": "Optional if selected",
+      "cadence": {
+        "monthly": "Monthly",
+        "quarterly": "Quarterly",
+        "semiAnnually": "Semi-annually",
+        "annually": "Annually",
+        "oneTime": "One-time"
+      },
       "statusLabel": "Status",
       "approvalLabel": "Approval",
       "approvalMessage": "Quotes need sales lead approval before sending.",
@@ -497,6 +513,7 @@
       "noPriceInCurrency": "No price in {{currencyCode}}",
       "optional": "Optional",
       "phaseSection": "Phase / Section",
+      "preselected": "Pre-selected",
       "recurring": "Recurring",
       "service": "service",
       "setPrice": "Set price",

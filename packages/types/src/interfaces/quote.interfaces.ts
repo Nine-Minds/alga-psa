@@ -227,6 +227,12 @@ export interface QuoteViewModelLineItem {
   phase?: string | null;
   is_optional: boolean;
   is_selected: boolean;
+  /**
+   * Row marker for optional lines — "Optional (included)" for a selected
+   * add-on that counts toward the total, "Optional (if selected)" for a
+   * pending one; null for required rows. Localized by the PDF service.
+   */
+  optional_label?: string | null;
   is_recurring: boolean;
   billing_frequency?: string | null;
   is_discount?: boolean;
@@ -256,6 +262,34 @@ export interface QuoteViewModelLocationGroup {
   subtotal: number;
   tax: number;
   total: number;
+}
+
+/**
+ * One cadence band of a quote (Monthly / Quarterly / Semi-annually / Annually /
+ * any other recurring cadence / One-time). `items` are the rows that count
+ * toward the total (required rows and selected optional add-ons) with their
+ * per-band subtotal/tax/total; `optional_items` and `optional_*` carry the
+ * pending "if selected" add-ons that are excluded from every total.
+ */
+export interface QuoteViewModelCadenceGroup {
+  cadence_key: string;
+  /** Localized band label; English fallback is emitted by the adapter. */
+  name?: string | null;
+  /**
+   * Localized "{{cadence}} Total" band-footer label (e.g. "Monthly Total").
+   * English fallback (`${name} Total`) is emitted by the adapter and replaced
+   * with the localized template by the PDF service.
+   */
+  total_label?: string | null;
+  is_recurring: boolean;
+  items: QuoteViewModelLineItem[];
+  subtotal: number;
+  tax: number;
+  total: number;
+  optional_items: QuoteViewModelLineItem[];
+  optional_subtotal: number;
+  optional_tax: number;
+  optional_total: number;
 }
 
 export interface QuoteViewModel {
@@ -307,6 +341,23 @@ export interface QuoteViewModel {
    * bands. When items span only one location (or none), this may be empty.
    */
   groups_by_location?: QuoteViewModelLocationGroup[];
+  /**
+   * Pre-computed cadence bands for templates that want per-cadence sections.
+   * Only non-empty bands are emitted, in canonical cadence order (monthly →
+   * quarterly → semi-annually → annually → other → one-time). Band
+   * `subtotal/tax/total` are required-only; `optional_*` carry the add-ons.
+   */
+  groups_by_cadence?: QuoteViewModelCadenceGroup[];
+  /**
+   * The subset of `groups_by_cadence` that actually carries optional items.
+   * Templates render the "Optional (if selected)" sections from this so empty
+   * optional sections are omitted without a node-level conditional.
+   */
+  groups_by_cadence_with_optionals?: QuoteViewModelCadenceGroup[];
+  /** Optional (if-selected) add-on totals, excluded from `subtotal`/`total_amount`. */
+  optional_subtotal?: number;
+  optional_tax?: number;
+  optional_total?: number;
   /**
    * True when items span ≥2 distinct locations — a convenience flag for
    * templates that auto-branch between flat and grouped layouts.

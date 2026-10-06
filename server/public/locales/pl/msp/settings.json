@@ -393,6 +393,7 @@
         "emailAlreadyExists": "Użytkownik o tym adresie e-mail już istnieje",
         "reportsToSelf": "Użytkownik nie może podlegać samemu sobie",
         "reportsToCycle": "Spowodowałoby to cykliczną strukturę podległości",
+        "invalidTimezone": "Wybierz strefę czasową powiązaną z miastem, np. America/New_York.",
         "permissionDenied": "Nie masz uprawnień do zmiany ról użytkowników.",
         "invalidCapacity": "Tygodniowa wydajność musi być liczbą dodatnią.",
         "invalidWorkSchedule": "Godziny pracy muszą być prawidłowymi przedziałami kończącymi się po rozpoczęciu."
@@ -3500,6 +3501,7 @@
       "missingField": "Brakuje wymaganego pola ustawień organizacji.",
       "missingFieldNamed": "Brakuje wymaganego pola ustawień organizacji: {{field}}.",
       "invalidTimezone": "Nieprawidłowa strefa czasowa: {{timezone}}",
+      "nonLocationTimezone": "{{timezone}} nie jest strefą czasową powiązaną z miastem. Wybierz strefę, np. America/New_York.",
       "permissions": {
         "clearOnboarding": "Odmowa uprawnień: tylko administratorzy mogą usuwać dane onboardingu.",
         "update": "Odmowa uprawnień: nie można zaktualizować ustawień",

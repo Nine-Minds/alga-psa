@@ -388,6 +388,7 @@
         "emailAlreadyExists": "Det finns redan en användare med denna e-postadress",
         "reportsToSelf": "En användare kan inte rapportera till sig själv",
         "reportsToCycle": "Detta skulle skapa en cirkulär rapporteringskedja",
+        "invalidTimezone": "Välj en tidszon baserad på en stad, till exempel America/New_York.",
         "passwordTooShort": "Lösenordet måste innehålla minst 8 tecken",
         "passwordChangeFailed": "Det gick inte att ändra lösenordet",
         "passwordChangeError": "Ett fel uppstod när lösenordet ändrades",
@@ -3470,6 +3471,7 @@
       "missingField": "Ett obligatoriskt inställningsfält för organisationen saknas.",
       "missingFieldNamed": "Ett obligatoriskt inställningsfält för organisationen saknas: {{field}}.",
       "invalidTimezone": "Ogiltig tidszon: {{timezone}}",
+      "nonLocationTimezone": "{{timezone}} är inte en stadsbaserad tidszon. Välj en zon som America/New_York.",
       "permissions": {
         "clearOnboarding": "Åtkomst nekad: endast administratörer kan rensa onboardingdata.",
         "update": "Åtkomst nekad: kan inte uppdatera inställningar",

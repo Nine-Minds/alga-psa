@@ -33,6 +33,9 @@ export * from './lib/version';
 // Template utilities
 export * from './lib/templateUtils';
 
+// Quote line inclusion rule (required always; optional only while selected)
+export * from './lib/quoteItemInclusion';
+
 // Formatting utilities
 export * from './lib/formatters';
 export * from './lib/projectBillingStatus';

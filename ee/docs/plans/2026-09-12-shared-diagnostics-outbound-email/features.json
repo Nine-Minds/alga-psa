@@ -1,0 +1,234 @@
+[
+  {
+    "id": "F001",
+    "description": "Introduce generic diagnostics status, HTTP/error metadata, extensible steps/report/summary types and preserve Microsoft365 aliases and exports.",
+    "implemented": true,
+    "prdRefs": [
+      "Kernel and compatibility"
+    ]
+  },
+  {
+    "id": "F002",
+    "description": "Implement one ordered execution kernel with step timing, exception capture, dependency/early-stop support and structured outcomes.",
+    "implemented": true,
+    "prdRefs": [
+      "Kernel and compatibility"
+    ]
+  },
+  {
+    "id": "F003",
+    "description": "Centralize insertion-ordered recommendation accumulation, overall-status fold, report creation and support-bundle assembly.",
+    "implemented": true,
+    "prdRefs": [
+      "Kernel and compatibility"
+    ]
+  },
+  {
+    "id": "F004",
+    "description": "Support reusable legacy projections for inbound and Teams without duplicating timing, folding or execution.",
+    "implemented": true,
+    "prdRefs": [
+      "Kernel and compatibility"
+    ]
+  },
+  {
+    "id": "F005",
+    "description": "Extract Graph failure classification and ID extraction; preserve inbound recommendations verbatim and compose outbound-specific advice.",
+    "implemented": true,
+    "prdRefs": [
+      "Kernel and compatibility"
+    ]
+  },
+  {
+    "id": "F006",
+    "description": "Migrate inbound M365 including missing-token early return, identifier modes and live subscription cleanup with unchanged reports.",
+    "implemented": true,
+    "prdRefs": [
+      "Kernel and compatibility"
+    ]
+  },
+  {
+    "id": "F007",
+    "description": "Migrate Teams including string errors, detail, completion timestamp and top-level status with unchanged reports and UI.",
+    "implemented": true,
+    "prdRefs": [
+      "Kernel and compatibility"
+    ]
+  },
+  {
+    "id": "F008",
+    "description": "Expose reusable credential/token/identity/mailbox-route primitives and tokens_present logic without private-member access or inbound-health gates.",
+    "implemented": true,
+    "prdRefs": [
+      "Kernel and compatibility"
+    ]
+  },
+  {
+    "id": "F009",
+    "description": "Resolve saved tenant settings, selected enabled provider, binding and effective/default/ticketing From using production resolvers.",
+    "implemented": true,
+    "prdRefs": [
+      "Outbound shell and action contract"
+    ]
+  },
+  {
+    "id": "F010",
+    "description": "Add authenticated, permission-checked and tenant-derived outbound diagnostics action with validated live-send input.",
+    "implemented": true,
+    "prdRefs": [
+      "Outbound shell and action contract"
+    ]
+  },
+  {
+    "id": "F011",
+    "description": "Implement provider-dispatched outbound shell on the kernel with structured provider-selection failure and dependent skips.",
+    "implemented": true,
+    "prdRefs": [
+      "Outbound shell and action contract"
+    ]
+  },
+  {
+    "id": "F012",
+    "description": "Report missing tokens and OAuth refresh failures without flattening native metadata or exposing credentials.",
+    "implemented": true,
+    "prdRefs": [
+      "Microsoft steps"
+    ]
+  },
+  {
+    "id": "F013",
+    "description": "Warn for undecodable/missing-scp tokens; fail known missing Mail.Send and require Mail.Send.Shared only for confirmed different mailbox.",
+    "implemented": true,
+    "prdRefs": [
+      "Microsoft steps"
+    ]
+  },
+  {
+    "id": "F014",
+    "description": "Report authenticated identity and production mailbox-route decision, conditional scopes and stale-token refresh consistency.",
+    "implemented": true,
+    "prdRefs": [
+      "Microsoft steps"
+    ]
+  },
+  {
+    "id": "F015",
+    "description": "Implement Send As advisory fallback and evidence-based denial classification without treating generic 403 or draft success as definitive.",
+    "implemented": true,
+    "prdRefs": [
+      "Probe evidence gate and acceptance reconciliation"
+    ]
+  },
+  {
+    "id": "F016",
+    "description": "Record real-tenant draft/send comparison gate and selected outcome; if a probe is justified, delete only its own synthetic draft and expose cleanup evidence.",
+    "implemented": false,
+    "prdRefs": [
+      "Probe evidence gate and acceptance reconciliation"
+    ]
+  },
+  {
+    "id": "F017",
+    "description": "Report Sent Items target and limited access evidence without equating read access or missing write scope with send writability.",
+    "implemented": true,
+    "prdRefs": [
+      "Microsoft steps"
+    ]
+  },
+  {
+    "id": "F018",
+    "description": "Preserve Graph/native provider status, errorCode and correlation IDs across transport, sanitized errors, action reports and multi-operation evidence.",
+    "implemented": true,
+    "prdRefs": [
+      "Outbound shell and action contract"
+    ]
+  },
+  {
+    "id": "F019",
+    "description": "Reuse actual SMTP configuration and verify attempt while capturing native errors before initialization wrapping.",
+    "implemented": true,
+    "prdRefs": [
+      "SMTP and Resend"
+    ]
+  },
+  {
+    "id": "F020",
+    "description": "Expose evidence-backed connection/TLS/AUTH phases, skips and honest durations; do not infer unobserved phase success.",
+    "implemented": true,
+    "prdRefs": [
+      "SMTP and Resend"
+    ]
+  },
+  {
+    "id": "F021",
+    "description": "Expose real Resend configuration/domains verification evidence and cache freshness, with restricted-key capability limitations.",
+    "implemented": true,
+    "prdRefs": [
+      "SMTP and Resend"
+    ]
+  },
+  {
+    "id": "F022",
+    "description": "Implement common optional live send through selected production provider; preserve acceptance versus delivery and uncertain-send semantics.",
+    "implemented": true,
+    "prdRefs": [
+      "Microsoft steps"
+    ]
+  },
+  {
+    "id": "F023",
+    "description": "Build shared outbound dialog with summary, identities, rows, timing, safe details, recommendations and support export.",
+    "implemented": true,
+    "prdRefs": [
+      "UI and support bundle"
+    ]
+  },
+  {
+    "id": "F024",
+    "description": "Add explicit live-send opt-in/recipient validation, saved-settings notice, pending/retry states and duplicate-submit prevention.",
+    "implemented": true,
+    "prdRefs": [
+      "UI and support bundle"
+    ]
+  },
+  {
+    "id": "F025",
+    "description": "Replace outbound Test entry point in CE EmailSettings with the shared diagnostics dialog.",
+    "implemented": true,
+    "prdRefs": [
+      "UI and support bundle"
+    ]
+  },
+  {
+    "id": "F026",
+    "description": "Replace outbound Test entry point in EE ManagedEmailSettings with the same exported dialog.",
+    "implemented": true,
+    "prdRefs": [
+      "UI and support bundle"
+    ]
+  },
+  {
+    "id": "F027",
+    "description": "Project/redact outbound report and support bundle safely while retaining protocol correlation IDs and explicit identifier controls.",
+    "implemented": true,
+    "prdRefs": [
+      "UI and support bundle"
+    ]
+  },
+  {
+    "id": "F028",
+    "description": "Log errorCode, metadata.status and metadata.requestId explicitly in notification send failure without changing message, skip or rethrow behavior.",
+    "implemented": true,
+    "prdRefs": [
+      "Notification logging"
+    ]
+  },
+  {
+    "id": "F029",
+    "description": "Remove all diagnostics runStep/fold clones and verify shared exports build across CE, EE, email and integrations consumers.",
+    "implemented": true,
+    "prdRefs": [
+      "Definition of done"
+    ]
+  }
+]

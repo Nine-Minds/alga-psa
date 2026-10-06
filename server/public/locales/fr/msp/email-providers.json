@@ -803,7 +803,8 @@
           "recipientPlaceholder": "vous@exemple.com",
           "testingButton": "Test en cours...",
           "runButton": "Tester la connexion"
-        }
+        },
+        "ticketIdentityRequired": "Choisissez une identité de messagerie des tickets ci-dessous pour définir le domaine d’envoi."
       },
       "ticketingFrom": {
         "title": "Adresse d'expéditeur de ticket",
@@ -842,7 +843,18 @@
         "description": "Les messages sont envoyés depuis la boîte sélectionnée via Microsoft Graph et enregistrés dans Éléments envoyés.",
         "loadFailed": "Impossible de charger les boîtes aux lettres Microsoft 365.",
         "saved": "Boîte aux lettres d'envoi mise à jour."
-      }
+      },
+      "diagnosticsButton": "Exécuter le diagnostic des e-mails sortants",
+      "saveSettings": "Enregistrer les paramètres d’envoi",
+      "discardChanges": "Abandonner les modifications",
+      "unsaved": "Modifications non enregistrées",
+      "noPendingChanges": "Aucune modification non enregistrée",
+      "saving": "Enregistrement des paramètres d’envoi…",
+      "saved": "Paramètres d’envoi enregistrés.",
+      "saveFailed": "Impossible d’enregistrer les paramètres d’envoi. Vos modifications sont toujours présentes. Réessayez.",
+      "diagnosticsSaveHelp": "Enregistrez ou abandonnez vos modifications avant de vérifier les paramètres d’envoi.",
+      "saveBeforeDomainRemoval": "Enregistrez ou abandonnez vos modifications des paramètres d’envoi avant de supprimer un domaine.",
+      "senderAddressAfterSave": "Affiché après l’enregistrement."
     },
     "inbound": {
       "intro": "Configurez le routage des e-mails entrants et l'automatisation spécifique au fournisseur."
