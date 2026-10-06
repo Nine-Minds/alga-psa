@@ -23,6 +23,7 @@ import {
   attachDocumentToTicket,
   type TenantTxContext,
 } from './shared';
+import { getCurrentTicketAdditionalUserIds } from './userRecipients';
 import {
   WORKFLOW_COMMENT_VISIBILITY_LABELS,
   withWorkflowExplicitChoice,
@@ -119,22 +120,6 @@ function tenantScopedTable(
 ): Knex.QueryBuilder {
   return tenantDb(tx.trx, tx.tenantId).table(table);
 }
-
-const getCurrentTicketAdditionalUserIds = async (
-  tx: { tenantId: string; trx: any },
-  ticketId: string
-): Promise<string[]> => {
-  const rows = await tenantScopedTable(tx, 'ticket_resources')
-    .where('ticket_id', ticketId)
-    .whereNotNull('additional_user_id')
-    .select('additional_user_id');
-
-  return uniqueStrings(
-    rows
-      .map((row: { additional_user_id: string | null }) => row.additional_user_id)
-      .filter((userId: string | null): userId is string => typeof userId === 'string' && userId.length > 0)
-  );
-};
 
 const resolveWorkflowTicketAssignment = async (
   tx: { tenantId: string; trx: any },

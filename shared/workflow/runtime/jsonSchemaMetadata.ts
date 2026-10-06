@@ -47,7 +47,7 @@ export type WorkflowEditorJsonSchemaMetadata = {
   };
 };
 
-export type WorkflowEditorCustomComponent = 'ticket-assignment' | 'notification-recipients' | 'email-recipients';
+export type WorkflowEditorCustomComponent = 'ticket-assignment' | 'notification-recipients' | 'email-recipients' | 'email-user-recipients';
 
 export type WorkflowFailurePolicyMetadata = {
   /** The option value that makes the step fail (so a surrounding Try/Catch handles it). */

@@ -12,6 +12,7 @@ import {
   throwActionError
 } from './shared';
 import { withWorkflowJsonSchemaMetadata, withWorkflowPicker } from '../../jsonSchemaMetadata';
+import { workflowUserRecipientsSchema, resolveWorkflowUserRecipients } from './userRecipients';
 
 export function registerNotificationActions(): void {
   const registry = getActionRegistryV2();
@@ -25,10 +26,9 @@ export function registerNotificationActions(): void {
     inputSchema: z.object({
       // The designer edits recipients with one "Notify users / roles" editor instead of nested fields.
       recipients: withWorkflowJsonSchemaMetadata(
-        z.object({
+        workflowUserRecipientsSchema.extend({
           user_ids: withWorkflowPicker(z.array(uuidSchema).optional(), 'Users to notify', 'user'),
           role_ids: withWorkflowPicker(z.array(uuidSchema).optional(), 'Roles to notify (every user with one of these roles)', 'role'),
-          role_names: z.array(z.string().min(1)).optional().describe('Role names (case-insensitive)')
         }),
         'Recipients',
         { 'x-workflow-editor': { kind: 'custom', custom: { component: 'notification-recipients' } } }
@@ -48,43 +48,15 @@ export function registerNotificationActions(): void {
     ui: { label: 'Send In-App Notification', category: 'Business Operations', description: 'Create internal_notifications records for users' },
     handler: async (input, ctx) => withTenantTransaction(ctx, async (tx) => {
       const db = tenantDb(tx.trx, tx.tenantId);
-      const explicitUserIds = Array.isArray(input.recipients?.user_ids) ? input.recipients.user_ids : [];
-      const roleIds = Array.isArray(input.recipients?.role_ids) ? input.recipients.role_ids : [];
-      const roleNames = Array.isArray(input.recipients?.role_names) ? input.recipients.role_names : [];
-
-      const resolvedRoleIds: string[] = [];
-      if (roleIds.length) resolvedRoleIds.push(...roleIds);
-      if (roleNames.length) {
-        const roleNamesLower = roleNames.map((n) => n.toLowerCase());
-        const roles = await db.table('roles')
-          .andWhere(function matchRoleNames() {
-            roleNamesLower.forEach((name) => {
-              this.orWhereRaw('lower(role_name) = ?', [name]);
-            });
-          })
-          .select('role_id');
-        resolvedRoleIds.push(...roles.map((r: any) => r.role_id));
-      }
-
-      const roleUserIds: string[] = resolvedRoleIds.length
-        ? (await db.table('user_roles')
-            .whereIn('role_id', resolvedRoleIds)
-            .select('user_id'))
-            .map((row: any) => row.user_id)
-        : [];
-
-      const userIds = Array.from(new Set([...explicitUserIds, ...roleUserIds]));
+      // In-app notifications go to every resolved user, including inactive and client users.
+      const users = await resolveWorkflowUserRecipients(tx, ctx, {
+        user_ids: input.recipients?.user_ids,
+        role_ids: input.recipients?.role_ids,
+        role_names: input.recipients?.role_names,
+      });
+      const userIds = users.map((user) => user.user_id);
       if (!userIds.length) {
         throwActionError(ctx, { category: 'ValidationError', code: 'VALIDATION_ERROR', message: 'At least one recipient user_id is required' });
-      }
-
-      const existingUsers = await db.table('users')
-        .whereIn('user_id', userIds)
-        .select('user_id');
-      const existingSet = new Set(existingUsers.map((u: any) => u.user_id));
-      const missing = userIds.filter((id: string) => !existingSet.has(id));
-      if (missing.length) {
-        throwActionError(ctx, { category: 'ActionError', code: 'NOT_FOUND', message: 'One or more users not found', details: { missing_user_ids: missing } });
       }
 
       const nowIso = new Date().toISOString();
