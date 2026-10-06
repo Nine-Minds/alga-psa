@@ -738,6 +738,7 @@
     "status": "Status",
     "actions": "Åtgärder",
     "openMenu": "Öppna meny",
+    "viewDetails": "Visa detaljer",
     "unassign": "Ta bort tilldelning",
     "loading": "Läser in avtal…",
     "empty": "Inga avtal har tilldelats kunden ännu.",

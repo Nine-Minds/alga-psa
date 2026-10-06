@@ -19,8 +19,12 @@ import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { createInstance } from 'i18next';
+import englishClients from '../../../../../server/public/locales/en/msp/clients.json';
+import swedishClients from '../../../../../server/public/locales/sv/msp/clients.json';
 
 const pushMock = vi.hoisted(() => vi.fn());
+const translateMock = vi.hoisted(() => vi.fn());
 
 const getClientContractsMock = vi.hoisted(() => vi.fn());
 const getDetailedClientContractMock = vi.hoisted(() => vi.fn());
@@ -55,7 +59,7 @@ vi.mock('@alga-psa/clients/context/ClientCrossFeatureContext', () => ({
 
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
   useTranslation: () => ({
-    t: (key: string, options?: { defaultValue?: string }) => options?.defaultValue ?? key,
+    t: translateMock,
   }),
 }));
 
@@ -129,6 +133,9 @@ const CANONICAL_URL =
 describe('ClientContractAssignment contract-detail navigation', () => {
   beforeEach(() => {
     pushMock.mockReset();
+    translateMock.mockReset().mockImplementation(
+      (key: string, options?: { defaultValue?: string }) => options?.defaultValue ?? key,
+    );
     getClientContractsMock.mockReset().mockResolvedValue([
       {
         client_contract_id: 'cc-1',
@@ -170,6 +177,29 @@ describe('ClientContractAssignment contract-detail navigation', () => {
     render(<ClientContractAssignment clientId="client-1" />);
 
     const viewDetails = await screen.findByRole('button', { name: 'View details' });
+    await userEvent.click(viewDetails);
+
+    expect(pushMock).toHaveBeenCalledTimes(1);
+    expect(pushMock).toHaveBeenCalledWith(CANONICAL_URL);
+    expect(screen.queryByTestId('client-contract-dialog')).toBeNull();
+  });
+
+  it('renders the details action in Swedish and navigates to the assigned contract', async () => {
+    const i18n = createInstance();
+    await i18n.init({
+      lng: 'sv',
+      fallbackLng: 'en',
+      resources: {
+        en: { 'msp/clients': englishClients },
+        sv: { 'msp/clients': swedishClients },
+      },
+    });
+    translateMock.mockImplementation(i18n.getFixedT('sv', 'msp/clients'));
+
+    render(<ClientContractAssignment clientId="client-1" />);
+
+    const viewDetails = await screen.findByRole('button', { name: 'Visa detaljer' });
+    expect(screen.queryByRole('button', { name: 'View details' })).toBeNull();
     await userEvent.click(viewDetails);
 
     expect(pushMock).toHaveBeenCalledTimes(1);
