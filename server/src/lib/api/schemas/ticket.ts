@@ -368,6 +368,40 @@ function validateScheduledCommentPublication(
   }
 }
 
+/** Abuse ceiling shared with the normalizer: cc + bcc per comment. */
+export const MAX_TICKET_COMMENT_EMAIL_RECIPIENTS = 20;
+
+// One-off Cc/Bcc are a public-reply feature. Internal notes never email
+// anyone outside the MSP, so the API rejects the fields rather than
+// silently dropping them.
+function validateTicketCommentEmailRecipients(
+  data: { cc?: string[]; bcc?: string[]; is_internal?: boolean },
+  ctx: z.RefinementCtx
+): void {
+  const total = (data.cc?.length ?? 0) + (data.bcc?.length ?? 0);
+  if (total === 0) {
+    return;
+  }
+  if (data.is_internal) {
+    for (const field of ['cc', 'bcc'] as const) {
+      if ((data[field]?.length ?? 0) > 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: [field],
+          message: 'Cc/Bcc recipients cannot be added to an internal note',
+        });
+      }
+    }
+  }
+  if (total > MAX_TICKET_COMMENT_EMAIL_RECIPIENTS) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['cc'],
+      message: `At most ${MAX_TICKET_COMMENT_EMAIL_RECIPIENTS} Cc and Bcc recipients are allowed on one comment`,
+    });
+  }
+}
+
 // Ticket comment schemas
 export const createTicketCommentSchema = z.object({
   comment_text: z.string()
@@ -385,8 +419,13 @@ export const createTicketCommentSchema = z.object({
   external_links: inlineTicketExternalLinksSchema,
   scheduled_publish_at: z.string().datetime({ offset: true }).optional(),
   scheduled_publish_tz: z.string().min(1).max(64).optional(),
+  cc: z.array(z.string().email()).max(MAX_TICKET_COMMENT_EMAIL_RECIPIENTS).optional(),
+  bcc: z.array(z.string().email()).max(MAX_TICKET_COMMENT_EMAIL_RECIPIENTS).optional(),
   ...ticketNotificationSuppressionSchema,
-}).superRefine(validateTicketNotificationSuppression).superRefine(validateScheduledCommentPublication);
+})
+  .superRefine(validateTicketNotificationSuppression)
+  .superRefine(validateScheduledCommentPublication)
+  .superRefine(validateTicketCommentEmailRecipients);
 
 export const updateTicketCommentSchema = z.object({
   comment_text: z.string()

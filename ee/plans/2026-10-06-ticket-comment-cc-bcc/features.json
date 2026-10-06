@@ -10,10 +10,10 @@
   {"id": "F008", "commitGroup": "server-actions", "prdRefs": ["FR20"], "implemented": true, "description": "mirrorCommentToChild does not copy metadata.email_recipients to bundle-child comment copies"},
   {"id": "F009", "commitGroup": "server-actions", "prdRefs": ["Flows: scheduled"], "implemented": true, "description": "Scheduled comments keep email_recipients on the row; publishScheduledCommentHandler needs no extra payload since delivery reads from the row"},
 
-  {"id": "F010", "commitGroup": "rest-api", "prdRefs": ["FR11"], "implemented": false, "description": "createTicketCommentSchema gains optional cc/bcc email arrays (max 20) with a refine rejecting them when is_internal is true"},
-  {"id": "F011", "commitGroup": "rest-api", "prdRefs": ["FR11"], "implemented": false, "description": "ApiTicketController.addComment and TicketService.addComment pass cc/bcc through the shared helper and persist them; validation errors map to 400 with field details"},
-  {"id": "F012", "commitGroup": "rest-api", "prdRefs": ["FR27"], "implemented": false, "description": "Ticket comment API responses (create + list/get) include email_recipients"},
-  {"id": "F013", "commitGroup": "rest-api", "prdRefs": ["Data / API"], "implemented": false, "description": "OpenAPI TicketCommentCreateBody and comment response updated; regenerate openapi spec and MCP registry.generated.ts; sync nm-store developer portal"},
+  {"id": "F010", "commitGroup": "rest-api", "prdRefs": ["FR11"], "implemented": true, "description": "createTicketCommentSchema gains optional cc/bcc email arrays (max 20) with a refine rejecting them when is_internal is true"},
+  {"id": "F011", "commitGroup": "rest-api", "prdRefs": ["FR11"], "implemented": true, "description": "ApiTicketController.addComment and TicketService.addComment pass cc/bcc through the shared helper and persist them; validation errors map to 400 with field details"},
+  {"id": "F012", "commitGroup": "rest-api", "prdRefs": ["FR27"], "implemented": true, "description": "Ticket comment API responses (create + list/get) include email_recipients"},
+  {"id": "F013", "commitGroup": "rest-api", "prdRefs": ["Data / API"], "implemented": true, "description": "OpenAPI TicketCommentCreateBody and comment response updated; regenerate openapi spec and MCP registry.generated.ts; sync nm-store developer portal"},
 
   {"id": "F014", "commitGroup": "email-delivery", "prdRefs": ["FR17"], "implemented": false, "description": "sendEventEmail SendEmailParams gains optional cc/bcc string arrays passed through to TenantEmailService.sendEmail"},
   {"id": "F015", "commitGroup": "email-delivery", "prdRefs": ["FR13"], "implemented": false, "description": "handleTicketCommentAdded reads metadata.email_recipients from the comment row (not the event payload)"},
