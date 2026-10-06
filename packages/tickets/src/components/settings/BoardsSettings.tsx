@@ -1208,10 +1208,15 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
           }
         }
 
-        const notificationResult = await persistNotificationSettings(editingBoard.board_id!);
-        if (isReturnedActionError(notificationResult)) {
-          failInSection('notifications', getErrorMessage(notificationResult));
-          return;
+        // Only when the notifications section changed: re-saving untouched settings would
+        // re-validate stored users that may have been deactivated since, and fail every
+        // unrelated board save.
+        if (isSectionDirty('notifications')) {
+          const notificationResult = await persistNotificationSettings(editingBoard.board_id!);
+          if (isReturnedActionError(notificationResult)) {
+            failInSection('notifications', getErrorMessage(notificationResult));
+            return;
+          }
         }
 
         toast.success(t('ticketing.boards.messages.success.updated'));

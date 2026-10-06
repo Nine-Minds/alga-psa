@@ -143,13 +143,36 @@ export const saveBoardNotificationSettings = withAuth(
 
         const userIds = dedupe([...rules.flatMap((rule) => rule.user_ids), ...defaultWatcherUserIds]);
         if (userIds.length > 0) {
-          const found = await scoped
-            .table('users')
-            .where({ user_type: 'internal', is_inactive: false })
-            .whereIn('user_id', userIds)
-            .pluck('user_id');
-          if (userIds.some((id) => !found.includes(id))) {
-            throw new Error('Notification recipients and default watchers must be active internal users');
+          // Users already stored on this board (as a recipient or default watcher) stay valid
+          // even after deactivation: those rows are kept and filtered out at send time, so a
+          // board with a deactivated stored user must still save. Only newly chosen users
+          // have to be active internal users.
+          const storedIds = new Set<string>([
+            ...(await scoped
+              .table('board_notification_rule_recipients as r')
+              .join('board_notification_rules as br', function () {
+                this.on('br.tenant', 'r.tenant').andOn('br.rule_id', 'r.rule_id');
+              })
+              .where('br.board_id', boardId)
+              .where('r.recipient_type', 'user')
+              .whereIn('r.user_id', userIds)
+              .pluck('r.user_id')),
+            ...(await scoped
+              .table('board_default_watchers')
+              .where({ board_id: boardId })
+              .whereIn('user_id', userIds)
+              .pluck('user_id')),
+          ]);
+          const newIds = userIds.filter((id) => !storedIds.has(id));
+          if (newIds.length > 0) {
+            const found = await scoped
+              .table('users')
+              .where({ user_type: 'internal', is_inactive: false })
+              .whereIn('user_id', newIds)
+              .pluck('user_id');
+            if (newIds.some((id) => !found.includes(id))) {
+              throw new Error('Notification recipients and default watchers must be active internal users');
+            }
           }
         }
 

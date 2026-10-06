@@ -197,6 +197,47 @@ describe('board notification settings actions (integration)', () => {
     expect(await countRows('board_notification_rules', { board_id: boardId })).toBe(0);
   });
 
+  it('keeps saving a board whose stored recipient and default watcher were deactivated; a newly chosen inactive user is still rejected', async () => {
+    const leaver = await createUser(db, tenant, { email: `leaver-${uuidv4().slice(0, 6)}@example.com` });
+    const leaverWatcher = await createUser(db, tenant, { email: `leaver-w-${uuidv4().slice(0, 6)}@example.com` });
+    const input = {
+      rules: [{ notify_on_create: true, user_ids: [leaver] }],
+      default_watcher_user_ids: [leaverWatcher, tech1],
+    };
+    const first: any = await saveBoardNotificationSettings(boardId, input);
+    expect(isActionMessageError(first), JSON.stringify(first)).toBe(false);
+
+    await scoped.table('users').whereIn('user_id', [leaver, leaverWatcher]).update({ is_inactive: true });
+
+    // Unchanged re-save (rule id reused) succeeds: the rule's only recipient is inactive but stored.
+    const again: any = await saveBoardNotificationSettings(boardId, {
+      rules: [{ rule_id: first.rules[0].rule_id, ...input.rules[0] }],
+      default_watcher_user_ids: input.default_watcher_user_ids,
+    });
+    expect(isActionMessageError(again), JSON.stringify(again)).toBe(false);
+    expect(again.rules[0].user_ids).toEqual([leaver]);
+    expect([...again.default_watcher_user_ids].sort()).toEqual([leaverWatcher, tech1].sort());
+
+    // Adding a newly chosen inactive user is still rejected, and nothing changes.
+    expectError(
+      await saveBoardNotificationSettings(boardId, {
+        rules: [{ rule_id: first.rules[0].rule_id, notify_on_create: true, user_ids: [leaver, inactiveTech] }],
+        default_watcher_user_ids: input.default_watcher_user_ids,
+      }),
+      'active internal users'
+    );
+    expectError(
+      await saveBoardNotificationSettings(boardId, {
+        rules: again.rules,
+        default_watcher_user_ids: [...input.default_watcher_user_ids, inactiveTech],
+      }),
+      'active internal users'
+    );
+    const loaded: any = await getBoardNotificationSettings(boardId);
+    expect(loaded.rules[0].user_ids).toEqual([leaver]);
+    expect(loaded.default_watcher_user_ids).not.toContain(inactiveTech);
+  });
+
   it('rejects an unknown board', async () => {
     expectError(await saveBoardNotificationSettings(uuidv4(), { rules: [] }), 'Board not found');
   });
