@@ -1,10 +1,11 @@
 'use client';
 
-/* eslint-disable custom-rules/no-feature-to-feature-imports -- Client portal invoice preview intentionally reuses billing feature presentation components for customer invoice views. */
+/* eslint-disable custom-rules/no-feature-to-feature-imports -- Client portal invoice preview intentionally reuses billing feature presentation components and the scoped invoice template resolver so customer invoice views honor the same configured template as MSP preview and PDF rendering. */
 
 import React, { useEffect, useState, useRef } from 'react';
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
 import { TemplateRenderer, PaperInvoice } from '@alga-psa/billing/components';
+import { getResolvedInvoiceTemplateId } from '@alga-psa/billing/actions/invoiceQueries';
 import { getClientInvoiceById, getClientInvoiceTemplates } from '@alga-psa/client-portal/actions';
 import { mapDbInvoiceToWasmViewModel } from '@alga-psa/billing/lib/adapters/invoiceAdapters';
 import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
@@ -68,10 +69,13 @@ const ClientInvoicePreview: React.FC<ClientInvoicePreviewProps> = ({
       setError(null);
 
       try {
-        // Fetch invoice and templates in parallel
-        const [dbInvoiceData, templates] = await Promise.all([
+        // Fetch invoice, templates, and the client/default template selection in
+        // parallel. The resolver returns the client's override, otherwise the
+        // tenant default, otherwise its own first-template fallback.
+        const [dbInvoiceData, templates, resolvedTemplateId] = await Promise.all([
           getClientInvoiceById(invoiceId),
           getClientInvoiceTemplates(),
+          getResolvedInvoiceTemplateId(invoiceId),
         ]);
 
         if (isBillingActionError(dbInvoiceData)) {
@@ -100,10 +104,16 @@ const ClientInvoicePreview: React.FC<ClientInvoicePreviewProps> = ({
 
         setInvoiceData(viewModel);
 
-        // Use the first available template (standard template)
-        // In future, could use tenant's default template preference
-        const defaultTemplate = templates.find(t => t.isStandard) || templates[0];
-        setTemplate(defaultTemplate || null);
+        // Honor the resolved client/tenant/default template when it matches one
+        // of the available templates. A null or unmatched resolution falls back
+        // to the first standard template, then the first available template.
+        // An empty list keeps the existing unavailable state.
+        const resolvedTemplate = resolvedTemplateId
+          ? templates.find((entry) => entry.template_id === resolvedTemplateId)
+          : undefined;
+        const selectedTemplate =
+          resolvedTemplate || templates.find((entry) => entry.isStandard) || templates[0];
+        setTemplate(selectedTemplate || null);
 
       } catch (err) {
         console.error('Error loading invoice preview:', err);
