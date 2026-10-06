@@ -2,7 +2,7 @@
 
 Card: "CE scheduler runs sub-daily cron jobs only once per 24h" (eacba6ad-0ca3-4eed-a7c1-4fde534a8b8d)
 Branch: `feature/ce-scheduler-runs-sub-daily-cron-jobs-only-once`
-Status: design. Nothing is implemented yet.
+Status: implemented on branch; live CE cadence check (§6.3) still pending.
 
 ## 1. What is actually broken
 
