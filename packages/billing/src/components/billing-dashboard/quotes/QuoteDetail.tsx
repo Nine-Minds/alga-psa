@@ -16,7 +16,7 @@ import { getActiveClientLocationsForBilling, type BillingLocationSummary } from 
 import LocationAddress from '../locations/LocationAddress';
 import { buildLocationGroups, shouldShowLocationGroups } from '../locations/locationGrouping';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
-import { buildSenderOptions, DEFAULT_SENDER_SELECTION, senderIdForSend } from '@alga-psa/email/senderSelection';
+import { DEFAULT_SENDER_SELECTION } from '@alga-psa/email/senderSelection';
 import { listSelectableSenders } from '@alga-psa/email/senderActions';
 import type { IQuoteDocumentTemplate } from '@alga-psa/types';
 import { approveQuote, convertQuoteToContract, convertQuoteToInvoice, convertQuoteToSalesOrder, createQuoteRevision, deleteQuote, downloadQuotePdf, duplicateQuote, getQuote, getQuoteApprovalSettings, getQuoteConversionPreview, listQuoteVersions, renderQuotePreview, requestQuoteApprovalChanges, resendQuote, saveQuoteAsTemplate, sendQuote, sendQuoteReminder, submitQuoteForApproval, updateQuote } from '../../../actions/quoteActions';
@@ -27,7 +27,7 @@ import { getContactsForPicker } from '@alga-psa/user-composition/actions/contact
 import QuoteStatusBadge from './QuoteStatusBadge';
 import { QuoteTermsContent } from '@alga-psa/ui/editor';
 import { ArrowLeft } from 'lucide-react';
-import { QuoteSendRecipientsField, type QuoteRecipient } from './QuoteSendRecipientsField';
+import { QuoteSendDialog, type QuoteSendDialogPayload } from './QuoteSendDialog';
 
 interface QuoteDetailProps {
   quoteId: string;
@@ -165,9 +165,6 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
   const [quoteSenders, setQuoteSenders] = useState<Array<{ sender_id: string; email_address: string }>>([]);
   const [quoteEffectiveSenderAddress, setQuoteEffectiveSenderAddress] = useState('');
   const [quoteSenderId, setQuoteSenderId] = useState(DEFAULT_SENDER_SELECTION);
-  const [sendMessage, setSendMessage] = useState('');
-  const [sendRecipients, setSendRecipients] = useState<QuoteRecipient[]>([]);
-  const [additionalEmails, setAdditionalEmails] = useState('');
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [previewHtml, setPreviewHtml] = useState<{ html: string; css: string } | null>(null);
   const [isPreviewLoading2, setIsPreviewLoading2] = useState(false);
@@ -604,7 +601,7 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
     }
   };
 
-  const handleSendQuote = async () => {
+  const handleSendQuote = async (payload: QuoteSendDialogPayload) => {
     if (!quote) {
       return;
     }
@@ -613,21 +610,7 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
       setIsWorking(true);
       setError(null);
       setNotice(null);
-      const typedEmails = additionalEmails.split(',').map((e) => e.trim()).filter(Boolean);
-      const pickedEmails = sendRecipients.map((r) => r.email);
-      const seen = new Set<string>();
-      const combined: string[] = [];
-      for (const email of [...pickedEmails, ...typedEmails]) {
-        const key = email.toLowerCase();
-        if (seen.has(key)) continue;
-        seen.add(key);
-        combined.push(email);
-      }
-      const result = await sendQuote(quote.quote_id, {
-        message: sendMessage.trim() || undefined,
-        email_addresses: combined.length > 0 ? combined : undefined,
-        senderId: senderIdForSend(quoteSenderId),
-      });
+      const result = await sendQuote(quote.quote_id, payload);
 
       if (isReturnedActionError(result)) {
         throw new Error(getErrorMessage(result));
@@ -635,9 +618,6 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
 
       setQuote(result);
       setIsSendDialogOpen(false);
-      setSendMessage('');
-      setSendRecipients([]);
-      setAdditionalEmails('');
       setNotice(
         t('quoteDetail.notices.sent', { defaultValue: 'Quote sent to the client.' }),
       );
@@ -1516,61 +1496,18 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
           )}
         </DialogContent>
       </Dialog>
-      <Dialog
-        id="quote-send-dialog"
+      <QuoteSendDialog
+        idPrefix="quote-send"
         isOpen={isSendDialogOpen}
+        clientId={quote.client_id}
+        isSending={isWorking}
+        senders={quoteSenders}
+        effectiveSenderAddress={quoteEffectiveSenderAddress}
+        senderId={quoteSenderId}
+        onSenderChange={setQuoteSenderId}
         onClose={() => setIsSendDialogOpen(false)}
-        title={t('quoteForm.dialogs.send.title', { defaultValue: 'Send Quote to Client' })}
-        footer={(
-          <div className="flex justify-end space-x-2">
-            <Button id="quote-send-cancel" variant="outline" onClick={() => setIsSendDialogOpen(false)} disabled={isWorking}>{t('common.actions.cancel', { defaultValue: 'Cancel' })}</Button>
-            <Button id="quote-send-confirm" onClick={() => void handleSendQuote()} disabled={isWorking}>
-              {isWorking
-                ? t('common.states.sending', { defaultValue: 'Sending...' })
-                : t('quoteForm.actions.sendQuote', { defaultValue: 'Send Quote' })}
-            </Button>
-          </div>
-        )}
-      >
-        <DialogContent>
-          <DialogDescription>
-            {t('quoteForm.dialogs.send.description', {
-              defaultValue: 'This will email the quote to the client\'s billing contacts and change its status to "Sent".',
-            })}
-          </DialogDescription>
-          <div className="space-y-3 py-2">
-            {quoteSenders.length > 1 && <div className="space-y-1"><label htmlFor="quote-detail-send-sender" className="text-sm font-medium">{t('quoteForm.dialogs.send.from', { defaultValue: 'From' })}</label><CustomSelect id="quote-detail-send-sender" value={quoteSenderId} onValueChange={setQuoteSenderId} options={buildSenderOptions(quoteSenders, quoteEffectiveSenderAddress, t('quoteForm.dialogs.send.useDefault', { defaultValue: 'Use default' }))} /></div>}
-            <label className="flex flex-col gap-1 text-sm font-medium">
-              {t('quoteForm.fields.recipients', { defaultValue: 'Recipients' })}
-              <QuoteSendRecipientsField
-                id="quote-send-recipients"
-                clientId={quote?.client_id}
-                value={sendRecipients}
-                onChange={setSendRecipients}
-              />
-            </label>
-            <label className="flex flex-col gap-1 text-sm font-medium">
-              {t('quoteForm.fields.additionalEmails', { defaultValue: 'Additional email addresses (comma-separated)' })}
-              <input
-                type="text"
-                value={additionalEmails}
-                onChange={(event) => setAdditionalEmails(event.target.value)}
-                placeholder={t('quoteForm.placeholders.additionalEmails', { defaultValue: 'email@example.com, another@example.com' })}
-                className="rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-              />
-            </label>
-            <label className="flex flex-col gap-1 text-sm font-medium">
-              {t('quoteDetail.dialogs.send.message', { defaultValue: 'Optional message to include in the email' })}
-              <TextArea
-                value={sendMessage}
-                onChange={(event) => setSendMessage(event.target.value)}
-                rows={3}
-                placeholder={t('quoteForm.placeholders.message', { defaultValue: 'Add a personal note for the client...' })}
-              />
-            </label>
-          </div>
-        </DialogContent>
-      </Dialog>
+        onConfirm={(payload) => void handleSendQuote(payload)}
+      />
       <Dialog
         id="quote-approval-dialog"
         isOpen={approvalDialogMode !== null}
