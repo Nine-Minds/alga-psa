@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
-import { startOffsetDaysFromDates, templateTaskDates } from './templateTaskDates';
+import {
+  formatStartOffsetDays,
+  parseStartOffsetDays,
+  startOffsetDaysFromDates,
+  templateTaskDates,
+} from './templateTaskDates';
 
 const day = (iso: string) => new Date(`${iso}T00:00:00`);
 
@@ -59,5 +64,29 @@ describe('templateTaskDates', () => {
   it('round-trips an offset saved from a project', () => {
     const offset = startOffsetDaysFromDates(day('2026-10-09'), phaseStart);
     expect(templateTaskDates({ phaseStart, durationDays: 10, startOffsetDays: offset }).start_date).toEqual(day('2026-10-09'));
+  });
+});
+
+describe('start offset form field', () => {
+  it('reads blank as no start date and keeps zero as a real offset', () => {
+    expect(parseStartOffsetDays('')).toBeNull();
+    expect(parseStartOffsetDays('   ')).toBeNull();
+    expect(parseStartOffsetDays(undefined)).toBeNull();
+    expect(parseStartOffsetDays('0')).toBe(0);
+    expect(parseStartOffsetDays('7')).toBe(7);
+  });
+
+  it('never stores a negative or non-numeric offset', () => {
+    expect(parseStartOffsetDays('-3')).toBe(0);
+    expect(parseStartOffsetDays('abc')).toBeNull();
+    expect(parseStartOffsetDays('2.9')).toBe(2);
+  });
+
+  it('shows a stored zero rather than an empty field, and round-trips', () => {
+    expect(formatStartOffsetDays(0)).toBe('0');
+    expect(formatStartOffsetDays(null)).toBe('');
+    expect(formatStartOffsetDays(undefined)).toBe('');
+    for (const value of [0, 1, 14]) expect(parseStartOffsetDays(formatStartOffsetDays(value))).toBe(value);
+    expect(parseStartOffsetDays(formatStartOffsetDays(null))).toBeNull();
   });
 });

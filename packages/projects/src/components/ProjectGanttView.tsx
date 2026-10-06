@@ -806,8 +806,7 @@ export const ProjectGanttView: React.FC<ProjectGanttViewProps> = ({
         bars: [],
         arrows: arrows.map((arrow) => ({
           d: arrow.d,
-          color: arrow.violated ? overdueColor : arrow.critical ? '#f59e0b' : arrow.kind === 'related' ? '#2563eb' : '#374151',
-          dashed: arrow.kind === 'related',
+          tone: arrow.violated ? 'conflict' : arrow.critical ? 'critical' : arrow.kind === 'related' ? 'related' : 'blocking',
         })),
       };
       rows.forEach((row, index) => {

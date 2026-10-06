@@ -4,6 +4,9 @@
  * layout as a standalone SVG and paints that onto a canvas.
  */
 
+/** What an arrow means; the export picks the colour, since the image has its own palette. */
+export type GanttExportArrowTone = 'blocking' | 'related' | 'critical' | 'conflict';
+
 export interface GanttExportModel {
   title: string;
   leftWidth: number;
@@ -40,7 +43,7 @@ export interface GanttExportModel {
     inferred: boolean;
     critical: boolean;
   }[];
-  arrows: { d: string; color: string; dashed: boolean }[];
+  arrows: { d: string; tone: GanttExportArrowTone }[];
 }
 
 /** Largest canvas edge browsers reliably allocate. */
@@ -53,6 +56,14 @@ const MUTED = '#6b7280';
 const RULE = '#e5e7eb';
 const BAND = '#f9fafb';
 const CRITICAL = '#f59e0b';
+// The image is always drawn on white, whatever theme the app is in, so its
+// line colours are fixed here rather than read from theme variables.
+const ARROW_COLORS: Record<GanttExportArrowTone, string> = {
+  blocking: '#374151',
+  related: '#2563eb',
+  critical: CRITICAL,
+  conflict: '#ef4444',
+};
 
 function escapeXml(value: string): string {
   return value
@@ -172,7 +183,7 @@ export function buildGanttSvg(model: GanttExportModel): { svg: string; width: nu
   out.push(`<g transform="translate(${cx} ${bodyTop})" fill="none">`);
   for (const arrow of model.arrows) {
     out.push(
-      `<path d="${arrow.d}" stroke="${arrow.color}" stroke-width="1"${arrow.dashed ? ' stroke-dasharray="2 3"' : ' marker-end="url(#a)"'}/>`,
+      `<path d="${arrow.d}" stroke="${ARROW_COLORS[arrow.tone]}" stroke-width="1"${arrow.tone === 'related' ? ' stroke-dasharray="2 3"' : ' marker-end="url(#a)"'}/>`,
     );
   }
   out.push('</g>');

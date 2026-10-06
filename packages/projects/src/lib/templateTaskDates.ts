@@ -16,6 +16,22 @@ export function startOffsetDaysFromDates(
 }
 
 /**
+ * A template form's "Start offset (days)" text as the stored value. Blank means
+ * no start date (null); 0 is a real offset, the task starts with its phase.
+ */
+export function parseStartOffsetDays(input: string | null | undefined): number | null {
+  const trimmed = (input ?? '').trim();
+  if (trimmed === '') return null;
+  const parsed = parseInt(trimmed, 10);
+  return Number.isFinite(parsed) ? Math.max(0, parsed) : null;
+}
+
+/** The stored offset as form text; only a missing offset is blank. */
+export function formatStartOffsetDays(value: number | null | undefined): string {
+  return value != null ? String(value) : '';
+}
+
+/**
  * Dates for a task created from a template. Both counts are measured from the
  * phase start. An offset past the due date would give a task that starts after
  * it is due, so that start is left undated.

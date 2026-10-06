@@ -43,6 +43,7 @@ import { IService } from '@alga-psa/types';
 import { getServices } from '@alga-psa/projects/actions/serviceCatalogActions';
 import { useTranslation } from 'react-i18next';
 import checklistDnd from '../ChecklistDragDrop.module.css';
+import { formatStartOffsetDays, parseStartOffsetDays } from '../../lib/templateTaskDates';
 
 /**
  * Local checklist item - unified type for both new and existing items.
@@ -251,7 +252,7 @@ export function TemplateTaskForm({
         const estimatedHoursVal = task.estimated_hours ? (Number(task.estimated_hours) / 60).toString() : '';
         const durationDaysVal = task.duration_days?.toString() || '';
         // 0 is a real offset (starts with the phase), so only null/undefined is blank.
-        const startOffsetDaysVal = task.start_offset_days != null ? String(task.start_offset_days) : '';
+        const startOffsetDaysVal = formatStartOffsetDays(task.start_offset_days);
         const taskTypeKeyVal = task.task_type_key || '';
         const priorityIdVal = task.priority_id || '';
         const assignedToVal = task.assigned_to || '';
@@ -439,7 +440,7 @@ export function TemplateTaskForm({
           estimated_hours: estimatedHours ? Math.round(parseFloat(estimatedHours) * 60) : undefined,
           duration_days: durationDays ? parseInt(durationDays) : undefined,
           // null (not undefined) so clearing the field clears the stored offset.
-          start_offset_days: startOffsetDays !== '' ? Math.max(0, parseInt(startOffsetDays)) : null,
+          start_offset_days: parseStartOffsetDays(startOffsetDays),
           task_type_key: taskTypeKey || undefined,
           priority_id: priorityId || undefined,
           assigned_to: assignedTo || undefined,

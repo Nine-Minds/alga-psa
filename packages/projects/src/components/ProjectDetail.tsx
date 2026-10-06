@@ -33,6 +33,8 @@ import TaskEdit from './TaskEdit';
 import PhaseQuickAdd from './PhaseQuickAdd';
 import TaskListView from './TaskListView';
 import { useDependencyGuard } from './useDependencyGuard';
+import { useUrlTaskOpenGuard } from './useUrlTaskOpenGuard';
+import { addDependencyToMap, removeDependencyFromMap } from '../lib/taskDependencyMap';
 import ProjectGanttView, { DEFAULT_GANTT_SETTINGS, type GanttSettings } from './ProjectGanttView';
 import ViewSwitcher from '@alga-psa/ui/components/ViewSwitcher';
 import { getProjectTaskStatuses, getProjectStatusesByPhase, updatePhase, deletePhase, getProjectTreeData, reorderPhase, markPhaseComplete, reopenPhase } from '../actions/projectActions';
@@ -407,10 +409,8 @@ export default function ProjectDetail({
   const [projectTags, setProjectTags] = useState<ITag[]>([]);
   const { tags: allTags } = useTags();
   const hasNotifiedParent = useRef(false);
-  const hasOpenedInitialTask = useRef(false);
-  // The URL task that is already open (or was opened by a click), so a later
-  // data refresh does not open it a second time.
-  const handledInitialTaskId = useRef<string | null>(null);
+  // Opens a task named in the URL once; a task opened by a click counts as handled.
+  const urlTaskOpenGuard = useUrlTaskOpenGuard();
 
   // Auto-select phase based on URL param or default to first phase
   useEffect(() => {
@@ -1876,17 +1876,9 @@ export default function ProjectDetail({
   // Handle opening task from URL parameter (e.g., from notifications)
   // First effect: Fetch task and select its phase
   useEffect(() => {
-    if (!initialTaskId) {
-      handledInitialTaskId.current = null;
-      return;
-    }
+    // Skip when the URL has no task, or names the one already open.
+    if (!urlTaskOpenGuard.arm(initialTaskId) || !initialTaskId) return;
     if (projectPhases.length === 0) return;
-
-    // Re-arm only for a task that has not been opened yet. Clicking a task also
-    // writes it to the URL; re-arming for that one reopened the dialog after
-    // saving whenever the task was not on the current kanban board (timeline view).
-    if (handledInitialTaskId.current === initialTaskId) return;
-    hasOpenedInitialTask.current = false;
 
     const loadTaskAndSelectPhase = async () => {
       try {
@@ -1927,7 +1919,7 @@ export default function ProjectDetail({
 
   // Second effect: Once tasks are loaded, open the specific task
   useEffect(() => {
-    if (!initialTaskId || projectTasks.length === 0 || hasOpenedInitialTask.current) return;
+    if (!initialTaskId || projectTasks.length === 0 || !urlTaskOpenGuard.canOpen()) return;
 
     // Find the task in the loaded tasks
     const taskToOpen = projectTasks.find(task => task.task_id === initialTaskId);
@@ -1937,8 +1929,7 @@ export default function ProjectDetail({
       setSelectedTask(taskToOpen);
       setCurrentPhase(selectedPhase);
       setShowQuickAdd(true);
-      hasOpenedInitialTask.current = true; // Mark that we've opened the task
-      handledInitialTaskId.current = initialTaskId;
+      urlTaskOpenGuard.markOpened(initialTaskId);
     }
   }, [initialTaskId, projectTasks]);
 
@@ -2823,8 +2814,7 @@ export default function ProjectDetail({
     // Log that we're using the cached project tree data for editing
     console.log('Using cached project tree data for edit task dialog');
 
-    handledInitialTaskId.current = task.task_id;
-    hasOpenedInitialTask.current = true;
+    urlTaskOpenGuard.markOpened(task.task_id);
     setSelectedTask(task);
     const taskPhase = phases.find(phase => phase.phase_id === task.phase_id) || null;
     setCurrentPhase(taskPhase);
@@ -2931,17 +2921,7 @@ export default function ProjectDetail({
         toast.error(getErrorMessage(dependency));
         return;
       }
-      setAllTaskDependencies(prev => ({
-        ...prev,
-        [predecessorTaskId]: {
-          predecessors: prev[predecessorTaskId]?.predecessors ?? [],
-          successors: [...(prev[predecessorTaskId]?.successors ?? []), dependency],
-        },
-        [successorTaskId]: {
-          predecessors: [...(prev[successorTaskId]?.predecessors ?? []), dependency],
-          successors: prev[successorTaskId]?.successors ?? [],
-        },
-      }));
+      setAllTaskDependencies(prev => addDependencyToMap(prev, dependency));
       toast.success(t('gantt.dependencyAdded', 'Dependency added'));
     } catch (error) {
       handleError(error, 'Failed to add dependency. Please try again.');
@@ -2955,16 +2935,7 @@ export default function ProjectDetail({
         toast.error(getErrorMessage(result));
         return;
       }
-      setAllTaskDependencies(prev => {
-        const next: typeof prev = {};
-        for (const [taskId, entry] of Object.entries(prev)) {
-          next[taskId] = {
-            predecessors: entry.predecessors.filter(dep => dep.dependency_id !== dependencyId),
-            successors: entry.successors.filter(dep => dep.dependency_id !== dependencyId),
-          };
-        }
-        return next;
-      });
+      setAllTaskDependencies(prev => removeDependencyFromMap(prev, dependencyId));
       toast.success(t('gantt.dependencyRemoved', 'Dependency removed'));
     } catch (error) {
       handleError(error, 'Failed to remove dependency. Please try again.');

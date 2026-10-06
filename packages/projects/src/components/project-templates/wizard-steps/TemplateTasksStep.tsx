@@ -29,6 +29,7 @@ import { IService } from '@alga-psa/types';
 import { getEffectiveTemplateStatusMappings } from '../../../lib/templateStatusMappingUtils';
 import { useTranslation } from 'react-i18next';
 import { useTaskTypeLabel } from '../../../lib/useTaskTypeLabel';
+import { formatStartOffsetDays, parseStartOffsetDays } from '../../../lib/templateTaskDates';
 
 interface TemplateTasksStepProps {
   data: TemplateWizardData;
@@ -348,12 +349,10 @@ export function TemplateTasksStep({
                               id={`template-task-start-offset-${task.temp_id}`}
                               type="number"
                               min="0"
-                              value={task.start_offset_days ?? ''}
+                              value={formatStartOffsetDays(task.start_offset_days)}
                               onChange={(e) =>
                                 updateTask(task.temp_id, {
-                                  start_offset_days: e.target.value !== ''
-                                    ? Math.max(0, parseInt(e.target.value))
-                                    : undefined,
+                                  start_offset_days: parseStartOffsetDays(e.target.value) ?? undefined,
                                 })
                               }
                               placeholder={t('templates.wizard.phases.optionalPlaceholder', 'Optional')}
