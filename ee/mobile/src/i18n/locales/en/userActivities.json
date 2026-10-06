@@ -134,6 +134,7 @@
     "noDescription": "No description.",
     "projectLabel": "Project / phase",
     "statusLabel": "Status",
+    "startDateLabel": "Start date",
     "dueDateLabel": "Due date",
     "assignedLabel": "Assigned to",
     "loading": "Loading task…",

@@ -738,6 +738,7 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
           description: taskData.description,
           estimated_hours: taskData.estimated_hours,
           duration_days: taskData.duration_days,
+          start_offset_days: taskData.start_offset_days,
           task_type_key: taskData.task_type_key,
           priority_id: taskData.priority_id,
           assigned_to: taskData.assigned_to,
