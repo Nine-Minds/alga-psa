@@ -196,7 +196,7 @@ export function CommentEmailRecipientsControl({
         {!expanded && count > 0 && (
           <span
             id={`${idPrefix}-${COMMENT_EMAIL_RECIPIENTS_TOGGLE_ID}-count`}
-            className="ml-1 rounded-full bg-[rgb(var(--color-primary-100))] px-1.5 text-xs text-[rgb(var(--color-primary-700))]"
+            className="ml-1 rounded-full bg-[rgb(var(--color-border-100))] px-1.5 text-xs text-[rgb(var(--color-text-700))]"
           >
             {count}
           </span>

@@ -195,7 +195,7 @@ export function EmailRecipientsInput({
       {suggestions.length > 0 && (
         <ul
           id={`${id}-suggestions`}
-          className="max-h-48 overflow-auto rounded-md border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-bg-50))] text-sm"
+          className="max-h-48 overflow-auto rounded-md border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] text-sm"
         >
           {suggestions.map((suggestion) => (
             <li key={`${suggestion.email}-${suggestion.contact_id ?? suggestion.user_id ?? ''}`}>
