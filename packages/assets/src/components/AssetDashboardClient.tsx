@@ -122,6 +122,7 @@ type ColumnKey =
   | 'patching'
   | 'coverage'
   | 'client_name'
+  | 'contact_name'
   | 'location'
   | 'actions';
 
@@ -1042,6 +1043,13 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
         return <ClientNameCell clientId={record.client_id} clientName={name} logoUrl={logoUrl} />;
       }
     },
+    contact_name: {
+      dataIndex: 'contact_name',
+      title: t('assetDashboardClient.table.assignedTo', { defaultValue: 'Assigned to' }),
+      render: (value: unknown) => (
+        <span className="text-sm font-medium text-gray-700">{(value as string) || t('common.states.none', { defaultValue: 'None' })}</span>
+      )
+    },
     location: {
       dataIndex: 'location',
       title: t('assetDashboardClient.table.location', { defaultValue: 'Location' }),
@@ -1200,6 +1208,7 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
         client_name: (asset) => asset.client?.client_name
           || clientNameById.get(asset.client_id)
           || t('assetDashboardClient.details.unassigned', { defaultValue: 'Unassigned' }),
+        contact_name: (asset) => asset.contact_name || t('assetDashboardClient.print.emptyValue', { defaultValue: '-' }),
         location: (asset) => asset.location || t('assetDashboardClient.print.emptyValue', { defaultValue: '-' }),
       },
     })

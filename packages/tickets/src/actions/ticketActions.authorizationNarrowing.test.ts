@@ -456,6 +456,50 @@ describe('ticket authorization narrowing for migrated list/detail paths', () => 
     else expect(await getTicketById('sibling')).toMatchObject({ permissionError: 'Permission denied: Cannot view ticket' });
   });
 
+  it('reads a profile-granted, a report\'s and a watched ticket through getTicketById, and still denies a peer\'s', async () => {
+    currentUser = { user_id: 'client-user-1', user_type: 'client', tenant: 'tenant-1', clientId: 'client-1', contact_id: 'contact-1', roles: [] };
+    getClientContactVisibilityContextMock.mockResolvedValue({
+      ticketScope: 'contact',
+      effectiveTicketScope: 'contact',
+      isClientAdmin: false,
+      contactId: 'contact-1',
+      clientId: 'client-1',
+      visibilityGroupId: 'g',
+      visibleBoardIds: ['board-allow'],
+      grantedTicketProfileIds: ['profile-north'],
+      defaultBillingProfileId: 'profile-default',
+      visibleContactIds: ['contact-1', 'contact-2'],
+      watchGrant: true,
+    });
+    const base = { board_id: 'board-allow', client_id: 'client-1' };
+    const profileTicket = makeTicket({ ...base, ticket_id: 'profile', contact_name_id: 'contact-9', billing_profile_id: 'profile-north' });
+    const reportTicket = makeTicket({ ...base, ticket_id: 'report', contact_name_id: 'contact-2' });
+    const watchedTicket = makeTicket({
+      ...base,
+      ticket_id: 'watched',
+      contact_name_id: 'contact-9',
+      attributes: { watch_list: [{ email: 'a@x.com', active: true, entity_type: 'contact', entity_id: 'contact-1' }] },
+    });
+    const inactiveWatch = makeTicket({
+      ...base,
+      ticket_id: 'inactive-watch',
+      contact_name_id: 'contact-9',
+      attributes: { watch_list: [{ email: 'a@x.com', active: false, entity_type: 'contact', entity_id: 'contact-1' }] },
+    });
+    const peerTicket = makeTicket({ ...base, ticket_id: 'peer', contact_name_id: 'contact-9', billing_profile_id: 'profile-south' });
+    withTransactionMock.mockImplementation(async (_db, callback) => callback(buildTrx({
+      listTickets: [],
+      detailTicketsById: { profile: profileTicket, report: reportTicket, watched: watchedTicket, 'inactive-watch': inactiveWatch, peer: peerTicket },
+    })));
+
+    for (const id of ['profile', 'report', 'watched']) {
+      expect(await getTicketById(id), id).toMatchObject({ ticket_id: id });
+    }
+    for (const id of ['inactive-watch', 'peer']) {
+      expect(await getTicketById(id), id).toMatchObject({ permissionError: 'Permission denied: Cannot view ticket' });
+    }
+  });
+
   it('denies client list/detail when context resolution throws', async () => {
     currentUser = { user_id: 'client-user-1', user_type: 'client', tenant: 'tenant-1', contact_id: 'contact-1', roles: [] };
     getClientContactVisibilityContextMock.mockRejectedValue(new Error('missing group'));

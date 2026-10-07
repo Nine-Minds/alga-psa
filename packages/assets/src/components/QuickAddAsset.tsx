@@ -6,15 +6,16 @@ import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
+import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
 import { createAsset } from '../actions/assetActions';
 import { unwrapAssetActionResult } from '../actions/assetActionErrors';
 import { formatClientLocation } from '../lib/formatClientLocation';
 import { isBuiltinAssetTypeSlug, pickSchemaAttributes, validateAttributesAgainstSchema } from '../lib/assetTypeAttributes';
 import { buildAssetTypeOptions, findCustomAssetType, useAssetTypeRegistry } from './shared/useAssetTypeOptions';
 import { CustomTypeFieldsPanel } from './shared/CustomTypeFieldsPanel';
-import type { CreateAssetRequest, IClient, IClientLocation } from '@alga-psa/types';
+import type { CreateAssetRequest, IClient, IClientLocation, IContact } from '@alga-psa/types';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
-import { getAllClientsForAssets, getClientLocationsForAssets } from '../actions/clientLookupActions';
+import { getAllClientsForAssets, getClientContactsForAssets, getClientLocationsForAssets } from '../actions/clientLookupActions';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { useQuickAddClient } from '@alga-psa/ui/context';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
@@ -38,6 +39,7 @@ interface FormData {
   status: AssetStatus;
   serial_number: string;
   location_id: string | null;
+  contact_name_id: string | null;
   location: string;
   workstation: {
     os_type: string;
@@ -78,6 +80,8 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
   const [isQuickAddClientOpen, setIsQuickAddClientOpen] = useState(false);
   const [clientLocations, setClientLocations] = useState<IClientLocation[]>([]);
   const [locationsLoading, setLocationsLoading] = useState(false);
+  const [clientContacts, setClientContacts] = useState<IContact[]>([]);
+  const [contactsLoading, setContactsLoading] = useState(false);
   const [attributeErrors, setAttributeErrors] = useState<Record<string, string>>({});
   const statusOptions: SelectOption[] = STATUS_OPTION_VALUES.map((value) => ({
     value,
@@ -103,6 +107,7 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
     status: 'active',
     serial_number: '',
     location_id: null,
+    contact_name_id: null,
     location: '',
     // Type-specific fields will be added conditionally
     workstation: {
@@ -177,6 +182,32 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
         if (isMounted) setClientLocations([]);
       } finally {
         if (isMounted) setLocationsLoading(false);
+      }
+    })();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [open, effectiveClientId]);
+
+  useEffect(() => {
+    if (!open || !effectiveClientId) {
+      setClientContacts([]);
+      return;
+    }
+
+    let isMounted = true;
+    setContactsLoading(true);
+    (async () => {
+      try {
+        const contacts = await getClientContactsForAssets(effectiveClientId);
+        if (!isMounted) return;
+        setClientContacts(contacts);
+      } catch (error) {
+        console.error('Error fetching client contacts:', error);
+        if (isMounted) setClientContacts([]);
+      } finally {
+        if (isMounted) setContactsLoading(false);
       }
     })();
 
@@ -263,6 +294,7 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
         name: formData.name,
         status: formData.status,
         location_id: formData.location_id,
+        contact_name_id: formData.contact_name_id,
         location: formData.location.trim() || undefined,
         serial_number: formData.serial_number || undefined
       };
@@ -344,6 +376,7 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
         status: 'active',
         serial_number: '',
         location_id: null,
+        contact_name_id: null,
         location: '',
         workstation: { os_type: '', os_version: '' },
         network_device: { device_type: 'switch', management_ip: '' },
@@ -648,7 +681,7 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
                     selectedClientId={selectedClientId}
                     onSelect={(id) => {
                       setSelectedClientId(id);
-                      setFormData(prev => ({ ...prev, location_id: null, location: '' }));
+                      setFormData(prev => ({ ...prev, location_id: null, contact_name_id: null, location: '' }));
                       clearErrorIfSubmitted();
                     }}
                     filterState={clientFilterState}
@@ -692,6 +725,27 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
                   })}
                 />
               )}
+            </div>
+
+            <div {...withDataAutomationId({ id: 'asset-contact-container' })}>
+              <label className="block text-sm font-medium text-gray-700">
+                {t('quickAddAsset.fields.assignedTo', { defaultValue: 'Assigned to' })}
+              </label>
+              <ContactPicker
+                id="asset-contact-picker"
+                label={t('quickAddAsset.fields.assignedTo', { defaultValue: 'Assigned to' })}
+                contacts={clientContacts}
+                value={formData.contact_name_id ?? ''}
+                onValueChange={(value) => setFormData(prev => ({ ...prev, contact_name_id: value || null }))}
+                clientId={effectiveClientId || undefined}
+                placeholder={effectiveClientId
+                  ? (contactsLoading
+                    ? t('quickAddAsset.placeholders.loadingContacts', { defaultValue: 'Loading contacts...' })
+                    : t('quickAddAsset.placeholders.selectContact', { defaultValue: 'Select contact' }))
+                  : t('quickAddAsset.placeholders.selectClientFirst', { defaultValue: 'Select a client first' })}
+                disabled={!effectiveClientId || contactsLoading}
+                buttonWidth="full"
+              />
             </div>
 
             <div {...withDataAutomationId({ id: 'asset-name-container' })}>
@@ -807,7 +861,7 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
         onClientAdded: (newClient) => {
           setClients(prev => [...prev, newClient]);
           setSelectedClientId(newClient.client_id);
-          setFormData(prev => ({ ...prev, location_id: null, location: '' }));
+          setFormData(prev => ({ ...prev, location_id: null, contact_name_id: null, location: '' }));
         },
         skipSuccessDialog: true,
       })}
