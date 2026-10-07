@@ -37,8 +37,17 @@ const notificationSuppressionPayloadFields = {
     .describe('Skip internal staff ticket notifications for this operation'),
 };
 
+// LEVERAGE: pattern ticket-event-schema-dup — mirrors ticketRequesterFieldsSchema in packages/event-schemas/src/schemas/domain/ticketEventSchemas.ts; keep both in sync
+const ticketRequesterFields = {
+  clientName: z.string().optional().describe('Name of the ticket client, when one is set'),
+  contactName: z.string().optional().describe('Name of the ticket contact, when one is set'),
+  senderEmail: z.string().optional().describe('Email of the person the ticket came from (inbound sender or contact email)'),
+  requesterName: z.string().optional().describe('Best display label for who the ticket is from: contact name, else sender email, else client name'),
+};
+
 export const ticketCreatedEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
   ticketId: ticketIdSchema,
+  ...ticketRequesterFields,
   createdByUserId: userIdSchema.optional().describe('User who created the ticket'),
   actorUserId: userIdSchema.optional().describe('Actor User ID (preferred)'),
   createdAt: z.string().optional().describe('Created timestamp (ISO 8601)'),

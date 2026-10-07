@@ -14,7 +14,7 @@ import {
 import { withWorkflowJsonSchemaMetadata, withWorkflowPicker } from '../../jsonSchemaMetadata';
 
 const UUID_ONLY = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const DANGLING_PREPOSITION = /\s+(?:from|for|by|to|about|on|of)\s*[:\-–]?\s*$/i;
+const DANGLING_PREPOSITION = /\s+(?:from|for|by)\s*[:\-–]?\s*$/i;
 export const FALLBACK_IN_APP_TITLE = 'Workflow notification';
 
 /**

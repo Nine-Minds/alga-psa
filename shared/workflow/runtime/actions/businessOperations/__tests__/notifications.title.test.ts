@@ -16,4 +16,10 @@ describe('sanitizeInAppNotificationTitle', () => {
     expect(sanitizeInAppNotificationTitle('d410d992-4e99-43e7-9390-f6b0ff744509')).toBe(FALLBACK_IN_APP_TITLE);
     expect(sanitizeInAppNotificationTitle('  ')).toBe(FALLBACK_IN_APP_TITLE);
   });
+
+  it('leaves legitimate titles that end in other short words alone', () => {
+    for (const t of ['Time to sign on', 'Time to', 'Waiting on', 'Quote of', 'Ask about', 'Message to']) {
+      expect(sanitizeInAppNotificationTitle(t)).toBe(t);
+    }
+  });
 });

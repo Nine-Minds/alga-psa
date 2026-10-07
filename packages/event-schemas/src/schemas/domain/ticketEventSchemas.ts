@@ -33,6 +33,7 @@ const suppressionFlagsSchema = {
  * authors build notification titles from these, so every field is optional and
  * absent when unknown (e.g. an email ticket with no contact or client).
  */
+// LEVERAGE: pattern ticket-event-schema-dup — mirrored in shared/workflow/runtime/schemas/ticketEventSchemas.ts; keep both in sync
 export const ticketRequesterFieldsSchema = {
   clientName: z.string().optional().describe('Name of the ticket client, when one is set'),
   contactName: z.string().optional().describe('Name of the ticket contact, when one is set'),
