@@ -14,7 +14,7 @@ import {
   serializeRichEditorJson,
 } from "../../ticketRichText/helpers";
 import { ActionChip } from "./ActionChip";
-import { CommentEmailRecipients } from "./CommentEmailRecipients";
+import { CommentEmailRecipients, type CommentRecipientSearch } from "./CommentEmailRecipients";
 import { ScheduleCommentModal } from "./ScheduleCommentModal";
 import { formatDateTimeWithRelative } from "../../../ui/formatters/dateTime";
 import { MAX_COMMENT_LENGTH } from "../types";
@@ -52,6 +52,7 @@ export function CommentComposer({
   bcc,
   onChangeCc,
   onChangeBcc,
+  onSearchRecipients,
   variant = "ticket",
 }: {
   draftContent: string;
@@ -81,6 +82,8 @@ export function CommentComposer({
   bcc?: string[];
   onChangeCc?: (next: string[]) => void;
   onChangeBcc?: (next: string[]) => void;
+  /** Contact lookup behind the Cc/Bcc suggestion list. */
+  onSearchRecipients?: CommentRecipientSearch;
   /** Task comments are always internal and never scheduled, so those controls are hidden. */
   variant?: "ticket" | "task";
   onChangeScheduleAt?: (value: Date | null) => void;
@@ -190,6 +193,7 @@ export function CommentComposer({
               bcc={bcc ?? []}
               onChangeCc={onChangeCc}
               onChangeBcc={onChangeBcc}
+              searchRecipients={onSearchRecipients}
             />
           ) : null}
           {canSchedule && isInternal ? (

@@ -1,10 +1,20 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Pressable, Text, TextInput, View } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "../../../ui/ThemeContext";
 
 const EMAIL_PATTERN = /^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/;
+const SUGGESTION_DEBOUNCE_MS = 250;
+
+/** A contact of the ticket's client, offered while the agent types a name. */
+export type CommentRecipientSuggestion = { email: string; name?: string };
+
+/** Looks up the ticket client's contacts; the screen owns the API call. */
+export type CommentRecipientSearch = (
+  query: string,
+  signal: AbortSignal,
+) => Promise<CommentRecipientSuggestion[]>;
 
 /** Splits a typed or pasted list on comma, semicolon and newline. */
 export function parseCommentRecipients(text: string): { valid: string[]; invalid: string[] } {
@@ -24,16 +34,30 @@ function RecipientRow({
   label,
   value,
   onChange,
+  searchRecipients,
 }: {
   testID: string;
   label: string;
   value: string[];
   onChange: (next: string[]) => void;
+  searchRecipients?: CommentRecipientSearch;
 }) {
   const { colors, spacing, typography } = useTheme();
   const { t } = useTranslation("tickets");
   const [draft, setDraft] = useState("");
   const [invalid, setInvalid] = useState<string[]>([]);
+  const [suggestions, setSuggestions] = useState<CommentRecipientSuggestion[]>([]);
+
+  const add = (entries: string[]) => {
+    const existing = new Set(value.map((entry) => entry.toLowerCase()));
+    const added = entries.filter((entry) => {
+      const key = entry.toLowerCase();
+      if (existing.has(key)) return false;
+      existing.add(key);
+      return true;
+    });
+    if (added.length) onChange([...value, ...added]);
+  };
 
   const commit = () => {
     if (!draft.trim()) {
@@ -41,12 +65,36 @@ function RecipientRow({
       return;
     }
     const parsed = parseCommentRecipients(draft);
-    const existing = new Set(value.map((entry) => entry.toLowerCase()));
-    const added = parsed.valid.filter((entry) => !existing.has(entry.toLowerCase()));
-    if (added.length) onChange([...value, ...added]);
+    add(parsed.valid);
     setInvalid(parsed.invalid);
     setDraft(parsed.invalid.join(", "));
+    setSuggestions([]);
   };
+
+  // A typed name looks up the ticket client's contacts; a typed address does
+  // not need a lookup, and neither does a blur-committed draft.
+  useEffect(() => {
+    if (!searchRecipients) return;
+    const query = draft.trim();
+    if (query.length < 2 || EMAIL_PATTERN.test(query)) {
+      setSuggestions([]);
+      return;
+    }
+    const controller = new AbortController();
+    const timer = setTimeout(() => {
+      void searchRecipients(query, controller.signal)
+        .then((results) => {
+          if (controller.signal.aborted) return;
+          const chosen = new Set(value.map((entry) => entry.toLowerCase()));
+          setSuggestions(results.filter((entry) => !chosen.has(entry.email.toLowerCase())).slice(0, 5));
+        })
+        .catch(() => setSuggestions([]));
+    }, SUGGESTION_DEBOUNCE_MS);
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [draft, searchRecipients, value]);
 
   return (
     <View style={{ marginTop: spacing.xs }} testID={testID}>
@@ -97,6 +145,31 @@ function RecipientRow({
           color: colors.text,
         }}
       />
+      {suggestions.length > 0 ? (
+        <View
+          testID={`${testID}-suggestions`}
+          style={{ borderWidth: 1, borderColor: colors.border, borderRadius: 8, marginTop: 4 }}
+        >
+          {suggestions.map((suggestion) => (
+            <Pressable
+              key={suggestion.email}
+              testID={`${testID}-suggestion-${suggestion.email}`}
+              accessibilityRole="button"
+              onPress={() => {
+                add([suggestion.email]);
+                setDraft("");
+                setInvalid([]);
+                setSuggestions([]);
+              }}
+              style={{ paddingHorizontal: spacing.sm, paddingVertical: 6 }}
+            >
+              <Text style={{ ...typography.caption, color: colors.text }}>
+                {suggestion.name ? `${suggestion.name} <${suggestion.email}>` : suggestion.email}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+      ) : null}
       {invalid.length > 0 ? (
         <Text style={{ ...typography.caption, color: colors.danger, marginTop: 2 }}>
           {t("comments.recipientInvalid", { entries: invalid.join(", ") })}
@@ -117,12 +190,15 @@ export function CommentEmailRecipients({
   bcc,
   onChangeCc,
   onChangeBcc,
+  searchRecipients,
 }: {
   isInternal: boolean;
   cc: string[];
   bcc: string[];
   onChangeCc: (next: string[]) => void;
   onChangeBcc: (next: string[]) => void;
+  /** Contact lookup for the suggestion list; omitted leaves free text only. */
+  searchRecipients?: CommentRecipientSearch;
 }) {
   const { colors, spacing, typography } = useTheme();
   const { t } = useTranslation("tickets");
@@ -147,8 +223,8 @@ export function CommentEmailRecipients({
       </Pressable>
       {expanded ? (
         <>
-          <RecipientRow testID="comment-cc" label={t("comments.cc")} value={cc} onChange={onChangeCc} />
-          <RecipientRow testID="comment-bcc" label={t("comments.bcc")} value={bcc} onChange={onChangeBcc} />
+          <RecipientRow testID="comment-cc" label={t("comments.cc")} value={cc} onChange={onChangeCc} searchRecipients={searchRecipients} />
+          <RecipientRow testID="comment-bcc" label={t("comments.bcc")} value={bcc} onChange={onChangeBcc} searchRecipients={searchRecipients} />
         </>
       ) : null}
     </View>
