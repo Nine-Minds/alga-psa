@@ -1045,6 +1045,43 @@ describe('AutomaticInvoices recurring due-work UI', () => {
     expect(getAvailableRecurringDueWorkMock).toHaveBeenCalledTimes(1);
   });
 
+  it('a filter typed and cleared within the debounce window triggers no fetch and keeps page 2 consistent', async () => {
+    getAvailableRecurringDueWorkMock.mockImplementation(async (options: any) => ({
+      invoiceCandidates: [
+        buildInvoiceCandidate(
+          [options?.page === 2 ? createContractRow() : createClientRow()],
+        ),
+      ],
+      materializationGaps: [],
+      total: 25,
+      page: options?.page ?? 1,
+      pageSize: 10,
+      totalPages: 3,
+    }));
+
+    render(<AutomaticInvoices onGenerateSuccess={vi.fn()} />);
+    await screen.findByText('Acme Co');
+    fireEvent.click(screen.getAllByRole('button', { name: /Next Page/i })[0]!);
+    await waitFor(() => {
+      expect(getAvailableRecurringDueWorkMock).toHaveBeenCalledWith(expect.objectContaining({ page: 2 }));
+    });
+    await screen.findByText('Zenith Health');
+
+    getAvailableRecurringDueWorkMock.mockClear();
+    const filterInput = document.getElementById('filter-clients-input') as HTMLInputElement;
+    fireEvent.change(filterInput, { target: { value: 'W' } });
+    fireEvent.change(filterInput, { target: { value: '' } });
+    await new Promise((resolve) => setTimeout(resolve, 450));
+
+    expect(getAvailableRecurringDueWorkMock).not.toHaveBeenCalled();
+    // Page 2 is still the current page and still shows page 2's rows.
+    expect(screen.getByText('Zenith Health')).toBeInTheDocument();
+    expect(screen.queryByText('Acme Co')).toBeNull();
+    expect(getAvailableRecurringDueWorkMock).not.toHaveBeenCalledWith(
+      expect.objectContaining({ clientName: expect.anything() }),
+    );
+  });
+
   it('T004: AutomaticInvoices loads through the real due-work action in a migrated schema with no `client_contract_lines` table', async () => {
     dbMocks.missingTables.add('client_contract_lines');
     getAvailableRecurringDueWorkMock.mockImplementation(originalGetAvailableRecurringDueWork);

@@ -780,8 +780,8 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
   const [debouncedClientFilter, setDebouncedClientFilter] = useState<string>(
     () => readAutomaticInvoicesClientFilterFromLocation().trim(),
   );
-  const clientFilterRef = useRef(clientFilter);
-  clientFilterRef.current = clientFilter;
+  const debouncedClientFilterRef = useRef(debouncedClientFilter);
+  debouncedClientFilterRef.current = debouncedClientFilter;
   const [currentReadyPage, setCurrentReadyPage] = useState(1);
   const [isInvoicedLoading, setIsInvoicedLoading] = useState(true);
   const [isPeriodsLoading, setIsPeriodsLoading] = useState(true);
@@ -938,7 +938,15 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      setDebouncedClientFilter(clientFilter.trim());
+      const trimmed = clientFilter.trim();
+      // A filter that settles back to the committed value changes nothing.
+      // Otherwise commit filter + page reset + selection clear in one batch so
+      // exactly one fetch (page 1, new filter) follows.
+      if (trimmed === debouncedClientFilterRef.current) return;
+      setDebouncedClientFilter(trimmed);
+      setCurrentReadyPage(1);
+      setSelectedTargets(new Set());
+      setExpandedParentGroups(new Set());
     }, 300);
     return () => clearTimeout(timer);
   }, [clientFilter]);
@@ -946,7 +954,6 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
   const handleClientFilterChange = (value: string) => {
     if (value === clientFilter) return;
     setClientFilter(value);
-    setCurrentReadyPage(1);
     setSelectedTargets(new Set());
     setExpandedParentGroups(new Set());
   };
@@ -976,9 +983,6 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
 
   // Load available billing periods with server-side pagination
   useEffect(() => {
-    // While the client-filter debounce is pending, the page has already been
-    // reset to 1; skip so we never fetch the new page with the old filter.
-    if (clientFilterRef.current.trim() !== debouncedClientFilter) return;
     let isMounted = true;
 
     const loadPeriods = async () => {
