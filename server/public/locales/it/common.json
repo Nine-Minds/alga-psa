@@ -172,6 +172,10 @@
         "updateComments": "Permessi insufficienti per aggiornare i commenti",
         "deleteComments": "Permessi insufficienti per eliminare i commenti",
         "viewDocuments": "Autorizzazioni insufficienti per visualizzare i documenti del ticket"
+      },
+      "projects": {
+        "read": "Permessi insufficienti per visualizzare i progetti",
+        "readDetails": "Permessi insufficienti per visualizzare i dettagli del progetto"
       }
     },
     "tags": {
