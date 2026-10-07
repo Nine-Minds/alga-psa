@@ -283,6 +283,9 @@
     "options": {
       "percentage": "Percentuale",
       "fixedAmount": "Importo fisso"
+    },
+    "errors": {
+      "serviceRequired": "Assegna un servizio a questo addebito prima di salvare."
     }
   },
   "contractLineServices": {

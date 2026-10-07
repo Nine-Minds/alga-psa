@@ -283,6 +283,9 @@
     "options": {
       "percentage": "Percentage",
       "fixedAmount": "Fixed Amount"
+    },
+    "errors": {
+      "serviceRequired": "Assign a service to this charge before saving."
     }
   },
   "contractLineServices": {

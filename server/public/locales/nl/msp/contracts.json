@@ -2638,48 +2638,15 @@
     "description": "Elk klantcontract heeft een eigen bewerkbare kopie. Contractbrede kortingen gelden voor de in aanmerking komende kosten van de gefactureerde contractregels.",
     "loading": "Kortingen laden…",
     "empty": "Er zijn nog geen kortingen geconfigureerd voor dit contract.",
-    "actions.add": "Korting toevoegen",
-    "actions.cancel": "Annuleren",
-    "actions.save": "Opslaan",
-    "actions.saving": "Opslaan…",
-    "columns.name": "Naam",
-    "columns.value": "Waarde",
-    "columns.scope": "Bereik",
-    "columns.line": "Contractregel",
-    "columns.dates": "Datums",
-    "columns.status": "Status",
-    "status.active": "Actief",
-    "status.inactive": "Inactief",
-    "scopes.invoice": "Alle in aanmerking komende kosten",
-    "scopes.contract": "Dit contract",
-    "scopes.service": "Een service",
-    "values.unnamedLine": "Naamloze regel",
-    "types.percentage": "Percentage",
-    "types.fixed": "Vast bedrag",
-    "fields.name": "Naam",
-    "fields.namePlaceholder": "bijv. Loyaliteit 10%",
-    "fields.type": "Type",
-    "fields.percentValue": "Percentage (0–100)",
-    "fields.fixedValue": "Bedrag",
-    "fields.startDate": "Startdatum",
-    "fields.endDate": "Einddatum",
-    "fields.line": "Contractregel",
-    "fields.linePlaceholder": "Selecteer een contractregel",
-    "fields.scope": "Bereik",
-    "fields.priority": "Prioriteit",
-    "fields.priorityPlaceholder": "Optioneel",
-    "fields.service": "Service",
-    "fields.servicePlaceholder": "Selecteer een service",
-    "fields.active": "Actief",
-    "dialog.createTitle": "Korting toevoegen",
-    "dialog.editTitle": "Korting bewerken",
-    "errors.loadFailed": "Kortingen laden mislukt.",
-    "errors.saveFailed": "Korting opslaan mislukt.",
     "actions": {
       "attach": "Koppelen",
       "pickShared": "Bestaande korting koppelen",
       "detach": "Loskoppelen van dit contract",
-      "toggleActive": "Kortingsstatus wijzigen"
+      "toggleActive": "Kortingsstatus wijzigen",
+      "add": "Korting toevoegen",
+      "cancel": "Annuleren",
+      "save": "Opslaan",
+      "saving": "Opslaan…"
     },
     "attachment": {
       "shared": "Contractkoppeling",
@@ -2687,7 +2654,55 @@
     },
     "sharedEditNotice": "Wijzigingen gelden alleen voor dit klantcontract. Het bewerken van de sjabloon verandert bestaande contractkopieën niet.",
     "dialog": {
-      "contractAttachmentLineScopeLocked": "Deze korting is gekoppeld aan dit klantcontract. Koppel de korting los en maak een regelgebonden korting om deze tot één regel te beperken."
+      "contractAttachmentLineScopeLocked": "Deze korting is gekoppeld aan dit klantcontract. Koppel de korting los en maak een regelgebonden korting om deze tot één regel te beperken.",
+      "createTitle": "Korting toevoegen",
+      "editTitle": "Korting bewerken"
+    },
+    "columns": {
+      "name": "Naam",
+      "value": "Waarde",
+      "scope": "Bereik",
+      "line": "Contractregel",
+      "dates": "Datums",
+      "status": "Status"
+    },
+    "status": {
+      "active": "Actief",
+      "inactive": "Inactief"
+    },
+    "scopes": {
+      "invoice": "Alle in aanmerking komende kosten",
+      "contract": "Dit contract",
+      "service": "Een service",
+      "line": "Een contractregel"
+    },
+    "values": {
+      "unnamedLine": "Naamloze regel"
+    },
+    "types": {
+      "percentage": "Percentage",
+      "fixed": "Vast bedrag"
+    },
+    "fields": {
+      "name": "Naam",
+      "namePlaceholder": "bijv. Loyaliteit 10%",
+      "type": "Type",
+      "percentValue": "Percentage (0–100)",
+      "fixedValue": "Bedrag",
+      "startDate": "Startdatum",
+      "endDate": "Einddatum",
+      "line": "Contractregel",
+      "linePlaceholder": "Selecteer een contractregel",
+      "scope": "Bereik",
+      "priority": "Prioriteit",
+      "priorityPlaceholder": "Optioneel",
+      "service": "Service",
+      "servicePlaceholder": "Selecteer een service",
+      "active": "Actief"
+    },
+    "errors": {
+      "loadFailed": "Kortingen laden mislukt.",
+      "saveFailed": "Korting opslaan mislukt."
     }
   }
 }

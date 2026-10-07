@@ -2638,48 +2638,15 @@
     "description": "Ogni contratto cliente dispone di una propria copia modificabile. Gli sconti del contratto si applicano agli addebiti idonei delle sue voci fatturate.",
     "loading": "Caricamento sconti…",
     "empty": "Nessuno sconto è ancora configurato per questo contratto.",
-    "actions.add": "Aggiungi sconto",
-    "actions.cancel": "Annulla",
-    "actions.save": "Salva",
-    "actions.saving": "Salvataggio…",
-    "columns.name": "Nome",
-    "columns.value": "Valore",
-    "columns.scope": "Ambito",
-    "columns.line": "Riga di contratto",
-    "columns.dates": "Date",
-    "columns.status": "Stato",
-    "status.active": "Attivo",
-    "status.inactive": "Inattivo",
-    "scopes.invoice": "Tutti gli addebiti idonei",
-    "scopes.contract": "Questo contratto",
-    "scopes.service": "Un servizio",
-    "values.unnamedLine": "Riga senza nome",
-    "types.percentage": "Percentuale",
-    "types.fixed": "Importo fisso",
-    "fields.name": "Nome",
-    "fields.namePlaceholder": "es. Fedeltà 10%",
-    "fields.type": "Tipo",
-    "fields.percentValue": "Percentuale (0–100)",
-    "fields.fixedValue": "Importo",
-    "fields.startDate": "Data di inizio",
-    "fields.endDate": "Data di fine",
-    "fields.line": "Riga di contratto",
-    "fields.linePlaceholder": "Seleziona una riga di contratto",
-    "fields.scope": "Ambito",
-    "fields.priority": "Priorità",
-    "fields.priorityPlaceholder": "Facoltativo",
-    "fields.service": "Servizio",
-    "fields.servicePlaceholder": "Seleziona un servizio",
-    "fields.active": "Attivo",
-    "dialog.createTitle": "Aggiungi sconto",
-    "dialog.editTitle": "Modifica sconto",
-    "errors.loadFailed": "Impossibile caricare gli sconti.",
-    "errors.saveFailed": "Impossibile salvare lo sconto.",
     "actions": {
       "attach": "Collega",
       "pickShared": "Collega sconto esistente",
       "detach": "Scollega da questo contratto",
-      "toggleActive": "Modifica lo stato dello sconto"
+      "toggleActive": "Modifica lo stato dello sconto",
+      "add": "Aggiungi sconto",
+      "cancel": "Annulla",
+      "save": "Salva",
+      "saving": "Salvataggio…"
     },
     "attachment": {
       "shared": "Associazione al contratto",
@@ -2687,7 +2654,55 @@
     },
     "sharedEditNotice": "Le modifiche riguardano solo questo contratto cliente. Modificare il modello non cambia le copie dei contratti esistenti.",
     "dialog": {
-      "contractAttachmentLineScopeLocked": "Questo sconto è associato a questo contratto cliente. Per limitarlo a una riga, scollegalo e crea uno sconto specifico per quella riga."
+      "contractAttachmentLineScopeLocked": "Questo sconto è associato a questo contratto cliente. Per limitarlo a una riga, scollegalo e crea uno sconto specifico per quella riga.",
+      "createTitle": "Aggiungi sconto",
+      "editTitle": "Modifica sconto"
+    },
+    "columns": {
+      "name": "Nome",
+      "value": "Valore",
+      "scope": "Ambito",
+      "line": "Riga di contratto",
+      "dates": "Date",
+      "status": "Stato"
+    },
+    "status": {
+      "active": "Attivo",
+      "inactive": "Inattivo"
+    },
+    "scopes": {
+      "invoice": "Tutti gli addebiti idonei",
+      "contract": "Questo contratto",
+      "service": "Un servizio",
+      "line": "Una riga di contratto"
+    },
+    "values": {
+      "unnamedLine": "Riga senza nome"
+    },
+    "types": {
+      "percentage": "Percentuale",
+      "fixed": "Importo fisso"
+    },
+    "fields": {
+      "name": "Nome",
+      "namePlaceholder": "es. Fedeltà 10%",
+      "type": "Tipo",
+      "percentValue": "Percentuale (0–100)",
+      "fixedValue": "Importo",
+      "startDate": "Data di inizio",
+      "endDate": "Data di fine",
+      "line": "Riga di contratto",
+      "linePlaceholder": "Seleziona una riga di contratto",
+      "scope": "Ambito",
+      "priority": "Priorità",
+      "priorityPlaceholder": "Facoltativo",
+      "service": "Servizio",
+      "servicePlaceholder": "Seleziona un servizio",
+      "active": "Attivo"
+    },
+    "errors": {
+      "loadFailed": "Impossibile caricare gli sconti.",
+      "saveFailed": "Impossibile salvare lo sconto."
     }
   }
 }

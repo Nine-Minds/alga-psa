@@ -2638,48 +2638,15 @@
     "description": "Cada contrato de cliente tiene una copia editable propia. Los descuentos del contrato se aplican a los cargos elegibles de sus líneas facturadas.",
     "loading": "Cargando descuentos…",
     "empty": "Este contrato aún no tiene descuentos configurados.",
-    "actions.add": "Añadir descuento",
-    "actions.cancel": "Cancelar",
-    "actions.save": "Guardar",
-    "actions.saving": "Guardando…",
-    "columns.name": "Nombre",
-    "columns.value": "Valor",
-    "columns.scope": "Ámbito",
-    "columns.line": "Línea de contrato",
-    "columns.dates": "Fechas",
-    "columns.status": "Estado",
-    "status.active": "Activo",
-    "status.inactive": "Inactivo",
-    "scopes.invoice": "Todos los cargos elegibles",
-    "scopes.contract": "Este contrato",
-    "scopes.service": "Un servicio",
-    "values.unnamedLine": "Línea sin nombre",
-    "types.percentage": "Porcentaje",
-    "types.fixed": "Importe fijo",
-    "fields.name": "Nombre",
-    "fields.namePlaceholder": "p. ej. Fidelidad 10 %",
-    "fields.type": "Tipo",
-    "fields.percentValue": "Porcentaje (0–100)",
-    "fields.fixedValue": "Importe",
-    "fields.startDate": "Fecha de inicio",
-    "fields.endDate": "Fecha de fin",
-    "fields.line": "Línea de contrato",
-    "fields.linePlaceholder": "Selecciona una línea de contrato",
-    "fields.scope": "Ámbito",
-    "fields.priority": "Prioridad",
-    "fields.priorityPlaceholder": "Opcional",
-    "fields.service": "Servicio",
-    "fields.servicePlaceholder": "Selecciona un servicio",
-    "fields.active": "Activo",
-    "dialog.createTitle": "Añadir descuento",
-    "dialog.editTitle": "Editar descuento",
-    "errors.loadFailed": "No se pudieron cargar los descuentos.",
-    "errors.saveFailed": "No se pudo guardar el descuento.",
     "actions": {
       "attach": "Vincular",
       "pickShared": "Vincular descuento existente",
       "detach": "Desvincular de este contrato",
-      "toggleActive": "Cambiar estado del descuento"
+      "toggleActive": "Cambiar estado del descuento",
+      "add": "Añadir descuento",
+      "cancel": "Cancelar",
+      "save": "Guardar",
+      "saving": "Guardando…"
     },
     "attachment": {
       "shared": "Vinculación al contrato",
@@ -2687,7 +2654,55 @@
     },
     "sharedEditNotice": "Los cambios solo afectan a este contrato de cliente. Editar la plantilla no modifica las copias de contratos existentes.",
     "dialog": {
-      "contractAttachmentLineScopeLocked": "Este descuento está asociado a este contrato de cliente. Para limitarlo a una línea, desvincúlelo y cree un descuento específico para esa línea."
+      "contractAttachmentLineScopeLocked": "Este descuento está asociado a este contrato de cliente. Para limitarlo a una línea, desvincúlelo y cree un descuento específico para esa línea.",
+      "createTitle": "Añadir descuento",
+      "editTitle": "Editar descuento"
+    },
+    "columns": {
+      "name": "Nombre",
+      "value": "Valor",
+      "scope": "Ámbito",
+      "line": "Línea de contrato",
+      "dates": "Fechas",
+      "status": "Estado"
+    },
+    "status": {
+      "active": "Activo",
+      "inactive": "Inactivo"
+    },
+    "scopes": {
+      "invoice": "Todos los cargos elegibles",
+      "contract": "Este contrato",
+      "service": "Un servicio",
+      "line": "Una línea de contrato"
+    },
+    "values": {
+      "unnamedLine": "Línea sin nombre"
+    },
+    "types": {
+      "percentage": "Porcentaje",
+      "fixed": "Importe fijo"
+    },
+    "fields": {
+      "name": "Nombre",
+      "namePlaceholder": "p. ej. Fidelidad 10 %",
+      "type": "Tipo",
+      "percentValue": "Porcentaje (0–100)",
+      "fixedValue": "Importe",
+      "startDate": "Fecha de inicio",
+      "endDate": "Fecha de fin",
+      "line": "Línea de contrato",
+      "linePlaceholder": "Selecciona una línea de contrato",
+      "scope": "Ámbito",
+      "priority": "Prioridad",
+      "priorityPlaceholder": "Opcional",
+      "service": "Servicio",
+      "servicePlaceholder": "Selecciona un servicio",
+      "active": "Activo"
+    },
+    "errors": {
+      "loadFailed": "No se pudieron cargar los descuentos.",
+      "saveFailed": "No se pudo guardar el descuento."
     }
   }
 }

@@ -283,6 +283,9 @@
     "options": {
       "percentage": "Percentagem",
       "fixedAmount": "Valor Fixo"
+    },
+    "errors": {
+      "serviceRequired": "Atribua um serviço a este encargo antes de guardar."
     }
   },
   "contractLineServices": {

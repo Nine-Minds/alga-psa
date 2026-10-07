@@ -456,7 +456,7 @@ export const LineItem: React.FC<LineItemProps> = ({
                 className="w-full"
                 disabled={editState.isRemoved}
               />
-              {!editState.service_id && editState.rate >= 0 && <p className="text-sm text-destructive">{t('manualInvoices.errors.SERVICE_REQUIRED', { defaultValue: 'Assign a service to this charge before saving.' })}</p>}
+              {!editState.service_id && editState.rate >= 0 && <p className="text-sm text-destructive">{t('lineItem.errors.serviceRequired', { defaultValue: 'Assign a service to this charge before saving.' })}</p>}
             </div>
 
             <div>

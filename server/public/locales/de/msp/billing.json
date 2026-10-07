@@ -283,6 +283,9 @@
     "options": {
       "percentage": "Prozentsatz",
       "fixedAmount": "Fester Betrag"
+    },
+    "errors": {
+      "serviceRequired": "Weisen Sie dieser Position vor dem Speichern einen Dienst zu."
     }
   },
   "contractLineServices": {

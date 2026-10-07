@@ -2642,48 +2642,15 @@
     "description": "Każda umowa z klientem ma własną edytowalną kopię. Rabaty obejmujące całą umowę dotyczą kwalifikujących się opłat z jej zafakturowanych pozycji.",
     "loading": "Ładowanie rabatów…",
     "empty": "Dla tego kontraktu nie skonfigurowano jeszcze żadnych rabatów.",
-    "actions.add": "Dodaj rabat",
-    "actions.cancel": "Anuluj",
-    "actions.save": "Zapisz",
-    "actions.saving": "Zapisywanie…",
-    "columns.name": "Nazwa",
-    "columns.value": "Wartość",
-    "columns.scope": "Zakres",
-    "columns.line": "Wiersz kontraktu",
-    "columns.dates": "Daty",
-    "columns.status": "Status",
-    "status.active": "Aktywny",
-    "status.inactive": "Nieaktywny",
-    "scopes.invoice": "Wszystkie kwalifikujące się opłaty",
-    "scopes.contract": "Ten kontrakt",
-    "scopes.service": "Usługa",
-    "values.unnamedLine": "Wiersz bez nazwy",
-    "types.percentage": "Procent",
-    "types.fixed": "Kwota stała",
-    "fields.name": "Nazwa",
-    "fields.namePlaceholder": "np. Lojalność 10%",
-    "fields.type": "Typ",
-    "fields.percentValue": "Procent (0–100)",
-    "fields.fixedValue": "Kwota",
-    "fields.startDate": "Data rozpoczęcia",
-    "fields.endDate": "Data zakończenia",
-    "fields.line": "Wiersz kontraktu",
-    "fields.linePlaceholder": "Wybierz wiersz kontraktu",
-    "fields.scope": "Zakres",
-    "fields.priority": "Priorytet",
-    "fields.priorityPlaceholder": "Opcjonalne",
-    "fields.service": "Usługa",
-    "fields.servicePlaceholder": "Wybierz usługę",
-    "fields.active": "Aktywny",
-    "dialog.createTitle": "Dodaj rabat",
-    "dialog.editTitle": "Edytuj rabat",
-    "errors.loadFailed": "Nie udało się załadować rabatów.",
-    "errors.saveFailed": "Nie udało się zapisać rabatu.",
     "actions": {
       "attach": "Dołącz",
       "pickShared": "Dołącz istniejący rabat",
       "detach": "Odłącz od tej umowy",
-      "toggleActive": "Zmień status rabatu"
+      "toggleActive": "Zmień status rabatu",
+      "add": "Dodaj rabat",
+      "cancel": "Anuluj",
+      "save": "Zapisz",
+      "saving": "Zapisywanie…"
     },
     "attachment": {
       "shared": "Przypisanie do umowy",
@@ -2691,7 +2658,55 @@
     },
     "sharedEditNotice": "Zmiany dotyczą tylko tej umowy z klientem. Edycja szablonu nie zmienia kopii istniejących umów.",
     "dialog": {
-      "contractAttachmentLineScopeLocked": "Ten rabat jest przypisany do tej umowy z klientem. Aby ograniczyć go do pozycji, odłącz go i utwórz rabat dla tej pozycji."
+      "contractAttachmentLineScopeLocked": "Ten rabat jest przypisany do tej umowy z klientem. Aby ograniczyć go do pozycji, odłącz go i utwórz rabat dla tej pozycji.",
+      "createTitle": "Dodaj rabat",
+      "editTitle": "Edytuj rabat"
+    },
+    "columns": {
+      "name": "Nazwa",
+      "value": "Wartość",
+      "scope": "Zakres",
+      "line": "Wiersz kontraktu",
+      "dates": "Daty",
+      "status": "Status"
+    },
+    "status": {
+      "active": "Aktywny",
+      "inactive": "Nieaktywny"
+    },
+    "scopes": {
+      "invoice": "Wszystkie kwalifikujące się opłaty",
+      "contract": "Ten kontrakt",
+      "service": "Usługa",
+      "line": "Pozycja umowy"
+    },
+    "values": {
+      "unnamedLine": "Wiersz bez nazwy"
+    },
+    "types": {
+      "percentage": "Procent",
+      "fixed": "Kwota stała"
+    },
+    "fields": {
+      "name": "Nazwa",
+      "namePlaceholder": "np. Lojalność 10%",
+      "type": "Typ",
+      "percentValue": "Procent (0–100)",
+      "fixedValue": "Kwota",
+      "startDate": "Data rozpoczęcia",
+      "endDate": "Data zakończenia",
+      "line": "Wiersz kontraktu",
+      "linePlaceholder": "Wybierz wiersz kontraktu",
+      "scope": "Zakres",
+      "priority": "Priorytet",
+      "priorityPlaceholder": "Opcjonalne",
+      "service": "Usługa",
+      "servicePlaceholder": "Wybierz usługę",
+      "active": "Aktywny"
+    },
+    "errors": {
+      "loadFailed": "Nie udało się załadować rabatów.",
+      "saveFailed": "Nie udało się zapisać rabatu."
     }
   }
 }

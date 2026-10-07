@@ -283,6 +283,9 @@
     "options": {
       "percentage": "Pourcentage",
       "fixedAmount": "Montant fixe"
+    },
+    "errors": {
+      "serviceRequired": "Attribuez un service à cette ligne avant d’enregistrer."
     }
   },
   "contractLineServices": {

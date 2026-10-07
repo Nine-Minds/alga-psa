@@ -283,6 +283,9 @@
     "options": {
       "percentage": "Percentage",
       "fixedAmount": "Vast bedrag"
+    },
+    "errors": {
+      "serviceRequired": "Wijs een dienst toe aan deze kostenpost voordat u opslaat."
     }
   },
   "contractLineServices": {

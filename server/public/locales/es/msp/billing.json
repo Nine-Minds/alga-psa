@@ -283,6 +283,9 @@
     "options": {
       "percentage": "Porcentaje",
       "fixedAmount": "Monto Fijo"
+    },
+    "errors": {
+      "serviceRequired": "Asigne un servicio a este cargo antes de guardar."
     }
   },
   "contractLineServices": {

@@ -2638,52 +2638,71 @@
     "description": "Each client contract owns an editable copy. Contract-wide discounts apply to eligible charges across its represented lines.",
     "loading": "Loading discounts…",
     "empty": "No discounts are configured for this contract yet.",
-    "actions.add": "Add Discount",
-    "actions.attach": "Attach",
-    "actions.detach": "Detach from this contract",
-    "actions.toggleActive": "Change discount status",
-    "actions.pickShared": "Attach existing discount",
-    "actions.cancel": "Cancel",
-    "actions.save": "Save",
-    "actions.saving": "Saving…",
-    "columns.name": "Name",
-    "columns.value": "Value",
-    "columns.scope": "Scope",
-    "columns.line": "Contract line",
-    "columns.dates": "Dates",
-    "columns.status": "Status",
-    "status.active": "Active",
-    "status.inactive": "Inactive",
-    "attachment.shared": "Contract attachment",
-    "attachment.line": "Line attachment",
-    "scopes.invoice": "All eligible charges",
-    "scopes.contract": "This contract",
-    "scopes.service": "A service",
-    "values.unnamedLine": "Unnamed line",
-    "types.percentage": "Percentage",
-    "types.fixed": "Fixed amount",
-    "fields.name": "Name",
-    "fields.namePlaceholder": "e.g. Loyalty 10%",
-    "fields.type": "Type",
-    "fields.percentValue": "Percent (0–100)",
-    "fields.fixedValue": "Amount",
-    "fields.startDate": "Start date",
-    "fields.endDate": "End date",
-    "fields.line": "Contract line",
-    "fields.linePlaceholder": "Optional: keep this discount line-scoped",
-    "fields.scope": "Scope",
-    "fields.priority": "Priority",
-    "fields.priorityPlaceholder": "Optional",
-    "fields.service": "Service",
-    "fields.servicePlaceholder": "Select a service",
-    "fields.active": "Active",
-    "dialog.createTitle": "Add discount",
-    "dialog.editTitle": "Edit discount",
     "sharedEditNotice": "Changes affect only this client contract. Editing the template does not change existing contract copies.",
-    "errors.loadFailed": "Failed to load discounts.",
-    "errors.saveFailed": "Failed to save the discount.",
     "dialog": {
-      "contractAttachmentLineScopeLocked": "This discount is attached to this client contract. To make it line-scoped, detach it and create a line-scoped discount."
+      "contractAttachmentLineScopeLocked": "This discount is attached to this client contract. To make it line-scoped, detach it and create a line-scoped discount.",
+      "createTitle": "Add discount",
+      "editTitle": "Edit discount"
+    },
+    "actions": {
+      "add": "Add Discount",
+      "attach": "Attach",
+      "detach": "Detach from this contract",
+      "toggleActive": "Change discount status",
+      "pickShared": "Attach existing discount",
+      "cancel": "Cancel",
+      "save": "Save",
+      "saving": "Saving…"
+    },
+    "columns": {
+      "name": "Name",
+      "value": "Value",
+      "scope": "Scope",
+      "line": "Contract line",
+      "dates": "Dates",
+      "status": "Status"
+    },
+    "status": {
+      "active": "Active",
+      "inactive": "Inactive"
+    },
+    "attachment": {
+      "shared": "Contract attachment",
+      "line": "Line attachment"
+    },
+    "scopes": {
+      "invoice": "All eligible charges",
+      "contract": "This contract",
+      "service": "A service",
+      "line": "A contract line"
+    },
+    "values": {
+      "unnamedLine": "Unnamed line"
+    },
+    "types": {
+      "percentage": "Percentage",
+      "fixed": "Fixed amount"
+    },
+    "fields": {
+      "name": "Name",
+      "namePlaceholder": "e.g. Loyalty 10%",
+      "type": "Type",
+      "percentValue": "Percent (0–100)",
+      "fixedValue": "Amount",
+      "startDate": "Start date",
+      "endDate": "End date",
+      "line": "Contract line",
+      "linePlaceholder": "Optional: keep this discount line-scoped",
+      "scope": "Scope",
+      "priority": "Priority",
+      "priorityPlaceholder": "Optional",
+      "service": "Service",
+      "servicePlaceholder": "Select a service",
+      "active": "Active"
+    },
+    "errors": {
+      "loadFailed": "Failed to load discounts.",
+      "saveFailed": "Failed to save the discount."
     }
   }
 }

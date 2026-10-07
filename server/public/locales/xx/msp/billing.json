@@ -283,6 +283,9 @@
     "options": {
       "percentage": "⟦Ƥḗřƈḗƞŧȧɠḗ⟧",
       "fixedAmount": "⟦Ƒīẋḗḓ Ȧḿȯŭƞŧ⟧"
+    },
+    "errors": {
+      "serviceRequired": "⟦Ȧşşīɠƞ ȧ şḗřṽīƈḗ ŧȯ ŧħīş ƈħȧřɠḗ ƀḗƒȯřḗ şȧṽīƞɠ.⟧"
     }
   },
   "contractLineServices": {

@@ -283,6 +283,9 @@
     "options": {
       "percentage": "Procent",
       "fixedAmount": "Stała kwota"
+    },
+    "errors": {
+      "serviceRequired": "Przypisz usługę do tej pozycji przed zapisaniem."
     }
   },
   "contractLineServices": {

@@ -2638,48 +2638,15 @@
     "description": "Jeder Kundenvertrag besitzt eine eigene bearbeitbare Kopie. Vertragsweite Rabatte gelten für die berechtigten Gebühren seiner abgerechneten Vertragszeilen.",
     "loading": "Rabatte werden geladen…",
     "empty": "Für diesen Vertrag sind noch keine Rabatte konfiguriert.",
-    "actions.add": "Rabatt hinzufügen",
-    "actions.cancel": "Abbrechen",
-    "actions.save": "Speichern",
-    "actions.saving": "Speichern…",
-    "columns.name": "Name",
-    "columns.value": "Wert",
-    "columns.scope": "Geltungsbereich",
-    "columns.line": "Vertragszeile",
-    "columns.dates": "Daten",
-    "columns.status": "Status",
-    "status.active": "Aktiv",
-    "status.inactive": "Inaktiv",
-    "scopes.invoice": "Alle anspruchsberechtigten Positionen",
-    "scopes.contract": "Dieser Vertrag",
-    "scopes.service": "Ein Service",
-    "values.unnamedLine": "Unbenannte Zeile",
-    "types.percentage": "Prozentsatz",
-    "types.fixed": "Festbetrag",
-    "fields.name": "Name",
-    "fields.namePlaceholder": "z. B. Treue 10 %",
-    "fields.type": "Typ",
-    "fields.percentValue": "Prozent (0–100)",
-    "fields.fixedValue": "Betrag",
-    "fields.startDate": "Startdatum",
-    "fields.endDate": "Enddatum",
-    "fields.line": "Vertragszeile",
-    "fields.linePlaceholder": "Vertragszeile auswählen",
-    "fields.scope": "Geltungsbereich",
-    "fields.priority": "Priorität",
-    "fields.priorityPlaceholder": "Optional",
-    "fields.service": "Service",
-    "fields.servicePlaceholder": "Service auswählen",
-    "fields.active": "Aktiv",
-    "dialog.createTitle": "Rabatt hinzufügen",
-    "dialog.editTitle": "Rabatt bearbeiten",
-    "errors.loadFailed": "Rabatte konnten nicht geladen werden.",
-    "errors.saveFailed": "Der Rabatt konnte nicht gespeichert werden.",
     "actions": {
       "attach": "Anhängen",
       "pickShared": "Vorhandenen Rabatt anhängen",
       "detach": "Von diesem Vertrag lösen",
-      "toggleActive": "Rabattstatus ändern"
+      "toggleActive": "Rabattstatus ändern",
+      "add": "Rabatt hinzufügen",
+      "cancel": "Abbrechen",
+      "save": "Speichern",
+      "saving": "Speichern…"
     },
     "attachment": {
       "shared": "Vertragszuordnung",
@@ -2687,10 +2654,55 @@
     },
     "sharedEditNotice": "Änderungen wirken sich nur auf diesen Kundenvertrag aus. Änderungen an der Vorlage ändern keine bestehenden Vertragskopien.",
     "fields": {
-      "service": "Dienstleistung"
+      "service": "Dienstleistung",
+      "name": "Name",
+      "namePlaceholder": "z. B. Treue 10 %",
+      "type": "Typ",
+      "percentValue": "Prozent (0–100)",
+      "fixedValue": "Betrag",
+      "startDate": "Startdatum",
+      "endDate": "Enddatum",
+      "line": "Vertragszeile",
+      "linePlaceholder": "Vertragszeile auswählen",
+      "scope": "Geltungsbereich",
+      "priority": "Priorität",
+      "priorityPlaceholder": "Optional",
+      "servicePlaceholder": "Service auswählen",
+      "active": "Aktiv"
     },
     "dialog": {
-      "contractAttachmentLineScopeLocked": "Dieser Rabatt ist diesem Kundenvertrag zugeordnet. Um ihn auf eine Position zu beschränken, lösen Sie ihn und erstellen Sie einen positionsbezogenen Rabatt."
+      "contractAttachmentLineScopeLocked": "Dieser Rabatt ist diesem Kundenvertrag zugeordnet. Um ihn auf eine Position zu beschränken, lösen Sie ihn und erstellen Sie einen positionsbezogenen Rabatt.",
+      "createTitle": "Rabatt hinzufügen",
+      "editTitle": "Rabatt bearbeiten"
+    },
+    "columns": {
+      "name": "Name",
+      "value": "Wert",
+      "scope": "Geltungsbereich",
+      "line": "Vertragszeile",
+      "dates": "Daten",
+      "status": "Status"
+    },
+    "status": {
+      "active": "Aktiv",
+      "inactive": "Inaktiv"
+    },
+    "scopes": {
+      "invoice": "Alle anspruchsberechtigten Positionen",
+      "contract": "Dieser Vertrag",
+      "service": "Ein Service",
+      "line": "Eine Vertragsposition"
+    },
+    "values": {
+      "unnamedLine": "Unbenannte Zeile"
+    },
+    "types": {
+      "percentage": "Prozentsatz",
+      "fixed": "Festbetrag"
+    },
+    "errors": {
+      "loadFailed": "Rabatte konnten nicht geladen werden.",
+      "saveFailed": "Der Rabatt konnte nicht gespeichert werden."
     }
   }
 }

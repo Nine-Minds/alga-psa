@@ -332,7 +332,8 @@
       "title": "Automatiserade rader",
       "service": "Tjänst",
       "total": "Totalt",
-      "unknownService": "Okänd tjänst"
+      "unknownService": "Okänd tjänst",
+      "period": "Period"
     },
     "lineItems": {
       "manual": "Manuella rader",
@@ -345,7 +346,8 @@
       "saveChanges": "Spara ändringar",
       "processing": "Bearbetar…",
       "generateSalesOrderInvoice": "Skapa faktura från försäljningsorder",
-      "clearSalesOrderSource": "Rensa ursprunglig försäljningsorder"
+      "clearSalesOrderSource": "Rensa ursprunglig försäljningsorder",
+      "addPartialPeriodCharge": "Lägg till avgift för delperiod"
     },
     "labels": {
       "total": "Totalt",
@@ -389,7 +391,9 @@
       "SOURCE_ALREADY_BILLED": "Vissa valda poster kan inte längre faktureras (redan fakturerade, inte godkända eller borttagna). Ladda om sidan och försök igen.",
       "SOURCE_NOT_ELIGIBLE": "En vald post hör inte till det här ärendets debiterbara poster eller kan inte längre faktureras. Ladda om sidan och försök igen.",
       "SOURCE_CURRENCY_MISMATCH": "Vissa valda produkter är prissatta i en annan valuta än kundens faktureringsvaluta och kan därför inte läggas till. Fakturera dem separat i deras egen valuta.",
-      "BILLING_PROFILE_NOT_FOUND": "Den valda faktureringsprofilen är inte tillgänglig för kunden. Ladda om sidan och försök igen."
+      "BILLING_PROFILE_NOT_FOUND": "Den valda faktureringsprofilen är inte tillgänglig för kunden. Ladda om sidan och försök igen.",
+      "CLIENT_CONTRACT_NOT_FOUND": "Det valda avtalet tillhör inte fakturans kund.",
+      "SERVICE_REQUIRED": "Tilldela en tjänst till avgiften innan du sparar."
     },
     "warnings": {
       "noBillingEmail": "Den här kunden saknar e-postadress för fakturering. Ange en faktureringskontakt, en e-postadress för kundens fakturering eller en e-postadress för faktureringsplatsen eller standardplatsen innan du skapar fakturan."
@@ -403,6 +407,48 @@
     },
     "hints": {
       "billingProfile": "Fakturan och dess rader faktureras till den här profilen."
+    },
+    "draftAdjustments": {
+      "title": "Fakturajusteringar",
+      "description": "Lägg till engångsavgifter, rabatter eller krediteringar. Genererade avtalsavgifter är skrivskyddade. Korrigera källavtalet eller lägg till en justering."
+    },
+    "partialPeriod": {
+      "title": "Avgift för delperiod",
+      "help": "Välj en fakturerad tjänst. Dess pris, tjänsteperiod, skattehantering och avtalskoppling används för att beräkna en engångsjustering.",
+      "direction": "Riktning",
+      "increase": "Ökning",
+      "decrease": "Minskning (kreditering)",
+      "units": "Enheter",
+      "source": "Välj fakturerad tjänst",
+      "effectiveDate": "Gäller från",
+      "sourceRate": "Pris {{rate}}",
+      "unitPrice": "Enhetspris",
+      "coveredDays": "Dagar som omfattas",
+      "fullPeriodDays": "Dagar i hela perioden",
+      "description": "Beskrivning (valfritt)",
+      "reason": "Orsak (valfritt)",
+      "previewUnavailable": "Ange en giltig beräkning.",
+      "resolvedAmount": "Beräknat belopp: {{amount}}",
+      "addCharge": "Lägg till avgift",
+      "creditDescription": "Kreditering: {{proration}}",
+      "errors": {
+        "source": "Välj en fakturerad tjänst med en entydig tjänsteperiod.",
+        "units": "Antalet enheter måste vara större än noll.",
+        "unitPrice": "Enhetspriset måste vara ett tal.",
+        "invalid": "Ange en giltig delperiod."
+      },
+      "permanentChangeNudge": "Är det här en permanent ändring? Registrera den på avtalet i stället.",
+      "overlapConfirm": "En automatisk justering för en avtalsändring överlappar redan den här perioden. Vill du ändå lägga till den separata manuella justeringen?",
+      "invoiceDescription": {
+        "increase": "{{description}} — ytterligare {{units}} {{unitLabel}}, {{period}} — {{calculation}}",
+        "decrease": "{{description}} — kreditering för {{units}} färre {{unitLabel}}, {{period}} — {{calculation}}"
+      },
+      "sourceDescriptionFallback": "Tjänstejustering"
+    },
+    "exportWarnings": {
+      "discount": "{{adapter}}: konfigurera rabattmappningen innan du exporterar {{description}}.",
+      "service": "{{adapter}}: tilldela en mappad tjänst till {{description}} före export.",
+      "unavailable": "Det gick inte att kontrollera om fakturan är klar för bokföringsexport. Kontrollera mappningarna före export."
     }
   },
   "quickInvoice": {
@@ -2483,5 +2529,12 @@
     "saving": "Sparar…",
     "saveCorrection": "Spara rättelse",
     "save": "Spara"
+  },
+  "draftInvoiceAdjustments": {
+    "blockedTitle": "Fakturajusteringar är inte tillgängliga",
+    "blocked": {
+      "exported": "Den här fakturan är synkroniserad med ett bokföringssystem. Makulera den eller utfärda en separat kreditfaktura i stället för att redigera raderna.",
+      "exporting": "En bokföringsexport förbereds för den här fakturan. Vänta tills den är klar innan du ändrar fakturan."
+    }
   }
 }

@@ -2638,48 +2638,15 @@
     "description": "Chaque contrat client possède sa propre copie modifiable. Les remises du contrat s’appliquent aux frais éligibles de ses lignes facturées.",
     "loading": "Chargement des remises…",
     "empty": "Aucune remise n'est encore configurée pour ce contrat.",
-    "actions.add": "Ajouter une remise",
-    "actions.cancel": "Annuler",
-    "actions.save": "Enregistrer",
-    "actions.saving": "Enregistrement…",
-    "columns.name": "Nom",
-    "columns.value": "Valeur",
-    "columns.scope": "Portée",
-    "columns.line": "Ligne de contrat",
-    "columns.dates": "Dates",
-    "columns.status": "Statut",
-    "status.active": "Active",
-    "status.inactive": "Inactive",
-    "scopes.invoice": "Tous les frais éligibles",
-    "scopes.contract": "Ce contrat",
-    "scopes.service": "Un service",
-    "values.unnamedLine": "Ligne sans nom",
-    "types.percentage": "Pourcentage",
-    "types.fixed": "Montant fixe",
-    "fields.name": "Nom",
-    "fields.namePlaceholder": "ex. Fidélité 10 %",
-    "fields.type": "Type",
-    "fields.percentValue": "Pourcentage (0–100)",
-    "fields.fixedValue": "Montant",
-    "fields.startDate": "Date de début",
-    "fields.endDate": "Date de fin",
-    "fields.line": "Ligne de contrat",
-    "fields.linePlaceholder": "Sélectionner une ligne de contrat",
-    "fields.scope": "Portée",
-    "fields.priority": "Priorité",
-    "fields.priorityPlaceholder": "Facultatif",
-    "fields.service": "Service",
-    "fields.servicePlaceholder": "Sélectionner un service",
-    "fields.active": "Active",
-    "dialog.createTitle": "Ajouter une remise",
-    "dialog.editTitle": "Modifier la remise",
-    "errors.loadFailed": "Échec du chargement des remises.",
-    "errors.saveFailed": "Échec de l'enregistrement de la remise.",
     "actions": {
       "attach": "Associer",
       "pickShared": "Associer une remise existante",
       "detach": "Dissocier de ce contrat",
-      "toggleActive": "Modifier le statut de la remise"
+      "toggleActive": "Modifier le statut de la remise",
+      "add": "Ajouter une remise",
+      "cancel": "Annuler",
+      "save": "Enregistrer",
+      "saving": "Enregistrement…"
     },
     "attachment": {
       "shared": "Association au contrat",
@@ -2687,13 +2654,55 @@
     },
     "sharedEditNotice": "Les modifications ne concernent que ce contrat client. Modifier le modèle ne change pas les copies des contrats existants.",
     "columns": {
-      "dates": "Périodes"
+      "dates": "Périodes",
+      "name": "Nom",
+      "value": "Valeur",
+      "scope": "Portée",
+      "line": "Ligne de contrat",
+      "status": "Statut"
     },
     "status": {
-      "inactive": "Inactif"
+      "inactive": "Inactif",
+      "active": "Active"
     },
     "dialog": {
-      "contractAttachmentLineScopeLocked": "Cette remise est associée à ce contrat client. Pour la limiter à une ligne, dissociez-la et créez une remise propre à cette ligne."
+      "contractAttachmentLineScopeLocked": "Cette remise est associée à ce contrat client. Pour la limiter à une ligne, dissociez-la et créez une remise propre à cette ligne.",
+      "createTitle": "Ajouter une remise",
+      "editTitle": "Modifier la remise"
+    },
+    "scopes": {
+      "invoice": "Tous les frais éligibles",
+      "contract": "Ce contrat",
+      "service": "Un service",
+      "line": "Une ligne de contrat"
+    },
+    "values": {
+      "unnamedLine": "Ligne sans nom"
+    },
+    "types": {
+      "percentage": "Pourcentage",
+      "fixed": "Montant fixe"
+    },
+    "fields": {
+      "name": "Nom",
+      "namePlaceholder": "ex. Fidélité 10 %",
+      "type": "Type",
+      "percentValue": "Pourcentage (0–100)",
+      "fixedValue": "Montant",
+      "startDate": "Date de début",
+      "endDate": "Date de fin",
+      "line": "Ligne de contrat",
+      "linePlaceholder": "Sélectionner une ligne de contrat",
+      "scope": "Portée",
+      "priority": "Priorité",
+      "priorityPlaceholder": "Facultatif",
+      "service": "Service",
+      "servicePlaceholder": "Sélectionner un service",
+      "active": "Active"
+    },
+    "errors": {
+      "loadFailed": "Échec du chargement des remises.",
+      "saveFailed": "Échec de l'enregistrement de la remise."
     }
   }
 }

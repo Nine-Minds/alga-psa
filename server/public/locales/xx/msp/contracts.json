@@ -2638,52 +2638,71 @@
     "description": "⟦Ḗȧƈħ ƈŀīḗƞŧ ƈȯƞŧřȧƈŧ ȯẇƞş ȧƞ ḗḓīŧȧƀŀḗ ƈȯƥẏ. Ƈȯƞŧřȧƈŧ-ẇīḓḗ ḓīşƈȯŭƞŧş ȧƥƥŀẏ ŧȯ ḗŀīɠīƀŀḗ ƈħȧřɠḗş ȧƈřȯşş īŧş řḗƥřḗşḗƞŧḗḓ ŀīƞḗş.⟧",
     "loading": "⟦Ŀȯȧḓīƞɠ ḓīşƈȯŭƞŧş…⟧",
     "empty": "⟦Ƞȯ ḓīşƈȯŭƞŧş ȧřḗ ƈȯƞƒīɠŭřḗḓ ƒȯř ŧħīş ƈȯƞŧřȧƈŧ ẏḗŧ.⟧",
-    "actions.add": "⟦Ȧḓḓ Ḓīşƈȯŭƞŧ⟧",
-    "actions.attach": "⟦Ȧŧŧȧƈħ⟧",
-    "actions.detach": "⟦Ḓḗŧȧƈħ ƒřȯḿ ŧħīş ƈȯƞŧřȧƈŧ⟧",
-    "actions.toggleActive": "⟦Ƈħȧƞɠḗ ḓīşƈȯŭƞŧ şŧȧŧŭş⟧",
-    "actions.pickShared": "⟦Ȧŧŧȧƈħ ḗẋīşŧīƞɠ ḓīşƈȯŭƞŧ⟧",
-    "actions.cancel": "⟦Ƈȧƞƈḗŀ⟧",
-    "actions.save": "⟦Şȧṽḗ⟧",
-    "actions.saving": "⟦Şȧṽīƞɠ…⟧",
-    "columns.name": "⟦Ƞȧḿḗ⟧",
-    "columns.value": "⟦Ṽȧŀŭḗ⟧",
-    "columns.scope": "⟦Şƈȯƥḗ⟧",
-    "columns.line": "⟦Ƈȯƞŧřȧƈŧ ŀīƞḗ⟧",
-    "columns.dates": "⟦Ḓȧŧḗş⟧",
-    "columns.status": "⟦Şŧȧŧŭş⟧",
-    "status.active": "⟦Ȧƈŧīṽḗ⟧",
-    "status.inactive": "⟦Īƞȧƈŧīṽḗ⟧",
-    "attachment.shared": "⟦Ƈȯƞŧřȧƈŧ ȧŧŧȧƈħḿḗƞŧ⟧",
-    "attachment.line": "⟦Ŀīƞḗ ȧŧŧȧƈħḿḗƞŧ⟧",
-    "scopes.invoice": "⟦Ȧŀŀ ḗŀīɠīƀŀḗ ƈħȧřɠḗş⟧",
-    "scopes.contract": "⟦Ŧħīş ƈȯƞŧřȧƈŧ⟧",
-    "scopes.service": "⟦Ȧ şḗřṽīƈḗ⟧",
-    "values.unnamedLine": "⟦Ŭƞƞȧḿḗḓ ŀīƞḗ⟧",
-    "types.percentage": "⟦Ƥḗřƈḗƞŧȧɠḗ⟧",
-    "types.fixed": "⟦Ƒīẋḗḓ ȧḿȯŭƞŧ⟧",
-    "fields.name": "⟦Ƞȧḿḗ⟧",
-    "fields.namePlaceholder": "⟦ḗ.ɠ. Ŀȯẏȧŀŧẏ 10%⟧",
-    "fields.type": "⟦Ŧẏƥḗ⟧",
-    "fields.percentValue": "⟦Ƥḗřƈḗƞŧ (0–100)⟧",
-    "fields.fixedValue": "⟦Ȧḿȯŭƞŧ⟧",
-    "fields.startDate": "⟦Şŧȧřŧ ḓȧŧḗ⟧",
-    "fields.endDate": "⟦Ḗƞḓ ḓȧŧḗ⟧",
-    "fields.line": "⟦Ƈȯƞŧřȧƈŧ ŀīƞḗ⟧",
-    "fields.linePlaceholder": "⟦Ȯƥŧīȯƞȧŀ: ķḗḗƥ ŧħīş ḓīşƈȯŭƞŧ ŀīƞḗ-şƈȯƥḗḓ⟧",
-    "fields.scope": "⟦Şƈȯƥḗ⟧",
-    "fields.priority": "⟦Ƥřīȯřīŧẏ⟧",
-    "fields.priorityPlaceholder": "⟦Ȯƥŧīȯƞȧŀ⟧",
-    "fields.service": "⟦Şḗřṽīƈḗ⟧",
-    "fields.servicePlaceholder": "⟦Şḗŀḗƈŧ ȧ şḗřṽīƈḗ⟧",
-    "fields.active": "⟦Ȧƈŧīṽḗ⟧",
-    "dialog.createTitle": "⟦Ȧḓḓ ḓīşƈȯŭƞŧ⟧",
-    "dialog.editTitle": "⟦Ḗḓīŧ ḓīşƈȯŭƞŧ⟧",
     "sharedEditNotice": "⟦Ƈħȧƞɠḗş ȧƒƒḗƈŧ ȯƞŀẏ ŧħīş ƈŀīḗƞŧ ƈȯƞŧřȧƈŧ. Ḗḓīŧīƞɠ ŧħḗ ŧḗḿƥŀȧŧḗ ḓȯḗş ƞȯŧ ƈħȧƞɠḗ ḗẋīşŧīƞɠ ƈȯƞŧřȧƈŧ ƈȯƥīḗş.⟧",
-    "errors.loadFailed": "⟦Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ḓīşƈȯŭƞŧş.⟧",
-    "errors.saveFailed": "⟦Ƒȧīŀḗḓ ŧȯ şȧṽḗ ŧħḗ ḓīşƈȯŭƞŧ.⟧",
     "dialog": {
-      "contractAttachmentLineScopeLocked": "⟦Ŧħīş ḓīşƈȯŭƞŧ īş ȧŧŧȧƈħḗḓ ŧȯ ŧħīş ƈŀīḗƞŧ ƈȯƞŧřȧƈŧ. Ŧȯ ḿȧķḗ īŧ ŀīƞḗ-şƈȯƥḗḓ, ḓḗŧȧƈħ īŧ ȧƞḓ ƈřḗȧŧḗ ȧ ŀīƞḗ-şƈȯƥḗḓ ḓīşƈȯŭƞŧ.⟧"
+      "contractAttachmentLineScopeLocked": "⟦Ŧħīş ḓīşƈȯŭƞŧ īş ȧŧŧȧƈħḗḓ ŧȯ ŧħīş ƈŀīḗƞŧ ƈȯƞŧřȧƈŧ. Ŧȯ ḿȧķḗ īŧ ŀīƞḗ-şƈȯƥḗḓ, ḓḗŧȧƈħ īŧ ȧƞḓ ƈřḗȧŧḗ ȧ ŀīƞḗ-şƈȯƥḗḓ ḓīşƈȯŭƞŧ.⟧",
+      "createTitle": "⟦Ȧḓḓ ḓīşƈȯŭƞŧ⟧",
+      "editTitle": "⟦Ḗḓīŧ ḓīşƈȯŭƞŧ⟧"
+    },
+    "actions": {
+      "add": "⟦Ȧḓḓ Ḓīşƈȯŭƞŧ⟧",
+      "attach": "⟦Ȧŧŧȧƈħ⟧",
+      "detach": "⟦Ḓḗŧȧƈħ ƒřȯḿ ŧħīş ƈȯƞŧřȧƈŧ⟧",
+      "toggleActive": "⟦Ƈħȧƞɠḗ ḓīşƈȯŭƞŧ şŧȧŧŭş⟧",
+      "pickShared": "⟦Ȧŧŧȧƈħ ḗẋīşŧīƞɠ ḓīşƈȯŭƞŧ⟧",
+      "cancel": "⟦Ƈȧƞƈḗŀ⟧",
+      "save": "⟦Şȧṽḗ⟧",
+      "saving": "⟦Şȧṽīƞɠ…⟧"
+    },
+    "columns": {
+      "name": "⟦Ƞȧḿḗ⟧",
+      "value": "⟦Ṽȧŀŭḗ⟧",
+      "scope": "⟦Şƈȯƥḗ⟧",
+      "line": "⟦Ƈȯƞŧřȧƈŧ ŀīƞḗ⟧",
+      "dates": "⟦Ḓȧŧḗş⟧",
+      "status": "⟦Şŧȧŧŭş⟧"
+    },
+    "status": {
+      "active": "⟦Ȧƈŧīṽḗ⟧",
+      "inactive": "⟦Īƞȧƈŧīṽḗ⟧"
+    },
+    "attachment": {
+      "shared": "⟦Ƈȯƞŧřȧƈŧ ȧŧŧȧƈħḿḗƞŧ⟧",
+      "line": "⟦Ŀīƞḗ ȧŧŧȧƈħḿḗƞŧ⟧"
+    },
+    "scopes": {
+      "invoice": "⟦Ȧŀŀ ḗŀīɠīƀŀḗ ƈħȧřɠḗş⟧",
+      "contract": "⟦Ŧħīş ƈȯƞŧřȧƈŧ⟧",
+      "service": "⟦Ȧ şḗřṽīƈḗ⟧",
+      "line": "⟦Ȧ ƈȯƞŧřȧƈŧ ŀīƞḗ⟧"
+    },
+    "values": {
+      "unnamedLine": "⟦Ŭƞƞȧḿḗḓ ŀīƞḗ⟧"
+    },
+    "types": {
+      "percentage": "⟦Ƥḗřƈḗƞŧȧɠḗ⟧",
+      "fixed": "⟦Ƒīẋḗḓ ȧḿȯŭƞŧ⟧"
+    },
+    "fields": {
+      "name": "⟦Ƞȧḿḗ⟧",
+      "namePlaceholder": "⟦ḗ.ɠ. Ŀȯẏȧŀŧẏ 10%⟧",
+      "type": "⟦Ŧẏƥḗ⟧",
+      "percentValue": "⟦Ƥḗřƈḗƞŧ (0–100)⟧",
+      "fixedValue": "⟦Ȧḿȯŭƞŧ⟧",
+      "startDate": "⟦Şŧȧřŧ ḓȧŧḗ⟧",
+      "endDate": "⟦Ḗƞḓ ḓȧŧḗ⟧",
+      "line": "⟦Ƈȯƞŧřȧƈŧ ŀīƞḗ⟧",
+      "linePlaceholder": "⟦Ȯƥŧīȯƞȧŀ: ķḗḗƥ ŧħīş ḓīşƈȯŭƞŧ ŀīƞḗ-şƈȯƥḗḓ⟧",
+      "scope": "⟦Şƈȯƥḗ⟧",
+      "priority": "⟦Ƥřīȯřīŧẏ⟧",
+      "priorityPlaceholder": "⟦Ȯƥŧīȯƞȧŀ⟧",
+      "service": "⟦Şḗřṽīƈḗ⟧",
+      "servicePlaceholder": "⟦Şḗŀḗƈŧ ȧ şḗřṽīƈḗ⟧",
+      "active": "⟦Ȧƈŧīṽḗ⟧"
+    },
+    "errors": {
+      "loadFailed": "⟦Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ḓīşƈȯŭƞŧş.⟧",
+      "saveFailed": "⟦Ƒȧīŀḗḓ ŧȯ şȧṽḗ ŧħḗ ḓīşƈȯŭƞŧ.⟧"
     }
   }
 }
