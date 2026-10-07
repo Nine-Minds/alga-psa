@@ -120,7 +120,23 @@ export class CalendarSyncService {
       const existingMapping = await this.getMappingByScheduleEntry(entryId, calendarProviderId, tenant);
 
       const result = await withTransaction(knex, async (trx) => {
-        const externalEvent = await mapScheduleEntryToExternalEvent(entry, provider.provider_type);
+        if (entry.calendar_id && await tenantDb(trx, tenant).table('calendars')
+          .where({ calendar_id: entry.calendar_id, calendar_type: 'group', is_archived: true }).first()) {
+          return { success: true, skipped: true, reason: 'Calendar is archived' };
+        }
+        const providerAccess = await this.resolveProviderUserAccess(trx, tenant, provider.user_id);
+        if (!providerAccess) return { success: false, skipped: true, error: 'Provider owner access could not be resolved' };
+        const accessDecision = evaluateEntryAccess(entry, providerAccess);
+        if (accessDecision.access !== 'full') {
+          return { success: true, skipped: true, reason: accessDecision.access === 'busy'
+            ? 'Provider owner has busy-only access; no safe outbound representation exists'
+            : 'Provider owner cannot view this schedule entry' };
+        }
+
+        const groupCalendar = entry.calendar_id
+          ? await tenantDb(trx, tenant).table('calendars').where({ calendar_id: entry.calendar_id, calendar_type: 'group' }).first()
+          : null;
+        const externalEvent = await mapScheduleEntryToExternalEvent(entry, provider.provider_type, undefined, groupCalendar?.name);
 
         if (existingMapping) {
           const updatedEvent = await this.updateProviderEventIfPresent(adapter, existingMapping.external_event_id, externalEvent);
@@ -148,7 +164,7 @@ export class CalendarSyncService {
               externalEventId: updatedEvent.id
             };
 
-            await this.markProviderConnected(provider.id);
+            await this.markProviderConnected(provider.id, adapter);
             return syncResult;
           }
 
@@ -187,7 +203,7 @@ export class CalendarSyncService {
           externalEventId: createdEvent.id
         };
 
-        await this.markProviderConnected(provider.id);
+        await this.markProviderConnected(provider.id, adapter);
         return syncResult;
       });
       return result;
@@ -333,13 +349,48 @@ export class CalendarSyncService {
             };
           }
 
+          // Convert external event to schedule entry format
+          const entryData = await mapExternalEventToScheduleEntry(externalEvent, tenant, provider.provider_type);
+
+          // Merge with existing entry, but preserve assigned_user_ids from Alga
+          // External calendars often don't include the correct attendees, so we keep
+          // the original assignment unless the external event explicitly has attendees
+          // that map to valid Alga users
+          const shouldPreserveAssignees =
+            existingEntry.assigned_user_ids.length > 0 &&
+            (entryData.assigned_user_ids?.length === 0 ||
+             !externalEvent.attendees ||
+             externalEvent.attendees.length === 0);
+
+          console.log('[CalendarSyncService] Merging external event with existing entry', {
+            entryId: existingEntry.entry_id,
+            existingAssignees: existingEntry.assigned_user_ids,
+            externalAttendees: externalEvent.attendees?.map(a => a.email) || [],
+            mappedAssignees: entryData.assigned_user_ids,
+            shouldPreserveAssignees
+          });
+
+          const mergedEntry = {
+            ...existingEntry,
+            ...entryData,
+            entry_id: existingEntry.entry_id, // Preserve entry ID
+            // Preserve existing assignees if external event doesn't have valid attendees
+            assigned_user_ids: shouldPreserveAssignees
+              ? existingEntry.assigned_user_ids
+              : ((entryData.assigned_user_ids?.length ?? 0) > 0 ? entryData.assigned_user_ids! : existingEntry.assigned_user_ids)
+          };
+
           const access = await this.resolveProviderUserAccess(trx, tenant, provider.user_id);
           if (!access) return { success: true, skipped: true, reason: 'Provider user not found' };
-          if (!evaluateEntryAccess(existingEntry, access).canEdit) {
-            rePushEntryId = existingEntry.entry_id;
-            return { success: true, skipped: true, reason: 'Provider user cannot edit this entry' };
+          const canEdit = evaluateEntryAccess(existingEntry, access).canEdit;
+          if (!changesSyncedFields(existingEntry, mergedEntry)) {
+            await tenantDb(trx, tenant).table('calendar_event_mappings').where('id', existingMapping.id).update({
+              sync_status: 'synced', last_synced_at: new Date().toISOString(),
+              external_last_modified: externalEvent.updated, sync_error_message: null, updated_at: new Date().toISOString()
+            });
+            if (!canEdit) return { success: true, skipped: true, reason: 'Only Alga calendar metadata changed' };
+            return { success: true, skipped: true, reason: 'No synced fields changed' };
           }
-
           // Check for conflicts
           const conflict = await this.detectConflict(existingEntry, externalEvent, existingMapping);
           if (conflict && !force) {
@@ -378,36 +429,10 @@ export class CalendarSyncService {
             };
           }
 
-          // Convert external event to schedule entry format
-          const entryData = await mapExternalEventToScheduleEntry(externalEvent, tenant, provider.provider_type);
-
-          // Merge with existing entry, but preserve assigned_user_ids from Alga
-          // External calendars often don't include the correct attendees, so we keep
-          // the original assignment unless the external event explicitly has attendees
-          // that map to valid Alga users
-          const shouldPreserveAssignees =
-            existingEntry.assigned_user_ids.length > 0 &&
-            (entryData.assigned_user_ids?.length === 0 ||
-             !externalEvent.attendees ||
-             externalEvent.attendees.length === 0);
-
-          console.log('[CalendarSyncService] Merging external event with existing entry', {
-            entryId: existingEntry.entry_id,
-            existingAssignees: existingEntry.assigned_user_ids,
-            externalAttendees: externalEvent.attendees?.map(a => a.email) || [],
-            mappedAssignees: entryData.assigned_user_ids,
-            shouldPreserveAssignees
-          });
-
-          const mergedEntry = {
-            ...existingEntry,
-            ...entryData,
-            entry_id: existingEntry.entry_id, // Preserve entry ID
-            // Preserve existing assignees if external event doesn't have valid attendees
-            assigned_user_ids: shouldPreserveAssignees
-              ? existingEntry.assigned_user_ids
-              : ((entryData.assigned_user_ids?.length ?? 0) > 0 ? entryData.assigned_user_ids! : existingEntry.assigned_user_ids)
-          };
+          if (!canEdit) {
+            rePushEntryId = existingEntry.entry_id;
+            return { success: true, skipped: true, reason: 'Provider user cannot edit this entry' };
+          }
 
           // Update schedule entry
           const updatedEntry = await ScheduleEntry.update(
@@ -455,7 +480,7 @@ export class CalendarSyncService {
             externalEventId: externalEvent.id
           };
 
-          await this.markProviderConnected(provider.id);
+          await this.markProviderConnected(provider.id, adapter);
           return syncResult;
         } else {
           // Check if this event was originally created by Alga (has alga-entry-id)
@@ -494,7 +519,7 @@ export class CalendarSyncService {
                 externalEventId: externalEvent.id
               };
 
-              await this.markProviderConnected(provider.id);
+              await this.markProviderConnected(provider.id, adapter);
               return syncResult;
             }
             // Entry doesn't exist (may have been deleted) - fall through to create new entry
@@ -579,7 +604,7 @@ export class CalendarSyncService {
             externalEventId: externalEvent.id
           };
 
-          await this.markProviderConnected(provider.id);
+          await this.markProviderConnected(provider.id, adapter);
           return syncResult;
         }
       });
@@ -690,7 +715,7 @@ export class CalendarSyncService {
         }
       });
       if (result.success) {
-        await this.markProviderConnected(provider.id);
+        await this.markProviderConnected(provider.id, adapter);
       }
       return result;
     } catch (error: any) {
@@ -924,12 +949,12 @@ export class CalendarSyncService {
     };
   }
 
-  private async markProviderConnected(providerId: string): Promise<void> {
+  private async markProviderConnected(providerId: string, adapter?: BaseCalendarAdapter): Promise<void> {
     try {
       await this.providerService.updateProviderStatus(providerId, {
         status: 'connected',
         lastSyncAt: new Date().toISOString(),
-        errorMessage: null
+        errorMessage: adapter instanceof MicrosoftCalendarAdapter ? adapter.getProviderStatusWarning() ?? null : null
       });
     } catch (statusError) {
       console.warn('[CalendarSyncService] Failed to update provider status to connected', {

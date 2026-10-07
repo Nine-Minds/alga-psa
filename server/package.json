@@ -8,8 +8,8 @@
     "npm": ">=10.0.0"
   },
   "scripts": {
-    "dev": "cd .. && npx nx build-deps server && cd server && NX_LOAD_DOT_ENV_FILES=false NODE_ENV=development npx tsx dev-server.ts",
-    "dev:turbo": "cd .. && npx nx build-deps server && cd server && NX_LOAD_DOT_ENV_FILES=false NODE_ENV=development DEV_TURBOPACK=1 npx tsx dev-server.ts",
+    "dev": "cd .. && npx nx build-deps server && cd server && NX_LOAD_DOT_ENV_FILES=false NODE_ENV=development NEXT_DIST_DIR=\"${NEXT_DIST_DIR:-.next-dev}\" npx tsx dev-server.ts",
+    "dev:turbo": "cd .. && npx nx build-deps server && cd server && NX_LOAD_DOT_ENV_FILES=false NODE_ENV=development DEV_TURBOPACK=1 NEXT_DIST_DIR=\"${NEXT_DIST_DIR:-.next-dev}\" npx tsx dev-server.ts",
     "dev:express": "NODE_OPTIONS='--max-old-space-size=8192' NODE_ENV=development nodemon --watch index.ts --watch src/middleware --ext ts --exec tsx index.ts",
     "dev:ngrok": "node scripts/dev-with-ngrok-instructions.js",
     "ngrok:start": "ngrok http 3000 --subdomain=alga-psa-dev",
@@ -57,7 +57,8 @@
     "rollback-tenant": "tsx scripts/rollback-tenant.ts",
     "migrate:ee": "node scripts/run-ee-migrations.js",
     "migrate:ee:down": "node scripts/run-ee-migrations.js down",
-    "migrate:ee:status": "node scripts/run-ee-migrations.js status"
+    "migrate:ee:status": "node scripts/run-ee-migrations.js status",
+    "test:calendar-routing": "vitest run --config vitest.redis.config.ts src/test/infrastructure/eventBusWorktreeNamespace.test.ts src/test/infrastructure/calendarSearchSubscriberDelivery.test.ts src/test/integration/calendar/automaticCalendarDelivery.integration.test.ts --coverage.enabled=false"
   },
   "nx": {
     "targets": {
