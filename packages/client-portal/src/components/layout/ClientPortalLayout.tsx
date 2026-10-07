@@ -47,6 +47,8 @@ function LayoutShell({
     hasBillingAccess: false,
     hasUserManagementAccess: false,
     hasAccountAccess: false,
+    hasProjectAccess: false,
+    hasDocumentAccess: false,
     isLicenseDistributor: false,
   });
   const [permissionsLoaded, setPermissionsLoaded] = useState(false);
@@ -84,6 +86,8 @@ function LayoutShell({
             hasBillingAccess: perms.hasBillingAccess,
             hasUserManagementAccess: perms.hasUserManagementAccess,
             hasAccountAccess: perms.hasAccountAccess,
+            hasProjectAccess: perms.hasProjectAccess,
+            hasDocumentAccess: perms.hasDocumentAccess,
             isLicenseDistributor: perms.isLicenseDistributor,
           });
         }
@@ -112,6 +116,8 @@ function LayoutShell({
         permissions={{
           hasClientSettingsAccess: permissions.hasClientSettingsAccess,
           hasBillingAccess: permissions.hasBillingAccess,
+          hasProjectAccess: permissions.hasProjectAccess,
+          hasDocumentAccess: permissions.hasDocumentAccess,
           isLicenseDistributor: permissions.isLicenseDistributor,
         }}
         permissionsLoaded={permissionsLoaded}
