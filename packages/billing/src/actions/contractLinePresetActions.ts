@@ -1,5 +1,8 @@
-// server/src/lib/actions/contractLinePresetActions.ts
+
 'use server'
+
+import { resolveUnitOfMeasure } from '@alga-psa/core/unitOfMeasure';
+// server/src/lib/actions/contractLinePresetActions.ts
 import { v4 as uuidv4 } from 'uuid';
 import ContractLinePreset from '../models/contractLinePreset';
 import ContractLinePresetService from '../models/contractLinePresetService';
@@ -24,6 +27,11 @@ import ContractLineFixedConfig from '../models/contractLineFixedConfig';
 import { ContractLineServiceConfigurationService } from '../services/contractLineServiceConfigurationService';
 import { IContractLineServiceConfiguration } from '@alga-psa/types';
 import { syncRecurringServicePeriodsForContractLine } from './recurringServicePeriodSync';
+import {
+    getFixedServiceBasisIssue,
+    hasBundleFixedService,
+    isUnitFixedService,
+} from '../lib/fixedServiceBasis';
 import { upsertBucketOverlayInTransaction } from './bucketOverlayActions';
 import { validateContractLineWindow, normalizeContractLineDate } from '../lib/billing/contractLineWindow';
 import {
@@ -306,6 +314,64 @@ export const getContractLinePresetServiceCounts = withAuth(async (user, { tenant
 });
 
 /**
+ * Authoring rules for a Fixed preset's per-seat services, enforced where the
+ * rows are written so no UI or API caller can store a half-valid unit service.
+ * Unit services need a whole quantity >= 0 and an optional (currency-neutral)
+ * default unit rate; a product is billed by unit quantity already and cannot be
+ * a recurring seat.
+ */
+async function assertPresetServiceBasisInputs(
+    trx: Knex.Transaction,
+    tenant: string,
+    presetId: string,
+    services: Array<Pick<IContractLinePresetService, 'service_id' | 'quantity' | 'custom_rate' | 'pricing_basis'>>
+): Promise<void> {
+    const basisRows = services.filter((service) => service.pricing_basis != null);
+    if (basisRows.length === 0) return;
+
+    for (const service of basisRows) {
+        if (!['bundle', 'unit'].includes(service.pricing_basis as string)) {
+            throw new ContractLinePresetDomainError('Choose bundle or recurring unit pricing.');
+        }
+    }
+
+    const unitRows = services.filter((service) => isUnitFixedService(service));
+    if (unitRows.length === 0) return;
+
+    const preset = await ContractLinePreset.findById(trx, tenant, presetId);
+    if (!preset) {
+        throw new ContractLinePresetDomainError(`Contract line preset ${presetId} not found`);
+    }
+    if (preset.contract_line_type !== 'Fixed') {
+        throw new ContractLinePresetDomainError('Recurring unit pricing is only available on Fixed contract line presets.');
+    }
+
+    const products = await tenantDb(trx, tenant).table('service_catalog')
+        .whereIn('service_id', unitRows.map((service) => service.service_id))
+        .where({ item_kind: 'product' })
+        .select('service_id');
+    if (products.length > 0) {
+        throw new ContractLinePresetDomainError('Products are billed by unit quantity and cannot be priced as recurring seats.');
+    }
+
+    for (const service of unitRows) {
+        const issue = getFixedServiceBasisIssue(
+            { pricing_basis: service.pricing_basis, quantity: service.quantity, unit_rate: service.custom_rate },
+            { requireUnitRate: false },
+        );
+        if (issue === 'quantity_invalid') {
+            throw new ContractLinePresetDomainError('Recurring units require a quantity of zero or more.');
+        }
+        if (issue === 'unit_quantity_not_whole') {
+            throw new ContractLinePresetDomainError('Recurring unit quantities must be whole numbers.');
+        }
+        if (issue === 'unit_rate_required') {
+            throw new ContractLinePresetDomainError('A recurring unit rate must be zero or more, in minor units.');
+        }
+    }
+}
+
+/**
  * Update services for a contract line preset
  */
 export const updateContractLinePresetServices = withAuth(async (
@@ -321,6 +387,8 @@ export const updateContractLinePresetServices = withAuth(async (
             if (!await hasPermission(user, 'billing', 'update', trx)) {
                 throw new ContractLinePresetDomainError('Permission denied: Cannot update contract line preset services');
             }
+
+            await assertPresetServiceBasisInputs(trx, tenant, presetId, services);
 
             const updatedServices = await ContractLinePresetService.updateForPreset(trx, presetId, services);
             return updatedServices;
@@ -547,6 +615,15 @@ export const copyPresetToContractLine = withAuth(async (
                     // Determine configuration type based on contract line type
                     let configurationType: 'Fixed' | 'Hourly' | 'Usage' | 'Bucket' = preset.contract_line_type as any;
 
+                    // A per-seat Fixed service keeps its unit rate in the fixed config (below),
+                    // never in the service's allocation custom_rate. An empty preset rate
+                    // stays empty so the line follows the catalog in the contract currency.
+                    const isUnitPresetService =
+                        preset.contract_line_type === 'Fixed' && isUnitFixedService(presetService);
+                    const presetUnitRate = isUnitPresetService
+                        ? serviceOverride?.custom_rate ?? presetService.custom_rate ?? null
+                        : null;
+
                     // Create the base configuration.
                     // Usage billing is record-driven: a configured quantity is never a billing
                     // input, so new Usage configurations are created without one.
@@ -554,7 +631,9 @@ export const copyPresetToContractLine = withAuth(async (
                         contract_line_id: contractLineId,
                         service_id: presetService.service_id,
                         configuration_type: configurationType,
-                        custom_rate: serviceOverride?.custom_rate ?? presetService.custom_rate ?? undefined,
+                        custom_rate: isUnitPresetService
+                            ? undefined
+                            : serviceOverride?.custom_rate ?? presetService.custom_rate ?? undefined,
                         quantity: configurationType === 'Usage'
                             ? undefined
                             : presetService.quantity ?? 1,
@@ -586,10 +665,15 @@ export const copyPresetToContractLine = withAuth(async (
                         };
                     } else if (configurationType === 'Usage') {
                         typeConfig = {
-                            unit_of_measure: presetService.unit_of_measure || 'unit',
+                            unit_of_measure: presetService.unit_of_measure || resolveUnitOfMeasure({ fallback: 'C62' }).label,
                             base_rate: baseConfig.custom_rate,
                             enable_tiered_pricing: false,
                             minimum_usage: undefined
+                        };
+                    } else if (isUnitPresetService) {
+                        typeConfig = {
+                            pricing_basis: 'unit',
+                            base_rate: presetUnitRate,
                         };
                     }
 
@@ -630,9 +714,16 @@ export const copyPresetToContractLine = withAuth(async (
             // 5. Copy type-specific config
             if (preset.contract_line_type === 'Fixed') {
                 if (presetFixedConfig) {
+                    // The line base rate is the bundle total for allocation members only. A
+                    // preset whose every service is a per-seat unit has no bundle, so a stale
+                    // base rate must not be billed on top of quantity x unit rate.
+                    const presetHasBundleService =
+                        presetServices.length === 0 || hasBundleFixedService(presetServices);
                     const fixedConfigData: Omit<IContractLineFixedConfig, 'created_at' | 'updated_at'> = {
                         contract_line_id: contractLineId,
-                        base_rate: overrides?.base_rate !== undefined ? overrides.base_rate : presetFixedConfig.base_rate,
+                        base_rate: !presetHasBundleService
+                            ? null
+                            : overrides?.base_rate !== undefined ? overrides.base_rate : presetFixedConfig.base_rate,
                         enable_proration: recurringAuthoringPolicy.enableProration,
                         billing_cycle_alignment: recurringAuthoringPolicy.billingCycleAlignment,
                         tenant: tenantId
@@ -866,7 +957,7 @@ export const createCustomContractLine = withAuth(async (
                     };
                 } else if (input.contract_line_type === 'Usage') {
                     typeConfig = {
-                        unit_of_measure: serviceConfig.unit_of_measure || 'unit',
+                        unit_of_measure: serviceConfig.unit_of_measure || resolveUnitOfMeasure({ fallback: 'C62' }).label,
                         base_rate: serviceConfig.custom_rate,
                         measurement_mode: serviceConfig.measurement_mode ?? 'additive',
                         enable_tiered_pricing: serviceConfig.enable_tiered_pricing ?? false,

@@ -346,7 +346,8 @@
       "billingMethod": "Método de facturación",
       "quantity": "Cantidad",
       "defaultRate": "Tasa predeterminada",
-      "actions": "Acciones"
+      "actions": "Acciones",
+      "pricing": "Precio"
     },
     "tooltip": {
       "defaultRate": "Tarifa estándar del servicio, utilizada para la asignación de valor interno y la generación de informes dentro del total del plan fijo."
@@ -381,7 +382,17 @@
       "saveSuccess": "Servicios preestablecidos de línea de contrato guardados correctamente",
       "saveError": "No se pudieron guardar los servicios"
     },
-    "unknownService": "Servicio desconocido"
+    "unknownService": "Servicio desconocido",
+    "pricing": {
+      "product": "Facturado por cantidad de unidades",
+      "bundle": "Parte del total de la línea",
+      "unit": "Por puesto / unidad",
+      "unitRate": "Tarifa unitaria",
+      "unitRatePlaceholder": "Precio de catálogo"
+    },
+    "errors": {
+      "recurringQuantityInvalid": "{{name}}: la cantidad recurrente debe ser un número entero, cero o más."
+    }
   },
   "accountingExports": {
     "title": "Exportaciones Contables",

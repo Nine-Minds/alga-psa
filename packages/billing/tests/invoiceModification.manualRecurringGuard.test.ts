@@ -36,6 +36,7 @@ function createBuilder(table: string) {
 
   builder.clone = vi.fn(() => builder);
   builder.forUpdate = vi.fn(() => builder);
+  builder.join = vi.fn(() => builder);
   builder.leftJoin = vi.fn(() => builder);
   builder.where = vi.fn((value: Record<string, any>) => {
     Object.assign(criteria, value);
@@ -113,6 +114,7 @@ vi.mock('../src/lib/billing/billingEngine', () => ({
 }));
 
 vi.mock('../src/services/invoiceService', () => ({
+  recalculatePercentageDiscountInvoiceCharges: vi.fn(async () => undefined),
   persistInvoiceCharges: vi.fn(),
   persistManualInvoiceCharges: vi.fn(),
   validateManualChargeAttribution: vi.fn(),

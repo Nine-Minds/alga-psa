@@ -1,7 +1,7 @@
 // server/src/components/billing-dashboard/FixedPlanServicesList.tsx
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Card, Box } from '@radix-ui/themes';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
@@ -44,11 +44,18 @@ const isReturnedActionError = (value: unknown) =>
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useCurrencyFormat } from '@alga-psa/ui/lib';
+import { resolveContractAuthoringRate } from '../../lib/contractAuthoringRate';
 // Removed ContractLineServiceForm import as 'Configure' is removed
 
 interface FixedPlanServicesListProps {
   planId: string; // Changed from plan object to just planId
   onServiceAdded?: () => void; // Callback for when a service is added
+  /**
+   * Reports the quantity-weighted sum (minor units) of the associated
+   * non-product services' resolved catalog rates. Used to seed an empty fixed
+   * base-rate editor; it never replaces a populated value.
+   */
+  onServicesTotalResolved?: (totalCents: number) => void;
 }
 
 // Simplified interface for display
@@ -69,7 +76,7 @@ type PlanServiceWithConfig = {
   configuration: IContractLineServiceConfiguration;
   typeConfig?: any;
 };
-const FixedPlanServicesList: React.FC<FixedPlanServicesListProps> = ({ planId, onServiceAdded }) => {
+const FixedPlanServicesList: React.FC<FixedPlanServicesListProps> = ({ planId, onServiceAdded, onServicesTotalResolved }) => {
   const { t } = useTranslation('msp/billing');
   const { money } = useCurrencyFormat();
   const [planServices, setPlanServices] = useState<SimplePlanService[]>([]);
@@ -83,6 +90,11 @@ const FixedPlanServicesList: React.FC<FixedPlanServicesListProps> = ({ planId, o
   const [selectedService, setSelectedService] = useState<SimplePlanService | null>(null);
   const [quantityDialogOpen, setQuantityDialogOpen] = useState(false);
   // Removed editingService state
+  const onServicesTotalResolvedRef = useRef(onServicesTotalResolved);
+
+  useEffect(() => {
+    onServicesTotalResolvedRef.current = onServicesTotalResolved;
+  }, [onServicesTotalResolved]);
 
   const fetchData = useCallback(async () => {
     if (!planId) return;
@@ -111,6 +123,8 @@ const FixedPlanServicesList: React.FC<FixedPlanServicesListProps> = ({ planId, o
         return;
       }
 
+      let resolvedCurrency = contractCurrency;
+
       if (planDetails?.contract_id) {
         const contract = await getContractById(planDetails.contract_id);
         if (isReturnedActionError(contract)) {
@@ -118,6 +132,7 @@ const FixedPlanServicesList: React.FC<FixedPlanServicesListProps> = ({ planId, o
           return;
         }
         if (contract?.currency_code) {
+          resolvedCurrency = contract.currency_code;
           setContractCurrency(contract.currency_code);
         }
       }
@@ -146,6 +161,25 @@ const FixedPlanServicesList: React.FC<FixedPlanServicesListProps> = ({ planId, o
       setPlanServices(enhancedServices);
       setAvailableServices(allAvailableServices);
       setSelectedServicesToAdd([]);
+
+      // Report the resolved associated-service total so a legacy fixed line
+      // with no base rate can seed the editor. Products bill on their own and
+      // are excluded from the fixed base rate.
+      if (onServicesTotalResolved) {
+        const totalCents = enhancedServices.reduce((sum, row) => {
+          if (row.item_kind === 'product') return sum;
+          const catalogService = allAvailableServices.find(
+            (service) => service.service_id === row.service_id
+          );
+          const resolved = resolveContractAuthoringRate(
+            catalogService ?? { default_rate: row.default_rate },
+            resolvedCurrency
+          );
+          const quantity = Number.isFinite(row.quantity as number) ? (row.quantity as number) : 1;
+          return sum + Math.round((resolved.rate ?? 0) * quantity);
+        }, 0);
+        onServicesTotalResolvedRef.current?.(totalCents);
+      }
     } catch (error) {
       console.error('Error fetching data:', error);
       setError(t('contractLineServices.errors.loadData', { defaultValue: 'Failed to load services data' }));

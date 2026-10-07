@@ -1,4 +1,6 @@
 'use server'
+
+import { loadPortalTicketExternalLinks } from '../../lib/portalTicketExternalLinks';
 import { persistCommentPublication } from '@alga-psa/shared/lib/ticketCommentAttachments';
 
 /* eslint-disable custom-rules/no-feature-to-feature-imports -- Client portal ticket actions intentionally compose ticketing feature APIs for client-facing workflows. */
@@ -6,7 +8,7 @@ import { persistCommentPublication } from '@alga-psa/shared/lib/ticketCommentAtt
 import { registerAfterCommit } from '@alga-psa/db';
 import Comment from '@alga-psa/tickets/models/comment';
 import { reconcileCommentAttachments, filterReadableCommentAttachments, withdrawCommentAttachments } from '@shared/lib/ticketCommentAttachments';
-import { validateData } from '@alga-psa/validation';
+import { isUuidShaped, validateData } from '@alga-psa/validation';
 import { COMMENT_RESPONSE_SOURCES, IComment, IStatus, ITicket, ITicketListItem, ITicketWithDetails, TICKET_ORIGINS } from '@alga-psa/types';
 import { IDocument } from '@alga-psa/types';
 import { IUser } from '@alga-psa/types';
@@ -106,6 +108,10 @@ function toClientTicketActionError(error: unknown): ClientTicketActionError | nu
   return null;
 }
 
+function ticketNotFoundError(): ClientTicketActionError {
+  return actionError('Ticket not found or access denied', 'client-portal:errors.tickets.notFoundOrDenied');
+}
+
 function expectedOrThrow(error: unknown, logMessage: string): ClientTicketActionError {
   const expected = toClientTicketActionError(error);
   if (expected) {
@@ -162,7 +168,7 @@ async function resolveVisibleTicket(
       't.client_id': visibility.clientId
     })
     .modify((queryBuilder: Knex.QueryBuilder) => {
-      applyTicketVisibilityFilter(queryBuilder, visibility, { boardColumn: 't.board_id', contactColumn: 't.contact_name_id' });
+      applyTicketVisibilityFilter(queryBuilder, visibility, { boardColumn: 't.board_id', contactColumn: 't.contact_name_id', billingProfileColumn: 't.billing_profile_id' });
     })
     .first();
 
@@ -265,7 +271,7 @@ export const getClientTickets = withAuth(async (user, { tenant }, status: string
         't.client_id': visibility.clientId
       });
 
-      applyTicketVisibilityFilter(query, visibility, { boardColumn: 't.board_id', contactColumn: 't.contact_name_id' });
+      applyTicketVisibilityFilter(query, visibility, { boardColumn: 't.board_id', contactColumn: 't.contact_name_id', billingProfileColumn: 't.billing_profile_id' });
 
     // Filter by status
     if (parsedStatusFilter.kind === 'all') {
@@ -319,6 +325,11 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
       return permissionError('Insufficient permissions to view ticket details', 'common:errors.permissions.tickets.readDetails');
     }
 
+    // A malformed id gets the same response as a hidden ticket, and never reaches the database.
+    if (!isUuidShaped(ticketId)) {
+      return ticketNotFoundError();
+    }
+
     const result = await withTransaction(db, async (trx: Knex.Transaction) => {
       const { visibility } = await resolvePortalVisibility(trx, tenant, userId);
       const scopedDb = tenantDb(trx, tenant);
@@ -350,7 +361,7 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
           't.client_id': visibility.clientId
         })
         .modify((ticketQuery: Knex.QueryBuilder) => {
-          applyTicketVisibilityFilter(ticketQuery, visibility, { boardColumn: 't.board_id', contactColumn: 't.contact_name_id' });
+          applyTicketVisibilityFilter(ticketQuery, visibility, { boardColumn: 't.board_id', contactColumn: 't.contact_name_id', billingProfileColumn: 't.billing_profile_id' });
         })
         .first();
 
@@ -467,11 +478,13 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
         linkedAssetsQuery
       ]);
 
-      return { ticket, conversations, documents: await filterReadableCommentAttachments(trx, tenant, userId, documents), users, linkedAssets };
+      // Never fetch link data until the existing client/board/contact ticket scope succeeds.
+      const portalExternalLinks = ticket ? await loadPortalTicketExternalLinks(trx, tenant, ticketId) : [];
+      return { ticket, portalExternalLinks, conversations, documents: await filterReadableCommentAttachments(trx, tenant, userId, documents), users, linkedAssets };
     }) as any;
 
     if (!result.ticket) {
-      return actionError('Ticket not found or access denied', 'client-portal:errors.tickets.notFoundOrDenied');
+      return ticketNotFoundError();
     }
 
     // Create user map, including avatar URLs
@@ -569,6 +582,7 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
       // the consumer side via a small augmentation since ITicketWithDetails
       // doesn't model this today.
       linkedAssets: result.linkedAssets,
+      portalExternalLinks: result.portalExternalLinks,
       userMap,
       contactMap
     };
@@ -610,6 +624,11 @@ export const addClientTicketComment = withAuth(async (
     const canUpdate = await hasPermission(userForPermission, 'ticket', 'update', db);
     if (!canUpdate) {
       return permissionError('Insufficient permissions to add comments', 'common:errors.permissions.tickets.addComments');
+    }
+
+    // A malformed id gets the same response as a hidden ticket, and never reaches the database.
+    if (!isUuidShaped(ticketId) || (parentCommentId !== undefined && parentCommentId !== null && !isUuidShaped(parentCommentId))) {
+      return ticketNotFoundError();
     }
 
     await withTransaction(db, async (trx: Knex.Transaction) => {
@@ -902,6 +921,11 @@ export const updateTicketStatus = withAuth(async (
       return permissionError('Insufficient permissions to update ticket status', 'common:errors.permissions.tickets.updateStatus');
     }
 
+    // A malformed id gets the same response as a hidden ticket, and never reaches the database.
+    if (!isUuidShaped(ticketId)) {
+      return ticketNotFoundError();
+    }
+
     await withTransaction(db, async (trx: Knex.Transaction) => {
       const userRecord = await tenantDb(trx, tenant).table('users')
         .where({
@@ -1185,6 +1209,11 @@ export const getClientTicketDocuments = withAuth(async (user, { tenant }, ticket
       return permissionError('Insufficient permissions to view ticket documents', 'common:errors.permissions.tickets.viewDocuments');
     }
 
+    // A malformed id gets the same response as a hidden ticket, and never reaches the database.
+    if (!isUuidShaped(ticketId)) {
+      return ticketNotFoundError();
+    }
+
     const documents = await withTransaction(db, async (trx: Knex.Transaction) => {
       // Verify user has access to this ticket
       const { visibility } = await resolvePortalVisibility(trx, tenant, userId);
@@ -1196,7 +1225,7 @@ export const getClientTicketDocuments = withAuth(async (user, { tenant }, ticket
           client_id: visibility.clientId
         })
         .modify((queryBuilder: Knex.QueryBuilder) => {
-          applyTicketVisibilityFilter(queryBuilder, visibility, { boardColumn: 'tickets.board_id', contactColumn: 'tickets.contact_name_id' });
+          applyTicketVisibilityFilter(queryBuilder, visibility, { boardColumn: 'tickets.board_id', contactColumn: 'tickets.contact_name_id', billingProfileColumn: 'tickets.billing_profile_id' });
         })
         .first();
 
@@ -1331,6 +1360,28 @@ export const createClientTicket = withAuth(async (user, { tenant }, data: FormDa
         throw expectedClientTicketActionError('No default status configured for tickets');
       }
 
+      // A contact associated with exactly one billing profile is working on
+      // behalf of that segment, so the ticket is attributed to it. Two or more
+      // associations is genuinely ambiguous — the model's location → client
+      // default chain answers it instead of this guessing.
+      const contactProfileQuery = tenantDb(trx, tenant).table('billing_profile_contacts as bpc');
+      tenantDb(trx, tenant).tenantJoin(
+        contactProfileQuery,
+        'client_billing_profiles as p',
+        'p.billing_profile_id',
+        'bpc.billing_profile_id',
+      );
+      const contactProfiles = await contactProfileQuery
+        .where({
+          'bpc.contact_name_id': visibility.contactId,
+          'p.client_id': visibility.clientId,
+          'p.is_active': true,
+        })
+        .select('bpc.billing_profile_id');
+      const contactBillingProfileId = contactProfiles.length === 1
+        ? (contactProfiles[0].billing_profile_id as string)
+        : undefined;
+
       // Convert to TicketModel input format
       const createTicketInput: CreateTicketInput = {
         title: validatedData.title,
@@ -1338,6 +1389,7 @@ export const createClientTicket = withAuth(async (user, { tenant }, data: FormDa
         priority_id: validatedData.priority_id,
         client_id: visibility.clientId,
         contact_id: visibility.contactId, // Maps to contact_name_id in database
+        billing_profile_id: contactBillingProfileId,
         entered_by: userId,
         source: 'client_portal',
         ticket_origin: TICKET_ORIGINS.CLIENT_PORTAL,

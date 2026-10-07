@@ -5379,7 +5379,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/assets",
     "displayName": "Create asset",
     "summary": "Create asset",
-    "description": "Creates an asset for the authenticated tenant. The request body is validated with createAssetWithExtensionSchema; client_id, asset_type, asset_tag, name, and status are required. AssetService.create writes assets.tenant from the request context, inserts the asset, optionally upserts asset-type-specific extension_data, publishes an ASSET_CREATED event, and returns getWithDetails with HATEOAS links.",
+    "description": "Creates an asset for the authenticated tenant. The request body is validated with createAssetWithExtensionSchema; client_id, asset_type, asset_tag, name, and status are required. Custom attributes are checked against the registered type schema and required fields must be present. Unknown asset_type slugs and invalid/missing required attributes return 400. AssetService.create writes the attributes map, optionally upserts extension_data, publishes ASSET_CREATED, and returns getWithDetails.",
     "tags": [
       "Assets"
     ],
@@ -5395,7 +5395,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         },
         "asset_type": {
           "type": "string",
-          "description": "Asset type. Determines the optional extension data table."
+          "description": "Must be a built-in slug or registered custom slug; unknown slugs return 400."
         },
         "asset_tag": {
           "type": "string",
@@ -5439,6 +5439,9 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "type": "string",
           "format": "date-time",
           "description": "Optional warranty end date/time."
+        },
+        "attributes": {
+          "$ref": "#/components/schemas/AssetAttributes"
         },
         "extension_data": {
           "$ref": "#/components/schemas/AssetExtensionData"
@@ -5547,7 +5550,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/assets/bulk-update",
     "displayName": "Bulk update assets",
     "summary": "Bulk update assets",
-    "description": "Updates up to 50 assets in the authenticated tenant. Each array item supplies an asset_id and partial update data validated with updateAssetSchema. The controller calls AssetService.update for every item, tenant-scoping each update by asset_id and context.tenant and publishing ASSET_UPDATED events.",
+    "description": "Updates up to 50 assets in the authenticated tenant. Each item is validated and written independently; custom attributes are validated against that asset type and merged into its stored map. Unknown types and invalid attributes return 400. Earlier items may remain committed if a later item fails.",
     "tags": [
       "Assets"
     ],
@@ -6127,7 +6130,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/assets/{id}",
     "displayName": "Update asset",
     "summary": "Update asset",
-    "description": "Partially updates base asset fields for the authenticated tenant. The request body is validated with updateAssetSchema, where all fields are optional. AssetService.update scopes the update by asset_id and context.tenant, writes updated_at, publishes ASSET_UPDATED, and returns the refreshed base asset with joined client_name and warranty_status. This REST path does not update extension data, create asset history records, or wrap the update in a transaction. Missing assets currently lead to a 500 when the controller tries to add links to a null result rather than a clean 404.",
+    "description": "Partially updates base asset fields for the authenticated tenant. Custom attributes are validated against the next asset type when asset_type changes, then merged into the stored map so omitted keys remain. Required custom fields cannot be blanked. Unknown asset_type slugs and invalid attributes return 400.",
     "tags": [
       "Assets"
     ],
@@ -6155,7 +6158,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         },
         "asset_type": {
           "type": "string",
-          "description": "Asset type to store in assets.asset_type."
+          "description": "Must be a built-in slug or registered custom slug; unknown slugs return 400."
         },
         "asset_tag": {
           "type": "string",
@@ -6199,6 +6202,9 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "type": "string",
           "format": "date-time",
           "description": "Warranty end date/time."
+        },
+        "attributes": {
+          "$ref": "#/components/schemas/AssetAttributes"
         }
       }
     },
@@ -10385,9 +10391,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                   "billing_address": {
                     "type": "string"
                   },
-                  "tax_id": {
-                    "type": "string"
-                  },
                   "notes": {
                     "type": "string"
                   },
@@ -10409,6 +10412,9 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                     "format": "date-time"
                   },
                   "logo": {
+                    "type": "string"
+                  },
+                  "defaultLocale": {
                     "type": "string"
                   }
                 }
@@ -10500,6 +10506,12 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                 "format": "uuid"
               },
               "account_manager_full_name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "client_since": {
                 "type": [
                   "string",
                   "null"
@@ -10657,6 +10669,13 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         },
         "properties": {
           "type": "object",
+          "properties": {
+            "tax_id": {
+              "type": "string",
+              "description": "Deprecated legacy input. Send tax_id_number instead.",
+              "deprecated": true
+            }
+          },
           "additionalProperties": {}
         },
         "payment_terms": {
@@ -10840,9 +10859,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                 "billing_address": {
                   "type": "string"
                 },
-                "tax_id": {
-                  "type": "string"
-                },
                 "notes": {
                   "type": "string"
                 },
@@ -10864,6 +10880,9 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                   "format": "date-time"
                 },
                 "logo": {
+                  "type": "string"
+                },
+                "defaultLocale": {
                   "type": "string"
                 }
               }
@@ -10955,6 +10974,12 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
               "format": "uuid"
             },
             "account_manager_full_name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "client_since": {
               "type": [
                 "string",
                 "null"
@@ -11141,9 +11166,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                 "billing_address": {
                   "type": "string"
                 },
-                "tax_id": {
-                  "type": "string"
-                },
                 "notes": {
                   "type": "string"
                 },
@@ -11165,6 +11187,9 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                   "format": "date-time"
                 },
                 "logo": {
+                  "type": "string"
+                },
+                "defaultLocale": {
                   "type": "string"
                 }
               }
@@ -11261,6 +11286,12 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                 "null"
               ]
             },
+            "client_since": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
             "logoUrl": {
               "type": [
                 "string",
@@ -11325,7 +11356,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/clients/{id}",
     "displayName": "Update client",
     "summary": "Update client",
-    "description": "Inherited ApiBaseController update route for one client_id.",
+    "description": "Updates client fields for one client_id. email, phone_no, and address are location fields and must be managed through /api/v1/clients/{id}/locations.",
     "tags": [
       "Clients"
     ],
@@ -11349,19 +11380,9 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "minLength": 1,
           "maxLength": 255
         },
-        "phone_no": {
-          "type": "string"
-        },
-        "email": {
-          "type": "string",
-          "format": "email"
-        },
         "url": {
           "type": "string",
           "format": "uri"
-        },
-        "address": {
-          "type": "string"
         },
         "client_type": {
           "type": "string",
@@ -11378,6 +11399,13 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         },
         "properties": {
           "type": "object",
+          "properties": {
+            "tax_id": {
+              "type": "string",
+              "description": "Deprecated legacy input. Send tax_id_number instead.",
+              "deprecated": true
+            }
+          },
           "additionalProperties": {}
         },
         "payment_terms": {
@@ -11453,12 +11481,12 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "items": {
             "type": "string"
           }
+        },
+        "deactivate_contacts": {
+          "type": "boolean",
+          "description": "With is_inactive=true: also deactivate the client's contacts and their portal users (default true). Requires contact:update when true."
         }
-      },
-      "required": [
-        "client_name",
-        "billing_cycle"
-      ]
+      }
     },
     "responseBodySchema": {
       "type": "object",
@@ -11561,9 +11589,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                 "billing_address": {
                   "type": "string"
                 },
-                "tax_id": {
-                  "type": "string"
-                },
                 "notes": {
                   "type": "string"
                 },
@@ -11585,6 +11610,9 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                   "format": "date-time"
                 },
                 "logo": {
+                  "type": "string"
+                },
+                "defaultLocale": {
                   "type": "string"
                 }
               }
@@ -11676,6 +11704,12 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
               "format": "uuid"
             },
             "account_manager_full_name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "client_since": {
               "type": [
                 "string",
                 "null"
@@ -12150,8 +12184,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "type": "string"
         },
         "address_line1": {
-          "type": "string",
-          "minLength": 1
+          "type": "string"
         },
         "address_line2": {
           "type": "string"
@@ -12160,8 +12193,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "type": "string"
         },
         "city": {
-          "type": "string",
-          "minLength": 1
+          "type": "string"
         },
         "state_province": {
           "type": "string"
@@ -12208,8 +12240,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         }
       },
       "required": [
-        "address_line1",
-        "city",
         "country_code",
         "country_name"
       ]
@@ -12374,6 +12404,318 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     }
   },
   {
+    "id": "post-_api_v1_clients_id_merge_preview",
+    "method": "post",
+    "path": "/api/v1/clients/{id}/merge/preview",
+    "displayName": "Preview a client merge",
+    "summary": "Preview a client merge",
+    "description": "Dry run of absorbing source_client_id into this client as a billing profile. Writes nothing; returns the profiles that would move, per-entity row counts, the contacts and contracts needing a decision, the portal users whose billing-segment access would widen, the accounting mappings that would need re-pointing, and any blockers.",
+    "tags": [
+      "Clients"
+    ],
+    "rbacResource": "client",
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "source_client_id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "The client that would be absorbed."
+        }
+      },
+      "required": [
+        "source_client_id"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "$ref": "#/components/schemas/ClientMergePreviewResource"
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_clients_id_merge",
+    "method": "post",
+    "path": "/api/v1/clients/{id}/merge",
+    "displayName": "Merge a client into this one",
+    "summary": "Merge a client into this one",
+    "description": "Absorbs source_client_id into this client as a billing profile. The source's billing profiles are re-parented keeping their ids, so invoices, billing cycles, payment methods, credits and tax settings follow them; tickets, contacts, projects, assets, contracts, locations and portal visibility groups move to this client. The source client is archived with a forwarding marker. Irreversible. Requires client update and delete.",
+    "tags": [
+      "Clients"
+    ],
+    "rbacResource": "client",
+    "approvalRequired": true,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "source_client_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "contact_assignments": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "contact_name_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "billing_profile_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "is_manager": {
+                "type": "boolean"
+              },
+              "can_view_profile_tickets": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "contact_name_id",
+              "billing_profile_id"
+            ]
+          }
+        },
+        "contract_decisions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "client_contract_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "choice": {
+                "type": "string",
+                "enum": [
+                  "original",
+                  "cutover"
+                ]
+              },
+              "cutover_date": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "client_contract_id",
+              "choice"
+            ]
+          }
+        },
+        "pin_portal_grants": {
+          "type": "boolean",
+          "description": "Defaults to true: records the billing segments unrestricted portal users have today."
+        },
+        "external_remap_choices": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "mapping_id": {
+                "type": "string"
+              },
+              "apply": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "mapping_id",
+              "apply"
+            ]
+          }
+        }
+      },
+      "required": [
+        "source_client_id"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "$ref": "#/components/schemas/ClientMergeResource"
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_v1_clients_id_billingprofiles_profileid_contacts",
+    "method": "get",
+    "path": "/api/v1/clients/{id}/billing-profiles/{profileId}/contacts",
+    "displayName": "List billing profile contacts",
+    "summary": "List billing profile contacts",
+    "description": "Returns the contacts attached to a billing profile, with the manager designation and the separate grant that lets a contact see every ticket attributed to the profile in the client portal.",
+    "tags": [
+      "Clients"
+    ],
+    "rbacResource": "client",
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "profileId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "$ref": "#/components/schemas/BillingProfileContactResource"
+          }
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "put-_api_v1_clients_id_billingprofiles_profileid_contacts",
+    "method": "put",
+    "path": "/api/v1/clients/{id}/billing-profiles/{profileId}/contacts",
+    "displayName": "Replace billing profile contacts",
+    "summary": "Replace billing profile contacts",
+    "description": "Replaces the profile's contact list. At most one contact may be the manager. can_view_profile_tickets is a separate opt-in and defaults to false, so naming a manager never widens what they can read.",
+    "tags": [
+      "Clients"
+    ],
+    "rbacResource": "client",
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "profileId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "contacts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "contact_name_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "is_manager": {
+                "type": "boolean"
+              },
+              "can_view_profile_tickets": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "contact_name_id"
+            ]
+          },
+          "description": "Replaces the profile's contact list; omitting a contact removes it."
+        }
+      },
+      "required": [
+        "contacts"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "$ref": "#/components/schemas/BillingProfileContactResource"
+          }
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
     "id": "get-_api_v1_clients_id_notes",
     "method": "get",
     "path": "/api/v1/clients/{id}/notes",
@@ -12521,6 +12863,301 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "message"
       ]
     }
+  },
+  {
+    "id": "put-_api_v1_clients_id_locations_locationid",
+    "method": "put",
+    "path": "/api/v1/clients/{id}/locations/{locationId}",
+    "displayName": "Update client location",
+    "summary": "Update client location",
+    "description": "Updates one location of client_id. This is where a client's phone, email and address are edited; PUT /api/v1/clients/{id} rejects those fields. Promoting is_default demotes the previous default; the last active location cannot lose its default flag.",
+    "tags": [
+      "Clients"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "locationId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "allOf": [
+        {
+          "$ref": "#/components/schemas/ClientLocationBody"
+        },
+        {
+          "properties": {
+            "location_name": {
+              "type": "string"
+            },
+            "address_line1": {
+              "type": "string"
+            },
+            "address_line2": {
+              "type": "string"
+            },
+            "address_line3": {
+              "type": "string"
+            },
+            "city": {
+              "type": "string"
+            },
+            "state_province": {
+              "type": "string"
+            },
+            "postal_code": {
+              "type": "string"
+            },
+            "country_code": {
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 3
+            },
+            "country_name": {
+              "type": "string",
+              "minLength": 1
+            },
+            "region_code": {
+              "type": "string"
+            },
+            "is_billing_address": {
+              "type": "boolean"
+            },
+            "is_shipping_address": {
+              "type": "boolean"
+            },
+            "is_default": {
+              "type": "boolean"
+            },
+            "phone": {
+              "type": "string"
+            },
+            "fax": {
+              "type": "string"
+            },
+            "email": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "email",
+              "description": "null clears the email"
+            },
+            "notes": {
+              "type": "string"
+            },
+            "is_active": {
+              "type": "boolean"
+            }
+          }
+        }
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "properties": {
+            "location_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "client_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "location_name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "address_line1": {
+              "type": "string"
+            },
+            "address_line2": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "address_line3": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "city": {
+              "type": "string"
+            },
+            "state_province": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "postal_code": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "country_code": {
+              "type": "string"
+            },
+            "country_name": {
+              "type": "string"
+            },
+            "region_code": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "is_billing_address": {
+              "type": "boolean"
+            },
+            "is_shipping_address": {
+              "type": "boolean"
+            },
+            "is_default": {
+              "type": "boolean"
+            },
+            "phone": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "phone_extension": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "fax": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "fax_extension": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "email": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "notes": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "is_active": {
+              "type": "boolean"
+            },
+            "created_at": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "updated_at": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "tenant": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "required": [
+            "location_id",
+            "client_id",
+            "location_name",
+            "address_line1",
+            "address_line2",
+            "address_line3",
+            "city",
+            "state_province",
+            "postal_code",
+            "country_code",
+            "country_name",
+            "region_code",
+            "is_billing_address",
+            "is_shipping_address",
+            "is_default",
+            "phone",
+            "fax",
+            "email",
+            "notes",
+            "is_active",
+            "created_at",
+            "updated_at",
+            "tenant"
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "delete-_api_v1_clients_id_locations_locationid",
+    "method": "delete",
+    "path": "/api/v1/clients/{id}/locations/{locationId}",
+    "displayName": "Delete client location",
+    "summary": "Delete client location",
+    "description": "Deletes one location of client_id. Refused while tickets or other records still reference it.",
+    "tags": [
+      "Clients"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "locationId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ]
   },
   {
     "id": "get-_api_v1_contacts",
@@ -12904,6 +13541,122 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         }
       }
     ]
+  },
+  {
+    "id": "post-_api_v1_contacts_id_avatar",
+    "method": "post",
+    "path": "/api/v1/contacts/{id}/avatar",
+    "displayName": "Upload contact avatar",
+    "summary": "Upload contact avatar",
+    "description": "Replaces the contact's avatar from the multipart form field `avatar`. Same storage path as the web contact page.",
+    "tags": [
+      "Contacts"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "avatar": {
+          "type": "string",
+          "description": "Multipart file field name expected by controller: avatar."
+        }
+      },
+      "required": [
+        "avatar"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "boolean"
+            },
+            "message": {
+              "type": "string"
+            },
+            "avatarUrl": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "success",
+            "message"
+          ]
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "delete-_api_v1_contacts_id_avatar",
+    "method": "delete",
+    "path": "/api/v1/contacts/{id}/avatar",
+    "displayName": "Delete contact avatar",
+    "summary": "Delete contact avatar",
+    "description": "Removes the contact's avatar.",
+    "tags": [
+      "Contacts"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "boolean"
+            },
+            "message": {
+              "type": "string"
+            },
+            "avatarUrl": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "success",
+            "message"
+          ]
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
   },
   {
     "id": "get-_api_v1_contacts_search",
@@ -15263,7 +16016,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         },
         "quantity": {
           "type": "number",
-          "minimum": 1
+          "minimum": 0,
+          "description": "Seat/unit count. Must be at least 1 for a bundle service; zero or more (whole number) when type_config.pricing_basis is \"unit\" (zero bills zero)."
         },
         "custom_rate": {
           "type": "number",
@@ -15280,7 +16034,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         },
         "type_config": {
           "type": "object",
-          "additionalProperties": {}
+          "additionalProperties": {},
+          "description": "Type-specific configuration. For a Fixed service, set pricing_basis to \"unit\" to bill quantity x base_rate every period (base_rate is the unit rate in minor units of the contract currency; omit or null to follow the catalog price in the contract currency). The default \"bundle\" keeps the line total authoritative. Per-unit pricing is not available for products or non-Fixed lines."
         }
       },
       "required": [
@@ -15456,7 +16211,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "properties": {
         "quantity": {
           "type": "number",
-          "minimum": 1
+          "minimum": 0,
+          "description": "New seat/unit count (zero or more, whole number, for a per-unit service; at least 1 for a bundle service). On a per-unit service the change is scheduled as a dated revision effective at the next unbilled period boundary; already-invoiced periods keep their price."
         },
         "custom_rate": {
           "type": "number",
@@ -15464,7 +16220,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         },
         "type_config": {
           "type": "object",
-          "additionalProperties": {}
+          "additionalProperties": {},
+          "description": "For a per-unit Fixed service, base_rate is the new unit rate (scheduled like a quantity change). pricing_basis may be sent only if it equals the stored basis; it cannot be changed after the service is added."
         },
         "rate_tiers": {
           "type": "array",
@@ -16400,6 +17157,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             "it",
             "pl",
             "pt",
+            "sv",
             "xx",
             "yy"
           ],
@@ -16552,6 +17310,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             "it",
             "pl",
             "pt",
+            "sv",
             "xx",
             "yy"
           ],
@@ -16627,6 +17386,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             "it",
             "pl",
             "pt",
+            "sv",
             "xx",
             "yy"
           ],
@@ -16724,6 +17484,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             "it",
             "pl",
             "pt",
+            "sv",
             "xx",
             "yy"
           ],
@@ -24183,6 +24944,55 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "meta": {
           "type": "object",
           "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_v1_countries",
+    "method": "get",
+    "path": "/api/v1/countries",
+    "displayName": "List countries",
+    "summary": "List countries",
+    "description": "Lists the active ISO 3166-1 countries (code, name, dialing code) available for client locations. Global reference data, identical for every tenant; any authenticated caller may read it.",
+    "tags": [
+      "Countries"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string",
+                "minLength": 2,
+                "maxLength": 2,
+                "description": "ISO 3166-1 alpha-2"
+              },
+              "name": {
+                "type": "string"
+              },
+              "phone_code": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "International dialing prefix, e.g. +1"
+              }
+            },
+            "required": [
+              "code",
+              "name"
+            ]
+          }
         }
       },
       "required": [
@@ -34662,6 +35472,11 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         },
         "is_active": {
           "type": "boolean"
+        },
+        "display_order": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Sort position of the category (integer, 0 or greater). If omitted on create, the category is appended to the end of the list; if omitted on update, the existing value is left unchanged."
         }
       },
       "required": [
@@ -34770,6 +35585,11 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         },
         "is_active": {
           "type": "boolean"
+        },
+        "display_order": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Sort position of the category (integer, 0 or greater). If omitted on create, the category is appended to the end of the list; if omitted on update, the existing value is left unchanged."
         }
       },
       "required": [
@@ -35534,7 +36354,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "schema": {
           "type": "integer",
           "minimum": 1,
-          "maximum": 100,
           "default": 25
         }
       },
@@ -35742,6 +36561,9 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "minLength": 1,
           "maxLength": 128
         },
+        "unit_code": {
+          "type": "string"
+        },
         "category_id": {
           "anyOf": [
             {
@@ -35783,14 +36605,16 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
               "type": "null"
             }
           ]
+        },
+        "is_active": {
+          "type": "boolean"
         }
       },
       "required": [
         "service_name",
         "custom_service_type_id",
         "billing_method",
-        "default_rate",
-        "unit_of_measure"
+        "default_rate"
       ]
     },
     "responseBodySchema": {
@@ -35904,6 +36728,9 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "minLength": 1,
           "maxLength": 128
         },
+        "unit_code": {
+          "type": "string"
+        },
         "category_id": {
           "anyOf": [
             {
@@ -35945,6 +36772,9 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
               "type": "null"
             }
           ]
+        },
+        "is_active": {
+          "type": "boolean"
         }
       }
     },
@@ -36218,6 +37048,9 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "minLength": 1,
           "maxLength": 128
         },
+        "unit_code": {
+          "type": "string"
+        },
         "category_id": {
           "anyOf": [
             {
@@ -36419,8 +37252,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       },
       "required": [
         "service_name",
-        "custom_service_type_id",
-        "unit_of_measure"
+        "custom_service_type_id"
       ]
     },
     "responseBodySchema": {
@@ -36538,6 +37370,9 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "type": "string",
           "minLength": 1,
           "maxLength": 128
+        },
+        "unit_code": {
+          "type": "string"
         },
         "category_id": {
           "anyOf": [
@@ -40676,6 +41511,10 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "type": "number",
           "minimum": 0
         },
+        "start_date": {
+          "type": "string",
+          "format": "date-time"
+        },
         "due_date": {
           "type": "string",
           "format": "date-time"
@@ -40814,6 +41653,10 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "type": "number",
           "minimum": 0
         },
+        "start_date": {
+          "type": "string",
+          "format": "date-time"
+        },
         "due_date": {
           "type": "string",
           "format": "date-time"
@@ -40897,6 +41740,304 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         }
       }
     ]
+  },
+  {
+    "id": "get-_api_v1_projects_tasks_taskid_comments",
+    "method": "get",
+    "path": "/api/v1/projects/tasks/{taskId}/comments",
+    "displayName": "List project task comments",
+    "summary": "List project task comments",
+    "description": "Returns every comment on the task oldest first, soft-deleted rows included (note \"[deleted]\", deleted_at set) so reply threads stay well-formed, each with its aggregated emoji reactions. Task comments are always internal. Requires project_task:read.",
+    "tags": [
+      "Projects"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "taskId",
+        "in": "path",
+        "required": true,
+        "description": "Project task UUID.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Project task UUID."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "$ref": "#/components/schemas/ProjectTaskCommentResource"
+          }
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_projects_tasks_taskid_comments",
+    "method": "post",
+    "path": "/api/v1/projects/tasks/{taskId}/comments",
+    "displayName": "Add a project task comment",
+    "summary": "Add a project task comment",
+    "description": "Adds a comment, or a reply when parent_comment_id is given (the parent must be a live comment on the same task). note is BlockNote JSON, exactly what the web composer stores; markdown is derived server-side. Publishes the same TASK_COMMENT_ADDED event as the web, so assignee and @mention notifications fire. Only internal users may comment.",
+    "tags": [
+      "Projects"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "taskId",
+        "in": "path",
+        "required": true,
+        "description": "Project task UUID.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Project task UUID."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "note": {
+          "type": "string",
+          "minLength": 1
+        },
+        "parent_comment_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid"
+        }
+      },
+      "required": [
+        "note"
+      ],
+      "additionalProperties": false
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "$ref": "#/components/schemas/ProjectTaskCommentResource"
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "put-_api_v1_projects_tasks_taskid_comments_commentid",
+    "method": "put",
+    "path": "/api/v1/projects/tasks/{taskId}/comments/{commentId}",
+    "displayName": "Edit a project task comment",
+    "summary": "Edit a project task comment",
+    "description": "Replaces the comment note (BlockNote JSON) and stamps edited_at. Newly mentioned users are notified. Internal users may edit any comment; others only their own.",
+    "tags": [
+      "Projects"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "taskId",
+        "in": "path",
+        "required": true,
+        "description": "Project task UUID.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Project task UUID."
+        }
+      },
+      {
+        "name": "commentId",
+        "in": "path",
+        "required": true,
+        "description": "Task comment UUID.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Task comment UUID."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "note": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "note"
+      ],
+      "additionalProperties": false
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "$ref": "#/components/schemas/ProjectTaskCommentResource"
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "delete-_api_v1_projects_tasks_taskid_comments_commentid",
+    "method": "delete",
+    "path": "/api/v1/projects/tasks/{taskId}/comments/{commentId}",
+    "displayName": "Delete a project task comment",
+    "summary": "Delete a project task comment",
+    "description": "Removes the comment. One that still has replies is soft-deleted (note becomes \"[deleted]\") so the thread keeps its shape; a leaf comment is removed outright.",
+    "tags": [
+      "Projects"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "taskId",
+        "in": "path",
+        "required": true,
+        "description": "Project task UUID.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Project task UUID."
+        }
+      },
+      {
+        "name": "commentId",
+        "in": "path",
+        "required": true,
+        "description": "Task comment UUID.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Task comment UUID."
+        }
+      }
+    ]
+  },
+  {
+    "id": "post-_api_v1_projects_tasks_taskid_comments_commentid_reactions",
+    "method": "post",
+    "path": "/api/v1/projects/tasks/{taskId}/comments/{commentId}/reactions",
+    "displayName": "Toggle a reaction on a project task comment",
+    "summary": "Toggle a reaction on a project task comment",
+    "description": "Adds the emoji reaction for the caller, or removes it when already present. Returns the comment's reactions after the change.",
+    "tags": [
+      "Projects"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "taskId",
+        "in": "path",
+        "required": true,
+        "description": "Project task UUID.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Project task UUID."
+        }
+      },
+      {
+        "name": "commentId",
+        "in": "path",
+        "required": true,
+        "description": "Task comment UUID.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Task comment UUID."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "emoji": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 50
+        }
+      },
+      "required": [
+        "emoji"
+      ],
+      "additionalProperties": false
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "properties": {
+            "added": {
+              "type": "boolean"
+            },
+            "reactions": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "emoji": {
+                    "type": "string"
+                  },
+                  "count": {
+                    "type": "integer"
+                  },
+                  "userIds": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  },
+                  "currentUserReacted": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "emoji",
+                  "count",
+                  "userIds",
+                  "currentUserReacted"
+                ]
+              }
+            },
+            "reaction_user_names": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            }
+          },
+          "required": [
+            "added",
+            "reactions",
+            "reaction_user_names"
+          ]
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
   },
   {
     "id": "get-_api_v1_projects",
@@ -41762,7 +42903,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/projects/tasks/{taskId}/checklist",
     "displayName": "Create task checklist item",
     "summary": "Create task checklist item",
-    "description": "Creates checklist item for project task UUID via ApiProjectController.createChecklistItem().",
+    "description": "Creates checklist item for project task UUID via ApiProjectController.createChecklistItem(). Body uses the table's item_name / completed names; item_text / is_completed remain accepted aliases.",
     "tags": [
       "Work Management v1"
     ],
@@ -41842,9 +42983,204 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     ],
     "requestBodySchema": {
       "type": "object",
-      "additionalProperties": {},
-      "description": "Controller/service-specific payload; see source route/controller for exact required shape."
+      "properties": {
+        "item_name": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Checklist item text. Required on create. `item_text` is accepted as a legacy alias."
+        },
+        "description": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "assigned_to": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid"
+        },
+        "completed": {
+          "type": "boolean",
+          "description": "Mark the item done/undone. `is_completed` is accepted as a legacy alias."
+        },
+        "due_date": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "order_number": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
     },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "put-_api_v1_projects_tasks_taskid_checklist_itemid",
+    "method": "put",
+    "path": "/api/v1/projects/tasks/{taskId}/checklist/{itemId}",
+    "displayName": "Update task checklist item",
+    "summary": "Update task checklist item",
+    "description": "Updates one checklist item of the task, typically `completed` to tick it done. 404 when the item is not on that task.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "taskId",
+        "in": "path",
+        "required": true,
+        "description": "Project task UUID from project_tasks.task_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Project task UUID from project_tasks.task_id."
+        }
+      },
+      {
+        "name": "itemId",
+        "in": "path",
+        "required": true,
+        "description": "Checklist item UUID from task_checklist_items.checklist_item_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Checklist item UUID from task_checklist_items.checklist_item_id."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "item_name": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Checklist item text. Required on create. `item_text` is accepted as a legacy alias."
+        },
+        "description": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "assigned_to": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid"
+        },
+        "completed": {
+          "type": "boolean",
+          "description": "Mark the item done/undone. `is_completed` is accepted as a legacy alias."
+        },
+        "due_date": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "order_number": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "delete-_api_v1_projects_tasks_taskid_checklist_itemid",
+    "method": "delete",
+    "path": "/api/v1/projects/tasks/{taskId}/checklist/{itemId}",
+    "displayName": "Delete task checklist item",
+    "summary": "Delete task checklist item",
+    "description": "Deletes one checklist item of the task. 404 when the item is not on that task.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "taskId",
+        "in": "path",
+        "required": true,
+        "description": "Project task UUID from project_tasks.task_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Project task UUID from project_tasks.task_id."
+        }
+      },
+      {
+        "name": "itemId",
+        "in": "path",
+        "required": true,
+        "description": "Checklist item UUID from task_checklist_items.checklist_item_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Checklist item UUID from task_checklist_items.checklist_item_id."
+        }
+      }
+    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {
@@ -44384,7 +45720,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/tickets",
     "displayName": "List Tickets",
     "summary": "List tickets",
-    "description": "Returns a paginated list of tickets for the current tenant. Supports filtering by board, status, priority, client, assignee, category, open/closed/overdue flags, and entered/closed date ranges — see the parameters list for all available filters. For aggregate counts (e.g. how many tickets are open or high priority), prefer GET /api/v1/tickets/stats or set limit=1 and read pagination.total from the response. Use GET /api/v1/boards, GET /api/v1/statuses, and GET /api/v1/priorities for lookup data instead of sampling tickets. If you send the fields query parameter, use only these exact field names: ticket_id, ticket_number, title, status_id, status_name, status_is_closed, priority_name, assigned_to_name, client_name, contact_name, updated_at, entered_at, closed_at, tags, or mobile_list. Do not invent aliases such as id, subject, status, priority, client, created_at, or description.",
+    "description": "Returns a paginated list of tickets for the current tenant. Supports filtering by board, status, priority, client, assignee, category, open/closed/overdue flags, and entered/closed date ranges — see the parameters list for all available filters. For aggregate counts (e.g. how many tickets are open or high priority), prefer GET /api/v1/tickets/stats or set limit=1 and read pagination.total from the response. Use GET /api/v1/boards, GET /api/v1/statuses, and GET /api/v1/priorities for lookup data instead of sampling tickets. If you send the fields query parameter, use only these exact field names: ticket_id, ticket_number, title, status_id, status_name, status_is_closed, priority_name, assigned_to_name, client_name, contact_name, updated_at, entered_at, closed_at, latest_activity_at, tags, or mobile_list. Do not invent aliases such as id, subject, status, priority, client, created_at, or description. Use sort=latest_activity_at to order by the most recently active tickets.",
     "tags": [
       "Work Management v1"
     ],
@@ -44661,10 +45997,45 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         }
       },
       {
+        "name": "sort",
+        "in": "query",
+        "required": false,
+        "description": "Field to sort by (default entered_at). Only these values are accepted: ticket_number, title, entered_at, updated_at, closed_at, due_date, client_name, status_name, priority_name, latest_activity_at, plus created_at as a legacy alias for entered_at. latest_activity_at orders by the newest of the ticket's own timestamps and its newest visible comment. Any other value is rejected with a 400 error.",
+        "schema": {
+          "type": "string",
+          "enum": [
+            "ticket_number",
+            "title",
+            "entered_at",
+            "created_at",
+            "updated_at",
+            "closed_at",
+            "due_date",
+            "client_name",
+            "status_name",
+            "priority_name",
+            "latest_activity_at"
+          ]
+        }
+      },
+      {
+        "name": "order",
+        "in": "query",
+        "required": false,
+        "description": "Sort direction (default desc). Ties break on ticket_id descending.",
+        "schema": {
+          "type": "string",
+          "enum": [
+            "asc",
+            "desc"
+          ]
+        }
+      },
+      {
         "name": "fields",
         "in": "query",
         "required": false,
-        "description": "Comma-separated list of fields to return. Use only these exact values: ticket_id, ticket_number, title, status_id, status_name, status_is_closed, priority_name, assigned_to_name, client_name, contact_name, updated_at, entered_at, closed_at, tags, or mobile_list. If you are not sure, omit fields entirely instead of guessing aliases.",
+        "description": "Comma-separated list of fields to return. Use only these exact values: ticket_id, ticket_number, title, status_id, status_name, status_is_closed, priority_name, assigned_to_name, client_name, contact_name, updated_at, entered_at, closed_at, latest_activity_at, tags, or mobile_list. If you are not sure, omit fields entirely instead of guessing aliases.",
         "schema": {
           "type": "string"
         }
@@ -44724,6 +46095,14 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
               "entered_at": {
                 "type": "string",
                 "format": "date-time"
+              },
+              "latest_activity_at": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date-time",
+                "description": "Newest of the ticket's own timestamps and its newest visible comment. Returned when requested through fields."
               }
             },
             "required": [
@@ -53572,7 +54951,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/opportunities/{id}",
     "displayName": "Update opportunity",
     "summary": "Update opportunity",
-    "description": "Updates editable opportunity fields; status and stage use dedicated flows.",
+    "description": "Updates editable opportunity fields. status, stage, client_id, and the next-action mirror columns may be echoed back unchanged but never reassigned here: changing them answers 400 naming the dedicated endpoint.",
     "tags": [
       "Opportunities v1"
     ],
@@ -53684,6 +55063,212 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             "null"
           ],
           "format": "uuid"
+        },
+        "stage": {
+          "type": "string",
+          "enum": [
+            "identified",
+            "qualified",
+            "assessment",
+            "proposed",
+            "verbal",
+            "won",
+            "lost"
+          ]
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "open",
+            "won",
+            "lost"
+          ]
+        },
+        "next_action": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1
+        },
+        "next_action_due": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        }
+      }
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "additionalProperties": {}
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "patch-_api_v1_opportunities_id",
+    "method": "patch",
+    "path": "/api/v1/opportunities/{id}",
+    "displayName": "Partially update opportunity",
+    "summary": "Partially update opportunity",
+    "description": "Applies a partial update using the same contract as PUT; every field is optional.",
+    "tags": [
+      "Opportunities v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Opportunity UUID from opportunities.opportunity_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Opportunity UUID from opportunities.opportunity_id."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "client_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "contact_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1
+        },
+        "opportunity_type": {
+          "type": "string",
+          "enum": [
+            "new_logo",
+            "expansion",
+            "renewal",
+            "project"
+          ]
+        },
+        "owner_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "confidence": {
+          "type": "string",
+          "enum": [
+            "low",
+            "medium",
+            "high",
+            "committed"
+          ],
+          "default": "medium"
+        },
+        "mrr_cents": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 0
+        },
+        "nrr_cents": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 0
+        },
+        "hardware_cents": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 0
+        },
+        "currency_code": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 3
+        },
+        "expected_close_date": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        },
+        "generator_key": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "renewal",
+            "tm_conversion",
+            "whitespace",
+            "asset_aging",
+            "inbound-lead"
+          ]
+        },
+        "generator_context": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": {}
+        },
+        "suggestion_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid"
+        },
+        "stage": {
+          "type": "string",
+          "enum": [
+            "identified",
+            "qualified",
+            "assessment",
+            "proposed",
+            "verbal",
+            "won",
+            "lost"
+          ]
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "open",
+            "won",
+            "lost"
+          ]
+        },
+        "next_action": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1
+        },
+        "next_action_due": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
         }
       }
     },
@@ -53914,6 +55499,73 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           ]
         }
       }
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "additionalProperties": {}
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_opportunities_id_stage",
+    "method": "post",
+    "path": "/api/v1/opportunities/{id}/stage",
+    "displayName": "Set opportunity stage",
+    "summary": "Set opportunity stage",
+    "description": "Sets an open-pipeline stage through the declared-evidence flow the board drag uses; won and lost answer 400 pointing at /win and /lose.",
+    "tags": [
+      "Opportunities v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Opportunity UUID from opportunities.opportunity_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Opportunity UUID from opportunities.opportunity_id."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "stage": {
+          "type": "string",
+          "enum": [
+            "identified",
+            "qualified",
+            "assessment",
+            "proposed",
+            "verbal",
+            "won",
+            "lost"
+          ]
+        },
+        "detail": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "stage"
+      ]
     },
     "responseBodySchema": {
       "type": "object",
@@ -58856,12 +60508,33 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                 },
                 "opportunitiesCreate": {
                   "type": "boolean"
+                },
+                "projects": {
+                  "type": "boolean",
+                  "description": "Project tasks on mobile (project:read; PSA product only)."
+                },
+                "clientsCreate": {
+                  "type": "boolean"
+                },
+                "clientsUpdate": {
+                  "type": "boolean"
+                },
+                "contactsCreate": {
+                  "type": "boolean"
+                },
+                "contactsUpdate": {
+                  "type": "boolean"
                 }
               },
               "required": [
                 "inventory",
                 "opportunities",
-                "opportunitiesCreate"
+                "opportunitiesCreate",
+                "projects",
+                "clientsCreate",
+                "clientsUpdate",
+                "contactsCreate",
+                "contactsUpdate"
               ]
             },
             "formatting": {

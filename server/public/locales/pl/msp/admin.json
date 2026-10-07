@@ -9,7 +9,8 @@
       "edit": "Edytuj",
       "delete": "Usuń",
       "deleting": "Usuwanie…",
-      "verify": "Zweryfikuj"
+      "verify": "Zweryfikuj",
+      "cancel": "Anuluj"
     },
     "states": {
       "active": "Aktywny",
@@ -226,7 +227,53 @@
         "companyFallback": "Twoja organizacja"
       },
       "warningTitle": "Sprawdź routing odpowiedzi",
-      "errorTitle": "Popraw tożsamość nadawcy zgłoszeń"
+      "errorTitle": "Popraw tożsamość nadawcy zgłoszeń",
+      "addresses": {
+        "title": "Adresy nadawców",
+        "description": "Twórz nazwane adresy do wysyłania poczty."
+      },
+      "routing": {
+        "title": "Reguły nadawców",
+        "description": "Wybierz nadawcę dla każdej klasy wiadomości.",
+        "default": "Domyślnie (pozostałe wiadomości)",
+        "useDefault": "Użyj domyślnego",
+        "sender": "Nadawca",
+        "displayName": "Nazwa wyświetlana",
+        "boardSummary": "Nadawców wiadomości zgłoszeń dla tablicy ustawisz w ustawieniach tej tablicy.",
+        "ticket": "E-mail zgłoszenia",
+        "project": "E-mail projektu",
+        "billing": "E-mail rozliczeniowy",
+        "sales": "E-mail sprzedażowy",
+        "scheduling": "E-mail harmonogramu",
+        "survey": "E-mail ankiety",
+        "account": "E-mail konta",
+        "general": "E-mail ogólny",
+        "noneProviderFrom": "Brak (użyj adresu nadawcy dostawcy)",
+        "confirmSmtp": "Potwierdzam, że serwer SMTP akceptuje ten adres nadawcy.",
+        "inboundReplyWarning": "Odpowiedzi przychodzące nadal trafiają do skonfigurowanej skrzynki; zmiana tego adresu nie zmienia kierowania odpowiedzi.",
+        "unknownBoard": "Nieznana tablica"
+      },
+      "actions": {
+        "add": "Dodaj nadawcę",
+        "verify": "Zweryfikuj",
+        "delete": "Usuń"
+      },
+      "fields": {
+        "address": "Adres e-mail",
+        "localPart": "Nazwa adresu",
+        "domain": "Zweryfikowana domena",
+        "sendThrough": "Wysyłaj przez",
+        "displayName": "Nazwa wyświetlana",
+        "displayNamePlaceholder": "Zespół pomocy"
+      },
+      "smtpHelp": "Twój serwer SMTP musi zezwalać na ten adres.",
+      "microsoftHelp": "Połączona skrzynka musi mieć uprawnienie Exchange Send As dla tego adresu.",
+      "errors": {
+        "duplicateAddress": "Ten adres nadawcy już istnieje.",
+        "saveFailed": "Nie można dodać nadawcy. Sprawdź adres i spróbuj ponownie.",
+        "duplicateRoute": "Ta trasa nadawcy już istnieje.",
+        "saveRoutingFailed": "Nie można zapisać trasy nadawcy. Spróbuj ponownie."
+      }
     }
   },
   "microsoft365": {
@@ -253,7 +300,8 @@
     },
     "states": {
       "running": "Uruchamianie diagnostyki...",
-      "diagnosticsFailed": "Diagnostyka nie powiodła się"
+      "diagnosticsFailed": "Diagnostyka nie powiodła się",
+      "callbackDiagnosticsCaptured": "Diagnostyka zwrotna zapisana {{timestamp}}."
     },
     "statuses": {
       "pass": "Zaliczono",
@@ -660,6 +708,79 @@
       "fail": "Niepowodzenie",
       "skip": "Pominięto"
     }
+  },
+  "outboundDiagnostics": {
+    "title": "Diagnostyka poczty wychodzącej",
+    "description": "Uruchamia zapisaną konfigurację wychodzącą przez listę kontrolną dostawcy. Żadna wiadomość nie zostanie wysłana, o ile nie włączysz jawnie opcji wysyłki na żywo poniżej.",
+    "unsavedNotice": "Niezapisane zmiany na tym ekranie nie są uwzględniane. Zapisz ustawienia przed uruchomieniem diagnostyki.",
+    "states": {
+      "running": "Uruchamianie diagnostyki...",
+      "failed": "Diagnostyka nie powiodła się",
+      "copyFailed": "Nie udało się skopiować pakietu pomocy technicznej. Użyj opcji Pobierz, aby zapisać go jako plik.",
+      "checking": "Sprawdzanie ustawień poczty…"
+    },
+    "actions": {
+      "retry": "Ponów",
+      "rerun": "Uruchom ponownie",
+      "copyBundle": "Kopiuj pakiet pomocy",
+      "copied": "Skopiowano",
+      "downloadBundle": "Pobierz"
+    },
+    "labels": {
+      "overall": "Ogólnie:",
+      "provider": "Dostawca:",
+      "effectiveSender": "Efektywny nadawca:",
+      "authorizedUser": "Autoryzowany użytkownik:",
+      "mailboxRoute": "Trasa skrzynki:",
+      "recommendations": "Zalecenia",
+      "error": "Błąd",
+      "redacted": "Eksport pomocy domyślnie redaguje identyfikatory skrzynek."
+    },
+    "statuses": {
+      "pass": "Zaliczone",
+      "warn": "Ostrzeżenie",
+      "fail": "Niepowodzenie",
+      "skip": "Pominięte"
+    },
+    "liveSend": {
+      "label": "Wyślij jedną wiadomość testową (na żywo)",
+      "recipient": "Odbiorca",
+      "run": "Uruchom z wysyłką na żywo",
+      "invalidRecipient": "Wprowadź prawidłowy adres e-mail odbiorcy.",
+      "permissionHelp": "Wyślij testową wiadomość e-mail, aby potwierdzić, że to konto może wysyłać wiadomości z wybranej skrzynki pocztowej.",
+      "enableTest": "Wyślij testową wiadomość e-mail",
+      "sendTo": "Wyślij do",
+      "sendTest": "Wyślij wiadomość testową",
+      "sending": "Wysyłanie wiadomości testowej…",
+      "unconfirmed": "Nie udało się potwierdzić, czy wiadomość testowa została wysłana. Sprawdź skrzynkę odbiorczą adresata przed ponowną próbą."
+    },
+    "introduction": "Sprawdź zapisane ustawienia poczty. Wysłanie wiadomości testowej jest opcjonalne.",
+    "checkStatus": {
+      "pass": "Powodzenie",
+      "warn": "Wymaga uwagi",
+      "fail": "Niepowodzenie",
+      "skip": "Nie sprawdzono"
+    },
+    "result": {
+      "pass": "Kontrole konfiguracji zakończone pomyślnie",
+      "warn": "Nie udało się ukończyć niektórych kontroli",
+      "fail": "Jedna z kontroli poczty zakończyła się niepowodzeniem",
+      "skip": "Nie udało się ukończyć niektórych kontroli"
+    },
+    "noTestSent": "Te kontrole nie wysłały żadnej wiadomości e-mail.",
+    "emailService": "Usługa poczty",
+    "sender": "Od",
+    "connectedAccount": "Połączone konto",
+    "checkAgain": "Sprawdź ponownie",
+    "nextSteps": "Następne kroki",
+    "limitedChecksHelp": "Niektóre informacje o koncie były niedostępne podczas tych kontroli. Wyślij wiadomość testową, aby sprawdzić, czy wysyłanie działa.",
+    "sentItemsHelp": "Nie udało się sprawdzić folderu Elementy wysłane. Po wysłaniu wiadomości testowej sprawdź, czy jej kopia pojawiła się w folderze Elementy wysłane skrzynki nadawcy.",
+    "copyReport": "Kopiuj raport",
+    "downloadReport": "Pobierz raport",
+    "copyConfirmed": "Raport skopiowano do schowka.",
+    "copyReportFailed": "Nie udało się skopiować raportu. Użyj opcji Pobierz raport, aby zapisać go jako plik.",
+    "shareHelp": "Udostępnij ten raport pomocy technicznej. Adresy e-mail i identyfikatory kont są ukryte.",
+    "technicalDetails": "Szczegóły techniczne dla pomocy technicznej"
   },
   "integrations": {
     "entra": {

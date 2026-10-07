@@ -283,6 +283,8 @@
     },
     "captchaRequired": "Ukończ poniższą weryfikację, a następnie zaloguj się ponownie.",
     "tooManyAttempts": "Zbyt wiele nieudanych prób logowania. Poczekaj kilka minut przed kolejną próbą.",
+    "tenantRequiredMessage": "Twój adres e-mail jest powiązany z więcej niż jedną organizacją — wybierz swoją organizację, aby kontynuować.",
+    "tenantRequiredLink": "Wybierz swoją organizację",
     "tenantDiscovery": {
       "title": "Znajdź swoją organizację",
       "description": "Wpisz swój adres e-mail, a wyślemy Ci linki logowania do wszystkich organizacji, do których masz dostęp.",
@@ -426,6 +428,30 @@
         "expMonth": "Wprowadź poprawny miesiąc (01-12)",
         "expYear": "Wprowadź poprawny rok (2024-2099)",
         "cvv": "Wprowadź poprawny CVV"
+      },
+      "methodUpdateError": "Nie udało się zaktualizować tej metody płatności. Spróbuj ponownie.",
+      "cardSetup": {
+        "success": "Karta została bezpiecznie zapisana.",
+        "error": "Nie udało się zapisać karty. Spróbuj ponownie."
+      },
+      "autopay": {
+        "title": "Metody płatności i płatność automatyczna",
+        "loading": "Ładowanie metod płatności…",
+        "profileUnavailable": "Metody płatności i ustawienia płatności automatycznej są niedostępne dla tego profilu rozliczeniowego.",
+        "cardFallback": "Karta",
+        "enrolled": "Płatność automatyczna jest włączona.",
+        "disable": "Wyłącz płatność automatyczną",
+        "consent": "Upoważniam do cyklicznego obciążania tej karty za zatwierdzone faktury.",
+        "enable": "Włącz płatność automatyczną",
+        "noCards": "Dodaj kartę, aby włączyć płatność automatyczną.",
+        "changeCard": "Użyj tej karty do płatności automatycznej",
+        "updateError": "Nie udało się zaktualizować płatności automatycznej. Spróbuj ponownie."
+      },
+      "publicCardSetup": {
+        "saved": "Karta zapisana",
+        "failed": "Nie udało się zapisać Twojej karty",
+        "savedDescription": "Twoja karta jest gotowa do przyszłych płatności.",
+        "failedDescription": "Nie udało się zweryfikować konfiguracji. Poproś dostawcę rozliczeń o nowy link."
       }
     }
   },
@@ -544,7 +570,8 @@
       "avatarDescription": "Ten awatar jest widoczny dla personelu MSP podczas przeglądania danych kontaktowych.",
       "emailAlreadyExists": "Użytkownik o tym adresie e-mail już istnieje",
       "reportsToSelf": "Użytkownik nie może podlegać samemu sobie",
-      "reportsToCycle": "Spowodowałoby to cykliczną strukturę podległości"
+      "reportsToCycle": "Spowodowałoby to cykliczną strukturę podległości",
+      "invalidTimezone": "Wybierz strefę czasową powiązaną z miastem, np. America/New_York."
     },
     "imageUpload": {
       "uploadAvatar": "Prześlij awatar",
@@ -568,7 +595,19 @@
       "deleteError": "Nie udało się usunąć.",
       "deleteConfirm": "Czy na pewno chcesz to usunąć? Tej operacji nie można cofnąć.",
       "linking": "Łączenie...",
-      "linkDocument": "Połącz dokument"
+      "linkDocument": "Połącz dokument",
+      "cropTitle": "Wybierz kwadratowy znak",
+      "cropHelp": "Przeciągnij logo i powiększ, aby wybrać część widoczną w małych, kwadratowych miejscach. Pomniejsz, aby zostawić wokół niego miejsce. Pełne logo również zostaje zachowane.",
+      "zoom": "Powiększenie",
+      "zoomOut": "Pomniejsz",
+      "zoomIn": "Powiększ",
+      "cropPreview": "Podgląd",
+      "applyCrop": "Użyj tego kadru",
+      "adjustMark": "Dostosuj znak",
+      "cropFromWide": "Wycinij z szerokiego logo",
+      "recropSuccess": "Znak zaktualizowany.",
+      "recropError": "Nie udało się zaktualizować znaku.",
+      "fileNameLabel": "Zapisany plik"
     },
     "validation": {
       "clientNameRequired": "Nazwa klienta jest wymagana",
@@ -1004,5 +1043,11 @@
       "duplicate": "Grupa widoczności o takich danych już istnieje dla tego klienta.",
       "invalidData": "Nieprawidłowe dane grupy widoczności. Sprawdź dane grupy i wybrane tablice."
     }
+  },
+  "tabs": {
+    "paymentMethods": "Metody płatności i płatność automatyczna"
+  },
+  "invoice": {
+    "autopayWillCharge": "Zostanie obciążona {{date}} karta {{brand}} •••• {{last4}}"
   }
 }

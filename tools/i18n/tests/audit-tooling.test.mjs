@@ -18,6 +18,82 @@ const {
 } = require('../lib/translation-utils.cjs');
 const { compareBaseline, runAudit } = require('../audit.cjs');
 
+test('Swedish default time-entry service settings have localized copy at both scopes', () => {
+  for (const [namespace, path] of [
+    ['billing-settings', ['general', 'timeEntryService']],
+    ['clients', ['clientDefaultTimeEntryServiceSettings']],
+  ]) {
+    const readGroup = (locale) => {
+      const pack = JSON.parse(readFileSync(new URL(
+        `../../../server/public/locales/${locale}/msp/${namespace}.json`, import.meta.url,
+      ), 'utf8'));
+      return path.reduce((value, segment) => value?.[segment], pack);
+    };
+    const english = collectLeaves(readGroup('en'));
+    const swedish = collectLeaves(readGroup('sv') ?? {});
+
+    assert.ok(english.size > 0, `${namespace}: expected English settings copy`);
+    assert.deepEqual([...swedish.keys()], [...english.keys()], `${namespace}: Swedish settings keys`);
+    assert.match(swedish.get('title'), /tidposter/, `${namespace}: use the time-entry term`);
+    for (const [key, source] of english) {
+      const translated = swedish.get(key);
+      assert.equal(typeof translated, 'string', `${namespace}.${key}: expected text`);
+      assert.ok(translated.trim(), `${namespace}.${key}: empty translation`);
+      assert.notEqual(translated, source, `${namespace}.${key}: English fallback copy`);
+    }
+  }
+});
+
+test('French audit accepts the cognate Question but rejects English question prose', (t) => {
+  const root = mkdtempSync(join(tmpdir(), 'question-audit-'));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  for (const language of ['en', 'fr']) {
+    mkdirSync(join(root, language), { recursive: true });
+    writeFileSync(join(root, language, 'questions.json'), JSON.stringify({
+      label: 'Question',
+      placeholder: 'Select a question',
+      missing: 'Missing question ({{key}})',
+    }));
+  }
+  const { report } = runAudit({ locale: 'fr', localesDir: root, writeReport: false });
+  assert.equal(report.namespaces.length, 1);
+  assert.deepEqual(report.namespaces[0].untranslated.map(({ key }) => key), [
+    'placeholder', 'missing',
+  ]);
+});
+
+for (const locale of ['fr', 'nl']) {
+  test(`${locale} service request mapping copy passes the locale quality audit`, () => {
+    const { report } = runAudit({
+      locale,
+      namespaceFilter: new Set(['msp/service-requests']),
+      writeReport: false,
+    });
+    assert.equal(report.namespaces.length, 1);
+    const result = report.namespaces[0];
+    assert.ok(result.keyCount > 0);
+    assert.deepEqual(result.structuralErrors, []);
+    assert.deepEqual(result.untranslated, []);
+    assert.deepEqual(result.forbiddenViolations, []);
+  });
+}
+
+for (const locale of ['pt', 'it']) {
+  test(`${locale} time entry copy passes the locale quality audit`, () => {
+    const { report } = runAudit({
+      locale,
+      namespaceFilter: new Set(['msp/time-entry']),
+      writeReport: false,
+    });
+    assert.equal(report.namespaces.length, 1);
+    const result = report.namespaces[0];
+    assert.ok(result.keyCount > 0);
+    assert.deepEqual(result.structuralErrors, []);
+    assert.deepEqual(result.untranslated, []);
+    assert.deepEqual(result.forbiddenViolations, []);
+  });
+}
+
 for (const locale of ['pt', 'es', 'fr', 'it']) {
   test(`${locale} duration audit accepts unit symbols but rejects English duration prose`, (t) => {
     const root = mkdtempSync(join(tmpdir(), 'schedule-duration-audit-'));
@@ -72,6 +148,23 @@ test('Polish tax settings pass the locale quality audit', () => {
   assert.deepEqual(namespace.structuralErrors, []);
   assert.deepEqual(namespace.untranslated.filter(({ key }) => key.startsWith('tax.')), []);
   assert.deepEqual(namespace.forbiddenViolations.filter(({ key }) => key.startsWith('tax.')), []);
+});
+
+test('Brazilian Portuguese rejects the European contacto spelling in singular and plural', () => {
+  const glossary = JSON.parse(readFileSync(new URL('../pt/glossary.json', import.meta.url), 'utf8'));
+  const matchers = forbiddenMatchers(glossary);
+
+  assert.deepEqual(findForbiddenTerms('Criar um contacto de confiança', matchers).map((item) => item.preferred), ['contato']);
+  assert.deepEqual(findForbiddenTerms('Criar contactos para novos remetentes', matchers).map((item) => item.preferred), ['contatos']);
+  assert.deepEqual(findForbiddenTerms('Criar contatos para novos remetentes', matchers), []);
+
+  const { report } = runAudit({
+    locale: 'pt',
+    namespaceFilter: new Set(['msp/clients']),
+    writeReport: false,
+  });
+  assert.equal(report.namespaces.length, 1);
+  assert.deepEqual(report.namespaces[0].forbiddenViolations, []);
 });
 
 test('identical allowlist matches exact, locale-folded, and pattern values', () => {

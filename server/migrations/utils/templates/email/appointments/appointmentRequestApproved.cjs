@@ -255,6 +255,7 @@ const COPY = {
   },
 };
 SUBJECTS.pt = 'Agendamento confirmado - {{serviceName}} em {{appointmentDate}}';
+SUBJECTS.sv = 'Bokning bekräftad – {{serviceName}} den {{appointmentDate}}';
 COPY.pt = {
   headerLabel: 'Agendamento confirmado',
   headerSub: 'Seu agendamento foi aprovado',
@@ -288,12 +289,45 @@ COPY.pt = {
   textCancelHeader: 'POLÍTICA DE CANCELAMENTO',
 };
 
+COPY.sv = {
+  headerLabel: 'Bokning bekräftad',
+  headerSub: 'Din bokning har godkänts',
+  greeting: 'Hej{{#if requesterName}} {{requesterName}}{{/if}},',
+  intro: 'Din bokningsförfrågan har godkänts och bekräftats. Vi ser fram emot att hjälpa dig.',
+  appointmentTitle: 'Din bokning',
+  service: 'Tjänst',
+  date: 'Datum',
+  time: 'Tid',
+  duration: 'Längd',
+  durationUnit: 'minuter',
+  technicianTitle: 'Tilldelad tekniker',
+  technicianEmail: 'E-post:',
+  technicianPhone: 'Telefon:',
+  calendarButton: 'Lägg till i kalendern',
+  cancellationTitle: 'Avbokningsvillkor',
+  rescheduleMsg: 'Om du behöver boka om eller avboka den här bokningen, kontakta oss minst {{minimumNoticeHours}} timmar i förväg på {{contactEmail}}{{#if contactPhone}} eller ring {{contactPhone}}{{/if}}.',
+  reminderMsg: 'Vi skickar en påminnelse före din bokade tid. Vi ses snart.',
+  footer: 'Drivs av AlgaPSA &middot; För samspelta team',
+  textHeader: 'Bokning bekräftad',
+  textAppointmentHeader: 'Din bokning',
+  textService: 'Tjänst',
+  textDate: 'Datum',
+  textTime: 'Tid',
+  textDuration: 'Längd',
+  textDurationUnit: 'minuter',
+  textTechHeader: 'Tilldelad tekniker',
+  textTechEmail: 'E-post',
+  textTechPhone: 'Telefon',
+  textCalendar: 'Lägg till i kalendern',
+  textCancelHeader: 'Avbokningsvillkor',
+};
+
 /* eslint-enable max-len */
 
 function buildBodyHtml(c) {
   return `<p style="margin:0 0 16px 0;font-size:15px;color:#1f2933;line-height:1.5;">${c.greeting}</p>
                 <p style="margin:0 0 16px 0;font-size:15px;color:#1f2933;line-height:1.5;">${c.intro}</p>
-                <div style="margin:24px 0;padding:24px;border-radius:8px;background:linear-gradient(135deg,${INFO_BOX_BG} 0%,#ede9fe 100%);border:2px solid ${BRAND_PRIMARY};text-align:center;">
+                <div style="margin:24px 0;padding:24px;border-radius:8px;background-color:${INFO_BOX_BG};background:linear-gradient(135deg,${INFO_BOX_BG} 0%,#ede9fe 100%);border:2px solid ${BRAND_PRIMARY};text-align:center;">
                   <div style="font-weight:600;color:${BRAND_DARK};font-size:18px;margin-bottom:20px;">${c.appointmentTitle}</div>
                   <div style="margin:12px 0;">
                     <div style="color:${BRAND_DARK};font-size:14px;text-transform:uppercase;letter-spacing:0.5px;font-weight:600;margin-bottom:4px;">${c.service}</div>

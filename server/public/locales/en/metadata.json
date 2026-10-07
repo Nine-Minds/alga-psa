@@ -113,7 +113,12 @@
           "title": "Quote Details"
         }
       },
-      "title": "Billing"
+      "title": "Billing",
+      "paymentMethods": {
+        "setupComplete": {
+          "title": "Card Setup"
+        }
+      }
     },
     "clientSettings": {
       "description": "Manage your company settings and configurations",
@@ -541,6 +546,9 @@
       "detail": {
         "title": "Ticket #{{ticketNumber}} - {{ticketTitle}}",
         "fallbackTitle": "Ticket Details"
+      },
+      "recurring": {
+        "title": "Recurring tickets"
       }
     },
     "timeEntry": {
@@ -613,6 +621,11 @@
     },
     "tab": {
       "title": "Teams"
+    }
+  },
+  "paymentMethods": {
+    "setupComplete": {
+      "title": "Card Setup"
     }
   }
 }

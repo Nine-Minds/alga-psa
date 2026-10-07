@@ -107,7 +107,9 @@
         "message": "Nachricht",
         "messageOptional": "Nachricht (optional)",
         "messagePlaceholder": "Fügen Sie eine persönliche Notiz für den Empfänger hinzu...",
-        "title": "Angebot senden"
+        "title": "Angebot senden",
+        "from": "Von",
+        "useDefault": "Standardabsender verwenden"
       }
     },
     "errors": {
@@ -212,7 +214,9 @@
         "description": "Dadurch wird das Angebot per E-Mail an die Rechnungskontakte des Kunden gesendet und sein Status in „Gesendet“ geändert.",
         "title": "Angebot an den Kunden senden",
         "additionalEmails": "Zusätzliche Empfänger",
-        "message": "Nachricht"
+        "message": "Nachricht",
+        "from": "Von",
+        "useDefault": "Standardabsender verwenden"
       }
     },
     "errorActions": {
@@ -299,7 +303,15 @@
       "currencyPlaceholder": "Währung auswählen",
       "quoteDate": "Angebotsdatum",
       "validUntil": "Gültig bis",
-      "validUntilHelp": "Angebot läuft an diesem Datum automatisch ab."
+      "validUntilHelp": "Angebot läuft an diesem Datum automatisch ab.",
+      "currencySource": {
+        "tenant": "Mandantenstandard",
+        "client": "Kundenstandard für {{clientName}}",
+        "template": "Aus Angebotsvorlage {{templateTitle}}",
+        "saved": "In diesem Angebot gespeichert",
+        "savedTemplate": "In dieser Vorlage gespeichert",
+        "manual": "Manuell ausgewählt"
+      }
     },
     "lineItems": {
       "title": "Positionen",
@@ -339,6 +351,14 @@
       "subtotal": "Zwischensumme",
       "discounts": "Rabatte",
       "tax": "Steuer",
+      "optionalIfSelected": "Optional falls ausgewählt",
+      "cadence": {
+        "monthly": "Monatlich",
+        "quarterly": "Vierteljährlich",
+        "semiAnnually": "Halbjährlich",
+        "annually": "Jährlich",
+        "oneTime": "Einmalig"
+      },
       "statusLabel": "Status",
       "approvalLabel": "Genehmigung",
       "approvalMessage": "Angebote benötigen vor dem Versand die Genehmigung durch den Vertriebsleiter.",
@@ -493,6 +513,7 @@
       "noPriceInCurrency": "Kein Preis in {{currencyCode}}",
       "optional": "Optional",
       "phaseSection": "Phase / Abschnitt",
+      "preselected": "Vorausgewählt",
       "recurring": "Wiederkehrend",
       "service": "Service",
       "setPrice": "Preis festlegen",

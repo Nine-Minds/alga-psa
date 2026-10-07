@@ -50,6 +50,7 @@ export default defineConfig({
       { find: /^@\/lib\/db\/index$/, replacement: `${path.resolve(__dirname, '../../server/src/lib/db/index.ts')}` },
       { find: /^@\/lib\/tenant$/, replacement: `${path.resolve(__dirname, '../../server/src/lib/tenant.ts')}` },
       { find: /^@\/lib\/iap\/(.*)$/, replacement: `${path.resolve(__dirname, '../../server/src/lib/iap')}/$1` },
+      { find: /^@\/lib\/services\/(.*)$/, replacement: `${path.resolve(__dirname, '../../server/src/lib/services')}/$1` },
       { find: /^@\/config\/(.*)$/, replacement: `${path.resolve(__dirname, '../../server/src/config')}/$1` },
       { find: /^@\/utils\/(.*)$/, replacement: `${path.resolve(__dirname, '../../server/src/utils')}/$1` },
       { find: /^@\/interfaces\/(.*)$/, replacement: `${path.resolve(__dirname, '../../server/src/interfaces')}/$1` },

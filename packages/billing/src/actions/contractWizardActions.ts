@@ -1,5 +1,7 @@
 'use server';
 
+
+import { resolveUnitOfMeasure, withUnitCode } from '@alga-psa/core/unitOfMeasure';
 import { tenantDb, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
@@ -9,6 +11,7 @@ import { withAuth } from '@alga-psa/auth/withAuth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { actionError, permissionError } from '@alga-psa/ui/lib/errorHandling';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import { emitDateDomainEventOnce, normalizeDateDomainKeyDate } from '@alga-psa/event-bus/workflow/dateDomainEvents';
 import {
   buildContractCreatedPayload,
   buildContractRenewalUpcomingPayload,
@@ -33,7 +36,14 @@ import {
 
 import { ensureTemplateLineSnapshot, fetchDetailedContractLines } from '../repositories/contractLineRepository';
 import {
+  allocateBundleBaseRate,
+  getFixedServiceBasisIssue,
+  hasBundleFixedService,
+  isUnitFixedService,
+} from '../lib/fixedServiceBasis';
+import {
   CadenceOwner,
+  FixedPricingBasis,
   IContractLineServiceBucketConfig,
   IContractLineServiceFixedConfig,
   IContractLineServiceHourlyConfig,
@@ -52,12 +62,43 @@ import {
 
 export type { ContractWizardActionError } from './contractWizardActionErrors';
 
+/**
+ * Reject fixed-service inputs that cannot be stored faithfully. A unit-priced
+ * member without a whole quantity >= 0 and an explicit unit rate would
+ * otherwise silently fall back to bundle or bill nothing.
+ */
+function assertFixedServiceBasisInputs(
+  services: Array<{ service_id: string; service_name?: string; pricing_basis?: FixedPricingBasis | string | null; quantity?: number | null; unit_rate?: number | null }>,
+  options: { requireUnitRate?: boolean } = {},
+): void {
+  for (const service of services) {
+    if (service.pricing_basis != null && service.pricing_basis !== 'bundle' && service.pricing_basis !== 'unit') {
+      throw new Error('Choose bundle or recurring unit pricing.');
+    }
+    const issue = getFixedServiceBasisIssue(service, options);
+    const label = service.service_name ? `"${service.service_name}"` : service.service_id;
+    if (issue === 'quantity_invalid') {
+      throw new Error(`Quantity for ${label} must be zero or greater.`);
+    }
+    if (issue === 'unit_quantity_not_whole') {
+      throw new Error(`Recurring quantity for ${label} must be a whole number.`);
+    }
+    if (issue === 'unit_rate_required') {
+      throw new Error(`Enter a unit rate for recurring service ${label}.`);
+    }
+  }
+}
+
 // ---------------------- Template wizard types ----------------------
 
 type TemplateFixedServiceInput = {
   service_id: string;
   service_name?: string;
   quantity?: number;
+  /** Absent means 'bundle' (the historical fixed-fee semantics). */
+  pricing_basis?: FixedPricingBasis;
+  /** Unit rate in minor units. Only meaningful (and required) for 'unit'. */
+  unit_rate?: number | null;
 };
 
 type TemplateProductServiceInput = {
@@ -113,7 +154,12 @@ type ClientFixedServiceInput = {
   service_id: string;
   service_name?: string;
   source_template_line_id?: string;
+  /** Allocation quantity for 'bundle'; recurring seats/units (>= 0) for 'unit'. */
   quantity: number;
+  /** Absent means 'bundle' (the historical fixed-fee semantics). */
+  pricing_basis?: FixedPricingBasis;
+  /** Unit rate in minor units of the contract currency. Required for 'unit'. */
+  unit_rate?: number | null;
   bucket_overlay?: BucketOverlayInput | null;
 };
 
@@ -151,6 +197,11 @@ export type ClientContractWizardSubmission = {
   contract_name: string;
   description?: string;
   client_id: string;
+  /**
+   * Billing profile this contract bills to (step 3 of the attribution chain).
+   * Omitted / null keeps the client-default fallback.
+   */
+  billing_profile_id?: string | null;
   start_date: string;
   renewal_mode?: 'none' | 'manual' | 'auto';
   notice_period_days?: number;
@@ -345,6 +396,13 @@ export const createContractTemplateFromWizard = withAuth(async (
     const nowIso = now.toISOString();
     const templateId = uuidv4();
 
+    // Validate before any write so a rejected per-seat submission leaves no
+    // half-built template behind. A template unit rate is optional.
+    assertFixedServiceBasisInputs(
+      (submission.fixed_services || []).filter((service) => service?.service_id),
+      { requireUnitRate: false },
+    );
+
     await tenantDb(trx, tenant).table('contract_templates').insert({
       tenant,
       template_id: templateId,
@@ -508,7 +566,11 @@ export const createContractTemplateFromWizard = withAuth(async (
       // Create template line mapping FIRST before inserting fixed config
       const templateLineId = await recordTemplateMapping(planId, null);
 
-      const fixedBaseRateCents = submission.fixed_base_rate ?? 0;
+      // Only bundle members share the line base rate. A per-seat member bills
+      // quantity × unit rate on its own, so a stale base rate left over from
+      // an earlier bundle draft must not leak into a pure per-seat template.
+      const templateHasBundleMember = hasBundleFixedService(filteredFixedServices);
+      const fixedBaseRateCents = templateHasBundleMember ? submission.fixed_base_rate ?? 0 : 0;
       // Insert into contract_template_line_fixed_config (not contract_line_fixed_config)
       await tenantDb(trx, tenant).table('contract_template_line_fixed_config').insert({
         tenant,
@@ -520,28 +582,23 @@ export const createContractTemplateFromWizard = withAuth(async (
         updated_at: nowIso,
       });
 
-      const totalQuantity = filteredFixedServices.reduce((sum, svc) => sum + (svc.quantity ?? 1), 0) || filteredFixedServices.length;
-      let allocated = 0;
+      const bundleShares = allocateBundleBaseRate(filteredFixedServices, fixedBaseRateCents);
 
       for (const [index, service] of filteredFixedServices.entries()) {
-        const quantity = service.quantity ?? 1;
+        const isUnit = isUnitFixedService(service);
+        const quantity = service.quantity ?? (isUnit ? 0 : 1);
 
         let serviceBaseRate = 0;
-        if (fixedBaseRateCents) {
-          const share = quantity / totalQuantity;
-          const provisionalValue = fixedBaseRateCents * share;
-          if (index === filteredFixedServices.length - 1) {
-            serviceBaseRate = fixedBaseRateCents - allocated;
+        if (!isUnit) {
+          if (fixedBaseRateCents) {
+            serviceBaseRate = bundleShares[index] ?? 0;
           } else {
-            serviceBaseRate = Math.round(provisionalValue);
-            allocated = Math.round(allocated + serviceBaseRate);
+            serviceBaseRate =
+              firstPositiveRateInCents(
+                fixedModeDefaultsByServiceId.get(service.service_id),
+                serviceCatalogById.get(service.service_id)?.default_rate
+              ) ?? 0;
           }
-        } else {
-          serviceBaseRate =
-            firstPositiveRateInCents(
-              fixedModeDefaultsByServiceId.get(service.service_id),
-              serviceCatalogById.get(service.service_id)?.default_rate
-            ) ?? 0;
         }
 
         // Insert into template line services table (not contract_line_services)
@@ -556,7 +613,9 @@ export const createContractTemplateFromWizard = withAuth(async (
         });
 
         // Insert into template line service configuration
-        // For Fixed services, the rate is stored in custom_rate, not in a separate fixed config table
+        // For bundle Fixed services, the allocated rate is stored in custom_rate.
+        // A per-seat service carries no allocation: its basis and optional
+        // default unit rate live in the template fixed-config row below.
         const configId = uuidv4();
         await tenantDb(trx, tenant).table('contract_template_line_service_configuration').insert({
           tenant,
@@ -569,6 +628,17 @@ export const createContractTemplateFromWizard = withAuth(async (
           created_at: nowIso,
           updated_at: nowIso,
         });
+
+        if (isUnit) {
+          await tenantDb(trx, tenant).table('contract_template_line_service_fixed_config').insert({
+            tenant,
+            config_id: configId,
+            base_rate: service.unit_rate ?? null,  // Minor units; null follows the catalog in the contract currency
+            pricing_basis: 'unit',
+            created_at: nowIso,
+            updated_at: nowIso,
+          });
+        }
       }
     }
 
@@ -771,7 +841,7 @@ export const createContractTemplateFromWizard = withAuth(async (
         await tenantDb(trx, tenant).table('contract_template_line_service_usage_config').insert({
           tenant,
           config_id: configId,
-          unit_of_measure: service.unit_of_measure || 'unit',
+          ...withUnitCode({ unit_of_measure: service.unit_of_measure || resolveUnitOfMeasure({ fallback: 'C62' }).label }),
           enable_tiered_pricing: false,
           minimum_usage: 0,
           base_rate: normalizedUnitRate ?? null,
@@ -834,6 +904,7 @@ export const createClientContractFromWizard = withAuth(async (
   try {
   let createdForWorkflow: {
     contractId: string;
+    clientContractId: string;
     clientId: string;
     createdAt: string;
     startDate: string;
@@ -849,6 +920,13 @@ export const createClientContractFromWizard = withAuth(async (
       throw new Error('Contract start date is required');
     }
     const endDate = normalizeDateOnly(submission.end_date) ?? null;
+
+    // Reject unstorable per-seat rows before anything is written.
+    assertFixedServiceBasisInputs(
+      (Array.isArray(submission.fixed_services) ? submission.fixed_services : []).filter(
+        (service) => service?.service_id,
+      ),
+    );
 
     const now = new Date();
     const nowIso = now.toISOString();
@@ -912,6 +990,22 @@ export const createClientContractFromWizard = withAuth(async (
           .delete();
 
         await tenantDb(trx, tenant).table('contract_line_service_usage_config')
+          .whereIn('config_id', configIds)
+          .delete();
+
+        // Rate tiers hang off the usage config's config_id, and fixed/hourly_configs are the
+        // shapes a quote-converted draft is written with. All three carry NO ACTION FKs back to
+        // contract_line_service_configuration, so skipping them makes the parent delete below
+        // raise 23503 when the wizard finalizes such a draft.
+        await tenantDb(trx, tenant).table('contract_line_service_rate_tiers')
+          .whereIn('config_id', configIds)
+          .delete();
+
+        await tenantDb(trx, tenant).table('contract_line_service_fixed_config')
+          .whereIn('config_id', configIds)
+          .delete();
+
+        await tenantDb(trx, tenant).table('contract_line_service_hourly_configs')
           .whereIn('config_id', configIds)
           .delete();
 
@@ -1076,8 +1170,15 @@ export const createClientContractFromWizard = withAuth(async (
       // Fixed services: if a fixed_base_rate is specified for the line, all services in that line
       // are covered by the flat fee and don't need individual currency pricing.
       // Otherwise, check for individual custom_rate on each service.
+      // Unit-priced services carry their own explicit unit rate (validated
+      // above), so they never depend on the base rate or a currency price.
+      filteredFixedServices.forEach(s => {
+        if (isUnitFixedService(s)) {
+          servicesWithCustomRates.add(s.service_id);
+        }
+      });
       if (submission.fixed_base_rate !== undefined && submission.fixed_base_rate > 0) {
-        // All fixed services are covered by the overall fixed base rate
+        // Every bundle service is covered by the overall fixed base rate
         filteredFixedServices.forEach(s => {
           servicesWithCustomRates.add(s.service_id);
         });
@@ -1235,9 +1336,9 @@ export const createClientContractFromWizard = withAuth(async (
     const productGroups = groupBySourceLine(filteredProductServices);
     const hourlyGroups = groupBySourceLine(filteredHourlyServices);
     const usageGroups = groupBySourceLine(filteredUsageServices);
-    const fixedTotalQuantity = filteredFixedServices.reduce((sum, service) => sum + (service.quantity ?? 1), 0) || filteredFixedServices.length;
-    let fixedAllocated = 0;
-    let fixedServiceIndex = 0;
+    const bundleShares = submission.fixed_base_rate != null
+      ? allocateBundleBaseRate(filteredFixedServices, submission.fixed_base_rate)
+      : null;
     let nextDisplayOrder = 0;
   const planServiceConfigService = new ContractLineServiceConfigurationService(trx, tenant);
   const recurringAuthoringPolicy = resolveRecurringAuthoringPolicy({
@@ -1277,10 +1378,12 @@ export const createClientContractFromWizard = withAuth(async (
       }
 
       let lineBaseRate = 0;
-
+      const lineHasBundleMember = hasBundleFixedService(fixedServices);
       for (const service of fixedServices) {
         mapSourceTemplateLine(service.source_template_line_id, planId);
-        const quantity = service.quantity ?? 1;
+        const index = filteredFixedServices.indexOf(service);
+        const isUnit = isUnitFixedService(service);
+        const quantity = isUnit ? Number(service.quantity) : (service.quantity ?? 1);
 
         await tenantDb(trx, tenant).table('contract_line_services').insert({
           tenant,
@@ -1288,21 +1391,36 @@ export const createClientContractFromWizard = withAuth(async (
           service_id: service.service_id,
         });
 
+        if (isUnit) {
+          // Same creation path as CreateCustomContractLineDialog: the unit rate
+          // is the member's own explicit (custom) fixed base_rate, and later
+          // quantity/rate edits are routed through the revision service.
+          await planServiceConfigService.createConfiguration(
+            {
+              contract_line_id: planId,
+              service_id: service.service_id,
+              configuration_type: 'Fixed',
+              quantity,
+              tenant,
+              custom_rate: undefined,
+            },
+            {
+              pricing_basis: 'unit',
+              base_rate: service.unit_rate as number,
+              rate_provenance: 'custom',
+            },
+          );
+          continue;
+        }
+
         // The operator's explicit rate is a snapshot (`custom`); absent one the
         // member is left rate-less (`inherited`) so a later catalog change
         // reaches it. Snapshotting the catalog here would shadow it forever.
         let serviceBaseRate: number | null = null;
         let serviceBaseProvenance: 'custom' | 'inherited' = 'inherited';
-        if (submission.fixed_base_rate) {
+        if (bundleShares) {
           serviceBaseProvenance = 'custom';
-          const share = quantity / fixedTotalQuantity;
-          const provisionalValue = submission.fixed_base_rate * share;
-          if (fixedServiceIndex === filteredFixedServices.length - 1) {
-            serviceBaseRate = submission.fixed_base_rate - fixedAllocated;
-          } else {
-            serviceBaseRate = Math.round(provisionalValue);
-            fixedAllocated = Math.round(fixedAllocated + serviceBaseRate);
-          }
+          serviceBaseRate = bundleShares[index];
         } else {
           // A configured fixed-mode default is a chosen rate for this service,
           // and the rate resolver does not read that table — so it must be
@@ -1320,7 +1438,6 @@ export const createClientContractFromWizard = withAuth(async (
         }
 
         lineBaseRate += serviceBaseRate ?? 0;
-        fixedServiceIndex += 1;
 
         await planServiceConfigService.createConfiguration(
           {
@@ -1340,7 +1457,7 @@ export const createClientContractFromWizard = withAuth(async (
         contract_line_id: planId,
         // No operator rate means "follow the catalog" (null + inherited), not a
         // stored zero that would shadow it forever. Already in cents when set.
-        base_rate: submission.fixed_base_rate == null ? null : lineBaseRate,
+        base_rate: !lineHasBundleMember || submission.fixed_base_rate == null ? null : lineBaseRate,
         enable_proration: recurringAuthoringPolicy.enableProration,
         billing_cycle_alignment: recurringAuthoringPolicy.billingCycleAlignment,
         tenant,
@@ -1500,7 +1617,7 @@ export const createClientContractFromWizard = withAuth(async (
         });
 
         await planServiceConfigService.upsertPlanServiceUsageConfiguration(usagePlanId, service.service_id, {
-          unit_of_measure: service.unit_of_measure || 'unit',
+          unit_of_measure: service.unit_of_measure || resolveUnitOfMeasure({ fallback: 'C62' }).label,
           unit_rate: normalizedUnitRate,
           enable_tiered_pricing: false,
         });
@@ -1556,7 +1673,7 @@ export const createClientContractFromWizard = withAuth(async (
       }
     }
 
-    const createdAssignment = await createClientContractAssignment(trx, tenant, {
+    const clientContractAssignment = await createClientContractAssignment(trx, tenant, {
       client_id: submission.client_id,
       contract_id: contractId,
       start_date: startDate,
@@ -1583,12 +1700,13 @@ export const createClientContractFromWizard = withAuth(async (
       po_required: submission.po_required ?? false,
       po_number: submission.po_number ?? null,
       po_amount: submission.po_amount ?? null,
+      billing_profile_id: submission.billing_profile_id ?? null,
     });
     if (submission.template_id) {
       await cloneTemplateDefaultDiscounts(trx, {
         tenant,
         templateId: submission.template_id,
-        clientContractId: createdAssignment.client_contract_id,
+        clientContractId: clientContractAssignment.client_contract_id,
         clientId: submission.client_id,
         lineIdMap: sourceTemplateLineMap,
       });
@@ -1604,6 +1722,7 @@ export const createClientContractFromWizard = withAuth(async (
 
     createdForWorkflow = {
       contractId,
+      clientContractId: clientContractAssignment.client_contract_id,
       clientId: submission.client_id,
       createdAt: now.toISOString(),
       startDate,
@@ -1622,7 +1741,8 @@ export const createClientContractFromWizard = withAuth(async (
     renewalForWorkflow = endDate
       ? computeContractRenewalUpcoming({
           renewalAt: endDate,
-          decisionDueAt: decisionDueAtForWorkflow ?? undefined,
+          decisionDueAt: clientContractAssignment.decision_due_date ?? decisionDueAtForWorkflow ?? undefined,
+          renewalCycleKey: clientContractAssignment.renewal_cycle_key ?? undefined,
           now: now.toISOString(),
         })
       : null;
@@ -1642,6 +1762,7 @@ export const createClientContractFromWizard = withAuth(async (
   if (createdForWorkflow) {
     const wfData: {
       contractId: string;
+      clientContractId: string;
       clientId: string;
       createdAt: string;
       startDate: string;
@@ -1678,13 +1799,15 @@ export const createClientContractFromWizard = withAuth(async (
         daysUntilDecisionDue: number;
         renewalCycleKey?: string;
       } = renewalForWorkflow as any;
-      await publishWorkflowEvent({
-        eventType: 'CONTRACT_RENEWAL_UPCOMING',
+      await emitDateDomainEventOnce(knex, tenant, {
+        eventType: 'CONTRACT_RENEWAL_UPCOMING', entityId: wfData.clientContractId,
+        cycleKey: renewal.renewalCycleKey ?? normalizeDateDomainKeyDate(renewal.decisionDueDate ?? renewal.renewalAt),
+        occursOn: normalizeDateDomainKeyDate(renewal.decisionDueDate),
         payload: buildContractRenewalUpcomingPayload({
           contractId: wfData.contractId,
           clientId: wfData.clientId,
-          renewalAt: renewal.renewalAt,
-          decisionDueDate: renewal.decisionDueDate,
+          renewalAt: normalizeDateDomainKeyDate(renewal.renewalAt),
+          decisionDueDate: normalizeDateDomainKeyDate(renewal.decisionDueDate),
           daysUntilRenewal: renewal.daysUntilRenewal,
           daysUntilDecisionDue: renewal.daysUntilDecisionDue,
           renewalCycleKey: renewal.renewalCycleKey,
@@ -1696,7 +1819,6 @@ export const createClientContractFromWizard = withAuth(async (
             ? { actorType: 'USER' as const, actorUserId: wfData.actorUserId }
             : undefined,
         },
-        idempotencyKey: `contract_renewal_upcoming:${wfData.contractId}:${wfData.clientId}:${renewal.renewalCycleKey ?? renewal.decisionDueDate ?? renewal.renewalAt}`,
       });
     }
   }
@@ -1849,8 +1971,22 @@ export const getContractTemplateSnapshotForClientWizard = withAuth(async (
           return;
         }
 
+        // Per-seat services keep their basis, standing quantity and (when the
+        // template states one) default unit rate so the wizard opens them as
+        // recurring quantities the operator can adjust before creating the
+        // contract. An empty rate is prefilled from the catalog in the
+        // contract currency by the wizard.
+        const templateFixedConfig =
+          typeConfig && 'pricing_basis' in typeConfig ? (typeConfig as IContractLineServiceFixedConfig) : null;
+        const isUnitTemplateService = templateFixedConfig?.pricing_basis === 'unit';
+
         fixedServices?.push({
           ...baseEntry,
+          pricing_basis: isUnitTemplateService ? 'unit' : 'bundle',
+          unit_rate:
+            isUnitTemplateService && templateFixedConfig?.base_rate != null
+              ? Math.round(Number(templateFixedConfig.base_rate))
+              : null,
           bucket_overlay:
             bucketConfig && isBucketConfig(bucketConfig)
               ? {
@@ -1866,7 +2002,13 @@ export const getContractTemplateSnapshotForClientWizard = withAuth(async (
 
       // Only treat this as the "fixed fee services" line if it has non-product items.
       if (servicesWithConfig.some(({ service }) => service.item_kind !== 'product')) {
-        const baseRateValue = line.rate != null ? Number(line.rate) : undefined;
+        const lineHasBundleMember = servicesWithConfig.some(({ service, typeConfig }) => {
+          if (service.item_kind === 'product') return false;
+          return !(typeConfig && 'pricing_basis' in typeConfig && typeConfig.pricing_basis === 'unit');
+        });
+        // A pure per-seat line has no line total: its stored 0 must not
+        // prefill the wizard's base rate.
+        const baseRateValue = lineHasBundleMember && line.rate != null ? Number(line.rate) : undefined;
         // Rates are stored in cents in the database already.
         fixedBaseRateCents = baseRateValue != null ? Math.round(baseRateValue) : undefined;
         enableProration = line.enable_proration ?? false;
@@ -1926,8 +2068,7 @@ export const getContractTemplateSnapshotForClientWizard = withAuth(async (
           unit_rate: unitRateCents,
           unit_of_measure:
             usageConfig?.unit_of_measure ||
-            service.unit_of_measure ||
-            'unit',
+            service.unit_of_measure || resolveUnitOfMeasure({ fallback: 'C62' }).label,
           bucket_overlay:
             bucketConfig && isBucketConfig(bucketConfig)
               ? {
@@ -1963,6 +2104,7 @@ export const getContractTemplateSnapshotForClientWizard = withAuth(async (
 
 export type DraftContractWizardData = {
   client_id: string;
+  billing_profile_id?: string | null;
   contract_name: string;
   start_date: string;
   end_date?: string;
@@ -1982,6 +2124,8 @@ export type DraftContractWizardData = {
     service_id: string;
     service_name?: string;
     quantity: number;
+    pricing_basis: FixedPricingBasis;
+    unit_rate?: number | null;
     bucket_overlay?: BucketOverlayInput | null;
   }>;
   product_services: Array<{
@@ -2108,7 +2252,7 @@ export const getDraftContractForResume = withAuth(async (
     const servicesWithConfig = servicesByLineId.get(line.contract_line_id) ?? [];
 
     if (line.contract_line_type === 'Fixed') {
-      servicesWithConfig.forEach(({ service, configuration, bucketConfig }) => {
+      servicesWithConfig.forEach(({ service, configuration, typeConfig, bucketConfig }) => {
         const quantity =
           configuration?.quantity != null ? Number(configuration.quantity) : 1;
 
@@ -2127,8 +2271,16 @@ export const getDraftContractForResume = withAuth(async (
           return;
         }
 
+        // Reload the stored basis and unit rate: a draft that resumed without
+        // them would silently demote a per-seat service to an allocation.
+        const fixedTypeConfig = configuration?.configuration_type === 'Fixed'
+          ? (typeConfig as IContractLineServiceFixedConfig | null)
+          : null;
+        const isUnit = fixedTypeConfig?.pricing_basis === 'unit';
         fixedServices.push({
           ...baseEntry,
+          pricing_basis: isUnit ? 'unit' : 'bundle',
+          unit_rate: isUnit && fixedTypeConfig?.base_rate != null ? Math.round(Number(fixedTypeConfig.base_rate)) : undefined,
           bucket_overlay:
             bucketConfig && isBucketConfig(bucketConfig)
               ? {
@@ -2205,8 +2357,7 @@ export const getDraftContractForResume = withAuth(async (
           unit_rate: unitRateCents,
           unit_of_measure:
             usageConfig?.unit_of_measure ||
-            service.unit_of_measure ||
-            'unit',
+            service.unit_of_measure || resolveUnitOfMeasure({ fallback: 'C62' }).label,
           bucket_overlay:
             bucketConfig && isBucketConfig(bucketConfig)
               ? {
@@ -2250,6 +2401,7 @@ export const getDraftContractForResume = withAuth(async (
 
   return {
     client_id: clientContract.client_id,
+    billing_profile_id: clientContract.billing_profile_id ?? null,
     contract_name: contract.contract_name,
     start_date: startDate,
     end_date: normalizeDateOnly(clientContract.end_date) ?? undefined,

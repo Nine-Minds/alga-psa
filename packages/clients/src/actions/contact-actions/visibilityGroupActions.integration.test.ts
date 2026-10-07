@@ -138,6 +138,14 @@ function createVisibilityTrx(state: VisibilityState) {
       };
     }
 
+    // No billing-profile ticket grants in this fixture: reassigning a
+    // visibility group must not depend on them.
+    if (table === 'client_billing_profiles' || table === 'billing_profile_contacts') {
+      return {
+        where: () => ({ select: async () => [] }),
+      };
+    }
+
     throw new Error(`Unexpected table: ${table}`);
   }) as any;
 }

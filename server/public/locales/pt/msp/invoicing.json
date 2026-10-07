@@ -317,14 +317,16 @@
       "client": "Cliente",
       "invoiceNumber": "Número da fatura",
       "invoiceNumberOptional": "Número da fatura (opcional)",
-      "sourceSalesOrder": "Pedido de venda de origem (opcional)"
+      "sourceSalesOrder": "Pedido de venda de origem (opcional)",
+      "billingProfile": "Perfil de faturação"
     },
     "placeholders": {
       "selectClient": "Selecione um cliente",
       "invoiceNumberOptional": "Deixe em branco para gerar automaticamente",
       "sourceSalesOrder": "Selecione um pedido de venda atendido ou faturável manualmente",
       "searchSalesOrders": "Pesquisar pedidos de venda...",
-      "noInvoiceableSalesOrders": "Nenhum pedido de venda faturável encontrado."
+      "noInvoiceableSalesOrders": "Nenhum pedido de venda faturável encontrado.",
+      "selectBillingProfile": "Selecione um perfil de faturação"
     },
     "automatedItems": {
       "title": "Itens de linha automatizados",
@@ -348,7 +350,8 @@
       "addPartialPeriodCharge": "Adicionar cobrança de período parcial"
     },
     "labels": {
-      "total": "Total"
+      "total": "Total",
+      "defaultBillingProfile": "{{name}} (predefinido)"
     },
     "prepayment": {
       "label": "Esta é uma fatura de pré-pagamento (cria crédito)",
@@ -388,7 +391,9 @@
       "SOURCE_NOT_ELIGIBLE": "Um item selecionado não pertence a este ticket ou já não é elegível. Atualize e tente novamente.",
       "SOURCE_CURRENCY_MISMATCH": "Alguns produtos selecionados estão cotados numa moeda diferente da moeda de faturação deste cliente e não podem ser adicionados. Fature-os separadamente na sua própria moeda.",
       "CLIENT_CONTRACT_NOT_FOUND": "O contrato selecionado não pertence ao cliente desta fatura.",
-      "SERVICE_REQUIRED": "Atribua um serviço a este encargo antes de guardar."
+      "SERVICE_REQUIRED": "Atribua um serviço a este encargo antes de guardar.",
+      "RECURRING_PRICING_STALE": "A prévia está desatualizada: {{details}}. Execute a prévia novamente para ver os valores atuais e gere outra vez.",
+      "BILLING_PROFILE_NOT_FOUND": "O perfil de faturação selecionado não está disponível para este cliente. Atualize a página e tente novamente."
     },
     "warnings": {
       "noBillingEmail": "Este cliente não tem um e-mail de faturação. Defina um contato de faturação, um e-mail de faturação do cliente ou um endereço de e-mail na localização de faturação ou predefinida antes de gerar a fatura."
@@ -441,6 +446,9 @@
       "discount": "{{adapter}}: configure a associação de descontos antes de exportar {{description}}.",
       "service": "{{adapter}}: atribua um serviço associado a {{description}} antes de exportar.",
       "unavailable": "Não foi possível verificar a preparação contabilística. Verifique as associações antes de exportar."
+    },
+    "hints": {
+      "billingProfile": "A fatura e as suas linhas são faturadas neste perfil."
     }
   },
   "quickInvoice": {
@@ -535,7 +543,8 @@
       "finalizedDate": "Data Finalizada",
       "status": "Status",
       "actions": "Ações",
-      "quickbooks": "QuickBooks"
+      "quickbooks": "QuickBooks",
+      "autopay": "Pagamento automático"
     },
     "actions": {
       "downloadPdfs": "Baixar PDFs",
@@ -567,6 +576,9 @@
         "selectedCount": "{{count}} selecionado",
         "clear": "Limpar seleção"
       }
+    },
+    "autopay": {
+      "scheduled": "Pagamento automático {{status}}"
     }
   },
   "recurringServicePeriods": {
@@ -771,7 +783,9 @@
     "title": "Visualização da fatura",
     "templatePlaceholder": "Selecione o modelo de fatura...",
     "labels": {
-      "standard": "(Padrão)"
+      "standard": "(Padrão)",
+      "billingProfile": "Perfil de faturação: {{name}}",
+      "billingProfileDefault": "o perfil predefinido do cliente"
     },
     "actions": {
       "finalizeInvoice": "Finalizar fatura",
@@ -823,7 +837,8 @@
       "back": "Voltar para Layouts de fatura",
       "cancel": "Cancelar",
       "save": "Salvar modelo",
-      "saving": "Salvando..."
+      "saving": "Salvando...",
+      "close": "Fechar"
     },
     "titles": {
       "create": "Criar novo layout de fatura",
@@ -833,7 +848,9 @@
       "templateName": "Nome do modelo",
       "templateAst": "Modelo AST (JSON)",
       "created": "Criado",
-      "lastUpdated": "Última atualização"
+      "lastUpdated": "Última atualização",
+      "savedAt": "Salvo {{time}}",
+      "notSaved": "Ainda não salvo"
     },
     "tabs": {
       "visual": "Visual",
@@ -849,6 +866,9 @@
       "templateNameRequired": "O nome do modelo é obrigatório",
       "astExportFailed": "Falha ao exportar o modelo AST do espaço de trabalho visual: {{message}}",
       "unknownAstExport": "Erro de exportação AST desconhecido"
+    },
+    "toast": {
+      "saved": "Layout \"{{name}}\" salvo."
     }
   },
   "templates": {
@@ -1026,12 +1046,17 @@
       "billingEmail": "E-mail de cobrança",
       "clientEmail": "E-mail do cliente",
       "noEmailFound": "Nenhum e-mail encontrado",
-      "notConfigured": "Nenhum endereço de email está configurado para este cliente."
+      "notConfigured": "Nenhum endereço de email está configurado para este cliente.",
+      "billingProfile": "Perfil de faturamento",
+      "billingProfileNamed": "Perfil de faturação: {{name}}",
+      "billingProfileDefault": "o perfil predefinido do cliente"
     },
     "fields": {
       "due": "Devido",
       "additionalMessage": "Mensagem Adicional",
-      "additionalMessagePlaceholder": "Adicione uma nota pessoal para incluir no e-mail..."
+      "additionalMessagePlaceholder": "Adicione uma nota pessoal para incluir no e-mail...",
+      "from": "De",
+      "useDefault": "Usar remetente predefinido"
     },
     "preview": "Os e-mails serão enviados de {{fromEmail}} em nome de {{companyName}}. Cada fatura será anexada em formato PDF.",
     "values": {
@@ -1240,7 +1265,10 @@
         "drags": "Arrasta: {{count}}",
         "success": "Sucesso: {{count}}",
         "invalid": "Inválido: {{count}}"
-      }
+      },
+      "zoomOut": "Diminuir zoom",
+      "zoomIn": "Aumentar zoom",
+      "zoomFit": "Ajustar"
     },
     "palette": {
       "tabs": {
@@ -1281,6 +1309,15 @@
         "content": "Contente",
         "media": "Mídia",
         "dynamic": "Dinâmico"
+      },
+      "insertTarget": {
+        "page": "Novos blocos vão para o final da página.",
+        "inside": "Novos blocos vão dentro de {{name}}.",
+        "after": "Novos blocos vão logo após {{name}}.",
+        "label": "Onde os novos blocos ficam",
+        "insideOption": "Dentro dele",
+        "afterOption": "Depois dele",
+        "shiftHint": "Shift+click em + para adicionar depois dele."
       }
     },
     "inspector": {
@@ -1300,7 +1337,70 @@
       "fitSectionToContents": "Ajustar seção ao conteúdo",
       "sectionNoChildContent": "A seção não tem conteúdo filho para caber.",
       "apply": "Aplicar",
-      "emptyHelp": "Selecione um componente para editar suas propriedades."
+      "emptyHelp": "Selecione um componente para editar suas propriedades.",
+      "size": "Tamanho",
+      "width": "Largura",
+      "widthValue": "Valor da largura",
+      "minWidth": "Largura mínima",
+      "maxWidth": "Largura máxima",
+      "height": "Altura",
+      "heightValue": "Valor da altura",
+      "minHeight": "Altura mínima",
+      "maxHeight": "Altura máxima",
+      "mediaSource": "Origem da imagem",
+      "mediaSourceLogo": "Logotipo da empresa",
+      "mediaSourceCustom": "Imagem personalizada",
+      "mediaSourceLogoHint": "Mostra em todos os documentos o logotipo das configurações de marca da sua empresa.",
+      "mediaSourceUrl": "URL de origem",
+      "renameInner": "Renomear também {{count}} camadas internas ({{from}} → {{to}}…)?",
+      "renameInnerApply": "Renomear",
+      "renameInnerDismiss": "Não",
+      "tabsLabel": "Seções do inspetor",
+      "insertDataField": "+ Inserir campo de dados…",
+      "searchDataFields": "Pesquisar campos de dados…",
+      "dataFields": "Campos de dados",
+      "box": {
+        "top": "Superior",
+        "right": "Direita",
+        "bottom": "Inferior",
+        "left": "Esquerda",
+        "all": "Todos os lados",
+        "sameOnAllSides": "Igual em todos os lados",
+        "unit": "Unidade",
+        "customValue": "Valor CSS personalizado mantido até você editar um lado: {{value}}"
+      },
+      "examplePlaceholder": "ex.: {{value}}",
+      "setCount": "{{count}} definidos",
+      "overrides": {
+        "none": "Usa apenas os valores padrão.",
+        "jump": "Editar na aba {{tab}}",
+        "title": "Definido neste bloco ({{count}}):"
+      },
+      "tabs": {
+        "content": "Conteúdo",
+        "style": "Estilo",
+        "layout": "Layout e tamanho"
+      },
+      "sizeModes": {
+        "auto": {
+          "label": "Auto",
+          "widthTooltip": "O contêiner decide (estica em uma pilha vertical)",
+          "heightTooltip": "Crescer com o conteúdo"
+        },
+        "fill": {
+          "label": "Preencher",
+          "widthTooltip": "Ocupar toda a largura do contêiner"
+        },
+        "fit": {
+          "label": "Ajustar",
+          "widthTooltip": "Encolher para se ajustar ao conteúdo"
+        },
+        "fixed": {
+          "label": "Fixo",
+          "widthTooltip": "Usar a largura exata digitada abaixo",
+          "heightTooltip": "Usar a altura exata digitada abaixo"
+        }
+      }
     },
     "shell": {
       "selectedLabel": "Selecionado:",
@@ -1592,6 +1692,12 @@
             },
             "margin": {
               "label": "Margem"
+            },
+            "padding": {
+              "label": "Preenchimento"
+            },
+            "containerPadding": {
+              "label": "Preenchimento"
             }
           }
         },
@@ -1679,6 +1785,84 @@
         },
         "totals-rows": {
           "title": "Linhas de totais"
+        },
+        "typography": {
+          "title": "Tipografia",
+          "fields": {
+            "fontSize": {
+              "label": "Tamanho"
+            },
+            "fontWeight": {
+              "label": "Espessura",
+              "options": {
+                "400": "Normal (400)",
+                "500": "Médio (500)",
+                "600": "Seminegrito (600)",
+                "700": "Negrito (700)"
+              }
+            },
+            "lineHeight": {
+              "label": "Altura da linha"
+            },
+            "textAlign": {
+              "label": "Alinhamento",
+              "options": {
+                "left": "Esquerda",
+                "center": "Centro",
+                "right": "Direita",
+                "justify": "Justificado"
+              }
+            },
+            "fontStyle": {
+              "label": "Estilo",
+              "options": {
+                "normal": "Normal",
+                "italic": "Itálico"
+              }
+            },
+            "color": {
+              "label": "Cor"
+            }
+          }
+        },
+        "value-typography": {
+          "title": "Texto do valor",
+          "fields": {
+            "fontSize": {
+              "label": "Tamanho"
+            },
+            "fontWeight": {
+              "label": "Espessura",
+              "options": {
+                "400": "Normal (400)",
+                "500": "Médio (500)",
+                "600": "Seminegrito (600)",
+                "700": "Negrito (700)"
+              }
+            },
+            "lineHeight": {
+              "label": "Altura da linha"
+            },
+            "textAlign": {
+              "label": "Alinhamento",
+              "options": {
+                "left": "Esquerda",
+                "center": "Centro",
+                "right": "Direita",
+                "justify": "Justificado"
+              }
+            },
+            "fontStyle": {
+              "label": "Estilo",
+              "options": {
+                "normal": "Normal",
+                "italic": "Itálico"
+              }
+            },
+            "color": {
+              "label": "Cor"
+            }
+          }
         }
       }
     },
@@ -1778,10 +1962,80 @@
     },
     "canvas": {
       "templateBoundary": "Limite do modelo",
-      "translatableHint": "Traduzido automaticamente para o idioma do destinatário. Se você editar o texto, seu próprio texto fixo será usado."
+      "translatableHint": "Traduzido automaticamente para o idioma do destinatário. Se você editar o texto, seu próprio texto fixo será usado.",
+      "noLineItems": "Nenhum item de linha",
+      "moreRows": "+{{count}} linhas adicionais",
+      "subtotal": "Subtotal",
+      "tax": "Imposto",
+      "total": "Total",
+      "buttonLabel": "Botão",
+      "signatureLabel": "Assinatura",
+      "attachmentsLabel": "Anexos",
+      "spacerLabel": "Espaçador",
+      "companyLogo": "Logotipo da empresa",
+      "insertionMarker": "O próximo bloco que você adicionar ficará aqui",
+      "emptyContainer": "Vazio — selecione-o e adicione blocos pelo painel esquerdo",
+      "localeChip": "Rótulos traduzidos exibidos em {{language}} (Idioma de visualização)",
+      "badgeDragHint": "Arraste para mover este bloco"
     },
     "dragOverlay": {
       "component": "Componente"
+    },
+    "arrange": {
+      "up": "Subir",
+      "upHint": "Mover para antes no contêiner (↑)",
+      "down": "Descer",
+      "downHint": "Mover para depois no contêiner (↓)",
+      "out": "Retirar",
+      "outHint": "Mover para fora do contêiner, logo após ele (Alt+←)",
+      "into": "Aninhar",
+      "intoHint": "Mover para o contêiner logo antes dele (Alt+→)",
+      "copy": "Copiar",
+      "copyHint": "Copiar (Ctrl/⌘+C). Selecione onde ele deve ficar e cole com Ctrl/⌘+V.",
+      "paste": "Colar",
+      "pasteHint": "Colar no contêiner selecionado ou após o bloco selecionado (Ctrl/⌘+V)",
+      "duplicate": "Duplicar",
+      "duplicateHint": "Duplicar logo após o original (Ctrl/⌘+D)",
+      "copyStyle": "Copiar estilo",
+      "copyStyleHint": "Copiar cores, bordas, espaçamento e estilo de texto (Ctrl/⌘+Alt+C)",
+      "pasteStyle": "Colar estilo",
+      "pasteStyleHint": "Aplicar o estilo copiado a este bloco (Ctrl/⌘+Alt+V)",
+      "delete": "Excluir",
+      "deleteHint": "Excluir (tecla Delete)",
+      "title": "Organizar"
+    },
+    "feedback": {
+      "cannotInsert": "Não é possível adicionar {{block}} aqui.",
+      "insertedOnPage": "{{block}} adicionado à página.",
+      "insertedInto": "{{block}} adicionado a {{parent}}.",
+      "fieldRebound": "{{name}} agora mostra {{path}}."
+    },
+    "translation": {
+      "translatedAs": "Rótulo padrão \"{{name}}\", traduzido para cada destinatário",
+      "useFixedText": "Usar texto fixo",
+      "pickStandardLabel": "Texto fixo. Traduzir automaticamente…",
+      "searchStandardLabels": "Pesquisar rótulos padrão…",
+      "standardLabels": "Rótulos padrão",
+      "noMatches": "Nenhum rótulo padrão corresponde.",
+      "cancel": "Cancelar"
+    },
+    "outline": {
+      "collapse": "Recolher {{name}}",
+      "expand": "Expandir {{name}}",
+      "title": "Estrutura"
+    },
+    "dragPreview": {
+      "noTarget": "Fora da página — solte para cancelar",
+      "noChange": "Fica onde está",
+      "before": "Antes de {{block}}",
+      "after": "Depois de {{block}}",
+      "inside": "Dentro de {{container}}",
+      "dropOnPage": "Solte na página para adicionar este bloco.",
+      "cancelled": "Não movido — solte sobre a página ou a Estrutura para posicionar."
+    },
+    "resize": {
+      "handleHint": "Arraste para redimensionar · clique duas vezes para ajustar ao conteúdo",
+      "autoValue": "Automático ({{value}})"
     }
   },
   "projectBilling": {
@@ -1847,7 +2101,8 @@
         "selectedCount": "{{count}} selecionado",
         "clear": "Limpar seleção"
       }
-    }
+    },
+    "emptyTimeHint": "Horas e materiais aprovados nunca entram nesta fila — são faturados na execução normal de faturamento ou pelo botão Gerar fatura do projeto."
   },
   "invoiceDesigner": {
     "transforms": {
@@ -2036,7 +2291,9 @@
         "addLine": "+ Linha",
         "clearLines": "Linha única",
         "stackedLinesHint": "Cada linha não vazia é exibida em sua própria linha. Quando todas as linhas estão vazias, é exibida a chave de vinculação da coluna indicada acima.",
-        "removeLine": "Remover a linha {{index}}"
+        "removeLine": "Remover a linha {{index}}",
+        "align": "Alinhamento",
+        "widthPlaceholder": "auto | 50% | 120px"
       },
       "columnTypes": {
         "text": "Texto",
@@ -2071,6 +2328,12 @@
         "groupedRowKey": "Chave da linha agrupada",
         "groupedRowItems": "Itens da linha agrupada",
         "availableBinding": "Vinculação disponível"
+      },
+      "columnAlign": {
+        "default": "Padrão",
+        "left": "Esquerda",
+        "center": "Centro",
+        "right": "Direita"
       }
     },
     "imagePicker": {
@@ -2089,7 +2352,14 @@
       "clearRowBackground": "Limpar cor de fundo da linha",
       "clearRowTextColor": "Limpar cor do texto da linha",
       "labelColorOverrideNote": "Este rótulo mantém a sua própria cor guardada e não herda a cor do texto da linha definida acima. O valor continua a seguir a cor do texto da linha.",
-      "noRows": "Este bloco de totais ainda não tem linhas guardadas. Guarde o modelo e reabra-o para editar as cores das linhas."
+      "noRows": "Este bloco de totais ainda não tem linhas guardadas. Guarde o modelo e reabra-o para editar as cores das linhas.",
+      "addRow": "Adicionar linha:",
+      "empty": "Nenhuma linha ainda. Adicione uma abaixo.",
+      "moveUp": "Mover {{row}} para cima",
+      "moveDown": "Mover {{row}} para baixo",
+      "remove": "Remover {{row}}",
+      "label": "Rótulo",
+      "emphasize": "Destacar (estilo de total geral)"
     }
   },
   "draftInvoiceDetails": {
@@ -2101,6 +2371,13 @@
     "errors": {
       "invoiceNumberRequired": "O número da fatura é obrigatório.",
       "invoiceDateRequired": "A data da fatura é obrigatória."
+    },
+    "labels": {
+      "billingProfile": "Perfil de faturamento",
+      "billingProfileDefault": "O perfil padrão do cliente"
+    },
+    "hints": {
+      "billingProfile": "A fatura, as suas linhas e a cópia enviada por e-mail seguem este perfil."
     }
   },
   "documentTemplates": {
@@ -2211,7 +2488,8 @@
       "referenceMissing": "A fatura, cliente, contrato ou registro de faturamento selecionado não existe mais. Atualize a página e tente novamente.",
       "duplicate": "Já existe uma fatura conflitante. Atualize a página e tente novamente.",
       "missingField": "Falta um campo obrigatório da fatura.",
-      "missingFieldNamed": "Falta um campo obrigatório da fatura: {{field}}."
+      "missingFieldNamed": "Falta um campo obrigatório da fatura: {{field}}.",
+      "billingProfileUnavailable": "O perfil de faturação selecionado não está disponível para este cliente."
     },
     "billingCycle": {
       "notFoundRefresh": "Ciclo de faturamento não encontrado. Ele pode ter sido atualizado ou excluído. Atualize a página e tente novamente.",

@@ -3,7 +3,10 @@ import { readFileSync } from 'fs';
 import { resolve } from 'path';
 import {
   decorateBrandedHtml,
+  isDarkEmailHeader,
+  pickBrandLogoVariant,
   resolveBrandLogoForPreview,
+  resolveEmailPalette,
   STOCK_EMAIL_PALETTE,
 } from '@alga-psa/email/branding';
 import {
@@ -20,6 +23,10 @@ const panelSource = readFileSync(resolve(__dirname, 'EmailBrandingPanel.tsx'), '
 const templatesSource = readFileSync(resolve(__dirname, 'EmailTemplates.tsx'), 'utf8');
 const tabHostSource = readFileSync(resolve(__dirname, 'EmailBrandingTab.tsx'), 'utf8');
 const previewSource = readFileSync(resolve(__dirname, 'EmailTemplatePreview.tsx'), 'utf8');
+const actionsSource = readFileSync(
+  resolve(__dirname, '../../actions/notification-actions/emailBrandingActions.ts'),
+  'utf8',
+);
 
 const LOGO_OPTIONS = {
   logoUrl: '/api/documents/view/square-file?t=1',
@@ -203,8 +210,11 @@ describe('enterprise logo and attribution', () => {
     expect(panelSource).toContain('id="email-branding-use-logo"');
     expect(panelSource).toContain('id="email-branding-logo-variant-wide"');
     expect(panelSource).toContain('id="email-branding-logo-variant-default"');
-    expect(panelSource).toContain('{status.logoOptions.logoWideUrl && (');
-    expect(panelSource).toContain('{status.logoOptions.logoUrl && (');
+    // A shape whose only upload is the dark artwork is still on offer.
+    expect(panelSource).toContain('{hasWideLogo && (');
+    expect(panelSource).toContain('{hasSquareLogo && (');
+    expect(panelSource).toContain('status.logoOptions.logoWideDarkUrl');
+    expect(panelSource).toContain('status.logoOptions.logoDarkUrl');
     expect(panelSource).toContain('id="email-branding-show-attribution"');
     expect(panelSource).toContain('checked={!draft.hideAttribution}');
   });
@@ -217,6 +227,31 @@ describe('enterprise logo and attribution', () => {
   it('previews the brand assets exactly as an apply would write them', () => {
     expect(panelSource).toContain('decorateBrandedHtml(recolored, {');
     expect(panelSource).toContain('hideAttribution: draft.hideAttribution,');
+    // The same chooser the apply decorator runs, over the same resolved palette,
+    // so the preview can never show a variant the apply would not write.
+    expect(panelSource).toContain(
+      'pickBrandLogoVariant(draft.logoVariant, isDarkEmailHeader(resolved), status.logoOptions)',
+    );
+    expect(actionsSource).toContain('pickBrandLogoVariant(palette.logo.variant, isDarkEmailHeader(target), {');
+  });
+
+  it('decorates a dark header with the dark artwork of the chosen shape', () => {
+    const darkHeader = { primary: '#3b1c6b', secondary: '#1f1147' };
+    const lightHeader = { primary: '#fde68a', secondary: '#fcd34d' };
+    const uploads = { ...LOGO_OPTIONS, logoWideDarkUrl: '/api/documents/view/wide-dark-file?t=4' };
+
+    const variantFor = (palette: { primary: string; secondary: string }) =>
+      pickBrandLogoVariant('wide', isDarkEmailHeader(resolveEmailPalette(palette)), uploads);
+
+    expect(variantFor(darkHeader)).toBe('wide-dark');
+    expect(variantFor(lightHeader)).toBe('wide');
+
+    const decorated = decorateBrandedHtml('<body><h1>Hi</h1></body>', {
+      logo: { variant: variantFor(darkHeader)!, alt: 'Acme MSP' },
+    });
+
+    expect(decorated).toContain('src="cid:alga-brand-logo-wide-dark"');
+    expect(resolveBrandLogoForPreview(decorated, uploads)).toContain(`src="${uploads.logoWideDarkUrl}"`);
   });
 
   it('writes the logo as a content-id and resolves it to a URL only for the preview', () => {
@@ -237,9 +272,13 @@ describe('enterprise logo and attribution', () => {
     // substitutes them after the source annotation.
     expect(panelSource).toContain('brandLogoUrls={status.logoOptions}');
     expect(templatesSource).toContain('brandLogoUrls={brandingStatus?.logoOptions}');
-    expect(previewSource).toContain('resolveBrandLogoForPreview(annotated, { logoUrl, logoWideUrl })');
-    // The two URLs, not the object a parent may rebuild on every render.
-    expect(previewSource).toContain('[htmlContent, sampleData, sourceMap, logoUrl, logoWideUrl]');
+    expect(previewSource).toContain(
+      'resolveBrandLogoForPreview(annotated, { logoUrl, logoDarkUrl, logoWideUrl, logoWideDarkUrl })',
+    );
+    // The URLs, not the object a parent may rebuild on every render.
+    expect(previewSource).toContain(
+      '[htmlContent, sampleData, sourceMap, logoUrl, logoDarkUrl, logoWideUrl, logoWideDarkUrl]',
+    );
   });
 
   it('tells the editor the cid reference is embedded at send time', () => {

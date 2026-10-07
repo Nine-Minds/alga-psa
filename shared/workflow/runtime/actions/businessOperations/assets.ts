@@ -10,6 +10,7 @@ import {
   throwActionError,
   type TenantTxContext,
 } from './shared';
+import { withWorkflowPicker, withWorkflowNotFoundPolicy } from '../../jsonSchemaMetadata';
 
 function tenantScopedTable(
   tx: Pick<TenantTxContext, 'tenantId' | 'trx'>,
@@ -22,7 +23,7 @@ export function registerAssetActions(): void {
   const registry = getActionRegistryV2();
 
   const associatedTicketSchema = z.object({
-    ticket_id: uuidSchema,
+    ticket_id: withWorkflowPicker(uuidSchema, 'Ticket id', 'ticket'),
     ticket_number: z.string(),
     title: z.string().nullable(),
     status_id: uuidSchema.nullable(),
@@ -64,7 +65,7 @@ export function registerAssetActions(): void {
           .default('open')
           .describe('Filter resulting tickets by closed flag'),
         limit: z.number().int().positive().max(50).default(10).describe('Maximum number of tickets to return'),
-        on_not_found: z.enum(['return_empty', 'error']).default('return_empty'),
+        on_not_found: withWorkflowNotFoundPolicy(z.enum(['return_empty', 'error']).default('return_empty'), 'What to do when nothing is found'),
       })
       .refine((val) => Boolean(val.asset_id || val.asset_tag || val.external_id), {
         message: 'asset_id, asset_tag, or external_id is required',

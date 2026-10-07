@@ -13,7 +13,6 @@ const {
   deleteManagedEmailDomainMock,
   getEmailSettingsMock,
   updateEmailSettingsMock,
-  getEmailProvidersMock,
   testOutboundEmailMock,
   getMicrosoftOutboundMailboxesMock,
   toastSuccessMock,
@@ -26,7 +25,6 @@ const {
   deleteManagedEmailDomainMock: vi.fn(),
   getEmailSettingsMock: vi.fn(),
   updateEmailSettingsMock: vi.fn(),
-  getEmailProvidersMock: vi.fn(),
   testOutboundEmailMock: vi.fn(),
   getMicrosoftOutboundMailboxesMock: vi.fn(),
   toastSuccessMock: vi.fn(),
@@ -44,7 +42,6 @@ vi.mock('@ee/lib/actions/email-actions/managedDomainActions', () => ({
 vi.mock('@alga-psa/integrations/actions', () => ({
   getEmailSettings: getEmailSettingsMock,
   updateEmailSettings: updateEmailSettingsMock,
-  getEmailProviders: getEmailProvidersMock,
   testOutboundEmail: testOutboundEmailMock,
   getMicrosoftOutboundMailboxes: getMicrosoftOutboundMailboxesMock,
 }));
@@ -76,44 +73,11 @@ vi.mock('react-hot-toast', () => ({
 
 vi.mock('@alga-psa/integrations/components', () => ({
   EmailProviderConfiguration: () => <div id="email-provider-configuration-stub" />,
-  EmailSenderIdentityCards: ({
-    copy,
-    ticketAddress,
-    ticketName,
-    notificationAddress,
-    notificationName,
-    onTicketAddressChange,
-    onTicketNameChange,
-    onNotificationAddressChange,
-    onNotificationNameChange,
-    actions,
-  }: any) => (
-    <div>
-      <h2>{copy.ticketTitle}</h2>
-      <input
-        id="ticket-from-address"
-        value={ticketAddress}
-        onChange={(event) => onTicketAddressChange(event.target.value)}
-      />
-      <input
-        id="ticket-from-name"
-        value={ticketName}
-        onChange={(event) => onTicketNameChange(event.target.value)}
-      />
-      <h2>{copy.notificationTitle}</h2>
-      <input
-        id="notification-from-address"
-        value={notificationAddress}
-        onChange={(event) => onNotificationAddressChange(event.target.value)}
-      />
-      <input
-        id="notification-from-name"
-        value={notificationName}
-        onChange={(event) => onNotificationNameChange(event.target.value)}
-      />
-      {actions}
-    </div>
-  ),
+  EmailSenderCardsProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  EmailSenderAddressesCard: () => <div data-testid="email-sender-addresses-card" />,
+  EmailSenderRoutingCard: () => <div data-testid="email-sender-routing-card" />,
+  OutboundEmailDiagnosticsDialog: ({ isOpen }: { isOpen: boolean }) =>
+    isOpen ? <div data-testid="outbound-diagnostics-dialog" /> : null,
 }));
 
 vi.mock('@alga-psa/ui/components/Card', () => ({
@@ -241,7 +205,6 @@ vi.mock('@ee/components/settings/email/DnsRecordInstructions', () => ({
 const baseSettings = {
   tenantId: 'tenant-123',
   defaultFromDomain: 'acme.com',
-  ticketingFromEmail: 'support@acme.com',
   customDomains: [],
   emailProvider: 'resend' as const,
   providerConfigs: [],
@@ -288,7 +251,6 @@ describe('ManagedEmailSettings removal actions', () => {
     deleteManagedEmailDomainMock.mockReset();
     getEmailSettingsMock.mockReset();
     updateEmailSettingsMock.mockReset();
-    getEmailProvidersMock.mockReset();
     testOutboundEmailMock.mockReset();
     getMicrosoftOutboundMailboxesMock.mockReset();
     getMicrosoftOutboundMailboxesMock.mockResolvedValue({ mailboxes: [] });
@@ -304,9 +266,6 @@ describe('ManagedEmailSettings removal actions', () => {
       },
     ]);
     getEmailSettingsMock.mockResolvedValue(baseSettings);
-    getEmailProvidersMock.mockResolvedValue({
-      providers: [{ id: 'provider-1', mailbox: 'support@acme.com' }],
-    });
   });
 
   it('does not expose a thrown English domain-loading error', async () => {
@@ -320,31 +279,15 @@ describe('ManagedEmailSettings removal actions', () => {
     expect(toastErrorMock).not.toHaveBeenCalledWith('Secret backend trace');
   });
 
-  it('clears the saved ticketing from address via the explicit clear action', async () => {
-    updateEmailSettingsMock.mockResolvedValue({
-      ...baseSettings,
-      ticketingFromEmail: null,
-    });
-
+  it('renders sender identity management in the sender cards', async () => {
     render(<ManagedEmailSettings />);
 
-    const clearButton = await screen.findByRole('button', { name: /clear ticket identity/i });
-    fireEvent.click(clearButton);
-    const confirmButton = document.getElementById('managed-email-clear-ticketing-from-confirm');
-    expect(confirmButton).not.toBeNull();
-    fireEvent.click(confirmButton as HTMLElement);
-
-    await waitFor(() => {
-      expect(updateEmailSettingsMock).toHaveBeenCalledWith(
-        expect.objectContaining({
-          ticketingFromEmail: null,
-        })
-      );
-    });
-    expect(toastSuccessMock).toHaveBeenCalledWith('Ticketing from address cleared');
+    expect(await screen.findByTestId('email-sender-addresses-card')).toBeInTheDocument();
+    expect(screen.getByTestId('email-sender-routing-card')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /clear ticket identity/i })).not.toBeInTheDocument();
   });
 
-  it('removing the active managed domain also clears the saved ticketing from address', async () => {
+  it('removing the active managed domain clears only the outbound domain setting', async () => {
     deleteManagedEmailDomainMock.mockResolvedValue({ success: true });
     getManagedEmailDomainsMock
       .mockResolvedValueOnce([
@@ -358,7 +301,6 @@ describe('ManagedEmailSettings removal actions', () => {
     updateEmailSettingsMock.mockResolvedValue({
       ...baseSettings,
       defaultFromDomain: undefined,
-      ticketingFromEmail: null,
     });
 
     render(<ManagedEmailSettings />);
@@ -374,11 +316,12 @@ describe('ManagedEmailSettings removal actions', () => {
       expect(updateEmailSettingsMock).toHaveBeenCalledWith(
         expect.objectContaining({
           defaultFromDomain: null,
-          ticketingFromEmail: null,
-        })
+        }),
       );
     });
-    expect(toastSuccessMock).toHaveBeenCalledWith('Domain removal scheduled and ticketing From address cleared');
+    expect(updateEmailSettingsMock.mock.calls[0][0]).not.toHaveProperty('ticketingFromEmail');
+    expect(updateEmailSettingsMock.mock.calls[0][0]).not.toHaveProperty('ticketingFromName');
+    expect(toastSuccessMock).toHaveBeenCalledWith('Domain removal scheduled');
   });
 });
 
@@ -390,7 +333,6 @@ describe('ManagedEmailSettings outbound SMTP test and TLS controls', () => {
     deleteManagedEmailDomainMock.mockReset();
     getEmailSettingsMock.mockReset();
     updateEmailSettingsMock.mockReset();
-    getEmailProvidersMock.mockReset();
     testOutboundEmailMock.mockReset();
     getMicrosoftOutboundMailboxesMock.mockReset();
     getMicrosoftOutboundMailboxesMock.mockResolvedValue({ mailboxes: [] });
@@ -401,7 +343,6 @@ describe('ManagedEmailSettings outbound SMTP test and TLS controls', () => {
     getManagedEmailDomainsMock.mockResolvedValue([]);
     getEmailSettingsMock.mockResolvedValue(smtpSettings);
     updateEmailSettingsMock.mockResolvedValue(smtpSettings);
-    getEmailProvidersMock.mockResolvedValue({ providers: [] });
   });
 
   it('persists current edits and reports success from the connection test', async () => {
@@ -488,58 +429,18 @@ describe('ManagedEmailSettings outbound SMTP test and TLS controls', () => {
     });
   });
 
-  it('saves notification branding without changing the ticket identity fields', async () => {
+  it('keeps sender address and routing controls in the sender cards alongside SMTP settings', async () => {
     render(<ManagedEmailSettings />);
 
-    await waitFor(() => expect(document.getElementById('notification-from-name')).not.toBeNull());
-    fireEvent.change(document.getElementById('notification-from-name')!, {
-      target: { value: 'Acme Billing' },
-    });
-    fireEvent.click(document.getElementById('save-sender-identities')!);
-
-    await waitFor(() => {
-      expect(updateEmailSettingsMock).toHaveBeenCalledWith(expect.objectContaining({
-        ticketingFromEmail: 'support@acme.com',
-        providerConfigs: [expect.objectContaining({
-          providerType: 'smtp',
-          config: expect.objectContaining({ fromName: 'Acme Billing' }),
-        })],
-      }));
-    });
-  });
-
-  it('saves ticket identity edits without replacing notification branding', async () => {
-    getEmailSettingsMock.mockResolvedValue({
-      ...smtpSettings,
-      providerConfigs: [{
-        ...smtpSettings.providerConfigs[0],
-        config: { ...smtpSettings.providerConfigs[0].config, fromName: 'Acme Billing' },
-      }],
-    });
-
-    render(<ManagedEmailSettings />);
-
-    await waitFor(() => expect(document.getElementById('ticket-from-name')).not.toBeNull());
-    fireEvent.change(document.getElementById('ticket-from-name')!, {
-      target: { value: 'Acme Support' },
-    });
-    fireEvent.click(document.getElementById('save-sender-identities')!);
-
-    await waitFor(() => {
-      expect(updateEmailSettingsMock).toHaveBeenCalledWith(expect.objectContaining({
-        ticketingFromName: 'Acme Support',
-        providerConfigs: [expect.objectContaining({
-          config: expect.objectContaining({ fromName: 'Acme Billing' }),
-        })],
-      }));
-    });
+    expect(await screen.findByTestId('email-sender-addresses-card')).toBeInTheDocument();
+    expect(screen.getByTestId('email-sender-routing-card')).toBeInTheDocument();
+    expect(screen.queryByLabelText(/notification from/i)).not.toBeInTheDocument();
   });
 
   it('offers SMTP and Microsoft but not managed email on self-host', async () => {
     tierContextState.isHosted = false;
     getManagedEmailDomainsMock.mockRejectedValue(new Error('managed domains should not load'));
     getEmailSettingsMock.mockResolvedValue(baseSettings);
-    getEmailProvidersMock.mockResolvedValue({ providers: [] });
 
     render(<ManagedEmailSettings />);
 
@@ -567,7 +468,6 @@ describe('ManagedEmailSettings outbound SMTP test and TLS controls', () => {
   it('switching to Microsoft saves the connected mailbox as the outbound sender', async () => {
     tierContextState.isHosted = false;
     getEmailSettingsMock.mockResolvedValue(baseSettings);
-    getEmailProvidersMock.mockResolvedValue({ providers: [] });
     getMicrosoftOutboundMailboxesMock.mockResolvedValue({
       mailboxes: [{
         providerId: 'ms-provider-1',
@@ -608,7 +508,6 @@ describe('ManagedEmailSettings outbound SMTP test and TLS controls', () => {
   it('refuses to switch to Microsoft when no mailbox is authorized', async () => {
     tierContextState.isHosted = false;
     getEmailSettingsMock.mockResolvedValue(baseSettings);
-    getEmailProvidersMock.mockResolvedValue({ providers: [] });
     getMicrosoftOutboundMailboxesMock.mockResolvedValue({ mailboxes: [] });
 
     render(<ManagedEmailSettings />);
@@ -626,13 +525,13 @@ describe('ManagedEmailSettings outbound SMTP test and TLS controls', () => {
     expect(updateEmailSettingsMock).not.toHaveBeenCalled();
   });
 
-  it('waits for a provider switch before allowing a sender save with the selected mailbox', async () => {
+  it('waits for a provider switch to finish before allowing another provider change', async () => {
     tierContextState.isHosted = false;
-    getEmailSettingsMock.mockResolvedValue({ ...smtpSettings, ticketingFromEmail: null });
+    getEmailSettingsMock.mockResolvedValue(smtpSettings);
     getMicrosoftOutboundMailboxesMock.mockResolvedValue({ mailboxes: [{
       providerId: 'ms-provider-1', providerName: 'Support', mailbox: 'support@acme.com', status: 'connected',
     }] });
-    const saved = { ...smtpSettings, emailProvider: 'microsoft', ticketingFromEmail: null,
+    const saved = { ...smtpSettings, emailProvider: 'microsoft',
       providerConfigs: [{ providerId: 'ms-provider-1', providerType: 'microsoft', isEnabled: true,
         config: { inboundProviderId: 'ms-provider-1', mailbox: 'support@acme.com', from: 'support@acme.com' } }] };
     let finish!: (value: typeof saved) => void;
@@ -641,26 +540,27 @@ describe('ManagedEmailSettings outbound SMTP test and TLS controls', () => {
     const select = document.getElementById('outbound-provider-select')!;
     await waitFor(() => expect(select).not.toBeDisabled());
     fireEvent.change(select, { target: { value: 'microsoft' } });
-    const save = document.getElementById('save-sender-identities')!;
-    expect(save).toBeDisabled();
     expect(select).toBeDisabled();
     expect(document.getElementById('microsoft-outbound-mailbox')).toBeDisabled();
-    fireEvent.click(save);
     expect(updateEmailSettingsMock).toHaveBeenCalledTimes(1);
     finish(saved);
-    await waitFor(() => expect(save).not.toBeDisabled());
-    fireEvent.change(document.getElementById('ticket-from-address')!, { target: { value: 'support@acme.com' } });
-    updateEmailSettingsMock.mockResolvedValueOnce({ ...saved, ticketingFromEmail: 'support@acme.com' });
-    fireEvent.click(save);
-    await waitFor(() => expect(updateEmailSettingsMock).toHaveBeenCalledTimes(2));
-    expect(updateEmailSettingsMock.mock.calls[1][0]).toMatchObject({ ticketingFromEmail: 'support@acme.com',
-      providerConfigs: saved.providerConfigs });
+    await waitFor(() => expect(select).not.toBeDisabled());
+    expect(select).toHaveValue('microsoft');
+    expect(updateEmailSettingsMock.mock.calls[0][0]).toMatchObject({
+      emailProvider: 'microsoft',
+      providerConfigs: expect.arrayContaining([
+        expect.objectContaining({
+          providerType: 'microsoft',
+          config: expect.objectContaining({ inboundProviderId: 'ms-provider-1' }),
+        }),
+      ]),
+    });
   });
 
-  it('waits for a changed Microsoft mailbox before saving its sender identity', async () => {
+  it('waits for a Microsoft mailbox change before allowing another provider change', async () => {
     const mailboxConfig = (id: string, mailbox: string) => ({ providerId: id, providerType: 'microsoft', isEnabled: true,
       config: { inboundProviderId: id, mailbox, from: mailbox } });
-    const initial = { ...baseSettings, emailProvider: 'microsoft', ticketingFromEmail: null,
+    const initial = { ...baseSettings, emailProvider: 'microsoft',
       providerConfigs: [mailboxConfig('ms-one', 'one@acme.com')] };
     const saved = { ...initial, providerConfigs: [mailboxConfig('ms-two', 'two@acme.com')] };
     getEmailSettingsMock.mockResolvedValue(initial);
@@ -673,20 +573,17 @@ describe('ManagedEmailSettings outbound SMTP test and TLS controls', () => {
     render(<ManagedEmailSettings />);
     await waitFor(() => expect(document.getElementById('microsoft-outbound-mailbox')).not.toBeDisabled());
     fireEvent.change(document.getElementById('microsoft-outbound-mailbox')!, { target: { value: 'ms-two' } });
-    const save = document.getElementById('save-sender-identities')!;
-    expect(save).toBeDisabled();
-    expect(document.getElementById('outbound-provider-select')).toBeDisabled();
-    fireEvent.click(save);
+    const providerSelect = document.getElementById('outbound-provider-select')!;
+    expect(providerSelect).toBeDisabled();
     expect(updateEmailSettingsMock).toHaveBeenCalledTimes(1);
     finish(saved);
-    await waitFor(() => expect(save).not.toBeDisabled());
+    await waitFor(() => expect(providerSelect).not.toBeDisabled());
     expect(document.getElementById('microsoft-outbound-mailbox')).toHaveValue('ms-two');
-    fireEvent.change(document.getElementById('ticket-from-address')!, { target: { value: 'two@acme.com' } });
-    updateEmailSettingsMock.mockResolvedValueOnce({ ...saved, ticketingFromEmail: 'two@acme.com' });
-    fireEvent.click(save);
-    await waitFor(() => expect(updateEmailSettingsMock).toHaveBeenCalledTimes(2));
-    expect(updateEmailSettingsMock.mock.calls[1][0]).toMatchObject({ ticketingFromEmail: 'two@acme.com',
-      providerConfigs: saved.providerConfigs });
+    expect(updateEmailSettingsMock).toHaveBeenCalledTimes(1);
+    expect(updateEmailSettingsMock.mock.calls[0][0]).toMatchObject({
+      emailProvider: 'microsoft',
+      providerConfigs: saved.providerConfigs,
+    });
   });
 
   it('unlocks the previous provider after a rejected provider switch', async () => {
@@ -704,7 +601,7 @@ describe('ManagedEmailSettings outbound SMTP test and TLS controls', () => {
     reject(new Error('Connection lost'));
     await waitFor(() => expect(select).not.toBeDisabled());
     expect(select).toHaveValue('smtp');
-    expect(document.getElementById('save-sender-identities')).not.toBeDisabled();
+    expect(document.getElementById('save-smtp-settings')).not.toBeDisabled();
     expect(toastErrorMock).toHaveBeenCalled();
   });
 
@@ -730,9 +627,11 @@ describe('ManagedEmailSettings outbound SMTP test and TLS controls', () => {
     fireEvent.change(await screen.findByLabelText(/smtp host/i), {
       target: { value: 'relay.appliance.lan' },
     });
-    fireEvent.change(document.getElementById('notification-from-address') as HTMLInputElement, {
+    fireEvent.change(document.getElementById('smtp-from') as HTMLInputElement, {
       target: { value: 'support@acme.test' },
     });
+    expect(await screen.findByTestId('email-sender-addresses-card')).toBeInTheDocument();
+    expect(screen.getByTestId('email-sender-routing-card')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: /save smtp settings/i }));
 
     await waitFor(() => {
@@ -745,12 +644,23 @@ describe('ManagedEmailSettings outbound SMTP test and TLS controls', () => {
               isEnabled: true,
               config: expect.objectContaining({
                 host: 'relay.appliance.lan',
-                from: 'support@acme.test',
               }),
             }),
           ],
         })
       );
     });
+  });
+
+  it('opens the shared outbound diagnostics dialog for saved settings', async () => {
+    tierContextState.isHosted = false;
+    getEmailSettingsMock.mockResolvedValue(smtpSettings);
+
+    render(<ManagedEmailSettings />);
+
+    const diagnostics = await screen.findByRole('button', { name: /run outbound diagnostics/i });
+    expect(screen.queryByTestId('outbound-diagnostics-dialog')).not.toBeInTheDocument();
+    fireEvent.click(diagnostics);
+    expect(await screen.findByTestId('outbound-diagnostics-dialog')).toBeInTheDocument();
   });
 });

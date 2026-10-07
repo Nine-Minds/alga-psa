@@ -29,6 +29,8 @@ import {
   type ActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
 import { getStoredQboCredentialsMap, QboClientService } from '../lib/qbo/qboClientService';
+import { isQboAutomatedSalesTaxEnabled } from '../lib/qbo/qboTaxSettings';
+import { QBO_AST_PSEUDO_TAX_CODES } from '../lib/qbo/types';
 import { getStoredXeroConnections, XeroClientService } from '../lib/xero/xeroClientService';
 import {
   normalizeXeroConnectionSelection,
@@ -424,6 +426,18 @@ async function assertQboRemoteEntityExists(
     throw new ExpectedExternalMappingError(
       `Mapping entity type ${algaEntityType} is not managed by the mapping screen.`
     );
+  }
+
+  // The pseudo codes are not readable TaxCode records (`GET /taxcode/NON`
+  // 404s), so the realm's AST setting proves them instead of a read-by-id.
+  if (algaEntityType === 'tax_code' && QBO_AST_PSEUDO_TAX_CODES.has(externalEntityId)) {
+    const { knex } = await createTenantKnex();
+    if (!(await isQboAutomatedSalesTaxEnabled(knex, tenant, realm))) {
+      throw new ExpectedExternalMappingError(
+        `QuickBooks tax code ${externalEntityId} is only accepted when "QuickBooks calculates sales tax" is enabled for this company. Turn it on for this QuickBooks company, or map the region to a tax code from the company's own tax-code list.`
+      );
+    }
+    return;
   }
 
   const qboClient = await QboClientService.create(tenant, realm);

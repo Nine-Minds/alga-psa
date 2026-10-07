@@ -29,6 +29,12 @@ import {
 import { publishEvent } from 'server/src/lib/eventBus/publishers';
 import { TimePeriod } from '@alga-psa/scheduling/models/timePeriod';
 import { hasPermission } from '../../auth/rbac';
+import {
+  buildVisibilityFilter,
+  evaluateEntryAccess,
+  resolveCalendarAccess,
+  type CalendarAccess,
+} from '@alga-psa/scheduling/lib/calendarAccess';
 import { BadRequestError, ConflictError, ForbiddenError, NotFoundError } from '../middleware/apiMiddleware';
 
 function throwTimePeriodSettingsApiError(error: unknown): never {
@@ -972,18 +978,36 @@ export class TimeSheetService extends BaseService<any> {
           .where('schedule_entry_assignees.user_id', filters.user_id);
       }
   
-      // Check permissions for private entries
-      if (!await this.canViewAllSchedules(context)) {
-        const userId = context.userId;
-        const assigneeVisibilityQuery = tenantDb(knex, context.tenant).table('schedule_entry_assignees as sea')
-          .select('sea.user_id')
-          .whereRaw('sea.entry_id = schedule_entries.entry_id')
-          .where('sea.user_id', userId);
+      // Visibility comes from the shared-calendar resolver: own entries,
+      // shared personal calendars, group calendars, or everything for
+      // user_schedule:update holders. Filtered in SQL, then masked per entry.
+      const access = await resolveCalendarAccess(
+        knex,
+        context.tenant,
+        { user_id: context.userId },
+        await this.canViewAllSchedules(context)
+      );
+      const visibility = buildVisibilityFilter(access);
+      if (visibility) {
+        const visibleUserIds = visibility.userIds;
+        const visibleCalendarIds = visibility.calendarIds;
+        const assigneeVisibilityQuery = db.subquery('schedule_entry_assignees as sea')
+          .select(knex.raw('1'))
+          .whereRaw('?? = ??', ['sea.entry_id', 'schedule_entries.entry_id'])
+          .whereIn('sea.user_id', visibleUserIds);
+        db.tenantWhereColumn(assigneeVisibilityQuery, 'sea.tenant', 'schedule_entries.tenant');
 
         query = query.where(function() {
-          this.where('is_private', false)
-            .orWhere('created_by', userId)
-            .orWhereExists(assigneeVisibilityQuery);
+          this.whereExists(assigneeVisibilityQuery);
+          if (visibleCalendarIds.length > 0) {
+            this.orWhereIn('schedule_entries.calendar_id', visibleCalendarIds);
+          }
+        });
+      }
+      if (access.hiddenCalendarIds.length > 0) {
+        query = query.where(function() {
+          this.whereNull('schedule_entries.calendar_id')
+            .orWhereNotIn('schedule_entries.calendar_id', access.hiddenCalendarIds);
         });
       }
 
@@ -993,38 +1017,41 @@ export class TimeSheetService extends BaseService<any> {
         .orderBy('scheduled_start');
 
       // Get assigned users for each entry
-      return Promise.all(entries.map(async entry => {
+      const results = await Promise.all(entries.map(async entry => {
         const assignedUsers = await this.getScheduleAssignees(entry.entry_id, context);
-        const workItem = entry.work_item_id ? await this.getWorkItemForSchedule(entry.work_item_id, entry.work_item_type, context) : null;
+        const decision = evaluateEntryAccess(
+          { ...entry, assigned_user_ids: assignedUsers.map((u: any) => u.user_id) },
+          access
+        );
+        if (decision.access === 'none') {
+          return null;
+        }
 
         const startTime = entry.scheduled_start ? new Date(entry.scheduled_start) : new Date();
         const endTime = entry.scheduled_end ? new Date(entry.scheduled_end) : new Date();
         const durationMs = endTime.getTime() - startTime.getTime();
         const durationHours = durationMs / (1000 * 60 * 60);
-
-        const result = {
-          ...entry,
-          assigned_users: assignedUsers,
-          work_item: workItem,
+        const timing = {
           duration_hours: Math.round(durationHours * 100) / 100,
-          is_current: startTime <= new Date() && endTime >= new Date()
+          is_current: startTime <= new Date() && endTime >= new Date(),
         };
 
-        // Private entries are masked for anyone who is not the creator or an assignee
-        const isOwnEntry = entry.created_by === context.userId ||
-          assignedUsers.some((u: any) => u.user_id === context.userId);
-        if (entry.is_private && !isOwnEntry) {
-          return {
-            ...result,
-            title: 'Busy',
-            notes: '',
-            work_item_id: null,
-            work_item: null
-          };
+        if (decision.access === 'busy') {
+          return maskApiScheduleEntry({ ...entry, ...timing }, assignedUsers, access);
         }
 
-        return result;
+        const workItem = entry.work_item_id ? await this.getWorkItemForSchedule(entry.work_item_id, entry.work_item_type, context) : null;
+        return {
+          ...entry,
+          ...timing,
+          assigned_users: assignedUsers,
+          work_item: workItem,
+          access: 'full',
+          can_edit: decision.canEdit,
+        };
       }));
+
+      return results.filter((entry) => entry !== null);
     }
 
 
@@ -1410,6 +1437,34 @@ export class TimeSheetService extends BaseService<any> {
       if (!entry) return null;
   
       const assignedUsers = await this.getScheduleAssignees(id, context);
+
+      // Internal callers (e.g. update/delete permission lookups) pass no user;
+      // REST reads always carry one and go through the shared-calendar resolver.
+      if (context.user) {
+        const access = await resolveCalendarAccess(
+          knex,
+          context.tenant,
+          { user_id: context.userId },
+          await this.canViewAllSchedules(context)
+        );
+        const decision = evaluateEntryAccess(
+          { ...entry, assigned_user_ids: assignedUsers.map((u: any) => u.user_id) },
+          access
+        );
+        if (decision.access === 'none') return null;
+        if (decision.access === 'busy') {
+          return maskApiScheduleEntry(entry, assignedUsers, access);
+        }
+        const workItem = entry.work_item_id ? await this.getWorkItemForSchedule(entry.work_item_id, entry.work_item_type, context) : null;
+        return {
+          ...entry,
+          assigned_users: assignedUsers,
+          work_item: workItem,
+          access: 'full',
+          can_edit: decision.canEdit,
+        };
+      }
+
       const workItem = entry.work_item_id ? await this.getWorkItemForSchedule(entry.work_item_id, entry.work_item_type, context) : null;
   
       return {
@@ -1470,4 +1525,25 @@ export class TimeSheetService extends BaseService<any> {
     
     return endDate;
   }
+}
+
+/**
+ * Busy view of a schedule entry for REST responses: timing only, with
+ * assignees narrowed to calendars the viewer can see.
+ */
+function maskApiScheduleEntry(entry: any, assignedUsers: any[], access: CalendarAccess): any {
+  return {
+    ...entry,
+    title: 'Busy',
+    notes: '',
+    work_item_id: null,
+    work_item_type: 'ad_hoc',
+    work_item: null,
+    recurrence_pattern: null,
+    assigned_users: assignedUsers.filter(
+      (u: any) => u.user_id === access.viewerUserId || access.canViewAll || access.userLevels.has(u.user_id)
+    ),
+    access: 'busy',
+    can_edit: false,
+  };
 }

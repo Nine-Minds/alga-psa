@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import Drawer from '@alga-psa/ui/components/Drawer';
+import { PhoneText } from '@alga-psa/ui/components/PhoneText';
 import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -663,9 +664,7 @@ export default function AppointmentRequestsPanel({
                   <div>
                     <div className="font-semibold text-gray-700">{t('requests.detail.labels.phone', { defaultValue: 'Phone' })}</div>
                     <div>
-                      <a href={`tel:${selectedRequest.requester_phone}`} className="text-blue-600 hover:underline">
-                        {selectedRequest.requester_phone}
-                      </a>
+                      <PhoneText value={selectedRequest.requester_phone} />
                     </div>
                   </div>
                 )}

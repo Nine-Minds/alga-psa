@@ -329,6 +329,49 @@ describe('registerEmailWorkflowActionsV2 contact authorship', () => {
     );
   });
 
+  it('stamps the inbound sender onto comment metadata for an unmatched sender', async () => {
+    findContactByEmailMock.mockResolvedValue(null);
+
+    const { registerEmailWorkflowActionsV2 } = await import('../registerEmailWorkflowActions');
+    registerEmailWorkflowActionsV2();
+
+    const emailData = {
+      id: 'email-sender-1',
+      subject: 'Inbound subject',
+      body: { text: 'Inbound body' },
+      from: { email: 'unknown@example.com', name: 'Unknown Sender' },
+      to: [{ email: 'support@example.com' }],
+    };
+    const parsedEmail = { sanitizedText: 'Inbound body', confidence: 'high', metadata: {} };
+    const senderMetadata = expect.objectContaining({
+      email: { fromAddress: 'unknown@example.com', fromName: 'Unknown Sender' },
+    });
+
+    const parsed = registeredActions.find((entry) => entry.id === 'create_comment_from_parsed_email');
+    await parsed!.handler({ ticketId: 'ticket-sender-1', emailData, parsedEmail }, { tenantId: 'tenant-1' });
+    expect(createCommentFromEmailMock).toHaveBeenCalledWith(
+      expect.objectContaining({ metadata: senderMetadata }),
+      'tenant-1'
+    );
+
+    const initial = registeredActions.find((entry) => entry.id === 'create_ticket_with_initial_comment');
+    await initial!.handler(
+      {
+        emailData,
+        parsedEmail,
+        ticketDefaults: { board_id: 'board-1' },
+        targetClientId: null,
+        targetContactId: null,
+        targetLocationId: null,
+      },
+      { tenantId: 'tenant-1' }
+    );
+    expect(createCommentFromEmailMock).toHaveBeenLastCalledWith(
+      expect.objectContaining({ metadata: senderMetadata }),
+      'tenant-1'
+    );
+  });
+
   it('runtime email actions keep primary contact email and matched sender email separate', async () => {
     findContactByEmailMock.mockResolvedValue({
       contact_id: 'contact-1',

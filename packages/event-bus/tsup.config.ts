@@ -9,6 +9,7 @@ export default defineConfig({
     'src/ticket-live-updates.ts',
     'src/publishers/index.ts',
     'src/publishers/*.ts',
+    'src/workflow/dateDomainEvents.ts',
   ],
   format: ['esm'],
   dts: false,

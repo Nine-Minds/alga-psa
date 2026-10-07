@@ -10,6 +10,9 @@
 
 export class EmailNotificationService {
   async sendNotification(_params: {
+    mailClass: import('@alga-psa/types').OutboundMailClass;
+    boardId?: string;
+    senderId?: string;
     tenant: string;
     userId: string;
     subtypeId: number | string;

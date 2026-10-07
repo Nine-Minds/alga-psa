@@ -11,6 +11,7 @@ import { getDateFnsLocale } from '@alga-psa/ui';
 import TaskDocumentUpload from './TaskDocumentUpload';
 import { IClientPortalConfig, DEFAULT_CLIENT_PORTAL_CONFIG } from '@alga-psa/types';
 import { ChevronRight, ChevronDown, Calendar, Clock, User, CheckCircle2, Circle, AlertCircle } from 'lucide-react';
+import { taskDateText } from './taskDateText';
 
 interface Phase {
   phase_id: string;
@@ -32,6 +33,7 @@ interface Task {
   phase_id: string;
   task_name?: string;
   description?: string;
+  start_date?: Date | null;
   due_date?: Date | null;
   status_name?: string;
   assigned_to_name?: string;
@@ -348,13 +350,21 @@ export default function ProjectPhaseTasksView({ projectId, config }: ProjectPhas
 
                         {/* Task Details */}
                         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-gray-600">
-                          {/* Due Date */}
-                          {visibleFields.includes('due_date') && task.due_date && (
-                            <span className="flex items-center gap-1">
-                              <Calendar className="w-3.5 h-3.5 text-gray-400" />
-                              {format(new Date(task.due_date), 'PP', { locale: dateLocale })}
-                            </span>
-                          )}
+                          {/* Start / Due Date */}
+                          {(() => {
+                            const dateText = taskDateText(
+                              task,
+                              visibleFields,
+                              (date) => format(date, 'PP', { locale: dateLocale }),
+                              (date) => t('tasks.startsOn', 'Starts {{date}}', { date }),
+                            );
+                            return dateText ? (
+                              <span className="flex items-center gap-1">
+                                <Calendar className="w-3.5 h-3.5 text-gray-400" />
+                                {dateText}
+                              </span>
+                            ) : null;
+                          })()}
 
                           {/* Assigned To (primary + additional agents) */}
                           {visibleFields.includes('assigned_to') && (task.assigned_to_name || (task.additional_agents && task.additional_agents.length > 0)) && (

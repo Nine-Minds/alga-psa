@@ -4,6 +4,7 @@ import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { createTenantKnex, withTransaction } from '@alga-psa/db';
 import type { Knex } from 'knex';
+import { toClientSinceDate } from '../lib/clientSince';
 import { getContactAvatarUrlsBatchAsync } from '../lib/documentsHelpers';
 import {
   actionError,
@@ -29,6 +30,10 @@ import type {
 } from '../lib/commandCenterTypes';
 import { listClientBillingProfiles } from '@alga-psa/shared/billingClients/billingProfiles';
 import { ageInvoicesByProfile, summariseClientAr } from '@alga-psa/shared/billingClients/billingProfileAr';
+import {
+  ticketProjectAttributionJoin,
+  ticketProjectIdExpression,
+} from '@alga-psa/shared/billingClients/ticketProjectAttribution';
 
 type ClientPulseLocations = ClientPulse['locations'];
 type ClientPulseActionError = ActionMessageError | ActionPermissionError;
@@ -228,7 +233,7 @@ async function fetchPeople(
       ? trx('contact_phone_numbers')
         .where({ tenant })
         .whereIn('contact_name_id', contactIds)
-        .select('contact_name_id', 'phone_number', 'is_default', 'display_order')
+        .select('contact_name_id', 'phone_number', 'extension', 'is_default', 'display_order')
         .orderBy([
           { column: 'is_default', order: 'desc' },
           { column: 'display_order', order: 'asc' },
@@ -238,10 +243,10 @@ async function fetchPeople(
       ? getContactAvatarUrlsBatchAsync(contactIds, tenant)
       : Promise.resolve(new Map<string, string | null>()),
   ]);
-  const phoneByContact = new Map<string, string>();
+  const phoneByContact = new Map<string, { number: string; extension: string | null }>();
   for (const phoneRow of phoneRows as any[]) {
     if (!phoneByContact.has(phoneRow.contact_name_id)) {
-      phoneByContact.set(phoneRow.contact_name_id, phoneRow.phone_number);
+      phoneByContact.set(phoneRow.contact_name_id, { number: phoneRow.phone_number, extension: phoneRow.extension ?? null });
     }
   }
 
@@ -252,7 +257,8 @@ async function fetchPeople(
       full_name: row.full_name ?? '',
       role: row.role ?? null,
       email: row.email ?? null,
-      phone: phoneByContact.get(row.contact_name_id) ?? null,
+      phone: phoneByContact.get(row.contact_name_id)?.number ?? null,
+      phone_extension: phoneByContact.get(row.contact_name_id)?.extension ?? null,
       is_default: Boolean(defaultContactId && row.contact_name_id === defaultContactId),
       avatarUrl: avatarUrls.get(row.contact_name_id) ?? null,
     })),
@@ -272,6 +278,8 @@ async function fetchLocations(
       'address_line1',
       'city',
       'phone',
+      'phone_extension',
+      'country_code',
       'email',
       'is_default',
       'is_billing_address',
@@ -286,6 +294,8 @@ async function fetchLocations(
     address_line1: row.address_line1 ?? null,
     city: row.city ?? null,
     phone: row.phone ?? null,
+    phone_extension: row.phone_extension ?? null,
+    country_code: row.country_code ?? null,
     email: row.email ?? null,
     is_default: Boolean(row.is_default),
     is_billing: Boolean(row.is_billing_address),
@@ -313,25 +323,36 @@ async function fetchNotes(
   trx: Knex.Transaction,
   tenant: string,
   notesDocumentId: string | null,
+  legacyNotes: string | null,
 ): Promise<ClientPulseNotes> {
   const empty: ClientPulseNotes = { hasNotes: false, previewLines: [], lastEditedAt: null };
-  if (!notesDocumentId) return empty;
+  const legacyPreview = (): ClientPulseNotes => {
+    const previewLines = (legacyNotes ?? '')
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .slice(0, NOTE_PREVIEW_LINE_LIMIT);
+    return previewLines.length
+      ? { hasNotes: true, previewLines, lastEditedAt: null }
+      : empty;
+  };
+  if (!notesDocumentId) return legacyPreview();
 
   const contentRow = await trx('document_block_content')
     .where({ tenant, document_id: notesDocumentId })
     .select('block_data', 'updated_at')
     .first();
-  if (!contentRow) return empty;
+  if (!contentRow) return legacyPreview();
 
   let blocks: unknown = contentRow.block_data;
   if (typeof blocks === 'string') {
     try {
       blocks = JSON.parse(blocks);
     } catch {
-      return empty;
+      return legacyPreview();
     }
   }
-  if (!Array.isArray(blocks)) return empty;
+  if (!Array.isArray(blocks)) return legacyPreview();
 
   const previewLines: string[] = [];
   let hasNotes = false;
@@ -345,7 +366,7 @@ async function fetchNotes(
 
   // A saved-but-blank doc reads as "no notes" — an empty preview with a
   // timestamp would imply content that isn't there (D6).
-  if (!hasNotes) return empty;
+  if (!hasNotes) return legacyPreview();
 
   return {
     hasNotes,
@@ -364,7 +385,7 @@ async function fetchRecord(
     defaultContactId
       ? trx('contacts')
         .where({ tenant, contact_name_id: defaultContactId, client_id: clientRow.client_id })
-        .select('full_name')
+        .select('contact_name_id', 'full_name')
         .first()
       : Promise.resolve(null),
     trx('client_inbound_email_domains')
@@ -392,9 +413,14 @@ async function fetchRecord(
     url: clientRow.url ?? null,
     accountManagerName: formatUserName(clientRow),
     defaultContactName: defaultContact?.full_name ?? null,
+    // Only when the contact resolved — the query is what proves it still
+    // belongs to this client, and a stale id would open the wrong drawer.
+    defaultContactId: defaultContact?.contact_name_id ?? null,
     inboundDomains: inboundDomains.map((domain) => String(domain)),
     taxRegion: taxRegion?.region_name ?? null,
-    clientSince: toIsoString(clientRow.created_at),
+    // Calendar date, not a timestamp: the card reads the year off it, and a
+    // UTC re-parse would lose a January 1 for anyone east of Greenwich.
+    clientSince: toClientSinceDate(clientRow.client_since ?? clientRow.created_at) ?? null,
     isInactive: Boolean(clientRow.is_inactive),
   };
 }
@@ -666,8 +692,16 @@ async function fetchMoney(
       .leftJoin('project_phases as pp', function joinWipProjectPhases() {
         this.on('pt.phase_id', '=', 'pp.phase_id').andOn('pt.tenant', '=', 'pp.tenant');
       })
+      // Shared ticket→project resolver, so WIP time reaches the same project
+      // every other consumer bills it under. Client attribution is unchanged:
+      // ticket time still matches through the ticket's client below — which
+      // makes this rollup's numbers identical either way. It is here so the one
+      // resolver is the only path from a ticket to a project: the next clause
+      // added to this query cannot quietly reintroduce the task-only join.
+      .joinRaw(ticketProjectAttributionJoin('te'))
       .leftJoin('projects as pr', function joinWipProjects() {
-        this.on('pp.project_id', '=', 'pr.project_id').andOn('pp.tenant', '=', 'pr.tenant');
+        this.on(trx.raw(ticketProjectIdExpression('pp')) as unknown as string, '=', 'pr.project_id')
+          .andOn('te.tenant', '=', 'pr.tenant');
       })
       .where({ 'te.tenant': tenant, 'te.invoiced': false })
       .where('te.billable_duration', '>', 0)
@@ -1001,10 +1035,12 @@ export const getClientPulse = withAuth(async (
       .select(
         'c.client_id',
         'c.created_at',
+        'c.client_since',
         'c.url',
         'c.account_manager_id',
         'c.is_inactive',
         'c.properties',
+        'c.notes',
         'c.notes_document_id',
         'u.first_name',
         'u.last_name',
@@ -1033,7 +1069,7 @@ export const getClientPulse = withAuth(async (
       fetchPeople(trx, tenant, clientId, defaultContactId),
       fetchLocations(trx, tenant, clientId),
       fetchRecord(trx, tenant, clientRow, defaultContactId),
-      fetchNotes(trx, tenant, clientRow.notes_document_id ?? null),
+      fetchNotes(trx, tenant, clientRow.notes_document_id ?? null, clientRow.notes ?? null),
       canReadTickets ? fetchService(trx, tenant, clientId, nowMs) : Promise.resolve(null),
       canReadBilling ? fetchMoney(trx, tenant, clientId, nowMs) : Promise.resolve(null),
       canReadInventory ? fetchInstallBase(trx, tenant, clientId, canReadAssets, nowMs) : Promise.resolve(null),

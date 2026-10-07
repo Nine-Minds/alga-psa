@@ -346,7 +346,8 @@
       "billingMethod": "Méthode de facturation",
       "quantity": "Quantité",
       "defaultRate": "Taux par défaut",
-      "actions": "Actions"
+      "actions": "Actions",
+      "pricing": "Tarification"
     },
     "tooltip": {
       "defaultRate": "Taux standard du service, utilisé pour l'allocation de valeur interne et le reporting dans le cadre du total fixe du plan."
@@ -381,7 +382,17 @@
       "saveSuccess": "Services prédéfinis de ligne de contrat enregistrés avec succès",
       "saveError": "Échec de l'enregistrement des services"
     },
-    "unknownService": "Service inconnu"
+    "unknownService": "Service inconnu",
+    "pricing": {
+      "product": "Facturé à la quantité d'unités",
+      "bundle": "Inclus dans le total de la ligne",
+      "unit": "Par poste / unité",
+      "unitRate": "Tarif unitaire",
+      "unitRatePlaceholder": "Prix catalogue"
+    },
+    "errors": {
+      "recurringQuantityInvalid": "{{name}} : la quantité récurrente doit être un nombre entier, zéro ou plus."
+    }
   },
   "accountingExports": {
     "title": "Exportations comptables",

@@ -300,6 +300,16 @@ export interface AccountingExportAdapter {
   ): Promise<AccountingProviderOperations>;
 
   /**
+   * Line tax codes the target company accepts on a taxable line, when it
+   * restricts them. Null means any mapped code is acceptable. Export
+   * pre-validation uses this to reject a mapping the provider would refuse.
+   */
+  allowedLineTaxCodes?(
+    tenantId: string,
+    targetRealm?: string | null
+  ): Promise<ReadonlySet<string> | null>;
+
+  /**
    * Called after export when tax delegation is enabled.
    * Records pending tax imports for invoices exported without tax.
    */

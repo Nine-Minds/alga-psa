@@ -317,14 +317,16 @@
       "client": "Client",
       "invoiceNumber": "Numéro de facture",
       "invoiceNumberOptional": "Numéro de facture (facultatif)",
-      "sourceSalesOrder": "Commande client source (facultatif)"
+      "sourceSalesOrder": "Commande client source (facultatif)",
+      "billingProfile": "Profil de facturation"
     },
     "placeholders": {
       "selectClient": "Sélectionnez un client",
       "invoiceNumberOptional": "Laisser vide pour générer automatiquement",
       "sourceSalesOrder": "Sélectionnez une commande client livrée ou facturable manuellement",
       "searchSalesOrders": "Rechercher des commandes clients…",
-      "noInvoiceableSalesOrders": "Aucune commande client facturable trouvée."
+      "noInvoiceableSalesOrders": "Aucune commande client facturable trouvée.",
+      "selectBillingProfile": "Sélectionnez un profil de facturation"
     },
     "automatedItems": {
       "title": "Éléments de campagne automatisés",
@@ -348,7 +350,8 @@
       "addPartialPeriodCharge": "Ajouter des frais de période partielle"
     },
     "labels": {
-      "total": "Total"
+      "total": "Total",
+      "defaultBillingProfile": "{{name}} (par défaut)"
     },
     "prepayment": {
       "label": "Ceci est une facture de prépaiement (crée un crédit)",
@@ -388,7 +391,9 @@
       "SOURCE_NOT_ELIGIBLE": "Un élément sélectionné n'appartient pas à ce ticket ou n'est plus éligible. Actualisez et réessayez.",
       "SOURCE_CURRENCY_MISMATCH": "Certains produits sélectionnés sont facturés dans une autre devise que celle de ce client et ne peuvent pas être ajoutés. Facturez-les séparément dans leur devise.",
       "CLIENT_CONTRACT_NOT_FOUND": "Le contrat sélectionné n’appartient pas au client de cette facture.",
-      "SERVICE_REQUIRED": "Attribuez un service à cette ligne avant d’enregistrer."
+      "SERVICE_REQUIRED": "Attribuez un service à cette ligne avant d’enregistrer.",
+      "RECURRING_PRICING_STALE": "L'aperçu n'est plus à jour : {{details}}. Relancez l'aperçu pour afficher les montants actuels, puis générez de nouveau.",
+      "BILLING_PROFILE_NOT_FOUND": "Le profil de facturation sélectionné n'est pas disponible pour ce client. Actualisez la page et réessayez."
     },
     "warnings": {
       "noBillingEmail": "Ce client n'a pas d'adresse e-mail de facturation. Ajoutez un contact de facturation, une adresse e-mail de facturation du client ou une adresse e-mail à son emplacement de facturation ou par défaut avant de générer la facture."
@@ -441,6 +446,9 @@
       "discount": "{{adapter}} : configurez l’association des remises avant d’exporter {{description}}.",
       "service": "{{adapter}} : attribuez un service associé à {{description}} avant l’exportation.",
       "unavailable": "La préparation comptable n’a pas pu être vérifiée. Vérifiez les associations avant l’exportation."
+    },
+    "hints": {
+      "billingProfile": "La facture et ses lignes sont facturées à ce profil."
     }
   },
   "quickInvoice": {
@@ -535,7 +543,8 @@
       "finalizedDate": "Date de finalisation",
       "status": "Statut",
       "actions": "Actes",
-      "quickbooks": "QuickBooks"
+      "quickbooks": "QuickBooks",
+      "autopay": "Paiement automatique"
     },
     "actions": {
       "downloadPdfs": "Télécharger des PDF",
@@ -567,6 +576,9 @@
         "selectedCount": "{{count}} sélectionnés",
         "clear": "Effacer la sélection"
       }
+    },
+    "autopay": {
+      "scheduled": "Paiement automatique {{status}}"
     }
   },
   "recurringServicePeriods": {
@@ -771,7 +783,9 @@
     "title": "Aperçu de la facture",
     "templatePlaceholder": "Sélectionnez le modèle de facture...",
     "labels": {
-      "standard": "(Standard)"
+      "standard": "(Standard)",
+      "billingProfile": "Profil de facturation : {{name}}",
+      "billingProfileDefault": "le profil par défaut du client"
     },
     "actions": {
       "finalizeInvoice": "Finaliser la facture",
@@ -823,7 +837,8 @@
       "back": "Retour aux présentations de facture",
       "cancel": "Annuler",
       "save": "Enregistrer le modèle",
-      "saving": "Enregistrement..."
+      "saving": "Enregistrement...",
+      "close": "Fermer"
     },
     "titles": {
       "create": "Créer une nouvelle présentation de facture",
@@ -833,7 +848,9 @@
       "templateName": "Nom du modèle",
       "templateAst": "Modèle AST (JSON)",
       "created": "Créé",
-      "lastUpdated": "Dernière mise à jour"
+      "lastUpdated": "Dernière mise à jour",
+      "savedAt": "Enregistré {{time}}",
+      "notSaved": "Pas encore enregistré"
     },
     "tabs": {
       "visual": "Visuel",
@@ -849,6 +866,9 @@
       "templateNameRequired": "Le nom du modèle est obligatoire",
       "astExportFailed": "Échec de l'exportation du modèle AST à partir de l'espace de travail visuel : {{message}}",
       "unknownAstExport": "Erreur d'exportation AST inconnue"
+    },
+    "toast": {
+      "saved": "Mise en page « {{name}} » enregistrée."
     }
   },
   "templates": {
@@ -1026,12 +1046,17 @@
       "billingEmail": "E-mail de facturation",
       "clientEmail": "E-mail du client",
       "noEmailFound": "Aucun e-mail trouvé",
-      "notConfigured": "Aucune adresse e-mail n'est configurée pour ce client."
+      "notConfigured": "Aucune adresse e-mail n'est configurée pour ce client.",
+      "billingProfile": "Profil de facturation",
+      "billingProfileNamed": "Profil de facturation : {{name}}",
+      "billingProfileDefault": "le profil par défaut du client"
     },
     "fields": {
       "due": "Échéance",
       "additionalMessage": "Message supplémentaire",
-      "additionalMessagePlaceholder": "Ajoutez une note personnelle à inclure dans l'e-mail..."
+      "additionalMessagePlaceholder": "Ajoutez une note personnelle à inclure dans l'e-mail...",
+      "from": "De",
+      "useDefault": "Utiliser l’expéditeur par défaut"
     },
     "preview": "Les e-mails seront envoyés depuis {{fromEmail}} au nom de {{companyName}}. Chaque facture sera jointe au format PDF.",
     "values": {
@@ -1240,7 +1265,10 @@
         "drags": "Glisser : {{count}}",
         "success": "Succès : {{count}}",
         "invalid": "Invalide : {{count}}"
-      }
+      },
+      "zoomOut": "Zoom arrière",
+      "zoomIn": "Zoom avant",
+      "zoomFit": "Ajuster"
     },
     "palette": {
       "tabs": {
@@ -1281,6 +1309,15 @@
         "content": "Contenu",
         "media": "Médias",
         "dynamic": "Dynamique"
+      },
+      "insertTarget": {
+        "page": "Les nouveaux blocs sont ajoutés en fin de page.",
+        "inside": "Les nouveaux blocs sont ajoutés dans {{name}}.",
+        "after": "Les nouveaux blocs sont ajoutés juste après {{name}}.",
+        "label": "Emplacement des nouveaux blocs",
+        "insideOption": "À l'intérieur",
+        "afterOption": "Après",
+        "shiftHint": "Shift+click sur + pour l'ajouter après à la place."
       }
     },
     "inspector": {
@@ -1300,7 +1337,70 @@
       "fitSectionToContents": "Ajuster la section au contenu",
       "sectionNoChildContent": "La section n'a pas de contenu à ajuster.",
       "apply": "Appliquer",
-      "emptyHelp": "Sélectionnez un composant pour modifier ses propriétés."
+      "emptyHelp": "Sélectionnez un composant pour modifier ses propriétés.",
+      "size": "Taille",
+      "width": "Largeur",
+      "widthValue": "Valeur de largeur",
+      "minWidth": "Largeur min.",
+      "maxWidth": "Largeur max.",
+      "height": "Hauteur",
+      "heightValue": "Valeur de hauteur",
+      "minHeight": "Hauteur min.",
+      "maxHeight": "Hauteur max.",
+      "mediaSource": "Source de l'image",
+      "mediaSourceLogo": "Logo de l'entreprise",
+      "mediaSourceCustom": "Image personnalisée",
+      "mediaSourceLogoHint": "Affiche sur chaque document le logo défini dans les paramètres de marque de votre entreprise.",
+      "mediaSourceUrl": "URL source",
+      "renameInner": "Renommer aussi {{count}} calques internes ({{from}} → {{to}}…) ?",
+      "renameInnerApply": "Renommer",
+      "renameInnerDismiss": "Non",
+      "tabsLabel": "Sections de l'inspecteur",
+      "insertDataField": "+ Insérer un champ de données…",
+      "searchDataFields": "Rechercher des champs de données…",
+      "dataFields": "Champs de données",
+      "box": {
+        "top": "Haut",
+        "right": "Droite",
+        "bottom": "Bas",
+        "left": "Gauche",
+        "all": "Tous les côtés",
+        "sameOnAllSides": "Identique sur tous les côtés",
+        "unit": "Unité",
+        "customValue": "Valeur CSS personnalisée conservée jusqu'à ce que vous modifiiez un côté : {{value}}"
+      },
+      "examplePlaceholder": "ex. : {{value}}",
+      "setCount": "{{count}} définis",
+      "overrides": {
+        "none": "Utilise uniquement les valeurs par défaut.",
+        "jump": "Modifier dans l'onglet {{tab}}",
+        "title": "Défini sur ce bloc ({{count}}) :"
+      },
+      "tabs": {
+        "content": "Contenu",
+        "style": "Style",
+        "layout": "Mise en page et taille"
+      },
+      "sizeModes": {
+        "auto": {
+          "label": "Auto",
+          "widthTooltip": "Laisser le conteneur décider (s'étire dans une pile verticale)",
+          "heightTooltip": "S'agrandir avec le contenu"
+        },
+        "fill": {
+          "label": "Remplir",
+          "widthTooltip": "Occuper toute la largeur du conteneur"
+        },
+        "fit": {
+          "label": "Ajuster",
+          "widthTooltip": "Réduire pour s'ajuster au contenu"
+        },
+        "fixed": {
+          "label": "Fixe",
+          "widthTooltip": "Utiliser la largeur exacte saisie ci-dessous",
+          "heightTooltip": "Utiliser la hauteur exacte saisie ci-dessous"
+        }
+      }
     },
     "shell": {
       "selectedLabel": "Sélectionné :",
@@ -1592,6 +1692,12 @@
             },
             "margin": {
               "label": "Marge"
+            },
+            "padding": {
+              "label": "Remplissage"
+            },
+            "containerPadding": {
+              "label": "Remplissage"
             }
           }
         },
@@ -1679,6 +1785,84 @@
         },
         "totals-rows": {
           "title": "Lignes de totaux"
+        },
+        "typography": {
+          "title": "Typographie",
+          "fields": {
+            "fontSize": {
+              "label": "Taille"
+            },
+            "fontWeight": {
+              "label": "Graisse",
+              "options": {
+                "400": "Normal (400)",
+                "500": "Moyen (500)",
+                "600": "Demi-gras (600)",
+                "700": "Gras (700)"
+              }
+            },
+            "lineHeight": {
+              "label": "Hauteur de ligne"
+            },
+            "textAlign": {
+              "label": "Alignement",
+              "options": {
+                "left": "Gauche",
+                "center": "Centre",
+                "right": "Droite",
+                "justify": "Justifié"
+              }
+            },
+            "fontStyle": {
+              "label": "Style",
+              "options": {
+                "normal": "Normal",
+                "italic": "Italique"
+              }
+            },
+            "color": {
+              "label": "Couleur"
+            }
+          }
+        },
+        "value-typography": {
+          "title": "Texte de la valeur",
+          "fields": {
+            "fontSize": {
+              "label": "Taille"
+            },
+            "fontWeight": {
+              "label": "Graisse",
+              "options": {
+                "400": "Normal (400)",
+                "500": "Moyen (500)",
+                "600": "Demi-gras (600)",
+                "700": "Gras (700)"
+              }
+            },
+            "lineHeight": {
+              "label": "Hauteur de ligne"
+            },
+            "textAlign": {
+              "label": "Alignement",
+              "options": {
+                "left": "Gauche",
+                "center": "Centre",
+                "right": "Droite",
+                "justify": "Justifié"
+              }
+            },
+            "fontStyle": {
+              "label": "Style",
+              "options": {
+                "normal": "Normal",
+                "italic": "Italique"
+              }
+            },
+            "color": {
+              "label": "Couleur"
+            }
+          }
         }
       }
     },
@@ -1778,10 +1962,80 @@
     },
     "canvas": {
       "templateBoundary": "Limite du modèle",
-      "translatableHint": "Traduit automatiquement dans la langue du destinataire. Modifiez le texte pour utiliser votre propre texte fixe."
+      "translatableHint": "Traduit automatiquement dans la langue du destinataire. Modifiez le texte pour utiliser votre propre texte fixe.",
+      "noLineItems": "Aucun poste",
+      "moreRows": "+{{count}} lignes supplémentaires",
+      "subtotal": "Sous-total",
+      "tax": "Taxe",
+      "total": "Total",
+      "buttonLabel": "Bouton",
+      "signatureLabel": "Signature",
+      "attachmentsLabel": "Pièces jointes",
+      "spacerLabel": "Espaceur",
+      "companyLogo": "Logo de l'entreprise",
+      "insertionMarker": "Le prochain bloc que vous ajoutez sera placé ici",
+      "emptyContainer": "Vide — sélectionnez-le et ajoutez des blocs depuis le panneau de gauche",
+      "localeChip": "Libellés traduits affichés en {{language}} (Langue d'aperçu)",
+      "badgeDragHint": "Faites glisser pour déplacer ce bloc"
     },
     "dragOverlay": {
       "component": "Composant"
+    },
+    "arrange": {
+      "up": "Monter",
+      "upHint": "Déplacer plus haut dans son conteneur (↑)",
+      "down": "Descendre",
+      "downHint": "Déplacer plus bas dans son conteneur (↓)",
+      "out": "Sortir",
+      "outHint": "Sortir de son conteneur et le placer juste après (Alt+←)",
+      "into": "Imbriquer",
+      "intoHint": "Déplacer dans le conteneur situé juste avant (Alt+→)",
+      "copy": "Copier",
+      "copyHint": "Copier (Ctrl/⌘+C). Sélectionnez l'emplacement voulu, puis collez avec Ctrl/⌘+V.",
+      "paste": "Coller",
+      "pasteHint": "Coller dans le conteneur sélectionné ou après le bloc sélectionné (Ctrl/⌘+V)",
+      "duplicate": "Dupliquer",
+      "duplicateHint": "Dupliquer juste après l'original (Ctrl/⌘+D)",
+      "copyStyle": "Copier le style",
+      "copyStyleHint": "Copier les couleurs, bordures, espacements et le style de texte (Ctrl/⌘+Alt+C)",
+      "pasteStyle": "Coller le style",
+      "pasteStyleHint": "Appliquer le style copié à ce bloc (Ctrl/⌘+Alt+V)",
+      "delete": "Supprimer",
+      "deleteHint": "Supprimer (touche Suppr)",
+      "title": "Organiser"
+    },
+    "feedback": {
+      "cannotInsert": "Impossible d'ajouter {{block}} ici.",
+      "insertedOnPage": "{{block}} ajouté à la page.",
+      "insertedInto": "{{block}} ajouté à {{parent}}.",
+      "fieldRebound": "{{name}} affiche désormais {{path}}."
+    },
+    "translation": {
+      "translatedAs": "Libellé standard « {{name}} », traduit pour chaque destinataire",
+      "useFixedText": "Utiliser un texte fixe",
+      "pickStandardLabel": "Texte fixe. Traduire automatiquement…",
+      "searchStandardLabels": "Rechercher des libellés standard…",
+      "standardLabels": "Libellés standard",
+      "noMatches": "Aucun libellé standard trouvé.",
+      "cancel": "Annuler"
+    },
+    "outline": {
+      "collapse": "Réduire {{name}}",
+      "expand": "Développer {{name}}",
+      "title": "Plan"
+    },
+    "dragPreview": {
+      "noTarget": "Hors de la page — relâchez pour annuler",
+      "noChange": "Reste à sa place",
+      "before": "Avant {{block}}",
+      "after": "Après {{block}}",
+      "inside": "Dans {{container}}",
+      "dropOnPage": "Déposez sur la page pour ajouter ce bloc.",
+      "cancelled": "Non déplacé — relâchez au-dessus de la page ou du Plan pour déposer."
+    },
+    "resize": {
+      "handleHint": "Faites glisser pour redimensionner · double-cliquez pour ajuster au contenu",
+      "autoValue": "Automatique ({{value}})"
     }
   },
   "projectBilling": {
@@ -1847,7 +2101,8 @@
         "selectedCount": "{{count}} sélectionnés",
         "clear": "Effacer la sélection"
       }
-    }
+    },
+    "emptyTimeHint": "Le temps et les matériels approuvés ne sont jamais mis en file ici : ils sont facturés par la facturation normale ou par le bouton Générer la facture du projet."
   },
   "invoiceDesigner": {
     "transforms": {
@@ -2036,7 +2291,9 @@
         "addLine": "+ Ligne",
         "clearLines": "Ligne unique",
         "stackedLinesHint": "Chaque ligne non vide s’affiche sur sa propre ligne. Lorsque toutes les lignes sont vides, la clé de liaison de la colonne ci-dessus est affichée.",
-        "removeLine": "Retirer la ligne {{index}}"
+        "removeLine": "Retirer la ligne {{index}}",
+        "align": "Alignement",
+        "widthPlaceholder": "auto | 50% | 120px"
       },
       "columnTypes": {
         "text": "Texte",
@@ -2071,6 +2328,12 @@
         "groupedRowKey": "Clé de ligne regroupée",
         "groupedRowItems": "Éléments de ligne regroupée",
         "availableBinding": "Liaison disponible"
+      },
+      "columnAlign": {
+        "default": "Par défaut",
+        "left": "Gauche",
+        "center": "Centre",
+        "right": "Droite"
       }
     },
     "imagePicker": {
@@ -2089,7 +2352,14 @@
       "clearRowBackground": "Effacer la couleur de fond de la ligne",
       "clearRowTextColor": "Effacer la couleur du texte de la ligne",
       "labelColorOverrideNote": "Cette étiquette conserve sa propre couleur enregistrée et n’hérite pas de la couleur de texte de la ligne définie ci-dessus. Le montant suit la couleur de texte de la ligne.",
-      "noRows": "Ce bloc de totaux ne contient pas encore de lignes enregistrées. Enregistrez le modèle puis rouvrez-le pour modifier les couleurs des lignes."
+      "noRows": "Ce bloc de totaux ne contient pas encore de lignes enregistrées. Enregistrez le modèle puis rouvrez-le pour modifier les couleurs des lignes.",
+      "addRow": "Ajouter une ligne :",
+      "empty": "Aucune ligne pour l'instant. Ajoutez-en une ci-dessous.",
+      "moveUp": "Déplacer {{row}} vers le haut",
+      "moveDown": "Déplacer {{row}} vers le bas",
+      "remove": "Retirer {{row}}",
+      "label": "Libellé",
+      "emphasize": "Mettre en évidence (style du total général)"
     }
   },
   "draftInvoiceDetails": {
@@ -2101,6 +2371,13 @@
     "errors": {
       "invoiceNumberRequired": "Le numéro de facture est obligatoire.",
       "invoiceDateRequired": "La date de la facture est obligatoire."
+    },
+    "labels": {
+      "billingProfile": "Profil de facturation",
+      "billingProfileDefault": "Le profil par défaut du client"
+    },
+    "hints": {
+      "billingProfile": "La facture, ses lignes et la copie envoyée par e-mail suivent ce profil."
     }
   },
   "documentTemplates": {
@@ -2211,7 +2488,8 @@
       "referenceMissing": "La facture, le client, le contrat ou l’enregistrement de facturation sélectionné n’existe plus. Veuillez actualiser la page et réessayer.",
       "duplicate": "Une facture en conflit existe déjà. Veuillez actualiser la page et réessayer.",
       "missingField": "Un champ obligatoire de la facture est manquant.",
-      "missingFieldNamed": "Un champ obligatoire de la facture est manquant : {{field}}."
+      "missingFieldNamed": "Un champ obligatoire de la facture est manquant : {{field}}.",
+      "billingProfileUnavailable": "Le profil de facturation sélectionné n'est pas disponible pour ce client."
     },
     "billingCycle": {
       "notFoundRefresh": "Cycle de facturation introuvable. Il a peut-être été mis à jour ou supprimé. Veuillez actualiser la page et réessayer.",

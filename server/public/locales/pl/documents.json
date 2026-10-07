@@ -5,6 +5,15 @@
     "authorizedBy": "Zatwierdzone przez",
     "billTo": "Nabywca",
     "billedTimeByTicket": "Rozliczony czas według zgłoszeń",
+    "cadence": {
+      "annually": "Rocznie",
+      "monthly": "Miesięcznie",
+      "oneTime": "Jednorazowo",
+      "other": "Inne",
+      "quarterly": "Kwartalnie",
+      "semiAnnually": "Półrocznie"
+    },
+    "cadenceTotal": "Suma {{cadence}}",
     "date": "Data",
     "description": "Opis",
     "discounts": "Rabaty",
@@ -27,6 +36,10 @@
     "oneTimeItems": "Pozycje jednorazowe",
     "oneTimeTotal": "Razem jednorazowo",
     "optional": "Opcjonalne",
+    "optionalIncluded": "Opcjonalne (uwzględnione)",
+    "optionalSection": "Opcjonalne (jeśli wybrane)",
+    "optionalSubtotal": "Suma opcjonalna",
+    "optionalTotal": "Opcjonalnie, jeśli wybrane",
     "orderConfirmationTitle": "POTWIERDZENIE ZAMÓWIENIA",
     "orderDate": "Data zamówienia",
     "orderNumber": "Zamówienie nr",
@@ -77,7 +90,9 @@
       "pickedBy": "Pobrał: ____________________     Data: ____________",
       "preTaxTotals": "Podane sumy nie zawierają podatku. Należny podatek jest naliczany na fakturze.",
       "thankYouForOrder": "Dziękujemy za zamówienie."
-    }
+    },
+    "serialNumbers": "Numery seryjne",
+    "allocatedSerialsNote": "Przypisane numery seryjne; mogą ulec zmianie podczas realizacji."
   },
   "errors": {
     "permissions": {

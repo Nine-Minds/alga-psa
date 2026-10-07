@@ -36,6 +36,9 @@ import {
 } from './handlers/providerDisconnectRetryHandler';
 import { renewGoogleGmailWatchSubscriptions, GoogleGmailWatchRenewalJobData } from '@alga-psa/jobs/handlers/googleGmailWatchRenewalHandler';
 import { processRenewalQueueHandler, RenewalQueueProcessorJobData } from '@alga-psa/jobs/handlers/processRenewalQueueHandler';
+import { createDateTriggerScanHandler, dateTriggerScanHandler, DateTriggerScanJobData } from '@alga-psa/jobs/handlers/dateTriggerScanHandler';
+import { GENERATE_RECURRING_TICKETS_CRON, GENERATE_RECURRING_TICKETS_JOB, type GenerateRecurringTicketsJobData } from './handlers/generateRecurringTicketsHandler';
+import { resolveDateTriggerWorkflowLauncher } from './dateTriggerWorkflowLauncher';
 import { autoCloseTicketsHandler, AutoCloseTicketsJobData } from '@alga-psa/jobs/handlers/autoCloseTicketsHandler';
 import { lowStockNotificationHandler, LowStockNotificationJobData } from './handlers/lowStockNotificationHandler';
 import {
@@ -267,6 +270,11 @@ export const initializeScheduler = async (storageService?: StorageService) => {
     jobScheduler.registerJobHandler<ProviderDisconnectRetryJobData>(PROVIDER_DISCONNECT_RETRY_JOB, async (job: Job<ProviderDisconnectRetryJobData>) => {
       await providerDisconnectRetryJobHandler(job);
     });
+
+    // Keep the legacy scheduler's EE handler aligned with JobHandlerRegistry without a CE import edge.
+    const dateTriggerLauncher = resolveDateTriggerWorkflowLauncher(isEnterpriseWorkflowEdition());
+    const runDateTriggerScan = dateTriggerLauncher ? createDateTriggerScanHandler(dateTriggerLauncher) : dateTriggerScanHandler;
+    jobScheduler.registerJobHandler<DateTriggerScanJobData>('date-trigger-scan', async (job) => { await runDateTriggerScan(job.data); });
 
     // Register renewal queue processing handler
     jobScheduler.registerJobHandler<RenewalQueueProcessorJobData>(
@@ -1039,4 +1047,38 @@ export const scheduleSearchReconcileJob = async (
     cronExpression,
     { tenantId }
   );
+};
+
+export const scheduleDateTriggerScanJob = async (tenantId: string, cronExpression: string = '5 * * * *'): Promise<string | null> => {
+  if (isEnterpriseWorkflowEdition()) return null;
+  const runner = await getJobRunnerInstance();
+  const result = await runner.scheduleRecurringJob<DateTriggerScanJobData>(
+    'date-trigger-scan',
+    { tenantId },
+    cronExpression,
+    { singletonKey: `date-trigger-scan:${tenantId}` }
+  );
+  return result.jobId;
+};
+
+/**
+ * Recurring-ticket generation sweep. CE runs it as a per-tenant pg-boss schedule; EE runs it from the
+ * global maintenance fan-out schedule (generate-recurring-tickets), so this returns null there.
+ *
+ * Goes through the job runner, not the legacy JobScheduler: that one degrades a sub-daily cron to once
+ * every 24 hours, which would turn a 15-minute sweep into a daily one.
+ */
+export const scheduleGenerateRecurringTicketsJob = async (
+  tenantId: string,
+  cronExpression: string = GENERATE_RECURRING_TICKETS_CRON
+): Promise<string | null> => {
+  if (isEnterpriseWorkflowEdition()) return null;
+  const runner = await getJobRunnerInstance();
+  const result = await runner.scheduleRecurringJob<GenerateRecurringTicketsJobData>(
+    GENERATE_RECURRING_TICKETS_JOB,
+    { tenantId },
+    cronExpression,
+    { singletonKey: `${GENERATE_RECURRING_TICKETS_JOB}:${tenantId}` }
+  );
+  return result.jobId;
 };

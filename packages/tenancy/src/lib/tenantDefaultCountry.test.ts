@@ -25,11 +25,20 @@ function fakeConn(table: keyof FakeState) {
 
   return {
     where(criteria: Record<string, any>) {
-      const matched = state[table].filter((row) =>
+      let matched = state[table].filter((row) =>
         Object.entries(criteria).every(([column, value]) => (row[column] ?? null) === value)
       );
 
       const builder = {
+        // The only raw predicate here is the case-insensitive country name match.
+        whereRaw(sql: string, bindings: unknown[] = []) {
+          if (!/lower\(name\)\s*=\s*lower\(\?\)/.test(sql)) {
+            throw new Error(`Unexpected raw predicate ${sql}`);
+          }
+          const needle = String(bindings[0] ?? '').toLowerCase();
+          matched = matched.filter((row) => String(row.name ?? '').toLowerCase() === needle);
+          return builder;
+        },
         // Every ordered column in this resolver is a boolean flag.
         orderBy(column: string, direction: 'asc' | 'desc' = 'asc') {
           matched.sort((left, right) => {
@@ -59,10 +68,16 @@ async function load() {
   return import('./tenantDefaultCountry');
 }
 
-function location(clientId: string, countryCode: string | null, isDefault = true) {
+function location(
+  clientId: string,
+  countryCode: string | null,
+  isDefault = true,
+  countryName: string | null = null
+) {
   return {
     client_id: clientId,
     country_code: countryCode,
+    country_name: countryName,
     is_default: isDefault,
     is_billing_address: isDefault,
     is_active: true,
@@ -109,6 +124,45 @@ describe('resolveClientCountry', () => {
     await expect(resolveClientCountry(conn, 'tenant-1', 'acme')).resolves.toBeNull();
 
     state.client_locations = [location('acme', 'ZZ')];
+    await expect(resolveClientCountry(conn, 'tenant-1', 'acme')).resolves.toBeNull();
+  });
+
+  it('falls back to the stored country name when the code is a legacy alias', async () => {
+    // 'UK' is not an ISO code, so the reference lookup misses it, but the
+    // address still renders "United Kingdom" — resolution must agree.
+    state.client_locations = [location('acme', 'UK', true, 'United Kingdom')];
+
+    const { resolveClientCountry } = await load();
+    await expect(resolveClientCountry(conn, 'tenant-1', 'acme')).resolves.toEqual({
+      code: 'GB',
+      name: 'United Kingdom',
+    });
+  });
+
+  it('falls back to the stored country name when no code was written', async () => {
+    state.client_locations = [location('acme', null, true, 'united kingdom')];
+
+    const { resolveClientCountry } = await load();
+    await expect(resolveClientCountry(conn, 'tenant-1', 'acme')).resolves.toEqual({
+      code: 'GB',
+      name: 'United Kingdom',
+    });
+  });
+
+  it('returns null when neither the code nor the name is in the reference table', async () => {
+    state.client_locations = [location('acme', 'ZZ', true, 'Ruritania')];
+
+    const { resolveClientCountry } = await load();
+    await expect(resolveClientCountry(conn, 'tenant-1', 'acme')).resolves.toBeNull();
+  });
+
+  it('never guesses a country out of the unknown-address placeholders', async () => {
+    const { resolveClientCountry } = await load();
+
+    state.client_locations = [location('acme', 'XX', true, 'United Kingdom')];
+    await expect(resolveClientCountry(conn, 'tenant-1', 'acme')).resolves.toBeNull();
+
+    state.client_locations = [location('acme', null, true, 'Unknown')];
     await expect(resolveClientCountry(conn, 'tenant-1', 'acme')).resolves.toBeNull();
   });
 

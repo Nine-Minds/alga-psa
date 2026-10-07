@@ -283,6 +283,8 @@
     },
     "captchaRequired": "Voltooi de onderstaande verificatie en meld u daarna opnieuw aan.",
     "tooManyAttempts": "Te veel mislukte aanmeldpogingen. Wacht een paar minuten voordat u het opnieuw probeert.",
+    "tenantRequiredMessage": "Uw e-mailadres is gekoppeld aan meer dan één organisatie — kies uw organisatie om door te gaan.",
+    "tenantRequiredLink": "Kies uw organisatie",
     "tenantDiscovery": {
       "title": "Vind uw organisatie",
       "description": "Voer uw e-mailadres in en wij sturen u aanmeldlinks voor alle organisaties waartoe u toegang heeft.",
@@ -426,6 +428,30 @@
         "expMonth": "Voer een geldige maand in (01-12)",
         "expYear": "Voer een geldig jaar in (2024-2099)",
         "cvv": "Voer een geldige CVV in"
+      },
+      "methodUpdateError": "Deze betaalmethode kon niet worden bijgewerkt. Probeer het opnieuw.",
+      "cardSetup": {
+        "success": "Kaart veilig opgeslagen.",
+        "error": "We konden de kaart niet opslaan. Probeer het opnieuw."
+      },
+      "autopay": {
+        "title": "Betaalmethoden en automatische betaling",
+        "loading": "Betaalmethoden laden…",
+        "profileUnavailable": "Betaalmethoden en instellingen voor automatische betaling zijn niet beschikbaar voor dit factuurprofiel.",
+        "cardFallback": "Kaart",
+        "enrolled": "Automatische betaling is ingeschakeld.",
+        "disable": "Automatische betaling uitschakelen",
+        "consent": "Ik machtig terugkerende afschrijvingen van deze kaart voor definitieve facturen.",
+        "enable": "Automatische betaling inschakelen",
+        "noCards": "Voeg een kaart toe om automatische betaling in te schakelen.",
+        "changeCard": "Deze kaart gebruiken voor automatische betaling",
+        "updateError": "De automatische betaling kon niet worden bijgewerkt. Probeer het opnieuw."
+      },
+      "publicCardSetup": {
+        "saved": "Kaart opgeslagen",
+        "failed": "We konden uw kaart niet opslaan",
+        "savedDescription": "Uw kaart is klaar voor toekomstige betalingen.",
+        "failedDescription": "De instelling kon niet worden geverifieerd. Vraag uw factuurverstrekker om een nieuwe link."
       }
     }
   },
@@ -542,7 +568,8 @@
       "avatarDescription": "Deze avatar wordt getoond aan het MSP-team wanneer zij uw contactgegevens bekijken.",
       "emailAlreadyExists": "Er bestaat al een gebruiker met dit e-mailadres",
       "reportsToSelf": "Een gebruiker kan niet aan zichzelf rapporteren",
-      "reportsToCycle": "Dit zou een circulaire rapportagelijn creëren"
+      "reportsToCycle": "Dit zou een circulaire rapportagelijn creëren",
+      "invalidTimezone": "Kies een tijdzone op basis van een stad, zoals America/New_York."
     },
     "imageUpload": {
       "uploadAvatar": "Avatar uploaden",
@@ -566,7 +593,19 @@
       "deleteError": "Verwijderen is mislukt.",
       "deleteConfirm": "Weet u zeker dat u dit wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.",
       "linking": "Koppelen...",
-      "linkDocument": "Document koppelen"
+      "linkDocument": "Document koppelen",
+      "cropTitle": "Kies het vierkante beeldmerk",
+      "cropHelp": "Sleep het logo en zoom om het deel te kiezen dat in kleine, vierkante ruimtes wordt getoond. Zoom uit om ruimte eromheen te laten. Het volledige logo blijft ook bewaard.",
+      "zoom": "Zoom",
+      "zoomOut": "Uitzoomen",
+      "zoomIn": "Inzoomen",
+      "cropPreview": "Voorbeeld",
+      "applyCrop": "Deze uitsnede gebruiken",
+      "adjustMark": "Beeldmerk aanpassen",
+      "cropFromWide": "Uitsnijden uit breed logo",
+      "recropSuccess": "Beeldmerk bijgewerkt.",
+      "recropError": "Het beeldmerk kon niet worden bijgewerkt.",
+      "fileNameLabel": "Opgeslagen bestand"
     },
     "validation": {
       "clientNameRequired": "Bedrijfsnaam is verplicht",
@@ -1000,5 +1039,11 @@
       "duplicate": "Er bestaat al een zichtbaarheidsgroep met deze gegevens voor deze klant.",
       "invalidData": "Ongeldige gegevens voor de zichtbaarheidsgroep. Controleer de groepsgegevens en de geselecteerde borden."
     }
+  },
+  "tabs": {
+    "paymentMethods": "Betaalmethoden en automatische betaling"
+  },
+  "invoice": {
+    "autopayWillCharge": "Wordt op {{date}} afgeschreven van {{brand}} •••• {{last4}}"
   }
 }

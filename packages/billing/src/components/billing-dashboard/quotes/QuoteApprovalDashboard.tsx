@@ -245,7 +245,7 @@ const QuoteApprovalDashboard: React.FC<QuoteApprovalDashboardProps> = ({ embedde
           </AlertDescription>
         </Alert>
       ) : (
-        <DataTable
+        <DataTable id="quote-approvals-table"
           data={quotes}
           columns={columns}
           pagination

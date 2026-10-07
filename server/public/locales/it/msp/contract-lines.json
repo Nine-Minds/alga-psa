@@ -276,7 +276,10 @@
       "heading": "Servizi a tariffa fissa",
       "itemLabel": "Articolo {{index}}",
       "selectItemPlaceholder": "Seleziona un elemento",
-      "servicesAndProducts": "Servizi e prodotti"
+      "servicesAndProducts": "Servizi e prodotti",
+      "recurringQuantity": "Quantità ricorrente",
+      "unitRateOptional": "Facoltativo. Lascia vuota la tariffa unitaria per usare il prezzo di catalogo del servizio nella valuta del cliente quando viene creata una linea da questo preset.",
+      "alertUnits": "Per fatturare invece un servizio per postazione o unità, scegli per esso il prezzo a quantità ricorrente: viene fatturato quantità × tariffa unitaria a ogni periodo e non fa parte della tariffa base."
     },
     "hourly": {
       "addHourlyService": "Aggiungi servizio orario",
@@ -333,7 +336,8 @@
       "serviceSelectRequired": "Servizio {{index}}: selezionare un servizio",
       "unitOfMeasureRequired": "Servizio {{index}}: Unità di misura richiesta",
       "unitRateRequired": "Servizio {{index}}: è richiesta la tariffa unitaria",
-      "usageServiceRequired": "È richiesto almeno un servizio basato sull'utilizzo"
+      "usageServiceRequired": "È richiesto almeno un servizio basato sull'utilizzo",
+      "recurringQuantityInvalid": "Servizio {{index}}: la quantità ricorrente deve essere un numero intero, zero o più"
     }
   },
   "forms": {
@@ -455,7 +459,8 @@
         "defaultRatePerUnit": "Tariffa per unità (utilizzata se il prezzo a scaglioni è disattivato).",
         "minimumUsage": "Unità minime fatturabili per periodo.",
         "unitOfMeasure": "ad esempio GB, Utente, Dispositivo."
-      }
+      },
+      "catalogUnitPrecedence": "L’unità del catalogo ha la precedenza sull’unità di questa configurazione di utilizzo."
     }
   },
   "list": {
@@ -727,7 +732,8 @@
         "enterRatePlaceholder": "Inserisci la tariffa",
         "metadata": "Tipo di servizio: {{type}} | Metodo: {{method}}",
         "noCurrencyPrice": "Nessun prezzo {{currency}}",
-        "rateDetail": "Tariffa: {{symbol}}{{amount}}"
+        "rateDetail": "Tariffa: {{symbol}}{{amount}}",
+        "catalogDefaultRateDetail": "Valore predefinito del catalogo: {{symbol}}{{amount}}"
       },
       "unknownService": "Servizio sconosciuto"
     },

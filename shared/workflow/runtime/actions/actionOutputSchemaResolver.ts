@@ -1,4 +1,4 @@
-import { zodToJsonSchema } from 'zod-to-json-schema';
+import { zodToWorkflowJsonSchema } from '../jsonSchemaMetadata';
 
 import { isWorkflowAiInferAction, resolveWorkflowAiSchemaFromConfig } from '../ai/aiSchema';
 import {
@@ -30,6 +30,6 @@ export const resolveActionCallOutputSchema = (
   const version = typeof config?.version === 'number' ? config.version : 1;
   const defn = registry.get(actionId, version);
   return defn?.outputSchema
-    ? (zodToJsonSchema(defn.outputSchema, { name: `${actionId}@${version}.output` }) as Record<string, unknown>)
+    ? zodToWorkflowJsonSchema(defn.outputSchema, { name: `${actionId}@${version}.output` })
     : null;
 };

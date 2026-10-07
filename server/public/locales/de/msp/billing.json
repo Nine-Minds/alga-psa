@@ -346,7 +346,8 @@
       "billingMethod": "Abrechnungsmethode",
       "quantity": "Menge",
       "defaultRate": "Standardtarif",
-      "actions": "Aktionen"
+      "actions": "Aktionen",
+      "pricing": "Preisgestaltung"
     },
     "tooltip": {
       "defaultRate": "Der Standardsatz des Dienstes, der für die interne Wertzuordnung und Berichterstattung innerhalb der festen Plansumme verwendet wird."
@@ -381,7 +382,17 @@
       "saveSuccess": "Voreingestellte Vertragszeilendienste erfolgreich gespeichert",
       "saveError": "Dienste konnten nicht gespeichert werden"
     },
-    "unknownService": "Unbekannter Dienst"
+    "unknownService": "Unbekannter Dienst",
+    "pricing": {
+      "product": "Abrechnung nach Stückzahl",
+      "bundle": "Teil der Positionssumme",
+      "unit": "Pro Arbeitsplatz / Einheit",
+      "unitRate": "Stückpreis",
+      "unitRatePlaceholder": "Katalogpreis"
+    },
+    "errors": {
+      "recurringQuantityInvalid": "{{name}}: Die wiederkehrende Menge muss eine ganze Zahl von null oder mehr sein."
+    }
   },
   "accountingExports": {
     "title": "Buchhaltungsexporte",

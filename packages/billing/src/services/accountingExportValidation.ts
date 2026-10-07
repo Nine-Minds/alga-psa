@@ -1,10 +1,25 @@
 import { expandAccountingExportCharges } from './accountingExportChargeExpansion';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { AccountingExportRepository } from '../repositories/accountingExportRepository';
-import { AccountingMappingResolver } from './accountingMappingResolver';
+import { AccountingMappingResolver, type MappingResolution } from './accountingMappingResolver';
 import { getAccountingSyncSettings } from './accountingSync/accountingSyncSettings';
-import type { AccountingExportLine, AccountingExportServicePeriodSource } from '@alga-psa/types';
+import type {
+  AccountingExportAdapter,
+  AccountingExportLine,
+  AccountingExportServicePeriodSource
+} from '@alga-psa/types';
 import { normalizeAccountingExportCalendarDate } from './accountingExportDateUtils';
+
+/** Adapter lookup for provider-specific rules; AccountingAdapterRegistry satisfies it. */
+export type AccountingExportAdapterLookup = {
+  get(adapterType: string): AccountingExportAdapter | undefined;
+};
+
+function readExternalDisplayName(metadata: unknown): string | null {
+  if (!metadata || typeof metadata !== 'object') return null;
+  const value = (metadata as Record<string, unknown>).externalDisplayName;
+  return typeof value === 'string' && value.length > 0 ? value : null;
+}
 
 type ChargeProjection = {
   tenant: string;
@@ -15,6 +30,7 @@ type ChargeProjection = {
   net_amount?: number | string | null;
   description?: string | null;
   is_discount?: boolean | null;
+  is_taxable?: boolean | null;
 };
 
 type ChargeDetailProjection = {
@@ -83,7 +99,7 @@ function mergeErrorMetadata(
 }
 
 export class AccountingExportValidation {
-  static async ensureMappingsForBatch(batchId: string, options: { preserveBatchStatus?: boolean } = {}): Promise<void> {
+  static async ensureMappingsForBatch(batchId: string, adapters?: AccountingExportAdapterLookup, options: { preserveBatchStatus?: boolean } = {}): Promise<void> {
     const repo = await AccountingExportRepository.create();
     const batch = await repo.getBatch(batchId);
     if (!batch) {
@@ -175,7 +191,7 @@ export class AccountingExportValidation {
     const charges =
       chargeIds.size > 0
         ? await db.table<ChargeProjection>('invoice_charges')
-            .select('item_id', 'invoice_id', 'service_id', 'tax_region', 'net_amount', 'description', 'is_discount', 'is_manual', 'tax_amount')
+            .select('item_id', 'invoice_id', 'service_id', 'tax_region', 'net_amount', 'description', 'is_discount', 'is_manual', 'tax_amount', 'is_taxable')
             .whereIn('item_id', Array.from(chargeIds))
         : [];
     const expanded = await expandAccountingExportCharges(knex, tenant, new Map(charges.map((charge) => [charge.item_id, charge])), lines);
@@ -297,11 +313,24 @@ export class AccountingExportValidation {
 
     const checkedTaxRegions = new Set<string>();
     const missingTaxRegions = new Set<string>();
+    const invalidTaxRegions = new Set<string>();
+    const taxMappingByRegion = new Map<string, MappingResolution | null>();
     const checkedPaymentTerms = new Set<string>();
     const missingPaymentTerms = new Set<string>();
     const missingClientRefs = new Set<string>();
     const checkedServiceMappings = new Set<string>();
     const missingServiceMappings = new Set<string>();
+
+    // Asked of the adapter at most once per batch, and only once a tax mapping
+    // actually needs judging: the answer can cost a provider round trip.
+    let allowedLineTaxCodes: ReadonlySet<string> | null | undefined;
+    const getAllowedLineTaxCodes = async (): Promise<ReadonlySet<string> | null> => {
+      if (allowedLineTaxCodes === undefined) {
+        allowedLineTaxCodes =
+          (await adapters?.get(adapterType)?.allowedLineTaxCodes?.(tenant, batch.target_realm)) ?? null;
+      }
+      return allowedLineTaxCodes;
+    };
 
     const serviceIds = new Set<string>();
     for (const charge of chargesById.values()) {
@@ -502,7 +531,35 @@ export class AccountingExportValidation {
             });
             missingTaxRegions.add(cacheKey);
           }
+          taxMappingByRegion.set(cacheKey, taxMapping);
           checkedTaxRegions.add(cacheKey);
+        }
+
+        // Taxability is a property of the charge, not of the region, so this
+        // runs for every line even after the region's mapping has been
+        // resolved once. A non-taxable line is exempt from the check: the
+        // exporter sends NON for it on an AST realm whatever the mapping says.
+        const resolvedTaxMapping = taxMappingByRegion.get(cacheKey) ?? null;
+        if (
+          resolvedTaxMapping &&
+          charge.is_taxable !== false &&
+          !invalidTaxRegions.has(cacheKey) &&
+          (await getAllowedLineTaxCodes())?.has(resolvedTaxMapping.external_entity_id) === false
+        ) {
+          const mappedName =
+            readExternalDisplayName(resolvedTaxMapping.metadata) ?? resolvedTaxMapping.external_entity_id;
+          await repo.addError({
+            batch_id: batchId,
+            line_id: line.line_id,
+            code: 'invalid_tax_mapping',
+            message: `Tax region ${charge.tax_region} is mapped to QuickBooks tax code "${mappedName}", which QuickBooks rejects on Automated Sales Tax companies. Map it to TAX or NON under Settings → Integrations → Accounting → QuickBooks → Tax Codes.`,
+            metadata: mergeErrorMetadata(line, {
+              tax_region: charge.tax_region,
+              external_entity_id: resolvedTaxMapping.external_entity_id,
+              external_display_name: mappedName
+            })
+          });
+          invalidTaxRegions.add(cacheKey);
         }
       }
     }

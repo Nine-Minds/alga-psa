@@ -109,6 +109,7 @@ export async function runOpportunityWeeklyDigest(
     });
 
     await getEmailNotificationService().sendNotification({
+      mailClass: 'sales',
       tenant,
       userId: owner.user_id,
       subtypeId: Number(emailSubtype.id),

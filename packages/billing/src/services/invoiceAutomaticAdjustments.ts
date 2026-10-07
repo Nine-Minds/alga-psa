@@ -521,6 +521,8 @@ async function applySettlementRows(
 }
 
 interface InvoiceForSettlement {
+  status: string;
+  finalized_at?: unknown;
   is_manual: boolean;
   client_id: string;
   client_contract_id?: string | null;
@@ -539,7 +541,7 @@ export async function reconcileAutomaticInvoiceDiscounts(
   const invoice = (await tenantScopedTable<Record<string, any>>(tx, tenant, 'invoices')
     .where({ invoice_id: invoiceId, tenant })
     .first()) as InvoiceForSettlement | undefined;
-  if (!invoice) return 0;
+  if (!invoice || invoice.status !== 'draft' || invoice.finalized_at) return 0;
 
   const charges = await loadInvoiceCharges(tx, tenant, invoiceId);
   const provenance = charges.filter((charge) => charge.adjustment_source_kind === 'discount');

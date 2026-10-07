@@ -5,6 +5,13 @@ import {
   projectTaskResponseSchema,
   updateProjectTaskSchema,
 } from '../../schemas/project';
+import {
+  createProjectTaskCommentSchema,
+  projectTaskCommentReactionResponseSchema,
+  projectTaskCommentResponseSchema,
+  toggleProjectTaskCommentReactionSchema,
+  updateProjectTaskCommentSchema,
+} from '../../schemas/projectTaskComment';
 import { ApiOpenApiRegistry, zOpenApi } from '../registry';
 
 export function registerProjectRoutes(
@@ -376,6 +383,127 @@ export function registerProjectRoutes(
       'x-chat-rbac-resource': 'project',
       'x-chat-approval-required': true,
     },
+    edition: 'both',
+  });
+
+  // ---------------------------------------------------------------------------
+  // Task comments and reactions (shared service with the web task thread).
+  // ---------------------------------------------------------------------------
+  const ProjectTaskCommentParams = registry.registerSchema(
+    'ProjectTaskCommentParams',
+    zOpenApi.object({
+      taskId: zOpenApi.string().uuid().describe('Project task UUID.'),
+      commentId: zOpenApi.string().uuid().describe('Task comment UUID.'),
+    }),
+  );
+  const ProjectTaskCommentResource = registry.registerSchema('ProjectTaskCommentResource', projectTaskCommentResponseSchema);
+  const ProjectTaskCommentEnvelope = registry.registerSchema(
+    'ProjectTaskCommentEnvelope',
+    zOpenApi.object({ data: ProjectTaskCommentResource }),
+  );
+  const ProjectTaskCommentListEnvelope = registry.registerSchema(
+    'ProjectTaskCommentListEnvelope',
+    zOpenApi.object({ data: zOpenApi.array(ProjectTaskCommentResource) }),
+  );
+  const ProjectTaskCommentBody = registry.registerSchema('ProjectTaskCommentBody', createProjectTaskCommentSchema);
+  const ProjectTaskCommentUpdateBody = registry.registerSchema('ProjectTaskCommentUpdateBody', updateProjectTaskCommentSchema);
+  const ProjectTaskCommentReactionBody = registry.registerSchema('ProjectTaskCommentReactionBody', toggleProjectTaskCommentReactionSchema);
+  const ProjectTaskCommentReactionEnvelope = registry.registerSchema(
+    'ProjectTaskCommentReactionEnvelope',
+    zOpenApi.object({ data: projectTaskCommentReactionResponseSchema }),
+  );
+  const commentErrors = (extra: Record<number, string> = {}) => ({
+    400: { description: 'Invalid identifiers or request payload.', schema: deps.ErrorResponse },
+    401: { description: 'Authentication failed.', schema: deps.ErrorResponse },
+    403: { description: 'Caller lacks project_task:read, is not an internal user, or is editing someone else\'s comment.', schema: deps.ErrorResponse },
+    404: { description: 'Task not found, or the comment is not on this task.', schema: deps.ErrorResponse },
+    ...Object.fromEntries(Object.entries(extra).map(([code, description]) => [Number(code), { description, schema: deps.ErrorResponse }])),
+  });
+  const commentExtensions = {
+    'x-tenant-header-required': true,
+    'x-rbac-resource': 'project_task',
+    'x-rbac-action': 'read',
+  };
+
+  registry.registerRoute({
+    method: 'get',
+    path: '/api/v1/projects/tasks/{taskId}/comments',
+    summary: 'List project task comments',
+    description:
+      'Returns every comment on the task oldest first, soft-deleted rows included (note "[deleted]", deleted_at set) so reply threads stay well-formed, each with its aggregated emoji reactions. Task comments are always internal. Requires project_task:read.',
+    tags: [tag],
+    security: [{ ApiKeyAuth: [] }],
+    request: { params: ProjectTaskIdParams },
+    responses: {
+      200: { description: 'Task comments returned.', schema: ProjectTaskCommentListEnvelope },
+      ...commentErrors(),
+    },
+    extensions: commentExtensions,
+    edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'post',
+    path: '/api/v1/projects/tasks/{taskId}/comments',
+    summary: 'Add a project task comment',
+    description:
+      'Adds a comment, or a reply when parent_comment_id is given (the parent must be a live comment on the same task). note is BlockNote JSON, exactly what the web composer stores; markdown is derived server-side. Publishes the same TASK_COMMENT_ADDED event as the web, so assignee and @mention notifications fire. Only internal users may comment.',
+    tags: [tag],
+    security: [{ ApiKeyAuth: [] }],
+    request: { params: ProjectTaskIdParams, body: { schema: ProjectTaskCommentBody } },
+    responses: {
+      201: { description: 'Comment created.', schema: ProjectTaskCommentEnvelope },
+      ...commentErrors(),
+    },
+    extensions: commentExtensions,
+    edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'put',
+    path: '/api/v1/projects/tasks/{taskId}/comments/{commentId}',
+    summary: 'Edit a project task comment',
+    description: 'Replaces the comment note (BlockNote JSON) and stamps edited_at. Newly mentioned users are notified. Internal users may edit any comment; others only their own.',
+    tags: [tag],
+    security: [{ ApiKeyAuth: [] }],
+    request: { params: ProjectTaskCommentParams, body: { schema: ProjectTaskCommentUpdateBody } },
+    responses: {
+      200: { description: 'Comment updated.', schema: ProjectTaskCommentEnvelope },
+      ...commentErrors(),
+    },
+    extensions: commentExtensions,
+    edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'delete',
+    path: '/api/v1/projects/tasks/{taskId}/comments/{commentId}',
+    summary: 'Delete a project task comment',
+    description: 'Removes the comment. One that still has replies is soft-deleted (note becomes "[deleted]") so the thread keeps its shape; a leaf comment is removed outright.',
+    tags: [tag],
+    security: [{ ApiKeyAuth: [] }],
+    request: { params: ProjectTaskCommentParams },
+    responses: {
+      204: { description: 'Comment deleted.', emptyBody: true },
+      ...commentErrors(),
+    },
+    extensions: commentExtensions,
+    edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'post',
+    path: '/api/v1/projects/tasks/{taskId}/comments/{commentId}/reactions',
+    summary: 'Toggle a reaction on a project task comment',
+    description: 'Adds the emoji reaction for the caller, or removes it when already present. Returns the comment\'s reactions after the change.',
+    tags: [tag],
+    security: [{ ApiKeyAuth: [] }],
+    request: { params: ProjectTaskCommentParams, body: { schema: ProjectTaskCommentReactionBody } },
+    responses: {
+      200: { description: 'Reaction toggled.', schema: ProjectTaskCommentReactionEnvelope },
+      ...commentErrors(),
+    },
+    extensions: commentExtensions,
     edition: 'both',
   });
 }

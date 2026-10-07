@@ -25,7 +25,10 @@ vi.mock('@alga-psa/db', async (importOriginal) => {
 
 import { SharedNumberingService } from '@shared/services/numberingService';
 import { TestContext } from '../../../../../test-utils/testContext';
-import { createTestService } from '../../../../../test-utils/billingTestHelpers';
+import { createTestService, setupClientTaxConfiguration } from '../../../../../test-utils/billingTestHelpers';
+import { recalculateQuoteFinancials } from '../../../../../../packages/billing/src/services/quoteCalculationService';
+import { mapLoadedQuoteToViewModel } from '../../../../../../packages/billing/src/lib/adapters/quoteAdapters';
+import { calculateDraftQuoteTotals, type DraftQuoteItem } from '../../../../../../packages/billing/src/components/billing-dashboard/quotes/quoteLineItemDraft';
 import Quote from '../../../../../../packages/billing/src/models/quote';
 import QuoteItem from '../../../../../../packages/billing/src/models/quoteItem';
 import {
@@ -36,6 +39,7 @@ import {
   convertQuoteToDraftSalesOrder,
 } from '../../../../../../packages/billing/src/services/quoteConversionService';
 import { recalculatePercentageDiscountInvoiceCharges } from '../../../../../../packages/billing/src/services/invoiceService';
+import { registerTenantUnit } from '../../../../../../shared/billingClients/tenantUnitsOfMeasure';
 
 const {
   beforeAll: setupContext,
@@ -474,6 +478,52 @@ describe('Quote conversion infrastructure', () => {
     const refreshedQuote = await Quote.getById(context.db, context.tenantId, quote.quote_id);
 
     expect(refreshedQuote?.converted_invoice_id).toBe(result.invoice.invoice_id);
+  });
+
+  it('keeps quote item unit labels and codes together on create and update', async () => {
+    const serviceId = await createTestService(context, {
+      service_name: 'Gigabyte catalog item', billing_method: 'fixed', default_rate: 100,
+      unit_of_measure: 'Gigabyte',
+    });
+    const quote = await Quote.create(context.db, context.tenantId, {
+      client_id: context.clientId, title: 'Unit snapshot', quote_date: QUOTE_DATE,
+      valid_until: VALID_UNTIL, subtotal: 0, discount_total: 0, tax: 0,
+      total_amount: 0, currency_code: 'USD', is_template: false, created_by: context.userId,
+    } as any);
+    const item = await QuoteItem.create(context.db, context.tenantId, {
+      quote_id: quote.quote_id, service_id: serviceId, description: 'Storage',
+      quantity: 1, unit_price: 100, unit_of_measure: 'Terabyte', created_by: context.userId,
+    } as any);
+    expect(item).toMatchObject({ unit_of_measure: 'Terabyte', unit_code: '4L' });
+
+    const changedBack = await QuoteItem.update(context.db, context.tenantId, item.quote_item_id, {
+      unit_of_measure: 'Gigabyte',
+    } as any);
+    expect(changedBack).toMatchObject({ unit_of_measure: 'Gigabyte', unit_code: 'E34' });
+    const changed = await QuoteItem.update(context.db, context.tenantId, item.quote_item_id, {
+      unit_of_measure: 'Terabyte',
+    } as any);
+    expect(changed).toMatchObject({ unit_of_measure: 'Terabyte', unit_code: '4L' });
+    const custom = await registerTenantUnit(context.db, context.tenantId, 'Smoke Unit', 'BX');
+    const customChanged = await QuoteItem.update(context.db, context.tenantId, item.quote_item_id, {
+      unit_of_measure: custom.label,
+    } as any);
+    expect(customChanged).toMatchObject({ unit_of_measure: 'Smoke Unit', unit_code: 'BX' });
+  });
+
+  it('copies quote unit snapshots onto base and discount invoice charges', async () => {
+    const { quote, items } = await createAcceptedQuote([
+      { description: 'Storage', unit_price: 1000, billing_method: 'fixed', unit_of_measure: 'Gigabyte' },
+      { description: 'Storage discount', unit_price: 100, is_discount: true, discount_type: 'fixed' },
+    ]);
+    const result = await context.db.transaction((trx) =>
+      convertQuoteToDraftInvoice(trx, context.tenantId, quote.quote_id, context.userId));
+    const charges = await context.db('invoice_charges').where({ tenant: context.tenantId, invoice_id: result.invoice.invoice_id });
+    const base = charges.find((row: any) => row.description === 'Storage');
+    const discount = charges.find((row: any) => row.description === 'Storage discount');
+    expect(base).toMatchObject({ unit_code: 'E34', unit_label: 'Gigabyte' });
+    expect(discount.unit_code).toBeTruthy();
+    expect(discount.unit_label).toBeTruthy();
   });
 
   it('T113: combined conversion creates both a draft contract and draft invoice in one transaction', async () => {
@@ -1276,4 +1326,119 @@ describe('Quote conversion infrastructure', () => {
     expect(Number(finalLines[0].unit_price) + Number(invoice.invoice.subtotal)).toBe(1600);
   });
 
+
+  // alga-2026-0002383: one source of truth for quote totals. For every
+  // selection state the persisted total (quote list / portal), the document
+  // view model (PDF), the editor draft and the converted contract + invoice
+  // must all report the same money.
+  describe('T230: list total == editor total == PDF total == converted amount across optional selection states', () => {
+    type Selection = { monthly: boolean; annual: boolean } | null;
+
+    const toDraft = (row: any): DraftQuoteItem => ({
+      local_id: row.quote_item_id,
+      quote_item_id: row.quote_item_id,
+      service_id: row.service_id ?? null,
+      service_item_kind: null,
+      service_name: null,
+      service_sku: null,
+      billing_method: row.billing_method ?? null,
+      description: row.description,
+      catalog_description: null,
+      quantity: Number(row.quantity),
+      unit_price: Number(row.unit_price),
+      unit_of_measure: null,
+      phase: null,
+      is_optional: Boolean(row.is_optional),
+      is_selected: row.is_selected === true,
+      is_recurring: Boolean(row.is_recurring),
+      billing_frequency: row.billing_frequency ?? null,
+      is_discount: Boolean(row.is_discount),
+      discount_type: row.discount_type ?? null,
+      discount_percentage: row.discount_percentage == null ? null : Number(row.discount_percentage),
+      applies_to_item_id: row.applies_to_item_id ?? null,
+      applies_to_service_id: row.applies_to_service_id ?? null,
+      is_taxable: row.is_taxable !== false,
+      tax_region: row.tax_region ?? null,
+      tax_rate: row.tax_rate == null ? null : Number(row.tax_rate),
+      location_id: row.location_id ?? null,
+    });
+
+    it.each([
+      ['no optional items', null, 80454, 0],
+      ['none selected', { monthly: false, annual: false }, 80454, 9540],
+      ['some selected', { monthly: true, annual: false }, 84694, 5300],
+      ['all selected', { monthly: true, annual: true }, 89994, 0],
+    ] as Array<[string, Selection, number, number]>)('%s', async (_label, selection, expectedTotal, expectedOptional) => {
+      await context.db('clients')
+        .where({ tenant: context.tenantId, client_id: context.clientId })
+        .update({ region_code: 'US-WA', is_tax_exempt: false });
+      await setupClientTaxConfiguration(context, { regionCode: 'US-WA', taxPercentage: 6 });
+
+      const specs: QuoteItemSpec[] = [
+        { description: 'Managed Support', unit_price: 10000, is_recurring: true, billing_frequency: 'monthly', billing_method: 'fixed' },
+        { description: 'Annual Firewall Subscription', unit_price: 15900, is_recurring: true, billing_frequency: 'annually', billing_method: 'fixed' },
+        { description: 'Onboarding', unit_price: 50000, is_recurring: false, billing_method: 'fixed' },
+      ];
+      if (selection) {
+        specs.push(
+          { description: 'Optional Endpoint Backup', unit_price: 4000, is_recurring: true, billing_frequency: 'monthly', billing_method: 'fixed', is_optional: true, is_selected: selection.monthly },
+          { description: 'Optional Annual Security Review', unit_price: 5000, is_recurring: true, billing_frequency: 'annually', billing_method: 'fixed', is_optional: true, is_selected: selection.annual },
+        );
+      }
+      const { quote } = await createAcceptedQuote(specs);
+      await recalculateQuoteFinancials(context.db, context.tenantId, quote.quote_id);
+
+      // 1. Persisted total: what the quote list and the client portal show.
+      const stored = await context.db('quotes')
+        .where({ tenant: context.tenantId, quote_id: quote.quote_id })
+        .first();
+      expect(Number(stored.total_amount)).toBe(expectedTotal);
+
+      // 2. PDF view model.
+      const loaded = (await Quote.getById(context.db, context.tenantId, quote.quote_id))!;
+      const viewModel = await mapLoadedQuoteToViewModel(context.db, context.tenantId, loaded);
+      expect(viewModel.total_amount).toBe(expectedTotal);
+      expect(viewModel.subtotal).toBe(Number(stored.subtotal));
+      expect(viewModel.tax).toBe(Number(stored.tax));
+      expect(viewModel.optional_total).toBe(expectedOptional);
+
+      // 3. Editor draft built from the persisted rows.
+      const draft = calculateDraftQuoteTotals((loaded.quote_items ?? []).map(toDraft));
+      expect(draft.total_amount).toBe(expectedTotal);
+      expect(draft.optional_total).toBe(expectedOptional);
+
+      // 4. Conversion converts exactly the included rows: recurring lines to
+      //    the contract at their quoted rates, one-time rows to the invoice.
+      const result = await context.db.transaction((trx) =>
+        convertQuoteToDraftContractAndInvoice(trx, context.tenantId, quote.quote_id, context.userId)
+      );
+      const lines = await context.db('contract_lines')
+        .where({ tenant: context.tenantId, contract_id: result.contract.contract_id });
+      const configs = await context.db('contract_line_service_configuration')
+        .where({ tenant: context.tenantId })
+        .whereIn('contract_line_id', lines.map((line: any) => line.contract_line_id));
+      const fixedConfigs = await context.db('contract_line_service_fixed_config')
+        .where({ tenant: context.tenantId })
+        .whereIn('config_id', configs.map((config: any) => config.config_id));
+      const convertedRecurring = fixedConfigs.reduce((sum: number, config: any) => sum + Number(config.base_rate), 0);
+      const invoice = await context.db('invoices')
+        .where({ tenant: context.tenantId, invoice_id: result.invoice.invoice_id })
+        .first();
+
+      const recurringBands = (viewModel.groups_by_cadence ?? []).filter((band) => band.is_recurring);
+      const onetimeBand = (viewModel.groups_by_cadence ?? []).find((band) => !band.is_recurring)!;
+      const includedRecurringCount = (loaded.quote_items ?? []).filter(
+        (item) => item.is_recurring && (!item.is_optional || item.is_selected === true)
+      ).length;
+      expect(lines).toHaveLength(includedRecurringCount);
+      expect(convertedRecurring).toBe(recurringBands.reduce((sum, band) => sum + band.subtotal, 0));
+      expect(Number(invoice.subtotal)).toBe(onetimeBand.subtotal);
+      expect(Number(invoice.total_amount)).toBe(onetimeBand.total);
+
+      // Converted amount (contract rates + invoice total) plus the recurring
+      // tax the contract bills at invoicing time equals the quoted total.
+      const recurringTax = recurringBands.reduce((sum, band) => sum + band.tax, 0);
+      expect(convertedRecurring + Number(invoice.total_amount) + recurringTax).toBe(expectedTotal);
+    }, 60000);
+  });
 });

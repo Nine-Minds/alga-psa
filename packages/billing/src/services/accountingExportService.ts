@@ -310,7 +310,7 @@ export class AccountingExportService {
     let adapterSettings: Record<string, unknown> | undefined;
     let context: AccountingExportAdapterContext;
     try {
-      await AccountingExportValidation.ensureMappingsForBatch(batchId, { preserveBatchStatus: true });
+      await AccountingExportValidation.ensureMappingsForBatch(batchId, this.adapterRegistry, { preserveBatchStatus: true });
       refreshed = await this.getBatchWithDetails(batchId);
       if (!refreshed.batch) {
         throw new Error(`Export batch ${batchId} was not found after validation`);

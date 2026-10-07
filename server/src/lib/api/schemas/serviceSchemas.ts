@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { uuidSchema } from './common';
+import { isUnitOfMeasureCode } from '@alga-psa/core/unitOfMeasure';
 
 const billingMethodSchema = z.enum(['fixed', 'hourly', 'usage']);
 
@@ -26,13 +27,19 @@ const serviceShape = {
   custom_service_type_id: uuidSchema,
   billing_method: billingMethodSchema,
   default_rate: defaultRateSchema,
-  unit_of_measure: z.string().min(1).max(128),
+  unit_of_measure: z.string().trim().min(1).max(128).optional(),
+  unit_code: z.string().refine(isUnitOfMeasureCode, 'Unknown unit of measure code').optional(),
   category_id: nullableUuidSchema.optional(),
   tax_rate_id: nullableUuidSchema.optional(),
-  description: descriptionSchema.optional()
+  description: descriptionSchema.optional(),
+  is_active: z.boolean().optional()
 } as const;
 
-export const createServiceSchema = z.object(serviceShape);
+export const createServiceSchema = z.object(serviceShape).superRefine((data, ctx) => {
+  if (data.billing_method === 'usage' && !data.unit_of_measure && !data.unit_code) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['unit_of_measure'], message: 'Usage services require a unit of measure' });
+  }
+});
 
 export const updateServiceSchema = z.object(serviceShape)
   .partial()
@@ -53,7 +60,9 @@ const serviceSortSchema = z.enum(['service_name', 'billing_method', 'default_rat
 
 export const serviceListQuerySchema = z.object({
   page: z.coerce.number().int().min(1).optional().default(1),
-  limit: z.coerce.number().int().min(1).max(100).optional().default(25),
+  // Clamp rather than reject, matching the opportunities list page_size: an
+  // oversized limit gets a full page, not a 400.
+  limit: z.coerce.number().int().min(1).optional().default(25).transform((value) => Math.min(value, 100)),
   sort: serviceSortSchema.optional().default('service_name'),
   order: z.enum(['asc', 'desc']).optional().default('asc'),
   search: z.string().optional(),

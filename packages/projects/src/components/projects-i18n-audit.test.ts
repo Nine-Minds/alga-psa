@@ -301,6 +301,61 @@ describe('T011: /msp/projects/[id] detail page i18n coverage', () => {
     expect(source).toContain("useTranslation");
     expect(getLeaf(pseudo, 'taskTicketLinks.title')).toMatch(pseudoPattern('xx'));
   });
+
+  it('the ticket-time billing choice is translated on both the task and the ticket side', () => {
+    const taskSide = read('./TaskTicketLinks.tsx');
+    // Pre-ticked: linking a ticket to a task means its time is project work.
+    expect(taskSide).toContain('id="bill-under-project-checkbox"');
+    expect(taskSide).toContain("linkT('billUnderProjectLabel'");
+    expect(taskSide).toContain("linkT('billingOffBadge'");
+    expect(taskSide).toContain('setTicketLinkBillingAction(link.link_id, nextValue)');
+
+    const ticketSide = read('./TicketLinkedTasksBadge.tsx');
+    expect(ticketSide).toContain("t('dialogs.ticketLinkedTasks.billsToProject'");
+    expect(ticketSide).toContain("t('dialogs.ticketLinkedTasks.billsToClient'");
+
+    for (const key of [
+      'taskTicketLinks.billUnderProjectLabel',
+      'taskTicketLinks.billingOffBadge',
+      'taskTicketLinks.billingOnTooltip',
+      'taskTicketLinks.billingOffTooltip',
+      'taskTicketLinks.billingOnSuccess',
+      'taskTicketLinks.billingOffSuccess',
+      'taskTicketLinks.billingUpdateFailed',
+      'dialogs.ticketLinkedTasks.billsToProject',
+      'dialogs.ticketLinkedTasks.billsToClient',
+    ]) {
+      expect(getLeaf(pseudo, key), key).toMatch(pseudoPattern('xx'));
+    }
+  });
+
+  it('the stranded-currency notices on the project billing cards are translated', () => {
+    const budgetCard = read(
+      '../../../billing/src/components/project-billing/BudgetVsActualCard.tsx'
+    );
+    expect(budgetCard).toContain("'billing.budget.currencyStale'");
+    expect(budgetCard).toContain('id="project-billing-currency-mismatch"');
+
+    const capPanel = read('../../../billing/src/components/project-billing/CapPanel.tsx');
+    expect(capPanel).toContain("'billing.cap.currencyStale'");
+    expect(capPanel).toContain('id="project-billing-cap-currency-stale"');
+
+    for (const key of ['billing.budget.currencyStale', 'billing.cap.currencyStale']) {
+      expect(getLeaf(pseudo, key), key).toMatch(pseudoPattern('xx'));
+    }
+  });
+
+  it("the project billing queue says approved time is not reviewed there", () => {
+    const reviewTab = read(
+      '../../../billing/src/components/billing-dashboard/invoicing/ProjectBillingReviewTab.tsx'
+    );
+    expect(reviewTab).toContain("t('projectBilling.emptyTimeHint'");
+
+    const invoicingPseudo = readJson<Record<string, unknown>>(
+      '../../../../server/public/locales/xx/msp/invoicing.json'
+    );
+    expect(getLeaf(invoicingPseudo, 'projectBilling.emptyTimeHint')).toMatch(pseudoPattern('xx'));
+  });
 });
 
 // ── T012: /msp/projects/templates routes pseudo-locale coverage ─────────────

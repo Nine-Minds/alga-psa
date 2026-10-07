@@ -6,6 +6,24 @@ import {
 } from './invoiceAdapters';
 
 describe('mapDbInvoiceToWasmViewModel', () => {
+  it('maps the payment-method snapshot to its label, and a missing one to null', () => {
+    const base = {
+      invoice_number: 'INV-600',
+      invoice_date: '2026-02-01',
+      due_date: '2026-02-01',
+      client: { name: 'Acme', address: '123 Main' },
+      invoice_charges: [],
+      subtotal: '0',
+      tax: '0',
+      total: '0',
+    };
+
+    expect(mapDbInvoiceToWasmViewModel({ ...base, payment_method: 'check' })?.paymentMethod).toBe('Check');
+    expect(mapDbInvoiceToWasmViewModel({ ...base, payment_method: null })?.paymentMethod).toBeNull();
+    // Invoices generated before the snapshot existed carry no column value.
+    expect(mapDbInvoiceToWasmViewModel(base)?.paymentMethod).toBeNull();
+  });
+
   it('maps db invoice payload numeric and string fields into wasm preview model', () => {
     const mapped = mapDbInvoiceToWasmViewModel({
       invoice_number: 'INV-500',

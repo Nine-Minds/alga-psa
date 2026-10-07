@@ -276,7 +276,10 @@
       "heading": "Servicios de tarifa fija",
       "itemLabel": "Artículo {{index}}",
       "selectItemPlaceholder": "Seleccione un artículo",
-      "servicesAndProducts": "Servicios y productos"
+      "servicesAndProducts": "Servicios y productos",
+      "recurringQuantity": "Cantidad recurrente",
+      "unitRateOptional": "Opcional. Deje la tarifa unitaria vacía para usar el precio de catálogo del servicio en la moneda del cliente cuando se cree una línea a partir de este preajuste.",
+      "alertUnits": "Para facturar un servicio por puesto o unidad, elija para él el precio por cantidad recurrente: se factura cantidad × tarifa unitaria en cada período y no forma parte de la tarifa base."
     },
     "hourly": {
       "addHourlyService": "Agregar servicio por horas",
@@ -333,7 +336,8 @@
       "serviceSelectRequired": "Servicio {{index}}: Por favor seleccione un servicio",
       "unitOfMeasureRequired": "Servicio {{index}}: Se requiere unidad de medida",
       "unitRateRequired": "Servicio {{index}}: Se requiere tarifa unitaria",
-      "usageServiceRequired": "Se requiere al menos un servicio basado en el uso"
+      "usageServiceRequired": "Se requiere al menos un servicio basado en el uso",
+      "recurringQuantityInvalid": "Servicio {{index}}: La cantidad recurrente debe ser un número entero, cero o más"
     }
   },
   "forms": {
@@ -455,7 +459,8 @@
         "defaultRatePerUnit": "Tarifa por unidad (se utiliza si el precio escalonado está desactivado).",
         "minimumUsage": "Unidades mínimas facturables por período.",
         "unitOfMeasure": "por ejemplo, GB, Usuario, Dispositivo."
-      }
+      },
+      "catalogUnitPrecedence": "La unidad del catálogo tiene prioridad sobre la unidad de esta configuración de uso."
     }
   },
   "list": {
@@ -727,7 +732,8 @@
         "enterRatePlaceholder": "Introducir tarifa",
         "metadata": "Tipo de servicio: {{type}} | Método: {{method}}",
         "noCurrencyPrice": "Sin precio {{currency}}",
-        "rateDetail": "Tarifa: {{symbol}}{{amount}}"
+        "rateDetail": "Tarifa: {{symbol}}{{amount}}",
+        "catalogDefaultRateDetail": "Valor predeterminado del catálogo: {{symbol}}{{amount}}"
       },
       "unknownService": "Servicio desconocido"
     },

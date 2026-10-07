@@ -113,7 +113,7 @@ Each generated suggestion carries a `dedupe_key`. On every run, `classifyExistin
 Three recurring jobs are registered in `server/src/lib/jobs/index.ts`, each with a per-tenant singleton key:
 
 | Job | Default cron | Handler |
-|-----|--------------|---------|
+|-----|--------------|--------|
 | `opportunity-generators` | `0 6 * * *` | Runs the sweep generators |
 | `opportunity-discipline` | `0 7 * * *` | Nudges, escalates, and flags overdue actions |
 | `opportunity-weekly-digest` | `0 8 * * 1` | Sends the weekly digest |
@@ -136,6 +136,18 @@ Two things follow a win:
 
 - `promoteProspectClientAfterWin()` flips a client whose `lifecycle_status` is `prospect` to `active` and publishes `CLIENT_STATUS_CHANGED`. Clients in any other state are left alone.
 - `getOpportunityHandoffData()` assembles what the delivery team needs on the created project, including Enterprise commitments recorded during the sale.
+
+## Documents
+
+Opportunities are a first-class document association entity type. The `document_associations.entity_type` check constraint includes `opportunity`, and the documents module handles `opportunityId` upload options and entity searches alongside tickets, project tasks, contracts, and clients.
+
+**Upload and search**: `uploadDocument` accepts an `opportunityId` upload option and creates the `document_associations` row in the same call, resolving entity and folder context the same way it does for other entity types. `searchDocumentAssociationEntities` includes an `opportunity` branch that joins to `clients` and surfaces the opportunity number, title, and client name as the searchable label with full-text search across all three.
+
+**Default folders**: the first upload to any opportunity seeds a default folder tree — `/Opportunities/Requirements`, `/Opportunities/Proposals`, `/Opportunities/Correspondence` — so files land in a structured location without manual setup.
+
+**Cascade delete**: `deleteOpportunity` removes all `document_associations` rows for the opportunity before deleting the opportunity itself. The underlying `documents` rows are intentionally left intact so files that are also associated with the client or a linked quote remain accessible.
+
+**UI**: `OpportunityDocumentsTile` (`packages/opportunities/src/components/`) renders the bento tile in `OpportunityDetailView`, listing linked documents with extension badge and file size, supporting the document viewer drawer, and opening a full manager dialog for add and manage actions.
 
 ## Reporting
 
