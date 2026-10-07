@@ -157,6 +157,40 @@ close" — the other way to leave a comment — had no Cc/Bcc at all.
   missing. `QuickAddTicket`, `BentoHero` and `TicketInfo` use `TextEditor` for
   ticket *descriptions*, not comments, and `TaskCommentThread` is project tasks.
 
+## Round 4 — the close copy that never arrived (2026-10-07)
+
+A browser check reported that **Resolve and close** saved both recipients and
+closed the ticket, but the requester's close email carried no `Cc` and neither
+copied address received anything. The comment path, checked minutes earlier on
+the same ticket, delivered to both.
+
+It was not the code. The stored row was exactly what the handler asks for —
+`is_resolution`, not internal, `metadata.closes_ticket = true`, both lists under
+`email_recipients` — and `email_sending_logs` showed the close message leaving
+with `cc_addresses` and `bcc_addresses` empty while the earlier comment message
+recorded both. The dev server behind the check had been up since the evening
+before, and the event bus logs "Initializing event bus and subscribers" exactly
+once, at boot: `handleTicketClosed` was registered hours before the close-email
+Cc/Bcc code was written, so the running handler was the old one. Restarting it
+and repeating the flow put `verify-close-cc` in `cc_addresses`,
+`verify-close-bcc` in `bcc_addresses` and a message in both mailboxes.
+
+The lesson worth keeping: **event-bus subscribers do not hot-reload.** Next's
+dev server recompiles routes, actions and components on demand — which is why
+the new dialog rendered and stored its recipients — but the handlers registered
+at boot keep their original closures. Any change under
+`server/src/lib/eventBus/subscribers/` needs a dev-server restart before it can
+be observed, and a deploy that ships one needs the server process restarted (the
+operator note about deploying server, workflow-worker and email-service together
+already covers the release case).
+
+To stop the writer and the reader from drifting apart unnoticed, T081 builds the
+closing resolution through `TicketModel.createComment` — the same model the
+dialog's action uses, including address normalisation and metadata merge —
+instead of hand-writing the row, then runs the close handler against real SMTP.
+The other close cases still hand-write their fixtures, so a shape change now
+fails one test rather than none.
+
 ## Commands
 
 - Regenerate OpenAPI and sync the developer portal with the `alga-openapi-sync` skill.
