@@ -24,7 +24,11 @@ vi.mock('@alga-psa/ui', () => ({
 
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
   useTranslation: () => ({
-    t: (_key: string, fallback?: string) => fallback ?? _key,
+    t: (_key: string, fallback?: string | { defaultValue?: string; [option: string]: unknown }) => {
+      if (typeof fallback === 'string' || fallback === undefined) return fallback ?? _key;
+      // i18next-style options: interpolate {{name}} into the default value.
+      return (fallback.defaultValue ?? _key).replace(/\{\{(\w+)\}\}/g, (_m, name) => String(fallback[name] ?? ''));
+    },
   }),
 }));
 

@@ -13,6 +13,7 @@ interface Task {
   phase_id: string;
   task_name?: string;
   description?: string;
+  start_date?: Date | null;
   due_date?: Date | null;
   status_name?: string;
   assigned_to_name?: string;
@@ -190,6 +191,18 @@ export default function ProjectTasksSection({
                                 {t('tasks.assignedTo', 'Assigned To')}:
                               </span>{' '}
                               <span className="text-gray-600">{task.assigned_to_name}</span>
+                            </div>
+                          )}
+
+                          {/* Start Date */}
+                          {visibleFields.includes('start_date') && task.start_date && (
+                            <div>
+                              <span className="font-medium text-gray-700">
+                                {t('tasks.startDate', 'Start Date')}:
+                              </span>{' '}
+                              <span className="text-gray-600">
+                                {format(new Date(task.start_date), 'PPP', { locale: dateLocale })}
+                              </span>
                             </div>
                           )}
 

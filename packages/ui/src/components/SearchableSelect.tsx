@@ -152,6 +152,54 @@ export function rankSearchableSelectOptions(options: SelectOption[], search: str
     .map((entry) => entry.option);
 }
 
+const OVERLAY_GAP = 4;
+const OVERLAY_VIEWPORT_GUTTER = 8;
+/** Search row above the list: input height plus its border. */
+const OVERLAY_SEARCH_ROW = 44;
+/** Below this much room the list is too short to pick from, so flipping wins. */
+const OVERLAY_MIN_USEFUL_HEIGHT = 220;
+const OVERLAY_MIN_LIST_HEIGHT = 96;
+
+/** `maxListHeight` (`15rem`, `240px`, …) in px; falls back to 240 for anything else. */
+export function parseOverlayListHeight(maxListHeight: string): number {
+  const match = /^([\d.]+)\s*(px|rem|em)?$/.exec(maxListHeight.trim());
+  if (!match) return 240;
+  const amount = Number.parseFloat(match[1]);
+  if (!Number.isFinite(amount)) return 240;
+  return match[2] === 'rem' || match[2] === 'em' ? amount * 16 : amount;
+}
+
+/**
+ * Where an overlay dropdown goes vertically. It opens below the trigger as long as the list is
+ * usable there; when the viewport is too short (a picker low in a side panel) it flips above
+ * instead of running off the bottom edge, and the list is capped to the room it actually has.
+ */
+export function resolveOverlayVerticalFit({
+  triggerTop,
+  triggerBottom,
+  viewportHeight,
+  preferredListHeight,
+}: {
+  triggerTop: number;
+  triggerBottom: number;
+  viewportHeight: number;
+  preferredListHeight: number;
+}): { placement: 'below' | 'above'; listMaxHeight: number } {
+  const spaceBelow = viewportHeight - triggerBottom - OVERLAY_GAP - OVERLAY_VIEWPORT_GUTTER;
+  const spaceAbove = triggerTop - OVERLAY_GAP - OVERLAY_VIEWPORT_GUTTER;
+  const neededBelow = Math.min(preferredListHeight + OVERLAY_SEARCH_ROW, OVERLAY_MIN_USEFUL_HEIGHT);
+  const placement = spaceBelow >= neededBelow || spaceBelow >= spaceAbove ? 'below' : 'above';
+  const space = placement === 'below' ? spaceBelow : spaceAbove;
+
+  return {
+    placement,
+    listMaxHeight: Math.max(
+      OVERLAY_MIN_LIST_HEIGHT,
+      Math.min(preferredListHeight, space - OVERLAY_SEARCH_ROW)
+    ),
+  };
+}
+
 export function SearchableSelect({
   options,
   value,
@@ -181,7 +229,13 @@ export function SearchableSelect({
   const [search, setSearch] = useState('');
   const triggerRef = useRef<HTMLButtonElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
-  const [overlayPosition, setOverlayPosition] = useState<{ top: number; left: number; width: number } | null>(null);
+  const [overlayPosition, setOverlayPosition] = useState<{
+    top?: number;
+    bottom?: number;
+    left: number;
+    width: number;
+    listMaxHeight: number;
+  } | null>(null);
   const [announce, setAnnounce] = useState('');
 
   // Memoize the mapped options to prevent recreating on every render
@@ -259,28 +313,42 @@ export function SearchableSelect({
     const rect = triggerRef.current.getBoundingClientRect();
     const container = getResolvedPortalContainer();
     const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : rect.right;
-    const gutter = 8;
+    const viewportHeight = typeof window !== 'undefined' ? window.innerHeight : rect.bottom;
+    const gutter = OVERLAY_VIEWPORT_GUTTER;
     // At least the trigger's width, wider when asked, never wider than the viewport.
     const width = Math.min(Math.max(rect.width, dropdownMinWidth ?? 0), Math.max(rect.width, viewportWidth - gutter * 2));
     // Grow leftwards when the wider list would run off the right edge.
     const viewportLeft = Math.max(gutter, Math.min(rect.left, viewportWidth - gutter - width));
+    // Open upwards instead of off the bottom edge when the viewport is short.
+    const { placement, listMaxHeight } = resolveOverlayVerticalFit({
+      triggerTop: rect.top,
+      triggerBottom: rect.bottom,
+      viewportHeight,
+      preferredListHeight: parseOverlayListHeight(maxListHeight),
+    });
 
     if (!container || container === document.body) {
       setOverlayPosition({
-        top: rect.bottom + 4,
+        ...(placement === 'below'
+          ? { top: rect.bottom + OVERLAY_GAP }
+          : { bottom: viewportHeight - rect.top + OVERLAY_GAP }),
         left: viewportLeft,
         width,
+        listMaxHeight,
       });
       return;
     }
 
     const containerRect = container.getBoundingClientRect();
     setOverlayPosition({
-      top: rect.bottom - containerRect.top + 4,
+      ...(placement === 'below'
+        ? { top: rect.bottom - containerRect.top + OVERLAY_GAP }
+        : { bottom: containerRect.bottom - rect.top + OVERLAY_GAP }),
       left: viewportLeft - containerRect.left,
       width,
+      listMaxHeight,
     });
-  }, [dropdownMinWidth, getResolvedPortalContainer]);
+  }, [dropdownMinWidth, getResolvedPortalContainer, maxListHeight]);
 
   // Positioning for overlay dropdowns
   useEffect(() => {
@@ -384,7 +452,12 @@ export function SearchableSelect({
           role="listbox"
           aria-label={label ?? resolvedPlaceholder}
           className="overflow-y-auto p-1"
-          style={{ maxHeight: maxListHeight }}
+          style={{
+            maxHeight:
+              dropdownMode === 'overlay' && overlayPosition
+                ? `${overlayPosition.listMaxHeight}px`
+                : maxListHeight,
+          }}
         >
           {filteredOptions.length > 0 ? (
             groupSearchableSelectOptions(filteredOptions).map((run, runIndex) => (
@@ -529,6 +602,7 @@ export function SearchableSelect({
                 style={{
                   position: container === document.body ? 'fixed' : 'absolute',
                   top: overlayPosition.top,
+                  bottom: overlayPosition.bottom,
                   left: overlayPosition.left,
                   width: overlayPosition.width,
                   marginTop: 0,

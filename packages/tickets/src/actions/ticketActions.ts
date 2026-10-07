@@ -81,6 +81,7 @@ import {
   type TicketDuplicateSource,
 } from '../lib/ticketDuplicate';
 import { getClientContactVisibilityContext } from '../lib/clientPortalVisibility.server';
+import { extractActiveWatcherContactIds } from '@alga-psa/authorization/portal/visibility';
 import {
   addTicketCommentWithCache,
   updateTicketWithCache,
@@ -260,6 +261,9 @@ function toTicketAuthorizationRecord(
     clientId: ticket.client_id ?? null,
     boardId: ticket.board_id ?? null,
     contactId: ticket.contact_name_id ?? null,
+    // `undefined` (column not selected) can never satisfy a profile grant.
+    billingProfileId: ticket.billing_profile_id,
+    watcherContactIds: extractActiveWatcherContactIds(ticket.attributes),
     teamIds: ticket.assigned_team_id ? [ticket.assigned_team_id] : [],
   };
 }

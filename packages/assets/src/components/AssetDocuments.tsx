@@ -10,18 +10,24 @@ interface AssetDocumentsProps {
     tenant: string;
     initialDocuments?: IDocument[];
     onDocumentCreated?: () => Promise<void>;
+    /** Optional loading state supplied by the parent while it fetches `initialDocuments`. */
+    isLoading?: boolean;
 }
+
+// Module-level so omitting `initialDocuments` yields a referentially stable value;
+// a fresh `[]` default would re-trigger the prop-sync effect on every render.
+const EMPTY_DOCUMENTS: IDocument[] = [];
 
 const AssetDocuments: React.FC<AssetDocumentsProps> = ({
     assetId,
     tenant,
-    initialDocuments = [],
-    onDocumentCreated
+    initialDocuments = EMPTY_DOCUMENTS,
+    onDocumentCreated,
+    isLoading = false
 }) => {
     const router = useRouter();
     const { renderDocuments } = useDocumentsCrossFeature();
     const [documents, setDocuments] = useState<IDocument[]>(initialDocuments);
-    const [isLoading, setIsLoading] = useState(false);
 
     // Sync from props when they change
     useEffect(() => {

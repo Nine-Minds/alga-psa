@@ -483,3 +483,17 @@ it.each([
   const subscriptions = await (await graph('/subscriptions')).json();
   expect(subscriptions.value).toHaveLength(accepted ? 1 : 0);
 });
+
+it('persists master categories and event category edits', async () => {
+  const name = "Alga calendar: Team's closures";
+  const createdCategory = await graph('/me/outlook/masterCategories', 'POST', { displayName: name, color: 'preset0' });
+  expect(createdCategory.status).toBe(201);
+  const lookup = await graph(`/me/outlook/masterCategories?$filter=${encodeURIComponent("displayName eq 'Alga calendar: Team''s closures'")}`);
+  expect((await lookup.json()).value).toEqual([expect.objectContaining({ displayName: name, color: 'preset0' })]);
+  expect((await graph('/me/outlook/masterCategories', 'POST', { displayName: 'Invalid', color: 'auto' })).status).toBe(400);
+  const created = await createEvent({ categories: [name] });
+  expect(created.categories).toEqual([name]);
+  const updated = await graph(`/me/calendar/events/${created.id}`, 'PATCH', { categories: ['Personal'] });
+  expect((await updated.json()).categories).toEqual(['Personal']);
+  expect((await (await graph(`/me/calendar/events/${created.id}`)).json()).categories).toEqual(['Personal']);
+});

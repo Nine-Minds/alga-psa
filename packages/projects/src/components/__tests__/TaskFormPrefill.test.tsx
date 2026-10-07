@@ -154,8 +154,13 @@ vi.mock('../TaskTicketLinks', () => ({
 }));
 
 vi.mock('@alga-psa/ui/components/DatePicker', () => ({
-  DatePicker: ({ value }: { value?: Date }) => (
-    <input data-testid="due-date" value={value ? value.toISOString() : ''} readOnly />
+  // The form renders a start-date and a due-date picker; tell them apart by id.
+  DatePicker: ({ value, id }: { value?: Date; id?: string }) => (
+    <input
+      data-testid={id === 'task-start-date-picker' ? 'start-date' : 'due-date'}
+      value={value ? value.toISOString() : ''}
+      readOnly
+    />
   )
 }));
 
