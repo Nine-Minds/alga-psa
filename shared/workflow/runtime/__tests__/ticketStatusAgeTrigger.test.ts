@@ -124,6 +124,25 @@ describe('payload.TicketStatusAge.v1', () => {
   });
 });
 
+describe('an event trigger on a date source catalog row', () => {
+  const eventDefinition = (eventName: string) => ({
+    id: 'wf', version: 1, name: 'Catalog trap', payloadSchemaRef: 'payload.TicketStatusAge.v1', trigger: { type: 'event', eventName }, steps: [],
+  }) as any;
+
+  it('is rejected at publish, pointing at the date trigger', () => {
+    const errors = validateWorkflowDefinition(eventDefinition('TICKET_STATUS_AGE')).errors;
+    const found = errors.find((e) => e.code === 'EVENT_TRIGGER_IS_DATE_SOURCE');
+    expect(found?.message).toContain('date trigger');
+    expect(found?.message).toContain('ticket.status_age');
+  });
+
+  it('does not reject real events, including ones a date source also emits', () => {
+    for (const name of ['TICKET_CREATED', 'CLIENT_ANNIVERSARY_UPCOMING']) {
+      expect(validateWorkflowDefinition(eventDefinition(name)).errors.map((e) => e.code)).not.toContain('EVENT_TRIGGER_IS_DATE_SOURCE');
+    }
+  });
+});
+
 describe('publish validation of the status-age trigger', () => {
   const definition = (trigger: Record<string, unknown>) => ({
     id: 'wf', version: 1, name: 'Lynda: ticket waiting for client 7 days', payloadSchemaRef: 'payload.TicketStatusAge.v1', trigger, steps: [],

@@ -18,7 +18,7 @@ describe('ticket status-age catalog migration', () => {
     const definition = dateTriggerSourceDefinitions.find((d) => d.id === 'ticket.status_age');
     expect(table).toHaveBeenCalledWith('system_event_catalog');
     expect(insert).toHaveBeenCalledWith(expect.objectContaining({
-      event_type: 'TICKET_STATUS_AGE',
+      event_type: definition?.catalogEventType,
       payload_schema_ref: definition?.payloadSchemaRef,
       created_at: '2026-10-05T00:00:00.000Z',
     }));

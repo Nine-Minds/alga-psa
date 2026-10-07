@@ -36,6 +36,12 @@ export type DateTriggerSourceDefinition = {
   usesOffset: boolean;
   /** Set when the daily scan also emits an upcoming-date domain event for this source. */
   domainEvent?: { eventType: string; windowDays: number };
+  /**
+   * The system_event_catalog row that documents this source's payload. It is not a real event:
+   * nothing publishes it, so the event-trigger picker redirects it to this date source and publish
+   * validation rejects an `event` trigger that names it.
+   */
+  catalogEventType?: string;
 };
 
 export const dateTriggerSourceDefinitions = [
@@ -91,6 +97,7 @@ export const dateTriggerSourceDefinitions = [
     recurrence: 'repeating',
     hasParams: true,
     usesOffset: false,
+    catalogEventType: 'TICKET_STATUS_AGE',
   },
 ] as const satisfies readonly DateTriggerSourceDefinition[];
 
@@ -111,3 +118,9 @@ export const getDateTriggerSourceDefinition = (id: string): DateTriggerSourceDef
 
 export const isDateTriggerSourceId = (value: unknown): value is DateTriggerSourceId =>
   typeof value === 'string' && dateTriggerSourceDefinitions.some((definition) => definition.id === value);
+
+/** The date source whose catalog row is `eventType`, when that row is not a real event. */
+export const getDateTriggerSourceByCatalogEvent = (eventType: unknown): DateTriggerSourceDefinition | undefined =>
+  typeof eventType === 'string'
+    ? (dateTriggerSourceDefinitions as readonly DateTriggerSourceDefinition[]).find((definition) => definition.catalogEventType === eventType)
+    : undefined;

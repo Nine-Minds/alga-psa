@@ -98,6 +98,7 @@ import {
   WORKFLOW_CAUGHT_ERROR_SCHEMA,
   buildWorkflowDesignerActionCatalog,
   dateTriggerSourceDefinitions,
+  getDateTriggerSourceByCatalogEvent,
   getDateTriggerSourceDefinition,
   getWorkflowDesignerCatalogRecordForAction,
   type WorkflowDesignerCatalogRecord
@@ -214,7 +215,8 @@ import { WORKFLOW_CLOCK_PAYLOAD_SCHEMA_REF } from '@alga-psa/workflows/authoring
 import { EMPTY_WORKFLOW_PAYLOAD_SCHEMA_REF } from '@alga-psa/shared/workflow/runtime/schemas/emptyWorkflowPayloadSchema';
 import { DATE_TRIGGER_PAYLOAD_SCHEMA_REFS } from './dateTriggerPayloadSchemas';
 import { DateTriggerStatusAgeFields } from './DateTriggerStatusAgeFields';
-import { DEFAULT_STATUS_AGE_PARAMS, type StatusAgeParamsDraft } from './dateTriggerStatusAge';
+import { type StatusAgeParamsDraft } from './dateTriggerStatusAge';
+import { buildDateTriggerForSource } from './dateTriggerSwitch';
 
 import {
   isWorkflowAiInferAction,
@@ -4533,6 +4535,20 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                                           handleDefinitionChange({ trigger: undefined });
                                           return;
                                         }
+                                        // A date source's catalog row is not a real event: choosing it builds the date trigger.
+                                        const dateSource = getDateTriggerSourceByCatalogEvent(next);
+                                        if (dateSource) {
+                                          setShowUseEventSchemaSuggestion(false);
+                                          setPendingEventSchemaPrompt(null);
+                                          setSelectedTriggerEventCategory('');
+                                          setDateOffsetDirection('on');
+                                          setTriggerTypeSelection('date');
+                                          handleDefinitionChange({
+                                            trigger: buildDateTriggerForSource(dateSource, activeDefinition?.trigger?.type === 'date' ? (activeDefinition.trigger as Record<string, unknown>) : undefined),
+                                            payloadSchemaRef: dateSource.payloadSchemaRef,
+                                          });
+                                          return;
+                                        }
                                         const chosen = eventCatalogOptions.find((e) => e.event_type === next) ?? null;
                                         if (chosen?.source === 'system' && (chosen.payload_schema_ref_status !== 'known' || !chosen.payload_schema_ref)) {
                                           toast.error(t('designer.toasts.systemEventMissingSchema', {
@@ -4699,14 +4715,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                                     }))}
                                     onValueChange={(value) => {
                                       const nextDefinition = getDateTriggerSourceDefinition(value);
-                                      const { params: _previousParams, ...triggerWithoutParams } = dateTrigger;
-                                      const nextTrigger = {
-                                        ...triggerWithoutParams,
-                                        source: value as typeof dateTrigger.source,
-                                        // Sources without an offset control store 0; params only exist for sources that take them.
-                                        ...(nextDefinition?.usesOffset ? {} : { offsetDays: 0 }),
-                                        ...(nextDefinition?.hasParams ? { params: { ...DEFAULT_STATUS_AGE_PARAMS } } : {}),
-                                      };
+                                      const nextTrigger = buildDateTriggerForSource(nextDefinition!, dateTrigger as Record<string, unknown>);
                                       if (!nextDefinition?.usesOffset) setDateOffsetDirection('on');
                                       handleDefinitionChange({ trigger: nextTrigger, payloadSchemaRef: DATE_TRIGGER_PAYLOAD_SCHEMA_REFS[value as keyof typeof DATE_TRIGGER_PAYLOAD_SCHEMA_REFS] });
                                     }}

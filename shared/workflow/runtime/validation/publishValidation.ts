@@ -3,7 +3,7 @@ import type { WorkflowDefinition, PublishError, Step, NodeStep, InputMapping } f
 import { workflowDefinitionSchema } from '../types';
 import { dateTriggerPayloadSchemaRefs } from '../schemas/dateTriggerPayloadSchemas';
 import { validateDateTriggerParams } from '../dateTriggerParams';
-import { getDateTriggerSourceDefinition } from '../dateTriggerSourceDefinitions';
+import { getDateTriggerSourceByCatalogEvent, getDateTriggerSourceDefinition } from '../dateTriggerSourceDefinitions';
 import { getNodeTypeRegistry } from '../registries/nodeTypeRegistry';
 import { getActionRegistryV2 } from '../registries/actionRegistry';
 import { validateExpressionSource, describeExpressionError } from '../expressionEngine';
@@ -55,6 +55,19 @@ export function validateWorkflowDefinition(
         stepPath: 'root',
         code: 'INVALID_WORKFLOW_DEFINITION',
         message: 'Workflow definition failed schema validation'
+      });
+    }
+  }
+
+  if (definition.trigger?.type === 'event') {
+    // The catalog row of a date source documents its payload but is never published as an event.
+    const dateSource = getDateTriggerSourceByCatalogEvent(definition.trigger.eventName);
+    if (dateSource) {
+      errors.push({
+        severity: 'error',
+        stepPath: 'trigger',
+        code: 'EVENT_TRIGGER_IS_DATE_SOURCE',
+        message: `"${definition.trigger.eventName}" is never published as an event, so this workflow would never run. Use a date trigger with the "${dateSource.id}" source instead.`
       });
     }
   }
