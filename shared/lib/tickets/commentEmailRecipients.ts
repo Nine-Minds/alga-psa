@@ -14,6 +14,7 @@ export {
   MAX_COMMENT_EMAIL_RECIPIENTS,
   normalizeCommentEmailRecipients,
   readCommentEmailRecipients,
+  stripCommentBccFromMetadata,
   type CommentEmailRecipientsInput,
   type NormalizeCommentEmailRecipientsInput,
 } from './commentEmailRecipientsCore';
