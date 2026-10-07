@@ -255,10 +255,11 @@ test('an administrator authors a billed-time date sort and reopens its persisted
                   : 'Billed-time entry detail is unavailable for this invoice.';
               expect(localized).toContain(note.replace(/\s/g, ''));
             }
-            // Each available snapshot appears in both the flat and nested table.
-            // Missing historical detail must not be reconstructed from live work.
+            // Each of the five available snapshots appears in both the flat and
+            // nested table. Missing historical detail must not be reconstructed
+            // from live work.
             expect(pdfText.match(countryOrderedDate) ?? [])
-              .toHaveLength(history === 'none' ? 0 : history === 'partial' ? 6 : 8);
+              .toHaveLength(history === 'none' ? 0 : history === 'partial' ? 8 : 10);
             expect(localized).not.toContain('PRIVATE');
             expect(await readSnapshots()).toEqual(expectedSnapshots);
             expect(await readCharges()).toEqual(charges);
