@@ -96,7 +96,15 @@ export interface PaginatedBillingPeriodsResult {
     totalPages: number;
 }
 
-export interface FetchRecurringDueWorkOptions extends FetchBillingPeriodsOptions {}
+export interface FetchRecurringDueWorkOptions extends FetchBillingPeriodsOptions {
+    /**
+     * Case-insensitive substring filter on the invoice candidate's client name,
+     * applied to the full candidate set before pagination. Deliberately separate
+     * from `searchTerm`, which narrows the candidate billing periods that also
+     * drive `materializationGaps` and cadence-gap blocking.
+     */
+    clientName?: string;
+}
 export type PaginatedRecurringDueWorkResult = IRecurringDueWorkPaginatedResponse;
 export type RecurringDueWorkMaterializationGap = IRecurringDueWorkMaterializationGap;
 
@@ -2068,10 +2076,17 @@ export const getAvailableRecurringDueWork = withAuth(async (
             approvalBlockedInvoiceCandidates,
             approvalWarningsByExecutionIdentityKey,
         );
-        const total = warnedInvoiceCandidates.length;
+        // Client filter runs on the full candidate set, before total/pagination.
+        // materializationGaps are intentionally left unfiltered.
+        const normalizedClientName = (options.clientName ?? '').trim().toLowerCase();
+        const filteredInvoiceCandidates = normalizedClientName.length > 0
+            ? warnedInvoiceCandidates.filter((candidate) =>
+                (candidate.clientName ?? '').toLowerCase().includes(normalizedClientName))
+            : warnedInvoiceCandidates;
+        const total = filteredInvoiceCandidates.length;
         const totalPages = total === 0 ? 0 : Math.ceil(total / pageSize);
         const offset = (page - 1) * pageSize;
-        const visibleInvoiceCandidates = warnedInvoiceCandidates.slice(offset, offset + pageSize);
+        const visibleInvoiceCandidates = filteredInvoiceCandidates.slice(offset, offset + pageSize);
         // Surface deterministic fixed-line amounts as confirmed "known now" values.
         // Pricing runs AFTER pagination and on the visible candidates' own member
         // objects: the approval block/warning passes above clone members, so the

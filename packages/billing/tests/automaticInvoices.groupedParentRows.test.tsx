@@ -596,7 +596,12 @@ describe('AutomaticInvoices grouped parent rows', () => {
       expect(checkbox).not.toBeChecked();
       expect(screen.queryByRole('button', { name: 'Preview Selected' })).not.toBeInTheDocument();
       fireEvent.change(screen.getByPlaceholderText('Filter by client'), { target: { value: 'Other client' } });
-      expect(screen.getByTestId('automatic-invoices-table-row-count')).toHaveTextContent('0');
+      // The filter is applied by the server, so the debounced value is sent as clientName.
+      mockGetAvailableRecurringDueWork.mockClear();
+      await act(async () => { await vi.advanceTimersByTimeAsync(300); });
+      expect(mockGetAvailableRecurringDueWork).toHaveBeenCalledWith(
+        expect.objectContaining({ page: 1, clientName: 'Other client' }),
+      );
     } finally {
       cleanup();
       vi.useRealTimers();

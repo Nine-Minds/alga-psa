@@ -927,17 +927,24 @@ describe('AutomaticInvoices recurring due-work UI', () => {
       approvalBlockedEntryCount: 0,
     };
 
-    getAvailableRecurringDueWorkMock.mockResolvedValue({
-      invoiceCandidates: [
-        buildInvoiceCandidate([blockedRow], {
-          candidateKey: 'candidate-blocked-filtered',
-          approvalBlockedEntryCount: 1,
-        }),
-        buildInvoiceCandidate([readyRow], {
-          candidateKey: 'candidate-ready-filtered',
-          approvalBlockedEntryCount: 0,
-        }),
-      ],
+    // The client filter runs on the server: emulate it in the mocked action.
+    const allCandidates = [
+      buildInvoiceCandidate([blockedRow], {
+        candidateKey: 'candidate-blocked-filtered',
+        approvalBlockedEntryCount: 1,
+      }),
+      buildInvoiceCandidate([readyRow], {
+        candidateKey: 'candidate-ready-filtered',
+        approvalBlockedEntryCount: 0,
+      }),
+    ];
+    getAvailableRecurringDueWorkMock.mockImplementation(async (options: any) => {
+      const needle = (options?.clientName ?? '').toLowerCase();
+      const matching = needle
+        ? allCandidates.filter((candidate) => (candidate.clientName ?? '').toLowerCase().includes(needle))
+        : allCandidates;
+      return {
+      invoiceCandidates: matching,
       materializationGaps: [
         {
           executionIdentityKey: 'gap-blocked-filtered',
@@ -955,13 +962,23 @@ describe('AutomaticInvoices recurring due-work UI', () => {
           detail: 'Recurring service periods were not materialized for this canonical client-cadence execution window.',
         },
       ],
-      total: 2,
+      total: matching.length,
       page: 1,
       pageSize: 10,
       totalPages: 1,
+      };
     });
 
     render(<AutomaticInvoices onGenerateSuccess={vi.fn()} />);
+
+    // Deep link: the very first fetch already carries the filter.
+    await waitFor(() => {
+      expect(getAvailableRecurringDueWorkMock).toHaveBeenCalled();
+    });
+    expect(getAvailableRecurringDueWorkMock.mock.calls[0]![0]).toMatchObject({
+      page: 1,
+      clientName: 'Blocked',
+    });
 
     const filterInput = await screen.findByDisplayValue('Blocked');
     expect(filterInput).toBeInTheDocument();
@@ -990,6 +1007,42 @@ describe('AutomaticInvoices recurring due-work UI', () => {
 
     const liveGapPanel = screen.getByTestId('recurring-materialization-gap-panel');
     expect(within(liveGapPanel).getByText('Repair Co')).toBeInTheDocument();
+  });
+
+  it('typing in Filter by client after paging refetches page 1 with clientName and never pairs the new page with the old filter', async () => {
+    getAvailableRecurringDueWorkMock.mockResolvedValue({
+      invoiceCandidates: [buildInvoiceCandidate([createClientRow()])],
+      materializationGaps: [],
+      total: 25,
+      page: 1,
+      pageSize: 10,
+      totalPages: 3,
+    });
+
+    render(<AutomaticInvoices onGenerateSuccess={vi.fn()} />);
+    await screen.findByText('Acme Co');
+
+    fireEvent.click(screen.getAllByRole('button', { name: /Next Page/i })[0]!);
+    await waitFor(() => {
+      expect(getAvailableRecurringDueWorkMock).toHaveBeenCalledWith(expect.objectContaining({ page: 2 }));
+    });
+    await screen.findByText('Acme Co');
+
+    getAvailableRecurringDueWorkMock.mockClear();
+    const filterInput = document.getElementById('filter-clients-input') as HTMLInputElement;
+    expect(filterInput).not.toBeNull();
+    fireEvent.change(filterInput, { target: { value: ' Wonder ' } });
+
+    await waitFor(() => {
+      expect(getAvailableRecurringDueWorkMock).toHaveBeenCalledWith({
+        page: 1,
+        pageSize: 10,
+        dateRange: { from: undefined, to: expect.any(String) },
+        clientName: 'Wonder',
+      });
+    });
+    // No fetch for (old filter, page 1) or (new filter, page 2) while debouncing.
+    expect(getAvailableRecurringDueWorkMock).toHaveBeenCalledTimes(1);
   });
 
   it('T004: AutomaticInvoices loads through the real due-work action in a migrated schema with no `client_contract_lines` table', async () => {
