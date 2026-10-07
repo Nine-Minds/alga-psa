@@ -151,8 +151,10 @@ describe('NextAuth OAuth mapping-failure redirects', () => {
       failureUser('no_matching_user', 'internal', 'nd@computerbutlereurope.onmicrosoft.com')
     );
 
+    // `single-sign-on` is the tab id the profile page resolves; a human label
+    // here lands on the Profile tab and the banner is never shown.
     expect(result).toBe(
-      '/msp/profile?tab=Single%20Sign-On&linkError=no_matching_user&providerEmail=nd%40computerbutlereurope.onmicrosoft.com'
+      '/msp/profile?tab=single-sign-on&linkError=no_matching_user&providerEmail=nd%40computerbutlereurope.onmicrosoft.com'
     );
     expect(cookieDeleteMock).toHaveBeenCalledWith(LINK_STATE_COOKIE_NAME);
     expect(userSessionCreateMock).not.toHaveBeenCalled();
