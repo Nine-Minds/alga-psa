@@ -190,8 +190,10 @@ test('an administrator authors a billed-time date sort and reopens its persisted
     }
     expect(compact).toContain(`Total$${(Number(invoice.total_amount) / 100).toFixed(2)}`);
     const dates = text.match(/8\/\d+\/2026/g) ?? [];
-    expect(dates).toHaveLength(8); // Four flat entries and four entries scoped to ticket groups.
-    expect(dates.filter(date => date === '8/15/2026')).toHaveLength(4);
+    // Five time rows (the overtime entry is a regular + overtime pair) appear
+    // once in the flat table and once scoped to their ticket group.
+    expect(dates).toHaveLength(10);
+    expect(dates.filter(date => date === '8/15/2026')).toHaveLength(6);
     expect(dates.filter(date => date === '8/16/2026')).toHaveLength(4);
     expect(dates.some((_, index) => dates.slice(index, index + 4).join(',') === '8/16/2026,8/16/2026,8/15/2026,8/15/2026')).toBe(true);
     expect(compact).not.toContain('PRIVATE');
@@ -329,7 +331,8 @@ test('an administrator authors a billed-time date sort and reopens its persisted
       const readTaskCharges = () => database('invoice_charges')
         .where({ tenant: tenant.tenantId, invoice_id: taskInvoice.invoice_id }).orderBy('item_id');
       const chargesBefore = await readTaskCharges();
-      expect(links).toHaveLength(8);
+      // Four task entries plus the ticket fixture's four, with the overtime entry linked twice.
+      expect(links).toHaveLength(9);
       const taskSnapshots = links.map(link => link.work_item_snapshot).filter(snapshot => snapshot.workItemType === 'project_task');
       expect(taskSnapshots).toHaveLength(4);
       expect(new Set(taskSnapshots.map(snapshot => snapshot.workItemId))).toEqual(new Set(tasks.taskIds));
@@ -356,7 +359,7 @@ test('an administrator authors a billed-time date sort and reopens its persisted
           expect(compact).toContain(locale === 'fr' ? 'Tâchedeprojet' : 'Projecttask');
           expect(compact).toContain(locale === 'fr' ? '180,00' : '$180.00');
           expect(compact).toContain(locale === 'fr' ? '1600,50' : '1,600.50');
-          expect(text.match(countryOrderedDate) ?? []).toHaveLength(16);
+          expect(text.match(countryOrderedDate) ?? []).toHaveLength(18);
           expect(compact).not.toMatch(/PRIVATE|EDITED/);
           expect(await readTaskLinks()).toEqual(links);
           expect(await readTaskCharges()).toEqual(chargesBefore);
