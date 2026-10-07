@@ -35,6 +35,7 @@ import {
   hasBundleFixedService,
   isUnitFixedService,
 } from '../../lib/fixedServiceBasis';
+import { reindexRateInputs } from '../../lib/serviceRateInputs';
 import { resolveBillingCycleAlignmentForCompatibility } from '@alga-psa/shared/billingClients/billingCycleAlignmentCompatibility';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useCurrencyFormat } from '@alga-psa/ui/lib';
@@ -688,6 +689,7 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
                       );
                     }}
                     min={isUnitFixedService(service) ? '0' : '1'}
+                    onWheel={(e) => (e.target as HTMLInputElement).blur()}
                     className="w-24"
                   />
                   {isUnitFixedService(service) && (
@@ -759,9 +761,7 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
     const handleRemoveHourlyService = (index: number) => {
       const newServices = hourlyServices.filter((_, i) => i !== index);
       setHourlyServices(newServices);
-      const newInputs = { ...hourlyServiceRateInputs };
-      delete newInputs[index];
-      setHourlyServiceRateInputs(newInputs);
+      setHourlyServiceRateInputs((prev) => reindexRateInputs(prev, index));
       markDirty();
     };
 
@@ -805,6 +805,7 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
                 placeholder={t('dialog.hourly.minutesPlaceholder', { defaultValue: '15' })}
                 min="0"
                 step="15"
+                onWheel={(e) => (e.target as HTMLInputElement).blur()}
                 className="w-32"
               />
               <p className="text-xs text-muted-foreground">
@@ -829,6 +830,7 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
                 placeholder={t('dialog.hourly.minutesPlaceholder', { defaultValue: '15' })}
                 min="0"
                 step="15"
+                onWheel={(e) => (e.target as HTMLInputElement).blur()}
                 className="w-32"
               />
               <p className="text-xs text-muted-foreground">
@@ -1028,9 +1030,7 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
     const handleRemoveUsageService = (index: number) => {
       const newServices = usageServices.filter((_, i) => i !== index);
       setUsageServices(newServices);
-      const newInputs = { ...usageServiceRateInputs };
-      delete newInputs[index];
-      setUsageServiceRateInputs(newInputs);
+      setUsageServiceRateInputs((prev) => reindexRateInputs(prev, index));
       markDirty();
     };
 
