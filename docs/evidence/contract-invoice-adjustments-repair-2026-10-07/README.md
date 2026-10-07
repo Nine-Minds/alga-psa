@@ -1,5 +1,7 @@
 # Contract invoice adjustment service recovery — 2026-10-07
 
+The takeover completed the remaining targeted live smoke on `356892db`. Start with [the takeover results and artifacts](takeover/README.md): posted-principal add/edit/remove and idempotency, partial-period PDF and contract navigation, real CSV downloads after reload, export locks, and paid/cancelled/finalized stale-edit protection all passed. Owned fixtures were cleaned and shared invoices were unchanged.
+
 Worktree: `/home/robert/alga-copies/feature-contract-invoices-automatic-adjustments-and-disc`
 Branch: `feature/contract-invoices-automatic-adjustments-and-disc`
 Baseline: `12cd331bba55a892440ccec6b844060ccf98f297`
@@ -34,7 +36,7 @@ Read-only database inspection confirmed the expected billing tables in the `serv
 | `REVIEW-CONTRACT-3499` | `5a1e0000-0000-4000-8000-202609279204` | draft | 405000 / 405000 | 20 | 4 |
 | `SMOKE-ADJ-1` | `5a1e0000-0000-4000-8000-0000000000a1` | draft | 370500 / 371400 | 63 | 5 |
 
-Current-HEAD smoke does not establish manual-line edit/removal, partial-period descriptions and permanent-change focus, actual QBO/Xero CSV downloads, delivered-export edit locks, prohibited lifecycle UI protections, or live provider acceptance. Historical evidence under `docs/evidence/contract-invoice-adjustments-repair-2026-09-27/` does not substitute for these current-HEAD paths.
+The initial builder smoke left manual-line edit/removal, partial-period descriptions/link focus, actual CSV downloads and lifecycle protection unverified. The [takeover smoke](takeover/README.md) now covers those paths against the same application source. Live provider and client-portal acceptance remain outside this mitigation evidence.
 
 ## Database regression repair
 
@@ -51,4 +53,4 @@ The prior QBO/Xero three-versus-four classification failures were caused by test
 
 ## Review first
 
-Review the saved registration and command-free ensure response first, then inspect the focused test fix and full-suite log. The environment probe reached `/api/health` with HTTP 200 under temporary service-use permission, and normal board policy was restored afterward. Authenticated UI evidence now proves draft totals, repeat-save idempotency, no ledger postings, and generated PDF content. Actual accounting CSV downloads, UI lifecycle guards, partial-period descriptions/link focus, and live provider acceptance remain unverified. Do not treat environment recovery or automated evaluator coverage as whole-card acceptance. The companion card `f6e7254b` continues to own permanent quantity changes and automatic contract-change true-ups; this round added no duplicate mechanism.
+Review [the takeover results](takeover/README.md), especially the downloaded PDF/CSV amounts, posted-principal assertions, and lifecycle write rejections. Then inspect the migrated-ledger fixture cleanup and 63/63 DB result. Command-free service recovery and readiness on port 3185 were verified under temporary service-use permission, and the normal policy was restored while retaining registration `:19`. Client-portal, live provider API/import and end-to-end companion generation acceptance remain unverified by this round. No duplicate adjustment implementation was added.

@@ -1,0 +1,6 @@
+Product/source baseline: 356892db69900cf97b901647f0a7dbcef168aefe
+Takeover changes: evidence only.
+PASS: NODE_OPTIONS=--max-old-space-size=8192 npx tsc --noEmit -p packages/billing/tsconfig.json (exit 0; no diagnostics).
+PASS: npx nx run @alga-psa/billing:build (exit 0; Nx cache hit).
+Retained current-source DB result: ../db-suite-2026-10-07-review-fix.log, 63/63; suite was run by builder after migrated-table cleanup fix. No billing source changed during takeover.
+PASS: live browser, downloaded PDF/CSV bytes, signed totals, posted principal, protected lifecycle writes, cleanup assertions.
