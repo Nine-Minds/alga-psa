@@ -108,6 +108,21 @@ Other facts:
 - The client portal also renders `TicketConversation`. The control must be opt-in through a prop.
 - There is an existing contract test: `TicketConversation.replyComposer.e2e.contract.test.tsx`. Keep it green.
 
+## Review round 2 (2026-10-06)
+
+Fixes from the review:
+
+- **Suggestion picker was mouse-dead.** `onBlur={commitDraft}` closed the list on the pointer press (focusout is a discrete React event), so the `<ul>` unmounted before the click landed. Suggestion buttons now `preventDefault()` on mousedown, and blur only commits text that contains an `@` — a half-typed name no longer becomes an error chip that blocks Send.
+- **Gated sends counted as delivered.** `sendNotificationIfEnabled` returned `void`, so `sendIfUnique` reported `true` even when a gate skipped the send. It now returns whether a message reached the email service.
+- **Disabled notifications:** decided that the tenant kill switch wins (PRD FR15, F017, T027). The fallback runs but passes the same gate, so nothing goes out. A bypass would send a copy of a comment the requester themself is not being emailed.
+- **Author-less MSP comments.** `isFromAgent` needs a user row; a comment written with `author_type = 'internal'` and no `user_id` (a workflow's own comment) now counts as MSP-authored for the one-off fallback only. The requester-notification gate is untouched.
+- **Thread headers** are built once and used by both the requester message and the fallback. (The email service also applies ticket-scoped headers, so this is belt and braces — the test asserts the delivered message.)
+- **Bcc mask moved into `TicketService.getTicketComments`**, which spreads the raw row; `stripCommentBccFromMetadata` was missing from the db-coupled module's re-export list, which the new storage suite caught at runtime.
+- **The ceiling counts people**: dedupe before the 20-recipient check, the error names the list that overflowed, and the composer blocks Send with an inline message instead of failing in the action.
+- **Mobile** gained the contact suggestions F042 claimed.
+
+Test coverage this round: the grep-based delivery contract is gone except for the attachment claim/gate (which the SMTP harness cannot reach cheaply). The isolated-SMTP suite grew to 14 cases, a new storage suite covers identity resolution / metadata merge / bundle mirror / API read / Bcc mask, the workflow handler is exercised, and the composer wiring has its own suites. Eight tests stay unimplemented with the reason recorded in `tests.json`: the five server-action integration tests (no harness for calling a Next.js server action against a database), T032 (needs stored attachments), T057 (scheduling job path) and T069 (bento inline reply rendering stack).
+
 ## Commands
 
 - Regenerate OpenAPI and sync the developer portal with the `alga-openapi-sync` skill.

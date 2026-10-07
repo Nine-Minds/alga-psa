@@ -97,9 +97,10 @@ Each entry point accepts cc/bcc, validates them and stores them:
 
 - FR13. Read `email_recipients` from the comment row, not from the event payload. This survives scheduled publication and recovery republishes.
 - FR14. When the requester email is sent, it carries `cc`/`bcc` headers.
-- FR15. When no requester email is sent (no requester address, `suppressContactNotifications`, contact notifications disabled, or the requester is the author), send one message:
+- FR15. When no requester email is sent (no requester address, `suppressContactNotifications`, the requester is the author, or the comment was written by a workflow with no user row), send one message:
   - `To` = the CC list and `Bcc` = the BCC list.
   - If there is no CC either, send each BCC address its own message.
+  - A tenant that switched comment notifications off is the exception: the fallback runs but passes the same notification gate, so the kill switch silences the copies too. An MSP that wants per-comment copies has to leave comment notifications on.
 - FR16. Any address already receiving its own copy of this comment (assigned user, additional agent, watcher, bundle-child requester) is dropped from that separate send, so nobody gets the comment twice. The headers keep the address.
 - FR17. `sendEventEmail` and `SendEmailParams` gain optional `cc`/`bcc` and pass them to `TenantEmailService.sendEmail`, which already supports them.
 - FR18. The delivery claim (`ticket_comment_email_deliveries`) for a combined send is keyed on the `To` recipient as today. The email log already records `cc_addresses`/`bcc_addresses`.

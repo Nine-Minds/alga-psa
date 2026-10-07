@@ -133,6 +133,43 @@ describe('per-comment Cc/Bcc storage', () => {
     expect(byId.get(plain.comment_id).email_recipients).toBeNull();
   }, 60_000);
 
+  it('T013: a bundled child copy of a copied comment carries no recipients', async () => {
+    const master = await TicketModel.createComment(
+      {
+        ticket_id: ticket, content: 'Copied reply', is_internal: false, is_resolution: false,
+        author_type: 'internal', author_id: agent,
+        emailRecipients: { cc: ['vendor@acme.test'], bcc: ['boss@msp.test'] },
+      } as never,
+      tenant, trx, undefined, undefined, agent,
+    );
+    const child = randomUUID();
+    await table('tickets').insert({
+      tenant, ticket_id: child, ticket_number: `CHILD-${child.slice(0, 8)}`, client_id: client,
+      title: 'Bundled child', entered_by: agent, master_ticket_id: ticket,
+    });
+    const source = await table('comments').where({ comment_id: master.comment_id }).first();
+
+    const { mirrorCommentToChild } = await import('@alga-psa/tickets/actions/ticketBundleUtils');
+    const childCommentId = await mirrorCommentToChild(trx, tenant, {
+      sourceComment: {
+        comment_id: source.comment_id,
+        note: source.note,
+        markdown_content: source.markdown_content,
+        user_id: source.user_id,
+        contact_id: source.contact_id,
+        author_type: source.author_type,
+      },
+      childTicketId: child,
+      isResolution: false,
+    });
+
+    const mirrored = await table('comments').where({ comment_id: childCommentId }).first();
+    const metadata = typeof mirrored.metadata === 'string' ? JSON.parse(mirrored.metadata) : mirrored.metadata;
+    // The copy belongs to the child's own requester; the one-off recipients
+    // chosen on the master must not be mailed a second time.
+    expect(metadata?.email_recipients).toBeUndefined();
+  }, 60_000);
+
   it('T019: a client-visible read keeps the Cc and never the Bcc', async () => {
     const comment = await TicketModel.createComment(
       {
