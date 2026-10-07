@@ -38,6 +38,9 @@ import { XeroCompanyAdapter } from '../../services/companySync/adapters/xeroComp
 import { KnexInvoiceMappingRepository } from '../../repositories/invoiceMappingRepository';
 import { resolveXeroRealmAliases } from '../../services/accountingSync/xeroRealmIdentity';
 import { AppError } from '@alga-psa/core';
+import { reconcileExportLineQuantity } from './exportLineQuantity';
+
+const XERO_MAX_QUANTITY_DECIMALS = 4;
 
 export function buildXeroInvoiceReference(baseReference: string, poNumber?: string | null): string {
   const reference = poNumber ? `${baseReference} | PO ${poNumber}` : baseReference;
@@ -87,6 +90,7 @@ type DbCharge = {
   net_amount?: number | null;
   tax_amount?: number | null;
   tax_region?: string | null;
+  is_discount?: boolean | null;
 };
 
 type DbClient = {
@@ -474,19 +478,28 @@ export class XeroAdapter implements AccountingExportAdapter {
         if (!charge) {
           throw new AppError('XERO_CHARGE_NOT_FOUND', `Charge ${line.document_line_id} missing for invoice ${invoiceId}`);
         }
-        if (!charge.service_id) {
+        const isServicelessDiscount = !charge.service_id && Boolean(charge.is_discount);
+        if (!charge.service_id && !isServicelessDiscount) {
           throw new AppError('XERO_SERVICE_MISSING', `Charge ${charge.item_id} missing service_id for invoice ${invoiceId}`);
         }
 
-        const serviceMapping = await resolver.resolveServiceMapping({
-          tenantId: context.batch.tenant,
-          adapterType: this.type,
-          serviceId: charge.service_id,
-          targetRealm: context.batch.target_realm
-        });
+        const serviceMapping = isServicelessDiscount
+          ? await resolver.resolveDiscountMapping({
+              tenantId: context.batch.tenant,
+              adapterType: this.type,
+              targetRealm: context.batch.target_realm
+            })
+          : await resolver.resolveServiceMapping({
+              tenantId: context.batch.tenant,
+              adapterType: this.type,
+              serviceId: charge.service_id!,
+              targetRealm: context.batch.target_realm
+            });
 
         if (!serviceMapping) {
-          throw new AppError('XERO_SERVICE_MAPPING_MISSING', `No Xero mapping for service ${charge.service_id}`);
+          throw isServicelessDiscount
+            ? new AppError('XERO_DISCOUNT_MAPPING_MISSING', `No Xero mapping for discount lines on invoice ${invoiceId}`)
+            : new AppError('XERO_SERVICE_MAPPING_MISSING', `No Xero mapping for service ${charge.service_id}`);
         }
 
         const serviceMetadata = serviceMapping.metadata ?? {};
@@ -555,6 +568,13 @@ export class XeroAdapter implements AccountingExportAdapter {
           );
         }
 
+        const lineQuantity = reconcileExportLineQuantity({
+          quantity: charge.quantity,
+          unitPriceCents: unitAmountCents,
+          amountCents: netAmountCents,
+          maxQuantityDecimals: XERO_MAX_QUANTITY_DECIMALS
+        });
+
         const servicePeriod = resolveXeroLineServicePeriod(line);
 
         // The mapping's target kind is explicit metadata, never inferred from
@@ -602,8 +622,8 @@ export class XeroAdapter implements AccountingExportAdapter {
           externalLineItemId: knownChargeToXeroLineItemId.get(line.document_line_id) ?? null,
           amountCents: netAmountCents,
           description,
-          quantity: coerceChargeDecimal(charge.quantity) ?? 1,
-          unitAmountCents,
+          quantity: lineQuantity.quantity,
+          unitAmountCents: lineQuantity.unitPriceCents,
           itemCode,
           accountCode,
           taxType: taxType ?? undefined,
@@ -873,7 +893,8 @@ export class XeroAdapter implements AccountingExportAdapter {
         'total_price',
         'net_amount',
         'tax_amount',
-        'tax_region'
+        'tax_region',
+        'is_discount'
       )
       .whereIn('item_id', chargeIds);
 
@@ -1401,17 +1422,6 @@ function coerceChargeCents(value: unknown): number | null {
   }
   if (typeof value === 'string' && /^-?\d+$/.test(value.trim())) {
     const parsed = parseInt(value.trim(), 10);
-    return Number.isFinite(parsed) ? parsed : null;
-  }
-  return null;
-}
-
-function coerceChargeDecimal(value: unknown): number | null {
-  if (typeof value === 'number' && Number.isFinite(value)) {
-    return value;
-  }
-  if (typeof value === 'string' && value.trim().length > 0) {
-    const parsed = Number(value.trim());
     return Number.isFinite(parsed) ? parsed : null;
   }
   return null;
