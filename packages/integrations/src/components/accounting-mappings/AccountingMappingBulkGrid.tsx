@@ -237,7 +237,10 @@ export function AccountingMappingBulkGrid({
         title: t('integrations.accounting.bulk.columns.select', { defaultValue: 'Save' }),
         dataIndex: 'selected',
         sortable: false,
-        width: '1%',
+        // px, not %: a % width is only a floor (>=160px) in DataTable. 96px is the
+        // narrowest a non-compact column can be; total widths are kept well under
+        // a 1920px viewport with the sidebar expanded so Status is never hidden.
+        width: '96px',
         render: (_value, row) => (
           <Checkbox
             id={`${idPrefix}-select-${row.id}`}
@@ -255,6 +258,7 @@ export function AccountingMappingBulkGrid({
         title: module.labels.algaColumn,
         dataIndex: 'name',
         sortable: false,
+        width: '220px',
         render: (_value, row) => <span>{row.name}</span>
       }
     ];
@@ -264,6 +268,7 @@ export function AccountingMappingBulkGrid({
         title: targetConfig.label,
         dataIndex: 'kindId',
         sortable: false,
+        width: '160px',
         render: (_value, row) =>
           row.mappedTo !== null ? null : (
             <CustomSelect
@@ -276,7 +281,7 @@ export function AccountingMappingBulkGrid({
                 // is meaningless under the new one (same rule as the dialog).
                 patchRow(row.id, { kindId: value || targetConfig.defaultKindId, externalId: '', selected: false })
               }
-              className="w-full min-w-[10rem]"
+              className="w-full min-w-0"
             />
           )
       });
@@ -287,13 +292,14 @@ export function AccountingMappingBulkGrid({
         title: module.labels.externalColumn,
         dataIndex: 'externalId',
         sortable: false,
+        width: '520px',
         render: (_value, row) => {
           if (row.mappedTo !== null) return <span>{row.mappedTo}</span>;
           const options = externalEntities
             .filter((entity) => !targetConfig || !entity.kind || entity.kind === row.kindId)
             .map((entity) => ({ value: entity.id, label: entity.name }));
           return (
-            <div className="flex items-center gap-2">
+            <div className="flex flex-col items-start gap-1">
               <SearchableSelect
                 id={`${idPrefix}-external-${row.id}`}
                 options={options}
@@ -306,7 +312,7 @@ export function AccountingMappingBulkGrid({
                   defaultValue: 'Select {{field}}...',
                   field: module.labels.dialog.externalField
                 })}
-                className="w-full min-w-[16rem]"
+                className="w-full min-w-0"
                 dropdownMode="overlay"
               />
               {row.suggested ? (
@@ -327,7 +333,7 @@ export function AccountingMappingBulkGrid({
         title: t('integrations.accounting.bulk.columns.ignore', { defaultValue: 'Ignore' }),
         dataIndex: 'ignored',
         sortable: false,
-        width: '1%',
+        width: '96px',
         render: (_value, row) => (
           <Checkbox
             id={`${idPrefix}-ignore-${row.id}`}
@@ -345,12 +351,19 @@ export function AccountingMappingBulkGrid({
         title: t('integrations.accounting.bulk.columns.status', { defaultValue: 'Status' }),
         dataIndex: 'id',
         sortable: false,
+        width: '280px',
         render: (_value, row) => {
           const error = rowErrors[row.id];
           let content: React.ReactNode;
           if (error) {
             content = (
-              <span className="text-xs text-destructive" data-testid={`${idPrefix}-error-${row.id}`}>
+              // DataTable cells force nowrap and reset .break-words, so wrap via
+              // an arbitrary overflow-wrap property and !whitespace-normal.
+              <span
+                className="block text-xs text-destructive !whitespace-normal [overflow-wrap:anywhere]"
+                title={error}
+                data-testid={`${idPrefix}-error-${row.id}`}
+              >
                 {error}
               </span>
             );

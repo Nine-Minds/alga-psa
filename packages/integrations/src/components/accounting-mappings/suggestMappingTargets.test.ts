@@ -145,4 +145,14 @@ describe('suggestMappingTargets', () => {
     );
     expect(result.get('s1')).toEqual({ externalId: '42', kind: undefined, matchedBy: 'name' });
   });
+
+  it('does not preselect the same exact target for more than one row', () => {
+    const result = suggestMappingTargets(
+      [svc('a', 'Power BI Pro'), svc('b', 'Power BI Pro'), svc('c', 'Hosting')],
+      [item('PBI', 'Power BI Pro'), item('HOST', 'Hosting')]
+    );
+    expect(result.has('a')).toBe(false);
+    expect(result.has('b')).toBe(false);
+    expect(result.get('c')).toMatchObject({ externalId: 'item:HOST' });
+  });
 });

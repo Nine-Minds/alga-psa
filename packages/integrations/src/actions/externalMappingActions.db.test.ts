@@ -1061,7 +1061,7 @@ describe('createExternalEntityMappings — bulk create with per-row isolation', 
     );
     // s2 collides with s1 on the same item; s4 collides with s3 on the same account.
     expect(results.map((r: any) => r.ok)).toEqual([true, false, true, false]);
-    expect(results[1].error).toMatch(/already exists/);
-    expect(results[3].error).toMatch(/already exists/);
+    expect(results[1].error).toMatch(/target is already mapped to another entity/);
+    expect(results[3].error).toMatch(/target is already mapped to another entity/);
   });
 });

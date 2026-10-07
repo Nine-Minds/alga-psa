@@ -1087,8 +1087,11 @@ async function createMappingRow({
 
     if (error?.code === '23505') {
       return actionError(
-        'A mapping already exists for this entity. Edit the existing mapping instead.',
-        'msp/integrations:errors.mappings.duplicate'
+        // The live-mapping unique index is on the external target (the
+        // same-entity case is rejected earlier with its own message), so a
+        // 23505 here means another service already uses this target.
+        'This target is already mapped to another entity in this organisation. Choose a different target.',
+        'msp/integrations:errors.mappings.duplicateTarget'
       );
     }
 

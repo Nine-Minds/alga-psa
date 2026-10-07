@@ -296,4 +296,27 @@ describe('AccountingMappingModuleView bulk grid', () => {
     fireEvent.click(el(`${P}-select-svc-fuzzy`));
     expect(el(`${P}-select-svc-fuzzy`).checked).toBe(true);
   });
+
+  it('renders suggested, possible-match and full-text row error affordances together', async () => {
+    const base = loadResult();
+    const message = 'This target is already mapped to another entity in this organisation. Choose a different target.';
+    loadMock.mockResolvedValue({
+      ...base,
+      algaEntities: [
+        ...base.algaEntities,
+        { id: 'svc-fuzzy', name: 'Managed Backup Service Plan', baseName: 'Managed Backup Service Plan' }
+      ],
+      externalEntities: [...base.externalEntities, item('MBA', 'Managed Backup Service Plan Annual')]
+    });
+    createManyMock.mockImplementation(async (_ctx: unknown, inputs: any[]) =>
+      inputs.map((i) => ({ algaEntityId: i.algaEntityId, ok: false, error: message }))
+    );
+    await openBulk();
+    expect(screen.getByTestId(`${P}-suggested-svc-host`)).toBeInTheDocument();
+    expect(screen.getByTestId(`${P}-possible-svc-fuzzy`)).toBeInTheDocument();
+    fireEvent.click(saveAll());
+    const error = await screen.findByTestId(`${P}-error-svc-host`);
+    expect(error).toHaveTextContent(message);
+    expect(error).toHaveAttribute('title', message);
+  });
 });

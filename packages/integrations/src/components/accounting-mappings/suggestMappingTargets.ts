@@ -126,9 +126,22 @@ export function suggestMappingTargets(
     }
   }
 
+  // Two Alga rows exact-matching the same target (e.g. duplicate service
+  // names) would preselect one target twice and hit the unique index on save.
+  // Treat those as ambiguous: suggest it for neither. The target stays
+  // claimed so the fuzzy pass can't hand it to a third row either.
+  const claimedByExact = new Map<string, string[]>();
+  for (const [algaId, suggestion] of result) {
+    claimedByExact.set(suggestion.externalId, [...(claimedByExact.get(suggestion.externalId) ?? []), algaId]);
+  }
+  const exactClaims = new Set(claimedByExact.keys());
+  for (const algaIds of claimedByExact.values()) {
+    if (algaIds.length > 1) for (const id of algaIds) result.delete(id);
+  }
+
   // Pass 2: fuzzy, item-kind (or kind-less) targets only, excluding anything an
   // exact match already claimed, and only when there is a single best target.
-  const claimed = new Set([...result.values()].map((s) => s.externalId));
+  const claimed = exactClaims;
   const fuzzyPool = prepared.filter(
     (p) => (!p.option.kind || p.option.kind === FUZZY_KIND) && !claimed.has(p.option.id)
   );
