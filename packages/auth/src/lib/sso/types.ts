@@ -16,6 +16,38 @@ export interface OAuthProfileMappingInput {
   userTypeHint?: string | null;
 }
 
+// Expected reasons an OAuth profile never resolves to an AlgaPSA user. Auth.js
+// swallows anything thrown from `profile()` into `error=Configuration`, so the
+// mapper reports these as data instead and `callbacks.signIn` turns them into a
+// readable redirect.
+export const OAUTH_MAPPING_FAILURE_CODES = [
+  'no_matching_user',
+  'missing_email',
+  'inactive_user',
+  'user_type_mismatch',
+  'tenant_mismatch',
+] as const;
+
+export type OAuthMappingFailureCode = (typeof OAUTH_MAPPING_FAILURE_CODES)[number];
+
+// Sign-in pages receive the code through the query string, so never trust it as
+// a translation key without matching it against the known set first.
+export function parseOAuthMappingFailureCode(
+  value: string | null | undefined,
+): OAuthMappingFailureCode | null {
+  if (typeof value !== 'string') {
+    return null;
+  }
+  const match = OAUTH_MAPPING_FAILURE_CODES.find((code) => code === value);
+  return match ?? null;
+}
+
+export interface OAuthMappingFailure {
+  code: OAuthMappingFailureCode;
+  providerEmail?: string;
+  userType: 'internal' | 'client';
+}
+
 export interface OAuthProfileMappingResult {
   id: string;
   email: string;
@@ -28,6 +60,13 @@ export interface OAuthProfileMappingResult {
   user_type: 'internal' | 'client';
   clientId?: string;
   contactId?: string;
+  authFailure?: OAuthMappingFailure;
+}
+
+export function isOAuthMappingFailure<
+  T extends { authFailure?: OAuthMappingFailure | null },
+>(user: T | null | undefined): user is T & { authFailure: OAuthMappingFailure } {
+  return Boolean(user && user.authFailure && typeof user.authFailure.code === 'string');
 }
 
 export interface OAuthAccountLinkInput {

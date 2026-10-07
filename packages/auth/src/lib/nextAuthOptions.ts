@@ -23,8 +23,13 @@ import { isEnterprise } from "@alga-psa/core/features";
 import { getLicenseStateRow, resolveSelfHostTier } from "@alga-psa/licensing";
 import { getSSORegistry, registerSSOProvider } from "./sso/registry";
 import { loadEnterpriseSsoProviderRegistryImpl } from "./sso/enterpriseRegistryEntry";
-import type { OAuthProfileMappingInput, OAuthProfileMappingResult, OAuthLinkProvider } from "./sso/types";
-import { OAuthAccountLinkConflictError } from "./sso/types";
+import type {
+    OAuthProfileMappingInput,
+    OAuthProfileMappingResult,
+    OAuthLinkProvider,
+    OAuthMappingFailure,
+} from "./sso/types";
+import { isOAuthMappingFailure, OAuthAccountLinkConflictError } from "./sso/types";
 import { mapCeOAuthProfileToExtendedUser } from "./sso/ceOAuthProfileMapper";
 import { cookies } from "next/headers.js";
 import {
@@ -626,6 +631,7 @@ interface ExtendedUser {
     user_type: string;
     clientId?: string;
     contactId?: string;
+    authFailure?: OAuthMappingFailure;
     plan?: string;
     product_code?: 'psa' | 'algadesk';
     deviceInfo?: {
@@ -1072,6 +1078,63 @@ async function clearClientPortalSsoStateCookies(): Promise<void> {
     } catch (error) {
         console.warn('[client-portal-sso] failed to clear state cookies', { error });
     }
+}
+
+// Auth.js swallows anything thrown from `profile()` into the unreadable
+// `error=Configuration` page, but it honours a string returned from
+// `callbacks.signIn` as a redirect target. Expected mapping failures therefore
+// arrive as a sentinel user and leave on an app page that can name the email the
+// provider presented.
+async function resolveOAuthFailureRedirect(
+    user: ExtendedUser | undefined,
+    providerId?: string | null,
+): Promise<string | null> {
+    if (!providerId || providerId === 'credentials' || !isOAuthMappingFailure(user)) {
+        return null;
+    }
+
+    const { code, providerEmail, userType } = user.authFailure;
+    // Reading the cookie also deletes it, so a failed attempt cannot reuse the
+    // signed link authorization; its presence is what marks profile link mode.
+    const linkState = await consumeLinkStateCookie(undefined);
+    await clearClientPortalSsoStateCookies();
+
+    console.warn('[auth] OAuth profile did not resolve to an AlgaPSA user', {
+        providerId,
+        code,
+        providerEmail,
+        userType,
+        linkMode: Boolean(linkState),
+    });
+
+    if (linkState) {
+        const linkParams = new URLSearchParams({ linkError: code });
+        if (providerEmail) {
+            linkParams.set('providerEmail', providerEmail);
+        }
+        return `/msp/profile?tab=Single%20Sign-On&${linkParams.toString()}`;
+    }
+
+    const params = new URLSearchParams({ error: 'AccessDenied', reason: code });
+    if (providerEmail) {
+        params.set('providerEmail', providerEmail);
+    }
+
+    // Target the concrete sign-in pages rather than the /auth/signin dispatcher
+    // so the params survive the redirect chain.
+    const signInPath = userType === 'client' ? '/auth/client-portal/signin' : '/auth/msp/signin';
+    return `${signInPath}?${params.toString()}`;
+}
+
+// Defense in depth for the jwt callback: returning a redirect string from
+// `callbacks.signIn` already stops Auth.js before it mints a token, so a
+// sentinel user (or any user without an AlgaPSA id) reaching this point must
+// never become a session.
+function isUnresolvedOAuthUser(user: ExtendedUser | null | undefined): boolean {
+    if (!user) {
+        return false;
+    }
+    return isOAuthMappingFailure(user) || typeof user.id !== 'string' || user.id.length === 0;
 }
 
 function extractProviderAccountId(
@@ -1709,6 +1772,9 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
     pages: {
         signIn: '/auth/signin', // This will redirect to the appropriate page
         signOut: '/auth/signin', // After sign out, go to the redirect page
+        // Keep residual non-client-safe failures (error=Configuration) on an
+        // app-styled page instead of the raw Auth.js error page.
+        error: '/auth/signin',
     },
     session: {
         strategy: "jwt",
@@ -1720,6 +1786,11 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
             const providerId = account?.provider;
             const extendedUser = user as ExtendedUser | undefined;
             const request = (context as any).request; // NextAuth v5 runtime provides request
+
+            const failureRedirect = await resolveOAuthFailureRedirect(extendedUser, providerId);
+            if (failureRedirect) {
+                return failureRedirect;
+            }
 
             if (extendedUser && providerId && providerId !== 'credentials') {
                 // NextAuth v5 can sometimes override the user.id with a random UUID.
@@ -1910,6 +1981,14 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
 	                clientId: token.clientId,
 	                hasUser: !!user
 	            });
+
+            if (isUnresolvedOAuthUser(user as ExtendedUser | undefined)) {
+                console.warn('[auth] refusing to mint a token for an unresolved OAuth profile', {
+                    email: (user as ExtendedUser)?.email,
+                    code: (user as ExtendedUser)?.authFailure?.code,
+                });
+                return token;
+            }
 
 	            if (user) {
 	                const extendedUser = user as ExtendedUser;
@@ -2123,6 +2202,19 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
         async session({ session, token }: any) {
             if (token.error === "TokenValidationError") {
                 // If there was an error during token validation, return a special session
+                return { expires: "0" };
+            }
+
+            // A token with no AlgaPSA user id never belonged to a resolved user
+            // (e.g. an OAuth profile that matched nobody); present it as signed out
+            // instead of a session whose user.id is an empty string.
+            const tokenUserId = typeof token.id === 'string' && token.id.length > 0
+                ? token.id
+                : typeof token.sub === 'string' && token.sub.length > 0
+                    ? token.sub
+                    : '';
+            if (!tokenUserId) {
+                console.warn('[auth] session requested for a token without a user id; treating as unauthenticated');
                 return { expires: "0" };
             }
 
@@ -2534,6 +2626,9 @@ export const options: NextAuthConfig = {
     pages: {
         signIn: '/auth/signin', // This will redirect to the appropriate page
         signOut: '/auth/signin', // After sign out, go to the redirect page
+        // Keep residual non-client-safe failures (error=Configuration) on an
+        // app-styled page instead of the raw Auth.js error page.
+        error: '/auth/signin',
     },
     session: {
         strategy: "jwt",
@@ -2552,6 +2647,11 @@ export const options: NextAuthConfig = {
             // }, extendedUser.id);
             const providerId = account?.provider;
             const extendedUser = user as ExtendedUser | undefined;
+
+            const failureRedirect = await resolveOAuthFailureRedirect(extendedUser, providerId);
+            if (failureRedirect) {
+                return failureRedirect;
+            }
 
             if (extendedUser && providerId && providerId !== 'credentials') {
                 if (account?.providerAccountId) {
@@ -2691,6 +2791,14 @@ export const options: NextAuthConfig = {
                 clientId: token.clientId,
                 hasUser: !!user
             });
+
+            if (isUnresolvedOAuthUser(user as ExtendedUser | undefined)) {
+                console.warn('[auth] refusing to mint a token for an unresolved OAuth profile', {
+                    email: (user as ExtendedUser)?.email,
+                    code: (user as ExtendedUser)?.authFailure?.code,
+                });
+                return token;
+            }
 
 	            if (user) {
 	                const extendedUser = user as ExtendedUser;
@@ -2903,6 +3011,19 @@ export const options: NextAuthConfig = {
         async session({ session, token }: any) {
             if (token.error === "TokenValidationError") {
                 // If there was an error during token validation, return a special session
+                return { expires: "0" };
+            }
+
+            // A token with no AlgaPSA user id never belonged to a resolved user
+            // (e.g. an OAuth profile that matched nobody); present it as signed out
+            // instead of a session whose user.id is an empty string.
+            const tokenUserId = typeof token.id === 'string' && token.id.length > 0
+                ? token.id
+                : typeof token.sub === 'string' && token.sub.length > 0
+                    ? token.sub
+                    : '';
+            if (!tokenUserId) {
+                console.warn('[auth] session requested for a token without a user id; treating as unauthenticated');
                 return { expires: "0" };
             }
 

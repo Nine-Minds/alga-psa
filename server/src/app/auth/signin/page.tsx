@@ -26,6 +26,14 @@ export default async function SignIn({
 
   const query = new URLSearchParams();
   if (callbackUrl) query.set('callbackUrl', callbackUrl);
+  // Auth.js sends its own failures here (pages.error) and SSO mapping failures
+  // add a reason; without forwarding them the sign-in page has nothing to show.
+  for (const key of ['error', 'reason', 'providerEmail'] as const) {
+    const value = params?.[key];
+    if (typeof value === 'string' && value.length > 0) {
+      query.set(key, value);
+    }
+  }
 
   if (callbackUrl.includes('/client-portal')) {
     redirect(`/auth/client-portal/signin${query.toString() ? `?${query.toString()}` : ''}`);
