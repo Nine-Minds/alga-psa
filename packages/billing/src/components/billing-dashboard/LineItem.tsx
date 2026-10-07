@@ -670,7 +670,6 @@ export const LineItem: React.FC<LineItemProps> = ({
               <Input
                 id='rate-input'
                 type="number"
-                min="0"
                 step="0.01"
                 value={rateInDollars}
                 onChange={(e) => {

@@ -148,6 +148,19 @@ const isBlankManualItem = (item: EditableInvoiceItem, defaultServiceId?: string)
   && !(item.description ?? '').trim()
   && (item.rate ?? 0) === 0;
 
+/** Merge editable fields from a LineItem draft while keeping row identity and
+ * lifecycle under the parent editor's ownership. */
+const mergeLineItemDraft = (
+  item: EditableInvoiceItem,
+  draft: LineItemEditableItem,
+): EditableInvoiceItem => ({
+  ...item,
+  ...draft,
+  item_id: item.item_id,
+  isExisting: item.isExisting,
+  isRemoved: item.isRemoved,
+});
+
 // Base structure for a default item, ensuring required fields for EditableInvoiceItem are present
 const baseDefaultItem: Omit<EditableInvoiceItem, 'invoice_id'> = {
   item_id: '', // Will be replaced by uuidv4() when used
@@ -809,7 +822,13 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
     console.log('Removing/restoring item:', { index, item: items[index] });
     const newItems = [...items];
     if (newItems[index].isExisting) {
-      newItems[index] = { ...newItems[index], isRemoved: !newItems[index].isRemoved };
+      const draft = pendingLineItemDraftsRef.current.get(index);
+      const nextItem = draft ? mergeLineItemDraft(newItems[index], draft) : newItems[index];
+      nextItem.isRemoved = !newItems[index].isRemoved;
+      newItems[index] = nextItem;
+      if (draft) {
+        pendingLineItemDraftsRef.current.set(index, { ...draft, isRemoved: nextItem.isRemoved });
+      }
       setItems(newItems);
     } else {
       const drafts = pendingLineItemDraftsRef.current;
@@ -884,8 +903,19 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
     e.preventDefault();
     const itemsForSubmit = items.map((item, index) => {
       const draft = pendingLineItemDraftsRef.current.get(index);
-      return draft ? { ...item, ...draft } : item;
+      return draft ? mergeLineItemDraft(item, draft) : item;
     });
+    const invalidQuantityItem = itemsForSubmit.find((item) =>
+      !item.isRemoved
+      && !isBlankManualItem(item, defaultManualServiceId)
+      && (Number.isFinite(Number(item.quantity)) === false || Number(item.quantity) <= 0),
+    );
+    if (invalidQuantityItem) {
+      setError(t('manualInvoices.errors.INVALID_QUANTITY', {
+        defaultValue: 'Quantity must be greater than zero.',
+      }));
+      return;
+    }
     if (!currentInvoiceData && selectedClient === null && !selectedSalesOrder) {
       setError(t('manualInvoices.errors.selectClient', {
         defaultValue: 'Please select a client',

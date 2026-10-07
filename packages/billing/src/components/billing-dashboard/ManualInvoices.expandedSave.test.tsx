@@ -52,13 +52,30 @@ const fillCharge = async (description: string) => {
 
 describe('expanded invoice adjustment global save', () => {
   it('submits the latest expanded charge values directly through global Save Changes', async () => {
-    mocks.update.mockResolvedValue({ ...invoice, draft_adjustment_revision: 8, invoice_charges: [] });
+    let revision = 7;
+    let persisted: any[] = [];
+    mocks.update.mockImplementation(async (_invoiceId, changes) => {
+      revision += 1;
+      persisted = [...persisted, ...changes.newItems.map((item: any) => ({
+        ...item, is_manual: true, total_price: item.quantity * item.rate,
+        net_amount: item.quantity * item.rate, tax_amount: 0,
+      }))];
+      return { ...invoice, draft_adjustment_revision: revision, invoice_charges: [...invoice.invoice_charges, ...persisted] };
+    });
     renderDraft();
     await fillCharge('Manual adjustment');
     fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
     await waitFor(() => expect(mocks.update).toHaveBeenCalledTimes(1));
     expect(mocks.update.mock.calls[0][1].newItems).toEqual([expect.objectContaining({ service_id: 'svc-1', quantity: 3, rate: 5000, description: 'Manual adjustment' })]);
     expect(mocks.update.mock.calls[0][2]).toEqual({ operationId: expect.any(String), expectedRevision: 7 });
+
+    // The authoritative response is reloaded into the editor. A second save
+    // updates the existing row and does not append a duplicate.
+    fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+    await waitFor(() => expect(mocks.update).toHaveBeenCalledTimes(2));
+    expect(mocks.update.mock.calls[1][1].newItems).toEqual([]);
+    expect(mocks.update.mock.calls[1][1].updatedItems).toHaveLength(1);
+    expect(persisted).toHaveLength(1);
   });
 
   it('preserves expanded inputs when persistence fails', async () => {
@@ -86,6 +103,115 @@ describe('expanded invoice adjustment global save', () => {
     await waitFor(() => expect(mocks.update).toHaveBeenCalledTimes(1));
     expect(mocks.update.mock.calls[0][1].updatedItems).toEqual([expect.objectContaining({ item_id: 'manual-1', quantity: 3, rate: 5000, description: 'Edited charge' })]);
     expect((document.getElementById('description-input') as HTMLInputElement).value).toBe('Edited charge');
+  });
+
+  it('keeps edited values and parent removal state when editing then removing an existing row', async () => {
+    const existingCharge = { item_id: 'remove-1', invoice_id: 'invoice-1', service_id: 'svc-1', description: 'Before', quantity: 1, unit_price: 2500, total_price: 2500, net_amount: 2500, tax_amount: 0, is_manual: true, is_discount: false, is_taxable: false };
+    mocks.lineItems.mockResolvedValueOnce([existingCharge] as any);
+    mocks.update.mockResolvedValue({ ...invoice, draft_adjustment_revision: 8, invoice_charges: invoice.invoice_charges });
+    renderDraft({ ...invoice, invoice_charges: [...invoice.invoice_charges, existingCharge] });
+    await waitFor(() => expect(document.getElementById('item-remove-1')).toBeTruthy());
+    fireEvent.click(document.getElementById('item-remove-1')!);
+    fireEvent.change(document.getElementById('description-input')!, { target: { value: 'Edited before removal' } });
+    fireEvent.change(document.getElementById('rate-input')!, { target: { value: '40' } });
+    fireEvent.click(document.getElementById('remove-line-item-button')!);
+    fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+    await waitFor(() => expect(mocks.update).toHaveBeenCalledTimes(1));
+    expect(mocks.update.mock.calls[0][1].removedItemIds).toEqual(['remove-1']);
+    expect(mocks.update.mock.calls[0][1].updatedItems).toEqual([]);
+  });
+
+  it('restores an edited row and saves its values as an update', async () => {
+    const existingCharge = { item_id: 'restore-1', invoice_id: 'invoice-1', service_id: 'svc-1', description: 'Before', quantity: 1, unit_price: 2500, total_price: 2500, net_amount: 2500, tax_amount: 0, is_manual: true, is_discount: false, is_taxable: false };
+    mocks.lineItems.mockResolvedValueOnce([existingCharge] as any);
+    mocks.update.mockResolvedValue({ success: false, code: 'unexpected_error', message: 'write failed' });
+    renderDraft({ ...invoice, invoice_charges: [...invoice.invoice_charges, existingCharge] });
+    await waitFor(() => expect(document.getElementById('item-restore-1')).toBeTruthy());
+    fireEvent.click(document.getElementById('item-restore-1')!);
+    fireEvent.change(document.getElementById('description-input')!, { target: { value: 'Edited and restored' } });
+    fireEvent.change(document.getElementById('rate-input')!, { target: { value: '45' } });
+    fireEvent.click(document.getElementById('remove-line-item-button')!);
+    await waitFor(() => expect(document.getElementById('restore-line-item-button')).toBeTruthy());
+    fireEvent.click(document.getElementById('restore-line-item-button')!);
+    expect((document.getElementById('description-input') as HTMLInputElement).value).toBe('Edited and restored');
+    fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+    await waitFor(() => expect(mocks.update).toHaveBeenCalledTimes(1));
+    expect(mocks.update.mock.calls[0][1].removedItemIds).toEqual([]);
+    expect(mocks.update.mock.calls[0][1].updatedItems).toEqual([expect.objectContaining({ item_id: 'restore-1', description: 'Edited and restored', rate: 4500 })]);
+  });
+
+  it('blocks invalid quantity, explains the correction, and retains the expanded input', async () => {
+    renderDraft();
+    await fillCharge('Quantity needs correction');
+    fireEvent.change(document.getElementById('quantity-input')!, { target: { value: '0' } });
+    fireEvent.submit(document.querySelector('form')!);
+    expect(mocks.update).not.toHaveBeenCalled();
+    expect(await screen.findByText('Quantity must be greater than zero.')).toBeTruthy();
+    expect((document.getElementById('quantity-input') as HTMLInputElement).value).toBe('0');
+  });
+
+  it('preserves the later pending row when an earlier new row is removed and indices shift', async () => {
+    renderDraft();
+    await waitFor(() => expect(document.getElementById('add-line-item-button')).toBeTruthy());
+    fireEvent.click(document.getElementById('add-line-item-button')!);
+    let selects = document.querySelectorAll('[id^="service-select-"]');
+    fireEvent.change(selects[selects.length - 1], { target: { value: 'svc-1' } });
+    fireEvent.change(document.querySelectorAll('#quantity-input')[0], { target: { value: '2' } });
+    fireEvent.change(document.querySelectorAll('#rate-input')[0], { target: { value: '10' } });
+    fireEvent.change(document.querySelectorAll('#description-input')[0], { target: { value: 'Earlier row' } });
+    fireEvent.click(document.getElementById('collapse-line-item-button')!);
+
+    fireEvent.click(document.getElementById('add-line-item-button')!);
+    selects = document.querySelectorAll('[id^="service-select-"]');
+    fireEvent.change(selects[selects.length - 1], { target: { value: 'svc-1' } });
+    fireEvent.change(document.querySelectorAll('#quantity-input')[0], { target: { value: '3' } });
+    fireEvent.change(document.querySelectorAll('#rate-input')[0], { target: { value: '20' } });
+    fireEvent.change(document.querySelectorAll('#description-input')[0], { target: { value: 'Later row survives' } });
+
+    const earlierRow = screen.getByText('Earlier row').closest('[id^="item-"]') as HTMLElement;
+    fireEvent.click(earlierRow);
+    fireEvent.click(earlierRow.querySelector('#remove-line-item-button')!);
+    mocks.update.mockResolvedValue({ success: false, code: 'unexpected_error', message: 'write failed' });
+    fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+    await waitFor(() => expect(mocks.update).toHaveBeenCalledTimes(1));
+    expect(mocks.update.mock.calls[0][1].newItems).toEqual([expect.objectContaining({ description: 'Later row survives', quantity: 3, rate: 2000 })]);
+  });
+
+  it('submits a new negative-rate charge credit from its expanded row', async () => {
+    let persistedCredit: any;
+    let revision = 7;
+    mocks.update.mockImplementation(async (_invoiceId, changes) => {
+      revision += 1;
+      if (changes.newItems.length) {
+        const item = changes.newItems[0];
+        persistedCredit = {
+          ...item, unit_price: item.rate, is_manual: true, is_discount: true, is_manual_credit: true,
+          discount_type: 'fixed', total_price: item.quantity * item.rate,
+          net_amount: item.quantity * item.rate, tax_amount: 0,
+        };
+      }
+      return { ...invoice, draft_adjustment_revision: revision, invoice_charges: [...invoice.invoice_charges, ...(persistedCredit ? [persistedCredit] : [])] };
+    });
+    renderDraft();
+    await waitFor(() => expect(document.getElementById('add-line-item-button')).toBeTruthy());
+    fireEvent.click(document.getElementById('add-line-item-button')!);
+    const select = await waitFor(() => {
+      const element = document.querySelector('[id^="service-select-"]') as HTMLSelectElement | null;
+      expect(element).toBeTruthy();
+      return element!;
+    });
+    fireEvent.change(select, { target: { value: 'svc-1' } });
+    fireEvent.change(document.getElementById('quantity-input')!, { target: { value: '3' } });
+    fireEvent.change(document.getElementById('rate-input')!, { target: { value: '-50' } });
+    fireEvent.change(document.getElementById('description-input')!, { target: { value: 'New quantity credit' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+    await waitFor(() => expect(mocks.update).toHaveBeenCalledTimes(1));
+    expect(mocks.update.mock.calls[0][1].newItems).toEqual([expect.objectContaining({ description: 'New quantity credit', quantity: 3, rate: -5000, is_discount: false })]);
+    expect(persistedCredit).toMatchObject({ is_manual_credit: true, is_discount: true, rate: -5000 });
+    fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+    await waitFor(() => expect(mocks.update).toHaveBeenCalledTimes(2));
+    expect(mocks.update.mock.calls[1][1].newItems).toEqual([]);
+    expect(mocks.update.mock.calls[1][1].updatedItems).toEqual([expect.objectContaining({ item_id: persistedCredit.item_id, quantity: 3, rate: -5000 })]);
   });
 
   it.each([
