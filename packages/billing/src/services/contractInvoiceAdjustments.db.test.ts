@@ -1131,6 +1131,9 @@ describe('contract invoice adjustments (DB-backed)', () => {
     const configId = uuidv4();
     const revisionId = uuidv4();
     const trueUpId = uuidv4();
+    const adjustmentId = uuidv4();
+    const foreignTenant = uuidv4();
+    const foreignAdjustmentId = uuidv4();
     await db('contract_line_service_configuration').insert({ tenant, config_id: configId, contract_line_id: contractLineId, service_id: serviceId, configuration_type: 'Fixed', quantity: 1 });
     await db('invoice_charge_details').insert({ tenant, item_detail_id: uuidv4(), item_id: fixture.generatedChargeId, config_id: configId, service_id: serviceId, quantity: 39, rate: 10_000, service_period_start: '2026-09-01', service_period_end: '2026-09-30' });
     await db('invoice_charges').where({ tenant, item_id: fixture.generatedChargeId }).update({ unit_price: 10_000 });
@@ -1140,15 +1143,15 @@ describe('contract invoice adjustments (DB-backed)', () => {
       await db('contract_recurring_unit_adjustments').insert([
         {
           tenant, revision_id: revisionId, contract_line_id: contractLineId,
-          adjustment_id: uuidv4(), service_id: serviceId, config_id: configId,
+          adjustment_id: adjustmentId, service_id: serviceId, config_id: configId,
           revision_version: 1, adjustment_period_start: '2026-09-01', adjustment_period_end: '2026-10-01',
           mid_period_effective_date: '2026-09-16', previous_quantity: 2, new_quantity: 3,
           quantity_delta: 1, unit_rate_cents: 10_000, covered_days: 15, full_period_days: 30,
           amount_cents: 5_000, reason: 'ledger-only test row',
         },
         {
-          tenant: uuidv4(), revision_id: uuidv4(), contract_line_id: uuidv4(),
-          adjustment_id: uuidv4(), service_id: uuidv4(), config_id: uuidv4(),
+          tenant: foreignTenant, revision_id: revisionId, contract_line_id: uuidv4(),
+          adjustment_id: foreignAdjustmentId, service_id: uuidv4(), config_id: uuidv4(),
           revision_version: 1, adjustment_period_start: '2026-09-01', adjustment_period_end: '2026-10-01',
           mid_period_effective_date: '2026-09-16', previous_quantity: 2, new_quantity: 3,
           quantity_delta: 1, unit_rate_cents: 10_000, covered_days: 15, full_period_days: 30,
@@ -1186,8 +1189,12 @@ describe('contract invoice adjustments (DB-backed)', () => {
       } as any);
       expect(result).toMatchObject({ success: false, code: 'SOURCE_NOT_ELIGIBLE', params: { overlapConfirmationRequired: 'true', overlapItemIds: trueUpId } });
     } finally {
-      await db.schema.dropTable('contract_recurring_unit_adjustments');
-      await db('discounts').where({ tenant, discount_id: configuredDiscountId }).update({ scope: originalDiscount.scope });
+      try {
+        await db('contract_recurring_unit_adjustments').where({ tenant, adjustment_id: adjustmentId }).delete();
+        await db('contract_recurring_unit_adjustments').where({ tenant: foreignTenant, adjustment_id: foreignAdjustmentId }).delete();
+      } finally {
+        await db('discounts').where({ tenant, discount_id: configuredDiscountId }).update({ scope: originalDiscount.scope });
+      }
     }
   });
 

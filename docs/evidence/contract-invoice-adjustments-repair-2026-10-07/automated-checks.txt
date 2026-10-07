@@ -6,6 +6,6 @@ PASS: NODE_OPTIONS=--max-old-space-size=8192 npx tsc --noEmit -p packages/billin
 
 PASS: focused migrated companion-ledger test — 1 passed, 62 skipped.
 PASS: focused QuickBooks Online and Xero accounting matrix — 2 passed, 61 skipped. Both retain the four-line classification and signed-total parity assertions. Xero transport is mocked.
-PASS: full DB-backed suite — 63/63 passed on a fresh isolated database. Output: db-suite-2026-10-07.log.
+PASS: full DB-backed suite — 63/63 passed on a fresh isolated database. Output: db-suite-2026-10-07-review-fix.log.
 
-The initial 60/63 failures were test-order contamination from a companion test trying to create a migrated table before entering its cleanup `try/finally`; its configured discount-scope override leaked into later QBO/Xero test cases. The fixture now inserts all required columns into the migrated schema, so cleanup restores the original scope. No expected line counts were reduced. Isolated test DBs are suite-managed and no shared invoices were modified.
+The prior 60/63 run identified test-order contamination: a companion-ledger test attempted to create the already migrated table before entering cleanup, so a configured discount-scope override leaked into QBO/Xero cases. The correction writes full rows into the migrated schema, deletes only fixture-owned rows, and restores scope in nested `finally`. QBO and Xero still assert four discount-classified lines and signed-total parity. Isolated test DBs are suite-managed; no shared invoices were modified.
