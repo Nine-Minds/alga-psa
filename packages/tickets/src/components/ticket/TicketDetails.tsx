@@ -180,6 +180,7 @@ interface TicketDetailsProps {
     initialContacts?: IContact[];
     initialContactInfo?: IContact | null;
     initialCreatedByUser?: IUser | null;
+    initialUpdatedByUser?: IUser | null;
     initialBoard?: any;
     initialAdditionalAgents?: ITicketResource[];
     initialAvailableAgents?: IUserWithRoles[];
@@ -303,6 +304,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     initialContacts = [],
     initialContactInfo = null,
     initialCreatedByUser = null,
+    initialUpdatedByUser = null,
     initialBoard = null,
     initialAdditionalAgents = [],
     initialAvailableAgents = [],
@@ -590,6 +592,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const [client, setClient] = useState<IClient | null>(initialClient);
     const [contactInfo, setContactInfo] = useState<IContact | null>(initialContactInfo);
     const [createdByUser, setCreatedByUser] = useState<IUser | null>(initialCreatedByUser);
+    const [updatedByUser, setUpdatedByUser] = useState<IUser | null>(initialUpdatedByUser);
 
     const closedStatusOptions = useMemo(() => {
         const boardId = ticket.board_id;
@@ -978,7 +981,10 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         highlightLiveFields([field]);
     }, [clearLiveFieldConflict, highlightLiveFields]);
 
-    const refreshTicketSnapshot = useCallback(async (updatedFields: string[] = []) => {
+    const refreshTicketSnapshot = useCallback(async (
+        updatedFields: string[] = [],
+        remoteUpdatedBy?: { userId: string; displayName: string }
+    ) => {
         if (!ticket.ticket_id) {
             return { refreshed: false as const };
         }
@@ -991,6 +997,17 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
             const normalizedUpdatedFields = new Set(updatedFields.map((field) => normalizeTicketLiveField(field)));
 
             setTicket(latestTicket);
+            // Resolve who made the latest write. The live-update payload carries the
+            // actor's display name; without it keep the name only if it still matches.
+            setUpdatedByUser((previous) => {
+                const latestUpdatedBy = latestTicket.updated_by ?? null;
+                if (!latestUpdatedBy) return null;
+                if (previous?.user_id === latestUpdatedBy) return previous;
+                if (remoteUpdatedBy?.userId === latestUpdatedBy) {
+                    return { user_id: latestUpdatedBy, first_name: remoteUpdatedBy.displayName, last_name: '' } as IUser;
+                }
+                return null;
+            });
             setItilImpact(latestTicket.itil_impact || undefined);
             setItilUrgency(latestTicket.itil_urgency || undefined);
             setSavedBoardId(latestTicket.board_id ?? null);
@@ -1099,7 +1116,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         const overlappingFields = updatedFields.filter((field) => dirtyFields.has(field));
         const nonOverlappingFields = updatedFields.filter((field) => !dirtyFields.has(field));
 
-        const refreshResult = await refreshTicketSnapshot(pendingUpdate.updatedFields);
+        const refreshResult = await refreshTicketSnapshot(pendingUpdate.updatedFields, pendingUpdate.updatedBy);
         if (!refreshResult.refreshed) {
             return;
         }
@@ -2507,6 +2524,7 @@ const handleClose = () => {
                         attributes: updatedAttributes,
                         updated_at: new Date().toISOString()
                     }));
+                    setUpdatedByUser(currentUser ?? null);
                 }
                 
                 return success;
@@ -2526,8 +2544,7 @@ const handleClose = () => {
 
                 // Update the ticket
                 const result = await updateTicket(ticket.ticket_id, {
-                    attributes: updatedAttributes,
-                    updated_at: new Date().toISOString()
+                    attributes: updatedAttributes
                 });
                 if (isReturnedActionError(result)) {
                     throw result;
@@ -2539,6 +2556,7 @@ const handleClose = () => {
                     attributes: updatedAttributes,
                     updated_at: new Date().toISOString()
                 }));
+                setUpdatedByUser(currentUser ?? null);
 
 
                 toast.success(t('messages.descriptionUpdated'));
@@ -2684,6 +2702,7 @@ const handleClose = () => {
                 attributes: updatedAttributes ?? null,
                 updated_at: new Date().toISOString(),
             }));
+            setUpdatedByUser(currentUser ?? null);
             return true;
         } catch (error) {
             console.error('Error updating watch list:', error);
@@ -2889,6 +2908,7 @@ const handleClose = () => {
                     ...changes,
                     updated_at: new Date().toISOString()
                 }));
+                setUpdatedByUser(currentUser ?? null);
                 // Refetch the grid timeline so the "changed <field>" system rows
                 // from this local batch appear live (single bump per batch). The
                 // individual-save fallback below relies on handleSelectChange,
@@ -3061,6 +3081,7 @@ const handleClose = () => {
                 response_state: null,
                 updated_at: new Date().toISOString(),
             }));
+            setUpdatedByUser(currentUser ?? null);
             setActivityLogRefreshKey((value) => value + 1);
             toast.success(t('messages.ticketClosed', 'Ticket closed'));
             return true;
@@ -3093,6 +3114,8 @@ const handleClose = () => {
                 getClientLocations(newClientId),
             ]);
             
+            setTicket(prevTicket => ({ ...prevTicket, updated_at: new Date().toISOString() }));
+            setUpdatedByUser(currentUser ?? null);
             setClient(clientData);
             setContacts(contactsData || []);
             setLocations(locationData || []);
@@ -3121,8 +3144,10 @@ const handleClose = () => {
             setTicket(prevTicket => ({
                 ...prevTicket,
                 location_id: newLocationId,
-                location: newLocationId ? locations.find(l => l.location_id === newLocationId) : undefined
+                location: newLocationId ? locations.find(l => l.location_id === newLocationId) : undefined,
+                updated_at: new Date().toISOString()
             }));
+            setUpdatedByUser(currentUser ?? null);
 
             toast.success(t('messages.locationUpdated'));
         } catch (error) {
@@ -3141,8 +3166,10 @@ const handleClose = () => {
 
             setTicket(prevTicket => ({
                 ...prevTicket,
-                billing_profile_id: newBillingProfileId
+                billing_profile_id: newBillingProfileId,
+                updated_at: new Date().toISOString()
             }));
+            setUpdatedByUser(currentUser ?? null);
 
             toast.success(t('messages.billingProfileUpdated', 'Billing profile updated'));
         } catch (error) {
@@ -3850,14 +3877,26 @@ const handleClose = () => {
                             })()}
                         </p>
                     )}
-                    {ticket.updated_at && (
-                        <p>
-                            {t('fields.updated', 'Updated')} {updatedRelativeTime || (() => {
-                                const tz = hasHydrated ? getUserTimeZone() : 'UTC';
-                                return formatTicketDateTime(ticket.updated_at, locale, tz, dateFormat, showWeekday);
-                            })()}
-                        </p>
-                    )}
+                    {ticket.updated_at && (() => {
+                        const updatedTime = updatedRelativeTime || (() => {
+                            const tz = hasHydrated ? getUserTimeZone() : 'UTC';
+                            return formatTicketDateTime(ticket.updated_at, locale, tz, dateFormat, showWeekday);
+                        })();
+                        const updatedByName = updatedByUser
+                            ? `${updatedByUser.first_name ?? ''} ${updatedByUser.last_name ?? ''}`.trim()
+                            : '';
+                        return (
+                            <p data-testid="ticket-updated-at">
+                                {updatedByName
+                                    ? t('fields.updatedAtBy', {
+                                        defaultValue: 'Updated {{time}} by {{name}}',
+                                        time: updatedTime,
+                                        name: updatedByName,
+                                    })
+                                    : <>{t('fields.updated', 'Updated')} {updatedTime}</>}
+                            </p>
+                        );
+                    })()}
                 </div>
                 {/* Delete Ticket Dialog (with dependency validation) */}
                 <DeleteEntityDialog

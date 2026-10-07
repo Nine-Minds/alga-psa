@@ -899,7 +899,6 @@ export function QuickAddTicket({
         ...(newTicket.attributes || {}),
         description: serializedDescription,
       },
-      updated_at: new Date().toISOString(),
     });
     if (isReturnedActionError(updateResult)) {
       throw new Error(getErrorMessage(updateResult));

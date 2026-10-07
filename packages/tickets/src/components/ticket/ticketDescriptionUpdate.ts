@@ -46,7 +46,6 @@ export async function persistTicketDescriptionUpdate({
     };
     const result = await updateTicket(ticketId, {
       attributes: updatedAttributes,
-      updated_at: new Date().toISOString(),
     });
     if (isReturnedActionError(result)) {
       handleError(result, 'Failed to update description');
