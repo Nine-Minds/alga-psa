@@ -32,6 +32,7 @@ export default defineConfig({
       'src/actions/documentTemplateActions.existingDocument.test.ts',
       'src/components/billing-dashboard/documents/DocumentTemplateEditor.existingDocument.test.tsx',
       'src/components/billing-dashboard/LineItem.test.tsx',
+      'src/components/billing-dashboard/ManualInvoices.expandedSave.test.tsx',
       // Manual invoice total arithmetic must be selected by the billing
       // package's own test command as well as the server's monorepo glob.
       'src/components/billing-dashboard/manualInvoiceTotals.test.ts',

@@ -1,0 +1,90 @@
+// @vitest-environment jsdom
+import React from 'react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+const mocks = vi.hoisted(() => ({ update: vi.fn(), warnings: vi.fn(async () => []), lineItems: vi.fn(async () => []) }));
+vi.mock('../../actions/invoiceExportWarnings', () => ({ getInvoiceAdjustmentExportWarnings: mocks.warnings }));
+vi.mock('@alga-psa/billing/actions/manualInvoiceActions', () => ({ generateManualInvoice: vi.fn(), getClientBillingEmailStatus: vi.fn(async () => ({ hasBillingEmail: true })) }));
+vi.mock('@alga-psa/billing/actions/salesOrderInvoicingActions', () => ({ generateInvoiceForSalesOrder: vi.fn() }));
+vi.mock('@alga-psa/billing/actions/invoiceModification', () => ({ updateInvoiceManualItems: mocks.update }));
+vi.mock('@alga-psa/billing/actions/invoiceQueries', () => ({ getInvoiceLineItems: mocks.lineItems }));
+vi.mock('@alga-psa/billing/actions/billingClientLocationActions', () => ({ getActiveClientLocationsForBilling: vi.fn(async () => []) }));
+vi.mock('@alga-psa/billing/actions/taxRateActions', () => ({ getTaxRates: vi.fn(async () => []) }));
+vi.mock('@alga-psa/billing/actions/billingProfileActions', () => ({ getClientBillingProfilesForBilling: vi.fn(async () => []) }));
+vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn() }) }));
+vi.mock('@alga-psa/ui/context', () => ({ useQuickAddClient: () => ({ renderQuickAddClient: () => null }) }));
+vi.mock('@alga-psa/ui/components/ClientPicker', () => ({ ClientPicker: () => null }));
+vi.mock('@alga-psa/ui/components/CustomSelect', () => ({ __esModule: true, default: ({ id, options = [], value, onValueChange }: any) => <select id={id} value={value ?? ''} onChange={(e) => onValueChange(e.target.value)}><option value="">Select</option>{options.map((o: any) => <option key={o.value} value={o.value}>{o.label}</option>)}</select> }));
+vi.mock('@alga-psa/ui/components/SearchableSelect', () => ({ default: () => null }));
+vi.mock('@alga-psa/ui/components/DatePicker', () => ({ DatePicker: () => null }));
+vi.mock('@alga-psa/ui/components/Button', () => ({ Button: ({ children, ...props }: any) => <button {...props}>{children}</button> }));
+vi.mock('@alga-psa/ui/components/Input', () => ({ Input: (props: any) => <input {...props} /> }));
+vi.mock('@alga-psa/ui/components/Checkbox', () => ({ Checkbox: (props: any) => <input type="checkbox" {...props} /> }));
+vi.mock('@alga-psa/ui/components/Card', () => ({ Card: ({ children }: any) => <div>{children}</div> }));
+vi.mock('@alga-psa/ui/components/Alert', () => ({ Alert: ({ children }: any) => <div role="alert">{children}</div>, AlertDescription: ({ children }: any) => <div>{children}</div> }));
+vi.mock('@alga-psa/ui/lib/i18n/client', () => ({ useTranslation: () => ({ t: (_k: string, o?: Record<string, unknown>) => (o?.defaultValue as string | undefined) ?? _k }), useFormatters: () => ({ formatCurrency: (v: number) => `$${v.toFixed(2)}` }) }));
+
+import ManualInvoices from './ManualInvoices';
+afterEach(cleanup);
+beforeEach(() => vi.clearAllMocks());
+
+const invoice: any = {
+  invoice_id: 'invoice-1', client_id: 'client-1', invoice_number: 'INV-1', currencyCode: 'USD', is_manual: false,
+  draft_adjustment_revision: 7, total_amount: 390000,
+  invoice_charges: [{ item_id: 'generated-1', invoice_id: 'invoice-1', service_id: 'svc-1', description: 'Recurring', quantity: 1, unit_price: 390000, total_price: 390000, net_amount: 390000, tax_amount: 0, is_manual: false, is_discount: false, is_taxable: false }],
+};
+const services: any[] = [{ service_id: 'svc-1', service_name: 'Support', item_kind: 'service', is_active: true, default_rate: 5000, prices: [{ currency_code: 'USD', rate: 5000 }] }];
+const renderDraft = (draft = invoice) => render(<ManualInvoices clients={[]} services={services} invoice={draft} variant="draftAdjustments" onGenerateSuccess={vi.fn()} />);
+const fillCharge = async (description: string) => {
+  await waitFor(() => expect(document.getElementById('add-line-item-button')).toBeTruthy());
+  fireEvent.click(document.getElementById('add-line-item-button')!);
+  let serviceSelect: HTMLSelectElement | null = null;
+  await waitFor(() => {
+    serviceSelect = document.querySelector('[id^="service-select-"]');
+    expect(serviceSelect).toBeTruthy();
+  });
+  fireEvent.change(serviceSelect!, { target: { value: 'svc-1' } });
+  fireEvent.change(document.getElementById('quantity-input')!, { target: { value: '3' } });
+  fireEvent.change(document.getElementById('rate-input')!, { target: { value: '50' } });
+  fireEvent.change(document.getElementById('description-input')!, { target: { value: description } });
+};
+
+describe('expanded invoice adjustment global save', () => {
+  it('submits the latest expanded charge values directly through global Save Changes', async () => {
+    mocks.update.mockResolvedValue({ ...invoice, draft_adjustment_revision: 8, invoice_charges: [] });
+    renderDraft();
+    await fillCharge('Manual adjustment');
+    fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+    await waitFor(() => expect(mocks.update).toHaveBeenCalledTimes(1));
+    expect(mocks.update.mock.calls[0][1].newItems).toEqual([expect.objectContaining({ service_id: 'svc-1', quantity: 3, rate: 5000, description: 'Manual adjustment' })]);
+    expect(mocks.update.mock.calls[0][2]).toEqual({ operationId: expect.any(String), expectedRevision: 7 });
+  });
+
+  it('preserves expanded inputs when persistence fails', async () => {
+    mocks.update.mockResolvedValue({ success: false, code: 'unexpected_error', message: 'write failed' });
+    renderDraft();
+    await fillCharge('Keep me');
+    fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+    await waitFor(() => expect(mocks.update).toHaveBeenCalledTimes(1));
+    expect((document.getElementById('description-input') as HTMLInputElement).value).toBe('Keep me');
+    expect((document.getElementById('quantity-input') as HTMLInputElement).value).toBe('3');
+  });
+
+  it('submits edits to an existing charge while its row remains expanded', async () => {
+    const existingCharge = { item_id: 'manual-1', invoice_id: 'invoice-1', service_id: 'svc-1', description: 'Old charge', quantity: 1, unit_price: 2500, total_price: 2500, net_amount: 2500, tax_amount: 0, is_manual: true, is_discount: false, is_taxable: false };
+    const draft = { ...invoice, invoice_charges: [...invoice.invoice_charges, existingCharge] };
+    mocks.lineItems.mockResolvedValueOnce([existingCharge] as any);
+    mocks.update.mockResolvedValue({ success: false, code: 'unexpected_error', message: 'write failed' });
+    renderDraft(draft);
+    await waitFor(() => expect(document.getElementById('item-manual-1')).toBeTruthy());
+    fireEvent.click(document.getElementById('item-manual-1')!);
+    fireEvent.change(document.getElementById('quantity-input')!, { target: { value: '3' } });
+    fireEvent.change(document.getElementById('rate-input')!, { target: { value: '50' } });
+    fireEvent.change(document.getElementById('description-input')!, { target: { value: 'Edited charge' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+    await waitFor(() => expect(mocks.update).toHaveBeenCalledTimes(1));
+    expect(mocks.update.mock.calls[0][1].updatedItems).toEqual([expect.objectContaining({ item_id: 'manual-1', quantity: 3, rate: 5000, description: 'Edited charge' })]);
+    expect((document.getElementById('description-input') as HTMLInputElement).value).toBe('Edited charge');
+  });
+});

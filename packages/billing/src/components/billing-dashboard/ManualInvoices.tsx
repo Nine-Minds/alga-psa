@@ -339,6 +339,10 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
       invoice_id: invoice?.invoice_id || ''
     }];
   });
+  // Expanded LineItem editors keep working state locally. Capture their latest
+  // values in a ref so Save can synchronously snapshot them without collapsing
+  // the row or relying on a just-scheduled React state update.
+  const pendingLineItemDraftsRef = useRef(new Map<number, LineItemEditableItem>());
 
   const [expandedItems, setExpandedItems] = useState<Set<number>>(new Set());
   const [isGenerating, setIsGenerating] = useState(false);
@@ -808,6 +812,13 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
       newItems[index] = { ...newItems[index], isRemoved: !newItems[index].isRemoved };
       setItems(newItems);
     } else {
+      const drafts = pendingLineItemDraftsRef.current;
+      const shiftedDrafts = new Map<number, LineItemEditableItem>();
+      drafts.forEach((draft, draftIndex) => {
+        if (draftIndex < index) shiftedDrafts.set(draftIndex, draft);
+        else if (draftIndex > index) shiftedDrafts.set(draftIndex - 1, draft);
+      });
+      pendingLineItemDraftsRef.current = shiftedDrafts;
       newItems.splice(index, 1);
       setItems(newItems);
       const newExpanded = new Set(expandedItems);
@@ -871,6 +882,10 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const itemsForSubmit = items.map((item, index) => {
+      const draft = pendingLineItemDraftsRef.current.get(index);
+      return draft ? { ...item, ...draft } : item;
+    });
     if (!currentInvoiceData && selectedClient === null && !selectedSalesOrder) {
       setError(t('manualInvoices.errors.selectClient', {
         defaultValue: 'Please select a client',
@@ -883,7 +898,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
     setExportWarnings([]);
     if (currentInvoiceData?.invoice_id) {
       try {
-        const warnings = await getInvoiceAdjustmentExportWarnings(currentInvoiceData.invoice_id, items.filter(item => !item.isRemoved && !isBlankManualItem(item, defaultManualServiceId)));
+        const warnings = await getInvoiceAdjustmentExportWarnings(currentInvoiceData.invoice_id, itemsForSubmit.filter(item => !item.isRemoved && !isBlankManualItem(item, defaultManualServiceId)));
         setExportWarnings(warnings.map(warning => t(
           warning.code === 'discount' ? 'manualInvoices.exportWarnings.discount' : 'manualInvoices.exportWarnings.service',
           { adapter: warning.adapter, description: warning.description, defaultValue: warning.code === 'discount'
@@ -931,14 +946,14 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
       if (currentInvoiceData) {
         console.log('[Submit] Updating invoice items:', {
             invoiceId: currentInvoiceData.invoice_id,
-            newCount: items.filter(i => !i.isExisting && !i.isRemoved).length,
-            updatedCount: items.filter(i => i.isExisting && !i.isRemoved).length,
-            removedCount: items.filter(i => i.isRemoved).length
+            newCount: itemsForSubmit.filter(i => !i.isExisting && !i.isRemoved).length,
+            updatedCount: itemsForSubmit.filter(i => i.isExisting && !i.isRemoved).length,
+            removedCount: itemsForSubmit.filter(i => i.isRemoved).length
         });
 
-        const newItemsToSave = items.filter(item => !item.isExisting && !item.isRemoved && !isBlankManualItem(item, defaultManualServiceId));
-        const updatedItemsToSave = items.filter(item => item.isExisting && !item.isRemoved && item.item_id);
-        const removedItemIds = items
+        const newItemsToSave = itemsForSubmit.filter(item => !item.isExisting && !item.isRemoved && !isBlankManualItem(item, defaultManualServiceId));
+        const updatedItemsToSave = itemsForSubmit.filter(item => item.isExisting && !item.isRemoved && item.item_id);
+        const removedItemIds = itemsForSubmit
           .filter(item => item.isExisting && item.isRemoved && item.item_id)
           .map(item => item.item_id!); // item_id is guaranteed here by filter
 
@@ -1088,6 +1103,8 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
           return;
         }
 
+        // The save succeeded; authoritative refreshed rows now own these values.
+        pendingLineItemDraftsRef.current.clear();
         setExpandedItems(new Set());
 
         if (!currentInvoiceData) {
@@ -1375,6 +1392,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
 
   // Adapter for LineItem's onChange prop
   const handleLineItemChange = (index: number, updatedLineItem: LineItemEditableItem) => {
+      pendingLineItemDraftsRef.current.delete(index);
       const newItems = [...items];
       if (index >= 0 && index < newItems.length) {
           // Merge updated fields back into the full EditableInvoiceItem structure
@@ -1729,6 +1747,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
                       onRemove={() => handleRemoveItem(index)}
                       // Use the adapter function for onChange
                       onChange={(updatedLineItem) => handleLineItemChange(index, updatedLineItem)}
+                      onDraftChange={(updatedLineItem) => pendingLineItemDraftsRef.current.set(index, updatedLineItem)}
                       onToggleExpand={() => {
                         const newExpanded = new Set(expandedItems);
                         if (newExpanded.has(index)) newExpanded.delete(index);

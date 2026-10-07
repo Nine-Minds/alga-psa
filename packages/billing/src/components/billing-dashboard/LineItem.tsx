@@ -78,6 +78,8 @@ interface LineItemProps {
   invoiceItems?: Array<{ item_id: string; description: string }>;
   onRemove: () => void;
   onChange: (updatedItem: EditableItem) => void;
+  /** Publishes the live editor draft without committing/collapsing the row. */
+  onDraftChange?: (updatedItem: EditableItem) => void;
   onToggleExpand: () => void;
   currencyCode?: string;
   /** When provided, one-time charges expose a location attribution select. */
@@ -100,6 +102,7 @@ export const LineItem: React.FC<LineItemProps> = ({
   invoiceItems,
   onRemove,
   onChange,
+  onDraftChange,
   onToggleExpand,
   currencyCode = 'USD',
   locationOptions,
@@ -116,6 +119,7 @@ export const LineItem: React.FC<LineItemProps> = ({
     discount_percentage: item.discount_percentage
     // is_taxable removed; derived from selectedService.tax_rate_id
   }));
+  const editStateRef = useRef(editState);
   
   // Track raw discount amount input for display purposes
   const [discountAmountInput, setDiscountAmountInput] = useState<string>(
@@ -156,12 +160,14 @@ export const LineItem: React.FC<LineItemProps> = ({
     }
     lastSyncedItemKey.current = itemSyncKey;
 
-    setEditState({
+    const nextEditState = {
       ...item,
       discount_type: item.is_discount ? (item.discount_type || 'fixed') : undefined,
       discount_percentage: item.discount_percentage
       // is_taxable removed; derived from selectedService.tax_rate_id
-    });
+    };
+    editStateRef.current = nextEditState;
+    setEditState(nextEditState);
     
     // Reset discount amount input
     if (item.is_discount && item.discount_type === 'fixed') {
@@ -218,8 +224,8 @@ export const LineItem: React.FC<LineItemProps> = ({
 
   // Handle local state changes
   const handleLocalChange = (field: keyof EditableItem, value: string | number | boolean | undefined) => {
-    setEditState(prev => {
-      const newState = { ...prev } as EditableItem;
+    const prev = editStateRef.current;
+    const newState = { ...prev } as EditableItem;
       
       switch (field) {
         case 'discount_type':
@@ -305,8 +311,9 @@ export const LineItem: React.FC<LineItemProps> = ({
         // Removed manual is_taxable case; derived from service tax_rate_id
       }
 
-      return newState;
-    });
+    editStateRef.current = newState;
+    setEditState(newState);
+    onDraftChange?.(newState);
   };
 
   // Save changes when collapsing

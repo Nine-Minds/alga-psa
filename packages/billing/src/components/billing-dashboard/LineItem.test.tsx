@@ -92,6 +92,35 @@ it('keeps in-progress edits when an unrelated parent re-render passes an identic
   );
 });
 
+it('publishes the current expanded editor draft immediately without collapsing', () => {
+  const onDraftChange = vi.fn();
+  const onChange = vi.fn();
+  render(
+    <LineItem
+      item={baseItem}
+      index={0}
+      isExpanded
+      serviceOptions={serviceOptions}
+      onRemove={vi.fn()}
+      onChange={onChange}
+      onDraftChange={onDraftChange}
+      onToggleExpand={vi.fn()}
+      currencyCode="USD"
+    />,
+  );
+
+  fireEvent.change(document.getElementById('service-select-item-1')!, { target: { value: 'svc-1' } });
+  fireEvent.change(document.getElementById('quantity-input')!, { target: { value: '3' } });
+  fireEvent.change(document.getElementById('rate-input')!, { target: { value: '50' } });
+  fireEvent.change(document.getElementById('description-input')!, { target: { value: 'Expanded manual charge' } });
+
+  expect(onDraftChange).toHaveBeenLastCalledWith(expect.objectContaining({
+    service_id: 'svc-1', quantity: 3, rate: 5000, description: 'Expanded manual charge',
+  }));
+  expect(onChange).not.toHaveBeenCalled();
+  expect(document.getElementById('collapse-line-item-button')).toBeTruthy();
+});
+
 it('re-syncs the editor when the item data genuinely changes', () => {
   const { view, props } = renderLineItem(baseItem);
 
