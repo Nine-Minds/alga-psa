@@ -52,6 +52,8 @@ vi.mock('../../../../packages/tickets/src/lib/liveUpdates', async (importOrigina
 }));
 
 import { tenantDb } from '@alga-psa/db';
+import { appendOutboundMessageIdReference } from '../../lib/notifications/sendEventEmail';
+import { resolveLatestActivityActor } from '../../../../packages/tickets/src/lib/latestActivityActor';
 import { TicketModel } from '../../../../shared/models/ticketModel';
 import {
   createCloseRulesFixture,
@@ -220,5 +222,57 @@ describe('ticket last-updated-by', () => {
     expect(byId.get(commentWon).latest_activity_actor).toEqual({ kind: 'user', name: 'Beatrice Second' });
 
     expect(queries.filter((sql) => /DISTINCT ON \(ticket_id\)/i.test(sql) && /from comments/i.test(sql))).toHaveLength(1);
+  }, HOOK_TIMEOUT);
+
+  it('the outbound email references write leaves updated_at/updated_by alone, so the comment author stays credited', async () => {
+    const { addTicketCommentWithCache } = await import('../../../../packages/tickets/src/actions/optimizedTicketActions');
+    const ticketId = await insertTicket(db, fixture, {
+      entered_at: '2020-01-01T00:00:00Z',
+      updated_at: '2020-01-02T00:00:00Z',
+      updated_by: userA.user_id,
+    });
+
+    asUser(userB);
+    const comment: any = await addTicketCommentWithCache(
+      ticketId,
+      '[{"type":"paragraph","content":"Public reply"}]',
+      false,
+      false
+    );
+    expect(comment?.comment_id).toBeTruthy();
+    const before = await getTicket(ticketId);
+
+    // What sendEventEmail does after a successful send (the SMTP part is not exercised).
+    await appendOutboundMessageIdReference(scoped(), db, ticketId, '<outbound-1@example.com>');
+
+    const after = await getTicket(ticketId);
+    expect(after.email_metadata.references).toContain('<outbound-1@example.com>');
+    expect(new Date(after.updated_at).getTime()).toBe(new Date(before.updated_at).getTime());
+    expect(after.updated_by).toBe(before.updated_by);
+
+    const latestComment = await scoped()
+      .table('comments')
+      .where({ ticket_id: ticketId, publish_state: 'published' })
+      .orderBy('created_at', 'desc')
+      .first();
+    const latestMs = Math.max(new Date(after.updated_at).getTime(), new Date(latestComment.created_at).getTime());
+    const actor = resolveLatestActivityActor(
+      {
+        latest_activity_at: new Date(latestMs).toISOString(),
+        updated_at: new Date(after.updated_at).toISOString(),
+        entered_at: new Date(after.entered_at).toISOString(),
+        updated_by: after.updated_by,
+        entered_by: after.entered_by,
+      },
+      latestComment,
+      {
+        users: {
+          [userA.user_id]: { name: `${userA.first_name} ${userA.last_name}`.trim(), userType: 'internal' },
+          [userB.user_id]: { name: 'Beatrice Second', userType: 'internal' },
+        },
+        contacts: {},
+      }
+    );
+    expect(actor).toEqual({ kind: 'user', name: 'Beatrice Second' });
   }, HOOK_TIMEOUT);
 });

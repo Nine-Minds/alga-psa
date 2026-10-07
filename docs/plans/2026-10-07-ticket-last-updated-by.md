@@ -103,6 +103,11 @@ Both columns are server-owned. Clients can no longer send them.
    ```
    grep -rn -A4 -E "('tickets'|table\('tickets'\))" packages shared server/src ee/server/src | grep "\.update("
    ```
+   `-A4` is too short for multi-line `.update({ ... })` payloads and the hit often does not show `updated_at` (it missed the `email_metadata` write in `sendEventEmail.ts`). Also run this wider check, which lists every non-test `tickets` write whose payload sets `updated_at` without `updated_by` or `ticketUpdateStamp`; each hit must be fixed or be a non-ticket table (false positive):
+   ```
+   grep -rn -A14 -E "['\"]tickets(\s+as\s+\w+)?['\"]" packages shared server/src ee/server/src --include=*.ts --include=*.tsx | grep -v -E "test|spec|migrations" | grep -E "updated_at"
+   ```
+   Then confirm each remaining hit also has `updated_by`/`ticketUpdateStamp` within its `.update({...})` payload. `server/src/lib/notifications/sendEventEmail.ts` (`email_metadata`) must not write `updated_at`.
    Re-check `huntress/incidentProcessor.ts:277` and `processRmmAlertEvent.ts:330,412` in particular; they may write to other tables.
 
 6. **Leave a marker.** Put a `// LEVERAGE: pattern ticket-update-stamp — <note>` comment on the helper. Around 30 raw `tickets` writers each decide stamping by hand. A single `updateTicketRow(trx, tenant, id, patch, actor)` writer is the missing layer, but building it is a separate change.

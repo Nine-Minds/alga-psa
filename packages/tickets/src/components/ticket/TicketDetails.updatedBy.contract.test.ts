@@ -21,7 +21,9 @@ describe('MSP TicketDetails "Updated … by" header contract', () => {
 
   it('seeds updatedByUser from the container and refreshes it after local saves', () => {
     expect(details).toContain('initialUpdatedByUser');
-    expect(details).toContain('setUpdatedByUser(currentUser ?? null)');
+    expect(details).toContain('setUpdatedByUser(localActor)');
+    expect(details).not.toContain('setUpdatedByUser(currentUser ?? null)');
+    expect(details).toMatch(/if \(currentUser\) return currentUser;[\s\S]*session\?\.user\?\.id/);
     expect(read('./TicketDetailsContainer.tsx')).toContain('initialUpdatedByUser={ticketData.updatedByUser ?? null}');
   });
 
