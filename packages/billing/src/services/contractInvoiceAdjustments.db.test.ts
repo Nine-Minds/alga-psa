@@ -1136,15 +1136,24 @@ describe('contract invoice adjustments (DB-backed)', () => {
     await db('invoice_charges').where({ tenant, item_id: fixture.generatedChargeId }).update({ unit_price: 10_000 });
     const originalDiscount = await db('discounts').where({ tenant, discount_id: configuredDiscountId }).first('scope');
     await db('discounts').where({ tenant, discount_id: configuredDiscountId }).update({ scope: 'line' });
-    // Only the consumer columns are needed here; the companion owns migration
-    // and writer tests for its complete ledger. This database is suite-local.
-    await db.schema.createTable('contract_recurring_unit_adjustments', (table) => {
-      table.uuid('tenant'); table.uuid('revision_id'); table.uuid('contract_line_id');
-    });
     try {
       await db('contract_recurring_unit_adjustments').insert([
-        { tenant, revision_id: revisionId, contract_line_id: contractLineId },
-        { tenant: uuidv4(), revision_id: revisionId, contract_line_id: uuidv4() },
+        {
+          tenant, revision_id: revisionId, contract_line_id: contractLineId,
+          adjustment_id: uuidv4(), service_id: serviceId, config_id: configId,
+          revision_version: 1, adjustment_period_start: '2026-09-01', adjustment_period_end: '2026-10-01',
+          mid_period_effective_date: '2026-09-16', previous_quantity: 2, new_quantity: 3,
+          quantity_delta: 1, unit_rate_cents: 10_000, covered_days: 15, full_period_days: 30,
+          amount_cents: 5_000, reason: 'ledger-only test row',
+        },
+        {
+          tenant: uuidv4(), revision_id: uuidv4(), contract_line_id: uuidv4(),
+          adjustment_id: uuidv4(), service_id: uuidv4(), config_id: uuidv4(),
+          revision_version: 1, adjustment_period_start: '2026-09-01', adjustment_period_end: '2026-10-01',
+          mid_period_effective_date: '2026-09-16', previous_quantity: 2, new_quantity: 3,
+          quantity_delta: 1, unit_rate_cents: 10_000, covered_days: 15, full_period_days: 30,
+          amount_cents: 5_000, reason: 'foreign-tenant test row',
+        },
       ]);
       await db('invoice_charges').insert({
         tenant, item_id: trueUpId, invoice_id: fixture.invoiceId, service_id: serviceId,
@@ -3152,7 +3161,8 @@ describe('accounting adjustment export matrix', () => {
     let evidence: unknown = transformed;
     if (adapterType === 'quickbooks_online') {
       const invoice = (transformed.documents[0].payload as any).invoice;
-      expect(invoice.Line.filter((line: any) => line.DetailType === 'DiscountLineDetail')).toHaveLength(4);
+      expect(invoice.Line.filter((line: any) => line.DetailType === 'DiscountLineDetail'),
+        JSON.stringify(invoice.Line.map((line: any) => ({ detailType: line.DetailType, description: line.Description, amount: line.Amount })))).toHaveLength(4);
       expect(Math.round(invoice.Line.reduce((sum: number, line: any) => sum + (line.DetailType === 'DiscountLineDetail' ? -line.Amount : line.Amount), 0) * 100)).toBe(net);
       expect(invoice.Line.filter((line: any) => line.DetailType === 'DiscountLineDetail').every((line: any) => line.DiscountLineDetail.DiscountAccountRef.value === 'DISCOUNT')).toBe(true);
       expect(invoice.Line.filter((line: any) => line.DetailType === 'SalesItemLineDetail')).toHaveLength(3);
@@ -3163,7 +3173,8 @@ describe('accounting adjustment export matrix', () => {
       const request = vi.spyOn(client, 'request').mockResolvedValue({ Invoices: [{ InvoiceID: 'mock-export' }] });
       await client.createInvoices([(transformed.documents[0].payload as any).invoice]);
       const serialized = (request.mock.calls[0][0] as any).data.Invoices[0];
-      expect(serialized.LineItems.filter((line: any) => line.AccountCode === 'DISCOUNT')).toHaveLength(4);
+      expect(serialized.LineItems.filter((line: any) => line.AccountCode === 'DISCOUNT'),
+        JSON.stringify(serialized.LineItems.map((line: any) => ({ description: line.Description, accountCode: line.AccountCode, itemCode: line.ItemCode, quantity: line.Quantity, unitAmount: line.UnitAmount, lineAmount: line.LineAmount })))).toHaveLength(4);
       for (const line of serialized.LineItems) expect(Math.round(line.Quantity * line.UnitAmount * 100)).toBe(Math.round(line.LineAmount * 100));
       expect(Math.round(serialized.LineItems.reduce((sum: number, line: any) => sum + line.LineAmount, 0) * 100)).toBe(net);
       evidence = { transport: 'mocked Xero request; no external write', request: serialized };
