@@ -428,4 +428,144 @@ describe('per-comment Cc/Bcc delivery over isolated SMTP', () => {
     expect(log[0].cc_addresses).toBeNull();
     expect(log[0].bcc_addresses).toBeNull();
   }, 60_000);
+
+  // A resolution written from "Resolve and close" has its own comment email
+  // suppressed (metadata.closes_ticket), so the close email is the message that
+  // has to carry its one-off Cc/Bcc.
+  describe('the close email carries the resolution comment Cc/Bcc', () => {
+    async function closeFixture(options: {
+      requesterEmail?: string;
+      recipients?: { cc?: { email: string; name?: string }[]; bcc?: { email: string; name?: string }[] };
+      /** A resolution left open: no metadata.closes_ticket on the row. */
+      withoutClosePairing?: boolean;
+      watchers?: string[];
+    }) {
+      const ticket = randomUUID(), comment = randomUUID(), thread = randomUUID();
+      let contact: string | null = null;
+      if (options.requesterEmail) {
+        contact = randomUUID();
+        await table('contacts').insert({ tenant, contact_name_id: contact, client_id: client, full_name: 'Requester', email: options.requesterEmail });
+      }
+      await table('tickets').insert({
+        tenant, ticket_id: ticket, ticket_number: `CLOSE-${ticket.slice(0, 8)}`, client_id: client,
+        contact_name_id: contact, title: 'Cc/Bcc on close', entered_by: agent,
+        ...(options.watchers?.length
+          ? { attributes: JSON.stringify({ watch_list: options.watchers.map(email => ({ email, active: true })) }) }
+          : {}),
+      });
+      await table('comment_threads').insert({ tenant, thread_id: thread, ticket_id: ticket, root_comment_id: comment, is_internal: false, created_by: agent });
+      const note = JSON.stringify([{ type: 'paragraph', content: [{ type: 'text', text: 'Replaced the failed switch.', styles: {} }] }]);
+      await table('comments').insert({
+        tenant, comment_id: comment, thread_id: thread, ticket_id: ticket, user_id: agent, author_type: 'internal',
+        note, is_internal: false, is_resolution: true,
+        metadata: JSON.stringify({
+          ...(options.withoutClosePairing ? {} : { closes_ticket: true }),
+          ...(options.recipients ? { email_recipients: options.recipients } : {}),
+        }),
+      });
+      return {
+        ticket,
+        comment,
+        thread,
+        event: {
+          id: randomUUID(),
+          eventType: 'TICKET_CLOSED',
+          payload: { tenantId: tenant, ticketId: ticket, closedByUserId: agent, changes: {} },
+        },
+      };
+    }
+
+    async function close(event: unknown) {
+      const { ticketEmailSubscriberTestHarness } = await import('@/lib/eventBus/subscribers/ticketEmailSubscriber');
+      await withoutAmbientTenant(() => ticketEmailSubscriberTestHarness.handleTicketClosed(event as never));
+    }
+
+    beforeEach(async () => {
+      await table('tenant_email_templates').insert({
+        tenant, name: 'ticket-closed', language_code: 'en',
+        subject: 'Closed {{ticket.id}}', html_content: '<p>{{{ticket.resolution}}}</p>', text_content: '{{ticket.title}}',
+      });
+    });
+
+    it('T077: the requester close message carries the Cc, and the Bcc copy names nobody', async () => {
+      const requester = address('requester'), cc = address('cc'), bcc = address('bcc');
+      const { event } = await closeFixture({
+        requesterEmail: requester,
+        recipients: { cc: [{ email: cc, name: 'Cc Person' }], bcc: [{ email: bcc }] },
+      });
+
+      await close(event);
+
+      const [requesterMail] = await inbox(requester);
+      expect(requesterMail).toBeDefined();
+      expect(addressText(requesterMail.to)).toBe(requester);
+      expect(addressText(requesterMail.cc)).toContain(cc);
+      expect(requesterMail.headerLines.some(line => line.key === 'bcc')).toBe(false);
+
+      // One message for everyone, as on a comment: same Message-ID.
+      for (const recipient of [cc, bcc]) {
+        const copies = await inbox(recipient);
+        expect(copies).toHaveLength(1);
+        expect(copies[0].messageId).toBe(requesterMail.messageId);
+      }
+
+      const log = await table('email_sending_logs').where({ tenant }).first();
+      expect(addressList(log.cc_addresses)).toEqual([cc]);
+      expect(addressList(log.bcc_addresses)).toEqual([bcc]);
+    }, 60_000);
+
+    it('T078: with no requester address the close message goes to the Cc list', async () => {
+      const firstCc = address('cc-one'), secondCc = address('cc-two'), bcc = address('bcc');
+      const { event } = await closeFixture({
+        recipients: { cc: [{ email: firstCc }, { email: secondCc }], bcc: [{ email: bcc }] },
+      });
+
+      await close(event);
+
+      const [combined] = await inbox(firstCc);
+      expect(combined).toBeDefined();
+      expect(addressText(combined.to)).toBe(firstCc);
+      expect(addressText(combined.cc)).toContain(secondCc);
+      for (const recipient of [secondCc, bcc]) {
+        const copies = await inbox(recipient);
+        expect(copies).toHaveLength(1);
+        expect(copies[0].messageId).toBe(combined.messageId);
+      }
+    }, 60_000);
+
+    it('T079: a resolution that did not close the ticket keeps its Cc off the close email', async () => {
+      const requester = address('requester'), cc = address('earlier-cc');
+      // This resolution emailed its own Cc when it was written, so a later
+      // close must not copy them again.
+      const { event } = await closeFixture({
+        requesterEmail: requester,
+        withoutClosePairing: true,
+        recipients: { cc: [{ email: cc }] },
+      });
+
+      await close(event);
+
+      const [requesterMail] = await inbox(requester);
+      expect(requesterMail).toBeDefined();
+      expect(requesterMail.cc).toBeUndefined();
+      expect(await inbox(cc)).toHaveLength(0);
+    }, 60_000);
+
+    it('T080: a watcher who is also cc\'d on the resolution gets one close message', async () => {
+      const requester = address('requester'), watcher = address('watcher');
+      const { event } = await closeFixture({
+        requesterEmail: requester,
+        watchers: [watcher],
+        recipients: { cc: [{ email: watcher }] },
+      });
+
+      await close(event);
+
+      const [requesterMail] = await inbox(requester);
+      expect(addressText(requesterMail.cc)).toContain(watcher);
+      const watcherCopies = await inbox(watcher);
+      expect(watcherCopies).toHaveLength(1);
+      expect(watcherCopies[0].messageId).toBe(requesterMail.messageId);
+    }, 60_000);
+  });
 });
