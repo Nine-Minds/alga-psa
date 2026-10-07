@@ -31,3 +31,27 @@ describe('status-age trigger controls', () => {
     expect(parseDayCount('7.9')).toBe(7);
   });
 });
+
+describe('closed statuses', () => {
+  const statuses = [
+    { id: '1', name: 'Open', board_id: 'a', is_closed: false },
+    { id: '2', name: 'SMOKE Closed', board_id: 'a', is_closed: true },
+    { id: '3', name: 'Shared', board_id: 'a', is_closed: true },
+    { id: '4', name: 'shared', board_id: 'b', is_closed: false },
+  ];
+  const names = (boardId: string | null) => statusNameOptions(statuses, boardId).map((o) => o.value);
+
+  it('excludes a closed status', () => {
+    expect(names(null)).not.toContain('SMOKE Closed');
+    expect(names(null)).toContain('Open');
+  });
+
+  it('keeps a name that is closed on one board but open on another when no board is selected', () => {
+    expect(names(null)).toContain('shared');
+  });
+
+  it('excludes that name when the board where it is closed is selected', () => {
+    expect(names('a')).toEqual(['Open']);
+    expect(names('b')).toEqual(['shared']);
+  });
+});

@@ -1987,7 +1987,8 @@
     "dateTiming": {
       "before": "⟦{{count}} ḓȧẏş ƀḗƒȯřḗ⟧",
       "after": "⟦{{count}} ḓȧẏş ȧƒŧḗř⟧",
-      "onTheDay": "⟦ȯƞ ŧħḗ ḓȧẏ⟧"
+      "onTheDay": "⟦ȯƞ ŧħḗ ḓȧẏ⟧",
+      "daysInStatus": "⟦{{count}} ḓȧẏş īƞ ŧħḗ şŧȧŧŭş⟧"
     },
     "dateWithTiming": "⟦{{source}}, {{timing}}⟧"
   },

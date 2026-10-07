@@ -1987,7 +1987,8 @@
     "dateTiming": {
       "before": "{{count}} dias antes",
       "after": "{{count}} dias depois",
-      "onTheDay": "no próprio dia"
+      "onTheDay": "no próprio dia",
+      "daysInStatus": "{{count}} dias no status"
     },
     "dateWithTiming": "{{source}}, {{timing}}"
   },

@@ -22,6 +22,7 @@ export * from './jsonSchemaMetadata';
 export * from './dateTriggerOccurrence';
 export * from './dateTriggerSourceDefinitions';
 export * from './dateTriggerParams';
+export * from './dateTriggerBuilder';
 export {
   validateWorkflowDefinition,
   type PublishValidationResult

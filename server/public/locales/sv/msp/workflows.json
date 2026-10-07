@@ -1987,7 +1987,8 @@
     "dateTiming": {
       "before": "{{count}} dagar före",
       "after": "{{count}} dagar efter",
-      "onTheDay": "samma dag"
+      "onTheDay": "samma dag",
+      "daysInStatus": "{{count}} dagar i statusen"
     },
     "dateWithTiming": "{{source}}, {{timing}}"
   },

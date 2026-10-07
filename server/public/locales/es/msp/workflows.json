@@ -2109,7 +2109,8 @@
     "dateTiming": {
       "before": "{{count}} días antes",
       "after": "{{count}} días después",
-      "onTheDay": "el mismo día"
+      "onTheDay": "el mismo día",
+      "daysInStatus": "{{count}} días en el estado"
     },
     "dateWithTiming": "{{source}}, {{timing}}"
   },

@@ -2109,7 +2109,8 @@
     "dateTiming": {
       "before": "{{count}} dagen ervoor",
       "after": "{{count}} dagen erna",
-      "onTheDay": "op de dag zelf"
+      "onTheDay": "op de dag zelf",
+      "daysInStatus": "{{count}} dagen in de status"
     },
     "dateWithTiming": "{{source}}, {{timing}}"
   },

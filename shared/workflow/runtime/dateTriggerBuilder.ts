@@ -1,5 +1,13 @@
-import type { DateTriggerSourceDefinition } from '@alga-psa/workflows/authoring';
-import { DEFAULT_STATUS_AGE_PARAMS } from './dateTriggerStatusAge';
+import type { DateTriggerSourceDefinition } from './dateTriggerSourceDefinitions';
+
+/** Params a new `ticket.status_age` trigger starts with (the designer's controls and Attach (new workflow)). */
+export const DEFAULT_STATUS_AGE_PARAMS = {
+  statusName: '',
+  boardId: null as string | null,
+  days: 7,
+  repeatEveryDays: null as number | null,
+  requireNoActivity: false,
+};
 
 /**
  * The date trigger for choosing `source`, keeping the timing fields (time of day, timezone, offset)

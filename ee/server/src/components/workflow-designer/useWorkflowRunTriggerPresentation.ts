@@ -2,6 +2,7 @@
 
 import { useCallback } from 'react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { getDateTriggerSourceDefinition } from '@alga-psa/workflows/authoring';
 import type { WorkflowRunTriggerType, WorkflowScheduleStatus } from './workflowRunTriggerPresentation';
 
 const WORKFLOW_NAMESPACE = 'msp/workflows';
@@ -34,12 +35,6 @@ export function useFormatWorkflowRunTrigger(): (
   };
 }
 
-const DATE_SOURCE_LABELS: Record<string, { key: string; defaultValue: string }> = {
-  'client.anniversary': { key: 'designer.form.dateSourceAnniversary', defaultValue: 'Client anniversary' },
-  'contract.renewal_decision': { key: 'designer.form.dateSourceRenewal', defaultValue: 'Contract renewal decision date' },
-  'contract.end': { key: 'designer.form.dateSourceContractEnd', defaultValue: 'Contract end date' },
-  'asset.warranty_end': { key: 'designer.form.dateSourceWarranty', defaultValue: 'Asset warranty end' },
-};
 
 /**
  * What starts a workflow (its definition's trigger), as opposed to what started one run:
@@ -50,7 +45,7 @@ export function useDescribeWorkflowTrigger(): (trigger: unknown) => string | nul
   const { t } = useTranslation(WORKFLOW_NAMESPACE);
   return useCallback((trigger: unknown) => {
     if (!trigger || typeof trigger !== 'object') return null;
-    const value = trigger as { type?: unknown; eventName?: unknown; source?: unknown; offsetDays?: unknown };
+    const value = trigger as { type?: unknown; eventName?: unknown; source?: unknown; offsetDays?: unknown; params?: unknown };
     switch (value.type) {
       case 'event':
         return typeof value.eventName === 'string' && value.eventName
@@ -61,16 +56,23 @@ export function useDescribeWorkflowTrigger(): (trigger: unknown) => string | nul
       case 'recurring':
         return t('trigger.recurringSchedule', { defaultValue: 'Recurring schedule' });
       case 'date': {
-        const sourceLabel = typeof value.source === 'string' && DATE_SOURCE_LABELS[value.source]
-          ? t(DATE_SOURCE_LABELS[value.source].key, { defaultValue: DATE_SOURCE_LABELS[value.source].defaultValue })
+        const sourceDefinition = typeof value.source === 'string' ? getDateTriggerSourceDefinition(value.source) : undefined;
+        const sourceLabel = sourceDefinition
+          ? t(sourceDefinition.labelKey, { defaultValue: sourceDefinition.defaultLabel })
           : t('trigger.date', { defaultValue: 'Date' });
         const offsetDays = typeof value.offsetDays === 'number' ? value.offsetDays : 0;
         const days = Math.abs(offsetDays);
-        const timing = offsetDays < 0
-          ? t('trigger.dateTiming.before', { defaultValue: '{{count}} days before', count: days })
-          : offsetDays > 0
-            ? t('trigger.dateTiming.after', { defaultValue: '{{count}} days after', count: days })
-            : t('trigger.dateTiming.onTheDay', { defaultValue: 'on the day' });
+        const statusAgeDays = sourceDefinition && !sourceDefinition.usesOffset
+          ? (value.params as { days?: unknown } | undefined)?.days
+          : undefined;
+        // Sources without an offset fire on a condition, so "on the day" would mislead: say how long instead.
+        const timing = typeof statusAgeDays === 'number'
+          ? t('trigger.dateTiming.daysInStatus', { defaultValue: '{{count}} days in the status', count: statusAgeDays })
+          : offsetDays < 0
+            ? t('trigger.dateTiming.before', { defaultValue: '{{count}} days before', count: days })
+            : offsetDays > 0
+              ? t('trigger.dateTiming.after', { defaultValue: '{{count}} days after', count: days })
+              : t('trigger.dateTiming.onTheDay', { defaultValue: 'on the day' });
         return t('trigger.dateWithTiming', { defaultValue: '{{source}}, {{timing}}', source: sourceLabel, timing });
       }
       default:

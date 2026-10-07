@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { dateTriggerSourceDefinitions, getDateTriggerSourceByCatalogEvent, getDateTriggerSourceDefinition } from '@alga-psa/workflows/authoring';
-import { buildDateTriggerForSource } from '../dateTriggerSwitch';
-import { DEFAULT_STATUS_AGE_PARAMS } from '../dateTriggerStatusAge';
+import { buildDateTriggerForSource } from '@alga-psa/workflows/authoring';
+import { DEFAULT_STATUS_AGE_PARAMS } from '@alga-psa/workflows/authoring';
 
 describe('choosing a date source whose catalog row is picked as an event', () => {
   it('maps the catalog event to its source from the definitions, and nothing else', () => {

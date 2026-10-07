@@ -11,19 +11,15 @@ export type StatusAgeParamsDraft = {
   requireNoActivity?: boolean;
 };
 
-export type StatusAgeStatusOption = { id: string; name: string; board_id?: string | null };
+export type StatusAgeStatusOption = { id: string; name: string; board_id?: string | null; is_closed?: boolean | null };
 
-export const DEFAULT_STATUS_AGE_PARAMS: StatusAgeParamsDraft = {
-  statusName: '',
-  boardId: null,
-  days: 7,
-  repeatEveryDays: null,
-  requireNoActivity: false,
-};
+export { DEFAULT_STATUS_AGE_PARAMS } from '@alga-psa/workflows/authoring';
 
 /**
  * The status names to offer. The trigger matches by name (case-insensitive), so boards sharing a
  * name collapse to one option; once a board is chosen only that board's statuses are offered.
+ * Closed statuses are skipped (the scan only matches open ones), so a name stays only while some
+ * open status row in scope carries it.
  */
 export function statusNameOptions(
   statuses: readonly StatusAgeStatusOption[],
@@ -32,6 +28,7 @@ export function statusNameOptions(
   const seen = new Map<string, string>();
   for (const status of statuses) {
     if (boardId && status.board_id !== boardId) continue;
+    if (status.is_closed) continue;
     const name = status.name.trim();
     if (!name) continue;
     const key = name.toLowerCase();

@@ -216,7 +216,7 @@ import { EMPTY_WORKFLOW_PAYLOAD_SCHEMA_REF } from '@alga-psa/shared/workflow/run
 import { DATE_TRIGGER_PAYLOAD_SCHEMA_REFS } from './dateTriggerPayloadSchemas';
 import { DateTriggerStatusAgeFields } from './DateTriggerStatusAgeFields';
 import { type StatusAgeParamsDraft } from './dateTriggerStatusAge';
-import { buildDateTriggerForSource } from './dateTriggerSwitch';
+
 
 import {
   isWorkflowAiInferAction,
@@ -224,6 +224,7 @@ import {
   resolveComposeTextOutputSchemaFromConfig,
   resolveWorkflowAiSchemaFromConfig,
 } from '@alga-psa/workflows/authoring';
+import { buildDateTriggerForSource } from '@alga-psa/workflows/authoring';
 import { describeExpressionError, validateExpressionSource } from '@alga-psa/workflows/authoring';
 import { partitionStepExpressionValidations, validateStepExpressions } from './expressionValidation';
 import {
