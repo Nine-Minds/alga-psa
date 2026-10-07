@@ -3,7 +3,12 @@
 import { describe, expect, it } from 'vitest';
 import { ticketListFiltersSchema } from './ticket.schema';
 
-const NEW_SORT_KEYS = ['assigned_to_name', 'assigned_team_name', 'updated_at'] as const;
+const NEW_SORT_KEYS = [
+  'assigned_to_name',
+  'assigned_team_name',
+  'updated_at',
+  'latest_activity_at',
+] as const;
 
 describe('ticketListFiltersSchema sortBy', () => {
   for (const sortBy of NEW_SORT_KEYS) {

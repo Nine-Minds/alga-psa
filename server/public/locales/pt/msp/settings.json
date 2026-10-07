@@ -388,6 +388,7 @@
         "emailAlreadyExists": "Já existe um usuário com este endereço de e-mail",
         "reportsToSelf": "Um usuário não pode reportar a si mesmo",
         "reportsToCycle": "Isto criaria uma cadeia circular de relatórios",
+        "invalidTimezone": "Escolha um fuso horário baseado em uma cidade, como America/New_York.",
         "passwordTooShort": "A senha deve ter pelo menos 8 caracteres",
         "passwordChangeFailed": "Falha ao alterar a senha",
         "passwordChangeError": "Ocorreu um erro ao alterar a senha",
@@ -2391,6 +2392,11 @@
       "updateFailed": "Falha ao atualizar a função",
       "validateDeletionFailed": "Falha ao validar a exclusão. Tente novamente.",
       "deleteFailed": "Falha ao excluir a função"
+    },
+    "editDialog": {
+      "title": "Editar função",
+      "builtInNameLocked": "Os nomes das funções integradas não podem ser alterados porque o sistema depende deles.",
+      "portalLocked": "O acesso ao portal não pode ser alterado depois que uma função é criada."
     }
   },
   "security": {
@@ -3445,7 +3451,10 @@
       "duplicate": "Esse usuário já tem a função selecionada.",
       "changePermission": "Permissão negada: você não tem permissão para alterar as funções dos usuários.",
       "missingField": "Falta um campo obrigatório da função do usuário.",
-      "missingFieldNamed": "Falta um campo obrigatório da função do usuário: {{field}}."
+      "missingFieldNamed": "Falta um campo obrigatório da função do usuário: {{field}}.",
+      "nameRequired": "O nome da função é obrigatório.",
+      "builtInRename": "Funções integradas não podem ser renomeadas.",
+      "duplicateName": "Já existe uma função chamada \"{{name}}\" para este portal."
     },
     "secrets": {
       "tenantContextMissing": "O contexto do tenant está ausente. Atualize a página e tente novamente.",
@@ -3470,6 +3479,7 @@
       "missingField": "Falta um campo obrigatório das configurações do tenant.",
       "missingFieldNamed": "Falta um campo obrigatório das configurações do tenant: {{field}}.",
       "invalidTimezone": "Fuso horário inválido: {{timezone}}",
+      "nonLocationTimezone": "{{timezone}} não é um fuso horário baseado em uma cidade. Escolha um fuso como America/New_York.",
       "permissions": {
         "clearOnboarding": "Permissão negada: apenas administradores podem limpar os dados de onboarding.",
         "update": "Permissão negada: não é possível atualizar as configurações",

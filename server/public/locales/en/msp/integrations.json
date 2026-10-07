@@ -90,7 +90,8 @@
           "clients": "Clients",
           "itemsServices": "Items / Services",
           "taxCodes": "Tax Codes",
-          "paymentTerms": "Payment Terms"
+          "paymentTerms": "Payment Terms",
+          "discounts": "Discounts"
         }
       }
     },
@@ -111,6 +112,7 @@
           "failed": "Export failed",
           "missingItemMapping": "Missing item mapping",
           "missingItemMappingId": "Missing item mapping ({{serviceId}})",
+          "missingDiscountMapping": "Missing discount mapping (Discounts tab)",
           "missingItemMappingNamed": "Missing item mapping: {{serviceName}}"
         },
         "fields": {
@@ -469,7 +471,8 @@
           "previousCount": "Previous",
           "syncFinished": "Sync finished for {{client}}.",
           "syncing": "Syncing…",
-          "syncTrackingFailed": "The sync started, but this page could not follow it to completion. Refresh to see its latest result."
+          "syncTrackingFailed": "The sync started, but this page could not follow it to completion. Refresh to see its latest result.",
+          "syncWorkerUnavailable": "The sync is queued, but nothing is processing the background queue right now. It will run once the worker is back; if it stays stuck, restart the temporal-worker service."
         },
         "connection": {
           "changeAction": "Change connection",

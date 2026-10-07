@@ -57,7 +57,7 @@ const periods = [
 
 const NOW = new Date('2026-09-09T15:00:00Z');
 
-function renderEntry(overrides: { periods?: any[]; now?: Date; onComplete?: () => void } = {}) {
+function renderEntry(overrides: { periods?: any[]; now?: Date; onComplete?: () => void; workItem?: any } = {}) {
   const catalog = overrides.periods ?? periods;
   const defaults = resolveEntryDefaults({ context: {}, periods: catalog, timeZone: ZONE, now: overrides.now ?? NOW })!;
   const onComplete = overrides.onComplete ?? vi.fn();
@@ -65,7 +65,7 @@ function renderEntry(overrides: { periods?: any[]; now?: Date; onComplete?: () =
     <NewWorkItemTimeEntry
       closeDrawer={vi.fn()}
       onComplete={onComplete}
-      workItem={{ work_item_id: 'ticket-1', type: 'ticket', name: 'Ticket 1', description: '' } as any}
+      workItem={overrides.workItem ?? ({ work_item_id: 'ticket-1', type: 'ticket', name: 'Ticket 1', description: '' } as any)}
       userId="user-1"
       userTimeZone={ZONE}
       periods={catalog}
@@ -101,6 +101,25 @@ describe('NewWorkItemTimeEntry', () => {
     expect(props.defaultStartTime.toISOString()).toBe('2026-09-09T12:00:00.000Z');
     expect(props.notice).toBeUndefined();
     expect(mocks.fetchOrCreateTimeSheet).not.toHaveBeenCalled();
+  });
+
+  it('hands the entry form the effective service and where it came from', () => {
+    const { props } = renderEntry({
+      workItem: {
+        work_item_id: 'task-1',
+        type: 'project_task',
+        name: 'Task 1',
+        description: '',
+        service_id: 'svc-phase',
+        service_name: 'Phase Service',
+        service_source: 'phase',
+      },
+    });
+    expect(props.workItem).toMatchObject({
+      service_id: 'svc-phase',
+      service_name: 'Phase Service',
+      service_source: 'phase',
+    });
   });
 
   it('explains when today’s sheet is locked and the default moved', () => {

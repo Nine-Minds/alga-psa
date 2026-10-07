@@ -391,6 +391,7 @@
         "emailAlreadyExists": "Er bestaat al een gebruiker met dit e-mailadres",
         "reportsToSelf": "Een gebruiker kan niet aan zichzelf rapporteren",
         "reportsToCycle": "Dit zou een circulaire rapportagelijn creëren",
+        "invalidTimezone": "Kies een tijdzone op basis van een stad, zoals America/New_York.",
         "permissionDenied": "U heeft geen toestemming om gebruikersrollen te wijzigen.",
         "invalidCapacity": "Wekelijkse capaciteit moet een positief getal zijn.",
         "invalidWorkSchedule": "Werktijden moeten geldige tijdvakken zijn die eindigen na de starttijd."
@@ -2391,6 +2392,11 @@
       "updateFailed": "Kan de rol niet bijwerken",
       "validateDeletionFailed": "Kan de verwijdering niet valideren. Probeer het opnieuw.",
       "deleteFailed": "Kan de rol niet verwijderen"
+    },
+    "editDialog": {
+      "title": "Rol bewerken",
+      "builtInNameLocked": "Namen van ingebouwde rollen kunnen niet worden gewijzigd, omdat het systeem ervan afhankelijk is.",
+      "portalLocked": "Portaaltoegang kan niet worden gewijzigd nadat een rol is aangemaakt."
     }
   },
   "security": {
@@ -3445,7 +3451,10 @@
       "duplicate": "Die gebruiker heeft de geselecteerde rol al.",
       "changePermission": "Toestemming geweigerd: u hebt geen rechten om gebruikersrollen te wijzigen.",
       "missingField": "Er ontbreekt een verplicht veld van de gebruikersrol.",
-      "missingFieldNamed": "Er ontbreekt een verplicht veld van de gebruikersrol: {{field}}."
+      "missingFieldNamed": "Er ontbreekt een verplicht veld van de gebruikersrol: {{field}}.",
+      "nameRequired": "Rolnaam is verplicht.",
+      "builtInRename": "Ingebouwde rollen kunnen niet worden hernoemd.",
+      "duplicateName": "Er bestaat al een rol met de naam \"{{name}}\" voor dit portaal."
     },
     "secrets": {
       "tenantContextMissing": "De tenantcontext ontbreekt. Vernieuw de pagina en probeer het opnieuw.",
@@ -3470,6 +3479,7 @@
       "missingField": "Er ontbreekt een verplicht veld van de tenantinstellingen.",
       "missingFieldNamed": "Er ontbreekt een verplicht veld van de tenantinstellingen: {{field}}.",
       "invalidTimezone": "Ongeldige tijdzone: {{timezone}}",
+      "nonLocationTimezone": "{{timezone}} is geen tijdzone op basis van een stad. Kies een zone zoals America/New_York.",
       "permissions": {
         "clearOnboarding": "Toestemming geweigerd: alleen beheerders kunnen onboardinggegevens wissen.",
         "update": "Toestemming geweigerd: de instellingen kunnen niet worden bijgewerkt",

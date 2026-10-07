@@ -128,6 +128,7 @@ export interface GraphCalendarEvent {
   singleValueExtendedProperties?: unknown;
   lastModifiedDateTime?: string;
   recurrence?: unknown;
+  categories?: string[];
 }
 
 type CalendarDeltaItem = GraphCalendarEvent | { id: string; '@removed': { reason: 'deleted' } };
@@ -416,6 +417,7 @@ export class MsGraphCore implements EmulatorCore {
   readonly teams = new Map<string, GraphTeam>();
   readonly chats = new Map<string, GraphChat>();
   readonly chatMessages = new Map<string, GraphChatMessage[]>();
+  readonly masterCategories = new Map<string, { id: string; displayName: string; color: string }>();
   readonly calendarEvents = new Map<string, GraphCalendarEvent>();
   private readonly calendarDeltaSnapshots = new Map<string, CalendarDeltaSnapshot>();
   private readonly calendarDeltaPages = new Map<string, CalendarDeltaPage>();
@@ -473,6 +475,7 @@ export class MsGraphCore implements EmulatorCore {
     this.chats.clear();
     this.chatMessages.clear();
     this.calendarEvents.clear();
+    this.masterCategories.clear();
     this.calendarDeltaSnapshots.clear();
     this.calendarDeltaPages.clear();
     this.onlineMeetings.clear();
@@ -1034,6 +1037,7 @@ export class MsGraphCore implements EmulatorCore {
       isAllDay: body.isAllDay,
       singleValueExtendedProperties: body.singleValueExtendedProperties,
       recurrence: body.recurrence,
+      categories: Array.isArray(body.categories) ? body.categories.map(String) : [],
       lastModifiedDateTime: this.env.clock.now().toISOString(),
       createdDateTime: this.env.clock.now().toISOString(),
     };
@@ -1057,6 +1061,7 @@ export class MsGraphCore implements EmulatorCore {
     if (patch.end !== undefined) event.end = patch.end;
     if (patch.body !== undefined) event.body = patch.body;
     if (Array.isArray(patch.attendees)) event.attendees = patch.attendees;
+    if (Array.isArray(patch.categories)) event.categories = patch.categories.map(String);
     for (const key of ['location', 'showAs', 'sensitivity', 'isAllDay', 'singleValueExtendedProperties', 'recurrence'] as const) {
       if (patch[key] !== undefined) event[key] = patch[key];
     }
@@ -1432,6 +1437,7 @@ export class MsGraphCore implements EmulatorCore {
       chats: [...this.chats.values()],
       chatMessages: [...this.chatMessages.entries()],
       calendarEvents: [...this.calendarEvents.values()],
+      masterCategories: [...this.masterCategories.values()],
       onlineMeetings: [...this.onlineMeetings.values()],
       meetingArtifacts: [...this.meetingArtifacts.entries()],
       callRecords: [...this.callRecords.values()],
@@ -1479,6 +1485,7 @@ export class MsGraphCore implements EmulatorCore {
     load(this.chats, snapshot.chats, (row) => row.id);
     loadEntries(this.chatMessages, snapshot.chatMessages);
     load(this.calendarEvents, snapshot.calendarEvents, (row) => row.id);
+    load(this.masterCategories, snapshot.masterCategories, (row) => row.id);
     load(this.onlineMeetings, snapshot.onlineMeetings, (row) => row.id);
     loadEntries(this.meetingArtifacts, snapshot.meetingArtifacts);
     load(this.callRecords, snapshot.callRecords, (row) => row.id);

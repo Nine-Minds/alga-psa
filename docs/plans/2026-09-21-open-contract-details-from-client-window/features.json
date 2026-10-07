@@ -1,0 +1,65 @@
+[
+  {
+    "id": "F001",
+    "description": "Build the client-contract detail URL with the client-contract tab, contract identity, and assignment identity.",
+    "implemented": false,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Implementation Plan > packages/clients/src/components/clients/ClientContractAssignment.tsx"
+    ]
+  },
+  {
+    "id": "F002",
+    "description": "Render each contract name as a keyboard-accessible details affordance in the client contract table.",
+    "implemented": false,
+    "prdRefs": [
+      "Goals",
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F003",
+    "description": "Navigate from a contract name to the existing Billing detail screen for the exact client-contract assignment.",
+    "implemented": false,
+    "prdRefs": [
+      "Users and Primary Flows > Open details from the contract name",
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F004",
+    "description": "Offer a View details item in each client-contract row action menu and navigate it to the same assignment detail screen.",
+    "implemented": false,
+    "prdRefs": [
+      "Users and Primary Flows > Open details from the row action menu",
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F005",
+    "description": "Prevent the contract-name and View details interactions from also opening the assignment editor.",
+    "implemented": false,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F006",
+    "description": "Preserve row-click and Edit action behavior for assignment dates and renewal settings.",
+    "implemented": false,
+    "prdRefs": [
+      "Users and Primary Flows > Edit assignment settings",
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F007",
+    "description": "Provide localized View details copy in the client contract assignment translation namespace.",
+    "implemented": false,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Implementation Plan > server/public/locales/*/msp/clients.json"
+    ]
+  }
+]

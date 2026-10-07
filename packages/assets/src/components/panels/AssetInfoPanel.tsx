@@ -144,6 +144,12 @@ export const AssetInfoPanel: React.FC<AssetInfoPanelProps> = ({
             copiedLabel={t('assetInfoPanel.actions.copied', { defaultValue: 'Copied' })}
           />
           <InfoRow 
+            label={t('assetInfoPanel.fields.assignedTo', { defaultValue: 'Assigned to' })}
+            value={asset.contact_name || t('assetInfoPanel.values.unassigned', { defaultValue: 'Unassigned' })}
+            copyLabel={t('assetInfoPanel.actions.copy', { defaultValue: 'Copy' })}
+            copiedLabel={t('assetInfoPanel.actions.copied', { defaultValue: 'Copied' })}
+          />
+          <InfoRow 
             label={t('assetInfoPanel.fields.model', { defaultValue: 'Model' })}
             value={getModelName()} 
             copyLabel={t('assetInfoPanel.actions.copy', { defaultValue: 'Copy' })}

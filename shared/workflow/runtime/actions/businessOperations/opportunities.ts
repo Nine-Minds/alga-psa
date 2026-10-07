@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { tenantDb } from '@alga-psa/db';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import { getActionRegistryV2 } from '../../registries/actionRegistry';
-import { withWorkflowJsonSchemaMetadata } from '../../jsonSchemaMetadata';
+import { withWorkflowJsonSchemaMetadata, withWorkflowPicker, withWorkflowNotFoundPolicy } from '../../jsonSchemaMetadata';
 import {
   actionProvidedKey,
   isoDateTimeSchema,
@@ -15,18 +15,6 @@ import {
 import { buildOpportunityCreatedPayload } from '../../../streams/domainEventBuilders/opportunityEventBuilders';
 import { SharedNumberingService } from '../../../../services/numberingService';
 
-const withPicker = <T extends z.ZodTypeAny>(
-  schema: T,
-  description: string,
-  resource: 'client' | 'contact' | 'user' | 'opportunity',
-  dependencies?: string[],
-): T => withWorkflowJsonSchemaMetadata(schema, description, {
-  'x-workflow-picker-kind': resource,
-  'x-workflow-picker-dependencies': dependencies,
-  'x-workflow-picker-fixed-value-hint': `Search ${resource.replace('-', ' ')}s`,
-  'x-workflow-picker-allow-dynamic-reference': true,
-});
-
 const opportunityTypeSchema = z.enum(['new_logo', 'expansion', 'renewal', 'project']);
 const opportunityStatusSchema = z.enum(['open', 'won', 'lost']);
 const opportunityStageSchema = z.enum(['identified', 'qualified', 'assessment', 'proposed', 'verbal', 'won', 'lost']);
@@ -37,11 +25,11 @@ const centsSchema = z.number().int().nonnegative();
 const opportunitySummarySchema = z.object({
   opportunity_id: uuidSchema,
   opportunity_number: z.string(),
-  client_id: uuidSchema,
-  contact_id: uuidSchema.nullable(),
+  client_id: withWorkflowPicker(uuidSchema, 'Client id', 'client'),
+  contact_id: withWorkflowPicker(uuidSchema.nullable(), 'Contact id', 'contact'),
   title: z.string(),
   opportunity_type: opportunityTypeSchema,
-  owner_id: uuidSchema,
+  owner_id: withWorkflowPicker(uuidSchema, 'Owner user id', 'user'),
   status: opportunityStatusSchema,
   stage: opportunityStageSchema,
   confidence: opportunityConfidenceSchema,
@@ -83,11 +71,11 @@ export function registerOpportunityActions(): void {
     id: 'opportunities.create',
     version: 1,
     inputSchema: z.object({
-      client_id: withPicker(uuidSchema, 'Client id', 'client'),
-      contact_id: withPicker(uuidSchema.nullable().optional(), 'Optional contact id', 'contact', ['client_id']),
+      client_id: withWorkflowPicker(uuidSchema, 'Client id', 'client'),
+      contact_id: withWorkflowPicker(uuidSchema.nullable().optional(), 'Optional contact id', 'contact', ['client_id']),
       title: z.string().trim().min(1).max(255),
       opportunity_type: opportunityTypeSchema,
-      owner_id: withPicker(uuidSchema.optional(), 'Optional owner user id', 'user'),
+      owner_id: withWorkflowPicker(uuidSchema.optional(), 'Optional owner user id', 'user'),
       confidence: opportunityConfidenceSchema.default('medium'),
       mrr_cents: centsSchema.default(0),
       nrr_cents: centsSchema.default(0),
@@ -219,15 +207,15 @@ export function registerOpportunityActions(): void {
     id: 'opportunities.find',
     version: 1,
     inputSchema: z.object({
-      opportunity_id: withPicker(uuidSchema.optional(), 'Opportunity id', 'opportunity'),
+      opportunity_id: withWorkflowPicker(uuidSchema.optional(), 'Opportunity id', 'opportunity'),
       opportunity_number: z.string().trim().min(1).optional(),
-      client_id: withPicker(uuidSchema.optional(), 'Client id filter', 'client'),
-      owner_id: withPicker(uuidSchema.optional(), 'Owner user id filter', 'user'),
+      client_id: withWorkflowPicker(uuidSchema.optional(), 'Client id filter', 'client'),
+      owner_id: withWorkflowPicker(uuidSchema.optional(), 'Owner user id filter', 'user'),
       status: opportunityStatusSchema.optional(),
       stage: opportunityStageSchema.optional(),
       opportunity_type: opportunityTypeSchema.optional(),
       limit: z.number().int().positive().max(100).default(25),
-      on_empty: z.enum(['return_empty', 'error']).default('return_empty'),
+      on_empty: withWorkflowNotFoundPolicy(z.enum(['return_empty', 'error']).default('return_empty'), 'What to do when there are no results'),
     }).refine((input) => Boolean(
       input.opportunity_id || input.opportunity_number || input.client_id || input.owner_id
       || input.status || input.stage || input.opportunity_type
@@ -264,8 +252,8 @@ export function registerOpportunityActions(): void {
 
   const updatePatchSchema = z.object({
     title: z.string().trim().min(1).max(255).optional(),
-    contact_id: withPicker(uuidSchema.nullable().optional(), 'Contact id', 'contact'),
-    owner_id: withPicker(uuidSchema.optional(), 'Owner user id', 'user'),
+    contact_id: withWorkflowPicker(uuidSchema.nullable().optional(), 'Contact id', 'contact'),
+    owner_id: withWorkflowPicker(uuidSchema.optional(), 'Owner user id', 'user'),
     confidence: opportunityConfidenceSchema.optional(),
     mrr_cents: centsSchema.optional(),
     nrr_cents: centsSchema.optional(),
@@ -280,7 +268,7 @@ export function registerOpportunityActions(): void {
     id: 'opportunities.update',
     version: 1,
     inputSchema: z.object({
-      opportunity_id: withPicker(uuidSchema, 'Opportunity id', 'opportunity'),
+      opportunity_id: withWorkflowPicker(uuidSchema, 'Opportunity id', 'opportunity'),
       patch: updatePatchSchema,
     }).strict(),
     outputSchema: z.object({ opportunity: opportunitySummarySchema }),
@@ -330,7 +318,7 @@ export function registerOpportunityActions(): void {
     id: 'opportunities.set_next_action',
     version: 1,
     inputSchema: z.object({
-      opportunity_id: withPicker(uuidSchema, 'Opportunity id', 'opportunity'),
+      opportunity_id: withWorkflowPicker(uuidSchema, 'Opportunity id', 'opportunity'),
       next_action: withWorkflowJsonSchemaMetadata(
         z.string().trim().min(1).max(4000),
         'The next concrete action',

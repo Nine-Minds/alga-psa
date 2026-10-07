@@ -48,6 +48,17 @@ function fixture(overtimeRate = 22500, entryOverrides: Record<string, unknown>[]
     items: charges.map((c) => ({ id: c.item_id, description: c.description, quantity: c.quantity, unitPrice: c.unit_price, total: c.net_amount })), subtotal: charges.reduce((sum, c) => sum + c.net_amount, 0), tax: 1234, total: charges.reduce((sum, c) => sum + c.net_amount, 0) + 1234 };
   return { vm, charges, generated, inputs, taxContext };
 }
+/**
+ * Invoices generated before overtime entries were split into segment lines
+ * carry one blended 'mixed' snapshot per entry. The renderer still has to
+ * present those, so tests that need a mixed time entry rewrite one link.
+ */
+function withLegacyMixedSnapshot(charges: IInvoiceCharge[], index: number): void {
+  const snapshot = { ...charges[index].time_entry_snapshots![0], rateKind: 'mixed' as const, uniformRate: null };
+  delete (snapshot as { segment?: unknown }).segment;
+  charges[index].time_entry_snapshots = [snapshot];
+  charges[index].time_entry_links![0].snapshot = snapshot;
+}
 function reconcile(vm: WasmInvoiceViewModel, charges: IInvoiceCharge[]) {
   const all = vm.ticketPresentationRows!.flatMap((row) => row.contributions);
   for (const charge of charges) {
@@ -71,8 +82,10 @@ describe('ticket presentation from actual calculation', () => {
     expect(result.kind).toBe('hourly');
     if (result.kind !== 'hourly') throw new Error('Expected hourly calculation');
     expect(result.charges.map((charge) => charge.workItemSnapshot)).toEqual(generated.map((charge) => charge.workItemSnapshot));
-    expect(result.charges[0].workItemSnapshot).toMatchObject({ title: 'Public title', description: 'Public description', rateKind: 'mixed' });
-    expect(result.charges[1].workItemSnapshot).toMatchObject({ title: 'Public task', workItemId: 'task-a', ticketNumber: null });
+    // The 120-minute entry over a 1 h threshold bills as two segment charges.
+    expect(result.charges[0].workItemSnapshot).toMatchObject({ title: 'Public title', description: 'Public description', rateKind: 'uniform', uniformRate: 15000, segment: 'regular' });
+    expect(result.charges[1].workItemSnapshot).toMatchObject({ title: 'Public title', rateKind: 'uniform', uniformRate: 22500, segment: 'overtime' });
+    expect(result.charges[2].workItemSnapshot).toMatchObject({ title: 'Public task', workItemId: 'task-a', ticketNumber: null });
   });
   it.each([
     { name: 'entry override', entry: { custom_rate: 17000 }, minutes: 60, amount: 17000, rate: 17000 },
@@ -139,7 +152,8 @@ describe('ticket presentation from actual calculation', () => {
     const before = JSON.stringify({ items: vm.items, subtotal: vm.subtotal, tax: vm.tax, total: vm.total, charges });
     attachInvoiceTimeCollections(vm, charges); reconcile(vm, charges);
     expect(vm.ticketPresentationRows).toHaveLength(5);
-    expect(generated[0].workItemSnapshot).toMatchObject({ version: 2, billedMinutes: 120, netAmount: 37500, rateKind: 'mixed', uniformRate: null });
+    expect(generated[0].workItemSnapshot).toMatchObject({ version: 2, billedMinutes: 60, netAmount: 15000, rateKind: 'uniform', uniformRate: 15000, segment: 'regular' });
+    expect(generated[1].workItemSnapshot).toMatchObject({ version: 2, billedMinutes: 60, netAmount: 22500, rateKind: 'uniform', uniformRate: 22500, segment: 'overtime' });
     expect(vm.ticketGroups!.every((row) => row.rateKind === 'mixed' && row.rate === null)).toBe(true);
     const { html } = await renderEvaluatedTemplateAst(ast, evaluateTemplateAst(ast, vm as unknown as Record<string, unknown>));
     expect(html.match(/<table /g)).toHaveLength(1);
@@ -160,7 +174,7 @@ describe('ticket presentation from actual calculation', () => {
     const { vm, charges } = fixture(); const link = charges[0].time_entry_links![0];
     if (condition === 'partial') charges[0].time_entry_links!.push({ ...link, entryId: 'missing', snapshot: null });
     if (condition === 'duplicate') charges[0].time_entry_links!.push({ ...link });
-    if (condition === 'conflict') charges[1].time_entry_links![0].entryId = link.entryId;
+    if (condition === 'conflict') charges[2].time_entry_links![0].entryId = link.entryId;
     if (condition === 'wrong-tenant') link.tenant = 'unrelated';
     if (condition === 'invalid-money') link.snapshot = { ...link.snapshot as object, netAmount: '37500' };
     if (condition === 'unknown-version') link.snapshot = { ...link.snapshot as object, version: 9 };
@@ -188,13 +202,13 @@ describe('ticket presentation from actual calculation', () => {
     attachInvoiceTimeCollections(vm, charges);
     expect(vm.ticketGroups![0]).toMatchObject({ rateKind: 'uniform', rate: 0 });
     const mixed = fixture();
-    mixed.charges[1].time_entry_snapshots![0] = { ...mixed.charges[1].time_entry_snapshots![0], version: 1 };
-    mixed.charges[1].time_entry_links![0].snapshot = mixed.charges[1].time_entry_snapshots![0];
+    mixed.charges[2].time_entry_snapshots![0] = { ...mixed.charges[2].time_entry_snapshots![0], version: 1 };
+    mixed.charges[2].time_entry_links![0].snapshot = mixed.charges[2].time_entry_snapshots![0];
     attachInvoiceTimeCollections(mixed.vm, mixed.charges);
     expect(mixed.vm.ticketGroups![1]).toMatchObject({ rateKind: 'unknown', rate: null });
     const knownMixed = fixture(22500, [{}, { work_item_id: 'ticket-a', ticket_number: 'T-A' }]);
-    knownMixed.charges[1].time_entry_snapshots![0] = { ...knownMixed.charges[1].time_entry_snapshots![0], version: 1 };
-    knownMixed.charges[1].time_entry_links![0].snapshot = knownMixed.charges[1].time_entry_snapshots![0];
+    knownMixed.charges[2].time_entry_snapshots![0] = { ...knownMixed.charges[2].time_entry_snapshots![0], version: 1 };
+    knownMixed.charges[2].time_entry_links![0].snapshot = knownMixed.charges[2].time_entry_snapshots![0];
     attachInvoiceTimeCollections(knownMixed.vm, knownMixed.charges);
     expect(knownMixed.vm.ticketGroups![0]).toMatchObject({ rateKind: 'mixed', rate: null });
     reconcile(knownMixed.vm, knownMixed.charges);
@@ -213,16 +227,16 @@ describe('ticket presentation from actual calculation', () => {
     expect((reopened.layout.children[0] as any).children[0].repeat.sourceBinding.bindingId).toBe(bindingId);
     const scope = resolveCanvasRowScope(vm, reopened, 'entry-detail');
     expect(resolveCanvasCollection(vm, bindingId, reopened, scope).rows).toEqual(vm.ticketGroups![0].entries);
-    expect(resolveTableItemBindingRawValue(vm, resolveCanvasCollection(vm, bindingId, reopened, scope).rows[0], 'line.amount', 'line')).toBe(37500);
+    expect(resolveTableItemBindingRawValue(vm, resolveCanvasCollection(vm, bindingId, reopened, scope).rows[0], 'line.amount', 'line')).toBe(15000);
     const { html } = await renderEvaluatedTemplateAst(reopened, evaluateTemplateAst(reopened, vm as unknown as Record<string, unknown>));
-    expect(html).toContain('$375.00'); expect(html).toContain('$180.00');
+    expect(html).toContain('$150.00'); expect(html).toContain('$225.00'); expect(html).toContain('$180.00');
     const legacy = { ...vm, ticketGroups: undefined, timeEntries: undefined };
     expect(resolveCanvasCollection(legacy, bindingId, reopened, resolveCanvasRowScope(legacy, reopened, 'entry-detail'))).toEqual({ rows: [] });
     const customBindingAst = { ...ast, bindings: { ...ast.bindings, collections: { ...ast.bindings!.collections, savedPrimary: { id: 'savedPrimary', kind: 'collection' as const, path: 'ticketPresentationRows' } } } };
     expect(resolveCollectionDescriptor('savedPrimary', undefined, customBindingAst)?.fields.map((f) => f.name)).toContain('rateKind');
   });
   it('resolves sorted/empty rows with discoverable fields and French semantic labels', () => {
-    const { vm, charges } = fixture(); attachInvoiceTimeCollections(vm, charges);
+    const { vm, charges } = fixture(); withLegacyMixedSnapshot(charges, 2); attachInvoiceTimeCollections(vm, charges);
     const sorted = { ...ast, transforms: { sourceBindingId: 'timeEntries', outputBindingId: 'sortedTime', operations: [{ id: 'sort', type: 'sort' as const, keys: [{ path: 'amount', direction: 'desc' as const }] }] } };
     const rows = resolveCanvasCollection(vm, 'sortedTime', sorted); expect(rows.diagnostic).toBeUndefined();
     expect(rows.rows.map((r) => r.amount)).toEqual([...vm.timeEntries!].sort((a,b) => b.amount-a.amount).map((e) => e.amount));
@@ -233,8 +247,9 @@ describe('ticket presentation from actual calculation', () => {
     expect(resolveCanvasCollection({ ...vm, timeEntries: undefined }, 'sortedTime', sorted)).toEqual({ rows: [] });
     const t = (key: string, options: { defaultValue: string }) => key.split('.').reduce<any>((o, part) => o?.[part], fr) ?? options.defaultValue;
     const localized = localizeTimePresentation(evaluateTemplateAst(sorted, vm as unknown as Record<string, unknown>), t);
-    expect((localized.bindings.sortedTime as any[])[0].rateDisplay).toBe('Tarifs variables');
-    expect(vm.timeEntries![0].rateDisplay).toBeNull();
+    const mixedRow = (localized.bindings.sortedTime as any[]).find((row) => row.rateKind === 'mixed');
+    expect(mixedRow.rateDisplay).toBe('Tarifs variables');
+    expect(vm.timeEntries!.find((row) => row.rateKind === 'mixed')!.rateDisplay).toBeNull();
   });
   it('uses evaluator filter/group output schemas without suggesting entry fields on group wrappers', () => {
     const { vm, charges } = fixture(); attachInvoiceTimeCollections(vm, charges);
@@ -242,7 +257,7 @@ describe('ticket presentation from actual calculation', () => {
       { id: 'filter', type: 'filter', predicate: { type: 'comparison', path: 'amount', op: 'gt', value: 18000 } },
     ] } };
     const selected = resolveCanvasCollection(vm, 'selectedTime', filtered);
-    expect(selected.rows.map((row) => row.amount)).toEqual([37500]);
+    expect(selected.rows.map((row) => row.amount)).toEqual([22500]);
     expect(resolveCollectionDescriptor('selectedTime', filtered.transforms, filtered)?.fields.map((field) => field.name)).toContain('rateKind');
     const grouped: TemplateAst = { ...filtered, transforms: { ...filtered.transforms!, operations: [
       { id: 'group', type: 'group', key: 'workItemId' },
@@ -279,7 +294,7 @@ describe('ticket presentation from actual calculation', () => {
     }
   });
   it.each(['rateDisplay', 'label'])('filters and sorts %s on identical neutral data before translating', async (path) => {
-    const { vm, charges } = fixture(); attachInvoiceTimeCollections(vm, charges);
+    const { vm, charges } = fixture(); withLegacyMixedSnapshot(charges, 2); attachInvoiceTimeCollections(vm, charges);
     const t = (key: string, options: { defaultValue: string }) => key.split('.').reduce<any>((o, part) => o?.[part], fr) ?? options.defaultValue;
     for (const operation of [
       { id: 'filter', type: 'filter', predicate: { type: 'comparison', path, op: 'eq', value: 'Tarifs variables' } },

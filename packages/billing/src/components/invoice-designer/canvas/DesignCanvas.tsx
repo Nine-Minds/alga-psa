@@ -9,10 +9,6 @@ import { useDroppable, useDraggable } from '@dnd-kit/core';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useDateFormat } from '@alga-psa/ui/lib/dateFormat/useDateFormat';
 import type { CountryDateFormat } from '@alga-psa/core/i18n/countryDateFormat';
-import {
-  SortableContext,
-  useSortable,
-} from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import clsx from 'clsx';
 import { Languages } from 'lucide-react';
@@ -34,7 +30,10 @@ import {
   isNodeTextTranslatable,
 } from '../utils/translatableText';
 import { inferHeightMode } from '../utils/sizeModes';
-import { resolveSortableStrategy } from '../utils/sortableStrategy';
+import { DESIGNER_NODE_ID_ATTRIBUTE } from '../utils/canvasDom';
+import { SelectionAdorner, type Frame, type HandleResetSize, type HandleResize, type ResizeHandle } from './SelectionAdorner';
+import { CanvasRulers } from './CanvasRulers';
+import { resolveInsertionTarget } from '../utils/structureEditing';
 import {
   formatBoundValue,
   normalizeFieldFormat,
@@ -77,6 +76,15 @@ const TranslatableMark: React.FC<{ t?: DesignerTranslator }> = ({ t }) => (
 export const CanvasDocumentPreviewContext = React.createContext<{ data: WasmInvoiceViewModel | null; locale?: string; presentationLabels?: Record<string, string> }>({ data: null });
 const CanvasAstContext = React.createContext<TemplateAst | null | undefined>(undefined);
 
+/** Where the next "+" lands, so the canvas can show it before the author commits. */
+type InsertionMarker = {
+  afterNodeId: string | null;
+  beforeNodeId: string | null;
+  emptyContainerId: string | null;
+  horizontal: boolean;
+};
+const InsertionMarkerContext = React.createContext<InsertionMarker | null>(null);
+
 interface DesignCanvasProps {
   nodes: DesignerNode[];
   selectedNodeId: string | null;
@@ -89,12 +97,14 @@ interface DesignCanvasProps {
   snapToGrid: boolean;
   guides: AlignmentGuide[];
   isDragActive: boolean;
-  dropIndicator?: DropIndicator;
+  /** The block being dragged, shown dimmed in place. */
+  draggingNodeId?: string | null;
   forcedDropTarget: string | 'canvas' | null;
   droppableId: string;
   onPointerLocationChange: (point: { x: number; y: number } | null) => void;
   onNodeSelect: (id: string | null) => void;
-  onResize: (id: string, size: { width: number; height: number }, commit?: boolean) => void;
+  onResize: HandleResize;
+  onResetSize?: HandleResetSize;
   onTextEdit?: (id: string, text: string, commit: boolean) => void;
   readOnly?: boolean;
   previewData?: WasmInvoiceViewModel | null;
@@ -102,10 +112,15 @@ interface DesignCanvasProps {
 
 const GRID_COLOR = 'rgba(148, 163, 184, 0.25)';
 
-type DropIndicator =
-  | { kind: 'insert'; overNodeId: string; position: 'before' | 'after'; tone: 'valid' | 'invalid' }
-  | { kind: 'container'; containerId: string; tone: 'invalid' }
-  | null;
+const ALL_RESIZE_HANDLES: ResizeHandle[] = ['e', 'w', 's', 'se', 'sw'];
+
+/** Sides a block can be resized from: a divider only gets wider, a spacer only taller. */
+const resolveResizeHandles = (node: DesignerNode | undefined): ResizeHandle[] => {
+  if (!node || node.allowResize === false || node.type === 'document' || node.type === 'page') return [];
+  if (node.type === 'divider') return ['e', 'w'];
+  if (node.type === 'spacer') return ['s'];
+  return ALL_RESIZE_HANDLES;
+};
 
 interface CanvasNodeProps {
   node: DesignerNode;
@@ -116,10 +131,9 @@ interface CanvasNodeProps {
   isInSelectionContext: boolean;
   hasActiveSelection: boolean;
   isDragActive: boolean;
-  dropIndicator: DropIndicator;
+  draggingNodeId: string | null;
   forcedDropTarget: string | 'canvas' | null;
   onSelect: (id: string | null) => void;
-  onResize: (id: string, size: { width: number; height: number }, commit?: boolean) => void;
   onTextEdit?: (id: string, text: string, commit: boolean) => void;
   renderChildren: (parentId: string) => React.ReactNode;
   childExtents?: { maxRight: number; maxBottom: number };
@@ -135,13 +149,6 @@ type CanvasNodeDnd = {
   transform: any;
   transition?: string;
   isDragging: boolean;
-};
-
-type SectionSemanticCue = {
-  label: string;
-  toneClass: string;
-  chipClass: string;
-  accentClass: string;
 };
 
 type SectionBorderStyle = 'none' | 'light' | 'strong';
@@ -162,56 +169,6 @@ const FONT_WEIGHT_CLASS: Record<FontWeightStyle, string> = {
   medium: 'font-medium',
   semibold: 'font-semibold',
   bold: 'font-bold',
-};
-
-const getSectionSemanticCue = (sectionName: string): SectionSemanticCue => {
-  const name = sectionName.toLowerCase();
-  if (/\b(item|line item|service|detail)\b/.test(name)) {
-    return {
-      label: 'Items',
-      toneClass: 'bg-cyan-100/45 dark:bg-cyan-900/20',
-      chipClass: 'border-cyan-300 dark:border-cyan-700 bg-cyan-100 dark:bg-cyan-900/40 text-cyan-800 dark:text-cyan-300',
-      accentClass: 'bg-cyan-400/80',
-    };
-  }
-  if (/\b(total|summary|payment)\b/.test(name)) {
-    return {
-      label: 'Totals',
-      toneClass: 'bg-emerald-100/45 dark:bg-emerald-900/20',
-      chipClass: 'border-emerald-300 dark:border-emerald-700 bg-emerald-100 dark:bg-emerald-900/40 text-emerald-800 dark:text-emerald-300',
-      accentClass: 'bg-emerald-400/80',
-    };
-  }
-  if (/\b(footer|approval|signature)\b/.test(name)) {
-    return {
-      label: 'Footer',
-      toneClass: 'bg-slate-100 dark:bg-slate-800/30',
-      chipClass: 'border-slate-400 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300',
-      accentClass: 'bg-slate-400/80',
-    };
-  }
-  if (/\b(billing|info|meta|details)\b/.test(name)) {
-    return {
-      label: 'Info',
-      toneClass: 'bg-blue-100/45 dark:bg-blue-900/20',
-      chipClass: 'border-blue-300 dark:border-blue-700 bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-300',
-      accentClass: 'bg-blue-400/80',
-    };
-  }
-  if (/\b(header|masthead|top)\b/.test(name)) {
-    return {
-      label: 'Header',
-      toneClass: 'bg-amber-100/45 dark:bg-amber-900/20',
-      chipClass: 'border-amber-300 dark:border-amber-700 bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300',
-      accentClass: 'bg-amber-400/80',
-    };
-  }
-  return {
-    label: 'Section',
-    toneClass: 'bg-blue-100/45 dark:bg-blue-900/20',
-    chipClass: 'border-blue-300 dark:border-blue-700 bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-300',
-    accentClass: 'bg-blue-400/80',
-  };
 };
 
 const resolveSectionBorderStyle = (metadata: Record<string, unknown>): SectionBorderStyle => {
@@ -310,6 +267,46 @@ const resolveLabelInlineStyle = (metadata: Record<string, unknown>): React.CSSPr
   return Object.keys(resolved).length > 0 ? resolved : undefined;
 };
 
+/**
+ * The authored typography of a text-bearing node, applied to the element that
+ * actually holds the text so the canvas matches the rendered document. Color
+ * travels as a custom property: it paints on the light page and yields to the
+ * theme's text color in dark mode, where the page itself is dark.
+ */
+const resolveAuthoredTypography = (
+  style: ReturnType<typeof getNodeStyle>
+): { style: React.CSSProperties; hasSize: boolean; hasColor: boolean } => {
+  const resolved: React.CSSProperties & Record<string, unknown> = {};
+  if (!style) {
+    return { style: resolved, hasSize: false, hasColor: false };
+  }
+  const fontSize = normalizeCssStringOrNumber(style.fontSize);
+  const fontWeight = normalizeFontWeightCssValue(style.fontWeight);
+  const lineHeight = normalizeCssStringOrNumber(style.lineHeight);
+  const fontFamily = normalizeCssStringOrNumber(style.fontFamily);
+  const fontStyle = normalizeCssStringOrNumber(style.fontStyle);
+  const color = normalizeCssStringOrNumber(style.color);
+  if (fontSize !== undefined) resolved.fontSize = fontSize;
+  if (fontWeight !== undefined) resolved.fontWeight = fontWeight as React.CSSProperties['fontWeight'];
+  if (lineHeight !== undefined) resolved.lineHeight = lineHeight;
+  if (fontFamily !== undefined) resolved.fontFamily = String(fontFamily);
+  if (fontStyle !== undefined) resolved.fontStyle = String(fontStyle);
+  if (style.textAlign) resolved.textAlign = style.textAlign;
+  if (color !== undefined) resolved['--designer-authored-color'] = String(color);
+  return { style: resolved, hasSize: fontSize !== undefined, hasColor: color !== undefined };
+};
+
+/** Where a press counts as "on a block": the block itself or the selection adorner's handles. */
+const PRESS_ON_BLOCK_SELECTOR = `[${DESIGNER_NODE_ID_ATTRIBUTE}], [data-automation-id="designer-selection-adorner"], [data-automation-id^="designer-resize-handle-"]`;
+
+const AUTHORED_COLOR_CLASS = '[color:var(--designer-authored-color)] dark:[color:inherit]';
+
+// Authored surfaces win over the designer's structural chrome on the light page.
+const AUTHORED_SURFACE_CSS = `
+html:not(.dark) .designer-authored-bg { background-color: var(--designer-authored-bg) !important; }
+html:not(.dark) .designer-authored-border { border: var(--designer-authored-border) !important; }
+`;
+
 const resolveTableBorderPreset = (metadata: Record<string, unknown>): TableBorderPreset => {
   const candidate = metadata.tableBorderPreset;
   if (candidate === 'list' || candidate === 'boxed' || candidate === 'grid' || candidate === 'none') {
@@ -350,9 +347,34 @@ const resolveTableColumnPixelWidth = (column: Record<string, unknown>, index: nu
   return TABLE_COLUMN_WIDTH_FALLBACKS[index] ?? 120;
 };
 
+const readColumnInlineStyle = (column: Record<string, unknown>): Record<string, unknown> => {
+  const style = column.style;
+  return isRecord(style) && isRecord(style.inline) ? (style.inline as Record<string, unknown>) : {};
+};
+
+const readColumnCssWidth = (column: Record<string, unknown>): string | null => {
+  const width = readColumnInlineStyle(column).width;
+  return typeof width === 'string' && width.trim().length > 0 ? width.trim() : null;
+};
+
+// Mirrors the renderer: an authored alignment wins, numbers default to the right.
+const resolveTableColumnTextAlign = (column: Record<string, unknown>): React.CSSProperties['textAlign'] => {
+  const authored = readColumnInlineStyle(column).textAlign;
+  if (authored === 'left' || authored === 'center' || authored === 'right' || authored === 'justify') {
+    return authored;
+  }
+  const format = asTrimmedString(column.format) || asTrimmedString(column.type);
+  return format === 'number' || format === 'currency' ? 'right' : undefined;
+};
+
 const resolveTableGridTemplateColumns = (columns: Array<Record<string, unknown>>): string => {
   if (columns.length === 0) {
     return '1fr';
+  }
+  // Authored CSS widths are what the document renders, so the canvas uses them
+  // verbatim; unsized columns share the remaining space.
+  if (columns.some((column) => readColumnCssWidth(column) !== null)) {
+    return columns.map((column) => readColumnCssWidth(column) ?? 'minmax(0, 1fr)').join(' ');
   }
   const widths = columns.map((column, index) => resolveTableColumnPixelWidth(column, index));
   const totalWidth = widths.reduce((sum, width) => sum + width, 0);
@@ -479,8 +501,19 @@ const hasMovedBeyondThreshold = (
   return Math.abs(current.x - start.x) > threshold || Math.abs(current.y - start.y) > threshold;
 };
 
-const shouldToggleSelectionOff = (wasSelectedOnPointerDown: boolean, pointerMoved: boolean): boolean =>
-  wasSelectedOnPointerDown && !pointerMoved;
+/** True when a block other than the page is selected and contains `nodeId`. */
+const isInsideSelectedContainer = (nodeId: string): boolean => {
+  const { selectedNodeId, nodesById } = useInvoiceDesignerStore.getState();
+  if (!selectedNodeId || selectedNodeId === nodeId) return false;
+  const selected = nodesById[selectedNodeId];
+  if (!selected || selected.type === 'page' || selected.type === 'document') return false;
+  let current = nodesById[nodeId]?.parentId ?? null;
+  while (current) {
+    if (current === selectedNodeId) return true;
+    current = nodesById[current]?.parentId ?? null;
+  }
+  return false;
+};
 
 const shouldDeemphasizeNode = (
   hasActiveSelection: boolean,
@@ -657,6 +690,7 @@ const renderTablePreview = (
         {visibleColumns.map((column, index) => (
           <span
             key={String(column.id ?? column.key ?? 'column')}
+            style={{ textAlign: resolveTableColumnTextAlign(column) }}
             className={clsx(
               'truncate px-1 py-1',
               borderConfig.columnDividers &&
@@ -721,6 +755,7 @@ const renderTablePreview = (
                   return (
                     <span
                       key={`${rowKey}-${String(column.id ?? key)}`}
+                      style={{ textAlign: resolveTableColumnTextAlign(column) }}
                       className={clsx(
                         'flex min-w-0 flex-col px-1 py-0.5',
                         borderConfig.columnDividers &&
@@ -747,6 +782,7 @@ const renderTablePreview = (
                 return (
                   <span
                     key={`${rowKey}-${String(column.id ?? key)}`}
+                    style={{ textAlign: resolveTableColumnTextAlign(column) }}
                     className={clsx(
                       'truncate px-1 py-0.5',
                       borderConfig.columnDividers &&
@@ -1136,7 +1172,13 @@ const getPreviewContent = (node: DesignerNode, previewData: WasmInvoiceViewModel
       case 'image':
       case 'logo':
       case 'qr': {
-        const src = asTrimmedString(metadata.src) || asTrimmedString(metadata.url) || '';
+        const boundToLogo = metadata.srcBinding === 'tenantLogo';
+        const boundLogoSrc = boundToLogo
+          ? ['tenantClient.logoUrl', 'tenantClient.logo_url', 'tenant.logo_url']
+              .map((path) => asTrimmedString(resolveInvoiceBindingRawValue(previewData, path)))
+              .find((candidate) => candidate.length > 0) ?? ''
+          : '';
+        const src = boundToLogo ? boundLogoSrc : asTrimmedString(metadata.src) || asTrimmedString(metadata.url) || '';
         const alt = typeof metadata.alt === 'string' ? metadata.alt : '';
         const fallbackFit =
           metadata.fitMode === 'contain' || metadata.fitMode === 'cover' || metadata.fitMode === 'fill'
@@ -1148,14 +1190,16 @@ const getPreviewContent = (node: DesignerNode, previewData: WasmInvoiceViewModel
         const objectPosition = getNodeStyle(node)?.objectPosition;
 
         if (!src) {
-          const label = node.type === 'qr'
+          const label = boundToLogo
+            ? (t?.('designer.canvas.companyLogo', { defaultValue: 'Company logo' }) ?? 'Company logo')
+            : node.type === 'qr'
             ? (t?.('designer.blocks.qr.label', { defaultValue: 'QR Code' }) ?? 'QR Code')
             : node.type === 'logo'
               ? (t?.('designer.blocks.logo.label', { defaultValue: 'Logo' }) ?? 'Logo')
               : (t?.('designer.blocks.image.label', { defaultValue: 'Image' }) ?? 'Image');
           return {
             content: (
-              <div className="w-full h-full flex items-center justify-center text-[10px] text-slate-400 dark:text-slate-500 bg-slate-50/50 dark:bg-slate-800/50 border border-dashed border-slate-200 dark:border-slate-700">
+              <div className="w-full h-full min-h-[48px] flex items-center justify-center text-[10px] text-slate-400 dark:text-slate-500 bg-slate-50/50 dark:bg-slate-800/50 border border-dashed border-slate-200 dark:border-slate-700">
                 {label}
               </div>
             ),
@@ -1192,10 +1236,9 @@ const CanvasNodeInner: React.FC<CanvasNodeProps & { dnd: CanvasNodeDnd }> = ({
   isInSelectionContext,
   hasActiveSelection,
   isDragActive,
-  dropIndicator,
+  draggingNodeId,
   forcedDropTarget,
   onSelect,
-  onResize,
   onTextEdit,
   renderChildren,
   childExtents,
@@ -1205,21 +1248,12 @@ const CanvasNodeInner: React.FC<CanvasNodeProps & { dnd: CanvasNodeDnd }> = ({
   dnd,
 }) => {
   const { t } = useTranslation('msp/invoicing');
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = dnd;
+  const { attributes, listeners, setNodeRef, transform, transition } = dnd;
+  // The block being moved (which may be the selected container rather than the block pressed).
+  const isDragging = draggingNodeId === node.id;
   const [isEditingText, setIsEditingText] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const isContainer = node.allowedChildren.length > 0;
-  const { setNodeRef: setDropZoneRef, isOver: isNodeDropTarget } = useDroppable({
-    id: `droppable-${node.id}`,
-    disabled: !isContainer || readOnly,
-    data: isContainer
-      ? {
-          nodeId: node.id,
-          nodeType: node.type,
-          allowedChildren: node.allowedChildren,
-        }
-      : undefined,
-  });
 
   const inferredWidth =
     isContainer && childExtents && Number.isFinite(childExtents.maxRight)
@@ -1245,9 +1279,16 @@ const CanvasNodeInner: React.FC<CanvasNodeProps & { dnd: CanvasNodeDnd }> = ({
   const resolvedMediaHeight = mediaFrameSize.height;
   // Strip visual styles (backgroundColor, color, border) from resolved AST inline styles
   // so that Tailwind dark-mode classes on the canvas node can take effect.
-  const { backgroundColor: _bg, color: _fg, border: _bdr, ...layoutBoxStyle } = resolvedBoxStyle;
+  const { backgroundColor: authoredBackground, color: _fg, border: authoredBorder, ...layoutBoxStyle } = resolvedBoxStyle;
+  // Authored backgrounds and borders paint on the light page exactly as printed
+  // (see AUTHORED_SURFACE_CSS); dark mode keeps the designer's own surface.
+  const authoredSurfaceVars: Record<string, string> = {
+    ...(authoredBackground ? { '--designer-authored-bg': String(authoredBackground) } : {}),
+    ...(authoredBorder ? { '--designer-authored-border': String(authoredBorder) } : {}),
+  };
   const nodeStyle: React.CSSProperties = {
     ...layoutBoxStyle,
+    ...authoredSurfaceVars,
     // Keep box sizing stable when we apply padding/borders via Tailwind classes.
     boxSizing: 'border-box',
     // In flow layouts (flex/grid), do not force a fixed width/height from legacy node.size.
@@ -1277,7 +1318,19 @@ const CanvasNodeInner: React.FC<CanvasNodeProps & { dnd: CanvasNodeDnd }> = ({
       : {}),
   };
   const shouldDeemphasize = shouldDeemphasizeNode(hasActiveSelection, isInSelectionContext, isDragging);
-  const sectionCue = node.type === 'section' ? getSectionSemanticCue(getNodeName(node)) : null;
+  // One hovered block across the canvas (the deepest under the pointer), so a badge
+  // never lingers on a container the pointer already left.
+  const isHovered = useInvoiceDesignerStore((state) => state.hoverNodeId === node.id);
+  const setHoverNode = useInvoiceDesignerStore((state) => state.setHoverNode);
+  const insertionMarker = React.useContext(InsertionMarkerContext);
+  const markerSide = !insertionMarker
+    ? null
+    : insertionMarker.afterNodeId === node.id
+      ? 'after'
+      : insertionMarker.beforeNodeId === node.id
+        ? 'before'
+        : null;
+  const typography = resolveAuthoredTypography(getNodeStyle(node));
   const isTotalsRow = isTotalsRowType(node.type);
   const isLabelNode = node.type === 'label';
   const isTextNode = node.type === 'text' || node.type === 'richText';
@@ -1292,28 +1345,17 @@ const CanvasNodeInner: React.FC<CanvasNodeProps & { dnd: CanvasNodeDnd }> = ({
   const fieldBorderStyle = isFieldNode ? resolveFieldBorderStyle(metadata) : 'box';
   const sectionContainerClasses =
     node.type === 'section'
-      ? clsx(sectionCue?.toneClass ?? 'bg-blue-100/45 dark:bg-blue-900/20', resolveSectionBorderClasses(sectionBorderStyle))
+      ? clsx('bg-blue-100/45 dark:bg-blue-900/20', resolveSectionBorderClasses(sectionBorderStyle))
       : 'border bg-blue-50/40 dark:bg-blue-900/15 border-blue-200 dark:border-blue-800 border-dashed';
   const fieldSurfaceClasses = resolveFieldBorderClasses(fieldBorderStyle);
   const isInlineFieldLike = isFieldNode || isLabelNode;
   const isCompactLeaf = isTotalsRow || isInlineFieldLike || isTextNode;
-  const isResizeHandleSupported =
-    node.type !== 'document' &&
-    node.type !== 'page' &&
-    node.type !== 'divider' &&
-    node.type !== 'spacer';
-  const showOverlayNodeBadge = isContainer || !isCompactLeaf;
+  // Nested containers share a top-left corner, so labelling every block at once stacks
+  // the badges into an unreadable pile: only the hovered block and the selected one
+  // (whose badge is its drag grip) are labelled.
+  const showOverlayNodeBadge = !readOnly && (isHovered || isSelected) && !isDragActive;
+  const hasNoChildren = isContainer && node.children.length === 0;
 
-  const combinedRef = useCallback(
-    (element: HTMLDivElement | null) => {
-      // dnd-kit refs are typed as HTMLElement; HTMLDivElement is compatible.
-      setNodeRef(element);
-      if (isContainer) {
-        setDropZoneRef(element);
-      }
-    },
-    [isContainer, setDropZoneRef, setNodeRef]
-  );
 
   const draggablePointerDown = listeners?.onPointerDown;
   const canvasAst = React.useContext(CanvasAstContext);
@@ -1333,6 +1375,9 @@ const CanvasNodeInner: React.FC<CanvasNodeProps & { dnd: CanvasNodeDnd }> = ({
   const pointerDownPositionRef = useRef<{ x: number; y: number } | null>(null);
   const pointerDownSelectedRef = useRef(false);
   const pointerMovedRef = useRef(false);
+  // Pressing inside the selected container keeps it selected (a drag moves the
+  // container); the block under the pointer is selected on release instead.
+  const deferredSelectRef = useRef(false);
 
   const handlePointerDown: React.PointerEventHandler<HTMLDivElement> = (event) => {
     event.stopPropagation();
@@ -1342,7 +1387,10 @@ const CanvasNodeInner: React.FC<CanvasNodeProps & { dnd: CanvasNodeDnd }> = ({
     pointerDownPositionRef.current = { x: event.clientX, y: event.clientY };
     pointerDownSelectedRef.current = isSelected;
     pointerMovedRef.current = false;
-    onSelect(node.id);
+    deferredSelectRef.current = !isSelected && isInsideSelectedContainer(node.id);
+    if (!deferredSelectRef.current) {
+      onSelect(node.id);
+    }
     draggablePointerDown?.(event);
   };
 
@@ -1382,12 +1430,14 @@ const CanvasNodeInner: React.FC<CanvasNodeProps & { dnd: CanvasNodeDnd }> = ({
     if (readOnly) {
       return;
     }
-    const shouldDeselect = shouldToggleSelectionOff(pointerDownSelectedRef.current, pointerMovedRef.current);
+    // Clicking the selected block keeps it selected (click empty canvas to deselect).
+    const selectOnRelease = deferredSelectRef.current && !pointerMovedRef.current;
     pointerDownPositionRef.current = null;
     pointerDownSelectedRef.current = false;
     pointerMovedRef.current = false;
-    if (shouldDeselect) {
-      onSelect(null);
+    deferredSelectRef.current = false;
+    if (selectOnRelease) {
+      onSelect(node.id);
     }
   };
 
@@ -1417,45 +1467,16 @@ const CanvasNodeInner: React.FC<CanvasNodeProps & { dnd: CanvasNodeDnd }> = ({
     }
   };
 
-  const startResize = (event: React.PointerEvent<HTMLDivElement>) => {
-    if (readOnly) {
-      return;
-    }
-    event.preventDefault();
-    event.stopPropagation();
-    const startX = event.clientX;
-    const startY = event.clientY;
-    const { width, height } = node.size;
-    let latestSize = node.size;
-
-    const handlePointerMove = (moveEvent: PointerEvent) => {
-      const deltaX = moveEvent.clientX - startX;
-      const deltaY = moveEvent.clientY - startY;
-      latestSize = {
-        width: Math.max(40, width + deltaX),
-        height: Math.max(32, height + deltaY),
-      };
-      onResize(node.id, latestSize, false);
-    };
-
-    const handlePointerUp = (upEvent: PointerEvent) => {
-      upEvent.preventDefault();
-      window.removeEventListener('pointermove', handlePointerMove);
-      window.removeEventListener('pointerup', handlePointerUp);
-      onResize(node.id, latestSize, true);
-    };
-
-    window.addEventListener('pointermove', handlePointerMove);
-    window.addEventListener('pointerup', handlePointerUp, { once: true });
-  };
-
   return (
     <div
-      ref={combinedRef}
+      ref={setNodeRef}
       style={nodeStyle}
       data-automation-id={`designer-canvas-node-${node.id}`}
+      {...{ [DESIGNER_NODE_ID_ATTRIBUTE]: node.id }}
       className={clsx(
         'relative select-none transition-[opacity,box-shadow,border-color,background-color] duration-150',
+        authoredBackground && 'designer-authored-bg',
+        authoredBorder && 'designer-authored-border',
         isLabelNode
           ? 'rounded-sm border border-transparent bg-transparent shadow-none'
           : [
@@ -1472,13 +1493,8 @@ const CanvasNodeInner: React.FC<CanvasNodeProps & { dnd: CanvasNodeDnd }> = ({
         !isSelected &&
           isConstraintCounterpart &&
           'ring-2 ring-cyan-500 shadow-[0_0_0_2px_rgba(6,182,212,0.2)]',
-        ((isDragActive && isNodeDropTarget) || forcedDropTarget === node.id) &&
-          'ring-2 ring-emerald-500 shadow-[0_0_0_2px_rgba(16,185,129,0.2)]',
-        isDragActive &&
-          dropIndicator?.kind === 'container' &&
-          dropIndicator.containerId === node.id &&
-          'ring-2 ring-red-500 shadow-[0_0_0_2px_rgba(239,68,68,0.25)] cursor-not-allowed',
-        shouldDeemphasize && applySelectionDeemphasis && 'opacity-65',
+        forcedDropTarget === node.id && 'ring-2 ring-emerald-500 shadow-[0_0_0_2px_rgba(16,185,129,0.2)]',
+        shouldDeemphasize && applySelectionDeemphasis && 'opacity-85',
         isDragging && 'opacity-80'
       )}
       {...(readOnly ? {} : listeners)}
@@ -1486,39 +1502,67 @@ const CanvasNodeInner: React.FC<CanvasNodeProps & { dnd: CanvasNodeDnd }> = ({
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
       onPointerCancel={handlePointerCancel}
+      onPointerOver={(event) => {
+        event.stopPropagation();
+        setHoverNode(node.id);
+      }}
+      onPointerOut={(event) => {
+        event.stopPropagation();
+        if (useInvoiceDesignerStore.getState().hoverNodeId === node.id) setHoverNode(null);
+      }}
       onClick={handleNodeClick}
       onDoubleClick={handleDoubleClick}
       {...(readOnly ? {} : attributes)}
     >
-      {dropIndicator?.kind === 'insert' && parentUsesFlowLayout && dropIndicator.overNodeId === node.id && (
+      {node.type === 'divider' && !readOnly && (
+        // A divider is a hairline; give the pointer a few px either side to grab it by.
+        <span aria-hidden className="absolute -inset-1.5" />
+      )}
+      {markerSide && (
         <div
+          aria-hidden
+          data-automation-id="designer-canvas-insertion-marker"
+          title={t('designer.canvas.insertionMarker', { defaultValue: 'The next block you add goes here' })}
           className={clsx(
-            clsx(
-              'pointer-events-none absolute left-0 right-0 h-0.5 z-20',
-              dropIndicator.tone === 'invalid' ? 'bg-red-500' : 'bg-emerald-500'
-            ),
-            dropIndicator.position === 'before' ? '-top-1' : '-bottom-1'
+            'pointer-events-none absolute z-30 rounded-full bg-primary-500',
+            insertionMarker?.horizontal
+              ? ['top-0 bottom-0 w-1', markerSide === 'after' ? '-right-1.5' : '-left-1.5']
+              : ['left-0 right-0 h-1', markerSide === 'after' ? '-bottom-1.5' : '-top-1.5']
           )}
         />
       )}
       {showOverlayNodeBadge && (
-        <div className="absolute left-2 top-1 z-10 flex max-w-[calc(100%-1rem)] items-center gap-1.5 rounded bg-slate-900/80 px-2 py-0.5 text-[10px] uppercase tracking-wide text-white pointer-events-none">
-          <span className="truncate">{getNodeName(node)} · {t(`designer.blocks.${node.type}.label`, { defaultValue: node.type })}</span>
-          {sectionCue && (
-            <span className={clsx('rounded border px-1 py-0.5 text-[9px] font-semibold', sectionCue.chipClass)}>
-              {sectionCue.label}
-            </span>
+        <div
+          className={clsx(
+            'absolute left-0 -top-5 z-40 flex max-w-full items-center gap-1.5 rounded px-2 py-0.5 text-[10px] tracking-wide text-white whitespace-nowrap cursor-grab',
+            isSelected ? 'bg-primary-600' : 'bg-slate-900/85'
           )}
+          title={t('designer.canvas.badgeDragHint', { defaultValue: 'Drag to move this block' })}
+          data-automation-id="designer-canvas-node-badge"
+        >
+          <span className="truncate">{getNodeName(node)} · {t(`designer.blocks.${node.type}.label`, { defaultValue: node.type })}</span>
         </div>
       )}
       {isContainer ? (
         <div className="relative w-full h-full">
-          {sectionCue && <div className={clsx('absolute inset-y-0 left-0 w-1 rounded-l-md', sectionCue.accentClass)} />}
           <div
             className="relative w-full h-full"
             style={resolveContainerLayoutStyle(getNodeLayout(node))}
           >
             {renderChildren(node.id)}
+            {hasNoChildren && !readOnly && (
+              <div
+                className={clsx(
+                  'flex min-h-[48px] min-w-[120px] flex-1 items-center justify-center rounded border border-dashed px-2 text-center text-[11px]',
+                  insertionMarker?.emptyContainerId === node.id
+                    ? 'border-primary-500 text-primary-600 dark:text-primary-300'
+                    : 'border-slate-300 dark:border-slate-600 text-slate-400 dark:text-slate-500'
+                )}
+                data-automation-id="designer-canvas-empty-container"
+              >
+                {t('designer.canvas.emptyContainer', { defaultValue: 'Empty — select it and add blocks from the left panel' })}
+              </div>
+            )}
           </div>
         </div>
       ) : (
@@ -1543,24 +1587,34 @@ const CanvasNodeInner: React.FC<CanvasNodeProps & { dnd: CanvasNodeDnd }> = ({
                   {fieldDisplayLabel}:
                 </span>
               )}
-              <span className={clsx('min-w-0', previewContent.singleLine ? 'truncate' : 'whitespace-pre-line break-words')}>
+              <span
+                className={clsx(
+                  'min-w-0',
+                  previewContent.singleLine ? 'truncate' : 'whitespace-pre-line break-words',
+                  typography.hasColor && AUTHORED_COLOR_CLASS
+                )}
+                style={typography.style}
+              >
                 {previewContent.content}
               </span>
             </div>
           ) : (
             <div
               className={clsx(
-                'h-full text-[11px] text-slate-500',
+                'h-full',
+                !typography.hasSize && 'text-[11px]',
+                typography.hasColor ? AUTHORED_COLOR_CLASS : 'text-slate-500',
                 isLabelNode
-                  ? clsx('px-1 py-0.5 flex items-center bg-transparent text-slate-700', labelWeightClass)
+                  ? clsx('px-1 py-0.5 flex items-center bg-transparent', !typography.hasColor && 'text-slate-700', labelWeightClass)
                   : isTotalsRow
                     ? 'p-1.5 whitespace-pre-wrap'
                     : isTextNode
-                      ? 'px-2 py-1 whitespace-pre-wrap text-slate-700 bg-transparent'
+                      ? clsx('px-1 py-0.5 whitespace-pre-wrap bg-transparent', !typography.hasColor && 'text-slate-700 dark:text-slate-200')
                     : fieldSurfaceClasses,
                 previewContent.singleLine && 'whitespace-nowrap overflow-hidden',
                 previewContent.isPlaceholder && (isLabelNode ? 'text-slate-400 font-normal italic' : 'text-slate-400')
               )}
+              style={typography.style}
             >
               {previewContent.content}
             </div>
@@ -1568,8 +1622,10 @@ const CanvasNodeInner: React.FC<CanvasNodeProps & { dnd: CanvasNodeDnd }> = ({
         ) : (
           <>
 	            <div
+	              style={node.type === 'totals' ? typography.style : undefined}
 	              className={clsx(
-	                'text-[11px] text-slate-500',
+	                !(node.type === 'totals' && typography.hasSize) && 'text-[11px]',
+	                node.type === 'totals' && typography.hasColor ? AUTHORED_COLOR_CLASS : 'text-slate-500',
 	                node.type === 'divider'
 	                  ? 'p-0 flex items-center justify-center h-[14px]'
 	                  : isMediaNode
@@ -1600,21 +1656,14 @@ const CanvasNodeInner: React.FC<CanvasNodeProps & { dnd: CanvasNodeDnd }> = ({
           onClick={(event) => event.stopPropagation()}
         />
       )}
-      {!readOnly && node.allowResize !== false && isResizeHandleSupported && !isEditingText && (
-        <div
-          role="button"
-          tabIndex={0}
-          onPointerDown={startResize}
-          className="absolute -bottom-2 -right-2 h-4 w-4 rounded-full border border-primary-500 bg-white dark:bg-slate-900 cursor-se-resize"
-        />
-      )}
     </div>
   );
 };
 
 const FlowCanvasNode: React.FC<CanvasNodeProps> = (props) => {
   const { node, readOnly } = props;
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+  // Blocks stay put while dragging; the drop preview shows where one will land.
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: node.id,
     disabled: readOnly,
     data: {
@@ -1631,8 +1680,8 @@ const FlowCanvasNode: React.FC<CanvasNodeProps> = (props) => {
         attributes,
         listeners,
         setNodeRef,
-        transform,
-        transition,
+        transform: null,
+        transition: undefined,
         isDragging,
       }}
     />
@@ -1681,17 +1730,33 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({
   snapToGrid,
   guides,
   isDragActive,
-  dropIndicator = null,
+  draggingNodeId = null,
   forcedDropTarget,
   droppableId,
   onPointerLocationChange,
   onNodeSelect,
   onResize,
+  onResetSize = () => {},
   onTextEdit,
   readOnly = false,
   previewData = null,
 }) => {
   const exportWorkspace = useInvoiceDesignerStore((state) => state.exportWorkspace);
+  const insertPlacement = useInvoiceDesignerStore((state) => state.insertPlacement);
+  const insertionMarker = useMemo<InsertionMarker | null>(() => {
+    if (readOnly || !selectedNodeId) return null;
+    // A text block stands in for "a block": it fits everywhere a block can go.
+    const target = resolveInsertionTarget(nodes, selectedNodeId, 'text', insertPlacement);
+    const parent = target ? nodes.find((node) => node.id === target.parentId) : undefined;
+    if (!target || !parent) return null;
+    const parentLayout = getNodeLayout(parent);
+    return {
+      afterNodeId: target.index > 0 ? parent.children[target.index - 1] ?? null : null,
+      beforeNodeId: target.index === 0 ? parent.children[0] ?? null : null,
+      emptyContainerId: parent.children.length === 0 ? parent.id : null,
+      horizontal: parentLayout?.display === 'flex' && parentLayout.flexDirection === 'row',
+    };
+  }, [insertPlacement, nodes, readOnly, selectedNodeId]);
   const transforms = useInvoiceDesignerStore((state) => state.transforms);
   const canvasAst = useMemo(() => {
     try {
@@ -1702,8 +1767,19 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({
       });
     } catch { return null; }
   }, [nodes, transforms, exportWorkspace]);
-  const { t } = useTranslation('msp/invoicing');
+  const { t, i18n } = useTranslation('msp/invoicing');
   const artboardRef = useRef<HTMLDivElement>(null);
+  const [artboardElement, setArtboardElement] = useState<HTMLDivElement | null>(null);
+  const [selectedFrame, setSelectedFrame] = useState<Frame | null>(null);
+  const { locale: canvasLocale } = React.useContext(CanvasDocumentPreviewContext);
+  const canvasLocaleLabel = useMemo(() => {
+    if (!canvasLocale || canvasLocale.toLowerCase().startsWith('en')) return null;
+    try {
+      return new Intl.DisplayNames([i18n.language || 'en'], { type: 'language' }).of(canvasLocale) ?? canvasLocale;
+    } catch {
+      return canvasLocale;
+    }
+  }, [canvasLocale, i18n.language]);
   const documentNode = useMemo(
     () => nodes.find((node) => node.type === 'document') ?? nodes.find((node) => node.parentId === null),
     [nodes]
@@ -1717,7 +1793,7 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({
   );
   // Prefer page/document roots, but tolerate malformed parent links from imported snapshots.
   const rootDropMeta = defaultPageNode ?? documentNode ?? nodes.find((node) => node.parentId === null);
-  const { setNodeRef: setDroppableNodeRef, isOver } = useDroppable({
+  const { setNodeRef: setDroppableNodeRef } = useDroppable({
     id: droppableId,
     data: rootDropMeta
       ? {
@@ -1730,6 +1806,7 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({
   const setArtboardNodeRef = useCallback(
     (node: HTMLDivElement | null) => {
       setDroppableNodeRef(node);
+      setArtboardElement(node);
       artboardRef.current = node;
     },
     [setDroppableNodeRef]
@@ -1822,10 +1899,9 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({
           isInSelectionContext={selectionContextNodeIds.has(node.id)}
           hasActiveSelection={hasActiveRenderableSelection}
           isDragActive={isDragActive}
-          dropIndicator={dropIndicator}
+          draggingNodeId={draggingNodeId}
           forcedDropTarget={forcedDropTarget}
           onSelect={onNodeSelect}
-          onResize={onResize}
           onTextEdit={onTextEdit}
           renderChildren={renderNodeTree}
           childExtents={childExtentsMap.get(node.id)}
@@ -1834,15 +1910,6 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({
           applySelectionDeemphasis={!readOnly}
         />
       ));
-    if (!readOnly && parentUsesFlowLayout) {
-      const items = children.filter((child) => child.type !== 'document' && child.type !== 'page').map((child) => child.id);
-      const strategy = resolveSortableStrategy(parentLayout);
-      return (
-        <SortableContext items={items} strategy={strategy}>
-          {renderedChildren}
-        </SortableContext>
-      );
-    }
     return renderedChildren;
   }, [
     activeReferenceNodeId,
@@ -1850,12 +1917,11 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({
     childrenMap,
     nodesById,
     constrainedCounterpartNodeIds,
-    dropIndicator,
     forcedDropTarget,
+    draggingNodeId,
     hasActiveRenderableSelection,
     isDragActive,
     onNodeSelect,
-    onResize,
     onTextEdit,
     previewData,
     readOnly,
@@ -1864,6 +1930,9 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({
   ]);
 
   const rootParentId = rootDropMeta?.id;
+  const pressStartedOnBlockRef = useRef(false);
+  const selectedNode = selectedNodeId ? nodesById.get(selectedNodeId) : undefined;
+  const selectedResizeHandles = useMemo(() => resolveResizeHandles(selectedNode), [selectedNode]);
   const canvasWidth = defaultPageNode?.size.width ?? DESIGNER_CANVAS_WIDTH;
   const canvasHeight = defaultPageNode?.size.height ?? DESIGNER_CANVAS_HEIGHT;
 
@@ -1896,41 +1965,57 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({
 
   return (
     <CanvasAstContext.Provider value={canvasAst}>
+    <InsertionMarkerContext.Provider value={insertionMarker}>
+    <style>{AUTHORED_SURFACE_CSS}</style>
     <div
       className="relative flex-1 overflow-auto bg-slate-100 dark:bg-[rgb(var(--color-background))]"
+      data-designer-canvas-viewport="true"
+      onPointerDownCapture={(event) => {
+        // A click's target is the common ancestor of where the press and the release landed.
+        // Press on a block and release on its resize handle (which sits outside the block's
+        // subtree) and the click arrives here: only a press that started on empty canvas
+        // may deselect.
+        const target = event.target instanceof Element ? event.target : null;
+        pressStartedOnBlockRef.current = Boolean(target?.closest(PRESS_ON_BLOCK_SELECTOR));
+      }}
       onClick={() => {
-        if (!readOnly) {
+        // Consumed per press, so a click without a pointerdown (keyboard, programmatic)
+        // is treated as an empty-canvas click rather than inheriting an earlier press.
+        const startedOnBlock = pressStartedOnBlockRef.current;
+        pressStartedOnBlockRef.current = false;
+        if (!readOnly && !startedOnBlock) {
           onNodeSelect(null);
         }
       }}
     >
-      {showRulers && (
-        <>
-          <div className="absolute top-0 left-12 right-0 h-8 bg-white dark:bg-[rgb(var(--color-card))] border-b border-slate-200 dark:border-[rgb(var(--color-border-200))] flex items-end text-[10px] text-slate-400 px-3 gap-3 z-10">
-            {Array.from({ length: Math.ceil(canvasWidth / 50) + 2 }).map((_, index) => (
-              <span key={`hr-${index}`}>{index * 50}</span>
-            ))}
-          </div>
-          <div className="absolute top-8 bottom-0 left-0 w-12 bg-white dark:bg-[rgb(var(--color-card))] border-r border-slate-200 dark:border-[rgb(var(--color-border-200))] flex flex-col items-end text-[10px] text-slate-400 py-4 pr-1 gap-6 z-10">
-            {Array.from({ length: Math.ceil(canvasHeight / 50) + 2 }).map((_, index) => (
-              <span key={`vr-${index}`}>{index * 50}</span>
-            ))}
-          </div>
-        </>
-      )}
-      <div className="relative flex-1" style={{ padding: showRulers ? '48px 0 0 48px' : '32px' }}>
+      <div className="relative flex-1" style={{ padding: '32px' }}>
         <div
-          className="mx-auto"
+          className="relative mx-auto"
           style={{
             width: canvasWidth * canvasScale,
             height: canvasHeight * canvasScale,
           }}
         >
+          {showRulers && (
+            <CanvasRulers
+              width={canvasWidth}
+              height={canvasHeight}
+              canvasScale={canvasScale}
+              selection={
+                selectedFrame
+                  ? {
+                      x: { start: selectedFrame.left, end: selectedFrame.left + selectedFrame.width },
+                      y: { start: selectedFrame.top, end: selectedFrame.top + selectedFrame.height },
+                    }
+                  : null
+              }
+            />
+          )}
           <div
             ref={setArtboardNodeRef}
             className={clsx(
               'relative rounded-lg border border-slate-300 dark:border-slate-600 shadow-inner bg-white dark:bg-slate-900',
-              ((isDragActive && isOver) || forcedDropTarget === 'canvas') && 'ring-2 ring-emerald-500'
+              forcedDropTarget === 'canvas' && 'ring-2 ring-emerald-500'
             )}
             data-designer-canvas="true"
             style={{
@@ -1953,6 +2038,18 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({
             <div className="absolute left-3 top-2 z-20 rounded bg-slate-900/80 px-2 py-0.5 text-[10px] uppercase tracking-wide text-white pointer-events-none">
               {t('designer.canvas.templateBoundary', { defaultValue: 'Template Boundary' })}
             </div>
+            {canvasLocaleLabel && (
+              // Translated labels follow the Preview language; say so, or a German canvas looks like a bug.
+              <div
+                className="absolute right-3 top-2 z-20 rounded border border-sky-200 dark:border-sky-800 bg-sky-50 dark:bg-sky-900/40 px-2 py-0.5 text-[10px] text-sky-700 dark:text-sky-300 pointer-events-none"
+                data-automation-id="designer-canvas-locale-chip"
+              >
+                {t('designer.canvas.localeChip', {
+                  defaultValue: 'Translated labels shown in {{language}} (Preview language)',
+                  language: canvasLocaleLabel,
+                })}
+              </div>
+            )}
             <div
               className="absolute inset-0"
             >
@@ -1965,6 +2062,18 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({
             >
               {rootParentId && renderNodeTree(rootParentId)}
             </div>
+            {!readOnly && !isDragActive && selectedNode && selectedResizeHandles.length > 0 && (
+              <SelectionAdorner
+                nodeId={selectedNode.id}
+                artboard={artboardElement}
+                canvasScale={canvasScale}
+                handles={selectedResizeHandles}
+                onResize={onResize}
+                onResetSize={onResetSize}
+                layoutKey={nodes}
+                onFrameChange={setSelectedFrame}
+              />
+            )}
             {showGuides && guides.map((guide) => (
               <div
                 key={`${guide.type}-${guide.position}`}
@@ -1984,6 +2093,7 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({
         </div>
       </div>
     </div>
+    </InsertionMarkerContext.Provider>
     </CanvasAstContext.Provider>
   );
 };
@@ -1993,7 +2103,7 @@ export const __designCanvasSelectionTestUtils = {
   hasRenderableActiveSelection,
   collectSelectionContextNodeIds,
   hasMovedBeyondThreshold,
-  shouldToggleSelectionOff,
+  isInsideSelectedContainer,
   shouldDeemphasizeNode,
 };
 

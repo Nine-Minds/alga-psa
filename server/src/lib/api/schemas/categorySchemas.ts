@@ -38,7 +38,9 @@ export const createServiceCategorySchema = z.object({
   description: z.string()
     .max(1000, 'Description too long')
     .optional(),
-  is_active: booleanTransform.or(z.boolean()).optional()
+  is_active: booleanTransform.or(z.boolean()).optional(),
+  // Omitted on create => appended after the current last category (see CategoryService).
+  display_order: z.number().int('Display order must be an integer').min(0, 'Display order must be 0 or greater').optional()
 });
 
 export const updateServiceCategorySchema = createUpdateSchema(createServiceCategorySchema);
@@ -48,6 +50,7 @@ export const serviceCategoryResponseSchema = z.object({
   category_name: z.string(),
   description: z.string().nullable(),
   is_active: z.boolean(),
+  display_order: z.number(),
   tenant: uuidSchema,
   created_by: uuidSchema,
   updated_by: uuidSchema,

@@ -69,7 +69,10 @@ export const projectSchema = tenantSchema.extend({
   assigned_to: z.string().nullable().optional(),
   contact_name_id: z.string().nullable().optional(),
   budgeted_hours: budgetedHoursSchema,
-  client_portal_config: clientPortalConfigSchema.optional()
+  client_portal_config: clientPortalConfigSchema.optional(),
+  // Declared here because updateProjectSchema.parse() strips unknown keys, so an
+  // undeclared service_id would never reach the model.
+  service_id: z.string().uuid().nullable().optional()
 });
 
 export const projectPhaseSchema = tenantSchema.extend({
@@ -83,7 +86,8 @@ export const projectPhaseSchema = tenantSchema.extend({
   order_number: z.number(),
   created_at: z.date(),
   updated_at: z.date(),
-  wbs_code: z.string()
+  wbs_code: z.string(),
+  service_id: z.string().uuid().nullable().optional()
 });
 
 export const projectTaskSchema = tenantSchema.extend({
@@ -99,6 +103,7 @@ export const projectTaskSchema = tenantSchema.extend({
   created_at: z.date(),
   updated_at: z.date(),
   wbs_code: z.string(),
+  start_date: z.date().nullable().optional(),
   due_date: z.date().nullable(),
   priority_id: z.string().uuid().nullable().optional(),
   service_id: z.string().uuid().nullable().optional(),
@@ -113,6 +118,7 @@ export const projectTicketLinkSchema = tenantSchema.extend({
   phase_id: z.string().nullable(),
   task_id: z.string().nullable(),
   ticket_id: z.string(),
+  bill_under_project: z.boolean(),
   created_at: z.date()
 });
 

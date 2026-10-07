@@ -6,6 +6,7 @@ const getTaxRegionsMock = vi.hoisted(() => vi.fn());
 const getQboItemsMock = vi.hoisted(() => vi.fn());
 const getQboTaxCodesMock = vi.hoisted(() => vi.fn());
 const getQboAutomatedSalesTaxModeMock = vi.hoisted(() => vi.fn());
+const getQboCompanyCountryInfoMock = vi.hoisted(() => vi.fn());
 const getQboTermsMock = vi.hoisted(() => vi.fn());
 const createExternalEntityMappingMock = vi.hoisted(() => vi.fn());
 
@@ -15,6 +16,7 @@ vi.mock('@alga-psa/integrations/actions', () => ({
   getExternalEntityMappings: getExternalEntityMappingsMock,
   getQboItems: getQboItemsMock,
   getQboAutomatedSalesTaxMode: getQboAutomatedSalesTaxModeMock,
+  getQboCompanyCountryInfo: getQboCompanyCountryInfoMock,
   getQboTaxCodes: getQboTaxCodesMock,
   getQboTerms: getQboTermsMock,
   getServices: getServicesMock,
@@ -62,6 +64,9 @@ describe('QBO live mapping modules', () => {
       }
     ]);
     getQboAutomatedSalesTaxModeMock.mockResolvedValue({ enabled: false });
+    // Default to a non-US company: Intuit's "TAX/NON only" line rule binds US
+    // AST companies, so the US case is opted into per test.
+    getQboCompanyCountryInfoMock.mockResolvedValue({ country: 'CA', isUnitedStates: false });
     getQboTermsMock.mockResolvedValue([
       {
         id: 'term-1',
@@ -79,15 +84,22 @@ describe('QBO live mapping modules', () => {
     });
   });
 
-  it('T030: returns exactly 3 modules in order: service, tax_code, payment_term', () => {
+  it('T030: returns exactly 4 modules in order: service, tax_code, payment_term, discount', () => {
     const modules = createQboLiveMappingModules();
-    expect(modules).toHaveLength(3);
+    expect(modules).toHaveLength(4);
     expect(modules[0].id).toBe('qbo-live-service-mappings');
     expect(modules[1].id).toBe('qbo-live-tax-code-mappings');
     expect(modules[2].id).toBe('qbo-live-payment-term-mappings');
+    expect(modules[3].id).toBe('qbo-live-discount-mappings');
   });
 
-  it('T031: all three modules have adapterType quickbooks_online', () => {
+  it('the discount module offers one fixed Alga entity and maps it to a QuickBooks item', async () => {
+    const discountModule = createQboLiveMappingModules()[3];
+    expect(discountModule.algaEntityType).toBe('discount');
+    expect(discountModule.externalEntityType).toBe('Item');
+  });
+
+  it('T031: all modules have adapterType quickbooks_online', () => {
     const modules = createQboLiveMappingModules();
     for (const mod of modules) {
       expect(mod.adapterType).toBe('quickbooks_online');
@@ -302,7 +314,7 @@ describe('QBO live mapping modules', () => {
     expect(result.externalEntities.map((entity) => entity.id)).toEqual(['TAX-001']);
   });
 
-  it('T047: AST on prepends the TAX/NON pseudo codes to the tax-code options', async () => {
+  it('T047: AST on, non-US company prepends the TAX/NON pseudo codes to the tax-code options', async () => {
     getQboAutomatedSalesTaxModeMock.mockResolvedValue({ enabled: true });
     const [, taxModule] = createQboLiveMappingModules();
 
@@ -319,7 +331,7 @@ describe('QBO live mapping modules', () => {
     expect(getQboAutomatedSalesTaxModeMock).toHaveBeenCalledWith({ realmId: 'realm-123' });
   });
 
-  it('T049: a catalog that already contains TAX/NON is not given duplicates', async () => {
+  it('T049: a non-US catalog that already contains TAX/NON is not given duplicates', async () => {
     getQboAutomatedSalesTaxModeMock.mockResolvedValue({ enabled: true });
     getQboTaxCodesMock.mockResolvedValue([
       { id: 'TAX', name: 'TAX' },
@@ -332,6 +344,41 @@ describe('QBO live mapping modules', () => {
     const ids = result.externalEntities.map((entity) => entity.id);
     expect(ids.filter((id) => id === 'TAX')).toHaveLength(1);
     expect(ids).toEqual(['NON', 'TAX', 'TAX-001']);
+  });
+
+  it('T049a: AST on, US company offers exactly the two pseudo codes', async () => {
+    // Intuit rejects every non-pseudo TaxCode id on a US AST company with
+    // "Invalid Line TaxCode" (6100), so the catalog entries are traps and the
+    // pick list must not offer them at all.
+    getQboAutomatedSalesTaxModeMock.mockResolvedValue({ enabled: true });
+    getQboCompanyCountryInfoMock.mockResolvedValue({ country: 'US', isUnitedStates: true });
+    getQboTaxCodesMock.mockResolvedValue([
+      { id: '2', name: 'Out of scope (0%)' },
+      { id: '4', name: 'Non-Tax (0%)' }
+    ]);
+    const [, taxModule] = createQboLiveMappingModules();
+
+    const result = await taxModule.load({ realmId: 'realm-123', connectionId: 'conn-1' });
+
+    expect(result.externalEntities.map((entity) => entity.id)).toEqual(['TAX', 'NON']);
+  });
+
+  it('T049b: AST off on a US company keeps the catalog and adds no pseudo codes', async () => {
+    getQboAutomatedSalesTaxModeMock.mockResolvedValue({ enabled: false });
+    getQboCompanyCountryInfoMock.mockResolvedValue({ country: 'US', isUnitedStates: true });
+    const [, taxModule] = createQboLiveMappingModules();
+
+    const result = await taxModule.load({ realmId: 'realm-123', connectionId: 'conn-1' });
+
+    expect(result.externalEntities.map((entity) => entity.id)).toEqual(['TAX-001']);
+  });
+
+  it('T049c: the company country is read for the same realm as the tax-code catalog', async () => {
+    const [, taxModule] = createQboLiveMappingModules();
+
+    await taxModule.load({ realmId: 'realm-123', connectionId: 'conn-1' });
+
+    expect(getQboCompanyCountryInfoMock).toHaveBeenCalledWith({ realmId: 'realm-123' });
   });
 
   it('T050: pseudo-code labels come from the translator when one is supplied', () => {

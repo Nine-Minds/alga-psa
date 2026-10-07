@@ -228,7 +228,7 @@ export class AccountingExportService {
       validated_at: now
     });
 
-    await AccountingExportValidation.ensureMappingsForBatch(batchId);
+    await AccountingExportValidation.ensureMappingsForBatch(batchId, this.adapterRegistry);
     const refreshed = await this.getBatchWithDetails(batchId);
     if (!refreshed.batch) {
       throw new Error(`Export batch ${batchId} was not found after validation`);

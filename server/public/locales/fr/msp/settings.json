@@ -391,6 +391,7 @@
         "emailAlreadyExists": "Un utilisateur avec cette adresse e-mail existe déjà",
         "reportsToSelf": "Un utilisateur ne peut pas être son propre responsable",
         "reportsToCycle": "Cela créerait une chaîne hiérarchique circulaire",
+        "invalidTimezone": "Choisissez un fuseau horaire basé sur une ville, comme America/New_York.",
         "permissionDenied": "Vous n'avez pas la permission de modifier les rôles des utilisateurs.",
         "invalidCapacity": "La capacité hebdomadaire doit être un nombre positif.",
         "invalidWorkSchedule": "Les heures de travail doivent former une plage valide se terminant après son début."
@@ -2391,6 +2392,11 @@
       "updateFailed": "Impossible de mettre à jour le rôle",
       "validateDeletionFailed": "Impossible de valider la suppression. Veuillez réessayer.",
       "deleteFailed": "Impossible de supprimer le rôle"
+    },
+    "editDialog": {
+      "title": "Modifier le rôle",
+      "builtInNameLocked": "Les noms des rôles intégrés ne peuvent pas être modifiés, car le système en dépend.",
+      "portalLocked": "L’accès au portail ne peut pas être modifié après la création d’un rôle."
     }
   },
   "security": {
@@ -3445,7 +3451,10 @@
       "duplicate": "Cet utilisateur possède déjà le rôle sélectionné.",
       "changePermission": "Autorisation refusée : vous n’avez pas l’autorisation de modifier les rôles des utilisateurs.",
       "missingField": "Un champ obligatoire du rôle utilisateur est manquant.",
-      "missingFieldNamed": "Un champ obligatoire du rôle utilisateur est manquant : {{field}}."
+      "missingFieldNamed": "Un champ obligatoire du rôle utilisateur est manquant : {{field}}.",
+      "nameRequired": "Le nom du rôle est obligatoire.",
+      "builtInRename": "Les rôles intégrés ne peuvent pas être renommés.",
+      "duplicateName": "Un rôle nommé « {{name}} » existe déjà pour ce portail."
     },
     "secrets": {
       "tenantContextMissing": "Le contexte du locataire est absent. Veuillez actualiser la page et réessayer.",
@@ -3470,6 +3479,7 @@
       "missingField": "Un champ obligatoire des paramètres du locataire est manquant.",
       "missingFieldNamed": "Un champ obligatoire des paramètres du locataire est manquant : {{field}}.",
       "invalidTimezone": "Fuseau horaire non valide : {{timezone}}",
+      "nonLocationTimezone": "{{timezone}} n'est pas un fuseau horaire basé sur une ville. Choisissez un fuseau comme America/New_York.",
       "permissions": {
         "clearOnboarding": "Autorisation refusée : seuls les administrateurs peuvent effacer les données d’onboarding.",
         "update": "Autorisation refusée : impossible de mettre à jour les paramètres",

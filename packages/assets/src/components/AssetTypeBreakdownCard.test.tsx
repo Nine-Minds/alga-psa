@@ -114,15 +114,30 @@ describe('AssetTypeBreakdownCard (T316)', () => {
   });
 
   it('refetches when refreshToken changes and hides itself with zero assets', async () => {
-    mockGetAssetCountsByType.mockResolvedValue({});
+    // Each fetch resolves only when the test says so, so assertions observe
+    // the rendered outcome rather than racing the promise flush.
+    const pending: Array<(counts: Record<string, number>) => void> = [];
+    mockGetAssetCountsByType.mockImplementation(
+      () => new Promise<Record<string, number>>((resolve) => pending.push(resolve))
+    );
     const { container, rerender } = render(
       <AssetTypeBreakdownCard getTypeLabel={getTypeLabel} refreshToken={0} />
     );
 
     await waitFor(() => expect(mockGetAssetCountsByType).toHaveBeenCalledTimes(1));
-    expect(container.innerHTML).toBe('');
+    // Loading skeleton while the first fetch is in flight.
+    expect(document.getElementById('asset-type-breakdown')).toBeTruthy();
+
+    pending[0]({});
+    await waitFor(() => expect(container.innerHTML).toBe(''));
 
     rerender(<AssetTypeBreakdownCard getTypeLabel={getTypeLabel} refreshToken={1} />);
     await waitFor(() => expect(mockGetAssetCountsByType).toHaveBeenCalledTimes(2));
+
+    pending[1]({ door_access: 2 });
+    await waitFor(() => {
+      expect(screen.getByText('Door Access System')).toBeTruthy();
+    });
+    expect(screen.getByText('2')).toBeTruthy();
   });
 });

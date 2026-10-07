@@ -391,6 +391,7 @@
         "emailAlreadyExists": "Esiste già un utente con questo indirizzo e-mail",
         "reportsToSelf": "Un utente non può riferire a se stesso",
         "reportsToCycle": "Questo creerebbe una catena di riporto circolare",
+        "invalidTimezone": "Scegli un fuso orario basato su una città, ad esempio America/New_York.",
         "permissionDenied": "Non disponi delle autorizzazioni per modificare i ruoli utente.",
         "invalidCapacity": "La capacità settimanale deve essere un numero positivo.",
         "invalidWorkSchedule": "L'orario di lavoro deve essere un intervallo valido che termina dopo l'inizio."
@@ -2391,6 +2392,11 @@
       "updateFailed": "Impossibile aggiornare il ruolo",
       "validateDeletionFailed": "Impossibile convalidare l’eliminazione. Riprova.",
       "deleteFailed": "Impossibile eliminare il ruolo"
+    },
+    "editDialog": {
+      "title": "Modifica ruolo",
+      "builtInNameLocked": "I nomi dei ruoli predefiniti non possono essere modificati perché il sistema dipende da essi.",
+      "portalLocked": "L'accesso al portale non può essere modificato dopo la creazione di un ruolo."
     }
   },
   "security": {
@@ -3445,7 +3451,10 @@
       "duplicate": "Questo utente ha già il ruolo selezionato.",
       "changePermission": "Autorizzazione negata: non si dispone dell’autorizzazione per modificare i ruoli degli utenti.",
       "missingField": "Manca un campo obbligatorio del ruolo utente.",
-      "missingFieldNamed": "Manca un campo obbligatorio del ruolo utente: {{field}}."
+      "missingFieldNamed": "Manca un campo obbligatorio del ruolo utente: {{field}}.",
+      "nameRequired": "Il nome del ruolo è obbligatorio.",
+      "builtInRename": "I ruoli predefiniti non possono essere rinominati.",
+      "duplicateName": "Esiste già un ruolo denominato \"{{name}}\" per questo portale."
     },
     "secrets": {
       "tenantContextMissing": "Manca il contesto del tenant. Aggiornare la pagina e riprovare.",
@@ -3470,6 +3479,7 @@
       "missingField": "Manca un campo obbligatorio delle impostazioni del tenant.",
       "missingFieldNamed": "Manca un campo obbligatorio delle impostazioni del tenant: {{field}}.",
       "invalidTimezone": "Fuso orario non valido: {{timezone}}",
+      "nonLocationTimezone": "{{timezone}} non è un fuso orario basato su una città. Scegli un fuso come America/New_York.",
       "permissions": {
         "clearOnboarding": "Autorizzazione negata: solo gli amministratori possono cancellare i dati di onboarding.",
         "update": "Autorizzazione negata: impossibile aggiornare le impostazioni",

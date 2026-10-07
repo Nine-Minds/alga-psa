@@ -391,6 +391,7 @@
         "emailAlreadyExists": "Ya existe un usuario con esta dirección de correo electrónico",
         "reportsToSelf": "Un usuario no puede reportarse a sí mismo",
         "reportsToCycle": "Esto crearía una cadena de reporte circular",
+        "invalidTimezone": "Elige una zona horaria basada en una ciudad, como America/New_York.",
         "permissionDenied": "No tiene permiso para cambiar los roles de usuario.",
         "invalidCapacity": "La capacidad semanal debe ser un número positivo.",
         "invalidWorkSchedule": "El horario laboral debe ser un intervalo válido que termine después de comenzar."
@@ -2391,6 +2392,11 @@
       "updateFailed": "No se pudo actualizar el rol",
       "validateDeletionFailed": "No se pudo validar la eliminación. Inténtelo de nuevo.",
       "deleteFailed": "No se pudo eliminar el rol"
+    },
+    "editDialog": {
+      "title": "Editar rol",
+      "builtInNameLocked": "Los nombres de los roles integrados no se pueden cambiar porque el sistema depende de ellos.",
+      "portalLocked": "El acceso al portal no se puede cambiar después de crear un rol."
     }
   },
   "security": {
@@ -3445,7 +3451,10 @@
       "duplicate": "Ese usuario ya tiene el rol seleccionado.",
       "changePermission": "Permiso denegado: no tiene permiso para cambiar los roles de usuario.",
       "missingField": "Falta un campo obligatorio del rol de usuario.",
-      "missingFieldNamed": "Falta un campo obligatorio del rol de usuario: {{field}}."
+      "missingFieldNamed": "Falta un campo obligatorio del rol de usuario: {{field}}.",
+      "nameRequired": "El nombre del rol es obligatorio.",
+      "builtInRename": "Los roles integrados no se pueden renombrar.",
+      "duplicateName": "Ya existe un rol llamado «{{name}}» para este portal."
     },
     "secrets": {
       "tenantContextMissing": "Falta el contexto del inquilino. Actualice la página e inténtelo de nuevo.",
@@ -3470,6 +3479,7 @@
       "missingField": "Falta un campo obligatorio de la configuración del inquilino.",
       "missingFieldNamed": "Falta un campo obligatorio de la configuración del inquilino: {{field}}.",
       "invalidTimezone": "Zona horaria no válida: {{timezone}}",
+      "nonLocationTimezone": "{{timezone}} no es una zona horaria basada en una ciudad. Elige una zona como America/New_York.",
       "permissions": {
         "clearOnboarding": "Permiso denegado: solo los administradores pueden borrar los datos de incorporación.",
         "update": "Permiso denegado: no se puede actualizar la configuración",

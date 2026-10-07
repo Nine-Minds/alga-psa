@@ -283,6 +283,8 @@
     },
     "captchaRequired": "Complete la verificación a continuación y vuelva a iniciar sesión.",
     "tooManyAttempts": "Demasiados intentos fallidos de inicio de sesión. Espere unos minutos antes de volver a intentarlo.",
+    "tenantRequiredMessage": "Su correo electrónico está vinculado a más de una organización: elija su organización para continuar.",
+    "tenantRequiredLink": "Elegir su organización",
     "tenantDiscovery": {
       "title": "Encuentre su organización",
       "description": "Ingrese su correo electrónico y le enviaremos enlaces de inicio de sesión para todas las organizaciones a las que tiene acceso.",
@@ -442,7 +444,8 @@
         "consent": "Autorizo cargos recurrentes a esta tarjeta por las facturas finalizadas.",
         "enable": "Activar el pago automático",
         "noCards": "Añada una tarjeta para activar el pago automático.",
-        "changeCard": "Usar esta tarjeta para el pago automático"
+        "changeCard": "Usar esta tarjeta para el pago automático",
+        "updateError": "No se pudo actualizar el pago automático. Inténtelo de nuevo."
       },
       "publicCardSetup": {
         "saved": "Tarjeta guardada",
@@ -565,7 +568,8 @@
       "avatarDescription": "Este avatar se muestra al personal del MSP cuando consultan su información de contacto.",
       "emailAlreadyExists": "Ya existe un usuario con esta dirección de correo electrónico",
       "reportsToSelf": "Un usuario no puede reportarse a sí mismo",
-      "reportsToCycle": "Esto crearía una cadena de reporte circular"
+      "reportsToCycle": "Esto crearía una cadena de reporte circular",
+      "invalidTimezone": "Elige una zona horaria basada en una ciudad, como America/New_York."
     },
     "imageUpload": {
       "uploadAvatar": "Subir avatar",
@@ -681,7 +685,10 @@
       "deleteError": "No se pudo eliminar el usuario",
       "emailAlreadyExists": "Ya existe un usuario con esta dirección de correo electrónico",
       "reportsToSelf": "Un usuario no puede reportarse a sí mismo",
-      "reportsToCycle": "Esto crearía una cadena de reporte circular"
+      "reportsToCycle": "Esto crearía una cadena de reporte circular",
+      "reportsTo": "Reporta a",
+      "noManager": "Sin responsable",
+      "reportsToHelp": "Un responsable puede ver los tickets, dispositivos y proyectos de las personas que dependen de él, cuando su grupo de visibilidad se limita a sus propios registros."
     },
     "visibilityGroups": {
       "title": "Grupos de visibilidad",
@@ -721,9 +728,22 @@
       "scopeClient": "Todos los tickets de este cliente",
       "scopeContact": "Solo sus propios tickets",
       "scopeClientDescription": "Los miembros ven todos los tickets de este cliente en los tableros seleccionados.",
-      "scopeContactDescription": "Los miembros solo ven los tickets en los que figuran como contacto. Los administradores del cliente ven todos los tickets de los tableros seleccionados, incluidos los que no tienen contacto.",
-      "assignmentHelp": "Asigne un grupo para limitar los tableros y los tickets, o mantenga el acceso completo al cliente.",
-      "boardHiddenFromPortal": "Oculto en el portal de clientes"
+      "scopeContactDescription": "Los miembros ven los tickets en los que figuran como contacto, los tickets de las personas que dependen de ellos y los tickets que siguen. Los administradores del cliente siempre ven todo en los tableros seleccionados, incluidos los tickets sin contacto.",
+      "assignmentHelp": "Asigne un grupo para limitar los tableros y lo que esta persona ve de tickets, dispositivos y proyectos, o mantenga el acceso completo al cliente.",
+      "boardHiddenFromPortal": "Oculto en el portal de clientes",
+      "assetScopeLabel": "Visibilidad de dispositivos",
+      "assetScopeClient": "Todos los dispositivos de este cliente",
+      "assetScopeContact": "Solo sus propios dispositivos",
+      "assetScopeClientDescription": "Los miembros ven todos los dispositivos de este cliente, incluidos los no asignados.",
+      "assetScopeContactDescription": "Los miembros solo ven los dispositivos asignados a ellos o a las personas que dependen de ellos. Los dispositivos sin asignar permanecen ocultos. Los administradores del cliente siempre ven todo.",
+      "projectScopeLabel": "Visibilidad de proyectos",
+      "projectScopeClient": "Todos los proyectos de este cliente",
+      "projectScopeContact": "Solo sus propios proyectos",
+      "projectScopeClientDescription": "Los miembros ven todos los proyectos de este cliente.",
+      "projectScopeContactDescription": "Los miembros solo ven los proyectos cuyo contacto son ellos o alguien que depende de ellos. Los proyectos sin contacto permanecen ocultos. Los administradores del cliente siempre ven todo.",
+      "scopeSummary": "Tickets: {{tickets}} · Dispositivos: {{devices}} · Proyectos: {{projects}}",
+      "scopeSummaryAll": "Todos",
+      "scopeSummaryOwn": "Propios"
     },
     "messages": {
       "saveChanges": "Guardar cambios",

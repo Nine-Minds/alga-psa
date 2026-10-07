@@ -14,7 +14,9 @@ import {
   projectExportQuerySchema,
   updateProjectTaskSchema,
   createProjectPhaseSchema,
-  createProjectTaskSchema
+  createProjectTaskSchema,
+  createTaskChecklistItemSchema,
+  updateTaskChecklistItemSchema,
 } from '../schemas/project';
 import { 
   ApiKeyServiceForApi 
@@ -45,6 +47,7 @@ import {
   handleApiError
 } from '../middleware/apiMiddleware';
 import { ZodError } from 'zod';
+import type { Knex } from 'knex';
 
 export class ApiProjectController extends ApiBaseController {
   private projectService: ProjectService;
@@ -1968,8 +1971,16 @@ export class ApiProjectController extends ApiBaseController {
 
           await this.assertTaskProjectAllowed(apiRequest as AuthenticatedApiRequest, taskId, knex);
 
-          // Parse body
-          const data = await req.json();
+          // Parse body (accepts the legacy item_text / is_completed spellings too)
+          let data;
+          try {
+            data = createTaskChecklistItemSchema.parse(await req.json());
+          } catch (error) {
+            if (error instanceof ZodError) {
+              throw new ValidationError('Validation failed', error.errors);
+            }
+            throw error;
+          }
 
           const checklistItem = await this.projectService.createChecklistItem(
             taskId,
@@ -1984,4 +1995,104 @@ export class ApiProjectController extends ApiBaseController {
       }
     };
   }
+  /** The `/tasks/{taskId}/checklist/{itemId}` segments of the request path. */
+  private checklistPathIds(req: NextRequest): { taskId: string; checklistItemId: string } {
+    const pathParts = new URL(req.url).pathname.split('/');
+    const tasksIndex = pathParts.findIndex(part => part === 'tasks');
+    const taskId = pathParts[tasksIndex + 1];
+    const checklistItemId = pathParts[pathParts.indexOf('checklist', tasksIndex) + 1];
+    const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!taskId || !uuid.test(taskId)) throw new ValidationError('Invalid task ID format');
+    if (!checklistItemId || !uuid.test(checklistItemId)) throw new ValidationError('Invalid checklist item ID format');
+    return { taskId, checklistItemId };
+  }
+
+  /** Same auth and task-access checks as the checklist create route. */
+  private async authenticateChecklistWrite(req: NextRequest): Promise<{ apiRequest: AuthenticatedApiRequest; tenantId: string; knex: Knex }> {
+    const apiKey = req.headers.get('x-api-key');
+    if (!apiKey) {
+      throw new UnauthorizedError('API key required');
+    }
+    let tenantId = req.headers.get('x-tenant-id');
+    let keyRecord;
+    if (tenantId) {
+      keyRecord = await ApiKeyServiceForApi.validateApiKeyForTenant(apiKey, tenantId);
+    } else {
+      keyRecord = await ApiKeyServiceForApi.validateApiKeyAnyTenant(apiKey);
+      if (keyRecord) {
+        tenantId = keyRecord.tenant;
+      }
+    }
+    if (!keyRecord) {
+      throw new UnauthorizedError('Invalid API key');
+    }
+    const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
+    assertInternalApiUser(user);
+    const apiRequest = req as ApiRequest;
+    apiRequest.context = {
+      userId: keyRecord.user_id,
+      tenant: keyRecord.tenant,
+      user,
+      apiKeyId: keyRecord.api_key_id,
+    };
+    await this.assertProductApiAccess(apiRequest as AuthenticatedApiRequest);
+    const knex = await getConnection(tenantId!);
+    const hasAccess = await hasPermission(user, 'project', 'update', knex);
+    if (!hasAccess) {
+      throw new ForbiddenError('Permission denied: Cannot update project');
+    }
+    return { apiRequest: apiRequest as AuthenticatedApiRequest, tenantId: tenantId!, knex };
+  }
+
+  /**
+   * Update checklist item (e.g. tick it done)
+   */
+  updateChecklistItem() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        const { taskId, checklistItemId } = this.checklistPathIds(req);
+        const { apiRequest, tenantId, knex } = await this.authenticateChecklistWrite(req);
+
+        return await runWithTenant(tenantId, async () => {
+          await this.assertTaskProjectAllowed(apiRequest, taskId, knex);
+
+          let data;
+          try {
+            data = updateTaskChecklistItemSchema.parse(await req.json());
+          } catch (error) {
+            if (error instanceof ZodError) {
+              throw new ValidationError('Validation failed', error.errors);
+            }
+            throw error;
+          }
+
+          const item = await this.projectService.updateChecklistItem(taskId, checklistItemId, data, apiRequest.context!);
+          return createSuccessResponse(item);
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  /**
+   * Delete checklist item
+   */
+  deleteChecklistItem() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        const { taskId, checklistItemId } = this.checklistPathIds(req);
+        const { apiRequest, tenantId, knex } = await this.authenticateChecklistWrite(req);
+
+        return await runWithTenant(tenantId, async () => {
+          await this.assertTaskProjectAllowed(apiRequest, taskId, knex);
+          await this.projectService.deleteChecklistItem(taskId, checklistItemId, apiRequest.context!);
+          return new NextResponse(null, { status: 204 });
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
 }

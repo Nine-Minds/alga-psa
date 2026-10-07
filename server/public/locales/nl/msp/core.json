@@ -102,7 +102,9 @@
       "forms": "Formulieren",
       "channels": "Kanalen"
     },
-    "passwords": "Wachtwoorden"
+    "passwords": "Wachtwoorden",
+    "ticketsAll": "Alle tickets",
+    "ticketsRecurring": "Terugkerende tickets"
   },
   "sidebar": {
     "backToMain": "Terug naar hoofd",

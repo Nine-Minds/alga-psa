@@ -90,7 +90,8 @@
           "clients": "Klanten",
           "itemsServices": "Items / Diensten",
           "taxCodes": "Belastingcodes",
-          "paymentTerms": "Betalingsvoorwaarden"
+          "paymentTerms": "Betalingsvoorwaarden",
+          "discounts": "Kortingen"
         }
       }
     },
@@ -111,6 +112,7 @@
           "failed": "Export mislukt",
           "missingItemMapping": "Item-toewijzing ontbreekt",
           "missingItemMappingId": "Item-toewijzing ontbreekt ({{serviceId}})",
+          "missingDiscountMapping": "Kortingstoewijzing ontbreekt (tabblad Kortingen)",
           "missingItemMappingNamed": "Item-toewijzing ontbreekt: {{serviceName}}"
         },
         "fields": {
@@ -469,7 +471,8 @@
           "previousCount": "Vorige",
           "syncFinished": "Synchronisatie voltooid voor {{client}}.",
           "syncing": "Bezig met synchroniseren…",
-          "syncTrackingFailed": "De synchronisatie is gestart, maar deze pagina kon deze niet tot voltooiing volgen. Vernieuw om het nieuwste resultaat te bekijken."
+          "syncTrackingFailed": "De synchronisatie is gestart, maar deze pagina kon deze niet tot voltooiing volgen. Vernieuw om het nieuwste resultaat te bekijken.",
+          "syncWorkerUnavailable": "De synchronisatie staat in de wachtrij, maar op dit moment verwerkt niets de achtergrondwachtrij. Hij wordt uitgevoerd zodra de worker terug is; blijft hij hangen, herstart dan de service temporal-worker."
         },
         "connection": {
           "changeAction": "Verbinding wijzigen",

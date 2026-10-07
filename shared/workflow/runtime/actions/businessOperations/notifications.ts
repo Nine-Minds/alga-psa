@@ -11,6 +11,7 @@ import {
   writeRunAudit,
   throwActionError
 } from './shared';
+import { withWorkflowJsonSchemaMetadata, withWorkflowPicker } from '../../jsonSchemaMetadata';
 
 export function registerNotificationActions(): void {
   const registry = getActionRegistryV2();
@@ -22,15 +23,20 @@ export function registerNotificationActions(): void {
     id: 'notifications.send_in_app',
     version: 1,
     inputSchema: z.object({
-      recipients: z.object({
-        user_ids: z.array(uuidSchema).optional().describe('User ids'),
-        role_ids: z.array(uuidSchema).optional().describe('Role ids (users with these roles receive the notification)'),
-        role_names: z.array(z.string().min(1)).optional().describe('Role names (case-insensitive)')
-      }).describe('Recipients'),
+      // The designer edits recipients with one "Notify users / roles" editor instead of nested fields.
+      recipients: withWorkflowJsonSchemaMetadata(
+        z.object({
+          user_ids: withWorkflowPicker(z.array(uuidSchema).optional(), 'Users to notify', 'user'),
+          role_ids: withWorkflowPicker(z.array(uuidSchema).optional(), 'Roles to notify (every user with one of these roles)', 'role'),
+          role_names: z.array(z.string().min(1)).optional().describe('Role names (case-insensitive)')
+        }),
+        'Recipients',
+        { 'x-workflow-editor': { kind: 'custom', custom: { component: 'notification-recipients' } } }
+      ),
       title: z.string().min(1).describe('Title'),
       body: z.string().min(1).describe('Body'),
       severity: z.enum(['info', 'success', 'warning', 'error']).default('info'),
-      link: z.string().optional().describe('Optional deep link'),
+      link: z.string().optional().describe('Opening the notification takes the user here, e.g. /msp/tickets/<ticket id>. Leave empty for a notification without a link.'),
       dedupe_key: z.string().optional().describe('Optional dedupe key (idempotency)')
     }),
     outputSchema: z.object({

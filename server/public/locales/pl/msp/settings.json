@@ -393,6 +393,7 @@
         "emailAlreadyExists": "Użytkownik o tym adresie e-mail już istnieje",
         "reportsToSelf": "Użytkownik nie może podlegać samemu sobie",
         "reportsToCycle": "Spowodowałoby to cykliczną strukturę podległości",
+        "invalidTimezone": "Wybierz strefę czasową powiązaną z miastem, np. America/New_York.",
         "permissionDenied": "Nie masz uprawnień do zmiany ról użytkowników.",
         "invalidCapacity": "Tygodniowa wydajność musi być liczbą dodatnią.",
         "invalidWorkSchedule": "Godziny pracy muszą być prawidłowymi przedziałami kończącymi się po rozpoczęciu."
@@ -2399,6 +2400,11 @@
       "updateFailed": "Nie udało się zaktualizować roli",
       "validateDeletionFailed": "Nie udało się sprawdzić możliwości usunięcia. Spróbuj ponownie.",
       "deleteFailed": "Nie udało się usunąć roli"
+    },
+    "editDialog": {
+      "title": "Edytuj rolę",
+      "builtInNameLocked": "Nazw wbudowanych ról nie można zmienić, ponieważ system z nich korzysta.",
+      "portalLocked": "Dostępu do portalu nie można zmienić po utworzeniu roli."
     }
   },
   "security": {
@@ -3475,7 +3481,10 @@
       "duplicate": "Ten użytkownik ma już wybraną rolę.",
       "changePermission": "Odmowa uprawnień: brak uprawnień do zmiany ról użytkowników.",
       "missingField": "Brakuje wymaganego pola roli użytkownika.",
-      "missingFieldNamed": "Brakuje wymaganego pola roli użytkownika: {{field}}."
+      "missingFieldNamed": "Brakuje wymaganego pola roli użytkownika: {{field}}.",
+      "nameRequired": "Nazwa roli jest wymagana.",
+      "builtInRename": "Nie można zmieniać nazw wbudowanych ról.",
+      "duplicateName": "Rola o nazwie „{{name}}” już istnieje dla tego portalu."
     },
     "secrets": {
       "tenantContextMissing": "Brak kontekstu organizacji. Odśwież stronę i spróbuj ponownie.",
@@ -3500,6 +3509,7 @@
       "missingField": "Brakuje wymaganego pola ustawień organizacji.",
       "missingFieldNamed": "Brakuje wymaganego pola ustawień organizacji: {{field}}.",
       "invalidTimezone": "Nieprawidłowa strefa czasowa: {{timezone}}",
+      "nonLocationTimezone": "{{timezone}} nie jest strefą czasową powiązaną z miastem. Wybierz strefę, np. America/New_York.",
       "permissions": {
         "clearOnboarding": "Odmowa uprawnień: tylko administratorzy mogą usuwać dane onboardingu.",
         "update": "Odmowa uprawnień: nie można zaktualizować ustawień",

@@ -14,7 +14,8 @@ import { randomUUID } from 'crypto';
  */
 export class GoogleCalendarAdapter extends BaseCalendarAdapter {
   private httpClient: AxiosInstance;
-  private baseUrl = 'https://www.googleapis.com/calendar/v3';
+  private apiRoot: string;
+  private tokenEndpoint: string;
   private oauth2Client: OAuth2Client;
   private calendar: any;
   private calendarId: string;
@@ -24,10 +25,13 @@ export class GoogleCalendarAdapter extends BaseCalendarAdapter {
     
     // Get calendar ID from config
     this.calendarId = config.calendar_id || 'primary';
+    const vendorConfig = config.provider_config || {};
+    this.apiRoot = vendorConfig.apiRoot || process.env.GOOGLE_CALENDAR_API_ROOT_URL || 'https://www.googleapis.com/';
+    this.tokenEndpoint = vendorConfig.tokenEndpoint || process.env.GOOGLE_OAUTH_TOKEN_URL || 'https://oauth2.googleapis.com/token';
     
     // Create axios instance with default headers
     this.httpClient = axios.create({
-      baseURL: this.baseUrl,
+      baseURL: new URL('calendar/v3/', this.apiRoot).toString(),
       headers: {
         'Content-Type': 'application/json',
       },
@@ -35,8 +39,8 @@ export class GoogleCalendarAdapter extends BaseCalendarAdapter {
     });
 
     // Initialize OAuth2 client (will be configured with credentials later)
-    this.oauth2Client = new OAuth2Client();
-    this.calendar = google.calendar({ version: 'v3', auth: this.oauth2Client });
+    this.oauth2Client = this.createOAuthClient();
+    this.calendar = google.calendar({ version: 'v3', auth: this.oauth2Client, rootUrl: this.apiRoot });
 
     // Add request interceptor to include auth token
     this.httpClient.interceptors.request.use(async (config) => {
@@ -46,6 +50,10 @@ export class GoogleCalendarAdapter extends BaseCalendarAdapter {
       }
       return config;
     });
+  }
+
+  private createOAuthClient(clientId?: string, clientSecret?: string): OAuth2Client {
+    return new OAuth2Client({ clientId, clientSecret, endpoints: { oauth2TokenUrl: this.tokenEndpoint } });
   }
 
   /**
@@ -105,7 +113,7 @@ export class GoogleCalendarAdapter extends BaseCalendarAdapter {
       }
 
       // Configure OAuth2 client with app credentials
-      this.oauth2Client = new OAuth2Client(clientId, clientSecret);
+      this.oauth2Client = this.createOAuthClient(clientId, clientSecret);
       this.oauth2Client.setCredentials({
         refresh_token: this.refreshToken
       });
@@ -133,7 +141,7 @@ export class GoogleCalendarAdapter extends BaseCalendarAdapter {
       await this.updateStoredCredentials();
 
       // Update calendar client
-      this.calendar = google.calendar({ version: 'v3', auth: this.oauth2Client });
+      this.calendar = google.calendar({ version: 'v3', auth: this.oauth2Client, rootUrl: this.apiRoot });
 
       this.log('info', 'Access token refreshed successfully');
     } catch (error) {

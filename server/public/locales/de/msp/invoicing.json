@@ -388,6 +388,7 @@
       "SOURCE_ALREADY_BILLED": "Einige ausgewählte Positionen sind nicht mehr abrechenbar (bereits abgerechnet, nicht genehmigt oder entfernt). Aktualisieren und erneut versuchen.",
       "SOURCE_NOT_ELIGIBLE": "Eine ausgewählte Position gehört nicht zu den abrechenbaren Positionen dieses Tickets oder ist nicht mehr zulässig. Aktualisieren und erneut versuchen.",
       "SOURCE_CURRENCY_MISMATCH": "Einige ausgewählte Produkte sind in einer anderen Währung bepreist als die Rechnungswährung dieses Kunden. Sie können nicht hinzugefügt werden. Rechnen Sie sie in ihrer eigenen Währung getrennt ab.",
+      "RECURRING_PRICING_STALE": "Die Vorschau ist veraltet: {{details}}. Führen Sie die Vorschau erneut aus, um die aktuellen Zahlen zu sehen, und erstellen Sie die Rechnung dann erneut.",
       "BILLING_PROFILE_NOT_FOUND": "Das ausgewählte Abrechnungsprofil ist für diesen Kunden nicht verfügbar. Aktualisiere die Seite und versuche es erneut."
     },
     "warnings": {
@@ -790,7 +791,8 @@
       "back": "Zurück zu Rechnungslayouts",
       "cancel": "Abbrechen",
       "save": "Vorlage speichern",
-      "saving": "Wird gespeichert..."
+      "saving": "Wird gespeichert...",
+      "close": "Schließen"
     },
     "titles": {
       "create": "Erstellen Sie ein neues Rechnungslayout",
@@ -800,7 +802,9 @@
       "templateName": "Vorlagenname",
       "templateAst": "Vorlage AST (JSON)",
       "created": "Erstellt",
-      "lastUpdated": "Zuletzt aktualisiert"
+      "lastUpdated": "Zuletzt aktualisiert",
+      "savedAt": "Gespeichert {{time}}",
+      "notSaved": "Noch nicht gespeichert"
     },
     "tabs": {
       "visual": "Visuell",
@@ -816,6 +820,9 @@
       "templateNameRequired": "Der Name der Vorlage ist erforderlich",
       "astExportFailed": "Die AST-Vorlage konnte nicht aus dem visuellen Arbeitsbereich exportiert werden: {{message}}",
       "unknownAstExport": "Unbekannter AST-Exportfehler"
+    },
+    "toast": {
+      "saved": "Layout „{{name}}“ gespeichert."
     }
   },
   "templates": {
@@ -1212,7 +1219,10 @@
         "drags": "Ziehen: {{count}}",
         "success": "Erfolg: {{count}}",
         "invalid": "Ungültig: {{count}}"
-      }
+      },
+      "zoomOut": "Verkleinern",
+      "zoomIn": "Vergrößern",
+      "zoomFit": "Einpassen"
     },
     "palette": {
       "tabs": {
@@ -1253,6 +1263,15 @@
         "content": "Inhalt",
         "media": "Medien",
         "dynamic": "Dynamisch"
+      },
+      "insertTarget": {
+        "page": "Neue Blöcke werden am Seitenende eingefügt.",
+        "inside": "Neue Blöcke werden in {{name}} eingefügt.",
+        "after": "Neue Blöcke werden direkt nach {{name}} eingefügt.",
+        "label": "Wo neue Blöcke eingefügt werden",
+        "insideOption": "Darin",
+        "afterOption": "Danach",
+        "shiftHint": "Shift+click auf +, um stattdessen danach einzufügen."
       }
     },
     "inspector": {
@@ -1272,7 +1291,70 @@
       "fitSectionToContents": "Abschnitt an Inhalt anpassen",
       "sectionNoChildContent": "Abschnitt hat keinen Inhalt zum Anpassen.",
       "apply": "Anwenden",
-      "emptyHelp": "Wählen Sie eine Komponente aus, um ihre Eigenschaften zu bearbeiten."
+      "emptyHelp": "Wählen Sie eine Komponente aus, um ihre Eigenschaften zu bearbeiten.",
+      "size": "Größe",
+      "width": "Breite",
+      "widthValue": "Breitenwert",
+      "minWidth": "Min.-Breite",
+      "maxWidth": "Max.-Breite",
+      "height": "Höhe",
+      "heightValue": "Höhenwert",
+      "minHeight": "Min.-Höhe",
+      "maxHeight": "Max.-Höhe",
+      "mediaSource": "Bildquelle",
+      "mediaSourceLogo": "Firmenlogo",
+      "mediaSourceCustom": "Eigenes Bild",
+      "mediaSourceLogoHint": "Zeigt auf jedem Dokument das Logo aus den Branding-Einstellungen Ihres Unternehmens.",
+      "mediaSourceUrl": "Quell-URL",
+      "renameInner": "Auch {{count}} innere Ebenen umbenennen ({{from}} → {{to}}…)?",
+      "renameInnerApply": "Umbenennen",
+      "renameInnerDismiss": "Nein",
+      "tabsLabel": "Inspektor-Bereiche",
+      "insertDataField": "+ Datenfeld einfügen…",
+      "searchDataFields": "Datenfelder suchen…",
+      "dataFields": "Datenfelder",
+      "box": {
+        "top": "Oben",
+        "right": "Rechts",
+        "bottom": "Unten",
+        "left": "Links",
+        "all": "Alle Seiten",
+        "sameOnAllSides": "Auf allen Seiten gleich",
+        "unit": "Einheit",
+        "customValue": "Benutzerdefinierter CSS-Wert bleibt erhalten, bis Sie eine Seite bearbeiten: {{value}}"
+      },
+      "examplePlaceholder": "z. B. {{value}}",
+      "setCount": "{{count}} festgelegt",
+      "overrides": {
+        "none": "Nur Standardwerte.",
+        "jump": "Im Tab {{tab}} bearbeiten",
+        "title": "In diesem Block festgelegt ({{count}}):"
+      },
+      "tabs": {
+        "content": "Inhalt",
+        "style": "Stil",
+        "layout": "Layout & Größe"
+      },
+      "sizeModes": {
+        "auto": {
+          "label": "Auto",
+          "widthTooltip": "Der Container entscheidet (wird in einem vertikalen Stapel gestreckt)",
+          "heightTooltip": "Mit dem Inhalt mitwachsen"
+        },
+        "fill": {
+          "label": "Füllen",
+          "widthTooltip": "Die volle Breite des Containers ausfüllen"
+        },
+        "fit": {
+          "label": "Anpassen",
+          "widthTooltip": "Auf die Größe des Inhalts verkleinern"
+        },
+        "fixed": {
+          "label": "Fest",
+          "widthTooltip": "Die unten eingegebene exakte Breite verwenden",
+          "heightTooltip": "Die unten eingegebene exakte Höhe verwenden"
+        }
+      }
     },
     "shell": {
       "selectedLabel": "Ausgewählt:",
@@ -1564,6 +1646,12 @@
             },
             "margin": {
               "label": "Rand"
+            },
+            "padding": {
+              "label": "Innenabstand"
+            },
+            "containerPadding": {
+              "label": "Innenabstand"
             }
           }
         },
@@ -1651,6 +1739,84 @@
         },
         "totals-rows": {
           "title": "Summenzeilen"
+        },
+        "typography": {
+          "title": "Typografie",
+          "fields": {
+            "fontSize": {
+              "label": "Größe"
+            },
+            "fontWeight": {
+              "label": "Schriftstärke",
+              "options": {
+                "400": "Normal (400)",
+                "500": "Mittel (500)",
+                "600": "Halbfett (600)",
+                "700": "Fett (700)"
+              }
+            },
+            "lineHeight": {
+              "label": "Zeilenhöhe"
+            },
+            "textAlign": {
+              "label": "Ausrichtung",
+              "options": {
+                "left": "Links",
+                "center": "Zentriert",
+                "right": "Rechts",
+                "justify": "Blocksatz"
+              }
+            },
+            "fontStyle": {
+              "label": "Stil",
+              "options": {
+                "normal": "Normal",
+                "italic": "Kursiv"
+              }
+            },
+            "color": {
+              "label": "Farbe"
+            }
+          }
+        },
+        "value-typography": {
+          "title": "Werttext",
+          "fields": {
+            "fontSize": {
+              "label": "Größe"
+            },
+            "fontWeight": {
+              "label": "Schriftstärke",
+              "options": {
+                "400": "Normal (400)",
+                "500": "Mittel (500)",
+                "600": "Halbfett (600)",
+                "700": "Fett (700)"
+              }
+            },
+            "lineHeight": {
+              "label": "Zeilenhöhe"
+            },
+            "textAlign": {
+              "label": "Ausrichtung",
+              "options": {
+                "left": "Links",
+                "center": "Zentriert",
+                "right": "Rechts",
+                "justify": "Blocksatz"
+              }
+            },
+            "fontStyle": {
+              "label": "Stil",
+              "options": {
+                "normal": "Normal",
+                "italic": "Kursiv"
+              }
+            },
+            "color": {
+              "label": "Farbe"
+            }
+          }
         }
       }
     },
@@ -1750,10 +1916,80 @@
     },
     "canvas": {
       "templateBoundary": "Vorlagenbegrenzung",
-      "translatableHint": "Wird automatisch in die Sprache des Empfängers übersetzt. Wenn Sie den Text bearbeiten, gilt stattdessen Ihr eigener fester Text."
+      "translatableHint": "Wird automatisch in die Sprache des Empfängers übersetzt. Wenn Sie den Text bearbeiten, gilt stattdessen Ihr eigener fester Text.",
+      "noLineItems": "Keine Positionen",
+      "moreRows": "+{{count}} weitere Zeilen",
+      "subtotal": "Zwischensumme",
+      "tax": "Steuer",
+      "total": "Gesamt",
+      "buttonLabel": "Schaltfläche",
+      "signatureLabel": "Unterschrift",
+      "attachmentsLabel": "Anhänge",
+      "spacerLabel": "Abstandshalter",
+      "companyLogo": "Firmenlogo",
+      "insertionMarker": "Der nächste Block, den Sie hinzufügen, wird hier eingefügt",
+      "emptyContainer": "Leer – auswählen und Blöcke aus dem linken Bereich hinzufügen",
+      "localeChip": "Übersetzte Beschriftungen werden auf {{language}} angezeigt (Vorschausprache)",
+      "badgeDragHint": "Ziehen, um diesen Block zu verschieben"
     },
     "dragOverlay": {
       "component": "Komponente"
+    },
+    "arrange": {
+      "up": "Hoch",
+      "upHint": "Im Container nach oben verschieben (↑)",
+      "down": "Runter",
+      "downHint": "Im Container nach unten verschieben (↓)",
+      "out": "Heraus",
+      "outHint": "Aus dem Container herausnehmen und direkt dahinter platzieren (Alt+←)",
+      "into": "Hinein",
+      "intoHint": "In den direkt davor liegenden Container verschieben (Alt+→)",
+      "copy": "Kopieren",
+      "copyHint": "Kopieren (Ctrl/⌘+C). Wählen Sie das Ziel aus und fügen Sie mit Ctrl/⌘+V ein.",
+      "paste": "Einfügen",
+      "pasteHint": "In den ausgewählten Container oder nach dem ausgewählten Block einfügen (Ctrl/⌘+V)",
+      "duplicate": "Duplizieren",
+      "duplicateHint": "Direkt dahinter duplizieren (Ctrl/⌘+D)",
+      "copyStyle": "Stil kopieren",
+      "copyStyleHint": "Farben, Rahmen, Abstände und Textstil kopieren (Ctrl/⌘+Alt+C)",
+      "pasteStyle": "Stil einfügen",
+      "pasteStyleHint": "Kopierten Stil auf diesen Block anwenden (Ctrl/⌘+Alt+V)",
+      "delete": "Löschen",
+      "deleteHint": "Löschen (Entf-Taste)",
+      "title": "Anordnen"
+    },
+    "feedback": {
+      "cannotInsert": "{{block}} kann hier nicht hinzugefügt werden.",
+      "insertedOnPage": "{{block}} zur Seite hinzugefügt.",
+      "insertedInto": "{{block}} zu {{parent}} hinzugefügt.",
+      "fieldRebound": "{{name}} zeigt jetzt {{path}}."
+    },
+    "translation": {
+      "translatedAs": "Standardbezeichnung „{{name}}“, für jeden Empfänger übersetzt",
+      "useFixedText": "Festen Text verwenden",
+      "pickStandardLabel": "Fester Text. Automatisch übersetzen…",
+      "searchStandardLabels": "Standardbezeichnungen suchen…",
+      "standardLabels": "Standardbezeichnungen",
+      "noMatches": "Keine Standardbezeichnung gefunden.",
+      "cancel": "Abbrechen"
+    },
+    "outline": {
+      "collapse": "{{name}} einklappen",
+      "expand": "{{name}} ausklappen",
+      "title": "Gliederung"
+    },
+    "dragPreview": {
+      "noTarget": "Außerhalb der Seite – zum Abbrechen loslassen",
+      "noChange": "Bleibt an seiner Position",
+      "before": "Vor {{block}}",
+      "after": "Nach {{block}}",
+      "inside": "In {{container}}",
+      "dropOnPage": "Auf der Seite ablegen, um diesen Block hinzuzufügen.",
+      "cancelled": "Nicht verschoben – zum Ablegen über der Seite oder der Gliederung loslassen."
+    },
+    "resize": {
+      "handleHint": "Ziehen zum Ändern der Größe · Doppelklick passt an den Inhalt an",
+      "autoValue": "Automatisch ({{value}})"
     }
   },
   "projectBilling": {
@@ -1819,7 +2055,8 @@
         "selectedCount": "{{count}} ausgewählt",
         "clear": "Auswahl aufheben"
       }
-    }
+    },
+    "emptyTimeHint": "Freigegebene Zeiten und Materialien warten nie hier — sie werden über den normalen Rechnungslauf oder die Schaltfläche „Projektrechnung erstellen“ des Projekts abgerechnet."
   },
   "invoiceDesigner": {
     "transforms": {
@@ -2008,7 +2245,9 @@
         "addLine": "+ Zeile",
         "clearLines": "Einzelne Zeile",
         "stackedLinesHint": "Jede nicht leere Zeile wird in einer eigenen Zeile dargestellt. Wenn alle Zeilen leer sind, wird der oben stehende Bindungsschlüssel der Spalte angezeigt.",
-        "removeLine": "Zeile {{index}} entfernen"
+        "removeLine": "Zeile {{index}} entfernen",
+        "align": "Ausrichtung",
+        "widthPlaceholder": "auto | 50% | 120px"
       },
       "columnTypes": {
         "text": "Text",
@@ -2043,6 +2282,12 @@
         "groupedRowKey": "Schlüssel der gruppierten Zeile",
         "groupedRowItems": "Elemente der gruppierten Zeile",
         "availableBinding": "Verfügbare Bindung"
+      },
+      "columnAlign": {
+        "default": "Standard",
+        "left": "Links",
+        "center": "Zentriert",
+        "right": "Rechts"
       }
     },
     "imagePicker": {
@@ -2061,7 +2306,14 @@
       "clearRowBackground": "Zeilenhintergrundfarbe löschen",
       "clearRowTextColor": "Textfarbe der Zeile löschen",
       "labelColorOverrideNote": "Diese Beschriftung behält ihre eigene gespeicherte Farbe und übernimmt nicht die oben festgelegte Textfarbe der Zeile. Der Betrag folgt weiterhin der Textfarbe der Zeile.",
-      "noRows": "Dieser Summenblock hat noch keine gespeicherten Zeilen. Speichern Sie die Vorlage und öffnen Sie sie erneut, um Zeilenfarben zu bearbeiten."
+      "noRows": "Dieser Summenblock hat noch keine gespeicherten Zeilen. Speichern Sie die Vorlage und öffnen Sie sie erneut, um Zeilenfarben zu bearbeiten.",
+      "addRow": "Zeile hinzufügen:",
+      "empty": "Noch keine Zeilen. Fügen Sie unten eine hinzu.",
+      "moveUp": "{{row}} nach oben verschieben",
+      "moveDown": "{{row}} nach unten verschieben",
+      "remove": "{{row}} entfernen",
+      "label": "Bezeichnung",
+      "emphasize": "Hervorheben (Stil der Gesamtsumme)"
     }
   },
   "draftInvoiceDetails": {

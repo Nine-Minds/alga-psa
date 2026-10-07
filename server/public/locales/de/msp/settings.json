@@ -391,6 +391,7 @@
         "emailAlreadyExists": "Ein Benutzer mit dieser E-Mail-Adresse existiert bereits",
         "reportsToSelf": "Ein Benutzer kann sich nicht selbst als Vorgesetzten zuweisen",
         "reportsToCycle": "Dies würde eine zirkuläre Berichtskette erzeugen",
+        "invalidTimezone": "Wählen Sie eine Zeitzone mit Stadtbezug, z. B. America/New_York.",
         "permissionDenied": "Sie haben keine Berechtigung, Benutzerrollen zu ändern.",
         "invalidCapacity": "Die Wochenkapazität muss eine positive Zahl sein.",
         "invalidWorkSchedule": "Arbeitszeiten müssen gültige Zeiträume sein, die nach ihrem Beginn enden."
@@ -2391,6 +2392,11 @@
       "updateFailed": "Rolle konnte nicht aktualisiert werden",
       "validateDeletionFailed": "Das Löschen konnte nicht überprüft werden. Bitte versuchen Sie es erneut.",
       "deleteFailed": "Rolle konnte nicht gelöscht werden"
+    },
+    "editDialog": {
+      "title": "Rolle bearbeiten",
+      "builtInNameLocked": "Namen integrierter Rollen können nicht geändert werden, da das System auf sie angewiesen ist.",
+      "portalLocked": "Der Portalzugriff kann nach dem Erstellen einer Rolle nicht mehr geändert werden."
     }
   },
   "security": {
@@ -3445,7 +3451,10 @@
       "duplicate": "Dieser Benutzer hat die ausgewählte Rolle bereits.",
       "changePermission": "Berechtigung verweigert: Sie haben keine Berechtigung, Benutzerrollen zu ändern.",
       "missingField": "Erforderliches Feld der Benutzerrolle fehlt.",
-      "missingFieldNamed": "Erforderliches Feld der Benutzerrolle fehlt: {{field}}."
+      "missingFieldNamed": "Erforderliches Feld der Benutzerrolle fehlt: {{field}}.",
+      "nameRequired": "Rollenname ist erforderlich.",
+      "builtInRename": "Integrierte Rollen können nicht umbenannt werden.",
+      "duplicateName": "Eine Rolle mit dem Namen „{{name}}“ existiert für dieses Portal bereits."
     },
     "secrets": {
       "tenantContextMissing": "Der Mandantenkontext fehlt. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
@@ -3470,6 +3479,7 @@
       "missingField": "Erforderliches Feld der Mandanteneinstellungen fehlt.",
       "missingFieldNamed": "Erforderliches Feld der Mandanteneinstellungen fehlt: {{field}}.",
       "invalidTimezone": "Ungültige Zeitzone: {{timezone}}",
+      "nonLocationTimezone": "{{timezone}} ist keine Zeitzone mit Stadtbezug. Wählen Sie eine Zone wie America/New_York.",
       "permissions": {
         "clearOnboarding": "Berechtigung verweigert: Nur Administratoren können Onboarding-Daten löschen.",
         "update": "Berechtigung verweigert: Einstellungen können nicht aktualisiert werden",

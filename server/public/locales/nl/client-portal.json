@@ -283,6 +283,8 @@
     },
     "captchaRequired": "Voltooi de onderstaande verificatie en meld u daarna opnieuw aan.",
     "tooManyAttempts": "Te veel mislukte aanmeldpogingen. Wacht een paar minuten voordat u het opnieuw probeert.",
+    "tenantRequiredMessage": "Uw e-mailadres is gekoppeld aan meer dan één organisatie — kies uw organisatie om door te gaan.",
+    "tenantRequiredLink": "Kies uw organisatie",
     "tenantDiscovery": {
       "title": "Vind uw organisatie",
       "description": "Voer uw e-mailadres in en wij sturen u aanmeldlinks voor alle organisaties waartoe u toegang heeft.",
@@ -442,7 +444,8 @@
         "consent": "Ik machtig terugkerende afschrijvingen van deze kaart voor definitieve facturen.",
         "enable": "Automatische betaling inschakelen",
         "noCards": "Voeg een kaart toe om automatische betaling in te schakelen.",
-        "changeCard": "Deze kaart gebruiken voor automatische betaling"
+        "changeCard": "Deze kaart gebruiken voor automatische betaling",
+        "updateError": "De automatische betaling kon niet worden bijgewerkt. Probeer het opnieuw."
       },
       "publicCardSetup": {
         "saved": "Kaart opgeslagen",
@@ -565,7 +568,8 @@
       "avatarDescription": "Deze avatar wordt getoond aan het MSP-team wanneer zij uw contactgegevens bekijken.",
       "emailAlreadyExists": "Er bestaat al een gebruiker met dit e-mailadres",
       "reportsToSelf": "Een gebruiker kan niet aan zichzelf rapporteren",
-      "reportsToCycle": "Dit zou een circulaire rapportagelijn creëren"
+      "reportsToCycle": "Dit zou een circulaire rapportagelijn creëren",
+      "invalidTimezone": "Kies een tijdzone op basis van een stad, zoals America/New_York."
     },
     "imageUpload": {
       "uploadAvatar": "Avatar uploaden",
@@ -681,7 +685,10 @@
       "deleteError": "Gebruiker kon niet worden verwijderd",
       "emailAlreadyExists": "Er bestaat al een gebruiker met dit e-mailadres",
       "reportsToSelf": "Een gebruiker kan niet aan zichzelf rapporteren",
-      "reportsToCycle": "Dit zou een circulaire rapportagelijn creëren"
+      "reportsToCycle": "Dit zou een circulaire rapportagelijn creëren",
+      "reportsTo": "Rapporteert aan",
+      "noManager": "Geen leidinggevende",
+      "reportsToHelp": "Een leidinggevende kan de tickets, apparaten en projecten zien van personen die aan hem of haar rapporteren, wanneer de zichtbaarheidsgroep beperkt is tot de eigen gegevens."
     },
     "visibilityGroups": {
       "title": "Zichtbaarheidsgroepen",
@@ -721,9 +728,22 @@
       "scopeClient": "Alle tickets van deze klant",
       "scopeContact": "Alleen hun eigen tickets",
       "scopeClientDescription": "Leden zien alle tickets van deze klant op de geselecteerde borden.",
-      "scopeContactDescription": "Leden zien alleen tickets waarop zij als contactpersoon staan. Klantbeheerders zien alle tickets op de geselecteerde borden, ook tickets zonder contactpersoon.",
-      "assignmentHelp": "Wijs een groep toe om borden en tickets te beperken, of behoud volledige toegang tot de klant.",
-      "boardHiddenFromPortal": "Verborgen in klantportaal"
+      "scopeContactDescription": "Leden zien tickets waarvan zij het contact zijn, tickets van personen die aan hen rapporteren en tickets die ze volgen. Klantbeheerders zien op de geselecteerde borden altijd alles, inclusief tickets zonder contact.",
+      "assignmentHelp": "Wijs een groep toe om borden en wat deze persoon van tickets, apparaten en projecten ziet te beperken, of behoud volledige klanttoegang.",
+      "boardHiddenFromPortal": "Verborgen in klantportaal",
+      "assetScopeLabel": "Zichtbaarheid van apparaten",
+      "assetScopeClient": "Alle apparaten van deze klant",
+      "assetScopeContact": "Alleen eigen apparaten",
+      "assetScopeClientDescription": "Leden zien alle apparaten van deze klant, ook niet-toegewezen apparaten.",
+      "assetScopeContactDescription": "Leden zien alleen apparaten die aan hen of aan personen die aan hen rapporteren zijn toegewezen. Niet-toegewezen apparaten zijn verborgen. Klantbeheerders zien altijd alles.",
+      "projectScopeLabel": "Zichtbaarheid van projecten",
+      "projectScopeClient": "Alle projecten van deze klant",
+      "projectScopeContact": "Alleen eigen projecten",
+      "projectScopeClientDescription": "Leden zien alle projecten van deze klant.",
+      "projectScopeContactDescription": "Leden zien alleen projecten waarvan het contact henzelf of iemand is die aan hen rapporteert. Projecten zonder contact zijn verborgen. Klantbeheerders zien altijd alles.",
+      "scopeSummary": "Tickets: {{tickets}} · Apparaten: {{devices}} · Projecten: {{projects}}",
+      "scopeSummaryAll": "Alle",
+      "scopeSummaryOwn": "Eigen"
     },
     "messages": {
       "saveChanges": "Wijzigingen opslaan",

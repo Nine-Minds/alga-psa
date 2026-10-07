@@ -844,6 +844,37 @@ describe('contact workflow runtime DB-backed action handlers', () => {
     ).rejects.toMatchObject({ code: 'CONFLICT' });
   });
 
+  it('contacts.delete clears reports-to and asset assignment references to the deleted contact', async () => {
+    const clientId = await createClient(db, runtimeState.tenantId, 'Manager Delete Client');
+    const managerId = await createContactRaw(db, runtimeState.tenantId, { client_id: clientId });
+    const reportId = await createContactRaw(db, runtimeState.tenantId, { client_id: clientId });
+    await tenantTable(db, runtimeState.tenantId, 'contacts')
+      .where({ contact_name_id: reportId })
+      .update({ manager_contact_id: managerId });
+    const assetId = uuidv4();
+    await tenantTable(db, runtimeState.tenantId, 'assets').insert({
+      tenant: runtimeState.tenantId,
+      asset_id: assetId,
+      client_id: clientId,
+      asset_type: 'server',
+      asset_tag: `DEL-${assetId}`,
+      name: 'Managed asset',
+      status: 'active',
+      contact_name_id: managerId,
+    });
+
+    const result = await invokeAction('contacts.delete', { contact_id: managerId, confirm: true });
+    expect(result).toEqual({ deleted: true, contact_id: managerId });
+
+    expect(await tenantTable(db, runtimeState.tenantId, 'contacts').where({ contact_name_id: managerId }).first()).toBeFalsy();
+    const report = await tenantTable(db, runtimeState.tenantId, 'contacts').where({ contact_name_id: reportId }).first();
+    expect(report).toBeTruthy();
+    expect(report.manager_contact_id).toBeNull();
+    const asset = await tenantTable(db, runtimeState.tenantId, 'assets').where({ asset_id: assetId }).first();
+    expect(asset).toBeTruthy();
+    expect(asset.contact_name_id).toBeNull();
+  });
+
   it('T013: each mutating contacts action enforces required permissions', async () => {
     const clientA = await createClient(db, runtimeState.tenantId, 'Perm Client A');
     const clientB = await createClient(db, runtimeState.tenantId, 'Perm Client B');

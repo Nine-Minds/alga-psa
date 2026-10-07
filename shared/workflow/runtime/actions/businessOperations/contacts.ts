@@ -5,8 +5,8 @@ import { tenantDb } from '@alga-psa/db';
 import { isEnterprise } from '@alga-psa/core';
 import { deleteEntityWithValidation } from '@alga-psa/core/server';
 import { getActionRegistryV2 } from '../../registries/actionRegistry';
-import { withWorkflowJsonSchemaMetadata } from '../../jsonSchemaMetadata';
-import { ContactModel } from '../../../../models/contactModel';
+import { withWorkflowPicker, withWorkflowNotFoundPolicy, withWorkflowRequireOneOf } from '../../jsonSchemaMetadata';
+import { ContactModel, clearContactLinksBeforeDelete } from '../../../../models/contactModel';
 import type {
   ContactEmailAddressInput as ContactModelEmailInput,
   ContactPhoneNumberInput as ContactModelPhoneInput,
@@ -30,25 +30,6 @@ import {
   type TenantTxContext,
 } from './shared';
 
-const WORKFLOW_PICKER_HINTS = {
-  client: 'Search clients',
-  ticket: 'Search tickets',
-  contact: 'Search contacts',
-} as const;
-
-const withWorkflowPicker = <T extends z.ZodTypeAny>(
-  schema: T,
-  description: string,
-  kind: keyof typeof WORKFLOW_PICKER_HINTS,
-  dependencies?: string[]
-): T =>
-  withWorkflowJsonSchemaMetadata(schema, description, {
-    'x-workflow-picker-kind': kind,
-    'x-workflow-picker-dependencies': dependencies,
-    'x-workflow-picker-fixed-value-hint': WORKFLOW_PICKER_HINTS[kind],
-    'x-workflow-picker-allow-dynamic-reference': true,
-  });
-
 function tenantScopedTable(
   tx: Pick<TenantTxContext, 'tenantId' | 'trx'>,
   table: string
@@ -65,12 +46,12 @@ function tenantScopedTableForTenant(
 }
 
 const contactSummarySchema = z.object({
-  contact_name_id: uuidSchema,
-  full_name: z.string().nullable(),
-  email: z.string().nullable(),
-  phone: z.string().nullable(),
-  client_id: uuidSchema.nullable(),
-  is_inactive: z.boolean(),
+  contact_name_id: withWorkflowPicker(uuidSchema, 'Contact', 'contact'),
+  full_name: z.string().nullable().describe('Full name'),
+  email: z.string().nullable().describe('Email address'),
+  phone: z.string().nullable().describe('Phone number'),
+  client_id: withWorkflowPicker(uuidSchema.nullable(), 'Client', 'client'),
+  is_inactive: z.boolean().describe('Is inactive'),
 });
 
 const tagResultSchema = z.object({
@@ -124,7 +105,7 @@ const contactUpdatePatchSchema = z
   .object({
     full_name: z.string().min(1).optional(),
     email: z.string().email().nullable().optional(),
-    client_id: nullableUuidSchema.optional(),
+    client_id: withWorkflowPicker(nullableUuidSchema.optional(), 'Client id', 'client'),
     role: z.string().nullable().optional(),
     notes: z.string().nullable().optional(),
     is_inactive: z.boolean().optional(),
@@ -684,25 +665,28 @@ export function registerContactActions(): void {
   registry.register({
     id: 'contacts.find',
     version: 1,
-    inputSchema: z
-      .object({
-        contact_id: withWorkflowPicker(uuidSchema.optional(), 'Contact id', 'contact'),
-        email: z.string().email().optional(),
-        phone: z.string().optional().describe('Phone number (normalized digits match)'),
-        phone_match: z
-          .enum(phoneMatchModes)
-          .default('exact')
-          .describe('Phone matching mode. last7/last10 can match multiple contacts.'),
-        client_id: withWorkflowPicker(uuidSchema.optional(), 'Optional client scope', 'client'),
-        on_not_found: z.enum(['return_null', 'error']).default('return_null'),
-        match_strategy: z
-          .enum(['first_created', 'most_recent'])
-          .default('first_created')
-          .describe('Deterministic ordering when multiple matches exist'),
-      })
-      .refine((val) => Boolean(val.contact_id || val.email || val.phone), {
-        message: 'contact_id, email, or phone required',
-      }),
+    inputSchema: withWorkflowRequireOneOf(
+      z
+        .object({
+          contact_id: withWorkflowPicker(uuidSchema.optional(), 'Contact id', 'contact'),
+          email: z.string().email().optional(),
+          phone: z.string().optional().describe('Phone number (normalized digits match)'),
+          phone_match: z
+            .enum(phoneMatchModes)
+            .default('exact')
+            .describe('Phone matching mode. last7/last10 can match multiple contacts.'),
+          client_id: withWorkflowPicker(uuidSchema.optional(), 'Optional client scope', 'client'),
+          on_not_found: withWorkflowNotFoundPolicy(z.enum(['return_null', 'error']).default('return_null'), 'What to do when nothing is found'),
+          match_strategy: z
+            .enum(['first_created', 'most_recent'])
+            .default('first_created')
+            .describe('Deterministic ordering when multiple matches exist'),
+        })
+        .refine((val) => Boolean(val.contact_id || val.email || val.phone), {
+          message: 'contact_id, email, or phone required',
+        }),
+      ['contact_id', 'email', 'phone']
+    ),
     outputSchema: z.object({
       contact: contactSummarySchema.nullable(),
     }),
@@ -1115,7 +1099,7 @@ export function registerContactActions(): void {
       reason: z.string().optional().describe('Optional reason/audit detail for deactivation'),
     }),
     outputSchema: z.object({
-      contact_id: uuidSchema,
+      contact_id: withWorkflowPicker(uuidSchema, 'Contact id', 'contact'),
       deactivated: z.boolean(),
       noop: z.boolean(),
       previous_is_inactive: z.boolean(),
@@ -1198,11 +1182,11 @@ export function registerContactActions(): void {
     inputSchema: z.object({
       contact_id: withWorkflowPicker(uuidSchema, 'Contact id', 'contact'),
       confirm: z.boolean().refine((value) => value === true, { message: 'confirm must be true to delete a contact' }),
-      on_not_found: z.enum(['error', 'return_false']).default('error'),
+      on_not_found: withWorkflowNotFoundPolicy(z.enum(['error', 'return_false']).default('error'), 'What to do when nothing is found'),
     }),
     outputSchema: z.object({
       deleted: z.boolean(),
-      contact_id: uuidSchema,
+      contact_id: withWorkflowPicker(uuidSchema, 'Contact id', 'contact'),
     }),
     sideEffectful: true,
     idempotency: { mode: 'engineProvided' },
@@ -1240,6 +1224,7 @@ export function registerContactActions(): void {
             await cleanupContactDeleteArtifacts(trx, tenantId, input.contact_id);
             await cleanupContactNotesDocument(trx, tenantId, input.contact_id);
             await cleanupEntraReferencesBeforeContactDelete(trx, tenantId, input.contact_id);
+            await clearContactLinksBeforeDelete(trx, tenantId, input.contact_id);
             await tenantScopedTableForTenant(trx, tenantId, 'contacts')
               .where({ contact_name_id: input.contact_id })
               .delete();
@@ -1393,7 +1378,7 @@ export function registerContactActions(): void {
       idempotency_key: z.string().optional().describe('Optional external idempotency key'),
     }),
     outputSchema: z.object({
-      contact_id: uuidSchema,
+      contact_id: withWorkflowPicker(uuidSchema, 'Contact id', 'contact'),
       added: z.array(tagResultSchema),
       existing: z.array(tagResultSchema),
       added_count: z.number().int(),
@@ -1446,9 +1431,9 @@ export function registerContactActions(): void {
       comment: z.string().optional().describe('Optional internal comment/audit detail for assignment'),
     }),
     outputSchema: z.object({
-      ticket_id: uuidSchema,
-      previous_contact_id: nullableUuidSchema,
-      current_contact_id: nullableUuidSchema,
+      ticket_id: withWorkflowPicker(uuidSchema, 'Ticket id', 'ticket'),
+      previous_contact_id: withWorkflowPicker(nullableUuidSchema, 'Previous contact id', 'contact'),
+      current_contact_id: withWorkflowPicker(nullableUuidSchema, 'Current contact id', 'contact'),
     }),
     sideEffectful: true,
     idempotency: { mode: 'engineProvided' },
@@ -1522,7 +1507,7 @@ export function registerContactActions(): void {
       idempotency_key: z.string().optional().describe('Optional external idempotency key'),
     }),
     outputSchema: z.object({
-      contact_id: uuidSchema,
+      contact_id: withWorkflowPicker(uuidSchema, 'Contact id', 'contact'),
       document_id: uuidSchema,
       created_document: z.boolean(),
       updated_at: isoDateTimeSchema,
@@ -1600,9 +1585,9 @@ export function registerContactActions(): void {
     }),
     outputSchema: z.object({
       interaction_id: uuidSchema,
-      contact_id: uuidSchema,
-      client_id: uuidSchema,
-      ticket_id: nullableUuidSchema,
+      contact_id: withWorkflowPicker(uuidSchema, 'Contact id', 'contact'),
+      client_id: withWorkflowPicker(uuidSchema, 'Client id', 'client'),
+      ticket_id: withWorkflowPicker(nullableUuidSchema, 'Ticket id', 'ticket'),
       interaction_type_id: uuidSchema,
       status_id: nullableUuidSchema,
       title: z.string(),
@@ -1611,7 +1596,7 @@ export function registerContactActions(): void {
       start_time: isoDateTimeSchema.nullable(),
       end_time: isoDateTimeSchema.nullable(),
       duration: z.number().int().nullable(),
-      user_id: uuidSchema,
+      user_id: withWorkflowPicker(uuidSchema, 'User id', 'user'),
     }),
     sideEffectful: true,
     idempotency: { mode: 'actionProvided', key: actionProvidedKey },
@@ -1775,9 +1760,9 @@ export function registerContactActions(): void {
       client_id: withWorkflowPicker(uuidSchema, 'Client id', 'client'),
     }),
     outputSchema: z.object({
-      contact_id: uuidSchema,
-      previous_client_id: nullableUuidSchema,
-      current_client_id: nullableUuidSchema,
+      contact_id: withWorkflowPicker(uuidSchema, 'Contact id', 'contact'),
+      previous_client_id: withWorkflowPicker(nullableUuidSchema, 'Previous client id', 'client'),
+      current_client_id: withWorkflowPicker(nullableUuidSchema, 'Current client id', 'client'),
       noop: z.boolean(),
       contact: contactSummarySchema,
     }),
@@ -1855,9 +1840,9 @@ export function registerContactActions(): void {
       expected_current_client_id: withWorkflowPicker(nullableUuidSchema.optional(), 'Optional expected current client id', 'client'),
     }),
     outputSchema: z.object({
-      contact_id: uuidSchema,
-      previous_client_id: nullableUuidSchema,
-      current_client_id: nullableUuidSchema,
+      contact_id: withWorkflowPicker(uuidSchema, 'Contact id', 'contact'),
+      previous_client_id: withWorkflowPicker(nullableUuidSchema, 'Previous client id', 'client'),
+      current_client_id: withWorkflowPicker(nullableUuidSchema, 'Current client id', 'client'),
       noop: z.boolean(),
       contact: contactSummarySchema,
     }),

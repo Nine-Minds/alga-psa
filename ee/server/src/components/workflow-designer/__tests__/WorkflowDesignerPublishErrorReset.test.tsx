@@ -10,7 +10,11 @@ const {
   listWorkflowDefinitionsActionMock,
   publishWorkflowDefinitionActionMock,
   updateWorkflowDefinitionDraftActionMock,
+  updateWorkflowDefinitionMetadataActionMock,
+  toastErrorMock,
 } = vi.hoisted(() => ({
+  updateWorkflowDefinitionMetadataActionMock: vi.fn(),
+  toastErrorMock: vi.fn(),
   getCurrentUserMock: vi.fn(),
   getCurrentUserPermissionsMock: vi.fn(),
   listWorkflowDefinitionsActionMock: vi.fn(),
@@ -29,7 +33,7 @@ vi.mock('next/navigation', () => ({
 }));
 
 vi.mock('react-hot-toast', () => ({
-  toast: { success: vi.fn(), error: vi.fn() },
+  toast: { success: vi.fn(), error: (...args: unknown[]) => toastErrorMock(...args) },
 }));
 
 vi.mock('@hello-pangea/dnd', () => ({
@@ -51,7 +55,12 @@ vi.mock('@alga-psa/ui/components/Button', () => ({
 }));
 
 vi.mock('@alga-psa/ui/components/ConfirmationDialog', () => ({
-  ConfirmationDialog: () => <div />
+  ConfirmationDialog: ({ id, isOpen, title, message, confirmLabel, onConfirm }: any) => (isOpen ? (
+    <div id={id} role="dialog" aria-label={title}>
+      <p>{message}</p>
+      <button id={`${id}-confirm`} onClick={onConfirm}>{confirmLabel}</button>
+    </div>
+  ) : null)
 }));
 
 vi.mock('@alga-psa/ui/components/Input', () => ({
@@ -178,7 +187,7 @@ vi.mock('@alga-psa/workflows/actions', async (importOriginal) => {
     getWorkflowDefinitionVersionAction: vi.fn(),
     publishWorkflowDefinitionAction: (...args: unknown[]) => publishWorkflowDefinitionActionMock(...args),
     updateWorkflowDefinitionDraftAction: (...args: unknown[]) => updateWorkflowDefinitionDraftActionMock(...args),
-    updateWorkflowDefinitionMetadataAction: vi.fn(async () => ({})),
+    updateWorkflowDefinitionMetadataAction: (...args: unknown[]) => updateWorkflowDefinitionMetadataActionMock(...args),
   };
 });
 
@@ -256,6 +265,101 @@ describe('WorkflowDesigner publish error reset', () => {
     getCurrentUserPermissionsMock.mockResolvedValue(['workflow:read', 'workflow:manage', 'workflow:publish']);
     listWorkflowDefinitionsActionMock.mockResolvedValue([cleanRecord()]);
     updateWorkflowDefinitionDraftActionMock.mockResolvedValue({});
+    updateWorkflowDefinitionMetadataActionMock.mockReset();
+    updateWorkflowDefinitionMetadataActionMock.mockResolvedValue({});
+    toastErrorMock.mockReset();
+    window.localStorage.clear();
+  });
+
+  it('saves a pause with an empty concurrency limit as unlimited', async () => {
+    render(<WorkflowDesigner mode="editor-designer" workflowId={WORKFLOW_ID} />);
+    const paused = await screen.findByTestId('workflow-settings-paused');
+
+    fireEvent.click(paused);
+    fireEvent.click(screen.getByRole('button', { name: 'Save Settings' }));
+
+    await waitFor(() => expect(updateWorkflowDefinitionMetadataActionMock).toHaveBeenCalled());
+    expect(updateWorkflowDefinitionMetadataActionMock).toHaveBeenCalledWith(expect.objectContaining({
+      workflowId: WORKFLOW_ID,
+      isPaused: true,
+      concurrencyLimit: null,
+    }));
+  });
+
+  it('rolls the settings back and explains the error when saving them fails', async () => {
+    updateWorkflowDefinitionMetadataActionMock.mockRejectedValue(new Error(JSON.stringify([
+      { code: 'invalid_type', expected: 'number', received: 'undefined', path: ['concurrencyLimit'], message: 'Required' },
+    ])));
+    render(<WorkflowDesigner mode="editor-designer" workflowId={WORKFLOW_ID} />);
+    const paused = await screen.findByTestId('workflow-settings-paused');
+
+    fireEvent.click(paused);
+    expect(paused).toBeChecked();
+    fireEvent.click(screen.getByRole('button', { name: 'Save Settings' }));
+
+    await waitFor(() => expect(toastErrorMock).toHaveBeenCalled());
+    expect(String(toastErrorMock.mock.calls[0][0])).toContain('Concurrency limit is required');
+    await waitFor(() => expect(screen.getByTestId('workflow-settings-paused')).not.toBeChecked());
+  });
+
+  it('keeps the draft and asks the user to sign in again when the session has ended', async () => {
+    updateWorkflowDefinitionDraftActionMock.mockRejectedValue(new Error('User not authenticated'));
+    render(<WorkflowDesigner mode="editor-designer" workflowId={WORKFLOW_ID} />);
+    await waitFor(() => expect(publishButton()).toBeEnabled());
+    const nameInput = screen.getByLabelText('Workflow name');
+
+    fireEvent.change(nameInput, { target: { value: 'Renamed before the session ended' } });
+    expect(screen.getByLabelText('Workflow name')).toHaveValue('Renamed before the session ended');
+    fireEvent.click(screen.getByRole('button', { name: 'Save Draft' }));
+
+    expect(await screen.findByText(/Your session ended\. Sign in again in a new tab/)).toBeInTheDocument();
+    expect(toastErrorMock).not.toHaveBeenCalled();
+    expect(screen.getByLabelText('Workflow name')).toHaveValue('Renamed before the session ended');
+  });
+
+  it('pauses and resumes a published workflow from the header switch, sending only the pause flag change', async () => {
+    render(<WorkflowDesigner mode="editor-designer" workflowId={WORKFLOW_ID} />);
+    const toggle = await screen.findByRole('switch');
+    expect(toggle).toHaveAttribute('aria-checked', 'true');
+    expect(toggle).toHaveTextContent('Active');
+
+    fireEvent.click(toggle);
+
+    await waitFor(() => expect(updateWorkflowDefinitionMetadataActionMock).toHaveBeenCalledWith(expect.objectContaining({
+      workflowId: WORKFLOW_ID,
+      isPaused: true,
+    })));
+    expect(screen.getByRole('switch')).toHaveAttribute('aria-checked', 'false');
+    expect(screen.getByRole('switch')).toHaveTextContent('Paused');
+  });
+
+  it('rolls the header switch back and explains the error when pausing fails', async () => {
+    updateWorkflowDefinitionMetadataActionMock.mockRejectedValue(new Error('Database unavailable'));
+    render(<WorkflowDesigner mode="editor-designer" workflowId={WORKFLOW_ID} />);
+    const toggle = await screen.findByRole('switch');
+
+    fireEvent.click(toggle);
+
+    await waitFor(() => expect(toastErrorMock).toHaveBeenCalled());
+    await waitFor(() => expect(screen.getByRole('switch')).toHaveAttribute('aria-checked', 'true'));
+  });
+
+  it('asks before the first publish starts the workflow, and publishes only once confirmed', async () => {
+    listWorkflowDefinitionsActionMock.mockResolvedValue([{ ...cleanRecord(), published_version: null }]);
+    publishWorkflowDefinitionActionMock.mockResolvedValue({ ok: true, errors: [], warnings: [], publishedVersion: 2 });
+    render(<WorkflowDesigner mode="editor-designer" workflowId={WORKFLOW_ID} />);
+    await waitFor(() => expect(publishButton()).toBeEnabled());
+    expect(screen.queryByRole('switch')).not.toBeInTheDocument();
+
+    fireEvent.click(publishButton());
+
+    const dialog = await screen.findByRole('dialog', { name: 'Publish and start this workflow?' });
+    expect(dialog).toHaveTextContent('Nothing starts it automatically');
+    expect(publishWorkflowDefinitionActionMock).not.toHaveBeenCalled();
+
+    fireEvent.click(document.getElementById('workflow-designer-first-publish-dialog-confirm')!);
+
+    await waitFor(() => expect(publishWorkflowDefinitionActionMock).toHaveBeenCalledTimes(1));
   });
 
   it('clears a blocked publish result once the draft is saved again', async () => {
