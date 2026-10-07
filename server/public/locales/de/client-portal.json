@@ -444,7 +444,8 @@
         "consent": "Ich autorisiere wiederkehrende Belastungen dieser Karte für abgeschlossene Rechnungen.",
         "enable": "Automatische Zahlung aktivieren",
         "noCards": "Fügen Sie eine Karte hinzu, um die automatische Zahlung zu aktivieren.",
-        "changeCard": "Diese Karte für die automatische Zahlung verwenden"
+        "changeCard": "Diese Karte für die automatische Zahlung verwenden",
+        "updateError": "Die automatische Zahlung konnte nicht aktualisiert werden. Bitte versuchen Sie es erneut."
       },
       "publicCardSetup": {
         "saved": "Karte gespeichert",
@@ -567,7 +568,8 @@
       "avatarDescription": "Dieser Avatar wird dem MSP-Team angezeigt, wenn es Ihre Kontaktinformationen ansieht.",
       "emailAlreadyExists": "Ein Benutzer mit dieser E-Mail-Adresse existiert bereits",
       "reportsToSelf": "Ein Benutzer kann sich nicht selbst als Vorgesetzten zuweisen",
-      "reportsToCycle": "Dies würde eine zirkuläre Berichtskette erzeugen"
+      "reportsToCycle": "Dies würde eine zirkuläre Berichtskette erzeugen",
+      "invalidTimezone": "Wählen Sie eine Zeitzone mit Stadtbezug, z. B. America/New_York."
     },
     "imageUpload": {
       "uploadAvatar": "Avatar hochladen",

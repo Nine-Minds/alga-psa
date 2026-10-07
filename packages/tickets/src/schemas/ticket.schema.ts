@@ -69,6 +69,8 @@ export const ticketSchema = z.object({
   itil_priority_level: z.number().int().min(1).max(5).nullable().optional(),
   // Response state tracking
   response_state: z.enum(['awaiting_client', 'awaiting_internal']).nullable().optional(),
+  // Provenance for a ticket created via "Duplicate". Create-only; no FK.
+  duplicated_from_ticket_id: z.string().uuid().nullable().optional(),
 });
 
 export const ticketUpdateSchema = ticketSchema.partial().omit({
@@ -77,6 +79,7 @@ export const ticketUpdateSchema = ticketSchema.partial().omit({
   ticket_number: true,
   entered_by: true,
   entered_at: true,
+  duplicated_from_ticket_id: true,
 });
 
 export const ticketAttributesQuerySchema = z.object({

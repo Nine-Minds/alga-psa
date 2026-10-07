@@ -304,17 +304,18 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
         assetData.attributes = pickSchemaAttributes(customTypeFields, formData.attributes);
       }
 
-      // Add type-specific data based on the selected type
+      // Add type-specific data based on the selected type. Quick Add doesn't ask
+      // for hardware numbers, so they are unknown (null), not 0 (alga0002283).
       switch (formData.asset_type) {
         case 'workstation':
           assetData.workstation = {
             os_type: formData.workstation.os_type,
             os_version: formData.workstation.os_version,
             cpu_model: '',
-            cpu_cores: 0,
-            ram_gb: 0,
+            cpu_cores: null,
+            ram_gb: null,
             storage_type: '',
-            storage_capacity_gb: 0,
+            storage_capacity_gb: null,
             installed_software: []
           };
           break;
@@ -322,10 +323,10 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
           assetData.network_device = {
             device_type: formData.network_device.device_type,
             management_ip: formData.network_device.management_ip,
-            port_count: 0,
+            port_count: null,
             firmware_version: '',
             supports_poe: false,
-            power_draw_watts: 0,
+            power_draw_watts: null,
             vlan_config: {},
             port_config: {}
           };
@@ -335,8 +336,8 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
             os_type: formData.server.os_type,
             os_version: formData.server.os_version,
             cpu_model: '',
-            cpu_cores: 0,
-            ram_gb: 0,
+            cpu_cores: null,
+            ram_gb: null,
             storage_config: [],
             is_virtual: false,
             network_interfaces: [],

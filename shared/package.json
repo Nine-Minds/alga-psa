@@ -19,6 +19,8 @@
     "./core/deploymentProfile.js": "./dist/core/deploymentProfile.js",
     "./db": "./dist/db/index.js",
     "./db/admin.js": "./dist/db/admin.js",
+    "./services/diagnostics": "./dist/services/diagnostics/index.js",
+    "./services/diagnostics/index.js": "./dist/services/diagnostics/index.js",
     "./events/publisher.js": "./dist/events/publisher.js",
     "./utils/encryption.js": "./dist/utils/encryption.js",
     "./workflow": "./dist/workflow/index.js",
@@ -55,12 +57,15 @@
     "./lib/ticketChecklists/index.js": "./dist/lib/ticketChecklists/index.js",
     "./lib/ticketCloseRules": "./dist/lib/ticketCloseRules/index.js",
     "./lib/ticketCloseRules/index.js": "./dist/lib/ticketCloseRules/index.js",
+    "./lib/recurrence": "./dist/lib/recurrence/index.js",
+    "./lib/recurrence/index.js": "./dist/lib/recurrence/index.js",
     "./*": "./dist/*"
   },
   "scripts": {
     "build": "tsup",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "test:recurrence-tz": "TZ=Pacific/Auckland vitest run lib/recurrence lib/businessHours"
   },
   "dependencies": {
     "@alga-psa/authorization": "file:../packages/authorization",

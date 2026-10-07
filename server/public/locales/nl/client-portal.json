@@ -444,7 +444,8 @@
         "consent": "Ik machtig terugkerende afschrijvingen van deze kaart voor definitieve facturen.",
         "enable": "Automatische betaling inschakelen",
         "noCards": "Voeg een kaart toe om automatische betaling in te schakelen.",
-        "changeCard": "Deze kaart gebruiken voor automatische betaling"
+        "changeCard": "Deze kaart gebruiken voor automatische betaling",
+        "updateError": "De automatische betaling kon niet worden bijgewerkt. Probeer het opnieuw."
       },
       "publicCardSetup": {
         "saved": "Kaart opgeslagen",
@@ -567,7 +568,8 @@
       "avatarDescription": "Deze avatar wordt getoond aan het MSP-team wanneer zij uw contactgegevens bekijken.",
       "emailAlreadyExists": "Er bestaat al een gebruiker met dit e-mailadres",
       "reportsToSelf": "Een gebruiker kan niet aan zichzelf rapporteren",
-      "reportsToCycle": "Dit zou een circulaire rapportagelijn creëren"
+      "reportsToCycle": "Dit zou een circulaire rapportagelijn creëren",
+      "invalidTimezone": "Kies een tijdzone op basis van een stad, zoals America/New_York."
     },
     "imageUpload": {
       "uploadAvatar": "Avatar uploaden",

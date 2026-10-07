@@ -21,16 +21,19 @@ export const createAssetRelationshipSchema = z.object({
   relationship_type: z.string().min(1)
 });
 
+// alga0002283: every extension numeric column is nullable in the database and
+// "empty" means "unknown", not 0 — so the schemas accept and the types carry
+// `number | null` end to end.
 const workstationAssetSchema = z.object({
   tenant: z.string().uuid(),
   asset_id: z.string().uuid(),
   os_type: z.string(),
   os_version: z.string(),
   cpu_model: z.string(),
-  cpu_cores: z.number(),
-  ram_gb: z.number(),
+  cpu_cores: z.number().nullable(),
+  ram_gb: z.number().nullable(),
   storage_type: z.string(),
-  storage_capacity_gb: z.number(),
+  storage_capacity_gb: z.number().nullable(),
   gpu_model: z.string().optional(),
   last_login: z.string().optional(),
   installed_software: z.array(z.unknown())
@@ -41,10 +44,10 @@ const network_device_asset_schema = z.object({
   asset_id: z.string().uuid(),
   device_type: z.enum(['switch', 'router', 'firewall', 'access_point', 'load_balancer']),
   management_ip: z.string(),
-  port_count: z.number(),
+  port_count: z.number().nullable(),
   firmware_version: z.string(),
   supports_poe: z.boolean(),
-  power_draw_watts: z.number(),
+  power_draw_watts: z.number().nullable(),
   vlan_config: z.record(z.unknown()),
   port_config: z.record(z.unknown())
 });
@@ -55,8 +58,8 @@ const serverAssetSchema = z.object({
   os_type: z.string(),
   os_version: z.string(),
   cpu_model: z.string(),
-  cpu_cores: z.number(),
-  ram_gb: z.number(),
+  cpu_cores: z.number().nullable(),
+  ram_gb: z.number().nullable(),
   storage_config: z.array(z.unknown()),
   raid_config: z.string().optional(),
   is_virtual: z.boolean(),
@@ -88,9 +91,9 @@ const printerAssetSchema = z.object({
   is_network_printer: z.boolean(),
   supports_color: z.boolean(),
   supports_duplex: z.boolean(),
-  max_paper_size: z.number().optional(),
+  max_paper_size: z.number().nullable().optional(),
   supported_paper_types: z.array(z.unknown()),
-  monthly_duty_cycle: z.number().optional(),
+  monthly_duty_cycle: z.number().nullable().optional(),
   supply_levels: z.record(z.unknown())
 });
 

@@ -388,6 +388,7 @@
         "emailAlreadyExists": "Já existe um usuário com este endereço de e-mail",
         "reportsToSelf": "Um usuário não pode reportar a si mesmo",
         "reportsToCycle": "Isto criaria uma cadeia circular de relatórios",
+        "invalidTimezone": "Escolha um fuso horário baseado em uma cidade, como America/New_York.",
         "passwordTooShort": "A senha deve ter pelo menos 8 caracteres",
         "passwordChangeFailed": "Falha ao alterar a senha",
         "passwordChangeError": "Ocorreu um erro ao alterar a senha",
@@ -3470,6 +3471,7 @@
       "missingField": "Falta um campo obrigatório das configurações do tenant.",
       "missingFieldNamed": "Falta um campo obrigatório das configurações do tenant: {{field}}.",
       "invalidTimezone": "Fuso horário inválido: {{timezone}}",
+      "nonLocationTimezone": "{{timezone}} não é um fuso horário baseado em uma cidade. Escolha um fuso como America/New_York.",
       "permissions": {
         "clearOnboarding": "Permissão negada: apenas administradores podem limpar os dados de onboarding.",
         "update": "Permissão negada: não é possível atualizar as configurações",

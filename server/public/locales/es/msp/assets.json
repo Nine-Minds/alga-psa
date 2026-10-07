@@ -457,6 +457,12 @@
       "location": "Ubicación"
     }
   },
+  "documentsTab": {
+    "errors": {
+      "title": "Documentos no disponibles",
+      "loadFailed": "No se pudieron cargar los documentos vinculados. Recargue la página o inténtelo de nuevo más tarde."
+    }
+  },
   "assetDetails": {
     "title": "Detalles del activo",
     "description": "Página completa de detalles de activos con tarjetas de resumen, asociaciones, documentos y acciones operativas.",
@@ -1593,8 +1599,7 @@
       "manageAssetTypes": "Permiso denegado: no se pueden gestionar los tipos de activo",
       "readDocuments": "Permiso denegado: no se pueden leer los documentos del activo",
       "associateDocuments": "Permiso denegado: no se pueden asociar documentos a los activos",
-      "removeDocuments": "Permiso denegado: no se pueden quitar documentos de los activos",
-      "updateDocumentNotes": "Permiso denegado: no se pueden actualizar las notas de los documentos del activo"
+      "removeDocuments": "Permiso denegado: no se pueden quitar documentos de los activos"
     },
     "asset": {
       "notFoundRefresh": "No se encontró el activo. Es posible que se haya eliminado. Actualice la página e inténtelo de nuevo.",
@@ -1616,5 +1621,15 @@
       "missingFieldNamed": "Falta un campo obligatorio del activo: {{field}}.",
       "contactUnavailable": "El contacto seleccionado no está disponible para este cliente."
     }
+  },
+  "clientAssetMultiSelect": {
+    "errors": {
+      "load": "No se pudieron cargar los activos"
+    },
+    "placeholder": "Agregar un activo...",
+    "searchPlaceholder": "Buscar activos",
+    "empty": "No hay activos coincidentes para este cliente",
+    "loading": "Cargando...",
+    "remove": "Quitar activo"
   }
 }

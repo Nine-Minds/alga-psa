@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState, useCallback, useMemo, useRef, Suspense } from 'react';
+import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { getUserTimeZone, generateUUID } from '@alga-psa/core';
 import { formatTicketDateTime, formatTicketRelativeToNow } from '../../lib/ticketDateTimeFormat';
@@ -85,7 +86,7 @@ import { Input } from "@alga-psa/ui/components/Input";
 import CustomSelect from "@alga-psa/ui/components/CustomSelect";
 import { Label } from "@alga-psa/ui/components/Label";
 import { PresenceBar } from '@alga-psa/ui/presence/PresenceBar';
-import { ExternalLink, Mail, History, Trash2 } from 'lucide-react';
+import { ExternalLink, Mail, History, Trash2, Copy } from 'lucide-react';
 import { WorkItemType } from "@alga-psa/types";
 import { ReflectionContainer } from "@alga-psa/ui/ui-reflection/ReflectionContainer";
 import { PartialBlock, StyledText } from '@blocknote/core';
@@ -107,6 +108,9 @@ import { useTranslation, useFormatters } from '@alga-psa/ui/lib/i18n/client';
 import { useTicketLiveContext } from './TicketLiveProvider';
 import { buildTicketTimeEntryContext, createTicketTimeEntryOnComplete } from '../../lib/timeEntryContext';
 import { getTicketOrigin } from '../../lib/ticketOrigin';
+import { getRecurringSourceForTicket } from '../../actions/recurringTicketActions';
+import type { RecurringTicketSource } from '../../lib/recurring/types';
+import { buildCreateTicketHref } from '../../lib/createTicketRoute';
 import {
     setTicketWatchListOnAttributes,
     type TicketWatchListEntry,
@@ -261,6 +265,8 @@ interface TicketDetailsProps {
      * Shows auto-tracked time intervals below the ticket timer.
      */
     renderIntervalManagement?: (args: { ticketId: string; userId: string }) => React.ReactNode;
+    /** AlgaDesk product mode: Duplicate opens the AlgaDesk create form variant. */
+    isAlgaDeskMode?: boolean;
     hideSlaStatus?: boolean;
     hideBilling?: boolean;
     hideScheduling?: boolean;
@@ -326,6 +332,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     renderQuickInvoice,
     renderClientDetails,
     renderIntervalManagement,
+    isAlgaDeskMode = false,
     hideSlaStatus = false,
     hideBilling = false,
     hideScheduling = false,
@@ -709,11 +716,25 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
             }),
         [ticket, originExternalLink?.system],
     );
+    // The definition a recurring ticket came from; null (no link) when the viewer may not read definitions.
+    const [recurringSource, setRecurringSource] = useState<RecurringTicketSource | null>(null);
+    useEffect(() => {
+        if (ticketOrigin !== 'recurring' || !ticket.ticket_id) {
+            setRecurringSource(null);
+            return;
+        }
+        let cancelled = false;
+        void getRecurringSourceForTicket(ticket.ticket_id)
+            .then((source) => { if (!cancelled) setRecurringSource(source ?? null); })
+            .catch((error) => console.error('Failed to load the recurring ticket source:', error));
+        return () => { cancelled = true; };
+    }, [ticketOrigin, ticket.ticket_id]);
     const ticketOriginLabels = useMemo(() => ({
         internal: t('origin.internal', 'Created Internally'),
         clientPortal: t('origin.clientPortal', 'Created via Client Portal'),
         inboundEmail: t('origin.inboundEmail', 'Created via Inbound Email'),
         api: t('origin.api', 'Created via API'),
+        recurring: t('origin.recurring', 'Created by Recurring Schedule'),
         other: t('origin.other', 'Created via Other'),
     }), [t]);
     const [ticketInfoDirtyFields, setTicketInfoDirtyFields] = useState<string[]>([]);
@@ -1286,6 +1307,10 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const [isTimeEntryPeriodDialogOpen, setIsTimeEntryPeriodDialogOpen] = useState(false);
     const [pendingDeleteTimeEntry, setPendingDeleteTimeEntry] = useState<{ entry_id: string; user_name: string | null } | null>(null);
     const [isDeletingTimeEntry, setIsDeletingTimeEntry] = useState(false);
+    // Synchronous ref mirrors the state so rapid repeat clicks land before React
+    // re-renders and can be dropped instead of starting a second launch chain.
+    const isLaunchingTimeEntryRef = useRef(false);
+    const [isLaunchingTimeEntry, setIsLaunchingTimeEntry] = useState(false);
 
     // Debounced search for child tickets
     const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -2526,6 +2551,11 @@ const handleClose = () => {
     };
 
     const handleAddTimeEntry = async () => {
+        if (isLaunchingTimeEntryRef.current) {
+            return;
+        }
+        isLaunchingTimeEntryRef.current = true;
+        setIsLaunchingTimeEntry(true);
         try {
             if (!ticket.ticket_id) {
                 toast.error(t('messages.ticketIdMissing'));
@@ -2554,6 +2584,9 @@ const handleClose = () => {
             });
         } catch (error) {
             handleTicketActionError(error, t('messages.prepareTimeEntryFailed'));
+        } finally {
+            isLaunchingTimeEntryRef.current = false;
+            setIsLaunchingTimeEntry(false);
         }
     };
 
@@ -2690,10 +2723,34 @@ const handleClose = () => {
         setTags(updatedTags);
     };
 
+    // Changing the contact is a ticket update that notifies the contact, assignee
+    // and watchers, so it asks the same notification question status changes do.
+    const [contactChangePrompt, setContactChangePrompt] = useState<{
+        isOpen: boolean;
+        contactId: string | null;
+        suppression: TicketNotificationSuppressionValue;
+    }>({ isOpen: false, contactId: null, suppression: emptyNotificationSuppression() });
+    const [isSubmittingContactChange, setIsSubmittingContactChange] = useState(false);
+
     const handleContactChange = async (newContactId: string | null) => {
+        if ((ticket.contact_name_id ?? null) === newContactId) {
+            setIsChangeContactDialogOpen(false);
+            return;
+        }
+        setContactChangePrompt({ isOpen: true, contactId: newContactId, suppression: emptyNotificationSuppression() });
+    };
+
+    const applyContactChange = async (
+        newContactId: string | null,
+        suppression?: TicketNotificationSuppressionValue,
+    ) => {
         try {
             await runWithPendingLiveFields(['contact_name_id'], async () => {
-                const result = await updateTicket(ticket.ticket_id!, { contact_name_id: newContactId });
+                const result = await updateTicket(
+                    ticket.ticket_id!,
+                    { contact_name_id: newContactId },
+                    suppression?.suppressContactNotifications ? suppression : undefined,
+                );
                 if (isReturnedActionError(result)) {
                     throw result;
                 }
@@ -2711,6 +2768,20 @@ const handleClose = () => {
             toast.success(t('messages.contactUpdated'));
         } catch (error) {
             handleTicketActionError(error, t('messages.updateContactFailed'));
+        }
+    };
+
+    const closeContactChangePrompt = () => {
+        setContactChangePrompt({ isOpen: false, contactId: null, suppression: emptyNotificationSuppression() });
+    };
+
+    const confirmContactChangePrompt = async () => {
+        setIsSubmittingContactChange(true);
+        try {
+            await applyContactChange(contactChangePrompt.contactId, contactChangePrompt.suppression);
+            closeContactChangePrompt();
+        } finally {
+            setIsSubmittingContactChange(false);
         }
     };
 
@@ -3688,6 +3759,27 @@ const handleClose = () => {
                                     className="flex-shrink-0"
                                     systemLabel={originExternalLink?.display.label ?? null}
                                 />
+                                {recurringSource ? (
+                                    <Link
+                                        id="ticket-recurring-source-link"
+                                        href={`/msp/tickets/recurring/${recurringSource.definition_id}`}
+                                        className="flex-shrink-0 text-xs text-[rgb(var(--color-primary-600))] hover:underline"
+                                    >
+                                        {t('recurring.badge.source', 'Recurring: {{name}}', { name: recurringSource.name })}
+                                    </Link>
+                                ) : null}
+                                {ticket.duplicated_from_ticket_id && ticket.duplicated_from_ticket_number ? (
+                                    <Link
+                                        href={`/msp/tickets/${ticket.duplicated_from_ticket_id}`}
+                                        id={`${id}-duplicated-from-link`}
+                                        className="flex-shrink-0 text-xs text-[rgb(var(--color-primary-600))] hover:underline whitespace-nowrap"
+                                    >
+                                        {t('details.duplicatedFrom', {
+                                            defaultValue: 'Duplicated from #{{number}}',
+                                            number: ticket.duplicated_from_ticket_number,
+                                        })}
+                                    </Link>
+                                ) : null}
                             </div>
 
                             <div className="flex items-center gap-2">
@@ -3716,6 +3808,19 @@ const handleClose = () => {
                                         <span>{t('fields.openInNewTab', 'Open in new tab')}</span>
                                     </Button>
                                 )}
+                                <Button
+                                    id={`${id}-duplicate-ticket-button`}
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => router.push(buildCreateTicketHref({
+                                        duplicateFromTicketId: ticket.ticket_id,
+                                        isAlgaDeskMode,
+                                    }))}
+                                    className="flex items-center gap-2"
+                                >
+                                    <Copy className="h-4 w-4" />
+                                    <span>{t('actions.duplicate', { defaultValue: 'Duplicate' })}</span>
+                                </Button>
                                 <Button
                                     id={`${id}-delete-ticket-button`}
                                     variant="destructive"
@@ -3859,6 +3964,61 @@ const handleClose = () => {
                                 {isSubmittingResolutionClosePrompt
                                     ? t('info.closing', 'Closing…')
                                     : t('info.closeTicketTitle', 'Close ticket')}
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
+
+                <Dialog
+                    id={`${id}-contact-change-prompt`}
+                    isOpen={contactChangePrompt.isOpen}
+                    onClose={() => {
+                        if (!isSubmittingContactChange) {
+                            closeContactChangePrompt();
+                        }
+                    }}
+                    title={
+                        contactChangePrompt.contactId
+                            ? t('info.changeContactTitle', 'Change the ticket contact?')
+                            : t('info.removeContactTitle', 'Remove the ticket contact?')
+                    }
+                >
+                    <DialogContent>
+                        <p className="mb-4 text-sm text-[rgb(var(--color-text-600))]">
+                            {t(
+                                'info.changeContactPrompt',
+                                'The contact, assignee and watchers are told about this update unless you turn their notifications off.',
+                            )}
+                        </p>
+                        <TicketNotificationSuppressionControl
+                            idPrefix={`${id}-contact-change-prompt-notification-suppression`}
+                            value={contactChangePrompt.suppression}
+                            onChange={(suppression) =>
+                                setContactChangePrompt((prev) => ({ ...prev, suppression }))
+                            }
+                            disabled={isSubmittingContactChange}
+                        />
+                        <DialogFooter>
+                            <Button
+                                id={`${id}-contact-change-prompt-cancel`}
+                                type="button"
+                                variant="outline"
+                                onClick={closeContactChangePrompt}
+                                disabled={isSubmittingContactChange}
+                            >
+                                {t('actions.cancel', 'Cancel')}
+                            </Button>
+                            <Button
+                                id={`${id}-contact-change-prompt-confirm`}
+                                type="button"
+                                onClick={() => void confirmContactChangePrompt()}
+                                disabled={isSubmittingContactChange}
+                            >
+                                {isSubmittingContactChange
+                                    ? t('info.saving', 'Saving…')
+                                    : contactChangePrompt.contactId
+                                        ? t('info.changeContact', 'Change contact')
+                                        : t('info.removeContact', 'Remove contact')}
                             </Button>
                         </DialogFooter>
                     </DialogContent>
@@ -4192,6 +4352,7 @@ const handleClose = () => {
                     onPause={handlePauseClick}
                     onStop={handleStopClick}
                     onAddTimeEntry={handleAddTimeEntry}
+                    isLaunchingTimeEntry={isLaunchingTimeEntry}
                     onScheduleWork={handleScheduleWork}
                     onOpenScheduleEntry={handleOpenScheduleEntry}
                     scheduleRefreshKey={scheduleRefreshKey}
@@ -4389,6 +4550,7 @@ const handleClose = () => {
                                 onStop={handleStopClick}
                                 onTimeDescriptionChange={setTimeDescription}
                                 onAddTimeEntry={handleAddTimeEntry}
+                                isLaunchingTimeEntry={isLaunchingTimeEntry}
                                 onClientClick={handleClientClick}
                                 onContactClick={handleContactClick}
                                 team={team}

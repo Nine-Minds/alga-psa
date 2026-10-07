@@ -315,10 +315,10 @@ describe('QuickAddAsset custom asset types', () => {
       os_type: 'Windows',
       os_version: '11',
       cpu_model: '',
-      cpu_cores: 0,
-      ram_gb: 0,
+      cpu_cores: null,
+      ram_gb: null,
       storage_type: '',
-      storage_capacity_gb: 0,
+      storage_capacity_gb: null,
       installed_software: [],
     });
     expect(payload.attributes).toBeUndefined();

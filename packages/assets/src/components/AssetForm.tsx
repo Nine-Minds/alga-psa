@@ -25,8 +25,16 @@ import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
 import Spinner from '@alga-psa/ui/components/Spinner';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { getAsset, updateAsset } from '../actions/assetActions';
-import { unwrapAssetActionResult } from '../actions/assetActionErrors';
+import {
+  assetActionErrorFrom,
+  assetActionErrorMessage,
+  unwrapAssetActionResult,
+  isAssetValidationError,
+} from '../actions/assetActionErrors';
 import { formatClientLocation } from '../lib/formatClientLocation';
+import { parseNumberInput } from '../lib/numberInput';
+import { calendarDateToLocalDate } from '../lib/calendarDate';
+import { toCalendarDateString } from '@alga-psa/core';
 import { pickSchemaAttributes, validateAttributesAgainstSchema } from '../lib/assetTypeAttributes';
 import { buildAssetTypeOptions, useAssetTypeRegistry } from './shared/useAssetTypeOptions';
 import { CustomTypeFieldsPanel } from './shared/CustomTypeFieldsPanel';
@@ -211,20 +219,20 @@ export default function AssetForm({ assetId, onSaved }: AssetFormProps) {
             os_type: data.workstation.os_type || '',
             os_version: data.workstation.os_version || '',
             cpu_model: data.workstation.cpu_model || '',
-            cpu_cores: data.workstation.cpu_cores || 0,
-            ram_gb: data.workstation.ram_gb || 0,
+            cpu_cores: data.workstation.cpu_cores ?? null,
+            ram_gb: data.workstation.ram_gb ?? null,
             storage_type: data.workstation.storage_type || '',
-            storage_capacity_gb: data.workstation.storage_capacity_gb || 0,
+            storage_capacity_gb: data.workstation.storage_capacity_gb ?? null,
             gpu_model: data.workstation.gpu_model || '',
             installed_software: data.workstation.installed_software || []
           } : undefined,
           network_device: data.network_device ? {
             device_type: data.network_device.device_type || '',
             management_ip: data.network_device.management_ip || '',
-            port_count: data.network_device.port_count || 0,
+            port_count: data.network_device.port_count ?? null,
             firmware_version: data.network_device.firmware_version || '',
             supports_poe: data.network_device.supports_poe || false,
-            power_draw_watts: data.network_device.power_draw_watts || 0,
+            power_draw_watts: data.network_device.power_draw_watts ?? null,
             vlan_config: data.network_device.vlan_config || {},
             port_config: data.network_device.port_config || {}
           } : undefined,
@@ -232,8 +240,8 @@ export default function AssetForm({ assetId, onSaved }: AssetFormProps) {
             os_type: data.server.os_type || '',
             os_version: data.server.os_version || '',
             cpu_model: data.server.cpu_model || '',
-            cpu_cores: data.server.cpu_cores || 0,
-            ram_gb: data.server.ram_gb || 0,
+            cpu_cores: data.server.cpu_cores ?? null,
+            ram_gb: data.server.ram_gb ?? null,
             storage_config: data.server.storage_config || [],
             raid_config: data.server.raid_config || '',
             is_virtual: data.server.is_virtual || false,
@@ -258,9 +266,9 @@ export default function AssetForm({ assetId, onSaved }: AssetFormProps) {
             is_network_printer: data.printer.is_network_printer || false,
             supports_color: data.printer.supports_color || false,
             supports_duplex: data.printer.supports_duplex || false,
-            max_paper_size: data.printer.max_paper_size || 0,
+            max_paper_size: data.printer.max_paper_size ?? null,
             supported_paper_types: data.printer.supported_paper_types || [],
-            monthly_duty_cycle: data.printer.monthly_duty_cycle || 0,
+            monthly_duty_cycle: data.printer.monthly_duty_cycle ?? null,
             supply_levels: data.printer.supply_levels || {}
           } : undefined
         });
@@ -573,6 +581,18 @@ export default function AssetForm({ assetId, onSaved }: AssetFormProps) {
     }));
   };
 
+  // Inline server-side validation message for a field path such as
+  // `network_device.power_draw_watts`, so a highlighted field is never invisible.
+  const renderFieldError = (path: string) => {
+    const message = fieldErrors[path];
+    if (!message) return null;
+    return (
+      <p id={`field-error-${path.replace(/[^a-zA-Z0-9]+/g, '-')}`} role="alert" className="mt-1 text-sm text-red-600">
+        {message}
+      </p>
+    );
+  };
+
   const renderWorkstationFields = () => {
     if (!asset?.workstation) return null;
     if (!formData.workstation) return null;
@@ -616,10 +636,11 @@ export default function AssetForm({ assetId, onSaved }: AssetFormProps) {
           </label>
           <Input
             type="number"
-            value={formData.workstation.cpu_cores || ''}
-            onChange={(e) => handleTypeSpecificChange('workstation', 'cpu_cores', parseInt(e.target.value))}
+            value={formData.workstation.cpu_cores ?? ''}
+            onChange={(e) => handleTypeSpecificChange('workstation', 'cpu_cores', parseNumberInput(e.target.value, { integer: true }))}
             className="mt-1"
           />
+          {renderFieldError('workstation.cpu_cores')}
         </div>
         <div>
           <label className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
@@ -627,10 +648,11 @@ export default function AssetForm({ assetId, onSaved }: AssetFormProps) {
           </label>
           <Input
             type="number"
-            value={formData.workstation.ram_gb || ''}
-            onChange={(e) => handleTypeSpecificChange('workstation', 'ram_gb', parseInt(e.target.value))}
+            value={formData.workstation.ram_gb ?? ''}
+            onChange={(e) => handleTypeSpecificChange('workstation', 'ram_gb', parseNumberInput(e.target.value, { integer: true }))}
             className="mt-1"
           />
+          {renderFieldError('workstation.ram_gb')}
         </div>
         <div>
           <label className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
@@ -649,10 +671,11 @@ export default function AssetForm({ assetId, onSaved }: AssetFormProps) {
           </label>
           <Input
             type="number"
-            value={formData.workstation.storage_capacity_gb || ''}
-            onChange={(e) => handleTypeSpecificChange('workstation', 'storage_capacity_gb', parseInt(e.target.value))}
+            value={formData.workstation.storage_capacity_gb ?? ''}
+            onChange={(e) => handleTypeSpecificChange('workstation', 'storage_capacity_gb', parseNumberInput(e.target.value, { integer: true }))}
             className="mt-1"
           />
+          {renderFieldError('workstation.storage_capacity_gb')}
         </div>
         <div>
           <label className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
@@ -701,10 +724,11 @@ export default function AssetForm({ assetId, onSaved }: AssetFormProps) {
           </label>
           <Input
             type="number"
-            value={formData.network_device.port_count || ''}
-            onChange={(e) => handleTypeSpecificChange('network_device', 'port_count', parseInt(e.target.value))}
+            value={formData.network_device.port_count ?? ''}
+            onChange={(e) => handleTypeSpecificChange('network_device', 'port_count', parseNumberInput(e.target.value, { integer: true }))}
             className="mt-1"
           />
+          {renderFieldError('network_device.port_count')}
         </div>
         <div>
           <label className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
@@ -722,10 +746,12 @@ export default function AssetForm({ assetId, onSaved }: AssetFormProps) {
           </label>
           <Input
             type="number"
-            value={formData.network_device.power_draw_watts || ''}
-            onChange={(e) => handleTypeSpecificChange('network_device', 'power_draw_watts', parseInt(e.target.value))}
+            step="0.01"
+            value={formData.network_device.power_draw_watts ?? ''}
+            onChange={(e) => handleTypeSpecificChange('network_device', 'power_draw_watts', parseNumberInput(e.target.value, { integer: false }))}
             className="mt-1"
           />
+          {renderFieldError('network_device.power_draw_watts')}
         </div>
         <div className="flex items-center">
           <Checkbox
@@ -782,10 +808,11 @@ export default function AssetForm({ assetId, onSaved }: AssetFormProps) {
           </label>
           <Input
             type="number"
-            value={formData.server.cpu_cores || ''}
-            onChange={(e) => handleTypeSpecificChange('server', 'cpu_cores', parseInt(e.target.value))}
+            value={formData.server.cpu_cores ?? ''}
+            onChange={(e) => handleTypeSpecificChange('server', 'cpu_cores', parseNumberInput(e.target.value, { integer: true }))}
             className="mt-1"
           />
+          {renderFieldError('server.cpu_cores')}
         </div>
         <div>
           <label className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
@@ -793,10 +820,11 @@ export default function AssetForm({ assetId, onSaved }: AssetFormProps) {
           </label>
           <Input
             type="number"
-            value={formData.server.ram_gb || ''}
-            onChange={(e) => handleTypeSpecificChange('server', 'ram_gb', parseInt(e.target.value))}
+            value={formData.server.ram_gb ?? ''}
+            onChange={(e) => handleTypeSpecificChange('server', 'ram_gb', parseNumberInput(e.target.value, { integer: true }))}
             className="mt-1"
           />
+          {renderFieldError('server.ram_gb')}
         </div>
         <div>
           <label className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
@@ -957,10 +985,11 @@ export default function AssetForm({ assetId, onSaved }: AssetFormProps) {
           </label>
           <Input
             type="number"
-            value={formData.printer.monthly_duty_cycle || ''}
-            onChange={(e) => handleTypeSpecificChange('printer', 'monthly_duty_cycle', parseInt(e.target.value))}
+            value={formData.printer.monthly_duty_cycle ?? ''}
+            onChange={(e) => handleTypeSpecificChange('printer', 'monthly_duty_cycle', parseNumberInput(e.target.value, { integer: true }))}
             className="mt-1"
           />
+          {renderFieldError('printer.monthly_duty_cycle')}
         </div>
         <div className="flex items-center space-x-6">
           <Checkbox
@@ -1123,7 +1152,33 @@ export default function AssetForm({ assetId, onSaved }: AssetFormProps) {
         )
       ) as UpdateAssetRequest;
 
-      unwrapAssetActionResult(await updateAsset(assetId, cleanedData));
+      // updateAsset RETURNS expected failures (validation, permission, not found)
+      // rather than throwing: Next.js masks thrown messages in production builds.
+      const result = await updateAsset(assetId, cleanedData);
+
+      if (isAssetValidationError(result)) {
+        const nextFieldErrors: Record<string, string> = {};
+        for (const issue of result.validationIssues) {
+          const key = issue.path.join('.');
+          if (key && !nextFieldErrors[key]) nextFieldErrors[key] = issue.message;
+        }
+        setFieldErrors(nextFieldErrors);
+        const summary = t('assetForm.errors.validation', {
+          defaultValue: 'Please fix the highlighted fields before saving.',
+        });
+        setSaveError(summary);
+        toast.error(summary);
+        return;
+      }
+
+      const expectedError = assetActionErrorFrom(result);
+      if (expectedError) {
+        const message = assetActionErrorMessage(expectedError);
+        setSaveError(message);
+        toast.error(message);
+        return;
+      }
+
       if (onSaved) {
         onSaved();
         router.refresh();
@@ -1132,29 +1187,11 @@ export default function AssetForm({ assetId, onSaved }: AssetFormProps) {
         router.refresh();
       }
     } catch (error) {
+      // Only an unexpected failure (network, server crash) lands here.
       console.error('Error updating asset:', error);
-
-      const message = error instanceof Error ? error.message : '';
-      let parsed: { kind?: string; issues?: Array<{ path?: unknown; message?: string }> } | null = null;
-      try { parsed = JSON.parse(message); } catch { /* not a structured error */ }
-
-      if (parsed?.kind === 'validation' && Array.isArray(parsed.issues)) {
-        const nextFieldErrors: Record<string, string> = {};
-        for (const issue of parsed.issues) {
-          const key = Array.isArray(issue.path) ? issue.path.join('.') : String(issue.path ?? '');
-          if (key) nextFieldErrors[key] = issue.message || 'Invalid';
-        }
-        setFieldErrors(nextFieldErrors);
-        const summary = t('assetForm.errors.validation', {
-          defaultValue: 'Please fix the highlighted fields before saving.',
-        });
-        setSaveError(summary);
-        toast.error(summary);
-      } else {
-        const summary = t('assetForm.errors.updateFailed', { defaultValue: 'Failed to update asset' });
-        setSaveError(summary);
-        toast.error(summary);
-      }
+      const summary = t('assetForm.errors.updateFailed', { defaultValue: 'Failed to update asset' });
+      setSaveError(summary);
+      toast.error(summary);
     } finally {
       setSaving(false);
     }
@@ -1440,11 +1477,11 @@ export default function AssetForm({ assetId, onSaved }: AssetFormProps) {
                   </label>
                   <DatePicker
                     id="purchase_date"
-                    value={formData.purchase_date ? new Date(formData.purchase_date) : undefined}
+                    value={calendarDateToLocalDate(formData.purchase_date)}
                     onChange={(date) => {
                       setFormData(prev => ({
                         ...prev,
-                        purchase_date: date ? date.toISOString().split('T')[0] : ''
+                        purchase_date: toCalendarDateString(date) ?? ''
                       }));
                     }}
                     placeholder={t('assetForm.placeholders.selectPurchaseDate', {
@@ -1460,11 +1497,11 @@ export default function AssetForm({ assetId, onSaved }: AssetFormProps) {
                   </label>
                   <DatePicker
                     id="warranty_end_date"
-                    value={formData.warranty_end_date ? new Date(formData.warranty_end_date) : undefined}
+                    value={calendarDateToLocalDate(formData.warranty_end_date)}
                     onChange={(date) => {
                       setFormData(prev => ({
                         ...prev,
-                        warranty_end_date: date ? date.toISOString().split('T')[0] : ''
+                        warranty_end_date: toCalendarDateString(date) ?? ''
                       }));
                     }}
                     placeholder={t('assetForm.placeholders.selectWarrantyEndDate', {

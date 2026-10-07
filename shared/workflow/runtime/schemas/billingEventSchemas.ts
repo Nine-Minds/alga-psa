@@ -1,12 +1,12 @@
 import { z } from 'zod';
-import { BaseDomainEventPayloadSchema, changesSchema, currencySchema, updatedFieldsSchema, uuidSchema } from './commonEventPayloadSchemas';
+import { BaseDomainEventPayloadSchema, changesSchema, currencySchema, updatedFieldsSchema, uuidSchema, entityIdSchema } from './commonEventPayloadSchemas';
 
 const invoiceIdSchema = uuidSchema('Invoice ID');
 const paymentIdSchema = uuidSchema('Payment ID');
 const creditNoteIdSchema = uuidSchema('Credit Note ID');
-const contractIdSchema = uuidSchema('Contract ID');
-const clientIdSchema = uuidSchema('Client ID');
-const userIdSchema = uuidSchema('User ID');
+const contractIdSchema = entityIdSchema('Contract ID', 'contract');
+const clientIdSchema = entityIdSchema('Client ID', 'client');
+const userIdSchema = entityIdSchema('User ID', 'user');
 
 const deliveryMethodSchema = z.enum(['email', 'portal', 'print']).describe('Invoice delivery method');
 const invoiceRecurringProvenanceSchema = z.object({

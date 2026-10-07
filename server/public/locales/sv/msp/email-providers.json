@@ -803,7 +803,8 @@
           "recipientPlaceholder": "you@example.com",
           "testingButton": "Testar…",
           "runButton": "Testa anslutning"
-        }
+        },
+        "ticketIdentityRequired": "Välj en e-postidentitet för ärenden nedan för att ange avsändardomänen."
       },
       "ticketingFrom": {
         "title": "Avsändaradress för ärendemeddelanden",
@@ -842,7 +843,18 @@
         "description": "Meddelanden skickas från den valda postlådan via Microsoft Graph och sparas i Skickat.",
         "loadFailed": "Det gick inte att läsa in Microsoft 365-postlådor.",
         "saved": "Avsändarpostlådan för utgående e-post har uppdaterats."
-      }
+      },
+      "diagnosticsButton": "Kör diagnostik för utgående e-post",
+      "saveSettings": "Spara utgående inställningar",
+      "discardChanges": "Ignorera ändringar",
+      "unsaved": "Osparade ändringar",
+      "noPendingChanges": "Inga osparade ändringar",
+      "saving": "Sparar utgående inställningar…",
+      "saved": "Utgående inställningar sparade.",
+      "saveFailed": "Det gick inte att spara utgående inställningar. Ändringarna finns kvar. Försök igen.",
+      "diagnosticsSaveHelp": "Spara eller ignorera ändringarna innan du kontrollerar de utgående inställningarna.",
+      "saveBeforeDomainRemoval": "Spara eller ignorera dina utgående ändringar innan du tar bort en domän.",
+      "senderAddressAfterSave": "Visas efter sparande."
     },
     "inbound": {
       "intro": "Konfigurera routning av inkommande e-post och automatisering för respektive leverantör."

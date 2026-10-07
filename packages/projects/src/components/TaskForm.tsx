@@ -113,6 +113,8 @@ interface TaskFormProps {
   projectTreeData?: any[]; // Add projectTreeData prop
   prefillData?: TaskFormPrefillData;
   onCommentCountChange?: (taskId: string, count: number) => void;
+  /** Asked before an edit is saved; resolving false keeps the form open. */
+  confirmBeforeSave?: (taskId: string, change: { start_date: Date | null; due_date: Date | null; project_status_mapping_id: string }) => Promise<boolean>;
   printButton?: React.ReactNode;
   printableHeader?: React.ReactNode;
   printTitle?: string;
@@ -133,6 +135,7 @@ export default function TaskForm({
   projectTreeData = [],
   prefillData,
   onCommentCountChange,
+  confirmBeforeSave,
   printButton,
   printableHeader,
   printTitle,
@@ -185,6 +188,9 @@ export default function TaskForm({
       : prefillData?.estimated_hours ?? 0
   );
   const actualHours = Number(task?.actual_hours) / 60 || 0;
+  const [startDate, setStartDate] = useState<Date | undefined>(
+    task?.start_date ? new Date(task.start_date) : undefined
+  );
   const [dueDate, setDueDate] = useState<Date | undefined>(
     task?.due_date
       ? new Date(task.due_date)
@@ -329,6 +335,7 @@ export default function TaskForm({
     setDescriptionContent(parseTaskRichTextContent(prefillData.description || null));
     setDescriptionEditorKey(prev => prev + 1);
     setAssignedUser(prefillData.assigned_to);
+    setStartDate(undefined);
     setDueDate(prefillData.due_date ?? undefined);
     setEstimatedHours(prefillData.estimated_hours);
 
@@ -354,6 +361,7 @@ export default function TaskForm({
         created_at: new Date(),
         project_id: phase.project_id,
         phase_id: phase.phase_id,
+        bill_under_project: true,
         status_name: ticket.status_name || 'New',
         is_closed: ticket.is_closed ?? ticket.closed_at != null
       };
@@ -674,6 +682,7 @@ export default function TaskForm({
           assigned_to: assignedUser || null,
           assigned_team_id: assignedTeamId || null,
           estimated_hours: Math.round(estimatedHours * 60), // Convert hours to minutes for storage
+          start_date: startDate || null,
           due_date: dueDate || null,
           checklist_items: checklistItems,
           phase_id: selectedPhaseId,
@@ -864,6 +873,15 @@ export default function TaskForm({
       // Convert empty string to null for database
       const finalAssignedTo = !assignedUser || assignedUser === '' ? null : assignedUser;
 
+      if (mode === 'edit' && task?.task_id && confirmBeforeSave) {
+        const proceed = await confirmBeforeSave(task.task_id, {
+          start_date: startDate ?? null,
+          due_date: dueDate ?? null,
+          project_status_mapping_id: selectedStatusId,
+        });
+        if (!proceed) return;
+      }
+
       if (mode === 'edit' && task?.task_id) {
         // Check if phase or status actually changed
         const phaseChanged = task.phase_id !== selectedPhaseId;
@@ -900,6 +918,7 @@ export default function TaskForm({
           assigned_to: finalAssignedTo,
           assigned_team_id: assignedTeamId || null,
           estimated_hours: Math.round(estimatedHours * 60), // Convert hours to minutes for storage
+          start_date: startDate || null,
           due_date: dueDate || null,
           priority_id: selectedPriorityId,
           checklist_items: checklistItems,
@@ -938,6 +957,7 @@ export default function TaskForm({
           assigned_to: finalAssignedTo,
           assigned_team_id: assignedTeamId || null,
           estimated_hours: Math.round(estimatedHours * 60), // Convert hours to minutes for storage
+          start_date: startDate || null,
           due_date: dueDate || null, // Use selected due date or null
           priority_id: selectedPriorityId,
           phase_id: phase.phase_id,
@@ -971,7 +991,7 @@ export default function TaskForm({
 
             // Add ticket links using the actual task ID and phase ID
             for (const link of pendingTicketLinks) {
-              const linkResult = await addTicketLinkAction(phase.project_id, resultTask.task_id, link.ticket_id, phase.phase_id);
+              const linkResult = await addTicketLinkAction(phase.project_id, resultTask.task_id, link.ticket_id, phase.phase_id, link.bill_under_project ?? true);
               if (isReturnedActionError(linkResult)) {
                 throw new Error(getErrorMessage(linkResult));
               }
@@ -1818,24 +1838,19 @@ export default function TaskForm({
               </>
             )}
 
-            {/* Row 3: Created At (Edit mode only) and Due Date */}
+            {/* Row 3: Start Date and Due Date */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">{taskFormT('createdAtLabel', 'Created At')}</label>
-              {mode === 'edit' && task ? (
-                <div className="p-2 bg-gray-50 border border-gray-200 rounded-md text-gray-700">
-                  {formatDate(new Date(task.created_at), {
-                    month: 'short',
-                    day: 'numeric',
-                    year: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit'
-                  })}
-                </div>
-              ) : (
-                <div className="p-2 bg-gray-50 border border-gray-200 rounded-md text-gray-500">
-                  {taskFormT('willBeSetOnCreate', 'Will be set on creation')}
-                </div>
-              )}
+              <label className="block text-sm font-medium text-gray-700 mb-1">{taskFormT('startDateLabel', 'Start Date')}</label>
+              <DatePicker
+                value={startDate}
+                onChange={setStartDate}
+                id="task-start-date-picker"
+                label={taskFormT('taskStartDateLabel', 'Task Start Date')}
+                placeholder={taskFormT('startDatePlaceholder', 'Select start date')}
+                maxDate={dueDate}
+                clearable
+                disabled={isSubmitting}
+              />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">{taskFormT('dueDateLabel', 'Due Date')}</label>
@@ -1879,6 +1894,19 @@ export default function TaskForm({
                 {taskFormT('actualHoursDerivedHelp', 'Calculated from linked time entries')}
               </p>
             </div>
+            {/* Read-only metadata stays out of the field grid. */}
+            {mode === 'edit' && task?.created_at && (
+              <p id="task-created-at" className="col-span-2 -mt-2 text-xs text-[rgb(var(--color-text-500))]">
+                {taskFormT('createdAtLabel', 'Created At')}:{' '}
+                {formatDate(new Date(task.created_at), {
+                  month: 'short',
+                  day: 'numeric',
+                  year: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit'
+                })}
+              </p>
+            )}
             {/* Row 5: Assigned To and Additional Agents in one row */}
             <div className="col-span-2">
               <div className="grid grid-cols-2 gap-4">

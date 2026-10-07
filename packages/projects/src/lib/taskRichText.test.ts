@@ -118,6 +118,44 @@ describe('isTaskRichTextEmpty', () => {
     expect(isTaskRichTextEmpty([withLink])).toBe(false);
   });
 
+  it('treats text nested under a blank parent as content', () => {
+    // BlockNote indents sub-items into `children`; the parent carries no text
+    // of its own, so judging it empty would discard the whole description.
+    const nested: PartialBlock = {
+      ...paragraph(''),
+      children: [paragraph('Nested detail')],
+    } as any;
+
+    expect(isTaskRichTextEmpty([nested])).toBe(false);
+  });
+
+  it('treats a media block nested under a blank parent as content', () => {
+    const nested: PartialBlock = {
+      ...paragraph(''),
+      children: [{ type: 'image', props: { url: 'https://example.test/rack.png' } }],
+    } as any;
+
+    expect(isTaskRichTextEmpty([nested])).toBe(false);
+  });
+
+  it('treats text nested several levels deep as content', () => {
+    const nested: PartialBlock = {
+      ...paragraph(''),
+      children: [{ ...paragraph(''), children: [paragraph('Buried note')] }],
+    } as any;
+
+    expect(isTaskRichTextEmpty([nested])).toBe(false);
+  });
+
+  it('stays empty when the parent and every nested child are blank', () => {
+    const nested: PartialBlock = {
+      ...paragraph('  '),
+      children: [{ ...paragraph(''), children: [paragraph('   ')] }],
+    } as any;
+
+    expect(isTaskRichTextEmpty([nested])).toBe(true);
+  });
+
   it('recognises every text-container block type as emptiable', () => {
     const textContainers = [
       'paragraph',
@@ -180,6 +218,22 @@ describe('extractTaskDescriptionText', () => {
     expect(extractTaskDescriptionText(JSON.stringify(doc))).toBe('See the runbook');
   });
 
+  it('includes nested child lines alongside their parent', () => {
+    const doc = [
+      { ...paragraph('Steps'), children: [paragraph('Power cycle'), paragraph('Re-seat the NIC')] },
+    ];
+
+    expect(extractTaskDescriptionText(JSON.stringify(doc))).toBe(
+      'Steps\nPower cycle\nRe-seat the NIC',
+    );
+  });
+
+  it('returns nested text even when the parent block is blank', () => {
+    const doc = [{ ...paragraph(''), children: [paragraph('Nested detail')] }];
+
+    expect(extractTaskDescriptionText(JSON.stringify(doc))).toBe('Nested detail');
+  });
+
   it('returns the raw string when a bracketed description is not valid JSON', () => {
     const malformed = '[{"type":"paragraph"';
     expect(extractTaskDescriptionText(malformed)).toBe(malformed);
@@ -217,6 +271,17 @@ describe('serializeTaskDescriptions', () => {
 
     expect(result.description_rich_text).not.toBeNull();
     expect(result.description_rich_text).toContain('image');
+  });
+
+  it('keeps a document whose text lives only in nested children', () => {
+    // The parent paragraph is blank; dropping it would lose the whole
+    // description the moment the task is created.
+    const doc = [{ ...paragraph(''), children: [paragraph('Nested detail')] }] as PartialBlock[];
+
+    const result = serializeTaskDescriptions(doc);
+
+    expect(result.description_rich_text).toBe(serializeTaskRichTextContent(doc));
+    expect(result.description).toContain('Nested detail');
   });
 
   it('survives a full edit round-trip without losing the body', () => {

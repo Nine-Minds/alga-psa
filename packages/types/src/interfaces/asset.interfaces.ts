@@ -105,10 +105,10 @@ export interface WorkstationAsset {
   os_type: string;
   os_version: string;
   cpu_model: string;
-  cpu_cores: number;
-  ram_gb: number;
+  cpu_cores: number | null;
+  ram_gb: number | null;
   storage_type: string;
-  storage_capacity_gb: number;
+  storage_capacity_gb: number | null;
   gpu_model?: string;
   last_login?: string;
   installed_software: unknown[];
@@ -139,10 +139,10 @@ export interface NetworkDeviceAsset {
   asset_id: string;
   device_type: 'switch' | 'router' | 'firewall' | 'access_point' | 'load_balancer';
   management_ip: string;
-  port_count: number;
+  port_count: number | null;
   firmware_version: string;
   supports_poe: boolean;
-  power_draw_watts: number;
+  power_draw_watts: number | null;
   vlan_config: Record<string, unknown>;
   port_config: Record<string, unknown>;
 }
@@ -153,8 +153,8 @@ export interface ServerAsset {
   os_type: string;
   os_version: string;
   cpu_model: string;
-  cpu_cores: number;
-  ram_gb: number;
+  cpu_cores: number | null;
+  ram_gb: number | null;
   storage_config: unknown[];
   raid_config?: string;
   is_virtual: boolean;
@@ -255,9 +255,9 @@ export interface PrinterAsset {
   is_network_printer: boolean;
   supports_color: boolean;
   supports_duplex: boolean;
-  max_paper_size?: number;
+  max_paper_size?: number | null;
   supported_paper_types: unknown[];
-  monthly_duty_cycle?: number;
+  monthly_duty_cycle?: number | null;
   supply_levels: Record<string, unknown>;
 }
 

@@ -457,6 +457,12 @@
       "location": "Posizione"
     }
   },
+  "documentsTab": {
+    "errors": {
+      "title": "Documenti non disponibili",
+      "loadFailed": "Impossibile caricare i documenti collegati. Ricarica la pagina o riprova più tardi."
+    }
+  },
   "assetDetails": {
     "title": "Dettagli asset",
     "description": "Pagina di dettaglio completo degli asset con schede riepilogative, associazioni, documenti e azioni operative",
@@ -1593,8 +1599,7 @@
       "manageAssetTypes": "Autorizzazione negata: impossibile gestire i tipi di asset",
       "readDocuments": "Autorizzazione negata: impossibile leggere i documenti dell’asset",
       "associateDocuments": "Autorizzazione negata: impossibile associare documenti agli asset",
-      "removeDocuments": "Autorizzazione negata: impossibile rimuovere documenti dagli asset",
-      "updateDocumentNotes": "Autorizzazione negata: impossibile aggiornare le note dei documenti dell’asset"
+      "removeDocuments": "Autorizzazione negata: impossibile rimuovere documenti dagli asset"
     },
     "asset": {
       "notFoundRefresh": "Asset non trovato. Potrebbe essere stato eliminato. Aggiornare la pagina e riprovare.",
@@ -1616,5 +1621,15 @@
       "missingFieldNamed": "Manca un campo obbligatorio dell’asset: {{field}}.",
       "contactUnavailable": "Il contatto selezionato non è disponibile per questo cliente."
     }
+  },
+  "clientAssetMultiSelect": {
+    "errors": {
+      "load": "Impossibile caricare gli asset"
+    },
+    "placeholder": "Aggiungi un asset...",
+    "searchPlaceholder": "Cerca asset",
+    "empty": "Nessun asset corrispondente per questo cliente",
+    "loading": "Caricamento...",
+    "remove": "Rimuovi asset"
   }
 }

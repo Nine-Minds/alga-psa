@@ -45,6 +45,7 @@ import {
   type TemplateStatusMappingRow,
 } from '../lib/projectTemplateStatusMappingResolution';
 import { generateKeyBetween } from 'fractional-indexing';
+import { startOffsetDaysFromDates } from '../lib/templateTaskDates';
 
 type ProjectTemplateActionError = ActionMessageError | ActionPermissionError;
 
@@ -350,6 +351,8 @@ export const createTemplateFromProject = withAuth(async (
         duration_days = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); // Convert ms to days
       }
 
+      const start_offset_days = startOffsetDaysFromDates(task.start_date, originalPhase?.start_date);
+
       // Map the project status mapping to template status mapping
       const templateStatusMappingId = task.project_status_mapping_id
         ? projectStatusToTemplateStatusMap.get(task.project_status_mapping_id)
@@ -371,6 +374,7 @@ export const createTemplateFromProject = withAuth(async (
           template_status_mapping_id: templateStatusMappingId || null,
           order_key: task.order_key,
           duration_days,
+          start_offset_days,
           service_id: copyOptions.copyServices ? (task.service_id || null) : null
         })
         .returning('*');
@@ -761,6 +765,7 @@ export const duplicateTemplate = withAuth(async (
             description: task.description,
             estimated_hours: task.estimated_hours,
             duration_days: task.duration_days,
+            start_offset_days: task.start_offset_days ?? null,
             task_type_key: task.task_type_key,
             priority_id: task.priority_id,
             order_key: task.order_key,
@@ -1325,6 +1330,7 @@ export const addTemplateTask = withAuth(async (
     description?: string;
     estimated_hours?: number;
     duration_days?: number;
+    start_offset_days?: number | null;
     task_type_key?: string;
     priority_id?: string;
     assigned_to?: string;
@@ -1374,6 +1380,7 @@ export const addTemplateTask = withAuth(async (
         description: taskData.description || null,
         estimated_hours: taskData.estimated_hours || null,
         duration_days: taskData.duration_days || null,
+        start_offset_days: taskData.start_offset_days ?? null,
         task_type_key: taskData.task_type_key || null,
         priority_id: taskData.priority_id || null,
         assigned_to: taskData.assigned_to || null,
@@ -1409,6 +1416,7 @@ export const updateTemplateTask = withAuth(async (
     description_rich_text?: string;
     estimated_hours?: number;
     duration_days?: number;
+    start_offset_days?: number | null;
     task_type_key?: string;
     priority_id?: string;
     assigned_to?: string | null;

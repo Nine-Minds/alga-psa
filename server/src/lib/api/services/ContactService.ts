@@ -6,6 +6,7 @@
 import { Knex } from 'knex';
 import { BaseService, ListResult, ServiceContext, withTransaction, tenantDb } from '@alga-psa/db';
 import { getContactAvatarUrl } from '@alga-psa/formatting/avatarUtils';
+import { deleteEntityImage, uploadEntityImage } from '@alga-psa/storage';
 import { ContactModel, clearContactLinksBeforeDelete } from '@alga-psa/shared/models/contactModel';
 import { IContact } from 'server/src/interfaces/contact.interfaces';
 import { publishWorkflowEvent } from 'server/src/lib/eventBus/publishers';
@@ -301,6 +302,32 @@ export class ContactService extends BaseService<IContact> {
     }
 
     return contact;
+  }
+
+  /** Same storage path as the web contact page (contactAvatarActions). */
+  async uploadAvatar(
+    contactId: string,
+    file: File,
+    context: ServiceContext
+  ): Promise<{ success: boolean; message: string; avatarUrl?: string | null }> {
+    const existing = await this.getById(contactId, context);
+    if (!existing) {
+      throw new NotFoundError('Contact not found');
+    }
+    const result = await uploadEntityImage('contact', contactId, file, context.userId, context.tenant, 'contact_avatar', true);
+    if (!result.success) {
+      throw new ValidationError(result.message || 'Failed to upload contact avatar');
+    }
+    return { success: true, message: 'Avatar uploaded successfully', avatarUrl: result.imageUrl ?? null };
+  }
+
+  async deleteAvatar(contactId: string, context: ServiceContext): Promise<{ success: boolean; message: string }> {
+    const existing = await this.getById(contactId, context);
+    if (!existing) {
+      throw new NotFoundError('Contact not found');
+    }
+    await deleteEntityImage('contact', contactId, context.userId, context.tenant);
+    return { success: true, message: 'Avatar deleted successfully' };
   }
 
   async createContact(data: CreateContactData, context: ServiceContext): Promise<IContact> {

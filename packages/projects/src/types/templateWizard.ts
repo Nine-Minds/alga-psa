@@ -27,6 +27,7 @@ export interface TemplateTask {
   description_rich_text?: string;
   estimated_hours?: number;
   duration_days?: number;
+  start_offset_days?: number | null;
   task_type_key?: string;
   priority_id?: string;
   assigned_to?: string;

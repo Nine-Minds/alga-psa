@@ -4,6 +4,9 @@ import React, { useEffect, useRef, useState } from 'react';
 import type { DraggableProvided } from '@hello-pangea/dnd';
 import { createPortal } from 'react-dom';
 
+/** 'grid' shows compact tiles; 'list' (search results) shows full names on one row each. */
+export const PaletteLayoutContext = React.createContext<'grid' | 'list'>('grid');
+
 export type PaletteTooltipItem = {
   id: string;
   label: string;
@@ -86,6 +89,8 @@ export const PaletteItemWithTooltip: React.FC<{
 }> = ({ item, icon, isDragging, provided, disabled = false, onClick }) => {
   const [isHovered, setIsHovered] = useState(false);
   const triggerRef = useRef<HTMLDivElement>(null);
+  const layout = React.useContext(PaletteLayoutContext);
+  const isList = layout === 'list';
 
   return (
     <div
@@ -96,8 +101,10 @@ export const PaletteItemWithTooltip: React.FC<{
       {...provided.draggableProps}
       {...(disabled ? {} : provided.dragHandleProps)}
       className={`
-        group relative flex w-full min-h-[3.25rem] flex-col items-center justify-center gap-1 rounded-lg border px-1 py-1.5 text-center
-        transition-all duration-150
+        group relative flex w-full rounded-lg border transition-all duration-150
+        ${isList
+          ? 'min-h-[2.5rem] flex-row items-center gap-2 px-2 py-1.5 text-left'
+          : 'min-h-[3.25rem] flex-col items-center justify-center gap-1 px-1 py-1.5 text-center'}
         ${disabled ? 'cursor-not-allowed opacity-50' : 'cursor-grab'}
         ${isDragging
           ? 'shadow-lg ring-2 ring-primary-400 bg-primary-50 border-primary-300 dark:bg-primary-500/20 dark:border-primary-400 z-50'
@@ -120,17 +127,30 @@ export const PaletteItemWithTooltip: React.FC<{
       <span className="flex h-5 w-5 items-center justify-center text-gray-500 group-hover:text-gray-700 dark:text-[rgb(var(--color-text-500))] dark:group-hover:text-[rgb(var(--color-text-700))]">
         {icon}
       </span>
-      <span
-        className="w-full truncate text-[10px] font-medium leading-tight text-gray-600 group-hover:text-gray-800 dark:text-[rgb(var(--color-text-600))] dark:group-hover:text-[rgb(var(--color-text-800))]"
-        title={item.label}
-      >
-        {item.label}
-      </span>
+      {isList ? (
+        <span className="min-w-0 flex-1">
+          <span className="block text-xs font-medium leading-tight text-[rgb(var(--color-text-800))] break-words">
+            {item.label}
+          </span>
+          {item.description && (
+            <span className="block truncate text-[10px] leading-tight text-[rgb(var(--color-text-500))]" title={item.description}>
+              {item.description}
+            </span>
+          )}
+        </span>
+      ) : (
+        <span
+          className="w-full truncate text-[10px] font-medium leading-tight text-gray-600 group-hover:text-gray-800 dark:text-[rgb(var(--color-text-600))] dark:group-hover:text-[rgb(var(--color-text-800))]"
+          title={item.label}
+        >
+          {item.label}
+        </span>
+      )}
       <PaletteTooltip
         label={item.label}
         description={item.description}
         triggerRef={triggerRef}
-        isHovered={isHovered && !isDragging}
+        isHovered={isHovered && !isDragging && !isList}
       />
     </div>
   );
