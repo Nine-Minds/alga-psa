@@ -299,7 +299,7 @@ export function AccountingMappingBulkGrid({
             .filter((entity) => !targetConfig || !entity.kind || entity.kind === row.kindId)
             .map((entity) => ({ value: entity.id, label: entity.name }));
           return (
-            <div className="flex flex-col items-start gap-1">
+            <div className="flex flex-col gap-1">
               <SearchableSelect
                 id={`${idPrefix}-external-${row.id}`}
                 options={options}
@@ -317,6 +317,7 @@ export function AccountingMappingBulkGrid({
               />
               {row.suggested ? (
                 <Badge
+                  className="self-start"
                   variant={row.fuzzy ? 'warning' : 'secondary'}
                   data-testid={`${idPrefix}-${row.fuzzy ? 'possible' : 'suggested'}-${row.id}`}
                 >

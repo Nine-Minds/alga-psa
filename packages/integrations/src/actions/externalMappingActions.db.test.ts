@@ -1064,4 +1064,27 @@ describe('createExternalEntityMappings — bulk create with per-row isolation', 
     expect(results[1].error).toMatch(/target is already mapped to another entity/);
     expect(results[3].error).toMatch(/target is already mapped to another entity/);
   });
+
+  it('maps each unique-index violation to its own message', async () => {
+    const target = uuidv4();
+    const svc1 = await seedService(tenantA);
+    const svc2 = await seedService(tenantA);
+    const make = (alga: string, external: string) => ({
+      integration_type: 'quickbooks_online',
+      alga_entity_type: 'service',
+      alga_entity_id: alga,
+      external_entity_id: external,
+      external_realm_id: realmA,
+    });
+    const first = await (createExternalEntityMapping as any)({ user_id: 'u' }, { tenant: tenantA }, make(svc1, target));
+    expect(first).not.toHaveProperty('actionError');
+
+    // Same target, different entity: idx_unique_external_mapping.
+    const sameTarget = await (createExternalEntityMapping as any)({ user_id: 'u' }, { tenant: tenantA }, make(svc2, target));
+    expect(sameTarget.actionError).toMatch(/target is already mapped to another entity/);
+
+    // Same entity, different target: idx_unique_alga_mapping.
+    const sameEntity = await (createExternalEntityMapping as any)({ user_id: 'u' }, { tenant: tenantA }, make(svc1, uuidv4()));
+    expect(sameEntity.actionError).toMatch(/A mapping already exists for this entity/);
+  });
 });

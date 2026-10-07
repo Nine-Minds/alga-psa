@@ -1086,12 +1086,17 @@ async function createMappingRow({
     });
 
     if (error?.code === '23505') {
+      // idx_unique_external_mapping is keyed on the external target; anything
+      // else (idx_unique_alga_mapping) is the same Alga entity mapped twice.
+      if (error?.constraint === 'idx_unique_external_mapping') {
+        return actionError(
+          'This target is already mapped to another entity in this organisation. Choose a different target.',
+          'msp/integrations:errors.mappings.duplicateTarget'
+        );
+      }
       return actionError(
-        // The live-mapping unique index is on the external target (the
-        // same-entity case is rejected earlier with its own message), so a
-        // 23505 here means another service already uses this target.
-        'This target is already mapped to another entity in this organisation. Choose a different target.',
-        'msp/integrations:errors.mappings.duplicateTarget'
+        'A mapping already exists for this entity. Edit the existing mapping instead.',
+        'msp/integrations:errors.mappings.duplicate'
       );
     }
 
