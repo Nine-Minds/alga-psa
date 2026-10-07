@@ -236,7 +236,7 @@ vi.mock('@alga-psa/ui/components/DataTable', () => ({
 
     return (
       <div>
-        <table data-testid={id || 'data-table'}>
+        <table data-testid={id || 'data-table'} data-current-page={currentPage ?? 1}>
           <tbody>
             {data.map((row: any, rowIndex: number) => (
               <tr key={row.candidateKey ?? row.rowKey ?? row.executionIdentityKey ?? row.invoiceId ?? row.billing_cycle_id ?? rowIndex}>
@@ -1043,6 +1043,11 @@ describe('AutomaticInvoices recurring due-work UI', () => {
     });
     // No fetch for (old filter, page 1) or (new filter, page 2) while debouncing.
     expect(getAvailableRecurringDueWorkMock).toHaveBeenCalledTimes(1);
+    await waitFor(() => {
+      expect(
+        screen.getAllByTestId('automatic-invoices-table').at(-1)!.getAttribute('data-current-page'),
+      ).toBe('1');
+    });
   });
 
   it('a filter typed and cleared within the debounce window triggers no fetch and keeps page 2 consistent', async () => {
@@ -1066,6 +1071,9 @@ describe('AutomaticInvoices recurring due-work UI', () => {
       expect(getAvailableRecurringDueWorkMock).toHaveBeenCalledWith(expect.objectContaining({ page: 2 }));
     });
     await screen.findByText('Zenith Health');
+    const readyGridPage = () =>
+      screen.getAllByTestId('automatic-invoices-table').at(-1)!.getAttribute('data-current-page');
+    expect(readyGridPage()).toBe('2');
 
     getAvailableRecurringDueWorkMock.mockClear();
     const filterInput = document.getElementById('filter-clients-input') as HTMLInputElement;
@@ -1074,6 +1082,7 @@ describe('AutomaticInvoices recurring due-work UI', () => {
     await new Promise((resolve) => setTimeout(resolve, 450));
 
     expect(getAvailableRecurringDueWorkMock).not.toHaveBeenCalled();
+    expect(readyGridPage()).toBe('2');
     // Page 2 is still the current page and still shows page 2's rows.
     expect(screen.getByText('Zenith Health')).toBeInTheDocument();
     expect(screen.queryByText('Acme Co')).toBeNull();
