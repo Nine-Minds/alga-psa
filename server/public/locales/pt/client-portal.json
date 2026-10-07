@@ -371,7 +371,17 @@
         "verifiedContact": "E-mail de contato verificado",
         "validPassword": "Senha válida"
       }
-    }
+    },
+    "ssoNoMatchTitle": "Falha no login com SSO",
+    "ssoNoMatch": {
+      "no_matching_user": "Nenhuma conta do portal do cliente corresponde a {{providerEmail}}. Faça login com sua senha ou fale com seu prestador de serviços.",
+      "missing_email": "Seu provedor de identidade não retornou um e-mail, portanto nenhuma conta do portal do cliente pôde ser identificada. Faça login com sua senha ou fale com seu prestador de serviços.",
+      "inactive_user": "A conta do portal do cliente para {{providerEmail}} está inativa. Fale com seu prestador de serviços para reativá-la.",
+      "user_type_mismatch": "{{providerEmail}} não é uma conta do portal do cliente. Fale com seu prestador de serviços.",
+      "tenant_mismatch": "{{providerEmail}} pertence ao portal de outra organização. Faça login com sua senha ou fale com seu prestador de serviços."
+    },
+    "configurationTitle": "Falha no login",
+    "configurationMessage": "O login falhou. Tente novamente ou fale com seu prestador de serviços."
   },
   "account": {
     "title": "Conta",

@@ -377,7 +377,17 @@
         "verifiedContact": "Verified contact email",
         "validPassword": "Valid password"
       }
-    }
+    },
+    "ssoNoMatchTitle": "SSO sign-in failed",
+    "ssoNoMatch": {
+      "no_matching_user": "No client portal account matches {{providerEmail}}. Sign in with your password or contact your service provider.",
+      "missing_email": "Your identity provider did not return an email address, so no client portal account could be matched. Sign in with your password or contact your service provider.",
+      "inactive_user": "The client portal account for {{providerEmail}} is inactive. Contact your service provider to reactivate it.",
+      "user_type_mismatch": "{{providerEmail}} is not a client portal account. Contact your service provider.",
+      "tenant_mismatch": "{{providerEmail}} belongs to a different organization's portal. Sign in with your password or contact your service provider."
+    },
+    "configurationTitle": "Sign-in failed",
+    "configurationMessage": "Sign-in failed. Please try again or contact your service provider."
   },
   "account": {
     "title": "Account",

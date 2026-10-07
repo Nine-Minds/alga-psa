@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import ConnectSsoClient from "./ConnectSsoClient";
 import { getSsoProviderOptionsAction } from "@ee/lib/actions/auth/getSsoProviderOptions";
 import { getLinkedSsoAccountsAction, type LinkedSsoAccount } from "@ee/lib/actions/auth/ssoPreferences";
@@ -24,8 +25,12 @@ function getErrorMessage(err: unknown): string {
   return "An unexpected error occurred while loading SSO settings";
 }
 
+const SSO_TAB_URL = "/msp/profile?tab=Single%20Sign-On";
+
 export default function ConnectSsoWrapper() {
   const { t } = useTranslation('common');
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [email, setEmail] = useState("");
@@ -33,6 +38,19 @@ export default function ConnectSsoWrapper() {
   const [linkedAccounts, setLinkedAccounts] = useState<LinkedSsoAccount[]>([]);
   const [providerOptions, setProviderOptions] = useState<ProviderOption[]>([]);
   const isMountedRef = useRef(true);
+  // Captured once: the params are stripped below so a refresh does not replay
+  // a stale outcome from a previous link attempt.
+  const [linkOutcome] = useState(() => ({
+    linked: searchParams?.get("linked") === "1",
+    linkError: searchParams?.get("linkError") ?? undefined,
+    providerEmail: searchParams?.get("providerEmail") ?? undefined,
+  }));
+
+  useEffect(() => {
+    if (linkOutcome.linked || linkOutcome.linkError) {
+      router.replace(SSO_TAB_URL);
+    }
+  }, [linkOutcome, router]);
 
   useEffect(() => {
     isMountedRef.current = true;
@@ -112,6 +130,9 @@ export default function ConnectSsoWrapper() {
       twoFactorEnabled={twoFactorEnabled}
       linkedAccounts={linkedAccounts}
       providerOptions={providerOptions}
+      linkStatus={linkOutcome.linkError ? "error" : linkOutcome.linked ? "linked" : undefined}
+      linkErrorCode={linkOutcome.linkError}
+      linkErrorProviderEmail={linkOutcome.providerEmail}
     />
   );
 }

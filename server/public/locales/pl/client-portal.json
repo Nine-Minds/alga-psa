@@ -322,7 +322,17 @@
         "verifiedContact": "Zweryfikowany adres e-mail kontaktu",
         "validPassword": "Prawidłowe hasło"
       }
-    }
+    },
+    "ssoNoMatchTitle": "Logowanie SSO nie powiodło się",
+    "ssoNoMatch": {
+      "no_matching_user": "Żadne konto portalu klienta nie odpowiada adresowi {{providerEmail}}. Zaloguj się hasłem lub skontaktuj się z usługodawcą.",
+      "missing_email": "Dostawca tożsamości nie zwrócił adresu e-mail, więc nie udało się dopasować konta portalu klienta. Zaloguj się hasłem lub skontaktuj się z usługodawcą.",
+      "inactive_user": "Konto portalu klienta dla {{providerEmail}} jest nieaktywne. Skontaktuj się z usługodawcą, aby je ponownie aktywować.",
+      "user_type_mismatch": "{{providerEmail}} nie jest kontem portalu klienta. Skontaktuj się z usługodawcą.",
+      "tenant_mismatch": "{{providerEmail}} należy do portalu innej organizacji. Zaloguj się hasłem lub skontaktuj się z usługodawcą."
+    },
+    "configurationTitle": "Logowanie nie powiodło się",
+    "configurationMessage": "Logowanie nie powiodło się. Spróbuj ponownie lub skontaktuj się z usługodawcą."
   },
   "account": {
     "title": "Konto",

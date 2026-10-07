@@ -100,6 +100,22 @@ interface ConnectSsoClientProps {
   linkedAccounts: LinkedAccount[];
   providerOptions: ProviderOption[];
   linkStatus?: "linked" | "error";
+  linkErrorCode?: string;
+  linkErrorProviderEmail?: string;
+}
+
+// Codes mirror OAuthMappingFailureCode in the SSO mapper; anything else falls
+// back to the generic message.
+const LINK_ERROR_CODES = [
+  "no_matching_user",
+  "missing_email",
+  "inactive_user",
+  "user_type_mismatch",
+  "tenant_mismatch",
+] as const;
+
+function isKnownLinkErrorCode(code: string | undefined): code is (typeof LINK_ERROR_CODES)[number] {
+  return typeof code === "string" && (LINK_ERROR_CODES as readonly string[]).includes(code);
 }
 
 export default function ConnectSsoClient({
@@ -108,6 +124,8 @@ export default function ConnectSsoClient({
   linkedAccounts,
   providerOptions,
   linkStatus,
+  linkErrorCode,
+  linkErrorProviderEmail,
 }: ConnectSsoClientProps) {
   const { t } = useTranslation("msp/profile");
   const { t: tCommon } = useTranslation("common");
@@ -140,6 +158,20 @@ export default function ConnectSsoClient({
     () => providerOptions.some((provider) => provider.configured),
     [providerOptions]
   );
+
+  // The provider never matched an AlgaPSA user, so the message has to name both
+  // emails: the one the provider presented and the one this account signs in with.
+  const linkErrorMessage = useMemo(() => {
+    if (linkStatus !== "error") {
+      return null;
+    }
+
+    const providerEmail =
+      linkErrorProviderEmail ?? t("connectSso.linkError.unknownProviderEmail");
+    const code = isKnownLinkErrorCode(linkErrorCode) ? linkErrorCode : "generic";
+
+    return t(`connectSso.linkError.${code}`, { providerEmail, accountEmail: email });
+  }, [linkStatus, linkErrorCode, linkErrorProviderEmail, email, t]);
 
   const handleAuthorize = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -238,6 +270,15 @@ export default function ConnectSsoClient({
 
   return (
     <div className="space-y-6">
+      {linkErrorMessage && (
+        <Alert variant="destructive" id="sso-link-error">
+          <AlertDescription>
+            <span className="font-medium">{t("connectSso.linkError.title")}</span>{" "}
+            {linkErrorMessage}
+          </AlertDescription>
+        </Alert>
+      )}
+
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
