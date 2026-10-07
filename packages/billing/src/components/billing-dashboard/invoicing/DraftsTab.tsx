@@ -429,7 +429,9 @@ const DraftsTab: React.FC<DraftsTabProps> = ({
           />
         </div>
       ),
-      dataIndex: 'invoice_id',
+      // DataTable derives each column id from dataIndex, so ids must be unique per column.
+      // Sharing 'invoice_id' made the selection checkbox replace the Actions cell.
+      dataIndex: 'select',
       width: '50px',
       render: (_, record) => (
         <div className="flex items-center" onClick={(e) => e.stopPropagation()}>
@@ -485,7 +487,7 @@ const DraftsTab: React.FC<DraftsTabProps> = ({
     },
     ...(syncHidden ? [] : [{
       title: t('draftsTab.columns.quickbooks', { defaultValue: 'QuickBooks' }),
-      dataIndex: 'invoice_id' as const,
+      dataIndex: 'quickbooks_sync' as const,
       render: (_: unknown, record: DbInvoiceViewModel) => {
         const syncStatus = syncStatuses[record.invoice_id];
         if (!syncStatus) return null;
@@ -494,7 +496,7 @@ const DraftsTab: React.FC<DraftsTabProps> = ({
     }]),
     {
       title: t('draftsTab.columns.actions', { defaultValue: 'Actions' }),
-      dataIndex: 'invoice_id',
+      dataIndex: 'actions',
       width: '5%',
       render: (_, record) => (
         <div onClick={(e) => e.stopPropagation()}>
