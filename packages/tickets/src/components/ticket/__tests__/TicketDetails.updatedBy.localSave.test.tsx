@@ -40,6 +40,10 @@ let liveTicketContext = {
   reconnectVersion: 0,
 };
 
+const sessionRef = vi.hoisted(() => ({
+  current: { user: { id: 'user-1', name: 'Sam Session', email: 'sam@example.com' } } as null | { user: { id: string; name: string; email: string } },
+}));
+
 vi.mock('next/navigation', () => {
   // A fresh router on each render would reset the remote-update debounce.
   const router = { push: routerPushMock, refresh: vi.fn() };
@@ -51,7 +55,7 @@ vi.mock('next/navigation', () => {
 });
 
 vi.mock('next-auth/react', () => ({
-  useSession: () => ({ data: { user: { id: 'user-1', name: 'Sam Session', email: 'sam@example.com' } } }),
+  useSession: () => ({ data: sessionRef.current }),
 }));
 
 vi.mock('react-hot-toast', () => ({
@@ -486,6 +490,7 @@ describe('TicketDetails "Updated … by" after a local save without a currentUse
 
   afterEach(() => {
     cleanup();
+    sessionRef.current = { user: { id: 'user-1', name: 'Sam Session', email: 'sam@example.com' } };
   });
 
   it('names the session user in the header after a local save (full-page mount)', async () => {
@@ -508,5 +513,37 @@ describe('TicketDetails "Updated … by" after a local save without a currentUse
     await act(async () => { fireEvent.click(screen.getByTestId('change-priority')); });
 
     expect(screen.getByTestId('ticket-updated-at')).toHaveTextContent(/by Dana Drawer$/);
+  });
+
+  it('uses the session user when the session resolves after the first render (no stale null actor)', async () => {
+    const sessionUser = { user: { id: 'user-1', name: 'Sam Session', email: 'sam@example.com' } };
+    sessionRef.current = null;
+    const onBatchTicketUpdate = vi.fn().mockResolvedValue(true);
+    const view = render(
+      <TicketDetails
+        bootstrap={gridLayoutBootstrap}
+        initialTicket={baseTicket}
+        initialBoard={enabledBoard}
+        priorityOptions={[{ value: 'priority-1', label: 'Low' }, { value: 'priority-2', label: 'High' }]}
+        onBatchTicketUpdate={onBatchTicketUpdate}
+      />
+    );
+    await act(async () => {});
+
+    sessionRef.current = sessionUser;
+    await act(async () => {
+      view.rerender(
+        <TicketDetails
+          bootstrap={gridLayoutBootstrap}
+          initialTicket={baseTicket}
+          initialBoard={enabledBoard}
+          priorityOptions={[{ value: 'priority-1', label: 'Low' }, { value: 'priority-2', label: 'High' }]}
+          onBatchTicketUpdate={onBatchTicketUpdate}
+        />
+      );
+    });
+
+    await act(async () => { fireEvent.click(screen.getByTestId('change-priority')); });
+    expect(screen.getByTestId('ticket-updated-at')).toHaveTextContent(/by Sam Session$/);
   });
 });
