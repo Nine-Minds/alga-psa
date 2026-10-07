@@ -402,7 +402,9 @@ const FinalizedTab: React.FC<FinalizedTabProps> = ({
     },
     {
       title: t('finalizedTab.columns.status', { defaultValue: 'Status' }),
+      id: 'finalized_status',
       dataIndex: 'finalized_at',
+      sortable: false,
       render: () => (
         <Badge variant="success">
           {t('finalizedTab.status.finalized', { defaultValue: 'Finalized' })}
@@ -420,7 +422,9 @@ const FinalizedTab: React.FC<FinalizedTabProps> = ({
     },
     ...(syncHidden ? [] : [{
       title: t('finalizedTab.columns.quickbooks', { defaultValue: 'QuickBooks' }),
+      id: 'quickbooks_sync',
       dataIndex: 'invoice_id' as const,
+      sortable: false,
       render: (_: unknown, record: DbInvoiceViewModel) => {
         const syncStatus = syncStatuses[record.invoice_id];
         if (!syncStatus) return null;
@@ -429,7 +433,9 @@ const FinalizedTab: React.FC<FinalizedTabProps> = ({
     }]),
     {
       title: t('finalizedTab.columns.actions', { defaultValue: 'Actions' }),
+      id: 'actions',
       dataIndex: 'invoice_id',
+      sortable: false,
       width: '5%',
       render: (_, record) => (
         <div onClick={(e) => e.stopPropagation()}>

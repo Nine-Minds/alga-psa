@@ -2400,6 +2400,11 @@
       "updateFailed": "Nie udało się zaktualizować roli",
       "validateDeletionFailed": "Nie udało się sprawdzić możliwości usunięcia. Spróbuj ponownie.",
       "deleteFailed": "Nie udało się usunąć roli"
+    },
+    "editDialog": {
+      "title": "Edytuj rolę",
+      "builtInNameLocked": "Nazw wbudowanych ról nie można zmienić, ponieważ system z nich korzysta.",
+      "portalLocked": "Dostępu do portalu nie można zmienić po utworzeniu roli."
     }
   },
   "security": {
@@ -3476,7 +3481,10 @@
       "duplicate": "Ten użytkownik ma już wybraną rolę.",
       "changePermission": "Odmowa uprawnień: brak uprawnień do zmiany ról użytkowników.",
       "missingField": "Brakuje wymaganego pola roli użytkownika.",
-      "missingFieldNamed": "Brakuje wymaganego pola roli użytkownika: {{field}}."
+      "missingFieldNamed": "Brakuje wymaganego pola roli użytkownika: {{field}}.",
+      "nameRequired": "Nazwa roli jest wymagana.",
+      "builtInRename": "Nie można zmieniać nazw wbudowanych ról.",
+      "duplicateName": "Rola o nazwie „{{name}}” już istnieje dla tego portalu."
     },
     "secrets": {
       "tenantContextMissing": "Brak kontekstu organizacji. Odśwież stronę i spróbuj ponownie.",
