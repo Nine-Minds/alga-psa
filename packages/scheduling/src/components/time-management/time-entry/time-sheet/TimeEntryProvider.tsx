@@ -184,6 +184,18 @@ export function TimeEntryProvider({ children }: { children: React.ReactNode }): 
 
       let newEntries: ITimeEntryWithNew[] = [];
 
+      // The task → phase → project default, but only when this form can hold it:
+      // the service picker is hourly-only, so a default of any other billing
+      // method would render blank and then fail save validation. Tickets fall
+      // back to the client/tenant configured service resolved above. Shared by
+      // all new-entry branches so a work item keeps its default however it was opened.
+      const defaultServiceId = workItem.type === 'project_task' && workItem.service_id
+        ? workItem.service_id
+        : (workItem.type === 'ticket' ? ticketDefaultServiceId : '');
+      const prefilledServiceId = defaultServiceId && services.some(service => service.id === defaultServiceId)
+        ? defaultServiceId
+        : '';
+
       if (existingEntries?.length) {
         newEntries = existingEntries.map(({ ...rest }): ITimeEntryWithNew => ({
           ...rest,
@@ -199,9 +211,6 @@ export function TimeEntryProvider({ children }: { children: React.ReactNode }): 
       } else if (defaultStartTime && defaultEndTime) {
         const duration = calculateDuration(defaultStartTime, defaultEndTime);
         const isBillable = workItem.is_billable === false ? false : true;
-        const prefilledServiceId = workItem.type === 'project_task' && workItem.service_id
-          ? workItem.service_id
-          : (workItem.type === 'ticket' ? ticketDefaultServiceId : '');
 
         console.log('Creating new time entry with defaults:', {
           isBillable,
@@ -230,6 +239,7 @@ export function TimeEntryProvider({ children }: { children: React.ReactNode }): 
           _isServicePrefilled: !!prefilledServiceId,
           _originalServiceId: prefilledServiceId || null,
           _serviceOverridden: false,
+          _serviceSource: prefilledServiceId ? workItem.service_source : undefined,
         }];
       } else {
         let startTime: Date, endTime: Date;
@@ -273,14 +283,15 @@ export function TimeEntryProvider({ children }: { children: React.ReactNode }): 
           created_at: formatISO(new Date()),
           updated_at: formatISO(new Date()),
           approval_status: 'DRAFT',
-          service_id: workItem.type === 'ticket' ? ticketDefaultServiceId : '',
+          service_id: prefilledServiceId,
           tax_region: defaultTaxRegion || '',
           isNew: true,
           tempId: generateUUID(),
           client_id: clientId || undefined,
-          _isServicePrefilled: workItem.type === 'ticket' ? !!ticketDefaultServiceId : false,
-          _originalServiceId: workItem.type === 'ticket' && ticketDefaultServiceId ? ticketDefaultServiceId : null,
+          _isServicePrefilled: !!prefilledServiceId,
+          _originalServiceId: prefilledServiceId || null,
           _serviceOverridden: false,
+          _serviceSource: prefilledServiceId ? workItem.service_source : undefined,
         }];
       }
 

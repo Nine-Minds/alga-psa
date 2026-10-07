@@ -1,4 +1,5 @@
 import { TenantEntity } from ".";
+import type { ProjectServiceSource } from "./project.interfaces";
 
 export type WorkItemType = 'ticket' | 'project_task' | 'non_billable_category' | 'ad_hoc' | 'interaction' | 'appointment_request' | 'opportunity_step';
 
@@ -41,7 +42,9 @@ export interface IExtendedWorkItem extends IWorkItem {
   task_name?: string;
   service_id?: string | null;
   service_name?: string | null;
-  
+  /** Which hierarchy level the effective service came from (task → phase → project). */
+  service_source?: ProjectServiceSource;
+
   // Interaction specific fields
   interaction_type?: string;
   entity_type?: string;

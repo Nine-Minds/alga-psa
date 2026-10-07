@@ -145,6 +145,11 @@
       "durationSameDay": "La durée doit se terminer le même jour",
       "endSameDay": "L'heure de fin doit être le même jour que l'heure de début",
       "invalidTimeRange": "Saisissez une plage horaire valide"
+    },
+    "serviceSource": {
+      "task": "Par défaut depuis la tâche",
+      "phase": "Par défaut depuis la phase",
+      "project": "Par défaut depuis le projet"
     }
   },
   "workItemPicker": {

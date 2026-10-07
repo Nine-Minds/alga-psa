@@ -82,7 +82,12 @@
     "markedComplete": "Faza oznaczona jako ukończona",
     "reopened": "Faza otwarta ponownie",
     "completeReadyToast": "{{description}} jest gotowe do rozliczenia",
-    "viewInBilling": "Wyświetl"
+    "viewInBilling": "Wyświetl",
+    "serviceLabel": "Domyślna usługa (dla wpisów czasu)",
+    "noService": "Brak usługi",
+    "servicePlaceholder": "Wybierz domyślną usługę",
+    "serviceHelp": "Używana we wpisach czasu dla zadań tej fazy, gdy samo zadanie nie ustawia usługi.",
+    "serviceDisplayLabel": "Usługa"
   },
   "projectList": {
     "addProject": "Dodaj projekt",
@@ -143,6 +148,10 @@
     "projectManagerPlaceholder": "Wybierz osobę przypisaną",
     "budgetedHoursLabel": "Budżetowe godziny",
     "budgetedHoursPlaceholder": "Wprowadź godziny budżetowe",
+    "serviceLabel": "Domyślna usługa (dla wpisów czasu)",
+    "noService": "Brak usługi",
+    "servicePlaceholder": "Wybierz domyślną usługę",
+    "serviceHelp": "Używana we wpisach czasu tego projektu, gdy ani zadanie, ani jego faza nie ustawia usługi.",
     "startDateLabel": "Data rozpoczęcia",
     "startDatePlaceholder": "Wybierz datę rozpoczęcia",
     "endDateLabel": "Data zakończenia",
@@ -183,7 +192,11 @@
     "continueEditing": "Kontynuuj edycję",
     "discardChanges": "Odrzuć zmiany",
     "saveAndClose": "Zapisz i zamknij",
-    "saving": "Zapisywanie..."
+    "saving": "Zapisywanie...",
+    "serviceLabel": "Domyślna usługa (dla wpisów czasu)",
+    "noService": "Brak usługi",
+    "servicePlaceholder": "Wybierz domyślną usługę",
+    "serviceHelp": "Używana we wpisach czasu tego projektu, gdy ani zadanie, ani jego faza nie ustawia usługi."
   },
   "projectDetail": {
     "allAgents": "Wszyscy agenci",
@@ -428,6 +441,8 @@
     "duplicatedSuccess": "Zadanie „{{taskName}}” zostało pomyślnie zduplikowane!",
     "willBeSetOnCreate": "Zostanie ustawiony podczas tworzenia",
     "unknownPhase": "Nieznana faza",
+    "serviceInheritedFromPhase": "Dziedziczy {{service}} z fazy.",
+    "serviceInheritedFromProject": "Dziedziczy {{service}} z projektu.",
     "startDateLabel": "Data rozpoczęcia",
     "taskStartDateLabel": "Data rozpoczęcia zadania",
     "startDatePlaceholder": "Wybierz datę rozpoczęcia"
@@ -1458,6 +1473,10 @@
     "addPhase": "Dodaj fazę",
     "phaseNamePlaceholder": "Nazwa fazy… *",
     "descriptionPlaceholder": "Opis",
+    "serviceLabel": "Domyślna usługa (dla wpisów czasu)",
+    "noService": "Brak usługi",
+    "servicePlaceholder": "Wybierz domyślną usługę",
+    "serviceHelp": "Używana we wpisach czasu dla zadań tej fazy, gdy samo zadanie nie ustawia usługi.",
     "adding": "Dodawanie…",
     "addError": "Nie udało się dodać fazy. Spróbuj ponownie.",
     "title": "Fazy projektu",
