@@ -49,7 +49,7 @@ The only way to loop someone else into a ticket email today is the watch list. T
 ## UX / UI Notes
 
 - **Placement:** the shared `TextEditor` (`packages/ui/src/editor/TextEditor.tsx:494-515`) owns the "Attach files" button. Add an optional slot for extra footer actions next to it (e.g. `footerActions`). `TicketConversation` uses it to render a **Cc/Bcc** toggle button (id `ticket-comment-cc-bcc-toggle`).
-- **Expanded state:** two labelled rows, "Cc" and "Bcc" (ids `ticket-comment-cc-input`, `ticket-comment-bcc-input`), shown above the editor body Gmail-style.
+- **Expanded state:** two labelled rows, "Cc" and "Bcc" (ids `ticket-comment-cc-input`, `ticket-comment-bcc-input`), shown above the editor body Gmail-style, side by side in two columns (one column below `sm`): half the width is enough for an address, and the pair costs one row of height instead of two.
   - Each row is a chip input with suggestions: the client's contacts first, then internal users, plus free-text emails.
   - Pasting a comma- or semicolon-separated list splits it into chips.
   - Invalid addresses render as error chips and block sending.
@@ -61,6 +61,7 @@ The only way to loop someone else into a ticket email today is the watch list. T
   - The reply inherits `is_internal` from its parent comment (there is no Internal toggle), so the Cc/Bcc control only shows when replying to a public comment.
   - `InlineReplyComposer` is generic UI. It gets an optional slot next to "Attach files" plus cc/bcc in its submit payload, and stays unchanged when the slot isn't passed.
 - **Bento layout (in v1):** `BentoTimelineTile` has its own copy of the main composer and its own `InlineReplyComposer`. Both get the same control.
+- **Resolve and close:** `TicketResolutionDialog` is the other way to leave a comment, so it gets the same control — the toggle in the editor footer, the rows above the editor. Its own fields sit in two columns as well (close status beside the Internal switch) to keep the dialog short.
 - **One implementation:** a shared `CommentEmailRecipientsControl` (toggle, rows, hide-when-internal) is used by the classic composer, the bento composer and both reply composers.
 - **Opt-in:** the control is enabled by a prop (e.g. `allowEmailRecipients`). The client portal reuses `TicketConversation` and does not enable it.
 - **Mobile (ee/mobile):** an expandable Cc/Bcc section in the comment composer (`CommentsSection` / `useCommentDraft`) with free-text chips and contact suggestions. It is hidden for internal comments.
@@ -105,6 +106,11 @@ Each entry point accepts cc/bcc, validates them and stores them:
 - FR17. `sendEventEmail` and `SendEmailParams` gain optional `cc`/`bcc` and pass them to `TenantEmailService.sendEmail`, which already supports them.
 - FR18. The delivery claim (`ticket_comment_email_deliveries`) for a combined send is keyed on the `To` recipient as today. The email log already records `cc_addresses`/`bcc_addresses`.
 - FR19. Explicitly chosen CC/BCC recipients receive the same message and attachments as the `To` recipient. The per-recipient attachment gate is evaluated for the `To` recipient only.
+
+**Resolve and close** (`handleTicketClosed`)
+
+- FR30. A resolution written to close a ticket has its comment email deliberately suppressed (`metadata.closes_ticket`), so the **close** email is the message that carries that comment's CC/BCC: the requester's close email gets the `Cc`/`Bcc` headers, and when no requester message goes out (no address, or contact notifications suppressed) the same fallback shapes as FR15 apply with the close template. Anyone on those lists is dropped from the separate assignee/additional-agent/watcher close emails, as in FR16.
+- FR31. Only the resolution that closed the ticket is read: its row carries `closes_ticket`. A resolution left open already emailed its own copies as a normal comment, so a later close never re-copies them. If the status write that follows the resolution never happens (close rules block it, or bundle propagation is cancelled), no close email goes out and the copies are not sent — the same as the resolution body itself.
 
 **Bundles**
 

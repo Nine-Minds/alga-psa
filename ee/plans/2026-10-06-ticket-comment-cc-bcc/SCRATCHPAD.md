@@ -123,6 +123,40 @@ Fixes from the review:
 
 Test coverage this round: the grep-based delivery contract is gone except for the attachment claim/gate (which the SMTP harness cannot reach cheaply). The isolated-SMTP suite grew to 14 cases, a new storage suite covers identity resolution / metadata merge / bundle mirror / API read / Bcc mask, the workflow handler is exercised, and the composer wiring has its own suites. Eight tests stay unimplemented with the reason recorded in `tests.json`: the five server-action integration tests (no harness for calling a Next.js server action against a database), T032 (needs stored attachments), T057 (scheduling job path) and T069 (bento inline reply rendering stack).
 
+## Round 3 — Resolve and close (2026-10-07)
+
+Operator feedback: the Cc/Bcc rows ate too much vertical space, and "Resolve and
+close" — the other way to leave a comment — had no Cc/Bcc at all.
+
+- **Two columns.** The Cc and Bcc rows now sit side by side (`sm:grid-cols-2`);
+  half the width is plenty for an address. `TicketResolutionDialog` also pairs
+  the close-status select with the Internal switch, so the dialog is two rows
+  shorter.
+- **The dialog is a composer.** It renders the shared
+  `CommentEmailRecipientsControl` (toggle in the editor footer via
+  `footerActions`, rows above the editor), blocks **Resolve and close** on an
+  invalid address, hides-and-keeps the values while Internal is on, and resets
+  on reopen. `onConfirm` carries the payload to `addResolutionComment` →
+  `addTicketCommentWithCache`.
+- **Delivery had to move.** A resolution paired with a close is written with
+  `metadata.closes_ticket`, and `handleTicketCommentAdded` deliberately returns
+  early for those rows — the close email carries the resolution body. So the
+  Cc/Bcc had to ride the **close** email: `handleTicketClosed` now reads the
+  closing resolution's `email_recipients`, puts them on the requester's close
+  message, runs the same no-requester fallback shapes, and adds them to the
+  seen-set so a cc'd watcher or assignee gets one message. The selection logic
+  is now one function, `selectOneOffEmailRecipients`, used by both handlers.
+  This also fixes the classic composer's "resolution + close status" path,
+  which collected Cc/Bcc and had nowhere to deliver them.
+- **Scope:** only a resolution row carrying `closes_ticket` is read. A
+  resolution left open already mailed its own copies as a normal comment, so a
+  later close does not copy them again (T079).
+- **Other ways to leave a comment** were audited: classic composer, inline
+  reply, `CommentThreadDrawer`, both bento composers, mobile, REST and the
+  workflow action were already wired; `TicketResolutionDialog` was the only one
+  missing. `QuickAddTicket`, `BentoHero` and `TicketInfo` use `TextEditor` for
+  ticket *descriptions*, not comments, and `TaskCommentThread` is project tasks.
+
 ## Commands
 
 - Regenerate OpenAPI and sync the developer portal with the `alga-openapi-sync` skill.

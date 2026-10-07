@@ -70,8 +70,16 @@
   {"id": "T069", "commitGroup": "composer-ui", "featureIds": ["F046"], "implemented": false, "description": "UI: bento layout inline reply sends cc/bcc via onAddReplyComment — DEFERRED: the bento inline reply needs the thread-group rendering stack this suite stubs out; it reuses the control and InlineReplyComposer slot pinned by T058/T066/T071, and the bento composer's own path is covered by T068"},
   {"id": "T070", "commitGroup": "composer-ui", "featureIds": ["F047"], "implemented": true, "description": "UI: client portal ticket composer and reply composer render no Cc/Bcc control"},
   {"id": "T071", "commitGroup": "composer-ui", "featureIds": ["F038"], "implemented": true, "description": "Component: InlineReplyComposer without the slot renders unchanged and its onSubmit payload is backward compatible (existing replyComposer e2e contract test still passes)"},
+  {"id": "T073", "commitGroup": "composer-ui", "featureIds": ["F049"], "implemented": true, "description": "UI: Cc and Bcc entered in the Resolve and close dialog reach onConfirm as the cc/bcc payload"},
+  {"id": "T074", "commitGroup": "composer-ui", "featureIds": ["F049"], "implemented": true, "description": "UI: an internal resolution hides the rows and sends no recipients, keeping the entered values"},
+  {"id": "T075", "commitGroup": "composer-ui", "featureIds": ["F049"], "implemented": true, "description": "UI: an invalid address disables Resolve and close until it is corrected"},
+  {"id": "T076", "commitGroup": "composer-ui", "featureIds": ["F049"], "implemented": true, "description": "UI: reopening the Resolve and close dialog clears the previous recipients, and a host that opts out gets no control at all"},
 
   {"id": "T072", "commitGroup": "email-delivery", "featureIds": ["F016", "F045"], "implemented": true, "description": "Subscriber: a threaded reply (parent_comment_id set) with cc sends the requester email with Cc, same as a top-level comment"},
+  {"id": "T077", "commitGroup": "email-delivery", "featureIds": ["F051"], "implemented": true, "description": "SMTP: the requester's close email carries Cc from the closing resolution, the Bcc copy names nobody, and the log records both lists"},
+  {"id": "T078", "commitGroup": "email-delivery", "featureIds": ["F051"], "implemented": true, "description": "SMTP: with no requester address the close message goes To the first Cc with the rest in Cc and Bcc"},
+  {"id": "T079", "commitGroup": "email-delivery", "featureIds": ["F051"], "implemented": true, "description": "SMTP: a resolution that did not close the ticket keeps its Cc off a later close email"},
+  {"id": "T080", "commitGroup": "email-delivery", "featureIds": ["F051"], "implemented": true, "description": "SMTP: a watcher also cc'd on the closing resolution receives exactly one close message"},
 
   {"id": "T059", "commitGroup": "timeline-display", "featureIds": ["F039"], "implemented": true, "description": "UI: MSP timeline shows Cc and Bcc lines with contact names when known and raw emails otherwise"},
   {"id": "T060", "commitGroup": "timeline-display", "featureIds": ["F040"], "implemented": true, "description": "Client portal action response for ticket comments contains cc but never bcc"},
