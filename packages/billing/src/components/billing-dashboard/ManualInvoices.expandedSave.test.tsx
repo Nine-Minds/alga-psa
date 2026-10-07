@@ -87,4 +87,50 @@ describe('expanded invoice adjustment global save', () => {
     expect(mocks.update.mock.calls[0][1].updatedItems).toEqual([expect.objectContaining({ item_id: 'manual-1', quantity: 3, rate: 5000, description: 'Edited charge' })]);
     expect((document.getElementById('description-input') as HTMLInputElement).value).toBe('Edited charge');
   });
+
+  it.each([
+    ['fixed', '25.50', { rate: -2550, discount_type: 'fixed' }],
+    ['percentage', '10', { rate: 0, discount_type: 'percentage', discount_percentage: 10 }],
+  ] as const)('submits a new expanded %s discount without row Add', async (discountType, amount, expected) => {
+    mocks.update.mockResolvedValue({ success: false, code: 'unexpected_error', message: 'write failed' });
+    renderDraft();
+    await waitFor(() => expect(document.getElementById('add-discount-button')).toBeTruthy());
+    fireEvent.click(document.getElementById('add-discount-button')!);
+    fireEvent.change(document.getElementById('discount-type-select')!, { target: { value: discountType } });
+    fireEvent.change(document.getElementById('discount-value-input')!, { target: { value: amount } });
+    fireEvent.change(document.getElementById('discount-description-input')!, { target: { value: `${discountType} discount` } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+    await waitFor(() => expect(mocks.update).toHaveBeenCalledTimes(1));
+    expect(mocks.update.mock.calls[0][1].newItems).toEqual([expect.objectContaining({ is_discount: true, description: `${discountType} discount`, ...expected })]);
+  });
+
+  it.each([
+    ['fixed', -2550, undefined, '30.00', { rate: -3000, discount_type: 'fixed' }],
+    ['percentage', 0, 10, '15', { discount_type: 'percentage', discount_percentage: 15 }],
+  ] as const)('submits an edited existing %s discount while expanded', async (discountType, rate, percentage, amount, expected) => {
+    const discount = { item_id: `discount-${discountType}`, invoice_id: 'invoice-1', description: 'Existing discount', quantity: 1, unit_price: rate, total_price: rate, net_amount: rate, tax_amount: 0, is_manual: true, is_discount: true, discount_type: discountType, discount_percentage: percentage, is_taxable: false };
+    mocks.lineItems.mockResolvedValueOnce([discount] as any);
+    mocks.update.mockResolvedValue({ success: false, code: 'unexpected_error', message: 'write failed' });
+    renderDraft({ ...invoice, invoice_charges: [...invoice.invoice_charges, discount] });
+    await waitFor(() => expect(document.getElementById(`item-${discount.item_id}`)).toBeTruthy());
+    fireEvent.click(document.getElementById(`item-${discount.item_id}`)!);
+    fireEvent.change(document.getElementById('discount-value-input')!, { target: { value: amount } });
+    fireEvent.change(document.getElementById('discount-description-input')!, { target: { value: 'Updated discount' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+    await waitFor(() => expect(mocks.update).toHaveBeenCalledTimes(1));
+    expect(mocks.update.mock.calls[0][1].updatedItems).toEqual([expect.objectContaining({ item_id: discount.item_id, is_discount: true, description: 'Updated discount', ...expected })]);
+  });
+
+  it('submits an edited quantity-derived credit while expanded', async () => {
+    const credit = { item_id: 'credit-1', invoice_id: 'invoice-1', service_id: 'svc-1', description: 'Quantity credit', quantity: 3, unit_price: -10000, total_price: -30000, net_amount: -30000, tax_amount: 0, is_manual: true, is_discount: true, is_manual_credit: true, discount_type: 'fixed', is_taxable: false };
+    mocks.lineItems.mockResolvedValueOnce([credit] as any);
+    mocks.update.mockResolvedValue({ success: false, code: 'unexpected_error', message: 'write failed' });
+    renderDraft({ ...invoice, invoice_charges: [...invoice.invoice_charges, credit] });
+    await waitFor(() => expect(document.getElementById('item-credit-1')).toBeTruthy());
+    fireEvent.click(document.getElementById('item-credit-1')!);
+    fireEvent.change(document.getElementById('quantity-input')!, { target: { value: '5' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+    await waitFor(() => expect(mocks.update).toHaveBeenCalledTimes(1));
+    expect(mocks.update.mock.calls[0][1].updatedItems).toEqual([expect.objectContaining({ item_id: 'credit-1', quantity: 5, rate: -10000 })]);
+  });
 });
