@@ -614,6 +614,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         resolution: string,
         suppression: TicketNotificationSuppressionValue,
         isInternal: boolean = false,
+        emailRecipients?: CommentEmailRecipientsPayload,
     ): Promise<boolean> => {
         const ticketId = ticket.ticket_id;
         if (!ticketId) {
@@ -631,6 +632,10 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                         true,
                         true,
                         suppression,
+                        null,
+                        // The close email carries these; see the email
+                        // subscriber's closes_ticket handling.
+                        emailRecipients,
                     );
                     if (isReturnedActionError(result)) {
                         throw result;
@@ -2997,6 +3002,7 @@ const handleClose = () => {
         contentBlocks: PartialBlock[],
         suppression: TicketNotificationSuppressionValue,
         isInternal: boolean = false,
+        emailRecipients?: CommentEmailRecipientsPayload,
     ) => {
         if (!ticket.ticket_id || !closedStatusOptions.some((option) => option.value === statusId)) {
             toast.error(t('messages.closeFailed', 'Failed to close ticket'));
@@ -3006,7 +3012,12 @@ const handleClose = () => {
         setIsSubmittingResolutionClose(true);
         let resolutionSaved = false;
         try {
-            const resolutionAdded = await addResolutionComment(JSON.stringify(contentBlocks), suppression, isInternal);
+            const resolutionAdded = await addResolutionComment(
+                JSON.stringify(contentBlocks),
+                suppression,
+                isInternal,
+                emailRecipients,
+            );
             if (!resolutionAdded) {
                 return false;
             }
@@ -3897,6 +3908,8 @@ const handleClose = () => {
                     currentUserId={userId}
                     statusOptions={closedStatusOptions}
                     isSubmitting={isSubmittingResolutionClose}
+                    clientId={ticket.client_id ?? null}
+                    allowEmailRecipients
                     onClose={() => {
                         if (!isSubmittingResolutionClose) {
                             setIsResolutionCloseDialogOpen(false);

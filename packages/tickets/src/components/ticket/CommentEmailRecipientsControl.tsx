@@ -211,26 +211,30 @@ export function CommentEmailRecipientsControl({
 
   return (
     <div id={`${idPrefix}-email-recipients`} className="mb-2 space-y-2">
-      <EmailRecipientsInput
-        id={`${idPrefix}-${COMMENT_EMAIL_RECIPIENTS_CC_ID}`}
-        label={t('conversation.cc', 'Cc')}
-        value={value.cc}
-        onChange={(cc) => onChange((prev) => ({ ...prev, cc }))}
-        invalidEntries={value.invalidCc}
-        onInvalidEntriesChange={(invalidCc) => onChange((prev) => ({ ...prev, invalidCc }))}
-        disabled={disabled}
-        searchSuggestions={searchSuggestions}
-      />
-      <EmailRecipientsInput
-        id={`${idPrefix}-${COMMENT_EMAIL_RECIPIENTS_BCC_ID}`}
-        label={t('conversation.bcc', 'Bcc')}
-        value={value.bcc}
-        onChange={(bcc) => onChange((prev) => ({ ...prev, bcc }))}
-        invalidEntries={value.invalidBcc}
-        onInvalidEntriesChange={(invalidBcc) => onChange((prev) => ({ ...prev, invalidBcc }))}
-        disabled={disabled}
-        searchSuggestions={searchSuggestions}
-      />
+      {/* Half the width is plenty for an address, so the two rows sit side by
+          side and cost one row of vertical space instead of two. */}
+      <div className="grid grid-cols-1 items-start gap-x-3 gap-y-2 sm:grid-cols-2">
+        <EmailRecipientsInput
+          id={`${idPrefix}-${COMMENT_EMAIL_RECIPIENTS_CC_ID}`}
+          label={t('conversation.cc', 'Cc')}
+          value={value.cc}
+          onChange={(cc) => onChange((prev) => ({ ...prev, cc }))}
+          invalidEntries={value.invalidCc}
+          onInvalidEntriesChange={(invalidCc) => onChange((prev) => ({ ...prev, invalidCc }))}
+          disabled={disabled}
+          searchSuggestions={searchSuggestions}
+        />
+        <EmailRecipientsInput
+          id={`${idPrefix}-${COMMENT_EMAIL_RECIPIENTS_BCC_ID}`}
+          label={t('conversation.bcc', 'Bcc')}
+          value={value.bcc}
+          onChange={(bcc) => onChange((prev) => ({ ...prev, bcc }))}
+          invalidEntries={value.invalidBcc}
+          onInvalidEntriesChange={(invalidBcc) => onChange((prev) => ({ ...prev, invalidBcc }))}
+          disabled={disabled}
+          searchSuggestions={searchSuggestions}
+        />
+      </div>
       {(value.invalidCc.length > 0 || value.invalidBcc.length > 0) && (
         <p role="alert" className="text-xs text-destructive">
           {t('conversation.ccBccInvalid', 'Fix the highlighted addresses before sending.')}
