@@ -47,6 +47,9 @@ function buildClientCadenceServicePeriodRow(overrides: Row = {}): Row {
     tenant: 'tenant-1',
     cadence_owner: 'client',
     obligation_type: 'client_contract_line',
+    obligation_id: 'line-1',
+    // The query stub consumes joined rows; include the contract owner.
+    owner_client_id: 'client-1',
     client_id: 'client-1',
     schedule_key: 'schedule:tenant-1:client_contract_line:line-1:client:arrears',
     period_key: 'period:2025-01-01:2025-02-01',
@@ -166,6 +169,13 @@ function createQueryBuilder(rows: Row[], tableName: string) {
 const mocks = vi.hoisted(() => {
   const missingTables = new Set<string>();
   const rowsByTable: Record<string, Row[]> = {
+    client_billing_profiles: [{
+      billing_profile_id: 'unit-test-default-billing-profile',
+      tenant: 'tenant-1',
+      client_id: 'client-1',
+      is_default: true,
+      is_active: true,
+    }],
     client_billing_cycles: [
       {
         billing_cycle_id: 'cycle-1',
@@ -181,6 +191,15 @@ const mocks = vi.hoisted(() => {
         client_name: 'Acme Corp',
       },
     ],
+    // Joined contract-line / client-assignment result used by ownership validation.
+    contract_lines: [{
+      contract_line_id: 'line-1',
+      contract_id: 'contract-1',
+      tenant: 'tenant-1',
+      client_id: 'client-1',
+      line_profile_id: null,
+      contract_profile_id: null,
+    }],
     invoices: [],
     recurring_service_periods: [buildClientCadenceServicePeriodRow()],
     client_billing_settings: [
@@ -485,6 +504,32 @@ describe('selector-input recurring generation', () => {
     mocks.rowsByTable.time_entries = [];
   });
 
+  it.each(['client_billing_profiles', 'contract_lines'])(
+    'rejects a contract-cadence selection when %s belongs to another client',
+    async (table) => {
+      const row = mocks.rowsByTable[table][0];
+      const originalClientId = row.client_id;
+      row.client_id = 'other-client';
+      const selectorInput = buildContractCadenceDueSelectionInput({
+        clientId: 'client-1',
+        contractId: 'contract-1',
+        contractLineId: 'line-1',
+        windowStart: '2025-02-08',
+        windowEnd: '2025-03-08',
+      });
+
+      try {
+        await expect(generateInvoiceForSelectionInput(selectorInput)).rejects.toThrow(
+          'does not belong to client client-1 in this tenant',
+        );
+        expect(mocks.persistInvoiceCharges).not.toHaveBeenCalled();
+        expect(mocks.rowsByTable.invoices).toEqual([]);
+      } finally {
+        row.client_id = originalClientId;
+      }
+    },
+  );
+
   it('T006: recurring generation API accepts a client-cadence selector-input window with no `client_contract_lines` table', async () => {
     mocks.missingTables.add('client_contract_lines');
 
@@ -725,3 +770,15 @@ describe('selector-input recurring generation', () => {
     expect(mocks.calculateBillingForExecutionWindow).not.toHaveBeenCalled();
   });
 });
+
+// These fixtures characterize orchestration with no pending contract events.
+// Database settlement and discount lifecycle are covered by the invoice integration suite.
+vi.mock('@alga-psa/billing/lib/billing/reconcileContractChangeAdjustments', async importOriginal => ({
+  ...(await importOriginal<typeof import('@alga-psa/billing/lib/billing/reconcileContractChangeAdjustments')>()),
+  resolveContractChangeChargesForWindow: vi.fn(async () => []),
+  releaseOrphanedContractAdjustments: vi.fn(async () => undefined),
+  reconcileContractChangeAdjustmentsForInvoice: vi.fn(async () => ({ changed: false, settledInvoiceId: null, amountCents: 0 })),
+}));
+vi.mock('@alga-psa/billing/lib/billing/reconcileAutomaticInvoiceDiscounts', () => ({
+  reconcileAutomaticInvoiceAdjustments: vi.fn(async () => 0),
+}));

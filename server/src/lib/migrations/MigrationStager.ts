@@ -118,6 +118,7 @@ export class MigrationStager {
                 source_record_id: String(row.source_record_id),
                 namespace: String(row.external_identifier_namespace),
                 payload: JSON.stringify(row),
+                custom_field_values: JSON.stringify({}),
                 source_created_at: (row.created_at as string | null) ?? null,
                 source_updated_at: (row.updated_at as string | null) ?? null,
                 validation_state: 'valid',
@@ -147,6 +148,25 @@ export class MigrationStager {
           });
         }
 
+        if (presentTables.includes('custom_field_values')) {
+          const grouped = new Map<string, { entityType: string; packageRecordId: string; fields: Record<string, unknown> }>();
+          for (const row of reader.readRows('custom_field_values', STAGING_BATCH_SIZE)) {
+            const entityType = String(row.entity_type);
+            const packageRecordId = String(row.entity_package_record_id);
+            const key = `${entityType}\0${packageRecordId}`;
+            let item = grouped.get(key);
+            if (!item) {
+              item = { entityType, packageRecordId, fields: Object.create(null) as Record<string, unknown> };
+              grouped.set(key, item);
+            }
+            item.fields[String(row.field_name)] = JSON.parse(String(row.value_json));
+            if (grouped.size >= STAGING_BATCH_SIZE) {
+              await flushCustomFields(grouped, trx, migrationJobId, this.tenant);
+            }
+          }
+          await flushCustomFields(grouped, trx, migrationJobId, this.tenant);
+        }
+
         await db.table('migration_jobs').where({ migration_job_id: migrationJobId }).update({
           state: 'needs_configuration',
           package_id: manifest.package_id,
@@ -165,6 +185,27 @@ export class MigrationStager {
 
     return { validation, stagedCounts, rejected: false };
   }
+}
+
+async function flushCustomFields(
+  grouped: Map<string, { entityType: string; packageRecordId: string; fields: Record<string, unknown> }>,
+  trx: Knex.Transaction,
+  migrationJobId: string,
+  tenant: string
+): Promise<void> {
+  if (grouped.size === 0) return;
+  const items = [...grouped.values()];
+  const tuples = items.map(() => '(?::text, ?::text, ?::jsonb)').join(', ');
+  const bindings = items.flatMap((item) => [item.entityType, item.packageRecordId, JSON.stringify(item.fields)]);
+  await trx.raw(
+    `UPDATE migration_staged_records AS s
+     SET custom_field_values = s.custom_field_values || v.fields
+     FROM (VALUES ${tuples}) AS v(entity_type, package_record_id, fields)
+     WHERE s.tenant = ? AND s.migration_job_id = ?
+       AND s.entity_type = v.entity_type AND s.package_record_id = v.package_record_id`,
+    [...bindings, tenant, migrationJobId]
+  );
+  grouped.clear();
 }
 
 function summarizeDiagnostics(diagnostics: AmpDiagnostic[]): string {

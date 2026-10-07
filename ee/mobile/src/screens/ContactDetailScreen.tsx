@@ -1,3 +1,4 @@
+import { formatPhoneForDisplay, formatPhoneLabel } from "../../../../packages/validation/src/lib/phone";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { CommonActions } from "@react-navigation/native";
 import { Linking, Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
@@ -26,6 +27,9 @@ import { usePullToRefresh } from "../hooks/usePullToRefresh";
 import { logger } from "../logging/logger";
 import { usePlaceCall } from "../features/interactions/hooks/usePlaceCall";
 import { CallPromptHost } from "../features/interactions/components/CallPromptHost";
+import { ContactFormModal } from "../features/contacts/components/ContactFormModal";
+import { useCapabilities } from "../capabilities/CapabilitiesContext";
+import { IconButton } from "../ui/components/IconButton";
 
 type Props = NativeStackScreenProps<RootStackParamList, "ContactDetail">;
 
@@ -51,6 +55,22 @@ export function ContactDetailScreen({ route, navigation }: Props) {
   const [contact, setContact] = useState<ContactDetail | null>(null);
   const [initialLoading, setInitialLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [editOpen, setEditOpen] = useState(false);
+  const { features } = useCapabilities();
+
+  useEffect(() => {
+    if (!features.contactsUpdate || !contact) return;
+    navigation.setOptions({
+      headerRight: () => (
+        <IconButton
+          testID="contact-detail-edit"
+          icon={<Feather name="edit-2" size={20} color={theme.colors.text} />}
+          onPress={() => setEditOpen(true)}
+          accessibilityLabel={t("detail.edit")}
+        />
+      ),
+    });
+  }, [contact, features.contactsUpdate, navigation, t, theme.colors.text]);
 
   const fetchContact = useCallback(async () => {
     if (!client || !session) return;
@@ -250,7 +270,7 @@ export function ContactDetailScreen({ route, navigation }: Props) {
                 contactName={contact.full_name}
                 onCall={() => placeCall({
                   origin: { kind: "contact", id: contactId },
-                  phone: phone.phone_number,
+                  phone: formatPhoneForDisplay(phone.phone_number, phone.extension).e164 || phone.phone_number,
                   name: contact.full_name,
                   contactId,
                   clientId: contact.client_id ?? null,
@@ -287,6 +307,17 @@ export function ContactDetailScreen({ route, navigation }: Props) {
           <Text style={{ ...theme.typography.body, color: theme.colors.text }}>{notes}</Text>
         </SectionCard>
       ) : null}
+
+      <ContactFormModal
+        visible={editOpen}
+        mode="edit"
+        client={client}
+        apiKey={session.accessToken}
+        baseUrl={config.baseUrl}
+        initial={contact}
+        onClose={() => setEditOpen(false)}
+        onSaved={() => void fetchContact()}
+      />
     </ScrollView>
   );
 }
@@ -335,7 +366,7 @@ function PhoneRow({
     >
       <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary }}>{label}</Text>
       <Text style={{ ...theme.typography.body, color: theme.colors.primary, marginTop: 2 }}>
-        {phone.phone_number}
+        {formatPhoneLabel(formatPhoneForDisplay(phone.phone_number, phone.extension), t("detail.phoneExtension", { defaultValue: "ext." }))}
       </Text>
     </Pressable>
   );

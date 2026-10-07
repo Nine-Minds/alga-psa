@@ -51,7 +51,7 @@ export class KbImportParseTimeoutError extends Error {
 
 const HTML_CHUNK_SIZE = 64 * 1024;
 const MARKDOWN_CHUNK_SIZE = 64 * 1024;
-const INLINE_CHUNK_SIZE = 32 * 1024;
+export const INLINE_CHUNK_SIZE = 32 * 1024;
 
 class Deadline {
   private readonly expiresAt: number | null;
@@ -463,19 +463,30 @@ class DeadlineTokenizer extends Tokenizer {
 /**
  * Splits one oversized inline run at the latest whitespace inside each window,
  * falling back to a hard cut when a chunk holds no break at all.
+ *
+ * Exported for tests only.
  */
-function splitInlineChunks(src: string): string[] {
+export function splitInlineChunks(src: string, deadline: Deadline = new Deadline()): string[] {
   const chunks: string[] = [];
   let offset = 0;
 
   while (offset < src.length) {
+    deadline.check(true);
     let end = offset + INLINE_CHUNK_SIZE;
     if (end < src.length) {
-      const breakAt = Math.max(
-        src.lastIndexOf('\n', end - 1),
-        src.lastIndexOf(' ', end - 1),
-      );
-      if (breakAt > offset + INLINE_CHUNK_SIZE / 2) end = breakAt + 1;
+      // Searching from `end` with String#lastIndexOf scans all the way back to
+      // the start of `src` when a run contains no whitespace. Repeating that
+      // for every window makes exactly the pathological input this chunking is
+      // meant to protect quadratic. Bound the search to the latter half of the
+      // current window instead.
+      const earliestBreak = offset + INLINE_CHUNK_SIZE / 2;
+      for (let cursor = end - 1; cursor > earliestBreak; cursor--) {
+        const character = src.charCodeAt(cursor);
+        if (character === 0x0a || character === 0x20) {
+          end = cursor + 1;
+          break;
+        }
+      }
     } else {
       end = src.length;
     }
@@ -512,7 +523,7 @@ class DeadlineLexer extends Lexer {
       return super.inlineTokens(src, tokens);
     }
 
-    for (const chunk of splitInlineChunks(src)) {
+    for (const chunk of splitInlineChunks(src, this.deadline)) {
       this.deadline.check(true);
       super.inlineTokens(chunk, tokens);
     }

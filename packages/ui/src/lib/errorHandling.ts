@@ -316,15 +316,37 @@ export function getErrorMessage(error: unknown): string {
   return 'An unexpected error occurred';
 }
 
+/** An error whose message was written for the end user and may be displayed verbatim. */
+export class UserFacingError extends Error {
+  name = 'UserFacingError';
+}
+
+/**
+ * The message to show a user for `error`: a returned actionError/permissionError payload's text,
+ * a UserFacingError's message, otherwise `fallback`. Never returns the message of an arbitrary
+ * thrown error — those can carry driver/stack detail and belong in logs only.
+ */
+export function userFacingErrorMessage(error: unknown, fallback: string): string {
+  if (isActionPermissionError(error)) {
+    return error.permissionError;
+  }
+  if (isActionMessageError(error)) {
+    return error.actionError;
+  }
+  if (error instanceof UserFacingError) {
+    return error.message;
+  }
+  return fallback;
+}
+
 /**
  * Handle errors with appropriate UI feedback.
  * Shows permission errors with a ShieldAlert icon and other errors normally.
  */
 export function handleError(error: unknown, fallbackMessage?: string): void {
-  const message = getErrorMessage(error);
-
   if (isPermissionError(error)) {
     // Show permission errors with an Alert-style layout
+    const message = getErrorMessage(error);
     toast.custom((t) => (
       React.createElement('div', {
         className: `${t.visible ? 'animate-enter' : 'animate-leave'} max-w-md w-full bg-alert-destructive-bg shadow-lg rounded-lg pointer-events-auto flex items-start p-4 border border-destructive/30`,
@@ -345,9 +367,16 @@ export function handleError(error: unknown, fallbackMessage?: string): void {
     ), {
       duration: 5000,
     });
+  } else if (isActionMessageError(error)) {
+    // A returned actionError is the explicit user-safe channel, so its message
+    // outranks the caller's generic fallback — otherwise a specific server reply
+    // ("filters are no longer valid") is hidden behind "Failed to fetch…".
+    // Thrown errors and unknown values never match this guard, so raw exception
+    // text still cannot reach a toast.
+    toast.error(error.actionError);
   } else {
     // Show other errors normally
-    toast.error(fallbackMessage || message);
+    toast.error(fallbackMessage || getErrorMessage(error));
   }
 
   // Always log to console for debugging

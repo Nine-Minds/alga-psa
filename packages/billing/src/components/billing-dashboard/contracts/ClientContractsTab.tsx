@@ -37,7 +37,7 @@ import {
   type RenewalQueueAction,
   type RenewalQueueRow,
 } from '@alga-psa/billing/actions/renewalsQueueActions';
-import { updateClientContractForBilling } from '@alga-psa/billing/actions/billingClientsActions';
+import { activateClientContractForBilling, updateClientContractForBilling } from '@alga-psa/billing/actions/billingClientsActions';
 import { toPlainDate } from '@alga-psa/core';
 import { ContractWizard } from './ContractWizard';
 import { ContractDialog } from './ContractDialog';
@@ -223,11 +223,12 @@ const ClientContractsTab: React.FC<ClientContractsTabProps> = ({ onRefreshNeeded
       if (!clientContractId) {
         throw new Error('Missing client contract identifier');
       }
-      const result = await updateClientContractForBilling(clientContractId, { is_active: true });
+      const result = await activateClientContractForBilling(clientContractId);
       if (isActionMessageError(result) || isActionPermissionError(result)) {
         toast.error(getErrorMessage(result));
         return;
       }
+      toast.success(t('contractsList.toasts.contractActivated', { defaultValue: 'Contract activated' }));
       await fetchClientContracts();
       onRefreshNeeded?.();
     } catch (err) {
@@ -382,7 +383,9 @@ const ClientContractsTab: React.FC<ClientContractsTabProps> = ({ onRefreshNeeded
     },
     {
       title: t('clientContracts.columns.poIndicator', { defaultValue: 'PO' }),
-      dataIndex: 'contract_id',
+      // DataTable keys columns by dataIndex; sharing 'contract_id' with the Actions
+      // column made the Actions cell render this column's text instead of its menu.
+      dataIndex: 'po_required',
       width: '8rem',
       headerClassName: 'min-w-[8rem]',
       cellClassName: 'min-w-[8rem] max-w-none',
@@ -850,7 +853,7 @@ const ClientContractsTab: React.FC<ClientContractsTabProps> = ({ onRefreshNeeded
                   {t('clientContracts.empty.noMatches', { defaultValue: 'No client contracts match your search.' })}
                 </div>
               ) : (
-                <DataTable
+                <DataTable id="client-account-contracts-table"
                   data={filteredClientContracts}
                   columns={clientContractColumns}
                   pagination
@@ -923,7 +926,7 @@ const ClientContractsTab: React.FC<ClientContractsTabProps> = ({ onRefreshNeeded
                   })}
                 </div>
               ) : (
-                <DataTable
+                <DataTable id="client-contract-renewals-table"
                   data={filteredUpcomingRenewals}
                   columns={upcomingRenewalColumns}
                   pagination

@@ -30,6 +30,7 @@ import {
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { ProjectTaskStatusSettings } from './settings/projects/ProjectTaskStatusSettings';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
+import { DrawerFooter } from '@alga-psa/ui/components/Drawer';
 import ClientPortalConfigEditor from './ClientPortalConfigEditor';
 import { DEFAULT_CLIENT_PORTAL_CONFIG } from '@alga-psa/types';
 import { ChevronDown, ChevronRight, Settings } from 'lucide-react';
@@ -486,7 +487,7 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
           </div>
         </div>
 
-        <div className="flex justify-end space-x-3 mt-4">
+        <DrawerFooter className="gap-3">
           <Dialog
             isOpen={showCancelConfirm}
             onClose={() => setShowCancelConfirm(false)}
@@ -579,7 +580,7 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
               ? t('projectEdit.saving', 'Saving...')
               : t('projectEdit.saveTitle', 'Save Changes')}
           </Button>
-        </div>
+        </DrawerFooter>
       </form>
     </div>
   );

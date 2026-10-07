@@ -1,6 +1,7 @@
 import { ZodSchema } from 'zod';
 import type { RetryPolicy } from '../types';
 import type { ExpressionContext } from '../expressionEngine';
+import { allowsRegistryReplacement } from './hotReload';
 
 export type ActionId = string;
 
@@ -69,7 +70,7 @@ export class ActionRegistry {
     }
 
     const key = this.key(def.id, def.version);
-    if (this.actions.has(key)) {
+    if (this.actions.has(key) && !allowsRegistryReplacement()) {
       throw new Error(`ActionRegistry already has ${key}`);
     }
     this.actions.set(key, def);

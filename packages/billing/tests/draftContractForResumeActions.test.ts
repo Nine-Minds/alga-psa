@@ -209,17 +209,35 @@ describe('getDraftContractForResume action', () => {
         configuration: { quantity: 2 },
         bucketConfig: null,
       },
+      {
+        service: { service_id: 'svc-seat', service_name: 'Seat Service', item_kind: 'service' },
+        configuration: { quantity: 12, configuration_type: 'Fixed' },
+        typeConfig: { pricing_basis: 'unit', base_rate: 2500 },
+        bucketConfig: null,
+      },
     ]);
 
     const { getDraftContractForResume } = await import('../src/actions/contractWizardActions');
     const result = await getDraftContractForResume('contract-1');
 
     expect(result.fixed_base_rate).toBe(1000);
+    // The stored basis and unit rate round-trip, so a per-seat service does not
+    // resume as a bundle allocation.
     expect(result.fixed_services).toEqual([
       {
         service_id: 'svc-1',
         service_name: 'Service 1',
         quantity: 2,
+        pricing_basis: 'bundle',
+        unit_rate: undefined,
+        bucket_overlay: undefined,
+      },
+      {
+        service_id: 'svc-seat',
+        service_name: 'Seat Service',
+        quantity: 12,
+        pricing_basis: 'unit',
+        unit_rate: 2500,
         bucket_overlay: undefined,
       },
     ]);

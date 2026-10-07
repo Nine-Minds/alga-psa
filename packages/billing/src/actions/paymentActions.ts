@@ -4,6 +4,9 @@ import logger from '@alga-psa/core/logger';
 import type { PaymentDetails, PaymentLinkResult } from '@alga-psa/types';
 import { getCurrentUserAsync } from '../lib/authHelpers';
 import { PaymentLinkError } from './paymentLinkError';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
+import { hasPermission } from '@alga-psa/auth/rbac';
+import { getInvoiceAutopayContextsForTenant, chargeInvoiceWithAutopayNow, type InvoiceAutopayContext } from '../services/autopayBridge';
 
 export type { PaymentLinkErrorCode } from './paymentLinkError';
 
@@ -32,6 +35,44 @@ async function loadEnterprisePayments(): Promise<{
     logger.debug('[billing/paymentActions] enterprise payments module not available', { error });
     return null;
   }
+}
+
+/**
+ * Auto-pay status for invoice lists (MSP finalized tab, client portal invoices).
+ * Authenticated here; the tenant-trusting bridge is only reached after the
+ * invoice ids are narrowed to what this user may see.
+ */
+export async function getInvoiceAutopayContexts(invoiceIds: string[]): Promise<Record<string, InvoiceAutopayContext>> {
+  if (!isEnterpriseBuild() || invoiceIds.length === 0) return {};
+  const user = await getCurrentUserAsync();
+  if (!user) return {};
+  const tenantId = user.tenant;
+  const { knex } = await createTenantKnex();
+  let permittedInvoiceIds = invoiceIds;
+  if (user.user_type === 'client') {
+    if (!user.contact_id) return {};
+    const contact = await tenantDb(knex, tenantId).table('contacts').where({ contact_name_id: user.contact_id }).first('client_id');
+    if (!contact?.client_id) return {};
+    const rows = await tenantDb(knex, tenantId).table('invoices').where({ client_id: contact.client_id }).whereIn('invoice_id', invoiceIds).select('invoice_id');
+    permittedInvoiceIds = rows.map((row: { invoice_id: string }) => row.invoice_id);
+  } else if (!await hasPermission(user, 'billing', 'read')) {
+    return {};
+  }
+  return getInvoiceAutopayContextsForTenant(tenantId, permittedInvoiceIds);
+}
+
+export async function chargeInvoiceAutopayNow(invoiceId: string): Promise<{ success: boolean; error?: string }> {
+  const user = await getCurrentUserAsync();
+  if (!user || user.user_type === 'client' || !await hasPermission(user, 'billing', 'update')) {
+    return { success: false, error: 'Permission denied' };
+  }
+  const { knex } = await createTenantKnex();
+  const invoice = await tenantDb(knex, user.tenant).table('invoices').where({ invoice_id: invoiceId }).first('invoice_id');
+  if (!invoice) return { success: false, error: 'Invoice not found' };
+  const signalled = await chargeInvoiceWithAutopayNow(user.tenant, invoiceId);
+  return signalled
+    ? { success: true }
+    : { success: false, error: 'Auto-pay is not waiting on this invoice; no active workflow received the charge request.' };
 }
 
 export async function getPaymentService(tenantId: string): Promise<any | null> {

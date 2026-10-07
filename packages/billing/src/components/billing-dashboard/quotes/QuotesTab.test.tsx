@@ -15,14 +15,15 @@ const actionMocks = vi.hoisted(() => ({
   sendQuoteReminder: vi.fn(),
 }));
 const getQuoteDocumentTemplatesMock = vi.hoisted(() => vi.fn());
-const navigationMocks = vi.hoisted(() => ({ searchParams: 'subtab=sent' }));
+const senderActionMocks = vi.hoisted(() => ({ listSelectableSenders: vi.fn() }));
+const navigationMocks = vi.hoisted(() => ({ searchParams: 'subtab=sent', push: vi.fn() }));
 const quoteFormPropsMock = vi.hoisted(() => ({ current: null as null | Record<string, unknown> }));
 const customTabsPropsMock = vi.hoisted(() => ({
   current: null as null | { tabs: Array<{ id: string; label: string }> },
 }));
 
 vi.mock('next/navigation', () => ({
-  useRouter: () => ({ push: vi.fn() }),
+  useRouter: () => ({ push: navigationMocks.push }),
   useSearchParams: () => new URLSearchParams(navigationMocks.searchParams),
 }));
 
@@ -39,6 +40,10 @@ vi.mock('../../../actions/quoteActions', () => ({
 
 vi.mock('../../../actions/quoteDocumentTemplates', () => ({
   getQuoteDocumentTemplates: (...args: unknown[]) => getQuoteDocumentTemplatesMock(...args),
+}));
+
+vi.mock('@alga-psa/email/senderActions', () => ({
+  listSelectableSenders: (...args: unknown[]) => senderActionMocks.listSelectableSenders(...args),
 }));
 
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
@@ -103,11 +108,58 @@ vi.mock('@alga-psa/ui/components/ClientNameCell', () => ({
   default: ({ clientName }: { clientName: string }) => <span>{clientName}</span>,
 }));
 
+vi.mock('@alga-psa/ui/components/Dialog', () => ({
+  Dialog: ({ isOpen, children, footer, id }: {
+    isOpen: boolean;
+    children: React.ReactNode;
+    footer?: React.ReactNode;
+    id?: string;
+  }) => (isOpen ? <div data-testid={id}>{children}{footer}</div> : null),
+  DialogContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  DialogDescription: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  DialogFooter: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+}));
+
+vi.mock('@alga-psa/ui/components/Input', () => ({
+  Input: (props: React.InputHTMLAttributes<HTMLInputElement>) => <input {...props} />,
+}));
+
+vi.mock('@alga-psa/ui/components/TextArea', () => ({
+  TextArea: (props: React.TextareaHTMLAttributes<HTMLTextAreaElement>) => <textarea {...props} />,
+}));
+
+vi.mock('./QuoteSendRecipientsField', () => ({
+  QuoteSendRecipientsField: ({ value, onChange, id, clientId }: {
+    value: Array<Record<string, unknown>>;
+    onChange: (next: Array<Record<string, unknown>>) => void;
+    id: string;
+    clientId?: string | null;
+  }) => (
+    <div data-testid={`field-${id}`} data-client-id={clientId ?? ''}>
+      <button
+        type="button"
+        onClick={() => onChange([
+          ...value,
+          { key: 'contact@example.com', email: 'Contact@Example.com', name: 'Contact', kind: 'contact', entityId: 'c1', avatarUrl: null },
+        ])}
+      >
+        Pick Contact
+      </button>
+    </div>
+  ),
+}));
+
 vi.mock('./QuoteApprovalDashboard', () => ({ default: () => null }));
 vi.mock('./QuoteForm', () => ({
   default: (props: Record<string, unknown>) => {
     quoteFormPropsMock.current = props;
-    return null;
+    return <div>
+      <input aria-label="Draft title" defaultValue="" />
+      <span data-testid="open-quote-id">{String(props.quoteId)}</span>
+      <button onClick={() => (props.onSaved as (id: string) => void)('quote-created-1')}>
+        Save test quote
+      </button>
+    </div>;
   },
 }));
 vi.mock('./QuotePreviewPanel', () => ({ default: () => null }));
@@ -130,6 +182,8 @@ const sentQuote = {
 const draftQuote = {
   ...sentQuote,
   quote_id: 'quote-draft-1',
+  client_id: 'client-draft-1',
+  client_name: 'Draft Client',
   display_quote_number: 'Q-1000',
   status: 'draft',
   title: 'Draft quote',
@@ -157,6 +211,7 @@ describe('QuotesTab sent quote actions', () => {
 
   afterEach(() => {
     cleanup();
+    vi.restoreAllMocks();
   });
 
   it('resends a sent quote with resendQuote instead of sendQuote', async () => {
@@ -192,15 +247,13 @@ describe('QuotesTab sent quote actions', () => {
   it('T002: a detail-view status change refreshes the list in the background without a loading flash', async () => {
     navigationMocks.searchParams = 'tab=quotes&quoteId=quote-draft-1&mode=detail';
     const refreshDeferred = createDeferred<{ data: unknown[] }>();
-    actionMocks.listQuotes
-      .mockResolvedValueOnce({ data: [draftQuote] })
-      .mockReturnValueOnce(refreshDeferred.promise);
+    actionMocks.listQuotes.mockReturnValueOnce(refreshDeferred.promise);
 
     const view = render(<QuotesTab />);
 
-    // Initial load mounts the detail form; the list is not rendered yet.
+    // Opening the detail form does not fetch the hidden list.
     await waitFor(() => expect(quoteFormPropsMock.current).not.toBeNull());
-    expect(actionMocks.listQuotes).toHaveBeenCalledTimes(1);
+    expect(actionMocks.listQuotes).not.toHaveBeenCalled();
 
     const onQuoteStatusChanged = quoteFormPropsMock.current?.onQuoteStatusChanged as
       | (() => Promise<void>)
@@ -208,7 +261,7 @@ describe('QuotesTab sent quote actions', () => {
     expect(typeof onQuoteStatusChanged).toBe('function');
 
     const refresh = onQuoteStatusChanged!();
-    await waitFor(() => expect(actionMocks.listQuotes).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(actionMocks.listQuotes).toHaveBeenCalledTimes(1));
 
     // While the background fetch is in flight the detail form stays mounted and
     // the list-level loading card must not replace it.
@@ -219,8 +272,7 @@ describe('QuotesTab sent quote actions', () => {
     await refresh;
 
     // Simulate returning to the list: only searchParams change, so the mounted
-    // component keeps its refreshed snapshot and must show current membership
-    // and counts.
+    // component fetches the list again and shows current membership and counts.
     navigationMocks.searchParams = 'tab=quotes&subtab=active';
     view.rerender(<QuotesTab />);
 
@@ -229,5 +281,80 @@ describe('QuotesTab sent quote actions', () => {
     await waitFor(() =>
       expect(customTabsPropsMock.current?.tabs.find((tab) => tab.id === 'sent')?.label).toBe('Sent (1)'),
     );
+  });
+
+  it('updates the saved quote URL without a server navigation, retains the form, and refreshes on return to the list', async () => {
+    const pushState = vi.spyOn(window.history, 'pushState');
+    navigationMocks.searchParams = 'tab=quotes&subtab=active';
+    actionMocks.listQuotes.mockResolvedValueOnce({ data: [draftQuote] });
+    const view = render(<QuotesTab />);
+    await screen.findByText('Draft quote');
+
+    navigationMocks.searchParams = 'tab=quotes&quoteId=new';
+    view.rerender(<QuotesTab />);
+    fireEvent.change(screen.getByLabelText('Draft title'), { target: { value: 'Keep this draft' } });
+    fireEvent.click(screen.getByText('Save test quote'));
+
+    expect(pushState).toHaveBeenCalledWith(null, '', '/msp/billing?tab=quotes&quoteId=quote-created-1&mode=edit');
+    expect(navigationMocks.push).not.toHaveBeenCalled();
+    expect(window.location.search).toBe('?tab=quotes&quoteId=quote-created-1&mode=edit');
+    // Before useSearchParams updates, keep the form mounted and avoid
+    // hidden-list server actions racing with the saved-quote transition.
+    expect((screen.getByLabelText('Draft title') as HTMLInputElement).value).toBe('Keep this draft');
+    expect(screen.queryByText('Loading quotes...')).toBeNull();
+    expect(actionMocks.listQuotes).toHaveBeenCalledTimes(1);
+    expect(getQuoteDocumentTemplatesMock).toHaveBeenCalledTimes(1);
+
+    navigationMocks.searchParams = 'tab=quotes&quoteId=quote-created-1&mode=edit';
+    view.rerender(<QuotesTab />);
+    expect(screen.getByTestId('open-quote-id').textContent).toBe('quote-created-1');
+    expect(actionMocks.listQuotes).toHaveBeenCalledTimes(1);
+
+    actionMocks.listQuotes.mockResolvedValueOnce({ data: [{ ...draftQuote, title: 'Newly saved quote' }] });
+    navigationMocks.searchParams = 'tab=quotes&subtab=active';
+    view.rerender(<QuotesTab />);
+    await screen.findByText('Newly saved quote');
+    expect(actionMocks.listQuotes).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('QuotesTab send dialog', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    navigationMocks.searchParams = 'subtab=active';
+    quoteFormPropsMock.current = null;
+    actionMocks.listQuotes.mockResolvedValue({ data: [draftQuote] });
+    getQuoteDocumentTemplatesMock.mockResolvedValue([]);
+    actionMocks.sendQuote.mockResolvedValue({});
+    senderActionMocks.listSelectableSenders.mockResolvedValue({ senders: [], effectiveSenderAddress: '' });
+  });
+
+  afterEach(() => {
+    cleanup();
+  });
+
+  it('opens the shared dialog with the row client id and sends merged recipients for the row quote', async () => {
+    render(<QuotesTab />);
+
+    const sendItem = await waitFor(() => {
+      const item = document.getElementById(`send-quote-${draftQuote.quote_id}-menu-item`);
+      expect(item).not.toBeNull();
+      return item as HTMLElement;
+    });
+    fireEvent.click(sendItem);
+
+    const recipientsField = await screen.findByTestId('field-send-quote-recipients');
+    expect(recipientsField.getAttribute('data-client-id')).toBe(draftQuote.client_id);
+
+    fireEvent.click(screen.getByText('Pick Contact'));
+    fireEvent.change(document.getElementById('send-quote-additional-emails') as HTMLInputElement, {
+      target: { value: 'contact@example.com, extra@example.com' },
+    });
+    fireEvent.click(document.getElementById('send-quote-confirm') as HTMLButtonElement);
+
+    await waitFor(() => expect(actionMocks.sendQuote).toHaveBeenCalledWith(draftQuote.quote_id, {
+      email_addresses: ['Contact@Example.com', 'extra@example.com'],
+      message: undefined,
+    }));
   });
 });

@@ -14,8 +14,8 @@ import {
 } from './common';
 
 // Asset type schema — any registry slug (built-in or custom tenant type), not a
-// fixed enum. Validation against the tenant's asset_type_registry happens in the
-// action layer (resolveWritableAssetType).
+// fixed enum. Validation against the tenant's asset_type_registry happens in
+// the shared asset attribute write layer.
 export const assetTypeSchema = z.string().min(1, 'Asset type is required').max(255);
 
 // Base asset schema
@@ -29,7 +29,8 @@ export const createAssetSchema = z.object({
   location: z.string().optional(),
   serial_number: z.string().optional(),
   purchase_date: dateSchema.optional(),
-  warranty_end_date: dateSchema.optional()
+  warranty_end_date: dateSchema.optional(),
+  attributes: z.record(z.unknown()).optional()
 });
 
 // Update asset schema (all fields optional)
@@ -148,6 +149,7 @@ export const assetResponseSchema = z.object({
   created_at: z.string().datetime(),
   updated_at: z.string().datetime(),
   tenant: uuidSchema,
+  attributes: z.record(z.unknown()).nullable().optional(),
   
   // Computed/joined fields
   client_name: z.string().optional(),

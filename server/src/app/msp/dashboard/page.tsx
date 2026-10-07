@@ -4,6 +4,7 @@ import AlgaDeskDashboard from '@/components/dashboard/AlgaDeskDashboard';
 import { getDashboardMobileAppCardDismissedAction } from '@/lib/actions/dashboardMobileAppActions';
 import { getAlgaDeskDashboardSummary } from '@/lib/actions/algadeskDashboardActions';
 import { getCurrentTenantProduct } from '@/lib/productAccess';
+import { getDashboardWelcomeSettingsAction } from '@alga-psa/tenancy/actions/tenant-settings-actions/dashboardWelcomeActions';
 import { isSelfHostLicensing } from '@alga-psa/licensing';
 import { DashboardOnboardingSkeleton, DashboardOnboardingSlot } from '@alga-psa/onboarding/components';
 import { isEnterprise } from '@/lib/features';
@@ -30,6 +31,10 @@ async function DashboardPage() {
 
   const mobileAppCardDismissed = await getDashboardMobileAppCardDismissedAction().catch(() => false);
   const selfHost = await isSelfHostLicensing().catch(() => false);
+  // Opt-in, and only when there is a company to name — the banner must never
+  // fail the page, so a lookup problem falls back to the stock title.
+  const welcome = await getDashboardWelcomeSettingsAction().catch(() => null);
+  const welcomeCompanyName = welcome?.useCompanyName ? welcome.companyName : null;
 
   return (
     <DashboardContainer
@@ -42,6 +47,7 @@ async function DashboardPage() {
       }
       initialMobileAppCardDismissed={mobileAppCardDismissed}
       selfHost={selfHost}
+      welcomeCompanyName={welcomeCompanyName}
     />
   );
 }

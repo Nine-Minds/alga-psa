@@ -70,7 +70,8 @@ const LANGUAGE_NAMES: Record<string, string> = {
   'nl': 'Dutch',
   'it': 'Italian',
   'pl': 'Polish',
-  'pt': 'Portuguese'
+  'pt': 'Portuguese',
+  'sv': 'Swedish'
 };
 
 // Row types for flat list
@@ -584,6 +585,7 @@ export function EmailTemplates() {
 
       <DataTable
         id="email-templates-table"
+        persistPageSize={false}
         data={flatList}
         columns={columns}
         pagination={true}

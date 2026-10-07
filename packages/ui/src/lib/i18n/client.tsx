@@ -76,6 +76,10 @@ const BOOTSTRAP_LOADING_TEXT: Record<
     translations: 'Carregando traduções...',
     languagePreferences: 'Carregando preferências de idioma...',
   },
+  sv: {
+    translations: 'Laddar översättningar...',
+    languagePreferences: 'Laddar språkinställningar...',
+  },
   // Mirrors scripts/generate-pseudo-locales.cjs; these two never reach a pack.
   xx: {
     translations: '⟦Ŀȯȧḓīƞɠ ŧřȧƞşŀȧŧīȯƞş...⟧',
@@ -221,24 +225,20 @@ async function initI18n(
         promise: Promise.resolve(),
       };
       i18nInitialization = attempt;
-      attempt.promise = Promise.resolve()
-        .then(() => {
-          return i18next
-            .use(HttpBackend)
-            .use(initReactI18next)
-            .init({
-              ...I18N_CONFIG,
-              lng: resolvedLocale,
-              // I18nProvider owns the page-level readiness gate. Keep hooks from
-              // suspending forever if init itself rejects; they can render keys.
-              react: { useSuspense: false },
-              resources: seededResources,
-              partialBundledLanguages: true,
-              backend: {
-                loadPath: '/locales/{{lng}}/{{ns}}.json',
-              },
-            });
-        })
+      const initialization = i18next
+        .use(HttpBackend)
+        .use(initReactI18next)
+        .init({
+          ...I18N_CONFIG,
+          lng: resolvedLocale,
+          react: { useSuspense: false },
+          resources: seededResources,
+          partialBundledLanguages: true,
+          backend: {
+            loadPath: '/locales/{{lng}}/{{ns}}.json',
+          },
+        });
+      attempt.promise = Promise.resolve(initialization)
         .then(() => {
           if (i18nInitialization === attempt) {
             attempt.state = 'ready';
@@ -282,6 +282,8 @@ interface I18nProviderProps {
   namespaces?: string[];
   /** Server-embedded namespace resources for the current route (no HTTP fetch). */
   preloadedResources?: PreloadedNamespaceResources;
+  /** Render auth children while i18next initializes in the background. */
+  renderChildrenWhileLoading?: boolean;
 }
 
 export function I18nProvider({
@@ -290,6 +292,7 @@ export function I18nProvider({
   portal = 'client',
   namespaces,
   preloadedResources,
+  renderChildrenWhileLoading = false,
 }: I18nProviderProps) {
   const [locale, setLocaleState] = useState<SupportedLocale>(
     initialLocale || (LOCALE_CONFIG.defaultLocale as SupportedLocale)
@@ -299,6 +302,17 @@ export function I18nProvider({
   // Identity, not contents, is what would re-run the effect: callers that build
   // this array inline would otherwise reload namespaces on every render.
   const namespaceKey = namespaces ? namespaces.join(',') : '';
+
+  // Auth pages can render their forms while the backend loads. Install the
+  // shared i18next instance synchronously so useTranslation is ready before
+  // those children render; the effect below still owns the readiness fallback.
+  if (renderChildrenWhileLoading && typeof window !== 'undefined' && !i18nInitialization) {
+    void initI18n(
+      locale,
+      preloadedResources,
+      namespaceKey ? namespaceKey.split(',') : undefined,
+    ).catch(() => undefined);
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -401,7 +415,7 @@ export function I18nProvider({
     isRTL: LOCALE_CONFIG.rtlLocales.includes(locale),
   };
 
-  if (!isInitialized) {
+  if (!isInitialized && !renderChildrenWhileLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-gray-500">{getBootstrapLoadingText(locale, 'translations')}</div>
@@ -435,8 +449,8 @@ export function useOptionalI18n() {
 /**
  * Hook for translations (wrapper around react-i18next)
  */
-export function useTranslation(namespace?: string | string[]) {
-  return useI18nextTranslation(namespace as any);
+export function useTranslation(namespace?: string | string[], options?: any) {
+  return useI18nextTranslation(namespace as any, options);
 }
 
 /**

@@ -1,8 +1,14 @@
 // @vitest-environment jsdom
 
 import React from 'react';
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+const toastMock = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn() }));
+vi.mock('react-hot-toast', () => ({ toast: toastMock }));
+
+const senderActions = vi.hoisted(() => ({ list: vi.fn(async () => ({ senders: [], effectiveSenderId: null, effectiveSenderAddress: 'provider@example.test', allowOverride: false })) }));
+vi.mock('@alga-psa/email/senderActions', () => ({ listSelectableSenders: senderActions.list }));
 
 const actions = vi.hoisted(() => ({
   addQuoteItem: vi.fn(),
@@ -35,6 +41,7 @@ const getAllClientsMock = vi.hoisted(() => vi.fn());
 const getActiveLocationsMock = vi.hoisted(() => vi.fn());
 const getContactsMock = vi.hoisted(() => vi.fn());
 const getDefaultBillingSettingsMock = vi.hoisted(() => vi.fn());
+const quickAddClientMock = vi.hoisted(() => ({ current: null as null | Record<string, any> }));
 const lineItemsEditorMock = vi.hoisted(() => ({ current: null as null | { items?: unknown[] } }));
 const termsEditorMock = vi.hoisted(() => ({ current: null as null | { onContentChange?: (blocks: unknown[]) => void } }));
 
@@ -68,12 +75,25 @@ vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
     formatDate: (value: string) => String(value),
   }),
   useTranslation: () => ({
-    t: (key: string, options?: { defaultValue?: string }) => options?.defaultValue ?? key,
+    t: (key: string, options?: { defaultValue?: string; [token: string]: unknown }) => {
+      let value = options?.defaultValue ?? key;
+      for (const [token, replacement] of Object.entries(options ?? {})) {
+        if (token !== 'defaultValue') {
+          value = value.split(`{{${token}}}`).join(String(replacement));
+        }
+      }
+      return value;
+    },
   }),
 }));
 
 vi.mock('@alga-psa/ui/context', () => ({
-  useQuickAddClient: () => ({ renderQuickAddClient: () => null }),
+  useQuickAddClient: () => ({
+    renderQuickAddClient: (config: Record<string, any>) => {
+      quickAddClientMock.current = config;
+      return null;
+    },
+  }),
 }));
 
 vi.mock('@radix-ui/themes', () => ({
@@ -114,10 +134,22 @@ vi.mock('@alga-psa/ui/components/CurrencyPicker', () => ({
       { id, value: value ?? '', onChange: (event: any) => onValueChange(event.target.value) },
       React.createElement('option', { key: 'USD', value: 'USD' }, 'USD'),
       React.createElement('option', { key: 'EUR', value: 'EUR' }, 'EUR'),
+      React.createElement('option', { key: 'GBP', value: 'GBP' }, 'GBP'),
+      React.createElement('option', { key: 'AUD', value: 'AUD' }, 'AUD'),
     ),
 }));
 
-vi.mock('@alga-psa/ui/components/ClientPicker', () => ({ ClientPicker: () => null }));
+vi.mock('@alga-psa/ui/components/ClientPicker', () => ({
+  ClientPicker: ({ id, clients, selectedClientId, onSelect }: any) =>
+    React.createElement(
+      'select',
+      { id, value: selectedClientId ?? '', onChange: (event: any) => onSelect(event.target.value) },
+      React.createElement('option', { key: '', value: '' }, ''),
+      (clients ?? []).map((client: any) =>
+        React.createElement('option', { key: client.client_id, value: client.client_id }, client.client_name),
+      ),
+    ),
+}));
 vi.mock('@alga-psa/ui/components/ContactPicker', () => ({ ContactPicker: () => null }));
 vi.mock('@alga-psa/ui/components/DatePicker', () => ({ DatePicker: () => null }));
 vi.mock('@alga-psa/ui/components/LoadingIndicator', () => ({ default: () => null }));
@@ -198,8 +230,17 @@ vi.mock('../../src/components/billing-dashboard/quotes/quoteLineItemDraft', () =
     is_taxable: item.is_taxable ?? true,
     location_id: null,
   }),
-  calculateDraftQuoteTotals: () => ({ subtotal: 0, discount_total: 0, tax: 0, total_amount: 0 }),
+  calculateDraftQuoteTotals: () => ({
+    subtotal: 0,
+    discount_total: 0,
+    tax: 0,
+    total_amount: 0,
+    optional_subtotal: 0,
+    optional_tax: 0,
+    optional_total: 0,
+  }),
   calculateDraftMonthlyRecurringNet: () => 0,
+  calculateDraftCadenceSummary: () => [],
   formatDraftQuoteMoney: (value: number) => `$${(Number(value ?? 0) / 100).toFixed(2)}`,
   resolveDraftDiscountAmounts: () => new Map(),
 }));
@@ -262,6 +303,7 @@ describe('QuoteForm template instantiation', () => {
     vi.clearAllMocks();
     lineItemsEditorMock.current = null;
     termsEditorMock.current = null;
+    quickAddClientMock.current = null;
     actions.listQuotes.mockResolvedValue({
       data: [{ quote_id: 'tmpl-1', title: 'Template Title', currency_code: 'EUR' }],
     });
@@ -283,6 +325,45 @@ describe('QuoteForm template instantiation', () => {
 
   afterEach(() => {
     cleanup();
+  });
+
+  it('confirms invoice conversion and keeps a link to the saved invoice after reloading', async () => {
+    const acceptedQuote = { ...editQuote, status: 'accepted', quote_items: [template.quote_items[1]] };
+    const convertedQuote = { ...acceptedQuote, converted_invoice_id: 'invoice-1' };
+    actions.getQuote.mockResolvedValue(acceptedQuote);
+    actions.getQuoteConversionPreview.mockResolvedValue({
+      contract_items: [], invoice_items: [template.quote_items[1]], sales_order_items: [], excluded_items: [],
+    });
+    actions.convertQuoteToInvoice.mockResolvedValue({
+      quote: convertedQuote, invoice: { invoice_id: 'invoice-1', invoice_number: 'INV-193' },
+    });
+    const view = renderForm({ quoteId: 'quote-1' });
+    fireEvent.click((await screen.findAllByText('Convert to…'))[0]);
+    fireEvent.click(await screen.findByText('Create Draft Invoice'));
+    await waitFor(() => expect(toastMock.success).toHaveBeenCalled());
+    expect(screen.getByRole('link', { name: 'Open Converted Invoice' }).getAttribute('href'))
+      .toBe('/msp/billing?tab=invoicing&subtab=drafts&invoiceId=invoice-1');
+    expect(screen.queryByText('Convert to…')).toBeNull();
+
+    view.unmount();
+    actions.getQuote.mockResolvedValue(convertedQuote);
+    renderForm({ quoteId: 'quote-1' });
+    await screen.findByRole('link', { name: 'Open Converted Invoice' });
+    expect(screen.queryByText('Convert to…')).toBeNull();
+  });
+
+  it('shows conversion errors while retaining the conversion dialog for retry', async () => {
+    actions.getQuote.mockResolvedValue({ ...editQuote, status: 'accepted', quote_items: [template.quote_items[1]] });
+    actions.getQuoteConversionPreview.mockResolvedValue({
+      contract_items: [], invoice_items: [template.quote_items[1]], sales_order_items: [], excluded_items: [],
+    });
+    actions.convertQuoteToInvoice.mockRejectedValue(new Error('Invoice creation failed'));
+    renderForm({ quoteId: 'quote-1' });
+    fireEvent.click((await screen.findAllByText('Convert to…'))[0]);
+    fireEvent.click(await screen.findByText('Create Draft Invoice'));
+    await waitFor(() => expect(toastMock.error).toHaveBeenCalledWith('Invoice creation failed'));
+    expect(screen.getByText('Create Draft Invoice').hasAttribute('disabled')).toBe(false);
+    expect(screen.queryByRole('link', { name: 'Open Converted Invoice' })).toBeNull();
   });
 
   it('T002: deep link prefills terms, notes, description, PO number, currency and line items', async () => {
@@ -449,6 +530,131 @@ describe('QuoteForm template instantiation', () => {
   });
 });
 
+describe('QuoteForm currency source resolution', () => {
+  const readCurrency = () =>
+    (document.getElementById('quote-currency') as HTMLSelectElement).value;
+  const readSource = () =>
+    document.getElementById('quote-currency-source')?.textContent ?? '';
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    lineItemsEditorMock.current = null;
+    termsEditorMock.current = null;
+    quickAddClientMock.current = null;
+    actions.listQuotes.mockResolvedValue({
+      data: [{ quote_id: 'tmpl-1', title: 'Template Title', currency_code: 'EUR' }],
+    });
+    getQuoteDocumentTemplatesMock.mockResolvedValue([]);
+    actions.getQuoteApprovalSettings.mockResolvedValue({ approvalRequired: false });
+    getDefaultBillingSettingsMock.mockResolvedValue({ defaultCurrencyCode: 'USD' });
+    getAllClientsMock.mockResolvedValue([]);
+    getActiveLocationsMock.mockResolvedValue([]);
+    getContactsMock.mockResolvedValue([]);
+    actions.createQuote.mockResolvedValue({ quote_id: 'new-2', quote_items: [] });
+    actions.updateQuote.mockResolvedValue({ quote_id: 'quote-1' });
+    actions.createQuoteFromTemplate.mockResolvedValue({ quote_id: 'new-1', quote_items: [] });
+  });
+
+  afterEach(() => {
+    cleanup();
+  });
+
+  it('F008/F009/F015: seeds the initial-context client currency and re-resolves on select and clear', async () => {
+    getAllClientsMock.mockResolvedValue([
+      { client_id: 'client-aud', client_name: 'Aussie Co', default_currency_code: 'AUD' },
+      { client_id: 'client-gbp', client_name: 'Brit Co', default_currency_code: 'GBP' },
+    ]);
+
+    renderForm({ initialContext: { clientId: 'client-aud' } });
+
+    await screen.findByLabelText('Title');
+    await waitFor(() => expect(readSource()).toBe('Client default for Aussie Co'));
+    expect(readCurrency()).toBe('AUD');
+
+    fireEvent.change(document.getElementById('quote-client') as HTMLSelectElement, {
+      target: { value: 'client-gbp' },
+    });
+    await waitFor(() => expect(readSource()).toBe('Client default for Brit Co'));
+    expect(readCurrency()).toBe('GBP');
+
+    fireEvent.change(document.getElementById('quote-client') as HTMLSelectElement, {
+      target: { value: '' },
+    });
+    await waitFor(() => expect(readSource()).toBe('Tenant default'));
+    expect(readCurrency()).toBe('USD');
+  });
+
+  it('F010: quick-adding a client applies its default currency and client source', async () => {
+    renderForm();
+
+    await screen.findByLabelText('Title');
+    await waitFor(() => expect(quickAddClientMock.current).not.toBeNull());
+
+    act(() => {
+      quickAddClientMock.current!.onClientAdded({
+        client_id: 'client-new',
+        client_name: 'New Co',
+        default_currency_code: 'GBP',
+      });
+    });
+
+    await waitFor(() => expect(readSource()).toBe('Client default for New Co'));
+    expect(readCurrency()).toBe('GBP');
+  });
+
+  it('F011/F012: a business template overrides the client currency and a manual pick sets manual source', async () => {
+    getAllClientsMock.mockResolvedValue([
+      { client_id: 'client-aud', client_name: 'Aussie Co', default_currency_code: 'AUD' },
+      { client_id: 'client-gbp', client_name: 'Brit Co', default_currency_code: 'GBP' },
+    ]);
+    actions.getQuote.mockResolvedValue(template);
+
+    renderForm({ initialContext: { clientId: 'client-aud' } });
+
+    await waitFor(() => expect(readSource()).toBe('Client default for Aussie Co'));
+
+    fireEvent.change(document.getElementById('quote-form-template-picker') as HTMLSelectElement, {
+      target: { value: 'tmpl-1' },
+    });
+    await waitFor(() => expect(readSource()).toBe('From quote template Template Title'));
+    expect(readCurrency()).toBe('EUR');
+
+    // A source template outranks client defaulting: changing the client keeps
+    // the template currency and its source label.
+    fireEvent.change(document.getElementById('quote-client') as HTMLSelectElement, {
+      target: { value: 'client-gbp' },
+    });
+    await waitFor(() => expect(readSource()).toBe('From quote template Template Title'));
+    expect(readCurrency()).toBe('EUR');
+
+    fireEvent.change(document.getElementById('quote-currency') as HTMLSelectElement, {
+      target: { value: 'GBP' },
+    });
+    await waitFor(() => expect(readSource()).toBe('Selected manually'));
+    expect(readCurrency()).toBe('GBP');
+  });
+
+  it('F013: editing a saved quote keeps its currency and labels it saved rather than re-defaulting', async () => {
+    getDefaultBillingSettingsMock.mockResolvedValue({ defaultCurrencyCode: 'AUD' });
+    actions.getQuote.mockResolvedValue({ ...editQuote, currency_code: 'USD' });
+
+    renderForm({ quoteId: 'quote-1' });
+
+    await screen.findByLabelText('Title');
+    await waitFor(() => expect(readSource()).toBe('Saved on this quote'));
+    expect(readCurrency()).toBe('USD');
+  });
+
+  it('F014: editing a saved business template labels the saved-on-template source', async () => {
+    actions.getQuote.mockResolvedValue({ ...template, is_template: true, currency_code: 'EUR' });
+
+    renderForm({ quoteId: 'tmpl-1', initialIsTemplate: true });
+
+    await waitFor(() => expect(readSource()).toBe('Saved on this template'));
+    expect(readCurrency()).toBe('EUR');
+  });
+});
+
 const createDeferred = <T,>() => {
   let resolve!: (value: T | PromiseLike<T>) => void;
   const promise = new Promise<T>((res) => {
@@ -484,6 +690,12 @@ describe('QuoteForm quote status change callback', () => {
   it('T001/F002: a successful send awaits the parent refresh callback exactly once', async () => {
     actions.getQuote.mockResolvedValue(workflowQuote('draft'));
     actions.sendQuote.mockResolvedValue(workflowQuote('sent'));
+    senderActions.list.mockResolvedValue({
+      senders: [{ sender_id: 'first', email_address: 'first@example.test' }, { sender_id: 'second', email_address: 'second@example.test' }],
+      effectiveSenderId: null,
+      effectiveSenderAddress: 'provider@example.test',
+      allowOverride: true,
+    });
     const deferred = createDeferred<void>();
     const onQuoteStatusChanged = vi.fn(() => deferred.promise);
 
@@ -491,10 +703,14 @@ describe('QuoteForm quote status change callback', () => {
     await screen.findByLabelText('Title');
 
     fireEvent.click(document.getElementById('quote-form-send') as HTMLButtonElement);
+    const senderSelect = await screen.findByLabelText('From') as HTMLSelectElement;
+    expect(senderSelect.value).toBe('__default__');
+    expect(screen.getByRole('option', { name: 'Use default (provider@example.test)' })).not.toBeNull();
     await waitFor(() => expect(document.getElementById('quote-form-send-confirm')).not.toBeNull());
     fireEvent.click(document.getElementById('quote-form-send-confirm') as HTMLButtonElement);
 
     await waitFor(() => expect(actions.sendQuote).toHaveBeenCalledTimes(1));
+    expect(actions.sendQuote).toHaveBeenCalledWith('quote-1', expect.objectContaining({ senderId: undefined, email_addresses: undefined, message: undefined }));
     await waitFor(() => expect(onQuoteStatusChanged).toHaveBeenCalledTimes(1));
 
     // Awaited, not fired-and-forgotten: the workflow stays busy and the send

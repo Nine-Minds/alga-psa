@@ -302,6 +302,7 @@ export function normalizeResolvedContractCharge(input: {
           configurationQuantity: service.configuration_quantity,
           configurationCustomRate: service.configuration_custom_rate,
           priceRate: service.price_rate,
+          effectivePricing: service.effective_pricing ?? null,
         })),
       };
   }
@@ -598,6 +599,7 @@ export function calculateNormalizedContractCharge(
             configuration_quantity: service.configurationQuantity,
             configuration_custom_rate: service.configurationCustomRate,
             price_rate: service.priceRate,
+            effective_pricing: service.effectivePricing ?? null,
           })),
           contractCurrency: facts.line.currencyCode,
           billingProfile: facts.billingProfile,

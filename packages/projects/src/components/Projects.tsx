@@ -43,6 +43,14 @@ import { useClientIntegration } from '../context/ClientIntegrationContext';
 import { useTranslation } from 'react-i18next';
 import { useFormatters } from '@alga-psa/ui/lib/i18n/client';
 import { ShortcutActiveRegion, usePageCreateShortcut } from '@alga-psa/ui/keyboard-shortcuts';
+import { LIST_VIEW_URL_PARAM } from '@alga-psa/list-views';
+import { useListViews } from '@alga-psa/list-views/hooks';
+import { ListViewPicker } from '@alga-psa/list-views/components';
+import {
+  createProjectListViewAdapter,
+  pickProjectViewFilters,
+  type ProjectListLiveState,
+} from '../lib/projectListViewAdapter';
 
 type AnySmartSearchResultsProps = SmartSearchResultsProps<unknown, Record<string, unknown>, unknown>;
 
@@ -164,6 +172,13 @@ interface ProjectsProps {
   smartSearchAvailable?: boolean;
 }
 
+/** URL params that state the list's filters; their presence suppresses the personal default view. */
+const PROJECT_FILTER_URL_PARAMS = [
+  'searchQuery', 'status', 'projectStatus', 'clientId', 'contactId', 'managerId', 'tags', 'deadlineType',
+] as const;
+
+const DEFAULT_PROJECT_SORT = { by: 'created_at', direction: 'desc' as const };
+
 export const DEFAULT_PROJECT_FILTERS: ProjectListFilters = {
   status: 'active',
   // Hide closed statuses by default, matching the tickets dashboard.
@@ -261,8 +276,18 @@ export default function Projects({ initialProjects, clients, initialFilters, ini
   }, [activeFilters.deadlineType, activeFilters.deadlineDate, activeFilters.deadlineEndDate]);
 
   // Sync filter state to URL
-  const updateURLWithFilters = useCallback((filters: ProjectListFilters) => {
-    const newURL = buildURLFromFilters(filters);
+  const updateURLWithFilters = useCallback((filters: ProjectListFilters, namedViewId?: string | null) => {
+    let newURL = buildURLFromFilters(filters);
+    // Keep naming the applied view while its filters are refined. An apply
+    // passes the view it just put on screen (or null for "Default view") so the
+    // filters and the view are one history write; a plain edit passes nothing
+    // and reads the live view back out of the address bar.
+    const activeNamedView = namedViewId === undefined
+      ? new URLSearchParams(window.location.search).get(LIST_VIEW_URL_PARAM)
+      : namedViewId;
+    if (activeNamedView) {
+      newURL += `${newURL.includes('?') ? '&' : '?'}${LIST_VIEW_URL_PARAM}=${encodeURIComponent(activeNamedView)}`;
+    }
     const newSearch = newURL.includes('?') ? newURL.slice(newURL.indexOf('?')) : '';
     window.history.replaceState(null, '', newURL);
     lastAppliedSearchRef.current = newSearch;
@@ -360,6 +385,61 @@ export default function Projects({ initialProjects, clients, initialFilters, ini
       }
     };
   }, [syncFromUrl]);
+
+  // ── Named list views ──────────────────────────────────────────────────────
+  // The table sorts client-side; its sort and widths are tracked here only so a
+  // view can capture them, and handed back (remounting the table) on apply.
+  const [tableSort, setTableSort] = useState<{ by: string; direction: 'asc' | 'desc' }>(DEFAULT_PROJECT_SORT);
+  const [columnSizing, setColumnSizing] = useState<Record<string, number> | undefined>(undefined);
+  const [viewApplyToken, setViewApplyToken] = useState(0);
+  const entryUrlHasFilters = useRef(
+    typeof window !== 'undefined'
+      && PROJECT_FILTER_URL_PARAMS.some((param) => new URLSearchParams(window.location.search).has(param))
+  );
+
+  const listViewLive = useMemo<ProjectListLiveState>(() => ({
+    filters: pickProjectViewFilters(activeFilters as Record<string, unknown>),
+    sort: tableSort,
+    pageSize: activeFilters.pageSize ?? DEFAULT_PROJECT_FILTERS.pageSize ?? 10,
+    columnSizing,
+  }), [activeFilters, tableSort, columnSizing]);
+
+  const projectListViewAdapter = useMemo(() => createProjectListViewAdapter({
+    defaultFilters: pickProjectViewFilters(DEFAULT_PROJECT_FILTERS as Record<string, unknown>),
+    defaultSort: DEFAULT_PROJECT_SORT,
+    defaultPageSize: DEFAULT_PROJECT_FILTERS.pageSize ?? 10,
+    known: { clientIds: new Set(clients.map((client) => client.client_id)) },
+  }), [clients]);
+
+  const handleListViewApply = useCallback((next: ProjectListLiveState, meta: { viewId: string | null }) => {
+    if (filterUpdateTimeoutRef.current) {
+      clearTimeout(filterUpdateTimeoutRef.current);
+      filterUpdateTimeoutRef.current = null;
+    }
+    // A view replaces the whole filter set (search included) and starts at page 1.
+    const nextFilters: ProjectListFilters = {
+      ...DEFAULT_PROJECT_FILTERS,
+      ...next.filters,
+      page: 1,
+      pageSize: next.pageSize,
+    };
+    setActiveFilters(nextFilters);
+    activeFiltersRef.current = nextFilters;
+    // Filters and view in one write; the hook's own write is disabled (ownsUrl).
+    updateURLWithFilters(nextFilters, meta.viewId);
+    setTableSort(next.sort);
+    setColumnSizing(next.columnSizing);
+    setViewApplyToken((token) => token + 1);
+  }, [updateURLWithFilters]);
+
+  const listViews = useListViews({
+    adapter: projectListViewAdapter,
+    live: listViewLive,
+    onApply: handleListViewApply,
+    urlHasExplicitState: entryUrlHasFilters.current,
+    // Projects mirror their filters into the URL, so they own the single write.
+    ownsUrl: true,
+  });
 
   const handleTagsChange = (projectId: string, tags: ITag[]) => {
     projectTagsRef.current[projectId] = tags;
@@ -1173,6 +1253,9 @@ export default function Projects({ initialProjects, clients, initialFilters, ini
             <XCircle className="h-4 w-4" />
             {t('resetFilters', 'Reset')}
           </Button>
+          <div className="ml-auto shrink-0">
+            <ListViewPicker id="projects-view-picker" controller={listViews} />
+          </div>
       </div>
 
       <div className="bg-white shadow rounded-lg p-4">
@@ -1196,7 +1279,7 @@ export default function Projects({ initialProjects, clients, initialFilters, ini
             />
           ) : (
             <DataTable
-              key={`${activeFilters.page}-${activeFilters.pageSize}`}
+              key={`${activeFilters.page}-${activeFilters.pageSize}-${viewApplyToken}`}
               id="projects-table"
               data={filteredProjects}
               columns={columns}
@@ -1205,7 +1288,10 @@ export default function Projects({ initialProjects, clients, initialFilters, ini
               onPageChange={(page) => handleFilterChange({ page })}
               pageSize={activeFilters.pageSize || 10}
               onItemsPerPageChange={(pageSize) => handleFilterChange({ pageSize, page: 1 })}
-              initialSorting={[{ id: 'created_at', desc: true }]}
+              initialSorting={[{ id: tableSort.by, desc: tableSort.direction === 'desc' }]}
+              onSortChange={(by, direction) => setTableSort({ by, direction })}
+              columnSizing={columnSizing}
+              onColumnSizingChange={setColumnSizing}
             />
           )}
         </ShortcutActiveRegion>

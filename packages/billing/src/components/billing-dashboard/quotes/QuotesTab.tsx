@@ -11,6 +11,8 @@ import { DataTable } from '@alga-psa/ui/components/DataTable';
 import ClientNameCell from '@alga-psa/ui/components/ClientNameCell';
 import { Button } from '@alga-psa/ui/components/Button';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import { DEFAULT_SENDER_SELECTION } from '@alga-psa/email/senderSelection';
+import { listSelectableSenders } from '@alga-psa/email/senderActions';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -18,9 +20,6 @@ import {
   DropdownMenuTrigger,
 } from '@alga-psa/ui/components/DropdownMenu';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
-import { Dialog, DialogContent, DialogDescription } from '@alga-psa/ui/components/Dialog';
-import { TextArea } from '@alga-psa/ui/components/TextArea';
-import { Input } from '@alga-psa/ui/components/Input';
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { MoreVertical, Edit, Send, Copy, Download, Trash2, RefreshCw, Bell, FileText, XCircle, FilePenLine } from 'lucide-react';
@@ -30,6 +29,7 @@ import { getQuoteDocumentTemplates } from '../../../actions/quoteDocumentTemplat
 import QuoteApprovalDashboard from './QuoteApprovalDashboard';
 import QuoteForm from './QuoteForm';
 import QuotePreviewPanel from './QuotePreviewPanel';
+import { QuoteSendDialog, type QuoteSendDialogPayload } from './QuoteSendDialog';
 import QuoteStatusBadge from './QuoteStatusBadge';
 
 type QuoteSubTab = 'active' | 'sent' | 'closed' | 'approval';
@@ -54,7 +54,7 @@ interface QuoteSubTabContentProps {
   onOpen: () => void;
   onDownload: () => Promise<void>;
   onEdit: (quoteId: string) => void;
-  onSend: (quoteId: string) => void;
+  onSend: (quote: IQuoteListItem) => void;
   onResend: (quoteId: string) => Promise<void>;
   onSendReminder: (quoteId: string) => Promise<void>;
   onRevise: (quoteId: string) => Promise<void>;
@@ -162,7 +162,7 @@ const QuoteSubTabContent: React.FC<QuoteSubTabContentProps> = ({
                 </DropdownMenuItem>
                 {['draft', 'approved'].includes(status) && (
                   <DropdownMenuItem
-                    onClick={() => onSend(record.quote_id)}
+                    onClick={() => onSend(record)}
                     className="flex items-center gap-2"
                     id={`send-quote-${record.quote_id}-menu-item`}
                   >
@@ -263,7 +263,7 @@ const QuoteSubTabContent: React.FC<QuoteSubTabContentProps> = ({
             </div>
           )}
 
-          <DataTable
+          <DataTable id="quotes-table"
             key={tableKey}
             data={filteredQuotes}
             columns={columns}
@@ -306,10 +306,11 @@ const QuotesTab: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [deleteDialogState, setDeleteDialogState] = useState<{ isOpen: boolean; quoteId: string | null }>({ isOpen: false, quoteId: null });
   const [isDeleting, setIsDeleting] = useState(false);
-  const [sendDialogState, setSendDialogState] = useState<{ isOpen: boolean; quoteId: string | null }>({ isOpen: false, quoteId: null });
+  const [sendDialogState, setSendDialogState] = useState<{ isOpen: boolean; quoteId: string | null; clientId: string | null }>({ isOpen: false, quoteId: null, clientId: null });
   const [isSending, setIsSending] = useState(false);
-  const [sendAdditionalEmails, setSendAdditionalEmails] = useState('');
-  const [sendMessage, setSendMessage] = useState('');
+  const [quoteSenders, setQuoteSenders] = useState<Array<{ sender_id: string; email_address: string }>>([]);
+  const [quoteEffectiveSenderAddress, setQuoteEffectiveSenderAddress] = useState('');
+  const [quoteSenderId, setQuoteSenderId] = useState(DEFAULT_SENDER_SELECTION);
   const selectedQuoteId = searchParams?.get('quoteId');
   const selectedMode = searchParams?.get('mode');
   const requestedSubtab = searchParams?.get('subtab');
@@ -323,9 +324,23 @@ const QuotesTab: React.FC = () => {
     ? (requestedSubtab as QuoteSubTab)
     : 'active';
 
+  const isQuoteFormOpen = selectedQuoteId === 'new'
+    || Boolean(selectedQuoteId && (selectedMode === 'edit' || selectedMode === 'detail'));
+
   useEffect(() => {
-    void loadData();
-  }, []);
+    if (!isQuoteFormOpen) {
+      void loadData();
+    }
+  }, [isQuoteFormOpen]);
+
+  useEffect(() => {
+    if (!sendDialogState.isOpen) return;
+    void listSelectableSenders({ mailClass: 'sales' }).then((result) => {
+      setQuoteSenders(result.senders);
+      setQuoteEffectiveSenderAddress(result.effectiveSenderAddress);
+      setQuoteSenderId(DEFAULT_SENDER_SELECTION);
+    }).catch((reason) => setError(reason instanceof Error ? reason.message : 'Could not load sender addresses.'));
+  }, [sendDialogState.isOpen]);
 
   const loadData = async (options?: { background?: boolean }) => {
     const isBackground = options?.background === true;
@@ -411,30 +426,20 @@ const QuotesTab: React.FC = () => {
     await triggerPdfDownload(selectedQuoteId);
   };
 
-  const handleConfirmSendQuote = async () => {
+  const handleConfirmSendQuote = async (payload: QuoteSendDialogPayload) => {
     const quoteId = sendDialogState.quoteId;
     if (!quoteId) return;
-
-    const parsedEmails = sendAdditionalEmails
-      .split(',')
-      .map((e) => e.trim())
-      .filter((e) => e.length > 0);
 
     setIsSending(true);
     setError(null);
     try {
-      const result = await sendQuote(quoteId, {
-        email_addresses: parsedEmails.length > 0 ? parsedEmails : undefined,
-        message: sendMessage.trim() || undefined,
-      });
+      const result = await sendQuote(quoteId, payload);
       if (isReturnedActionError(result)) {
         setError(getErrorMessage(result));
       } else {
         void loadData();
       }
-      setSendDialogState({ isOpen: false, quoteId: null });
-      setSendAdditionalEmails('');
-      setSendMessage('');
+      setSendDialogState({ isOpen: false, quoteId: null, clientId: null });
     } catch (err) {
       console.error('Failed to send quote:', err);
       setError(
@@ -561,23 +566,7 @@ const QuotesTab: React.FC = () => {
     return counts;
   }, [quotes]);
 
-  if (isLoading) {
-    return (
-      <Card size="2">
-        <Box p="4">
-          <LoadingIndicator
-            className="py-12 text-muted-foreground"
-            layout="stacked"
-            spinnerProps={{ size: 'md' }}
-            text={t('quotesTab.loading', { defaultValue: 'Loading quotes...' })}
-            textClassName="text-muted-foreground"
-          />
-        </Box>
-      </Card>
-    );
-  }
-
-  if (selectedQuoteId === 'new' || (selectedQuoteId && (selectedMode === 'edit' || selectedMode === 'detail'))) {
+  if (isQuoteFormOpen) {
     return (
       <QuoteForm
         quoteId={selectedQuoteId}
@@ -595,17 +584,37 @@ const QuotesTab: React.FC = () => {
             ? router.push('/msp/billing?tab=quote-business-templates')
             : router.push('/msp/billing?tab=quotes')}
         onSaved={(savedQuoteId) => {
-          void loadData();
+          // Reload the list when it is shown again. Starting server actions here
+          // can interrupt this navigation and remount a blank new-quote form.
           if (opportunityId) {
             router.push(`/msp/opportunities/${opportunityId}`);
           } else if (isTemplateParam) {
             router.push('/msp/billing?tab=quote-business-templates');
           } else {
-            router.push(`/msp/billing?tab=quotes&quoteId=${savedQuoteId}&mode=edit`);
+            // LEVERAGE: friction query-navigation — server actions can discard a
+            // concurrent router navigation even when only client-side query state changes.
+            // Next synchronizes useSearchParams with the native history API.
+            window.history.pushState(null, '', `/msp/billing?tab=quotes&quoteId=${savedQuoteId}&mode=edit`);
           }
         }}
         onQuoteStatusChanged={() => loadData({ background: true })}
       />
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <Card size="2">
+        <Box p="4">
+          <LoadingIndicator
+            className="py-12 text-muted-foreground"
+            layout="stacked"
+            spinnerProps={{ size: 'md' }}
+            text={t('quotesTab.loading', { defaultValue: 'Loading quotes...' })}
+            textClassName="text-muted-foreground"
+          />
+        </Box>
+      </Card>
     );
   }
 
@@ -642,7 +651,7 @@ const QuotesTab: React.FC = () => {
                   onOpen={handleOpenQuote}
                   onDownload={handleDownloadPdf}
                   onEdit={(id) => router.push(`/msp/billing?tab=quotes&quoteId=${id}&mode=edit`)}
-                  onSend={(id) => setSendDialogState({ isOpen: true, quoteId: id })}
+                  onSend={(quote) => setSendDialogState({ isOpen: true, quoteId: quote.quote_id, clientId: quote.client_id ?? null })}
                   onResend={handleResendQuote}
                   onSendReminder={handleSendReminder}
                   onRevise={handleReviseQuote}
@@ -665,7 +674,7 @@ const QuotesTab: React.FC = () => {
                   onOpen={handleOpenQuote}
                   onDownload={handleDownloadPdf}
                   onEdit={(id) => router.push(`/msp/billing?tab=quotes&quoteId=${id}&mode=edit`)}
-                  onSend={(id) => setSendDialogState({ isOpen: true, quoteId: id })}
+                  onSend={(quote) => setSendDialogState({ isOpen: true, quoteId: quote.quote_id, clientId: quote.client_id ?? null })}
                   onResend={handleResendQuote}
                   onSendReminder={handleSendReminder}
                   onRevise={handleReviseQuote}
@@ -688,7 +697,7 @@ const QuotesTab: React.FC = () => {
                   onOpen={handleOpenQuote}
                   onDownload={handleDownloadPdf}
                   onEdit={(id) => router.push(`/msp/billing?tab=quotes&quoteId=${id}&mode=edit`)}
-                  onSend={(id) => setSendDialogState({ isOpen: true, quoteId: id })}
+                  onSend={(quote) => setSendDialogState({ isOpen: true, quoteId: quote.quote_id, clientId: quote.client_id ?? null })}
                   onResend={handleResendQuote}
                   onSendReminder={handleSendReminder}
                   onRevise={handleReviseQuote}
@@ -722,58 +731,18 @@ const QuotesTab: React.FC = () => {
         isConfirming={isDeleting}
       />
 
-      <Dialog
-        id="send-quote-dialog"
+      <QuoteSendDialog
+        idPrefix="send-quote"
         isOpen={sendDialogState.isOpen}
-        onClose={() => { setSendDialogState({ isOpen: false, quoteId: null }); setSendAdditionalEmails(''); setSendMessage(''); }}
-        title={t('quotesTab.dialogs.send.title', { defaultValue: 'Send Quote' })}
-        footer={(
-          <div className="flex justify-end space-x-2">
-            <Button id="send-quote-cancel" variant="outline" onClick={() => { setSendDialogState({ isOpen: false, quoteId: null }); setSendAdditionalEmails(''); setSendMessage(''); }} disabled={isSending}>{t('common.actions.cancel', { defaultValue: 'Cancel' })}</Button>
-            <Button id="send-quote-confirm" onClick={() => void handleConfirmSendQuote()} disabled={isSending}>
-              {isSending
-                ? t('common.states.sending', { defaultValue: 'Sending...' })
-                : t('quoteForm.actions.sendQuote', { defaultValue: 'Send Quote' })}
-            </Button>
-          </div>
-        )}
-      >
-        <DialogContent>
-          <DialogDescription>
-            {t('quotesTab.dialogs.send.description', {
-              defaultValue:
-                'This will email the quote PDF to the client\'s billing contacts and change its status to "Sent".',
-            })}
-          </DialogDescription>
-          <div className="space-y-3 py-2">
-            <label className="flex flex-col gap-1 text-sm font-medium">
-              {t('quotesTab.dialogs.send.additionalRecipients', {
-                defaultValue: 'Additional recipients (comma-separated)',
-              })}
-              <Input
-                id="send-quote-additional-emails"
-                value={sendAdditionalEmails}
-                onChange={(event) => setSendAdditionalEmails(event.target.value)}
-                placeholder={t('quoteForm.placeholders.additionalEmails', {
-                  defaultValue: 'email@example.com, another@example.com',
-                })}
-              />
-            </label>
-            <label className="flex flex-col gap-1 text-sm font-medium">
-              {t('quotesTab.dialogs.send.messageOptional', { defaultValue: 'Message (optional)' })}
-              <TextArea
-                id="send-quote-message"
-                value={sendMessage}
-                onChange={(event) => setSendMessage(event.target.value)}
-                rows={3}
-                placeholder={t('quotesTab.dialogs.send.messagePlaceholder', {
-                  defaultValue: 'Add a personal note for the recipient...',
-                })}
-              />
-            </label>
-          </div>
-        </DialogContent>
-      </Dialog>
+        clientId={sendDialogState.clientId}
+        isSending={isSending}
+        senders={quoteSenders}
+        effectiveSenderAddress={quoteEffectiveSenderAddress}
+        senderId={quoteSenderId}
+        onSenderChange={setQuoteSenderId}
+        onClose={() => setSendDialogState({ isOpen: false, quoteId: null, clientId: null })}
+        onConfirm={(payload) => void handleConfirmSendQuote(payload)}
+      />
     </div>
   );
 };

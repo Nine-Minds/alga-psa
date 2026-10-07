@@ -283,6 +283,8 @@
     },
     "captchaRequired": "Complete la verificación a continuación y vuelva a iniciar sesión.",
     "tooManyAttempts": "Demasiados intentos fallidos de inicio de sesión. Espere unos minutos antes de volver a intentarlo.",
+    "tenantRequiredMessage": "Su correo electrónico está vinculado a más de una organización: elija su organización para continuar.",
+    "tenantRequiredLink": "Elegir su organización",
     "tenantDiscovery": {
       "title": "Encuentre su organización",
       "description": "Ingrese su correo electrónico y le enviaremos enlaces de inicio de sesión para todas las organizaciones a las que tiene acceso.",
@@ -426,6 +428,30 @@
         "expMonth": "Introduzca un mes válido (01-12)",
         "expYear": "Introduzca un año válido (2024-2099)",
         "cvv": "Introduzca un CVV válido"
+      },
+      "methodUpdateError": "No se pudo actualizar este método de pago. Inténtelo de nuevo.",
+      "cardSetup": {
+        "success": "Tarjeta guardada de forma segura.",
+        "error": "No pudimos guardar la tarjeta. Inténtelo de nuevo."
+      },
+      "autopay": {
+        "title": "Métodos de pago y pago automático",
+        "loading": "Cargando métodos de pago…",
+        "profileUnavailable": "Los métodos de pago y la configuración del pago automático no están disponibles para este perfil de facturación.",
+        "cardFallback": "Tarjeta",
+        "enrolled": "El pago automático está activado.",
+        "disable": "Desactivar el pago automático",
+        "consent": "Autorizo cargos recurrentes a esta tarjeta por las facturas finalizadas.",
+        "enable": "Activar el pago automático",
+        "noCards": "Añada una tarjeta para activar el pago automático.",
+        "changeCard": "Usar esta tarjeta para el pago automático",
+        "updateError": "No se pudo actualizar el pago automático. Inténtelo de nuevo."
+      },
+      "publicCardSetup": {
+        "saved": "Tarjeta guardada",
+        "failed": "No pudimos guardar su tarjeta",
+        "savedDescription": "Su tarjeta está lista para pagos futuros.",
+        "failedDescription": "No se pudo verificar la configuración. Solicite un nuevo enlace a su proveedor de facturación."
       }
     }
   },
@@ -542,7 +568,8 @@
       "avatarDescription": "Este avatar se muestra al personal del MSP cuando consultan su información de contacto.",
       "emailAlreadyExists": "Ya existe un usuario con esta dirección de correo electrónico",
       "reportsToSelf": "Un usuario no puede reportarse a sí mismo",
-      "reportsToCycle": "Esto crearía una cadena de reporte circular"
+      "reportsToCycle": "Esto crearía una cadena de reporte circular",
+      "invalidTimezone": "Elige una zona horaria basada en una ciudad, como America/New_York."
     },
     "imageUpload": {
       "uploadAvatar": "Subir avatar",
@@ -577,7 +604,8 @@
       "adjustMark": "Ajustar marca",
       "cropFromWide": "Recortar del logotipo ancho",
       "recropSuccess": "Marca actualizada.",
-      "recropError": "No se pudo actualizar la marca."
+      "recropError": "No se pudo actualizar la marca.",
+      "fileNameLabel": "Archivo almacenado"
     },
     "validation": {
       "clientNameRequired": "El nombre de la empresa es obligatorio",
@@ -1011,5 +1039,11 @@
       "duplicate": "Ya existe un grupo de visibilidad con estos datos para este cliente.",
       "invalidData": "Datos del grupo de visibilidad no válidos. Revise los datos del grupo y los tableros seleccionados."
     }
+  },
+  "tabs": {
+    "paymentMethods": "Métodos de pago y pago automático"
+  },
+  "invoice": {
+    "autopayWillCharge": "Se cargará el {{date}} a {{brand}} •••• {{last4}}"
   }
 }

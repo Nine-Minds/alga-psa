@@ -89,6 +89,7 @@ export async function sendPortalInvitationEmail({
 
       const tenantEmailService = TenantEmailService.getInstance(tenant);
       const emailParams = {
+        mailClass: 'account' as const,
         to: email,
         templateProcessor,
         templateData,

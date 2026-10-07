@@ -53,6 +53,7 @@
         "fillRequiredFields": "Please fill in all required fields",
         "loadFailed": "Failed to load profile",
         "saveFailed": "Failed to save profile",
+        "invalidTimezone": "Choose a city-based time zone, such as America/New_York.",
         "errorPrefix": "Error: {{error}}"
       }
     },

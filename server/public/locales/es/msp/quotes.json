@@ -107,7 +107,9 @@
         "message": "Mensaje",
         "messageOptional": "Mensaje (opcional)",
         "messagePlaceholder": "Añade una nota personal para el destinatario...",
-        "title": "Enviar cotización"
+        "title": "Enviar cotización",
+        "from": "De",
+        "useDefault": "Usar remitente predeterminado"
       }
     },
     "errors": {
@@ -212,7 +214,9 @@
         "description": "Esto enviará la cotización por correo electrónico a los contactos de facturación del cliente y cambiará su estado a \"Enviado\".",
         "title": "Enviar cotización al cliente",
         "additionalEmails": "Destinatarios adicionales",
-        "message": "Mensaje"
+        "message": "Mensaje",
+        "from": "De",
+        "useDefault": "Usar remitente predeterminado"
       }
     },
     "errorActions": {
@@ -299,7 +303,15 @@
       "currencyPlaceholder": "Seleccionar moneda",
       "quoteDate": "Fecha de la cotización",
       "validUntil": "Válido hasta",
-      "validUntilHelp": "La cotización caduca automáticamente en esta fecha."
+      "validUntilHelp": "La cotización caduca automáticamente en esta fecha.",
+      "currencySource": {
+        "tenant": "Predeterminada del inquilino",
+        "client": "Predeterminada del cliente para {{clientName}}",
+        "template": "Desde la plantilla de cotización {{templateTitle}}",
+        "saved": "Guardada en esta cotización",
+        "savedTemplate": "Guardada en esta plantilla",
+        "manual": "Seleccionada manualmente"
+      }
     },
     "lineItems": {
       "title": "Líneas",
@@ -339,6 +351,14 @@
       "subtotal": "Subtotal",
       "discounts": "Descuentos",
       "tax": "Impuesto",
+      "optionalIfSelected": "Opcional si se selecciona",
+      "cadence": {
+        "monthly": "Mensual",
+        "quarterly": "Trimestral",
+        "semiAnnually": "Semestral",
+        "annually": "Anual",
+        "oneTime": "Puntual"
+      },
       "statusLabel": "Estado",
       "approvalLabel": "Aprobación",
       "approvalMessage": "Las cotizaciones requieren la aprobación del responsable de ventas antes de enviarse.",
@@ -493,6 +513,7 @@
       "noPriceInCurrency": "Sin precio en {{currencyCode}}",
       "optional": "Opcional",
       "phaseSection": "Fase/Tramo",
+      "preselected": "Preseleccionado",
       "recurring": "Periódico",
       "service": "servicio",
       "setPrice": "precio fijo",

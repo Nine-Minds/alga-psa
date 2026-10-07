@@ -16,14 +16,19 @@ const notSelectedSteps = () => [
   { name: 'Record browser tests not selected', status: 'completed', conclusion: 'success' },
   { name: 'Record browser journey readiness', status: 'completed', conclusion: 'skipped' },
 ];
+export const exportRow = values => BROWSER_HEADER.map(column => values[column] ?? '');
+const RUN_URL = 'https://github.com/Nine-Minds/alga-psa/actions/runs/123';
 function fixture() {
   const run = { id: 123, repository: { full_name: 'Nine-Minds/alga-psa' }, path: '.github/workflows/production-regression.yml',
     run_attempt: 2, head_sha: head, status: 'completed', conclusion: 'failure', event: 'pull_request',
+    // Relative, so a fixture date can never drift past the retention window.
+    created_at: new Date(Date.now() - 86_400_000).toISOString(),
     pull_requests: [{ number: 3343, head: { sha: head }, base: { sha: base } }] };
   const job = (id, name) => ({ id, name, run_id: 123, run_attempt: 2, head_sha: head, status: 'completed', conclusion: 'success' });
   const jobs = [job(1, 'browser / Production browser (community)'), job(2, 'browser / Production browser (enterprise)')];
   const metadata = { spreadsheetId: 'sheet-id', sheets: [{ properties: { title: 'browser_readiness', gridProperties: { rowCount: 1000, columnCount: 26 } } }] };
-  const values = { majorDimension: 'ROWS', values: [BROWSER_HEADER, ['2026-09-09', 2, 'run']] };
+  const values = { majorDimension: 'ROWS', values: [BROWSER_HEADER,
+    exportRow({ timestamp_utc: '2026-09-09', schema_version: 2, row_kind: 'run', run_url: RUN_URL })] };
   const state = { run, after: null, jobs, metadata, values, parents: [{ sha: base }, { sha: head }], calls: [], intercept: null, total: undefined };
   const request = async (input, options) => {
     const url = new URL(input); state.calls.push({ url, options });
@@ -40,15 +45,27 @@ function fixture() {
       assert.equal(url.searchParams.get('per_page'), '100');
       const page = Number(url.searchParams.get('page'));
       data = { total_count: state.total ?? state.jobs.length, jobs: state.jobs.slice((page - 1) * 100, page * 100) };
+    } else if (url.pathname.endsWith('/values:batchGet')) {
+      const ranges = url.searchParams.getAll('ranges');
+      assert.ok(ranges.length > 0 && ranges.length <= 50);
+      data = { spreadsheetId: 'sheet-id', valueRanges: ranges.map(range => {
+        const match = /^'browser_readiness'!A(\d+):([R-Y])(\d+)$/.exec(range);
+        assert.ok(match, range);
+        const [start, end] = [Number(match[1]), Number(match[3])];
+        const rows = (state.values.values ?? []).slice(start - 1, end).map(row => row.slice(0, match[2].charCodeAt(0) - 64));
+        while (rows.length && rows.at(-1).length === 0) rows.pop();
+        return { range, majorDimension: 'ROWS', ...(rows.length ? { values: rows } : {}) };
+      }) };
     } else if (url.pathname.includes('/values/')) {
       const range = decodeURIComponent(url.pathname.split('/values/')[1]);
-      const match = /^'browser_readiness'!A(\d+):[R-Y](\d+)$/.exec(range);
-      assert.ok(match);
+      const match = /^'browser_readiness'!G(\d+):G(\d+)$/.exec(range);
+      assert.ok(match, range);
       const start = Number(match[1]), end = Number(match[2]);
-      assert.ok(end - start + 1 <= 2000);
-      const selected = state.values.values?.slice(start - 1, end);
-      while (selected?.length && selected.at(-1).length === 0) selected.pop();
-      data = { ...state.values, values: selected, range };
+      assert.ok(end - start + 1 <= 20_000);
+      const column = (state.values.values ?? []).slice(start - 1, end)
+        .map(row => ((row[6] ?? '') === '' ? [] : [row[6]]));
+      while (column.length && column.at(-1).length === 0) column.pop();
+      data = { majorDimension: 'ROWS', range, ...(column.length ? { values: column } : {}) };
     } else data = state.metadata;
     return new Response(JSON.stringify(data), { status: 200 });
   };
@@ -133,7 +150,7 @@ for (const defect of ['wrong-parent', 'wrong-job-head', 'wrong-workflow', 'wrong
     if (defect === 'duplicate-edition') state.jobs.push({ ...state.jobs[0], id: 42 });
     if (defect === 'truncated-page') state.total = 3;
     if (defect === 'page-cap') state.total = 2001;
-    if (defect === 'sheet-cap') state.metadata.sheets[0].properties.gridProperties.rowCount = 10001;
+    if (defect === 'sheet-cap') state.metadata.sheets[0].properties.gridProperties.rowCount = 200_001;
     if (defect === 'missing-tab') state.metadata.sheets = [];
     if (defect === 'changing-attempt') state.after = { ...state.run, run_attempt: 3 };
     if (defect === 'changing-status') state.after = { ...state.run, status: 'in_progress' };
@@ -154,24 +171,34 @@ test('non-PR revision must equal the exact run head, independent of Sheets conte
   await assert.rejects(collect);
 });
 
-test('sheet capacity failure reports the allocated grid and limit without reading a partial sheet', async () => {
+test('index-scan cap failure reports the allocated grid and limit without reading a row of it', async () => {
   const { state, collect } = fixture();
-  state.metadata.sheets[0].properties.gridProperties.rowCount = 10001;
+  state.metadata.sheets[0].properties.gridProperties.rowCount = 200_001;
   await assert.rejects(collect, error => {
     assert.deepEqual(error.diagnostic, { phase: 'sheet-metadata', code: 'sheet-row-limit-exceeded',
-      rowCount: 10001, columnCount: 26, maxSheetRows: 10000 });
+      rowCount: 200_001, columnCount: 26, maxSheetRows: 200_000 });
     return true;
   });
-  assert.equal(state.calls.filter(call => call.url.pathname.includes('/values/')).length, 0);
+  assert.equal(state.calls.filter(call => call.url.pathname.includes('/values')).length, 0);
 });
 
-for (const phase of ['run', 'sheet-metadata', 'sheet-values']) {
+test('the cap tolerates a tab far larger than retention leaves behind', async () => {
+  const { state, collect } = fixture();
+  state.metadata.sheets[0].properties.gridProperties.rowCount = 19_091;
+  const result = await collect();
+  assert.equal(result.collectionMetadata.indexRowCount, 19_091);
+  assert.equal(result.collectionMetadata.matchedRowCount, 1);
+  assert.equal(result.exportedRows.rows.length, 1);
+});
+
+for (const phase of ['run', 'sheet-metadata', 'sheet-index', 'sheet-values']) {
   test(`HTTP failure in ${phase} preserves its status but never the response body`, async () => {
     const { state, collect } = fixture();
     state.intercept = url => {
       const matches = phase === 'run' ? url.pathname.endsWith('/actions/runs/123')
-        : phase === 'sheet-values' ? url.pathname.includes('/values/')
-          : url.hostname === 'sheets.googleapis.com' && !url.pathname.includes('/values/');
+        : phase === 'sheet-index' ? url.pathname.includes('/values/')
+          : phase === 'sheet-values' ? url.pathname.endsWith('/values:batchGet')
+            : url.hostname === 'sheets.googleapis.com' && !url.pathname.includes('/values');
       return matches ? new Response('credential=must-not-print', { status: 403 }) : null;
     };
     await assert.rejects(collect, error => {
@@ -223,18 +250,18 @@ async function fileFixture(t) {
 
 test('collection failure replaces stale reports, removes stale evidence and retains safe diagnostics', async t => {
   const { state, options } = await fileFixture(t);
-  state.metadata.sheets[0].properties.gridProperties.rowCount = 12345;
+  state.metadata.sheets[0].properties.gridProperties.rowCount = 234_567;
   await writeFile(options.output, 'stale successful evidence');
   await writeFile(options.diagnostics, 'stale successful report');
   const result = await runBrowserMetricCollection(options);
   assert.equal(result.status, 'failed');
   assert.deepEqual(result.diagnostic, { phase: 'sheet-metadata', code: 'sheet-row-limit-exceeded',
-    rowCount: 12345, columnCount: 26, maxSheetRows: 10000 });
+    rowCount: 234_567, columnCount: 26, maxSheetRows: 200_000 });
   assert.deepEqual(JSON.parse(await readFile(options.diagnostics, 'utf8')), result);
   await assert.rejects(readFile(options.output), { code: 'ENOENT' });
   const summary = await readFile(options.env.GITHUB_STEP_SUMMARY, 'utf8');
   assert.match(summary, /sheet-row-limit-exceeded/);
-  assert.match(summary, /12345/);
+  assert.match(summary, /234567/);
   assert.ok(!summary.includes('secret') && !summary.includes('PRIVATE KEY'));
 });
 
@@ -244,6 +271,8 @@ test('successful collection preserves raw evidence and reports collection separa
   assert.equal(result.status, 'collected');
   assert.equal(result.executionCount, 2);
   assert.equal(result.exportedRowCount, 1);
+  assert.equal(result.matchedRowCount, 1);
+  assert.equal(result.indexRowCount, 1000);
   assert.equal(JSON.parse(await readFile(options.output, 'utf8')).expectedExecutions.length, 2);
   assert.deepEqual(JSON.parse(await readFile(options.diagnostics, 'utf8')), result);
 });
@@ -314,20 +343,109 @@ test('deadline aborts a stalled request', async () => {
   } }), /Browser metric collection failed \(run\)/);
 });
 
-test('chunks large grids within 50k cells and preserves blank row offsets', async () => {
+test('scans run_url in bounded chunks and fetches matches at the first, middle and last rows', async () => {
   const { state, collect } = fixture();
-  state.metadata.sheets[0].properties.gridProperties.rowCount = 4500;
-  state.values.values = [BROWSER_HEADER, ['first']];
-  // No cells in the rest of the first chunk or start of the second.
-  for (let row = 2; row < 2400; row++) state.values.values.push([]);
-  state.values.values.push(['later']);
+  state.metadata.sheets[0].properties.gridProperties.rowCount = 45_000;
+  const other = exportRow({ row_kind: 'run', run_url: 'https://github.com/Nine-Minds/alga-psa/actions/runs/999' });
+  state.values.values = [BROWSER_HEADER, exportRow({ row_kind: 'run', run_url: RUN_URL, collected: 'first' })];
+  for (let row = 3; row <= 22_000; row++) state.values.values.push(row % 2 ? other : []);
+  // Adjacent middle matches, then a lone match on the very last allocated row.
+  state.values.values.push(exportRow({ row_kind: 'run', run_url: RUN_URL, collected: 'middle-a' }),
+    exportRow({ row_kind: 'journey', run_url: RUN_URL, collected: 'middle-b' }));
+  for (let row = 22_003; row < 45_000; row++) state.values.values.push([]);
+  state.values.values.push(exportRow({ row_kind: 'run', run_url: RUN_URL, collected: 'last' }));
   const result = await collect();
-  assert.equal(result.exportedRows.rows.length, 2400);
-  assert.deepEqual(result.exportedRows.rows[2399], ['later']);
-  assert.deepEqual(result.exportedRows.rows[1999], []);
-  const reads = state.calls.filter(call => call.url.pathname.includes('/values/'));
-  assert.deepEqual(reads.map(call => decodeURIComponent(call.url.pathname.split('/values/')[1])),
-    ["'browser_readiness'!A1:Y2000", "'browser_readiness'!A2001:Y4000", "'browser_readiness'!A4001:Y4500"]);
+  assert.deepEqual(result.exportedRows.rows.map(row => row[BROWSER_HEADER.indexOf('collected')]),
+    ['first', 'middle-a', 'middle-b', 'last']);
+  assert.equal(result.collectionMetadata.matchedRowCount, 4);
+  assert.deepEqual(state.calls.filter(call => call.url.pathname.includes('/values/'))
+    .map(call => decodeURIComponent(call.url.pathname.split('/values/')[1])),
+    ["'browser_readiness'!G1:G20000", "'browser_readiness'!G20001:G40000", "'browser_readiness'!G40001:G45000"]);
+  // Header plus one range per run of adjacent matches; no other run is fetched.
+  assert.deepEqual(state.calls.filter(call => call.url.pathname.endsWith('/values:batchGet'))
+    .flatMap(call => call.url.searchParams.getAll('ranges')),
+    ["'browser_readiness'!A1:Y2", "'browser_readiness'!A22001:Y22002", "'browser_readiness'!A45000:Y45000"]);
+});
+
+test('rows belonging to other runs are never fetched, whatever the header claims', async () => {
+  const { state, collect } = fixture();
+  state.metadata.sheets[0].properties.gridProperties.rowCount = 6;
+  state.values.values = [BROWSER_HEADER,
+    exportRow({ row_kind: 'run', run_url: 'https://github.com/Nine-Minds/alga-psa/actions/runs/122' }),
+    exportRow({ row_kind: 'run', run_url: 'https://github.com/other/repository/actions/runs/123' }),
+    exportRow({ row_kind: 'run', run_url: 'https://github.com/Nine-Minds/alga-psa/actions/runs/1234' }),
+    exportRow({ row_kind: 'run', run_url: RUN_URL, collected: 'mine' }),
+    exportRow({ row_kind: 'run', run_url: 'https://github.com/Nine-Minds/alga-psa/actions/runs/124' })];
+  const result = await collect();
+  assert.deepEqual(result.exportedRows.rows.map(row => row[BROWSER_HEADER.indexOf('collected')]), ['mine']);
+  assert.deepEqual(state.calls.filter(call => call.url.pathname.endsWith('/values:batchGet'))
+    .flatMap(call => call.url.searchParams.getAll('ranges')),
+    ["'browser_readiness'!A1:Y1", "'browser_readiness'!A5:Y5"]);
+});
+
+test('other attempts of the same run are fetched so stale attempts stay detectable', async () => {
+  const { state, collect } = fixture();
+  state.run.conclusion = 'success';
+  for (const job of state.jobs) job.steps = [{ name: 'Record browser journey readiness', status: 'completed', conclusion: 'success' }];
+  state.metadata.sheets[0].properties.gridProperties.rowCount = 3;
+  const common = { schema_version: 2, tested_sha: revision, edition: 'community', event_name: 'pull_request',
+    run_url: RUN_URL, run_id: '123', row_kind: 'run', lane_status: 'passed' };
+  state.values.values = [BROWSER_HEADER, exportRow({ ...common, run_attempt: 1 }), exportRow({ ...common, run_attempt: 2, collected: 1, executed: 1 })];
+  const result = await collect();
+  assert.equal(result.collectionMetadata.matchedRowCount, 2);
+  const record = reconcileBrowserMetricExecutions(result).records.find(entry => entry.edition === 'community');
+  assert.deepEqual(record.staleAttempts, [1]);
+});
+
+test('a fetched row that is not a row cannot pass cell validation', async () => {
+  const { state, collect } = fixture();
+  state.values.values[1][6] = RUN_URL;
+  state.intercept = url => (url.pathname.endsWith('/values:batchGet')
+    ? new Response(JSON.stringify({ valueRanges: [{ range: 'r', majorDimension: 'ROWS', values: [[{ nested: true }]] }] }), { status: 200 })
+    : null);
+  await assert.rejects(collect, error => {
+    assert.deepEqual(error.diagnostic, { phase: 'sheet-values', code: 'invalid-sheet-cells' });
+    return true;
+  });
+});
+
+test('a truncated batch response is refused rather than dropping a matched row', async () => {
+  const { state, collect } = fixture();
+  state.intercept = url => (url.pathname.endsWith('/values:batchGet')
+    ? new Response(JSON.stringify({ valueRanges: [] }), { status: 200 }) : null);
+  await assert.rejects(collect, error => {
+    assert.deepEqual(error.diagnostic, { phase: 'sheet-values', code: 'invalid-sheet-range' });
+    return true;
+  });
+});
+
+test('a malformed index column is refused rather than silently matching nothing', async () => {
+  const { state, collect } = fixture();
+  state.intercept = url => (url.pathname.includes('/values/')
+    ? new Response(JSON.stringify({ majorDimension: 'ROWS', values: [['a', 'b']] }), { status: 200 }) : null);
+  await assert.rejects(collect, error => {
+    assert.deepEqual(error.diagnostic, { phase: 'sheet-index', code: 'invalid-sheet-cells' });
+    return true;
+  });
+});
+
+test('a header-only tab reports the current header and matches nothing', async () => {
+  const { state, collect } = fixture();
+  state.metadata.sheets[0].properties.gridProperties.rowCount = 1;
+  state.values.values = [BROWSER_HEADER];
+  const result = await collect();
+  assert.equal(result.collectionMetadata.sheetObservation, 'current-header');
+  assert.equal(result.collectionMetadata.matchedRowCount, 0);
+  assert.deepEqual(result.exportedRows, { header: BROWSER_HEADER, rows: [] });
+});
+
+test('an allocated but empty tab has no header to trust', async () => {
+  const { state, collect } = fixture();
+  state.values.values = [];
+  await assert.rejects(collect, error => {
+    assert.deepEqual(error.diagnostic, { phase: 'sheet-values', code: 'invalid-sheet-header' });
+    return true;
+  });
 });
 
 test('absent browser jobs retain a terminal parent cancellation', async () => {
@@ -342,7 +460,8 @@ test('repository identity is case insensitive with canonical lowercase output', 
   const result = await collect({ repository: 'nine-minds/ALGA-psa' });
   assert.ok(result.expectedExecutions.every(row => row.repository === 'nine-minds/alga-psa'));
   assert.deepEqual(result.collectionMetadata, { testedRevisionSource: 'operator-supplied',
-    revisionValidation: 'merge-run-head-parent-verified', checkoutIndependentlyVerified: false, sheetObservation: 'current-header' });
+    revisionValidation: 'merge-run-head-parent-verified', checkoutIndependentlyVerified: false, sheetObservation: 'current-header',
+    sheetReadStrategy: 'index-filtered', indexRowCount: 1000, matchedRowCount: 1 });
 });
 
 for (const conclusion of ['success', 'failure', 'skipped']) test(`retains actual recorder ${conclusion} separately from job result`, async () => {
@@ -388,9 +507,10 @@ test('missing browser tab preserves cancelled expectations as explicit missing e
   const { state, collect } = fixture(); state.metadata.sheets = []; state.jobs = []; state.run.conclusion = 'cancelled';
   const result = await collect();
   assert.equal(result.collectionMetadata.sheetObservation, 'missing-tab');
+  assert.deepEqual(result.collectionMetadata.indexRowCount, 0);
   assert.deepEqual(result.exportedRows, { header: BROWSER_HEADER, rows: [] });
   assert.ok(reconcileBrowserMetricExecutions(result).records.every(record => record.status === 'cancelled'));
-  assert.equal(state.calls.filter(call => call.url.pathname.includes('/values/')).length, 0);
+  assert.equal(state.calls.filter(call => call.url.pathname.includes('/values')).length, 0);
 });
 for (const width of [18, 20]) test(`legacy ${width}-column sheet is readable without inventing current evidence`, async () => {
   const { state, collect } = fixture();
@@ -399,8 +519,8 @@ for (const width of [18, 20]) test(`legacy ${width}-column sheet is readable wit
   const result = await collect();
   assert.equal(result.collectionMetadata.sheetObservation, 'legacy-header');
   assert.equal(reconcileBrowserMetricExecutions(result).status, 'incomplete');
-  assert.ok(decodeURIComponent(state.calls.find(call => call.url.pathname.includes('/values/')).url.pathname)
-    .endsWith(`A1:${String.fromCharCode(64 + width)}1000`));
+  assert.deepEqual(state.calls.filter(call => call.url.pathname.endsWith('/values:batchGet'))
+    .flatMap(call => call.url.searchParams.getAll('ranges')), [`'browser_readiness'!A1:${String.fromCharCode(64 + width)}1`]);
 });
 
 

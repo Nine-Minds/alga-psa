@@ -8,6 +8,7 @@ import {
   getErrorMessage,
   isActionMessageError,
   isActionPermissionError,
+  userFacingErrorMessage,
 } from '@alga-psa/ui/lib/errorHandling';
 import { getCurrentTenantProduct } from '@/lib/productAccess';
 import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
@@ -111,12 +112,10 @@ export default async function TicketPage({ params }: TicketPageProps) {
     return (
       <Alert id="ticket-error-message" variant="destructive">
         <AlertDescription>
-          {t('messages.errorWithMessage', {
-            message: error instanceof Error
-              ? error.message
-              : t('messages.loadError', { defaultValue: 'Failed to load ticket details' }),
-            defaultValue: 'Error: {{message}}',
-          })}
+          {userFacingErrorMessage(
+            error,
+            t('messages.loadError', { defaultValue: 'Failed to load ticket details' }),
+          )}
         </AlertDescription>
       </Alert>
     );

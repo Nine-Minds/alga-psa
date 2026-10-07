@@ -107,7 +107,9 @@
         "message": "Messaggio",
         "messageOptional": "Messaggio (facoltativo)",
         "messagePlaceholder": "Aggiungi una nota personale per il destinatario...",
-        "title": "Invia preventivo"
+        "title": "Invia preventivo",
+        "from": "Da",
+        "useDefault": "Usa mittente predefinito"
       }
     },
     "errors": {
@@ -212,7 +214,9 @@
         "description": "Il preventivo verrà inviato via email ai contatti di fatturazione del cliente e il suo stato cambierà in \"Inviato\".",
         "title": "Invia preventivo al cliente",
         "additionalEmails": "Destinatari aggiuntivi",
-        "message": "Messaggio"
+        "message": "Messaggio",
+        "from": "Da",
+        "useDefault": "Usa mittente predefinito"
       }
     },
     "errorActions": {
@@ -299,7 +303,15 @@
       "currencyPlaceholder": "Seleziona valuta",
       "quoteDate": "Data preventivo",
       "validUntil": "Valido fino al",
-      "validUntilHelp": "Il preventivo scade automaticamente in questa data."
+      "validUntilHelp": "Il preventivo scade automaticamente in questa data.",
+      "currencySource": {
+        "tenant": "Predefinita del tenant",
+        "client": "Predefinita del cliente per {{clientName}}",
+        "template": "Dal modello di preventivo {{templateTitle}}",
+        "saved": "Salvata su questo preventivo",
+        "savedTemplate": "Salvata su questo modello",
+        "manual": "Selezionata manualmente"
+      }
     },
     "lineItems": {
       "title": "Voci",
@@ -339,6 +351,14 @@
       "subtotal": "Subtotale",
       "discounts": "Sconti",
       "tax": "Imposta",
+      "optionalIfSelected": "Opzionale se selezionato",
+      "cadence": {
+        "monthly": "Mensile",
+        "quarterly": "Trimestrale",
+        "semiAnnually": "Semestrale",
+        "annually": "Annuale",
+        "oneTime": "Una tantum"
+      },
       "statusLabel": "Stato",
       "approvalLabel": "Approvazione",
       "approvalMessage": "I preventivi richiedono l'approvazione del responsabile vendite prima dell'invio.",
@@ -493,6 +513,7 @@
       "noPriceInCurrency": "Nessun prezzo in {{currencyCode}}",
       "optional": "Opzionale",
       "phaseSection": "Fase/Sezione",
+      "preselected": "Preselezionato",
       "recurring": "Ricorrente",
       "service": "servizio",
       "setPrice": "Imposta il prezzo",

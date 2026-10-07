@@ -14,6 +14,7 @@ export const buildInvoiceTemplateBindings = (): NonNullable<TemplateAst['binding
     recurringServicePeriodEnd: { id: 'recurringServicePeriodEnd', kind: 'value', path: 'recurringServicePeriodEnd' },
     recurringServicePeriodLabel: { id: 'recurringServicePeriodLabel', kind: 'value', path: 'recurringServicePeriodLabel' },
     poNumber: { id: 'poNumber', kind: 'value', path: 'poNumber' },
+    paymentMethod: { id: 'paymentMethod', kind: 'value', path: 'paymentMethod' },
     subtotal: { id: 'subtotal', kind: 'value', path: 'subtotal' },
     tax: { id: 'tax', kind: 'value', path: 'tax' },
     total: { id: 'total', kind: 'value', path: 'total' },

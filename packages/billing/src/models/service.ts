@@ -4,6 +4,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { z } from 'zod';
 import { validateData } from '@alga-psa/core';
 import { Knex } from 'knex';
+import { resolveCatalogUnitForCreate, resolveCatalogUnitForUpdate } from '@alga-psa/shared/billingClients/tenantUnitsOfMeasure';
 
 // Use a constant for environment check
 const IS_DEVELOPMENT = typeof window !== 'undefined' &&
@@ -82,6 +83,7 @@ const baseServiceSchema = z.object({
     typeof val === 'string' ? parseFloat(val) || 0 : val
   ),
   unit_of_measure: z.string(),
+  unit_code: z.string().nullable().optional(),
   category_id: z.string().uuid().nullable(), // Matches DB FK (nullable) - IService allows string | null
   item_kind: z.enum(['service', 'product']).default('service'),
   is_active: z.union([z.boolean(), z.number()]).transform((val) => Boolean(val)).default(true),
@@ -259,7 +261,11 @@ export function parseServiceReadRows(
 
 // Create schema: Omit service_id and tenant from the *base* schema first
 // We omit tenant because it will be added by the server-side code after validation
-const baseCreateServiceSchema = baseServiceSchema.omit({ service_id: true, tenant: true, created_at: true, updated_at: true });
+// Unit is optional on create: Service.create applies the D1–D3 defaults
+// (product/fixed → Each/C62, hourly → Hour/HUR; usage must be supplied).
+const baseCreateServiceSchema = baseServiceSchema
+  .omit({ service_id: true, tenant: true, created_at: true, updated_at: true })
+  .extend({ unit_of_measure: z.string().optional() });
 
 // No need for refine check anymore
 const refinedCreateServiceSchema = baseCreateServiceSchema;
@@ -453,6 +459,11 @@ const Service = {
 
     const validatedData = createServiceSchema.parse(dataToValidate);
 
+    const unit = await resolveCatalogUnitForCreate(knexOrTrx, effectiveTenant, validatedData).then((resolved) => {
+      if (!resolved.unit_of_measure) throw new Error('Usage services require a unit of measure');
+      return { unit_of_measure: resolved.unit_of_measure, unit_code: resolved.unit_code };
+    });
+
     const normalizedDefaultRate = Math.round(Number(validatedData.default_rate || 0));
     if (!Number.isFinite(normalizedDefaultRate) || normalizedDefaultRate < 0) {
       throw new Error('default_rate must be a non-negative number');
@@ -486,7 +497,8 @@ const Service = {
       custom_service_type_id: validatedData.custom_service_type_id,
       billing_method: validatedData.billing_method,
       default_rate: normalizedDefaultRate,
-      unit_of_measure: validatedData.unit_of_measure,
+      unit_of_measure: unit.unit_of_measure,
+      unit_code: unit.unit_code,
       category_id: validatedData.category_id ?? null, // category_id is string | null in IService
       tax_rate_id: validatedData.tax_rate_id ?? null, // Corrected: Use tax_rate_id
       description: validatedData.description ?? '', // Add description field with default empty string
@@ -610,6 +622,8 @@ const Service = {
           finalUpdateData.cost = Math.round(numericCost);
         }
       }
+
+      Object.assign(finalUpdateData, await resolveCatalogUnitForUpdate(knexOrTrx, tenant, finalUpdateData));
 
       // Knex `update()` does not reliably ignore `undefined` values; strip them so we don't
       // generate invalid bindings (optional fields are allowed to be omitted entirely).

@@ -701,6 +701,7 @@ const TransformsWorkspace: React.FC<Props> = ({
               {t('invoiceDesigner.transforms.inspector.field', { defaultValue: 'Field' })}
             </label>
             <CustomSelect
+              showPlaceholderInDropdown={false}
               id={`transform-filter-field-${selectedOperation.id}`}
               options={sourceFieldPaths.map((path) => ({ value: path, label: path }))}
               value={predicate.path}
@@ -724,6 +725,7 @@ const TransformsWorkspace: React.FC<Props> = ({
               {t('invoiceDesigner.transforms.inspector.operator', { defaultValue: 'Operator' })}
             </label>
             <CustomSelect
+              showPlaceholderInDropdown={false}
               id={`transform-filter-operator-${selectedOperation.id}`}
               options={buildFilterOperatorOptions(t)}
               value={predicate.op}
@@ -822,6 +824,7 @@ const TransformsWorkspace: React.FC<Props> = ({
                   {t('invoiceDesigner.transforms.inspector.field', { defaultValue: 'Field' })}
                 </label>
                 <CustomSelect
+                  showPlaceholderInDropdown={false}
                   id={`transform-sort-field-${selectedOperation.id}-${index}`}
                   options={sourceFieldPaths.map((path) => ({ value: path, label: path }))}
                   value={key.path}
@@ -843,6 +846,7 @@ const TransformsWorkspace: React.FC<Props> = ({
                   {t('invoiceDesigner.transforms.inspector.direction', { defaultValue: 'Direction' })}
                 </label>
                 <CustomSelect
+                  showPlaceholderInDropdown={false}
                   id={`transform-sort-direction-${selectedOperation.id}-${index}`}
                   options={buildSortDirectionOptions(t)}
                   value={key.direction ?? 'asc'}
@@ -888,6 +892,7 @@ const TransformsWorkspace: React.FC<Props> = ({
               {t('invoiceDesigner.transforms.inspector.groupField', { defaultValue: 'Group field' })}
             </label>
             <CustomSelect
+              showPlaceholderInDropdown={false}
               id={`transform-group-key-${selectedOperation.id}`}
               options={sourceFieldPaths.map((path) => ({ value: path, label: path }))}
               value={selectedOperation.key}
@@ -992,6 +997,7 @@ const TransformsWorkspace: React.FC<Props> = ({
                   {t('invoiceDesigner.transforms.inspector.operation', { defaultValue: 'Operation' })}
                 </label>
                 <CustomSelect
+                  showPlaceholderInDropdown={false}
                   id={`transform-aggregate-op-${selectedOperation.id}-${index}`}
                   options={buildAggregationOptions(t)}
                   value={aggregation.op}
@@ -1020,6 +1026,7 @@ const TransformsWorkspace: React.FC<Props> = ({
                     {t('invoiceDesigner.transforms.inspector.field', { defaultValue: 'Field' })}
                   </label>
                   <CustomSelect
+                    showPlaceholderInDropdown={false}
                     id={`transform-aggregate-path-${selectedOperation.id}-${index}`}
                     options={sourceFieldPaths.map((path) => ({ value: path, label: path }))}
                     value={aggregation.path ?? ''}
@@ -1105,6 +1112,7 @@ const TransformsWorkspace: React.FC<Props> = ({
                     {t('invoiceDesigner.transforms.source.sampleScenario', { defaultValue: 'Sample scenario' })}
                   </label>
                   <CustomSelect
+                    showPlaceholderInDropdown={false}
                     id="invoice-designer-transforms-sample-select"
                     options={sampleScenarios.map((scenario) => ({
                       value: scenario.id,
@@ -1157,6 +1165,7 @@ const TransformsWorkspace: React.FC<Props> = ({
               {t('invoiceDesigner.transforms.source.collection', { defaultValue: 'Source collection' })}
             </label>
             <CustomSelect
+              showPlaceholderInDropdown={false}
               id="invoice-designer-transforms-source-binding"
               options={sourceCollectionOptions.map((option) => ({
                 value: option.value,

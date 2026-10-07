@@ -8,7 +8,7 @@
       "metadata": {
         "displayName": "List Tickets",
         "summary": "List tickets",
-        "description": "Returns a paginated list of tickets for the current tenant. Supports filtering by board, status, priority, client, assignee, category, open/closed/overdue flags, and entered/closed date ranges — see the parameters list for all available filters. For aggregate counts (e.g. how many tickets are open or high priority), prefer GET /api/v1/tickets/stats or set limit=1 and read pagination.total from the response. Use GET /api/v1/boards, GET /api/v1/statuses, and GET /api/v1/priorities for lookup data instead of sampling tickets. If you send the fields query parameter, use only these exact field names: ticket_id, ticket_number, title, status_id, status_name, status_is_closed, priority_name, assigned_to_name, client_name, contact_name, updated_at, entered_at, closed_at, tags, or mobile_list. Do not invent aliases such as id, subject, status, priority, client, created_at, or description.",
+        "description": "Returns a paginated list of tickets for the current tenant. Supports filtering by board, status, priority, client, assignee, category, open/closed/overdue flags, and entered/closed date ranges — see the parameters list for all available filters. For aggregate counts (e.g. how many tickets are open or high priority), prefer GET /api/v1/tickets/stats or set limit=1 and read pagination.total from the response. Use GET /api/v1/boards, GET /api/v1/statuses, and GET /api/v1/priorities for lookup data instead of sampling tickets. If you send the fields query parameter, use only these exact field names: ticket_id, ticket_number, title, status_id, status_name, status_is_closed, priority_name, assigned_to_name, client_name, contact_name, updated_at, entered_at, closed_at, latest_activity_at, tags, or mobile_list. Do not invent aliases such as id, subject, status, priority, client, created_at, or description. Use sort=latest_activity_at to order by the most recently active tickets.",
         "rbacResource": "ticket",
         "approvalRequired": false,
         "parameters": [
@@ -209,10 +209,39 @@
             "schema": { "type": "string", "format": "date-time" }
           },
           {
+            "name": "sort",
+            "in": "query",
+            "required": false,
+            "description": "Field to sort by (default entered_at). Only these values are accepted: ticket_number, title, entered_at, updated_at, closed_at, due_date, client_name, status_name, priority_name, latest_activity_at, plus created_at as a legacy alias for entered_at. latest_activity_at orders by the newest of the ticket's own timestamps and its newest visible comment. Any other value is rejected with a 400 error.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ticket_number",
+                "title",
+                "entered_at",
+                "created_at",
+                "updated_at",
+                "closed_at",
+                "due_date",
+                "client_name",
+                "status_name",
+                "priority_name",
+                "latest_activity_at"
+              ]
+            }
+          },
+          {
+            "name": "order",
+            "in": "query",
+            "required": false,
+            "description": "Sort direction (default desc). Ties break on ticket_id descending.",
+            "schema": { "type": "string", "enum": ["asc", "desc"] }
+          },
+          {
             "name": "fields",
             "in": "query",
             "required": false,
-            "description": "Comma-separated list of fields to return. Use only these exact values: ticket_id, ticket_number, title, status_id, status_name, status_is_closed, priority_name, assigned_to_name, client_name, contact_name, updated_at, entered_at, closed_at, tags, or mobile_list. If you are not sure, omit fields entirely instead of guessing aliases.",
+            "description": "Comma-separated list of fields to return. Use only these exact values: ticket_id, ticket_number, title, status_id, status_name, status_is_closed, priority_name, assigned_to_name, client_name, contact_name, updated_at, entered_at, closed_at, latest_activity_at, tags, or mobile_list. If you are not sure, omit fields entirely instead of guessing aliases.",
             "schema": { "type": "string" }
           },
           {
@@ -239,7 +268,8 @@
                   "status_id": { "type": "string", "format": "uuid" },
                   "priority_id": { "type": "string", "format": "uuid" },
                   "assigned_to": { "type": ["string", "null"], "format": "uuid" },
-                  "entered_at": { "type": "string", "format": "date-time" }
+                  "entered_at": { "type": "string", "format": "date-time" },
+                  "latest_activity_at": { "type": ["string", "null"], "format": "date-time", "description": "Newest of the ticket's own timestamps and its newest visible comment. Returned when requested through fields." }
                 },
                 "required": [
                   "ticket_id",

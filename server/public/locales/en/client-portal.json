@@ -1,4 +1,10 @@
 {
+  "tabs": {
+    "paymentMethods": "Payment methods & auto-pay"
+  },
+  "invoice": {
+    "autopayWillCharge": "Will be charged on {{date}} to {{brand}} •••• {{last4}}"
+  },
   "nav": {
     "dashboard": "Dashboard",
     "tickets": "Tickets",
@@ -332,6 +338,8 @@
     },
     "captchaRequired": "Please complete the verification below, then sign in again.",
     "tooManyAttempts": "Too many failed sign-in attempts. Please wait a few minutes before trying again.",
+    "tenantRequiredMessage": "Your email is linked to more than one organization — choose your organization to continue.",
+    "tenantRequiredLink": "Choose your organization",
     "tenantDiscovery": {
       "title": "Find Your Organization",
       "description": "Enter your email address and we'll send you login links for all organizations you have access to.",
@@ -436,6 +444,7 @@
       "addPaymentError": "Failed to add payment method",
       "removePaymentError": "Failed to remove payment method",
       "setDefaultError": "Failed to set default payment method",
+      "methodUpdateError": "Could not update this payment method. Please try again.",
       "loadingBillingInfo": "Loading billing information...",
       "overviewTitle": "Billing Overview",
       "paymentMethodsTitle": "Payment Methods",
@@ -454,6 +463,29 @@
         "addPaymentMethod": "Add Payment Method",
         "adding": "Adding...",
         "view": "View"
+      },
+      "cardSetup": {
+        "success": "Card saved securely.",
+        "error": "We could not save the card. Please try again."
+      },
+      "autopay": {
+        "title": "Payment methods & auto-pay",
+        "loading": "Loading payment methods…",
+        "profileUnavailable": "Payment method and auto-pay settings are unavailable for this billing profile.",
+        "cardFallback": "Card",
+        "enrolled": "Auto-pay is enabled.",
+        "disable": "Turn off auto-pay",
+        "consent": "I authorize recurring charges to this card for finalized invoices.",
+        "enable": "Enable auto-pay",
+        "noCards": "Add a card to enable auto-pay.",
+        "changeCard": "Use this card for auto-pay",
+        "updateError": "Could not update auto-pay. Please try again."
+      },
+      "publicCardSetup": {
+        "saved": "Card saved",
+        "failed": "We could not save your card",
+        "savedDescription": "Your card is ready for future payments.",
+        "failedDescription": "The setup could not be verified. Please ask your billing provider for a new link."
       },
       "fields": {
         "cardNumber": "Card Number",
@@ -586,6 +618,7 @@
       "emailAlreadyExists": "A user with this email address already exists",
       "reportsToSelf": "A user cannot report to themselves",
       "reportsToCycle": "This would create a circular reporting chain",
+      "invalidTimezone": "Choose a city-based time zone, such as America/New_York.",
       "photoUploaded": "Photo uploaded successfully",
       "photoRemoved": "Photo removed successfully",
       "userNotFound": "User not found",
@@ -626,7 +659,8 @@
       "adjustMark": "Adjust mark",
       "cropFromWide": "Crop from wide logo",
       "recropSuccess": "Mark updated.",
-      "recropError": "Failed to update the mark."
+      "recropError": "Failed to update the mark.",
+      "fileNameLabel": "Stored file"
     },
     "validation": {
       "clientNameRequired": "Client name is required",

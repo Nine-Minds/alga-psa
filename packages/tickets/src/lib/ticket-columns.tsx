@@ -656,6 +656,23 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
     });
   }
 
+  // Last Activity (newest of the ticket's own timestamps and its latest comment)
+  if (columnVisibility.last_activity) {
+    columns.push({
+      key: 'last_activity',
+      col: {
+        title: t('fields.lastActivity', 'Last Activity'),
+        dataIndex: 'latest_activity_at',
+        width: '10%',
+        render: (value: string | null) => (
+          <div className="text-sm text-gray-500">
+            {value ? formatTicketDateTime(value, locale, getUserTimeZone(), dateFormat, showWeekday) : '-'}
+          </div>
+        ),
+      }
+    });
+  }
+
   // Apply the stored order to the reorderable columns only, leaving every other
   // kind exactly where the builder put it. Sorting the whole array would let a
   // stored order drag the title cell out of first position.

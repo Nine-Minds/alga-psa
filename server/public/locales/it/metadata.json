@@ -26,6 +26,11 @@
         "detail": {
           "title": "Dettagli del preventivo"
         }
+      },
+      "paymentMethods": {
+        "setupComplete": {
+          "title": "Configurazione della carta"
+        }
       }
     },
     "devices": {
@@ -273,6 +278,9 @@
       "detail": {
         "title": "Ticket n. {{ticketNumber}} - {{ticketTitle}}",
         "fallbackTitle": "Dettagli del ticket"
+      },
+      "recurring": {
+        "title": "Ticket ricorrenti"
       }
     },
     "timeEntry": {
@@ -613,6 +621,11 @@
     },
     "tab": {
       "title": "Team"
+    }
+  },
+  "paymentMethods": {
+    "setupComplete": {
+      "title": "Configurazione della carta"
     }
   }
 }

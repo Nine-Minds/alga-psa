@@ -264,6 +264,87 @@ describe('Project Template Actions', () => {
       );
     });
 
+    it('should record each task start as an offset from its phase start', async () => {
+      const projectId = 'project-123';
+
+      knexStub.queries.projects.first.mockResolvedValue({
+        project_id: projectId,
+        tenant: 'tenant-123'
+      });
+
+      knexStub.queries.project_phases.orderBy.mockResolvedValue([
+        {
+          phase_id: 'phase-1',
+          tenant: 'tenant-123',
+          order_key: 'a0',
+          start_date: new Date('2026-10-05T00:00:00.000Z'),
+          end_date: new Date('2026-10-30T00:00:00.000Z')
+        }
+      ]);
+
+      knexStub.queries.project_templates.returning.mockResolvedValue([
+        { template_id: 'template-123', tenant: 'tenant-123' }
+      ]);
+
+      knexStub.queries.project_template_phases.returning.mockResolvedValue([
+        { template_phase_id: 'template-phase-1', tenant: 'tenant-123' }
+      ]);
+
+      knexStub.queries.project_tasks.orderBy.mockResolvedValue([
+        {
+          task_id: 'task-1',
+          phase_id: 'phase-1',
+          tenant: 'tenant-123',
+          task_name: 'Dated',
+          start_date: new Date('2026-10-08T00:00:00.000Z'),
+          due_date: new Date('2026-10-15T00:00:00.000Z')
+        },
+        {
+          task_id: 'task-2',
+          phase_id: 'phase-1',
+          tenant: 'tenant-123',
+          task_name: 'Starts with the phase',
+          start_date: new Date('2026-10-05T00:00:00.000Z'),
+          due_date: null
+        },
+        {
+          task_id: 'task-3',
+          phase_id: 'phase-1',
+          tenant: 'tenant-123',
+          task_name: 'No start',
+          start_date: null,
+          due_date: new Date('2026-10-12T00:00:00.000Z')
+        },
+        {
+          task_id: 'task-4',
+          phase_id: 'phase-1',
+          tenant: 'tenant-123',
+          task_name: 'Starts before the phase',
+          start_date: new Date('2026-10-01T00:00:00.000Z'),
+          due_date: null
+        }
+      ]);
+
+      knexStub.queries.project_template_tasks.returning.mockResolvedValue([
+        { template_task_id: 'template-task-x', tenant: 'tenant-123' }
+      ]);
+      knexStub.queries.project_task_dependencies.whereIn.mockResolvedValue([]);
+      knexStub.queries.task_checklist_items.whereIn.mockResolvedValue([]);
+      knexStub.queries.project_status_mappings.where.mockResolvedValue([]);
+
+      await projectTemplateActions.createTemplateFromProject(projectId, { template_name: 'Test' });
+
+      const inserted = Object.fromEntries(
+        knexStub.queries.project_template_tasks.insert.mock.calls.map(([row]: [any]) => [row.task_name, row])
+      );
+      expect(inserted['Dated']).toMatchObject({ start_offset_days: 3, duration_days: 10 });
+      // Zero is a real offset, not "no start date".
+      expect(inserted['Starts with the phase']).toMatchObject({ start_offset_days: 0 });
+      expect(inserted['No start']).toMatchObject({ start_offset_days: null, duration_days: 7 });
+      // A start before the phase has no offset to express.
+      expect(inserted['Starts before the phase']).toMatchObject({ start_offset_days: null });
+    });
+
     it('should copy checklists with remapped task IDs', async () => {
       const projectId = 'project-123';
 

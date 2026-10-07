@@ -38,13 +38,12 @@ export default function BulkAddTagsRouteClient({ closeMode }: BulkAddTagsRouteCl
     try {
       const result = await bulkAddTagsToTickets(selectedTicketIdsArray, tagTexts);
 
-      if (result.updatedIds.length > 0) {
-        refreshList();
-      }
-
       if (result.failed.length > 0) {
         setFailed(result.failed);
         keepFailedSelection(result.failed);
+        if (result.updatedIds.length > 0) {
+          refreshList();
+        }
         toastBulkResult(result, {
           partialFailure: t('bulk.tags.partialFailure', 'Tags could not be added to some tickets'),
           success: (count) => t('bulk.tags.success', {

@@ -6,15 +6,27 @@ const versionNumber = z.preprocess(
   z.number().int().positive()
 );
 
+// The preprocess step maps null/'' to undefined, so the inner schema must accept undefined itself:
+// an outer `.optional()` only sees the raw input (null), not the preprocessed value, and the inner
+// z.number() would then reject the undefined as "Required".
 const optionalPositiveInt = z.preprocess(
   (val) => (val === undefined || val === null || val === '' ? undefined : Number(val)),
-  z.number().int().positive()
-).optional();
+  z.number().int().positive().optional()
+);
 
 const optionalNonNegativeInt = z.preprocess(
   (val) => (val === undefined || val === null || val === '' ? undefined : Number(val)),
-  z.number().int().nonnegative()
-).optional();
+  z.number().int().nonnegative().optional()
+);
+
+/**
+ * An optional setting that can be cleared: undefined leaves the stored value alone, null (or an
+ * empty string from a blank form field) clears it, and anything else must be a number.
+ */
+const clearableNumber = (schema: z.ZodNumber) => z.preprocess(
+  (val) => (val === undefined ? undefined : val === null || val === '' ? null : Number(val)),
+  schema.nullable().optional()
+);
 
 const workflowKey = z.string().min(1).regex(/^[a-z0-9][a-z0-9._-]*$/);
 
@@ -67,13 +79,11 @@ export const UpdateWorkflowDefinitionMetadataInput = z.object({
   key: workflowKey.optional(),
   isVisible: z.boolean().optional(),
   isPaused: z.boolean().optional(),
-  concurrencyLimit: optionalNonNegativeInt.optional(),
+  /** null or blank means no limit. */
+  concurrencyLimit: clearableNumber(z.number().int().nonnegative()),
   autoPauseOnFailure: z.boolean().optional(),
-  failureRateThreshold: z.preprocess(
-    (val) => (val === undefined || val === null || val === '' ? undefined : Number(val)),
-    z.number().min(0).max(1)
-  ).optional(),
-  failureRateMinRuns: optionalNonNegativeInt.optional(),
+  failureRateThreshold: clearableNumber(z.number().min(0).max(1)),
+  failureRateMinRuns: clearableNumber(z.number().int().nonnegative()),
   retentionPolicyOverride: z.record(z.any()).optional()
 });
 
@@ -97,7 +107,13 @@ export const StartWorkflowRunInput = z.object({
   workflowVersion: versionNumber.optional(),
   payload: z.record(z.any()).default({}),
   eventType: z.string().min(1).optional(),
-  sourcePayloadSchemaRef: z.string().min(1).optional()
+  sourcePayloadSchemaRef: z.string().min(1).optional(),
+  /**
+   * Return payload validation failures as a result (field-by-field issues) instead of throwing.
+   * Thrown server-action errors lose their details on the way to the browser, so the Run dialog
+   * asks for this to show each problem next to its field.
+   */
+  reportPayloadIssues: z.boolean().optional()
 });
 
 export const ListWorkflowRunsInput = z.object({
@@ -136,7 +152,7 @@ export const ListWorkflowDefinitionsPagedInput = z.object({
   pageSize: pageSizeNumber.default(20),
   search: z.string().optional(),
   status: z.enum(['all', 'active', 'draft', 'paused']).optional(),
-  trigger: z.enum(['all', 'event', 'schedule', 'recurring', 'scheduled', 'manual']).optional(),
+  trigger: z.enum(['all', 'event', 'schedule', 'recurring', 'scheduled', 'date', 'manual']).optional(),
   sortBy: z.enum(['name', 'status', 'updated_at', 'created_at']).optional(),
   sortDirection: z.enum(['asc', 'desc']).optional()
 });

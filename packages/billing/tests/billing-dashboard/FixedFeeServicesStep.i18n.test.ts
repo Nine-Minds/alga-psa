@@ -44,7 +44,9 @@ describe('FixedFeeServicesStep i18n wiring contract', () => {
       'wizardFixed.services.label',
       'wizardFixed.services.serviceItemLabel',
       'wizardFixed.services.selectServicePlaceholder',
-      'wizardFixed.services.quantityLabel',
+      // The quantity label follows the service's pricing basis.
+      'wizardFixed.services.recurringQuantityLabel',
+      'wizardFixed.services.allocationQuantityLabel',
       'wizardFixed.services.addService',
       'wizardFixed.emptyState',
       'wizardFixed.alternateFrequencyLabel',

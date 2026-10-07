@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { displayAddressField, displayCountry } from '@alga-psa/core';
+import { displayAddressField, displayCountry, isOptional, isQuoteItemIncluded } from '@alga-psa/core';
 import { useCurrencyFormat } from '@alga-psa/ui/lib';
 import { useRouter } from 'next/navigation';
 import { Badge, type BadgeVariant } from '@alga-psa/ui/components/Badge';
@@ -41,9 +41,6 @@ const STATUS_VARIANTS: Record<QuoteStatus, BadgeVariant> = {
   archived: 'outline',
 };
 
-function itemIsIncluded(item: IQuoteItem): boolean {
-  return !item.is_optional || item.is_selected !== false;
-}
 
 const isBillingActionError = (
   value: unknown
@@ -197,7 +194,7 @@ const QuoteDetailPage: React.FC<QuoteDetailPageProps> = ({ quoteId }) => {
   const optionalSelectedItemIds = useMemo(() => {
     if (!quote?.quote_items) return [];
     return quote.quote_items
-      .filter((item) => item.is_optional && item.is_selected !== false)
+      .filter((item) => isOptional(item) && isQuoteItemIncluded(item))
       .map((item) => item.quote_item_id);
   }, [quote]);
 
@@ -455,7 +452,7 @@ const QuoteDetailPage: React.FC<QuoteDetailPageProps> = ({ quoteId }) => {
                     </thead>
                     <tbody className="divide-y">
                       {rowItems.map((item) => {
-                        const isIncluded = itemIsIncluded(item);
+                        const isIncluded = isQuoteItemIncluded(item);
                         return (
                           <tr key={item.quote_item_id} className={!isIncluded ? 'opacity-60' : undefined}>
                             <td className="px-3 py-2">
@@ -465,7 +462,7 @@ const QuoteDetailPage: React.FC<QuoteDetailPageProps> = ({ quoteId }) => {
                                   <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                                     <Badge variant="outline" className="text-[10px]">{t('quotes.detail.optional', { defaultValue: 'Optional' })}</Badge>
                                     <span>
-                                      {item.is_selected !== false
+                                      {isIncluded
                                         ? t('quotes.detail.included', { defaultValue: 'Included' })
                                         : t('quotes.detail.excluded', { defaultValue: 'Excluded' })}
                                     </span>
@@ -475,11 +472,11 @@ const QuoteDetailPage: React.FC<QuoteDetailPageProps> = ({ quoteId }) => {
                                   <div className="pt-1">
                                     <Switch
                                       id={`quote-item-${item.quote_item_id}-selection`}
-                                      checked={item.is_selected !== false}
+                                      checked={isIncluded}
                                       disabled={!canEditSelections || isUpdatingSelections}
                                       onCheckedChange={(checked) => void handleSelectionToggle(item.quote_item_id, checked)}
                                       className="data-[state=checked]:bg-primary-500"
-                                      label={item.is_selected !== false
+                                      label={isIncluded
                                         ? t('quotes.detail.include', { defaultValue: 'Include' })
                                         : t('quotes.detail.exclude', { defaultValue: 'Exclude' })}
                                       size="sm"
@@ -510,7 +507,7 @@ const QuoteDetailPage: React.FC<QuoteDetailPageProps> = ({ quoteId }) => {
                     {groups.map((group) => {
                       // Live per-group subtotal honours the optional-item toggle.
                       const subtotal = group.items
-                        .filter((i) => !i.is_discount && itemIsIncluded(i))
+                        .filter((i) => !i.is_discount && isQuoteItemIncluded(i))
                         .reduce((sum, i) => sum + (Number(i.total_price) || 0), 0);
                       const addressLines = formatClientPortalLocationLines(group.location);
                       return (

@@ -6,8 +6,9 @@ exports.seed = function(knex) {
                 {
                     tenant: tenant.tenant,
                     username: 'glinda',
-                    // Placeholder recognized by development credential initialization.
-                    hashed_password: 'KIXQJZT7qLBlZB6rHn9e1uuEIYVVbIilJ', 
+                    // Development startup creates a credential because this
+                    // seed value is intentionally not a PBKDF2 password hash.
+                    hashed_password: '',
                     first_name: 'Glinda',
                     last_name: 'Good',
                     email: 'glinda@emeraldcity.oz',

@@ -39,6 +39,17 @@ vi.mock('../EmailProviderConfiguration', () => ({
   EmailProviderConfiguration: () => <div />,
 }));
 
+vi.mock('./EmailSenderRoutingCards', () => ({
+  EmailSenderCardsProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  EmailSenderAddressesCard: () => <div data-testid="sender-addresses-card" />,
+  EmailSenderRoutingCard: () => <div data-testid="sender-routing-card" />,
+}));
+
+vi.mock('./OutboundEmailDiagnosticsDialog', () => ({
+  OutboundEmailDiagnosticsDialog: ({ isOpen }: { isOpen: boolean }) =>
+    isOpen ? <div data-testid="outbound-diagnostics-dialog" /> : null,
+}));
+
 vi.mock('@alga-psa/ui/components/providers/TenantProvider', () => ({
   useTenant: () => 'tenant-1',
 }));
@@ -111,33 +122,19 @@ describe('EmailSettings sender identities', () => {
     getEmailDomainsMock.mockResolvedValue([]);
   });
 
-  it('renders both identities and saves each field to its existing storage group', async () => {
+  it('renders the shared sender address and routing cards', async () => {
+    render(<EmailSettings />);
+    expect(await screen.findByTestId('sender-addresses-card')).toBeInTheDocument();
+    expect(screen.getByTestId('sender-routing-card')).toBeInTheDocument();
+  });
+
+  it('opens the shared outbound diagnostics dialog from the outbound tab', async () => {
     render(<EmailSettings />);
 
-    expect(await screen.findByText('email.senderIdentities.ticket.title')).toBeInTheDocument();
-    expect(screen.getByText('email.senderIdentities.notification.title')).toBeInTheDocument();
-    expect(screen.getByText('Leave blank to use Example MSP automatically.')).toBeInTheDocument();
+    const diagnosticsButton = await screen.findByRole('button', { name: /test connection/i });
+    expect(screen.queryByTestId('outbound-diagnostics-dialog')).not.toBeInTheDocument();
+    fireEvent.click(diagnosticsButton);
 
-    fireEvent.change(screen.getByDisplayValue('Example Support'), {
-      target: { value: 'Example Helpdesk' },
-    });
-    fireEvent.change(
-      screen.getByPlaceholderText('email.senderIdentities.notification.namePlaceholder'),
-      { target: { value: 'Example Billing' } }
-    );
-    fireEvent.click(screen.getByRole('button', { name: /save settings/i }));
-
-    await waitFor(() => {
-      expect(updateEmailSettingsMock).toHaveBeenCalledWith(expect.objectContaining({
-        ticketingFromName: 'Example Helpdesk',
-        providerConfigs: [expect.objectContaining({
-          providerType: 'smtp',
-          config: expect.objectContaining({
-            from: 'notifications@example.test',
-            fromName: 'Example Billing',
-          }),
-        })],
-      }));
-    });
+    expect(await screen.findByTestId('outbound-diagnostics-dialog')).toBeInTheDocument();
   });
 });

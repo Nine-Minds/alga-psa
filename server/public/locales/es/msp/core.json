@@ -102,7 +102,9 @@
       "forms": "Formularios",
       "channels": "Canales"
     },
-    "passwords": "Contraseñas"
+    "passwords": "Contraseñas",
+    "ticketsAll": "Todos los tickets",
+    "ticketsRecurring": "Tickets recurrentes"
   },
   "sidebar": {
     "backToMain": "Volver al inicio",

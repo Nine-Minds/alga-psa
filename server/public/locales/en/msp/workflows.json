@@ -149,7 +149,8 @@
     "header": {
       "runIdLabel": "Run ID",
       "workflowIdLabel": "Workflow ID:",
-      "triggerLabel": "Trigger:"
+      "triggerLabel": "Trigger:",
+      "workflowTriggerLabel": "Workflow trigger:"
     },
     "actions": {
       "cancel": "Cancel",
@@ -179,7 +180,8 @@
       "identity": "Identity",
       "runErrorFallback": "Run error",
       "errorCategoryFallback": "Error",
-      "technicalDetailLabel": "Technical detail:"
+      "technicalDetailLabel": "Technical detail:",
+      "runSourceLabel": "Run source"
     },
     "stepTimeline": {
       "title": "Step Timeline",
@@ -199,7 +201,8 @@
         "error": "Error",
         "action": "Action"
       },
-      "empty": "No step history yet."
+      "empty": "No step history yet.",
+      "neverStarted": "This run never reached the workflow engine, so no steps ran."
     },
     "stepDetails": {
       "title": "Step Details",
@@ -338,7 +341,10 @@
       "savePreset": "Save preset",
       "show": "Show",
       "startRun": "Start Run",
-      "starting": "Starting..."
+      "starting": "Starting...",
+      "viewRun": "View run",
+      "viewFailedRun": "View failed run",
+      "tryAgain": "Try again"
     },
     "eventCatalog": {
       "title": "Event catalog",
@@ -361,7 +367,11 @@
       "manualTrigger": "Manual",
       "workflowStatusLabel": "Workflow status",
       "statusActive": "active",
-      "statusPaused": "paused"
+      "statusPaused": "paused",
+      "runSourceLabel": "Run source",
+      "runSourceManualTest": "Manual test",
+      "workflowTriggerLabel": "Workflow trigger",
+      "noTrigger": "None (runs only when started by hand)"
     },
     "form": {
       "booleanTrue": "True",
@@ -370,7 +380,12 @@
       "mapEntriesPrompt": "Enter field key/path",
       "mapEntriesDescription": "For map-style objects, add keys and set each value.",
       "mapEntriesEmpty": "No map entries added.",
-      "noSchema": "No schema available to render a form."
+      "noSchema": "No schema available to render a form.",
+      "recordFillHint": "Pick a real record (for example a contract, ticket, or client) and the empty fields beside it fill in from that record.",
+      "recordFillHintField": "Pick a real record in {{field}} and these fields fill in from it when empty: {{targets}}.",
+      "recordFillKeepsTyped": "Values you typed yourself are kept; fields the record has no value for stay as they are.",
+      "recordFillGap": "The picked record has no {{fields}}, so that stays empty.",
+      "recordNeverFires": "This trigger never runs for this record: it has no date to run on. Pick another, or enter the dates yourself."
     },
     "noPublishedVersion": {
       "title": "No published version",
@@ -380,7 +395,9 @@
       "largePayloadWarning": "Payload size exceeds 256KB; runs may be slower.",
       "payloadJsonLabel": "Payload (JSON)",
       "payloadLabel": "payload",
-      "payloadSize": "Payload size: {{size}} KB"
+      "payloadSize": "Payload size: {{size}} KB",
+      "uuidPlaceholder": "An id (UUID), e.g. 3f2c1a5e-0b7d-4c1e-9a2f-6d8e4b1c7a90",
+      "generateTestId": "Generate test id"
     },
     "presets": {
       "presetNameLabel": "Preset name",
@@ -438,18 +455,87 @@
       "presetSaved": "Preset saved.",
       "providePresetName": "Provide a preset name.",
       "startRunFailed": "Failed to start run",
-      "triggerMappingMissing": "Trigger mapping is required for this event schema but is not configured on the workflow."
+      "triggerMappingMissing": "Trigger mapping is required for this event schema but is not configured on the workflow.",
+      "runStarted": "Run started."
     },
     "validation": {
       "invalidJson": "Invalid JSON",
-      "summaryTitle": "Payload still needs required event fields before this run can start",
-      "summaryDescription": "Fill the missing fields below, switch to Form Builder, or use a sample payload button.",
+      "summaryTitle": "Some fields need attention before this run can start",
+      "summaryDescription": "Fix the fields below, switch to Form Builder, or use a sample payload button.",
       "moreErrors": "+{{count}} more…"
     },
     "sampleEmailBody": "Sample email body",
     "sections": {
       "schemaAndEvents": "Schema & Events",
       "payloadTools": "Payload Tools"
+    },
+    "startFailure": {
+      "engineUnavailableTitle": "The workflow engine could not be reached",
+      "engineUnavailableDescription": "The run was recorded but could not start, so it is marked failed. Try again in a few minutes. If this keeps happening, ask an administrator to check the workflow service.",
+      "launchFailedTitle": "The run could not start",
+      "launchFailedDescription": "The run was recorded and marked failed. Open it to see the error.",
+      "genericTitle": "The run did not start",
+      "technicalDetails": "Technical details"
+    },
+    "startProgress": "Connecting to the workflow engine…",
+    "issues": {
+      "item": "item {{position}}",
+      "required": "{{field}} is required",
+      "type": "{{field}} must be {{type}}",
+      "typeUnknown": "{{field}} has the wrong kind of value",
+      "formatUuid": "{{field}} must be an id (UUID), like 3f2c1a5e-0b7d-4c1e-9a2f-6d8e4b1c7a90",
+      "formatEmail": "{{field}} must be an email address",
+      "formatDate": "{{field}} must be a date (YYYY-MM-DD)",
+      "formatDateTime": "{{field}} must be a date and time, like 2026-10-03T09:00:00Z",
+      "formatTime": "{{field}} must be a time (HH:MM)",
+      "formatUrl": "{{field}} must be a web address",
+      "formatOther": "{{field}} is not in the expected format",
+      "choice": "{{field}} must be one of: {{options}}",
+      "choiceUnknown": "{{field}} is not one of the allowed values",
+      "tooShort": "{{field}} must be at least {{limit}} characters",
+      "tooFewItems": "{{field}} needs at least {{limit}} items",
+      "tooSmall": "{{field}} must be at least {{limit}}",
+      "tooLong": "{{field}} must be at most {{limit}} characters",
+      "tooManyItems": "{{field}} can have at most {{limit}} items",
+      "tooBig": "{{field}} must be at most {{limit}}",
+      "unknownField": "{{field}} is not part of this payload",
+      "invalidWithMessage": "{{field}}: {{message}}",
+      "invalid": "{{field}} is not valid",
+      "more": "+{{count}} more",
+      "inputTitle": "Fix these fields, then start the run again",
+      "mappedTitle": "The trigger mapping produced a payload the workflow does not accept",
+      "mappedDescription": "{{issues}} Check the trigger mapping in the workflow settings, or the event fields it reads.",
+      "types": {
+        "string": "text",
+        "number": "a number",
+        "integer": "a whole number",
+        "boolean": "true or false",
+        "object": "a group of fields",
+        "array": "a list"
+      }
+    },
+    "draft": {
+      "restored": "Your last test payload for this workflow is back. It stays here until you start over.",
+      "kept": "This payload is kept if you close the dialog.",
+      "startOver": "Start over"
+    },
+    "dateTrigger": {
+      "help": {
+        "occursOn": "The date this run is about: {{dateName}}. Filled in from the record you pick.",
+        "offsetDays": "Days between that date and the run, from the trigger ({{timing}}). Negative means before, positive after.",
+        "fireDate": "The day the scheduler would start this run: the date above plus the offset."
+      },
+      "timing": {
+        "before": "{{days}} days before",
+        "after": "{{days}} days after",
+        "onTheDay": "on the day"
+      },
+      "dateNames": {
+        "anniversary": "the client's next anniversary",
+        "renewal": "the contract's renewal decision date",
+        "contractEnd": "the contract's end date",
+        "warrantyEnd": "the asset's warranty end date"
+      }
     }
   },
   "eventList": {
@@ -582,7 +668,9 @@
       "loading": "Loading audit entries..."
     },
     "values": {
-      "system": "system"
+      "system": "system",
+      "unknownUser": "Unknown user",
+      "byUser": "By {{user}}"
     },
     "toasts": {
       "loadFailed": "Failed to load audit logs",
@@ -633,7 +721,26 @@
       "validation": {
         "lastValidated": "Last validated: {{timestamp}}",
         "unknown": "Validation status unknown"
-      }
+      },
+      "publishedVersionBadge": "Published v{{version}}",
+      "notPublishedBadge": "Not published",
+      "pausedToast": "Workflow paused. New events won’t start runs.",
+      "resumedToast": "Workflow active. New events start runs again.",
+      "resumeTitle": "Paused: new events don’t start runs. Click to make it active.",
+      "pauseTitle": "Active: new events start runs. Click to pause.",
+      "pausedBadge": "Paused",
+      "activeBadge": "Active",
+      "runPausedReason": "Paused: resume the workflow to run it.",
+      "pauseTitleDate": "Active: runs start on the dates this workflow watches. Click to pause.",
+      "resumeTitleDate": "Paused: watched dates don’t start runs. Click to make it active.",
+      "pausedToastDate": "Workflow paused. Watched dates won’t start runs.",
+      "resumedToastDate": "Workflow active. Watched dates start runs again.",
+      "pauseTitleManual": "Active: schedules can start runs. Click to pause.",
+      "resumeTitleManual": "Paused: schedules don’t start runs. Click to make it active.",
+      "pausedToastManual": "Workflow paused. Schedules won’t start runs.",
+      "resumedToastManual": "Workflow active. Schedules start runs again.",
+      "newWorkflowTitle": "Start a new, empty workflow. This one stays as it was last saved.",
+      "newWorkflowShort": "New workflow"
     },
     "form": {
       "nameLabel": "Workflow name",
@@ -642,7 +749,7 @@
       "latestPublishedVersion": "Latest published version: {{version}}",
       "triggerTypeLabel": "Trigger type",
       "triggerTypePlaceholder": "Select trigger type",
-      "triggerTypeHelp": "Choose whether this workflow starts manually or from an event. Reusable schedules are managed in the Workflow Control Panel.",
+      "triggerTypeHelp": "Choose how this workflow starts: only when you run it, when an event happens, or on a date from a record (like a contract’s end date). Reusable schedules are managed in the Workflow Control Panel.",
       "manualTriggerNote": "This workflow has no trigger. It can still be run manually and scheduled from the Workflow Control Panel once it has a pinned payload schema and a published version.",
       "eventCategoryLabel": "Event category",
       "eventLabel": "Event",
@@ -674,7 +781,34 @@
       "workflowStepsListHint": "Drag steps to reorder or move between pipes.",
       "workflowStepsGraphHint": "Pan/zoom the graph. Branches render as separate lanes.",
       "workflowStepsViewAria": "Workflow steps view",
-      "warningsCount": "{{count}} warnings"
+      "warningsCount": "{{count}} warnings",
+      "dateSource": "Date source",
+      "dateSourceAnniversary": "Client anniversary",
+      "dateSourceRenewal": "Contract renewal decision date",
+      "dateSourceContractEnd": "Contract end date",
+      "dateSourceWarranty": "Asset warranty end",
+      "dateOffset": "Days",
+      "dateDirection": "Timing",
+      "before": "Before",
+      "onDate": "On the day",
+      "after": "After",
+      "daysBefore": "days before",
+      "daysAfter": "days after",
+      "localTime": "Local time",
+      "timezoneOptional": "Timezone (optional)",
+      "tenantTimezoneDefault": "Tenant timezone",
+      "dateTriggerSummary": "Runs {{days}} {{direction}} {{source}} at {{time}} ({{timezone}})",
+      "inputDataDatePrefix": "This workflow receives the payload defined by",
+      "searchEventCategories": "Search categories",
+      "searchAllEvents": "Search all events",
+      "selectEventToFinish": "Select an event to finish configuring this trigger.",
+      "searchOrPickCategory": "Search all events, or pick a category to narrow the list.",
+      "nextVersionLabel": "Next version to publish",
+      "publishedAndNextVersion": "Published: v{{published}}. You are editing a draft; publishing it creates v{{next}}.",
+      "notPublishedNextVersion": "Not published yet. Publishing creates v{{next}}.",
+      "tenantTimezoneOption": "Tenant timezone (default)",
+      "searchTimezones": "Search timezones",
+      "inputDataEventPending": "Choose the event above; your steps will read the data that event sends."
     },
     "stepPanel": {
       "readOnly": "Read-only access: step editing is disabled.",
@@ -715,7 +849,12 @@
       "untilInput": "Until input",
       "specificDateTime": "Specific date & time",
       "untilExpression": "Until expression",
-      "returnNotice": "Return stops workflow execution."
+      "returnNotice": "Return stops workflow execution.",
+      "duration": "Duration",
+      "durationSummary": "Waits {{duration}}.",
+      "durationEmpty": "Enter how long to wait, in any of these units.",
+      "notFoundInTry": "This step is inside a Try. If nothing is found it currently continues, so the Catch branch won’t run. Make it fail instead to let Catch handle a missing record.",
+      "notFoundFailAction": "Fail so Catch can handle it"
     },
     "mappingExpr": {
       "add": "Add",
@@ -809,23 +948,23 @@
       },
       "store.get": {
         "label": "Get Stored Value",
-        "description": "Read a persisted workflow key/value entry."
+        "description": "Read a value saved earlier, by namespace and key."
       },
       "store.set": {
         "label": "Set Stored Value",
-        "description": "Persist a workflow key/value entry."
+        "description": "Save a value under a namespace and key so later runs can read it."
       },
       "store.delete": {
         "label": "Delete Stored Value",
-        "description": "Delete a persisted workflow key/value entry."
+        "description": "Delete a saved value by namespace and key."
       },
       "store.increment": {
         "label": "Increment Stored Number",
-        "description": "Atomically increment a persisted workflow number."
+        "description": "Add to a saved number, such as a counter or tally, by namespace and key."
       },
       "store.list": {
         "label": "List Stored Values",
-        "description": "List persisted workflow key/value entries in a namespace."
+        "description": "List the values saved in one namespace."
       },
       "store.list_namespaces": {
         "label": "List Store Namespaces",
@@ -879,7 +1018,12 @@
       "else": "ELSE",
       "try": "TRY",
       "catch": "CATCH",
-      "body": "BODY"
+      "body": "BODY",
+      "thenLabel": "Then",
+      "elseLabel": "Else",
+      "tryLabel": "Try",
+      "catchLabel": "Catch",
+      "bodyLabel": "Body"
     },
     "palette": {
       "showPalette": "Show palette",
@@ -896,7 +1040,9 @@
         "Apps": "Apps",
         "Action": "Action",
         "Email": "Email",
-        "Nodes": "Nodes"
+        "Nodes": "Nodes",
+        "Actions": "Actions",
+        "Results": "Results"
       },
       "controlBlocks": {
         "control.if": {
@@ -934,8 +1080,8 @@
           "description": "Wait for a duration or until a date/time"
         },
         "transform.assign": {
-          "label": "Assign",
-          "description": "Assign values into payload or vars"
+          "label": "Set variables",
+          "description": "Set values in the payload or workflow variables"
         },
         "action.call": {
           "label": "Call Action",
@@ -999,6 +1145,13 @@
           "label": "Data Store",
           "description": "Read and write durable workflow state across runs."
         }
+      },
+      "noMatches": {
+        "title": "No matches for “{{query}}”",
+        "tipWords": "Try a shorter or different word, such as “ticket”, “email”, or “wait”.",
+        "tipVerb": "Search by what the step does: create, find, update, notify.",
+        "tipBrowse": "Clear the search to browse every category.",
+        "clear": "Clear search"
       }
     },
     "stepCard": {
@@ -1011,8 +1164,8 @@
         "disconnected": "Disconnected"
       },
       "mapping": {
-        "unmappedTitle": "{{count}} required fields are unmapped",
-        "unmappedBadge": "{{count}} required unmapped",
+        "unmappedTitle": "{{count}} required inputs still need a value",
+        "unmappedBadge": "{{count}} required missing",
         "allMappedTitle": "All {{count}} required fields are mapped",
         "allMappedAria": "All required fields mapped"
       },
@@ -1041,7 +1194,8 @@
       "published": "Workflow published",
       "publishFailed": "Failed to publish workflow",
       "publishValidationErrors": "Publish failed - fix validation errors",
-      "systemEventMissingSchema": "This system event is missing a valid schema and cannot be selected until fixed."
+      "systemEventMissingSchema": "This system event is missing a valid schema and cannot be selected until fixed.",
+      "publishedVersion": "Published version {{version}}. New runs use this version."
     },
     "propsPanel": {
       "resizeAria": "Resize properties panel",
@@ -1053,7 +1207,8 @@
       "unlimited": "Unlimited",
       "autoPauseFailureRate": "Auto-pause on failure rate",
       "failureRateThreshold": "Failure rate threshold",
-      "minRunsBeforeAutoPause": "Min runs before auto-pause"
+      "minRunsBeforeAutoPause": "Min runs before auto-pause",
+      "resizeHint": "Drag to resize. Double-click to widen or narrow."
     },
     "trigger": {
       "summary": "Trigger summary",
@@ -1085,7 +1240,8 @@
     },
     "expression": {
       "insertField": "Insert field",
-      "enterPlaceholder": "Enter expression..."
+      "enterPlaceholder": "Enter expression...",
+      "conditionPlaceholder": "e.g. payload.status = \"open\" and payload.count > 3"
     },
     "dataContext": {
       "availableDataAtStep": "Available Data at This Step",
@@ -1106,6 +1262,114 @@
       "clientSecret": "Client Secret:",
       "tenantId": "Tenant ID:",
       "userEmail": "User Email:"
+    },
+    "entityLookup": {
+      "added": "Added “{{action}}”. Later steps can use its output under vars.{{saveAs}}.",
+      "message": "This trigger includes only the {{entity}}’s id (payload.{{field}}). To use the {{entity}}’s details, such as its name or status, add “{{action}}” first.",
+      "addButton": "Add “{{action}}”",
+      "entities": {
+        "ticket": "ticket",
+        "client": "client",
+        "contact": "contact",
+        "project": "project"
+      },
+      "messageWithCarried": "This trigger already includes {{fields}}. For other {{entity}} details, add “{{action}}”, which looks the {{entity}} up from payload.{{field}}.",
+      "tips": {
+        "customerReplyText": {
+          "available": "The reply text isn’t in the trigger itself. Use {{path}} (“{{action}}” › latest customer comment).",
+          "afterLookup": "The reply text isn’t in the trigger itself. After “{{action}}”, it’s available as “{{action}}” › {{detail}}."
+        }
+      }
+    },
+    "insertion": {
+      "afterStepIn": "After “{{step}}” in {{container}}",
+      "afterStep": "After “{{step}}”",
+      "startOf": "Start of {{container}}",
+      "startOfWorkflow": "Start of the workflow",
+      "endOf": "End of {{container}}",
+      "endOfWorkflow": "End of the workflow",
+      "paletteLabel": "Adds to:",
+      "reset": "Reset"
+    },
+    "conditionBuilder": {
+      "triggerSource": "Trigger",
+      "expressionLabel": "Condition expression",
+      "joinWords": {
+        "and": "and",
+        "or": "or"
+      },
+      "noConditionSummary": "No condition set",
+      "selectValue": "Select a value",
+      "booleanTrue": "true",
+      "booleanFalse": "false",
+      "numberPlaceholder": "Number",
+      "textPlaceholder": "Value",
+      "removeValue": "Remove value",
+      "addValue": "Add value",
+      "builderUnavailable": "The builder can only show conditions that are a list of field checks joined by all \"and\" or all \"or\".",
+      "modes": {
+        "builder": "Builder",
+        "expression": "Expression"
+      },
+      "expressionOnlyNotice": "This condition can only be edited as an expression. Clear it to start over in the builder.",
+      "matchPrefix": "Continue when",
+      "joinAll": "all",
+      "joinAny": "any",
+      "matchSuffix": "of these are true",
+      "selectField": "Choose a field",
+      "searchFields": "Search fields",
+      "noFields": "No matching fields",
+      "removeCondition": "Remove condition",
+      "emptyHint": "Add a condition to choose when the Then branch runs. Otherwise the Else branch runs.",
+      "noFieldsHint": "No fields are available yet. Pick a trigger, or add a step before this one that saves its output.",
+      "addCondition": "Add condition",
+      "operators": {
+        "equals": "is",
+        "not_equals": "is not",
+        "in": "is any of",
+        "not_in": "is none of",
+        "gt": "is greater than",
+        "gte": "is at least",
+        "lt": "is less than",
+        "lte": "is at most",
+        "contains": "contains",
+        "starts_with": "starts with",
+        "ends_with": "ends with",
+        "is_empty": "is empty",
+        "is_not_empty": "is not empty"
+      },
+      "unknownEntity": "unknown {{field}}",
+      "anyBoardStatus": "{{name}} (any board)",
+      "boardStatus": "{{name}} ({{board}})",
+      "cancelNewCondition": "Cancel new condition"
+    },
+    "draftBackup": {
+      "message": "This browser kept unsaved changes to this workflow from {{time}}. Restore them?",
+      "restore": "Restore changes",
+      "discard": "Discard"
+    },
+    "sessionExpired": {
+      "title": "Your session ended",
+      "backToEditing": "Back to editing",
+      "signIn": "Sign in in a new tab",
+      "message": "Your session ended. Sign in again in a new tab, then come back and save — your changes are kept."
+    },
+    "firstPublish": {
+      "messageEvent": "Publishing starts this workflow. From now on it runs every time “{{event}}” happens. You can pause it at any time.",
+      "messageDate": "Publishing starts this workflow. From now on it runs on the dates its date trigger selects. You can pause it at any time.",
+      "messageManual": "Publishing makes this workflow available to run. Nothing starts it automatically: run it with Run, or add a schedule in the Workflow Control Panel.",
+      "title": "Publish and start this workflow?",
+      "confirm": "Publish",
+      "cancel": "Cancel"
+    },
+    "saveStatus": {
+      "justNow": "just now",
+      "minutesAgo": "{{count}} min ago",
+      "atTime": "at {{time}}",
+      "notSavedYet": "Not saved yet",
+      "unsaved": "Unsaved changes",
+      "savedAgo": "Saved · {{ago}}",
+      "saved": "Saved"
     }
   },
   "actionInputFieldInfo": {
@@ -1118,10 +1382,13 @@
     "range": "Range: {{min}} - {{max}}",
     "any": "any",
     "defaultPrefix": "Default:",
-    "examplePrefix": "Example:"
+    "examplePrefix": "Example:",
+    "atMost": "At most {{max}}",
+    "atLeast": "At least {{min}}"
   },
   "actionInputSection": {
-    "heading": "Action inputs"
+    "heading": "Action inputs",
+    "requireOneOf": "Fill at least one of: {{fields}}"
   },
   "actionInputFixedPicker": {
     "loadingOptions": "Loading options...",
@@ -1158,6 +1425,25 @@
         "board_id": "Choose a fixed Board first to load subcategory options.",
         "category_id": "Choose a fixed Category first to load subcategory options."
       }
+    },
+    "ticketNoMatches": "No tickets match. Try the ticket number (for example 1122) or words from the title.",
+    "addValue": "Add a value",
+    "removeValue": "Remove {{label}}",
+    "searchPlaceholder": "Search",
+    "noMatchingOptions": "No matching options",
+    "details": {
+      "endsOn": "Ends {{date}}",
+      "noEndDate": "No end date",
+      "warrantyEndsOn": "Warranty ends {{date}}",
+      "noWarrantyEnd": "No warranty end date",
+      "anyBoardStatus": "{{name}} (any board)"
+    },
+    "clientScope": {
+      "showingAll": "Showing every client",
+      "filteredTo": "Filtered to {{client}}",
+      "filteredToChosen": "Filtered to the chosen client",
+      "filterAgain": "Only this client",
+      "showAll": "Show all clients"
     }
   },
   "serverErrors": {
@@ -1200,7 +1486,17 @@
     "schedulePinnedSchemaRequired": "Schedules are only supported for workflows with a pinned payload schema.",
     "scheduleSchemaNotRegistered": "The latest published workflow version does not have a registered pinned payload schema.",
     "schedulePayloadInvalid": "The schedule payload failed validation against the workflow payload schema.",
-    "processEventFailed": "Failed to process the workflow event."
+    "processEventFailed": "Failed to process the workflow event.",
+    "workflowEngineUnavailable": "The workflow engine could not be reached. Try again in a few minutes. If this keeps happening, ask an administrator to check the workflow service.",
+    "invalidFields": "Some values are not valid: {{details}}",
+    "sessionExpired": "Your session has ended. Sign in again, then retry.",
+    "fieldValue": "A value",
+    "issue": {
+      "required": "{{field}} is required",
+      "number": "{{field}} must be a number",
+      "tooSmall": "{{field}} must be at least {{minimum}}",
+      "tooBig": "{{field}} must be at most {{maximum}}"
+    }
   },
   "taskInbox": {
     "title": "Task Inbox",
@@ -1386,7 +1682,11 @@
     "emptySelectPrompt": "Select a step from the panel to get started.",
     "patchSummary": {
       "unchanged": "other fields unchanged"
-    }
+    },
+    "insertionPointLabel": "New steps go here",
+    "emptyBranchPrompt": "Add a step to this branch",
+    "emptyActivePrompt": "New steps go here. Pick one from the palette.",
+    "stepCount": "({{count}} steps)"
   },
   "expressionEditor": {
     "ariaLabel": "Expression editor",
@@ -1394,10 +1694,67 @@
     "textAreaPlaceholder": "Enter JSONata expression...",
     "field": {
       "placeholder": "Enter expression...",
-      "insertFieldPlaceholder": "Insert field"
+      "insertFieldPlaceholder": "Insert field",
+      "expand": "Open a larger editor",
+      "expandShort": "Expand",
+      "expandedTitle": "Edit expression",
+      "done": "Done"
     },
     "clear": "Clear",
-    "clearAriaLabel": "Clear expression"
+    "clearAriaLabel": "Clear expression",
+    "syntaxHelp": {
+      "toggle": "Syntax help",
+      "intro": "Expressions compute a value from workflow data. Common patterns:",
+      "examples": {
+        "field": {
+          "label": "Field",
+          "description": "A value from the trigger (payload.…) or a saved step result (vars.…)."
+        },
+        "text": {
+          "label": "Text",
+          "description": "Put text in double quotes. Join values with &."
+        },
+        "equals": {
+          "label": "Equals",
+          "description": "Use = for equals and != for not equals."
+        },
+        "compare": {
+          "label": "Compare",
+          "description": "Compare numbers with >, >=, <, and <=."
+        },
+        "andOr": {
+          "label": "And / or",
+          "description": "Combine conditions with and, or, and parentheses."
+        },
+        "oneOf": {
+          "label": "One of",
+          "description": "True when the value matches any item in the list."
+        },
+        "hasValue": {
+          "label": "Has a value",
+          "description": "True when the field is present and not empty (null)."
+        },
+        "notTrue": {
+          "label": "Not",
+          "description": "Negate a condition by comparing it to false."
+        },
+        "choose": {
+          "label": "Choose a value",
+          "description": "condition ? value if true : value if false."
+        },
+        "list": {
+          "label": "List",
+          "description": "Put values in square brackets, separated by commas, for inputs that take a list."
+        }
+      },
+      "functionsHeading": "Functions",
+      "transformsPointer": "For heavier text work, add a Transform step instead: Truncate Text, Compose Text, Split Text, Regex Extract, Regex Replace and more. Search the palette for \"text\" or \"regex\"."
+    },
+    "preview": {
+      "title": "Preview with sample data",
+      "emptyResult": "(empty)",
+      "cannotPreview": "Can’t preview yet: {{message}}"
+    }
   },
   "sourceDataTree": {
     "searchPlaceholder": "Search fields...",
@@ -1412,7 +1769,7 @@
       "emptyPrefix": "No vars yet. Use",
       "saveOutput": "Save output",
       "emptyConjunction": "or an",
-      "assignStep": "Assign",
+      "assignStep": "Set variables",
       "emptySuffix": "step to populate"
     },
     "loop": {
@@ -1440,7 +1797,7 @@
   },
   "inputMappingEditor": {
     "empty": "This action has no input fields.",
-    "browseSources": "Browse sources",
+    "browseSources": "Browse step by step",
     "objectFields": "Object fields",
     "itemTitle": "Item {{index}}",
     "reset": "Reset",
@@ -1501,7 +1858,7 @@
     "softEnumNoResults": "No suggestions",
     "softEnumUseCustom": "Use \"{{value}}\"",
     "expression": {
-      "placeholder": "e.g. payload.body.task_name"
+      "placeholder": "e.g. \"Re: \" & payload.title"
     },
     "updatePatch": {
       "summaryTitle": "Fields to change",
@@ -1533,7 +1890,24 @@
         "fromExpression": "the {{record}} chosen by an expression",
         "fixed": "a specific {{record}}"
       }
-    }
+    },
+    "ticketAssignment": {
+      "editFields": "Edit as individual fields"
+    },
+    "reference": {
+      "firstItem": "(first item)",
+      "lastItem": "(last item)",
+      "wholeResult": "Entire result",
+      "oneItemList": "This single value is sent as a one-item list."
+    },
+    "setOptionalField": "Set",
+    "unsetOptionalField": "Leave {{name}} unset",
+    "textWithFieldsMode": "Text",
+    "textModeUnavailable": "This expression does more than join text and fields, so it can only be edited as an expression. Clear it to start again as text.",
+    "partialMatchSuffix": "(similar name: check before using)",
+    "kindMatchSuffix": "(same kind of record)",
+    "kindMatchSuffixAn": "(also an {{kind}})",
+    "kindMatchSuffixA": "(also a {{kind}})"
   },
   "schemaReference": {
     "selectAction": "Select an action to see its input/output schema",
@@ -1589,11 +1963,19 @@
     }
   },
   "trigger": {
-    "manual": "Manual",
+    "manual": "Manual test",
     "event": "Event",
     "eventWithType": "Event: {{eventType}}",
     "oneTimeSchedule": "One-time schedule",
-    "recurringSchedule": "Recurring schedule"
+    "recurringSchedule": "Recurring schedule",
+    "date": "Date",
+    "manualWithEvent": "Manual test with event: {{eventType}}",
+    "dateTiming": {
+      "before": "{{count}} days before",
+      "after": "{{count}} days after",
+      "onTheDay": "on the day"
+    },
+    "dateWithTiming": "{{source}}, {{timing}}"
   },
   "scheduleStatus": {
     "unknown": "Unknown",
@@ -1621,8 +2003,8 @@
       "dragPrompt": "Drag a step from the panel, or select one to get started."
     },
     "mapping": {
-      "unmappedTitle": "{{count}} required fields unmapped",
-      "unmappedBadge": "{{count}} req unmapped",
+      "unmappedTitle": "{{count}} required inputs still need a value",
+      "unmappedBadge": "{{count}} required missing",
       "allMapped": "All required fields mapped"
     },
     "insert": {
@@ -1774,7 +2156,9 @@
       "waitForTime": "Wait for Time",
       "humanTask": "Human Task",
       "setState": "Set State",
-      "assign": "Assign"
+      "assign": "Set variables",
+      "return": "Return",
+      "callWorkflow": "Call Workflow"
     },
     "stepCard": {
       "lastStatus": "Last status: {{status}} ({{timestamp}})",
@@ -1806,7 +2190,13 @@
     },
     "lastRefreshed": "Last refreshed {{time}}",
     "navigation": {
-      "backToRuns": "← Back to workflow runs"
+      "backToRuns": "← Back to workflow runs",
+      "breadcrumbLabel": "Run location",
+      "workflows": "Workflows",
+      "runs": "Runs",
+      "currentRunOf": "{{workflow}} run",
+      "currentRun": "Run {{id}}",
+      "backToWorkflow": "Back to workflow"
     },
     "title": "Workflow Run Studio"
   },
@@ -2201,13 +2591,15 @@
         "event": "Event-based",
         "schedule": "One-time schedule",
         "recurring": "Recurring schedule",
-        "manual": "Manual"
+        "manual": "Manual",
+        "date": "Date-based"
       },
       "triggerLabels": {
         "manual": "Manual",
         "schedule": "One-time schedule",
         "recurring": "Recurring schedule",
-        "event": "Event"
+        "event": "Event",
+        "date": "Date"
       },
       "bulk": {
         "selectedSingular": "{{count}} workflow selected",
@@ -2244,7 +2636,9 @@
       },
       "tableValues": {
         "system": "System",
-        "draftVersion": "Draft: v{{version}}"
+        "draftVersion": "Draft: v{{version}}",
+        "unpublishedChangesTitle": "The saved draft has changes that are not published yet. Runs use v{{version}}.",
+        "unpublishedChanges": "Unpublished changes"
       },
       "rowMenu": {
         "ariaLabel": "Workflow actions",
@@ -2252,7 +2646,12 @@
         "pause": "Pause",
         "duplicate": "Duplicate",
         "viewRuns": "View Runs",
-        "delete": "Delete"
+        "delete": "Delete",
+        "ariaLabelNamed": "Actions for {{name}}",
+        "open": "Open in editor",
+        "runPaused": "Run (resume first)",
+        "run": "Run…",
+        "title": "Workflow actions"
       },
       "states": {
         "errorTitle": "Failed to load workflows",
@@ -2589,5 +2988,67 @@
   "actionInputTypeHint": {
     "coercible": "Type \"{{sourceType}}\" will be converted to \"{{targetType}}\"",
     "incompatible": "Type \"{{sourceType}}\" is incompatible with expected \"{{targetType}}\""
+  },
+  "ticketAssignmentEditor": {
+    "assignTo": "Assign to",
+    "assigneeHint": "Search users or teams",
+    "teamMode": "How to assign the team",
+    "teamModeLead": "Team lead, with team members added as additional agents",
+    "teamModeQueue": "Queue: the team’s first member",
+    "additionalUsers": "Also assign (optional)",
+    "additionalUsersHint": "Search users"
+  },
+  "textTemplateEditor": {
+    "insertField": "Insert field",
+    "placeholder": "Type text. Use Insert field to add values, e.g. Ticket {{example}} was updated",
+    "fieldsUsed": "Fields:",
+    "hint": "Placeholders such as {{payloadExample}} or {{varsExample}} are filled in by the workflow. Other {{otherExample}} placeholders are kept as written, for example for an email template’s own data.",
+    "expand": "Expand",
+    "expandedTitle": "Edit text",
+    "done": "Done",
+    "hintInLoop": "Placeholders such as {{itemExample}}, {{indexExample}}, {{payloadExample}} or {{varsExample}} are filled in by the workflow. Other {{otherExample}} placeholders are kept as written, for example for an email template’s own data."
+  },
+  "valueSourceChooser": {
+    "origin": {
+      "trigger": "Trigger",
+      "loop": "Current loop item",
+      "error": "Caught error",
+      "workflow": "Workflow run"
+    },
+    "chooseSpecific": "Choose a specific {{entity}}…",
+    "typeText": "Type text (insert fields as you go)…",
+    "enterValue": "Enter a fixed value…",
+    "tierSameName": "Same name",
+    "tierSameKind": "Same kind of record",
+    "tierActor": "Who did it, not the record itself",
+    "writeExpression": "Write an expression…",
+    "placeholder": "Choose a field from earlier steps or the trigger",
+    "noMatches": "No fitting fields. Choose a fixed value or write an expression.",
+    "groupSuggested": "Suggested",
+    "currentSpecific": "A specific {{entity}}",
+    "currentText": "Text",
+    "currentFixed": "Fixed value",
+    "currentExpression": "Expression",
+    "label": "Value from",
+    "tierSameKindAn": "Also an {{kind}}",
+    "tierSameKindA": "Also a {{kind}}"
+  },
+  "notificationRecipientsEditor": {
+    "users": "Notify users",
+    "usersHint": "Search users",
+    "roles": "Notify everyone with these roles",
+    "rolesHint": "Add a role",
+    "roleNames": "Role names (optional)",
+    "roleNamesPlaceholder": "e.g. Technician, Dispatcher (matched by name when the workflow runs)",
+    "empty": "Choose at least one user or role to notify."
+  },
+  "emailRecipientsEditor": {
+    "remove": "Remove {{email}}",
+    "placeholder": "Type an address and press Enter, e.g. Ada Lovelace <ada@example.com>",
+    "invalid": "Not an email address: {{entries}}"
+  },
+  "fieldPicker": {
+    "searchPlaceholder": "Search fields",
+    "noMatches": "No matching fields"
   }
 }

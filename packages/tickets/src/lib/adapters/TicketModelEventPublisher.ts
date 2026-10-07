@@ -10,7 +10,17 @@ export class TicketModelEventPublisher implements IEventPublisher {
    * never race the still-open creation transaction. Requires the transaction
    * to be owned by a withTransaction frame.
    */
-  constructor(private readonly trx?: Knex.Transaction) {}
+  constructor(
+    private readonly trx?: Knex.Transaction,
+    private readonly options: {
+      /**
+       * Extra TICKET_CREATED payload fields supplied by the creator, e.g. the
+       * notification suppression flags. TicketModel owns the base metadata, so
+       * the creator cannot pass these through createTicket itself.
+       */
+      ticketCreatedPayload?: Record<string, unknown>;
+    } = {},
+  ) {}
 
   async publishTicketCreated(data: { tenantId: string; ticketId: string; userId?: string; metadata?: Record<string, any> }): Promise<void> {
     await this.safePublishEvent('TICKET_CREATED', {
@@ -18,6 +28,7 @@ export class TicketModelEventPublisher implements IEventPublisher {
       ticketId: data.ticketId,
       userId: data.userId,
       ...data.metadata,
+      ...this.options.ticketCreatedPayload,
     });
   }
 

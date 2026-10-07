@@ -6,7 +6,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Label } from '@alga-psa/ui/components/Label';
 import { Input } from '@alga-psa/ui/components/Input';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { formatCurrency } from '@alga-psa/core';
+import { useCurrencyFormat } from '@alga-psa/ui/lib';
 import { ICreditTracking } from '@alga-psa/types';
 import CreditExpirationBadge from '@alga-psa/ui/components/CreditExpirationBadge';
 import { formatDateOnly } from '@alga-psa/core';
@@ -16,7 +16,9 @@ import { DataTable } from '@alga-psa/ui/components/DataTable';
 interface CreditApplicationUIProps {
   clientId: string;
   invoiceId?: string;
+  /** Minor units of the invoice currency. */
   invoiceAmount?: number;
+  currencyCode?: string;
   onApplyCredit: (creditId: string, amount: number) => Promise<void>;
   onCancel: () => void;
 }
@@ -37,10 +39,12 @@ const CreditApplicationUI: React.FC<CreditApplicationUIProps> = ({
   clientId,
   invoiceId,
   invoiceAmount = 0,
+  currencyCode,
   onApplyCredit,
   onCancel
 }) => {
   const { t } = useTranslation('msp/credits');
+  const { money } = useCurrencyFormat();
   const [availableCredits, setAvailableCredits] = useState<ICreditTracking[]>([]);
   const [selectedCreditId, setSelectedCreditId] = useState<string>('');
   const [applicationAmount, setApplicationAmount] = useState<number>(0);
@@ -48,6 +52,7 @@ const CreditApplicationUI: React.FC<CreditApplicationUIProps> = ({
   const [applying, setApplying] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState<number>(1);
+  const [pageSize, setPageSize] = useState<number>(10);
   const [totalPages, setTotalPages] = useState<number>(1);
   const [totalCredits, setTotalCredits] = useState<number>(0);
   const [creditOrder, setCreditOrder] = useState<'expiration_first' | 'oldest_first' | 'newest_first'>('expiration_first');
@@ -78,7 +83,7 @@ const CreditApplicationUI: React.FC<CreditApplicationUIProps> = ({
         setLoading(true);
         
         // Fetch real credits from the server using the server action
-        const result = await listClientCredits(clientId, false, page, 10);
+        const result = await listClientCredits(clientId, false, page, pageSize);
         const returnedError = getReturnedActionError(result);
         if (returnedError) {
           setError(returnedError);
@@ -110,7 +115,7 @@ const CreditApplicationUI: React.FC<CreditApplicationUIProps> = ({
     };
     
     fetchCredits();
-  }, [clientId, invoiceAmount, page, selectedCreditId]);
+  }, [clientId, invoiceAmount, page, pageSize, selectedCreditId]);
 
   const handleCreditSelection = (creditId: string) => {
     setSelectedCreditId(creditId);
@@ -183,7 +188,7 @@ const CreditApplicationUI: React.FC<CreditApplicationUIProps> = ({
     {
       title: t('columns.amountAvailable', { defaultValue: 'Amount Available' }),
       dataIndex: 'remaining_amount',
-      render: (value: number) => formatCurrency(value)
+      render: (value: number, record: ICreditTracking) => money(value, record.currency_code || currencyCode)
     },
     {
       title: t('columns.created', { defaultValue: 'Created' }),
@@ -257,7 +262,7 @@ const CreditApplicationUI: React.FC<CreditApplicationUIProps> = ({
               <span className="font-medium">
                 {t('application.totalAvailableCredit', { defaultValue: 'Total Available Credit:' })}
               </span>
-              <span>{formatCurrency(getTotalAvailableCredit())}</span>
+              <span>{money(getTotalAvailableCredit(), currencyCode || availableCredits[0]?.currency_code)}</span>
             </div>
             
             {invoiceAmount > 0 && (
@@ -265,7 +270,7 @@ const CreditApplicationUI: React.FC<CreditApplicationUIProps> = ({
                 <span className="font-medium">
                   {t('application.invoiceAmount', { defaultValue: 'Invoice Amount:' })}
                 </span>
-                <span>{formatCurrency(invoiceAmount)}</span>
+                <span>{money(invoiceAmount, currencyCode)}</span>
               </div>
             )}
             
@@ -279,9 +284,10 @@ const CreditApplicationUI: React.FC<CreditApplicationUIProps> = ({
                 columns={columns}
                 pagination={true}
                 onPageChange={setPage}
+                onItemsPerPageChange={(nextPageSize) => { setPageSize(nextPageSize); setPage(1); }}
                 currentPage={page}
                 totalItems={totalCredits}
-                pageSize={10}
+                pageSize={pageSize}
               />
             </div>
             

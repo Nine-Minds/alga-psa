@@ -1,6 +1,14 @@
+
+import { resolveUnitOfMeasure } from '@alga-psa/core/unitOfMeasure';
 import { resolveUsageMeasurementRevision, setUsageMeasurementModeInTransaction } from '../lib/billing/usageMeasurementTransitions';
 import { lockTenantBilling } from '../lib/billing/billingMutationLock';
-import { resolveNextUnbilledSeatBoundary, resolveEffectiveSeatPricing, scheduleSeatRevisionInTransaction } from '../lib/billing/seatRevisions';
+import {
+  resolveNextUnbilledSeatBoundary,
+  resolveEffectiveRecurringUnitPricingInTransaction,
+  scheduleRecurringUnitRevisionInTransaction,
+  configurationDeletionGuard,
+} from '../lib/billing/seatRevisions';
+import { resolveRecurringUnitKind, type RecurringUnitKind } from '@alga-psa/shared/billingClients/recurringUnitPricing';
 import { Knex } from 'knex';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import {
@@ -71,6 +79,31 @@ export class ContractLineServiceConfigurationService {
   }
 
   /**
+   * The neutral recurring-unit kind for a Fixed configuration, or null when the
+   * member is neither a product nor an explicitly unit-priced service.
+   */
+  private async resolveRecurringUnitKindForConfig(
+    serviceId: string,
+    pricingBasis: IContractLineServiceFixedConfig['pricing_basis'] | undefined,
+  ): Promise<RecurringUnitKind | null> {
+    let itemKind: string | null = null;
+    try {
+      const item = await tenantDb(this.knex as Knex, this.tenant)
+        .table('service_catalog')
+        .where({ tenant: this.tenant, service_id: serviceId })
+        .first<{ item_kind: string | null } | undefined>('item_kind');
+      itemKind = item?.item_kind ?? null;
+    } catch {
+      itemKind = null;
+    }
+    return resolveRecurringUnitKind({
+      configurationType: 'Fixed',
+      pricingBasis: pricingBasis ?? null,
+      itemKind,
+    });
+  }
+
+  /**
    * Get a plan service configuration with its type-specific configuration
    */
   async getConfigurationWithDetails(configId: string, effectiveDate?: string): Promise<{
@@ -112,11 +145,31 @@ export class ContractLineServiceConfigurationService {
         break;
     }
     
-    if (effectiveDate && baseConfig.configuration_type === 'Fixed' && (typeConfig as IContractLineServiceFixedConfig)?.pricing_basis === 'unit') {
-      const effective = await resolveEffectiveSeatPricing({trx: this.knex as Knex.Transaction, tenant: this.tenant,
-        contractLineId: baseConfig.contract_line_id, serviceId: baseConfig.service_id, configId, boundary: effectiveDate});
-      baseConfig.quantity = effective.quantity;
-      typeConfig = {...typeConfig, base_rate: effective.unitRateCents} as IContractLineServiceFixedConfig;
+    if (effectiveDate && baseConfig.configuration_type === 'Fixed') {
+      const fixedType = typeConfig as IContractLineServiceFixedConfig | null;
+      const kind = await this.resolveRecurringUnitKindForConfig(
+        baseConfig.service_id,
+        fixedType?.pricing_basis,
+      );
+      if (kind) {
+        const effective = await resolveEffectiveRecurringUnitPricingInTransaction({
+          trx: this.knex as Knex.Transaction,
+          tenant: this.tenant,
+          contractLineId: baseConfig.contract_line_id,
+          serviceId: baseConfig.service_id,
+          configId,
+          kind,
+          boundary: effectiveDate,
+        });
+        baseConfig.quantity = effective.quantity;
+        const rate =
+          effective.pricePolicy === 'override' ? effective.unitRateCents : null;
+        typeConfig = {
+          ...fixedType,
+          base_rate: rate,
+          price_policy: effective.pricePolicy,
+        } as IContractLineServiceFixedConfig;
+      }
     }
     if (effectiveDate && baseConfig.configuration_type === 'Usage') {
       const revision = await resolveUsageMeasurementRevision(this.knex, this.tenant, configId, effectiveDate);
@@ -191,7 +244,7 @@ export class ContractLineServiceConfigurationService {
         case 'Usage':
           await usageConfigModel.create({
             config_id: configId,
-            unit_of_measure: (typeConfig as IContractLineServiceUsageConfig)?.unit_of_measure ?? 'Unit',
+            unit_of_measure: (typeConfig as IContractLineServiceUsageConfig)?.unit_of_measure ?? resolveUnitOfMeasure({ fallback: 'C62' }).label,
             measurement_mode: (typeConfig as IContractLineServiceUsageConfig)?.measurement_mode ?? 'additive',
             enable_tiered_pricing: (typeConfig as IContractLineServiceUsageConfig)?.enable_tiered_pricing ?? false,
             minimum_usage: (typeConfig as IContractLineServiceUsageConfig)?.minimum_usage ?? 0,
@@ -295,14 +348,47 @@ export class ContractLineServiceConfigurationService {
       if (currentConfig.configuration_type === 'Fixed') {
         const fixed = await tenantDb(trx, this.tenant).table('contract_line_service_fixed_config').where('config_id', configId).first();
         const incoming = typeConfig as Partial<IContractLineServiceFixedConfig> | undefined;
-        if (fixed?.pricing_basis === 'unit' && (baseConfig?.quantity !== undefined || baseConfig?.custom_rate !== undefined || incoming?.base_rate !== undefined)) {
+        const kind = await this.resolveRecurringUnitKindForConfig(currentConfig.service_id, fixed?.pricing_basis);
+        const isPriceOrQuantityEdit =
+          baseConfig?.quantity !== undefined ||
+          baseConfig?.custom_rate !== undefined ||
+          incoming?.base_rate !== undefined;
+        if (kind && isPriceOrQuantityEdit) {
           const boundary = incoming?.effective_period_start ?? await resolveNextUnbilledSeatBoundary({ trx, tenant: this.tenant, contractLineId: currentConfig.contract_line_id });
           if (boundary) {
-            const effective = await resolveEffectiveSeatPricing({ trx, tenant: this.tenant, contractLineId: currentConfig.contract_line_id, serviceId: currentConfig.service_id, configId, boundary });
-            const scheduled = await scheduleSeatRevisionInTransaction({ trx, tenant: this.tenant, userId: null,
+            const effective = await resolveEffectiveRecurringUnitPricingInTransaction({
+              trx, tenant: this.tenant, contractLineId: currentConfig.contract_line_id,
+              serviceId: currentConfig.service_id, configId, kind, boundary,
+            });
+            // An explicit rate (including null from a product "use catalog
+            // price" control) sets the policy. A quantity-only edit preserves
+            // the policy already in force, so an inherited product stays
+            // inherited and does not pin today's catalog rate.
+            const explicitRate =
+              incoming?.base_rate !== undefined ? incoming.base_rate : baseConfig?.custom_rate;
+            let pricePolicy: 'override' | 'catalog';
+            let unitRateCents: number | null;
+            if (explicitRate === null) {
+              pricePolicy = kind === 'product' ? 'catalog' : effective.pricePolicy;
+              unitRateCents = pricePolicy === 'override' ? effective.unitRateCents : null;
+            } else if (explicitRate !== undefined) {
+              pricePolicy = 'override';
+              unitRateCents = Number(explicitRate);
+            } else {
+              pricePolicy = effective.pricePolicy;
+              unitRateCents = pricePolicy === 'override' ? effective.unitRateCents : null;
+            }
+            const scheduled = await scheduleRecurringUnitRevisionInTransaction({
+              trx, tenant: this.tenant, userId: null,
               contractLineId: currentConfig.contract_line_id, serviceId: currentConfig.service_id, configId,
-              quantity: Number(baseConfig?.quantity ?? effective.quantity),
-              unitRateCents: Number(incoming?.base_rate ?? baseConfig?.custom_rate ?? effective.unitRateCents), effectivePeriodStart: boundary });
+              kind, quantity: Number(baseConfig?.quantity ?? effective.quantity),
+              pricePolicy, unitRateCents, effectivePeriodStart: boundary,
+              // The inline editor has no version token, so it may only create at
+              // an empty boundary. Replacing an existing scheduled change must go
+              // through the scheduling panel's compare-and-set, which surfaces
+              // the newer values and records the superseded edit in history.
+              expectedVersion: null,
+            });
             if (scheduled.ok === false) throw new Error(scheduled.error);
             const { quantity, custom_rate, ...restBase } = baseConfig ?? {};
             baseConfig = restBase;
@@ -403,6 +489,19 @@ export class ContractLineServiceConfigurationService {
     
     // Use transaction to ensure all operations succeed or fail together
     return await this.knex.transaction(async (trx) => {
+      // Serialize against billing writes and refuse to erase an item that has
+      // issued-invoice provenance or scheduled effective history. The operator
+      // stops such an item with a zero revision instead of deleting it.
+      await lockTenantBilling(trx, this.tenant);
+      const deletionGuard = await configurationDeletionGuard({
+        trx,
+        tenant: this.tenant,
+        configId,
+      });
+      if (deletionGuard) {
+        throw new Error(deletionGuard);
+      }
+
       // Create models with transaction
       const planServiceConfigModel = new ContractLineServiceConfiguration(trx, this.tenant);
       const fixedConfigModel = new ContractLineServiceFixedConfig(trx, this.tenant);
@@ -665,7 +764,7 @@ export class ContractLineServiceConfigurationService {
       }
 
       const usagePayload = {
-        unit_of_measure: usageConfigData.unit_of_measure ?? 'unit',
+        unit_of_measure: usageConfigData.unit_of_measure ?? resolveUnitOfMeasure({ fallback: 'C62' }).label,
         enable_tiered_pricing: usageConfigData.enable_tiered_pricing ?? false,
         minimum_usage: usageConfigData.minimum_usage ?? 0,
         base_rate: normalizedUnitRate,

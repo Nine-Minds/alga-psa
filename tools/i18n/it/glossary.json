@@ -2338,7 +2338,7 @@
       "m",
       "macOS",
       "my-project-id",
-      "phase_name, task_description, assigned_to, estimated_hours, due_date, priority, service, task_type, status, tags",
+      "phase_name, task_description, assigned_to, estimated_hours, start_date, due_date, priority, service, task_type, status, tags",
       "primary",
       "task_name",
       "token",
@@ -2352,7 +2352,13 @@
       "{{count}} h",
       "{{hours}} h {{minutes}} min",
       "3CX",
-      "Teams Phone"
+      "Teams Phone",
+      "TeamViewer",
+      "Gigabyte",
+      "Terabyte",
+      "Volume",
+      "Auto",
+      "auto | 50% | 120px"
     ],
     "caseInsensitive": [
       "account",
@@ -2417,7 +2423,7 @@
       "^[A-Z]{2,8}$",
       "^#[0-9A-Fa-f]{3,8}$",
       "^\\{\\{[^{}]+\\}\\}$",
-      "^[\\s()\\[\\]{},.:;#/+\\-–—·|]*\\{\\{[^{}]+\\}\\}(?:[\\s()\\[\\]{},.:;#/+\\-–—·|]*\\{\\{[^{}]+\\}\\})*[\\s()\\[\\]{},.:;#/+\\-–—·|]*$",
+      "^[\\s()\\[\\]{},.:;#/+\\-–—·|×=]*\\{\\{[^{}]+\\}\\}(?:[\\s()\\[\\]{},.:;#/+\\-–—·|×=]*\\{\\{[^{}]+\\}\\})*[\\s()\\[\\]{},.:;#/+\\-–—·|×=]*$",
       "^v\\{\\{[^{}]+\\}\\}$",
       "^Item \\{\\{[^{}]+\\}\\}$",
       "^Tickets?:?$",

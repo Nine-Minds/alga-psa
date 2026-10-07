@@ -28,6 +28,20 @@ vi.mock('@alga-psa/ui/hooks/useFeatureFlag', () => ({
 
 vi.mock('@alga-psa/billing/actions/contractLineSemanticsActions', () => ({getNextContractServiceBoundary: vi.fn(async () => '2026-10-01')}));
 
+// The contract-line expansion mounts the recurring schedule panel. Stub its
+// server actions so this jsdom suite never loads the server-only billing graph
+// (which imports node storage/fs) through the panel.
+vi.mock('@alga-psa/billing/actions/contractLineUnitPricingActions', () => ({
+  getEffectiveRecurringUnitPricing: vi.fn(async () => null),
+  scheduleRecurringUnitPricingRevision: vi.fn(async () => null),
+  listRecurringUnitPricingRevisions: vi.fn(async () => []),
+  listRecurringUnitPricingRevisionHistory: vi.fn(async () => []),
+  resolveRecurringUnitMidPeriod: vi.fn(async () => null),
+}));
+vi.mock('@alga-psa/billing/actions/invoiceGeneration', () => ({
+  previewRecurringRevisionInvoiceImpact: vi.fn(async () => ({ success: false, error: 'not used' })),
+}));
+
 vi.mock('@alga-psa/billing/actions/serviceActions', () => ({
   getServices: actionMocks.getServices,
 }));
@@ -62,9 +76,11 @@ vi.mock('@alga-psa/billing/actions/billingClientLocationActions', () => ({
   getActiveClientLocationsForBilling: actionMocks.getActiveClientLocationsForBilling,
 }));
 
-const translate = (_key: string, options?: Record<string, unknown>) => {
-  let value = String(options?.defaultValue ?? _key);
-  for (const [name, replacement] of Object.entries(options ?? {})) {
+// DatePicker calls t(key, 'fallback'); the editors call t(key, { defaultValue, ...vars }).
+const translate = (_key: string, second?: string | Record<string, unknown>) => {
+  const options = typeof second === 'object' && second ? second : {};
+  let value = String((typeof second === 'string' ? second : options.defaultValue) ?? _key);
+  for (const [name, replacement] of Object.entries(options)) {
     value = value.replace(`{{${name}}}`, String(replacement));
   }
   return value;
@@ -72,8 +88,10 @@ const translate = (_key: string, options?: Record<string, unknown>) => {
 
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
   useTranslation: () => ({ t: translate }),
+  useOptionalI18n: () => ({ locale: 'en' }),
   useFormatters: () => ({
     formatCurrency: (value: number, currency: string) => `${currency} ${value}`,
+    formatDate: (value: string) => value,
   }),
 }));
 
@@ -88,7 +106,10 @@ vi.mock('@alga-psa/ui/lib/errorHandling', () => ({
   isActionPermissionError: () => false,
 }));
 
-vi.mock('@alga-psa/core', () => ({
+// Partial mock: the recurring-unit schedule panel needs the real calendar-date
+// helpers to render its DatePicker values.
+vi.mock('@alga-psa/core', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@alga-psa/core')>()),
   getCurrencySymbol: () => '$',
 }));
 
@@ -220,6 +241,27 @@ const availableServices = [
     is_active: true,
     prices: [{ currency_code: 'USD', rate: 25000 }],
   },
+  {
+    service_id: 'fallback-service',
+    service_name: 'Fallback service',
+    service_type_name: 'Support',
+    unit_of_measure: 'item',
+    default_rate: 18000,
+    billing_method: 'fixed',
+    item_kind: 'service',
+    is_active: true,
+  },
+  {
+    service_id: 'product-item',
+    service_name: 'Catalog product',
+    service_type_name: 'Hardware',
+    unit_of_measure: 'item',
+    default_rate: 0,
+    billing_method: 'fixed',
+    item_kind: 'product',
+    sku: 'SKU-1',
+    is_active: true,
+  },
 ];
 
 const renderContractLines = () => render(
@@ -333,7 +375,7 @@ describe('contract line service membership editing', () => {
     fireEvent.click(await screen.findByRole('button', {name: 'Edit'}));
     await waitFor(() => expect((document.getElementById('quantity-existing-config') as HTMLInputElement)?.value).toBe('10'));
     expect((document.getElementById('quantity-effective-line-1') as HTMLInputElement).value).toBe('2026-10-01');
-    expect(screen.getByText('Recurring seats/units')).not.toBeNull();
+    expect(screen.getAllByText('Recurring seats/units').length).toBeGreaterThan(0);
     fireEvent.change(document.getElementById('quantity-existing-config')!, {target: {value: '0'}});
     fireEvent.click(screen.getByRole('button', {name: 'Save'}));
     await waitFor(() => expect(actionMocks.updateConfiguration).toHaveBeenCalledWith('existing-config', expect.objectContaining({quantity: 0}), expect.objectContaining({effective_period_start: '2026-10-01', base_rate: 10000})));
@@ -395,6 +437,61 @@ describe('contract line service membership editing', () => {
         },
       }),
     ]));
+  });
+
+  it('T004: resolves the catalog default_rate when no contract-currency price exists', async () => {
+    const onServicesSelected = vi.fn();
+    render(
+      <ServiceSelectionDialog
+        isOpen
+        onClose={vi.fn()}
+        contractLineType="Usage"
+        currencyCode="USD"
+        existingServiceIds={['existing-service']}
+        onServicesSelected={onServicesSelected}
+      />
+    );
+
+    fireEvent.click(await screen.findByText('Fallback service'));
+    fireEvent.click(screen.getByRole('button', { name: 'Add Selected Services' }));
+
+    await waitFor(() => expect(onServicesSelected).toHaveBeenCalledWith([
+      expect.objectContaining({
+        service: expect.objectContaining({ service_id: 'fallback-service' }),
+        customRate: 18000,
+        typeConfig: { base_rate: 18000, unit_of_measure: 'item' },
+      }),
+    ]));
+  });
+
+  it('T004: keeps products out of hourly/usage selectors but exposes them for fixed lines', async () => {
+    for (const contractLineType of ['Hourly', 'Usage'] as const) {
+      const { unmount } = render(
+        <ServiceSelectionDialog
+          isOpen
+          onClose={vi.fn()}
+          contractLineType={contractLineType}
+          currencyCode="USD"
+          existingServiceIds={['existing-service']}
+          onServicesSelected={vi.fn()}
+        />
+      );
+      expect(await screen.findByText('New service')).not.toBeNull();
+      expect(screen.queryByText('Catalog product')).toBeNull();
+      unmount();
+    }
+
+    render(
+      <ServiceSelectionDialog
+        isOpen
+        onClose={vi.fn()}
+        contractLineType="Fixed"
+        currencyCode="USD"
+        existingServiceIds={['existing-service']}
+        onServicesSelected={vi.fn()}
+      />
+    );
+    expect(await screen.findByText('Catalog product')).not.toBeNull();
   });
 });
 

@@ -107,7 +107,9 @@
         "message": "Mensagem",
         "messageOptional": "Mensagem (opcional)",
         "messagePlaceholder": "Adicione uma nota pessoal para o destinatário...",
-        "title": "Enviar cotação"
+        "title": "Enviar cotação",
+        "from": "De",
+        "useDefault": "Usar remetente predefinido"
       }
     },
     "errors": {
@@ -212,7 +214,9 @@
         "description": "Isso enviará a cotação por e-mail aos contatos de cobrança do cliente e alterará seu status para \"Enviado\".",
         "title": "Enviar cotação ao cliente",
         "additionalEmails": "Destinatários Adicionais",
-        "message": "Mensagem"
+        "message": "Mensagem",
+        "from": "De",
+        "useDefault": "Usar remetente predefinido"
       }
     },
     "errorActions": {
@@ -299,7 +303,15 @@
       "currencyPlaceholder": "Selecione a moeda",
       "quoteDate": "Data da cotação",
       "validUntil": "Válido até",
-      "validUntilHelp": "A cotação expira automaticamente nesta data."
+      "validUntilHelp": "A cotação expira automaticamente nesta data.",
+      "currencySource": {
+        "tenant": "Padrão do locatário",
+        "client": "Padrão do cliente para {{clientName}}",
+        "template": "Do modelo de cotação {{templateTitle}}",
+        "saved": "Salva nesta cotação",
+        "savedTemplate": "Salva neste modelo",
+        "manual": "Selecionada manualmente"
+      }
     },
     "lineItems": {
       "title": "Itens de linha",
@@ -339,6 +351,14 @@
       "subtotal": "Subtotal",
       "discounts": "Descontos",
       "tax": "Imposto",
+      "optionalIfSelected": "Opcional se selecionado",
+      "cadence": {
+        "monthly": "Mensal",
+        "quarterly": "Trimestral",
+        "semiAnnually": "Semestral",
+        "annually": "Anual",
+        "oneTime": "Único"
+      },
       "statusLabel": "Status",
       "approvalLabel": "Aprovação",
       "approvalMessage": "As cotações precisam da aprovação do líder de vendas antes do envio.",
@@ -493,6 +513,7 @@
       "noPriceInCurrency": "Sem preço em {{currencyCode}}",
       "optional": "Opcional",
       "phaseSection": "Fase/Seção",
+      "preselected": "Pré-selecionado",
       "recurring": "Recorrente",
       "service": "serviço",
       "setPrice": "Definir preço",

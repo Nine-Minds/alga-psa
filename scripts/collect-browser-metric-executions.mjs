@@ -60,6 +60,10 @@ export async function runBrowserMetricCollection({ output, diagnostics, env = pr
     report.status = 'collected';
     report.executionCount = result.expectedExecutions.length;
     report.exportedRowCount = result.exportedRows.rows.length;
+    // Index-filtered reads: the scanned grid size and the rows this run matched
+    // make a shrinking or runaway tab visible without reading the whole history.
+    report.indexRowCount = result.collectionMetadata.indexRowCount;
+    report.matchedRowCount = result.collectionMetadata.matchedRowCount;
   } catch (error) {
     report.diagnostic = (error instanceof BrowserMetricCollectionError ? error
       : new BrowserMetricCollectionError(phase, 'unexpected-error')).diagnostic;

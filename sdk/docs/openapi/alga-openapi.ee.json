@@ -71,6 +71,9 @@
       "name": "Contract Lines"
     },
     {
+      "name": "Countries"
+    },
+    {
       "name": "Documents"
     },
     {
@@ -2153,6 +2156,11 @@
         "additionalProperties": {},
         "description": "Asset-type-specific extension data written to the corresponding extension table for workstation, network device, server, mobile device, or printer assets."
       },
+      "AssetAttributes": {
+        "type": "object",
+        "additionalProperties": {},
+        "description": "Values for a custom asset type's fields, keyed by each field's key in the tenant asset type registry fields_schema. On create, required fields must be present; on update, provided keys merge into the stored map, omitted keys remain, and required fields cannot be blanked. Other keys such as integration namespaces are stored as-is. Built-in asset types accept the map without schema validation."
+      },
       "AssetCreateRequest": {
         "type": "object",
         "properties": {
@@ -2163,7 +2171,7 @@
           },
           "asset_type": {
             "type": "string",
-            "description": "Asset type. Determines the optional extension data table."
+            "description": "Must be a built-in slug or registered custom slug; unknown slugs return 400."
           },
           "asset_tag": {
             "type": "string",
@@ -2208,6 +2216,9 @@
             "format": "date-time",
             "description": "Optional warranty end date/time."
           },
+          "attributes": {
+            "$ref": "#/components/schemas/AssetAttributes"
+          },
           "extension_data": {
             "$ref": "#/components/schemas/AssetExtensionData"
           }
@@ -2230,7 +2241,7 @@
           },
           "asset_type": {
             "type": "string",
-            "description": "Asset type to store in assets.asset_type."
+            "description": "Must be a built-in slug or registered custom slug; unknown slugs return 400."
           },
           "asset_tag": {
             "type": "string",
@@ -2274,6 +2285,9 @@
             "type": "string",
             "format": "date-time",
             "description": "Warranty end date/time."
+          },
+          "attributes": {
+            "$ref": "#/components/schemas/AssetAttributes"
           }
         }
       },
@@ -2648,6 +2662,20 @@
             "type": "string",
             "format": "uuid",
             "description": "Tenant UUID from assets.tenant; filtered to the authenticated request context."
+          },
+          "attributes": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/AssetAttributes"
+              },
+              {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "description": "Stored custom-type attribute values and integration namespaces."
+              }
+            ]
           },
           "client_name": {
             "type": "string",
@@ -6995,6 +7023,23 @@
           "id"
         ]
       },
+      "ClientLocationIdParams": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "locationId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "id",
+          "locationId"
+        ]
+      },
       "ContactIdParam": {
         "type": "object",
         "properties": {
@@ -7160,6 +7205,13 @@
           },
           "properties": {
             "type": "object",
+            "properties": {
+              "tax_id": {
+                "type": "string",
+                "description": "Deprecated legacy input. Send tax_id_number instead.",
+                "deprecated": true
+              }
+            },
             "additionalProperties": {}
           },
           "payment_terms": {
@@ -7249,8 +7301,7 @@
             "type": "string"
           },
           "address_line1": {
-            "type": "string",
-            "minLength": 1
+            "type": "string"
           },
           "address_line2": {
             "type": "string"
@@ -7259,8 +7310,7 @@
             "type": "string"
           },
           "city": {
-            "type": "string",
-            "minLength": 1
+            "type": "string"
           },
           "state_province": {
             "type": "string"
@@ -7307,8 +7357,6 @@
           }
         },
         "required": [
-          "address_line1",
-          "city",
           "country_code",
           "country_name"
         ]
@@ -8138,9 +8186,6 @@
                   "billing_address": {
                     "type": "string"
                   },
-                  "tax_id": {
-                    "type": "string"
-                  },
                   "notes": {
                     "type": "string"
                   },
@@ -8162,6 +8207,9 @@
                     "format": "date-time"
                   },
                   "logo": {
+                    "type": "string"
+                  },
+                  "defaultLocale": {
                     "type": "string"
                   }
                 }
@@ -8253,6 +8301,12 @@
                 "format": "uuid"
               },
               "account_manager_full_name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "client_since": {
                 "type": [
                   "string",
                   "null"
@@ -8418,9 +8472,6 @@
                     "billing_address": {
                       "type": "string"
                     },
-                    "tax_id": {
-                      "type": "string"
-                    },
                     "notes": {
                       "type": "string"
                     },
@@ -8442,6 +8493,9 @@
                       "format": "date-time"
                     },
                     "logo": {
+                      "type": "string"
+                    },
+                    "defaultLocale": {
                       "type": "string"
                     }
                   }
@@ -8533,6 +8587,12 @@
                   "format": "uuid"
                 },
                 "account_manager_full_name": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "client_since": {
                   "type": [
                     "string",
                     "null"
@@ -9165,6 +9225,568 @@
           "data"
         ]
       },
+      "ClientMergeIdParams": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "BillingProfileContactsParams": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "profileId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "id",
+          "profileId"
+        ]
+      },
+      "ClientMergePreviewBody": {
+        "type": "object",
+        "properties": {
+          "source_client_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The client that would be absorbed."
+          }
+        },
+        "required": [
+          "source_client_id"
+        ]
+      },
+      "ClientMergePreviewResource": {
+        "type": "object",
+        "properties": {
+          "sourceClientId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sourceClientName": {
+            "type": "string"
+          },
+          "targetClientId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "targetClientName": {
+            "type": "string"
+          },
+          "blockers": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                },
+                "i18nKey": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "message",
+                "i18nKey"
+              ]
+            },
+            "description": "Non-empty means the merge would be refused."
+          },
+          "profiles": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "billingProfileId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "currentName": {
+                  "type": "string"
+                },
+                "mergedName": {
+                  "type": "string",
+                  "description": "The name the profile takes on the destination client."
+                },
+                "isDefault": {
+                  "type": "boolean"
+                },
+                "isActive": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "billingProfileId",
+                "currentName",
+                "mergedName",
+                "isDefault",
+                "isActive"
+              ]
+            }
+          },
+          "movedDefaultProfileId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "counts": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "number"
+            },
+            "description": "Rows that would move, by entity label."
+          },
+          "contacts": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "contactNameId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "fullName": {
+                  "type": "string"
+                },
+                "email": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "suggestedBillingProfileId": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid"
+                }
+              },
+              "required": [
+                "contactNameId",
+                "fullName",
+                "email",
+                "suggestedBillingProfileId"
+              ]
+            }
+          },
+          "contracts": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "clientContractId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "contractName": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "startDate": {
+                  "type": "string"
+                },
+                "endDate": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "billingProfileId": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid"
+                },
+                "isActive": {
+                  "type": "boolean"
+                },
+                "suggestedChoice": {
+                  "type": "string",
+                  "enum": [
+                    "original",
+                    "cutover"
+                  ]
+                },
+                "suggestedCutoverDate": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "clientContractId",
+                "contractName",
+                "startDate",
+                "endDate",
+                "billingProfileId",
+                "isActive",
+                "suggestedChoice",
+                "suggestedCutoverDate"
+              ]
+            }
+          },
+          "visibilityGroupRenames": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "groupId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "from": {
+                  "type": "string"
+                },
+                "to": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "groupId",
+                "from",
+                "to"
+              ]
+            }
+          },
+          "unrestrictedPortalUserIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Portal users of the source that currently see every billing profile."
+          },
+          "externalMappings": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "mappingId": {
+                  "type": "string"
+                },
+                "integrationType": {
+                  "type": "string"
+                },
+                "algaEntityType": {
+                  "type": "string"
+                },
+                "externalEntityId": {
+                  "type": "string"
+                },
+                "externalRealmId": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "targetAlreadyMapped": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "mappingId",
+                "integrationType",
+                "algaEntityType",
+                "externalEntityId",
+                "externalRealmId",
+                "targetAlreadyMapped"
+              ]
+            }
+          }
+        },
+        "required": [
+          "sourceClientId",
+          "sourceClientName",
+          "targetClientId",
+          "targetClientName",
+          "blockers",
+          "profiles",
+          "movedDefaultProfileId",
+          "counts",
+          "contacts",
+          "contracts",
+          "visibilityGroupRenames",
+          "unrestrictedPortalUserIds",
+          "externalMappings"
+        ]
+      },
+      "ClientMergeBody": {
+        "type": "object",
+        "properties": {
+          "source_client_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "contact_assignments": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "contact_name_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "billing_profile_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "is_manager": {
+                  "type": "boolean"
+                },
+                "can_view_profile_tickets": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "contact_name_id",
+                "billing_profile_id"
+              ]
+            }
+          },
+          "contract_decisions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "client_contract_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "choice": {
+                  "type": "string",
+                  "enum": [
+                    "original",
+                    "cutover"
+                  ]
+                },
+                "cutover_date": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              },
+              "required": [
+                "client_contract_id",
+                "choice"
+              ]
+            }
+          },
+          "pin_portal_grants": {
+            "type": "boolean",
+            "description": "Defaults to true: records the billing segments unrestricted portal users have today."
+          },
+          "external_remap_choices": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "mapping_id": {
+                  "type": "string"
+                },
+                "apply": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "mapping_id",
+                "apply"
+              ]
+            }
+          }
+        },
+        "required": [
+          "source_client_id"
+        ]
+      },
+      "ClientMergeResource": {
+        "type": "object",
+        "properties": {
+          "merge_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "source_client_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "target_client_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "moved_profile_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "moved_default_profile_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "counts": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "number"
+            }
+          },
+          "remapped_external_mapping_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "skipped_external_mapping_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "merge_id",
+          "source_client_id",
+          "target_client_id",
+          "moved_profile_ids",
+          "moved_default_profile_id",
+          "counts",
+          "remapped_external_mapping_ids",
+          "skipped_external_mapping_ids"
+        ]
+      },
+      "BillingProfileContactResource": {
+        "type": "object",
+        "properties": {
+          "contact_name_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "full_name": {
+            "type": "string"
+          },
+          "email": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "is_manager": {
+            "type": "boolean"
+          },
+          "can_view_profile_tickets": {
+            "type": "boolean",
+            "description": "Lets this contact see every ticket attributed to the profile in the client portal."
+          }
+        },
+        "required": [
+          "contact_name_id",
+          "full_name",
+          "email",
+          "is_manager",
+          "can_view_profile_tickets"
+        ]
+      },
+      "BillingProfileContactsBody": {
+        "type": "object",
+        "properties": {
+          "contacts": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "contact_name_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "is_manager": {
+                  "type": "boolean"
+                },
+                "can_view_profile_tickets": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "contact_name_id"
+              ]
+            },
+            "description": "Replaces the profile's contact list; omitting a contact removes it."
+          }
+        },
+        "required": [
+          "contacts"
+        ]
+      },
+      "ClientMergePreviewEnvelope": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/ClientMergePreviewResource"
+          },
+          "meta": {
+            "type": "object",
+            "additionalProperties": {}
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "ClientMergeEnvelope": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/ClientMergeResource"
+          },
+          "meta": {
+            "type": "object",
+            "additionalProperties": {}
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "BillingProfileContactsEnvelope": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BillingProfileContactResource"
+            }
+          },
+          "meta": {
+            "type": "object",
+            "additionalProperties": {}
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
       "ClientNotesResponse": {
         "type": "object",
         "properties": {
@@ -9201,6 +9823,35 @@
             "description": "Full BlockNote block array (or its JSON string). Replaces the existing notes document."
           }
         }
+      },
+      "ContactAvatarResult": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "success": {
+                "type": "boolean"
+              },
+              "message": {
+                "type": "string"
+              },
+              "avatarUrl": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "success",
+              "message"
+            ]
+          }
+        },
+        "required": [
+          "data"
+        ]
       },
       "ContractLineIdParam": {
         "type": "object",
@@ -9594,7 +10245,8 @@
           },
           "quantity": {
             "type": "number",
-            "minimum": 1
+            "minimum": 0,
+            "description": "Seat/unit count. Must be at least 1 for a bundle service; zero or more (whole number) when type_config.pricing_basis is \"unit\" (zero bills zero)."
           },
           "custom_rate": {
             "type": "number",
@@ -9611,7 +10263,8 @@
           },
           "type_config": {
             "type": "object",
-            "additionalProperties": {}
+            "additionalProperties": {},
+            "description": "Type-specific configuration. For a Fixed service, set pricing_basis to \"unit\" to bill quantity x base_rate every period (base_rate is the unit rate in minor units of the contract currency; omit or null to follow the catalog price in the contract currency). The default \"bundle\" keeps the line total authoritative. Per-unit pricing is not available for products or non-Fixed lines."
           }
         },
         "required": [
@@ -9623,7 +10276,8 @@
         "properties": {
           "quantity": {
             "type": "number",
-            "minimum": 1
+            "minimum": 0,
+            "description": "New seat/unit count (zero or more, whole number, for a per-unit service; at least 1 for a bundle service). On a per-unit service the change is scheduled as a dated revision effective at the next unbilled period boundary; already-invoiced periods keep their price."
           },
           "custom_rate": {
             "type": "number",
@@ -9631,7 +10285,8 @@
           },
           "type_config": {
             "type": "object",
-            "additionalProperties": {}
+            "additionalProperties": {},
+            "description": "For a per-unit Fixed service, base_rate is the new unit rate (scheduled like a quantity change). pricing_basis may be sent only if it equals the stored basis; it cannot be changed after the service is added."
           },
           "rate_tiers": {
             "type": "array",
@@ -10724,6 +11379,7 @@
               "it",
               "pl",
               "pt",
+              "sv",
               "xx",
               "yy"
             ],
@@ -10766,6 +11422,7 @@
               "it",
               "pl",
               "pt",
+              "sv",
               "xx",
               "yy"
             ],
@@ -10787,6 +11444,7 @@
               "it",
               "pl",
               "pt",
+              "sv",
               "xx",
               "yy"
             ],
@@ -11026,6 +11684,7 @@
               "it",
               "pl",
               "pt",
+              "sv",
               "xx",
               "yy"
             ],
@@ -13210,6 +13869,42 @@
             "maximum": 200
           }
         }
+      },
+      "CountriesEnvelope": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string",
+                  "minLength": 2,
+                  "maxLength": 2,
+                  "description": "ISO 3166-1 alpha-2"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "phone_code": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "description": "International dialing prefix, e.g. +1"
+                }
+              },
+              "required": [
+                "code",
+                "name"
+              ]
+            }
+          }
+        },
+        "required": [
+          "data"
+        ]
       },
       "PriorityListQuery": {
         "type": "object",
@@ -16539,6 +17234,11 @@
           },
           "is_active": {
             "type": "boolean"
+          },
+          "display_order": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Sort position of the category (integer, 0 or greater). If omitted on create, the category is appended to the end of the list; if omitted on update, the existing value is left unchanged."
           }
         },
         "required": [
@@ -17190,6 +17890,12 @@
           "unit_of_measure": {
             "type": "string"
           },
+          "unit_code": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "category_id": {
             "type": [
               "string",
@@ -17433,6 +18139,12 @@
           },
           "unit_of_measure": {
             "type": "string"
+          },
+          "unit_code": {
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "category_id": {
             "type": [
@@ -21450,6 +22162,13 @@
             "type": "string",
             "format": "uuid"
           },
+          "start_date": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
           "due_date": {
             "type": [
               "string",
@@ -21490,6 +22209,42 @@
             "items": {
               "type": "string"
             }
+          },
+          "service_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "is_closed": {
+            "type": "boolean"
+          },
+          "phase_name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "project_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "project_name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "client_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
           }
         },
         "required": [
@@ -21634,6 +22389,10 @@
             "type": "number",
             "minimum": 0
           },
+          "start_date": {
+            "type": "string",
+            "format": "date-time"
+          },
           "due_date": {
             "type": "string",
             "format": "date-time"
@@ -21681,6 +22440,10 @@
             "type": "number",
             "minimum": 0
           },
+          "start_date": {
+            "type": "string",
+            "format": "date-time"
+          },
           "due_date": {
             "type": "string",
             "format": "date-time"
@@ -21712,6 +22475,317 @@
           "project_status_mapping_id"
         ],
         "description": "Payload for creating a project task within a phase. Provide project_status_mapping_id as a UUID from the project task status mappings endpoint. The phaseId path parameter selects which phase will receive the task."
+      },
+      "ProjectTaskCommentParams": {
+        "type": "object",
+        "properties": {
+          "taskId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Project task UUID."
+          },
+          "commentId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Task comment UUID."
+          }
+        },
+        "required": [
+          "taskId",
+          "commentId"
+        ]
+      },
+      "ProjectTaskCommentResource": {
+        "type": "object",
+        "properties": {
+          "task_comment_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "task_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "thread_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "parent_comment_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "user_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "author_type": {
+            "type": "string",
+            "enum": [
+              "internal"
+            ]
+          },
+          "note": {
+            "type": "string"
+          },
+          "markdown_content": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "created_at": {
+            "type": "string"
+          },
+          "updated_at": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "edited_at": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "deleted_at": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "author": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "user_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "first_name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "last_name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "email": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "avatar_url": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "user_id",
+              "first_name",
+              "last_name",
+              "email",
+              "avatar_url"
+            ]
+          },
+          "reactions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "emoji": {
+                  "type": "string"
+                },
+                "count": {
+                  "type": "integer"
+                },
+                "userIds": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "format": "uuid"
+                  }
+                },
+                "currentUserReacted": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "emoji",
+                "count",
+                "userIds",
+                "currentUserReacted"
+              ]
+            }
+          },
+          "reaction_user_names": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "task_comment_id",
+          "task_id",
+          "thread_id",
+          "parent_comment_id",
+          "user_id",
+          "author_type",
+          "note",
+          "markdown_content",
+          "created_at",
+          "updated_at",
+          "edited_at",
+          "deleted_at",
+          "author",
+          "reactions",
+          "reaction_user_names"
+        ]
+      },
+      "ProjectTaskCommentEnvelope": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/ProjectTaskCommentResource"
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "ProjectTaskCommentListEnvelope": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProjectTaskCommentResource"
+            }
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "ProjectTaskCommentBody": {
+        "type": "object",
+        "properties": {
+          "note": {
+            "type": "string",
+            "minLength": 1
+          },
+          "parent_comment_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "note"
+        ],
+        "additionalProperties": false
+      },
+      "ProjectTaskCommentUpdateBody": {
+        "type": "object",
+        "properties": {
+          "note": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "note"
+        ],
+        "additionalProperties": false
+      },
+      "ProjectTaskCommentReactionBody": {
+        "type": "object",
+        "properties": {
+          "emoji": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 50
+          }
+        },
+        "required": [
+          "emoji"
+        ],
+        "additionalProperties": false
+      },
+      "ProjectTaskCommentReactionEnvelope": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "added": {
+                "type": "boolean"
+              },
+              "reactions": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "emoji": {
+                      "type": "string"
+                    },
+                    "count": {
+                      "type": "integer"
+                    },
+                    "userIds": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "format": "uuid"
+                      }
+                    },
+                    "currentUserReacted": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "emoji",
+                    "count",
+                    "userIds",
+                    "currentUserReacted"
+                  ]
+                }
+              },
+              "reaction_user_names": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "added",
+              "reactions",
+              "reaction_user_names"
+            ]
+          }
+        },
+        "required": [
+          "data"
+        ]
       },
       "WorkV1IdParam": {
         "type": "object",
@@ -21757,6 +22831,62 @@
         "required": [
           "taskId"
         ]
+      },
+      "WorkV1ProjectTaskChecklistItemParams": {
+        "type": "object",
+        "properties": {
+          "taskId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Project task UUID from project_tasks.task_id."
+          },
+          "itemId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Checklist item UUID from task_checklist_items.checklist_item_id."
+          }
+        },
+        "required": [
+          "taskId",
+          "itemId"
+        ]
+      },
+      "WorkV1ProjectTaskChecklistItemBody": {
+        "type": "object",
+        "properties": {
+          "item_name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Checklist item text. Required on create. `item_text` is accepted as a legacy alias."
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "assigned_to": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "completed": {
+            "type": "boolean",
+            "description": "Mark the item done/undone. `is_completed` is accepted as a legacy alias."
+          },
+          "due_date": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "order_number": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
       },
       "WorkV1SessionParam": {
         "type": "object",
@@ -21808,6 +22938,51 @@
           },
           "fields": {
             "type": "string"
+          },
+          "search": {
+            "type": "string"
+          },
+          "query": {
+            "type": "string"
+          }
+        }
+      },
+      "WorkV1TicketListQuery": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "string"
+          },
+          "sort": {
+            "type": "string",
+            "enum": [
+              "client_name",
+              "closed_at",
+              "created_at",
+              "due_date",
+              "entered_at",
+              "latest_activity_at",
+              "priority_name",
+              "status_name",
+              "ticket_number",
+              "title",
+              "updated_at"
+            ],
+            "description": "Sort field. Defaults to entered_at. `created_at` is a legacy alias for `entered_at` (tickets have no created_at column). `latest_activity_at` orders by the newest of the ticket's own timestamps and its newest visible comment; for client-portal callers only client-visible comments count. Ties break on ticket_id descending. Any other value is rejected with 400."
+          },
+          "order": {
+            "type": "string",
+            "enum": [
+              "asc",
+              "desc"
+            ]
+          },
+          "fields": {
+            "type": "string",
+            "description": "Comma-separated response fields. Accepts ticket_id, ticket_number, title, status_id, status_name, status_is_closed, priority_name, assigned_to_name, client_name, contact_name, updated_at, entered_at, closed_at, latest_activity_at, tags, master_ticket_id, bundle_master_ticket_number, bundle_child_count, or the mobile_list preset. Unknown names are rejected with 400."
           },
           "search": {
             "type": "string"
@@ -23502,8 +24677,68 @@
               "null"
             ],
             "format": "uuid"
+          },
+          "stage": {
+            "type": "string",
+            "enum": [
+              "identified",
+              "qualified",
+              "assessment",
+              "proposed",
+              "verbal",
+              "won",
+              "lost"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "open",
+              "won",
+              "lost"
+            ]
+          },
+          "next_action": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1
+          },
+          "next_action_due": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
           }
         }
+      },
+      "SetOpportunityStageBodyV1": {
+        "type": "object",
+        "properties": {
+          "stage": {
+            "type": "string",
+            "enum": [
+              "identified",
+              "qualified",
+              "assessment",
+              "proposed",
+              "verbal",
+              "won",
+              "lost"
+            ]
+          },
+          "detail": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "stage"
+        ]
       },
       "WinOpportunityBodyV1": {
         "type": "object",
@@ -25661,12 +26896,33 @@
                   },
                   "opportunitiesCreate": {
                     "type": "boolean"
+                  },
+                  "projects": {
+                    "type": "boolean",
+                    "description": "Project tasks on mobile (project:read; PSA product only)."
+                  },
+                  "clientsCreate": {
+                    "type": "boolean"
+                  },
+                  "clientsUpdate": {
+                    "type": "boolean"
+                  },
+                  "contactsCreate": {
+                    "type": "boolean"
+                  },
+                  "contactsUpdate": {
+                    "type": "boolean"
                   }
                 },
                 "required": [
                   "inventory",
                   "opportunities",
-                  "opportunitiesCreate"
+                  "opportunitiesCreate",
+                  "projects",
+                  "clientsCreate",
+                  "clientsUpdate",
+                  "contactsCreate",
+                  "contactsUpdate"
                 ]
               },
               "formatting": {
@@ -35053,7 +36309,7 @@
       },
       "post": {
         "summary": "Create asset",
-        "description": "Creates an asset for the authenticated tenant. The request body is validated with createAssetWithExtensionSchema; client_id, asset_type, asset_tag, name, and status are required. AssetService.create writes assets.tenant from the request context, inserts the asset, optionally upserts asset-type-specific extension_data, publishes an ASSET_CREATED event, and returns getWithDetails with HATEOAS links.",
+        "description": "Creates an asset for the authenticated tenant. The request body is validated with createAssetWithExtensionSchema; client_id, asset_type, asset_tag, name, and status are required. Custom attributes are checked against the registered type schema and required fields must be present. Unknown asset_type slugs and invalid/missing required attributes return 400. AssetService.create writes the attributes map, optionally upserts extension_data, publishes ASSET_CREATED, and returns getWithDetails.",
         "tags": [
           "Assets"
         ],
@@ -35097,7 +36353,7 @@
             }
           },
           "400": {
-            "description": "Request body validation failed.",
+            "description": "Request validation failed, asset_type is not a built-in or registered slug, or custom attributes are invalid or missing required fields.",
             "content": {
               "application/json": {
                 "schema": {
@@ -35232,7 +36488,7 @@
     "/api/v1/assets/bulk-update": {
       "put": {
         "summary": "Bulk update assets",
-        "description": "Updates up to 50 assets in the authenticated tenant. Each array item supplies an asset_id and partial update data validated with updateAssetSchema. The controller calls AssetService.update for every item, tenant-scoping each update by asset_id and context.tenant and publishing ASSET_UPDATED events.",
+        "description": "Updates up to 50 assets in the authenticated tenant. Each item is validated and written independently; custom attributes are validated against that asset type and merged into its stored map. Unknown types and invalid attributes return 400. Earlier items may remain committed if a later item fails.",
         "tags": [
           "Assets"
         ],
@@ -35277,7 +36533,7 @@
             }
           },
           "400": {
-            "description": "Request body validation failed.",
+            "description": "Request validation failed, asset_type is not registered, or custom attributes are invalid.",
             "content": {
               "application/json": {
                 "schema": {
@@ -36133,7 +37389,7 @@
       },
       "put": {
         "summary": "Update asset",
-        "description": "Partially updates base asset fields for the authenticated tenant. The request body is validated with updateAssetSchema, where all fields are optional. AssetService.update scopes the update by asset_id and context.tenant, writes updated_at, publishes ASSET_UPDATED, and returns the refreshed base asset with joined client_name and warranty_status. This REST path does not update extension data, create asset history records, or wrap the update in a transaction. Missing assets currently lead to a 500 when the controller tries to add links to a null result rather than a clean 404.",
+        "description": "Partially updates base asset fields for the authenticated tenant. Custom attributes are validated against the next asset type when asset_type changes, then merged into the stored map so omitted keys remain. Required custom fields cannot be blanked. Unknown asset_type slugs and invalid attributes return 400.",
         "tags": [
           "Assets"
         ],
@@ -36194,7 +37450,7 @@
             }
           },
           "400": {
-            "description": "Request body validation failed, or the database rejected an invalid reference.",
+            "description": "Request validation failed, asset_type is not registered, custom attributes are invalid, or the database rejected an invalid reference.",
             "content": {
               "application/json": {
                 "schema": {
@@ -42117,7 +43373,7 @@
       },
       "put": {
         "summary": "Update client",
-        "description": "Inherited ApiBaseController update route for one client_id.",
+        "description": "Updates client fields for one client_id. email, phone_no, and address are location fields and must be managed through /api/v1/clients/{id}/locations.",
         "tags": [
           "Clients"
         ],
@@ -42151,7 +43407,120 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/ClientBody"
+                "type": "object",
+                "properties": {
+                  "client_name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 255
+                  },
+                  "url": {
+                    "type": "string",
+                    "format": "uri"
+                  },
+                  "client_type": {
+                    "type": "string",
+                    "enum": [
+                      "company",
+                      "individual"
+                    ]
+                  },
+                  "tax_id_number": {
+                    "type": "string"
+                  },
+                  "notes": {
+                    "type": "string"
+                  },
+                  "properties": {
+                    "type": "object",
+                    "properties": {
+                      "tax_id": {
+                        "type": "string",
+                        "description": "Deprecated legacy input. Send tax_id_number instead.",
+                        "deprecated": true
+                      }
+                    },
+                    "additionalProperties": {}
+                  },
+                  "payment_terms": {
+                    "type": "string"
+                  },
+                  "billing_cycle": {
+                    "type": "string",
+                    "enum": [
+                      "weekly",
+                      "bi-weekly",
+                      "monthly",
+                      "quarterly",
+                      "semi-annually",
+                      "annually"
+                    ]
+                  },
+                  "credit_limit": {
+                    "type": "number",
+                    "minimum": 0
+                  },
+                  "default_currency_code": {
+                    "type": "string",
+                    "minLength": 3,
+                    "maxLength": 3
+                  },
+                  "preferred_payment_method": {
+                    "type": "string"
+                  },
+                  "auto_invoice": {
+                    "type": "boolean"
+                  },
+                  "invoice_delivery_method": {
+                    "type": "string",
+                    "enum": [
+                      "email",
+                      "mail",
+                      "portal"
+                    ]
+                  },
+                  "region_code": {
+                    "type": "string"
+                  },
+                  "is_tax_exempt": {
+                    "type": "boolean"
+                  },
+                  "tax_exemption_certificate": {
+                    "type": "string"
+                  },
+                  "timezone": {
+                    "type": "string"
+                  },
+                  "invoice_template_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "billing_contact_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "billing_email": {
+                    "type": "string",
+                    "format": "email"
+                  },
+                  "account_manager_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "is_inactive": {
+                    "type": "boolean"
+                  },
+                  "tags": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "deactivate_contacts": {
+                    "type": "boolean",
+                    "description": "With is_inactive=true: also deactivate the client's contacts and their portal users (default true). Requires contact:update when true."
+                  }
+                }
               }
             }
           }
@@ -42670,6 +44039,437 @@
         }
       }
     },
+    "/api/v1/clients/{id}/merge/preview": {
+      "post": {
+        "summary": "Preview a client merge",
+        "description": "Dry run of absorbing source_client_id into this client as a billing profile. Writes nothing; returns the profiles that would move, per-entity row counts, the contacts and contracts needing a decision, the portal users whose billing-segment access would widen, the accounting mappings that would need re-pointing, and any blockers.",
+        "tags": [
+          "Clients"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-rbac-resource": "client",
+          "x-rbac-action": "update"
+        },
+        "x-alga-products": [
+          "psa",
+          "algadesk"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClientMergePreviewBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Merge preview returned.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientMergePreviewEnvelope"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid client id or request payload.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientContactApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key missing/invalid or key user not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientContactApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Permission denied for client update.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientContactApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Client not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientContactApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected merge preview failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientContactApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/clients/{id}/merge": {
+      "post": {
+        "summary": "Merge a client into this one",
+        "description": "Absorbs source_client_id into this client as a billing profile. The source's billing profiles are re-parented keeping their ids, so invoices, billing cycles, payment methods, credits and tax settings follow them; tickets, contacts, projects, assets, contracts, locations and portal visibility groups move to this client. The source client is archived with a forwarding marker. Irreversible. Requires client update and delete.",
+        "tags": [
+          "Clients"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-rbac-resource": "client",
+          "x-rbac-action": "update",
+          "x-chat-approval-required": true
+        },
+        "x-alga-products": [
+          "psa",
+          "algadesk"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClientMergeBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Merge completed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientMergeEnvelope"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid payload, or the merge was refused (blockers are returned as validation details).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientContactApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key missing/invalid or key user not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientContactApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Permission denied for client update or delete.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientContactApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Client not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientContactApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected merge failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientContactApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/clients/{id}/billing-profiles/{profileId}/contacts": {
+      "get": {
+        "summary": "List billing profile contacts",
+        "description": "Returns the contacts attached to a billing profile, with the manager designation and the separate grant that lets a contact see every ticket attributed to the profile in the client portal.",
+        "tags": [
+          "Clients"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-rbac-resource": "client",
+          "x-rbac-action": "read"
+        },
+        "x-alga-products": [
+          "psa",
+          "algadesk"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "profileId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Billing profile contacts returned.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BillingProfileContactsEnvelope"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid client or profile id format.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientContactApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key missing/invalid or key user not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientContactApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Permission denied for client read.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientContactApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Billing profile not found for this client.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientContactApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected billing profile contacts failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientContactApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "Replace billing profile contacts",
+        "description": "Replaces the profile's contact list. At most one contact may be the manager. can_view_profile_tickets is a separate opt-in and defaults to false, so naming a manager never widens what they can read.",
+        "tags": [
+          "Clients"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-rbac-resource": "client",
+          "x-rbac-action": "update"
+        },
+        "x-alga-products": [
+          "psa",
+          "algadesk"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "profileId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BillingProfileContactsBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Billing profile contacts replaced.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BillingProfileContactsEnvelope"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid payload, a second manager, or a contact from another client.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientContactApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key missing/invalid or key user not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientContactApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Permission denied for client update.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientContactApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Billing profile not found for this client.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientContactApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected billing profile contacts failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientContactApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/clients/{id}/notes": {
       "get": {
         "summary": "Get client notes",
@@ -42990,6 +44790,307 @@
           },
           "500": {
             "description": "Unexpected client notes failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientContactApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/clients/{id}/locations/{locationId}": {
+      "put": {
+        "summary": "Update client location",
+        "description": "Updates one location of client_id. This is where a client's phone, email and address are edited; PUT /api/v1/clients/{id} rejects those fields. Promoting is_default demotes the previous default; the last active location cannot lose its default flag.",
+        "tags": [
+          "Clients"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-rbac-resource": "client",
+          "x-rbac-action": "update"
+        },
+        "x-alga-products": [
+          "psa",
+          "algadesk"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "locationId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/ClientLocationBody"
+                  },
+                  {
+                    "properties": {
+                      "location_name": {
+                        "type": "string"
+                      },
+                      "address_line1": {
+                        "type": "string"
+                      },
+                      "address_line2": {
+                        "type": "string"
+                      },
+                      "address_line3": {
+                        "type": "string"
+                      },
+                      "city": {
+                        "type": "string"
+                      },
+                      "state_province": {
+                        "type": "string"
+                      },
+                      "postal_code": {
+                        "type": "string"
+                      },
+                      "country_code": {
+                        "type": "string",
+                        "minLength": 2,
+                        "maxLength": 3
+                      },
+                      "country_name": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "region_code": {
+                        "type": "string"
+                      },
+                      "is_billing_address": {
+                        "type": "boolean"
+                      },
+                      "is_shipping_address": {
+                        "type": "boolean"
+                      },
+                      "is_default": {
+                        "type": "boolean"
+                      },
+                      "phone": {
+                        "type": "string"
+                      },
+                      "fax": {
+                        "type": "string"
+                      },
+                      "email": {
+                        "type": [
+                          "string",
+                          "null"
+                        ],
+                        "format": "email",
+                        "description": "null clears the email"
+                      },
+                      "notes": {
+                        "type": "string"
+                      },
+                      "is_active": {
+                        "type": "boolean"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Client location updated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientLocationEnvelope"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid ids or request payload.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientContactApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key missing/invalid or key user not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientContactApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Permission denied for client update.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientContactApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Client or location not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientContactApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default-location rule violated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientContactApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected client location update failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientContactApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete client location",
+        "description": "Deletes one location of client_id. Refused while tickets or other records still reference it.",
+        "tags": [
+          "Clients"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-rbac-resource": "client",
+          "x-rbac-action": "update"
+        },
+        "x-alga-products": [
+          "psa",
+          "algadesk"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "locationId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Client location deleted."
+          },
+          "400": {
+            "description": "Invalid ids.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientContactApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key missing/invalid or key user not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientContactApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Permission denied for client update.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientContactApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Client or location not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientContactApiError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Location still referenced by other records.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientContactApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected client location deletion failure.",
             "content": {
               "application/json": {
                 "schema": {
@@ -43590,6 +45691,205 @@
           },
           "500": {
             "description": "Unexpected contact deletion failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientContactApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/contacts/{id}/avatar": {
+      "post": {
+        "summary": "Upload contact avatar",
+        "description": "Replaces the contact's avatar from the multipart form field `avatar`. Same storage path as the web contact page.",
+        "tags": [
+          "Contacts"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-rbac-resource": "contact",
+          "x-rbac-action": "update"
+        },
+        "x-alga-products": [
+          "psa",
+          "algadesk"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "avatar": {
+                    "type": "string",
+                    "description": "Multipart file field name expected by controller: avatar."
+                  }
+                },
+                "required": [
+                  "avatar"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Avatar stored.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContactAvatarResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Missing file or invalid id.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientContactApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key missing/invalid or key user not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientContactApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Permission denied for contact update.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientContactApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Contact not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientContactApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected avatar upload failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientContactApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete contact avatar",
+        "description": "Removes the contact's avatar.",
+        "tags": [
+          "Contacts"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-rbac-resource": "contact",
+          "x-rbac-action": "update"
+        },
+        "x-alga-products": [
+          "psa",
+          "algadesk"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Avatar removed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContactAvatarResult"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key missing/invalid or key user not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientContactApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Permission denied for contact update.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientContactApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Contact not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientContactApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected avatar deletion failure.",
             "content": {
               "application/json": {
                 "schema": {
@@ -47452,6 +49752,7 @@
                 "it",
                 "pl",
                 "pt",
+                "sv",
                 "xx",
                 "yy"
               ],
@@ -47587,6 +49888,7 @@
                 "it",
                 "pl",
                 "pt",
+                "sv",
                 "xx",
                 "yy"
               ],
@@ -47787,6 +50089,7 @@
                 "it",
                 "pl",
                 "pt",
+                "sv",
                 "xx",
                 "yy"
               ],
@@ -57800,6 +60103,59 @@
           },
           "403": {
             "description": "Caller lacks the required permission.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/countries": {
+      "get": {
+        "summary": "List countries",
+        "description": "Lists the active ISO 3166-1 countries (code, name, dialing code) available for client locations. Global reference data, identical for every tenant; any authenticated caller may read it.",
+        "tags": [
+          "Countries"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": false
+        },
+        "x-alga-products": [
+          "psa",
+          "algadesk"
+        ],
+        "responses": {
+          "200": {
+            "description": "Active countries sorted by name.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CountriesEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key missing/invalid.",
             "content": {
               "application/json": {
                 "schema": {
@@ -76989,7 +79345,6 @@
             "schema": {
               "type": "integer",
               "minimum": 1,
-              "maximum": 100,
               "default": 25
             },
             "required": false,
@@ -77197,6 +79552,9 @@
                     "minLength": 1,
                     "maxLength": 128
                   },
+                  "unit_code": {
+                    "type": "string"
+                  },
                   "category_id": {
                     "anyOf": [
                       {
@@ -77238,14 +79596,16 @@
                         "type": "null"
                       }
                     ]
+                  },
+                  "is_active": {
+                    "type": "boolean"
                   }
                 },
                 "required": [
                   "service_name",
                   "custom_service_type_id",
                   "billing_method",
-                  "default_rate",
-                  "unit_of_measure"
+                  "default_rate"
                 ]
               },
               "description": "Service creation payload."
@@ -77446,6 +79806,9 @@
                     "minLength": 1,
                     "maxLength": 128
                   },
+                  "unit_code": {
+                    "type": "string"
+                  },
                   "category_id": {
                     "anyOf": [
                       {
@@ -77487,6 +79850,9 @@
                         "type": "null"
                       }
                     ]
+                  },
+                  "is_active": {
+                    "type": "boolean"
                   }
                 }
               },
@@ -77857,6 +80223,9 @@
                     "minLength": 1,
                     "maxLength": 128
                   },
+                  "unit_code": {
+                    "type": "string"
+                  },
                   "category_id": {
                     "anyOf": [
                       {
@@ -78058,8 +80427,7 @@
                 },
                 "required": [
                   "service_name",
-                  "custom_service_type_id",
-                  "unit_of_measure"
+                  "custom_service_type_id"
                 ]
               },
               "description": "Product creation payload."
@@ -78274,6 +80642,9 @@
                     "type": "string",
                     "minLength": 1,
                     "maxLength": 128
+                  },
+                  "unit_code": {
+                    "type": "string"
                   },
                   "category_id": {
                     "anyOf": [
@@ -84596,6 +86967,493 @@
         }
       }
     },
+    "/api/v1/projects/tasks/{taskId}/comments": {
+      "get": {
+        "summary": "List project task comments",
+        "description": "Returns every comment on the task oldest first, soft-deleted rows included (note \"[deleted]\", deleted_at set) so reply threads stay well-formed, each with its aggregated emoji reactions. Task comments are always internal. Requires project_task:read.",
+        "tags": [
+          "Projects"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-header-required": true,
+          "x-rbac-resource": "project_task",
+          "x-rbac-action": "read"
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Project task UUID."
+            },
+            "required": true,
+            "description": "Project task UUID.",
+            "name": "taskId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Task comments returned.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectTaskCommentListEnvelope"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid identifiers or request payload.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication failed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks project_task:read, is not an internal user, or is editing someone else's comment.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Task not found, or the comment is not on this task.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Add a project task comment",
+        "description": "Adds a comment, or a reply when parent_comment_id is given (the parent must be a live comment on the same task). note is BlockNote JSON, exactly what the web composer stores; markdown is derived server-side. Publishes the same TASK_COMMENT_ADDED event as the web, so assignee and @mention notifications fire. Only internal users may comment.",
+        "tags": [
+          "Projects"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-header-required": true,
+          "x-rbac-resource": "project_task",
+          "x-rbac-action": "read"
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Project task UUID."
+            },
+            "required": true,
+            "description": "Project task UUID.",
+            "name": "taskId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProjectTaskCommentBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Comment created.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectTaskCommentEnvelope"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid identifiers or request payload.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication failed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks project_task:read, is not an internal user, or is editing someone else's comment.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Task not found, or the comment is not on this task.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/projects/tasks/{taskId}/comments/{commentId}": {
+      "put": {
+        "summary": "Edit a project task comment",
+        "description": "Replaces the comment note (BlockNote JSON) and stamps edited_at. Newly mentioned users are notified. Internal users may edit any comment; others only their own.",
+        "tags": [
+          "Projects"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-header-required": true,
+          "x-rbac-resource": "project_task",
+          "x-rbac-action": "read"
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Project task UUID."
+            },
+            "required": true,
+            "description": "Project task UUID.",
+            "name": "taskId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Task comment UUID."
+            },
+            "required": true,
+            "description": "Task comment UUID.",
+            "name": "commentId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProjectTaskCommentUpdateBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Comment updated.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectTaskCommentEnvelope"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid identifiers or request payload.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication failed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks project_task:read, is not an internal user, or is editing someone else's comment.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Task not found, or the comment is not on this task.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete a project task comment",
+        "description": "Removes the comment. One that still has replies is soft-deleted (note becomes \"[deleted]\") so the thread keeps its shape; a leaf comment is removed outright.",
+        "tags": [
+          "Projects"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-header-required": true,
+          "x-rbac-resource": "project_task",
+          "x-rbac-action": "read"
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Project task UUID."
+            },
+            "required": true,
+            "description": "Project task UUID.",
+            "name": "taskId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Task comment UUID."
+            },
+            "required": true,
+            "description": "Task comment UUID.",
+            "name": "commentId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Comment deleted."
+          },
+          "400": {
+            "description": "Invalid identifiers or request payload.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication failed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks project_task:read, is not an internal user, or is editing someone else's comment.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Task not found, or the comment is not on this task.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/projects/tasks/{taskId}/comments/{commentId}/reactions": {
+      "post": {
+        "summary": "Toggle a reaction on a project task comment",
+        "description": "Adds the emoji reaction for the caller, or removes it when already present. Returns the comment's reactions after the change.",
+        "tags": [
+          "Projects"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-header-required": true,
+          "x-rbac-resource": "project_task",
+          "x-rbac-action": "read"
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Project task UUID."
+            },
+            "required": true,
+            "description": "Project task UUID.",
+            "name": "taskId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Task comment UUID."
+            },
+            "required": true,
+            "description": "Task comment UUID.",
+            "name": "commentId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProjectTaskCommentReactionBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Reaction toggled.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectTaskCommentReactionEnvelope"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid identifiers or request payload.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication failed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks project_task:read, is not an internal user, or is editing someone else's comment.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Task not found, or the comment is not on this task.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/projects": {
       "get": {
         "summary": "List projects",
@@ -85651,7 +88509,7 @@
       },
       "post": {
         "summary": "Create task checklist item",
-        "description": "Creates checklist item for project task UUID via ApiProjectController.createChecklistItem().",
+        "description": "Creates checklist item for project task UUID via ApiProjectController.createChecklistItem(). Body uses the table's item_name / completed names; item_text / is_completed remain accepted aliases.",
         "tags": [
           "Work Management v1"
         ],
@@ -85747,7 +88605,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/WorkV1GenericBody"
+                "$ref": "#/components/schemas/WorkV1ProjectTaskChecklistItemBody"
               }
             }
           }
@@ -85772,6 +88630,235 @@
                 }
               }
             }
+          },
+          "400": {
+            "description": "Validation or request parsing failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key missing/invalid or associated user missing.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "RBAC denied for project resource action.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Target resource not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected controller/service failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/projects/tasks/{taskId}/checklist/{itemId}": {
+      "put": {
+        "summary": "Update task checklist item",
+        "description": "Updates one checklist item of the task, typically `completed` to tick it done. 404 when the item is not on that task.",
+        "tags": [
+          "Work Management v1"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-auth-mechanism": "x-api-key validated in ApiBaseController.authenticate() or controller-specific equivalent",
+          "x-tenant-header": "x-tenant-id (optional; inferred from API key when omitted)",
+          "x-rbac-resource": "project"
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Project task UUID from project_tasks.task_id."
+            },
+            "required": true,
+            "description": "Project task UUID from project_tasks.task_id.",
+            "name": "taskId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Checklist item UUID from task_checklist_items.checklist_item_id."
+            },
+            "required": true,
+            "description": "Checklist item UUID from task_checklist_items.checklist_item_id.",
+            "name": "itemId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkV1ProjectTaskChecklistItemBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Operation succeeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiSuccess"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation or request parsing failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key missing/invalid or associated user missing.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "RBAC denied for project resource action.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Target resource not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected controller/service failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete task checklist item",
+        "description": "Deletes one checklist item of the task. 404 when the item is not on that task.",
+        "tags": [
+          "Work Management v1"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-auth-mechanism": "x-api-key validated in ApiBaseController.authenticate() or controller-specific equivalent",
+          "x-tenant-header": "x-tenant-id (optional; inferred from API key when omitted)",
+          "x-rbac-resource": "project"
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Project task UUID from project_tasks.task_id."
+            },
+            "required": true,
+            "description": "Project task UUID from project_tasks.task_id.",
+            "name": "taskId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Checklist item UUID from task_checklist_items.checklist_item_id."
+            },
+            "required": true,
+            "description": "Checklist item UUID from task_checklist_items.checklist_item_id.",
+            "name": "itemId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Operation succeeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiSuccess"
+                }
+              }
+            }
+          },
+          "204": {
+            "description": "Delete-like operation can return no content when implemented that way."
           },
           "400": {
             "description": "Validation or request parsing failure.",
@@ -89780,7 +92867,7 @@
     "/api/v1/tickets": {
       "get": {
         "summary": "List tickets",
-        "description": "Lists tickets via ApiTicketController.list() with authorization-aware pagination.",
+        "description": "Lists tickets via ApiTicketController.list() with authorization-aware pagination. `sort` is validated against an allowlist (unknown values return 400) and supports latest_activity_at, which is also selectable through `fields`.",
         "tags": [
           "Work Management v1"
         ],
@@ -89818,9 +92905,24 @@
           },
           {
             "schema": {
-              "type": "string"
+              "type": "string",
+              "enum": [
+                "client_name",
+                "closed_at",
+                "created_at",
+                "due_date",
+                "entered_at",
+                "latest_activity_at",
+                "priority_name",
+                "status_name",
+                "ticket_number",
+                "title",
+                "updated_at"
+              ],
+              "description": "Sort field. Defaults to entered_at. `created_at` is a legacy alias for `entered_at` (tickets have no created_at column). `latest_activity_at` orders by the newest of the ticket's own timestamps and its newest visible comment; for client-portal callers only client-visible comments count. Ties break on ticket_id descending. Any other value is rejected with 400."
             },
             "required": false,
+            "description": "Sort field. Defaults to entered_at. `created_at` is a legacy alias for `entered_at` (tickets have no created_at column). `latest_activity_at` orders by the newest of the ticket's own timestamps and its newest visible comment; for client-portal callers only client-visible comments count. Ties break on ticket_id descending. Any other value is rejected with 400.",
             "name": "sort",
             "in": "query"
           },
@@ -89838,9 +92940,11 @@
           },
           {
             "schema": {
-              "type": "string"
+              "type": "string",
+              "description": "Comma-separated response fields. Accepts ticket_id, ticket_number, title, status_id, status_name, status_is_closed, priority_name, assigned_to_name, client_name, contact_name, updated_at, entered_at, closed_at, latest_activity_at, tags, master_ticket_id, bundle_master_ticket_number, bundle_child_count, or the mobile_list preset. Unknown names are rejected with 400."
             },
             "required": false,
+            "description": "Comma-separated response fields. Accepts ticket_id, ticket_number, title, status_id, status_name, status_is_closed, priority_name, assigned_to_name, client_name, contact_name, updated_at, entered_at, closed_at, latest_activity_at, tags, master_ticket_id, bundle_master_ticket_number, bundle_child_count, or the mobile_list preset. Unknown names are rejected with 400.",
             "name": "fields",
             "in": "query"
           },
@@ -103361,7 +106465,123 @@
       },
       "put": {
         "summary": "Update opportunity",
-        "description": "Updates editable opportunity fields; status and stage use dedicated flows.",
+        "description": "Updates editable opportunity fields. status, stage, client_id, and the next-action mirror columns may be echoed back unchanged but never reassigned here: changing them answers 400 naming the dedicated endpoint.",
+        "tags": [
+          "Opportunities v1"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-auth-mechanism": "x-api-key validated in ApiBaseController.authenticate()",
+          "x-tenant-header": "x-tenant-id (optional; inferred from API key when omitted)",
+          "x-rbac-resource": "opportunities"
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Opportunity UUID from opportunities.opportunity_id."
+            },
+            "required": true,
+            "description": "Opportunity UUID from opportunities.opportunity_id.",
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateOpportunityBodyV1"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Operation succeeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpportunityApiSuccessV1"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation or request parsing failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpportunityApiErrorV1"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key missing or invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpportunityApiErrorV1"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "RBAC denied for the opportunities resource action.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpportunityApiErrorV1"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Opportunity or nested resource not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpportunityApiErrorV1"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Opportunity state conflicts with the requested operation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpportunityApiErrorV1"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected controller or service failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpportunityApiErrorV1"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "summary": "Partially update opportunity",
+        "description": "Applies a partial update using the same contract as PUT; every field is optional.",
         "tags": [
           "Opportunities v1"
         ],
@@ -103842,6 +107062,124 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/CompleteOpportunityStepBodyV1"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Operation succeeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpportunityApiSuccessV1"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation or request parsing failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpportunityApiErrorV1"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key missing or invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpportunityApiErrorV1"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "RBAC denied for the opportunities resource action.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpportunityApiErrorV1"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Opportunity or nested resource not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpportunityApiErrorV1"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Opportunity state conflicts with the requested operation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpportunityApiErrorV1"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected controller or service failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpportunityApiErrorV1"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/opportunities/{id}/stage": {
+      "post": {
+        "summary": "Set opportunity stage",
+        "description": "Sets an open-pipeline stage through the declared-evidence flow the board drag uses; won and lost answer 400 pointing at /win and /lose.",
+        "tags": [
+          "Opportunities v1"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-auth-mechanism": "x-api-key validated in ApiBaseController.authenticate()",
+          "x-tenant-header": "x-tenant-id (optional; inferred from API key when omitted)",
+          "x-rbac-resource": "opportunities"
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Opportunity UUID from opportunities.opportunity_id."
+            },
+            "required": true,
+            "description": "Opportunity UUID from opportunities.opportunity_id.",
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetOpportunityStageBodyV1"
               }
             }
           }

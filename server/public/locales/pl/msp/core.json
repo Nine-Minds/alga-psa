@@ -102,7 +102,9 @@
       "forms": "Formularze",
       "channels": "Kanały"
     },
-    "passwords": "Hasła"
+    "passwords": "Hasła",
+    "ticketsAll": "Wszystkie zgłoszenia",
+    "ticketsRecurring": "Zgłoszenia cykliczne"
   },
   "sidebar": {
     "backToMain": "Powrót do głównego",
