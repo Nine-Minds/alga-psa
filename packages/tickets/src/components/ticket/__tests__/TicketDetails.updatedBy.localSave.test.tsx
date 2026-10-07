@@ -515,6 +515,40 @@ describe('TicketDetails "Updated … by" after a local save without a currentUse
     expect(screen.getByTestId('ticket-updated-at')).toHaveTextContent(/by Dana Drawer$/);
   });
 
+  it('names currentUser and bumps the time after a drawer-style save (no onBatchTicketUpdate)', async () => {
+    const staleTicket = { ...baseTicket, updated_at: '2020-01-01T00:00:00.000Z', updated_by: 'user-5' };
+    await act(async () => {
+      renderTicketDetails({
+        initialTicket: staleTicket,
+        initialUpdatedByUser: { user_id: 'user-5', first_name: 'Old', last_name: 'Updater', email: 'o@example.com' } as any,
+        currentUser: { user_id: 'user-9', first_name: 'Dana', last_name: 'Drawer', email: 'd@example.com' } as any,
+      });
+    });
+    const before = screen.getByTestId('ticket-updated-at').textContent;
+    expect(before).toMatch(/by Old Updater$/);
+
+    await act(async () => { fireEvent.click(screen.getByTestId('change-priority')); });
+
+    const after = screen.getByTestId('ticket-updated-at').textContent;
+    expect(after).toMatch(/by Dana Drawer$/);
+    expect(after).not.toBe(before);
+    expect(after).not.toContain('2020');
+  });
+
+  it('does not restamp the header when the per-field write fails', async () => {
+    const { updateTicket } = await import('../../../actions/ticketActions');
+    vi.mocked(updateTicket).mockResolvedValueOnce('failure' as any);
+    await act(async () => {
+      renderTicketDetails({
+        initialUpdatedByUser: { user_id: 'user-5', first_name: 'Old', last_name: 'Updater', email: 'o@example.com' } as any,
+        currentUser: { user_id: 'user-9', first_name: 'Dana', last_name: 'Drawer', email: 'd@example.com' } as any,
+      });
+    });
+    await act(async () => { fireEvent.click(screen.getByTestId('change-priority')); });
+
+    expect(screen.getByTestId('ticket-updated-at')).toHaveTextContent(/by Old Updater$/);
+  });
+
   it('uses the session user when the session resolves after the first render (no stale null actor)', async () => {
     const sessionUser = { user: { id: 'user-1', name: 'Sam Session', email: 'sam@example.com' } };
     sessionRef.current = null;

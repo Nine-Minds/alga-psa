@@ -2023,6 +2023,10 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
             // error/revert).
             if (updateSucceeded) {
                 setActivityLogRefreshKey((value) => value + 1);
+                // Header "Updated <time> by <name>": local UI state only. The server
+                // stamps updated_at/updated_by itself; browsers never send them.
+                setTicket(prev => ({ ...prev, updated_at: new Date().toISOString() }));
+                setUpdatedByUser(localActor);
             }
         } catch (error) {
             console.error(`Error updating ticket ${field}:`, error);
@@ -2794,7 +2798,11 @@ const handleClose = () => {
                 }
                 return result;
             });
-            
+
+            // Header "Updated … by …": local UI state only; the server stamps the row.
+            setTicket(prev => ({ ...prev, updated_at: new Date().toISOString() }));
+            setUpdatedByUser(localActor);
+
             if (newContactId) {
                 const contactData = await getContactByContactNameId(newContactId);
                 setContactInfo(contactData);
@@ -2862,8 +2870,10 @@ const handleClose = () => {
             // Update local ticket state to reflect the change
             setTicket(prevTicket => ({
                 ...prevTicket,
-                ...updateData
+                ...updateData,
+                updated_at: new Date().toISOString()
             }));
+            setUpdatedByUser(localActor);
 
             if (field === 'itil_impact') {
                 toast.success(t('messages.itilImpactUpdated'));
@@ -2954,7 +2964,12 @@ const handleClose = () => {
                 if (result !== 'success') {
                     return false;
                 }
-                setTicket(prevTicket => ({ ...prevTicket, ...ticketChanges }));
+                setTicket(prevTicket => ({
+                    ...prevTicket,
+                    ...ticketChanges,
+                    updated_at: new Date().toISOString()
+                }));
+                setUpdatedByUser(localActor);
                 setActivityLogRefreshKey((value) => value + 1);
                 for (const [field, value] of itilEntries) {
                     await handleItilFieldChange(field, value);

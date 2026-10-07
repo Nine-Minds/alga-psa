@@ -15,6 +15,7 @@ import type {
 
 // Ticket imports
 import TicketDetails from '@alga-psa/tickets/components/ticket/TicketDetails';
+import { ticketDetailsInitialProps } from '../tickets/ticketDetailsInitialProps';
 import { QuickAddTicket } from '@alga-psa/tickets/components/QuickAddTicket';
 import { getConsolidatedTicketData } from '@alga-psa/tickets/actions/optimizedTicketActions';
 
@@ -60,7 +61,7 @@ export function MspActivityCrossFeatureProvider({ children }: { children: ReactN
         initialClient={d.client}
         initialContacts={d.contacts}
         initialContactInfo={d.contactInfo}
-        initialCreatedByUser={d.createdByUser}
+        {...ticketDetailsInitialProps(d)}
         initialAdditionalAgents={d.additionalAgents}
         statusOptions={d.options.status}
         agentOptions={d.options.agent}
