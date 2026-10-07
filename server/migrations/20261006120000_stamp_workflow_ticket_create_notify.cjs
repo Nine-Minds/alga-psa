@@ -3,13 +3,20 @@
  *
  * `tickets.create` now publishes TICKET_CREATED, so assignees would be notified twice by workflows
  * that already send their own notification. Existing steps get:
- *  - { internal: false, contact: false } when the workflow contains notifications.send_in_app / email.send
+ *  - { internal: false, contact: false } when the workflow contains a self-notifying action:
+ *    notifications.send_in_app, email.send, teams.notify_user, teams.send_dm or teams.post_to_channel
  *  - { internal: true,  contact: false } otherwise
  *
  * Literal shape: resolveMappingValue treats any object without $expr/$secret as a literal and resolves
  * its members recursively, so a plain nested object of booleans is a valid inputMapping value.
  */
-const SELF_NOTIFY_ACTIONS = new Set(['notifications.send_in_app', 'email.send']);
+const SELF_NOTIFY_ACTIONS = new Set([
+  'notifications.send_in_app',
+  'email.send',
+  'teams.notify_user',
+  'teams.send_dm',
+  'teams.post_to_channel',
+]);
 const CHILD_KEYS = ['then', 'else', 'body', 'try', 'catch'];
 
 const STAMP_SILENT = Object.freeze({ internal: false, contact: false });

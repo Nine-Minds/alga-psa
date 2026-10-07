@@ -156,12 +156,12 @@ In `tickets.ts`:
 
 ### 4.5 Duplicate-notification dedupe
 
-**What duplicates.** Until now a workflow-created ticket fired no notification. Authors who wanted one added a `notifications.send_in_app` or `email.send` step. Once `TICKET_CREATED` fires, those assignees would get both. Nothing on a workflow-created ticket duplicates a system notification: `tickets.create` sends none itself, and the inbound-email action `createTicketFromEmail` is a separate path that is not touched.
+**What duplicates.** Until now a workflow-created ticket fired no notification. Authors who wanted one added a `notifications.send_in_app`, `email.send` or (EE) `teams.notify_user` / `teams.send_dm` / `teams.post_to_channel` step. Once `TICKET_CREATED` fires, those assignees would get both. Nothing on a workflow-created ticket duplicates a system notification: `tickets.create` sends none itself, and the inbound-email action `createTicketFromEmail` is a separate path that is not touched.
 
 **Detection** is static and runs once, in a migration over stored definitions. Name it `server/migrations/<ts>_stamp_workflow_ticket_create_notify.cjs` and follow `20260314130000_remap_workflow_ticket_status_references.cjs`, which walks `then/else/body/try/catch` and rewrites `step.config.inputMapping`:
 
 - Apply it to both `workflow_definitions.draft_definition` and `workflow_definition_versions.definition_json`.
-- For each definition, decide whether it contains an `action.call` step whose `actionId` is `notifications.send_in_app` or `email.send`, at any depth.
+- For each definition, decide whether it contains an `action.call` step whose `actionId` is `notifications.send_in_app`, `email.send`, `teams.notify_user`, `teams.send_dm` or `teams.post_to_channel`, at any depth. (`slack.send_message` is not registered anywhere in the codebase, so it is not in the list.)
 - For every `action.call` step with `actionId: 'tickets.create'` that has no `notify` key in `inputMapping`:
   - If the workflow sends its own notifications, set `inputMapping.notify = { internal: false, contact: false }`.
   - Otherwise, set `inputMapping.notify = { internal: true, contact: false }`.

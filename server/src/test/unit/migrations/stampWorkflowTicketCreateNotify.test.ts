@@ -35,6 +35,26 @@ describe('stamp_workflow_ticket_create_notify', () => {
     expect(stampDefinition(def2).steps[1].config.inputMapping.notify).toEqual({ internal: false, contact: false });
   });
 
+  it.each(['teams.notify_user', 'teams.send_dm', 'teams.post_to_channel'])(
+    'stamps the silent notify when the workflow contains %s, nested under then/try',
+    (teamsActionId) => {
+      const def = {
+        steps: [
+          call('tickets.create', { title: 't' }),
+          { type: 'control.if', then: [{ type: 'control.try', try: [call(teamsActionId)] }] },
+        ],
+      };
+      expect(stampDefinition(def).steps[0].config.inputMapping.notify).toEqual({ internal: false, contact: false });
+      const reversed = {
+        steps: [{ type: 'control.try', try: [{ type: 'control.if', then: [call('tickets.create')] }], catch: [call(teamsActionId)] }],
+      };
+      expect(stampDefinition(reversed).steps[0].try[0].then[0].config.inputMapping.notify).toEqual({
+        internal: false,
+        contact: false,
+      });
+    }
+  );
+
   it('leaves an existing notify alone and returns the same reference when nothing changes', () => {
     const def = { steps: [call('tickets.create', { notify: { internal: true, contact: true } })] };
     expect(stampDefinition(def)).toBe(def);
