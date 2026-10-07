@@ -4,4 +4,4 @@ GET http://127.0.0.1:3185/api/health
 HTTP 200
 {"status":"ok","version":"1.0.0"}
 
-After removing that temporary permission, the board suspended the PTY as required by the current Draft Implementation policy. The saved registration was retained for the Smoke Test step.
+After setting readiness metadata, `workflow-restart-service` followed by command-free `workflow-ensure-service --name=dev-server` returned the saved session `:19`, command, cwd, `created:false`, readiness `{port:3185,path:"/api/health"}`, and readiness URL `http://100.109.101.64:3185/api/health`. Normal Draft Implementation policy then suspended the PTY; a subsequent direct HTTP probe returned connection refused while suspended. The board template was restored to Draft Implementation `services:[]`, Smoke Test `services:[{"name":"dev-server"}]`. The registration was retained and was not concluded.
