@@ -712,6 +712,7 @@ async function handleProjectTaskAdditionalAgentAssigned(
       type: 'info',
       category: 'projects',
       link: internalUrl,
+      metadata: { taskId, projectId },
       data: {
         taskName: taskData.task_name,
         projectName: taskData.project_name,
@@ -743,6 +744,7 @@ async function handleProjectTaskAdditionalAgentAssigned(
         type: 'info',
         category: 'projects',
         link: internalUrl,
+        metadata: { taskId, projectId },
         data: {
           taskName: taskData.task_name,
           projectName: taskData.project_name,
@@ -2433,6 +2435,7 @@ async function handleTaskAssigned(event: ProjectTaskAssignedEvent): Promise<void
           type: 'info',
           category: 'projects',
           link: internalUrl,
+          metadata: { taskId, projectId },
           data: {
             taskName: task.task_name,
             projectName: task.project_name,
@@ -2451,6 +2454,7 @@ async function handleTaskAssigned(event: ProjectTaskAssignedEvent): Promise<void
           type: 'info',
           category: 'projects',
           link: internalUrl,
+          metadata: { taskId, projectId },
           data: {
             taskName: task.task_name,
             projectName: task.project_name,
@@ -2477,6 +2481,7 @@ async function handleTaskAssigned(event: ProjectTaskAssignedEvent): Promise<void
         type: 'info',
         category: 'projects',
         link: internalUrl,
+        metadata: { taskId, projectId },
         data: {
           taskName: task.task_name,
           projectName: task.project_name,
@@ -2972,6 +2977,7 @@ const CALENDAR_ACCESS_LEVEL_LABELS: Record<string, Record<string, string>> = {
   it: { free_busy: 'libero/occupato', read: 'visualizza dettagli', edit: 'modifica', manage: 'gestione' },
   pl: { free_busy: 'wolny/zajęty', read: 'wyświetlanie szczegółów', edit: 'edycja', manage: 'zarządzanie' },
   pt: { free_busy: 'livre/ocupado', read: 'ver detalhes', edit: 'edição', manage: 'gestão' },
+  sv: { free_busy: 'ledig/upptagen', read: 'visa detaljer', edit: 'redigera', manage: 'hantera' },
 };
 
 /**

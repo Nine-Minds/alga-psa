@@ -336,6 +336,21 @@ async function processReset(
       return { outcome: 'resolved', alertId: existing.alert_id, warnings };
     }
 
+    // rmm_alerts.ticket_id has no FK, so the linked ticket may have been
+    // deleted; detach it instead of noting against a missing ticket.
+    if (existing.ticket_id) {
+      const ticket = await db.table('tickets')
+        .where({ ticket_id: existing.ticket_id })
+        .first('ticket_id');
+      if (!ticket) {
+        await db.table('rmm_alerts')
+          .where({ alert_id: existing.alert_id })
+          .update({ ticket_id: null });
+        warnings.push(`Linked ticket ${existing.ticket_id} no longer exists; alert resolved without ticket update`);
+        existing.ticket_id = null;
+      }
+    }
+
     if (existing.ticket_id && existing.matched_rule_id) {
       const rule = (await db.table('rmm_alert_rules')
         .where({ rule_id: existing.matched_rule_id })

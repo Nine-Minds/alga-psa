@@ -78,7 +78,7 @@ describe('search index source event publishing contracts', () => {
   it('T060 project CRUD and child entity CRUD emit project-family events', () => {
     const projectSource = readRepoFile('packages/projects/src/actions/projectActions.ts');
     const taskSource = readRepoFile('packages/projects/src/actions/projectTaskActions.ts');
-    const commentSource = readRepoFile('packages/projects/src/actions/projectTaskCommentActions.ts');
+    const commentSource = readRepoFile('packages/projects/src/lib/taskComments/taskCommentService.ts');
 
     for (const eventType of [
       'PROJECT_CREATED',

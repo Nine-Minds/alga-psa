@@ -31,7 +31,7 @@ export default function MspSignIn({ initialEmail }: MspSignInProps) {
   const [alertInfo, setAlertInfo] = useState<AlertProps>({ type: 'success', title: '', message: '' });
   const [isOpen2FA, setIsOpen2FA] = useState(false);
   const searchParams = useSearchParams();
-  const { t } = useTranslation('msp/auth');
+  const { t } = useTranslation('msp/auth', { useSuspense: false });
 
   const callbackUrl = searchParams?.get('callbackUrl') || '/msp/dashboard';
   const error = searchParams?.get('error');

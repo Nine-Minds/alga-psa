@@ -456,6 +456,12 @@
       "location": "Standort"
     }
   },
+  "documentsTab": {
+    "errors": {
+      "title": "Dokumente nicht verfügbar",
+      "loadFailed": "Verknüpfte Dokumente konnten nicht geladen werden. Laden Sie die Seite neu oder versuchen Sie es später erneut."
+    }
+  },
   "assetDetails": {
     "title": "Asset-Details",
     "description": "Vollständige Asset-Detailseite mit Übersichtskarten, Zuordnungen, Dokumenten und Betriebsmaßnahmen",
@@ -1581,8 +1587,7 @@
       "manageAssetTypes": "Berechtigung verweigert: Assettypen können nicht verwaltet werden",
       "readDocuments": "Berechtigung verweigert: Assetdokumente können nicht gelesen werden",
       "associateDocuments": "Berechtigung verweigert: Dokumente können Assets nicht zugeordnet werden",
-      "removeDocuments": "Berechtigung verweigert: Dokumente können nicht von Assets entfernt werden",
-      "updateDocumentNotes": "Berechtigung verweigert: Notizen zu Assetdokumenten können nicht aktualisiert werden"
+      "removeDocuments": "Berechtigung verweigert: Dokumente können nicht von Assets entfernt werden"
     },
     "asset": {
       "notFoundRefresh": "Asset nicht gefunden. Es wurde möglicherweise gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
@@ -1603,5 +1608,15 @@
       "missingField": "Erforderliches Assetfeld fehlt.",
       "missingFieldNamed": "Erforderliches Assetfeld fehlt: {{field}}."
     }
+  },
+  "clientAssetMultiSelect": {
+    "errors": {
+      "load": "Assets konnten nicht geladen werden"
+    },
+    "placeholder": "Asset hinzufügen...",
+    "searchPlaceholder": "Assets suchen",
+    "empty": "Keine passenden Assets für diesen Kunden",
+    "loading": "Wird geladen...",
+    "remove": "Asset entfernen"
   }
 }

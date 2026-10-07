@@ -1,4 +1,12 @@
-import type { QuoteViewModel, QuoteViewModelLineItem } from '@alga-psa/types';
+import type { QuoteViewModel, QuoteViewModelCadenceGroup, QuoteViewModelLineItem } from '@alga-psa/types';
+
+import {
+  cadenceDefaultName,
+  compareCadenceKeys,
+  isRecurringCadenceKey,
+  resolveCadenceKey,
+} from '../../../lib/quoteItemCadence';
+import { isOptional, isRequired } from '../../../lib/quoteItemInclusion';
 
 export type QuotePreviewSampleScenario = {
   id: string;
@@ -7,10 +15,74 @@ export type QuotePreviewSampleScenario = {
   data: QuoteViewModel;
 };
 
-/** Derives recurring/one-time grouped fields from line_items so sample data works with grouped templates. */
+/** Pre-computed cadence bands so the designer preview renders the grouped
+ *  template's per-cadence sections (monthly / annual / … / one-time) and the
+ *  "Optional (if selected)" add-on bands from sample data. */
+function buildSampleCadenceGroups(items: QuoteViewModelLineItem[]): {
+  groups: QuoteViewModelCadenceGroup[];
+  optionalGroups: QuoteViewModelCadenceGroup[];
+} {
+  const byKey = new Map<string, QuoteViewModelCadenceGroup>();
+
+  const ensure = (key: string): QuoteViewModelCadenceGroup => {
+    let group = byKey.get(key);
+    if (!group) {
+      group = {
+        cadence_key: key,
+        name: cadenceDefaultName(key),
+        is_recurring: isRecurringCadenceKey(key),
+        items: [],
+        subtotal: 0,
+        tax: 0,
+        total: 0,
+        optional_items: [],
+        optional_subtotal: 0,
+        optional_tax: 0,
+        optional_total: 0,
+      };
+      byKey.set(key, group);
+    }
+    return group;
+  };
+
+  for (const item of items) {
+    if (item.is_discount) continue;
+    const group = ensure(resolveCadenceKey(item));
+    if (isOptional(item)) group.optional_items.push(item);
+    else group.items.push(item);
+  }
+
+  for (const group of byKey.values()) {
+    const sum = (list: QuoteViewModelLineItem[], field: 'total_price' | 'tax_amount') =>
+      list.reduce((total, item) => total + (item[field] ?? 0), 0);
+    group.subtotal = sum(group.items, 'total_price');
+    group.tax = sum(group.items, 'tax_amount');
+    group.total = group.subtotal + group.tax;
+    group.optional_subtotal = sum(group.optional_items, 'total_price');
+    group.optional_tax = sum(group.optional_items, 'tax_amount');
+    group.optional_total = group.optional_subtotal + group.optional_tax;
+  }
+
+  const ordered = Array.from(byKey.values())
+    .filter((group) => group.items.length > 0 || group.optional_items.length > 0)
+    .sort((left, right) => compareCadenceKeys(left.cadence_key, right.cadence_key));
+
+  return {
+    groups: ordered.filter((group) => group.items.length > 0),
+    optionalGroups: ordered.filter((group) => group.optional_items.length > 0),
+  };
+}
+
+/** Derives recurring/one-time grouped fields, cadence bands, and the
+ *  required-vs-optional split from line_items so sample data works with every
+ *  standard template. Required rows form the base totals; optional add-ons are
+ *  reported separately and never move the base. */
 function enrichQuoteSampleWithGroups(data: QuoteViewModel): QuoteViewModel {
   const recurring = data.line_items.filter((item: QuoteViewModelLineItem) => item.is_recurring);
   const onetime = data.line_items.filter((item: QuoteViewModelLineItem) => !item.is_recurring);
+  const required = data.line_items.filter((item) => !item.is_discount && isRequired(item));
+  const optional = data.line_items.filter((item) => !item.is_discount && isOptional(item));
+  const discountRows = data.line_items.filter((item) => item.is_discount);
   const sumField = (items: QuoteViewModelLineItem[], field: 'total_price' | 'tax_amount') =>
     items.reduce((sum, item) => sum + (item[field] ?? 0), 0);
 
@@ -22,6 +94,18 @@ function enrichQuoteSampleWithGroups(data: QuoteViewModel): QuoteViewModel {
   data.onetime_subtotal = sumField(onetime, 'total_price');
   data.onetime_tax = sumField(onetime, 'tax_amount');
   data.onetime_total = (data.onetime_subtotal ?? 0) + (data.onetime_tax ?? 0);
+
+  data.subtotal = sumField(required, 'total_price');
+  data.tax = sumField(required, 'tax_amount');
+  data.discount_total = discountRows.reduce((sum, item) => sum + Math.abs(item.total_price ?? 0), 0);
+  data.total_amount = (data.subtotal ?? 0) - (data.discount_total ?? 0) + (data.tax ?? 0);
+  data.optional_subtotal = sumField(optional, 'total_price');
+  data.optional_tax = sumField(optional, 'tax_amount');
+  data.optional_total = (data.optional_subtotal ?? 0) + (data.optional_tax ?? 0);
+
+  const cadence = buildSampleCadenceGroups(data.line_items);
+  data.groups_by_cadence = cadence.groups;
+  data.groups_by_cadence_with_optionals = cadence.optionalGroups;
 
   return data;
 }
@@ -124,6 +208,14 @@ function enrichSampleCatalogFields(data: QuoteViewModel): QuoteViewModel {
     'ql-7': {
       service_name: 'Network Infrastructure Audit',
       catalog_description: 'One-time audit of network infrastructure, firmware levels, and security configuration with a findings report.',
+    },
+    'ql-8': {
+      service_name: 'Annual Firewall Subscription',
+      catalog_description: 'Annual managed firewall subscription covering rule review, firmware patching, and security monitoring, billed once per year.',
+    },
+    'ql-9': {
+      service_name: 'Annual Security Review',
+      catalog_description: 'Optional annual security posture review with penetration-test findings and a remediation roadmap.',
     },
   };
 
@@ -351,10 +443,12 @@ export const QUOTE_PREVIEW_SAMPLE_SCENARIOS: QuotePreviewSampleScenario[] = [
         { quote_item_id: 'ql-5', description: 'SOC Alert Triage', quantity: 1, unit_price: 250000, total_price: 250000, tax_amount: 20000, net_amount: 270000, is_optional: false, is_selected: true, is_recurring: true, billing_frequency: 'monthly', billing_method: 'fixed' },
         { quote_item_id: 'ql-6', description: 'After Hours On-Call Support', quantity: 1, unit_price: 180000, total_price: 180000, tax_amount: 14400, net_amount: 194400, is_optional: true, is_selected: false, is_recurring: true, billing_frequency: 'monthly', billing_method: 'fixed' },
         { quote_item_id: 'ql-7', description: 'Network Infrastructure Audit', quantity: 1, unit_price: 450000, total_price: 450000, tax_amount: 36000, net_amount: 486000, is_optional: false, is_selected: true, is_recurring: false, billing_method: 'fixed' },
+        { quote_item_id: 'ql-8', description: 'Annual Firewall Subscription', quantity: 1, unit_price: 15900, total_price: 15900, tax_amount: 1272, net_amount: 17172, is_optional: false, is_selected: true, is_recurring: true, billing_frequency: 'annually', billing_method: 'fixed' },
+        { quote_item_id: 'ql-9', description: 'Annual Security Review (Optional)', quantity: 1, unit_price: 24000, total_price: 24000, tax_amount: 1920, net_amount: 25920, is_optional: true, is_selected: false, is_recurring: true, billing_frequency: 'annually', billing_method: 'fixed' },
       ],
-      subtotal: 2212500,
-      tax: 177000,
-      total_amount: 2389500,
+      subtotal: 1898400,
+      tax: 151872,
+      total_amount: 2050272,
     },
   }),
 ];

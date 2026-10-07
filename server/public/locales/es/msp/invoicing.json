@@ -388,6 +388,7 @@
       "SOURCE_ALREADY_BILLED": "Algunos elementos seleccionados ya no son facturables (ya facturados, no aprobados o eliminados). Actualiza e inténtalo de nuevo.",
       "SOURCE_NOT_ELIGIBLE": "Uno de los elementos seleccionados no pertenece a este ticket o ya no es elegible. Actualiza e inténtalo de nuevo.",
       "SOURCE_CURRENCY_MISMATCH": "Algunos productos seleccionados tienen un precio en una moneda distinta a la de facturación de este cliente, por lo que no se pueden añadir. Factúralos por separado en su propia moneda.",
+      "RECURRING_PRICING_STALE": "La vista previa está desactualizada: {{details}}. Vuelva a ejecutar la vista previa para ver los valores actuales y, luego, genere de nuevo.",
       "BILLING_PROFILE_NOT_FOUND": "El perfil de facturación seleccionado no está disponible para este cliente. Actualice la página e inténtelo de nuevo."
     },
     "warnings": {
@@ -790,7 +791,8 @@
       "back": "Volver a diseños de facturas",
       "cancel": "Cancelar",
       "save": "Guardar plantilla",
-      "saving": "Guardando..."
+      "saving": "Guardando...",
+      "close": "Cerrar"
     },
     "titles": {
       "create": "Crear nuevo diseño de factura",
@@ -800,7 +802,9 @@
       "templateName": "Nombre de la plantilla",
       "templateAst": "Plantilla AST (JSON)",
       "created": "Creado",
-      "lastUpdated": "Última actualización"
+      "lastUpdated": "Última actualización",
+      "savedAt": "Guardado {{time}}",
+      "notSaved": "Aún no guardado"
     },
     "tabs": {
       "visual": "Visual",
@@ -816,6 +820,9 @@
       "templateNameRequired": "El nombre de la plantilla es obligatorio",
       "astExportFailed": "No se pudo exportar la plantilla AST desde el espacio de trabajo visual: {{message}}",
       "unknownAstExport": "Error de exportación AST desconocido"
+    },
+    "toast": {
+      "saved": "Diseño «{{name}}» guardado."
     }
   },
   "templates": {
@@ -1212,7 +1219,10 @@
         "drags": "Arrastres: {{count}}",
         "success": "Éxito: {{count}}",
         "invalid": "No válidos: {{count}}"
-      }
+      },
+      "zoomOut": "Alejar",
+      "zoomIn": "Acercar",
+      "zoomFit": "Ajustar"
     },
     "palette": {
       "tabs": {
@@ -1253,6 +1263,15 @@
         "content": "Contenido",
         "media": "Medios",
         "dynamic": "Dinámico"
+      },
+      "insertTarget": {
+        "page": "Los bloques nuevos se añaden al final de la página.",
+        "inside": "Los bloques nuevos se añaden dentro de {{name}}.",
+        "after": "Los bloques nuevos se añaden justo después de {{name}}.",
+        "label": "Dónde se añaden los bloques nuevos",
+        "insideOption": "Dentro",
+        "afterOption": "Después",
+        "shiftHint": "Shift+click en + para añadirlo después."
       }
     },
     "inspector": {
@@ -1272,7 +1291,70 @@
       "fitSectionToContents": "Ajustar sección al contenido",
       "sectionNoChildContent": "La sección no tiene contenido para ajustar.",
       "apply": "Aplicar",
-      "emptyHelp": "Seleccione un componente para editar sus propiedades."
+      "emptyHelp": "Seleccione un componente para editar sus propiedades.",
+      "size": "Tamaño",
+      "width": "Ancho",
+      "widthValue": "Valor de ancho",
+      "minWidth": "Ancho mín.",
+      "maxWidth": "Ancho máx.",
+      "height": "Alto",
+      "heightValue": "Valor de alto",
+      "minHeight": "Alto mín.",
+      "maxHeight": "Alto máx.",
+      "mediaSource": "Origen de la imagen",
+      "mediaSourceLogo": "Logotipo de la empresa",
+      "mediaSourceCustom": "Imagen personalizada",
+      "mediaSourceLogoHint": "Muestra en cada documento el logotipo de la configuración de marca de su empresa.",
+      "mediaSourceUrl": "URL de origen",
+      "renameInner": "¿Cambiar también el nombre de {{count}} capas internas ({{from}} → {{to}}…)?",
+      "renameInnerApply": "Cambiar nombre",
+      "renameInnerDismiss": "No",
+      "tabsLabel": "Secciones del inspector",
+      "insertDataField": "+ Insertar campo de datos…",
+      "searchDataFields": "Buscar campos de datos…",
+      "dataFields": "Campos de datos",
+      "box": {
+        "top": "Arriba",
+        "right": "Derecha",
+        "bottom": "Abajo",
+        "left": "Izquierda",
+        "all": "Todos los lados",
+        "sameOnAllSides": "Igual en todos los lados",
+        "unit": "Unidad",
+        "customValue": "Valor CSS personalizado conservado hasta que edite un lado: {{value}}"
+      },
+      "examplePlaceholder": "p. ej. {{value}}",
+      "setCount": "{{count}} definidos",
+      "overrides": {
+        "none": "Solo usa los valores predeterminados.",
+        "jump": "Editar en la pestaña {{tab}}",
+        "title": "Definido en este bloque ({{count}}):"
+      },
+      "tabs": {
+        "content": "Contenido",
+        "style": "Estilo",
+        "layout": "Diseño y tamaño"
+      },
+      "sizeModes": {
+        "auto": {
+          "label": "Auto",
+          "widthTooltip": "Lo decide el contenedor (se estira en una pila vertical)",
+          "heightTooltip": "Crecer con el contenido"
+        },
+        "fill": {
+          "label": "Llenar",
+          "widthTooltip": "Ocupar todo el ancho del contenedor"
+        },
+        "fit": {
+          "label": "Ajustar",
+          "widthTooltip": "Reducir para ajustarse al contenido"
+        },
+        "fixed": {
+          "label": "Fijo",
+          "widthTooltip": "Usar el ancho exacto indicado abajo",
+          "heightTooltip": "Usar el alto exacto indicado abajo"
+        }
+      }
     },
     "shell": {
       "selectedLabel": "Seleccionado:",
@@ -1564,6 +1646,12 @@
             },
             "margin": {
               "label": "Margen"
+            },
+            "padding": {
+              "label": "Relleno"
+            },
+            "containerPadding": {
+              "label": "Relleno"
             }
           }
         },
@@ -1651,6 +1739,84 @@
         },
         "totals-rows": {
           "title": "Filas de totales"
+        },
+        "typography": {
+          "title": "Tipografía",
+          "fields": {
+            "fontSize": {
+              "label": "Tamaño"
+            },
+            "fontWeight": {
+              "label": "Grosor",
+              "options": {
+                "400": "Normal (400)",
+                "500": "Medio (500)",
+                "600": "Semi-negrita (600)",
+                "700": "Negrita (700)"
+              }
+            },
+            "lineHeight": {
+              "label": "Interlineado"
+            },
+            "textAlign": {
+              "label": "Alineación",
+              "options": {
+                "left": "Izquierda",
+                "center": "Centro",
+                "right": "Derecha",
+                "justify": "Justificado"
+              }
+            },
+            "fontStyle": {
+              "label": "Estilo",
+              "options": {
+                "normal": "Normal",
+                "italic": "Cursiva"
+              }
+            },
+            "color": {
+              "label": "Color"
+            }
+          }
+        },
+        "value-typography": {
+          "title": "Texto del valor",
+          "fields": {
+            "fontSize": {
+              "label": "Tamaño"
+            },
+            "fontWeight": {
+              "label": "Grosor",
+              "options": {
+                "400": "Normal (400)",
+                "500": "Medio (500)",
+                "600": "Semi-negrita (600)",
+                "700": "Negrita (700)"
+              }
+            },
+            "lineHeight": {
+              "label": "Interlineado"
+            },
+            "textAlign": {
+              "label": "Alineación",
+              "options": {
+                "left": "Izquierda",
+                "center": "Centro",
+                "right": "Derecha",
+                "justify": "Justificado"
+              }
+            },
+            "fontStyle": {
+              "label": "Estilo",
+              "options": {
+                "normal": "Normal",
+                "italic": "Cursiva"
+              }
+            },
+            "color": {
+              "label": "Color"
+            }
+          }
         }
       }
     },
@@ -1750,10 +1916,80 @@
     },
     "canvas": {
       "templateBoundary": "Límite de la plantilla",
-      "translatableHint": "Se traduce automáticamente al idioma del destinatario. Si edita el texto, se usará su propio texto fijo."
+      "translatableHint": "Se traduce automáticamente al idioma del destinatario. Si edita el texto, se usará su propio texto fijo.",
+      "noLineItems": "Sin conceptos",
+      "moreRows": "+{{count}} filas más",
+      "subtotal": "Subtotal",
+      "tax": "Impuesto",
+      "total": "Total",
+      "buttonLabel": "Botón",
+      "signatureLabel": "Firma",
+      "attachmentsLabel": "Adjuntos",
+      "spacerLabel": "Espaciador",
+      "companyLogo": "Logotipo de la empresa",
+      "insertionMarker": "El siguiente bloque que añada irá aquí",
+      "emptyContainer": "Vacío: selecciónelo y añada bloques desde el panel izquierdo",
+      "localeChip": "Etiquetas traducidas mostradas en {{language}} (Idioma de vista previa)",
+      "badgeDragHint": "Arrastra para mover este bloque"
     },
     "dragOverlay": {
       "component": "Componente"
+    },
+    "arrange": {
+      "up": "Subir",
+      "upHint": "Mover antes dentro de su contenedor (↑)",
+      "down": "Bajar",
+      "downHint": "Mover después dentro de su contenedor (↓)",
+      "out": "Sacar",
+      "outHint": "Sacar de su contenedor y colocarlo justo después (Alt+←)",
+      "into": "Anidar",
+      "intoHint": "Mover al contenedor que está justo antes (Alt+→)",
+      "copy": "Copiar",
+      "copyHint": "Copiar (Ctrl/⌘+C). Seleccione dónde debe ir y pegue con Ctrl/⌘+V.",
+      "paste": "Pegar",
+      "pasteHint": "Pegar en el contenedor seleccionado o después del bloque seleccionado (Ctrl/⌘+V)",
+      "duplicate": "Duplicar",
+      "duplicateHint": "Duplicar justo a continuación (Ctrl/⌘+D)",
+      "copyStyle": "Copiar estilo",
+      "copyStyleHint": "Copiar colores, bordes, espaciado y estilo de texto (Ctrl/⌘+Alt+C)",
+      "pasteStyle": "Pegar estilo",
+      "pasteStyleHint": "Aplicar el estilo copiado a este bloque (Ctrl/⌘+Alt+V)",
+      "delete": "Eliminar",
+      "deleteHint": "Eliminar (tecla Supr)",
+      "title": "Organizar"
+    },
+    "feedback": {
+      "cannotInsert": "No se puede añadir {{block}} aquí.",
+      "insertedOnPage": "Se añadió {{block}} a la página.",
+      "insertedInto": "Se añadió {{block}} a {{parent}}.",
+      "fieldRebound": "{{name}} ahora muestra {{path}}."
+    },
+    "translation": {
+      "translatedAs": "Etiqueta estándar «{{name}}», traducida para cada destinatario",
+      "useFixedText": "Usar texto fijo",
+      "pickStandardLabel": "Texto fijo. Traducir automáticamente…",
+      "searchStandardLabels": "Buscar etiquetas estándar…",
+      "standardLabels": "Etiquetas estándar",
+      "noMatches": "Ninguna etiqueta estándar coincide.",
+      "cancel": "Cancelar"
+    },
+    "outline": {
+      "collapse": "Contraer {{name}}",
+      "expand": "Expandir {{name}}",
+      "title": "Esquema"
+    },
+    "dragPreview": {
+      "noTarget": "Fuera de la página: suelta para cancelar",
+      "noChange": "Se queda donde está",
+      "before": "Antes de {{block}}",
+      "after": "Después de {{block}}",
+      "inside": "Dentro de {{container}}",
+      "dropOnPage": "Suelta en la página para añadir este bloque.",
+      "cancelled": "No se ha movido: suelta sobre la página o el Esquema para colocarlo."
+    },
+    "resize": {
+      "handleHint": "Arrastra para cambiar el tamaño · doble clic para ajustarlo al contenido",
+      "autoValue": "Automático ({{value}})"
     }
   },
   "projectBilling": {
@@ -1819,7 +2055,8 @@
         "selectedCount": "{{count}} seleccionados",
         "clear": "Limpiar selección"
       }
-    }
+    },
+    "emptyTimeHint": "El tiempo y los materiales aprobados nunca se encolan aquí: se facturan en la ejecución de facturación normal o con el botón Generar factura del proyecto."
   },
   "invoiceDesigner": {
     "transforms": {
@@ -2008,7 +2245,9 @@
         "addLine": "+ Línea",
         "clearLines": "Línea única",
         "stackedLinesHint": "Cada línea no vacía se muestra en su propia fila. Cuando todas las líneas están vacías, se muestra la clave de vinculación de la columna indicada arriba.",
-        "removeLine": "Quitar la línea {{index}}"
+        "removeLine": "Quitar la línea {{index}}",
+        "align": "Alineación",
+        "widthPlaceholder": "auto | 50% | 120px"
       },
       "columnTypes": {
         "text": "Texto",
@@ -2043,6 +2282,12 @@
         "groupedRowKey": "Clave de fila agrupada",
         "groupedRowItems": "Elementos de fila agrupada",
         "availableBinding": "Vinculación disponible"
+      },
+      "columnAlign": {
+        "default": "Predeterminado",
+        "left": "Izquierda",
+        "center": "Centro",
+        "right": "Derecha"
       }
     },
     "imagePicker": {
@@ -2061,7 +2306,14 @@
       "clearRowBackground": "Borrar color de fondo de la fila",
       "clearRowTextColor": "Borrar color de texto de la fila",
       "labelColorOverrideNote": "Esta etiqueta conserva su propio color guardado y no hereda el color de texto de la fila establecido arriba. El importe sigue el color de texto de la fila.",
-      "noRows": "Este bloque de totales aún no tiene filas guardadas. Guarde la plantilla y vuelva a abrirla para editar los colores de las filas."
+      "noRows": "Este bloque de totales aún no tiene filas guardadas. Guarde la plantilla y vuelva a abrirla para editar los colores de las filas.",
+      "addRow": "Añadir fila:",
+      "empty": "Aún no hay filas. Añada una abajo.",
+      "moveUp": "Mover {{row}} hacia arriba",
+      "moveDown": "Mover {{row}} hacia abajo",
+      "remove": "Quitar {{row}}",
+      "label": "Etiqueta",
+      "emphasize": "Destacar (estilo de total general)"
     }
   },
   "draftInvoiceDetails": {

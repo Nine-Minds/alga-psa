@@ -41,17 +41,21 @@ import { getAllUsersBasic } from '@alga-psa/user-composition/actions';
 
 import type { WorkflowDefinition, Step, IfBlock, ForEachBlock, TryCatchBlock } from '@alga-psa/workflows/runtime/client';
 import type { ColumnDefinition, IUser } from '@alga-psa/types';
+import { isWorkflowEngineUnavailableMessage } from '../workflow-designer/workflowServerErrors';
+import { describeWorkflowRunLaunchFailure } from '../workflow-designer/workflowRunDialogUtils';
 import { pathDepth } from '@alga-psa/workflows/authoring';
 import {
   getWorkflowScheduleStatusBadgeClass,
   isTimeTriggeredRun
 } from '../workflow-designer/workflowRunTriggerPresentation';
 import {
+  useDescribeWorkflowTrigger,
   useFormatWorkflowRunTrigger,
   useFormatWorkflowScheduleStatus,
 } from '../workflow-designer/useWorkflowRunTriggerPresentation';
 import {
   buildRunDisplayError,
+  getWorkflowRunLaunchFailure,
   buildStepDisplayError,
   getWorkflowErrorCode,
   type WorkflowDisplayError,
@@ -326,6 +330,7 @@ const WorkflowRunDetailsPanel: React.FC<WorkflowRunDetailsProps> = ({
   const formatWorkflowStepStatus = useFormatWorkflowStepStatus();
   const formatWorkflowLogLevel = useFormatWorkflowLogLevel();
   const formatWorkflowRunTrigger = useFormatWorkflowRunTrigger();
+  const describeWorkflowTrigger = useDescribeWorkflowTrigger();
   const formatWorkflowScheduleStatus = useFormatWorkflowScheduleStatus();
   const formatDateTime = useFormatDateTime();
   const workflowStepStatusOptions = useWorkflowStepStatusOptions();
@@ -595,6 +600,11 @@ const WorkflowRunDetailsPanel: React.FC<WorkflowRunDetailsProps> = ({
     () => buildRunDisplayError(run, steps, invocations),
     [run, steps, invocations]
   );
+  // A run that never reached the workflow engine gets the Run dialog's plain-language explanation.
+  const runLaunchFailure = useMemo(() => {
+    const failure = getWorkflowRunLaunchFailure(run, isWorkflowEngineUnavailableMessage);
+    return failure && run ? describeWorkflowRunLaunchFailure(t, failure, run.run_id) : null;
+  }, [run, t]);
 
   const stepWaits = useMemo(
     () => waits.filter((wait) => wait.step_path === selectedStepPath),
@@ -905,7 +915,9 @@ const WorkflowRunDetailsPanel: React.FC<WorkflowRunDetailsProps> = ({
     }
   };
 
+  // How this run started (a trigger, or by hand as a manual test), and separately what starts the workflow.
   const triggerLabel = formatWorkflowRunTrigger(run?.trigger_type ?? null, run?.event_type ?? null);
+  const workflowTriggerLabel = workflowTrigger ?? describeWorkflowTrigger(definition?.trigger ?? null);
   const triggerMetadata = (run?.trigger_metadata_json ?? null) as Record<string, unknown> | null;
   const canCancel = canAdmin && run?.status && !['SUCCEEDED', 'FAILED', 'CANCELED'].includes(run.status);
   const canReplay = canAdmin && !!run;
@@ -1039,9 +1051,9 @@ const WorkflowRunDetailsPanel: React.FC<WorkflowRunDetailsProps> = ({
             <div className="text-xs text-gray-500">
               {t('runDetails.header.workflowIdLabel', { defaultValue: 'Workflow ID:' })} {run?.workflow_id ?? emptyValueLabel}
             </div>
-            {workflowTrigger && (
-              <div className="text-xs text-gray-500">
-                {t('runDetails.header.triggerLabel', { defaultValue: 'Trigger:' })} {workflowTrigger}
+            {workflowTriggerLabel && (
+              <div id="workflow-run-detail-workflow-trigger" className="text-xs text-gray-500">
+                {t('runDetails.header.workflowTriggerLabel', { defaultValue: 'Workflow trigger:' })} {workflowTriggerLabel}
               </div>
             )}
           </div>
@@ -1117,9 +1129,9 @@ const WorkflowRunDetailsPanel: React.FC<WorkflowRunDetailsProps> = ({
           </div>
           <div>
             <div className="text-xs text-gray-500">
-              {t('runDetails.summary.triggerLabel', { defaultValue: 'Trigger' })}
+              {t('runDetails.summary.runSourceLabel', { defaultValue: 'Run source' })}
             </div>
-            <div className="text-gray-800">{triggerLabel}</div>
+            <div id="workflow-run-detail-run-source" className="text-gray-800">{triggerLabel}</div>
           </div>
           {isTimeTriggeredRun(run?.trigger_type) && (
             <div>
@@ -1149,7 +1161,8 @@ const WorkflowRunDetailsPanel: React.FC<WorkflowRunDetailsProps> = ({
           )}
         </div>
 
-        {run?.node_path && (
+        {/* Before any step runs the engine still reports the first step's path; it says nothing then. */}
+        {run?.node_path && steps.length > 0 && (
           <div className="text-xs text-gray-500">
             {t('runDetails.summary.nodePathLabel', { defaultValue: 'Node path:' })} {run.node_path}
           </div>
@@ -1179,7 +1192,22 @@ const WorkflowRunDetailsPanel: React.FC<WorkflowRunDetailsProps> = ({
             )}
           </div>
         )}
-        {runDisplayError && (
+        {runLaunchFailure && (
+          <div id="run-launch-failure" className="flex items-start gap-2 text-sm text-destructive" role="alert">
+            <AlertTriangle className="h-4 w-4 mt-0.5" />
+            <div>
+              <div className="font-medium">{runLaunchFailure.title}</div>
+              <div className="text-xs">{runLaunchFailure.description}</div>
+              {runLaunchFailure.technicalDetail && (
+                <div className="mt-1 text-xs text-destructive/80">
+                  {t('runDetails.summary.technicalDetailLabel', { defaultValue: 'Technical detail:' })}{' '}
+                  {runLaunchFailure.technicalDetail}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+        {runDisplayError && !runLaunchFailure && (
           <div className="flex items-start gap-2 text-sm text-destructive">
             <AlertTriangle className="h-4 w-4 mt-0.5" />
             <div>
@@ -1265,7 +1293,11 @@ const WorkflowRunDetailsPanel: React.FC<WorkflowRunDetailsProps> = ({
         )}
         {!isLoading && filteredSteps.length === 0 && (
           <div className="py-6 text-center text-sm text-gray-500">
-            {t('runDetails.stepTimeline.empty', { defaultValue: 'No step history yet.' })}
+            {runLaunchFailure
+              ? t('runDetails.stepTimeline.neverStarted', {
+                  defaultValue: 'This run never reached the workflow engine, so no steps ran.',
+                })
+              : t('runDetails.stepTimeline.empty', { defaultValue: 'No step history yet.' })}
           </div>
         )}
         {filteredSteps.length > 0 && (

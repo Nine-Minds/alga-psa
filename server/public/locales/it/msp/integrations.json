@@ -469,7 +469,8 @@
           "previousCount": "Precedente",
           "syncFinished": "Sincronizzazione completata per {{client}}.",
           "syncing": "Sincronizzazione…",
-          "syncTrackingFailed": "La sincronizzazione è stata avviata, ma questa pagina non ha potuto seguirla fino al completamento. Aggiorna per vedere il risultato più recente."
+          "syncTrackingFailed": "La sincronizzazione è stata avviata, ma questa pagina non ha potuto seguirla fino al completamento. Aggiorna per vedere il risultato più recente.",
+          "syncWorkerUnavailable": "La sincronizzazione è in coda, ma al momento nulla sta elaborando la coda in background. Verrà eseguita quando il worker tornerà attivo; se resta bloccata, riavvia il servizio temporal-worker."
         },
         "connection": {
           "changeAction": "Modifica connessione",

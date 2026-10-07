@@ -139,6 +139,8 @@ function createQueryBuilder(rows: Row[], raw: (sql: string) => string) {
     first: vi.fn(async () => resultRows[0]),
     join: vi.fn(() => builder),
     leftJoin: vi.fn(() => builder),
+    // The ticket→project resolver is joined as raw SQL (alga-2026-0002622).
+    joinRaw: vi.fn(() => builder),
     orderBy: vi.fn(() => builder),
     raw,
     then: (resolve: (value: Row[]) => unknown, reject?: (reason: unknown) => unknown) =>
@@ -529,6 +531,7 @@ describe('invoice preview recurring timing', () => {
     );
     expect(result).toEqual({
       success: true,
+      expectedRecurringPricingSources: [],
       data: expect.objectContaining({
         invoiceNumber: 'PREVIEW',
         // The stubbed profile identity sets no payment terms, so the preview
@@ -725,6 +728,7 @@ describe('invoice preview recurring timing', () => {
 
     expect(selectorResult).toEqual({
       success: true,
+      expectedRecurringPricingSources: [],
       data: expect.objectContaining({
         dueDate: legacyResult.success ? legacyResult.data.dueDate : undefined,
         subtotal: legacyResult.success ? legacyResult.data.subtotal : undefined,

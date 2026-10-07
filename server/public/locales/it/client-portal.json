@@ -283,6 +283,8 @@
     },
     "captchaRequired": "Completa la verifica qui sotto, quindi accedi di nuovo.",
     "tooManyAttempts": "Troppi tentativi di accesso non riusciti. Attendi qualche minuto prima di riprovare.",
+    "tenantRequiredMessage": "La tua email è collegata a più di un'organizzazione: scegli la tua organizzazione per continuare.",
+    "tenantRequiredLink": "Scegli la tua organizzazione",
     "tenantDiscovery": {
       "title": "Trova la tua organizzazione",
       "description": "Inserisci il tuo indirizzo email e ti invieremo i link di accesso per tutte le organizzazioni a cui hai accesso.",
@@ -442,7 +444,8 @@
         "consent": "Autorizzo addebiti ricorrenti su questa carta per le fatture finalizzate.",
         "enable": "Attiva il pagamento automatico",
         "noCards": "Aggiungi una carta per attivare il pagamento automatico.",
-        "changeCard": "Usa questa carta per il pagamento automatico"
+        "changeCard": "Usa questa carta per il pagamento automatico",
+        "updateError": "Impossibile aggiornare il pagamento automatico. Riprova."
       },
       "publicCardSetup": {
         "saved": "Carta salvata",
@@ -565,7 +568,8 @@
       "avatarDescription": "Questo avatar viene mostrato al personale MSP quando consulta le tue informazioni di contatto.",
       "emailAlreadyExists": "Esiste già un utente con questo indirizzo e-mail",
       "reportsToSelf": "Un utente non può riferire a se stesso",
-      "reportsToCycle": "Questo creerebbe una catena di riporto circolare"
+      "reportsToCycle": "Questo creerebbe una catena di riporto circolare",
+      "invalidTimezone": "Scegli un fuso orario basato su una città, ad esempio America/New_York."
     },
     "imageUpload": {
       "uploadAvatar": "Carica avatar",
@@ -600,7 +604,8 @@
       "adjustMark": "Regola simbolo",
       "cropFromWide": "Ritaglia dal logo largo",
       "recropSuccess": "Simbolo aggiornato.",
-      "recropError": "Impossibile aggiornare il simbolo."
+      "recropError": "Impossibile aggiornare il simbolo.",
+      "fileNameLabel": "File memorizzato"
     },
     "validation": {
       "clientNameRequired": "Il nome dell'azienda è obbligatorio",

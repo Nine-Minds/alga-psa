@@ -55,6 +55,18 @@ export function isValidUUID(uuid: string): boolean {
 }
 
 /**
+ * True when `value` is a canonical 8-4-4-4-12 hex uuid string (any version/variant) — i.e. Postgres will parse it.
+ * Use this (not `isValidUUID`, which also requires version 1-5 / variant 8-b) to guard ids before they reach a query.
+ */
+// LEVERAGE: pattern uuid-shape-guard — the same permissive regex is still inlined in:
+// msp/tickets/[id]/page.tsx, list-views/listViewActions.ts, tickets/lib/ticketStatusFilter.ts,
+// tickets/lib/ticketFilterUtils.ts, scheduling/workItemActions.ts, billing/renewalsQueueActions.ts,
+// jobs/processRenewalQueueHandler.ts, search/indexers/status.ts, shared/billingClients/defaultTaxRate.ts
+export function isUuidShaped(value: unknown): value is string {
+  return typeof value === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
+}
+
+/**
  * Validate tenant access for a user
  */
 export async function validateTenantAccess(

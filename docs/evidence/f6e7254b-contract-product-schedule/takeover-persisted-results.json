@@ -1,0 +1,94 @@
+{
+  "invoices": [
+    {
+      "invoice_id": "d8816325-32a7-4a58-b000-ff987b99f6fe",
+      "invoice_number": "INV-000039",
+      "subtotal": 390000,
+      "tax": 0,
+      "total_amount": "390000"
+    },
+    {
+      "invoice_id": "e2d0a40e-e5be-4fea-baa7-6b76e7d0ddd8",
+      "invoice_number": "INV-000040",
+      "subtotal": 420000,
+      "tax": 0,
+      "total_amount": "420000"
+    }
+  ],
+  "details": [
+    {
+      "invoice_id": "d8816325-32a7-4a58-b000-ff987b99f6fe",
+      "description": "Product: SMOKE Prod Locations",
+      "quantity": "2.00",
+      "service_period_start": "2026-08-01T04:00:00.000Z",
+      "service_period_end": "2026-08-31T04:00:00.000Z",
+      "effective_pricing": null
+    },
+    {
+      "invoice_id": "d8816325-32a7-4a58-b000-ff987b99f6fe",
+      "description": "Product: SMOKE Prod Endpoints",
+      "quantity": "30.00",
+      "service_period_start": "2026-08-01T04:00:00.000Z",
+      "service_period_end": "2026-08-31T04:00:00.000Z",
+      "effective_pricing": null
+    },
+    {
+      "invoice_id": "d8816325-32a7-4a58-b000-ff987b99f6fe",
+      "description": "Product: SMOKE Prod Users",
+      "quantity": "20.00",
+      "service_period_start": "2026-08-01T04:00:00.000Z",
+      "service_period_end": "2026-08-31T04:00:00.000Z",
+      "effective_pricing": null
+    },
+    {
+      "invoice_id": "e2d0a40e-e5be-4fea-baa7-6b76e7d0ddd8",
+      "description": "Product: SMOKE Prod Locations",
+      "quantity": "2.00",
+      "service_period_start": "2026-09-01T04:00:00.000Z",
+      "service_period_end": "2026-09-30T04:00:00.000Z",
+      "effective_pricing": null
+    },
+    {
+      "invoice_id": "e2d0a40e-e5be-4fea-baa7-6b76e7d0ddd8",
+      "description": "Product: SMOKE Prod Endpoints",
+      "quantity": "30.00",
+      "service_period_start": "2026-09-01T04:00:00.000Z",
+      "service_period_end": "2026-09-30T04:00:00.000Z",
+      "effective_pricing": null
+    },
+    {
+      "invoice_id": "e2d0a40e-e5be-4fea-baa7-6b76e7d0ddd8",
+      "description": "Product: SMOKE Prod Users",
+      "quantity": "23.00",
+      "service_period_start": "2026-09-01T04:00:00.000Z",
+      "service_period_end": "2026-09-30T04:00:00.000Z",
+      "effective_pricing": {
+        "version": 1,
+        "revisionId": "eb53e098-5498-426d-99ac-2c5780219dcc",
+        "pricePolicy": "catalog",
+        "unitRateCents": 10000,
+        "catalogPriceId": "e7840508-15a4-4b4d-b3c0-e04bbb71e94e",
+        "catalogEffectiveDate": "Thu Jan 01",
+        "effectivePeriodStart": "2026-09-01"
+      }
+    }
+  ],
+  "revisions": [
+    {
+      "tenant": "6d178771-ad9a-4d43-8809-83992745f8f9",
+      "revision_id": "eb53e098-5498-426d-99ac-2c5780219dcc",
+      "contract_line_id": "d3076f7b-6256-46d7-be20-e63efacc6f45",
+      "service_id": "f1d99d01-380c-4e1f-94a2-a8830227cf18",
+      "config_id": "f082bf04-1f71-4f5a-93c4-91db20fd8ac8",
+      "quantity": 23,
+      "unit_rate_cents": null,
+      "effective_period_start": "2026-09-01T04:00:00.000Z",
+      "created_by": "77206cb5-fb24-43f4-b445-fb13fafb949f",
+      "created_at": "2026-09-23T17:39:48.906Z",
+      "price_policy": "catalog",
+      "version": 1,
+      "updated_by": "77206cb5-fb24-43f4-b445-fb13fafb949f",
+      "updated_at": "2026-09-23T17:39:48.906Z"
+    }
+  ]
+}

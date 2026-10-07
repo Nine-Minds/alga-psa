@@ -15,6 +15,7 @@ const actionMocks = vi.hoisted(() => ({
   sendQuoteReminder: vi.fn(),
 }));
 const getQuoteDocumentTemplatesMock = vi.hoisted(() => vi.fn());
+const senderActionMocks = vi.hoisted(() => ({ listSelectableSenders: vi.fn() }));
 const navigationMocks = vi.hoisted(() => ({ searchParams: 'subtab=sent', push: vi.fn() }));
 const quoteFormPropsMock = vi.hoisted(() => ({ current: null as null | Record<string, unknown> }));
 const customTabsPropsMock = vi.hoisted(() => ({
@@ -39,6 +40,10 @@ vi.mock('../../../actions/quoteActions', () => ({
 
 vi.mock('../../../actions/quoteDocumentTemplates', () => ({
   getQuoteDocumentTemplates: (...args: unknown[]) => getQuoteDocumentTemplatesMock(...args),
+}));
+
+vi.mock('@alga-psa/email/senderActions', () => ({
+  listSelectableSenders: (...args: unknown[]) => senderActionMocks.listSelectableSenders(...args),
 }));
 
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
@@ -103,6 +108,47 @@ vi.mock('@alga-psa/ui/components/ClientNameCell', () => ({
   default: ({ clientName }: { clientName: string }) => <span>{clientName}</span>,
 }));
 
+vi.mock('@alga-psa/ui/components/Dialog', () => ({
+  Dialog: ({ isOpen, children, footer, id }: {
+    isOpen: boolean;
+    children: React.ReactNode;
+    footer?: React.ReactNode;
+    id?: string;
+  }) => (isOpen ? <div data-testid={id}>{children}{footer}</div> : null),
+  DialogContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  DialogDescription: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  DialogFooter: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+}));
+
+vi.mock('@alga-psa/ui/components/Input', () => ({
+  Input: (props: React.InputHTMLAttributes<HTMLInputElement>) => <input {...props} />,
+}));
+
+vi.mock('@alga-psa/ui/components/TextArea', () => ({
+  TextArea: (props: React.TextareaHTMLAttributes<HTMLTextAreaElement>) => <textarea {...props} />,
+}));
+
+vi.mock('./QuoteSendRecipientsField', () => ({
+  QuoteSendRecipientsField: ({ value, onChange, id, clientId }: {
+    value: Array<Record<string, unknown>>;
+    onChange: (next: Array<Record<string, unknown>>) => void;
+    id: string;
+    clientId?: string | null;
+  }) => (
+    <div data-testid={`field-${id}`} data-client-id={clientId ?? ''}>
+      <button
+        type="button"
+        onClick={() => onChange([
+          ...value,
+          { key: 'contact@example.com', email: 'Contact@Example.com', name: 'Contact', kind: 'contact', entityId: 'c1', avatarUrl: null },
+        ])}
+      >
+        Pick Contact
+      </button>
+    </div>
+  ),
+}));
+
 vi.mock('./QuoteApprovalDashboard', () => ({ default: () => null }));
 vi.mock('./QuoteForm', () => ({
   default: (props: Record<string, unknown>) => {
@@ -136,6 +182,8 @@ const sentQuote = {
 const draftQuote = {
   ...sentQuote,
   quote_id: 'quote-draft-1',
+  client_id: 'client-draft-1',
+  client_name: 'Draft Client',
   display_quote_number: 'Q-1000',
   status: 'draft',
   title: 'Draft quote',
@@ -267,5 +315,46 @@ describe('QuotesTab sent quote actions', () => {
     view.rerender(<QuotesTab />);
     await screen.findByText('Newly saved quote');
     expect(actionMocks.listQuotes).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('QuotesTab send dialog', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    navigationMocks.searchParams = 'subtab=active';
+    quoteFormPropsMock.current = null;
+    actionMocks.listQuotes.mockResolvedValue({ data: [draftQuote] });
+    getQuoteDocumentTemplatesMock.mockResolvedValue([]);
+    actionMocks.sendQuote.mockResolvedValue({});
+    senderActionMocks.listSelectableSenders.mockResolvedValue({ senders: [], effectiveSenderAddress: '' });
+  });
+
+  afterEach(() => {
+    cleanup();
+  });
+
+  it('opens the shared dialog with the row client id and sends merged recipients for the row quote', async () => {
+    render(<QuotesTab />);
+
+    const sendItem = await waitFor(() => {
+      const item = document.getElementById(`send-quote-${draftQuote.quote_id}-menu-item`);
+      expect(item).not.toBeNull();
+      return item as HTMLElement;
+    });
+    fireEvent.click(sendItem);
+
+    const recipientsField = await screen.findByTestId('field-send-quote-recipients');
+    expect(recipientsField.getAttribute('data-client-id')).toBe(draftQuote.client_id);
+
+    fireEvent.click(screen.getByText('Pick Contact'));
+    fireEvent.change(document.getElementById('send-quote-additional-emails') as HTMLInputElement, {
+      target: { value: 'contact@example.com, extra@example.com' },
+    });
+    fireEvent.click(document.getElementById('send-quote-confirm') as HTMLButtonElement);
+
+    await waitFor(() => expect(actionMocks.sendQuote).toHaveBeenCalledWith(draftQuote.quote_id, {
+      email_addresses: ['Contact@Example.com', 'extra@example.com'],
+      message: undefined,
+    }));
   });
 });

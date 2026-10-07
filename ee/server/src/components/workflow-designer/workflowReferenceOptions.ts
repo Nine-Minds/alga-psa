@@ -1,5 +1,7 @@
+import { formatWorkflowFieldLabel } from './workflowFieldNames';
 import type { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 
+import { WORKFLOW_CAUGHT_ERROR_FIELDS } from '@alga-psa/workflows/authoring';
 import { resolveLocalJsonSchemaRef } from './jsonSchemaRefs';
 import type { DataContext, JsonSchema } from './workflowDataContext';
 
@@ -57,11 +59,10 @@ const buildReferenceOptionLabel = (
   description: string | undefined,
   fallbackLabel: string
 ): string => {
-  const trimmedDescription = description?.trim();
-  if (!trimmedDescription) {
-    return fallbackLabel;
-  }
-  return `${fallbackLabel} (${trimmedDescription})`;
+  // Lead with the field's plain-language name (its schema description, or its humanized name),
+  // keeping the path for people who know it.
+  if (!fallbackLabel) return description?.trim() || path;
+  return formatWorkflowFieldLabel(description, fallbackLabel);
 };
 
 const collectSchemaPaths = (
@@ -137,10 +138,10 @@ export const buildWorkflowReferenceFieldOptions = (
   pushUniqueOption(options, 'meta.tags', 'meta.tags');
 
   if (dataContext?.inCatchBlock) {
-    pushUniqueOption(options, 'error', '⚠️ error');
-    pushUniqueOption(options, 'error.message', 'error.message');
-    pushUniqueOption(options, 'error.code', 'error.code');
-    pushUniqueOption(options, 'error.stack', 'error.stack');
+    pushUniqueOption(options, 'error', '⚠️ error (caught by this Try/Catch)');
+    for (const field of WORKFLOW_CAUGHT_ERROR_FIELDS) {
+      pushUniqueOption(options, `error.${field.name}`, `error.${field.name} (${field.description})`);
+    }
   }
 
   if (payloadSchema) {
@@ -173,5 +174,22 @@ export const buildWorkflowReferenceFieldOptions = (
     );
   }
 
-  return options;
+  // Several steps can have a field with the same name (e.g. three "url"s); name the source path so
+  // the entries can be told apart.
+  const labelCounts = new Map<string, number>();
+  for (const option of options) {
+    const label = String(option.label);
+    labelCounts.set(label, (labelCounts.get(label) ?? 0) + 1);
+  }
+  return options.map((option) =>
+    (labelCounts.get(String(option.label)) ?? 0) > 1 && option.label !== option.value
+      ? {
+          ...option,
+          // "URL (url)" → "URL (vars.firstTicket.url)": the full path replaces the short one.
+          label: /\([^()]*\)$/.test(String(option.label))
+            ? String(option.label).replace(/\([^()]*\)$/, `(${option.value})`)
+            : `${String(option.label)} (${option.value})`,
+        }
+      : option
+  );
 };

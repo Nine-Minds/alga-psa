@@ -283,6 +283,8 @@
     },
     "captchaRequired": "Veuillez compléter la vérification ci-dessous, puis connectez-vous à nouveau.",
     "tooManyAttempts": "Trop de tentatives de connexion échouées. Veuillez patienter quelques minutes avant de réessayer.",
+    "tenantRequiredMessage": "Votre adresse e-mail est associée à plusieurs organisations — choisissez votre organisation pour continuer.",
+    "tenantRequiredLink": "Choisir votre organisation",
     "tenantDiscovery": {
       "title": "Trouvez votre organisation",
       "description": "Saisissez votre adresse e-mail et nous vous enverrons des liens de connexion pour toutes les organisations auxquelles vous avez accès.",
@@ -442,7 +444,8 @@
         "consent": "J'autorise des débits récurrents sur cette carte pour les factures finalisées.",
         "enable": "Activer le prélèvement automatique",
         "noCards": "Ajoutez une carte pour activer le prélèvement automatique.",
-        "changeCard": "Utiliser cette carte pour le prélèvement automatique"
+        "changeCard": "Utiliser cette carte pour le prélèvement automatique",
+        "updateError": "Impossible de mettre à jour le prélèvement automatique. Veuillez réessayer."
       },
       "publicCardSetup": {
         "saved": "Carte enregistrée",
@@ -565,7 +568,8 @@
       "avatarDescription": "Cet avatar est affiché au personnel MSP lorsqu'il consulte vos informations de contact.",
       "emailAlreadyExists": "Un utilisateur avec cette adresse e-mail existe déjà",
       "reportsToSelf": "Un utilisateur ne peut pas être son propre responsable",
-      "reportsToCycle": "Cela créerait une chaîne hiérarchique circulaire"
+      "reportsToCycle": "Cela créerait une chaîne hiérarchique circulaire",
+      "invalidTimezone": "Choisissez un fuseau horaire basé sur une ville, comme America/New_York."
     },
     "imageUpload": {
       "uploadAvatar": "Téléverser un avatar",
@@ -600,7 +604,8 @@
       "adjustMark": "Ajuster le symbole",
       "cropFromWide": "Découper depuis le logo large",
       "recropSuccess": "Symbole mis à jour.",
-      "recropError": "Impossible de mettre à jour le symbole."
+      "recropError": "Impossible de mettre à jour le symbole.",
+      "fileNameLabel": "Fichier stocké"
     },
     "validation": {
       "clientNameRequired": "Le nom de l'entreprise est obligatoire",

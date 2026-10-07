@@ -160,12 +160,6 @@ export const parseCssLengthBox = (
   };
 };
 
-export const areCssLengthBoxValuesLinked = (box: Pick<ParsedCssLengthBox, 'top' | 'right' | 'bottom' | 'left'>): boolean =>
-  box.top !== null &&
-  box.top === box.right &&
-  box.top === box.bottom &&
-  box.top === box.left;
-
 export const formatCssLengthBox = (
   values: { top: number | null; right: number | null; bottom: number | null; left: number | null },
   unit: CssLengthUnit

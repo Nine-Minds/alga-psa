@@ -5,7 +5,6 @@ import { validateEnv } from 'server/src/config/envConfig';
 import { validateRequiredConfiguration, validateDatabaseConnectivity, validateSecretUniqueness } from 'server/src/config/criticalEnvValidation';
 import { config } from 'dotenv';
 import { tenantDb } from '@alga-psa/db';
-import { provisionDevelopmentLogin } from './devLoginProvisioning';
 import { JobScheduler, IJobScheduler } from 'server/src/lib/jobs/jobScheduler';
 import { JobService } from 'server/src/services/job.service';
 import { InvoiceZipJobHandler } from 'server/src/lib/jobs/handlers/invoiceZipHandler';
@@ -36,6 +35,7 @@ import { inboundWebhookRateLimitConfigGetter } from './inboundWebhooks/rateLimit
 import { bootstrapInboundWebhookActions } from './inboundWebhooks/actions/bootstrap';
 import { WebhookDeliveryQueue } from './webhooks/WebhookDeliveryQueue';
 import { processWebhookDeliveryJob } from './webhooks/processWebhookDeliveryJob';
+import { setupDevelopmentEnvironment } from './developmentEnvironmentSetup';
 
 let isFunctionExecuted = false;
 
@@ -740,43 +740,5 @@ async function initializeJobScheduler(storageService: StorageService) {
     await tick();
   } catch (error) {
     logger.error('Failed to set up RMM polling schedule reconciler:', error);
-  }
-}
-
-// Helper function to setup development environment
-async function setupDevelopmentEnvironment() {
-  if (process.env.NODE_ENV !== 'development') {
-    return;
-  }
-
-  const credentials = await provisionDevelopmentLogin();
-  if (!credentials) {
-    logger.info('Glinda not found. Skipping password update.');
-  }
-
-  if (process.env.NODE_ENV === 'development') {
-    try {
-      logger.info(`
-:::::::::  :::::::::: :::     ::: :::::::::: :::        ::::::::  :::::::::  ::::    ::::  :::::::::: ::::    ::: :::::::::::      ::::    ::::   ::::::::  :::::::::  ::::::::::
-:+:    :+: :+:        :+:     :+: :+:        :+:       :+:    :+: :+:    :+: +:+:+: :+:+:+ :+:        :+:+:   :+:     :+:          +:+:+: :+:+:+ :+:    :+: :+:    :+: :+:
-+:+    +:+ +:+        +:+     +:+ +:+        +:+       +:+    +:+ +:+    +:+ +:+ +:+:+ +:+ +:+        :+:+:+  +:+     +:+          +:+ +:+:+ +:+ +:+    +:+ +:+    +:+ :+:
-+#+    +:+ +#++:++#   +#+     +:+ +#++:++#   +#+       +#+    +:+ +#++:++#+  +#+  +:+  +#+ +#++:++#   +#+ +:+ +#+     +#+          +#+  +:+  +#+ +#+    +:+ +#+    +:+ +#++:++#
-+#+    +#+ +#+         +#+   +#+  +#+        +#+       +#+    +#+ +#+        +#+       +#+ +#+        +#+  +#+#+#     +#+          +#+       +#+ +#+    +#+ +#+    +#+ +#+
-#+#    #+# #+#          #+#+#+#   #+#        #+#       #+#    #+# #+#        #+#       #+# #+#        #+#   #+#+#     #+#          #+#       #+# #+#    #+# #+#    #+# #+#
-#########  ##########     ###     ########## ########## ########  ###        ###       ### ########## ###    ####     ###          ###       ###  ########  #########  ##########
-      `);
-    } catch (error) {
-      logger.error('Error displaying development banner:', error);
-    }
-  }
-
-  if (credentials) {
-    logger.info('*************************************************************');
-    logger.info(`********                                             ********`);
-    logger.info(`******** User Email is -> [ ${credentials.email} ]  ********`);
-    logger.info(`********                                             ********`);
-    logger.info(`********       Password is -> [ ${credentials.password} ]   ********`);
-    logger.info(`********                                             ********`);
-    logger.info('*************************************************************');
   }
 }

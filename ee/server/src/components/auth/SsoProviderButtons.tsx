@@ -87,6 +87,8 @@ export default function SsoProviderButtons({
   storageKey,
 }: SsoProviderButtonsProps): React.ReactElement {
   const { t } = useTranslation('common', { useSuspense: false });
+  const [hasHydrated, setHasHydrated] = useState(false);
+  useEffect(() => setHasHydrated(true), []);
   const editionProviders = useMemo(() => visibleProviders(authSurface), [authSurface]);
   // A provider button exists when NextAuth registers it app-wide (deployment-level
   // credentials) or when discovery offers it for the typed email (tenant-level
@@ -346,8 +348,8 @@ export default function SsoProviderButtons({
           >
             {isPending ? <Loader2 className="h-6 w-6 animate-spin" /> : renderProviderIcon(provider.id)}
             {isPending
-              ? t('auth.sso.redirecting', { defaultValue: 'Redirecting...' })
-              : t(provider.nameKey, { defaultValue: provider.nameFallback })}
+              ? (hasHydrated ? t('auth.sso.redirecting', { defaultValue: 'Redirecting...' }) : 'Redirecting...')
+              : (hasHydrated ? t(provider.nameKey, { defaultValue: provider.nameFallback }) : provider.nameFallback)}
           </Button>
         );
       })}

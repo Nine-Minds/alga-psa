@@ -13,6 +13,17 @@ import { useTranslation } from '../lib/i18n/client';
 export interface SelectOption {
   value: string;
   label: string;
+  /** Muted second line under the label; omit to keep the row single-line. */
+  secondaryLabel?: string;
+  /** Extra text that search matches but that is never shown (codes, synonyms, descriptions). */
+  keywords?: string;
+  /**
+   * Heading the option is listed under (e.g. the step a field comes from). Options of one group are
+   * listed together, groups in order of first appearance; options without a group get no heading.
+   */
+  group?: string;
+  /** Shorter text for the closed control when this option is selected; defaults to `label`. */
+  triggerLabel?: string;
 }
 
 type SelectSize = 'sm' | 'md' | 'lg';
@@ -60,10 +71,85 @@ interface SearchableSelectProps {
   allowCustomValue?: boolean;
   /** Customize the label shown for the create/use-typed-value option */
   customValueLabel?: (value: string) => string;
+  /** Start with the list open (e.g. a row just added so its first job is choosing). */
+  defaultOpen?: boolean;
+  /**
+   * Minimum width of an overlay dropdown in px. Long option labels in a narrow control stay
+   * readable: the list grows past the trigger and is kept inside the viewport.
+   */
+  dropdownMinWidth?: number;
 }
 
 function normalizeOptionText(value: string): string {
   return value.trim().toLowerCase();
+}
+
+const SEARCH_RANK_NONE = Number.POSITIVE_INFINITY;
+
+/**
+ * How well an option matches a search; lower is better, Infinity means no match. The label counts
+ * most (exact, then starts with, then a word starting with the search, then anywhere, then every
+ * search word somewhere in it), then the second line, then hidden keywords.
+ */
+export function getSearchableSelectRank(option: SelectOption, search: string): number {
+  const searchLower = search.trim().toLowerCase();
+  if (!searchLower) return 0;
+  const searchWords = searchLower.split(/\s+/).filter(Boolean);
+  const label = option.label.toString().toLowerCase();
+  const containsAllWords = (text: string) => searchWords.every((word) => text.includes(word));
+
+  if (label === searchLower) return 0;
+  if (label.startsWith(searchLower)) return 1;
+  if (new RegExp(`(^|[^a-z0-9])${searchLower.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`).test(label)) return 2;
+  if (label.includes(searchLower)) return 3;
+  if (searchWords.length > 1 && containsAllWords(label)) return 4;
+
+  const secondary = (option.secondaryLabel ?? '').toLowerCase();
+  if (secondary.includes(searchLower) || (searchWords.length > 1 && containsAllWords(`${label}\n${secondary}`))) return 5;
+
+  const haystack = `${label}\n${secondary}\n${(option.keywords ?? '').toLowerCase()}`;
+  if (haystack.includes(searchLower) || (searchWords.length > 1 && containsAllWords(haystack))) return 6;
+  return SEARCH_RANK_NONE;
+}
+
+/**
+ * Splits options into runs listed under one heading each: every option of a group goes with the
+ * group's first option, so groups keep the order in which they first appear (by search rank while
+ * searching). Ungrouped options form runs without a heading.
+ */
+export function groupSearchableSelectOptions(
+  options: SelectOption[]
+): Array<{ group?: string; options: SelectOption[] }> {
+  if (!options.some((option) => option.group)) return [{ options }];
+  const runs: Array<{ group?: string; options: SelectOption[] }> = [];
+  const runByGroup = new Map<string, { group?: string; options: SelectOption[] }>();
+  for (const option of options) {
+    if (!option.group) {
+      const last = runs[runs.length - 1];
+      if (last && !last.group) last.options.push(option);
+      else runs.push({ options: [option] });
+      continue;
+    }
+    const existing = runByGroup.get(option.group);
+    if (existing) {
+      existing.options.push(option);
+      continue;
+    }
+    const run = { group: option.group, options: [option] };
+    runByGroup.set(option.group, run);
+    runs.push(run);
+  }
+  return runs;
+}
+
+/** Options matching a search, best match first; equally good matches keep their original order. */
+export function rankSearchableSelectOptions(options: SelectOption[], search: string): SelectOption[] {
+  if (!search.trim()) return options;
+  return options
+    .map((option, index) => ({ option, index, rank: getSearchableSelectRank(option, search) }))
+    .filter((entry) => entry.rank !== SEARCH_RANK_NONE)
+    .sort((left, right) => left.rank - right.rank || left.index - right.index)
+    .map((entry) => entry.option);
 }
 
 export function SearchableSelect({
@@ -85,11 +171,13 @@ export function SearchableSelect({
   size = 'md',
   allowCustomValue = false,
   customValueLabel,
+  defaultOpen = false,
+  dropdownMinWidth,
 }: SearchableSelectProps & AutomationProps): React.JSX.Element {
   const { t } = useTranslation();
   const resolvedPlaceholder = placeholder ?? t('form.selectPlaceholder', { defaultValue: 'Select...' });
   const resolvedEmptyMessage = emptyMessage ?? t('form.noResults', { defaultValue: 'No results found' });
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(defaultOpen && !disabled);
   const [search, setSearch] = useState('');
   const triggerRef = useRef<HTMLButtonElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -126,14 +214,12 @@ export function SearchableSelect({
     }
   }, [value, disabled, label, required, mappedOptions, updateMetadata]);
 
-  // Filter options based on search
+  // Filter options based on search. An option matches when its label, secondary line, or keywords
+  // contain the whole search, or contain every word of it (in any order).
   const filteredOptions = useMemo(() => {
     if (!search) return options;
-    
-    const searchLower = search.toLowerCase();
-    return options.filter((option: SelectOption) => 
-      option.label.toString().toLowerCase().includes(searchLower)
-    );
+
+    return rankSearchableSelectOptions(options, search);
   }, [options, search]);
 
   const normalizedSearch = search.trim();
@@ -172,12 +258,18 @@ export function SearchableSelect({
     if (!triggerRef.current) return;
     const rect = triggerRef.current.getBoundingClientRect();
     const container = getResolvedPortalContainer();
+    const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : rect.right;
+    const gutter = 8;
+    // At least the trigger's width, wider when asked, never wider than the viewport.
+    const width = Math.min(Math.max(rect.width, dropdownMinWidth ?? 0), Math.max(rect.width, viewportWidth - gutter * 2));
+    // Grow leftwards when the wider list would run off the right edge.
+    const viewportLeft = Math.max(gutter, Math.min(rect.left, viewportWidth - gutter - width));
 
     if (!container || container === document.body) {
       setOverlayPosition({
         top: rect.bottom + 4,
-        left: rect.left,
-        width: rect.width,
+        left: viewportLeft,
+        width,
       });
       return;
     }
@@ -185,10 +277,10 @@ export function SearchableSelect({
     const containerRect = container.getBoundingClientRect();
     setOverlayPosition({
       top: rect.bottom - containerRect.top + 4,
-      left: rect.left - containerRect.left,
-      width: rect.width,
+      left: viewportLeft - containerRect.left,
+      width,
     });
-  }, [getResolvedPortalContainer]);
+  }, [dropdownMinWidth, getResolvedPortalContainer]);
 
   // Positioning for overlay dropdowns
   useEffect(() => {
@@ -295,7 +387,17 @@ export function SearchableSelect({
           style={{ maxHeight: maxListHeight }}
         >
           {filteredOptions.length > 0 ? (
-            filteredOptions.map((option: SelectOption) => (
+            groupSearchableSelectOptions(filteredOptions).map((run, runIndex) => (
+              <React.Fragment key={run.group ? `group:${run.group}` : `run:${runIndex}`}>
+                {run.group && (
+                  <div
+                    role="presentation"
+                    className="px-2 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-wide text-[rgb(var(--color-text-400))]"
+                  >
+                    {run.group}
+                  </div>
+                )}
+                {run.options.map((option: SelectOption) => (
               <Command.Item
                 key={option.value}
                 value={option.value}
@@ -310,11 +412,22 @@ export function SearchableSelect({
                   value === option.value && 'bg-muted'
                 )}
               >
-                <span className="flex-1">{option.label}</span>
+                {option.secondaryLabel ? (
+                  <span className="flex-1 min-w-0">
+                    <span className="block truncate">{option.label}</span>
+                    <span className="block truncate text-xs text-[rgb(var(--color-text-400))]">
+                      {option.secondaryLabel}
+                    </span>
+                  </span>
+                ) : (
+                  <span className="flex-1">{option.label}</span>
+                )}
                 {value === option.value && (
                   <Check className="w-4 h-4 text-primary-600" />
                 )}
               </Command.Item>
+                ))}
+              </React.Fragment>
             ))
           ) : (
             <div className="py-6 text-center text-sm text-muted-foreground">
@@ -390,7 +503,7 @@ export function SearchableSelect({
           {...automationIdProps}
         >
           <span className={cn("truncate", !selectedOption && "text-muted-foreground")}>
-            {selectedOption ? selectedOption.label : value || resolvedPlaceholder}
+            {selectedOption ? selectedOption.triggerLabel ?? selectedOption.label : value || resolvedPlaceholder}
           </span>
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>

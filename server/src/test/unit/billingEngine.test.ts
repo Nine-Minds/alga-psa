@@ -136,6 +136,7 @@ describe("BillingEngine", () => {
       whereBetween: vi.fn().mockReturnThis(),
       join: vi.fn().mockReturnThis(),
       leftJoin: vi.fn().mockReturnThis(),
+      joinRaw: vi.fn().mockReturnThis(),
       orderBy: vi.fn().mockReturnThis(),
       first: vi.fn().mockResolvedValue(null),
       raw: vi.fn().mockReturnThis(),
@@ -303,6 +304,7 @@ describe("BillingEngine", () => {
 
     builder.join = vi.fn().mockImplementation(() => builder);
     builder.leftJoin = vi.fn().mockImplementation(() => builder);
+    builder.joinRaw = vi.fn().mockImplementation(() => builder);
     builder.where = vi.fn().mockImplementation(handleWhere);
     builder.andWhere = vi.fn().mockImplementation(handleWhere);
     builder.orWhere = vi.fn().mockImplementation(handleWhere);
@@ -2605,3 +2607,15 @@ describe("BillingEngine", () => {
     });
   });
 });
+
+// These fixtures characterize orchestration with no pending contract events.
+// Database settlement and discount lifecycle are covered by the invoice integration suite.
+vi.mock('@alga-psa/billing/lib/billing/reconcileContractChangeAdjustments', async importOriginal => ({
+  ...(await importOriginal<typeof import('@alga-psa/billing/lib/billing/reconcileContractChangeAdjustments')>()),
+  resolveContractChangeChargesForWindow: vi.fn(async () => []),
+  releaseOrphanedContractAdjustments: vi.fn(async () => undefined),
+  reconcileContractChangeAdjustmentsForInvoice: vi.fn(async () => ({ changed: false, settledInvoiceId: null, amountCents: 0 })),
+}));
+vi.mock('@alga-psa/billing/lib/billing/reconcileAutomaticInvoiceDiscounts', () => ({
+  reconcileAutomaticInvoiceAdjustments: vi.fn(async () => 0),
+}));

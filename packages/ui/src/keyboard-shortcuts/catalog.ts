@@ -118,6 +118,14 @@ export const SHORTCUT_ACTION_CATALOG: readonly ShortcutActionCatalogEntry[] = [
   entry('editor.moveDown', 'editor', 'editor', ['ArrowDown']),
   entry('editor.moveLeft', 'editor', 'editor', ['ArrowLeft']),
   entry('editor.moveRight', 'editor', 'editor', ['ArrowRight']),
+  entry('editor.moveOut', 'editor', 'editor', ['alt+ArrowLeft']),
+  entry('editor.moveInto', 'editor', 'editor', ['alt+ArrowRight']),
+  entry('editor.copy', 'editor', 'editor', ['mod+c']),
+  entry('editor.cut', 'editor', 'editor', ['mod+x']),
+  entry('editor.paste', 'editor', 'editor', ['mod+v']),
+  entry('editor.duplicate', 'editor', 'editor', ['mod+d']),
+  entry('editor.copyStyle', 'editor', 'editor', ['mod+alt+c']),
+  entry('editor.pasteStyle', 'editor', 'editor', ['mod+alt+v']),
 ];
 
 export const OPTIONAL_ALTERNATE_BINDINGS: Readonly<Record<string, readonly string[]>> = {

@@ -1,4 +1,5 @@
 import React from "react";
+import { EMPTY_FEATURE_CAPABILITIES } from "../api/capabilities";
 import { act, create } from "react-test-renderer";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -130,7 +131,7 @@ describe("CapabilitiesProvider", () => {
 
     await renderProvider();
 
-    expect(value.features).toEqual({ inventory: false, opportunities: false, opportunitiesCreate: false });
+    expect(value.features).toEqual(EMPTY_FEATURE_CAPABILITIES);
     expect(value.theme).toBeNull();
     expect(value.loaded).toBe(true);
   });

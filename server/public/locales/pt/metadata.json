@@ -297,6 +297,9 @@
       "detail": {
         "title": "Ticket nº {{ticketNumber}} - {{ticketTitle}}",
         "fallbackTitle": "Detalhes do ticket"
+      },
+      "recurring": {
+        "title": "Tickets recorrentes"
       }
     },
     "userActivities": {

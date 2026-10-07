@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import {
   BUILT_IN_EXTERNAL_SYSTEMS,
   CUSTOM_EXTERNAL_SYSTEM_KEY_PATTERN,
+  renderExternalLinkUrl as renderSharedExternalLinkUrl,
+  resolveExternalSystem as resolveSharedExternalSystem,
   type ITenantExternalSystem,
 } from '@alga-psa/types';
 import {
@@ -99,5 +101,18 @@ describe('externalSystems', () => {
     expect(resolveExternalSystemOrigin(tenantSystems, 'api')).toBe('api');
     expect(resolveExternalSystemOrigin(tenantSystems, 'custom:vendor')).toBe('other');
     expect(resolveExternalSystemOrigin(tenantSystems, null)).toBeNull();
+  });
+
+  it('T109: the horizontal package preserves custom-system portal link rendering', () => {
+    const systems: ITenantExternalSystem[] = [
+      { key: 'custom:vendor', label: 'Vendor', url_template: 'https://vendor.example/cases/{external_id}' },
+    ];
+    const definition = resolveSharedExternalSystem(systems, 'custom:vendor');
+
+    expect(renderSharedExternalLinkUrl(definition, {
+      external_id: 'CASE 42',
+      realm: null,
+      url: null,
+    })).toBe('https://vendor.example/cases/CASE%2042');
   });
 });

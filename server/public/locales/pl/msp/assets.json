@@ -456,6 +456,12 @@
       "location": "Lokalizacja"
     }
   },
+  "documentsTab": {
+    "errors": {
+      "title": "Dokumenty niedostępne",
+      "loadFailed": "Nie udało się załadować powiązanych dokumentów. Odśwież stronę lub spróbuj ponownie później."
+    }
+  },
   "assetDetails": {
     "title": "Szczegóły zasobu",
     "description": "Strona z pełnymi szczegółami zasobu z kartami podsumowań, powiązaniami, dokumentami i działaniami operacyjnymi",
@@ -1581,8 +1587,7 @@
       "manageAssetTypes": "Odmowa uprawnień: nie można zarządzać typami zasobów",
       "readDocuments": "Odmowa uprawnień: nie można odczytywać dokumentów zasobu",
       "associateDocuments": "Odmowa uprawnień: nie można powiązać dokumentów z zasobami",
-      "removeDocuments": "Odmowa uprawnień: nie można usuwać dokumentów z zasobów",
-      "updateDocumentNotes": "Odmowa uprawnień: nie można aktualizować notatek dokumentów zasobu"
+      "removeDocuments": "Odmowa uprawnień: nie można usuwać dokumentów z zasobów"
     },
     "asset": {
       "notFoundRefresh": "Nie znaleziono zasobu. Mógł zostać usunięty. Odśwież stronę i spróbuj ponownie.",
@@ -1603,5 +1608,15 @@
       "missingField": "Brakuje wymaganego pola zasobu.",
       "missingFieldNamed": "Brakuje wymaganego pola zasobu: {{field}}."
     }
+  },
+  "clientAssetMultiSelect": {
+    "errors": {
+      "load": "Nie udało się wczytać zasobów"
+    },
+    "placeholder": "Dodaj zasób...",
+    "searchPlaceholder": "Szukaj zasobów",
+    "empty": "Brak pasujących zasobów dla tego klienta",
+    "loading": "Ładowanie...",
+    "remove": "Usuń zasób"
   }
 }
