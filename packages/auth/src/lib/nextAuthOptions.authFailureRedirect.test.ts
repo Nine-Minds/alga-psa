@@ -6,6 +6,8 @@ const cookieDeleteMock = vi.fn();
 const applyOAuthAccountHintsMock = vi.fn(async (user: unknown) => user);
 const updateLastLoginMock = vi.fn(async () => undefined);
 const userSessionCreateMock = vi.fn(async () => 'session-1');
+const parseClientPortalResolutionMock = vi.fn((..._args: unknown[]): unknown => null);
+const CLIENT_PORTAL_RESOLUTION_COOKIE_NAME = 'client_portal_sso_resolution';
 
 vi.mock('next-auth/providers/credentials', () => ({ default: (config: unknown) => config }));
 vi.mock('next-auth/providers/keycloak', () => ({ default: (config: unknown) => config }));
@@ -80,6 +82,13 @@ vi.mock('@alga-psa/db/models/UserSession', () => ({
   },
 }));
 
+vi.mock('./sso/clientPortalSsoResolution', () => ({
+  CLIENT_PORTAL_SSO_DISCOVERY_COOKIE: 'client_portal_sso_discovery',
+  CLIENT_PORTAL_SSO_RESOLUTION_COOKIE: CLIENT_PORTAL_RESOLUTION_COOKIE_NAME,
+  parseAndVerifyClientPortalSsoResolutionCookie: (...args: unknown[]) =>
+    parseClientPortalResolutionMock(...args),
+}));
+
 vi.mock('./ipAddress', () => ({ getClientIp: vi.fn() }));
 vi.mock('./deviceFingerprint', () => ({
   generateDeviceFingerprint: vi.fn(),
@@ -140,6 +149,7 @@ describe('NextAuth OAuth mapping-failure redirects', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     cookieGetMock.mockReturnValue(undefined);
+    parseClientPortalResolutionMock.mockReturnValue(null);
   });
 
   it('sends link-mode failures back to the profile SSO tab and clears the link cookie', async () => {
@@ -180,6 +190,28 @@ describe('NextAuth OAuth mapping-failure redirects', () => {
 
     expect(result).toBe(
       '/auth/client-portal/signin?error=AccessDenied&reason=tenant_mismatch&providerEmail=portal%40example.com'
+    );
+    expect(userSessionCreateMock).not.toHaveBeenCalled();
+  });
+
+  it('carries the portal tenant slug so the message is not lost to tenant discovery', async () => {
+    cookieGetMock.mockImplementation((name: string) =>
+      name === CLIENT_PORTAL_RESOLUTION_COOKIE_NAME ? { value: 'signed-resolution' } : undefined
+    );
+    parseClientPortalResolutionMock.mockReturnValue({
+      audience: 'client_portal',
+      provider: 'azure-ad',
+      tenantId: '11111111-2222-3333-4444-555555555555',
+    });
+
+    const result = await invokeSignIn(
+      failureUser('no_matching_user', 'client', 'portal@example.com')
+    );
+
+    // Without `tenant` the portal sign-in page renders the tenant-discovery
+    // form, which shows no error at all.
+    expect(result).toBe(
+      '/auth/client-portal/signin?error=AccessDenied&reason=no_matching_user&providerEmail=portal%40example.com&tenant=tenant-slug'
     );
     expect(userSessionCreateMock).not.toHaveBeenCalled();
   });

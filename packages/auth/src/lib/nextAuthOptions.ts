@@ -1067,6 +1067,34 @@ async function finalizePendingRememberedEmailCookie(): Promise<void> {
     }
 }
 
+// The client-portal sign-in page falls back to the tenant-discovery form when no
+// tenant is named, and that form shows no error — a mapping failure redirected
+// there without a tenant loses its message. The still-live SSO resolution cookie
+// names the tenant, so recover the public slug from it before it is cleared.
+async function readClientPortalSsoTenantSlug(): Promise<string | undefined> {
+    try {
+        const signingSecret = await getMspSsoSigningSecret();
+        if (!signingSecret) {
+            return undefined;
+        }
+
+        const store = await cookies();
+        const resolution = parseAndVerifyClientPortalSsoResolutionCookie({
+            value: store.get(CLIENT_PORTAL_SSO_RESOLUTION_COOKIE)?.value,
+            secret: signingSecret,
+        });
+        if (!resolution?.tenantId) {
+            return undefined;
+        }
+
+        const slug = buildTenantPortalSlug(resolution.tenantId);
+        return isValidTenantSlug(slug) ? slug : undefined;
+    } catch (error) {
+        console.warn('[client-portal-sso] failed to read tenant from resolution cookie', { error });
+        return undefined;
+    }
+}
+
 async function clearClientPortalSsoStateCookies(): Promise<void> {
     try {
         const store = await cookies();
@@ -1098,6 +1126,8 @@ async function resolveOAuthFailureRedirect(
     // Reading the cookie also deletes it, so a failed attempt cannot reuse the
     // signed link authorization; its presence is what marks profile link mode.
     const linkState = await consumeLinkStateCookie(undefined);
+    const clientPortalTenantSlug =
+        userType === 'client' ? await readClientPortalSsoTenantSlug() : undefined;
     await clearClientPortalSsoStateCookies();
 
     console.warn('[auth] OAuth profile did not resolve to an AlgaPSA user', {
@@ -1122,6 +1152,11 @@ async function resolveOAuthFailureRedirect(
     const params = new URLSearchParams({ error: 'AccessDenied', reason: code });
     if (providerEmail) {
         params.set('providerEmail', providerEmail);
+    }
+    // Without the slug the portal page renders tenant discovery instead of the
+    // branded sign-in form that carries the message.
+    if (clientPortalTenantSlug) {
+        params.set('tenant', clientPortalTenantSlug);
     }
 
     // Target the concrete sign-in pages rather than the /auth/signin dispatcher
