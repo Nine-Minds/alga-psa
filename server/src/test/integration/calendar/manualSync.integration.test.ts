@@ -2,6 +2,7 @@ import { beforeAll, afterAll, beforeEach, describe, expect, it, vi } from 'vites
 import { v4 as uuidv4 } from 'uuid';
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
+import ScheduleEntry from '@alga-psa/shared/models/scheduleEntry';
 import { createTestDbConnection } from '../../../../test-utils/dbConfig.ts';
 
 const modulePaths = vi.hoisted(() => {
@@ -31,6 +32,7 @@ const context = vi.hoisted(() => ({
   providerEvents: new Map<string, any>(),
   providerCalls: [] as Array<{ providerId: string; operation: string; eventId?: string; event?: any }>,
   providerReadFailures: new Map<string, Error>(),
+  providerWriteFailures: new Map<string, Error>(),
   nextEventNumber: 1,
 }));
 
@@ -219,6 +221,8 @@ function createStatefulAdapter(provider: any) {
       return structuredClone(stored);
     },
     async updateEvent(eventId: string, event: any) {
+      const failure = context.providerWriteFailures.get(provider.id);
+      if (failure) throw failure;
       const existing = context.providerEvents.get(key(eventId));
       if (!existing) throw Object.assign(new Error('Provider event not found'), { status: 404 });
       const stored = { ...existing, ...structuredClone(event), id: eventId, updated: new Date(Date.now() + 10_000).toISOString() };
@@ -256,6 +260,7 @@ vi.mock('@alga-psa/ee-calendar/lib/services/calendar/providers/MicrosoftCalendar
     deleteEvent(eventId: string) { return this.adapter.deleteEvent(eventId); }
     registerWebhookSubscription() { return this.adapter.registerWebhookSubscription(); }
     renewWebhookSubscription() { return this.adapter.renewWebhookSubscription(); }
+    getProviderStatusWarning() { return undefined; }
   },
 }));
 vi.mock('@alga-psa/ee-calendar/lib/services/calendar/CalendarWebhookMaintenanceService', () => ({
@@ -267,6 +272,7 @@ vi.mock('@alga-psa/ee-calendar/lib/services/calendar/CalendarWebhookMaintenanceS
 // @alga-psa/ee-calendar/actions does not expose, so it reports calendar sync
 // unavailable even on EE.)
 import { syncCalendarProvider } from '@alga-psa/ee-calendar/actions';
+import { CalendarSyncService } from '@alga-psa/ee-calendar/lib/services/calendar/CalendarSyncService';
 
 describe('Manual calendar sync integration', () => {
   const testTenant = uuidv4();
@@ -348,6 +354,7 @@ describe('Manual calendar sync integration', () => {
     context.providerEvents.clear();
     context.providerCalls.length = 0;
     context.providerReadFailures.clear();
+    context.providerWriteFailures.clear();
     context.nextEventNumber = 1;
     providerTenantMap.clear();
 
@@ -711,6 +718,47 @@ describe('Manual calendar sync integration', () => {
       expect(context.providerEvents.get(eventKey).description).toContain('[Alga calendar: Operations]');
     }
   );
+
+  it.each([
+    { status: 503, allDay: false },
+    { status: 403, allDay: false },
+    { status: 429, allDay: false },
+    { status: 429, allDay: true },
+  ])('retries a saved Microsoft edit after $status (allDay=$allDay) without replacing its mapping', async ({ status, allDay }) => {
+    const providerId = await seedBidirectionalProvider('microsoft');
+    const { entryId } = await seedCalendarEntry({ calendarType: 'personal' });
+    const start = new Date();
+    start.setUTCHours(0, 0, 0, 0);
+    const end = new Date(start.getTime() + (allDay ? 86400000 : 3600000));
+    await tenantTable(db, testTenant, 'schedule_entries').where({ entry_id: entryId }).update({
+      is_all_day: allDay, scheduled_start: start, scheduled_end: end,
+    });
+    await runManualSync(providerId);
+    const mapping = await readMapping(providerId, entryId);
+    const eventKey = `${providerId}:${mapping.external_event_id}`;
+    const originalTitle = context.providerEvents.get(eventKey).title;
+
+    // Use the same model as the schedule UI; do not manufacture updated_at.
+    await ScheduleEntry.update(db, testTenant, entryId, { title: 'Rescheduled visit' });
+    context.providerWriteFailures.set(providerId, Object.assign(new Error(`Provider failure ${status}`), { status }));
+    expect(await new CalendarSyncService().syncScheduleEntryToExternal(entryId, providerId))
+      .toMatchObject({ success: false });
+    expect((await readMapping(providerId, entryId)).sync_status).toBe('error');
+    expect(context.providerEvents.get(eventKey).title).toBe(originalTitle);
+
+    context.providerWriteFailures.clear();
+    expect((await runManualSync(providerId)).status).toBe('connected');
+    expect(context.providerEvents.get(eventKey).title).toBe('Rescheduled visit');
+    expect(context.providerEvents.size).toBe(1);
+    expect(await readMapping(providerId, entryId)).toMatchObject({
+      id: mapping.id, schedule_entry_id: entryId, external_event_id: mapping.external_event_id, sync_status: 'synced',
+    });
+    const stored = await ScheduleEntry.get(db, testTenant, entryId);
+    expect(stored?.title).toBe('Rescheduled visit');
+    expect(stored?.is_all_day).toBe(allDay);
+    expect(new Date(stored!.scheduled_start).toISOString()).toBe(start.toISOString());
+    expect(new Date(stored!.scheduled_end).toISOString()).toBe(end.toISOString());
+  });
 
   it.each(['google', 'microsoft'] as const)(
     'leaves %s simultaneous edits in conflict without a provider write', async providerType => {
