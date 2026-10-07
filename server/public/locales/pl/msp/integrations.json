@@ -16,6 +16,7 @@
         },
         "ignoreAll": "Ignoruj wszystko",
         "noRows": "Żaden wiersz nie pasuje do bieżącego filtra.",
+        "possibleMatch": "Możliwe dopasowanie",
         "rowIgnoreAria": "Ignoruj {{name}}",
         "rowSelectAria": "Uwzględnij {{name}} przy zapisie",
         "saveAll": "Zapisz wszystko",

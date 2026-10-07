@@ -16,6 +16,7 @@
         },
         "ignoreAll": "Alle ignorieren",
         "noRows": "Keine Zeilen entsprechen dem aktuellen Filter.",
+        "possibleMatch": "Mögliche Übereinstimmung",
         "rowIgnoreAria": "{{name}} ignorieren",
         "rowSelectAria": "{{name}} in das Speichern einbeziehen",
         "saveAll": "Alle speichern",

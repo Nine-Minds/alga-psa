@@ -16,6 +16,7 @@
         },
         "ignoreAll": "Ignore all",
         "noRows": "No rows match the current filter.",
+        "possibleMatch": "Possible match",
         "rowIgnoreAria": "Ignore {{name}}",
         "rowSelectAria": "Include {{name}} in save",
         "saveAll": "Save all",

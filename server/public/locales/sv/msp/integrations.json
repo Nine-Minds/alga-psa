@@ -16,6 +16,7 @@
         },
         "ignoreAll": "Ignorera alla",
         "noRows": "Inga rader matchar det aktuella filtret.",
+        "possibleMatch": "Möjlig matchning",
         "rowIgnoreAria": "Ignorera {{name}}",
         "rowSelectAria": "Inkludera {{name}} vid sparande",
         "saveAll": "Spara alla",

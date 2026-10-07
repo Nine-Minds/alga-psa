@@ -6,7 +6,7 @@ import type { AccountingMappingEntityOption } from './types';
  * options, never display strings, so no `Item · ` / `[Product] ` knowledge
  * lives here.
  *
- * Order (per Alga entity): exact code match, then exact normalised name, then
+ * Order (per Alga entity): exact code match (item/kind-less targets only), then exact normalised name, then
  * a conservative token-overlap match. Within a tier `item`-kind targets win;
  * an `account` target is only ever suggested from an EXACT tier (code or
  * name), never fuzzily — and kinds are never crossed silently: the suggestion
@@ -93,7 +93,17 @@ export function suggestMappingTargets(
   for (const alga of algaEntities) {
     const code = normalizeCode(alga.code);
     if (code) {
-      const hit = pickExact(prepared.filter((p) => p.code && p.code === code));
+      // Alga SKUs and non-item codes (e.g. Xero revenue-account codes) are
+      // unrelated namespaces, so the code tier only considers the preferred
+      // kind (or kind-less targets); other kinds match by exact name only.
+      const hit = pickExact(
+        prepared.filter(
+          (p) =>
+            p.code &&
+            p.code === code &&
+            (!p.option.kind || p.option.kind === preferredKind)
+        )
+      );
       if (hit) {
         result.set(alga.id, {
           externalId: hit.option.id,

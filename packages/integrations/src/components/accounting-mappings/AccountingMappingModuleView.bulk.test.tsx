@@ -144,9 +144,11 @@ describe('AccountingMappingModuleView bulk grid', () => {
     fireEvent.click(el(`${P}-ignore-all`));
     expect(el(`${P}-ignore-svc-basic`).checked).toBe(true);
     expect(el(`${P}-ignore-svc-std`).checked).toBe(true);
-    // Hidden rows are untouched: only Hosting is left to save.
-    expect(screen.getByTestId(`${P}-count`)).toHaveTextContent('1');
+    // The count is visible-only: both visible rows are ignored.
+    expect(screen.getByTestId(`${P}-count`)).toHaveTextContent('0');
     fireEvent.change(el(`${P}-search`), { target: { value: '' } });
+    // Hidden Hosting was untouched and is the only thing left to save.
+    expect(screen.getByTestId(`${P}-count`)).toHaveTextContent('1');
     expect(el(`${P}-ignore-svc-host`).checked).toBe(false);
 
     // Select-all on a filtered view only touches visible rows with a target.
@@ -231,5 +233,67 @@ describe('AccountingMappingModuleView bulk grid', () => {
     await waitFor(() => expect(createMock).toHaveBeenCalledTimes(3));
     expect(await screen.findByTestId(`${P}-error-svc-basic`)).toHaveTextContent('boom');
     expect(createManyMock).not.toHaveBeenCalled();
+  });
+
+  it('Save all only saves rows visible under the current search', async () => {
+    createManyMock.mockImplementation(async (_ctx: unknown, inputs: any[]) =>
+      inputs.map((i) => ({ algaEntityId: i.algaEntityId, ok: true }))
+    );
+    await openBulk();
+    fireEvent.change(el(`${P}-search`), { target: { value: '365' } });
+    // Hosting is selected by default but hidden: not counted, not saved.
+    expect(screen.getByTestId(`${P}-count`)).toHaveTextContent('2');
+    fireEvent.click(saveAll());
+    await waitFor(() => expect(createManyMock).toHaveBeenCalledTimes(1));
+    expect(
+      createManyMock.mock.calls[0][1].map((i: any) => i.algaEntityId).sort()
+    ).toEqual(['svc-basic', 'svc-std']);
+  });
+
+  it('hidden edits stay in state and save once the row is visible again', async () => {
+    createManyMock.mockImplementation(async (_ctx: unknown, inputs: any[]) =>
+      inputs.map((i) => ({ algaEntityId: i.algaEntityId, ok: true }))
+    );
+    await openBulk();
+    fireEvent.click(el(`${P}-ignore-svc-basic`));
+    fireEvent.change(el(`${P}-search`), { target: { value: 'hosting' } });
+    fireEvent.click(saveAll());
+    await waitFor(() => expect(createManyMock).toHaveBeenCalledTimes(1));
+    expect(createManyMock.mock.calls[0][1].map((i: any) => i.algaEntityId)).toEqual(['svc-host']);
+    fireEvent.change(el(`${P}-search`), { target: { value: '' } });
+    // svc-basic is still ignored (edit preserved). The mocked reload still
+    // reports host as unmapped, so std and host are the two pending rows.
+    expect(el(`${P}-ignore-svc-basic`).checked).toBe(true);
+    expect(screen.getByTestId(`${P}-count`)).toHaveTextContent('2');
+  });
+
+  it('prefills a fuzzy match with a Possible match badge but leaves it unchecked', async () => {
+    const base = loadResult();
+    loadMock.mockResolvedValue({
+      ...base,
+      algaEntities: [
+        ...base.algaEntities,
+        { id: 'svc-fuzzy', name: 'Managed Backup Service Plan', baseName: 'Managed Backup Service Plan' }
+      ],
+      externalEntities: [...base.externalEntities, item('MBA', 'Managed Backup Service Plan Annual')]
+    });
+    createManyMock.mockImplementation(async (_ctx: unknown, inputs: any[]) =>
+      inputs.map((i) => ({ algaEntityId: i.algaEntityId, ok: true }))
+    );
+    await openBulk();
+    expect(screen.getByTestId(`${P}-possible-svc-fuzzy`)).toHaveTextContent('Possible match');
+    expect(screen.queryByTestId(`${P}-suggested-svc-fuzzy`)).not.toBeInTheDocument();
+    expect(el(`${P}-select-svc-fuzzy`).checked).toBe(false);
+    // The exact row is checked.
+    expect(el(`${P}-select-svc-host`).checked).toBe(true);
+    expect(screen.getByText('Item · Managed Backup Service Plan Annual (MBA)')).toBeInTheDocument();
+
+    fireEvent.click(saveAll());
+    await waitFor(() => expect(createManyMock).toHaveBeenCalledTimes(1));
+    expect(createManyMock.mock.calls[0][1].map((i: any) => i.algaEntityId)).not.toContain('svc-fuzzy');
+
+    // Ticking it opts in explicitly.
+    fireEvent.click(el(`${P}-select-svc-fuzzy`));
+    expect(el(`${P}-select-svc-fuzzy`).checked).toBe(true);
   });
 });

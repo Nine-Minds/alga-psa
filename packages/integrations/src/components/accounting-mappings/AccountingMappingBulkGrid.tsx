@@ -38,6 +38,8 @@ type GridRow = {
   kindId: string;
   externalId: string;
   suggested: boolean;
+  /** Fuzzy suggestions are prefilled but never preselected for save. */
+  fuzzy: boolean;
   ignored: boolean;
   selected: boolean;
   toSave: boolean;
@@ -118,7 +120,10 @@ export function AccountingMappingBulkGrid({
             : suggestion?.externalId ?? '';
         const suggested = !mapped && !touchedTarget && Boolean(suggestion);
         const ignored = Boolean(edit.ignored);
-        const selected = edit.selected ?? suggested;
+        const fuzzy = suggested && suggestion?.matchedBy === 'fuzzy';
+        // Exact (code/name) suggestions are preselected; near-misses need an
+        // explicit tick so a variant is never saved without review.
+        const selected = edit.selected ?? (suggested && !fuzzy);
         const externalName = mapped?.externalName ?? externalById.get(externalId)?.name ?? '';
 
         return {
@@ -128,6 +133,7 @@ export function AccountingMappingBulkGrid({
           kindId,
           externalId,
           suggested,
+          fuzzy,
           ignored,
           selected,
           toSave: !mapped && selected && !ignored && Boolean(externalId),
@@ -148,7 +154,10 @@ export function AccountingMappingBulkGrid({
 
   // Bulk header controls act on rows that are visible AND editable (unmapped).
   const editableVisible = useMemo(() => visibleRows.filter((row) => row.mappedTo === null), [visibleRows]);
-  const toSaveCount = useMemo(() => rows.filter((row) => row.toSave).length, [rows]);
+  // Save acts on what the user can see: rows hidden by the search/filter keep
+  // their edits in state and save the next time they are visible.
+  const visibleToSave = useMemo(() => visibleRows.filter((row) => row.toSave), [visibleRows]);
+  const toSaveCount = visibleToSave.length;
 
   const patchRow = useCallback((id: string, patch: RowEdit) => {
     setEdits((current) => ({ ...current, [id]: { ...current[id], ...patch } }));
@@ -173,7 +182,7 @@ export function AccountingMappingBulkGrid({
   const someIgnored = editableVisible.some((row) => row.ignored);
 
   const handleSaveAll = async () => {
-    const pending = rows.filter((row) => row.toSave);
+    const pending = visibleToSave;
     if (pending.length === 0 || isSaving) return;
 
     // The option id is sent exactly as picked. For multi-catalog modules it
@@ -301,8 +310,13 @@ export function AccountingMappingBulkGrid({
                 dropdownMode="overlay"
               />
               {row.suggested ? (
-                <Badge variant="secondary" data-testid={`${idPrefix}-suggested-${row.id}`}>
-                  {t('integrations.accounting.bulk.suggested', { defaultValue: 'Suggested' })}
+                <Badge
+                  variant={row.fuzzy ? 'warning' : 'secondary'}
+                  data-testid={`${idPrefix}-${row.fuzzy ? 'possible' : 'suggested'}-${row.id}`}
+                >
+                  {row.fuzzy
+                    ? t('integrations.accounting.bulk.possibleMatch', { defaultValue: 'Possible match' })
+                    : t('integrations.accounting.bulk.suggested', { defaultValue: 'Suggested' })}
                 </Badge>
               ) : null}
             </div>

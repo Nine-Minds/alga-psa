@@ -61,6 +61,38 @@ describe('suggestMappingTargets', () => {
     expect(result.get('s1')).toEqual({ externalId: 'account:200', kind: 'account', matchedBy: 'name' });
   });
 
+  it('never suggests an account from a code match: SKU 200 does not pick account:200', () => {
+    const result = suggestMappingTargets(
+      [svc('s1', 'Consulting', '200')],
+      [account('200', 'Sales')]
+    );
+    expect(result.has('s1')).toBe(false);
+  });
+
+  it('a SKU equal to both an item code and an account code picks the item', () => {
+    const result = suggestMappingTargets(
+      [svc('s1', 'Consulting', '200')],
+      [account('200', 'Sales'), item('200', 'Unrelated Name')]
+    );
+    expect(result.get('s1')).toEqual({ externalId: 'item:200', kind: 'item', matchedBy: 'code' });
+  });
+
+  it('an account is still suggested on an exact name even when its code equals the SKU', () => {
+    const result = suggestMappingTargets(
+      [svc('s1', 'Sales', '200')],
+      [account('200', 'Sales')]
+    );
+    expect(result.get('s1')).toMatchObject({ externalId: 'account:200', matchedBy: 'name' });
+  });
+
+  it('labels near-miss variants as fuzzy so callers can avoid preselecting them', () => {
+    const result = suggestMappingTargets(
+      [svc('s1', 'Managed Backup Service Plan', 'MB')],
+      [item('MBA', 'Managed Backup Service Plan Annual')]
+    );
+    expect(result.get('s1')?.matchedBy).toBe('fuzzy');
+  });
+
   it('never suggests an account from a fuzzy match', () => {
     const result = suggestMappingTargets(
       [svc('s1', 'Managed Backup Service Plan')],

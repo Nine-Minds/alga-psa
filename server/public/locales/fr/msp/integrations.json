@@ -16,6 +16,7 @@
         },
         "ignoreAll": "Tout ignorer",
         "noRows": "Aucune ligne ne correspond au filtre actuel.",
+        "possibleMatch": "Correspondance possible",
         "rowIgnoreAria": "Ignorer {{name}}",
         "rowSelectAria": "Inclure {{name}} dans l'enregistrement",
         "saveAll": "Tout enregistrer",

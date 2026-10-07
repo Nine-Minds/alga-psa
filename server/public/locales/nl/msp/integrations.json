@@ -16,6 +16,7 @@
         },
         "ignoreAll": "Alles negeren",
         "noRows": "Geen rijen komen overeen met het huidige filter.",
+        "possibleMatch": "Mogelijke overeenkomst",
         "rowIgnoreAria": "{{name}} negeren",
         "rowSelectAria": "{{name}} meenemen bij opslaan",
         "saveAll": "Alles opslaan",

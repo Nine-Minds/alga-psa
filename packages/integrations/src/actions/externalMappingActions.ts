@@ -406,6 +406,54 @@ function isXeroRecordUsable(status: string | undefined): boolean {
 }
 
 /**
+ * Per-call provider lookups behind the remote-existence checks. The single
+ * create/update paths use a fresh instance per call (always a live fetch). The
+ * bulk action shares ONE instance across a batch so each provider client and
+ * each Xero catalog (per realm and kind) is fetched at most once per request
+ * instead of once per row — Xero rate-limits at 60 calls/minute/org.
+ * Rejections are memoised too: a failing catalog fails its rows without
+ * being re-hit once per row.
+ */
+interface RemoteCatalogs {
+  qboClient(tenant: string, realm: string): Promise<QboClientService>;
+  qboAstEnabled(tenant: string, realm: string): Promise<boolean>;
+  xeroList(
+    tenant: string,
+    realm: string,
+    kind: 'item' | 'account' | 'tax_rate'
+  ): Promise<any[]>;
+}
+
+function createRemoteCatalogs(memoize = false): RemoteCatalogs {
+  const memo = new Map<string, Promise<any>>();
+  const once = <T,>(key: string, load: () => Promise<T>): Promise<T> => {
+    if (!memoize) return load();
+    let hit = memo.get(key);
+    if (!hit) {
+      hit = load();
+      memo.set(key, hit);
+    }
+    return hit;
+  };
+  return {
+    qboClient: (tenant, realm) =>
+      once(JSON.stringify(['qbo', tenant, realm]), () => QboClientService.create(tenant, realm)),
+    qboAstEnabled: (tenant, realm) =>
+      once(JSON.stringify(['qbo-ast', tenant, realm]), async () => {
+        const { knex } = await createTenantKnex();
+        return isQboAutomatedSalesTaxEnabled(knex, tenant, realm);
+      }),
+    xeroList: (tenant, realm, kind) =>
+      once(JSON.stringify(['xero', tenant, realm, kind]), async () => {
+        const client = await XeroClientService.create(tenant, realm);
+        if (kind === 'item') return client.listItems();
+        if (kind === 'account') return client.listAccounts();
+        return client.listTaxRates();
+      }),
+  };
+}
+
+/**
  * Fail-closed remote check for a manually-linked QuickBooks mapping: the
  * external id must resolve to a live entity of the expected type in the
  * connected company, or the link is rejected.
@@ -414,7 +462,8 @@ async function assertQboRemoteEntityExists(
   tenant: string,
   algaEntityType: string,
   externalEntityId: string,
-  realm: string
+  realm: string,
+  catalogs: RemoteCatalogs
 ): Promise<void> {
   const remoteType = QBO_REMOTE_ENTITY_TYPE[algaEntityType];
   if (!remoteType) {
@@ -426,8 +475,7 @@ async function assertQboRemoteEntityExists(
   // The pseudo codes are not readable TaxCode records (`GET /taxcode/NON`
   // 404s), so the realm's AST setting proves them instead of a read-by-id.
   if (algaEntityType === 'tax_code' && QBO_AST_PSEUDO_TAX_CODES.has(externalEntityId)) {
-    const { knex } = await createTenantKnex();
-    if (!(await isQboAutomatedSalesTaxEnabled(knex, tenant, realm))) {
+    if (!(await catalogs.qboAstEnabled(tenant, realm))) {
       throw new ExpectedExternalMappingError(
         `QuickBooks tax code ${externalEntityId} is only accepted when "QuickBooks calculates sales tax" is enabled for this company. Turn it on for this QuickBooks company, or map the region to a tax code from the company's own tax-code list.`
       );
@@ -435,7 +483,7 @@ async function assertQboRemoteEntityExists(
     return;
   }
 
-  const qboClient = await QboClientService.create(tenant, realm);
+  const qboClient = await catalogs.qboClient(tenant, realm);
   const entity = await qboClient.read<unknown>(remoteType, externalEntityId);
   if (!entity) {
     throw new ExpectedExternalMappingError(
@@ -457,7 +505,8 @@ async function assertXeroRemoteEntityExists(
   algaEntityType: string,
   externalEntityId: string,
   realm: string,
-  metadata?: Record<string, unknown> | null
+  metadata: Record<string, unknown> | null | undefined,
+  catalogs: RemoteCatalogs
 ): Promise<void> {
   let kind = XERO_CATALOG_KIND[algaEntityType];
   if (!kind) {
@@ -480,10 +529,9 @@ async function assertXeroRemoteEntityExists(
   }
 
   const wanted = externalEntityId.trim();
-  const client = await XeroClientService.create(tenant, realm);
 
   if (kind === 'item') {
-    const items = await client.listItems();
+    const items = await catalogs.xeroList(tenant, realm, 'item');
     const match = items.find(
       (item) => (item.code ?? '').trim() === wanted || (item.itemId ?? '').trim() === wanted
     );
@@ -502,7 +550,7 @@ async function assertXeroRemoteEntityExists(
     if (!wanted) {
       throw new ExpectedExternalMappingError('Xero account mappings require an account code.');
     }
-    const accounts = await client.listAccounts();
+    const accounts = await catalogs.xeroList(tenant, realm, 'account');
     const match = accounts.find((account) => (account.code ?? '').trim() === wanted);
     if (!match) {
       throw new ExpectedExternalMappingError(
@@ -525,7 +573,7 @@ async function assertXeroRemoteEntityExists(
     return;
   }
 
-  const rates = await client.listTaxRates();
+  const rates = await catalogs.xeroList(tenant, realm, 'tax_rate');
   const match = rates.find(
     (rate) => (rate.taxType ?? '').trim() === wanted || (rate.taxRateId ?? '').trim() === wanted
   );
@@ -550,14 +598,15 @@ async function assertRemoteEntityExists(
   algaEntityType: string,
   externalEntityId: string,
   realm: string,
-  metadata?: Record<string, unknown> | null
+  metadata?: Record<string, unknown> | null,
+  catalogs: RemoteCatalogs = createRemoteCatalogs()
 ): Promise<void> {
   if (integrationType === 'quickbooks_online') {
-    await assertQboRemoteEntityExists(tenant, algaEntityType, externalEntityId, realm);
+    await assertQboRemoteEntityExists(tenant, algaEntityType, externalEntityId, realm, catalogs);
     return;
   }
   if (integrationType === 'xero') {
-    await assertXeroRemoteEntityExists(tenant, algaEntityType, externalEntityId, realm, metadata);
+    await assertXeroRemoteEntityExists(tenant, algaEntityType, externalEntityId, realm, metadata, catalogs);
     return;
   }
 }
@@ -803,12 +852,15 @@ async function createMappingRow({
   tenant,
   mappingData,
   validateRealm,
+  catalogs,
 }: {
   knex: Knex;
   user: IUserWithRoles;
   tenant: string;
   mappingData: CreateMappingData;
   validateRealm: boolean;
+  /** Shared across a bulk batch; omitted = fresh fetch per call. */
+  catalogs?: RemoteCatalogs;
 }): Promise<ExternalEntityMapping | ActionMessageError> {
   const {
     integration_type,
@@ -864,7 +916,8 @@ async function createMappingRow({
           alga_entity_type,
           external_entity_id,
           normalizedRealm,
-          metadata ?? null
+          metadata ?? null,
+          catalogs
         );
       }
 
@@ -1117,6 +1170,8 @@ export const createExternalEntityMappings = withAuth(async (
     }
   }
 
+  // One snapshot per batch: each client/catalog is fetched at most once.
+  const catalogs = createRemoteCatalogs(true);
   const results: BulkCreateMappingRowResult[] = [];
   for (const row of rows) {
     const key = JSON.stringify([row.integration_type, row.external_realm_id ?? null]);
@@ -1142,6 +1197,7 @@ export const createExternalEntityMappings = withAuth(async (
         tenant,
         mappingData: row,
         validateRealm: false,
+        catalogs,
       });
       if (isActionMessageError(result)) {
         results.push({ alga_entity_id: row.alga_entity_id, ok: false, error: result.actionError });

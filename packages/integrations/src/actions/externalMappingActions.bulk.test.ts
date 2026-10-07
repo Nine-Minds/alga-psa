@@ -12,6 +12,10 @@ const store = vi.hoisted(() => ({ mappings: [] as Array<Record<string, any>> }))
 const mocks = vi.hoisted(() => ({
   hasPermission: vi.fn(),
   getStoredXeroConnections: vi.fn(),
+  getStoredQboCredentialsMap: vi.fn(),
+  qboCreate: vi.fn(),
+  qboRead: vi.fn(),
+  xeroCreate: vi.fn(),
   listItems: vi.fn(),
   listAccounts: vi.fn(),
   withTransaction: vi.fn(),
@@ -23,17 +27,13 @@ vi.mock('@alga-psa/auth', () => ({
 vi.mock('@alga-psa/auth/rbac', () => ({ hasPermission: mocks.hasPermission }));
 vi.mock('@alga-psa/event-bus/publishers', () => ({ publishWorkflowEvent: vi.fn(async () => undefined) }));
 vi.mock('../lib/qbo/qboClientService', () => ({
-  getStoredQboCredentialsMap: vi.fn(),
-  QboClientService: { create: vi.fn() },
+  getStoredQboCredentialsMap: mocks.getStoredQboCredentialsMap,
+  QboClientService: { create: mocks.qboCreate },
 }));
 vi.mock('../lib/xero/xeroClientService', () => ({
   getStoredXeroConnections: mocks.getStoredXeroConnections,
   XeroClientService: {
-    create: vi.fn(async () => ({
-      listItems: mocks.listItems,
-      listAccounts: mocks.listAccounts,
-      listTaxRates: vi.fn(async () => []),
-    })),
+    create: mocks.xeroCreate,
   },
 }));
 
@@ -107,6 +107,16 @@ beforeEach(() => {
   mocks.listAccounts.mockResolvedValue([
     { accountId: 'a1', code: '200', name: 'Sales', type: 'REVENUE', status: 'ACTIVE' },
   ]);
+  mocks.xeroCreate.mockImplementation(async () => ({
+    listItems: mocks.listItems,
+    listAccounts: mocks.listAccounts,
+    listTaxRates: vi.fn(async () => []),
+  }));
+  mocks.getStoredQboCredentialsMap.mockResolvedValue({ 'qbo-realm': {} });
+  mocks.qboRead.mockImplementation(async (_type: string, id: string) =>
+    id === 'missing' ? null : { Id: id }
+  );
+  mocks.qboCreate.mockImplementation(async () => ({ read: mocks.qboRead }));
   // Each call gets its own "transaction": the callback's throw is isolated to it.
   mocks.withTransaction.mockImplementation(async (_knex: unknown, cb: any) =>
     cb({ raw: vi.fn(async () => undefined) })
@@ -181,6 +191,49 @@ describe('createExternalEntityMappings', () => {
     expect(results.map((r: any) => r.ok)).toEqual([false, false, true]);
     expect(results[0].error).toMatch(/xeroTargetKind/);
     expect(store.mappings.map((m) => m.alga_entity_id)).toEqual(['svc-b']);
+  });
+
+  it('fetches each Xero catalog at most once per batch, however many rows', async () => {
+    const results = await call([
+      row('svc-1', '200', 'item'),
+      row('svc-2', 'B', 'item'),
+      row('svc-3', 'nope', 'item'),
+      row('svc-4', '200', 'account'),
+      row('svc-5', '200', 'account'),
+      row('svc-6', 'nope', 'account'),
+    ]);
+    expect(results.map((r: any) => r.ok)).toEqual([true, true, false, true, true, false]);
+    // Per-row messages are preserved.
+    expect(results[2].error).toMatch(/Xero item nope does not exist/);
+    expect(results[5].error).toMatch(/Xero account code nope does not exist/);
+    expect(mocks.listItems).toHaveBeenCalledTimes(1);
+    expect(mocks.listAccounts).toHaveBeenCalledTimes(1);
+    expect(mocks.xeroCreate).toHaveBeenCalledTimes(2); // one client per catalog, not per row
+  });
+
+  it('single create keeps a fresh fetch per call', async () => {
+    const { createExternalEntityMapping } = await import('./externalMappingActions');
+    const single = (id: string) =>
+      (createExternalEntityMapping as any)({ user_id: 'u' }, { tenant: 't1' }, row(id, 'B', 'item'));
+    await single('svc-x');
+    await single('svc-y');
+    expect(mocks.listItems).toHaveBeenCalledTimes(2);
+  });
+
+  it('creates the QBO client once per batch and keeps per-row existence errors', async () => {
+    const qbo = (id: string, ext: string) => ({
+      integration_type: 'quickbooks_online',
+      alga_entity_type: 'service',
+      alga_entity_id: id,
+      external_entity_id: ext,
+      external_realm_id: 'qbo-realm',
+      metadata: null,
+    });
+    const results = await call([qbo('s1', '10'), qbo('s2', 'missing'), qbo('s3', '12')]);
+    expect(results.map((r: any) => r.ok)).toEqual([true, false, true]);
+    expect(results[1].error).toMatch(/QuickBooks Item missing does not exist/);
+    expect(mocks.qboCreate).toHaveBeenCalledTimes(1);
+    expect(mocks.qboRead).toHaveBeenCalledTimes(3);
   });
 
   it('returns an empty result for an empty batch', async () => {
