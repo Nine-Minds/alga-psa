@@ -92,6 +92,19 @@
           "taxCodes": "Codes fiscaux",
           "paymentTerms": "Conditions de paiement"
         }
+      },
+      "adjustmentMappings": {
+        "desktopServices": "Comptes de services Desktop",
+        "desktopDiscounts": "Remises Desktop",
+        "discounts": "Remises et avoirs",
+        "qboAccount": "Identifiant du compte de remises QuickBooks",
+        "xeroAccount": "Code du compte Xero",
+        "desktopAccount": "Nom du compte de produits Desktop",
+        "csvItem": "Nom de l’article de remise QuickBooks",
+        "description": "Associez les remises et avoirs avant l’exportation. Cette association appartient à cette société comptable.",
+        "add": "Ajouter une association",
+        "remove": "Supprimer une association",
+        "removeConfirm": "Supprimer cette association comptable ?"
       }
     },
     "calendar": {

@@ -10,7 +10,6 @@ import { hasPermission } from '@alga-psa/auth/rbac';
 import { getAnalyticsAsync } from '../lib/authHelpers';
 import { BillingEngine, UnresolvedCatalogPricingError } from '../lib/billing/billingEngine';
 import { reconcileWindowAttribution } from '../lib/billing/contractLineAttributionWriter';
-import { getClientDefaultBillingProfileId } from '../lib/billing/billingProfileLookup';
 import { listUnmaterializedClientCadenceWindowLineIds } from '../lib/billing/clientCadenceWindowMaterialization';
 import {
   getCycleBillingProfileId,
@@ -58,7 +57,7 @@ import { resolveUnitOfMeasure } from '@alga-psa/core/unitOfMeasure';
 import { auditLog } from '@alga-psa/db';
 import { getClientDocumentLogoUrl } from '@alga-psa/formatting/avatarUtils';
 import { calculateAndDistributeTax, claimRecurringServicePeriodsForSelectionInputs, getClientDetails, persistInvoiceCharges, updateInvoiceTotalsAndRecordTransaction, validateClientBillingEmail } from '../services/invoiceService';
-import { reconcileAutomaticInvoiceAdjustments } from '../lib/billing/reconcileAutomaticInvoiceDiscounts';
+import { reconcileAutomaticInvoiceAdjustments } from '../services/invoiceAutomaticAdjustments';
 import {
   reconcileContractChangeAdjustmentsForInvoice,
   releaseOrphanedContractAdjustments,
@@ -4190,17 +4189,16 @@ export async function createInvoiceFromBillingResultImpl(
       }
     }
 
-    // Reconcile automatic discounts against the actual persisted (and
-    // reconciled) charge rows through the shared evaluator, with provenance, so
-    // a cancelled/edited true-up cannot leave a stale discount amount behind.
-    const discountMagnitude = await reconcileAutomaticInvoiceAdjustments({
-      trx,
-      tenant,
-      invoiceId: newInvoice!.invoice_id,
-    });
+    // One shared evaluator owns configured automatic discounts. It reads the
+    // persisted rows, so generation, preview and draft refresh all apply the
+    // same scopes, invoice-period eligibility and rounding. Discounts return a
+    // positive magnitude.
+    const { automaticDiscountAmount } =
+      await reconcileAutomaticInvoiceAdjustments(trx, tenant, newInvoice!.invoice_id);
 
-    // Use the subtotal from persisted charges minus the reconciled discounts.
-    const subtotal = calculatedSubtotal - discountMagnitude;
+    // Use the subtotal returned by persistInvoiceCharges minus the shared
+    // automatic discount settlement.
+    const subtotal = calculatedSubtotal - automaticDiscountAmount;
 
     // Leverage the shared tax helper so automated invoices mirror manual invoices
     const calculatedTax = await calculateAndDistributeTax(

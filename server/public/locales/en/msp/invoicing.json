@@ -332,7 +332,8 @@
       "title": "Automated Line Items",
       "service": "Service",
       "total": "Total",
-      "unknownService": "Unknown Service"
+      "unknownService": "Unknown Service",
+      "period": "Period"
     },
     "lineItems": {
       "manual": "Manual Line Items",
@@ -345,7 +346,8 @@
       "saveChanges": "Save Changes",
       "processing": "Processing...",
       "generateSalesOrderInvoice": "Generate Sales Order Invoice",
-      "clearSalesOrderSource": "Clear sales order source"
+      "clearSalesOrderSource": "Clear sales order source",
+      "addPartialPeriodCharge": "Add partial-period charge"
     },
     "labels": {
       "total": "Total",
@@ -360,6 +362,7 @@
       "helpText": "Leave blank for no expiration or to use default expiration period"
     },
     "errors": {
+      "CLIENT_CONTRACT_NOT_FOUND": "The selected contract does not belong to this invoice's client.",
       "selectClient": "Please select a client",
       "invoiceNumberUnique": "This invoice number is already in use.",
       "noTaxRateConfigured": "No tax rate configured for the region.",
@@ -389,6 +392,7 @@
       "SOURCE_ALREADY_BILLED": "Some selected items are no longer billable (already invoiced, not approved, or removed). Refresh and try again.",
       "SOURCE_NOT_ELIGIBLE": "A selected item is not one of this ticket's billable items, or it is no longer eligible. Refresh and try again.",
       "SOURCE_CURRENCY_MISMATCH": "Some selected products are priced in a different currency than this client invoices in, so they cannot be added. Invoice them separately in their own currency.",
+      "SERVICE_REQUIRED": "Assign a service to this charge before saving.",
       "BILLING_PROFILE_NOT_FOUND": "The selected billing profile is not available for this client. Refresh and try again."
     },
     "warnings": {
@@ -400,6 +404,48 @@
     },
     "salesOrderContext": {
       "summary": "{{quantity}} item(s) ready to invoice from {{lineCount}} line(s). This draft will be linked back to the sales order."
+    },
+    "draftAdjustments": {
+      "title": "Invoice adjustments",
+      "description": "Add one-time charges, discounts or credits. Generated contract charges stay read-only; correct the source contract or add an adjustment."
+    },
+    "partialPeriod": {
+      "title": "Partial-period charge",
+      "help": "Choose a billed service. Its rate, service period, tax treatment and contract attribution are used to calculate a one-time adjustment.",
+      "direction": "Direction",
+      "increase": "Increase",
+      "decrease": "Decrease (credit)",
+      "units": "Units",
+      "source": "Select billed service",
+      "effectiveDate": "Effective date",
+      "sourceRate": "Rate {{rate}}",
+      "unitPrice": "Unit price",
+      "coveredDays": "Covered days",
+      "fullPeriodDays": "Full-period days",
+      "description": "Description (optional)",
+      "reason": "Reason (optional)",
+      "previewUnavailable": "Enter a valid calculation.",
+      "resolvedAmount": "Resolved amount: {{amount}}",
+      "addCharge": "Add charge",
+      "creditDescription": "Credit: {{proration}}",
+      "errors": {
+        "source": "Choose a billed service with an unambiguous service period.",
+        "units": "Units must be greater than zero.",
+        "unitPrice": "Unit price must be a number.",
+        "invalid": "Enter a valid partial period."
+      },
+      "permanentChangeNudge": "Is this a permanent change? Record it on the contract instead.",
+      "overlapConfirm": "An automatic contract change adjustment already overlaps this period. Add this separate manual adjustment anyway?",
+      "invoiceDescription": {
+        "increase": "{{description}} — additional {{units}} {{unitLabel}}, {{period}} — {{calculation}}",
+        "decrease": "{{description}} — credit for {{units}} fewer {{unitLabel}}, {{period}} — {{calculation}}"
+      },
+      "sourceDescriptionFallback": "Service adjustment"
+    },
+    "exportWarnings": {
+      "discount": "{{adapter}}: configure the discount mapping before exporting {{description}}.",
+      "service": "{{adapter}}: assign a mapped service to {{description}} before exporting.",
+      "unavailable": "Accounting readiness could not be checked. Check mappings before exporting."
     },
     "hints": {
       "billingProfile": "The invoice and its lines are billed to this profile."
@@ -2483,5 +2529,12 @@
     "saving": "Saving…",
     "saveCorrection": "Save correction",
     "save": "Save"
+  },
+  "draftInvoiceAdjustments": {
+    "blockedTitle": "Invoice adjustments unavailable",
+    "blocked": {
+      "exported": "This invoice is synced to an accounting system. Void it or issue a separate credit instead of editing its lines.",
+      "exporting": "An accounting export is being prepared for this invoice. Wait for it to finish before changing the invoice."
+    }
   }
 }

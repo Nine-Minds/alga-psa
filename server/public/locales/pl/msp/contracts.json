@@ -264,7 +264,8 @@
       "lines": "Linie kontraktowe",
       "overview": "Przegląd",
       "pricing": "Harmonogramy cenowe",
-      "simulator": "Symuluj"
+      "simulator": "Symuluj",
+      "discounts": "Rabaty"
     },
     "validation": {
       "billingFrequencyRequired": "Wymagana jest częstotliwość rozliczeń.",
@@ -539,7 +540,8 @@
       "name": "Nazwa",
       "rate": "Stawka",
       "services": "Usługi",
-      "type": "Typ"
+      "type": "Typ",
+      "dates": "Daty"
     },
     "configuration": {
       "description": "Ustawienia stosowane do tej linii kontraktowej",
@@ -550,7 +552,15 @@
       "minutesValue": "{{count}} min",
       "roundUpToNearest": "Zaokrąglij w górę do najbliższych (minuty)",
       "title": "Konfiguracja linii kontraktowej",
-      "usageInfo": "Linie kontraktowe rozliczane według zużycia są konfigurowane osobno dla każdej usługi ze stawkami jednostkowymi."
+      "usageInfo": "Linie kontraktowe rozliczane według zużycia są konfigurowane osobno dla każdej usługi ze stawkami jednostkowymi.",
+      "invoiceText": "Tekst wiersza faktury",
+      "invoiceTextPlaceholder": "Drukowany na fakturze; domyślnie nazwa wiersza",
+      "invoiceTextDefault": "Używa nazwy wiersza",
+      "startDate": "Data rozpoczęcia",
+      "endDate": "Data zakończenia",
+      "inheritsContract": "Początek kontraktu",
+      "inheritsContractEnd": "Koniec kontraktu",
+      "billedEditExplanation": "Po zafakturowaniu pozycji można nadal edytować tekst faktury i daty. Daty nie mogą wykluczać już zafakturowanych ani zarezerwowanych okresów usług; stawki i ilości zmienia się prospektywnie."
     },
     "customRate": "Niestandardowy",
     "description": {
@@ -566,13 +576,14 @@
       "selectAbove": "Wybierz linię kontraktową powyżej, aby rozpocząć."
     },
     "errors": {
-      "cannotEditWithInvoices": "Nie można edytować linii kontraktowej: ta umowa ma powiązane faktury. Linii kontraktowych nie można edytować po wygenerowaniu faktur.",
       "failedToCheckEditable": "Nie udało się sprawdzić, czy umowę można edytować",
       "failedToLoad": "Nie udało się wczytać linii kontraktowych",
       "failedToRefresh": "Nie udało się odświeżyć linii kontraktowych",
       "failedToRemove": "Nie udało się usunąć linii kontraktowej",
       "failedToUpdate": "Nie udało się zaktualizować linii kontraktowej",
-      "failedToResetRate": "Nie udało się przywrócić stawki pozycji"
+      "failedToResetRate": "Nie udało się przywrócić stawki pozycji",
+      "protectedStartDate": "Data rozpoczęcia musi przypadać {{boundary}} lub wcześniej, aby uwzględnić chronioną historię usług.",
+      "protectedEndDate": "Data zakończenia musi przypadać {{boundary}} lub później, aby uwzględnić chronioną historię usług."
     },
     "loading": {
       "contractLines": "Ładowanie linii kontraktowych",
@@ -694,7 +705,10 @@
     },
     "fields": {
       "billingTimingQuestion": "Kiedy powinna być rozliczana ta linia?",
-      "rate": "Stawka"
+      "rate": "Stawka",
+      "invoiceText": "Tekst wiersza faktury",
+      "invoiceTextPlaceholder": "Drukowany na fakturze; domyślnie nazwa wiersza",
+      "invoiceTextHelp": "Ten tekst jest drukowany dosłownie w wierszu faktury cyklicznej."
     },
     "sections": {
       "billingTiming": "Termin rozliczeń",
@@ -887,7 +901,12 @@
     "fixedServicesPricingExplanation": "Alokacje pakietowe dzielą stawkę bazową linii. Cykliczne stanowiska rozliczają uzgodnioną ilość × stawkę jednostkową w każdym okresie bez wpisów zużycia.",
     "recurringQuantity": "Ilość cykliczna",
     "allocationQuantity": "Ilość alokacji",
-    "bundleBaseRateHelp": "Cykliczna opłata za usługi w cenie pakietowej. Cykliczne stanowiska są rozliczane osobno według ilości × stawki jednostkowej."
+    "bundleBaseRateHelp": "Cykliczna opłata za usługi w cenie pakietowej. Cykliczne stanowiska są rozliczane osobno według ilości × stawki jednostkowej.",
+    "invoiceTextLabel": "Tekst wiersza faktury",
+    "invoiceTextPlaceholder": "Drukowany na fakturze; domyślnie nazwa wiersza",
+    "invoiceTextHelp": "Ten tekst jest drukowany dosłownie w wierszu faktury cyklicznej.",
+    "startDateLabel": "Data rozpoczęcia wiersza",
+    "endDateLabel": "Data zakończenia wiersza"
   },
   "pricingSchedules": {
     "list": {
@@ -1303,6 +1322,21 @@
       "hypothetical": "Hipotetyczny profil klienta",
       "open": "Symuluj",
       "title": "Symulacja szablonu"
+    },
+    "discounts": {
+      "title": "Domyślne rabaty umowy",
+      "help": "Każda umowa klienta otrzymuje niezależną kopię do edycji. Rabaty dla całej umowy obejmują kwalifikujące się pozycje.",
+      "invalid": "Podaj nazwę, dodatnią wartość i datę rozpoczęcia.",
+      "remove": "Usuń",
+      "name": "Nazwa rabatu",
+      "percentage": "Procent",
+      "fixed": "Kwota stała",
+      "value": "Wartość",
+      "startDate": "Rozpoczęcie",
+      "endDate": "Koniec (opcjonalnie)",
+      "add": "Dodaj domyślny rabat",
+      "chooseLine": "Wybierz pozycję szablonu",
+      "chooseService": "Wybierz usługę"
     }
   },
   "quickStart": {
@@ -2575,7 +2609,8 @@
       "missingClient": "W roboczej wersji umowy brakuje przypisania klienta",
       "invalidStartDate": "Robocza wersja umowy ma nieprawidłową datę rozpoczęcia",
       "recordInvalid": "Jeden z wybranych rekordów kreatora umowy nie jest już prawidłowy. Odśwież stronę i spróbuj ponownie.",
-      "duplicate": "Pasujący rekord kreatora umowy już istnieje."
+      "duplicate": "Pasujący rekord kreatora umowy już istnieje.",
+      "standingTerms": "Ten szkic zawiera stałe warunki rabatowe. Edytuj karty Pozycje i Rabaty, aby je zachować."
     },
     "pricingSchedule": {
       "endAfterEffective": "Data zakończenia musi być późniejsza niż data wejścia w życie",
@@ -2600,6 +2635,78 @@
       "activatedContractIdRequired": "Identyfikator aktywowanej umowy odnowienia jest wymagany.",
       "contractNotActive": "Aktywowana umowa odnowienia nie jest już aktywna. Odśwież stronę i spróbuj ponownie.",
       "manualRetryDueOnly": "Ręczne ponowienie jest dostępne tylko dla wymagalnych cykli odnowienia."
+    }
+  },
+  "contractDiscounts": {
+    "title": "Rabaty",
+    "description": "Każda umowa z klientem ma własną edytowalną kopię. Rabaty obejmujące całą umowę dotyczą kwalifikujących się opłat z jej zafakturowanych pozycji.",
+    "loading": "Ładowanie rabatów…",
+    "empty": "Dla tego kontraktu nie skonfigurowano jeszcze żadnych rabatów.",
+    "actions": {
+      "attach": "Dołącz",
+      "pickShared": "Dołącz istniejący rabat",
+      "detach": "Odłącz od tej umowy",
+      "toggleActive": "Zmień status rabatu",
+      "add": "Dodaj rabat",
+      "cancel": "Anuluj",
+      "save": "Zapisz",
+      "saving": "Zapisywanie…"
+    },
+    "attachment": {
+      "shared": "Przypisanie do umowy",
+      "line": "Przypisanie do pozycji"
+    },
+    "sharedEditNotice": "Zmiany dotyczą tylko tej umowy z klientem. Edycja szablonu nie zmienia kopii istniejących umów.",
+    "dialog": {
+      "contractAttachmentLineScopeLocked": "Ten rabat jest przypisany do tej umowy z klientem. Aby ograniczyć go do pozycji, odłącz go i utwórz rabat dla tej pozycji.",
+      "createTitle": "Dodaj rabat",
+      "editTitle": "Edytuj rabat"
+    },
+    "columns": {
+      "name": "Nazwa",
+      "value": "Wartość",
+      "scope": "Zakres",
+      "line": "Wiersz kontraktu",
+      "dates": "Daty",
+      "status": "Status"
+    },
+    "status": {
+      "active": "Aktywny",
+      "inactive": "Nieaktywny"
+    },
+    "scopes": {
+      "invoice": "Wszystkie kwalifikujące się opłaty",
+      "contract": "Ten kontrakt",
+      "service": "Usługa",
+      "line": "Pozycja umowy"
+    },
+    "values": {
+      "unnamedLine": "Wiersz bez nazwy"
+    },
+    "types": {
+      "percentage": "Procent",
+      "fixed": "Kwota stała"
+    },
+    "fields": {
+      "name": "Nazwa",
+      "namePlaceholder": "np. Lojalność 10%",
+      "type": "Typ",
+      "percentValue": "Procent (0–100)",
+      "fixedValue": "Kwota",
+      "startDate": "Data rozpoczęcia",
+      "endDate": "Data zakończenia",
+      "line": "Wiersz kontraktu",
+      "linePlaceholder": "Wybierz wiersz kontraktu",
+      "scope": "Zakres",
+      "priority": "Priorytet",
+      "priorityPlaceholder": "Opcjonalne",
+      "service": "Usługa",
+      "servicePlaceholder": "Wybierz usługę",
+      "active": "Aktywny"
+    },
+    "errors": {
+      "loadFailed": "Nie udało się załadować rabatów.",
+      "saveFailed": "Nie udało się zapisać rabatu."
     }
   }
 }

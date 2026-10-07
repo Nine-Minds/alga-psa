@@ -24,7 +24,7 @@ export function XeroLiveMappingManager({ defaultConnection }: XeroLiveMappingMan
   }), [defaultConnection]);
 
   const tabStyles = {
-    list: 'grid w-full grid-cols-2',
+    list: 'flex w-full flex-wrap',
     trigger: 'data-[state=active]:shadow-none'
   };
 

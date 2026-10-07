@@ -92,6 +92,19 @@
           "taxCodes": "Steuercodes",
           "paymentTerms": "Zahlungsbedingungen"
         }
+      },
+      "adjustmentMappings": {
+        "desktopServices": "Desktop-Dienstkonten",
+        "desktopDiscounts": "Desktop-Rabatte",
+        "discounts": "Rabatte und Gutschriften",
+        "qboAccount": "QuickBooks-Rabattkonto-ID",
+        "xeroAccount": "Xero-Kontocode",
+        "desktopAccount": "Name des Desktop-Ertragskontos",
+        "csvItem": "QuickBooks-Rabattartikelname",
+        "description": "Ordnen Sie Rechnungsrabatte und Gutschriften vor dem Export zu. Die Zuordnung gilt für dieses Buchhaltungsunternehmen.",
+        "add": "Zuordnung hinzufügen",
+        "remove": "Zuordnung entfernen",
+        "removeConfirm": "Diese Buchhaltungszuordnung entfernen?"
       }
     },
     "calendar": {

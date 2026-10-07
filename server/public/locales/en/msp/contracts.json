@@ -264,7 +264,8 @@
       "lines": "Contract Lines",
       "overview": "Overview",
       "pricing": "Pricing Schedules",
-      "simulator": "Simulate"
+      "simulator": "Simulate",
+      "discounts": "Discounts"
     },
     "validation": {
       "billingFrequencyRequired": "Billing frequency is required.",
@@ -539,7 +540,8 @@
       "name": "Name",
       "rate": "Rate",
       "services": "Services",
-      "type": "Type"
+      "type": "Type",
+      "dates": "Dates"
     },
     "configuration": {
       "description": "Settings that apply to this contract line",
@@ -550,7 +552,15 @@
       "minutesValue": "{{count}} minutes",
       "roundUpToNearest": "Round Up To Nearest (minutes)",
       "title": "Contract Line Configuration",
-      "usageInfo": "Usage-based contract lines are configured per service with unit rates."
+      "usageInfo": "Usage-based contract lines are configured per service with unit rates.",
+      "invoiceText": "Invoice line text",
+      "invoiceTextPlaceholder": "Printed on the invoice; defaults to the line name",
+      "invoiceTextDefault": "Uses the line name",
+      "startDate": "Start date",
+      "endDate": "End date",
+      "inheritsContract": "Contract start",
+      "inheritsContractEnd": "Contract end",
+      "billedEditExplanation": "After a line has billed, invoice text and line dates remain editable. Start and end dates cannot exclude service periods already billed or claimed; rates and quantities use prospective changes."
     },
     "customRate": "Custom",
     "description": {
@@ -566,13 +576,14 @@
       "selectAbove": "Select a contract line above to get started."
     },
     "errors": {
-      "cannotEditWithInvoices": "Cannot edit contract line: This contract has associated invoices. Contract lines cannot be edited once invoices have been generated.",
       "failedToCheckEditable": "Failed to check if contract can be edited",
       "failedToLoad": "Failed to load contract lines",
       "failedToRefresh": "Failed to refresh contract lines",
       "failedToRemove": "Failed to remove contract line",
       "failedToUpdate": "Failed to update contract line",
-      "failedToResetRate": "Failed to reset the line rate"
+      "failedToResetRate": "Failed to reset the line rate",
+      "protectedStartDate": "Start date must be on or before {{boundary}} to include protected service history.",
+      "protectedEndDate": "End date must be on or after {{boundary}} to include protected service history."
     },
     "loading": {
       "contractLines": "Loading contract lines",
@@ -694,7 +705,10 @@
     },
     "fields": {
       "billingTimingQuestion": "When should this line be billed?",
-      "rate": "Rate"
+      "rate": "Rate",
+      "invoiceText": "Invoice line text",
+      "invoiceTextPlaceholder": "Printed on the invoice; defaults to the line name",
+      "invoiceTextHelp": "This text prints verbatim on the recurring invoice line."
     },
     "sections": {
       "billingTiming": "Billing Timing",
@@ -887,7 +901,12 @@
     "fixedServicesPricingExplanation": "Bundle allocations share the line base rate. Recurring seats bill the agreed quantity × unit rate each period without usage records.",
     "recurringQuantity": "Recurring quantity",
     "allocationQuantity": "Allocation quantity",
-    "bundleBaseRateHelp": "Recurring fee for bundle-priced services. Recurring seats are billed separately at quantity × unit rate."
+    "bundleBaseRateHelp": "Recurring fee for bundle-priced services. Recurring seats are billed separately at quantity × unit rate.",
+    "invoiceTextLabel": "Invoice line text",
+    "invoiceTextPlaceholder": "Printed on the invoice; defaults to the line name",
+    "invoiceTextHelp": "This text prints verbatim on the recurring invoice line.",
+    "startDateLabel": "Line start date",
+    "endDateLabel": "Line end date"
   },
   "pricingSchedules": {
     "list": {
@@ -1303,6 +1322,21 @@
       "hypothetical": "Hypothetical client profile",
       "open": "Simulate",
       "title": "Template simulation"
+    },
+    "discounts": {
+      "title": "Default contract discounts",
+      "help": "Each client contract receives an independent editable copy. Contract-wide discounts apply across its eligible lines.",
+      "invalid": "Enter a name, positive value, and start date.",
+      "remove": "Remove",
+      "name": "Discount name",
+      "percentage": "Percentage",
+      "fixed": "Fixed amount",
+      "value": "Value",
+      "startDate": "Starts on",
+      "endDate": "Ends on (optional)",
+      "add": "Add default discount",
+      "chooseLine": "Choose a template line",
+      "chooseService": "Choose a service"
     }
   },
   "quickStart": {
@@ -2571,7 +2605,8 @@
       "missingClient": "Draft contract is missing client assignment",
       "invalidStartDate": "Draft contract has an invalid start date",
       "recordInvalid": "One of the selected contract wizard records is no longer valid. Please refresh and try again.",
-      "duplicate": "A matching contract wizard record already exists."
+      "duplicate": "A matching contract wizard record already exists.",
+      "standingTerms": "This draft has standing discount terms. Edit its Lines and Discounts tabs to preserve those terms."
     },
     "pricingSchedule": {
       "endAfterEffective": "End date must be after effective date",
@@ -2596,6 +2631,78 @@
       "activatedContractIdRequired": "Activated renewal contract id is required.",
       "contractNotActive": "The activated renewal contract is no longer active. Please refresh and try again.",
       "manualRetryDueOnly": "Manual retry is only available for due renewal cycles."
+    }
+  },
+  "contractDiscounts": {
+    "title": "Discounts",
+    "description": "Each client contract owns an editable copy. Contract-wide discounts apply to eligible charges across its represented lines.",
+    "loading": "Loading discounts…",
+    "empty": "No discounts are configured for this contract yet.",
+    "sharedEditNotice": "Changes affect only this client contract. Editing the template does not change existing contract copies.",
+    "dialog": {
+      "contractAttachmentLineScopeLocked": "This discount is attached to this client contract. To make it line-scoped, detach it and create a line-scoped discount.",
+      "createTitle": "Add discount",
+      "editTitle": "Edit discount"
+    },
+    "actions": {
+      "add": "Add Discount",
+      "attach": "Attach",
+      "detach": "Detach from this contract",
+      "toggleActive": "Change discount status",
+      "pickShared": "Attach existing discount",
+      "cancel": "Cancel",
+      "save": "Save",
+      "saving": "Saving…"
+    },
+    "columns": {
+      "name": "Name",
+      "value": "Value",
+      "scope": "Scope",
+      "line": "Contract line",
+      "dates": "Dates",
+      "status": "Status"
+    },
+    "status": {
+      "active": "Active",
+      "inactive": "Inactive"
+    },
+    "attachment": {
+      "shared": "Contract attachment",
+      "line": "Line attachment"
+    },
+    "scopes": {
+      "invoice": "All eligible charges",
+      "contract": "This contract",
+      "service": "A service",
+      "line": "A contract line"
+    },
+    "values": {
+      "unnamedLine": "Unnamed line"
+    },
+    "types": {
+      "percentage": "Percentage",
+      "fixed": "Fixed amount"
+    },
+    "fields": {
+      "name": "Name",
+      "namePlaceholder": "e.g. Loyalty 10%",
+      "type": "Type",
+      "percentValue": "Percent (0–100)",
+      "fixedValue": "Amount",
+      "startDate": "Start date",
+      "endDate": "End date",
+      "line": "Contract line",
+      "linePlaceholder": "Optional: keep this discount line-scoped",
+      "scope": "Scope",
+      "priority": "Priority",
+      "priorityPlaceholder": "Optional",
+      "service": "Service",
+      "servicePlaceholder": "Select a service",
+      "active": "Active"
+    },
+    "errors": {
+      "loadFailed": "Failed to load discounts.",
+      "saveFailed": "Failed to save the discount."
     }
   }
 }

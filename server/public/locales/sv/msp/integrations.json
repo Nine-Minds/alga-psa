@@ -92,6 +92,19 @@
           "taxCodes": "Skattekoder",
           "paymentTerms": "Betalningsvillkor"
         }
+      },
+      "adjustmentMappings": {
+        "desktopServices": "Tjänstekonton i Desktop",
+        "desktopDiscounts": "Rabatter i Desktop",
+        "discounts": "Rabatter och krediteringar",
+        "qboAccount": "ID för rabattkonto i QuickBooks",
+        "xeroAccount": "Kontokod i Xero",
+        "desktopAccount": "Intäktskontots namn i Desktop",
+        "csvItem": "Rabattartikelns namn i QuickBooks",
+        "description": "Mappa fakturarabatter och krediteringar före export. Mappningen tillhör det här bokföringsföretaget.",
+        "add": "Lägg till mappning",
+        "remove": "Ta bort mappning",
+        "removeConfirm": "Vill du ta bort den här bokföringsmappningen?"
       }
     },
     "calendar": {

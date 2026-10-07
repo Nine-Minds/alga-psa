@@ -1,3 +1,4 @@
+import { expandAccountingExportCharges } from './accountingExportChargeExpansion';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { AccountingExportRepository } from '../repositories/accountingExportRepository';
 import { AccountingMappingResolver, type MappingResolution } from './accountingMappingResolver';
@@ -27,6 +28,8 @@ type ChargeProjection = {
   service_id?: string | null;
   tax_region?: string | null;
   net_amount?: number | string | null;
+  description?: string | null;
+  is_discount?: boolean | null;
   is_taxable?: boolean | null;
 };
 
@@ -96,7 +99,7 @@ function mergeErrorMetadata(
 }
 
 export class AccountingExportValidation {
-  static async ensureMappingsForBatch(batchId: string, adapters?: AccountingExportAdapterLookup): Promise<void> {
+  static async ensureMappingsForBatch(batchId: string, adapters?: AccountingExportAdapterLookup, options: { preserveBatchStatus?: boolean } = {}): Promise<void> {
     const repo = await AccountingExportRepository.create();
     const batch = await repo.getBatch(batchId);
     if (!batch) {
@@ -108,7 +111,7 @@ export class AccountingExportValidation {
       throw new Error(`Export batch ${batchId} is missing tenant context`);
     }
 
-    const lines = await repo.listLines(batchId);
+    let lines = await repo.listLines(batchId);
     const { knex } = await createTenantKnex();
     const db = tenantDb(knex, tenant);
     const validationTimestamp = new Date().toISOString();
@@ -154,7 +157,9 @@ export class AccountingExportValidation {
 
       const errors = await repo.listErrors(batchId);
       const openErrors = errors.filter((item) => item.resolution_state === 'open');
-      await repo.updateBatchStatus(batchId, { status: openErrors.length === 0 ? 'ready' : 'needs_attention' });
+      if (!options.preserveBatchStatus) {
+        await repo.updateBatchStatus(batchId, { status: openErrors.length === 0 ? 'ready' : 'needs_attention' });
+      }
       return;
     }
 
@@ -186,10 +191,12 @@ export class AccountingExportValidation {
     const charges =
       chargeIds.size > 0
         ? await db.table<ChargeProjection>('invoice_charges')
-            .select('item_id', 'invoice_id', 'service_id', 'tax_region', 'net_amount', 'is_taxable')
+            .select('item_id', 'invoice_id', 'service_id', 'tax_region', 'net_amount', 'description', 'is_discount', 'is_manual', 'tax_amount', 'is_taxable')
             .whereIn('item_id', Array.from(chargeIds))
         : [];
-    const chargesById = new Map(charges.map((charge) => [charge.item_id, charge]));
+    const expanded = await expandAccountingExportCharges(knex, tenant, new Map(charges.map((charge) => [charge.item_id, charge])), lines);
+    const chargesById = expanded.charges;
+    lines = expanded.lines;
     const chargeDetailRows =
       chargeIds.size > 0
         ? await db.table<ChargeDetailProjection>('invoice_charge_details')
@@ -326,7 +333,7 @@ export class AccountingExportValidation {
     };
 
     const serviceIds = new Set<string>();
-    for (const charge of charges) {
+    for (const charge of chargesById.values()) {
       if (charge.service_id) {
         serviceIds.add(charge.service_id);
       }
@@ -365,18 +372,42 @@ export class AccountingExportValidation {
         });
         continue;
       }
-      if (!charge?.service_id) {
+      if (charge?.is_discount) {
+        const mapping = await resolver.resolveDiscountMapping({
+          tenantId: tenant,
+          adapterType,
+          targetRealm: batch.target_realm
+        });
+        if (!mapping) {
+          await repo.addError({
+            batch_id: batchId,
+            line_id: line.line_id,
+            code: 'missing_discount_mapping',
+            message: 'Configure a discount mapping for this accounting integration before exporting discounts or credits.',
+            metadata: mergeErrorMetadata(line, {
+              invoice_charge_id: charge.item_id,
+              description: charge.description ?? null,
+              invoice_id: charge.invoice_id ?? line.document_id ?? null
+            })
+          });
+        }
+      }
+      if (!charge?.service_id && !charge?.is_discount) {
         await repo.addError({
           batch_id: batchId,
           line_id: line.line_id,
           code: 'missing_service',
-          message: `Charge ${line.document_line_id} missing associated service`,
-          metadata: mergeErrorMetadata(line)
+          message: `Assign a service to '${charge?.description ?? 'charge'}' on invoice ${line.document_id ?? 'unknown'} (line ${line.line_id}).`,
+          metadata: mergeErrorMetadata(line, {
+            invoice_charge_id: line.document_line_id,
+            invoice_id: line.document_id ?? null,
+            description: charge?.description ?? null
+          })
         });
         continue;
       }
 
-      const canonicalPeriods = canonicalPeriodsByChargeId.get(line.document_line_id) ?? [];
+      const canonicalPeriods = canonicalPeriodsByChargeId.get(lineById.get(line.line_id)?.document_line_id ?? line.document_line_id) ?? [];
       const exportSource = normalizeExportLineServicePeriodSource(line.payload);
       const exportSummaryStart = normalizeIsoString(line.service_period_start);
       const exportSummaryEnd = normalizeIsoString(line.service_period_end);
@@ -447,8 +478,8 @@ export class AccountingExportValidation {
         }
       }
 
-      const serviceMappingKey = `${charge.service_id}:${batch.target_realm ?? 'default'}`;
-      if (!checkedServiceMappings.has(serviceMappingKey)) {
+      const serviceMappingKey = charge.service_id ? `${charge.service_id}:${batch.target_realm ?? 'default'}` : null;
+      if (serviceMappingKey && charge.service_id && !charge.is_discount && !checkedServiceMappings.has(serviceMappingKey)) {
         const mapping = await resolver.resolveServiceMapping({
           tenantId: tenant,
           adapterType,
@@ -479,7 +510,7 @@ export class AccountingExportValidation {
       const invoiceDelegatesTax =
         invoiceTaxSource === 'external' || invoiceTaxSource === 'pending_external';
 
-      if (isQuickBooks && charge.tax_region && !invoiceDelegatesTax) {
+      if ((isQuickBooks || adapterType === 'quickbooks_desktop') && charge.tax_region && !invoiceDelegatesTax) {
         const cacheKey = `${charge.tax_region}:${batch.target_realm ?? 'default'}`;
         if (!checkedTaxRegions.has(cacheKey)) {
           const taxMapping = await resolver.resolveTaxCodeMapping({
@@ -601,7 +632,9 @@ export class AccountingExportValidation {
     const errors = await repo.listErrors(batchId);
     const openErrors = errors.filter((item) => item.resolution_state === 'open');
     const cleanedStatus = openErrors.length === 0 ? 'ready' : 'needs_attention';
-    await repo.updateBatchStatus(batchId, { status: cleanedStatus });
+    if (!options.preserveBatchStatus) {
+      await repo.updateBatchStatus(batchId, { status: cleanedStatus });
+    }
   }
 }
 

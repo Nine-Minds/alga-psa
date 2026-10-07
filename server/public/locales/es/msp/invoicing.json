@@ -332,7 +332,8 @@
       "title": "Líneas de pedido automatizadas",
       "service": "Servicio",
       "total": "Total",
-      "unknownService": "Servicio desconocido"
+      "unknownService": "Servicio desconocido",
+      "period": "Período"
     },
     "lineItems": {
       "manual": "Elementos de línea manuales",
@@ -345,7 +346,8 @@
       "saveChanges": "Guardar cambios",
       "processing": "Procesando...",
       "generateSalesOrderInvoice": "Generar factura de la orden de venta",
-      "clearSalesOrderSource": "Quitar la orden de venta de origen"
+      "clearSalesOrderSource": "Quitar la orden de venta de origen",
+      "addPartialPeriodCharge": "Agregar cargo de período parcial"
     },
     "labels": {
       "total": "Total",
@@ -388,6 +390,8 @@
       "SOURCE_ALREADY_BILLED": "Algunos elementos seleccionados ya no son facturables (ya facturados, no aprobados o eliminados). Actualiza e inténtalo de nuevo.",
       "SOURCE_NOT_ELIGIBLE": "Uno de los elementos seleccionados no pertenece a este ticket o ya no es elegible. Actualiza e inténtalo de nuevo.",
       "SOURCE_CURRENCY_MISMATCH": "Algunos productos seleccionados tienen un precio en una moneda distinta a la de facturación de este cliente, por lo que no se pueden añadir. Factúralos por separado en su propia moneda.",
+      "CLIENT_CONTRACT_NOT_FOUND": "El contrato seleccionado no pertenece al cliente de esta factura.",
+      "SERVICE_REQUIRED": "Asigne un servicio a este cargo antes de guardar.",
       "RECURRING_PRICING_STALE": "La vista previa está desactualizada: {{details}}. Vuelva a ejecutar la vista previa para ver los valores actuales y, luego, genere de nuevo.",
       "BILLING_PROFILE_NOT_FOUND": "El perfil de facturación seleccionado no está disponible para este cliente. Actualice la página e inténtelo de nuevo."
     },
@@ -400,6 +404,48 @@
     },
     "salesOrderContext": {
       "summary": "{{quantity}} artículo(s) de {{lineCount}} línea(s) listo(s) para facturar. Este borrador se vinculará a la orden de venta."
+    },
+    "draftAdjustments": {
+      "title": "Ajustes de factura",
+      "description": "Agregue cargos, descuentos o créditos únicos. Los cargos de contrato generados permanecen de solo lectura; corrija el contrato de origen o agregue un ajuste."
+    },
+    "partialPeriod": {
+      "title": "Cargo de período parcial",
+      "help": "Se calcula como unidades × precio unitario del período × días cubiertos / días del período completo. Las entradas se conservan con el concepto para que siga siendo comprensible.",
+      "direction": "Dirección",
+      "increase": "Aumento",
+      "decrease": "Reducción (crédito)",
+      "units": "Unidades",
+      "unitPrice": "Precio unitario",
+      "coveredDays": "Días cubiertos",
+      "fullPeriodDays": "Días del período completo",
+      "description": "Descripción (opcional)",
+      "reason": "Motivo (opcional)",
+      "previewUnavailable": "Introduzca un cálculo válido.",
+      "resolvedAmount": "Importe calculado: {{amount}}",
+      "addCharge": "Agregar cargo",
+      "creditDescription": "Crédito: {{proration}}",
+      "errors": {
+        "units": "Las unidades deben ser mayores que cero.",
+        "unitPrice": "El precio unitario debe ser un número.",
+        "invalid": "Introduzca un período parcial válido.",
+        "source": "Elija un servicio facturado con un período de servicio inequívoco."
+      },
+      "source": "Seleccionar servicio facturado",
+      "effectiveDate": "Fecha de vigencia",
+      "sourceRate": "Tarifa {{rate}}",
+      "permanentChangeNudge": "¿Es un cambio permanente? Regístrelo en el contrato.",
+      "overlapConfirm": "Ya existe un ajuste automático de contrato que se solapa con este período. ¿Añadir de todos modos este ajuste manual separado?",
+      "invoiceDescription": {
+        "increase": "{{description}} — {{units}} {{unitLabel}} adicionales, {{period}} — {{calculation}}",
+        "decrease": "{{description}} — crédito por {{units}} {{unitLabel}} menos, {{period}} — {{calculation}}"
+      },
+      "sourceDescriptionFallback": "Ajuste de servicio"
+    },
+    "exportWarnings": {
+      "discount": "{{adapter}}: configure la asignación de descuentos antes de exportar {{description}}.",
+      "service": "{{adapter}}: asigne un servicio con correspondencia a {{description}} antes de exportar.",
+      "unavailable": "No se pudo comprobar la preparación contable. Revise las asignaciones antes de exportar."
     },
     "hints": {
       "billingProfile": "La factura y sus líneas se facturan a este perfil."
@@ -2483,5 +2529,12 @@
     "saving": "Guardando…",
     "saveCorrection": "Guardar corrección",
     "save": "Guardar"
+  },
+  "draftInvoiceAdjustments": {
+    "blockedTitle": "Ajustes de factura no disponibles",
+    "blocked": {
+      "exported": "Esta factura está sincronizada con un sistema de contabilidad. Anúlela o emita un crédito por separado en lugar de editar sus conceptos.",
+      "exporting": "Se está preparando una exportación contable para esta factura. Espere a que termine antes de cambiarla."
+    }
   }
 }

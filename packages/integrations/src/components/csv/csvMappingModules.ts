@@ -1,3 +1,4 @@
+import { createDiscountMappingModule } from '../accounting-mappings/discountMappingModule';
 import {
   createExternalEntityMapping,
   deleteExternalEntityMapping,
@@ -57,7 +58,11 @@ export function createCsvMappingModules(t?: TFn): AccountingMappingModule[] {
     createCustomerModule(tab('clients', 'Clients')),
     createServiceModule(tab('itemsServices', 'Items / Services')),
     createTaxCodeModule(tab('taxCodes', 'Tax Codes')),
-    createPaymentTermModule(tab('paymentTerms', 'Payment Terms'))
+    createPaymentTermModule(tab('paymentTerms', 'Payment Terms')),
+    createDiscountMappingModule(ADAPTER_TYPE, t),
+    createDiscountMappingModule('quickbooks_desktop', t),
+    createDiscountMappingModule('quickbooks_desktop', t, 'service'),
+    createDiscountMappingModule('quickbooks_desktop', t, 'tax_code')
   ];
 }
 

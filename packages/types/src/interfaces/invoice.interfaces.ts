@@ -59,6 +59,12 @@ export interface IInvoice extends TenantEntity {
   credit_applied: number;
   billing_cycle_id?: string;
   is_manual: boolean;
+  /**
+   * Monotonic token bumped by every manual adjustment save. The editor sends
+   * the revision it loaded; a stale value is rejected instead of overwriting a
+   * newer edit.
+   */
+  draft_adjustment_revision?: number;
   invoice_charges: IInvoiceCharge[];
   /** @deprecated Use invoice_charges instead. */
   invoice_items?: IInvoiceCharge[];
@@ -122,6 +128,9 @@ export interface IInvoiceCharge extends TenantEntity, NetAmountItem {
   service_id?: string;
   service_period_start?: ISO8601String | null;
   service_period_end?: ISO8601String | null;
+  /** Manual adjustment impact window; recurring coverage remains in detail rows. */
+  adjustment_period_start?: ISO8601String | null;
+  adjustment_period_end?: ISO8601String | null;
   billing_timing?: 'arrears' | 'advance' | null;
   /**
    * Canonical recurring detail periods linked to this charge.
@@ -155,6 +164,14 @@ export interface IInvoiceCharge extends TenantEntity, NetAmountItem {
   is_manual: boolean;
   is_taxable?: boolean;
   is_discount?: boolean;
+  /**
+   * True when a manual row's amount was derived from `quantity × unit_price`
+   * (an operator credit entered as a negative-rate charge), rather than an
+   * authored fixed discount whose amount is quantity-independent. The two
+   * shapes share `is_discount`/`discount_type='fixed'`, so the draft edit
+   * recalculation uses this flag to pick the right recompute rule.
+   */
+  is_manual_credit?: boolean;
   discount_type?: DiscountType;
   discount_percentage?: number;
   applies_to_item_id?: string;
@@ -166,7 +183,21 @@ export interface IInvoiceCharge extends TenantEntity, NetAmountItem {
    */
   billing_profile_id?: string | null;
   billing_profile_source?: BillingProfileSource | null;
-  client_contract_id?: string; // Reference to the client contract assignment
+  /** Provenance for automatic discounts/true-ups and manual adjustments. */
+  adjustment_source_kind?: AdjustmentSourceKind | null;
+  /** Stable source id (discount id or contract-change id) for automatic lines. */
+  adjustment_source_id?: string | null;
+  /** Source revision claimed by this settlement; re-validated on draft refresh. */
+  adjustment_source_revision?: number | null;
+  /** Scope an automatic discount resolved against. */
+  adjustment_scope?: AdjustmentScope | null;
+  /** Eligible base used to derive the amount (integer minor units). */
+  adjustment_base_amount?: number | null;
+  /** Human-readable calculation reason for the adjustment line. */
+  adjustment_reason?: string | null;
+  /** Authoring facts for manually entered adjustment lines. */
+  manual_line_metadata?: ManualLineMetadata | null;
+  client_contract_id?: string | null; // Reference to the client contract assignment
   contract_name?: string; // Contract name
   is_bundle_header?: boolean; // Whether this item is a contract group header
   parent_item_id?: string; // Reference to the parent contract group header item
@@ -184,6 +215,46 @@ export interface IInvoiceCharge extends TenantEntity, NetAmountItem {
 }
 
 export type DiscountType = 'percentage' | 'fixed';
+
+/** What produced an invoice adjustment line. */
+export type AdjustmentSourceKind = 'discount' | 'contract_change' | 'manual_adjustment';
+/** Which charges an automatic discount resolves against. */
+export type AdjustmentScope = 'invoice' | 'contract' | 'service' | 'item';
+
+/**
+ * Authoring facts for a manually entered adjustment line, kept separate from
+ * the resolved monetary values so a partial-period line such as
+ * "3 × $100 × 15/30" stays intelligible after it is priced.
+ */
+export interface ManualLineMetadata {
+  /** Partial-period calculator inputs (contracted, not resolved). */
+  partialPeriod?: ManualPartialPeriodMetadata;
+  /** Optional freeform note explaining the adjustment. */
+  reason?: string;
+  /** Source true-up rows operator explicitly chose to overlap. */
+  confirmed_overlap_item_ids?: string[];
+  [key: string]: unknown;
+}
+
+export interface ManualPartialPeriodMetadata {
+    version: 1;
+    source_kind: 'invoice_charge';
+  source_item_id: string;
+  contract_line_id?: string | null;
+    direction: 'increase' | 'decrease';
+    effective_date: string;
+    source_period_start: string;
+    source_period_end: string;
+    /** Unit delta retained at invoice_charges.quantity precision (0.01). */
+    units: number;
+    /** Original source rate in integer currency minor units per unit. */
+    source_unit_price_minor: number;
+    /** Date-derived coverage inputs. */
+    covered_days: number;
+    full_period_days: number;
+    /** Server-validated row amount (minor units), equals rounded quantity × stored rate. */
+    resolved_amount_minor?: number;
+}
 
 /**
  * Interface for adding manual items to an invoice
@@ -653,6 +724,12 @@ export interface InvoiceViewModel {
   credit_applied: number;
   billing_cycle_id?: string;
   is_manual: boolean;
+  /**
+   * Monotonic token bumped by every manual adjustment save. The editor sends
+   * the revision it loaded; a stale value is rejected instead of overwriting a
+   * newer edit.
+   */
+  draft_adjustment_revision?: number;
   /** Financial-document identity, stamped at finalization. */
   invoice_type?: 'standard' | 'credit_note' | 'prepayment' | null;
   is_prepayment?: boolean;

@@ -264,7 +264,8 @@
       "lines": "Vertragslinien",
       "overview": "Überblick",
       "pricing": "Preispläne",
-      "simulator": "Simulieren"
+      "simulator": "Simulieren",
+      "discounts": "Rabatte"
     },
     "validation": {
       "billingFrequencyRequired": "Die Häufigkeit der Abrechnung ist erforderlich.",
@@ -539,7 +540,8 @@
       "name": "Name",
       "rate": "Tarif",
       "services": "Dienste",
-      "type": "Typ"
+      "type": "Typ",
+      "dates": "Daten"
     },
     "configuration": {
       "description": "Einstellungen, die für diese Vertragslinie gelten",
@@ -550,7 +552,15 @@
       "minutesValue": "{{count}} Minuten",
       "roundUpToNearest": "Aufrunden auf (Minuten)",
       "title": "Vertragslinienkonfiguration",
-      "usageInfo": "Nutzungsbasierte Vertragslinien werden pro Service mit Einheitstarifen konfiguriert."
+      "usageInfo": "Nutzungsbasierte Vertragslinien werden pro Service mit Einheitstarifen konfiguriert.",
+      "invoiceText": "Rechnungspositionstext",
+      "invoiceTextPlaceholder": "Wird auf der Rechnung gedruckt; standardmäßig der Zeilenname",
+      "invoiceTextDefault": "Verwendet den Zeilennamen",
+      "startDate": "Startdatum",
+      "endDate": "Enddatum",
+      "inheritsContract": "Vertragsbeginn",
+      "inheritsContractEnd": "Vertragsende",
+      "billedEditExplanation": "Nach einer Abrechnung bleiben Rechnungstext und Liniendaten bearbeitbar. Start- und Enddaten dürfen bereits abgerechnete oder beanspruchte Leistungszeiträume nicht ausschließen; Preise und Mengen werden prospektiv geändert."
     },
     "customRate": "Benutzerdefiniert",
     "description": {
@@ -566,13 +576,14 @@
       "selectAbove": "Wählen Sie oben eine Vertragslinie aus, um zu beginnen."
     },
     "errors": {
-      "cannotEditWithInvoices": "Vertragslinie kann nicht bearbeitet werden: Zu diesem Vertrag gibt es zugeordnete Rechnungen. Vertragslinien können nicht mehr bearbeitet werden, sobald Rechnungen erstellt wurden.",
       "failedToCheckEditable": "Prüfung, ob der Vertrag bearbeitet werden kann, fehlgeschlagen",
       "failedToLoad": "Vertragslinien konnten nicht geladen werden",
       "failedToRefresh": "Vertragslinien konnten nicht aktualisiert werden",
       "failedToRemove": "Vertragslinie konnte nicht entfernt werden",
       "failedToUpdate": "Vertragslinie konnte nicht aktualisiert werden",
-      "failedToResetRate": "Zurücksetzen des Positionspreises fehlgeschlagen"
+      "failedToResetRate": "Zurücksetzen des Positionspreises fehlgeschlagen",
+      "protectedStartDate": "Das Startdatum muss am oder vor dem {{boundary}} liegen, damit geschützte Leistungszeiträume enthalten bleiben.",
+      "protectedEndDate": "Das Enddatum muss am oder nach dem {{boundary}} liegen, damit geschützte Leistungszeiträume enthalten bleiben."
     },
     "loading": {
       "contractLines": "Vertragslinien werden geladen",
@@ -694,7 +705,10 @@
     },
     "fields": {
       "billingTimingQuestion": "Wann soll diese Linie abgerechnet werden?",
-      "rate": "Tarif"
+      "rate": "Tarif",
+      "invoiceText": "Rechnungspositionstext",
+      "invoiceTextPlaceholder": "Wird auf der Rechnung gedruckt; standardmäßig der Zeilenname",
+      "invoiceTextHelp": "Dieser Text wird wörtlich auf der wiederkehrenden Rechnungsposition gedruckt."
     },
     "sections": {
       "billingTiming": "Abrechnungszeitpunkt",
@@ -887,7 +901,12 @@
     "fixedServicesPricingExplanation": "Paketverteilungen teilen sich den Grundtarif der Vertragslinie. Wiederkehrende Plätze rechnen in jeder Periode die vereinbarte Menge × Einheitstarif ohne Verbrauchsdatensätze ab.",
     "recurringQuantity": "Wiederkehrende Menge",
     "allocationQuantity": "Verteilungsmenge",
-    "bundleBaseRateHelp": "Wiederkehrende Gebühr für Services mit Paketpreis. Wiederkehrende Plätze werden separat mit Menge × Einheitstarif abgerechnet."
+    "bundleBaseRateHelp": "Wiederkehrende Gebühr für Services mit Paketpreis. Wiederkehrende Plätze werden separat mit Menge × Einheitstarif abgerechnet.",
+    "invoiceTextLabel": "Rechnungspositionstext",
+    "invoiceTextPlaceholder": "Wird auf der Rechnung gedruckt; standardmäßig der Zeilenname",
+    "invoiceTextHelp": "Dieser Text wird wörtlich auf der wiederkehrenden Rechnungsposition gedruckt.",
+    "startDateLabel": "Startdatum der Zeile",
+    "endDateLabel": "Enddatum der Zeile"
   },
   "pricingSchedules": {
     "list": {
@@ -1303,6 +1322,21 @@
       "hypothetical": "Hypothetisches Kundenprofil",
       "open": "Simulieren",
       "title": "Vorlagensimulation"
+    },
+    "discounts": {
+      "title": "Standardvertragsrabatte",
+      "help": "Jeder Kundenvertrag erhält eine unabhängig bearbeitbare Kopie. Vertragsweite Rabatte gelten für alle berechtigten Positionen.",
+      "invalid": "Name, positiven Wert und Startdatum eingeben.",
+      "remove": "Entfernen",
+      "name": "Rabattname",
+      "percentage": "Prozentsatz",
+      "fixed": "Festbetrag",
+      "value": "Wert",
+      "startDate": "Beginn",
+      "endDate": "Ende (optional)",
+      "add": "Standardrabatt hinzufügen",
+      "chooseLine": "Vorlagenposition auswählen",
+      "chooseService": "Dienst auswählen"
     }
   },
   "quickStart": {
@@ -2571,7 +2605,8 @@
       "missingClient": "Dem Vertragsentwurf fehlt die Kundenzuordnung",
       "invalidStartDate": "Der Vertragsentwurf hat ein ungültiges Startdatum",
       "recordInvalid": "Einer der ausgewählten Datensätze des Vertragsassistenten ist nicht mehr gültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
-      "duplicate": "Ein passender Datensatz des Vertragsassistenten existiert bereits."
+      "duplicate": "Ein passender Datensatz des Vertragsassistenten existiert bereits.",
+      "standingTerms": "Dieser Entwurf enthält dauerhafte Rabattbedingungen. Bearbeiten Sie die Registerkarten Positionen und Rabatte, um diese Bedingungen beizubehalten."
     },
     "pricingSchedule": {
       "endAfterEffective": "Das Enddatum muss nach dem Gültigkeitsdatum liegen",
@@ -2596,6 +2631,78 @@
       "activatedContractIdRequired": "Die ID des aktivierten Verlängerungsvertrags ist erforderlich.",
       "contractNotActive": "Der aktivierte Verlängerungsvertrag ist nicht mehr aktiv. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
       "manualRetryDueOnly": "Ein manueller Wiederholungsversuch ist nur für fällige Verlängerungszyklen möglich."
+    }
+  },
+  "contractDiscounts": {
+    "title": "Rabatte",
+    "description": "Jeder Kundenvertrag besitzt eine eigene bearbeitbare Kopie. Vertragsweite Rabatte gelten für die berechtigten Gebühren seiner abgerechneten Vertragszeilen.",
+    "loading": "Rabatte werden geladen…",
+    "empty": "Für diesen Vertrag sind noch keine Rabatte konfiguriert.",
+    "actions": {
+      "attach": "Anhängen",
+      "pickShared": "Vorhandenen Rabatt anhängen",
+      "detach": "Von diesem Vertrag lösen",
+      "toggleActive": "Rabattstatus ändern",
+      "add": "Rabatt hinzufügen",
+      "cancel": "Abbrechen",
+      "save": "Speichern",
+      "saving": "Speichern…"
+    },
+    "attachment": {
+      "shared": "Vertragszuordnung",
+      "line": "Zeilenverknüpfung"
+    },
+    "sharedEditNotice": "Änderungen wirken sich nur auf diesen Kundenvertrag aus. Änderungen an der Vorlage ändern keine bestehenden Vertragskopien.",
+    "fields": {
+      "service": "Dienstleistung",
+      "name": "Name",
+      "namePlaceholder": "z. B. Treue 10 %",
+      "type": "Typ",
+      "percentValue": "Prozent (0–100)",
+      "fixedValue": "Betrag",
+      "startDate": "Startdatum",
+      "endDate": "Enddatum",
+      "line": "Vertragszeile",
+      "linePlaceholder": "Vertragszeile auswählen",
+      "scope": "Geltungsbereich",
+      "priority": "Priorität",
+      "priorityPlaceholder": "Optional",
+      "servicePlaceholder": "Service auswählen",
+      "active": "Aktiv"
+    },
+    "dialog": {
+      "contractAttachmentLineScopeLocked": "Dieser Rabatt ist diesem Kundenvertrag zugeordnet. Um ihn auf eine Position zu beschränken, lösen Sie ihn und erstellen Sie einen positionsbezogenen Rabatt.",
+      "createTitle": "Rabatt hinzufügen",
+      "editTitle": "Rabatt bearbeiten"
+    },
+    "columns": {
+      "name": "Name",
+      "value": "Wert",
+      "scope": "Geltungsbereich",
+      "line": "Vertragszeile",
+      "dates": "Daten",
+      "status": "Status"
+    },
+    "status": {
+      "active": "Aktiv",
+      "inactive": "Inaktiv"
+    },
+    "scopes": {
+      "invoice": "Alle anspruchsberechtigten Positionen",
+      "contract": "Dieser Vertrag",
+      "service": "Ein Service",
+      "line": "Eine Vertragsposition"
+    },
+    "values": {
+      "unnamedLine": "Unbenannte Zeile"
+    },
+    "types": {
+      "percentage": "Prozentsatz",
+      "fixed": "Festbetrag"
+    },
+    "errors": {
+      "loadFailed": "Rabatte konnten nicht geladen werden.",
+      "saveFailed": "Der Rabatt konnte nicht gespeichert werden."
     }
   }
 }

@@ -92,6 +92,19 @@
           "taxCodes": "Belastingcodes",
           "paymentTerms": "Betalingsvoorwaarden"
         }
+      },
+      "adjustmentMappings": {
+        "desktopServices": "Desktop-dienstrekeningen",
+        "desktopDiscounts": "Desktop-kortingen",
+        "discounts": "Kortingen en credits",
+        "qboAccount": "QuickBooks-kortingsrekening-ID",
+        "xeroAccount": "Xero-rekeningcode",
+        "desktopAccount": "Naam Desktop-opbrengstrekening",
+        "csvItem": "QuickBooks-kortingsartikelnaam",
+        "description": "Koppel factuurkortingen en credits vóór export. De koppeling hoort bij dit boekhoudbedrijf.",
+        "add": "Koppeling toevoegen",
+        "remove": "Koppeling verwijderen",
+        "removeConfirm": "Deze boekhoudkoppeling verwijderen?"
       }
     },
     "calendar": {

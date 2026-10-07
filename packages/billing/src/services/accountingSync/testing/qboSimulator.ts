@@ -21,7 +21,9 @@
  * - Invoice/CreditMemo totals are computed by "QBO" from the lines — the
  *   caller's header TotalAmt is ignored, like QBO itself does. An optional
  *   taxAdjustmentCents models Automated Sales Tax changing the total at
- *   create time.
+ *   create time. DiscountLineDetail lines carry a positive Amount that QBO
+ *   subtracts (Intuit's Invoice reference sample), and tax is computed before
+ *   the discount, matching ApplyTaxAfterDiscount's documented default (false).
  * - Automated Sales Tax: with the automatedSalesTax option, invoices get a
  *   TxnTaxDetail computed from per-line TaxCodeRefs against seeded TaxCode and
  *   TaxRate entities. NON exempts a line; TAX and an *absent* code are both
@@ -267,7 +269,14 @@ export class QboSimulator {
   private sumSalesLines(lines: any[]): number {
     return (Array.isArray(lines) ? lines : [])
       .filter((line) => line?.DetailType !== 'SubTotalLineDetail')
-      .reduce((sum, line) => sum + toCents(line?.Amount), 0);
+      // QBO discount lines carry a positive magnitude that reduces the total.
+      .reduce(
+        (sum, line) =>
+          line?.DetailType === 'DiscountLineDetail'
+            ? sum - Math.abs(toCents(line?.Amount))
+            : sum + toCents(line?.Amount),
+        0
+      );
   }
 
   /**

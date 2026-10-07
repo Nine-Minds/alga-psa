@@ -35,6 +35,7 @@ import { Label } from "@alga-psa/ui/components/Label";
 import { Input } from "@alga-psa/ui/components/Input";
 import { TextArea } from "@alga-psa/ui/components/TextArea";
 import CustomSelect from "@alga-psa/ui/components/CustomSelect";
+import TemplateDefaultDiscountsPanel from "./TemplateDefaultDiscountsPanel";
 import CurrencyPicker from "@alga-psa/ui/components/CurrencyPicker";
 
 import { IContract, IContractAssignmentSummary } from "@alga-psa/types";
@@ -1509,6 +1510,13 @@ const ContractTemplateDetail: React.FC = () => {
         </section>
       </div>
 
+      <TemplateDefaultDiscountsPanel
+        templateId={contract.contract_id}
+        definitions={templateMetadata.default_discounts ?? []}
+        lines={templateLines}
+        onSaved={() => void loadTemplate(contract.contract_id)}
+      />
+
       <Card className="mt-4">
         <CardHeader>
           <CardTitle className="text-base font-semibold text-[rgb(var(--color-text-800))]">
@@ -2064,6 +2072,7 @@ const TemplateServicesManager: React.FC<TemplateServicesManagerProps> = ({
     contractLineId: string,
     rateCents: number,
     billingTiming: "arrears" | "advance",
+    invoiceLineDescription: string | null,
   ) => {
     try {
       const result = await updateContractLineRate(
@@ -2071,6 +2080,7 @@ const TemplateServicesManager: React.FC<TemplateServicesManagerProps> = ({
         contractLineId,
         rateCents,
         billingTiming,
+        invoiceLineDescription,
       );
       if (isReturnedActionError(result)) {
         throw new Error(getErrorMessage(result));
@@ -2167,6 +2177,7 @@ const TemplateServicesManager: React.FC<TemplateServicesManagerProps> = ({
             contract_line_name: editingLine.contract_line_name,
             rate: editingLine.rate ?? undefined,
             billing_timing: editingLine.billing_timing,
+            invoice_line_description: editingLine.invoice_line_description ?? null,
           }}
           onClose={() => setEditingLine(null)}
           onSave={handleSaveRate}
@@ -2176,5 +2187,6 @@ const TemplateServicesManager: React.FC<TemplateServicesManagerProps> = ({
     </Card>
   );
 };
+
 
 export default ContractTemplateDetail;

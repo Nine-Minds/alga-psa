@@ -350,7 +350,8 @@
       "title": "Automatyczne elementy zamówienia",
       "service": "Usługa",
       "total": "Razem",
-      "unknownService": "Nieznana usługa"
+      "unknownService": "Nieznana usługa",
+      "period": "Okres"
     },
     "lineItems": {
       "manual": "Ręczne elementy zamówienia",
@@ -363,7 +364,8 @@
       "saveChanges": "Zapisz zmiany",
       "processing": "Przetwarzanie...",
       "generateSalesOrderInvoice": "Utwórz fakturę z zamówienia sprzedaży",
-      "clearSalesOrderSource": "Wyczyść źródłowe zamówienie sprzedaży"
+      "clearSalesOrderSource": "Wyczyść źródłowe zamówienie sprzedaży",
+      "addPartialPeriodCharge": "Dodaj opłatę za częściowy okres"
     },
     "labels": {
       "total": "Razem",
@@ -406,6 +408,8 @@
       "SOURCE_ALREADY_BILLED": "Niektóre wybrane pozycje nie są już rozliczalne (już rozliczone, niezatwierdzone lub usunięte). Odśwież i spróbuj ponownie.",
       "SOURCE_NOT_ELIGIBLE": "Wybrana pozycja nie należy do tego zgłoszenia lub nie jest już kwalifikowalna. Odśwież i spróbuj ponownie.",
       "SOURCE_CURRENCY_MISMATCH": "Niektóre wybrane produkty są wycenione w innej walucie niż waluta fakturowania tego klienta, więc nie można ich dodać. Rozlicz je osobno w ich własnej walucie.",
+      "CLIENT_CONTRACT_NOT_FOUND": "Wybrana umowa nie należy do klienta tej faktury.",
+      "SERVICE_REQUIRED": "Przypisz usługę do tej pozycji przed zapisaniem.",
       "RECURRING_PRICING_STALE": "Podgląd jest nieaktualny: {{details}}. Uruchom podgląd ponownie, aby zobaczyć bieżące wartości, a następnie wygeneruj ponownie.",
       "BILLING_PROFILE_NOT_FOUND": "Wybrany profil rozliczeniowy nie jest dostępny dla tego klienta. Odśwież stronę i spróbuj ponownie."
     },
@@ -418,6 +422,48 @@
     },
     "salesOrderContext": {
       "summary": "Z {{lineCount}} pozycji zamówienia można zafakturować {{quantity}} elementów. Ta wersja robocza zostanie powiązana z zamówieniem sprzedaży."
+    },
+    "draftAdjustments": {
+      "title": "Korekty faktury",
+      "description": "Dodaj jednorazowe opłaty, rabaty lub kredyty. Wygenerowane opłaty umowne pozostają tylko do odczytu; popraw umowę źródłową lub dodaj korektę."
+    },
+    "partialPeriod": {
+      "title": "Opłata za częściowy okres",
+      "help": "Obliczane jako jednostki × cena jednostkowa okresu × dni objęte / dni pełnego okresu. Wartości pozostają przy pozycji, aby pozostała zrozumiała.",
+      "direction": "Kierunek",
+      "increase": "Zwiększenie",
+      "decrease": "Zmniejszenie (kredyt)",
+      "units": "Jednostki",
+      "unitPrice": "Cena jednostkowa",
+      "coveredDays": "Dni objęte",
+      "fullPeriodDays": "Dni pełnego okresu",
+      "description": "Opis (opcjonalnie)",
+      "reason": "Powód (opcjonalnie)",
+      "previewUnavailable": "Wprowadź prawidłowe obliczenie.",
+      "resolvedAmount": "Obliczona kwota: {{amount}}",
+      "addCharge": "Dodaj opłatę",
+      "creditDescription": "Kredyt: {{proration}}",
+      "errors": {
+        "units": "Jednostki muszą być większe od zera.",
+        "unitPrice": "Cena jednostkowa musi być liczbą.",
+        "invalid": "Wprowadź prawidłowy częściowy okres.",
+        "source": "Wybierz zafakturowaną usługę z jednoznacznym okresem świadczenia."
+      },
+      "source": "Wybierz zafakturowaną usługę",
+      "effectiveDate": "Data obowiązywania",
+      "sourceRate": "Stawka {{rate}}",
+      "permanentChangeNudge": "Czy to trwała zmiana? Zapisz ją zamiast tego w umowie.",
+      "overlapConfirm": "Automatyczna korekta umowy nakłada się już na ten okres. Czy mimo to dodać tę oddzielną korektę ręczną?",
+      "invoiceDescription": {
+        "increase": "{{description}} — dodatkowe {{units}} {{unitLabel}}, {{period}} — {{calculation}}",
+        "decrease": "{{description}} — korekta za {{units}} mniej {{unitLabel}}, {{period}} — {{calculation}}"
+      },
+      "sourceDescriptionFallback": "Korekta usługi"
+    },
+    "exportWarnings": {
+      "discount": "{{adapter}}: skonfiguruj przypisanie rabatów przed eksportem {{description}}.",
+      "service": "{{adapter}}: przypisz usługę z mapowaniem do {{description}} przed eksportem.",
+      "unavailable": "Nie można sprawdzić gotowości księgowej. Sprawdź przypisania przed eksportem."
     },
     "hints": {
       "billingProfile": "Faktura i jej pozycje są rozliczane w tym profilu."
@@ -2533,5 +2579,12 @@
     "saving": "Zapisywanie…",
     "saveCorrection": "Zapisz korektę",
     "save": "Zapisz"
+  },
+  "draftInvoiceAdjustments": {
+    "blockedTitle": "Korekty faktury niedostępne",
+    "blocked": {
+      "exported": "Ta faktura jest zsynchronizowana z systemem księgowym. Unieważnij ją lub wystaw osobny kredyt, zamiast edytować jej pozycje.",
+      "exporting": "Trwa przygotowywanie eksportu księgowego tej faktury. Poczekaj na jego zakończenie przed zmianą faktury."
+    }
   }
 }

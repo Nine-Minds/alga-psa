@@ -1,0 +1,87 @@
+Oz
+
+INVOICE
+Invoice #:
+
+TAKEOVER-POSTED-20261007
+
+Issue Date:
+
+09/23/2026
+
+Due Date:
+
+10/23/2026
+
+PO #:
+
+From
+
+Bill To
+
+Oz
+
+SMOKE Takeover Recurring Products
+
+Description
+
+-
+
+Qty
+
+Rate
+
+Amount
+
+Product: SMOKE Prod Locations
+
+2
+
+$200.00
+
+$400.00
+
+Product: SMOKE Prod Users
+
+20
+
+$100.00
+
+$2,000.00
+
+Product: SMOKE Prod Endpoints
+
+30
+
+$50.00
+
+$1,500.00
+
+Product: SMOKE Prod Users — credit for 3
+fewer users, Aug 16–31, 2026 — 3 × $100.00 ×
+16/31
+
+3
+
+-$51.61
+
+-$154.83
+
+Product: SMOKE Prod Users — additional 3
+users, Aug 16–31, 2026 — 3 × $100.00 × 16/31
+
+3
+
+$51.61
+
+$154.83
+
+Subtotal
+Tax
+Total
+
+$3,900.00
+$0.00
+$3,900.00
+
+

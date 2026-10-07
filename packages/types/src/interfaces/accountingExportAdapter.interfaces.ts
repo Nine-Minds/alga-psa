@@ -1,3 +1,4 @@
+import type { Knex } from 'knex';
 import type { AccountingExportBatch, AccountingExportLine } from './accountingExport.interfaces';
 
 export interface AccountingExportAdapterCapabilities {
@@ -215,6 +216,10 @@ export interface AccountingExportDeliveryResult {
 /** External invoice charge with tax data from accounting system */
 export interface ExternalInvoiceChargeTax {
   lineId: string;
+  /** Original invoice charge when this provider line represents a fixed-plan allocation. */
+  parentChargeId?: string;
+  /** Persisted invoice_charge_details.item_detail_id represented by this provider line. */
+  allocationDetailId?: string;
   externalLineId?: string;
   taxAmount: number;
   taxCode?: string;
@@ -262,7 +267,8 @@ export interface AccountingExportAdapter {
   capabilities(): AccountingExportAdapterCapabilities;
   transform(context: AccountingExportAdapterContext): Promise<AccountingExportTransformResult>;
   deliver(transformResult: AccountingExportTransformResult, context: AccountingExportAdapterContext): Promise<AccountingExportDeliveryResult>;
-  postProcess?(deliveryResult: AccountingExportDeliveryResult, context: AccountingExportAdapterContext): Promise<void>;
+  /** File adapters must use the supplied transaction for mappings so files and edit guards publish atomically. */
+  postProcess?(deliveryResult: AccountingExportDeliveryResult, context: AccountingExportAdapterContext, transaction?: Knex): Promise<void>;
 
   /**
    * Fetch invoice data including tax amounts from external accounting system.

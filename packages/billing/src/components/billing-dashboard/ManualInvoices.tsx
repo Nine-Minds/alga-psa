@@ -1,6 +1,8 @@
 'use client'
 
-import React, { useState, useEffect, useMemo } from 'react';
+import { getInvoiceAdjustmentExportWarnings } from '../../actions/invoiceExportWarnings';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { Temporal } from '@js-temporal/polyfill';
 import {
   generateManualInvoice,
   getClientBillingEmailStatus,
@@ -11,6 +13,8 @@ import {
   type InvoiceManualItemsUpdateActionResult,
 } from '@alga-psa/billing/actions/invoiceModification';
 import { getInvoiceLineItems } from '@alga-psa/billing/actions/invoiceQueries';
+import { getActiveClientLocationsForBilling } from '@alga-psa/billing/actions/billingClientLocationActions';
+import { getTaxRates } from '@alga-psa/billing/actions/taxRateActions';
 import type { ManualInvoiceUpdate } from '@alga-psa/billing/actions/invoiceActions'; // Import the specific type
 import type { ManualInvoiceItem as ManualInvoiceItemForAction } from '@alga-psa/billing/actions/manualInvoiceActions'; // Import and alias
 import type {
@@ -19,10 +23,13 @@ import type {
 import { translateManualInvoiceFailure } from './manualInvoiceErrorTranslation';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
+import { Input } from '@alga-psa/ui/components/Input';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import { dateFromString, dateToString } from '@alga-psa/ui/lib/dateInput';
 import { Card } from '@alga-psa/ui/components/Card';
-import { LineItem, ServiceOption, EditableItem as LineItemEditableItem } from './LineItem'; // Import EditableItem type from LineItem
+import { LineItem, ServiceOption, EditableItem as LineItemEditableItem } from './LineItem';
+import { resolveInitialManualTaxRateId } from './manualInvoiceTaxResolution';
+import { calculateManualInvoiceEditorTotal } from './manualInvoiceTotals';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import SearchableSelect from '@alga-psa/ui/components/SearchableSelect';
@@ -31,9 +38,11 @@ import { getClientBillingProfilesForBilling } from '@alga-psa/billing/actions/bi
 import type { IClient } from '@alga-psa/types';
 import { ErrorBoundary } from 'react-error-boundary';
 import type { IService } from '@alga-psa/types';
-import { InvoiceViewModel, DiscountType, IInvoiceCharge } from '@alga-psa/types';
+import { InvoiceViewModel, DiscountType, IInvoiceCharge, type ManualLineMetadata } from '@alga-psa/types';
+import { hasOverlappingContractChangeAdjustment, resolveSourceDerivedPartialPeriod } from '../../lib/billing/compute/contractInvoiceAdjustments';
+import { buildPartialPeriodInvoiceDescription } from '../../lib/billing/partialPeriodInvoiceDescription';
 import type { JSX } from 'react';
-import { v4 as uuidv4 } from 'uuid';
+import { v4 as uuidv4, v5 as uuidv5 } from 'uuid';
 import { PlusIcon, MinusCircleIcon } from 'lucide-react';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { useQuickAddClient } from '@alga-psa/ui/context';
@@ -54,6 +63,16 @@ interface SelectOption {
   label: string;
 }
 
+/** The subset of a tenant tax rate the per-line tax treatment needs. */
+interface TaxRateChoice {
+  tax_rate_id: string;
+  region_code: string;
+  tax_percentage: number;
+  name?: string | null;
+  description?: string | null;
+  is_active?: boolean;
+}
+
 interface ManualInvoicesProps {
   clients: IClient[];
   services: IService[];
@@ -61,6 +80,15 @@ interface ManualInvoicesProps {
   invoice?: InvoiceViewModel;
   invoiceableSalesOrders?: InvoiceableSalesOrderForBilling[];
   sourceSalesOrderId?: string | null;
+  /**
+   * `standard` keeps the manual-invoice generator. `draftAdjustments` renders
+   * the same editor for an existing contract draft: invoice metadata is owned
+   * by the details card, so it is hidden here and the generated rows are shown
+   * read-only above the operator's manual additions.
+   */
+  variant?: 'standard' | 'draftAdjustments';
+  /** Called after a successful save so the host can refresh authoritative data. */
+  onSaved?: () => void | Promise<void>;
 }
 
 const isLegacyManualItemsUpdateError = (
@@ -80,14 +108,58 @@ const isManualInvoiceFailure = (result: unknown): result is ManualInvoiceFailure
 
 // This is the primary state type for manual items within this component
 // Reverted: Keep is_taxable, remove tax_rate_id
-interface EditableInvoiceItem extends Omit<IInvoiceCharge, 'tenant' | 'created_at' | 'updated_at' | 'created_by' | 'updated_by' | 'tax_region' | 'tax_rate' | 'tax_amount' | 'net_amount' | 'total_price' | 'unit_price'> {
+interface EditableInvoiceItem extends Omit<IInvoiceCharge, 'tenant' | 'created_at' | 'updated_at' | 'created_by' | 'updated_by' | 'tax_rate' | 'tax_amount' | 'net_amount' | 'total_price' | 'unit_price'> {
   rate: number; // Represents unit_price for editing (in cents)
-  // tax_rate_id?: string | null; // Removed
+  /** Chosen tax treatment for one-time lines; null/empty means non-taxable. */
+  tax_rate_id?: string | null;
   is_taxable?: boolean; // Add is_taxable back to the interface
   isExisting?: boolean;
   isRemoved?: boolean;
   is_bundle_header?: boolean;
+  adjustment_period_start?: string | null;
+  adjustment_period_end?: string | null;
+  /** Partial-period inputs and reason for one-time adjustment lines. */
+  manual_line_metadata?: ManualLineMetadata | null;
 }
+
+const singleCanonicalPeriod = (item: IInvoiceCharge): { start: string; end: string } | null => {
+  const dateOnly = (value: unknown) => value instanceof Date
+    ? value.toISOString().slice(0, 10)
+    : String(value).slice(0, 10);
+  const periods = (item.recurring_detail_periods ?? [])
+    .filter((period) => period.service_period_start && period.service_period_end)
+    .map((period) => `${dateOnly(period.service_period_start)}:${dateOnly(period.service_period_end)}`);
+  const unique = [...new Set(periods)];
+  if (unique.length !== 1) return null;
+  const [start, inclusiveEnd] = unique[0].split(':');
+  if (!start || !inclusiveEnd) return null;
+  return { start, end: Temporal.PlainDate.from(inclusiveEnd).add({ days: 1 }).toString() };
+};
+
+// An untouched default row (no description, amount or adjustment metadata,
+// with only its default service selected) is a placeholder, not a financial line. Saving it would persist a
+// meaningless zero charge on the invoice.
+const isBlankManualItem = (item: EditableInvoiceItem, defaultServiceId?: string): boolean =>
+  !item.isExisting
+  && !item.isRemoved
+  && !item.is_discount
+  && (!item.service_id || item.service_id === defaultServiceId)
+  && !item.manual_line_metadata
+  && !(item.description ?? '').trim()
+  && (item.rate ?? 0) === 0;
+
+/** Merge editable fields from a LineItem draft while keeping row identity and
+ * lifecycle under the parent editor's ownership. */
+const mergeLineItemDraft = (
+  item: EditableInvoiceItem,
+  draft: LineItemEditableItem,
+): EditableInvoiceItem => ({
+  ...item,
+  ...draft,
+  item_id: item.item_id,
+  isExisting: item.isExisting,
+  isRemoved: item.isRemoved,
+});
 
 // Base structure for a default item, ensuring required fields for EditableInvoiceItem are present
 const baseDefaultItem: Omit<EditableInvoiceItem, 'invoice_id'> = {
@@ -98,10 +170,11 @@ const baseDefaultItem: Omit<EditableInvoiceItem, 'invoice_id'> = {
   rate: 0, // Represents unit_price in cents
   is_discount: false,
   is_manual: true,
+  is_manual_credit: false,
   isExisting: false,
   isRemoved: false,
   is_taxable: false, // Default to non-taxable until a service with tax_rate_id is selected
-  // tax_rate_id: null, // Removed
+  tax_rate_id: null,
   discount_type: undefined,
   discount_percentage: undefined,
   applies_to_item_id: undefined,
@@ -110,6 +183,9 @@ const baseDefaultItem: Omit<EditableInvoiceItem, 'invoice_id'> = {
   contract_name: undefined,
   is_bundle_header: undefined as any,
   parent_item_id: undefined,
+  manual_line_metadata: undefined,
+  location_id: null,
+  billing_profile_id: null,
 };
 
 
@@ -117,6 +193,11 @@ const AutomatedItemsTable: React.FC<{
   items: Array<{
     service_name: string;
     total: number; // Should be total_price from IInvoiceCharge (in cents)
+    description?: string;
+    contractName?: string | null;
+    servicePeriod?: string | null;
+    isDiscount?: boolean;
+    reason?: string | null;
   }>;
   currencyCode?: string;
 }> = ({ items, currencyCode = 'USD' }) => {
@@ -133,13 +214,16 @@ const AutomatedItemsTable: React.FC<{
   return (
     <div className="mb-6">
       <h3 className="text-sm font-medium mb-2">
-        {t('manualInvoices.automatedItems.title', { defaultValue: 'Automated Line Items' })}
+        {t('manualInvoices.automatedItems.title', { defaultValue: 'Generated Line Items' })}
       </h3>
       <table className="w-full">
         <thead className="text-sm text-muted-foreground">
           <tr>
             <th className="text-left py-2">
               {t('manualInvoices.automatedItems.service', { defaultValue: 'Service' })}
+            </th>
+            <th className="text-left py-2">
+              {t('manualInvoices.automatedItems.period', { defaultValue: 'Period' })}
             </th>
             <th className="text-right py-2">
               {t('manualInvoices.automatedItems.total', { defaultValue: 'Total' })}
@@ -148,10 +232,24 @@ const AutomatedItemsTable: React.FC<{
         </thead>
         <tbody className="text-sm">
           {items.map((item, i) => (
-            <tr key={i} className="border-t">
-              <td className="py-2">{item.service_name}</td>
+            <tr key={i} className="border-t align-top">
+              <td className="py-2">
+                <div className="text-[rgb(var(--color-text-900))]">{item.service_name}</div>
+                {item.description && item.description !== item.service_name ? (
+                  <div className="text-xs text-muted-foreground">{item.description}</div>
+                ) : null}
+                {item.reason ? (
+                  <div className="text-xs text-muted-foreground">{item.reason}</div>
+                ) : null}
+              </td>
+              <td className="py-2 text-xs text-muted-foreground">
+                {item.contractName ? <div>{item.contractName}</div> : null}
+                {item.servicePeriod ? <div>{item.servicePeriod}</div> : null}
+              </td>
               {/* Display total_price */}
-              <td className="text-right">{formatCurrency(item.total / 100, currencyCode)}</td>
+              <td className={`text-right ${item.isDiscount ? 'text-[rgb(var(--color-text-600))]' : ''}`}>
+                {formatCurrency(item.total / 100, currencyCode)}
+              </td>
             </tr>
           ))}
         </tbody>
@@ -190,7 +288,11 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
   invoice, // This is the initial invoice prop
   invoiceableSalesOrders = [],
   sourceSalesOrderId,
+  variant = 'standard',
+  onSaved,
 }) => {
+  const defaultManualServiceId = services.find(service => service.tenant && service.service_id === uuidv5(`${service.tenant}:manual-charge-service`, uuidv5.DNS))?.service_id;
+  const isDraftAdjustments = variant === 'draftAdjustments';
   const { t } = useTranslation('msp/invoicing');
   const router = useRouter();
   const { formatCurrency } = useFormatters();
@@ -230,7 +332,14 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
         parent_item_id: item.parent_item_id,
         is_manual: true,
         is_taxable: item.is_taxable, // Include is_taxable from the item
-        // tax_rate_id: item.tax_rate_id || null, // Removed
+        // Carried so the per-line tax treatment control can restore the chosen
+        // rate on reload; a non-taxable line keeps is_taxable=false and resolves
+        // to no rate regardless of its stored region.
+        tax_region: item.tax_region ?? undefined,
+        manual_line_metadata: (item as IInvoiceCharge).manual_line_metadata ?? null,
+        location_id: item.location_id ?? null,
+        billing_profile_id: item.billing_profile_id ?? null,
+        is_manual_credit: item.is_manual_credit ?? false,
         isExisting: true,
         isRemoved: false,
       });
@@ -238,14 +347,40 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
     // Ensure the default item gets a unique ID if added
     return mappedItems.length > 0 ? mappedItems : [{
       ...baseDefaultItem,
+      service_id: defaultManualServiceId,
       item_id: uuidv4(), // Add ID here
       invoice_id: invoice?.invoice_id || ''
     }];
   });
+  // Expanded LineItem editors keep working state locally. Capture their latest
+  // values in a ref so Save can synchronously snapshot them without collapsing
+  // the row or relying on a just-scheduled React state update.
+  const pendingLineItemDraftsRef = useRef(new Map<number, LineItemEditableItem>());
 
   const [expandedItems, setExpandedItems] = useState<Set<number>>(new Set());
   const [isGenerating, setIsGenerating] = useState(false);
+  const [exportWarnings, setExportWarnings] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
+  // Stable per-unsaved-edit idempotency key: a retried save reuses it, so the
+  // server returns the already-applied result instead of appending twice.
+  const pendingOperationIdRef = useRef<string>(uuidv4());
+  const [partialPeriodOpen, setPartialPeriodOpen] = useState(false);
+  const [partialDirection, setPartialDirection] = useState<'increase' | 'decrease'>('increase');
+  const [partialUnits, setPartialUnits] = useState('');
+  const [partialSourceId, setPartialSourceId] = useState('');
+  const [partialEffectiveDate, setPartialEffectiveDate] = useState('');
+  const [partialDescription, setPartialDescription] = useState('');
+  const [partialReason, setPartialReason] = useState('');
+  const [partialError, setPartialError] = useState<string | null>(null);
+  // Attribution controls for operator-created one-time charges on a contract
+  // draft: the client's locations and billing profiles, resolved once per
+  // client. The standard manual-invoice generator leaves these undefined.
+  const [locationOptions, setLocationOptions] = useState<SelectOption[]>([]);
+  const [billingProfileOptions, setBillingProfileOptions] = useState<SelectOption[]>([]);
+  // Tenant tax rates for the per-line tax treatment control. Loaded once; an
+  // empty list simply hides the control rather than defaulting a line to a
+  // taxability the operator did not choose.
+  const [taxRates, setTaxRates] = useState<TaxRateChoice[]>([]);
   const [filterState, setFilterState] = useState<'all' | 'active' | 'inactive'>('active');
   const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
   const [loading, setLoading] = useState(false);
@@ -435,6 +570,15 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
               parent_item_id: item.parent_item_id,
               is_manual: true,
               is_taxable: item.is_taxable,
+              tax_region: item.tax_region ?? undefined,
+              manual_line_metadata: (item as IInvoiceCharge).manual_line_metadata ?? null,
+              location_id: item.location_id ?? null,
+              billing_profile_id: item.billing_profile_id ?? null,
+              service_period_start: item.service_period_start ?? null,
+              service_period_end: item.service_period_end ?? null,
+              adjustment_period_start: (item as any).adjustment_period_start ?? null,
+              adjustment_period_end: (item as any).adjustment_period_end ?? null,
+              is_manual_credit: item.is_manual_credit ?? false,
               isExisting: true,
               isRemoved: false,
             };
@@ -442,6 +586,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
           // Ensure the default item gets a unique ID if added after fetch
           setItems(mappedManualItems.length > 0 ? mappedManualItems : [{
             ...baseDefaultItem,
+            service_id: defaultManualServiceId,
             item_id: uuidv4(), // Add ID here
             invoice_id: invoiceIdToFetch
           }]);
@@ -460,6 +605,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
         // Ensure the default item gets a unique ID when resetting
         setItems([{
           ...baseDefaultItem,
+          service_id: defaultManualServiceId,
           item_id: uuidv4(), // Add ID here
           invoice_id: ''
         }]);
@@ -470,11 +616,83 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
     // Run effect only when the invoice prop itself changes
   }, [invoice]);
 
+  // Attribution options for the draft-adjustment editor. Loaded only for an
+  // existing contract draft, where the client is fixed and the operator needs
+  // to choose a location/billing profile for each one-time charge.
+  const attributionClientId = isDraftAdjustments
+    ? (currentInvoiceData?.client_id || invoice?.client_id || null)
+    : null;
+  useEffect(() => {
+    if (!attributionClientId) {
+      setLocationOptions([]);
+      setBillingProfileOptions([]);
+      return;
+    }
+    let cancelled = false;
+    const loadAttributionOptions = async () => {
+      try {
+        const [locationsResult, profilesResult] = await Promise.all([
+          getActiveClientLocationsForBilling(attributionClientId),
+          getClientBillingProfilesForBilling(attributionClientId),
+        ]);
+        if (cancelled) return;
+        if (Array.isArray(locationsResult)) {
+          setLocationOptions(locationsResult.map((location) => ({
+            value: location.location_id,
+            label: location.location_name || location.address_line1 || location.location_id,
+          })));
+        }
+        if (Array.isArray(profilesResult)) {
+          setBillingProfileOptions(profilesResult.map((profile) => ({
+            value: profile.billing_profile_id,
+            label: profile.name,
+          })));
+        }
+      } catch (error) {
+        if (!cancelled) {
+          console.warn('[ManualInvoices] Failed to load attribution options', error);
+        }
+      }
+    };
+    void loadAttributionOptions();
+    return () => {
+      cancelled = true;
+    };
+  }, [attributionClientId]);
+
+  // Tax treatments are tenant-wide, so they are loaded once. Only the
+  // draft-adjustment editor exposes the control; the manual generator keeps its
+  // legacy behavior by leaving taxRateOptions undefined.
+  useEffect(() => {
+    if (!isDraftAdjustments) return;
+    let cancelled = false;
+    const loadTaxRates = async () => {
+      try {
+        const result = await getTaxRates();
+        if (cancelled) return;
+        if (isActionMessageError(result) || isActionPermissionError(result)) {
+          console.warn('[ManualInvoices] Tax rates unavailable for the tax treatment control');
+          return;
+        }
+        setTaxRates((result as TaxRateChoice[]) ?? []);
+      } catch (error) {
+        if (!cancelled) {
+          console.warn('[ManualInvoices] Failed to load tax rates', error);
+        }
+      }
+    };
+    void loadTaxRates();
+    return () => {
+      cancelled = true;
+    };
+  }, [isDraftAdjustments]);
+
   const handleAddItem = (isDiscount: boolean = false) => {
     const newItem: EditableInvoiceItem = {
       ...baseDefaultItem,
       invoice_id: currentInvoiceData?.invoice_id || '',
       item_id: uuidv4(), // Generate ID for the new item
+      service_id: !isDiscount ? defaultManualServiceId : undefined,
       is_discount: isDiscount,
       discount_type: isDiscount ? ('fixed' as DiscountType) : undefined,
       rate: 0,
@@ -487,13 +705,139 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
     setExpandedItems(new Set([newItems.length - 1]));
   };
 
+  const resetPartialPeriodForm = () => {
+    setPartialDirection('increase');
+    setPartialUnits('');
+    setPartialSourceId('');
+    setPartialEffectiveDate('');
+    setPartialDescription('');
+    setPartialReason('');
+    setPartialError(null);
+  };
+
+  const handleAddPartialPeriodCharge = () => {
+    const units = Number(partialUnits);
+    const source = currentInvoiceData?.invoice_charges.find((item) => item.item_id === partialSourceId);
+    const sourcePeriod = source ? singleCanonicalPeriod(source) : null;
+    if (!source?.service_id || !sourcePeriod) {
+      setPartialError(t('manualInvoices.partialPeriod.errors.source', { defaultValue: 'Choose a billed service with an unambiguous service period.' }));
+      return;
+    }
+    const overlap = Boolean(source.contract_line_id && partialEffectiveDate && hasOverlappingContractChangeAdjustment({
+      contractLineId: source.contract_line_id,
+      effectiveDate: partialEffectiveDate,
+      periodEnd: sourcePeriod.end,
+      adjustments: currentInvoiceData?.invoice_charges ?? [],
+    }));
+    if (overlap && !window.confirm(t('manualInvoices.partialPeriod.overlapConfirm', {
+      defaultValue: 'An automatic contract change adjustment already overlaps this period. Add this separate manual adjustment anyway?',
+    }))) return;
+    if (!Number.isFinite(units) || units <= 0) {
+      setPartialError(t('manualInvoices.partialPeriod.errors.units', { defaultValue: 'Units must be greater than zero.' }));
+      return;
+    }
+    try {
+      if (!partialEffectiveDate) throw new Error('Choose an effective date.');
+      const unitPrice = Math.abs(Number(source.unit_price));
+      const calculation = resolveSourceDerivedPartialPeriod({
+        units,
+        unitPrice,
+        effectiveDate: partialEffectiveDate,
+        servicePeriodStart: sourcePeriod.start,
+        servicePeriodEnd: sourcePeriod.end,
+        direction: partialDirection,
+      });
+      const periodStart = sourcePeriod.start;
+      const periodEnd = sourcePeriod.end;
+      const sourceMetadata = source.manual_line_metadata as ManualLineMetadata | null | undefined;
+      const hasStoredTaxChoice = Boolean(sourceMetadata && Object.prototype.hasOwnProperty.call(sourceMetadata, 'tax_rate_id'));
+      const sourceServiceTaxRateId = services.find((service) => service.service_id === source.service_id)?.tax_rate_id ?? null;
+      const inheritedTaxRateId = hasStoredTaxChoice
+        ? (sourceMetadata?.tax_rate_id as string | null)
+        : source.is_taxable === false
+          ? null
+          : taxRateByRegion.get(source.tax_region ?? '') ?? sourceServiceTaxRateId ?? undefined;
+      // A decrease is the same proration reversed: it is a signed credit, not a
+      // separate calculator. It persists as a negative non-discount rate, which
+      // the manual writer already treats as a credit.
+      const defaultDescription = buildPartialPeriodInvoiceDescription({
+        sourceDescription: source.description || source.service_name || t('manualInvoices.partialPeriod.sourceDescriptionFallback', { defaultValue: 'Service adjustment' }),
+        direction: partialDirection,
+        units,
+        start: partialEffectiveDate,
+        exclusiveEnd: periodEnd,
+        unitPrice,
+        coveredDays: calculation.coveredDays,
+        fullPeriodDays: calculation.fullPeriodDays,
+        currencyCode,
+        formatCurrency,
+        describe: (direction, values) => t(`manualInvoices.partialPeriod.invoiceDescription.${direction}`, {
+          ...values,
+          defaultValue: direction === 'increase'
+            ? '{{description}} — additional {{units}} {{unitLabel}}, {{period}} — {{calculation}}'
+            : '{{description}} — credit for {{units}} fewer {{unitLabel}}, {{period}} — {{calculation}}',
+        }),
+      });
+      const newItem: EditableInvoiceItem = {
+        ...baseDefaultItem,
+        invoice_id: currentInvoiceData?.invoice_id || '',
+        item_id: uuidv4(),
+        service_id: source.service_id,
+        client_contract_id: source.client_contract_id,
+        contract_line_id: source.contract_line_id,
+        location_id: source.location_id ?? null,
+        billing_profile_id: source.billing_profile_id ?? null,
+        is_discount: false,
+        // The evaluator rounds the prorated per-unit minor-unit rate first,
+        // then rounds quantity × stored rate. This keeps row display, totals,
+        // reload and export consistent even for fractional-cent proration.
+        rate: calculation.unitPrice,
+        quantity: units,
+        description: partialDescription.trim() || defaultDescription,
+        isExisting: false,
+        is_taxable: source.is_taxable ?? false,
+        tax_rate_id: inheritedTaxRateId,
+        tax_region: source.tax_region,
+        adjustment_period_start: partialEffectiveDate,
+        adjustment_period_end: sourcePeriod.end,
+        manual_line_metadata: {
+          partialPeriod: { version: 1, source_kind: 'invoice_charge', source_item_id: source.item_id, contract_line_id: source.contract_line_id ?? null, direction: partialDirection, effective_date: partialEffectiveDate, source_period_start: periodStart, source_period_end: periodEnd, units, source_unit_price_minor: unitPrice, covered_days: calculation.coveredDays, full_period_days: calculation.fullPeriodDays, resolved_amount_minor: calculation.amount },
+          reason: partialReason.trim() || undefined,
+          ...(overlap ? { confirmed_overlap_item_ids: currentInvoiceData?.invoice_charges.filter((row) => row.adjustment_source_kind === 'contract_change' && row.contract_line_id === source.contract_line_id).map((row) => row.item_id) } : {}),
+        },
+      };
+      const newItems = [...items, newItem];
+      setItems(newItems);
+      setExpandedItems(new Set([newItems.length - 1]));
+      setPartialPeriodOpen(false);
+      resetPartialPeriodForm();
+    } catch (error) {
+      setPartialError(error instanceof Error
+        ? error.message
+        : t('manualInvoices.partialPeriod.errors.invalid', { defaultValue: 'Enter a valid partial period.' }));
+    }
+  };
+
   const handleRemoveItem = (index: number) => {
     console.log('Removing/restoring item:', { index, item: items[index] });
     const newItems = [...items];
     if (newItems[index].isExisting) {
-      newItems[index] = { ...newItems[index], isRemoved: !newItems[index].isRemoved };
+      const draft = pendingLineItemDraftsRef.current.get(index);
+      const nextItem = draft ? mergeLineItemDraft(newItems[index], draft) : newItems[index];
+      nextItem.isRemoved = !newItems[index].isRemoved;
+      newItems[index] = nextItem;
+      if (draft) {
+        pendingLineItemDraftsRef.current.set(index, { ...draft, isRemoved: nextItem.isRemoved });
+      }
       setItems(newItems);
     } else {
+      const drafts = pendingLineItemDraftsRef.current;
+      const shiftedDrafts = new Map<number, LineItemEditableItem>();
+      drafts.forEach((draft, draftIndex) => {
+        if (draftIndex < index) shiftedDrafts.set(draftIndex, draft);
+        else if (draftIndex > index) shiftedDrafts.set(draftIndex - 1, draft);
+      });
+      pendingLineItemDraftsRef.current = shiftedDrafts;
       newItems.splice(index, 1);
       setItems(newItems);
       const newExpanded = new Set(expandedItems);
@@ -557,6 +901,21 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const itemsForSubmit = items.map((item, index) => {
+      const draft = pendingLineItemDraftsRef.current.get(index);
+      return draft ? mergeLineItemDraft(item, draft) : item;
+    });
+    const invalidQuantityItem = itemsForSubmit.find((item) =>
+      !item.isRemoved
+      && !isBlankManualItem(item, defaultManualServiceId)
+      && (Number.isFinite(Number(item.quantity)) === false || Number(item.quantity) <= 0),
+    );
+    if (invalidQuantityItem) {
+      setError(t('manualInvoices.errors.INVALID_QUANTITY', {
+        defaultValue: 'Quantity must be greater than zero.',
+      }));
+      return;
+    }
     if (!currentInvoiceData && selectedClient === null && !selectedSalesOrder) {
       setError(t('manualInvoices.errors.selectClient', {
         defaultValue: 'Please select a client',
@@ -566,6 +925,20 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
 
     setIsGenerating(true);
     setError(null);
+    setExportWarnings([]);
+    if (currentInvoiceData?.invoice_id) {
+      try {
+        const warnings = await getInvoiceAdjustmentExportWarnings(currentInvoiceData.invoice_id, itemsForSubmit.filter(item => !item.isRemoved && !isBlankManualItem(item, defaultManualServiceId)));
+        setExportWarnings(warnings.map(warning => t(
+          warning.code === 'discount' ? 'manualInvoices.exportWarnings.discount' : 'manualInvoices.exportWarnings.service',
+          { adapter: warning.adapter, description: warning.description, defaultValue: warning.code === 'discount'
+            ? '{{adapter}}: configure the discount mapping before exporting {{description}}.'
+            : '{{adapter}}: assign a mapped service to {{description}} before exporting.' },
+        )));
+      } catch {
+        setExportWarnings([t('manualInvoices.exportWarnings.unavailable', { defaultValue: 'Accounting readiness could not be checked. Check mappings before exporting.' })]);
+      }
+    }
 
     try {
       if (!currentInvoiceData && selectedSalesOrderId && !selectedSalesOrder) {
@@ -603,19 +976,60 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
       if (currentInvoiceData) {
         console.log('[Submit] Updating invoice items:', {
             invoiceId: currentInvoiceData.invoice_id,
-            newCount: items.filter(i => !i.isExisting && !i.isRemoved).length,
-            updatedCount: items.filter(i => i.isExisting && !i.isRemoved).length,
-            removedCount: items.filter(i => i.isRemoved).length
+            newCount: itemsForSubmit.filter(i => !i.isExisting && !i.isRemoved).length,
+            updatedCount: itemsForSubmit.filter(i => i.isExisting && !i.isRemoved).length,
+            removedCount: itemsForSubmit.filter(i => i.isRemoved).length
         });
 
-        const newItemsToSave = items.filter(item => !item.isExisting && !item.isRemoved);
-        const updatedItemsToSave = items.filter(item => item.isExisting && !item.isRemoved && item.item_id);
-        const removedItemIds = items
+        const newItemsToSave = itemsForSubmit.filter(item => !item.isExisting && !item.isRemoved && !isBlankManualItem(item, defaultManualServiceId));
+        const updatedItemsToSave = itemsForSubmit.filter(item => item.isExisting && !item.isRemoved && item.item_id);
+        const removedItemIds = itemsForSubmit
           .filter(item => item.isExisting && item.isRemoved && item.item_id)
           .map(item => item.item_id!); // item_id is guaranteed here by filter
 
-        // Map EditableInvoiceItem to IInvoiceCharge for newItems
-        const mapToNewItemSaveFormat = (item: EditableInvoiceItem): IInvoiceCharge => ({
+        // Carries the operator's tax-treatment choice alongside the partial-period
+        // inputs. The charge has no tax_rate_id column, so this echo is what lets
+        // a reload restore the exact rate (the charge's tax_region alone cannot
+        // disambiguate two rates that share a region). The server still resolves
+        // and validates tax_rate_id into tax_region/is_taxable independently.
+        const withTaxTreatmentMetadata = (
+          item: EditableInvoiceItem,
+        ): ManualLineMetadata | null => {
+          const next: Record<string, unknown> = { ...(item.manual_line_metadata ?? {}) };
+          const partial = next.partialPeriod as ManualLineMetadata['partialPeriod'] | undefined;
+          if (partial) {
+            next.partialPeriod = {
+              ...partial,
+              units: Number(item.quantity),
+              direction: Number(item.rate) < 0 ? 'decrease' : 'increase',
+              resolved_amount_minor: Math.round(Number(item.quantity) * Number(item.rate)),
+            };
+          }
+          if (item.tax_rate_id) {
+            next.tax_rate_id = item.tax_rate_id;
+          } else {
+            delete next.tax_rate_id;
+          }
+          return Object.keys(next).length > 0 ? (next as ManualLineMetadata) : null;
+        };
+
+        // The selected tax treatment is authoritative for the persisted charge:
+        // a chosen rate is taxable, and an explicit Non-taxable (null) stays
+        // non-taxable even when the linked catalog service is taxable. Only an
+        // absent choice (undefined) falls back to the item's existing flag, so a
+        // legacy caller that never saw the control keeps its prior behavior.
+        const resolvePayloadTaxable = (item: EditableInvoiceItem): boolean | undefined => {
+          if (item.is_discount) return false;
+          if (item.tax_rate_id === undefined) return item.is_taxable;
+          return Boolean(item.tax_rate_id);
+        };
+
+        // Map EditableInvoiceItem to IInvoiceCharge for newItems. `tax_rate_id`
+        // is an authoring override (there is no such column); the server turns it
+        // into the charge's tax_region/is_taxable.
+        const mapToNewItemSaveFormat = (
+          item: EditableInvoiceItem,
+        ): IInvoiceCharge & { tax_rate_id?: string | null } => ({
           item_id: item.item_id || uuidv4(), // Ensure ID exists
           invoice_id: item.invoice_id,
           tenant: '', // Backend handles tenant
@@ -627,8 +1041,8 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
           tax_amount: 0, // Calculated backend
           net_amount: 0, // Calculated backend
           is_manual: true,
-          is_taxable: item.is_taxable, // Include is_taxable property
-          // tax_rate_id: item.tax_rate_id, // Removed
+          is_taxable: resolvePayloadTaxable(item), // Include is_taxable property
+          tax_rate_id: item.tax_rate_id,
           is_discount: item.is_discount,
           discount_type: item.discount_type,
           discount_percentage: item.discount_percentage,
@@ -640,6 +1054,11 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
           is_bundle_header: item.is_bundle_header as any,
           parent_item_id: item.parent_item_id,
           rate: item.rate, // Add the missing rate property
+          manual_line_metadata: withTaxTreatmentMetadata(item),
+          location_id: item.location_id ?? null,
+          billing_profile_id: item.billing_profile_id ?? null,
+          adjustment_period_start: item.adjustment_period_start ?? item.service_period_start ?? null,
+          adjustment_period_end: item.adjustment_period_end ?? item.service_period_end ?? null,
           // Omit audit fields
         });
 
@@ -654,16 +1073,55 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
           discount_type: item.discount_type,
           discount_percentage: item.discount_percentage,
           applies_to_item_id: item.applies_to_item_id,
-          is_taxable: item.is_taxable, // Include is_taxable property
-          // tax_rate_id: item.tax_rate_id, // Removed
+          is_taxable: resolvePayloadTaxable(item),
+          tax_rate_id: item.tax_rate_id,
+          manual_line_metadata: withTaxTreatmentMetadata(item),
+          location_id: item.location_id ?? null,
+          billing_profile_id: item.billing_profile_id ?? null,
+          client_contract_id: item.client_contract_id ?? null,
+          adjustment_period_start: item.adjustment_period_start ?? item.service_period_start ?? null,
+          adjustment_period_end: item.adjustment_period_end ?? item.service_period_end ?? null,
         });
 
-        const updateResult = await updateInvoiceManualItems(currentInvoiceData.invoice_id, {
+        const changes = {
           invoice_number: currentInvoiceData.invoice_number,
           newItems: newItemsToSave.map(mapToNewItemSaveFormat),
           updatedItems: updatedItemsToSave.map(mapToUpdateSaveFormat),
-          removedItemIds
-        });
+          removedItemIds,
+        };
+        const submission = {
+          operationId: pendingOperationIdRef.current,
+          expectedRevision: currentInvoiceData.draft_adjustment_revision,
+        };
+        let updateResult = await updateInvoiceManualItems(currentInvoiceData.invoice_id, changes, submission);
+        if (isManualInvoiceFailure(updateResult)
+          && updateResult.params?.overlapConfirmationRequired === 'true'
+          && updateResult.params.overlapItemIds) {
+          const overlapIds = updateResult.params.overlapItemIds.split(',').filter(Boolean);
+          if (!window.confirm(t('manualInvoices.partialPeriod.overlapConfirm', {
+            defaultValue: 'A companion contract-change adjustment now overlaps this partial-period change. Save both adjustments?',
+          }))) {
+            setError(translateManualInvoiceError(updateResult));
+            return;
+          }
+          const confirmItem = (item: any) => {
+            const metadata = item.manual_line_metadata;
+            const partial = metadata?.partialPeriod;
+            if (partial?.source_kind !== 'invoice_charge') return item;
+            return {
+              ...item,
+              manual_line_metadata: {
+                ...metadata,
+                confirmed_overlap_item_ids: [...new Set([...(metadata.confirmed_overlap_item_ids ?? []), ...overlapIds])],
+              },
+            };
+          };
+          updateResult = await updateInvoiceManualItems(currentInvoiceData.invoice_id, {
+            ...changes,
+            newItems: changes.newItems.map(confirmItem),
+            updatedItems: changes.updatedItems.map(confirmItem),
+          }, submission);
+        }
 
         if (isManualInvoiceFailure(updateResult)) {
           setError(translateManualInvoiceError(updateResult));
@@ -675,6 +1133,8 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
           return;
         }
 
+        // The save succeeded; authoritative refreshed rows now own these values.
+        pendingLineItemDraftsRef.current.clear();
         setExpandedItems(new Set());
 
         if (!currentInvoiceData) {
@@ -685,21 +1145,31 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
           setIsGenerating(false);
           return;
         }
-        // Refresh items from server
-        const refreshedItems = await getInvoiceLineItems(currentInvoiceData.invoice_id);
+
+        // `updateInvoiceManualItems` returns the full authoritative invoice,
+        // including recalculated discounts, tax and totals. Prefer it over the
+        // older line-items-only refresh so the editor never displays a
+        // manual-only subtotal as the invoice total.
+        const authoritativeInvoice = (
+          updateResult
+          && typeof updateResult === 'object'
+          && Array.isArray((updateResult as InvoiceViewModel).invoice_charges)
+        )
+          ? (updateResult as InvoiceViewModel)
+          : null;
+
+        const refreshedItems = authoritativeInvoice?.invoice_charges
+          ?? await getInvoiceLineItems(currentInvoiceData.invoice_id);
         if (isActionMessageError(refreshedItems) || isActionPermissionError(refreshedItems)) {
           setError(getErrorMessage(refreshedItems));
           return;
         }
         console.log('[Submit] Refreshed items after update:', refreshedItems.length);
-        
-        // Fetch the updated invoice data from the server
-        // We need to create a new object with updated values since we don't have a direct way to get the full invoice
-        const updatedInvoiceData = {
-          ...currentInvoiceData,
-          invoice_charges: refreshedItems
-        };
-        
+
+        const updatedInvoiceData: InvoiceViewModel = authoritativeInvoice
+          ? { ...authoritativeInvoice, invoice_charges: refreshedItems }
+          : { ...currentInvoiceData, invoice_charges: refreshedItems };
+
         // Update the state with the refreshed data
         setCurrentInvoiceData(updatedInvoiceData);
         console.log('[Submit] Updated currentInvoiceData state with refreshed items');
@@ -725,14 +1195,27 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
             parent_item_id: item.parent_item_id,
             is_manual: true,
             is_taxable: item.is_taxable, // Include is_taxable from the item
+            tax_region: item.tax_region ?? undefined,
+            manual_line_metadata: (item as IInvoiceCharge).manual_line_metadata ?? null,
+            location_id: item.location_id ?? null,
+            billing_profile_id: item.billing_profile_id ?? null,
+            service_period_start: item.service_period_start ?? null,
+            service_period_end: item.service_period_end ?? null,
+            adjustment_period_start: (item as any).adjustment_period_start ?? null,
+            adjustment_period_end: (item as any).adjustment_period_end ?? null,
+            is_manual_credit: item.is_manual_credit ?? false,
             isExisting: true,
             isRemoved: false,
         }));
         setItems(mappedUpdatedManual.length > 0 ? mappedUpdatedManual : [{
             ...baseDefaultItem,
+            service_id: defaultManualServiceId,
             item_id: uuidv4(),
             invoice_id: currentInvoiceData.invoice_id
         }]);
+        // This edit is committed; the next edit gets a fresh idempotency key.
+        pendingOperationIdRef.current = uuidv4();
+        await onSaved?.();
         onGenerateSuccess(); // Notify parent about successful update
 
       } else {
@@ -790,21 +1273,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
   };
 
   const calculateManualItemsTotal = () => {
-    const nonDiscountItems = items.filter(item => !item.isRemoved && !item.is_discount);
-    const discountItems = items.filter(item => !item.isRemoved && item.is_discount);
-    const subtotal = nonDiscountItems.reduce((sum, item) => sum + (item.quantity * item.rate), 0);
-    let total = subtotal;
-    for (const item of discountItems) {
-      if (item.discount_type === 'percentage' && item.discount_percentage !== undefined) {
-        const applicableAmount = item.applies_to_item_id
-          ? (nonDiscountItems.find(i => i.item_id === item.applies_to_item_id)?.quantity || 0) * (nonDiscountItems.find(i => i.item_id === item.applies_to_item_id)?.rate || 0)
-          : subtotal;
-        total -= (applicableAmount * item.discount_percentage) / 100;
-      } else if (item.discount_type === 'fixed') {
-        total += item.quantity * item.rate; // Rate is already negative and in cents
-      }
-    }
-    return Math.round(total); // Return total in cents
+    return calculateManualInvoiceEditorTotal(items, currentInvoiceData?.invoice_charges ?? []);
   };
 
   const getButtonText = () => {
@@ -852,6 +1321,32 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
   const selectedClientData = clientOptions.find(c => c.client_id === (currentInvoiceData?.client_id || selectedClient));
   const currencyCode = currentInvoiceData?.currencyCode || selectedClientData?.default_currency_code || 'USD';
 
+  const partialPeriodCalculation = (() => {
+    try {
+      const source = currentInvoiceData?.invoice_charges.find((item) => item.item_id === partialSourceId);
+      const sourcePeriod = source ? singleCanonicalPeriod(source) : null;
+      if (!source?.service_id || !sourcePeriod || !partialEffectiveDate) return null;
+      if (!Number.isFinite(Number(partialUnits)) || Number(partialUnits) <= 0) return null;
+      const calculation = resolveSourceDerivedPartialPeriod({
+        units: Number(partialUnits),
+        unitPrice: Math.abs(Number(source.unit_price)),
+        effectiveDate: partialEffectiveDate,
+        servicePeriodStart: sourcePeriod.start,
+        servicePeriodEnd: sourcePeriod.end,
+        direction: partialDirection,
+      });
+      return calculation;
+    } catch {
+      return null;
+    }
+  })();
+  const partialPeriodPreview = partialPeriodCalculation?.amount ?? null;
+
+  const partialPeriodSources = (currentInvoiceData?.invoice_charges ?? [])
+    .filter((item) => !item.is_discount && item.service_id && singleCanonicalPeriod(item))
+    .map((item) => ({ value: item.item_id, label: `${item.description} · ${item.service_period_start} – ${item.service_period_end}` }));
+  const partialPeriodSource = currentInvoiceData?.invoice_charges.find((item) => item.item_id === partialSourceId);
+
   const serviceOptions: ServiceOption[] = services
     .filter((service) => service.is_active !== false)
     .map((service): ServiceOption => {
@@ -873,6 +1368,39 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
       };
     });
 
+  const taxRateOptions: SelectOption[] = taxRates.map((rate) => ({
+    value: rate.tax_rate_id,
+    label: `${rate.name || rate.description || rate.region_code} (${rate.tax_percentage}%)`,
+  }));
+
+  const taxRateByRegion = new Map<string, string>();
+  for (const rate of taxRates) {
+    if (rate.region_code && !taxRateByRegion.has(rate.region_code)) {
+      taxRateByRegion.set(rate.region_code, rate.tax_rate_id);
+    }
+  }
+
+  // Preselects a one-time line's tax treatment: an explicit operator choice
+  // wins, otherwise derive from the selected service, otherwise match the
+  // stored region. Discounts/credits are never taxed. A taxable row whose rate
+  // cannot be reconstructed resolves to `undefined` so opening and saving it
+  // preserves the stored treatment instead of stripping it.
+  const resolveInitialTaxRateId = (item: EditableInvoiceItem): string | null | undefined => {
+    const invoiceClientId = currentInvoiceData?.client_id || invoice?.client_id || selectedClient;
+    const clientRegion = clientOptions.find((client) => client.client_id === invoiceClientId)?.region_code ?? null;
+    return resolveInitialManualTaxRateId({
+      isDiscount: Boolean(item.is_discount),
+      explicitTaxRateId: item.tax_rate_id,
+      metadataTaxRateId: item.manual_line_metadata?.tax_rate_id,
+      isTaxable: item.is_taxable,
+      taxRegion: item.tax_region ?? null,
+      serviceId: item.service_id ?? null,
+      serviceTaxRateId: services.find((service) => service.service_id === item.service_id)?.tax_rate_id ?? null,
+      clientRegion,
+      taxRateByRegion,
+    });
+  };
+
   // Helper to prepare item prop for LineItem component
   const mapToLineItemEditable = (item: EditableInvoiceItem): LineItemEditableItem => ({
       item_id: item.item_id,
@@ -880,18 +1408,21 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
       quantity: item.quantity,
       description: item.description,
       rate: item.rate, // Pass rate in cents
-      // tax_rate_id: item.tax_rate_id, // Removed
-      // is_taxable removed; derived from selectedService.tax_rate_id
+      tax_rate_id: resolveInitialTaxRateId(item),
       isExisting: item.isExisting,
       isRemoved: item.isRemoved,
       is_discount: item.is_discount,
+      is_manual_credit: item.is_manual_credit ?? false,
       discount_type: item.discount_type,
       discount_percentage: item.discount_percentage,
       applies_to_item_id: item.applies_to_item_id,
+      location_id: item.location_id ?? null,
+      billing_profile_id: item.billing_profile_id ?? null,
   });
 
   // Adapter for LineItem's onChange prop
   const handleLineItemChange = (index: number, updatedLineItem: LineItemEditableItem) => {
+      pendingLineItemDraftsRef.current.delete(index);
       const newItems = [...items];
       if (index >= 0 && index < newItems.length) {
           // Merge updated fields back into the full EditableInvoiceItem structure
@@ -916,23 +1447,31 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
             <div className="flex items-center gap-4 mb-6">
               <div>
                 <h2 className="text-lg font-semibold">
-                  {(currentInvoiceData || invoice)
-                    ? t('manualInvoices.detailsTitle', { defaultValue: 'Invoice Details' })
-                    : t('manualInvoices.title', { defaultValue: 'Generate Manual Invoice' })}
+                  {isDraftAdjustments
+                    ? t('manualInvoices.draftAdjustments.title', { defaultValue: 'Invoice adjustments' })
+                    : (currentInvoiceData || invoice)
+                      ? t('manualInvoices.detailsTitle', { defaultValue: 'Invoice Details' })
+                      : t('manualInvoices.title', { defaultValue: 'Generate Manual Invoice' })}
                 </h2>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  {(currentInvoiceData || invoice)
-                    ? t('manualInvoices.detailsDescription', {
-                      defaultValue: 'Manual edits stay periodless by default, while recurring detail-backed lines keep their canonical service periods.',
+                  {isDraftAdjustments
+                    ? t('manualInvoices.draftAdjustments.description', {
+                      defaultValue: 'Add one-time charges, discounts or credits. Generated contract charges stay read-only; correct the source contract or add an adjustment.',
                     })
-                    : t('manualInvoices.description', {
-                      defaultValue: 'Use manual invoices for one-off or adjustment lines. They coexist with recurring invoices without redefining recurring service periods.',
-                    })}
+                    : (currentInvoiceData || invoice)
+                      ? t('manualInvoices.detailsDescription', {
+                        defaultValue: 'Manual edits stay periodless by default, while recurring detail-backed lines keep their canonical service periods.',
+                      })
+                      : t('manualInvoices.description', {
+                        defaultValue: 'Use manual invoices for one-off or adjustment lines. They coexist with recurring invoices without redefining recurring service periods.',
+                      })}
                 </p>
               </div>
             </div>
 
-            {currentInvoiceData && (
+            {exportWarnings.length > 0 && <Alert><AlertDescription><ul>{exportWarnings.map((warning, index) => <li key={index}>{warning}</li>)}</ul></AlertDescription></Alert>}
+
+            {currentInvoiceData && !isDraftAdjustments && (
               <div className="mb-6">
                 <label className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">
                   {t('manualInvoices.fields.client', { defaultValue: 'Client' })}
@@ -944,7 +1483,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
               </div>
             )}
 
-            {currentInvoiceData && (
+            {currentInvoiceData && !isDraftAdjustments && (
               <div className="mb-6">
                 <label htmlFor="invoice-number-input" className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">
                   {t('manualInvoices.fields.invoiceNumber', { defaultValue: 'Invoice Number' })}
@@ -1151,7 +1690,14 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
                         || t('manualInvoices.automatedItems.unknownService', {
                           defaultValue: 'Unknown Service',
                         }),
-                      total: item.total_price // Pass total_price (in cents)
+                      total: item.total_price, // Pass total_price (in cents)
+                      description: item.description,
+                      contractName: item.contract_name,
+                      servicePeriod: item.service_period_start && item.service_period_end
+                        ? `${String(item.service_period_start).slice(0, 10)} – ${String(item.service_period_end).slice(0, 10)}`
+                        : null,
+                      isDiscount: Boolean(item.is_discount),
+                      reason: item.adjustment_reason ?? null,
                     }))
                   }
                   currencyCode={currencyCode}
@@ -1231,6 +1777,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
                       onRemove={() => handleRemoveItem(index)}
                       // Use the adapter function for onChange
                       onChange={(updatedLineItem) => handleLineItemChange(index, updatedLineItem)}
+                      onDraftChange={(updatedLineItem) => pendingLineItemDraftsRef.current.set(index, updatedLineItem)}
                       onToggleExpand={() => {
                         const newExpanded = new Set(expandedItems);
                         if (newExpanded.has(index)) newExpanded.delete(index);
@@ -1238,6 +1785,9 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
                         setExpandedItems(newExpanded);
                       }}
                       currencyCode={currencyCode}
+                      locationOptions={isDraftAdjustments ? locationOptions : undefined}
+                      billingProfileOptions={isDraftAdjustments ? billingProfileOptions : undefined}
+                      taxRateOptions={isDraftAdjustments ? taxRateOptions : undefined}
                     />
                   ))}
                 </div>
@@ -1245,6 +1795,114 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
               )}
 
               {!hasSalesOrderSource && (
+                <div className="space-y-4">
+                {partialPeriodOpen && (
+                  <div
+                    id="partial-period-charge-panel"
+                    className="rounded-md border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-background))] p-4 space-y-3"
+                  >
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-sm font-medium text-[rgb(var(--color-text-900))]">
+                        {t('manualInvoices.partialPeriod.title', { defaultValue: 'Partial-period charge' })}
+                      </h4>
+                      <Button
+                        id="cancel-partial-period-charge-button"
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setPartialPeriodOpen(false);
+                          resetPartialPeriodForm();
+                        }}
+                      >
+                        {t('common.actions.cancel', { defaultValue: 'Cancel' })}
+                      </Button>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {t('manualInvoices.partialPeriod.help', {
+                        defaultValue: 'Choose a billed service. Its rate, service period, tax treatment and contract attribution are used to calculate a one-time adjustment.',
+                      })}
+                    </p>
+                    {partialError && (
+                      <Alert variant="destructive">
+                        <AlertDescription>{partialError}</AlertDescription>
+                      </Alert>
+                    )}
+                    <div className="flex gap-2" role="group" aria-label={t('manualInvoices.partialPeriod.direction', { defaultValue: 'Direction' })}>
+                      <Button
+                        id="partial-period-direction-increase-button"
+                        type="button"
+                        size="sm"
+                        variant={partialDirection === 'increase' ? 'default' : 'outline'}
+                        onClick={() => setPartialDirection('increase')}
+                      >
+                        {t('manualInvoices.partialPeriod.increase', { defaultValue: 'Increase' })}
+                      </Button>
+                      <Button
+                        id="partial-period-direction-decrease-button"
+                        type="button"
+                        size="sm"
+                        variant={partialDirection === 'decrease' ? 'default' : 'outline'}
+                        onClick={() => setPartialDirection('decrease')}
+                      >
+                        {t('manualInvoices.partialPeriod.decrease', { defaultValue: 'Decrease (credit)' })}
+                      </Button>
+                    </div>
+                    <div className="grid gap-3 sm:grid-cols-3">
+                      <SearchableSelect
+                        id="partial-period-source-select"
+                        value={partialSourceId}
+                        onChange={(value) => setPartialSourceId(value)}
+                        options={partialPeriodSources}
+                        placeholder={t('manualInvoices.partialPeriod.source', { defaultValue: 'Select billed service' })}
+                      />
+                      <Input
+                        id="partial-period-units-input"
+                        label={t('manualInvoices.partialPeriod.units', { defaultValue: 'Units' })}
+                        type="number"
+                        min="0"
+                        required
+                        step="0.01"
+                        value={partialUnits}
+                        onChange={(event) => setPartialUnits(event.target.value)}
+                      />
+                      <Input id="partial-period-effective-date" label={t('manualInvoices.partialPeriod.effectiveDate', { defaultValue: 'Effective date' })} type="date" value={partialEffectiveDate} onChange={(event) => setPartialEffectiveDate(event.target.value)} required />
+                    </div>
+                    {partialPeriodSource && <div className="space-y-1"><p className="text-xs text-muted-foreground">{partialPeriodSource.description}: {partialPeriodSource.service_period_start} – {partialPeriodSource.service_period_end} · {t('manualInvoices.partialPeriod.sourceRate', { defaultValue: 'Rate {{rate}}', rate: formatCurrency(Number(partialPeriodSource.unit_price) / 100, currencyCode) })} · {partialEffectiveDate && partialPeriodPreview !== null ? `${partialUnits} × ${formatCurrency(Math.abs(partialPeriodCalculation?.unitPrice ?? 0) / 100, currencyCode)} = ${formatCurrency((partialPeriodPreview ?? 0) / 100, currencyCode)} (${formatCurrency(Math.abs(Number(partialPeriodSource.unit_price)) / 100, currencyCode)} × ${partialPeriodCalculation?.coveredDays ?? 0}/${partialPeriodCalculation?.fullPeriodDays ?? 0}, rounded per unit)` : ''}</p>{partialPeriodSource.contract_line_id && partialPeriodSource.client_contract_id && <a className="text-xs text-primary-600 underline" href={`/msp/billing?tab=client-contracts&clientContractId=${encodeURIComponent(partialPeriodSource.client_contract_id)}&contractView=lines&contractLineId=${encodeURIComponent(partialPeriodSource.contract_line_id)}`}>{t('manualInvoices.partialPeriod.permanentChangeNudge', { defaultValue: 'Is this a permanent change? Record it on the contract instead.' })}</a>}</div>}
+                    <Input
+                      id="partial-period-description-input"
+                      label={t('manualInvoices.partialPeriod.description', { defaultValue: 'Description (optional)' })}
+                      value={partialDescription}
+                      onChange={(event) => setPartialDescription(event.target.value)}
+                      placeholder={partialPeriodSource?.description ?? ''}
+                    />
+                    <Input
+                      id="partial-period-reason-input"
+                      label={t('manualInvoices.partialPeriod.reason', { defaultValue: 'Reason (optional)' })}
+                      value={partialReason}
+                      onChange={(event) => setPartialReason(event.target.value)}
+                    />
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-[rgb(var(--color-text-700))]">
+                        {partialPeriodPreview === null
+                          ? t('manualInvoices.partialPeriod.previewUnavailable', { defaultValue: 'Enter a valid calculation.' })
+                          : t('manualInvoices.partialPeriod.resolvedAmount', {
+                            defaultValue: 'Resolved amount: {{amount}}',
+                            amount: formatCurrency(partialPeriodPreview / 100, currencyCode),
+                          })}
+                      </span>
+                      <Button
+                        id="add-partial-period-charge-confirm-button"
+                        type="button"
+                        onClick={handleAddPartialPeriodCharge}
+                        disabled={isGenerating || partialPeriodPreview === null}
+                      >
+                        <PlusIcon className="w-4 h-4 mr-2" />
+                        {t('manualInvoices.partialPeriod.addCharge', { defaultValue: 'Add charge' })}
+                      </Button>
+                    </div>
+                  </div>
+                )}
                 <div className="flex justify-between items-center">
                 <div className="flex gap-2">
                   <Button id='add-line-item-button' type="button" onClick={() => handleAddItem(false)} variant="secondary" disabled={isGenerating || expandedItems.size > 0}>
@@ -1255,6 +1913,15 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
                     <MinusCircleIcon className="w-4 h-4 mr-2" />
                     {t('manualInvoices.actions.addDiscount', { defaultValue: 'Add Discount' })}
                   </Button>
+                  <Button
+                    id='add-partial-period-charge-button'
+                    type="button"
+                    onClick={() => setPartialPeriodOpen(true)}
+                    variant="outline"
+                    disabled={isGenerating || partialPeriodOpen}
+                  >
+                    {t('manualInvoices.actions.addPartialPeriodCharge', { defaultValue: 'Add partial-period charge' })}
+                  </Button>
                 </div>
                 <div className="text-lg font-semibold">
                   {/* Always use the calculated total for consistency */}
@@ -1262,6 +1929,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
                     {t('manualInvoices.labels.total', { defaultValue: 'Total' })}: {formatCurrency(calculatedGrandTotal / 100, currencyCode)}
                   </>
                 </div>
+              </div>
               </div>
               )}
 

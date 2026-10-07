@@ -230,12 +230,14 @@
       "selectService": "Seleziona Servizio",
       "taxable": "(Imponibile)",
       "nonTaxable": "(Non imponibile)",
-      "calculatedOnSave": "(calcolato al salvataggio)"
+      "calculatedOnSave": "(calcolato al salvataggio)",
+      "credit": "Credito"
     },
     "expanded": {
       "discount": "Sconto",
       "item": "Articolo {{number}}",
-      "markedForRemoval": "Contrassegnato per la rimozione"
+      "markedForRemoval": "Contrassegnato per la rimozione",
+      "credit": "Credito"
     },
     "fields": {
       "service": "Servizio",
@@ -247,10 +249,18 @@
       "applyDiscountTo": "Applica lo sconto a",
       "entireInvoice": "Fattura intera",
       "rate": "Tariffa ({{currencySymbol}})",
-      "description": "Descrizione"
+      "description": "Descrizione",
+      "creditUnit": "Credito per unità ({{currencySymbol}})",
+      "taxTreatment": "Trattamento fiscale",
+      "nonTaxable": "Non imponibile",
+      "location": "Sede",
+      "clientDefaultLocation": "Predefinito del cliente",
+      "billingProfile": "Profilo di fatturazione",
+      "clientDefaultProfile": "Predefinito del cliente"
     },
     "placeholders": {
-      "discountDescription": "ad esempio, sconto per pagamento anticipato"
+      "discountDescription": "ad esempio, sconto per pagamento anticipato",
+      "creditDescription": "ad esempio, credito di cortesia"
     },
     "actions": {
       "add": "Aggiungi",
@@ -267,11 +277,15 @@
       "invoiceTotal": "{{percentage}}% del totale della fattura",
       "amount": "Importo: -{{currencySymbol}}{{amount}}",
       "appliedTo": "Applicato a: {{description}}",
-      "subtotal": "Totale parziale: {{currencySymbol}}{{amount}}"
+      "subtotal": "Totale parziale: {{currencySymbol}}{{amount}}",
+      "credit": "Credito"
     },
     "options": {
       "percentage": "Percentuale",
       "fixedAmount": "Importo fisso"
+    },
+    "errors": {
+      "serviceRequired": "Assegna un servizio a questo addebito prima di salvare."
     }
   },
   "contractLineServices": {
@@ -459,7 +473,8 @@
       "executeError": "Impossibile eseguire il batch",
       "cancelled": "Batch annullato",
       "cancelError": "Impossibile annullare il batch",
-      "realmRequired": "Scegli un'azienda contabile connessa prima di creare l'esportazione."
+      "realmRequired": "Scegli un'azienda contabile connessa prima di creare l'esportazione.",
+      "artifactDownloadError": "Impossibile scaricare questo file esportato."
     },
     "status": {
       "pending": "In sospeso",
@@ -470,6 +485,12 @@
       "failed": "Non riuscito",
       "cancelled": "Annullato",
       "needsAttention": "Richiede attenzione"
+    },
+    "artifacts": {
+      "title": "File consegnati",
+      "download": "Scarica",
+      "unavailable": "Questo batch storico non contiene file salvati. Non è possibile recuperarli senza eseguire una nuova esportazione.",
+      "storageFallback": "Salvato in un backup del database"
     }
   },
   "templateRenderer": {

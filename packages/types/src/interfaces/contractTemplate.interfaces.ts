@@ -22,6 +22,8 @@ export interface IContractTemplateLine extends TenantEntity {
   template_id: string;
   template_line_name: string;
   description?: string | null;
+  /** Verbatim invoice line text; copied to the live line when the template is applied. */
+  invoice_line_description?: string | null;
   billing_frequency: string;
   line_type?: string | null;
   service_category?: string | null;

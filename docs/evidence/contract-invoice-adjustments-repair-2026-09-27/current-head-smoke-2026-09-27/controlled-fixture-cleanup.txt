@@ -1,0 +1,9 @@
+BEGIN
+owned_fixture_before_cleanup|SMOKE-ADJ-REPAIR-20260927|5a1e0000-0000-4000-8000-202609270001|5
+owned_operations|0
+DELETE 0
+DELETE 5
+DELETE 1
+owned_fixture_remaining|0
+source_fixture_unchanged|SMOKE-ADJ-1|370500|900|371400|63|5
+COMMIT

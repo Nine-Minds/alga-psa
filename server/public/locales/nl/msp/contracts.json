@@ -264,7 +264,8 @@
       "lines": "Contractregels",
       "overview": "Overzicht",
       "pricing": "Prijsschema's",
-      "simulator": "Simuleren"
+      "simulator": "Simuleren",
+      "discounts": "Kortingen"
     },
     "validation": {
       "billingFrequencyRequired": "Factureringsfrequentie is vereist.",
@@ -539,7 +540,8 @@
       "name": "Naam",
       "rate": "Tarief",
       "services": "Services",
-      "type": "Type"
+      "type": "Type",
+      "dates": "Datums"
     },
     "configuration": {
       "description": "Instellingen die van toepassing zijn op deze contractregel",
@@ -550,7 +552,15 @@
       "minutesValue": "{{count}} minuten",
       "roundUpToNearest": "Naar boven afronden op dichtstbijzijnde (minuten)",
       "title": "Contractregelconfiguratie",
-      "usageInfo": "Verbruiksgebaseerde contractregels worden per service geconfigureerd met tarieven per eenheid."
+      "usageInfo": "Verbruiksgebaseerde contractregels worden per service geconfigureerd met tarieven per eenheid.",
+      "invoiceText": "Factuurregeltekst",
+      "invoiceTextPlaceholder": "Wordt op de factuur afgedrukt; standaard de regelnaam",
+      "invoiceTextDefault": "Gebruikt de regelnaam",
+      "startDate": "Startdatum",
+      "endDate": "Einddatum",
+      "inheritsContract": "Contractstart",
+      "inheritsContractEnd": "Contracteinde",
+      "billedEditExplanation": "Na facturering blijven factuurtekst en regeldatums bewerkbaar. Datums mogen al gefactureerde of geclaimde serviceperioden niet uitsluiten; tarieven en aantallen worden prospectief gewijzigd."
     },
     "customRate": "Aangepast",
     "description": {
@@ -566,13 +576,14 @@
       "selectAbove": "Selecteer hierboven een contractregel om te beginnen."
     },
     "errors": {
-      "cannotEditWithInvoices": "Kan contractregel niet bewerken: dit contract heeft bijbehorende facturen. Contractregels kunnen niet worden bewerkt zodra facturen zijn gegenereerd.",
       "failedToCheckEditable": "Controleren of contract kan worden bewerkt is mislukt",
       "failedToLoad": "Contractregels laden is mislukt",
       "failedToRefresh": "Contractregels vernieuwen is mislukt",
       "failedToRemove": "Contractregel verwijderen is mislukt",
       "failedToUpdate": "Contractregel bijwerken is mislukt",
-      "failedToResetRate": "Kan het regeltarief niet opnieuw instellen"
+      "failedToResetRate": "Kan het regeltarief niet opnieuw instellen",
+      "protectedStartDate": "De startdatum moet op of vóór {{boundary}} liggen om beschermde servicehistorie mee te nemen.",
+      "protectedEndDate": "De einddatum moet op of na {{boundary}} liggen om beschermde servicehistorie mee te nemen."
     },
     "loading": {
       "contractLines": "Contractregels laden",
@@ -694,7 +705,10 @@
     },
     "fields": {
       "billingTimingQuestion": "Wanneer moet deze regel worden gefactureerd?",
-      "rate": "Tarief"
+      "rate": "Tarief",
+      "invoiceText": "Factuurregeltekst",
+      "invoiceTextPlaceholder": "Wordt op de factuur afgedrukt; standaard de regelnaam",
+      "invoiceTextHelp": "Deze tekst wordt letterlijk op de terugkerende factuurregel afgedrukt."
     },
     "sections": {
       "billingTiming": "Facturatietiming",
@@ -887,7 +901,12 @@
     "fixedServicesPricingExplanation": "Bundelverdelingen delen het basistarief van de regel. Terugkerende plaatsen factureren elke periode het afgesproken aantal × tarief per eenheid, zonder verbruiksregistraties.",
     "recurringQuantity": "Terugkerend aantal",
     "allocationQuantity": "Verdeelaantal",
-    "bundleBaseRateHelp": "Terugkerende vergoeding voor services met bundelprijs. Terugkerende plaatsen worden apart gefactureerd tegen aantal × tarief per eenheid."
+    "bundleBaseRateHelp": "Terugkerende vergoeding voor services met bundelprijs. Terugkerende plaatsen worden apart gefactureerd tegen aantal × tarief per eenheid.",
+    "invoiceTextLabel": "Factuurregeltekst",
+    "invoiceTextPlaceholder": "Wordt op de factuur afgedrukt; standaard de regelnaam",
+    "invoiceTextHelp": "Deze tekst wordt letterlijk op de terugkerende factuurregel afgedrukt.",
+    "startDateLabel": "Startdatum regel",
+    "endDateLabel": "Einddatum regel"
   },
   "pricingSchedules": {
     "list": {
@@ -1303,6 +1322,21 @@
       "hypothetical": "Hypothetisch klantprofiel",
       "open": "Simuleren",
       "title": "Sjabloonsimulatie"
+    },
+    "discounts": {
+      "title": "Standaardcontractkortingen",
+      "help": "Elk klantcontract krijgt een onafhankelijke bewerkbare kopie. Contractbrede kortingen gelden voor alle geschikte regels.",
+      "invalid": "Voer een naam, positieve waarde en begindatum in.",
+      "remove": "Verwijderen",
+      "name": "Kortingsnaam",
+      "percentage": "Percentage",
+      "fixed": "Vast bedrag",
+      "value": "Waarde",
+      "startDate": "Begint op",
+      "endDate": "Eindigt op (optioneel)",
+      "add": "Standaardkorting toevoegen",
+      "chooseLine": "Kies een sjabloonregel",
+      "chooseService": "Kies een service"
     }
   },
   "quickStart": {
@@ -2571,7 +2605,8 @@
       "missingClient": "Bij het conceptcontract ontbreekt de klanttoewijzing",
       "invalidStartDate": "Het conceptcontract heeft een ongeldige startdatum",
       "recordInvalid": "Een van de geselecteerde records van de contractwizard is niet meer geldig. Vernieuw de pagina en probeer het opnieuw.",
-      "duplicate": "Er bestaat al een overeenkomend record van de contractwizard."
+      "duplicate": "Er bestaat al een overeenkomend record van de contractwizard.",
+      "standingTerms": "Dit concept bevat terugkerende kortingsvoorwaarden. Bewerk de tabbladen Regels en Kortingen om deze te behouden."
     },
     "pricingSchedule": {
       "endAfterEffective": "De einddatum moet na de ingangsdatum liggen",
@@ -2596,6 +2631,78 @@
       "activatedContractIdRequired": "Contract-ID van de geactiveerde verlenging is verplicht.",
       "contractNotActive": "Het geactiveerde verlengingscontract is niet meer actief. Vernieuw de pagina en probeer het opnieuw.",
       "manualRetryDueOnly": "Handmatig opnieuw proberen is alleen mogelijk voor vervallen verlengingscycli."
+    }
+  },
+  "contractDiscounts": {
+    "title": "Kortingen",
+    "description": "Elk klantcontract heeft een eigen bewerkbare kopie. Contractbrede kortingen gelden voor de in aanmerking komende kosten van de gefactureerde contractregels.",
+    "loading": "Kortingen laden…",
+    "empty": "Er zijn nog geen kortingen geconfigureerd voor dit contract.",
+    "actions": {
+      "attach": "Koppelen",
+      "pickShared": "Bestaande korting koppelen",
+      "detach": "Loskoppelen van dit contract",
+      "toggleActive": "Kortingsstatus wijzigen",
+      "add": "Korting toevoegen",
+      "cancel": "Annuleren",
+      "save": "Opslaan",
+      "saving": "Opslaan…"
+    },
+    "attachment": {
+      "shared": "Contractkoppeling",
+      "line": "Regelgekoppeld"
+    },
+    "sharedEditNotice": "Wijzigingen gelden alleen voor dit klantcontract. Het bewerken van de sjabloon verandert bestaande contractkopieën niet.",
+    "dialog": {
+      "contractAttachmentLineScopeLocked": "Deze korting is gekoppeld aan dit klantcontract. Koppel de korting los en maak een regelgebonden korting om deze tot één regel te beperken.",
+      "createTitle": "Korting toevoegen",
+      "editTitle": "Korting bewerken"
+    },
+    "columns": {
+      "name": "Naam",
+      "value": "Waarde",
+      "scope": "Bereik",
+      "line": "Contractregel",
+      "dates": "Datums",
+      "status": "Status"
+    },
+    "status": {
+      "active": "Actief",
+      "inactive": "Inactief"
+    },
+    "scopes": {
+      "invoice": "Alle in aanmerking komende kosten",
+      "contract": "Dit contract",
+      "service": "Een service",
+      "line": "Een contractregel"
+    },
+    "values": {
+      "unnamedLine": "Naamloze regel"
+    },
+    "types": {
+      "percentage": "Percentage",
+      "fixed": "Vast bedrag"
+    },
+    "fields": {
+      "name": "Naam",
+      "namePlaceholder": "bijv. Loyaliteit 10%",
+      "type": "Type",
+      "percentValue": "Percentage (0–100)",
+      "fixedValue": "Bedrag",
+      "startDate": "Startdatum",
+      "endDate": "Einddatum",
+      "line": "Contractregel",
+      "linePlaceholder": "Selecteer een contractregel",
+      "scope": "Bereik",
+      "priority": "Prioriteit",
+      "priorityPlaceholder": "Optioneel",
+      "service": "Service",
+      "servicePlaceholder": "Selecteer een service",
+      "active": "Actief"
+    },
+    "errors": {
+      "loadFailed": "Kortingen laden mislukt.",
+      "saveFailed": "Korting opslaan mislukt."
     }
   }
 }

@@ -129,6 +129,9 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   'opportunity_meeting_sessions', 'opportunity_settings', 'opportunities',
 
   // Invoice details
+  // invoice_adjustment_operations is a FK-less manual-save idempotency ledger,
+  // so it can drop with the invoice rows it keys.
+  'invoice_adjustment_operations',
   'invoice_charges', 'invoice_annotations', 'invoice_time_entries', 'invoice_usage_records',
   'invoice_charge_details', 'invoice_charge_fixed_details', 'invoice_items',
   'invoice_autopay_attempts', 'billing_profile_autopay', 'invoice_payment_links', 'invoice_payments', 'invoice_template_assignments',
@@ -336,16 +339,19 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   'contract_line_unit_pricing_revision_history', 'contract_recurring_unit_adjustments',
   'contract_line_unit_pricing_revisions', 'billing_semantics_locks',
   'usage_tracking', 'bucket_usage', 'bucket_usage_unmappable_archive', 'recurring_service_periods', 'transactions',
-  'accounting_export_errors', 'accounting_export_lines', 'accounting_export_batches',
+  // Artifacts contain adapter-produced financial bytes and have no cascading
+  // FK to the export batch, so remove them explicitly before the batch rows.
+  'accounting_export_artifacts', 'accounting_export_errors', 'accounting_export_lines', 'accounting_export_batches',
   // Accounting sync engine (leaf tables: nothing references them)
   'accounting_sync_operations', 'accounting_sync_cycles',
   'contract_line_bucket_services', 'contract_line_buckets',
+  'contract_template_discount_copies',
   'client_contracts', 'contract_line_service_rate_tiers', 'contract_line_service_bucket_config',
   'contract_line_service_hourly_config', 'contract_line_service_hourly_configs', 'contract_line_service_usage_config',
   'contract_line_service_fixed_config', 'contract_line_service_configuration',
   'contract_line_service_defaults', 'contract_pricing_schedules',
   'service_catalog_mode_defaults',
-  'service_rate_tiers', 'service_prices', 'contract_line_discounts', 'discounts',
+  'service_rate_tiers', 'service_prices', 'contract_line_discounts', 'contract_discount_assignments', 'discounts',
   'client_billing_cycles', 'client_billing_settings',
   'contract_line_services', 'contract_lines', 'contracts',
 

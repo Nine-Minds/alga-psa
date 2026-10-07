@@ -1,5 +1,6 @@
 'use server';
 
+import { Buffer } from 'node:buffer';
 import { AccountingExportService } from '../services/accountingExportService';
 import type {
   AccountingExportBatch,
@@ -34,6 +35,8 @@ import { permissionError } from '@alga-psa/ui/lib/errorHandling';
 import type { ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { AppError } from '@alga-psa/core';
 import logger from '@alga-psa/core/logger';
+import { tenantDb } from '@alga-psa/db';
+import { StorageService } from '@alga-psa/storage/StorageService';
 
 type AccountingExportPermission = 'create' | 'read' | 'update' | 'execute';
 
@@ -276,6 +279,49 @@ export const getAccountingExportBatch = withAuth(async (
   if (denied) return denied;
   const service = await AccountingExportService.create();
   return service.getBatchWithDetails(batchId);
+});
+
+export const downloadAccountingExportArtifact = withAuth(async (
+  user,
+  { tenant },
+  batchId: string,
+  artifactId: string
+): Promise<{ filename: string; contentType: string; contentBase64: string } | ActionPermissionError | AccountingExportActionError> => {
+  const denied = await checkAccountingExportPermission(user, 'read');
+  if (denied) return denied;
+  try {
+    const { knex } = await createTenantKnex();
+    const db = tenantDb(knex, tenant);
+    const query = db.table('accounting_export_artifacts as artifact')
+      .where({ 'artifact.artifact_id': artifactId, 'artifact.batch_id': batchId, 'artifact.committed': true });
+    db.tenantJoin(query, 'accounting_export_batches as batch', 'batch.batch_id', 'artifact.batch_id');
+    const artifact = await query.first('artifact.file_id', 'artifact.content', 'artifact.filename', 'artifact.content_type');
+    if (!artifact) throw new Error('This export artifact is unavailable for this batch.');
+    let bytes: Buffer;
+    if (artifact.file_id) {
+      try {
+        bytes = (await StorageService.downloadFile(artifact.file_id)).buffer;
+      } catch (storageError) {
+        // The tenant-scoped row keeps the exact adapter bytes as a durable
+        // recovery copy when object storage is temporarily unavailable.
+        logger.warn('[AccountingExport] Primary artifact download failed; using persisted byte backup', {
+          batchId,
+          artifactId,
+          error: storageError instanceof Error ? storageError.message : String(storageError),
+        });
+        bytes = Buffer.from(artifact.content);
+      }
+    } else {
+      bytes = Buffer.from(artifact.content);
+    }
+    return {
+      filename: artifact.filename,
+      contentType: artifact.content_type,
+      contentBase64: bytes.toString('base64'),
+    };
+  } catch (error) {
+    return toAccountingExportActionError(error, 'execute');
+  }
 });
 
 export const listAccountingExportBatches = withAuth(async (

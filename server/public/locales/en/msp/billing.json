@@ -230,12 +230,14 @@
       "selectService": "Select Service",
       "taxable": "(Taxable)",
       "nonTaxable": "(Non-Taxable)",
-      "calculatedOnSave": "(calculated on save)"
+      "calculatedOnSave": "(calculated on save)",
+      "credit": "Credit"
     },
     "expanded": {
       "discount": "Discount",
       "item": "Item {{number}}",
-      "markedForRemoval": "Marked for removal"
+      "markedForRemoval": "Marked for removal",
+      "credit": "Credit"
     },
     "fields": {
       "service": "Service",
@@ -247,10 +249,18 @@
       "applyDiscountTo": "Apply Discount To",
       "entireInvoice": "Entire Invoice",
       "rate": "Rate ({{currencySymbol}})",
-      "description": "Description"
+      "description": "Description",
+      "creditUnit": "Unit credit ({{currencySymbol}})",
+      "taxTreatment": "Tax treatment",
+      "nonTaxable": "Non-taxable",
+      "location": "Location",
+      "clientDefaultLocation": "Client default",
+      "billingProfile": "Billing profile",
+      "clientDefaultProfile": "Client default"
     },
     "placeholders": {
-      "discountDescription": "e.g., Early Payment Discount"
+      "discountDescription": "e.g., Early Payment Discount",
+      "creditDescription": "e.g., Goodwill credit"
     },
     "actions": {
       "add": "Add",
@@ -267,11 +277,15 @@
       "invoiceTotal": "{{percentage}}% of invoice total",
       "amount": "Amount: -{{currencySymbol}}{{amount}}",
       "appliedTo": "Applied to: {{description}}",
-      "subtotal": "Subtotal: {{currencySymbol}}{{amount}}"
+      "subtotal": "Subtotal: {{currencySymbol}}{{amount}}",
+      "credit": "Credit"
     },
     "options": {
       "percentage": "Percentage",
       "fixedAmount": "Fixed Amount"
+    },
+    "errors": {
+      "serviceRequired": "Assign a service to this charge before saving."
     }
   },
   "contractLineServices": {
@@ -459,7 +473,8 @@
       "executeError": "Failed to execute batch",
       "cancelled": "Batch cancelled",
       "cancelError": "Failed to cancel batch",
-      "realmRequired": "Choose a connected accounting company before creating the export."
+      "realmRequired": "Choose a connected accounting company before creating the export.",
+      "artifactDownloadError": "Unable to download this export file."
     },
     "status": {
       "pending": "Pending",
@@ -470,6 +485,12 @@
       "failed": "Failed",
       "cancelled": "Cancelled",
       "needsAttention": "Needs Attention"
+    },
+    "artifacts": {
+      "title": "Delivered files",
+      "download": "Download",
+      "unavailable": "This historical batch has no saved file artifact. It cannot be recovered without running a new export.",
+      "storageFallback": "Stored in database backup"
     }
   },
   "templateRenderer": {

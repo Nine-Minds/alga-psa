@@ -1,3 +1,6 @@
+import { serializeAccountingCsv } from '../../services/accountingCsv';
+import { expandAccountingExportCharges } from '../../services/accountingExportChargeExpansion';
+import { toDateOnly } from '../../lib/billing/dateOnly';
 /**
  * QuickBooks CSV Export Adapter
  *
@@ -19,11 +22,9 @@ import {
   PendingTaxImportRecord
 } from '@alga-psa/types';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
-import { AppError } from '@alga-psa/core';
 import { lockInvoiceForExternalSync } from '../../lib/invoiceExternalSyncLock';
 import { AccountingMappingResolver } from '../../services/accountingMappingResolver';
 import { KnexInvoiceMappingRepository } from '../../repositories/invoiceMappingRepository';
-import { unparseCSV } from '@alga-psa/core';
 
 /**
  * Database types for invoices and charges
@@ -166,7 +167,10 @@ export class QuickBooksCSVAdapter implements AccountingExportAdapter {
 
     // Load data
     const invoicesById = await this.loadInvoices(knex, tenantId, context);
-    const chargesById = await this.loadCharges(knex, tenantId, context);
+    const loadedCharges = await this.loadCharges(knex, tenantId, context);
+    const expanded = await expandAccountingExportCharges(knex, tenantId, loadedCharges, context.lines);
+    const chargesById = expanded.charges;
+    context = { ...context, lines: expanded.lines };
     const clientData = await this.loadClients(knex, tenantId, invoicesById);
 
     // Set up mapping resolver
@@ -214,29 +218,32 @@ export class QuickBooksCSVAdapter implements AccountingExportAdapter {
           throw new Error(`QuickBooks CSV adapter: charge ${line.document_line_id} not found`);
         }
 
-        if (!charge.service_id) {
+        const lineMapping = charge.is_discount
+          ? await resolver.resolveDiscountMapping({ tenantId, adapterType: this.type, targetRealm: context.batch.target_realm })
+          : charge.service_id
+            ? await resolver.resolveServiceMapping({ tenantId, adapterType: this.type, serviceId: charge.service_id, targetRealm: context.batch.target_realm })
+            : null;
+        if (!lineMapping && charge.is_discount) {
+          throw new Error('Configure a QuickBooks CSV discount item mapping before exporting discounts or credits.');
+        }
+        if (!charge.service_id && !charge.is_discount) {
           throw new Error(`QuickBooks CSV adapter: charge ${charge.item_id} missing service_id`);
         }
 
-        // Resolve service mapping to get QuickBooks item name
-        const serviceMapping = await resolver.resolveServiceMapping({
-          tenantId: context.batch.tenant,
-          adapterType: this.type,
-          serviceId: charge.service_id,
-          targetRealm: context.batch.target_realm
-        });
-
-        if (!serviceMapping) {
+        if (!lineMapping) {
           throw new Error(`QuickBooks CSV adapter: no mapping for service ${charge.service_id}. Please configure service mappings before export.`);
         }
 
         // Get the item name from mapping metadata or use external_entity_id
-        const itemName = this.getItemName(serviceMapping);
+        const itemName = this.getItemName(lineMapping);
 
         // Calculate amounts
-        const quantity = charge.quantity ?? 1;
-        const unitPrice = charge.unit_price ?? charge.total_price;
         const lineAmount = charge.net_amount ?? charge.total_price;
+        // The CSV importer derives the line from quantity × rate. Use the
+        // persisted net sign so fixed discounts and quantity-derived credits
+        // stay negative even when the authored rate was stored as positive.
+        const quantity = charge.is_discount ? 1 : (charge.quantity ?? 1);
+        const unitPrice = quantity ? lineAmount / quantity : lineAmount;
         const taxAmount = shouldExcludeTax ? 0 : (charge.tax_amount ?? 0);
 
         totalAmountCents += lineAmount;
@@ -316,7 +323,7 @@ export class QuickBooksCSVAdapter implements AccountingExportAdapter {
 
       documents.push({
         documentId: invoiceId,
-        lineIds: exportLines.map((line) => line.line_id),
+        lineIds: [...new Set(exportLines.map((line) => line.line_id))],
         payload: payload as unknown as Record<string, unknown>
       });
     }
@@ -348,9 +355,6 @@ export class QuickBooksCSVAdapter implements AccountingExportAdapter {
       throw new Error('QuickBooks CSV adapter requires batch tenant identifier for delivery');
     }
 
-    const { knex } = await createTenantKnex();
-    const deliveredAt = new Date().toISOString();
-
     logger.info('[QuickBooksCSVAdapter] Starting delivery (file generation)', {
       tenant: tenantId,
       batchId: context.batch.batch_id,
@@ -370,71 +374,21 @@ export class QuickBooksCSVAdapter implements AccountingExportAdapter {
     }
 
     // Generate CSV content
-    const csvContent = unparseCSV(allRows, CSV_FIELDS as string[]);
+    const csvContent = serializeAccountingCsv(allRows, CSV_FIELDS as string[], ['*ItemQuantity', '*ItemRate', '*ItemAmount', 'TaxAmount']);
 
     // Generate filename with timestamp
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-').split('T')[0];
     const filename = `quickbooks-invoices-${timestamp}.csv`;
 
-    // Mark an invoice exported only after confirming it is not cancelled. The
-    // mapping insert takes the same invoice row lock the void path holds
-    // (invoiceExternalSyncLock.ts), so a concurrent void either commits first
-    // and refuses the export of its invoice, or waits until these mappings
-    // commit and then re-reads the mapping under its own lock.
     const deliveredLines: { lineId: string; externalDocumentRef?: string | null }[] = [];
-    const failedDocuments: Array<{
-      documentId: string;
-      lineIds: string[];
-      code: string;
-      message: string;
-    }> = [];
-
     for (const document of transformResult.documents) {
       const payload = document.payload as unknown as InvoiceDocumentPayload;
       const externalRef = `csv:${payload.invoiceNumber}`;
-      try {
-        await withTransaction(knex, async (trx) => {
-          await lockInvoiceForExternalSync(trx, tenantId, document.documentId);
-          const invoiceMappingRepository = new KnexInvoiceMappingRepository(trx);
-          await invoiceMappingRepository.upsertInvoiceMapping({
-            tenantId,
-            adapterType: this.type,
-            invoiceId: document.documentId,
-            externalInvoiceId: externalRef,
-            targetRealm: context.batch.target_realm ?? null,
-            metadata: {
-              last_exported_at: deliveredAt,
-              filename,
-              invoiceNumber: payload.invoiceNumber
-            }
-          });
-        });
-
-        for (const lineId of document.lineIds) {
-          deliveredLines.push({
-            lineId,
-            externalDocumentRef: externalRef
-          });
-        }
-      } catch (error) {
-        const code = error instanceof AppError ? error.code : 'QBO_CSV_DELIVERY_ERROR';
-        const message = error instanceof Error ? error.message : 'Unknown QuickBooks CSV delivery error';
-        logger.warn('[QuickBooksCSVAdapter] Skipping mapping for invoice delivery failure', {
-          invoiceId: document.documentId,
-          code,
-          error: message
-        });
-        failedDocuments.push({
-          documentId: document.documentId,
-          lineIds: document.lineIds,
-          code,
-          message
-        });
-      }
+      for (const lineId of document.lineIds) deliveredLines.push({ lineId, externalDocumentRef: externalRef });
     }
 
     // Create file attachment
-    const files: AccountingExportFileAttachment[] = [{
+    const files: AccountingExportFileAttachment[] = allRows.length === 0 ? [] : [{
       filename,
       contentType: 'text/csv',
       content: csvContent
@@ -449,7 +403,6 @@ export class QuickBooksCSVAdapter implements AccountingExportAdapter {
 
     return {
       deliveredLines,
-      failedDocuments: failedDocuments.length > 0 ? failedDocuments : undefined,
       artifacts: {
         filename,
         rowCount: allRows.length,
@@ -457,10 +410,33 @@ export class QuickBooksCSVAdapter implements AccountingExportAdapter {
       },
       metadata: {
         adapter: this.type,
-        deliveredInvoices: transformResult.documents.length - failedDocuments.length,
-        files
+        deliveredInvoices: transformResult.documents.length,
+        files,
+        invoiceMappings: transformResult.documents.map((document) => {
+          const payload = document.payload as unknown as InvoiceDocumentPayload;
+          return { invoiceId: document.documentId, invoiceNumber: payload.invoiceNumber, lineIds: document.lineIds, filename };
+        })
       }
     };
+  }
+
+  async postProcess(deliveryResult: AccountingExportDeliveryResult, context: AccountingExportAdapterContext, transaction?: Knex): Promise<void> {
+    const tenantId = context.batch.tenant;
+    if (!tenantId) throw new Error('QuickBooks CSV mapping requires a tenant');
+    const metadata = deliveryResult.metadata as { invoiceMappings?: Array<{ invoiceId: string; invoiceNumber: string; filename?: string }> } | undefined;
+    const mappings = metadata?.invoiceMappings ?? [];
+    const knex = transaction ?? (await createTenantKnex()).knex;
+    const deliveredAt = new Date().toISOString();
+    await withTransaction(knex, async (trx) => {
+      for (const mapping of [...mappings].sort((a, b) => a.invoiceId.localeCompare(b.invoiceId))) {
+        await lockInvoiceForExternalSync(trx, tenantId, mapping.invoiceId);
+        await new KnexInvoiceMappingRepository(trx).upsertInvoiceMapping({
+          tenantId, adapterType: this.type, invoiceId: mapping.invoiceId,
+          externalInvoiceId: `csv:${mapping.invoiceNumber}`, targetRealm: context.batch.target_realm ?? null,
+          metadata: { last_exported_at: deliveredAt, filename: mapping.filename, invoiceNumber: mapping.invoiceNumber },
+        });
+      }
+    });
   }
 
   /**
@@ -578,6 +554,7 @@ export class QuickBooksCSVAdapter implements AccountingExportAdapter {
         'item_id',
         'invoice_id',
         'service_id',
+        'is_manual',
         'description',
         'quantity',
         'unit_price',
@@ -629,16 +606,7 @@ export class QuickBooksCSVAdapter implements AccountingExportAdapter {
   }
 
   private formatDate(value?: string | Date | null): string {
-    if (!value) return '';
-    const date = typeof value === 'string' ? new Date(value) : value;
-    if (Number.isNaN(date.getTime())) {
-      return '';
-    }
-    // MM/DD/YYYY format for QuickBooks
-    const month = (date.getMonth() + 1).toString().padStart(2, '0');
-    const day = date.getDate().toString().padStart(2, '0');
-    const year = date.getFullYear();
-    return `${month}/${day}/${year}`;
+    return formatDateForQuickBooks(value);
   }
 
   private centsToAmount(cents: number): number {
@@ -665,4 +633,11 @@ export class QuickBooksCSVAdapter implements AccountingExportAdapter {
     const line = context.lines.find((l) => l.line_id === lineId);
     return line?.document_id;
   }
+}
+
+export function formatDateForQuickBooks(value?: string | Date | null): string {
+  const dateOnly = toDateOnly(value);
+  if (!dateOnly) return '';
+  const [year, month, day] = dateOnly.split('-');
+  return `${month}/${day}/${year}`;
 }

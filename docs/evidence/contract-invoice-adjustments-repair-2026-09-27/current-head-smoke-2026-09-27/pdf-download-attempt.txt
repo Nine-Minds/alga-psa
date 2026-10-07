@@ -1,0 +1,5 @@
+The first supervised UI PDF action returned HTTP 500 because Puppeteer could not find Chrome 154.0.8037.57 in /home/robert/.cache/puppeteer.
+Restored locally with: npx puppeteer browsers install chrome@154.0.8037.57
+Retried Download PDF from the operator invoice preview and captured the app-generated Blob after the click (the embedded browser did not expose its download directory).
+Verified with pdfinfo and pdftotext: the $3,900 partial-period parity PDF and $64.60 taxable invoice PDF are saved beside this record; the separate credit PDF contains the signed -$30.00 line and $3,870 total.
+Other console noise: devtools WebSocket ws://localhost:1274 refused; it did not prevent billing page actions or saves.

@@ -92,6 +92,19 @@
           "taxCodes": "Tax Codes",
           "paymentTerms": "Payment Terms"
         }
+      },
+      "adjustmentMappings": {
+        "desktopServices": "Desktop service accounts",
+        "desktopDiscounts": "Desktop discounts",
+        "discounts": "Discounts and credits",
+        "qboAccount": "QuickBooks discount account ID",
+        "xeroAccount": "Xero account code",
+        "desktopAccount": "Desktop income account name",
+        "csvItem": "QuickBooks discount item name",
+        "description": "Map invoice discounts and credits before exporting. The mapping belongs to this accounting company.",
+        "add": "Add mapping",
+        "remove": "Remove mapping",
+        "removeConfirm": "Remove this accounting mapping?"
       }
     },
     "calendar": {

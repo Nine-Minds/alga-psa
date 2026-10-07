@@ -43,6 +43,7 @@ vi.mock('@alga-psa/db', () => ({
   createTenantKnex: vi.fn(async () => ({ knex: h.knex, tenant: 'tenant-1' })),
   tenantDb: vi.fn((knex: any) => ({
     table: (table: string) => knex(table),
+    tenantJoin: () => undefined,
   })),
 }));
 
@@ -59,6 +60,7 @@ type FakeState = {
   lines: any[];
   charges: any[];
   chargeDetails: any[];
+  fixedDetails?: any[];
   invoices: any[];
   clients: any[];
   services: any[];
@@ -69,6 +71,7 @@ function createFakeKnex(state: FakeState) {
   const tableData: Record<string, () => any[]> = {
     invoice_charges: () => state.charges.map((charge) => ({ net_amount: 100, ...charge })),
     invoice_charge_details: () => state.chargeDetails,
+    'invoice_charge_details as d': () => state.fixedDetails ?? [],
     invoices: () => state.invoices,
     clients: () => state.clients,
     service_catalog: () => state.services,
@@ -116,6 +119,7 @@ function createFakeRepo(state: FakeState) {
 function createFakeResolver(overrides: Partial<Record<string, any>> = {}) {
   return {
     resolveServiceMapping: vi.fn(async () => ({ external_entity_id: 'item-1', source: 'service' })),
+    resolveDiscountMapping: vi.fn(async () => ({ external_entity_id: 'discount-account', source: 'discount' })),
     resolveTaxCodeMapping: vi.fn(async () => ({ external_entity_id: 'tax-1', source: 'tax_code' })),
     resolvePaymentTermMapping: vi.fn(async () => ({ external_entity_id: 'term-1', source: 'payment_term' })),
     ...overrides,
@@ -200,15 +204,54 @@ describe('AccountingExportValidation.ensureMappingsForBatch', () => {
     expect(repo.updateBatchStatus).toHaveBeenCalledWith('batch-1', { status: 'needs_attention' });
   });
 
+  it('validates fixed-plan child services without exporting or rejecting the parent', async () => {
+    const state = baseState({
+      charges: [{ item_id: 'charge-1', invoice_id: 'inv-1', service_id: null, is_manual: false, net_amount: 100, tax_amount: 0 }],
+      fixedDetails: [
+        { item_id: 'charge-1', item_detail_id: 'detail-1', service_id: 'svc-1', allocated_amount: 60, tax_amount: 0 },
+        { item_id: 'charge-1', item_detail_id: 'detail-2', service_id: 'svc-2', allocated_amount: 40, tax_amount: 0 },
+      ],
+    });
+    const { repo, resolver } = await run(state);
+    expect(repo.errors).toEqual([]);
+    expect(repo.updateBatchStatus).toHaveBeenCalledWith('batch-1', { status: 'ready' });
+    expect(resolver.resolveServiceMapping.mock.calls.map(([args]: any[]) => args.serviceId)).toEqual(['svc-1', 'svc-2']);
+    const unmapped = await run(state, createFakeResolver({ resolveServiceMapping: vi.fn(async () => null) }));
+    expect(unmapped.repo.errors).toHaveLength(2);
+    expect(unmapped.repo.errors.every((error: any) => error.code === 'missing_service_mapping')).toBe(true);
+  });
+
+  it('rejects inconsistent fixed allocations instead of dropping or duplicating revenue', async () => {
+    await expect(run(baseState({
+      charges: [{ item_id: 'charge-1', service_id: null, is_manual: false, net_amount: 100, tax_amount: 0 }],
+      fixedDetails: [{ item_id: 'charge-1', item_detail_id: 'detail-1', service_id: 'svc-1', allocated_amount: 99, tax_amount: 0 }],
+    }))).rejects.toThrow('Fixed-plan allocation totals do not match');
+  });
+
   it('flags charges that have no associated service', async () => {
     const state = baseState({
-      charges: [{ item_id: 'charge-1', invoice_id: 'inv-1', service_id: null, tax_region: null }],
+      charges: [{ item_id: 'charge-1', invoice_id: 'inv-1', service_id: null, description: 'Old manual charge', tax_region: null }],
     });
     const { repo } = await run(state);
 
     expect(repo.errors).toEqual([
-      expect.objectContaining({ code: 'missing_service', line_id: 'line-1' }),
+      expect.objectContaining({ code: 'missing_service', line_id: 'line-1', message: expect.stringContaining("Assign a service to 'Old manual charge'") }),
     ]);
+  });
+
+  it('requires the configured discount mapping for serviceless discount settlements', async () => {
+    const state = baseState({
+      charges: [{ item_id: 'charge-1', invoice_id: 'inv-1', service_id: null, is_discount: true, description: 'Automatic contract discount' }],
+      chargeDetails: []
+    });
+    const resolver = createFakeResolver({ resolveDiscountMapping: vi.fn(async () => null) });
+    const { repo } = await run(state, resolver);
+
+    expect(repo.errors).toContainEqual(expect.objectContaining({
+      code: 'missing_discount_mapping',
+      message: expect.stringContaining('Configure a discount mapping')
+    }));
+    expect(repo.errors.some((error: any) => error.code === 'missing_service')).toBe(false);
   });
 
   it('reports an unmapped service once per service+realm, with the service name', async () => {

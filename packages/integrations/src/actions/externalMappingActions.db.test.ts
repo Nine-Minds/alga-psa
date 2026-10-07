@@ -977,3 +977,40 @@ describe('unlink (tombstone) and explicit relink', () => {
     expect(audit.details).toMatchObject({ relinked: true });
   });
 });
+
+describe('invoice discount mapping configuration', () => {
+  it.each(['quickbooks_online', 'xero', 'quickbooks_csv', 'xero_csv', 'quickbooks_desktop'])('creates, reads, edits and removes the tenant-scoped %s mapping', async (provider) => {
+    const realm = provider === 'quickbooks_online' ? realmA : provider === 'xero' ? xeroRealm : null;
+    const external = provider === 'xero' ? '200' : 'Discount account';
+    const user = { user_id: 'u' };
+    const context = { tenant: tenantA };
+    const result = await (createExternalEntityMapping as any)(user, context, {
+      integration_type: provider, alga_entity_type: 'discount', alga_entity_id: 'invoice_discount',
+      external_entity_id: external, external_realm_id: realm,
+    });
+    expect(result.id).toBeTruthy();
+    expect(await db('tenant_external_entity_mappings').where({ tenant: tenantB, alga_entity_type: 'discount' })).toHaveLength(0);
+    if (provider === 'quickbooks_online') expect(qboReadMock).toHaveBeenCalledWith('Account', external);
+    if (provider === 'xero') expect(xeroListAccountsMock).toHaveBeenCalled();
+    const read = await (getExternalEntityMappings as any)(user, context, { integrationType: provider, algaEntityType: 'discount', externalRealmId: realm });
+    expect(read).toHaveLength(1);
+    const updated = await (updateExternalEntityMapping as any)(user, context, result.id, { external_entity_id: external });
+    expect(updated.external_entity_id).toBe(external);
+    await (deleteExternalEntityMapping as any)(user, context, result.id);
+    expect(await (getExternalEntityMappings as any)(user, context, { integrationType: provider, algaEntityType: 'discount', externalRealmId: realm })).toHaveLength(0);
+  });
+
+  it('rejects forged discount identities and unmappable Xero accounts', async () => {
+    for (const input of [
+      { alga_entity_id: uuidv4(), external_entity_id: '200' },
+      { alga_entity_id: 'invoice_discount', external_entity_id: '090' },
+      { alga_entity_id: 'invoice_discount', external_entity_id: '299' },
+    ]) {
+      const result = await (createExternalEntityMapping as any)({ user_id: 'u' }, { tenant: tenantA }, {
+        integration_type: 'xero', alga_entity_type: 'discount', external_realm_id: xeroRealm, ...input,
+      });
+      expect(result.actionError).toBeTruthy();
+    }
+    expect(await db('tenant_external_entity_mappings').where({ tenant: tenantA, alga_entity_type: 'discount' })).toHaveLength(0);
+  });
+});

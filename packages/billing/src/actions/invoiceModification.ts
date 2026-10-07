@@ -1,10 +1,12 @@
 // @ts-nocheck
 'use server'
 
+import { loadInvoiceChargeLineIds } from '../services/invoiceChargeLineage';
 import { tenantDb, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { Session } from 'next-auth';
 import { Temporal } from '@js-temporal/polyfill';
+import { resolveSourceDerivedPartialPeriod } from '../lib/billing/compute/contractInvoiceAdjustments';
 import { createTenantKnex } from '@alga-psa/db';
 import { toISODate } from '@alga-psa/core';
 // import { auditLog } from '@alga-psa/db';
@@ -12,12 +14,13 @@ import { applyCreditToInvoice, resolveCreditExpirationDate, resolveCreditDrawdow
 import { getAvailableCredit } from '../lib/creditBalance';
 import { reverseCreditApplicationsForInvoice } from '../lib/creditReversal';
 import { clearPrepaidReplenishmentForInvoice } from '../lib/prepaidAutoReplenishment';
-import { IInvoiceCharge, InvoiceViewModel, DiscountType } from '@alga-psa/types';
+import { IInvoiceCharge, InvoiceViewModel, DiscountType, type ManualPartialPeriodMetadata } from '@alga-psa/types';
 import { BillingEngine } from '../lib/billing/billingEngine';
 import ProjectBillingCapUsage from '../models/projectBillingCapUsage';
 import { capAppliesToInvoiceCurrency } from '../lib/billing/compute/projectCapMath';
 import ProjectBillingScheduleEntry from '../models/projectBillingScheduleEntry';
-import { persistInvoiceCharges, persistManualInvoiceCharges } from '../services/invoiceService'; // Import persistManualInvoiceCharges
+import { persistInvoiceCharges, persistManualInvoiceCharges, recalculatePercentageDiscountInvoiceCharges, resolveTaxRegionCodeForRate, validateManualChargeAttribution } from '../services/invoiceService'; // Import persistManualInvoiceCharges
+import { reconcileAutomaticInvoiceAdjustments } from '../services/invoiceAutomaticAdjustments';
 import Invoice from '@alga-psa/billing/models/invoice';
 import { v4 as uuidv4 } from 'uuid';
 // import { getRedisStreamClient } from '@alga-psa/workflow-streams'; // No longer directly used here
@@ -29,13 +32,19 @@ import {
 
 import { validateInvoiceFinalization, validateInvoiceFinalizationInternal } from './taxSourceActions';
 import { enqueueInvoiceAutoExport } from '../services/accountingSync/syncProducers';
+import { assertInvoiceNotExported, findInvoiceExportInProgress } from '../services/accountingSync/invoiceExportGuards';
+import {
+  inspectInvoiceEditable,
+  type InvoiceAdjustmentCapability,
+} from '../services/invoiceAdjustmentEditability';
+
+export type { InvoiceAdjustmentCapability } from '../services/invoiceAdjustmentEditability';
 import { startInvoiceAutopay } from '../services/autopayBridge';
 import {
   activateHourBlocksForFinalizedInvoice as activateHourBlocksForFinalizedInvoiceCore,
   classifyInvoiceCreditHandling,
   settlePrepaidReplenishmentInvoice as settlePrepaidReplenishmentInvoiceCore,
 } from '../services/prepaidReplenishmentSettlement';
-import { assertInvoiceNotExported } from '../services/accountingSync/invoiceExportGuards';
 import { assertInvoiceExportReady, InvoiceExportReadinessError } from '../services/accountingSync/exportReadiness';
 import { withAuth } from '@alga-psa/auth';
 import { getSession } from '@alga-psa/auth';
@@ -163,6 +172,19 @@ export interface ManualInvoiceUpdate {
   discount_percentage?: number;
   applies_to_item_id?: string;
   is_taxable?: boolean; // Keep for purely manual items without service
+  /** Optional location attribution for the manual line. */
+  location_id?: string | null;
+  /** Explicit billing profile for the manual line. */
+  billing_profile_id?: string | null;
+  client_contract_id?: string | null;
+  service_period_start?: string | null;
+  service_period_end?: string | null;
+  adjustment_period_start?: string | null;
+  adjustment_period_end?: string | null;
+  /** Service-level discount target (resolved to an item id on save). */
+  applies_to_service_id?: string;
+  /** Partial-period inputs and reason, kept alongside the resolved amount. */
+  manual_line_metadata?: Record<string, unknown> | null;
 }
 
 interface ManualItemsUpdate {
@@ -741,6 +763,102 @@ function isManualInvoiceNumberConflict(error: unknown): boolean {
     databaseError.constraint === 'unique_invoice_number_per_tenant';
 }
 
+async function assertInvoiceEditableUnderLock(
+  conn: Knex | Knex.Transaction,
+  tenant: string,
+  invoiceId: string,
+): Promise<Record<string, any>> {
+  const { invoice, capability } = await inspectInvoiceEditable(conn, tenant, invoiceId, {
+    forUpdate: true,
+  });
+
+  if (!invoice || !capability.editable) {
+    throw expectedInvoiceActionError(capability.reason ?? 'Invoice cannot be modified');
+  }
+
+  return invoice;
+}
+
+/**
+ * Server-checked identity for a manual adjustment save. The client sends the
+ * `expectedRevision` it loaded and (optionally) a per-save `operationId`.
+ * A stale revision is rejected; a replayed operation is a no-op, so a double
+ * click or retry cannot append the same lines twice.
+ */
+export interface ManualAdjustmentSubmission {
+  operationId?: string;
+  expectedRevision?: number;
+}
+
+const STALE_ADJUSTMENT_REVISION = 'STALE_ADJUSTMENT_REVISION';
+
+async function adjustmentOperationAlreadyApplied(
+  conn: Knex | Knex.Transaction,
+  tenant: string,
+  operationId: string | undefined,
+): Promise<boolean> {
+  if (!operationId) return false;
+  const row = await tenantScopedTable(conn, tenant, 'invoice_adjustment_operations')
+    .where({ tenant, operation_id: operationId })
+    .first('operation_id');
+  return Boolean(row);
+}
+
+function assertAdjustmentRevisionCurrent(
+  invoice: Record<string, any>,
+  expectedRevision: number | undefined,
+): void {
+  if (expectedRevision === undefined || expectedRevision === null) return;
+  const current = Number(invoice.draft_adjustment_revision ?? 0);
+  if (Number(expectedRevision) !== current) {
+    throw new ManualInvoiceError(
+      STALE_ADJUSTMENT_REVISION,
+      'This invoice changed since it was loaded. Reload it before saving your adjustments.',
+      { expectedRevision: String(expectedRevision), currentRevision: String(current) },
+    );
+  }
+}
+
+async function recordAdjustmentSave(
+  conn: Knex | Knex.Transaction,
+  tenant: string,
+  invoiceId: string,
+  operationId: string | undefined,
+): Promise<void> {
+  await tenantScopedTable(conn, tenant, 'invoices')
+    .where({ invoice_id: invoiceId, tenant })
+    .increment('draft_adjustment_revision', 1);
+
+  if (!operationId) return;
+  const row = await tenantScopedTable(conn, tenant, 'invoices')
+    .where({ invoice_id: invoiceId, tenant })
+    .first('draft_adjustment_revision');
+  await tenantScopedTable(conn, tenant, 'invoice_adjustment_operations').insert({
+    tenant,
+    operation_id: operationId,
+    invoice_id: invoiceId,
+    resulting_revision: Number(row?.draft_adjustment_revision ?? 0),
+  });
+}
+
+/**
+ * Read-only capability probe for the draft adjustment editor. Returns the same
+ * decision the writers enforce, without taking a row lock.
+ */
+export const getInvoiceAdjustmentCapability = withAuth(async (
+  user,
+  { tenant },
+  invoiceId: string,
+): Promise<InvoiceAdjustmentCapability | ActionPermissionError> => {
+  if (!await hasPermission(user, 'invoice', 'update')) {
+    return permissionError('Permission denied: invoice update required', 'msp/invoicing:errors.permissions.invoiceUpdate');
+  }
+
+  const { knex } = await createTenantKnex();
+  const { capability } = await inspectInvoiceEditable(knex, tenant, invoiceId);
+  return capability;
+});
+
 export const updateDraftInvoiceProperties = withAuth(async (
   user,
   { tenant },
@@ -791,10 +909,18 @@ export const updateDraftInvoiceProperties = withAuth(async (
         invoice_id: invoiceId,
         tenant,
       })
+      .forUpdate()
       .first();
 
     if (!invoice) {
       expectedError = actionError('Invoice not found', 'msp/invoicing:errors.invoice.notFound');
+      return;
+    }
+
+    try {
+      await assertInvoiceNotExported(trx, tenant, invoiceId, 'edit');
+    } catch (error) {
+      expectedError = actionError(getErrorMessage(error));
       return;
     }
 
@@ -1009,6 +1135,10 @@ export async function finalizeInvoiceWithKnex(
 
     if (!invoice) {
       throw expectedInvoiceActionError('Invoice not found');
+    }
+
+    if (await findInvoiceExportInProgress(trx, tenant, invoiceId)) {
+      throw expectedInvoiceActionError('An accounting export is being prepared for this invoice. Wait for it to finish before changing the invoice.');
     }
 
     // Replenishment invoices are payment-gated regardless of whether they are
@@ -1447,6 +1577,13 @@ export const unfinalizeInvoice = withAuth(async (
       return;
     }
 
+    try {
+      await assertInvoiceNotExported(trx, tenant, invoiceId, 'unfinalize');
+    } catch (error) {
+      expectedError = actionError(getErrorMessage(error));
+      return;
+    }
+
     const normalizedStatus = invoice.status ? invoice.status.toLowerCase() : null;
     const isFinalized = Boolean(invoice.finalized_at) || (normalizedStatus && normalizedStatus !== 'draft');
 
@@ -1527,7 +1664,8 @@ export const updateInvoiceManualItems = withAuth(async (
   user,
   { tenant },
   invoiceId: string,
-  changes: ManualItemsUpdate
+  changes: ManualItemsUpdate,
+  submission?: ManualAdjustmentSubmission,
 ): Promise<InvoiceManualItemsUpdateActionResult> => {
   const context = {
     tenant,
@@ -1585,7 +1723,7 @@ export const updateInvoiceManualItems = withAuth(async (
       );
     }
 
-    await updateManualInvoiceItemsInternal(invoiceId, changes, session!, tenant); // Renamed internal call
+    await updateManualInvoiceItemsInternal(invoiceId, changes, session!, tenant, submission); // Renamed internal call
     return await Invoice.getFullInvoiceById(knex, tenant, invoiceId);
   } catch (error) {
     if (error instanceof ManualInvoiceError) {
@@ -1619,37 +1757,221 @@ async function updateManualInvoiceItemsInternal(
   invoiceId: string,
   changes: ManualItemsUpdate,
   session: Session,
-  tenant: string
+  tenant: string,
+  submission?: ManualAdjustmentSubmission,
 ): Promise<void> {
   const { knex } = await createTenantKnex(tenant);
   const billingEngine = new BillingEngine();
   const currentDate = Temporal.Now.plainDateISO().toString();
 
-  const invoice = await withTransaction(knex, async (trx: Knex.Transaction) => {
-    return await tenantScopedTable(trx, tenant, 'invoices')
-      .where({ invoice_id: invoiceId })
-      .first();
-  });
+  await withTransaction(knex, async (trx: Knex.Transaction) => {
+    // Lock the invoice and re-check the full editability contract inside the
+    // write transaction. A concurrent finalize/export/void that commits while
+    // the operator is editing must win the race, not be overwritten by a stale
+    // snapshot the UI fetched earlier.
+    const invoice = await assertInvoiceEditableUnderLock(trx, tenant, invoiceId);
 
-  if (!invoice) {
-    throw expectedInvoiceActionError('Invoice not found');
-  }
+    // A replayed operation is a no-op; a stale revision is rejected before any
+    // row is touched.
+    if (await adjustmentOperationAlreadyApplied(trx, tenant, submission?.operationId)) {
+      return;
+    }
+    assertAdjustmentRevisionCurrent(invoice, submission?.expectedRevision);
 
-  if (['paid', 'cancelled'].includes(invoice.status)) {
-    throw expectedInvoiceActionError('Cannot modify a paid or cancelled invoice');
-  }
-
-  const client = await withTransaction(knex, async (trx: Knex.Transaction) => {
-    return await tenantScopedTable(trx, tenant, 'clients')
+    const client = await tenantScopedTable(trx, tenant, 'clients')
       .where({ client_id: invoice.client_id })
       .first();
-  });
 
-  if (!client) {
-    throw expectedInvoiceActionError('Client not found');
-  }
+    if (!client) {
+      throw expectedInvoiceActionError('Client not found');
+    }
 
-  await withTransaction(knex, async (trx: Knex.Transaction) => {
+    // A partial-period row must remain grounded in a charge on this invoice.
+    // Validate the client-supplied source identity again under the invoice lock
+    // so stale or forged service/period data cannot be persisted.
+    const partialRows = [
+      ...(changes.newItems ?? []),
+      ...(changes.updatedItems ?? []),
+    ] as Array<Record<string, unknown>>;
+    const invoiceLineIds = partialRows.some((item) => (item.manual_line_metadata as any)?.partialPeriod?.source_kind === 'invoice_charge')
+      ? await loadInvoiceChargeLineIds(trx, tenant, invoiceId)
+      : new Map<string, Set<string>>();
+    for (const item of partialRows) {
+      const metadata = item.manual_line_metadata as Record<string, unknown> | null | undefined;
+      const partial = metadata?.partialPeriod as ManualPartialPeriodMetadata | undefined;
+      // Historical partial-period rows predate source links; keep those
+      // editable. New calculator rows opt into strict source validation.
+      if (!partial || partial.source_kind !== 'invoice_charge') continue;
+      const sourceId = typeof partial.source_item_id === 'string' ? partial.source_item_id : '';
+      const source = sourceId ? await tenantScopedTable(trx, tenant, 'invoice_charges')
+        .where({ item_id: sourceId, invoice_id: invoiceId })
+        .first('service_id', 'client_contract_id', 'unit_price', 'is_taxable', 'tax_rate', 'tax_region', 'location_id', 'billing_profile_id', 'manual_line_metadata') : null;
+      const dateOnly = (value: unknown) => value == null
+        ? null
+        : value instanceof Date ? value.toISOString().slice(0, 10) : String(value).slice(0, 10);
+      const sourcePeriods = source ? await tenantScopedTable(trx, tenant, 'invoice_charge_details')
+        .where({ item_id: sourceId, tenant })
+        .andWhere('service_id', source.service_id)
+        .whereNotNull('service_period_start').whereNotNull('service_period_end')
+        .select('service_period_start', 'service_period_end') : [];
+      const sourcePeriodKeys = [...new Set(sourcePeriods.map((period: any) => {
+        const periodStart = dateOnly(period.service_period_start);
+        const inclusiveEnd = dateOnly(period.service_period_end);
+        const periodEnd = inclusiveEnd ? Temporal.PlainDate.from(inclusiveEnd).add({ days: 1 }).toString() : null;
+        return `${periodStart}:${periodEnd}`;
+      }))];
+      const sourceLineRows = source ? await tenantScopedTable(trx, tenant, 'invoice_charge_details as detail')
+        .join('contract_line_service_configuration as config', function () {
+          this.on('config.tenant', '=', 'detail.tenant').andOn('config.config_id', '=', 'detail.config_id');
+        })
+        .where({ 'detail.item_id': sourceId, 'detail.tenant': tenant })
+        .select('config.contract_line_id') : [];
+      const sourceLineIds = new Set(sourceLineRows.map((row: { contract_line_id: string }) => row.contract_line_id));
+      // The billed source owns line identity. Omitting it from a calculator
+      // payload must not disable line-scoped overlap checks or attribution.
+      if (sourceLineIds.size > 1) {
+        throw expectedInvoiceActionError('The selected billed service spans multiple contract lines. Choose a charge belonging to one contract line.');
+      }
+      const sourceLineId = sourceLineIds.values().next().value ?? null;
+      if (partial.contract_line_id != null && partial.contract_line_id !== sourceLineId) {
+        throw expectedInvoiceActionError('The partial-period contract line does not match its billed source. Reopen the calculator and choose a current billed service.');
+      }
+      partial.contract_line_id = sourceLineId;
+      const effective = dateOnly(partial.effective_date);
+      const [sourceStart, sourceEnd] = sourcePeriodKeys.length === 1 ? sourcePeriodKeys[0].split(':') : [null, null];
+      const units = Number(partial.units);
+      let calculation: ReturnType<typeof resolveSourceDerivedPartialPeriod> | null = null;
+      if (source?.unit_price != null && sourceStart && sourceEnd && effective
+        && (partial.direction === 'increase' || partial.direction === 'decrease')) {
+        calculation = resolveSourceDerivedPartialPeriod({
+          units,
+          unitPrice: Math.abs(Number(source.unit_price)),
+          effectiveDate: effective,
+          servicePeriodStart: sourceStart,
+          servicePeriodEnd: sourceEnd,
+          direction: partial.direction,
+        });
+      }
+      if (!source || !source.service_id || !sourceStart || !sourceEnd || source.service_id !== item.service_id
+        || sourcePeriodKeys.length !== 1
+        || partial.version !== 1
+        || partial.source_kind !== 'invoice_charge'
+        || partial.source_item_id !== sourceId
+        || (partial.contract_line_id != null && !sourceLineIds.has(partial.contract_line_id))
+        || dateOnly(partial.source_period_start) !== sourceStart
+        || dateOnly(partial.source_period_end) !== sourceEnd
+        || !effective
+        || effective < sourceStart
+        || effective >= sourceEnd
+        || !Number.isFinite(units) || units <= 0
+        // NUMERIC(10,2) is decimal storage; tolerate binary representation
+        // noise such as 1.1 * 100 === 110.00000000000001, while rejecting
+        // values which actually carry more than two decimal places.
+        || Number(units.toFixed(2)) !== units
+        || Number(item.quantity) !== units
+        || !calculation
+        || Number(item.rate) !== calculation.unitPrice
+        || (item.client_contract_id ?? null) !== (source.client_contract_id ?? null)) {
+        throw expectedInvoiceActionError('The partial-period source is no longer represented on this invoice or its service period changed. Reopen the calculator and choose a current billed service.');
+      }
+      if (partial.contract_line_id) {
+        const companionOverlaps = await tenantScopedTable(trx, tenant, 'invoice_charges as charge')
+          .where({
+            'charge.invoice_id': invoiceId,
+            'charge.adjustment_source_kind': 'contract_change',
+          })
+          .whereNotNull('charge.adjustment_period_start').whereNotNull('charge.adjustment_period_end')
+          .andWhere('charge.adjustment_period_start', '<', sourceEnd)
+          .andWhere('charge.adjustment_period_end', '>', effective)
+          .select('charge.item_id');
+        const overlapIds = companionOverlaps
+          .filter((row: { item_id: string }) => invoiceLineIds.get(row.item_id)?.has(partial.contract_line_id!))
+          .map((row: { item_id: string }) => row.item_id);
+        const confirmedIds = new Set(Array.isArray(metadata?.confirmed_overlap_item_ids)
+          ? metadata.confirmed_overlap_item_ids.filter((value: unknown): value is string => typeof value === 'string')
+          : []);
+        const unconfirmedIds = overlapIds.filter((overlapId: string) => !confirmedIds.has(overlapId));
+        if (unconfirmedIds.length > 0) {
+          throw new ManualInvoiceError(
+            'SOURCE_NOT_ELIGIBLE',
+            'A companion contract-change adjustment now overlaps this partial-period change. Confirm to save both adjustments.',
+            { overlapConfirmationRequired: 'true', overlapItemIds: unconfirmedIds.join(',') },
+          );
+        }
+      }
+      item.adjustment_period_start = effective;
+      item.adjustment_period_end = sourceEnd;
+      item.client_contract_id = source.client_contract_id;
+      if (partial.contract_line_id) item.manual_line_metadata = { ...metadata, partialPeriod: { ...partial, contract_line_id: partial.contract_line_id } };
+      item.location_id = source.location_id;
+      item.billing_profile_id = source.billing_profile_id;
+      item.rate = calculation.unitPrice;
+      item.is_taxable = source.is_taxable;
+      item.tax_region = source.tax_region;
+      let sourceMetadata = source.manual_line_metadata;
+      if (typeof sourceMetadata === 'string') {
+        try { sourceMetadata = JSON.parse(sourceMetadata); } catch { sourceMetadata = null; }
+      }
+      const storedTaxChoice = sourceMetadata && Object.prototype.hasOwnProperty.call(sourceMetadata, 'tax_rate_id')
+        ? sourceMetadata.tax_rate_id
+        : undefined;
+      let billedTaxRateId = storedTaxChoice;
+      if (billedTaxRateId === undefined && source.is_taxable && source.tax_region && source.tax_rate != null) {
+        const billedTaxRate = await tenantScopedTable(trx, tenant, 'tax_rates')
+          .where({ region_code: source.tax_region, tax_percentage: source.tax_rate })
+          .first('tax_rate_id');
+        billedTaxRateId = billedTaxRate?.tax_rate_id;
+      }
+      if (billedTaxRateId === undefined) billedTaxRateId = source.is_taxable ? item.tax_rate_id : null;
+      if (source.is_taxable && !billedTaxRateId) {
+        throw expectedInvoiceActionError('The selected taxable charge no longer has a resolvable tax rate. Choose a current billed charge or resolve its tax configuration first.');
+      }
+      if (source.is_taxable && billedTaxRateId) {
+        const taxRate = await tenantScopedTable(trx, tenant, 'tax_rates')
+          .where({ tax_rate_id: billedTaxRateId }).first('tax_rate_id');
+        if (!taxRate) {
+          throw expectedInvoiceActionError('The selected taxable charge tax rate is no longer available. Choose a current billed charge or resolve its tax configuration first.');
+        }
+      }
+      item.tax_rate_id = billedTaxRateId;
+      partial.resolved_amount_minor = calculation.amount;
+      partial.units = units;
+      partial.source_unit_price_minor = Math.abs(Number(source.unit_price));
+      partial.covered_days = calculation.coveredDays;
+      partial.full_period_days = calculation.fullPeriodDays;
+      partial.effective_date = effective;
+      partial.source_period_start = sourceStart;
+      partial.source_period_end = sourceEnd;
+      item.manual_line_metadata = { ...metadata, partialPeriod: partial };
+      item.adjustment_reason = typeof metadata?.reason === 'string' ? metadata.reason : null;
+    }
+
+    // Attribution ids on an edit must belong to this invoice's client; the
+    // editor's selects are not an authorization boundary.
+    // Updates are patches: validate the effective row, not only supplied fields.
+    const effectiveUpdates = [];
+    for (const patch of changes.updatedItems ?? []) {
+      const stored = await tenantScopedTable(trx, tenant, 'invoice_charges')
+        .where({ invoice_id: invoiceId, item_id: patch.item_id, is_manual: true })
+        .first();
+      if (!stored) continue; // The generated/foreign-row guard below owns this error.
+      const effective = {
+        ...stored,
+        rate: Number(stored.unit_price),
+        ...Object.fromEntries(Object.entries(patch).filter(([, value]) => value !== undefined)),
+      };
+      // Negative-rate manual charges become quantity-derived credits on edits too.
+      if (!effective.is_discount && Number(effective.rate) < 0) {
+        patch.is_discount = true;
+        patch.discount_type = 'fixed';
+        patch.is_manual_credit = true;
+        effective.is_discount = true;
+      }
+      patch.is_discount = Boolean(effective.is_discount);
+      effectiveUpdates.push(effective);
+    }
+    await validateManualChargeAttribution(trx, tenant, invoice.client_id, effectiveUpdates);
+
     const targetedItemIds = Array.from(
       new Set([
         ...(changes.removedItemIds ?? []),
@@ -1683,18 +2005,91 @@ async function updateManualInvoiceItemsInternal(
       }
     }
 
+    // Every discount/adjustment target must be a line on THIS invoice. Target
+    // IDs arrive from the client and previously went unchecked, so a forged
+    // target could make percentage discounts read another invoice's line.
+    const discountTargetIds = Array.from(
+      new Set(
+        [
+          ...((changes.updatedItems ?? []).map((item) => item.applies_to_item_id)),
+          ...((changes.newItems ?? []).map((item: any) => item.applies_to_item_id)),
+        ].filter((value): value is string => Boolean(value)),
+      ),
+    );
+
+    if (discountTargetIds.length > 0) {
+      const ownedTargetIds = await tenantScopedTable(trx, tenant, 'invoice_charges')
+        .where({ invoice_id: invoiceId })
+        .whereIn('item_id', discountTargetIds)
+        .pluck('item_id');
+      const owned = new Set(ownedTargetIds as string[]);
+      const foreignTargets = discountTargetIds.filter((id) => !owned.has(id));
+      if (foreignTargets.length > 0) {
+        throw expectedInvoiceActionError(
+          'A discount or adjustment can only target a line on this invoice.'
+        );
+      }
+    }
+
     // Process removals
     if (changes.removedItemIds && changes.removedItemIds.length > 0) {
+      // Reject removing a line while manual discounts still target it: the
+      // supported behavior is an explicit retarget/removal in the same confirmed
+      // edit, never silently orphaning (or cascading away) the discount.
+      const dependentDiscountIds = await tenantScopedTable(trx, tenant, 'invoice_charges')
+        .where({ invoice_id: invoiceId, is_manual: true, is_discount: true })
+        .whereIn('applies_to_item_id', changes.removedItemIds)
+        .whereNotIn('item_id', changes.removedItemIds)
+        .pluck('item_id');
+
+      if (dependentDiscountIds.length > 0) {
+        throw expectedInvoiceActionError(
+          'Remove or retarget the discount attached to this line in the same edit before deleting it.'
+        );
+      }
+
       await tenantScopedTable(trx, tenant, 'invoice_charges')
+        .where({ invoice_id: invoiceId, is_manual: true })
         .whereIn('item_id', changes.removedItemIds)
-        .andWhere({ is_manual: true }) // Ensure we only delete manual items intended for removal
         .delete();
     }
 
     // Process updates
     if (changes.updatedItems && changes.updatedItems.length > 0) {
+      // Resolve every explicit tax treatment before touching any row. A rate id
+      // that cannot resolve to a region (unknown, cross-tenant, or otherwise
+      // unusable) must fail the whole edit rather than persist is_taxable=true
+      // with a null region — that would let tax calculation fall back to the
+      // client region and charge the wrong tax. Resolving up front guarantees no
+      // row is updated before the failure.
+      const resolvedTaxRegions = new Map<string, string>();
+      for (const item of changes.updatedItems) {
+        if (!item.tax_rate_id) continue;
+        const region = await resolveTaxRegionCodeForRate(trx, tenant, item.tax_rate_id);
+        if (!region) {
+          throw new ManualInvoiceError(
+            'TAX_RATE_NOT_FOUND',
+            'The selected tax treatment was not found for this tenant.',
+            { taxRateId: item.tax_rate_id },
+          );
+        }
+        resolvedTaxRegions.set(item.item_id, region);
+      }
+
       // First pass: Update all items with their new values
       for (const item of changes.updatedItems) {
+        // The selected tax treatment is authoritative for an edited line: a
+        // string taxes it in that rate's region; an explicit null means
+        // Non-taxable and clears any stale region even when the linked service
+        // is taxable. An absent choice (`undefined`) leaves the stored treatment
+        // untouched, preserving legacy callers.
+        const hasExplicitTaxTreatment = item.tax_rate_id !== undefined;
+        const explicitTaxRateId = item.tax_rate_id || null;
+        const resolvedTaxRegion = hasExplicitTaxTreatment
+          ? explicitTaxRateId
+            ? resolvedTaxRegions.get(item.item_id) ?? null
+            : null
+          : undefined;
         const updateData = {
           service_id: item.service_id,
           description: item.description,
@@ -1702,10 +2097,21 @@ async function updateManualInvoiceItemsInternal(
           // Rate is already in cents from the frontend, no need to multiply by 100
           unit_price: item.rate !== undefined ? Math.round(item.rate) : undefined,
           is_discount: item.is_discount,
+          is_manual_credit: item.is_manual_credit,
           discount_type: item.discount_type,
           discount_percentage: item.discount_percentage,
           applies_to_item_id: item.applies_to_item_id,
-          is_taxable: item.is_taxable,
+          applies_to_service_id: item.applies_to_service_id,
+          location_id: item.location_id,
+          billing_profile_id: item.billing_profile_id,
+          client_contract_id: item.client_contract_id,
+          adjustment_period_start: item.adjustment_period_start,
+          adjustment_period_end: item.adjustment_period_end,
+          is_taxable: hasExplicitTaxTreatment ? Boolean(explicitTaxRateId) : item.is_taxable,
+          tax_region: resolvedTaxRegion,
+          manual_line_metadata: item.manual_line_metadata !== undefined
+            ? (item.manual_line_metadata ? JSON.stringify(item.manual_line_metadata) : null)
+            : undefined,
           updated_at: currentDate // Use the existing currentDate variable
         };
         // Filter out undefined values to avoid overwriting columns with null unnecessarily
@@ -1713,17 +2119,45 @@ async function updateManualInvoiceItemsInternal(
 
         if (Object.keys(filteredUpdateData).length > 0) {
            await tenantScopedTable(trx, tenant, 'invoice_charges')
-            .where({ item_id: item.item_id, is_manual: true }) // Ensure we only update manual items
+            .where({ item_id: item.item_id, invoice_id: invoiceId, is_manual: true }) // Scope to this invoice and manual rows only
             .update(filteredUpdateData);
         }
       }
       
-      // Second pass: Recalculate net_amount for discount items
+      // Second pass: recompute ordinary manual rows from their persisted
+      // quantity and unit price. The first pass updates quantity/unit_price but
+      // previously left net_amount stale, so an edited one-time charge kept its
+      // old amount in totals, automatic-discount bases and every output. This
+      // runs before the discount pass so percentage bases read the new amount.
+      for (const item of changes.updatedItems) {
+        if (item.is_discount) continue;
+        const updatedRow = await tenantScopedTable(trx, tenant, 'invoice_charges')
+          .where({ item_id: item.item_id, invoice_id: invoiceId, is_manual: true })
+          .first();
+        if (!updatedRow || updatedRow.is_discount) continue;
+        let manualMetadata = updatedRow.manual_line_metadata;
+        if (typeof manualMetadata === 'string') {
+          try { manualMetadata = JSON.parse(manualMetadata); } catch { manualMetadata = null; }
+        }
+        const netAmount = Math.round(
+          (Number(updatedRow.quantity) || 0) * (Number(updatedRow.unit_price) || 0),
+        );
+        if (
+          Number(updatedRow.net_amount) !== netAmount ||
+          Number(updatedRow.total_price) !== netAmount
+        ) {
+          await tenantScopedTable(trx, tenant, 'invoice_charges')
+            .where({ item_id: item.item_id, invoice_id: invoiceId, is_manual: true })
+            .update({ net_amount: netAmount, total_price: netAmount });
+        }
+      }
+
+      // Third pass: Recalculate net_amount for discount items
       for (const item of changes.updatedItems) {
         if (item.is_discount) {
           // Get the updated item from the database
           const updatedItem = await tenantScopedTable(trx, tenant, 'invoice_charges')
-            .where({ item_id: item.item_id, is_manual: true })
+            .where({ item_id: item.item_id, invoice_id: invoiceId, is_manual: true })
             .first();
           
           if (updatedItem) {
@@ -1742,7 +2176,7 @@ async function updateManualInvoiceItemsInternal(
               // If discount applies to a specific item, get that item's amount
               if (updatedItem.applies_to_item_id) {
                 const applicableItem = await tenantScopedTable(trx, tenant, 'invoice_charges')
-                  .where({ item_id: updatedItem.applies_to_item_id })
+                  .where({ item_id: updatedItem.applies_to_item_id, invoice_id: invoiceId })
                   .first();
                 applicableAmount = applicableItem?.net_amount;
               }
@@ -1756,13 +2190,28 @@ async function updateManualInvoiceItemsInternal(
                 : subtotal;
               newNetAmount = -Math.round((baseAmount * updatedItem.discount_percentage) / 100);
             } else {
-              // Fixed discount - use the unit_price
-              newNetAmount = -Math.abs(Math.round(updatedItem.unit_price));
+              // Fixed discount or operator credit. An authored fixed discount is
+              // quantity-independent (`-abs(rate)`), while a negative-rate manual
+              // charge is persisted as a fixed discount-like credit whose
+              // magnitude is `quantity × rate` (see persistManualInvoiceCharges'
+              // first pass) and is flagged with `is_manual_credit`. The explicit
+              // flag decides which shape applies, so scaling by quantity never
+              // doubles an authored discount and never drops a credit's quantity.
+              const quantity = Number(updatedItem.quantity);
+              const unitPrice = Number(updatedItem.unit_price);
+              const isQuantityDerivedCredit = Boolean(updatedItem.is_manual_credit);
+              const effectiveQuantity = isQuantityDerivedCredit
+                && Number.isFinite(quantity)
+                && quantity !== 0
+                ? quantity
+                : 1;
+              const effectiveUnitPrice = Number.isFinite(unitPrice) ? unitPrice : 0;
+              newNetAmount = -Math.abs(Math.round(effectiveQuantity * effectiveUnitPrice));
             }
             
             // Update the net_amount
             await tenantScopedTable(trx, tenant, 'invoice_charges')
-              .where({ item_id: item.item_id, is_manual: true })
+              .where({ item_id: item.item_id, invoice_id: invoiceId, is_manual: true })
               .update({
                 net_amount: newNetAmount,
                 total_price: newNetAmount // Also update total_price since discounts have no tax
@@ -1783,17 +2232,30 @@ async function updateManualInvoiceItemsInternal(
           rate: item.rate,
           quantity: item.quantity,
           is_discount: item.is_discount,
+          is_manual_credit: item.is_manual_credit,
           discount_type: item.discount_type,
           applies_to_item_id: item.applies_to_item_id,
           service_id: item.service_id || undefined,
           description: item.description,
           tax_region: item.tax_region || client.tax_region,
+          tax_rate_id: (item as any).tax_rate_id,
+          location_id: (item as any).location_id ?? null,
           is_taxable: item.is_taxable !== false,
           applies_to_service_id: item.applies_to_service_id,
           discount_percentage: item.discount_percentage,
           // Step 1 of the resolution chain; persistManualInvoiceCharges falls
           // through to the client default when unset (F033).
           billing_profile_id: item.billing_profile_id ?? null,
+          client_contract_id: item.client_contract_id ?? null,
+          adjustment_period_start: item.adjustment_period_start ?? null,
+          adjustment_period_end: item.adjustment_period_end ?? null,
+          manual_line_metadata: (item as any).manual_line_metadata ?? null,
+          adjustment_source_kind: (item as any).adjustment_source_kind ?? 'manual_adjustment',
+          adjustment_source_id: (item as any).adjustment_source_id ?? null,
+          adjustment_source_revision: (item as any).adjustment_source_revision ?? null,
+          adjustment_scope: (item as any).adjustment_scope ?? null,
+          adjustment_base_amount: (item as any).adjustment_base_amount ?? null,
+          adjustment_reason: (item as any).adjustment_reason ?? null,
         })),
         client,
         session,
@@ -1832,7 +2294,17 @@ async function updateManualInvoiceItemsInternal(
     }
 
     // Recalculate before commit so tax/totals failures roll back item mutations.
+    // Automatic discounts stamped with provenance are re-applied against the
+    // post-edit eligible base first, in place, so the stored discount rows and
+    // the manual additions agree.
+    await reconcileAutomaticInvoiceAdjustments(trx, tenant, invoiceId);
+    // Recompute the shared legacy/manual percentage discount rows from the
+    // complete persisted charge set. This must run outside the tax calculator:
+    // pending/external-tax invoices do not necessarily traverse its internal
+    // tax branch, and newItems were only persisted above.
+    await recalculatePercentageDiscountInvoiceCharges(trx, invoiceId, tenant);
     await billingEngine.recalculateInvoice(invoiceId, trx, tenant);
+    await recordAdjustmentSave(trx, tenant, invoiceId, submission?.operationId);
   });
 
 }
@@ -1842,7 +2314,8 @@ export const addManualItemsToInvoice = withAuth(async (
   user,
   { tenant },
   invoiceId: string,
-  items: IInvoiceCharge[]
+  items: IInvoiceCharge[],
+  submission?: ManualAdjustmentSubmission,
 ): Promise<InvoiceManualItemsUpdateActionResult> => {
   if (!await hasPermission(user, 'invoice', 'update')) {
     return permissionError('Permission denied: invoice update required', 'msp/invoicing:errors.permissions.invoiceUpdate');
@@ -1887,7 +2360,7 @@ export const addManualItemsToInvoice = withAuth(async (
   }
 
   try {
-    await addManualInvoiceItemsInternal(invoiceId, items, session!, tenant); // Renamed internal call
+    await addManualInvoiceItemsInternal(invoiceId, items, session!, tenant, submission); // Renamed internal call
   } catch (error) {
     const expectedError = toInvoiceActionError(error);
     if (expectedError) {
@@ -1903,35 +2376,33 @@ async function addManualInvoiceItemsInternal(
   invoiceId: string,
   items: IInvoiceCharge[],
   session: Session,
-  tenant: string
+  tenant: string,
+  submission?: ManualAdjustmentSubmission,
 ): Promise<void> {
   const { knex } = await createTenantKnex(tenant);
-
-  const invoice = await withTransaction(knex, async (trx: Knex.Transaction) => {
-    return await tenantScopedTable(trx, tenant, 'invoices')
-      .where({ invoice_id: invoiceId })
-      .first();
-  });
-
-  if (!invoice) {
-    throw expectedInvoiceActionError('Invoice not found');
-  }
-
-  if (['paid', 'cancelled'].includes(invoice.status)) {
-    throw expectedInvoiceActionError('Cannot modify a paid or cancelled invoice');
-  }
-
-  const client = await withTransaction(knex, async (trx: Knex.Transaction) => {
-    return await tenantScopedTable(trx, tenant, 'clients')
-      .where({ client_id: invoice.client_id })
-      .first();
-  });
-
-  if (!client) {
-    throw expectedInvoiceActionError('Client not found');
-  }
+  const billingEngine = new BillingEngine();
 
   await withTransaction(knex, async (trx: Knex.Transaction) => {
+    // Add-only mutations were previously unchecked after the outer read, so a
+    // concurrent finalize/export could still receive new rows. Lock and recheck
+    // the lifecycle in the same transaction that inserts them.
+    const invoice = await assertInvoiceEditableUnderLock(trx, tenant, invoiceId);
+
+    // A replayed operation is a no-op; a stale revision is rejected before any
+    // row is touched.
+    if (await adjustmentOperationAlreadyApplied(trx, tenant, submission?.operationId)) {
+      return;
+    }
+    assertAdjustmentRevisionCurrent(invoice, submission?.expectedRevision);
+
+    const client = await tenantScopedTable(trx, tenant, 'clients')
+      .where({ client_id: invoice.client_id })
+      .first();
+
+    if (!client) {
+      throw expectedInvoiceActionError('Client not found');
+    }
+
     // Use persistManualInvoiceCharges for adding manual items
     await persistManualInvoiceCharges(
       trx,
@@ -1941,28 +2412,44 @@ async function addManualInvoiceItemsInternal(
           rate: item.rate,
           quantity: item.quantity,
           is_discount: item.is_discount,
+          is_manual_credit: item.is_manual_credit,
           discount_type: item.discount_type,
           applies_to_item_id: item.applies_to_item_id,
           service_id: item.service_id || undefined,
           description: item.description,
           tax_region: item.tax_region || client.tax_region,
+          tax_rate_id: (item as any).tax_rate_id ?? null,
+          location_id: (item as any).location_id ?? null,
           is_taxable: item.is_taxable !== false,
           applies_to_service_id: item.applies_to_service_id,
           discount_percentage: item.discount_percentage,
+          billing_profile_id: item.billing_profile_id ?? null,
+          manual_line_metadata: (item as any).manual_line_metadata ?? null,
+          adjustment_source_kind: (item as any).adjustment_source_kind ?? 'manual_adjustment',
+          adjustment_source_id: (item as any).adjustment_source_id ?? null,
+          adjustment_source_revision: (item as any).adjustment_source_revision ?? null,
+          adjustment_scope: (item as any).adjustment_scope ?? null,
+          adjustment_base_amount: (item as any).adjustment_base_amount ?? null,
+          adjustment_reason: (item as any).adjustment_reason ?? null,
       })),
       client,
       session,
       tenant
       // No 'isManual' boolean needed for persistManualInvoiceCharges
     );
-     // Touch updated_at when items are added
-     await tenantScopedTable(trx, tenant, 'invoices')
-        .where({ invoice_id: invoiceId })
-        .update({ updated_at: Temporal.Now.plainDateISO().toString() });
-  });
 
-  const billingEngine = new BillingEngine();
-  await billingEngine.recalculateInvoice(invoiceId);
+    // Touch updated_at when items are added
+    await tenantScopedTable(trx, tenant, 'invoices')
+      .where({ invoice_id: invoiceId })
+      .update({ updated_at: Temporal.Now.plainDateISO().toString() });
+
+    // Recalculate inside the transaction: a tax/totals failure must roll the
+    // new rows back, not leave an invoice whose stored totals disagree with its
+    // charges (previously recalc ran post-commit).
+    await reconcileAutomaticInvoiceAdjustments(trx, tenant, invoiceId);
+    await billingEngine.recalculateInvoice(invoiceId, trx, tenant);
+    await recordAdjustmentSave(trx, tenant, invoiceId, submission?.operationId);
+  });
 }
 
 

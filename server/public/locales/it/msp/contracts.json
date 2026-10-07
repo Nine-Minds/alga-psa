@@ -264,7 +264,8 @@
       "lines": "Linee contrattuali",
       "overview": "Panoramica",
       "pricing": "Piani dei prezzi",
-      "simulator": "Simula"
+      "simulator": "Simula",
+      "discounts": "Sconti"
     },
     "validation": {
       "billingFrequencyRequired": "La frequenza di fatturazione è obbligatoria.",
@@ -539,7 +540,8 @@
       "name": "Nome",
       "rate": "Tariffa",
       "services": "Servizi",
-      "type": "Tipo"
+      "type": "Tipo",
+      "dates": "Date"
     },
     "configuration": {
       "description": "Impostazioni che si applicano a questa linea contrattuale",
@@ -550,7 +552,15 @@
       "minutesValue": "{{count}} minuti",
       "roundUpToNearest": "Arrotonda per eccesso al più vicino (minuti)",
       "title": "Configurazione della linea contrattuale",
-      "usageInfo": "Le linee contrattuali basate su utilizzo sono configurate per servizio con tariffe unitarie."
+      "usageInfo": "Le linee contrattuali basate su utilizzo sono configurate per servizio con tariffe unitarie.",
+      "invoiceText": "Testo della riga di fattura",
+      "invoiceTextPlaceholder": "Stampato sulla fattura; per impostazione predefinita, il nome della riga",
+      "invoiceTextDefault": "Usa il nome della riga",
+      "startDate": "Data di inizio",
+      "endDate": "Data di fine",
+      "inheritsContract": "Inizio contratto",
+      "inheritsContractEnd": "Fine contratto",
+      "billedEditExplanation": "Dopo la fatturazione di una riga, il testo della fattura e le date restano modificabili. Le date non possono escludere periodi di servizio già fatturati o rivendicati; tariffe e quantità si modificano in modo prospettico."
     },
     "customRate": "Personalizzato",
     "description": {
@@ -566,13 +576,14 @@
       "selectAbove": "Seleziona una linea contrattuale sopra per iniziare."
     },
     "errors": {
-      "cannotEditWithInvoices": "Impossibile modificare la linea contrattuale: questo contratto ha fatture associate. Le linee contrattuali non possono essere modificate una volta generate le fatture.",
       "failedToCheckEditable": "Impossibile verificare se il contratto può essere modificato",
       "failedToLoad": "Impossibile caricare le linee contrattuali",
       "failedToRefresh": "Impossibile aggiornare le linee contrattuali",
       "failedToRemove": "Impossibile rimuovere la linea contrattuale",
       "failedToUpdate": "Impossibile aggiornare la linea contrattuale",
-      "failedToResetRate": "Impossibile ripristinare la tariffa della riga"
+      "failedToResetRate": "Impossibile ripristinare la tariffa della riga",
+      "protectedStartDate": "La data di inizio deve essere il {{boundary}} o precedente per includere la cronologia protetta.",
+      "protectedEndDate": "La data di fine deve essere il {{boundary}} o successiva per includere la cronologia protetta."
     },
     "loading": {
       "contractLines": "Caricamento linee contrattuali",
@@ -694,7 +705,10 @@
     },
     "fields": {
       "billingTimingQuestion": "Quando deve essere fatturata questa linea?",
-      "rate": "Tariffa"
+      "rate": "Tariffa",
+      "invoiceText": "Testo della riga di fattura",
+      "invoiceTextPlaceholder": "Stampato sulla fattura; per impostazione predefinita, il nome della riga",
+      "invoiceTextHelp": "Questo testo viene stampato letteralmente sulla riga di fattura ricorrente."
     },
     "sections": {
       "billingTiming": "Tempistiche di fatturazione",
@@ -887,7 +901,12 @@
     "fixedServicesPricingExplanation": "Le allocazioni a prezzo forfettario condividono la tariffa base della linea. Le postazioni ricorrenti fatturano la quantità concordata × tariffa unitaria in ogni periodo senza record di utilizzo.",
     "recurringQuantity": "Quantità ricorrente",
     "allocationQuantity": "Quantità di allocazione",
-    "bundleBaseRateHelp": "Tariffa ricorrente per i servizi a prezzo forfettario. Le postazioni ricorrenti vengono fatturate separatamente a quantità × tariffa unitaria."
+    "bundleBaseRateHelp": "Tariffa ricorrente per i servizi a prezzo forfettario. Le postazioni ricorrenti vengono fatturate separatamente a quantità × tariffa unitaria.",
+    "invoiceTextLabel": "Testo della riga di fattura",
+    "invoiceTextPlaceholder": "Stampato sulla fattura; per impostazione predefinita, il nome della riga",
+    "invoiceTextHelp": "Questo testo viene stampato letteralmente sulla riga di fattura ricorrente.",
+    "startDateLabel": "Data di inizio riga",
+    "endDateLabel": "Data di fine riga"
   },
   "pricingSchedules": {
     "list": {
@@ -1303,6 +1322,21 @@
       "hypothetical": "Profilo cliente ipotetico",
       "open": "Simula",
       "title": "Simulazione del modello"
+    },
+    "discounts": {
+      "title": "Sconti predefiniti del contratto",
+      "help": "Ogni contratto cliente riceve una copia modificabile indipendente. Gli sconti globali si applicano alle righe idonee.",
+      "invalid": "Inserisci un nome, un valore positivo e una data di inizio.",
+      "remove": "Rimuovi",
+      "name": "Nome dello sconto",
+      "percentage": "Percentuale",
+      "fixed": "Importo fisso",
+      "value": "Valore",
+      "startDate": "Inizia il",
+      "endDate": "Termina il (facoltativo)",
+      "add": "Aggiungi sconto predefinito",
+      "chooseLine": "Scegli una riga del modello",
+      "chooseService": "Scegli un servizio"
     }
   },
   "quickStart": {
@@ -2571,7 +2605,8 @@
       "missingClient": "Al contratto in bozza manca l’assegnazione del cliente",
       "invalidStartDate": "Il contratto in bozza ha una data di inizio non valida",
       "recordInvalid": "Uno dei record selezionati della procedura guidata del contratto non è più valido. Aggiornare la pagina e riprovare.",
-      "duplicate": "Esiste già un record corrispondente della procedura guidata del contratto."
+      "duplicate": "Esiste già un record corrispondente della procedura guidata del contratto.",
+      "standingTerms": "Questa bozza contiene condizioni di sconto ricorrenti. Modifica le schede Righe e Sconti per conservarle."
     },
     "pricingSchedule": {
       "endAfterEffective": "La data di fine deve essere successiva alla data di decorrenza",
@@ -2596,6 +2631,78 @@
       "activatedContractIdRequired": "L’id del contratto di rinnovo attivato è obbligatorio.",
       "contractNotActive": "Il contratto di rinnovo attivato non è più attivo. Aggiornare la pagina e riprovare.",
       "manualRetryDueOnly": "Il nuovo tentativo manuale è disponibile solo per i cicli di rinnovo in scadenza."
+    }
+  },
+  "contractDiscounts": {
+    "title": "Sconti",
+    "description": "Ogni contratto cliente dispone di una propria copia modificabile. Gli sconti del contratto si applicano agli addebiti idonei delle sue voci fatturate.",
+    "loading": "Caricamento sconti…",
+    "empty": "Nessuno sconto è ancora configurato per questo contratto.",
+    "actions": {
+      "attach": "Collega",
+      "pickShared": "Collega sconto esistente",
+      "detach": "Scollega da questo contratto",
+      "toggleActive": "Modifica lo stato dello sconto",
+      "add": "Aggiungi sconto",
+      "cancel": "Annulla",
+      "save": "Salva",
+      "saving": "Salvataggio…"
+    },
+    "attachment": {
+      "shared": "Associazione al contratto",
+      "line": "Collegamento alla voce"
+    },
+    "sharedEditNotice": "Le modifiche riguardano solo questo contratto cliente. Modificare il modello non cambia le copie dei contratti esistenti.",
+    "dialog": {
+      "contractAttachmentLineScopeLocked": "Questo sconto è associato a questo contratto cliente. Per limitarlo a una riga, scollegalo e crea uno sconto specifico per quella riga.",
+      "createTitle": "Aggiungi sconto",
+      "editTitle": "Modifica sconto"
+    },
+    "columns": {
+      "name": "Nome",
+      "value": "Valore",
+      "scope": "Ambito",
+      "line": "Riga di contratto",
+      "dates": "Date",
+      "status": "Stato"
+    },
+    "status": {
+      "active": "Attivo",
+      "inactive": "Inattivo"
+    },
+    "scopes": {
+      "invoice": "Tutti gli addebiti idonei",
+      "contract": "Questo contratto",
+      "service": "Un servizio",
+      "line": "Una riga di contratto"
+    },
+    "values": {
+      "unnamedLine": "Riga senza nome"
+    },
+    "types": {
+      "percentage": "Percentuale",
+      "fixed": "Importo fisso"
+    },
+    "fields": {
+      "name": "Nome",
+      "namePlaceholder": "es. Fedeltà 10%",
+      "type": "Tipo",
+      "percentValue": "Percentuale (0–100)",
+      "fixedValue": "Importo",
+      "startDate": "Data di inizio",
+      "endDate": "Data di fine",
+      "line": "Riga di contratto",
+      "linePlaceholder": "Seleziona una riga di contratto",
+      "scope": "Ambito",
+      "priority": "Priorità",
+      "priorityPlaceholder": "Facoltativo",
+      "service": "Servizio",
+      "servicePlaceholder": "Seleziona un servizio",
+      "active": "Attivo"
+    },
+    "errors": {
+      "loadFailed": "Impossibile caricare gli sconti.",
+      "saveFailed": "Impossibile salvare lo sconto."
     }
   }
 }

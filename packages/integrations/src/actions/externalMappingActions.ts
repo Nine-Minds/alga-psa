@@ -134,6 +134,7 @@ const CATALOG_ENTITY_TYPES = new Set([
   'service_category',
   'tax_code',
   'payment_term',
+  'discount',
   'client',
 ]);
 
@@ -149,7 +150,7 @@ const MUTABLE_MAPPING_ENTITY_TYPES = new Set([...CATALOG_ENTITY_TYPES, 'invoice'
 const REALM_BASED_INTEGRATION_TYPES = new Set(['quickbooks_online', 'xero']);
 
 /** CSV providers export to a file, not a connected realm. */
-const CSV_INTEGRATION_TYPES = new Set(['quickbooks_csv', 'xero_csv']);
+const CSV_INTEGRATION_TYPES = new Set(['quickbooks_csv', 'xero_csv', 'quickbooks_desktop']);
 
 const KNOWN_INTEGRATION_TYPES = new Set([
   ...REALM_BASED_INTEGRATION_TYPES,
@@ -226,6 +227,10 @@ async function assertLocalEntityOwnership(
   const db = tenantDb(trx, tenant);
 
   switch (entityType) {
+    case 'discount': {
+      if (entityId !== 'invoice_discount') throw new ExpectedExternalMappingError('Unknown invoice discount mapping.');
+      return;
+    }
     case 'service': {
       const row = await db.table('service_catalog').where({ service_id: entityId }).first('service_id');
       if (!row) {
@@ -368,6 +373,7 @@ function assertKnownIntegrationType(integrationType: string): void {
 
 /** QBO entity type an external mapping of the given local entity type must name. */
 const QBO_REMOTE_ENTITY_TYPE: Record<string, string> = {
+  discount: 'Account',
   service: 'Item',
   service_category: 'Item',
   tax_code: 'TaxCode',
@@ -392,6 +398,7 @@ const QBO_REMOTE_ENTITY_TYPE: Record<string, string> = {
  */
 type XeroCatalogKind = 'item' | 'taxRate' | 'account';
 const XERO_CATALOG_KIND: Record<string, XeroCatalogKind> = {
+  discount: 'account',
   service: 'item',
   tax_code: 'taxRate',
 };

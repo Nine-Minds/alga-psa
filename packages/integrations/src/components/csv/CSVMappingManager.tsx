@@ -12,7 +12,7 @@ export function CSVMappingManager() {
   const context = useMemo<AccountingMappingContext>(() => ({ realmId: null }), []);
 
   const tabStyles = {
-    list: 'grid w-full grid-cols-4',
+    list: 'flex w-full flex-wrap',
     trigger: 'data-[state=active]:shadow-none'
   };
 

@@ -1,0 +1,35 @@
+Oz
+                                            INVOICE
+                                            Invoice #: SMOKE-ADJ-CURRENT-20261007
+                                            Issue Date:                09/23/2026
+                                            Due Date:                  10/23/2026
+                                            PO #:                               -
+
+
+
+
+ From         Bill To
+
+ Oz           SMOKE Takeover Recurring Products
+
+
+
+Description                                       Qty         Rate        Amount
+
+Product: SMOKE Prod Locations                         2    $200.00         $400.00
+
+Product: SMOKE Prod Users                            20    $100.00       $2,000.00
+
+Product: SMOKE Prod Endpoints                        30      $50.00      $1,500.00
+
+Contract adjustment smoke manual charge               1    $150.00         $150.00
+
+Contract adjustment smoke 10% discount                1       $0.00       -$405.10
+
+Contract adjustment smoke additional $1               1       $1.00          $1.00
+
+
+                                          Subtotal                       $3,645.90
+                                          Tax                               $0.00
+                                          Total                          $3,645.90
+

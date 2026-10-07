@@ -264,7 +264,8 @@
       "lines": "Avtalsrader",
       "overview": "Översikt",
       "pricing": "Prisscheman",
-      "simulator": "Simulera"
+      "simulator": "Simulera",
+      "discounts": "Rabatter"
     },
     "validation": {
       "billingFrequencyRequired": "Faktureringsintervall krävs.",
@@ -539,7 +540,8 @@
       "name": "Namn",
       "rate": "Taxa",
       "services": "Tjänster",
-      "type": "Typ"
+      "type": "Typ",
+      "dates": "Datum"
     },
     "configuration": {
       "description": "Inställningar som gäller för den här avtalsraden",
@@ -550,7 +552,15 @@
       "minutesValue": "{{count}} min",
       "roundUpToNearest": "Avrunda uppåt till närmaste (minuter)",
       "title": "Avtalsradsinställningar",
-      "usageInfo": "Förbrukningsbaserade avtalsrader konfigureras per tjänst med enhetstaxor."
+      "usageInfo": "Förbrukningsbaserade avtalsrader konfigureras per tjänst med enhetstaxor.",
+      "invoiceText": "Fakturaradstext",
+      "invoiceTextPlaceholder": "Visas på fakturan; radens namn används som standard",
+      "invoiceTextDefault": "Använder radens namn",
+      "startDate": "Startdatum",
+      "endDate": "Slutdatum",
+      "inheritsContract": "Avtalets start",
+      "inheritsContractEnd": "Avtalets slut",
+      "billedEditExplanation": "Efter att en rad har fakturerats kan fakturatext och raddatum fortfarande redigeras. Start- och slutdatum får inte utesluta tjänsteperioder som redan fakturerats eller reserverats för fakturering. Pris- och antalsändringar gäller framåt i tiden."
     },
     "customRate": "Anpassad",
     "description": {
@@ -566,13 +576,14 @@
       "selectAbove": "Välj en avtalsrad ovan för att komma igång."
     },
     "errors": {
-      "cannotEditWithInvoices": "Avtalsraden kan inte redigeras: det finns fakturor kopplade till avtalet. Avtalsrader kan inte redigeras när fakturor har skapats.",
       "failedToCheckEditable": "Det gick inte att kontrollera om avtalet kan redigeras",
       "failedToLoad": "Det gick inte att läsa in avtalsrader",
       "failedToRefresh": "Det gick inte att uppdatera avtalsraderna",
       "failedToRemove": "Det gick inte att ta bort avtalsraden",
       "failedToUpdate": "Det gick inte att uppdatera avtalsraden",
-      "failedToResetRate": "Det gick inte att återställa radens taxa"
+      "failedToResetRate": "Det gick inte att återställa radens taxa",
+      "protectedStartDate": "Startdatum måste vara senast {{boundary}} för att inkludera skyddad tjänstehistorik.",
+      "protectedEndDate": "Slutdatum måste vara tidigast {{boundary}} för att inkludera skyddad tjänstehistorik."
     },
     "loading": {
       "contractLines": "Läser in avtalsrader",
@@ -694,7 +705,10 @@
     },
     "fields": {
       "billingTimingQuestion": "När ska raden debiteras?",
-      "rate": "Taxa"
+      "rate": "Taxa",
+      "invoiceText": "Fakturaradstext",
+      "invoiceTextPlaceholder": "Visas på fakturan; radens namn används som standard",
+      "invoiceTextHelp": "Den här texten visas ordagrant på den återkommande fakturaraden."
     },
     "sections": {
       "billingTiming": "Faktureringstidpunkt",
@@ -887,7 +901,12 @@
     "fixedServicesPricingExplanation": "Vid paketfördelning delas radens grundavgift. Återkommande användarlicenser debiteras med avtalat antal × enhetstaxa varje period utan förbrukningsposter.",
     "recurringQuantity": "Återkommande antal",
     "allocationQuantity": "Fördelningsantal",
-    "bundleBaseRateHelp": "Återkommande avgift för tjänster med paketpris. Återkommande användarlicenser debiteras separat med antal × enhetstaxa."
+    "bundleBaseRateHelp": "Återkommande avgift för tjänster med paketpris. Återkommande användarlicenser debiteras separat med antal × enhetstaxa.",
+    "invoiceTextLabel": "Fakturaradstext",
+    "invoiceTextPlaceholder": "Visas på fakturan; radens namn används som standard",
+    "invoiceTextHelp": "Den här texten visas ordagrant på den återkommande fakturaraden.",
+    "startDateLabel": "Radens startdatum",
+    "endDateLabel": "Radens slutdatum"
   },
   "pricingSchedules": {
     "list": {
@@ -1303,6 +1322,21 @@
       "hypothetical": "Hypotetisk kundprofil",
       "open": "Simulera",
       "title": "Mallsimulering"
+    },
+    "discounts": {
+      "title": "Standardrabatter för avtal",
+      "help": "Varje kundavtal får en egen redigerbar kopia. Avtalsövergripande rabatter gäller för avtalets berättigade rader.",
+      "invalid": "Ange ett namn, ett positivt värde och ett startdatum.",
+      "remove": "Ta bort",
+      "name": "Rabattnamn",
+      "percentage": "Procent",
+      "fixed": "Fast belopp",
+      "value": "Värde",
+      "startDate": "Gäller från",
+      "endDate": "Gäller till (valfritt)",
+      "add": "Lägg till standardrabatt",
+      "chooseLine": "Välj en mallrad",
+      "chooseService": "Välj en tjänst"
     }
   },
   "quickStart": {
@@ -2571,7 +2605,8 @@
       "missingClient": "Avtalsutkastet saknar kundtilldelning",
       "invalidStartDate": "Avtalsutkastet har ett ogiltigt startdatum",
       "recordInvalid": "En av de valda posterna i avtalsguiden är inte längre giltig. Ladda om sidan och försök igen.",
-      "duplicate": "En matchande post finns redan i avtalsguiden."
+      "duplicate": "En matchande post finns redan i avtalsguiden.",
+      "standingTerms": "Det här utkastet har löpande rabattvillkor. Redigera flikarna Rader och Rabatter för att bevara villkoren."
     },
     "pricingSchedule": {
       "endAfterEffective": "Slutdatum måste vara efter datumet då ändringen börjar gälla",
@@ -2596,6 +2631,78 @@
       "activatedContractIdRequired": "ID för det aktiverade förnyelseavtalet krävs.",
       "contractNotActive": "Det aktiverade förnyelseavtalet är inte längre aktivt. Ladda om sidan och försök igen.",
       "manualRetryDueOnly": "Manuellt återförsök är bara tillgängligt för förnyelsecykler vars förnyelsedatum har nåtts."
+    }
+  },
+  "contractDiscounts": {
+    "title": "Rabatter",
+    "description": "Varje kundavtal har en egen redigerbar kopia. Avtalsövergripande rabatter gäller för berättigade avgifter på avtalets representerade rader.",
+    "loading": "Läser in rabatter…",
+    "empty": "Inga rabatter har konfigurerats för det här avtalet ännu.",
+    "actions": {
+      "add": "Lägg till rabatt",
+      "attach": "Koppla",
+      "detach": "Koppla bort från det här avtalet",
+      "toggleActive": "Ändra rabattstatus",
+      "pickShared": "Koppla befintlig rabatt",
+      "cancel": "Avbryt",
+      "save": "Spara",
+      "saving": "Sparar…"
+    },
+    "columns": {
+      "name": "Namn",
+      "value": "Värde",
+      "scope": "Omfattning",
+      "line": "Avtalsrad",
+      "dates": "Datum",
+      "status": "Status"
+    },
+    "status": {
+      "active": "Aktiv",
+      "inactive": "Inaktiv"
+    },
+    "attachment": {
+      "shared": "Avtalskoppling",
+      "line": "Radkoppling"
+    },
+    "scopes": {
+      "invoice": "Alla berättigade avgifter",
+      "contract": "Det här avtalet",
+      "service": "En tjänst",
+      "line": "En avtalsrad"
+    },
+    "values": {
+      "unnamedLine": "Namnlös rad"
+    },
+    "types": {
+      "percentage": "Procent",
+      "fixed": "Fast belopp"
+    },
+    "fields": {
+      "name": "Namn",
+      "namePlaceholder": "t.ex. Lojalitetsrabatt 10 %",
+      "type": "Typ",
+      "percentValue": "Procent (0–100)",
+      "fixedValue": "Belopp",
+      "startDate": "Startdatum",
+      "endDate": "Slutdatum",
+      "line": "Avtalsrad",
+      "linePlaceholder": "Valfritt: begränsa rabatten till en rad",
+      "scope": "Omfattning",
+      "priority": "Prioritet",
+      "priorityPlaceholder": "Valfritt",
+      "service": "Tjänst",
+      "servicePlaceholder": "Välj en tjänst",
+      "active": "Aktiv"
+    },
+    "dialog": {
+      "createTitle": "Lägg till rabatt",
+      "editTitle": "Redigera rabatt",
+      "contractAttachmentLineScopeLocked": "Den här rabatten är kopplad till kundavtalet. Koppla bort den och skapa en radbegränsad rabatt om den bara ska gälla en rad."
+    },
+    "sharedEditNotice": "Ändringar påverkar bara det här kundavtalet. Ändringar i mallen påverkar inte befintliga avtalskopior.",
+    "errors": {
+      "loadFailed": "Det gick inte att läsa in rabatterna.",
+      "saveFailed": "Det gick inte att spara rabatten."
     }
   }
 }
