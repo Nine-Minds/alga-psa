@@ -24,6 +24,7 @@ import {
 } from '../lib/externalMappingWorkflowEvents';
 import {
   actionError,
+  isActionMessageError,
   permissionError,
   type ActionMessageError,
   type ActionPermissionError,
@@ -39,6 +40,7 @@ import {
 import {
   readXeroServiceTargetKind,
   XERO_SALES_ACCOUNT_TYPES,
+  XERO_TARGET_KIND_METADATA_KEY,
 } from '../lib/xero/xeroServiceMappingTarget';
 
 const MAPPING_CACHE_TTL_MS = 30_000;
@@ -767,6 +769,11 @@ export const getExternalEntityMappings = withAuth(async (
 
 // ─── Create ──────────────────────────────────────────────────────────────────
 
+const MAPPINGS_MANAGE_DENIED = {
+  message: 'Permission denied: You do not have permission to manage accounting mappings.',
+  key: 'msp/integrations:errors.mappings.managePermission',
+} as const;
+
 export const createExternalEntityMapping = withAuth(async (
   user,
   { tenant },
@@ -775,12 +782,34 @@ export const createExternalEntityMapping = withAuth(async (
   const { knex } = await createTenantKnex();
   const allowed = await hasPermission(user, 'accounting_integrations', 'mappings_manage', knex);
   if (!allowed) {
-    return permissionError(
-      'Permission denied: You do not have permission to manage accounting mappings.',
-      'msp/integrations:errors.mappings.managePermission'
-    );
+    return permissionError(MAPPINGS_MANAGE_DENIED.message, MAPPINGS_MANAGE_DENIED.key);
   }
 
+  return createMappingRow({ knex, user, tenant, mappingData, validateRealm: true });
+});
+
+/**
+ * The per-row create path shared by the single and bulk actions: validation,
+ * insert-or-relink inside its OWN transaction, audit, workflow event, cache
+ * invalidation, and error mapping. Because each call owns its transaction, a
+ * failure here rolls back only this row.
+ *
+ * `validateRealm: false` is for the bulk action, which has already run
+ * `assertRealmAllowed` once for the (shared) realm.
+ */
+async function createMappingRow({
+  knex,
+  user,
+  tenant,
+  mappingData,
+  validateRealm,
+}: {
+  knex: Knex;
+  user: IUserWithRoles;
+  tenant: string;
+  mappingData: CreateMappingData;
+  validateRealm: boolean;
+}): Promise<ExternalEntityMapping | ActionMessageError> {
   const {
     integration_type,
     alga_entity_type,
@@ -818,7 +847,9 @@ export const createExternalEntityMapping = withAuth(async (
         await lockInvoiceForExternalSync(trx, tenant, alga_entity_id);
       }
 
-      await assertRealmAllowed(tenant, integration_type, external_realm_id);
+      if (validateRealm) {
+        await assertRealmAllowed(tenant, integration_type, external_realm_id);
+      }
       await assertLocalEntityOwnership(trx, tenant, alga_entity_type, alga_entity_id);
 
       const normalizedRealm =
@@ -1030,6 +1061,105 @@ export const createExternalEntityMapping = withAuth(async (
       'msp/integrations:errors.mappings.saveFailed'
     );
   }
+}
+
+function integrationRequiresExplicitKind(row: CreateMappingData): boolean {
+  if (row.integration_type !== 'xero' || row.alga_entity_type !== 'service') return false;
+  const kind = row.metadata?.[XERO_TARGET_KIND_METADATA_KEY];
+  return kind !== 'item' && kind !== 'account';
+}
+
+export interface BulkCreateMappingRowResult {
+  alga_entity_id: string;
+  ok: boolean;
+  mapping?: ExternalEntityMapping;
+  error?: string;
+}
+
+/**
+ * Bulk create: permission and realm are checked ONCE, then every row runs
+ * through the same `createMappingRow` as the single create, each in its own
+ * transaction so one bad row (duplicate, stale catalog entry) cannot abort or
+ * roll back the others. Row-level failures are returned as results — only a
+ * permission failure is returned as a top-level error.
+ */
+export const createExternalEntityMappings = withAuth(async (
+  user,
+  { tenant },
+  rows: CreateMappingData[]
+): Promise<BulkCreateMappingRowResult[] | ActionPermissionError> => {
+  const { knex } = await createTenantKnex();
+  const allowed = await hasPermission(user, 'accounting_integrations', 'mappings_manage', knex);
+  if (!allowed) {
+    return permissionError(MAPPINGS_MANAGE_DENIED.message, MAPPINGS_MANAGE_DENIED.key);
+  }
+
+  if (rows.length === 0) return [];
+
+  // The batch shares one realm check per distinct (integration, realm) pair —
+  // the UI sends a single pair, so this is one check in practice.
+  const realmFailures = new Map<string, string>();
+  const checked = new Set<string>();
+  for (const row of rows) {
+    const key = JSON.stringify([row.integration_type, row.external_realm_id ?? null]);
+    if (checked.has(key)) continue;
+    checked.add(key);
+    try {
+      assertKnownIntegrationType(row.integration_type);
+      await assertRealmAllowed(tenant, row.integration_type, row.external_realm_id);
+    } catch (error: unknown) {
+      realmFailures.set(
+        key,
+        error instanceof ExpectedExternalMappingError
+          ? error.message
+          : 'Unable to validate the connected organisation. Please try again.'
+      );
+    }
+  }
+
+  const results: BulkCreateMappingRowResult[] = [];
+  for (const row of rows) {
+    const key = JSON.stringify([row.integration_type, row.external_realm_id ?? null]);
+    const realmFailure = realmFailures.get(key);
+    if (realmFailure) {
+      results.push({ alga_entity_id: row.alga_entity_id, ok: false, error: realmFailure });
+      continue;
+    }
+    // Bulk rows never rely on the single-create legacy rule ("no kind means
+    // item"): a Xero service row must carry an explicit, recognised kind.
+    if (integrationRequiresExplicitKind(row)) {
+      results.push({
+        alga_entity_id: row.alga_entity_id,
+        ok: false,
+        error: 'Xero service mappings must declare xeroTargetKind as "item" or "account".',
+      });
+      continue;
+    }
+    try {
+      const result = await createMappingRow({
+        knex,
+        user,
+        tenant,
+        mappingData: row,
+        validateRealm: false,
+      });
+      if (isActionMessageError(result)) {
+        results.push({ alga_entity_id: row.alga_entity_id, ok: false, error: result.actionError });
+      } else {
+        results.push({ alga_entity_id: row.alga_entity_id, ok: true, mapping: result });
+      }
+    } catch (error: unknown) {
+      // createMappingRow maps its own errors; this is a last-resort guard so a
+      // surprise never turns into a top-level throw for the whole batch.
+      logger.error('Unexpected failure in bulk mapping row', { tenantId: tenant, error });
+      results.push({
+        alga_entity_id: row.alga_entity_id,
+        ok: false,
+        error: 'Unable to save mapping. Please try again.',
+      });
+    }
+  }
+  return results;
 });
 
 // ─── Update ──────────────────────────────────────────────────────────────────

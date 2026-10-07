@@ -1,6 +1,36 @@
 {
   "integrations": {
     "accounting": {
+      "bulk": {
+        "button": "Sammelzuordnung",
+        "columns": {
+          "ignore": "Ignorieren",
+          "select": "Speichern",
+          "status": "Status"
+        },
+        "exit": "Zurück zu den Zuordnungen",
+        "filter": {
+          "all": "Alle",
+          "mapped": "Zugeordnet",
+          "unmapped": "Nicht zugeordnet"
+        },
+        "ignoreAll": "Alle ignorieren",
+        "noRows": "Keine Zeilen entsprechen dem aktuellen Filter.",
+        "rowIgnoreAria": "{{name}} ignorieren",
+        "rowSelectAria": "{{name}} in das Speichern einbeziehen",
+        "saveAll": "Alle speichern",
+        "searchPlaceholder": "Services und Ziele suchen...",
+        "selectAll": "Alle auswählen",
+        "status": {
+          "ignored": "Ignoriert",
+          "mapped": "Zugeordnet",
+          "noResult": "Für diese Zeile wurde kein Ergebnis zurückgegeben.",
+          "pending": "Ausstehend",
+          "saved": "Gespeichert"
+        },
+        "suggested": "Vorgeschlagen",
+        "toSave": "{{total}} zu speichern"
+      },
       "dialog": {
         "cancel": "Abbrechen",
         "enterPlaceholder": "{{field}} eingeben...",

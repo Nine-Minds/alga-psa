@@ -1,6 +1,36 @@
 {
   "integrations": {
     "accounting": {
+      "bulk": {
+        "button": "Massmappning",
+        "columns": {
+          "ignore": "Ignorera",
+          "select": "Spara",
+          "status": "Status"
+        },
+        "exit": "Tillbaka till mappningar",
+        "filter": {
+          "all": "Alla",
+          "mapped": "Mappade",
+          "unmapped": "Ej mappade"
+        },
+        "ignoreAll": "Ignorera alla",
+        "noRows": "Inga rader matchar det aktuella filtret.",
+        "rowIgnoreAria": "Ignorera {{name}}",
+        "rowSelectAria": "Inkludera {{name}} vid sparande",
+        "saveAll": "Spara alla",
+        "searchPlaceholder": "Sök tjänster och mål...",
+        "selectAll": "Markera alla",
+        "status": {
+          "ignored": "Ignorerad",
+          "mapped": "Mappad",
+          "noResult": "Inget resultat returnerades för den här raden.",
+          "pending": "Väntar",
+          "saved": "Sparad"
+        },
+        "suggested": "Föreslagen",
+        "toSave": "{{total}} att spara"
+      },
       "dialog": {
         "cancel": "Avbryt",
         "enterPlaceholder": "Ange {{field}}…",

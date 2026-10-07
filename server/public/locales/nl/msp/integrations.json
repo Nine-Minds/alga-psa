@@ -1,6 +1,36 @@
 {
   "integrations": {
     "accounting": {
+      "bulk": {
+        "button": "Bulkkoppeling",
+        "columns": {
+          "ignore": "Negeren",
+          "select": "Opslaan",
+          "status": "Status"
+        },
+        "exit": "Terug naar koppelingen",
+        "filter": {
+          "all": "Alle",
+          "mapped": "Gekoppeld",
+          "unmapped": "Niet gekoppeld"
+        },
+        "ignoreAll": "Alles negeren",
+        "noRows": "Geen rijen komen overeen met het huidige filter.",
+        "rowIgnoreAria": "{{name}} negeren",
+        "rowSelectAria": "{{name}} meenemen bij opslaan",
+        "saveAll": "Alles opslaan",
+        "searchPlaceholder": "Zoek diensten en doelen...",
+        "selectAll": "Alles selecteren",
+        "status": {
+          "ignored": "Genegeerd",
+          "mapped": "Gekoppeld",
+          "noResult": "Voor deze rij is geen resultaat teruggegeven.",
+          "pending": "In afwachting",
+          "saved": "Opgeslagen"
+        },
+        "suggested": "Voorgesteld",
+        "toSave": "{{total}} op te slaan"
+      },
       "dialog": {
         "cancel": "Annuleren",
         "enterPlaceholder": "{{field}} invoeren...",

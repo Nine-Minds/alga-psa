@@ -47,6 +47,7 @@ import { getStoredQboCredentialsMap } from '../lib/qbo/qboClientService';
 import { getStoredXeroConnections } from '../lib/xero/xeroClientService';
 import {
   createExternalEntityMapping,
+  createExternalEntityMappings,
   updateExternalEntityMapping,
   deleteExternalEntityMapping,
   getExternalEntityMappings,
@@ -975,5 +976,42 @@ describe('unlink (tombstone) and explicit relink', () => {
 
     const audit = await lastAudit(tenantA, 'CREATE');
     expect(audit.details).toMatchObject({ relinked: true });
+  });
+});
+
+describe('createExternalEntityMappings — bulk create with per-row isolation', () => {
+  const bulkRow = (serviceId: string, code: string, kind: 'item' | 'account') => ({
+    integration_type: 'xero',
+    alga_entity_type: 'service',
+    alga_entity_id: serviceId,
+    external_entity_id: code,
+    external_realm_id: xeroRealm,
+    metadata: { xeroTargetKind: kind },
+  });
+
+  it('persists the good rows with their own kinds while a duplicate row fails alone', async () => {
+    xeroListItemsMock.mockResolvedValue([
+      { itemId: 'g1', code: '200', name: 'Item 200', status: 'ACTIVE' },
+    ]);
+    const extraService = await seedService(tenantA);
+    await (createExternalEntityMapping as any)(
+      { user_id: 'u' },
+      { tenant: tenantA },
+      bulkRow(serviceA, '200', 'item')
+    );
+
+    const results = await (createExternalEntityMappings as any)(
+      { user_id: 'u' },
+      { tenant: tenantA },
+      [bulkRow(serviceA, '200', 'item'), bulkRow(extraService, '200', 'account')]
+    );
+
+    expect(results.map((r: any) => r.ok)).toEqual([false, true]);
+    expect(results[0].error).toMatch(/already exists/);
+    const rows = await db('tenant_external_entity_mappings').where({ tenant: tenantA });
+    expect(rows).toHaveLength(2);
+    expect(rows.find((r: any) => r.alga_entity_id === extraService).metadata).toMatchObject({
+      xeroTargetKind: 'account',
+    });
   });
 });

@@ -9,9 +9,11 @@ const getQboAutomatedSalesTaxModeMock = vi.hoisted(() => vi.fn());
 const getQboCompanyCountryInfoMock = vi.hoisted(() => vi.fn());
 const getQboTermsMock = vi.hoisted(() => vi.fn());
 const createExternalEntityMappingMock = vi.hoisted(() => vi.fn());
+const createExternalEntityMappingsMock = vi.hoisted(() => vi.fn());
 
 vi.mock('@alga-psa/integrations/actions', () => ({
   createExternalEntityMapping: (...args: unknown[]) => createExternalEntityMappingMock(...args),
+  createExternalEntityMappings: (...args: unknown[]) => createExternalEntityMappingsMock(...args),
   deleteExternalEntityMapping: vi.fn(),
   getExternalEntityMappings: getExternalEntityMappingsMock,
   getQboItems: getQboItemsMock,
@@ -160,7 +162,7 @@ describe('QBO live mapping modules', () => {
     const result = await serviceModule.load(context);
 
     expect(result.externalEntities).toEqual([
-      { id: 'qbo-item-1', name: 'Consulting Services' }
+      { id: 'qbo-item-1', name: 'Consulting Services', baseName: 'Consulting Services' }
     ]);
   });
 
@@ -440,5 +442,28 @@ describe('QBO live mapping modules', () => {
       'NM-Roosevelt (5.5%)',
       'NM-Roosevelt (6.25%)'
     ]);
+  });
+});
+
+describe('QBO service module createMany', () => {
+  it('sends one bulk request with the realm and returns per-row results', async () => {
+    createExternalEntityMappingsMock.mockResolvedValue([
+      { alga_entity_id: 'svc-a', ok: true, mapping: { id: 'm1' } },
+      { alga_entity_id: 'svc-b', ok: false, error: 'duplicate' }
+    ]);
+    const [serviceModule] = createQboLiveMappingModules();
+    const results = await serviceModule.createMany!(
+      { realmId: 'realm-abc' },
+      [
+        { algaEntityId: 'svc-a', externalEntityId: '1' },
+        { algaEntityId: 'svc-b', externalEntityId: '2' }
+      ]
+    );
+    expect(createExternalEntityMappingsMock).toHaveBeenCalledTimes(1);
+    expect(createExternalEntityMappingsMock.mock.calls[0][0]).toEqual([
+      expect.objectContaining({ integration_type: 'quickbooks_online', alga_entity_type: 'service', alga_entity_id: 'svc-a', external_entity_id: '1', external_realm_id: 'realm-abc' }),
+      expect.objectContaining({ alga_entity_id: 'svc-b', external_entity_id: '2' })
+    ]);
+    expect(results.map((r) => r.ok)).toEqual([true, false]);
   });
 });
