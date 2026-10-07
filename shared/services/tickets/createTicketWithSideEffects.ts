@@ -1,17 +1,17 @@
 import type { Knex } from 'knex';
 import { registerAfterCommit, tenantDb } from '@alga-psa/db';
 import { publishWorkflowEvent, type WorkflowActor } from '@alga-psa/event-bus/publishers';
-import { TicketModel, type CreateTicketInput } from '@alga-psa/shared/models/ticketModel';
-import { TagModel } from '@alga-psa/shared/models/tagModel';
-import { associateAssetWithTicket } from '@alga-psa/shared/services/assets/assetTicketAssociation';
-import { applyChecklistTemplateToTicket } from '@alga-psa/shared/lib/ticketChecklists';
+import { TicketModel, type CreateTicketInput } from '../../models/ticketModel';
+import { TagModel } from '../../models/tagModel';
+import { associateAssetWithTicket } from '../assets/assetTicketAssociation';
+import { applyChecklistTemplateToTicket } from '../../lib/ticketChecklists';
 import {
   TICKET_ACTIVITY_ACTOR,
   TICKET_ACTIVITY_ENTITY,
   TICKET_ACTIVITY_EVENT,
   TICKET_ACTIVITY_SOURCE,
   writeTicketActivity,
-} from '@alga-psa/shared/lib/ticketActivity';
+} from '../../lib/ticketActivity';
 import { TicketModelEventPublisher } from './ticketModelEventPublisher';
 import { addTicketResourceCore } from './ticketResourceCore';
 import { assignTeamToTicketCore } from './teamAssignmentCore';

@@ -2,7 +2,7 @@ import type { Knex } from 'knex';
 import {
   createTicketWithSideEffects,
   type CreateTicketActor,
-} from '@alga-psa/shared/services/tickets/createTicketWithSideEffects';
+} from '../services/tickets/createTicketWithSideEffects';
 
 export const RENEWAL_TICKET_SOURCE = 'renewal_due_date_automation';
 export const RENEWAL_TICKET_MANUAL_RETRY_SOURCE = 'renewal_due_date_manual_retry';
