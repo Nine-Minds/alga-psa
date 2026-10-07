@@ -15,6 +15,7 @@ import { findMatchingWindow } from './windowMatcher';
 import { addAlertInternalNote, createTicketForAlert, providerLabel } from './ticketCreator';
 import { publishRmmTicketCreated } from './ticketCreatedEvent';
 import { isTicketUntouched } from './untouched';
+import { ticketStatusClockPatch } from '../../lib/ticketStatusClock';
 
 /**
  * Single entry point for normalized RMM alert events (webhooks and the
@@ -366,9 +367,10 @@ async function processReset(
         if (await isTicketUntouched(trx, event.tenantId, existing.ticket_id)) {
           const statusId = await resolveCloseStatusId(trx, event.tenantId, actions, existing.ticket_id);
           if (statusId) {
+            // LEVERAGE: pattern ticket-status-write — spread the status clock patch into every tickets.status_id UPDATE
             await db.table('tickets')
               .where({ ticket_id: existing.ticket_id })
-              .update({ status_id: statusId, updated_at: new Date().toISOString() });
+              .update({ status_id: statusId, ...ticketStatusClockPatch(trx, statusId), updated_at: new Date().toISOString() });
             await db.table('rmm_alerts')
               .where({ alert_id: existing.alert_id })
               .update({ status: 'auto_resolved' });

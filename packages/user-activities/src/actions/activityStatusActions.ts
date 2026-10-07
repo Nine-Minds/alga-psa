@@ -9,6 +9,7 @@ import { withAuth } from "@alga-psa/auth";
 import { revalidatePath } from "next/cache";
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
+import { ticketStatusClockPatch } from '@alga-psa/shared/lib/ticketStatusClock';
 import { publishTicketUpdate } from '@alga-psa/event-bus/ticket-live-updates';
 
 function formatLiveUpdateDisplayName(user: any): string {
@@ -85,8 +86,10 @@ export const updateActivityStatus = withAuth(async (
           
           await tenantScopedTable("tickets")
             .where("ticket_id", activityId)
+            // LEVERAGE: pattern ticket-status-write — spread the status clock patch into every tickets.status_id UPDATE
             .update({
               status_id: status.status_id,
+              ...ticketStatusClockPatch(trx, status.status_id),
               updated_at: new Date()
             });
           break;
@@ -166,8 +169,10 @@ export const updateActivityStatusById = withAuth(async (
         case ActivityType.TICKET:
           return await tenantScopedTable("tickets")
             .where("ticket_id", activityId)
+            // LEVERAGE: pattern ticket-status-write — spread the status clock patch into every tickets.status_id UPDATE
             .update({
               status_id: statusId,
+              ...ticketStatusClockPatch(trx, statusId),
               updated_at: new Date(),
             });
 

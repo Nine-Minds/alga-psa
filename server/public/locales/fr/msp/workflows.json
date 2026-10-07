@@ -534,7 +534,8 @@
         "anniversary": "le prochain anniversaire du client",
         "renewal": "la date de décision de renouvellement du contrat",
         "contractEnd": "la date de fin du contrat",
-        "warrantyEnd": "la date de fin de garantie de l’actif"
+        "warrantyEnd": "la date de fin de garantie de l’actif",
+        "ticketStatusAge": "le jour où le ticket atteint le nombre de jours dans le statut"
       }
     }
   },
@@ -808,7 +809,20 @@
       "notPublishedNextVersion": "Pas encore publié. La publication crée la v{{next}}.",
       "tenantTimezoneOption": "Fuseau horaire du locataire (par défaut)",
       "searchTimezones": "Rechercher des fuseaux horaires",
-      "inputDataEventPending": "Choisissez l’événement ci-dessus ; vos étapes liront les données que cet événement envoie."
+      "inputDataEventPending": "Choisissez l’événement ci-dessus ; vos étapes liront les données que cet événement envoie.",
+      "dateSourceTicketStatusAge": "Ticket dans un statut depuis N jours",
+      "statusAgeStatus": "Statut",
+      "statusAgeStatusPlaceholder": "Sélectionner un statut",
+      "statusAgeStatusMissing": "Aucun statut portant ce nom n'existe sur le tableau sélectionné.",
+      "statusAgeOptionsFailed": "Impossible de charger les statuts et les tableaux.",
+      "statusAgeMatchByName": "Les statuts sont comparés par nom. Renommer un statut empêche ce déclencheur de correspondre.",
+      "statusAgeBoard": "Tableau (facultatif)",
+      "statusAgeAnyBoard": "N'importe quel tableau",
+      "statusAgeDays": "Jours dans le statut",
+      "statusAgeRepeat": "Répéter tant que le ticket reste dans le statut",
+      "statusAgeRepeatEvery": "Répéter tous les (jours)",
+      "statusAgeNoActivity": "Uniquement s'il n'y a eu aucune activité (commentaires ou modifications par des personnes) pendant cette durée",
+      "statusAgeSummary": "S'exécute chaque jour à {{time}} ({{timezone}}) pour chaque ticket resté dans le statut choisi pendant le nombre de jours défini"
     },
     "stepPanel": {
       "readOnly": "Accès en lecture seule : l’édition des étapes est désactivée.",

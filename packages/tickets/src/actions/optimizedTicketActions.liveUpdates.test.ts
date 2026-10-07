@@ -456,6 +456,31 @@ describe('updateTicketWithCache live updates', () => {
     );
   });
 
+  it('status clock: a status change includes the status_changed_at CASE patch in the tickets UPDATE', async () => {
+    let capturedTrx: any;
+    withTransactionMock.mockImplementation(async (_db: any, callback: (trx: any) => Promise<any>) => {
+      capturedTrx = buildTrx({ currentTicket: makeTicket({ status_id: 'status-1' }) });
+      return callback(capturedTrx);
+    });
+
+    const { updateTicketWithCache } = await import('./optimizedTicketActions');
+    await expect(updateTicketWithCache('ticket-1', { status_id: 'status-2' })).resolves.toBe('success');
+
+    expect(ticketUpdates[0]).toHaveProperty('status_changed_at');
+    expect(capturedTrx.raw).toHaveBeenCalledWith(
+      expect.stringContaining('CASE WHEN status_id IS DISTINCT FROM ?::uuid THEN now() ELSE status_changed_at END'),
+      ['status-2']
+    );
+  });
+
+  it('status clock: an update that does not write status_id never touches status_changed_at', async () => {
+    const { updateTicketWithCache } = await import('./optimizedTicketActions');
+    await expect(updateTicketWithCache('ticket-1', { title: 'Renamed' })).resolves.toBe('success');
+
+    expect(ticketUpdates[0]).toMatchObject({ title: 'Renamed' });
+    expect(ticketUpdates[0]).not.toHaveProperty('status_changed_at');
+  });
+
   it('T005: permission failure results in zero live-update publishes', async () => {
     hasPermissionMock.mockResolvedValue(false);
 
@@ -827,6 +852,7 @@ describe('updateTicketWithCache live updates', () => {
 
     expect(ticketUpdates[0]).toEqual({
       status_id: 'closed-status-1',
+      status_changed_at: expect.anything(),
       response_state: null,
     });
     expect(publishRedisMock).toHaveBeenCalledWith(

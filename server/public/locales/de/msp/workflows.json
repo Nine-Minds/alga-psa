@@ -534,7 +534,8 @@
         "anniversary": "das nächste Jubiläum des Kunden",
         "renewal": "das Entscheidungsdatum für die Vertragsverlängerung",
         "contractEnd": "das Vertragsende",
-        "warrantyEnd": "das Ende der Garantie des Assets"
+        "warrantyEnd": "das Ende der Garantie des Assets",
+        "ticketStatusAge": "der Tag, an dem das Ticket die festgelegte Anzahl von Tagen im Status erreicht"
       }
     }
   },
@@ -808,7 +809,20 @@
       "notPublishedNextVersion": "Noch nicht veröffentlicht. Die Veröffentlichung erstellt v{{next}}.",
       "tenantTimezoneOption": "Mandanten-Zeitzone (Standard)",
       "searchTimezones": "Zeitzonen durchsuchen",
-      "inputDataEventPending": "Wählen Sie oben das Ereignis; Ihre Schritte lesen die Daten, die dieses Ereignis sendet."
+      "inputDataEventPending": "Wählen Sie oben das Ereignis; Ihre Schritte lesen die Daten, die dieses Ereignis sendet.",
+      "dateSourceTicketStatusAge": "Ticket seit N Tagen in Status",
+      "statusAgeStatus": "Status",
+      "statusAgeStatusPlaceholder": "Status auswählen",
+      "statusAgeStatusMissing": "Auf dem ausgewählten Board gibt es keinen Status mit diesem Namen.",
+      "statusAgeOptionsFailed": "Status und Boards konnten nicht geladen werden.",
+      "statusAgeMatchByName": "Status werden nach Namen abgeglichen. Wird ein Status umbenannt, trifft dieser Trigger nicht mehr zu.",
+      "statusAgeBoard": "Board (optional)",
+      "statusAgeAnyBoard": "Beliebiges Board",
+      "statusAgeDays": "Tage im Status",
+      "statusAgeRepeat": "Wiederholen, solange im Status",
+      "statusAgeRepeatEvery": "Wiederholen alle (Tage)",
+      "statusAgeNoActivity": "Nur wenn in dieser Zeit keine Aktivität (Kommentare oder Änderungen durch Personen) stattgefunden hat",
+      "statusAgeSummary": "Läuft täglich um {{time}} ({{timezone}}) für jedes Ticket, das die festgelegte Anzahl von Tagen im gewählten Status war"
     },
     "stepPanel": {
       "readOnly": "Schreibgeschützter Zugriff: Schrittbearbeitung ist deaktiviert.",

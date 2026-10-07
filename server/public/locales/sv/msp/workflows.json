@@ -534,7 +534,8 @@
         "anniversary": "kundens nästa årsdag",
         "renewal": "avtalets beslutsdatum för förnyelse",
         "contractEnd": "avtalets slutdatum",
-        "warrantyEnd": "tillgångens slutdatum för garantin"
+        "warrantyEnd": "tillgångens slutdatum för garantin",
+        "ticketStatusAge": "dagen då ärendet når antalet dagar i status"
       }
     }
   },
@@ -808,7 +809,20 @@
       "notPublishedNextVersion": "Inte publicerat än. När du publicerar skapas v{{next}}.",
       "tenantTimezoneOption": "Organisationens tidszon (standard)",
       "searchTimezones": "Sök tidszoner",
-      "inputDataEventPending": "Välj händelsen ovan; dina steg läser de data som händelsen skickar."
+      "inputDataEventPending": "Välj händelsen ovan; dina steg läser de data som händelsen skickar.",
+      "dateSourceTicketStatusAge": "Ärende i status i N dagar",
+      "statusAgeStatus": "Status",
+      "statusAgeStatusPlaceholder": "Välj en status",
+      "statusAgeStatusMissing": "Det finns ingen status med detta namn på den valda tavlan.",
+      "statusAgeOptionsFailed": "Det gick inte att läsa in statusar och tavlor.",
+      "statusAgeMatchByName": "Statusar matchas på namn. Om en status byter namn slutar den här utlösaren matcha.",
+      "statusAgeBoard": "Tavla (valfritt)",
+      "statusAgeAnyBoard": "Valfri tavla",
+      "statusAgeDays": "Dagar i status",
+      "statusAgeRepeat": "Upprepa så länge ärendet är i status",
+      "statusAgeRepeatEvery": "Upprepa var (dagar)",
+      "statusAgeNoActivity": "Endast om det inte har förekommit någon aktivitet (kommentarer eller ändringar av personer) under den tiden",
+      "statusAgeSummary": "Körs dagligen kl. {{time}} ({{timezone}}) för varje ärende som har varit i den valda statusen under det angivna antalet dagar"
     },
     "stepPanel": {
       "readOnly": "Skrivskyddad åtkomst: stegredigering är inaktiverad.",

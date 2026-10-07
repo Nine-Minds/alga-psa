@@ -22,6 +22,7 @@ import { withAuth, withOptionalAuth } from '@alga-psa/auth';
 import type { ActionResultMessageKey } from '@alga-psa/ui/lib/errorHandling';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import { prepareTicketResourceReassignment } from "@alga-psa/db/reassignTicketResources";
+import { ticketStatusClockPatch } from '@alga-psa/shared/lib/ticketStatusClock';
 import {
   sanitizeUserForResponse,
   USER_RESPONSE_FIELD_NAMES,
@@ -1400,7 +1401,9 @@ export const deactivateUserWithDisposition = withAuth(
               assigned_to: nextAssignee,
             };
             if (disposition.tickets.action === "archive") {
+              // LEVERAGE: pattern ticket-status-write — spread the status clock patch into every tickets.status_id UPDATE
               update.status_id = ticketArchiveStatuses.get(ticket.board_id);
+              Object.assign(update, ticketStatusClockPatch(trx, update.status_id as string | undefined));
               update.is_closed = true;
               update.closed_at = new Date();
               update.closed_by = currentUser.user_id;

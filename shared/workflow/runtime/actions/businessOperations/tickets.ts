@@ -5,6 +5,7 @@ import { tenantDb } from '@alga-psa/db';
 import { getActionRegistryV2 } from '../../registries/actionRegistry';
 import { getWorkflowEmailProvider } from '../../registries/workflowEmailRegistry';
 import { TicketModel } from '../../../../models/ticketModel';
+import { ticketStatusClockPatch } from '../../../../lib/ticketStatusClock';
 import { auditCloseRulesBypassIfGated } from '../../../../lib/ticketCloseRules';
 import { TICKET_ACTIVITY_ACTOR, TICKET_ACTIVITY_SOURCE } from '../../../../lib/ticketActivity';
 import { applyChecklistTemplateToTicket } from '../../../../lib/ticketChecklists';
@@ -1260,8 +1261,10 @@ export function registerTicketActions(): void {
       // Update ticket closure fields.
       await tenantScopedTable(tx, 'tickets')
         .where('ticket_id', input.ticket_id)
+        // LEVERAGE: pattern ticket-status-write — spread the status clock patch into every tickets.status_id UPDATE
         .update({
           status_id: closedStatus.status_id,
+          ...ticketStatusClockPatch(tx.trx, closedStatus.status_id as string),
           is_closed: true,
           closed_at: nowIso,
           closed_by: tx.actorUserId,

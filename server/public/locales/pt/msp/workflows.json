@@ -534,7 +534,8 @@
         "anniversary": "o próximo aniversário do cliente",
         "renewal": "a data de decisão de renovação do contrato",
         "contractEnd": "a data de término do contrato",
-        "warrantyEnd": "a data de término da garantia do ativo"
+        "warrantyEnd": "a data de término da garantia do ativo",
+        "ticketStatusAge": "o dia em que o ticket atinge o número de dias no status"
       }
     }
   },
@@ -808,7 +809,20 @@
       "notPublishedNextVersion": "Ainda não publicado. Publicar cria a v{{next}}.",
       "tenantTimezoneOption": "Fuso horário do locatário (padrão)",
       "searchTimezones": "Pesquisar fusos horários",
-      "inputDataEventPending": "Escolha o evento acima; suas etapas lerão os dados que esse evento envia."
+      "inputDataEventPending": "Escolha o evento acima; suas etapas lerão os dados que esse evento envia.",
+      "dateSourceTicketStatusAge": "Ticket no status há N dias",
+      "statusAgeStatus": "Status",
+      "statusAgeStatusPlaceholder": "Selecionar um status",
+      "statusAgeStatusMissing": "Não existe um status com este nome no quadro selecionado.",
+      "statusAgeOptionsFailed": "Não foi possível carregar os status e quadros.",
+      "statusAgeMatchByName": "Os status são comparados pelo nome. Renomear um status faz com que este gatilho deixe de corresponder.",
+      "statusAgeBoard": "Quadro (opcional)",
+      "statusAgeAnyBoard": "Qualquer quadro",
+      "statusAgeDays": "Dias no status",
+      "statusAgeRepeat": "Repetir enquanto estiver no status",
+      "statusAgeRepeatEvery": "Repetir a cada (dias)",
+      "statusAgeNoActivity": "Somente se não houve atividade (comentários ou alterações feitas por pessoas) nesse período",
+      "statusAgeSummary": "Executa diariamente às {{time}} ({{timezone}}) para cada ticket que esteja no status escolhido pelo número de dias definido"
     },
     "stepPanel": {
       "readOnly": "Acesso somente leitura: a edição de etapas está desativada.",

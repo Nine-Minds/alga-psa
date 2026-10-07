@@ -20,6 +20,8 @@ export type { WorkflowEmailProvider } from './registries/workflowEmailRegistry';
 export { WorkflowRuntimeV2 } from './runtime/workflowRuntimeV2';
 export * from './jsonSchemaMetadata';
 export * from './dateTriggerOccurrence';
+export * from './dateTriggerSourceDefinitions';
+export * from './dateTriggerParams';
 export {
   validateWorkflowDefinition,
   type PublishValidationResult

@@ -534,7 +534,8 @@
         "anniversary": "następna rocznica klienta",
         "renewal": "data decyzji o odnowieniu umowy",
         "contractEnd": "data zakończenia umowy",
-        "warrantyEnd": "data zakończenia gwarancji zasobu"
+        "warrantyEnd": "data zakończenia gwarancji zasobu",
+        "ticketStatusAge": "dzień, w którym zgłoszenie osiąga liczbę dni w statusie"
       }
     }
   },
@@ -808,7 +809,20 @@
       "notPublishedNextVersion": "Jeszcze nieopublikowane. Publikacja utworzy v{{next}}.",
       "tenantTimezoneOption": "Strefa czasowa organizacji (domyślna)",
       "searchTimezones": "Szukaj stref czasowych",
-      "inputDataEventPending": "Wybierz powyższe zdarzenie; kroki będą odczytywać dane wysyłane przez to zdarzenie."
+      "inputDataEventPending": "Wybierz powyższe zdarzenie; kroki będą odczytywać dane wysyłane przez to zdarzenie.",
+      "dateSourceTicketStatusAge": "Zgłoszenie w statusie przez N dni",
+      "statusAgeStatus": "Status",
+      "statusAgeStatusPlaceholder": "Wybierz status",
+      "statusAgeStatusMissing": "Na wybranej tablicy nie ma statusu o tej nazwie.",
+      "statusAgeOptionsFailed": "Nie udało się wczytać statusów i tablic.",
+      "statusAgeMatchByName": "Statusy są dopasowywane według nazwy. Zmiana nazwy statusu sprawia, że ten wyzwalacz przestaje pasować.",
+      "statusAgeBoard": "Tablica (opcjonalnie)",
+      "statusAgeAnyBoard": "Dowolna tablica",
+      "statusAgeDays": "Dni w statusie",
+      "statusAgeRepeat": "Powtarzaj, dopóki zgłoszenie jest w statusie",
+      "statusAgeRepeatEvery": "Powtarzaj co (dni)",
+      "statusAgeNoActivity": "Tylko jeśli w tym czasie nie było aktywności (komentarzy ani zmian wprowadzonych przez osoby)",
+      "statusAgeSummary": "Uruchamiany codziennie o {{time}} ({{timezone}}) dla każdego zgłoszenia, które jest w wybranym statusie przez ustaloną liczbę dni"
     },
     "stepPanel": {
       "readOnly": "Dostęp tylko do odczytu: edycja kroków jest wyłączona.",

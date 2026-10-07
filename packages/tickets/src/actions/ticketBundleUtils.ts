@@ -3,6 +3,7 @@
 import type { Knex } from 'knex';
 import { registerAfterCommit, tenantDb } from '@alga-psa/db';
 import { v4 as uuidv4 } from 'uuid';
+import { ticketStatusClockPatch } from '@alga-psa/shared/lib/ticketStatusClock';
 import {
   getBoardCloseRulesRow,
   openBundleChildrenCount,
@@ -208,10 +209,12 @@ export async function reopenBundleMasterOnly(
   // Keep the denormalized `is_closed` column on tickets in sync with the
   // open status we're moving to — mirrors how updateTicketWithCache flips
   // is_closed when the status transitions across the closed boundary.
+  // LEVERAGE: pattern ticket-status-write — spread the status clock patch into every tickets.status_id UPDATE
   await tenantScopedTable(trx, 'tickets', tenant)
     .where({ ticket_id: masterTicketId })
     .update({
       status_id: openStatusId,
+      ...ticketStatusClockPatch(trx, openStatusId),
       is_closed: false,
       closed_at: null,
       closed_by: null,
@@ -443,8 +446,10 @@ export async function applyClosedMasterChoice(
 
       await tenantScopedTable(trx, 'tickets', tenant)
         .where({ ticket_id: childTicketId })
+        // LEVERAGE: pattern ticket-status-write — spread the status clock patch into every tickets.status_id UPDATE
         .update({
           status_id: master.statusId,
+          ...ticketStatusClockPatch(trx, master.statusId),
           is_closed: true,
           closed_at: occurredAt,
           closed_by: actor.userId ?? null,
@@ -1184,7 +1189,13 @@ export async function propagateBundleMasterStatus(
     if (openChildIds.length > 0) {
       await tenantScopedTable(trx, 'tickets', ctx.tenant)
         .whereIn('ticket_id', openChildIds)
-        .update({ ...propagateFields, updated_by: ctx.user.user_id, updated_at: updatedAt });
+        // LEVERAGE: pattern ticket-status-write — spread the status clock patch into every tickets.status_id UPDATE
+        .update({
+          ...propagateFields,
+          ...ticketStatusClockPatch(trx, propagateFields.status_id as string | null | undefined),
+          updated_by: ctx.user.user_id,
+          updated_at: updatedAt,
+        });
     }
     if (closedChildIds.length > 0 && Object.keys(closedFields).length > 0) {
       await tenantScopedTable(trx, 'tickets', ctx.tenant)
@@ -1262,7 +1273,8 @@ export async function propagateBundleMasterStatus(
 
   await tenantScopedTable(trx, 'tickets', ctx.tenant)
     .whereIn('ticket_id', affectedChildIds)
-    .update(propagate);
+    // LEVERAGE: pattern ticket-status-write — spread the status clock patch into every tickets.status_id UPDATE
+    .update({ ...propagate, ...ticketStatusClockPatch(trx, propagate.status_id as string | null | undefined) });
 
   const occurredAt = nowIso();
   if (crossesBoundary === 'close') {

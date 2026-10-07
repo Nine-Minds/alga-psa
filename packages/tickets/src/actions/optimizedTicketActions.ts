@@ -50,6 +50,7 @@ import { Temporal } from '@js-temporal/polyfill';
 import { calculateItilPriority } from '@alga-psa/tickets/lib/itilUtils';
 import { withAuth } from '@alga-psa/auth';
 import { TicketModel } from '@alga-psa/shared/models/ticketModel';
+import { ticketStatusClockPatch } from '@alga-psa/shared/lib/ticketStatusClock';
 import Comment from '../models/comment';
 import {
   TICKET_ACTIVITY_ACTOR,
@@ -2818,9 +2819,10 @@ export async function updateTicketInTransaction(
         }
         
         // Step 5: Update the ticket with the new assigned_to
+        // LEVERAGE: pattern ticket-status-write — spread the status clock patch into every tickets.status_id UPDATE
         const [updated] = await tenantScopedTable(trx, 'tickets', tenant)
           .where({ ticket_id: id })
-          .update(updateData)
+          .update({ ...updateData, ...ticketStatusClockPatch(trx, updateData.status_id) })
           .returning('*');
           
         // Step 6: Re-create the resources with the new assigned_to
@@ -2834,9 +2836,10 @@ export async function updateTicketInTransaction(
         updatedTicket = updated;
     } else {
       // Regular update without changing assignment
+      // LEVERAGE: pattern ticket-status-write — spread the status clock patch into every tickets.status_id UPDATE
       [updatedTicket] = await tenantScopedTable(trx, 'tickets', tenant)
         .where({ ticket_id: id })
-        .update(updateData)
+        .update({ ...updateData, ...ticketStatusClockPatch(trx, updateData.status_id) })
         .returning('*');
     }
 

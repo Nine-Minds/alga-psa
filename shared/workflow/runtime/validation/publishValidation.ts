@@ -2,6 +2,8 @@ import { z } from 'zod';
 import type { WorkflowDefinition, PublishError, Step, NodeStep, InputMapping } from '../types';
 import { workflowDefinitionSchema } from '../types';
 import { dateTriggerPayloadSchemaRefs } from '../schemas/dateTriggerPayloadSchemas';
+import { validateDateTriggerParams } from '../dateTriggerParams';
+import { getDateTriggerSourceDefinition } from '../dateTriggerSourceDefinitions';
 import { getNodeTypeRegistry } from '../registries/nodeTypeRegistry';
 import { getActionRegistryV2 } from '../registries/actionRegistry';
 import { validateExpressionSource, describeExpressionError } from '../expressionEngine';
@@ -65,6 +67,25 @@ export function validateWorkflowDefinition(
         stepPath: 'trigger',
         code: 'DATE_TRIGGER_SCHEMA_MISMATCH',
         message: `Date trigger source "${definition.trigger.source}" requires payload schema "${expectedSchemaRef}".`
+      });
+    }
+    const paramsResult = validateDateTriggerParams(definition.trigger.source, definition.trigger.params);
+    if (!paramsResult.ok) {
+      for (const issue of paramsResult.issues) {
+        errors.push({
+          severity: 'error',
+          stepPath: 'trigger',
+          code: 'DATE_TRIGGER_PARAMS_INVALID',
+          message: `Date trigger "${definition.trigger.source}": ${issue}.`
+        });
+      }
+    }
+    if (getDateTriggerSourceDefinition(definition.trigger.source)?.usesOffset === false && definition.trigger.offsetDays !== 0) {
+      errors.push({
+        severity: 'error',
+        stepPath: 'trigger',
+        code: 'DATE_TRIGGER_OFFSET_NOT_SUPPORTED',
+        message: `Date trigger source "${definition.trigger.source}" does not use an offset; offsetDays must be 0.`
       });
     }
     if (definition.trigger.timezone) {

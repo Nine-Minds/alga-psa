@@ -47,6 +47,7 @@ import {
   TicketResponseStateChangedEvent
 } from '@alga-psa/event-bus/events';
 
+import { ticketStatusClockPatch } from '@alga-psa/shared/lib/ticketStatusClock';
 import { TicketModel, CreateTicketInput } from '@alga-psa/shared/models/ticketModel';
 import {
   TICKET_ACTIVITY_ACTOR,
@@ -1164,9 +1165,10 @@ export const updateTicket = withAuth(async (user, { tenant }, id: string, data: 
         )
         : null;
 
+      // LEVERAGE: pattern ticket-status-write — spread the status clock patch into every tickets.status_id UPDATE
       const [updatedTicket] = await tenantScopedTable(trx, 'tickets', tenant)
         .where({ ticket_id: id })
-        .update(updateData)
+        .update({ ...updateData, ...ticketStatusClockPatch(trx, updateData.status_id) })
         .returning('*');
 
       if (finalizeResourceReassignment) {

@@ -12,6 +12,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { z } from 'zod';
 import type { IEventPublisher } from '@alga-psa/types';
 import { applyMatchingChecklistTemplates } from '../lib/ticketChecklists';
+import { ticketStatusClockPatch } from '../lib/ticketStatusClock';
 import { SharedNumberingService } from '../services/numberingService';
 
 // LEVERAGE: pattern ticket-origins-duplicate — copy of TICKET_ORIGINS in @alga-psa/types (shared cannot import types); keep both in sync
@@ -1223,6 +1224,7 @@ export class TicketModel {
       .where({ ticket_id: ticketId })
       .update({
         ...updateData,
+        ...ticketStatusClockPatch(trx, updateData.status_id),
         updated_at: new Date()
       })
       .returning('*');
@@ -1347,6 +1349,7 @@ export class TicketModel {
       .where({ ticket_id: ticketId })
       .update({
         ...updateData,
+        ...ticketStatusClockPatch(trx, updateData.status_id),
         updated_at: new Date()
       })
       .returning('*');

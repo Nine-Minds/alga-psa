@@ -1,8 +1,7 @@
-// LEVERAGE: pattern date-trigger-source-list — duplicates dateTriggerPayloadSchemaRefs in
-// shared/workflow/runtime/schemas/dateTriggerPayloadSchemas.ts; import that instead.
-export const DATE_TRIGGER_PAYLOAD_SCHEMA_REFS = {
-  'client.anniversary': 'payload.ClientAnniversary.v1',
-  'contract.renewal_decision': 'payload.ContractRenewalDate.v1',
-  'contract.end': 'payload.ContractEndDate.v1',
-  'asset.warranty_end': 'payload.AssetWarrantyEnd.v1',
-} as const;
+// The source-to-payload-schema map is derived from the shared source definitions
+// (shared/workflow/runtime/dateTriggerSourceDefinitions.ts); there is no separate copy here.
+import { dateTriggerSourceDefinitions, type DateTriggerPayloadSchemaRefs } from '@alga-psa/workflows/authoring';
+
+export const DATE_TRIGGER_PAYLOAD_SCHEMA_REFS = Object.fromEntries(
+  dateTriggerSourceDefinitions.map((definition) => [definition.id, definition.payloadSchemaRef]),
+) as DateTriggerPayloadSchemaRefs;
