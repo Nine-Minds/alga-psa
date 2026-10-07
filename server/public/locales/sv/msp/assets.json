@@ -448,6 +448,12 @@
       "location": "Plats"
     }
   },
+  "documentsTab": {
+    "errors": {
+      "title": "Dokument otillgängliga",
+      "loadFailed": "Länkade dokument kunde inte läsas in. Ladda om sidan eller försök igen senare."
+    }
+  },
   "assetDetails": {
     "title": "Tillgångsdetaljer",
     "description": "Fullständig detaljsida för tillgångar med sammanfattningskort, kopplingar, dokument och driftåtgärder",
@@ -1553,8 +1559,7 @@
       "manageAssetTypes": "Behörighet saknas: Du kan inte hantera tillgångstyper",
       "readDocuments": "Behörighet saknas: Du kan inte läsa tillgångsdokument",
       "associateDocuments": "Behörighet saknas: Du kan inte koppla dokument till tillgångar",
-      "removeDocuments": "Behörighet saknas: Du kan inte ta bort dokument från tillgångar",
-      "updateDocumentNotes": "Behörighet saknas: Du kan inte uppdatera anteckningar för tillgångsdokument"
+      "removeDocuments": "Behörighet saknas: Du kan inte ta bort dokument från tillgångar"
     },
     "asset": {
       "notFoundRefresh": "Tillgången hittades inte. Den kan ha raderats. Ladda om sidan och försök igen.",

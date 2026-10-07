@@ -456,6 +456,12 @@
       "location": "Locatie"
     }
   },
+  "documentsTab": {
+    "errors": {
+      "title": "Documenten niet beschikbaar",
+      "loadFailed": "Gekoppelde documenten konden niet worden geladen. Laad de pagina opnieuw of probeer het later opnieuw."
+    }
+  },
   "assetDetails": {
     "title": "Activadetails",
     "description": "Volledige pagina met activadetails met overzichtskaarten, koppelingen, documenten en operationele acties",
@@ -1581,8 +1587,7 @@
       "manageAssetTypes": "Toestemming geweigerd: assettypen kunnen niet worden beheerd",
       "readDocuments": "Toestemming geweigerd: assetdocumenten kunnen niet worden gelezen",
       "associateDocuments": "Toestemming geweigerd: documenten kunnen niet aan assets worden gekoppeld",
-      "removeDocuments": "Toestemming geweigerd: documenten kunnen niet van assets worden verwijderd",
-      "updateDocumentNotes": "Toestemming geweigerd: notities bij assetdocumenten kunnen niet worden bijgewerkt"
+      "removeDocuments": "Toestemming geweigerd: documenten kunnen niet van assets worden verwijderd"
     },
     "asset": {
       "notFoundRefresh": "Asset niet gevonden. Mogelijk is deze verwijderd. Vernieuw de pagina en probeer het opnieuw.",

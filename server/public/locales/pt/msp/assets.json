@@ -456,6 +456,12 @@
       "location": "Localização"
     }
   },
+  "documentsTab": {
+    "errors": {
+      "title": "Documentos indisponíveis",
+      "loadFailed": "Não foi possível carregar os documentos vinculados. Recarregue a página ou tente novamente mais tarde."
+    }
+  },
   "assetDetails": {
     "title": "Detalhes do ativo",
     "description": "Página completa de detalhes do ativo com cartões de resumo, associações, documentos e ações operacionais",
@@ -1581,8 +1587,7 @@
       "manageAssetTypes": "Permissão negada: não é possível gerenciar os tipos de ativo",
       "readDocuments": "Permissão negada: não é possível ler os documentos do ativo",
       "associateDocuments": "Permissão negada: não é possível associar documentos aos ativos",
-      "removeDocuments": "Permissão negada: não é possível remover documentos dos ativos",
-      "updateDocumentNotes": "Permissão negada: não é possível atualizar as notas dos documentos do ativo"
+      "removeDocuments": "Permissão negada: não é possível remover documentos dos ativos"
     },
     "asset": {
       "notFoundRefresh": "Ativo não encontrado. Ele pode ter sido excluído. Atualize a página e tente novamente.",
