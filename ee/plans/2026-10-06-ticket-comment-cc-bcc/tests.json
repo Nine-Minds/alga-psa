@@ -80,6 +80,7 @@
   {"id": "T078", "commitGroup": "email-delivery", "featureIds": ["F051"], "implemented": true, "description": "SMTP: with no requester address the close message goes To the first Cc with the rest in Cc and Bcc"},
   {"id": "T079", "commitGroup": "email-delivery", "featureIds": ["F051"], "implemented": true, "description": "SMTP: a resolution that did not close the ticket keeps its Cc off a later close email"},
   {"id": "T080", "commitGroup": "email-delivery", "featureIds": ["F051"], "implemented": true, "description": "SMTP: a watcher also cc'd on the closing resolution receives exactly one close message"},
+  {"id": "T081", "commitGroup": "email-delivery", "featureIds": ["F051"], "implemented": true, "description": "SMTP: a closing resolution written through TicketModel.createComment is read by the close email, pinning writer and reader to one row shape"},
 
   {"id": "T059", "commitGroup": "timeline-display", "featureIds": ["F039"], "implemented": true, "description": "UI: MSP timeline shows Cc and Bcc lines with contact names when known and raw emails otherwise"},
   {"id": "T060", "commitGroup": "timeline-display", "featureIds": ["F040"], "implemented": true, "description": "Client portal action response for ticket comments contains cc but never bcc"},

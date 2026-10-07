@@ -567,5 +567,56 @@ describe('per-comment Cc/Bcc delivery over isolated SMTP', () => {
       expect(watcherCopies).toHaveLength(1);
       expect(watcherCopies[0].messageId).toBe(requesterMail.messageId);
     }, 60_000);
+
+    // The cases above hand-write the resolution row, so they only prove the
+    // reader. This one writes it the way "Resolve and close" does — through the
+    // model that normalises the addresses and merges metadata — so the writer
+    // and the close handler are pinned to the same row shape.
+    it('T081: a resolution written by the model is read by the close email', async () => {
+      const { TicketModel } = await import('@shared/models/ticketModel');
+      const requester = address('requester'), cc = address('cc'), bcc = address('bcc');
+      const ticket = randomUUID(), contact = randomUUID();
+      await table('contacts').insert({ tenant, contact_name_id: contact, client_id: client, full_name: 'Requester', email: requester });
+      await table('tickets').insert({
+        tenant, ticket_id: ticket, ticket_number: `MODEL-${ticket.slice(0, 8)}`, client_id: client,
+        contact_name_id: contact, title: 'Cc/Bcc written by the model', entered_by: agent,
+      });
+
+      await withoutAmbientTenant(() => TicketModel.createComment(
+        {
+          ticket_id: ticket,
+          content: JSON.stringify([{ type: 'paragraph', content: [{ type: 'text', text: 'Replaced the failed switch.', styles: {} }] }]),
+          is_internal: false,
+          is_resolution: true,
+          author_type: 'internal',
+          author_id: agent,
+          // What addTicketCommentWithCache stores when the resolution is
+          // paired with an immediate close.
+          metadata: { closes_ticket: true },
+          emailRecipients: { cc: [cc], bcc: [bcc] },
+        } as never,
+        tenant,
+        trx,
+        undefined,
+        undefined,
+        agent,
+      ));
+
+      await close({
+        id: randomUUID(),
+        eventType: 'TICKET_CLOSED',
+        payload: { tenantId: tenant, ticketId: ticket, closedByUserId: agent, changes: {} },
+      });
+
+      const [requesterMail] = await inbox(requester);
+      expect(requesterMail).toBeDefined();
+      expect(addressText(requesterMail.cc)).toContain(cc);
+      expect(requesterMail.headerLines.some(line => line.key === 'bcc')).toBe(false);
+      for (const recipient of [cc, bcc]) {
+        const copies = await inbox(recipient);
+        expect(copies).toHaveLength(1);
+        expect(copies[0].messageId).toBe(requesterMail.messageId);
+      }
+    }, 60_000);
   });
 });
