@@ -760,7 +760,7 @@ describe('ticket workflow runtime board-scoped statuses', () => {
   it('T040: tickets.create hands tags to the creation service and preserves mirrored attributes.tags', async () => {
     const tables: TableMap = {
       statuses: [],
-      tickets: [{ tenant: 'tenant-1', ticket_id: 'ticket-1', status_id: 'status-board-a-open', created_at: '2026-03-14T00:00:00.000Z' }],
+      tickets: [{ tenant: 'tenant-1', ticket_id: 'ticket-1', status_id: 'status-board-a-open', entered_at: '2026-03-14T00:00:00.000Z' }],
     };
     setTenantTx(tables);
     runtimeState.createWithEffectsMock.mockResolvedValue({ ticketId: 'ticket-1', ticketNumber: 'T-1' });
@@ -792,7 +792,7 @@ describe('ticket workflow runtime board-scoped statuses', () => {
   it("T041: tickets.create returns the stored status of the created ticket when workflow input omits status_id", async () => {
     setTenantTx({
       statuses: [],
-      tickets: [{ tenant: 'tenant-1', ticket_id: 'ticket-2', status_id: 'status-board-a-default', created_at: '2026-03-14T00:00:00.000Z' }],
+      tickets: [{ tenant: 'tenant-1', ticket_id: 'ticket-2', status_id: 'status-board-a-default', entered_at: '2026-03-14T00:00:00.000Z' }],
     });
     runtimeState.createWithEffectsMock.mockResolvedValue({ ticketId: 'ticket-2', ticketNumber: 'T-2' });
 
@@ -812,6 +812,7 @@ describe('ticket workflow runtime board-scoped statuses', () => {
     const [, , serviceInput] = runtimeState.createWithEffectsMock.mock.calls[0];
     expect(serviceInput.ticket).toEqual(expect.objectContaining({ board_id: 'board-a', status_id: undefined }));
     expect(result.status_id).toBe('status-board-a-default');
+    expect(result.created_at).toBe('2026-03-14T00:00:00.000Z');
   });
 
   it('T042: tickets.find returns response_state in the ticket summary', async () => {
