@@ -1,0 +1,7 @@
+Successful probe while the board-managed PTY was running under temporary Draft Implementation service permission:
+
+GET http://127.0.0.1:3185/api/health
+HTTP 200
+{"status":"ok","version":"1.0.0"}
+
+After removing that temporary permission, the board suspended the PTY as required by the current Draft Implementation policy. The saved registration was retained for the Smoke Test step.

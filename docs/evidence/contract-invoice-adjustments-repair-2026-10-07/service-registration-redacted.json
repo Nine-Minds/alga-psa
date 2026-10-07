@@ -1,0 +1,21 @@
+{
+  "projectId": "b97eda7b-0e3f-4b09-be80-6b57f934d8a5",
+  "service": {
+    "name": "dev-server",
+    "sessionId": "card-service:b97eda7b-0e3f-4b09-be80-6b57f934d8a5:dev-server:19",
+    "cwd": "/home/robert/alga-copies/feature-contract-invoices-automatic-adjustments-and-disc/server",
+    "command": "NODE_OPTIONS=--max-old-space-size=8192 HOST=0.0.0.0 PORT=3185 npm run dev:turbo",
+    "finalStatus": "suspended",
+    "suspendedReason": "Draft Implementation does not use it",
+    "readinessMetadata": null
+  },
+  "commandFreeEnsure": {
+    "created": false,
+    "reusedSessionId": "card-service:b97eda7b-0e3f-4b09-be80-6b57f934d8a5:dev-server:19",
+    "temporaryDraftServiceUseEnabled": true
+  },
+  "stepPolicyAfterCleanup": {
+    "draftImplementationServices": [],
+    "smokeTestServices": ["dev-server"]
+  }
+}
