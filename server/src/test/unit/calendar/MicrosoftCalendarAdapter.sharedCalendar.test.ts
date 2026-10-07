@@ -1,10 +1,11 @@
+// Cross-implementation parity belongs in the server test layer to avoid package-to-server dependency cycles.
 import { describe, expect, it, vi } from 'vitest';
 import type { CalendarProviderConfig, IScheduleEntry } from '@alga-psa/types';
-import { mapScheduleEntryToExternalEvent, mapExternalEventToScheduleEntry } from '../../../utils/calendar/eventMapping';
-import { MicrosoftCalendarAdapter } from './MicrosoftCalendarAdapter';
-import { CalendarProviderService } from '../CalendarProviderService';
-import { MicrosoftCalendarAdapter as EnterpriseMicrosoftCalendarAdapter } from '../../../../../../ee/packages/calendar/src/lib/services/calendar/providers/MicrosoftCalendarAdapter';
-import { MicrosoftCalendarAdapter as LegacyMicrosoftCalendarAdapter } from '../../../../../../server/src/services/calendar/providers/MicrosoftCalendarAdapter';
+import { mapScheduleEntryToExternalEvent, mapExternalEventToScheduleEntry } from '../../../../../packages/integrations/src/utils/calendar/eventMapping';
+import { MicrosoftCalendarAdapter } from '../../../../../packages/integrations/src/services/calendar/providers/MicrosoftCalendarAdapter';
+import { CalendarProviderService } from '../../../../../packages/integrations/src/services/calendar/CalendarProviderService';
+import { MicrosoftCalendarAdapter as EnterpriseMicrosoftCalendarAdapter } from '../../../../../ee/packages/calendar/src/lib/services/calendar/providers/MicrosoftCalendarAdapter';
+import { MicrosoftCalendarAdapter as LegacyMicrosoftCalendarAdapter } from '../../../services/calendar/providers/MicrosoftCalendarAdapter';
 
 const config: CalendarProviderConfig = {
   id: 'provider', tenant: 'tenant', user_id: 'user', name: 'Outlook',

@@ -1,7 +1,8 @@
+// Cross-implementation parity belongs in the server test layer to avoid package-to-server dependency cycles.
 import { describe, expect, it } from 'vitest';
-import * as workspace from './oauthHelpers';
+import * as workspace from '../../../../../packages/integrations/src/utils/calendar/oauthHelpers';
 import * as enterprise from '../../../../../ee/packages/calendar/src/lib/utils/calendar/oauthHelpers';
-import * as legacyServer from '../../../../../server/src/utils/calendar/oauthHelpers';
+import * as legacyServer from '../../../utils/calendar/oauthHelpers';
 
 const helpers = [
   ['workspace', workspace],

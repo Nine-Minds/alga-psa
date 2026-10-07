@@ -1,8 +1,9 @@
+// Cross-implementation parity belongs in the server test layer to avoid package-to-server dependency cycles.
 import { describe, expect, it } from 'vitest';
 import type { ExternalCalendarEvent, IScheduleEntry } from '@alga-psa/types';
-import * as workspace from './eventMapping';
+import * as workspace from '../../../../../packages/integrations/src/utils/calendar/eventMapping';
 import * as enterprise from '../../../../../ee/packages/calendar/src/lib/utils/calendar/eventMapping';
-import * as legacyServer from '../../../../../server/src/utils/calendar/eventMapping';
+import * as legacyServer from '../../../utils/calendar/eventMapping';
 
 const entry = (notes: string): IScheduleEntry => ({
   entry_id: 'entry-1', title: 'Unchanged title', notes, assigned_user_ids: [], work_item_type: 'ad_hoc',
