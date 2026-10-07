@@ -30,6 +30,7 @@ import type {
     OAuthMappingFailure,
 } from "./sso/types";
 import { isOAuthMappingFailure, OAuthAccountLinkConflictError } from "./sso/types";
+import { SSO_LINK_STATE_COOKIE, SSO_PROFILE_TAB_URL } from "./sso/linkStateCookie";
 import { mapCeOAuthProfileToExtendedUser } from "./sso/ceOAuthProfileMapper";
 import { cookies } from "next/headers.js";
 import {
@@ -803,7 +804,7 @@ function parseStateValue(rawState: unknown, key: string): string | undefined {
 }
 
 const LINK_SIGNATURE_TTL_MS = 5 * 60 * 1000;
-const LINK_STATE_COOKIE = 'sso-link-state';
+const LINK_STATE_COOKIE = SSO_LINK_STATE_COOKIE;
 
 // Recompute the client-issued signature so we can validate the callback payload without reaching for shared code.
 function computeLinkSignature(secret: string, userId: string, nonce: string, issuedAt: number): string {
@@ -1112,7 +1113,10 @@ async function resolveOAuthFailureRedirect(
         if (providerEmail) {
             linkParams.set('providerEmail', providerEmail);
         }
-        return `/msp/profile?tab=Single%20Sign-On&${linkParams.toString()}`;
+        // `tab` must be the tab *id* resolveUserProfileTab() knows; a label like
+        // "Single Sign-On" silently falls back to the Profile tab and the banner
+        // below never renders.
+        return `${SSO_PROFILE_TAB_URL}&${linkParams.toString()}`;
     }
 
     const params = new URLSearchParams({ error: 'AccessDenied', reason: code });

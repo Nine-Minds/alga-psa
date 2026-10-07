@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
+import { SSO_PROFILE_TAB_URL } from "@alga-psa/auth/lib/sso/linkStateCookie";
 import ConnectSsoClient from "./ConnectSsoClient";
 import { getSsoProviderOptionsAction } from "@ee/lib/actions/auth/getSsoProviderOptions";
 import { getLinkedSsoAccountsAction, type LinkedSsoAccount } from "@ee/lib/actions/auth/ssoPreferences";
@@ -25,11 +26,8 @@ function getErrorMessage(err: unknown): string {
   return "An unexpected error occurred while loading SSO settings";
 }
 
-const SSO_TAB_URL = "/msp/profile?tab=Single%20Sign-On";
-
 export default function ConnectSsoWrapper() {
   const { t } = useTranslation('common');
-  const router = useRouter();
   const searchParams = useSearchParams();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -46,11 +44,18 @@ export default function ConnectSsoWrapper() {
     providerEmail: searchParams?.get("providerEmail") ?? undefined,
   }));
 
+  // Strip the params through the History API rather than the router: a router
+  // navigation re-reads `tab` and would unmount this tab (and the banner) with
+  // it, which is exactly what the outcome needs to outlive.
   useEffect(() => {
-    if (linkOutcome.linked || linkOutcome.linkError) {
-      router.replace(SSO_TAB_URL);
+    if (!linkOutcome.linked && !linkOutcome.linkError) {
+      return;
     }
-  }, [linkOutcome, router]);
+    if (typeof window === "undefined") {
+      return;
+    }
+    window.history.replaceState({}, "", SSO_PROFILE_TAB_URL);
+  }, [linkOutcome]);
 
   useEffect(() => {
     isMountedRef.current = true;

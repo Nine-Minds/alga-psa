@@ -13,6 +13,7 @@ import { Label } from "@alga-psa/ui/components/Label";
 import { Button } from "@alga-psa/ui/components/Button";
 import { Alert, AlertDescription } from "@alga-psa/ui/components/Alert";
 import { Badge } from "@alga-psa/ui/components/Badge";
+import { SSO_PROFILE_TAB_URL } from "@alga-psa/auth/lib/sso/linkStateCookie";
 import clsx from "clsx";
 import { Loader2, ShieldCheck, KeyRound, LogIn } from "lucide-react";
 import { SiKeycloak } from "react-icons/si";
@@ -247,7 +248,7 @@ export default function ConnectSsoClient({
     await signIn(
       providerId,
       {
-        callbackUrl: "/msp/profile?tab=Single%20Sign-On&linked=1",
+        callbackUrl: `${SSO_PROFILE_TAB_URL}&linked=1`,
       },
       {
         state: encodedState,

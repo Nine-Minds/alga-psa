@@ -16,6 +16,7 @@ import {
   CLIENT_PORTAL_SSO_DISCOVERY_COOKIE,
   CLIENT_PORTAL_SSO_RESOLUTION_COOKIE,
 } from "@alga-psa/auth/lib/sso/clientPortalSsoResolution";
+import { SSO_LINK_STATE_COOKIE } from "@alga-psa/auth/lib/sso/linkStateCookie";
 import { TIER_FEATURES } from "@alga-psa/types";
 import { verifyAuthenticator } from "server/src/utils/authenticator/authenticator";
 import logger from "@alga-psa/core/logger";
@@ -50,7 +51,7 @@ interface PrepareSsoLinkResolutionResult {
 
 const LINK_TTL_SECONDS = 5 * 60; // 5 minutes
 const LINK_TTL_MS = LINK_TTL_SECONDS * 1000;
-const LINK_STATE_COOKIE = "sso-link-state";
+const LINK_STATE_COOKIE = SSO_LINK_STATE_COOKIE;
 
 async function signLinkNonce({ nonce, userId }: LinkNoncePayload): Promise<{ issuedAt: number; signature: string }> {
   const secret = await getNextAuthSecret();
