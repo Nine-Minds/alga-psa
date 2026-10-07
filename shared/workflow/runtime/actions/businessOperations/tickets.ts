@@ -597,7 +597,7 @@ export function registerTicketActions(): void {
         ticket_id: created.ticketId,
         ticket_number: created.ticketNumber,
         url: null,
-        created_at: createdTicket.entered_at,
+        created_at: new Date(createdTicket.entered_at).toISOString(),
         status_id: createdTicket.status_id,
         priority_id: input.priority_id
       };

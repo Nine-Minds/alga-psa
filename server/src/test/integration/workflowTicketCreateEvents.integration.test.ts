@@ -4,6 +4,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { tenantDb } from '@alga-psa/db';
 
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
+import { isoDateTimeSchema } from '../../../../shared/workflow/runtime/actions/businessOperations/shared';
 import { createClient, createTenant, createUser } from '../../../test-utils/testDataFactory';
 
 /**
@@ -98,7 +99,7 @@ async function runWith(f: Fixture & { runId: string }, input: Record<string, unk
   const { getActionRegistryV2 } = await import('../../../../shared/workflow/runtime/registries/actionRegistry');
   const action = getActionRegistryV2().get('tickets.create', 1)!;
   const parsed = action.inputSchema.parse(input);
-  return action.handler(parsed, {
+  const result = await action.handler(parsed, {
     runId: f.runId,
     stepPath: 'steps.create',
     idempotencyKey: uuidv4(),
@@ -108,6 +109,12 @@ async function runWith(f: Fixture & { runId: string }, input: Record<string, unk
     tenantId: f.tenant,
     knex: db,
   } as any);
+  // The real runtime validates handler output against outputSchema; do the same here
+  // so output-contract regressions (e.g. created_at as Date) fail these tests.
+  const validated = action.outputSchema.parse(result) as { created_at?: unknown };
+  expect(typeof validated.created_at).toBe('string');
+  expect(isoDateTimeSchema.safeParse(validated.created_at).success).toBe(true);
+  return result;
 }
 
 const byType = (type: string) => published.filter((e) => e.eventType === type);
