@@ -860,7 +860,7 @@ export function registerTicketActions(): void {
           tenant: tx.tenantId,
           before: transitionBefore,
           actorUserId: tx.actorUserId ?? undefined,
-          correlationId: tx.runId,
+          correlationId: ctx.runId,
         });
 
         if (resolvedAssignment) {
@@ -1014,7 +1014,7 @@ export function registerTicketActions(): void {
           tenant: tx.tenantId,
           before: transitionBefore,
           actorUserId: tx.actorUserId ?? undefined,
-          correlationId: tx.runId,
+          correlationId: ctx.runId,
         });
 
         await reconcileWorkflowTicketAdditionalUsers(
@@ -1189,7 +1189,7 @@ export function registerTicketActions(): void {
         tenant: tx.tenantId,
         before: transitionBefore,
         actorUserId: tx.actorUserId ?? undefined,
-        correlationId: tx.runId,
+        correlationId: ctx.runId,
       });
 
       if (input.public_note) {
