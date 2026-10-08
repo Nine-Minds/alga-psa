@@ -20,6 +20,7 @@ import {
   recordInboundOutboxDeliveryFailure,
   newInboundDeliveryOwner,
 } from '@alga-psa/shared/services/email/inboundEmailConsumerDedupe';
+import { resolveTicketSubjectLabel, usableDisplayName } from '@alga-psa/shared/lib/ticketRequesterDisplay';
 import { isInboundOutboxEvent } from '@alga-psa/shared/services/email/inboundEmailDurableStore';
 
 /** Consumers of the inbound outbox events use this stable ledger consumer id. */
@@ -75,6 +76,19 @@ function shouldCreateTicketCommentNotification(
 }
 
 /**
+ * Display name for a users row, or `fallback` when the row is missing or has no
+ * usable name (a null first/last name must not render as "null null").
+ */
+// LEVERAGE: pattern user-display-name — `${u.first_name} ${u.last_name}` is repeated across handlers in this file
+function userDisplayName(
+  user: { first_name?: string | null; last_name?: string | null } | null | undefined,
+  fallback: string
+): string {
+  const name = user ? `${user.first_name ?? ''} ${user.last_name ?? ''}`.trim() : '';
+  return name || fallback;
+}
+
+/**
  * Handle ticket created events
  */
 async function handleTicketCreated(event: TicketCreatedEvent, opts?: InternalNotificationHandlerOptions): Promise<void> {
@@ -98,10 +112,14 @@ async function handleTicketCreated(event: TicketCreatedEvent, opts?: InternalNot
         't.board_id',
         't.contact_name_id',
         't.client_id',
+        't.email_metadata',
         'c.client_name',
+        'ct.full_name as contact_name',
+        'ct.email as contact_email',
         'b.default_assigned_team_id as board_default_team_id'
       );
     scopedDb.tenantJoin(ticketQuery, 'clients as c', 't.client_id', 'c.client_id', { type: 'left' });
+    scopedDb.tenantJoin(ticketQuery, 'contacts as ct', 't.contact_name_id', 'ct.contact_name_id', { type: 'left' });
     scopedDb.tenantJoin(ticketQuery, 'boards as b', 't.board_id', 'b.board_id', { type: 'left' });
 
     const ticket = await ticketQuery
@@ -126,7 +144,13 @@ async function handleTicketCreated(event: TicketCreatedEvent, opts?: InternalNot
     const baseData = {
       ticketId: ticket.ticket_number || 'New Ticket',
       ticketTitle: ticket.title,
-      clientName: ticket.client_name || 'Unknown'
+      // No client (inbound email, unmatched portal contact): name the contact,
+      // then the sender's email, rather than interpolating an empty or id value.
+      clientName: resolveTicketSubjectLabel({
+        clientName: ticket.client_name,
+        contactName: ticket.contact_name ?? payload.contactName,
+        senderEmail: payload.senderEmail ?? ticket.email_metadata?.from?.email ?? ticket.contact_email,
+      }) || 'Unknown'
     };
 
     const notifyMspUser = async (userId: string) => {
@@ -337,9 +361,7 @@ async function handleTicketAssigned(event: TicketAssignedEvent, opts?: InternalN
       .where({ user_id: assignedByUserId })
       .first() : null;
 
-    const performedByName = assignedByUser
-      ? `${assignedByUser.first_name} ${assignedByUser.last_name}`
-      : 'Someone';
+    const performedByName = userDisplayName(assignedByUser, 'Someone');
 
     // Resolve notification link
     const { internalUrl, portalUrl } = await resolveNotificationLinks(db, tenantId, {
@@ -790,7 +812,7 @@ async function handleTicketUpdated(event: TicketUpdatedEvent, opts?: InternalNot
       .where('user_id', userId)
       .first();
 
-    const performedByName = performedByUser ? `${performedByUser.first_name} ${performedByUser.last_name}` : 'Someone';
+    const performedByName = userDisplayName(performedByUser, 'Someone');
 
     // Build metadata with change details
     const metadata: Record<string, any> = {
@@ -995,7 +1017,7 @@ async function handleTicketClosed(event: TicketClosedEvent, opts?: InternalNotif
       .where('user_id', userId)
       .first() : null;
 
-    const performedByName = performedByUser ? `${performedByUser.first_name} ${performedByUser.last_name}` : 'Someone';
+    const performedByName = userDisplayName(performedByUser, 'Someone');
 
     // Resolve links for both MSP and client portal
     const { internalUrl, portalUrl } = await resolveNotificationLinks(db, tenantId, {
@@ -1642,7 +1664,7 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent, opts?: I
 
     // No user row means a system/sentinel actor (inbound email); the payload
     // already carries the real sender identity, so prefer it over 'Someone'.
-    const authorName = author ? `${author.first_name} ${author.last_name}` : (comment?.author || 'Someone');
+    const authorName = userDisplayName(author, usableDisplayName(comment?.author) || 'Someone');
 
     // Extract comment text preview from BlockNote content
     let commentPreview = '';
@@ -1877,7 +1899,7 @@ async function handleTicketCommentUpdated(event: TicketCommentUpdatedEvent): Pro
       .where('user_id', userId)
       .first();
 
-    const authorName = author ? `${author.first_name} ${author.last_name}` : 'Someone';
+    const authorName = userDisplayName(author, 'Someone');
 
     // Extract comment text preview from BlockNote content
     let commentPreview = '';
@@ -3267,6 +3289,7 @@ export const internalNotificationSubscriberTestHarness = {
   shouldCreateContactPortalTicketNotification,
   shouldCreateStaffTicketNotification,
   shouldCreateTicketCommentNotification,
+  handleTicketCreated,
   handleTicketAssigned,
   handleTicketUpdated,
   handleTicketClosed,

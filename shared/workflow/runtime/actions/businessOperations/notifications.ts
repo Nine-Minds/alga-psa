@@ -13,6 +13,22 @@ import {
 } from './shared';
 import { withWorkflowJsonSchemaMetadata, withWorkflowPicker } from '../../jsonSchemaMetadata';
 
+const UUID_ONLY = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const DANGLING_PREPOSITION = /\s+(?:from|for|by)\s*[:\-–]?\s*$/i;
+export const FALLBACK_IN_APP_TITLE = 'Workflow notification';
+
+/**
+ * Last-resort guard for titles authored in a workflow. The real fix is that the
+ * event payloads carry names; this only keeps a title that interpolated an
+ * empty value ("New ticket from ") or an id from reaching the notification bell.
+ */
+export function sanitizeInAppNotificationTitle(title: string): string {
+  const trimmed = title.trim();
+  if (!trimmed || UUID_ONLY.test(trimmed)) return FALLBACK_IN_APP_TITLE;
+  const withoutDangling = trimmed.replace(DANGLING_PREPOSITION, '').trim();
+  return withoutDangling || FALLBACK_IN_APP_TITLE;
+}
+
 export function registerNotificationActions(): void {
   const registry = getActionRegistryV2();
 
@@ -98,7 +114,7 @@ export function registerNotificationActions(): void {
           user_id: userId,
           template_name: 'workflow-custom',
           language_code: 'en',
-          title: input.title,
+          title: sanitizeInAppNotificationTitle(input.title),
           message: input.body,
           type: input.severity,
           category: 'workflow',

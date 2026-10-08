@@ -12,6 +12,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { z } from 'zod';
 import type { IEventPublisher } from '@alga-psa/types';
 import { applyMatchingChecklistTemplates } from '../lib/ticketChecklists';
+import { loadTicketRequesterIdentity, resolveTicketRequesterLabel } from '../lib/ticketRequesterDisplay';
 import { SharedNumberingService } from '../services/numberingService';
 
 // LEVERAGE: pattern ticket-origins-duplicate — copy of TICKET_ORIGINS in @alga-psa/types (shared cannot import types); keep both in sync
@@ -996,6 +997,11 @@ export class TicketModel {
     // Publish event if publisher provided
     if (eventPublisher) {
       try {
+        // Tickets from inbound email or the portal often have no contact or
+        // client. Carry real names plus the sender email so a workflow title
+        // like "New ticket from ..." never has to fall back to an id or "".
+        const requester = await loadTicketRequesterIdentity(trx, tenant, cleanedInput);
+        const requesterName = resolveTicketRequesterLabel(requester);
         await eventPublisher.publishTicketCreated({
           tenantId: tenant,
           ticketId: ticketId,
@@ -1004,7 +1010,11 @@ export class TicketModel {
             source: cleanedInput.source,
             board_id: cleanedInput.board_id,
             priority_id: cleanedInput.priority_id,
-            client_id: cleanedInput.client_id
+            client_id: cleanedInput.client_id,
+            ...(requester.clientName ? { clientName: requester.clientName } : {}),
+            ...(requester.contactName ? { contactName: requester.contactName } : {}),
+            ...(requester.senderEmail ? { senderEmail: requester.senderEmail } : {}),
+            ...(requesterName ? { requesterName } : {}),
           }
         });
       } catch (error) {
