@@ -185,6 +185,8 @@
     "tags": "⟦Ŧȧɠş⟧",
     "sla": "⟦ŞĿȦ⟧",
     "updated": "⟦Ŭƥḓȧŧḗḓ⟧",
+    "updatedAtBy": "⟦Ŭƥḓȧŧḗḓ {{time}} ƀẏ {{name}}⟧",
+    "byName": "⟦ƀẏ {{name}}⟧",
     "openInNewTab": "⟦Ȯƥḗƞ īƞ ƞḗẇ ŧȧƀ⟧",
     "actions": "⟦Ȧƈŧīȯƞş⟧",
     "linkedAssets": "⟦Ŀīƞķḗḓ ȧşşḗŧş⟧",

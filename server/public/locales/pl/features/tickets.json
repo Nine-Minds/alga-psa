@@ -209,6 +209,8 @@
     "tags": "Tagi",
     "sla": "SLA",
     "updated": "Zaktualizowano",
+    "updatedAtBy": "Zaktualizowano {{time}} przez {{name}}",
+    "byName": "przez {{name}}",
     "openInNewTab": "Otwórz w nowej karcie",
     "actions": "Akcje",
     "linkedAssets": "Powiązane zasoby",

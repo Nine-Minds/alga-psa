@@ -1,5 +1,6 @@
 'use server';
 
+import { ticketUpdateStamp } from '@shared/lib/tickets/ticketUpdateStamp';
 import type { ContactVisibilityContext } from '../lib/clientPortalVisibility';
 import { persistCommentPublication } from '@alga-psa/shared/lib/ticketCommentAttachments';
 
@@ -1170,7 +1171,7 @@ export const updateTicket = withAuth(async (user, { tenant }, id: string, data: 
 
       const [updatedTicket] = await tenantScopedTable(trx, 'tickets', tenant)
         .where({ ticket_id: id })
-        .update(updateData)
+        .update({ ...updateData, ...ticketUpdateStamp(trx, user.user_id) })
         .returning('*');
 
       if (finalizeResourceReassignment) {

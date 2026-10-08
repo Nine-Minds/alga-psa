@@ -15,6 +15,7 @@ import { findMatchingWindow } from './windowMatcher';
 import { addAlertInternalNote, createTicketForAlert, providerLabel } from './ticketCreator';
 import { publishRmmTicketCreated } from './ticketCreatedEvent';
 import { isTicketUntouched } from './untouched';
+import { ticketUpdateStamp } from '../../lib/tickets/ticketUpdateStamp';
 
 /**
  * Single entry point for normalized RMM alert events (webhooks and the
@@ -368,7 +369,7 @@ async function processReset(
           if (statusId) {
             await db.table('tickets')
               .where({ ticket_id: existing.ticket_id })
-              .update({ status_id: statusId, updated_at: new Date().toISOString() });
+              .update({ status_id: statusId, ...ticketUpdateStamp(trx, null) });
             await db.table('rmm_alerts')
               .where({ alert_id: existing.alert_id })
               .update({ status: 'auto_resolved' });

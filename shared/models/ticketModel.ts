@@ -7,6 +7,7 @@ import { persistCommentPublication, resolveCommentAuthorDisplay } from '../lib/t
 
 import { reconcileCommentAttachments } from '../lib/ticketCommentAttachments';
 import { Knex } from 'knex';
+import { ticketUpdateStamp } from '../lib/tickets/ticketUpdateStamp';
 import { tenantDb } from '@alga-psa/db';
 import { v4 as uuidv4 } from 'uuid';
 import { z } from 'zod';
@@ -1233,7 +1234,7 @@ export class TicketModel {
       .where({ ticket_id: ticketId })
       .update({
         ...updateData,
-        updated_at: new Date()
+        ...ticketUpdateStamp(trx, input.updated_by ?? userId ?? null)
       })
       .returning('*');
 
@@ -1357,7 +1358,7 @@ export class TicketModel {
       .where({ ticket_id: ticketId })
       .update({
         ...updateData,
-        updated_at: new Date()
+        ...ticketUpdateStamp(trx, updateData.updated_by ?? null)
       })
       .returning('*');
       

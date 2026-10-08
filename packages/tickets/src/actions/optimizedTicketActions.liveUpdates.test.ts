@@ -828,6 +828,8 @@ describe('updateTicketWithCache live updates', () => {
     expect(ticketUpdates[0]).toEqual({
       status_id: 'closed-status-1',
       response_state: null,
+      updated_at: expect.anything(),
+      updated_by: 'user-1',
     });
     expect(publishRedisMock).toHaveBeenCalledWith(
       'alga-psa:ticket-updates:tenant-1:ticket-1',

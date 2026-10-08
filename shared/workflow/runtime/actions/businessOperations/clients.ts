@@ -10,6 +10,7 @@ import { withWorkflowPicker, withWorkflowNotFoundPolicy } from '../../jsonSchema
 import { ClientModel } from '../../../../models/clientModel';
 import { buildClientArchivedPayload, buildClientCreatedPayload, buildClientUpdatedPayload } from '../../../streams/domainEventBuilders/clientEventBuilders';
 import { buildInteractionLoggedPayload, buildNoteCreatedPayload } from '../../../streams/domainEventBuilders/crmInteractionNoteEventBuilders';
+import { ticketUpdateStamp } from '../../../../lib/tickets/ticketUpdateStamp';
 import {
   uuidSchema,
   isoDateTimeSchema,
@@ -1932,7 +1933,7 @@ export function registerClientActions(): void {
 
         const patch: Record<string, unknown> = {
           client_id: input.client_id,
-          updated_at: new Date().toISOString(),
+          ...ticketUpdateStamp(tx.trx, tx.actorUserId),
         };
 
         if (Object.prototype.hasOwnProperty.call(input, 'contact_id')) {
