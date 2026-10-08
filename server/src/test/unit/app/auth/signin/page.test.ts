@@ -2,16 +2,9 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const redirectMock = vi.fn();
 const getSessionMock = vi.fn();
-const cookieGetMock = vi.fn();
 
 vi.mock('next/navigation', () => ({
   redirect: redirectMock,
-}));
-
-vi.mock('next/headers.js', () => ({
-  cookies: async () => ({
-    get: (...args: unknown[]) => cookieGetMock(...args),
-  }),
 }));
 
 vi.mock('@alga-psa/auth', () => ({
@@ -33,7 +26,6 @@ async function render(params: Record<string, string>) {
 describe('SignIn dispatcher', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    cookieGetMock.mockReturnValue(undefined);
     getSessionMock.mockResolvedValue(null);
   });
 
@@ -51,9 +43,6 @@ describe('SignIn dispatcher', () => {
 
   it('shows a link failure on the profile SSO tab instead of bouncing a signed-in user to the dashboard', async () => {
     getSessionMock.mockResolvedValue({ user: { id: 'user-1', user_type: 'internal' } });
-    cookieGetMock.mockImplementation((name: string) =>
-      name === 'sso-link-state' ? { value: 'signed-link-state' } : undefined
-    );
 
     await render({ error: 'Configuration' });
 
@@ -64,11 +53,37 @@ describe('SignIn dispatcher', () => {
     );
   });
 
-  it('keeps sending a signed-in user without a link attempt to the dashboard', async () => {
+  it('surfaces a rejected link that already burned its link-state cookie', async () => {
+    // ensureOAuthAccountLink() consumes the cookie before returning false, and
+    // Auth.js then sends AccessDenied here with no callbackUrl: without this the
+    // failure ends as a silent dashboard redirect.
     getSessionMock.mockResolvedValue({ user: { id: 'user-1', user_type: 'internal' } });
 
-    await render({ error: 'Configuration' });
+    await render({
+      error: 'AccessDenied',
+      callbackUrl: '/msp/profile?tab=single-sign-on&linked=1',
+    });
+
+    expect(redirectMock).toHaveBeenNthCalledWith(
+      1,
+      '/msp/profile?tab=single-sign-on&linkError=AccessDenied'
+    );
+  });
+
+  it('keeps sending a signed-in user with no failure to the dashboard', async () => {
+    getSessionMock.mockResolvedValue({ user: { id: 'user-1', user_type: 'internal' } });
+
+    await render({});
 
     expect(redirectMock).toHaveBeenCalledWith('/msp/dashboard');
+  });
+
+  it('leaves a signed-in client portal user on their callback url', async () => {
+    // The SSO link tab is MSP-only, so a portal session must not be sent there.
+    getSessionMock.mockResolvedValue({ user: { id: 'user-2', user_type: 'client' } });
+
+    await render({ error: 'AccessDenied', callbackUrl: '/client-portal/dashboard' });
+
+    expect(redirectMock).toHaveBeenNthCalledWith(1, '/client-portal/dashboard');
   });
 });

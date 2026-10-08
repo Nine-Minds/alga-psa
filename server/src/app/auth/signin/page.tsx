@@ -1,10 +1,6 @@
 import { redirect } from 'next/navigation';
-import { cookies } from 'next/headers.js';
 import { getSession } from '@alga-psa/auth';
-import {
-  SSO_LINK_STATE_COOKIE,
-  SSO_PROFILE_TAB_URL,
-} from '@alga-psa/auth/lib/sso/linkStateCookie';
+import { SSO_PROFILE_TAB_URL } from '@alga-psa/auth/lib/sso/linkStateCookie';
 import type { Metadata } from 'next';
 import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 
@@ -33,18 +29,22 @@ export default async function SignIn({
 
   const session = await getSession();
   if (session?.user) {
-    // An already-signed-in visitor only reaches pages.error from a profile SSO
-    // link attempt, and the signed link-state cookie proves it. Bouncing them to
-    // the dashboard here would drop the failure silently -- the whole complaint.
-    if (error) {
-      const linkState = (await cookies()).get(SSO_LINK_STATE_COOKIE);
-      if (linkState) {
-        const linkParams = new URLSearchParams({ linkError: reason || error });
-        if (providerEmail) {
-          linkParams.set('providerEmail', providerEmail);
-        }
-        redirect(`${SSO_PROFILE_TAB_URL}&${linkParams.toString()}`);
+    // Auth.js routes every error of kind "error" -- AccessDenied from a rejected
+    // `signIn` callback included -- to pages.error, which is this page, and it
+    // carries no callbackUrl. The only flow that starts OAuth for a visitor who
+    // is already signed in is the profile SSO link, so land the failure on that
+    // tab: bouncing to the dashboard would drop it silently (the whole
+    // complaint), and honouring a stale `linked=1` callbackUrl would even claim
+    // the link succeeded. The link-state cookie is no proof either way --
+    // ensureOAuthAccountLink() consumes it before it rejects -- so only the
+    // session's own user type decides, since the link tab is MSP-only.
+    const isInternalUser = session.user.user_type !== 'client';
+    if (error && isInternalUser) {
+      const linkParams = new URLSearchParams({ linkError: reason || error });
+      if (providerEmail) {
+        linkParams.set('providerEmail', providerEmail);
       }
+      redirect(`${SSO_PROFILE_TAB_URL}&${linkParams.toString()}`);
     }
     redirect(callbackUrl || '/msp/dashboard');
   }
