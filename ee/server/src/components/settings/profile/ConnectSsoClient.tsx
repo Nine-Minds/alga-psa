@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition, type ReactNode } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import {
@@ -143,6 +143,12 @@ export default function ConnectSsoClient({
     linkStatus === "linked" ? t("connectSso.verify.linkedSuccess") : null
   );
   const [isPending, startTransition] = useTransition();
+  // Each signIn() call mints its own Auth.js state/PKCE cookies and then
+  // navigates, so a second one started from the same click overwrites the first
+  // flow's cookies and the failure it was supposed to report is lost. A ref,
+  // not state: both calls run in one event dispatch and would read a stale
+  // value.
+  const ssoStartedRef = useRef(false);
 
   useEffect(() => {
     if (linkStatus === "linked") {
@@ -205,10 +211,16 @@ export default function ConnectSsoClient({
   };
 
   const handleProviderClick = async (providerId: string) => {
+    if (ssoStartedRef.current) {
+      return;
+    }
+
     if (!reauthComplete || !reauthNonce || !reauthNonceIssuedAt || !reauthNonceSignature) {
       setFormError(t("connectSso.verify.verifyBeforeProvider"));
       return;
     }
+
+    ssoStartedRef.current = true;
 
     const genericStartFailureMessage = tCommon("auth.sso.startFailed", {
       defaultValue: "We couldn't start SSO sign-in. Please verify provider setup and try again.",
@@ -225,6 +237,7 @@ export default function ConnectSsoClient({
 
     if (!resolution.success) {
       setFormError(resolution.error ?? genericStartFailureMessage);
+      ssoStartedRef.current = false;
       return;
     }
 
@@ -245,19 +258,25 @@ export default function ConnectSsoClient({
     const base64 = btoa(ascii);
     const encodedState = base64.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
 
-    await signIn(
-      providerId,
-      {
-        callbackUrl: `${SSO_PROFILE_TAB_URL}&linked=1`,
-      },
-      {
-        state: encodedState,
-        prompt: "login",
-      }
-    );
+    try {
+      await signIn(
+        providerId,
+        {
+          callbackUrl: `${SSO_PROFILE_TAB_URL}&linked=1`,
+        },
+        {
+          state: encodedState,
+          prompt: "login",
+        }
+      );
+    } catch {
+      setFormError(genericStartFailureMessage);
+      ssoStartedRef.current = false;
+    }
   };
 
   const handleReset = () => {
+    ssoStartedRef.current = false;
     setPassword("");
     setTwoFactorCode("");
     setReauthNonce(null);
@@ -436,7 +455,10 @@ export default function ConnectSsoClient({
                       )}
                       variant={branding.buttonVariant ?? "secondary"}
                       disabled={disabled}
-                      onClick={() => {
+                      onClick={(event) => {
+                        // The whole card is a button too; without this the click
+                        // bubbles and starts a second OAuth flow.
+                        event.stopPropagation();
                         void handleProviderClick(provider.id);
                       }}
                     >
