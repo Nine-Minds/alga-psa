@@ -17,6 +17,10 @@ on:
     - cron: '30 4 * * *'
 
 jobs:
+  images:
+    name: Pinned images
+    uses: ./.github/workflows/pinned-images.yml
+
   check-changes:
     name: Check for relevant changes
     runs-on: ubuntu-latest
@@ -44,9 +48,9 @@ jobs:
 
   integration-tests:
     name: Integration shard ${{ matrix.shard }}
-    needs: check-changes
+    needs: [check-changes, images]
     # `needs` is skipped entirely on schedule; `always()` lets the nightly run proceed.
-    if: always() && (github.event_name == 'schedule' || needs.check-changes.outputs.should_run == 'true')
+    if: always() && (github.event_name == 'schedule' || needs.check-changes.outputs.should_run == 'true') && needs.images.result == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 120
     strategy:
@@ -56,7 +60,7 @@ jobs:
 
     services:
       postgres:
-        image: ankane/pgvector:latest
+        image: ${{ needs.images.outputs.pgvector }}
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: test_password
@@ -296,8 +300,8 @@ jobs:
   # aggregate rejects missing, stale or failed shard evidence.
   infrastructure-tests:
     name: Infrastructure shard ${{ matrix.shard }}
-    needs: check-changes
-    if: always() && (github.event_name == 'schedule' || needs.check-changes.outputs.should_run == 'true')
+    needs: [check-changes, images]
+    if: always() && (github.event_name == 'schedule' || needs.check-changes.outputs.should_run == 'true') && needs.images.result == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 45
     strategy:
@@ -307,7 +311,7 @@ jobs:
 
     services:
       postgres:
-        image: ankane/pgvector:latest
+        image: ${{ needs.images.outputs.pgvector }}
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: test_password
@@ -467,14 +471,14 @@ jobs:
 
   workspace-db-tests:
     name: Workspace database tests
-    needs: check-changes
-    if: always() && (github.event_name == 'schedule' || needs.check-changes.outputs.should_run == 'true')
+    needs: [check-changes, images]
+    if: always() && (github.event_name == 'schedule' || needs.check-changes.outputs.should_run == 'true') && needs.images.result == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 90
 
     services:
       postgres:
-        image: ankane/pgvector:latest
+        image: ${{ needs.images.outputs.pgvector }}
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: test_password
