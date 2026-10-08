@@ -16,6 +16,15 @@ const backendReads = vi.hoisted(() => [] as BackendRead[]);
 const backendReadHistory = vi.hoisted(() => [] as Array<{ language: string; namespace: string }>);
 const signInMock = vi.hoisted(() => vi.fn());
 
+// The server unit setup replaces this provider with a passthrough. Exercise
+// the real provider and translation hook here, with an uninitialized engine.
+vi.unmock('@alga-psa/ui/lib/i18n/client');
+vi.unmock('react-i18next');
+vi.mock('i18next', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('i18next')>();
+  return { ...actual, default: actual.createInstance() };
+});
+
 vi.mock('i18next-http-backend', () => {
   class DeferredTranslationBackend {
     static type = 'backend';
@@ -125,6 +134,7 @@ describe('MSP sign-in i18n bootstrap', () => {
     const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     const initSpy = vi.spyOn(i18next, 'init');
 
+    expect(i18next.isInitialized).not.toBe(true);
     const oldProvider = render(
       React.createElement(
         I18nProvider,
@@ -142,7 +152,14 @@ describe('MSP sign-in i18n bootstrap', () => {
     expect(screen.queryByLabelText('Email')).toBeNull();
 
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(10_000);
+      await vi.advanceTimersByTimeAsync(9_999);
+    });
+    expect(screen.getByText('Loading translations...')).toBeTruthy();
+    expect(screen.queryByLabelText('Email')).toBeNull();
+    expect(errorSpy).not.toHaveBeenCalled();
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1);
     });
 
     const email = screen.getByLabelText('Email') as HTMLInputElement;
@@ -150,6 +167,10 @@ describe('MSP sign-in i18n bootstrap', () => {
     expect(email).toBeTruthy();
     expect(password).toBeTruthy();
     expect(screen.queryByText('Loading translations...')).toBeNull();
+    expect(errorSpy).toHaveBeenCalledWith(
+      'Failed to initialize translations:',
+      expect.objectContaining({ message: 'Translation initialization exceeded 10000ms' }),
+    );
 
     fireEvent.change(email, { target: { value: 'operator@example.com' } });
     fireEvent.change(password, { target: { value: 'secret' } });
