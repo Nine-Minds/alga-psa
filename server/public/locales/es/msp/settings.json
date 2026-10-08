@@ -1846,6 +1846,12 @@
         "useLogo": "Usar mi logo en el encabezado del correo electrónico",
         "logoWide": "Logo ancho",
         "logoDefault": "Logo cuadrado",
+        "logoArtwork": "Versión del logo",
+        "logoArtworkAuto": "Según el encabezado",
+        "logoArtworkLight": "Logo para fondo claro",
+        "logoArtworkDark": "Logo para fondo oscuro",
+        "logoArtworkAutoDark": "El modo automático considera oscuro este encabezado y usa el logo para fondo oscuro.",
+        "logoArtworkAutoLight": "El modo automático considera claro este encabezado y usa el logo para fondo claro.",
         "noLogo": "Cargue un logo en Configuración → Portal de clientes → Marca para usarlo aquí.",
         "showAttribution": "Mostrar «Powered by AlgaPSA» en el pie de página"
       }

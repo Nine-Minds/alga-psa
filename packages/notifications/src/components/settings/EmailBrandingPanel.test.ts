@@ -97,7 +97,16 @@ describe('email branding draft', () => {
     }));
 
     expect(draft.logoVariant).toBe('wide');
+    expect(draft.logoArtwork).toBe('auto');
     expect(draft.hideAttribution).toBe(true);
+  });
+
+  it('carries a pinned logo artwork into the draft', () => {
+    const draft = draftFromStatus(status({
+      palette: { primary: '#6b7280', secondary: null, logo: { variant: 'wide', artwork: 'dark' } },
+    }));
+
+    expect(draft.logoArtwork).toBe('dark');
   });
 });
 
@@ -216,6 +225,8 @@ describe('enterprise logo and attribution', () => {
     expect(panelSource).toContain('status.logoOptions.logoWideDarkUrl');
     expect(panelSource).toContain('status.logoOptions.logoDarkUrl');
     expect(panelSource).toContain('id="email-branding-show-attribution"');
+    expect(panelSource).toContain('id={`email-branding-logo-artwork-${value}`}');
+    expect(panelSource).toContain("{ value: 'dark', key: 'logoArtworkDark'");
     expect(panelSource).toContain('checked={!draft.hideAttribution}');
   });
 
@@ -230,7 +241,7 @@ describe('enterprise logo and attribution', () => {
     // The same chooser the apply decorator runs, over the same resolved palette,
     // so the preview can never show a variant the apply would not write.
     expect(panelSource).toContain(
-      'pickBrandLogoVariant(draft.logoVariant, isDarkEmailHeader(resolved), status.logoOptions)',
+      'pickBrandLogoVariant(draft.logoVariant, headerIsDark, status.logoOptions, draft.logoArtwork)',
     );
     expect(actionsSource).toContain('pickBrandLogoVariant(palette.logo.variant, isDarkEmailHeader(target), {');
   });

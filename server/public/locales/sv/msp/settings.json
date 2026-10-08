@@ -1846,6 +1846,12 @@
         "useLogo": "Använd min logotyp i e-posthuvudet",
         "logoWide": "Bred logotyp",
         "logoDefault": "Kvadratisk logotyp",
+        "logoArtwork": "Logotypversion",
+        "logoArtworkAuto": "Följ sidhuvudet",
+        "logoArtworkLight": "Logotyp för ljus bakgrund",
+        "logoArtworkDark": "Logotyp för mörk bakgrund",
+        "logoArtworkAutoDark": "Automatiskt läser sidhuvudet som mörkt och använder logotypen för mörk bakgrund.",
+        "logoArtworkAutoLight": "Automatiskt läser sidhuvudet som ljust och använder logotypen för ljus bakgrund.",
         "noLogo": "Ladda upp en logotyp under Inställningar → Kundportal → Varumärkesprofil för att använda den här.",
         "showAttribution": "Visa ”Drivs av AlgaPSA” i sidfoten"
       }

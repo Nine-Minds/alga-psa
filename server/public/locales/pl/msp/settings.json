@@ -1852,6 +1852,12 @@
         "useLogo": "Używaj mojego logo w nagłówku e-maili",
         "logoWide": "Szerokie logo",
         "logoDefault": "Kwadratowe logo",
+        "logoArtwork": "Wersja logo",
+        "logoArtworkAuto": "Dopasuj do nagłówka",
+        "logoArtworkLight": "Logo na jasne tło",
+        "logoArtworkDark": "Logo na ciemne tło",
+        "logoArtworkAutoDark": "Tryb automatyczny uznaje ten nagłówek za ciemny i używa logo na ciemne tło.",
+        "logoArtworkAutoLight": "Tryb automatyczny uznaje ten nagłówek za jasny i używa logo na jasne tło.",
         "noLogo": "Prześlij logo w Ustawienia → Portal klienta → Branding, aby użyć go tutaj.",
         "showAttribution": "Pokazuj „Powered by AlgaPSA” w stopce"
       }

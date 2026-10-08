@@ -6,7 +6,7 @@
  * leaves exactly one logo and one footer.
  */
 
-import type { EmailBrandingLogoShape, EmailBrandingLogoVariant } from './types';
+import type { EmailBrandingLogoArtwork, EmailBrandingLogoShape, EmailBrandingLogoVariant } from './types';
 
 export const BRAND_LOGO_MARKER = 'data-alga-brand-logo';
 
@@ -166,21 +166,26 @@ export function resolveBrandLogoForPreview(html: string, urls: BrandLogoPreviewU
 
 /**
  * The one rule for which logo file a branded template references: the shape the
- * tenant picked, in the artwork that reads on the header the palette paints.
+ * tenant picked, in the artwork that reads on the header the palette paints,
+ * unless the tenant pinned the artwork — a mid grey sits on the luminance
+ * boundary and only the tenant knows which wordmark they drew for it.
  *
- * Shared by the settings preview, the apply decorator and their tests, so what
- * a tenant sees in the panel is exactly what lands in tenant_email_templates.
- * Returns null when nothing usable is uploaded, which the callers read as "no
- * logo in this template" rather than writing a cid with no bytes behind it.
+ * Shared by the settings preview, the apply decorator, the send-time repair of
+ * pre-cid rows and their tests, so what a tenant sees in the panel is exactly
+ * what lands in tenant_email_templates. Returns null when nothing usable is
+ * uploaded, which the callers read as "no logo in this template" rather than
+ * writing a cid with no bytes behind it.
  */
 export function pickBrandLogoVariant(
   shape: EmailBrandingLogoShape,
   headerIsDark: boolean,
   uploaded: BrandLogoPreviewUrls,
+  artwork: EmailBrandingLogoArtwork = 'auto',
 ): EmailBrandingLogoVariant | null {
-  if (shape === 'wide' && headerIsDark && uploaded.logoWideDarkUrl) return 'wide-dark';
+  const dark = artwork === 'auto' ? headerIsDark : artwork === 'dark';
+  if (shape === 'wide' && dark && uploaded.logoWideDarkUrl) return 'wide-dark';
   if (shape === 'wide' && uploaded.logoWideUrl) return 'wide';
-  if (headerIsDark && uploaded.logoDarkUrl) return 'dark';
+  if (dark && uploaded.logoDarkUrl) return 'dark';
   return uploaded.logoUrl ? 'default' : null;
 }
 

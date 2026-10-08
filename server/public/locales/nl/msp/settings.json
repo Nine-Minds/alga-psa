@@ -1846,6 +1846,12 @@
         "useLogo": "Mijn logo in de e-mailkop gebruiken",
         "logoWide": "Breed logo",
         "logoDefault": "Vierkant logo",
+        "logoArtwork": "Logoversie",
+        "logoArtworkAuto": "Afstemmen op de koptekst",
+        "logoArtworkLight": "Logo voor lichte achtergrond",
+        "logoArtworkDark": "Logo voor donkere achtergrond",
+        "logoArtworkAutoDark": "Automatisch ziet deze koptekst als donker en gebruikt het logo voor donkere achtergrond.",
+        "logoArtworkAutoLight": "Automatisch ziet deze koptekst als licht en gebruikt het logo voor lichte achtergrond.",
         "noLogo": "Upload een logo via Instellingen → Klantenportaal → Huisstijl om het hier te gebruiken.",
         "showAttribution": "'Powered by AlgaPSA' in de voettekst tonen"
       }

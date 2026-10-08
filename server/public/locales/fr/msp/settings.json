@@ -1846,6 +1846,12 @@
         "useLogo": "Utiliser mon logo dans l'en-tête des courriels",
         "logoWide": "Logo large",
         "logoDefault": "Logo carré",
+        "logoArtwork": "Version du logo",
+        "logoArtworkAuto": "Selon l'en-tête",
+        "logoArtworkLight": "Logo pour fond clair",
+        "logoArtworkDark": "Logo pour fond sombre",
+        "logoArtworkAutoDark": "Le mode automatique considère cet en-tête comme sombre et utilise le logo pour fond sombre.",
+        "logoArtworkAutoLight": "Le mode automatique considère cet en-tête comme clair et utilise le logo pour fond clair.",
         "noLogo": "Téléversez un logo dans Paramètres → Portail client → Image de marque pour l'utiliser ici.",
         "showAttribution": "Afficher « Powered by AlgaPSA » dans le pied de page"
       }
