@@ -121,7 +121,8 @@
           "clients": "Kunder",
           "itemsServices": "Artiklar / tjänster",
           "taxCodes": "Skattekoder",
-          "paymentTerms": "Betalningsvillkor"
+          "paymentTerms": "Betalningsvillkor",
+          "discounts": "Rabatter"
         }
       }
     },
@@ -142,6 +143,7 @@
           "failed": "Exporten misslyckades",
           "missingItemMapping": "Artikelmappning saknas",
           "missingItemMappingId": "Artikelmappning saknas ({{serviceId}})",
+          "missingDiscountMapping": "Rabattmappning saknas (fliken Rabatter)",
           "missingItemMappingNamed": "Artikelmappning saknas: {{serviceName}}"
         },
         "fields": {

@@ -2392,6 +2392,11 @@
       "updateFailed": "Impossible de mettre à jour le rôle",
       "validateDeletionFailed": "Impossible de valider la suppression. Veuillez réessayer.",
       "deleteFailed": "Impossible de supprimer le rôle"
+    },
+    "editDialog": {
+      "title": "Modifier le rôle",
+      "builtInNameLocked": "Les noms des rôles intégrés ne peuvent pas être modifiés, car le système en dépend.",
+      "portalLocked": "L’accès au portail ne peut pas être modifié après la création d’un rôle."
     }
   },
   "security": {
@@ -3446,7 +3451,10 @@
       "duplicate": "Cet utilisateur possède déjà le rôle sélectionné.",
       "changePermission": "Autorisation refusée : vous n’avez pas l’autorisation de modifier les rôles des utilisateurs.",
       "missingField": "Un champ obligatoire du rôle utilisateur est manquant.",
-      "missingFieldNamed": "Un champ obligatoire du rôle utilisateur est manquant : {{field}}."
+      "missingFieldNamed": "Un champ obligatoire du rôle utilisateur est manquant : {{field}}.",
+      "nameRequired": "Le nom du rôle est obligatoire.",
+      "builtInRename": "Les rôles intégrés ne peuvent pas être renommés.",
+      "duplicateName": "Un rôle nommé « {{name}} » existe déjà pour ce portail."
     },
     "secrets": {
       "tenantContextMissing": "Le contexte du locataire est absent. Veuillez actualiser la page et réessayer.",

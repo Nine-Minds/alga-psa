@@ -121,7 +121,8 @@
           "clients": "Klienci",
           "itemsServices": "Pozycje / Usługi",
           "taxCodes": "Kody podatkowe",
-          "paymentTerms": "Warunki płatności"
+          "paymentTerms": "Warunki płatności",
+          "discounts": "Rabaty"
         }
       }
     },
@@ -142,6 +143,7 @@
           "failed": "Eksport nie powiódł się",
           "missingItemMapping": "Brak mapowania pozycji",
           "missingItemMappingId": "Brak mapowania pozycji ({{serviceId}})",
+          "missingDiscountMapping": "Brak mapowania rabatów (karta Rabaty)",
           "missingItemMappingNamed": "Brak mapowania pozycji: {{serviceName}}"
         },
         "fields": {

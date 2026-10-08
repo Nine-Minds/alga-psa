@@ -121,7 +121,8 @@
           "clients": "Klanten",
           "itemsServices": "Items / Diensten",
           "taxCodes": "Belastingcodes",
-          "paymentTerms": "Betalingsvoorwaarden"
+          "paymentTerms": "Betalingsvoorwaarden",
+          "discounts": "Kortingen"
         }
       }
     },
@@ -142,6 +143,7 @@
           "failed": "Export mislukt",
           "missingItemMapping": "Item-toewijzing ontbreekt",
           "missingItemMappingId": "Item-toewijzing ontbreekt ({{serviceId}})",
+          "missingDiscountMapping": "Kortingstoewijzing ontbreekt (tabblad Kortingen)",
           "missingItemMappingNamed": "Item-toewijzing ontbreekt: {{serviceName}}"
         },
         "fields": {

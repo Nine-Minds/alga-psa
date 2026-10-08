@@ -11,6 +11,7 @@ import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { getProjectTreeData, getProjectDetails } from '../actions/projectActions';
 import { getAllPriorities } from '@alga-psa/reference-data/actions';
 import { getServices } from '@alga-psa/projects/actions/serviceCatalogActions';
+import { timeEntryServiceChoices } from '@alga-psa/core';
 import { IService } from '@alga-psa/types';
 import {
   updateTaskWithChecklist,
@@ -27,7 +28,8 @@ import {
   deleteTaskTicketLinksByTicketIdAction,
   duplicateTaskToPhase,
   getTaskDependencies,
-  addTaskDependency
+  addTaskDependency,
+  getEffectiveTaskService
 } from '../actions/projectTaskActions';
 import { getCurrentUser, getUserAvatarUrlsBatchAction, searchUsersForMentions } from '@alga-psa/user-composition/actions';
 import { findTagsByEntityId, createTagsForEntity, isTagActionError } from '@alga-psa/tags/actions';
@@ -72,12 +74,13 @@ import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { useDrawer } from '@alga-psa/ui';
 import { useSchedulingCallbacks } from '@alga-psa/ui/context';
 import { IExtendedWorkItem, WorkItemType } from '@alga-psa/types';
+import type { ProjectServiceSource } from '@alga-psa/types';
 import TaskStatusSelect from './TaskStatusSelect';
 import PrefillFromTicketDialog from './PrefillFromTicketDialog';
 import { getTeams, getTeamAvatarUrlsBatchAction, isTeamActionError } from '@alga-psa/teams/actions';
 import type { ITeam } from '@alga-psa/types';
 import { TaskPrefillFields } from '../lib/taskTicketMapping';
-import { buildTaskTimeEntryContext } from '../lib/timeEntryContext';
+import { applicableServiceDefault, buildTaskTimeEntryContext } from '../lib/timeEntryContext';
 import {
   parseTaskRichTextContent,
   serializeTaskRichTextContent,
@@ -272,6 +275,14 @@ export default function TaskForm({
   const [selectedPriorityId, setSelectedPriorityId] = useState<string | null>(task?.priority_id ?? null);
   const [availableServices, setAvailableServices] = useState<IService[]>([]);
   const [selectedServiceId, setSelectedServiceId] = useState<string | null>(task?.service_id ?? null);
+  // Phase/project default this task falls back to when it sets no service of its own.
+  // Only for the hint: the entry itself re-resolves on click, so a slow load can
+  // never cost the entry its default.
+  const [applicableInheritedService, setApplicableInheritedService] = useState<{
+    serviceId: string;
+    serviceName: string | null;
+    source: 'phase' | 'project';
+  } | null>(null);
   const [taskDependencies, setTaskDependencies] = useState<{
     predecessors: IProjectTaskDependency[];
     successors: IProjectTaskDependency[];
@@ -418,6 +429,13 @@ export default function TaskForm({
         }
 
         if (task?.task_id) {
+          // Phase/project service default, so the picker can say what a blank
+          // task-level service will fall back to.
+          const effectiveService = await getEffectiveTaskService(task.task_id);
+          if (!isReturnedActionError(effectiveService)) {
+            setApplicableInheritedService(applicableServiceDefault(effectiveService.inherited));
+          }
+
           // Use checklist items and resources from the task object if they exist
           if (task.checklist_items !== undefined) {
             console.log('Using checklist items from task object');
@@ -1400,6 +1418,26 @@ export default function TaskForm({
     setShowDeleteConfirm(false);
   };
 
+  // The phase/project default as it stands right now. Falls back to the hint
+  // already on screen if the lookup fails, so a hiccup never downgrades a
+  // default the user can see.
+  const resolveInheritedService = async (taskId: string): Promise<{
+    serviceId: string | null;
+    serviceName: string | null;
+    source: ProjectServiceSource | null;
+  }> => {
+    const effectiveService = await getEffectiveTaskService(taskId);
+    const inherited = isReturnedActionError(effectiveService)
+      ? applicableInheritedService
+      : applicableServiceDefault(effectiveService.inherited);
+
+    if (!isReturnedActionError(effectiveService)) {
+      setApplicableInheritedService(inherited);
+    }
+
+    return inherited ?? { serviceId: null, serviceName: null, source: null };
+  };
+
   const handleAddTimeEntry = async () => {
     if (!task?.task_id) {
       toast.error(taskFormT('saveBeforeTimeEntry', 'Please save the task before adding time entries'));
@@ -1421,7 +1459,17 @@ export default function TaskForm({
       };
 
       const projectName = findProjectName(projectTreeOptions, selectedPhaseId);
-      const serviceName = availableServices.find(service => service.service_id === selectedServiceId)?.service_name ?? null;
+      // The task's own service wins; otherwise fall back to the phase/project
+      // default, resolved here rather than read from state: the form loads its
+      // hint in the background, and an entry opened before that lands must still
+      // carry the default.
+      const effectiveService = selectedServiceId
+        ? {
+            serviceId: selectedServiceId,
+            serviceName: availableServices.find(service => service.service_id === selectedServiceId)?.service_name ?? null,
+            source: 'task' as const,
+          }
+        : await resolveInheritedService(task.task_id);
 
       await launchTimeEntry({
         openDrawer,
@@ -1431,8 +1479,9 @@ export default function TaskForm({
           taskName: taskName || task.task_name,
           projectName,
           phaseName: selectedPhase.phase_name,
-          serviceId: selectedServiceId,
-          serviceName,
+          serviceId: effectiveService.serviceId,
+          serviceName: effectiveService.serviceName,
+          serviceSource: effectiveService.source,
         }),
       });
     } catch (error) {
@@ -1753,7 +1802,7 @@ export default function TaskForm({
               onChange={(value) => setSelectedServiceId(value || null)}
               options={[
                 { value: '', label: taskFormT('noService', 'No service') },
-                ...availableServices.map(s => ({
+                ...timeEntryServiceChoices(availableServices, selectedServiceId).map(s => ({
                   value: s.service_id,
                   label: s.service_name
                 }))
@@ -1765,6 +1814,17 @@ export default function TaskForm({
             <p className="text-xs text-gray-500 mt-1">
               {taskFormT('serviceHelp', 'When set, this service will be automatically selected when creating time entries from this task.')}
             </p>
+            {!selectedServiceId && applicableInheritedService && (
+              <p className="text-xs text-gray-500 mt-1" id="task-service-inherited-hint">
+                {applicableInheritedService.source === 'phase'
+                  ? taskFormT('serviceInheritedFromPhase', 'Inherits {{service}} from the phase.', {
+                      service: applicableInheritedService.serviceName ?? '',
+                    })
+                  : taskFormT('serviceInheritedFromProject', 'Inherits {{service}} from the project.', {
+                      service: applicableInheritedService.serviceName ?? '',
+                    })}
+              </p>
+            )}
           </div>
 
           {/* 2 Column Grid Section */}

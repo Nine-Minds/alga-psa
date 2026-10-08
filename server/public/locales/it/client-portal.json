@@ -685,7 +685,10 @@
       "deleteError": "Impossibile eliminare l'utente",
       "emailAlreadyExists": "Esiste già un utente con questo indirizzo e-mail",
       "reportsToSelf": "Un utente non può riferire a se stesso",
-      "reportsToCycle": "Questo creerebbe una catena di riporto circolare"
+      "reportsToCycle": "Questo creerebbe una catena di riporto circolare",
+      "reportsTo": "Riporta a",
+      "noManager": "Nessun responsabile",
+      "reportsToHelp": "Un responsabile può vedere i ticket, i dispositivi e i progetti delle persone che riportano a lui, quando il suo gruppo di visibilità è limitato ai propri dati."
     },
     "visibilityGroups": {
       "title": "Gruppi di visibilità",
@@ -725,9 +728,22 @@
       "scopeClient": "Tutti i ticket di questo cliente",
       "scopeContact": "Solo i propri ticket",
       "scopeClientDescription": "I membri vedono tutti i ticket di questo cliente nelle bacheche selezionate.",
-      "scopeContactDescription": "I membri vedono solo i ticket in cui sono indicati come contatto. Gli amministratori del cliente vedono tutti i ticket nelle bacheche selezionate, inclusi quelli senza contatto.",
-      "assignmentHelp": "Assegna un gruppo per limitare bacheche e ticket, oppure mantieni l’accesso completo al cliente.",
-      "boardHiddenFromPortal": "Nascosta dal portale clienti"
+      "scopeContactDescription": "I membri vedono i ticket di cui sono il contatto, i ticket delle persone che riportano a loro e i ticket che seguono. Gli amministratori del cliente vedono sempre tutto sulle bacheche selezionate, inclusi i ticket senza contatto.",
+      "assignmentHelp": "Assegna un gruppo per limitare le bacheche e ciò che questa persona vede di ticket, dispositivi e progetti, oppure mantieni l’accesso completo al cliente.",
+      "boardHiddenFromPortal": "Nascosta dal portale clienti",
+      "assetScopeLabel": "Visibilità dei dispositivi",
+      "assetScopeClient": "Tutti i dispositivi di questo cliente",
+      "assetScopeContact": "Solo i propri dispositivi",
+      "assetScopeClientDescription": "I membri vedono tutti i dispositivi di questo cliente, compresi quelli non assegnati.",
+      "assetScopeContactDescription": "I membri vedono solo i dispositivi assegnati a loro o alle persone che riportano a loro. I dispositivi non assegnati sono nascosti. Gli amministratori del cliente vedono sempre tutto.",
+      "projectScopeLabel": "Visibilità dei progetti",
+      "projectScopeClient": "Tutti i progetti di questo cliente",
+      "projectScopeContact": "Solo i propri progetti",
+      "projectScopeClientDescription": "I membri vedono tutti i progetti di questo cliente.",
+      "projectScopeContactDescription": "I membri vedono solo i progetti il cui contatto sono loro stessi o una persona che riporta a loro. I progetti senza contatto sono nascosti. Gli amministratori del cliente vedono sempre tutto.",
+      "scopeSummary": "Ticket: {{tickets}} · Dispositivi: {{devices}} · Progetti: {{projects}}",
+      "scopeSummaryAll": "Tutti",
+      "scopeSummaryOwn": "Propri"
     },
     "messages": {
       "saveChanges": "Salva modifiche",

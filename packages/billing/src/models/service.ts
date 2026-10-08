@@ -737,6 +737,20 @@ const Service = {
 
         log.info(`[Service.delete] Updated ${updatedTemplateTasks} project_template_tasks records for service ${service_id}`);
 
+        // Clear service_id from project_phases and projects (phase/project-wide
+        // time entry defaults; replaces ON DELETE SET NULL)
+        const updatedPhases = await db.table('project_phases')
+          .where({ service_id })
+          .update({ service_id: null });
+
+        log.info(`[Service.delete] Updated ${updatedPhases} project_phases records for service ${service_id}`);
+
+        const updatedProjects = await db.table('projects')
+          .where({ service_id })
+          .update({ service_id: null });
+
+        log.info(`[Service.delete] Updated ${updatedProjects} projects records for service ${service_id}`);
+
         // Clear linked_service_id from service_request_definitions (replaces ON DELETE SET NULL)
         const updatedRequestDefs = await db.table('service_request_definitions')
           .where({ linked_service_id: service_id })
@@ -788,6 +802,20 @@ const Service = {
             });
 
           log.info(`[Service.delete] Updated ${updatedTemplateTasks} project_template_tasks records for service ${service_id}`);
+
+          // Clear service_id from project_phases and projects (phase/project-wide
+          // time entry defaults; replaces ON DELETE SET NULL)
+          const updatedPhases = await db.table('project_phases')
+            .where({ service_id })
+            .update({ service_id: null });
+
+          log.info(`[Service.delete] Updated ${updatedPhases} project_phases records for service ${service_id}`);
+
+          const updatedProjects = await db.table('projects')
+            .where({ service_id })
+            .update({ service_id: null });
+
+          log.info(`[Service.delete] Updated ${updatedProjects} projects records for service ${service_id}`);
 
           // Clear linked_service_id from service_request_definitions (replaces ON DELETE SET NULL)
           const updatedRequestDefs = await db.table('service_request_definitions')

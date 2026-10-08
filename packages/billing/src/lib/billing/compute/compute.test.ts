@@ -412,9 +412,62 @@ describe("computeTimeBasedCharges", () => {
       TEN_PERCENT_PORTS,
     );
 
-    expect(result.charges[0].total).toBe(Math.round(1 * 15000 + 1 * 22500));
-    expect(result.charges[0].workItemSnapshot).toMatchObject({ rateKind: 'mixed', uniformRate: null, netAmount: 37500 });
+    // One entry, two lines: regular hours at the base rate, overtime hours at
+    // the overtime rate, so each stored line keeps quantity × rate = amount.
+    expect(result.charges).toHaveLength(2);
+    expect(result.explanations).toHaveLength(2);
+    const [regular, overtime] = result.charges;
+    expect(regular).toMatchObject({ timeSegment: 'regular', quantity: 1, rate: 15000, total: 15000 });
+    expect(overtime).toMatchObject({ timeSegment: 'overtime', quantity: 1, rate: 22500, total: 22500 });
+    expect(regular.entryId).toBe(overtime.entryId);
+    expect(regular.total + overtime.total).toBe(Math.round(1 * 15000 + 1 * 22500));
+    expect(regular.workItemSnapshot).toMatchObject({ rateKind: 'uniform', uniformRate: 15000, billedMinutes: 60, netAmount: 15000 });
+    expect(overtime.workItemSnapshot).toMatchObject({ rateKind: 'uniform', uniformRate: 22500, billedMinutes: 60, netAmount: 22500 });
     expect(result.explanations[0].markers).toContain("overtime");
+    expect(result.explanations.map((e) => e.chargeKey)).toEqual([
+      expect.stringMatching(/:regular$/),
+      expect.stringMatching(/:overtime$/),
+    ]);
+  });
+
+  it("gives odd overtime minutes their own exact line and keeps the entry total", async () => {
+    const result = await computeTimeBasedCharges(
+      timeInputs({
+        plan: {
+          enable_overtime: true,
+          overtime_threshold: 1,
+          overtime_rate: 22500,
+        },
+        timeEntries: [entry({ billable_duration: 65 })],
+      }),
+      TEN_PERCENT_PORTS,
+    );
+
+    const [regular, overtime] = result.charges;
+    expect(regular).toMatchObject({ quantity: 1, rate: 15000, total: 15000 });
+    expect(overtime.quantity).toBeCloseTo(5 / 60, 10);
+    expect(overtime.rate).toBe(22500);
+    expect(overtime.total).toBe(1875);
+    expect(regular.total + overtime.total).toBe(Math.round(1 * 15000 + (5 / 60) * 22500));
+  });
+
+  it("keeps one line when the overtime rate equals the base rate", async () => {
+    const result = await computeTimeBasedCharges(
+      timeInputs({
+        plan: {
+          enable_overtime: true,
+          overtime_threshold: 1,
+          overtime_rate: 15000,
+        },
+        timeEntries: [entry()],
+      }),
+      TEN_PERCENT_PORTS,
+    );
+
+    expect(result.charges).toHaveLength(1);
+    expect(result.charges[0]).toMatchObject({ quantity: 2, rate: 15000, total: 30000 });
+    expect(result.charges[0].timeSegment).toBeUndefined();
+    expect(result.charges[0].workItemSnapshot).toMatchObject({ rateKind: 'uniform', uniformRate: 15000, netAmount: 30000 });
   });
 
   it("throws when no rate can be resolved", async () => {

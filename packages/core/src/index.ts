@@ -40,6 +40,9 @@ export * from './lib/quoteItemInclusion';
 export * from './lib/formatters';
 export * from './lib/projectBillingStatus';
 
+// Task → phase → project service fallback (shared by scheduling + projects)
+export * from './lib/effectiveService';
+
 // Time-entry worked duration (billability-independent)
 export * from './lib/timeEntryDuration';
 

@@ -80,7 +80,12 @@
     "markedComplete": "Phase marked complete",
     "reopened": "Phase reopened",
     "completeReadyToast": "{{description}} is ready to bill",
-    "viewInBilling": "View"
+    "viewInBilling": "View",
+    "serviceLabel": "Default Service (for time entries)",
+    "noService": "No service",
+    "servicePlaceholder": "Select default service",
+    "serviceHelp": "Used for time entries on this phase's tasks when the task itself sets no service.",
+    "serviceDisplayLabel": "Service"
   },
   "projectList": {
     "addProject": "Add Project",
@@ -141,6 +146,10 @@
     "projectManagerPlaceholder": "Select Assignee",
     "budgetedHoursLabel": "Budgeted Hours",
     "budgetedHoursPlaceholder": "Enter budgeted hours",
+    "serviceLabel": "Default Service (for time entries)",
+    "noService": "No service",
+    "servicePlaceholder": "Select default service",
+    "serviceHelp": "Used for time entries on this project when neither the task nor its phase sets a service.",
     "startDateLabel": "Start Date",
     "startDatePlaceholder": "Select start date",
     "endDateLabel": "End Date",
@@ -181,7 +190,11 @@
     "continueEditing": "Continue Editing",
     "discardChanges": "Discard Changes",
     "saveAndClose": "Save and Close",
-    "saving": "Saving..."
+    "saving": "Saving...",
+    "serviceLabel": "Default Service (for time entries)",
+    "noService": "No service",
+    "servicePlaceholder": "Select default service",
+    "serviceHelp": "Used for time entries on this project when neither the task nor its phase sets a service."
   },
   "projectDetail": {
     "allAgents": "All Agents",
@@ -416,6 +429,8 @@
     "duplicatedSuccess": "Task \"{{taskName}}\" duplicated successfully!",
     "willBeSetOnCreate": "Will be set on creation",
     "unknownPhase": "Unknown Phase",
+    "serviceInheritedFromPhase": "Inherits {{service}} from the phase.",
+    "serviceInheritedFromProject": "Inherits {{service}} from the project.",
     "startDateLabel": "Start Date",
     "taskStartDateLabel": "Task Start Date",
     "startDatePlaceholder": "Select start date"
@@ -1471,6 +1486,10 @@
     "addPhase": "Add Phase",
     "phaseNamePlaceholder": "Phase name... *",
     "descriptionPlaceholder": "Description",
+    "serviceLabel": "Default Service (for time entries)",
+    "noService": "No service",
+    "servicePlaceholder": "Select default service",
+    "serviceHelp": "Used for time entries on this phase's tasks when the task itself sets no service.",
     "adding": "Adding...",
     "addError": "Failed to add phase. Please try again.",
     "import": "Import"

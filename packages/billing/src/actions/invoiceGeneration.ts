@@ -254,6 +254,13 @@ function getChargeUnitPrice(charge: IBillingCharge): number {
  * Bucket-style description for a prepaid-hour-block informational line:
  * "Prepaid hour block (Svc) — 4.0 hrs consumed, 12.5 hrs remaining".
  */
+/** Overtime entries bill as two lines; the overtime segment says so. */
+function timeChargeDescription(charge: IBillingCharge): string {
+  return isTimeBasedCharge(charge) && charge.timeSegment === 'overtime'
+    ? `${charge.serviceName} (overtime)`
+    : charge.serviceName;
+}
+
 function formatHourBlockChargeDescription(charge: IHourBlockCharge): string {
   const hourShortLabel = resolveUnitOfMeasure({ fallback: 'HUR' }).shortLabel;
   return `Prepaid hour block (${charge.serviceName}) — ${charge.hoursUsed.toFixed(1)} ${hourShortLabel} consumed, ${charge.hoursRemaining.toFixed(1)} ${hourShortLabel} remaining`;
@@ -2463,7 +2470,7 @@ async function buildPreviewInvoiceForSelectionInputs(params: {
       service_id: charge.serviceId,
       description: isHourBlockCharge(charge)
         ? formatHourBlockChargeDescription(charge)
-        : (charge.serviceName || 'Charge'),
+        : (timeChargeDescription(charge) || 'Charge'),
       quantity: getChargeQuantity(charge),
       unit_price: getChargeUnitPrice(charge),
       total_price: charge.total,
@@ -2510,7 +2517,7 @@ async function buildPreviewInvoiceForSelectionInputs(params: {
 
     charges.forEach(charge => {
       const recurringSummary = resolvePreviewRecurringSummary(charge);
-      let description = charge.serviceName;
+      let description = timeChargeDescription(charge);
       if (isBucketCharge(charge)) {
         const currencySymbol = getCurrencySymbol(billingResult.currency_code || 'USD');
         const hourShortLabel = resolveUnitOfMeasure({ fallback: 'HUR' }).shortLabel;

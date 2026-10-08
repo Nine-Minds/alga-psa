@@ -121,7 +121,8 @@
           "clients": "Clientes",
           "itemsServices": "Itens/Serviços",
           "taxCodes": "Códigos fiscais",
-          "paymentTerms": "Condições de pagamento"
+          "paymentTerms": "Condições de pagamento",
+          "discounts": "Descontos"
         }
       }
     },
@@ -142,6 +143,7 @@
           "failed": "Falha na exportação",
           "missingItemMapping": "Mapeamento de item ausente",
           "missingItemMappingId": "Mapeamento de item ausente ({{serviceId}})",
+          "missingDiscountMapping": "Mapeamento de descontos em falta (separador Descontos)",
           "missingItemMappingNamed": "Mapeamento de item ausente: {{serviceName}}"
         },
         "fields": {

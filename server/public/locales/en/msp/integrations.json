@@ -121,7 +121,8 @@
           "clients": "Clients",
           "itemsServices": "Items / Services",
           "taxCodes": "Tax Codes",
-          "paymentTerms": "Payment Terms"
+          "paymentTerms": "Payment Terms",
+          "discounts": "Discounts"
         }
       }
     },
@@ -142,6 +143,7 @@
           "failed": "Export failed",
           "missingItemMapping": "Missing item mapping",
           "missingItemMappingId": "Missing item mapping ({{serviceId}})",
+          "missingDiscountMapping": "Missing discount mapping (Discounts tab)",
           "missingItemMappingNamed": "Missing item mapping: {{serviceName}}"
         },
         "fields": {

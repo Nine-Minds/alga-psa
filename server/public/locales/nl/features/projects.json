@@ -80,7 +80,12 @@
     "markedComplete": "Fase gemarkeerd als voltooid",
     "reopened": "Fase heropend",
     "completeReadyToast": "{{description}} is klaar voor facturering",
-    "viewInBilling": "Bekijken"
+    "viewInBilling": "Bekijken",
+    "serviceLabel": "Standaardservice (voor tijdinvoer)",
+    "noService": "Geen service",
+    "servicePlaceholder": "Standaardservice selecteren",
+    "serviceHelp": "Wordt gebruikt voor tijdinvoer op taken in deze fase wanneer de taak zelf geen service instelt.",
+    "serviceDisplayLabel": "Service"
   },
   "projectList": {
     "addProject": "Project toevoegen",
@@ -141,6 +146,10 @@
     "projectManagerPlaceholder": "Selecteer Toegewezen",
     "budgetedHoursLabel": "Gebudgetteerde uren",
     "budgetedHoursPlaceholder": "Voer gebudgetteerde uren in",
+    "serviceLabel": "Standaardservice (voor tijdinvoer)",
+    "noService": "Geen service",
+    "servicePlaceholder": "Standaardservice selecteren",
+    "serviceHelp": "Wordt gebruikt voor tijdinvoer op dit project wanneer noch de taak noch de fase een service instelt.",
     "startDateLabel": "Startdatum",
     "startDatePlaceholder": "Selecteer startdatum",
     "endDateLabel": "Einddatum",
@@ -181,7 +190,11 @@
     "continueEditing": "Ga door met bewerken",
     "discardChanges": "Wijzigingen negeren",
     "saveAndClose": "Opslaan en sluiten",
-    "saving": "Opslaan..."
+    "saving": "Opslaan...",
+    "serviceLabel": "Standaardservice (voor tijdinvoer)",
+    "noService": "Geen service",
+    "servicePlaceholder": "Standaardservice selecteren",
+    "serviceHelp": "Wordt gebruikt voor tijdinvoer op dit project wanneer noch de taak noch de fase een service instelt."
   },
   "projectDetail": {
     "allAgents": "Alle agenten",
@@ -416,6 +429,8 @@
     "duplicatedSuccess": "Taak \"{{taskName}}\" is succesvol gedupliceerd!",
     "willBeSetOnCreate": "Wordt ingesteld op de schepping",
     "unknownPhase": "Onbekende fase",
+    "serviceInheritedFromPhase": "Neemt {{service}} over van de fase.",
+    "serviceInheritedFromProject": "Neemt {{service}} over van het project.",
     "startDateLabel": "Startdatum",
     "taskStartDateLabel": "Startdatum van taak",
     "startDatePlaceholder": "Selecteer startdatum"
@@ -1434,6 +1449,10 @@
     "addPhase": "Fase toevoegen",
     "phaseNamePlaceholder": "Fasenaam… *",
     "descriptionPlaceholder": "Beschrijving",
+    "serviceLabel": "Standaardservice (voor tijdinvoer)",
+    "noService": "Geen service",
+    "servicePlaceholder": "Standaardservice selecteren",
+    "serviceHelp": "Wordt gebruikt voor tijdinvoer op taken in deze fase wanneer de taak zelf geen service instelt.",
     "adding": "Toevoegen…",
     "addError": "Kon fase niet toevoegen. Probeer opnieuw.",
     "title": "Projectfasen",

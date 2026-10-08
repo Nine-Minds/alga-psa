@@ -249,6 +249,7 @@ describe('sharedAssetIngestionService', () => {
           asset_id: 'asset_existing',
           asset_type: 'workstation',
           client_id: 'client_old',
+          contact_name_id: 'contact_of_client_old',
           name: 'Old Name',
           serial_number: 'OLD',
           status: 'active',
@@ -298,12 +299,70 @@ describe('sharedAssetIngestionService', () => {
       name: 'Moved Endpoint',
       rmm_organization_id: 'scope_new',
     });
+    // The assignee belonged to the old client, so the move clears it.
+    expect(state.assets[0].contact_name_id).toBeNull();
     expect(state.tenant_external_entity_mappings).toHaveLength(1);
     expect(state.tenant_external_entity_mappings[0]).toMatchObject({
       id: 'map_existing',
       external_entity_id: 'device_1',
       external_realm_id: 'scope_new',
       sync_status: 'synced',
+    });
+  });
+
+  it('keeps the assigned contact when a re-sync leaves the device on the same client', async () => {
+    const state: DbState = {
+      assets: [
+        {
+          tenant: 'tenant_1',
+          asset_id: 'asset_existing',
+          asset_type: 'workstation',
+          client_id: 'client_1',
+          contact_name_id: 'contact_1',
+          name: 'Old Name',
+          serial_number: 'OLD',
+          status: 'active',
+          location: 'Old',
+          rmm_provider: 'tanium',
+          rmm_device_id: 'device_1',
+        },
+      ],
+      workstation_assets: [],
+      server_assets: [],
+      tenant_external_entity_mappings: [
+        {
+          id: 'map_existing',
+          tenant: 'tenant_1',
+          integration_type: 'tanium',
+          alga_entity_type: 'asset',
+          alga_entity_id: 'asset_existing',
+          external_entity_id: 'device_1',
+          external_realm_id: 'scope_1',
+          sync_status: 'pending',
+        },
+      ],
+      rmm_organization_mappings: [
+        {
+          tenant: 'tenant_1',
+          integration_id: 'integration_1',
+          external_organization_id: 'scope_1',
+          client_id: 'client_1',
+        },
+      ],
+    };
+    const knex = createFakeKnex(state);
+
+    const result = await ingestNormalizedRmmDeviceSnapshot({
+      tenant: 'tenant_1',
+      snapshot: buildSnapshot({ displayName: 'Same Client Endpoint' }),
+      knex,
+    });
+
+    expect(result.action).toBe('updated');
+    expect(state.assets[0]).toMatchObject({
+      client_id: 'client_1',
+      contact_name_id: 'contact_1',
+      name: 'Same Client Endpoint',
     });
   });
 

@@ -64,6 +64,7 @@ const buildWorkItem = (context: TimeEntryWorkItemContext): Omit<IExtendedWorkIte
     task_name: context.taskName,
     service_id: context.serviceId,
     service_name: context.serviceName,
+    service_source: context.serviceSource,
   };
 };
 

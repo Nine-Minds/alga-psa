@@ -121,7 +121,8 @@
           "clients": "Clients",
           "itemsServices": "Articles / Services",
           "taxCodes": "Codes fiscaux",
-          "paymentTerms": "Conditions de paiement"
+          "paymentTerms": "Conditions de paiement",
+          "discounts": "Remises"
         }
       }
     },
@@ -142,6 +143,7 @@
           "failed": "Échec de l'export",
           "missingItemMapping": "Mappage d'article manquant",
           "missingItemMappingId": "Mappage d'article manquant ({{serviceId}})",
+          "missingDiscountMapping": "Mappage des remises manquant (onglet Remises)",
           "missingItemMappingNamed": "Mappage d'article manquant : {{serviceName}}"
         },
         "fields": {

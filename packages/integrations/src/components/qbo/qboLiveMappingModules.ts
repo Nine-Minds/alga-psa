@@ -18,6 +18,10 @@ import {
 } from '@alga-psa/integrations/actions';
 import type { IService, ITaxRegion } from '@alga-psa/types';
 import { QBO_PSEUDO_TAX_CODE_NON_TAXABLE, QBO_PSEUDO_TAX_CODE_TAXABLE } from '../../lib/qbo/types';
+import {
+  AUTOMATIC_DISCOUNT_MAPPING_ID,
+  DISCOUNT_MAPPING_ENTITY_TYPE
+} from '@alga-psa/types';
 import type {
   AccountingMappingBulkCreateInput,
   AccountingMappingBulkCreateResult,
@@ -51,6 +55,15 @@ const PAYMENT_TERMS: PaymentTermOption[] = [
   { id: 'net_30', name: 'Net 30' },
   { id: 'net_15', name: 'Net 15' },
   { id: 'due_on_receipt', name: 'Due on receipt' }
+];
+
+type DiscountOption = {
+  id: string;
+  name: string;
+};
+
+const DISCOUNT_OPTIONS: DiscountOption[] = [
+  { id: AUTOMATIC_DISCOUNT_MAPPING_ID, name: 'Automatic contract discounts' }
 ];
 
 type TFn = (key: string, options?: Record<string, unknown>) => string;
@@ -167,7 +180,8 @@ export function createQboLiveMappingModules(t?: TFn): AccountingMappingModule[] 
   return [
     createServiceModule(tab('itemsServices', 'Items / Services')),
     createTaxCodeModule(tab('taxCodes', 'Tax Codes'), t),
-    createPaymentTermModule(tab('paymentTerms', 'Payment Terms'))
+    createPaymentTermModule(tab('paymentTerms', 'Payment Terms')),
+    createDiscountModule(tab('discounts', 'Discounts'))
   ];
 }
 
@@ -442,6 +456,72 @@ function createPaymentTermModule(tabLabel: string): AccountingMappingModule {
     },
     createMany(context, inputs) {
       return createManyMappings({ context, inputs, algaEntityType: 'payment_term' });
+    }
+  };
+}
+
+function createDiscountModule(tabLabel: string): AccountingMappingModule {
+  return {
+    id: 'qbo-live-discount-mappings',
+    adapterType: ADAPTER_TYPE,
+    algaEntityType: DISCOUNT_MAPPING_ENTITY_TYPE,
+    externalEntityType: 'Item',
+    labels: {
+      tab: tabLabel,
+      description:
+        'Choose the QuickBooks item that automatic contract discounts post to. Discount lines have no Alga service, so they need their own item.',
+      addButton: 'Add Discount Mapping',
+      algaColumn: 'Alga Discount',
+      externalColumn: 'QuickBooks Item',
+      dialog: {
+        addTitle: 'Add Live QuickBooks Discount Mapping',
+        editTitle: 'Edit Live QuickBooks Discount Mapping',
+        algaField: 'Alga Discount',
+        externalField: 'QuickBooks Item',
+        helpText: 'Select the QuickBooks item that discount lines should be exported as.'
+      },
+      deleteConfirmation: {
+        title: 'Delete Discount Mapping',
+        message: ({ externalName }) =>
+          `Delete the discount mapping${externalName ? ` ↔ ${externalName}` : ''}? Invoices with automatic discounts will not export until a new one is added.`,
+        confirmLabel: 'Delete',
+        cancelLabel: 'Cancel'
+      }
+    },
+    elements: {
+      addButton: 'add-qbo-live-discount-mapping-button',
+      table: 'qbo-live-discount-mappings-table',
+      dialog: 'qbo-live-discount-mapping-dialog',
+      deleteDialogPrefix: 'confirm-delete-qbo-live-discount-mapping-dialog',
+      editMenuPrefix: 'edit-qbo-live-discount-mapping-menu-item-',
+      deleteMenuPrefix: 'delete-qbo-live-discount-mapping-menu-item-'
+    },
+    load(context) {
+      return loadMappings<DiscountOption>({
+        context,
+        algaEntityType: DISCOUNT_MAPPING_ENTITY_TYPE,
+        loadAlgaEntities: async () => DISCOUNT_OPTIONS,
+        loadExternalEntities: async (currentContext) => {
+          const itemsResult = await getQboItems({ realmId: currentContext.realmId ?? null });
+          throwIfActionError(itemsResult);
+          const items = itemsResult as Array<{ id: string; name: string }>;
+          return items.map((item) => ({ id: item.id, name: item.name }));
+        },
+        mapAlga: (discount) => discount
+      });
+    },
+    create(context, input) {
+      return createMapping({
+        context,
+        input,
+        algaEntityType: DISCOUNT_MAPPING_ENTITY_TYPE
+      });
+    },
+    update(_context, mappingId, input) {
+      return updateMapping(mappingId, input);
+    },
+    async remove(_context, mappingId) {
+      throwIfActionError(await deleteExternalEntityMapping(mappingId));
     }
   };
 }

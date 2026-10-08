@@ -395,8 +395,10 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   'project_billing_schedule_entries', 'project_billing_cap_usage',
   'project_billing_configs', 'project_phase_rate_overrides',
 
-  // Project/task entities
-  'project_tasks', 'project_phases', 'project_status_mappings',
+  // Project/task entities. projects itself must land here too: it now carries
+  // a restrictive (NO ACTION) FK to service_catalog (default service for the
+  // whole project), so it has to be deleted before service_catalog below.
+  'project_tasks', 'project_phases', 'project_status_mappings', 'projects',
 
   // Workflow task entities
   'workflow_tasks', 'workflow_form_definitions',
@@ -465,9 +467,6 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
 
   // Invoices (after invoice_templates)
   'invoices',
-
-  // Projects
-  'projects',
 
   // External files and documents
   'external_files', 'documents', 'document_types',
