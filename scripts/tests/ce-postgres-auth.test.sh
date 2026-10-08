@@ -217,7 +217,7 @@ legacy_init() {
     wait_ready "$SUPER_SECRET" || return 1
     pg postgres "$SUPER_SECRET" -c "CREATE ROLE app_user LOGIN PASSWORD '$APP_SECRET'" >/dev/null || return 1
     # Precondition: this really is the legacy layout.
-    hba_active_lines | grep -q '^host all all all trust' || return 1
+    grep -q '^host all all all trust' <<<"$(hba_active_lines)" || return 1
     dc down >/dev/null 2>&1
 }
 
@@ -269,7 +269,7 @@ t1_fresh_install() {
         return
     fi
     ok "postgres became ready with the secret"
-    hba_active_lines | grep -Eq '[[:space:]]trust([[:space:]]|$)' && nok "pg_hba.conf file has no trust rule" || ok "pg_hba.conf file has no trust rule"
+    grep -Eq '[[:space:]]trust([[:space:]]|$)' <<<"$(hba_active_lines)" && nok "pg_hba.conf file has no trust rule" || ok "pg_hba.conf file has no trust rule"
     [ "$(trust_rule_count postgres "$SUPER_SECRET")" = "0" ] && ok "pg_hba_file_rules reports no trust rule" || nok "pg_hba_file_rules reports no trust rule"
     local out
     out="$(pg postgres "" -tAc 'select 1')"
@@ -280,7 +280,7 @@ t1_fresh_install() {
     fi
     out="$(pg postgres "$SUPER_SECRET" -tAc 'select 1')"
     [ "$out" = "1" ] && ok "psql with the secret succeeds" || nok "psql with the secret succeeds" "$out"
-    postgres_logs | grep -q 'Fast path: no existing data directory' && ok "wrapper logged the fast path" || nok "wrapper logged the fast path"
+    grep -q 'Fast path: no existing data directory' <<<"$(postgres_logs)" && ok "wrapper logged the fast path" || nok "wrapper logged the fast path"
 }
 
 t2_upgrade_from_legacy() {
@@ -299,9 +299,9 @@ t2_upgrade_from_legacy() {
         return 1
     fi
     ok "postgres started after upgrade"
-    postgres_logs | grep -q 'Repaired legacy trust rules' && ok "wrapper logged the repair" || nok "wrapper logged the repair"
+    grep -q 'Repaired legacy trust rules' <<<"$(postgres_logs)" && ok "wrapper logged the repair" || nok "wrapper logged the repair"
     [ "$(trust_rule_count postgres "$SUPER_SECRET")" = "0" ] && ok "pg_hba_file_rules reports no trust rule" || nok "pg_hba_file_rules reports no trust rule"
-    hba_active_lines | grep -Eq '[[:space:]]trust([[:space:]]|$)' && nok "pg_hba.conf file has no trust rule" || ok "pg_hba.conf file has no trust rule"
+    grep -Eq '[[:space:]]trust([[:space:]]|$)' <<<"$(hba_active_lines)" && nok "pg_hba.conf file has no trust rule" || ok "pg_hba.conf file has no trust rule"
     local mode
     mode="$(pg_exec 'stat -c %a "$PGDATA/pg_hba.conf.pre-trust-removal"' | tr -d '[:space:]')"
     [ "$mode" = "600" ] && ok "backup exists with mode 600" || nok "backup exists with mode 600" "mode=$mode"
@@ -377,8 +377,8 @@ t5_empty_secret_fails_closed() {
     local code
     code="$(container_exit_code)"
     [ "$code" != "0" ] && ok "exit code is non-zero ($code)" || nok "exit code is non-zero"
-    postgres_logs | grep -q 'no postgres password is available' && ok "log explains the refusal" || nok "log explains the refusal"
-    postgres_logs | grep -q 'ready to accept connections' && nok "server never reached ready" || ok "server never reached ready"
+    grep -q 'no postgres password is available' <<<"$(postgres_logs)" && ok "log explains the refusal" || nok "log explains the refusal"
+    grep -q 'ready to accept connections' <<<"$(postgres_logs)" && nok "server never reached ready" || ok "server never reached ready"
     (exec 3<>"/dev/tcp/127.0.0.1/$EXPOSE_DB_PORT") 2>/dev/null && nok "published port 5432 is closed" || ok "published port 5432 is closed"
     set_superuser_secret "$SUPER_SECRET"
 }
@@ -397,7 +397,7 @@ t6_trust_env_fails_closed() {
     local code
     code="$(container_exit_code)"
     [ "$code" != "0" ] && ok "exit code is non-zero ($code)" || nok "exit code is non-zero"
-    postgres_logs | grep -q 'POSTGRES_HOST_AUTH_METHOD=trust is not allowed' && ok "log explains the refusal" || nok "log explains the refusal"
+    grep -q 'POSTGRES_HOST_AUTH_METHOD=trust is not allowed' <<<"$(postgres_logs)" && ok "log explains the refusal" || nok "log explains the refusal"
     docker run --rm -v "$VOLUME:/d:ro" --entrypoint sh "$PG_IMAGE" -c 'test ! -e /d/PG_VERSION' \
         && ok "refused before initdb (no PG_VERSION in the volume)" || nok "refused before initdb (no PG_VERSION in the volume)"
 }
