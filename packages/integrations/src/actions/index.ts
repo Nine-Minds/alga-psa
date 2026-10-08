@@ -48,8 +48,10 @@ export {
 export {
   getExternalEntityMappings,
   createExternalEntityMapping,
+  createExternalEntityMappings,
   updateExternalEntityMapping,
   deleteExternalEntityMapping,
+  type BulkCreateMappingRowResult,
   type CreateMappingData,
   type ExternalEntityMapping,
   type UpdateMappingData

@@ -9,6 +9,31 @@ export type AccountingMappingEntityOption = {
    * shown regardless of the selected kind.
    */
   kind?: string;
+  /**
+   * Structured provider/Alga identifier (Xero item or account code, QBO item
+   * id, Alga service SKU). Loaders populate it so the suggestion matcher never
+   * has to parse it back out of the display `name`.
+   */
+  code?: string;
+  /**
+   * The entity's own name with no display decoration (no `[Product] ` /
+   * `Item · ` prefix, no ` (CODE)` suffix). Loaders populate it for the same
+   * reason as `code`. Falls back to `name` when absent.
+   */
+  baseName?: string;
+};
+
+export type AccountingMappingBulkCreateInput = {
+  algaEntityId: string;
+  externalEntityId: string;
+  metadata?: Record<string, unknown> | null;
+};
+
+export type AccountingMappingBulkCreateResult = {
+  algaEntityId: string;
+  ok: boolean;
+  mapping?: ExternalEntityMapping;
+  error?: string;
 };
 
 export type AccountingMappingLoadResult = {
@@ -110,6 +135,7 @@ export type AccountingMetadataConfig = {
 
 export type AccountingMappingElementIds = {
   addButton?: string;
+  bulkButton?: string;
   table?: string;
   dialog?: string;
   deleteDialogPrefix?: string;
@@ -150,4 +176,13 @@ export interface AccountingMappingModule {
     }
   ): Promise<ExternalEntityMapping>;
   remove(context: AccountingMappingContext, mappingId: string): Promise<void>;
+  /**
+   * Optional one-request bulk create used by the bulk grid. Row-level failures
+   * are reported in the results, never thrown. When absent the engine falls
+   * back to sequential `create` calls with per-row error capture.
+   */
+  createMany?(
+    context: AccountingMappingContext,
+    inputs: AccountingMappingBulkCreateInput[]
+  ): Promise<AccountingMappingBulkCreateResult[]>;
 }

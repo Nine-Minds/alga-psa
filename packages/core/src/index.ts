@@ -38,7 +38,9 @@ export * from './lib/quoteItemInclusion';
 
 // Formatting utilities
 export * from './lib/formatters';
+export * from './lib/fileNames';
 export * from './lib/projectBillingStatus';
+export * from './lib/appointmentRequestLinks';
 
 // Task → phase → project service fallback (shared by scheduling + projects)
 export * from './lib/effectiveService';

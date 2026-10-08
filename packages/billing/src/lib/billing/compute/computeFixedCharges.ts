@@ -140,6 +140,13 @@ export interface FixedChargeComputeInputs {
   /** Loaded by the caller when planServices is empty; null otherwise. */
   fallbackService: FixedFallbackServiceRow | null;
   /**
+   * True when planServices is empty because every member of the line is a
+   * product/license, which bills through its own charge family. Such a line is
+   * not "unpriceable" or "without services" — it just has nothing to bill as a
+   * fixed fee — so the blockers must not fire for it.
+   */
+  hasProductMembers?: boolean;
+  /**
    * Fixed charges have no per-occurrence source record — there is only the
    * contract line and its recurring periods — so they stop at the contract
    * step of the resolution chain (F026, documented via F070).
@@ -147,9 +154,44 @@ export interface FixedChargeComputeInputs {
   billingProfile?: ChargeProfileAssignments | null;
 }
 
+/**
+ * Coded reason a fixed line could not be priced. Unresolved is NOT zero: a
+ * line whose rate legitimately resolves to 0 is not a blocker and bills
+ * nothing; a line whose rate cannot be determined at all must never vanish
+ * from an invoice silently, so the caller refuses to preview/generate it.
+ */
+export const FIXED_LINE_RATE_UNRESOLVED = "FIXED_LINE_RATE_UNRESOLVED" as const;
+
+/**
+ * Coded reason a fixed line HAS a rate but nothing to bill it on: it has no
+ * member services and no fallback service could be found. Distinct from
+ * FIXED_LINE_RATE_UNRESOLVED (no rate at all), so its message must never say
+ * "has no rate".
+ */
+export const FIXED_LINE_NO_SERVICES = "FIXED_LINE_NO_SERVICES" as const;
+
+export type FixedChargeBlockerCode =
+  | typeof FIXED_LINE_RATE_UNRESOLVED
+  | typeof FIXED_LINE_NO_SERVICES;
+
+export interface FixedChargeBlocker {
+  code: FixedChargeBlockerCode;
+  /** Plain-English reason, e.g. "Fixed fee line Essentials has no rate". */
+  message: string;
+  /** The contract_lines id (also the id charges carry as client_contract_line_id). */
+  contractLineId: string;
+  contractLineName: string;
+}
+
 export interface FixedChargeComputeResult {
   charges: IFixedPriceCharge[];
   explanations: ChargeExplanation[];
+  /**
+   * Present only when the line could not be priced. Any charges returned
+   * alongside (e.g. the seats of a mixed line) are what WAS computable; the
+   * invoice as a whole must still be refused.
+   */
+  blockers?: FixedChargeBlocker[];
   /**
    * Set when the surviving charges bill an advance service period that may
    * already be persisted. Production must suppress the charges when a
@@ -357,6 +399,116 @@ function formatCents(cents: number, currencyCode: string): string {
   }).format(cents / 100);
 }
 
+export type FixedFeeAllocationBasis = "stored_shares" | "quantity" | "even_split";
+
+export interface FixedFeeAllocation {
+  basis: FixedFeeAllocationBasis;
+  /** Minor units per service, in input order; sums exactly to the fee. */
+  amounts: number[];
+  /** The weight each service carried under `basis`, in input order. */
+  weights: number[];
+  /** weight / Σ weights, in input order. */
+  proportions: number[];
+}
+
+const nonNegativeFinite = (raw: unknown): number => {
+  if (raw === null || raw === undefined) return 0;
+  const parsed = typeof raw === "string" ? parseFloat(raw) : Number(raw);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
+};
+
+/**
+ * Split `totalCents` across weighted members so the parts sum EXACTLY to the
+ * total: floor each exact share, then hand the leftover cents to the largest
+ * fractional remainders (ties broken by service_id so the split never depends
+ * on row order). `totalCents` is in the contract/invoice currency's minor
+ * units; nothing here knows or assumes a currency.
+ */
+function allocateCentsByWeights(
+  totalCents: number,
+  members: Array<{ key: string; weight: number }>,
+): { amounts: number[]; proportions: number[] } {
+  const weightSum = members.reduce((sum, member) => sum + member.weight, 0);
+  const exact = members.map((member) => (totalCents * member.weight) / weightSum);
+  const amounts = exact.map((value) => Math.floor(value));
+  let remainder = totalCents - amounts.reduce((sum, value) => sum + value, 0);
+  const order = members
+    .map((member, index) => ({ index, key: member.key, fraction: exact[index] - amounts[index] }))
+    .sort(
+      (a, b) =>
+        b.fraction - a.fraction ||
+        (a.key < b.key ? -1 : a.key > b.key ? 1 : 0) ||
+        a.index - b.index,
+    );
+  for (let cursor = 0; remainder > 0 && order.length > 0; cursor += 1) {
+    amounts[order[cursor % order.length].index] += 1;
+    remainder -= 1;
+  }
+  return {
+    amounts,
+    proportions: members.map((member) => member.weight / weightSum),
+  };
+}
+
+// LEVERAGE: pattern fixed-fee-allocation — "split one fixed fee across member
+// services by a weight, with cent remainder handling" now exists in three
+// places: the FMV allocation in computeFixedCharges below (no remainder
+// handling), this helper, and the wizard's quantity share in
+// contractWizardActions (last member takes the remainder). A single
+// allocation layer should own weight → exact cents.
+/**
+ * Allocation for a fixed fee whose members carry no catalog price (FMV total
+ * of 0), so the fee cannot be apportioned by fair market value. The full fee
+ * is always billed. Weight chain:
+ *  1. stored per-service shares (contract_line_service_fixed_config.base_rate,
+ *     already the member's share of the line total — never × quantity) when
+ *     they sum to more than 0;
+ *  2. otherwise service quantity;
+ *  3. otherwise an even split.
+ */
+export function allocateFixedFeeWithoutCatalogPrice(
+  totalCents: number,
+  services: Array<{
+    service_id: string;
+    service_base_rate?: number | string | null;
+    quantity: number;
+  }>,
+): FixedFeeAllocation {
+  const shareWeights = services.map((service) => nonNegativeFinite(service.service_base_rate));
+  const quantityWeights = services.map((service) => nonNegativeFinite(service.quantity));
+  const sum = (values: number[]) => values.reduce((total, value) => total + value, 0);
+
+  let basis: FixedFeeAllocationBasis;
+  let weights: number[];
+  if (sum(shareWeights) > 0) {
+    basis = "stored_shares";
+    weights = shareWeights;
+  } else if (sum(quantityWeights) > 0) {
+    basis = "quantity";
+    weights = quantityWeights;
+  } else {
+    basis = "even_split";
+    weights = services.map(() => 1);
+  }
+
+  const { amounts, proportions } = allocateCentsByWeights(
+    totalCents,
+    services.map((service, index) => ({ key: service.service_id, weight: weights[index] })),
+  );
+  return { basis, amounts, weights, proportions };
+}
+
+function allocationBasisLabel(basis: FixedFeeAllocationBasis): string {
+  switch (basis) {
+    case "stored_shares":
+      return "Stored per-service shares";
+    case "quantity":
+      return "Service quantity";
+    case "even_split":
+      return "Even split";
+  }
+}
+
 function fixedChargeKey(charge: IFixedPriceCharge): string {
   return `${charge.config_id ?? charge.client_contract_line_id ?? "line"}:${charge.serviceId ?? "service"}`;
 }
@@ -376,6 +528,7 @@ export function computeFixedCharges(
     customRateSource,
     planServices,
     fallbackService,
+    hasProductMembers = false,
     billingProfile,
   } = inputs;
   const resolvedProfile = resolveChargeProfileFor(billingProfile);
@@ -392,8 +545,37 @@ export function computeFixedCharges(
   let generatedCharges: IFixedPriceCharge[] | null = null;
   let generatedChargeAmountsUseCoverage = false;
   const explanations: ChargeExplanation[] = [];
+  const blockers: FixedChargeBlocker[] = [];
 
   const isFixedFeePlan = contractLineDetails?.contract_line_type === "Fixed";
+  const lineBlocker = (
+    code: FixedChargeBlockerCode,
+    describe: (contractLineName: string) => string,
+  ): FixedChargeBlocker => {
+    const contractLineName =
+      clientContractLine.contract_line_name ||
+      clientContractLine.contract_line_id ||
+      clientContractLine.client_contract_line_id;
+    return {
+      code,
+      message: describe(contractLineName),
+      contractLineId:
+        clientContractLine.contract_line_id ??
+        clientContractLine.client_contract_line_id,
+      contractLineName,
+    };
+  };
+  const unresolvedRateBlocker = (): FixedChargeBlocker =>
+    lineBlocker(
+      FIXED_LINE_RATE_UNRESOLVED,
+      (name) => `Fixed fee line ${name} has no rate`,
+    );
+  const noServicesBlocker = (): FixedChargeBlocker =>
+    lineBlocker(
+      FIXED_LINE_NO_SERVICES,
+      (name) =>
+        `Fixed fee line ${name} has a rate but no service to bill it on`,
+    );
 
   // --- Plan-level fixed config (base rate and proration) ---
   const planLevelBaseRate = resolveFixedPlanLevelBaseRate({
@@ -435,14 +617,24 @@ export function computeFixedCharges(
   }
   fixedProrationEnabled = planLevelEnableProration;
 
+  // A line with explicit unit-priced (seat) members prices those members from
+  // their own unit rates, so a missing plan-level rate only blocks lines that
+  // have nothing else to price with. Mixed lines are checked against their
+  // bundle members below.
+  const billsThroughProductFamily = planServices.length === 0 && hasProductMembers;
   if (
     isFixedFeePlan &&
-    (planLevelBaseRate === null || Number.isNaN(planLevelBaseRate))
+    (planLevelBaseRate === null || Number.isNaN(planLevelBaseRate)) &&
+    !hasUnitPricedFixedMembers(planServices)
   ) {
-    console.error(
-      `[DEBUG] Unable to determine base_rate for contract line ${clientContractLine.contract_line_id}.`,
-    );
-    return { charges: [], explanations: [], advanceGuard: null };
+    return {
+      charges: [],
+      explanations: [],
+      advanceGuard: null,
+      ...(billsThroughProductFamily
+        ? {}
+        : { blockers: [unresolvedRateBlocker()] }),
+    };
   }
 
   const planLevelBaseRateCents =
@@ -623,6 +815,21 @@ export function computeFixedCharges(
       : planLevelBaseRateCents;
 
     if (!fallbackService?.service_id || !fallbackService?.config_id) {
+      // A positive rate with nothing to bill it on must not vanish silently
+      // (Estimated monthly still counts custom_rate). A rate of 0 bills
+      // nothing by design and keeps the quiet return.
+      if (
+        !billsThroughProductFamily &&
+        Number.isFinite(baseRateInCents) &&
+        baseRateInCents > 0
+      ) {
+        return {
+          charges: [],
+          explanations: [],
+          advanceGuard: null,
+          blockers: [noServicesBlocker()],
+        };
+      }
       return { charges: [], explanations: [], advanceGuard: null };
     }
 
@@ -726,50 +933,90 @@ export function computeFixedCharges(
           })
         : planLevelBaseRate;
     if (bundleLevelBaseRate === null || Number.isNaN(bundleLevelBaseRate)) {
+      // The bundle members cannot be priced. Never drop them silently: report
+      // the line as blocked. Seats that ARE priceable are still returned so
+      // callers that ignore blockers (simulation) keep their behavior.
+      blockers.push(unresolvedRateBlocker());
       if (heldUnitCharges) {
-        // The seats are priceable even when the bundle members are not; do
-        // not silently drop them.
-        console.error(
-          `[BillingEngine] Unable to determine bundle base_rate for mixed contract line ${clientContractLine.contract_line_id}; billing unit-priced members only.`,
-        );
         generatedCharges = heldUnitCharges;
         heldUnitCharges = null;
       } else {
-        return { charges: [], explanations: [], advanceGuard: null };
+        return {
+          charges: [],
+          explanations: [],
+          advanceGuard: null,
+          blockers,
+        };
       }
     }
     const baseRateInCents = hasCustomRateOverride
       ? Math.round(Number(effectiveCustomRate))
       : Math.round((bundleLevelBaseRate ?? 0) * 100);
 
+    if (!Number.isFinite(baseRateInCents) && !generatedCharges) {
+      // A custom rate that is not a number is an unresolved rate, not zero.
+      blockers.push(unresolvedRateBlocker());
+      if (heldUnitCharges) {
+        generatedCharges = heldUnitCharges;
+        heldUnitCharges = null;
+      } else {
+        return {
+          charges: [],
+          explanations: [],
+          advanceGuard: null,
+          blockers,
+        };
+      }
+    }
+
     const totalFMVCents = normalizedBundleServices.reduce((sum, service) => {
       const serviceFMV = preferredCatalogRate(service) * service.quantity;
       return sum + serviceFMV;
     }, 0);
 
-    // Zero FMV cannot be allocated. Negative FMV is valid (credit services).
+    // Zero FMV cannot be apportioned by fair market value. Negative FMV is
+    // valid (credit services). When the line still carries a positive fee, that
+    // fee is billed IN FULL, allocated by stored shares → quantity → even split
+    // (see allocateFixedFeeWithoutCatalogPrice). Only a fee of 0 has nothing to
+    // bill; unresolved rates were rejected above.
+    let zeroFmvAllocation: FixedFeeAllocation | null = null;
     if (!generatedCharges && totalFMVCents === 0) {
-      console.log(
-        `Total FMV (cents) for services in plan ${clientContractLine.contract_line_id} is zero`,
-      );
-      if (heldUnitCharges) {
-        generatedCharges = heldUnitCharges;
-        heldUnitCharges = null;
+      const effectiveFeeCents = planLevelEnableProration
+        ? Math.round(baseRateInCents * coverageRatio)
+        : baseRateInCents;
+      if (baseRateInCents > 0 && normalizedBundleServices.length > 0) {
+        zeroFmvAllocation = allocateFixedFeeWithoutCatalogPrice(
+          effectiveFeeCents,
+          normalizedBundleServices,
+        );
       } else {
-        return { charges: [], explanations: [], advanceGuard: null };
+        console.log(
+          `Total FMV (cents) for services in plan ${clientContractLine.contract_line_id} is zero and the plan rate is ${baseRateInCents}; nothing to allocate`,
+        );
+        if (heldUnitCharges) {
+          generatedCharges = heldUnitCharges;
+          heldUnitCharges = null;
+        } else {
+          return { charges: [], explanations: [], advanceGuard: null };
+        }
       }
     }
 
     // When a guard above already resolved the charges (seats only), the
     // allocation below runs over nothing.
     const bundleAllocationNeeded = !generatedCharges;
-    const serviceAllocations = (bundleAllocationNeeded ? normalizedBundleServices : []).map((service) => {
+    // LEVERAGE: pattern fixed-fee-allocation — FMV-weighted split; rounds each
+    // member independently (no remainder handling), unlike the zero-FMV path.
+    const serviceAllocations = (bundleAllocationNeeded ? normalizedBundleServices : []).map((service, serviceIndex) => {
       // FMV is based on the service's catalog rate (cents), not plan overrides.
       const rateForFMV = preferredCatalogRate(service);
       const serviceFMVCents = Math.round(rateForFMV * service.quantity);
 
-      const proportion =
-        totalFMVCents !== 0 ? serviceFMVCents / totalFMVCents : 0;
+      const proportion = zeroFmvAllocation
+        ? zeroFmvAllocation.proportions[serviceIndex]
+        : totalFMVCents !== 0
+          ? serviceFMVCents / totalFMVCents
+          : 0;
 
       let prorationFactor = 1.0;
       let effectiveBaseRateInCents = baseRateInCents;
@@ -780,7 +1027,9 @@ export function computeFixedCharges(
         );
       }
 
-      const allocatedAmount = Math.round(effectiveBaseRateInCents * proportion);
+      const allocatedAmount = zeroFmvAllocation
+        ? zeroFmvAllocation.amounts[serviceIndex]
+        : Math.round(effectiveBaseRateInCents * proportion);
 
       const { taxRegion: serviceTaxRegion, isTaxable } =
         taxPorts.getTaxInfoFromService(service);
@@ -828,7 +1077,7 @@ export function computeFixedCharges(
 
     const detailedCharges: IFixedPriceCharge[] = [];
 
-    for (const allocation of serviceAllocations) {
+    for (const [allocationIndex, allocation] of serviceAllocations.entries()) {
       const planService = normalizedBundleServices.find(
         (ps) => ps.service_id === allocation.serviceId,
       );
@@ -881,11 +1130,32 @@ export function computeFixedCharges(
           label: "Service FMV",
           value: formatCents(allocation.fmv, currencyCode),
         },
-        {
-          label: "FMV proportion",
-          value: `×${allocation.proportion.toFixed(4)}`,
-        },
+        zeroFmvAllocation
+          ? {
+              label: "Allocation basis",
+              value: allocationBasisLabel(zeroFmvAllocation.basis),
+            }
+          : {
+              label: "FMV proportion",
+              value: `×${allocation.proportion.toFixed(4)}`,
+            },
       ];
+      if (zeroFmvAllocation) {
+        const weight = zeroFmvAllocation.weights[allocationIndex];
+        explanationInputs.push(
+          {
+            label: "Allocation weight",
+            value:
+              zeroFmvAllocation.basis === "stored_shares"
+                ? formatCents(weight, currencyCode)
+                : String(weight),
+          },
+          {
+            label: "Allocation share",
+            value: `×${allocation.proportion.toFixed(4)}`,
+          },
+        );
+      }
       const steps: string[] = [];
       if (planLevelEnableProration) {
         explanationInputs.push({
@@ -903,7 +1173,9 @@ export function computeFixedCharges(
       if (planLevelEnableProration && allocation.prorationFactor !== 1) {
         markers.push("proration");
       }
-      if (normalizedBundleServices.length > 1) {
+      if (zeroFmvAllocation) {
+        markers.push("fixed_fee_allocation_fallback");
+      } else if (normalizedBundleServices.length > 1) {
         markers.push("fmv_allocation");
       }
       if (customRateSource === "pricing_schedule" && hasCustomRateOverride) {
@@ -915,8 +1187,9 @@ export function computeFixedCharges(
         chargeType: "fixed",
         inputs: explanationInputs,
         steps,
-        note:
-          normalizedBundleServices.length > 1
+        note: zeroFmvAllocation
+          ? `The services have no catalog price, so the plan's full fixed fee is allocated by ${allocationBasisLabel(zeroFmvAllocation.basis).toLowerCase()}; cent remainders go to the largest fractions so the parts sum exactly to the fee.`
+          : normalizedBundleServices.length > 1
             ? "The plan's fixed fee is allocated across its services in proportion to their fair market value."
             : planLevelEnableProration && allocation.prorationFactor !== 1
               ? "Prorated — the service period covers part of the billing period."
@@ -1034,7 +1307,12 @@ export function computeFixedCharges(
   }
 
   if (!generatedCharges || generatedCharges.length === 0) {
-    return { charges: [], explanations: [], advanceGuard: null };
+    return {
+      charges: [],
+      explanations: [],
+      advanceGuard: null,
+      ...(blockers.length > 0 ? { blockers } : {}),
+    };
   }
 
   const requiresAdvanceTerminationSettlement =
@@ -1111,5 +1389,6 @@ export function computeFixedCharges(
       finalKeys.has(explanation.chargeKey),
     ),
     advanceGuard: positiveCharges.length > 0 ? advanceGuard : null,
+    ...(blockers.length > 0 ? { blockers } : {}),
   };
 }

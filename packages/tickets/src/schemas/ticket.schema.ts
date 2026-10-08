@@ -80,6 +80,9 @@ export const ticketUpdateSchema = ticketSchema.partial().omit({
   entered_by: true,
   entered_at: true,
   duplicated_from_ticket_id: true,
+  // Server-owned audit columns, stamped by ticketUpdateStamp.
+  updated_at: true,
+  updated_by: true,
 });
 
 export const ticketAttributesQuerySchema = z.object({
@@ -135,6 +138,13 @@ export const ticketListItemSchema = baseTicketSchema.extend({
   bundle_master_ticket_number: z.string().nullable().optional(),
   bundle_distinct_client_count: z.number().int().nonnegative().optional(),
   latest_activity_at: z.string().nullable().optional(),
+  latest_activity_actor: z
+    .object({
+      kind: z.enum(['user', 'client_user', 'contact', 'email_sender', 'system']),
+      name: z.string().nullable(),
+    })
+    .nullable()
+    .optional(),
   // ITIL-specific fields for list items (for priority calculation)
   itil_impact: z.number().int().min(1).max(5).nullable().optional(),
   itil_urgency: z.number().int().min(1).max(5).nullable().optional(),

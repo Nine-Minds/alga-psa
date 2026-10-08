@@ -1205,7 +1205,7 @@
     "composition": {
       "addContractLinesBeforeManaging": "Ajoutez des lignes de contrat à ce modèle avant de gérer les services.",
       "additionalPlans": "Forfaits supplémentaires",
-      "bucketSummary": "Banque : {{minutes}} min • Dépassement ${{overage}}",
+      "bucketSummary": "Banque : {{minutes}} min • Dépassement {{overage}}",
       "closeManager": "Fermer le gestionnaire",
       "editRate": "Modifier le tarif",
       "fixedFeeBundles": "Offres à frais fixes",

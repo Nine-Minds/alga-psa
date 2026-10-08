@@ -3042,6 +3042,15 @@
     "roleNamesPlaceholder": "t.ex. Tekniker, Dispatcher (matchas på namn när arbetsflödet körs)",
     "empty": "Välj minst en användare eller roll att avisera."
   },
+  "emailUserRecipientsEditor": {
+    "users": "Skicka e-post till användare",
+    "usersHint": "Sök användare",
+    "roles": "Skicka e-post till alla med dessa roller",
+    "rolesHint": "Lägg till en roll",
+    "roleNames": "Rollnamn (valfritt)",
+    "roleNamesPlaceholder": "t.ex. Technician, Dispatcher (matchas på namn när arbetsflödet körs)",
+    "empty": "Välj användare eller roller, eller välj ett ärende nedan."
+  },
   "emailRecipientsEditor": {
     "remove": "Ta bort {{email}}",
     "placeholder": "Skriv en adress och tryck på Enter, t.ex. Ada Lovelace <ada@example.com>",

@@ -137,6 +137,25 @@ Domain logic lives in `@alga-psa/*` packages under `packages/`. Some are **pre-b
 - Nx caches build outputs — subsequent runs are near-instant
 - See [Package Build System](../architecture/package-build-system.md) for full details on which packages use which mode and how to flip a package
 
+### Development sign-in credentials
+
+On first development startup, the server replaces Glinda's known seed placeholder
+with a generated password and prints the credential banner only after the
+database update succeeds. Later startups preserve that password so worktrees
+sharing a database do not invalidate one another's credentials.
+
+To recover a development database whose Glinda password is already unknown,
+choose a temporary password and explicitly provision it for one server start.
+Pass `DEV_USER_PASSWORD` and `DEV_USER_PASSWORD_PROVISION=true` in that start's
+environment only. The server compares the account hash it read with the value it
+updates, then prints the credential banner after a successful update. If another
+initializer changes the account first, this process will not print its candidate
+credential. Remove both variables after the banner appears; normal restarts then
+preserve the provisioned password and do not rotate it. The downstream sign-in
+smoke should use the password from that successful banner.
+
+Keep the recovery password out of committed environment files and reports.
+
 ### 2. Branch Strategy
 
 - `main`: Production-ready code

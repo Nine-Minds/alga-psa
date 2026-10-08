@@ -523,10 +523,10 @@ export const templateVariableSeed: TemplateVariableSeedCategory[] = [
           {
             "path": "approvalLink",
             "type": "url",
-            "description": "Link for MSP staff to review and approve the request.",
-            "example": "https://app.algapsa.com/msp/schedule",
+            "description": "Deep link that opens this request in the schedule page's Appointment Requests panel so MSP staff can review and approve it.",
+            "example": "https://app.algapsa.com/msp/schedule?requestId=3f2b8c1e-6a4d-4e7b-9c1a-2d5e8f0a7b64",
             "availability": "used",
-            "notes": "Optional. 'Review & Approve' button shown only inside {{#if approvalLink}}. Both call sites set it to `${NEXT_PUBLIC_APP_URL}/msp/schedule`."
+            "notes": "Optional. 'Review & Approve' button shown only inside {{#if approvalLink}}. Both call sites (portal action and public route) build it with buildAppointmentRequestReviewUrl from @alga-psa/core: `<app base URL>/msp/schedule?requestId=<appointment_request_id>`. An unknown or stale id opens the panel with nothing selected."
           },
           {
             "path": "submittedAt",
@@ -3305,6 +3305,408 @@ export const templateVariableSeed: TemplateVariableSeedCategory[] = [
             "example": "",
             "availability": "used",
             "notes": "Referenced ONLY in the pl translation; NOT assembled in handleTicketCreated, so it renders empty for Polish recipients."
+          },
+          {
+            "path": "ticket.url",
+            "type": "string",
+            "description": "MSP deep link to the ticket (the 'View Ticket' button).",
+            "example": "https://app.example.com/msp/tickets/sample-ticket-id",
+            "availability": "used"
+          },
+          {
+            "path": "ticket.createdDetails",
+            "type": "string",
+            "description": "Combined '<createdAt> · <createdBy>' string; assembled but the template composes the parts itself.",
+            "example": "May 12, 2026, 3:04 PM EDT · John Doe",
+            "availability": "available-unused"
+          },
+          {
+            "path": "ticket.descriptionText",
+            "type": "string",
+            "description": "Plain-text version of the description; assembled but not referenced.",
+            "example": "Toner is jammed and red error light is on.",
+            "availability": "available-unused"
+          },
+          {
+            "path": "ticket.descriptionHtml",
+            "type": "string",
+            "description": "HTML version of the description; assembled separately but the template uses ticket.description.",
+            "example": "<p>Toner is jammed…</p>",
+            "availability": "available-unused"
+          },
+          {
+            "path": "ticket.requesterEmail",
+            "type": "string",
+            "description": "Requester email in isolation; assembled but unused.",
+            "example": "john.doe@acme.com",
+            "availability": "available-unused"
+          },
+          {
+            "path": "ticket.requesterPhone",
+            "type": "string",
+            "description": "Requester phone in isolation; assembled but unused.",
+            "example": "+1 (555) 010-1234",
+            "availability": "available-unused"
+          },
+          {
+            "path": "ticket.category",
+            "type": "string",
+            "description": "Top-level category; template uses categoryDetails instead.",
+            "example": "Hardware",
+            "availability": "available-unused"
+          },
+          {
+            "path": "ticket.subcategory",
+            "type": "string",
+            "description": "Subcategory; template uses categoryDetails instead.",
+            "example": "Printer",
+            "availability": "available-unused"
+          }
+        ]
+      },
+      {
+        "templateName": "ticket-board-created",
+        "variables": [
+          {
+            "path": "ticket.title",
+            "type": "string",
+            "description": "The ticket's subject/title line; appears in the subject and header.",
+            "example": "Printer not working on 3rd floor",
+            "availability": "used"
+          },
+          {
+            "path": "ticket.priority",
+            "type": "string",
+            "description": "Priority level name; appears in the subject and the priority badge.",
+            "example": "High",
+            "availability": "used"
+          },
+          {
+            "path": "ticket.metaLine",
+            "type": "string",
+            "description": "One-line ticket#/priority/status summary.",
+            "example": "Ticket #TCK-1234 · High Priority · New",
+            "availability": "used"
+          },
+          {
+            "path": "ticket.id",
+            "type": "string",
+            "description": "Human-readable ticket number on the 'Ticket #' badge.",
+            "example": "TCK-1234",
+            "availability": "used"
+          },
+          {
+            "path": "ticket.clientName",
+            "type": "string",
+            "description": "Client/company the ticket belongs to; shown in the intro and text header.",
+            "example": "Acme Corporation",
+            "availability": "used"
+          },
+          {
+            "path": "ticket.priorityColor",
+            "type": "string",
+            "description": "Hex color for the priority badge (defaults to #8A4DEA).",
+            "example": "#dc2626",
+            "availability": "used"
+          },
+          {
+            "path": "ticket.status",
+            "type": "string",
+            "description": "Current workflow status name.",
+            "example": "New",
+            "availability": "used"
+          },
+          {
+            "path": "ticket.createdAt",
+            "type": "string",
+            "description": "Formatted creation date/time of the ticket (Intl date-time with short timezone).",
+            "example": "May 12, 2026, 3:04 PM EDT",
+            "availability": "used"
+          },
+          {
+            "path": "ticket.createdBy",
+            "type": "string",
+            "description": "Full name of who created the ticket (or 'System').",
+            "example": "John Doe",
+            "availability": "used"
+          },
+          {
+            "path": "ticket.assignedToName",
+            "type": "string",
+            "description": "Full name of the assigned agent.",
+            "example": "Jane Smith",
+            "availability": "used"
+          },
+          {
+            "path": "ticket.assignedToEmail",
+            "type": "string",
+            "description": "Email of the assigned agent (or 'Not assigned'/'Not provided').",
+            "example": "jane.smith@example.com",
+            "availability": "used"
+          },
+          {
+            "path": "ticket.assignedDetails",
+            "type": "string",
+            "description": "Assigned agent name with email, for plain text.",
+            "example": "Jane Smith (jane.smith@example.com)",
+            "availability": "used"
+          },
+          {
+            "path": "ticket.requesterName",
+            "type": "string",
+            "description": "Name of the requesting contact.",
+            "example": "John Doe",
+            "availability": "used"
+          },
+          {
+            "path": "ticket.requesterContact",
+            "type": "string",
+            "description": "Requester email and phone joined for the HTML contact block.",
+            "example": "john.doe@acme.com · +1 (555) 010-1234",
+            "availability": "used"
+          },
+          {
+            "path": "ticket.requesterDetails",
+            "type": "string",
+            "description": "Requester name/email/phone joined for plain text.",
+            "example": "John Doe · john.doe@acme.com · +1 (555) 010-1234",
+            "availability": "used"
+          },
+          {
+            "path": "ticket.board",
+            "type": "string",
+            "description": "Board/queue the ticket lives on.",
+            "example": "Help Desk",
+            "availability": "used"
+          },
+          {
+            "path": "ticket.categoryDetails",
+            "type": "string",
+            "description": "Category / subcategory combined.",
+            "example": "Hardware / Printer",
+            "availability": "used"
+          },
+          {
+            "path": "ticket.locationSummary",
+            "type": "string",
+            "description": "Client site name and address.",
+            "example": "Acme HQ • 100 Main St, Springfield, IL 62701 US",
+            "availability": "used"
+          },
+          {
+            "path": "ticket.description",
+            "type": "string",
+            "description": "Ticket description body (HTML-rendered via {{{ }}}); falls back to 'No description provided.'.",
+            "example": "Toner is jammed and red error light is on.",
+            "availability": "used"
+          },
+          {
+            "path": "ticket.url",
+            "type": "string",
+            "description": "MSP deep link to the ticket (the 'View Ticket' button).",
+            "example": "https://app.example.com/msp/tickets/sample-ticket-id",
+            "availability": "used"
+          },
+          {
+            "path": "ticket.createdDetails",
+            "type": "string",
+            "description": "Combined '<createdAt> · <createdBy>' string; assembled but the template composes the parts itself.",
+            "example": "May 12, 2026, 3:04 PM EDT · John Doe",
+            "availability": "available-unused"
+          },
+          {
+            "path": "ticket.descriptionText",
+            "type": "string",
+            "description": "Plain-text version of the description; assembled but not referenced.",
+            "example": "Toner is jammed and red error light is on.",
+            "availability": "available-unused"
+          },
+          {
+            "path": "ticket.descriptionHtml",
+            "type": "string",
+            "description": "HTML version of the description; assembled separately but the template uses ticket.description.",
+            "example": "<p>Toner is jammed…</p>",
+            "availability": "available-unused"
+          },
+          {
+            "path": "ticket.requesterEmail",
+            "type": "string",
+            "description": "Requester email in isolation; assembled but unused.",
+            "example": "john.doe@acme.com",
+            "availability": "available-unused"
+          },
+          {
+            "path": "ticket.requesterPhone",
+            "type": "string",
+            "description": "Requester phone in isolation; assembled but unused.",
+            "example": "+1 (555) 010-1234",
+            "availability": "available-unused"
+          },
+          {
+            "path": "ticket.category",
+            "type": "string",
+            "description": "Top-level category; template uses categoryDetails instead.",
+            "example": "Hardware",
+            "availability": "available-unused"
+          },
+          {
+            "path": "ticket.subcategory",
+            "type": "string",
+            "description": "Subcategory; template uses categoryDetails instead.",
+            "example": "Printer",
+            "availability": "available-unused"
+          }
+        ]
+      },
+      {
+        "templateName": "ticket-board-status-entered",
+        "variables": [
+          {
+            "path": "ticket.title",
+            "type": "string",
+            "description": "The ticket's subject/title line; appears in the subject and header.",
+            "example": "Printer not working on 3rd floor",
+            "availability": "used"
+          },
+          {
+            "path": "ticket.priority",
+            "type": "string",
+            "description": "Priority level name; appears in the subject and the priority badge.",
+            "example": "High",
+            "availability": "used"
+          },
+          {
+            "path": "ticket.metaLine",
+            "type": "string",
+            "description": "One-line ticket#/priority/status summary.",
+            "example": "Ticket #TCK-1234 · High Priority · New",
+            "availability": "used"
+          },
+          {
+            "path": "ticket.id",
+            "type": "string",
+            "description": "Human-readable ticket number on the 'Ticket #' badge.",
+            "example": "TCK-1234",
+            "availability": "used"
+          },
+          {
+            "path": "ticket.clientName",
+            "type": "string",
+            "description": "Client/company the ticket belongs to; shown in the intro and text header.",
+            "example": "Acme Corporation",
+            "availability": "used"
+          },
+          {
+            "path": "ticket.priorityColor",
+            "type": "string",
+            "description": "Hex color for the priority badge (defaults to #8A4DEA).",
+            "example": "#dc2626",
+            "availability": "used"
+          },
+          {
+            "path": "ticket.status",
+            "type": "string",
+            "description": "Current workflow status name.",
+            "example": "New",
+            "availability": "used"
+          },
+          {
+            "path": "ticket.previousStatus",
+            "type": "string",
+            "description": "Name of the status the ticket left.",
+            "example": "In Progress",
+            "availability": "used"
+          },
+          {
+            "path": "ticket.enteredStatus",
+            "type": "string",
+            "description": "Name of the status the ticket just entered.",
+            "example": "Resolved",
+            "availability": "used"
+          },
+          {
+            "path": "ticket.createdAt",
+            "type": "string",
+            "description": "Formatted creation date/time of the ticket (Intl date-time with short timezone).",
+            "example": "May 12, 2026, 3:04 PM EDT",
+            "availability": "used"
+          },
+          {
+            "path": "ticket.createdBy",
+            "type": "string",
+            "description": "Full name of who created the ticket (or 'System').",
+            "example": "John Doe",
+            "availability": "used"
+          },
+          {
+            "path": "ticket.assignedToName",
+            "type": "string",
+            "description": "Full name of the assigned agent.",
+            "example": "Jane Smith",
+            "availability": "used"
+          },
+          {
+            "path": "ticket.assignedToEmail",
+            "type": "string",
+            "description": "Email of the assigned agent (or 'Not assigned'/'Not provided').",
+            "example": "jane.smith@example.com",
+            "availability": "used"
+          },
+          {
+            "path": "ticket.assignedDetails",
+            "type": "string",
+            "description": "Assigned agent name with email, for plain text.",
+            "example": "Jane Smith (jane.smith@example.com)",
+            "availability": "used"
+          },
+          {
+            "path": "ticket.requesterName",
+            "type": "string",
+            "description": "Name of the requesting contact.",
+            "example": "John Doe",
+            "availability": "used"
+          },
+          {
+            "path": "ticket.requesterContact",
+            "type": "string",
+            "description": "Requester email and phone joined for the HTML contact block.",
+            "example": "john.doe@acme.com · +1 (555) 010-1234",
+            "availability": "used"
+          },
+          {
+            "path": "ticket.requesterDetails",
+            "type": "string",
+            "description": "Requester name/email/phone joined for plain text.",
+            "example": "John Doe · john.doe@acme.com · +1 (555) 010-1234",
+            "availability": "used"
+          },
+          {
+            "path": "ticket.board",
+            "type": "string",
+            "description": "Board/queue the ticket lives on.",
+            "example": "Help Desk",
+            "availability": "used"
+          },
+          {
+            "path": "ticket.categoryDetails",
+            "type": "string",
+            "description": "Category / subcategory combined.",
+            "example": "Hardware / Printer",
+            "availability": "used"
+          },
+          {
+            "path": "ticket.locationSummary",
+            "type": "string",
+            "description": "Client site name and address.",
+            "example": "Acme HQ • 100 Main St, Springfield, IL 62701 US",
+            "availability": "used"
+          },
+          {
+            "path": "ticket.description",
+            "type": "string",
+            "description": "Ticket description body (HTML-rendered via {{{ }}}); falls back to 'No description provided.'.",
+            "example": "Toner is jammed and red error light is on.",
+            "availability": "used"
           },
           {
             "path": "ticket.url",

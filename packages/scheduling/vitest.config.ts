@@ -20,6 +20,8 @@ export default defineConfig({
       'tests/SchedulePage.accessRetry.test.tsx',
       'tests/SchedulePage.dialogRestore.test.tsx',
       'tests/SchedulePage.headerStability.test.tsx',
+      'tests/SchedulePage.requestDeepLink.test.tsx',
+      'tests/AppointmentRequestsPanel.highlight.test.tsx',
       'tests/entryPopup.slotDraftPersistence.test.tsx',
       'tests/entryPopup.assigneeOptions.test.tsx',
       'tests/entryPopup.teamsMeetingRefresh.test.tsx',

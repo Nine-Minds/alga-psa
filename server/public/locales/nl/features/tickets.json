@@ -177,6 +177,8 @@
     "tags": "Labels",
     "sla": "SLA",
     "updated": "Bijgewerkt",
+    "updatedAtBy": "Bijgewerkt {{time}} door {{name}}",
+    "byName": "door {{name}}",
     "openInNewTab": "Openen in nieuw tabblad",
     "actions": "Acties",
     "linkedAssets": "Gekoppelde apparaten",

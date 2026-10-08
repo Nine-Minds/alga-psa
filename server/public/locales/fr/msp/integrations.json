@@ -1,6 +1,37 @@
 {
   "integrations": {
     "accounting": {
+      "bulk": {
+        "button": "Mappage en masse",
+        "columns": {
+          "ignore": "Ignorer",
+          "select": "Enregistrer",
+          "status": "Statut"
+        },
+        "exit": "Retour aux mappages",
+        "filter": {
+          "all": "Tous",
+          "mapped": "Mappé",
+          "unmapped": "Non mappé"
+        },
+        "ignoreAll": "Tout ignorer",
+        "noRows": "Aucune ligne ne correspond au filtre actuel.",
+        "possibleMatch": "Correspondance possible",
+        "rowIgnoreAria": "Ignorer {{name}}",
+        "rowSelectAria": "Inclure {{name}} dans l'enregistrement",
+        "saveAll": "Tout enregistrer",
+        "searchPlaceholder": "Rechercher des services et des cibles...",
+        "selectAll": "Tout sélectionner",
+        "status": {
+          "ignored": "Ignoré",
+          "mapped": "Mappé",
+          "noResult": "Aucun résultat n'a été renvoyé pour cette ligne.",
+          "pending": "En attente",
+          "saved": "Enregistré"
+        },
+        "suggested": "Suggéré",
+        "toSave": "{{total}} à enregistrer"
+      },
       "dialog": {
         "cancel": "Annuler",
         "enterPlaceholder": "Saisir {{field}}...",

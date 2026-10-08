@@ -1205,7 +1205,7 @@
     "composition": {
       "addContractLinesBeforeManaging": "Agregue líneas de contrato a esta plantilla antes de gestionar los servicios.",
       "additionalPlans": "Planes adicionales",
-      "bucketSummary": "Bloque: {{minutes}} min • Exceso ${{overage}}",
+      "bucketSummary": "Bloque: {{minutes}} min • Exceso {{overage}}",
       "closeManager": "Cerrar gestor",
       "editRate": "Editar tarifa",
       "fixedFeeBundles": "Paquetes de tarifa fija",

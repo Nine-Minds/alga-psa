@@ -5,6 +5,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { tenantDb } from '@alga-psa/db';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { TicketModel } from '@shared/models/ticketModel';
+import { silentTicketCreation } from '@alga-psa/shared/lib/tickets/ticketLifecycleEvents';
 
 const HOOK_TIMEOUT = 180_000;
 
@@ -267,7 +268,7 @@ describe('AlgaDesk ticket create/update integration', () => {
           source: 'web_app',
         },
         fixture.tenantId,
-        trx,
+        trx, {}, silentTicketCreation('test fixture'),
       );
 
       createdTicketId = created.ticket_id;

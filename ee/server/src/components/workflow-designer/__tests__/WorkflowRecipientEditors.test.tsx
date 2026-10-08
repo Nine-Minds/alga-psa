@@ -14,7 +14,7 @@ vi.mock('../WorkflowActionInputFixedPicker', () => ({
 import type { MappingValue } from '@alga-psa/workflows/runtime';
 import {
   WorkflowEmailRecipientsEditor,
-  WorkflowNotificationRecipientsEditor,
+  WorkflowUserRecipientsEditor,
   parseEmailRecipients,
   parseRoleNames,
   readEmailRecipientsLiteral,
@@ -91,14 +91,15 @@ describe('email recipients literal helpers', () => {
   });
 });
 
-describe('WorkflowNotificationRecipientsEditor', () => {
+describe('WorkflowUserRecipientsEditor', () => {
   it('writes typed role names alongside the picked users and roles', () => {
     const onChange = vi.fn();
     render(
-      <WorkflowNotificationRecipientsEditor
+      <WorkflowUserRecipientsEditor
         idPrefix="notify"
         value={{ userIds: ['u1'], roleIds: ['r1'], roleNames: [] }}
         onChange={onChange}
+        purpose="notify"
       />
     );
     expect(screen.getByTestId('notify-users-multi').textContent).toBe('u1');
@@ -106,6 +107,49 @@ describe('WorkflowNotificationRecipientsEditor', () => {
 
     fireEvent.change(document.getElementById('notify-role-names')!, { target: { value: 'Technician, Dispatcher' } });
     expect(onChange).toHaveBeenLastCalledWith({ user_ids: ['u1'], role_ids: ['r1'], role_names: ['Technician', 'Dispatcher'] });
+  });
+
+  it('keeps the notify copy for purpose="notify"', () => {
+    render(
+      <WorkflowUserRecipientsEditor
+        idPrefix="notify"
+        value={{ userIds: [], roleIds: [], roleNames: [] }}
+        onChange={vi.fn()}
+        purpose="notify"
+      />
+    );
+    expect(screen.getByText('Choose at least one user or role to notify.')).toBeTruthy();
+    expect(screen.getByText('Notify everyone with these roles')).toBeTruthy();
+  });
+
+  it('shows the email copy and writes { user_ids, role_ids, role_names } for purpose="email"', () => {
+    const onChange = vi.fn();
+    render(
+      <WorkflowUserRecipientsEditor
+        idPrefix="mail"
+        value={{ userIds: ['u1'], roleIds: [], roleNames: [] }}
+        onChange={onChange}
+        purpose="email"
+      />
+    );
+    expect(screen.getByText('Email everyone with these roles')).toBeTruthy();
+    expect(screen.queryByText('Notify everyone with these roles')).toBeNull();
+    expect(document.getElementById('mail-email-user-recipients')).not.toBeNull();
+
+    fireEvent.change(document.getElementById('mail-role-names')!, { target: { value: 'Technician' } });
+    expect(onChange).toHaveBeenLastCalledWith({ user_ids: ['u1'], role_names: ['Technician'] });
+  });
+
+  it('shows the email empty hint when nothing is chosen', () => {
+    render(
+      <WorkflowUserRecipientsEditor
+        idPrefix="mail"
+        value={{ userIds: [], roleIds: [], roleNames: [] }}
+        onChange={vi.fn()}
+        purpose="email"
+      />
+    );
+    expect(screen.getByText('Choose users or roles, or pick a ticket below.')).toBeTruthy();
   });
 });
 

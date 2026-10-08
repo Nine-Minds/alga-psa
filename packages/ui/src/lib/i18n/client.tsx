@@ -4,7 +4,7 @@
 
 'use client';
 
-import { createContext, useContext, useState, useEffect, useMemo, useCallback, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useMemo, ReactNode } from 'react';
 import i18next from 'i18next';
 import { initReactI18next, useTranslation as useI18nextTranslation } from 'react-i18next';
 import HttpBackend from 'i18next-http-backend';
@@ -30,7 +30,15 @@ import { useDateFormat } from '../dateFormat/useDateFormat';
  * server text rendered in one language and client text in another.
  */
 let i18nInitialized = false;
-let i18nInitialization: Promise<void> | null = null;
+type I18nInitializationAttempt = {
+  promise: Promise<void>;
+  state: 'pending' | 'timed-out' | 'ready' | 'failed';
+};
+let i18nInitialization: I18nInitializationAttempt | null = null;
+let i18nReconciliation: Promise<void> = Promise.resolve();
+// A fallback deadline for the UI readiness gate; it is not a diagnosis that
+// this timeout caused any particular browser bootstrap failure.
+const I18N_READINESS_TIMEOUT_MS = 10_000;
 
 const BOOTSTRAP_LOADING_TEXT: Record<
   SupportedLocale,
@@ -146,52 +154,109 @@ async function ensureNamespacesLoaded(
   }
 }
 
+async function reconcileProviderI18n(
+  locale: SupportedLocale,
+  preloaded: PreloadedNamespaceResources | undefined,
+  namespaces: string[] | undefined,
+  isProviderActive: () => boolean,
+) {
+  // Keep provider-specific locale/resource work ordered. If an old provider's
+  // language change is already in flight when it unmounts, the current
+  // provider's reconciliation runs after it and becomes the final state.
+  const reconciliation = i18nReconciliation.then(async () => {
+    if (!isProviderActive()) return;
+
+    applyPreloadedResources(locale, preloaded);
+    if (i18next.language !== locale) {
+      await i18next.changeLanguage(locale);
+    }
+  });
+  i18nReconciliation = reconciliation.catch(() => undefined);
+  await reconciliation;
+
+  // Namespace loads do not mutate the active language, so do not keep the
+  // locale-reconciliation queue locked while a stale provider's load is
+  // pending. Cleanup skips loads that have not started yet.
+  if (!isProviderActive()) return;
+  await ensureNamespacesLoaded(locale, namespaces);
+}
+
 async function initI18n(
   locale?: SupportedLocale,
   preloaded?: PreloadedNamespaceResources,
   namespaces?: string[],
+  isProviderActive: () => boolean = () => true,
 ) {
   const resolvedLocale = (locale || LOCALE_CONFIG.defaultLocale) as SupportedLocale;
   if (!i18nInitialized) {
+    if (i18nInitialization?.state === 'timed-out') {
+      // Render the provider's fallback immediately, but keep its current
+      // inputs attached to the shared attempt for reconciliation on settlement.
+      const attempt = i18nInitialization;
+      void attempt.promise
+        .then(() => reconcileProviderI18n(
+          resolvedLocale,
+          preloaded,
+          namespaces,
+          isProviderActive,
+        ))
+        .catch((error) => {
+          if (isProviderActive()) {
+            console.error('Failed to initialize translations:', error);
+          }
+        });
+      return;
+    }
+
+    // React StrictMode mounts effects twice in development. Share the in-flight
+    // init so concurrent effects/providers cannot call i18next.init twice.
     if (!i18nInitialization) {
-      // React Strict Mode replays mount effects in development. Share the
-      // in-flight init promise so both effects don't initialize the singleton
-      // twice while its backend is still loading.
+      // Seed only when the server actually embedded namespace data — an empty
+      // seed would mark the bundle as loaded and mask fetched translations.
       const hasPreloadedContent = preloaded && Object.keys(preloaded).length > 0;
       const seededResources = hasPreloadedContent
         ? { [resolvedLocale]: preloaded }
         : undefined;
 
-      i18nInitialization = i18next
+      const attempt: I18nInitializationAttempt = {
+        state: 'pending',
+        // The promise is assigned synchronously before its work starts so
+        // another provider cannot enter i18next.init in the same tick.
+        promise: Promise.resolve(),
+      };
+      i18nInitialization = attempt;
+      const initialization = i18next
         .use(HttpBackend)
         .use(initReactI18next)
         .init({
           ...I18N_CONFIG,
           lng: resolvedLocale,
-          // Seed the route's namespaces so useTranslation() resolves them without a
-          // network round-trip; the HTTP backend still covers anything not seeded.
+          react: { useSuspense: false },
           resources: seededResources,
           partialBundledLanguages: true,
           backend: {
             loadPath: '/locales/{{lng}}/{{ns}}.json',
           },
-        })
+        });
+      attempt.promise = Promise.resolve(initialization)
         .then(() => {
-          i18nInitialized = true;
+          if (i18nInitialization === attempt) {
+            attempt.state = 'ready';
+            i18nInitialized = true;
+          }
         })
         .catch((error) => {
-          i18nInitialization = null;
+          attempt.state = 'failed';
+          // Only the attempt that owns the slot may release it. A stale
+          // completion cannot clear a newer initialization.
+          if (i18nInitialization === attempt) i18nInitialization = null;
           throw error;
         });
     }
-    await i18nInitialization;
+    await i18nInitialization.promise;
   }
 
-  applyPreloadedResources(resolvedLocale, preloaded);
-  if (locale && i18next.language !== locale) {
-    await i18next.changeLanguage(locale);
-  }
-  await ensureNamespacesLoaded(resolvedLocale, namespaces);
+  await reconcileProviderI18n(resolvedLocale, preloaded, namespaces, isProviderActive);
 }
 
 /**
@@ -215,10 +280,10 @@ interface I18nProviderProps {
   initialLocale?: SupportedLocale;
   portal?: 'msp' | 'client';
   namespaces?: string[];
-  /** Render children after i18next starts, even while route namespaces load. */
-  renderChildrenWhileLoading?: boolean;
   /** Server-embedded namespace resources for the current route (no HTTP fetch). */
   preloadedResources?: PreloadedNamespaceResources;
+  /** Render auth children while i18next initializes in the background. */
+  renderChildrenWhileLoading?: boolean;
 }
 
 export function I18nProvider({
@@ -229,11 +294,6 @@ export function I18nProvider({
   preloadedResources,
   renderChildrenWhileLoading = false,
 }: I18nProviderProps) {
-  // Register only when a provider renders, including during SSR. Registering
-  // on module import makes standalone controls suspend on an uninitialized
-  // engine even though no provider exists to start loading its resources.
-  initReactI18next.init(i18next);
-
   const [locale, setLocaleState] = useState<SupportedLocale>(
     initialLocale || (LOCALE_CONFIG.defaultLocale as SupportedLocale)
   );
@@ -243,11 +303,9 @@ export function I18nProvider({
   // this array inline would otherwise reload namespaces on every render.
   const namespaceKey = namespaces ? namespaces.join(',') : '';
 
-  // A full-page sign-in response may be used before hydration (or while the
-  // locale backend is slow). Start the shared initialization synchronously in
-  // the browser render so useTranslation has its normal i18next instance
-  // before auth children render. The shared promise keeps Strict Mode replay
-  // from initializing the singleton twice.
+  // Auth pages can render their forms while the backend loads. Install the
+  // shared i18next instance synchronously so useTranslation is ready before
+  // those children render; the effect below still owns the readiness fallback.
   if (renderChildrenWhileLoading && typeof window !== 'undefined' && !i18nInitialization) {
     void initI18n(
       locale,
@@ -258,29 +316,50 @@ export function I18nProvider({
 
   useEffect(() => {
     let cancelled = false;
+    let readinessTimer: ReturnType<typeof setTimeout> | undefined;
     // The route's namespaces are awaited as part of initialization rather than
-    // in a follow-up effect, so `isInitialized` means "translations are ready"
-    // and not merely "i18next exists". Children used to render in the gap.
-    // initI18n installs react-i18next synchronously before its first await. The
-    // auth screen can then render its forms with useSuspense:false while the
-    // locale backend is still responding.
-    const initialization = initI18n(
+    // in a follow-up effect. The readiness deadline below is a fallback for a
+    // request that never settles; it does not mean translations are ready.
+    const readiness = initI18n(
       locale,
       preloadedResources,
       namespaceKey ? namespaceKey.split(',') : undefined,
+      () => !cancelled,
     );
-    initialization.then(
-      () => {
+    const initializationAttempt = i18nInitialization;
+    const readinessDeadline = new Promise<never>((_, reject) => {
+      readinessTimer = setTimeout(() => {
+        if (
+          initializationAttempt &&
+          i18nInitialization === initializationAttempt &&
+          initializationAttempt.state === 'pending'
+        ) {
+          // Keep ownership of the singleton while its init promise is pending.
+          // This prevents a timed-out provider remount from overlapping init.
+          i18nInitialization.state = 'timed-out';
+        }
+        reject(new Error(`Translation initialization exceeded ${I18N_READINESS_TIMEOUT_MS}ms`));
+      }, I18N_READINESS_TIMEOUT_MS);
+    });
+
+    Promise.race([readiness, readinessDeadline])
+      .then(() => {
         if (!cancelled) setIsInitialized(true);
-      },
-      (error) => {
-        // Initialization failures are distinct from missing-resource errors,
-        // which i18next reports through the backend callback and resolves.
-        console.error('Failed to initialize translations:', error);
-      },
-    );
+      })
+      .catch((error) => {
+        // Initialization failures must not strand sign-in or other pages behind
+        // the bootstrap screen. i18next can still render keys/default values.
+        if (!cancelled) {
+          console.error('Failed to initialize translations:', error);
+          setIsInitialized(true);
+        }
+      })
+      .finally(() => {
+        if (readinessTimer) clearTimeout(readinessTimer);
+      });
     return () => {
       cancelled = true;
+      if (readinessTimer) clearTimeout(readinessTimer);
     };
   }, [locale, preloadedResources, namespaceKey]);
 
@@ -370,34 +449,8 @@ export function useOptionalI18n() {
 /**
  * Hook for translations (wrapper around react-i18next)
  */
-export function useTranslation(
-  namespace?: string | string[],
-  options?: Parameters<typeof useI18nextTranslation>[1],
-) {
-  const translation = useI18nextTranslation(namespace as any, options as any);
-  const [, i18n] = translation;
-  // Keep this hook unconditional across initialization and the callback stable:
-  // sign-in alert effects depend on t and update state while resources load.
-  const t = useCallback((...args: any[]) => {
-    const [key, translationOptions] = args;
-    // During the auth bootstrap, i18next has been attached to React but its
-    // backend may not have returned yet. Preserve the call site's fallback
-    // copy so the server-rendered controls remain labelled and usable.
-    if (typeof translationOptions === 'string') return translationOptions;
-    if (typeof translationOptions?.defaultValue === 'string') {
-      return translationOptions.defaultValue;
-    }
-    return Array.isArray(key) ? key[0] : key;
-  }, []);
-
-  // Once initialized, preserve react-i18next's translator and its complete
-  // overloads (including defaultValue plus interpolation/plural options).
-  if (i18n?.isInitialized) return translation;
-
-  const wrapped = Object.assign([...translation], translation) as typeof translation;
-  wrapped[0] = t as typeof translation[0];
-  wrapped.t = t as typeof translation.t;
-  return wrapped;
+export function useTranslation(namespace?: string | string[], options?: any) {
+  return useI18nextTranslation(namespace as any, options);
 }
 
 /**
@@ -519,8 +572,8 @@ export function useFormatters() {
  * Translate outside a React tree (server-action launchers, imperative toasts).
  *
  * Uses the same module-level i18next instance the hooks do, and relies on the
- * caller's `defaultValue` until the namespace is loaded, so it is safe to call
- * before the provider mounts. Prefer `useTranslation` inside components.
+ * caller's `defaultValue` until the namespace is loaded. Prefer `useTranslation`
+ * inside components.
  */
 export function translate(
   namespace: string,

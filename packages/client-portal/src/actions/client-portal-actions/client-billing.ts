@@ -4,6 +4,7 @@
 
 import { getConnection, createTenantKnex, withTransaction, tenantDb, resolveEffectiveTimeZone } from '@alga-psa/db';
 import { toCalendarDateString, toCalendarDateStringInTimeZone } from '@alga-psa/core';
+import { buildDocumentFileName } from '@alga-psa/core/fileNames';
 import { Knex } from 'knex';
 import {
   IClientContractLine,
@@ -852,6 +853,7 @@ export interface DownloadPdfResult {
   fileId?: string;
   pdfData?: number[];
   invoiceNumber?: string;
+  fileName?: string;
   error?: string;
 }
 
@@ -1215,13 +1217,18 @@ export const downloadClientQuotePdf = withAuth(async (
       })
       .whereNotNull('d.file_id')
       .orderBy('da.created_at', 'desc')
-      .select('d.file_id')
-      .first<{ file_id: string } | undefined>();
+      .select('d.file_id', 'd.document_name')
+      .first<{ file_id: string; document_name: string } | undefined>();
     scopedDb.tenantJoin(docQuery, 'documents as d', 'da.document_id', 'd.document_id');
     const doc = await docQuery;
 
-    if (doc?.file_id) {
-      return { success: true, fileId: doc.file_id };
+    const expectedFileName = buildDocumentFileName(quote.title, `Quote_${quote.quote_number ?? quote.quote_id}`);
+    if (doc?.file_id && doc.document_name === expectedFileName) {
+      return {
+        success: true,
+        fileId: doc.file_id,
+        fileName: expectedFileName,
+      };
     }
 
     // No stored PDF yet — generate one on the fly
@@ -1233,7 +1240,11 @@ export const downloadClientQuotePdf = withAuth(async (
       userId: user.user_id,
     });
 
-    return { success: true, fileId: fileRecord.file_id };
+    return {
+      success: true,
+      fileId: fileRecord.file_id,
+      fileName: expectedFileName,
+    };
   } catch (error) {
     const expected = billingActionErrorFrom(error);
     if (expected) {

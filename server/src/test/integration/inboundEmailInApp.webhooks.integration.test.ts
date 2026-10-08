@@ -47,6 +47,15 @@ vi.mock('@alga-psa/core/secrets', () => ({
   })),
 }));
 
+// Reopen transitions publish TICKET_STATUS_CHANGED/TICKET_REOPENED after commit. This file
+// mocks @alga-psa/core/secrets without getSecret, so a real publish would build the
+// process-wide EventBus singleton (globalThis) around that broken mock and leak it into
+// later files in the same worker. Nothing here asserts on bus delivery.
+vi.mock('@alga-psa/event-bus/publishers', () => ({
+  publishEvent: vi.fn(async () => undefined),
+  publishWorkflowEvent: vi.fn(async () => undefined),
+}));
+
 vi.mock('@alga-psa/db/admin', () => ({
   getAdminConnection: vi.fn(async () => {
     if (!db) throw new Error('Test DB not initialized');

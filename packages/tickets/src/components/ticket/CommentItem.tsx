@@ -226,6 +226,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
   const isBundleMirror = Boolean(conversation.bundle_mirror_source);
   const isSystemAuthor = resolvedAuthor.source === 'system';
 
+  // LEVERAGE: pattern comment-author-label — same author-label rules as resolveLatestActivityActor (lib/latestActivityActor.ts)
   const getAuthorName = () => {
     if (isSystemAuthor) {
       return isBundleMirror ? t('conversation.bundledUpdate') : t('conversation.systemAuthor', 'System');
