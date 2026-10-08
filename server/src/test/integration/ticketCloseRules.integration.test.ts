@@ -736,14 +736,14 @@ describe('ticket close rules', () => {
   it('T047: reopening clears closure fields and publishes TICKET_REOPENED', async () => {
     const ticketId = await insertTicket(db, fixture);
 
-    await db.transaction((trx) =>
+    await withTransaction(db, (trx) =>
       updateTicketInTransaction(trx, userRef.user, fixture.tenantId, ticketId, {
         status_id: fixture.closedStatusId,
       })
     );
     publishWorkflowEventMock.mockClear();
 
-    await db.transaction((trx) =>
+    await withTransaction(db, (trx) =>
       updateTicketInTransaction(trx, userRef.user, fixture.tenantId, ticketId, {
         status_id: fixture.openStatusId,
       })

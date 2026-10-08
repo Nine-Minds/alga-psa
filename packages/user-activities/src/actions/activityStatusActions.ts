@@ -9,6 +9,10 @@ import { withAuth } from "@alga-psa/auth";
 import { revalidatePath } from "next/cache";
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
+import {
+  captureTicketTransitionSnapshot,
+  publishTicketTransitionsAfterCommit,
+} from '@shared/lib/tickets/ticketLifecycleEvents';
 import { ticketUpdateStamp } from '@shared/lib/tickets/ticketUpdateStamp';
 import { publishTicketUpdate } from '@alga-psa/event-bus/ticket-live-updates';
 
@@ -164,13 +168,21 @@ export const updateActivityStatusById = withAuth(async (
       const tenantScopedTable = (table: string) => tenantDb(trx, tenant).table(table);
 
       switch (activityType) {
-        case ActivityType.TICKET:
-          return await tenantScopedTable("tickets")
+        case ActivityType.TICKET: {
+          const transitionBefore = await captureTicketTransitionSnapshot(trx, tenant, activityId);
+          const updatedRows = await tenantScopedTable("tickets")
             .where("ticket_id", activityId)
             .update({
               status_id: statusId,
               ...ticketUpdateStamp(trx, user.user_id),
             });
+          await publishTicketTransitionsAfterCommit(trx, {
+            tenant,
+            before: transitionBefore,
+            actorUserId: user?.user_id,
+          });
+          return updatedRows;
+        }
 
         case ActivityType.PROJECT_TASK:
           return await tenantScopedTable("project_tasks")

@@ -80,8 +80,8 @@ import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorizatio
 import { createTicketRelationshipSqlAdapter } from '../lib/ticketAuthorizationSql';
 import { ticketSlaBreachedBindings, ticketSlaBreachedSql } from '../lib/ticketSlaSql';
 import { getClientContactVisibilityContext } from '../lib/clientPortalVisibility.server';
+import { publishTicketTransitionsAfterCommit } from '@alga-psa/shared/lib/tickets/ticketLifecycleEvents';
 import { extractActiveWatcherContactIds } from '@alga-psa/authorization/portal/visibility';
-import { buildTicketTransitionWorkflowEvents } from '../lib/workflowTicketTransitionEvents';
 import { buildTicketCommunicationWorkflowEvents } from '../lib/workflowTicketCommunicationEvents';
 import { buildTicketResolutionSlaStageCompletionEvent } from '@alga-psa/shared/services/tickets/ticketSlaStageEvents';
 import { diffTicketFields, publishTicketUpdate } from '../lib/liveUpdates';
@@ -2969,7 +2969,8 @@ export async function updateTicketInTransaction(
       occurredAt,
     };
 
-    const transitionEvents = buildTicketTransitionWorkflowEvents({
+    await publishTicketTransitionsAfterCommit(trx, {
+      tenant,
       before: {
         ticketId: id,
         statusId: currentTicket.status_id,
@@ -2986,24 +2987,8 @@ export async function updateTicketInTransaction(
         boardId: updatedTicket.board_id,
         escalated: updatedTicket.escalated,
       },
-      ctx: {
-        occurredAt,
-        actorUserId: user.user_id,
-        previousStatusIsClosed: !!oldStatus?.is_closed,
-        newStatusIsClosed: !!newStatus?.is_closed,
-      },
+      actorUserId: isSystemActor ? undefined : user.user_id,
     });
-
-    for (const ev of transitionEvents) {
-      await publishWorkflowEvent({
-        eventType: ev.eventType,
-        payload: ev.payload,
-        ctx: workflowCtx,
-        eventName: ev.workflow?.eventName,
-        fromState: ev.workflow?.fromState,
-        toState: ev.workflow?.toState,
-      });
-    }
 
     // Build structured changes object with old/new values
     const structuredChanges: Record<string, any> = {};
