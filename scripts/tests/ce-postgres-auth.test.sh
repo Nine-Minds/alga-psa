@@ -17,7 +17,8 @@
 #       the PgBouncer auth_type change, so it is skipped with a message while
 #       pgbouncer/pgbouncer.ini.template still says `auth_type = trust`.
 #       0 skips T8 entirely; 1 makes a skipped part a failure.
-#   PG_IMAGE              image used for sibling clients (default ankane/pgvector:latest)
+#   PG_IMAGE              image used for sibling clients (default: the pinned `pgvector`
+#                         image from docker-compose.images.yaml)
 #   TMPDIR                where the sandbox is created (default /tmp). Docker must be able to
 #                         bind-mount it; a snap-packaged Docker cannot see /tmp or hidden
 #                         directories, so point TMPDIR at a visible directory under $HOME.
@@ -25,7 +26,10 @@
 set -uo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-PG_IMAGE="${PG_IMAGE:-ankane/pgvector:latest}"
+PG_IMAGE="${PG_IMAGE:-$(node "$REPO_ROOT/scripts/lib/pinned-images.mjs" pgvector)}" || {
+    echo "could not resolve the pinned pgvector image" >&2
+    exit 2
+}
 T8_MODE="${CE_POSTGRES_AUTH_T8:-auto}"
 
 PROJECT="alga-pgauth-test-$$"
