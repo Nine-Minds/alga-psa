@@ -1,5 +1,6 @@
 import {
   createExternalEntityMapping,
+  createExternalEntityMappings,
   deleteExternalEntityMapping,
   getExternalEntityMappings,
   getServices,
@@ -14,7 +15,10 @@ import {
 } from '@alga-psa/integrations/actions';
 import type { IService, ITaxRegion } from '@alga-psa/types';
 import type {
+  AccountingMappingBulkCreateInput,
+  AccountingMappingBulkCreateResult,
   AccountingMappingContext,
+  AccountingMappingEntityOption,
   AccountingMappingLoadResult,
   AccountingMappingModule
 } from '@alga-psa/integrations/components';
@@ -76,8 +80,8 @@ type MappingLoadConfig<TAlga> = {
   context: AccountingMappingContext;
   algaEntityType: string;
   loadAlgaEntities: (context: AccountingMappingContext) => Promise<TAlga[]>;
-  loadExternalEntities: (context: AccountingMappingContext) => Promise<Array<{ id: string; name: string }>>;
-  mapAlga: (entity: TAlga) => { id: string; name: string };
+  loadExternalEntities: (context: AccountingMappingContext) => Promise<AccountingMappingEntityOption[]>;
+  mapAlga: (entity: TAlga) => AccountingMappingEntityOption;
 };
 
 type TFn = (key: string, options?: Record<string, unknown>) => string;
@@ -135,7 +139,9 @@ async function loadItemOrAccountOptions(currentContext: { connectionId?: string 
     .map((item) => ({
       id: toOptionId('item', item.code ?? item.id),
       name: `Item · ${item.code ? `${item.name} (${item.code})` : item.name}`,
-      kind: 'item' as const
+      kind: 'item' as const,
+      code: (item.code ?? item.id).trim(),
+      baseName: item.name
     }));
 
   // Account mode sends the code as the invoice line AccountCode, so
@@ -151,7 +157,9 @@ async function loadItemOrAccountOptions(currentContext: { connectionId?: string 
     .map((account) => ({
       id: toOptionId('account', account.code!.trim()),
       name: `Revenue account · ${account.name} (${account.code!.trim()})`,
-      kind: 'account' as const
+      kind: 'account' as const,
+      code: account.code!.trim(),
+      baseName: account.name
     }));
 
   return [...itemOptions, ...accountOptions];
@@ -239,7 +247,9 @@ function createServiceModule(tabLabel: string): AccountingMappingModule {
           id: service.service_id,
           name:
             `${service.item_kind === 'product' ? '[Product] ' : ''}${service.service_name}` +
-            (service.sku ? ` (${service.sku})` : '')
+            (service.sku ? ` (${service.sku})` : ''),
+          code: service.sku ?? undefined,
+          baseName: service.service_name
         })
       });
     },
@@ -267,6 +277,23 @@ function createServiceModule(tabLabel: string): AccountingMappingModule {
     },
     async remove(_context, mappingId) {
       throwIfActionError(await deleteExternalEntityMapping(mappingId));
+    },
+    createMany(context, inputs) {
+      return createManyMappings({
+        context,
+        inputs,
+        algaEntityType: 'service',
+        // Each row's kind comes from ITS OWN prefixed option id. A row whose id
+        // is unprefixed fails alone; nothing is ever persisted untyped.
+        prepare: (input) => {
+          const { kind, code } = parseOptionId(input.externalEntityId);
+          return {
+            ...input,
+            externalEntityId: code,
+            metadata: { ...(input.metadata ?? {}), [XERO_TARGET_KIND_METADATA_KEY]: kind }
+          };
+        }
+      });
     }
   };
 }
@@ -480,6 +507,75 @@ function createMapping({
     throwIfActionError(result);
     return result as ExternalEntityMapping;
   });
+}
+
+// LEVERAGE: pattern bulk-create-many — duplicated in qboLiveMappingModules; wants a shared provider-agnostic helper.
+/**
+ * One-request bulk create. Rows that cannot be prepared (e.g. an unprefixed
+ * Xero option id) are reported as failed locally and never sent; the rest go in
+ * a single server call that isolates each row.
+ */
+async function createManyMappings({
+  context,
+  inputs,
+  algaEntityType,
+  prepare
+}: {
+  context: AccountingMappingContext;
+  inputs: AccountingMappingBulkCreateInput[];
+  algaEntityType: string;
+  prepare: (input: AccountingMappingBulkCreateInput) => AccountingMappingBulkCreateInput;
+}): Promise<AccountingMappingBulkCreateResult[]> {
+  const outcomes = new Map<string, AccountingMappingBulkCreateResult>();
+  const payloads: CreateMappingData[] = [];
+
+  for (const input of inputs) {
+    try {
+      const prepared = prepare(input);
+      payloads.push({
+        integration_type: ADAPTER_TYPE,
+        alga_entity_type: algaEntityType,
+        alga_entity_id: prepared.algaEntityId,
+        external_entity_id: prepared.externalEntityId,
+        external_realm_id: context.realmId ?? null,
+        metadata: prepared.metadata ?? null
+      });
+    } catch (error) {
+      outcomes.set(input.algaEntityId, {
+        algaEntityId: input.algaEntityId,
+        ok: false,
+        error: getErrorMessage(error)
+      });
+    }
+  }
+
+  if (payloads.length > 0) {
+    const response = await createExternalEntityMappings(payloads);
+    // Only a permission failure comes back as a non-array.
+    throwIfActionError(response);
+    for (const row of response as Array<{
+      alga_entity_id: string;
+      ok: boolean;
+      mapping?: ExternalEntityMapping;
+      error?: string;
+    }>) {
+      outcomes.set(row.alga_entity_id, {
+        algaEntityId: row.alga_entity_id,
+        ok: row.ok,
+        mapping: row.mapping,
+        error: row.error
+      });
+    }
+  }
+
+  return inputs.map(
+    (input) =>
+      outcomes.get(input.algaEntityId) ?? {
+        algaEntityId: input.algaEntityId,
+        ok: false,
+        error: 'No result was returned for this row.'
+      }
+  );
 }
 
 function updateMapping(

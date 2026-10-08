@@ -24,6 +24,7 @@ import {
 } from '../lib/externalMappingWorkflowEvents';
 import {
   actionError,
+  isActionMessageError,
   permissionError,
   type ActionMessageError,
   type ActionPermissionError,
@@ -39,6 +40,7 @@ import {
 import {
   readXeroServiceTargetKind,
   XERO_SALES_ACCOUNT_TYPES,
+  XERO_TARGET_KIND_METADATA_KEY,
 } from '../lib/xero/xeroServiceMappingTarget';
 import {
   AUTOMATIC_DISCOUNT_MAPPING_ID,
@@ -422,6 +424,54 @@ function isXeroRecordUsable(status: string | undefined): boolean {
 }
 
 /**
+ * Per-call provider lookups behind the remote-existence checks. The single
+ * create/update paths use a fresh instance per call (always a live fetch). The
+ * bulk action shares ONE instance across a batch so each provider client and
+ * each Xero catalog (per realm and kind) is fetched at most once per request
+ * instead of once per row — Xero rate-limits at 60 calls/minute/org.
+ * Rejections are memoised too: a failing catalog fails its rows without
+ * being re-hit once per row.
+ */
+interface RemoteCatalogs {
+  qboClient(tenant: string, realm: string): Promise<QboClientService>;
+  qboAstEnabled(tenant: string, realm: string): Promise<boolean>;
+  xeroList(
+    tenant: string,
+    realm: string,
+    kind: 'item' | 'account' | 'tax_rate'
+  ): Promise<any[]>;
+}
+
+function createRemoteCatalogs(memoize = false): RemoteCatalogs {
+  const memo = new Map<string, Promise<any>>();
+  const once = <T,>(key: string, load: () => Promise<T>): Promise<T> => {
+    if (!memoize) return load();
+    let hit = memo.get(key);
+    if (!hit) {
+      hit = load();
+      memo.set(key, hit);
+    }
+    return hit;
+  };
+  return {
+    qboClient: (tenant, realm) =>
+      once(JSON.stringify(['qbo', tenant, realm]), () => QboClientService.create(tenant, realm)),
+    qboAstEnabled: (tenant, realm) =>
+      once(JSON.stringify(['qbo-ast', tenant, realm]), async () => {
+        const { knex } = await createTenantKnex();
+        return isQboAutomatedSalesTaxEnabled(knex, tenant, realm);
+      }),
+    xeroList: (tenant, realm, kind) =>
+      once(JSON.stringify(['xero', tenant, realm, kind]), async () => {
+        const client = await XeroClientService.create(tenant, realm);
+        if (kind === 'item') return client.listItems();
+        if (kind === 'account') return client.listAccounts();
+        return client.listTaxRates();
+      }),
+  };
+}
+
+/**
  * Fail-closed remote check for a manually-linked QuickBooks mapping: the
  * external id must resolve to a live entity of the expected type in the
  * connected company, or the link is rejected.
@@ -430,7 +480,8 @@ async function assertQboRemoteEntityExists(
   tenant: string,
   algaEntityType: string,
   externalEntityId: string,
-  realm: string
+  realm: string,
+  catalogs: RemoteCatalogs
 ): Promise<void> {
   const remoteType = QBO_REMOTE_ENTITY_TYPE[algaEntityType];
   if (!remoteType) {
@@ -442,8 +493,7 @@ async function assertQboRemoteEntityExists(
   // The pseudo codes are not readable TaxCode records (`GET /taxcode/NON`
   // 404s), so the realm's AST setting proves them instead of a read-by-id.
   if (algaEntityType === 'tax_code' && QBO_AST_PSEUDO_TAX_CODES.has(externalEntityId)) {
-    const { knex } = await createTenantKnex();
-    if (!(await isQboAutomatedSalesTaxEnabled(knex, tenant, realm))) {
+    if (!(await catalogs.qboAstEnabled(tenant, realm))) {
       throw new ExpectedExternalMappingError(
         `QuickBooks tax code ${externalEntityId} is only accepted when "QuickBooks calculates sales tax" is enabled for this company. Turn it on for this QuickBooks company, or map the region to a tax code from the company's own tax-code list.`
       );
@@ -451,7 +501,7 @@ async function assertQboRemoteEntityExists(
     return;
   }
 
-  const qboClient = await QboClientService.create(tenant, realm);
+  const qboClient = await catalogs.qboClient(tenant, realm);
   const entity = await qboClient.read<unknown>(remoteType, externalEntityId);
   if (!entity) {
     throw new ExpectedExternalMappingError(
@@ -473,7 +523,8 @@ async function assertXeroRemoteEntityExists(
   algaEntityType: string,
   externalEntityId: string,
   realm: string,
-  metadata?: Record<string, unknown> | null
+  metadata: Record<string, unknown> | null | undefined,
+  catalogs: RemoteCatalogs
 ): Promise<void> {
   let kind = XERO_CATALOG_KIND[algaEntityType];
   if (!kind) {
@@ -496,10 +547,9 @@ async function assertXeroRemoteEntityExists(
   }
 
   const wanted = externalEntityId.trim();
-  const client = await XeroClientService.create(tenant, realm);
 
   if (kind === 'item') {
-    const items = await client.listItems();
+    const items = await catalogs.xeroList(tenant, realm, 'item');
     const match = items.find(
       (item) => (item.code ?? '').trim() === wanted || (item.itemId ?? '').trim() === wanted
     );
@@ -518,7 +568,7 @@ async function assertXeroRemoteEntityExists(
     if (!wanted) {
       throw new ExpectedExternalMappingError('Xero account mappings require an account code.');
     }
-    const accounts = await client.listAccounts();
+    const accounts = await catalogs.xeroList(tenant, realm, 'account');
     const match = accounts.find((account) => (account.code ?? '').trim() === wanted);
     if (!match) {
       throw new ExpectedExternalMappingError(
@@ -541,7 +591,7 @@ async function assertXeroRemoteEntityExists(
     return;
   }
 
-  const rates = await client.listTaxRates();
+  const rates = await catalogs.xeroList(tenant, realm, 'tax_rate');
   const match = rates.find(
     (rate) => (rate.taxType ?? '').trim() === wanted || (rate.taxRateId ?? '').trim() === wanted
   );
@@ -566,14 +616,15 @@ async function assertRemoteEntityExists(
   algaEntityType: string,
   externalEntityId: string,
   realm: string,
-  metadata?: Record<string, unknown> | null
+  metadata?: Record<string, unknown> | null,
+  catalogs: RemoteCatalogs = createRemoteCatalogs()
 ): Promise<void> {
   if (integrationType === 'quickbooks_online') {
-    await assertQboRemoteEntityExists(tenant, algaEntityType, externalEntityId, realm);
+    await assertQboRemoteEntityExists(tenant, algaEntityType, externalEntityId, realm, catalogs);
     return;
   }
   if (integrationType === 'xero') {
-    await assertXeroRemoteEntityExists(tenant, algaEntityType, externalEntityId, realm, metadata);
+    await assertXeroRemoteEntityExists(tenant, algaEntityType, externalEntityId, realm, metadata, catalogs);
     return;
   }
 }
@@ -785,6 +836,11 @@ export const getExternalEntityMappings = withAuth(async (
 
 // ─── Create ──────────────────────────────────────────────────────────────────
 
+const MAPPINGS_MANAGE_DENIED = {
+  message: 'Permission denied: You do not have permission to manage accounting mappings.',
+  key: 'msp/integrations:errors.mappings.managePermission',
+} as const;
+
 export const createExternalEntityMapping = withAuth(async (
   user,
   { tenant },
@@ -793,12 +849,37 @@ export const createExternalEntityMapping = withAuth(async (
   const { knex } = await createTenantKnex();
   const allowed = await hasPermission(user, 'accounting_integrations', 'mappings_manage', knex);
   if (!allowed) {
-    return permissionError(
-      'Permission denied: You do not have permission to manage accounting mappings.',
-      'msp/integrations:errors.mappings.managePermission'
-    );
+    return permissionError(MAPPINGS_MANAGE_DENIED.message, MAPPINGS_MANAGE_DENIED.key);
   }
 
+  return createMappingRow({ knex, user, tenant, mappingData, validateRealm: true });
+});
+
+/**
+ * The per-row create path shared by the single and bulk actions: validation,
+ * insert-or-relink inside its OWN transaction, audit, workflow event, cache
+ * invalidation, and error mapping. Because each call owns its transaction, a
+ * failure here rolls back only this row.
+ *
+ * `validateRealm: false` is for the bulk action, which has already run
+ * `assertRealmAllowed` once for the (shared) realm.
+ */
+async function createMappingRow({
+  knex,
+  user,
+  tenant,
+  mappingData,
+  validateRealm,
+  catalogs,
+}: {
+  knex: Knex;
+  user: IUserWithRoles;
+  tenant: string;
+  mappingData: CreateMappingData;
+  validateRealm: boolean;
+  /** Shared across a bulk batch; omitted = fresh fetch per call. */
+  catalogs?: RemoteCatalogs;
+}): Promise<ExternalEntityMapping | ActionMessageError> {
   const {
     integration_type,
     alga_entity_type,
@@ -836,7 +917,9 @@ export const createExternalEntityMapping = withAuth(async (
         await lockInvoiceForExternalSync(trx, tenant, alga_entity_id);
       }
 
-      await assertRealmAllowed(tenant, integration_type, external_realm_id);
+      if (validateRealm) {
+        await assertRealmAllowed(tenant, integration_type, external_realm_id);
+      }
       await assertLocalEntityOwnership(trx, tenant, alga_entity_type, alga_entity_id);
 
       const normalizedRealm =
@@ -851,7 +934,8 @@ export const createExternalEntityMapping = withAuth(async (
           alga_entity_type,
           external_entity_id,
           normalizedRealm,
-          metadata ?? null
+          metadata ?? null,
+          catalogs
         );
       }
 
@@ -1020,6 +1104,14 @@ export const createExternalEntityMapping = withAuth(async (
     });
 
     if (error?.code === '23505') {
+      // idx_unique_external_mapping is keyed on the external target; anything
+      // else (idx_unique_alga_mapping) is the same Alga entity mapped twice.
+      if (error?.constraint === 'idx_unique_external_mapping') {
+        return actionError(
+          'This target is already mapped to another entity in this organisation. Choose a different target.',
+          'msp/integrations:errors.mappings.duplicateTarget'
+        );
+      }
       return actionError(
         'A mapping already exists for this entity. Edit the existing mapping instead.',
         'msp/integrations:errors.mappings.duplicate'
@@ -1048,6 +1140,108 @@ export const createExternalEntityMapping = withAuth(async (
       'msp/integrations:errors.mappings.saveFailed'
     );
   }
+}
+
+function integrationRequiresExplicitKind(row: CreateMappingData): boolean {
+  if (row.integration_type !== 'xero' || row.alga_entity_type !== 'service') return false;
+  const kind = row.metadata?.[XERO_TARGET_KIND_METADATA_KEY];
+  return kind !== 'item' && kind !== 'account';
+}
+
+export interface BulkCreateMappingRowResult {
+  alga_entity_id: string;
+  ok: boolean;
+  mapping?: ExternalEntityMapping;
+  error?: string;
+}
+
+/**
+ * Bulk create: permission and realm are checked ONCE, then every row runs
+ * through the same `createMappingRow` as the single create, each in its own
+ * transaction so one bad row (duplicate, stale catalog entry) cannot abort or
+ * roll back the others. Row-level failures are returned as results — only a
+ * permission failure is returned as a top-level error.
+ */
+export const createExternalEntityMappings = withAuth(async (
+  user,
+  { tenant },
+  rows: CreateMappingData[]
+): Promise<BulkCreateMappingRowResult[] | ActionPermissionError> => {
+  const { knex } = await createTenantKnex();
+  const allowed = await hasPermission(user, 'accounting_integrations', 'mappings_manage', knex);
+  if (!allowed) {
+    return permissionError(MAPPINGS_MANAGE_DENIED.message, MAPPINGS_MANAGE_DENIED.key);
+  }
+
+  if (rows.length === 0) return [];
+
+  // The batch shares one realm check per distinct (integration, realm) pair —
+  // the UI sends a single pair, so this is one check in practice.
+  const realmFailures = new Map<string, string>();
+  const checked = new Set<string>();
+  for (const row of rows) {
+    const key = JSON.stringify([row.integration_type, row.external_realm_id ?? null]);
+    if (checked.has(key)) continue;
+    checked.add(key);
+    try {
+      assertKnownIntegrationType(row.integration_type);
+      await assertRealmAllowed(tenant, row.integration_type, row.external_realm_id);
+    } catch (error: unknown) {
+      realmFailures.set(
+        key,
+        error instanceof ExpectedExternalMappingError
+          ? error.message
+          : 'Unable to validate the connected organisation. Please try again.'
+      );
+    }
+  }
+
+  // One snapshot per batch: each client/catalog is fetched at most once.
+  const catalogs = createRemoteCatalogs(true);
+  const results: BulkCreateMappingRowResult[] = [];
+  for (const row of rows) {
+    const key = JSON.stringify([row.integration_type, row.external_realm_id ?? null]);
+    const realmFailure = realmFailures.get(key);
+    if (realmFailure) {
+      results.push({ alga_entity_id: row.alga_entity_id, ok: false, error: realmFailure });
+      continue;
+    }
+    // Bulk rows never rely on the single-create legacy rule ("no kind means
+    // item"): a Xero service row must carry an explicit, recognised kind.
+    if (integrationRequiresExplicitKind(row)) {
+      results.push({
+        alga_entity_id: row.alga_entity_id,
+        ok: false,
+        error: 'Xero service mappings must declare xeroTargetKind as "item" or "account".',
+      });
+      continue;
+    }
+    try {
+      const result = await createMappingRow({
+        knex,
+        user,
+        tenant,
+        mappingData: row,
+        validateRealm: false,
+        catalogs,
+      });
+      if (isActionMessageError(result)) {
+        results.push({ alga_entity_id: row.alga_entity_id, ok: false, error: result.actionError });
+      } else {
+        results.push({ alga_entity_id: row.alga_entity_id, ok: true, mapping: result });
+      }
+    } catch (error: unknown) {
+      // createMappingRow maps its own errors; this is a last-resort guard so a
+      // surprise never turns into a top-level throw for the whole batch.
+      logger.error('Unexpected failure in bulk mapping row', { tenantId: tenant, error });
+      results.push({
+        alga_entity_id: row.alga_entity_id,
+        ok: false,
+        error: 'Unable to save mapping. Please try again.',
+      });
+    }
+  }
+  return results;
 });
 
 // ─── Update ──────────────────────────────────────────────────────────────────

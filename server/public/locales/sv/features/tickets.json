@@ -185,6 +185,8 @@
     "tags": "Taggar",
     "sla": "SLA",
     "updated": "Uppdaterad",
+    "updatedAtBy": "Uppdaterad {{time}} av {{name}}",
+    "byName": "av {{name}}",
     "openInNewTab": "Öppna i ny flik",
     "actions": "Åtgärder",
     "linkedAssets": "Kopplade tillgångar",

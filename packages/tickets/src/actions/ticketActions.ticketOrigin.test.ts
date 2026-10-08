@@ -72,7 +72,7 @@ vi.mock('@alga-psa/shared/models/ticketModel', () => ({
   TicketModel: {},
 }));
 
-vi.mock('../lib/adapters/TicketModelEventPublisher', () => ({
+vi.mock('@alga-psa/shared/services/tickets/ticketModelEventPublisher', () => ({
   TicketModelEventPublisher: class {},
 }));
 
@@ -92,7 +92,7 @@ vi.mock('../lib/workflowTicketCommunicationEvents', () => ({
   buildTicketCommunicationWorkflowEvents: vi.fn(() => []),
 }));
 
-vi.mock('../lib/workflowTicketSlaStageEvents', () => ({
+vi.mock('@alga-psa/shared/services/tickets/ticketSlaStageEvents', () => ({
   buildTicketResolutionSlaStageCompletionEvent: vi.fn(() => null),
   buildTicketResolutionSlaStageEnteredEvent: vi.fn(() => null),
 }));

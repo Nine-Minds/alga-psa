@@ -14,12 +14,15 @@ type RuntimeState = {
   currentTenantTx: {
     tenantId: string;
     actorUserId: string;
+    workflowId: string;
+    lineage: string[];
     trx: any;
   } | null;
   tables: TableMap;
   createTicketMock: ReturnType<typeof vi.fn>;
   updateTicketMock: ReturnType<typeof vi.fn>;
   createCommentMock: ReturnType<typeof vi.fn>;
+  createWithEffectsMock: ReturnType<typeof vi.fn>;
 };
 
 const runtimeState = vi.hoisted<RuntimeState>(() => ({
@@ -29,6 +32,7 @@ const runtimeState = vi.hoisted<RuntimeState>(() => ({
   createTicketMock: vi.fn(),
   updateTicketMock: vi.fn(),
   createCommentMock: vi.fn(),
+  createWithEffectsMock: vi.fn(),
 }));
 
 vi.mock('@shared/workflow/runtime/registries/actionRegistry', () => ({
@@ -70,6 +74,10 @@ vi.mock('@shared/models/ticketModel', async (importOriginal) => {
     },
   };
 });
+
+vi.mock('@shared/services/tickets/createTicketWithSideEffects', () => ({
+  createTicketWithSideEffects: runtimeState.createWithEffectsMock,
+}));
 
 vi.mock('@shared/workflow/runtime/registries/workflowEmailRegistry', () => ({
   getWorkflowEmailProvider: () => ({
@@ -307,6 +315,8 @@ function setTenantTx(tables: TableMap): void {
   runtimeState.currentTenantTx = {
     tenantId: 'tenant-1',
     actorUserId: 'actor-1',
+    workflowId: 'workflow-1',
+    lineage: [],
     trx: createFakeTrx(tables),
   };
 }
@@ -365,6 +375,8 @@ describe('workflow ticket assignment model runtime', () => {
     runtimeState.createTicketMock.mockReset();
     runtimeState.updateTicketMock.mockReset();
     runtimeState.createCommentMock.mockReset();
+    runtimeState.createWithEffectsMock.mockReset();
+    runtimeState.createWithEffectsMock.mockResolvedValue({ ticketId: IDS.ticket, ticketNumber: 'T-1' });
 
     runtimeState.createTicketMock.mockImplementation(async (input: any) => ({
       ticket_id: IDS.ticket,
@@ -395,10 +407,18 @@ describe('workflow ticket assignment model runtime', () => {
     registerTicketActions();
   });
 
-  it('T002: tickets.create with primary user plus additional users persists primary assignment and reconciles additional ticket resources deterministically', async () => {
+  it('T002: tickets.create with primary user plus additional users hands the resolved assignment to createTicketWithSideEffects', async () => {
     setTenantTx({
       users: [activeInternalUser(IDS.user1), activeInternalUser(IDS.user2)],
-      ticket_resources: [],
+      tickets: [
+        {
+          tenant: 'tenant-1',
+          ticket_id: IDS.ticket,
+          status_id: 'status-1',
+          created_at: '2026-04-20T00:00:00.000Z',
+          entered_at: '2026-04-20T00:00:00.000Z',
+        },
+      ],
     });
 
     const action = getAction('tickets.create');
@@ -417,27 +437,23 @@ describe('workflow ticket assignment model runtime', () => {
       createActionContext()
     );
 
-    expect(runtimeState.createTicketMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        assigned_to: IDS.user1,
-        assigned_team_id: undefined,
-      }),
-      'tenant-1',
-      expect.anything(),
-      {},
-      expect.objectContaining({ publisher: expect.anything() }),
-      undefined,
-      'actor-1'
+    expect(runtimeState.createWithEffectsMock).toHaveBeenCalledTimes(1);
+    const [, tenant, serviceInput] = runtimeState.createWithEffectsMock.mock.calls[0];
+    expect(tenant).toBe('tenant-1');
+    expect(serviceInput.actor).toEqual(
+      expect.objectContaining({ type: 'workflow', userId: 'actor-1', workflowId: 'workflow-1', lineage: [] })
     );
+    expect(serviceInput.ticket).toEqual(
+      expect.objectContaining({ assigned_to: IDS.user1, source: 'workflow' })
+    );
+    expect(serviceInput.teamId ?? undefined).toBeUndefined();
+    // Primary is excluded and duplicates collapse; the service de-dupes against existing rows.
+    expect(serviceInput.additionalAgentIds).toEqual([IDS.user2]);
+    expect(serviceInput.notificationSuppression).toEqual({
+      suppressInternalNotifications: false,
+      suppressContactNotifications: true,
+    });
     expect(result.ticket_id).toBe(IDS.ticket);
-    expect(runtimeState.tables.ticket_resources).toEqual([
-      expect.objectContaining({
-        ticket_id: IDS.ticket,
-        assigned_to: IDS.user1,
-        additional_user_id: IDS.user2,
-        role: 'support',
-      }),
-    ]);
   });
 
   it('T003: tickets.create rejects non-empty additional_user_ids when assignment.primary is null', () => {

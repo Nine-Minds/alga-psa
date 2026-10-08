@@ -9,6 +9,8 @@ import { registerAfterCommit } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import type { PublishOptions } from '@alga-psa/event-bus/publishers';
 
+// LEVERAGE: pattern ticket-event-publisher — ticket-event publishing is wired per call site (this adapter, TicketModelEventPublisher, publishTicketEvent in createTicketWithSideEffects); one ticket-event publisher layer would unify them
+
 /**
  * Publish workflow-originated ticket events through the shared event bus.
  *

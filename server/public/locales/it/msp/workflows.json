@@ -3164,6 +3164,15 @@
     "roleNamesPlaceholder": "ad es. Tecnico, Dispatcher (abbinati per nome all’esecuzione del workflow)",
     "empty": "Scegli almeno un utente o un ruolo da notificare."
   },
+  "emailUserRecipientsEditor": {
+    "users": "Invia e-mail agli utenti",
+    "usersHint": "Cerca utenti",
+    "roles": "Invia e-mail a tutti gli utenti con questi ruoli",
+    "rolesHint": "Aggiungi un ruolo",
+    "roleNames": "Nomi dei ruoli (facoltativo)",
+    "roleNamesPlaceholder": "ad es. Technician, Dispatcher (abbinati per nome quando il workflow viene eseguito)",
+    "empty": "Scegli utenti o ruoli, oppure seleziona un ticket qui sotto."
+  },
   "emailRecipientsEditor": {
     "remove": "Rimuovi {{email}}",
     "placeholder": "Digita un indirizzo e premi Invio, ad es. Ada Lovelace <ada@example.com>",

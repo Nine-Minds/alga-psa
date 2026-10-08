@@ -1,6 +1,37 @@
 {
   "integrations": {
     "accounting": {
+      "bulk": {
+        "button": "Mapeamento em massa",
+        "columns": {
+          "ignore": "Ignorar",
+          "select": "Guardar",
+          "status": "Estado"
+        },
+        "exit": "Voltar aos mapeamentos",
+        "filter": {
+          "all": "Todos",
+          "mapped": "Mapeado",
+          "unmapped": "Não mapeado"
+        },
+        "ignoreAll": "Ignorar tudo",
+        "noRows": "Nenhuma linha corresponde ao filtro atual.",
+        "possibleMatch": "Possível correspondência",
+        "rowIgnoreAria": "Ignorar {{name}}",
+        "rowSelectAria": "Incluir {{name}} ao guardar",
+        "saveAll": "Guardar tudo",
+        "searchPlaceholder": "Pesquisar serviços e destinos...",
+        "selectAll": "Selecionar tudo",
+        "status": {
+          "ignored": "Ignorado",
+          "mapped": "Mapeado",
+          "noResult": "Nenhum resultado foi devolvido para esta linha.",
+          "pending": "Pendente",
+          "saved": "Guardado"
+        },
+        "suggested": "Sugerido",
+        "toSave": "{{total}} para guardar"
+      },
       "dialog": {
         "cancel": "Cancelar",
         "enterPlaceholder": "Digite {{field}}...",

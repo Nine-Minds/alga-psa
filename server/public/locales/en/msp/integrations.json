@@ -1,6 +1,37 @@
 {
   "integrations": {
     "accounting": {
+      "bulk": {
+        "button": "Bulk map",
+        "columns": {
+          "ignore": "Ignore",
+          "select": "Save",
+          "status": "Status"
+        },
+        "exit": "Back to mappings",
+        "filter": {
+          "all": "All",
+          "mapped": "Mapped",
+          "unmapped": "Unmapped"
+        },
+        "ignoreAll": "Ignore all",
+        "noRows": "No rows match the current filter.",
+        "possibleMatch": "Possible match",
+        "rowIgnoreAria": "Ignore {{name}}",
+        "rowSelectAria": "Include {{name}} in save",
+        "saveAll": "Save all",
+        "searchPlaceholder": "Search services and targets...",
+        "selectAll": "Select all",
+        "status": {
+          "ignored": "Ignored",
+          "mapped": "Mapped",
+          "noResult": "No result was returned for this row.",
+          "pending": "Pending",
+          "saved": "Saved"
+        },
+        "suggested": "Suggested",
+        "toSave": "{{total}} to save"
+      },
       "dialog": {
         "cancel": "Cancel",
         "enterPlaceholder": "Enter {{field}}...",

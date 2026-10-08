@@ -22,7 +22,13 @@ vi.mock('@alga-psa/event-bus/publishers', async (importOriginal) => ({
   publishEvent: vi.fn(async (event: any, options?: any) => {
     busEvents.push({ eventType: event.eventType, payload: event.payload, options });
   }),
-  publishWorkflowEvent: vi.fn(async () => {}),
+  publishWorkflowEvent: vi.fn(async (params: any, options?: any) => {
+    busEvents.push({
+      eventType: params.eventType,
+      payload: params.payload,
+      options: { ...options, workflow: { executionId: params.ctx?.correlationId } },
+    });
+  }),
 }));
 
 vi.mock('../../lib/db/db', async (importOriginal) => ({
@@ -199,17 +205,32 @@ describe('TICKET_CREATED coverage across creation sites (integration)', () => {
 
   describe('newly publishing sources suppress contact notifications', () => {
     it.each([
-      ['renewal manual retry', 'packages/billing/src/actions/renewalsQueueActions.ts'],
-      ['renewal job fallback', 'packages/jobs/src/lib/handlers/processRenewalQueueHandler.ts'],
       ['manual telephony ticket', 'packages/integrations/src/actions/integrations/telephonyActions.ts'],
       ['auto telephony ticket', 'packages/telephony/src/services/autoTicketFromCall.ts'],
       ['inbound webhook create', 'packages/tickets/src/actions/inboundActions.ts'],
       ['Teams guest intake', 'ee/packages/microsoft-teams/src/lib/teams/bot/teamsGuestIntake.ts'],
-      ['workflow tickets.create', 'shared/workflow/runtime/actions/businessOperations/tickets.ts'],
     ])('%s creates through contactSuppressedTicketCreation', (_name, file) => {
       const src = readSource(file);
       expect(src).toMatch(
         /createTicket(WithRetry)?\([\s\S]{0,900}contactSuppressedTicketCreation\(\s*new WorkflowEventPublisher\(/
+      );
+    });
+
+    it('renewal tickets create through createRenewalTicket with contact notifications suppressed', () => {
+      expect(readSource('shared/billingClients/renewalTicket.ts')).toMatch(
+        /createTicketWithSideEffects\([\s\S]{0,1500}suppressContactNotifications: true/
+      );
+      for (const file of [
+        'packages/billing/src/actions/renewalsQueueActions.ts',
+        'packages/jobs/src/lib/handlers/processRenewalQueueHandler.ts',
+      ]) {
+        expect(readSource(file)).toMatch(/createRenewalTicket\(/);
+      }
+    });
+
+    it('workflow tickets.create goes through createTicketWithSideEffects', () => {
+      expect(readSource('shared/workflow/runtime/actions/businessOperations/tickets.ts')).toMatch(
+        /createTicketWithSideEffects\([\s\S]{0,2500}suppressContactNotifications/
       );
     });
 
@@ -241,7 +262,7 @@ describe('TICKET_CREATED coverage across creation sites (integration)', () => {
   });
 
   describe('representative real sites', () => {
-    it('workflow tickets.create publishes one TICKET_CREATED stamped with the run id as execution_id', async () => {
+    it('workflow tickets.create publishes one TICKET_CREATED carrying the run id as workflowRunId provenance', async () => {
       const { getActionRegistryV2 } = await import('../../../../shared/workflow/runtime/registries/actionRegistry');
       const action = getActionRegistryV2().get('tickets.create', 1)!;
       const result: any = await action.handler(
@@ -256,7 +277,7 @@ describe('TICKET_CREATED coverage across creation sites (integration)', () => {
       const events = created();
       expect(events).toHaveLength(1);
       expect(events[0].payload).toMatchObject({ tenantId: tenant, ticketId: result.ticket_id });
-      expect(events[0].options?.workflow?.executionId).toBe(runId);
+      expect(events[0].payload.workflowRunId).toBe(runId);
       expectContactSuppressedOnly(events[0].payload);
     });
 

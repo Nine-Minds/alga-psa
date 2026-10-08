@@ -523,10 +523,10 @@ export const templateVariableSeed: TemplateVariableSeedCategory[] = [
           {
             "path": "approvalLink",
             "type": "url",
-            "description": "Link for MSP staff to review and approve the request.",
-            "example": "https://app.algapsa.com/msp/schedule",
+            "description": "Deep link that opens this request in the schedule page's Appointment Requests panel so MSP staff can review and approve it.",
+            "example": "https://app.algapsa.com/msp/schedule?requestId=3f2b8c1e-6a4d-4e7b-9c1a-2d5e8f0a7b64",
             "availability": "used",
-            "notes": "Optional. 'Review & Approve' button shown only inside {{#if approvalLink}}. Both call sites set it to `${NEXT_PUBLIC_APP_URL}/msp/schedule`."
+            "notes": "Optional. 'Review & Approve' button shown only inside {{#if approvalLink}}. Both call sites (portal action and public route) build it with buildAppointmentRequestReviewUrl from @alga-psa/core: `<app base URL>/msp/schedule?requestId=<appointment_request_id>`. An unknown or stale id opens the panel with nothing selected."
           },
           {
             "path": "submittedAt",

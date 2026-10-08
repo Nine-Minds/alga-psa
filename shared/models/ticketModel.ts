@@ -7,12 +7,14 @@ import { persistCommentPublication, resolveCommentAuthorDisplay } from '../lib/t
 
 import { reconcileCommentAttachments } from '../lib/ticketCommentAttachments';
 import { Knex } from 'knex';
+import { ticketUpdateStamp } from '../lib/tickets/ticketUpdateStamp';
 import { tenantDb } from '@alga-psa/db';
 import { v4 as uuidv4 } from 'uuid';
 import { z } from 'zod';
 import type { IEventPublisher } from '@alga-psa/types';
 import { isSilentTicketCreation, isTicketCreationWithPayloadExtras, type TicketCreationEvents } from '../lib/tickets/ticketLifecycleEvents';
 import { applyMatchingChecklistTemplates } from '../lib/ticketChecklists';
+import { loadTicketRequesterIdentity, resolveTicketRequesterLabel } from '../lib/ticketRequesterDisplay';
 import { SharedNumberingService } from '../services/numberingService';
 import { applyBoardDefaultWatchers } from '../lib/tickets/boardDefaultWatchers';
 
@@ -1012,6 +1014,11 @@ export class TicketModel {
         : eventPublisher;
       const payloadExtras = isTicketCreationWithPayloadExtras(eventPublisher) ? eventPublisher.payloadExtras : {};
       try {
+        // Tickets from inbound email or the portal often have no contact or
+        // client. Carry real names plus the sender email so a workflow title
+        // like "New ticket from ..." never has to fall back to an id or "".
+        const requester = await loadTicketRequesterIdentity(trx, tenant, cleanedInput);
+        const requesterName = resolveTicketRequesterLabel(requester);
         await createdPublisher.publishTicketCreated({
           tenantId: tenant,
           ticketId: ticketId,
@@ -1021,6 +1028,10 @@ export class TicketModel {
             board_id: cleanedInput.board_id,
             priority_id: cleanedInput.priority_id,
             client_id: cleanedInput.client_id,
+            ...(requester.clientName ? { clientName: requester.clientName } : {}),
+            ...(requester.contactName ? { contactName: requester.contactName } : {}),
+            ...(requester.senderEmail ? { senderEmail: requester.senderEmail } : {}),
+            ...(requesterName ? { requesterName } : {}),
             ...payloadExtras
           }
         });
@@ -1240,7 +1251,7 @@ export class TicketModel {
       .where({ ticket_id: ticketId })
       .update({
         ...updateData,
-        updated_at: new Date()
+        ...ticketUpdateStamp(trx, input.updated_by ?? userId ?? null)
       })
       .returning('*');
 
@@ -1364,7 +1375,7 @@ export class TicketModel {
       .where({ ticket_id: ticketId })
       .update({
         ...updateData,
-        updated_at: new Date()
+        ...ticketUpdateStamp(trx, updateData.updated_by ?? null)
       })
       .returning('*');
       

@@ -19,6 +19,7 @@ import {
   captureTicketTransitionSnapshot,
   publishTicketTransitionsAfterCommit,
 } from '../../lib/tickets/ticketLifecycleEvents';
+import { ticketUpdateStamp } from '../../lib/tickets/ticketUpdateStamp';
 
 /**
  * Single entry point for normalized RMM alert events (webhooks and the
@@ -373,7 +374,7 @@ async function processReset(
             const transitionBefore = await captureTicketTransitionSnapshot(trx, event.tenantId, existing.ticket_id);
             await db.table('tickets')
               .where({ ticket_id: existing.ticket_id })
-              .update({ status_id: statusId, updated_at: new Date().toISOString() });
+              .update({ status_id: statusId, ...ticketUpdateStamp(trx, null) });
             await publishTicketTransitionsAfterCommit(trx, {
               tenant: event.tenantId,
               before: transitionBefore,

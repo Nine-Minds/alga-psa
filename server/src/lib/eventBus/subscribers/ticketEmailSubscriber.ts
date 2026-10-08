@@ -1116,6 +1116,16 @@ async function handleTicketCreated(event: TicketCreatedEvent): Promise<void> {
   // Internal recipients (assignee, internal watchers) are never affected by the contact flag.
   const suppression = resolveTicketNotificationSuppression(payload);
 
+  // Every audience suppressed (contact, assignee, watchers): nothing to send, and not an error.
+  if (!shouldSendContactFacingTicketEmail(suppression) && !shouldSendInternalTicketEmail(suppression)) {
+    logger.debug('[TicketEmailSubscriber] Skipped ticket created email: all audiences suppressed', {
+      eventId: event.id,
+      ticketId: payload.ticketId,
+      tenantId,
+    });
+    return;
+  }
+
   try {
     console.log('[EmailSubscriber] Creating database connection');
     const db = await getConnection(tenantId);
@@ -1147,7 +1157,10 @@ async function handleTicketCreated(event: TicketCreatedEvent): Promise<void> {
     const primaryEmail = shouldSendContactFacingTicketEmail(suppression)
       ? safeString(ticket.contact_email) || safeString(ticket.client_email)
       : '';
-    const assignedEmail = safeString(ticket.assigned_to_email);
+    // A suppressed internal audience leaves no assignee recipient.
+    const assignedEmail = shouldSendInternalTicketEmail(suppression)
+      ? safeString(ticket.assigned_to_email)
+      : '';
 
     // Watchers are recipients too: a suppressed contact-facing email with no assignee must still
     // reach the internal watchers.

@@ -124,7 +124,7 @@ vi.mock('../lib/workflowTicketCommunicationEvents', () => ({
   buildTicketCommunicationWorkflowEvents: vi.fn(() => []),
 }));
 
-vi.mock('../lib/workflowTicketSlaStageEvents', () => ({
+vi.mock('@alga-psa/shared/services/tickets/ticketSlaStageEvents', () => ({
   buildTicketResolutionSlaStageCompletionEvent: vi.fn(() => null),
 }));
 
@@ -724,7 +724,7 @@ describe('updateTicketWithCache live updates', () => {
 
   it('publishes suppression flags on TICKET_CLOSED', async () => {
     const { updateTicketWithCache } = await import('./optimizedTicketActions');
-    const slaEvents = await import('../lib/workflowTicketSlaStageEvents');
+    const slaEvents = await import('@alga-psa/shared/services/tickets/ticketSlaStageEvents');
     (slaEvents.buildTicketResolutionSlaStageCompletionEvent as any).mockReturnValueOnce({
       eventType: 'TICKET_SLA_STAGE_MET',
       payload: {
@@ -833,6 +833,8 @@ describe('updateTicketWithCache live updates', () => {
     expect(ticketUpdates[0]).toEqual({
       status_id: 'closed-status-1',
       response_state: null,
+      updated_at: expect.anything(),
+      updated_by: 'user-1',
     });
     expect(publishRedisMock).toHaveBeenCalledWith(
       'alga-psa:ticket-updates:tenant-1:ticket-1',

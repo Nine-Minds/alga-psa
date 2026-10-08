@@ -38,7 +38,7 @@ import {
   captureTicketTransitionSnapshot,
   publishTicketTransitionsAfterCommit,
 } from '@alga-psa/shared/lib/tickets/ticketLifecycleEvents';
-import { buildTicketResolutionSlaStageCompletionEvent } from '../lib/workflowTicketSlaStageEvents';
+import { buildTicketResolutionSlaStageCompletionEvent } from '@alga-psa/shared/services/tickets/ticketSlaStageEvents';
 import {
   BundleConcurrentModificationError,
   resolveClosedMasterChoices,

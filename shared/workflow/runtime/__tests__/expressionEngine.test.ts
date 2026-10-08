@@ -136,6 +136,19 @@ describe('expressionEngine guardrails', () => {
       ).resolves.toBe(10);
     });
 
+    it('stays well inside the evaluation budget on large text containing emoji', async () => {
+      const big = 'x😀'.repeat(100_000);
+      // 100,000 characters = 50,000 'x😀' pairs; len() counts UTF-16 units.
+      await expect(run('len(truncate(payload.big, 1000000, ""))', { big })).resolves.toBe(150_000);
+      await expect(run('truncate(payload.big, 4, "")', { big })).resolves.toBe('x😀x😀');
+      await expect(run('substring(payload.big, -3)', { big })).resolves.toBe('😀x😀');
+    });
+
+    it('treats a lone surrogate as one character', async () => {
+      await expect(run('substring(payload.s, 1, 2)', { s: 'a\uD83Db\uDE00c' })).resolves.toBe('\uD83Db');
+      await expect(run('truncate(payload.s, 3, "")', { s: '\uDE00😀ab' })).resolves.toBe('\uDE00😀a');
+    });
+
     it('is accepted by the validator the designer uses', () => {
       expect(() => validateExpressionSource('truncate(payload.a, 10) & substring(payload.b, 0, 3)')).not.toThrow();
     });
