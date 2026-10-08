@@ -178,12 +178,20 @@ async function signInThroughSimulator() {
   const callback = new URL(authorized.headers.get('location')!);
   expect(callback.searchParams.get('state')).toBe('authjs-state');
 
+  // @auth/core's default client auth is client_secret_basic: the credentials
+  // ride in the Authorization header, form-urlencoded, and never in the body.
+  const formUrlEncode = (value: string) => encodeURIComponent(value).replace(/%20/g, '+');
+  const clientSecretBasic = `Basic ${Buffer.from(
+    `${formUrlEncode(provider.clientId)}:${formUrlEncode(provider.clientSecret)}`
+  ).toString('base64')}`;
+
   const tokenResponse = await fetch(provider.token.url, {
     method: 'POST',
-    headers: { 'content-type': 'application/x-www-form-urlencoded' },
+    headers: {
+      'content-type': 'application/x-www-form-urlencoded',
+      authorization: clientSecretBasic,
+    },
     body: new URLSearchParams({
-      client_id: provider.clientId,
-      client_secret: provider.clientSecret,
       grant_type: 'authorization_code',
       code: callback.searchParams.get('code')!,
       redirect_uri: redirectUri,

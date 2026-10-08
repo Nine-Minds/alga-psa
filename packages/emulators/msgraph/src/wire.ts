@@ -26,6 +26,40 @@ function decodePath(path: string): string {
 }
 
 /**
+ * Microsoft's token endpoint takes client credentials either in the form body
+ * (client_secret_post) or as an HTTP Basic header (client_secret_basic, RFC 6749
+ * 2.3.1, form-urlencoded halves). Auth.js sends the header by default and omits
+ * the body fields entirely, so a simulator that only read the body would 401
+ * every browser sign-in. Body fields still win where a client sends both.
+ */
+function clientSecretBasicCredentials(req: Request): { client_id?: string; client_secret?: string } {
+  const header = String(req.headers.authorization ?? '');
+  const encoded = /^Basic\s+(.+)$/i.exec(header)?.[1];
+  if (!encoded) {
+    return {};
+  }
+
+  const decoded = Buffer.from(encoded, 'base64').toString('utf8');
+  const separator = decoded.indexOf(':');
+  if (separator < 0) {
+    return {};
+  }
+
+  return {
+    client_id: formUrlDecode(decoded.slice(0, separator)),
+    client_secret: formUrlDecode(decoded.slice(separator + 1)),
+  };
+}
+
+function formUrlDecode(value: string): string {
+  try {
+    return decodeURIComponent(value.replace(/\+/g, '%20'));
+  } catch {
+    return value;
+  }
+}
+
+/**
  * Vendor surface: Microsoft login (OAuth2 v2.0), the Graph v1.0 routes Alga's
  * email and Teams integrations use, and the Bot Framework connector plus its
  * OpenID/JWKS surface. Point MICROSOFT_LOGIN_BASE_URL, MICROSOFT_GRAPH_BASE_URL
@@ -76,7 +110,13 @@ export function wire(router: Router, core: MsGraphCore, env: HostEnv): void {
       res.status(fault.status).json(fault.body);
       return;
     }
-    res.json(core.grantToken({ ...req.body, authorityTenant: String(req.params.tenant) }));
+    res.json(
+      core.grantToken({
+        ...clientSecretBasicCredentials(req),
+        ...req.body,
+        authorityTenant: String(req.params.tenant),
+      }),
+    );
   });
 
   router.get('/:tenant/v2.0/adminconsent', (req, res) => {

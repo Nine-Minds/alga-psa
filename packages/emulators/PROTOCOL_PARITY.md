@@ -92,6 +92,15 @@ matches no AlgaPSA user ends on a readable redirect instead of Auth.js
 emulator mints no signed id_token for this flow, so no signature, nonce or
 consent check runs, and the AlgaPSA database and session store are fixtures.
 
+The token endpoint reads client credentials from the form body
+(`client_secret_post`) and from an HTTP Basic header
+([`client_secret_basic`](https://www.rfc-editor.org/rfc/rfc6749#section-2.3.1),
+form-urlencoded halves), because Auth.js sends the header by default and omits
+the body fields. Both are grounded in RFC 6749 and in Microsoft's support for
+either method; the emulator publishes no
+`token_endpoint_auth_methods_supported` metadata, so this is not evidence about
+which methods a given Entra application accepts.
+
 ## SMTP transaction evidence
 
 The SMTP sink records bounded DATA transactions through the host request-history endpoint: acceptance, rejection, processing failure and interrupted transfers, with in-flight, dropped and reset-generation accounting. Records contain protocol, command, sequence, timestamps and outcome only; they contain no envelope, credentials or message content. Native transport tests cover these outcomes and isolation across reset. Greeting, envelope and authentication failures before DATA are not represented. The browser readiness consumer requires complete, nonempty SMTP evidence for the inbound-email journey; this is emulator observation, not live mail-provider parity.
