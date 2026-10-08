@@ -51,12 +51,12 @@ describe('assertTierAccess', () => {
       });
     });
 
-    it('does not throw for solo tenant accessing INTEGRATIONS (now unlocked at solo)', async () => {
-      vi.mocked(getSession).mockResolvedValue({
-        user: { plan: 'solo' },
-      } as any);
-
-      await expect(assertTierAccess(TIER_FEATURES.INTEGRATIONS)).resolves.toBeUndefined();
+    it.each(['essentials', 'solo'])('requires Pro for %s tenants accessing paid integrations', async (plan) => {
+      vi.mocked(getSession).mockResolvedValue({ user: { plan } } as any);
+      await expect(assertTierAccess(TIER_FEATURES.INTEGRATIONS)).rejects.toMatchObject({
+        requiredTier: 'pro',
+        currentTier: plan,
+      });
     });
 
     it('does not throw for pro tenant accessing INTEGRATIONS', async () => {

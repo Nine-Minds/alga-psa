@@ -1,8 +1,12 @@
-import { createTenantKnex, tenantDb } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import logger from '@alga-psa/core/logger';
 import { normalizeClientContract } from '@shared/billingClients/clientContracts';
-import { getActionRegistryV2, initializeWorkflowRuntimeV2 } from '@alga-psa/workflows/runtime';
-import { TicketModel } from '@shared/models/ticketModel';
+import {
+  buildRenewalTicketIdempotencyKey,
+  createRenewalTicket,
+  normalizeOptionalUuid,
+  resolveRenewalTicketRouting,
+} from '@shared/billingClients/renewalTicket';
 import type { RenewalWorkItemStatus } from '@alga-psa/types';
 import type { Knex } from 'knex';
 
@@ -13,10 +17,6 @@ export interface RenewalQueueProcessorJobData extends Record<string, unknown> {
 
 const DEFAULT_RENEWAL_PROCESSING_HORIZON_DAYS = 90;
 const DEFAULT_RENEWAL_DUE_DATE_ACTION_POLICY = 'create_ticket' as const;
-const RENEWAL_TICKET_SOURCE = 'renewal_due_date_automation';
-const RENEWAL_QUEUE_ACTION_STEP_PATH = 'jobs.process-renewal-queue';
-const UUID_PATTERN =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const KNOWN_RENEWAL_STATUSES: RenewalWorkItemStatus[] = [
   'pending',
   'renewing',
@@ -52,141 +52,9 @@ const resolveUseTenantRenewalDefaults = (value: unknown): boolean => (
     ? value
     : true
 );
-const normalizeOptionalUuid = (value: unknown): string | null => (
-  typeof value === 'string' && UUID_PATTERN.test(value)
-    ? value
-    : null
-);
-const buildRenewalTicketTitle = (row: Record<string, unknown>, decisionDueDate: string): string => {
-  const clientName = typeof row.client_name === 'string' && row.client_name.trim().length > 0
-    ? row.client_name.trim()
-    : 'Client';
-  const contractName = typeof row.contract_name === 'string' && row.contract_name.trim().length > 0
-    ? row.contract_name.trim()
-    : 'Contract';
-  return `Renewal Decision Due ${decisionDueDate}: ${clientName} / ${contractName}`;
-};
-const buildRenewalTicketDescription = (
-  row: Record<string, unknown>,
-  normalized: Record<string, unknown>,
-  decisionDueDate: string
-): string => {
-  const renewalMode = typeof normalized.effective_renewal_mode === 'string'
-    ? normalized.effective_renewal_mode
-    : 'manual';
-  const noticePeriod = typeof normalized.effective_notice_period_days === 'number'
-    ? normalized.effective_notice_period_days
-    : 'unknown';
-  const cycleKey = typeof normalized.renewal_cycle_key === 'string'
-    ? normalized.renewal_cycle_key
-    : 'unknown';
-  const contractId = typeof row.contract_id === 'string' ? row.contract_id : 'unknown';
-
-  return [
-    'Contract renewal decision is due.',
-    `Decision due date: ${decisionDueDate}`,
-    `Renewal mode: ${renewalMode}`,
-    `Notice period (days): ${noticePeriod}`,
-    `Renewal cycle: ${cycleKey}`,
-    `Source contract: ${contractId}`,
-  ].join('\n');
-};
-const buildRenewalTicketIdempotencyKey = (params: {
-  tenantId: string;
-  clientContractId: string;
-  cycleKey: string;
-}): string => `renewal-ticket:${params.tenantId}:${params.clientContractId}:${params.cycleKey}`;
-
 function tenantScopedTable(conn: Knex | Knex.Transaction, table: string, tenant: string) {
   return tenantDb(conn, tenant).table(table);
 }
-
-const tryCreateRenewalTicketViaWorkflowAction = async (params: {
-  knex: Knex;
-  tenantId: string;
-  runId: string | null;
-  idempotencyKey: string;
-  clientId: string;
-  title: string;
-  description: string;
-  boardId: string;
-  statusId: string;
-  priorityId: string;
-  assignedTo: string | null;
-  attributes: Record<string, unknown>;
-}): Promise<string | null> => {
-  if (!params.runId) {
-    return null;
-  }
-
-  initializeWorkflowRuntimeV2();
-  const ticketCreateAction = getActionRegistryV2().get('tickets.create', 1);
-  if (!ticketCreateAction) {
-    return null;
-  }
-
-  const actionInput = ticketCreateAction.inputSchema.parse({
-    client_id: params.clientId,
-    title: params.title,
-    description: params.description,
-    board_id: params.boardId,
-    status_id: params.statusId,
-    priority_id: params.priorityId,
-    assignment: params.assignedTo
-      ? { primary: { type: 'user', id: params.assignedTo }, additional_user_ids: [] }
-      : undefined,
-    attributes: params.attributes,
-    idempotency_key: params.idempotencyKey,
-  });
-
-  const actionResult = await ticketCreateAction.handler(actionInput, {
-    runId: params.runId,
-    stepPath: RENEWAL_QUEUE_ACTION_STEP_PATH,
-    tenantId: params.tenantId,
-    idempotencyKey: params.idempotencyKey,
-    attempt: 1,
-    nowIso: () => new Date().toISOString(),
-    env: { source: RENEWAL_TICKET_SOURCE },
-    knex: params.knex,
-  });
-  const validatedResult = ticketCreateAction.outputSchema.parse(actionResult);
-  return validatedResult.ticket_id;
-};
-
-const createRenewalTicketDirectly = async (params: {
-  trx: Knex.Transaction;
-  tenantId: string;
-  clientId: string;
-  title: string;
-  description: string;
-  boardId: string;
-  statusId: string;
-  priorityId: string;
-  assignedTo: string | null;
-  idempotencyKey: string;
-  attributes: Record<string, unknown>;
-}): Promise<string> => {
-  // LEVERAGE: pattern ticket-create-composition — creates a ticket then composes assets/agents/team/tags/checklist/activity/events by hand; see createTicketWithSideEffects (packages/tickets/src/lib/createTicketWithSideEffects.ts)
-  const created = await TicketModel.createTicketWithRetry(
-    {
-      title: params.title,
-      description: params.description,
-      client_id: params.clientId,
-      board_id: params.boardId,
-      status_id: params.statusId,
-      priority_id: params.priorityId,
-      assigned_to: params.assignedTo ?? undefined,
-      source: RENEWAL_TICKET_SOURCE,
-      attributes: {
-        ...params.attributes,
-        idempotency_key: params.idempotencyKey,
-      },
-    },
-    params.tenantId,
-    params.trx
-  );
-  return created.ticket_id;
-};
 
 export async function processRenewalQueueHandler(data: RenewalQueueProcessorJobData): Promise<void> {
   const tenantId = typeof data.tenantId === 'string' ? data.tenantId : '';
@@ -231,7 +99,6 @@ export async function processRenewalQueueHandler(data: RenewalQueueProcessorJobD
     hasLastActionByColumn,
     hasLastActionAtColumn,
     hasTicketsTable,
-    hasWorkflowRunsTable,
   ] = await Promise.all([
     schema?.hasColumn?.('client_contracts', 'decision_due_date') ?? false,
     schema?.hasColumn?.('client_contracts', 'status') ?? false,
@@ -262,7 +129,6 @@ export async function processRenewalQueueHandler(data: RenewalQueueProcessorJobD
     schema?.hasColumn?.('client_contracts', 'last_action_by') ?? false,
     schema?.hasColumn?.('client_contracts', 'last_action_at') ?? false,
     schema?.hasTable?.('tickets') ?? false,
-    schema?.hasTable?.('workflow_runs') ?? false,
   ]);
 
   const missingRenewalSchema: string[] = [];
@@ -328,21 +194,6 @@ export async function processRenewalQueueHandler(data: RenewalQueueProcessorJobD
     .select(['cc.*', 'c.status as contract_status', 'c.contract_name', 'cl.client_name', ...defaultSelections]);
 
   const candidateRows = await contractQuery;
-  let workflowRunIdForTenant: string | null = null;
-  if (hasWorkflowRunsTable) {
-    try {
-      workflowRunIdForTenant = (
-        await tenantScopedTable(knex, 'workflow_runs', tenantId)
-          .orderBy('updated_at', 'desc')
-          .first('run_id')
-      )?.run_id ?? null;
-    } catch (error) {
-      logger.warn('Failed to resolve workflow run for renewal ticket provenance; tickets will be created directly', {
-        tenantId,
-        error: error instanceof Error ? error.message : String(error),
-      });
-    }
-  }
   let eligibleRows = 0;
   let upsertedCount = 0;
   let normalizedStatusCount = 0;
@@ -351,9 +202,6 @@ export async function processRenewalQueueHandler(data: RenewalQueueProcessorJobD
   let createTicketPolicyCount = 0;
   let contractOverridePolicyCount = 0;
   let createdTicketCount = 0;
-  let workflowTicketCreateAttemptCount = 0;
-  let workflowTicketCreateSuccessCount = 0;
-  let workflowTicketCreateFallbackCount = 0;
   let ticketCreationSkippedMissingDefaultsCount = 0;
   let routingOverrideAppliedCount = 0;
   let duplicateTicketSkipCount = 0;
@@ -454,28 +302,9 @@ export async function processRenewalQueueHandler(data: RenewalQueueProcessorJobD
       && decisionDueDate <= today;
     if (shouldCreateTicketAtDueDate) {
       let ticketAutomationError: string | null = null;
-      const clientId = normalizeOptionalUuid((row as any).client_id);
-      const tenantBoardId = normalizeOptionalUuid((row as any).tenant_renewal_ticket_board_id);
-      const tenantStatusId = normalizeOptionalUuid((row as any).tenant_renewal_ticket_status_id);
-      const tenantPriorityId = normalizeOptionalUuid((row as any).tenant_renewal_ticket_priority);
-      const tenantAssignedTo = normalizeOptionalUuid((row as any).tenant_renewal_ticket_assignee_id);
-      const contractBoardId = normalizeOptionalUuid((row as any).renewal_ticket_board_id);
-      const contractStatusId = normalizeOptionalUuid((row as any).renewal_ticket_status_id);
-      const contractPriorityId = normalizeOptionalUuid((row as any).renewal_ticket_priority);
-      const contractAssignedTo = normalizeOptionalUuid((row as any).renewal_ticket_assignee_id);
-      const boardId = useTenantRenewalDefaults ? tenantBoardId : (contractBoardId ?? tenantBoardId);
-      const statusId = useTenantRenewalDefaults ? tenantStatusId : (contractStatusId ?? tenantStatusId);
-      const priorityId = useTenantRenewalDefaults ? tenantPriorityId : (contractPriorityId ?? tenantPriorityId);
-      const assignedTo = useTenantRenewalDefaults ? tenantAssignedTo : (contractAssignedTo ?? tenantAssignedTo);
-      if (
-        !useTenantRenewalDefaults
-        && (
-          contractBoardId !== null
-          || contractStatusId !== null
-          || contractPriorityId !== null
-          || contractAssignedTo !== null
-        )
-      ) {
+      const routing = resolveRenewalTicketRouting(row as Record<string, unknown>, useTenantRenewalDefaults);
+      const { clientId, boardId, statusId, priorityId } = routing;
+      if (routing.overrideApplied) {
         routingOverrideAppliedCount += 1;
       }
 
@@ -488,19 +317,6 @@ export async function processRenewalQueueHandler(data: RenewalQueueProcessorJobD
           clientContractId: (row as any).client_contract_id,
           cycleKey,
         });
-        const ticketTitle = buildRenewalTicketTitle(row as Record<string, unknown>, decisionDueDate);
-        const ticketDescription = buildRenewalTicketDescription(
-          row as Record<string, unknown>,
-          normalized,
-          decisionDueDate
-        );
-        const ticketAttributes = {
-          renewal_cycle_key: cycleKey,
-          decision_due_date: decisionDueDate,
-          source_client_contract_id: (row as any).client_contract_id,
-          idempotency_key: idempotencyKey,
-        } as Record<string, unknown>;
-
         let createdTicketId: string | null = null;
         try {
           const existingTicket = await tenantScopedTable(knex, 'tickets', tenantId)
@@ -521,58 +337,20 @@ export async function processRenewalQueueHandler(data: RenewalQueueProcessorJobD
         }
 
         if (!createdTicketId) {
-          workflowTicketCreateAttemptCount += 1;
           try {
-            createdTicketId = await tryCreateRenewalTicketViaWorkflowAction({
-              knex,
-              tenantId,
-              runId: workflowRunIdForTenant,
-              idempotencyKey,
-              clientId,
-              title: ticketTitle,
-              description: ticketDescription,
-              boardId,
-              statusId,
-              priorityId,
-              assignedTo,
-              attributes: ticketAttributes,
-            });
-            if (createdTicketId) {
-              workflowTicketCreateSuccessCount += 1;
-            }
-          } catch (error) {
-            logger.warn(
-              'Workflow tickets.create action failed for renewal automation ticket creation; falling back to direct creation',
-              {
-                tenantId,
-                clientContractId: (row as any).client_contract_id,
-                error: error instanceof Error ? error.message : String(error),
-              }
-            );
-          }
-        }
-
-        if (!createdTicketId) {
-          workflowTicketCreateFallbackCount += 1;
-          try {
-            createdTicketId = await knex.transaction(async (trx: Knex.Transaction) => (
-              createRenewalTicketDirectly({
-                trx,
-                tenantId,
-                clientId,
-                title: ticketTitle,
-                description: ticketDescription,
-                boardId,
-                statusId,
-                priorityId,
-                assignedTo,
-                idempotencyKey,
-                attributes: ticketAttributes,
+            createdTicketId = await withTransaction(knex, async (trx: Knex.Transaction) => (
+              await createRenewalTicket(trx, tenantId, {
+                row: row as Record<string, unknown>,
+                normalized,
+                decisionDueDate,
+                cycleKey,
+                routing,
+                actor: { type: 'system' },
               })
-            ));
+            ).ticketId);
           } catch (error) {
             ticketAutomationError = error instanceof Error ? error.message : String(error);
-            logger.error('Direct renewal automation ticket creation failed', {
+            logger.error('Renewal automation ticket creation failed', {
               tenantId,
               clientContractId: (row as any).client_contract_id,
               error: error instanceof Error ? error.message : String(error),
@@ -625,9 +403,6 @@ export async function processRenewalQueueHandler(data: RenewalQueueProcessorJobD
     createTicketPolicyCount,
     contractOverridePolicyCount,
     createdTicketCount,
-    workflowTicketCreateAttemptCount,
-    workflowTicketCreateSuccessCount,
-    workflowTicketCreateFallbackCount,
     ticketCreationSkippedMissingDefaultsCount,
     routingOverrideAppliedCount,
     duplicateTicketSkipCount,

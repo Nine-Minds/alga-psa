@@ -14,6 +14,7 @@ import UserAvatar from '@alga-psa/ui/components/UserAvatar';
 import TeamAvatar from '@alga-psa/ui/components/TeamAvatar';
 import { useTheme } from 'next-themes';
 import { darkenColor } from '@alga-psa/ui/lib/colorUtils';
+import { taskDateText } from './taskDateText';
 
 interface Phase {
   phase_id: string;
@@ -47,6 +48,7 @@ interface Task {
   project_status_mapping_id: string;
   task_name?: string;
   description?: string;
+  start_date?: Date | null;
   due_date?: Date | null;
   status_name?: string;
   custom_name?: string;
@@ -116,6 +118,12 @@ function TaskCard({
   const visibleFields = config.visible_task_fields ?? ['task_name', 'due_date', 'status'];
   const allowUploads = visibleFields.includes('document_uploads');
   const showDependencies = visibleFields.includes('dependencies');
+  const dateText = taskDateText(
+    task,
+    visibleFields,
+    (date) => format(date, 'PP', { locale: dateLocale }),
+    (date) => t('tasks.startsOn', 'Starts {{date}}', { date }),
+  );
 
   const hasDependencies = dependencies && (dependencies.predecessors.length > 0 || dependencies.successors.length > 0);
   const hasBlockingDeps = dependencies && (
@@ -168,13 +176,13 @@ function TaskCard({
       {/* Task Details */}
       <div className="space-y-1.5 text-sm text-gray-600 dark:text-gray-400">
         {/* Due Date row with badges inline */}
-        {(visibleFields.includes('due_date') || visibleFields.includes('checklist_progress') || showDependencies) && (
+        {(visibleFields.includes('start_date') || visibleFields.includes('due_date') || visibleFields.includes('checklist_progress') || showDependencies) && (
           <div className="flex items-center justify-between gap-2">
-            {/* Left side: Due Date */}
-            {visibleFields.includes('due_date') && task.due_date ? (
+            {/* Left side: Start / Due Date */}
+            {dateText ? (
               <div className="flex items-center gap-1.5">
                 <Calendar className="w-3 h-3 text-[rgb(var(--color-text-400))]" />
-                <span>{format(new Date(task.due_date), 'PP', { locale: dateLocale })}</span>
+                <span>{dateText}</span>
               </div>
             ) : (
               <div />

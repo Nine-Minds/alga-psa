@@ -552,6 +552,11 @@
   "timeEntry": {
     "title": "Add time entry",
     "serviceLabel": "Service",
+    "serviceSource": {
+      "task": "Default from task",
+      "phase": "Default from phase",
+      "project": "Default from project"
+    },
     "selectService": "Select a service…",
     "loadingServices": "Loading services…",
     "noServices": "No services available.",

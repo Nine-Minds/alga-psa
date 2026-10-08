@@ -11,6 +11,7 @@ import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { getProjectTreeData, getProjectDetails } from '../actions/projectActions';
 import { getAllPriorities } from '@alga-psa/reference-data/actions';
 import { getServices } from '@alga-psa/projects/actions/serviceCatalogActions';
+import { timeEntryServiceChoices } from '@alga-psa/core';
 import { IService } from '@alga-psa/types';
 import {
   updateTaskWithChecklist,
@@ -27,7 +28,8 @@ import {
   deleteTaskTicketLinksByTicketIdAction,
   duplicateTaskToPhase,
   getTaskDependencies,
-  addTaskDependency
+  addTaskDependency,
+  getEffectiveTaskService
 } from '../actions/projectTaskActions';
 import { getCurrentUser, getUserAvatarUrlsBatchAction, searchUsersForMentions } from '@alga-psa/user-composition/actions';
 import { findTagsByEntityId, createTagsForEntity, isTagActionError } from '@alga-psa/tags/actions';
@@ -72,12 +74,13 @@ import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { useDrawer } from '@alga-psa/ui';
 import { useSchedulingCallbacks } from '@alga-psa/ui/context';
 import { IExtendedWorkItem, WorkItemType } from '@alga-psa/types';
+import type { ProjectServiceSource } from '@alga-psa/types';
 import TaskStatusSelect from './TaskStatusSelect';
 import PrefillFromTicketDialog from './PrefillFromTicketDialog';
 import { getTeams, getTeamAvatarUrlsBatchAction, isTeamActionError } from '@alga-psa/teams/actions';
 import type { ITeam } from '@alga-psa/types';
 import { TaskPrefillFields } from '../lib/taskTicketMapping';
-import { buildTaskTimeEntryContext } from '../lib/timeEntryContext';
+import { applicableServiceDefault, buildTaskTimeEntryContext } from '../lib/timeEntryContext';
 import {
   parseTaskRichTextContent,
   serializeTaskRichTextContent,
@@ -113,6 +116,8 @@ interface TaskFormProps {
   projectTreeData?: any[]; // Add projectTreeData prop
   prefillData?: TaskFormPrefillData;
   onCommentCountChange?: (taskId: string, count: number) => void;
+  /** Asked before an edit is saved; resolving false keeps the form open. */
+  confirmBeforeSave?: (taskId: string, change: { start_date: Date | null; due_date: Date | null; project_status_mapping_id: string }) => Promise<boolean>;
   printButton?: React.ReactNode;
   printableHeader?: React.ReactNode;
   printTitle?: string;
@@ -133,6 +138,7 @@ export default function TaskForm({
   projectTreeData = [],
   prefillData,
   onCommentCountChange,
+  confirmBeforeSave,
   printButton,
   printableHeader,
   printTitle,
@@ -185,6 +191,9 @@ export default function TaskForm({
       : prefillData?.estimated_hours ?? 0
   );
   const actualHours = Number(task?.actual_hours) / 60 || 0;
+  const [startDate, setStartDate] = useState<Date | undefined>(
+    task?.start_date ? new Date(task.start_date) : undefined
+  );
   const [dueDate, setDueDate] = useState<Date | undefined>(
     task?.due_date
       ? new Date(task.due_date)
@@ -266,6 +275,14 @@ export default function TaskForm({
   const [selectedPriorityId, setSelectedPriorityId] = useState<string | null>(task?.priority_id ?? null);
   const [availableServices, setAvailableServices] = useState<IService[]>([]);
   const [selectedServiceId, setSelectedServiceId] = useState<string | null>(task?.service_id ?? null);
+  // Phase/project default this task falls back to when it sets no service of its own.
+  // Only for the hint: the entry itself re-resolves on click, so a slow load can
+  // never cost the entry its default.
+  const [applicableInheritedService, setApplicableInheritedService] = useState<{
+    serviceId: string;
+    serviceName: string | null;
+    source: 'phase' | 'project';
+  } | null>(null);
   const [taskDependencies, setTaskDependencies] = useState<{
     predecessors: IProjectTaskDependency[];
     successors: IProjectTaskDependency[];
@@ -329,6 +346,7 @@ export default function TaskForm({
     setDescriptionContent(parseTaskRichTextContent(prefillData.description || null));
     setDescriptionEditorKey(prev => prev + 1);
     setAssignedUser(prefillData.assigned_to);
+    setStartDate(undefined);
     setDueDate(prefillData.due_date ?? undefined);
     setEstimatedHours(prefillData.estimated_hours);
 
@@ -411,6 +429,13 @@ export default function TaskForm({
         }
 
         if (task?.task_id) {
+          // Phase/project service default, so the picker can say what a blank
+          // task-level service will fall back to.
+          const effectiveService = await getEffectiveTaskService(task.task_id);
+          if (!isReturnedActionError(effectiveService)) {
+            setApplicableInheritedService(applicableServiceDefault(effectiveService.inherited));
+          }
+
           // Use checklist items and resources from the task object if they exist
           if (task.checklist_items !== undefined) {
             console.log('Using checklist items from task object');
@@ -675,6 +700,7 @@ export default function TaskForm({
           assigned_to: assignedUser || null,
           assigned_team_id: assignedTeamId || null,
           estimated_hours: Math.round(estimatedHours * 60), // Convert hours to minutes for storage
+          start_date: startDate || null,
           due_date: dueDate || null,
           checklist_items: checklistItems,
           phase_id: selectedPhaseId,
@@ -865,6 +891,15 @@ export default function TaskForm({
       // Convert empty string to null for database
       const finalAssignedTo = !assignedUser || assignedUser === '' ? null : assignedUser;
 
+      if (mode === 'edit' && task?.task_id && confirmBeforeSave) {
+        const proceed = await confirmBeforeSave(task.task_id, {
+          start_date: startDate ?? null,
+          due_date: dueDate ?? null,
+          project_status_mapping_id: selectedStatusId,
+        });
+        if (!proceed) return;
+      }
+
       if (mode === 'edit' && task?.task_id) {
         // Check if phase or status actually changed
         const phaseChanged = task.phase_id !== selectedPhaseId;
@@ -901,6 +936,7 @@ export default function TaskForm({
           assigned_to: finalAssignedTo,
           assigned_team_id: assignedTeamId || null,
           estimated_hours: Math.round(estimatedHours * 60), // Convert hours to minutes for storage
+          start_date: startDate || null,
           due_date: dueDate || null,
           priority_id: selectedPriorityId,
           checklist_items: checklistItems,
@@ -939,6 +975,7 @@ export default function TaskForm({
           assigned_to: finalAssignedTo,
           assigned_team_id: assignedTeamId || null,
           estimated_hours: Math.round(estimatedHours * 60), // Convert hours to minutes for storage
+          start_date: startDate || null,
           due_date: dueDate || null, // Use selected due date or null
           priority_id: selectedPriorityId,
           phase_id: phase.phase_id,
@@ -1381,6 +1418,26 @@ export default function TaskForm({
     setShowDeleteConfirm(false);
   };
 
+  // The phase/project default as it stands right now. Falls back to the hint
+  // already on screen if the lookup fails, so a hiccup never downgrades a
+  // default the user can see.
+  const resolveInheritedService = async (taskId: string): Promise<{
+    serviceId: string | null;
+    serviceName: string | null;
+    source: ProjectServiceSource | null;
+  }> => {
+    const effectiveService = await getEffectiveTaskService(taskId);
+    const inherited = isReturnedActionError(effectiveService)
+      ? applicableInheritedService
+      : applicableServiceDefault(effectiveService.inherited);
+
+    if (!isReturnedActionError(effectiveService)) {
+      setApplicableInheritedService(inherited);
+    }
+
+    return inherited ?? { serviceId: null, serviceName: null, source: null };
+  };
+
   const handleAddTimeEntry = async () => {
     if (!task?.task_id) {
       toast.error(taskFormT('saveBeforeTimeEntry', 'Please save the task before adding time entries'));
@@ -1402,7 +1459,17 @@ export default function TaskForm({
       };
 
       const projectName = findProjectName(projectTreeOptions, selectedPhaseId);
-      const serviceName = availableServices.find(service => service.service_id === selectedServiceId)?.service_name ?? null;
+      // The task's own service wins; otherwise fall back to the phase/project
+      // default, resolved here rather than read from state: the form loads its
+      // hint in the background, and an entry opened before that lands must still
+      // carry the default.
+      const effectiveService = selectedServiceId
+        ? {
+            serviceId: selectedServiceId,
+            serviceName: availableServices.find(service => service.service_id === selectedServiceId)?.service_name ?? null,
+            source: 'task' as const,
+          }
+        : await resolveInheritedService(task.task_id);
 
       await launchTimeEntry({
         openDrawer,
@@ -1412,8 +1479,9 @@ export default function TaskForm({
           taskName: taskName || task.task_name,
           projectName,
           phaseName: selectedPhase.phase_name,
-          serviceId: selectedServiceId,
-          serviceName,
+          serviceId: effectiveService.serviceId,
+          serviceName: effectiveService.serviceName,
+          serviceSource: effectiveService.source,
         }),
       });
     } catch (error) {
@@ -1734,7 +1802,7 @@ export default function TaskForm({
               onChange={(value) => setSelectedServiceId(value || null)}
               options={[
                 { value: '', label: taskFormT('noService', 'No service') },
-                ...availableServices.map(s => ({
+                ...timeEntryServiceChoices(availableServices, selectedServiceId).map(s => ({
                   value: s.service_id,
                   label: s.service_name
                 }))
@@ -1746,6 +1814,17 @@ export default function TaskForm({
             <p className="text-xs text-gray-500 mt-1">
               {taskFormT('serviceHelp', 'When set, this service will be automatically selected when creating time entries from this task.')}
             </p>
+            {!selectedServiceId && applicableInheritedService && (
+              <p className="text-xs text-gray-500 mt-1" id="task-service-inherited-hint">
+                {applicableInheritedService.source === 'phase'
+                  ? taskFormT('serviceInheritedFromPhase', 'Inherits {{service}} from the phase.', {
+                      service: applicableInheritedService.serviceName ?? '',
+                    })
+                  : taskFormT('serviceInheritedFromProject', 'Inherits {{service}} from the project.', {
+                      service: applicableInheritedService.serviceName ?? '',
+                    })}
+              </p>
+            )}
           </div>
 
           {/* 2 Column Grid Section */}
@@ -1819,24 +1898,19 @@ export default function TaskForm({
               </>
             )}
 
-            {/* Row 3: Created At (Edit mode only) and Due Date */}
+            {/* Row 3: Start Date and Due Date */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">{taskFormT('createdAtLabel', 'Created At')}</label>
-              {mode === 'edit' && task ? (
-                <div className="p-2 bg-gray-50 border border-gray-200 rounded-md text-gray-700">
-                  {formatDate(new Date(task.created_at), {
-                    month: 'short',
-                    day: 'numeric',
-                    year: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit'
-                  })}
-                </div>
-              ) : (
-                <div className="p-2 bg-gray-50 border border-gray-200 rounded-md text-gray-500">
-                  {taskFormT('willBeSetOnCreate', 'Will be set on creation')}
-                </div>
-              )}
+              <label className="block text-sm font-medium text-gray-700 mb-1">{taskFormT('startDateLabel', 'Start Date')}</label>
+              <DatePicker
+                value={startDate}
+                onChange={setStartDate}
+                id="task-start-date-picker"
+                label={taskFormT('taskStartDateLabel', 'Task Start Date')}
+                placeholder={taskFormT('startDatePlaceholder', 'Select start date')}
+                maxDate={dueDate}
+                clearable
+                disabled={isSubmitting}
+              />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">{taskFormT('dueDateLabel', 'Due Date')}</label>
@@ -1880,6 +1954,19 @@ export default function TaskForm({
                 {taskFormT('actualHoursDerivedHelp', 'Calculated from linked time entries')}
               </p>
             </div>
+            {/* Read-only metadata stays out of the field grid. */}
+            {mode === 'edit' && task?.created_at && (
+              <p id="task-created-at" className="col-span-2 -mt-2 text-xs text-[rgb(var(--color-text-500))]">
+                {taskFormT('createdAtLabel', 'Created At')}:{' '}
+                {formatDate(new Date(task.created_at), {
+                  month: 'short',
+                  day: 'numeric',
+                  year: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit'
+                })}
+              </p>
+            )}
             {/* Row 5: Assigned To and Additional Agents in one row */}
             <div className="col-span-2">
               <div className="grid grid-cols-2 gap-4">

@@ -55,7 +55,7 @@ import {
   TICKET_ACTIVITY_SOURCE,
   writeTicketActivity,
 } from '@alga-psa/shared/lib/ticketActivity';
-import { TicketModelEventPublisher } from '../lib/adapters/TicketModelEventPublisher';
+import { TicketModelEventPublisher } from '@alga-psa/shared/services/tickets/ticketModelEventPublisher';
 import { TicketModelAnalyticsTracker } from '../lib/adapters/TicketModelAnalyticsTracker';
 import { calculateItilPriority } from '@alga-psa/tickets/lib/itilUtils';
 import { enforceTicketCloseRules, TicketCloseValidationError, type CloseRuleFailure } from '../lib/validateTicketClosure';
@@ -81,6 +81,7 @@ import {
   type TicketDuplicateSource,
 } from '../lib/ticketDuplicate';
 import { getClientContactVisibilityContext } from '../lib/clientPortalVisibility.server';
+import { extractActiveWatcherContactIds } from '@alga-psa/authorization/portal/visibility';
 import {
   addTicketCommentWithCache,
   updateTicketWithCache,
@@ -92,7 +93,7 @@ import { revertBundlePropagationForChild } from './ticketBundleUtils';
 import {
   buildTicketResolutionSlaStageCompletionEvent,
   buildTicketResolutionSlaStageEnteredEvent,
-} from '../lib/workflowTicketSlaStageEvents';
+} from '@alga-psa/shared/services/tickets/ticketSlaStageEvents';
 import {
   parseTicketStatusFilterValue,
   shouldApplyOpenOnlyStatusFilter,
@@ -260,6 +261,9 @@ function toTicketAuthorizationRecord(
     clientId: ticket.client_id ?? null,
     boardId: ticket.board_id ?? null,
     contactId: ticket.contact_name_id ?? null,
+    // `undefined` (column not selected) can never satisfy a profile grant.
+    billingProfileId: ticket.billing_profile_id,
+    watcherContactIds: extractActiveWatcherContactIds(ticket.attributes),
     teamIds: ticket.assigned_team_id ? [ticket.assigned_team_id] : [],
   };
 }
@@ -619,7 +623,7 @@ export const addTicket = withAuth(async (user, { tenant }, data: FormData): Prom
       const analyticsTracker = new TicketModelAnalyticsTracker();
 
       // Use shared TicketModel with retry logic
-      // LEVERAGE: pattern ticket-create-composition — creates a ticket then composes assets/agents/team/tags/checklist/activity/events by hand; see createTicketWithSideEffects (packages/tickets/src/lib/createTicketWithSideEffects.ts)
+      // LEVERAGE: pattern ticket-create-composition — creates a ticket then composes assets/agents/team/tags/checklist/activity/events by hand; see createTicketWithSideEffects (shared/services/tickets/createTicketWithSideEffects.ts)
       const ticketResult = await TicketModel.createTicketWithRetry(
         createTicketInput,
         tenant,

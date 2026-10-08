@@ -314,16 +314,43 @@ export class WorkflowRuntimeV2EventStreamWorker {
 
     const startedRuns: string[] = [];
     const payloadValidationErrors: string[] = [];
+    // Every reason a matching workflow was NOT launched. These used to be
+    // counted in skipStats only, so an operator looking at the event row saw no
+    // error and no run (alga-2026-0002379). They are persisted with the event.
+    const skipDiagnostics: string[] = [];
     const skipStats = {
       noVersion: 0,
       missingSchemaRef: 0,
       unknownSchemaRef: 0,
       schemaMismatch: 0,
       payloadValidationFailed: 0,
+      workflowCycle: 0,
     };
+    // Workflow ids that caused this event (stamped by an action such as tickets.create when a
+    // workflow run published it). A workflow already in the chain never relaunches itself, which
+    // bounds A -> A and A -> B -> A loops. Non-cyclic chains (A -> B) still run.
+    const eventLineage = Array.isArray(payload.workflowLineage)
+      ? (payload.workflowLineage as unknown[]).filter((id): id is string => typeof id === 'string')
+      : [];
     for (const { workflow, latestVersion: latest } of matching) {
       if (deliveryError) {
         break;
+      }
+
+      const skipLabel = `workflow ${workflow.key ?? workflow.workflow_id} (${workflow.workflow_id})`;
+
+      if (eventLineage.includes(workflow.workflow_id)) {
+        skipStats.workflowCycle += 1;
+        skipDiagnostics.push(`Skipped ${skipLabel}: workflow is already in the event lineage (trigger loop guard)`);
+        logger.warn('[WorkflowRuntimeV2EventStreamWorker] Workflow is already in the event lineage; skipping launch to avoid a trigger loop', {
+          workerId: this.workerId,
+          eventId: event.event_id,
+          eventType: event.event_type,
+          tenant: event.tenant,
+          workflowId: workflow.workflow_id,
+          workflowLineage: eventLineage,
+        });
+        continue;
       }
 
       const latestDefinition = latest.definition_json as any;
@@ -333,10 +360,12 @@ export class WorkflowRuntimeV2EventStreamWorker {
 
       if (!workflowPayloadSchemaRef) {
         skipStats.missingSchemaRef += 1;
+        skipDiagnostics.push(`Skipped ${skipLabel}: no payload schema reference is set on the workflow`);
         continue;
       }
       if (!schemaRegistry.has(workflowPayloadSchemaRef)) {
         skipStats.unknownSchemaRef += 1;
+        skipDiagnostics.push(`Skipped ${skipLabel}: payload schema ${workflowPayloadSchemaRef} is not registered`);
         continue;
       }
 
@@ -348,6 +377,7 @@ export class WorkflowRuntimeV2EventStreamWorker {
       const effectiveSourceSchemaRef = overrideSourceSchemaRef ?? payloadSchemaRef;
       if (!effectiveSourceSchemaRef) {
         skipStats.missingSchemaRef += 1;
+        skipDiagnostics.push(`Skipped ${skipLabel}: no source payload schema is known for event ${event.event_type}`);
         continue;
       }
 
@@ -356,6 +386,9 @@ export class WorkflowRuntimeV2EventStreamWorker {
       const refsMatch = effectiveSourceSchemaRef === workflowPayloadSchemaRef;
       if (!mappingProvided && !refsMatch) {
         skipStats.schemaMismatch += 1;
+        skipDiagnostics.push(
+          `Skipped ${skipLabel}: event payload schema ${effectiveSourceSchemaRef} differs from workflow schema ${workflowPayloadSchemaRef} and no payload mapping is configured`
+        );
         continue;
       }
 
@@ -378,7 +411,10 @@ export class WorkflowRuntimeV2EventStreamWorker {
           });
           workflowPayload = expandDottedKeys((resolved ?? {}) as Record<string, unknown>);
           mappingApplied = true;
-        } catch {
+        } catch (mappingError) {
+          skipDiagnostics.push(
+            `Skipped ${skipLabel}: trigger payload mapping failed: ${mappingError instanceof Error ? mappingError.message : String(mappingError)}`
+          );
           continue;
         }
       }
@@ -421,7 +457,8 @@ export class WorkflowRuntimeV2EventStreamWorker {
           triggerMetadata: {
             eventType: event.event_type,
             sourcePayloadSchemaRef: effectiveSourceSchemaRef,
-            triggerMappingApplied: mappingApplied
+            triggerMappingApplied: mappingApplied,
+            ...(eventLineage.length > 0 ? { workflowLineage: eventLineage } : {})
           },
           eventType: event.event_type,
           sourcePayloadSchemaRef: effectiveSourceSchemaRef,
@@ -479,9 +516,13 @@ export class WorkflowRuntimeV2EventStreamWorker {
         error_message: deliveryError,
         processed_at: processedAt,
       });
-    } else if (payloadValidationErrors.length > 0 && startedRuns.length === 0 && signaledRuns.size === 0) {
+    } else if (
+      (payloadValidationErrors.length > 0 || skipDiagnostics.length > 0) &&
+      startedRuns.length === 0 &&
+      signaledRuns.size === 0
+    ) {
       await WorkflowRuntimeEventModelV2.update(knex, eventRecord.event_id, {
-        error_message: payloadValidationErrors.join('\n'),
+        error_message: [...payloadValidationErrors, ...skipDiagnostics].join('\n'),
         processed_at: processedAt,
       }, event.tenant);
     } else if (missingCorrelationWarning && startedRuns.length === 0 && signaledRuns.size === 0) {

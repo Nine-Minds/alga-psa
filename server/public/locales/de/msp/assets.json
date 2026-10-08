@@ -126,7 +126,8 @@
       "location": "Standort",
       "actions": "Aktionen",
       "patching": "Patches",
-      "coverage": "Abdeckung"
+      "coverage": "Abdeckung",
+      "assignedTo": "Zugewiesen an"
     },
     "metrics": {
       "totalAssets": {
@@ -456,6 +457,12 @@
       "location": "Standort"
     }
   },
+  "documentsTab": {
+    "errors": {
+      "title": "Dokumente nicht verfügbar",
+      "loadFailed": "Verknüpfte Dokumente konnten nicht geladen werden. Laden Sie die Seite neu oder versuchen Sie es später erneut."
+    }
+  },
   "assetDetails": {
     "title": "Asset-Details",
     "description": "Vollständige Asset-Detailseite mit Übersichtskarten, Zuordnungen, Dokumenten und Betriebsmaßnahmen",
@@ -565,7 +572,8 @@
       "clientsLoadFailed": "Clients können nicht geladen werden",
       "locationsLoadFailed": "Standorte für diesen Client können nicht geladen werden",
       "updateFailed": "Das Asset konnte nicht aktualisiert werden",
-      "validation": "Bitte korrigieren Sie die markierten Felder vor dem Speichern."
+      "validation": "Bitte korrigieren Sie die markierten Felder vor dem Speichern.",
+      "contactsLoadFailed": "Kontakte für diesen Kunden konnten nicht geladen werden"
     },
     "actions": {
       "viewClient": "Kunden ansehen",
@@ -618,7 +626,8 @@
       "status": "Status",
       "purchaseDate": "Kaufdatum",
       "warrantyEndDate": "Enddatum der Garantie",
-      "assetType": "Typ"
+      "assetType": "Typ",
+      "assignedTo": "Zugewiesen an"
     },
     "placeholders": {
       "loadingClients": "Kunden werden geladen…",
@@ -628,7 +637,9 @@
       "selectClientFirst": "Wählen Sie zunächst einen Kunden aus",
       "customLocation": "Geben Sie einen benutzerdefinierten Ort oder Bereich ein",
       "selectPurchaseDate": "Kaufdatum auswählen",
-      "selectWarrantyEndDate": "Wählen Sie das Enddatum der Garantie aus"
+      "selectWarrantyEndDate": "Wählen Sie das Enddatum der Garantie aus",
+      "loadingContacts": "Kontakte werden geladen…",
+      "selectContact": "Kontakt auswählen"
     },
     "statusOptions": {
       "active": "Aktiv",
@@ -664,7 +675,10 @@
       "printer": "Druckerdetails",
       "custom": "{{typeName}}-Details"
     },
-    "additionalFields": "Zusätzliche Felder"
+    "additionalFields": "Zusätzliche Felder",
+    "help": {
+      "assignedTo": "Im Kundenportal sehen Personen mit eingeschränkter Sichtbarkeit dieses Gerät nur, wenn es ihnen oder einer ihnen unterstellten Person zugewiesen ist."
+    }
   },
   "assetFormClient": {
     "title": "Asset-Formular-Client",
@@ -978,7 +992,8 @@
       "status": "Status",
       "serialNumber": "Seriennummer",
       "customLocationOption": "Benutzerdefinierter Standort",
-      "location": "Standort"
+      "location": "Standort",
+      "assignedTo": "Zugewiesen an"
     },
     "placeholders": {
       "workstationOsType": "z. B. Windows, macOS, Linux",
@@ -998,7 +1013,9 @@
       "customLocation": "Geben Sie einen benutzerdefinierten Ort oder Bereich ein",
       "loadingLocations": "Standorte werden geladen...",
       "selectClientFirst": "Wählen Sie zunächst einen Kunden aus",
-      "selectLocation": "Standort auswählen"
+      "selectLocation": "Standort auswählen",
+      "loadingContacts": "Kontakte werden geladen...",
+      "selectContact": "Kontakt auswählen"
     },
     "sections": {
       "typeSpecificDetails": "Typspezifische Details"
@@ -1060,7 +1077,8 @@
       "model": "Modell",
       "serialNumber": "Seriennummer",
       "purchaseDate": "Kaufdatum",
-      "warrantyEnd": "Garantieende"
+      "warrantyEnd": "Garantieende",
+      "assignedTo": "Zugewiesen an"
     },
     "values": {
       "unknownClient": "Unbekannter Kunde",
@@ -1581,8 +1599,7 @@
       "manageAssetTypes": "Berechtigung verweigert: Assettypen können nicht verwaltet werden",
       "readDocuments": "Berechtigung verweigert: Assetdokumente können nicht gelesen werden",
       "associateDocuments": "Berechtigung verweigert: Dokumente können Assets nicht zugeordnet werden",
-      "removeDocuments": "Berechtigung verweigert: Dokumente können nicht von Assets entfernt werden",
-      "updateDocumentNotes": "Berechtigung verweigert: Notizen zu Assetdokumenten können nicht aktualisiert werden"
+      "removeDocuments": "Berechtigung verweigert: Dokumente können nicht von Assets entfernt werden"
     },
     "asset": {
       "notFoundRefresh": "Asset nicht gefunden. Es wurde möglicherweise gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
@@ -1601,7 +1618,8 @@
       "conflict": "Diese Assetänderung steht im Konflikt mit einem vorhandenen Datensatz. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
       "notAllowed": "Einer der Assetwerte ist nicht zulässig. Bitte prüfen Sie das Formular und versuchen Sie es erneut.",
       "missingField": "Erforderliches Assetfeld fehlt.",
-      "missingFieldNamed": "Erforderliches Assetfeld fehlt: {{field}}."
+      "missingFieldNamed": "Erforderliches Assetfeld fehlt: {{field}}.",
+      "contactUnavailable": "Der ausgewählte Kontakt ist für diesen Kunden nicht verfügbar."
     }
   },
   "clientAssetMultiSelect": {

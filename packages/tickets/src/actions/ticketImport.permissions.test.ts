@@ -26,19 +26,39 @@ vi.mock('@alga-psa/auth', () => ({
 
 vi.mock('@alga-psa/auth/rbac', () => ({ hasPermission: hasPermissionMock }));
 
+/** Tables the importer called .insert() on, in order. */
+const insertedTables = vi.hoisted(() => ({ value: [] as string[] }));
+
+/**
+ * The importer bails out early without a board status and priority, which would
+ * make "nothing was inserted" assertions pass for the wrong reason. Hand back
+ * just enough for a permitted import to reach the ticket loop.
+ */
+const firstRowByTable: Record<string, unknown> = {
+  statuses: { status_id: 'status-1', is_closed: false },
+  priorities: { priority_id: 'priority-1' },
+};
+
 /**
  * Minimal thenable query builder: every chained call returns itself, and
  * awaiting it (or calling .first()) yields an empty result. Enough for the
- * reference-data loader to run to completion without a database.
+ * reference-data loader to run to completion without a database. Inserts are
+ * recorded so a denied import can be shown to have written nothing.
  */
-function stubQuery(): any {
+function stubQuery(table?: string): any {
   const builder: any = new Proxy(
     {},
     {
       get(_target, prop) {
         if (prop === 'then') return undefined;
-        if (prop === 'first') return async () => undefined;
+        if (prop === 'first') return async () => (table ? firstRowByTable[table] : undefined);
         if (prop === Symbol.iterator) return [][Symbol.iterator].bind([]);
+        if (prop === 'insert') {
+          return () => {
+            if (table) insertedTables.value.push(table);
+            return builder;
+          };
+        }
         return () => builder;
       },
     },
@@ -48,7 +68,7 @@ function stubQuery(): any {
 
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: createTenantKnexMock,
-  tenantDb: () => ({ table: () => stubQuery() }),
+  tenantDb: () => ({ table: (table: string) => stubQuery(table) }),
   withTransaction: withTransactionMock,
 }));
 
@@ -111,9 +131,9 @@ type Resolutions = {
   category?: unknown[];
 };
 
-async function runImport(resolutions: Resolutions = {}) {
+async function runImport(resolutions: Resolutions = {}, rows: unknown[] = [ticketRow()]) {
   return importTickets(
-    [ticketRow()] as any,
+    rows as any,
     (resolutions.status ?? []) as any,
     (resolutions.client ?? []) as any,
     (resolutions.contact ?? []) as any,
@@ -124,9 +144,9 @@ async function runImport(resolutions: Resolutions = {}) {
 }
 
 /** The importer converts expected failures to a result object and rethrows the rest. */
-async function importOutcome(resolutions: Resolutions = {}): Promise<'denied' | 'allowed'> {
+async function importOutcome(resolutions: Resolutions = {}, rows?: unknown[]): Promise<'denied' | 'allowed'> {
   try {
-    const result: any = await runImport(resolutions);
+    const result: any = await runImport(resolutions, rows);
     return result?.success === true ? 'allowed' : 'denied';
   } catch {
     return 'denied';
@@ -137,6 +157,7 @@ const CREATE = [{ action: 'create' }];
 
 beforeEach(() => {
   vi.clearAllMocks();
+  insertedTables.value.length = 0;
   createTenantKnexMock.mockResolvedValue({ knex: {}, tenant: 'tenant-1' });
   withTransactionMock.mockImplementation(async (_db: unknown, cb: any) => cb(stubQuery()));
   authUserRef.value = { user_id: 'user-1', user_type: 'internal', tenant: 'tenant-1' };
@@ -158,6 +179,27 @@ describe('importTickets authorization', () => {
   it('requires contact:create before minting contacts from the CSV', async () => {
     allowAllExcept(['contact', 'create']);
     expect(await importOutcome({ contact: CREATE })).toBe('denied');
+  });
+
+  // The insert path keys contact creation off the row's `__create__:` placeholder,
+  // not off the resolution list, so the gate cannot be read from the resolutions
+  // alone: a hand-rolled call can carry placeholders with nothing to declare them.
+  const MALLORY = [ticketRow({ contact_id: '__create__:Mallory' })];
+
+  it('requires contact:create for __create__ rows with no create resolution', async () => {
+    allowAllExcept(['contact', 'create']);
+
+    expect(await importOutcome({ contact: [] }, MALLORY)).toBe('denied');
+    expect(insertedTables.value).not.toContain('contacts');
+    expect(hasPermissionMock).toHaveBeenCalledWith(expect.anything(), 'contact', 'create', expect.anything());
+  });
+
+  it('requires contact:create for __create__ rows declared as map_to_existing', async () => {
+    allowAllExcept(['contact', 'create']);
+
+    expect(await importOutcome({ contact: [{ action: 'map_to_existing' }] }, MALLORY)).toBe('denied');
+    expect(insertedTables.value).not.toContain('contacts');
+    expect(hasPermissionMock).toHaveBeenCalledWith(expect.anything(), 'contact', 'create', expect.anything());
   });
 
   it('requires priority:create before minting priorities from the CSV', async () => {

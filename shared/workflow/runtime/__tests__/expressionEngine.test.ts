@@ -122,10 +122,18 @@ describe('expressionEngine guardrails', () => {
       await expect(run('substring(payload.s, 1.9, 2.9)', { s: 'Hello world' })).resolves.toBe('el');
     });
 
-    it('stays well inside the evaluation budget on large text', async () => {
+    it('stays linear on large text', async () => {
+      // Guards against quadratic helpers, not the 25ms production budget: a
+      // loaded, coverage-instrumented CI shard overshoots 25ms on linear work,
+      // while a quadratic walk of 200k characters takes seconds.
+      const budgetMs = 1_000;
       const big = 'x'.repeat(200_000);
-      await expect(run('len(truncate(payload.big, 1000000))', { big })).resolves.toBe(100_000);
-      await expect(run('len(substring(payload.big, -10))', { big })).resolves.toBe(10);
+      await expect(
+        evaluateExpressionSource('len(truncate(payload.big, 1000000))', { payload: { big } }, budgetMs)
+      ).resolves.toBe(100_000);
+      await expect(
+        evaluateExpressionSource('len(substring(payload.big, -10))', { payload: { big } }, budgetMs)
+      ).resolves.toBe(10);
     });
 
     it('stays well inside the evaluation budget on large text containing emoji', async () => {

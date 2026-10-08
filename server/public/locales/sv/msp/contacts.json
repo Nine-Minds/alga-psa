@@ -550,7 +550,11 @@
       "notes": "Anteckningar:",
       "notesPlaceholder": "Lägg till ytterligare anteckningar om kontakten…",
       "tags": "Taggar:",
-      "emailAddresses": "E-postadresser:"
+      "emailAddresses": "E-postadresser:",
+      "reportsTo": "Rapporterar till:",
+      "reportsToPlaceholder": "Ingen chef",
+      "reportsToClear": "Rensa",
+      "reportsToHelp": "Måste vara någon hos samma kund. Används för portalsynlighet (”min personal”) för ärenden, enheter och projekt."
     },
     "loading": {
       "destinations": "Läser in destinationer…"
@@ -568,7 +572,8 @@
     },
     "empty": {
       "notSet": "Inte angivet",
-      "unknownClient": "Okänd kund"
+      "unknownClient": "Okänd kund",
+      "noManager": "Ingen chef"
     },
     "phoneTypes": {
       "work": "Arbete",
@@ -591,7 +596,8 @@
       "notes": "Anteckningar:",
       "tags": "Taggar:",
       "emailAddresses": "E-postadresser:",
-      "defaultEmail": "Standard"
+      "defaultEmail": "Standard",
+      "reportsTo": "Rapporterar till"
     },
     "status": {
       "active": "Aktiv",
@@ -737,8 +743,23 @@
       "scopeClient": "Alla den här kundens ärenden",
       "scopeContact": "Endast egna ärenden",
       "scopeClientDescription": "Medlemmar ser alla ärenden för den här kunden på de valda tavlorna.",
-      "scopeContactDescription": "Medlemmar ser endast ärenden där de är angivna som kontakt. Kundadministratörer ser alla ärenden på de valda tavlorna, även ärenden utan kontakt.",
-      "assignmentHelp": "Tilldela en grupp för att begränsa vilka tavlor och ärenden som visas, eller behåll full kundåtkomst."
+      "scopeContactDescription": "Medlemmar ser ärenden där de är kontakt, ärenden för personer som rapporterar till dem och ärenden de bevakar. Kundadministratörer ser alltid allt på de valda tavlorna, även ärenden utan kontakt.",
+      "assignmentHelp": "Tilldela en grupp för att begränsa tavlor och vad personen ser av ärenden, enheter och projekt, eller behåll full kundåtkomst.",
+      "assetScopeLabel": "Synlighet för enheter",
+      "assetScopeClient": "Alla den här kundens enheter",
+      "assetScopeContact": "Endast egna enheter",
+      "assetScopeClientDescription": "Medlemmar ser alla enheter för den här kunden, även icke tilldelade.",
+      "assetScopeContactDescription": "Medlemmar ser bara enheter som är tilldelade dem eller personer som rapporterar till dem. Icke tilldelade enheter är dolda. Kundadministratörer ser alltid allt.",
+      "projectScopeLabel": "Synlighet för projekt",
+      "projectScopeClient": "Alla den här kundens projekt",
+      "projectScopeContact": "Endast egna projekt",
+      "projectScopeClientDescription": "Medlemmar ser alla projekt för den här kunden.",
+      "projectScopeContactDescription": "Medlemmar ser bara projekt där kontakten är de själva eller någon som rapporterar till dem. Projekt utan kontakt är dolda. Kundadministratörer ser alltid allt.",
+      "scopeSummary": "Ärenden: {{tickets}} · Enheter: {{devices}} · Projekt: {{projects}}",
+      "scopeSummaryAll": "Alla",
+      "scopeSummaryOwn": "Egna",
+      "managerScopeNote_one": "Deras vy omfattar även poster för {{count}} person som rapporterar till dem.",
+      "managerScopeNote_other": "Deras vy omfattar även poster för {{count}} personer som rapporterar till dem."
     }
   }
 }

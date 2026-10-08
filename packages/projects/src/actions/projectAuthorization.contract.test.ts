@@ -110,6 +110,31 @@ describe('project authorization kernel contracts', () => {
     expect(projectTaskActionsSource).toContain('if (!allowedTicketIds.has(link.ticket_id)) {');
   });
 
+  it('T024: phase/task CSV import and task CSV export narrow to the project they are handed', () => {
+    // The coarse project:update / project:read gates are tenant-wide, so without
+    // the record-level check a restricted user could read a project by exporting
+    // it, or write to one by importing into it.
+    const sharedAuthorizationSource = readSource('../lib/projectReadAuthorization.ts');
+    const importActionsSource = readSource('phaseTaskImportActions.ts');
+    const exportActionsSource = readSource('projectTaskExportActions.ts');
+
+    expect(sharedAuthorizationSource).toContain('export async function assertProjectReadAllowed(');
+    expect(sharedAuthorizationSource).toContain("resource: { type: 'project', action: 'read', id: projectId },");
+    expect(sharedAuthorizationSource).toContain("throw new Error('Permission denied: Cannot read project');");
+
+    expect(importActionsSource).toContain("import { assertProjectReadAllowed } from '../lib/projectReadAuthorization';");
+    expect(importActionsSource).toContain('export const importPhasesAndTasks = withAuth(async (');
+    expect(importActionsSource).toContain('const project = await assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, projectId);');
+    expect(importActionsSource).toContain('export const getImportReferenceData = withAuth(async (');
+    expect(importActionsSource).toContain('await assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, projectId);');
+    expect(importActionsSource).toContain('export const validatePhaseTaskImportData = withAuth(async (');
+    expect(importActionsSource).toContain('await assertProjectReadAllowed(db, tenant, _user as IUserWithRoles, projectId);');
+
+    expect(exportActionsSource).toContain("import { assertProjectReadAllowed } from '../lib/projectReadAuthorization';");
+    expect(exportActionsSource).toContain('export const exportProjectTasksToCSV = withAuth(async (');
+    expect(exportActionsSource).toContain('await assertProjectReadAllowed(trx, tenant, _user as IUserWithRoles, projectId);');
+  });
+
   it('F033: linked ticket payloads in project structural surfaces apply assignee-set restriction semantics', () => {
     expect(projectTaskActionsSource).toContain('export async function filterAuthorizedTicketIds(');
     expect(projectTaskActionsSource).toContain('export async function buildTicketAssigneeSetByTicketId(');

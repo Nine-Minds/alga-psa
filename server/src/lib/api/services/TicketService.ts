@@ -44,13 +44,13 @@ import {
   getTicketResourcesCore,
   publishTicketResourceEvent,
   removeTicketResourceCore,
-} from '@alga-psa/tickets/lib/ticketResourceCore';
+} from '@alga-psa/shared/services/tickets/ticketResourceCore';
 import {
   TeamAssignmentError,
   assignTeamToTicketCore,
   removeTeamFromTicketCore,
   type RemoveTeamFromTicketOptions,
-} from '@alga-psa/tickets/lib/teamAssignmentCore';
+} from '@alga-psa/shared/services/tickets/teamAssignmentCore';
 import { deleteEntityWithValidation } from '@alga-psa/core/server';
 import { publishWorkflowEvent } from 'server/src/lib/eventBus/publishers';
 import {
@@ -412,6 +412,7 @@ export class TicketService extends BaseService<ITicket> {
       boardColumn: 't.board_id',
       contactColumn: 't.contact_name_id',
       billingProfileColumn: 't.billing_profile_id',
+      watchListColumn: 't.attributes',
     });
   }
 

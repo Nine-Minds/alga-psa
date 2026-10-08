@@ -578,7 +578,15 @@ describe('ticket comment attachments (migrated PostgreSQL)', () => {
     const bytes = Buffer.from('%PDF-bundled-notification'), messages: any[] = [];
     const { sendEventEmail } = await import('@/lib/notifications/sendEventEmail');
     const { getSecretProviderInstance } = await import('@alga-psa/core/secrets');
-    const secret = vi.spyOn(await getSecretProviderInstance(), 'getAppSecret').mockResolvedValue('bundle-test-secret');
+    const secretProvider = await getSecretProviderInstance();
+    const getAppSecret = secretProvider.getAppSecret.bind(secretProvider);
+    // Keep infrastructure secrets real: replacing every lookup makes the event
+    // bus send the attachment signing key as the Redis password.
+    const secret = vi.spyOn(secretProvider, 'getAppSecret').mockImplementation(async name =>
+      name === 'NEXTAUTH_SECRET' || name === 'nextauth_secret'
+        ? 'bundle-test-secret'
+        : getAppSecret(name)
+    );
     const provider = new SMTPEmailProvider('bundle-test');
     if (mode === 'provider-limited') provider.capabilities.maxAttachmentSize = 1;
     const stream = nodemailer.createTransport({ streamTransport: true, buffer: true });

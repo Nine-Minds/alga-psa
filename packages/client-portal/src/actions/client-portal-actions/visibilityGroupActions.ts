@@ -17,6 +17,8 @@ const visibilityGroupSchema = z.object({
   name: z.string().trim().min(1, 'Group name is required'),
   description: z.string().trim().nullable().optional(),
   ticketScope: z.enum(['client', 'contact']).default('client'),
+  assetScope: z.enum(['client', 'contact']).default('client'),
+  projectScope: z.enum(['client', 'contact']).default('client'),
   boardIds: z.array(z.string().uuid()).default([]),
   clientId: z.string().uuid().optional(),
   contactId: z.string().uuid().optional()
@@ -41,6 +43,8 @@ type VisibilityGroup = {
   name: string;
   description: string | null;
   ticket_scope: 'client' | 'contact';
+  asset_scope: 'client' | 'contact';
+  project_scope: 'client' | 'contact';
   board_ids: string[];
   board_count: number;
   assigned_contact_count: number;
@@ -277,7 +281,7 @@ export const getClientPortalVisibilityGroups = withAuth(async (
         .where({
           client_id: clientId
         })
-        .select('group_id', 'client_id', 'name', 'description', 'ticket_scope')
+        .select('group_id', 'client_id', 'name', 'description', 'ticket_scope', 'asset_scope', 'project_scope')
         .orderBy('name');
 
       const boardCounts = groups.length
@@ -476,7 +480,9 @@ export const createClientPortalVisibilityGroup = withAuth(async (
           client_id: clientId,
           name: payload.name,
           description: payload.description,
-          ticket_scope: payload.ticketScope
+          ticket_scope: payload.ticketScope,
+          asset_scope: payload.assetScope,
+          project_scope: payload.projectScope
         })
         .returning('group_id');
 
@@ -539,6 +545,10 @@ export const updateClientPortalVisibilityGroup = withAuth(async (
           name: payload.name,
           description: payload.description,
           ...(input.ticketScope !== undefined ? { ticket_scope: payload.ticketScope } : {}),
+          // Omitted scopes are left alone: the schema default must not reset a
+          // stored 'contact' scope when an older caller saves without them.
+          ...(input.assetScope !== undefined ? { asset_scope: payload.assetScope } : {}),
+          ...(input.projectScope !== undefined ? { project_scope: payload.projectScope } : {}),
           updated_at: new Date().toISOString()
         });
 

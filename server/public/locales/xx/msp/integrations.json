@@ -90,7 +90,8 @@
           "clients": "⟦Ƈŀīḗƞŧş⟧",
           "itemsServices": "⟦Īŧḗḿş / Şḗřṽīƈḗş⟧",
           "taxCodes": "⟦Ŧȧẋ Ƈȯḓḗş⟧",
-          "paymentTerms": "⟦Ƥȧẏḿḗƞŧ Ŧḗřḿş⟧"
+          "paymentTerms": "⟦Ƥȧẏḿḗƞŧ Ŧḗřḿş⟧",
+          "discounts": "⟦Ḓīşƈȯŭƞŧş⟧"
         }
       }
     },
@@ -111,6 +112,7 @@
           "failed": "⟦Ḗẋƥȯřŧ ƒȧīŀḗḓ⟧",
           "missingItemMapping": "⟦Ḿīşşīƞɠ īŧḗḿ ḿȧƥƥīƞɠ⟧",
           "missingItemMappingId": "⟦Ḿīşşīƞɠ īŧḗḿ ḿȧƥƥīƞɠ ({{serviceId}})⟧",
+          "missingDiscountMapping": "⟦Ḿīşşīƞɠ ḓīşƈȯŭƞŧ ḿȧƥƥīƞɠ (Ḓīşƈȯŭƞŧş ŧȧƀ)⟧",
           "missingItemMappingNamed": "⟦Ḿīşşīƞɠ īŧḗḿ ḿȧƥƥīƞɠ: {{serviceName}}⟧"
         },
         "fields": {

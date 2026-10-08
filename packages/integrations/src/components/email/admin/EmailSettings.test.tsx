@@ -45,6 +45,11 @@ vi.mock('./EmailSenderRoutingCards', () => ({
   EmailSenderRoutingCard: () => <div data-testid="sender-routing-card" />,
 }));
 
+vi.mock('./OutboundEmailDiagnosticsDialog', () => ({
+  OutboundEmailDiagnosticsDialog: ({ isOpen }: { isOpen: boolean }) =>
+    isOpen ? <div data-testid="outbound-diagnostics-dialog" /> : null,
+}));
+
 vi.mock('@alga-psa/ui/components/providers/TenantProvider', () => ({
   useTenant: () => 'tenant-1',
 }));
@@ -121,5 +126,15 @@ describe('EmailSettings sender identities', () => {
     render(<EmailSettings />);
     expect(await screen.findByTestId('sender-addresses-card')).toBeInTheDocument();
     expect(screen.getByTestId('sender-routing-card')).toBeInTheDocument();
+  });
+
+  it('opens the shared outbound diagnostics dialog from the outbound tab', async () => {
+    render(<EmailSettings />);
+
+    const diagnosticsButton = await screen.findByRole('button', { name: /test connection/i });
+    expect(screen.queryByTestId('outbound-diagnostics-dialog')).not.toBeInTheDocument();
+    fireEvent.click(diagnosticsButton);
+
+    expect(await screen.findByTestId('outbound-diagnostics-dialog')).toBeInTheDocument();
   });
 });

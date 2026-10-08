@@ -179,7 +179,10 @@
     "updated": "Mis à jour",
     "openInNewTab": "Ouvrir dans un nouvel onglet",
     "actions": "Actions",
-    "linkedAssets": "Actifs liés"
+    "linkedAssets": "Actifs liés",
+    "assetName": "Nom",
+    "assetTag": "Étiquette d’actif",
+    "assetType": "Type"
   },
   "actions": {
     "view": "Voir",

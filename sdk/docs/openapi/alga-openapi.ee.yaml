@@ -15723,6 +15723,11 @@ components:
         project_status_mapping_id:
           type: string
           format: uuid
+        start_date:
+          type:
+            - string
+            - "null"
+          format: date-time
         due_date:
           type:
             - string
@@ -15881,6 +15886,9 @@ components:
         estimated_hours:
           type: number
           minimum: 0
+        start_date:
+          type: string
+          format: date-time
         due_date:
           type: string
           format: date-time
@@ -15917,6 +15925,9 @@ components:
         estimated_hours:
           type: number
           minimum: 0
+        start_date:
+          type: string
+          format: date-time
         due_date:
           type: string
           format: date-time
@@ -41122,6 +41133,7 @@ paths:
         x-tenant-scoped: false
       x-alga-products:
         - psa
+        - algadesk
       responses:
         "200":
           description: Active countries sorted by name.
