@@ -84,15 +84,22 @@ describe('QBO live mapping modules', () => {
     });
   });
 
-  it('T030: returns exactly 3 modules in order: service, tax_code, payment_term', () => {
+  it('T030: returns exactly 4 modules in order: service, tax_code, payment_term, discount', () => {
     const modules = createQboLiveMappingModules();
-    expect(modules).toHaveLength(3);
+    expect(modules).toHaveLength(4);
     expect(modules[0].id).toBe('qbo-live-service-mappings');
     expect(modules[1].id).toBe('qbo-live-tax-code-mappings');
     expect(modules[2].id).toBe('qbo-live-payment-term-mappings');
+    expect(modules[3].id).toBe('qbo-live-discount-mappings');
   });
 
-  it('T031: all three modules have adapterType quickbooks_online', () => {
+  it('the discount module offers one fixed Alga entity and maps it to a QuickBooks item', async () => {
+    const discountModule = createQboLiveMappingModules()[3];
+    expect(discountModule.algaEntityType).toBe('discount');
+    expect(discountModule.externalEntityType).toBe('Item');
+  });
+
+  it('T031: all modules have adapterType quickbooks_online', () => {
     const modules = createQboLiveMappingModules();
     for (const mod of modules) {
       expect(mod.adapterType).toBe('quickbooks_online');

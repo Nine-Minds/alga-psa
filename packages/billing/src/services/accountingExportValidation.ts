@@ -28,6 +28,7 @@ type ChargeProjection = {
   tax_region?: string | null;
   net_amount?: number | string | null;
   is_taxable?: boolean | null;
+  is_discount?: boolean | null;
 };
 
 type ChargeDetailProjection = {
@@ -186,7 +187,7 @@ export class AccountingExportValidation {
     const charges =
       chargeIds.size > 0
         ? await db.table<ChargeProjection>('invoice_charges')
-            .select('item_id', 'invoice_id', 'service_id', 'tax_region', 'net_amount', 'is_taxable')
+            .select('item_id', 'invoice_id', 'service_id', 'tax_region', 'net_amount', 'is_taxable', 'is_discount')
             .whereIn('item_id', Array.from(chargeIds))
         : [];
     const chargesById = new Map(charges.map((charge) => [charge.item_id, charge]));
@@ -365,7 +366,8 @@ export class AccountingExportValidation {
         });
         continue;
       }
-      if (!charge?.service_id) {
+      const isServicelessDiscount = Boolean(charge && !charge.service_id && charge.is_discount);
+      if (!charge || (!charge.service_id && !isServicelessDiscount)) {
         await repo.addError({
           batch_id: batchId,
           line_id: line.line_id,
@@ -447,8 +449,28 @@ export class AccountingExportValidation {
         }
       }
 
+      const discountMappingKey = `discount:${batch.target_realm ?? 'default'}`;
+      if (isServicelessDiscount && !checkedServiceMappings.has(discountMappingKey)) {
+        const mapping = await resolver.resolveDiscountMapping({
+          tenantId: tenant,
+          adapterType,
+          targetRealm: batch.target_realm
+        });
+        if (!mapping) {
+          await repo.addError({
+            batch_id: batchId,
+            line_id: line.line_id,
+            code: 'missing_discount_mapping',
+            message:
+              'No mapping for automatic discounts. Map a discount item under Settings → Integrations → Accounting → Discounts.',
+            metadata: mergeErrorMetadata(line, { invoice_charge_id: line.document_line_id })
+          });
+        }
+        checkedServiceMappings.add(discountMappingKey);
+      }
+
       const serviceMappingKey = `${charge.service_id}:${batch.target_realm ?? 'default'}`;
-      if (!checkedServiceMappings.has(serviceMappingKey)) {
+      if (charge.service_id && !checkedServiceMappings.has(serviceMappingKey)) {
         const mapping = await resolver.resolveServiceMapping({
           tenantId: tenant,
           adapterType,
