@@ -125,6 +125,10 @@ const billingCycleAlignmentPostInventoryRefs = new Set([
   // after the pass-0 snapshot.
   'packages/billing/src/components/billing-dashboard/contracts/CreateCustomContractLineDialog.tsx',
   'packages/billing/tests/ContractLineServiceForm.fixedPricingBasis.test.tsx',
+  // Fixed-fee zero-catalog-price regression suite (feature/alga-2026-0002499)
+  // seeds billing_cycle_alignment on its contract-line fixtures; it landed
+  // after the pass-0 snapshot.
+  'server/src/test/integration/billing/fixedFeeZeroCatalogPrice.integration.test.ts',
 ]);
 
 // Files whose billing_cycle_alignment references were removed after the pass-0
@@ -294,6 +298,10 @@ const servicePeriodPostInventoryRefs = new Set([
   // persisted boundaries and were added after the historical snapshot.
   'packages/billing/src/actions/contractCadenceCoverageAudit.ts',
   'server/src/test/infrastructure/billing/invoices/contractCadenceCoverageAudit.test.ts',
+  // Fixed-fee allocation coverage (feature/alga-2026-0002499) asserts the
+  // service-period boundaries stamped on allocated fixed charges; it landed
+  // after the pass-0 snapshot.
+  'packages/billing/src/lib/billing/compute/computeFixedCharges.allocation.test.ts',
 ]);
 
 // Files whose persisted service-period field references were removed after the
