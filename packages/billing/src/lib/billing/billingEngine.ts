@@ -39,6 +39,7 @@ import {
   IRecurringServicePeriod,
   IRecurringServicePeriodRecord,
   IUsageServicePeriodStatus,
+  FixedLineBlockerCode,
   BillingCycleType,
   DEFAULT_RECURRING_SERVICE_PERIOD_DUE_SELECTION_STATES,
   RECURRING_RANGE_SEMANTICS,
@@ -298,6 +299,8 @@ type FixedChargeLineStaticInputs = {
   contractLineDetails: any;
   planServices: any[];
   fallbackService: any | null;
+  /** planServices is empty because every member is a product/license. */
+  hasProductMembers: boolean;
   /**
    * True when no base rate resolves from any source, which makes the line
    * price to nothing in EVERY window (see computeFixedCharges' base-rate
@@ -2091,10 +2094,30 @@ export class BillingEngine {
       canonical,
     );
 
-    const usageStatusField =
-      usageServicePeriodStatuses.length > 0
+    // Coded, unpriceable fixed lines travel with the result (like usage
+    // statuses) so preview and generation refuse instead of billing short.
+    const fixedLineBlockers = (canonical.diagnostics ?? []).flatMap(
+      (diagnostic) =>
+        (diagnostic.code === "FIXED_LINE_RATE_UNRESOLVED" ||
+          diagnostic.code === "FIXED_LINE_NO_SERVICES") &&
+        diagnostic.contractLineId
+          ? [
+              {
+                code: diagnostic.code as FixedLineBlockerCode,
+                message: diagnostic.message,
+                contractLineId: diagnostic.contractLineId,
+                contractLineName:
+                  diagnostic.contractLineName ?? diagnostic.contractLineId,
+              },
+            ]
+          : [],
+    );
+    const usageStatusField = {
+      ...(usageServicePeriodStatuses.length > 0
         ? { usageServicePeriodStatuses }
-        : {};
+        : {}),
+      ...(fixedLineBlockers.length > 0 ? { fixedLineBlockers } : {}),
+    };
 
     return projectBillingContext
       ? {
@@ -3812,6 +3835,7 @@ export class BillingEngine {
       (lineId) => (planServicesByLineId.get(lineId) ?? []).length === 0,
     );
     const fallbackServiceByLineId = new Map<string, any>();
+    let productMemberLineIds = new Set<string>();
     if (fallbackLineIds.length > 0) {
       const fallbackServiceQuery = db.table<any>(
         "contract_line_services as cls_fallback",
@@ -3860,6 +3884,9 @@ export class BillingEngine {
           fallbackServiceByLineId.set(lineId, fallbackService);
         }
       }
+      productMemberLineIds = await this.loadProductMemberLineIds(
+        fallbackLineIds.filter((lineId) => !fallbackServiceByLineId.has(lineId)),
+      );
     }
 
     for (const line of pendingLines) {
@@ -3876,6 +3903,9 @@ export class BillingEngine {
             ? (fallbackServiceByLineId.get(line.client_contract_line_id) ??
               null)
             : null,
+        hasProductMembers:
+          planServices.length === 0 &&
+          productMemberLineIds.has(line.client_contract_line_id),
         unpriceable: isFixedLineUnpriceable(
           line,
           contractLineDetails,
@@ -3889,11 +3919,43 @@ export class BillingEngine {
     return staticInputsByLineId;
   }
 
+  /**
+   * Which of these contract lines have at least one product/license member.
+   * Those members bill through the product/license charge families, so a fixed
+   * line made only of them has nothing to bill as a fixed fee (and must not be
+   * reported as unpriceable). One batched query; empty input runs none.
+   */
+  private async loadProductMemberLineIds(
+    contractLineIds: string[],
+  ): Promise<Set<string>> {
+    if (contractLineIds.length === 0) {
+      return new Set();
+    }
+    const db = tenantDb(this.knex, this.tenant!);
+    const query = db.table<any>("contract_line_services as cls_product");
+    db.tenantJoin(
+      query,
+      "service_catalog as sc_product",
+      "sc_product.service_id",
+      "cls_product.service_id",
+    );
+    const rows = await query
+      .whereIn("cls_product.contract_line_id", contractLineIds)
+      .where({ "cls_product.tenant": this.tenant })
+      .where("sc_product.item_kind", "product")
+      .distinct("cls_product.contract_line_id as contract_line_id");
+    return new Set(rows.map((row: any) => row.contract_line_id as string));
+  }
+
   /** Per-line plan services (and product-only fallback) for the generation path. */
   private async queryFixedChargeLineServices(
     clientContractLine: IClientContractLine,
     asOf: string,
-  ): Promise<{ planServices: any[]; fallbackService: any | null }> {
+  ): Promise<{
+    planServices: any[];
+    fallbackService: any | null;
+    hasProductMembers: boolean;
+  }> {
     const db = tenantDb(this.knex, this.tenant!);
     const tenant = this.tenant;
 
@@ -4006,7 +4068,16 @@ export class BillingEngine {
           )) ?? null;
     }
 
-    return { planServices, fallbackService };
+    const hasProductMembers =
+      planServices.length === 0 &&
+      fallbackService === null &&
+      (
+        await this.loadProductMemberLineIds([
+          clientContractLine.client_contract_line_id,
+        ])
+      ).has(clientContractLine.client_contract_line_id);
+
+    return { planServices, fallbackService, hasProductMembers };
   }
 
   /** Load every pricing schedule for the window's contracts in one query. */
@@ -4418,7 +4489,7 @@ export class BillingEngine {
           })
           .first();
 
-    const { planServices, fallbackService } =
+    const { planServices, fallbackService, hasProductMembers } =
       preloaded ??
       (await this.queryFixedChargeLineServices(
         clientContractLine,
@@ -4579,6 +4650,7 @@ export class BillingEngine {
         customRateSource,
         planServices: effectivePlanServices,
         fallbackService,
+        hasProductMembers,
         billingProfile: await this.loadChargeProfileAssignments(
           clientId,
           clientContractLine,

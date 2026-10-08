@@ -1205,7 +1205,7 @@
     "composition": {
       "addContractLinesBeforeManaging": "Fügen Sie dieser Vorlage Vertragslinien hinzu, bevor Sie Services verwalten.",
       "additionalPlans": "Zusätzliche Pläne",
-      "bucketSummary": "Kontingent: {{minutes}} Min • Überschreitung ${{overage}}",
+      "bucketSummary": "Kontingent: {{minutes}} Min • Überschreitung {{overage}}",
       "closeManager": "Manager schließen",
       "editRate": "Tarif bearbeiten",
       "fixedFeeBundles": "Festgebührenpakete",

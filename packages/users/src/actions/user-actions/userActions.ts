@@ -860,6 +860,8 @@ export const deleteUser = withAuth(async (
         'telemetry_consent_log',
         'calendar_providers',
         'team_members',
+        'board_notification_rule_recipients',
+        'board_default_watchers',
         'schedule_entry_assignees',
         'comment_reactions',
         'project_task_comment_reactions',

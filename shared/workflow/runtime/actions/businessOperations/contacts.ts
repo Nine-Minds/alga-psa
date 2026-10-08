@@ -13,6 +13,7 @@ import type {
 } from '../../../../interfaces/contact.interfaces';
 import { buildContactArchivedPayload, buildContactCreatedPayload, buildContactUpdatedPayload } from '../../../streams/domainEventBuilders/contactEventBuilders';
 import { buildInteractionLoggedPayload, buildNoteCreatedPayload } from '../../../streams/domainEventBuilders/crmInteractionNoteEventBuilders';
+import { ticketUpdateStamp } from '../../../../lib/tickets/ticketUpdateStamp';
 import {
   uuidSchema,
   isoDateTimeSchema,
@@ -1467,7 +1468,7 @@ export function registerContactActions(): void {
         const previousContactId = ticket.contact_name_id ?? null;
         await tenantScopedTable(tx, 'tickets')
           .where({ ticket_id: input.ticket_id })
-          .update({ contact_name_id: input.contact_id, updated_at: new Date().toISOString() });
+          .update({ contact_name_id: input.contact_id, ...ticketUpdateStamp(tx.trx, tx.actorUserId) });
 
         const after = await ensureTicketExists(ctx, tx, input.ticket_id);
 

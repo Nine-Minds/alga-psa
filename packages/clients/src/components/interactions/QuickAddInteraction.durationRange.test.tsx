@@ -153,9 +153,9 @@ describe('QuickAddInteraction duration/range agreement', () => {
     fireEvent.change(endField(), { target: { value: '2026-10-04T09:00:00.000Z' } });
 
     expect(await screen.findByText(TOO_LONG)).toBeInTheDocument();
-    // The out-of-range end time is not committed, so the duration fields cannot drift
-    // into the 72 hours the submitted duration would then clamp down to 24.
-    expect(endField()).toHaveValue('');
+    // The picked end time stays visible (flagged, not dropped), but the duration fields
+    // do not drift into the 72 hours the submitted duration would then clamp down to 24.
+    expect(endField()).toHaveValue('2026-10-04T09:00:00.000Z');
     expect(hoursField()).toHaveValue(null);
     expect(minutesField()).toHaveValue(null);
 

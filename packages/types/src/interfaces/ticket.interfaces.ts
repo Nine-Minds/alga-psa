@@ -93,6 +93,13 @@ export interface ITicket extends TenantEntity, ITaggable {
   external_links?: IExternalEntityLink[];
 }
 
+export type TicketLatestActivityActorKind = 'user' | 'client_user' | 'contact' | 'email_sender' | 'system';
+
+export interface ITicketLatestActivityActor {
+  kind: TicketLatestActivityActorKind;
+  name: string | null;
+}
+
 export interface ITicketListItem extends Omit<ITicket, 'status_id' | 'priority_id' | 'board_id' | 'entered_by' | 'category_id' | 'subcategory_id'> {
   status_id: string | null;
   priority_id: string | null;
@@ -118,6 +125,8 @@ export interface ITicketListItem extends Omit<ITicket, 'status_id' | 'priority_i
   bundle_distinct_client_count?: number;
   // Newest of the ticket's own timestamps and its newest published comment.
   latest_activity_at?: string | null;
+  // Who produced the activity shown in latest_activity_at; null when nobody can be named.
+  latest_activity_actor?: ITicketLatestActivityActor | null;
 }
 
 export interface ITicketListFilters {

@@ -177,6 +177,8 @@
     "tags": "Etiquetas",
     "sla": "SLA",
     "updated": "Atualizado",
+    "updatedAtBy": "Atualizado {{time}} por {{name}}",
+    "byName": "por {{name}}",
     "openInNewTab": "Abrir em nova aba",
     "actions": "Ações",
     "linkedAssets": "Ativos vinculados",

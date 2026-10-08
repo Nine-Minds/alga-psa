@@ -12,15 +12,13 @@
 import logger from '@alga-psa/core/logger';
 import { getEventBus } from '../index';
 import { EventSchemas } from '@alga-psa/event-schemas';
-import { runMaintenanceJob, isKnownMaintenanceJob } from '@alga-psa/jobs/fanout';
+import { isKnownMaintenanceJob } from '@alga-psa/jobs/fanout';
 // IMPORTANT: use the SERVER-LOCAL registry — registerAllHandlers populates
 // server/src/lib/jobs/jobHandlerRegistry (a different singleton than the
 // @alga-psa/jobs one), so rmm/huntress are only registered there.
 import { executeJobHandler } from '../../jobs/jobHandlerRegistry';
 import { runWithTenant } from '@alga-psa/db';
-import { acquireMaintenanceJobLock } from './maintenanceJobLock';
-import { configureEditionDateTriggerWorkflowLauncher } from '../../jobs/dateTriggerWorkflowLauncher';
-import { isEnterpriseEdition } from '../../features';
+import { prepareMaintenanceRegistry, runMaintenanceJobExclusive } from '../../jobs/runMaintenanceJobExclusive';
 
 let isRegistered = false;
 
@@ -29,16 +27,11 @@ export async function registerMaintenanceJobSubscriber(): Promise<void> {
     return;
   }
 
-  // Configure the fanout's EE date-workflow launcher before accepting Temporal
-  // requests, so an early date-trigger-scan cannot run without it. This does
-  // not depend on job-runner startup order and starts no runner.
-  configureEditionDateTriggerWorkflowLauncher(isEnterpriseEdition());
-  // Server-local jobs must be in the fan-out registry before the first request
-  // arrives, or isKnownMaintenanceJob would route them to the forwarded-job path.
-  // Loaded lazily: the handlers pull the domain graph, which this module's
-  // importers (event bus bootstrap, tests) should not have to load.
-  const { registerServerMaintenanceJobs } = await import('../../jobs/registerServerMaintenanceJobs');
-  registerServerMaintenanceJobs();
+  // Configure the fanout's EE date-workflow launcher and register the server-local
+  // jobs before accepting Temporal requests, so an early date-trigger-scan cannot
+  // run without them and isKnownMaintenanceJob does not route server-local jobs to
+  // the forwarded-job path. Starts no runner.
+  await prepareMaintenanceRegistry();
   await getEventBus().subscribe('MAINTENANCE_JOB_REQUESTED', handleMaintenanceJobRequested);
 
   isRegistered = true;
@@ -68,18 +61,7 @@ async function handleMaintenanceJobRequested(event: unknown): Promise<void> {
     if (isKnownMaintenanceJob(jobName) && !jobId) {
       // Global maintenance fan-out: run once / across all tenants, and never
       // concurrently with another run of the same job anywhere in the cluster.
-      const lock = await acquireMaintenanceJobLock(jobName);
-      if (!lock) {
-        logger.info(`[MaintenanceJobSubscriber] Skipping maintenance job '${jobName}': a run is already in progress`);
-        return;
-      }
-      try {
-        logger.info(`[MaintenanceJobSubscriber] Running maintenance job '${jobName}'`);
-        const result = await runMaintenanceJob(jobName);
-        logger.info(`[MaintenanceJobSubscriber] Maintenance job '${jobName}' complete`, result);
-      } finally {
-        await lock.release();
-      }
+      await runMaintenanceJobExclusive(jobName);
     } else {
       // Worker-scheduled job (e.g. rmm/huntress) forwarded for server-side
       // execution because its handler imports src-consumed packages the worker

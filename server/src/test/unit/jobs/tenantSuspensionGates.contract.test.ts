@@ -53,21 +53,12 @@ describe('tenant suspension chokepoint gates', () => {
     expect(activities).toContain('return { mappings: [] }');
   });
 
-  it('T022: time-period chain skips suspended tenants while keeping the chain armed', () => {
+  it('T022: time-period chain is owned by the maintenance fan-out, which skips suspended tenants', () => {
+    // The per-tenant createNextTimePeriods self-rescheduling chain is gone;
+    // tenant enumeration for the fan-out already excludes suspended tenants (T018).
     const source = read('server/src/lib/initializeApp.ts');
-    const existsCheck = source.indexOf('tenant no longer exists, ending job chain');
-    const suspendedSkip = source.indexOf('tenant suspended, skipping run (chain continues)');
-    const jobRecordCreate = source.indexOf("jobService.createJob('createNextTimePeriods'");
-
-    expect(existsCheck).toBeGreaterThan(-1);
-    expect(suspendedSkip).toBeGreaterThan(existsCheck);
-    expect(suspendedSkip).toBeLessThan(jobRecordCreate);
-
-    // The startup enumeration must NOT filter: the chain stays armed and the
-    // per-run skip is the gate, so win-back resumes without a restart.
-    const enumIdx = source.indexOf('__time_period_tenant_enumeration__');
-    const enumSlice = source.slice(enumIdx, source.indexOf('select(', enumIdx));
-    expect(enumSlice).not.toContain("whereNull('suspended_at')");
+    expect(source).not.toContain("jobService.createJob('createNextTimePeriods'");
+    expect(source).not.toContain('__time_period_tenant_enumeration__');
   });
 
   it('T023: billing-cycle creation excludes suspended tenants at each run', () => {

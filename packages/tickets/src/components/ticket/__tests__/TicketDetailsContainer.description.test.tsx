@@ -54,9 +54,11 @@ describe('persistTicketDescriptionUpdate', () => {
           existing: 'value',
           description,
         },
-        updated_at: expect.any(String),
       })
     );
+    // updated_at/updated_by are server-owned; the browser must not send them.
+    expect(updateTicket.mock.calls[0][1]).not.toHaveProperty('updated_at');
+    expect(updateTicket.mock.calls[0][1]).not.toHaveProperty('updated_by');
     expect(setSubmitting).toHaveBeenNthCalledWith(1, true);
     expect(setSubmitting).toHaveBeenLastCalledWith(false);
     expect(toastApi.success).toHaveBeenCalledWith('Description updated successfully');

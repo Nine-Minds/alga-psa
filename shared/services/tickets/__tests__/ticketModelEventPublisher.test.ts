@@ -13,7 +13,7 @@ vi.mock('@alga-psa/db', () => ({
   registerAfterCommit: mocks.registerAfterCommit,
 }));
 
-import { TicketModelEventPublisher } from './TicketModelEventPublisher';
+import { TicketModelEventPublisher } from '../ticketModelEventPublisher';
 
 describe('TicketModelEventPublisher', () => {
   beforeEach(() => {

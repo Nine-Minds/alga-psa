@@ -7,7 +7,7 @@
 /**
  * Types of entities that can be tagged
  */
-export type TaggedEntityType = 'client' | 'contact' | 'project_task' | 'document' | 'knowledge_base_article' | 'opportunity';
+export type TaggedEntityType = 'client' | 'contact' | 'ticket' | 'project_task' | 'document' | 'knowledge_base_article' | 'opportunity';
 
 /**
  * Tag definition entity interface

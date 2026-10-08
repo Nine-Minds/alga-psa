@@ -3164,6 +3164,15 @@
     "roleNamesPlaceholder": "bijv. Technicus, Planner (wordt op naam gekoppeld wanneer de workflow wordt uitgevoerd)",
     "empty": "Kies minimaal een gebruiker of rol om op de hoogte te stellen."
   },
+  "emailUserRecipientsEditor": {
+    "users": "E-mail naar gebruikers",
+    "usersHint": "Gebruikers zoeken",
+    "roles": "E-mail naar iedereen met deze rollen",
+    "rolesHint": "Rol toevoegen",
+    "roleNames": "Rolnamen (optioneel)",
+    "roleNamesPlaceholder": "bijv. Technician, Dispatcher (op naam gekoppeld wanneer de workflow wordt uitgevoerd)",
+    "empty": "Kies gebruikers of rollen, of selecteer hieronder een ticket."
+  },
   "emailRecipientsEditor": {
     "remove": "{{email}} verwijderen",
     "placeholder": "Typ een adres en druk op Enter, bijv. Ada Lovelace <ada@example.com>",

@@ -14,6 +14,11 @@ const enforceTicketCloseRulesMock = vi.fn();
 const ticketModelGetDefaultStatusIdMock = vi.fn();
 const ticketModelCreateTicketWithRetryMock = vi.fn();
 
+vi.mock('@alga-psa/shared/lib/tickets/ticketLifecycleEvents', () => ({
+  publishTicketTransitionsAfterCommit: vi.fn(async () => []),
+  captureTicketTransitionSnapshot: vi.fn(async () => null),
+}));
+
 vi.mock('@alga-psa/auth', () => ({
   withAuth: (action: any) => async (...args: any[]) =>
     action(currentUser, { tenant: currentUser.tenant }, ...args),

@@ -1,5 +1,6 @@
 'use server';
 
+import { ticketUpdateStamp } from '@shared/lib/tickets/ticketUpdateStamp';
 import type { ContactVisibilityContext } from '../lib/clientPortalVisibility';
 import { persistCommentPublication } from '@alga-psa/shared/lib/ticketCommentAttachments';
 
@@ -55,7 +56,7 @@ import {
   TICKET_ACTIVITY_SOURCE,
   writeTicketActivity,
 } from '@alga-psa/shared/lib/ticketActivity';
-import { TicketModelEventPublisher } from '../lib/adapters/TicketModelEventPublisher';
+import { TicketModelEventPublisher } from '@alga-psa/shared/services/tickets/ticketModelEventPublisher';
 import { TicketModelAnalyticsTracker } from '../lib/adapters/TicketModelAnalyticsTracker';
 import { calculateItilPriority } from '@alga-psa/tickets/lib/itilUtils';
 import { enforceTicketCloseRules, TicketCloseValidationError, type CloseRuleFailure } from '../lib/validateTicketClosure';
@@ -71,7 +72,7 @@ import {
   type AuthorizationSubject,
 } from '@alga-psa/authorization/kernel';
 import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
-import { buildTicketTransitionWorkflowEvents } from '../lib/workflowTicketTransitionEvents';
+import { publishTicketTransitionsAfterCommit } from '@alga-psa/shared/lib/tickets/ticketLifecycleEvents';
 import { buildTicketCommunicationWorkflowEvents } from '../lib/workflowTicketCommunicationEvents';
 import { getTicketOrigin, type ResolvedTicketOrigin } from '../lib/ticketOrigin';
 import {
@@ -93,7 +94,7 @@ import { revertBundlePropagationForChild } from './ticketBundleUtils';
 import {
   buildTicketResolutionSlaStageCompletionEvent,
   buildTicketResolutionSlaStageEnteredEvent,
-} from '../lib/workflowTicketSlaStageEvents';
+} from '@alga-psa/shared/services/tickets/ticketSlaStageEvents';
 import {
   parseTicketStatusFilterValue,
   shouldApplyOpenOnlyStatusFilter,
@@ -623,7 +624,7 @@ export const addTicket = withAuth(async (user, { tenant }, data: FormData): Prom
       const analyticsTracker = new TicketModelAnalyticsTracker();
 
       // Use shared TicketModel with retry logic
-      // LEVERAGE: pattern ticket-create-composition — creates a ticket then composes assets/agents/team/tags/checklist/activity/events by hand; see createTicketWithSideEffects (packages/tickets/src/lib/createTicketWithSideEffects.ts)
+      // LEVERAGE: pattern ticket-create-composition — creates a ticket then composes assets/agents/team/tags/checklist/activity/events by hand; see createTicketWithSideEffects (shared/services/tickets/createTicketWithSideEffects.ts)
       const ticketResult = await TicketModel.createTicketWithRetry(
         createTicketInput,
         tenant,
@@ -974,7 +975,7 @@ export const updateTicket = withAuth(async (user, { tenant }, id: string, data: 
 
     const {knex: db} = await createTenantKnex();
 
-    const result = await db.transaction(async (trx) => {
+    const result = await withTransaction(db, async (trx) => {
       if (!await hasPermission(user, 'ticket', 'update', trx)) {
         throw new Error('Permission denied: Cannot update ticket');
       }
@@ -1170,7 +1171,7 @@ export const updateTicket = withAuth(async (user, { tenant }, id: string, data: 
 
       const [updatedTicket] = await tenantScopedTable(trx, 'tickets', tenant)
         .where({ ticket_id: id })
-        .update(updateData)
+        .update({ ...updateData, ...ticketUpdateStamp(trx, user.user_id) })
         .returning('*');
 
       if (finalizeResourceReassignment) {
@@ -1199,7 +1200,8 @@ export const updateTicket = withAuth(async (user, { tenant }, id: string, data: 
         occurredAt,
       };
 
-      const transitionEvents = buildTicketTransitionWorkflowEvents({
+      await publishTicketTransitionsAfterCommit(trx, {
+        tenant,
         before: {
           ticketId: id,
           statusId: currentTicket.status_id,
@@ -1216,24 +1218,8 @@ export const updateTicket = withAuth(async (user, { tenant }, id: string, data: 
           boardId: updatedTicket.board_id,
           escalated: updatedTicket.escalated,
         },
-        ctx: {
-          occurredAt,
-          actorUserId: user.user_id,
-          previousStatusIsClosed: !!oldStatus?.is_closed,
-          newStatusIsClosed: !!newStatus?.is_closed,
-        },
+        actorUserId: user.user_id,
       });
-
-      for (const ev of transitionEvents) {
-        await publishWorkflowEvent({
-          eventType: ev.eventType,
-          payload: ev.payload,
-          ctx: workflowCtx,
-          eventName: ev.workflow?.eventName,
-          fromState: ev.workflow?.fromState,
-          toState: ev.workflow?.toState,
-        });
-      }
 
       // Build structured changes object with old/new values
       const structuredChanges: Record<string, any> = {};

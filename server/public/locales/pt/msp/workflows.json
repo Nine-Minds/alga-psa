@@ -3042,6 +3042,15 @@
     "roleNamesPlaceholder": "ex.: Técnico, Despachante (correspondência por nome quando o fluxo de trabalho é executado)",
     "empty": "Escolha pelo menos um usuário ou função para notificar."
   },
+  "emailUserRecipientsEditor": {
+    "users": "Enviar e-mail aos utilizadores",
+    "usersHint": "Pesquisar utilizadores",
+    "roles": "Enviar e-mail a todos com estas funções",
+    "rolesHint": "Adicionar uma função",
+    "roleNames": "Nomes de função (opcional)",
+    "roleNamesPlaceholder": "p. ex. Technician, Dispatcher (correspondidos por nome quando o fluxo de trabalho é executado)",
+    "empty": "Escolha utilizadores ou funções, ou selecione um ticket abaixo."
+  },
   "emailRecipientsEditor": {
     "remove": "Remover {{email}}",
     "placeholder": "Digite um endereço e pressione Enter, ex.: Ada Lovelace <ada@example.com>",
