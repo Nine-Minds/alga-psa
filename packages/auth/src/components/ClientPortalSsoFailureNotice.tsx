@@ -3,7 +3,7 @@
 import { useSearchParams } from 'next/navigation';
 import { AlertTriangle } from 'lucide-react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { parseOAuthMappingFailureCode } from '../lib/sso/types';
+import { oauthMappingFailureFallbackMessage, parseOAuthMappingFailureCode } from '../lib/sso/types';
 
 /**
  * Inline sign-in failure notice for the client portal pages that have no tenant
@@ -34,7 +34,10 @@ export default function ClientPortalSsoFailureNotice() {
     error === 'Configuration'
       ? t('auth.configurationMessage', 'Sign-in failed. Please try again or contact your service provider.')
       : reason
-        ? t(`auth.ssoNoMatch.${reason}`, { providerEmail })
+        ? t(`auth.ssoNoMatch.${reason}`, {
+            providerEmail,
+            defaultValue: oauthMappingFailureFallbackMessage(reason, 'client', providerEmail),
+          })
         : t('auth.accessDeniedMessage', 'You do not have permission to access the client portal.');
 
   return (

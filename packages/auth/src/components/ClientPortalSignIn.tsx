@@ -10,7 +10,7 @@ import type { AlertProps } from '@alga-psa/types';
 import { Ticket, FileText, Eye, History } from 'lucide-react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { isValidTenantSlug } from '@alga-psa/validation';
-import { parseOAuthMappingFailureCode } from '../lib/sso/types';
+import { oauthMappingFailureFallbackMessage, parseOAuthMappingFailureCode } from '../lib/sso/types';
 
 type TenantBranding = {
   primaryColor: string;
@@ -62,7 +62,10 @@ export default function ClientPortalSignIn({ branding, portalDomain, tenantSlug:
           ? t('auth.ssoNoMatchTitle', 'SSO sign-in failed')
           : t('auth.accessDeniedTitle', 'Access Denied'),
         message: reason
-          ? t(`auth.ssoNoMatch.${reason}`, { providerEmail })
+          ? t(`auth.ssoNoMatch.${reason}`, {
+              providerEmail,
+              defaultValue: oauthMappingFailureFallbackMessage(reason, 'client', providerEmail),
+            })
           : t('auth.accessDeniedMessage', 'You do not have permission to access the client portal.')
       });
       setIsAlertOpen(true);

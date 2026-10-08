@@ -41,7 +41,21 @@ function loadMspAuthMessages(): Map<string, string> {
 
 const messages = loadMspAuthMessages();
 
+// Mirrors the pre-init translator in packages/ui useTranslation: no resources
+// yet, so the call site's fallback copy is all the page has.
+const bootstrapTranslate = (key: string, options?: unknown): string => {
+  if (typeof options === 'string') return options;
+  const defaultValue = (options as { defaultValue?: unknown } | undefined)?.defaultValue;
+  if (typeof defaultValue === 'string') return defaultValue;
+  return key;
+};
+
+const translatorMode = { bootstrap: false };
+
 const translate = (key: string, options?: unknown): string => {
+  if (translatorMode.bootstrap) {
+    return bootstrapTranslate(key, options);
+  }
   const template = messages.get(key);
   if (template === undefined) {
     return typeof options === 'string' ? options : key;
@@ -107,6 +121,7 @@ afterEach(() => cleanup());
 describe('MSP sign-in SSO failure messages', () => {
   beforeEach(() => {
     searchParamsState.value = new URLSearchParams();
+    translatorMode.bootstrap = false;
   });
 
   it('names the provider email when no AlgaPSA account matched', () => {
@@ -147,6 +162,23 @@ describe('MSP sign-in SSO failure messages', () => {
     const alert = screen.getByRole('alert');
     expect(alert.textContent).toContain('Access Denied');
     expect(alert.textContent).not.toContain('signIn.alerts.ssoNoMatch');
+  });
+
+  it('reads as a sentence before the translation namespace loads', () => {
+    translatorMode.bootstrap = true;
+    searchParamsState.value = new URLSearchParams({
+      error: 'AccessDenied',
+      reason: 'no_matching_user',
+      providerEmail: 'nd@computerbutlereurope.onmicrosoft.com',
+    });
+
+    render(<MspSignIn />);
+
+    const alert = screen.getByRole('alert');
+    expect(alert.textContent).not.toContain('signIn.alerts.ssoNoMatch');
+    expect(alert.textContent).toContain(
+      'No AlgaPSA account matches nd@computerbutlereurope.onmicrosoft.com.'
+    );
   });
 
   it('explains the Auth.js configuration failure in product copy', () => {

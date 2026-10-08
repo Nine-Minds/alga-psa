@@ -9,7 +9,7 @@ import Alert from './Alert';
 import type { AlertProps } from '@alga-psa/types';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Ticket, Mail, Calendar, Clock, Users, FileText, Layers } from 'lucide-react';
-import { parseOAuthMappingFailureCode } from '../lib/sso/types';
+import { oauthMappingFailureFallbackMessage, parseOAuthMappingFailureCode } from '../lib/sso/types';
 
 interface MspSignInProps {
   initialEmail?: string;
@@ -50,7 +50,10 @@ export default function MspSignIn({ initialEmail }: MspSignInProps) {
           ? t('signIn.alerts.ssoNoMatchTitle', 'SSO sign-in failed')
           : t('signIn.alerts.accessDeniedTitle', 'Access Denied'),
         message: reason
-          ? t(`signIn.alerts.ssoNoMatch.${reason}`, { providerEmail })
+          ? t(`signIn.alerts.ssoNoMatch.${reason}`, {
+              providerEmail,
+              defaultValue: oauthMappingFailureFallbackMessage(reason, 'internal', providerEmail),
+            })
           : t('signIn.alerts.accessDeniedMessage', 'You do not have permission to access the MSP dashboard.')
       });
       setIsAlertOpen(true);
