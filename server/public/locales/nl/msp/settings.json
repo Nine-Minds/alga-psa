@@ -841,6 +841,7 @@
           "notificationsTriggerRequired": "Elke meldingsregel heeft minstens één trigger nodig: het aanmaken van een ticket of een status.",
           "notificationsRecipientRequired": "Elke meldingsregel heeft minstens één gebruiker of team nodig om te informeren.",
           "notificationsFetchFailed": "Meldingsinstellingen laden mislukt",
+          "notificationsStatusRemapFailed": "Het bord is aangemaakt, maar de status van een meldingsregel kon niet aan het nieuwe bord worden gekoppeld. Voeg de meldingsregels opnieuw toe.",
           "inbound": "E-mail & inkomende antwoorden",
           "inboundHelp": "Tickets heropenen wanneer klanten per e-mail antwoorden",
           "close": "Afsluitregels",

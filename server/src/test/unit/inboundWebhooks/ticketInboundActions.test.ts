@@ -13,6 +13,14 @@ const mocks = vi.hoisted(() => ({
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: mocks.createTenantKnex,
   withTransaction: mocks.withTransaction,
+  // captureTicketTransitionSnapshot reads the ticket through tenantDb(...).table().select().where().first();
+  // resolving no row means "ticket did not exist", so no transition events are published.
+  tenantDb: vi.fn(() => {
+    const builder: Record<string, unknown> = {};
+    for (const method of ['select', 'where']) builder[method] = () => builder;
+    builder.first = async () => undefined;
+    return { table: () => builder, unscoped: () => builder };
+  }),
 }));
 
 vi.mock('@alga-psa/shared/models/ticketModel', () => ({
@@ -117,7 +125,7 @@ describe('ticket inbound webhook actions', () => {
       'tenant-a',
       'trx',
       {},
-      undefined,
+      expect.objectContaining({ publisher: expect.anything() }),
       undefined,
       undefined,
       3,

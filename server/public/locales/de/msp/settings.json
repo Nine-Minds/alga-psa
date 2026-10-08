@@ -841,6 +841,7 @@
           "notificationsTriggerRequired": "Jede Benachrichtigungsregel benötigt mindestens einen Auslöser: die Ticketerstellung oder einen Status.",
           "notificationsRecipientRequired": "Jede Benachrichtigungsregel benötigt mindestens einen Benutzer oder ein Team, das benachrichtigt wird.",
           "notificationsFetchFailed": "Benachrichtigungseinstellungen konnten nicht geladen werden",
+          "notificationsStatusRemapFailed": "Das Board wurde erstellt, aber der Status einer Benachrichtigungsregel konnte dem neuen Board nicht zugeordnet werden. Fügen Sie die Benachrichtigungsregeln erneut hinzu.",
           "inbound": "E-Mail & eingehende Antworten",
           "inboundHelp": "Tickets erneut öffnen, wenn Kunden per E-Mail antworten",
           "close": "Abschlussregeln",

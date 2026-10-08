@@ -841,6 +841,7 @@
           "notificationsTriggerRequired": "Each notification rule needs at least one trigger: ticket creation or a status.",
           "notificationsRecipientRequired": "Each notification rule needs at least one user or team to notify.",
           "notificationsFetchFailed": "Failed to load notification settings",
+          "notificationsStatusRemapFailed": "The board was created, but a notification rule status could not be matched to the new board. Re-add the notification rules.",
           "inbound": "Email & inbound replies",
           "inboundHelp": "Reopen tickets when clients reply by email",
           "close": "Close rules",

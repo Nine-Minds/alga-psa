@@ -425,7 +425,7 @@ describe('workflow ticket assignment model runtime', () => {
       'tenant-1',
       expect.anything(),
       {},
-      undefined,
+      expect.objectContaining({ publisher: expect.anything() }),
       undefined,
       'actor-1'
     );

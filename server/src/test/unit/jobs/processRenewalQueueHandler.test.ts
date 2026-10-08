@@ -13,6 +13,9 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: mocks.createTenantKnex,
+  // The handler runs direct ticket creation inside withTransaction; the fake
+  // knex doubles as the transaction so the same recorded builders are used.
+  withTransaction: async (knex: any, callback: (trx: any) => unknown) => callback(knex),
   // The facade scopes each table by tenant; the fake builder's where() merges
   // object criteria, so the recorded update where still carries { tenant, ... }.
   tenantDb: (conn: any, tenant: string) => ({

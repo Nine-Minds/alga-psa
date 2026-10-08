@@ -841,6 +841,7 @@
           "notificationsTriggerRequired": "Varje aviseringsregel behöver minst en utlösare: att ett ärende skapas eller en status.",
           "notificationsRecipientRequired": "Varje aviseringsregel behöver minst en användare eller ett team att avisera.",
           "notificationsFetchFailed": "Det gick inte att läsa in aviseringsinställningarna",
+          "notificationsStatusRemapFailed": "Tavlan skapades, men statusen för en aviseringsregel kunde inte matchas mot den nya tavlan. Lägg till aviseringsreglerna igen.",
           "inbound": "E-post och inkommande svar",
           "inboundHelp": "Öppna ärenden igen när kunder svarar via e-post",
           "close": "Stängningsregler",

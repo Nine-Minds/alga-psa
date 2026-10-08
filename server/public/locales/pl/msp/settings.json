@@ -845,6 +845,7 @@
           "notificationsTriggerRequired": "Każda reguła powiadomień wymaga co najmniej jednego wyzwalacza: utworzenia zgłoszenia lub statusu.",
           "notificationsRecipientRequired": "Każda reguła powiadomień wymaga co najmniej jednego użytkownika lub zespołu do powiadomienia.",
           "notificationsFetchFailed": "Nie udało się wczytać ustawień powiadomień",
+          "notificationsStatusRemapFailed": "Tablica została utworzona, ale nie udało się dopasować statusu reguły powiadomień do nowej tablicy. Dodaj reguły powiadomień ponownie.",
           "inbound": "E-mail i odpowiedzi przychodzące",
           "inboundHelp": "Ponownie otwieraj zgłoszenia, gdy klienci odpowiadają e-mailem",
           "close": "Reguły zamykania",

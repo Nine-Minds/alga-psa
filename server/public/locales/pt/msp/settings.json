@@ -841,6 +841,7 @@
           "notificationsTriggerRequired": "Cada regra de notificação precisa de pelo menos um gatilho: a criação de um ticket ou um status.",
           "notificationsRecipientRequired": "Cada regra de notificação precisa de pelo menos um usuário ou equipe para notificar.",
           "notificationsFetchFailed": "Falha ao carregar as configurações de notificação",
+          "notificationsStatusRemapFailed": "O quadro foi criado, mas o status de uma regra de notificação não pôde ser associado ao novo quadro. Adicione as regras de notificação novamente.",
           "inbound": "E-mail e respostas recebidas",
           "inboundHelp": "Reabrir tickets quando os clientes responderem por e-mail",
           "close": "Regras de fechamento",

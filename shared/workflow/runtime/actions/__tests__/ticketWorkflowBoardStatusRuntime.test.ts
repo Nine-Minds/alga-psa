@@ -781,7 +781,7 @@ describe('ticket workflow runtime board-scoped statuses', () => {
       'tenant-1',
       expect.any(Function),
       {},
-      undefined,
+      expect.objectContaining({ publisher: expect.anything() }),
       undefined,
       'user-1'
     );
@@ -854,7 +854,7 @@ describe('ticket workflow runtime board-scoped statuses', () => {
       'tenant-1',
       expect.any(Function),
       {},
-      undefined,
+      expect.objectContaining({ publisher: expect.anything() }),
       undefined,
       'user-1'
     );

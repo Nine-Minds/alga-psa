@@ -841,6 +841,7 @@
           "notificationsTriggerRequired": "Chaque règle de notification nécessite au moins un déclencheur : la création d'un ticket ou un statut.",
           "notificationsRecipientRequired": "Chaque règle de notification nécessite au moins un utilisateur ou une équipe à notifier.",
           "notificationsFetchFailed": "Échec du chargement des paramètres de notification",
+          "notificationsStatusRemapFailed": "Le tableau a été créé, mais le statut d'une règle de notification n'a pas pu être associé au nouveau tableau. Ajoutez à nouveau les règles de notification.",
           "inbound": "E-mail et réponses entrantes",
           "inboundHelp": "Rouvrir les tickets lorsque les clients répondent par e-mail",
           "close": "Règles de clôture",

@@ -841,6 +841,7 @@
           "notificationsTriggerRequired": "Ogni regola di notifica richiede almeno un attivatore: la creazione di un ticket o uno stato.",
           "notificationsRecipientRequired": "Ogni regola di notifica richiede almeno un utente o un team da notificare.",
           "notificationsFetchFailed": "Impossibile caricare le impostazioni di notifica",
+          "notificationsStatusRemapFailed": "La bacheca è stata creata, ma lo stato di una regola di notifica non ha potuto essere associato alla nuova bacheca. Aggiungi di nuovo le regole di notifica.",
           "inbound": "Email e risposte in arrivo",
           "inboundHelp": "Riapri i ticket quando i clienti rispondono via email",
           "close": "Regole di chiusura",
