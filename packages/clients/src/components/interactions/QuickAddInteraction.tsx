@@ -463,8 +463,12 @@ export function QuickAddInteraction({
       // Mark notes content as ready after processing
       setIsNotesContentReady(true);
     } else if (isOpen && !startTime && !isEditMode) {
-      // Set start time to current time when dialog opens for new interactions
-      setStartTime(new Date());
+      // Set start time to current time when dialog opens for new interactions. The pickers
+      // work in whole minutes, so seed at a whole minute too: an End picked on the very same
+      // minute must not read as "before" a Start that is carrying leftover seconds.
+      const now = new Date();
+      now.setSeconds(0, 0);
+      setStartTime(now);
       setSelectedUserId(session?.user?.id || '');
       setIsNotesContentReady(true); // Mark as ready for new interactions
     }
@@ -668,13 +672,19 @@ export function QuickAddInteraction({
 
   // Handle end time change
   const handleEndTimeChange = (date: Date) => {
-    // Validate: end time must be after or equal to start time, and within the cap the
-    // duration fields can represent.
+    // What the user picked is what the field shows, so it is always kept. An End that lands
+    // before the Start, or beyond the cap the duration fields can represent, is flagged (and
+    // blocks saving) rather than dropped: dropping it left the picker displaying a time the
+    // dialog did not hold, and made it impossible to set End first and then move Start.
+    setEndTime(date);
+
     if (startTime) {
       const { totalMinutes, exceedsCap } = durationFromRange(startTime, date);
       if (totalMinutes < 0) {
-        // Don't allow setting end time before start time
         setEndTimeError(END_BEFORE_START_MESSAGE);
+        // A stale duration would otherwise re-derive End from Start on the next Start pick.
+        setDurationHours('');
+        setDurationMinutes('');
         return;
       }
       if (exceedsCap) {
@@ -683,7 +693,6 @@ export function QuickAddInteraction({
       }
     }
 
-    setEndTime(date);
     setEndTimeError('');
 
     // If we have a start time, the duration is exactly the range it spans

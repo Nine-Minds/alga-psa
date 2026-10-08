@@ -90,7 +90,8 @@
           "clients": "Clientes",
           "itemsServices": "Artículos / Servicios",
           "taxCodes": "Códigos fiscales",
-          "paymentTerms": "Condiciones de pago"
+          "paymentTerms": "Condiciones de pago",
+          "discounts": "Descuentos"
         }
       }
     },
@@ -111,6 +112,7 @@
           "failed": "Error en la exportación",
           "missingItemMapping": "Falta asignación de artículo",
           "missingItemMappingId": "Falta asignación de artículo ({{serviceId}})",
+          "missingDiscountMapping": "Falta la asignación de descuentos (pestaña Descuentos)",
           "missingItemMappingNamed": "Falta asignación de artículo: {{serviceName}}"
         },
         "fields": {

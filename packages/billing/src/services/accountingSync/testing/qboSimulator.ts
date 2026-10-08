@@ -332,8 +332,31 @@ export class QboSimulator {
     };
   }
 
+  /**
+   * Intuit rejects a sales line whose Qty × UnitPrice does not round to its
+   * Amount (error 6070). Alga stores hours rounded while the amount comes from
+   * whole minutes, which is exactly the trap this check exists to catch.
+   */
+  private assertLineAmountsReconcile(lines: any[]): void {
+    for (const line of lines) {
+      if (line?.DetailType !== 'SalesItemLineDetail') continue;
+      const detail = line.SalesItemLineDetail ?? {};
+      if (detail.Qty == null || detail.UnitPrice == null) continue;
+      const qty = Number(detail.Qty);
+      const unitPrice = Number(detail.UnitPrice);
+      if (!Number.isFinite(qty) || !Number.isFinite(unitPrice)) continue;
+      if (Math.round(qty * unitPrice * 100) !== toCents(line.Amount)) {
+        throw new QboSimError(
+          '6070',
+          `Amount calculation incorrect in the request. Amount is not equal to UnitPrice * Qty. Supplied value:${line.Amount}`
+        );
+      }
+    }
+  }
+
   private createTransactionDocument(type: 'Invoice' | 'CreditMemo', data: any): QboSimEntity {
     const lines = Array.isArray(data.Line) ? data.Line : [];
+    this.assertLineAmountsReconcile(lines);
     const astTax = type === 'Invoice' ? this.computeAutomatedSalesTax(lines) : null;
     // QBO computes the total from lines; the caller's TotalAmt is not trusted.
     const totalCents =

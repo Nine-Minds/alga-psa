@@ -118,6 +118,7 @@ function createFakeResolver(overrides: Partial<Record<string, any>> = {}) {
     resolveServiceMapping: vi.fn(async () => ({ external_entity_id: 'item-1', source: 'service' })),
     resolveTaxCodeMapping: vi.fn(async () => ({ external_entity_id: 'tax-1', source: 'tax_code' })),
     resolvePaymentTermMapping: vi.fn(async () => ({ external_entity_id: 'term-1', source: 'payment_term' })),
+    resolveDiscountMapping: vi.fn(async () => ({ external_entity_id: 'discount-item', source: 'discount' })),
     ...overrides,
   };
 }
@@ -209,6 +210,42 @@ describe('AccountingExportValidation.ensureMappingsForBatch', () => {
     expect(repo.errors).toEqual([
       expect.objectContaining({ code: 'missing_service', line_id: 'line-1' }),
     ]);
+  });
+
+  it('accepts a service-less discount line when the realm has a discount mapping', async () => {
+    const state = baseState({
+      charges: [{ item_id: 'charge-1', invoice_id: 'inv-1', service_id: null, tax_region: null, is_discount: true, net_amount: -500 }],
+    });
+    const resolver = createFakeResolver();
+    const { repo } = await run(state, resolver);
+
+    expect(repo.errors.map((e: any) => e.code)).not.toContain('missing_service');
+    expect(repo.errors.map((e: any) => e.code)).not.toContain('missing_discount_mapping');
+    expect(resolver.resolveServiceMapping).not.toHaveBeenCalled();
+  });
+
+  it('reports a missing discount mapping once per realm instead of missing_service', async () => {
+    const state = baseState({
+      lines: [
+        makeCanonicalLine({ line_id: 'line-1', document_line_id: 'charge-1' }),
+        makeCanonicalLine({ line_id: 'line-2', document_line_id: 'charge-2' }),
+      ],
+      charges: [
+        { item_id: 'charge-1', invoice_id: 'inv-1', service_id: null, tax_region: null, is_discount: true, net_amount: -500 },
+        { item_id: 'charge-2', invoice_id: 'inv-1', service_id: null, tax_region: null, is_discount: true, net_amount: -250 },
+      ],
+      chargeDetails: [
+        { item_id: 'charge-1', service_period_start: P1_START, service_period_end: P1_END, billing_timing: 'advance' },
+        { item_id: 'charge-2', service_period_start: P1_START, service_period_end: P1_END, billing_timing: 'advance' },
+      ],
+    });
+    const resolver = createFakeResolver({ resolveDiscountMapping: vi.fn(async () => null) });
+    const { repo } = await run(state, resolver);
+
+    const discountErrors = repo.errors.filter((e: any) => e.code === 'missing_discount_mapping');
+    expect(discountErrors).toHaveLength(1);
+    expect(repo.errors.map((e: any) => e.code)).not.toContain('missing_service');
+    expect(repo.updateBatchStatus).toHaveBeenCalledWith('batch-1', { status: 'needs_attention' });
   });
 
   it('reports an unmapped service once per service+realm, with the service name', async () => {

@@ -5,7 +5,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { TaxService } from './taxService';
 import { generateInvoiceNumber } from '@alga-psa/billing/actions/invoiceGeneration';
 import type { InvoiceViewModel, IInvoiceCharge as ManualInvoiceItem, NetAmountItem, DiscountType, ManualInvoiceSourceLink } from '@alga-psa/types'; // Renamed for clarity
-import type { IBillingCharge, IFixedPriceCharge, IService, TransactionType, RecurringChargeFamily, IHourBlockCharge, InvoiceTimeEntrySnapshot } from '@alga-psa/types'; // Added import
+import type { IBillingCharge, IFixedPriceCharge, IService, TransactionType, RecurringChargeFamily, IHourBlockCharge, IBucketCharge, ITimeBasedCharge, InvoiceTimeEntrySnapshot } from '@alga-psa/types'; // Added import
 import type { IClientWithLocation } from '@alga-psa/types';
 import { Knex } from 'knex';
 import { Session } from 'next-auth';
@@ -277,12 +277,24 @@ async function linkAndMarkSourceBillingRecord(params: {
       return;
     }
 
-    const updatedCount = await tenantScopedTable(tx, tenant, 'time_entries')
-      .where({ entry_id: entryId, invoiced: false })
-      .update({ invoiced: true });
+    // An overtime entry is billed as two segment charges; the first one on
+    // this invoice marks the entry, the other only adds its link row.
+    const alreadyLinkedHere =
+      (charge as ITimeBasedCharge).timeSegment != null &&
+      Boolean(
+        await tenantScopedTable(tx, tenant, 'invoice_time_entries')
+          .where({ invoice_id: invoiceId, entry_id: entryId })
+          .first('invoice_time_entry_id')
+      );
 
-    if (updatedCount !== 1) {
-      throw new Error(`Internal error: Time entry ${entryId} could not be marked invoiced for invoice ${invoiceId}.`);
+    if (!alreadyLinkedHere) {
+      const updatedCount = await tenantScopedTable(tx, tenant, 'time_entries')
+        .where({ entry_id: entryId, invoiced: false })
+        .update({ invoiced: true });
+
+      if (updatedCount !== 1) {
+        throw new Error(`Internal error: Time entry ${entryId} could not be marked invoiced for invoice ${invoiceId}.`);
+      }
     }
 
     // Freeze the work-item snapshot at generation time. This row is the only
@@ -1494,7 +1506,11 @@ export async function persistInvoiceCharges(
           ? `License: ${charge.serviceName}`
           : charge.type === 'hour_block'
             ? `Prepaid hour block (${charge.serviceName}) — ${(charge as IHourBlockCharge).hoursUsed.toFixed(1)} ${resolveUnitOfMeasure({ fallback: 'HUR' }).shortLabel} consumed, ${(charge as IHourBlockCharge).hoursRemaining.toFixed(1)} ${resolveUnitOfMeasure({ fallback: 'HUR' }).shortLabel} remaining`
-            : charge.serviceName;
+            : charge.type === 'time' && (charge as ITimeBasedCharge).timeSegment === 'overtime'
+              // LEVERAGE: pattern charge-line-description — preview (invoiceGeneration.timeChargeDescription,
+              // formatHourBlockChargeDescription) and persist each derive line descriptions from a charge
+              ? `${charge.serviceName} (overtime)`
+              : charge.serviceName;
     const invoiceItem = {
       item_id: uuidv4(),
       invoice_id: invoiceId,
@@ -1511,7 +1527,9 @@ export async function persistInvoiceCharges(
       quantity:
         charge.type === 'hour_block'
           ? (charge as IHourBlockCharge).hoursUsed
-          : (charge.quantity ?? 1),
+          : charge.type === 'bucket' && !(charge as IBucketCharge).isUsageBucket
+            ? (charge as IBucketCharge).overageHours
+            : (charge.quantity ?? 1),
       unit_price: charge.rate ?? 0,
       net_amount: netAmount,
       tax_amount: charge.tax_amount || 0,
