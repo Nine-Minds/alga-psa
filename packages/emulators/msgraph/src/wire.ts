@@ -165,8 +165,10 @@ export function wire(router: Router, core: MsGraphCore, env: HostEnv): void {
   router.use('/v1.0', graph);
   router.use('/beta', graph);
 
-  const mailboxUser = { id: 'emulated-user', userPrincipalName: 'support@example.test', mail: 'support@example.test' };
-  graph.get('/me', (_req, res) => res.json(mailboxUser));
+  // Read through to core state: the `signed-in-user` seeder can change the
+  // identity Graph reports mid-run, exactly as another account signing in does.
+  const mailboxUser = () => core.signedInUser;
+  graph.get('/me', (_req, res) => res.json(mailboxUser()));
 
   // Graph simulator only: capture the send request for adapter smoke tests.
   // It does not model Entra consent, Exchange Send As, or real mail delivery.
@@ -235,8 +237,8 @@ export function wire(router: Router, core: MsGraphCore, env: HostEnv): void {
     // Real Graph 404s unknown ids. Only the emulated mailbox identity keeps
     // resolving un-seeded, for the email module's fixed test principal —
     // answering every id used to mask lookup-failure handling bugs.
-    if (userId === mailboxUser.id || userId.toLowerCase() === mailboxUser.userPrincipalName.toLowerCase()) {
-      res.json(mailboxUser);
+    if (userId === mailboxUser().id || userId.toLowerCase() === mailboxUser().userPrincipalName.toLowerCase()) {
+      res.json(mailboxUser());
       return;
     }
     throw new GraphApiError(404, { error: { code: 'Request_ResourceNotFound', message: `Resource '${userId}' does not exist.` } });
@@ -307,7 +309,7 @@ export function wire(router: Router, core: MsGraphCore, env: HostEnv): void {
     if (prefer && !/^odata\.maxpagesize=\d+$/.test(prefer)) {
       throw new GraphApiError(400, { error: { code: 'Request_UnsupportedQuery' } });
     }
-    const result = core.calendarDelta(authed(res).clientId, mailboxUser.id, {
+    const result = core.calendarDelta(authed(res).clientId, mailboxUser().id, {
       start: req.query.startDateTime ? String(req.query.startDateTime) : undefined,
       end: req.query.endDateTime ? String(req.query.endDateTime) : undefined,
       deltaToken: req.query.$deltatoken ? String(req.query.$deltatoken) : undefined,
@@ -321,13 +323,13 @@ export function wire(router: Router, core: MsGraphCore, env: HostEnv): void {
   });
   const ownedEvent = (id: string) => {
     const event = core.getCalendarEvent(id);
-    if (event.organizerUserId !== mailboxUser.id) {
+    if (event.organizerUserId !== mailboxUser().id) {
       throw new GraphApiError(404, { error: { code: 'ErrorItemNotFound' } });
     }
     return event;
   };
   graph.get('/me/calendar/events', (req, res) => {
-    let events = [...core.calendarEvents.values()].filter(event => event.organizerUserId === mailboxUser.id);
+    let events = [...core.calendarEvents.values()].filter(event => event.organizerUserId === mailboxUser().id);
     if (req.query.$filter) {
       const range = String(req.query.$filter).match(/^start\/dateTime ge '([^']+)' and end\/dateTime le '([^']+)'$/);
       if (!range || !Number.isFinite(Date.parse(range[1])) || !Number.isFinite(Date.parse(range[2]))) {
@@ -352,7 +354,7 @@ export function wire(router: Router, core: MsGraphCore, env: HostEnv): void {
     res.json({ value: events.map(publicEvent) });
   });
   graph.post('/me/calendar/events', route(async (req, res) => {
-    const event = core.createCalendarEvent(mailboxUser.id, req.body ?? {});
+    const event = core.createCalendarEvent(mailboxUser().id, req.body ?? {});
     await deliverCalendarNotifications(core, event, 'created', env);
     res.status(201).json(publicEvent(event));
   }));
