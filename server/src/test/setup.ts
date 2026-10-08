@@ -147,6 +147,8 @@ if (typeof document !== 'undefined') {
 // require('dotenv').config(), so the first suite that reaches it (e.g. the
 // search-backfill script) dumps the developer's whole server/.env into the
 // shared fork and every later Microsoft OAuth assertion reads the emulator.
+// MICROSOFT_SSO_EMULATOR_MODE is the gate those base URLs need before Microsoft
+// *sign-in* follows them, so a leaked value flips the provider the same way.
 // TZ shifts every date the process formats — a timezone test that sets it
 // and doesn't restore turns later files' date assertions off by a day.
 const GUARDED_ENV_VARS = [
@@ -158,6 +160,7 @@ const GUARDED_ENV_VARS = [
   'MICROSOFT_LOGIN_BASE_URL',
   'MICROSOFT_GRAPH_BASE_URL',
   'MICROSOFT_GRAPH_BETA_BASE_URL',
+  'MICROSOFT_SSO_EMULATOR_MODE',
   'TZ',
 ] as const;
 type GuardedEnvVar = (typeof GUARDED_ENV_VARS)[number];

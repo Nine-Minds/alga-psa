@@ -31,6 +31,10 @@ import type {
 } from "./sso/types";
 import { isOAuthMappingFailure, OAuthAccountLinkConflictError } from "./sso/types";
 import { SSO_LINK_STATE_COOKIE, SSO_PROFILE_TAB_URL } from "./sso/linkStateCookie";
+import {
+    getMicrosoftSsoEmulatorEndpoints,
+    isMicrosoftSsoEmulatorEnabled,
+} from "./sso/microsoftSsoEmulator";
 import { mapCeOAuthProfileToExtendedUser } from "./sso/ceOAuthProfileMapper";
 import { cookies } from "next/headers.js";
 import {
@@ -410,6 +414,53 @@ function buildGoogleProvider(clientId: string, clientSecret: string) {
         clientId,
         clientSecret,
         profile: mapGoogleProfile,
+    });
+}
+
+/**
+ * Microsoft sign-in, against Entra or — when the simulator gate is on — against
+ * the algasim Microsoft simulator. The simulator issues no signed id_token, so
+ * that branch runs as plain OAuth2 and resolves the account from Graph `/me`,
+ * which carries the same `mail`/`userPrincipalName` pair `profile()` reads.
+ */
+function buildAzureADProvider(config: {
+    clientId: string;
+    clientSecret: string;
+    authority: string;
+    checks?: Array<'pkce' | 'state'>;
+    profile: (profile: Record<string, any>) => Promise<ExtendedUser>;
+}) {
+    if (isMicrosoftSsoEmulatorEnabled()) {
+        const endpoints = getMicrosoftSsoEmulatorEndpoints(config.authority);
+        return {
+            id: 'azure-ad',
+            name: 'Microsoft',
+            type: 'oauth' as const,
+            clientId: config.clientId,
+            clientSecret: config.clientSecret,
+            checks: (config.checks ?? ['pkce', 'state']) as Array<'pkce' | 'state'>,
+            authorization: {
+                url: endpoints.authorization,
+                params: {
+                    scope: 'openid email profile https://graph.microsoft.com/User.Read',
+                },
+            },
+            token: {
+                url: endpoints.token,
+            },
+            userinfo: {
+                url: endpoints.userinfo,
+            },
+            profile: config.profile,
+        };
+    }
+
+    return AzureADProvider({
+        clientId: config.clientId,
+        clientSecret: config.clientSecret,
+        issuer: `https://login.microsoftonline.com/${config.authority}/v2.0`,
+        ...(config.checks ? { checks: config.checks } : {}),
+        profile: config.profile,
     });
 }
 
@@ -1489,10 +1540,10 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
             : []),
         ...(secrets.microsoftClientId && secrets.microsoftClientSecret
             ? [
-                AzureADProvider({
+                buildAzureADProvider({
                     clientId: secrets.microsoftClientId,
                     clientSecret: secrets.microsoftClientSecret,
-                    issuer: `https://login.microsoftonline.com/${secrets.microsoftTenantId || 'common'}/v2.0`,
+                    authority: secrets.microsoftTenantId || 'common',
                     checks: ['pkce', 'state'],
                     profile: async (profile: Record<string, any>): Promise<ExtendedUser> => {
                         const clientPortalHints = await getClientPortalSsoProfileHints('azure-ad');
@@ -2350,10 +2401,10 @@ export const options: NextAuthConfig = {
         ...(process.env.MICROSOFT_OAUTH_CLIENT_ID &&
         process.env.MICROSOFT_OAUTH_CLIENT_SECRET
             ? [
-                AzureADProvider({
+                buildAzureADProvider({
                     clientId: process.env.MICROSOFT_OAUTH_CLIENT_ID as string,
                     clientSecret: process.env.MICROSOFT_OAUTH_CLIENT_SECRET as string,
-                    issuer: `https://login.microsoftonline.com/${process.env.MICROSOFT_OAUTH_TENANT_ID || 'common'}/v2.0`,
+                    authority: process.env.MICROSOFT_OAUTH_TENANT_ID || 'common',
                     profile: async (profile: Record<string, any>): Promise<ExtendedUser> => {
                         const emailCandidate =
                             profile.email ??

@@ -81,6 +81,17 @@ JWKS requests and no nonce, so it does not establish application signature
 verification, nonce rejection, or live Microsoft consent. This adds application
 callback evidence without expanding the msgraph emulator's protocol-parity claims.
 
+A second, narrower lane does use the emulator's OAuth endpoints:
+[the SSO mapping-failure test](../auth/src/lib/nextAuthOptions.microsoftSimulator.test.ts)
+builds the app's `azure-ad` provider behind `MICROSOFT_SSO_EMULATOR_MODE`, then
+replays the authorization redirect, the code exchange and the Graph `/me`
+userinfo request before handing the response to the provider's own `profile()`
+and `signIn` callbacks. It establishes that an Entra-shaped profile whose mail
+matches no AlgaPSA user ends on a readable redirect instead of Auth.js
+`error=Configuration`. It is not browser evidence and not OIDC evidence: the
+emulator mints no signed id_token for this flow, so no signature, nonce or
+consent check runs, and the AlgaPSA database and session store are fixtures.
+
 ## SMTP transaction evidence
 
 The SMTP sink records bounded DATA transactions through the host request-history endpoint: acceptance, rejection, processing failure and interrupted transfers, with in-flight, dropped and reset-generation accounting. Records contain protocol, command, sequence, timestamps and outcome only; they contain no envelope, credentials or message content. Native transport tests cover these outcomes and isolation across reset. Greeting, envelope and authentication failures before DATA are not represented. The browser readiness consumer requires complete, nonempty SMTP evidence for the inbound-email journey; this is emulator observation, not live mail-provider parity.
