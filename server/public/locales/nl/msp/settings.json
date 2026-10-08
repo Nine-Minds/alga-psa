@@ -2413,6 +2413,11 @@
       "updateFailed": "Kan de rol niet bijwerken",
       "validateDeletionFailed": "Kan de verwijdering niet valideren. Probeer het opnieuw.",
       "deleteFailed": "Kan de rol niet verwijderen"
+    },
+    "editDialog": {
+      "title": "Rol bewerken",
+      "builtInNameLocked": "Namen van ingebouwde rollen kunnen niet worden gewijzigd, omdat het systeem ervan afhankelijk is.",
+      "portalLocked": "Portaaltoegang kan niet worden gewijzigd nadat een rol is aangemaakt."
     }
   },
   "security": {
@@ -3467,7 +3472,10 @@
       "duplicate": "Die gebruiker heeft de geselecteerde rol al.",
       "changePermission": "Toestemming geweigerd: u hebt geen rechten om gebruikersrollen te wijzigen.",
       "missingField": "Er ontbreekt een verplicht veld van de gebruikersrol.",
-      "missingFieldNamed": "Er ontbreekt een verplicht veld van de gebruikersrol: {{field}}."
+      "missingFieldNamed": "Er ontbreekt een verplicht veld van de gebruikersrol: {{field}}.",
+      "nameRequired": "Rolnaam is verplicht.",
+      "builtInRename": "Ingebouwde rollen kunnen niet worden hernoemd.",
+      "duplicateName": "Er bestaat al een rol met de naam \"{{name}}\" voor dit portaal."
     },
     "secrets": {
       "tenantContextMissing": "De tenantcontext ontbreekt. Vernieuw de pagina en probeer het opnieuw.",

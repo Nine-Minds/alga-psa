@@ -21,6 +21,13 @@ describe('assetActionErrorFrom', () => {
     });
   });
 
+  it('maps an unavailable asset contact to a localized action error', () => {
+    expect(assetActionErrorFrom(new Error('Selected contact is not available for this client'))).toEqual({
+      actionError: 'Selected contact is not available for this client.',
+      messageKey: 'msp/assets:errors.asset.contactUnavailable',
+    });
+  });
+
   it('maps database constraint failures and leaves unexpected failures unhandled', () => {
     expect(assetActionErrorFrom({ code: '23503' })).toEqual({
       actionError: 'The selected asset, document, or related record no longer exists. Please refresh and try again.',

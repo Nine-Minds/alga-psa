@@ -110,6 +110,17 @@ async function resolveProjectStatusInfo(
  * Parse a date string to Date object
  * Supports: YYYY-MM-DD, MM/DD/YYYY, DD/MM/YYYY
  */
+/**
+ * Task dates as they will be stored. A start date after the due date cannot
+ * be drawn or scheduled, so it is dropped rather than failing the row.
+ */
+function resolveImportTaskDates(row: ITaskImportRow): { start_date: Date | null; due_date: Date | null } {
+  const due_date = parseImportDate(row.due_date);
+  const parsedStart = parseImportDate(row.start_date);
+  const start_date = parsedStart && due_date && parsedStart > due_date ? null : parsedStart;
+  return { start_date, due_date };
+}
+
 function parseImportDate(dateStr: string | undefined): Date | null {
   if (!dateStr?.trim()) return null;
 
@@ -314,7 +325,7 @@ export async function groupRowsIntoPhases(
       additional_agent_ids: additionalAgentIds,
       estimated_hours: parseImportHoursToMinutes(row.estimated_hours),
       actual_hours: null,
-      due_date: parseImportDate(row.due_date),
+      ...resolveImportTaskDates(row),
       priority_id: priorityLookup[priorityName] || null,
       service_id: serviceLookup[serviceName] || null,
       task_type_key: row.task_type?.trim() || 'task',
@@ -347,6 +358,7 @@ export async function generatePhaseTaskCSVTemplate(): Promise<string> {
       task_description: 'Collect and document client requirements',
       assigned_to: 'John Smith',
       estimated_hours: '16',
+      start_date: '2024-02-12',
       due_date: '2024-02-15',
       priority: 'High',
       service: 'Consulting',
@@ -414,6 +426,7 @@ export async function generatePhaseTaskCSVTemplate(): Promise<string> {
     'task_description',
     'assigned_to',
     'estimated_hours',
+    'start_date',
     'due_date',
     'priority',
     'service',
@@ -625,11 +638,17 @@ export async function validatePhaseTaskImportDataWithReferenceData(
     }
 
     // Date validation
+    if (row.start_date?.trim() && !parseImportDate(row.start_date)) {
+      warnings.push(`Invalid date format for start_date: "${row.start_date}" - will be skipped`);
+    }
     if (row.due_date?.trim()) {
       const parsedDate = parseImportDate(row.due_date);
       if (!parsedDate) {
         warnings.push(`Invalid date format for due_date: "${row.due_date}" - will be skipped`);
       }
+    }
+    if (!resolveImportTaskDates(row).start_date && parseImportDate(row.start_date) && parseImportDate(row.due_date)) {
+      warnings.push(`start_date "${row.start_date}" is after due_date "${row.due_date}" - start date will be skipped`);
     }
 
     // Number validation
@@ -819,11 +838,17 @@ export const validatePhaseTaskImportData = withAuth(async (
     }
 
     // Date validation
+    if (row.start_date?.trim() && !parseImportDate(row.start_date)) {
+      warnings.push(`Invalid date format for start_date: "${row.start_date}" - will be skipped`);
+    }
     if (row.due_date?.trim()) {
       const parsedDate = parseImportDate(row.due_date);
       if (!parsedDate) {
         warnings.push(`Invalid date format for due_date: "${row.due_date}" - will be skipped`);
       }
+    }
+    if (!resolveImportTaskDates(row).start_date && parseImportDate(row.start_date) && parseImportDate(row.due_date)) {
+      warnings.push(`start_date "${row.start_date}" is after due_date "${row.due_date}" - start date will be skipped`);
     }
 
     // Number validation
@@ -1158,6 +1183,7 @@ export const importPhasesAndTasks = withAuth(async (
               description_rich_text: null,
               assigned_to: taskData.assigned_to,
               estimated_hours: taskData.estimated_hours,
+              start_date: taskData.start_date,
               due_date: taskData.due_date,
               priority_id: taskData.priority_id,
               service_id: taskData.service_id,

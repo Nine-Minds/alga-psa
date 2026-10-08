@@ -8,7 +8,7 @@ import { Knex } from 'knex';
 import { hasPermission, withAuth } from '@alga-psa/auth';
 import { getConnection, withTransaction, tenantDb, type TenantDb } from '@alga-psa/db';
 import { applyClientDocumentVisibilityFilter, getClientDocumentVisibilitySources, resolveClientPortalDocument } from '../../lib/clientDocumentAccess';
-import { getAuthenticatedClientId } from '../../lib/clientAuth';
+import { getAuthenticatedPortalVisibility } from '../../lib/clientAuth';
 import { clientPortalActionErrorFrom, type ClientPortalActionError } from './clientPortalActionErrors';
 
 export interface ClientDocumentFilters {
@@ -93,7 +93,7 @@ export const getClientDocuments = withAuth(
     }
 
       return withTransaction(db, async (trx: Knex.Transaction) => {
-      const clientId = await getAuthenticatedClientId(trx, user.user_id, tenant);
+      const visibility = await getAuthenticatedPortalVisibility(trx, user.user_id, tenant);
       const scopedDb = tenantDb(trx, tenant);
 
       const baseQuery = scopedDb.table('documents as d')
@@ -103,7 +103,7 @@ export const getClientDocuments = withAuth(
       applyClientDocumentVisibilityFilter(
         baseQuery,
         scopedDb,
-        clientId,
+        visibility,
         'd',
         getClientDocumentVisibilitySources(filters.sourceType)
       );
@@ -193,7 +193,8 @@ export const getClientDocumentFolders = withAuth(
     }
 
       return withTransaction(db, async (trx: Knex.Transaction) => {
-      const clientId = await getAuthenticatedClientId(trx, user.user_id, tenant);
+      const visibility = await getAuthenticatedPortalVisibility(trx, user.user_id, tenant);
+      const clientId = visibility.clientId;
       const scopedDb = tenantDb(trx, tenant);
 
       // Get folder paths from client-visible documents belonging to this client
@@ -201,7 +202,7 @@ export const getClientDocumentFolders = withAuth(
         .distinct('folder_path')
         .where('d.is_client_visible', true)
         .whereNotNull('d.folder_path')
-        .modify((query) => applyClientDocumentVisibilityFilter(query, scopedDb, clientId, 'd'))
+        .modify((query) => applyClientDocumentVisibilityFilter(query, scopedDb, visibility, 'd'))
         .modify((query) => applyPublicCommentAttachmentFilter(query, trx, tenant, user.user_id));
 
       // Also get explicitly client-visible folders scoped to this client or one of the

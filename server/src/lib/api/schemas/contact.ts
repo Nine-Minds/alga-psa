@@ -73,6 +73,8 @@ export const createContactSchema = z.object({
   contact_kind: z.enum(['person', 'shared_mailbox']).optional(),
   full_name: contactNameField,
   client_id: uuidSchema.optional(),
+  // Reports-to. Must be a person at the same client; null clears it on update.
+  manager_contact_id: uuidSchema.nullable().optional(),
   phone_numbers: z.array(contactPhoneNumberInputSchema).optional().default([]),
   email: emailFieldSchema,
   primary_email_canonical_type: contactEmailCanonicalTypeSchema.nullish(),
@@ -111,6 +113,7 @@ export const contactResponseSchema = z.object({
   contact_name_id: uuidSchema,
   full_name: z.string(),
   client_id: uuidSchema.nullable(),
+  manager_contact_id: uuidSchema.nullable().optional(),
   phone_numbers: z.array(contactPhoneNumberResponseSchema),
   default_phone_number: z.string().nullable().optional(),
   default_phone_type: z.string().nullable().optional(),

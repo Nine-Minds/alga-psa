@@ -39,6 +39,7 @@ import {
   parseTicketStatusFilterValue,
 } from '@alga-psa/tickets/lib';
 import { getClientContactVisibilityContext } from '@alga-psa/tickets/lib/clientPortalVisibility.server';
+import { applyAssetVisibilityFilter } from '@alga-psa/authorization/portal/visibility';
 import { publishTicketUpdate } from '@alga-psa/tickets/lib/liveUpdates';
 import { getUserAvatarUrlAction, getContactAvatarUrlAction } from '@alga-psa/user-composition/actions/avatarActions';
 
@@ -169,7 +170,7 @@ async function resolveVisibleTicket(
       't.client_id': visibility.clientId
     })
     .modify((queryBuilder: Knex.QueryBuilder) => {
-      applyTicketVisibilityFilter(queryBuilder, visibility, { boardColumn: 't.board_id', contactColumn: 't.contact_name_id', billingProfileColumn: 't.billing_profile_id' });
+      applyTicketVisibilityFilter(queryBuilder, visibility, { boardColumn: 't.board_id', contactColumn: 't.contact_name_id', billingProfileColumn: 't.billing_profile_id', watchListColumn: 't.attributes' });
     })
     .first();
 
@@ -272,7 +273,7 @@ export const getClientTickets = withAuth(async (user, { tenant }, status: string
         't.client_id': visibility.clientId
       });
 
-      applyTicketVisibilityFilter(query, visibility, { boardColumn: 't.board_id', contactColumn: 't.contact_name_id', billingProfileColumn: 't.billing_profile_id' });
+      applyTicketVisibilityFilter(query, visibility, { boardColumn: 't.board_id', contactColumn: 't.contact_name_id', billingProfileColumn: 't.billing_profile_id', watchListColumn: 't.attributes' });
 
     // Filter by status
     if (parsedStatusFilter.kind === 'all') {
@@ -362,7 +363,7 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
           't.client_id': visibility.clientId
         })
         .modify((ticketQuery: Knex.QueryBuilder) => {
-          applyTicketVisibilityFilter(ticketQuery, visibility, { boardColumn: 't.board_id', contactColumn: 't.contact_name_id', billingProfileColumn: 't.billing_profile_id' });
+          applyTicketVisibilityFilter(ticketQuery, visibility, { boardColumn: 't.board_id', contactColumn: 't.contact_name_id', billingProfileColumn: 't.billing_profile_id', watchListColumn: 't.attributes' });
         })
         .first();
 
@@ -1249,7 +1250,7 @@ export const getClientTicketDocuments = withAuth(async (user, { tenant }, ticket
           client_id: visibility.clientId
         })
         .modify((queryBuilder: Knex.QueryBuilder) => {
-          applyTicketVisibilityFilter(queryBuilder, visibility, { boardColumn: 'tickets.board_id', contactColumn: 'tickets.contact_name_id', billingProfileColumn: 'tickets.billing_profile_id' });
+          applyTicketVisibilityFilter(queryBuilder, visibility, { boardColumn: 'tickets.board_id', contactColumn: 'tickets.contact_name_id', billingProfileColumn: 'tickets.billing_profile_id', watchListColumn: 'tickets.attributes' });
         })
         .first();
 
@@ -1439,14 +1440,17 @@ export const createClientTicket = withAuth(async (user, { tenant }, data: FormDa
         3 // max retries
       );
 
-      // If an asset was selected, link it to the ticket. The asset must already
-      // belong to the requester's client; we verify ownership before inserting.
+      // If an asset was selected, link it to the ticket. The asset must be one
+      // the requester can see (their client's, narrowed by asset scope), so a
+      // contact-scoped user cannot file against a device assigned to someone
+      // else; we verify before inserting.
       if (validatedData.asset_id) {
-        const asset = await tenantDb(trx, tenant).table('assets')
-          .where({
-            asset_id: validatedData.asset_id,
-            client_id: visibility.clientId,
-          })
+        const asset = await applyAssetVisibilityFilter(
+          tenantDb(trx, tenant).table('assets')
+            .where({ asset_id: validatedData.asset_id }),
+          visibility,
+          { clientColumn: 'assets.client_id', contactColumn: 'assets.contact_name_id' }
+        )
           .select('asset_id')
           .first();
 

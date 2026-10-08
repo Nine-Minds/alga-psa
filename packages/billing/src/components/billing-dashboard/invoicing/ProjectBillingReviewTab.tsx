@@ -378,7 +378,9 @@ const ProjectBillingReviewTab: React.FC<ProjectBillingReviewTabProps> = ({
     },
     {
       title: t('projectBilling.columns.actions', { defaultValue: 'Actions' }),
+      id: 'actions',
       dataIndex: ['entry', 'schedule_entry_id'],
+      sortable: false,
       width: '5%',
       render: (_, record) => (
         <div onClick={(e) => e.stopPropagation()}>

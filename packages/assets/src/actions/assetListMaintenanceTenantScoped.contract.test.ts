@@ -27,6 +27,9 @@ describe('asset list and maintenance tenant-scoped query contract', () => {
 
         expect(listSection).toContain("tenantScopedTable(trx, 'assets', tenant)");
         expect(listSection).not.toContain(".where('assets.tenant', tenant)");
+        // Assigned-to filter and the tenant-scoped contact join that names the assignee.
+        expect(listSection).toContain("query.where('assets.contact_name_id', validatedParams.contact_name_id)");
+        expect(listSection).toContain("tenantJoin(query, 'contacts', 'contacts.contact_name_id', 'assets.contact_name_id'");
         expect(maintenanceSection).toContain("tenantScopedTable(trx, 'asset_maintenance_schedules', tenant)");
         expect(maintenanceSection).toContain("tenantScopedTable(trx, 'asset_maintenance_notifications', tenant)");
         expect(maintenanceSection).toContain("tenantScopedTable(db, 'assets', tenant)");

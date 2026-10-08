@@ -2413,6 +2413,11 @@
       "updateFailed": "No se pudo actualizar el rol",
       "validateDeletionFailed": "No se pudo validar la eliminación. Inténtelo de nuevo.",
       "deleteFailed": "No se pudo eliminar el rol"
+    },
+    "editDialog": {
+      "title": "Editar rol",
+      "builtInNameLocked": "Los nombres de los roles integrados no se pueden cambiar porque el sistema depende de ellos.",
+      "portalLocked": "El acceso al portal no se puede cambiar después de crear un rol."
     }
   },
   "security": {
@@ -3467,7 +3472,10 @@
       "duplicate": "Ese usuario ya tiene el rol seleccionado.",
       "changePermission": "Permiso denegado: no tiene permiso para cambiar los roles de usuario.",
       "missingField": "Falta un campo obligatorio del rol de usuario.",
-      "missingFieldNamed": "Falta un campo obligatorio del rol de usuario: {{field}}."
+      "missingFieldNamed": "Falta un campo obligatorio del rol de usuario: {{field}}.",
+      "nameRequired": "El nombre del rol es obligatorio.",
+      "builtInRename": "Los roles integrados no se pueden renombrar.",
+      "duplicateName": "Ya existe un rol llamado «{{name}}» para este portal."
     },
     "secrets": {
       "tenantContextMissing": "Falta el contexto del inquilino. Actualice la página e inténtelo de nuevo.",

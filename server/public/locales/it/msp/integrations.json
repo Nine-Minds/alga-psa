@@ -90,7 +90,8 @@
           "clients": "Clienti",
           "itemsServices": "Articoli / Servizi",
           "taxCodes": "Codici fiscali",
-          "paymentTerms": "Termini di pagamento"
+          "paymentTerms": "Termini di pagamento",
+          "discounts": "Sconti"
         }
       }
     },
@@ -111,6 +112,7 @@
           "failed": "Esportazione non riuscita",
           "missingItemMapping": "Mappatura articolo mancante",
           "missingItemMappingId": "Mappatura articolo mancante ({{serviceId}})",
+          "missingDiscountMapping": "Mappatura degli sconti mancante (scheda Sconti)",
           "missingItemMappingNamed": "Mappatura articolo mancante: {{serviceName}}"
         },
         "fields": {

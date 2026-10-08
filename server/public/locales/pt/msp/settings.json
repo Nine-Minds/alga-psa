@@ -2413,6 +2413,11 @@
       "updateFailed": "Falha ao atualizar a função",
       "validateDeletionFailed": "Falha ao validar a exclusão. Tente novamente.",
       "deleteFailed": "Falha ao excluir a função"
+    },
+    "editDialog": {
+      "title": "Editar função",
+      "builtInNameLocked": "Os nomes das funções integradas não podem ser alterados porque o sistema depende deles.",
+      "portalLocked": "O acesso ao portal não pode ser alterado depois que uma função é criada."
     }
   },
   "security": {
@@ -3467,7 +3472,10 @@
       "duplicate": "Esse usuário já tem a função selecionada.",
       "changePermission": "Permissão negada: você não tem permissão para alterar as funções dos usuários.",
       "missingField": "Falta um campo obrigatório da função do usuário.",
-      "missingFieldNamed": "Falta um campo obrigatório da função do usuário: {{field}}."
+      "missingFieldNamed": "Falta um campo obrigatório da função do usuário: {{field}}.",
+      "nameRequired": "O nome da função é obrigatório.",
+      "builtInRename": "Funções integradas não podem ser renomeadas.",
+      "duplicateName": "Já existe uma função chamada \"{{name}}\" para este portal."
     },
     "secrets": {
       "tenantContextMissing": "O contexto do tenant está ausente. Atualize a página e tente novamente.",

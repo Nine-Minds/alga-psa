@@ -2413,6 +2413,11 @@
       "updateFailed": "Rolle konnte nicht aktualisiert werden",
       "validateDeletionFailed": "Das Löschen konnte nicht überprüft werden. Bitte versuchen Sie es erneut.",
       "deleteFailed": "Rolle konnte nicht gelöscht werden"
+    },
+    "editDialog": {
+      "title": "Rolle bearbeiten",
+      "builtInNameLocked": "Namen integrierter Rollen können nicht geändert werden, da das System auf sie angewiesen ist.",
+      "portalLocked": "Der Portalzugriff kann nach dem Erstellen einer Rolle nicht mehr geändert werden."
     }
   },
   "security": {
@@ -3467,7 +3472,10 @@
       "duplicate": "Dieser Benutzer hat die ausgewählte Rolle bereits.",
       "changePermission": "Berechtigung verweigert: Sie haben keine Berechtigung, Benutzerrollen zu ändern.",
       "missingField": "Erforderliches Feld der Benutzerrolle fehlt.",
-      "missingFieldNamed": "Erforderliches Feld der Benutzerrolle fehlt: {{field}}."
+      "missingFieldNamed": "Erforderliches Feld der Benutzerrolle fehlt: {{field}}.",
+      "nameRequired": "Rollenname ist erforderlich.",
+      "builtInRename": "Integrierte Rollen können nicht umbenannt werden.",
+      "duplicateName": "Eine Rolle mit dem Namen „{{name}}“ existiert für dieses Portal bereits."
     },
     "secrets": {
       "tenantContextMissing": "Der Mandantenkontext fehlt. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",

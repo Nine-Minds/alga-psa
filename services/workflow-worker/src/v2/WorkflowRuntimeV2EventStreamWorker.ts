@@ -315,6 +315,10 @@ export class WorkflowRuntimeV2EventStreamWorker {
 
     const startedRuns: string[] = [];
     const payloadValidationErrors: string[] = [];
+    // Every reason a matching workflow was NOT launched. These used to be
+    // counted in skipStats only, so an operator looking at the event row saw no
+    // error and no run (alga-2026-0002379). They are persisted with the event.
+    const skipDiagnostics: string[] = [];
     const skipStats = {
       noVersion: 0,
       missingSchemaRef: 0,
@@ -332,12 +336,15 @@ export class WorkflowRuntimeV2EventStreamWorker {
         (typeof latestDefinition?.payloadSchemaRef === 'string' ? latestDefinition.payloadSchemaRef : null) ??
         (typeof (workflow as any)?.payload_schema_ref === 'string' ? String((workflow as any).payload_schema_ref) : null);
 
+      const skipLabel = `workflow ${workflow.key ?? workflow.workflow_id} (${workflow.workflow_id})`;
       if (!workflowPayloadSchemaRef) {
         skipStats.missingSchemaRef += 1;
+        skipDiagnostics.push(`Skipped ${skipLabel}: no payload schema reference is set on the workflow`);
         continue;
       }
       if (!schemaRegistry.has(workflowPayloadSchemaRef)) {
         skipStats.unknownSchemaRef += 1;
+        skipDiagnostics.push(`Skipped ${skipLabel}: payload schema ${workflowPayloadSchemaRef} is not registered`);
         continue;
       }
 
@@ -349,6 +356,7 @@ export class WorkflowRuntimeV2EventStreamWorker {
       const effectiveSourceSchemaRef = overrideSourceSchemaRef ?? payloadSchemaRef;
       if (!effectiveSourceSchemaRef) {
         skipStats.missingSchemaRef += 1;
+        skipDiagnostics.push(`Skipped ${skipLabel}: no source payload schema is known for event ${event.event_type}`);
         continue;
       }
 
@@ -357,6 +365,9 @@ export class WorkflowRuntimeV2EventStreamWorker {
       const refsMatch = effectiveSourceSchemaRef === workflowPayloadSchemaRef;
       if (!mappingProvided && !refsMatch) {
         skipStats.schemaMismatch += 1;
+        skipDiagnostics.push(
+          `Skipped ${skipLabel}: event payload schema ${effectiveSourceSchemaRef} differs from workflow schema ${workflowPayloadSchemaRef} and no payload mapping is configured`
+        );
         continue;
       }
 
@@ -379,7 +390,10 @@ export class WorkflowRuntimeV2EventStreamWorker {
           });
           workflowPayload = expandDottedKeys((resolved ?? {}) as Record<string, unknown>);
           mappingApplied = true;
-        } catch {
+        } catch (mappingError) {
+          skipDiagnostics.push(
+            `Skipped ${skipLabel}: trigger payload mapping failed: ${mappingError instanceof Error ? mappingError.message : String(mappingError)}`
+          );
           continue;
         }
       }
@@ -500,9 +514,13 @@ export class WorkflowRuntimeV2EventStreamWorker {
         error_message: deliveryError,
         processed_at: processedAt,
       });
-    } else if (payloadValidationErrors.length > 0 && startedRuns.length === 0 && signaledRuns.size === 0) {
+    } else if (
+      (payloadValidationErrors.length > 0 || skipDiagnostics.length > 0) &&
+      startedRuns.length === 0 &&
+      signaledRuns.size === 0
+    ) {
       await WorkflowRuntimeEventModelV2.update(knex, eventRecord.event_id, {
-        error_message: payloadValidationErrors.join('\n'),
+        error_message: [...payloadValidationErrors, ...skipDiagnostics].join('\n'),
         processed_at: processedAt,
       }, event.tenant);
     } else if (missingCorrelationWarning && startedRuns.length === 0 && signaledRuns.size === 0) {
