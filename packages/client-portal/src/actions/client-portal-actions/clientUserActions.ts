@@ -865,6 +865,8 @@ export const checkClientPortalPermissions = withAuth(async (
   hasClientSettingsAccess: boolean;
   hasAccountAccess: boolean;
   hasVisibilityGroupAccess: boolean;
+  hasProjectAccess: boolean;
+  hasDocumentAccess: boolean;
   isLicenseDistributor: boolean;
 }> => {
   try {
@@ -879,11 +881,13 @@ export const checkClientPortalPermissions = withAuth(async (
       .catch(() => false);
 
     // Check permissions using the hasPermission function from rbac
-    const [hasBilling, hasUser, hasClient, hasSettings] = await Promise.all([
+    const [hasBilling, hasUser, hasClient, hasSettings, hasProject, hasDocument] = await Promise.all([
       hasPermission(currentUser, 'billing', 'read'),
       hasPermission(currentUser, 'user', 'read'),
       hasPermission(currentUser, 'client', 'read'),
-      hasPermission(currentUser, 'settings', 'read')
+      hasPermission(currentUser, 'settings', 'read'),
+      hasPermission(currentUser, 'project', 'read'),
+      hasPermission(currentUser, 'document', 'read')
     ]);
 
     let hasVisibilityGroupAccess = false;
@@ -908,6 +912,10 @@ export const checkClientPortalPermissions = withAuth(async (
       // Account access requires both hosted tenant and settings permission
       hasAccountAccess: isHosted && hasSettings,
       hasVisibilityGroupAccess,
+      // Navigation entries for role-gated sections; the routes enforce the same
+      // permissions server-side.
+      hasProjectAccess: hasProject,
+      hasDocumentAccess: hasDocument,
       // Only the Nine Minds distribution tenant (with distribution enabled) sees
       // the appliance-license surface.
       isLicenseDistributor: isLicenseDistributionTenant(tenant)
@@ -920,6 +928,8 @@ export const checkClientPortalPermissions = withAuth(async (
       hasClientSettingsAccess: false,
       hasAccountAccess: false,
       hasVisibilityGroupAccess: false,
+      hasProjectAccess: false,
+      hasDocumentAccess: false,
       isLicenseDistributor: false
     };
   }

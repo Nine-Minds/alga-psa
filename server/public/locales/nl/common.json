@@ -172,6 +172,10 @@
         "updateComments": "Onvoldoende rechten om opmerkingen bij te werken",
         "deleteComments": "Onvoldoende rechten om opmerkingen te verwijderen",
         "viewDocuments": "Onvoldoende rechten om ticketdocumenten te bekijken"
+      },
+      "projects": {
+        "read": "Onvoldoende rechten om projecten te bekijken",
+        "readDetails": "Onvoldoende rechten om projectdetails te bekijken"
       }
     },
     "tags": {
