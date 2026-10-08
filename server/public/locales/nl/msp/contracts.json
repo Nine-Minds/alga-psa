@@ -1205,7 +1205,7 @@
     "composition": {
       "addContractLinesBeforeManaging": "Voeg contractregels toe aan dit sjabloon voordat u services beheert.",
       "additionalPlans": "Aanvullende plannen",
-      "bucketSummary": "Bundel: {{minutes}} min • Overschrijding ${{overage}}",
+      "bucketSummary": "Bundel: {{minutes}} min • Overschrijding {{overage}}",
       "closeManager": "Beheerder sluiten",
       "editRate": "Tarief bewerken",
       "fixedFeeBundles": "Vaste-vergoedingsbundels",

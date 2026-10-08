@@ -35,7 +35,7 @@ import {
 } from '../lib/validateTicketClosure';
 import type { CloseRuleFailure } from '../lib/closeRuleConstants';
 import { buildTicketTransitionWorkflowEvents } from '../lib/workflowTicketTransitionEvents';
-import { buildTicketResolutionSlaStageCompletionEvent } from '../lib/workflowTicketSlaStageEvents';
+import { buildTicketResolutionSlaStageCompletionEvent } from '@alga-psa/shared/services/tickets/ticketSlaStageEvents';
 import {
   BundleConcurrentModificationError,
   resolveClosedMasterChoices,

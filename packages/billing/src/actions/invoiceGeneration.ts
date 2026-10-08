@@ -41,7 +41,7 @@ import {
   DEFAULT_RECURRING_SERVICE_PERIOD_DUE_SELECTION_STATES,
 } from '@alga-psa/types';
 import { WasmInvoiceViewModel } from '@alga-psa/types';
-import { IBillingResult, IBillingCharge, IBucketCharge, IUsageBasedCharge, ITimeBasedCharge, IFixedPriceCharge, IProductCharge, ILicenseCharge, IUsageServicePeriodStatus, BillingCycleType } from '@alga-psa/types';
+import { IBillingResult, IBillingCharge, IBucketCharge, IUsageBasedCharge, ITimeBasedCharge, IFixedPriceCharge, IProductCharge, ILicenseCharge, IUsageServicePeriodStatus, IFixedLineBlocker, BillingCycleType } from '@alga-psa/types';
 import { IClient, IClientWithLocation } from '@alga-psa/types';
 import Invoice from '@alga-psa/billing/models/invoice';
 import { attachInvoiceTimeCollections } from '../lib/adapters/invoiceAdapters';
@@ -98,6 +98,8 @@ import {
   USAGE_PERIOD_TOTAL_STALE_MESSAGE_KEY,
   RECURRING_PRICING_STALE_MESSAGE_KEY,
   USAGE_CALCULATION_ERROR_MESSAGE_KEY,
+  FIXED_LINE_RATE_UNRESOLVED_MESSAGE_KEY,
+  FIXED_LINE_NO_SERVICES_MESSAGE_KEY,
 } from './invoiceGeneration.constants';
 import {
   ManualInvoiceError,
@@ -254,6 +256,13 @@ function getChargeUnitPrice(charge: IBillingCharge): number {
  * Bucket-style description for a prepaid-hour-block informational line:
  * "Prepaid hour block (Svc) — 4.0 hrs consumed, 12.5 hrs remaining".
  */
+/** Overtime entries bill as two lines; the overtime segment says so. */
+function timeChargeDescription(charge: IBillingCharge): string {
+  return isTimeBasedCharge(charge) && charge.timeSegment === 'overtime'
+    ? `${charge.serviceName} (overtime)`
+    : charge.serviceName;
+}
+
 function formatHourBlockChargeDescription(charge: IHourBlockCharge): string {
   const hourShortLabel = resolveUnitOfMeasure({ fallback: 'HUR' }).shortLabel;
   return `Prepaid hour block (${charge.serviceName}) — ${charge.hoursUsed.toFixed(1)} ${hourShortLabel} consumed, ${charge.hoursRemaining.toFixed(1)} ${hourShortLabel} remaining`;
@@ -794,6 +803,40 @@ function buildUsageCalculationError(
   );
 }
 
+/**
+ * Builds the coded failure for fixed-fee contract lines the engine could not
+ * price: `FIXED_LINE_RATE_UNRESOLVED` (no rate) or `FIXED_LINE_NO_SERVICES`
+ * (a rate, but no service to bill it on). Preview and generation both refuse
+ * with it: an unpriceable fixed line must never produce a silently short (or
+ * "Nothing to bill") invoice. The engine's blockers are the single source of
+ * truth. When both kinds are present the missing-rate failure is reported
+ * first; the other surfaces once it is fixed.
+ */
+function buildFixedLineBlockerError(
+  blockers: IFixedLineBlocker[],
+): ManualInvoiceError {
+  const code = blockers.some((blocker) => blocker.code === 'FIXED_LINE_RATE_UNRESOLVED')
+    ? 'FIXED_LINE_RATE_UNRESOLVED'
+    : 'FIXED_LINE_NO_SERVICES';
+  const lines = Array.from(
+    new Map(
+      blockers
+        .filter((blocker) => blocker.code === code)
+        .map((blocker) => [blocker.contractLineId, blocker]),
+    ).values(),
+  );
+  const lineNames = lines.map((blocker) => blocker.contractLineName);
+  const message =
+    code === 'FIXED_LINE_RATE_UNRESOLVED'
+      ? `Fixed fee line ${lineNames.join(', ')} has no rate. Set a rate on the contract line (or a price for its services in the contract currency), then try again.`
+      : `Fixed fee line ${lineNames.join(', ')} has a rate but no service to bill it on. Add a service to the contract line, then try again.`;
+  return new ManualInvoiceError(code, message, {
+    lines: lineNames.join(', '),
+    lineIds: lines.map((blocker) => blocker.contractLineId).join(','),
+    count: String(lines.length),
+  });
+}
+
 export type { IExpectedUsagePeriodTotal } from '../lib/billing/usagePeriodTotalIdentity';
 export type { IExpectedRecurringPricingSource } from '../lib/billing/recurringPricingIdentity';
 
@@ -979,7 +1022,9 @@ function previewInvoiceErrorInfo(error: unknown): {
     error instanceof ManualInvoiceError &&
     (error.code === 'NO_BILLING_EMAIL' ||
       error.code === 'USAGE_RECORDS_MISSING' ||
-      error.code === 'USAGE_CALCULATION_ERROR')
+      error.code === 'USAGE_CALCULATION_ERROR' ||
+      error.code === 'FIXED_LINE_RATE_UNRESOLVED' ||
+      error.code === 'FIXED_LINE_NO_SERVICES')
   ) {
     return {
       message: error.message,
@@ -1035,6 +1080,10 @@ function manualInvoiceErrorMessageKey(
       return RECURRING_PRICING_STALE_MESSAGE_KEY;
     case 'USAGE_CALCULATION_ERROR':
       return USAGE_CALCULATION_ERROR_MESSAGE_KEY;
+    case 'FIXED_LINE_RATE_UNRESOLVED':
+      return FIXED_LINE_RATE_UNRESOLVED_MESSAGE_KEY;
+    case 'FIXED_LINE_NO_SERVICES':
+      return FIXED_LINE_NO_SERVICES_MESSAGE_KEY;
     default:
       return undefined;
   }
@@ -2379,6 +2428,15 @@ async function buildPreviewInvoiceForSelectionInputs(params: {
     throw withRecurringWindowErrorContext(new Error(billingResult.error), canonicalSelection);
   }
 
+  if (billingResult.fixedLineBlockers && billingResult.fixedLineBlockers.length > 0) {
+    // An unpriceable fixed line is named even when other charges exist: the
+    // preview must not present a short invoice as the full amount due.
+    throw withRecurringWindowErrorContext(
+      buildFixedLineBlockerError(billingResult.fixedLineBlockers),
+      canonicalSelection,
+    );
+  }
+
   if (billingResult.charges.length === 0) {
     const usageStatuses = billingResult.usageServicePeriodStatuses ?? [];
     const calculationErrorStatuses = usageStatuses.filter(
@@ -2463,7 +2521,7 @@ async function buildPreviewInvoiceForSelectionInputs(params: {
       service_id: charge.serviceId,
       description: isHourBlockCharge(charge)
         ? formatHourBlockChargeDescription(charge)
-        : (charge.serviceName || 'Charge'),
+        : (timeChargeDescription(charge) || 'Charge'),
       quantity: getChargeQuantity(charge),
       unit_price: getChargeUnitPrice(charge),
       total_price: charge.total,
@@ -2510,7 +2568,7 @@ async function buildPreviewInvoiceForSelectionInputs(params: {
 
     charges.forEach(charge => {
       const recurringSummary = resolvePreviewRecurringSummary(charge);
-      let description = charge.serviceName;
+      let description = timeChargeDescription(charge);
       if (isBucketCharge(charge)) {
         const currencySymbol = getCurrencySymbol(billingResult.currency_code || 'USD');
         const hourShortLabel = resolveUnitOfMeasure({ fallback: 'HUR' }).shortLabel;
@@ -3558,6 +3616,15 @@ async function generateInvoiceForLockedSelectionInputs(params: Parameters<typeof
         ? withRecurringWindowErrorContext(error, normalizedSelectorInput)
         : error;
     }
+  }
+
+  if (billingResult.fixedLineBlockers && billingResult.fixedLineBlockers.length > 0) {
+    // Never finalize (and mark the period fulfilled) with an unpriceable
+    // fixed line silently missing from the invoice.
+    throw withRecurringWindowErrorContext(
+      buildFixedLineBlockerError(billingResult.fixedLineBlockers),
+      normalizedSelectorInput,
+    );
   }
 
   // Preview/generation consistency for scheduled recurring pricing: when the

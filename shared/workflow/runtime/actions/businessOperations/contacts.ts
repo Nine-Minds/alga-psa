@@ -6,13 +6,14 @@ import { isEnterprise } from '@alga-psa/core';
 import { deleteEntityWithValidation } from '@alga-psa/core/server';
 import { getActionRegistryV2 } from '../../registries/actionRegistry';
 import { withWorkflowPicker, withWorkflowNotFoundPolicy, withWorkflowRequireOneOf } from '../../jsonSchemaMetadata';
-import { ContactModel } from '../../../../models/contactModel';
+import { ContactModel, clearContactLinksBeforeDelete } from '../../../../models/contactModel';
 import type {
   ContactEmailAddressInput as ContactModelEmailInput,
   ContactPhoneNumberInput as ContactModelPhoneInput,
 } from '../../../../interfaces/contact.interfaces';
 import { buildContactArchivedPayload, buildContactCreatedPayload, buildContactUpdatedPayload } from '../../../streams/domainEventBuilders/contactEventBuilders';
 import { buildInteractionLoggedPayload, buildNoteCreatedPayload } from '../../../streams/domainEventBuilders/crmInteractionNoteEventBuilders';
+import { ticketUpdateStamp } from '../../../../lib/tickets/ticketUpdateStamp';
 import {
   uuidSchema,
   isoDateTimeSchema,
@@ -1224,6 +1225,7 @@ export function registerContactActions(): void {
             await cleanupContactDeleteArtifacts(trx, tenantId, input.contact_id);
             await cleanupContactNotesDocument(trx, tenantId, input.contact_id);
             await cleanupEntraReferencesBeforeContactDelete(trx, tenantId, input.contact_id);
+            await clearContactLinksBeforeDelete(trx, tenantId, input.contact_id);
             await tenantScopedTableForTenant(trx, tenantId, 'contacts')
               .where({ contact_name_id: input.contact_id })
               .delete();
@@ -1466,7 +1468,7 @@ export function registerContactActions(): void {
         const previousContactId = ticket.contact_name_id ?? null;
         await tenantScopedTable(tx, 'tickets')
           .where({ ticket_id: input.ticket_id })
-          .update({ contact_name_id: input.contact_id, updated_at: new Date().toISOString() });
+          .update({ contact_name_id: input.contact_id, ...ticketUpdateStamp(tx.trx, tx.actorUserId) });
 
         const after = await ensureTicketExists(ctx, tx, input.ticket_id);
 

@@ -148,6 +148,10 @@
     "logTime": "Log time",
     "timeEntriesFailed": "Unable to load time entries.",
     "serviceLabel": "Service",
+    "serviceFrom": {
+      "phase": "{{service}} (default from phase)",
+      "project": "{{service}} (default from project)"
+    },
     "changeStatus": "Change status",
     "selectStatus": "Select status",
     "noStatuses": "No statuses available.",

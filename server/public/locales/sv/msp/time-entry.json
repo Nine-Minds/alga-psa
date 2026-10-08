@@ -145,6 +145,11 @@
       "durationSameDay": "Tidsintervallet måste sluta samma dag",
       "endSameDay": "Sluttiden måste vara samma dag som starttiden",
       "invalidTimeRange": "Ange ett giltigt tidsintervall"
+    },
+    "serviceSource": {
+      "task": "Standard från uppgift",
+      "phase": "Standard från fas",
+      "project": "Standard från projekt"
     }
   },
   "workItemPicker": {

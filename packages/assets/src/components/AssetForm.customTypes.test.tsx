@@ -31,6 +31,9 @@ vi.mock('../actions/clientLookupActions', () => ({
     { client_id: 'b0000000-0000-4000-8000-00000000000b', client_name: 'Acme Inc' },
   ]),
   getClientLocationsForAssets: vi.fn(async () => []),
+  getClientContactsForAssets: vi.fn(async () => [
+    { contact_name_id: '11000000-0000-4000-8000-000000000001', client_id: 'b0000000-0000-4000-8000-00000000000b', full_name: 'Pat Person', email: null },
+  ]),
 }));
 
 vi.mock('../actions/assetTypeRegistryActions', () => ({
@@ -124,6 +127,24 @@ vi.mock('@alga-psa/ui/components/CustomSelect', () => ({
       {options.map((option: any) => (
         <option key={option.value} value={option.value}>
           {option.label}
+        </option>
+      ))}
+    </select>
+  ),
+}));
+
+vi.mock('@alga-psa/ui/components/ContactPicker', () => ({
+  ContactPicker: ({ id, contacts = [], value, onValueChange, placeholder, disabled }: any) => (
+    <select
+      aria-label={id ?? 'contact-picker'}
+      value={value ?? ''}
+      onChange={(event) => onValueChange(event.target.value)}
+      disabled={disabled}
+    >
+      <option value="">{placeholder ?? 'Select contact'}</option>
+      {contacts.map((contact: any) => (
+        <option key={contact.contact_name_id} value={contact.contact_name_id}>
+          {contact.full_name}
         </option>
       ))}
     </select>
@@ -328,6 +349,26 @@ describe('AssetForm custom asset types', () => {
     expect(payload.asset_type).toBe('workstation');
     expect(payload.workstation).toMatchObject({ os_type: 'windows', os_version: '11', cpu_model: 'i7' });
     expect(payload.attributes).toBeUndefined();
+  });
+
+  it('shows the assigned contact, submits it unchanged, and submits an explicit null once cleared', async () => {
+    const user = userEvent.setup();
+    const CONTACT_ID = '11000000-0000-4000-8000-000000000001';
+    mockGetAsset.mockResolvedValue({ ...workstationAsset, contact_name_id: CONTACT_ID });
+    await renderForm();
+
+    const picker = (await screen.findByLabelText('asset-contact-select')) as HTMLSelectElement;
+    await waitFor(() => expect(picker.value).toBe(CONTACT_ID));
+    expect(screen.getByText('Assigned to')).toBeTruthy();
+
+    await user.click(screen.getByRole('button', { name: 'Save Changes' }));
+    await waitFor(() => expect(mockUpdateAsset).toHaveBeenCalledTimes(1));
+    expect(mockUpdateAsset.mock.calls[0][1].contact_name_id).toBe(CONTACT_ID);
+
+    await user.selectOptions(picker, '');
+    await user.click(screen.getByRole('button', { name: 'Save Changes' }));
+    await waitFor(() => expect(mockUpdateAsset).toHaveBeenCalledTimes(2));
+    expect(mockUpdateAsset.mock.calls[1][1].contact_name_id).toBeNull();
   });
 
   it('renders built-in additional fields under Additional fields and submits them in attributes', async () => {

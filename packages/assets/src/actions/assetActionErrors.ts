@@ -7,6 +7,8 @@ import {
   type ActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
 
+export const ASSET_CONTACT_UNAVAILABLE_MESSAGE = 'Selected contact is not available for this client';
+
 export type AssetActionError = ActionMessageError | ActionPermissionError;
 
 /** One field-level validation failure, as the form needs it to highlight an input. */
@@ -102,6 +104,9 @@ export function assetActionErrorFrom(error: unknown): AssetActionError | null {
     }
     if (message === 'Selected location is not available for this client') {
       return actionError('Selected location is not available for this client.', 'msp/assets:errors.asset.locationUnavailable');
+    }
+    if (message === ASSET_CONTACT_UNAVAILABLE_MESSAGE) {
+      return actionError('Selected contact is not available for this client.', 'msp/assets:errors.asset.contactUnavailable');
     }
     if (message === 'An asset cannot be related to itself') {
       return actionError('An asset cannot be related to itself.', 'msp/assets:errors.asset.selfRelation');

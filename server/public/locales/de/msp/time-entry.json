@@ -145,6 +145,11 @@
       "durationSameDay": "Die Dauer muss am selben Tag enden",
       "endSameDay": "Die Endzeit muss am selben Tag wie die Startzeit liegen",
       "invalidTimeRange": "Geben Sie einen gültigen Zeitraum ein"
+    },
+    "serviceSource": {
+      "task": "Standard aus Aufgabe",
+      "phase": "Standard aus Phase",
+      "project": "Standard aus Projekt"
     }
   },
   "workItemPicker": {

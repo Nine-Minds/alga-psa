@@ -68,11 +68,11 @@ import {
   addTicketResourceCore,
   getTicketResourcesCore,
   removeTicketResourceCore,
-} from '../../../../packages/tickets/src/lib/ticketResourceCore';
+} from '../../../../shared/services/tickets/ticketResourceCore';
 import {
   assignTeamToTicketCore,
   removeTeamFromTicketCore,
-} from '../../../../packages/tickets/src/lib/teamAssignmentCore';
+} from '../../../../shared/services/tickets/teamAssignmentCore';
 import { updateTicket } from '../../../../packages/tickets/src/actions/ticketActions';
 
 const HOOK_TIMEOUT = 300_000;

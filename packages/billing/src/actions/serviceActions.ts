@@ -954,6 +954,14 @@ export const deleteProductPermanently = withAuth(async (
                 .where({ service_id: serviceId })
                 .update({ service_id: null });
 
+            await db.table('project_phases')
+                .where({ service_id: serviceId })
+                .update({ service_id: null });
+
+            await db.table('projects')
+                .where({ service_id: serviceId })
+                .update({ service_id: null });
+
             await db.table('invoice_charge_details')
                 .where({ service_id: serviceId })
                 .update({ service_id: null });

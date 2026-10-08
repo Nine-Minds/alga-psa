@@ -145,6 +145,12 @@ export interface InvoiceTimeEntrySnapshotData {
   netAmount: number;
   serviceId: string | null;
   serviceName: string | null;
+  /**
+   * Present when the entry was billed as two lines (regular hours at the
+   * base rate, overtime hours at the overtime rate). Each line links the
+   * entry with its own snapshot; this names the segment that line covers.
+   */
+  segment?: 'regular' | 'overtime';
 }
 
 export interface ITimeBasedCharge extends IBillingCharge, TenantEntity {
@@ -156,6 +162,11 @@ export interface ITimeBasedCharge extends IBillingCharge, TenantEntity {
   total: number;
   type: 'time';
   entryId: string; // Added field for source time entry ID
+  /**
+   * Set when an overtime entry is billed as two lines (regular hours at the
+   * base rate, overtime hours at the overtime rate); both share `entryId`.
+   */
+  timeSegment?: 'regular' | 'overtime';
   /**
    * Work-item snapshot persisted to `invoice_time_entries.work_item_snapshot`
    * when this charge is invoiced. Renderer-only metadata: it must never feed
@@ -364,6 +375,30 @@ export interface IBillingResult extends TenantEntity {
    * record and from calculation errors.
    */
   usageServicePeriodStatuses?: IUsageServicePeriodStatus[];
+  /**
+   * Fixed-fee contract lines that could not be priced (no resolvable rate, or
+   * a rate with no service to bill it on). A line listed here is NOT billed by
+   * this result, and previewing/generating from it must be refused with the
+   * blocker's coded reason (FIXED_LINE_RATE_UNRESOLVED / FIXED_LINE_NO_SERVICES) — never
+   * shortened silently. A line whose rate legitimately resolves to zero is not
+   * listed.
+   */
+  fixedLineBlockers?: IFixedLineBlocker[];
+}
+
+export type FixedLineBlockerCode =
+  | 'FIXED_LINE_RATE_UNRESOLVED'
+  | 'FIXED_LINE_NO_SERVICES';
+
+export interface IFixedLineBlocker {
+  /**
+   * FIXED_LINE_RATE_UNRESOLVED: the line has no resolvable rate.
+   * FIXED_LINE_NO_SERVICES: the line has a rate but no service to bill it on.
+   */
+  code: FixedLineBlockerCode;
+  message: string;
+  contractLineId: string;
+  contractLineName: string;
 }
 
 export interface IClientContractLine extends TenantEntity {

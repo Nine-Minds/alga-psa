@@ -8,6 +8,7 @@ import type {
   RelationshipTemplateKey,
 } from './contracts';
 import type { BundleNarrowingRule } from './providers/bundleProvider';
+import { applyTicketVisibilityFilter, ticketMatchesVisibility } from '../portal/visibility';
 
 // ---------------------------------------------------------------------------
 // Shared relationship-template definitions.
@@ -50,6 +51,17 @@ export interface RelationshipSqlAdapter {
   clientColumn: string;
   boardColumn: string;
   contactColumn?: string;
+  /**
+   * Column holding the ticket's billing profile. When omitted, billing-profile
+   * grants cannot widen `contact_visibility` (narrower, fail-closed).
+   */
+  billingProfileColumn?: string;
+  /**
+   * JSONB column holding the resource's `attributes` object (the watch list is
+   * its `watch_list` array). When omitted, the watcher grant cannot widen
+   * `contact_visibility` (narrower, fail-closed).
+   */
+  watchListColumn?: string;
   teamColumn: string;
   /**
    * Column holding a boolean client-visibility flag. When omitted, the
@@ -184,12 +196,7 @@ const RELATIONSHIP_TEMPLATES: Record<RelationshipTemplateKey, RelationshipTempla
   // One rule intersects client, board, and contact restrictions. Built-in rules
   // otherwise compose with OR, which would leak sibling tickets if split up.
   contact_visibility: {
-    matches: ({ record, contactVisibility: scope }) => Boolean(
-      scope && record?.clientId === scope.clientId &&
-      (scope.visibleBoardIds === null || (record?.boardId && scope.visibleBoardIds.includes(record.boardId))) &&
-      (scope.effectiveTicketScope === 'client' ||
-        (scope.effectiveTicketScope === 'contact' && scope.contactId && record?.contactId === scope.contactId))
-    ),
+    matches: ({ record, contactVisibility: scope }) => ticketMatchesVisibility(record, scope),
     compileSql: (builder, ctx) => {
       const scope = ctx.contactVisibility;
       if (!scope || !scope.clientId) {
@@ -197,14 +204,25 @@ const RELATIONSHIP_TEMPLATES: Record<RelationshipTemplateKey, RelationshipTempla
         return;
       }
       builder.where(ctx.adapter.clientColumn, scope.clientId);
-      if (scope.visibleBoardIds !== null) {
-        whereInOrDeny(builder, ctx.adapter.boardColumn, scope.visibleBoardIds);
-      }
-      if (scope.effectiveTicketScope === 'contact' && scope.contactId && ctx.adapter.contactColumn) {
-        builder.where(ctx.adapter.contactColumn, scope.contactId);
-      } else if (scope.effectiveTicketScope !== 'client') {
+      if (scope.effectiveTicketScope === 'contact' && !ctx.adapter.contactColumn) {
+        // Contact scope without a contact column cannot be expressed: deny.
+        if (scope.visibleBoardIds !== null) {
+          whereInOrDeny(builder, ctx.adapter.boardColumn, scope.visibleBoardIds);
+        }
         deny(builder);
+        return;
       }
+      if (scope.effectiveTicketScope !== 'client' && scope.effectiveTicketScope !== 'contact') {
+        deny(builder);
+        return;
+      }
+      applyTicketVisibilityFilter(builder, scope, {
+        boardColumn: ctx.adapter.boardColumn,
+        // Only read under contact scope, which returned above when it is absent.
+        contactColumn: ctx.adapter.contactColumn ?? '',
+        billingProfileColumn: ctx.adapter.billingProfileColumn,
+        watchListColumn: ctx.adapter.watchListColumn,
+      });
     },
   },
   selected_boards: {

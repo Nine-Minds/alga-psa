@@ -80,7 +80,12 @@
     "markedComplete": "Fase marcada como completada",
     "reopened": "Fase reabierta",
     "completeReadyToast": "{{description}} está listo para facturar",
-    "viewInBilling": "Ver"
+    "viewInBilling": "Ver",
+    "serviceLabel": "Servicio predeterminado (para partes de tiempo)",
+    "noService": "Sin servicio",
+    "servicePlaceholder": "Seleccionar servicio predeterminado",
+    "serviceHelp": "Se usa en los partes de tiempo de las tareas de esta fase cuando la propia tarea no define un servicio.",
+    "serviceDisplayLabel": "Servicio"
   },
   "projectList": {
     "addProject": "Agregar proyecto",
@@ -141,6 +146,10 @@
     "projectManagerPlaceholder": "Seleccionar responsable",
     "budgetedHoursLabel": "Horas presupuestadas",
     "budgetedHoursPlaceholder": "Ingresar horas presupuestadas",
+    "serviceLabel": "Servicio predeterminado (para partes de tiempo)",
+    "noService": "Sin servicio",
+    "servicePlaceholder": "Seleccionar servicio predeterminado",
+    "serviceHelp": "Se usa en los partes de tiempo de este proyecto cuando ni la tarea ni su fase definen un servicio.",
     "startDateLabel": "Fecha de inicio",
     "startDatePlaceholder": "Seleccionar fecha de inicio",
     "endDateLabel": "Fecha de fin",
@@ -181,7 +190,11 @@
     "continueEditing": "Seguir editando",
     "discardChanges": "Descartar cambios",
     "saveAndClose": "Guardar y cerrar",
-    "saving": "Guardando..."
+    "saving": "Guardando...",
+    "serviceLabel": "Servicio predeterminado (para partes de tiempo)",
+    "noService": "Sin servicio",
+    "servicePlaceholder": "Seleccionar servicio predeterminado",
+    "serviceHelp": "Se usa en los partes de tiempo de este proyecto cuando ni la tarea ni su fase definen un servicio."
   },
   "projectDetail": {
     "allAgents": "Todos los agentes",
@@ -416,6 +429,8 @@
     "duplicatedSuccess": "¡La tarea \"{{taskName}}\" se duplicó correctamente!",
     "willBeSetOnCreate": "Se establecerá al crearla",
     "unknownPhase": "Fase desconocida",
+    "serviceInheritedFromPhase": "Hereda {{service}} de la fase.",
+    "serviceInheritedFromProject": "Hereda {{service}} del proyecto.",
     "startDateLabel": "Fecha de inicio",
     "taskStartDateLabel": "Fecha de inicio de la tarea",
     "startDatePlaceholder": "Seleccionar fecha de inicio"
@@ -1434,6 +1449,10 @@
     "addPhase": "Añadir fase",
     "phaseNamePlaceholder": "Nombre de la fase… *",
     "descriptionPlaceholder": "Descripción",
+    "serviceLabel": "Servicio predeterminado (para partes de tiempo)",
+    "noService": "Sin servicio",
+    "servicePlaceholder": "Seleccionar servicio predeterminado",
+    "serviceHelp": "Se usa en los partes de tiempo de las tareas de esta fase cuando la propia tarea no define un servicio.",
     "adding": "Añadiendo…",
     "addError": "Error al añadir la fase. Inténtelo de nuevo.",
     "title": "Fases del proyecto",

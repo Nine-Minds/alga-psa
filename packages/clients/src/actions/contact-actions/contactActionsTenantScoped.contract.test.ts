@@ -36,6 +36,8 @@ describe('contactActions tenant-scoped query contract', () => {
     expect(deleteSection).toContain("tenantScopedTable(trx, 'contact_additional_email_addresses', tenantId)");
     expect(deleteSection).toContain("tenantScopedTable(trx, 'comments', tenantId)");
     expect(deleteSection).toContain("tenantScopedTable(trx, 'portal_invitations', tenantId)");
+    // manager_contact_id / assets.contact_name_id are NO ACTION FKs: cleared via the shared helper before the delete.
+    expect(deleteSection).toContain('clearContactLinksBeforeDelete(trx, tenantId, contactId)');
     expect(deleteSection).toContain("tenantScopedTable(trx, 'rmm_organization_mappings', tenantId)");
     expect(deleteSection).toContain("tenantScopedTable(trx, 'contacts', tenantId)");
     expect(deleteSection).toContain("tenantScopedTable(trx, 'document_block_content', tenantId)");

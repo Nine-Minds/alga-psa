@@ -16,6 +16,7 @@ import { addAlertInternalNote, createTicketForAlert, providerLabel } from './tic
 import { publishRmmTicketCreated } from './ticketCreatedEvent';
 import { isTicketUntouched } from './untouched';
 import { ticketStatusClockPatch } from '../../lib/ticketStatusClock';
+import { ticketUpdateStamp } from '../../lib/tickets/ticketUpdateStamp';
 
 /**
  * Single entry point for normalized RMM alert events (webhooks and the
@@ -370,7 +371,7 @@ async function processReset(
             // LEVERAGE: pattern ticket-status-write — spread the status clock patch into every tickets.status_id UPDATE
             await db.table('tickets')
               .where({ ticket_id: existing.ticket_id })
-              .update({ status_id: statusId, ...ticketStatusClockPatch(trx, statusId), updated_at: new Date().toISOString() });
+              .update({ status_id: statusId, ...ticketStatusClockPatch(trx, statusId), ...ticketUpdateStamp(trx, null) });
             await db.table('rmm_alerts')
               .where({ alert_id: existing.alert_id })
               .update({ status: 'auto_resolved' });

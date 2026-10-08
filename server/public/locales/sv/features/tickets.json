@@ -185,9 +185,14 @@
     "tags": "Taggar",
     "sla": "SLA",
     "updated": "Uppdaterad",
+    "updatedAtBy": "Uppdaterad {{time}} av {{name}}",
+    "byName": "av {{name}}",
     "openInNewTab": "Öppna i ny flik",
     "actions": "Åtgärder",
-    "linkedAssets": "Kopplade tillgångar"
+    "linkedAssets": "Kopplade tillgångar",
+    "assetName": "Namn",
+    "assetTag": "Tillgångstagg",
+    "assetType": "Typ"
   },
   "actions": {
     "view": "Visa",

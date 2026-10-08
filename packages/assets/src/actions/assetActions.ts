@@ -94,6 +94,7 @@ import {
 } from '../lib/assetTypeAttributes';
 import { resolveWritableAssetType, resolveAttributeSchemaForWrite, validateAttributesForWrite, attributesMergeExpression, serializeAttributesForInsert } from '../lib/assetAttributeWrites';
 import {
+    ASSET_CONTACT_UNAVAILABLE_MESSAGE,
     assetActionErrorFrom,
     type AssetActionError,
 } from './assetActionErrors';
@@ -189,6 +190,7 @@ async function assetActionErrorMessage(error: unknown, fallback: string): Promis
     if (
         message === 'Asset not found' ||
         message === 'Selected location is not available for this client' ||
+        message === ASSET_CONTACT_UNAVAILABLE_MESSAGE ||
         message.startsWith('Invalid input data:') ||
         message.startsWith('Asset validation failed:') ||
         message.startsWith('Permission denied:')
@@ -283,9 +285,14 @@ function sanitizeUpdatePayload(data: UpdateAssetRequest): UpdateAssetRequest {
         }))(data.printer) : undefined
     };
 
-    const cleaned = pruneNullishValues(sanitized) as UpdateAssetRequest;
+    // A payload made only of explicit nulls prunes to undefined; restore the object so they can be re-attached.
+    const cleaned = (pruneNullishValues(sanitized) ?? {}) as UpdateAssetRequest;
     if (data.location_id === null) {
         cleaned.location_id = null;
+    }
+    // An explicit null clears the assignee; pruneNullishValues would drop it.
+    if (data.contact_name_id === null) {
+        cleaned.contact_name_id = null;
     }
     // pruneNullishValues deletes null, which would turn "clear this field" into
     // "keep the stored value". An explicit null on a nullable extension number
@@ -335,6 +342,40 @@ async function resolveValidatedAssetLocation(
         location_id: location.location_id,
         location: formatClientLocation(location),
     };
+}
+
+/**
+ * Validates the contact an asset is assigned to. The contact must exist in the
+ * tenant, belong to the asset's (effective) client and be a real person, not a
+ * shared mailbox. `undefined` means "not provided" and `null` clears.
+ */
+async function resolveValidatedAssetContact(
+    trx: Knex.Transaction,
+    tenant: string,
+    clientId: string,
+    contactNameId: string | null | undefined
+): Promise<{ contact_name_id: string | null } | undefined> {
+    if (contactNameId === undefined) {
+        return undefined;
+    }
+
+    if (contactNameId === null) {
+        return { contact_name_id: null };
+    }
+
+    const contact = await tenantScopedTable(trx, 'contacts', tenant)
+        .where({
+            contact_name_id: contactNameId,
+            client_id: clientId,
+        })
+        .whereNot({ contact_kind: 'shared_mailbox' })
+        .first<{ contact_name_id: string }>('contact_name_id');
+
+    if (!contact) {
+        throw new Error(ASSET_CONTACT_UNAVAILABLE_MESSAGE);
+    }
+
+    return { contact_name_id: contact.contact_name_id };
 }
 
 type AssetAuthUser = {
@@ -790,6 +831,8 @@ function formatAssetForOutput(asset: any): Asset {
         serial_number: asset.serial_number || undefined,
         location: asset.location || undefined,
         location_id: asset.location_id ?? null,
+        contact_name_id: asset.contact_name_id ?? null,
+        contact_name: asset.contact_name ?? null,
         // Ensure client data is properly structured
         // The SQL JOIN returns client_name as a flat field; build the nested object from it
         client: asset.client_id ? {
@@ -952,6 +995,13 @@ export async function createAssetInTransaction(
                 validatedData.location_id
             );
 
+            const selectedContact = await resolveValidatedAssetContact(
+                trx,
+                tenant,
+                validatedData.client_id,
+                validatedData.contact_name_id
+            );
+
             // Extract only the base asset fields and ensure dates are only included if they exist
             const baseAssetData = {
                 tenant,
@@ -964,6 +1014,7 @@ export async function createAssetInTransaction(
                 location: validatedData.location !== undefined && validatedData.location !== ''
                     ? validatedData.location
                     : (selectedLocation?.location ?? ''),
+                contact_name_id: selectedContact?.contact_name_id ?? null,
                 serial_number: validatedData.serial_number || '',
                 created_at: now,
                 updated_at: now,
@@ -1226,6 +1277,21 @@ export async function updateAssetRecord(
                 if (!Object.prototype.hasOwnProperty.call(baseCandidate, 'location')) {
                     baseCandidate.location = '';
                 }
+            }
+
+            if (Object.prototype.hasOwnProperty.call(baseCandidate, 'contact_name_id')) {
+                const selectedContact = await resolveValidatedAssetContact(
+                    trx,
+                    tenant,
+                    (baseCandidate.client_id as string | undefined) ?? asset.client_id,
+                    baseCandidate.contact_name_id as string | null | undefined
+                );
+                if (selectedContact) {
+                    baseCandidate.contact_name_id = selectedContact.contact_name_id;
+                }
+            } else if (baseCandidate.client_id && baseCandidate.client_id !== asset.client_id && asset.contact_name_id) {
+                // The assignee belongs to the previous client; moving the asset clears it.
+                baseCandidate.contact_name_id = null;
             }
 
             // Update base asset fields (excluding extension payloads)
@@ -1599,7 +1665,7 @@ export const bulkUpdateAssets = withAuth(async (
     user,
     _ctx,
     assetIds: string[],
-    data: Pick<UpdateAssetRequest, 'status' | 'location' | 'location_id'>
+    data: Pick<UpdateAssetRequest, 'status' | 'location' | 'location_id' | 'contact_name_id'>
 ): Promise<BulkAssetActionResponse | AssetActionError> => {
     try {
     if (!await hasPermission(user, 'asset', 'update')) {
@@ -1707,9 +1773,11 @@ async function getAssetWithExtensions(knex: Knex, tenant: string, asset_id: stri
     const assetQuery = tenantScopedTable(knex, 'assets', tenant)
         .select(
             'assets.*',
-            'clients.client_name'
+            'clients.client_name',
+            'contacts.full_name as contact_name'
         );
     db.tenantJoin(assetQuery, 'clients', 'clients.client_id', 'assets.client_id', { type: 'left' });
+    db.tenantJoin(assetQuery, 'contacts', 'contacts.contact_name_id', 'assets.contact_name_id', { type: 'left' });
     const asset = await assetQuery
         .where({ 'assets.asset_id': asset_id })
         .first();
@@ -1959,6 +2027,7 @@ export const listAssets = withAuth(async (user, { tenant }, params: AssetQueryPa
                     agent_status: 'assets.agent_status',
                     location: 'assets.location',
                     client_name: 'clients.client_name',
+                    contact_name: 'contacts.full_name',
                     created_at: 'assets.created_at',
                 };
                 return allowed[sortBy] ?? null;
@@ -1970,6 +2039,9 @@ export const listAssets = withAuth(async (user, { tenant }, params: AssetQueryPa
                 }
                 if (validatedParams.location_id) {
                     query.where('assets.location_id', validatedParams.location_id);
+                }
+                if (validatedParams.contact_name_id) {
+                    query.where('assets.contact_name_id', validatedParams.contact_name_id);
                 }
                 if (validatedParams.asset_type) {
                     query.where('assets.asset_type', validatedParams.asset_type);
@@ -2020,6 +2092,7 @@ export const listAssets = withAuth(async (user, { tenant }, params: AssetQueryPa
             const buildAssetListQuery = () => {
                 const query = tenantScopedTable(trx, 'assets', tenant);
                 tenantDb(trx, tenant).tenantJoin(query, 'clients', 'clients.client_id', 'assets.client_id', { type: 'left' });
+                tenantDb(trx, tenant).tenantJoin(query, 'contacts', 'contacts.contact_name_id', 'assets.contact_name_id', { type: 'left' });
 
                 applyFilters(query);
                 return query;
@@ -2031,7 +2104,7 @@ export const listAssets = withAuth(async (user, { tenant }, params: AssetQueryPa
                     .count<{ count: string }>('assets.asset_id as count')
                     .first();
                 const rows = await buildAssetListQuery()
-                    .select('assets.*', 'clients.client_name')
+                    .select('assets.*', 'clients.client_name', 'contacts.full_name as contact_name')
                     .modify(applySort)
                     .limit(sourceLimit)
                     .offset(offset);

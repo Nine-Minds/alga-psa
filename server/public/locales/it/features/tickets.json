@@ -177,9 +177,14 @@
     "tags": "Tag",
     "sla": "SLA",
     "updated": "Aggiornato",
+    "updatedAtBy": "Aggiornato {{time}} da {{name}}",
+    "byName": "da {{name}}",
     "openInNewTab": "Apri in una nuova scheda",
     "actions": "Azioni",
-    "linkedAssets": "Asset collegati"
+    "linkedAssets": "Asset collegati",
+    "assetName": "Nome",
+    "assetTag": "Tag dell’asset",
+    "assetType": "Tipo"
   },
   "actions": {
     "view": "Visualizza",

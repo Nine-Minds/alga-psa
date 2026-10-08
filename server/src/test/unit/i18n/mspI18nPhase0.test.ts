@@ -214,17 +214,8 @@ describe('MSP i18n Phase 0 - config', () => {
 });
 
 describe('MSP i18n Phase 0 - wrapper/provider wiring', () => {
-  it('T016-T019: I18nProvider accepts namespaces and loads missing namespaces', () => {
-    const src = readRepoFile('packages/ui/src/lib/i18n/client.tsx');
-    expect(src).toContain('namespaces?: string[]');
-    expect(src).toContain('i18next.loadNamespaces');
-    expect(src).toContain('i18next.hasResourceBundle');
-    // Namespaces are loaded as part of initialization, not in a follow-up
-    // effect gated on isInitialized — that gap let children render and call
-    // t() against a namespace still in flight.
-    expect(src).toContain('await ensureNamespacesLoaded(resolvedLocale, namespaces)');
-    expect(src).not.toMatch(/\[isInitialized, locale, namespaces\]/);
-  });
+  // T016-T019 run against the provider and translation engine in
+  // i18nProviderNamespaces.test.tsx, including delayed namespace readiness.
 
   it('T020-T022: I18nWrapper uses usePathname and passes namespaces', () => {
     const src = readRepoFile('packages/tenancy/src/components/i18n/I18nWrapper.tsx');

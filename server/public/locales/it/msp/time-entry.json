@@ -145,6 +145,11 @@
       "durationSameDay": "La durata deve terminare nello stesso giorno",
       "endSameDay": "L'ora di fine deve essere nello stesso giorno dell'ora di inizio",
       "invalidTimeRange": "Inserisci un intervallo di tempo valido"
+    },
+    "serviceSource": {
+      "task": "Predefinito dall’attività",
+      "phase": "Predefinito dalla fase",
+      "project": "Predefinito dal progetto"
     }
   },
   "workItemPicker": {

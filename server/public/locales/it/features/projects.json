@@ -80,7 +80,12 @@
     "markedComplete": "Fase contrassegnata come completata",
     "reopened": "Fase riaperta",
     "completeReadyToast": "{{description}} è pronto per la fatturazione",
-    "viewInBilling": "Visualizza"
+    "viewInBilling": "Visualizza",
+    "serviceLabel": "Servizio predefinito (per registrazioni ore)",
+    "noService": "Nessun servizio",
+    "servicePlaceholder": "Seleziona servizio predefinito",
+    "serviceHelp": "Usato per le registrazioni ore sulle attività di questa fase quando l’attività stessa non imposta un servizio.",
+    "serviceDisplayLabel": "Servizio"
   },
   "projectList": {
     "addProject": "Aggiungi progetto",
@@ -141,6 +146,10 @@
     "projectManagerPlaceholder": "Seleziona responsabile",
     "budgetedHoursLabel": "Ore a budget",
     "budgetedHoursPlaceholder": "Inserisci le ore a budget",
+    "serviceLabel": "Servizio predefinito (per registrazioni ore)",
+    "noService": "Nessun servizio",
+    "servicePlaceholder": "Seleziona servizio predefinito",
+    "serviceHelp": "Usato per le registrazioni ore su questo progetto quando né l’attività né la sua fase impostano un servizio.",
     "startDateLabel": "Data di inizio",
     "startDatePlaceholder": "Seleziona la data di inizio",
     "endDateLabel": "Data di fine",
@@ -181,7 +190,11 @@
     "continueEditing": "Continua a modificare",
     "discardChanges": "Scarta modifiche",
     "saveAndClose": "Salva e chiudi",
-    "saving": "Salvataggio..."
+    "saving": "Salvataggio...",
+    "serviceLabel": "Servizio predefinito (per registrazioni ore)",
+    "noService": "Nessun servizio",
+    "servicePlaceholder": "Seleziona servizio predefinito",
+    "serviceHelp": "Usato per le registrazioni ore su questo progetto quando né l’attività né la sua fase impostano un servizio."
   },
   "projectDetail": {
     "allAgents": "Tutti gli agenti",
@@ -416,6 +429,8 @@
     "duplicatedSuccess": "Attività \"{{taskName}}\" duplicata con successo!",
     "willBeSetOnCreate": "Verrà impostato alla creazione",
     "unknownPhase": "Fase sconosciuta",
+    "serviceInheritedFromPhase": "Eredita {{service}} dalla fase.",
+    "serviceInheritedFromProject": "Eredita {{service}} dal progetto.",
     "startDateLabel": "Data di inizio",
     "taskStartDateLabel": "Data di inizio dell'attività",
     "startDatePlaceholder": "Seleziona data di inizio"
@@ -1434,6 +1449,10 @@
     "addPhase": "Aggiungi fase",
     "phaseNamePlaceholder": "Nome fase… *",
     "descriptionPlaceholder": "Descrizione",
+    "serviceLabel": "Servizio predefinito (per registrazioni ore)",
+    "noService": "Nessun servizio",
+    "servicePlaceholder": "Seleziona servizio predefinito",
+    "serviceHelp": "Usato per le registrazioni ore sulle attività di questa fase quando l’attività stessa non imposta un servizio.",
     "adding": "Aggiunta…",
     "addError": "Impossibile aggiungere la fase. Riprova.",
     "title": "Fasi del progetto",

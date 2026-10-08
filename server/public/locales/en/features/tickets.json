@@ -185,9 +185,14 @@
     "tags": "Tags",
     "sla": "SLA",
     "updated": "Updated",
+    "updatedAtBy": "Updated {{time}} by {{name}}",
+    "byName": "by {{name}}",
     "openInNewTab": "Open in new tab",
     "actions": "Actions",
-    "linkedAssets": "Linked assets"
+    "linkedAssets": "Linked assets",
+    "assetName": "Name",
+    "assetTag": "Asset tag",
+    "assetType": "Type"
   },
   "actions": {
     "view": "View",

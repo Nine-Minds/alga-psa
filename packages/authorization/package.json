@@ -18,6 +18,14 @@
       "import": "./dist/kernel/*.js",
       "types": "./src/kernel/*"
     },
+    "./portal": {
+      "import": "./dist/portal/visibility.js",
+      "types": "./src/portal/visibility.ts"
+    },
+    "./portal/*": {
+      "import": "./dist/portal/*.js",
+      "types": "./src/portal/*.ts"
+    },
     "./bundles/catalog": {
       "import": "./dist/bundles/catalog.js",
       "types": "./src/bundles/catalog.ts"

@@ -3179,6 +3179,15 @@
     "roleNamesPlaceholder": "p. ej. Technician, Dispatcher (se asocian por nombre cuando se ejecuta el flujo de trabajo)",
     "empty": "Elija al menos un usuario o un rol a quien notificar."
   },
+  "emailUserRecipientsEditor": {
+    "users": "Enviar correo a usuarios",
+    "usersHint": "Buscar usuarios",
+    "roles": "Enviar correo a todos los que tengan estos roles",
+    "rolesHint": "Añadir un rol",
+    "roleNames": "Nombres de rol (opcional)",
+    "roleNamesPlaceholder": "p. ej. Technician, Dispatcher (se buscan por nombre cuando se ejecuta el flujo de trabajo)",
+    "empty": "Elija usuarios o roles, o seleccione un ticket más abajo."
+  },
   "emailRecipientsEditor": {
     "remove": "Quitar {{email}}",
     "placeholder": "Escriba una dirección y pulse Enter, p. ej. Ada Lovelace <ada@example.com>",

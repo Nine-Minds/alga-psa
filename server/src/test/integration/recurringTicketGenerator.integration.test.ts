@@ -394,12 +394,47 @@ describe('recurring ticket generator (integration)', () => {
     expect(resources[0].assigned_to).toBe(f.userId);
   });
 
+  it('does not fail the occurrence when an additional agent is also a member of the assigned team', async () => {
+    const f = await createFixture();
+    const scoped = tenantDb(db, f.tenant);
+    const lead = await createUser(db, f.tenant, { first_name: 'Lee', last_name: 'Lead' });
+    const member = await createUser(db, f.tenant, { first_name: 'Mia', last_name: 'Member' });
+    const outsider = await createUser(db, f.tenant, { first_name: 'Otto', last_name: 'Outside' });
+    const teamId = uuidv4();
+    await scoped.table('teams').insert({ tenant: f.tenant, team_id: teamId, team_name: 'Patch Team', manager_id: lead });
+    await scoped.table('team_members').insert([
+      { tenant: f.tenant, team_id: teamId, user_id: lead },
+      { tenant: f.tenant, team_id: teamId, user_id: member },
+    ]);
+    const { definitionId, definitionClientId } = await createDefinition(f, {
+      evaluatedThrough: '2026-02-28T12:00:00Z',
+      additionalAgentIds: [member, outsider],
+    });
+    await scoped.table('recurring_ticket_definitions').where({ definition_id: definitionId }).update({ assigned_team_id: teamId });
+
+    const summary = await sweep(f, '2026-03-01T14:00:00Z');
+    expect(summary).toMatchObject({ created: 1, failed: 0 });
+    const [row] = await occurrences(f, definitionClientId);
+    expect(row.status).toBe('created');
+
+    const resources = await scoped.table('ticket_resources').where({ ticket_id: row.ticket_id });
+    const byAgent = new Map(resources.map((r) => [r.additional_user_id, r.role]));
+    // The team member keeps the team role; only the non-member is added as support.
+    expect(byAgent.get(member)).toBe('team_member');
+    expect(byAgent.get(outsider)).toBe('support');
+    expect(resources.filter((r) => r.additional_user_id === member)).toHaveLength(1);
+    const agentEvents = published.filter((e) => e.eventType === 'TICKET_ADDITIONAL_AGENT_ASSIGNED');
+    // Exactly one agent event, for the explicit non-member; the team member is not announced again.
+    expect(agentEvents.map((e) => e.payload.additionalAgentId)).toEqual([outsider]);
+  });
+
   it('passes notify_client_on_create through: suppression is lifted only when the definition opts in', async () => {
     const f = await createFixture();
     await createDefinition(f, { evaluatedThrough: '2026-02-28T12:00:00Z', notify: true });
     await sweep(f, '2026-03-01T14:00:00Z');
     const created = published.find((event) => event.eventType === 'TICKET_CREATED');
-    expect(created?.payload.suppressContactNotifications).toBeUndefined();
+    expect(created?.payload.suppressContactNotifications).toBe(false);
+    expect(created?.payload.suppressInternalNotifications).toBe(false);
   });
 
   it('keys occurrences on the nominal date: a non-business-day shift, then a policy change, does not duplicate', async () => {

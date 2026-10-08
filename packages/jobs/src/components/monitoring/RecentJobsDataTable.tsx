@@ -176,6 +176,7 @@ export default function RecentJobsDataTable({ initialData = [] }: RecentJobsData
     },
     {
       title: t('recentTable.columns.started', { defaultValue: 'Started' }),
+      id: 'started',
       dataIndex: 'processed_at',
       render: (value?: Date) => (
         <span className="text-sm text-[rgb(var(--color-text-700))]">
