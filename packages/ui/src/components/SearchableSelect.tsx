@@ -152,6 +152,20 @@ export function rankSearchableSelectOptions(options: SelectOption[], search: str
     .map((entry) => entry.option);
 }
 
+const SEARCH_ROW_HEIGHT = 53;
+const MIN_LIST_HEIGHT = 96;
+
+// maxListHeight is a CSS length; rem and px are the forms in use.
+function listHeightPx(maxListHeight: string): number {
+  const value = parseFloat(maxListHeight);
+  if (!Number.isFinite(value)) return 240;
+  return maxListHeight.trim().endsWith('px') ? value : value * 16;
+}
+
+function estimatedDropdownHeight(maxListHeight: string): number {
+  return listHeightPx(maxListHeight) + SEARCH_ROW_HEIGHT;
+}
+
 export function SearchableSelect({
   options,
   value,
@@ -181,7 +195,7 @@ export function SearchableSelect({
   const [search, setSearch] = useState('');
   const triggerRef = useRef<HTMLButtonElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
-  const [overlayPosition, setOverlayPosition] = useState<{ top: number; left: number; width: number } | null>(null);
+  const [overlayPosition, setOverlayPosition] = useState<{ top: number; left: number; width: number; above: boolean; listMaxHeight?: string } | null>(null);
   const [announce, setAnnounce] = useState('');
 
   // Memoize the mapped options to prevent recreating on every render
@@ -265,22 +279,33 @@ export function SearchableSelect({
     // Grow leftwards when the wider list would run off the right edge.
     const viewportLeft = Math.max(gutter, Math.min(rect.left, viewportWidth - gutter - width));
 
+    // Open upwards when the list would run off the bottom of the viewport and
+    // there is more room above the trigger (a select near the bottom of a page
+    // or pane otherwise hides its search box and results).
+    const viewportHeight = typeof window !== 'undefined' ? window.innerHeight : rect.bottom;
+    const spaceBelow = viewportHeight - rect.bottom - gutter;
+    const spaceAbove = rect.top - gutter;
+    const above = spaceBelow < estimatedDropdownHeight(maxListHeight) && spaceAbove > spaceBelow;
+    const available = Math.max(0, (above ? spaceAbove : spaceBelow) - SEARCH_ROW_HEIGHT - 4);
+    // Shrink the list when neither side fits it in full.
+    const listMaxHeight =
+      available < listHeightPx(maxListHeight) ? `${Math.max(available, MIN_LIST_HEIGHT)}px` : undefined;
+    const anchorTop = above ? rect.top - 4 : rect.bottom + 4;
+
     if (!container || container === document.body) {
-      setOverlayPosition({
-        top: rect.bottom + 4,
-        left: viewportLeft,
-        width,
-      });
+      setOverlayPosition({ top: anchorTop, left: viewportLeft, width, above, listMaxHeight });
       return;
     }
 
     const containerRect = container.getBoundingClientRect();
     setOverlayPosition({
-      top: rect.bottom - containerRect.top + 4,
+      top: anchorTop - containerRect.top,
       left: viewportLeft - containerRect.left,
       width,
+      above,
+      listMaxHeight,
     });
-  }, [dropdownMinWidth, getResolvedPortalContainer]);
+  }, [dropdownMinWidth, getResolvedPortalContainer, maxListHeight]);
 
   // Positioning for overlay dropdowns
   useEffect(() => {
@@ -384,7 +409,7 @@ export function SearchableSelect({
           role="listbox"
           aria-label={label ?? resolvedPlaceholder}
           className="overflow-y-auto p-1"
-          style={{ maxHeight: maxListHeight }}
+          style={{ maxHeight: dropdownMode === 'overlay' && overlayPosition?.listMaxHeight ? overlayPosition.listMaxHeight : maxListHeight }}
         >
           {filteredOptions.length > 0 ? (
             groupSearchableSelectOptions(filteredOptions).map((run, runIndex) => (
@@ -532,6 +557,7 @@ export function SearchableSelect({
                   left: overlayPosition.left,
                   width: overlayPosition.width,
                   marginTop: 0,
+                  transform: overlayPosition.above ? 'translateY(-100%)' : undefined,
                 }}
               >
                 {dropdown}
