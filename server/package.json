@@ -145,6 +145,7 @@
     "cmdk": "^1.0.4",
     "cookie-parser": "^1.4.7",
     "cookies-next": "^6.1.0",
+    "cron-parser": "^4.9.0",
     "date-fns": "^4.1.0",
     "date-fns-tz": "^3.2.0",
     "dotenv": "^16.4.7",

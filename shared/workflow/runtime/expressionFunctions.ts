@@ -45,34 +45,47 @@ const asCount = (fn: string, argument: string, value: unknown, min: number): num
   return Math.min(Math.max(Math.trunc(number), min), WORKFLOW_EXPRESSION_MAX_TEXT_LENGTH);
 };
 
-/** Number of characters (code points, so emoji count once), counting no further than `limit`. */
-const countCharacters = (text: string, limit: number): number => {
-  if (text.length <= limit) {
-    let count = 0;
-    for (const _char of text) count += 1;
-    return count;
+/** A UTF-16 surrogate code unit. Text without one has exactly one code unit per character. */
+const SURROGATE = /[\uD800-\uDFFF]/;
+
+/** Code units taken by the character at `offset`: 2 for a surrogate pair, otherwise 1. */
+const characterWidth = (text: string, offset: number): number => {
+  const code = text.charCodeAt(offset);
+  if (code >= 0xd800 && code <= 0xdbff && offset + 1 < text.length) {
+    const next = text.charCodeAt(offset + 1);
+    if (next >= 0xdc00 && next <= 0xdfff) return 2;
   }
+  return 1;
+};
+
+/**
+ * Number of characters (code points, so emoji count once). Text with surrogate pairs is
+ * counted no further than one past `limit`; callers only compare the result against it.
+ * Indexed loops instead of `for...of` keep large text well inside the evaluation budget.
+ */
+const countCharacters = (text: string, limit: number): number => {
+  if (!SURROGATE.test(text)) return text.length;
   let count = 0;
-  for (const _char of text) {
+  for (let offset = 0; offset < text.length && count <= limit; offset += characterWidth(text, offset)) {
     count += 1;
-    if (count > limit) break;
   }
   return count;
 };
 
 /** Characters [start, end) of text, by code point, never splitting a surrogate pair. */
 const sliceCharacters = (text: string, start: number, end?: number): string => {
+  if (!SURROGATE.test(text)) return text.slice(start, end === undefined ? undefined : Math.max(start, end));
   let index = 0;
   let offset = 0;
   let startOffset: number | null = null;
   let endOffset = text.length;
-  for (const char of text) {
+  while (offset < text.length) {
     if (index === start) startOffset = offset;
     if (end !== undefined && index === end) {
       endOffset = offset;
       break;
     }
-    offset += char.length;
+    offset += characterWidth(text, offset);
     index += 1;
   }
   if (startOffset === null) return '';
