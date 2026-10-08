@@ -1744,5 +1744,9 @@
     "customPlaceholder": "Asigne un nombre a esta unidad",
     "register": "Agregar",
     "selectPlaceholder": "Seleccione una unidad"
+  },
+  "emailRecipients": {
+    "remove": "Quitar {{email}}",
+    "placeholder": "Escribe una dirección y pulsa Enter"
   }
 }

@@ -64,6 +64,12 @@ import { inboundSenderLabel } from './ticketCommentAuthor';
 import { hasPermission } from '../../auth/rbac';
 import { TicketModel, CreateTicketInput } from '@shared/models/ticketModel';
 import {
+  CommentEmailRecipientsError,
+  prepareCommentEmailRecipients,
+  readCommentEmailRecipients,
+  stripCommentBccFromMetadata,
+} from '@shared/lib/tickets/commentEmailRecipients';
+import {
   TICKET_ACTIVITY_ACTOR,
   TICKET_ACTIVITY_ENTITY,
   TICKET_ACTIVITY_EVENT,
@@ -2440,10 +2446,19 @@ export class TicketService extends BaseService<ITicket> {
         };
       }
 
+      // Bcc is MSP-only. The raw row is spread below, so a client-visible
+      // caller gets the metadata with the bcc list emptied before anything
+      // reads it — the mask lives here rather than at the route so no future
+      // client-facing caller of this service can leak it.
+      const metadata = clientVisibility
+        ? stripCommentBccFromMetadata(comment.metadata)
+        : comment.metadata;
+
       // Full branch: select('tc.*') above means ...comment already carries
       // thread_id / parent_comment_id / deleted_at — no explicit mapping needed.
       return {
         ...comment,
+        metadata,
         comment_text: comment.note,
         markdown_content: comment.markdown_content || null,
         comment_html: renderTicketRichTextHtml(comment.note),
@@ -2455,6 +2470,7 @@ export class TicketService extends BaseService<ITicket> {
         author_contact_email: comment.author_contact_email || null,
         reactions: reactionsMap[comment.comment_id] ?? [],
         reaction_user_names: reactionUserNames,
+        email_recipients: readCommentEmailRecipients(metadata),
       };
     });
   }
@@ -2561,6 +2577,25 @@ export class TicketService extends BaseService<ITicket> {
       // check runs after visibility is resolved rather than on the raw body.
       const scheduledPublication = resolveScheduledCommentPublication(data, apiIsInternal);
 
+      // One-off Cc/Bcc for this comment only. The schema already rejects them
+      // on an explicitly internal body; this also catches a reply that
+      // inherits internal visibility from its thread.
+      let emailRecipients: Awaited<ReturnType<typeof prepareCommentEmailRecipients>> = null;
+      try {
+        emailRecipients = await prepareCommentEmailRecipients(trx, context.tenant, {
+          cc: data.cc,
+          bcc: data.bcc,
+          isInternal: apiIsInternal,
+        });
+      } catch (error) {
+        if (error instanceof CommentEmailRecipientsError) {
+          throw new ValidationError('Validation failed', [
+            { path: [error.field], message: error.message },
+          ]);
+        }
+        throw error;
+      }
+
       const commentData = {
         comment_id: apiCommentId,
         thread_id: apiThreadId,
@@ -2573,7 +2608,9 @@ export class TicketService extends BaseService<ITicket> {
         tenant: context.tenant,
         created_at: apiNowIso,
         updated_at: apiNowIso,
-        metadata: data.metadata,
+        metadata: emailRecipients
+          ? { ...(data.metadata ?? {}), email_recipients: emailRecipients }
+          : data.metadata,
         ...(scheduledPublication
           ? {
               publish_state: 'scheduled',
@@ -2641,7 +2678,8 @@ export class TicketService extends BaseService<ITicket> {
         created_by: comment.user_id ?? null,
         author_contact_id: comment.contact_id ?? null,
         author_contact_name: null,
-        author_contact_email: null
+        author_contact_email: null,
+        email_recipients: readCommentEmailRecipients(comment.metadata),
       };
 
       const eventPayload = {

@@ -1744,5 +1744,9 @@
     "customPlaceholder": "Einheit benennen",
     "register": "Hinzufügen",
     "selectPlaceholder": "Einheit auswählen"
+  },
+  "emailRecipients": {
+    "remove": "{{email}} entfernen",
+    "placeholder": "Adresse eingeben und Eingabetaste drücken"
   }
 }

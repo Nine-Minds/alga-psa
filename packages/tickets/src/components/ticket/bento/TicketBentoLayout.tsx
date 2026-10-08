@@ -36,6 +36,7 @@ import type { TicketScreenBootstrap } from '../../../lib/ticketScreenBootstrap';
 import TicketTimeEntries from './../TicketTimeEntries';
 import TicketMaterialsCard from './../TicketMaterialsCard';
 import TicketWatchListCard from './../TicketWatchListCard';
+import type { CommentEmailRecipientsPayload } from '../CommentEmailRecipientsControl';
 import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
 import { getTeamAvatarUrlsBatchAction } from '@alga-psa/teams/actions';
 import { useQuickAddClient } from '@alga-psa/ui/context';
@@ -136,7 +137,9 @@ export interface TicketBentoLayoutProps {
     isInternal: boolean,
     isResolution: boolean,
     closeStatusId?: string | null,
-    options?: TicketNotificationSuppressionValue
+    options?: TicketNotificationSuppressionValue,
+    schedule?: { publishAt: string; timeZone: string } | null,
+    emailRecipients?: CommentEmailRecipientsPayload,
   ) => Promise<boolean>;
   closedStatusOptions?: { value: string; label: string }[];
   // Comment affordances on timeline nodes (reactions, edit, delete).
@@ -161,7 +164,12 @@ export interface TicketBentoLayoutProps {
   }) => Promise<{ deletedDocumentIds: string[]; failures: Array<{ documentId: string; reason: string }> }>;
   resolveTicketAttachmentViewUrl?: (document: { document_id?: string; file_id?: string }) => string;
   /** Threaded reply pipeline (same handler the conversation view gets). */
-  onAddReplyComment?: (content: PartialBlock[], parentCommentId: string, isInternal: boolean) => Promise<boolean>;
+  onAddReplyComment?: (
+    content: PartialBlock[],
+    parentCommentId: string,
+    isInternal: boolean,
+    emailRecipients?: CommentEmailRecipientsPayload,
+  ) => Promise<boolean>;
   /**
    * Server-started data promises from the RSC page. Tiles resolve them via
    * React use() behind <Suspense> skeletons — zero fetch-on-mount requests.
@@ -972,6 +980,8 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
             resolveTicketAttachmentViewUrl={props.resolveTicketAttachmentViewUrl}
             initialEntries={props.bentoStreams?.timelineEntries}
             initialReactions={props.bentoStreams?.commentReactions}
+            allowEmailRecipients
+            clientId={ticket.client_id ?? null}
           />
           </Suspense>
         </div>

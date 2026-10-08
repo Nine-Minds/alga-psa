@@ -56,6 +56,9 @@ export type CommentApi = {
       parent_comment_id?: string;
       scheduled_publish_at?: string;
       scheduled_publish_tz?: string;
+      /** Ticket comments only: one-off Cc/Bcc for this comment's email. */
+      cc?: string[];
+      bcc?: string[];
       auditHeaders?: Audit;
     },
   ): Promise<ApiResult<SuccessResponse<TicketComment>>>;

@@ -9,6 +9,7 @@ import { persistCommentPublication } from '@alga-psa/shared/lib/ticketCommentAtt
 import { registerAfterCommit } from '@alga-psa/db';
 import Comment from '@alga-psa/tickets/models/comment';
 import { reconcileCommentAttachments, filterReadableCommentAttachments, withdrawCommentAttachments } from '@shared/lib/ticketCommentAttachments';
+import { stripCommentBccFromMetadata } from '@shared/lib/tickets/commentEmailRecipientsCore';
 import { isUuidShaped, validateData } from '@alga-psa/validation';
 import { COMMENT_RESPONSE_SOURCES, IComment, IStatus, ITicket, ITicketListItem, ITicketWithDetails, TICKET_ORIGINS } from '@alga-psa/types';
 import { IDocument } from '@alga-psa/types';
@@ -566,6 +567,9 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
       const { bundle_mirror_source_comment_id, ...commentRow } = comment;
       return {
         ...commentRow,
+        // Bcc is MSP-only: strip it here so it can never reach a portal
+        // payload. Cc stays, since the requester saw it on the email anyway.
+        metadata: stripCommentBccFromMetadata(commentRow.metadata),
         bundle_mirror_source: bundle_mirror_source_comment_id
           ? { source_comment_id: bundle_mirror_source_comment_id }
           : null,

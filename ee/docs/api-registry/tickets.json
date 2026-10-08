@@ -715,6 +715,18 @@
             "suppressInternalNotifications": {
               "type": "boolean",
               "description": "Also suppress agent and watcher notifications for this comment. Requires suppressContactNotifications=true."
+            },
+            "cc": {
+              "type": "array",
+              "items": { "type": "string", "format": "email" },
+              "maxItems": 20,
+              "description": "One-off Cc recipients for this comment's email only. They are never added to the ticket watch list and receive no later comments. Not allowed with is_internal. Max 20 cc + bcc combined."
+            },
+            "bcc": {
+              "type": "array",
+              "items": { "type": "string", "format": "email" },
+              "maxItems": 20,
+              "description": "One-off Bcc recipients for this comment's email only. Never returned to client-portal callers. Not allowed with is_internal. Max 20 cc + bcc combined."
             }
           },
           "required": ["comment_text"]

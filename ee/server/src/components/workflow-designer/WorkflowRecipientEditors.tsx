@@ -6,9 +6,13 @@ import { X } from 'lucide-react';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { parseEmailRecipients } from '@alga-psa/ui/lib/emailRecipients';
 import type { InputMapping, MappingValue } from '@alga-psa/workflows/runtime';
 
 import { WorkflowActionInputFixedMultiPicker } from './WorkflowActionInputFixedPicker';
+
+// Chip parsing moved to @alga-psa/ui so the ticket comment Cc/Bcc input shares it.
+export { parseEmailRecipients };
 
 // Recipient pickers here have no dependencies; a shared constant keeps their props stable.
 const NO_DEPENDENCY_MAPPING: InputMapping = {};
@@ -154,7 +158,7 @@ export const WorkflowUserRecipientsEditor: React.FC<{
 
 export type EmailRecipient = { email: string; name?: string };
 
-const EMAIL_PATTERN = /^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/;
+
 
 /** Reads a fixed list of email recipients; null when the list or an entry is computed. */
 export const readEmailRecipientsLiteral = (value: MappingValue | undefined | null): EmailRecipient[] | null => {
@@ -173,29 +177,6 @@ export const readEmailRecipientsLiteral = (value: MappingValue | undefined | nul
 
 export const writeEmailRecipientsLiteral = (recipients: EmailRecipient[]): MappingValue =>
   recipients.map((recipient) => (recipient.name ? { email: recipient.email, name: recipient.name } : { email: recipient.email }));
-
-/**
- * Parses typed or pasted addresses: comma, semicolon or newline separated, each either
- * `ada@example.com` or `Ada Lovelace <ada@example.com>`. Returns valid recipients and the entries
- * that aren't addresses.
- */
-export const parseEmailRecipients = (text: string): { recipients: EmailRecipient[]; invalid: string[] } => {
-  const recipients: EmailRecipient[] = [];
-  const invalid: string[] = [];
-  for (const raw of text.split(/[,;\n]/)) {
-    const entry = raw.trim();
-    if (!entry) continue;
-    const named = /^(.*?)\s*<([^>]+)>$/.exec(entry);
-    const email = (named ? named[2] : entry).trim();
-    const name = named ? named[1].trim().replace(/^"|"$/g, '') : '';
-    if (EMAIL_PATTERN.test(email)) {
-      recipients.push(name ? { email, name } : { email });
-    } else {
-      invalid.push(entry);
-    }
-  }
-  return { recipients, invalid };
-};
 
 /** A list of email recipients: type or paste addresses, remove them from the chips. */
 export const WorkflowEmailRecipientsEditor: React.FC<{

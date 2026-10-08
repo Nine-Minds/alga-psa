@@ -378,7 +378,13 @@
     "schedule": "Programar",
     "scheduled": "Programado",
     "showMore": "Mostrar más",
-    "showLess": "Mostrar menos"
+    "showLess": "Mostrar menos",
+    "ccBcc": "Cc/Cco",
+    "cc": "Cc",
+    "bcc": "Cco",
+    "ccBccInvalid": "Corrige las direcciones resaltadas antes de enviar.",
+    "ccBccTooMany": "Como máximo se pueden copiar {{max}} destinatarios Cc y Cco en un comentario.",
+    "ccBccNotSentOnInternal": "Cc y Cco no se envían con una nota interna. Desactiva Interna para usarlos."
   },
   "responseState": {
     "awaitingYourResponse": "Esperando su respuesta",

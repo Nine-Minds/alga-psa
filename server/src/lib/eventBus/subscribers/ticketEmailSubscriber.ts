@@ -52,6 +52,9 @@ import {
   sendOneEmailPerWatcher,
   resolveInternalWatcherEmails,
 } from './watcherRecipients';
+import { readCommentEmailRecipients } from '@shared/lib/tickets/commentEmailRecipients';
+import type { CommentEmailRecipient, CommentEmailRecipients } from '@alga-psa/types';
+import type { EmailAddress } from '../../../types/email.types';
 import {
   INBOUND_OUTBOX_EVENT_TYPES,
   withInboundOutboxDelivery,
@@ -506,16 +509,75 @@ function toRetryableAccumulatorError(
 }
 
 /**
+ * The one-off Cc/Bcc of a single comment, prepared for one message.
+ */
+interface OneOffEmailRecipients {
+  cc: EmailAddress[];
+  bcc: EmailAddress[];
+  hasAny: boolean;
+  /** Spread onto a send to put the real Cc/Bcc headers on that message. */
+  headerParams: { cc?: EmailAddress[]; bcc?: EmailAddress[] };
+}
+
+/**
+ * Prepares a comment's stored Cc/Bcc for one outgoing message: invalid
+ * addresses are dropped, so are the excluded ones (the `To` recipient and the
+ * comment author, who already know), duplicates collapse, and an address named
+ * in both lists stays in Cc only. Shared by the comment email and the close
+ * email, which carries the resolution comment's recipients.
+ */
+function selectOneOffEmailRecipients(
+  recipients: CommentEmailRecipients | null | undefined,
+  excludedEmails: Array<string | null | undefined>
+): OneOffEmailRecipients {
+  const excluded = new Set<string>(
+    excludedEmails
+      .filter((value): value is string => isValidEmail(value))
+      .map((value) => normalizeRecipientEmail(value))
+  );
+  // One `taken` set across both lists is what makes Cc win over Bcc.
+  const taken = new Set<string>();
+  const select = (list: CommentEmailRecipient[] | undefined): EmailAddress[] => {
+    const result: EmailAddress[] = [];
+    for (const entry of list ?? []) {
+      const key = normalizeRecipientEmail(entry.email);
+      if (!isValidEmail(entry.email) || excluded.has(key) || taken.has(key)) {
+        continue;
+      }
+      taken.add(key);
+      result.push({ email: entry.email, ...(entry.name ? { name: entry.name } : {}) });
+    }
+    return result;
+  };
+  const cc = select(recipients?.cc);
+  const bcc = select(recipients?.bcc);
+  return {
+    cc,
+    bcc,
+    hasAny: cc.length > 0 || bcc.length > 0,
+    headerParams: {
+      ...(cc.length > 0 ? { cc } : {}),
+      ...(bcc.length > 0 ? { bcc } : {}),
+    },
+  };
+}
+
+/**
  * Wrapper function that checks notification preferences before sending email
  * @param params - Same params as sendEventEmail
  * @param subtypeName - Name of the notification subtype (e.g., "Ticket Created")
  * @param recipientUserId - Optional user ID for preference checking (only for internal users)
+ * @returns whether a message was actually handed to the email service; false
+ *          when a gate (tenant kill switch, subtype, category, user opt-out)
+ *          or an invalid address silently skipped the send. Callers that need
+ *          to know whether a recipient was reached — the per-comment Cc/Bcc
+ *          fallback — depend on this being truthful.
  */
 async function sendNotificationIfEnabled(
   params: SendEmailParams,
   subtypeName: string,
   recipientUserId?: string
-): Promise<void> {
+): Promise<boolean> {
   try {
     if (!isValidEmail(params.to)) {
       logger.warn('[TicketEmailSubscriber] Skipping email send due to invalid recipient address:', {
@@ -523,7 +585,7 @@ async function sendNotificationIfEnabled(
         subtypeName,
         tenantId: params.tenantId
       });
-      return;
+      return false;
     }
 
     const { knex } = await createTenantKnex();
@@ -537,7 +599,7 @@ async function sendNotificationIfEnabled(
         recipient: params.to,
         subtypeName
       });
-      return;
+      return false;
     }
 
     if (gate.kind === 'subtype-missing') {
@@ -546,7 +608,7 @@ async function sendNotificationIfEnabled(
         recipient: params.to
       });
       await sendEventEmail(params);
-      return;
+      return true;
     }
 
     if (gate.kind === 'subtype-disabled') {
@@ -555,7 +617,7 @@ async function sendNotificationIfEnabled(
         tenantId: params.tenantId,
         recipient: params.to
       });
-      return;
+      return false;
     }
 
     if (gate.kind === 'category-disabled') {
@@ -564,7 +626,7 @@ async function sendNotificationIfEnabled(
         tenantId: params.tenantId,
         recipient: params.to
       });
-      return;
+      return false;
     }
 
     const subtype = gate.subtype;
@@ -585,7 +647,7 @@ async function sendNotificationIfEnabled(
           subtypeName,
           recipient: params.to
         });
-        return;
+        return false;
       }
 
       // Rate limiting is now centralized in TenantEmailService.sendEmail()
@@ -620,6 +682,7 @@ async function sendNotificationIfEnabled(
       }
     }
 
+    return true;
   } catch (error) {
     const isEmailProviderError =
       typeof error === 'object' &&
@@ -634,7 +697,7 @@ async function sendNotificationIfEnabled(
         recipient: params.to,
         tenantId: params.tenantId
       });
-      return;
+      return false;
     }
 
     if (isEmailProviderError && (error as any).isRetryable === true) {
@@ -653,7 +716,9 @@ async function sendNotificationIfEnabled(
           recipient: params.to,
           tenantId: params.tenantId
         });
-        return;
+        // The queued params carry the Cc/Bcc headers, so the retry delivers
+        // the combined message: treat it as sent, not as a dropped recipient.
+        return true;
       }
     }
 
@@ -2625,13 +2690,18 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
 
     let commentAuthorUserId: string | null = commentUserId || null;
     let commentAuthorContactId: string | null = null;
+    let commentAuthorType = '';
     let commentAuthorEmail = '';
     let commentClosesTicket = false;
+    // Read from the comment row, never the event payload: the payload schema
+    // strips unknown keys and both the scheduled-publication handler and the
+    // recovery republish rebuild the payload from the row.
+    let commentEmailRecipients: CommentEmailRecipients | null = null;
 
     if (payload.comment?.id) {
       const scopedDb = tenantDb(db, tenantId);
       const commentAuthorQuery = scopedDb.table('comments as cm')
-        .select({ comment_user_id: 'cm.user_id', comment_metadata: 'cm.metadata', comment_contact_id: 'cu.contact_id', comment_user_email: 'cu.email', comment_contact_email: 'cc.email' });
+        .select({ comment_user_id: 'cm.user_id', comment_author_type: 'cm.author_type', comment_metadata: 'cm.metadata', comment_contact_id: 'cu.contact_id', comment_user_email: 'cu.email', comment_contact_email: 'cc.email' });
       scopedDb.tenantJoin(commentAuthorQuery, 'users as cu', 'cm.user_id', 'cu.user_id', { type: 'left' });
       scopedDb.tenantJoin(commentAuthorQuery, 'contacts as cc', 'cu.contact_id', 'cc.contact_name_id', {
         type: 'left',
@@ -2642,6 +2712,7 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
         .where({ 'cm.comment_id': payload.comment.id })
         .first<{
           comment_user_id?: string | null;
+          comment_author_type?: string | null;
           comment_metadata?: Record<string, unknown> | null;
           comment_contact_id?: string | null;
           comment_user_email?: string | null;
@@ -2650,11 +2721,13 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
 
       if (commentAuthor) {
         commentAuthorUserId = commentAuthor.comment_user_id ?? null;
+        commentAuthorType = safeString(commentAuthor.comment_author_type);
         commentAuthorContactId = commentAuthor.comment_contact_id ?? null;
         commentAuthorEmail =
           safeString(commentAuthor.comment_user_email) ||
           safeString(commentAuthor.comment_contact_email);
         commentClosesTicket = commentAuthor.comment_metadata?.closes_ticket === true;
+        commentEmailRecipients = readCommentEmailRecipients(commentAuthor.comment_metadata);
       }
     }
 
@@ -2840,25 +2913,49 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
       params: TicketNotificationParams,
       subtypeName: string,
       recipientUserId?: string | null,
-    ) => {
+    ): Promise<boolean> => {
       const email = params.to?.trim();
       if (!isValidEmail(email)) {
-        return;
+        return false;
       }
       const key = normalizeRecipientEmail(email);
       if (commentAuthorEmail && key === normalizeRecipientEmail(commentAuthorEmail)) {
-        return;
+        return false;
       }
       if (sentEmails.has(key)) {
-        return;
+        return false;
       }
       sentEmails.add(key);
-      await sendNotificationIfEnabled({ ...params, mailClass: 'ticket', boardId: params.boardId ?? ticket.board_id }, subtypeName, recipientUserId ?? undefined);
+      // The returned flag reports whether a message really went out: a
+      // notification gate can skip the send silently, and the Cc/Bcc fallback
+      // must not treat that as "the requester was reached".
+      return sendNotificationIfEnabled({ ...params, mailClass: 'ticket', boardId: params.boardId ?? ticket.board_id }, subtypeName, recipientUserId ?? undefined);
     };
 
     // Only notify external contacts (primaryEmail) if the comment is public and from an internal agent.
     // Event schema uses `isInternal` (camelCase); legacy payloads may omit it.
     const isPublicComment = !payload.comment?.isInternal;
+
+    // One-off Cc/Bcc are a public-reply feature. Ignore them on an internal
+    // note even if the row carries them, so a hand-edited row can never leak
+    // an internal note outside the MSP.
+    const oneOffRecipients = isPublicComment ? commentEmailRecipients : null;
+    // The requester is the `To` of the combined message and the author already
+    // knows what they wrote, so neither belongs in Cc/Bcc.
+    const {
+      cc: oneOffCc,
+      bcc: oneOffBcc,
+      hasAny: hasOneOffRecipients,
+      headerParams: oneOffHeaderParams,
+    } = selectOneOffEmailRecipients(oneOffRecipients, [primaryEmail, commentAuthorEmail]);
+    // Everyone carried on the combined message has already received this
+    // comment, so watchers, assigned agents, additional agents and bundle-child
+    // requesters in those lists must not get a second separate copy.
+    const markOneOffRecipientsSent = () => {
+      for (const entry of [...oneOffCc, ...oneOffBcc]) {
+        sentEmails.add(normalizeRecipientEmail(entry.email));
+      }
+    };
 
     let isFromAgent = false;
     if (commentAuthorUserId) {
@@ -2875,7 +2972,31 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
       String(ticket.contact_name_id).trim() === commentAuthorContactId
     );
 
+    // A comment row written without a user — a system- or workflow-authored
+    // one — has nobody to classify, so `isFromAgent` is false for it while the
+    // stored author_type still says the comment came from the MSP side.
+    // Explicit Cc/Bcc on such a comment is an instruction to mail someone, so
+    // the one-off fallback runs for it too; a client-authored comment never
+    // gets it.
+    const isMspAuthoredComment = isFromAgent || (!commentAuthorUserId && commentAuthorType === 'internal');
+
+    // Extract threading info from ticket metadata. Every copy of this comment
+    // — the requester message and the Cc/Bcc fallback alike — carries the same
+    // thread headers so replies land on this ticket's thread.
+    const commentThreadMessageId = emailMetadata.messageId; // Original message ID from inbound email
+    const commentThreadHeaders: Record<string, string> = {};
+    if (commentThreadMessageId) {
+      commentThreadHeaders['In-Reply-To'] = commentThreadMessageId;
+      const refs = Array.isArray(emailMetadata.references) ? emailMetadata.references : [];
+      // Append original messageId to references to maintain chain
+      commentThreadHeaders['References'] = [...refs, commentThreadMessageId].join(' ');
+    }
+    const commentThreadHeaderParams = Object.keys(commentThreadHeaders).length > 0
+      ? { headers: commentThreadHeaders }
+      : {};
+
     // Send to primary email if available - external user, no userId
+    let requesterEmailSent = false;
     if (
       primaryEmail &&
       isPublicComment &&
@@ -2883,17 +3004,6 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
       !isPrimaryContactAuthor &&
       shouldSendTicketCommentNotification(suppression, 'contact')
     ) {
-      // Extract threading info from ticket metadata
-      const messageId = emailMetadata.messageId; // Original message ID from inbound email
-      
-      const headers: Record<string, string> = {};
-      if (messageId) {
-          headers['In-Reply-To'] = messageId;
-          const refs = Array.isArray(emailMetadata.references) ? emailMetadata.references : [];
-          // Append original messageId to references to maintain chain
-          headers['References'] = [...refs, messageId].join(' ');
-      }
-
       // For client portal users (contacts), pass the clientId so locale resolution respects client preferences
       const emailParams: TicketNotificationParams = {
         tenantId,
@@ -2909,7 +3019,10 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
           threadId: ticket.email_metadata?.threadId
         },
         attachments: inlineCommentImageAttachments,
-        headers: Object.keys(headers).length > 0 ? headers : undefined,
+        ...commentThreadHeaderParams,
+        // Real Cc/Bcc headers, so the requester sees who was copied and
+        // reply-all reaches them. One message, one Message-ID, one reply token.
+        ...oneOffHeaderParams,
       };
 
       // Add clientId for locale resolution if we're sending to a contact/client
@@ -2917,7 +3030,56 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
         emailParams.recipientClientId = ticket.client_id;
       }
 
-      await sendIfUnique(emailParams, 'Ticket Comment Added');
+      requesterEmailSent = await sendIfUnique(emailParams, 'Ticket Comment Added');
+      if (requesterEmailSent) {
+        markOneOffRecipientsSent();
+      }
+    }
+
+    // No requester mail went out (no address, suppressed, or the requester is
+    // the author) but the agent still chose explicit recipients. Send them the
+    // comment directly rather than dropping it. A message with several Bcc
+    // addresses and an empty To is rejected by some providers, so a Bcc-only
+    // list becomes one message per address.
+    // A tenant that switched comment notifications off also lands here, and the
+    // fallback goes through the same gate: the kill switch wins and nobody is
+    // mailed, one-off recipients included.
+    if (hasOneOffRecipients && isMspAuthoredComment && !requesterEmailSent) {
+      const fallbackReplyContext = {
+        ticketId: ticket.ticket_id || payload.ticketId,
+        commentId: payload.comment?.id,
+        threadId: ticket.email_metadata?.threadId,
+      };
+      const fallbackBase = {
+        tenantId,
+        ...emailEntityContext,
+        subject: `New Comment on Ticket: ${ticket.title}`,
+        template: 'ticket-comment-added',
+        context: buildContext(portalUrl),
+        replyContext: fallbackReplyContext,
+        attachments: inlineCommentImageAttachments,
+        ...commentThreadHeaderParams,
+        ...(ticket.client_id ? { recipientClientId: ticket.client_id } : {}),
+      };
+
+      if (oneOffCc.length > 0) {
+        // The first Cc address carries the `To` so the delivery claim and the
+        // per-recipient attachment gate still key on a single address.
+        const [primaryOneOff, ...remainingCc] = oneOffCc;
+        const sent = await sendIfUnique({
+          ...fallbackBase,
+          to: primaryOneOff.email,
+          ...(remainingCc.length > 0 ? { cc: remainingCc } : {}),
+          ...(oneOffBcc.length > 0 ? { bcc: oneOffBcc } : {}),
+        }, 'Ticket Comment Added');
+        if (sent) {
+          markOneOffRecipientsSent();
+        }
+      } else {
+        for (const entry of oneOffBcc) {
+          await sendIfUnique({ ...fallbackBase, to: entry.email }, 'Ticket Comment Added');
+        }
+      }
     }
 
     // If this ticket is a bundle master, default behavior is to notify all child requesters for public comments.
@@ -3252,6 +3414,16 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
       latestResolutionComment,
       latestClientVisibleResolutionComment,
     );
+    // A resolution written to close the ticket has its own comment email
+    // suppressed (metadata.closes_ticket), so this message is the one that
+    // carries its one-off Cc/Bcc. Only that comment's recipients are used: a
+    // resolution left without a close already mailed them itself.
+    const closePairedResolutionComment =
+      latestClientVisibleResolutionComment
+      && !latestClientVisibleResolutionComment.is_internal
+      && (latestClientVisibleResolutionComment.metadata as Record<string, unknown> | null)?.closes_ticket === true
+        ? latestClientVisibleResolutionComment
+        : null;
 
     const { internalUrl, portalUrl } = await resolveTicketLinks(db, tenantId, ticket.ticket_id, ticket.ticket_number);
 
@@ -3312,21 +3484,47 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
       params: TicketNotificationParams,
       subtypeName: string,
       recipientUserId?: string | null
-    ) => {
+    ): Promise<boolean> => {
       const email = params.to?.trim();
       if (!isValidEmail(email)) {
-        return;
+        return false;
       }
 
       const key = normalizeRecipientEmail(email);
       if (sentEmails.has(key)) {
-        return;
+        return false;
       }
 
       sentEmails.add(key);
-      await sendNotificationIfEnabled({ ...params, mailClass: 'ticket', boardId: params.boardId ?? ticket.board_id }, subtypeName, recipientUserId ?? undefined);
+      // The flag reports whether a message really went out, so the Cc/Bcc
+      // fallback below never treats a gated send as "the requester was reached".
+      return sendNotificationIfEnabled({ ...params, mailClass: 'ticket', boardId: params.boardId ?? ticket.board_id }, subtypeName, recipientUserId ?? undefined);
     };
 
+    // The requester is the `To` of the close message, so they never belong in
+    // its Cc/Bcc.
+    const {
+      cc: oneOffCc,
+      bcc: oneOffBcc,
+      hasAny: hasOneOffRecipients,
+      headerParams: oneOffHeaderParams,
+    } = selectOneOffEmailRecipients(
+      readCommentEmailRecipients(closePairedResolutionComment?.metadata),
+      [primaryEmail]
+    );
+    // Anyone carried on the close message has had it; watchers, the assigned
+    // agent and additional agents in those lists get no second copy.
+    const markOneOffRecipientsSent = () => {
+      for (const entry of [...oneOffCc, ...oneOffBcc]) {
+        sentEmails.add(normalizeRecipientEmail(entry.email));
+      }
+    };
+    const closeReplyContext = {
+      ticketId: ticket.ticket_id || payload.ticketId,
+      threadId: ticket.email_metadata?.threadId
+    };
+
+    let primaryCloseEmailSent = false;
     if (!shouldSendContactFacingTicketEmail(suppression)) {
       logger.debug('[TicketEmailSubscriber] Skipped ticket closed contact notification due to suppression', {
         eventId: event.id,
@@ -3340,7 +3538,7 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
       });
     } else {
       // Send to primary recipient - external user, no userId
-      await sendIfUnique({
+      primaryCloseEmailSent = await sendIfUnique({
         tenantId,
         ...emailEntityContext,
         contactId: primaryContactId,
@@ -3348,11 +3546,51 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
         subject: `Ticket Closed: ${ticket.title}`,
         template: 'ticket-closed',
         context: externalContext,
-        replyContext: {
-          ticketId: ticket.ticket_id || payload.ticketId,
-          threadId: ticket.email_metadata?.threadId
-        },
+        replyContext: closeReplyContext,
+        // Real Cc/Bcc headers from the resolution that closed the ticket, so
+        // the requester sees who was copied and reply-all reaches them.
+        ...oneOffHeaderParams,
       }, 'Ticket Closed');
+      if (primaryCloseEmailSent) {
+        markOneOffRecipientsSent();
+      }
+    }
+
+    // No requester mail went out (no address, or suppressed) but the agent still
+    // chose recipients for this resolution, so they get the close message
+    // directly. A message with several Bcc addresses and an empty To is
+    // rejected by some providers, so a Bcc-only list becomes one message per
+    // address. The same notification gate applies: a tenant with closed-ticket
+    // emails switched off mails nobody, copied recipients included.
+    if (hasOneOffRecipients && !primaryCloseEmailSent) {
+      const fallbackBase = {
+        tenantId,
+        ...emailEntityContext,
+        subject: `Ticket Closed: ${ticket.title}`,
+        template: 'ticket-closed',
+        context: externalContext,
+        replyContext: closeReplyContext,
+        ...(ticket.client_id ? { recipientClientId: ticket.client_id } : {}),
+      };
+
+      if (oneOffCc.length > 0) {
+        // The first Cc address carries the `To`, so the send still keys on a
+        // single address.
+        const [firstCc, ...remainingCc] = oneOffCc;
+        const sent = await sendIfUnique({
+          ...fallbackBase,
+          to: firstCc.email,
+          ...(remainingCc.length > 0 ? { cc: remainingCc } : {}),
+          ...(oneOffBcc.length > 0 ? { bcc: oneOffBcc } : {}),
+        }, 'Ticket Closed');
+        if (sent) {
+          markOneOffRecipientsSent();
+        }
+      } else {
+        for (const entry of oneOffBcc) {
+          await sendIfUnique({ ...fallbackBase, to: entry.email }, 'Ticket Closed');
+        }
+      }
     }
 
     // If this ticket is a bundle master, default behavior is to notify all child requesters on closure.
