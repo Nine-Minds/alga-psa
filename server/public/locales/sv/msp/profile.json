@@ -727,6 +727,16 @@
     }
   },
   "connectSso": {
+    "linkError": {
+      "title": "SSO-kopplingen misslyckades.",
+      "no_matching_user": "Kontot du loggade in med är {{providerEmail}}, men din AlgaPSA-inloggning är {{accountEmail}}. Koppla ett konto som använder {{accountEmail}}, eller be administratören för din identitetsleverantör att göra {{accountEmail}} till kontots primära e-postadress.",
+      "missing_email": "Din identitetsleverantör returnerade ingen e-postadress för kontot, så det kan inte matchas mot din AlgaPSA-inloggning {{accountEmail}}. Be administratören för din identitetsleverantör att publicera en e-postadress för kontot och försök igen.",
+      "inactive_user": "AlgaPSA-användaren för {{providerEmail}} är inaktiv och kan därför inte kopplas. Be din administratör att aktivera den igen och försök sedan på nytt.",
+      "user_type_mismatch": "{{providerEmail}} motsvarar en användare i kundportalen, inte en intern AlgaPSA-användare. Koppla i stället ett konto som använder {{accountEmail}}.",
+      "tenant_mismatch": "{{providerEmail}} tillhör en annan organisation än {{accountEmail}}. Koppla ett konto från din egen organisation.",
+      "generic": "Vi kunde inte koppla kontot till {{accountEmail}}. Försök igen eller kontakta din administratör.",
+      "unknownProviderEmail": "ett konto utan e-postadress"
+    },
     "verify": {
       "title": "Skydda ditt konto med SSO",
       "description": "Koppla Azure AD eller Google Workspace för att använda organisationens policyer och slippa lokala uppmaningar om tvåfaktorsautentisering.",

@@ -727,6 +727,16 @@
     }
   },
   "connectSso": {
+    "linkError": {
+      "title": "SSO-Verknüpfung fehlgeschlagen.",
+      "no_matching_user": "Das Konto, mit dem Sie sich angemeldet haben, lautet {{providerEmail}}, Ihre AlgaPSA-Anmeldung lautet jedoch {{accountEmail}}. Verknüpfen Sie ein Konto, das {{accountEmail}} verwendet, oder bitten Sie den Administrator Ihres Identitätsanbieters, {{accountEmail}} als primäre E-Mail-Adresse dieses Kontos festzulegen.",
+      "missing_email": "Ihr Identitätsanbieter hat für dieses Konto keine E-Mail-Adresse zurückgegeben, daher kann es Ihrer AlgaPSA-Anmeldung {{accountEmail}} nicht zugeordnet werden. Bitten Sie den Administrator Ihres Identitätsanbieters, eine E-Mail-Adresse für das Konto zu veröffentlichen, und versuchen Sie es erneut.",
+      "inactive_user": "Der AlgaPSA-Benutzer für {{providerEmail}} ist inaktiv und kann daher nicht verknüpft werden. Bitten Sie Ihren Administrator, ihn zu reaktivieren, und versuchen Sie es erneut.",
+      "user_type_mismatch": "{{providerEmail}} gehört zu einem Benutzer des Kundenportals und nicht zu einem internen AlgaPSA-Benutzer. Verknüpfen Sie stattdessen ein Konto, das {{accountEmail}} verwendet.",
+      "tenant_mismatch": "{{providerEmail}} gehört zu einer anderen Organisation als {{accountEmail}}. Verknüpfen Sie ein Konto aus Ihrer eigenen Organisation.",
+      "generic": "Dieses Konto konnte nicht mit {{accountEmail}} verknüpft werden. Bitte versuchen Sie es erneut oder wenden Sie sich an Ihren Administrator.",
+      "unknownProviderEmail": "ein Konto ohne E-Mail-Adresse"
+    },
     "verify": {
       "title": "Sichern Sie Ihr Konto mit SSO",
       "description": "Verknüpfen Sie Azure AD oder Google Workspace, um organisatorische Richtlinien wiederzuverwenden und lokale Zwei-Faktor-Abfragen zu überspringen.",

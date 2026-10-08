@@ -377,7 +377,17 @@
         "verifiedContact": "Verifierad e-postadress för kontakten",
         "validPassword": "Giltigt lösenord"
       }
-    }
+    },
+    "ssoNoMatchTitle": "SSO-inloggningen misslyckades",
+    "ssoNoMatch": {
+      "no_matching_user": "Inget kundportalskonto matchar {{providerEmail}}. Logga in med ditt lösenord eller kontakta din tjänsteleverantör.",
+      "missing_email": "Din identitetsleverantör returnerade ingen e-postadress, så inget kundportalskonto kunde matchas. Logga in med ditt lösenord eller kontakta din tjänsteleverantör.",
+      "inactive_user": "Kundportalskontot för {{providerEmail}} är inaktivt. Kontakta din tjänsteleverantör för att aktivera det igen.",
+      "user_type_mismatch": "{{providerEmail}} är inget kundportalskonto. Kontakta din tjänsteleverantör.",
+      "tenant_mismatch": "{{providerEmail}} tillhör en annan organisations portal. Logga in med ditt lösenord eller kontakta din tjänsteleverantör."
+    },
+    "configurationTitle": "Inloggningen misslyckades",
+    "configurationMessage": "Inloggningen misslyckades. Försök igen eller kontakta din tjänsteleverantör."
   },
   "account": {
     "title": "Konto",

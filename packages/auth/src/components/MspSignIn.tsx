@@ -9,6 +9,7 @@ import Alert from './Alert';
 import type { AlertProps } from '@alga-psa/types';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Ticket, Mail, Calendar, Clock, Users, FileText, Layers } from 'lucide-react';
+import { oauthMappingFailureFallbackMessage, parseOAuthMappingFailureCode } from '../lib/sso/types';
 
 interface MspSignInProps {
   initialEmail?: string;
@@ -35,14 +36,32 @@ export default function MspSignIn({ initialEmail }: MspSignInProps) {
 
   const callbackUrl = searchParams?.get('callbackUrl') || '/msp/dashboard';
   const error = searchParams?.get('error');
+  // SSO mapping failures carry why they failed and which email the provider
+  // presented, so the page can say more than "Access Denied".
+  const reason = parseOAuthMappingFailureCode(searchParams?.get('reason'));
+  const providerEmail = searchParams?.get('providerEmail') ?? '';
 
   // Handle error messages from URL parameters
   useEffect(() => {
     if (error === 'AccessDenied') {
       setAlertInfo({
         type: 'error',
-        title: t('signIn.alerts.accessDeniedTitle', 'Access Denied'),
-        message: t('signIn.alerts.accessDeniedMessage', 'You do not have permission to access the MSP dashboard.')
+        title: reason
+          ? t('signIn.alerts.ssoNoMatchTitle', 'SSO sign-in failed')
+          : t('signIn.alerts.accessDeniedTitle', 'Access Denied'),
+        message: reason
+          ? t(`signIn.alerts.ssoNoMatch.${reason}`, {
+              providerEmail,
+              defaultValue: oauthMappingFailureFallbackMessage(reason, 'internal', providerEmail),
+            })
+          : t('signIn.alerts.accessDeniedMessage', 'You do not have permission to access the MSP dashboard.')
+      });
+      setIsAlertOpen(true);
+    } else if (error === 'Configuration') {
+      setAlertInfo({
+        type: 'error',
+        title: t('signIn.alerts.configurationTitle', 'Sign-in failed'),
+        message: t('signIn.alerts.configurationMessage', 'Sign-in failed. Please try again or contact support.')
       });
       setIsAlertOpen(true);
     } else if (error === 'SessionRevoked') {
@@ -53,7 +72,7 @@ export default function MspSignIn({ initialEmail }: MspSignInProps) {
       });
       setIsAlertOpen(true);
     }
-  }, [error, t]);
+  }, [error, reason, providerEmail, t]);
 
   const handle2FA = (twoFactorCode: string) => {
     setIsOpen2FA(false);

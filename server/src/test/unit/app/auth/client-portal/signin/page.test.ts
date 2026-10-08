@@ -14,6 +14,7 @@ const getTenantLocaleBySlugMock = vi.fn();
 const recordPortalDomainSeenMock = vi.fn();
 
 const ClientPortalSignInMock = () => null;
+const ClientPortalSsoFailureNoticeMock = () => null;
 const ClientPortalTenantDiscoveryMock = () => null;
 const PortalSwitchPromptMock = () => null;
 const I18nWrapperMock = ({ children }: { children?: React.ReactNode }) => children ?? null;
@@ -55,6 +56,7 @@ vi.mock('@alga-psa/ui/lib/i18n/serverOnly', () => ({
 
 vi.mock('@alga-psa/auth/client', () => ({
   ClientPortalSignIn: ClientPortalSignInMock,
+  ClientPortalSsoFailureNotice: ClientPortalSsoFailureNoticeMock,
   PortalSwitchPrompt: PortalSwitchPromptMock,
 }));
 
@@ -114,6 +116,9 @@ describe('ClientPortalSignInPage', () => {
     // wrapped: unwrapped it renders English whatever the visitor's locale is.
     expect((result as any)?.type).toBe(I18nWrapperMock);
     expect(inner(result)?.type).toBe(ClientPortalTenantDiscoveryMock);
+    // An SSO mapping failure can redirect here with no tenant; discovery shows
+    // no error of its own, so the notice has to travel with it.
+    expect(inner(result)?.props?.notice?.type).toBe(ClientPortalSsoFailureNoticeMock);
   });
 
   it('redirects authenticated client portal users to the provided callback when already authenticated', async () => {

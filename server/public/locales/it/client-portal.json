@@ -322,7 +322,17 @@
         "verifiedContact": "Email di contatto verificata",
         "validPassword": "Password valida"
       }
-    }
+    },
+    "ssoNoMatchTitle": "Accesso SSO non riuscito",
+    "ssoNoMatch": {
+      "no_matching_user": "Nessun account del portale clienti corrisponde a {{providerEmail}}. Accedi con la tua password o contatta il tuo fornitore di servizi.",
+      "missing_email": "Il tuo provider di identità non ha restituito un indirizzo email, quindi non è stato possibile individuare un account del portale clienti. Accedi con la tua password o contatta il tuo fornitore di servizi.",
+      "inactive_user": "L'account del portale clienti per {{providerEmail}} non è attivo. Contatta il tuo fornitore di servizi per riattivarlo.",
+      "user_type_mismatch": "{{providerEmail}} non è un account del portale clienti. Contatta il tuo fornitore di servizi.",
+      "tenant_mismatch": "{{providerEmail}} appartiene al portale di un'altra organizzazione. Accedi con la tua password o contatta il tuo fornitore di servizi."
+    },
+    "configurationTitle": "Accesso non riuscito",
+    "configurationMessage": "L'accesso non è riuscito. Riprova oppure contatta il tuo fornitore di servizi."
   },
   "account": {
     "title": "Account",

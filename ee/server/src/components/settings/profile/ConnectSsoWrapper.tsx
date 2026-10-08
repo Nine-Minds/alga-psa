@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
+import { useSearchParams } from "next/navigation";
+import { SSO_PROFILE_TAB_URL } from "@alga-psa/auth/lib/sso/linkStateCookie";
 import ConnectSsoClient from "./ConnectSsoClient";
 import { getSsoProviderOptionsAction } from "@ee/lib/actions/auth/getSsoProviderOptions";
 import { getLinkedSsoAccountsAction, type LinkedSsoAccount } from "@ee/lib/actions/auth/ssoPreferences";
@@ -26,6 +28,7 @@ function getErrorMessage(err: unknown): string {
 
 export default function ConnectSsoWrapper() {
   const { t } = useTranslation('common');
+  const searchParams = useSearchParams();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [email, setEmail] = useState("");
@@ -33,6 +36,26 @@ export default function ConnectSsoWrapper() {
   const [linkedAccounts, setLinkedAccounts] = useState<LinkedSsoAccount[]>([]);
   const [providerOptions, setProviderOptions] = useState<ProviderOption[]>([]);
   const isMountedRef = useRef(true);
+  // Captured once: the params are stripped below so a refresh does not replay
+  // a stale outcome from a previous link attempt.
+  const [linkOutcome] = useState(() => ({
+    linked: searchParams?.get("linked") === "1",
+    linkError: searchParams?.get("linkError") ?? undefined,
+    providerEmail: searchParams?.get("providerEmail") ?? undefined,
+  }));
+
+  // Strip the params through the History API rather than the router: a router
+  // navigation re-reads `tab` and would unmount this tab (and the banner) with
+  // it, which is exactly what the outcome needs to outlive.
+  useEffect(() => {
+    if (!linkOutcome.linked && !linkOutcome.linkError) {
+      return;
+    }
+    if (typeof window === "undefined") {
+      return;
+    }
+    window.history.replaceState({}, "", SSO_PROFILE_TAB_URL);
+  }, [linkOutcome]);
 
   useEffect(() => {
     isMountedRef.current = true;
@@ -112,6 +135,9 @@ export default function ConnectSsoWrapper() {
       twoFactorEnabled={twoFactorEnabled}
       linkedAccounts={linkedAccounts}
       providerOptions={providerOptions}
+      linkStatus={linkOutcome.linkError ? "error" : linkOutcome.linked ? "linked" : undefined}
+      linkErrorCode={linkOutcome.linkError}
+      linkErrorProviderEmail={linkOutcome.providerEmail}
     />
   );
 }

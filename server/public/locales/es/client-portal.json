@@ -322,7 +322,17 @@
         "verifiedContact": "Correo electrónico de contacto verificado",
         "validPassword": "Contraseña válida"
       }
-    }
+    },
+    "ssoNoMatchTitle": "No se pudo iniciar sesión con SSO",
+    "ssoNoMatch": {
+      "no_matching_user": "Ninguna cuenta del portal del cliente coincide con {{providerEmail}}. Inicie sesión con su contraseña o póngase en contacto con su proveedor de servicios.",
+      "missing_email": "Su proveedor de identidad no devolvió una dirección de correo electrónico, por lo que no se pudo asociar ninguna cuenta del portal del cliente. Inicie sesión con su contraseña o póngase en contacto con su proveedor de servicios.",
+      "inactive_user": "La cuenta del portal del cliente para {{providerEmail}} está inactiva. Póngase en contacto con su proveedor de servicios para reactivarla.",
+      "user_type_mismatch": "{{providerEmail}} no es una cuenta del portal del cliente. Póngase en contacto con su proveedor de servicios.",
+      "tenant_mismatch": "{{providerEmail}} pertenece al portal de otra organización. Inicie sesión con su contraseña o póngase en contacto con su proveedor de servicios."
+    },
+    "configurationTitle": "No se pudo iniciar sesión",
+    "configurationMessage": "No se pudo iniciar sesión. Inténtelo de nuevo o póngase en contacto con su proveedor de servicios."
   },
   "account": {
     "title": "Cuenta",
