@@ -103,8 +103,6 @@ services:
       POSTGRES_HOST_AUTH_METHOD: md5
     secrets:
       - postgres_password
-    ports:
-      - "${EXPOSE_DB_PORT:-5432}:5432"
     networks:
       - app-network
 
@@ -121,8 +119,6 @@ services:
       dockerfile: redis/Dockerfile
     environment:
       <<: *shared-environment
-    ports:
-      - '${EXPOSE_REDIS_PORT:-6379}:6379'
     secrets:
       - redis_password
     networks:

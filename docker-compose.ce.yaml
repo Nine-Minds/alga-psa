@@ -352,11 +352,22 @@ services:
       - postgres_data:/var/lib/postgresql/data
     secrets:
       - postgres_password
+    ports:
+      - "${EXPOSE_INFRA_BIND_ADDR:-127.0.0.1}:${EXPOSE_DB_PORT:-5432}:5432"
 
   redis:
     extends:
       file: docker-compose.base.yaml
       service: redis # Updated from redis-base
+    ports:
+      - "${EXPOSE_INFRA_BIND_ADDR:-127.0.0.1}:${EXPOSE_REDIS_PORT:-6379}:6379"
+
+  pgbouncer:
+    extends:
+      file: docker-compose.base.yaml
+      service: pgbouncer
+    ports:
+      - "${EXPOSE_INFRA_BIND_ADDR:-127.0.0.1}:${EXPOSE_PGBOUNCER_PORT:-6432}:6432"
 
 networks:
   app-network:
