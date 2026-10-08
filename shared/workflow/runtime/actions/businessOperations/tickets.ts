@@ -740,6 +740,10 @@ export function registerTicketActions(): void {
             is_resolution: false,
             author_type: 'system',
             author_id: tx.actorUserId,
+            // `metadata.source = 'workflow'` is the persisted workflow-origin marker: the ticket.status_age
+            // no-activity clock ignores such comments, so a workflow's own comment can't re-arm itself.
+            // Not `is_system_generated`: that would also make the comment uneditable and change how its
+            // author renders, which is user-visible.
             metadata: { source: 'workflow', run_id: ctx.runId, step_path: ctx.stepPath }
           },
           tx.tenantId,

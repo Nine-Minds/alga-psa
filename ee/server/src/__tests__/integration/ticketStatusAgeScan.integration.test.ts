@@ -5,6 +5,14 @@ import { createTestDbConnection } from '@main-test-utils/dbConfig';
 import { createDateTriggerScanHandler } from '../../../../../packages/jobs/src/lib/handlers/dateTriggerScanHandler';
 import { launchDateTriggeredWorkflows } from '../../../../packages/workflows/src/lib/dateTriggerLauncher';
 import { dateTriggerPayloadSchemas } from '../../../../../shared/workflow/runtime/schemas/dateTriggerPayloadSchemas';
+import { TicketModel } from '../../../../../shared/models/ticketModel';
+import {
+  writeTicketActivity,
+  TICKET_ACTIVITY_ACTOR,
+  TICKET_ACTIVITY_ENTITY,
+  TICKET_ACTIVITY_EVENT,
+  TICKET_ACTIVITY_SOURCE,
+} from '../../../../../shared/lib/ticketActivity';
 import { ticketStatusClockPatch } from '../../../../../shared/lib/ticketStatusClock';
 
 /**
@@ -222,6 +230,62 @@ describe('ticket.status_age date trigger integration', () => {
       expect(rows).toHaveLength(1);
       expect(rows[0].input_json).toMatchObject({ occursOn: '2026-09-12', enteredStatusAt: '2026-09-01T09:00:00.000Z' });
       expect(rows[0].trigger_fire_key).toContain(':2026-09-05T10:00:00.000Z:');
+    });
+  });
+
+  it('with requireNoActivity, a workflow-authored comment or audit row does not move the clock; a human comment does', async () => {
+    await withScenario(async ({ trx, tenant, userId, board, status, ticket, workflow, scan, runs }) => {
+      const b = await board('Support');
+      const waiting = await status(b, 'Waiting for client');
+      const t = await ticket(b, waiting, '2026-09-01T09:00:00.000Z');
+      const quiet = await workflow({ statusName: 'Waiting for client', days: 7, requireNoActivity: true });
+      const comment = async (at: string, workflowAuthored: boolean) => {
+        // Same inputs as the tickets.add_comment action (internal: so it needs no contact/portal setup).
+        const created = await TicketModel.createComment(
+          {
+            ticket_id: t, content: 'Checking in', is_internal: true, is_resolution: false,
+            author_type: workflowAuthored ? 'system' : 'internal', author_id: userId ?? undefined,
+            ...(workflowAuthored ? { metadata: { source: 'workflow', run_id: uuidv4(), step_path: 'root.steps[0]' } } : {}),
+          },
+          tenant, trx, undefined, undefined, userId ?? undefined,
+        );
+        await trx('comments').where({ tenant, comment_id: created.comment_id }).update({ created_at: at });
+        return created.comment_id;
+      };
+
+      // (a) 7 days after entering the status: fires once.
+      await scan('2026-09-08T12:00:00Z');
+      await scan('2026-09-09T12:00:00Z');
+      expect(await runs(quiet)).toHaveLength(1);
+
+      // (b) The run comments (and audits as the workflow actor); scanning 3 and 8 days later launches nothing.
+      const workflowCommentId = await comment('2026-09-09T13:00:00Z', true);
+      const stored = await trx('comments').where({ tenant, comment_id: workflowCommentId }).first('metadata');
+      expect(stored.metadata).toMatchObject({ source: 'workflow' });
+      // Real write path: the same helper + workflow actor/source the workflow actions pass
+      // (auditCloseRulesBypassIfGated, applyChecklistTemplateToTicket in tickets.ts).
+      await writeTicketActivity(trx, {
+        tenant, ticketId: t, eventType: TICKET_ACTIVITY_EVENT.UPDATED, entityType: TICKET_ACTIVITY_ENTITY.TICKET,
+        actor: { actorType: TICKET_ACTIVITY_ACTOR.WORKFLOW, userId: userId ?? null },
+        source: TICKET_ACTIVITY_SOURCE.WORKFLOW, occurredAt: '2026-09-09T13:00:01Z',
+        changes: { priority_id: { old: 'a', new: 'b' } },
+      });
+      // Defensive: a row tagged only by source (actor 'user') is also ignored.
+      await trx('ticket_audit_logs').insert({ tenant, ticket_id: t, event_type: 'TICKET_UPDATED', entity_type: 'ticket', actor_type: 'user', source: 'workflow', occurred_at: '2026-09-09T13:00:02Z', changes: JSON.stringify({ priority: { old: 2, new: 3 } }) });
+      const wfAudit = await trx('ticket_audit_logs').where({ tenant, ticket_id: t, actor_type: 'workflow', source: 'workflow' });
+      expect(wfAudit).toHaveLength(1);
+      await scan('2026-09-12T12:00:00Z');
+      await scan('2026-09-17T12:00:00Z');
+      expect(await runs(quiet)).toHaveLength(1);
+
+      // (c) A person comments: that moves the clock. Nothing before 7 days later, one run after.
+      await comment('2026-09-18T10:00:00Z', false);
+      await scan('2026-09-24T12:00:00Z');
+      expect(await runs(quiet)).toHaveLength(1);
+      await scan('2026-09-25T12:00:00Z');
+      const rows = await runs(quiet);
+      expect(rows).toHaveLength(2);
+      expect(rows[1].trigger_fire_key).toContain(':2026-09-18T10:00:00.000Z:');
     });
   });
 

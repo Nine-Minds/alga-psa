@@ -816,7 +816,7 @@
       "statusAgeStatusMissing": "Auf dem ausgewählten Board gibt es keinen Status mit diesem Namen.",
       "statusAgeOptionsFailed": "Status und Boards konnten nicht geladen werden.",
       "statusAgeMatchByName": "Status werden nach Namen abgeglichen. Wird ein Status umbenannt, trifft dieser Trigger nicht mehr zu.",
-      "statusAgeBoard": "Board (optional)",
+      "statusAgeBoard": "Board (wahlweise)",
       "statusAgeAnyBoard": "Beliebiges Board",
       "statusAgeDays": "Tage im Status",
       "statusAgeRepeat": "Wiederholen, solange im Status",

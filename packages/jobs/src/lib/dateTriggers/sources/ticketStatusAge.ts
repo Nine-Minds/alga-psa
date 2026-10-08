@@ -16,14 +16,23 @@ type StatusAgeParams = {
  * "Last activity" for `requireNoActivity`: the newest comment, or the newest audit-log entry a person
  * or integration made. Deliberately NOT tickets.updated_at: the auto-close warning, SLA bookkeeping,
  * response-state updates and bundle propagation all bump updated_at without anyone touching the ticket,
- * which would keep an idle ticket "active" forever. System-actor audit rows and the auto-close warning
- * are excluded for the same reason.
+ * which would keep an idle ticket "active" forever.
+ *
+ * Rule: activity is what a person, contact or integration did. Excluded, for the same reason:
+ *  - system-actor audit rows and the auto-close warning;
+ *  - anything a workflow did. Comments carry `metadata.source = 'workflow'` (written by
+ *    `tickets.add_comment`; deliberately not `is_system_generated`, which would also make the comment
+ *    uneditable and change its author rendering), and audit rows carry actor_type or source 'workflow'.
+ *    Otherwise a workflow that comments on the ticket would move its own anchor and re-fire.
+ * Human and contact comments always count.
  */
 const LAST_ACTIVITY_SQL = `GREATEST(
-  (SELECT MAX(c.created_at) FROM comments c WHERE c.tenant = t.tenant AND c.ticket_id = t.ticket_id),
+  (SELECT MAX(c.created_at) FROM comments c WHERE c.tenant = t.tenant AND c.ticket_id = t.ticket_id
+     AND (c.metadata->>'source') IS DISTINCT FROM 'workflow'),
   (SELECT MAX(l.occurred_at) FROM ticket_audit_logs l
      WHERE l.tenant = t.tenant AND l.ticket_id = t.ticket_id
-       AND l.actor_type <> 'system' AND l.event_type <> 'TICKET_AUTO_CLOSE_WARNING_SENT')
+       AND l.actor_type NOT IN ('system', 'workflow') AND l.source IS DISTINCT FROM 'workflow'
+       AND l.event_type <> 'TICKET_AUTO_CLOSE_WARNING_SENT')
 )`;
 
 /** Whole days between two YYYY-MM-DD dates. */
