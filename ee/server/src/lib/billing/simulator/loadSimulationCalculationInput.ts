@@ -888,6 +888,10 @@ interface SimulateFamilyInput {
   accumulator: SimulationCalculationPeriodInput;
 }
 
+const isUnit = (service: ScenarioLineService): boolean =>
+  service.configuration.configuration_type === "Fixed" &&
+  service.configuration.pricing_basis === "unit";
+
 async function simulateFixedCharges(
   input: SimulateFamilyInput & { fixedServices: ScenarioLineService[] },
 ): Promise<void> {
@@ -917,8 +921,13 @@ async function simulateFixedCharges(
       default_rate: service.default_rate,
       tax_rate_id: service.tax_rate_id,
       config_id: syntheticConfigId(line.key, service.service_id),
-      configuration_quantity: service.quantity,
+      // Per-unit members keep their raw quantity (0 is an explicit zero);
+      // every other fixed member keeps the >= 1 clamped quantity.
+      configuration_quantity: isUnit(service)
+        ? (service.configuration_quantity ?? service.quantity)
+        : service.quantity,
       service_base_rate: service.configuration.base_rate,
+      pricing_basis: isUnit(service) ? "unit" : null,
     };
   });
 
@@ -953,6 +962,7 @@ async function simulateFixedCharges(
         configurationId: service.config_id,
         configurationQuantity: service.configuration_quantity,
         baseRate: service.service_base_rate,
+        pricingBasis: service.pricing_basis,
       })),
       // The scenario carries the full service list; there is no separate
       // catalog fallback row to load for a hypothetical line.

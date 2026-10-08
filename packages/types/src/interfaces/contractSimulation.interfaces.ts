@@ -2,6 +2,7 @@ import type { ISO8601String } from "../lib/temporal";
 import type { CadenceOwner } from "./recurringTiming.interfaces";
 import type { ChargeExplanation } from "./billingCompute.interfaces";
 import type { BillingCycleType } from "./billing.interfaces";
+import type { FixedPricingBasis } from "./contractLineServiceConfiguration.interfaces";
 import type { WasmInvoiceViewModel } from "../lib/invoice-renderer/types";
 
 /**
@@ -50,8 +51,17 @@ export interface ScenarioPoolRef {
 
 export interface ScenarioFixedConfig {
   configuration_type: "Fixed";
-  /** Cents. Null falls back to the service catalog default rate. */
+  /**
+   * Cents. Null falls back to the service catalog default rate. For a
+   * 'unit' member this is the operator's unit-rate override (the same value a
+   * persisted unit configuration stores in `base_rate`).
+   */
   base_rate: number | null;
+  /**
+   * 'unit' bills quantity × unit rate (zero bills zero) through the shared
+   * fixed-charge path; absent/'bundle' keeps allocation semantics.
+   */
+  pricing_basis?: FixedPricingBasis | null;
 }
 
 export interface ScenarioHourlyConfig extends ScenarioPoolRef {
@@ -263,7 +273,11 @@ export interface ContractDraftSimulationInput {
   fixed_services: Array<{
     service_id: string;
     service_name?: string;
+    /** Allocation quantity for 'bundle'; recurring units (>= 0) for 'unit'. */
     quantity: number;
+    pricing_basis?: FixedPricingBasis | null;
+    /** Minor units of the draft currency; null/absent follows the catalog price. Only for 'unit'. */
+    unit_rate?: number | null;
     bucket_overlay?: ContractDraftBucketOverlayInput | null;
   }>;
   product_services: Array<{

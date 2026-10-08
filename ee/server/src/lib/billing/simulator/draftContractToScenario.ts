@@ -85,6 +85,9 @@ export async function draftContractToScenario(
       configuration_id: `draft-config-${serviceId}-${configuration.configuration_type}`,
       service_id: catalog.service_id,
       service_name: catalog.service_name,
+      // Clamp to >= 1 for allocation/hourly/usage/products. Per-unit Fixed
+      // members read the raw configuration_quantity instead, where 0 is an
+      // explicit zero.
       quantity: Math.max(1, Math.round(quantity || 1)),
       custom_rate: customRate,
       default_rate: catalog.currency_rate,
@@ -142,9 +145,15 @@ export async function draftContractToScenario(
   const lines: ScenarioLine[] = [];
   if (draft.fixed_services.length > 0 || draft.fixed_base_rate != null) {
     const services = draft.fixed_services.flatMap((item) => {
+      const isUnit = item.pricing_basis === "unit";
       const primary = service(item.service_id, item.quantity, null, {
         configuration_type: "Fixed",
-        base_rate: null,
+        // A unit member's base_rate is its unit-rate override; null follows
+        // the catalog price in the draft currency (resolved by the shared
+        // fixed-charge path, not here).
+        base_rate:
+          isUnit && item.unit_rate != null ? Math.round(item.unit_rate) : null,
+        ...(isUnit ? { pricing_basis: "unit" as const } : {}),
       });
       return item.bucket_overlay
         ? [primary, bucket(primary, item.bucket_overlay)]
