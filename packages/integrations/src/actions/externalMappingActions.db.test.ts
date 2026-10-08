@@ -47,6 +47,7 @@ import { getStoredQboCredentialsMap } from '../lib/qbo/qboClientService';
 import { getStoredXeroConnections } from '../lib/xero/xeroClientService';
 import {
   createExternalEntityMapping,
+  createExternalEntityMappings,
   updateExternalEntityMapping,
   deleteExternalEntityMapping,
   getExternalEntityMappings,
@@ -82,7 +83,7 @@ async function seedService(tenantId: string): Promise<string> {
     tenant: tenantId,
     name: `Service Type ${serviceId.slice(0, 8)}`,
     is_active: true,
-    order_number: 1,
+    order_number: Math.floor(Math.random() * 1_000_000_000),
   });
   await db('service_catalog').insert({
     tenant: tenantId,
@@ -975,5 +976,115 @@ describe('unlink (tombstone) and explicit relink', () => {
 
     const audit = await lastAudit(tenantA, 'CREATE');
     expect(audit.details).toMatchObject({ relinked: true });
+  });
+});
+
+describe('createExternalEntityMappings — bulk create with per-row isolation', () => {
+  const bulkRow = (serviceId: string, code: string, kind: 'item' | 'account') => ({
+    integration_type: 'xero',
+    alga_entity_type: 'service',
+    alga_entity_id: serviceId,
+    external_entity_id: code,
+    external_realm_id: xeroRealm,
+    metadata: { xeroTargetKind: kind },
+  });
+
+  it('persists the good rows with their own kinds while a duplicate row fails alone', async () => {
+    xeroListItemsMock.mockResolvedValue([
+      { itemId: 'g1', code: '200', name: 'Item 200', status: 'ACTIVE' },
+    ]);
+    xeroListAccountsMock.mockResolvedValue([
+      { accountId: 'ga1', code: '200', name: 'Sales', type: 'REVENUE', status: 'ACTIVE' },
+      { accountId: 'ga2', code: '210', name: 'Hosting Sales', type: 'REVENUE', status: 'ACTIVE' },
+    ]);
+    xeroListItemsMock.mockClear();
+    xeroListAccountsMock.mockClear();
+    const extraService = await seedService(tenantA);
+    const unknownService = uuidv4();
+    await (createExternalEntityMapping as any)(
+      { user_id: 'u' },
+      { tenant: tenantA },
+      bulkRow(serviceA, '200', 'item')
+    );
+    xeroListItemsMock.mockClear();
+
+    const results = await (createExternalEntityMappings as any)(
+      { user_id: 'u' },
+      { tenant: tenantA },
+      [
+        bulkRow(serviceA, '200', 'item'),
+        bulkRow(unknownService, '200', 'item'),
+        bulkRow(extraService, '210', 'account'),
+      ]
+    );
+
+    expect(results.map((r: any) => r.ok)).toEqual([false, false, true]);
+    expect(results[0].error).toMatch(/already exists/);
+    expect(xeroListItemsMock).toHaveBeenCalledTimes(1);
+    expect(xeroListAccountsMock).toHaveBeenCalledTimes(1);
+    const rows = await db('tenant_external_entity_mappings').where({ tenant: tenantA });
+    expect(rows).toHaveLength(2);
+    expect(rows.find((r: any) => r.alga_entity_id === extraService).metadata).toMatchObject({
+      xeroTargetKind: 'account',
+    });
+  });
+
+  // KNOWN LIMITATION (pre-existing, same for the single create): the unique
+  // index idx_unique_external_mapping is (tenant, integration_type,
+  // alga_entity_type, external_entity_id, realm) and does not include the Xero
+  // target kind, so item:200 and account:200 cannot both be mapped for the
+  // same realm even though the app treats them as distinct. The failing row
+  // gets the duplicate error and does not disturb the rest of the batch.
+  it('surfaces the kind-blind unique index as a per-row duplicate error without aborting the batch', async () => {
+    xeroListItemsMock.mockResolvedValue([
+      { itemId: 'g1', code: '200', name: 'Item 200', status: 'ACTIVE' },
+      { itemId: 'g2', code: '201', name: 'Item 201', status: 'ACTIVE' },
+    ]);
+    xeroListAccountsMock.mockResolvedValue([
+      { accountId: 'ga1', code: '200', name: 'Sales', type: 'REVENUE', status: 'ACTIVE' },
+    ]);
+    const [s1, s2, s3, s4] = [
+      await seedService(tenantA),
+      await seedService(tenantA),
+      await seedService(tenantA),
+      await seedService(tenantA),
+    ];
+    const results = await (createExternalEntityMappings as any)(
+      { user_id: 'u' },
+      { tenant: tenantA },
+      [
+        bulkRow(s1, '201', 'item'),
+        bulkRow(s2, '201', 'item'),
+        bulkRow(s3, '200', 'account'),
+        bulkRow(s4, '200', 'account'),
+      ]
+    );
+    // s2 collides with s1 on the same item; s4 collides with s3 on the same account.
+    expect(results.map((r: any) => r.ok)).toEqual([true, false, true, false]);
+    expect(results[1].error).toMatch(/target is already mapped to another entity/);
+    expect(results[3].error).toMatch(/target is already mapped to another entity/);
+  });
+
+  it('maps each unique-index violation to its own message', async () => {
+    const target = uuidv4();
+    const svc1 = await seedService(tenantA);
+    const svc2 = await seedService(tenantA);
+    const make = (alga: string, external: string) => ({
+      integration_type: 'quickbooks_online',
+      alga_entity_type: 'service',
+      alga_entity_id: alga,
+      external_entity_id: external,
+      external_realm_id: realmA,
+    });
+    const first = await (createExternalEntityMapping as any)({ user_id: 'u' }, { tenant: tenantA }, make(svc1, target));
+    expect(first).not.toHaveProperty('actionError');
+
+    // Same target, different entity: idx_unique_external_mapping.
+    const sameTarget = await (createExternalEntityMapping as any)({ user_id: 'u' }, { tenant: tenantA }, make(svc2, target));
+    expect(sameTarget.actionError).toMatch(/target is already mapped to another entity/);
+
+    // Same entity, different target: idx_unique_alga_mapping.
+    const sameEntity = await (createExternalEntityMapping as any)({ user_id: 'u' }, { tenant: tenantA }, make(svc1, uuidv4()));
+    expect(sameEntity.actionError).toMatch(/A mapping already exists for this entity/);
   });
 });

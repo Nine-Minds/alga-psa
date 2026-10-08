@@ -803,7 +803,8 @@
           "recipientPlaceholder": "voce@exemplo.com",
           "testingButton": "Testando...",
           "runButton": "Testar conexão"
-        }
+        },
+        "ticketIdentityRequired": "Escolha uma identidade de email de tickets abaixo para definir o domínio de envio."
       },
       "ticketingFrom": {
         "title": "Emissão de tickets no endereço",
@@ -842,7 +843,18 @@
         "description": "As mensagens são enviadas como a caixa selecionada pelo Microsoft Graph e salvas em Itens Enviados.",
         "loadFailed": "Não foi possível carregar as caixas de correio do Microsoft 365.",
         "saved": "Caixa de correio de envio atualizada."
-      }
+      },
+      "diagnosticsButton": "Executar diagnóstico de e-mail de saída",
+      "saveSettings": "Salvar configurações de saída",
+      "discardChanges": "Descartar alterações",
+      "unsaved": "Alterações não salvas",
+      "noPendingChanges": "Nenhuma alteração não salva",
+      "saving": "Salvando as configurações de saída…",
+      "saved": "Configurações de saída salvas.",
+      "saveFailed": "Não foi possível salvar as configurações de saída. Suas alterações ainda estão aqui. Tente novamente.",
+      "diagnosticsSaveHelp": "Salve ou descarte suas alterações antes de verificar as configurações de saída.",
+      "saveBeforeDomainRemoval": "Salve ou descarte suas alterações de saída antes de remover um domínio.",
+      "senderAddressAfterSave": "Exibido após salvar."
     },
     "inbound": {
       "intro": "Configure o roteamento de e-mail de entrada e a automação específica do provedor."

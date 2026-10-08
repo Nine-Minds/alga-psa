@@ -1,0 +1,45 @@
+[
+  {
+    "id": "T001",
+    "description": "Component: activating a populated contract name pushes the exact client-contract Billing URL and does not open the assignment editor.",
+    "implemented": false,
+    "featureIds": [
+      "F001",
+      "F002",
+      "F003",
+      "F005"
+    ]
+  },
+  {
+    "id": "T002",
+    "description": "Component: selecting View details pushes the same exact client-contract Billing URL and does not open the assignment editor.",
+    "implemented": false,
+    "featureIds": [
+      "F001",
+      "F004",
+      "F005",
+      "F007"
+    ]
+  },
+  {
+    "id": "T003",
+    "description": "Component regression: clicking the row or selecting Edit opens the existing assignment editor without navigating.",
+    "implemented": false,
+    "featureIds": [
+      "F006"
+    ]
+  },
+  {
+    "id": "T004",
+    "description": "Manual smoke: from a real client's Billing > Contracts tab, open the same active contract through its name and View details action, confirm the Billing detail screen identifies the expected client assignment, then return and confirm Edit and Unassign remain distinct actions.",
+    "implemented": false,
+    "featureIds": [
+      "F002",
+      "F003",
+      "F004",
+      "F005",
+      "F006",
+      "F007"
+    ]
+  }
+]

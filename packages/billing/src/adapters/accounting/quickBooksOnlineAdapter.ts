@@ -51,6 +51,9 @@ import {
   isUnitedStatesQboCountry
 } from '@alga-psa/integrations/lib/qbo/qboCompanyCountry';
 import { getAccountingSyncSettings } from '../../services/accountingSync/accountingSyncSettings';
+import { reconcileExportLineQuantity } from './exportLineQuantity';
+
+const QBO_MAX_QUANTITY_DECIMALS = 6;
 
 /**
  * QuickBooks' US pseudo tax codes. Intuit ships exactly these two on every US
@@ -462,34 +465,35 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
         if (!charge) {
           throw new Error(`QuickBooks adapter: charge ${line.document_line_id} missing for invoice ${invoiceId}`);
         }
-        if (!charge.service_id) {
+        const isServicelessDiscount = !charge.service_id && Boolean(charge.is_discount);
+        if (!charge.service_id && !isServicelessDiscount) {
           throw new Error(`QuickBooks adapter: charge ${charge.item_id} missing service_id for invoice ${invoiceId}`);
         }
 
-        const serviceMapping = await resolver.resolveServiceMapping({
-          tenantId: context.batch.tenant,
-          adapterType: this.type,
-          serviceId: charge.service_id,
-          targetRealm: context.batch.target_realm
-        });
+        const serviceMapping = isServicelessDiscount
+          ? await resolver.resolveDiscountMapping({
+              tenantId: context.batch.tenant,
+              adapterType: this.type,
+              targetRealm: context.batch.target_realm
+            })
+          : await resolver.resolveServiceMapping({
+              tenantId: context.batch.tenant,
+              adapterType: this.type,
+              serviceId: charge.service_id!,
+              targetRealm: context.batch.target_realm
+            });
 
         if (!serviceMapping) {
-          throw new Error(`QuickBooks adapter: no mapping for service ${charge.service_id}`);
+          throw new Error(
+            isServicelessDiscount
+              ? `QuickBooks adapter: no discount mapping for invoice ${invoiceId}`
+              : `QuickBooks adapter: no mapping for service ${charge.service_id}`
+          );
         }
 
         const salesDetail: QboSalesItemLineDetail = {
           ItemRef: { value: serviceMapping.external_entity_id }
         };
-
-        if (charge.quantity != null) {
-          salesDetail.Qty = isCreditNote ? Math.abs(charge.quantity) : charge.quantity;
-        }
-
-        if (charge.unit_price != null) {
-          salesDetail.UnitPrice = isCreditNote
-            ? centsToAmount(Math.abs(charge.unit_price))
-            : centsToAmount(charge.unit_price);
-        }
 
         const serviceDate = resolveQboServiceDate(line);
         if (serviceDate) {
@@ -580,6 +584,17 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
         }
         const netAmountCents = isCreditNote ? Math.abs(rawNetAmountCents) : rawNetAmountCents;
         invoiceNetCents += netAmountCents;
+
+        const rawUnitPriceCents = coerceChargeCents(charge.unit_price);
+        const lineQuantity = reconcileExportLineQuantity({
+          quantity: charge.quantity,
+          unitPriceCents:
+            rawUnitPriceCents !== null && isCreditNote ? Math.abs(rawUnitPriceCents) : rawUnitPriceCents,
+          amountCents: netAmountCents,
+          maxQuantityDecimals: QBO_MAX_QUANTITY_DECIMALS
+        });
+        salesDetail.Qty = isCreditNote ? Math.abs(lineQuantity.quantity) : lineQuantity.quantity;
+        salesDetail.UnitPrice = centsToAmount(lineQuantity.unitPriceCents);
         if (shouldIncludeAuthoritativeTax) {
           const rawTaxCents = coerceChargeCents(charge.tax_amount);
           if (rawTaxCents !== null) {

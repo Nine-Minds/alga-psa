@@ -15,6 +15,7 @@ export default defineConfig({
       'tests/AvailabilitySettings.component.test.tsx',
       'tests/timeEntryProvider.defaultService.test.tsx',
       'tests/calendarSharePicker.component.test.tsx',
+      'tests/timeEntryDialog.saveFailure.test.tsx',
       'tests/agentScheduleView.test.tsx',
       'tests/SchedulePage.accessRetry.test.tsx',
       'tests/SchedulePage.dialogRestore.test.tsx',

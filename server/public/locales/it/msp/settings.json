@@ -2392,6 +2392,11 @@
       "updateFailed": "Impossibile aggiornare il ruolo",
       "validateDeletionFailed": "Impossibile convalidare l’eliminazione. Riprova.",
       "deleteFailed": "Impossibile eliminare il ruolo"
+    },
+    "editDialog": {
+      "title": "Modifica ruolo",
+      "builtInNameLocked": "I nomi dei ruoli predefiniti non possono essere modificati perché il sistema dipende da essi.",
+      "portalLocked": "L'accesso al portale non può essere modificato dopo la creazione di un ruolo."
     }
   },
   "security": {
@@ -3446,7 +3451,10 @@
       "duplicate": "Questo utente ha già il ruolo selezionato.",
       "changePermission": "Autorizzazione negata: non si dispone dell’autorizzazione per modificare i ruoli degli utenti.",
       "missingField": "Manca un campo obbligatorio del ruolo utente.",
-      "missingFieldNamed": "Manca un campo obbligatorio del ruolo utente: {{field}}."
+      "missingFieldNamed": "Manca un campo obbligatorio del ruolo utente: {{field}}.",
+      "nameRequired": "Il nome del ruolo è obbligatorio.",
+      "builtInRename": "I ruoli predefiniti non possono essere rinominati.",
+      "duplicateName": "Esiste già un ruolo denominato \"{{name}}\" per questo portale."
     },
     "secrets": {
       "tenantContextMissing": "Manca il contesto del tenant. Aggiornare la pagina e riprovare.",

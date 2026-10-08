@@ -2392,6 +2392,11 @@
       "updateFailed": "Failed to update role",
       "validateDeletionFailed": "Failed to validate deletion. Please try again.",
       "deleteFailed": "Failed to delete role"
+    },
+    "editDialog": {
+      "title": "Edit Role",
+      "builtInNameLocked": "Built-in role names can't be changed because the system relies on them.",
+      "portalLocked": "Portal access can't be changed after a role is created."
     }
   },
   "security": {
@@ -3446,7 +3451,10 @@
       "duplicate": "That user already has the selected role.",
       "changePermission": "Permission denied: You do not have permission to change user roles.",
       "missingField": "Missing required user role field.",
-      "missingFieldNamed": "Missing required user role field: {{field}}."
+      "missingFieldNamed": "Missing required user role field: {{field}}.",
+      "nameRequired": "Role name is required.",
+      "builtInRename": "Built-in roles cannot be renamed.",
+      "duplicateName": "A role named \"{{name}}\" already exists for this portal."
     },
     "secrets": {
       "tenantContextMissing": "Tenant context is missing. Please refresh and try again.",

@@ -84,6 +84,7 @@ const ProjectTaskModel = {
         'description_rich_text',
         'assigned_to',
         'estimated_hours',
+        'start_date',
         'due_date',
         'wbs_code',
         'project_status_mapping_id',
@@ -109,9 +110,15 @@ const ProjectTaskModel = {
             case 'priority_id':
               finalTaskData[typedKey] = value === '' ? null : value as string | null;
               break;
-            case 'task_name':
             case 'description':
             case 'description_rich_text':
+              // The editor sends null for an emptied description; writing it is
+              // how clearing a description sticks.
+              if (typeof value === 'string' || value === null) {
+                finalTaskData[typedKey] = value as string | null;
+              }
+              break;
+            case 'task_name':
             case 'wbs_code':
             case 'project_status_mapping_id':
             case 'order_key':
@@ -125,6 +132,7 @@ const ProjectTaskModel = {
                 finalTaskData[typedKey] = value;
               }
               break;
+            case 'start_date':
             case 'due_date':
               // Convert string to Date if needed
               if (typeof value === 'string') {

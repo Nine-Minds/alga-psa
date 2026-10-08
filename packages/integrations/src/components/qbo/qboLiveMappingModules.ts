@@ -1,5 +1,6 @@
 import {
   createExternalEntityMapping,
+  createExternalEntityMappings,
   deleteExternalEntityMapping,
   getExternalEntityMappings,
   getQboAutomatedSalesTaxMode,
@@ -17,8 +18,15 @@ import {
 } from '@alga-psa/integrations/actions';
 import type { IService, ITaxRegion } from '@alga-psa/types';
 import { QBO_PSEUDO_TAX_CODE_NON_TAXABLE, QBO_PSEUDO_TAX_CODE_TAXABLE } from '../../lib/qbo/types';
+import {
+  AUTOMATIC_DISCOUNT_MAPPING_ID,
+  DISCOUNT_MAPPING_ENTITY_TYPE
+} from '@alga-psa/types';
 import type {
+  AccountingMappingBulkCreateInput,
+  AccountingMappingBulkCreateResult,
   AccountingMappingContext,
+  AccountingMappingEntityOption,
   AccountingMappingLoadResult,
   AccountingMappingModule
 } from '@alga-psa/integrations/components';
@@ -34,8 +42,8 @@ type MappingLoadConfig<TAlga> = {
   context: AccountingMappingContext;
   algaEntityType: string;
   loadAlgaEntities: (context: AccountingMappingContext) => Promise<TAlga[]>;
-  loadExternalEntities: (context: AccountingMappingContext) => Promise<Array<{ id: string; name: string }>>;
-  mapAlga: (entity: TAlga) => { id: string; name: string };
+  loadExternalEntities: (context: AccountingMappingContext) => Promise<AccountingMappingEntityOption[]>;
+  mapAlga: (entity: TAlga) => AccountingMappingEntityOption;
 };
 
 type PaymentTermOption = {
@@ -47,6 +55,15 @@ const PAYMENT_TERMS: PaymentTermOption[] = [
   { id: 'net_30', name: 'Net 30' },
   { id: 'net_15', name: 'Net 15' },
   { id: 'due_on_receipt', name: 'Due on receipt' }
+];
+
+type DiscountOption = {
+  id: string;
+  name: string;
+};
+
+const DISCOUNT_OPTIONS: DiscountOption[] = [
+  { id: AUTOMATIC_DISCOUNT_MAPPING_ID, name: 'Automatic contract discounts' }
 ];
 
 type TFn = (key: string, options?: Record<string, unknown>) => string;
@@ -163,7 +180,8 @@ export function createQboLiveMappingModules(t?: TFn): AccountingMappingModule[] 
   return [
     createServiceModule(tab('itemsServices', 'Items / Services')),
     createTaxCodeModule(tab('taxCodes', 'Tax Codes'), t),
-    createPaymentTermModule(tab('paymentTerms', 'Payment Terms'))
+    createPaymentTermModule(tab('paymentTerms', 'Payment Terms')),
+    createDiscountModule(tab('discounts', 'Discounts'))
   ];
 }
 
@@ -229,14 +247,17 @@ function createServiceModule(tabLabel: string): AccountingMappingModule {
           const items = itemsResult as Array<{ id: string; name: string }>;
           return items.map((item) => ({
             id: item.id,
-            name: item.name
+            name: item.name,
+            baseName: item.name
           }));
         },
         mapAlga: (service) => ({
           id: service.service_id,
           name:
             `${service.item_kind === 'product' ? '[Product] ' : ''}${service.service_name}` +
-            (service.sku ? ` (${service.sku})` : '')
+            (service.sku ? ` (${service.sku})` : ''),
+          code: service.sku ?? undefined,
+          baseName: service.service_name
         })
       });
     },
@@ -252,6 +273,9 @@ function createServiceModule(tabLabel: string): AccountingMappingModule {
     },
     async remove(_context, mappingId) {
       throwIfActionError(await deleteExternalEntityMapping(mappingId));
+    },
+    createMany(context, inputs) {
+      return createManyMappings({ context, inputs, algaEntityType: 'service' });
     }
   };
 }
@@ -355,6 +379,9 @@ function createTaxCodeModule(tabLabel: string, t?: TFn): AccountingMappingModule
     },
     async remove(_context, mappingId) {
       throwIfActionError(await deleteExternalEntityMapping(mappingId));
+    },
+    createMany(context, inputs) {
+      return createManyMappings({ context, inputs, algaEntityType: 'tax_code' });
     }
   };
 }
@@ -426,6 +453,75 @@ function createPaymentTermModule(tabLabel: string): AccountingMappingModule {
     },
     async remove(_context, mappingId) {
       throwIfActionError(await deleteExternalEntityMapping(mappingId));
+    },
+    createMany(context, inputs) {
+      return createManyMappings({ context, inputs, algaEntityType: 'payment_term' });
+    }
+  };
+}
+
+function createDiscountModule(tabLabel: string): AccountingMappingModule {
+  return {
+    id: 'qbo-live-discount-mappings',
+    adapterType: ADAPTER_TYPE,
+    algaEntityType: DISCOUNT_MAPPING_ENTITY_TYPE,
+    externalEntityType: 'Item',
+    labels: {
+      tab: tabLabel,
+      description:
+        'Choose the QuickBooks item that automatic contract discounts post to. Discount lines have no Alga service, so they need their own item.',
+      addButton: 'Add Discount Mapping',
+      algaColumn: 'Alga Discount',
+      externalColumn: 'QuickBooks Item',
+      dialog: {
+        addTitle: 'Add Live QuickBooks Discount Mapping',
+        editTitle: 'Edit Live QuickBooks Discount Mapping',
+        algaField: 'Alga Discount',
+        externalField: 'QuickBooks Item',
+        helpText: 'Select the QuickBooks item that discount lines should be exported as.'
+      },
+      deleteConfirmation: {
+        title: 'Delete Discount Mapping',
+        message: ({ externalName }) =>
+          `Delete the discount mapping${externalName ? ` ↔ ${externalName}` : ''}? Invoices with automatic discounts will not export until a new one is added.`,
+        confirmLabel: 'Delete',
+        cancelLabel: 'Cancel'
+      }
+    },
+    elements: {
+      addButton: 'add-qbo-live-discount-mapping-button',
+      table: 'qbo-live-discount-mappings-table',
+      dialog: 'qbo-live-discount-mapping-dialog',
+      deleteDialogPrefix: 'confirm-delete-qbo-live-discount-mapping-dialog',
+      editMenuPrefix: 'edit-qbo-live-discount-mapping-menu-item-',
+      deleteMenuPrefix: 'delete-qbo-live-discount-mapping-menu-item-'
+    },
+    load(context) {
+      return loadMappings<DiscountOption>({
+        context,
+        algaEntityType: DISCOUNT_MAPPING_ENTITY_TYPE,
+        loadAlgaEntities: async () => DISCOUNT_OPTIONS,
+        loadExternalEntities: async (currentContext) => {
+          const itemsResult = await getQboItems({ realmId: currentContext.realmId ?? null });
+          throwIfActionError(itemsResult);
+          const items = itemsResult as Array<{ id: string; name: string }>;
+          return items.map((item) => ({ id: item.id, name: item.name }));
+        },
+        mapAlga: (discount) => discount
+      });
+    },
+    create(context, input) {
+      return createMapping({
+        context,
+        input,
+        algaEntityType: DISCOUNT_MAPPING_ENTITY_TYPE
+      });
+    },
+    update(_context, mappingId, input) {
+      return updateMapping(mappingId, input);
+    },
+    async remove(_context, mappingId) {
+      throwIfActionError(await deleteExternalEntityMapping(mappingId));
     }
   };
 }
@@ -482,6 +578,43 @@ function createMapping({
   return createExternalEntityMapping(payload).then((result) => {
     throwIfActionError(result);
     return result as ExternalEntityMapping;
+  });
+}
+
+// LEVERAGE: pattern bulk-create-many — same createMany helper as xeroLiveMappingModules (QBO has no per-row prepare step).
+async function createManyMappings({
+  context,
+  inputs,
+  algaEntityType
+}: {
+  context: AccountingMappingContext;
+  inputs: AccountingMappingBulkCreateInput[];
+  algaEntityType: string;
+}): Promise<AccountingMappingBulkCreateResult[]> {
+  if (inputs.length === 0) return [];
+  const payloads: CreateMappingData[] = inputs.map((input) => ({
+    integration_type: ADAPTER_TYPE,
+    alga_entity_type: algaEntityType,
+    alga_entity_id: input.algaEntityId,
+    external_entity_id: input.externalEntityId,
+    external_realm_id: context.realmId ?? null,
+    metadata: input.metadata ?? null
+  }));
+  const response = await createExternalEntityMappings(payloads);
+  throwIfActionError(response);
+  const byEntity = new Map(
+    (response as Array<{
+      alga_entity_id: string;
+      ok: boolean;
+      mapping?: ExternalEntityMapping;
+      error?: string;
+    }>).map((row) => [row.alga_entity_id, row])
+  );
+  return inputs.map((input) => {
+    const row = byEntity.get(input.algaEntityId);
+    return row
+      ? { algaEntityId: input.algaEntityId, ok: row.ok, mapping: row.mapping, error: row.error }
+      : { algaEntityId: input.algaEntityId, ok: false, error: 'No result was returned for this row.' };
   });
 }
 

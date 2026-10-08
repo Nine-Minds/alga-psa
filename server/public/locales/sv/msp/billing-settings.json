@@ -18,12 +18,14 @@
         }
       },
       "toast": {
-        "updated": "Standardvalutan har uppdaterats."
+        "updated": "Standardvalutan har uppdaterats.",
+        "propagated": "Standardvalutan ändrades till {{currency}}. {{updated}} kunders standardvalutor uppdaterades; {{preserved}} kundspecifika valutor bevarades."
       },
       "errors": {
         "load": "Det gick inte att läsa in inställningarna",
         "save": "Det gick inte att spara inställningarna"
-      }
+      },
+      "propagationNote": "När du ändrar detta uppdateras kunder som fortfarande använder den tidigare standardvalutan. Kunder med en annan valuta bevaras, och befintliga dokument och mallar ändras inte."
     },
     "invoiceNumbering": {
       "title": "Fakturanumrering",

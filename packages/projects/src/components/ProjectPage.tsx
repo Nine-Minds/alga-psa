@@ -37,7 +37,7 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
   const taskIdFromUrl = searchParams?.get('taskId') ?? null;
   const phaseIdFromUrl = searchParams?.get('phaseId') ?? null;
   const viewFromUrlRaw = searchParams?.get('view') ?? null;
-  const viewFromUrl = viewFromUrlRaw === 'kanban' || viewFromUrlRaw === 'list' || viewFromUrlRaw === 'billing'
+  const viewFromUrl = viewFromUrlRaw === 'kanban' || viewFromUrlRaw === 'list' || viewFromUrlRaw === 'billing' || viewFromUrlRaw === 'gantt'
     ? viewFromUrlRaw
     : null;
   const [projectId, setProjectId] = useState<string | null>(null);

@@ -122,6 +122,61 @@ describe('MicrosoftGraphAdapter.sendMail', () => {
     expect(logged).not.toContain('secret-access-token');
     expect(logged).not.toContain('secret-message-body');
   });
+
+  it('preserves body-only correlation ids from error.innerError when no headers are present', async () => {
+    const adapter = makeAdapter();
+    const post = vi.fn().mockRejectedValue({
+      message: 'Forbidden',
+      response: {
+        status: 403,
+        headers: {},
+        data: {
+          error: {
+            code: 'ErrorSendAsDenied',
+            message: 'The user account does not have the right to send mail on behalf of the specified sending account.',
+            innerError: {
+              'request-id': 'body-request-403',
+              'client-request-id': 'body-client-403',
+            },
+          },
+        },
+      },
+    });
+    (adapter as any).httpClient = { post };
+
+    await expect(adapter.sendMail({ kind: 'json', message: { subject: 'Private' } }))
+      .rejects.toMatchObject({
+        status: 403,
+        code: 'ErrorSendAsDenied',
+        requestId: 'body-request-403',
+        clientRequestId: 'body-client-403',
+      });
+  });
+
+  it('keeps header correlation ids ahead of body innerError ids', async () => {
+    const adapter = makeAdapter();
+    const post = vi.fn().mockRejectedValue({
+      message: 'Forbidden',
+      response: {
+        status: 403,
+        headers: { 'request-id': 'header-request', 'client-request-id': 'header-client' },
+        data: {
+          error: {
+            code: 'ErrorSendAsDenied',
+            message: 'Denied',
+            innerError: { 'request-id': 'body-request', 'client-request-id': 'body-client' },
+          },
+        },
+      },
+    });
+    (adapter as any).httpClient = { post };
+
+    await expect(adapter.sendMail({ kind: 'json', message: { subject: 'Private' } }))
+      .rejects.toMatchObject({
+        requestId: 'header-request',
+        clientRequestId: 'header-client',
+      });
+  });
 });
 
 describe('MicrosoftGraphAdapter.testConnection', () => {

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import type { ProjectTaskServiceSource } from "../../../api/projectTasks";
 import { createTimeEntry, type WorkItemType } from "../../../api/timeEntries";
 import { getClientMetadataHeaders } from "../../../device/clientMetadata";
 import type { TicketDetailDeps } from "../types";
@@ -10,8 +11,10 @@ export function useTimeEntry(
     onCreated?: () => void;
     /** Log against something other than the ticket in `deps` (a project task, say). */
     workItem?: { id: string; type: WorkItemType };
-    /** Service to start the form with; a task carries its own. */
+    /** Service to start the form with; a task carries its own, or inherits one. */
     defaultServiceId?: string | null;
+    /** Which level `defaultServiceId` came from, for the form's provenance mark. */
+    defaultServiceSource?: ProjectTaskServiceSource | null;
   },
 ) {
   const { client, session, ticketId, showToast, t } = deps;
@@ -25,6 +28,9 @@ export function useTimeEntry(
   const [timeEntryServiceId, setTimeEntryServiceId] = useState<string | null>(null);
   const [timeEntryUpdating, setTimeEntryUpdating] = useState(false);
   const [timeEntryError, setTimeEntryError] = useState<string | null>(null);
+  // The default the form opened with, so the provenance mark disappears the
+  // moment the user picks something else.
+  const [prefilled, setPrefilled] = useState<{ serviceId: string; source: ProjectTaskServiceSource } | null>(null);
 
   const openTimeEntryModal = (forDate?: Date) => {
     setTimeEntryError(null);
@@ -50,9 +56,12 @@ export function useTimeEntry(
       setTimeEntryEndTime("09:15");
     }
 
+    const defaultServiceId = options?.defaultServiceId ?? null;
+    const defaultServiceSource = options?.defaultServiceSource ?? null;
     setTimeEntryDate(baseDate);
     setTimeEntryNotes("");
-    setTimeEntryServiceId(options?.defaultServiceId ?? null);
+    setTimeEntryServiceId(defaultServiceId);
+    setPrefilled(defaultServiceId && defaultServiceSource ? { serviceId: defaultServiceId, source: defaultServiceSource } : null);
     setTimeEntryOpen(true);
   };
 
@@ -137,6 +146,7 @@ export function useTimeEntry(
     setTimeEntryNotes,
     timeEntryServiceId,
     setTimeEntryServiceId,
+    timeEntryServiceSource: prefilled && prefilled.serviceId === timeEntryServiceId ? prefilled.source : null,
     timeEntryUpdating,
     timeEntryError,
     openTimeEntryModal,

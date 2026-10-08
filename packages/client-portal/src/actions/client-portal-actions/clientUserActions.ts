@@ -14,6 +14,8 @@ import {
   getClientPortalRoles as getClientPortalRolesFromDB,
   CreatePortalUserInput
 } from '@shared/models/userModel';
+import { assertValidContactManager } from '@shared/models/contactModel';
+import { collectReportContactIds } from '@alga-psa/authorization/portal/visibility.server';
 import { IUser, IRole } from '@shared/interfaces/user.interfaces';
 import type { IUserWithRoles } from '@alga-psa/types';
 
@@ -57,6 +59,11 @@ function clientUserActionErrorFrom(error: unknown): ClientUserActionError | null
   }
   if (error.message === 'Contact not found') {
     return { actionError: 'Contact not found. It may have been deleted. Please refresh and try again.' };
+  }
+  // Reports-to validation (assertValidContactManager) speaks in coded messages.
+  const coded = /^(VALIDATION_ERROR|FOREIGN_KEY_ERROR):\s*([\s\S]*)$/.exec(error.message);
+  if (coded) {
+    return { actionError: coded[2].trim() };
   }
 
   const dbError = error as Error & { code?: string; constraint?: string; column?: string };
@@ -313,19 +320,114 @@ async function assertCanCreateClientUser(
 }
 
 /**
+ * Who a client user may be set to report to: people at the same client other
+ * than the user and anyone already reporting (directly or indirectly) to them.
+ * Same permission gate as updating the user.
+ */
+export const getClientUserManagerOptions = withAuth(async (
+  user: IUserWithRoles,
+  { tenant }: AuthContext,
+  userId: string
+): Promise<{
+  managerContactId: string | null;
+  options: Array<{ contact_name_id: string; full_name: string }>;
+} | ClientUserActionError> => {
+  try {
+    const { knex } = await createTenantKnex();
+
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      await assertCanManageClientUser(user, tenant, trx, userId);
+
+      const scopedDb = tenantDb(trx, tenant);
+      const target = await scopedDb.table('users')
+        .where({ user_id: userId, user_type: 'client' })
+        .first('contact_id');
+      if (!target?.contact_id) {
+        return { managerContactId: null, options: [] };
+      }
+
+      const self = await scopedDb.table('contacts')
+        .where({ contact_name_id: target.contact_id })
+        .first('contact_name_id', 'client_id', 'manager_contact_id');
+      if (!self?.client_id) {
+        return { managerContactId: null, options: [] };
+      }
+
+      const clientContacts = await scopedDb.table('contacts')
+        .where({ client_id: self.client_id, contact_kind: 'person' })
+        .select('contact_name_id', 'full_name', 'manager_contact_id')
+        .orderBy('full_name', 'asc');
+
+      const excluded = new Set<string>([
+        self.contact_name_id as string,
+        ...collectReportContactIds(
+          clientContacts as Array<{ contact_name_id: string; manager_contact_id: string | null }>,
+          self.contact_name_id as string
+        ),
+      ]);
+
+      return {
+        managerContactId: (self.manager_contact_id as string | null) ?? null,
+        options: (clientContacts as Array<{ contact_name_id: string; full_name: string }>)
+          .filter((contact) => !excluded.has(contact.contact_name_id))
+          .map(({ contact_name_id, full_name }) => ({ contact_name_id, full_name })),
+      };
+    });
+  } catch (error) {
+    const expected = clientUserActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
+    console.error('Error loading client user manager options:', error);
+    throw error;
+  }
+});
+
+/**
  * Update a client user
+ *
+ * `manager_contact_id` (reports-to) is persisted on the user's contact, behind
+ * the same permission gate as every other field here (MSP user:update, or a
+ * client admin of the same client), and validated like every other write path.
  */
 export const updateClientUser = withAuth(async (
   user: IUserWithRoles,
   { tenant }: AuthContext,
   userId: string,
-  userData: Partial<IUser>
+  userData: Partial<IUser> & { manager_contact_id?: string | null }
 ): Promise<IUser | null | ClientUserActionError> => {
   try {
     const { knex } = await createTenantKnex();
 
     const [updatedUser] = await withTransaction(knex, async (trx: Knex.Transaction) => {
       await assertCanManageClientUser(user, tenant, trx, userId);
+
+      if (Object.prototype.hasOwnProperty.call(userData, 'manager_contact_id')) {
+        const scopedDb = tenantDb(trx, tenant);
+        const target = await scopedDb.table('users')
+          .where({ user_id: userId, user_type: 'client' })
+          .first('contact_id');
+        if (!target?.contact_id) {
+          throw new Error('Contact not found');
+        }
+        const contact = await scopedDb.table('contacts')
+          .where({ contact_name_id: target.contact_id })
+          .first('contact_name_id', 'client_id');
+        if (!contact) {
+          throw new Error('Contact not found');
+        }
+        const managerContactId = userData.manager_contact_id || null;
+        if (managerContactId) {
+          await assertValidContactManager(trx, tenant, {
+            contactId: contact.contact_name_id as string,
+            clientId: contact.client_id as string | null,
+            managerContactId,
+          });
+        }
+        await scopedDb.table('contacts')
+          .where({ contact_name_id: contact.contact_name_id })
+          .update({ manager_contact_id: managerContactId, updated_at: new Date().toISOString() });
+      }
 
       // Allowlist of self-service profile fields. Never allow privileged columns
       // (user_type, tenant, hashed_password, roles, username, ...) via this path.

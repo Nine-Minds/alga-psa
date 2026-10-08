@@ -48,8 +48,10 @@ export {
 export {
   getExternalEntityMappings,
   createExternalEntityMapping,
+  createExternalEntityMappings,
   updateExternalEntityMapping,
   deleteExternalEntityMapping,
+  type BulkCreateMappingRowResult,
   type CreateMappingData,
   type ExternalEntityMapping,
   type UpdateMappingData
@@ -85,7 +87,8 @@ export {
   getEmailSettings,
   getMicrosoftOutboundMailboxes,
   updateEmailSettings,
-  testOutboundEmail
+  testOutboundEmail,
+  runOutboundEmailDiagnostics
 } from './email-actions/emailSettingsActions';
 export type {
   EmailSettingsView,
