@@ -70,6 +70,20 @@ describe('SignIn dispatcher', () => {
     );
   });
 
+  it('treats a link callback that arrives with no error as a failed link', async () => {
+    // Auth.js redirects to its own signin action when a provider yields no
+    // usable profile, forwarding only the stored callbackUrl. Honouring that
+    // URL would claim `linked=1` succeeded.
+    getSessionMock.mockResolvedValue({ user: { id: 'user-1', user_type: 'internal' } });
+
+    await render({ callbackUrl: '/msp/profile?tab=single-sign-on&linked=1' });
+
+    expect(redirectMock).toHaveBeenNthCalledWith(
+      1,
+      '/msp/profile?tab=single-sign-on&linkError=link_failed'
+    );
+  });
+
   it('keeps sending a signed-in user with no failure to the dashboard', async () => {
     getSessionMock.mockResolvedValue({ user: { id: 'user-1', user_type: 'internal' } });
 

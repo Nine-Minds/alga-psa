@@ -39,8 +39,16 @@ export default async function SignIn({
     // ensureOAuthAccountLink() consumes it before it rejects -- so only the
     // session's own user type decides, since the link tab is MSP-only.
     const isInternalUser = session.user.user_type !== 'client';
-    if (error && isInternalUser) {
-      const linkParams = new URLSearchParams({ linkError: reason || error });
+    // Auth.js also lands here with no error at all: when a provider returns no
+    // usable profile it redirects to its own signin action, which forwards the
+    // stored callbackUrl only. For a link attempt that URL carries `linked=1`,
+    // so honouring it would claim the link worked. Success never comes through
+    // this page -- it redirects straight to the callback url -- so a link
+    // callback arriving here is a failure whatever Auth.js chose to say.
+    const isSsoLinkCallback =
+      callbackUrl.startsWith(SSO_PROFILE_TAB_URL) && callbackUrl.includes('linked=1');
+    if ((error || isSsoLinkCallback) && isInternalUser) {
+      const linkParams = new URLSearchParams({ linkError: reason || error || 'link_failed' });
       if (providerEmail) {
         linkParams.set('providerEmail', providerEmail);
       }
