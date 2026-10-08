@@ -53,6 +53,8 @@ import { PriorityPickerModal } from "../features/ticketDetail/components/Priorit
 import { StatusPickerModal } from "../features/ticketDetail/components/StatusPickerModal";
 import { AgentPickerModal } from "../features/ticketDetail/components/AgentPickerModal";
 import { ContactPickerModal } from "../features/ticketDetail/components/ContactPickerModal";
+import { ContactFormModal } from "../features/contacts/components/ContactFormModal";
+import { useCapabilities } from "../capabilities/CapabilitiesContext";
 import {
   activeTicketNotificationSuppression,
   DEFAULT_TICKET_NOTIFICATION_SUPPRESSION,
@@ -130,6 +132,9 @@ export function TicketDetailBody({
   const { colors, spacing, typography } = theme;
   const { showToast } = useToast();
   const { t } = useTranslation("tickets");
+  const { features } = useCapabilities();
+  const [newContactOpen, setNewContactOpen] = useState(false);
+  const [createdContact, setCreatedContact] = useState<{ id: string; name: string; email?: string | null } | null>(null);
   const placeCall = usePlaceCall();
   const [callsReloadKey, setCallsReloadKey] = useState(0);
   const network = useNetworkStatus();
@@ -894,10 +899,34 @@ export function TicketDetailBody({
           if (contactNameId) void contactHook.selectContact(contactNameId, notificationSuppression);
           else void contactHook.removeContact(notificationSuppression);
         }}
-        onClose={contactHook.closeContactPicker}
+        onClose={() => {
+          setCreatedContact(null);
+          contactHook.closeContactPicker();
+        }}
+        onCreateContact={features.contactsCreate && ticketClientId ? () => {
+          contactHook.closeContactPicker();
+          setNewContactOpen(true);
+        } : undefined}
+        preselect={createdContact}
         client={client}
         apiKey={session?.accessToken ?? ""}
         baseUrl={config.ok ? config.baseUrl : null}
+      />
+      <ContactFormModal
+        visible={newContactOpen}
+        mode="create"
+        client={client}
+        apiKey={session?.accessToken ?? ""}
+        baseUrl={config.ok ? config.baseUrl : null}
+        presetClient={ticketClientId ? { id: ticketClientId, name: ticket.client_name ?? "" } : null}
+        lockClient
+        onClose={() => setNewContactOpen(false)}
+        onSaved={(created) => {
+          // Back to the picker with the new contact selected, so the notification
+          // choice is made the same way as for an existing contact.
+          setCreatedContact({ id: created.contact_name_id, name: created.full_name, email: created.email ?? null });
+          contactHook.openContactPicker();
+        }}
       />
     </>
   );

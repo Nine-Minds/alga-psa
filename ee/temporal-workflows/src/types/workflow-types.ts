@@ -308,6 +308,7 @@ export interface CreatePortalUserActivityResult {
   roleId: string;
   temporaryPassword?: string; // Only set if password was generated
   // `existing` means a client portal user for this email already existed in the
-  // tenant and was returned untouched (no password re-hash, no role change).
+  // tenant and was reused (no password re-hash, no role change; reactivated if
+  // tenant deletion had deactivated it).
   status: 'created' | 'existing';
 }

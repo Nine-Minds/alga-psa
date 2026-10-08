@@ -41,7 +41,8 @@ test('upgraded billing sources generate a correctly priced invoice without consu
     expect(invoice.status).toBe('draft');
     expect((await db('usage_tracking').where({ ...scope, service_id: b.usageServiceId }).first()).invoiced).toBe(true);
     const links = await db('invoice_time_entries').where({ tenant: actor.tenant, invoice_id: invoice.invoice_id });
-    expect(links).toHaveLength(4);
+    // Four entries, with the overtime entry linked twice (regular + overtime segment).
+    expect(links).toHaveLength(5);
     expect(await db('usage_tracking').where({ tenant: other.tenant }).orderBy('usage_id')).toEqual(otherUsage);
     expect(await db('invoices').where({ tenant: other.tenant })).toEqual([]);
     await page.goto(`/msp/billing?tab=invoicing&subtab=drafts&invoiceId=${invoice.invoice_id}`);

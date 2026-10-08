@@ -52,6 +52,7 @@
         "fillRequiredFields": "Vul alle verplichte velden in",
         "loadFailed": "Kan profiel niet laden",
         "saveFailed": "Kan profiel niet opslaan",
+        "invalidTimezone": "Kies een tijdzone op basis van een stad, zoals America/New_York.",
         "errorPrefix": "Fout: {{error}}"
       }
     },

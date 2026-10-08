@@ -37,6 +37,7 @@ export default defineConfig({
       // (the `nx affected -t test` lane) selects them, not only the server
       // coverage run that globs ../packages/**.
       'src/components/settings/billing/ServiceCatalogManager.rollout.contract.test.tsx',
+      'src/components/settings/billing/DefaultTimeEntryServiceSettings.test.tsx',
       'src/components/settings/billing/PriceChangeRolloutDialog.contract.test.tsx',
       // Multi-select bulk actions on the catalog and product lists — listed for
       // the same reason as the suites above.
@@ -52,6 +53,9 @@ export default defineConfig({
       // Behavioral coverage for realm-exact QBO mapping resolution — listed
       // explicitly for the same reason as the suites above.
       'src/services/accountingSync/realmScopedOperations.test.ts',
+      // Project billing-currency drift notices and cap re-pinning — listed for
+      // the same reason as the suites above.
+      'src/components/project-billing/projectBillingCurrency.test.tsx',
       // Ticket-level billed-time detail: snapshot aggregation, standard-template
       // bindings, and render parity — listed for the same reason as above.
       'src/lib/adapters/invoiceAdapters.test.ts',
@@ -131,6 +135,10 @@ export default defineConfig({
       {
         find: /^@alga-psa\/workflows\/(.*)$/,
         replacement: `${path.resolve(__dirname, '../../ee/packages/workflows/src')}/$1`,
+      },
+      {
+        find: /^@alga-psa\/core\/fileNames$/,
+        replacement: `${path.resolve(__dirname, '../core/src/lib/fileNames.ts')}`,
       },
       {
         find: /^@alga-psa\/core\/logger$/,

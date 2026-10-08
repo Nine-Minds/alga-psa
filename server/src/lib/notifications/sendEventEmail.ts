@@ -24,6 +24,27 @@ function isEmailServiceDisabledErrorMessage(message: unknown): boolean {
   return message.includes(EMAIL_SERVICE_DISABLED_MESSAGE) || message.includes('disabled or not configured');
 }
 
+/**
+ * Extract provider failure identifiers for the notification failure log.
+ * EmailProviderError stores its provider code in errorCode (not code) and
+ * carries provider status/request-id on metadata; ordinary Error and non-Error
+ * throws must not throw here.
+ */
+export function extractProviderErrorLogFields(error: unknown): {
+  errorCode?: string;
+  status?: number;
+  requestId?: string;
+} {
+  const providerError = (error ?? undefined) as
+    | { errorCode?: unknown; metadata?: Record<string, unknown> | undefined }
+    | undefined;
+  const errorCode = typeof providerError?.errorCode === 'string' ? providerError.errorCode : undefined;
+  const metadata = providerError?.metadata;
+  const status = metadata && Number.isFinite(Number(metadata.status)) ? Number(metadata.status) : undefined;
+  const requestId = typeof metadata?.requestId === 'string' ? metadata.requestId : undefined;
+  return { errorCode, status, requestId };
+}
+
 interface ReplyMarkerPayload {
   token: string;
   ticketId?: string;
@@ -182,6 +203,34 @@ async function persistReplyToken(
 
 //
 // Template lookup and sending are handled below using DatabaseTemplateProcessor
+
+/**
+ * Append an outbound RFC Message-ID to a ticket's `email_metadata.references`.
+ *
+ * Deliberately writes neither `updated_at` nor `updated_by`: email_metadata is
+ * bookkeeping, and bumping `updated_at` here would make the ticket UI credit the
+ * previous editor for activity (e.g. a public comment) that this write follows.
+ */
+export async function appendOutboundMessageIdReference(
+  db: { table: (name: string) => any },
+  knex: { raw: (sql: string, bindings?: any[]) => any },
+  ticketId: string,
+  rfcMessageId: string
+): Promise<void> {
+  // Raw query to append to the JSONB array safely
+  await db.table('tickets')
+    .where({ ticket_id: ticketId })
+    .update({
+      email_metadata: knex.raw(
+        `jsonb_set(
+          COALESCE(email_metadata, '{}'::jsonb),
+          '{references}',
+          (COALESCE(email_metadata->'references', '[]'::jsonb) || to_jsonb(?::text))
+        )`,
+        [rfcMessageId]
+      )
+    });
+}
 
 export async function sendEventEmail(params: SendEmailParams): Promise<void> {
   try {
@@ -591,20 +640,7 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
     const outboundRfcMessageId = result.rfcMessageId ?? result.messageId;
     if (result.success && outboundRfcMessageId && params.replyContext?.ticketId) {
       try {
-        // We use a raw query to append to the JSONB array safely
-        await db.table('tickets')
-          .where({ ticket_id: params.replyContext.ticketId })
-          .update({
-            email_metadata: knex.raw(
-              `jsonb_set(
-                COALESCE(email_metadata, '{}'::jsonb),
-                '{references}',
-                (COALESCE(email_metadata->'references', '[]'::jsonb) || to_jsonb(?::text))
-              )`,
-              [outboundRfcMessageId]
-            ),
-            updated_at: new Date() // Good practice to touch updated_at
-          });
+        await appendOutboundMessageIdReference(db, knex, params.replyContext.ticketId, outboundRfcMessageId);
 
         logger.debug('[SendEventEmail] Linked outbound Message-ID to ticket:', {
           ticketId: params.replyContext.ticketId,
@@ -638,6 +674,12 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
       return;
     }
 
+    // EmailProviderError stores its provider code in errorCode (not code) and
+    // carries provider status/request-id on metadata. Log them explicitly so
+    // the logger does not depend on serializing the raw error's non-enumerable
+    // provider-specific properties.
+    const { errorCode, status: providerStatus, requestId } = extractProviderErrorLogFields(error);
+
     logger.error('[SendEventEmail] Failed to publish email event:', {
       error,
       to: params.to,
@@ -645,6 +687,9 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
       tenantId: params.tenantId,
       template: params.template,
       errorMessage,
+      errorCode,
+      status: providerStatus,
+      requestId,
       errorStack: error instanceof Error ? error.stack : undefined
     });
     throw error;

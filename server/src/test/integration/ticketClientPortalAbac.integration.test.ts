@@ -12,6 +12,7 @@ import { registerScheduledJobEnqueuer, registerScheduledJobCanceler } from '@alg
 import { publishScheduledCommentHandler } from '@/lib/jobs/handlers/publishScheduledCommentHandler';
 import { addTicketCommentWithCache } from '@alga-psa/tickets/actions/optimizedTicketActions';
 import { createComment } from '@alga-psa/tickets/actions/comment-actions/commentActions';
+import { silentTicketCreation } from '@alga-psa/shared/lib/tickets/ticketLifecycleEvents';
 
 const eventMocks = vi.hoisted(() => ({
   publishEvent: vi.fn().mockResolvedValue(undefined),
@@ -255,7 +256,7 @@ async function createFixture(): Promise<AbacFixture> {
         entered_by: internalUserId,
       },
       tenantId,
-      trx,
+      trx, {}, silentTicketCreation('test fixture'),
     );
 
     await TicketModel.createTicket(
@@ -270,7 +271,7 @@ async function createFixture(): Promise<AbacFixture> {
         entered_by: internalUserId,
       },
       tenantId,
-      trx,
+      trx, {}, silentTicketCreation('test fixture'),
     );
 
     await TicketModel.createTicket(
@@ -285,7 +286,7 @@ async function createFixture(): Promise<AbacFixture> {
         entered_by: internalUserId,
       },
       tenantId,
-      trx,
+      trx, {}, silentTicketCreation('test fixture'),
     );
   });
 
@@ -381,7 +382,7 @@ describeDb('ticket client-portal ABAC (TicketService)', () => {
           title, description: title, client_id: fixture.clientAId, contact_id: contactId,
           board_id: fixture.boardVisibleId, status_id: fixture.statusId,
           priority_id: fixture.priorityId, entered_by: fixture.internalUserId,
-        }, fixture.tenantId, trx));
+        }, fixture.tenantId, trx, {}, silentTicketCreation('test fixture')));
         added.push(ticket.ticket_id!);
       }
       await tenantRows('client_portal_visibility_groups', fixture.tenantId).where({ group_id: fixture.groupVisibleId }).update({ ticket_scope: 'contact' });
@@ -557,7 +558,7 @@ describeDb('ticket client-portal ABAC (TicketService)', () => {
           entered_by: fixture.internalUserId,
         },
         fixture.tenantId,
-        trx,
+        trx, {}, silentTicketCreation('test fixture'),
       );
     });
 
@@ -652,12 +653,12 @@ describeDb('ticket client-portal ABAC (TicketService)', () => {
       await TicketModel.createTicket(
         { title: 'NG-1', description: 'x', client_id: cId, contact_id: contactId, board_id: b1, status_id: statusId2, priority_id: priorityId2, entered_by: userId },
         noGroupTenantId,
-        trx,
+        trx, {}, silentTicketCreation('test fixture'),
       );
       await TicketModel.createTicket(
         { title: 'NG-2', description: 'x', client_id: cId, contact_id: contactId, board_id: b2, status_id: statusId2b, priority_id: priorityId2, entered_by: userId },
         noGroupTenantId,
-        trx,
+        trx, {}, silentTicketCreation('test fixture'),
       );
     });
 

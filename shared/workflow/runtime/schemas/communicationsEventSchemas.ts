@@ -1,11 +1,11 @@
 import { z } from 'zod';
-import { BaseDomainEventPayloadSchema, uuidSchema } from './commonEventPayloadSchemas';
+import { BaseDomainEventPayloadSchema, uuidSchema, entityIdSchema } from './commonEventPayloadSchemas';
 
 const messageIdSchema = uuidSchema('Message ID');
 const threadIdSchema = uuidSchema('Thread ID');
 const inboundProviderMessageIdSchema = z.string().min(1).describe('Provider message ID');
 const inboundProviderThreadIdSchema = z.string().min(1).describe('Provider thread ID');
-const ticketIdSchema = uuidSchema('Ticket ID');
+const ticketIdSchema = entityIdSchema('Ticket ID', 'ticket');
 
 const emailAddressSchema = z.string().email().describe('Email address');
 const emailListSchema = z.array(emailAddressSchema).min(1);
@@ -161,7 +161,7 @@ export const surveySentEventPayloadSchema = BaseDomainEventPayloadSchema.extend(
   surveyType: surveyTypeSchema,
   recipientId: z.string().min(1),
   ticketId: ticketIdSchema.optional(),
-  projectId: uuidSchema('Project ID').optional(),
+  projectId: entityIdSchema('Project ID', 'project').optional(),
   sentAt: z.string().datetime().optional(),
   channel: notificationChannelSchema,
   templateId: z.string().optional(),
@@ -174,7 +174,7 @@ export const surveyResponseReceivedEventPayloadSchema = BaseDomainEventPayloadSc
   responseId: z.string().uuid(),
   recipientId: z.string().min(1),
   ticketId: ticketIdSchema.optional(),
-  projectId: uuidSchema('Project ID').optional(),
+  projectId: entityIdSchema('Project ID', 'project').optional(),
   respondedAt: z.string().datetime().optional(),
   score: z.number(),
   comment: z.string().optional(),
@@ -186,7 +186,7 @@ export const surveyReminderSentEventPayloadSchema = BaseDomainEventPayloadSchema
   surveyId: z.string().uuid(),
   recipientId: z.string().min(1),
   ticketId: ticketIdSchema.optional(),
-  projectId: uuidSchema('Project ID').optional(),
+  projectId: entityIdSchema('Project ID', 'project').optional(),
   sentAt: z.string().datetime().optional(),
   channel: notificationChannelSchema,
   reminderNumber: z.number().int().positive(),
@@ -198,7 +198,7 @@ export const surveyExpiredEventPayloadSchema = BaseDomainEventPayloadSchema.exte
   surveyId: z.string().uuid(),
   recipientId: z.string().min(1),
   ticketId: ticketIdSchema.optional(),
-  projectId: uuidSchema('Project ID').optional(),
+  projectId: entityIdSchema('Project ID', 'project').optional(),
   expiredAt: z.string().datetime().optional(),
 }).refine(value => !(value.ticketId && value.projectId), { message: 'Provide only one survey subject' }).describe('Payload for SURVEY_EXPIRED');
 

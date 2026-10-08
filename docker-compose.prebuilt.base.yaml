@@ -94,7 +94,9 @@ secrets:
 
 services:
   postgres:
-    image: ankane/pgvector:latest
+    extends:
+      file: ./docker-compose.images.yaml
+      service: pgvector
     # LEVERAGE: pattern postgres-auth-entrypoint — the wrapper entrypoint and its bind mount are duplicated from docker-compose.base.yaml because this postgres service does not extend it; extending base would also change initdb args/command, so fold them together in a separate change
     entrypoint: ["/bin/bash", "/usr/local/bin/alga-postgres-entrypoint.sh"]
     volumes:
@@ -105,10 +107,15 @@ services:
       POSTGRES_HOST_AUTH_METHOD: md5
     secrets:
       - postgres_password
-    ports:
-      - "${EXPOSE_DB_PORT:-5432}:5432"
     networks:
       - app-network
+
+  # One-shot reconciliation of an existing bundled data directory with the pinned
+  # image; defined once in docker-compose.base.yaml.
+  postgres-extension-update:
+    extends:
+      file: ./docker-compose.base.yaml
+      service: postgres-extension-update
 
   redis:
     build:
@@ -116,8 +123,6 @@ services:
       dockerfile: redis/Dockerfile
     environment:
       <<: *shared-environment
-    ports:
-      - '${EXPOSE_REDIS_PORT:-6379}:6379'
     secrets:
       - redis_password
     networks:

@@ -664,11 +664,31 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
         title: t('fields.lastActivity', 'Last Activity'),
         dataIndex: 'latest_activity_at',
         width: '10%',
-        render: (value: string | null) => (
-          <div className="text-sm text-gray-500">
-            {value ? formatTicketDateTime(value, locale, getUserTimeZone(), dateFormat, showWeekday) : '-'}
-          </div>
-        ),
+        render: (value: string | null, record: ITicketListItem) => {
+          const actor = record.latest_activity_actor;
+          const actorLabel = !actor
+            ? null
+            : actor.kind === 'system'
+              ? t('conversation.systemAuthor', 'System')
+              : actor.name
+                ? t('fields.byName', 'by {{name}}').replace('{{name}}', actor.name)
+                : null;
+          return (
+            <div className="flex flex-col leading-tight">
+              <span className="text-sm text-gray-500">
+                {value ? formatTicketDateTime(value, locale, getUserTimeZone(), dateFormat, showWeekday) : '-'}
+              </span>
+              {actorLabel && (
+                <span
+                  className="text-[11px] text-[rgb(var(--color-text-400))]"
+                  data-testid="last-activity-actor"
+                >
+                  {actorLabel}
+                </span>
+              )}
+            </div>
+          );
+        },
       }
     });
   }

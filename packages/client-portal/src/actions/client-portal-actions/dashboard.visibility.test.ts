@@ -104,7 +104,7 @@ describe('client portal dashboard visibility enforcement', () => {
     expect(applyTicketVisibilityFilterMock).toHaveBeenCalledWith(
       ticketsQuery,
       expect.objectContaining({ visibleBoardIds: ['board-1'] }),
-      { boardColumn: 'tickets.board_id', contactColumn: 'tickets.contact_name_id', billingProfileColumn: 'tickets.billing_profile_id' }
+      { boardColumn: 'tickets.board_id', contactColumn: 'tickets.contact_name_id', billingProfileColumn: 'tickets.billing_profile_id', watchListColumn: 'tickets.attributes' }
     );
     expect(metrics.openTickets).toBe(4);
   });

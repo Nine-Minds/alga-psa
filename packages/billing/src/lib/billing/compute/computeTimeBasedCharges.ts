@@ -166,6 +166,7 @@ export function buildTimeEntryWorkItemSnapshot(
     netAmount: number;
     serviceId: string | null;
     serviceName: string | null;
+    segment?: 'regular' | 'overtime';
   },
 ): InvoiceTimeEntrySnapshot {
   const workItemType: InvoiceTimeEntrySnapshot["workItemType"] =
@@ -193,6 +194,7 @@ export function buildTimeEntryWorkItemSnapshot(
     netAmount: Math.round(billed.netAmount),
     serviceId: billed.serviceId,
     serviceName: billed.serviceName,
+    ...(billed.segment ? { segment: billed.segment } : {}),
   };
 }
 
@@ -217,7 +219,7 @@ export function computeTimeBasedCharges(
   const { servicePeriodStart, servicePeriodEnd } = timing;
   const explanations: ChargeExplanation[] = [];
 
-  const charges = timeEntries.map((entry): ITimeBasedCharge => {
+  const charges = timeEntries.flatMap((entry): ITimeBasedCharge[] => {
     const serviceConfig = serviceConfigMap.get(entry.service_id);
     const isSystemManagedDefault =
       (clientContractLine as { is_system_managed_default?: boolean | null })
@@ -282,23 +284,35 @@ export function computeTimeBasedCharges(
       phaseOverride?.override_tax_rate_id ?? entry.tax_rate_id;
     const rate = Math.ceil(phaseOverride?.rate ?? (Number(resolvedRate) || 0));
 
-    let total = Math.round(duration * rate);
-    let overtimeDetail: {
-      regularHours: number;
-      overtimeHours: number;
-      overtimeRate: number;
-    } | null = null;
-    if (
-      plan.enable_overtime &&
-      plan.overtime_threshold &&
-      duration > plan.overtime_threshold
-    ) {
-      const regularHours = plan.overtime_threshold;
-      const overtimeHours = duration - regularHours;
-      const overtimeRate = plan.overtime_rate || rate * 1.5;
-      total = Math.round(regularHours * rate + overtimeHours * overtimeRate);
-      overtimeDetail = { regularHours, overtimeHours, overtimeRate };
-    }
+    // An entry past the overtime threshold bills as two segments at two
+    // rates. Each segment becomes its own charge so every stored line stays
+    // quantity × rate = amount (invoice PDFs and accounting exports both
+    // depend on that); equal rates collapse back into one plain line.
+    const overtimeRate =
+      plan.enable_overtime && plan.overtime_threshold
+        ? Math.ceil(Number(plan.overtime_rate) || rate * 1.5)
+        : null;
+    const regularMinutes =
+      overtimeRate !== null ? Math.round(Number(plan.overtime_threshold) * 60) : durationMinutes;
+    const overtimeMinutes = durationMinutes - regularMinutes;
+    const isOvertime = overtimeRate !== null && overtimeMinutes > 0;
+
+    const segments: Array<{ kind: 'regular' | 'overtime' | null; minutes: number; rate: number }> =
+      isOvertime && overtimeRate !== rate && regularMinutes > 0
+        ? [
+            { kind: 'regular', minutes: regularMinutes, rate },
+            { kind: 'overtime', minutes: overtimeMinutes, rate: overtimeRate },
+          ]
+        : [
+            {
+              kind: null,
+              minutes: durationMinutes,
+              rate: isOvertime && regularMinutes <= 0 ? overtimeRate : rate,
+            },
+          ];
+    const entryTotal = isOvertime
+      ? Math.round((regularMinutes / 60) * rate + (overtimeMinutes / 60) * (overtimeRate as number))
+      : Math.round(duration * rate);
 
     const { taxRegion: serviceTaxRegion, isTaxable } =
       taxPorts.getTaxInfoFromService({
@@ -314,38 +328,15 @@ export function computeTimeBasedCharges(
       workItemBillingProfileId: entry.work_item_billing_profile_id,
     });
 
-    let taxAmount = 0;
-    let taxRate = 0;
     const effectiveTaxRegion =
       serviceTaxRegion ??
       taxPorts.getLocationTaxRegionCode(clientContractLine.location_id) ??
       taxPorts.getClientDefaultTaxRegionCode(client.client_id) ??
       undefined;
-
-    if (
+    const taxApplies =
       !taxPorts.isTaxExemptForProfile(resolvedProfile?.billingProfileId) &&
       isTaxable &&
-      effectiveTaxRegion
-    ) {
-      try {
-        const taxResult = taxPorts.calculateTax(
-          client.client_id,
-          total,
-          billingPeriod.endDate,
-          effectiveTaxRegion,
-          true,
-          contractCurrency,
-          resolvedProfile?.billingProfileId ?? null,
-        );
-        taxRate = taxResult.taxRate;
-        taxAmount = taxResult.taxAmount;
-      } catch (error) {
-        console.error(
-          `Error calculating initial tax for time entry ${entry.entry_id}:`,
-          error,
-        );
-      }
-    }
+      Boolean(effectiveTaxRegion);
 
     const projectConfig = entry.project_id
       ? getProjectChargeConfig?.(entry.project_id)
@@ -358,77 +349,115 @@ export function computeTimeBasedCharges(
       },
       { label: "Hours", value: `${formatHours(duration)} hrs` },
     ];
-    const steps: string[] = [];
+    const durationSteps: string[] = [];
     if (minimumApplied || roundingApplied) {
-      steps.push(
+      durationSteps.push(
         `${rawDurationMinutes} min${minimumApplied ? ` → minimum ${serviceConfig!.config.minimum_billable_time} min` : ""}${roundingApplied ? ` → rounded up to ${durationMinutes} min` : ""} = ${formatHours(duration)} hrs`,
       );
     }
-    if (overtimeDetail) {
-      steps.push(
-        `${formatHours(overtimeDetail.regularHours)} hrs × ${formatCents(rate, contractCurrency)} + ${formatHours(overtimeDetail.overtimeHours)} hrs × ${formatCents(overtimeDetail.overtimeRate, contractCurrency)} = ${formatCents(total, contractCurrency)}`,
-      );
-    } else {
-      steps.push(
-        `${formatHours(duration)} hrs × ${formatCents(rate, contractCurrency)} = ${formatCents(total, contractCurrency)}`,
+    if (isOvertime) {
+      durationSteps.push(
+        `${formatHours(regularMinutes / 60)} hrs × ${formatCents(rate, contractCurrency)} + ${formatHours(overtimeMinutes / 60)} hrs × ${formatCents(overtimeRate as number, contractCurrency)} = ${formatCents(entryTotal, contractCurrency)}`,
       );
     }
     const markers: ChargeExplanation["markers"] = [];
     if (minimumApplied) markers.push("minimum_applied");
     if (roundingApplied) markers.push("rounding_applied");
-    if (overtimeDetail) markers.push("overtime");
-    explanations.push({
-      chargeKey: `${serviceConfig?.config.config_id ?? clientContractLine.client_contract_line_id}:${effectiveServiceId}:${entry.entry_id}`,
-      serviceName: effectiveServiceName ?? entry.service_id,
-      chargeType: "time",
-      inputs: explanationInputs,
-      steps,
-      markers,
-    });
+    if (isOvertime) markers.push("overtime");
+    const baseChargeKey = `${serviceConfig?.config.config_id ?? clientContractLine.client_contract_line_id}:${effectiveServiceId}:${entry.entry_id}`;
 
-    return {
-      serviceId: effectiveServiceId,
-      serviceName: effectiveServiceName as string,
-      config_id: serviceConfig?.config.config_id,
-      client_contract_line_id: clientContractLine.client_contract_line_id,
-      userId: entry.user_id,
-      duration,
-      quantity: duration,
-      rate,
-      total,
-      type: "time",
-      workItemSnapshot: buildTimeEntryWorkItemSnapshot(entry, {
-        billedMinutes: durationMinutes,
-        rateKind: overtimeDetail && overtimeDetail.regularHours > 0 && overtimeDetail.overtimeHours > 0 && overtimeDetail.overtimeRate !== rate ? 'mixed' : 'uniform',
-        uniformRate: overtimeDetail && overtimeDetail.regularHours <= 0 ? overtimeDetail.overtimeRate : rate,
-        rate,
-        netAmount: total,
-        serviceId: effectiveServiceId ?? null,
-        serviceName: (effectiveServiceName as string) ?? null,
-      }),
-      tax_amount: taxAmount,
-      tax_rate: taxRate,
-      tax_region: effectiveTaxRegion,
-      entryId: entry.entry_id,
-      is_taxable: isTaxable,
-      servicePeriodStart,
-      servicePeriodEnd,
-      servicePeriodRecordId: timing.servicePeriodRecordId ?? null,
-      billingTiming: timing.duePosition,
-      client_contract_id: clientContractLine.client_contract_id || undefined,
-      contract_name: clientContractLine.contract_name || undefined,
-      location_id: clientContractLine.location_id ?? null,
-      billing_profile_id: resolvedProfile?.billingProfileId ?? null,
-      billing_profile_source: resolvedProfile?.source ?? null,
-      ...(projectConfig?.billing_model === "time_and_materials"
-        ? {
-            project_id: projectConfig.project_id,
-            project_name: projectConfig.project_name,
-            project_number: projectConfig.project_number,
-            project_billing_config_id: projectConfig.config_id,
-          }
-        : {}),
-    };
+    let remainingTotal = entryTotal;
+    return segments.map((segment, index): ITimeBasedCharge => {
+      const segmentHours = segment.minutes / 60;
+      // Rounding remainder lands on the last segment so the segments sum to
+      // the entry total exactly.
+      const total =
+        index === segments.length - 1
+          ? remainingTotal
+          : Math.round(segmentHours * segment.rate);
+      remainingTotal -= total;
+
+      let taxAmount = 0;
+      let taxRate = 0;
+      if (taxApplies) {
+        try {
+          const taxResult = taxPorts.calculateTax(
+            client.client_id,
+            total,
+            billingPeriod.endDate,
+            effectiveTaxRegion as string,
+            true,
+            contractCurrency,
+            resolvedProfile?.billingProfileId ?? null,
+          );
+          taxRate = taxResult.taxRate;
+          taxAmount = taxResult.taxAmount;
+        } catch (error) {
+          console.error(
+            `Error calculating initial tax for time entry ${entry.entry_id}:`,
+            error,
+          );
+        }
+      }
+
+      explanations.push({
+        chargeKey: segment.kind ? `${baseChargeKey}:${segment.kind}` : baseChargeKey,
+        serviceName: effectiveServiceName ?? entry.service_id,
+        chargeType: "time",
+        inputs: explanationInputs,
+        steps: [
+          ...durationSteps,
+          `${segment.kind ? `${segment.kind === 'overtime' ? 'Overtime' : 'Regular'}: ` : ''}${formatHours(segmentHours)} hrs × ${formatCents(segment.rate, contractCurrency)} = ${formatCents(total, contractCurrency)}`,
+        ],
+        markers,
+      });
+
+      return {
+        serviceId: effectiveServiceId,
+        serviceName: effectiveServiceName as string,
+        config_id: serviceConfig?.config.config_id,
+        client_contract_line_id: clientContractLine.client_contract_line_id,
+        userId: entry.user_id,
+        duration: segmentHours,
+        quantity: segmentHours,
+        rate: segment.rate,
+        total,
+        type: "time",
+        ...(segment.kind ? { timeSegment: segment.kind } : {}),
+        workItemSnapshot: buildTimeEntryWorkItemSnapshot(entry, {
+          billedMinutes: segment.minutes,
+          rateKind: 'uniform',
+          uniformRate: segment.rate,
+          rate: segment.rate,
+          netAmount: total,
+          serviceId: effectiveServiceId ?? null,
+          serviceName: (effectiveServiceName as string) ?? null,
+          ...(segment.kind ? { segment: segment.kind } : {}),
+        }),
+        tax_amount: taxAmount,
+        tax_rate: taxRate,
+        tax_region: effectiveTaxRegion,
+        entryId: entry.entry_id,
+        is_taxable: isTaxable,
+        servicePeriodStart,
+        servicePeriodEnd,
+        servicePeriodRecordId: timing.servicePeriodRecordId ?? null,
+        billingTiming: timing.duePosition,
+        client_contract_id: clientContractLine.client_contract_id || undefined,
+        contract_name: clientContractLine.contract_name || undefined,
+        location_id: clientContractLine.location_id ?? null,
+        billing_profile_id: resolvedProfile?.billingProfileId ?? null,
+        billing_profile_source: resolvedProfile?.source ?? null,
+        ...(projectConfig?.billing_model === "time_and_materials"
+          ? {
+              project_id: projectConfig.project_id,
+              project_name: projectConfig.project_name,
+              project_number: projectConfig.project_number,
+              project_billing_config_id: projectConfig.config_id,
+            }
+          : {}),
+      };
+    });
   });
 
   return { charges, explanations };

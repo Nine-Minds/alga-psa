@@ -120,7 +120,7 @@ export class StorageService {
       await validateUpload(options.origin, options.mime_type || 'application/octet-stream', options.size);
       const provider = await StorageProviderFactory.createProvider();
       const storagePath = generateStoragePath(tenant, '', originalName);
-      const uploaded = await provider.upload(stream, storagePath, { mime_type: options.mime_type || 'application/octet-stream' });
+      const uploaded = await provider.upload(stream, storagePath, { mime_type: options.mime_type || 'application/octet-stream', size: options.size });
       if (uploaded.size !== options.size) {
         await provider.delete(uploaded.path);
         throw new Error('Uploaded stream size did not match the declared size');

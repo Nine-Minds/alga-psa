@@ -314,7 +314,8 @@
     "inboundDomainAutoCreateContacts": "Create contacts for new senders",
     "inboundDomainAutoCreateHelp": "Mapped domains can optionally create a contact for a trusted new sender. Domains must be unique across clients.",
     "inboundDomainAutoCreateUpdated": "Sender contact setting updated.",
-    "inboundDomainAutoCreateUpdateFailed": "Could not update sender contact setting."
+    "inboundDomainAutoCreateUpdateFailed": "Could not update sender contact setting.",
+    "recurringTickets": "Recurring tickets"
   },
   "clientCommandCenter": {
     "cards": {
@@ -737,6 +738,7 @@
     "status": "Status",
     "actions": "Actions",
     "openMenu": "Open menu",
+    "viewDetails": "View details",
     "unassign": "Unassign",
     "loading": "Loading contracts...",
     "empty": "No contracts have been assigned to this client yet.",
@@ -1075,6 +1077,15 @@
     "taxRateCreateError": "Failed to create tax rate: {{message}}",
     "taxRateOption": "{{regionLabel}} - {{percentage}}% ({{description}})",
     "unknownRegion": "Unknown Region"
+  },
+  "clientDefaultTimeEntryServiceSettings": {
+    "title": "Default time-entry service",
+    "label": "Default time-entry service",
+    "placeholder": "Use tenant default",
+    "help": "Used for new ticket time entries for this client. Clear the selection to use the tenant default.",
+    "updatedSuccess": "Default time-entry service updated.",
+    "saveError": "Failed to save default time-entry service",
+    "loadError": "Failed to load default time-entry service"
   },
   "clientZeroDollarInvoiceSettings": {
     "title": "Zero-dollar invoice settings",

@@ -391,6 +391,7 @@
         "emailAlreadyExists": "Esiste già un utente con questo indirizzo e-mail",
         "reportsToSelf": "Un utente non può riferire a se stesso",
         "reportsToCycle": "Questo creerebbe una catena di riporto circolare",
+        "invalidTimezone": "Scegli un fuso orario basato su una città, ad esempio America/New_York.",
         "permissionDenied": "Non disponi delle autorizzazioni per modificare i ruoli utente.",
         "invalidCapacity": "La capacità settimanale deve essere un numero positivo.",
         "invalidWorkSchedule": "L'orario di lavoro deve essere un intervallo valido che termina dopo l'inizio."
@@ -820,6 +821,27 @@
           "appearanceHelp": "Fissaggio della scheda e visualizzazione elenco predefinita della bacheca",
           "assignment": "Assegnazione e SLA",
           "assignmentHelp": "Instradamento predefinito, SLA e responsabile della bacheca",
+          "notifications": "Notifiche",
+          "notificationsHelp": "Avvisa i tecnici dei nuovi ticket e dei cambi di stato e imposta gli osservatori predefiniti",
+          "notificationsRulesLabel": "Regole di notifica",
+          "notificationsRulesHelp": "I destinatari ricevono una notifica per evento. Non vengono aggiunti come osservatori.",
+          "notificationsAddRule": "Aggiungi regola",
+          "notificationsRuleTitle": "Regola {{number}}",
+          "notificationsRuleEnabled": "Attivata",
+          "notificationsRemoveRule": "Rimuovi regola",
+          "notificationsOnCreate": "Quando viene creato un ticket su questa bacheca",
+          "notificationsOnStatus": "Quando un ticket passa allo stato",
+          "notificationsNoStatuses": "Gli stati possono essere selezionati dopo aver salvato la bacheca.",
+          "notificationsRecipients": "Notifica a",
+          "notificationsRecipientsPlaceholder": "Seleziona utenti e team...",
+          "notificationsRecipientsHelp": "I membri del team vengono determinati a ogni invio di una notifica.",
+          "notificationsDefaultWatchers": "Osservatori predefiniti",
+          "notificationsDefaultWatchersPlaceholder": "Seleziona utenti...",
+          "notificationsDefaultWatchersHelp": "Aggiunti all'elenco degli osservatori di ogni nuovo ticket di questa bacheca e avvisati di ogni aggiornamento successivo.",
+          "notificationsTriggerRequired": "Ogni regola di notifica richiede almeno un attivatore: la creazione di un ticket o uno stato.",
+          "notificationsRecipientRequired": "Ogni regola di notifica richiede almeno un utente o un team da notificare.",
+          "notificationsFetchFailed": "Impossibile caricare le impostazioni di notifica",
+          "notificationsStatusRemapFailed": "La bacheca è stata creata, ma lo stato di una regola di notifica non ha potuto essere associato alla nuova bacheca. Aggiungi di nuovo le regole di notifica.",
           "inbound": "Email e risposte in arrivo",
           "inboundHelp": "Riapri i ticket quando i clienti rispondono via email",
           "close": "Regole di chiusura",
@@ -2391,6 +2413,11 @@
       "updateFailed": "Impossibile aggiornare il ruolo",
       "validateDeletionFailed": "Impossibile convalidare l’eliminazione. Riprova.",
       "deleteFailed": "Impossibile eliminare il ruolo"
+    },
+    "editDialog": {
+      "title": "Modifica ruolo",
+      "builtInNameLocked": "I nomi dei ruoli predefiniti non possono essere modificati perché il sistema dipende da essi.",
+      "portalLocked": "L'accesso al portale non può essere modificato dopo la creazione di un ruolo."
     }
   },
   "security": {
@@ -3445,7 +3472,10 @@
       "duplicate": "Questo utente ha già il ruolo selezionato.",
       "changePermission": "Autorizzazione negata: non si dispone dell’autorizzazione per modificare i ruoli degli utenti.",
       "missingField": "Manca un campo obbligatorio del ruolo utente.",
-      "missingFieldNamed": "Manca un campo obbligatorio del ruolo utente: {{field}}."
+      "missingFieldNamed": "Manca un campo obbligatorio del ruolo utente: {{field}}.",
+      "nameRequired": "Il nome del ruolo è obbligatorio.",
+      "builtInRename": "I ruoli predefiniti non possono essere rinominati.",
+      "duplicateName": "Esiste già un ruolo denominato \"{{name}}\" per questo portale."
     },
     "secrets": {
       "tenantContextMissing": "Manca il contesto del tenant. Aggiornare la pagina e riprovare.",
@@ -3470,6 +3500,7 @@
       "missingField": "Manca un campo obbligatorio delle impostazioni del tenant.",
       "missingFieldNamed": "Manca un campo obbligatorio delle impostazioni del tenant: {{field}}.",
       "invalidTimezone": "Fuso orario non valido: {{timezone}}",
+      "nonLocationTimezone": "{{timezone}} non è un fuso orario basato su una città. Scegli un fuso come America/New_York.",
       "permissions": {
         "clearOnboarding": "Autorizzazione negata: solo gli amministratori possono cancellare i dati di onboarding.",
         "update": "Autorizzazione negata: impossibile aggiornare le impostazioni",

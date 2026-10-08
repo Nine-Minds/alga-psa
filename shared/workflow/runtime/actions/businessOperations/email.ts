@@ -2,7 +2,12 @@ import { z } from 'zod';
 import { tenantDb } from '@alga-psa/db';
 import { getActionRegistryV2 } from '../../registries/actionRegistry';
 import { getWorkflowEmailProvider } from '../../registries/workflowEmailRegistry';
-import { withWorkflowJsonSchemaMetadata } from '../../jsonSchemaMetadata';
+import {
+  withWorkflowJsonSchemaMetadata,
+  withWorkflowPicker,
+  withWorkflowRequireOneOf,
+  type WorkflowJsonSchemaMetadata
+} from '../../jsonSchemaMetadata';
 import { EmailProviderError } from '@alga-psa/types';
 import {
   uuidSchema,
@@ -15,6 +20,14 @@ import {
   MAX_ATTACHMENT_BYTES,
   isAllowedAttachmentMimeType
 } from './shared';
+import {
+  workflowUserRecipientsSchema,
+  resolveWorkflowUserRecipients,
+  selectEmailableUsers,
+  mergeEmailRecipients,
+  type EmailRecipient,
+  type EmailSkipReason
+} from './userRecipients';
 
 export function resolveDeprecatedWorkflowFrom(input: {
   from?: { email?: string };
@@ -38,6 +51,23 @@ export function resolveDeprecatedWorkflowFrom(input: {
   throw new Error('The saved From address is not a configured sender or the effective default. Choose a sender identity.');
 }
 
+const emailRecipientListSchema = z.array(z.object({ email: z.string().email(), name: z.string().optional() }));
+
+// The designer edits recipient lists as one list of addresses rather than rows of email/name fields.
+const withEmailRecipientsEditor = <T extends z.ZodTypeAny>(schema: T, description: string): T =>
+  withWorkflowJsonSchemaMetadata(schema, description, {
+    'x-workflow-editor': { kind: 'custom', custom: { component: 'email-recipients' } },
+  });
+
+// Email bodies are paragraphs, so they get a multi-line editor.
+const emailBodyEditorMetadata: WorkflowJsonSchemaMetadata = {
+  'x-workflow-editor': {
+    kind: 'text',
+    inline: { mode: 'textarea' },
+    dialog: { mode: 'large-text' },
+  },
+};
+
 export function registerEmailActions(): void {
   const registry = getActionRegistryV2();
 
@@ -47,40 +77,96 @@ export function registerEmailActions(): void {
   registry.register({
     id: 'email.send',
     version: 1,
-    inputSchema: z.object({
-      to: z.array(z.object({ email: z.string().email(), name: z.string().optional() })).min(1).describe('Recipients'),
-      cc: z.array(z.object({ email: z.string().email(), name: z.string().optional() })).optional(),
-      bcc: z.array(z.object({ email: z.string().email(), name: z.string().optional() })).optional(),
-      from: z.object({ email: z.string().email(), name: z.string().optional() }).optional().describe('Optional from override'),
-      sender_id: withWorkflowJsonSchemaMetadata(uuidSchema.optional(), 'Configured outbound sender identity', {
-        'x-workflow-picker-kind': 'email-sender',
-        'x-workflow-picker-fixed-value-hint': 'Select sender identity',
-        'x-workflow-picker-allow-dynamic-reference': true,
+    inputSchema: withWorkflowRequireOneOf(
+      z.object({
+        to: withEmailRecipientsEditor(emailRecipientListSchema.optional(), 'Email addresses'),
+        users: withWorkflowJsonSchemaMetadata(workflowUserRecipientsSchema.optional(), 'Users and roles to email', {
+          'x-workflow-editor': { kind: 'custom', custom: { component: 'email-user-recipients' } },
+        }),
+        ticket_id: withWorkflowPicker(uuidSchema.optional(), "Email this ticket's technicians", 'ticket'),
+        ticket_assignees: withWorkflowJsonSchemaMetadata(
+          z.enum(['assigned', 'assigned_and_additional']).default('assigned_and_additional'),
+          'Which of the ticket\'s technicians to email (used when a ticket is chosen)',
+          {
+            'x-workflow-option-labels': {
+              assigned: 'Assigned technician only',
+              assigned_and_additional: 'Assigned technician and additional resources',
+            },
+          }
+        ),
+        users_as: withWorkflowJsonSchemaMetadata(
+          z.enum(['to', 'cc', 'bcc']).default('to'),
+          'Send users and ticket technicians as',
+          { 'x-workflow-option-labels': { to: 'To', cc: 'Cc', bcc: 'Bcc' } }
+        ),
+        cc: withEmailRecipientsEditor(emailRecipientListSchema.optional(), 'Cc recipients'),
+        bcc: withEmailRecipientsEditor(emailRecipientListSchema.optional(), 'Bcc recipients'),
+        from: z.object({ email: z.string().email(), name: z.string().optional() }).optional().describe('Optional from override'),
+        sender_id: withWorkflowPicker(uuidSchema.optional(), 'Configured outbound sender identity', 'email-sender'),
+        mail_class: z.enum(['ticket', 'project', 'billing', 'sales', 'scheduling', 'survey', 'account', 'general']).optional().default('general'),
+        subject: z.string().min(1).describe('Subject. Insert workflow fields directly; any other {{name}} is filled from template_data'),
+        html: withWorkflowJsonSchemaMetadata(
+          z.string().optional(),
+          'HTML body. Insert workflow fields directly; any other {{name}} is filled from template_data',
+          emailBodyEditorMetadata
+        ),
+        text: withWorkflowJsonSchemaMetadata(
+          z.string().optional(),
+          'Plain-text body. Insert workflow fields directly; any other {{name}} is filled from template_data',
+          emailBodyEditorMetadata
+        ),
+        template_data: z.record(z.unknown()).optional().describe('Values for {{name}} placeholders in the subject and body (only needed for names that are not workflow fields)'),
+        attachment_file_ids: z.array(uuidSchema).optional().describe('Attachment file ids (external_files.file_id)'),
+        provider_id: z.string().optional().describe('Optional provider override (providerId from tenant email settings)'),
+        on_no_recipients: withWorkflowJsonSchemaMetadata(
+          z.enum(['error', 'skip']).default('error'),
+          'What to do when there is no one to email (for example an unassigned ticket)',
+          {
+            'x-workflow-option-labels': {
+              error: 'Fail the step (a surrounding Try/Catch handles it)',
+              skip: 'Continue without sending',
+            },
+            'x-workflow-failure-policy': { failValue: 'error' },
+          }
+        ),
+        idempotency_key: z.string().optional().describe('Optional external idempotency key')
+      }).superRefine((val, refineCtx) => {
+        const users = val.users;
+        const hasUsers = Boolean(users && (users.user_ids?.length || users.role_ids?.length || users.role_names?.length));
+        if (!(val.to?.length) && !hasUsers && !val.ticket_id) {
+          refineCtx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ['to'],
+            message: 'to, users, or ticket_id required'
+          });
+        }
       }),
-      mail_class: z.enum(['ticket', 'project', 'billing', 'sales', 'scheduling', 'survey', 'account', 'general']).optional().default('general'),
-      subject: z.string().min(1).describe('Subject template (supports {{var}})'),
-      html: z.string().optional().describe('HTML template (supports {{var}})'),
-      text: z.string().optional().describe('Text template (supports {{var}})'),
-      template_data: z.record(z.unknown()).optional().describe('Template data for {{var}} replacement'),
-      attachment_file_ids: z.array(uuidSchema).optional().describe('Attachment file ids (external_files.file_id)'),
-      provider_id: z.string().optional().describe('Optional provider override (providerId from tenant email settings)'),
-      idempotency_key: z.string().optional().describe('Optional external idempotency key')
-    }),
+      ['to', 'users', 'ticket_id']
+    ),
     outputSchema: z.object({
       success: z.boolean(),
       message_id: z.string().nullable(),
       provider_id: z.string().nullable(),
       provider_type: z.string().nullable(),
-      status: z.enum(['sent']).describe('Delivery status'),
-      sent_at: isoDateTimeSchema.nullable()
+      status: z.enum(['sent', 'skipped']).describe('Delivery status ("skipped" when there was no one to email and on_no_recipients is "skip")'),
+      sent_at: isoDateTimeSchema.nullable(),
+      internal_recipients: z.array(z.object({ user_id: uuidSchema, email: z.string() })).describe('Users and ticket technicians the email was addressed to'),
+      skipped_users: z.array(z.object({
+        user_id: uuidSchema,
+        reason: z.enum(['inactive', 'not_internal', 'no_email'])
+      })).describe('Users left out, with the reason')
     }),
     sideEffectful: true,
     retryHint: { maxAttempts: 3, backoffMs: 1000, retryOn: ['TransientError'] },
     idempotency: { mode: 'actionProvided', key: actionProvidedKey },
-    ui: { label: 'Send Email', category: 'Business Operations', description: 'Send an outbound email via tenant email settings' },
+    ui: { label: 'Send Email', category: 'Business Operations', description: "Send an email to addresses, users, roles, or a ticket's assigned technicians" },
     handler: async (input, ctx) => withTenantTransaction(ctx, async (tx) => {
       // Use the existing email permission taxonomy (email:process).
       await requirePermission(ctx, tx, { resource: 'email', action: 'process' });
+      // Reading a ticket's technicians needs the same permission as tickets.find.
+      if (input.ticket_id) {
+        await requirePermission(ctx, tx, { resource: 'ticket', action: 'read' });
+      }
 
       const { TenantEmailService, StaticTemplateProcessor, EmailProviderManager } = getWorkflowEmailProvider();
 
@@ -105,6 +191,75 @@ export function registerEmailActions(): void {
       const provider = providers[0] ?? null;
       if (!provider) {
         throwActionError(ctx, { category: 'ActionError', code: 'VALIDATION_ERROR', message: 'No enabled email provider configured' });
+      }
+
+      // Resolve internal recipients and apply the cap before any templating or attachment download.
+      const hasUsers = Boolean(
+        input.users && (input.users.user_ids?.length || input.users.role_ids?.length || input.users.role_names?.length)
+      );
+      let internalRecipients: Array<{ user_id: string; email: string; name: string }> = [];
+      let skippedUsers: Array<{ user_id: string; reason: EmailSkipReason }> = [];
+      if (hasUsers || input.ticket_id) {
+        const resolvedUsers = await resolveWorkflowUserRecipients(tx, ctx, {
+          user_ids: input.users?.user_ids,
+          role_ids: input.users?.role_ids,
+          role_names: input.users?.role_names,
+          ticket: input.ticket_id
+            ? { ticket_id: input.ticket_id, assignees: input.ticket_assignees ?? 'assigned_and_additional' }
+            : undefined,
+        });
+        ({ recipients: internalRecipients, skipped: skippedUsers } = selectEmailableUsers(resolvedUsers));
+      }
+      const merged = mergeEmailRecipients(
+        {
+          to: input.to as EmailRecipient[] | undefined,
+          cc: input.cc as EmailRecipient[] | undefined,
+          bcc: input.bcc as EmailRecipient[] | undefined
+        },
+        internalRecipients,
+        input.users_as ?? 'to'
+      );
+
+      const maxRecipients = provider.capabilities.maxRecipientsPerMessage ?? 100;
+      if (merged.total > maxRecipients) {
+        throwActionError(ctx, {
+          category: 'ValidationError',
+          code: 'VALIDATION_ERROR',
+          message: 'Too many recipients for email provider',
+          details: { count: merged.total, max: maxRecipients }
+        });
+      }
+
+      const internalRecipientsOutput = internalRecipients.map(({ user_id, email }) => ({ user_id, email }));
+      if (merged.total === 0) {
+        if ((input.on_no_recipients ?? 'error') === 'skip') {
+          await writeRunAudit(ctx, tx, {
+            operation: 'workflow_action:email.send',
+            changedData: { to_count: 0, cc_count: 0, bcc_count: 0, internal_user_count: 0, skipped_user_count: skippedUsers.length },
+            details: { action_id: 'email.send', action_version: 1, message_id: null, skipped: true }
+          });
+          return {
+            success: true,
+            message_id: null,
+            provider_id: null,
+            provider_type: null,
+            status: 'skipped' as const,
+            sent_at: null,
+            internal_recipients: [],
+            skipped_users: skippedUsers
+          };
+        }
+        const emptySources = [
+          input.to !== undefined && 'addresses',
+          hasUsers && 'users and roles',
+          input.ticket_id && 'ticket technicians'
+        ].filter(Boolean).join(', ');
+        throwActionError(ctx, {
+          category: 'ActionError',
+          code: 'NO_RECIPIENTS',
+          message: `No one to email: ${emptySources || 'no recipient source'} resolved to no deliverable recipients`,
+          details: { skipped_users: skippedUsers }
+        });
       }
 
       // Build content via static templating.
@@ -161,19 +316,13 @@ export function registerEmailActions(): void {
         }
       }
 
-      const recipientsCount = (input.to?.length ?? 0) + (input.cc?.length ?? 0) + (input.bcc?.length ?? 0);
-      const maxRecipients = provider.capabilities.maxRecipientsPerMessage ?? 100;
-      if (recipientsCount > maxRecipients) {
-        throwActionError(ctx, { category: 'ValidationError', code: 'VALIDATION_ERROR', message: 'Too many recipients for email provider' });
-      }
-
       try {
         const result = await TenantEmailService.getInstance(tx.tenantId).sendEmail({
             mailClass: input.mail_class,
             senderId,
-            to: input.to,
-            cc: input.cc,
-            bcc: input.bcc,
+            to: merged.to,
+            cc: merged.cc,
+            bcc: merged.bcc,
             subject: content.subject,
             html: content.html,
             text: content.text,
@@ -186,7 +335,13 @@ export function registerEmailActions(): void {
 
         await writeRunAudit(ctx, tx, {
           operation: 'workflow_action:email.send',
-          changedData: { to_count: input.to.length, cc_count: input.cc?.length ?? 0, bcc_count: input.bcc?.length ?? 0 },
+          changedData: {
+            to_count: merged.to.length,
+            cc_count: merged.cc.length,
+            bcc_count: merged.bcc.length,
+            internal_user_count: internalRecipients.length,
+            skipped_user_count: skippedUsers.length
+          },
           details: { action_id: 'email.send', action_version: 1, message_id: result.messageId ?? null }
         });
 
@@ -196,7 +351,9 @@ export function registerEmailActions(): void {
           provider_id: result.providerId ?? null,
           provider_type: result.providerType ?? null,
           status: 'sent' as const,
-          sent_at: result.sentAt ? new Date(result.sentAt).toISOString() : null
+          sent_at: result.sentAt ? new Date(result.sentAt).toISOString() : null,
+          internal_recipients: internalRecipientsOutput,
+          skipped_users: skippedUsers
         };
       } catch (error) {
         if (error instanceof EmailProviderError) {

@@ -166,6 +166,8 @@ services:
     depends_on:
       postgres:
         condition: service_started
+      postgres-extension-update:
+        condition: service_completed_successfully
     entrypoint: ["/app/setup/entrypoint.sh"]
 
   workflow-worker:

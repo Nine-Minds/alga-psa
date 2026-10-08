@@ -22,6 +22,10 @@ const h = vi.hoisted(() => {
         return query;
       },
       select: () => query,
+      update: async (values: Record<string, unknown>) => {
+        filtered.forEach((row) => Object.assign(row, values));
+        return filtered.length;
+      },
       first: async () => filtered[0],
       then: (resolve: (value: any[]) => unknown, reject?: (reason: unknown) => unknown) =>
         Promise.resolve(filtered).then(resolve, reject),
@@ -50,7 +54,7 @@ vi.mock('@temporalio/activity', () => ({
 vi.mock('@alga-psa/db', () => ({ tenantDb: h.tenantDb }));
 
 vi.mock('@alga-psa/db/admin.js', () => ({
-  getAdminConnection: vi.fn(async () => ({})),
+  getAdminConnection: vi.fn(async () => ({ fn: { now: () => 'now' } })),
   retryOnAdminReadOnly: vi.fn(async (fn: () => unknown) => fn()),
   withAdminTransactionRetryReadOnly: vi.fn(),
 }));
@@ -125,6 +129,33 @@ describe('createPortalUserInDB reuse behavior', () => {
       contact_id: 'contact-1',
     });
     expect(h.state.userRoles).toEqual([{ user_id: 'portal-existing', role_id: 'role-existing' }]);
+  });
+
+  it('reactivates an existing account that tenant deletion deactivated', async () => {
+    h.state.users = [
+      {
+        user_id: 'portal-returning',
+        email: 'admin@cloudvbs.test',
+        user_type: 'client',
+        is_inactive: true,
+        contact_id: 'contact-1',
+        password_hash: 'original-hash',
+      },
+    ];
+    h.state.userRoles = [{ user_id: 'portal-returning', role_id: 'role-existing' }];
+
+    const result = await createPortalUserInDB(baseInput);
+
+    expect(result).toEqual({
+      userId: 'portal-returning',
+      roleId: 'role-existing',
+      status: 'existing',
+    });
+    expect(sharedCreateMock).not.toHaveBeenCalled();
+    expect(h.state.users[0]).toMatchObject({
+      password_hash: 'original-hash',
+      is_inactive: false,
+    });
   });
 
   it('creates a portal user when none exists and reports created', async () => {

@@ -314,7 +314,8 @@
     "inboundDomainAutoCreateContacts": "Skapa kontakter för nya avsändare",
     "inboundDomainAutoCreateHelp": "Mappade domäner kan valfritt skapa en kontakt för en betrodd ny avsändare. Domäner måste vara unika för varje kund.",
     "inboundDomainAutoCreateUpdated": "Inställningen för avsändarkontakter har uppdaterats.",
-    "inboundDomainAutoCreateUpdateFailed": "Det gick inte att uppdatera inställningen för avsändarkontakter."
+    "inboundDomainAutoCreateUpdateFailed": "Det gick inte att uppdatera inställningen för avsändarkontakter.",
+    "recurringTickets": "Återkommande ärenden"
   },
   "clientCommandCenter": {
     "cards": {
@@ -737,6 +738,7 @@
     "status": "Status",
     "actions": "Åtgärder",
     "openMenu": "Öppna meny",
+    "viewDetails": "Visa detaljer",
     "unassign": "Ta bort tilldelning",
     "loading": "Läser in avtal…",
     "empty": "Inga avtal har tilldelats kunden ännu.",
@@ -1930,6 +1932,15 @@
       "duplicateManager": "En faktureringsprofil kan bara ha en ansvarig.",
       "notThisClient": "En av de valda kontakterna tillhör inte den kund som faktureringsprofilen hör till."
     }
+  },
+  "clientDefaultTimeEntryServiceSettings": {
+    "title": "Standardtjänst för tidposter",
+    "label": "Standardtjänst för tidposter",
+    "placeholder": "Använd organisationens standardtjänst",
+    "help": "Används för nya tidposter på den här kundens ärenden. Rensa valet för att använda organisationens standardtjänst.",
+    "updatedSuccess": "Standardtjänsten för tidposter har uppdaterats.",
+    "saveError": "Det gick inte att spara standardtjänsten för tidposter",
+    "loadError": "Det gick inte att läsa in standardtjänsten för tidposter"
   },
   "mergeClients": {
     "title": "Slå samman en kund med den här",

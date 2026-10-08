@@ -72,7 +72,8 @@ function buildContext(lines: MinimalLine[]): AccountingExportAdapterContext {
 describe('XeroAdapter – spec validation scaffolding', () => {
   const mockResolver = {
     resolveServiceMapping: vi.fn(),
-    resolveTaxCodeMapping: vi.fn()
+    resolveTaxCodeMapping: vi.fn(),
+    resolveDiscountMapping: vi.fn()
   };
   // Captures the transform-time evidence writes to accounting_export_lines
   // (mapping_resolution.serviceTarget snapshots).
@@ -98,6 +99,8 @@ describe('XeroAdapter – spec validation scaffolding', () => {
   beforeEach(() => {
     mockResolver.resolveServiceMapping.mockReset();
     mockResolver.resolveTaxCodeMapping.mockReset();
+    mockResolver.resolveDiscountMapping.mockReset();
+    mockResolver.resolveDiscountMapping.mockResolvedValue(null);
     lineUpdateSpy.mockClear();
     // Callable, chainable knex so the invoice-mapping lookup in transform() finds no
     // existing mapping (first() -> undefined) and proceeds to build a fresh payload.
@@ -744,6 +747,150 @@ describe('XeroAdapter – spec validation scaffolding', () => {
     expect(invoice.lineAmountType).toBe('Exclusive');
     // Invoice-level amountCents mirrors the sum of pre-tax line amounts.
     expect(invoice.amountCents).toBe(20_000);
+  });
+
+  it('exports a service-less automatic discount through the realm discount mapping (account mode)', async () => {
+    const adapter = new XeroAdapter();
+    const context = buildContext([baseLine]);
+    mockResolver.resolveDiscountMapping.mockResolvedValue({
+      external_entity_id: '260',
+      metadata: { xeroTargetKind: 'account' }
+    });
+
+    vi.spyOn(adapter as any, 'loadInvoices').mockResolvedValue(
+      new Map([
+        [
+          INVOICE_ID,
+          {
+            invoice_id: INVOICE_ID,
+            invoice_number: 'INV-DISC',
+            invoice_date: '2026-10-05',
+            due_date: '2026-10-19',
+            client_id: CLIENT_ID,
+            currency_code: 'USD'
+          }
+        ]
+      ])
+    );
+
+    vi.spyOn(adapter as any, 'loadCharges').mockResolvedValue(
+      new Map([
+        [
+          CHARGE_ID,
+          {
+            item_id: CHARGE_ID,
+            invoice_id: INVOICE_ID,
+            service_id: null,
+            description: 'Loyalty discount 10%',
+            quantity: '1.00',
+            unit_price: 0,
+            net_amount: -2_500,
+            total_price: -2_500,
+            tax_amount: 0,
+            is_discount: true,
+            tax_region: null
+          }
+        ]
+      ])
+    );
+
+    vi.spyOn(adapter as any, 'loadClients').mockResolvedValue({
+      clients: new Map([
+        [CLIENT_ID, { client_id: CLIENT_ID, client_name: 'Acme', billing_email: 'a@a' }]
+      ]),
+      mappings: new Map([
+        [
+          CLIENT_ID,
+          {
+            id: 'mapping-1',
+            integration_type: 'xero',
+            alga_entity_type: 'client',
+            alga_entity_id: CLIENT_ID,
+            external_entity_id: 'external-contact-acme',
+            metadata: { source: 'mapping_table' }
+          }
+        ]
+      ])
+    });
+
+    const result = await adapter.transform(context);
+    const line = (result.documents[0].payload as Record<string, any>).invoice.lines[0];
+
+    expect(mockResolver.resolveServiceMapping).not.toHaveBeenCalled();
+    expect(line.accountCode).toBe('260');
+    expect(line.itemCode).toBeUndefined();
+    expect(line.amountCents).toBe(-2_500);
+    expect(line.quantity * line.unitAmountCents).toBe(line.amountCents);
+  });
+
+  // Regression (alga-2026-0002643): 5 min at $125/h is stored as 0.08 h with a
+  // $10.42 amount. Xero keeps too few quantity decimals to express the hours,
+  // so the line goes out as a single unit at the line amount.
+  it('sends a pair that multiplies back to the amount when stored hours were rounded', async () => {
+    const adapter = new XeroAdapter();
+    const context = buildContext([baseLine]);
+
+    vi.spyOn(adapter as any, 'loadInvoices').mockResolvedValue(
+      new Map([
+        [
+          INVOICE_ID,
+          {
+            invoice_id: INVOICE_ID,
+            invoice_number: 'INV-ROUND',
+            invoice_date: '2026-10-05',
+            due_date: '2026-10-19',
+            client_id: CLIENT_ID,
+            currency_code: 'USD'
+          }
+        ]
+      ])
+    );
+
+    vi.spyOn(adapter as any, 'loadCharges').mockResolvedValue(
+      new Map([
+        [
+          CHARGE_ID,
+          {
+            item_id: CHARGE_ID,
+            invoice_id: INVOICE_ID,
+            service_id: 'svc-123',
+            description: 'Break Fix/Labor',
+            quantity: '0.08', // numeric columns arrive as strings
+            unit_price: 12_500,
+            net_amount: 1_042,
+            total_price: 1_042,
+            tax_amount: 0,
+            tax_region: 'US-NY'
+          }
+        ]
+      ])
+    );
+
+    vi.spyOn(adapter as any, 'loadClients').mockResolvedValue({
+      clients: new Map([
+        [CLIENT_ID, { client_id: CLIENT_ID, client_name: 'Acme', billing_email: 'a@a' }]
+      ]),
+      mappings: new Map([
+        [
+          CLIENT_ID,
+          {
+            id: 'mapping-1',
+            integration_type: 'xero',
+            alga_entity_type: 'client',
+            alga_entity_id: CLIENT_ID,
+            external_entity_id: 'external-contact-acme',
+            metadata: { source: 'mapping_table' }
+          }
+        ]
+      ])
+    });
+
+    const result = await adapter.transform(context);
+    const line = (result.documents[0].payload as Record<string, any>).invoice.lines[0];
+
+    expect(line.amountCents).toBe(1_042);
+    expect(line.quantity * line.unitAmountCents).toBe(line.amountCents);
+    expect(line.quantity).toBe(1);
   });
 
   it('throws XERO_CHARGE_MISSING_NET_AMOUNT when a charge has no net_amount', async () => {

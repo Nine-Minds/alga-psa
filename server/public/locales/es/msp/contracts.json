@@ -641,6 +641,8 @@
       "catalogPriceMissing": "Ningún precio de catálogo en {{currency}} cubre este límite, por lo que no se puede facturar una cantidad positiva. Agregue un precio de catálogo en {{currency}} o elija \"Anular precio unitario\" antes de guardar.",
       "invoiceImpact": "A partir del {{date}}, el subtotal recurrente de este artículo cambia en {{delta}} hasta {{total}} (antes de descuentos e impuestos). Los períodos facturados anteriormente no cambian.",
       "discardDirty": "Al cambiar la fecha de entrada en vigor se vuelven a cargar los valores vigentes y se descarta su edición sin guardar. ¿Desea continuar?",
+      "discardDirtyTitle": "¿Descartar la edición sin guardar?",
+      "discardDirtyConfirm": "Descartar y volver a cargar",
       "invalidQuantity": "La cantidad debe ser un número entero igual o mayor que 0.",
       "invalidRate": "Introduzca un precio unitario igual o mayor que 0, o cambie al precio de catálogo.",
       "saved": "Programado: {{quantity}} a partir del {{date}}.",
@@ -1203,7 +1205,7 @@
     "composition": {
       "addContractLinesBeforeManaging": "Agregue líneas de contrato a esta plantilla antes de gestionar los servicios.",
       "additionalPlans": "Planes adicionales",
-      "bucketSummary": "Bloque: {{minutes}} min • Exceso ${{overage}}",
+      "bucketSummary": "Bloque: {{minutes}} min • Exceso {{overage}}",
       "closeManager": "Cerrar gestor",
       "editRate": "Editar tarifa",
       "fixedFeeBundles": "Paquetes de tarifa fija",
@@ -1649,6 +1651,7 @@
       "quantityLabel": "Cantidad",
       "selectServicePlaceholder": "Seleccione un servicio",
       "serviceItemLabel": "Servicio {{index}}",
+      "catalogDefaultHint": "No hay precio de catálogo en {{currency}}; se usa el valor predeterminado del catálogo.",
       "recurringQuantityLabel": "Cantidad recurrente",
       "allocationQuantityLabel": "Cantidad de asignación",
       "noCurrencyPrice": "No hay precio en {{currency}} en el catálogo. Introduzca una tarifa unitaria."
@@ -1699,7 +1702,8 @@
       "serviceItem": "Servicio {{index}}",
       "setBucketOfHours": "Establecer bloque de horas",
       "noCurrencyPriceEnterRate": "No hay precio en {{currency}} en el catálogo. Introduzca una tarifa por hora.",
-      "noCurrencyPriceWithLegacyHint": "No hay precio en {{currency}} en el catálogo. Tarifa predeterminada heredada: {{rate}}. Introduzca una tarifa por hora en {{currency}}."
+      "noCurrencyPriceWithLegacyHint": "No hay precio en {{currency}} en el catálogo. Tarifa predeterminada heredada: {{rate}}. Introduzca una tarifa por hora en {{currency}}.",
+      "catalogDefaultRateHint": "No hay precio de catálogo en {{currency}}; se usa el valor predeterminado del catálogo."
     },
     "minimumBillableTime": {
       "hint": "p. ej., 15 minutos: cualquier entrada de tiempo inferior a esto se redondeará hacia arriba",
@@ -1759,7 +1763,8 @@
       "unitOfMeasureHint": "Elija la unidad en la que se factura este servicio.",
       "unitOfMeasurePlaceholder": "p. ej., GB, llamada a API, usuario",
       "noCurrencyPriceEnterRate": "No hay precio en {{currency}} en el catálogo. Introduzca una tarifa unitaria.",
-      "noCurrencyPriceWithLegacyHint": "No hay precio en {{currency}} en el catálogo. Tarifa predeterminada heredada: {{rate}}. Introduzca una tarifa unitaria en {{currency}}."
+      "noCurrencyPriceWithLegacyHint": "No hay precio en {{currency}} en el catálogo. Tarifa predeterminada heredada: {{rate}}. Introduzca una tarifa unitaria en {{currency}}.",
+      "catalogDefaultRateHint": "No hay precio de catálogo en {{currency}}; se usa el valor predeterminado del catálogo."
     },
     "summary": {
       "labels": {

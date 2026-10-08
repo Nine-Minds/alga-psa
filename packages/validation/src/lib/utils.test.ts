@@ -4,6 +4,7 @@ import { z } from 'zod';
 import {
   isValidEmail,
   isValidUUID,
+  isUuidShaped,
   validateArray,
   validateData,
   iso8601Schema,
@@ -28,6 +29,29 @@ describe('@alga-psa/validation utils', () => {
     expect(isValidUUID('not-a-uuid')).toBe(false);
     expect(isValidUUID('00000000-0000-0000-0000-000000000000')).toBe(false);
     expect(isValidUUID('550e8400-e29b-41d4-a716-446655440000')).toBe(true);
+  });
+
+  it('isUuidShaped accepts any canonical 8-4-4-4-12 hex uuid', () => {
+    expect(isUuidShaped('550e8400-e29b-41d4-a716-446655440000')).toBe(true); // v4
+    expect(isUuidShaped('018f4c1e-7b3a-7c2d-9e4f-0a1b2c3d4e5f')).toBe(true); // v7
+    expect(isUuidShaped('00000000-0000-0000-0000-000000000001')).toBe(true);
+    expect(isUuidShaped('550E8400-E29B-41D4-A716-446655440000')).toBe(true);
+  });
+
+  it('isUuidShaped rejects anything Postgres could not parse as a uuid', () => {
+    expect(isUuidShaped('T0001')).toBe(false);
+    expect(isUuidShaped('TIC001010')).toBe(false);
+    expect(isUuidShaped('')).toBe(false);
+    expect(isUuidShaped(undefined)).toBe(false);
+    expect(isUuidShaped(null)).toBe(false);
+    expect(isUuidShaped(123)).toBe(false);
+    expect(isUuidShaped({})).toBe(false);
+    expect(isUuidShaped(' 550e8400-e29b-41d4-a716-446655440000')).toBe(false);
+    expect(isUuidShaped('550e8400-e29b-41d4-a716-446655440000 ')).toBe(false);
+    expect(isUuidShaped('550e8400-e29b-41d4-a716-446655440000\n')).toBe(false);
+    expect(isUuidShaped('{550e8400-e29b-41d4-a716-446655440000}')).toBe(false);
+    expect(isUuidShaped("x' or '1'='1")).toBe(false);
+    expect(isUuidShaped('550e8400-e29b-41d4-a716-44665544000g')).toBe(false);
   });
 
   it('validateData and validateArray delegate to zod schemas', () => {

@@ -13,7 +13,7 @@ describe('process renewal queue handler tenant-scoped query contract', () => {
     expect(source).toContain("db.tenantJoin(contractQuery, 'contracts as c'");
     expect(source).toContain("db.tenantJoin(contractQuery, 'clients as cl'");
     expect(source).toContain("db.tenantJoin(contractQuery, 'default_billing_settings as dbs'");
-    expect(source).toContain("tenantScopedTable(knex, 'workflow_runs', tenantId)");
+    expect(source).not.toContain('workflow_runs');
     expect(source).toContain("tenantScopedTable(knex, 'tickets', tenantId)");
     expect(source).toContain("tenantScopedTable(knex, 'client_contracts', tenantId)");
     expect(source).not.toContain("'cc.tenant': tenantId");

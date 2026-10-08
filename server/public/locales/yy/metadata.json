@@ -546,6 +546,9 @@
       "detail": {
         "title": "〖Ŧīƈķḗŧ #{{ticketNumber}} - {{ticketTitle}} ·················〗",
         "fallbackTitle": "〖Ŧīƈķḗŧ Ḓḗŧȧīŀş ······〗"
+      },
+      "recurring": {
+        "title": "〖Řḗƈŭřřīƞɠ ŧīƈķḗŧş ·······〗"
       }
     },
     "timeEntry": {

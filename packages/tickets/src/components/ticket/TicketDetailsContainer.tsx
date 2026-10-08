@@ -48,6 +48,7 @@ interface TicketDetailsContainerProps {
     contacts: any[];
     contactInfo: any;
     createdByUser: any;
+    updatedByUser?: any;
     board: any;
     additionalAgents: any[];
     availableAgents: any[];
@@ -91,6 +92,7 @@ interface TicketDetailsContainerProps {
   renderQuickInvoice?: React.ComponentProps<typeof TicketDetails>['renderQuickInvoice'];
   renderClientDetails?: React.ComponentProps<typeof TicketDetails>['renderClientDetails'];
   renderIntervalManagement?: React.ComponentProps<typeof TicketDetails>['renderIntervalManagement'];
+  isAlgaDeskMode?: boolean;
   hideSlaStatus?: boolean;
   hideBilling?: boolean;
   hideScheduling?: boolean;
@@ -121,6 +123,7 @@ export default function TicketDetailsContainer({
   renderQuickInvoice,
   renderClientDetails,
   renderIntervalManagement,
+  isAlgaDeskMode = false,
   hideSlaStatus = false,
   hideBilling = false,
   hideScheduling = false,
@@ -327,6 +330,7 @@ export default function TicketDetailsContainer({
       initialContacts={ticketData.contacts}
       initialContactInfo={ticketData.contactInfo}
       initialCreatedByUser={ticketData.createdByUser}
+      initialUpdatedByUser={ticketData.updatedByUser ?? null}
       initialBoard={ticketData.board}
       initialAdditionalAgents={ticketData.additionalAgents}
       initialAvailableAgents={ticketData.availableAgents}
@@ -353,6 +357,7 @@ export default function TicketDetailsContainer({
       renderQuickInvoice={renderQuickInvoice}
       renderClientDetails={renderClientDetails}
       renderIntervalManagement={renderIntervalManagement}
+      isAlgaDeskMode={isAlgaDeskMode}
       hideSlaStatus={hideSlaStatus}
       hideBilling={hideBilling}
       hideScheduling={hideScheduling}

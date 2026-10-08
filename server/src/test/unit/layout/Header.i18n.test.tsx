@@ -219,6 +219,7 @@ describe('Header i18n wiring', () => {
       'header.breadcrumb.home': 'Accueil fil',
       'header.breadcrumb.dashboard': 'Tableau de bord FR',
       'nav.tickets': 'Tickets traduits',
+      'nav.ticketsAll': 'Tous les tickets traduits',
       'header.tenantBadge.ariaLabel': 'Locataire actif {{tenant}}',
       'header.themeToggle.ariaLabel': 'Basculer le theme',
       'header.themeToggle.light': 'Clair',
@@ -363,7 +364,7 @@ describe('Header i18n wiring', () => {
     );
 
     expect(screen.getByRole('link', { name: 'Accueil fil' })).toBeInTheDocument();
-    expect(screen.getByText('Tickets traduits')).toBeInTheDocument();
+    expect(screen.getByText('Tous les tickets traduits')).toBeInTheDocument();
 
     await waitFor(() => {
       expect(screen.getByLabelText('Locataire actif Acme MSP')).toBeInTheDocument();

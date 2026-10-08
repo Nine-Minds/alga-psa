@@ -66,3 +66,18 @@ Return the namespace
 {{- default .Release.Namespace .Values.namespace -}}
 {{- end -}}
 
+{{/*
+Render an image reference as name[:tag][@digest] from a dict with name, tag and
+digest keys. Fails when name is empty or when digest is set but is not
+sha256:<64 lowercase hex>.
+*/}}
+{{- define "email-service.imageRef" -}}
+{{- $name := required "image name is required" .name -}}
+{{- if and .digest (not (regexMatch "^sha256:[0-9a-f]{64}$" .digest)) -}}
+{{- fail (printf "image digest %q must match sha256:<64 lowercase hex characters>" .digest) -}}
+{{- end -}}
+{{- $ref := $name -}}
+{{- if .tag -}}{{- $ref = printf "%s:%s" $ref .tag -}}{{- end -}}
+{{- if .digest -}}{{- $ref = printf "%s@%s" $ref .digest -}}{{- end -}}
+{{- $ref -}}
+{{- end }}

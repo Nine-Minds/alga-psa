@@ -88,7 +88,7 @@ export function compileExpression(expr: Expr): CompiledExpression {
   };
 }
 
-function normalizeExpressionSource(source: string): string {
+export function normalizeExpressionSource(source: string): string {
   // JSONata uses `=` / `!=` for equality checks; many authors intuitively write `==`.
   // Normalize `==` to `=` for compatibility with workflow fixtures and designer output.
   const normalized = source.replace(/==/g, '=');

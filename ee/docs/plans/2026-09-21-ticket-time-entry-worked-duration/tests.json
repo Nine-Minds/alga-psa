@@ -1,0 +1,50 @@
+[
+  {
+    "id": "T001",
+    "description": "Unit (@alga-psa/core): workedMinutes returns 5 for a five-minute interval with billable_duration 0, returns timestamp duration when billable minutes differ, accepts Date/ISO values, falls back to finite billable minutes for missing or invalid intervals, returns 0 when neither source is usable, and does not mutate input",
+    "implemented": true,
+    "featureIds": ["F001"]
+  },
+  {
+    "id": "T002",
+    "description": "DB-backed integration (ticketActivityLog.integration.test.ts): a tenant-scoped ticket time entry with a five-minute timestamp interval and billable_duration 0 is returned by buildUnifiedTicketTimeline with the fields needed to calculate five worked minutes; querying another tenant/ticket does not return it",
+    "implemented": true,
+    "featureIds": ["F001", "F009", "F011", "F014"]
+  },
+  {
+    "id": "T003",
+    "description": "Action unit/integration (timeEntryTicketActions): mixed own, visible-other, and hidden-other entries use worked duration for every summary total while retaining original billable_duration and existing authorization/redaction outcomes; missing interval data exercises the fallback",
+    "implemented": true,
+    "featureIds": ["F003", "F004", "F011", "F014"]
+  },
+  {
+    "id": "T004",
+    "description": "Component (TimeLoggedSummary): a non-billable five-minute entry contributes five minutes to the headline, day bucket, tooltip, and aria-label; a second day verifies bucket aggregation and scaling use worked rather than billable minutes",
+    "implemented": true,
+    "featureIds": ["F005", "F006"]
+  },
+  {
+    "id": "T005",
+    "description": "Component (TicketTimeEntries): non-billable and billable entries render timestamp-derived durations with the correct localized badge, while approval badges and edit/delete ownership rules remain intact",
+    "implemented": true,
+    "featureIds": ["F007", "F008", "F014"]
+  },
+  {
+    "id": "T006",
+    "description": "Component (BentoTimelineTile): a five-minute timeline node with billable_duration 0 renders 5m plus Non-billable; a billable node whose billed and worked minutes differ renders worked time plus Billable",
+    "implemented": true,
+    "featureIds": ["F009", "F010"]
+  },
+  {
+    "id": "T007",
+    "description": "Regression (ticketBentoActions): billing rollup totalMinutes uses shared workedMinutes while billableMinutes and uninvoicedBillableMinutes still sum billable_duration",
+    "implemented": true,
+    "featureIds": ["F002"]
+  },
+  {
+    "id": "T008",
+    "description": "i18n validation: timeEntries.billable and timeEntries.nonBillable exist in all maintained locales, xx/yy are regenerated, placeholders remain valid, and npm run test:i18n passes",
+    "implemented": true,
+    "featureIds": ["F012", "F013"]
+  }
+]

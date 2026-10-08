@@ -297,7 +297,12 @@
     "cancelScheduledBody": "It will not be sent to the client.",
     "cancelScheduledConfirm": "Cancel comment",
     "cancelScheduledFailed": "Couldn't cancel the scheduled comment",
-    "scheduledCanceled": "Scheduled comment canceled"
+    "scheduledCanceled": "Scheduled comment canceled",
+    "commentLabel": "Comment",
+    "deleteTitle": "Delete this comment?",
+    "deleteBody": "This cannot be undone.",
+    "deleteConfirm": "Delete",
+    "deleteFailed": "Unable to delete the comment."
   },
   "documents": {
     "title": "Documents",
@@ -462,7 +467,9 @@
       "permission": "You don't have permission to create tickets.",
       "validation": "Ticket creation was rejected by the server.",
       "generic": "Unable to create ticket. Please try again."
-    }
+    },
+    "newClient": "New client",
+    "newContact": "New contact"
   },
   "agentPicker": {
     "title": "Assign to agent",
@@ -486,7 +493,8 @@
     "removeSelected": "The contact will be removed",
     "apply": "Change contact",
     "unableToLoad": "Unable to load contacts.",
-    "noResults": "No contacts found."
+    "noResults": "No contacts found.",
+    "create": "New contact"
   },
   "dueDateModal": {
     "title": "Due date",
@@ -544,6 +552,11 @@
   "timeEntry": {
     "title": "Add time entry",
     "serviceLabel": "Service",
+    "serviceSource": {
+      "task": "Default from task",
+      "phase": "Default from phase",
+      "project": "Default from project"
+    },
     "selectService": "Select a service…",
     "loadingServices": "Loading services…",
     "noServices": "No services available.",

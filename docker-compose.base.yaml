@@ -166,14 +166,16 @@ services:
     secrets:
       - postgres_password
     ports:
-      - "${EXPOSE_AI_GATEWAY_DB_PORT:-5433}:5432"
+      - "${EXPOSE_INFRA_BIND_ADDR:-127.0.0.1}:${EXPOSE_AI_GATEWAY_DB_PORT:-5433}:5432"
     volumes:
       - ai-gateway-postgres-data:/var/lib/postgresql/data
     networks:
       - app-network
 
   postgres: # Renamed from postgres-base
-    image: ankane/pgvector:latest
+    extends:
+      file: ./docker-compose.images.yaml
+      service: pgvector
     #container_name: ${APP_NAME:-sebastian}_postgres
     # Wrapper refuses/repairs legacy `trust` entries in pg_hba.conf, then execs the stock entrypoint.
     entrypoint: ["/bin/bash", "/usr/local/bin/alga-postgres-entrypoint.sh"]
@@ -186,10 +188,34 @@ services:
       POSTGRES_INITDB_ARGS: "--auth-host=md5 --auth-local=md5"
     secrets:
       - postgres_password
-    ports:
-      - "${EXPOSE_DB_PORT:-5432}:5432"
     networks:
       - app-network
+
+  # One-shot: brings extensions (and catalog views) of an existing bundled data
+  # directory in line with the pinned image. Targets the bundled `postgres`
+  # service only, never an external DB_HOST. See helm/files/postgres/update-extensions.sh.
+  postgres-extension-update:
+    extends:
+      file: ./docker-compose.images.yaml
+      service: pgvector
+    entrypoint: ["/bin/sh", "/opt/alga/update-extensions.sh"]
+    environment:
+      PGHOST: postgres
+      PGUSER: postgres
+      PGPASSWORD_FILE: /run/secrets/postgres_password
+    volumes:
+      - type: bind
+        source: ./helm/files/postgres/update-extensions.sh
+        target: /opt/alga/update-extensions.sh
+        read_only: true
+    secrets:
+      - postgres_password
+    restart: "no"
+    networks:
+      - app-network
+    depends_on:
+      postgres:
+        condition: service_started
 
   redis: # Renamed from redis-base
     build:
@@ -198,8 +224,6 @@ services:
     #container_name: ${APP_NAME:-sebastian}_redis
     environment:
       <<: *shared-environment
-    ports:
-      - '${EXPOSE_REDIS_PORT:-6379}:6379'
     secrets:
       - redis_password
     networks:

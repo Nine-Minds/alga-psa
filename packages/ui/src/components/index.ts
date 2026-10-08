@@ -190,3 +190,5 @@ export * from './sla';
 export * from './tickets/ResponseStateBadge';
 export { default as ResponseStateBadge } from './tickets/ResponseStateBadge';
 export { PrioritySelect } from './tickets/PrioritySelect';
+export { RecurrenceRuleEditor, defaultRuleForFrequency } from './recurrence/RecurrenceRuleEditor';
+export type { RecurrenceRuleEditorProps } from './recurrence/RecurrenceRuleEditor';

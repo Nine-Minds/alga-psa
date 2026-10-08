@@ -550,7 +550,11 @@
       "notes": "Notes :",
       "notesPlaceholder": "Ajoutez des notes supplémentaires sur le contact...",
       "tags": "Étiquettes :",
-      "emailAddresses": "Adresses e-mail :"
+      "emailAddresses": "Adresses e-mail :",
+      "reportsTo": "Rattaché à :",
+      "reportsToPlaceholder": "Aucun responsable",
+      "reportsToClear": "Effacer",
+      "reportsToHelp": "Doit être une personne du même client. Utilisé pour la visibilité « mon équipe » des tickets, appareils et projets dans le portail."
     },
     "loading": {
       "destinations": "Chargement des destinations..."
@@ -568,7 +572,8 @@
     },
     "empty": {
       "notSet": "Non défini",
-      "unknownClient": "Client inconnu"
+      "unknownClient": "Client inconnu",
+      "noManager": "Aucun responsable"
     },
     "phoneTypes": {
       "work": "Professionnel",
@@ -591,7 +596,8 @@
       "notes": "Notes :",
       "tags": "Étiquettes :",
       "emailAddresses": "Adresses e-mail :",
-      "defaultEmail": "Par défaut"
+      "defaultEmail": "Par défaut",
+      "reportsTo": "Rattaché à"
     },
     "status": {
       "active": "Actif",
@@ -737,8 +743,24 @@
       "scopeClient": "Tous les tickets de ce client",
       "scopeContact": "Uniquement leurs propres tickets",
       "scopeClientDescription": "Les membres voient tous les tickets de ce client sur les tableaux sélectionnés.",
-      "scopeContactDescription": "Les membres voient uniquement les tickets dont ils sont le contact. Les administrateurs du client voient tous les tickets des tableaux sélectionnés, y compris ceux sans contact.",
-      "assignmentHelp": "Attribuez un groupe pour limiter les tableaux et les tickets, ou conservez un accès complet au client."
+      "scopeContactDescription": "Les membres voient les tickets dont ils sont le contact, ceux des personnes qui leur sont rattachées et ceux qu’ils suivent. Les administrateurs du client voient toujours tout sur les tableaux sélectionnés, y compris les tickets sans contact.",
+      "assignmentHelp": "Attribuez un groupe pour limiter les tableaux ainsi que les tickets, appareils et projets visibles par cette personne, ou conservez l’accès complet au client.",
+      "assetScopeLabel": "Visibilité des appareils",
+      "assetScopeClient": "Tous les appareils de ce client",
+      "assetScopeContact": "Uniquement leurs propres appareils",
+      "assetScopeClientDescription": "Les membres voient tous les appareils de ce client, y compris ceux qui ne sont pas attribués.",
+      "assetScopeContactDescription": "Les membres ne voient que les appareils qui leur sont attribués ou qui sont attribués aux personnes qui leur sont rattachées. Les appareils non attribués sont masqués. Les administrateurs du client voient toujours tout.",
+      "projectScopeLabel": "Visibilité des projets",
+      "projectScopeClient": "Tous les projets de ce client",
+      "projectScopeContact": "Uniquement leurs propres projets",
+      "projectScopeClientDescription": "Les membres voient tous les projets de ce client.",
+      "projectScopeContactDescription": "Les membres ne voient que les projets dont le contact est eux-mêmes ou une personne qui leur est rattachée. Les projets sans contact sont masqués. Les administrateurs du client voient toujours tout.",
+      "scopeSummary": "Tickets : {{tickets}} · Appareils : {{devices}} · Projets : {{projects}}",
+      "scopeSummaryAll": "Tous",
+      "scopeSummaryOwn": "Propres",
+      "managerScopeNote_one": "Sa vue inclut aussi les éléments de {{count}} personne qui lui est rattachée.",
+      "managerScopeNote_many": "Sa vue inclut aussi les éléments de {{count}} de personnes qui lui sont rattachées.",
+      "managerScopeNote_other": "Sa vue inclut aussi les éléments de {{count}} personnes qui lui sont rattachées."
     }
   }
 }

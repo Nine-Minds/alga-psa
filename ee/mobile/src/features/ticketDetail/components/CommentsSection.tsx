@@ -5,7 +5,8 @@ import { useTranslation } from "react-i18next";
 import EmojiPicker from "rn-emoji-keyboard";
 import type { AggregatedReaction, TicketComment } from "../../../api/tickets";
 import { createApiClient } from "../../../api";
-import { cancelScheduledTicketComment, isScheduledComment, toggleCommentReaction, updateTicketComment } from "../../../api/tickets";
+import { isScheduledComment } from "../../../api/tickets";
+import { createCommentApi, ticketTarget, type CommentTarget } from "../../comments/commentTarget";
 import { useAuth } from "../../../auth/AuthContext";
 import { useTheme } from "../../../ui/ThemeContext";
 import { Avatar } from "../../../ui/components/Avatar";
@@ -47,6 +48,7 @@ export function CommentsSection({
   imageAuth,
   baseUrl,
   ticketId,
+  target,
   onCommentUpdated,
   onSubmitReply,
   initiallyCollapsed = false,
@@ -59,6 +61,8 @@ export function CommentsSection({
   imageAuth?: { baseUrl: string; apiKey: string };
   baseUrl?: string | null;
   ticketId: string;
+  /** Where the thread lives; defaults to the ticket named by `ticketId`. */
+  target?: CommentTarget;
   onCommentUpdated?: () => void;
   onSubmitReply?: ReplySubmit;
   initiallyCollapsed?: boolean;
@@ -66,6 +70,8 @@ export function CommentsSection({
   const { colors, spacing, typography } = useTheme();
   const { t } = useTranslation("tickets");
   const { session } = useAuth();
+  const commentTarget = useMemo<CommentTarget>(() => target ?? ticketTarget(ticketId), [target, ticketId]);
+  const api = useMemo(() => createCommentApi(commentTarget), [commentTarget]);
   const moderation = useModeration();
   // Sort order: "newest" shows latest-active threads first, "oldest" oldest
   // first. Ordering is now at the thread level (by last activity); replies
@@ -258,6 +264,44 @@ export function CommentsSection({
     [moderation, t],
   );
 
+  const config = getAppConfig();
+  const client = useMemo(() => {
+    if (!config.ok) return null;
+    return createApiClient({ baseUrl: config.baseUrl, getUserAgentTag: () => "mobile" });
+  }, [config]);
+
+  // Deleting is offered where the API supports it (task comments); tickets keep edit only.
+  const confirmDelete = useCallback(
+    (comment: TicketComment) => {
+      if (!comment.comment_id || !api.remove) return;
+      const commentId = comment.comment_id;
+      Alert.alert(
+        t("comments.deleteTitle", { defaultValue: "Delete this comment?" }),
+        t("comments.deleteBody", { defaultValue: "This cannot be undone." }),
+        [
+          { text: t("common:cancel"), style: "cancel" },
+          {
+            text: t("comments.deleteConfirm", { defaultValue: "Delete" }),
+            style: "destructive",
+            onPress: () => {
+              void (async () => {
+                if (!client || !session || !api.remove) return;
+                const auditHeaders = await getClientMetadataHeaders();
+                const res = await api.remove(client, { apiKey: session.accessToken, commentId, auditHeaders });
+                if (!res.ok) {
+                  Alert.alert(t("comments.deleteFailed", { defaultValue: "Unable to delete the comment." }), undefined, [{ text: t("common:ok") }]);
+                  return;
+                }
+                onCommentUpdated?.();
+              })();
+            },
+          },
+        ],
+      );
+    },
+    [api, client, onCommentUpdated, session, t],
+  );
+
   const openModerationMenu = useCallback(
     (comment: TicketComment) => {
       const authorId = comment.created_by;
@@ -289,6 +333,13 @@ export function CommentsSection({
           onPress: () => confirmMute(comment),
         });
       }
+      if (isOwn && api.remove && !isDeleted(comment)) {
+        options.push({
+          text: t("comments.deleteConfirm", { defaultValue: "Delete" }),
+          style: "destructive",
+          onPress: () => confirmDelete(comment),
+        });
+      }
 
       options.push({ text: t("common:cancel"), style: "cancel" });
 
@@ -298,7 +349,7 @@ export function CommentsSection({
         options.map((o) => ({ text: o.text, style: o.style, onPress: o.onPress })),
       );
     },
-    [confirmReport, confirmMute, meUserId, t],
+    [api.remove, confirmDelete, confirmReport, confirmMute, isDeleted, meUserId, t],
   );
 
   const saveComment = async (commentId: string) => {
@@ -307,9 +358,8 @@ export function CommentsSection({
     setEditError(null);
     try {
       const auditHeaders = await getClientMetadataHeaders();
-      const res = await updateTicketComment(client, {
+      const res = await api.update(client, {
         apiKey: session.accessToken,
-        ticketId,
         commentId,
         comment_text: editDraft,
         auditHeaders,
@@ -325,11 +375,6 @@ export function CommentsSection({
     }
   };
 
-  const config = getAppConfig();
-  const client = useMemo(() => {
-    if (!config.ok) return null;
-    return createApiClient({ baseUrl: config.baseUrl, getUserAgentTag: () => "mobile" });
-  }, [config]);
 
   const [cancelingCommentId, setCancelingCommentId] = useState<string | null>(null);
 
@@ -351,9 +396,9 @@ export function CommentsSection({
                 setCancelingCommentId(commentId);
                 try {
                   const auditHeaders = await getClientMetadataHeaders();
-                  const res = await cancelScheduledTicketComment(client, {
+                  if (!api.cancelScheduled) return;
+                  const res = await api.cancelScheduled(client, {
                     apiKey: session.accessToken,
-                    ticketId,
                     commentId,
                     auditHeaders,
                   });
@@ -371,9 +416,8 @@ export function CommentsSection({
         ],
       );
     },
-    [client, onCommentUpdated, session, t, ticketId],
+    [api, client, onCommentUpdated, session, t],
   );
-
 
   const getReactions = useCallback(
     (commentId: string | undefined): AggregatedReaction[] => {
@@ -410,14 +454,13 @@ export function CommentsSection({
       setEmojiPickerCommentId(null);
 
       // Fire-and-forget: the next comments refresh will sync server state.
-      void toggleCommentReaction(client, {
+      void api.toggleReaction(client, {
         apiKey: session.accessToken,
-        ticketId,
         commentId,
         emoji,
       });
     },
-    [client, session, ticketId, comments],
+    [api, client, session, comments],
   );
 
   // Clear overrides when comments refresh (server data is now authoritative)
@@ -504,7 +547,7 @@ export function CommentsSection({
             const canReply = Boolean(onSubmitReply) && !isSystemEventComment && !isOptimistic && !deleted && !hidden && !isEditingThis;
             const commentPlainText = extractPlainTextFromSerializedRichEditorContent(c.comment_text);
             const eventText = c.event_text ?? (eventType ? `${eventType}: ${commentPlainText}` : commentPlainText);
-            const badgeLabel = isSystemEventComment ? t("comments.event") : isOptimistic ? t("comments.sending") : c.is_resolution ? t("comments.resolution") : c.is_internal ? t("comments.internal") : t("comments.client");
+            const badgeLabel = isSystemEventComment ? t("comments.event") : isOptimistic ? t("comments.sending") : c.is_resolution ? t("comments.resolution") : !api.supportsVisibility ? t("comments.commentLabel", { defaultValue: "Comment" }) : c.is_internal ? t("comments.internal") : t("comments.client");
             const accessibilityLabel = `${badgeLabel}. ${c.created_by_name ?? t("common:unknown")}. ${formatDateTimeWithRelative(c.created_at)}. ${
               isSystemEventComment ? eventText : commentPlainText || t("comments.richComment")
             }`;
@@ -620,7 +663,9 @@ export function CommentsSection({
                       <Badge label={t("comments.sending")} tone="neutral" />
                     ) : (
                       <>
-                        <Badge label={c.is_internal ? t("comments.internal") : t("comments.client")} tone={c.is_internal ? "warning" : "info"} />
+                        {api.supportsVisibility ? (
+                          <Badge label={c.is_internal ? t("comments.internal") : t("comments.client")} tone={c.is_internal ? "warning" : "info"} />
+                        ) : null}
                         {scheduled ? (
                           <>
                             <View style={{ width: spacing.xs }} />

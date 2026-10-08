@@ -66,7 +66,7 @@ free_port() {
 }
 
 prepare_sandbox() {
-    cp "$REPO_ROOT/docker-compose.base.yaml" \
+    cp "$REPO_ROOT/docker-compose.base.yaml" "$REPO_ROOT/docker-compose.images.yaml" \
        "$REPO_ROOT/docker-compose.prebuilt.base.yaml" \
        "$REPO_ROOT/docker-compose.prebuilt.ce.yaml" "$SANDBOX/"
     cp -R "$REPO_ROOT/postgres" "$REPO_ROOT/pgbouncer" "$SANDBOX/"

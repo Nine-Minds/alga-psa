@@ -391,7 +391,9 @@ async function buildGoldenSnapshot(): Promise<Record<string, unknown>> {
 
   const chargeLines = sortBy(charges, (row) => String(row.description)).map((row) => ({
     description: String(row.description),
-    quantity: String(row.quantity),
+    // Serialised at the numeric(10,2) scale the baseline was captured with;
+    // the column later widened to numeric(14,6) without changing any value.
+    quantity: Number(row.quantity).toFixed(2),
     unit_price: toMoney(row.unit_price),
     total_price: toMoney(row.total_price),
     net_amount: toMoney(row.net_amount),

@@ -50,6 +50,8 @@ import { Temporal } from '@js-temporal/polyfill';
 import { calculateItilPriority } from '@alga-psa/tickets/lib/itilUtils';
 import { withAuth } from '@alga-psa/auth';
 import { TicketModel } from '@alga-psa/shared/models/ticketModel';
+import { ticketUpdateStamp } from '@shared/lib/tickets/ticketUpdateStamp';
+import { resolveLatestActivityActor, type LatestActivityNames } from '../lib/latestActivityActor';
 import Comment from '../models/comment';
 import {
   TICKET_ACTIVITY_ACTOR,
@@ -78,9 +80,10 @@ import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorizatio
 import { createTicketRelationshipSqlAdapter } from '../lib/ticketAuthorizationSql';
 import { ticketSlaBreachedBindings, ticketSlaBreachedSql } from '../lib/ticketSlaSql';
 import { getClientContactVisibilityContext } from '../lib/clientPortalVisibility.server';
-import { buildTicketTransitionWorkflowEvents } from '../lib/workflowTicketTransitionEvents';
+import { publishTicketTransitionsAfterCommit } from '@alga-psa/shared/lib/tickets/ticketLifecycleEvents';
+import { extractActiveWatcherContactIds } from '@alga-psa/authorization/portal/visibility';
 import { buildTicketCommunicationWorkflowEvents } from '../lib/workflowTicketCommunicationEvents';
-import { buildTicketResolutionSlaStageCompletionEvent } from '../lib/workflowTicketSlaStageEvents';
+import { buildTicketResolutionSlaStageCompletionEvent } from '@alga-psa/shared/services/tickets/ticketSlaStageEvents';
 import { diffTicketFields, publishTicketUpdate } from '../lib/liveUpdates';
 import {
   propagateBundleMasterStatus,
@@ -226,6 +229,9 @@ function toTicketAuthorizationRecord(
     clientId: ticket.client_id ?? null,
     boardId: ticket.board_id ?? null,
     contactId: ticket.contact_name_id ?? null,
+    // `undefined` (column not selected) can never satisfy a profile grant.
+    billingProfileId: ticket.billing_profile_id,
+    watcherContactIds: extractActiveWatcherContactIds(ticket.attributes),
     teamIds: ticket.assigned_team_id ? [ticket.assigned_team_id] : [],
   };
 }
@@ -461,6 +467,7 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
         't.*',
         's.name as status_name',
         's.is_closed',
+        'src.ticket_number as duplicated_from_ticket_number',
         'cl.location_id as location_location_id',
         'cl.location_name',
         'cl.address_line1',
@@ -481,6 +488,7 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
       );
     tenantLeftJoin(trx, tenant, ticketQuery, 'statuses as s', 't.status_id', 's.status_id');
     tenantLeftJoin(trx, tenant, ticketQuery, 'client_locations as cl', 't.location_id', 'cl.location_id');
+    tenantLeftJoin(trx, tenant, ticketQuery, 'tickets as src', 't.duplicated_from_ticket_id', 'src.ticket_id');
     const ticket = await ticketQuery
       .where({ 't.ticket_id': ticketId })
       .first();
@@ -743,6 +751,14 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
         })
         .first() : null;
 
+    // Fetch last updated by user
+    const updatedByUser = ticket.updated_by ?
+      await tenantScopedTable(trx, 'users', tenant)
+        .where({
+          user_id: ticket.updated_by
+        })
+        .first() : null;
+
     // Fetch board
     const board = ticket.board_id ?
       await tenantScopedTable(trx, 'boards', tenant)
@@ -992,7 +1008,9 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
         'ct.entered_by',
         'ct.assigned_to',
         'ct.board_id',
-        'ct.assigned_team_id'
+        'ct.assigned_team_id',
+        'ct.billing_profile_id',
+        'ct.attributes'
       );
     tenantLeftJoin(trx, tenant, rawBundleChildrenQuery, 'clients as comp', 'ct.client_id', 'comp.client_id');
     const rawBundleChildren = await rawBundleChildrenQuery
@@ -1015,7 +1033,9 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
           'mt.entered_by',
           'mt.assigned_to',
           'mt.board_id',
-          'mt.assigned_team_id'
+          'mt.assigned_team_id',
+          'mt.billing_profile_id',
+          'mt.attributes'
         );
         tenantLeftJoin(trx, tenant, masterQuery, 'clients as comp', 'mt.client_id', 'comp.client_id');
         return masterQuery
@@ -1024,9 +1044,20 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
       })()
       : null;
 
-    const bundleChildren = await filterAuthorizedTickets(trx, authorizationContext, rawBundleChildren);
+    // `billing_profile_id` and `attributes` (the watch list) are selected only
+    // so the visibility predicate can see them; they are not part of the bundle
+    // payload and must not reach the client.
+    const withoutAuthorizationOnlyColumns = <T extends { attributes?: unknown; billing_profile_id?: unknown }>(
+      row: T
+    ): Omit<T, 'attributes' | 'billing_profile_id'> => {
+      const { attributes: _attributes, billing_profile_id: _billingProfileId, ...rest } = row;
+      return rest;
+    };
+    const bundleChildren = (await filterAuthorizedTickets(trx, authorizationContext, rawBundleChildren))
+      .map(withoutAuthorizationOnlyColumns);
     const [bundleMaster] = rawBundleMaster
-      ? await filterAuthorizedTickets(trx, authorizationContext, [rawBundleMaster])
+      ? (await filterAuthorizedTickets(trx, authorizationContext, [rawBundleMaster]))
+          .map(withoutAuthorizationOnlyColumns)
       : [null];
 
     const isBundleChild = Boolean(masterTicketId);
@@ -1108,6 +1139,7 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
       contacts,
       contactInfo,
       createdByUser,
+      updatedByUser,
       board,
       additionalAgents: resources,
       availableAgents: users,
@@ -1870,7 +1902,7 @@ function buildTicketListItemsQuery(
       't.board_id', 't.client_id', 't.location_id', 't.contact_name_id',
       't.status_id', 't.category_id', 't.subcategory_id', 't.priority_id',
       't.entered_by', 't.updated_by', 't.closed_by',
-      't.assigned_to', 't.assigned_team_id',
+      't.assigned_to', 't.assigned_team_id', 't.billing_profile_id',
       't.entered_at', 't.updated_at', 't.closed_at', 't.due_date',
       't.is_closed', 't.attributes',
       't.master_ticket_id', 't.tenant',
@@ -1995,6 +2027,86 @@ export interface TicketListRowsWithMetadata {
   };
 }
 
+/**
+ * Resolve `latest_activity_actor` for a page of list rows. Two batched lookups
+ * keyed on the page's ticket ids (bounded by page size, not the filtered set):
+ * the newest published comment per ticket, and display names for every user and
+ * contact that could be the actor. The list SQL, sort and count are untouched.
+ */
+async function attachLatestActivityActors(
+  trx: Knex.Transaction,
+  tenant: string,
+  ticketListItems: ITicketListItem[],
+  ticketIds: string[]
+): Promise<void> {
+  if (ticketIds.length === 0) {
+    return;
+  }
+
+  // Same visibility filter as TICKET_LATEST_ACTIVITY_SQL.
+  const commentRows: Array<{
+    ticket_id: string;
+    created_at: Date | string;
+    user_id: string | null;
+    contact_id: string | null;
+    is_system_generated: boolean | null;
+    email: unknown;
+  }> = (await trx.raw(
+    `SELECT DISTINCT ON (ticket_id) ticket_id, created_at, user_id, contact_id,
+            is_system_generated, metadata->'email' AS email
+       FROM comments
+      WHERE tenant = ? AND ticket_id = ANY(?)
+        AND deleted_at IS NULL AND publish_state = 'published'
+      ORDER BY ticket_id, created_at DESC`,
+    [tenant, ticketIds]
+  )).rows;
+
+  const latestCommentByTicket = new Map<string, (typeof commentRows)[number]>();
+  const userIds = new Set<string>();
+  const contactIds = new Set<string>();
+  for (const comment of commentRows) {
+    latestCommentByTicket.set(comment.ticket_id, comment);
+    if (comment.user_id) userIds.add(comment.user_id);
+    if (comment.contact_id) contactIds.add(comment.contact_id);
+  }
+  for (const ticket of ticketListItems) {
+    if (ticket.updated_by) userIds.add(ticket.updated_by);
+    if (ticket.entered_by) userIds.add(ticket.entered_by);
+  }
+
+  const [userRows, contactRows] = await Promise.all([
+    userIds.size > 0
+      ? tenantScopedTable(trx, 'users', tenant)
+          .whereIn('user_id', Array.from(userIds))
+          .select('user_id', 'first_name', 'last_name', 'user_type')
+      : Promise.resolve([]),
+    contactIds.size > 0
+      ? tenantScopedTable(trx, 'contacts', tenant)
+          .whereIn('contact_name_id', Array.from(contactIds))
+          .select('contact_name_id', 'full_name')
+      : Promise.resolve([]),
+  ]);
+
+  const names: LatestActivityNames = { users: {}, contacts: {} };
+  for (const user of userRows as any[]) {
+    names.users[user.user_id] = {
+      name: `${user.first_name ?? ''} ${user.last_name ?? ''}`.trim(),
+      userType: user.user_type,
+    };
+  }
+  for (const contact of contactRows as any[]) {
+    names.contacts[contact.contact_name_id] = contact.full_name;
+  }
+
+  for (const ticket of ticketListItems) {
+    ticket.latest_activity_actor = resolveLatestActivityActor(
+      ticket,
+      latestCommentByTicket.get(ticket.ticket_id as string) ?? null,
+      names
+    );
+  }
+}
+
 async function enrichTicketListItems(
   trx: Knex.Transaction,
   tenant: string,
@@ -2066,6 +2178,8 @@ async function enrichTicketListItems(
   ticketListItems.forEach((ticket: ITicketListItem) => {
     ticket.client_logo_url = ticket.client_id ? (clientLogoUrlsMap.get(ticket.client_id) ?? null) : null;
   });
+
+  await attachLatestActivityActors(trx, tenant, ticketListItems, ticketIds);
 
   // Convert Maps to Records for serialization
   const agentAvatarUrls: Record<string, string | null> = {};
@@ -2233,7 +2347,7 @@ export const getAllMatchingTicketIds = withAuth(async (
               .clone()
               .clearSelect()
               .clearOrder()
-              .select('t.ticket_id', 't.entered_by', 't.assigned_to', 't.client_id', 't.contact_name_id', 't.board_id', 't.assigned_team_id')
+              .select('t.ticket_id', 't.entered_by', 't.assigned_to', 't.client_id', 't.contact_name_id', 't.board_id', 't.assigned_team_id', 't.billing_profile_id', 't.attributes')
           );
 
       const ticketIds: Array<string | null | undefined> = rows.map((row: { ticket_id?: string | null }) => row.ticket_id);
@@ -2368,7 +2482,7 @@ export const getTicketBoardIds = withAuth(async (
             authorizationContext,
             await tenantScopedTable(trx, 'tickets as t', tenant)
               .whereIn('t.ticket_id', uniqueIds)
-              .select('t.ticket_id', 't.entered_by', 't.assigned_to', 't.client_id', 't.contact_name_id', 't.board_id', 't.assigned_team_id')
+              .select('t.ticket_id', 't.entered_by', 't.assigned_to', 't.client_id', 't.contact_name_id', 't.board_id', 't.assigned_team_id', 't.billing_profile_id', 't.attributes')
           );
 
       return rows
@@ -2706,6 +2820,9 @@ export async function updateTicketInTransaction(
     const isClosingTicket = Boolean(newStatus?.is_closed && !oldStatus?.is_closed);
 
     const isSystemActor = options?.systemActor === true;
+    // Server-owned audit stamp; system actors (auto-close) write NULL explicitly.
+    // Kept out of updateData so it does not show up in the audit field diff.
+    const ticketStamp = ticketUpdateStamp(trx, isSystemActor ? null : user.user_id);
 
     // Pre-close validation gates: when this update flips the ticket from an
     // open to a closed status, enforce the board's close rules before any
@@ -2818,7 +2935,7 @@ export async function updateTicketInTransaction(
         // Step 5: Update the ticket with the new assigned_to
         const [updated] = await tenantScopedTable(trx, 'tickets', tenant)
           .where({ ticket_id: id })
-          .update(updateData)
+          .update({ ...updateData, ...ticketStamp })
           .returning('*');
           
         // Step 6: Re-create the resources with the new assigned_to
@@ -2834,7 +2951,7 @@ export async function updateTicketInTransaction(
       // Regular update without changing assignment
       [updatedTicket] = await tenantScopedTable(trx, 'tickets', tenant)
         .where({ ticket_id: id })
-        .update(updateData)
+        .update({ ...updateData, ...ticketStamp })
         .returning('*');
     }
 
@@ -2852,7 +2969,8 @@ export async function updateTicketInTransaction(
       occurredAt,
     };
 
-    const transitionEvents = buildTicketTransitionWorkflowEvents({
+    await publishTicketTransitionsAfterCommit(trx, {
+      tenant,
       before: {
         ticketId: id,
         statusId: currentTicket.status_id,
@@ -2869,24 +2987,8 @@ export async function updateTicketInTransaction(
         boardId: updatedTicket.board_id,
         escalated: updatedTicket.escalated,
       },
-      ctx: {
-        occurredAt,
-        actorUserId: user.user_id,
-        previousStatusIsClosed: !!oldStatus?.is_closed,
-        newStatusIsClosed: !!newStatus?.is_closed,
-      },
+      actorUserId: isSystemActor ? undefined : user.user_id,
     });
-
-    for (const ev of transitionEvents) {
-      await publishWorkflowEvent({
-        eventType: ev.eventType,
-        payload: ev.payload,
-        ctx: workflowCtx,
-        eventName: ev.workflow?.eventName,
-        fromState: ev.workflow?.fromState,
-        toState: ev.workflow?.toState,
-      });
-    }
 
     // Build structured changes object with old/new values
     const structuredChanges: Record<string, any> = {};
@@ -3959,7 +4061,7 @@ export const getAdjacentTicketIds = withAuth(async (
     }
 
     const orderedRows = await applyTicketListSort(
-      baseQuery.clone().clearSelect().select('t.ticket_id', 't.ticket_number', 't.entered_by', 't.assigned_to', 't.client_id', 't.contact_name_id', 't.board_id', 't.assigned_team_id'),
+      baseQuery.clone().clearSelect().select('t.ticket_id', 't.ticket_number', 't.entered_by', 't.assigned_to', 't.client_id', 't.contact_name_id', 't.board_id', 't.assigned_team_id', 't.billing_profile_id', 't.attributes'),
       validatedFilters
     );
     const authorizedRows = await filterAuthorizedTickets(trx, authorizationContext, orderedRows);
