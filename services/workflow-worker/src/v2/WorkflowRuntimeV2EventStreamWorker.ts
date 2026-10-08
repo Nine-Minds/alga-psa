@@ -213,7 +213,9 @@ export class WorkflowRuntimeV2EventStreamWorker {
     });
 
     const signaledRuns = new Set<string>();
-    let deliveryError: string | null = null;
+    // Each waiting run and each matching workflow is delivered independently:
+    // one failure is recorded and must not stop delivery to the rest.
+    const deliveryErrors: string[] = [];
     const correlationKeys = correlation.keys.length > 0
       ? correlation.keys
       : (correlation.key ? [correlation.key] : []);
@@ -277,9 +279,9 @@ export class WorkflowRuntimeV2EventStreamWorker {
           }
           signaledRuns.add(wait.run_id);
         } catch (error) {
-          deliveryError = wait.wait_type === 'human'
+          deliveryErrors.push(wait.wait_type === 'human'
             ? `Failed to signal Temporal human task for run ${wait.run_id}: ${error instanceof Error ? error.message : String(error)}`
-            : `Failed to signal Temporal event wait for run ${wait.run_id}: ${error instanceof Error ? error.message : String(error)}`;
+            : `Failed to signal Temporal event wait for run ${wait.run_id}: ${error instanceof Error ? error.message : String(error)}`);
           logger.warn('[WorkflowRuntimeV2EventStreamWorker] Failed to signal candidate run', {
             workerId: this.workerId,
             runId: wait.run_id,
@@ -290,7 +292,6 @@ export class WorkflowRuntimeV2EventStreamWorker {
             correlationKey: correlation.key,
             error,
           });
-          break;
         }
       }
     } else {
@@ -324,6 +325,7 @@ export class WorkflowRuntimeV2EventStreamWorker {
       unknownSchemaRef: 0,
       schemaMismatch: 0,
       payloadValidationFailed: 0,
+      paused: 0,
       workflowCycle: 0,
     };
     // Workflow ids that caused this event (stamped by an action such as tickets.create when a
@@ -333,8 +335,11 @@ export class WorkflowRuntimeV2EventStreamWorker {
       ? (payload.workflowLineage as unknown[]).filter((id): id is string => typeof id === 'string')
       : [];
     for (const { workflow, latestVersion: latest } of matching) {
-      if (deliveryError) {
-        break;
+      // Paused is a deliberate state, not a delivery failure; the launcher
+      // would refuse the run anyway.
+      if (workflow.is_paused) {
+        skipStats.paused += 1;
+        continue;
       }
 
       const skipLabel = `workflow ${workflow.key ?? workflow.workflow_id} (${workflow.workflow_id})`;
@@ -477,7 +482,7 @@ export class WorkflowRuntimeV2EventStreamWorker {
           });
         }
       } catch (error) {
-        deliveryError = `Failed to launch Temporal workflow for workflow ${workflow.workflow_id}: ${error instanceof Error ? error.message : String(error)}`;
+        deliveryErrors.push(`Failed to launch Temporal workflow for workflow ${workflow.workflow_id}: ${error instanceof Error ? error.message : String(error)}`);
         logger.warn('[WorkflowRuntimeV2EventStreamWorker] Failed to launch workflow', {
           workerId: this.workerId,
           workflowId: workflow.workflow_id,
@@ -487,7 +492,6 @@ export class WorkflowRuntimeV2EventStreamWorker {
           tenant: event.tenant,
           error,
         });
-        break;
       }
     }
 
@@ -511,9 +515,9 @@ export class WorkflowRuntimeV2EventStreamWorker {
       });
     }
 
-    if (deliveryError) {
+    if (deliveryErrors.length > 0) {
       await WorkflowRuntimeEventModelV2.update(knex, eventRecord.event_id, {
-        error_message: deliveryError,
+        error_message: deliveryErrors.join('\n'),
         processed_at: processedAt,
       });
     } else if (

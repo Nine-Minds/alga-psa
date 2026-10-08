@@ -737,7 +737,7 @@ describe('WorkflowRuntimeV2EventStreamWorker', () => {
     }
   });
 
-  it('persists Temporal delivery failures onto the event row', async () => {
+  it('persists Temporal delivery failures onto the event row without blocking other deliveries', async () => {
     workflowRuntimeEventCreateMock.mockResolvedValue({ event_id: 'event-5' });
     signalWorkflowRuntimeV2EventMock.mockRejectedValueOnce(new Error('temporal signal failed'));
 
@@ -752,7 +752,11 @@ describe('WorkflowRuntimeV2EventStreamWorker', () => {
       payload: { foo: 'bar' }
     });
 
-    expect(launchPublishedWorkflowRunMock).not.toHaveBeenCalled();
+    expect(signalWorkflowRuntimeV2EventMock).toHaveBeenCalledTimes(2);
+    expect(launchPublishedWorkflowRunMock).toHaveBeenCalledWith(
+      knexMock,
+      expect.objectContaining({ workflowId: 'workflow-1' })
+    );
     expect(workflowRuntimeEventUpdateMock).toHaveBeenCalledWith(
       knexMock,
       'event-5',
@@ -760,6 +764,99 @@ describe('WorkflowRuntimeV2EventStreamWorker', () => {
         error_message: expect.stringContaining('temporal signal failed')
       })
     );
+  });
+
+  describe('fan-out across matching workflows', () => {
+    const pingVersion = (workflowId: string) => [{
+      version: 7,
+      definition_json: {
+        id: workflowId,
+        version: 7,
+        payloadSchemaRef: 'payload.WorkflowEvent.v1',
+        trigger: { type: 'event', eventName: 'PING', sourcePayloadSchemaRef: 'payload.WorkflowEvent.v1' },
+        steps: []
+      }
+    }];
+    const pingWorkflow = (workflowId: string, extra: Record<string, unknown> = {}) => ({
+      workflow_id: workflowId,
+      status: 'published',
+      trigger: { type: 'event', eventName: 'PING', sourcePayloadSchemaRef: 'payload.WorkflowEvent.v1' },
+      ...extra
+    });
+
+    beforeEach(() => {
+      workflowRuntimeEventCreateMock.mockResolvedValue({ event_id: 'event-fan' });
+      workflowRunWaitListEventWaitCandidatesMock.mockResolvedValue([]);
+      workflowDefinitionVersionListByWorkflowMock.mockImplementation(
+        async (_knex: unknown, workflowId: string) => pingVersion(workflowId)
+      );
+    });
+
+    const deliver = async () => {
+      const worker = new WorkflowRuntimeV2EventStreamWorker('worker-1');
+      await worker.start();
+      await registeredConsumer?.({
+        event_id: 'event-fan',
+        event_type: 'PING',
+        workflow_correlation_key: 'corr-fan',
+        tenant: 'tenant-1',
+        payload: { foo: 'bar' }
+      });
+    };
+
+    it('skips a paused workflow without blocking the workflows after it or recording an error', async () => {
+      workflowDefinitionListMock.mockResolvedValue([
+        pingWorkflow('workflow-paused', { is_paused: true }),
+        pingWorkflow('workflow-after')
+      ]);
+      launchPublishedWorkflowRunMock.mockResolvedValue({ runId: 'run-after', workflowVersion: 7 });
+
+      await deliver();
+
+      expect(launchPublishedWorkflowRunMock).toHaveBeenCalledTimes(1);
+      expect(launchPublishedWorkflowRunMock).toHaveBeenCalledWith(
+        knexMock,
+        expect.objectContaining({ workflowId: 'workflow-after' })
+      );
+      expect(loggerDebugMock).toHaveBeenCalledWith(
+        '[WorkflowRuntimeV2EventStreamWorker] Event processed',
+        expect.objectContaining({ startedRuns: 1, skipStats: expect.objectContaining({ paused: 1 }) })
+      );
+      expect(workflowRuntimeEventUpdateMock).toHaveBeenCalledWith(
+        knexMock,
+        'event-fan',
+        expect.objectContaining({ matched_run_id: 'run-after' })
+      );
+      for (const call of workflowRuntimeEventUpdateMock.mock.calls) {
+        expect(call[2]).not.toHaveProperty('error_message');
+      }
+    });
+
+    it('keeps launching later workflows when one launch fails and records every failure', async () => {
+      workflowDefinitionListMock.mockResolvedValue([
+        pingWorkflow('workflow-limited'),
+        pingWorkflow('workflow-after'),
+        pingWorkflow('workflow-down')
+      ]);
+      launchPublishedWorkflowRunMock.mockImplementation(async (_knex: unknown, request: { workflowId: string }) => {
+        if (request.workflowId === 'workflow-limited') throw new Error('Workflow concurrency limit reached');
+        if (request.workflowId === 'workflow-down') throw new Error('Failed to connect before the deadline');
+        return { runId: 'run-after', workflowVersion: 7 };
+      });
+
+      await deliver();
+
+      expect(launchPublishedWorkflowRunMock).toHaveBeenCalledTimes(3);
+      expect(workflowRuntimeEventUpdateMock).toHaveBeenCalledWith(
+        knexMock,
+        'event-fan',
+        expect.objectContaining({ matched_run_id: 'run-after' })
+      );
+      const errorUpdate = workflowRuntimeEventUpdateMock.mock.calls.find((call) => 'error_message' in (call[2] as object));
+      expect(errorUpdate?.[2]).toEqual(expect.objectContaining({
+        error_message: expect.stringMatching(/workflow-limited: Workflow concurrency limit reached[\s\S]*workflow-down: Failed to connect/)
+      }));
+    });
   });
 
   it('routes temporal human waits from the stream worker', async () => {
