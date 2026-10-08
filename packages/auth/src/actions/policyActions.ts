@@ -8,6 +8,7 @@ import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { withAuth } from '../lib/withAuth';
 import { hasPermission } from '../lib/rbac';
+import { isBuiltInRoleName } from '../lib/policy/builtInRoles';
 import { deleteEntityWithValidation } from '@alga-psa/core/server';
 
 const policyEngine = new PolicyEngine();
@@ -209,18 +210,61 @@ export const createRole = withAuth(async (user, { tenant }, roleName: string, de
   }
 });
 
-export const updateRole = withAuth(async (user, { tenant }, roleId: string, roleName: string): Promise<IRole | AuthActionError> => {
+export const updateRole = withAuth(async (
+  user,
+  { tenant },
+  roleId: string,
+  changes: { role_name?: string; description?: string }
+): Promise<IRole | AuthActionError> => {
   try {
     const { knex: db } = await createTenantKnex();
     return await withTransaction(db, async (trx: Knex.Transaction) => {
         await assertSecuritySettingsPermission(user, 'update', trx);
-        const [updatedRole] = await tenantScopedTable(trx, 'roles', tenant)
+        const existing = await tenantScopedTable(trx, 'roles', tenant)
             .where({ role_id: roleId })
-            .update({ role_name: roleName })
-            .returning('*');
-        if (!updatedRole) {
+            .first();
+        if (!existing) {
             return actionError('Role not found. Refresh the role list and try again.', 'msp/settings:errors.roles.roleNotFound');
         }
+
+        const update: Partial<Pick<IRole, 'role_name' | 'description'>> = {};
+        const roleName = changes.role_name?.trim();
+        if (roleName !== undefined && roleName !== existing.role_name) {
+            if (!roleName) {
+                return actionError('Role name is required.', 'msp/settings:errors.roles.nameRequired');
+            }
+            if (isBuiltInRoleName(existing.role_name)) {
+                return actionError('Built-in roles cannot be renamed.', 'msp/settings:errors.roles.builtInRename');
+            }
+            // Names are unique per portal: MSP "Admin" and client-portal "Admin" coexist.
+            const duplicate = await tenantScopedTable(trx, 'roles', tenant)
+                .whereNot({ role_id: roleId })
+                .whereRaw('LOWER(role_name) = ?', [roleName.toLowerCase()])
+                .andWhere((portals) => {
+                    if (existing.msp) portals.orWhere('msp', true);
+                    if (existing.client) portals.orWhere('client', true);
+                })
+                .first();
+            if (duplicate) {
+                return actionError(
+                    `A role named "${roleName}" already exists for this portal.`,
+                    'msp/settings:errors.roles.duplicateName',
+                    { name: roleName }
+                );
+            }
+            update.role_name = roleName;
+        }
+        if (changes.description !== undefined) {
+            update.description = changes.description.trim();
+        }
+        if (Object.keys(update).length === 0) {
+            return existing;
+        }
+
+        const [updatedRole] = await tenantScopedTable(trx, 'roles', tenant)
+            .where({ role_id: roleId })
+            .update(update)
+            .returning('*');
         return updatedRole;
     });
   } catch (error) {

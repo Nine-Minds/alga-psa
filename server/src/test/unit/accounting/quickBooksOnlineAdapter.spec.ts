@@ -123,7 +123,8 @@ function buildContext(lines: MinimalLine[]): AccountingExportAdapterContext {
 describe('QuickBooksOnlineAdapter service-period export policy', () => {
   const mockResolver = {
     resolveServiceMapping: vi.fn(),
-    resolveTaxCodeMapping: vi.fn()
+    resolveTaxCodeMapping: vi.fn(),
+    resolveDiscountMapping: vi.fn()
   };
 
   const baseLine: MinimalLine = {
@@ -146,6 +147,8 @@ describe('QuickBooksOnlineAdapter service-period export policy', () => {
   beforeEach(() => {
     mockResolver.resolveServiceMapping.mockReset();
     mockResolver.resolveTaxCodeMapping.mockReset();
+    mockResolver.resolveDiscountMapping.mockReset();
+    mockResolver.resolveDiscountMapping.mockResolvedValue(null);
     vi.spyOn(dbModule, 'createTenantKnex').mockResolvedValue({ knex: makeKnexMock() as any, tenant: TENANT_ID });
     vi.spyOn(AccountingMappingResolver, 'create').mockResolvedValue(
       mockResolver as unknown as AccountingMappingResolver
@@ -521,6 +524,156 @@ describe('QuickBooksOnlineAdapter service-period export policy', () => {
     expect(line.SalesItemLineDetail.UnitPrice).toBe(100.00);
     expect(line.SalesItemLineDetail.Qty * line.SalesItemLineDetail.UnitPrice).toBe(line.Amount);
     expect(invoice.TxnTaxDetail?.TotalTax).toBe(17.75);
+  });
+
+  it('exports a service-less automatic discount through the realm discount mapping', async () => {
+    const adapter = new QuickBooksOnlineAdapter();
+    const context: AccountingExportAdapterContext = {
+      ...buildContext([baseLine]),
+      taxDelegationMode: 'delegate',
+      excludeTaxFromExport: false
+    } as AccountingExportAdapterContext;
+    mockResolver.resolveDiscountMapping.mockResolvedValue({ external_entity_id: 'ITEM-DISCOUNT', metadata: {} });
+
+    vi.spyOn(adapter as any, 'loadInvoices').mockResolvedValue(
+      new Map([
+        [
+          INVOICE_ID,
+          {
+            invoice_id: INVOICE_ID,
+            invoice_number: 'INV-QBO-DISC',
+            invoice_date: '2026-10-05',
+            due_date: '2026-10-19',
+            client_id: CLIENT_ID,
+            currency_code: 'USD'
+          }
+        ]
+      ])
+    );
+
+    vi.spyOn(adapter as any, 'loadCharges').mockResolvedValue(
+      new Map([
+        [
+          'charge-qbo-1',
+          {
+            item_id: 'charge-qbo-1',
+            invoice_id: INVOICE_ID,
+            service_id: null,
+            description: 'Loyalty discount 10%',
+            quantity: '1.00',
+            unit_price: 0,
+            net_amount: -2_500,
+            total_price: -2_500,
+            tax_amount: 0,
+            is_taxable: false,
+            is_discount: true,
+            tax_region: null
+          }
+        ]
+      ])
+    );
+
+    vi.spyOn(adapter as any, 'loadClients').mockResolvedValue({
+      clients: new Map([
+        [CLIENT_ID, { client_id: CLIENT_ID, client_name: 'Acme', billing_email: 'a@a', payment_terms: null }]
+      ]),
+      mappings: new Map([
+        [
+          CLIENT_ID,
+          {
+            id: 'mapping-qbo-1',
+            integration_type: 'quickbooks_online',
+            alga_entity_type: 'client',
+            alga_entity_id: CLIENT_ID,
+            external_entity_id: 'external-customer-acme',
+            metadata: { source: 'mapping_table' }
+          }
+        ]
+      ])
+    });
+
+    const result = await adapter.transform(context);
+    const line = (result.documents[0]?.payload as any).invoice.Line[0];
+
+    expect(mockResolver.resolveServiceMapping).not.toHaveBeenCalled();
+    expect(line.SalesItemLineDetail.ItemRef).toEqual({ value: 'ITEM-DISCOUNT' });
+    expect(line.Amount).toBe(-25);
+    expect(line.SalesItemLineDetail.Qty).toBe(1);
+    expect(line.SalesItemLineDetail.UnitPrice).toBe(-25);
+  });
+
+  // Regression (alga-2026-0002643): 5 min at $125/h is stored as 0.08 h with a
+  // $10.42 amount; QuickBooks multiplies 0.08 × 125 and faults the invoice (6070).
+  it('sends a quantity that multiplies back to the amount when stored hours were rounded', async () => {
+    const adapter = new QuickBooksOnlineAdapter();
+    const context: AccountingExportAdapterContext = {
+      ...buildContext([baseLine]),
+      taxDelegationMode: 'delegate',
+      excludeTaxFromExport: false
+    } as AccountingExportAdapterContext;
+
+    vi.spyOn(adapter as any, 'loadInvoices').mockResolvedValue(
+      new Map([
+        [
+          INVOICE_ID,
+          {
+            invoice_id: INVOICE_ID,
+            invoice_number: 'INV-QBO-ROUND',
+            invoice_date: '2026-10-05',
+            due_date: '2026-10-19',
+            client_id: CLIENT_ID,
+            currency_code: 'USD'
+          }
+        ]
+      ])
+    );
+
+    vi.spyOn(adapter as any, 'loadCharges').mockResolvedValue(
+      new Map([
+        [
+          'charge-qbo-1',
+          {
+            item_id: 'charge-qbo-1',
+            invoice_id: INVOICE_ID,
+            service_id: 'svc-qbo-1',
+            description: 'Break Fix/Labor',
+            quantity: '0.08', // numeric columns arrive as strings
+            unit_price: 12_500,
+            net_amount: 1_042,
+            total_price: 1_042,
+            tax_amount: 0,
+            tax_region: null
+          }
+        ]
+      ])
+    );
+
+    vi.spyOn(adapter as any, 'loadClients').mockResolvedValue({
+      clients: new Map([
+        [CLIENT_ID, { client_id: CLIENT_ID, client_name: 'Acme', billing_email: 'a@a', payment_terms: null }]
+      ]),
+      mappings: new Map([
+        [
+          CLIENT_ID,
+          {
+            id: 'mapping-qbo-1',
+            integration_type: 'quickbooks_online',
+            alga_entity_type: 'client',
+            alga_entity_id: CLIENT_ID,
+            external_entity_id: 'external-customer-acme',
+            metadata: { source: 'mapping_table' }
+          }
+        ]
+      ])
+    });
+
+    const result = await adapter.transform(context);
+    const line = (result.documents[0]?.payload as any).invoice.Line[0];
+
+    expect(line.Amount).toBe(10.42);
+    expect(line.SalesItemLineDetail.UnitPrice).toBe(125);
+    expect(line.SalesItemLineDetail.Qty).toBe(0.08336);
+    expect(line.SalesItemLineDetail.Qty * line.SalesItemLineDetail.UnitPrice).toBeCloseTo(line.Amount, 5);
   });
 
   it('omits TxnTaxDetail in delegate-tax mode and still sends pre-tax Amount', async () => {

@@ -317,7 +317,8 @@ export class EventBus {
   }
 
   private getProcessedSetKey(tenantId: string, channel: string): string {
-    return channel === this.defaultChannel ? `processed_events:${tenantId}` : `processed_events:${tenantId}:${channel}`;
+    const channelSuffix = channel === this.defaultChannel ? '' : `:${channel}`;
+    return `${getRedisConfig().prefix}processed_events:${tenantId}${channelSuffix}`;
   }
 
   private getEventTenantId(event: Event): string {
@@ -345,7 +346,8 @@ export class EventBus {
   }
 
   private getProcessedHandlersSetKey(tenantId: string, channel: string): string {
-    return channel === this.defaultChannel ? `processed_event_handlers:${tenantId}` : `processed_event_handlers:${tenantId}:${channel}`;
+    const channelSuffix = channel === this.defaultChannel ? '' : `:${channel}`;
+    return `${getRedisConfig().prefix}processed_event_handlers:${tenantId}${channelSuffix}`;
   }
 
   private async isHandlerProcessed(event: Event, handlerKey: string, channel: string): Promise<boolean> {

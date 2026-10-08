@@ -17,6 +17,7 @@ import { SwitchWithLabel } from '@alga-psa/ui/components/SwitchWithLabel';
 import { BucketOverlayFields } from './BucketOverlayFields';
 import { BucketOverlayInput } from './ContractWizard';
 import { ServiceCatalogPicker } from './ServiceCatalogPicker';
+import { reindexRateInputs } from '../../../lib/serviceRateInputs';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useCurrencyFormat } from '@alga-psa/ui/lib';
 import {
@@ -412,6 +413,7 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
                     value={service.quantity}
                     onChange={(e) => handleQuantityChange(index, Number(e.target.value))}
                     min="0"
+                    onWheel={(e) => (e.target as HTMLInputElement).blur()}
                     className="w-24"
                   />
                 </div>
@@ -481,9 +483,7 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
     const handleRemoveHourlyService = (index: number) => {
       const newServices = hourlyServices.filter((_, i) => i !== index);
       setHourlyServices(newServices);
-      const newInputs = { ...hourlyServiceRateInputs };
-      delete newInputs[index];
-      setHourlyServiceRateInputs(newInputs);
+      setHourlyServiceRateInputs((prev) => reindexRateInputs(prev, index));
     };
 
     const handleHourlyRateChange = (index: number, rate: number) => {
@@ -525,6 +525,7 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
                 placeholder="15"
                 min="0"
                 step="15"
+                onWheel={(e) => (e.target as HTMLInputElement).blur()}
                 className="w-32"
               />
             </div>
@@ -544,6 +545,7 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
                 placeholder="15"
                 min="0"
                 step="15"
+                onWheel={(e) => (e.target as HTMLInputElement).blur()}
                 className="w-32"
               />
             </div>
@@ -739,9 +741,7 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
     const handleRemoveUsageService = (index: number) => {
       const newServices = usageServices.filter((_, i) => i !== index);
       setUsageServices(newServices);
-      const newInputs = { ...usageServiceRateInputs };
-      delete newInputs[index];
-      setUsageServiceRateInputs(newInputs);
+      setUsageServiceRateInputs((prev) => reindexRateInputs(prev, index));
     };
 
     const handleUsageRateChange = (index: number, rate: number) => {

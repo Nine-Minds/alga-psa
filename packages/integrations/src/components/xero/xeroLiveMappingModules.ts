@@ -29,6 +29,10 @@ import {
   XERO_TARGET_KIND_METADATA_KEY,
   type XeroServiceTargetKind
 } from '../../lib/xero/xeroServiceMappingTarget';
+import {
+  AUTOMATIC_DISCOUNT_MAPPING_ID,
+  DISCOUNT_MAPPING_ENTITY_TYPE
+} from '@alga-psa/types';
 
 const ADAPTER_TYPE = 'xero';
 
@@ -78,6 +82,15 @@ type MappingLoadConfig<TAlga> = {
 
 type TFn = (key: string, options?: Record<string, unknown>) => string;
 
+type DiscountOption = {
+  id: string;
+  name: string;
+};
+
+const DISCOUNT_OPTIONS: DiscountOption[] = [
+  { id: AUTOMATIC_DISCOUNT_MAPPING_ID, name: 'Automatic contract discounts' }
+];
+
 function throwIfActionError(value: unknown): void {
   if (isActionMessageError(value) || isActionPermissionError(value)) {
     throw new Error(getErrorMessage(value));
@@ -89,8 +102,59 @@ export function createXeroLiveMappingModules(t?: TFn): AccountingMappingModule[]
     t ? t(`integrations.accounting.modules.tabs.${key}`, { defaultValue: fallback }) : fallback;
   return [
     createServiceModule(tab('itemsServices', 'Items / Services')),
-    createTaxCodeModule(tab('taxCodes', 'Tax Codes'))
+    createTaxCodeModule(tab('taxCodes', 'Tax Codes')),
+    createDiscountModule(tab('discounts', 'Discounts'))
   ];
+}
+
+/** Xero Items plus revenue Accounts, as one picker list (service and discount mappings). */
+async function loadItemOrAccountOptions(currentContext: { connectionId?: string | null }) {
+  const connectionId = currentContext.connectionId ?? null;
+  const [itemsResult, accountsResult] = await Promise.all([
+    getXeroItems(connectionId),
+    getXeroAccounts(connectionId)
+  ]);
+  throwIfActionError(itemsResult);
+  throwIfActionError(accountsResult);
+
+  const items = itemsResult as Array<{
+    id: string;
+    name: string;
+    code?: string;
+    status?: string;
+  }>;
+  const accounts = accountsResult as Array<{
+    id: string;
+    name: string;
+    code?: string;
+    type?: string;
+  }>;
+
+  const itemOptions = items
+    .filter((item) => isUsableStatus(item.status))
+    .map((item) => ({
+      id: toOptionId('item', item.code ?? item.id),
+      name: `Item · ${item.code ? `${item.name} (${item.code})` : item.name}`,
+      kind: 'item' as const
+    }));
+
+  // Account mode sends the code as the invoice line AccountCode, so
+  // only accounts Xero accepts on ACCREC sales lines are offered:
+  // active (getXeroAccounts already filters status), revenue-class
+  // type, and carrying a non-empty code.
+  const accountOptions = accounts
+    .filter(
+      (account) =>
+        Boolean(account.code && account.code.trim()) &&
+        XERO_SALES_ACCOUNT_TYPES.has((account.type ?? '').toUpperCase())
+    )
+    .map((account) => ({
+      id: toOptionId('account', account.code!.trim()),
+      name: `Revenue account · ${account.name} (${account.code!.trim()})`,
+      kind: 'account' as const
+    }));
+
+  return [...itemOptions, ...accountOptions];
 }
 
 function createServiceModule(tabLabel: string): AccountingMappingModule {
@@ -170,54 +234,7 @@ function createServiceModule(tabLabel: string): AccountingMappingModule {
             })
           );
         },
-        loadExternalEntities: async (currentContext) => {
-          const connectionId = currentContext.connectionId ?? null;
-          const [itemsResult, accountsResult] = await Promise.all([
-            getXeroItems(connectionId),
-            getXeroAccounts(connectionId)
-          ]);
-          throwIfActionError(itemsResult);
-          throwIfActionError(accountsResult);
-
-          const items = itemsResult as Array<{
-            id: string;
-            name: string;
-            code?: string;
-            status?: string;
-          }>;
-          const accounts = accountsResult as Array<{
-            id: string;
-            name: string;
-            code?: string;
-            type?: string;
-          }>;
-
-          const itemOptions = items
-            .filter((item) => isUsableStatus(item.status))
-            .map((item) => ({
-              id: toOptionId('item', item.code ?? item.id),
-              name: `Item · ${item.code ? `${item.name} (${item.code})` : item.name}`,
-              kind: 'item' as const
-            }));
-
-          // Account mode sends the code as the invoice line AccountCode, so
-          // only accounts Xero accepts on ACCREC sales lines are offered:
-          // active (getXeroAccounts already filters status), revenue-class
-          // type, and carrying a non-empty code.
-          const accountOptions = accounts
-            .filter(
-              (account) =>
-                Boolean(account.code && account.code.trim()) &&
-                XERO_SALES_ACCOUNT_TYPES.has((account.type ?? '').toUpperCase())
-            )
-            .map((account) => ({
-              id: toOptionId('account', account.code!.trim()),
-              name: `Revenue account · ${account.name} (${account.code!.trim()})`,
-              kind: 'account' as const
-            }));
-
-          return [...itemOptions, ...accountOptions];
-        },
+        loadExternalEntities: loadItemOrAccountOptions,
         mapAlga: (service) => ({
           id: service.service_id,
           name:
@@ -247,6 +264,84 @@ function createServiceModule(tabLabel: string): AccountingMappingModule {
         // stale xeroTargetKind carried over in the metadata JSON editor.
         metadata: { ...(input.metadata ?? {}), [XERO_TARGET_KIND_METADATA_KEY]: kind }
       });
+    },
+    async remove(_context, mappingId) {
+      throwIfActionError(await deleteExternalEntityMapping(mappingId));
+    }
+  };
+}
+
+function createDiscountModule(tabLabel: string): AccountingMappingModule {
+  const withTargetKind = <T extends { externalEntityId: string; metadata?: Record<string, unknown> | null }>(input: T): T => {
+    const { kind, code } = parseOptionId(input.externalEntityId);
+    return {
+      ...input,
+      externalEntityId: code,
+      metadata: { ...(input.metadata ?? {}), [XERO_TARGET_KIND_METADATA_KEY]: kind }
+    };
+  };
+  return {
+    id: 'xero-live-discount-mappings',
+    adapterType: ADAPTER_TYPE,
+    algaEntityType: DISCOUNT_MAPPING_ENTITY_TYPE,
+    externalEntityType: 'Item',
+    labels: {
+      tab: tabLabel,
+      description:
+        'Choose where automatic contract discounts post in Xero. Discount lines have no Alga service, so they need their own Xero Item or Revenue Account.',
+      addButton: 'Add Discount Mapping',
+      algaColumn: 'Alga Discount',
+      externalColumn: 'Xero Target',
+      dialog: {
+        addTitle: 'Add Live Xero Discount Mapping',
+        editTitle: 'Edit Live Xero Discount Mapping',
+        algaField: 'Alga Discount',
+        externalField: 'Xero Target',
+        helpText: 'Pick the Xero Item or Revenue Account that discount lines should be exported as.'
+      },
+      deleteConfirmation: {
+        title: 'Delete Discount Mapping',
+        message: ({ externalName }) =>
+          `Delete the discount mapping${externalName ? ` ↔ ${externalName}` : ''}? Invoices with automatic discounts will not export until a new one is added.`,
+        confirmLabel: 'Delete',
+        cancelLabel: 'Cancel'
+      }
+    },
+    externalTarget: {
+      label: 'Map To',
+      kinds: [
+        { id: 'item', label: 'Xero Item' },
+        { id: 'account', label: 'Xero Revenue Account' }
+      ],
+      defaultKindId: 'item',
+      kindForMapping: (mapping) => readXeroServiceTargetKind(mapping.metadata ?? null) ?? 'item',
+      optionIdForMapping: (mapping) =>
+        toOptionId(readXeroServiceTargetKind(mapping.metadata ?? null) ?? 'item', mapping.external_entity_id),
+      invalidNotice:
+        'This mapping no longer matches a usable record in the connected Xero organisation. Pick a valid Xero Item or Revenue Account.'
+    },
+    elements: {
+      addButton: 'add-xero-live-discount-mapping-button',
+      table: 'xero-live-discount-mappings-table',
+      dialog: 'xero-live-discount-mapping-dialog',
+      deleteDialogPrefix: 'confirm-delete-xero-live-discount-mapping-dialog',
+      editMenuPrefix: 'edit-xero-live-discount-mapping-menu-item-',
+      deleteMenuPrefix: 'delete-xero-live-discount-mapping-menu-item-'
+    },
+    load(context) {
+      return loadMappings<DiscountOption>({
+        context,
+        algaEntityType: DISCOUNT_MAPPING_ENTITY_TYPE,
+        loadAlgaEntities: async () => DISCOUNT_OPTIONS,
+        loadExternalEntities: loadItemOrAccountOptions,
+        mapAlga: (discount) => discount
+      });
+    },
+    create(context, input) {
+      return createMapping({ context, input: withTargetKind(input), algaEntityType: DISCOUNT_MAPPING_ENTITY_TYPE });
+    },
+    update(_context, mappingId, input) {
+      return updateMapping(mappingId, withTargetKind(input));
     },
     async remove(_context, mappingId) {
       throwIfActionError(await deleteExternalEntityMapping(mappingId));

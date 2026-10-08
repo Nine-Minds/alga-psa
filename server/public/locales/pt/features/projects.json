@@ -80,7 +80,12 @@
     "markedComplete": "Fase marcada como concluída",
     "reopened": "Fase reaberta",
     "completeReadyToast": "{{description}} está pronto para faturar",
-    "viewInBilling": "Ver"
+    "viewInBilling": "Ver",
+    "serviceLabel": "Serviço padrão (para entradas de horas)",
+    "noService": "Sem serviço",
+    "servicePlaceholder": "Selecione o serviço padrão",
+    "serviceHelp": "Usado nas entradas de horas das tarefas desta fase quando a própria tarefa não define um serviço.",
+    "serviceDisplayLabel": "Serviço"
   },
   "projectList": {
     "addProject": "Adicionar projeto",
@@ -141,6 +146,10 @@
     "projectManagerPlaceholder": "Selecione o responsável",
     "budgetedHoursLabel": "Horas orçadas",
     "budgetedHoursPlaceholder": "Insira as horas orçadas",
+    "serviceLabel": "Serviço padrão (para entradas de horas)",
+    "noService": "Sem serviço",
+    "servicePlaceholder": "Selecione o serviço padrão",
+    "serviceHelp": "Usado nas entradas de horas deste projeto quando nem a tarefa nem a sua fase define um serviço.",
     "startDateLabel": "Data de início",
     "startDatePlaceholder": "Selecione a data de início",
     "endDateLabel": "Data de término",
@@ -181,7 +190,11 @@
     "continueEditing": "Continuar editando",
     "discardChanges": "Descartar alterações",
     "saveAndClose": "Salvar e fechar",
-    "saving": "Salvando..."
+    "saving": "Salvando...",
+    "serviceLabel": "Serviço padrão (para entradas de horas)",
+    "noService": "Sem serviço",
+    "servicePlaceholder": "Selecione o serviço padrão",
+    "serviceHelp": "Usado nas entradas de horas deste projeto quando nem a tarefa nem a sua fase define um serviço."
   },
   "projectDetail": {
     "allAgents": "Todos os agentes",
@@ -416,6 +429,8 @@
     "duplicatedSuccess": "Tarefa \"{{taskName}}\" duplicada com sucesso!",
     "willBeSetOnCreate": "Será definido na criação",
     "unknownPhase": "Fase Desconhecida",
+    "serviceInheritedFromPhase": "Herda {{service}} da fase.",
+    "serviceInheritedFromProject": "Herda {{service}} do projeto.",
     "startDateLabel": "Data de início",
     "taskStartDateLabel": "Data de início da tarefa",
     "startDatePlaceholder": "Selecione a data de início"
@@ -1471,6 +1486,10 @@
     "addPhase": "Adicionar Fase",
     "phaseNamePlaceholder": "Nome da fase... *",
     "descriptionPlaceholder": "Descrição",
+    "serviceLabel": "Serviço padrão (para entradas de horas)",
+    "noService": "Sem serviço",
+    "servicePlaceholder": "Selecione o serviço padrão",
+    "serviceHelp": "Usado nas entradas de horas das tarefas desta fase quando a própria tarefa não define um serviço.",
     "adding": "Adicionando...",
     "addError": "Falha ao adicionar fase. Por favor, tente novamente.",
     "import": "Importar"

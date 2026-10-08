@@ -16,7 +16,13 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
-import { Tooltip } from '@alga-psa/ui/components/Tooltip';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@alga-psa/ui/components/DropdownMenu';
+import { MoreVertical } from 'lucide-react';
 import { preCheckDeletion } from '@alga-psa/auth/lib/preCheckDeletion';
 import {
   handleError,
@@ -24,6 +30,7 @@ import {
   isActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { isBuiltInRoleName } from '../../../lib/policy/builtInRoles';
 
 const isReturnedActionError = (value: unknown) =>
   isActionMessageError(value) || isActionPermissionError(value);
@@ -38,6 +45,8 @@ export default function RoleManagement() {
     client: false
   });
   const [editingRole, setEditingRole] = useState<IRole | null>(null);
+  const [editForm, setEditForm] = useState({ role_name: '', description: '' });
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [roleToDelete, setRoleToDelete] = useState<IRole | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -84,19 +93,36 @@ export default function RoleManagement() {
     }
   };
 
+  const openEditDialog = (role: IRole) => {
+    setEditingRole(role);
+    setEditForm({ role_name: role.role_name, description: role.description ?? '' });
+  };
+
+  const closeEditDialog = () => {
+    setEditingRole(null);
+    setIsSavingEdit(false);
+  };
+
   const handleUpdateRole = async () => {
-    if (editingRole) {
-      try {
-        const result = await updateRole(editingRole.role_id, editingRole.role_name);
-        if (isReturnedActionError(result)) {
-          handleError(result);
-          return;
-        }
-        setEditingRole(null);
-        fetchRoles();
-      } catch (error) {
-        handleError(error, t('roleManagement.errors.updateFailed'));
+    if (!editingRole) {
+      return;
+    }
+    setIsSavingEdit(true);
+    try {
+      const result = await updateRole(editingRole.role_id, {
+        ...(isBuiltInRoleName(editingRole.role_name) ? {} : { role_name: editForm.role_name }),
+        description: editForm.description,
+      });
+      if (isReturnedActionError(result)) {
+        handleError(result);
+        return;
       }
+      closeEditDialog();
+      fetchRoles();
+    } catch (error) {
+      handleError(error, t('roleManagement.errors.updateFailed'));
+    } finally {
+      setIsSavingEdit(false);
     }
   };
 
@@ -179,31 +205,36 @@ export default function RoleManagement() {
     },
     {
       title: t('common:common.actions'),
+      id: 'actions',
       dataIndex: 'role_id',
-      width: '150px',
-      render: (roleId, role) => {
+      sortable: false,
+      width: '64px',
+      render: (roleId: string, role: IRole) => {
         const isAdminRole = role.role_name.toLowerCase() === 'admin';
-        const button = (
-          <Button
-            variant="destructive"
-            id="delete-role-button"
-            size="sm"
-            onClick={() => handleDeleteRole(role)}
-            disabled={isAdminRole}
-          >
-            {t('common:common.delete')}
-          </Button>
+        return (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button id={`role-actions-${roleId}`} variant="ghost" className="h-8 w-8 p-0">
+                <span className="sr-only">{t('common:actions.openMenu')}</span>
+                <MoreVertical className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem id={`edit-role-${roleId}`} onClick={() => openEditDialog(role)}>
+                {t('common:common.edit')}
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                id={`delete-role-${roleId}`}
+                className="text-destructive focus:text-destructive"
+                disabled={isAdminRole}
+                title={isAdminRole ? t('roleManagement.adminDeleteDisabled') : undefined}
+                onClick={() => handleDeleteRole(role)}
+              >
+                {t('common:common.delete')}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         );
-
-        if (isAdminRole) {
-          return (
-            <Tooltip content={t('roleManagement.adminDeleteDisabled')}>
-              <span>{button}</span>
-            </Tooltip>
-          );
-        }
-        
-        return button;
       }
     }
   ];
@@ -328,6 +359,66 @@ export default function RoleManagement() {
             </Button>
           </div>
         </div>
+      </GenericDialog>
+
+      <GenericDialog
+        isOpen={editingRole !== null}
+        onClose={closeEditDialog}
+        title={t('roleManagement.editDialog.title')}
+        id="edit-role-dialog"
+      >
+        {editingRole && (
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="edit-role-name">{t('roleManagement.fields.roleName')}</Label>
+              <Input
+                id="edit-role-name"
+                type="text"
+                value={editForm.role_name}
+                disabled={isBuiltInRoleName(editingRole.role_name)}
+                onChange={(e) => setEditForm({ ...editForm, role_name: e.target.value })}
+              />
+              {isBuiltInRoleName(editingRole.role_name) && (
+                <p className="mt-1 text-sm text-gray-500">{t('roleManagement.editDialog.builtInNameLocked')}</p>
+              )}
+            </div>
+
+            <div>
+              <Label htmlFor="edit-role-description">{t('roleManagement.fields.description')}</Label>
+              <TextArea
+                id="edit-role-description"
+                placeholder={t('roleManagement.fields.descriptionPlaceholder')}
+                value={editForm.description}
+                onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                rows={3}
+              />
+            </div>
+
+            <div>
+              <Label>{t('roleManagement.portal.access')}</Label>
+              <p className="text-sm">
+                {[
+                  editingRole.msp && t('roleManagement.portal.msp'),
+                  editingRole.client && t('roleManagement.portal.client'),
+                ].filter(Boolean).join(', ') || t('roleManagement.portal.none')}
+              </p>
+              <p className="text-sm text-gray-500">{t('roleManagement.editDialog.portalLocked')}</p>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-4">
+              <Button id="cancel-edit-role-btn" variant="outline" onClick={closeEditDialog}>
+                {t('common:common.cancel')}
+              </Button>
+              <Button
+                id="confirm-edit-role-btn"
+                onClick={handleUpdateRole}
+                disabled={!editForm.role_name.trim() || isSavingEdit}
+              >
+                {isSavingEdit ? t('common:actions.saving') : t('common:common.save')}
+              </Button>
+            </div>
+          </div>
+        )}
       </GenericDialog>
 
       <DeleteEntityDialog

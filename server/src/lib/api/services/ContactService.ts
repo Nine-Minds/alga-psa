@@ -7,7 +7,7 @@ import { Knex } from 'knex';
 import { BaseService, ListResult, ServiceContext, withTransaction, tenantDb } from '@alga-psa/db';
 import { getContactAvatarUrl } from '@alga-psa/formatting/avatarUtils';
 import { deleteEntityImage, uploadEntityImage } from '@alga-psa/storage';
-import { ContactModel } from '@alga-psa/shared/models/contactModel';
+import { ContactModel, clearContactLinksBeforeDelete } from '@alga-psa/shared/models/contactModel';
 import { IContact } from 'server/src/interfaces/contact.interfaces';
 import { publishWorkflowEvent } from 'server/src/lib/eventBus/publishers';
 import {
@@ -249,6 +249,7 @@ export class ContactService extends BaseService<IContact> {
         {
           full_name: data.full_name ?? '',
           client_id: data.client_id ?? undefined,
+          manager_contact_id: data.manager_contact_id ?? undefined,
           phone_numbers: data.phone_numbers ?? [],
           email: data.email ?? undefined,
           primary_email_canonical_type: data.primary_email_canonical_type ?? undefined,
@@ -433,6 +434,8 @@ export class ContactService extends BaseService<IContact> {
       if (!before) {
         throw new NotFoundError('Contact not found');
       }
+
+      await clearContactLinksBeforeDelete(trx, context.tenant, id);
 
       await tenantDb(trx, context.tenant).table('contacts')
         .where('contact_name_id', id)

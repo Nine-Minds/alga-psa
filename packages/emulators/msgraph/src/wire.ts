@@ -275,6 +275,23 @@ export function wire(router: Router, core: MsGraphCore, env: HostEnv): void {
 
   // Delegated primary-calendar surface used by CalendarAdapter. The emulator
   // currently has one delegated mailbox; this is not Entra user isolation.
+  graph.get('/me/outlook/masterCategories', (req, res) => {
+    const filter = String(req.query.$filter || '').match(/^displayName eq '((?:[^']|'')*)'$/);
+    const name = filter?.[1].replace(/''/g, "'").toLowerCase();
+    res.json({ value: [...core.masterCategories.values()].filter(category => !name || category.displayName.toLowerCase() === name) });
+  });
+  graph.post('/me/outlook/masterCategories', (req, res) => {
+    const { displayName, color } = req.body;
+    if (typeof displayName !== 'string' || !displayName.trim() || !/^preset(?:[0-9]|1[0-9]|2[0-4])$/.test(color)) {
+      res.status(400).json({ error: { code: 'ErrorInvalidRequest', message: 'Expected a displayName and preset0 through preset24 color.' } }); return;
+    }
+    if ([...core.masterCategories.values()].some(category => category.displayName.toLowerCase() === displayName.toLowerCase())) {
+      res.status(409).json({ error: { code: 'ErrorNameAlreadyExists' } }); return;
+    }
+    const category = { id: randomUUID(), displayName, color };
+    core.masterCategories.set(category.id, category);
+    res.status(201).json(category);
+  });
   const primaryCalendar = { id: 'calendar', name: 'Calendar', isDefaultCalendar: true };
   graph.get('/me/calendar', (_req, res) => res.json(primaryCalendar));
   graph.get('/me/calendars', (_req, res) => res.json({ value: [primaryCalendar] }));

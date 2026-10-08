@@ -24,6 +24,9 @@ import { lockInvoiceForExternalSync } from '../../lib/invoiceExternalSyncLock';
 import { AccountingMappingResolver } from '../../services/accountingMappingResolver';
 import { KnexInvoiceMappingRepository } from '../../repositories/invoiceMappingRepository';
 import { unparseCSV } from '@alga-psa/core';
+import { reconcileExportLineQuantity } from './exportLineQuantity';
+
+const QBO_CSV_MAX_QUANTITY_DECIMALS = 6;
 
 /**
  * Database types for invoices and charges
@@ -214,29 +217,44 @@ export class QuickBooksCSVAdapter implements AccountingExportAdapter {
           throw new Error(`QuickBooks CSV adapter: charge ${line.document_line_id} not found`);
         }
 
-        if (!charge.service_id) {
+        const isServicelessDiscount = !charge.service_id && Boolean(charge.is_discount);
+        if (!charge.service_id && !isServicelessDiscount) {
           throw new Error(`QuickBooks CSV adapter: charge ${charge.item_id} missing service_id`);
         }
 
-        // Resolve service mapping to get QuickBooks item name
-        const serviceMapping = await resolver.resolveServiceMapping({
-          tenantId: context.batch.tenant,
-          adapterType: this.type,
-          serviceId: charge.service_id,
-          targetRealm: context.batch.target_realm
-        });
+        // Resolve the mapping that names the QuickBooks item
+        const serviceMapping = isServicelessDiscount
+          ? await resolver.resolveDiscountMapping({
+              tenantId: context.batch.tenant,
+              adapterType: this.type,
+              targetRealm: context.batch.target_realm
+            })
+          : await resolver.resolveServiceMapping({
+              tenantId: context.batch.tenant,
+              adapterType: this.type,
+              serviceId: charge.service_id!,
+              targetRealm: context.batch.target_realm
+            });
 
         if (!serviceMapping) {
-          throw new Error(`QuickBooks CSV adapter: no mapping for service ${charge.service_id}. Please configure service mappings before export.`);
+          throw new Error(
+            isServicelessDiscount
+              ? 'QuickBooks CSV adapter: no mapping for discount lines. Please configure the discount mapping before export.'
+              : `QuickBooks CSV adapter: no mapping for service ${charge.service_id}. Please configure service mappings before export.`
+          );
         }
 
         // Get the item name from mapping metadata or use external_entity_id
         const itemName = this.getItemName(serviceMapping);
 
         // Calculate amounts
-        const quantity = charge.quantity ?? 1;
-        const unitPrice = charge.unit_price ?? charge.total_price;
         const lineAmount = charge.net_amount ?? charge.total_price;
+        const { quantity, unitPriceCents: unitPrice } = reconcileExportLineQuantity({
+          quantity: charge.quantity,
+          unitPriceCents: charge.unit_price ?? null,
+          amountCents: lineAmount,
+          maxQuantityDecimals: QBO_CSV_MAX_QUANTITY_DECIMALS
+        });
         const taxAmount = shouldExcludeTax ? 0 : (charge.tax_amount ?? 0);
 
         totalAmountCents += lineAmount;

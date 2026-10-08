@@ -80,7 +80,12 @@
     "markedComplete": "Fasen har markerats som slutförd",
     "reopened": "Fasen har öppnats igen",
     "completeReadyToast": "{{description}} kan nu faktureras",
-    "viewInBilling": "Visa"
+    "viewInBilling": "Visa",
+    "serviceLabel": "Standardtjänst (för tidposter)",
+    "noService": "Ingen tjänst",
+    "servicePlaceholder": "Välj standardtjänst",
+    "serviceHelp": "Används för tidposter på den här fasens uppgifter när uppgiften själv inte anger någon tjänst.",
+    "serviceDisplayLabel": "Tjänst"
   },
   "projectList": {
     "addProject": "Lägg till projekt",
@@ -141,6 +146,10 @@
     "projectManagerPlaceholder": "Välj ansvarig",
     "budgetedHoursLabel": "Budgeterade timmar",
     "budgetedHoursPlaceholder": "Ange budgeterade timmar",
+    "serviceLabel": "Standardtjänst (för tidposter)",
+    "noService": "Ingen tjänst",
+    "servicePlaceholder": "Välj standardtjänst",
+    "serviceHelp": "Används för tidposter i det här projektet när varken uppgiften eller dess fas anger någon tjänst.",
     "startDateLabel": "Startdatum",
     "startDatePlaceholder": "Välj startdatum",
     "endDateLabel": "Slutdatum",
@@ -181,7 +190,11 @@
     "continueEditing": "Fortsätt redigera",
     "discardChanges": "Kasta ändringar",
     "saveAndClose": "Spara och stäng",
-    "saving": "Sparar…"
+    "saving": "Sparar…",
+    "serviceLabel": "Standardtjänst (för tidposter)",
+    "noService": "Ingen tjänst",
+    "servicePlaceholder": "Välj standardtjänst",
+    "serviceHelp": "Används för tidposter i det här projektet när varken uppgiften eller dess fas anger någon tjänst."
   },
   "projectDetail": {
     "allAgents": "Alla handläggare",
@@ -416,6 +429,8 @@
     "duplicatedSuccess": "Uppgiften ”{{taskName}}” har duplicerats",
     "willBeSetOnCreate": "Anges när posten skapas",
     "unknownPhase": "Okänd fas",
+    "serviceInheritedFromPhase": "Ärver {{service}} från fasen.",
+    "serviceInheritedFromProject": "Ärver {{service}} från projektet.",
     "startDateLabel": "Startdatum",
     "taskStartDateLabel": "Uppgiftens startdatum",
     "startDatePlaceholder": "Välj startdatum"
@@ -1471,6 +1486,10 @@
     "addPhase": "Lägg till fas",
     "phaseNamePlaceholder": "Fasnamn… *",
     "descriptionPlaceholder": "Beskrivning",
+    "serviceLabel": "Standardtjänst (för tidposter)",
+    "noService": "Ingen tjänst",
+    "servicePlaceholder": "Välj standardtjänst",
+    "serviceHelp": "Används för tidposter på den här fasens uppgifter när uppgiften själv inte anger någon tjänst.",
     "adding": "Lägger till…",
     "addError": "Det gick inte att lägga till fasen. Försök igen.",
     "import": "Importera"

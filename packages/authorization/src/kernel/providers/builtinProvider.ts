@@ -8,6 +8,7 @@ import type {
 } from '../contracts';
 import { evaluateRelationshipRules } from '../relationships';
 import { ALLOW_ALL_SCOPE, DENY_ALL_SCOPE } from '../scope';
+import { resolveVisibleContactIds } from '../../portal/visibility';
 
 export type BuiltinRelationshipRulesResolver = (
   input: AuthorizationEvaluationInput
@@ -76,6 +77,12 @@ export class BuiltinAuthorizationKernelProvider implements BuiltinAuthorizationP
               (visibility.effectiveTicketScope !== 'contact' || !visibility.contactId))) {
           return { allowed: false, scope: DENY_ALL_SCOPE, reasons: [] };
         }
+        // A constraint list is a pure conjunction and cannot express the OR the
+        // `contact_visibility` template evaluates (own/reports ∨ profile grant ∨
+        // watcher). Emit the strictly *narrower* conjunct instead: the contact
+        // and the people who report to them. Fails closed. Consumers that need
+        // the full predicate use the template's compileSql/matches.
+        const visibleContactIds = resolveVisibleContactIds(visibility);
         return {
           allowed: true,
           scope: {
@@ -87,7 +94,9 @@ export class BuiltinAuthorizationKernelProvider implements BuiltinAuthorizationP
                 { field: 'board_id', operator: 'in' as const, value: visibility.visibleBoardIds },
               ]),
               ...(visibility.effectiveTicketScope === 'contact' ? [
-                { field: 'contact_name_id', operator: 'eq' as const, value: visibility.contactId },
+                visibleContactIds.length === 1
+                  ? { field: 'contact_name_id', operator: 'eq' as const, value: visibility.contactId }
+                  : { field: 'contact_name_id', operator: 'in' as const, value: visibleContactIds },
               ] : []),
             ],
           },

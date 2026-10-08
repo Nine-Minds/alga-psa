@@ -21,8 +21,10 @@ import type {
   ITaskType,
   IUser,
   IUserWithRoles,
+  ProjectServiceSource,
   ProjectStatus,
 } from '@alga-psa/types';
+import { resolveEffectiveServiceSource } from '@alga-psa/core';
 import { revalidatePath } from 'next/cache';
 import {
   bulkApplyTagsToEntities,
@@ -163,6 +165,23 @@ function tenantScopedTable(
     tenant: string,
 ): Knex.QueryBuilder {
     return tenantDb(conn, tenant).table(table);
+}
+
+// Local (not exported) because every export of a 'use server' module must be an
+// async function; the type is erased, but keeping it private avoids the trap.
+interface EffectiveTaskService {
+    serviceId: string | null;
+    serviceName: string | null;
+    /** Carried so callers can apply isTimeEntryService without the catalog. */
+    billingMethod: string | null;
+    source: ProjectServiceSource | null;
+    /** The phase → project fallback alone, ignoring the task's own service. */
+    inherited: {
+        serviceId: string | null;
+        serviceName: string | null;
+        billingMethod: string | null;
+        source: 'phase' | 'project' | null;
+    };
 }
 
 function projectTaskDependencyTaskQuery(
@@ -3206,6 +3225,86 @@ export const getPhaseTaskCounts = withAuth(async (
             result[row.phase_id] = Number(row.count);
         }
             return result;
+        });
+    });
+});
+
+/**
+ * The service a time entry for this task should prefill, resolved task → phase
+ * → project, plus which level it came from. Returns nulls when no level sets a
+ * default.
+ */
+export const getEffectiveTaskService = withAuth(async (
+    user,
+    { tenant },
+    taskId: string
+): Promise<EffectiveTaskService | ProjectTaskActionError> => {
+    return withProjectTaskActionErrors(async () => {
+        const { knex: db } = await createTenantKnex();
+        return await withTransaction(db, async (trx: Knex.Transaction) => {
+            await checkPermission(user, 'project', 'read', trx);
+            const projectId = await resolveProjectIdForTask(trx, tenant, taskId);
+            if (!projectId) {
+                throw new Error('Project not found for task');
+            }
+            await assertProjectReadAllowedById(trx, tenant, user as IUserWithRoles, projectId);
+
+            const scoped = tenantDb(trx, tenant);
+            const query = tenantScopedTable(trx, 'project_tasks as pt', tenant);
+            scoped.tenantJoin(query, 'project_phases as pp', 'pt.phase_id', 'pp.phase_id');
+            scoped.tenantJoin(query, 'projects as p', 'pp.project_id', 'p.project_id');
+            // One catalog join per level so the name matches the id the COALESCE picked.
+            scoped.tenantJoin(query, 'service_catalog as task_service', 'pt.service_id', 'task_service.service_id', { type: 'left' });
+            scoped.tenantJoin(query, 'service_catalog as phase_service', 'pp.service_id', 'phase_service.service_id', { type: 'left' });
+            scoped.tenantJoin(query, 'service_catalog as project_service', 'p.service_id', 'project_service.service_id', { type: 'left' });
+
+            const row = await query
+                .where({ 'pt.task_id': taskId })
+                .first<Record<string, string | null>>(
+                    'pt.service_id as task_service_id',
+                    'pp.service_id as phase_service_id',
+                    'p.service_id as project_service_id',
+                    'task_service.service_name as task_service_name',
+                    'phase_service.service_name as phase_service_name',
+                    'project_service.service_name as project_service_name',
+                    'task_service.billing_method as task_billing_method',
+                    'phase_service.billing_method as phase_billing_method',
+                    'project_service.billing_method as project_billing_method'
+                );
+
+            const ids = {
+                task: row?.task_service_id ?? null,
+                phase: row?.phase_service_id ?? null,
+                project: row?.project_service_id ?? null,
+            };
+            const names: Record<ProjectServiceSource, string | null> = {
+                task: row?.task_service_name ?? null,
+                phase: row?.phase_service_name ?? null,
+                project: row?.project_service_name ?? null,
+            };
+            const billingMethods: Record<ProjectServiceSource, string | null> = {
+                task: row?.task_billing_method ?? null,
+                phase: row?.phase_billing_method ?? null,
+                project: row?.project_billing_method ?? null,
+            };
+
+            const source = resolveEffectiveServiceSource(ids);
+            // The phase → project fallback on its own, so the task form can name
+            // what an empty task-level service will resolve to.
+            const inheritedSource = resolveEffectiveServiceSource({ phase: ids.phase, project: ids.project });
+
+            return {
+                serviceId: source ? ids[source] : null,
+                serviceName: source ? names[source] : null,
+                billingMethod: source ? billingMethods[source] : null,
+                source,
+                inherited: {
+                    serviceId: inheritedSource ? ids[inheritedSource] : null,
+                    serviceName: inheritedSource ? names[inheritedSource] : null,
+                    billingMethod: inheritedSource ? billingMethods[inheritedSource] : null,
+                    source: inheritedSource as 'phase' | 'project' | null,
+                },
+            };
         });
     });
 });

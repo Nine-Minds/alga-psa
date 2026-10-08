@@ -318,7 +318,9 @@ const GenericPlanServicesList: React.FC<GenericPlanServicesListProps> = ({ contr
     },
     {
       title: t('services.generic.columns.derivedConfigType', { defaultValue: 'Derived Config Type' }), // Changed title slightly for clarity
+      id: 'derived_config_type',
       dataIndex: 'billing_method', // Use billing_method and unit_of_measure from record
+      sortable: false,
       render: (_, record) => { // Use record instead of value
         let derivedType: 'Fixed' | 'Hourly' | 'Usage' | 'Bucket' | undefined; // Allow undefined
 

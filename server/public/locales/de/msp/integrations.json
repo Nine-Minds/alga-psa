@@ -90,7 +90,8 @@
           "clients": "Kunden",
           "itemsServices": "Artikel / Dienstleistungen",
           "taxCodes": "Steuercodes",
-          "paymentTerms": "Zahlungsbedingungen"
+          "paymentTerms": "Zahlungsbedingungen",
+          "discounts": "Rabatte"
         }
       }
     },
@@ -111,6 +112,7 @@
           "failed": "Export fehlgeschlagen",
           "missingItemMapping": "Fehlende Artikelzuordnung",
           "missingItemMappingId": "Fehlende Artikelzuordnung ({{serviceId}})",
+          "missingDiscountMapping": "Fehlende Rabatt-Zuordnung (Tab „Rabatte“)",
           "missingItemMappingNamed": "Fehlende Artikelzuordnung: {{serviceName}}"
         },
         "fields": {
