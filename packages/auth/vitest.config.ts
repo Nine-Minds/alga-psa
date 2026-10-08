@@ -10,6 +10,10 @@ export default defineConfig({
   },
   resolve: {
     alias: {
+      // Emulator packages live under packages/emulators/* and are not linked
+      // into node_modules; point at their sources like server/vitest.config.ts.
+      '@alga-psa/emulator-host': path.resolve(__dirname, '../emulators/host/src/index.ts'),
+      '@alga-psa/emulator-msgraph': path.resolve(__dirname, '../emulators/msgraph/src/index.ts'),
       '@alga-psa/client-portal': path.resolve(__dirname, '../client-portal/src'),
       '@alga-psa/documents': path.resolve(__dirname, '../documents/src'),
       '@alga-psa/event-bus': path.resolve(__dirname, '../event-bus/src'),
