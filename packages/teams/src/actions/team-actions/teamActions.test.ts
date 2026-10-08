@@ -102,7 +102,14 @@ function createTrx(data: Record<string, TableData> = {}) {
 function teamDependencyCounts(counts: Record<string, number> = {}): Record<string, TableData> {
   const defaults: Record<string, number> = { team_members: 1 };
   return Object.fromEntries(
-    ['team_members', 'tickets', 'project_tasks', 'project_template_tasks', 'boards'].map((table) => [
+    [
+      'team_members',
+      'tickets',
+      'project_tasks',
+      'project_template_tasks',
+      'boards',
+      'board_notification_rule_recipients',
+    ].map((table) => [
       table,
       { first: { count: String(counts[table] ?? defaults[table] ?? 0) } },
     ])
