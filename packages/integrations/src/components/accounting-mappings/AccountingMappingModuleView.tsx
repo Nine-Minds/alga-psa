@@ -14,11 +14,15 @@ import type { ExternalEntityMapping } from '@alga-psa/integrations/actions';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { getErrorMessage } from '@alga-psa/ui/lib/errorHandling';
 import {
+  AccountingMappingBulkCreateInput,
+  AccountingMappingBulkCreateResult,
   AccountingMappingContext,
+  AccountingMappingEntityOption,
   AccountingMappingModule,
   AccountingMappingOverrides
 } from './types';
 import { AccountingMappingDialog } from './AccountingMappingDialog';
+import { AccountingMappingBulkGrid } from './AccountingMappingBulkGrid';
 import type { ColumnDefinition } from '@alga-psa/types';
 
 type DisplayMapping = ExternalEntityMapping & {
@@ -48,8 +52,9 @@ export function AccountingMappingModuleView({
   const overrides = useOverrides(module, context);
 
   const [mappings, setMappings] = useState<DisplayMapping[]>([]);
-  const [algaOptions, setAlgaOptions] = useState<Array<{ id: string; name: string }>>([]);
-  const [externalOptions, setExternalOptions] = useState<Array<{ id: string; name: string }>>([]);
+  const [algaOptions, setAlgaOptions] = useState<AccountingMappingEntityOption[]>([]);
+  const [externalOptions, setExternalOptions] = useState<AccountingMappingEntityOption[]>([]);
+  const [bulkMode, setBulkMode] = useState(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -57,8 +62,10 @@ export function AccountingMappingModuleView({
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
 
-  const loadData = useCallback(async () => {
-    setIsLoading(true);
+  const loadData = useCallback(async (options?: { silent?: boolean }) => {
+    // A silent reload keeps the current view mounted (the bulk grid must keep
+    // its per-row errors across the post-save refresh).
+    if (!options?.silent) setIsLoading(true);
     setError(null);
     try {
       const result = overrides?.loadData
@@ -78,7 +85,7 @@ export function AccountingMappingModuleView({
     } catch (loadError) {
       setError(getErrorMessage(loadError));
     } finally {
-      setIsLoading(false);
+      if (!options?.silent) setIsLoading(false);
     }
   }, [context, module, overrides, t]);
 
@@ -158,6 +165,63 @@ export function AccountingMappingModuleView({
       await loadData();
     },
     [context, externalOptions, loadData, mappings, module, overrides]
+  );
+
+  const handleBulkSave = useCallback(
+    async (inputs: AccountingMappingBulkCreateInput[]): Promise<AccountingMappingBulkCreateResult[]> => {
+      // Persist the picked option's label, like the single-create path does.
+      const withMetadata = inputs.map((input) => {
+        const externalDisplayName = externalOptions.find(
+          (option) => option.id === input.externalEntityId
+        )?.name;
+        return {
+          ...input,
+          metadata: externalDisplayName ? { ...(input.metadata ?? {}), externalDisplayName } : input.metadata
+        };
+      });
+
+      let results: AccountingMappingBulkCreateResult[];
+      if (module.createMany && !overrides?.createMapping) {
+        // One request for the whole batch; the module reports per-row outcomes.
+        results = await module.createMany(context, withMetadata);
+      } else {
+        // Sequential fallback (module without createMany, or test overrides):
+        // each row's failure is captured and never stops the others.
+        results = [];
+        for (const input of withMetadata) {
+          try {
+            if (overrides?.createMapping) {
+              await overrides.createMapping(context, {
+                integration_type: module.adapterType,
+                alga_entity_type: module.algaEntityType,
+                alga_entity_id: input.algaEntityId,
+                external_entity_id: input.externalEntityId,
+                external_realm_id: context.realmId ?? null,
+                metadata: input.metadata
+              });
+              results.push({ algaEntityId: input.algaEntityId, ok: true });
+            } else {
+              const mapping = await module.create(context, input);
+              results.push({ algaEntityId: input.algaEntityId, ok: true, mapping });
+            }
+          } catch (rowError) {
+            results.push({
+              algaEntityId: input.algaEntityId,
+              ok: false,
+              error: getErrorMessage(rowError)
+            });
+          }
+        }
+      }
+      await loadData({ silent: true });
+      return results;
+    },
+    [context, externalOptions, loadData, module, overrides]
+  );
+
+  const mappedAlgaIds = useMemo(
+    () => new Set(mappings.map((mapping) => mapping.alga_entity_id)),
+    [mappings]
   );
 
   const handleDelete = useCallback(async () => {
@@ -275,6 +339,7 @@ export function AccountingMappingModuleView({
   });
 
   const addButtonId = module.elements?.addButton ?? `${module.id}-add-button`;
+  const bulkButtonId = module.elements?.bulkButton ?? `${module.id}-bulk-map-button`;
   const tableId = module.elements?.table ?? `${module.id}-mappings-table`;
   const deleteDialogPrefix =
     module.elements?.deleteDialogPrefix ?? `${module.id}-delete-dialog`;
@@ -284,7 +349,16 @@ export function AccountingMappingModuleView({
       {module.labels.description && (
         <p className="text-sm text-muted-foreground">{module.labels.description}</p>
       )}
-      <div className="flex justify-end">
+      <div className="flex justify-end gap-2">
+        <Button
+          id={bulkButtonId}
+          variant="outline"
+          onClick={() => setBulkMode((current) => !current)}
+        >
+          {bulkMode
+            ? t('integrations.accounting.bulk.exit', { defaultValue: 'Back to mappings' })
+            : t('integrations.accounting.bulk.button', { defaultValue: 'Bulk map' })}
+        </Button>
         <Button
           id={addButtonId}
           onClick={() => {
@@ -296,7 +370,15 @@ export function AccountingMappingModuleView({
         </Button>
       </div>
 
-      {mappings.length === 0 ? (
+      {bulkMode ? (
+        <AccountingMappingBulkGrid
+          module={module}
+          algaEntities={algaOptions}
+          externalEntities={externalOptions}
+          mappings={mappings}
+          onSave={handleBulkSave}
+        />
+      ) : mappings.length === 0 ? (
         <div className="rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground">
           {t('integrations.accounting.moduleView.noMappings', { defaultValue: 'No mappings found.' })}
         </div>
@@ -319,6 +401,7 @@ export function AccountingMappingModuleView({
           onSubmit={handleCreateOrUpdate}
           algaEntities={algaOptions}
           externalEntities={externalOptions}
+          mappedAlgaIds={mappedAlgaIds}
           realmLabel={realmLabel}
         />
       ) : null}
@@ -342,8 +425,8 @@ export function AccountingMappingModuleView({
 
 function enrichMappings(
   mappings: ExternalEntityMapping[],
-  algaEntities: Array<{ id: string; name: string }>,
-  externalEntities: Array<{ id: string; name: string }>,
+  algaEntities: AccountingMappingEntityOption[],
+  externalEntities: AccountingMappingEntityOption[],
   module: AccountingMappingModule
 ): DisplayMapping[] {
   const algaLookup = new Map(algaEntities.map((entity) => [entity.id, entity.name]));

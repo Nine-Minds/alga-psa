@@ -1,6 +1,37 @@
 {
   "integrations": {
     "accounting": {
+      "bulk": {
+        "button": "⟦Ɓŭŀķ ḿȧƥ⟧",
+        "columns": {
+          "ignore": "⟦Īɠƞȯřḗ⟧",
+          "select": "⟦Şȧṽḗ⟧",
+          "status": "⟦Şŧȧŧŭş⟧"
+        },
+        "exit": "⟦Ɓȧƈķ ŧȯ ḿȧƥƥīƞɠş⟧",
+        "filter": {
+          "all": "⟦Ȧŀŀ⟧",
+          "mapped": "⟦Ḿȧƥƥḗḓ⟧",
+          "unmapped": "⟦Ŭƞḿȧƥƥḗḓ⟧"
+        },
+        "ignoreAll": "⟦Īɠƞȯřḗ ȧŀŀ⟧",
+        "noRows": "⟦Ƞȯ řȯẇş ḿȧŧƈħ ŧħḗ ƈŭřřḗƞŧ ƒīŀŧḗř.⟧",
+        "possibleMatch": "⟦Ƥȯşşīƀŀḗ ḿȧŧƈħ⟧",
+        "rowIgnoreAria": "⟦Īɠƞȯřḗ {{name}}⟧",
+        "rowSelectAria": "⟦Īƞƈŀŭḓḗ {{name}} īƞ şȧṽḗ⟧",
+        "saveAll": "⟦Şȧṽḗ ȧŀŀ⟧",
+        "searchPlaceholder": "⟦Şḗȧřƈħ şḗřṽīƈḗş ȧƞḓ ŧȧřɠḗŧş...⟧",
+        "selectAll": "⟦Şḗŀḗƈŧ ȧŀŀ⟧",
+        "status": {
+          "ignored": "⟦Īɠƞȯřḗḓ⟧",
+          "mapped": "⟦Ḿȧƥƥḗḓ⟧",
+          "noResult": "⟦Ƞȯ řḗşŭŀŧ ẇȧş řḗŧŭřƞḗḓ ƒȯř ŧħīş řȯẇ.⟧",
+          "pending": "⟦Ƥḗƞḓīƞɠ⟧",
+          "saved": "⟦Şȧṽḗḓ⟧"
+        },
+        "suggested": "⟦Şŭɠɠḗşŧḗḓ⟧",
+        "toSave": "⟦{{total}} ŧȯ şȧṽḗ⟧"
+      },
       "dialog": {
         "cancel": "⟦Ƈȧƞƈḗŀ⟧",
         "enterPlaceholder": "⟦Ḗƞŧḗř {{field}}...⟧",

@@ -1,6 +1,37 @@
 {
   "integrations": {
     "accounting": {
+      "bulk": {
+        "button": "Mappatura in blocco",
+        "columns": {
+          "ignore": "Ignora",
+          "select": "Salva",
+          "status": "Stato"
+        },
+        "exit": "Torna alle mappature",
+        "filter": {
+          "all": "Tutti",
+          "mapped": "Mappato",
+          "unmapped": "Non mappato"
+        },
+        "ignoreAll": "Ignora tutto",
+        "noRows": "Nessuna riga corrisponde al filtro corrente.",
+        "possibleMatch": "Possibile corrispondenza",
+        "rowIgnoreAria": "Ignora {{name}}",
+        "rowSelectAria": "Includi {{name}} nel salvataggio",
+        "saveAll": "Salva tutto",
+        "searchPlaceholder": "Cerca servizi e destinazioni...",
+        "selectAll": "Seleziona tutto",
+        "status": {
+          "ignored": "Ignorato",
+          "mapped": "Mappato",
+          "noResult": "Nessun risultato restituito per questa riga.",
+          "pending": "In sospeso",
+          "saved": "Salvato"
+        },
+        "suggested": "Suggerito",
+        "toSave": "{{total}} da salvare"
+      },
       "dialog": {
         "cancel": "Annulla",
         "enterPlaceholder": "Inserisci {{field}}...",
