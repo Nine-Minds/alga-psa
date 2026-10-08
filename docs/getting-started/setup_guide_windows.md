@@ -391,6 +391,7 @@ docker compose -f docker-compose.prebuilt.base.yaml -f docker-compose.prebuilt.c
 ✓ Encryption keys are at least 32 characters
 ✓ RLS policies properly configured
 ✓ Database users have appropriate permissions
+✓ `pg_hba.conf` has no `trust` entries
 ✓ Environment variables properly validated
 
 ## Production/Public Deployment Configuration
@@ -473,6 +474,39 @@ When upgrading from a previous version:
    - RLS policies
    - Protocol Buffer definitions (EE only)
 6. Update configurations as needed and verify the application starts cleanly before removing the old backups.
+
+### Postgres authentication (upgrading from v1.6.0 or earlier)
+
+Postgres now requires a password for every network connection. Earlier releases could create the `postgres_data` volume with legacy `trust` entries in `pg_hba.conf`. Those entries accepted connections without a password.
+
+Fresh installs need no action. On an existing install, the first `up` after the upgrade repairs the volume before Postgres starts listening:
+
+- The `postgres` container rewrites every `trust` entry in `pg_hba.conf` to `md5`.
+- It sets the `postgres` role's password to the value in `secrets/postgres_password`. Components of the stack already use that secret, so they keep working.
+- It saves the original file as `$PGDATA/pg_hba.conf.pre-trust-removal` (mode 600).
+- It leaves the `app_user` and `hocuspocus_user` passwords alone. The `setup` container applies them from their secrets on every run.
+
+Look for this line in the `postgres` logs:
+
+```text
+alga-postgres: Repaired legacy trust rules in /var/lib/postgresql/data/pg_hba.conf (now md5); superuser 'postgres' password synced to the configured secret; original saved to ...
+```
+
+To check the result, list the active rules. None of them should end in `trust`:
+
+```bash
+docker compose -f docker-compose.prebuilt.base.yaml -f docker-compose.prebuilt.ce.yaml \
+  --env-file server/.env --env-file .env.image exec postgres \
+  sh -c 'grep -v "^#" "$PGDATA/pg_hba.conf" | grep -v "^$"'
+```
+
+If you run Postgres outside these compose files, make the same change by hand. Set every `trust` method in `pg_hba.conf` to `md5`, make sure each login role has a password, then run `SELECT pg_reload_conf();`.
+
+The stack refuses to start in three cases:
+
+- `POSTGRES_HOST_AUTH_METHOD=trust is not allowed`: the postgres container found that environment value. Remove it or set it to `md5`.
+- `no postgres password is available`: the volume still has legacy entries, and `secrets/postgres_password` is empty or missing. Restore the secret and start again.
+- `pg_hba.conf has rules that do not require a password`: `setup` found a rule without a password after Postgres started. Recreate the `postgres` container so it repairs the file, or fix the rule by hand as described above.
 
 ## Additional Resources
 
