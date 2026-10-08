@@ -1825,6 +1825,12 @@
         "useLogo": "Use my logo in the email header",
         "logoWide": "Wide logo",
         "logoDefault": "Square logo",
+        "logoArtwork": "Logo artwork",
+        "logoArtworkAuto": "Match the header",
+        "logoArtworkLight": "Light-background logo",
+        "logoArtworkDark": "Dark-background logo",
+        "logoArtworkAutoDark": "Automatic reads this header as dark and uses the dark-background logo.",
+        "logoArtworkAutoLight": "Automatic reads this header as light and uses the light-background logo.",
         "noLogo": "Upload a logo in Settings → Client Portal → Branding to use it here.",
         "showAttribution": "Show \"Powered by AlgaPSA\" in the footer"
       }

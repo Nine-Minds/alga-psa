@@ -1825,6 +1825,12 @@
         "useLogo": "Mein Logo in der E-Mail-Kopfzeile verwenden",
         "logoWide": "Breites Logo",
         "logoDefault": "Quadratisches Logo",
+        "logoArtwork": "Logo-Variante",
+        "logoArtworkAuto": "An Kopfzeile anpassen",
+        "logoArtworkLight": "Logo für hellen Hintergrund",
+        "logoArtworkDark": "Logo für dunklen Hintergrund",
+        "logoArtworkAutoDark": "Automatisch stuft diese Kopfzeile als dunkel ein und verwendet das Logo für dunklen Hintergrund.",
+        "logoArtworkAutoLight": "Automatisch stuft diese Kopfzeile als hell ein und verwendet das Logo für hellen Hintergrund.",
         "noLogo": "Laden Sie unter Einstellungen → Kundenportal → Branding ein Logo hoch, um es hier zu verwenden.",
         "showAttribution": "„Powered by AlgaPSA“ in der Fußzeile anzeigen"
       }

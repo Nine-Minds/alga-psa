@@ -1825,6 +1825,12 @@
         "useLogo": "Usa il mio logo nell'intestazione delle email",
         "logoWide": "Logo largo",
         "logoDefault": "Logo quadrato",
+        "logoArtwork": "Versione del logo",
+        "logoArtworkAuto": "In base all'intestazione",
+        "logoArtworkLight": "Logo per sfondo chiaro",
+        "logoArtworkDark": "Logo per sfondo scuro",
+        "logoArtworkAutoDark": "La modalità automatica considera scura questa intestazione e usa il logo per sfondo scuro.",
+        "logoArtworkAutoLight": "La modalità automatica considera chiara questa intestazione e usa il logo per sfondo chiaro.",
         "noLogo": "Carica un logo in Impostazioni → Portale clienti → Branding per usarlo qui.",
         "showAttribution": "Mostra «Powered by AlgaPSA» nel piè di pagina"
       }
