@@ -530,6 +530,57 @@ describe('internal notification event handling', () => {
     await unregisterInternalNotificationSubscriber();
   });
 
+  const publishSuppressedTicketCreated = async (suppression: Record<string, boolean>) => {
+    await registerInternalNotificationSubscriber();
+
+    const tenantId = uuidv4();
+    const ticketId = uuidv4();
+    const assignedUserId = uuidv4();
+    const contactUserId = uuidv4();
+
+    const knexStub = createConnectionStub({
+      'tickets as t': [
+        {
+          ticket_id: ticketId,
+          ticket_number: 'T-510',
+          title: 'Suppression check',
+          assigned_to: assignedUserId,
+          contact_name_id: uuidv4(),
+          client_id: 'client-1',
+          client_name: 'Acme Inc'
+        }
+      ],
+      users: [{ user_id: contactUserId, user_type: 'client' }]
+    });
+    getConnectionMock.mockResolvedValue(knexStub);
+    createTenantKnexMock.mockResolvedValue({ knex: knexStub, tenant: tenantId });
+    createNotificationFromTemplateInternalMock.mockClear();
+
+    await eventBus.publish({
+      id: uuidv4(),
+      eventType: 'TICKET_CREATED' as const,
+      timestamp: new Date().toISOString(),
+      payload: { tenantId, ticketId, userId: uuidv4(), ...suppression }
+    }, { channel: 'internal-notifications' });
+
+    await unregisterInternalNotificationSubscriber();
+    return { assignedUserId, contactUserId };
+  };
+
+  it('TICKET_CREATED with suppressInternalNotifications skips the assignee but still notifies the portal contact', async () => {
+    const { contactUserId } = await publishSuppressedTicketCreated({ suppressInternalNotifications: true });
+
+    expect(getCallByTemplate('ticket-created')).toBeUndefined();
+    expect(getCallByTemplate('ticket-created-client')?.user_id).toBe(contactUserId);
+  });
+
+  it('TICKET_CREATED with suppressContactNotifications notifies the assignee but not the portal contact', async () => {
+    const { assignedUserId } = await publishSuppressedTicketCreated({ suppressContactNotifications: true });
+
+    expect(getCallByTemplate('ticket-created')?.user_id).toBe(assignedUserId);
+    expect(getCallByTemplate('ticket-created-client')).toBeUndefined();
+  });
+
   it('skips a second delivery of the same inbound outbox event id (consumer idempotency gate)', async () => {
     await registerInternalNotificationSubscriber();
 

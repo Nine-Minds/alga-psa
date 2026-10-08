@@ -6,7 +6,7 @@ import { recurrenceRuleSchema } from '@alga-psa/shared/lib/recurrence';
 import { loadTenantBusinessDayCalendar } from '@alga-psa/shared/lib/businessHours/loadBusinessDayCalendar';
 import type { BusinessDayCalendar } from '@alga-psa/shared/lib/businessHours/businessDayCalendar';
 import { listCandidateOccurrences, type Candidate } from './candidateOccurrences';
-import { createTicketWithSideEffects } from '../createTicketWithSideEffects';
+import { createTicketWithSideEffects } from '@alga-psa/shared/services/tickets/createTicketWithSideEffects';
 import {
   recurringTicketOverridesSchema,
   resolveEffectiveFields,

@@ -324,10 +324,33 @@ export class WorkflowRuntimeV2EventStreamWorker {
       unknownSchemaRef: 0,
       schemaMismatch: 0,
       payloadValidationFailed: 0,
+      workflowCycle: 0,
     };
+    // Workflow ids that caused this event (stamped by an action such as tickets.create when a
+    // workflow run published it). A workflow already in the chain never relaunches itself, which
+    // bounds A -> A and A -> B -> A loops. Non-cyclic chains (A -> B) still run.
+    const eventLineage = Array.isArray(payload.workflowLineage)
+      ? (payload.workflowLineage as unknown[]).filter((id): id is string => typeof id === 'string')
+      : [];
     for (const { workflow, latestVersion: latest } of matching) {
       if (deliveryError) {
         break;
+      }
+
+      const skipLabel = `workflow ${workflow.key ?? workflow.workflow_id} (${workflow.workflow_id})`;
+
+      if (eventLineage.includes(workflow.workflow_id)) {
+        skipStats.workflowCycle += 1;
+        skipDiagnostics.push(`Skipped ${skipLabel}: workflow is already in the event lineage (trigger loop guard)`);
+        logger.warn('[WorkflowRuntimeV2EventStreamWorker] Workflow is already in the event lineage; skipping launch to avoid a trigger loop', {
+          workerId: this.workerId,
+          eventId: event.event_id,
+          eventType: event.event_type,
+          tenant: event.tenant,
+          workflowId: workflow.workflow_id,
+          workflowLineage: eventLineage,
+        });
+        continue;
       }
 
       const latestDefinition = latest.definition_json as any;
@@ -335,7 +358,6 @@ export class WorkflowRuntimeV2EventStreamWorker {
         (typeof latestDefinition?.payloadSchemaRef === 'string' ? latestDefinition.payloadSchemaRef : null) ??
         (typeof (workflow as any)?.payload_schema_ref === 'string' ? String((workflow as any).payload_schema_ref) : null);
 
-      const skipLabel = `workflow ${workflow.key ?? workflow.workflow_id} (${workflow.workflow_id})`;
       if (!workflowPayloadSchemaRef) {
         skipStats.missingSchemaRef += 1;
         skipDiagnostics.push(`Skipped ${skipLabel}: no payload schema reference is set on the workflow`);
@@ -435,7 +457,8 @@ export class WorkflowRuntimeV2EventStreamWorker {
           triggerMetadata: {
             eventType: event.event_type,
             sourcePayloadSchemaRef: effectiveSourceSchemaRef,
-            triggerMappingApplied: mappingApplied
+            triggerMappingApplied: mappingApplied,
+            ...(eventLineage.length > 0 ? { workflowLineage: eventLineage } : {})
           },
           eventType: event.event_type,
           sourcePayloadSchemaRef: effectiveSourceSchemaRef,

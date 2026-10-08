@@ -119,7 +119,7 @@ vi.mock('../lib/workflowTicketCommunicationEvents', () => ({
   buildTicketCommunicationWorkflowEvents: vi.fn(() => []),
 }));
 
-vi.mock('../lib/workflowTicketSlaStageEvents', () => ({
+vi.mock('@alga-psa/shared/services/tickets/ticketSlaStageEvents', () => ({
   buildTicketResolutionSlaStageCompletionEvent: vi.fn(() => null),
 }));
 
@@ -719,7 +719,7 @@ describe('updateTicketWithCache live updates', () => {
 
   it('publishes suppression flags on TICKET_CLOSED', async () => {
     const { updateTicketWithCache } = await import('./optimizedTicketActions');
-    const slaEvents = await import('../lib/workflowTicketSlaStageEvents');
+    const slaEvents = await import('@alga-psa/shared/services/tickets/ticketSlaStageEvents');
     (slaEvents.buildTicketResolutionSlaStageCompletionEvent as any).mockReturnValueOnce({
       eventType: 'TICKET_SLA_STAGE_MET',
       payload: {
