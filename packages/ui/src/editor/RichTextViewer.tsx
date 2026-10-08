@@ -545,9 +545,12 @@ function RichTextViewerInternal({
     prevContentKey.current = contentKey;
   }, [contentKey]);
 
+  // Read-only: the empty block BlockNote appends for typing is pure whitespace
+  // here, and hiding it with CSS also hid real last blocks ending in a newline.
   const editor = useCreateBlockNote({
     schema,
     initialContent: displayBlocks,
+    trailingBlock: false,
   });
 
   // Async markdown-to-blocks conversion

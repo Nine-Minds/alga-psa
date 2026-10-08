@@ -756,10 +756,8 @@ const CommentItem: React.FC<CommentItemProps> = ({
                   className={`prose max-w-none w-full min-w-0 overflow-hidden break-words ${
                     isCompact
                       ? // Compact: shrink the editor's side-menu horizontal padding to the 4px
-                        // node-selection ring width (offset by -mx-1 so text keeps its x), and
-                        // hide BlockNote's always-appended trailing empty block (identified by
-                        // its ProseMirror trailing break) so a one-line comment reads as one line.
-                        'prose-sm mt-0.5 -mx-1 text-sm leading-snug [&_.bn-editor]:!px-1 [&_.bn-block-outer:last-child:has(br.ProseMirror-trailingBreak)]:hidden'
+                        // node-selection ring width (offset by -mx-1 so text keeps its x).
+                        'prose-sm mt-0.5 -mx-1 text-sm leading-snug [&_.bn-editor]:!px-1'
                       : 'mt-1'
                   }`}
                   style={{ overflowWrap: 'anywhere' }}
