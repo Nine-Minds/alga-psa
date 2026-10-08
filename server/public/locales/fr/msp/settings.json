@@ -821,6 +821,27 @@
           "appearanceHelp": "Épinglage de l'onglet et vue de liste par défaut du tableau",
           "assignment": "Attribution et SLA",
           "assignmentHelp": "Routage par défaut, SLA et responsable du tableau",
+          "notifications": "Notifications",
+          "notificationsHelp": "Avertir les techniciens des nouveaux tickets et des changements de statut, et définir les observateurs par défaut",
+          "notificationsRulesLabel": "Règles de notification",
+          "notificationsRulesHelp": "Les destinataires reçoivent une notification par événement. Ils ne sont pas ajoutés comme observateurs.",
+          "notificationsAddRule": "Ajouter une règle",
+          "notificationsRuleTitle": "Règle {{number}}",
+          "notificationsRuleEnabled": "Activée",
+          "notificationsRemoveRule": "Supprimer la règle",
+          "notificationsOnCreate": "Lorsqu'un ticket est créé sur ce tableau",
+          "notificationsOnStatus": "Lorsqu'un ticket passe au statut",
+          "notificationsNoStatuses": "Les statuts peuvent être sélectionnés une fois le tableau enregistré.",
+          "notificationsRecipients": "Notifier",
+          "notificationsRecipientsPlaceholder": "Sélectionner des utilisateurs et des équipes...",
+          "notificationsRecipientsHelp": "Les membres de l'équipe sont déterminés à chaque envoi de notification.",
+          "notificationsDefaultWatchers": "Observateurs par défaut",
+          "notificationsDefaultWatchersPlaceholder": "Sélectionner des utilisateurs...",
+          "notificationsDefaultWatchersHelp": "Ajoutés à la liste de suivi de chaque nouveau ticket de ce tableau et notifiés de chaque mise à jour ultérieure.",
+          "notificationsTriggerRequired": "Chaque règle de notification nécessite au moins un déclencheur : la création d'un ticket ou un statut.",
+          "notificationsRecipientRequired": "Chaque règle de notification nécessite au moins un utilisateur ou une équipe à notifier.",
+          "notificationsFetchFailed": "Échec du chargement des paramètres de notification",
+          "notificationsStatusRemapFailed": "Le tableau a été créé, mais le statut d'une règle de notification n'a pas pu être associé au nouveau tableau. Ajoutez à nouveau les règles de notification.",
           "inbound": "E-mail et réponses entrantes",
           "inboundHelp": "Rouvrir les tickets lorsque les clients répondent par e-mail",
           "close": "Règles de clôture",
@@ -2392,6 +2413,11 @@
       "updateFailed": "Impossible de mettre à jour le rôle",
       "validateDeletionFailed": "Impossible de valider la suppression. Veuillez réessayer.",
       "deleteFailed": "Impossible de supprimer le rôle"
+    },
+    "editDialog": {
+      "title": "Modifier le rôle",
+      "builtInNameLocked": "Les noms des rôles intégrés ne peuvent pas être modifiés, car le système en dépend.",
+      "portalLocked": "L’accès au portail ne peut pas être modifié après la création d’un rôle."
     }
   },
   "security": {
@@ -3446,7 +3472,10 @@
       "duplicate": "Cet utilisateur possède déjà le rôle sélectionné.",
       "changePermission": "Autorisation refusée : vous n’avez pas l’autorisation de modifier les rôles des utilisateurs.",
       "missingField": "Un champ obligatoire du rôle utilisateur est manquant.",
-      "missingFieldNamed": "Un champ obligatoire du rôle utilisateur est manquant : {{field}}."
+      "missingFieldNamed": "Un champ obligatoire du rôle utilisateur est manquant : {{field}}.",
+      "nameRequired": "Le nom du rôle est obligatoire.",
+      "builtInRename": "Les rôles intégrés ne peuvent pas être renommés.",
+      "duplicateName": "Un rôle nommé « {{name}} » existe déjà pour ce portail."
     },
     "secrets": {
       "tenantContextMissing": "Le contexte du locataire est absent. Veuillez actualiser la page et réessayer.",

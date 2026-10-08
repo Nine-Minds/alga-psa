@@ -4,6 +4,8 @@ import { Knex } from 'knex';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { withAuth, type AuthContext } from '@alga-psa/auth';
 import type { Asset, IUserWithRoles } from '@alga-psa/types';
+import { applyAssetVisibilityFilter, type ContactVisibilityContext } from '@alga-psa/authorization/portal/visibility';
+import { getClientContactVisibilityContext } from './visibilityResolver';
 import { clientPortalActionErrorFrom, type ClientPortalActionError } from './clientPortalActionErrors';
 
 export type ClientAssetType =
@@ -68,27 +70,35 @@ function serializeAsset(asset: Asset & Record<string, unknown>): Asset {
   };
 }
 
-async function resolveClientId(
+/**
+ * The portal user's visibility context. Assets are scoped by the group's
+ * `asset_scope` (client-wide, or only devices assigned to the contact and
+ * their reports), so every read below goes through `scopedAssets`.
+ */
+async function resolveAssetVisibility(
   trx: Knex.Transaction,
   user: IUserWithRoles,
   tenant: string,
-): Promise<string> {
+): Promise<ContactVisibilityContext> {
   if (user.user_type !== 'client') {
     throw new Error('Unauthorized: Invalid user type for client portal');
   }
   if (!user.contact_id) {
     throw new Error('Unauthorized: Contact information not found');
   }
+  return getClientContactVisibilityContext(trx, tenant, user.contact_id);
+}
 
-  const contact = await tenantScopedTable(trx, 'contacts', tenant)
-    .where({ contact_name_id: user.contact_id })
-    .select('client_id')
-    .first();
-
-  if (!contact) {
-    throw new Error('Unauthorized: Client information not found');
-  }
-  return contact.client_id as string;
+/** Assets of the user's client, narrowed by their asset scope. The only way this module reads `assets`. */
+function scopedAssets(
+  trx: Knex.Transaction,
+  tenant: string,
+  visibility: ContactVisibilityContext,
+): Knex.QueryBuilder {
+  return applyAssetVisibilityFilter(tenantScopedTable(trx, 'assets', tenant), visibility, {
+    clientColumn: 'assets.client_id',
+    contactColumn: 'assets.contact_name_id',
+  });
 }
 
 /**
@@ -107,10 +117,10 @@ export const listClientAssets = withAuth(async (
     const sortDirection = params.sort_direction === 'asc' ? 'asc' : 'desc';
 
     return withTransaction(knex, async (trx: Knex.Transaction) => {
-      const clientId = await resolveClientId(trx, user, tenant);
+      const visibility = await resolveAssetVisibility(trx, user, tenant);
 
       const baseQuery = () => {
-        const q = tenantScopedTable(trx, 'assets', tenant).where({ client_id: clientId });
+        const q = scopedAssets(trx, tenant, visibility);
         if (params.asset_type) q.where('asset_type', params.asset_type);
         if (params.status === 'active') q.whereNot('status', 'inactive');
         if (params.status === 'inactive') q.where('status', 'inactive');
@@ -126,19 +136,17 @@ export const listClientAssets = withAuth(async (
       };
 
     // Counts: filtered total, plus active/inactive and per-type counts across
-    // the entire client (so the summary tiles don't drift when the user paginates
-    // or filters the table).
+    // everything this user may see (so the summary tiles don't drift when the
+    // user paginates or filters the table, and always match the list).
     const [filteredCount, statusCounts, typeRows] = await Promise.all([
       baseQuery().count<{ count: string }>('asset_id as count').first(),
-      tenantScopedTable(trx, 'assets', tenant)
-        .where({ client_id: clientId })
+      scopedAssets(trx, tenant, visibility)
         .select(
           trx.raw(`SUM(CASE WHEN status = 'inactive' THEN 1 ELSE 0 END)::int as inactive`),
           trx.raw(`SUM(CASE WHEN status <> 'inactive' OR status IS NULL THEN 1 ELSE 0 END)::int as active`),
         )
         .first<{ active: number | null; inactive: number | null }>(),
-      tenantScopedTable(trx, 'assets', tenant)
-        .where({ client_id: clientId })
+      scopedAssets(trx, tenant, visibility)
         .groupBy('asset_type')
         .select<Array<{ asset_type: string | null; count: string }>>(
           'asset_type',
@@ -197,9 +205,8 @@ export const getClientAssets = withAuth(async (
   try {
     const { knex } = await createTenantKnex();
     return withTransaction(knex, async (trx: Knex.Transaction) => {
-      const clientId = await resolveClientId(trx, user, tenant);
-      const assets = await tenantScopedTable(trx, 'assets', tenant)
-        .where({ client_id: clientId })
+      const visibility = await resolveAssetVisibility(trx, user, tenant);
+      const assets = await scopedAssets(trx, tenant, visibility)
         .orderBy('updated_at', 'desc');
       return assets.map(serializeAsset);
     });
@@ -213,8 +220,8 @@ export const getClientAssets = withAuth(async (
 });
 
 /**
- * Returns a single asset by id, scoped to the requester's client.
- * Returns null if the asset doesn't exist or doesn't belong to this client —
+ * Returns a single asset by id, scoped to what the requester may see.
+ * Returns null if the asset doesn't exist or isn't visible to this user —
  * the caller (e.g. ticket-details linked-asset pill) should treat that as
  * "asset no longer available".
  */
@@ -226,9 +233,9 @@ export const getClientAssetById = withAuth(async (
   try {
     const { knex } = await createTenantKnex();
     return withTransaction(knex, async (trx: Knex.Transaction) => {
-      const clientId = await resolveClientId(trx, user, tenant);
-      const row = await tenantScopedTable(trx, 'assets', tenant)
-        .where({ client_id: clientId, asset_id: assetId })
+      const visibility = await resolveAssetVisibility(trx, user, tenant);
+      const row = await scopedAssets(trx, tenant, visibility)
+        .where('assets.asset_id', assetId)
         .first();
       return row ? serializeAsset(row) : null;
     });

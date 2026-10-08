@@ -49,6 +49,7 @@ interface TicketDetailsContainerProps {
     contacts: any[];
     contactInfo: any;
     createdByUser: any;
+    updatedByUser?: any;
     board: any;
     additionalAgents: any[];
     availableAgents: any[];
@@ -332,6 +333,7 @@ export default function TicketDetailsContainer({
       initialContacts={ticketData.contacts}
       initialContactInfo={ticketData.contactInfo}
       initialCreatedByUser={ticketData.createdByUser}
+      initialUpdatedByUser={ticketData.updatedByUser ?? null}
       initialBoard={ticketData.board}
       initialAdditionalAgents={ticketData.additionalAgents}
       initialAvailableAgents={ticketData.availableAgents}

@@ -28,8 +28,22 @@ const suppressionFlagsSchema = {
     .describe('Whether internal staff notifications are suppressed for this operation'),
 };
 
+/**
+ * Display identity of who a ticket came from. Always names, never ids: workflow
+ * authors build notification titles from these, so every field is optional and
+ * absent when unknown (e.g. an email ticket with no contact or client).
+ */
+// LEVERAGE: pattern ticket-event-schema-dup — mirrored in shared/workflow/runtime/schemas/ticketEventSchemas.ts; keep both in sync
+export const ticketRequesterFieldsSchema = {
+  clientName: z.string().optional().describe('Name of the ticket client, when one is set'),
+  contactName: z.string().optional().describe('Name of the ticket contact, when one is set'),
+  senderEmail: z.string().optional().describe('Email of the person the ticket came from (inbound sender or contact email)'),
+  requesterName: z.string().optional().describe('Best display label for who the ticket is from: contact name, else sender email, else client name'),
+};
+
 export const ticketCreatedEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
   ticketId: ticketIdSchema,
+  ...ticketRequesterFieldsSchema,
   createdByUserId: userIdSchema.optional().describe('User who created the ticket'),
   actorUserId: userIdSchema.optional().describe('Actor User ID (preferred)'),
   createdAt: z.string().optional().describe('Created timestamp (ISO 8601)'),
@@ -131,6 +145,7 @@ export const ticketStatusChangedEventPayloadSchema = BaseDomainEventPayloadSchem
   newStatusId: z.string().min(1).describe('New status ID'),
   reason: z.string().optional(),
   changedAt: z.string().datetime().optional().describe('Timestamp when status changed (ISO 8601)'),
+  ...suppressionFlagsSchema,
 }).describe('Payload for TICKET_STATUS_CHANGED');
 
 export type TicketStatusChangedEventPayload = z.infer<typeof ticketStatusChangedEventPayloadSchema>;

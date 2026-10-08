@@ -177,9 +177,14 @@
     "tags": "Etiquetas",
     "sla": "SLA",
     "updated": "Actualizado",
+    "updatedAtBy": "Actualizado {{time}} por {{name}}",
+    "byName": "por {{name}}",
     "openInNewTab": "Abrir en nueva pestaña",
     "actions": "Acciones",
-    "linkedAssets": "Activos vinculados"
+    "linkedAssets": "Activos vinculados",
+    "assetName": "Nombre",
+    "assetTag": "Etiqueta de activo",
+    "assetType": "Tipo"
   },
   "actions": {
     "view": "Ver",

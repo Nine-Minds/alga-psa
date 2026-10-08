@@ -283,7 +283,7 @@ export async function GET(request: NextRequest) {
         code: code,
         grant_type: 'authorization_code',
         redirect_uri: redirectUri,
-        scope: 'https://graph.microsoft.com/Calendars.ReadWrite offline_access'
+        scope: 'https://graph.microsoft.com/Calendars.ReadWrite https://graph.microsoft.com/MailboxSettings.ReadWrite offline_access'
       });
 
       const response = await axios.post(tokenUrl, params.toString(), {

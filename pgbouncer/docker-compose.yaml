@@ -10,7 +10,5 @@ services:
     secrets:
       - postgres_password
       - db_password_server
-    ports:
-      - "${EXPOSE_PGBOUNCER_PORT:-6432}:6432"
     networks:
       - app-network

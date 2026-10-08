@@ -45,38 +45,69 @@ const asCount = (fn: string, argument: string, value: unknown, min: number): num
   return Math.min(Math.max(Math.trunc(number), min), WORKFLOW_EXPRESSION_MAX_TEXT_LENGTH);
 };
 
-/** Number of characters (code points, so emoji count once), counting no further than `limit`. */
-const countCharacters = (text: string, limit: number): number => {
-  if (text.length <= limit) {
-    let count = 0;
-    for (const _char of text) count += 1;
-    return count;
+/** A UTF-16 surrogate code unit. Text without one has exactly one code unit per character. */
+const SURROGATE = /[\uD800-\uDFFF]/;
+
+/** A surrogate pair: one character taking two code units. Lone surrogates count as one character. */
+const SURROGATE_PAIR = /[\uD800-\uDBFF][\uDC00-\uDFFF]/g;
+
+const isHighSurrogate = (code: number): boolean => code >= 0xd800 && code <= 0xdbff;
+const isLowSurrogate = (code: number): boolean => code >= 0xdc00 && code <= 0xdfff;
+
+/**
+ * Number of characters (code points, so emoji count once). Pairs are counted by the regex
+ * engine rather than a per-code-unit loop so large text stays well inside the evaluation budget.
+ */
+const countCharacters = (text: string): number => {
+  if (!SURROGATE.test(text)) return text.length;
+  const pairs = (text.length - text.replace(SURROGATE_PAIR, '').length) / 2;
+  return text.length - pairs;
+};
+
+/** Whether text is longer than max characters; every character takes one or two code units. */
+const exceedsCharacters = (text: string, max: number): boolean =>
+  text.length > max && (text.length > 2 * max || countCharacters(text) > max);
+
+/**
+ * Code-unit offset where character `index` of text (which has `total` characters, or
+ * Infinity when uncounted and the position is known to be nearer the start) begins,
+ * walking from whichever end is nearer so positions near the end cost no more than near the start.
+ */
+const characterOffset = (text: string, index: number, total: number): number => {
+  if (index <= 0) return 0;
+  if (index >= total) return text.length;
+  if (index <= total - index) {
+    let offset = 0;
+    for (let skipped = 0; skipped < index; skipped += 1) {
+      const pair =
+        isHighSurrogate(text.charCodeAt(offset)) &&
+        offset + 1 < text.length &&
+        isLowSurrogate(text.charCodeAt(offset + 1));
+      offset += pair ? 2 : 1;
+    }
+    return offset;
   }
-  let count = 0;
-  for (const _char of text) {
-    count += 1;
-    if (count > limit) break;
+  let offset = text.length;
+  for (let skipped = total; skipped > index; skipped -= 1) {
+    const pair =
+      isLowSurrogate(text.charCodeAt(offset - 1)) && offset >= 2 && isHighSurrogate(text.charCodeAt(offset - 2));
+    offset -= pair ? 2 : 1;
   }
-  return count;
+  return offset;
 };
 
 /** Characters [start, end) of text, by code point, never splitting a surrogate pair. */
 const sliceCharacters = (text: string, start: number, end?: number): string => {
-  let index = 0;
-  let offset = 0;
-  let startOffset: number | null = null;
-  let endOffset = text.length;
-  for (const char of text) {
-    if (index === start) startOffset = offset;
-    if (end !== undefined && index === end) {
-      endOffset = offset;
-      break;
-    }
-    offset += char.length;
-    index += 1;
-  }
-  if (startOffset === null) return '';
-  return text.slice(startOffset, Math.max(startOffset, endOffset));
+  if (!SURROGATE.test(text)) return text.slice(start, end === undefined ? undefined : Math.max(start, end));
+  if (end !== undefined && end <= start) return '';
+  // Text has at least half as many characters as code units, so positions in the first
+  // quarter are nearer the start without counting the whole text.
+  const nearStart = (end ?? Number.POSITIVE_INFINITY) <= text.length / 4;
+  const total = nearStart ? Number.POSITIVE_INFINITY : countCharacters(text);
+  if (start >= total) return '';
+  const startOffset = characterOffset(text, start, total);
+  if (end === undefined || end >= total) return text.slice(startOffset);
+  return text.slice(startOffset, characterOffset(text, end, total));
 };
 
 export const WORKFLOW_EXPRESSION_FUNCTIONS: readonly WorkflowExpressionFunctionDef[] = [
@@ -242,9 +273,9 @@ export const WORKFLOW_EXPRESSION_FUNCTIONS: readonly WorkflowExpressionFunctionD
     implementation: (text: unknown, length: unknown, ending?: unknown) => {
       const value = asText(text) ?? '';
       const max = asCount('truncate', 'length', length, 0);
-      if (countCharacters(value, max) <= max) return value;
+      if (!exceedsCharacters(value, max)) return value;
       const marker = ending === undefined ? '...' : asText(ending) ?? '';
-      const markerLength = countCharacters(marker, max);
+      const markerLength = countCharacters(marker);
       if (markerLength >= max) return sliceCharacters(marker, 0, max);
       return sliceCharacters(value, 0, max - markerLength) + marker;
     },
@@ -266,7 +297,7 @@ export const WORKFLOW_EXPRESSION_FUNCTIONS: readonly WorkflowExpressionFunctionD
       const value = asText(text) ?? '';
       let from = asCount('substring', 'start', start, -WORKFLOW_EXPRESSION_MAX_TEXT_LENGTH);
       if (from < 0) {
-        from = Math.max(0, countCharacters(value, Number.POSITIVE_INFINITY) + from);
+        from = Math.max(0, countCharacters(value) + from);
       }
       if (length === undefined || length === null) return sliceCharacters(value, from);
       const count = asCount('substring', 'length', length, 0);

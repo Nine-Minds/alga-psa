@@ -821,6 +821,27 @@
           "appearanceHelp": "⟦Ŧȧƀ ƥīƞƞīƞɠ ȧƞḓ ŧħḗ ƀȯȧřḓ'ş ḓḗƒȧŭŀŧ ŀīşŧ ṽīḗẇ⟧",
           "assignment": "⟦Ȧşşīɠƞḿḗƞŧ & ŞĿȦ⟧",
           "assignmentHelp": "⟦Ḓḗƒȧŭŀŧ řȯŭŧīƞɠ, ŞĿȦ ȧƞḓ ƀȯȧřḓ ḿȧƞȧɠḗř⟧",
+          "notifications": "⟦Ƞȯŧīƒīƈȧŧīȯƞş⟧",
+          "notificationsHelp": "⟦Ƞȯŧīƒẏ ŧḗƈħƞīƈīȧƞş ȧƀȯŭŧ ƞḗẇ ŧīƈķḗŧş ȧƞḓ şŧȧŧŭş ƈħȧƞɠḗş, ȧƞḓ şḗŧ ḓḗƒȧŭŀŧ ẇȧŧƈħḗřş⟧",
+          "notificationsRulesLabel": "⟦Ƞȯŧīƒīƈȧŧīȯƞ řŭŀḗş⟧",
+          "notificationsRulesHelp": "⟦Řḗƈīƥīḗƞŧş ɠḗŧ ȯƞḗ ƞȯŧīƒīƈȧŧīȯƞ ƥḗř ḗṽḗƞŧ. Ŧħḗẏ ȧřḗ ƞȯŧ ȧḓḓḗḓ ȧş ẇȧŧƈħḗřş.⟧",
+          "notificationsAddRule": "⟦Ȧḓḓ řŭŀḗ⟧",
+          "notificationsRuleTitle": "⟦Řŭŀḗ {{number}}⟧",
+          "notificationsRuleEnabled": "⟦Ḗƞȧƀŀḗḓ⟧",
+          "notificationsRemoveRule": "⟦Řḗḿȯṽḗ řŭŀḗ⟧",
+          "notificationsOnCreate": "⟦Ẇħḗƞ ȧ ŧīƈķḗŧ īş ƈřḗȧŧḗḓ ȯƞ ŧħīş ƀȯȧřḓ⟧",
+          "notificationsOnStatus": "⟦Ẇħḗƞ ȧ ŧīƈķḗŧ ḗƞŧḗřş⟧",
+          "notificationsNoStatuses": "⟦Şŧȧŧŭşḗş ƈȧƞ ƀḗ şḗŀḗƈŧḗḓ ȯƞƈḗ ŧħḗ ƀȯȧřḓ ħȧş ƀḗḗƞ şȧṽḗḓ.⟧",
+          "notificationsRecipients": "⟦Ƞȯŧīƒẏ⟧",
+          "notificationsRecipientsPlaceholder": "⟦Şḗŀḗƈŧ ŭşḗřş ȧƞḓ ŧḗȧḿş...⟧",
+          "notificationsRecipientsHelp": "⟦Ŧḗȧḿ ḿḗḿƀḗřş ȧřḗ ŀȯȯķḗḓ ŭƥ ḗȧƈħ ŧīḿḗ ȧ ƞȯŧīƒīƈȧŧīȯƞ īş şḗƞŧ.⟧",
+          "notificationsDefaultWatchers": "⟦Ḓḗƒȧŭŀŧ ẇȧŧƈħḗřş⟧",
+          "notificationsDefaultWatchersPlaceholder": "⟦Şḗŀḗƈŧ ŭşḗřş...⟧",
+          "notificationsDefaultWatchersHelp": "⟦Ȧḓḓḗḓ ŧȯ ŧħḗ ẇȧŧƈħ ŀīşŧ ȯƒ ḗṽḗřẏ ƞḗẇ ŧīƈķḗŧ ȯƞ ŧħīş ƀȯȧřḓ, ȧƞḓ ƞȯŧīƒīḗḓ ȯƒ ḗṽḗřẏ ŀȧŧḗř ŭƥḓȧŧḗ.⟧",
+          "notificationsTriggerRequired": "⟦Ḗȧƈħ ƞȯŧīƒīƈȧŧīȯƞ řŭŀḗ ƞḗḗḓş ȧŧ ŀḗȧşŧ ȯƞḗ ŧřīɠɠḗř: ŧīƈķḗŧ ƈřḗȧŧīȯƞ ȯř ȧ şŧȧŧŭş.⟧",
+          "notificationsRecipientRequired": "⟦Ḗȧƈħ ƞȯŧīƒīƈȧŧīȯƞ řŭŀḗ ƞḗḗḓş ȧŧ ŀḗȧşŧ ȯƞḗ ŭşḗř ȯř ŧḗȧḿ ŧȯ ƞȯŧīƒẏ.⟧",
+          "notificationsFetchFailed": "⟦Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ƞȯŧīƒīƈȧŧīȯƞ şḗŧŧīƞɠş⟧",
+          "notificationsStatusRemapFailed": "⟦Ŧħḗ ƀȯȧřḓ ẇȧş ƈřḗȧŧḗḓ, ƀŭŧ ȧ ƞȯŧīƒīƈȧŧīȯƞ řŭŀḗ şŧȧŧŭş ƈȯŭŀḓ ƞȯŧ ƀḗ ḿȧŧƈħḗḓ ŧȯ ŧħḗ ƞḗẇ ƀȯȧřḓ. Řḗ-ȧḓḓ ŧħḗ ƞȯŧīƒīƈȧŧīȯƞ řŭŀḗş.⟧",
           "inbound": "⟦Ḗḿȧīŀ & īƞƀȯŭƞḓ řḗƥŀīḗş⟧",
           "inboundHelp": "⟦Řḗȯƥḗƞ ŧīƈķḗŧş ẇħḗƞ ƈŀīḗƞŧş řḗƥŀẏ ƀẏ ḗḿȧīŀ⟧",
           "close": "⟦Ƈŀȯşḗ řŭŀḗş⟧",
@@ -2392,6 +2413,11 @@
       "updateFailed": "⟦Ƒȧīŀḗḓ ŧȯ ŭƥḓȧŧḗ řȯŀḗ⟧",
       "validateDeletionFailed": "⟦Ƒȧīŀḗḓ ŧȯ ṽȧŀīḓȧŧḗ ḓḗŀḗŧīȯƞ. Ƥŀḗȧşḗ ŧřẏ ȧɠȧīƞ.⟧",
       "deleteFailed": "⟦Ƒȧīŀḗḓ ŧȯ ḓḗŀḗŧḗ řȯŀḗ⟧"
+    },
+    "editDialog": {
+      "title": "⟦Ḗḓīŧ Řȯŀḗ⟧",
+      "builtInNameLocked": "⟦Ɓŭīŀŧ-īƞ řȯŀḗ ƞȧḿḗş ƈȧƞ'ŧ ƀḗ ƈħȧƞɠḗḓ ƀḗƈȧŭşḗ ŧħḗ şẏşŧḗḿ řḗŀīḗş ȯƞ ŧħḗḿ.⟧",
+      "portalLocked": "⟦Ƥȯřŧȧŀ ȧƈƈḗşş ƈȧƞ'ŧ ƀḗ ƈħȧƞɠḗḓ ȧƒŧḗř ȧ řȯŀḗ īş ƈřḗȧŧḗḓ.⟧"
     }
   },
   "security": {
@@ -3446,7 +3472,10 @@
       "duplicate": "⟦Ŧħȧŧ ŭşḗř ȧŀřḗȧḓẏ ħȧş ŧħḗ şḗŀḗƈŧḗḓ řȯŀḗ.⟧",
       "changePermission": "⟦Ƥḗřḿīşşīȯƞ ḓḗƞīḗḓ: Ẏȯŭ ḓȯ ƞȯŧ ħȧṽḗ ƥḗřḿīşşīȯƞ ŧȯ ƈħȧƞɠḗ ŭşḗř řȯŀḗş.⟧",
       "missingField": "⟦Ḿīşşīƞɠ řḗʠŭīřḗḓ ŭşḗř řȯŀḗ ƒīḗŀḓ.⟧",
-      "missingFieldNamed": "⟦Ḿīşşīƞɠ řḗʠŭīřḗḓ ŭşḗř řȯŀḗ ƒīḗŀḓ: {{field}}.⟧"
+      "missingFieldNamed": "⟦Ḿīşşīƞɠ řḗʠŭīřḗḓ ŭşḗř řȯŀḗ ƒīḗŀḓ: {{field}}.⟧",
+      "nameRequired": "⟦Řȯŀḗ ƞȧḿḗ īş řḗʠŭīřḗḓ.⟧",
+      "builtInRename": "⟦Ɓŭīŀŧ-īƞ řȯŀḗş ƈȧƞƞȯŧ ƀḗ řḗƞȧḿḗḓ.⟧",
+      "duplicateName": "⟦Ȧ řȯŀḗ ƞȧḿḗḓ \"{{name}}\" ȧŀřḗȧḓẏ ḗẋīşŧş ƒȯř ŧħīş ƥȯřŧȧŀ.⟧"
     },
     "secrets": {
       "tenantContextMissing": "⟦Ŧḗƞȧƞŧ ƈȯƞŧḗẋŧ īş ḿīşşīƞɠ. Ƥŀḗȧşḗ řḗƒřḗşħ ȧƞḓ ŧřẏ ȧɠȧīƞ.⟧",

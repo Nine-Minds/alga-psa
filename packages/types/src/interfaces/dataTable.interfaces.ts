@@ -3,6 +3,11 @@ import { ReactNode } from 'react';
 export interface BaseColumnDefinition<T> {
   title: string | ReactNode;
   dataIndex: string | string[];
+  /**
+   * Column id; defaults to the dataIndex (joined with '_'). Must be unique per table — set it
+   * when two columns read the same field (e.g. an actions column keyed by the row id).
+   */
+  id?: string;
   width?: string;
   /** Optional class for header th */
   headerClassName?: string;

@@ -821,6 +821,27 @@
           "appearanceHelp": "Fästa flikar och tavlans standardlistvy",
           "assignment": "Tilldelning och SLA",
           "assignmentHelp": "Standardtilldelning, SLA och tavelansvarig",
+          "notifications": "Aviseringar",
+          "notificationsHelp": "Meddela tekniker om nya ärenden och statusändringar och ange standardbevakare",
+          "notificationsRulesLabel": "Aviseringsregler",
+          "notificationsRulesHelp": "Mottagare får en avisering per händelse. De läggs inte till som bevakare.",
+          "notificationsAddRule": "Lägg till regel",
+          "notificationsRuleTitle": "Regel {{number}}",
+          "notificationsRuleEnabled": "Aktiverad",
+          "notificationsRemoveRule": "Ta bort regel",
+          "notificationsOnCreate": "När ett ärende skapas på den här tavlan",
+          "notificationsOnStatus": "När ett ärende får status",
+          "notificationsNoStatuses": "Statusar kan väljas när tavlan har sparats.",
+          "notificationsRecipients": "Avisera",
+          "notificationsRecipientsPlaceholder": "Välj användare och team...",
+          "notificationsRecipientsHelp": "Teammedlemmar slås upp varje gång en avisering skickas.",
+          "notificationsDefaultWatchers": "Standardbevakare",
+          "notificationsDefaultWatchersPlaceholder": "Välj användare...",
+          "notificationsDefaultWatchersHelp": "Läggs till i bevakarlistan för varje nytt ärende på den här tavlan och aviseras om alla senare uppdateringar.",
+          "notificationsTriggerRequired": "Varje aviseringsregel behöver minst en utlösare: att ett ärende skapas eller en status.",
+          "notificationsRecipientRequired": "Varje aviseringsregel behöver minst en användare eller ett team att avisera.",
+          "notificationsFetchFailed": "Det gick inte att läsa in aviseringsinställningarna",
+          "notificationsStatusRemapFailed": "Tavlan skapades, men statusen för en aviseringsregel kunde inte matchas mot den nya tavlan. Lägg till aviseringsreglerna igen.",
           "inbound": "E-post och inkommande svar",
           "inboundHelp": "Öppna ärenden igen när kunder svarar via e-post",
           "close": "Stängningsregler",
@@ -2392,6 +2413,11 @@
       "updateFailed": "Det gick inte att uppdatera rollen",
       "validateDeletionFailed": "Det gick inte att validera raderingen. Försök igen.",
       "deleteFailed": "Det gick inte att radera rollen"
+    },
+    "editDialog": {
+      "title": "Redigera roll",
+      "builtInNameLocked": "Namn på inbyggda roller kan inte ändras eftersom systemet är beroende av dem.",
+      "portalLocked": "Portalåtkomst kan inte ändras efter att en roll har skapats."
     }
   },
   "security": {
@@ -3446,7 +3472,10 @@
       "duplicate": "Användaren har redan den valda rollen.",
       "changePermission": "Åtkomst nekad: du har inte behörighet att ändra användarroller.",
       "missingField": "Ett obligatoriskt fält för användarroll saknas.",
-      "missingFieldNamed": "Ett obligatoriskt fält för användarroll saknas: {{field}}."
+      "missingFieldNamed": "Ett obligatoriskt fält för användarroll saknas: {{field}}.",
+      "nameRequired": "Rollnamn krävs.",
+      "builtInRename": "Inbyggda roller kan inte byta namn.",
+      "duplicateName": "En roll med namnet ”{{name}}” finns redan för den här portalen."
     },
     "secrets": {
       "tenantContextMissing": "Organisationskontext saknas. Ladda om sidan och försök igen.",

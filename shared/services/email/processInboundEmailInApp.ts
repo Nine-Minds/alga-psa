@@ -31,6 +31,7 @@ import {
 } from './inboundReplyAcknowledgementDecider';
 import { evaluateInboundEmailRules } from './inboundEmailRules';
 import { normalizeRfc822MessageId } from './inboundEmailIdentity';
+import { captureTicketTransitionSnapshot, publishTicketTransitionsAfterCommit } from '../../lib/tickets/ticketLifecycleEvents';
 import { withTenantAdminTransaction } from './tenantAdminTransaction';
 import { associateAssetWithTicket } from '../assets/assetTicketAssociation';
 import {
@@ -562,6 +563,8 @@ async function applyInboundReplyReopenTransition(params: {
   statusId: string;
   updatedByUserId?: string;
   existingConnection?: any;
+  /** Durable-path outbox publisher; the status event is enqueued in the same transaction. */
+  eventPublisher?: IEventPublisher;
 }): Promise<void> {
   const {
     writeTicketActivity,
@@ -578,6 +581,7 @@ async function applyInboundReplyReopenTransition(params: {
       .select('status_id')
       .where({ ticket_id: params.ticketId })
       .first();
+    const beforeSnapshot = await captureTicketTransitionSnapshot(trx, params.tenantId, params.ticketId);
 
     await db.table('tickets')
       .where({ ticket_id: params.ticketId })
@@ -611,6 +615,15 @@ async function applyInboundReplyReopenTransition(params: {
         reopen_trigger: 'inbound_email_reply',
       },
     });
+
+    if (beforeSnapshot) {
+      await publishTicketTransitionsAfterCommit(trx, {
+        tenant: params.tenantId,
+        before: beforeSnapshot,
+        actorUserId: params.updatedByUserId,
+        publisher: params.eventPublisher,
+      });
+    }
   },
     params.existingConnection
   );
@@ -1475,6 +1488,7 @@ export async function processInboundEmailInApp(
           statusId: reopenTarget.statusId,
           updatedByUserId: matchedSenderIsInternalUser ? matchedSenderContact?.user_id : undefined,
           existingConnection: durableExecution?.trx,
+          eventPublisher: durableExecution?.eventPublishers?.comment ?? durableExecution?.eventPublishers?.ticket,
         });
         decisionMetadata.action = 'reopen';
         decisionMetadata.reopenTargetSource = reopenTarget.source;

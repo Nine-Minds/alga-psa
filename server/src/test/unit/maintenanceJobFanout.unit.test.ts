@@ -69,7 +69,7 @@ import {
   registerMaintenanceJob,
 } from '@alga-psa/jobs/fanout';
 import { MAINTENANCE_FANOUT_SCHEDULES } from '@alga-psa/types';
-import { SERVER_MAINTENANCE_JOBS } from '../../lib/jobs/serverMaintenanceJobNames';
+import { SERVER_MAINTENANCE_JOBS, CE_MAINTENANCE_JOBS } from '../../lib/jobs/serverMaintenanceJobNames';
 
 describe('runMaintenanceJob', () => {
   beforeEach(() => {
@@ -285,8 +285,10 @@ describe('maintenance schedule / fan-out registry parity', () => {
   });
 
   it('schedules every fan-out definition on Temporal', () => {
+    // CE-only definitions run on pg-boss schedules, never on Temporal.
+    const ceOnly = Object.values(CE_MAINTENANCE_JOBS) as string[];
     const definitions = [...listMaintenanceJobNames(), ...serverJobs]
-      .filter((jobName) => !jobName.startsWith('test-'));
+      .filter((jobName) => !jobName.startsWith('test-') && !ceOnly.includes(jobName));
     expect(definitions.filter((jobName) => !scheduled.includes(jobName))).toEqual([]);
   });
 

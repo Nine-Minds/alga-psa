@@ -152,6 +152,7 @@ import {
   ticketAutoCloseWarningEventPayloadSchema,
   ticketClosedEventPayloadSchema,
   ticketCreatedEventPayloadSchema,
+  ticketRequesterFieldsSchema,
   ticketCustomerRepliedEventPayloadSchema,
   ticketEscalatedEventPayloadSchema,
   ticketExternalLinkEventPayloadSchema,
@@ -1185,7 +1186,11 @@ export const RmmWebhookEventPayloadSchema = BasePayloadSchema.extend({
   rawPayload: z.record(z.unknown()), // Full webhook payload for processing
 });
 
-const TicketCreatedPayloadSchema = z.union([TicketEventPayloadSchema, ticketCreatedEventPayloadSchema]);
+// The legacy branch parses first and strips unknown keys, so it must carry the requester identity too.
+const TicketCreatedPayloadSchema = z.union([
+  TicketEventPayloadSchema.extend(ticketRequesterFieldsSchema),
+  ticketCreatedEventPayloadSchema,
+]);
 const TicketUpdatedPayloadSchema = z.union([TicketEventPayloadSchema, ticketUpdatedEventPayloadSchema]);
 const TicketClosedPayloadSchema = z.union([TicketEventPayloadSchema, ticketClosedEventPayloadSchema]);
 const TicketAutoCloseWarningPayloadSchema = z.union([TicketEventPayloadSchema, ticketAutoCloseWarningEventPayloadSchema]);

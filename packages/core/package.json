@@ -1,6 +1,6 @@
 {
   "name": "@alga-psa/core",
-  "version": "1.6.9",
+  "version": "1.6.10",
   "private": true,
   "type": "module",
   "main": "./dist/index.js",
@@ -21,6 +21,10 @@
     "./formatters": {
       "import": "./dist/lib/formatters.js",
       "types": "./src/lib/formatters.ts"
+    },
+    "./fileNames": {
+      "import": "./dist/lib/fileNames.js",
+      "types": "./src/lib/fileNames.ts"
     },
     "./workSchedule": {
       "import": "./dist/lib/workSchedule.js",

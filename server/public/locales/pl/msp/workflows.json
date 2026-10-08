@@ -3166,6 +3166,15 @@
     "roleNamesPlaceholder": "np. Technik, Dyspozytor (dopasowywane według nazwy podczas uruchomienia workflow)",
     "empty": "Wybierz co najmniej jednego użytkownika lub rolę do powiadomienia."
   },
+  "emailUserRecipientsEditor": {
+    "users": "Wyślij e-mail do użytkowników",
+    "usersHint": "Szukaj użytkowników",
+    "roles": "Wyślij e-mail do wszystkich z tymi rolami",
+    "rolesHint": "Dodaj rolę",
+    "roleNames": "Nazwy ról (opcjonalnie)",
+    "roleNamesPlaceholder": "np. Technik, Dyspozytor (dopasowywane według nazwy podczas uruchomienia workflow)",
+    "empty": "Wybierz użytkowników lub role albo wskaż zgłoszenie poniżej."
+  },
   "emailRecipientsEditor": {
     "remove": "Usuń {{email}}",
     "placeholder": "Wpisz adres i naciśnij Enter, np. Ada Lovelace <ada@example.com>",

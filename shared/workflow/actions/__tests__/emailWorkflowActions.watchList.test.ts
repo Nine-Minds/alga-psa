@@ -18,6 +18,7 @@ const trxMock = vi.fn((table: string) => {
   }
   return ticketsBuilder;
 });
+(trxMock as any).fn = { now: () => 'NOW()' };
 
 vi.mock('@alga-psa/db', () => ({
   withAdminTransaction: (callback: (trx: any) => Promise<any>) =>
@@ -63,6 +64,9 @@ describe('upsertTicketWatchListRecipients', () => {
     expect(updateMock).toHaveBeenCalledTimes(1);
     const updatePayload = updateMock.mock.calls[0][0];
     expect(updatePayload).toHaveProperty('attributes');
+    // System write: bump updated_at and clear updated_by so a prior human is not credited.
+    expect(updatePayload.updated_at).toBe('NOW()');
+    expect(updatePayload.updated_by).toBeNull();
 
     const parsedAttributes = JSON.parse(updatePayload.attributes);
     expect(parsedAttributes.watch_list).toEqual([

@@ -126,7 +126,8 @@
       "location": "Posizione",
       "actions": "Azioni",
       "patching": "Patch",
-      "coverage": "Copertura"
+      "coverage": "Copertura",
+      "assignedTo": "Assegnato a"
     },
     "metrics": {
       "totalAssets": {
@@ -456,6 +457,12 @@
       "location": "Posizione"
     }
   },
+  "documentsTab": {
+    "errors": {
+      "title": "Documenti non disponibili",
+      "loadFailed": "Impossibile caricare i documenti collegati. Ricarica la pagina o riprova più tardi."
+    }
+  },
   "assetDetails": {
     "title": "Dettagli asset",
     "description": "Pagina di dettaglio completo degli asset con schede riepilogative, associazioni, documenti e azioni operative",
@@ -565,7 +572,8 @@
       "clientsLoadFailed": "Impossibile caricare i client",
       "locationsLoadFailed": "Impossibile caricare posizioni per questo client",
       "updateFailed": "Impossibile aggiornare l'asset",
-      "validation": "Correggi i campi evidenziati prima di salvare."
+      "validation": "Correggi i campi evidenziati prima di salvare.",
+      "contactsLoadFailed": "Impossibile caricare i contatti di questo cliente"
     },
     "actions": {
       "viewClient": "Visualizza cliente",
@@ -618,7 +626,8 @@
       "status": "Stato",
       "purchaseDate": "Data di acquisto",
       "warrantyEndDate": "Data di fine garanzia",
-      "assetType": "Tipo"
+      "assetType": "Tipo",
+      "assignedTo": "Assegnato a"
     },
     "placeholders": {
       "loadingClients": "Caricamento clienti…",
@@ -628,7 +637,9 @@
       "selectClientFirst": "Seleziona prima un cliente",
       "customLocation": "Inserisci una posizione o un'area personalizzata",
       "selectPurchaseDate": "Seleziona la data di acquisto",
-      "selectWarrantyEndDate": "Seleziona la data di fine della garanzia"
+      "selectWarrantyEndDate": "Seleziona la data di fine della garanzia",
+      "loadingContacts": "Caricamento dei contatti…",
+      "selectContact": "Seleziona un contatto"
     },
     "statusOptions": {
       "active": "Attivo",
@@ -664,7 +675,10 @@
       "printer": "Dettagli della stampante",
       "custom": "Dettagli di {{typeName}}"
     },
-    "additionalFields": "Campi aggiuntivi"
+    "additionalFields": "Campi aggiuntivi",
+    "help": {
+      "assignedTo": "Nel portale clienti, le persone con visibilità limitata vedono questo dispositivo solo se è assegnato a loro o a una persona che riporta a loro."
+    }
   },
   "assetFormClient": {
     "title": "Cliente del modulo asset",
@@ -978,7 +992,8 @@
       "status": "Stato",
       "serialNumber": "Numero di serie",
       "customLocationOption": "Posizione personalizzata",
-      "location": "Posizione"
+      "location": "Posizione",
+      "assignedTo": "Assegnato a"
     },
     "placeholders": {
       "workstationOsType": "ad esempio Windows, macOS, Linux",
@@ -998,7 +1013,9 @@
       "customLocation": "Inserisci una posizione o un'area personalizzata",
       "loadingLocations": "Caricamento posizioni...",
       "selectClientFirst": "Seleziona prima un cliente",
-      "selectLocation": "Seleziona una posizione"
+      "selectLocation": "Seleziona una posizione",
+      "loadingContacts": "Caricamento dei contatti...",
+      "selectContact": "Seleziona contatto"
     },
     "sections": {
       "typeSpecificDetails": "Dettagli specifici del tipo"
@@ -1060,7 +1077,8 @@
       "model": "Modello",
       "serialNumber": "Numero di serie",
       "purchaseDate": "Data di acquisto",
-      "warrantyEnd": "Fine della garanzia"
+      "warrantyEnd": "Fine della garanzia",
+      "assignedTo": "Assegnato a"
     },
     "values": {
       "unknownClient": "Cliente sconosciuto",
@@ -1581,8 +1599,7 @@
       "manageAssetTypes": "Autorizzazione negata: impossibile gestire i tipi di asset",
       "readDocuments": "Autorizzazione negata: impossibile leggere i documenti dell’asset",
       "associateDocuments": "Autorizzazione negata: impossibile associare documenti agli asset",
-      "removeDocuments": "Autorizzazione negata: impossibile rimuovere documenti dagli asset",
-      "updateDocumentNotes": "Autorizzazione negata: impossibile aggiornare le note dei documenti dell’asset"
+      "removeDocuments": "Autorizzazione negata: impossibile rimuovere documenti dagli asset"
     },
     "asset": {
       "notFoundRefresh": "Asset non trovato. Potrebbe essere stato eliminato. Aggiornare la pagina e riprovare.",
@@ -1601,7 +1618,8 @@
       "conflict": "Questa modifica dell’asset è in conflitto con un record esistente. Aggiornare la pagina e riprovare.",
       "notAllowed": "Uno dei valori dell’asset non è consentito. Controllare il modulo e riprovare.",
       "missingField": "Manca un campo obbligatorio dell’asset.",
-      "missingFieldNamed": "Manca un campo obbligatorio dell’asset: {{field}}."
+      "missingFieldNamed": "Manca un campo obbligatorio dell’asset: {{field}}.",
+      "contactUnavailable": "Il contatto selezionato non è disponibile per questo cliente."
     }
   },
   "clientAssetMultiSelect": {

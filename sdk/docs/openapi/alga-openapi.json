@@ -22159,6 +22159,13 @@
             "type": "string",
             "format": "uuid"
           },
+          "start_date": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
           "due_date": {
             "type": [
               "string",
@@ -22379,6 +22386,10 @@
             "type": "number",
             "minimum": 0
           },
+          "start_date": {
+            "type": "string",
+            "format": "date-time"
+          },
           "due_date": {
             "type": "string",
             "format": "date-time"
@@ -22425,6 +22436,10 @@
           "estimated_hours": {
             "type": "number",
             "minimum": 0
+          },
+          "start_date": {
+            "type": "string",
+            "format": "date-time"
           },
           "due_date": {
             "type": "string",

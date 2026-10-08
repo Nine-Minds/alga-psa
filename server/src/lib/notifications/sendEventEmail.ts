@@ -211,6 +211,34 @@ async function persistReplyToken(
 //
 // Template lookup and sending are handled below using DatabaseTemplateProcessor
 
+/**
+ * Append an outbound RFC Message-ID to a ticket's `email_metadata.references`.
+ *
+ * Deliberately writes neither `updated_at` nor `updated_by`: email_metadata is
+ * bookkeeping, and bumping `updated_at` here would make the ticket UI credit the
+ * previous editor for activity (e.g. a public comment) that this write follows.
+ */
+export async function appendOutboundMessageIdReference(
+  db: { table: (name: string) => any },
+  knex: { raw: (sql: string, bindings?: any[]) => any },
+  ticketId: string,
+  rfcMessageId: string
+): Promise<void> {
+  // Raw query to append to the JSONB array safely
+  await db.table('tickets')
+    .where({ ticket_id: ticketId })
+    .update({
+      email_metadata: knex.raw(
+        `jsonb_set(
+          COALESCE(email_metadata, '{}'::jsonb),
+          '{references}',
+          (COALESCE(email_metadata->'references', '[]'::jsonb) || to_jsonb(?::text))
+        )`,
+        [rfcMessageId]
+      )
+    });
+}
+
 export async function sendEventEmail(params: SendEmailParams): Promise<void> {
   try {
     logger.info('[SendEventEmail] 🚀 NEW EMAIL PROVIDER MANAGER VERSION - Preparing to send email:', {
@@ -621,20 +649,7 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
     const outboundRfcMessageId = result.rfcMessageId ?? result.messageId;
     if (result.success && outboundRfcMessageId && params.replyContext?.ticketId) {
       try {
-        // We use a raw query to append to the JSONB array safely
-        await db.table('tickets')
-          .where({ ticket_id: params.replyContext.ticketId })
-          .update({
-            email_metadata: knex.raw(
-              `jsonb_set(
-                COALESCE(email_metadata, '{}'::jsonb),
-                '{references}',
-                (COALESCE(email_metadata->'references', '[]'::jsonb) || to_jsonb(?::text))
-              )`,
-              [outboundRfcMessageId]
-            ),
-            updated_at: new Date() // Good practice to touch updated_at
-          });
+        await appendOutboundMessageIdReference(db, knex, params.replyContext.ticketId, outboundRfcMessageId);
 
         logger.debug('[SendEventEmail] Linked outbound Message-ID to ticket:', {
           ticketId: params.replyContext.ticketId,

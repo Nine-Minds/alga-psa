@@ -1,4 +1,5 @@
 import { publishEvent } from '@alga-psa/event-bus/publishers';
+import { publishTicketTransitionsAfterCommit, ticketCreatedPublishedByCaller } from '@alga-psa/shared/lib/tickets/ticketLifecycleEvents';
 import { persistCommentPublication } from '@shared/lib/ticketCommentAttachments';
 /**
  * Ticket Service
@@ -44,13 +45,13 @@ import {
   getTicketResourcesCore,
   publishTicketResourceEvent,
   removeTicketResourceCore,
-} from '@alga-psa/tickets/lib/ticketResourceCore';
+} from '@alga-psa/shared/services/tickets/ticketResourceCore';
 import {
   TeamAssignmentError,
   assignTeamToTicketCore,
   removeTeamFromTicketCore,
   type RemoveTeamFromTicketOptions,
-} from '@alga-psa/tickets/lib/teamAssignmentCore';
+} from '@alga-psa/shared/services/tickets/teamAssignmentCore';
 import { deleteEntityWithValidation } from '@alga-psa/core/server';
 import { publishWorkflowEvent } from 'server/src/lib/eventBus/publishers';
 import {
@@ -418,6 +419,7 @@ export class TicketService extends BaseService<ITicket> {
       boardColumn: 't.board_id',
       contactColumn: 't.contact_name_id',
       billingProfileColumn: 't.billing_profile_id',
+      watchListColumn: 't.attributes',
     });
   }
 
@@ -1741,7 +1743,7 @@ export class TicketService extends BaseService<ITicket> {
           context.tenant,
           trx,
           {}, // validation options
-          undefined,
+          ticketCreatedPublishedByCaller('TicketService publishes TICKET_CREATED after the transaction commits'),
           analyticsTracker,
           context.userId,
           3 // max retries
@@ -2129,6 +2131,29 @@ export class TicketService extends BaseService<ITicket> {
         }
       }
 
+      // Transition events (TICKET_STATUS_CHANGED etc.), published after commit.
+      await publishTicketTransitionsAfterCommit(trx, {
+        tenant: context.tenant,
+        before: {
+          ticketId: id,
+          statusId: currentTicket.status_id,
+          priorityId: currentTicket.priority_id ?? null,
+          assignedTo: currentTicket.assigned_to ?? null,
+          boardId: currentTicket.board_id,
+          escalated: currentTicket.escalated,
+        },
+        after: {
+          ticketId: id,
+          statusId: ticket.status_id,
+          priorityId: ticket.priority_id ?? null,
+          assignedTo: ticket.assigned_to ?? null,
+          boardId: ticket.board_id,
+          escalated: ticket.escalated,
+        },
+        actorUserId: context.userId,
+        statusChangedPayloadExtras: { suppressContactNotifications, suppressInternalNotifications },
+      });
+
       const structuredChanges: Record<string, { old: unknown; new: unknown }> = {};
       const trackedChangeFields: Array<keyof ITicket> = [
         'title',
@@ -2258,7 +2283,7 @@ export class TicketService extends BaseService<ITicket> {
         context.userId,
         context.tenant,
         trx,
-        undefined,
+        ticketCreatedPublishedByCaller('TicketService publishes TICKET_CREATED after the transaction commits'),
         analyticsTracker
       );
 
