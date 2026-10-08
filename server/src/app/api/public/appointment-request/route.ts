@@ -15,7 +15,7 @@ import {
   formatDate,
   formatTime
 } from '@alga-psa/scheduling/actions';
-import { buildAppointmentRequestReviewUrl } from '@alga-psa/scheduling/lib/appointmentRequestLinks';
+import { buildAppointmentRequestReviewUrl } from '@alga-psa/core';
 import { resolveAppointmentApproverUserIds } from '@alga-psa/msp-composition/scheduling/appointmentApprovers';
 import logger from '@alga-psa/core/logger';
 import { z } from 'zod';

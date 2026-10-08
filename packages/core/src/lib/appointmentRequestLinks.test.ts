@@ -5,7 +5,7 @@ import {
   buildAppointmentRequestReviewPath,
   buildAppointmentRequestReviewUrl,
   resolveAppBaseUrl,
-} from '../appointmentRequestLinks';
+} from './appointmentRequestLinks';
 
 const ID = '3f2b8c1e-6a4d-4e7b-9c1a-2d5e8f0a7b64';
 

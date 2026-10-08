@@ -9,7 +9,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Calendar, Settings } from 'lucide-react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { APPOINTMENT_REQUEST_ID_PARAM } from '@alga-psa/scheduling/lib/appointmentRequestLinks';
+import { APPOINTMENT_REQUEST_ID_PARAM } from '@alga-psa/core';
 import { getAppointmentRequests, getAvailabilitySettingsAccess } from '@alga-psa/scheduling/actions';
 import {
   isReloadNavigation,

@@ -36,6 +36,7 @@ export * from './lib/templateUtils';
 // Formatting utilities
 export * from './lib/formatters';
 export * from './lib/projectBillingStatus';
+export * from './lib/appointmentRequestLinks';
 
 // Time-entry worked duration (billability-independent)
 export * from './lib/timeEntryDuration';

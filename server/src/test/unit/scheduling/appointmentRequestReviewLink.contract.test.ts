@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildAppointmentRequestReviewUrl } from '@alga-psa/scheduling/lib/appointmentRequestLinks';
+import { buildAppointmentRequestReviewUrl } from '@alga-psa/core';
 import { templateVariableSeed } from '../../../../../packages/notifications/src/lib/templateVariables/seed';
 
 describe('new-appointment-request approvalLink seed', () => {

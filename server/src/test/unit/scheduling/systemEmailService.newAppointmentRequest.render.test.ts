@@ -36,7 +36,7 @@ vi.mock('../../../../../packages/email/src/TenantEmailService', () => ({
 }));
 
 import { SystemEmailService } from '../../../../../packages/email/src/system/SystemEmailService';
-import { buildAppointmentRequestReviewUrl } from '@alga-psa/scheduling/lib/appointmentRequestLinks';
+import { buildAppointmentRequestReviewUrl } from '@alga-psa/core';
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const { getTemplate } = require('../../../../migrations/utils/templates/email/appointments/newAppointmentRequest.cjs');
 

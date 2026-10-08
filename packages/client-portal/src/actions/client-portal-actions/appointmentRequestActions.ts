@@ -32,7 +32,7 @@ import {
   getAvailableDates as getDatesFromService
 } from '../../services/availabilityService';
 import { createNotificationFromTemplateInternal } from '@alga-psa/notifications/actions/internal-notification-actions/internalNotificationActions';
-import { buildAppointmentRequestReviewPath, buildAppointmentRequestReviewUrl } from '@alga-psa/scheduling/lib/appointmentRequestLinks';
+import { buildAppointmentRequestReviewPath, buildAppointmentRequestReviewUrl } from '@alga-psa/core';
 import { resolveAppointmentApproverUserIds } from '@alga-psa/msp-composition/scheduling/appointmentApprovers';
 import { isValidEmail, enqueueImmediateJob } from '@alga-psa/core';
 import { isEnterprise } from '@alga-psa/core/features';

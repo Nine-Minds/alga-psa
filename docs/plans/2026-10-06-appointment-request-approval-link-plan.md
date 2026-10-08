@@ -97,7 +97,7 @@ Check that `server`'s and `client-portal`'s TypeScript paths and vitest aliases 
 
 - **description:** "Deep link that opens this request in the schedule page's Appointment Requests panel so MSP staff can review and approve it."
 - **example:** `https://app.algapsa.com/msp/schedule?requestId=3f2b8c1e-6a4d-4e7b-9c1a-2d5e8f0a7b64`
-- **notes:** "Optional. 'Review & Approve' button shown only inside {{#if approvalLink}}. Both call sites (portal action and public route) build it with buildAppointmentRequestReviewUrl from @alga-psa/scheduling/lib/appointmentRequestLinks: `<app base URL>/msp/schedule?requestId=<appointment_request_id>`. An unknown or stale id opens the panel with nothing selected."
+- **notes:** "Optional. 'Review & Approve' button shown only inside {{#if approvalLink}}. Both call sites (portal action and public route) build it with buildAppointmentRequestReviewUrl from @alga-psa/core: `<app base URL>/msp/schedule?requestId=<appointment_request_id>`. An unknown or stale id opens the panel with nothing selected."
 
 Regenerate with:
 

@@ -3,7 +3,7 @@ import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import path from 'node:path';
 import { tenantDb } from '@alga-psa/db';
-import { buildAppointmentRequestReviewUrl } from '@alga-psa/scheduling/lib/appointmentRequestLinks';
+import { buildAppointmentRequestReviewUrl } from '@alga-psa/core';
 
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { createTenant, createClient, createUser } from '../../../test-utils/testDataFactory';

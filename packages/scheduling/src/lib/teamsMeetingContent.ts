@@ -1,6 +1,6 @@
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
-import { buildAppointmentRequestReviewUrl } from './appointmentRequestLinks';
+import { buildAppointmentRequestReviewUrl } from '@alga-psa/core';
 import type {
   TeamsMeetingAttendee,
   TeamsMeetingSkipReason,

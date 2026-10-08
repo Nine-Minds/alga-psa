@@ -68,7 +68,7 @@ describe('public appointment-request route: staff approvalLink', () => {
 
   it('deep-links to the persisted request id and does not expose the id to the caller', async () => {
     const { POST } = await import('@/app/api/public/appointment-request/route');
-    const { buildAppointmentRequestReviewUrl } = await import('@alga-psa/scheduling/lib/appointmentRequestLinks');
+    const { buildAppointmentRequestReviewUrl } = await import('@alga-psa/core');
 
     const req = new NextRequest('http://localhost/api/public/appointment-request', {
       method: 'POST',
