@@ -82,7 +82,7 @@ verification, nonce rejection, or live Microsoft consent. This adds application
 callback evidence without expanding the msgraph emulator's protocol-parity claims.
 
 A second, narrower lane does use the emulator's OAuth endpoints:
-[the SSO mapping-failure test](../auth/src/lib/nextAuthOptions.microsoftSimulator.test.ts)
+[the SSO mapping-failure test](../../server/src/test/integration/nextAuthOptions.microsoftSimulator.integration.test.ts)
 builds the app's `azure-ad` provider behind `MICROSOFT_SSO_EMULATOR_MODE`, then
 replays the authorization redirect, the code exchange and the Graph `/me`
 userinfo request before handing the response to the provider's own `profile()`

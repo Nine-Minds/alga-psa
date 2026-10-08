@@ -9,9 +9,18 @@ import msgraph from '@alga-psa/emulator-msgraph';
  * Graph wire instead of a hand-written profile literal. The authorization
  * redirect, code exchange and `/me` lookup all execute; only the AlgaPSA
  * database and session store are fixtures. Unit coverage of the sentinel lives
- * in nextAuthOptions.authFailureRedirect.test.ts; this file pins that the
- * provider the app builds reaches the simulator and that a real Entra-shaped
- * profile ends on a readable URL rather than Auth.js `error=Configuration`.
+ * in packages/auth/src/lib/nextAuthOptions.authFailureRedirect.test.ts; this
+ * file pins that the provider the app builds reaches the simulator and that a
+ * real Entra-shaped profile ends on a readable URL rather than Auth.js
+ * `error=Configuration`.
+ *
+ * This lives under server/ rather than packages/auth/ because a real,
+ * unmocked import of @alga-psa/emulator-msgraph from inside packages/auth
+ * closes a project-graph cycle: emulator-msgraph already depends on
+ * @alga-psa/integrations, which depends (via email -> tenancy ->
+ * user-composition) back on @alga-psa/auth. server/ sits above all of those
+ * projects already, so it can import the real simulator without creating a
+ * new edge.
  */
 
 const CLIENT_ID = 'simulated-msp-sso-client';
@@ -31,7 +40,7 @@ vi.mock('next-auth/providers/keycloak', () => ({ default: (config: unknown) => c
 vi.mock('next-auth/providers/google', () => ({ default: (config: unknown) => config }));
 vi.mock('next-auth/providers/azure-ad', () => ({ default: (config: unknown) => config }));
 
-vi.mock('./session', () => ({
+vi.mock('@alga-psa/auth/session', () => ({
   getNextAuthSecret: async () => 'unit-test-secret',
   getNextAuthSecretSync: () => 'unit-test-secret',
   getSessionCookieConfig: () => ({ name: 'authjs.session-token', options: {} }),
@@ -40,7 +49,7 @@ vi.mock('./session', () => ({
   withDevPortSuffix: (value: string) => value,
 }));
 
-vi.mock('./PortalDomainSessionToken', () => ({ issuePortalDomainOtt: vi.fn() }));
+vi.mock('@alga-psa/auth/lib/PortalDomainSessionToken', () => ({ issuePortalDomainOtt: vi.fn() }));
 
 vi.mock('@alga-psa/validation', () => ({
   buildTenantPortalSlug: () => 'tenant-slug',
@@ -57,7 +66,7 @@ vi.mock('@alga-psa/core/secrets', () => ({
   }),
 }));
 
-vi.mock('./sso/registry', () => ({
+vi.mock('@alga-psa/auth/lib/sso/registry', () => ({
   getSSORegistry: () => ({
     applyOAuthAccountHints: (...args: unknown[]) => applyOAuthAccountHintsMock(...args),
     mapOAuthProfileToExtendedUser: vi.fn(),
@@ -69,7 +78,7 @@ vi.mock('./sso/registry', () => ({
   registerSSOProvider: vi.fn(),
 }));
 
-vi.mock('./sso/enterpriseRegistryEntry', () => ({
+vi.mock('@alga-psa/auth/lib/sso/enterpriseRegistryEntry', () => ({
   loadEnterpriseSsoProviderRegistryImpl: async () => null,
 }));
 
@@ -81,7 +90,7 @@ vi.mock('next/headers.js', () => ({
   }),
 }));
 
-vi.mock('./sso/mspSsoResolution', () => ({
+vi.mock('@alga-psa/auth/lib/sso/mspSsoResolution', () => ({
   MSP_SSO_DISCOVERY_TTL_SECONDS: 300,
   MSP_SSO_GENERIC_FAILURE_MESSAGE: 'generic failure',
   MSP_SSO_RESOLUTION_COOKIE: 'msp_sso_resolution',
@@ -95,7 +104,7 @@ vi.mock('./sso/mspSsoResolution', () => ({
   parseResolverProvider: vi.fn((value: string) => value),
 }));
 
-vi.mock('./sso/clientPortalSsoResolution', () => ({
+vi.mock('@alga-psa/auth/lib/sso/clientPortalSsoResolution', () => ({
   CLIENT_PORTAL_SSO_DISCOVERY_COOKIE: 'client_portal_sso_discovery',
   CLIENT_PORTAL_SSO_RESOLUTION_COOKIE: 'client_portal_sso_resolution',
   parseAndVerifyClientPortalSsoResolutionCookie: vi.fn(() => null),
@@ -116,19 +125,19 @@ vi.mock('@alga-psa/db/models/user', () => ({
   },
 }));
 
-vi.mock('./ipAddress', () => ({ getClientIp: vi.fn() }));
-vi.mock('./deviceFingerprint', () => ({
+vi.mock('@alga-psa/auth/ipAddress', () => ({ getClientIp: vi.fn() }));
+vi.mock('@alga-psa/auth/deviceFingerprint', () => ({
   generateDeviceFingerprint: vi.fn(),
   getDeviceInfo: vi.fn(),
 }));
-vi.mock('./geolocation', () => ({ getLocationFromIp: vi.fn() }));
+vi.mock('@alga-psa/auth/geolocation', () => ({ getLocationFromIp: vi.fn() }));
 vi.mock('@alga-psa/db', () => ({ getConnection: vi.fn(), tenantDb: vi.fn() }));
-vi.mock('./PortalDomainModel', () => ({
+vi.mock('@alga-psa/auth/lib/PortalDomainModel', () => ({
   getPortalDomain: vi.fn(),
   getPortalDomainByHostname: vi.fn(),
 }));
 
-const { getAuthOptions } = await import('./nextAuthOptions');
+const { getAuthOptions } = await import('@alga-psa/auth/nextAuthOptions');
 
 let host: EmulatorHost;
 let base: string;
