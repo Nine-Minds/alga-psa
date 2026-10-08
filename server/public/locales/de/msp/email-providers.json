@@ -803,7 +803,8 @@
           "recipientPlaceholder": "sie@beispiel.com",
           "testingButton": "Wird getestet...",
           "runButton": "Verbindung testen"
-        }
+        },
+        "ticketIdentityRequired": "Wählen Sie unten eine Ticket-E-Mail-Identität aus, um die Absenderdomain festzulegen."
       },
       "ticketingFrom": {
         "title": "Absenderadresse für Ticketing",
@@ -842,7 +843,18 @@
         "description": "Nachrichten werden über Microsoft Graph als das ausgewählte Postfach gesendet und in „Gesendete Elemente“ gespeichert.",
         "loadFailed": "Microsoft 365-Postfächer konnten nicht geladen werden.",
         "saved": "Sendepostfach aktualisiert."
-      }
+      },
+      "diagnosticsButton": "Ausgehende E-Mail-Diagnose ausführen",
+      "saveSettings": "Einstellungen für ausgehende E-Mails speichern",
+      "discardChanges": "Änderungen verwerfen",
+      "unsaved": "Nicht gespeicherte Änderungen",
+      "noPendingChanges": "Keine nicht gespeicherten Änderungen",
+      "saving": "Einstellungen für ausgehende E-Mails werden gespeichert…",
+      "saved": "Einstellungen für ausgehende E-Mails gespeichert.",
+      "saveFailed": "Die Einstellungen für ausgehende E-Mails konnten nicht gespeichert werden. Ihre Änderungen sind noch vorhanden. Versuchen Sie es erneut.",
+      "diagnosticsSaveHelp": "Speichern oder verwerfen Sie Ihre Änderungen, bevor Sie die Einstellungen für ausgehende E-Mails prüfen.",
+      "saveBeforeDomainRemoval": "Speichern oder verwerfen Sie Ihre Änderungen für ausgehende E-Mails, bevor Sie eine Domain entfernen.",
+      "senderAddressAfterSave": "Wird nach dem Speichern angezeigt."
     },
     "inbound": {
       "intro": "Konfigurieren Sie eingehendes E-Mail-Routing und anbieterspezifische Automatisierung."

@@ -90,7 +90,8 @@
           "clients": "Clientes",
           "itemsServices": "Artículos / Servicios",
           "taxCodes": "Códigos fiscales",
-          "paymentTerms": "Condiciones de pago"
+          "paymentTerms": "Condiciones de pago",
+          "discounts": "Descuentos"
         }
       }
     },
@@ -111,6 +112,7 @@
           "failed": "Error en la exportación",
           "missingItemMapping": "Falta asignación de artículo",
           "missingItemMappingId": "Falta asignación de artículo ({{serviceId}})",
+          "missingDiscountMapping": "Falta la asignación de descuentos (pestaña Descuentos)",
           "missingItemMappingNamed": "Falta asignación de artículo: {{serviceName}}"
         },
         "fields": {
@@ -469,7 +471,8 @@
           "previousCount": "Anterior",
           "syncFinished": "Sincronización finalizada para {{client}}.",
           "syncing": "Sincronizando…",
-          "syncTrackingFailed": "La sincronización se inició, pero esta página no pudo seguirla hasta el final. Actualice para ver el resultado más reciente."
+          "syncTrackingFailed": "La sincronización se inició, pero esta página no pudo seguirla hasta el final. Actualice para ver el resultado más reciente.",
+          "syncWorkerUnavailable": "La sincronización está en cola, pero ahora mismo nada está procesando la cola en segundo plano. Se ejecutará cuando el worker vuelva; si sigue bloqueada, reinicie el servicio temporal-worker."
         },
         "connection": {
           "changeAction": "Cambiar conexión",

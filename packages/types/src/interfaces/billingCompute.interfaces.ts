@@ -15,7 +15,12 @@ export type ChargeComputeMarker =
   | 'rate_tier'
   | 'pricing_schedule_override'
   | 'fmv_allocation'
-  | 'fixed_fee_allocation_fallback';
+  /** A fixed-fee line with no catalog price was allocated across its services. */
+  | 'fixed_fee_allocation_fallback'
+  /** A scheduled revision supplied the effective quantity/rate for this period. */
+  | 'scheduled_revision'
+  /** Quantity zero deliberately stops recurring billing for this item. */
+  | 'zero_quantity';
 
 export interface ChargeExplanationInput {
   label: string;

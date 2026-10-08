@@ -63,6 +63,7 @@ export const externalLinkActorSchema = z.object({
 });
 
 export const createExternalLinkSchema = z.object({
+  portal_visible: z.boolean().optional(),
   entity_type: z.enum(['ticket', 'comment']).optional(),
   comment_id: uuidSchema.optional(),
   system: z.string().trim().min(1, 'System is required'),
@@ -86,9 +87,11 @@ export const createExternalLinkSchema = z.object({
 export const createTicketExternalLinkSchema = createExternalLinkSchema.omit({
   entity_type: true,
   comment_id: true,
+  portal_visible: true,
 });
 
 export const updateExternalLinkSchema = z.object({
+  portal_visible: z.boolean().optional(),
   relationship: externalLinkRelationshipSchema.optional(),
   url: httpUrlSchema.nullable().optional(),
   actor: externalLinkActorSchema.nullable().optional(),
@@ -286,7 +289,10 @@ export const ticketWithDetailsResponseSchema = ticketResponseSchema.extend({
   assigned_to_name: z.string().optional(),
   location_name: z.string().optional(),
   location_address: z.string().nullable().optional(),
-  
+  // Newest of the ticket's own timestamps and its newest visible comment.
+  // List-only (computed in SQL); client-portal callers see public activity only.
+  latest_activity_at: z.string().datetime().nullable().optional(),
+
   // Related objects
   client: z.object({
     client_id: uuidSchema,

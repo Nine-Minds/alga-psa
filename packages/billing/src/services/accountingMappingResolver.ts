@@ -6,12 +6,17 @@ import {
   NormalizedCompanyPayload
 } from './companySync';
 import { resolveXeroRealmAliases } from './accountingSync/xeroRealmIdentity';
+import {
+  AUTOMATIC_DISCOUNT_MAPPING_ID,
+  DISCOUNT_MAPPING_ENTITY_TYPE
+} from '@alga-psa/types';
 
 export interface MappingResolution {
   external_entity_id: string;
   metadata?: Record<string, any> | null;
-  source: 'service' | 'service_category' | 'fallback' | 'tax_code' | 'payment_term' | 'company';
+  source: 'service' | 'service_category' | 'fallback' | 'tax_code' | 'payment_term' | 'company' | 'discount';
 }
+
 
 interface ResolveParams {
   tenantId?: string;
@@ -109,6 +114,17 @@ export class AccountingMappingResolver {
       entityType: 'payment_term',
       entityId: params.paymentTermId,
       source: 'payment_term',
+      targetRealm: params.targetRealm ?? null
+    });
+  }
+
+  async resolveDiscountMapping(params: { tenantId?: string; adapterType: string; targetRealm?: string | null }): Promise<MappingResolution | null> {
+    return this.resolveGenericMapping({
+      adapterType: params.adapterType,
+      tenantId: params.tenantId,
+      entityType: DISCOUNT_MAPPING_ENTITY_TYPE,
+      entityId: AUTOMATIC_DISCOUNT_MAPPING_ID,
+      source: 'discount',
       targetRealm: params.targetRealm ?? null
     });
   }

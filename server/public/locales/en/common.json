@@ -317,7 +317,8 @@
       "clientPortal": "Created via Client Portal",
       "inboundEmail": "Created via Inbound Email",
       "api": "Created via API",
-      "other": "Created via Other"
+      "other": "Created via Other",
+      "recurring": "Created by Recurring Schedule"
     },
     "responseSource": {
       "clientPortal": "Received via Client Portal",
@@ -824,7 +825,16 @@
       "fileError": "Failed to upload file",
       "associatedEntityTypeLabel": "Associate With",
       "noAssociation": "No association",
-      "selectAssociatedEntityError": "Select an associated entity before uploading."
+      "selectAssociatedEntityError": "Select an associated entity before uploading.",
+      "uploaded": "Uploaded",
+      "failed": "Failed",
+      "failureSummary": "{{failed}} of {{total}} files could not be uploaded. Review the errors below.",
+      "outcomeSummary": "{{succeeded}} of {{total}} files uploaded",
+      "emptyDropTitle": "No files received",
+      "emptyDropMessage": "No files were received. Save the attachment or email to your computer, then drag the saved file here or use Browse Files.",
+      "uploadInProgress": "An upload is already in progress. Wait for it to finish before adding more files.",
+      "refreshFailed": "Your files were uploaded, but the document list could not refresh. Reload the page to see them.",
+      "clearResults": "Clear results"
     },
     "folders": {
       "root": "Root",
@@ -1336,9 +1346,11 @@
   },
   "timezonePicker": {
     "selectPlaceholder": "Select timezone...",
-    "searchPlaceholder": "Search timezones or abbreviations (e.g. EST)...",
+    "searchPlaceholder": "Search by city, name, or abbreviation (e.g. New York, EST)...",
     "noResults": "No timezones found",
     "matchingGroup": "Matching \"{{query}}\"",
+    "noDst": "No DST",
+    "noDaylightSavingHint": "No daylight saving time. Clocks stay at {{offset}} all year.",
     "regions": {
       "Africa": "Africa",
       "America": "America",

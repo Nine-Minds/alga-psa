@@ -540,6 +540,7 @@ const ContactsImportDialog: React.FC<ContactsImportDialogProps> = ({
           },
           {
             title: t('contactsImportDialog.table.email', { defaultValue: 'Email' }),
+            id: 'original_email',
             dataIndex: 'originalData',
             render: (value: Record<string, string>) => value.email,
           },

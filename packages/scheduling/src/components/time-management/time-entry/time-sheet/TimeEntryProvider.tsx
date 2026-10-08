@@ -5,7 +5,7 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { ITimeEntry, ITimeEntryWithWorkItem, ITimePeriod, ITimePeriodView } from '@alga-psa/types';
 import { IExtendedWorkItem } from '@alga-psa/types';
 import { TaxRegion } from '@alga-psa/types';
-import { fetchClientTaxRateForWorkItem, fetchScheduleEntryForWorkItem, fetchServicesForTimeEntry, fetchTaxRegions } from '../../../../actions/timeEntryActions';
+import { fetchClientTaxRateForWorkItem, fetchScheduleEntryForWorkItem, fetchServicesForTimeEntry, fetchTaxRegions, resolveDefaultTicketTimeEntryService } from '../../../../actions/timeEntryActions';
 import { getClientIdForWorkItem } from '../../../../lib/contractLineDisambiguation';
 import { formatISO, parseISO } from 'date-fns';
 import { generateUUID } from '@alga-psa/core';
@@ -154,7 +154,47 @@ export function TimeEntryProvider({ children }: { children: React.ReactNode }): 
         payload: { services, taxRegions },
       });
 
+      // New ticket entries default to the client/tenant configured service (if
+      // one resolves to a service still offered in the selector). Existing
+      // entries and an explicitly supplied service are never overwritten.
+      const serviceIds = new Set(services.map((service) => service.id));
+      let ticketDefaultServiceId = '';
+      if (workItem.type === 'ticket' && !existingEntries?.length && clientId) {
+        if (workItem.service_id && serviceIds.has(workItem.service_id)) {
+          ticketDefaultServiceId = workItem.service_id;
+        } else {
+          try {
+            const resolved = await resolveDefaultTicketTimeEntryService({
+              clientId,
+              effectiveDate: defaultStartTime ?? date,
+            });
+            if (
+              resolved &&
+              'serviceId' in resolved &&
+              resolved.serviceId &&
+              serviceIds.has(resolved.serviceId)
+            ) {
+              ticketDefaultServiceId = resolved.serviceId;
+            }
+          } catch (error) {
+            console.warn('Unable to resolve default ticket time entry service:', error);
+          }
+        }
+      }
+
       let newEntries: ITimeEntryWithNew[] = [];
+
+      // The task → phase → project default, but only when this form can hold it:
+      // the service picker is hourly-only, so a default of any other billing
+      // method would render blank and then fail save validation. Tickets fall
+      // back to the client/tenant configured service resolved above. Shared by
+      // all new-entry branches so a work item keeps its default however it was opened.
+      const defaultServiceId = workItem.type === 'project_task' && workItem.service_id
+        ? workItem.service_id
+        : (workItem.type === 'ticket' ? ticketDefaultServiceId : '');
+      const prefilledServiceId = defaultServiceId && services.some(service => service.id === defaultServiceId)
+        ? defaultServiceId
+        : '';
 
       if (existingEntries?.length) {
         newEntries = existingEntries.map(({ ...rest }): ITimeEntryWithNew => ({
@@ -171,9 +211,6 @@ export function TimeEntryProvider({ children }: { children: React.ReactNode }): 
       } else if (defaultStartTime && defaultEndTime) {
         const duration = calculateDuration(defaultStartTime, defaultEndTime);
         const isBillable = workItem.is_billable === false ? false : true;
-        const prefilledServiceId = workItem.type === 'project_task' && workItem.service_id
-          ? workItem.service_id
-          : '';
 
         console.log('Creating new time entry with defaults:', {
           isBillable,
@@ -188,7 +225,7 @@ export function TimeEntryProvider({ children }: { children: React.ReactNode }): 
           end_time: formatISO(defaultEndTime),
           billable_duration: isBillable ? duration : 0,
           work_item_type: workItem.type,
-          notes: '',
+          notes: workItem.description ?? '',
           entry_id: '',
           user_id: '',
           created_at: formatISO(new Date()),
@@ -202,6 +239,7 @@ export function TimeEntryProvider({ children }: { children: React.ReactNode }): 
           _isServicePrefilled: !!prefilledServiceId,
           _originalServiceId: prefilledServiceId || null,
           _serviceOverridden: false,
+          _serviceSource: prefilledServiceId ? workItem.service_source : undefined,
         }];
       } else {
         let startTime: Date, endTime: Date;
@@ -239,17 +277,21 @@ export function TimeEntryProvider({ children }: { children: React.ReactNode }): 
           end_time: formatISO(endTime),
           billable_duration: isBillable ? duration : 0,
           work_item_type: workItem.type,
-          notes: '',
+          notes: workItem.description ?? '',
           entry_id: '',
           user_id: '',
           created_at: formatISO(new Date()),
           updated_at: formatISO(new Date()),
           approval_status: 'DRAFT',
-          service_id: '',
+          service_id: prefilledServiceId,
           tax_region: defaultTaxRegion || '',
           isNew: true,
           tempId: generateUUID(),
           client_id: clientId || undefined,
+          _isServicePrefilled: !!prefilledServiceId,
+          _originalServiceId: prefilledServiceId || null,
+          _serviceOverridden: false,
+          _serviceSource: prefilledServiceId ? workItem.service_source : undefined,
         }];
       }
 

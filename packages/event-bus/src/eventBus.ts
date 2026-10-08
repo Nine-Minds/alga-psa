@@ -29,9 +29,8 @@ const createRedisClient = async () => {
     logger.warn('[EventBus] No Redis password configured - this is not recommended for production');
   }
 
-  const client = createClient({
+  const clientOptions: Parameters<typeof createClient>[0] = {
     url: config.url,
-    password: password || undefined,
     socket: {
       reconnectStrategy: (retries) => {
         if (retries > config.eventBus.reconnectStrategy.retries) {
@@ -47,7 +46,15 @@ const createRedisClient = async () => {
         return delay;
       }
     }
-  });
+  };
+
+  // node-redis treats the presence of the password option as a request to
+  // authenticate, even when its value is undefined or empty.
+  if (password) {
+    clientOptions.password = password;
+  }
+
+  const client = createClient(clientOptions);
 
   client.on('error', (err) => {
     logger.error('[EventBus] Redis Client Error:', err);
@@ -310,7 +317,8 @@ export class EventBus {
   }
 
   private getProcessedSetKey(tenantId: string, channel: string): string {
-    return channel === this.defaultChannel ? `processed_events:${tenantId}` : `processed_events:${tenantId}:${channel}`;
+    const channelSuffix = channel === this.defaultChannel ? '' : `:${channel}`;
+    return `${getRedisConfig().prefix}processed_events:${tenantId}${channelSuffix}`;
   }
 
   private getEventTenantId(event: Event): string {
@@ -338,7 +346,8 @@ export class EventBus {
   }
 
   private getProcessedHandlersSetKey(tenantId: string, channel: string): string {
-    return channel === this.defaultChannel ? `processed_event_handlers:${tenantId}` : `processed_event_handlers:${tenantId}:${channel}`;
+    const channelSuffix = channel === this.defaultChannel ? '' : `:${channel}`;
+    return `${getRedisConfig().prefix}processed_event_handlers:${tenantId}${channelSuffix}`;
   }
 
   private async isHandlerProcessed(event: Event, handlerKey: string, channel: string): Promise<boolean> {

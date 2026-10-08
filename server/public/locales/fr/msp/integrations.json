@@ -90,7 +90,8 @@
           "clients": "Clients",
           "itemsServices": "Articles / Services",
           "taxCodes": "Codes fiscaux",
-          "paymentTerms": "Conditions de paiement"
+          "paymentTerms": "Conditions de paiement",
+          "discounts": "Remises"
         }
       }
     },
@@ -111,6 +112,7 @@
           "failed": "Échec de l'export",
           "missingItemMapping": "Mappage d'article manquant",
           "missingItemMappingId": "Mappage d'article manquant ({{serviceId}})",
+          "missingDiscountMapping": "Mappage des remises manquant (onglet Remises)",
           "missingItemMappingNamed": "Mappage d'article manquant : {{serviceName}}"
         },
         "fields": {
@@ -469,7 +471,8 @@
           "previousCount": "Précédent",
           "syncFinished": "Synchronisation terminée pour {{client}}.",
           "syncing": "Synchronisation…",
-          "syncTrackingFailed": "La synchronisation a démarré, mais cette page n'a pas pu la suivre jusqu'à la fin. Actualisez la page pour voir le dernier résultat."
+          "syncTrackingFailed": "La synchronisation a démarré, mais cette page n'a pas pu la suivre jusqu'à la fin. Actualisez la page pour voir le dernier résultat.",
+          "syncWorkerUnavailable": "La synchronisation est en file d'attente, mais rien ne traite la file d'arrière-plan pour le moment. Elle s'exécutera dès que le worker sera de retour ; si elle reste bloquée, redémarrez le service temporal-worker."
         },
         "connection": {
           "changeAction": "Modifier la connexion",

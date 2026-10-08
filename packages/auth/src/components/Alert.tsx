@@ -9,7 +9,7 @@ import type { AlertProps } from '@alga-psa/types';
 
 
 const Alert: React.FC<AlertProps> = ({ type, title, message, isOpen, onClose }) => {
-    const { t } = useTranslation('common');
+    const { t } = useTranslation('common', { useSuspense: false });
     // Status tokens, not palette literals: white on bg-yellow-400 measured 1.53:1,
     // and the per-pair *-foreground tokens already carry a readable ink for each fill.
     const getAlertStyles = (): { bgColor: string; textColor: string; fgColor: string; hoverColor: string; icon: React.JSX.Element } => {

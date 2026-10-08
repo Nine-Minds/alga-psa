@@ -8,6 +8,7 @@ import {
   CheckCircle,
   ChevronDown,
   ChevronRight,
+  Copy,
   Link2,
   Lock,
   Mail,
@@ -124,6 +125,9 @@ function eventIcon(eventType: string): React.ReactElement {
   switch (eventType) {
     case 'TICKET_CREATED':
       return <PlayCircle className="h-4 w-4" />;
+    case 'TICKET_DUPLICATED_FROM':
+    case 'TICKET_DUPLICATED_TO':
+      return <Copy className="h-4 w-4" />;
     case 'TICKET_CLOSED':
       return <CheckCircle className="h-4 w-4" />;
     case 'TICKET_REOPENED':
@@ -191,13 +195,29 @@ function notificationSuppressionAnnotation(activity: TicketActivityRow): string 
   return undefined;
 }
 
-function describeActivity(activity: TicketActivityRow): { title: string; annotation?: string; subtitle?: string } {
+function describeActivity(activity: TicketActivityRow, visibilityLabel: (visible: boolean) => string): { title: string; annotation?: string; subtitle?: string } {
   const actor = actorLabel(activity);
   const annotation = notificationSuppressionAnnotation(activity);
 
   switch (activity.event_type) {
     case 'TICKET_CREATED':
       return { title: `${actor} created the ticket` };
+    case 'TICKET_DUPLICATED_FROM': {
+      const details = (activity.details ?? {}) as { source_ticket_number?: string };
+      return {
+        title: details.source_ticket_number
+          ? `${actor} created this ticket as a duplicate of #${details.source_ticket_number}`
+          : `${actor} created this ticket as a duplicate of another ticket`,
+      };
+    }
+    case 'TICKET_DUPLICATED_TO': {
+      const details = (activity.details ?? {}) as { duplicate_ticket_number?: string };
+      return {
+        title: details.duplicate_ticket_number
+          ? `${actor} duplicated this ticket as #${details.duplicate_ticket_number}`
+          : `${actor} duplicated this ticket`,
+      };
+    }
     case 'TICKET_CLOSED':
       return { title: `${actor} closed the ticket`, annotation };
     case 'TICKET_REOPENED':
@@ -306,7 +326,12 @@ function describeActivity(activity: TicketActivityRow): { title: string; annotat
     case 'TICKET_EXTERNAL_LINK_ADDED':
       return { title: `${actor} linked ${externalLinkReference(activity)}` };
     case 'TICKET_EXTERNAL_LINK_UPDATED':
-      return { title: `${actor} updated the ${externalLinkReference(activity)} link` };
+      return {
+        title: `${actor} updated the ${externalLinkReference(activity)} link`,
+        subtitle: activity.changes?.portal_visible
+          ? `${visibilityLabel(activity.changes.portal_visible.old === true)} → ${visibilityLabel(activity.changes.portal_visible.new === true)}`
+          : undefined,
+      };
     case 'TICKET_EXTERNAL_LINK_REMOVED':
       return { title: `${actor} unlinked ${externalLinkReference(activity)}` };
     default:
@@ -314,10 +339,13 @@ function describeActivity(activity: TicketActivityRow): { title: string; annotat
   }
 }
 
-export function formatEntries(entries: TicketTimelineEntry[]): FormattedEntry[] {
+export function formatEntries(
+  entries: TicketTimelineEntry[],
+  visibilityLabel: (visible: boolean) => string = (visible: boolean) => visible ? 'Visible in client portal' : 'Internal only',
+): FormattedEntry[] {
   return entries.map((entry) => {
     if (entry.type === 'activity' && entry.activity) {
-      const desc = describeActivity(entry.activity);
+      const desc = describeActivity(entry.activity, visibilityLabel);
       return {
         key: `activity-${entry.sortId}`,
         occurredAt: entry.occurredAt,
@@ -407,6 +435,8 @@ const EVENT_TYPE_OPTIONS: { value: string; label: string }[] = [
   { value: 'TICKET_DOCUMENT_ATTACHED', label: 'Document attached' },
   { value: 'TICKET_DOCUMENT_REMOVED', label: 'Document removed' },
   { value: 'TICKET_INBOUND_EMAIL_RECEIVED', label: 'Inbound email' },
+  { value: 'TICKET_DUPLICATED_FROM', label: 'Duplicated from' },
+  { value: 'TICKET_DUPLICATED_TO', label: 'Duplicated to' },
   { value: 'TICKET_BUNDLE_REOPENED', label: 'Bundle reopened' },
   { value: 'TICKET_BUNDLE_STATUS_PROPAGATED', label: 'Bundle status propagated' },
 ];
@@ -458,6 +488,7 @@ function sourceBadge(source: string): { label: string; className: string } {
 
 export function TicketActivityTimeline({ ticketId, refreshKey = 0 }: TicketActivityTimelineProps) {
   const { t: tCommon } = useTranslation('common');
+  const { t: tTickets } = useTranslation('features/tickets');
   const { formatDate } = useFormatters();
   const [entries, setEntries] = useState<TicketTimelineEntry[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -497,7 +528,9 @@ export function TicketActivityTimeline({ ticketId, refreshKey = 0 }: TicketActiv
 
   // All hooks must run unconditionally on every render — keep useMemo/etc.
   // above the loading/error early returns to satisfy the rules of hooks.
-  const formatted = useMemo(() => formatEntries(entries ?? []), [entries]);
+  const formatted = useMemo(() => formatEntries(entries ?? [], (visible) => visible
+    ? tTickets('externalLinks.visibility.shared', 'Visible in client portal')
+    : tTickets('externalLinks.visibility.internal', 'Internal only')), [entries, tTickets]);
 
   const filtered = useMemo(() => {
     return formatted.filter((entry) => {
@@ -627,7 +660,7 @@ export function TicketActivityTimeline({ ticketId, refreshKey = 0 }: TicketActiv
         },
       },
     ],
-    [expandedKey],
+    [expandedKey, formatDate],
   );
 
   const filterBar = (

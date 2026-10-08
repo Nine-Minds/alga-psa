@@ -60,7 +60,9 @@ const serviceSortSchema = z.enum(['service_name', 'billing_method', 'default_rat
 
 export const serviceListQuerySchema = z.object({
   page: z.coerce.number().int().min(1).optional().default(1),
-  limit: z.coerce.number().int().min(1).max(100).optional().default(25),
+  // Clamp rather than reject, matching the opportunities list page_size: an
+  // oversized limit gets a full page, not a 400.
+  limit: z.coerce.number().int().min(1).optional().default(25).transform((value) => Math.min(value, 100)),
   sort: serviceSortSchema.optional().default('service_name'),
   order: z.enum(['asc', 'desc']).optional().default('asc'),
   search: z.string().optional(),

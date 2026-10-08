@@ -90,7 +90,8 @@
           "clients": "Kunden",
           "itemsServices": "Artikel / Dienstleistungen",
           "taxCodes": "Steuercodes",
-          "paymentTerms": "Zahlungsbedingungen"
+          "paymentTerms": "Zahlungsbedingungen",
+          "discounts": "Rabatte"
         }
       }
     },
@@ -111,6 +112,7 @@
           "failed": "Export fehlgeschlagen",
           "missingItemMapping": "Fehlende Artikelzuordnung",
           "missingItemMappingId": "Fehlende Artikelzuordnung ({{serviceId}})",
+          "missingDiscountMapping": "Fehlende Rabatt-Zuordnung (Tab „Rabatte“)",
           "missingItemMappingNamed": "Fehlende Artikelzuordnung: {{serviceName}}"
         },
         "fields": {
@@ -469,7 +471,8 @@
           "previousCount": "Vorher",
           "syncFinished": "Synchronisierung für {{client}} abgeschlossen.",
           "syncing": "Synchronisierung läuft…",
-          "syncTrackingFailed": "Die Synchronisierung wurde gestartet, aber diese Seite konnte sie nicht bis zum Abschluss verfolgen. Aktualisieren Sie die Seite, um das neueste Ergebnis zu sehen."
+          "syncTrackingFailed": "Die Synchronisierung wurde gestartet, aber diese Seite konnte sie nicht bis zum Abschluss verfolgen. Aktualisieren Sie die Seite, um das neueste Ergebnis zu sehen.",
+          "syncWorkerUnavailable": "Die Synchronisierung ist in der Warteschlange, aber derzeit verarbeitet nichts die Hintergrundwarteschlange. Sie läuft, sobald der Worker wieder da ist; bleibt sie hängen, starten Sie den Dienst temporal-worker neu."
         },
         "connection": {
           "changeAction": "Verbindung ändern",

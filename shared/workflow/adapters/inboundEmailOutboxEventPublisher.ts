@@ -63,7 +63,10 @@ export class InboundEmailOutboxEventPublisher implements IEventPublisher {
       outbox_id: outboxId,
       event_key: params.eventKey,
       event_type: params.eventType,
-      payload: params.payload,
+      // Workflow triggers validate payloads against schemas that require
+      // `occurredAt`. Stamp it when the event is recorded (not when the
+      // dispatcher publishes) so a retried publish keeps the original time.
+      payload: { occurredAt: new Date().toISOString(), ...params.payload },
       publish_options: params.publishOptions ?? null,
     });
   }

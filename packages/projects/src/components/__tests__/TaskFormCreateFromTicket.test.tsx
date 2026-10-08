@@ -277,6 +277,7 @@ describe('TaskForm create-from-ticket flow', () => {
             created_at: new Date(),
             updated_at: new Date(),
             wbs_code: '1',
+            start_date: null,
             due_date: null,
             task_type_key: 'task',
             tenant: 'tenant-1'
@@ -416,7 +417,7 @@ describe('TaskForm create-from-ticket flow', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Save' }));
 
     await waitFor(() => expect(addTaskToPhaseMock).toHaveBeenCalled());
-    expect(addTicketLinkActionMock).toHaveBeenCalledWith('project-1', 'task-1', 'ticket-1', 'phase-1');
+    expect(addTicketLinkActionMock).toHaveBeenCalledWith('project-1', 'task-1', 'ticket-1', 'phase-1', true);
   });
 
   it('does not add ticket link when auto-link is off', async () => {

@@ -11,9 +11,31 @@ const CONTAINER_GUTTER = 12;
 const COMPACT_COLUMN_IDS = new Set(['selection', 'checkbox', 'select', 'actions', 'action', 'tags']);
 const SELECTION_COLUMN_IDS = new Set(['selection', 'checkbox', 'select']);
 
-export const getColumnId = (dataIndex: string | string[]): string => (
-  Array.isArray(dataIndex) ? dataIndex.join('_') : dataIndex
+export const getColumnId = (column: Pick<ColumnDefinition<any>, 'id' | 'dataIndex'>): string => (
+  column.id ?? (Array.isArray(column.dataIndex) ? column.dataIndex.join('_') : column.dataIndex)
 );
+
+/**
+ * Give every column a distinct id. DataTable keys columns (cells, sizing, sorting, visibility)
+ * by id, so two columns sharing one would otherwise render the first column's cell twice.
+ * Later duplicates get `<id>__2`, `<id>__3`, …; returns the input array when nothing collides.
+ */
+export const withUniqueColumnIds = <T,>(columns: ColumnDefinition<T>[]): ColumnDefinition<T>[] => {
+  const seen = new Map<string, number>();
+  let changed = false;
+  const result = columns.map((column) => {
+    const baseId = getColumnId(column);
+    const count = (seen.get(baseId) ?? 0) + 1;
+    seen.set(baseId, count);
+    if (count === 1) return column;
+    changed = true;
+    let candidate = `${baseId}__${count}`;
+    while (seen.has(candidate)) candidate = `${candidate}_`;
+    seen.set(candidate, 1);
+    return { ...column, id: candidate };
+  });
+  return changed ? result : columns;
+};
 
 // Percent widths are resolved against the measured container width (percentBase) so a table
 // whose columns sum to 100% always fits its container. percentScale normalizes declared
@@ -89,7 +111,7 @@ export const getColumnSizeConfig = (
   column: ColumnDefinition<any>,
   layout: ColumnLayoutContext = DEFAULT_COLUMN_LAYOUT
 ): { size: number; minSize: number; maxSize: number } => {
-  const columnId = getColumnId(column.dataIndex);
+  const columnId = getColumnId(column);
   const isPercentWidth = getPercentWidth(column.width) !== undefined;
   const parsedWidth = parseColumnWidth(column.width, layout);
   const titleLength = typeof column.title === 'string' ? column.title.length : 12;
@@ -153,12 +175,12 @@ export const computeColumnFit = (
   containerWidth: number,
   layout: ColumnLayoutContext
 ): ColumnFitResult => {
-  const allColumnIds = columns.map(col => getColumnId(col.dataIndex));
+  const allColumnIds = columns.map(col => getColumnId(col));
 
   // Check if the last column is an actions column with interactive elements. Detect by column
   // id, with the title check kept as a fallback (titles are localized, ids are not).
   const lastColumn = columns[columns.length - 1];
-  const lastColumnId = lastColumn ? getColumnId(lastColumn.dataIndex) : '';
+  const lastColumnId = lastColumn ? getColumnId(lastColumn) : '';
   const isActionsColumn = !!lastColumn && (
     lastColumnId === 'actions' || lastColumnId === 'action' ||
     ((lastColumn.title === 'Actions' || lastColumn.title === 'Action') && lastColumn.render !== undefined)
@@ -190,7 +212,7 @@ export const computeColumnFit = (
   const sizeOverrides: Record<string, number> = {};
   let usedWidth = 0;
   for (const col of prioritizedColumns) {
-    const colId = getColumnId(col.dataIndex);
+    const colId = getColumnId(col);
     const { size, minSize } = getColumnSizeConfig(col, layout);
     if (visible.size > 0 && usedWidth + size > containerWidth) {
       // The column doesn't fit at its preferred size, but if it can shrink into the

@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import { ActivityIndicator, KeyboardAvoidingView, Modal, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "../../../ui/ThemeContext";
-import { searchTagSuggestions, type TagSuggestion } from "../../../api/tags";
+import { searchTagSuggestions, type TagEntityType, type TagSuggestion } from "../../../api/tags";
 import type { ApiClient } from "../../../api/client";
 import { getTagChipColors } from "../../../ui/tagColors";
 import { PrimaryButton } from "../../../ui/components/PrimaryButton";
@@ -17,6 +17,7 @@ export function TagPickerModal({
   client,
   apiKey,
   ticketUpdate = true,
+  entityType = "ticket",
 }: {
   visible: boolean;
   updating: boolean;
@@ -27,6 +28,8 @@ export function TagPickerModal({
   client: ApiClient | null;
   apiKey: string;
   ticketUpdate?: boolean;
+  /** Which entity's tag vocabulary to suggest from; tags are per entity type. */
+  entityType?: TagEntityType;
 }) {
   const { mode, colors, spacing, typography } = useTheme();
   const { t } = useTranslation("tickets");
@@ -52,6 +55,7 @@ export function TagPickerModal({
         apiKey,
         search: query,
         limit: 50,
+        entityType,
         signal: controller.signal,
       });
       if (controller.signal.aborted) return;
@@ -71,7 +75,7 @@ export function TagPickerModal({
         setLoading(false);
       }
     }
-  }, [client, apiKey, t]);
+  }, [client, apiKey, entityType, t]);
 
   useEffect(() => {
     if (visible) {

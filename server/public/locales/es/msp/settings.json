@@ -58,8 +58,22 @@
     },
     "clients": {
       "title": "Su empresa",
-      "help": "El cliente marcado como su empresa es su propia organización. Su nombre, dirección y logotipo aparecen en facturas, cotizaciones y comunicaciones dirigidas a los clientes.",
+      "help": "El cliente marcado como su empresa es su propia organización. Su nombre, dirección y logotipo aparecen en facturas, cotizaciones y comunicaciones dirigidas a los clientes, y el país de su ubicación define el formato de fecha y el país preseleccionado en los registros nuevos.",
       "currentDefault": "Actualmente su empresa es {{name}}.",
+      "defaults": {
+        "title": "Lo que define su empresa",
+        "intro": "El país de la ubicación de {{name}} define lo siguiente para todo el equipo en la aplicación MSP:",
+        "country": "Los nuevos clientes, contactos y ubicaciones preseleccionan {{country}}.",
+        "countryMissing": "Los nuevos clientes, contactos y ubicaciones no preseleccionan ningún país.",
+        "phoneCode": "Los teléfonos comienzan con el prefijo {{code}}.",
+        "phoneCodeMissing": "Los teléfonos comienzan sin prefijo.",
+        "dateFormat": "Las fechas se escriben {{pattern}} — {{example}} — con reloj de {{clock}}.",
+        "clock12": "12 horas",
+        "clock24": "24 horas",
+        "noCountry": "{{name}} no tiene país en su ubicación, por lo que las tres opciones vuelven al valor predeterminado {{pattern}}. Agregue una ubicación con país a {{name}} para cambiarlas: no existe una opción aparte para el formato de fecha.",
+        "portalNote": "En el portal de clientes las fechas se muestran en el formato del propio cliente, tomado del país de su ubicación y no del suyo.",
+        "changeIntro": "Cambiar a {{name}} también modifica estos valores predeterminados:"
+      },
       "yourCompanyBadge": "Su empresa",
       "table": {
         "name": "Nombre",
@@ -97,6 +111,18 @@
         "setDefaultClient": "Error al establecer el cliente predeterminado",
         "loadClients": "Error al cargar los clientes"
       }
+    }
+  },
+  "dashboardWelcome": {
+    "label": "Usar el nombre de su empresa en el saludo del panel",
+    "help": "Desactivado de forma predeterminada: el panel MSP muestra «Bienvenido a su centro de mando MSP». Al activarlo, aparece el nombre del cliente marcado como su empresa. Este interruptor se guarda por separado y de inmediato.",
+    "noCompany": "Todavía no hay ningún cliente marcado como su empresa. Elija uno en Configuración → General para que su nombre pueda aparecer aquí.",
+    "previewLabel": "Su equipo verá:",
+    "preview": "Bienvenido al centro de mando de {{companyName}}",
+    "previewDefault": "Bienvenido a su centro de mando MSP",
+    "messages": {
+      "saved": "Saludo del panel actualizado",
+      "saveFailed": "No se pudo actualizar el saludo del panel"
     }
   },
   "experimentalFeatures": {
@@ -365,6 +391,7 @@
         "emailAlreadyExists": "Ya existe un usuario con esta dirección de correo electrónico",
         "reportsToSelf": "Un usuario no puede reportarse a sí mismo",
         "reportsToCycle": "Esto crearía una cadena de reporte circular",
+        "invalidTimezone": "Elige una zona horaria basada en una ciudad, como America/New_York.",
         "permissionDenied": "No tiene permiso para cambiar los roles de usuario.",
         "invalidCapacity": "La capacidad semanal debe ser un número positivo.",
         "invalidWorkSchedule": "El horario laboral debe ser un intervalo válido que termine después de comenzar."
@@ -1229,6 +1256,7 @@
         "followThemeActive": "Los colores de abajo se conservan, pero no se aplican mientras el portal siga el tema de la organización."
       },
       "cropHelp": "Arrastre y haga zoom para elegir la parte que se muestra en el panel lateral del portal y en todos los marcos circulares. Su logotipo ancho no cambia.",
+      "cropHelpFromSquare": "Arrastre y haga zoom para elegir la parte que se muestra en el panel lateral del portal y en todos los marcos circulares. Solo se modifica la marca, por lo que puede volver a ajustarla más adelante.",
       "heroGradient": {
         "primaryShades": "Color primario a tono primario",
         "primarySecondary": "Color primario a color secundario"
@@ -1502,6 +1530,11 @@
       "description": "Suba su logotipo una vez. Sustituye la marca de Alga en el menú lateral MSP, y el portal de clientes usa las mismas imágenes.",
       "logoHelp": "La marca cuadrada se usa dondequiera que el espacio sea cuadrado: el menú lateral contraído y los marcos circulares. Si suelta un logotipo ancho en un espacio cuadrado, elige qué parte se convierte en la marca; una vez subido un logotipo ancho, también puede recortar la marca directamente de él. El logotipo ancho opcional sustituye a la marca y al nombre en el menú lateral expandido, así que suba uno que ya incluya el nombre de su empresa. El menú lateral se adapta a su propio fondo: usa las variantes para fondos oscuros cuando el menú es oscuro y las claras cuando es claro, y recurre a la variante que haya subido.",
       "cropHelp": "Arrastre y haga zoom para elegir la parte que se muestra en el menú lateral contraído y en todos los marcos circulares. Su logotipo ancho no cambia.",
+      "cropHelpFromSquare": "Arrastre y ajuste el zoom para elegir la parte que se muestra en el menú lateral contraído y en todos los marcos circulares. Solo se modifica la marca, por lo que puede volver a ajustarla más adelante.",
+      "linkDocument": {
+        "title": "Usar una imagen subida",
+        "description": "Seleccione una imagen que ya haya subido a Documentos. El documento original se conserva sin cambios."
+      },
       "fields": {
         "mark": "Marca cuadrada",
         "markDark": "Marca cuadrada para fondos oscuros",
@@ -2359,6 +2392,11 @@
       "updateFailed": "No se pudo actualizar el rol",
       "validateDeletionFailed": "No se pudo validar la eliminación. Inténtelo de nuevo.",
       "deleteFailed": "No se pudo eliminar el rol"
+    },
+    "editDialog": {
+      "title": "Editar rol",
+      "builtInNameLocked": "Los nombres de los roles integrados no se pueden cambiar porque el sistema depende de ellos.",
+      "portalLocked": "El acceso al portal no se puede cambiar después de crear un rol."
     }
   },
   "security": {
@@ -3413,7 +3451,10 @@
       "duplicate": "Ese usuario ya tiene el rol seleccionado.",
       "changePermission": "Permiso denegado: no tiene permiso para cambiar los roles de usuario.",
       "missingField": "Falta un campo obligatorio del rol de usuario.",
-      "missingFieldNamed": "Falta un campo obligatorio del rol de usuario: {{field}}."
+      "missingFieldNamed": "Falta un campo obligatorio del rol de usuario: {{field}}.",
+      "nameRequired": "El nombre del rol es obligatorio.",
+      "builtInRename": "Los roles integrados no se pueden renombrar.",
+      "duplicateName": "Ya existe un rol llamado «{{name}}» para este portal."
     },
     "secrets": {
       "tenantContextMissing": "Falta el contexto del inquilino. Actualice la página e inténtelo de nuevo.",
@@ -3438,6 +3479,7 @@
       "missingField": "Falta un campo obligatorio de la configuración del inquilino.",
       "missingFieldNamed": "Falta un campo obligatorio de la configuración del inquilino: {{field}}.",
       "invalidTimezone": "Zona horaria no válida: {{timezone}}",
+      "nonLocationTimezone": "{{timezone}} no es una zona horaria basada en una ciudad. Elige una zona como America/New_York.",
       "permissions": {
         "clearOnboarding": "Permiso denegado: solo los administradores pueden borrar los datos de incorporación.",
         "update": "Permiso denegado: no se puede actualizar la configuración",

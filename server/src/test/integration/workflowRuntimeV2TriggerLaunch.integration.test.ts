@@ -234,8 +234,10 @@ describe('workflow runtime v2 trigger validation and Temporal launch integration
     expect((run as any)?.trigger_mapping_applied).toBe(true);
     expect(run?.engine).toBe('temporal');
     expect(run?.status).toBe('RUNNING');
+    // Event-triggered launches have no one waiting, so they keep the client's default connect timeout.
     expect(startWorkflowRuntimeV2TemporalRunMock).toHaveBeenCalledWith(
-      expect.objectContaining({ runId, workflowId })
+      expect.objectContaining({ runId, workflowId }),
+      { connectTimeoutMs: undefined }
     );
   });
 

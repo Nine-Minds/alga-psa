@@ -78,6 +78,7 @@ import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorizatio
 import { createTicketRelationshipSqlAdapter } from '../lib/ticketAuthorizationSql';
 import { ticketSlaBreachedBindings, ticketSlaBreachedSql } from '../lib/ticketSlaSql';
 import { getClientContactVisibilityContext } from '../lib/clientPortalVisibility.server';
+import { extractActiveWatcherContactIds } from '@alga-psa/authorization/portal/visibility';
 import { buildTicketTransitionWorkflowEvents } from '../lib/workflowTicketTransitionEvents';
 import { buildTicketCommunicationWorkflowEvents } from '../lib/workflowTicketCommunicationEvents';
 import { buildTicketResolutionSlaStageCompletionEvent } from '../lib/workflowTicketSlaStageEvents';
@@ -97,7 +98,7 @@ import {
   TICKET_STATUS_FILTER_OPEN,
 } from '../lib/ticketStatusFilter';
 import { ticketActionErrorFrom, type TicketActionError } from './ticketActionErrors';
-import { resolveTicketListSortSpec } from './ticketListSortSql';
+import { resolveTicketListSortSpec, TICKET_LATEST_ACTIVITY_SQL } from './ticketListSortSql';
 import { actionError, permissionError } from '@alga-psa/ui/lib/errorHandling';
 import { scheduleJobAt as scheduleBackgroundJobAt } from '@alga-psa/core';
 import { authorizeAndRedactDocuments } from '@shared/lib/documentAuthorization';
@@ -226,6 +227,9 @@ function toTicketAuthorizationRecord(
     clientId: ticket.client_id ?? null,
     boardId: ticket.board_id ?? null,
     contactId: ticket.contact_name_id ?? null,
+    // `undefined` (column not selected) can never satisfy a profile grant.
+    billingProfileId: ticket.billing_profile_id,
+    watcherContactIds: extractActiveWatcherContactIds(ticket.attributes),
     teamIds: ticket.assigned_team_id ? [ticket.assigned_team_id] : [],
   };
 }
@@ -461,6 +465,7 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
         't.*',
         's.name as status_name',
         's.is_closed',
+        'src.ticket_number as duplicated_from_ticket_number',
         'cl.location_id as location_location_id',
         'cl.location_name',
         'cl.address_line1',
@@ -481,6 +486,7 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
       );
     tenantLeftJoin(trx, tenant, ticketQuery, 'statuses as s', 't.status_id', 's.status_id');
     tenantLeftJoin(trx, tenant, ticketQuery, 'client_locations as cl', 't.location_id', 'cl.location_id');
+    tenantLeftJoin(trx, tenant, ticketQuery, 'tickets as src', 't.duplicated_from_ticket_id', 'src.ticket_id');
     const ticket = await ticketQuery
       .where({ 't.ticket_id': ticketId })
       .first();
@@ -992,7 +998,9 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
         'ct.entered_by',
         'ct.assigned_to',
         'ct.board_id',
-        'ct.assigned_team_id'
+        'ct.assigned_team_id',
+        'ct.billing_profile_id',
+        'ct.attributes'
       );
     tenantLeftJoin(trx, tenant, rawBundleChildrenQuery, 'clients as comp', 'ct.client_id', 'comp.client_id');
     const rawBundleChildren = await rawBundleChildrenQuery
@@ -1015,7 +1023,9 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
           'mt.entered_by',
           'mt.assigned_to',
           'mt.board_id',
-          'mt.assigned_team_id'
+          'mt.assigned_team_id',
+          'mt.billing_profile_id',
+          'mt.attributes'
         );
         tenantLeftJoin(trx, tenant, masterQuery, 'clients as comp', 'mt.client_id', 'comp.client_id');
         return masterQuery
@@ -1024,9 +1034,20 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
       })()
       : null;
 
-    const bundleChildren = await filterAuthorizedTickets(trx, authorizationContext, rawBundleChildren);
+    // `billing_profile_id` and `attributes` (the watch list) are selected only
+    // so the visibility predicate can see them; they are not part of the bundle
+    // payload and must not reach the client.
+    const withoutAuthorizationOnlyColumns = <T extends { attributes?: unknown; billing_profile_id?: unknown }>(
+      row: T
+    ): Omit<T, 'attributes' | 'billing_profile_id'> => {
+      const { attributes: _attributes, billing_profile_id: _billingProfileId, ...rest } = row;
+      return rest;
+    };
+    const bundleChildren = (await filterAuthorizedTickets(trx, authorizationContext, rawBundleChildren))
+      .map(withoutAuthorizationOnlyColumns);
     const [bundleMaster] = rawBundleMaster
-      ? await filterAuthorizedTickets(trx, authorizationContext, [rawBundleMaster])
+      ? (await filterAuthorizedTickets(trx, authorizationContext, [rawBundleMaster]))
+          .map(withoutAuthorizationOnlyColumns)
       : [null];
 
     const isBundleChild = Boolean(masterTicketId);
@@ -1870,7 +1891,7 @@ function buildTicketListItemsQuery(
       't.board_id', 't.client_id', 't.location_id', 't.contact_name_id',
       't.status_id', 't.category_id', 't.subcategory_id', 't.priority_id',
       't.entered_by', 't.updated_by', 't.closed_by',
-      't.assigned_to', 't.assigned_team_id',
+      't.assigned_to', 't.assigned_team_id', 't.billing_profile_id',
       't.entered_at', 't.updated_at', 't.closed_at', 't.due_date',
       't.is_closed', 't.attributes',
       't.master_ticket_id', 't.tenant',
@@ -1903,6 +1924,9 @@ function buildTicketListItemsQuery(
       // Additional agents from pre-aggregated JOIN
       trx.raw('COALESCE(ags.additional_agent_count, 0)::int as additional_agent_count'),
       trx.raw("COALESCE(ags.additional_agents, '[]'::json) as additional_agents"),
+      // Same expression the latest_activity_at sort orders by, so the column
+      // renders exactly the value the ordering used.
+      trx.raw(`${TICKET_LATEST_ACTIVITY_SQL} as latest_activity_at`),
     );
 }
 
@@ -1929,6 +1953,7 @@ function mapTicketListItems(tickets: any[]): ITicketListItem[] {
       bundle_open_child_count,
       bundle_distinct_client_count,
       bundle_master_ticket_number,
+      latest_activity_at,
       // NOTE: Legacy ITIL fields removed - now using unified system
       ...rest
     } = ticket;
@@ -1968,7 +1993,10 @@ function mapTicketListItems(tickets: any[]): ITicketListItem[] {
       bundle_child_count: typeof bundle_child_count === 'number' ? bundle_child_count : Number.parseInt(String(bundle_child_count ?? '0'), 10) || 0,
       bundle_open_child_count: typeof bundle_open_child_count === 'number' ? bundle_open_child_count : Number.parseInt(String(bundle_open_child_count ?? '0'), 10) || 0,
       bundle_distinct_client_count: typeof bundle_distinct_client_count === 'number' ? bundle_distinct_client_count : Number.parseInt(String(bundle_distinct_client_count ?? '0'), 10) || 0,
-      bundle_master_ticket_number: bundle_master_ticket_number ?? null
+      bundle_master_ticket_number: bundle_master_ticket_number ?? null,
+      latest_activity_at: latest_activity_at instanceof Date
+        ? latest_activity_at.toISOString()
+        : latest_activity_at ?? null
     };
   });
 }
@@ -2226,7 +2254,7 @@ export const getAllMatchingTicketIds = withAuth(async (
               .clone()
               .clearSelect()
               .clearOrder()
-              .select('t.ticket_id', 't.entered_by', 't.assigned_to', 't.client_id', 't.contact_name_id', 't.board_id', 't.assigned_team_id')
+              .select('t.ticket_id', 't.entered_by', 't.assigned_to', 't.client_id', 't.contact_name_id', 't.board_id', 't.assigned_team_id', 't.billing_profile_id', 't.attributes')
           );
 
       const ticketIds: Array<string | null | undefined> = rows.map((row: { ticket_id?: string | null }) => row.ticket_id);
@@ -2361,7 +2389,7 @@ export const getTicketBoardIds = withAuth(async (
             authorizationContext,
             await tenantScopedTable(trx, 'tickets as t', tenant)
               .whereIn('t.ticket_id', uniqueIds)
-              .select('t.ticket_id', 't.entered_by', 't.assigned_to', 't.client_id', 't.contact_name_id', 't.board_id', 't.assigned_team_id')
+              .select('t.ticket_id', 't.entered_by', 't.assigned_to', 't.client_id', 't.contact_name_id', 't.board_id', 't.assigned_team_id', 't.billing_profile_id', 't.attributes')
           );
 
       return rows
@@ -3952,7 +3980,7 @@ export const getAdjacentTicketIds = withAuth(async (
     }
 
     const orderedRows = await applyTicketListSort(
-      baseQuery.clone().clearSelect().select('t.ticket_id', 't.ticket_number', 't.entered_by', 't.assigned_to', 't.client_id', 't.contact_name_id', 't.board_id', 't.assigned_team_id'),
+      baseQuery.clone().clearSelect().select('t.ticket_id', 't.ticket_number', 't.entered_by', 't.assigned_to', 't.client_id', 't.contact_name_id', 't.board_id', 't.assigned_team_id', 't.billing_profile_id', 't.attributes'),
       validatedFilters
     );
     const authorizedRows = await filterAuthorizedTickets(trx, authorizationContext, orderedRows);

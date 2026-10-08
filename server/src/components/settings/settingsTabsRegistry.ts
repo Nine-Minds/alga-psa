@@ -46,7 +46,8 @@ export const SETTINGS_TABS: readonly SettingsTabMeta[] = [
   { id: 'secrets', labelKey: 'tabs.secrets', title: 'Secrets', hasOwnRoute: true },
   { id: 'import-export', labelKey: 'tabs.importExport', title: 'Imports & Exports', hasOwnRoute: true },
   { id: 'email', labelKey: 'tabs.email', title: 'Email', hasOwnRoute: true },
-  { id: 'integrations', labelKey: 'tabs.integrations', title: 'Integrations', requiredFeature: TIER_FEATURES.INTEGRATIONS, hasOwnRoute: true },
+  // Email app setup is included on every tier; paid integrations are gated inside the page.
+  { id: 'integrations', labelKey: 'tabs.integrations', title: 'Integrations', hasOwnRoute: true },
   { id: 'extensions', labelKey: 'tabs.extensions', title: 'Extensions', requiredFeature: TIER_FEATURES.EXTENSIONS },
   {
     id: 'mcp-server',

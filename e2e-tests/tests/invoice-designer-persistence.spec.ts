@@ -77,17 +77,21 @@ test('an administrator authors a billed-time date sort and reopens its persisted
   await page.locator('#designer-palette-add-totals').click();
   await page.getByRole('button', { name: 'PRESETS', exact: true }).click();
   await page.locator('#designer-palette-add-preset-billed-time-by-ticket').click();
-  await page.getByRole('button', { name: 'OUTLINE', exact: true }).click();
-  await page.getByText('Entries in this ticket group', { exact: true }).and(page.locator('span')).click();
+  // The outline stays open under the palette while blocks are added.
+  await expect(page.locator('#designer-outline-toggle')).toHaveAttribute('aria-expanded', 'true');
+  await page.getByRole('tree', { name: 'Outline' }).getByText('Entries in this ticket group', { exact: true }).click();
   await expect(page.locator('#designer-table-source-binding')).toContainText('group.entries');
   await page.locator('#designer-add-column-preset-entry-title').click();
   await page.locator('#save-template-button').click();
-  await expect(page).not.toHaveURL(/templateId=/);
+  // Saving keeps the author in the editor; the URL takes the new layout's id so a
+  // reload reopens it instead of a blank layout.
+  await expect(page).toHaveURL(/templateId=[0-9a-f-]{36}/);
 
   // The operation under test saves through the application; SQL only verifies
   // its durable result. No template or completed layout is seeded by this test.
   const saved = await database('invoice_templates').where({ tenant: tenant.tenantId, name }).first();
   expect(saved).toBeTruthy();
+  expect(new URL(page.url()).searchParams.get('templateId')).toBe(saved.template_id);
   expect(saved.templateAst.transforms).toMatchObject({
     sourceBindingId: 'timeEntries', outputBindingId: outputBinding,
     operations: [{ type: 'sort', keys: [{ path: 'date', direction: 'desc' }] }],
@@ -102,7 +106,10 @@ test('an administrator authors a billed-time date sort and reopens its persisted
   expect(saved.templateAst.bindings.collections[nestedTable.repeat.sourceBinding.bindingId].path).toBe('group.entries');
   expect(nestedTable.columns).toHaveLength(6);
   const primaryTable = tables.find(table => table.id !== detailTable.id && table.id !== nestedTable.id);
-  expect(primaryTable.repeat.sourceBinding.bindingId).toContain('items');
+  // The charges table binds under the document catalog's canonical id, the same
+  // one shipped templates use, and that binding still reads the invoice items.
+  expect(primaryTable.repeat.sourceBinding.bindingId).toBe('lineItems');
+  expect(saved.templateAst.bindings.collections.lineItems).toEqual({ id: 'lineItems', kind: 'collection', path: 'items' });
   expect(detailTable.columns.map((column: any) => column.value)).toEqual([
     'date', 'ticketNumber', 'title', 'hours', 'rateDisplay', 'amount',
   ].map(path => expect.objectContaining({ type: 'path', path })));
@@ -125,7 +132,15 @@ test('an administrator authors a billed-time date sort and reopens its persisted
   await page.locator('[data-automation-id="invoice-designer-design-tab"]').click();
   await page.locator(`[data-automation-id="designer-canvas-node-${detailTable.id}"]`).click();
   await expect(page.locator('#designer-table-source-binding')).toContainText(outputBinding);
-  await expect(page.locator('input[id^="column-header-"]')).toHaveCount(6);
+  // Each column reopens as a one-line summary; its editor opens on demand and
+  // carries the persisted header.
+  const columnToggles = page.locator('button[id^="designer-column-toggle-"]');
+  await expect(columnToggles).toHaveCount(6);
+  const [firstColumn] = detailTable.columns;
+  await page.locator(`#designer-column-toggle-${firstColumn.id}`).click();
+  await expect(page.locator(`#designer-column-toggle-${firstColumn.id}`)).toHaveAttribute('aria-expanded', 'true');
+  await expect(page.locator(`#column-header-${firstColumn.id}`))
+    .toHaveValue(typeof firstColumn.header === 'string' ? firstColumn.header : firstColumn.header.defaultValue);
   expect((await database('invoice_templates').where({ tenant: tenant.tenantId, template_id: saved.template_id }).first()).templateAst)
     .toEqual(persistedAst);
 
@@ -165,17 +180,20 @@ test('an administrator authors a billed-time date sort and reopens its persisted
     const readCharges = () => database('invoice_charges')
       .where({ tenant: tenant.tenantId, invoice_id: invoiceId }).orderBy('item_id');
     const charges = await readCharges();
-    expect(snapshots).toHaveLength(4);
+    // Three entries plus the overtime entry, which links twice (regular + overtime segment).
+    expect(snapshots).toHaveLength(5);
     await page.goto(`/msp/billing?tab=invoicing&subtab=drafts&invoiceId=${invoiceId}`);
     const text = await readInvoiceDownload(page, testInfo, invoice.invoice_number);
     const compact = text.replace(/\s/g, '');
-    for (const value of ['Date', 'Ticket', 'Description', 'Hours', 'Rate', 'Amount', 'Public ticket 0', 'Public ticket 1', 'Mixed rates', '$375.00', '$150.00']) {
+    for (const value of ['Date', 'Ticket', 'Description', 'Hours', 'Rate', 'Amount', 'Public ticket 0', 'Public ticket 1', '(overtime)', '$225.00', '$150.00']) {
       expect(compact).toContain(value.replace(/\s/g, ''));
     }
     expect(compact).toContain(`Total$${(Number(invoice.total_amount) / 100).toFixed(2)}`);
     const dates = text.match(/8\/\d+\/2026/g) ?? [];
-    expect(dates).toHaveLength(8); // Four flat entries and four entries scoped to ticket groups.
-    expect(dates.filter(date => date === '8/15/2026')).toHaveLength(4);
+    // Five time rows (the overtime entry is a regular + overtime pair) appear
+    // once in the flat table and once scoped to their ticket group.
+    expect(dates).toHaveLength(10);
+    expect(dates.filter(date => date === '8/15/2026')).toHaveLength(6);
     expect(dates.filter(date => date === '8/16/2026')).toHaveLength(4);
     expect(dates.some((_, index) => dates.slice(index, index + 4).join(',') === '8/16/2026,8/16/2026,8/15/2026,8/15/2026')).toBe(true);
     expect(compact).not.toContain('PRIVATE');
@@ -190,7 +208,8 @@ test('an administrator authors a billed-time date sort and reopens its persisted
             ? null : history === 'v1' ? { ...snapshot.work_item_snapshot, version: 1 } : snapshot.work_item_snapshot;
           if (history === 'fallbacks') {
             // Disclosed legacy shapes, not a claim that today's authoring UI
-            // produces orphan work. Preserve the actual mixed overtime rate.
+            // produces orphan work. A pre-split blended overtime snapshot
+            // ('mixed') keeps its rate; everything else degrades to v1.
             if (index === 0) workItemSnapshot = { ...workItemSnapshot, workItemType: 'ad_hoc',
               workItemId: null, ticketNumber: null, title: null, description: 'Frozen historical public work' };
             if (index === 1) workItemSnapshot = { ...workItemSnapshot, workItemType: 'project_task',
@@ -213,9 +232,9 @@ test('an administrator authors a billed-time date sort and reopens its persisted
               `${invoice.invoice_number}-${history}-${locale}`);
             const localized = pdfText.replace(/\s/g, '');
             const french = locale === 'fr';
-            if (history === 'current') expect(localized).toContain(french ? 'Tarifsvariables' : 'Mixedrates');
             if (history === 'v1' || history === 'fallbacks') expect(localized).toContain(french ? 'Tarifindisponible' : 'Rateunavailable');
-            expect(localized).toContain(french ? '375,00' : '$375.00');
+            // The overtime entry renders as its own $225 segment line.
+            expect(localized).toContain(french ? '225,00' : '$225.00');
             expect(localized).toContain(new Intl.NumberFormat(french ? 'fr-FR' : 'en-US', {
               minimumFractionDigits: 2, maximumFractionDigits: 2,
             }).format(Number(invoice.total_amount) / 100).replace(/\s/g, ''));
@@ -224,9 +243,6 @@ test('an administrator authors a billed-time date sort and reopens its persisted
             } else if (history === 'fallbacks') {
               expect(localized).toContain(french ? 'Autretempsfacturé' : 'Otherbilledtime');
               expect(localized).toContain(french ? 'Tâchedeprojet' : 'Projecttask');
-              // This authored template binds Description to title; legacy
-              // description is preserved in storage, not substituted for it.
-              expect(localized).toContain(french ? 'Tarifsvariables' : 'Mixedrates');
             } else {
               expect(localized).toContain('Publicticket0');
               expect(localized).toContain('Publicticket1');
@@ -239,10 +255,11 @@ test('an administrator authors a billed-time date sort and reopens its persisted
                   : 'Billed-time entry detail is unavailable for this invoice.';
               expect(localized).toContain(note.replace(/\s/g, ''));
             }
-            // Each available snapshot appears in both the flat and nested table.
-            // Missing historical detail must not be reconstructed from live work.
+            // Each of the five available snapshots appears in both the flat and
+            // nested table. Missing historical detail must not be reconstructed
+            // from live work.
             expect(pdfText.match(countryOrderedDate) ?? [])
-              .toHaveLength(history === 'none' ? 0 : history === 'partial' ? 6 : 8);
+              .toHaveLength(history === 'none' ? 0 : history === 'partial' ? 8 : 10);
             expect(localized).not.toContain('PRIVATE');
             expect(await readSnapshots()).toEqual(expectedSnapshots);
             expect(await readCharges()).toEqual(charges);
@@ -268,7 +285,8 @@ test('an administrator authors a billed-time date sort and reopens its persisted
         .where({ tenant: tenant.tenantId, invoice_id: longInvoice.invoice_id }).orderBy('invoice_time_entry_id');
       const longCharges = await database('invoice_charges')
         .where({ tenant: tenant.tenantId, invoice_id: longInvoice.invoice_id }).orderBy('item_id');
-      expect(longLinks).toHaveLength(74);
+      // 73 entries, with the overtime entry linked twice (regular + overtime segment).
+      expect(longLinks).toHaveLength(75);
       expect([...new Set(longCharges.map(charge => Number(charge.tax_rate)))].sort((a, b) => a - b)).toEqual([10, 20]);
       // 36 single-hour entries at 20%; remaining $5,925 of time at 10%.
       expect(Number(longInvoice.subtotal)).toBe(1_132_500);
@@ -284,16 +302,16 @@ test('an administrator authors a billed-time date sort and reopens its persisted
         expect(document.pages.length).toBeGreaterThan(1);
         await testInfo.attach(`long-invoice-pagination-${locale}`, {
           body: JSON.stringify({ pages: document.pages.length, invoiceId: longInvoice.invoice_id,
-            sourceEntries: longLinks.length, expectedDetailRows: 148, subtotal: longInvoice.subtotal,
+            sourceEntries: longLinks.length, expectedDetailRows: 150, subtotal: longInvoice.subtotal,
             tax: longInvoice.tax, total: longInvoice.total_amount }), contentType: 'application/json',
         });
-        expect(document.text.match(countryOrderedDate) ?? []).toHaveLength(148);
+        expect(document.text.match(countryOrderedDate) ?? []).toHaveLength(150);
         for (const pageText of document.pages.filter(text => text.match(countryOrderedDate))) {
           expect(pageText).toContain('Date');
           expect(pageText).toContain('Ticket');
         }
         const compact = document.text.replace(/\s/g, '');
-        expect(compact).toContain(locale === 'fr' ? 'Tarifsvariables' : 'Mixedrates');
+        expect(compact).toContain(locale === 'fr' ? '225,00' : '$225.00');
         expect(compact).toContain(new Intl.NumberFormat(locale === 'fr' ? 'fr-FR' : 'en-US', {
           minimumFractionDigits: 2, maximumFractionDigits: 2,
         }).format(Number(longInvoice.total_amount) / 100).replace(/\s/g, ''));
@@ -314,7 +332,8 @@ test('an administrator authors a billed-time date sort and reopens its persisted
       const readTaskCharges = () => database('invoice_charges')
         .where({ tenant: tenant.tenantId, invoice_id: taskInvoice.invoice_id }).orderBy('item_id');
       const chargesBefore = await readTaskCharges();
-      expect(links).toHaveLength(8);
+      // Four task entries plus the ticket fixture's four, with the overtime entry linked twice.
+      expect(links).toHaveLength(9);
       const taskSnapshots = links.map(link => link.work_item_snapshot).filter(snapshot => snapshot.workItemType === 'project_task');
       expect(taskSnapshots).toHaveLength(4);
       expect(new Set(taskSnapshots.map(snapshot => snapshot.workItemId))).toEqual(new Set(tasks.taskIds));
@@ -341,7 +360,7 @@ test('an administrator authors a billed-time date sort and reopens its persisted
           expect(compact).toContain(locale === 'fr' ? 'Tâchedeprojet' : 'Projecttask');
           expect(compact).toContain(locale === 'fr' ? '180,00' : '$180.00');
           expect(compact).toContain(locale === 'fr' ? '1600,50' : '1,600.50');
-          expect(text.match(countryOrderedDate) ?? []).toHaveLength(16);
+          expect(text.match(countryOrderedDate) ?? []).toHaveLength(18);
           expect(compact).not.toMatch(/PRIVATE|EDITED/);
           expect(await readTaskLinks()).toEqual(links);
           expect(await readTaskCharges()).toEqual(chargesBefore);

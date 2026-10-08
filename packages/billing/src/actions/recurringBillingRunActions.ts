@@ -26,6 +26,7 @@ import {
   USAGE_RECORDS_MISSING_MESSAGE_KEY,
   USAGE_RECORDS_MISSING_ACK_REQUIRED_MESSAGE_KEY,
   USAGE_PERIOD_TOTAL_STALE_MESSAGE_KEY,
+  RECURRING_PRICING_STALE_MESSAGE_KEY,
   USAGE_CALCULATION_ERROR_MESSAGE_KEY,
   FIXED_LINE_RATE_UNRESOLVED_MESSAGE_KEY,
   FIXED_LINE_NO_SERVICES_MESSAGE_KEY,
@@ -126,6 +127,15 @@ function handledRecurringFailureFromActionError(error: RecurringBillingRunAction
       params: error.messageParams as Record<string, string> | undefined,
     };
   }
+  // A scheduled recurring quantity/price revision (or its inherited catalog
+  // price) changed after the preview that was approved: the run reports the
+  // coded stale-pricing failure so the operator re-previews before generating.
+  if (error.messageKey === RECURRING_PRICING_STALE_MESSAGE_KEY) {
+    return {
+      code: 'RECURRING_PRICING_STALE',
+      params: error.messageParams as Record<string, string> | undefined,
+    };
+  }
   // Recorded usage the engine could not price keeps its structured
   // per-service diagnostics across the run boundary.
   if (error.messageKey === USAGE_CALCULATION_ERROR_MESSAGE_KEY) {
@@ -173,6 +183,7 @@ function normalizeRecurringBillingRunGroupedTargets(params: {
       ),
       billingCycleId: group.billingCycleId,
       expectedUsagePeriodTotals: group.expectedUsagePeriodTotals,
+      expectedRecurringPricingSources: group.expectedRecurringPricingSources,
     }))
     .filter((group) => group.selectorInputs.length > 0);
 }
@@ -349,6 +360,7 @@ export async function generateInvoicesAsRecurringBillingRun(params: {
                 allowPoOverage: params.allowPoOverage,
                 acknowledgeUnreportedUsage: params.acknowledgeUnreportedUsage,
                 expectedUsagePeriodTotals: target.expectedUsagePeriodTotals,
+                expectedRecurringPricingSources: target.expectedRecurringPricingSources,
               },
               { billingCycleId: target.billingCycleId },
             )
@@ -356,6 +368,7 @@ export async function generateInvoicesAsRecurringBillingRun(params: {
               allowPoOverage: params.allowPoOverage,
               acknowledgeUnreportedUsage: params.acknowledgeUnreportedUsage,
               expectedUsagePeriodTotals: target.expectedUsagePeriodTotals,
+              expectedRecurringPricingSources: target.expectedRecurringPricingSources,
             });
         if (isRecurringBillingRunActionError(invoice)) {
           if (isDuplicateRecurringInvoiceActionError(invoice)) {
@@ -817,6 +830,7 @@ export async function generateGroupedInvoicesAsRecurringBillingRun(params: {
                 allowPoOverage: params.allowPoOverage,
                 acknowledgeUnreportedUsage: params.acknowledgeUnreportedUsage,
                 expectedUsagePeriodTotals: group.expectedUsagePeriodTotals,
+                expectedRecurringPricingSources: group.expectedRecurringPricingSources,
               },
               { billingCycleId: group.billingCycleId },
             )
@@ -824,6 +838,7 @@ export async function generateGroupedInvoicesAsRecurringBillingRun(params: {
               allowPoOverage: params.allowPoOverage,
               acknowledgeUnreportedUsage: params.acknowledgeUnreportedUsage,
               expectedUsagePeriodTotals: group.expectedUsagePeriodTotals,
+              expectedRecurringPricingSources: group.expectedRecurringPricingSources,
             });
         if (isRecurringBillingRunActionError(invoice)) {
           if (isDuplicateRecurringInvoiceActionError(invoice)) {

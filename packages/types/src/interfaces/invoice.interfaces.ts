@@ -2,7 +2,12 @@ import type { DateValue, ISO8601String } from '../lib/temporal';
 import { TenantEntity } from './index';
 import { WasmInvoiceViewModel as RendererInvoiceViewModel, WasmInvoiceViewModel } from '../lib/invoice-renderer/types'; // Import the correct ViewModel
 import type { TemplateAst } from '../lib/invoice-template-ast';
-import type { BillingProfileSource, InvoiceTimeEntrySnapshot, IUsageServicePeriodStatus } from './billing.interfaces';
+import type {
+  BillingProfileSource,
+  InvoiceTimeEntrySnapshot,
+  IRecurringPricingSource,
+  IUsageServicePeriodStatus,
+} from './billing.interfaces';
 
 // Tax source types for external tax delegation
 export type TaxSource = 'internal' | 'external' | 'pending_external';
@@ -383,7 +388,8 @@ export type RecurringInvoiceFailureCode =
   | 'USAGE_CALCULATION_ERROR'
   | 'FIXED_LINE_RATE_UNRESOLVED'
   | 'FIXED_LINE_NO_SERVICES'
-  | 'USAGE_PERIOD_TOTAL_STALE';
+  | 'USAGE_PERIOD_TOTAL_STALE'
+  | 'RECURRING_PRICING_STALE';
 
 /**
  * The previewed period-total identity a caller passes back to generation so
@@ -410,6 +416,19 @@ export interface IExpectedUsagePeriodTotal {
   totalCents?: number;
 }
 
+/**
+ * Recurring pricing source bound to the obligation it priced, so preview can
+ * hand the exact reviewed revision/catalog identity back to generation.
+ */
+export interface IExpectedRecurringPricingSource extends IRecurringPricingSource {
+  clientContractLineId: string | null;
+  configId: string | null;
+  serviceId: string;
+  servicePeriodStart: ISO8601String | null;
+  servicePeriodEnd: ISO8601String | null;
+  quantity: number;
+}
+
 export type PreviewInvoiceResponse = {
   success: true;
   data: WasmInvoiceViewModel; // Use the imported ViewModel alias
@@ -425,6 +444,13 @@ export type PreviewInvoiceResponse = {
    * finalization refuses when a report or its pricing changed after preview.
    */
   expectedUsagePeriodTotals?: IExpectedUsagePeriodTotal[];
+  /**
+   * Reviewed recurring revision/catalog sources for every scheduled
+   * product/license/unit-service charge, to hand back to generation
+   * (expectedRecurringPricingSources) so finalization refuses when the revision
+   * or its inherited catalog price changed after preview.
+   */
+  expectedRecurringPricingSources?: IExpectedRecurringPricingSource[];
 } | {
   success: false;
   error: string;

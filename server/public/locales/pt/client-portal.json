@@ -332,6 +332,8 @@
     },
     "captchaRequired": "Conclua a verificação abaixo e faça login novamente.",
     "tooManyAttempts": "Muitas tentativas de login malsucedidas. Aguarde alguns minutos antes de tentar novamente.",
+    "tenantRequiredMessage": "Seu e-mail está vinculado a mais de uma organização — escolha sua organização para continuar.",
+    "tenantRequiredLink": "Escolher sua organização",
     "tenantDiscovery": {
       "title": "Encontre sua organização",
       "description": "Digite seu e-mail e enviaremos links de login para todas as organizações às quais você tem acesso.",
@@ -491,7 +493,8 @@
         "consent": "Autorizo cobranças recorrentes neste cartão para faturas finalizadas.",
         "enable": "Ativar o pagamento automático",
         "noCards": "Adicione um cartão para ativar o pagamento automático.",
-        "changeCard": "Usar este cartão para o pagamento automático"
+        "changeCard": "Usar este cartão para o pagamento automático",
+        "updateError": "Não foi possível atualizar o pagamento automático. Tente novamente."
       },
       "publicCardSetup": {
         "saved": "Cartão salvo",
@@ -609,6 +612,7 @@
       "emailAlreadyExists": "Já existe um usuário com este endereço de e-mail",
       "reportsToSelf": "Um usuário não pode reportar a si mesmo",
       "reportsToCycle": "Isto criaria uma cadeia circular de relatórios",
+      "invalidTimezone": "Escolha um fuso horário baseado em uma cidade, como America/New_York.",
       "photoUploaded": "Foto enviada com sucesso",
       "photoRemoved": "Foto removida com sucesso",
       "userNotFound": "Usuário não encontrado",
@@ -649,7 +653,8 @@
       "adjustMark": "Ajustar marca",
       "cropFromWide": "Recortar do logotipo largo",
       "recropSuccess": "Marca atualizada.",
-      "recropError": "Não foi possível atualizar a marca."
+      "recropError": "Não foi possível atualizar a marca.",
+      "fileNameLabel": "Arquivo armazenado"
     },
     "validation": {
       "clientNameRequired": "O nome do cliente é obrigatório",
@@ -729,7 +734,10 @@
       "reportsToSelf": "Um usuário não pode reportar a si mesmo",
       "reportsToCycle": "Isto criaria uma cadeia circular de relatórios",
       "createError": "Falha ao criar usuário",
-      "deleteError": "Falha ao excluir usuário"
+      "deleteError": "Falha ao excluir usuário",
+      "reportsTo": "Reporta a",
+      "noManager": "Sem gestor",
+      "reportsToHelp": "Um gestor pode ver os tickets, dispositivos e projetos das pessoas que se reportam a ele, quando o grupo de visibilidade dele está limitado aos próprios registros."
     },
     "messages": {
       "saveChanges": "Salvar alterações",
@@ -781,9 +789,22 @@
       "scopeClient": "Todos os tickets deste cliente",
       "scopeContact": "Apenas os seus próprios tickets",
       "scopeClientDescription": "Os membros veem todos os tickets deste cliente nos quadros selecionados.",
-      "scopeContactDescription": "Os membros veem apenas os tickets em que estão indicados como contato. Os administradores do cliente veem todos os tickets nos quadros selecionados, incluindo os que não têm contato.",
-      "assignmentHelp": "Atribua um grupo para limitar quadros e tickets, ou mantenha o acesso completo ao cliente.",
-      "boardHiddenFromPortal": "Oculto no portal do cliente"
+      "scopeContactDescription": "Os membros veem os tickets em que são o contato, os tickets das pessoas que se reportam a eles e os tickets que acompanham. Os administradores do cliente sempre veem tudo nos quadros selecionados, incluindo tickets sem contato.",
+      "assignmentHelp": "Atribua um grupo para limitar os quadros e o que esta pessoa vê de tickets, dispositivos e projetos, ou mantenha o acesso completo ao cliente.",
+      "boardHiddenFromPortal": "Oculto no portal do cliente",
+      "assetScopeLabel": "Visibilidade dos dispositivos",
+      "assetScopeClient": "Todos os dispositivos deste cliente",
+      "assetScopeContact": "Somente os próprios dispositivos",
+      "assetScopeClientDescription": "Os membros veem todos os dispositivos deste cliente, incluindo os não atribuídos.",
+      "assetScopeContactDescription": "Os membros veem somente os dispositivos atribuídos a eles ou às pessoas que se reportam a eles. Os dispositivos não atribuídos ficam ocultos. Os administradores do cliente sempre veem tudo.",
+      "projectScopeLabel": "Visibilidade dos projetos",
+      "projectScopeClient": "Todos os projetos deste cliente",
+      "projectScopeContact": "Somente os próprios projetos",
+      "projectScopeClientDescription": "Os membros veem todos os projetos deste cliente.",
+      "projectScopeContactDescription": "Os membros veem somente os projetos cujo contato são eles próprios ou alguém que se reporta a eles. Os projetos sem contato ficam ocultos. Os administradores do cliente sempre veem tudo.",
+      "scopeSummary": "Tickets: {{tickets}} · Dispositivos: {{devices}} · Projetos: {{projects}}",
+      "scopeSummaryAll": "Todos",
+      "scopeSummaryOwn": "Próprios"
     },
     "domain": {
       "title": "Domínio personalizado",

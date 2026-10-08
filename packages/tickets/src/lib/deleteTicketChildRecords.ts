@@ -93,6 +93,12 @@ export async function deleteTicketChildRecords(
       ),
     });
 
+  // Detach RMM alerts: rmm_alerts.ticket_id has no FK, and a dangling link
+  // makes the alert's later reset try to note against the deleted ticket.
+  await tenantScopedTable(trx, 'rmm_alerts', tenant)
+    .where({ ticket_id: ticketId })
+    .update({ ticket_id: null });
+
   // Delete ticket activity/audit log rows (CitusDB doesn't support ON DELETE
   // CASCADE). Unlike sla_audit_log, ticket_audit_logs.ticket_id is NOT NULL
   // and its FK has no ON DELETE action, so the rows must be removed before the

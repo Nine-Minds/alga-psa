@@ -67,6 +67,7 @@ export interface GenerateOccurrencesOptions {
   includeMaster?: boolean;
 }
 
+// LEVERAGE: pattern recurrence-engine — schedule entries should move onto shared/lib/recurrence
 export function generateOccurrences(
   entry: IScheduleEntry,
   start: Date,

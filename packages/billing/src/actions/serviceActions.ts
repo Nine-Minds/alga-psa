@@ -197,7 +197,7 @@ export interface CatalogPickerSearchOptions {
 
 export type CatalogPickerItem = Pick<
   IService,
-  'service_id' | 'service_name' | 'billing_method' | 'unit_of_measure' | 'unit_code' | 'item_kind' | 'sku' | 'description'
+  'service_id' | 'service_name' | 'billing_method' | 'unit_of_measure' | 'unit_code' | 'item_kind' | 'sku' | 'description' | 'product_category'
 > & {
   default_rate: number;
   /** Rate from service_prices for the requested currency (null when no currency-specific price exists). */
@@ -240,10 +240,15 @@ export const searchServiceCatalogForPicker = withAuth(async (
     }
 
     if (searchTerm) {
+      // LEVERAGE: pattern catalog-search-predicate — this service_name/description/sku/product_category
+      // ILIKE shape is duplicated in getServices (below), ServiceCatalogService.list,
+      // ProductCatalogService.list (plus barcode), and inventory's queryCatalogPickerItems.
+      // Consider a shared predicate helper once a sixth caller appears.
       base.andWhere((qb) => {
         qb.whereILike('sc.service_name', searchTerm)
           .orWhereILike('sc.description', searchTerm)
-          .orWhereILike('sc.sku', searchTerm);
+          .orWhereILike('sc.sku', searchTerm)
+          .orWhereILike('sc.product_category', searchTerm);
       });
     }
 
@@ -264,6 +269,7 @@ export const searchServiceCatalogForPicker = withAuth(async (
         'sc.item_kind as item_kind',
         'sc.sku as sku',
         'sc.description as description',
+        'sc.product_category as product_category',
         trx.raw('CAST(sc.default_rate AS FLOAT) as default_rate'),
         trx.raw('CAST(sc.cost AS FLOAT) as cost'),
         'sc.cost_currency as cost_currency'
@@ -295,6 +301,42 @@ export const searchServiceCatalogForPicker = withAuth(async (
       items: rows,
       totalCount,
     };
+  });
+});
+
+/**
+ * Catalog price per service in one currency, keyed by service id (null when the
+ * service has no price in that currency). Same source as the picker's
+ * `currency_rate`, for callers that already hold service ids — e.g. prefilling
+ * the unit rate of a per-seat service that arrived from a contract template,
+ * which is currency-neutral.
+ */
+export const getServiceCatalogRatesForCurrency = withAuth(async (
+  user,
+  { tenant },
+  serviceIds: string[],
+  currencyCode: string
+): Promise<Record<string, number | null>> => {
+  const uniqueServiceIds = Array.from(new Set(serviceIds.filter(Boolean)));
+  const result: Record<string, number | null> = Object.fromEntries(
+    uniqueServiceIds.map((serviceId) => [serviceId, null])
+  );
+  if (uniqueServiceIds.length === 0 || !currencyCode) {
+    return result;
+  }
+
+  const { knex: db } = await createTenantKnex();
+  return withTransaction(db, async (trx: Knex.Transaction) => {
+    const rows = await tenantDb(trx, tenant)
+      .table('service_prices')
+      .whereIn('service_id', uniqueServiceIds)
+      .where('currency_code', currencyCode)
+      .select('service_id', trx.raw('CAST(rate AS FLOAT) as rate')) as Array<{ service_id: string; rate: number | null }>;
+
+    for (const row of rows) {
+      result[row.service_id] = row.rate != null && row.rate > 0 ? Math.round(row.rate) : null;
+    }
+    return result;
   });
 });
 
@@ -372,7 +414,8 @@ export const getServices = withAuth(async (
               builder
                 .whereILike('sc.service_name', term)
                 .orWhereILike('sc.description', term)
-                .orWhereILike('sc.sku', term);
+                .orWhereILike('sc.sku', term)
+                .orWhereILike('sc.product_category', term);
             });
           }
 
@@ -908,6 +951,14 @@ export const deleteProductPermanently = withAuth(async (
                 .update({ service_id: null });
 
             await db.table('project_template_tasks')
+                .where({ service_id: serviceId })
+                .update({ service_id: null });
+
+            await db.table('project_phases')
+                .where({ service_id: serviceId })
+                .update({ service_id: null });
+
+            await db.table('projects')
                 .where({ service_id: serviceId })
                 .update({ service_id: null });
 

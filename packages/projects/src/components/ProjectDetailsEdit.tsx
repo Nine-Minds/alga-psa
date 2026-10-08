@@ -16,6 +16,8 @@ import UserPicker from '@alga-psa/ui/components/UserPicker';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import { TagManager } from '@alga-psa/tags/components';
 import { updateProject, getProjectStatuses } from '../actions/projectActions';
+import { getServices } from '../actions/serviceCatalogActions';
+import { timeEntryServiceChoices, type TimeEntryServiceChoice } from '@alga-psa/core';
 import { getAllUsersBasic, getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
 import { useClientIntegration } from '../context/ClientIntegrationContext';
 import { findTagsByEntityId, isTagActionError } from '@alga-psa/tags/actions';
@@ -76,6 +78,7 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
   const [contacts, setContacts] = useState<{ value: string; label: string }[]>([]);
   const [users, setUsers] = useState<IUser[]>([]);
   const [statuses, setStatuses] = useState<IStatus[]>([]);
+  const [services, setServices] = useState<TimeEntryServiceChoice[]>([]);
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [projectTags, setProjectTags] = useState<ITag[]>([]);
@@ -87,12 +90,14 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [allUsers, projectStatusesResult, projectTagsData] = await Promise.all([
+        const [allUsers, projectStatusesResult, projectTagsData, servicesResponse] = await Promise.all([
           getAllUsersBasic(),
           getProjectStatuses(),
-          initialProject.project_id ? findTagsByEntityId(initialProject.project_id, 'project') : Promise.resolve([])
+          initialProject.project_id ? findTagsByEntityId(initialProject.project_id, 'project') : Promise.resolve([]),
+          getServices(1, 999)
         ]);
         setUsers(allUsers);
+        setServices(servicesResponse.services);
         if (isActionPermissionError(projectStatusesResult)) {
           handleError(projectStatusesResult.permissionError);
           return;
@@ -175,6 +180,7 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
         status: project.status,
         budgeted_hours: budgetedHours,
         client_portal_config: project.client_portal_config,
+        service_id: project.service_id ?? null,
       });
       if (isReturnedActionError(updatedProject)) {
         handleError(getErrorMessage(updatedProject));
@@ -376,6 +382,32 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
               step="0.25" // Allow quarter-hour increments
               placeholder={t('projectEdit.budgetedHoursPlaceholder', 'Enter budgeted hours')}
             />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              {t('projectEdit.serviceLabel', 'Default Service (for time entries)')}
+            </label>
+            <CustomSelect
+              id="project-service-select"
+              value={project.service_id || ''}
+              onValueChange={(value) => {
+                setProject(prev => ({ ...prev, service_id: value || null }));
+                setHasChanges(true);
+                clearErrorIfSubmitted();
+              }}
+              options={[
+                { value: '', label: t('projectEdit.noService', 'No service') },
+                ...timeEntryServiceChoices(services, project.service_id).map((service): SelectOption => ({
+                  value: service.service_id,
+                  label: service.service_name
+                }))
+              ]}
+              placeholder={t('projectEdit.servicePlaceholder', 'Select default service')}
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              {t('projectEdit.serviceHelp', 'Used for time entries on this project when neither the task nor its phase sets a service.')}
+            </p>
           </div>
 
           <div>

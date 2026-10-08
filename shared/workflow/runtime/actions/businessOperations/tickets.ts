@@ -23,33 +23,27 @@ import {
   attachDocumentToTicket,
   type TenantTxContext,
 } from './shared';
-import { withWorkflowJsonSchemaMetadata } from '../../jsonSchemaMetadata';
+import {
+  WORKFLOW_COMMENT_VISIBILITY_LABELS,
+  withWorkflowExplicitChoice,
+  withWorkflowJsonSchemaMetadata,
+  withWorkflowPicker,
+  withWorkflowNotFoundPolicy,
+} from '../../jsonSchemaMetadata';
+import { orderTicketCommentsNewestFirst, whereCustomerAuthoredComment } from './ticketComments';
 
-const WORKFLOW_PICKER_HINTS = {
-  board: 'Search boards',
-  client: 'Search clients',
-  contact: 'Search contacts',
-  'ticket-status': 'Search statuses',
-  'ticket-priority': 'Search priorities',
-  user: 'Search users',
-  'user-or-team': 'Search users or teams',
-  'ticket-category': 'Search categories',
-  'ticket-subcategory': 'Search subcategories',
-  'client-location': 'Search locations',
-} as const;
-
-const withWorkflowPicker = <T extends z.ZodTypeAny>(
-  schema: T,
-  description: string,
-  kind: keyof typeof WORKFLOW_PICKER_HINTS,
-  dependencies?: string[]
-): T =>
-  withWorkflowJsonSchemaMetadata(schema, description, {
-    'x-workflow-picker-kind': kind,
-    'x-workflow-picker-dependencies': dependencies,
-    'x-workflow-picker-fixed-value-hint': WORKFLOW_PICKER_HINTS[kind],
-    'x-workflow-picker-allow-dynamic-reference': true,
-  });
+/**
+ * A comment's visibility. The runtime still defaults to public when it's left out (existing
+ * workflows keep their behavior), but the designer asks the author to choose: a public comment is
+ * shown to the customer, so it should never be picked for them.
+ */
+const commentVisibilityChoice = () =>
+  withWorkflowExplicitChoice(
+    z.enum(['public', 'internal']).default('public'),
+    'Who can see this comment',
+    'Who can see this comment?',
+    WORKFLOW_COMMENT_VISIBILITY_LABELS
+  );
 
 const workflowTicketAssignmentPrimaryTypeSchema = z.enum(['user', 'team', 'queue']);
 
@@ -110,6 +104,12 @@ const buildWorkflowTicketAssignmentSchema = ({
     }
   });
 };
+
+// The designer edits assignment with one picker (user or team) instead of nested primary/type/id fields.
+const withTicketAssignmentEditor = <T extends z.ZodTypeAny>(schema: T, description: string): T =>
+  withWorkflowJsonSchemaMetadata(schema, description, {
+    'x-workflow-editor': { kind: 'custom', custom: { component: 'ticket-assignment' } },
+  });
 
 const uniqueStrings = (values: string[]): string[] => Array.from(new Set(values));
 
@@ -516,9 +516,10 @@ export function registerTicketActions(): void {
         ['board_id']
       ),
       priority_id: withWorkflowPicker(uuidSchema, 'Priority id', 'ticket-priority'),
-      assignment: buildWorkflowTicketAssignmentSchema({
-        dependencyPrefix: 'assignment'
-      }).optional().describe('Ticket assignment configuration'),
+      assignment: withTicketAssignmentEditor(
+        buildWorkflowTicketAssignmentSchema({ dependencyPrefix: 'assignment' }).optional(),
+        'Ticket assignment configuration'
+      ),
       category_id: withWorkflowPicker(
         uuidSchema.nullable().optional(),
         'Category id',
@@ -536,7 +537,7 @@ export function registerTicketActions(): void {
       attributes: z.record(z.unknown()).optional().describe('Additional attributes (merged into ticket.attributes)'),
       initial_comment: z.object({
         body: z.string().min(1).describe('Initial comment body'),
-        visibility: z.enum(['public', 'internal']).default('public').describe('Comment visibility')
+        visibility: commentVisibilityChoice()
       }).optional().describe('Optional initial comment'),
       attachments: z.array(z.object({
         source: attachmentSourceSchema,
@@ -546,12 +547,12 @@ export function registerTicketActions(): void {
       idempotency_key: z.string().optional().describe('Optional external idempotency key')
     }),
     outputSchema: z.object({
-      ticket_id: uuidSchema,
+      ticket_id: withWorkflowPicker(uuidSchema, 'Ticket id', 'ticket'),
       ticket_number: z.string(),
       url: z.string().nullable(),
       created_at: isoDateTimeSchema,
-      status_id: uuidSchema,
-      priority_id: uuidSchema
+      status_id: withWorkflowPicker(uuidSchema, 'Status id', 'ticket-status'),
+      priority_id: withWorkflowPicker(uuidSchema, 'Priority id', 'ticket-priority')
     }),
     sideEffectful: true,
     idempotency: { mode: 'actionProvided', key: actionProvidedKey },
@@ -606,6 +607,7 @@ export function registerTicketActions(): void {
 
       let created: any;
       try {
+        // LEVERAGE: pattern ticket-create-composition — creates a ticket then composes assets/agents/team/tags/checklist/activity/events by hand; see createTicketWithSideEffects (packages/tickets/src/lib/createTicketWithSideEffects.ts)
         created = await TicketModel.createTicket(
           {
             title: input.title,
@@ -700,9 +702,9 @@ export function registerTicketActions(): void {
     id: 'tickets.add_comment',
     version: 1,
     inputSchema: z.object({
-      ticket_id: uuidSchema.describe('Ticket id'),
+      ticket_id: withWorkflowPicker(uuidSchema, 'Ticket id', 'ticket'),
       body: z.string().min(1).describe('Comment body'),
-      visibility: z.enum(['public', 'internal']).default('public').describe('Comment visibility'),
+      visibility: commentVisibilityChoice(),
       mentions: z.array(z.string().min(1)).optional().describe('Optional mentioned user ids (or @everyone)'),
       attachments: z.array(z.object({
         source: attachmentSourceSchema,
@@ -779,7 +781,7 @@ export function registerTicketActions(): void {
     id: 'tickets.update_fields',
     version: 1,
     inputSchema: z.object({
-      ticket_id: uuidSchema.describe('Ticket id'),
+      ticket_id: withWorkflowPicker(uuidSchema, 'Ticket id', 'ticket'),
       patch: z.object({
         status_id: withWorkflowPicker(
           uuidSchema.optional(),
@@ -792,9 +794,10 @@ export function registerTicketActions(): void {
           'New priority id',
           'ticket-priority'
         ),
-        assignment: buildWorkflowTicketAssignmentSchema({
-          dependencyPrefix: 'patch.assignment'
-        }).optional().describe('Atomic assignment replacement'),
+        assignment: withTicketAssignmentEditor(
+          buildWorkflowTicketAssignmentSchema({ dependencyPrefix: 'patch.assignment' }).optional(),
+          'Atomic assignment replacement'
+        ),
         title: z.string().min(1).optional().describe('New title'),
         category_id: withWorkflowPicker(
           uuidSchema.nullable().optional(),
@@ -822,10 +825,10 @@ export function registerTicketActions(): void {
       idempotency_key: z.string().optional().describe('Optional external idempotency key')
     }),
     outputSchema: z.object({
-      ticket_id: uuidSchema,
+      ticket_id: withWorkflowPicker(uuidSchema, 'Ticket id', 'ticket'),
       updated_at: isoDateTimeSchema,
-      status_id: uuidSchema.nullable(),
-      priority_id: uuidSchema.nullable(),
+      status_id: withWorkflowPicker(uuidSchema.nullable(), 'Status id', 'ticket-status'),
+      priority_id: withWorkflowPicker(uuidSchema.nullable(), 'Priority id', 'ticket-priority'),
       tags: z.array(z.string()).nullable()
     }),
     sideEffectful: true,
@@ -1011,11 +1014,11 @@ export function registerTicketActions(): void {
     id: 'tickets.assign',
     version: 1,
     inputSchema: z.object({
-      ticket_id: uuidSchema.describe('Ticket id'),
-      assignment: buildWorkflowTicketAssignmentSchema({
-        dependencyPrefix: 'assignment',
-        requirePrimary: true,
-      }).describe('Ticket assignment configuration'),
+      ticket_id: withWorkflowPicker(uuidSchema, 'Ticket id', 'ticket'),
+      assignment: withTicketAssignmentEditor(
+        buildWorkflowTicketAssignmentSchema({ dependencyPrefix: 'assignment', requirePrimary: true }),
+        'Ticket assignment configuration'
+      ),
       reason: z.string().optional().describe('Optional assignment reason'),
       comment: z.object({
         body: z.string().min(1).describe('Optional assignment comment body'),
@@ -1024,10 +1027,10 @@ export function registerTicketActions(): void {
       no_op_if_already_assigned: z.boolean().default(true).describe('No-op if the resolved assignment already matches the ticket')
     }),
     outputSchema: z.object({
-      ticket_id: uuidSchema,
+      ticket_id: withWorkflowPicker(uuidSchema, 'Ticket id', 'ticket'),
       assigned_type: z.enum(['user', 'team', 'queue']),
-      assigned_id: uuidSchema,
-      assigned_to: uuidSchema.nullable(),
+      assigned_id: withWorkflowPicker(uuidSchema, 'Assigned user or team id', 'user-or-team'),
+      assigned_to: withWorkflowPicker(uuidSchema.nullable(), 'Assigned user id', 'user'),
       updated_at: isoDateTimeSchema
     }),
     sideEffectful: true,
@@ -1165,7 +1168,7 @@ export function registerTicketActions(): void {
     id: 'tickets.close',
     version: 1,
     inputSchema: z.object({
-      ticket_id: uuidSchema.describe('Ticket id'),
+      ticket_id: withWorkflowPicker(uuidSchema, 'Ticket id', 'ticket'),
       resolution: z.object({
         code: z.string().min(1).describe('Resolution code'),
         text: z.string().min(1).optional().describe('Resolution text/summary')
@@ -1364,7 +1367,7 @@ export function registerTicketActions(): void {
     id: 'tickets.link_entities',
     version: 1,
     inputSchema: z.object({
-      ticket_id: uuidSchema.describe('Ticket id'),
+      ticket_id: withWorkflowPicker(uuidSchema, 'Ticket id', 'ticket'),
       entity_type: z.enum(['project', 'project_task', 'asset', 'contract']).describe('Entity type'),
       entity_id: uuidSchema.describe('Entity id'),
       link_type: z.string().min(1).describe('Link type'),
@@ -1485,13 +1488,13 @@ export function registerTicketActions(): void {
     id: 'tickets.add_attachment',
     version: 1,
     inputSchema: z.object({
-      ticket_id: uuidSchema.describe('Ticket id'),
+      ticket_id: withWorkflowPicker(uuidSchema, 'Ticket id', 'ticket'),
       source: attachmentSourceSchema.describe('Attachment source'),
       filename: z.string().optional().describe('Optional filename'),
       visibility: z.enum(['public', 'internal']).optional().describe('Visibility (currently informational)'),
       comment: z.object({
         body: z.string().min(1),
-        visibility: z.enum(['public', 'internal']).default('public')
+        visibility: commentVisibilityChoice()
       }).optional().describe('Optional comment to add alongside the attachment'),
       idempotency_key: z.string().optional().describe('Optional external idempotency key')
     }),
@@ -1548,38 +1551,114 @@ export function registerTicketActions(): void {
   // ---------------------------------------------------------------------------
   // A08 — tickets.find
   // ---------------------------------------------------------------------------
+  // Descriptions are the field labels people see when picking ticket data in the designer.
   const ticketSummarySchema = z.object({
-    ticket_id: uuidSchema,
-    ticket_number: z.string(),
-    title: z.string().nullable(),
-    url: z.string().nullable(),
-    company_id: uuidSchema.nullable(),
-    board_id: uuidSchema.nullable(),
-    contact_name_id: uuidSchema.nullable(),
-    status_id: uuidSchema.nullable(),
-    priority_id: uuidSchema.nullable(),
-    category_id: uuidSchema.nullable(),
-    subcategory_id: uuidSchema.nullable(),
-    assigned_to: uuidSchema.nullable(),
-    entered_at: isoDateTimeSchema.nullable(),
-    updated_at: isoDateTimeSchema.nullable(),
-    closed_at: isoDateTimeSchema.nullable(),
-    is_closed: z.boolean().nullable(),
-    response_state: z.enum(['awaiting_client', 'awaiting_internal']).nullable().optional(),
-    attributes: z.record(z.unknown()).optional()
+    ticket_id: withWorkflowPicker(uuidSchema, 'Ticket', 'ticket'),
+    ticket_number: z.string().describe('Ticket number'),
+    title: z.string().nullable().describe('Title'),
+    url: z.string().nullable().describe('Link to the ticket'),
+    client_id: withWorkflowPicker(uuidSchema.nullable(), 'Client', 'client'),
+    client_name: z.string().nullable().describe('Client name'),
+    company_id: uuidSchema.nullable().describe('Client (old name for client_id)'),
+    board_id: withWorkflowPicker(uuidSchema.nullable(), 'Board', 'board'),
+    board_name: z.string().nullable().describe('Board name'),
+    contact_name_id: withWorkflowPicker(uuidSchema.nullable(), 'Requester contact', 'contact'),
+    contact_name: z.string().nullable().describe('Requester name'),
+    status_id: withWorkflowPicker(uuidSchema.nullable(), 'Status', 'ticket-status'),
+    status_name: z.string().nullable().describe('Status name'),
+    priority_id: withWorkflowPicker(uuidSchema.nullable(), 'Priority', 'ticket-priority'),
+    priority_name: z.string().nullable().describe('Priority name'),
+    category_id: withWorkflowPicker(uuidSchema.nullable(), 'Category', 'ticket-category'),
+    category_name: z.string().nullable().describe('Category name'),
+    subcategory_id: withWorkflowPicker(uuidSchema.nullable(), 'Subcategory', 'ticket-subcategory'),
+    subcategory_name: z.string().nullable().describe('Subcategory name'),
+    assigned_to: withWorkflowPicker(uuidSchema.nullable(), 'Assigned technician', 'user'),
+    assigned_to_name: z.string().nullable().describe('Assigned technician name'),
+    entered_at: isoDateTimeSchema.nullable().describe('Created at'),
+    updated_at: isoDateTimeSchema.nullable().describe('Last updated at'),
+    closed_at: isoDateTimeSchema.nullable().describe('Closed at'),
+    is_closed: z.boolean().nullable().describe('Is closed'),
+    response_state: z.enum(['awaiting_client', 'awaiting_internal']).nullable().optional().describe('Waiting on (client or internal)'),
+    attributes: z.record(z.unknown()).optional().describe('Custom attributes')
   });
 
+  type TicketDisplayNames = {
+    client_name: string | null;
+    board_name: string | null;
+    contact_name: string | null;
+    status_name: string | null;
+    priority_name: string | null;
+    category_name: string | null;
+    subcategory_name: string | null;
+    assigned_to_name: string | null;
+  };
+
+  // Display names let workflows show and compare a ticket's related records by name
+  // (priority_name = "High") without looking up ids.
+  const loadTicketDisplayNames = async (tx: TenantTxContext, ticket: any): Promise<TicketDisplayNames> => {
+    const lookup = async (table: string, idColumn: string, id: unknown, read: (row: any) => unknown): Promise<string | null> => {
+      if (typeof id !== 'string' || id.length === 0) return null;
+      const row = await tenantScopedTable(tx, table).where(idColumn, id).first();
+      const value = row ? read(row) : null;
+      return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
+    };
+    const clientId = ticket.client_id ?? ticket.company_id ?? null;
+
+    const [
+      client_name,
+      board_name,
+      contact_name,
+      status_name,
+      priority_name,
+      category_name,
+      subcategory_name,
+      assigned_to_name,
+    ] = await Promise.all([
+      lookup('clients', 'client_id', clientId, (row) => row.client_name),
+      lookup('boards', 'board_id', ticket.board_id, (row) => row.board_name),
+      lookup('contacts', 'contact_name_id', ticket.contact_name_id, (row) => row.full_name),
+      lookup('statuses', 'status_id', ticket.status_id, (row) => row.name),
+      lookup('priorities', 'priority_id', ticket.priority_id, (row) => row.priority_name),
+      lookup('categories', 'category_id', ticket.category_id, (row) => row.category_name),
+      lookup('categories', 'category_id', ticket.subcategory_id, (row) => row.category_name),
+      lookup('users', 'user_id', ticket.assigned_to, (row) =>
+        `${row.first_name ?? ''} ${row.last_name ?? ''}`.trim() || row.username),
+    ]);
+
+    return {
+      client_name,
+      board_name,
+      contact_name,
+      status_name,
+      priority_name,
+      category_name,
+      subcategory_name,
+      assigned_to_name,
+    };
+  };
+
   const ticketCommentSchema = z.object({
-    comment_id: uuidSchema,
-    note: z.string(),
-    is_internal: z.boolean(),
-    is_resolution: z.boolean(),
-    created_at: isoDateTimeSchema,
-    user_id: uuidSchema.nullable(),
-    contact_name_id: uuidSchema.nullable(),
+    comment_id: uuidSchema.describe('Comment'),
+    note: z.string().describe('Comment text'),
+    is_internal: z.boolean().describe('Is an internal note'),
+    is_resolution: z.boolean().describe('Is the resolution'),
+    created_at: isoDateTimeSchema.describe('Written at'),
+    user_id: withWorkflowPicker(uuidSchema.nullable(), 'Author (technician)', 'user'),
+    contact_name_id: withWorkflowPicker(uuidSchema.nullable(), 'Author (contact)', 'contact'),
     // Client-portal replies are authored by a user (user_type 'client'), so user_id
     // alone cannot distinguish a client reply from an agent reply.
     author_type: z.string().nullable()
+  });
+
+  const toTicketComment = (row: any) => ticketCommentSchema.parse({
+    comment_id: row.comment_id,
+    note: row.note,
+    is_internal: Boolean(row.is_internal),
+    is_resolution: Boolean(row.is_resolution),
+    created_at: new Date(row.created_at ?? new Date().toISOString()).toISOString(),
+    user_id: row.user_id ?? null,
+    contact_name_id: row.contact_id ?? null,
+    author_type: row.author_type ?? null
   });
 
   const ticketAttachmentSchema = z.object({
@@ -1614,24 +1693,28 @@ export function registerTicketActions(): void {
     id: 'tickets.find',
     version: 1,
     inputSchema: z.object({
-      ticket_id: uuidSchema.optional().describe('Ticket id'),
+      ticket_id: withWorkflowPicker(uuidSchema.optional(), 'Ticket id', 'ticket'),
       ticket_number: z.string().optional().describe('Ticket number'),
       external_ref: z.string().optional().describe('External reference (stored in tickets.attributes.external_ref)'),
       response_state: z.enum(['awaiting_client', 'awaiting_internal']).optional().describe('Optional response state filter'),
-      on_not_found: z.enum(['return_null', 'error']).default('return_null'),
+      on_not_found: withWorkflowNotFoundPolicy(z.enum(['return_null', 'error']).default('return_null'), 'What to do when nothing is found'),
       include: z.object({
-        comments: z.boolean().optional(),
-        attachments: z.boolean().optional(),
-        attributes: z.boolean().optional().describe('Include ticket.attributes (raw JSON)'),
-        custom_fields: z.boolean().optional().describe('Alias for include.attributes'),
-        comments_limit: z.number().int().positive().max(200).optional().describe('Maximum comments to return (1-200, default 50)'),
-        comments_order: z.enum(['asc', 'desc']).default('asc').describe('Comment ordering by created_at (default asc/oldest first, matching prior behavior; use desc for newest first)'),
-        comments_created_after: z.string().optional().describe('Only include comments created after this ISO datetime'),
-        attachments_limit: z.number().int().positive().max(200).optional()
+        comments: z.boolean().optional().describe('Also return the ticket\'s comments (the latest comment is always returned)'),
+        attachments: z.boolean().optional().describe('Also return the ticket\'s attachments'),
+        attributes: z.boolean().optional().describe('Also return the ticket\'s custom attributes'),
+        custom_fields: z.boolean().optional().describe('Same as attributes'),
+        comments_limit: z.number().int().min(1).max(200).default(50).describe('How many comments to return, 1 to 200 (default 50)'),
+        comments_order: z.enum(['asc', 'desc']).optional().describe('Comment order: asc returns oldest first (default), desc returns newest first'),
+        comments_created_after: z.string().optional().describe('Only return comments created after this date and time (ISO 8601)'),
+        attachments_limit: z.number().int().min(1).max(200).default(50).describe('How many attachments to return, 1 to 200 (default 50)')
       }).optional()
     }).refine((val) => Boolean(val.ticket_id || val.ticket_number || val.external_ref), { message: 'ticket_id, ticket_number, or external_ref is required' }),
     outputSchema: z.object({
       ticket: ticketSummarySchema.nullable(),
+      latest_comment: ticketCommentSchema.nullable().optional()
+        .describe('The most recent comment on the ticket, from anyone'),
+      latest_customer_comment: ticketCommentSchema.nullable().optional()
+        .describe('The most recent public comment from the customer, such as a client portal or email reply'),
       comments: z.array(ticketCommentSchema).optional(),
       comments_meta: collectionMetaSchema.optional(),
       attachments: z.array(ticketAttachmentSchema).optional(),
@@ -1674,19 +1757,23 @@ export function registerTicketActions(): void {
         if (input.on_not_found === 'error') {
           throwActionError(ctx, { category: 'ActionError', code: 'NOT_FOUND', message: 'Ticket not found' });
         }
-        return { ticket: null, comments: [], attachments: [] };
+        return { ticket: null, latest_comment: null, latest_customer_comment: null, comments: [], attachments: [] };
       }
 
       const include = input.include ?? {};
       const includeAttributes = Boolean(include.attributes || include.custom_fields);
       const attrs = includeAttributes ? parseJsonMaybe(ticket.attributes) : undefined;
 
+      const displayNames = await loadTicketDisplayNames(tx, ticket);
+      const clientId = ticket.client_id ?? ticket.company_id ?? null;
       const parsedTicket = ticketSummarySchema.parse({
+        ...displayNames,
         ticket_id: ticket.ticket_id,
         ticket_number: ticket.ticket_number,
         title: ticket.title ?? null,
         url: ticket.url ?? null,
-        company_id: ticket.company_id ?? null,
+        client_id: clientId,
+        company_id: clientId,
         board_id: ticket.board_id ?? null,
         contact_name_id: ticket.contact_name_id ?? null,
         status_id: ticket.status_id ?? null,
@@ -1702,7 +1789,19 @@ export function registerTicketActions(): void {
         ...(includeAttributes ? { attributes: (attrs && typeof attrs === 'object' && !Array.isArray(attrs)) ? attrs : {} } : {})
       });
 
-      const result: any = { ticket: parsedTicket };
+      const latestCommentQuery = () => orderTicketCommentsNewestFirst(
+        tenantScopedTable(tx, 'comments').where('ticket_id', ticket.ticket_id)
+      );
+      const [latestCommentRow, latestCustomerCommentRow] = await Promise.all([
+        latestCommentQuery().first(),
+        whereCustomerAuthoredComment(latestCommentQuery()).first(),
+      ]);
+
+      const result: any = {
+        ticket: parsedTicket,
+        latest_comment: latestCommentRow ? toTicketComment(latestCommentRow) : null,
+        latest_customer_comment: latestCustomerCommentRow ? toTicketComment(latestCustomerCommentRow) : null,
+      };
 
       if (include.comments) {
         const commentLimit = include.comments_limit ?? 50;
@@ -1720,16 +1819,7 @@ export function registerTicketActions(): void {
         const rows = await applyCommentFilters(tenantScopedTable(tx, 'comments'))
           .orderBy('created_at', include.comments_order ?? 'asc')
           .limit(commentLimit);
-        result.comments = rows.map((row: any) => ticketCommentSchema.parse({
-          comment_id: row.comment_id,
-          note: row.note,
-          is_internal: Boolean(row.is_internal),
-          is_resolution: Boolean(row.is_resolution),
-          created_at: new Date(row.created_at ?? new Date().toISOString()).toISOString(),
-          user_id: row.user_id ?? null,
-          contact_name_id: row.contact_id ?? null,
-          author_type: row.author_type ?? null
-        }));
+        result.comments = rows.map(toTicketComment);
         result.comments_meta = {
           total_count: totalCount,
           returned_count: result.comments.length,
@@ -1781,7 +1871,7 @@ export function registerTicketActions(): void {
     id: 'tickets.apply_checklist',
     version: 1,
     inputSchema: z.object({
-      ticket_id: uuidSchema.describe('Ticket id'),
+      ticket_id: withWorkflowPicker(uuidSchema, 'Ticket id', 'ticket'),
       template_id: uuidSchema.describe('Checklist template id')
     }),
     outputSchema: z.object({
