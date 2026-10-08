@@ -49,12 +49,22 @@ describe('SearchableSelect overlay placement', () => {
   it('opens below the trigger when there is room', () => {
     const overlay = openAt({ top: 100, bottom: 140 }, 900);
     expect(overlay.style.top).toBe('144px');
-    expect(overlay.style.transform).toBe('');
+    expect(overlay.style.bottom).toBe('');
+    expect(screen.getByRole('listbox').style.maxHeight).toBe('240px');
   });
 
   it('opens above the trigger when the list would run off the bottom of the viewport', () => {
     const overlay = openAt({ top: 600, bottom: 640 }, 700);
-    expect(overlay.style.top).toBe('596px');
-    expect(overlay.style.transform).toBe('translateY(-100%)');
+    // Bottom edge pinned 4px above the trigger's top (700 - 600 + 4).
+    expect(overlay.style.bottom).toBe('104px');
+    expect(overlay.style.top).toBe('');
+    expect(screen.getByRole('listbox').style.maxHeight).toBe('240px');
+  });
+
+  it('shrinks the list to the room above when it does not fit there in full', () => {
+    const overlay = openAt({ top: 200, bottom: 240 }, 280);
+    expect(overlay.style.bottom).toBe('84px');
+    // 200 - 4 gap - 8 gutter - 44 search row.
+    expect(screen.getByRole('listbox').style.maxHeight).toBe('144px');
   });
 });
