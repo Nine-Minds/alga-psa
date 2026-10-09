@@ -1201,6 +1201,7 @@ async function buildTicketListBaseQuery(
     tenantLeftJoin(trx, tenant, baseQuery, 'boards as c', 't.board_id', 'c.board_id');
     tenantLeftJoin(trx, tenant, baseQuery, 'categories as cat', 't.category_id', 'cat.category_id');
     tenantLeftJoin(trx, tenant, baseQuery, 'clients as comp', 't.client_id', 'comp.client_id');
+    tenantLeftJoin(trx, tenant, baseQuery, 'contacts as cn', 't.contact_name_id', 'cn.contact_name_id');
     tenantLeftJoin(trx, tenant, baseQuery, 'users as u', 't.entered_by', 'u.user_id');
     tenantLeftJoin(trx, tenant, baseQuery, 'users as au', 't.assigned_to', 'au.user_id');
     tenantLeftJoin(trx, tenant, baseQuery, 'teams as tm', 't.assigned_team_id', 'tm.team_id');
@@ -1933,6 +1934,7 @@ function buildTicketListItemsQuery(
       'c.board_name',
       'cat.category_name',
       'comp.client_name',
+      'cn.full_name as contact_name',
       trx.raw("CONCAT(u.first_name, ' ', u.last_name) as entered_by_name"),
       trx.raw("CONCAT(au.first_name, ' ', au.last_name) as assigned_to_name"),
       'tm.team_name as assigned_team_name',
@@ -1959,6 +1961,7 @@ function mapTicketListItems(tickets: any[]): ITicketListItem[] {
       board_name,
       category_name,
       client_name,
+      contact_name,
       entered_by_name,
       assigned_to_name,
       assigned_team_name,
@@ -2000,6 +2003,7 @@ function mapTicketListItems(tickets: any[]): ITicketListItem[] {
       board_name: board_name || 'Unknown',
       category_name: category_name || 'Unknown',
       client_name: client_name || 'Unknown',
+      contact_name: contact_name || null,
       entered_by_name: entered_by_name || 'Unknown',
       assigned_to_name: assigned_to_name || null,
       assigned_team_name: assigned_team_name || null,
