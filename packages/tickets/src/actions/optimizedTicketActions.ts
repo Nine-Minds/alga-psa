@@ -2149,7 +2149,14 @@ async function enrichTicketListItems(
     }
   });
 
-  const [agentAvatarUrlsMap, teamAvatarUrlsMap, ticketTagRows, clientLogoUrlsMap] = await Promise.all([
+  const contactIds = new Set<string>();
+  ticketListItems.forEach((ticket: ITicketListItem) => {
+    if (ticket.contact_name_id) {
+      contactIds.add(ticket.contact_name_id);
+    }
+  });
+
+  const [agentAvatarUrlsMap, teamAvatarUrlsMap, ticketTagRows, clientLogoUrlsMap, contactAvatarUrlsMap] = await Promise.all([
     agentUserIds.size > 0
       ? getEntityImageUrlsBatch('user', Array.from(agentUserIds), tenant)
       : Promise.resolve(new Map<string, string | null>()),
@@ -2180,11 +2187,17 @@ async function enrichTicketListItems(
     clientIds.size > 0
       ? getClientLogoUrlsBatch(Array.from(clientIds), tenant)
       : Promise.resolve(new Map<string, string | null>()),
+    contactIds.size > 0
+      ? getEntityImageUrlsBatch('contact', Array.from(contactIds), tenant)
+      : Promise.resolve(new Map<string, string | null>()),
   ]);
 
-  // Attach batched client logo URLs to each row (single query, no N+1).
+  // Attach batched client logo and contact avatar URLs to each row (single query each, no N+1).
   ticketListItems.forEach((ticket: ITicketListItem) => {
     ticket.client_logo_url = ticket.client_id ? (clientLogoUrlsMap.get(ticket.client_id) ?? null) : null;
+    ticket.contact_avatar_url = ticket.contact_name_id
+      ? (contactAvatarUrlsMap.get(ticket.contact_name_id) ?? null)
+      : null;
   });
 
   await attachLatestActivityActors(trx, tenant, ticketListItems, ticketIds);

@@ -115,6 +115,7 @@ export interface ITicketListItem extends Omit<ITicket, 'status_id' | 'priority_i
   client_name: string;
   client_logo_url?: string | null;
   contact_name: string | null;
+  contact_avatar_url?: string | null;
   entered_by_name: string;
   assigned_to_name: string | null;
   additional_agent_count?: number;
