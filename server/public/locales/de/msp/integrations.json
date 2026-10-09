@@ -2916,6 +2916,15 @@
           "name": "Vollständiger Name",
           "none": "Keine Übereinstimmung"
         }
+      },
+      "clientChange": {
+        "title": "Geräte dieser Organisation verschieben?",
+        "message": "{{count}} Asset(s) werden zu {{client}} verschoben. Zuweisungen, Gruppen und Abrechnungsprofile des vorherigen Kunden werden entfernt.",
+        "confirm": "Geräte verschieben"
+      },
+      "billingProfile": {
+        "label": "Abrechnungsprofil",
+        "clientDefault": "Kundenstandard"
       }
     },
     "sso": {

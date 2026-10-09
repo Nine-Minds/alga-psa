@@ -2916,6 +2916,15 @@
           "name": "Nom complet",
           "none": "Aucune correspondance"
         }
+      },
+      "clientChange": {
+        "title": "Déplacer les appareils de cette organisation ?",
+        "message": "{{count}} actif(s) seront déplacés vers {{client}}. Les attributions, groupes et profils de facturation du client précédent seront effacés.",
+        "confirm": "Déplacer les appareils"
+      },
+      "billingProfile": {
+        "label": "Profil de facturation",
+        "clientDefault": "Valeur par défaut du client"
       }
     },
     "sso": {

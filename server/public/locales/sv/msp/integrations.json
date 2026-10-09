@@ -2939,6 +2939,15 @@
           "name": "Fullständigt namn",
           "none": "Ingen matchning"
         }
+      },
+      "clientChange": {
+        "title": "Flytta den här organisationens enheter?",
+        "message": "{{count}} tillgång(ar) flyttas till {{client}}. Tilldelningar, grupper och faktureringsprofiler som hör till den tidigare kunden rensas.",
+        "confirm": "Flytta enheter"
+      },
+      "billingProfile": {
+        "label": "Faktureringsprofil",
+        "clientDefault": "Kundens standard"
       }
     },
     "sso": {

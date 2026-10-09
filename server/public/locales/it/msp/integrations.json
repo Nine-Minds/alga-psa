@@ -2916,6 +2916,15 @@
           "name": "Nome completo",
           "none": "Nessuna corrispondenza"
         }
+      },
+      "clientChange": {
+        "title": "Spostare i dispositivi di questa organizzazione?",
+        "message": "{{count}} asset verranno spostati su {{client}}. Assegnazioni, gruppi e profili di fatturazione del cliente precedente verranno rimossi.",
+        "confirm": "Sposta dispositivi"
+      },
+      "billingProfile": {
+        "label": "Profilo di fatturazione",
+        "clientDefault": "Predefinito del cliente"
       }
     },
     "sso": {

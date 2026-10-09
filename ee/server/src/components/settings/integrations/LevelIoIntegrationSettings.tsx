@@ -2,6 +2,7 @@
 
 import React, { useCallback, useEffect, useState, useTransition } from 'react';
 import { buildRmmPeopleModeOptions, RmmUserContactMappingPanel } from '@alga-psa/integrations/components/settings/integrations/RmmUserContactMappingPanel';
+import { RmmOrganizationClientChangeDialog } from '@alga-psa/integrations/components/settings/integrations/RmmOrganizationClientChangeDialog';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Copy, Eye, EyeOff } from 'lucide-react';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
@@ -249,7 +250,10 @@ export default function LevelIoIntegrationSettings() {
     });
   };
 
-  const handleMappingClientChange = (mappingId: string, clientId: string | null) => {
+  // FR-G4: re-pointing an organization moves its devices, so confirm first.
+  const [pendingClientChange, setPendingClientChange] = useState<{ mappingId: string; clientId: string | null } | null>(null);
+
+  const handleMappingClientChangeConfirmed = (mappingId: string, clientId: string | null) => {
     void (async () => {
       const result = await updateLevelIoOrganizationMapping({
         mappingId,
@@ -302,6 +306,15 @@ export default function LevelIoIntegrationSettings() {
   };
 
   const peopleModeOptions = buildRmmPeopleModeOptions(t);
+
+  const handleMappingClientChange = (mappingId: string, clientId: string | null) => {
+    const current = mappings.find((m) => m.mapping_id === mappingId);
+    if (clientId && current?.client_id && current.client_id !== clientId) {
+      setPendingClientChange({ mappingId, clientId });
+      return;
+    }
+    handleMappingClientChangeConfirmed(mappingId, clientId);
+  };
 
   const columns: ColumnDefinition<MappingRow>[] = [
     {
@@ -381,6 +394,17 @@ export default function LevelIoIntegrationSettings() {
 
   return (
     <div className="space-y-6" id="levelio-integration-settings">
+      <RmmOrganizationClientChangeDialog
+        mappingId={pendingClientChange?.mappingId ?? null}
+        pendingClientName={clients.find((c) => c.client_id === pendingClientChange?.clientId)?.client_name ?? null}
+        isOpen={Boolean(pendingClientChange)}
+        onCancel={() => setPendingClientChange(null)}
+        onConfirm={() => {
+          const pending = pendingClientChange;
+          setPendingClientChange(null);
+          if (pending) handleMappingClientChangeConfirmed(pending.mappingId, pending.clientId);
+        }}
+      />
       {error ? (
         <Alert variant="destructive">
           <AlertDescription>{error}</AlertDescription>

@@ -9,6 +9,7 @@
 
 import React, { useEffect, useRef, useState, useTransition } from 'react';
 import { buildRmmPeopleModeOptions, RmmUserContactMappingPanel } from '@alga-psa/integrations/components/settings/integrations/RmmUserContactMappingPanel';
+import { RmmOrganizationClientChangeDialog } from '@alga-psa/integrations/components/settings/integrations/RmmOrganizationClientChangeDialog';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -113,7 +114,10 @@ const OrganizationMappingManager: React.FC<OrganizationMappingManagerProps> = ({
     });
   };
 
-  const handleCompanyChange = async (mappingId: string, companyId: string | null) => {
+  // FR-G4: re-pointing an organization moves its devices, so confirm first.
+  const [pendingClientChange, setPendingClientChange] = useState<{ mappingId: string; clientId: string | null } | null>(null);
+
+  const handleCompanyChangeConfirmed = async (mappingId: string, companyId: string | null) => {
     setSavingMappingId(mappingId);
     setError(null);
     setSuccessMessage(null);
@@ -242,6 +246,15 @@ const OrganizationMappingManager: React.FC<OrganizationMappingManagerProps> = ({
       </Card>
     );
   }
+
+  const handleCompanyChange = (mappingId: string, companyId: string | null) => {
+    const current = mappings.find((m) => m.mapping_id === mappingId);
+    if (companyId && current?.client_id && current.client_id !== companyId) {
+      setPendingClientChange({ mappingId: mappingId, clientId: companyId });
+      return;
+    }
+    void handleCompanyChangeConfirmed(mappingId, companyId);
+  };
 
   const columns: ColumnDefinition<RmmOrganizationMapping>[] = [
     {

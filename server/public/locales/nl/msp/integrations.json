@@ -2916,6 +2916,15 @@
           "name": "Volledige naam",
           "none": "Geen overeenkomst"
         }
+      },
+      "clientChange": {
+        "title": "Apparaten van deze organisatie verplaatsen?",
+        "message": "{{count}} asset(s) worden verplaatst naar {{client}}. Toewijzingen, groepen en factureringsprofielen van de vorige klant worden gewist.",
+        "confirm": "Apparaten verplaatsen"
+      },
+      "billingProfile": {
+        "label": "Factureringsprofiel",
+        "clientDefault": "Standaard van de klant"
       }
     },
     "sso": {

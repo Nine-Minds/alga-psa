@@ -2916,6 +2916,15 @@
           "name": "Nombre completo",
           "none": "Sin coincidencia"
         }
+      },
+      "clientChange": {
+        "title": "¿Mover los dispositivos de esta organización?",
+        "message": "{{count}} activo(s) se moverán a {{client}}. Se borrarán las asignaciones, los grupos y los perfiles de facturación del cliente anterior.",
+        "confirm": "Mover dispositivos"
+      },
+      "billingProfile": {
+        "label": "Perfil de facturación",
+        "clientDefault": "Predeterminado del cliente"
       }
     },
     "sso": {

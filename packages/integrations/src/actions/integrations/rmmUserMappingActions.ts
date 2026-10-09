@@ -5,6 +5,7 @@ import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { createTenantKnex, withTransaction } from '@alga-psa/db';
 import { tenantDb } from '@alga-psa/db';
+import { countRmmOrganizationAssets as countOrganizationAssets } from '@alga-psa/shared/rmm/moveRmmOrganizationAssets';
 import {
   listSignedInUsersForOrganization,
   mapSignedInUserToContact,
@@ -100,4 +101,29 @@ export const mapRmmSignedInUserToContact = withAuth(async (
   } catch (error) {
     return { success: false, error: error instanceof Error ? error.message : 'Unable to save the mapping.' };
   }
+});
+
+/**
+ * FR-G4: how many assets a client change on this organization will move. The
+ * mapping UIs put the number in the confirmation, because clearing assignees,
+ * groups and billing profiles on 37 devices is not something to do blind.
+ */
+export const countRmmOrganizationAssets = withAuth(async (
+  user,
+  { tenant },
+  input: { mappingId: string }
+): Promise<{ success: boolean; error?: string; count?: number }> => {
+  if (!await hasPermission(user as any, 'system_settings', 'read')) {
+    return { success: false, error: 'Forbidden' };
+  }
+
+  const { knex } = await createTenantKnex();
+  const resolved = await resolveMapping(knex, tenant, input.mappingId);
+  if (!resolved) return { success: false, error: 'Mapping not found' };
+
+  const count = await countOrganizationAssets(knex, tenant, {
+    provider: resolved.provider,
+    externalOrganizationId: resolved.externalOrganizationId,
+  });
+  return { success: true, count };
 });

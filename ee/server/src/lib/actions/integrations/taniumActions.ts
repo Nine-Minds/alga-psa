@@ -1,11 +1,14 @@
 'use server';
 
 import { withAuth } from '@alga-psa/auth';
+import type { Knex } from 'knex';
+import { moveRmmOrganizationAssets } from '@alga-psa/shared/rmm/moveRmmOrganizationAssets';
 import { isRmmContactAssignmentMode } from '@alga-psa/shared/rmm/userMatching';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { TIER_FEATURES } from '@alga-psa/types';
 import { tenantDb } from '@alga-psa/db';
+import { withTransaction } from '@alga-psa/db';
 import { createTenantKnex } from '@/lib/db';
 import {
   ingestNormalizedRmmDeviceSnapshot,
@@ -442,9 +445,29 @@ export const updateTaniumOrganizationMapping = withAdvancedAssetsAccess(async (
       patch.billing_profile_id = null;
     }
 
-    await db.table('rmm_organization_mappings')
-      .where({ mapping_id: input.mappingId })
-      .update(patch);
+    // FR-G4: a client change moves the organization's assets in the same
+    // transaction as the mapping update, so the two can never disagree.
+    await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const trxDb = tenantDb(trx, tenant);
+      const existing = await trxDb.table('rmm_organization_mappings')
+        .where({ mapping_id: input.mappingId })
+        .first('client_id', 'integration_id', 'external_organization_id');
+
+      await trxDb.table('rmm_organization_mappings')
+        .where({ mapping_id: input.mappingId })
+        .update(patch);
+
+      const nextClientId = patch.client_id as string | null | undefined;
+      if (nextClientId && existing && String(existing.client_id ?? '') !== String(nextClientId)) {
+        await moveRmmOrganizationAssets(trx, tenant, {
+          integrationId: String(existing.integration_id),
+          provider: 'tanium',
+          externalOrganizationId: String(existing.external_organization_id),
+          newClientId: String(nextClientId),
+          actorUserId: (user as { user_id?: string }).user_id ?? null,
+        });
+      }
+    });
 
     return { success: true };
   } catch (error) {

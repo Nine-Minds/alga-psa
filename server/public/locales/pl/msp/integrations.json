@@ -2916,6 +2916,15 @@
           "name": "Imię i nazwisko",
           "none": "Brak dopasowania"
         }
+      },
+      "clientChange": {
+        "title": "Przenieść urządzenia tej organizacji?",
+        "message": "{{count}} zasób/zasoby zostaną przeniesione do {{client}}. Przypisania, grupy i profile rozliczeniowe poprzedniego klienta zostaną usunięte.",
+        "confirm": "Przenieś urządzenia"
+      },
+      "billingProfile": {
+        "label": "Profil rozliczeniowy",
+        "clientDefault": "Domyślny klienta"
       }
     },
     "sso": {

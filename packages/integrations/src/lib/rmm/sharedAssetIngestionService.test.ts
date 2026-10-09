@@ -287,7 +287,11 @@ describe('sharedAssetIngestionService', () => {
     expect(state.tenant_external_entity_mappings[0].sync_status).toBe('synced');
   });
 
-  it('updates the existing mapping and asset ownership when a device moves to a new mapped scope', async () => {
+  // FR-G5 (alga-2026-0002672): sync used to re-stamp `client_id` on update,
+  // which reverted a manual client move on every run and fought the RMM
+  // organization move. The update path now leaves ownership alone; re-pointing
+  // an organization moves its devices through moveRmmOrganizationAssets.
+  it('leaves asset ownership and the assignee alone when a device appears under a new mapped scope', async () => {
     const state: DbState = {
       assets: [
         {
@@ -341,12 +345,12 @@ describe('sharedAssetIngestionService', () => {
     expect(result.action).toBe('updated');
     expect(state.assets).toHaveLength(1);
     expect(state.assets[0]).toMatchObject({
-      client_id: 'client_new',
+      // Ownership is the operator's to change, not sync's.
+      client_id: 'client_old',
+      contact_name_id: 'contact_of_client_old',
       name: 'Moved Endpoint',
       rmm_organization_id: 'scope_new',
     });
-    // The assignee belonged to the old client, so the move clears it.
-    expect(state.assets[0].contact_name_id).toBeNull();
     expect(state.tenant_external_entity_mappings).toHaveLength(1);
     expect(state.tenant_external_entity_mappings[0]).toMatchObject({
       id: 'map_existing',

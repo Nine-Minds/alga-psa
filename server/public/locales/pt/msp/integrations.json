@@ -2916,6 +2916,15 @@
           "name": "Nome completo",
           "none": "Sem correspondência"
         }
+      },
+      "clientChange": {
+        "title": "Mover os dispositivos desta organização?",
+        "message": "{{count}} ativo(s) serão movidos para {{client}}. Atribuições, grupos e perfis de faturamento do cliente anterior serão removidos.",
+        "confirm": "Mover dispositivos"
+      },
+      "billingProfile": {
+        "label": "Perfil de faturamento",
+        "clientDefault": "Padrão do cliente"
       }
     },
     "sso": {

@@ -2939,6 +2939,15 @@
           "name": "Full name",
           "none": "No match"
         }
+      },
+      "clientChange": {
+        "title": "Move this organization’s devices?",
+        "message": "{{count}} asset(s) will move to {{client}}. Assignees, groups and billing profiles that belong to the previous client will be cleared.",
+        "confirm": "Move devices"
+      },
+      "billingProfile": {
+        "label": "Billing profile",
+        "clientDefault": "Client default"
       }
     },
     "sso": {

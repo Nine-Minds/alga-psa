@@ -69,6 +69,7 @@ export default defineConfig({
     'workflow/services/index': 'workflow/services/index.ts',
     'extension-utils/index': 'extension-utils/index.ts',
     'rmm/userMatching': 'rmm/userMatching.ts',
+    'rmm/moveRmmOrganizationAssets': 'rmm/moveRmmOrganizationAssets.ts',
     'rmm/signedInUserMappings': 'rmm/signedInUserMappings.ts',
     'rmm/autoAssignFromSignedInUser': 'rmm/autoAssignFromSignedInUser.ts',
     'models/assetAssignmentModel': 'models/assetAssignmentModel.ts',

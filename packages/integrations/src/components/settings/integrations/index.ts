@@ -1,5 +1,6 @@
 export { RmmAlertAutomationSettings } from './RmmAlertAutomationSettings';
 export { RmmUserContactMappingPanel, buildRmmPeopleModeOptions } from './RmmUserContactMappingPanel';
+export { RmmOrganizationClientChangeDialog } from './RmmOrganizationClientChangeDialog';
 export {
   RmmDeviceSyncSettings,
   DEVICE_SYNC_SUPPORTED_PROVIDERS,

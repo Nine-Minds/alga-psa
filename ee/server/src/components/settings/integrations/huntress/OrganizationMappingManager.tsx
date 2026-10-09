@@ -2,6 +2,7 @@
 
 import React, { useCallback, useEffect, useState, useTransition } from 'react';
 import { buildRmmPeopleModeOptions, RmmUserContactMappingPanel } from '@alga-psa/integrations/components/settings/integrations/RmmUserContactMappingPanel';
+import { RmmOrganizationClientChangeDialog } from '@alga-psa/integrations/components/settings/integrations/RmmOrganizationClientChangeDialog';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import {
   Card,
@@ -93,7 +94,10 @@ const HuntressOrganizationMappingManager: React.FC<Props> = ({ refreshKey, onMap
     });
   };
 
-  const handleClientChange = (mappingId: string, clientId: string | null) => {
+  // FR-G4: re-pointing an organization moves its devices, so confirm first.
+  const [pendingClientChange, setPendingClientChange] = useState<{ mappingId: string; clientId: string | null } | null>(null);
+
+  const handleClientChangeConfirmed = (mappingId: string, clientId: string | null) => {
     startTransition(async () => {
       const result = await updateHuntressOrganizationMapping(mappingId, {
         client_id: clientId,
@@ -143,6 +147,15 @@ const HuntressOrganizationMappingManager: React.FC<Props> = ({ refreshKey, onMap
   };
 
   const unmappedCount = mappings.filter((m) => !m.client_id).length;
+
+  const handleClientChange = (mappingId: string, clientId: string | null) => {
+    const current = mappings.find((m) => m.mapping_id === mappingId);
+    if (clientId && current?.client_id && current.client_id !== clientId) {
+      setPendingClientChange({ mappingId: mappingId, clientId: clientId });
+      return;
+    }
+    void handleClientChangeConfirmed(mappingId, clientId);
+  };
 
   const columns: ColumnDefinition<RmmOrganizationMapping>[] = [
     {

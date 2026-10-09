@@ -1,6 +1,5 @@
 import type { Knex } from 'knex';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
-import { setAssetAssignee } from '../models/assetAssignmentModel';
 import { applyRmmSignedInUserAssignment } from './autoAssignFromSignedInUser';
 import type {
   NormalizedRmmDeviceType,
@@ -302,28 +301,13 @@ export async function ingestNormalizedRmmDeviceSnapshot(
         ...buildHardwareIdentityPatch(snapshot),
       };
 
-      const movedClient = Boolean(
-        resolvedClientId && existingAsset.client_id && existingAsset.client_id !== resolvedClientId
-      );
-      if (resolvedClientId) {
-        assetPatch.client_id = resolvedClientId;
-      }
-
+      // FR-G5: sync no longer re-stamps `client_id` on update. A manual client
+      // change on an RMM-synced asset now survives every run, and re-pointing
+      // an RMM organization moves its devices immediately through
+      // moveRmmOrganizationAssets instead of drifting back on the next sync.
       await db.table('assets')
         .where({ asset_id: assetId })
         .update(assetPatch);
-
-      if (movedClient) {
-        // FR-C3: the assignee is a contact of the previous client, so moving
-        // the device unassigns it — through the helper, with source `system`,
-        // so the assignment history records the clear.
-        await setAssetAssignee(trx, tenant, assetId, null, {
-          actorUserId: null,
-          source: 'system',
-          note: 'RMM organization moved to another client',
-          allowWorkspaceMember: true,
-        });
-      }
 
       await upsertAssetExtension(trx, {
         tenant,
@@ -334,7 +318,9 @@ export async function ingestNormalizedRmmDeviceSnapshot(
 
       // FR-D4: assignment from the signed-in user runs after the extension row
       // so the matcher sees the value this run reported.
-      const assignmentClientId = resolvedClientId ?? (existingAsset.client_id ? String(existingAsset.client_id) : null);
+      // The asset's own client, not the mapping's: sync no longer moves it
+      // (FR-G5), so a manually moved device matches against where it is now.
+      const assignmentClientId = existingAsset.client_id ? String(existingAsset.client_id) : resolvedClientId;
       if (assignmentClientId) {
         await applyRmmSignedInUserAssignment(trx, {
           tenant,

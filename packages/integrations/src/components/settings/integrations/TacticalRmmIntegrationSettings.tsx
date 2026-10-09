@@ -8,6 +8,7 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { buildRmmPeopleModeOptions, RmmUserContactMappingPanel } from './RmmUserContactMappingPanel';
+import { RmmOrganizationClientChangeDialog } from './RmmOrganizationClientChangeDialog';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
@@ -326,8 +327,17 @@ export function TacticalRmmIntegrationSettings() {
 
   const peopleModeOptions = buildRmmPeopleModeOptions(t);
 
-  const handleClientChange = (mappingId: string, clientId: string | null) =>
-    handleUpdateMapping(mappingId, { clientId, defaultContactId: null });
+  // FR-G4: re-pointing an organization moves its devices, so confirm first.
+  const [pendingClientChange, setPendingClientChange] = React.useState<{ mappingId: string; clientId: string | null } | null>(null);
+
+  const handleClientChange = (mappingId: string, clientId: string | null) => {
+    const current = orgMappings.find((m) => m.mapping_id === mappingId);
+    if (clientId && current?.client_id && current.client_id !== clientId) {
+      setPendingClientChange({ mappingId, clientId });
+      return;
+    }
+    void handleUpdateMapping(mappingId, { clientId, defaultContactId: null });
+  };
 
   const handleDefaultContactChange = (mappingId: string, contactId: string) =>
     handleUpdateMapping(mappingId, { defaultContactId: contactId || null });
