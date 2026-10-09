@@ -70,8 +70,8 @@
       "cancel": "Cancelar",
       "confirmPayNow": "Confirmar y pagar ahora",
       "confirm": "Confirmar",
-      "trialTitle": "Sin cargo durante tu periodo de prueba",
-      "trialDescription": "Tu periodo de prueba continúa igual. La facturación comenzará con {{amount}} el {{date}}."
+      "trialTitle": "Sin cargo durante su periodo de prueba",
+      "trialDescription": "Su periodo de prueba continúa igual. La facturación comenzará con {{amount}} el {{date}}."
     },
     "usage": {
       "title": "Uso actual de licencias",
@@ -81,7 +81,7 @@
       "licensesToAdd": "Licencias a añadir"
     },
     "help": {
-      "licensesToAdd": "Introduce cuántas licencias quieres añadir. Tu nuevo total se actualiza abajo."
+      "licensesToAdd": "Introduzca cuántas licencias desea añadir. Su nuevo total se actualiza abajo."
     },
     "pricing": {
       "pricePerLicense": "Precio por licencia:",
@@ -95,7 +95,7 @@
     "info": {
       "increasingImmediate": "Aumentar licencias: acceso inmediato con cargo prorrateado",
       "billedMonthly": "Las licencias se facturan mensualmente y pueden cancelarse en cualquier momento",
-      "addsToTotal": "Las licencias se añaden a tu total actual. Para reducir licencias, visita Administración de la cuenta."
+      "addsToTotal": "Las licencias se añaden a su total actual. Para reducir licencias, visite Administración de la cuenta."
     },
     "solo": {
       "title": "Solo incluye un usuario",
