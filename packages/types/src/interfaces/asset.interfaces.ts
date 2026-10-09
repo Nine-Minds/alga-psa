@@ -69,6 +69,18 @@ export interface Asset {
   location?: string;
   purchase_date?: string;
   warranty_end_date?: string;
+  /** Hardware make, a first-class column (RMM sync and imports fill it). */
+  manufacturer?: string | null;
+  /** Hardware model, a first-class column (no system_info fallback). */
+  model?: string | null;
+  /** Supplier, an inventory `vendors` row. */
+  vendor_id?: string | null;
+  /** Supplier name; read-only, joined on read. */
+  vendor_name?: string | null;
+  /** Purchase cost in minor units (cents). */
+  purchase_cost?: number | null;
+  purchase_cost_currency?: string | null;
+  order_number?: string | null;
   created_at: string;
   updated_at: string;
   tenant: string;
@@ -485,6 +497,12 @@ export interface CreateAssetRequest {
   serial_number?: string;
   purchase_date?: string;
   warranty_end_date?: string;
+  manufacturer?: string | null;
+  model?: string | null;
+  vendor_id?: string | null;
+  purchase_cost?: number | null;
+  purchase_cost_currency?: string | null;
+  order_number?: string | null;
   workstation?: Omit<WorkstationAsset, 'tenant' | 'asset_id'>;
   network_device?: Omit<NetworkDeviceAsset, 'tenant' | 'asset_id'>;
   server?: Omit<ServerAsset, 'tenant' | 'asset_id'>;

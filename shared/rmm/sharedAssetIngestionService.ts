@@ -40,6 +40,23 @@ function normalizeAssetType(assetType: NormalizedRmmDeviceType): SupportedAssetT
   return 'unknown';
 }
 
+/**
+ * Hardware identity columns the provider owns (FR-A3). A thin payload must
+ * never blank a value a richer run — or a technician — already filled, so an
+ * empty manufacturer/model is omitted from the patch entirely.
+ */
+function buildHardwareIdentityPatch(
+  snapshot: NormalizedRmmExternalDeviceSnapshot
+): Record<string, string> {
+  const ext = snapshot.extension ?? {};
+  const patch: Record<string, string> = {};
+  const manufacturer = typeof ext.manufacturer === 'string' ? ext.manufacturer.trim() : '';
+  const model = typeof ext.model === 'string' ? ext.model.trim() : '';
+  if (manufacturer) patch.manufacturer = manufacturer;
+  if (model) patch.model = model;
+  return patch;
+}
+
 function pickExtensionTable(assetType: SupportedAssetType): 'workstation_assets' | 'server_assets' | null {
   if (assetType === 'server') return 'server_assets';
   if (assetType === 'workstation') return 'workstation_assets';
@@ -273,6 +290,7 @@ export async function ingestNormalizedRmmDeviceSnapshot(
         agent_status: agentStatus,
         last_seen_at: lastSeenAt,
         last_rmm_sync_at: trx.fn.now(),
+        ...buildHardwareIdentityPatch(snapshot),
       };
 
       if (resolvedClientId) {
@@ -350,6 +368,7 @@ export async function ingestNormalizedRmmDeviceSnapshot(
         agent_status: agentStatus,
         last_seen_at: lastSeenAt,
         last_rmm_sync_at: now,
+        ...buildHardwareIdentityPatch(snapshot),
         created_at: now,
         updated_at: now,
       })

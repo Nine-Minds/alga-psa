@@ -127,7 +127,9 @@
       "actions": "Ações",
       "patching": "Patches",
       "coverage": "Cobertura",
-      "assignedTo": "Atribuído a"
+      "assignedTo": "Atribuído a",
+      "manufacturer": "Fabricante",
+      "model": "Modelo"
     },
     "metrics": {
       "totalAssets": {
@@ -349,7 +351,9 @@
       "status": "Status",
       "created": "Criado",
       "updated": "Atualizado",
-      "tenant": "Inquilino"
+      "tenant": "Inquilino",
+      "manufacturer": "Fabricante",
+      "model": "Modelo"
     },
     "typeDetails": {
       "workstation": "Detalhes da estação de trabalho",
@@ -578,7 +582,8 @@
     "actions": {
       "viewClient": "Ver cliente",
       "manageClientLocations": "Gerenciar locais de clientes",
-      "saveChanges": "Salvar alterações"
+      "saveChanges": "Salvar alterações",
+      "createVendor": "Criar fornecedor"
     },
     "alerts": {
       "noLocationsSaved": "Este cliente ainda não tem locais salvos. Use a entrada personalizada ou crie uma a partir do registro do cliente."
@@ -586,7 +591,8 @@
     "sections": {
       "basicInformation": "Informações Básicas",
       "clientAndLocation": "Cliente e Localização",
-      "assetBasics": "Noções básicas de ativos"
+      "assetBasics": "Noções básicas de ativos",
+      "procurement": "Fabricante e compra"
     },
     "fields": {
       "customLocationOption": "Localização personalizada",
@@ -627,7 +633,11 @@
       "purchaseDate": "Data de compra",
       "warrantyEndDate": "Data de término da garantia",
       "assetType": "Tipo",
-      "assignedTo": "Atribuído a"
+      "assignedTo": "Atribuído a",
+      "manufacturer": "Fabricante",
+      "vendor": "Fornecedor",
+      "purchaseCost": "Custo de compra",
+      "orderNumber": "N.º do pedido"
     },
     "placeholders": {
       "loadingClients": "Carregando clientes…",
@@ -639,7 +649,10 @@
       "selectPurchaseDate": "Selecione a data de compra",
       "selectWarrantyEndDate": "Selecione a data de término da garantia",
       "loadingContacts": "Carregando contatos…",
-      "selectContact": "Selecione um contato"
+      "selectContact": "Selecione um contato",
+      "noVendor": "Sem fornecedor",
+      "selectVendor": "Selecione um fornecedor",
+      "purchaseCost": "0,00"
     },
     "statusOptions": {
       "active": "Ativo",
@@ -993,7 +1006,11 @@
       "serialNumber": "Número de série",
       "customLocationOption": "Localização personalizada",
       "location": "Localização",
-      "assignedTo": "Atribuído a"
+      "assignedTo": "Atribuído a",
+      "manufacturer": "Fabricante",
+      "vendor": "Fornecedor",
+      "purchaseCost": "Custo de compra",
+      "orderNumber": "N.º do pedido"
     },
     "placeholders": {
       "workstationOsType": "por exemplo, Windows, macOS, Linux",
@@ -1015,7 +1032,13 @@
       "selectClientFirst": "Selecione um cliente primeiro",
       "selectLocation": "Selecione o local",
       "loadingContacts": "Carregando contatos...",
-      "selectContact": "Selecionar contato"
+      "selectContact": "Selecionar contato",
+      "manufacturer": "ex.: Lenovo",
+      "modelName": "ex.: ThinkPad T14",
+      "noVendor": "Sem fornecedor",
+      "selectVendor": "Selecione o fornecedor",
+      "purchaseCost": "0,00",
+      "orderNumber": "Informe o número do pedido"
     },
     "sections": {
       "typeSpecificDetails": "Detalhes específicos do tipo"
@@ -1512,7 +1535,12 @@
     "compliance": "Conformidade",
     "lastDone": "Última realizada",
     "noMaintenance": "Nada agendado.",
-    "docsHint": "Anexos e credenciais deste ativo."
+    "docsHint": "Anexos e credenciais deste ativo.",
+    "manufacturer": "Fabricante",
+    "model": "Modelo",
+    "vendor": "Fornecedor",
+    "purchaseCost": "Custo de compra",
+    "orderNumber": "N.º do pedido"
   },
   "assetTimeline": {
     "title": "Linha do tempo",
@@ -1619,7 +1647,8 @@
       "notAllowed": "Um dos valores do ativo não é permitido. Revise o formulário e tente novamente.",
       "missingField": "Falta um campo obrigatório do ativo.",
       "missingFieldNamed": "Falta um campo obrigatório do ativo: {{field}}.",
-      "contactUnavailable": "O contato selecionado não está disponível para este cliente."
+      "contactUnavailable": "O contato selecionado não está disponível para este cliente.",
+      "vendorUnavailable": "O fornecedor selecionado não está disponível."
     }
   },
   "clientAssetMultiSelect": {

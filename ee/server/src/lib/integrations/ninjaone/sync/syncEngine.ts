@@ -65,6 +65,22 @@ import { v4 as uuidv4 } from 'uuid';
 import { publishWorkflowEvent } from 'server/src/lib/eventBus/publishers';
 
 /**
+ * Hardware identity columns NinjaOne owns (FR-A3). Only non-empty values are
+ * written so a device detail payload without a system block never blanks a
+ * manufacturer or model a technician entered.
+ */
+function ninjaOneHardwareIdentityPatch(
+  fields: { manufacturer?: string | null; model?: string | null } | undefined
+): Record<string, string> {
+  const patch: Record<string, string> = {};
+  const manufacturer = typeof fields?.manufacturer === 'string' ? fields.manufacturer.trim() : '';
+  const model = typeof fields?.model === 'string' ? fields.model.trim() : '';
+  if (manufacturer) patch.manufacturer = manufacturer;
+  if (model) patch.model = model;
+  return patch;
+}
+
+/**
  * Sync operation options
  */
 export interface SyncOptions {
@@ -752,6 +768,7 @@ export class NinjaOneSyncEngine {
           status: createRequest.status,
           location: createRequest.location || '',
           serial_number: createRequest.serial_number || '',
+          ...ninjaOneHardwareIdentityPatch(baseAssetData),
           // RMM fields
           rmm_provider: 'ninjaone',
           rmm_device_id: String(device.id),
@@ -859,6 +876,7 @@ export class NinjaOneSyncEngine {
           agent_status: baseFields.agent_status,
           last_seen_at: baseFields.last_seen_at,
           last_rmm_sync_at: now,
+          ...ninjaOneHardwareIdentityPatch(baseFields),
           updated_at: now,
         })
         .returning('*');

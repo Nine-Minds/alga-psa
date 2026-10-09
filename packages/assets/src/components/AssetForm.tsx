@@ -32,13 +32,14 @@ import {
   isAssetValidationError,
 } from '../actions/assetActionErrors';
 import { formatClientLocation } from '../lib/formatClientLocation';
+import { minorUnitsToInputValue, parseMoneyToMinorUnits } from '../lib/money';
 import { parseNumberInput } from '../lib/numberInput';
 import { calendarDateToLocalDate } from '../lib/calendarDate';
 import { toCalendarDateString } from '@alga-psa/core';
 import { pickSchemaAttributes, validateAttributesAgainstSchema } from '../lib/assetTypeAttributes';
 import { buildAssetTypeOptions, useAssetTypeRegistry } from './shared/useAssetTypeOptions';
 import { CustomTypeFieldsPanel } from './shared/CustomTypeFieldsPanel';
-import { getAllClientsForAssets, getClientContactsForAssets, getClientLocationsForAssets } from '../actions/clientLookupActions';
+import { getAllClientsForAssets, getClientContactsForAssets, getClientLocationsForAssets, getVendorOptionsForAssets } from '../actions/clientLookupActions';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
 import { Monitor, Network, Server, Smartphone, Printer as PrinterIcon, Router, Shield, Radio, Scale, MapPin, ExternalLink } from 'lucide-react';
@@ -97,6 +98,9 @@ export default function AssetForm({ assetId, onSaved }: AssetFormProps) {
   // across type switches per PRD D4 so re-selecting a type restores values.
   const [customAttributes, setCustomAttributes] = useState<Record<string, unknown>>({});
   const [attributeErrors, setAttributeErrors] = useState<Record<string, string>>({});
+  const [vendors, setVendors] = useState<Array<{ vendor_id: string; vendor_name: string }>>([]);
+  // Purchase cost is stored in minor units but typed as a decimal amount.
+  const [purchaseCostInput, setPurchaseCostInput] = useState('');
   const clientDrawer = useClientDrawer();
 
   useRegisterUIComponent({
@@ -116,9 +120,14 @@ export default function AssetForm({ assetId, onSaved }: AssetFormProps) {
     contact_name_id: null,
     location: '',
     purchase_date: '',
-    warranty_end_date: ''
+    warranty_end_date: '',
+    manufacturer: '',
+    model: '',
+    vendor_id: null,
+    order_number: ''
   });
-  
+
+
   const router = useRouter();
 
   // F308: type select sources the tenant registry (built-ins first with their
@@ -215,6 +224,11 @@ export default function AssetForm({ assetId, onSaved }: AssetFormProps) {
           location: data.location || '',
           purchase_date: purchaseDate,
           warranty_end_date: warrantyEndDate,
+          manufacturer: data.manufacturer ?? '',
+          model: data.model ?? '',
+          vendor_id: data.vendor_id ?? null,
+          purchase_cost_currency: data.purchase_cost_currency ?? null,
+          order_number: data.order_number ?? '',
           workstation: data.workstation ? {
             os_type: data.workstation.os_type || '',
             os_version: data.workstation.os_version || '',
@@ -273,6 +287,7 @@ export default function AssetForm({ assetId, onSaved }: AssetFormProps) {
           } : undefined
         });
         setCustomLocation(data.location || '');
+        setPurchaseCostInput(minorUnitsToInputValue(data.purchase_cost));
         setSelectedLocationId(data.location_id ?? (data.location ? 'custom' : ''));
         setCustomAttributes(
           data.attributes && typeof data.attributes === 'object' && !Array.isArray(data.attributes)
@@ -325,6 +340,31 @@ export default function AssetForm({ assetId, onSaved }: AssetFormProps) {
       isMounted = false;
     };
   }, [t]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadVendors = async () => {
+      try {
+        const list = await getVendorOptionsForAssets(asset?.vendor_id ?? null);
+        if (isMounted) setVendors(list);
+      } catch (err) {
+        // A missing supplier list must never block saving the rest of the form.
+        console.error('Error loading vendors:', err);
+      }
+    };
+
+    void loadVendors();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [asset?.vendor_id]);
+
+  const vendorOptions = useMemo(() => ([
+    { value: '', label: t('assetForm.placeholders.noVendor', { defaultValue: 'No vendor' }) },
+    ...vendors.map((vendor) => ({ value: vendor.vendor_id, label: vendor.vendor_name })),
+  ]), [vendors, t]);
 
   useEffect(() => {
     let isMounted = true;
@@ -1052,6 +1092,13 @@ export default function AssetForm({ assetId, onSaved }: AssetFormProps) {
         // Ensure optional fields are undefined instead of empty strings
         location: formData.location?.trim() || undefined,
         serial_number: formData.serial_number?.trim() || undefined,
+        // Procurement fields: an emptied input means "clear", so send null
+        // (cleanedData drops undefined and '' but keeps null).
+        manufacturer: formData.manufacturer?.trim() || null,
+        model: formData.model?.trim() || null,
+        vendor_id: formData.vendor_id || null,
+        purchase_cost: parseMoneyToMinorUnits(purchaseCostInput),
+        order_number: formData.order_number?.trim() || null,
         // F309/F310: submit only schema-declared keys — the server merges into
         // assets.attributes so sibling namespaces (e.g. hudu_fields) survive.
         attributes: customTypeFields.length > 0
@@ -1507,6 +1554,91 @@ export default function AssetForm({ assetId, onSaved }: AssetFormProps) {
                     placeholder={t('assetForm.placeholders.selectWarrantyEndDate', {
                       defaultValue: 'Select warranty end date'
                     })}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="border-t border-[rgb(var(--color-border-200))] pt-6">
+              <Text size="4" weight="medium" className="text-[rgb(var(--color-text-900))]">
+                {t('assetForm.sections.procurement', { defaultValue: 'Make & Purchase' })}
+              </Text>
+              <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3">
+                <div>
+                  <label htmlFor="asset-manufacturer-input" className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
+                    {t('assetForm.fields.manufacturer', { defaultValue: 'Manufacturer' })}
+                  </label>
+                  <Input
+                    id="asset-manufacturer-input"
+                    name="manufacturer"
+                    value={formData.manufacturer ?? ''}
+                    onChange={handleInputChange}
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="asset-model-input" className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
+                    {t('assetForm.fields.model', { defaultValue: 'Model' })}
+                  </label>
+                  <Input
+                    id="asset-model-input"
+                    name="model"
+                    value={formData.model ?? ''}
+                    onChange={handleInputChange}
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="asset-vendor-select" className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
+                    {t('assetForm.fields.vendor', { defaultValue: 'Vendor' })}
+                  </label>
+                  <CustomSelect
+                    id="asset-vendor-select"
+                    value={formData.vendor_id ?? ''}
+                    onValueChange={(value) => setFormData(prev => ({ ...prev, vendor_id: value || null }))}
+                    options={vendorOptions}
+                    placeholder={t('assetForm.placeholders.selectVendor', { defaultValue: 'Select a vendor' })}
+                    disabled={saving}
+                    className="mt-1"
+                  />
+                  <Link
+                    id="asset-form-create-vendor"
+                    href="/msp/inventory?tab=vendors"
+                    className="mt-2 inline-flex items-center gap-1 text-sm text-primary-600 hover:text-primary-500"
+                  >
+                    {t('assetForm.actions.createVendor', { defaultValue: 'Create vendor' })}
+                    <ExternalLink className="h-3.5 w-3.5" />
+                  </Link>
+                </div>
+                <div>
+                  <label htmlFor="asset-purchase-cost-input" className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
+                    {t('assetForm.fields.purchaseCost', { defaultValue: 'Purchase cost' })}
+                  </label>
+                  <Input
+                    id="asset-purchase-cost-input"
+                    name="purchase_cost_display"
+                    inputMode="decimal"
+                    value={purchaseCostInput}
+                    onChange={(e) => setPurchaseCostInput(e.target.value)}
+                    placeholder={t('assetForm.placeholders.purchaseCost', { defaultValue: '0.00' })}
+                    className="mt-1"
+                  />
+                  {formData.purchase_cost_currency && (
+                    <p className="mt-1 text-sm text-[rgb(var(--color-text-600))]">
+                      {formData.purchase_cost_currency}
+                    </p>
+                  )}
+                </div>
+                <div>
+                  <label htmlFor="asset-order-number-input" className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
+                    {t('assetForm.fields.orderNumber', { defaultValue: 'Order no.' })}
+                  </label>
+                  <Input
+                    id="asset-order-number-input"
+                    name="order_number"
+                    value={formData.order_number ?? ''}
+                    onChange={handleInputChange}
+                    className="mt-1"
                   />
                 </div>
               </div>

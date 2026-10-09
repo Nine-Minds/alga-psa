@@ -127,7 +127,9 @@
       "actions": "Acties",
       "patching": "Patches",
       "coverage": "Dekking",
-      "assignedTo": "Toegewezen aan"
+      "assignedTo": "Toegewezen aan",
+      "manufacturer": "Fabrikant",
+      "model": "Model"
     },
     "metrics": {
       "totalAssets": {
@@ -349,7 +351,9 @@
       "status": "Status",
       "created": "Gemaakt",
       "updated": "Bijgewerkt",
-      "tenant": "Tenant"
+      "tenant": "Tenant",
+      "manufacturer": "Fabrikant",
+      "model": "Model"
     },
     "typeDetails": {
       "workstation": "Details van het werkstation",
@@ -578,7 +582,8 @@
     "actions": {
       "viewClient": "Klant bekijken",
       "manageClientLocations": "Beheer klantlocaties",
-      "saveChanges": "Wijzigingen opslaan"
+      "saveChanges": "Wijzigingen opslaan",
+      "createVendor": "Leverancier aanmaken"
     },
     "alerts": {
       "noLocationsSaved": "Deze klant heeft nog geen opgeslagen locaties. Gebruik aangepaste invoer of maak er een vanuit het klantrecord."
@@ -586,7 +591,8 @@
     "sections": {
       "basicInformation": "Basisinformatie",
       "clientAndLocation": "Klant & Locatie",
-      "assetBasics": "Basisgegevens van de asset"
+      "assetBasics": "Basisgegevens van de asset",
+      "procurement": "Fabrikant en aankoop"
     },
     "fields": {
       "customLocationOption": "Aangepaste locatie",
@@ -627,7 +633,11 @@
       "purchaseDate": "Aankoopdatum",
       "warrantyEndDate": "Einddatum garantie",
       "assetType": "Type",
-      "assignedTo": "Toegewezen aan"
+      "assignedTo": "Toegewezen aan",
+      "manufacturer": "Fabrikant",
+      "vendor": "Leverancier",
+      "purchaseCost": "Aanschafkosten",
+      "orderNumber": "Ordernr."
     },
     "placeholders": {
       "loadingClients": "Klanten laden…",
@@ -639,7 +649,10 @@
       "selectPurchaseDate": "Selecteer aankoopdatum",
       "selectWarrantyEndDate": "Selecteer de einddatum van de garantie",
       "loadingContacts": "Contacten laden…",
-      "selectContact": "Selecteer een contact"
+      "selectContact": "Selecteer een contact",
+      "noVendor": "Geen leverancier",
+      "selectVendor": "Selecteer een leverancier",
+      "purchaseCost": "0,00"
     },
     "statusOptions": {
       "active": "Actief",
@@ -993,7 +1006,11 @@
       "serialNumber": "Serienummer",
       "customLocationOption": "Aangepaste locatie",
       "location": "Locatie",
-      "assignedTo": "Toegewezen aan"
+      "assignedTo": "Toegewezen aan",
+      "manufacturer": "Fabrikant",
+      "vendor": "Leverancier",
+      "purchaseCost": "Aanschafkosten",
+      "orderNumber": "Ordernr."
     },
     "placeholders": {
       "workstationOsType": "bijvoorbeeld Windows, macOS, Linux",
@@ -1015,7 +1032,13 @@
       "selectClientFirst": "Selecteer eerst een klant",
       "selectLocation": "Selecteer locatie",
       "loadingContacts": "Contacten laden...",
-      "selectContact": "Contact selecteren"
+      "selectContact": "Contact selecteren",
+      "manufacturer": "bijv. Lenovo",
+      "modelName": "bijv. ThinkPad T14",
+      "noVendor": "Geen leverancier",
+      "selectVendor": "Selecteer leverancier",
+      "purchaseCost": "0,00",
+      "orderNumber": "Voer ordernummer in"
     },
     "sections": {
       "typeSpecificDetails": "Typespecifieke details"
@@ -1512,7 +1535,12 @@
     "compliance": "Naleving",
     "lastDone": "Laatst uitgevoerd",
     "noMaintenance": "Niets gepland.",
-    "docsHint": "Bijlagen en inloggegevens voor dit asset."
+    "docsHint": "Bijlagen en inloggegevens voor dit asset.",
+    "manufacturer": "Fabrikant",
+    "model": "Model",
+    "vendor": "Leverancier",
+    "purchaseCost": "Aanschafkosten",
+    "orderNumber": "Ordernr."
   },
   "assetTimeline": {
     "title": "Tijdlijn",
@@ -1619,7 +1647,8 @@
       "notAllowed": "Een van de assetwaarden is niet toegestaan. Controleer het formulier en probeer het opnieuw.",
       "missingField": "Er ontbreekt een verplicht assetveld.",
       "missingFieldNamed": "Er ontbreekt een verplicht assetveld: {{field}}.",
-      "contactUnavailable": "Het geselecteerde contact is niet beschikbaar voor deze klant."
+      "contactUnavailable": "Het geselecteerde contact is niet beschikbaar voor deze klant.",
+      "vendorUnavailable": "De geselecteerde leverancier is niet beschikbaar."
     }
   },
   "clientAssetMultiSelect": {

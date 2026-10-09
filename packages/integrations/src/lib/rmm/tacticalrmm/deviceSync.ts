@@ -303,6 +303,56 @@ export interface TacticalHardware {
   disk_usage: Array<{ name: string; total_gb: number; free_gb: number; utilization_percent: number }> | null;
   serial_number: string | null;
   last_reboot_at: Date | null;
+  manufacturer: string | null;
+  model: string | null;
+}
+
+function cleanHardwareString(value: unknown): string | null {
+  const text = String(value ?? '').trim();
+  if (!text) return null;
+  // Tactical echoes these OEM placeholders verbatim; they are not a make.
+  if (/^(system manufacturer|system product name|to be filled by o\.?e\.?m\.?|default string|unknown|none|n\/?a)$/i.test(text)) {
+    return null;
+  }
+  return text.slice(0, 255);
+}
+
+/**
+ * Make and model from either Tactical payload shape (FR-A3). The list endpoint
+ * gives one `make_model` string ("Dell Inc. Latitude 5420"); the detail
+ * endpoint's `wmi_detail.comp_sys` carries them apart. When only the combined
+ * string is available and the make is known, the make prefix is stripped so
+ * the model column does not repeat it.
+ */
+export function extractTacticalMakeModel(agent: any): { manufacturer: string | null; model: string | null } {
+  const wmi = agent?.wmi_detail && typeof agent.wmi_detail === 'object' ? agent.wmi_detail : null;
+  let manufacturer: string | null = null;
+  let model: string | null = null;
+
+  if (wmi) {
+    if (isTacticalPosix(agent)) {
+      manufacturer = cleanHardwareString(wmi.manufacturer);
+      model = cleanHardwareString(wmi.model ?? wmi.make_model);
+    } else {
+      for (const entry of Array.isArray(wmi.comp_sys) ? wmi.comp_sys : []) {
+        const rows: any[] = Array.isArray(entry) ? entry : [entry];
+        for (const row of rows) {
+          if (!row || typeof row !== 'object') continue;
+          manufacturer = manufacturer ?? cleanHardwareString((row as any).Manufacturer);
+          model = model ?? cleanHardwareString((row as any).Model);
+        }
+      }
+    }
+  }
+
+  const combined = cleanHardwareString(agent?.make_model ?? agent?.makeModel);
+  if (!model && combined) {
+    model = manufacturer && combined.toLowerCase().startsWith(manufacturer.toLowerCase())
+      ? cleanHardwareString(combined.slice(manufacturer.length))
+      : combined;
+  }
+
+  return { manufacturer, model };
 }
 
 /**
@@ -384,6 +434,8 @@ export function extractHardware(agent: any): TacticalHardware {
     serial = typeof raw === 'string' && raw.trim() ? raw.trim() : null;
   }
 
+  const makeModel = extractTacticalMakeModel(agent);
+
   return {
     cpu_model: cpuModel,
     cpu_cores: cpuCores,
@@ -391,7 +443,20 @@ export function extractHardware(agent: any): TacticalHardware {
     disk_usage: diskUsage,
     serial_number: serial,
     last_reboot_at: bootTimeToDate(agent),
+    manufacturer: makeModel.manufacturer,
+    model: makeModel.model,
   };
+}
+
+/**
+ * Hardware identity columns on `assets`. Only non-empty values are included so
+ * a thin list-endpoint payload never blanks what the detail endpoint filled.
+ */
+export function buildTacticalAssetIdentityPatch(hardware: TacticalHardware): Record<string, string> {
+  const patch: Record<string, string> = {};
+  if (hardware.manufacturer) patch.manufacturer = hardware.manufacturer;
+  if (hardware.model) patch.model = hardware.model;
+  return patch;
 }
 
 /**
@@ -634,6 +699,7 @@ export async function runTacticalRmmDeviceSync(
                 agent_status: status,
                 last_seen_at: lastSeen ? new Date(lastSeen) : null,
                 last_rmm_sync_at: knex.fn.now(),
+                ...buildTacticalAssetIdentityPatch(hardware),
               });
 
             await upsertTacticalAssetExtension(knex, {
@@ -678,6 +744,7 @@ export async function runTacticalRmmDeviceSync(
                 last_seen_at: lastSeen ? new Date(lastSeen) : null,
                 last_rmm_sync_at: knex.fn.now(),
                 ...(hardware.serial_number ? { serial_number: hardware.serial_number } : {}),
+                ...buildTacticalAssetIdentityPatch(hardware),
               });
 
             await upsertTacticalAssetExtension(knex, {

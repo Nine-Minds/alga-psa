@@ -653,6 +653,12 @@ function InfoGrid({
       )}
       <InfoRow label={t('assetDetailDrawer.info.assetTag', { defaultValue: 'Asset tag' })} value={asset.asset_tag} />
       <InfoRow label={t('assetDetailDrawer.info.status', { defaultValue: 'Status' })} value={statusLabel} />
+      {asset.manufacturer ? (
+        <InfoRow label={t('assetDetailDrawer.info.manufacturer', { defaultValue: 'Manufacturer' })} value={asset.manufacturer} />
+      ) : null}
+      {asset.model ? (
+        <InfoRow label={t('assetDetailDrawer.info.model', { defaultValue: 'Model' })} value={asset.model} />
+      ) : null}
       <InfoRow label={t('assetDetailDrawer.info.created', { defaultValue: 'Created' })} value={formatDate(asset.created_at)} />
       <InfoRow label={t('assetDetailDrawer.info.updated', { defaultValue: 'Updated' })} value={formatRelative(asset.updated_at, t)} />
       <InfoRow label={t('assetDetailDrawer.info.tenant', { defaultValue: 'Tenant' })} value={asset.tenant} />

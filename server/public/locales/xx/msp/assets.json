@@ -127,7 +127,9 @@
       "actions": "⟦Ȧƈŧīȯƞş⟧",
       "patching": "⟦Ƥȧŧƈħīƞɠ⟧",
       "coverage": "⟦Ƈȯṽḗřȧɠḗ⟧",
-      "assignedTo": "⟦Ȧşşīɠƞḗḓ ŧȯ⟧"
+      "assignedTo": "⟦Ȧşşīɠƞḗḓ ŧȯ⟧",
+      "manufacturer": "⟦Ḿȧƞŭƒȧƈŧŭřḗř⟧",
+      "model": "⟦Ḿȯḓḗŀ⟧"
     },
     "metrics": {
       "totalAssets": {
@@ -349,7 +351,9 @@
       "status": "⟦Şŧȧŧŭş⟧",
       "created": "⟦Ƈřḗȧŧḗḓ⟧",
       "updated": "⟦Ŭƥḓȧŧḗḓ⟧",
-      "tenant": "⟦Ŧḗƞȧƞŧ⟧"
+      "tenant": "⟦Ŧḗƞȧƞŧ⟧",
+      "manufacturer": "⟦Ḿȧƞŭƒȧƈŧŭřḗř⟧",
+      "model": "⟦Ḿȯḓḗŀ⟧"
     },
     "typeDetails": {
       "workstation": "⟦Ẇȯřķşŧȧŧīȯƞ ḓḗŧȧīŀş⟧",
@@ -578,7 +582,8 @@
     "actions": {
       "viewClient": "⟦Ṽīḗẇ ƈŀīḗƞŧ⟧",
       "manageClientLocations": "⟦Ḿȧƞȧɠḗ ƈŀīḗƞŧ ŀȯƈȧŧīȯƞş⟧",
-      "saveChanges": "⟦Şȧṽḗ Ƈħȧƞɠḗş⟧"
+      "saveChanges": "⟦Şȧṽḗ Ƈħȧƞɠḗş⟧",
+      "createVendor": "⟦Ƈřḗȧŧḗ ṽḗƞḓȯř⟧"
     },
     "alerts": {
       "noLocationsSaved": "⟦Ŧħīş ƈŀīḗƞŧ ḓȯḗşƞ’ŧ ħȧṽḗ ȧƞẏ şȧṽḗḓ ŀȯƈȧŧīȯƞş ẏḗŧ. Ŭşḗ ƈŭşŧȯḿ ḗƞŧřẏ ȯř ƈřḗȧŧḗ ȯƞḗ ƒřȯḿ ŧħḗ ƈŀīḗƞŧ řḗƈȯřḓ.⟧"
@@ -586,7 +591,8 @@
     "sections": {
       "basicInformation": "⟦Ɓȧşīƈ Īƞƒȯřḿȧŧīȯƞ⟧",
       "clientAndLocation": "⟦Ƈŀīḗƞŧ & Ŀȯƈȧŧīȯƞ⟧",
-      "assetBasics": "⟦Ȧşşḗŧ Ɓȧşīƈş⟧"
+      "assetBasics": "⟦Ȧşşḗŧ Ɓȧşīƈş⟧",
+      "procurement": "⟦Ḿȧķḗ & Ƥŭřƈħȧşḗ⟧"
     },
     "fields": {
       "customLocationOption": "⟦Ƈŭşŧȯḿ ŀȯƈȧŧīȯƞ⟧",
@@ -627,7 +633,11 @@
       "purchaseDate": "⟦Ƥŭřƈħȧşḗ Ḓȧŧḗ⟧",
       "warrantyEndDate": "⟦Ẇȧřřȧƞŧẏ Ḗƞḓ Ḓȧŧḗ⟧",
       "assetType": "⟦Ŧẏƥḗ⟧",
-      "assignedTo": "⟦Ȧşşīɠƞḗḓ ŧȯ⟧"
+      "assignedTo": "⟦Ȧşşīɠƞḗḓ ŧȯ⟧",
+      "manufacturer": "⟦Ḿȧƞŭƒȧƈŧŭřḗř⟧",
+      "vendor": "⟦Ṽḗƞḓȯř⟧",
+      "purchaseCost": "⟦Ƥŭřƈħȧşḗ ƈȯşŧ⟧",
+      "orderNumber": "⟦Ȯřḓḗř ƞȯ.⟧"
     },
     "placeholders": {
       "loadingClients": "⟦Ŀȯȧḓīƞɠ ƈŀīḗƞŧş…⟧",
@@ -639,7 +649,10 @@
       "selectPurchaseDate": "⟦Şḗŀḗƈŧ ƥŭřƈħȧşḗ ḓȧŧḗ⟧",
       "selectWarrantyEndDate": "⟦Şḗŀḗƈŧ ẇȧřřȧƞŧẏ ḗƞḓ ḓȧŧḗ⟧",
       "loadingContacts": "⟦Ŀȯȧḓīƞɠ ƈȯƞŧȧƈŧş…⟧",
-      "selectContact": "⟦Şḗŀḗƈŧ ȧ ƈȯƞŧȧƈŧ⟧"
+      "selectContact": "⟦Şḗŀḗƈŧ ȧ ƈȯƞŧȧƈŧ⟧",
+      "noVendor": "⟦Ƞȯ ṽḗƞḓȯř⟧",
+      "selectVendor": "⟦Şḗŀḗƈŧ ȧ ṽḗƞḓȯř⟧",
+      "purchaseCost": "⟦0.00⟧"
     },
     "statusOptions": {
       "active": "⟦Ȧƈŧīṽḗ⟧",
@@ -993,7 +1006,11 @@
       "serialNumber": "⟦Şḗřīȧŀ Ƞŭḿƀḗř⟧",
       "customLocationOption": "⟦Ƈŭşŧȯḿ ŀȯƈȧŧīȯƞ⟧",
       "location": "⟦Ŀȯƈȧŧīȯƞ⟧",
-      "assignedTo": "⟦Ȧşşīɠƞḗḓ ŧȯ⟧"
+      "assignedTo": "⟦Ȧşşīɠƞḗḓ ŧȯ⟧",
+      "manufacturer": "⟦Ḿȧƞŭƒȧƈŧŭřḗř⟧",
+      "vendor": "⟦Ṽḗƞḓȯř⟧",
+      "purchaseCost": "⟦Ƥŭřƈħȧşḗ ƈȯşŧ⟧",
+      "orderNumber": "⟦Ȯřḓḗř ƞȯ.⟧"
     },
     "placeholders": {
       "workstationOsType": "⟦ḗ.ɠ., Ẇīƞḓȯẇş, ḿȧƈȮŞ, Ŀīƞŭẋ⟧",
@@ -1015,7 +1032,13 @@
       "selectClientFirst": "⟦Şḗŀḗƈŧ ȧ ƈŀīḗƞŧ ƒīřşŧ⟧",
       "selectLocation": "⟦Şḗŀḗƈŧ ŀȯƈȧŧīȯƞ⟧",
       "loadingContacts": "⟦Ŀȯȧḓīƞɠ ƈȯƞŧȧƈŧş...⟧",
-      "selectContact": "⟦Şḗŀḗƈŧ ƈȯƞŧȧƈŧ⟧"
+      "selectContact": "⟦Şḗŀḗƈŧ ƈȯƞŧȧƈŧ⟧",
+      "manufacturer": "⟦ḗ.ɠ., Ŀḗƞȯṽȯ⟧",
+      "modelName": "⟦ḗ.ɠ., ŦħīƞķƤȧḓ Ŧ14⟧",
+      "noVendor": "⟦Ƞȯ ṽḗƞḓȯř⟧",
+      "selectVendor": "⟦Şḗŀḗƈŧ ṽḗƞḓȯř⟧",
+      "purchaseCost": "⟦0.00⟧",
+      "orderNumber": "⟦Ḗƞŧḗř ȯřḓḗř ƞŭḿƀḗř⟧"
     },
     "sections": {
       "typeSpecificDetails": "⟦Ŧẏƥḗ-şƥḗƈīƒīƈ Ḓḗŧȧīŀş⟧"
@@ -1512,7 +1535,12 @@
     "compliance": "⟦Ƈȯḿƥŀīȧƞƈḗ⟧",
     "lastDone": "⟦Ŀȧşŧ ḓȯƞḗ⟧",
     "noMaintenance": "⟦Ƞȯŧħīƞɠ şƈħḗḓŭŀḗḓ.⟧",
-    "docsHint": "⟦Ȧŧŧȧƈħḿḗƞŧş ȧƞḓ ƈřḗḓḗƞŧīȧŀş ƒȯř ŧħīş ȧşşḗŧ.⟧"
+    "docsHint": "⟦Ȧŧŧȧƈħḿḗƞŧş ȧƞḓ ƈřḗḓḗƞŧīȧŀş ƒȯř ŧħīş ȧşşḗŧ.⟧",
+    "manufacturer": "⟦Ḿȧƞŭƒȧƈŧŭřḗř⟧",
+    "model": "⟦Ḿȯḓḗŀ⟧",
+    "vendor": "⟦Ṽḗƞḓȯř⟧",
+    "purchaseCost": "⟦Ƥŭřƈħȧşḗ ƈȯşŧ⟧",
+    "orderNumber": "⟦Ȯřḓḗř ƞȯ.⟧"
   },
   "assetTimeline": {
     "title": "⟦Ŧīḿḗŀīƞḗ⟧",
@@ -1619,7 +1647,8 @@
       "notAllowed": "⟦Ȯƞḗ ȯƒ ŧħḗ ȧşşḗŧ ṽȧŀŭḗş īş ƞȯŧ ȧŀŀȯẇḗḓ. Ƥŀḗȧşḗ řḗṽīḗẇ ŧħḗ ƒȯřḿ ȧƞḓ ŧřẏ ȧɠȧīƞ.⟧",
       "missingField": "⟦Ḿīşşīƞɠ řḗʠŭīřḗḓ ȧşşḗŧ ƒīḗŀḓ.⟧",
       "missingFieldNamed": "⟦Ḿīşşīƞɠ řḗʠŭīřḗḓ ȧşşḗŧ ƒīḗŀḓ: {{field}}.⟧",
-      "contactUnavailable": "⟦Şḗŀḗƈŧḗḓ ƈȯƞŧȧƈŧ īş ƞȯŧ ȧṽȧīŀȧƀŀḗ ƒȯř ŧħīş ƈŀīḗƞŧ.⟧"
+      "contactUnavailable": "⟦Şḗŀḗƈŧḗḓ ƈȯƞŧȧƈŧ īş ƞȯŧ ȧṽȧīŀȧƀŀḗ ƒȯř ŧħīş ƈŀīḗƞŧ.⟧",
+      "vendorUnavailable": "⟦Şḗŀḗƈŧḗḓ ṽḗƞḓȯř īş ƞȯŧ ȧṽȧīŀȧƀŀḗ.⟧"
     }
   },
   "clientAssetMultiSelect": {

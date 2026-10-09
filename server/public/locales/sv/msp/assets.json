@@ -125,7 +125,9 @@
       "actions": "Åtgärder",
       "patching": "Patchning",
       "coverage": "Täckning",
-      "assignedTo": "Tilldelad till"
+      "assignedTo": "Tilldelad till",
+      "manufacturer": "Tillverkare",
+      "model": "Modell"
     },
     "metrics": {
       "totalAssets": {
@@ -347,7 +349,9 @@
       "status": "Status",
       "created": "Skapad",
       "updated": "Uppdaterad",
-      "tenant": "Organisation"
+      "tenant": "Organisation",
+      "manufacturer": "Tillverkare",
+      "model": "Modell"
     },
     "typeDetails": {
       "workstation": "Arbetsstationsdetaljer",
@@ -571,7 +575,8 @@
     "actions": {
       "viewClient": "Visa kund",
       "manageClientLocations": "Hantera kundplatser",
-      "saveChanges": "Spara ändringar"
+      "saveChanges": "Spara ändringar",
+      "createVendor": "Skapa leverantör"
     },
     "alerts": {
       "noLocationsSaved": "Den här kunden har inga sparade platser än. Ange en anpassad plats eller skapa en från kundposten."
@@ -579,7 +584,8 @@
     "sections": {
       "basicInformation": "Grundläggande information",
       "clientAndLocation": "Kund och plats",
-      "assetBasics": "Grunduppgifter om tillgången"
+      "assetBasics": "Grunduppgifter om tillgången",
+      "procurement": "Tillverkare och inköp"
     },
     "fields": {
       "customLocationOption": "Anpassad plats",
@@ -620,7 +626,11 @@
       "purchaseDate": "Inköpsdatum",
       "warrantyEndDate": "Garantins slutdatum",
       "assetType": "Typ",
-      "assignedTo": "Tilldelad till"
+      "assignedTo": "Tilldelad till",
+      "manufacturer": "Tillverkare",
+      "vendor": "Leverantör",
+      "purchaseCost": "Inköpskostnad",
+      "orderNumber": "Ordernr."
     },
     "placeholders": {
       "loadingClients": "Läser in kunder…",
@@ -632,7 +642,10 @@
       "selectPurchaseDate": "Välj inköpsdatum",
       "selectWarrantyEndDate": "Välj garantins slutdatum",
       "loadingContacts": "Läser in kontakter…",
-      "selectContact": "Välj en kontakt"
+      "selectContact": "Välj en kontakt",
+      "noVendor": "Ingen leverantör",
+      "selectVendor": "Välj en leverantör",
+      "purchaseCost": "0,00"
     },
     "statusOptions": {
       "active": "Aktiv",
@@ -977,7 +990,11 @@
       "serialNumber": "Serienummer",
       "customLocationOption": "Anpassad plats",
       "location": "Plats",
-      "assignedTo": "Tilldelad till"
+      "assignedTo": "Tilldelad till",
+      "manufacturer": "Tillverkare",
+      "vendor": "Leverantör",
+      "purchaseCost": "Inköpskostnad",
+      "orderNumber": "Ordernr."
     },
     "placeholders": {
       "workstationOsType": "t.ex. Windows, macOS, Linux",
@@ -999,7 +1016,13 @@
       "selectClientFirst": "Välj en kund först",
       "selectLocation": "Välj plats",
       "loadingContacts": "Läser in kontakter...",
-      "selectContact": "Välj kontakt"
+      "selectContact": "Välj kontakt",
+      "manufacturer": "t.ex. Lenovo",
+      "modelName": "t.ex. ThinkPad T14",
+      "noVendor": "Ingen leverantör",
+      "selectVendor": "Välj leverantör",
+      "purchaseCost": "0,00",
+      "orderNumber": "Ange ordernummer"
     },
     "sections": {
       "typeSpecificDetails": "Typspecifika detaljer"
@@ -1484,7 +1507,12 @@
     "compliance": "Efterlevnad",
     "lastDone": "Senast utfört",
     "noMaintenance": "Inget schemalagt.",
-    "docsHint": "Bilagor och inloggningsuppgifter för den här tillgången."
+    "docsHint": "Bilagor och inloggningsuppgifter för den här tillgången.",
+    "manufacturer": "Tillverkare",
+    "model": "Modell",
+    "vendor": "Leverantör",
+    "purchaseCost": "Inköpskostnad",
+    "orderNumber": "Ordernr."
   },
   "assetTimeline": {
     "title": "Tidslinje",
@@ -1591,7 +1619,8 @@
       "notAllowed": "Ett av tillgångsvärdena är inte tillåtet. Granska formuläret och försök igen.",
       "missingField": "Ett obligatoriskt tillgångsfält saknas.",
       "missingFieldNamed": "Obligatoriskt tillgångsfält saknas: {{field}}.",
-      "contactUnavailable": "Den valda kontakten är inte tillgänglig för den här kunden."
+      "contactUnavailable": "Den valda kontakten är inte tillgänglig för den här kunden.",
+      "vendorUnavailable": "Den valda leverantören är inte tillgänglig."
     }
   },
   "clientAssetMultiSelect": {

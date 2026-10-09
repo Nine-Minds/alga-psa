@@ -127,7 +127,9 @@
       "actions": "Azioni",
       "patching": "Patch",
       "coverage": "Copertura",
-      "assignedTo": "Assegnato a"
+      "assignedTo": "Assegnato a",
+      "manufacturer": "Produttore",
+      "model": "Modello"
     },
     "metrics": {
       "totalAssets": {
@@ -349,7 +351,9 @@
       "status": "Stato",
       "created": "Creato",
       "updated": "Aggiornato",
-      "tenant": "Tenant"
+      "tenant": "Tenant",
+      "manufacturer": "Produttore",
+      "model": "Modello"
     },
     "typeDetails": {
       "workstation": "Dettagli della postazione di lavoro",
@@ -578,7 +582,8 @@
     "actions": {
       "viewClient": "Visualizza cliente",
       "manageClientLocations": "Gestisci le posizioni dei clienti",
-      "saveChanges": "Salva modifiche"
+      "saveChanges": "Salva modifiche",
+      "createVendor": "Crea fornitore"
     },
     "alerts": {
       "noLocationsSaved": "Questo cliente non ha ancora alcuna posizione salvata. Utilizza una voce personalizzata o creane una dal record del cliente."
@@ -586,7 +591,8 @@
     "sections": {
       "basicInformation": "Informazioni di base",
       "clientAndLocation": "Cliente e posizione",
-      "assetBasics": "Informazioni di base sull'asset"
+      "assetBasics": "Informazioni di base sull'asset",
+      "procurement": "Produttore e acquisto"
     },
     "fields": {
       "customLocationOption": "Posizione personalizzata",
@@ -627,7 +633,11 @@
       "purchaseDate": "Data di acquisto",
       "warrantyEndDate": "Data di fine garanzia",
       "assetType": "Tipo",
-      "assignedTo": "Assegnato a"
+      "assignedTo": "Assegnato a",
+      "manufacturer": "Produttore",
+      "vendor": "Fornitore",
+      "purchaseCost": "Costo di acquisto",
+      "orderNumber": "N. ordine"
     },
     "placeholders": {
       "loadingClients": "Caricamento clienti…",
@@ -639,7 +649,10 @@
       "selectPurchaseDate": "Seleziona la data di acquisto",
       "selectWarrantyEndDate": "Seleziona la data di fine della garanzia",
       "loadingContacts": "Caricamento dei contatti…",
-      "selectContact": "Seleziona un contatto"
+      "selectContact": "Seleziona un contatto",
+      "noVendor": "Nessun fornitore",
+      "selectVendor": "Seleziona un fornitore",
+      "purchaseCost": "0,00"
     },
     "statusOptions": {
       "active": "Attivo",
@@ -993,7 +1006,11 @@
       "serialNumber": "Numero di serie",
       "customLocationOption": "Posizione personalizzata",
       "location": "Posizione",
-      "assignedTo": "Assegnato a"
+      "assignedTo": "Assegnato a",
+      "manufacturer": "Produttore",
+      "vendor": "Fornitore",
+      "purchaseCost": "Costo di acquisto",
+      "orderNumber": "N. ordine"
     },
     "placeholders": {
       "workstationOsType": "ad esempio Windows, macOS, Linux",
@@ -1015,7 +1032,13 @@
       "selectClientFirst": "Seleziona prima un cliente",
       "selectLocation": "Seleziona una posizione",
       "loadingContacts": "Caricamento dei contatti...",
-      "selectContact": "Seleziona contatto"
+      "selectContact": "Seleziona contatto",
+      "manufacturer": "es. Lenovo",
+      "modelName": "es. ThinkPad T14",
+      "noVendor": "Nessun fornitore",
+      "selectVendor": "Seleziona fornitore",
+      "purchaseCost": "0,00",
+      "orderNumber": "Inserisci il numero d'ordine"
     },
     "sections": {
       "typeSpecificDetails": "Dettagli specifici del tipo"
@@ -1512,7 +1535,12 @@
     "compliance": "Conformità",
     "lastDone": "Ultima eseguita",
     "noMaintenance": "Niente in programma.",
-    "docsHint": "Allegati e credenziali di questo asset."
+    "docsHint": "Allegati e credenziali di questo asset.",
+    "manufacturer": "Produttore",
+    "model": "Modello",
+    "vendor": "Fornitore",
+    "purchaseCost": "Costo di acquisto",
+    "orderNumber": "N. ordine"
   },
   "assetTimeline": {
     "title": "Cronologia",
@@ -1619,7 +1647,8 @@
       "notAllowed": "Uno dei valori dell’asset non è consentito. Controllare il modulo e riprovare.",
       "missingField": "Manca un campo obbligatorio dell’asset.",
       "missingFieldNamed": "Manca un campo obbligatorio dell’asset: {{field}}.",
-      "contactUnavailable": "Il contatto selezionato non è disponibile per questo cliente."
+      "contactUnavailable": "Il contatto selezionato non è disponibile per questo cliente.",
+      "vendorUnavailable": "Il fornitore selezionato non è disponibile."
     }
   },
   "clientAssetMultiSelect": {

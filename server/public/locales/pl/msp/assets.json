@@ -127,7 +127,9 @@
       "actions": "Działania",
       "patching": "Poprawki",
       "coverage": "Zakres",
-      "assignedTo": "Przypisano do"
+      "assignedTo": "Przypisano do",
+      "manufacturer": "Producent",
+      "model": "Model"
     },
     "metrics": {
       "totalAssets": {
@@ -349,7 +351,9 @@
       "status": "Status",
       "created": "Utworzono",
       "updated": "Zaktualizowano",
-      "tenant": "Organizacja"
+      "tenant": "Organizacja",
+      "manufacturer": "Producent",
+      "model": "Model"
     },
     "typeDetails": {
       "workstation": "Szczegóły stacji roboczej",
@@ -578,7 +582,8 @@
     "actions": {
       "viewClient": "Zobacz klienta",
       "manageClientLocations": "Zarządzaj lokalizacjami klientów",
-      "saveChanges": "Zapisz zmiany"
+      "saveChanges": "Zapisz zmiany",
+      "createVendor": "Utwórz dostawcę"
     },
     "alerts": {
       "noLocationsSaved": "Ten klient nie ma jeszcze żadnych zapisanych lokalizacji. Użyj wpisu niestandardowego lub utwórz go na podstawie rekordu klienta."
@@ -586,7 +591,8 @@
     "sections": {
       "basicInformation": "Podstawowe informacje",
       "clientAndLocation": "Klient i lokalizacja",
-      "assetBasics": "Podstawy zasobu"
+      "assetBasics": "Podstawy zasobu",
+      "procurement": "Producent i zakup"
     },
     "fields": {
       "customLocationOption": "Niestandardowa lokalizacja",
@@ -627,7 +633,11 @@
       "purchaseDate": "Data zakupu",
       "warrantyEndDate": "Data zakończenia gwarancji",
       "assetType": "Typ",
-      "assignedTo": "Przypisano do"
+      "assignedTo": "Przypisano do",
+      "manufacturer": "Producent",
+      "vendor": "Dostawca",
+      "purchaseCost": "Koszt zakupu",
+      "orderNumber": "Nr zamówienia"
     },
     "placeholders": {
       "loadingClients": "Ładowanie klientów…",
@@ -639,7 +649,10 @@
       "selectPurchaseDate": "Wybierz datę zakupu",
       "selectWarrantyEndDate": "Wybierz datę zakończenia gwarancji",
       "loadingContacts": "Ładowanie kontaktów…",
-      "selectContact": "Wybierz kontakt"
+      "selectContact": "Wybierz kontakt",
+      "noVendor": "Brak dostawcy",
+      "selectVendor": "Wybierz dostawcę",
+      "purchaseCost": "0,00"
     },
     "statusOptions": {
       "active": "Aktywny",
@@ -993,7 +1006,11 @@
       "serialNumber": "Numer seryjny",
       "customLocationOption": "Niestandardowa lokalizacja",
       "location": "Lokalizacja",
-      "assignedTo": "Przypisano do"
+      "assignedTo": "Przypisano do",
+      "manufacturer": "Producent",
+      "vendor": "Dostawca",
+      "purchaseCost": "Koszt zakupu",
+      "orderNumber": "Nr zamówienia"
     },
     "placeholders": {
       "workstationOsType": "np. Windows, macOS, Linux",
@@ -1015,7 +1032,13 @@
       "selectClientFirst": "Najpierw wybierz klienta",
       "selectLocation": "Wybierz lokalizację",
       "loadingContacts": "Ładowanie kontaktów...",
-      "selectContact": "Wybierz kontakt"
+      "selectContact": "Wybierz kontakt",
+      "manufacturer": "np. Lenovo",
+      "modelName": "np. ThinkPad T14",
+      "noVendor": "Brak dostawcy",
+      "selectVendor": "Wybierz dostawcę",
+      "purchaseCost": "0,00",
+      "orderNumber": "Wpisz numer zamówienia"
     },
     "sections": {
       "typeSpecificDetails": "Szczegóły specyficzne dla typu"
@@ -1512,7 +1535,12 @@
     "compliance": "Zgodność",
     "lastDone": "Ostatnio wykonano",
     "noMaintenance": "Nic nie zaplanowano.",
-    "docsHint": "Załączniki i poświadczenia tego zasobu."
+    "docsHint": "Załączniki i poświadczenia tego zasobu.",
+    "manufacturer": "Producent",
+    "model": "Model",
+    "vendor": "Dostawca",
+    "purchaseCost": "Koszt zakupu",
+    "orderNumber": "Nr zamówienia"
   },
   "assetTimeline": {
     "title": "Oś czasu",
@@ -1619,7 +1647,8 @@
       "notAllowed": "Jedna z wartości zasobu jest niedozwolona. Sprawdź formularz i spróbuj ponownie.",
       "missingField": "Brakuje wymaganego pola zasobu.",
       "missingFieldNamed": "Brakuje wymaganego pola zasobu: {{field}}.",
-      "contactUnavailable": "Wybrany kontakt jest niedostępny dla tego klienta."
+      "contactUnavailable": "Wybrany kontakt jest niedostępny dla tego klienta.",
+      "vendorUnavailable": "Wybrany dostawca jest niedostępny."
     }
   },
   "clientAssetMultiSelect": {

@@ -31,6 +31,13 @@ export const createAssetSchema = z.object({
   serial_number: z.string().optional(),
   purchase_date: dateSchema.optional(),
   warranty_end_date: dateSchema.optional(),
+  manufacturer: z.string().max(255).nullable().optional(),
+  model: z.string().max(255).nullable().optional(),
+  vendor_id: uuidSchema.nullable().optional(),
+  /** Minor units (cents). */
+  purchase_cost: z.coerce.number().int().nullable().optional(),
+  purchase_cost_currency: z.string().length(3).nullable().optional(),
+  order_number: z.string().max(255).nullable().optional(),
   attributes: z.record(z.unknown()).optional()
 });
 
@@ -122,6 +129,9 @@ export const assetFilterSchema = baseFilterSchema.extend({
   asset_type: assetTypeSchema.optional(),
   status: z.string().optional(),
   location: z.string().optional(),
+  manufacturer: z.string().optional(),
+  model: z.string().optional(),
+  vendor_id: uuidSchema.optional(),
   client_name: z.string().optional(),
   has_warranty: booleanTransform.optional(),
   warranty_expired: booleanTransform.optional(),
@@ -149,11 +159,18 @@ export const assetResponseSchema = z.object({
   serial_number: z.string().nullable(),
   purchase_date: dateSchema.nullable(),
   warranty_end_date: dateSchema.nullable(),
+  manufacturer: z.string().nullable().optional(),
+  model: z.string().nullable().optional(),
+  vendor_id: uuidSchema.nullable().optional(),
+  vendor_name: z.string().nullable().optional(),
+  purchase_cost: z.coerce.number().int().nullable().optional(),
+  purchase_cost_currency: z.string().nullable().optional(),
+  order_number: z.string().nullable().optional(),
   created_at: z.string().datetime(),
   updated_at: z.string().datetime(),
   tenant: uuidSchema,
   attributes: z.record(z.unknown()).nullable().optional(),
-  
+
   // Computed/joined fields
   client_name: z.string().optional(),
   warranty_status: z.string().optional(),

@@ -456,11 +456,10 @@ export class AssetMigrationApplier implements EntityApplier {
         location_id: locationId,
         serial_number: record.serial_number ?? undefined,
         purchase_date: record.purchase_date ?? undefined,
-        attributes: {
-          ...(record.manufacturer ? { manufacturer: record.manufacturer } : {}),
-          ...(record.model ? { model: record.model } : {}),
-          ...customAttributes,
-        },
+        // Manufacturer and model are first-class columns (FR-A4), not attributes.
+        manufacturer: record.manufacturer ?? null,
+        model: record.model ?? null,
+        attributes: customAttributes,
       },
       { requireCustomAttributes: false }
     );

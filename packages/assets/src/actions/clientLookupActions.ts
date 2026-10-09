@@ -126,3 +126,30 @@ export const getClientContactsForAssets = withAuth(async (
       .orderBy('full_name', 'asc');
   }) as unknown as IContact[];
 });
+
+/**
+ * Suppliers an asset can be bought from: the tenant's inventory `vendors`.
+ * Scoped to the asset surfaces (hence `asset` read, not `vendor` read) so a
+ * technician without inventory permissions can still pick a supplier.
+ */
+export const getVendorOptionsForAssets = withAuth(async (
+  _user,
+  { tenant },
+  currentVendorId?: string | null
+): Promise<Array<{ vendor_id: string; vendor_name: string }>> => {
+  await assertPsaOnlyTenantAccess(tenant, 'asset_rmm_actions');
+  const { knex } = await createTenantKnex();
+
+  return withTransaction(knex, async (trx: Knex.Transaction) => {
+    return tenantScopedTable(trx, tenant, 'vendors')
+      .select('vendor_id', 'vendor_name')
+      .where(function (this: Knex.QueryBuilder) {
+        this.where({ is_active: true });
+        // Keep the stored supplier visible even once it is deactivated.
+        if (currentVendorId) {
+          this.orWhere({ vendor_id: currentVendorId });
+        }
+      })
+      .orderBy('vendor_name', 'asc');
+  }) as unknown as Array<{ vendor_id: string; vendor_name: string }>;
+});

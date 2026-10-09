@@ -49,6 +49,7 @@ import {
   warrantyPhrase,
   worstStorage,
 } from '../lib/assetSignals';
+import { formatMinorUnits } from '../lib/money';
 import { AssetTimeline } from './AssetTimeline';
 import AssetFormClient from './AssetFormClient';
 import { AssetNotesPanel } from './panels/AssetNotesPanel';
@@ -117,6 +118,7 @@ export function AssetBentoLayout({
     ([, aid]) => unwrapAssetActionResult(getAssetMaintenanceReport(aid))
   );
   const softwareCount = Array.isArray(ext?.installed_software) ? ext.installed_software.length : null;
+  const purchaseCostLabel = formatMinorUnits(asset.purchase_cost, asset.purchase_cost_currency);
 
   const pendingPatches =
     (ext?.pending_os_patches ?? 0) + (ext?.pending_software_patches ?? 0) || ext?.pending_patches;
@@ -207,6 +209,22 @@ export function AssetBentoLayout({
                 <BentoLabelValue label={t('assetBento.serial', { defaultValue: 'Serial' })} value={asset.serial_number} mono />
                 <BentoLabelValue label={t('assetBento.status', { defaultValue: 'Status' })} value={asset.status} />
                 <BentoLabelValue label={t('assetBento.location', { defaultValue: 'Location' })} value={asset.location} />
+                {/* FR-A1 rows are hidden when empty rather than showing a dash. */}
+                {asset.manufacturer ? (
+                  <BentoLabelValue id="asset-bento-manufacturer" label={t('assetBento.manufacturer', { defaultValue: 'Manufacturer' })} value={asset.manufacturer} />
+                ) : null}
+                {asset.model ? (
+                  <BentoLabelValue id="asset-bento-model" label={t('assetBento.model', { defaultValue: 'Model' })} value={asset.model} />
+                ) : null}
+                {asset.vendor_name ? (
+                  <BentoLabelValue id="asset-bento-vendor" label={t('assetBento.vendor', { defaultValue: 'Vendor' })} value={asset.vendor_name} />
+                ) : null}
+                {purchaseCostLabel ? (
+                  <BentoLabelValue id="asset-bento-purchase-cost" label={t('assetBento.purchaseCost', { defaultValue: 'Purchase cost' })} value={purchaseCostLabel} />
+                ) : null}
+                {asset.order_number ? (
+                  <BentoLabelValue id="asset-bento-order-number" label={t('assetBento.orderNumber', { defaultValue: 'Order no.' })} value={asset.order_number} mono />
+                ) : null}
                 <BentoLabelValue label={t('assetBento.purchased', { defaultValue: 'Purchased' })} value={asset.purchase_date ? new Date(asset.purchase_date).toLocaleDateString() : undefined} />
                 <BentoLabelValue label={t('assetBento.warrantyEnds', { defaultValue: 'Warranty ends' })} value={asset.warranty_end_date ? new Date(asset.warranty_end_date).toLocaleDateString() : undefined} />
               </div>

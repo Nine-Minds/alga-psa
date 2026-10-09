@@ -27,6 +27,7 @@ vi.mock('../actions/assetActions', () => ({
 }));
 
 vi.mock('../actions/clientLookupActions', () => ({
+  getVendorOptionsForAssets: vi.fn(async () => []),
   getAllClientsForAssets: vi.fn(async () => [
     { client_id: 'b0000000-0000-4000-8000-00000000000b', client_name: 'Acme Inc' },
   ]),

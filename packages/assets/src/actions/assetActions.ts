@@ -95,6 +95,7 @@ import {
 import { resolveWritableAssetType, resolveAttributeSchemaForWrite, validateAttributesForWrite, attributesMergeExpression, serializeAttributesForInsert } from '../lib/assetAttributeWrites';
 import {
     ASSET_CONTACT_UNAVAILABLE_MESSAGE,
+    ASSET_VENDOR_UNAVAILABLE_MESSAGE,
     assetActionErrorFrom,
     type AssetActionError,
 } from './assetActionErrors';
@@ -191,6 +192,7 @@ async function assetActionErrorMessage(error: unknown, fallback: string): Promis
         message === 'Asset not found' ||
         message === 'Selected location is not available for this client' ||
         message === ASSET_CONTACT_UNAVAILABLE_MESSAGE ||
+        message === ASSET_VENDOR_UNAVAILABLE_MESSAGE ||
         message.startsWith('Invalid input data:') ||
         message.startsWith('Asset validation failed:') ||
         message.startsWith('Permission denied:')
@@ -294,6 +296,12 @@ function sanitizeUpdatePayload(data: UpdateAssetRequest): UpdateAssetRequest {
     if (data.contact_name_id === null) {
         cleaned.contact_name_id = null;
     }
+    // Same for the procurement fields: null means "clear", not "keep".
+    for (const key of ['vendor_id', 'purchase_cost', 'purchase_cost_currency', 'manufacturer', 'model', 'order_number'] as const) {
+        if (data[key] === null) {
+            (cleaned as Record<string, unknown>)[key] = null;
+        }
+    }
     // pruneNullishValues deletes null, which would turn "clear this field" into
     // "keep the stored value". An explicit null on a nullable extension number
     // column means clear it (alga0002283), like location_id above.
@@ -376,6 +384,72 @@ async function resolveValidatedAssetContact(
     }
 
     return { contact_name_id: contact.contact_name_id };
+}
+
+/** Free-text asset field: blank means "cleared", not "empty string". */
+function trimToNull(value: unknown): string | null {
+    if (typeof value !== 'string') return null;
+    const trimmed = value.trim();
+    return trimmed === '' ? null : trimmed;
+}
+
+/**
+ * Validates the supplier an asset was bought from. Suppliers are the inventory
+ * `vendors` rows, so the id must exist in the tenant. `undefined` means "not
+ * provided" and `null` clears.
+ */
+async function resolveValidatedAssetVendor(
+    trx: Knex.Transaction,
+    tenant: string,
+    vendorId: string | null | undefined
+): Promise<{ vendor_id: string | null } | undefined> {
+    if (vendorId === undefined) {
+        return undefined;
+    }
+
+    if (vendorId === null) {
+        return { vendor_id: null };
+    }
+
+    const vendor = await tenantScopedTable(trx, 'vendors', tenant)
+        .where({ vendor_id: vendorId })
+        .first<{ vendor_id: string }>('vendor_id');
+
+    if (!vendor) {
+        throw new Error(ASSET_VENDOR_UNAVAILABLE_MESSAGE);
+    }
+
+    return { vendor_id: vendor.vendor_id };
+}
+
+/** Tenant default currency for a purchase cost written without one. */
+async function resolveTenantDefaultCurrency(trx: Knex.Transaction, tenant: string): Promise<string> {
+    const settings = await tenantScopedTable(trx, 'default_billing_settings', tenant)
+        .first<{ default_currency_code?: string | null }>('default_currency_code');
+    return settings?.default_currency_code || 'USD';
+}
+
+/**
+ * Purchase cost and its currency travel together: a cost written without a
+ * currency falls back to the tenant default, and clearing the cost clears the
+ * currency with it.
+ */
+async function applyPurchaseCostCurrency(
+    trx: Knex.Transaction,
+    tenant: string,
+    candidate: Record<string, unknown>,
+    storedCurrency?: string | null
+): Promise<void> {
+    const costProvided = Object.prototype.hasOwnProperty.call(candidate, 'purchase_cost');
+    if (!costProvided) return;
+
+    if (candidate.purchase_cost === null) {
+        candidate.purchase_cost_currency = null;
+        return;
+    }
+
+    const currency = candidate.purchase_cost_currency ?? storedCurrency ?? null;
+    candidate.purchase_cost_currency = currency || (await resolveTenantDefaultCurrency(trx, tenant));
 }
 
 type AssetAuthUser = {
@@ -833,6 +907,14 @@ function formatAssetForOutput(asset: any): Asset {
         location_id: asset.location_id ?? null,
         contact_name_id: asset.contact_name_id ?? null,
         contact_name: asset.contact_name ?? null,
+        manufacturer: asset.manufacturer ?? null,
+        model: asset.model ?? null,
+        vendor_id: asset.vendor_id ?? null,
+        vendor_name: asset.vendor_name ?? null,
+        // pg returns bigint as a string; the UI formats a number.
+        purchase_cost: nullableNumber(asset.purchase_cost),
+        purchase_cost_currency: asset.purchase_cost_currency ?? null,
+        order_number: asset.order_number ?? null,
         // Ensure client data is properly structured
         // The SQL JOIN returns client_name as a flat field; build the nested object from it
         client: asset.client_id ? {
@@ -1002,6 +1084,20 @@ export async function createAssetInTransaction(
                 validatedData.contact_name_id
             );
 
+            const selectedVendor = await resolveValidatedAssetVendor(trx, tenant, validatedData.vendor_id);
+
+            const procurement: Record<string, unknown> = {
+                manufacturer: trimToNull(validatedData.manufacturer),
+                model: trimToNull(validatedData.model),
+                vendor_id: selectedVendor?.vendor_id ?? null,
+                order_number: trimToNull(validatedData.order_number),
+            };
+            if (validatedData.purchase_cost !== undefined) {
+                procurement.purchase_cost = validatedData.purchase_cost;
+                procurement.purchase_cost_currency = validatedData.purchase_cost_currency ?? null;
+                await applyPurchaseCostCurrency(trx, tenant, procurement);
+            }
+
             // Extract only the base asset fields and ensure dates are only included if they exist
             const baseAssetData = {
                 tenant,
@@ -1016,6 +1112,7 @@ export async function createAssetInTransaction(
                     : (selectedLocation?.location ?? ''),
                 contact_name_id: selectedContact?.contact_name_id ?? null,
                 serial_number: validatedData.serial_number || '',
+                ...procurement,
                 created_at: now,
                 updated_at: now,
                 // Only include dates if they exist
@@ -1293,6 +1390,30 @@ export async function updateAssetRecord(
                 // The assignee belongs to the previous client; moving the asset clears it.
                 baseCandidate.contact_name_id = null;
             }
+
+            if (Object.prototype.hasOwnProperty.call(baseCandidate, 'vendor_id')) {
+                const selectedVendor = await resolveValidatedAssetVendor(
+                    trx,
+                    tenant,
+                    baseCandidate.vendor_id as string | null | undefined
+                );
+                if (selectedVendor) {
+                    baseCandidate.vendor_id = selectedVendor.vendor_id;
+                }
+            }
+
+            for (const key of ['manufacturer', 'model', 'order_number'] as const) {
+                if (Object.prototype.hasOwnProperty.call(baseCandidate, key)) {
+                    (baseCandidate as Record<string, unknown>)[key] = trimToNull(baseCandidate[key]);
+                }
+            }
+
+            await applyPurchaseCostCurrency(
+                trx,
+                tenant,
+                baseCandidate as Record<string, unknown>,
+                asset.purchase_cost_currency
+            );
 
             // Update base asset fields (excluding extension payloads)
             const baseUpdateData: Record<string, unknown> = {};
@@ -1774,10 +1895,12 @@ async function getAssetWithExtensions(knex: Knex, tenant: string, asset_id: stri
         .select(
             'assets.*',
             'clients.client_name',
-            'contacts.full_name as contact_name'
+            'contacts.full_name as contact_name',
+            'vendors.vendor_name'
         );
     db.tenantJoin(assetQuery, 'clients', 'clients.client_id', 'assets.client_id', { type: 'left' });
     db.tenantJoin(assetQuery, 'contacts', 'contacts.contact_name_id', 'assets.contact_name_id', { type: 'left' });
+    db.tenantJoin(assetQuery, 'vendors', 'vendors.vendor_id', 'assets.vendor_id', { type: 'left' });
     const asset = await assetQuery
         .where({ 'assets.asset_id': asset_id })
         .first();
@@ -2049,6 +2172,9 @@ export const listAssets = withAuth(async (user, { tenant }, params: AssetQueryPa
                 if (validatedParams.status) {
                     query.where('assets.status', validatedParams.status);
                 }
+                if (validatedParams.vendor_id) {
+                    query.where('assets.vendor_id', validatedParams.vendor_id);
+                }
                 if (validatedParams.search) {
                     const searchTerm = `%${validatedParams.search}%`;
                     query.where(function () {
@@ -2056,6 +2182,8 @@ export const listAssets = withAuth(async (user, { tenant }, params: AssetQueryPa
                             .orWhereILike('assets.asset_tag', searchTerm)
                             .orWhereILike('assets.serial_number', searchTerm)
                             .orWhereILike('assets.location', searchTerm)
+                            .orWhereILike('assets.manufacturer', searchTerm)
+                            .orWhereILike('assets.model', searchTerm)
                             .orWhereILike('clients.client_name', searchTerm);
                     });
                 }
@@ -2093,6 +2221,7 @@ export const listAssets = withAuth(async (user, { tenant }, params: AssetQueryPa
                 const query = tenantScopedTable(trx, 'assets', tenant);
                 tenantDb(trx, tenant).tenantJoin(query, 'clients', 'clients.client_id', 'assets.client_id', { type: 'left' });
                 tenantDb(trx, tenant).tenantJoin(query, 'contacts', 'contacts.contact_name_id', 'assets.contact_name_id', { type: 'left' });
+                tenantDb(trx, tenant).tenantJoin(query, 'vendors', 'vendors.vendor_id', 'assets.vendor_id', { type: 'left' });
 
                 applyFilters(query);
                 return query;
@@ -2104,7 +2233,7 @@ export const listAssets = withAuth(async (user, { tenant }, params: AssetQueryPa
                     .count<{ count: string }>('assets.asset_id as count')
                     .first();
                 const rows = await buildAssetListQuery()
-                    .select('assets.*', 'clients.client_name', 'contacts.full_name as contact_name')
+                    .select('assets.*', 'clients.client_name', 'contacts.full_name as contact_name', 'vendors.vendor_name')
                     .modify(applySort)
                     .limit(sourceLimit)
                     .offset(offset);

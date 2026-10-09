@@ -32,6 +32,7 @@ vi.mock('../actions/assetDrawerActions', () => ({
 }));
 
 vi.mock('../actions/clientLookupActions', () => ({
+  getVendorOptionsForAssets: vi.fn(async () => []),
   getAllClientsForAssets: vi.fn(async () => []),
   getClientLocationsForAssets: vi.fn(async () => []),
 }));

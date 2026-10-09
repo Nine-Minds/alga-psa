@@ -331,6 +331,9 @@ export function mapDeviceToAssetBase(
     serial_number: device.system?.serialNumber || device.system?.biosSerialNumber,
     status: device.approvalStatus === 'APPROVED' ? 'active' : 'pending',
     location: device.references?.location?.name,
+    // Hardware identity columns (FR-A3)
+    manufacturer: device.system?.manufacturer || null,
+    model: device.system?.model || null,
     // RMM fields
     rmm_provider: 'ninjaone' as RmmProvider,
     rmm_device_id: String(device.id),

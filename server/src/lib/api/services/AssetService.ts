@@ -88,7 +88,7 @@ export class AssetService extends BaseService<any> {
         createdAt: 'created_at',
         updatedAt: 'updated_at'
       },
-      searchableFields: ['asset_tag', 'name', 'serial_number', 'location'],
+      searchableFields: ['asset_tag', 'name', 'serial_number', 'location', 'manufacturer', 'model'],
       defaultSort: 'created_at',
       defaultOrder: 'desc'
     });
@@ -114,6 +114,15 @@ export class AssetService extends BaseService<any> {
       }
       if (filters.contact_name_id) {
         query.where(`${this.tableName}.contact_name_id`, filters.contact_name_id);
+      }
+      if (filters.manufacturer) {
+        query.where(`${this.tableName}.manufacturer`, 'ilike', `%${filters.manufacturer}%`);
+      }
+      if (filters.model) {
+        query.where(`${this.tableName}.model`, 'ilike', `%${filters.model}%`);
+      }
+      if (filters.vendor_id) {
+        query.where(`${this.tableName}.vendor_id`, filters.vendor_id);
       }
       if (filters.asset_type) {
         query.where(`${this.tableName}.asset_type`, filters.asset_type);
@@ -164,10 +173,14 @@ export class AssetService extends BaseService<any> {
     tenantDb(knex, context.tenant).tenantJoin(query, 'clients', 'assets.client_id', 'clients.client_id', {
       type: 'left',
     });
+    tenantDb(knex, context.tenant).tenantJoin(query, 'vendors', 'assets.vendor_id', 'vendors.vendor_id', {
+      type: 'left',
+    });
     query
       .select(
         `${this.tableName}.*`,
         'clients.client_name',
+        'vendors.vendor_name',
         knex.raw(`
           CASE 
             WHEN ${this.tableName}.warranty_end_date IS NULL THEN 'no_warranty'
@@ -243,10 +256,14 @@ export class AssetService extends BaseService<any> {
     tenantDb(knex, context.tenant).tenantJoin(query, 'clients', 'assets.client_id', 'clients.client_id', {
       type: 'left',
     });
-      
+    tenantDb(knex, context.tenant).tenantJoin(query, 'vendors', 'assets.vendor_id', 'vendors.vendor_id', {
+      type: 'left',
+    });
+
     const asset = await query.select(
         `${this.tableName}.*`,
         'clients.client_name',
+        'vendors.vendor_name',
         knex.raw(`
           CASE 
             WHEN ${this.tableName}.warranty_end_date IS NULL THEN 'no_warranty'
@@ -309,7 +326,13 @@ export class AssetService extends BaseService<any> {
     if (assetData.contact_name_id) {
       await this.assertContactBelongsToClient(knex, context.tenant, assetData.client_id, assetData.contact_name_id);
     }
-    
+    if (assetData.vendor_id) {
+      await this.assertVendorExists(knex, context.tenant, assetData.vendor_id);
+    }
+    if (assetData.purchase_cost !== undefined && assetData.purchase_cost !== null && !assetData.purchase_cost_currency) {
+      assetData.purchase_cost_currency = await this.resolveTenantCurrency(knex, context.tenant);
+    }
+
     const assetRecord = {
       ...assetData,
       ...(attributes !== undefined ? { attributes: serializeAttributesForInsert(attributes) } : {}),
@@ -411,6 +434,17 @@ export class AssetService extends BaseService<any> {
       updateData.contact_name_id = null;
     }
 
+    if (data.vendor_id) {
+      await this.assertVendorExists(knex, context.tenant, data.vendor_id);
+    }
+    if (data.purchase_cost !== undefined) {
+      if (data.purchase_cost === null) {
+        updateData.purchase_cost_currency = null;
+      } else if (!data.purchase_cost_currency) {
+        updateData.purchase_cost_currency = await this.resolveTenantCurrency(knex, context.tenant);
+      }
+    }
+
     updateData.updated_at = new Date();
 
     const updated = await scopedTable(knex, context.tenant, this.tableName)
@@ -477,6 +511,23 @@ export class AssetService extends BaseService<any> {
     if (!contact) {
       throw new ValidationError('Selected contact is not available for this client');
     }
+  }
+
+  /** Suppliers come from the inventory `vendors` table (FR-A1). */
+  private async assertVendorExists(knex: Knex, tenant: string, vendorId: string): Promise<void> {
+    const vendor = await scopedTable(knex, tenant, 'vendors')
+      .where({ vendor_id: vendorId })
+      .first('vendor_id');
+
+    if (!vendor) {
+      throw new ValidationError('Selected vendor is not available');
+    }
+  }
+
+  private async resolveTenantCurrency(knex: Knex, tenant: string): Promise<string> {
+    const settings = await scopedTable(knex, tenant, 'default_billing_settings')
+      .first('default_currency_code');
+    return (settings?.default_currency_code as string | undefined) || 'USD';
   }
 
   private async assertAssetExists(

@@ -123,6 +123,8 @@ type ColumnKey =
   | 'coverage'
   | 'client_name'
   | 'contact_name'
+  | 'manufacturer'
+  | 'model'
   | 'location'
   | 'actions';
 
@@ -1050,6 +1052,20 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
         <span className="text-sm font-medium text-gray-700">{(value as string) || t('common.states.none', { defaultValue: 'None' })}</span>
       )
     },
+    manufacturer: {
+      dataIndex: 'manufacturer',
+      title: t('assetDashboardClient.table.manufacturer', { defaultValue: 'Manufacturer' }),
+      render: (value: unknown) => (
+        <span className="text-sm font-medium text-gray-700">{(value as string) || t('common.states.none', { defaultValue: 'None' })}</span>
+      )
+    },
+    model: {
+      dataIndex: 'model',
+      title: t('assetDashboardClient.table.model', { defaultValue: 'Model' }),
+      render: (value: unknown) => (
+        <span className="text-sm font-medium text-gray-700">{(value as string) || t('common.states.none', { defaultValue: 'None' })}</span>
+      )
+    },
     location: {
       dataIndex: 'location',
       title: t('assetDashboardClient.table.location', { defaultValue: 'Location' }),
@@ -1209,6 +1225,8 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
           || clientNameById.get(asset.client_id)
           || t('assetDashboardClient.details.unassigned', { defaultValue: 'Unassigned' }),
         contact_name: (asset) => asset.contact_name || t('assetDashboardClient.print.emptyValue', { defaultValue: '-' }),
+        manufacturer: (asset) => asset.manufacturer || t('assetDashboardClient.print.emptyValue', { defaultValue: '-' }),
+        model: (asset) => asset.model || t('assetDashboardClient.print.emptyValue', { defaultValue: '-' }),
         location: (asset) => asset.location || t('assetDashboardClient.print.emptyValue', { defaultValue: '-' }),
       },
     })

@@ -2,7 +2,7 @@ import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { TacticalRmmClient, normalizeTacticalBaseUrl } from './tacticalApiClient';
 import { computeTacticalAgentStatus } from './agentStatus';
-import { buildTacticalExtensionPatch, extractHardware, upsertTacticalAssetExtension } from './deviceSync';
+import { buildTacticalAssetIdentityPatch, buildTacticalExtensionPatch, extractHardware, upsertTacticalAssetExtension } from './deviceSync';
 
 const PROVIDER = 'tacticalrmm' as const;
 
@@ -102,6 +102,7 @@ export async function syncTacticalSingleAgentForTenant(args: {
       last_seen_at: lastSeen ? new Date(lastSeen) : null,
       last_rmm_sync_at: knex.fn.now(),
       ...(hardware.serial_number ? { serial_number: hardware.serial_number } : {}),
+      ...buildTacticalAssetIdentityPatch(hardware),
     });
 
   await upsertTacticalAssetExtension(knex, {

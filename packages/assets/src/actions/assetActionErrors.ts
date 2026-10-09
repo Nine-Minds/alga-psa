@@ -8,6 +8,7 @@ import {
 } from '@alga-psa/ui/lib/errorHandling';
 
 export const ASSET_CONTACT_UNAVAILABLE_MESSAGE = 'Selected contact is not available for this client';
+export const ASSET_VENDOR_UNAVAILABLE_MESSAGE = 'Selected vendor is not available for this tenant';
 
 export type AssetActionError = ActionMessageError | ActionPermissionError;
 
@@ -107,6 +108,9 @@ export function assetActionErrorFrom(error: unknown): AssetActionError | null {
     }
     if (message === ASSET_CONTACT_UNAVAILABLE_MESSAGE) {
       return actionError('Selected contact is not available for this client.', 'msp/assets:errors.asset.contactUnavailable');
+    }
+    if (message === ASSET_VENDOR_UNAVAILABLE_MESSAGE) {
+      return actionError('Selected vendor is not available.', 'msp/assets:errors.asset.vendorUnavailable');
     }
     if (message === 'An asset cannot be related to itself') {
       return actionError('An asset cannot be related to itself.', 'msp/assets:errors.asset.selfRelation');
