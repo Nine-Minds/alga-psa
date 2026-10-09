@@ -16,6 +16,7 @@ import { BucketOverlayFields } from '../BucketOverlayFields';
 import { BillingFrequencyOverrideSelect } from '../BillingFrequencyOverrideSelect';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { getRecurringAuthoringPreview } from '../recurringAuthoringPreview';
+import { getUnsupportedRecurringAuthoringCombination } from '@alga-psa/shared/billingClients/recurringAuthoringValidation';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useFormatBillingFrequency } from '@alga-psa/billing/hooks/useBillingEnumOptions';
 import { resolveContractAuthoringRate } from '../../../../lib/contractAuthoringRate';
@@ -278,6 +279,18 @@ export function FixedFeeServicesStep({ data, updateData }: FixedFeeServicesStepP
     billingFrequency: data.fixed_billing_frequency ?? data.billing_frequency,
     enableProration: data.enable_proration,
   }, t);
+
+  // Arrears is the default and the wizard has no other timing control, so this is
+  // where an operator can move a new fixed-fee line to invoice on its start date.
+  // Contract cadence only supports some frequencies; don't offer a switch that
+  // would fail validation.
+  const canSuggestAdvanceOnContractCadence =
+    data.billing_timing !== 'advance' &&
+    !getUnsupportedRecurringAuthoringCombination({
+      lineType: 'Fixed',
+      cadenceOwner: 'contract',
+      billingFrequency: data.fixed_billing_frequency ?? data.billing_frequency,
+    });
 
   const formatBillingFrequency = useFormatBillingFrequency();
   const hasAlternateBillingFrequency =
@@ -593,6 +606,32 @@ export function FixedFeeServicesStep({ data, updateData }: FixedFeeServicesStepP
                     ))}
                   </ul>
                 </div>
+              </div>
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {data.fixed_services.length > 0 && canSuggestAdvanceOnContractCadence && (
+          <Alert variant="info" id="fixed-fee-advance-suggestion">
+            <AlertDescription>
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <p className="text-sm">
+                  {t('wizardFixed.advanceSuggestion.message', {
+                    defaultValue:
+                      "Billed in arrears, this line can't be invoiced until its first service period ends. Billing in advance on the contract's cadence invoices it on the start date instead.",
+                  })}
+                </p>
+                <Button
+                  id="fixed-fee-bill-in-advance-on-contract-cadence"
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => updateData({ billing_timing: 'advance', cadence_owner: 'contract' })}
+                >
+                  {t('wizardFixed.advanceSuggestion.action', {
+                    defaultValue: "Bill in advance on the contract's cadence",
+                  })}
+                </Button>
               </div>
             </AlertDescription>
           </Alert>

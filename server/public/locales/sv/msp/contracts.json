@@ -1658,6 +1658,10 @@
       "recurringQuantityLabel": "Återkommande antal",
       "allocationQuantityLabel": "Tilldelningsantal",
       "noCurrencyPrice": "Inget pris i {{currency}} i katalogen. Ange ett enhetspris."
+    },
+    "advanceSuggestion": {
+      "message": "Vid efterskottsfakturering kan den här raden inte faktureras förrän dess första tjänsteperiod har avslutats. Vid förskottsfakturering enligt avtalets intervall faktureras den i stället på startdatumet.",
+      "action": "Fakturera i förskott enligt avtalets intervall"
     }
   },
   "wizardProducts": {
@@ -1864,16 +1868,6 @@
         "label": "Styrande schema:",
         "contractAnniversary": "Avtalets årsdag",
         "clientBillingSchedule": "Kundens faktureringsschema"
-      },
-      "firstInvoice": {
-        "contract": {
-          "advance": "Första fakturan: fakturera i det intervall enligt avtalets årsdag som inleder den första tjänsteperioden som omfattas.",
-          "arrears": "Första fakturan: fakturera i nästa intervall enligt avtalets årsdag efter att den första tjänsteperioden som omfattas har avslutats."
-        },
-        "client": {
-          "advance": "Första fakturan: fakturera i den första faktureringsperioden i kundens faktureringsschema som omfattar tjänsteperioden.",
-          "arrears": "Första fakturan: fakturera i nästa faktureringsperiod i kundens faktureringsschema efter att den första tjänsteperioden som omfattas har avslutats."
-        }
       },
       "partialPeriod": {
         "enabled": "För delperioder anpassas den återkommande avgiften till den del av tjänsteperioden som omfattas.",
@@ -2600,5 +2594,31 @@
       "contractNotActive": "Det aktiverade förnyelseavtalet är inte längre aktivt. Ladda om sidan och försök igen.",
       "manualRetryDueOnly": "Manuellt återförsök är bara tillgängligt för förnyelsecykler vars förnyelsedatum har nåtts."
     }
+  },
+  "wizardFirstInvoice": {
+    "loading": "Kontrollerar kundens faktureringsschema…",
+    "arrearsPreviewNote": "Fram till dess finns det inget att fakturera för den här raden i en förhandsgranskning av fakturan för kunden.",
+    "unavailable": {
+      "missingStartDate": "Välj ett startdatum för att se när avtalet faktureras första gången.",
+      "unsupportedFrequency": "Inget datum för första fakturan visas eftersom fakturering enligt avtalets intervall inte stöder den här frekvensen. Välj en frekvens som stöds eller fakturera enligt kundens schema.",
+      "clientSchedule": "Den här raden faktureras enligt kundens faktureringsschema. Schemat kunde inte läsas in, så inget datum visas."
+    },
+    "contract": {
+      "arrears": "Faktureras i efterskott enligt avtalets intervall: den första fakturan blir tillgänglig {{date}}, när den första tjänsteperioden avslutas.",
+      "advance": "Faktureras i förskott enligt avtalets intervall: den första fakturan är tillgänglig från {{date}}, avtalets startdatum."
+    },
+    "client": {
+      "arrears": "Faktureras i efterskott enligt kundens faktureringsschema: den första fakturan blir tillgänglig {{date}}, när kundens aktuella faktureringsperiod avslutas.",
+      "advance": "Faktureras i förskott enligt kundens faktureringsschema: den första fakturan är tillgänglig från {{date}}, början av den faktureringsperiod hos kunden som omfattar avtalets startdatum."
+    }
+  },
+  "wizardCreated": {
+    "title": "Avtal skapat",
+    "heading": "{{contractName}} har skapats",
+    "firstInvoiceHeading": "Första fakturan",
+    "done": "Klar"
+  },
+  "sellHourBlockNote": {
+    "text": "En timpott i avtalet fakturerar bara överförbrukning. Om du vill ta betalt för ett timblock i förskott använder du Sälj timblock under Timblock på fliken Faktureringsöversikt för kunden."
   }
 }

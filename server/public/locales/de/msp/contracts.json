@@ -1658,6 +1658,10 @@
       "recurringQuantityLabel": "Wiederkehrende Menge",
       "allocationQuantityLabel": "Zuordnungsmenge",
       "noCurrencyPrice": "Kein Preis in {{currency}} im Katalog. Geben Sie einen Stückpreis ein."
+    },
+    "advanceSuggestion": {
+      "message": "Bei nachträglicher Abrechnung kann diese Position erst nach Ende ihres ersten Leistungszeitraums abgerechnet werden. Bei Abrechnung im Voraus nach dem Vertragsrhythmus wird sie stattdessen zum Startdatum abgerechnet.",
+      "action": "Im Voraus nach Vertragsrhythmus abrechnen"
     }
   },
   "wizardProducts": {
@@ -1864,16 +1868,6 @@
         "label": "Rhythmus-Eigentümer:",
         "contractAnniversary": "Vertragsjubiläum",
         "clientBillingSchedule": "Kundenabrechnungsplan"
-      },
-      "firstInvoice": {
-        "contract": {
-          "advance": "Erste Rechnung: Abrechnung am Vertragsjubiläumsfenster, das die erste abgedeckte Serviceperiode öffnet.",
-          "arrears": "Erste Rechnung: Abrechnung im nächsten Vertragsjubiläumsfenster nach Abschluss der ersten abgedeckten Serviceperiode."
-        },
-        "client": {
-          "advance": "Erste Rechnung: Abrechnung im ersten Kundenabrechnungsplanfenster, das die Serviceperiode abdeckt.",
-          "arrears": "Erste Rechnung: Abrechnung im nächsten Kundenabrechnungsplanfenster nach Abschluss der ersten abgedeckten Serviceperiode."
-        }
       },
       "partialPeriod": {
         "enabled": "Teilperioden passen die wiederkehrende Gebühr an den abgedeckten Anteil der Serviceperiode an.",
@@ -2600,5 +2594,31 @@
       "contractNotActive": "Der aktivierte Verlängerungsvertrag ist nicht mehr aktiv. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
       "manualRetryDueOnly": "Ein manueller Wiederholungsversuch ist nur für fällige Verlängerungszyklen möglich."
     }
+  },
+  "wizardFirstInvoice": {
+    "loading": "Abrechnungsplan des Kunden wird geprüft…",
+    "arrearsPreviewNote": "Bis dahin zeigt eine Rechnungsvorschau für diesen Kunden nichts zum Abrechnen für diese Position.",
+    "unavailable": {
+      "missingStartDate": "Wählen Sie ein Startdatum, um zu sehen, wann dieser Vertrag erstmals abgerechnet wird.",
+      "unsupportedFrequency": "Es wird kein Datum für die erste Rechnung angezeigt, da die Abrechnung nach Vertragsrhythmus diese Häufigkeit nicht unterstützt. Wählen Sie eine unterstützte Häufigkeit oder rechnen Sie nach dem Plan des Kunden ab.",
+      "clientSchedule": "Diese Position wird nach dem Abrechnungsplan des Kunden abgerechnet. Der Plan konnte nicht geladen werden, daher wird kein Datum angezeigt."
+    },
+    "contract": {
+      "arrears": "Nachträglich nach dem Vertragsrhythmus abgerechnet: Die erste Rechnung ist am {{date}} verfügbar, wenn der erste Leistungszeitraum endet.",
+      "advance": "Im Voraus nach dem Vertragsrhythmus abgerechnet: Die erste Rechnung ist ab dem {{date}} verfügbar, dem Vertragsstart."
+    },
+    "client": {
+      "arrears": "Nachträglich nach dem Abrechnungsplan des Kunden abgerechnet: Die erste Rechnung ist am {{date}} verfügbar, wenn der aktuelle Abrechnungszeitraum des Kunden endet.",
+      "advance": "Im Voraus nach dem Abrechnungsplan des Kunden abgerechnet: Die erste Rechnung ist ab dem {{date}} verfügbar, dem Beginn des Abrechnungszeitraums des Kunden, der den Vertragsstart enthält."
+    }
+  },
+  "wizardCreated": {
+    "title": "Vertrag erstellt",
+    "heading": "{{contractName}} wurde erstellt",
+    "firstInvoiceHeading": "Erste Rechnung",
+    "done": "Fertig"
+  },
+  "sellHourBlockNote": {
+    "text": "Ein Vertrags-Stundenkontingent berechnet nur die Mehrverbrauchsstunden. Um einen Stundenblock im Voraus zu berechnen, verwenden Sie „Block verkaufen“ unter „Stundenblöcke“ auf dem Tab „Abrechnungs-Dashboard“ des Kunden."
   }
 }

@@ -1658,6 +1658,10 @@
       "recurringQuantityLabel": "Terugkerende hoeveelheid",
       "allocationQuantityLabel": "Toewijzingshoeveelheid",
       "noCurrencyPrice": "Geen prijs in {{currency}} in de catalogus. Voer een eenheidstarief in."
+    },
+    "advanceSuggestion": {
+      "message": "Bij facturering achteraf kan deze regel pas worden gefactureerd na afloop van de eerste serviceperiode. Bij facturering vooraf volgens het contractritme wordt hij op de startdatum gefactureerd.",
+      "action": "Vooraf factureren volgens het contractritme"
     }
   },
   "wizardProducts": {
@@ -1864,16 +1868,6 @@
         "label": "Cadanseigenaar:",
         "contractAnniversary": "Contractverjaardag",
         "clientBillingSchedule": "Factureerschema klant"
-      },
-      "firstInvoice": {
-        "contract": {
-          "advance": "Eerste factuur: factureren op het contractverjaardagsvenster dat de eerste gedekte serviceperiode opent.",
-          "arrears": "Eerste factuur: factureren op het volgende contractverjaardagsvenster nadat de eerste gedekte serviceperiode is gesloten."
-        },
-        "client": {
-          "advance": "Eerste factuur: factureren op het eerste venster van het klantfactureerschema dat de serviceperiode dekt.",
-          "arrears": "Eerste factuur: factureren op het volgende venster van het klantfactureerschema nadat de eerste gedekte serviceperiode is gesloten."
-        }
       },
       "partialPeriod": {
         "enabled": "Gedeeltelijke perioden passen het terugkerende tarief aan op het gedekte deel van de serviceperiode.",
@@ -2600,5 +2594,31 @@
       "contractNotActive": "Het geactiveerde verlengingscontract is niet meer actief. Vernieuw de pagina en probeer het opnieuw.",
       "manualRetryDueOnly": "Handmatig opnieuw proberen is alleen mogelijk voor vervallen verlengingscycli."
     }
+  },
+  "wizardFirstInvoice": {
+    "loading": "Factureringsschema van de klant controleren…",
+    "arrearsPreviewNote": "Tot die tijd valt er in een factuurvoorbeeld voor deze klant niets te factureren voor deze regel.",
+    "unavailable": {
+      "missingStartDate": "Kies een startdatum om te zien wanneer dit contract voor het eerst wordt gefactureerd.",
+      "unsupportedFrequency": "Er wordt geen datum voor de eerste factuur getoond omdat facturering volgens het contractritme deze frequentie niet ondersteunt. Kies een ondersteunde frequentie of factureer volgens het schema van de klant.",
+      "clientSchedule": "Deze regel wordt gefactureerd volgens het factureringsschema van de klant. Dat schema kon niet worden geladen, dus er wordt geen datum getoond."
+    },
+    "contract": {
+      "arrears": "Achteraf gefactureerd volgens het contractritme: de eerste factuur is beschikbaar op {{date}}, wanneer de eerste serviceperiode eindigt.",
+      "advance": "Vooraf gefactureerd volgens het contractritme: de eerste factuur is beschikbaar vanaf {{date}}, de startdatum van het contract."
+    },
+    "client": {
+      "arrears": "Achteraf gefactureerd volgens het factureringsschema van de klant: de eerste factuur is beschikbaar op {{date}}, wanneer de huidige factureringsperiode van de klant eindigt.",
+      "advance": "Vooraf gefactureerd volgens het factureringsschema van de klant: de eerste factuur is beschikbaar vanaf {{date}}, het begin van de factureringsperiode van de klant waarin de contractstartdatum valt."
+    }
+  },
+  "wizardCreated": {
+    "title": "Contract aangemaakt",
+    "heading": "{{contractName}} is aangemaakt",
+    "firstInvoiceHeading": "Eerste factuur",
+    "done": "Klaar"
+  },
+  "sellHourBlockNote": {
+    "text": "Een urenbundel in het contract factureert alleen het meerverbruik. Wilt u een blok uren vooraf in rekening brengen, gebruik dan Blok verkopen onder Urenblokken op het tabblad Factureringsdashboard van de klant."
   }
 }

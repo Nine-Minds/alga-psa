@@ -23,6 +23,7 @@ import { getClientByIdForBilling } from '@alga-psa/billing/actions/billingClient
 import { getClientBillingProfilesForBilling } from '@alga-psa/billing/actions/billingProfileActions';
 import { useClientBillingProfiles } from '@alga-psa/ui/hooks/useClientBillingProfiles';
 import { getRecurringAuthoringPreview } from '../recurringAuthoringPreview';
+import { FirstInvoiceNotice } from './FirstInvoiceNotice';
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   fixedServicesRecurringTotalCents,
@@ -180,6 +181,7 @@ export function ReviewContractStep({ data }: ReviewContractStepProps) {
         });
   };
 
+  // LEVERAGE: pattern ymd-local-format — parse a YYYY-MM-DD string as a local date, then format it in the user's locale (also in FirstInvoiceNotice)
   const parseLocalYMD = (ymd: string): Date | null => {
     try {
       const d = parse(ymd, 'yyyy-MM-dd', new Date());
@@ -215,27 +217,6 @@ export function ReviewContractStep({ data }: ReviewContractStepProps) {
       : t('wizardReview.recurring.cadenceOwner.clientBillingSchedule', {
           defaultValue: 'Client billing schedule',
         });
-
-  const recurringFirstInvoiceSummary =
-    data.cadence_owner === 'contract'
-      ? data.billing_timing === 'advance'
-        ? t('wizardReview.recurring.firstInvoice.contract.advance', {
-            defaultValue:
-              'First invoice: bill on the contract anniversary window that opens the first covered service period.',
-          })
-        : t('wizardReview.recurring.firstInvoice.contract.arrears', {
-            defaultValue:
-              'First invoice: bill on the next contract anniversary window after the first covered service period closes.',
-          })
-      : data.billing_timing === 'advance'
-        ? t('wizardReview.recurring.firstInvoice.client.advance', {
-            defaultValue:
-              'First invoice: bill on the first client billing schedule window covering the service period.',
-          })
-        : t('wizardReview.recurring.firstInvoice.client.arrears', {
-            defaultValue:
-              'First invoice: bill on the next client billing schedule window after the first covered service period closes.',
-          });
 
   const recurringPartialPeriodSummary = data.enable_proration
     ? t('wizardReview.recurring.partialPeriod.enabled', {
@@ -548,7 +529,15 @@ export function ReviewContractStep({ data }: ReviewContractStepProps) {
                     <strong>{t('wizardReview.recurring.cadenceOwner.label', { defaultValue: 'Cadence owner:' })}</strong>{' '}
                     {recurringCadenceOwnerLabel}
                   </p>
-                  <p>{recurringFirstInvoiceSummary}</p>
+                  <FirstInvoiceNotice
+                    id="contract-wizard-review-first-invoice"
+                    cadenceOwner={data.cadence_owner}
+                    billingTiming={data.billing_timing}
+                    billingFrequency={data.fixed_billing_frequency ?? data.billing_frequency}
+                    startDate={data.start_date}
+                    clientId={data.client_id}
+                    className="space-y-1"
+                  />
                   <p>{recurringPartialPeriodSummary}</p>
                   <p className="font-medium">{recurringMaterializedHeading}</p>
                   <p>{recurringMaterializedSummary}</p>
