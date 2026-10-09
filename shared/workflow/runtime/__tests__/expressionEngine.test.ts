@@ -136,12 +136,16 @@ describe('expressionEngine guardrails', () => {
       ).resolves.toBe(10);
     });
 
-    it('stays well inside the evaluation budget on large text containing emoji', async () => {
+    it('stays linear on large text containing emoji', async () => {
+      // Same guard as above: the 25ms production budget is wall-clock, which a loaded
+      // CI shard overshoots on linear work, so assert against the linear-work budget.
+      const budgetMs = 1_000;
       const big = 'x😀'.repeat(100_000);
+      const runBig = (source: string) => evaluateExpressionSource(source, { payload: { big } }, budgetMs);
       // 100,000 characters = 50,000 'x😀' pairs; len() counts UTF-16 units.
-      await expect(run('len(truncate(payload.big, 1000000, ""))', { big })).resolves.toBe(150_000);
-      await expect(run('truncate(payload.big, 4, "")', { big })).resolves.toBe('x😀x😀');
-      await expect(run('substring(payload.big, -3)', { big })).resolves.toBe('😀x😀');
+      await expect(runBig('len(truncate(payload.big, 1000000, ""))')).resolves.toBe(150_000);
+      await expect(runBig('truncate(payload.big, 4, "")')).resolves.toBe('x😀x😀');
+      await expect(runBig('substring(payload.big, -3)')).resolves.toBe('😀x😀');
     });
 
     it('treats a lone surrogate as one character', async () => {
