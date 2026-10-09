@@ -50,6 +50,13 @@ Working memory for this plan. Short bullets; update earlier notes when a decisio
 - (2026-10-09, assignment-core) `asset_history.changed_by` is NOT NULL, so a sessionless caller (RMM sync without an audit user) gets the assignment row and the column update but no history entry rather than failing the assignment.
 - (2026-10-09, assignment-core) The in-memory knex harnesses in `packages/assets/src/actions/*.test.ts` gained `whereNull`/`whereNotNull`/`join` and an `asset_statuses` seed; the helper and FR-B3 validation both need them.
 
+- (2026-10-09, groups) The portal visibility helpers gained optional `sharedWorkspace` / `sharedWorkspaceTickets` column pairs instead of a new function: omitting them narrows, which is the rule the whole module is built on.
+- (2026-10-09, rmm-user-ui) `listRmmSignedInUsers` / `mapRmmSignedInUserToContact` take the **mapping row id**, not `(integrationId, externalOrganizationId)` as F049 wrote it — none of the five settings managers had the integration id to hand, and deriving it server-side avoided threading it through four EE data loaders.
+- (2026-10-09, rmm-user-ui) `@alga-psa/integrations` gained a `./components/*` export so EE managers import the one panel file rather than the components barrel (which pulls `@alga-psa/reference-data` and broke a Tanium UI test).
+- (2026-10-09, billing/groups/tickets) Four more shared models were added for the same cycle reason as `setAssetAssignee`: `assetGroupContactModel`, `assetTicketContactModel`, `assetBillingProfileModel`, `rmm/moveRmmOrganizationAssets`. The workflow worker needs all of them.
+- (2026-10-09, rest-api) The OpenAPI spec regenerates with `npx tsx --tsconfig tsconfig.base.json sdk/scripts/generate-openapi.ts [--edition ee]`. Running `npm run openapi:generate` from `sdk/` fails on `@shared/*` because sdk's tsconfig has no paths — use the root tsconfig.
+- (2026-10-09, mobile) `ee/mobile` has no `node_modules` in this worktree (expo missing), so its vitest and typecheck cannot run here; the two edited files were parse-checked with esbuild instead.
+
 ## Commands / Runbooks
 
 - Migrations: `npm run migrate` from repo root. Migrations must `require('./utils/tenantDb.cjs')`, never `@alga-psa/db`.

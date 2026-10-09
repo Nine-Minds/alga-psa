@@ -104,8 +104,8 @@
   {"id": "F103", "commitGroup": "rest-api", "prdRefs": ["FR-E9"], "implemented": true, "description": "REST /api/v1/asset-groups CRUD, /api/v1/asset-groups/{id}/members (POST, DELETE), /api/v1/asset-groups/{id}/contacts (POST, DELETE) backed by the group model with asset permissions"},
   {"id": "F104", "commitGroup": "rest-api", "prdRefs": ["FR-B4"], "implemented": true, "description": "GET /api/v1/asset-statuses lists the tenant's statuses"},
   {"id": "F105", "commitGroup": "rest-api", "prdRefs": ["Data / API"], "implemented": true, "description": "OpenAPI route definitions for the new endpoints and fields; spec regenerated and synced via alga-openapi-sync"},
-  {"id": "F106", "commitGroup": "mobile", "prdRefs": ["UX mobile"], "implemented": false, "description": "ee/mobile asset API types and AssetDetailScreen show Assigned to, Manufacturer, Model, Vendor and Group (read-only)"},
-  {"id": "F107", "commitGroup": "mobile", "prdRefs": ["UX i18n"], "implemented": false, "description": "Mobile strings added for every mobile locale"},
+  {"id": "F106", "commitGroup": "mobile", "prdRefs": ["UX mobile"], "implemented": true, "description": "ee/mobile asset API types and AssetDetailScreen show Assigned to, Manufacturer, Model, Vendor and Group (read-only)"},
+  {"id": "F107", "commitGroup": "mobile", "prdRefs": ["UX i18n"], "implemented": true, "description": "Mobile strings added for every mobile locale"},
   {"id": "F108", "commitGroup": "groups-portal", "prdRefs": ["FR-E7b"], "implemented": true, "description": "Portal ticket creation (client-tickets.ts asset check) and the portal asset picker use the extended applyAssetVisibilityFilter so a shared-workspace user can raise a ticket on any workspace asset"},
   {"id": "F109", "commitGroup": "groups-portal", "prdRefs": ["FR-E7b"], "implemented": true, "description": "Portal ticket list and ticket detail under ticket scope contact also include open tickets linked via asset_associations to a shared workspace the contact uses; such tickets are read-only unless the contact is requester or watcher"}
 ]

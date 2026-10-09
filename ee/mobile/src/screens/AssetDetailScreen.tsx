@@ -245,6 +245,26 @@ export function AssetDetailScreen({ route, navigation }: Props) {
             {asset.serial_number ? <FieldRow label={t("identity.serial", "Serial")} value={asset.serial_number} /> : null}
             {asset.asset_type ? <FieldRow label={t("identity.type", "Type")} value={asset.asset_type} /> : null}
             {asset.client_name ? <FieldRow label={t("identity.client", "Client")} value={asset.client_name} /> : null}
+            {/* FR-C6: who has the device, read-only on mobile. A shared
+                workspace has users rather than one assignee, so it shows the
+                workspace instead. */}
+            {asset.group?.kind === "shared_workspace" ? (
+              <FieldRow
+                label={t("identity.sharedWorkspace", "Shared workspace")}
+                value={asset.group.name}
+              />
+            ) : (
+              <FieldRow
+                label={t("identity.assignedTo", "Assigned to")}
+                value={asset.contact_name || t("identity.unassigned", "Unassigned")}
+              />
+            )}
+            {asset.manufacturer ? <FieldRow label={t("identity.manufacturer", "Manufacturer")} value={asset.manufacturer} /> : null}
+            {asset.model ? <FieldRow label={t("identity.model", "Model")} value={asset.model} /> : null}
+            {asset.vendor_name ? <FieldRow label={t("identity.vendor", "Vendor")} value={asset.vendor_name} /> : null}
+            {asset.group?.kind === "bundle" ? (
+              <FieldRow label={t("identity.bundle", "Bundle")} value={asset.group.name} />
+            ) : null}
             {asset.location ? <FieldRow label={t("identity.location", "Location")} value={asset.location} /> : null}
             {asset.warranty_end_date ? (
               <FieldRow label={t("identity.warrantyEnds", "Warranty ends")} value={asset.warranty_end_date.slice(0, 10)} />
