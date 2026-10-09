@@ -57,56 +57,55 @@
     "confirmation": {
       "title": "Licentie-update bevestigen",
       "increaseDescription": "Controleer de details van uw licentie-uitbreiding voordat u bevestigt.",
-      "decreaseDescription": "Controleer de details van uw licentievermindering. De wijzigingen gaan in aan het einde van uw factureringsperiode.",
       "currentMonthlyCost": "Huidige maandelijkse kosten",
       "currentLicenseCount": "Huidig aantal licenties",
       "newMonthlyCost": "Nieuwe maandelijkse kosten",
       "newLicenseCount": "Nieuw aantal licenties",
       "monthlyIncrease": "Maandelijkse toename",
-      "monthlySavings": "Maandelijkse besparing",
       "paymentMethod": "Betaalmethode",
       "changePaymentMethod": "Wijzigen",
       "immediateChargeTitle": "Directe afschrijving",
       "immediateChargeDescription": "Er wordt nu {{amountDue}} in rekening gebracht voor het naar rato berekende bedrag.",
       "prorationDescription": "Naar rato: {{amount}} voor de rest van deze factureringsperiode",
-      "scheduledTitle": "Ingepland voor einde van de periode",
-      "scheduledDescription": "De licentievermindering gaat op {{date}} in aan het einde van uw huidige factureringsperiode.",
-      "scheduledKeepAccess": "U behoudt tot die tijd toegang tot alle {{count}} licenties.",
       "cancel": "Annuleren",
       "confirmPayNow": "Bevestigen en nu betalen",
-      "confirmSchedule": "Planning bevestigen"
+      "confirm": "Bevestigen",
+      "trialTitle": "Geen kosten tijdens uw proefperiode",
+      "trialDescription": "Uw proefperiode loopt ongewijzigd door. De facturering begint op {{date}} met {{amount}}."
     },
     "usage": {
       "title": "Huidig licentiegebruik",
       "licensesUsed": "gebruikte licenties"
     },
     "fields": {
-      "totalLicenseCount": "Totaal aantal licenties"
+      "licensesToAdd": "Toe te voegen licenties"
     },
     "help": {
-      "totalLicenseCount": "Voer het nieuwe totale aantal licenties in (minimum: {{minimum}}). Huidig: {{current}}",
-      "reduceViaAccount": "Ga naar accountbeheer om licenties te verminderen",
-      "quantityWarning": "Waarschuwing: u heeft {{used}} gebruikers, maar stelt het totaal in op {{quantity}}"
+      "licensesToAdd": "Voer in hoeveel licenties u wilt toevoegen. Uw nieuwe totaal wordt hieronder bijgewerkt."
     },
     "pricing": {
       "pricePerLicense": "Prijs per licentie:",
-      "quantity": "Aantal:",
-      "total": "Totaal:"
+      "addedCost": "Extra kosten:",
+      "newTotal": "Nieuw totaal:"
     },
     "actions": {
       "creatingCheckout": "Checkout wordt aangemaakt...",
-      "noChange": "Geen wijziging",
-      "updateToTotal": "Bijwerken naar totaal {{quantity}} ({{difference}} {{licenseLabel}})"
+      "addLicenses": "{{count}} {{licenseLabel}} toevoegen"
     },
     "info": {
-      "totalQuantity": "Hiermee stelt u het totale abonnementsaantal in (geen toevoeging aan huidige licenties)",
       "increasingImmediate": "Licenties verhogen: directe toegang met een naar rato berekende kostenpost",
-      "billedMonthly": "Licenties worden maandelijks gefactureerd en kunnen op elk moment worden opgezegd"
+      "billedMonthly": "Licenties worden maandelijks gefactureerd en kunnen op elk moment worden opgezegd",
+      "addsToTotal": "Licenties worden toegevoegd aan uw huidige totaal. Ga naar Accountbeheer om licenties te verminderen."
     },
     "solo": {
       "title": "Solo omvat één gebruiker",
       "description": "Het Solo-abonnement is ontworpen voor één gebruiker en ondersteunt het toevoegen van licenties niet. Upgrade naar Pro om meer gebruikers aan uw team toe te voegen.",
       "upgradeCta": "Upgraden naar Pro"
+    },
+    "summary": {
+      "currentLicenses": "Huidige licenties",
+      "licensesToAdd": "Toe te voegen licenties",
+      "newTotal": "Nieuw totaal"
     }
   },
   "removalModal": {

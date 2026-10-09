@@ -57,56 +57,55 @@
     "confirmation": {
       "title": "Confirmar atualização da licença",
       "increaseDescription": "Revise os detalhes do aumento da sua licença antes de confirmar.",
-      "decreaseDescription": "Revise os detalhes da redução da sua licença. As alterações entrarão em vigor no final do seu período de faturamento.",
       "currentMonthlyCost": "Custo mensal atual",
       "currentLicenseCount": "Contagem de licenças atuais",
       "newMonthlyCost": "Novo custo mensal",
       "newLicenseCount": "Nova contagem de licenças",
       "monthlyIncrease": "Aumento Mensal",
-      "monthlySavings": "Poupança Mensal",
       "paymentMethod": "Método de pagamento",
       "changePaymentMethod": "Mudar",
       "immediateChargeTitle": "Cobrança imediata",
       "immediateChargeDescription": "Você será cobrado {{amountDue}} agora pelo valor rateado.",
       "prorationDescription": "Proporção: {{amount}} para o restante deste período de faturamento",
-      "scheduledTitle": "Programado para o final do período",
-      "scheduledDescription": "A redução da licença entrará em vigor em {{date}} no final do seu período de faturamento atual.",
-      "scheduledKeepAccess": "Você manterá acesso a todas as licenças {{count}} até então.",
       "cancel": "Cancelar",
       "confirmPayNow": "Confirme e pague agora",
-      "confirmSchedule": "Confirmar agendamento"
+      "confirm": "Confirmar",
+      "trialTitle": "Sem cobrança durante o período de teste",
+      "trialDescription": "Seu período de teste continua como antes. A cobrança começa em {{date}} com {{amount}}."
     },
     "usage": {
       "title": "Uso da licença atual",
       "licensesUsed": "licenças usadas"
     },
     "fields": {
-      "totalLicenseCount": "Contagem total de licenças"
+      "licensesToAdd": "Licenças a adicionar"
     },
     "help": {
-      "totalLicenseCount": "Insira o novo número total de licenças (mínimo: {{minimum}}). Atualmente: {{current}}",
-      "reduceViaAccount": "Para reduzir licenças, visite Gerenciamento de contas",
-      "quantityWarning": "Aviso: você tem usuários {{used}}, mas está definindo o total como {{quantity}}"
+      "licensesToAdd": "Informe quantas licenças deseja adicionar. O novo total é atualizado abaixo."
     },
     "pricing": {
       "pricePerLicense": "Preço por licença:",
-      "quantity": "Quantidade:",
-      "total": "Total:"
+      "addedCost": "Custo adicional:",
+      "newTotal": "Novo total:"
     },
     "actions": {
       "creatingCheckout": "Criando Check-out...",
-      "noChange": "Sem alteração",
-      "updateToTotal": "Atualizar para {{quantity}} Total ({{difference}} {{licenseLabel}})"
+      "addLicenses": "Adicionar {{count}} {{licenseLabel}}"
     },
     "info": {
-      "totalQuantity": "Isso define a quantidade total de assinaturas (não um acréscimo às licenças atuais)",
       "increasingImmediate": "Aumento de licenças: acesso imediato com cobrança proporcional",
-      "billedMonthly": "As licenças são cobradas mensalmente e podem ser canceladas a qualquer momento"
+      "billedMonthly": "As licenças são cobradas mensalmente e podem ser canceladas a qualquer momento",
+      "addsToTotal": "As licenças são adicionadas ao seu total atual. Para reduzir licenças, acesse o Gerenciamento da conta."
     },
     "solo": {
       "title": "Solo inclui um usuário",
       "description": "O plano Solo foi projetado para um único usuário e não oferece suporte para adição de licenças. Atualize para o Pro para adicionar mais usuários à sua equipe.",
       "upgradeCta": "Atualizar para Pro"
+    },
+    "summary": {
+      "currentLicenses": "Licenças atuais",
+      "licensesToAdd": "Licenças a adicionar",
+      "newTotal": "Novo total"
     }
   },
   "removalModal": {
