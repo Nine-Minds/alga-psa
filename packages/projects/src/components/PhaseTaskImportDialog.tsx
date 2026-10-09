@@ -880,7 +880,7 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
             <p className="mt-2 text-sm text-[rgb(var(--color-text-600))]">{importT('uploadIntro', 'Upload a CSV file with phase and task data')}</p>
             <p className="mt-1 text-xs text-[rgb(var(--color-text-500))]">
               <strong>{importT('requiredFields', 'Required:')}</strong> {importT('requiredFieldsList', 'task_name')}<br />
-              <strong>{importT('optionalFields', 'Optional:')}</strong> {importT('optionalFieldsList', 'phase_name, task_description, assigned_to, estimated_hours, due_date, priority, service, task_type, status, tags')}<br />
+              <strong>{importT('optionalFields', 'Optional:')}</strong> {importT('optionalFieldsList', 'phase_name, task_description, assigned_to, estimated_hours, start_date, due_date, priority, service, task_type, status, tags')}<br />
               <strong>{importT('noteLabel', 'Note:')}</strong> {importT('defaultPhaseNote', 'Tasks without a phase_name will be grouped into "{{phaseName}}"', { phaseName: DEFAULT_PHASE_NAME })}
             </p>
             <div className="mt-4 space-y-3">

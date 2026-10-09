@@ -322,7 +322,17 @@
         "verifiedContact": "E-mail de contact vérifié",
         "validPassword": "Mot de passe valide"
       }
-    }
+    },
+    "ssoNoMatchTitle": "Échec de la connexion SSO",
+    "ssoNoMatch": {
+      "no_matching_user": "Aucun compte du portail client ne correspond à {{providerEmail}}. Connectez-vous avec votre mot de passe ou contactez votre prestataire de services.",
+      "missing_email": "Votre fournisseur d'identité n'a renvoyé aucune adresse e-mail, aucun compte du portail client n'a donc pu être identifié. Connectez-vous avec votre mot de passe ou contactez votre prestataire de services.",
+      "inactive_user": "Le compte du portail client correspondant à {{providerEmail}} est inactif. Contactez votre prestataire de services pour le réactiver.",
+      "user_type_mismatch": "{{providerEmail}} n'est pas un compte du portail client. Contactez votre prestataire de services.",
+      "tenant_mismatch": "{{providerEmail}} appartient au portail d'une autre organisation. Connectez-vous avec votre mot de passe ou contactez votre prestataire de services."
+    },
+    "configurationTitle": "Échec de la connexion",
+    "configurationMessage": "La connexion a échoué. Veuillez réessayer ou contacter votre prestataire de services."
   },
   "account": {
     "title": "Compte",
@@ -444,7 +454,8 @@
         "consent": "J'autorise des débits récurrents sur cette carte pour les factures finalisées.",
         "enable": "Activer le prélèvement automatique",
         "noCards": "Ajoutez une carte pour activer le prélèvement automatique.",
-        "changeCard": "Utiliser cette carte pour le prélèvement automatique"
+        "changeCard": "Utiliser cette carte pour le prélèvement automatique",
+        "updateError": "Impossible de mettre à jour le prélèvement automatique. Veuillez réessayer."
       },
       "publicCardSetup": {
         "saved": "Carte enregistrée",
@@ -567,7 +578,8 @@
       "avatarDescription": "Cet avatar est affiché au personnel MSP lorsqu'il consulte vos informations de contact.",
       "emailAlreadyExists": "Un utilisateur avec cette adresse e-mail existe déjà",
       "reportsToSelf": "Un utilisateur ne peut pas être son propre responsable",
-      "reportsToCycle": "Cela créerait une chaîne hiérarchique circulaire"
+      "reportsToCycle": "Cela créerait une chaîne hiérarchique circulaire",
+      "invalidTimezone": "Choisissez un fuseau horaire basé sur une ville, comme America/New_York."
     },
     "imageUpload": {
       "uploadAvatar": "Téléverser un avatar",
@@ -683,7 +695,10 @@
       "deleteError": "Échec de la suppression de l'utilisateur",
       "emailAlreadyExists": "Un utilisateur avec cette adresse e-mail existe déjà",
       "reportsToSelf": "Un utilisateur ne peut pas être son propre responsable",
-      "reportsToCycle": "Cela créerait une chaîne hiérarchique circulaire"
+      "reportsToCycle": "Cela créerait une chaîne hiérarchique circulaire",
+      "reportsTo": "Rattaché à",
+      "noManager": "Aucun responsable",
+      "reportsToHelp": "Un responsable peut voir les tickets, appareils et projets des personnes qui lui sont rattachées lorsque son groupe de visibilité est limité à ses propres éléments."
     },
     "visibilityGroups": {
       "title": "Groupes de visibilité",
@@ -723,9 +738,22 @@
       "scopeClient": "Tous les tickets de ce client",
       "scopeContact": "Uniquement leurs propres tickets",
       "scopeClientDescription": "Les membres voient tous les tickets de ce client sur les tableaux sélectionnés.",
-      "scopeContactDescription": "Les membres voient uniquement les tickets dont ils sont le contact. Les administrateurs du client voient tous les tickets des tableaux sélectionnés, y compris ceux sans contact.",
-      "assignmentHelp": "Attribuez un groupe pour limiter les tableaux et les tickets, ou conservez un accès complet au client.",
-      "boardHiddenFromPortal": "Masqué du portail client"
+      "scopeContactDescription": "Les membres voient les tickets dont ils sont le contact, ceux des personnes qui leur sont rattachées et ceux qu’ils suivent. Les administrateurs du client voient toujours tout sur les tableaux sélectionnés, y compris les tickets sans contact.",
+      "assignmentHelp": "Attribuez un groupe pour limiter les tableaux ainsi que les tickets, appareils et projets visibles par cette personne, ou conservez l’accès complet au client.",
+      "boardHiddenFromPortal": "Masqué du portail client",
+      "assetScopeLabel": "Visibilité des appareils",
+      "assetScopeClient": "Tous les appareils de ce client",
+      "assetScopeContact": "Uniquement leurs propres appareils",
+      "assetScopeClientDescription": "Les membres voient tous les appareils de ce client, y compris ceux qui ne sont pas attribués.",
+      "assetScopeContactDescription": "Les membres ne voient que les appareils qui leur sont attribués ou qui sont attribués aux personnes qui leur sont rattachées. Les appareils non attribués sont masqués. Les administrateurs du client voient toujours tout.",
+      "projectScopeLabel": "Visibilité des projets",
+      "projectScopeClient": "Tous les projets de ce client",
+      "projectScopeContact": "Uniquement leurs propres projets",
+      "projectScopeClientDescription": "Les membres voient tous les projets de ce client.",
+      "projectScopeContactDescription": "Les membres ne voient que les projets dont le contact est eux-mêmes ou une personne qui leur est rattachée. Les projets sans contact sont masqués. Les administrateurs du client voient toujours tout.",
+      "scopeSummary": "Tickets : {{tickets}} · Appareils : {{devices}} · Projets : {{projects}}",
+      "scopeSummaryAll": "Tous",
+      "scopeSummaryOwn": "Propres"
     },
     "messages": {
       "saveChanges": "Enregistrer les modifications",

@@ -4,9 +4,11 @@ The Docker Compose configuration has been organized into multiple files to suppo
 
 ## File Structure
 
-- `docker-compose.base.yaml`: Contains shared service definitions for postgres and redis
+- `docker-compose.base.yaml`: Contains shared service definitions for postgres, pgbouncer and redis
 - `docker-compose.ce.yaml`: Community Edition specific configurations
 - `docker-compose.ee.yaml`: Enterprise Edition specific configurations
+- `docker-compose.prod.yaml`: Production overlay for the source-built stacks
+- `docker-compose.expose-infra.yaml`: Opt-in overlay that publishes postgres, pgbouncer and redis on the host
 
 ## Base Configuration
 
@@ -57,6 +59,28 @@ docker compose -f docker-compose.base.yaml -f docker-compose.ee.yaml up
 # Production
 docker compose -f docker-compose.base.yaml -f docker-compose.ee.yaml -f docker-compose.prod.yaml up -d
 ```
+
+## Published Ports for Postgres, PgBouncer and Redis
+
+Compose appends to `ports:` when you combine files or use `extends`. It never replaces the list. For that reason the shared definitions publish nothing, and each stack adds the ports it needs:
+
+| Stack | Postgres, PgBouncer, Redis on the host |
+|---|---|
+| Prebuilt CE/EE (`docker-compose.prebuilt.*.yaml`) | Not published |
+| Source-built with `docker-compose.prod.yaml` | Not published |
+| Source-built dev (`base` + `ce` or `ee`, with or without `docker-compose.yaml`) | `127.0.0.1` only |
+| Test stacks (`docker-compose.e2e*.yaml`, `docker-compose.playwright-*.yaml`, and similar) | `127.0.0.1` only |
+
+`EXPOSE_INFRA_BIND_ADDR` sets the address the dev and test stacks, and `docker-compose.expose-infra.yaml`, bind to. It defaults to `127.0.0.1`. It applies only to postgres, pgbouncer, redis and `ai-gateway-postgres`. Use a single private or VPN interface address if another machine must connect. Do not use `0.0.0.0`. The host port numbers come from `EXPOSE_DB_PORT`, `EXPOSE_PGBOUNCER_PORT`, `EXPOSE_REDIS_PORT` and `EXPOSE_AI_GATEWAY_DB_PORT`.
+
+To publish the three services on a deployment stack, add `docker-compose.expose-infra.yaml` as the last `-f` file:
+
+```bash
+docker compose -f docker-compose.prebuilt.base.yaml -f docker-compose.prebuilt.ce.yaml \
+  -f docker-compose.expose-infra.yaml up -d
+```
+
+`docker-compose.prod.yaml` clears the ports with `ports: !reset []`, which requires Docker Compose 2.24 or later. Older versions stop with a parse error instead of publishing the ports. The prebuilt files do not use `!reset`, so they keep the v2.20 minimum. See [Network Exposure](setup_guide.md#network-exposure) for remote access and firewall guidance.
 
 ## Service Configuration
 

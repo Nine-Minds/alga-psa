@@ -167,6 +167,55 @@ describe('msgraph emulator', { shuffle: false }, () => {
     expect((await fetch(`${mailboxBase}/inbox`, { headers: delegatedHeaders })).status).toBe(404);
   });
 
+  it('accepts client credentials as an HTTP Basic header, as Auth.js sends them', async () => {
+    // @auth/core's default token_endpoint_auth_method is client_secret_basic:
+    // the credentials ride in the Authorization header and are absent from the
+    // body. Reading the body alone made every browser-driven sign-in 401.
+    const clientId = 'basic app';
+    const clientSecret = 'basic/secret+1';
+    await controlPost('/control/msgraph/seed/client', { clientId, clientSecret });
+
+    const formUrlEncode = (value: string) => encodeURIComponent(value).replace(/%20/g, '+');
+    const basic = (id: string, secret: string) =>
+      `Basic ${Buffer.from(`${formUrlEncode(id)}:${formUrlEncode(secret)}`).toString('base64')}`;
+
+    const redirectUri = 'http://localhost/api/auth/callback/azure-ad';
+    const authorize = new URL(`${base}/common/oauth2/v2.0/authorize`);
+    authorize.search = new URLSearchParams({
+      client_id: clientId,
+      redirect_uri: redirectUri,
+      state: 'authjs-state',
+      scope: 'openid profile email User.Read',
+    }).toString();
+    const authorized = await fetch(authorize, { redirect: 'manual' });
+    const code = new URL(authorized.headers.get('location')!).searchParams.get('code')!;
+
+    const exchange = (authorization: string) =>
+      fetch(`${base}/common/oauth2/v2.0/token`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/x-www-form-urlencoded', authorization },
+        body: new URLSearchParams({
+          grant_type: 'authorization_code',
+          code,
+          redirect_uri: redirectUri,
+        }),
+      });
+
+    const rejected = await exchange(basic(clientId, 'wrong-secret'));
+    expect(rejected.status).toBe(401);
+    expect(await rejected.json()).toMatchObject({ error: 'invalid_client' });
+
+    const granted = await exchange(basic(clientId, clientSecret));
+    expect(granted.status).toBe(200);
+    expect(oauthTokenResponse.safeParse(await granted.json()).success).toBe(true);
+
+    const noCredentials = await fetch(
+      `${base}/common/oauth2/v2.0/token`,
+      form({ grant_type: 'authorization_code', code, redirect_uri: redirectUri }),
+    );
+    expect(noCredentials.status).toBe(401);
+  });
+
   it('supports guided Entra application creation and administrator consent', async () => {
     const redirectUri = 'http://localhost/email-setup/callback';
     const authorize = new URL(`${base}/common/oauth2/v2.0/authorize`);

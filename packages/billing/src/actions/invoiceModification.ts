@@ -15,6 +15,7 @@ import { clearPrepaidReplenishmentForInvoice } from '../lib/prepaidAutoReplenish
 import { IInvoiceCharge, InvoiceViewModel, DiscountType } from '@alga-psa/types';
 import { BillingEngine } from '../lib/billing/billingEngine';
 import ProjectBillingCapUsage from '../models/projectBillingCapUsage';
+import { capAppliesToInvoiceCurrency } from '../lib/billing/compute/projectCapMath';
 import ProjectBillingScheduleEntry from '../models/projectBillingScheduleEntry';
 import { persistInvoiceCharges, persistManualInvoiceCharges } from '../services/invoiceService'; // Import persistManualInvoiceCharges
 import Invoice from '@alga-psa/billing/models/invoice';
@@ -220,6 +221,11 @@ async function releaseProjectBillingForDeletedInvoice(
     }
   }
 
+  const invoiceRow = await tenantScopedTable(trx, tenant, 'invoices')
+    .where({ invoice_id: invoiceId })
+    .first('currency_code');
+  const invoiceCurrency: string | null = invoiceRow?.currency_code ?? null;
+
   const invoiceTransactions = await tenantScopedTable(trx, tenant, 'transactions')
     .where({ invoice_id: invoiceId, type: 'invoice_generated' })
     .select('transaction_id', 'metadata');
@@ -237,6 +243,14 @@ async function releaseProjectBillingForDeletedInvoice(
     }
 
     for (const delta of deltas) {
+      // Re-pinning a project's currency zeroes its cap usage, so a delta
+      // recorded in the invoice's currency no longer has anything to undo.
+      const capConfig = await tenantScopedTable(trx, tenant, 'project_billing_configs')
+        .where({ config_id: delta.configId })
+        .first('currency');
+      if (capConfig && !capAppliesToInvoiceCurrency(capConfig.currency, invoiceCurrency)) {
+        continue;
+      }
       await ProjectBillingCapUsage.ensureRow(delta.configId, trx);
       const usage = await ProjectBillingCapUsage.getForUpdate(delta.configId, trx);
       if (!usage) {

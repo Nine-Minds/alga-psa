@@ -1,5 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+const TICKET_1 = '00000000-0000-4000-8000-000000000001';
+const TICKET_HIDDEN = '00000000-0000-4000-8000-000000000002';
+const SIBLING_TICKET = '00000000-0000-4000-8000-000000000003';
+
 vi.mock('../../lib/portalTicketExternalLinks', () => ({ loadPortalTicketExternalLinks: vi.fn(async () => []) }));
 
 let currentUser: any;
@@ -189,7 +193,7 @@ describe('client portal ticket visibility enforcement', () => {
   it('T008: client portal ticket list applies the assigned visibility group boards', async () => {
     const ticketsBuilder = makeListBuilder([
       {
-        ticket_id: 'ticket-1',
+        ticket_id: TICKET_1,
         entered_at: '2026-03-15T00:00:00.000Z',
         updated_at: '2026-03-15T00:00:00.000Z',
         closed_at: null,
@@ -237,7 +241,7 @@ describe('client portal ticket visibility enforcement', () => {
     expect(applyTicketVisibilityFilterMock).toHaveBeenCalledWith(
       ticketsBuilder,
       expect.objectContaining({ visibleBoardIds: ['board-1'] }),
-      { boardColumn: 't.board_id', contactColumn: 't.contact_name_id', billingProfileColumn: 't.billing_profile_id' }
+      { boardColumn: 't.board_id', contactColumn: 't.contact_name_id', billingProfileColumn: 't.billing_profile_id', watchListColumn: 't.attributes' }
     );
   });
 
@@ -285,13 +289,13 @@ describe('client portal ticket visibility enforcement', () => {
     expect(applyTicketVisibilityFilterMock).toHaveBeenCalledWith(
       ticketsBuilder,
       expect.objectContaining({ visibleBoardIds: null }),
-      { boardColumn: 't.board_id', contactColumn: 't.contact_name_id', billingProfileColumn: 't.billing_profile_id' }
+      { boardColumn: 't.board_id', contactColumn: 't.contact_name_id', billingProfileColumn: 't.billing_profile_id', watchListColumn: 't.attributes' }
     );
   });
 
   it('T010: client portal ticket detail succeeds for a ticket on a visible board', async () => {
     const ticketBuilder = makeDetailBuilder({
-      ticket_id: 'ticket-1',
+      ticket_id: TICKET_1,
       ticket_number: 'T-1',
       title: 'Visible ticket',
       board_id: 'board-1',
@@ -366,13 +370,13 @@ describe('client portal ticket visibility enforcement', () => {
     });
 
     const { getClientTicketDetails } = await import('./client-tickets');
-    const ticket = await getClientTicketDetails('ticket-1');
+    const ticket = await getClientTicketDetails(TICKET_1);
 
-    expect(ticket.ticket_id).toBe('ticket-1');
+    expect(ticket.ticket_id).toBe(TICKET_1);
     expect(applyTicketVisibilityFilterMock).toHaveBeenCalledWith(
       expect.any(Object),
       expect.objectContaining({ visibleBoardIds: ['board-1'] }),
-      { boardColumn: 't.board_id', contactColumn: 't.contact_name_id', billingProfileColumn: 't.billing_profile_id' }
+      { boardColumn: 't.board_id', contactColumn: 't.contact_name_id', billingProfileColumn: 't.billing_profile_id', watchListColumn: 't.attributes' }
     );
   });
 
@@ -442,7 +446,7 @@ describe('client portal ticket visibility enforcement', () => {
 
     const { getClientTicketDetails } = await import('./client-tickets');
 
-    await expect(getClientTicketDetails('ticket-hidden')).resolves.toEqual({
+    await expect(getClientTicketDetails(TICKET_HIDDEN)).resolves.toEqual({
       actionError: 'Ticket not found or access denied',
       messageKey: 'client-portal:errors.tickets.notFoundOrDenied',
     });
@@ -450,7 +454,7 @@ describe('client portal ticket visibility enforcement', () => {
 
   it('T018: client portal ticket detail excludes internal comments and internal-only commenters', async () => {
     const ticketBuilder = makeDetailBuilder({
-      ticket_id: 'ticket-1',
+      ticket_id: TICKET_1,
       ticket_number: 'T-1',
       title: 'Visible ticket',
       board_id: 'board-1',
@@ -525,7 +529,7 @@ describe('client portal ticket visibility enforcement', () => {
     });
 
     const { getClientTicketDetails } = await import('./client-tickets');
-    await getClientTicketDetails('ticket-1');
+    await getClientTicketDetails(TICKET_1);
 
     // The serialized conversation list filters out internal comments at the
     // query (not just in the client component) and joins comment_threads so
@@ -533,7 +537,7 @@ describe('client portal ticket visibility enforcement', () => {
     // MSP-only draft state, so the query also restricts to published comments and
     // portal callers cannot infer a pending one.
     expect(conversationsBuilder.where).toHaveBeenCalledWith({
-      'comments.ticket_id': 'ticket-1',
+      'comments.ticket_id': TICKET_1,
       'comments.is_internal': false,
       'comments.publish_state': 'published',
     });
@@ -585,7 +589,7 @@ describe('client portal ticket visibility enforcement', () => {
 
     const { getClientTicketDocuments } = await import('./client-tickets');
 
-    await expect(getClientTicketDocuments('ticket-hidden')).resolves.toEqual({
+    await expect(getClientTicketDocuments(TICKET_HIDDEN)).resolves.toEqual({
       actionError: 'Ticket not found or access denied',
       messageKey: 'client-portal:errors.tickets.notFoundOrDenied',
     });
@@ -824,18 +828,18 @@ describe('contact-scoped portal enforcement', () => {
     const touched: string[] = [];
     withTransactionMock.mockImplementation(async (_db, callback) => callback(Object.assign((table: string) => {
       touched.push(table);
-      if (table === 'comments' && (path === 'edit-comment' || path === 'delete-comment')) return filteredTickets([{ comment_id: 'comment-1', ticket_id: 'sibling', user_id: 'u' }]);
+      if (table === 'comments' && (path === 'edit-comment' || path === 'delete-comment')) return filteredTickets([{ comment_id: 'comment-1', ticket_id: SIBLING_TICKET, user_id: 'u' }]);
       if (table === 'users') return makeUserQuery();
-      if (table === 'tickets as t' || table === 'tickets') return filteredTickets([{ ticket_id: 'sibling', client_id: 'client-1', contact_name_id: 'contact-2', board_id: 'board-1' }]);
+      if (table === 'tickets as t' || table === 'tickets') return filteredTickets([{ ticket_id: SIBLING_TICKET, client_id: 'client-1', contact_name_id: 'contact-2', board_id: 'board-1' }]);
       return makeChainable([]);
     }, { raw: vi.fn() })));
     const actions = await import('./client-tickets');
-    const result = path === 'detail' ? await actions.getClientTicketDetails('sibling')
-      : path === 'documents' ? await actions.getClientTicketDocuments('sibling')
-      : path === 'comment' ? await actions.addClientTicketComment('sibling', 'private')
+    const result = path === 'detail' ? await actions.getClientTicketDetails(SIBLING_TICKET)
+      : path === 'documents' ? await actions.getClientTicketDocuments(SIBLING_TICKET)
+      : path === 'comment' ? await actions.addClientTicketComment(SIBLING_TICKET, 'private')
       : path === 'edit-comment' ? await actions.updateClientTicketComment('comment-1', { note: 'changed' })
       : path === 'delete-comment' ? await actions.deleteClientTicketComment('comment-1')
-      : await actions.updateTicketStatus('sibling', 'status-2');
+      : await actions.updateTicketStatus(SIBLING_TICKET, 'status-2');
     expect(result).toMatchObject({ actionError: 'Ticket not found or access denied' });
     if (path === 'documents') expect(touched).not.toContain('documents as d');
     expect(touched).not.toContain('statuses');

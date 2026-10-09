@@ -214,6 +214,10 @@
         "updateComments": "Otillräckliga behörigheter för att uppdatera kommentarer",
         "deleteComments": "Otillräckliga behörigheter för att radera kommentarer",
         "viewDocuments": "Otillräckliga behörigheter för att visa ärendedokument"
+      },
+      "projects": {
+        "read": "Otillräckliga behörigheter för att visa projekt",
+        "readDetails": "Otillräckliga behörigheter för att visa projektdetaljer"
       }
     },
     "tags": {
@@ -317,7 +321,8 @@
       "clientPortal": "Skapat via kundportalen",
       "inboundEmail": "Skapat via inkommande e-post",
       "api": "Skapat via API",
-      "other": "Skapat via annan källa"
+      "other": "Skapat via annan källa",
+      "recurring": "Skapat av återkommande schema"
     },
     "responseSource": {
       "clientPortal": "Mottaget via kundportalen",
@@ -824,7 +829,16 @@
       "fileError": "Det gick inte att ladda upp filen",
       "associatedEntityTypeLabel": "Koppla till",
       "noAssociation": "Ingen koppling",
-      "selectAssociatedEntityError": "Välj en entitet att koppla till innan du laddar upp."
+      "selectAssociatedEntityError": "Välj en entitet att koppla till innan du laddar upp.",
+      "uploaded": "Uppladdad",
+      "failed": "Misslyckades",
+      "failureSummary": "{{failed}} av {{total}} filer kunde inte laddas upp. Granska felen nedan.",
+      "outcomeSummary": "{{succeeded}} av {{total}} filer har laddats upp",
+      "emptyDropTitle": "Inga filer mottogs",
+      "emptyDropMessage": "Inga filer togs emot. Spara bilagan eller e-postmeddelandet på datorn och dra sedan den sparade filen hit eller använd ”Bläddra bland filer”.",
+      "uploadInProgress": "En uppladdning pågår redan. Vänta tills den är klar innan du lägger till fler filer.",
+      "refreshFailed": "Dina filer laddades upp, men dokumentlistan kunde inte uppdateras. Ladda om sidan för att se dem.",
+      "clearResults": "Rensa resultat"
     },
     "folders": {
       "root": "Rot",
@@ -1336,9 +1350,11 @@
   },
   "timezonePicker": {
     "selectPlaceholder": "Välj tidszon…",
-    "searchPlaceholder": "Sök tidszoner eller förkortningar (t.ex. EST)…",
+    "searchPlaceholder": "Sök efter stad, namn eller förkortning (t.ex. New York, EST)...",
     "noResults": "Inga tidszoner hittades",
     "matchingGroup": "Matchar ”{{query}}”",
+    "noDst": "Ingen sommartid",
+    "noDaylightSavingHint": "Ingen sommartid. Klockorna står på {{offset}} hela året.",
     "regions": {
       "Africa": "Afrika",
       "America": "Amerika",
@@ -1728,5 +1744,9 @@
     "customPlaceholder": "Namnge enheten",
     "register": "Lägg till",
     "selectPlaceholder": "Välj en måttenhet"
+  },
+  "emailRecipients": {
+    "remove": "Ta bort {{email}}",
+    "placeholder": "Skriv en adress och tryck på Retur"
   }
 }

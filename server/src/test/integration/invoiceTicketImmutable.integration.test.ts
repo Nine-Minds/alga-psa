@@ -60,8 +60,16 @@ it('generates immutable ticket presentation from approved source records', async
     if (result?.actionError || result?.permissionError) throw new Error(JSON.stringify(result));
     expect(result?.invoice_id).toBeTruthy();
     const links = await db('invoice_time_entries').where({ tenant, invoice_id: result.invoice_id });
-    expect(links).toHaveLength(4);
-    expect(links.some((l) => l.work_item_snapshot.rateKind === 'mixed' && l.work_item_snapshot.netAmount === 37500)).toBe(true);
+    // The 120-minute overtime entry bills as two lines (regular + overtime),
+    // each linking the entry with its own segment snapshot.
+    expect(links).toHaveLength(5);
+    const overtimeLinks = links.filter((l) => l.work_item_snapshot.segment);
+    expect(overtimeLinks.map((l) => [l.work_item_snapshot.segment, l.work_item_snapshot.rateKind, l.work_item_snapshot.netAmount]).sort()).toEqual([
+      ['overtime', 'uniform', 22500],
+      ['regular', 'uniform', 15000],
+    ]);
+    expect(new Set(overtimeLinks.map((l) => l.entry_id)).size).toBe(1);
+    expect(new Set(overtimeLinks.map((l) => l.item_id)).size).toBe(2);
     const { default: Invoice } = await import('@alga-psa/billing/models/invoice');
     const { mapDbInvoiceToWasmViewModel } = await import('@alga-psa/billing/lib/adapters/invoiceAdapters');
     const { QuickBooksCSVAdapter } = await import('@alga-psa/billing/adapters/accounting/quickBooksCSVAdapter');
@@ -214,7 +222,7 @@ it('generates immutable ticket presentation from approved source records', async
     fs.writeFileSync(`${evidenceDir}/accounting-export.json`, JSON.stringify(exportBefore, null, 2));
     const duplicate = await generateInvoice(cycleId) as any;
     expect(duplicate?.invoice_id).toBeUndefined();
-    expect(await db('invoice_time_entries').where({ tenant, invoice_id: result.invoice_id }).count('* as count').first().then((r) => Number(r!.count))).toBe(4);
+    expect(await db('invoice_time_entries').where({ tenant, invoice_id: result.invoice_id }).count('* as count').first().then((r) => Number(r!.count))).toBe(5);
     expect(JSON.stringify(links)).not.toContain('PRIVATE');
     fs.writeFileSync(`${evidenceDir}/generated.json`, JSON.stringify({ invoiceId: result.invoice_id, links, vm }, null, 2));
     fs.writeFileSync(`${evidenceDir}/production.pdf`, await new PDFGenerationService(tenant).generatePDF({ invoiceId: result.invoice_id, userId, templateId: template.template_id }));

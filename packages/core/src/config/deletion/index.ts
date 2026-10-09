@@ -375,6 +375,12 @@ export const DELETION_CONFIGS: Record<string, EntityDeletionConfig> = {
         table: 'interactions',
         label: 'interaction',
         countQuery: countStatusUsage('interaction', 'interactions', 'status_id')
+      },
+      {
+        type: 'board_notification_status',
+        table: 'board_notification_rule_statuses',
+        foreignKey: 'status_id',
+        label: 'board notification rule'
       }
     ]
   },
@@ -383,11 +389,19 @@ export const DELETION_CONFIGS: Record<string, EntityDeletionConfig> = {
     supportsInactive: false,
     supportsArchive: false,
     dependencies: [
-      { type: 'member', table: 'team_members', foreignKey: 'team_id', label: 'team member' },
+      // team_members is intentionally not a blocker: teams.manager_id is NOT NULL and the
+      // lead is always also a member, so a team could never reach zero members. Team.delete
+      // removes the member rows inside the deletion transaction.
       { type: 'ticket', table: 'tickets', foreignKey: 'assigned_team_id', label: 'assigned ticket' },
       { type: 'project_task', table: 'project_tasks', foreignKey: 'assigned_team_id', label: 'assigned project task' },
       { type: 'project_template_task', table: 'project_template_tasks', foreignKey: 'assigned_team_id', label: 'project template task' },
-      { type: 'board', table: 'boards', foreignKey: 'default_assigned_team_id', label: 'board default team' }
+      { type: 'board', table: 'boards', foreignKey: 'default_assigned_team_id', label: 'board default team' },
+      {
+        type: 'board_notification_recipient',
+        table: 'board_notification_rule_recipients',
+        foreignKey: 'team_id',
+        label: 'board notification rule'
+      }
     ]
   },
   user: {

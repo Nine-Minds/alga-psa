@@ -388,6 +388,7 @@
         "emailAlreadyExists": "A user with this email address already exists",
         "reportsToSelf": "A user cannot report to themselves",
         "reportsToCycle": "This would create a circular reporting chain",
+        "invalidTimezone": "Choose a city-based time zone, such as America/New_York.",
         "passwordTooShort": "Password must be at least 8 characters long",
         "passwordChangeFailed": "Failed to change password",
         "passwordChangeError": "An error occurred while changing password",
@@ -820,6 +821,27 @@
           "appearanceHelp": "Tab pinning and the board's default list view",
           "assignment": "Assignment & SLA",
           "assignmentHelp": "Default routing, SLA and board manager",
+          "notifications": "Notifications",
+          "notificationsHelp": "Notify technicians about new tickets and status changes, and set default watchers",
+          "notificationsRulesLabel": "Notification rules",
+          "notificationsRulesHelp": "Recipients get one notification per event. They are not added as watchers.",
+          "notificationsAddRule": "Add rule",
+          "notificationsRuleTitle": "Rule {{number}}",
+          "notificationsRuleEnabled": "Enabled",
+          "notificationsRemoveRule": "Remove rule",
+          "notificationsOnCreate": "When a ticket is created on this board",
+          "notificationsOnStatus": "When a ticket enters",
+          "notificationsNoStatuses": "Statuses can be selected once the board has been saved.",
+          "notificationsRecipients": "Notify",
+          "notificationsRecipientsPlaceholder": "Select users and teams...",
+          "notificationsRecipientsHelp": "Team members are looked up each time a notification is sent.",
+          "notificationsDefaultWatchers": "Default watchers",
+          "notificationsDefaultWatchersPlaceholder": "Select users...",
+          "notificationsDefaultWatchersHelp": "Added to the watch list of every new ticket on this board, and notified of every later update.",
+          "notificationsTriggerRequired": "Each notification rule needs at least one trigger: ticket creation or a status.",
+          "notificationsRecipientRequired": "Each notification rule needs at least one user or team to notify.",
+          "notificationsFetchFailed": "Failed to load notification settings",
+          "notificationsStatusRemapFailed": "The board was created, but a notification rule status could not be matched to the new board. Re-add the notification rules.",
           "inbound": "Email & inbound replies",
           "inboundHelp": "Reopen tickets when clients reply by email",
           "close": "Close rules",
@@ -1824,6 +1846,12 @@
         "useLogo": "Use my logo in the email header",
         "logoWide": "Wide logo",
         "logoDefault": "Square logo",
+        "logoArtwork": "Logo artwork",
+        "logoArtworkAuto": "Match the header",
+        "logoArtworkLight": "Light-background logo",
+        "logoArtworkDark": "Dark-background logo",
+        "logoArtworkAutoDark": "Automatic reads this header as dark and uses the dark-background logo.",
+        "logoArtworkAutoLight": "Automatic reads this header as light and uses the light-background logo.",
         "noLogo": "Upload a logo in Settings → Client Portal → Branding to use it here.",
         "showAttribution": "Show \"Powered by AlgaPSA\" in the footer"
       }
@@ -2391,6 +2419,11 @@
       "updateFailed": "Failed to update role",
       "validateDeletionFailed": "Failed to validate deletion. Please try again.",
       "deleteFailed": "Failed to delete role"
+    },
+    "editDialog": {
+      "title": "Edit Role",
+      "builtInNameLocked": "Built-in role names can't be changed because the system relies on them.",
+      "portalLocked": "Portal access can't be changed after a role is created."
     }
   },
   "security": {
@@ -3445,7 +3478,10 @@
       "duplicate": "That user already has the selected role.",
       "changePermission": "Permission denied: You do not have permission to change user roles.",
       "missingField": "Missing required user role field.",
-      "missingFieldNamed": "Missing required user role field: {{field}}."
+      "missingFieldNamed": "Missing required user role field: {{field}}.",
+      "nameRequired": "Role name is required.",
+      "builtInRename": "Built-in roles cannot be renamed.",
+      "duplicateName": "A role named \"{{name}}\" already exists for this portal."
     },
     "secrets": {
       "tenantContextMissing": "Tenant context is missing. Please refresh and try again.",
@@ -3470,6 +3506,7 @@
       "missingField": "Missing required tenant settings field.",
       "missingFieldNamed": "Missing required tenant settings field: {{field}}.",
       "invalidTimezone": "Invalid timezone: {{timezone}}",
+      "nonLocationTimezone": "{{timezone}} isn't a city-based time zone. Choose a zone such as America/New_York.",
       "permissions": {
         "clearOnboarding": "Permission denied: Only admin users can clear onboarding data.",
         "update": "Permission denied: Cannot update settings",

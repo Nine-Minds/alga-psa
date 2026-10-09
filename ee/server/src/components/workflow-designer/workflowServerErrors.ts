@@ -31,9 +31,127 @@ export function mapWorkflowServerError(
     });
   }
 
+  // Infrastructure failures (the workflow engine is unreachable) surface as raw gRPC /
+  // socket messages such as "Failed to connect before the deadline". Say what happened.
+  if (isWorkflowEngineUnavailableMessage(raw)) {
+    return t('serverErrors.workflowEngineUnavailable', {
+      defaultValue: WORKFLOW_ENGINE_UNAVAILABLE_MESSAGE,
+    });
+  }
+
+  // Schema validation failures arrive as a serialized list of zod issues
+  // ([{"code":"invalid_type","path":["concurrencyLimit"],...}]). Say which fields are wrong.
+  const validationIssues = parseValidationIssues(err, raw);
+  if (validationIssues) {
+    return t('serverErrors.invalidFields', {
+      defaultValue: 'Some values are not valid: {{details}}',
+      details: validationIssues.map((issue) => describeValidationIssue(t, issue)).join('; '),
+    });
+  }
+
+  if (isWorkflowSessionExpiredError(err)) {
+    return t('serverErrors.sessionExpired', {
+      defaultValue: 'Your session has ended. Sign in again, then retry.',
+    });
+  }
+
   // No match — return the raw server message so the user still sees something.
   return raw || fallback;
 }
+
+type ValidationIssue = {
+  code?: string;
+  path?: Array<string | number>;
+  message?: string;
+  expected?: string;
+  received?: string;
+  minimum?: number | bigint;
+  maximum?: number | bigint;
+};
+
+const isValidationIssueList = (value: unknown): value is ValidationIssue[] =>
+  Array.isArray(value) &&
+  value.length > 0 &&
+  value.every((item) => item && typeof item === 'object' && Array.isArray((item as ValidationIssue).path));
+
+const parseValidationIssues = (err: unknown, raw: string): ValidationIssue[] | null => {
+  const issues = (err as { issues?: unknown } | null)?.issues;
+  if (isValidationIssueList(issues)) return issues;
+  if (!raw.startsWith('[')) return null;
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    return isValidationIssueList(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
+};
+
+/** "concurrencyLimit" → "Concurrency limit", "failure_rate_min_runs" → "Failure rate min runs". */
+export const humanizeWorkflowFieldPath = (path: Array<string | number> | undefined): string => {
+  const last = [...(path ?? [])].reverse().find((segment) => typeof segment === 'string') as string | undefined;
+  if (!last) return '';
+  const words = last.replace(/([a-z0-9])([A-Z])/g, '$1 $2').replace(/[_-]+/g, ' ').trim().toLowerCase();
+  return words.charAt(0).toUpperCase() + words.slice(1);
+};
+
+const describeValidationIssue = (t: TFunction, issue: ValidationIssue): string => {
+  const field = humanizeWorkflowFieldPath(issue.path) || t('serverErrors.fieldValue', { defaultValue: 'A value' });
+  if (issue.code === 'invalid_type' && (issue.received === 'undefined' || issue.received === 'null')) {
+    return t('serverErrors.issue.required', { defaultValue: '{{field}} is required', field });
+  }
+  if (issue.code === 'invalid_type' && issue.expected === 'number') {
+    return t('serverErrors.issue.number', { defaultValue: '{{field}} must be a number', field });
+  }
+  if (issue.code === 'too_small' && issue.minimum !== undefined) {
+    return t('serverErrors.issue.tooSmall', { defaultValue: '{{field}} must be at least {{minimum}}', field, minimum: String(issue.minimum) });
+  }
+  if (issue.code === 'too_big' && issue.maximum !== undefined) {
+    return t('serverErrors.issue.tooBig', { defaultValue: '{{field}} must be at most {{maximum}}', field, maximum: String(issue.maximum) });
+  }
+  return issue.message ? `${field}: ${issue.message}` : field;
+};
+
+const SESSION_EXPIRED_PATTERNS: RegExp[] = [
+  /^user not authenticated$/i,
+  /^not authenticated$/i,
+  /^unauthenticated$/i,
+  /^unauthorized$/i,
+  /^authentication required$/i,
+  /session (has )?expired/i,
+  /no (active )?session/i,
+];
+
+/**
+ * True when a server action failed because the user's session is gone (withAuth's
+ * AuthenticationError and similar), as opposed to a permission or validation failure.
+ */
+export const isWorkflowSessionExpiredError = (err: unknown): boolean => {
+  if (err && typeof err === 'object' && (err as { name?: unknown }).name === 'AuthenticationError') return true;
+  const message = err instanceof Error ? err.message : typeof err === 'string' ? err : '';
+  return SESSION_EXPIRED_PATTERNS.some((pattern) => pattern.test(message.trim()));
+};
+
+export const WORKFLOW_ENGINE_UNAVAILABLE_MESSAGE =
+  'The workflow engine could not be reached. Try again in a few minutes. If this keeps happening, ask an administrator to check the workflow service.';
+
+// Keep in sync with RUNTIME_UNAVAILABLE_PATTERNS in ee/packages/workflows/src/lib/workflowRunLauncher.ts,
+// which classifies the same failures server-side for run launches.
+const WORKFLOW_ENGINE_UNAVAILABLE_PATTERNS: RegExp[] = [
+  /failed to connect before the deadline/i,
+  /\bUNAVAILABLE\b/,
+  /\bDEADLINE_EXCEEDED\b/,
+  /\bECONNREFUSED\b/,
+  /\bECONNRESET\b/,
+  /\bETIMEDOUT\b/,
+  /\bENOTFOUND\b/,
+  /\bEAI_AGAIN\b/,
+  /getaddrinfo/i,
+  /name resolution failed/i,
+  /no connection established/i,
+];
+
+export const isWorkflowEngineUnavailableMessage = (message: string): boolean =>
+  WORKFLOW_ENGINE_UNAVAILABLE_PATTERNS.some((pattern) => pattern.test(message));
 
 const KNOWN_ERROR_KEYS: Record<string, string> = {
   // Authentication / authorization

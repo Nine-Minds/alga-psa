@@ -24,6 +24,10 @@ import {
   TICKET_ACTIVITY_SOURCE,
   writeTicketActivity,
 } from '@alga-psa/shared/lib/ticketActivity';
+import {
+  prepareCommentEmailRecipients,
+  type CommentEmailRecipientsInput,
+} from '@shared/lib/tickets/commentEmailRecipients';
 import { ticketActionErrorFrom, type TicketActionError } from '../ticketActionErrors';
 import { scheduleJobAt as scheduleBackgroundJobAt, cancelScheduledJob } from '@alga-psa/core';
 
@@ -226,7 +230,12 @@ export const findCommentById = withAuth(async (_user, { tenant }, commentId: str
   }
 });
 
-export const createComment = withAuth(async (user, { tenant }, comment: Omit<IComment, 'tenant'>): Promise<string | TicketActionError> => {
+export const createComment = withAuth(async (
+  user,
+  { tenant },
+  comment: Omit<IComment, 'tenant'>,
+  emailRecipients?: CommentEmailRecipientsInput | null,
+): Promise<string | TicketActionError> => {
   try {
     if (!await hasPermission(user, 'ticket', 'update')) throw new Error('Permission denied: Cannot add comment');
     comment.user_id = user.user_id;
@@ -305,6 +314,37 @@ export const createComment = withAuth(async (user, { tenant }, comment: Omit<ICo
     const commentTenant = tenant;
     return await withTransaction(db, async (trx: Knex.Transaction) => {
       await assertClientCanCreateComment(trx, commentTenant!, user, commentToInsert);
+
+      // A reply inherits its thread's visibility (Comment.insert enforces it),
+      // so resolve the effective visibility before validating one-off Cc/Bcc.
+      let effectiveIsInternal = Boolean(commentToInsert.is_internal);
+      if (commentToInsert.parent_comment_id) {
+        const parentThread = await tenantDb(trx, commentTenant!)
+          .tenantJoin(
+            tenantScopedTable(trx, 'comments as parent', commentTenant!),
+            'comment_threads as thread',
+            'parent.thread_id',
+            'thread.thread_id'
+          )
+          .select('thread.is_internal as thread_is_internal')
+          .where('parent.comment_id', commentToInsert.parent_comment_id)
+          .first();
+        if (parentThread) {
+          effectiveIsInternal = Boolean(parentThread.thread_is_internal);
+        }
+      }
+
+      const resolvedEmailRecipients = await prepareCommentEmailRecipients(trx, commentTenant!, {
+        cc: emailRecipients?.cc,
+        bcc: emailRecipients?.bcc,
+        isInternal: effectiveIsInternal,
+      });
+      if (resolvedEmailRecipients) {
+        commentToInsert.metadata = {
+          ...(commentToInsert.metadata ?? {}),
+          email_recipients: resolvedEmailRecipients,
+        };
+      }
 
       const commentId = await Comment.insert(trx, commentTenant!, commentToInsert);
       console.log(`[createComment] Comment inserted with ID:`, commentId);

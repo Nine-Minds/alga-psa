@@ -172,6 +172,10 @@
         "updateComments": "Permessi insufficienti per aggiornare i commenti",
         "deleteComments": "Permessi insufficienti per eliminare i commenti",
         "viewDocuments": "Autorizzazioni insufficienti per visualizzare i documenti del ticket"
+      },
+      "projects": {
+        "read": "Permessi insufficienti per visualizzare i progetti",
+        "readDetails": "Permessi insufficienti per visualizzare i dettagli del progetto"
       }
     },
     "tags": {
@@ -279,7 +283,8 @@
       "clientPortal": "Creato tramite portale clienti",
       "inboundEmail": "Creato tramite e-mail in entrata",
       "api": "Creato tramite API",
-      "other": "Creato tramite altro"
+      "other": "Creato tramite altro",
+      "recurring": "Creato da pianificazione ricorrente"
     }
   },
   "time": {
@@ -782,7 +787,16 @@
       "fileError": "Impossibile caricare il file",
       "associatedEntityTypeLabel": "Associa a",
       "noAssociation": "Nessuna associazione",
-      "selectAssociatedEntityError": "Seleziona un'entità associata prima di caricare."
+      "selectAssociatedEntityError": "Seleziona un'entità associata prima di caricare.",
+      "uploaded": "Caricato",
+      "failed": "Non riuscito",
+      "failureSummary": "Non è stato possibile caricare {{failed}} di {{total}} file. Controlla gli errori di seguito.",
+      "outcomeSummary": "{{succeeded}} di {{total}} file caricati",
+      "emptyDropTitle": "Nessun file ricevuto",
+      "emptyDropMessage": "Non è stato ricevuto alcun file. Salva l'allegato o l'email sul computer, poi trascina qui il file salvato oppure usa «Sfoglia file».",
+      "uploadInProgress": "Un caricamento è già in corso. Attendi che finisca prima di aggiungere altri file.",
+      "refreshFailed": "I file sono stati caricati, ma l'elenco dei documenti non è stato aggiornato. Ricarica la pagina per visualizzarli.",
+      "clearResults": "Cancella risultati"
     },
     "folders": {
       "root": "Radice",
@@ -1336,9 +1350,11 @@
   },
   "timezonePicker": {
     "selectPlaceholder": "Seleziona fuso orario...",
-    "searchPlaceholder": "Cerca fusi orari o abbreviazioni (es. EST)...",
+    "searchPlaceholder": "Cerca per città, nome o abbreviazione (ad es. New York, EST)...",
     "noResults": "Nessun fuso orario trovato",
     "matchingGroup": "Corrispondenze per \"{{query}}\"",
+    "noDst": "Niente ora legale",
+    "noDaylightSavingHint": "Nessuna ora legale. Gli orologi restano su {{offset}} tutto l'anno.",
     "regions": {
       "Africa": "Africa",
       "America": "America",
@@ -1728,5 +1744,9 @@
     "customPlaceholder": "Assegna un nome a questa unità",
     "register": "Aggiungi",
     "selectPlaceholder": "Seleziona un’unità"
+  },
+  "emailRecipients": {
+    "remove": "Rimuovi {{email}}",
+    "placeholder": "Digita un indirizzo e premi Invio"
   }
 }

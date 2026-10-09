@@ -1,9 +1,14 @@
 import { z } from 'zod';
+import { withWorkflowPicker, type WorkflowPickerKind } from '../jsonSchemaMetadata';
 
 export const tenantIdSchema = z.string().min(1).describe('Tenant ID');
 export const occurredAtSchema = z.string().datetime().describe('Timestamp when the event occurred (ISO 8601)');
 
 export const uuidSchema = (label: string) => z.string().uuid().describe(label);
+
+/** A uuid that identifies a `kind` entity, so the designer can offer that entity's picker. */
+export const entityIdSchema = (label: string, kind: WorkflowPickerKind) =>
+  withWorkflowPicker(z.string().uuid(), label, kind);
 
 const DATE_ONLY_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
 const isCalendarDate = (value: string): boolean => {
@@ -26,9 +31,13 @@ export const actorTypeSchema = z.enum(['USER', 'CONTACT', 'SYSTEM']).describe('A
 export const BaseDomainEventPayloadSchema = z.object({
   tenantId: tenantIdSchema,
   occurredAt: occurredAtSchema,
-  actorUserId: uuidSchema('Actor User ID').optional(),
-  actorContactId: uuidSchema('Actor Contact ID').optional(),
+  actorUserId: entityIdSchema('Actor User ID', 'user').optional(),
+  actorContactId: entityIdSchema('Actor Contact ID', 'contact').optional(),
   actorType: actorTypeSchema.optional(),
+  // Provenance when a workflow run caused the event. The lineage is the ancestry of workflow ids
+  // that led here; the event-stream worker uses it to refuse a workflow already in the chain.
+  workflowRunId: uuidSchema('Workflow Run ID').optional(),
+  workflowLineage: z.array(z.string().uuid()).describe('Workflow ids that caused this event, oldest first').optional(),
 });
 
 export const updatedFieldsSchema = z.array(z.string()).describe('Dot-paths of updated fields').optional();

@@ -1,5 +1,6 @@
 import { resolveInvoiceDiscounts } from './resolveInvoiceDiscounts';
 import { applyProjectCapAdjustments } from './domain/projectCapAdjustments';
+import { capAppliesToInvoiceCurrency, resolveInvoiceCurrency } from './compute/projectCapMath';
 import { resolveUsageMeasurementRevision } from './usageMeasurementTransitions';
 import { Knex } from "knex";
 import {
@@ -38,6 +39,7 @@ import {
   IRecurringServicePeriod,
   IRecurringServicePeriodRecord,
   IUsageServicePeriodStatus,
+  FixedLineBlockerCode,
   BillingCycleType,
   DEFAULT_RECURRING_SERVICE_PERIOD_DUE_SELECTION_STATES,
   RECURRING_RANGE_SEMANTICS,
@@ -66,6 +68,11 @@ import {
 } from "@alga-psa/core";
 import { getClientDefaultTaxRegionCode as getClientDefaultTaxRegionCodeShared } from "@alga-psa/shared/billingClients";
 import { computePoolContributionsByService, resolveBucketForLine } from "@alga-psa/shared/billingClients/bucketUsageService";
+import {
+  ambiguousTicketProjectLinksQuery,
+  ticketProjectAttributionJoin,
+  ticketProjectIdExpression,
+} from "@alga-psa/shared/billingClients/ticketProjectAttribution";
 import {
   calculateServicePeriodCoverage,
   resolveCadenceOwner,
@@ -292,6 +299,8 @@ type FixedChargeLineStaticInputs = {
   contractLineDetails: any;
   planServices: any[];
   fallbackService: any | null;
+  /** planServices is empty because every member is a product/license. */
+  hasProductMembers: boolean;
   /**
    * True when no base rate resolves from any source, which makes the line
    * price to nothing in EVERY window (see computeFixedCharges' base-rate
@@ -1692,18 +1701,10 @@ export class BillingEngine {
       };
     }
 
-    const uniqueCurrencies = Array.from(
-      new Set(
-        clientContractLines
-          .map((line) => line.currency_code)
-          .filter((code): code is string => !!code),
-      ),
+    const billingCurrency = resolveInvoiceCurrency(
+      clientContractLines.map((line) => line.currency_code),
+      client?.default_currency_code,
     );
-
-    const billingCurrency =
-      uniqueCurrencies.length === 1
-        ? uniqueCurrencies[0]
-        : client?.default_currency_code || "USD";
 
     console.log(
       `[BillingEngine] Resolved billing currency: ${billingCurrency}`,
@@ -1763,6 +1764,23 @@ export class BillingEngine {
           billingCurrency,
         )
       : [];
+    // Reported once per run, alongside the material warnings, and only where a
+    // project run can act on them.
+    const runWarnings = projectBillingContext
+      ? [
+          ...projectMaterialWarnings,
+          ...(await this.getAmbiguousTicketProjectWarnings(
+            clientId,
+            billingPeriod,
+            options.projectTarget,
+          )),
+          ...this.getProjectCapCurrencyWarnings(
+            projectBillingContext,
+            billingCurrency,
+            options.projectTarget,
+          ),
+        ]
+      : projectMaterialWarnings;
 
     if (clientContractLines.length === 0 && !nonContractSelection?.include) {
       if (materialCharges.length === 0 && !projectBillingContext) {
@@ -1773,7 +1791,7 @@ export class BillingEngine {
           adjustments: [],
           finalAmount: 0,
           currency_code: billingCurrency,
-          warnings: projectMaterialWarnings,
+          warnings: runWarnings,
           error:
             "No active contract lines found for this client in the selected billing period.",
         };
@@ -2047,7 +2065,9 @@ export class BillingEngine {
       obligations: contractObligations,
       taxContexts: contractTaxContexts,
       supplementalCharges: totalCharges,
-      projectCaps: projectBillingContext ?? undefined,
+      projectCaps: projectBillingContext
+        ? { ...projectBillingContext, invoiceCurrency: billingCurrency }
+        : undefined,
       discountsAndAdjustments: {
         billingPeriod,
         discountCandidates: discountCandidates.map((discount) => ({
@@ -2074,17 +2094,37 @@ export class BillingEngine {
       canonical,
     );
 
-    const usageStatusField =
-      usageServicePeriodStatuses.length > 0
+    // Coded, unpriceable fixed lines travel with the result (like usage
+    // statuses) so preview and generation refuse instead of billing short.
+    const fixedLineBlockers = (canonical.diagnostics ?? []).flatMap(
+      (diagnostic) =>
+        (diagnostic.code === "FIXED_LINE_RATE_UNRESOLVED" ||
+          diagnostic.code === "FIXED_LINE_NO_SERVICES") &&
+        diagnostic.contractLineId
+          ? [
+              {
+                code: diagnostic.code as FixedLineBlockerCode,
+                message: diagnostic.message,
+                contractLineId: diagnostic.contractLineId,
+                contractLineName:
+                  diagnostic.contractLineName ?? diagnostic.contractLineId,
+              },
+            ]
+          : [],
+    );
+    const usageStatusField = {
+      ...(usageServicePeriodStatuses.length > 0
         ? { usageServicePeriodStatuses }
-        : {};
+        : {}),
+      ...(fixedLineBlockers.length > 0 ? { fixedLineBlockers } : {}),
+    };
 
     return projectBillingContext
       ? {
           ...canonicalFinalCharges,
           ...usageStatusField,
           projectCapThresholdCrossings: canonical.projectCapThresholdCrossings,
-          warnings: projectMaterialWarnings,
+          warnings: runWarnings,
         }
       : { ...canonicalFinalCharges, ...usageStatusField };
   }
@@ -2098,6 +2138,89 @@ export class BillingEngine {
     input: Parameters<typeof calculateContractBilling>[0],
   ) {
     return calculateContractBilling(input);
+  }
+
+  /**
+   * A ticket flagged into more than one project cannot be attributed without
+   * guessing, so the resolver drops it (project_count = 1) and the biller is
+   * told once per run which links to fix.
+   *
+   * Only tickets whose time this very run would have billed are reported: the
+   * same uninvoiced/approved/billable time the loaders read, in the same window
+   * (a project-target run ignores the period, exactly as the loaders do), and
+   * for a project run only when one of the competing links points at the
+   * project being invoiced. Otherwise one stale link would warn on every run
+   * forever, with nothing at stake.
+   */
+  private async getAmbiguousTicketProjectWarnings(
+    clientId: string,
+    billingPeriod: IBillingPeriod,
+    projectTarget?: CalculateBillingOptions["projectTarget"],
+  ): Promise<string[]> {
+    await this.initKnex();
+    if (!this.tenant) {
+      throw new Error("tenant context not found");
+    }
+
+    const db = tenantDb(this.knex, this.tenant);
+    const query = db.table("tickets");
+    // Shared with the resolver, so the warning can never claim time was dropped
+    // that in fact billed.
+    query.joinRaw(
+      `JOIN (${ambiguousTicketProjectLinksQuery()}) ambiguous
+         ON ambiguous.tenant = tickets.tenant
+        AND ambiguous.ticket_id = tickets.ticket_id`,
+    );
+    query.where("tickets.client_id", clientId);
+    if (projectTarget) {
+      query.whereRaw(
+        `EXISTS (SELECT 1 FROM project_ticket_links target_link
+                  WHERE target_link.tenant = tickets.tenant
+                    AND target_link.ticket_id = tickets.ticket_id
+                    AND target_link.bill_under_project
+                    AND target_link.project_id = ?)`,
+        [projectTarget.projectId],
+      );
+      query.whereRaw(
+        `EXISTS (SELECT 1 FROM time_entries te
+                  WHERE te.tenant = tickets.tenant
+                    AND te.work_item_type = 'ticket'
+                    AND te.work_item_id = tickets.ticket_id
+                    AND te.invoiced = false
+                    AND te.approval_status = 'APPROVED'
+                    AND te.billable_duration > 0)`,
+      );
+    } else {
+      query.whereRaw(
+        `EXISTS (SELECT 1 FROM time_entries te
+                  WHERE te.tenant = tickets.tenant
+                    AND te.work_item_type = 'ticket'
+                    AND te.work_item_id = tickets.ticket_id
+                    AND te.invoiced = false
+                    AND te.approval_status = 'APPROVED'
+                    AND te.billable_duration > 0
+                    AND te.start_time >= ?
+                    AND te.end_time < ?)`,
+        [billingPeriod.startDate, billingPeriod.endDate],
+      );
+    }
+    const rows = await query
+      .groupBy("tickets.ticket_number")
+      .select<{ ticket_number: string }[]>("tickets.ticket_number");
+
+    if (rows.length === 0) {
+      return [];
+    }
+
+    const listed = rows.slice(0, 5).map((row) => row.ticket_number);
+    const remainder = rows.length - listed.length;
+    const tickets =
+      remainder > 0 ? `${listed.join(", ")} and ${remainder} more` : listed.join(", ");
+
+    return [
+      `Time on ticket(s) ${tickets} was not attributed to a project: each is linked to more than one project. ` +
+        `Untick "Bill this ticket's time as project time" on the links that should not carry its time.`,
+    ];
   }
 
   private async getProjectMaterialCurrencyWarnings(
@@ -2126,6 +2249,32 @@ export class BillingEngine {
       (row) =>
         `${Number(row.count)} materials in ${row.currency_code} were skipped — invoice currency is ${invoiceCurrency}`,
     );
+  }
+
+  /**
+   * A budget cap is minor units of the project's own billing currency, and the
+   * engine has no exchange rate, so a cap denominated in anything other than
+   * this invoice's currency is not applied (see `capAppliesToInvoiceCurrency`).
+   * Reported here so the biller learns the cap is dormant from the run rather
+   * than from an unexpectedly large invoice.
+   */
+  private getProjectCapCurrencyWarnings(
+    context: ProjectBillingContext,
+    invoiceCurrency: string,
+    target?: CalculateBillingOptions["projectTarget"],
+  ): string[] {
+    return context.configs
+      .filter(
+        (config) =>
+          config.cap_amount !== null &&
+          (!target || config.project_id === target.projectId) &&
+          !capAppliesToInvoiceCurrency(config.currency, invoiceCurrency),
+      )
+      .map(
+        (config) =>
+          `${config.project_name}'s budget cap is set in ${config.currency} but this invoice bills in ${invoiceCurrency}, ` +
+          `so the cap was not applied. Set the project's billing currency to ${invoiceCurrency} and re-enter the cap.`,
+      );
   }
 
   private async calculateProjectMilestoneCharges(
@@ -2300,6 +2449,15 @@ export class BillingEngine {
     windowEnd: ISO8601String;
     selectedTimeEntryIds?: string[];
     selectedUsageRecordIds?: string[];
+    /**
+     * The client's own currency. Only the fallback: the listing resolves the
+     * currency this work would be invoiced in from the same contract lines
+     * generation reads (`resolveInvoiceCurrency`), so a cap left out of the
+     * listing's arithmetic is exactly the cap generation leaves out. Passing
+     * the client default as the answer made the two disagree for a client whose
+     * currency moved after a contract was signed.
+     */
+    clientDefaultCurrency?: string | null;
   }): Promise<IBillingCharge[]> {
     return this.withPinnedTransaction(async () => {
       const billingPeriod: IBillingPeriod = {
@@ -2307,6 +2465,17 @@ export class BillingEngine {
         endDate: toISODate(toPlainDate(input.windowEnd)),
       };
       const context = await this.loadProjectBillingContext(input.clientId);
+      const invoiceCurrency = context
+        ? resolveInvoiceCurrency(
+            (
+              await this.getClientContractLinesForBillingPeriod(
+                input.clientId,
+                billingPeriod,
+              )
+            ).map((line) => line.currency_code),
+            input.clientDefaultCurrency,
+          )
+        : null;
       const selection = {
         timeEntryIds: input.selectedTimeEntryIds,
         usageRecordIds: input.selectedUsageRecordIds,
@@ -2324,7 +2493,10 @@ export class BillingEngine {
             selection,
           );
       return context
-        ? applyProjectCapAdjustments(charges, context).charges
+        ? applyProjectCapAdjustments(charges, {
+            ...context,
+            invoiceCurrency,
+          }).charges
         : charges;
     });
   }
@@ -2490,13 +2662,10 @@ export class BillingEngine {
       "time_entries.service_id",
       { type: "left" },
     );
-    db.tenantJoin(
-      timeEntriesQuery,
-      "project_ticket_links",
-      "time_entries.work_item_id",
-      "project_ticket_links.ticket_id",
-      { type: "left" },
-    );
+    // Ticket time counts as project time when its link says so, so the project
+    // reached below is the phase's project for task time and the resolved link
+    // project for ticket time.
+    timeEntriesQuery.joinRaw(ticketProjectAttributionJoin("time_entries"));
     db.tenantJoin(
       timeEntriesQuery,
       "project_tasks",
@@ -2514,9 +2683,13 @@ export class BillingEngine {
     db.tenantJoin(
       timeEntriesQuery,
       "projects",
-      "project_phases.project_id",
+      this.knex.raw(
+        ticketProjectIdExpression("project_phases"),
+      ) as unknown as string,
       "projects.project_id",
-      { type: "left" },
+      // project_phases is null for ticket time, so the tenant predicate has to
+      // come from the time entry rather than the (inferred) phase.
+      { type: "left", rootTenantColumn: "time_entries.tenant" },
     );
     db.tenantJoin(
       timeEntriesQuery,
@@ -3662,6 +3835,7 @@ export class BillingEngine {
       (lineId) => (planServicesByLineId.get(lineId) ?? []).length === 0,
     );
     const fallbackServiceByLineId = new Map<string, any>();
+    let productMemberLineIds = new Set<string>();
     if (fallbackLineIds.length > 0) {
       const fallbackServiceQuery = db.table<any>(
         "contract_line_services as cls_fallback",
@@ -3710,6 +3884,9 @@ export class BillingEngine {
           fallbackServiceByLineId.set(lineId, fallbackService);
         }
       }
+      productMemberLineIds = await this.loadProductMemberLineIds(
+        fallbackLineIds.filter((lineId) => !fallbackServiceByLineId.has(lineId)),
+      );
     }
 
     for (const line of pendingLines) {
@@ -3726,6 +3903,9 @@ export class BillingEngine {
             ? (fallbackServiceByLineId.get(line.client_contract_line_id) ??
               null)
             : null,
+        hasProductMembers:
+          planServices.length === 0 &&
+          productMemberLineIds.has(line.client_contract_line_id),
         unpriceable: isFixedLineUnpriceable(
           line,
           contractLineDetails,
@@ -3739,11 +3919,43 @@ export class BillingEngine {
     return staticInputsByLineId;
   }
 
+  /**
+   * Which of these contract lines have at least one product/license member.
+   * Those members bill through the product/license charge families, so a fixed
+   * line made only of them has nothing to bill as a fixed fee (and must not be
+   * reported as unpriceable). One batched query; empty input runs none.
+   */
+  private async loadProductMemberLineIds(
+    contractLineIds: string[],
+  ): Promise<Set<string>> {
+    if (contractLineIds.length === 0) {
+      return new Set();
+    }
+    const db = tenantDb(this.knex, this.tenant!);
+    const query = db.table<any>("contract_line_services as cls_product");
+    db.tenantJoin(
+      query,
+      "service_catalog as sc_product",
+      "sc_product.service_id",
+      "cls_product.service_id",
+    );
+    const rows = await query
+      .whereIn("cls_product.contract_line_id", contractLineIds)
+      .where({ "cls_product.tenant": this.tenant })
+      .where("sc_product.item_kind", "product")
+      .distinct("cls_product.contract_line_id as contract_line_id");
+    return new Set(rows.map((row: any) => row.contract_line_id as string));
+  }
+
   /** Per-line plan services (and product-only fallback) for the generation path. */
   private async queryFixedChargeLineServices(
     clientContractLine: IClientContractLine,
     asOf: string,
-  ): Promise<{ planServices: any[]; fallbackService: any | null }> {
+  ): Promise<{
+    planServices: any[];
+    fallbackService: any | null;
+    hasProductMembers: boolean;
+  }> {
     const db = tenantDb(this.knex, this.tenant!);
     const tenant = this.tenant;
 
@@ -3856,7 +4068,16 @@ export class BillingEngine {
           )) ?? null;
     }
 
-    return { planServices, fallbackService };
+    const hasProductMembers =
+      planServices.length === 0 &&
+      fallbackService === null &&
+      (
+        await this.loadProductMemberLineIds([
+          clientContractLine.client_contract_line_id,
+        ])
+      ).has(clientContractLine.client_contract_line_id);
+
+    return { planServices, fallbackService, hasProductMembers };
   }
 
   /** Load every pricing schedule for the window's contracts in one query. */
@@ -4268,7 +4489,7 @@ export class BillingEngine {
           })
           .first();
 
-    const { planServices, fallbackService } =
+    const { planServices, fallbackService, hasProductMembers } =
       preloaded ??
       (await this.queryFixedChargeLineServices(
         clientContractLine,
@@ -4429,6 +4650,7 @@ export class BillingEngine {
         customRateSource,
         planServices: effectivePlanServices,
         fallbackService,
+        hasProductMembers,
         billingProfile: await this.loadChargeProfileAssignments(
           clientId,
           clientContractLine,
@@ -5138,13 +5360,9 @@ export class BillingEngine {
       currency: contractCurrency,
       alias: "sp",
     });
-    db.tenantJoin(
-      query,
-      "project_ticket_links",
-      "time_entries.work_item_id",
-      "project_ticket_links.ticket_id",
-      { type: "left" },
-    );
+    // Same attribution as the non-contract loader: a flagged ticket link makes
+    // the ticket's time reachable through its project.
+    query.joinRaw(ticketProjectAttributionJoin("time_entries"));
     db.tenantJoin(
       query,
       "project_tasks",
@@ -5162,9 +5380,11 @@ export class BillingEngine {
     db.tenantJoin(
       query,
       "projects",
-      "project_phases.project_id",
+      this.knex.raw(
+        ticketProjectIdExpression("project_phases"),
+      ) as unknown as string,
       "projects.project_id",
-      { type: "left" },
+      { type: "left", rootTenantColumn: "time_entries.tenant" },
     );
     db.tenantJoin(
       query,

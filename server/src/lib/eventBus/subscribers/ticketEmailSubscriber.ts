@@ -21,6 +21,12 @@ import { getEmailEventChannel } from '@alga-psa/notifications';
 import { tenantDb } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import { getPortalDomain } from 'server/src/models/PortalDomainModel';
+import {
+  resolveBoardNotificationRecipients,
+  type ResolvedRecipient,
+} from '@alga-psa/shared/lib/tickets/boardNotificationRules';
+import { getAllTicketAssignees } from '@alga-psa/shared/lib/tickets/ticketAssignees';
+import { filterRecipientsWhoCanReadTicket } from '../../notifications/boardNotificationAudience';
 import { buildTenantPortalSlug } from '@shared/utils/tenantSlug';
 import { TenantEmailService } from '@alga-psa/email';
 import {
@@ -46,6 +52,9 @@ import {
   sendOneEmailPerWatcher,
   resolveInternalWatcherEmails,
 } from './watcherRecipients';
+import { readCommentEmailRecipients } from '@shared/lib/tickets/commentEmailRecipients';
+import type { CommentEmailRecipient, CommentEmailRecipients } from '@alga-psa/types';
+import type { EmailAddress } from '../../../types/email.types';
 import {
   INBOUND_OUTBOX_EVENT_TYPES,
   withInboundOutboxDelivery,
@@ -500,16 +509,75 @@ function toRetryableAccumulatorError(
 }
 
 /**
+ * The one-off Cc/Bcc of a single comment, prepared for one message.
+ */
+interface OneOffEmailRecipients {
+  cc: EmailAddress[];
+  bcc: EmailAddress[];
+  hasAny: boolean;
+  /** Spread onto a send to put the real Cc/Bcc headers on that message. */
+  headerParams: { cc?: EmailAddress[]; bcc?: EmailAddress[] };
+}
+
+/**
+ * Prepares a comment's stored Cc/Bcc for one outgoing message: invalid
+ * addresses are dropped, so are the excluded ones (the `To` recipient and the
+ * comment author, who already know), duplicates collapse, and an address named
+ * in both lists stays in Cc only. Shared by the comment email and the close
+ * email, which carries the resolution comment's recipients.
+ */
+function selectOneOffEmailRecipients(
+  recipients: CommentEmailRecipients | null | undefined,
+  excludedEmails: Array<string | null | undefined>
+): OneOffEmailRecipients {
+  const excluded = new Set<string>(
+    excludedEmails
+      .filter((value): value is string => isValidEmail(value))
+      .map((value) => normalizeRecipientEmail(value))
+  );
+  // One `taken` set across both lists is what makes Cc win over Bcc.
+  const taken = new Set<string>();
+  const select = (list: CommentEmailRecipient[] | undefined): EmailAddress[] => {
+    const result: EmailAddress[] = [];
+    for (const entry of list ?? []) {
+      const key = normalizeRecipientEmail(entry.email);
+      if (!isValidEmail(entry.email) || excluded.has(key) || taken.has(key)) {
+        continue;
+      }
+      taken.add(key);
+      result.push({ email: entry.email, ...(entry.name ? { name: entry.name } : {}) });
+    }
+    return result;
+  };
+  const cc = select(recipients?.cc);
+  const bcc = select(recipients?.bcc);
+  return {
+    cc,
+    bcc,
+    hasAny: cc.length > 0 || bcc.length > 0,
+    headerParams: {
+      ...(cc.length > 0 ? { cc } : {}),
+      ...(bcc.length > 0 ? { bcc } : {}),
+    },
+  };
+}
+
+/**
  * Wrapper function that checks notification preferences before sending email
  * @param params - Same params as sendEventEmail
  * @param subtypeName - Name of the notification subtype (e.g., "Ticket Created")
  * @param recipientUserId - Optional user ID for preference checking (only for internal users)
+ * @returns whether a message was actually handed to the email service; false
+ *          when a gate (tenant kill switch, subtype, category, user opt-out)
+ *          or an invalid address silently skipped the send. Callers that need
+ *          to know whether a recipient was reached — the per-comment Cc/Bcc
+ *          fallback — depend on this being truthful.
  */
 async function sendNotificationIfEnabled(
   params: SendEmailParams,
   subtypeName: string,
   recipientUserId?: string
-): Promise<void> {
+): Promise<boolean> {
   try {
     if (!isValidEmail(params.to)) {
       logger.warn('[TicketEmailSubscriber] Skipping email send due to invalid recipient address:', {
@@ -517,7 +585,7 @@ async function sendNotificationIfEnabled(
         subtypeName,
         tenantId: params.tenantId
       });
-      return;
+      return false;
     }
 
     const { knex } = await createTenantKnex();
@@ -531,7 +599,7 @@ async function sendNotificationIfEnabled(
         recipient: params.to,
         subtypeName
       });
-      return;
+      return false;
     }
 
     if (gate.kind === 'subtype-missing') {
@@ -540,7 +608,7 @@ async function sendNotificationIfEnabled(
         recipient: params.to
       });
       await sendEventEmail(params);
-      return;
+      return true;
     }
 
     if (gate.kind === 'subtype-disabled') {
@@ -549,7 +617,7 @@ async function sendNotificationIfEnabled(
         tenantId: params.tenantId,
         recipient: params.to
       });
-      return;
+      return false;
     }
 
     if (gate.kind === 'category-disabled') {
@@ -558,7 +626,7 @@ async function sendNotificationIfEnabled(
         tenantId: params.tenantId,
         recipient: params.to
       });
-      return;
+      return false;
     }
 
     const subtype = gate.subtype;
@@ -579,7 +647,7 @@ async function sendNotificationIfEnabled(
           subtypeName,
           recipient: params.to
         });
-        return;
+        return false;
       }
 
       // Rate limiting is now centralized in TenantEmailService.sendEmail()
@@ -614,6 +682,7 @@ async function sendNotificationIfEnabled(
       }
     }
 
+    return true;
   } catch (error) {
     const isEmailProviderError =
       typeof error === 'object' &&
@@ -628,7 +697,7 @@ async function sendNotificationIfEnabled(
         recipient: params.to,
         tenantId: params.tenantId
       });
-      return;
+      return false;
     }
 
     if (isEmailProviderError && (error as any).isRetryable === true) {
@@ -647,7 +716,9 @@ async function sendNotificationIfEnabled(
           recipient: params.to,
           tenantId: params.tenantId
         });
-        return;
+        // The queued params carry the Cc/Bcc headers, so the retry delivers
+        // the combined message: treat it as sent, not as a dropped recipient.
+        return true;
       }
     }
 
@@ -932,11 +1003,193 @@ function formatTicketDateTime(
 /**
  * Handle ticket created events
  */
+/**
+ * Shared "ticket summary" email context (the ticket-created body variables).
+ * Used by the ticket-created handler and the board status-entered handler.
+ */
+async function buildTicketSummaryEmailContext(
+  db: Knex,
+  tenantId: string,
+  ticket: NonNullable<TicketEmailRow>,
+  creatorUserId: string | undefined
+) {
+  const safeString = (value?: unknown) => {
+    if (typeof value === 'string') {
+      return value.trim();
+    }
+    if (value === null || value === undefined) {
+      return '';
+    }
+    return String(value).trim();
+  };
+
+  const emailTimeZone = await resolveEffectiveTimeZone(db, tenantId, creatorUserId);
+  // Date/time strings are baked into a shared email context reused across all
+  // recipients, so the exact per-recipient locale isn't known here. Use the
+  // tenant default locale (falls back to system default 'en').
+  const emailLocale = await getTenantDefaultLocale(tenantId);
+
+  const priorityName = safeString(ticket.priority_name) || 'Unspecified';
+  const statusName = safeString(ticket.status_name) || 'Unknown';
+  const metaLine = `Ticket #${ticket.ticket_number} · ${priorityName} Priority · ${statusName}`;
+  const priorityColor = safeString(ticket.priority_color) || '#8A4DEA';
+
+  const clientName = safeString(ticket.client_name) || 'Unassigned Client';
+
+  const emailDateFormat = await getTenantDateFormat(tenantId);
+  const createdAt = formatTicketDateTime(
+    ticket.entered_at as string | Date | null,
+    emailTimeZone,
+    emailLocale,
+    emailDateFormat
+  );
+  const createdByName = safeString(ticket.created_by_name) || 'System';
+  const createdDetails = `${createdAt} · ${createdByName}`;
+
+  const assignedToName = safeString(ticket.assigned_to_name) || 'Unassigned';
+  const rawAssignedEmail = safeString(ticket.assigned_to_email);
+  const assignedToEmailRaw = assignedToName === 'Unassigned' ? '' : rawAssignedEmail;
+  const assignedToEmailDisplay = assignedToName === 'Unassigned'
+    ? 'Not assigned'
+    : assignedToEmailRaw || 'Not provided';
+  const assignedDetails = assignedToName === 'Unassigned'
+    ? 'Unassigned'
+    : assignedToEmailRaw
+      ? `${assignedToName} (${assignedToEmailRaw})`
+      : assignedToName;
+
+  const requesterName = safeString(ticket.contact_name) || 'Not specified';
+  const requesterEmail = safeString(ticket.contact_email) || 'Not provided';
+  const requesterPhone = safeString(ticket.contact_phone) || 'Not provided';
+  const requesterContactParts: string[] = [];
+  if (requesterEmail && requesterEmail !== 'Not provided') {
+    requesterContactParts.push(requesterEmail);
+  }
+  if (requesterPhone && requesterPhone !== 'Not provided') {
+    requesterContactParts.push(requesterPhone);
+  }
+  const requesterDetailsParts: string[] = [];
+  if (requesterName && requesterName !== 'Not specified') {
+    requesterDetailsParts.push(requesterName);
+  }
+  requesterDetailsParts.push(...requesterContactParts);
+  const requesterContact = requesterContactParts.length > 0 ? requesterContactParts.join(' · ') : 'Not provided';
+  const requesterDetails = requesterDetailsParts.length > 0 ? requesterDetailsParts.join(' · ') : 'Not specified';
+
+  const boardName = safeString(ticket.board_name) || 'Not specified';
+  const categoryName = safeString(ticket.category_name);
+  const subcategoryName = safeString(ticket.subcategory_name);
+  const categoryDetails = categoryName && subcategoryName
+    ? `${categoryName} / ${subcategoryName}`
+    : categoryName || subcategoryName || 'Not categorized';
+
+  const locationSegments: string[] = [];
+  const locationName = safeString(ticket.location_name);
+  if (locationName) {
+    locationSegments.push(locationName);
+  }
+  const addressLines = [displayAddressField(safeString(ticket.address_line1)), safeString(ticket.address_line2)].filter(Boolean);
+  const cityState = [displayAddressField(safeString(ticket.city)), safeString(ticket.state_province)].filter(Boolean).join(', ');
+  const postalCountry = [safeString(ticket.postal_code), displayCountry(undefined, safeString(ticket.country_code))].filter(Boolean).join(' ');
+  const locationDetailsParts = [...addressLines];
+  if (cityState) {
+    locationDetailsParts.push(cityState);
+  }
+  if (postalCountry) {
+    locationDetailsParts.push(postalCountry);
+  }
+  if (locationDetailsParts.length > 0) {
+    locationSegments.push(locationDetailsParts.join(' · '));
+  }
+  const locationSummary = locationSegments.length > 0 ? locationSegments.join(' • ') : 'Not specified';
+
+  let rawDescription = '';
+  if (ticket.attributes && typeof ticket.attributes === 'object' && 'description' in ticket.attributes) {
+    rawDescription = safeString((ticket.attributes as Record<string, unknown>).description);
+  }
+  if (!rawDescription && 'description' in ticket) {
+    rawDescription = safeString((ticket as Record<string, unknown>).description);
+  }
+  // Email-ingested tickets store the inbound body as the first comment, not
+  // on the ticket row. Fall back to the initial-description comment (or the
+  // oldest comment) so the "New Ticket" email carries the user's original
+  // message instead of "No description provided".
+  if (!rawDescription) {
+    const descriptionComment = await tenantDb(db, tenantId).table('comments')
+      .select('note')
+      .where({ ticket_id: ticket.ticket_id })
+      .orderBy('created_at', 'asc')
+      .first();
+    if (descriptionComment?.note) {
+      rawDescription = safeString(descriptionComment.note);
+    }
+  }
+  // formatBlockNoteContent returns { html:'', text:'' } when the input is
+  // empty or is a BlockNote blob that has no extractable text — do NOT fall
+  // back to rawDescription here because it may be raw JSON which we'd
+  // otherwise leak into the email body.
+  const descriptionFormatting = formatBlockNoteContent(rawDescription);
+  const descriptionText = descriptionFormatting.text.trim();
+  const description = descriptionText || 'No description provided.';
+  const descriptionHtml = descriptionText
+    ? descriptionFormatting.html
+    : `<p>${description}</p>`;
+
+  const requesterDetailsForText = requesterDetails;
+  const assignedDetailsForText = assignedDetails;
+
+  const { internalUrl, portalUrl } = await resolveTicketLinks(db, tenantId, ticket.ticket_id, ticket.ticket_number);
+
+  const baseTicketContext = {
+    id: ticket.ticket_number,
+    title: ticket.title,
+    description,
+    descriptionText: description,
+    descriptionHtml: descriptionHtml,
+    priority: priorityName,
+    priorityColor,
+    status: statusName,
+    createdAt,
+    createdBy: createdByName,
+    createdDetails,
+    assignedToName,
+    assignedToEmail: assignedToEmailDisplay,
+    assignedDetails: assignedDetailsForText,
+    requesterName,
+    requesterEmail,
+    requesterPhone,
+    requesterContact,
+    requesterDetails: requesterDetailsForText,
+    board: boardName,
+    category: categoryName || 'Not categorized',
+    subcategory: subcategoryName || 'Not specified',
+    categoryDetails,
+    locationSummary,
+    clientName,
+    metaLine
+  };
+
+  return { baseTicketContext, priorityName, boardName, internalUrl, portalUrl };
+}
+
 async function handleTicketCreated(event: TicketCreatedEvent): Promise<void> {
   const { payload } = event;
   const { tenantId } = payload;
   // Resolve userId from domain-specific field or base field, falling back to legacy
   const creatorUserId = (payload as any).createdByUserId || payload.actorUserId || (payload as any).userId;
+  // Creators such as recurring-ticket generation can ask for client-facing mail to be skipped.
+  // Internal recipients (assignee, internal watchers) are never affected by the contact flag.
+  const suppression = resolveTicketNotificationSuppression(payload);
+
+  // Every audience suppressed (contact, assignee, watchers): nothing to send, and not an error.
+  if (!shouldSendContactFacingTicketEmail(suppression) && !shouldSendInternalTicketEmail(suppression)) {
+    logger.debug('[TicketEmailSubscriber] Skipped ticket created email: all audiences suppressed', {
+      eventId: event.id,
+      ticketId: payload.ticketId,
+      tenantId,
+    });
+    return;
+  }
 
   try {
     console.log('[EmailSubscriber] Creating database connection');
@@ -964,170 +1217,63 @@ async function handleTicketCreated(event: TicketCreatedEvent): Promise<void> {
       return String(value).trim();
     };
 
-    // Send to contact email if available, otherwise client email
-    const primaryEmail = safeString(ticket.contact_email) || safeString(ticket.client_email);
-    const assignedEmail = safeString(ticket.assigned_to_email);
+    // Send to contact email if available, otherwise client email. A suppressed
+    // contact-facing notification leaves no primary recipient.
+    const primaryEmail = shouldSendContactFacingTicketEmail(suppression)
+      ? safeString(ticket.contact_email) || safeString(ticket.client_email)
+      : '';
+    // A suppressed internal audience leaves no assignee recipient.
+    const assignedEmail = shouldSendInternalTicketEmail(suppression)
+      ? safeString(ticket.assigned_to_email)
+      : '';
 
-    if (!primaryEmail && !assignedEmail) {
-      logger.warn('Could not send ticket created email - missing contact, client, and assigned user emails:', {
+    // Watchers are recipients too: a suppressed contact-facing email with no assignee must still
+    // reach the internal watchers.
+    const hasActiveWatchers = extractActiveWatcherEmails(ticket.attributes).length > 0;
+
+    // Board notification rules (trigger: created): one-shot queue alert to the rule's users and
+    // teams. Never assigns and never touches the watch list. Skipped for the assignee and the
+    // actor, and for active internal watchers (who already get the standard ticket-created email).
+    let boardRuleRecipients: ResolvedRecipient[] = [];
+    if (ticket.board_id && shouldSendInternalTicketEmail(suppression)) {
+      const resolved = await resolveBoardNotificationRecipients(
+        db,
+        tenantId,
+        { kind: 'created', boardId: ticket.board_id },
+        { excludeUserIds: [ticket.assigned_to, creatorUserId] }
+      );
+      if (resolved.length > 0) {
+        const internalWatchers = await resolveInternalWatcherEmails(
+          db,
+          tenantId,
+          extractActiveWatcherEmails(ticket.attributes)
+        );
+        const notWatchers = resolved.filter(
+          (recipient) => !internalWatchers.has(normalizeRecipientEmail(recipient.email))
+        );
+        boardRuleRecipients = notWatchers.length > 0
+          ? await filterRecipientsWhoCanReadTicket(db, tenantId, payload.ticketId, notWatchers)
+          : [];
+      }
+    }
+
+    if (!primaryEmail && !assignedEmail && !hasActiveWatchers && boardRuleRecipients.length === 0) {
+      logger.warn('Could not send ticket created email - missing contact, client, assigned user, and watcher emails:', {
         eventId: event.id,
         ticketId: payload.ticketId
       });
       return;
     }
 
-    if (!primaryEmail) {
+    if (!primaryEmail && shouldSendContactFacingTicketEmail(suppression)) {
       logger.warn('Ticket created email missing contact and client emails, falling back to other recipients only:', {
         eventId: event.id,
         ticketId: payload.ticketId
       });
     }
 
-    const emailTimeZone = await resolveEffectiveTimeZone(db, tenantId, creatorUserId);
-    // Date/time strings are baked into a shared email context reused across all
-    // recipients, so the exact per-recipient locale isn't known here. Use the
-    // tenant default locale (falls back to system default 'en').
-    const emailLocale = await getTenantDefaultLocale(tenantId);
-
-    const priorityName = safeString(ticket.priority_name) || 'Unspecified';
-    const statusName = safeString(ticket.status_name) || 'Unknown';
-    const metaLine = `Ticket #${ticket.ticket_number} · ${priorityName} Priority · ${statusName}`;
-    const priorityColor = safeString(ticket.priority_color) || '#8A4DEA';
-
-    const clientName = safeString(ticket.client_name) || 'Unassigned Client';
-
-    const emailDateFormat = await getTenantDateFormat(tenantId);
-    const createdAt = formatTicketDateTime(
-      ticket.entered_at as string | Date | null,
-      emailTimeZone,
-      emailLocale,
-      emailDateFormat
-    );
-    const createdByName = safeString(ticket.created_by_name) || 'System';
-    const createdDetails = `${createdAt} · ${createdByName}`;
-
-    const assignedToName = safeString(ticket.assigned_to_name) || 'Unassigned';
-    const rawAssignedEmail = assignedEmail;
-    const assignedToEmailRaw = assignedToName === 'Unassigned' ? '' : rawAssignedEmail;
-    const assignedToEmailDisplay = assignedToName === 'Unassigned'
-      ? 'Not assigned'
-      : assignedToEmailRaw || 'Not provided';
-    const assignedDetails = assignedToName === 'Unassigned'
-      ? 'Unassigned'
-      : assignedToEmailRaw
-        ? `${assignedToName} (${assignedToEmailRaw})`
-        : assignedToName;
-
-    const requesterName = safeString(ticket.contact_name) || 'Not specified';
-    const requesterEmail = safeString(ticket.contact_email) || 'Not provided';
-    const requesterPhone = safeString(ticket.contact_phone) || 'Not provided';
-    const requesterContactParts: string[] = [];
-    if (requesterEmail && requesterEmail !== 'Not provided') {
-      requesterContactParts.push(requesterEmail);
-    }
-    if (requesterPhone && requesterPhone !== 'Not provided') {
-      requesterContactParts.push(requesterPhone);
-    }
-    const requesterDetailsParts: string[] = [];
-    if (requesterName && requesterName !== 'Not specified') {
-      requesterDetailsParts.push(requesterName);
-    }
-    requesterDetailsParts.push(...requesterContactParts);
-    const requesterContact = requesterContactParts.length > 0 ? requesterContactParts.join(' · ') : 'Not provided';
-    const requesterDetails = requesterDetailsParts.length > 0 ? requesterDetailsParts.join(' · ') : 'Not specified';
-
-    const boardName = safeString(ticket.board_name) || 'Not specified';
-    const categoryName = safeString(ticket.category_name);
-    const subcategoryName = safeString(ticket.subcategory_name);
-    const categoryDetails = categoryName && subcategoryName
-      ? `${categoryName} / ${subcategoryName}`
-      : categoryName || subcategoryName || 'Not categorized';
-
-    const locationSegments: string[] = [];
-    const locationName = safeString(ticket.location_name);
-    if (locationName) {
-      locationSegments.push(locationName);
-    }
-    const addressLines = [displayAddressField(safeString(ticket.address_line1)), safeString(ticket.address_line2)].filter(Boolean);
-    const cityState = [displayAddressField(safeString(ticket.city)), safeString(ticket.state_province)].filter(Boolean).join(', ');
-    const postalCountry = [safeString(ticket.postal_code), displayCountry(undefined, safeString(ticket.country_code))].filter(Boolean).join(' ');
-    const locationDetailsParts = [...addressLines];
-    if (cityState) {
-      locationDetailsParts.push(cityState);
-    }
-    if (postalCountry) {
-      locationDetailsParts.push(postalCountry);
-    }
-    if (locationDetailsParts.length > 0) {
-      locationSegments.push(locationDetailsParts.join(' · '));
-    }
-    const locationSummary = locationSegments.length > 0 ? locationSegments.join(' • ') : 'Not specified';
-
-    let rawDescription = '';
-    if (ticket.attributes && typeof ticket.attributes === 'object' && 'description' in ticket.attributes) {
-      rawDescription = safeString((ticket.attributes as Record<string, unknown>).description);
-    }
-    if (!rawDescription && 'description' in ticket) {
-      rawDescription = safeString((ticket as Record<string, unknown>).description);
-    }
-    // Email-ingested tickets store the inbound body as the first comment, not
-    // on the ticket row. Fall back to the initial-description comment (or the
-    // oldest comment) so the "New Ticket" email carries the user's original
-    // message instead of "No description provided".
-    if (!rawDescription) {
-      const descriptionComment = await tenantDb(db, tenantId).table('comments')
-        .select('note')
-        .where({ ticket_id: ticket.ticket_id })
-        .orderBy('created_at', 'asc')
-        .first();
-      if (descriptionComment?.note) {
-        rawDescription = safeString(descriptionComment.note);
-      }
-    }
-    // formatBlockNoteContent returns { html:'', text:'' } when the input is
-    // empty or is a BlockNote blob that has no extractable text — do NOT fall
-    // back to rawDescription here because it may be raw JSON which we'd
-    // otherwise leak into the email body.
-    const descriptionFormatting = formatBlockNoteContent(rawDescription);
-    const descriptionText = descriptionFormatting.text.trim();
-    const description = descriptionText || 'No description provided.';
-    const descriptionHtml = descriptionText
-      ? descriptionFormatting.html
-      : `<p>${description}</p>`;
-
-    const requesterDetailsForText = requesterDetails;
-    const assignedDetailsForText = assignedDetails;
-
-    const { internalUrl, portalUrl } = await resolveTicketLinks(db, tenantId, ticket.ticket_id, ticket.ticket_number);
-
-    const baseTicketContext = {
-      id: ticket.ticket_number,
-      title: ticket.title,
-      description,
-      descriptionText: description,
-      descriptionHtml: descriptionHtml,
-      priority: priorityName,
-      priorityColor,
-      status: statusName,
-      createdAt,
-      createdBy: createdByName,
-      createdDetails,
-      assignedToName,
-      assignedToEmail: assignedToEmailDisplay,
-      assignedDetails: assignedDetailsForText,
-      requesterName,
-      requesterEmail,
-      requesterPhone,
-      requesterContact,
-      requesterDetails: requesterDetailsForText,
-      board: boardName,
-      category: categoryName || 'Not categorized',
-      subcategory: subcategoryName || 'Not specified',
-      categoryDetails,
-      locationSummary,
-      clientName,
-      metaLine
-    };
+    const { baseTicketContext, priorityName, boardName, internalUrl, portalUrl } =
+      await buildTicketSummaryEmailContext(db, tenantId, ticket, creatorUserId);
 
     const buildContext = (url: string) => ({
       ticket: {
@@ -1195,11 +1341,32 @@ async function handleTicketCreated(event: TicketCreatedEvent): Promise<void> {
       }, 'Ticket Created', ticket.assigned_to);
     }
 
+    for (const recipient of boardRuleRecipients) {
+      await sendIfUnique({
+        tenantId,
+        ...emailEntityContext,
+        to: recipient.email,
+        subject: `New Ticket on ${boardName} • ${ticket.title} (${priorityName})`,
+        template: 'ticket-board-created',
+        context: buildContext(internalUrl),
+        replyContext,
+      }, 'Board Ticket Created', recipient.userId);
+    }
+
     const internalWatcherEmails = await resolveInternalWatcherEmails(db, tenantId, activeWatcherEmails);
     await sendOneEmailPerWatcher(
       activeWatcherEmails,
       async (watcherEmail) => {
         const isInternalWatcher = internalWatcherEmails.has(normalizeRecipientEmail(watcherEmail));
+        if (!shouldSendTicketWatcherEmail(suppression, isInternalWatcher)) {
+          logger.debug('[TicketEmailSubscriber] Skipped ticket created watcher email due to suppression', {
+            eventId: event.id,
+            ticketId: payload.ticketId,
+            tenantId,
+            watcherType: isInternalWatcher ? 'internal' : 'external',
+          });
+          return;
+        }
         await sendIfUnique({
           tenantId,
           ...emailEntityContext,
@@ -1220,6 +1387,100 @@ async function handleTicketCreated(event: TicketCreatedEvent): Promise<void> {
       error,
       eventId: event.id,
       ticketId: payload.ticketId
+    });
+    throw error;
+  }
+}
+
+/**
+ * Board notification rules (trigger: status entered). Sends one email per rule recipient,
+ * immediately — deliberately bypassing NotificationAccumulator so a status change is never
+ * merged into a later digest. Not fired at creation; never assigns or touches the watch list.
+ */
+async function handleTicketStatusChanged(event: { id?: string; payload: any }): Promise<void> {
+  const { payload } = event;
+  const { tenantId } = payload;
+  const actorUserId = payload.actorUserId || payload.userId;
+  const suppression = resolveTicketNotificationSuppression(payload);
+
+  try {
+    if (!shouldSendInternalTicketEmail(suppression)) {
+      return;
+    }
+    const db = await getConnection(tenantId);
+    const ticket = await fetchTicketForEmail(db, tenantId, payload.ticketId);
+    if (!ticket?.board_id) {
+      return;
+    }
+
+    const enteredStatusId: string = payload.newStatusId ?? ticket.status_id;
+    const assignees = await getAllTicketAssignees(db, tenantId, payload.ticketId);
+    const resolved = await resolveBoardNotificationRecipients(
+      db,
+      tenantId,
+      { kind: 'status_entered', statusId: enteredStatusId },
+      { excludeUserIds: [...assignees, actorUserId] }
+    );
+    if (resolved.length === 0) {
+      return;
+    }
+
+    // Active internal watchers already follow the ticket and get the standard update emails.
+    const watcherEmails = extractActiveWatcherEmails(ticket.attributes);
+    const internalWatchers = await resolveInternalWatcherEmails(db, tenantId, watcherEmails);
+    const notWatchers = resolved.filter(
+      (recipient) => !internalWatchers.has(normalizeRecipientEmail(recipient.email))
+    );
+    const recipients = notWatchers.length > 0
+      ? await filterRecipientsWhoCanReadTicket(db, tenantId, payload.ticketId, notWatchers)
+      : [];
+    if (recipients.length === 0) {
+      return;
+    }
+
+    const { baseTicketContext, priorityName, boardName, internalUrl } =
+      await buildTicketSummaryEmailContext(db, tenantId, ticket, actorUserId);
+
+    const statusNames = await tenantDb(db, tenantId).table('statuses')
+      .select('status_id', 'name')
+      .whereIn('status_id', [enteredStatusId, payload.previousStatusId].filter(Boolean));
+    const statusNameById = new Map<string, string>(
+      statusNames.map((row: { status_id: string; name: string }) => [row.status_id, row.name])
+    );
+    const enteredStatus = statusNameById.get(enteredStatusId) || baseTicketContext.status;
+    const previousStatus = statusNameById.get(payload.previousStatusId) || 'Unknown';
+
+    const context = {
+      ticket: {
+        ...baseTicketContext,
+        status: enteredStatus,
+        enteredStatus,
+        previousStatus,
+        url: internalUrl,
+      },
+    };
+    const sentEmails = new Set<string>();
+    for (const recipient of recipients) {
+      const key = normalizeRecipientEmail(recipient.email);
+      if (!isValidEmail(recipient.email) || sentEmails.has(key)) continue;
+      sentEmails.add(key);
+      await sendNotificationIfEnabled({
+        tenantId,
+        entityType: 'ticket',
+        entityId: ticket.ticket_id || payload.ticketId,
+        to: recipient.email,
+        subject: `Ticket Entered ${enteredStatus} on ${boardName} • ${ticket.title} (${priorityName})`,
+        template: 'ticket-board-status-entered',
+        context,
+        mailClass: 'ticket',
+        boardId: ticket.board_id,
+      }, 'Board Ticket Status Entered', recipient.userId);
+    }
+  } catch (error) {
+    logger.error('Error handling ticket status changed email:', {
+      eventId: event.id,
+      ticketId: payload.ticketId,
+      error,
     });
     throw error;
   }
@@ -2429,13 +2690,18 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
 
     let commentAuthorUserId: string | null = commentUserId || null;
     let commentAuthorContactId: string | null = null;
+    let commentAuthorType = '';
     let commentAuthorEmail = '';
     let commentClosesTicket = false;
+    // Read from the comment row, never the event payload: the payload schema
+    // strips unknown keys and both the scheduled-publication handler and the
+    // recovery republish rebuild the payload from the row.
+    let commentEmailRecipients: CommentEmailRecipients | null = null;
 
     if (payload.comment?.id) {
       const scopedDb = tenantDb(db, tenantId);
       const commentAuthorQuery = scopedDb.table('comments as cm')
-        .select({ comment_user_id: 'cm.user_id', comment_metadata: 'cm.metadata', comment_contact_id: 'cu.contact_id', comment_user_email: 'cu.email', comment_contact_email: 'cc.email' });
+        .select({ comment_user_id: 'cm.user_id', comment_author_type: 'cm.author_type', comment_metadata: 'cm.metadata', comment_contact_id: 'cu.contact_id', comment_user_email: 'cu.email', comment_contact_email: 'cc.email' });
       scopedDb.tenantJoin(commentAuthorQuery, 'users as cu', 'cm.user_id', 'cu.user_id', { type: 'left' });
       scopedDb.tenantJoin(commentAuthorQuery, 'contacts as cc', 'cu.contact_id', 'cc.contact_name_id', {
         type: 'left',
@@ -2446,6 +2712,7 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
         .where({ 'cm.comment_id': payload.comment.id })
         .first<{
           comment_user_id?: string | null;
+          comment_author_type?: string | null;
           comment_metadata?: Record<string, unknown> | null;
           comment_contact_id?: string | null;
           comment_user_email?: string | null;
@@ -2454,11 +2721,13 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
 
       if (commentAuthor) {
         commentAuthorUserId = commentAuthor.comment_user_id ?? null;
+        commentAuthorType = safeString(commentAuthor.comment_author_type);
         commentAuthorContactId = commentAuthor.comment_contact_id ?? null;
         commentAuthorEmail =
           safeString(commentAuthor.comment_user_email) ||
           safeString(commentAuthor.comment_contact_email);
         commentClosesTicket = commentAuthor.comment_metadata?.closes_ticket === true;
+        commentEmailRecipients = readCommentEmailRecipients(commentAuthor.comment_metadata);
       }
     }
 
@@ -2644,25 +2913,49 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
       params: TicketNotificationParams,
       subtypeName: string,
       recipientUserId?: string | null,
-    ) => {
+    ): Promise<boolean> => {
       const email = params.to?.trim();
       if (!isValidEmail(email)) {
-        return;
+        return false;
       }
       const key = normalizeRecipientEmail(email);
       if (commentAuthorEmail && key === normalizeRecipientEmail(commentAuthorEmail)) {
-        return;
+        return false;
       }
       if (sentEmails.has(key)) {
-        return;
+        return false;
       }
       sentEmails.add(key);
-      await sendNotificationIfEnabled({ ...params, mailClass: 'ticket', boardId: params.boardId ?? ticket.board_id }, subtypeName, recipientUserId ?? undefined);
+      // The returned flag reports whether a message really went out: a
+      // notification gate can skip the send silently, and the Cc/Bcc fallback
+      // must not treat that as "the requester was reached".
+      return sendNotificationIfEnabled({ ...params, mailClass: 'ticket', boardId: params.boardId ?? ticket.board_id }, subtypeName, recipientUserId ?? undefined);
     };
 
     // Only notify external contacts (primaryEmail) if the comment is public and from an internal agent.
     // Event schema uses `isInternal` (camelCase); legacy payloads may omit it.
     const isPublicComment = !payload.comment?.isInternal;
+
+    // One-off Cc/Bcc are a public-reply feature. Ignore them on an internal
+    // note even if the row carries them, so a hand-edited row can never leak
+    // an internal note outside the MSP.
+    const oneOffRecipients = isPublicComment ? commentEmailRecipients : null;
+    // The requester is the `To` of the combined message and the author already
+    // knows what they wrote, so neither belongs in Cc/Bcc.
+    const {
+      cc: oneOffCc,
+      bcc: oneOffBcc,
+      hasAny: hasOneOffRecipients,
+      headerParams: oneOffHeaderParams,
+    } = selectOneOffEmailRecipients(oneOffRecipients, [primaryEmail, commentAuthorEmail]);
+    // Everyone carried on the combined message has already received this
+    // comment, so watchers, assigned agents, additional agents and bundle-child
+    // requesters in those lists must not get a second separate copy.
+    const markOneOffRecipientsSent = () => {
+      for (const entry of [...oneOffCc, ...oneOffBcc]) {
+        sentEmails.add(normalizeRecipientEmail(entry.email));
+      }
+    };
 
     let isFromAgent = false;
     if (commentAuthorUserId) {
@@ -2679,7 +2972,31 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
       String(ticket.contact_name_id).trim() === commentAuthorContactId
     );
 
+    // A comment row written without a user — a system- or workflow-authored
+    // one — has nobody to classify, so `isFromAgent` is false for it while the
+    // stored author_type still says the comment came from the MSP side.
+    // Explicit Cc/Bcc on such a comment is an instruction to mail someone, so
+    // the one-off fallback runs for it too; a client-authored comment never
+    // gets it.
+    const isMspAuthoredComment = isFromAgent || (!commentAuthorUserId && commentAuthorType === 'internal');
+
+    // Extract threading info from ticket metadata. Every copy of this comment
+    // — the requester message and the Cc/Bcc fallback alike — carries the same
+    // thread headers so replies land on this ticket's thread.
+    const commentThreadMessageId = emailMetadata.messageId; // Original message ID from inbound email
+    const commentThreadHeaders: Record<string, string> = {};
+    if (commentThreadMessageId) {
+      commentThreadHeaders['In-Reply-To'] = commentThreadMessageId;
+      const refs = Array.isArray(emailMetadata.references) ? emailMetadata.references : [];
+      // Append original messageId to references to maintain chain
+      commentThreadHeaders['References'] = [...refs, commentThreadMessageId].join(' ');
+    }
+    const commentThreadHeaderParams = Object.keys(commentThreadHeaders).length > 0
+      ? { headers: commentThreadHeaders }
+      : {};
+
     // Send to primary email if available - external user, no userId
+    let requesterEmailSent = false;
     if (
       primaryEmail &&
       isPublicComment &&
@@ -2687,17 +3004,6 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
       !isPrimaryContactAuthor &&
       shouldSendTicketCommentNotification(suppression, 'contact')
     ) {
-      // Extract threading info from ticket metadata
-      const messageId = emailMetadata.messageId; // Original message ID from inbound email
-      
-      const headers: Record<string, string> = {};
-      if (messageId) {
-          headers['In-Reply-To'] = messageId;
-          const refs = Array.isArray(emailMetadata.references) ? emailMetadata.references : [];
-          // Append original messageId to references to maintain chain
-          headers['References'] = [...refs, messageId].join(' ');
-      }
-
       // For client portal users (contacts), pass the clientId so locale resolution respects client preferences
       const emailParams: TicketNotificationParams = {
         tenantId,
@@ -2713,7 +3019,10 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
           threadId: ticket.email_metadata?.threadId
         },
         attachments: inlineCommentImageAttachments,
-        headers: Object.keys(headers).length > 0 ? headers : undefined,
+        ...commentThreadHeaderParams,
+        // Real Cc/Bcc headers, so the requester sees who was copied and
+        // reply-all reaches them. One message, one Message-ID, one reply token.
+        ...oneOffHeaderParams,
       };
 
       // Add clientId for locale resolution if we're sending to a contact/client
@@ -2721,7 +3030,56 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
         emailParams.recipientClientId = ticket.client_id;
       }
 
-      await sendIfUnique(emailParams, 'Ticket Comment Added');
+      requesterEmailSent = await sendIfUnique(emailParams, 'Ticket Comment Added');
+      if (requesterEmailSent) {
+        markOneOffRecipientsSent();
+      }
+    }
+
+    // No requester mail went out (no address, suppressed, or the requester is
+    // the author) but the agent still chose explicit recipients. Send them the
+    // comment directly rather than dropping it. A message with several Bcc
+    // addresses and an empty To is rejected by some providers, so a Bcc-only
+    // list becomes one message per address.
+    // A tenant that switched comment notifications off also lands here, and the
+    // fallback goes through the same gate: the kill switch wins and nobody is
+    // mailed, one-off recipients included.
+    if (hasOneOffRecipients && isMspAuthoredComment && !requesterEmailSent) {
+      const fallbackReplyContext = {
+        ticketId: ticket.ticket_id || payload.ticketId,
+        commentId: payload.comment?.id,
+        threadId: ticket.email_metadata?.threadId,
+      };
+      const fallbackBase = {
+        tenantId,
+        ...emailEntityContext,
+        subject: `New Comment on Ticket: ${ticket.title}`,
+        template: 'ticket-comment-added',
+        context: buildContext(portalUrl),
+        replyContext: fallbackReplyContext,
+        attachments: inlineCommentImageAttachments,
+        ...commentThreadHeaderParams,
+        ...(ticket.client_id ? { recipientClientId: ticket.client_id } : {}),
+      };
+
+      if (oneOffCc.length > 0) {
+        // The first Cc address carries the `To` so the delivery claim and the
+        // per-recipient attachment gate still key on a single address.
+        const [primaryOneOff, ...remainingCc] = oneOffCc;
+        const sent = await sendIfUnique({
+          ...fallbackBase,
+          to: primaryOneOff.email,
+          ...(remainingCc.length > 0 ? { cc: remainingCc } : {}),
+          ...(oneOffBcc.length > 0 ? { bcc: oneOffBcc } : {}),
+        }, 'Ticket Comment Added');
+        if (sent) {
+          markOneOffRecipientsSent();
+        }
+      } else {
+        for (const entry of oneOffBcc) {
+          await sendIfUnique({ ...fallbackBase, to: entry.email }, 'Ticket Comment Added');
+        }
+      }
     }
 
     // If this ticket is a bundle master, default behavior is to notify all child requesters for public comments.
@@ -3056,6 +3414,16 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
       latestResolutionComment,
       latestClientVisibleResolutionComment,
     );
+    // A resolution written to close the ticket has its own comment email
+    // suppressed (metadata.closes_ticket), so this message is the one that
+    // carries its one-off Cc/Bcc. Only that comment's recipients are used: a
+    // resolution left without a close already mailed them itself.
+    const closePairedResolutionComment =
+      latestClientVisibleResolutionComment
+      && !latestClientVisibleResolutionComment.is_internal
+      && (latestClientVisibleResolutionComment.metadata as Record<string, unknown> | null)?.closes_ticket === true
+        ? latestClientVisibleResolutionComment
+        : null;
 
     const { internalUrl, portalUrl } = await resolveTicketLinks(db, tenantId, ticket.ticket_id, ticket.ticket_number);
 
@@ -3116,21 +3484,47 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
       params: TicketNotificationParams,
       subtypeName: string,
       recipientUserId?: string | null
-    ) => {
+    ): Promise<boolean> => {
       const email = params.to?.trim();
       if (!isValidEmail(email)) {
-        return;
+        return false;
       }
 
       const key = normalizeRecipientEmail(email);
       if (sentEmails.has(key)) {
-        return;
+        return false;
       }
 
       sentEmails.add(key);
-      await sendNotificationIfEnabled({ ...params, mailClass: 'ticket', boardId: params.boardId ?? ticket.board_id }, subtypeName, recipientUserId ?? undefined);
+      // The flag reports whether a message really went out, so the Cc/Bcc
+      // fallback below never treats a gated send as "the requester was reached".
+      return sendNotificationIfEnabled({ ...params, mailClass: 'ticket', boardId: params.boardId ?? ticket.board_id }, subtypeName, recipientUserId ?? undefined);
     };
 
+    // The requester is the `To` of the close message, so they never belong in
+    // its Cc/Bcc.
+    const {
+      cc: oneOffCc,
+      bcc: oneOffBcc,
+      hasAny: hasOneOffRecipients,
+      headerParams: oneOffHeaderParams,
+    } = selectOneOffEmailRecipients(
+      readCommentEmailRecipients(closePairedResolutionComment?.metadata),
+      [primaryEmail]
+    );
+    // Anyone carried on the close message has had it; watchers, the assigned
+    // agent and additional agents in those lists get no second copy.
+    const markOneOffRecipientsSent = () => {
+      for (const entry of [...oneOffCc, ...oneOffBcc]) {
+        sentEmails.add(normalizeRecipientEmail(entry.email));
+      }
+    };
+    const closeReplyContext = {
+      ticketId: ticket.ticket_id || payload.ticketId,
+      threadId: ticket.email_metadata?.threadId
+    };
+
+    let primaryCloseEmailSent = false;
     if (!shouldSendContactFacingTicketEmail(suppression)) {
       logger.debug('[TicketEmailSubscriber] Skipped ticket closed contact notification due to suppression', {
         eventId: event.id,
@@ -3144,7 +3538,7 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
       });
     } else {
       // Send to primary recipient - external user, no userId
-      await sendIfUnique({
+      primaryCloseEmailSent = await sendIfUnique({
         tenantId,
         ...emailEntityContext,
         contactId: primaryContactId,
@@ -3152,11 +3546,51 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
         subject: `Ticket Closed: ${ticket.title}`,
         template: 'ticket-closed',
         context: externalContext,
-        replyContext: {
-          ticketId: ticket.ticket_id || payload.ticketId,
-          threadId: ticket.email_metadata?.threadId
-        },
+        replyContext: closeReplyContext,
+        // Real Cc/Bcc headers from the resolution that closed the ticket, so
+        // the requester sees who was copied and reply-all reaches them.
+        ...oneOffHeaderParams,
       }, 'Ticket Closed');
+      if (primaryCloseEmailSent) {
+        markOneOffRecipientsSent();
+      }
+    }
+
+    // No requester mail went out (no address, or suppressed) but the agent still
+    // chose recipients for this resolution, so they get the close message
+    // directly. A message with several Bcc addresses and an empty To is
+    // rejected by some providers, so a Bcc-only list becomes one message per
+    // address. The same notification gate applies: a tenant with closed-ticket
+    // emails switched off mails nobody, copied recipients included.
+    if (hasOneOffRecipients && !primaryCloseEmailSent) {
+      const fallbackBase = {
+        tenantId,
+        ...emailEntityContext,
+        subject: `Ticket Closed: ${ticket.title}`,
+        template: 'ticket-closed',
+        context: externalContext,
+        replyContext: closeReplyContext,
+        ...(ticket.client_id ? { recipientClientId: ticket.client_id } : {}),
+      };
+
+      if (oneOffCc.length > 0) {
+        // The first Cc address carries the `To`, so the send still keys on a
+        // single address.
+        const [firstCc, ...remainingCc] = oneOffCc;
+        const sent = await sendIfUnique({
+          ...fallbackBase,
+          to: firstCc.email,
+          ...(remainingCc.length > 0 ? { cc: remainingCc } : {}),
+          ...(oneOffBcc.length > 0 ? { bcc: oneOffBcc } : {}),
+        }, 'Ticket Closed');
+        if (sent) {
+          markOneOffRecipientsSent();
+        }
+      } else {
+        for (const entry of oneOffBcc) {
+          await sendIfUnique({ ...fallbackBase, to: entry.email }, 'Ticket Closed');
+        }
+      }
     }
 
     // If this ticket is a bundle master, default behavior is to notify all child requesters on closure.
@@ -3383,6 +3817,9 @@ async function dispatchTicketEmailHandlers(validatedEvent: any): Promise<void> {
     case 'TICKET_CREATED':
       await handleTicketCreated(validatedEvent as TicketCreatedEvent);
       break;
+    case 'TICKET_STATUS_CHANGED':
+      await handleTicketStatusChanged(validatedEvent);
+      break;
     case 'TICKET_UPDATED':
       await handleTicketUpdated(validatedEvent as TicketUpdatedEvent);
       break;
@@ -3412,6 +3849,7 @@ export const ticketEmailSubscriberTestHarness = {
   shouldSendTicketClosedWatcherEmail,
   resolveCloseEmailResolutions,
   handleTicketCreated,
+  handleTicketStatusChanged,
   handleTicketUpdated,
   handleTicketAssigned,
   handleTicketCommentAdded,
@@ -3429,6 +3867,7 @@ export async function registerTicketEmailSubscriber(): Promise<void> {
     // Subscribe to all ticket events with a single handler
     const ticketEventTypes = [
       'TICKET_CREATED',
+      'TICKET_STATUS_CHANGED',
       'TICKET_UPDATED',
       'TICKET_CLOSED',
       'TICKET_ASSIGNED',
@@ -3458,6 +3897,7 @@ export async function unregisterTicketEmailSubscriber(): Promise<void> {
   try {
     const ticketEventTypes = [
       'TICKET_CREATED',
+      'TICKET_STATUS_CHANGED',
       'TICKET_UPDATED',
       'TICKET_CLOSED',
       'TICKET_ASSIGNED',

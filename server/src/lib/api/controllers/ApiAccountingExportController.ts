@@ -15,7 +15,8 @@ import {
   type CreateExportErrorInput,
   type UpdateExportBatchStatusInput,
   AccountingExportValidation,
-  AccountingExportInvoiceSelector
+  AccountingExportInvoiceSelector,
+  AccountingAdapterRegistry
 } from '@alga-psa/billing/services';
 import { AppError } from '@alga-psa/core';
 import { isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
@@ -458,7 +459,10 @@ export class ApiAccountingExportController extends ApiBaseController {
         }) as CreateExportLineInput[];
         const lines = await appendAccountingExportLines(params.batchId, normalizedLines);
 
-        await AccountingExportValidation.ensureMappingsForBatch(params.batchId);
+        await AccountingExportValidation.ensureMappingsForBatch(
+          params.batchId,
+          await AccountingAdapterRegistry.createDefault()
+        );
         return NextResponse.json(lines, { status: 201 });
       });
     } catch (error) {

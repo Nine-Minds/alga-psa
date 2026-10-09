@@ -642,7 +642,7 @@
       "invoiceImpact": "Vanaf {{date}} wijzigt het terugkerende subtotaal voor dit item met {{delta}} naar {{total}} (vóór kortingen en belasting). Eerder gefactureerde perioden blijven ongewijzigd.",
       "discardDirty": "Als u de ingangsdatum wijzigt, worden de geldende waarden opnieuw geladen en gaat uw niet-opgeslagen wijziging verloren. Doorgaan?",
       "discardDirtyTitle": "Niet-opgeslagen wijziging verwerpen?",
-      "discardDirtyConfirm": "Datum wijzigen",
+      "discardDirtyConfirm": "Verwerpen en opnieuw laden",
       "invalidQuantity": "De hoeveelheid moet een geheel getal van 0 of hoger zijn.",
       "invalidRate": "Voer een stukprijs van 0 of hoger in, of schakel over naar catalogusprijzen.",
       "saved": "Gepland: {{quantity}} met ingang van {{date}}.",
@@ -1205,7 +1205,7 @@
     "composition": {
       "addContractLinesBeforeManaging": "Voeg contractregels toe aan dit sjabloon voordat u services beheert.",
       "additionalPlans": "Aanvullende plannen",
-      "bucketSummary": "Bundel: {{minutes}} min • Overschrijding ${{overage}}",
+      "bucketSummary": "Bundel: {{minutes}} min • Overschrijding {{overage}}",
       "closeManager": "Beheerder sluiten",
       "editRate": "Tarief bewerken",
       "fixedFeeBundles": "Vaste-vergoedingsbundels",
@@ -1654,6 +1654,7 @@
       "quantityLabel": "Hoeveelheid",
       "selectServicePlaceholder": "Selecteer een service",
       "serviceItemLabel": "Service {{index}}",
+      "catalogDefaultHint": "Geen catalogusprijs in {{currency}}; de catalogusstandaard wordt gebruikt.",
       "recurringQuantityLabel": "Terugkerende hoeveelheid",
       "allocationQuantityLabel": "Toewijzingshoeveelheid",
       "noCurrencyPrice": "Geen prijs in {{currency}} in de catalogus. Voer een eenheidstarief in."
@@ -1704,7 +1705,8 @@
       "serviceItem": "Service {{index}}",
       "setBucketOfHours": "Urenbundel instellen",
       "noCurrencyPriceEnterRate": "Geen {{currency}}-prijs in de catalogus. Voer een uurtarief in.",
-      "noCurrencyPriceWithLegacyHint": "Geen {{currency}}-prijs in de catalogus. Verouderd standaardtarief: {{rate}}. Voer een uurtarief in {{currency}} in."
+      "noCurrencyPriceWithLegacyHint": "Geen {{currency}}-prijs in de catalogus. Verouderd standaardtarief: {{rate}}. Voer een uurtarief in {{currency}} in.",
+      "catalogDefaultRateHint": "Geen catalogusprijs in {{currency}}; de catalogusstandaard wordt gebruikt."
     },
     "minimumBillableTime": {
       "hint": "bijv. 15 minuten - elke tijdregistratie korter dan dit wordt naar boven afgerond",
@@ -1764,7 +1766,8 @@
       "unitOfMeasureHint": "Kies de eenheid waarop deze service wordt gefactureerd.",
       "unitOfMeasurePlaceholder": "bijv. GB, API-aanroep, gebruiker",
       "noCurrencyPriceEnterRate": "Geen {{currency}}-prijs in de catalogus. Voer een eenheidstarief in.",
-      "noCurrencyPriceWithLegacyHint": "Geen {{currency}}-prijs in de catalogus. Verouderd standaardtarief: {{rate}}. Voer een eenheidstarief in {{currency}} in."
+      "noCurrencyPriceWithLegacyHint": "Geen {{currency}}-prijs in de catalogus. Verouderd standaardtarief: {{rate}}. Voer een eenheidstarief in {{currency}} in.",
+      "catalogDefaultRateHint": "Geen catalogusprijs in {{currency}}; de catalogusstandaard wordt gebruikt."
     },
     "summary": {
       "labels": {

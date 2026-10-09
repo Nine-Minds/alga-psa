@@ -126,7 +126,8 @@
       "location": "Lokalizacja",
       "actions": "Działania",
       "patching": "Poprawki",
-      "coverage": "Zakres"
+      "coverage": "Zakres",
+      "assignedTo": "Przypisano do"
     },
     "metrics": {
       "totalAssets": {
@@ -456,6 +457,12 @@
       "location": "Lokalizacja"
     }
   },
+  "documentsTab": {
+    "errors": {
+      "title": "Dokumenty niedostępne",
+      "loadFailed": "Nie udało się załadować powiązanych dokumentów. Odśwież stronę lub spróbuj ponownie później."
+    }
+  },
   "assetDetails": {
     "title": "Szczegóły zasobu",
     "description": "Strona z pełnymi szczegółami zasobu z kartami podsumowań, powiązaniami, dokumentami i działaniami operacyjnymi",
@@ -565,7 +572,8 @@
       "clientsLoadFailed": "Nie można załadować klientów",
       "locationsLoadFailed": "Nie można załadować lokalizacji dla tego klienta",
       "updateFailed": "Nie udało się zaktualizować zasobu",
-      "validation": "Popraw wyróżnione pola przed zapisaniem."
+      "validation": "Popraw wyróżnione pola przed zapisaniem.",
+      "contactsLoadFailed": "Nie można załadować kontaktów tego klienta"
     },
     "actions": {
       "viewClient": "Zobacz klienta",
@@ -618,7 +626,8 @@
       "status": "Status",
       "purchaseDate": "Data zakupu",
       "warrantyEndDate": "Data zakończenia gwarancji",
-      "assetType": "Typ"
+      "assetType": "Typ",
+      "assignedTo": "Przypisano do"
     },
     "placeholders": {
       "loadingClients": "Ładowanie klientów…",
@@ -628,7 +637,9 @@
       "selectClientFirst": "Najpierw wybierz klienta",
       "customLocation": "Wprowadź niestandardową lokalizację lub obszar",
       "selectPurchaseDate": "Wybierz datę zakupu",
-      "selectWarrantyEndDate": "Wybierz datę zakończenia gwarancji"
+      "selectWarrantyEndDate": "Wybierz datę zakończenia gwarancji",
+      "loadingContacts": "Ładowanie kontaktów…",
+      "selectContact": "Wybierz kontakt"
     },
     "statusOptions": {
       "active": "Aktywny",
@@ -664,7 +675,10 @@
       "printer": "Szczegóły drukarki",
       "custom": "Szczegóły: {{typeName}}"
     },
-    "additionalFields": "Pola dodatkowe"
+    "additionalFields": "Pola dodatkowe",
+    "help": {
+      "assignedTo": "W portalu klienta osoby z ograniczoną widocznością widzą to urządzenie tylko wtedy, gdy jest przypisane do nich lub do osoby im podlegającej."
+    }
   },
   "assetFormClient": {
     "title": "Klient formularza zasobu",
@@ -978,7 +992,8 @@
       "status": "Status",
       "serialNumber": "Numer seryjny",
       "customLocationOption": "Niestandardowa lokalizacja",
-      "location": "Lokalizacja"
+      "location": "Lokalizacja",
+      "assignedTo": "Przypisano do"
     },
     "placeholders": {
       "workstationOsType": "np. Windows, macOS, Linux",
@@ -998,7 +1013,9 @@
       "customLocation": "Wprowadź niestandardową lokalizację lub obszar",
       "loadingLocations": "Ładowanie lokalizacji...",
       "selectClientFirst": "Najpierw wybierz klienta",
-      "selectLocation": "Wybierz lokalizację"
+      "selectLocation": "Wybierz lokalizację",
+      "loadingContacts": "Ładowanie kontaktów...",
+      "selectContact": "Wybierz kontakt"
     },
     "sections": {
       "typeSpecificDetails": "Szczegóły specyficzne dla typu"
@@ -1060,7 +1077,8 @@
       "model": "Model",
       "serialNumber": "Numer seryjny",
       "purchaseDate": "Data zakupu",
-      "warrantyEnd": "Koniec gwarancji"
+      "warrantyEnd": "Koniec gwarancji",
+      "assignedTo": "Przypisano do"
     },
     "values": {
       "unknownClient": "Nieznany klient",
@@ -1581,8 +1599,7 @@
       "manageAssetTypes": "Odmowa uprawnień: nie można zarządzać typami zasobów",
       "readDocuments": "Odmowa uprawnień: nie można odczytywać dokumentów zasobu",
       "associateDocuments": "Odmowa uprawnień: nie można powiązać dokumentów z zasobami",
-      "removeDocuments": "Odmowa uprawnień: nie można usuwać dokumentów z zasobów",
-      "updateDocumentNotes": "Odmowa uprawnień: nie można aktualizować notatek dokumentów zasobu"
+      "removeDocuments": "Odmowa uprawnień: nie można usuwać dokumentów z zasobów"
     },
     "asset": {
       "notFoundRefresh": "Nie znaleziono zasobu. Mógł zostać usunięty. Odśwież stronę i spróbuj ponownie.",
@@ -1601,7 +1618,18 @@
       "conflict": "Ta zmiana zasobu jest sprzeczna z istniejącym rekordem. Odśwież stronę i spróbuj ponownie.",
       "notAllowed": "Jedna z wartości zasobu jest niedozwolona. Sprawdź formularz i spróbuj ponownie.",
       "missingField": "Brakuje wymaganego pola zasobu.",
-      "missingFieldNamed": "Brakuje wymaganego pola zasobu: {{field}}."
+      "missingFieldNamed": "Brakuje wymaganego pola zasobu: {{field}}.",
+      "contactUnavailable": "Wybrany kontakt jest niedostępny dla tego klienta."
     }
+  },
+  "clientAssetMultiSelect": {
+    "errors": {
+      "load": "Nie udało się wczytać zasobów"
+    },
+    "placeholder": "Dodaj zasób...",
+    "searchPlaceholder": "Szukaj zasobów",
+    "empty": "Brak pasujących zasobów dla tego klienta",
+    "loading": "Ładowanie...",
+    "remove": "Usuń zasób"
   }
 }

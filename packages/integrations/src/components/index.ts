@@ -4,12 +4,20 @@
 
 export * from './csv';
 export { AccountingMappingManager } from './accounting-mappings';
-export type { AccountingMappingContext, AccountingMappingModule, AccountingMappingLoadResult } from './accounting-mappings/types';
+export type {
+  AccountingMappingContext,
+  AccountingMappingModule,
+  AccountingMappingLoadResult,
+  AccountingMappingEntityOption,
+  AccountingMappingBulkCreateInput,
+  AccountingMappingBulkCreateResult
+} from './accounting-mappings/types';
 export {
   EmailProviderConfiguration,
   EmailSenderAddressesCard,
   EmailSenderCardsProvider,
   EmailSenderRoutingCard,
+  OutboundEmailDiagnosticsDialog,
   INBOUND_DEFAULTS_WARNING,
   providerNeedsInboundDefaults,
   InboundTicketDefaultsManager,

@@ -3,11 +3,12 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
+import { DatePicker } from '@alga-psa/ui/components/DatePicker';
+import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { Label } from '@alga-psa/ui/components/Label';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
-import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { History, Loader2 } from 'lucide-react';
 import {
   getErrorMessage,
@@ -15,6 +16,7 @@ import {
   isActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { toCalendarDateString, toCalendarDisplayDate } from '@alga-psa/core';
 import {
   getEffectiveRecurringUnitPricing,
   listRecurringUnitPricingRevisionHistory,
@@ -40,11 +42,6 @@ const isReturnedActionError = (value: unknown): boolean =>
   isActionMessageError(value) || isActionPermissionError(value);
 
 const todayIso = (): string => new Date().toISOString().slice(0, 10);
-
-// A date input reports a complete value after every typed year digit
-// (0002-, 0020-, 0202-, 2026-...). Only a four-digit year without a leading
-// zero is a date the operator meant, so partial years never trigger a reload.
-const isCompleteBoundaryDate = (value: string): boolean => /^[1-9]\d{3}-\d{2}-\d{2}$/.test(value);
 
 export interface RecurringUnitSchedulePanelProps {
   contractLineId: string;
@@ -72,15 +69,10 @@ export const RecurringUnitSchedulePanel: React.FC<RecurringUnitSchedulePanelProp
   onScheduled,
 }) => {
   const { t } = useTranslation('msp/contracts');
-  const { formatCurrency } = useFormatters();
+  const { formatCurrency, formatDate } = useFormatters();
 
   const requestRef = useRef(0);
   const [boundary, setBoundary] = useState<string>('');
-  // What the date input shows while the operator is typing; it becomes the
-  // boundary only once it is a complete date (and any unsaved edit is
-  // knowingly discarded).
-  const [boundaryDraft, setBoundaryDraft] = useState<string>('');
-  const [pendingBoundary, setPendingBoundary] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -90,6 +82,10 @@ export const RecurringUnitSchedulePanel: React.FC<RecurringUnitSchedulePanelProp
   const [revisions, setRevisions] = useState<IRecurringUnitPricingRevisionListRow[]>([]);
   const [history, setHistory] = useState<IContractLineUnitPricingRevisionHistoryEntry[]>([]);
   const [historyError, setHistoryError] = useState<string | null>(null);
+  // A date picked while the form has an unsaved edit waits here for the user to
+  // confirm discarding that edit.
+  const [pendingBoundary, setPendingBoundary] = useState<string | null>(null);
+  const [boundaryPickerResetKey, setBoundaryPickerResetKey] = useState(0);
   // The values the form was loaded with; a date change that would discard an
   // unsaved edit prompts before reloading.
   const loadedInputsRef = useRef<{ quantity: string; policy: ContractLineUnitPricePolicy; rate: string }>({
@@ -142,6 +138,17 @@ export const RecurringUnitSchedulePanel: React.FC<RecurringUnitSchedulePanelProp
         ? t('common.empty.notAvailable', { defaultValue: 'N/A' })
         : formatCurrency(cents / 100, currencyCode),
     [currencyCode, formatCurrency, t],
+  );
+
+  // Every date shown to the user goes through the tenant's date format. Values
+  // stay YYYY-MM-DD internally; only the rendered text is formatted.
+  // LEVERAGE: pattern calendar-day-display — formatDate(toCalendarDateString(x)) / formatDate(toPlainDate(x).toString()) is repeated in FinalizedTab, DraftsTab, ProjectBillingReviewTab, TaxRegionsAndRates, ClientContractsTab; useFormatters is missing a formatCalendarDay.
+  const formatDay = useCallback(
+    (value: string | null | undefined): string | null => {
+      const day = value ? toCalendarDateString(value) : null;
+      return day ? formatDate(day) : null;
+    },
+    [formatDate],
   );
 
   // Audit columns show who acted; the raw id stays reachable as a tooltip
@@ -234,7 +241,6 @@ export const RecurringUnitSchedulePanel: React.FC<RecurringUnitSchedulePanelProp
       const initial =
         isReturnedActionError(nextBoundary) || !nextBoundary ? todayIso() : String(nextBoundary);
       setBoundary(initial);
-      setBoundaryDraft(initial);
       await load(initial);
     };
     void bootstrap();
@@ -283,15 +289,14 @@ export const RecurringUnitSchedulePanel: React.FC<RecurringUnitSchedulePanelProp
 
   const applyBoundary = (nextBoundary: string) => {
     setBoundary(nextBoundary);
-    setBoundaryDraft(nextBoundary);
     setSavedMessage(null);
     setSaveError(null);
     void load(nextBoundary);
   };
 
   const handleBoundaryChange = (nextBoundary: string) => {
-    setBoundaryDraft(nextBoundary);
-    if (!isCompleteBoundaryDate(nextBoundary) || nextBoundary === boundary) return;
+    // Picking the day already selected is not a change.
+    if (!nextBoundary || nextBoundary === boundary) return;
     const loaded = loadedInputsRef.current;
     const dirty =
       quantityInput !== loaded.quantity ||
@@ -304,15 +309,15 @@ export const RecurringUnitSchedulePanel: React.FC<RecurringUnitSchedulePanelProp
     applyBoundary(nextBoundary);
   };
 
-  const handleDiscardConfirm = () => {
-    if (pendingBoundary) applyBoundary(pendingBoundary);
+  const cancelBoundaryChange = () => {
     setPendingBoundary(null);
+    setBoundaryPickerResetKey((key) => key + 1);
   };
 
-  const handleDiscardCancel = () => {
-    if (pendingBoundary === null) return;
+  const confirmBoundaryChange = () => {
+    const next = pendingBoundary;
     setPendingBoundary(null);
-    setBoundaryDraft(boundary);
+    if (next) applyBoundary(next);
   };
 
   // Only the revision stored at exactly the selected boundary is authoritative
@@ -383,7 +388,7 @@ export const RecurringUnitSchedulePanel: React.FC<RecurringUnitSchedulePanelProp
         t('contractLines.recurringSchedule.saved', {
           defaultValue: 'Scheduled: {{quantity}} effective {{date}}.',
           quantity,
-          date: standingBoundary,
+          date: formatDay(standingBoundary),
         }),
       );
       await load(standingBoundary);
@@ -427,7 +432,7 @@ export const RecurringUnitSchedulePanel: React.FC<RecurringUnitSchedulePanelProp
     currentSubtotalCents !== null && proposedSubtotalCents !== null
       ? proposedSubtotalCents - currentSubtotalCents
       : null;
-  const coveredEndLabel = effective?.coveredEnd ?? t('contractLines.recurringSchedule.openPeriod', { defaultValue: 'next boundary' });
+  const coveredEndLabel = formatDay(effective?.coveredEnd) ?? t('contractLines.recurringSchedule.openPeriod', { defaultValue: 'next boundary' });
 
   // Mid-period (opt-in) quantity-only true-up. The standing change begins at
   // the selected boundary; the affected period is the one containing the
@@ -536,7 +541,7 @@ export const RecurringUnitSchedulePanel: React.FC<RecurringUnitSchedulePanelProp
             {t('contractLines.recurringSchedule.existingRevisionNotice', {
               defaultValue:
                 'A scheduled change is already in force from {{date}}. Saving again at this same boundary replaces it (version {{version}}); earlier periods stay unchanged.',
-              date: effective.effectivePeriodStart ?? boundary,
+              date: formatDay(effective.effectivePeriodStart ?? boundary),
               version: effective.version ?? 1,
             })}
           </AlertDescription>
@@ -562,12 +567,16 @@ export const RecurringUnitSchedulePanel: React.FC<RecurringUnitSchedulePanelProp
               defaultValue: 'Service pricing and measurement changes effective from',
             })}
           </Label>
-          <Input
+          {/* LEVERAGE: friction datetimefield-controlled-revert — DateTimeField does not resync its text when a controlled parent rejects a commit; remount forces it. Engine fix: resync dateText to value after commit when value did not adopt it. */}
+          <DatePicker
             id={`recurring-effective-${configId}`}
-            type="date"
-            value={midPeriod && midPeriodContext ? standingBoundary : boundaryDraft}
+            key={`recurring-effective-${configId}-${boundaryPickerResetKey}`}
+            label={t('contractLines.services.semanticsEffectiveFrom', {
+              defaultValue: 'Service pricing and measurement changes effective from',
+            })}
+            value={toCalendarDisplayDate(standingBoundary) ?? undefined}
             disabled={disabled || saving || loading || (midPeriod && !!midPeriodContext)}
-            onChange={(event) => handleBoundaryChange(event.target.value)}
+            onChange={(date) => handleBoundaryChange(toCalendarDateString(date) ?? '')}
             className="mt-1"
           />
         </div>
@@ -679,13 +688,13 @@ export const RecurringUnitSchedulePanel: React.FC<RecurringUnitSchedulePanelProp
             <Label htmlFor={`recurring-mid-period-date-${configId}`} className="text-xs uppercase tracking-wide text-muted-foreground">
               {t('contractLines.recurringSchedule.midPeriodDate', { defaultValue: 'Quantity changes on' })}
             </Label>
-            <Input
+            <DatePicker
               id={`recurring-mid-period-date-${configId}`}
-              type="date"
-              value={midPeriodDate}
+              label={t('contractLines.recurringSchedule.midPeriodDate', { defaultValue: 'Quantity changes on' })}
+              value={toCalendarDisplayDate(midPeriodDate) ?? undefined}
               disabled={disabled || saving || loading}
-              onChange={(event) => {
-                setMidPeriodDate(event.target.value);
+              onChange={(date) => {
+                setMidPeriodDate(toCalendarDateString(date) ?? '');
                 setSavedMessage(null);
               }}
               className="mt-1 max-w-[12rem]"
@@ -710,8 +719,8 @@ export const RecurringUnitSchedulePanel: React.FC<RecurringUnitSchedulePanelProp
             <p>
               {t('contractLines.recurringSchedule.midPeriodAffected', {
                 defaultValue: 'Affected period {{start}} to {{end}} changes by {{delta}} units.',
-                start: affectedStart,
-                end: affectedEnd,
+                start: formatDay(affectedStart),
+                end: formatDay(affectedEnd),
                 delta: midPeriodStandingDelta,
               })}
             </p>
@@ -734,7 +743,7 @@ export const RecurringUnitSchedulePanel: React.FC<RecurringUnitSchedulePanelProp
               {t('contractLines.recurringSchedule.midPeriodStanding', {
                 defaultValue:
                   'From {{boundary}} the standing quantity is {{quantity}}. The true-up lands on the next eligible editable draft (with applicable discounts and tax).',
-                boundary: standingBoundary,
+                boundary: formatDay(standingBoundary),
                 quantity: proposedQuantity,
               })}
             </p>
@@ -747,7 +756,7 @@ export const RecurringUnitSchedulePanel: React.FC<RecurringUnitSchedulePanelProp
           <p>
             {t('contractLines.recurringSchedule.currentEffective', {
               defaultValue: 'In force for periods from {{date}}: {{quantity}} × {{rate}} ({{source}}).',
-              date: effective.effectivePeriodStart ?? boundary,
+              date: formatDay(effective.effectivePeriodStart ?? boundary),
               quantity: effective.quantity,
               rate: formatRate(currentResolvedRateCents),
               source:
@@ -759,7 +768,7 @@ export const RecurringUnitSchedulePanel: React.FC<RecurringUnitSchedulePanelProp
           <p className="text-xs text-[rgb(var(--color-text-600))]">
             {t('contractLines.recurringSchedule.coverage', {
               defaultValue: 'Covers {{start}} to {{end}} ({{currency}}).',
-              start: effective.coveredStart ?? boundary,
+              start: formatDay(effective.coveredStart ?? boundary),
               end: coveredEndLabel,
               currency: effective.currencyCode ?? currencyCode,
             })}
@@ -770,7 +779,7 @@ export const RecurringUnitSchedulePanel: React.FC<RecurringUnitSchedulePanelProp
                 defaultValue:
                   'Catalog price {{priceId}} effective {{effectiveDate}}; inherited, so a later catalog change follows automatically.',
                 priceId: effective.catalogPriceId ?? t('common.empty.notAvailable', { defaultValue: 'N/A' }),
-                effectiveDate: effective.catalogEffectiveDate ?? t('common.empty.notAvailable', { defaultValue: 'N/A' }),
+                effectiveDate: formatDay(effective.catalogEffectiveDate) ?? t('common.empty.notAvailable', { defaultValue: 'N/A' }),
               })}
             </p>
           )}
@@ -786,7 +795,7 @@ export const RecurringUnitSchedulePanel: React.FC<RecurringUnitSchedulePanelProp
               {t('contractLines.recurringSchedule.invoiceImpact', {
                 defaultValue:
                   'From {{date}} the recurring subtotal for this item changes by {{delta}} to {{total}} (before discounts and tax). Earlier billed periods are unchanged.',
-                date: standingBoundary,
+                date: formatDay(standingBoundary),
                 delta: formatCurrency(deltaCents / 100, effective.currencyCode ?? currencyCode),
                 total: formatCurrency((proposedSubtotalCents ?? 0) / 100, effective.currencyCode ?? currencyCode),
               })}
@@ -811,14 +820,14 @@ export const RecurringUnitSchedulePanel: React.FC<RecurringUnitSchedulePanelProp
             ? t('contractLines.recurringSchedule.invoiceWindowMidPeriod', {
                 defaultValue:
                   'Estimated client invoice for {{start}} to {{end}}. Includes other items in this billing window and the one-time mid-period true-up.',
-                start: impact.windowStart,
-                end: impact.windowEnd,
+                start: formatDay(impact.windowStart),
+                end: formatDay(impact.windowEnd),
               })
             : t('contractLines.recurringSchedule.invoiceWindowBoundaryOnly', {
                 defaultValue:
                   'Estimated client invoice for {{start}} to {{end}}. Includes other items in this billing window; no mid-period adjustment.',
-                start: impact.windowStart,
-                end: impact.windowEnd,
+                start: formatDay(impact.windowStart),
+                end: formatDay(impact.windowEnd),
               })}</p>
           <p>{t('contractLines.recurringSchedule.invoiceTotals', { defaultValue: 'Subtotal after discounts: {{subtotal}}. Tax: {{tax}}. Total: {{before}} → {{after}}.', subtotal: formatCurrency(impact.after.subtotal / 100, impact.after.currencyCode), tax: formatCurrency(impact.after.tax / 100, impact.after.currencyCode), before: formatCurrency(impact.before.total / 100, impact.before.currencyCode), after: formatCurrency(impact.after.total / 100, impact.after.currencyCode) })}</p>
           {/* Show the resolved true-up (charge or credit) and any other credit
@@ -912,12 +921,12 @@ export const RecurringUnitSchedulePanel: React.FC<RecurringUnitSchedulePanelProp
                 return (
                   <tr key={revision.revision_id} className="border-t border-[rgb(var(--color-border-100))]">
                     <td className="py-1 pr-3">
-                      {revision.effective_period_start}
+                      {formatDay(revision.effective_period_start)}
                       {revision.mid_period_effective_date && (
                         <span className="block text-xs text-[rgb(var(--color-text-600))]">
                           {t('contractLines.recurringSchedule.midPeriodFrom', {
                             defaultValue: 'true-up from {{date}}',
-                            date: revision.mid_period_effective_date,
+                            date: formatDay(revision.mid_period_effective_date),
                           })}
                         </span>
                       )}
@@ -969,7 +978,7 @@ export const RecurringUnitSchedulePanel: React.FC<RecurringUnitSchedulePanelProp
             <tbody>
               {history.map((row) => (
                 <tr key={row.history_id} className="border-t border-[rgb(var(--color-border-100))]">
-                  <td className="py-1 pr-3">{row.effective_period_start}</td>
+                  <td className="py-1 pr-3">{formatDay(row.effective_period_start)}</td>
                   <td className="py-1 pr-3">{row.quantity}</td>
                   <td className="py-1 pr-3">
                     {row.price_policy === 'catalog'
@@ -987,14 +996,14 @@ export const RecurringUnitSchedulePanel: React.FC<RecurringUnitSchedulePanelProp
       <ConfirmationDialog
         id={`recurring-discard-dirty-${configId}`}
         isOpen={pendingBoundary !== null}
-        onClose={handleDiscardCancel}
-        onConfirm={handleDiscardConfirm}
+        onClose={cancelBoundaryChange}
+        onConfirm={confirmBoundaryChange}
         title={t('contractLines.recurringSchedule.discardDirtyTitle', { defaultValue: 'Discard unsaved edit?' })}
         message={t('contractLines.recurringSchedule.discardDirty', {
           defaultValue:
             'Changing the effective date reloads the values in force and discards your unsaved edit. Continue?',
         })}
-        confirmLabel={t('contractLines.recurringSchedule.discardDirtyConfirm', { defaultValue: 'Change date' })}
+        confirmLabel={t('contractLines.recurringSchedule.discardDirtyConfirm', { defaultValue: 'Discard and reload' })}
         cancelLabel={t('common.actions.cancel', { defaultValue: 'Cancel' })}
       />
     </div>

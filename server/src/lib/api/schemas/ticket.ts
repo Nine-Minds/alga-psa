@@ -368,6 +368,53 @@ function validateScheduledCommentPublication(
   }
 }
 
+/** Abuse ceiling shared with the normalizer: cc + bcc per comment. */
+export const MAX_TICKET_COMMENT_EMAIL_RECIPIENTS = 20;
+
+// One-off Cc/Bcc are a public-reply feature. Internal notes never email
+// anyone outside the MSP, so the API rejects the fields rather than
+// silently dropping them.
+function validateTicketCommentEmailRecipients(
+  data: { cc?: string[]; bcc?: string[]; is_internal?: boolean },
+  ctx: z.RefinementCtx
+): void {
+  const total = (data.cc?.length ?? 0) + (data.bcc?.length ?? 0);
+  if (total === 0) {
+    return;
+  }
+  if (data.is_internal) {
+    for (const field of ['cc', 'bcc'] as const) {
+      if ((data[field]?.length ?? 0) > 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: [field],
+          message: 'Cc/Bcc recipients cannot be added to an internal note',
+        });
+      }
+    }
+  }
+  // Counted the way the normalizer counts: distinct addresses, case-insensitive,
+  // with the error on the list that carried the address over the ceiling.
+  const seen = new Set<string>();
+  for (const field of ['cc', 'bcc'] as const) {
+    for (const entry of data[field] ?? []) {
+      const key = entry.trim().toLowerCase();
+      if (!key || seen.has(key)) {
+        continue;
+      }
+      if (seen.size >= MAX_TICKET_COMMENT_EMAIL_RECIPIENTS) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: [field],
+          message: `At most ${MAX_TICKET_COMMENT_EMAIL_RECIPIENTS} Cc and Bcc recipients are allowed on one comment`,
+        });
+        return;
+      }
+      seen.add(key);
+    }
+  }
+}
+
 // Ticket comment schemas
 export const createTicketCommentSchema = z.object({
   comment_text: z.string()
@@ -385,8 +432,13 @@ export const createTicketCommentSchema = z.object({
   external_links: inlineTicketExternalLinksSchema,
   scheduled_publish_at: z.string().datetime({ offset: true }).optional(),
   scheduled_publish_tz: z.string().min(1).max(64).optional(),
+  cc: z.array(z.string().email()).max(MAX_TICKET_COMMENT_EMAIL_RECIPIENTS).optional(),
+  bcc: z.array(z.string().email()).max(MAX_TICKET_COMMENT_EMAIL_RECIPIENTS).optional(),
   ...ticketNotificationSuppressionSchema,
-}).superRefine(validateTicketNotificationSuppression).superRefine(validateScheduledCommentPublication);
+})
+  .superRefine(validateTicketNotificationSuppression)
+  .superRefine(validateScheduledCommentPublication)
+  .superRefine(validateTicketCommentEmailRecipients);
 
 export const updateTicketCommentSchema = z.object({
   comment_text: z.string()
@@ -400,6 +452,22 @@ export const updateTicketCommentSchema = z.object({
 
 export type UpdateTicketCommentData = z.infer<typeof updateTicketCommentSchema>;
 export type CreateTicketMaterialData = z.infer<typeof createTicketMaterialSchema>;
+
+/**
+ * One-off recipient as stored on the comment and returned on comment reads.
+ * Client-portal callers get the `bcc` list emptied before serialization.
+ */
+export const ticketCommentEmailRecipientSchema = z.object({
+  email: z.string().email(),
+  name: z.string().optional(),
+  contact_id: uuidSchema.optional(),
+  user_id: uuidSchema.optional(),
+});
+
+export const ticketCommentEmailRecipientsSchema = z.object({
+  cc: z.array(ticketCommentEmailRecipientSchema),
+  bcc: z.array(ticketCommentEmailRecipientSchema),
+});
 
 export const ticketCommentResponseSchema = z.object({
   comment_id: uuidSchema,
@@ -423,7 +491,10 @@ export const ticketCommentResponseSchema = z.object({
   created_by_name: z.string().nullable().optional(),
   author_contact_id: uuidSchema.nullable().optional(),
   author_contact_name: z.string().nullable().optional(),
-  author_contact_email: z.string().nullable().optional()
+  author_contact_email: z.string().nullable().optional(),
+
+  // One-off Cc/Bcc carried by this comment's email, null when none were set.
+  email_recipients: ticketCommentEmailRecipientsSchema.nullable().optional()
 });
 
 // Ticket bulk operations schemas

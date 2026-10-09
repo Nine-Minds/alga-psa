@@ -7,6 +7,7 @@ import {
   withTenantTransaction,
   writeRunAudit,
 } from './shared';
+import { withWorkflowPicker } from '../../jsonSchemaMetadata';
 
 const stockUnitStatusSchema = z.enum([
   'in_stock',
@@ -39,7 +40,7 @@ const unitSummarySchema = z.object({
   status: stockUnitStatusSchema,
   location_id: uuidSchema.nullable(),
   location_name: z.string().nullable(),
-  client_id: uuidSchema.nullable(),
+  client_id: withWorkflowPicker(uuidSchema.nullable(), 'Client id', 'client'),
   client_name: z.string().nullable(),
 });
 

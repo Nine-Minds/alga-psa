@@ -86,6 +86,25 @@ describe('nx workspace', () => {
     }
   });
 
+  it('plans standalone integrations builds without pulling in the server', { timeout: 180_000 }, async () => {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'alga-nx-integrations-build-'));
+    try {
+      const outFile = path.join(tmpDir, 'tasks.json');
+      await runNx(['run', '@alga-psa/integrations:build', '--graph', outFile]);
+      const graph = JSON.parse(fs.readFileSync(outFile, 'utf8'));
+      const targets = Object.values(graph.tasks.tasks).map((task: any) => task.target);
+      expect(targets).toContainEqual(expect.objectContaining({
+        project: '@alga-psa/integrations', target: 'build',
+      }));
+      // Cross-implementation calendar tests belong to the application layer:
+      // importing server implementations from the package creates build cycles.
+      expect(targets.some(target => target.project === 'server')).toBe(false);
+      expect(targets.some(target => target.project === 'sebastian-ee')).toBe(false);
+    } finally {
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+
   it('runs the alga-module generator in dry-run mode', { timeout: 120_000 }, async () => {
     const output = await runNx([
       'g',

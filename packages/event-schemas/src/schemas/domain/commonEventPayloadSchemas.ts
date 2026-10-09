@@ -29,6 +29,10 @@ export const BaseDomainEventPayloadSchema = z.object({
   actorUserId: uuidSchema('Actor User ID').optional(),
   actorContactId: uuidSchema('Actor Contact ID').optional(),
   actorType: actorTypeSchema.optional(),
+  // Provenance when a workflow run caused the event. The lineage is the ancestry of workflow ids
+  // that led here; the event-stream worker uses it to refuse a workflow already in the chain.
+  workflowRunId: uuidSchema('Workflow Run ID').optional(),
+  workflowLineage: z.array(z.string().uuid()).describe('Workflow ids that caused this event, oldest first').optional(),
 });
 
 export const updatedFieldsSchema = z.array(z.string()).describe('Dot-paths of updated fields').optional();

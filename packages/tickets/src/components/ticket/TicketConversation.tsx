@@ -63,6 +63,13 @@ import type { IAggregatedReaction } from '@alga-psa/types';
 import TicketNotificationSuppressionControl, {
   type TicketNotificationSuppressionValue,
 } from './TicketNotificationSuppressionControl';
+import {
+  CommentEmailRecipientsControl,
+  commentEmailRecipientsPayload,
+  useCommentEmailRecipientSuggestions,
+  useCommentEmailRecipientsDraft,
+  type CommentEmailRecipientsPayload,
+} from './CommentEmailRecipientsControl';
 
 interface TicketConversationProps {
   id?: string;
@@ -83,8 +90,14 @@ interface TicketConversationProps {
     closeStatusId?: string | null,
     options?: TicketNotificationSuppressionValue,
     schedule?: { publishAt: string; timeZone: string } | null,
+    emailRecipients?: CommentEmailRecipientsPayload,
   ) => Promise<boolean>;
-  onAddReplyComment?: (content: PartialBlock[], parentCommentId: string, isInternal: boolean) => Promise<boolean>;
+  onAddReplyComment?: (
+    content: PartialBlock[],
+    parentCommentId: string,
+    isInternal: boolean,
+    emailRecipients?: CommentEmailRecipientsPayload,
+  ) => Promise<boolean>;
   onTabChange: (tab: string) => void;
   onEdit: (conversation: IComment) => void;
   onSave: (updates: Partial<IComment>) => void;
@@ -111,6 +124,11 @@ interface TicketConversationProps {
   reactionRefreshVersion?: number;
   /** Comment-level external links keyed by comment_id (read-only chips). */
   externalLinksByCommentId?: Record<string, ITicketExternalLinkView[]>;
+  /**
+   * Opt-in per-comment Cc/Bcc on public replies. The client portal reuses this
+   * component and deliberately leaves it off.
+   */
+  allowEmailRecipients?: boolean;
 }
 
 const ALL_COMMENTS_TAB_ID = 'all-comments';
@@ -158,6 +176,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
   canViewCommentMetadataDebug = false,
   reactionRefreshVersion = 0,
   externalLinksByCommentId = {},
+  allowEmailRecipients = false,
 }) => {
   const { t } = useTranslation('features/tickets');
   const { t: tCore } = useTranslation('common');
@@ -176,6 +195,16 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
   const [reverseOrder, setReverseOrder] = useState(defaultNewestFirst);
   const [isInternalToggle, setIsInternalToggle] = useState(false);
   const [isResolutionToggle, setIsResolutionToggle] = useState(false);
+  // One-off Cc/Bcc for the comment being composed. Separate drafts for the main
+  // composer and the reply composer so one never leaks into the other.
+  const emailRecipients = useCommentEmailRecipientsDraft();
+  const replyEmailRecipients = useCommentEmailRecipientsDraft();
+  const searchEmailRecipients = useCommentEmailRecipientSuggestions(ticket.client_id);
+  const showEmailRecipients = allowEmailRecipients && !hideInternalTab;
+  // A reply inherits is_internal from its parent, so the control only appears
+  // under a public comment.
+  const showReplyEmailRecipients = (parent?: IComment | null) =>
+    showEmailRecipients && Boolean(parent) && !parent!.is_internal;
   const [isScheduleToggle, setIsScheduleToggle] = useState(false);
   const [scheduledPublishAt, setScheduledPublishAt] = useState<Date | undefined>(undefined);
   const scheduledInstant = useMemo(() => {
@@ -301,8 +330,11 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
           isScheduleToggle && !isInternalToggle && scheduledInstant
             ? { publishAt: scheduledInstant.toISOString(), timeZone: getUserTimeZone() }
             : null,
+          // Never sent with an internal note, even though the draft is kept.
+          showEmailRecipients && !isInternalToggle ? emailRecipients.payload : undefined,
         );
         if (success) {
+          emailRecipients.reset();
           setIsInternalToggle(false);
           setIsResolutionToggle(false);
           setResolutionCloseStatusId(NO_STATUS_CHANGE);
@@ -537,10 +569,38 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
             showInternalToggle={false}
             uploadFile={existingCommentUploadSession.uploadFile}
             searchMentions={searchUsersForMentions}
+            footerActions={showReplyEmailRecipients(mergedConversation) ? (
+              <>
+                <CommentEmailRecipientsControl
+                  idPrefix={`${compId}-reply-${mergedConversation.comment_id}`}
+                  variant="toggle"
+                  value={replyEmailRecipients.draft}
+                  onChange={replyEmailRecipients.setDraft}
+                  expanded={replyEmailRecipients.expanded}
+                  onExpandedChange={replyEmailRecipients.setExpanded}
+                />
+                <CommentEmailRecipientsControl
+                  idPrefix={`${compId}-reply-${mergedConversation.comment_id}`}
+                  variant="rows"
+                  value={replyEmailRecipients.draft}
+                  onChange={replyEmailRecipients.setDraft}
+                  expanded={replyEmailRecipients.expanded}
+                  onExpandedChange={replyEmailRecipients.setExpanded}
+                  searchSuggestions={searchEmailRecipients}
+                />
+              </>
+            ) : undefined}
+            submitDisabled={showReplyEmailRecipients(mergedConversation) && replyEmailRecipients.hasErrors}
             onSubmit={async ({ content, parentCommentId, isInternal }) => {
               if (existingCommentUploadSession.isUploading) return;
-              const success = await onAddReplyComment?.(content, parentCommentId, isInternal);
+              const success = await onAddReplyComment?.(
+                content,
+                parentCommentId,
+                isInternal,
+                isInternal ? undefined : replyEmailRecipients.payload,
+              );
               if (success) {
+                replyEmailRecipients.reset();
                 existingCommentUploadSession.resetDraftTracking();
                 setReplyingToCommentId(null);
               }
@@ -820,6 +880,19 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
             )}
           </div>
         )}
+        {showEmailRecipients && (
+          <CommentEmailRecipientsControl
+            idPrefix={compId}
+            variant="rows"
+            value={emailRecipients.draft}
+            onChange={emailRecipients.setDraft}
+            isInternal={isInternalToggle}
+            disabled={isSubmitting}
+            expanded={emailRecipients.expanded}
+            onExpandedChange={emailRecipients.setExpanded}
+            searchSuggestions={searchEmailRecipients}
+          />
+        )}
         <Suspense fallback={<RichTextEditorSkeleton height="200px" title={t('conversation.commentEditor', 'Comment Editor')} />}>
           <TextEditor
             allowFileAttachments
@@ -830,6 +903,18 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
             onContentChange={onNewCommentContentChange}
             searchMentions={searchUsersForMentions}
             uploadFile={composeUploadSession.uploadFile}
+            footerActions={showEmailRecipients ? (
+              <CommentEmailRecipientsControl
+                idPrefix={compId}
+                variant="toggle"
+                value={emailRecipients.draft}
+                onChange={emailRecipients.setDraft}
+                isInternal={isInternalToggle}
+                disabled={isSubmitting}
+                expanded={emailRecipients.expanded}
+                onExpandedChange={emailRecipients.setExpanded}
+              />
+            ) : undefined}
             autoFocus
           />
         </Suspense>
@@ -837,7 +922,12 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
           <Button
             id={`${compId}-add-comment-btn`}
             onClick={handleSubmitComment}
-            disabled={isSubmitting || composeUploadSession.isUploading || !scheduleIsValid}
+            disabled={
+              isSubmitting
+              || composeUploadSession.isUploading
+              || !scheduleIsValid
+              || (showEmailRecipients && !isInternalToggle && emailRecipients.hasErrors)
+            }
           >
             {isSubmitting ? tCore('common.loading', 'Loading...') : isScheduleToggle ? t('conversation.schedule', 'Schedule') : t('conversation.addComment', 'Add Comment')}
           </Button>
@@ -932,10 +1022,41 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
         initialInternal={Boolean(openPanelComment?.is_internal ?? openPanelThreadGroup?.root.is_internal)}
         showInternalToggle={false}
         uploadFile={existingCommentUploadSession.uploadFile}
+        replyFooterActions={showReplyEmailRecipients(openPanelComment ?? openPanelThreadGroup?.root) ? (
+          <>
+            <CommentEmailRecipientsControl
+              idPrefix={`${compId}-comment-thread-drawer`}
+              variant="toggle"
+              value={replyEmailRecipients.draft}
+              onChange={replyEmailRecipients.setDraft}
+              expanded={replyEmailRecipients.expanded}
+              onExpandedChange={replyEmailRecipients.setExpanded}
+            />
+            <CommentEmailRecipientsControl
+              idPrefix={`${compId}-comment-thread-drawer`}
+              variant="rows"
+              value={replyEmailRecipients.draft}
+              onChange={replyEmailRecipients.setDraft}
+              expanded={replyEmailRecipients.expanded}
+              onExpandedChange={replyEmailRecipients.setExpanded}
+              searchSuggestions={searchEmailRecipients}
+            />
+          </>
+        ) : undefined}
+        replySubmitDisabled={
+          showReplyEmailRecipients(openPanelComment ?? openPanelThreadGroup?.root)
+          && replyEmailRecipients.hasErrors
+        }
         onSubmitReply={async ({ content, parentCommentId, isInternal }) => {
           if (existingCommentUploadSession.isUploading) return;
-          const success = await onAddReplyComment?.(content, parentCommentId, isInternal);
+          const success = await onAddReplyComment?.(
+            content,
+            parentCommentId,
+            isInternal,
+            isInternal ? undefined : replyEmailRecipients.payload,
+          );
           if (success) {
+            replyEmailRecipients.reset();
             existingCommentUploadSession.resetDraftTracking();
             closeCommentThreadPanel();
           }

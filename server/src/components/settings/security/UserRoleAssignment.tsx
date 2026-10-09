@@ -188,7 +188,9 @@ export default function UserRoleAssignment() {
     },
     {
       title: t('security.userRoles.table.actions'),
+      id: 'role_actions',
       dataIndex: 'user_id',
+      sortable: false,
       width: '20%',
       render: (userId) => {
         const roles = getFilteredUserRoles(userId);

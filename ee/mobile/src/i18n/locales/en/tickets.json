@@ -302,7 +302,13 @@
     "deleteTitle": "Delete this comment?",
     "deleteBody": "This cannot be undone.",
     "deleteConfirm": "Delete",
-    "deleteFailed": "Unable to delete the comment."
+    "deleteFailed": "Unable to delete the comment.",
+    "ccBcc": "Cc/Bcc",
+    "ccBccCount": "Cc/Bcc ({{count}})",
+    "cc": "Cc",
+    "bcc": "Bcc",
+    "recipientPlaceholder": "name@example.com",
+    "recipientInvalid": "Not an email address: {{entries}}"
   },
   "documents": {
     "title": "Documents",
@@ -552,6 +558,11 @@
   "timeEntry": {
     "title": "Add time entry",
     "serviceLabel": "Service",
+    "serviceSource": {
+      "task": "Default from task",
+      "phase": "Default from phase",
+      "project": "Default from project"
+    },
     "selectService": "Select a service…",
     "loadingServices": "Loading services…",
     "noServices": "No services available.",

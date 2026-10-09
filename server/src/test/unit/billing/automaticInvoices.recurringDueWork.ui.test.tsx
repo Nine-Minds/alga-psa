@@ -236,7 +236,7 @@ vi.mock('@alga-psa/ui/components/DataTable', () => ({
 
     return (
       <div>
-        <table data-testid={id || 'data-table'}>
+        <table data-testid={id || 'data-table'} data-current-page={currentPage ?? 1}>
           <tbody>
             {data.map((row: any, rowIndex: number) => (
               <tr key={row.candidateKey ?? row.rowKey ?? row.executionIdentityKey ?? row.invoiceId ?? row.billing_cycle_id ?? rowIndex}>
@@ -927,17 +927,24 @@ describe('AutomaticInvoices recurring due-work UI', () => {
       approvalBlockedEntryCount: 0,
     };
 
-    getAvailableRecurringDueWorkMock.mockResolvedValue({
-      invoiceCandidates: [
-        buildInvoiceCandidate([blockedRow], {
-          candidateKey: 'candidate-blocked-filtered',
-          approvalBlockedEntryCount: 1,
-        }),
-        buildInvoiceCandidate([readyRow], {
-          candidateKey: 'candidate-ready-filtered',
-          approvalBlockedEntryCount: 0,
-        }),
-      ],
+    // The client filter runs on the server: emulate it in the mocked action.
+    const allCandidates = [
+      buildInvoiceCandidate([blockedRow], {
+        candidateKey: 'candidate-blocked-filtered',
+        approvalBlockedEntryCount: 1,
+      }),
+      buildInvoiceCandidate([readyRow], {
+        candidateKey: 'candidate-ready-filtered',
+        approvalBlockedEntryCount: 0,
+      }),
+    ];
+    getAvailableRecurringDueWorkMock.mockImplementation(async (options: any) => {
+      const needle = (options?.clientName ?? '').toLowerCase();
+      const matching = needle
+        ? allCandidates.filter((candidate) => (candidate.clientName ?? '').toLowerCase().includes(needle))
+        : allCandidates;
+      return {
+      invoiceCandidates: matching,
       materializationGaps: [
         {
           executionIdentityKey: 'gap-blocked-filtered',
@@ -955,13 +962,23 @@ describe('AutomaticInvoices recurring due-work UI', () => {
           detail: 'Recurring service periods were not materialized for this canonical client-cadence execution window.',
         },
       ],
-      total: 2,
+      total: matching.length,
       page: 1,
       pageSize: 10,
       totalPages: 1,
+      };
     });
 
     render(<AutomaticInvoices onGenerateSuccess={vi.fn()} />);
+
+    // Deep link: the very first fetch already carries the filter.
+    await waitFor(() => {
+      expect(getAvailableRecurringDueWorkMock).toHaveBeenCalled();
+    });
+    expect(getAvailableRecurringDueWorkMock.mock.calls[0]![0]).toMatchObject({
+      page: 1,
+      clientName: 'Blocked',
+    });
 
     const filterInput = await screen.findByDisplayValue('Blocked');
     expect(filterInput).toBeInTheDocument();
@@ -990,6 +1007,88 @@ describe('AutomaticInvoices recurring due-work UI', () => {
 
     const liveGapPanel = screen.getByTestId('recurring-materialization-gap-panel');
     expect(within(liveGapPanel).getByText('Repair Co')).toBeInTheDocument();
+  });
+
+  it('typing in Filter by client after paging refetches page 1 with clientName and never pairs the new page with the old filter', async () => {
+    getAvailableRecurringDueWorkMock.mockResolvedValue({
+      invoiceCandidates: [buildInvoiceCandidate([createClientRow()])],
+      materializationGaps: [],
+      total: 25,
+      page: 1,
+      pageSize: 10,
+      totalPages: 3,
+    });
+
+    render(<AutomaticInvoices onGenerateSuccess={vi.fn()} />);
+    await screen.findByText('Acme Co');
+
+    fireEvent.click(screen.getAllByRole('button', { name: /Next Page/i })[0]!);
+    await waitFor(() => {
+      expect(getAvailableRecurringDueWorkMock).toHaveBeenCalledWith(expect.objectContaining({ page: 2 }));
+    });
+    await screen.findByText('Acme Co');
+
+    getAvailableRecurringDueWorkMock.mockClear();
+    const filterInput = document.getElementById('filter-clients-input') as HTMLInputElement;
+    expect(filterInput).not.toBeNull();
+    fireEvent.change(filterInput, { target: { value: ' Wonder ' } });
+
+    await waitFor(() => {
+      expect(getAvailableRecurringDueWorkMock).toHaveBeenCalledWith({
+        page: 1,
+        pageSize: 10,
+        dateRange: { from: undefined, to: expect.any(String) },
+        clientName: 'Wonder',
+      });
+    });
+    // No fetch for (old filter, page 1) or (new filter, page 2) while debouncing.
+    expect(getAvailableRecurringDueWorkMock).toHaveBeenCalledTimes(1);
+    await waitFor(() => {
+      expect(
+        screen.getAllByTestId('automatic-invoices-table').at(-1)!.getAttribute('data-current-page'),
+      ).toBe('1');
+    });
+  });
+
+  it('a filter typed and cleared within the debounce window triggers no fetch and keeps page 2 consistent', async () => {
+    getAvailableRecurringDueWorkMock.mockImplementation(async (options: any) => ({
+      invoiceCandidates: [
+        buildInvoiceCandidate(
+          [options?.page === 2 ? createContractRow() : createClientRow()],
+        ),
+      ],
+      materializationGaps: [],
+      total: 25,
+      page: options?.page ?? 1,
+      pageSize: 10,
+      totalPages: 3,
+    }));
+
+    render(<AutomaticInvoices onGenerateSuccess={vi.fn()} />);
+    await screen.findByText('Acme Co');
+    fireEvent.click(screen.getAllByRole('button', { name: /Next Page/i })[0]!);
+    await waitFor(() => {
+      expect(getAvailableRecurringDueWorkMock).toHaveBeenCalledWith(expect.objectContaining({ page: 2 }));
+    });
+    await screen.findByText('Zenith Health');
+    const readyGridPage = () =>
+      screen.getAllByTestId('automatic-invoices-table').at(-1)!.getAttribute('data-current-page');
+    expect(readyGridPage()).toBe('2');
+
+    getAvailableRecurringDueWorkMock.mockClear();
+    const filterInput = document.getElementById('filter-clients-input') as HTMLInputElement;
+    fireEvent.change(filterInput, { target: { value: 'W' } });
+    fireEvent.change(filterInput, { target: { value: '' } });
+    await new Promise((resolve) => setTimeout(resolve, 450));
+
+    expect(getAvailableRecurringDueWorkMock).not.toHaveBeenCalled();
+    expect(readyGridPage()).toBe('2');
+    // Page 2 is still the current page and still shows page 2's rows.
+    expect(screen.getByText('Zenith Health')).toBeInTheDocument();
+    expect(screen.queryByText('Acme Co')).toBeNull();
+    expect(getAvailableRecurringDueWorkMock).not.toHaveBeenCalledWith(
+      expect.objectContaining({ clientName: expect.anything() }),
+    );
   });
 
   it('T004: AutomaticInvoices loads through the real due-work action in a migrated schema with no `client_contract_lines` table', async () => {

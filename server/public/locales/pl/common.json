@@ -186,6 +186,10 @@
         "updateComments": "Niewystarczające uprawnienia do aktualizacji komentarzy",
         "deleteComments": "Niewystarczające uprawnienia do usuwania komentarzy",
         "viewDocuments": "Niewystarczające uprawnienia do wyświetlania dokumentów zgłoszenia"
+      },
+      "projects": {
+        "read": "Niewystarczające uprawnienia do przeglądania projektów",
+        "readDetails": "Niewystarczające uprawnienia do przeglądania szczegółów projektu"
       }
     },
     "tags": {
@@ -293,7 +297,8 @@
       "clientPortal": "Utworzone przez portal klienta",
       "inboundEmail": "Utworzone przez e-mail przychodzący",
       "api": "Utworzone przez API",
-      "other": "Utworzone przez inne źródło"
+      "other": "Utworzone przez inne źródło",
+      "recurring": "Utworzono przez harmonogram cykliczny"
     }
   },
   "time": {
@@ -812,7 +817,16 @@
       "fileError": "Nie udało się przesłać pliku",
       "associatedEntityTypeLabel": "Powiąż z",
       "noAssociation": "Brak powiązania",
-      "selectAssociatedEntityError": "Przed przesłaniem wybierz powiązany obiekt."
+      "selectAssociatedEntityError": "Przed przesłaniem wybierz powiązany obiekt.",
+      "uploaded": "Przesłano",
+      "failed": "Niepowodzenie",
+      "failureSummary": "Nie udało się przesłać {{failed}} z {{total}} plików. Sprawdź błędy poniżej.",
+      "outcomeSummary": "Przesłano {{succeeded}} z {{total}} plików",
+      "emptyDropTitle": "Nie otrzymano plików",
+      "emptyDropMessage": "Nie otrzymano żadnych plików. Zapisz załącznik lub wiadomość e-mail na komputerze, a następnie przeciągnij zapisany plik tutaj albo użyj opcji „Przeglądaj pliki”.",
+      "uploadInProgress": "Przesyłanie jest już w toku. Poczekaj na jego zakończenie, zanim dodasz kolejne pliki.",
+      "refreshFailed": "Twoje pliki zostały przesłane, ale nie udało się odświeżyć listy dokumentów. Odśwież stronę, aby je zobaczyć.",
+      "clearResults": "Wyczyść wyniki"
     },
     "folders": {
       "root": "Główny",
@@ -1368,9 +1382,11 @@
   },
   "timezonePicker": {
     "selectPlaceholder": "Wybierz strefę czasową...",
-    "searchPlaceholder": "Wyszukaj strefy czasowe lub skróty (np. EST)...",
+    "searchPlaceholder": "Szukaj według miasta, nazwy lub skrótu (np. New York, EST)...",
     "noResults": "Nie znaleziono stref czasowych",
     "matchingGroup": "Wyniki dla \"{{query}}\"",
+    "noDst": "Bez czasu letniego",
+    "noDaylightSavingHint": "Brak czasu letniego. Zegary przez cały rok pokazują {{offset}}.",
     "regions": {
       "Africa": "Afryka",
       "America": "Ameryka",
@@ -1762,5 +1778,9 @@
     "customPlaceholder": "Nazwij tę jednostkę",
     "register": "Dodaj",
     "selectPlaceholder": "Wybierz jednostkę"
+  },
+  "emailRecipients": {
+    "remove": "Usuń {{email}}",
+    "placeholder": "Wpisz adres i naciśnij Enter"
   }
 }

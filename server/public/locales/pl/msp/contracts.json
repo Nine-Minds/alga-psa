@@ -642,7 +642,7 @@
       "invoiceImpact": "Od {{date}} cykliczna suma częściowa tej pozycji zmienia się o {{delta}} do {{total}} (przed rabatami i podatkiem). Wcześniej zafakturowane okresy pozostają bez zmian.",
       "discardDirty": "Zmiana daty wejścia w życie ponownie wczyta obowiązujące wartości i odrzuci niezapisaną edycję. Kontynuować?",
       "discardDirtyTitle": "Odrzucić niezapisaną edycję?",
-      "discardDirtyConfirm": "Zmień datę",
+      "discardDirtyConfirm": "Odrzuć i wczytaj ponownie",
       "invalidQuantity": "Ilość musi być liczbą całkowitą równą 0 lub większą.",
       "invalidRate": "Wprowadź cenę jednostkową równą 0 lub większą albo przełącz na cenę katalogową.",
       "saved": "Zaplanowano: {{quantity}} od {{date}}.",
@@ -1205,7 +1205,7 @@
     "composition": {
       "addContractLinesBeforeManaging": "Dodaj linie kontraktowe do tego szablonu przed zarządzaniem usługami.",
       "additionalPlans": "Dodatkowe plany",
-      "bucketSummary": "Pakiet: {{minutes}} min • Nadwyżka ${{overage}}",
+      "bucketSummary": "Pakiet: {{minutes}} min • Nadwyżka {{overage}}",
       "closeManager": "Zamknij menedżera",
       "editRate": "Edytuj stawkę",
       "fixedFeeBundles": "Pakiety opłaty stałej",
@@ -1658,6 +1658,7 @@
       "quantityLabel": "Ilość",
       "selectServicePlaceholder": "Wybierz usługę",
       "serviceItemLabel": "Usługa {{index}}",
+      "catalogDefaultHint": "Brak ceny katalogowej w {{currency}}; używana jest domyślna stawka katalogowa.",
       "recurringQuantityLabel": "Ilość cykliczna",
       "allocationQuantityLabel": "Ilość alokacji",
       "noCurrencyPrice": "Brak ceny w walucie {{currency}} w katalogu. Podaj stawkę jednostkową."
@@ -1708,7 +1709,8 @@
       "serviceItem": "Usługa {{index}}",
       "setBucketOfHours": "Ustaw pakiet godzin",
       "noCurrencyPriceEnterRate": "Brak ceny w {{currency}} w katalogu. Wprowadź stawkę godzinową.",
-      "noCurrencyPriceWithLegacyHint": "Brak ceny w {{currency}} w katalogu. Starsza domyślna stawka: {{rate}}. Wprowadź stawkę godzinową w {{currency}}."
+      "noCurrencyPriceWithLegacyHint": "Brak ceny w {{currency}} w katalogu. Starsza domyślna stawka: {{rate}}. Wprowadź stawkę godzinową w {{currency}}.",
+      "catalogDefaultRateHint": "Brak ceny katalogowej w {{currency}}; używana jest domyślna stawka katalogowa."
     },
     "minimumBillableTime": {
       "hint": "np. 15 minut — dowolny wpis czasu krótszy od tego zostanie zaokrąglony w górę",
@@ -1768,7 +1770,8 @@
       "unitOfMeasureHint": "Wybierz jednostkę, według której rozliczana jest ta usługa.",
       "unitOfMeasurePlaceholder": "np. GB, wywołanie API, użytkownik",
       "noCurrencyPriceEnterRate": "Brak ceny w {{currency}} w katalogu. Wprowadź stawkę jednostkową.",
-      "noCurrencyPriceWithLegacyHint": "Brak ceny w {{currency}} w katalogu. Starsza domyślna stawka: {{rate}}. Wprowadź stawkę jednostkową w {{currency}}."
+      "noCurrencyPriceWithLegacyHint": "Brak ceny w {{currency}} w katalogu. Starsza domyślna stawka: {{rate}}. Wprowadź stawkę jednostkową w {{currency}}.",
+      "catalogDefaultRateHint": "Brak ceny katalogowej w {{currency}}; używana jest domyślna stawka katalogowa."
     },
     "summary": {
       "labels": {

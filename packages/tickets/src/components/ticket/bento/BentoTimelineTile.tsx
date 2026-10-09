@@ -27,6 +27,12 @@ import { searchUsersForMentions } from '@alga-psa/user-composition/actions';
 import type { IAggregatedReaction, IComment } from '@alga-psa/types';
 import CommentItem from '../CommentItem';
 import { DEFAULT_BLOCK } from '../TicketConversation';
+import {
+  CommentEmailRecipientsControl,
+  useCommentEmailRecipientSuggestions,
+  useCommentEmailRecipientsDraft,
+  type CommentEmailRecipientsPayload,
+} from '../CommentEmailRecipientsControl';
 import { useTicketRichTextUploadSession } from '../useTicketRichTextUploadSession';
 import type { TicketTimelineEntry } from '@alga-psa/shared/lib/ticketActivity';
 import { getTicketTimelineEntries } from '../../../actions/ticketActivityActions';
@@ -42,7 +48,7 @@ import { BentoTile, BentoTileEmpty } from '@alga-psa/ui/components/bento/BentoTi
 import TicketNotificationSuppressionControl, {
   type TicketNotificationSuppressionValue,
 } from '../TicketNotificationSuppressionControl';
-import { dateToWallTimeString, getUserTimeZone, zonedWallTimeToUtc } from '@alga-psa/core';
+import { dateToWallTimeString, getUserTimeZone, workedMinutes, zonedWallTimeToUtc } from '@alga-psa/core';
 
 const TextEditor = dynamic(() => import('@alga-psa/ui/editor').then((mod) => mod.TextEditor), {
   loading: () => <RichTextEditorSkeleton height="120px" />,
@@ -89,10 +95,16 @@ interface BentoTimelineTileProps {
     closeStatusId?: string | null,
     options?: TicketNotificationSuppressionValue,
     schedule?: { publishAt: string; timeZone: string } | null,
+    emailRecipients?: CommentEmailRecipientsPayload,
   ) => Promise<boolean>;
   closedStatusOptions?: { value: string; label: string }[];
   /** Threaded reply pipeline (same handler the conversation view gets). */
-  onAddReplyComment?: (content: PartialBlock[], parentCommentId: string, isInternal: boolean) => Promise<boolean>;
+  onAddReplyComment?: (
+    content: PartialBlock[],
+    parentCommentId: string,
+    isInternal: boolean,
+    emailRecipients?: CommentEmailRecipientsPayload,
+  ) => Promise<boolean>;
   /** Server-started non-comment timeline entries; resolved via use() so the tile suspends into its skeleton. */
   initialEntries?: Promise<TicketTimelineEntry[]>;
   /** Server-started reactions batch (decoration; resolved in an effect, never suspends). */
@@ -119,6 +131,10 @@ interface BentoTimelineTileProps {
     documentIds: string[];
   }) => Promise<{ deletedDocumentIds: string[]; failures: Array<{ documentId: string; reason: string }> }>;
   resolveTicketAttachmentViewUrl?: (document: { document_id?: string; file_id?: string }) => string;
+  /** Opt-in per-comment Cc/Bcc on public replies (MSP only). */
+  allowEmailRecipients?: boolean;
+  /** The ticket's client, used to rank its contacts first in suggestions. */
+  clientId?: string | null;
   className?: string;
 }
 
@@ -142,6 +158,14 @@ function formatMinutes(minutes: number): string {
   const rest = minutes % 60;
   if (hours === 0) return `${rest}m`;
   return rest > 0 ? `${hours}h ${rest}m` : `${hours}h`;
+}
+
+// Theme-aware classification chip; the Badge component renders a `div`, which
+// is invalid inside the timeline row's `<p>`, so this mirrors its token classes.
+function billabilityChipClasses(isBillable: boolean): string {
+  return isBillable
+    ? 'border-[rgb(var(--badge-success-border))] bg-[rgb(var(--badge-success-bg))] text-[rgb(var(--badge-success-text))]'
+    : 'border-[rgb(var(--badge-default-border))] bg-[rgb(var(--badge-default-bg))] text-[rgb(var(--badge-default-text))]';
 }
 
 type Translator = (key: string, fallback: string, opts?: Record<string, unknown>) => string;
@@ -215,7 +239,7 @@ function eventLabel(eventType: string, t: Translator): string {
 }
 
 /** Compact one-line description of a system (activity) entry. */
-function describeSystemEntry(entry: TicketTimelineEntry, t: Translator): string {
+export function describeSystemEntry(entry: TicketTimelineEntry, t: Translator): string {
   const activity = entry.activity;
   if (!activity) return t('bento.timeline.ticketUpdated', 'Ticket updated');
   const actor = activity.actor_display_name || t('bento.timeline.systemActor', 'System');
@@ -251,6 +275,36 @@ function describeSystemEntry(entry: TicketTimelineEntry, t: Translator): string 
           '{{actor}} closed the bundle master and {{count}} child ticket(s)',
           { actor, count },
         );
+  }
+
+  // Duplicate events name the other ticket. Missing/empty number falls through to
+  // the generic event label. Mirrors TicketActivityTimeline.describeActivity.
+  // String literals, not TICKET_ACTIVITY_EVENT: that constant is only exported from
+  // the shared ticketActivity index, which also pulls in server-only writers.
+  // LEVERAGE: pattern duplicate-event-labels — these branches duplicate the
+  // TICKET_DUPLICATED_FROM/TO wording in TicketActivityTimeline.tsx; same shared
+  // event-label function as propagation-event-labels would cover both.
+  if (activity.event_type === 'TICKET_DUPLICATED_FROM') {
+    const details = (activity.details ?? {}) as { source_ticket_number?: string | number | null };
+    const number = details.source_ticket_number == null ? '' : String(details.source_ticket_number).trim();
+    if (number) {
+      return t(
+        'bento.timeline.duplicatedFrom',
+        '{{actor}} created this ticket as a duplicate of #{{number}}',
+        { actor, number },
+      );
+    }
+  }
+  if (activity.event_type === 'TICKET_DUPLICATED_TO') {
+    const details = (activity.details ?? {}) as { duplicate_ticket_number?: string | number | null };
+    const number = details.duplicate_ticket_number == null ? '' : String(details.duplicate_ticket_number).trim();
+    if (number) {
+      return t(
+        'bento.timeline.duplicatedTo',
+        '{{actor}} duplicated this ticket as #{{number}}',
+        { actor, number },
+      );
+    }
   }
 
   const changes = activity.changes ?? {};
@@ -362,6 +416,8 @@ export function BentoTimelineTile({
   uploadTicketAttachmentAction,
   deleteDraftTicketAttachmentImagesAction,
   resolveTicketAttachmentViewUrl,
+  allowEmailRecipients = false,
+  clientId,
   className,
 }: BentoTimelineTileProps) {
   const { t } = useTranslation('features/tickets');
@@ -392,6 +448,11 @@ export function BentoTimelineTile({
   const skipFirstReactionsFetch = useRef(Boolean(initialReactions));
   const [filter, setFilter] = useState<LaneFilter>('everything');
   const [order, setOrder] = useState<'asc' | 'desc'>(initialOrder);
+  // One-off Cc/Bcc for the comment being composed; separate drafts for the
+  // main composer and the inline reply.
+  const emailRecipients = useCommentEmailRecipientsDraft();
+  const replyEmailRecipients = useCommentEmailRecipientsDraft();
+  const searchEmailRecipients = useCommentEmailRecipientSuggestions(clientId);
   // Visibility and resolution are independent, same as the legacy composer: an
   // internal note can also be the resolution.
   const [composerVisibility, setComposerVisibility] = useState<'client' | 'internal'>('client');
@@ -687,8 +748,11 @@ export function BentoTimelineTile({
       isScheduleToggle && composerVisibility === 'client' && scheduledInstant
         ? { publishAt: scheduledInstant.toISOString(), timeZone: getUserTimeZone() }
         : null,
+      // Never sent with an internal note, even though the draft is kept.
+      allowEmailRecipients && composerVisibility !== 'internal' ? emailRecipients.payload : undefined,
     );
     if (success) {
+      emailRecipients.reset();
       setHasDraft(false);
       setShowComposer(false);
       setIsResolutionToggle(false);
@@ -699,7 +763,7 @@ export function BentoTimelineTile({
       composeUploadSession.resetDraftTracking();
     }
     return success;
-  }, [composeUploadSession.isUploading, onAddNewComment, composerVisibility, isResolutionToggle, resolutionCloseStatusId, notificationSuppression, isScheduleToggle, scheduledInstant, composeUploadSession]);
+  }, [composeUploadSession.isUploading, onAddNewComment, composerVisibility, isResolutionToggle, resolutionCloseStatusId, notificationSuppression, isScheduleToggle, scheduledInstant, composeUploadSession, allowEmailRecipients, emailRecipients]);
 
   const handleCancelCompose = useCallback(async () => {
     await composeUploadSession.requestDiscard();
@@ -787,6 +851,19 @@ export function BentoTimelineTile({
             : t('bento.timeline.writeReply', 'Write a reply')}
         </p>
       ) : null}
+      {allowEmailRecipients && (
+        <CommentEmailRecipientsControl
+          idPrefix={`${id}-composer`}
+          variant="rows"
+          value={emailRecipients.draft}
+          onChange={emailRecipients.setDraft}
+          isInternal={composerVisibility === 'internal'}
+          disabled={isSubmitting}
+          expanded={emailRecipients.expanded}
+          onExpandedChange={emailRecipients.setExpanded}
+          searchSuggestions={searchEmailRecipients}
+        />
+      )}
       <TextEditor
             allowFileAttachments
         {...withDataAutomationId({ id: `${id}-composer-editor` })}
@@ -799,6 +876,18 @@ export function BentoTimelineTile({
         }}
         searchMentions={searchUsersForMentions}
         uploadFile={composeUploadSession.uploadFile}
+        footerActions={allowEmailRecipients ? (
+          <CommentEmailRecipientsControl
+            idPrefix={`${id}-composer`}
+            variant="toggle"
+            value={emailRecipients.draft}
+            onChange={emailRecipients.setDraft}
+            isInternal={composerVisibility === 'internal'}
+            disabled={isSubmitting}
+            expanded={emailRecipients.expanded}
+            onExpandedChange={emailRecipients.setExpanded}
+          />
+        ) : undefined}
         autoFocus
       />
       <div className="flex items-center gap-2 mt-2">
@@ -855,7 +944,13 @@ export function BentoTimelineTile({
           id={`${id}-composer-send`}
           size="sm"
           onClick={handleSend}
-          disabled={isSubmitting || composeUploadSession.isUploading || !hasDraft || !scheduleIsValid}
+          disabled={
+            isSubmitting
+            || composeUploadSession.isUploading
+            || !hasDraft
+            || !scheduleIsValid
+            || (allowEmailRecipients && composerVisibility !== 'internal' && emailRecipients.hasErrors)
+          }
         >
           {isSubmitting
             ? t('bento.timeline.sending', 'Sending…')
@@ -1097,10 +1192,42 @@ export function BentoTimelineTile({
               isSubmitting={isSubmitting}
               uploadFile={editUploadSession.uploadFile}
               searchMentions={searchUsersForMentions}
+              footerActions={allowEmailRecipients && !replyTargetComment.is_internal ? (
+                <>
+                  <CommentEmailRecipientsControl
+                    idPrefix={`${id}-reply-${replyingToCommentId}`}
+                    variant="toggle"
+                    value={replyEmailRecipients.draft}
+                    onChange={replyEmailRecipients.setDraft}
+                    expanded={replyEmailRecipients.expanded}
+                    onExpandedChange={replyEmailRecipients.setExpanded}
+                  />
+                  <CommentEmailRecipientsControl
+                    idPrefix={`${id}-reply-${replyingToCommentId}`}
+                    variant="rows"
+                    value={replyEmailRecipients.draft}
+                    onChange={replyEmailRecipients.setDraft}
+                    expanded={replyEmailRecipients.expanded}
+                    onExpandedChange={replyEmailRecipients.setExpanded}
+                    searchSuggestions={searchEmailRecipients}
+                  />
+                </>
+              ) : undefined}
+              submitDisabled={
+                allowEmailRecipients
+                && !replyTargetComment.is_internal
+                && replyEmailRecipients.hasErrors
+              }
               onSubmit={async ({ content, parentCommentId, isInternal }) => {
                 if (editUploadSession.isUploading) return;
-                const success = await onAddReplyComment?.(content, parentCommentId, isInternal);
+                const success = await onAddReplyComment?.(
+                  content,
+                  parentCommentId,
+                  isInternal,
+                  isInternal ? undefined : replyEmailRecipients.payload,
+                );
                 if (success) {
+                  replyEmailRecipients.reset();
                   editUploadSession.resetDraftTracking();
                   setReplyingToCommentId(null);
                 }
@@ -1134,6 +1261,8 @@ function TimelineNodeView({ id, node, t }: { id: string; node: TimelineNode; t: 
   const { formatDate } = useFormatters();
   if (node.lane === 'time' && node.entry?.timeEntry) {
     const timeEntry = node.entry.timeEntry;
+    // Worked duration is elapsed time; billability is the separate billing value.
+    const isBillable = timeEntry.billable_duration > 0;
     return (
       <div id={`${id}-${node.sortId}`} className="flex gap-2.5 items-baseline pt-1">
         <p className="text-sm text-[rgb(var(--color-text-600))] min-w-0">
@@ -1142,7 +1271,14 @@ function TimelineNodeView({ id, node, t }: { id: string; node: TimelineNode; t: 
           </span>{' '}
           {t('bento.timeline.logged', 'logged')}{' '}
           <span className="chip-primary inline-block rounded px-1.5 text-xs font-semibold">
-            {formatMinutes(timeEntry.billable_duration)}
+            {formatMinutes(workedMinutes(timeEntry))}
+          </span>{' '}
+          <span
+            className={`inline-block rounded-full border px-1.5 align-middle text-[10px] font-semibold ${billabilityChipClasses(isBillable)}`}
+          >
+            {isBillable
+              ? t('timeEntries.billable', 'Billable')
+              : t('timeEntries.nonBillable', 'Non-billable')}
           </span>
           {timeEntry.notes ? <> — {timeEntry.notes}</> : null}
         </p>

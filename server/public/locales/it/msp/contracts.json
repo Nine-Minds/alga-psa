@@ -641,8 +641,8 @@
       "catalogPriceMissing": "Nessun prezzo di catalogo in {{currency}} copre questo confine, quindi una quantità positiva non può essere fatturata. Aggiungi un prezzo di catalogo in {{currency}} o scegli \"Personalizza il prezzo unitario\" prima di salvare.",
       "invoiceImpact": "Dal {{date}} il subtotale ricorrente di questo elemento varia di {{delta}} fino a {{total}} (al lordo di sconti e imposte). I periodi già fatturati restano invariati.",
       "discardDirty": "Modificando la data di decorrenza si ricaricano i valori in vigore e si annulla la modifica non salvata. Continuare?",
-      "discardDirtyTitle": "Annullare la modifica non salvata?",
-      "discardDirtyConfirm": "Cambia data",
+      "discardDirtyTitle": "Scartare la modifica non salvata?",
+      "discardDirtyConfirm": "Scarta e ricarica",
       "invalidQuantity": "La quantità deve essere un numero intero pari o superiore a 0.",
       "invalidRate": "Inserisci un prezzo unitario pari o superiore a 0, oppure passa al prezzo di catalogo.",
       "saved": "Pianificato: {{quantity}} con decorrenza {{date}}.",
@@ -1205,7 +1205,7 @@
     "composition": {
       "addContractLinesBeforeManaging": "Aggiungi linee contrattuali a questo modello prima di gestire i servizi.",
       "additionalPlans": "Piani aggiuntivi",
-      "bucketSummary": "Pacchetto: {{minutes}} min • Eccesso ${{overage}}",
+      "bucketSummary": "Pacchetto: {{minutes}} min • Eccesso {{overage}}",
       "closeManager": "Chiudi gestore",
       "editRate": "Modifica tariffa",
       "fixedFeeBundles": "Pacchetti a tariffa fissa",
@@ -1654,6 +1654,7 @@
       "quantityLabel": "Quantità",
       "selectServicePlaceholder": "Seleziona un servizio",
       "serviceItemLabel": "Servizio {{index}}",
+      "catalogDefaultHint": "Nessun prezzo di catalogo in {{currency}}; viene usato il valore predefinito del catalogo.",
       "recurringQuantityLabel": "Quantità ricorrente",
       "allocationQuantityLabel": "Quantità di allocazione",
       "noCurrencyPrice": "Nessun prezzo in {{currency}} nel catalogo. Inserisci una tariffa unitaria."
@@ -1704,7 +1705,8 @@
       "serviceItem": "Servizio {{index}}",
       "setBucketOfHours": "Imposta pacchetto di ore",
       "noCurrencyPriceEnterRate": "Nessun prezzo in {{currency}} nel catalogo. Inserisci una tariffa oraria.",
-      "noCurrencyPriceWithLegacyHint": "Nessun prezzo in {{currency}} nel catalogo. Tariffa predefinita precedente: {{rate}}. Inserisci una tariffa oraria in {{currency}}."
+      "noCurrencyPriceWithLegacyHint": "Nessun prezzo in {{currency}} nel catalogo. Tariffa predefinita precedente: {{rate}}. Inserisci una tariffa oraria in {{currency}}.",
+      "catalogDefaultRateHint": "Nessun prezzo di catalogo in {{currency}}; viene usato il valore predefinito del catalogo."
     },
     "minimumBillableTime": {
       "hint": "es., 15 minuti - qualsiasi registrazione di tempo inferiore verrà arrotondata per eccesso",
@@ -1764,7 +1766,8 @@
       "unitOfMeasureHint": "Scegli l'unità su cui questo servizio viene fatturato.",
       "unitOfMeasurePlaceholder": "es., GB, chiamata API, utente",
       "noCurrencyPriceEnterRate": "Nessun prezzo in {{currency}} nel catalogo. Inserisci una tariffa unitaria.",
-      "noCurrencyPriceWithLegacyHint": "Nessun prezzo in {{currency}} nel catalogo. Tariffa predefinita precedente: {{rate}}. Inserisci una tariffa unitaria in {{currency}}."
+      "noCurrencyPriceWithLegacyHint": "Nessun prezzo in {{currency}} nel catalogo. Tariffa predefinita precedente: {{rate}}. Inserisci una tariffa unitaria in {{currency}}.",
+      "catalogDefaultRateHint": "Nessun prezzo di catalogo in {{currency}}; viene usato il valore predefinito del catalogo."
     },
     "summary": {
       "labels": {

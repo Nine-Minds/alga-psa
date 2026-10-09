@@ -386,6 +386,8 @@
       "USAGE_PERIOD_TOTAL_STALE": "Förhandsgranskningen är inaktuell: {{details}}. Kör förhandsgranskningen igen för att se aktuella siffror och skapa sedan fakturan på nytt.",
       "RECURRING_PRICING_STALE": "Förhandsgranskningen är inaktuell: {{details}}. Kör förhandsgranskningen igen för att se de aktuella siffrorna och generera sedan på nytt.",
       "USAGE_CALCULATION_ERROR": "Förbrukning för {{services}} under tjänsteperioden {{periodStart}} till {{periodEnd}} är registrerad men kunde inte prissättas. Rätta tjänstens prissättning (katalogpris i avtalsvalutan, en anpassad taxa eller prisnivåer) och försök igen. Registrera inte ersättande förbrukning.",
+      "FIXED_LINE_RATE_UNRESOLVED": "Avtalsraden med fast avgift {{lines}} saknar avgift. Ange en avgift på avtalsraden (eller ett pris för dess tjänster i avtalsvalutan) och försök igen.",
+      "FIXED_LINE_NO_SERVICES": "Avtalsraden med fast avgift {{lines}} har en avgift men ingen tjänst att debitera den på. Lägg till en tjänst på avtalsraden och försök igen.",
       "SOURCE_ALREADY_BILLED": "Vissa valda poster kan inte längre faktureras (redan fakturerade, inte godkända eller borttagna). Ladda om sidan och försök igen.",
       "SOURCE_NOT_ELIGIBLE": "En vald post hör inte till det här ärendets debiterbara poster eller kan inte längre faktureras. Ladda om sidan och försök igen.",
       "SOURCE_CURRENCY_MISMATCH": "Vissa valda produkter är prissatta i en annan valuta än kundens faktureringsvaluta och kan därför inte läggas till. Fakturera dem separat i deras egen valuta.",
@@ -2055,7 +2057,8 @@
         "selectedCount": "Markerade: {{count}}",
         "clear": "Rensa"
       }
-    }
+    },
+    "emptyTimeHint": "Godkänd tid och godkänt material köas aldrig här – de faktureras via den vanliga faktureringskörningen eller projektets knapp Skapa projektfaktura."
   },
   "invoiceDesigner": {
     "transforms": {

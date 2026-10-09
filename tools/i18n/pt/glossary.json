@@ -2719,7 +2719,8 @@
       "Volume",
       "Auto",
       "Normal (400)",
-      "auto | 50% | 120px"
+      "auto | 50% | 120px",
+      "Cc"
     ],
     "caseInsensitive": [
       "api",

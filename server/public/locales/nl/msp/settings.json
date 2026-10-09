@@ -391,6 +391,7 @@
         "emailAlreadyExists": "Er bestaat al een gebruiker met dit e-mailadres",
         "reportsToSelf": "Een gebruiker kan niet aan zichzelf rapporteren",
         "reportsToCycle": "Dit zou een circulaire rapportagelijn creëren",
+        "invalidTimezone": "Kies een tijdzone op basis van een stad, zoals America/New_York.",
         "permissionDenied": "U heeft geen toestemming om gebruikersrollen te wijzigen.",
         "invalidCapacity": "Wekelijkse capaciteit moet een positief getal zijn.",
         "invalidWorkSchedule": "Werktijden moeten geldige tijdvakken zijn die eindigen na de starttijd."
@@ -820,6 +821,27 @@
           "appearanceHelp": "Tabblad vastzetten en de standaardlijstweergave van het bord",
           "assignment": "Toewijzing & SLA",
           "assignmentHelp": "Standaardroutering, SLA en bordbeheerder",
+          "notifications": "Meldingen",
+          "notificationsHelp": "Technici op de hoogte brengen van nieuwe tickets en statuswijzigingen, en standaardvolgers instellen",
+          "notificationsRulesLabel": "Meldingsregels",
+          "notificationsRulesHelp": "Ontvangers krijgen één melding per gebeurtenis. Ze worden niet als volger toegevoegd.",
+          "notificationsAddRule": "Regel toevoegen",
+          "notificationsRuleTitle": "Regel {{number}}",
+          "notificationsRuleEnabled": "Ingeschakeld",
+          "notificationsRemoveRule": "Regel verwijderen",
+          "notificationsOnCreate": "Wanneer een ticket op dit bord wordt aangemaakt",
+          "notificationsOnStatus": "Wanneer een ticket de status krijgt",
+          "notificationsNoStatuses": "Statussen kunnen worden geselecteerd zodra het bord is opgeslagen.",
+          "notificationsRecipients": "Melden aan",
+          "notificationsRecipientsPlaceholder": "Selecteer gebruikers en teams...",
+          "notificationsRecipientsHelp": "Teamleden worden bij elke melding opnieuw opgezocht.",
+          "notificationsDefaultWatchers": "Standaardvolgers",
+          "notificationsDefaultWatchersPlaceholder": "Selecteer gebruikers...",
+          "notificationsDefaultWatchersHelp": "Toegevoegd aan de volgerslijst van elk nieuw ticket op dit bord en op de hoogte gebracht van elke latere update.",
+          "notificationsTriggerRequired": "Elke meldingsregel heeft minstens één trigger nodig: het aanmaken van een ticket of een status.",
+          "notificationsRecipientRequired": "Elke meldingsregel heeft minstens één gebruiker of team nodig om te informeren.",
+          "notificationsFetchFailed": "Meldingsinstellingen laden mislukt",
+          "notificationsStatusRemapFailed": "Het bord is aangemaakt, maar de status van een meldingsregel kon niet aan het nieuwe bord worden gekoppeld. Voeg de meldingsregels opnieuw toe.",
           "inbound": "E-mail & inkomende antwoorden",
           "inboundHelp": "Tickets heropenen wanneer klanten per e-mail antwoorden",
           "close": "Afsluitregels",
@@ -1824,6 +1846,12 @@
         "useLogo": "Mijn logo in de e-mailkop gebruiken",
         "logoWide": "Breed logo",
         "logoDefault": "Vierkant logo",
+        "logoArtwork": "Logoversie",
+        "logoArtworkAuto": "Afstemmen op de koptekst",
+        "logoArtworkLight": "Logo voor lichte achtergrond",
+        "logoArtworkDark": "Logo voor donkere achtergrond",
+        "logoArtworkAutoDark": "Automatisch ziet deze koptekst als donker en gebruikt het logo voor donkere achtergrond.",
+        "logoArtworkAutoLight": "Automatisch ziet deze koptekst als licht en gebruikt het logo voor lichte achtergrond.",
         "noLogo": "Upload een logo via Instellingen → Klantenportaal → Huisstijl om het hier te gebruiken.",
         "showAttribution": "'Powered by AlgaPSA' in de voettekst tonen"
       }
@@ -2391,6 +2419,11 @@
       "updateFailed": "Kan de rol niet bijwerken",
       "validateDeletionFailed": "Kan de verwijdering niet valideren. Probeer het opnieuw.",
       "deleteFailed": "Kan de rol niet verwijderen"
+    },
+    "editDialog": {
+      "title": "Rol bewerken",
+      "builtInNameLocked": "Namen van ingebouwde rollen kunnen niet worden gewijzigd, omdat het systeem ervan afhankelijk is.",
+      "portalLocked": "Portaaltoegang kan niet worden gewijzigd nadat een rol is aangemaakt."
     }
   },
   "security": {
@@ -3445,7 +3478,10 @@
       "duplicate": "Die gebruiker heeft de geselecteerde rol al.",
       "changePermission": "Toestemming geweigerd: u hebt geen rechten om gebruikersrollen te wijzigen.",
       "missingField": "Er ontbreekt een verplicht veld van de gebruikersrol.",
-      "missingFieldNamed": "Er ontbreekt een verplicht veld van de gebruikersrol: {{field}}."
+      "missingFieldNamed": "Er ontbreekt een verplicht veld van de gebruikersrol: {{field}}.",
+      "nameRequired": "Rolnaam is verplicht.",
+      "builtInRename": "Ingebouwde rollen kunnen niet worden hernoemd.",
+      "duplicateName": "Er bestaat al een rol met de naam \"{{name}}\" voor dit portaal."
     },
     "secrets": {
       "tenantContextMissing": "De tenantcontext ontbreekt. Vernieuw de pagina en probeer het opnieuw.",
@@ -3470,6 +3506,7 @@
       "missingField": "Er ontbreekt een verplicht veld van de tenantinstellingen.",
       "missingFieldNamed": "Er ontbreekt een verplicht veld van de tenantinstellingen: {{field}}.",
       "invalidTimezone": "Ongeldige tijdzone: {{timezone}}",
+      "nonLocationTimezone": "{{timezone}} is geen tijdzone op basis van een stad. Kies een zone zoals America/New_York.",
       "permissions": {
         "clearOnboarding": "Toestemming geweigerd: alleen beheerders kunnen onboardinggegevens wissen.",
         "update": "Toestemming geweigerd: de instellingen kunnen niet worden bijgewerkt",

@@ -1,0 +1,14 @@
+# Single source of truth for pinned third-party container images.
+#
+# Consumers:
+#   - Compose stacks:   `extends` the service below (docker-compose*.yaml, server/*, .github/docker-compose.yaml)
+#   - CI workflows:     .github/workflows/pinned-images.yml resolves it via scripts/lib/pinned-images.mjs
+#   - Tests / scripts:  scripts/lib/pinned-images.mjs (`pinnedImage('<key>')`)
+#   - Helm values:      helm/values.yaml and ee/helm/email-service/values.yaml carry copies that
+#                       scripts/tests/pinned-images.test.mjs checks against this file.
+#
+# Every `image:` line must keep the exact `${VAR:-name:tag@sha256:<digest>}` shape; the resolver
+# rejects anything else. Set the override variable to use a mirrored registry.
+services:
+  pgvector:
+    image: ${ALGA_PGVECTOR_IMAGE:-pgvector/pgvector:0.8.7-pg15-bookworm@sha256:47af0b65960b14f1c6945aa4ccae37836c632e9a6fe0eea9160936e616e5b2e9}

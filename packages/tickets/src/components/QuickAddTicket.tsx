@@ -8,7 +8,8 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { HelpCircle } from 'lucide-react';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Badge } from '@alga-psa/ui/components/Badge';
-import { Link2 } from 'lucide-react';
+import { Link2, Copy } from 'lucide-react';
+import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import Spinner from '@alga-psa/ui/components/Spinner';
 import { addTicket, updateTicket } from '../actions/ticketActions';
@@ -18,6 +19,8 @@ import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions
 import { searchUsersForMentions } from '@alga-psa/user-composition/actions/searchUsersForMentions';
 import { getContactsByClient, getClientLocations } from '../actions/clientLookupActions';
 import { getTicketFormData } from '../actions/ticketFormActions';
+import { getTicketDuplicateSource } from '../actions/ticketActions';
+import type { TicketDuplicateSource } from '../lib/ticketDuplicate';
 import { getTicketCategoriesByBoard, BoardCategoryData } from '../actions/ticketCategoryActions';
 import { IUser, IBoard, ITicketStatus, IPriority, IStandardPriority, IClient, IClientLocation, IContact, ITicket, ITicketCategory } from '@alga-psa/types';
 import { IUserWithRoles } from '@alga-psa/types';
@@ -188,6 +191,12 @@ interface QuickAddTicketProps {
   assetName?: string;
   renderBeforeFooter?: () => React.ReactNode;
   isAlgaDeskMode?: boolean;
+  /**
+   * Duplicate mode: prefill the form from this ticket. The form loads the source
+   * itself (getTicketDuplicateSource); the client stays editable (do not combine
+   * with prefilledClient).
+   */
+  duplicateFromTicketId?: string;
 }
 
 export function QuickAddTicket({
@@ -208,6 +217,7 @@ export function QuickAddTicket({
   assetName,
   renderBeforeFooter,
   isAlgaDeskMode = false,
+  duplicateFromTicketId,
 }: QuickAddTicketProps) {
   const router = useRouter();
   const { data: session } = useSession();
@@ -284,6 +294,10 @@ export function QuickAddTicket({
   const [itilImpact, setItilImpact] = useState<number | undefined>(undefined);
   const [itilUrgency, setItilUrgency] = useState<number | undefined>(undefined);
   const [showPriorityMatrix, setShowPriorityMatrix] = useState(false);
+  // Duplicate mode: the loaded source ticket, a load failure, and the checklist opt-out.
+  const [duplicateSource, setDuplicateSource] = useState<TicketDuplicateSource | null>(null);
+  const [duplicateLoadError, setDuplicateLoadError] = useState<string | null>(null);
+  const [copyChecklist, setCopyChecklist] = useState(true);
   const effectiveAssetId = isAlgaDeskMode ? undefined : assetId;
   const titleInputRef = useRef<HTMLInputElement>(null);
 
@@ -350,7 +364,12 @@ export function QuickAddTicket({
     const fetchData = async () => {
       setIsLoading(true);
       try {
-        const formData = await getTicketFormData(prefilledClient?.id);
+        // Duplicate mode loads the source alongside the form data. No client argument is
+        // passed to getTicketFormData, so the client stays editable.
+        const [formData, duplicateResult] = await Promise.all([
+          getTicketFormData(prefilledClient?.id),
+          duplicateFromTicketId ? getTicketDuplicateSource(duplicateFromTicketId) : Promise.resolve(null),
+        ]);
 
         setUsers(formData.users);
         setBoards(formData.boards);
@@ -389,15 +408,28 @@ export function QuickAddTicket({
         if (prefilledDueDate) {
           setDueDate(toPrefilledDueDate(prefilledDueDate));
         }
+
+        if (duplicateResult) {
+          if (isReturnedActionError(duplicateResult)) {
+            setDuplicateLoadError(getErrorMessage(duplicateResult));
+          } else {
+            applyDuplicateSource(duplicateResult);
+          }
+        }
       } catch (error) {
         console.error('Error fetching form data:', error);
+        if (duplicateFromTicketId) {
+          setDuplicateLoadError(
+            t('quickAdd.duplicateLoadFailed', 'The ticket to duplicate could not be loaded. Please try again.')
+          );
+        }
       } finally {
         setIsLoading(false);
       }
     };
 
     fetchData();
-  }, [open, prefilledClient?.id]);
+  }, [open, prefilledClient?.id, duplicateFromTicketId]);
 
   useEffect(() => {
     if (!open) {
@@ -686,6 +718,49 @@ export function QuickAddTicket({
       .catch(() => setTeamAvatarUrl(null));
   }, [assignedTeamId, teams]);
 
+  // Applies a duplicate draft by setting form state directly. It must NOT go through
+  // handleBoardChange / handleClientChange: those reset the copied priority, category and
+  // assignees (and apply board-default assignees). Setting boardId directly lets the status
+  // effect pick the board's default status and the categories effect load the picker
+  // without clearing the selection. Status and due date are deliberately not copied.
+  function applyDuplicateSource(source: TicketDuplicateSource) {
+    setDuplicateSource(source);
+    setCopyChecklist(true);
+    setTitle(source.title);
+    setDescriptionContent(parseTicketRichTextContent(source.description || ''));
+    setDescriptionEditorInstanceKey((current) => current + 1);
+    setClientId(source.client.id);
+    setSelectedClientType((source.client.type as 'company' | 'individual' | null) ?? null);
+    setContactId(source.contact?.id ?? null);
+    setLocationId(source.location_id ?? null);
+    setBoardId(source.board_id ?? '');
+    setPriorityId(source.priority_id ?? '');
+    setItilImpact(source.itil_impact ?? undefined);
+    setItilUrgency(source.itil_urgency ?? undefined);
+    setSelectedCategories(
+      [source.subcategory_id ?? source.category_id].filter((categoryId): categoryId is string => Boolean(categoryId))
+    );
+    setAssignedTo(source.assigned_to ?? '');
+    setAssignedTeamId(source.assigned_team_id ?? null);
+    setTempAdditionalAgents(
+      source.additional_agents.map((agent) => ({
+        user_id: agent.user_id,
+        first_name: agent.first_name || '',
+        last_name: agent.last_name || '',
+        temp_id: `temp-${Date.now()}-${agent.user_id}`,
+      }))
+    );
+    setPendingTags(
+      source.tags.map((tag) => ({
+        tag_id: tag.tag_id,
+        tag_text: tag.tag_text,
+        background_color: tag.background_color,
+        text_color: tag.text_color,
+        isNew: false,
+      }))
+    );
+  }
+
   function resetForm() {
     setTitle(prefilledTitle || '');
     setDescriptionContent(parseTicketRichTextContent(prefilledDescription || ''));
@@ -729,6 +804,9 @@ export function QuickAddTicket({
     setItilUrgency(undefined);
     setShowPriorityMatrix(false);
     setPendingTags([]);
+    setDuplicateSource(null);
+    setDuplicateLoadError(null);
+    setCopyChecklist(true);
     setIsQuickAddContactOpen(false);
     if (prefilledDueDate) {
       setDueDate(toPrefilledDueDate(prefilledDueDate));
@@ -821,7 +899,6 @@ export function QuickAddTicket({
         ...(newTicket.attributes || {}),
         description: serializedDescription,
       },
-      updated_at: new Date().toISOString(),
     });
     if (isReturnedActionError(updateResult)) {
       throw new Error(getErrorMessage(updateResult));
@@ -899,6 +976,13 @@ export function QuickAddTicket({
       // Add due date if provided (the field carries the time of day with it)
       if (dueDate) {
         formData.append('due_date', dueDate.toISOString());
+      }
+
+      // Duplicate mode: name the source; the server copies the checklist and custom
+      // fields from it inside addTicket's transaction. Status is never sent from the source.
+      if (duplicateSource) {
+        formData.append('duplicate_of_ticket_id', duplicateSource.ticket_id);
+        formData.append('duplicate_copy_checklist', String(copyChecklist));
       }
 
       // ITIL categories now use the unified category system
@@ -1118,7 +1202,12 @@ export function QuickAddTicket({
         isOpen={open}
         onClose={handleClose}
         className="w-full max-w-2xl max-h-[90vh]"
-        title={t('quickAdd.dialogTitle', 'Quick Add Ticket')}
+        title={duplicateSource
+          ? t('quickAdd.duplicateDialogTitle', {
+              defaultValue: 'Duplicate ticket #{{number}}',
+              number: duplicateSource.ticket_number,
+            })
+          : t('quickAdd.dialogTitle', 'Quick Add Ticket')}
         footer={footer}
       >
         <DialogContent>
@@ -1139,6 +1228,28 @@ export function QuickAddTicket({
                     </ul>
                   </AlertDescription>
                 </Alert>
+              )}
+
+              {duplicateLoadError && (
+                <Alert variant="destructive" className="mb-4" data-testid="quick-add-ticket-duplicate-error">
+                  <AlertDescription>{duplicateLoadError}</AlertDescription>
+                </Alert>
+              )}
+
+              {duplicateSource && (
+                <div className="mb-4 flex pb-2">
+                  <Badge
+                    variant="secondary"
+                    className="inline-flex items-center gap-1.5 rounded-full"
+                    data-testid="quick-add-ticket-duplicate-pill"
+                  >
+                    <Copy className="h-3 w-3" />
+                    {t('quickAdd.duplicatingPill', {
+                      defaultValue: 'Duplicating #{{number}}',
+                      number: duplicateSource.ticket_number,
+                    })}
+                  </Badge>
+                </div>
               )}
 
               {effectiveAssetId && (
@@ -1585,6 +1696,44 @@ export function QuickAddTicket({
                       />
                     </div>
                   </div>
+
+                  {duplicateSource && duplicateSource.checklist.length > 0 && (
+                    <div className="space-y-2" data-testid="quick-add-ticket-duplicate-checklist">
+                      <div className="text-sm font-medium text-gray-700">
+                        {t('quickAdd.duplicateChecklistHeading', {
+                          defaultValue: 'Checklist from #{{number}}',
+                          number: duplicateSource.ticket_number,
+                        })}
+                      </div>
+                      <ul className="list-disc list-inside space-y-0.5 text-sm text-gray-600">
+                        {duplicateSource.checklist.map((item, index) => (
+                          <li key={`${index}-${item.item_name}`}>
+                            {item.item_name}
+                            {item.is_required && (
+                              <span className="ml-1 text-xs text-gray-500">
+                                {t('quickAdd.duplicateChecklistRequired', '(required)')}
+                              </span>
+                            )}
+                          </li>
+                        ))}
+                      </ul>
+                      <Checkbox
+                        id={`${id}-copy-checklist`}
+                        checked={copyChecklist}
+                        onChange={(e) => setCopyChecklist(e.target.checked)}
+                        label={t('quickAdd.duplicateCopyChecklist', 'Copy checklist items (unchecked)')}
+                        disabled={isSubmitting}
+                      />
+                    </div>
+                  )}
+                  {duplicateSource && duplicateSource.custom_field_count > 0 && (
+                    <p className="text-xs text-gray-500" data-testid="quick-add-ticket-duplicate-custom-fields">
+                      {t('quickAdd.duplicateCustomFieldsNote', {
+                        defaultValue: 'Custom field values are copied from #{{number}}.',
+                        number: duplicateSource.ticket_number,
+                      })}
+                    </p>
+                  )}
 
                   <QuickAddTagPicker
                     id="quick-add-ticket-tags"

@@ -1,12 +1,16 @@
 import { z } from 'zod';
 import type { Knex } from 'knex';
-import { tenantDb } from '@alga-psa/db';
+import { tenantDb, withTransaction } from '@alga-psa/db';
 import { v4 as uuidv4 } from 'uuid';
 import type { ActionContext } from '../../registries/actionRegistry';
 
 export type TenantTxContext = {
   tenantId: string;
   actorUserId: string;
+  /** The workflow definition this run executes. */
+  workflowId: string;
+  /** Workflow ids that caused this run (from its trigger metadata), oldest first. */
+  lineage: string[];
   trx: Knex.Transaction;
 };
 
@@ -128,7 +132,19 @@ export async function setTenantContext(trx: Knex.Transaction, tenantId: string):
   await trx.raw(`select set_config('app.current_tenant', ?, true)`, [tenantId]);
 }
 
-export async function resolveRunActorUserId(trx: Knex.Transaction, tenantId: string, runId: string): Promise<string | null> {
+export type RunContext = {
+  actorUserId: string;
+  workflowId: string;
+  lineage: string[];
+};
+
+/**
+ * Resolves who a run acts as and where it sits in a workflow-triggered chain.
+ * The actor is the publisher (else the creator) of the run's workflow; the
+ * lineage is `trigger_metadata_json.workflowLineage`, stamped by the event-stream
+ * worker when an event published by another workflow launched this run.
+ */
+export async function resolveRunContext(trx: Knex.Transaction, tenantId: string, runId: string): Promise<RunContext | null> {
   const db = tenantDb(trx, tenantId);
   const query = db.table('workflow_runs as wr');
   db.tenantJoin(query, 'workflow_definition_versions as wdv', 'wr.workflow_id', 'wdv.workflow_id', {
@@ -143,16 +159,34 @@ export async function resolveRunActorUserId(trx: Knex.Transaction, tenantId: str
     .select(
       'wd.workflow_id as matched_workflow_id',
       'wdv.published_by as published_by',
-      'wd.created_by as created_by'
+      'wd.created_by as created_by',
+      'wr.trigger_metadata_json as trigger_metadata'
     )
     .where('wr.run_id', runId)
     .first() as {
       matched_workflow_id?: string | null;
       published_by?: string | null;
       created_by?: string | null;
+      trigger_metadata?: unknown;
     } | undefined;
   if (!row?.matched_workflow_id) return null;
-  return (row?.published_by as string | null) ?? (row?.created_by as string | null) ?? null;
+  const actorUserId = (row.published_by as string | null) ?? (row.created_by as string | null) ?? null;
+  if (!actorUserId) return null;
+
+  let metadata = row.trigger_metadata;
+  if (typeof metadata === 'string') {
+    try {
+      metadata = JSON.parse(metadata);
+    } catch {
+      metadata = null;
+    }
+  }
+  const rawLineage = (metadata as { workflowLineage?: unknown } | null | undefined)?.workflowLineage;
+  const lineage = Array.isArray(rawLineage)
+    ? rawLineage.filter((id): id is string => typeof id === 'string' && id.length > 0)
+    : [];
+
+  return { actorUserId, workflowId: row.matched_workflow_id, lineage };
 }
 
 export async function hasPermissionByUserId(
@@ -238,13 +272,17 @@ export async function withTenantTransaction<T>(
     throwActionError(ctx, { category: 'ActionError', code: 'INTERNAL_ERROR', message: 'Database connection unavailable' });
   }
 
-  return await knex.transaction(async (trx) => {
+  // An owning withTransaction frame (not a raw knex.transaction) so that
+  // registerAfterCommit hooks registered by an action - such as the ticket
+  // events from createTicketWithSideEffects - flush after the commit instead of
+  // being dropped. ctx.knex is a root connection, never an outer transaction.
+  return await withTransaction(knex, async (trx) => {
     await setTenantContext(trx, tenantId);
-    const actorUserId = await resolveRunActorUserId(trx, tenantId, ctx.runId);
-    if (!actorUserId) {
+    const run = await resolveRunContext(trx, tenantId, ctx.runId);
+    if (!run) {
       throwActionError(ctx, { category: 'ActionError', code: 'INTERNAL_ERROR', message: 'Workflow actor user not found' });
     }
-    return await fn({ tenantId, actorUserId, trx });
+    return await fn({ tenantId, actorUserId: run.actorUserId, workflowId: run.workflowId, lineage: run.lineage, trx });
   });
 }
 

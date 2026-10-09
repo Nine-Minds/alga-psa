@@ -1,4 +1,5 @@
 import { publishEvent } from '@alga-psa/event-bus/publishers';
+import { publishTicketTransitionsAfterCommit, ticketCreatedPublishedByCaller } from '@alga-psa/shared/lib/tickets/ticketLifecycleEvents';
 import { persistCommentPublication } from '@shared/lib/ticketCommentAttachments';
 /**
  * Ticket Service
@@ -44,13 +45,13 @@ import {
   getTicketResourcesCore,
   publishTicketResourceEvent,
   removeTicketResourceCore,
-} from '@alga-psa/tickets/lib/ticketResourceCore';
+} from '@alga-psa/shared/services/tickets/ticketResourceCore';
 import {
   TeamAssignmentError,
   assignTeamToTicketCore,
   removeTeamFromTicketCore,
   type RemoveTeamFromTicketOptions,
-} from '@alga-psa/tickets/lib/teamAssignmentCore';
+} from '@alga-psa/shared/services/tickets/teamAssignmentCore';
 import { deleteEntityWithValidation } from '@alga-psa/core/server';
 import { publishWorkflowEvent } from 'server/src/lib/eventBus/publishers';
 import {
@@ -62,6 +63,12 @@ import { locationAddressSql } from './locationAddressSql';
 import { inboundSenderLabel } from './ticketCommentAuthor';
 import { hasPermission } from '../../auth/rbac';
 import { TicketModel, CreateTicketInput } from '@shared/models/ticketModel';
+import {
+  CommentEmailRecipientsError,
+  prepareCommentEmailRecipients,
+  readCommentEmailRecipients,
+  stripCommentBccFromMetadata,
+} from '@shared/lib/tickets/commentEmailRecipients';
 import {
   TICKET_ACTIVITY_ACTOR,
   TICKET_ACTIVITY_ENTITY,
@@ -412,6 +419,7 @@ export class TicketService extends BaseService<ITicket> {
       boardColumn: 't.board_id',
       contactColumn: 't.contact_name_id',
       billingProfileColumn: 't.billing_profile_id',
+      watchListColumn: 't.attributes',
     });
   }
 
@@ -1735,7 +1743,7 @@ export class TicketService extends BaseService<ITicket> {
           context.tenant,
           trx,
           {}, // validation options
-          undefined,
+          ticketCreatedPublishedByCaller('TicketService publishes TICKET_CREATED after the transaction commits'),
           analyticsTracker,
           context.userId,
           3 // max retries
@@ -2123,6 +2131,29 @@ export class TicketService extends BaseService<ITicket> {
         }
       }
 
+      // Transition events (TICKET_STATUS_CHANGED etc.), published after commit.
+      await publishTicketTransitionsAfterCommit(trx, {
+        tenant: context.tenant,
+        before: {
+          ticketId: id,
+          statusId: currentTicket.status_id,
+          priorityId: currentTicket.priority_id ?? null,
+          assignedTo: currentTicket.assigned_to ?? null,
+          boardId: currentTicket.board_id,
+          escalated: currentTicket.escalated,
+        },
+        after: {
+          ticketId: id,
+          statusId: ticket.status_id,
+          priorityId: ticket.priority_id ?? null,
+          assignedTo: ticket.assigned_to ?? null,
+          boardId: ticket.board_id,
+          escalated: ticket.escalated,
+        },
+        actorUserId: context.userId,
+        statusChangedPayloadExtras: { suppressContactNotifications, suppressInternalNotifications },
+      });
+
       const structuredChanges: Record<string, { old: unknown; new: unknown }> = {};
       const trackedChangeFields: Array<keyof ITicket> = [
         'title',
@@ -2252,7 +2283,7 @@ export class TicketService extends BaseService<ITicket> {
         context.userId,
         context.tenant,
         trx,
-        undefined,
+        ticketCreatedPublishedByCaller('TicketService publishes TICKET_CREATED after the transaction commits'),
         analyticsTracker
       );
 
@@ -2415,10 +2446,19 @@ export class TicketService extends BaseService<ITicket> {
         };
       }
 
+      // Bcc is MSP-only. The raw row is spread below, so a client-visible
+      // caller gets the metadata with the bcc list emptied before anything
+      // reads it — the mask lives here rather than at the route so no future
+      // client-facing caller of this service can leak it.
+      const metadata = clientVisibility
+        ? stripCommentBccFromMetadata(comment.metadata)
+        : comment.metadata;
+
       // Full branch: select('tc.*') above means ...comment already carries
       // thread_id / parent_comment_id / deleted_at — no explicit mapping needed.
       return {
         ...comment,
+        metadata,
         comment_text: comment.note,
         markdown_content: comment.markdown_content || null,
         comment_html: renderTicketRichTextHtml(comment.note),
@@ -2430,6 +2470,7 @@ export class TicketService extends BaseService<ITicket> {
         author_contact_email: comment.author_contact_email || null,
         reactions: reactionsMap[comment.comment_id] ?? [],
         reaction_user_names: reactionUserNames,
+        email_recipients: readCommentEmailRecipients(metadata),
       };
     });
   }
@@ -2536,6 +2577,25 @@ export class TicketService extends BaseService<ITicket> {
       // check runs after visibility is resolved rather than on the raw body.
       const scheduledPublication = resolveScheduledCommentPublication(data, apiIsInternal);
 
+      // One-off Cc/Bcc for this comment only. The schema already rejects them
+      // on an explicitly internal body; this also catches a reply that
+      // inherits internal visibility from its thread.
+      let emailRecipients: Awaited<ReturnType<typeof prepareCommentEmailRecipients>> = null;
+      try {
+        emailRecipients = await prepareCommentEmailRecipients(trx, context.tenant, {
+          cc: data.cc,
+          bcc: data.bcc,
+          isInternal: apiIsInternal,
+        });
+      } catch (error) {
+        if (error instanceof CommentEmailRecipientsError) {
+          throw new ValidationError('Validation failed', [
+            { path: [error.field], message: error.message },
+          ]);
+        }
+        throw error;
+      }
+
       const commentData = {
         comment_id: apiCommentId,
         thread_id: apiThreadId,
@@ -2548,7 +2608,9 @@ export class TicketService extends BaseService<ITicket> {
         tenant: context.tenant,
         created_at: apiNowIso,
         updated_at: apiNowIso,
-        metadata: data.metadata,
+        metadata: emailRecipients
+          ? { ...(data.metadata ?? {}), email_recipients: emailRecipients }
+          : data.metadata,
         ...(scheduledPublication
           ? {
               publish_state: 'scheduled',
@@ -2616,7 +2678,8 @@ export class TicketService extends BaseService<ITicket> {
         created_by: comment.user_id ?? null,
         author_contact_id: comment.contact_id ?? null,
         author_contact_name: null,
-        author_contact_email: null
+        author_contact_email: null,
+        email_recipients: readCommentEmailRecipients(comment.metadata),
       };
 
       const eventPayload = {
