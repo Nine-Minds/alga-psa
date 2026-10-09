@@ -45,6 +45,11 @@ Working memory for this plan. Short bullets; update earlier notes when a decisio
 - (2026-10-09, asset-fields) Supplier options come from a new `getVendorOptionsForAssets` in `packages/assets` (gated on asset read), not `@alga-psa/inventory`'s `listVendors` (gated on `vendor` read) — a technician editing an asset should not need inventory permissions.
 - (2026-10-09, asset-fields) Tenant default currency = `default_billing_settings.default_currency_code`, falling back to `USD`.
 
+- (2026-10-09, assignment-core) `setAssetAssignee` had to live in `shared/models/assetAssignmentModel.ts`, not `packages/assets/src/lib/assetAssignment.ts`: the shared RMM ingestion service needs it and `packages/assets` already depends on `@alga-psa/shared`, so the planned direction would close a dependency cycle. `packages/assets/src/lib/assetAssignment.ts` is a thin re-export, so every call site named in the PRD still resolves and there is still exactly one implementation.
+- (2026-10-09, assignment-core) NinjaOne's `updateExistingAsset` never wrote `client_id`, so F029 has nothing to convert on that side — only shared ingestion had a raw `contact_name_id: null` branch. T045 ("create writes no assignment row") holds because `createNewAsset` never set a contact.
+- (2026-10-09, assignment-core) `asset_history.changed_by` is NOT NULL, so a sessionless caller (RMM sync without an audit user) gets the assignment row and the column update but no history entry rather than failing the assignment.
+- (2026-10-09, assignment-core) The in-memory knex harnesses in `packages/assets/src/actions/*.test.ts` gained `whereNull`/`whereNotNull`/`join` and an `asset_statuses` seed; the helper and FR-B3 validation both need them.
+
 ## Commands / Runbooks
 
 - Migrations: `npm run migrate` from repo root. Migrations must `require('./utils/tenantDb.cjs')`, never `@alga-psa/db`.

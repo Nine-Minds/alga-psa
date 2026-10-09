@@ -1652,7 +1652,8 @@
       "missingField": "Missing required asset field.",
       "missingFieldNamed": "Missing required asset field: {{field}}.",
       "contactUnavailable": "Selected contact is not available for this client.",
-      "vendorUnavailable": "Selected vendor is not available."
+      "vendorUnavailable": "Selected vendor is not available.",
+      "workspaceMember": "This asset belongs to a shared workspace, so it cannot be assigned to one person."
     }
   },
   "clientAssetMultiSelect": {

@@ -639,6 +639,37 @@ export interface AssetTypeRegistryEntry {
   updated_at: string;
 }
 
+// Assignment history
+/**
+ * Where an assignment came from. `manual` is a person in the MSP UI, `api` the
+ * REST API, `rmm` auto-assignment from a signed-in user, `bundle` propagation
+ * from a group, `import` the migration importer, `merge` a client merge and
+ * `system` an automatic clear (client move, contact deletion).
+ */
+export type AssetAssignmentSource = 'manual' | 'api' | 'rmm' | 'bundle' | 'import' | 'merge' | 'system';
+
+export interface AssetAssignment {
+  tenant: string;
+  assignment_id: string;
+  asset_id: string;
+  contact_name_id: string;
+  assigned_at: string;
+  assigned_by_user_id?: string | null;
+  /** Null while the assignment is the current one. */
+  unassigned_at?: string | null;
+  unassigned_by_user_id?: string | null;
+  source: AssetAssignmentSource;
+  note?: string | null;
+  /** Joined on read. */
+  contact_name?: string | null;
+  assigned_by_name?: string | null;
+  unassigned_by_name?: string | null;
+  asset_name?: string | null;
+  asset_tag?: string | null;
+  asset_type?: string | null;
+  asset_status?: string | null;
+}
+
 // Asset status registry (tenant-managed lifecycle list)
 /**
  * Lifecycle bucket a status belongs to. Metrics that mean "deployed" use

@@ -1624,7 +1624,8 @@
       "missingField": "Ett obligatoriskt tillgångsfält saknas.",
       "missingFieldNamed": "Obligatoriskt tillgångsfält saknas: {{field}}.",
       "contactUnavailable": "Den valda kontakten är inte tillgänglig för den här kunden.",
-      "vendorUnavailable": "Den valda leverantören är inte tillgänglig."
+      "vendorUnavailable": "Den valda leverantören är inte tillgänglig.",
+      "workspaceMember": "Den här tillgången hör till en delad arbetsplats och kan därför inte tilldelas en enskild person."
     }
   },
   "clientAssetMultiSelect": {

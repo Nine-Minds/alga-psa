@@ -469,6 +469,17 @@ export class AssetMigrationApplier implements EntityApplier {
       customAttributes[targetKey] = coerced.value;
     }
 
+    // FR-C3: an imported assignee is recorded with source `import` by
+    // createAssetInTransaction, which routes it through setAssetAssignee.
+    let assigneeContactId: string | null = null;
+    if (record.assignee_external_identifier) {
+      assigneeContactId = await context.resolveReference(
+        trx,
+        'contacts',
+        record.assignee_external_identifier
+      );
+    }
+
     const asset = await createAssetInTransaction(
       trx,
       context.tenant,
@@ -482,6 +493,7 @@ export class AssetMigrationApplier implements EntityApplier {
         // with that slug or label; otherwise fall back to `active`.
         status: await resolveImportedAssetStatus(trx, context.tenant, record.status),
         location_id: locationId,
+        contact_name_id: assigneeContactId,
         serial_number: record.serial_number ?? undefined,
         purchase_date: record.purchase_date ?? undefined,
         // Manufacturer and model are first-class columns (FR-A4), not attributes.
@@ -489,7 +501,7 @@ export class AssetMigrationApplier implements EntityApplier {
         model: record.model ?? null,
         attributes: customAttributes,
       },
-      { requireCustomAttributes: false }
+      { requireCustomAttributes: false, assignmentSource: 'import' }
     );
 
     return { targetEntityType: this.targetEntityType, targetEntityId: asset.asset_id };

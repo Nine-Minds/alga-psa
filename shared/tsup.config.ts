@@ -68,6 +68,7 @@ export default defineConfig({
     'workflow/workers/index': 'workflow/workers/index.ts',
     'workflow/services/index': 'workflow/services/index.ts',
     'extension-utils/index': 'extension-utils/index.ts',
+    'models/assetAssignmentModel': 'models/assetAssignmentModel.ts',
     'models/clientModel': 'models/clientModel.ts',
     'models/contactModel': 'models/contactModel.ts',
     'models/kbArticleModel': 'models/kbArticleModel.ts',

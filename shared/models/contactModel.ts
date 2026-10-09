@@ -8,6 +8,7 @@ import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { z } from 'zod';
 import { tenantDb } from '@alga-psa/db';
+import { closeOpenAssignmentsForContact } from './assetAssignmentModel';
 import {
   CONTACT_PHONE_CANONICAL_TYPES,
   type ContactPhoneCanonicalType,
@@ -67,6 +68,9 @@ export async function clearContactLinksBeforeDelete(
   await scoped.table('assets')
     .where({ contact_name_id: contactId })
     .update({ contact_name_id: null });
+  // FR-C5: the assignments the contact held are closed, not deleted — "who had
+  // this laptop in March" must survive the person leaving.
+  await closeOpenAssignmentsForContact(db, tenant, contactId);
 }
 
 /**

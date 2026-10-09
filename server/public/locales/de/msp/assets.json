@@ -1652,7 +1652,8 @@
       "missingField": "Erforderliches Assetfeld fehlt.",
       "missingFieldNamed": "Erforderliches Assetfeld fehlt: {{field}}.",
       "contactUnavailable": "Der ausgewählte Kontakt ist für diesen Kunden nicht verfügbar.",
-      "vendorUnavailable": "Der ausgewählte Lieferant ist nicht verfügbar."
+      "vendorUnavailable": "Der ausgewählte Lieferant ist nicht verfügbar.",
+      "workspaceMember": "Dieses Asset gehört zu einem gemeinsamen Arbeitsplatz und kann nicht einer einzelnen Person zugewiesen werden."
     }
   },
   "clientAssetMultiSelect": {

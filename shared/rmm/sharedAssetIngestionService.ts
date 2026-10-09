@@ -1,5 +1,6 @@
 import type { Knex } from 'knex';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
+import { setAssetAssignee } from '../models/assetAssignmentModel';
 import type {
   NormalizedRmmDeviceType,
   NormalizedRmmExternalDeviceSnapshot,
@@ -297,18 +298,28 @@ export async function ingestNormalizedRmmDeviceSnapshot(
         ...buildHardwareIdentityPatch(snapshot),
       };
 
+      const movedClient = Boolean(
+        resolvedClientId && existingAsset.client_id && existingAsset.client_id !== resolvedClientId
+      );
       if (resolvedClientId) {
         assetPatch.client_id = resolvedClientId;
-        if (existingAsset.client_id && existingAsset.client_id !== resolvedClientId) {
-          // The assignee is a contact of the previous client; moving the
-          // device to another client leaves it unassigned.
-          assetPatch.contact_name_id = null;
-        }
       }
 
       await db.table('assets')
         .where({ asset_id: assetId })
         .update(assetPatch);
+
+      if (movedClient) {
+        // FR-C3: the assignee is a contact of the previous client, so moving
+        // the device unassigns it — through the helper, with source `system`,
+        // so the assignment history records the clear.
+        await setAssetAssignee(trx, tenant, assetId, null, {
+          actorUserId: null,
+          source: 'system',
+          note: 'RMM organization moved to another client',
+          allowWorkspaceMember: true,
+        });
+      }
 
       await upsertAssetExtension(trx, {
         tenant,

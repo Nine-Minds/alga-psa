@@ -1652,7 +1652,8 @@
       "missingField": "Er ontbreekt een verplicht assetveld.",
       "missingFieldNamed": "Er ontbreekt een verplicht assetveld: {{field}}.",
       "contactUnavailable": "Het geselecteerde contact is niet beschikbaar voor deze klant.",
-      "vendorUnavailable": "De geselecteerde leverancier is niet beschikbaar."
+      "vendorUnavailable": "De geselecteerde leverancier is niet beschikbaar.",
+      "workspaceMember": "Dit asset hoort bij een gedeelde werkplek en kan daarom niet aan één persoon worden toegewezen."
     }
   },
   "clientAssetMultiSelect": {

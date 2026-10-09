@@ -28,6 +28,7 @@ import { NotFoundError, ConflictError, ValidationError } from '../middleware/api
 import { resolveWritableAssetType, resolveAttributeSchemaForWrite, validateAttributesForWrite, attributesMergeExpression, serializeAttributesForInsert } from '@alga-psa/assets/lib/assetAttributeWrites';
 import { isTypedAssetWriteError } from '@alga-psa/assets/lib/assetTypeAttributes';
 import { validateAssetStatusSlug } from '@alga-psa/assets/lib/assetStatusRegistry';
+import { isAssetAssigneeError, setAssetAssignee } from '@alga-psa/assets/lib/assetAssignment';
 
 function validationDetails(issues: Array<{ key: string; code: string; message: string }>) {
   return issues.map((issue) => ({ path: ['attributes', issue.key], code: issue.code, message: issue.message }));
@@ -335,8 +336,13 @@ export class AssetService extends BaseService<any> {
       assetData.purchase_cost_currency = await this.resolveTenantCurrency(knex, context.tenant);
     }
 
+    // FR-C3: the assignee is applied through setAssetAssignee (source `api`)
+    // so the open asset_assignments row is written with it.
+    const { contact_name_id: requestedContactId, ...assetColumns } = assetData as Record<string, any>;
+
     const assetRecord = {
-      ...assetData,
+      ...assetColumns,
+      contact_name_id: null,
       ...(attributes !== undefined ? { attributes: serializeAttributesForInsert(attributes) } : {}),
       tenant: context.tenant,
       created_at: new Date(),
@@ -346,6 +352,12 @@ export class AssetService extends BaseService<any> {
     const [asset] = await scopedTable(knex, context.tenant, this.tableName)
       .insert(assetRecord)
       .returning('*');
+
+    if (requestedContactId) {
+      await knex.transaction(async (trx) => {
+        await this.applyAssignee(trx, context, asset.asset_id, requestedContactId);
+      });
+    }
 
     // Handle extension data if provided
     if (extension_data && Object.keys(extension_data).length > 0) {
@@ -451,6 +463,11 @@ export class AssetService extends BaseService<any> {
       }
     }
 
+    // FR-C3: the assignee leaves the column patch and goes through the helper.
+    const assigneeProvided = Object.prototype.hasOwnProperty.call(updateData, 'contact_name_id');
+    const nextContactId = assigneeProvided ? (updateData.contact_name_id as string | null) : undefined;
+    delete updateData.contact_name_id;
+
     updateData.updated_at = new Date();
 
     const updated = await scopedTable(knex, context.tenant, this.tableName)
@@ -459,6 +476,12 @@ export class AssetService extends BaseService<any> {
 
     if (!updated) {
       throw new NotFoundError('Asset not found');
+    }
+
+    if (nextContactId !== undefined) {
+      await knex.transaction(async (trx) => {
+        await this.applyAssignee(trx, context, id, nextContactId);
+      });
     }
 
     // Publish event
@@ -516,6 +539,29 @@ export class AssetService extends BaseService<any> {
 
     if (!contact) {
       throw new ValidationError('Selected contact is not available for this client');
+    }
+  }
+
+  /**
+   * FR-C3 / T099: REST writes record their assignment with source `api`, and a
+   * shared-workspace member is rejected as a 400 rather than a 500.
+   */
+  private async applyAssignee(
+    trx: Knex.Transaction,
+    context: ServiceContext,
+    assetId: string,
+    contactId: string | null
+  ): Promise<void> {
+    try {
+      await setAssetAssignee(trx, context.tenant, assetId, contactId, {
+        actorUserId: context.userId,
+        source: 'api',
+      });
+    } catch (error) {
+      if (isAssetAssigneeError(error)) {
+        throw new ValidationError(error.message, { contact_name_id: [error.message] });
+      }
+      throw error;
     }
   }
 

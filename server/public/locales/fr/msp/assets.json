@@ -1652,7 +1652,8 @@
       "missingField": "Un champ obligatoire de l’actif est manquant.",
       "missingFieldNamed": "Un champ obligatoire de l’actif est manquant : {{field}}.",
       "contactUnavailable": "Le contact sélectionné n’est pas disponible pour ce client.",
-      "vendorUnavailable": "Le fournisseur sélectionné n'est pas disponible."
+      "vendorUnavailable": "Le fournisseur sélectionné n'est pas disponible.",
+      "workspaceMember": "Cet actif appartient à un espace de travail partagé ; il ne peut pas être attribué à une seule personne."
     }
   },
   "clientAssetMultiSelect": {

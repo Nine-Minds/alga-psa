@@ -9,6 +9,8 @@ import {
 
 export const ASSET_CONTACT_UNAVAILABLE_MESSAGE = 'Selected contact is not available for this client';
 export const ASSET_VENDOR_UNAVAILABLE_MESSAGE = 'Selected vendor is not available for this tenant';
+/** FR-E4: a shared-workspace member has users, not a single assignee. */
+export const ASSET_WORKSPACE_MEMBER_MESSAGE = 'This asset belongs to a shared workspace and cannot have a single assignee';
 
 export type AssetActionError = ActionMessageError | ActionPermissionError;
 
@@ -111,6 +113,12 @@ export function assetActionErrorFrom(error: unknown): AssetActionError | null {
     }
     if (message === ASSET_VENDOR_UNAVAILABLE_MESSAGE) {
       return actionError('Selected vendor is not available.', 'msp/assets:errors.asset.vendorUnavailable');
+    }
+    if (message === ASSET_WORKSPACE_MEMBER_MESSAGE) {
+      return actionError(
+        'This asset belongs to a shared workspace, so it cannot be assigned to one person.',
+        'msp/assets:errors.asset.workspaceMember',
+      );
     }
     if (message === 'An asset cannot be related to itself') {
       return actionError('An asset cannot be related to itself.', 'msp/assets:errors.asset.selfRelation');

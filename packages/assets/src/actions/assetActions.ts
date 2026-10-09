@@ -21,6 +21,8 @@ import {
     AssetMaintenanceReport,
     ClientMaintenanceSummary,
     AssetRelationship,
+    AssetAssignment,
+    AssetAssignmentSource,
     WorkstationAsset,
     NetworkDeviceAsset,
     ServerAsset,
@@ -94,9 +96,11 @@ import {
 } from '../lib/assetTypeAttributes';
 import { resolveWritableAssetType, resolveAttributeSchemaForWrite, validateAttributesForWrite, attributesMergeExpression, serializeAttributesForInsert } from '../lib/assetAttributeWrites';
 import { listDeployableStatusSlugs, validateAssetStatusSlug } from '../lib/assetStatusRegistry';
+import { isAssetAssigneeError, setAssetAssignee } from '../lib/assetAssignment';
 import {
     ASSET_CONTACT_UNAVAILABLE_MESSAGE,
     ASSET_VENDOR_UNAVAILABLE_MESSAGE,
+    ASSET_WORKSPACE_MEMBER_MESSAGE,
     assetActionErrorFrom,
     type AssetActionError,
 } from './assetActionErrors';
@@ -194,6 +198,7 @@ async function assetActionErrorMessage(error: unknown, fallback: string): Promis
         message === 'Selected location is not available for this client' ||
         message === ASSET_CONTACT_UNAVAILABLE_MESSAGE ||
         message === ASSET_VENDOR_UNAVAILABLE_MESSAGE ||
+        message === ASSET_WORKSPACE_MEMBER_MESSAGE ||
         message.startsWith('Invalid input data:') ||
         message.startsWith('Asset validation failed:') ||
         message.startsWith('Permission denied:')
@@ -1078,7 +1083,7 @@ export async function createAssetInTransaction(
     tenant: string,
     actorUserId: string,
     data: CreateAssetRequest,
-    options?: { requireCustomAttributes?: boolean }
+    options?: { requireCustomAttributes?: boolean; assignmentSource?: AssetAssignmentSource }
 ): Promise<Asset> {
             // Validate the input data
             const validatedData = validateData(createAssetSchema, data);
@@ -1134,7 +1139,9 @@ export async function createAssetInTransaction(
                 location: validatedData.location !== undefined && validatedData.location !== ''
                     ? validatedData.location
                     : (selectedLocation?.location ?? ''),
-                contact_name_id: selectedContact?.contact_name_id ?? null,
+                // FR-C3: the assignee is written by setAssetAssignee below so
+                // the open asset_assignments row is created with it.
+                contact_name_id: null,
                 serial_number: validatedData.serial_number || '',
                 ...procurement,
                 created_at: now,
@@ -1155,6 +1162,13 @@ export async function createAssetInTransaction(
             const [asset] = await tenantScopedTable(trx, 'assets', tenant)
                 .insert(baseAssetData)
                 .returning('*');
+
+            if (selectedContact?.contact_name_id) {
+                await setAssetAssignee(trx, tenant, asset.asset_id, selectedContact.contact_name_id, {
+                    actorUserId,
+                    source: options?.assignmentSource ?? 'manual',
+                });
+            }
 
             // Handle extension table data based on asset type
             const extensionData = data[data.asset_type as keyof CreateAssetRequest];
@@ -1197,7 +1211,7 @@ export async function createAssetRecord(
     data: CreateAssetRequest,
     // Importers (e.g. Hudu) project best-effort attributes and must never fail
     // on a required custom field the source didn't supply; they pass false.
-    options?: { requireCustomAttributes?: boolean }
+    options?: { requireCustomAttributes?: boolean; assignmentSource?: AssetAssignmentSource }
 ): Promise<Asset> {
     try {
         // Validate input data first
@@ -1318,7 +1332,7 @@ export async function updateAssetRecord(
     actorUserId: string,
     asset_id: string,
     data: UpdateAssetRequest,
-    opts?: { suppressRevalidate?: boolean },
+    opts?: { suppressRevalidate?: boolean; assignmentSource?: AssetAssignmentSource },
     hooks?: AssetWriteHooks
 ): Promise<Asset> {
     try {
@@ -1400,6 +1414,10 @@ export async function updateAssetRecord(
                 }
             }
 
+            // FR-C3: the assignee never travels in the column patch — it is
+            // applied through setAssetAssignee after the rest of the write so
+            // the assignment row, the column and the history entry agree.
+            let pendingAssignee: { contactId: string | null; source: AssetAssignmentSource } | undefined;
             if (Object.prototype.hasOwnProperty.call(baseCandidate, 'contact_name_id')) {
                 const selectedContact = await resolveValidatedAssetContact(
                     trx,
@@ -1408,11 +1426,16 @@ export async function updateAssetRecord(
                     baseCandidate.contact_name_id as string | null | undefined
                 );
                 if (selectedContact) {
-                    baseCandidate.contact_name_id = selectedContact.contact_name_id;
+                    pendingAssignee = {
+                        contactId: selectedContact.contact_name_id,
+                        source: opts?.assignmentSource ?? 'manual',
+                    };
                 }
+                delete baseCandidate.contact_name_id;
             } else if (baseCandidate.client_id && baseCandidate.client_id !== asset.client_id && asset.contact_name_id) {
-                // The assignee belongs to the previous client; moving the asset clears it.
-                baseCandidate.contact_name_id = null;
+                // The assignee belongs to the previous client; moving the asset
+                // clears it, and that clear is a `system` assignment event.
+                pendingAssignee = { contactId: null, source: 'system' };
             }
 
             if (typeof baseCandidate.status === 'string') {
@@ -1466,6 +1489,16 @@ export async function updateAssetRecord(
                 await tenantScopedTable(trx, 'assets', tenant)
                     .where({ asset_id })
                     .update({ updated_at: trx.fn.now() });
+            }
+
+            if (pendingAssignee) {
+                await setAssetAssignee(trx, tenant, asset_id, pendingAssignee.contactId, {
+                    actorUserId,
+                    source: pendingAssignee.source,
+                    // A client move clears the assignee no matter what the
+                    // group model says; the group membership goes with it.
+                    allowWorkspaceMember: pendingAssignee.contactId === null,
+                });
             }
 
             const nextAssetType = (baseCandidate.asset_type as string | undefined) ?? asset.asset_type;
@@ -1602,6 +1635,9 @@ export async function updateAssetRecord(
             // without losing the user's in-progress form data.
             throw serializedAssetValidationError(error);
         }
+        if (isAssetAssigneeError(error)) {
+            throw error;
+        }
         if (isTypedAssetWriteError(error)) {
             // invalid_asset_type / attribute-schema issues already carry a
             // structured message the client knows how to render.
@@ -1622,7 +1658,7 @@ export const updateAsset = withAuth(async (
     { tenant },
     asset_id: string,
     data: UpdateAssetRequest,
-    opts?: { suppressRevalidate?: boolean }
+    opts?: { suppressRevalidate?: boolean; assignmentSource?: AssetAssignmentSource }
 ): Promise<Asset | AssetActionError> => {
     try {
     const { knex } = await createTenantKnex();

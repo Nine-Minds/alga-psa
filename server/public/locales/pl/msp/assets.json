@@ -1652,7 +1652,8 @@
       "missingField": "Brakuje wymaganego pola zasobu.",
       "missingFieldNamed": "Brakuje wymaganego pola zasobu: {{field}}.",
       "contactUnavailable": "Wybrany kontakt jest niedostępny dla tego klienta.",
-      "vendorUnavailable": "Wybrany dostawca jest niedostępny."
+      "vendorUnavailable": "Wybrany dostawca jest niedostępny.",
+      "workspaceMember": "Ten zasób należy do współdzielonego stanowiska, więc nie można przypisać go jednej osobie."
     }
   },
   "clientAssetMultiSelect": {

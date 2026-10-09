@@ -1652,7 +1652,8 @@
       "missingField": "Manca un campo obbligatorio dell’asset.",
       "missingFieldNamed": "Manca un campo obbligatorio dell’asset: {{field}}.",
       "contactUnavailable": "Il contatto selezionato non è disponibile per questo cliente.",
-      "vendorUnavailable": "Il fornitore selezionato non è disponibile."
+      "vendorUnavailable": "Il fornitore selezionato non è disponibile.",
+      "workspaceMember": "Questo asset appartiene a una postazione condivisa, quindi non può essere assegnato a una sola persona."
     }
   },
   "clientAssetMultiSelect": {

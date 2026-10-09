@@ -249,7 +249,11 @@ export const DELETION_CONFIGS: Record<string, EntityDeletionConfig> = {
         table: 'asset_associations',
         label: 'asset association',
         countQuery: countAssetAssociations('contact')
-      }
+      },
+      // FR-C5: the assignee link is a NO ACTION composite FK that
+      // clearContactLinksBeforeDelete nulls, so the operator sees it listed
+      // before a hard delete instead of meeting it as a constraint error.
+      { type: 'assigned_asset', table: 'assets', foreignKey: 'contact_name_id', label: 'assigned asset' }
     ]
   },
   ticket: {

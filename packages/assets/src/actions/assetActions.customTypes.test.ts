@@ -103,6 +103,22 @@ const h = vi.hoisted(() => {
       return this;
     }
 
+    private nullWheres: Array<{ col: string; isNull: boolean }> = [];
+
+    whereNull(col: string) {
+      this.nullWheres.push({ col: stripPrefix(col), isNull: true });
+      return this;
+    }
+
+    whereNotNull(col: string) {
+      this.nullWheres.push({ col: stripPrefix(col), isNull: false });
+      return this;
+    }
+
+    join(_table: any, _fn: any) {
+      return this;
+    }
+
     leftJoin(_table: any, _fn: any) {
       return this;
     }
@@ -118,6 +134,9 @@ const h = vi.hoisted(() => {
       }
       for (const { col, vals } of this.inWheres) {
         rows = rows.filter((row) => vals.includes(row[col]));
+      }
+      for (const { col, isNull } of this.nullWheres) {
+        rows = rows.filter((row) => (isNull ? row[col] === null || row[col] === undefined : row[col] !== null && row[col] !== undefined));
       }
       return rows;
     }
