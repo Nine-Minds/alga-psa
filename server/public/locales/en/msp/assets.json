@@ -655,7 +655,8 @@
       "manufacturer": "Manufacturer",
       "vendor": "Vendor",
       "purchaseCost": "Purchase cost",
-      "orderNumber": "Order no."
+      "orderNumber": "Order no.",
+      "billingProfile": "Billing profile"
     },
     "placeholders": {
       "loadingClients": "Loading clients…",
@@ -670,7 +671,8 @@
       "selectContact": "Select a contact",
       "noVendor": "No vendor",
       "selectVendor": "Select a vendor",
-      "purchaseCost": "0.00"
+      "purchaseCost": "0.00",
+      "clientDefaultProfile": "Client default"
     },
     "statusOptions": {
       "active": "Active",
@@ -1566,7 +1568,8 @@
     "aContact": "Contact",
     "assignDialogTitle": "Assign this asset",
     "sharedWorkspace": "Shared workspace",
-    "sharedWorkspaceValue": "{{name}} · {{count}} people"
+    "sharedWorkspaceValue": "{{name}} · {{count}} people",
+    "billingProfile": "Billing profile"
   },
   "assetTimeline": {
     "title": "Timeline",
@@ -1686,7 +1689,8 @@
       "missingFieldNamed": "Missing required asset field: {{field}}.",
       "contactUnavailable": "Selected contact is not available for this client.",
       "vendorUnavailable": "Selected vendor is not available.",
-      "workspaceMember": "This asset belongs to a shared workspace, so it cannot be assigned to one person."
+      "workspaceMember": "This asset belongs to a shared workspace, so it cannot be assigned to one person.",
+      "billingProfileUnavailable": "Selected billing profile is not available for this client."
     },
     "assetGroup": {
       "not_found": "Asset group not found.",

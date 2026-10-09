@@ -655,7 +655,8 @@
       "manufacturer": "Produttore",
       "vendor": "Fornitore",
       "purchaseCost": "Costo di acquisto",
-      "orderNumber": "N. ordine"
+      "orderNumber": "N. ordine",
+      "billingProfile": "Profilo di fatturazione"
     },
     "placeholders": {
       "loadingClients": "Caricamento clienti…",
@@ -670,7 +671,8 @@
       "selectContact": "Seleziona un contatto",
       "noVendor": "Nessun fornitore",
       "selectVendor": "Seleziona un fornitore",
-      "purchaseCost": "0,00"
+      "purchaseCost": "0,00",
+      "clientDefaultProfile": "Predefinito del cliente"
     },
     "statusOptions": {
       "active": "Attivo",
@@ -1566,7 +1568,8 @@
     "aContact": "Contatto",
     "assignDialogTitle": "Assegna questo asset",
     "sharedWorkspace": "Postazione condivisa",
-    "sharedWorkspaceValue": "{{name}} · {{count}} persone"
+    "sharedWorkspaceValue": "{{name}} · {{count}} persone",
+    "billingProfile": "Profilo di fatturazione"
   },
   "assetTimeline": {
     "title": "Cronologia",
@@ -1686,7 +1689,8 @@
       "missingFieldNamed": "Manca un campo obbligatorio dell’asset: {{field}}.",
       "contactUnavailable": "Il contatto selezionato non è disponibile per questo cliente.",
       "vendorUnavailable": "Il fornitore selezionato non è disponibile.",
-      "workspaceMember": "Questo asset appartiene a una postazione condivisa, quindi non può essere assegnato a una sola persona."
+      "workspaceMember": "Questo asset appartiene a una postazione condivisa, quindi non può essere assegnato a una sola persona.",
+      "billingProfileUnavailable": "Il profilo di fatturazione selezionato non è disponibile per questo cliente."
     },
     "assetGroup": {
       "not_found": "Gruppo di asset non trovato.",

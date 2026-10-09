@@ -655,7 +655,8 @@
       "manufacturer": "Producent",
       "vendor": "Dostawca",
       "purchaseCost": "Koszt zakupu",
-      "orderNumber": "Nr zamówienia"
+      "orderNumber": "Nr zamówienia",
+      "billingProfile": "Profil rozliczeniowy"
     },
     "placeholders": {
       "loadingClients": "Ładowanie klientów…",
@@ -670,7 +671,8 @@
       "selectContact": "Wybierz kontakt",
       "noVendor": "Brak dostawcy",
       "selectVendor": "Wybierz dostawcę",
-      "purchaseCost": "0,00"
+      "purchaseCost": "0,00",
+      "clientDefaultProfile": "Domyślny klienta"
     },
     "statusOptions": {
       "active": "Aktywny",
@@ -1566,7 +1568,8 @@
     "aContact": "Kontakt",
     "assignDialogTitle": "Przypisz ten zasób",
     "sharedWorkspace": "Współdzielone stanowisko",
-    "sharedWorkspaceValue": "{{name}} · {{count}} osób"
+    "sharedWorkspaceValue": "{{name}} · {{count}} osób",
+    "billingProfile": "Profil rozliczeniowy"
   },
   "assetTimeline": {
     "title": "Oś czasu",
@@ -1686,7 +1689,8 @@
       "missingFieldNamed": "Brakuje wymaganego pola zasobu: {{field}}.",
       "contactUnavailable": "Wybrany kontakt jest niedostępny dla tego klienta.",
       "vendorUnavailable": "Wybrany dostawca jest niedostępny.",
-      "workspaceMember": "Ten zasób należy do współdzielonego stanowiska, więc nie można przypisać go jednej osobie."
+      "workspaceMember": "Ten zasób należy do współdzielonego stanowiska, więc nie można przypisać go jednej osobie.",
+      "billingProfileUnavailable": "Wybrany profil rozliczeniowy jest niedostępny dla tego klienta."
     },
     "assetGroup": {
       "not_found": "Nie znaleziono grupy zasobów.",

@@ -18,12 +18,15 @@ import type {
 } from './contracts';
 import { resolveRmmTicketContactId } from './resolveContact';
 import { associateAssetWithTicket } from '../../services/assets/assetTicketAssociation';
+import { resolveAssetBillingProfileId } from '../../models/assetBillingProfileModel';
 
 export interface CreateAlertTicketParams {
   event: NormalizedRmmAlertEvent;
   actions: RmmAlertRuleActions;
   clientId: string;
   assetId?: string | null;
+  /** FR-F3: the RMM organization mapping's billing profile, when it has one. */
+  mappingBillingProfileId?: string | null;
   organizationName?: string | null;
   mappingDefaultContactId?: string | null;
 }
@@ -76,6 +79,11 @@ export async function createTicketForAlert(
     source_reference: event.externalAlertId,
   });
 
+  // FR-F3: the RMM organization's profile wins, then the device's own, then
+  // its location's default. Null leaves today's client-default behaviour.
+  const billingProfileId = params.mappingBillingProfileId
+    ?? (params.assetId ? await resolveAssetBillingProfileId(trx, tenantId, params.assetId) : null);
+
   const [ticket] = await db.table('tickets')
     .insert({
       tenant: tenantId,
@@ -83,6 +91,7 @@ export async function createTicketForAlert(
       title,
       client_id: params.clientId,
       contact_name_id: contactId,
+      billing_profile_id: billingProfileId,
       status_id: defaultStatusId,
       priority_id: priorityId ?? null,
       board_id: boardId,

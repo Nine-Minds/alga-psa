@@ -83,6 +83,10 @@ export interface Asset {
   purchase_cost?: number | null;
   purchase_cost_currency?: string | null;
   order_number?: string | null;
+  /** Billing profile this device's work is attributed to (FR-F1). */
+  billing_profile_id?: string | null;
+  /** Profile name; read-only, joined on read. */
+  billing_profile_name?: string | null;
   created_at: string;
   updated_at: string;
   tenant: string;
@@ -505,6 +509,7 @@ export interface CreateAssetRequest {
   purchase_cost?: number | null;
   purchase_cost_currency?: string | null;
   order_number?: string | null;
+  billing_profile_id?: string | null;
   workstation?: Omit<WorkstationAsset, 'tenant' | 'asset_id'>;
   network_device?: Omit<NetworkDeviceAsset, 'tenant' | 'asset_id'>;
   server?: Omit<ServerAsset, 'tenant' | 'asset_id'>;

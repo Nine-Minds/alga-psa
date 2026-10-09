@@ -38,6 +38,7 @@ export const createAssetSchema = z.object({
   purchase_cost: z.coerce.number().int().nullable().optional(),
   purchase_cost_currency: z.string().length(3).nullable().optional(),
   order_number: z.string().max(255).nullable().optional(),
+  billing_profile_id: uuidSchema.nullable().optional(),
   attributes: z.record(z.unknown()).optional()
 });
 
@@ -132,6 +133,7 @@ export const assetFilterSchema = baseFilterSchema.extend({
   manufacturer: z.string().optional(),
   model: z.string().optional(),
   vendor_id: uuidSchema.optional(),
+  billing_profile_id: uuidSchema.optional(),
   client_name: z.string().optional(),
   has_warranty: booleanTransform.optional(),
   warranty_expired: booleanTransform.optional(),
@@ -166,6 +168,7 @@ export const assetResponseSchema = z.object({
   purchase_cost: z.coerce.number().int().nullable().optional(),
   purchase_cost_currency: z.string().nullable().optional(),
   order_number: z.string().nullable().optional(),
+  billing_profile_id: uuidSchema.nullable().optional(),
   created_at: z.string().datetime(),
   updated_at: z.string().datetime(),
   tenant: uuidSchema,

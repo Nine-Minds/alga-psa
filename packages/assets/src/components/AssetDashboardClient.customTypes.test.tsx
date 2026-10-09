@@ -27,6 +27,13 @@ vi.mock('../actions/assetActions', () => ({
   getClientMaintenanceSummaries: (...args: unknown[]) => mockGetClientMaintenanceSummaries(...args),
 }));
 
+vi.mock('../actions/assetGroupActions', () => ({
+  addAssetsToGroup: vi.fn(),
+  createAssetGroup: vi.fn(),
+  listAssetGroups: vi.fn(async () => []),
+  getAssetTicketContactOptions: vi.fn(async () => ({ options: [], preselect: null })),
+}));
+
 vi.mock('../actions/assetDrawerActions', () => ({
   loadAssetDetailDrawerData: vi.fn(async () => ({ data: { asset: null } })),
 }));

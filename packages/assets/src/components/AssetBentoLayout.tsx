@@ -250,6 +250,14 @@ export function AssetBentoLayout({
                 {asset.order_number ? (
                   <BentoLabelValue id="asset-bento-order-number" label={t('assetBento.orderNumber', { defaultValue: 'Order no.' })} value={asset.order_number} mono />
                 ) : null}
+                {/* FR-F4: shown only when the device overrides the client default. */}
+                {asset.billing_profile_id ? (
+                  <BentoLabelValue
+                    id="asset-bento-billing-profile"
+                    label={t('assetBento.billingProfile', { defaultValue: 'Billing profile' })}
+                    value={asset.billing_profile_name ?? asset.billing_profile_id}
+                  />
+                ) : null}
                 <BentoLabelValue label={t('assetBento.purchased', { defaultValue: 'Purchased' })} value={asset.purchase_date ? new Date(asset.purchase_date).toLocaleDateString() : undefined} />
                 <BentoLabelValue label={t('assetBento.warrantyEnds', { defaultValue: 'Warranty ends' })} value={asset.warranty_end_date ? new Date(asset.warranty_end_date).toLocaleDateString() : undefined} />
               </div>

@@ -655,7 +655,8 @@
       "manufacturer": "Hersteller",
       "vendor": "Lieferant",
       "purchaseCost": "Kaufpreis",
-      "orderNumber": "Bestellnr."
+      "orderNumber": "Bestellnr.",
+      "billingProfile": "Abrechnungsprofil"
     },
     "placeholders": {
       "loadingClients": "Kunden werden geladen…",
@@ -670,7 +671,8 @@
       "selectContact": "Kontakt auswählen",
       "noVendor": "Kein Lieferant",
       "selectVendor": "Lieferant auswählen",
-      "purchaseCost": "0,00"
+      "purchaseCost": "0,00",
+      "clientDefaultProfile": "Kundenstandard"
     },
     "statusOptions": {
       "active": "Aktiv",
@@ -1566,7 +1568,8 @@
     "aContact": "Kontakt",
     "assignDialogTitle": "Dieses Asset zuweisen",
     "sharedWorkspace": "Gemeinsamer Arbeitsplatz",
-    "sharedWorkspaceValue": "{{name}} · {{count}} Personen"
+    "sharedWorkspaceValue": "{{name}} · {{count}} Personen",
+    "billingProfile": "Abrechnungsprofil"
   },
   "assetTimeline": {
     "title": "Verlauf",
@@ -1686,7 +1689,8 @@
       "missingFieldNamed": "Erforderliches Assetfeld fehlt: {{field}}.",
       "contactUnavailable": "Der ausgewählte Kontakt ist für diesen Kunden nicht verfügbar.",
       "vendorUnavailable": "Der ausgewählte Lieferant ist nicht verfügbar.",
-      "workspaceMember": "Dieses Asset gehört zu einem gemeinsamen Arbeitsplatz und kann nicht einer einzelnen Person zugewiesen werden."
+      "workspaceMember": "Dieses Asset gehört zu einem gemeinsamen Arbeitsplatz und kann nicht einer einzelnen Person zugewiesen werden.",
+      "billingProfileUnavailable": "Das ausgewählte Abrechnungsprofil ist für diesen Kunden nicht verfügbar."
     },
     "assetGroup": {
       "not_found": "Asset-Gruppe nicht gefunden.",

@@ -153,3 +153,25 @@ export const getVendorOptionsForAssets = withAuth(async (
       .orderBy('vendor_name', 'asc');
   }) as unknown as Array<{ vendor_id: string; vendor_name: string }>;
 });
+
+/**
+ * FR-F4: the client's active billing profiles, for the asset form's Billing
+ * profile select. The select only appears when there is more than one, so a
+ * single-profile client is never asked a question with one answer.
+ */
+export const getClientBillingProfilesForAssets = withAuth(async (
+  _user,
+  { tenant },
+  clientId: string
+): Promise<Array<{ billing_profile_id: string; name: string; is_default: boolean }>> => {
+  await assertPsaOnlyTenantAccess(tenant, 'asset_rmm_actions');
+  const { knex } = await createTenantKnex();
+
+  return withTransaction(knex, async (trx: Knex.Transaction) => {
+    return tenantScopedTable(trx, tenant, 'client_billing_profiles')
+      .select('billing_profile_id', 'name', 'is_default')
+      .where({ client_id: clientId, is_active: true })
+      .orderBy('is_default', 'desc')
+      .orderBy('name', 'asc');
+  }) as unknown as Array<{ billing_profile_id: string; name: string; is_default: boolean }>;
+});

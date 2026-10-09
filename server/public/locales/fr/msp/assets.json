@@ -655,7 +655,8 @@
       "manufacturer": "Fabricant",
       "vendor": "Fournisseur",
       "purchaseCost": "Coût d'achat",
-      "orderNumber": "N° de commande"
+      "orderNumber": "N° de commande",
+      "billingProfile": "Profil de facturation"
     },
     "placeholders": {
       "loadingClients": "Chargement des clients…",
@@ -670,7 +671,8 @@
       "selectContact": "Sélectionnez un contact",
       "noVendor": "Aucun fournisseur",
       "selectVendor": "Sélectionner un fournisseur",
-      "purchaseCost": "0,00"
+      "purchaseCost": "0,00",
+      "clientDefaultProfile": "Valeur par défaut du client"
     },
     "statusOptions": {
       "active": "Actif",
@@ -1566,7 +1568,8 @@
     "aContact": "Contact",
     "assignDialogTitle": "Attribuer cet actif",
     "sharedWorkspace": "Espace partagé",
-    "sharedWorkspaceValue": "{{name}} · {{count}} personnes"
+    "sharedWorkspaceValue": "{{name}} · {{count}} personnes",
+    "billingProfile": "Profil de facturation"
   },
   "assetTimeline": {
     "title": "Chronologie",
@@ -1686,7 +1689,8 @@
       "missingFieldNamed": "Un champ obligatoire de l’actif est manquant : {{field}}.",
       "contactUnavailable": "Le contact sélectionné n’est pas disponible pour ce client.",
       "vendorUnavailable": "Le fournisseur sélectionné n'est pas disponible.",
-      "workspaceMember": "Cet actif appartient à un espace de travail partagé ; il ne peut pas être attribué à une seule personne."
+      "workspaceMember": "Cet actif appartient à un espace de travail partagé ; il ne peut pas être attribué à une seule personne.",
+      "billingProfileUnavailable": "Le profil de facturation sélectionné n'est pas disponible pour ce client."
     },
     "assetGroup": {
       "not_found": "Groupe d'actifs introuvable.",

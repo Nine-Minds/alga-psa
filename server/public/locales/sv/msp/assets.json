@@ -648,7 +648,8 @@
       "manufacturer": "Tillverkare",
       "vendor": "Leverantör",
       "purchaseCost": "Inköpskostnad",
-      "orderNumber": "Ordernr."
+      "orderNumber": "Ordernr.",
+      "billingProfile": "Faktureringsprofil"
     },
     "placeholders": {
       "loadingClients": "Läser in kunder…",
@@ -663,7 +664,8 @@
       "selectContact": "Välj en kontakt",
       "noVendor": "Ingen leverantör",
       "selectVendor": "Välj en leverantör",
-      "purchaseCost": "0,00"
+      "purchaseCost": "0,00",
+      "clientDefaultProfile": "Kundens standard"
     },
     "statusOptions": {
       "active": "Aktiv",
@@ -1538,7 +1540,8 @@
     "aContact": "Kontakt",
     "assignDialogTitle": "Tilldela den här tillgången",
     "sharedWorkspace": "Delad arbetsplats",
-    "sharedWorkspaceValue": "{{name}} · {{count}} personer"
+    "sharedWorkspaceValue": "{{name}} · {{count}} personer",
+    "billingProfile": "Faktureringsprofil"
   },
   "assetTimeline": {
     "title": "Tidslinje",
@@ -1658,7 +1661,8 @@
       "missingFieldNamed": "Obligatoriskt tillgångsfält saknas: {{field}}.",
       "contactUnavailable": "Den valda kontakten är inte tillgänglig för den här kunden.",
       "vendorUnavailable": "Den valda leverantören är inte tillgänglig.",
-      "workspaceMember": "Den här tillgången hör till en delad arbetsplats och kan därför inte tilldelas en enskild person."
+      "workspaceMember": "Den här tillgången hör till en delad arbetsplats och kan därför inte tilldelas en enskild person.",
+      "billingProfileUnavailable": "Den valda faktureringsprofilen är inte tillgänglig för den här kunden."
     },
     "assetGroup": {
       "not_found": "Tillgångsgruppen hittades inte.",

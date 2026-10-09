@@ -707,6 +707,8 @@ export const updateNinjaOneOrganizationMapping = withAdvancedAssetsAccess(async 
     auto_create_tickets?: boolean;
     /** FR-D3: off | suggest | auto. */
     contact_assignment_mode?: string;
+      /** FR-F1: the organization's billing profile, or null. */
+      billing_profile_id?: string | null;
   }
 ): Promise<{ success: boolean; error?: string }> => {
   try {
@@ -738,6 +740,12 @@ export const updateNinjaOneOrganizationMapping = withAdvancedAssetsAccess(async 
         return { success: false, error: 'Invalid people mode' };
       }
       dbUpdates.contact_assignment_mode = updates.contact_assignment_mode;
+    }
+    if ('billing_profile_id' in updates) {
+      dbUpdates.billing_profile_id = updates.billing_profile_id || null;
+    } else if ('company_id' in updates) {
+      // FR-F1: a profile belongs to one client, so a client change clears it.
+      dbUpdates.billing_profile_id = null;
     }
 
     await db.table('rmm_organization_mappings')

@@ -392,6 +392,8 @@ export const updateHuntressOrganizationMapping = withHuntressAccess(
       auto_create_tickets?: boolean;
       /** FR-D3: off | suggest | auto. */
       contact_assignment_mode?: string;
+      /** FR-F1: the organization's billing profile, or null. */
+      billing_profile_id?: string | null;
     }
   ): Promise<{ success: boolean; error?: string }> => {
     await requireSettingsUpdatePermission(user);
@@ -424,6 +426,12 @@ export const updateHuntressOrganizationMapping = withHuntressAccess(
         return { success: false, error: 'Invalid people mode' };
       }
       changes.contact_assignment_mode = updates.contact_assignment_mode;
+    }
+    if (updates.billing_profile_id !== undefined) {
+      changes.billing_profile_id = updates.billing_profile_id || null;
+    } else if (updates.client_id !== undefined) {
+      // FR-F1: a profile belongs to one client, so a client change clears it.
+      changes.billing_profile_id = null;
     }
 
     await db.table('rmm_organization_mappings')

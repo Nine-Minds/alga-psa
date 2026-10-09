@@ -40,7 +40,7 @@ import { pickSchemaAttributes, validateAttributesAgainstSchema } from '../lib/as
 import { buildAssetTypeOptions, useAssetTypeRegistry } from './shared/useAssetTypeOptions';
 import { buildAssetStatusOptions, useAssetStatusRegistry } from './shared/useAssetStatusOptions';
 import { CustomTypeFieldsPanel } from './shared/CustomTypeFieldsPanel';
-import { getAllClientsForAssets, getClientContactsForAssets, getClientLocationsForAssets, getVendorOptionsForAssets } from '../actions/clientLookupActions';
+import { getAllClientsForAssets, getClientBillingProfilesForAssets, getClientContactsForAssets, getClientLocationsForAssets, getVendorOptionsForAssets } from '../actions/clientLookupActions';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
 import { Monitor, Network, Server, Smartphone, Printer as PrinterIcon, Router, Shield, Radio, Scale, MapPin, ExternalLink } from 'lucide-react';
@@ -99,6 +99,8 @@ export default function AssetForm({ assetId, onSaved }: AssetFormProps) {
   const [customAttributes, setCustomAttributes] = useState<Record<string, unknown>>({});
   const [attributeErrors, setAttributeErrors] = useState<Record<string, string>>({});
   const [vendors, setVendors] = useState<Array<{ vendor_id: string; vendor_name: string }>>([]);
+  // FR-F4: only offered when the client actually has a choice to make.
+  const [billingProfiles, setBillingProfiles] = useState<Array<{ billing_profile_id: string; name: string }>>([]);
   // Purchase cost is stored in minor units but typed as a decimal amount.
   const [purchaseCostInput, setPurchaseCostInput] = useState('');
   const clientDrawer = useClientDrawer();
@@ -124,7 +126,8 @@ export default function AssetForm({ assetId, onSaved }: AssetFormProps) {
     manufacturer: '',
     model: '',
     vendor_id: null,
-    order_number: ''
+    order_number: '',
+    billing_profile_id: null
   });
 
 
@@ -227,6 +230,7 @@ export default function AssetForm({ assetId, onSaved }: AssetFormProps) {
           model: data.model ?? '',
           vendor_id: data.vendor_id ?? null,
           purchase_cost_currency: data.purchase_cost_currency ?? null,
+          billing_profile_id: data.billing_profile_id ?? null,
           order_number: data.order_number ?? '',
           workstation: data.workstation ? {
             os_type: data.workstation.os_type || '',
@@ -359,6 +363,25 @@ export default function AssetForm({ assetId, onSaved }: AssetFormProps) {
       isMounted = false;
     };
   }, [asset?.vendor_id]);
+
+  useEffect(() => {
+    if (!formData.client_id) {
+      setBillingProfiles([]);
+      return;
+    }
+    let isMounted = true;
+    void (async () => {
+      try {
+        const list = await getClientBillingProfilesForAssets(formData.client_id);
+        if (isMounted) setBillingProfiles(list);
+      } catch (error) {
+        console.error('Error loading billing profiles:', error);
+      }
+    })();
+    return () => {
+      isMounted = false;
+    };
+  }, [formData.client_id]);
 
   const vendorOptions = useMemo(() => ([
     { value: '', label: t('assetForm.placeholders.noVendor', { defaultValue: 'No vendor' }) },
@@ -1096,6 +1119,7 @@ export default function AssetForm({ assetId, onSaved }: AssetFormProps) {
         manufacturer: formData.manufacturer?.trim() || null,
         model: formData.model?.trim() || null,
         vendor_id: formData.vendor_id || null,
+        billing_profile_id: formData.billing_profile_id || null,
         purchase_cost: parseMoneyToMinorUnits(purchaseCostInput),
         order_number: formData.order_number?.trim() || null,
         // F309/F310: submit only schema-declared keys — the server merges into
@@ -1628,6 +1652,24 @@ export default function AssetForm({ assetId, onSaved }: AssetFormProps) {
                     </p>
                   )}
                 </div>
+                {billingProfiles.length > 1 ? (
+                  <div>
+                    <label htmlFor="asset-billing-profile-select" className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
+                      {t('assetForm.fields.billingProfile', { defaultValue: 'Billing profile' })}
+                    </label>
+                    <CustomSelect
+                      id="asset-billing-profile-select"
+                      value={formData.billing_profile_id ?? ''}
+                      onValueChange={(value) => setFormData(prev => ({ ...prev, billing_profile_id: value || null }))}
+                      options={[
+                        { value: '', label: t('assetForm.placeholders.clientDefaultProfile', { defaultValue: 'Client default' }) },
+                        ...billingProfiles.map((profile) => ({ value: profile.billing_profile_id, label: profile.name })),
+                      ]}
+                      disabled={saving}
+                      className="mt-1"
+                    />
+                  </div>
+                ) : null}
                 <div>
                   <label htmlFor="asset-order-number-input" className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
                     {t('assetForm.fields.orderNumber', { defaultValue: 'Order no.' })}

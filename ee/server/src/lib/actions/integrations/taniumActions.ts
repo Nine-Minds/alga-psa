@@ -385,6 +385,7 @@ export const getTaniumOrganizationMappings = withAdvancedAssetsAccess(async (use
         'rom.auto_create_tickets',
         'rom.default_contact_id',
         'rom.contact_assignment_mode',
+        'rom.billing_profile_id',
         'rom.last_synced_at',
         'c.client_name as client_name',
       ])
@@ -411,6 +412,8 @@ export const updateTaniumOrganizationMapping = withAdvancedAssetsAccess(async (
     defaultContactId?: string | null;
     /** FR-D3: off | suggest | auto. */
     contactAssignmentMode?: string;
+    /** FR-F1: the organization's billing profile, or null. */
+    billingProfileId?: string | null;
   }
 ) => {
   const permitted = await hasPermission(user as any, 'system_settings', 'update');
@@ -431,6 +434,12 @@ export const updateTaniumOrganizationMapping = withAdvancedAssetsAccess(async (
         return { success: false, error: 'Invalid people mode' };
       }
       patch.contact_assignment_mode = input.contactAssignmentMode;
+    }
+    if (typeof input.billingProfileId !== 'undefined') {
+      patch.billing_profile_id = input.billingProfileId || null;
+    } else if (typeof input.clientId !== 'undefined') {
+      // FR-F1: a profile belongs to one client, so a client change clears it.
+      patch.billing_profile_id = null;
     }
 
     await db.table('rmm_organization_mappings')

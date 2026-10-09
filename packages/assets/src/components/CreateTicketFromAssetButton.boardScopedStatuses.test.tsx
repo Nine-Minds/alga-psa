@@ -22,6 +22,13 @@ vi.mock('@alga-psa/reference-data/actions', () => ({
   getTicketStatuses: (...args: unknown[]) => mockGetTicketStatuses(...args),
 }));
 
+vi.mock('../actions/assetGroupActions', () => ({
+  addAssetsToGroup: vi.fn(),
+  createAssetGroup: vi.fn(),
+  listAssetGroups: vi.fn(async () => []),
+  getAssetTicketContactOptions: vi.fn(async () => ({ options: [], preselect: null })),
+}));
+
 vi.mock('next/navigation', () => ({
   useRouter: () => ({
     push: mockPush,

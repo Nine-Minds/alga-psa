@@ -114,6 +114,12 @@ export function assetActionErrorFrom(error: unknown): AssetActionError | null {
     if (message === ASSET_VENDOR_UNAVAILABLE_MESSAGE) {
       return actionError('Selected vendor is not available.', 'msp/assets:errors.asset.vendorUnavailable');
     }
+    if (message === 'Selected billing profile is not available for this client') {
+      return actionError(
+        'Selected billing profile is not available for this client.',
+        'msp/assets:errors.asset.billingProfileUnavailable',
+      );
+    }
     if (message === ASSET_WORKSPACE_MEMBER_MESSAGE) {
       return actionError(
         'This asset belongs to a shared workspace, so it cannot be assigned to one person.',

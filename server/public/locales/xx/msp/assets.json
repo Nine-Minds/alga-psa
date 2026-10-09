@@ -655,7 +655,8 @@
       "manufacturer": "⟦Ḿȧƞŭƒȧƈŧŭřḗř⟧",
       "vendor": "⟦Ṽḗƞḓȯř⟧",
       "purchaseCost": "⟦Ƥŭřƈħȧşḗ ƈȯşŧ⟧",
-      "orderNumber": "⟦Ȯřḓḗř ƞȯ.⟧"
+      "orderNumber": "⟦Ȯřḓḗř ƞȯ.⟧",
+      "billingProfile": "⟦Ɓīŀŀīƞɠ ƥřȯƒīŀḗ⟧"
     },
     "placeholders": {
       "loadingClients": "⟦Ŀȯȧḓīƞɠ ƈŀīḗƞŧş…⟧",
@@ -670,7 +671,8 @@
       "selectContact": "⟦Şḗŀḗƈŧ ȧ ƈȯƞŧȧƈŧ⟧",
       "noVendor": "⟦Ƞȯ ṽḗƞḓȯř⟧",
       "selectVendor": "⟦Şḗŀḗƈŧ ȧ ṽḗƞḓȯř⟧",
-      "purchaseCost": "⟦0.00⟧"
+      "purchaseCost": "⟦0.00⟧",
+      "clientDefaultProfile": "⟦Ƈŀīḗƞŧ ḓḗƒȧŭŀŧ⟧"
     },
     "statusOptions": {
       "active": "⟦Ȧƈŧīṽḗ⟧",
@@ -1566,7 +1568,8 @@
     "aContact": "⟦Ƈȯƞŧȧƈŧ⟧",
     "assignDialogTitle": "⟦Ȧşşīɠƞ ŧħīş ȧşşḗŧ⟧",
     "sharedWorkspace": "⟦Şħȧřḗḓ ẇȯřķşƥȧƈḗ⟧",
-    "sharedWorkspaceValue": "⟦{{name}} · {{count}} ƥḗȯƥŀḗ⟧"
+    "sharedWorkspaceValue": "⟦{{name}} · {{count}} ƥḗȯƥŀḗ⟧",
+    "billingProfile": "⟦Ɓīŀŀīƞɠ ƥřȯƒīŀḗ⟧"
   },
   "assetTimeline": {
     "title": "⟦Ŧīḿḗŀīƞḗ⟧",
@@ -1686,7 +1689,8 @@
       "missingFieldNamed": "⟦Ḿīşşīƞɠ řḗʠŭīřḗḓ ȧşşḗŧ ƒīḗŀḓ: {{field}}.⟧",
       "contactUnavailable": "⟦Şḗŀḗƈŧḗḓ ƈȯƞŧȧƈŧ īş ƞȯŧ ȧṽȧīŀȧƀŀḗ ƒȯř ŧħīş ƈŀīḗƞŧ.⟧",
       "vendorUnavailable": "⟦Şḗŀḗƈŧḗḓ ṽḗƞḓȯř īş ƞȯŧ ȧṽȧīŀȧƀŀḗ.⟧",
-      "workspaceMember": "⟦Ŧħīş ȧşşḗŧ ƀḗŀȯƞɠş ŧȯ ȧ şħȧřḗḓ ẇȯřķşƥȧƈḗ, şȯ īŧ ƈȧƞƞȯŧ ƀḗ ȧşşīɠƞḗḓ ŧȯ ȯƞḗ ƥḗřşȯƞ.⟧"
+      "workspaceMember": "⟦Ŧħīş ȧşşḗŧ ƀḗŀȯƞɠş ŧȯ ȧ şħȧřḗḓ ẇȯřķşƥȧƈḗ, şȯ īŧ ƈȧƞƞȯŧ ƀḗ ȧşşīɠƞḗḓ ŧȯ ȯƞḗ ƥḗřşȯƞ.⟧",
+      "billingProfileUnavailable": "⟦Şḗŀḗƈŧḗḓ ƀīŀŀīƞɠ ƥřȯƒīŀḗ īş ƞȯŧ ȧṽȧīŀȧƀŀḗ ƒȯř ŧħīş ƈŀīḗƞŧ.⟧"
     },
     "assetGroup": {
       "not_found": "⟦Ȧşşḗŧ ɠřȯŭƥ ƞȯŧ ƒȯŭƞḓ.⟧",

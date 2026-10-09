@@ -655,7 +655,8 @@
       "manufacturer": "Fabrikant",
       "vendor": "Leverancier",
       "purchaseCost": "Aanschafkosten",
-      "orderNumber": "Ordernr."
+      "orderNumber": "Ordernr.",
+      "billingProfile": "Factureringsprofiel"
     },
     "placeholders": {
       "loadingClients": "Klanten laden…",
@@ -670,7 +671,8 @@
       "selectContact": "Selecteer een contact",
       "noVendor": "Geen leverancier",
       "selectVendor": "Selecteer een leverancier",
-      "purchaseCost": "0,00"
+      "purchaseCost": "0,00",
+      "clientDefaultProfile": "Standaard van de klant"
     },
     "statusOptions": {
       "active": "Actief",
@@ -1566,7 +1568,8 @@
     "aContact": "Contact",
     "assignDialogTitle": "Dit asset toewijzen",
     "sharedWorkspace": "Gedeelde werkplek",
-    "sharedWorkspaceValue": "{{name}} · {{count}} personen"
+    "sharedWorkspaceValue": "{{name}} · {{count}} personen",
+    "billingProfile": "Factureringsprofiel"
   },
   "assetTimeline": {
     "title": "Tijdlijn",
@@ -1686,7 +1689,8 @@
       "missingFieldNamed": "Er ontbreekt een verplicht assetveld: {{field}}.",
       "contactUnavailable": "Het geselecteerde contact is niet beschikbaar voor deze klant.",
       "vendorUnavailable": "De geselecteerde leverancier is niet beschikbaar.",
-      "workspaceMember": "Dit asset hoort bij een gedeelde werkplek en kan daarom niet aan één persoon worden toegewezen."
+      "workspaceMember": "Dit asset hoort bij een gedeelde werkplek en kan daarom niet aan één persoon worden toegewezen.",
+      "billingProfileUnavailable": "Het geselecteerde factureringsprofiel is niet beschikbaar voor deze klant."
     },
     "assetGroup": {
       "not_found": "Assetgroep niet gevonden.",

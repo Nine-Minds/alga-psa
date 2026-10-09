@@ -30,6 +30,7 @@ import { isTypedAssetWriteError } from '@alga-psa/assets/lib/assetTypeAttributes
 import { validateAssetStatusSlug } from '@alga-psa/assets/lib/assetStatusRegistry';
 import { isAssetAssigneeError, setAssetAssignee } from '@alga-psa/assets/lib/assetAssignment';
 import { removeAssetFromAnyGroup } from '@alga-psa/assets/lib/assetGroups';
+import { assertBillingProfileForClient } from '@alga-psa/shared/models/assetBillingProfileModel';
 
 function validationDetails(issues: Array<{ key: string; code: string; message: string }>) {
   return issues.map((issue) => ({ path: ['attributes', issue.key], code: issue.code, message: issue.message }));
@@ -126,6 +127,9 @@ export class AssetService extends BaseService<any> {
       }
       if (filters.vendor_id) {
         query.where(`${this.tableName}.vendor_id`, filters.vendor_id);
+      }
+      if (filters.billing_profile_id) {
+        query.where(`${this.tableName}.billing_profile_id`, filters.billing_profile_id);
       }
       if (filters.asset_type) {
         query.where(`${this.tableName}.asset_type`, filters.asset_type);
@@ -333,6 +337,9 @@ export class AssetService extends BaseService<any> {
       await this.assertVendorExists(knex, context.tenant, assetData.vendor_id);
     }
     await this.assertValidStatus(knex, context.tenant, assetData.status);
+    if (assetData.billing_profile_id) {
+      await this.assertBillingProfile(knex, context.tenant, assetData.client_id, assetData.billing_profile_id);
+    }
     if (assetData.purchase_cost !== undefined && assetData.purchase_cost !== null && !assetData.purchase_cost_currency) {
       assetData.purchase_cost_currency = await this.resolveTenantCurrency(knex, context.tenant);
     }
@@ -396,7 +403,7 @@ export class AssetService extends BaseService<any> {
     const current = needsAssetContext
       ? await scopedTable(knex, context.tenant, this.tableName)
           .where({ [this.primaryKey]: id })
-          .first('client_id', 'location_id', 'contact_name_id', 'asset_type', 'status')
+          .first('client_id', 'location_id', 'contact_name_id', 'asset_type', 'status', 'billing_profile_id')
       : null;
 
     if (needsAssetContext && !current) {
@@ -455,6 +462,19 @@ export class AssetService extends BaseService<any> {
     }
     if (data.status !== undefined) {
       await this.assertValidStatus(knex, context.tenant, data.status, current?.status);
+    }
+    if (data.billing_profile_id) {
+      const clientId = data.client_id || current?.client_id;
+      if (!clientId) throw new NotFoundError('Asset not found');
+      await this.assertBillingProfile(knex, context.tenant, clientId, data.billing_profile_id);
+    } else if (
+      data.client_id &&
+      current?.client_id &&
+      data.client_id !== current.client_id &&
+      data.billing_profile_id === undefined
+    ) {
+      // FR-F1: a profile belongs to one client, so the move clears it.
+      updateData.billing_profile_id = null;
     }
     if (data.purchase_cost !== undefined) {
       if (data.purchase_cost === null) {
@@ -592,6 +612,23 @@ export class AssetService extends BaseService<any> {
     if (!result.ok) {
       const { error } = result as Extract<typeof result, { ok: false }>;
       throw new ValidationError(error.message, { status: [error.message] });
+    }
+  }
+
+  /** FR-F1: the profile must belong to the row's client and be active. */
+  private async assertBillingProfile(
+    knex: Knex,
+    tenant: string,
+    clientId: string,
+    billingProfileId: string
+  ): Promise<void> {
+    try {
+      await assertBillingProfileForClient(knex, tenant, clientId, billingProfileId);
+    } catch (error) {
+      throw new ValidationError(
+        error instanceof Error ? error.message : 'Selected billing profile is not available for this client',
+        { billing_profile_id: ['Selected billing profile is not available for this client'] }
+      );
     }
   }
 

@@ -99,6 +99,10 @@ import { listDeployableStatusSlugs, validateAssetStatusSlug } from '../lib/asset
 import { isAssetAssigneeError, setAssetAssignee } from '../lib/assetAssignment';
 import { getAssetGroupSummary, removeAssetFromAnyGroup } from '../lib/assetGroups';
 import {
+    ASSET_BILLING_PROFILE_UNAVAILABLE,
+    assertBillingProfileForClient,
+} from '@alga-psa/shared/models/assetBillingProfileModel';
+import {
     ASSET_CONTACT_UNAVAILABLE_MESSAGE,
     ASSET_VENDOR_UNAVAILABLE_MESSAGE,
     ASSET_WORKSPACE_MEMBER_MESSAGE,
@@ -200,6 +204,7 @@ async function assetActionErrorMessage(error: unknown, fallback: string): Promis
         message === ASSET_CONTACT_UNAVAILABLE_MESSAGE ||
         message === ASSET_VENDOR_UNAVAILABLE_MESSAGE ||
         message === ASSET_WORKSPACE_MEMBER_MESSAGE ||
+        message === ASSET_BILLING_PROFILE_UNAVAILABLE ||
         message.startsWith('Invalid input data:') ||
         message.startsWith('Asset validation failed:') ||
         message.startsWith('Permission denied:')
@@ -304,7 +309,7 @@ function sanitizeUpdatePayload(data: UpdateAssetRequest): UpdateAssetRequest {
         cleaned.contact_name_id = null;
     }
     // Same for the procurement fields: null means "clear", not "keep".
-    for (const key of ['vendor_id', 'purchase_cost', 'purchase_cost_currency', 'manufacturer', 'model', 'order_number'] as const) {
+    for (const key of ['vendor_id', 'purchase_cost', 'purchase_cost_currency', 'manufacturer', 'model', 'order_number', 'billing_profile_id'] as const) {
         if (data[key] === null) {
             (cleaned as Record<string, unknown>)[key] = null;
         }
@@ -943,6 +948,8 @@ function formatAssetForOutput(asset: any): Asset {
         purchase_cost: nullableNumber(asset.purchase_cost),
         purchase_cost_currency: asset.purchase_cost_currency ?? null,
         order_number: asset.order_number ?? null,
+        billing_profile_id: asset.billing_profile_id ?? null,
+        billing_profile_name: asset.billing_profile_name ?? null,
         // Ensure client data is properly structured
         // The SQL JOIN returns client_name as a flat field; build the nested object from it
         client: asset.client_id ? {
@@ -1115,12 +1122,20 @@ export async function createAssetInTransaction(
             await assertValidAssetStatus(trx, tenant, validatedData.status);
 
             const selectedVendor = await resolveValidatedAssetVendor(trx, tenant, validatedData.vendor_id);
+            // FR-F1: the profile must belong to this client and be active.
+            const billingProfileId = await assertBillingProfileForClient(
+                trx,
+                tenant,
+                validatedData.client_id,
+                validatedData.billing_profile_id ?? null
+            );
 
             const procurement: Record<string, unknown> = {
                 manufacturer: trimToNull(validatedData.manufacturer),
                 model: trimToNull(validatedData.model),
                 vendor_id: selectedVendor?.vendor_id ?? null,
                 order_number: trimToNull(validatedData.order_number),
+                billing_profile_id: billingProfileId,
             };
             if (validatedData.purchase_cost !== undefined) {
                 procurement.purchase_cost = validatedData.purchase_cost;
@@ -1466,6 +1481,19 @@ export async function updateAssetRecord(
                 baseCandidate as Record<string, unknown>,
                 asset.purchase_cost_currency
             );
+
+            const clientChanged = Boolean(baseCandidate.client_id && baseCandidate.client_id !== asset.client_id);
+            if (Object.prototype.hasOwnProperty.call(baseCandidate, 'billing_profile_id')) {
+                baseCandidate.billing_profile_id = await assertBillingProfileForClient(
+                    trx,
+                    tenant,
+                    (baseCandidate.client_id as string | undefined) ?? asset.client_id,
+                    (baseCandidate.billing_profile_id as string | null | undefined) ?? null
+                );
+            } else if (clientChanged && asset.billing_profile_id) {
+                // FR-F1: a profile belongs to one client, so the move clears it.
+                baseCandidate.billing_profile_id = null;
+            }
 
             // Update base asset fields (excluding extension payloads)
             const baseUpdateData: Record<string, unknown> = {};
@@ -1971,11 +1999,13 @@ async function getAssetWithExtensions(knex: Knex, tenant: string, asset_id: stri
             'assets.*',
             'clients.client_name',
             'contacts.full_name as contact_name',
-            'vendors.vendor_name'
+            'vendors.vendor_name',
+            'client_billing_profiles.name as billing_profile_name'
         );
     db.tenantJoin(assetQuery, 'clients', 'clients.client_id', 'assets.client_id', { type: 'left' });
     db.tenantJoin(assetQuery, 'contacts', 'contacts.contact_name_id', 'assets.contact_name_id', { type: 'left' });
     db.tenantJoin(assetQuery, 'vendors', 'vendors.vendor_id', 'assets.vendor_id', { type: 'left' });
+    db.tenantJoin(assetQuery, 'client_billing_profiles', 'client_billing_profiles.billing_profile_id', 'assets.billing_profile_id', { type: 'left' });
     const asset = await assetQuery
         .where({ 'assets.asset_id': asset_id })
         .first();
