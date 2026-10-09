@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useState, useTransition } from 'react';
+import { buildRmmPeopleModeOptions, RmmUserContactMappingPanel } from '@alga-psa/integrations/components/settings/integrations/RmmUserContactMappingPanel';
+import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -33,6 +35,7 @@ type MappingRow = {
   client_name?: string | null;
   auto_sync_assets: boolean;
   default_contact_id?: string | null;
+  contact_assignment_mode?: string | null;
 };
 
 export default function TaniumIntegrationSettings() {
@@ -233,6 +236,19 @@ export default function TaniumIntegrationSettings() {
     })();
   };
 
+  const handlePeopleModeChange = (mappingId: string, mode: string) => {
+    void (async () => {
+      const result = await updateTaniumOrganizationMapping({ mappingId, contactAssignmentMode: mode });
+      if (!result.success) {
+        setError(result.error || t('integrations.rmm.tanium.errors.updateMappingFailed'));
+        return;
+      }
+      await refresh();
+    })();
+  };
+
+  const peopleModeOptions = buildRmmPeopleModeOptions(t);
+
   const columns: ColumnDefinition<MappingRow>[] = [
     {
       title: t('integrations.rmm.tanium.mappings.externalScope'),
@@ -275,6 +291,21 @@ export default function TaniumIntegrationSettings() {
           disabled={!mapping.client_id}
           placeholder={t('integrations.rmm.tanium.mappings.selectContact')}
           onAddNew={mapping.client_id ? () => setQuickAddContactFor({ mappingId: mapping.mapping_id, clientId: mapping.client_id! }) : undefined}
+        />
+      ),
+    },
+    {
+      // FR-D8: what sync does with the device's signed-in user.
+      title: t('integrations.rmm.peopleMode.label', { defaultValue: 'People' }),
+      dataIndex: 'contact_assignment_mode',
+      sortable: false,
+      render: (_v, mapping) => (
+        <CustomSelect
+          id={`rmm-org-people-mode-${mapping.mapping_id}`}
+          value={mapping.contact_assignment_mode ?? 'suggest'}
+          onValueChange={(mode) => handlePeopleModeChange(mapping.mapping_id, mode)}
+          options={peopleModeOptions}
+          className="min-w-[160px]"
         />
       ),
     },
@@ -410,12 +441,30 @@ export default function TaniumIntegrationSettings() {
           </div>
 
           <div className="overflow-x-auto rounded-md border">
-            <DataTable
-              id="tanium-org-mappings"
-              data={mappings}
-              columns={columns}
-              pagination
-            />
+            <>
+              <DataTable
+                id="tanium-org-mappings"
+                data={mappings}
+                columns={columns}
+                pagination
+              />
+              {/* FR-D8: one Signed-in users panel per mapped organization. */}
+              {mappings
+                .filter((m) => m.client_id)
+                .map((m) => (
+                  <div key={`signed-in-${m.mapping_id}`} className="mt-4 border-t pt-4">
+                    <div className="mb-2 text-sm font-medium">
+                      {m.external_organization_name || m.external_organization_id}
+                    </div>
+                    <RmmUserContactMappingPanel
+                      mappingId={m.mapping_id}
+                      clientId={m.client_id ?? null}
+                      contacts={contacts}
+                      idPrefix={`tanium-signed-in-${m.mapping_id}`}
+                    />
+                  </div>
+                ))}
+            </>
           </div>
         </CardContent>
       </Card>

@@ -51,6 +51,7 @@ import {
 } from '../lib/assetSignals';
 import { formatMinorUnits } from '../lib/money';
 import { AssetAssigneeRow } from './AssetAssigneeRow';
+import { AssetSignedInUserRow } from './AssetSignedInUserRow';
 import { AssetTimeline } from './AssetTimeline';
 import AssetFormClient from './AssetFormClient';
 import { AssetNotesPanel } from './panels/AssetNotesPanel';
@@ -311,7 +312,12 @@ export function AssetBentoLayout({
                 </div>
                 <div className="mt-3 space-y-1.5 border-t border-[rgb(var(--color-border-100))] pt-3 text-sm">
                   <BentoLabelValue label={t('assetBento.uptime', { defaultValue: 'Uptime' })} value={formatUptime(rmmData?.uptime_seconds, t) ?? undefined} mono />
-                  <BentoLabelValue label={t('assetBento.signedIn', { defaultValue: 'Signed in' })} value={rmmData?.current_user} />
+                  {/* FR-D5: the row offers the matched contact, or a one-off mapping. */}
+                  <AssetSignedInUserRow
+                    assetId={asset.asset_id}
+                    clientId={asset.client_id}
+                    signedInUser={rmmData?.current_user ?? ext?.current_user ?? null}
+                  />
                 </div>
               </BentoTile>
             ) : null}

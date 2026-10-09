@@ -1,4 +1,5 @@
 export { RmmAlertAutomationSettings } from './RmmAlertAutomationSettings';
+export { RmmUserContactMappingPanel, buildRmmPeopleModeOptions } from './RmmUserContactMappingPanel';
 export {
   RmmDeviceSyncSettings,
   DEVICE_SYNC_SUPPORTED_PROVIDERS,

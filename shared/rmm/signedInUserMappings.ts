@@ -23,9 +23,17 @@ export interface RmmSignedInUserSuggestion {
   contactId: string | null;
   contactName: string | null;
   method: RmmContactMatchMethod | null;
+  /** Carried so the UI can save an explicit mapping without a second lookup. */
+  integrationId: string;
+  provider: string;
 }
 
-export interface RmmSignedInUserRow extends RmmSignedInUserSuggestion {
+export interface RmmSignedInUserRow {
+  rawUser: string;
+  key: string;
+  contactId: string | null;
+  contactName: string | null;
+  method: RmmContactMatchMethod | null;
   deviceCount: number;
   samples: string[];
 }
@@ -136,6 +144,8 @@ export async function suggestContactForAsset(
     contactId: match?.contactId ?? null,
     contactName,
     method: match?.method ?? null,
+    integrationId: integration.integration_id,
+    provider: asset.rmm_provider,
   };
 }
 

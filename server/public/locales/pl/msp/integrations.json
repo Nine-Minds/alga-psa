@@ -2884,6 +2884,38 @@
         "errors": {
           "saveFailed": "Nie udało się zapisać harmonogramu synchronizacji urządzeń."
         }
+      },
+      "peopleMode": {
+        "label": "Osoby",
+        "options": {
+          "off": "Wyłączone",
+          "suggest": "Sugeruj",
+          "auto": "Przypisuj automatycznie"
+        },
+        "updateFailed": "Nie udało się zaktualizować trybu osób"
+      },
+      "signedInUsers": {
+        "title": "Zalogowani użytkownicy",
+        "description": "Nazwy użytkowników raportowane przez urządzenia tej organizacji i kontakt, do którego każda z nich prowadzi.",
+        "empty": "Nie zgłoszono jeszcze żadnych zalogowanych użytkowników.",
+        "noClient": "Przypisz tę organizację do klienta, zanim zmapujesz jej użytkowników.",
+        "refresh": "Odśwież",
+        "selectContact": "Wybierz kontakt",
+        "loadFailed": "Nie udało się wczytać zalogowanych użytkowników.",
+        "saveFailed": "Nie udało się zapisać mapowania.",
+        "columns": {
+          "user": "Zalogowany użytkownik",
+          "devices": "Urządzenia",
+          "method": "Dopasowano przez",
+          "contact": "Kontakt"
+        },
+        "methods": {
+          "mapped": "Zapisane mapowanie",
+          "email": "E-mail",
+          "username": "Nazwa użytkownika",
+          "name": "Imię i nazwisko",
+          "none": "Brak dopasowania"
+        }
       }
     },
     "sso": {

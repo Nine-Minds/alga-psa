@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useCallback, useEffect, useState, useTransition } from 'react';
+import { buildRmmPeopleModeOptions, RmmUserContactMappingPanel } from '@alga-psa/integrations/components/settings/integrations/RmmUserContactMappingPanel';
+import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import {
   Card,
   CardContent,
@@ -114,6 +116,21 @@ const HuntressOrganizationMappingManager: React.FC<Props> = ({ refreshKey, onMap
     });
   };
 
+  const handlePeopleModeChange = (mappingId: string, mode: string) => {
+    startTransition(async () => {
+      const result = await updateHuntressOrganizationMapping(mappingId, {
+        contact_assignment_mode: mode,
+      });
+      if (!result.success) {
+        setError(result.error ?? t('integrations.rmm.peopleMode.updateFailed', { defaultValue: 'Failed to update the people mode' }));
+      }
+      await load();
+      onMappingChanged?.();
+    });
+  };
+
+  const peopleModeOptions = buildRmmPeopleModeOptions(t);
+
   const handleAutoCreateToggle = (mappingId: string, enabled: boolean) => {
     startTransition(async () => {
       const result = await updateHuntressOrganizationMapping(mappingId, {
@@ -147,6 +164,21 @@ const HuntressOrganizationMappingManager: React.FC<Props> = ({ refreshKey, onMap
           onFilterStateChange={() => {}}
           clientTypeFilter="all"
           onClientTypeFilterChange={() => {}}
+        />
+      ),
+    },
+    {
+      // FR-D8: what sync does with the device's signed-in user.
+      title: t('integrations.rmm.peopleMode.label', { defaultValue: 'People' }),
+      dataIndex: 'contact_assignment_mode',
+      sortable: false,
+      render: (_v, mapping) => (
+        <CustomSelect
+          id={`rmm-org-people-mode-${mapping.mapping_id}`}
+          value={mapping.contact_assignment_mode ?? 'suggest'}
+          onValueChange={(mode) => void handlePeopleModeChange(mapping.mapping_id, mode)}
+          options={peopleModeOptions}
+          className="min-w-[160px]"
         />
       ),
     },
@@ -244,12 +276,30 @@ const HuntressOrganizationMappingManager: React.FC<Props> = ({ refreshKey, onMap
             {t('integrations.rmm.huntress.empty', { defaultValue: 'No organizations yet — click "Sync organizations".' })}
           </p>
         ) : (
-          <DataTable
-            id="huntress-org-mappings"
-            data={mappings}
-            columns={columns}
-            pagination
-          />
+          <>
+            <DataTable
+              id="huntress-org-mappings"
+              data={mappings}
+              columns={columns}
+              pagination
+            />
+            {/* FR-D8: one Signed-in users panel per mapped organization. */}
+            {mappings
+              .filter((m) => m.client_id)
+              .map((m) => (
+                <div key={`signed-in-${m.mapping_id}`} className="mt-4 border-t pt-4">
+                  <div className="mb-2 text-sm font-medium">
+                    {m.external_organization_name || m.external_organization_id}
+                  </div>
+                  <RmmUserContactMappingPanel
+                    mappingId={m.mapping_id}
+                    clientId={m.client_id ?? null}
+                    contacts={contacts}
+                    idPrefix={`huntress-signed-in-${m.mapping_id}`}
+                  />
+                </div>
+              ))}
+          </>
         )}
       </CardContent>
     </Card>

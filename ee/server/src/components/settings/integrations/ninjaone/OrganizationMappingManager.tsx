@@ -8,6 +8,8 @@
  */
 
 import React, { useEffect, useRef, useState, useTransition } from 'react';
+import { buildRmmPeopleModeOptions, RmmUserContactMappingPanel } from '@alga-psa/integrations/components/settings/integrations/RmmUserContactMappingPanel';
+import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
@@ -171,6 +173,29 @@ const OrganizationMappingManager: React.FC<OrganizationMappingManagerProps> = ({
     }
   };
 
+  const handlePeopleModeChange = async (mappingId: string, mode: string) => {
+    setSavingMappingId(mappingId);
+    setError(null);
+    try {
+      const result = await updateNinjaOneOrganizationMapping(mappingId, {
+        contact_assignment_mode: mode,
+      });
+      if (result.success) {
+        setMappings((prev) =>
+          prev.map((m) => (m.mapping_id === mappingId
+            ? { ...m, contact_assignment_mode: mode as 'off' | 'suggest' | 'auto' }
+            : m))
+        );
+      } else {
+        setError(result.error ?? t('integrations.rmm.peopleMode.updateFailed', { defaultValue: 'Failed to update the people mode' }));
+      }
+    } finally {
+      setSavingMappingId(null);
+    }
+  };
+
+  const peopleModeOptions = buildRmmPeopleModeOptions(t);
+
   const handleAutoSyncChange = async (mappingId: string, autoSync: boolean) => {
     setSavingMappingId(mappingId);
     setError(null);
@@ -281,6 +306,21 @@ const OrganizationMappingManager: React.FC<OrganizationMappingManagerProps> = ({
           </div>
         );
       },
+    },
+    {
+      // FR-D8: what sync does with the device's signed-in user.
+      title: t('integrations.rmm.peopleMode.label', { defaultValue: 'People' }),
+      dataIndex: 'contact_assignment_mode',
+      sortable: false,
+      render: (_v, mapping) => (
+        <CustomSelect
+          id={`rmm-org-people-mode-${mapping.mapping_id}`}
+          value={mapping.contact_assignment_mode ?? 'suggest'}
+          onValueChange={(mode) => handlePeopleModeChange(mapping.mapping_id, mode)}
+          options={peopleModeOptions}
+          className="min-w-[160px]"
+        />
+      ),
     },
     {
       title: t('integrations.rmm.ninjaone.columns.autoSync', { defaultValue: 'Auto-Sync' }),
@@ -397,12 +437,30 @@ const OrganizationMappingManager: React.FC<OrganizationMappingManagerProps> = ({
           </div>
         ) : (
           <div className="rounded-lg border">
-            <DataTable
-              id="ninjaone-org-mappings"
-              data={mappings}
-              columns={columns}
-              pagination
-            />
+            <>
+              <DataTable
+                id="ninjaone-org-mappings"
+                data={mappings}
+                columns={columns}
+                pagination
+              />
+              {/* FR-D8: one Signed-in users panel per mapped organization. */}
+              {mappings
+                .filter((m) => m.client_id)
+                .map((m) => (
+                  <div key={`signed-in-${m.mapping_id}`} className="mt-4 border-t pt-4">
+                    <div className="mb-2 text-sm font-medium">
+                      {m.external_organization_name || m.external_organization_id}
+                    </div>
+                    <RmmUserContactMappingPanel
+                      mappingId={m.mapping_id}
+                      clientId={m.client_id ?? null}
+                      contacts={contacts}
+                      idPrefix={`ninjaone-signed-in-${m.mapping_id}`}
+                    />
+                  </div>
+                ))}
+            </>
           </div>
         )}
 

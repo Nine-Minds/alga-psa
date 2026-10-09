@@ -2884,6 +2884,38 @@
         "errors": {
           "saveFailed": "Der Zeitplan für die Gerätesynchronisierung konnte nicht gespeichert werden."
         }
+      },
+      "peopleMode": {
+        "label": "Personen",
+        "options": {
+          "off": "Aus",
+          "suggest": "Vorschlagen",
+          "auto": "Automatisch zuweisen"
+        },
+        "updateFailed": "Der Personen-Modus konnte nicht aktualisiert werden"
+      },
+      "signedInUsers": {
+        "title": "Angemeldete Benutzer",
+        "description": "Die Benutzernamen, die die Geräte dieser Organisation melden, und der jeweils zugeordnete Kontakt.",
+        "empty": "Noch keine angemeldeten Benutzer gemeldet.",
+        "noClient": "Ordnen Sie diese Organisation einem Kunden zu, bevor Sie ihre angemeldeten Benutzer zuordnen.",
+        "refresh": "Aktualisieren",
+        "selectContact": "Kontakt auswählen",
+        "loadFailed": "Angemeldete Benutzer konnten nicht geladen werden.",
+        "saveFailed": "Die Zuordnung konnte nicht gespeichert werden.",
+        "columns": {
+          "user": "Angemeldeter Benutzer",
+          "devices": "Geräte",
+          "method": "Zugeordnet über",
+          "contact": "Kontakt"
+        },
+        "methods": {
+          "mapped": "Gespeicherte Zuordnung",
+          "email": "E-Mail",
+          "username": "Benutzername",
+          "name": "Vollständiger Name",
+          "none": "Keine Übereinstimmung"
+        }
       }
     },
     "sso": {

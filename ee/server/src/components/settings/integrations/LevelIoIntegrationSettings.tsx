@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useCallback, useEffect, useState, useTransition } from 'react';
+import { buildRmmPeopleModeOptions, RmmUserContactMappingPanel } from '@alga-psa/integrations/components/settings/integrations/RmmUserContactMappingPanel';
+import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Copy, Eye, EyeOff } from 'lucide-react';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Badge } from '@alga-psa/ui/components/Badge';
@@ -37,6 +39,7 @@ type MappingRow = {
   client_id?: string | null;
   client_name?: string | null;
   default_contact_id?: string | null;
+  contact_assignment_mode?: string | null;
   auto_sync_assets: boolean;
   metadata?: { path?: string } | null;
 };
@@ -287,6 +290,19 @@ export default function LevelIoIntegrationSettings() {
       ? t('integrations.rmm.levelio.webhook.copied', { defaultValue: 'Copied' })
       : t('integrations.rmm.levelio.webhook.copy', { defaultValue: 'Copy' });
 
+  const handlePeopleModeChange = (mappingId: string, mode: string) => {
+    void (async () => {
+      const result = await updateLevelIoOrganizationMapping({ mappingId, contactAssignmentMode: mode });
+      if (!result.success) {
+        setError(result.error || t('integrations.rmm.levelio.errors.updateMappingFailed', { defaultValue: 'Failed to update mapping' }));
+        return;
+      }
+      await refresh(true);
+    })();
+  };
+
+  const peopleModeOptions = buildRmmPeopleModeOptions(t);
+
   const columns: ColumnDefinition<MappingRow>[] = [
     {
       title: t('integrations.rmm.levelio.mappings.group', { defaultValue: 'Level Group' }),
@@ -316,6 +332,21 @@ export default function LevelIoIntegrationSettings() {
           onFilterStateChange={() => {}}
           clientTypeFilter="all"
           onClientTypeFilterChange={() => {}}
+        />
+      ),
+    },
+    {
+      // FR-D8: what sync does with the device's signed-in user.
+      title: t('integrations.rmm.peopleMode.label', { defaultValue: 'People' }),
+      dataIndex: 'contact_assignment_mode',
+      sortable: false,
+      render: (_v, mapping) => (
+        <CustomSelect
+          id={`rmm-org-people-mode-${mapping.mapping_id}`}
+          value={mapping.contact_assignment_mode ?? 'suggest'}
+          onValueChange={(mode) => handlePeopleModeChange(mapping.mapping_id, mode)}
+          options={peopleModeOptions}
+          className="min-w-[160px]"
         />
       ),
     },
@@ -457,7 +488,25 @@ export default function LevelIoIntegrationSettings() {
           ) : null}
 
           <div className="overflow-x-auto rounded-md border">
-            <DataTable id="levelio-org-mappings" data={mappings} columns={columns} pagination />
+            <>
+              <DataTable id="levelio-org-mappings" data={mappings} columns={columns} pagination />
+              {/* FR-D8: one Signed-in users panel per mapped organization. */}
+              {mappings
+                .filter((m) => m.client_id)
+                .map((m) => (
+                  <div key={`signed-in-${m.mapping_id}`} className="mt-4 border-t pt-4">
+                    <div className="mb-2 text-sm font-medium">
+                      {m.external_organization_name || m.external_organization_id}
+                    </div>
+                    <RmmUserContactMappingPanel
+                      mappingId={m.mapping_id}
+                      clientId={m.client_id ?? null}
+                      contacts={contacts}
+                      idPrefix={`levelio-signed-in-${m.mapping_id}`}
+                    />
+                  </div>
+                ))}
+            </>
           </div>
         </CardContent>
       </Card>

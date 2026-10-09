@@ -25,7 +25,11 @@ let mappingCounter = 0;
 
 function createFakeKnex(state: DbState) {
   function rowsFor(table: string): any[] {
-    return (state as any)[table];
+    // Tables the assignment helper and the group lookup touch are created on
+    // demand so each test only has to seed what it cares about.
+    const key = table.split(' as ')[0];
+    if (!(state as any)[key]) (state as any)[key] = [];
+    return (state as any)[key];
   }
 
   function matches(row: any, where: Record<string, any>) {
@@ -35,7 +39,11 @@ function createFakeKnex(state: DbState) {
   class QueryBuilder {
     private wheres: Array<Record<string, any>> = [];
 
-    constructor(private readonly table: string) {}
+    constructor(table: string) {
+      this.table = table.split(' as ')[0];
+    }
+
+    private readonly table: string;
 
     where(where: Record<string, any>) {
       this.wheres.push(where);
@@ -45,6 +53,34 @@ function createFakeKnex(state: DbState) {
     whereNotNull(col: string) {
       this.wheres.push({ __not_null: col } as any);
       return this;
+    }
+
+    // setAssetAssignee closes the open assignment row (unassigned_at IS NULL)
+    // and the group lookup joins asset_groups; both reach this builder now.
+    whereNull(col: string) {
+      this.wheres.push({ __is_null: col } as any);
+      return this;
+    }
+
+    whereIn(col: string, values: any[]) {
+      this.wheres.push({ __in: { col, values } } as any);
+      return this;
+    }
+
+    join(_table: string, _on: unknown) {
+      return this;
+    }
+
+    select(..._cols: string[]) {
+      return this;
+    }
+
+    orderBy(_col: string, _dir?: string) {
+      return this;
+    }
+
+    then(resolve: (value: any) => void, reject?: (reason: unknown) => void) {
+      return Promise.resolve(this.filtered().map((row) => ({ ...row }))).then(resolve, reject);
     }
 
     andWhere(col: string, value: any) {
@@ -58,6 +94,16 @@ function createFakeKnex(state: DbState) {
         if ('__not_null' in where) {
           const col = (where as any).__not_null;
           rows = rows.filter((row) => row[col] !== null && typeof row[col] !== 'undefined');
+          continue;
+        }
+        if ('__is_null' in where) {
+          const col = (where as any).__is_null;
+          rows = rows.filter((row) => row[col] === null || typeof row[col] === 'undefined');
+          continue;
+        }
+        if ('__in' in where) {
+          const { col, values } = (where as any).__in;
+          rows = rows.filter((row) => values.includes(row[col]));
           continue;
         }
         rows = rows.filter((row) => matches(row, where));

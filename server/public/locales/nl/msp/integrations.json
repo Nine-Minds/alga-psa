@@ -2884,6 +2884,38 @@
         "errors": {
           "saveFailed": "Kan het schema voor apparaatsynchronisatie niet opslaan."
         }
+      },
+      "peopleMode": {
+        "label": "Personen",
+        "options": {
+          "off": "Uit",
+          "suggest": "Voorstellen",
+          "auto": "Automatisch toewijzen"
+        },
+        "updateFailed": "Kan de personenmodus niet bijwerken"
+      },
+      "signedInUsers": {
+        "title": "Aangemelde gebruikers",
+        "description": "De gebruikersnamen die de apparaten van deze organisatie rapporteren en het contact waarnaar elk wordt herleid.",
+        "empty": "Nog geen aangemelde gebruikers gerapporteerd.",
+        "noClient": "Koppel deze organisatie aan een klant voordat u haar gebruikers koppelt.",
+        "refresh": "Vernieuwen",
+        "selectContact": "Contact selecteren",
+        "loadFailed": "Kan aangemelde gebruikers niet laden.",
+        "saveFailed": "Kan de koppeling niet opslaan.",
+        "columns": {
+          "user": "Aangemelde gebruiker",
+          "devices": "Apparaten",
+          "method": "Gekoppeld via",
+          "contact": "Contact"
+        },
+        "methods": {
+          "mapped": "Opgeslagen koppeling",
+          "email": "E-mail",
+          "username": "Gebruikersnaam",
+          "name": "Volledige naam",
+          "none": "Geen overeenkomst"
+        }
       }
     },
     "sso": {

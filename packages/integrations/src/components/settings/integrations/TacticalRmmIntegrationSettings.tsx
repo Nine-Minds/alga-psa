@@ -7,6 +7,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import { buildRmmPeopleModeOptions, RmmUserContactMappingPanel } from './RmmUserContactMappingPanel';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
@@ -305,13 +306,14 @@ export function TacticalRmmIntegrationSettings() {
     }
   };
 
-  const handleUpdateMapping = async (mappingId: string, patch: { clientId?: string | null; defaultContactId?: string | null; autoSyncAssets?: boolean }) => {
+  const handleUpdateMapping = async (mappingId: string, patch: { clientId?: string | null; defaultContactId?: string | null; autoSyncAssets?: boolean; contactAssignmentMode?: string }) => {
     setError(null);
     const res = await updateTacticalRmmOrganizationMapping({
       mappingId,
       clientId: patch.clientId,
       defaultContactId: patch.defaultContactId,
       autoSyncAssets: patch.autoSyncAssets,
+      contactAssignmentMode: patch.contactAssignmentMode,
     });
     if (!res.success) {
       const message = getActionFailureMessage(res, t('integrations.rmm.tactical.errors.updateMapping', { defaultValue: 'Failed to update mapping' }));
@@ -321,6 +323,8 @@ export function TacticalRmmIntegrationSettings() {
     }
     await loadOrgMappings();
   };
+
+  const peopleModeOptions = buildRmmPeopleModeOptions(t);
 
   const handleClientChange = (mappingId: string, clientId: string | null) =>
     handleUpdateMapping(mappingId, { clientId, defaultContactId: null });
@@ -433,6 +437,21 @@ export function TacticalRmmIntegrationSettings() {
           placeholder={t('integrations.rmm.tactical.contact.select', { defaultValue: 'Select contact' })}
           className="min-w-[220px]"
           onAddNew={m.client_id ? () => setQuickAddContactFor({ mappingId: m.mapping_id, clientId: m.client_id! }) : undefined}
+        />
+      ),
+    },
+    {
+      // FR-D8: what sync does with the device's signed-in user.
+      title: t('integrations.rmm.peopleMode.label', { defaultValue: 'People' }),
+      dataIndex: 'contact_assignment_mode',
+      sortable: false,
+      render: (_v, m) => (
+        <CustomSelect
+          id={`rmm-org-people-mode-${m.mapping_id}`}
+          value={m.contact_assignment_mode ?? 'suggest'}
+          onValueChange={(mode) => handleUpdateMapping(m.mapping_id, { contactAssignmentMode: mode })}
+          options={peopleModeOptions}
+          className="min-w-[160px]"
         />
       ),
     },
@@ -766,6 +785,23 @@ export function TacticalRmmIntegrationSettings() {
                 pagination
               />
             )}
+
+            {/* FR-D8: one Signed-in users panel per mapped organization. */}
+            {orgMappings
+                  .filter((m) => m.client_id)
+                  .map((m) => (
+                    <div key={`signed-in-${m.mapping_id}`} className="mt-4 border-t pt-4">
+                      <div className="mb-2 text-sm font-medium">
+                        {m.external_organization_name || m.external_organization_id}
+                      </div>
+                      <RmmUserContactMappingPanel
+                        mappingId={m.mapping_id}
+                        clientId={m.client_id}
+                        contacts={contacts}
+                        idPrefix={`tacticalrmm-signed-in-${m.mapping_id}`}
+                      />
+                    </div>
+                  ))}
           </div>
 
           <div className="rounded-md border bg-background p-4">

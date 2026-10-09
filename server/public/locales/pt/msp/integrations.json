@@ -2884,6 +2884,38 @@
         "errors": {
           "saveFailed": "Não foi possível salvar a programação de sincronização de dispositivos."
         }
+      },
+      "peopleMode": {
+        "label": "Pessoas",
+        "options": {
+          "off": "Desativado",
+          "suggest": "Sugerir",
+          "auto": "Atribuir automaticamente"
+        },
+        "updateFailed": "Não foi possível atualizar o modo de pessoas"
+      },
+      "signedInUsers": {
+        "title": "Usuários conectados",
+        "description": "Os nomes de usuário informados pelos dispositivos desta organização e o contato correspondente a cada um.",
+        "empty": "Nenhum usuário conectado informado ainda.",
+        "noClient": "Associe esta organização a um cliente antes de associar seus usuários.",
+        "refresh": "Atualizar",
+        "selectContact": "Selecionar contato",
+        "loadFailed": "Não foi possível carregar os usuários conectados.",
+        "saveFailed": "Não foi possível salvar a associação.",
+        "columns": {
+          "user": "Usuário conectado",
+          "devices": "Dispositivos",
+          "method": "Associado por",
+          "contact": "Contato"
+        },
+        "methods": {
+          "mapped": "Associação salva",
+          "email": "E-mail",
+          "username": "Nome de usuário",
+          "name": "Nome completo",
+          "none": "Sem correspondência"
+        }
       }
     },
     "sso": {

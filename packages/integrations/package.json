@@ -33,6 +33,10 @@
       "import": "./dist/components/index.mjs",
       "require": "./dist/components/index.js"
     },
+    "./components/*": {
+      "types": "./src/components/*.tsx",
+      "import": "./src/components/*.tsx"
+    },
     "./email": {
       "types": "./dist/email/index.d.ts",
       "import": "./dist/email/index.mjs",
