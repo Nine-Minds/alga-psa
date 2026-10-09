@@ -1287,6 +1287,41 @@ export class AssetService extends BaseService<any> {
     return assets;
   }
 
+  /** FR-C8: the asset's assignment history, newest first. */
+  async getAssetAssignments(assetId: string, context: ServiceContext): Promise<any[]> {
+    const knex = await this.getDbForContext(context);
+    const query = scopedTable(knex, context.tenant, 'asset_assignments as aa')
+      .where({ 'aa.asset_id': assetId })
+      .select(
+        'aa.assignment_id',
+        'aa.asset_id',
+        'aa.contact_name_id',
+        'aa.assigned_at',
+        'aa.assigned_by_user_id',
+        'aa.unassigned_at',
+        'aa.unassigned_by_user_id',
+        'aa.source',
+        'aa.note',
+        'contacts.full_name as contact_name',
+      );
+    tenantDb(knex, context.tenant).tenantJoin(query, 'contacts', 'contacts.contact_name_id', 'aa.contact_name_id', {
+      type: 'left',
+    });
+
+    return query.orderBy('aa.assigned_at', 'desc');
+  }
+
+  /** FR-B4: the tenant's asset statuses, in display order. */
+  async listAssetStatuses(
+    context: ServiceContext,
+    options?: { includeArchived?: boolean }
+  ): Promise<any[]> {
+    const knex = await this.getDbForContext(context);
+    const query = scopedTable(knex, context.tenant, 'asset_statuses').select('*');
+    if (!options?.includeArchived) query.where({ is_active: true });
+    return query.orderBy('display_order', 'asc').orderBy('label', 'asc');
+  }
+
   // Statistics
   async getStatistics(context: ServiceContext): Promise<any> {
     const [basicStats, typeStats, statusStats, clientStats, warrantyStats, maintenanceStats] = await Promise.all([
