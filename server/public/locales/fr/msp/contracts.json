@@ -1259,6 +1259,9 @@
     },
     "loadingTemplate": "Chargement du modèle...",
     "servicesLabel": "Services",
+    "summary": {
+      "clientCurrency": "Devise du client"
+    },
     "templateBadge": "Modèle",
     "templateNotFound": "Modèle de contrat introuvable",
     "templateSnapshotTitle": "Instantané du modèle",

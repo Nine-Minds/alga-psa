@@ -1259,6 +1259,9 @@
     },
     "loadingTemplate": "Vorlage wird geladen...",
     "servicesLabel": "Dienste",
+    "summary": {
+      "clientCurrency": "Währung des Kunden"
+    },
     "templateBadge": "Vorlage",
     "templateNotFound": "Vertragsvorlage nicht gefunden",
     "templateSnapshotTitle": "Vorlagen-Snapshot",

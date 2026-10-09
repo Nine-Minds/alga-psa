@@ -1259,6 +1259,9 @@
     },
     "loadingTemplate": "Cargando plantilla...",
     "servicesLabel": "Servicios",
+    "summary": {
+      "clientCurrency": "Moneda del cliente"
+    },
     "templateBadge": "Plantilla",
     "templateNotFound": "Plantilla de contrato no encontrada",
     "templateSnapshotTitle": "Captura de la plantilla",
