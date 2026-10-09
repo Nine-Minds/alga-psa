@@ -1017,7 +1017,9 @@
     },
     "notAvailable": "Brak",
     "detailsTitle": "Szczegóły zasobu",
-    "unassigned": "Nieprzypisany"
+    "unassigned": "Nieprzypisany",
+    "sharedWorkspace": "Współdzielone stanowisko: {{name}}",
+    "sharedWorkspaceLabel": "Współdzielone stanowisko"
   },
   "errors": {
     "account": {

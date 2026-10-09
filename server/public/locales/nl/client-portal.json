@@ -1013,7 +1013,9 @@
     },
     "notAvailable": "N.v.t.",
     "detailsTitle": "Asset-details",
-    "unassigned": "Niet toegewezen"
+    "unassigned": "Niet toegewezen",
+    "sharedWorkspace": "Gedeelde werkplek: {{name}}",
+    "sharedWorkspaceLabel": "Gedeelde werkplek"
   },
   "errors": {
     "account": {

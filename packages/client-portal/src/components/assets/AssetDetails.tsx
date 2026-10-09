@@ -143,8 +143,16 @@ export function AssetDetails({ asset, onCreateTicket }: AssetDetailsProps) {
             </div>
             <div>
               {/* FR-C6: contact name only — no assignment history, no cost. */}
-              <p className="text-sm text-gray-500">{t('assets.columns.assignedTo', 'Assigned to')}</p>
-              <p className="mt-1">{asset.contact_name || t('assets.unassigned', 'Unassigned')}</p>
+              <p className="text-sm text-gray-500">
+                {asset.group?.kind === 'shared_workspace'
+                  ? t('assets.sharedWorkspaceLabel', 'Shared workspace')
+                  : t('assets.columns.assignedTo', 'Assigned to')}
+              </p>
+              <p className="mt-1">
+                {asset.group?.kind === 'shared_workspace'
+                  ? asset.group.name
+                  : asset.contact_name || t('assets.unassigned', 'Unassigned')}
+              </p>
             </div>
             <div>
               <p className="text-sm text-gray-500">Location</p>

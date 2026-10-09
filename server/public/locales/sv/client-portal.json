@@ -1019,7 +1019,9 @@
     },
     "notAvailable": "Saknas",
     "detailsTitle": "Enhetsdetaljer",
-    "unassigned": "Ej tilldelad"
+    "unassigned": "Ej tilldelad",
+    "sharedWorkspace": "Delad arbetsplats: {{name}}",
+    "sharedWorkspaceLabel": "Delad arbetsplats"
   },
   "errors": {
     "account": {

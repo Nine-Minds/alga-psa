@@ -57,6 +57,7 @@ export async function createTicketForAlert(
   const contactId = await resolveRmmTicketContactId(trx, tenantId, {
     clientId: params.clientId,
     mappingDefaultContactId: params.mappingDefaultContactId,
+    assetId: params.assetId,
   });
 
   const title = renderTemplate(actions.ticketTemplate?.titleTemplate, params) ?? defaultTitle(event);

@@ -10,6 +10,7 @@ import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { getAllPriorities } from '@alga-psa/reference-data/actions';
 import { getTicketStatuses } from '@alga-psa/reference-data/actions';
 import { useAssetCrossFeature } from '../context/AssetCrossFeatureContext';
+import { getAssetTicketContactOptions } from '../actions/assetGroupActions';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
 import {
@@ -35,6 +36,10 @@ const isReturnedActionError = (value: unknown): value is ActionMessageError | Ac
 export default function CreateTicketFromAssetButton({ asset, defaultBoardId, variant = 'default', size = 'sm' }: CreateTicketFromAssetButtonProps) {
     const { t } = useTranslation('msp/assets');
     const { createTicketFromAsset, getAllBoards } = useAssetCrossFeature();
+    const [contactOptions, setContactOptions] = useState<{
+        options: Array<{ contact_name_id: string; contact_name: string | null }>;
+        preselect: string | null;
+    }>({ options: [], preselect: null });
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [title, setTitle] = useState(() => t('createTicketFromAssetButton.defaultTitle', {
         defaultValue: 'Issue with {{name}}',
@@ -54,6 +59,17 @@ export default function CreateTicketFromAssetButton({ asset, defaultBoardId, var
     const router = useRouter();
 
     // Load priorities and boards when dialog opens.
+    // FR-E8: who this asset's ticket can be filed for.
+    useEffect(() => {
+        if (!isDialogOpen) return;
+        let mounted = true;
+        void (async () => {
+            const result = await getAssetTicketContactOptions(asset.asset_id);
+            if (mounted && result && 'options' in result) setContactOptions(result);
+        })();
+        return () => { mounted = false; };
+    }, [isDialogOpen, asset.asset_id]);
+
     useEffect(() => {
         if (isDialogOpen) {
             if (priorities.length === 0) {
@@ -194,7 +210,10 @@ export default function CreateTicketFromAssetButton({ asset, defaultBoardId, var
                 status_id: status,
                 board_id: board,
                 asset_id: asset.asset_id,
-                client_id: asset.client_id
+                client_id: asset.client_id,
+                // FR-E8: offered as the requester when the asset names exactly
+                // one person (its assignee, or a workspace with one user).
+                contact_name_id: contactOptions.preselect ?? undefined,
             });
             if (isReturnedActionError(ticket)) {
                 handleError(ticket, t('createTicketFromAssetButton.errors.createFailed', {

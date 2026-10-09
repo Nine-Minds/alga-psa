@@ -1013,7 +1013,9 @@
     },
     "notAvailable": "N/V",
     "detailsTitle": "Asset-Details",
-    "unassigned": "Nicht zugewiesen"
+    "unassigned": "Nicht zugewiesen",
+    "sharedWorkspace": "Gemeinsamer Arbeitsplatz: {{name}}",
+    "sharedWorkspaceLabel": "Gemeinsamer Arbeitsplatz"
   },
   "errors": {
     "account": {

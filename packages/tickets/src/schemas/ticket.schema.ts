@@ -27,6 +27,8 @@ export const createTicketFromAssetSchema = z.object({
   priority_id: z.string().uuid(),
   asset_id: z.string().uuid(),
   client_id: z.string().uuid(),
+  /** FR-E8: the asset's assignee, or a shared workspace's single user. */
+  contact_name_id: z.string().uuid().nullable().optional(),
 });
 
 export const ticketSchema = z.object({

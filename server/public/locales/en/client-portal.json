@@ -1019,7 +1019,9 @@
     },
     "notAvailable": "N/A",
     "detailsTitle": "Asset Details",
-    "unassigned": "Unassigned"
+    "unassigned": "Unassigned",
+    "sharedWorkspace": "Shared workspace: {{name}}",
+    "sharedWorkspaceLabel": "Shared workspace"
   },
   "errors": {
     "account": {

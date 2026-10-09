@@ -1013,7 +1013,9 @@
     },
     "notAvailable": "N/D",
     "detailsTitle": "Dettagli asset",
-    "unassigned": "Non assegnato"
+    "unassigned": "Non assegnato",
+    "sharedWorkspace": "Postazione condivisa: {{name}}",
+    "sharedWorkspaceLabel": "Postazione condivisa"
   },
   "errors": {
     "account": {

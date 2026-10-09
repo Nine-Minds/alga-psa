@@ -20,6 +20,7 @@ import {
   setGroupOwner,
   updateGroupRow,
 } from '../lib/assetGroups';
+import { resolveAssetTicketContactOptions } from '@alga-psa/shared/models/assetTicketContactModel';
 import {
   actionError,
   permissionError,
@@ -286,4 +287,25 @@ export const removeAssetGroupUser = withAuth(async (
     revalidateAssetPaths();
     return group;
   });
+});
+
+/**
+ * FR-E8: who a ticket raised from this asset can be filed for.
+ *
+ * A shared-workspace member has no single assignee, so the group's users are
+ * the people who could be reporting the problem. A normal asset offers its
+ * assignee. Exactly one option means the caller can preselect it.
+ */
+export const getAssetTicketContactOptions = withAuth(async (
+  user,
+  { tenant },
+  assetId: string
+): Promise<{ options: Array<{ contact_name_id: string; contact_name: string | null }>; preselect: string | null } | AssetGroupActionError> => {
+  if (!await hasPermission(user, 'asset', 'read')) {
+    return permissionError('Permission denied: Cannot read assets', 'msp/assets:errors.permissions.readAssets');
+  }
+
+  const { knex } = await createTenantKnex();
+  const options = await resolveAssetTicketContactOptions(knex, tenant, assetId);
+  return { options, preselect: options.length === 1 ? options[0].contact_name_id : null };
 });

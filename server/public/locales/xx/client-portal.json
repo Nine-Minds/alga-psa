@@ -1019,7 +1019,9 @@
     },
     "notAvailable": "⟦Ƞ/Ȧ⟧",
     "detailsTitle": "⟦Ȧşşḗŧ Ḓḗŧȧīŀş⟧",
-    "unassigned": "⟦Ŭƞȧşşīɠƞḗḓ⟧"
+    "unassigned": "⟦Ŭƞȧşşīɠƞḗḓ⟧",
+    "sharedWorkspace": "⟦Şħȧřḗḓ ẇȯřķşƥȧƈḗ: {{name}}⟧",
+    "sharedWorkspaceLabel": "⟦Şħȧřḗḓ ẇȯřķşƥȧƈḗ⟧"
   },
   "errors": {
     "account": {

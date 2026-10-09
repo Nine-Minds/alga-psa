@@ -54,7 +54,11 @@ export function AssetList({ assets }: AssetListProps) {
       // history or any cost field.
       title: t('assets.columns.assignedTo', { defaultValue: 'Assigned to' }),
       dataIndex: 'contact_name',
-      render: (value: string | null) => value || t('assets.unassigned', { defaultValue: 'Unassigned' })
+      render: (value: string | null, record: Asset) => (
+        record.group?.kind === 'shared_workspace'
+          ? t('assets.sharedWorkspace', { defaultValue: 'Shared workspace: {{name}}', name: record.group.name })
+          : value || t('assets.unassigned', { defaultValue: 'Unassigned' })
+      )
     },
     {
       title: t('assets.columns.location', { defaultValue: 'Location' }),

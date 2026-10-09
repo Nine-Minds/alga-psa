@@ -241,7 +241,7 @@ describe('client portal ticket visibility enforcement', () => {
     expect(applyTicketVisibilityFilterMock).toHaveBeenCalledWith(
       ticketsBuilder,
       expect.objectContaining({ visibleBoardIds: ['board-1'] }),
-      { boardColumn: 't.board_id', contactColumn: 't.contact_name_id', billingProfileColumn: 't.billing_profile_id', watchListColumn: 't.attributes' }
+      { boardColumn: 't.board_id', contactColumn: 't.contact_name_id', billingProfileColumn: 't.billing_profile_id', watchListColumn: 't.attributes', sharedWorkspaceTickets: { ticketIdColumn: 't.ticket_id', tenantColumn: 't.tenant' } }
     );
   });
 
@@ -289,7 +289,7 @@ describe('client portal ticket visibility enforcement', () => {
     expect(applyTicketVisibilityFilterMock).toHaveBeenCalledWith(
       ticketsBuilder,
       expect.objectContaining({ visibleBoardIds: null }),
-      { boardColumn: 't.board_id', contactColumn: 't.contact_name_id', billingProfileColumn: 't.billing_profile_id', watchListColumn: 't.attributes' }
+      { boardColumn: 't.board_id', contactColumn: 't.contact_name_id', billingProfileColumn: 't.billing_profile_id', watchListColumn: 't.attributes', sharedWorkspaceTickets: { ticketIdColumn: 't.ticket_id', tenantColumn: 't.tenant' } }
     );
   });
 
@@ -376,7 +376,7 @@ describe('client portal ticket visibility enforcement', () => {
     expect(applyTicketVisibilityFilterMock).toHaveBeenCalledWith(
       expect.any(Object),
       expect.objectContaining({ visibleBoardIds: ['board-1'] }),
-      { boardColumn: 't.board_id', contactColumn: 't.contact_name_id', billingProfileColumn: 't.billing_profile_id', watchListColumn: 't.attributes' }
+      { boardColumn: 't.board_id', contactColumn: 't.contact_name_id', billingProfileColumn: 't.billing_profile_id', watchListColumn: 't.attributes', sharedWorkspaceTickets: { ticketIdColumn: 't.ticket_id', tenantColumn: 't.tenant' } }
     );
   });
 
@@ -852,6 +852,33 @@ function filteredTickets(initial: any[]) {
   const builder = makeChainable();
   const field = (name: string) => name.split('.').pop()!;
   builder.where = vi.fn((column: any, value?: any) => {
+    // applyTicketVisibilityFilter uses a nested `where(callback)` as soon as it
+    // has more than the plain contact predicate (profiles, watchers, shared
+    // workspaces). Apply the callback's base predicates and ignore its `or*`
+    // branches: this harness has no join data to satisfy them, so ignoring
+    // them keeps the fake conservative rather than accidentally widening.
+    if (typeof column === 'function') {
+      const nested: any = {
+        where: (nestedColumn: any, nestedValue?: any) => {
+          const conditions = typeof nestedColumn === 'string' ? { [nestedColumn]: nestedValue } : nestedColumn;
+          if (conditions && typeof conditions === 'object') {
+            rows = rows.filter((row) => Object.entries(conditions).every(([key, val]) => row[field(key)] === val));
+          }
+          return nested;
+        },
+        whereIn: (nestedColumn: string, values: any[]) => {
+          rows = rows.filter((row) => values.includes(row[field(nestedColumn)]));
+          return nested;
+        },
+        whereRaw: () => nested,
+        orWhere: () => nested,
+        orWhereIn: () => nested,
+        orWhereNull: () => nested,
+        orWhereRaw: () => nested,
+      };
+      column(nested);
+      return builder;
+    }
     const conditions = typeof column === 'string' ? { [column]: value } : column;
     if (conditions && typeof conditions === 'object') {
       rows = rows.filter((row) => Object.entries(conditions).every(([key, val]) => row[field(key)] === val));

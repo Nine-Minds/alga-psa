@@ -58,7 +58,9 @@ export const createTicketFromAssetSchema = z.object({
   status_id: z.string().uuid('Status ID must be a valid UUID'),
   board_id: z.string().uuid('Board ID must be a valid UUID'),
   asset_id: z.string().uuid('Asset ID must be a valid UUID'),
-  client_id: z.string().uuid('Client ID must be a valid UUID')
+  client_id: z.string().uuid('Client ID must be a valid UUID'),
+  // FR-E8: the asset's assignee, or a shared workspace's single user.
+  contact_name_id: z.string().uuid('Contact ID must be a valid UUID').nullable().optional()
 });
 
 // Complete ticket schema for validation
@@ -193,6 +195,8 @@ export interface CreateTicketFromAssetInput {
   board_id: string;
   asset_id: string;
   client_id: string;
+  /** FR-E8: the asset's assignee, or a shared workspace's single user. */
+  contact_name_id?: string | null;
 }
 
 export interface UpdateTicketInput {
@@ -1127,6 +1131,7 @@ export class TicketModel {
       client_id: validatedData.client_id,
       status_id: validatedData.status_id,
       board_id: validatedData.board_id,
+      contact_id: validatedData.contact_name_id ?? null,
       entered_by: enteredBy,
       attributes: {
         created_from_asset: validatedData.asset_id

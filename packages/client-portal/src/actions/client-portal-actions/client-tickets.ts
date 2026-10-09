@@ -171,7 +171,7 @@ async function resolveVisibleTicket(
       't.client_id': visibility.clientId
     })
     .modify((queryBuilder: Knex.QueryBuilder) => {
-      applyTicketVisibilityFilter(queryBuilder, visibility, { boardColumn: 't.board_id', contactColumn: 't.contact_name_id', billingProfileColumn: 't.billing_profile_id', watchListColumn: 't.attributes' });
+      applyTicketVisibilityFilter(queryBuilder, visibility, { boardColumn: 't.board_id', contactColumn: 't.contact_name_id', billingProfileColumn: 't.billing_profile_id', watchListColumn: 't.attributes', sharedWorkspaceTickets: { ticketIdColumn: 't.ticket_id', tenantColumn: 't.tenant' } });
     })
     .first();
 
@@ -274,7 +274,7 @@ export const getClientTickets = withAuth(async (user, { tenant }, status: string
         't.client_id': visibility.clientId
       });
 
-      applyTicketVisibilityFilter(query, visibility, { boardColumn: 't.board_id', contactColumn: 't.contact_name_id', billingProfileColumn: 't.billing_profile_id', watchListColumn: 't.attributes' });
+      applyTicketVisibilityFilter(query, visibility, { boardColumn: 't.board_id', contactColumn: 't.contact_name_id', billingProfileColumn: 't.billing_profile_id', watchListColumn: 't.attributes', sharedWorkspaceTickets: { ticketIdColumn: 't.ticket_id', tenantColumn: 't.tenant' } });
 
     // Filter by status
     if (parsedStatusFilter.kind === 'all') {
@@ -364,7 +364,7 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
           't.client_id': visibility.clientId
         })
         .modify((ticketQuery: Knex.QueryBuilder) => {
-          applyTicketVisibilityFilter(ticketQuery, visibility, { boardColumn: 't.board_id', contactColumn: 't.contact_name_id', billingProfileColumn: 't.billing_profile_id', watchListColumn: 't.attributes' });
+          applyTicketVisibilityFilter(ticketQuery, visibility, { boardColumn: 't.board_id', contactColumn: 't.contact_name_id', billingProfileColumn: 't.billing_profile_id', watchListColumn: 't.attributes', sharedWorkspaceTickets: { ticketIdColumn: 't.ticket_id', tenantColumn: 't.tenant' } });
         })
         .first();
 
@@ -1254,7 +1254,7 @@ export const getClientTicketDocuments = withAuth(async (user, { tenant }, ticket
           client_id: visibility.clientId
         })
         .modify((queryBuilder: Knex.QueryBuilder) => {
-          applyTicketVisibilityFilter(queryBuilder, visibility, { boardColumn: 'tickets.board_id', contactColumn: 'tickets.contact_name_id', billingProfileColumn: 'tickets.billing_profile_id', watchListColumn: 'tickets.attributes' });
+          applyTicketVisibilityFilter(queryBuilder, visibility, { boardColumn: 'tickets.board_id', contactColumn: 'tickets.contact_name_id', billingProfileColumn: 'tickets.billing_profile_id', watchListColumn: 'tickets.attributes', sharedWorkspaceTickets: { ticketIdColumn: 'tickets.ticket_id', tenantColumn: 'tickets.tenant' } });
         })
         .first();
 
@@ -1453,7 +1453,12 @@ export const createClientTicket = withAuth(async (user, { tenant }, data: FormDa
           tenantDb(trx, tenant).table('assets')
             .where({ asset_id: validatedData.asset_id }),
           visibility,
-          { clientColumn: 'assets.client_id', contactColumn: 'assets.contact_name_id' }
+          {
+            clientColumn: 'assets.client_id',
+            contactColumn: 'assets.contact_name_id',
+            // FR-E7b: a workspace user can raise a ticket on any workspace asset.
+            sharedWorkspace: { assetIdColumn: 'assets.asset_id', tenantColumn: 'assets.tenant' },
+          }
         )
           .select('asset_id')
           .first();

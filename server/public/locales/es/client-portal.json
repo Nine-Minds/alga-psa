@@ -1013,7 +1013,9 @@
     },
     "notAvailable": "N/D",
     "detailsTitle": "Detalles del activo",
-    "unassigned": "Sin asignar"
+    "unassigned": "Sin asignar",
+    "sharedWorkspace": "Espacio compartido: {{name}}",
+    "sharedWorkspaceLabel": "Espacio compartido"
   },
   "errors": {
     "account": {
