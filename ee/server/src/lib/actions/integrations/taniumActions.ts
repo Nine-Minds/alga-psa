@@ -1,6 +1,7 @@
 'use server';
 
 import { withAuth } from '@alga-psa/auth';
+import { isRmmContactAssignmentMode } from '@alga-psa/shared/rmm/userMatching';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { TIER_FEATURES } from '@alga-psa/types';
@@ -383,6 +384,7 @@ export const getTaniumOrganizationMappings = withAdvancedAssetsAccess(async (use
         'rom.auto_sync_assets',
         'rom.auto_create_tickets',
         'rom.default_contact_id',
+        'rom.contact_assignment_mode',
         'rom.last_synced_at',
         'c.client_name as client_name',
       ])
@@ -407,6 +409,8 @@ export const updateTaniumOrganizationMapping = withAdvancedAssetsAccess(async (
     autoSyncAssets?: boolean;
     autoCreateTickets?: boolean;
     defaultContactId?: string | null;
+    /** FR-D3: off | suggest | auto. */
+    contactAssignmentMode?: string;
   }
 ) => {
   const permitted = await hasPermission(user as any, 'system_settings', 'update');
@@ -422,6 +426,12 @@ export const updateTaniumOrganizationMapping = withAdvancedAssetsAccess(async (
     if (typeof input.autoSyncAssets !== 'undefined') patch.auto_sync_assets = input.autoSyncAssets;
     if (typeof input.autoCreateTickets !== 'undefined') patch.auto_create_tickets = input.autoCreateTickets;
     if (typeof input.defaultContactId !== 'undefined') patch.default_contact_id = input.defaultContactId || null;
+    if (typeof input.contactAssignmentMode !== 'undefined') {
+      if (!isRmmContactAssignmentMode(input.contactAssignmentMode)) {
+        return { success: false, error: 'Invalid people mode' };
+      }
+      patch.contact_assignment_mode = input.contactAssignmentMode;
+    }
 
     await db.table('rmm_organization_mappings')
       .where({ mapping_id: input.mappingId })

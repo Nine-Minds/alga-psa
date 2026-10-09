@@ -1,6 +1,7 @@
 import type { Knex } from 'knex';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { setAssetAssignee } from '../models/assetAssignmentModel';
+import { applyRmmSignedInUserAssignment } from './autoAssignFromSignedInUser';
 import type {
   NormalizedRmmDeviceType,
   NormalizedRmmExternalDeviceSnapshot,
@@ -64,21 +65,22 @@ function pickExtensionTable(assetType: SupportedAssetType): 'workstation_assets'
   return null;
 }
 
-async function resolveClientIdForScope(
+/** The organization mapping's people mode and client, in one read (FR-D4). */
+async function loadScopeMapping(
   trx: Knex.Transaction,
-  args: { tenant: string; integrationId: string; externalScopeId: string; resolvedClientId?: string | null; }
-): Promise<string | null> {
-  if (args.resolvedClientId) return args.resolvedClientId;
-
+  args: { tenant: string; integrationId: string; externalScopeId: string }
+): Promise<{ client_id?: string | null; contact_assignment_mode?: string | null } | null> {
   const db = tenantDb(trx, args.tenant);
   const mapping = await db.table('rmm_organization_mappings')
     .where({
       integration_id: args.integrationId,
       external_organization_id: args.externalScopeId,
     })
-    .first<{ client_id?: string | null }>('client_id');
-
-  return mapping?.client_id ? String(mapping.client_id) : null;
+    .first<{ client_id?: string | null; contact_assignment_mode?: string | null }>(
+      'client_id',
+      'contact_assignment_mode'
+    );
+  return mapping ?? null;
 }
 
 async function upsertAssetExtension(
@@ -272,12 +274,14 @@ export async function ingestNormalizedRmmDeviceSnapshot(
     const lastSeenAt = parseIsoDate(snapshot.lastSeenAt);
     const assetStatus = snapshot.status || (snapshot.lifecycleState === 'offline' ? 'inactive' : 'active');
     const agentStatus = snapshot.agentStatus ?? (snapshot.lifecycleState === 'offline' ? 'offline' : 'online');
-    const resolvedClientId = await resolveClientIdForScope(trx, {
+    const scopeMapping = await loadScopeMapping(trx, {
       tenant,
       integrationId: snapshot.integrationId,
       externalScopeId: snapshot.externalScopeId,
-      resolvedClientId: input.resolvedClientId,
     });
+    const resolvedClientId = input.resolvedClientId
+      ?? (scopeMapping?.client_id ? String(scopeMapping.client_id) : null);
+    const assignmentMode = scopeMapping?.contact_assignment_mode ?? 'suggest';
 
     if (existingAsset?.asset_id) {
       const assetId = String(existingAsset.asset_id);
@@ -327,6 +331,21 @@ export async function ingestNormalizedRmmDeviceSnapshot(
         assetType,
         snapshot,
       });
+
+      // FR-D4: assignment from the signed-in user runs after the extension row
+      // so the matcher sees the value this run reported.
+      const assignmentClientId = resolvedClientId ?? (existingAsset.client_id ? String(existingAsset.client_id) : null);
+      if (assignmentClientId) {
+        await applyRmmSignedInUserAssignment(trx, {
+          tenant,
+          assetId,
+          clientId: assignmentClientId,
+          integrationId: snapshot.integrationId,
+          provider: snapshot.provider,
+          mode: assignmentMode,
+          currentUser: snapshot.extension?.currentUser ?? null,
+        });
+      }
 
       if (mappingId) {
         await db.table('tenant_external_entity_mappings')
@@ -396,6 +415,16 @@ export async function ingestNormalizedRmmDeviceSnapshot(
       assetId: createdAssetId,
       assetType,
       snapshot,
+    });
+
+    await applyRmmSignedInUserAssignment(trx, {
+      tenant,
+      assetId: createdAssetId,
+      clientId: resolvedClientId,
+      integrationId: snapshot.integrationId,
+      provider: snapshot.provider,
+      mode: assignmentMode,
+      currentUser: snapshot.extension?.currentUser ?? null,
     });
 
     await db.table('tenant_external_entity_mappings').insert({

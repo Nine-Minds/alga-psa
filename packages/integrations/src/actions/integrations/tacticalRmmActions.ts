@@ -11,6 +11,7 @@ import type { Knex } from 'knex';
 import { isAxiosUnauthorized, TacticalRmmClient, normalizeTacticalBaseUrl } from '../../lib/rmm/tacticalrmm/tacticalApiClient';
 import { computeTacticalAgentStatus } from '../../lib/rmm/tacticalrmm/agentStatus';
 import { getWebhookBaseUrl } from '../../utils/email/webhookHelpers';
+import { isRmmContactAssignmentMode } from '@alga-psa/shared/rmm/userMatching';
 import {
   TACTICAL_WEBHOOK_HEADER_NAME,
   TACTICAL_API_KEY_SECRET,
@@ -626,6 +627,7 @@ export const listTacticalRmmOrganizationMappings = withAuth(async (
     external_organization_name: string | null;
     client_id: string | null;
     default_contact_id: string | null;
+    contact_assignment_mode: string;
     company_name?: string | null;
     auto_sync_assets: boolean;
     metadata?: Record<string, unknown> | null;
@@ -658,6 +660,7 @@ export const listTacticalRmmOrganizationMappings = withAuth(async (
         'rom.external_organization_name',
         'rom.client_id',
         'rom.default_contact_id',
+        'rom.contact_assignment_mode',
         'rom.auto_sync_assets',
         'rom.metadata',
         knex.raw('c.client_name as company_name'),
@@ -673,7 +676,14 @@ export const listTacticalRmmOrganizationMappings = withAuth(async (
 export const updateTacticalRmmOrganizationMapping = withAuth(async (
   user,
   { tenant },
-  input: { mappingId: string; clientId?: string | null; defaultContactId?: string | null; autoSyncAssets?: boolean }
+  input: {
+    mappingId: string;
+    clientId?: string | null;
+    defaultContactId?: string | null;
+    autoSyncAssets?: boolean;
+    /** FR-D3: off | suggest | auto. */
+    contactAssignmentMode?: string;
+  }
 ): Promise<{ success: boolean; error?: string }> => {
   const permitted = await hasPermission(user as any, 'system_settings', 'update');
   if (!permitted) return { success: false, error: 'Forbidden' };
@@ -684,6 +694,12 @@ export const updateTacticalRmmOrganizationMapping = withAuth(async (
     if (typeof input.clientId !== 'undefined') patch.client_id = input.clientId;
     if (typeof input.defaultContactId !== 'undefined') patch.default_contact_id = input.defaultContactId || null;
     if (typeof input.autoSyncAssets !== 'undefined') patch.auto_sync_assets = input.autoSyncAssets;
+    if (typeof input.contactAssignmentMode !== 'undefined') {
+      if (!isRmmContactAssignmentMode(input.contactAssignmentMode)) {
+        return { success: false, error: 'Invalid people mode' };
+      }
+      patch.contact_assignment_mode = input.contactAssignmentMode;
+    }
     if (!Object.keys(patch).length) return { success: true };
 
     await tenantScopedTable(knex, 'rmm_organization_mappings', tenant)

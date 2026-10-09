@@ -6,6 +6,7 @@
  */
 
 import { revalidatePath } from 'next/cache';
+import { isRmmContactAssignmentMode } from '@alga-psa/shared/rmm/userMatching';
 import axios from 'axios';
 import logger from '@alga-psa/core/logger';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
@@ -385,7 +386,13 @@ export const updateHuntressOrganizationMapping = withHuntressAccess(
     user,
     { tenant },
     mappingId: string,
-    updates: { client_id?: string | null; default_contact_id?: string | null; auto_create_tickets?: boolean }
+    updates: {
+      client_id?: string | null;
+      default_contact_id?: string | null;
+      auto_create_tickets?: boolean;
+      /** FR-D3: off | suggest | auto. */
+      contact_assignment_mode?: string;
+    }
   ): Promise<{ success: boolean; error?: string }> => {
     await requireSettingsUpdatePermission(user);
 
@@ -411,6 +418,12 @@ export const updateHuntressOrganizationMapping = withHuntressAccess(
     }
     if (updates.default_contact_id !== undefined) {
       changes.default_contact_id = updates.default_contact_id;
+    }
+    if (updates.contact_assignment_mode !== undefined) {
+      if (!isRmmContactAssignmentMode(updates.contact_assignment_mode)) {
+        return { success: false, error: 'Invalid people mode' };
+      }
+      changes.contact_assignment_mode = updates.contact_assignment_mode;
     }
 
     await db.table('rmm_organization_mappings')

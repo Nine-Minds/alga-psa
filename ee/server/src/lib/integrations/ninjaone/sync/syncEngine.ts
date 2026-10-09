@@ -63,6 +63,7 @@ import {
 } from '@alga-psa/workflow-streams';
 import { v4 as uuidv4 } from 'uuid';
 import { publishWorkflowEvent } from 'server/src/lib/eventBus/publishers';
+import { applyRmmSignedInUserAssignment } from '@alga-psa/shared/rmm/autoAssignFromSignedInUser';
 
 /**
  * Hardware identity columns NinjaOne owns (FR-A3). Only non-empty values are
@@ -811,6 +812,17 @@ export class NinjaOneSyncEngine {
         updated_at: now,
       });
 
+      await applyRmmSignedInUserAssignment(trx, {
+        tenant: this.tenantId,
+        assetId: asset.asset_id,
+        clientId: createRequest.client_id,
+        integrationId: this.integrationId,
+        provider: 'ninjaone',
+        mode: (mapping as { contact_assignment_mode?: string | null }).contact_assignment_mode ?? 'suggest',
+        currentUser: device.lastLoggedInUser ?? null,
+        actorUserId: this.auditUserId,
+      });
+
       // Create asset history record (only if we have an audit user)
       if (this.auditUserId) {
         await db.table('asset_history').insert({
@@ -903,6 +915,19 @@ export class NinjaOneSyncEngine {
           });
         }
       }
+
+      // FR-D4: assignment from the signed-in user, after the extension row so
+      // the matcher sees the value this run reported.
+      await applyRmmSignedInUserAssignment(trx, {
+        tenant: this.tenantId,
+        assetId,
+        clientId: mapping.client_id!,
+        integrationId: this.integrationId,
+        provider: 'ninjaone',
+        mode: (mapping as { contact_assignment_mode?: string | null }).contact_assignment_mode ?? 'suggest',
+        currentUser: device.lastLoggedInUser ?? null,
+        actorUserId: this.auditUserId,
+      });
 
       // Update external entity mapping
       await db.table('tenant_external_entity_mappings')

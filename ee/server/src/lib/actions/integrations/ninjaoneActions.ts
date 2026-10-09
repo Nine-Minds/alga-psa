@@ -8,6 +8,7 @@
  */
 
 import logger from '@alga-psa/core/logger';
+import { isRmmContactAssignmentMode } from '@alga-psa/shared/rmm/userMatching';
 import axios from 'axios';
 import crypto from 'crypto';
 import fs from 'fs';
@@ -704,6 +705,8 @@ export const updateNinjaOneOrganizationMapping = withAdvancedAssetsAccess(async 
     default_contact_id?: string | null;
     auto_sync_assets?: boolean;
     auto_create_tickets?: boolean;
+    /** FR-D3: off | suggest | auto. */
+    contact_assignment_mode?: string;
   }
 ): Promise<{ success: boolean; error?: string }> => {
   try {
@@ -729,6 +732,12 @@ export const updateNinjaOneOrganizationMapping = withAdvancedAssetsAccess(async 
     }
     if ('default_contact_id' in updates) {
       dbUpdates.default_contact_id = updates.default_contact_id;
+    }
+    if ('contact_assignment_mode' in updates) {
+      if (!isRmmContactAssignmentMode(updates.contact_assignment_mode)) {
+        return { success: false, error: 'Invalid people mode' };
+      }
+      dbUpdates.contact_assignment_mode = updates.contact_assignment_mode;
     }
 
     await db.table('rmm_organization_mappings')
