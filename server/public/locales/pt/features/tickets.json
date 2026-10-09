@@ -455,6 +455,7 @@
     },
     "filters": {
       "allAssignees": "Todos os responsáveis",
+      "allContacts": "Todos os contatos",
       "selectStatus": "Selecione o status",
       "responseState": "Estado de resposta",
       "allResponseStates": "Todos os estados de resposta",
