@@ -376,6 +376,38 @@ Owners, status and fix PRs are tracked by hand in a tab of your own (for example
 to it, so nothing typed there is overwritten. Both tabs are created with their
 header on first append, like every other tab here.
 
+## Gate runs
+
+The suite rows above describe one lane each, and a lane that stopped short
+blanks its pass rate (see "Partial runs"). Neither says whether the candidate
+passed the production regression gate, so a red `main` can hide behind suite
+charts that read 100%.
+
+`gate_runs` records that verdict: one row per `production-regression.yml` run,
+appended by `scripts/record-gate-metrics.mjs` from the last step of the
+`readiness` job (`if: always()`, `continue-on-error`), on every event. Columns:
+
+| column | meaning |
+|---|---|
+| `timestamp_utc`, `run_kind`, `event_name`, `branch`, `commit`, `run_url`, `run_attempt` | as in `metrics`; `branch` is the PR head branch on pull requests |
+| `gate_status` | `passed` or `failed` from `test-results/production-readiness/aggregate.json`; `missing` when the readiness step wrote no aggregate |
+| `failed_lanes` | orchestrator jobs whose result was neither `success` nor `skipped`, as `lane:result` (for example `unit:failure, browser:cancelled`) |
+| `failed_requirements` | aggregate `results` entries with status `failed` (artifact ids such as `server-unit-aggregate`) |
+| `quarantined_requirements` | entries whose status starts with `quarantined` |
+| `failure_count`, `failures` | the aggregate's failure list; `failures` is cut at 2,000 characters |
+| `schema_version` | 1 |
+
+`failed_lanes` comes from `toJSON(needs)`, so it is filled even when the
+aggregate is missing. A cancelled run never reaches this step and writes no row,
+the same as every other recorder here.
+
+Chart it as a weekly red rate for `run_kind = main`, for example
+`=COUNTIFS(gate_runs!B:B,"main",gate_runs!H:H,"<>passed",gate_runs!A:A,">="&week)`
+over `=COUNTIFS(gate_runs!B:B,"main",gate_runs!A:A,">="&week)`. Formulas are
+added by hand on the `charts` tab after the first rows land; scripts never write
+them. The step also writes a one-line table to the run's job summary, so the
+verdict and red lanes are visible without the sheet.
+
 ## One-time setup
 
 1. In Google Cloud Console, create a service account (any project) and enable
