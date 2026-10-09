@@ -278,6 +278,7 @@ export function validateCapturedFilters(
     priorityIds?: readonly string[];
     categoryIds?: readonly string[];
     clientIds?: readonly string[];
+    contactIds?: readonly string[];
     userIds?: readonly string[];
     teamIds?: readonly string[];
     tags?: readonly string[];
@@ -309,6 +310,7 @@ export function validateCapturedFilters(
   out.priorityId = keepScalar(filters.priorityId, known.priorityIds);
   out.categoryId = keepScalar(filters.categoryId, known.categoryIds);
   out.clientId = keepScalar(filters.clientId, known.clientIds);
+  out.contactId = keepScalar(filters.contactId, known.contactIds);
   out.categoryIds = keepList(filters.categoryIds, known.categoryIds);
   out.excludeCategoryIds = keepList(filters.excludeCategoryIds, known.categoryIds);
   out.assignedToIds = keepList(normalizeAssignedToIdList(filters.assignedToIds), known.userIds);

@@ -179,6 +179,7 @@ export function hasBoardFilterParam(search: string): boolean {
  */
 export const TICKET_VIEW_URL_FILTER_PARAMS = [
   'clientId',
+  'contactId',
   'statusId',
   'priorityId',
   'categoryId',
