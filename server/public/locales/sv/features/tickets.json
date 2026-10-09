@@ -144,6 +144,7 @@
     "assignedTo": "Tilldelat till",
     "requester": "Beställare",
     "client": "Kund",
+    "contact": "Kontakt",
     "dueDate": "Måldatum",
     "resolution": "Lösning",
     "timeSpent": "Nedlagd tid",
@@ -457,7 +458,8 @@
       "loading": "Läser in…",
       "clientNotFound": "Kunden hittades inte.",
       "clientRendererMissing": "Kunduppgifter är inte tillgängliga i det här sammanhanget.",
-      "clientLoadFailed": "Det gick inte att läsa in kunden."
+      "clientLoadFailed": "Det gick inte att läsa in kunden.",
+      "contactRendererMissing": "Kontaktuppgifter är inte tillgängliga i det här sammanhanget."
     },
     "filters": {
       "allAssignees": "Alla ansvariga",

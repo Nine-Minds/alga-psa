@@ -136,6 +136,7 @@
     "assignedTo": "Atribuído a",
     "requester": "Solicitante",
     "client": "Cliente",
+    "contact": "Contato",
     "dueDate": "Data de vencimento",
     "resolution": "Resolução",
     "timeSpent": "Tempo gasto",
@@ -449,7 +450,8 @@
       "loading": "Carregando...",
       "clientNotFound": "Cliente não encontrado.",
       "clientRendererMissing": "Os detalhes do cliente não estão disponíveis neste contexto.",
-      "clientLoadFailed": "Falha ao carregar o cliente."
+      "clientLoadFailed": "Falha ao carregar o cliente.",
+      "contactRendererMissing": "Os detalhes do contato não estão disponíveis neste contexto."
     },
     "filters": {
       "allAssignees": "Todos os responsáveis",

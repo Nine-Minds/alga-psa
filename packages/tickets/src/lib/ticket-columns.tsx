@@ -7,6 +7,7 @@ import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
 import TeamAvatar from '@alga-psa/ui/components/TeamAvatar';
 import ClientAvatar from '@alga-psa/ui/components/ClientAvatar';
+import ContactAvatar from '@alga-psa/ui/components/ContactAvatar';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { getUserTimeZone } from '@alga-psa/core';
 import type { CountryDateFormat } from '@alga-psa/core/i18n/countryDateFormat';
@@ -149,6 +150,7 @@ interface CreateTicketColumnsOptions {
   showTags?: boolean;
   showClient?: boolean;
   onClientClick?: (clientId: string) => void;
+  onContactClick?: (contactNameId: string) => void;
   /**
    * Authoritative status_id → is_closed map. Used to color the status pill
    * (closed = green) from the status definition instead of the per-ticket
@@ -187,6 +189,7 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
     showTags = true,
     showClient = true,
     onClientClick,
+    onContactClick,
     statusIsClosedById = {},
     additionalAgentAvatarUrls = {},
     teamAvatarUrls = {},
@@ -480,6 +483,51 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
               onClick={(e) => {
                 e.stopPropagation();
                 if (record.client_id) onClientClick(record.client_id);
+              }}
+              className="bg-transparent border-none p-0 text-left text-[rgb(var(--color-text-700))] hover:[&_.truncate]:text-[rgb(var(--color-primary-700))]"
+            >
+              {body}
+            </button>
+          );
+        },
+      }
+    });
+  }
+
+  // Contact
+  if (columnVisibility.contact) {
+    columns.push({
+      key: 'contact',
+      col: {
+        title: t('fields.contact', 'Contact'),
+        dataIndex: 'contact_name',
+        width: '8%',
+        render: (value: string | null, record: ITicketListItem) => {
+          const body = (
+            <span className="flex items-center gap-2 overflow-hidden">
+              {value ? (
+                <ContactAvatar
+                  contactId={record.contact_name_id || value}
+                  contactName={value}
+                  avatarUrl={record.contact_avatar_url ?? null}
+                  size="xs"
+                />
+              ) : (
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-[10px] font-bold text-white bg-[#cbd5e1]">
+                  —
+                </span>
+              )}
+              <span className="truncate">{value || <span className="text-[rgb(var(--color-text-400))]">—</span>}</span>
+            </span>
+          );
+          if (!onContactClick || !record.contact_name_id) {
+            return <span className="flex text-[rgb(var(--color-text-700))]">{body}</span>;
+          }
+          return (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onContactClick(record.contact_name_id!);
               }}
               className="bg-transparent border-none p-0 text-left text-[rgb(var(--color-text-700))] hover:[&_.truncate]:text-[rgb(var(--color-primary-700))]"
             >

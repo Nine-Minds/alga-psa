@@ -136,6 +136,7 @@
     "assignedTo": "Attribué à",
     "requester": "Demandeur",
     "client": "Entreprise",
+    "contact": "Contact",
     "dueDate": "Date d'échéance",
     "resolution": "Résolution",
     "timeSpent": "Temps passé",
@@ -449,7 +450,8 @@
       "loading": "Chargement...",
       "clientNotFound": "Client introuvable.",
       "clientRendererMissing": "Les détails du client ne sont pas disponibles dans ce contexte.",
-      "clientLoadFailed": "Échec du chargement du client."
+      "clientLoadFailed": "Échec du chargement du client.",
+      "contactRendererMissing": "Les détails du contact ne sont pas disponibles dans ce contexte."
     },
     "filters": {
       "allAssignees": "Tous les cessionnaires",

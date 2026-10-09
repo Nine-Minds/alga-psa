@@ -168,6 +168,7 @@
     "assignedTo": "Przypisane do",
     "requester": "Zgłaszający",
     "client": "Klient",
+    "contact": "Kontakt",
     "dueDate": "Termin",
     "resolution": "Rozwiązanie",
     "timeSpent": "Poświęcony czas",
@@ -491,7 +492,8 @@
       "loading": "Ładowanie...",
       "clientNotFound": "Nie znaleziono klienta.",
       "clientRendererMissing": "Szczegóły klienta są niedostępne w tym kontekście.",
-      "clientLoadFailed": "Nie udało się załadować klienta."
+      "clientLoadFailed": "Nie udało się załadować klienta.",
+      "contactRendererMissing": "Szczegóły kontaktu są niedostępne w tym kontekście."
     },
     "filters": {
       "allAssignees": "Wszyscy przypisani",

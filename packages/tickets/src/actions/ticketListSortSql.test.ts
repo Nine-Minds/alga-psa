@@ -24,6 +24,12 @@ describe('TICKET_LIST_SORT_SQL', () => {
     expect(TICKET_LIST_SORT_SQL.updated_at).toEqual({ column: 't.updated_at' });
   });
 
+  it('orders contact_name against the base query contacts alias', () => {
+    // `cn` is the contacts join buildTicketListBaseQuery adds; any other alias
+    // would make the ORDER BY (and the adjacent-ticket window) fail at runtime.
+    expect(TICKET_LIST_SORT_SQL.contact_name).toEqual({ column: 'cn.full_name' });
+  });
+
   it('orders latest_activity_at by the shared activity expression', () => {
     expect(TICKET_LIST_SORT_SQL.latest_activity_at).toEqual({
       rawExpression: TICKET_LATEST_ACTIVITY_SQL,

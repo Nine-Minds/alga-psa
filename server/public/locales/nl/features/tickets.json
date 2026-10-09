@@ -136,6 +136,7 @@
     "assignedTo": "Toegewezen aan",
     "requester": "Aanvrager",
     "client": "Bedrijf",
+    "contact": "Contactpersoon",
     "dueDate": "Vervaldatum",
     "resolution": "Oplossing",
     "timeSpent": "Bestede tijd",
@@ -449,7 +450,8 @@
       "loading": "Laden...",
       "clientNotFound": "Klant niet gevonden.",
       "clientRendererMissing": "Klantgegevens zijn niet beschikbaar in deze context.",
-      "clientLoadFailed": "Kan klant niet laden."
+      "clientLoadFailed": "Kan klant niet laden.",
+      "contactRendererMissing": "Contactgegevens zijn niet beschikbaar in deze context."
     },
     "filters": {
       "allAssignees": "Alle toegewezen personen",

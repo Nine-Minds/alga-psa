@@ -136,6 +136,7 @@
     "assignedTo": "Asignado a",
     "requester": "Solicitante",
     "client": "Empresa",
+    "contact": "Contacto",
     "dueDate": "Fecha de vencimiento",
     "resolution": "Resolución",
     "timeSpent": "Tiempo invertido",
@@ -449,7 +450,8 @@
       "loading": "Cargando...",
       "clientNotFound": "No se encontró la empresa.",
       "clientRendererMissing": "Los detalles de la empresa no están disponibles en este contexto.",
-      "clientLoadFailed": "No se pudo cargar el cliente."
+      "clientLoadFailed": "No se pudo cargar el cliente.",
+      "contactRendererMissing": "Los detalles del contacto no están disponibles en este contexto."
     },
     "filters": {
       "allAssignees": "Todos los asignados",

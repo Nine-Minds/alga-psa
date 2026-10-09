@@ -144,6 +144,7 @@
     "assignedTo": "Assigned To",
     "requester": "Requester",
     "client": "Client",
+    "contact": "Contact",
     "dueDate": "Due Date",
     "resolution": "Resolution",
     "timeSpent": "Time Spent",
@@ -457,7 +458,8 @@
       "loading": "Loading...",
       "clientNotFound": "Client not found.",
       "clientRendererMissing": "Client details are unavailable in this context.",
-      "clientLoadFailed": "Failed to load client."
+      "clientLoadFailed": "Failed to load client.",
+      "contactRendererMissing": "Contact details are unavailable in this context."
     },
     "filters": {
       "allAssignees": "All Assignees",

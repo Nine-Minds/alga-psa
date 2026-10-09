@@ -13,7 +13,8 @@ import {
  * supplied.
  *
  * Aliases come from `buildTicketListBaseQuery`:
- *   au → users on t.assigned_to, tm → teams on t.assigned_team_id.
+ *   au → users on t.assigned_to, tm → teams on t.assigned_team_id,
+ *   cn → contacts on t.contact_name_id.
  */
 export interface TicketListSortSpec {
   column?: string;
@@ -63,6 +64,7 @@ export const TICKET_LIST_SORT_SQL: Record<TicketListSortKey, TicketListSortSpec>
   board_name: { column: 'c.board_name' },
   category_name: { column: 'cat.category_name' },
   client_name: { column: 'comp.client_name' },
+  contact_name: { column: 'cn.full_name' },
   entered_at: { column: 't.entered_at' },
   entered_by_name: { rawExpression: "COALESCE(CONCAT(u.first_name, ' ', u.last_name), '')" },
   due_date: { column: 't.due_date' },
