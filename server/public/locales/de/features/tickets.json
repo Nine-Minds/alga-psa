@@ -378,7 +378,13 @@
     "schedule": "Planen",
     "scheduled": "Geplant",
     "showMore": "Mehr anzeigen",
-    "showLess": "Weniger anzeigen"
+    "showLess": "Weniger anzeigen",
+    "ccBcc": "Cc/Bcc",
+    "cc": "Cc",
+    "bcc": "Bcc",
+    "ccBccInvalid": "Korrigieren Sie die markierten Adressen, bevor Sie senden.",
+    "ccBccTooMany": "Es können höchstens {{max}} Cc- und Bcc-Empfänger pro Kommentar kopiert werden.",
+    "ccBccNotSentOnInternal": "Cc und Bcc werden bei einer internen Notiz nicht gesendet. Deaktivieren Sie „Intern“, um sie zu verwenden."
   },
   "responseState": {
     "awaitingYourResponse": "Warten auf Ihre Antwort",

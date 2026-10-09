@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Label } from '@alga-psa/ui/components/Label';
 import { Input } from '@alga-psa/ui/components/Input';
+import { QuantityInput } from '../QuantityInput';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { BucketOverlayInput, ContractWizardData } from '../ContractWizard';
@@ -15,6 +16,7 @@ import { BucketOverlayFields } from '../BucketOverlayFields';
 import { BillingFrequencyOverrideSelect } from '../BillingFrequencyOverrideSelect';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { getRecurringAuthoringPreview } from '../recurringAuthoringPreview';
+import { getUnsupportedRecurringAuthoringCombination } from '@alga-psa/shared/billingClients/recurringAuthoringValidation';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useFormatBillingFrequency } from '@alga-psa/billing/hooks/useBillingEnumOptions';
 import { resolveContractAuthoringRate } from '../../../../lib/contractAuthoringRate';
@@ -70,6 +72,13 @@ export function FixedFeeServicesStep({ data, updateData }: FixedFeeServicesStepP
   // reordering or removing rows cannot attach a price to the wrong service.
   const [catalogRates, setCatalogRates] = useState<Record<string, number | null>>({});
 
+  // Services whose unit rate the operator deliberately emptied. Catalog prefill
+  // is for rows that never had a rate; an emptied field must stay empty while
+  // the operator types the replacement, and is then rejected by step validation
+  // and submission (getFixedServiceBasisIssue) instead of being refilled. A ref
+  // so the async prefill below always reads the latest set, not a render's copy.
+  const clearedRateServices = useRef<Set<string>>(new Set());
+
   useEffect(() => {
     if (data.fixed_base_rate !== undefined) {
       setBaseRateInput((data.fixed_base_rate / 100).toFixed(2));
@@ -101,7 +110,7 @@ export function FixedFeeServicesStep({ data, updateData }: FixedFeeServicesStepP
   // which is currency-neutral, or a resumed draft) follows the catalog price in
   // the contract currency until the operator overrides it.
   const unitServicesMissingRate = data.fixed_services
-    .filter((service) => isUnitFixedService(service) && service.service_id && service.unit_rate == null)
+    .filter((service) => isUnitFixedService(service) && service.service_id && service.unit_rate == null && !clearedRateServices.current.has(service.service_id))
     .map((service) => service.service_id);
   const missingRateKey = Array.from(new Set(unitServicesMissingRate)).sort().join(',');
 
@@ -118,7 +127,7 @@ export function FixedFeeServicesStep({ data, updateData }: FixedFeeServicesStepP
         // per-unit row on the same service is filled in.
         updateData((prev) => ({
           fixed_services: prev.fixed_services.map((service) =>
-            isUnitFixedService(service) && service.service_id && service.unit_rate == null && rates[service.service_id] != null
+            isUnitFixedService(service) && service.service_id && service.unit_rate == null && !clearedRateServices.current.has(service.service_id) && rates[service.service_id] != null
               ? { ...service, unit_rate: rates[service.service_id] as number }
               : service
           ),
@@ -149,6 +158,7 @@ export function FixedFeeServicesStep({ data, updateData }: FixedFeeServicesStepP
   };
 
   const handleRemoveService = (index: number) => {
+    clearedRateServices.current.delete(data.fixed_services[index]?.service_id);
     const next = data.fixed_services.filter((_, i) => i !== index);
     updateData({ fixed_services: next, ...getAutoBaseRateUpdate(next) });
   };
@@ -164,6 +174,10 @@ export function FixedFeeServicesStep({ data, updateData }: FixedFeeServicesStepP
     // A unit row follows the newly chosen service's catalog price; the operator
     // can still overwrite it. A bundle row carries no unit rate.
     const serviceChanged = current.service_id !== item.service_id;
+    if (serviceChanged) {
+      clearedRateServices.current.delete(current.service_id);
+      clearedRateServices.current.delete(item.service_id);
+    }
     next[index] = {
       ...current,
       service_id: item.service_id,
@@ -198,8 +212,11 @@ export function FixedFeeServicesStep({ data, updateData }: FixedFeeServicesStepP
     const current = next[index];
     const pricingBasis: 'bundle' | 'unit' = updates.pricing_basis === 'unit' ? 'unit' : updates.pricing_basis === 'bundle' ? 'bundle' : current.pricing_basis;
     let unitRate = updates.base_rate !== undefined ? updates.base_rate : current.unit_rate;
+    if (updates.base_rate === null) clearedRateServices.current.add(current.service_id);
+    else if (updates.base_rate !== undefined) clearedRateServices.current.delete(current.service_id);
     let quantity = current.quantity;
     if (updates.pricing_basis && updates.pricing_basis !== current.pricing_basis) {
+      clearedRateServices.current.delete(current.service_id);
       if (updates.pricing_basis === 'unit') {
         // Prefill from the catalog price in the contract currency, overridable.
         if (unitRate == null) unitRate = catalogRates[current.service_id] ?? undefined;
@@ -262,6 +279,18 @@ export function FixedFeeServicesStep({ data, updateData }: FixedFeeServicesStepP
     billingFrequency: data.fixed_billing_frequency ?? data.billing_frequency,
     enableProration: data.enable_proration,
   }, t);
+
+  // Arrears is the default and the wizard has no other timing control, so this is
+  // where an operator can move a new fixed-fee line to invoice on its start date.
+  // Contract cadence only supports some frequencies; don't offer a switch that
+  // would fail validation.
+  const canSuggestAdvanceOnContractCadence =
+    data.billing_timing !== 'advance' &&
+    !getUnsupportedRecurringAuthoringCombination({
+      lineType: 'Fixed',
+      cadenceOwner: 'contract',
+      billingFrequency: data.fixed_billing_frequency ?? data.billing_frequency,
+    });
 
   const formatBillingFrequency = useFormatBillingFrequency();
   const hasAlternateBillingFrequency =
@@ -410,15 +439,11 @@ export function FixedFeeServicesStep({ data, updateData }: FixedFeeServicesStepP
                       ? t('wizardFixed.services.recurringQuantityLabel', { defaultValue: 'Recurring quantity' })
                       : t('wizardFixed.services.allocationQuantityLabel', { defaultValue: 'Allocation quantity' })}
                   </Label>
-                  <Input
+                  <QuantityInput
                     id={`quantity-${index}`}
-                    type="number"
                     value={service.quantity}
-                    onChange={(event) =>
-                      handleQuantityChange(index, Number(event.target.value))
-                    }
-                    min={isUnitFixedService(service) ? '0' : '1'}
-                    step="1"
+                    onCommit={(value) => handleQuantityChange(index, value)}
+                    min={isUnitFixedService(service) ? 0 : 1}
                     className="w-24"
                   />
                 </div>
@@ -581,6 +606,32 @@ export function FixedFeeServicesStep({ data, updateData }: FixedFeeServicesStepP
                     ))}
                   </ul>
                 </div>
+              </div>
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {data.fixed_services.length > 0 && canSuggestAdvanceOnContractCadence && (
+          <Alert variant="info" id="fixed-fee-advance-suggestion">
+            <AlertDescription>
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <p className="text-sm">
+                  {t('wizardFixed.advanceSuggestion.message', {
+                    defaultValue:
+                      "Billed in arrears, this line can't be invoiced until its first service period ends. Billing in advance on the contract's cadence invoices it on the start date instead.",
+                  })}
+                </p>
+                <Button
+                  id="fixed-fee-bill-in-advance-on-contract-cadence"
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => updateData({ billing_timing: 'advance', cadence_owner: 'contract' })}
+                >
+                  {t('wizardFixed.advanceSuggestion.action', {
+                    defaultValue: "Bill in advance on the contract's cadence",
+                  })}
+                </Button>
               </div>
             </AlertDescription>
           </Alert>

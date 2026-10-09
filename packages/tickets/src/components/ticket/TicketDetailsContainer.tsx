@@ -21,6 +21,7 @@ import {
 } from '../../actions/optimizedTicketActions';
 import TicketDetails from './TicketDetails';
 import type { TicketNotificationSuppressionValue } from './TicketNotificationSuppressionControl';
+import type { CommentEmailRecipientsPayload } from './CommentEmailRecipientsControl';
 import { TicketDetailsSkeleton } from './TicketDetailsSkeleton';
 import { UnsavedChangesProvider } from '@alga-psa/ui/context';
 import { persistTicketDescriptionUpdate } from './ticketDescriptionUpdate';
@@ -262,6 +263,7 @@ export default function TicketDetailsContainer({
     isResolution: boolean,
     closesTicket: boolean = false,
     schedule?: { publishAt: string; timeZone: string } | null,
+    emailRecipients?: CommentEmailRecipientsPayload,
   ) => {
     if (!session?.user) {
       toast.error(t('errors.authRequiredComment', 'You must be logged in to add comments'));
@@ -278,6 +280,7 @@ export default function TicketDetailsContainer({
         closesTicket,
         undefined,
         schedule,
+        emailRecipients,
       );
       if (isReturnedActionError(newComment)) {
         throw newComment;

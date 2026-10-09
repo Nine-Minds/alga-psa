@@ -115,6 +115,13 @@ export interface SendEmailParams {
    * If provided, the system will attempt to use this provider instead of the tenant default.
    */
   providerId?: string;
+  /**
+   * Optional: real Cc/Bcc headers on this one message. Used by per-comment
+   * one-off recipients; every layer below (TenantEmailService, the providers
+   * and the email log) already understands them.
+   */
+  cc?: EmailAddress[];
+  bcc?: EmailAddress[];
 }
 
 function applyReplyMarkers(
@@ -558,6 +565,8 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
       senderId: params.senderId,
       revalidateCommentOnRetry: managedCommentDelivery,
       to: params.to,
+      ...(params.cc?.length ? { cc: params.cc } : {}),
+      ...(params.bcc?.length ? { bcc: params.bcc } : {}),
       tenantId: params.tenantId,
       entityType: params.entityType,
       entityId: params.entityId,

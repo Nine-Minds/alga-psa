@@ -378,7 +378,13 @@
     "schedule": "Pianifica",
     "scheduled": "Pianificato",
     "showMore": "Mostra di più",
-    "showLess": "Mostra meno"
+    "showLess": "Mostra meno",
+    "ccBcc": "Cc/Ccn",
+    "cc": "Cc",
+    "bcc": "Ccn",
+    "ccBccInvalid": "Correggi gli indirizzi evidenziati prima di inviare.",
+    "ccBccTooMany": "È possibile copiare al massimo {{max}} destinatari Cc e Ccn in un commento.",
+    "ccBccNotSentOnInternal": "Cc e Ccn non vengono inviati con una nota interna. Disattiva Interna per usarli."
   },
   "responseState": {
     "awaitingYourResponse": "In attesa della tua risposta",

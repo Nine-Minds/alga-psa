@@ -727,6 +727,16 @@
     }
   },
   "connectSso": {
+    "linkError": {
+      "title": "Collegamento SSO non riuscito.",
+      "no_matching_user": "L'account con cui hai effettuato l'accesso è {{providerEmail}}, mentre il tuo accesso AlgaPSA è {{accountEmail}}. Collega un account che usa {{accountEmail}} oppure chiedi all'amministratore del tuo provider di identità di impostare {{accountEmail}} come indirizzo email principale di quell'account.",
+      "missing_email": "Il tuo provider di identità non ha restituito un indirizzo email per quell'account, quindi non può essere associato al tuo accesso AlgaPSA {{accountEmail}}. Chiedi all'amministratore del provider di identità di pubblicare un indirizzo email per l'account e riprova.",
+      "inactive_user": "L'utente AlgaPSA per {{providerEmail}} non è attivo, quindi non può essere collegato. Chiedi al tuo amministratore di riattivarlo e riprova.",
+      "user_type_mismatch": "{{providerEmail}} corrisponde a un utente del portale clienti, non a un utente interno AlgaPSA. Collega invece un account che usa {{accountEmail}}.",
+      "tenant_mismatch": "{{providerEmail}} appartiene a un'organizzazione diversa da {{accountEmail}}. Collega un account della tua organizzazione.",
+      "generic": "Non è stato possibile collegare quell'account a {{accountEmail}}. Riprova oppure contatta il tuo amministratore.",
+      "unknownProviderEmail": "un account senza indirizzo email"
+    },
     "verify": {
       "title": "Proteggi il tuo account con SSO",
       "description": "Collega Azure AD o Google Workspace per riutilizzare le policy aziendali e saltare le richieste locali di autenticazione a due fattori.",

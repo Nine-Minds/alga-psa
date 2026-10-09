@@ -322,7 +322,17 @@
         "verifiedContact": "Bestätigte Kontakt-E-Mail-Adresse",
         "validPassword": "Gültiges Passwort"
       }
-    }
+    },
+    "ssoNoMatchTitle": "SSO-Anmeldung fehlgeschlagen",
+    "ssoNoMatch": {
+      "no_matching_user": "Kein Kundenportal-Konto stimmt mit {{providerEmail}} überein. Melden Sie sich mit Ihrem Passwort an oder wenden Sie sich an Ihren Dienstleister.",
+      "missing_email": "Ihr Identitätsanbieter hat keine E-Mail-Adresse zurückgegeben, daher konnte kein Kundenportal-Konto zugeordnet werden. Melden Sie sich mit Ihrem Passwort an oder wenden Sie sich an Ihren Dienstleister.",
+      "inactive_user": "Das Kundenportal-Konto für {{providerEmail}} ist inaktiv. Wenden Sie sich an Ihren Dienstleister, um es zu reaktivieren.",
+      "user_type_mismatch": "{{providerEmail}} ist kein Kundenportal-Konto. Wenden Sie sich an Ihren Dienstleister.",
+      "tenant_mismatch": "{{providerEmail}} gehört zum Portal einer anderen Organisation. Melden Sie sich mit Ihrem Passwort an oder wenden Sie sich an Ihren Dienstleister."
+    },
+    "configurationTitle": "Anmeldung fehlgeschlagen",
+    "configurationMessage": "Die Anmeldung ist fehlgeschlagen. Bitte versuchen Sie es erneut oder wenden Sie sich an Ihren Dienstleister."
   },
   "account": {
     "title": "Konto",

@@ -86,6 +86,10 @@
       "import": "./src/lib/sso/clientPortalSsoResolution.ts",
       "types": "./src/lib/sso/clientPortalSsoResolution.ts"
     },
+    "./lib/sso/linkStateCookie": {
+      "import": "./src/lib/sso/linkStateCookie.ts",
+      "types": "./src/lib/sso/linkStateCookie.ts"
+    },
     "./lib/security/captcha": {
       "import": "./src/lib/security/captcha.ts",
       "types": "./src/lib/security/captcha.ts"

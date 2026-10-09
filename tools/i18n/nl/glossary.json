@@ -2553,7 +2553,10 @@
       "Volume",
       "Auto",
       "auto | 50% | 120px",
-      "is"
+      "is",
+      "Cc",
+      "Bcc",
+      "Cc/Bcc"
     ],
     "caseInsensitive": [
       "account",

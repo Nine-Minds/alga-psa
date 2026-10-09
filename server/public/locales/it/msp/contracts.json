@@ -1259,6 +1259,9 @@
     },
     "loadingTemplate": "Caricamento modello...",
     "servicesLabel": "Servizi",
+    "summary": {
+      "clientCurrency": "Valuta del cliente"
+    },
     "templateBadge": "Modello",
     "templateNotFound": "Modello di contratto non trovato",
     "templateSnapshotTitle": "Istantanea del modello",
@@ -1655,6 +1658,10 @@
       "recurringQuantityLabel": "Quantità ricorrente",
       "allocationQuantityLabel": "Quantità di allocazione",
       "noCurrencyPrice": "Nessun prezzo in {{currency}} nel catalogo. Inserisci una tariffa unitaria."
+    },
+    "advanceSuggestion": {
+      "message": "Con la fatturazione a posticipo, questa riga non può essere fatturata prima della fine del suo primo periodo di servizio. Con la fatturazione in anticipo con la cadenza del contratto viene invece fatturata alla data di inizio.",
+      "action": "Fattura in anticipo con la cadenza del contratto"
     }
   },
   "wizardProducts": {
@@ -1861,16 +1868,6 @@
         "label": "Proprietario della cadenza:",
         "contractAnniversary": "Anniversario del contratto",
         "clientBillingSchedule": "Pianificazione di fatturazione del cliente"
-      },
-      "firstInvoice": {
-        "contract": {
-          "advance": "Prima fattura: emessa nella finestra di anniversario del contratto che apre il primo periodo di servizio coperto.",
-          "arrears": "Prima fattura: emessa nella prossima finestra di anniversario del contratto dopo la chiusura del primo periodo di servizio coperto."
-        },
-        "client": {
-          "advance": "Prima fattura: emessa nella prima finestra della pianificazione di fatturazione del cliente che copre il periodo di servizio.",
-          "arrears": "Prima fattura: emessa nella prossima finestra della pianificazione di fatturazione del cliente dopo la chiusura del primo periodo di servizio coperto."
-        }
       },
       "partialPeriod": {
         "enabled": "I periodi parziali adeguano la tariffa ricorrente alla porzione coperta del periodo di servizio.",
@@ -2597,5 +2594,31 @@
       "contractNotActive": "Il contratto di rinnovo attivato non è più attivo. Aggiornare la pagina e riprovare.",
       "manualRetryDueOnly": "Il nuovo tentativo manuale è disponibile solo per i cicli di rinnovo in scadenza."
     }
+  },
+  "wizardFirstInvoice": {
+    "loading": "Verifica del calendario di fatturazione del cliente…",
+    "arrearsPreviewNote": "Fino ad allora, un'anteprima delle fatture per questo cliente non ha nulla da fatturare per questa riga.",
+    "unavailable": {
+      "missingStartDate": "Scegli una data di inizio per vedere quando questo contratto viene fatturato per la prima volta.",
+      "unsupportedFrequency": "Non viene mostrata la data della prima fattura perché la fatturazione con cadenza del contratto non supporta questa frequenza. Scegli una frequenza supportata oppure fattura secondo il calendario del cliente.",
+      "clientSchedule": "Questa riga viene fatturata secondo il calendario di fatturazione del cliente. Non è stato possibile caricare il calendario, quindi non viene mostrata alcuna data."
+    },
+    "contract": {
+      "arrears": "Fatturata a posticipo con la cadenza del contratto: la prima fattura sarà disponibile il {{date}}, alla fine del primo periodo di servizio.",
+      "advance": "Fatturata in anticipo con la cadenza del contratto: la prima fattura è disponibile dal {{date}}, la data di inizio del contratto."
+    },
+    "client": {
+      "arrears": "Fatturata a posticipo secondo il calendario di fatturazione del cliente: la prima fattura sarà disponibile il {{date}}, alla fine dell'attuale periodo di fatturazione del cliente.",
+      "advance": "Fatturata in anticipo secondo il calendario di fatturazione del cliente: la prima fattura è disponibile dal {{date}}, l'inizio del periodo di fatturazione del cliente che comprende la data di inizio del contratto."
+    }
+  },
+  "wizardCreated": {
+    "title": "Contratto creato",
+    "heading": "{{contractName}} è stato creato",
+    "firstInvoiceHeading": "Prima fattura",
+    "done": "Fine"
+  },
+  "sellHourBlockNote": {
+    "text": "Un plafond di ore del contratto fattura solo l'eccedenza. Per addebitare in anticipo un blocco di ore, usa Vendi blocco in Blocchi ore, nella scheda Pannello di fatturazione del cliente."
   }
 }

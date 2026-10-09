@@ -5,6 +5,10 @@ import type { ContactVisibilityContext } from '../lib/clientPortalVisibility';
 import { persistCommentPublication } from '@alga-psa/shared/lib/ticketCommentAttachments';
 
 import { reconcileCommentAttachments } from '@shared/lib/ticketCommentAttachments';
+import {
+  prepareCommentEmailRecipients,
+  type CommentEmailRecipientsInput,
+} from '@shared/lib/tickets/commentEmailRecipients';
 import type {
   ITicket,
   ITicketListItem,
@@ -73,7 +77,7 @@ import {
   type AuthorizationSubject,
 } from '@alga-psa/authorization/kernel';
 import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
-import { buildTicketTransitionWorkflowEvents } from '../lib/workflowTicketTransitionEvents';
+import { publishTicketTransitionsAfterCommit } from '@alga-psa/shared/lib/tickets/ticketLifecycleEvents';
 import { buildTicketCommunicationWorkflowEvents } from '../lib/workflowTicketCommunicationEvents';
 import { getTicketOrigin, type ResolvedTicketOrigin } from '../lib/ticketOrigin';
 import {
@@ -976,7 +980,7 @@ export const updateTicket = withAuth(async (user, { tenant }, id: string, data: 
 
     const {knex: db} = await createTenantKnex();
 
-    const result = await db.transaction(async (trx) => {
+    const result = await withTransaction(db, async (trx) => {
       if (!await hasPermission(user, 'ticket', 'update', trx)) {
         throw new Error('Permission denied: Cannot update ticket');
       }
@@ -1202,7 +1206,8 @@ export const updateTicket = withAuth(async (user, { tenant }, id: string, data: 
         occurredAt,
       };
 
-      const transitionEvents = buildTicketTransitionWorkflowEvents({
+      await publishTicketTransitionsAfterCommit(trx, {
+        tenant,
         before: {
           ticketId: id,
           statusId: currentTicket.status_id,
@@ -1219,24 +1224,8 @@ export const updateTicket = withAuth(async (user, { tenant }, id: string, data: 
           boardId: updatedTicket.board_id,
           escalated: updatedTicket.escalated,
         },
-        ctx: {
-          occurredAt,
-          actorUserId: user.user_id,
-          previousStatusIsClosed: !!oldStatus?.is_closed,
-          newStatusIsClosed: !!newStatus?.is_closed,
-        },
+        actorUserId: user.user_id,
       });
-
-      for (const ev of transitionEvents) {
-        await publishWorkflowEvent({
-          eventType: ev.eventType,
-          payload: ev.payload,
-          ctx: workflowCtx,
-          eventName: ev.workflow?.eventName,
-          fromState: ev.workflow?.fromState,
-          toState: ev.workflow?.toState,
-        });
-      }
 
       // Build structured changes object with old/new values
       const structuredChanges: Record<string, any> = {};
@@ -1797,7 +1786,14 @@ export const getTicketsForList = withAuth(async (user, { tenant }, filters: ITic
   }
 });
 
-export const addTicketComment = withAuth(async (user, { tenant }, ticketId: string, comment: string, isInternal: boolean): Promise<void | TicketActionError> => {
+export const addTicketComment = withAuth(async (
+  user,
+  { tenant },
+  ticketId: string,
+  comment: string,
+  isInternal: boolean,
+  emailRecipients?: CommentEmailRecipientsInput | null,
+): Promise<void | TicketActionError> => {
   try {
     const {knex: db} = await createTenantKnex();
 
@@ -1829,6 +1825,13 @@ export const addTicketComment = withAuth(async (user, { tenant }, ticketId: stri
       }
       const nowIso = new Date().toISOString();
 
+      // One-off Cc/Bcc for this comment only; rejected on internal notes.
+      const resolvedEmailRecipients = await prepareCommentEmailRecipients(trx, tenant, {
+        cc: emailRecipients?.cc,
+        bcc: emailRecipients?.bcc,
+        isInternal,
+      });
+
       await tenantScopedTable(trx, 'comment_threads', tenant).insert({
         tenant,
         thread_id: generatedIds.thread_id,
@@ -1853,6 +1856,7 @@ export const addTicketComment = withAuth(async (user, { tenant }, ticketId: stri
         is_internal: isInternal,
         is_resolution: false,
         created_at: nowIso,
+        ...(resolvedEmailRecipients ? { metadata: { email_recipients: resolvedEmailRecipients } } : {}),
       }).returning('*');
 
       await reconcileCommentAttachments(trx, tenant, newComment.comment_id, user.user_id);

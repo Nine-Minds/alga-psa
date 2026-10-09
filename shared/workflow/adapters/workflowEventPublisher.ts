@@ -43,12 +43,14 @@ async function publishNotificationEvent(
 export class WorkflowEventPublisher implements IEventPublisher {
   private readonly suppressCommentEmail: boolean;
   private readonly trx?: Knex.Transaction;
+  private readonly workflowExecutionId?: string;
 
   // suppressCommentEmail keeps comment events on the in-app channel only. Used for the
   // first comment on a new inbound-email ticket, which the TICKET_CREATED email already covers.
-  constructor(options?: { suppressCommentEmail?: boolean; transaction?: Knex.Transaction }) {
+  constructor(options?: { suppressCommentEmail?: boolean; transaction?: Knex.Transaction; workflowExecutionId?: string }) {
     this.suppressCommentEmail = options?.suppressCommentEmail ?? false;
     this.trx = options?.transaction;
+    this.workflowExecutionId = options?.workflowExecutionId;
   }
 
   private async publish(
@@ -56,7 +58,12 @@ export class WorkflowEventPublisher implements IEventPublisher {
     payload: Record<string, any>,
     options?: PublishOptions
   ): Promise<void> {
-    const publish = () => publishNotificationEvent(eventType, payload, options);
+    // workflowExecutionId stamps the originating run on the event so workflow
+    // trigger matching can refuse to start a run's own definition (self-trigger guard).
+    const effectiveOptions: PublishOptions | undefined = this.workflowExecutionId
+      ? { ...options, workflow: { ...(options?.workflow ?? {}), executionId: this.workflowExecutionId } }
+      : options;
+    const publish = () => publishNotificationEvent(eventType, payload, effectiveOptions);
 
     if (this.trx) {
       registerAfterCommit(

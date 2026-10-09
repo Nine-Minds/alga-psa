@@ -214,6 +214,10 @@
         "updateComments": "Otillräckliga behörigheter för att uppdatera kommentarer",
         "deleteComments": "Otillräckliga behörigheter för att radera kommentarer",
         "viewDocuments": "Otillräckliga behörigheter för att visa ärendedokument"
+      },
+      "projects": {
+        "read": "Otillräckliga behörigheter för att visa projekt",
+        "readDetails": "Otillräckliga behörigheter för att visa projektdetaljer"
       }
     },
     "tags": {
@@ -1740,5 +1744,9 @@
     "customPlaceholder": "Namnge enheten",
     "register": "Lägg till",
     "selectPlaceholder": "Välj en måttenhet"
+  },
+  "emailRecipients": {
+    "remove": "Ta bort {{email}}",
+    "placeholder": "Skriv en adress och tryck på Retur"
   }
 }

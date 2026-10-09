@@ -186,6 +186,10 @@
         "updateComments": "Niewystarczające uprawnienia do aktualizacji komentarzy",
         "deleteComments": "Niewystarczające uprawnienia do usuwania komentarzy",
         "viewDocuments": "Niewystarczające uprawnienia do wyświetlania dokumentów zgłoszenia"
+      },
+      "projects": {
+        "read": "Niewystarczające uprawnienia do przeglądania projektów",
+        "readDetails": "Niewystarczające uprawnienia do przeglądania szczegółów projektu"
       }
     },
     "tags": {
@@ -1774,5 +1778,9 @@
     "customPlaceholder": "Nazwij tę jednostkę",
     "register": "Dodaj",
     "selectPlaceholder": "Wybierz jednostkę"
+  },
+  "emailRecipients": {
+    "remove": "Usuń {{email}}",
+    "placeholder": "Wpisz adres i naciśnij Enter"
   }
 }

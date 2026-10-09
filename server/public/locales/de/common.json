@@ -172,6 +172,10 @@
         "updateComments": "Unzureichende Berechtigungen zum Aktualisieren von Kommentaren",
         "deleteComments": "Unzureichende Berechtigungen zum Löschen von Kommentaren",
         "viewDocuments": "Unzureichende Berechtigungen zum Anzeigen von Ticket-Dokumenten"
+      },
+      "projects": {
+        "read": "Unzureichende Berechtigungen zum Anzeigen von Projekten",
+        "readDetails": "Unzureichende Berechtigungen zum Anzeigen von Projektdetails"
       }
     },
     "tags": {
@@ -1740,5 +1744,9 @@
     "customPlaceholder": "Einheit benennen",
     "register": "Hinzufügen",
     "selectPlaceholder": "Einheit auswählen"
+  },
+  "emailRecipients": {
+    "remove": "{{email}} entfernen",
+    "placeholder": "Adresse eingeben und Eingabetaste drücken"
   }
 }

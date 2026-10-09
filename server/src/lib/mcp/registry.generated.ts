@@ -47234,6 +47234,24 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "suppressInternalNotifications": {
           "type": "boolean",
           "description": "Also suppress agent and watcher notifications for this comment. Requires suppressContactNotifications=true."
+        },
+        "cc": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "email"
+          },
+          "maxItems": 20,
+          "description": "One-off Cc recipients for this comment's email only. They are never added to the ticket watch list and receive no later comments. Not allowed with is_internal. Max 20 cc + bcc combined."
+        },
+        "bcc": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "email"
+          },
+          "maxItems": 20,
+          "description": "One-off Bcc recipients for this comment's email only. Never returned to client-portal callers. Not allowed with is_internal. Max 20 cc + bcc combined."
         }
       },
       "required": [
@@ -54815,7 +54833,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             "string",
             "null"
           ],
-          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}([T ].*)?$"
         },
         "next_action": {
           "type": "string",
@@ -55035,7 +55053,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             "string",
             "null"
           ],
-          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}([T ].*)?$"
         },
         "generator_key": {
           "type": [
@@ -55207,7 +55225,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             "string",
             "null"
           ],
-          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}([T ].*)?$"
         },
         "generator_key": {
           "type": [
@@ -55629,7 +55647,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         },
         "project_start_date": {
           "type": "string",
-          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}([T ].*)?$"
         }
       },
       "additionalProperties": false
@@ -56154,7 +56172,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             "string",
             "null"
           ],
-          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}([T ].*)?$"
         },
         "next_action": {
           "type": "string",

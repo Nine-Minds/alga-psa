@@ -322,7 +322,17 @@
         "verifiedContact": "Geverifieerd e-mailadres van de contactpersoon",
         "validPassword": "Geldig wachtwoord"
       }
-    }
+    },
+    "ssoNoMatchTitle": "SSO-aanmelding mislukt",
+    "ssoNoMatch": {
+      "no_matching_user": "Geen enkel account van het klantenportaal komt overeen met {{providerEmail}}. Meld u aan met uw wachtwoord of neem contact op met uw dienstverlener.",
+      "missing_email": "Uw identiteitsprovider heeft geen e-mailadres geretourneerd, waardoor er geen account van het klantenportaal kon worden gevonden. Meld u aan met uw wachtwoord of neem contact op met uw dienstverlener.",
+      "inactive_user": "Het account van het klantenportaal voor {{providerEmail}} is inactief. Neem contact op met uw dienstverlener om het te heractiveren.",
+      "user_type_mismatch": "{{providerEmail}} is geen account van het klantenportaal. Neem contact op met uw dienstverlener.",
+      "tenant_mismatch": "{{providerEmail}} hoort bij het portaal van een andere organisatie. Meld u aan met uw wachtwoord of neem contact op met uw dienstverlener."
+    },
+    "configurationTitle": "Aanmelden mislukt",
+    "configurationMessage": "Aanmelden is mislukt. Probeer het opnieuw of neem contact op met uw dienstverlener."
   },
   "account": {
     "title": "Account",

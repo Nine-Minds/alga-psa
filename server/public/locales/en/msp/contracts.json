@@ -1259,6 +1259,9 @@
     },
     "loadingTemplate": "Loading template...",
     "servicesLabel": "Services",
+    "summary": {
+      "clientCurrency": "Client's currency"
+    },
     "templateBadge": "Template",
     "templateNotFound": "Contract template not found",
     "templateSnapshotTitle": "Template Snapshot",
@@ -1655,6 +1658,10 @@
       "recurringQuantityLabel": "Recurring quantity",
       "allocationQuantityLabel": "Allocation quantity",
       "noCurrencyPrice": "No {{currency}} price in the catalog. Enter a unit rate."
+    },
+    "advanceSuggestion": {
+      "message": "Billed in arrears, this line can't be invoiced until its first service period ends. Billing in advance on the contract's cadence invoices it on the start date instead.",
+      "action": "Bill in advance on the contract's cadence"
     }
   },
   "wizardProducts": {
@@ -1861,16 +1868,6 @@
         "label": "Cadence owner:",
         "contractAnniversary": "Contract anniversary",
         "clientBillingSchedule": "Client billing schedule"
-      },
-      "firstInvoice": {
-        "contract": {
-          "advance": "First invoice: bill on the contract anniversary window that opens the first covered service period.",
-          "arrears": "First invoice: bill on the next contract anniversary window after the first covered service period closes."
-        },
-        "client": {
-          "advance": "First invoice: bill on the first client billing schedule window covering the service period.",
-          "arrears": "First invoice: bill on the next client billing schedule window after the first covered service period closes."
-        }
       },
       "partialPeriod": {
         "enabled": "Partial periods adjust the recurring fee to the covered portion of the service period.",
@@ -2597,5 +2594,31 @@
       "contractNotActive": "The activated renewal contract is no longer active. Please refresh and try again.",
       "manualRetryDueOnly": "Manual retry is only available for due renewal cycles."
     }
+  },
+  "wizardFirstInvoice": {
+    "loading": "Checking the client's billing schedule…",
+    "arrearsPreviewNote": "Until then, an invoice preview for this client has nothing to bill for this line.",
+    "unavailable": {
+      "missingStartDate": "Choose a start date to see when this contract first invoices.",
+      "unsupportedFrequency": "No first invoice date is shown because contract-cadence billing doesn't support this frequency. Pick a supported frequency or bill on the client's schedule.",
+      "clientSchedule": "This line bills on the client's billing schedule. That schedule couldn't be loaded, so no date is shown."
+    },
+    "contract": {
+      "arrears": "Billed in arrears on the contract's cadence: the first invoice becomes available on {{date}}, when the first service period ends.",
+      "advance": "Billed in advance on the contract's cadence: the first invoice is available from {{date}}, the contract start date."
+    },
+    "client": {
+      "arrears": "Billed in arrears on the client's billing schedule: the first invoice becomes available on {{date}}, when the client's current billing period ends.",
+      "advance": "Billed in advance on the client's billing schedule: the first invoice is available from {{date}}, the start of the client's billing period that contains the contract start date."
+    }
+  },
+  "wizardCreated": {
+    "title": "Contract Created",
+    "heading": "{{contractName}} was created",
+    "firstInvoiceHeading": "First invoice",
+    "done": "Done"
+  },
+  "sellHourBlockNote": {
+    "text": "A contract hour bucket bills only the overage. To charge for a block of hours up front, use Sell block under Hour Blocks on the client's Billing Dashboard tab."
   }
 }

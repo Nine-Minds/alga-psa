@@ -214,6 +214,10 @@
         "updateComments": "Permissões insuficientes para atualizar comentários",
         "deleteComments": "Permissões insuficientes para excluir comentários",
         "viewDocuments": "Permissões insuficientes para ver os documentos do ticket"
+      },
+      "projects": {
+        "read": "Permissões insuficientes para visualizar projetos",
+        "readDetails": "Permissões insuficientes para visualizar detalhes do projeto"
       }
     },
     "tags": {
@@ -1740,5 +1744,9 @@
     "customPlaceholder": "Dê um nome a esta unidade",
     "register": "Adicionar",
     "selectPlaceholder": "Selecione uma unidade"
+  },
+  "emailRecipients": {
+    "remove": "Remover {{email}}",
+    "placeholder": "Digite um endereço e pressione Enter"
   }
 }

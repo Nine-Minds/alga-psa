@@ -2590,7 +2590,8 @@ it('T082: DB-backed recurring invoice code treats materialized service periods a
 
   expect(preview).toMatchObject({
     success: false,
-    error: 'Recurring service periods were not materialized for this recurring execution window.',
+    code: 'RECURRING_PERIODS_NOT_MATERIALIZED',
+    error: expect.stringContaining("Service periods haven't been generated"),
   });
 }, HOOK_TIMEOUT);
 

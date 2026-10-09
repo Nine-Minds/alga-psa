@@ -249,6 +249,10 @@ const servicePeriodPostInventoryRefs = new Set([
   // Two-way Xero reconciliation fixtures persist export-line service periods;
   // this suite was introduced after the pass-0 snapshot.
   'server/src/test/integration/accounting/xeroInboundReconciliation.integration.test.ts',
+  // The contract wizard's first-invoice notice derives the first service
+  // period a new contract will bill; it landed after the pass-0 snapshot.
+  'packages/billing/src/components/billing-dashboard/contracts/wizard-steps/firstInvoiceDate.ts',
+  'packages/billing/src/components/billing-dashboard/contracts/wizard-steps/firstInvoiceDate.test.ts',
   'server/src/lib/api/services/InvoiceService.ts',
   // seedBillingChargeSources backs fabricated usage charges with usage_tracking
   // rows keyed off the charge's servicePeriodStart.

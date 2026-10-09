@@ -322,7 +322,17 @@
         "verifiedContact": "E-mail de contact vérifié",
         "validPassword": "Mot de passe valide"
       }
-    }
+    },
+    "ssoNoMatchTitle": "Échec de la connexion SSO",
+    "ssoNoMatch": {
+      "no_matching_user": "Aucun compte du portail client ne correspond à {{providerEmail}}. Connectez-vous avec votre mot de passe ou contactez votre prestataire de services.",
+      "missing_email": "Votre fournisseur d'identité n'a renvoyé aucune adresse e-mail, aucun compte du portail client n'a donc pu être identifié. Connectez-vous avec votre mot de passe ou contactez votre prestataire de services.",
+      "inactive_user": "Le compte du portail client correspondant à {{providerEmail}} est inactif. Contactez votre prestataire de services pour le réactiver.",
+      "user_type_mismatch": "{{providerEmail}} n'est pas un compte du portail client. Contactez votre prestataire de services.",
+      "tenant_mismatch": "{{providerEmail}} appartient au portail d'une autre organisation. Connectez-vous avec votre mot de passe ou contactez votre prestataire de services."
+    },
+    "configurationTitle": "Échec de la connexion",
+    "configurationMessage": "La connexion a échoué. Veuillez réessayer ou contacter votre prestataire de services."
   },
   "account": {
     "title": "Compte",

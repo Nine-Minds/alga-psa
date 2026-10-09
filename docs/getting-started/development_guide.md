@@ -247,6 +247,12 @@ docker compose restart [service]
 docker compose down -v
 ```
 
+#### Infrastructure ports
+
+The dev and test compose stacks publish Postgres (5432), PgBouncer (6432), and Redis (6379) on `127.0.0.1` only. Tools on your machine connect to `127.0.0.1:<port>`. Containers on `app-network` use the service names (`postgres`, `pgbouncer`, `redis`) instead of the host.
+
+Set `EXPOSE_INFRA_BIND_ADDR` only when another machine, or a container on a different network, must reach these ports. Use a single private address, not `0.0.0.0`. The setting does not change the app or other service ports. See [Published Ports for Postgres, PgBouncer and Redis](docker_compose.md#published-ports-for-postgres-pgbouncer-and-redis).
+
 ## Development Best Practices
 
 ### 1. Code Style

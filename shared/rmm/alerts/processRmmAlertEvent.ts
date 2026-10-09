@@ -1,5 +1,5 @@
 import type { Knex } from 'knex';
-import { tenantDb } from '@alga-psa/db';
+import { tenantDb, withTransaction } from '@alga-psa/db';
 import type {
   NormalizedRmmAlertEvent,
   RmmAlertProcessingContext,
@@ -16,6 +16,10 @@ import { addAlertInternalNote, createTicketForAlert, providerLabel } from './tic
 import { publishRmmTicketCreated } from './ticketCreatedEvent';
 import { isTicketUntouched } from './untouched';
 import { ticketStatusClockPatch } from '../../lib/ticketStatusClock';
+import {
+  captureTicketTransitionSnapshot,
+  publishTicketTransitionsAfterCommit,
+} from '../../lib/tickets/ticketLifecycleEvents';
 import { ticketUpdateStamp } from '../../lib/tickets/ticketUpdateStamp';
 
 /**
@@ -106,7 +110,7 @@ async function processTriggered(
   const context = await resolveAlertContext(knex, event);
   const dedupKey = computeDedupKey(event);
 
-  const result = await knex.transaction(async (trx): Promise<RmmAlertProcessingResult> => {
+  const result = await withTransaction(knex, async (trx): Promise<RmmAlertProcessingResult> => {
     const db = tenantDb(trx, event.tenantId);
 
     const existing = await db.table('rmm_alerts')
@@ -310,7 +314,7 @@ async function processReset(
   let resolvedQuietly = false;
   let resolvedAssetId: string | null = null;
 
-  const result = await knex.transaction(async (trx): Promise<RmmAlertProcessingResult> => {
+  const result = await withTransaction(knex, async (trx): Promise<RmmAlertProcessingResult> => {
     const db = tenantDb(trx, event.tenantId);
 
     const existing = await db.table('rmm_alerts')
@@ -368,10 +372,16 @@ async function processReset(
         if (await isTicketUntouched(trx, event.tenantId, existing.ticket_id)) {
           const statusId = await resolveCloseStatusId(trx, event.tenantId, actions, existing.ticket_id);
           if (statusId) {
+            const transitionBefore = await captureTicketTransitionSnapshot(trx, event.tenantId, existing.ticket_id);
             // LEVERAGE: pattern ticket-status-write — spread the status clock patch into every tickets.status_id UPDATE
             await db.table('tickets')
               .where({ ticket_id: existing.ticket_id })
               .update({ status_id: statusId, ...ticketStatusClockPatch(trx, statusId), ...ticketUpdateStamp(trx, null) });
+            await publishTicketTransitionsAfterCommit(trx, {
+              tenant: event.tenantId,
+              before: transitionBefore,
+              correlationId: event.externalAlertId,
+            });
             await db.table('rmm_alerts')
               .where({ alert_id: existing.alert_id })
               .update({ status: 'auto_resolved' });

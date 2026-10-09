@@ -1259,6 +1259,9 @@
     },
     "loadingTemplate": "Cargando plantilla...",
     "servicesLabel": "Servicios",
+    "summary": {
+      "clientCurrency": "Moneda del cliente"
+    },
     "templateBadge": "Plantilla",
     "templateNotFound": "Plantilla de contrato no encontrada",
     "templateSnapshotTitle": "Captura de la plantilla",
@@ -1655,6 +1658,10 @@
       "recurringQuantityLabel": "Cantidad recurrente",
       "allocationQuantityLabel": "Cantidad de asignación",
       "noCurrencyPrice": "No hay precio en {{currency}} en el catálogo. Introduzca una tarifa unitaria."
+    },
+    "advanceSuggestion": {
+      "message": "Con facturación a plazo vencido, esta línea no se puede facturar hasta que termine su primer período de servicio. Con facturación anticipada según el ciclo del contrato, se factura en la fecha de inicio.",
+      "action": "Facturar por anticipado según el ciclo del contrato"
     }
   },
   "wizardProducts": {
@@ -1861,16 +1868,6 @@
         "label": "Propietario de la cadencia:",
         "contractAnniversary": "Aniversario del contrato",
         "clientBillingSchedule": "Calendario de facturación del cliente"
-      },
-      "firstInvoice": {
-        "contract": {
-          "advance": "Primera factura: facturar en la ventana de aniversario del contrato que abre el primer período de servicio cubierto.",
-          "arrears": "Primera factura: facturar en la siguiente ventana de aniversario del contrato después del cierre del primer período de servicio cubierto."
-        },
-        "client": {
-          "advance": "Primera factura: facturar en la primera ventana del calendario de facturación del cliente que cubre el período de servicio.",
-          "arrears": "Primera factura: facturar en la siguiente ventana del calendario de facturación del cliente después del cierre del primer período de servicio cubierto."
-        }
       },
       "partialPeriod": {
         "enabled": "Los períodos parciales ajustan la tarifa recurrente a la porción cubierta del período de servicio.",
@@ -2597,5 +2594,31 @@
       "contractNotActive": "El contrato de renovación activado ya no está activo. Actualice la página e inténtelo de nuevo.",
       "manualRetryDueOnly": "El reintento manual solo está disponible para los ciclos de renovación vencidos."
     }
+  },
+  "wizardFirstInvoice": {
+    "loading": "Comprobando el calendario de facturación del cliente…",
+    "arrearsPreviewNote": "Hasta entonces, una vista previa de facturas de este cliente no tiene nada que facturar para esta línea.",
+    "unavailable": {
+      "missingStartDate": "Elija una fecha de inicio para ver cuándo se factura por primera vez este contrato.",
+      "unsupportedFrequency": "No se muestra la fecha de la primera factura porque la facturación según el ciclo del contrato no admite esta frecuencia. Elija una frecuencia admitida o facture según el calendario del cliente.",
+      "clientSchedule": "Esta línea se factura según el calendario de facturación del cliente. No se pudo cargar ese calendario, por lo que no se muestra ninguna fecha."
+    },
+    "contract": {
+      "arrears": "Facturada a plazo vencido según el ciclo del contrato: la primera factura estará disponible el {{date}}, cuando termine el primer período de servicio.",
+      "advance": "Facturada por anticipado según el ciclo del contrato: la primera factura está disponible desde el {{date}}, la fecha de inicio del contrato."
+    },
+    "client": {
+      "arrears": "Facturada a plazo vencido según el calendario de facturación del cliente: la primera factura estará disponible el {{date}}, cuando termine el período de facturación actual del cliente.",
+      "advance": "Facturada por anticipado según el calendario de facturación del cliente: la primera factura está disponible desde el {{date}}, el inicio del período de facturación del cliente que incluye la fecha de inicio del contrato."
+    }
+  },
+  "wizardCreated": {
+    "title": "Contrato creado",
+    "heading": "Se creó {{contractName}}",
+    "firstInvoiceHeading": "Primera factura",
+    "done": "Listo"
+  },
+  "sellHourBlockNote": {
+    "text": "Una bolsa de horas del contrato solo factura el exceso. Para cobrar por adelantado un bloque de horas, use Vender bloque en Bloques de horas, en la pestaña Panel de facturación del cliente."
   }
 }

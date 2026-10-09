@@ -12,10 +12,13 @@ import { tenantDb } from '@alga-psa/db';
 import { v4 as uuidv4 } from 'uuid';
 import { z } from 'zod';
 import type { IEventPublisher } from '@alga-psa/types';
+import { isSilentTicketCreation, isTicketCreationWithPayloadExtras, type TicketCreationEvents } from '../lib/tickets/ticketLifecycleEvents';
 import { applyMatchingChecklistTemplates } from '../lib/ticketChecklists';
 import { ticketStatusClockPatch } from '../lib/ticketStatusClock';
+import { prepareCommentEmailRecipients } from '../lib/tickets/commentEmailRecipients';
 import { loadTicketRequesterIdentity, resolveTicketRequesterLabel } from '../lib/ticketRequesterDisplay';
 import { SharedNumberingService } from '../services/numberingService';
+import { applyBoardDefaultWatchers } from '../lib/tickets/boardDefaultWatchers';
 
 // LEVERAGE: pattern ticket-origins-duplicate — copy of TICKET_ORIGINS in @alga-psa/types (shared cannot import types); keep both in sync
 const TICKET_ORIGINS = {
@@ -131,7 +134,11 @@ export const createCommentSchema = z.object({
   author_type: z.enum(['internal', 'contact', 'system']).optional(),
   author_id: z.string().uuid('Author ID must be a valid UUID').optional(),
   contact_id: z.string().uuid('Contact ID must be a valid UUID').optional(),
-  metadata: z.record(z.unknown()).optional()
+  metadata: z.record(z.unknown()).optional(),
+  emailRecipients: z.object({
+    cc: z.array(z.string()).optional(),
+    bcc: z.array(z.string()).optional(),
+  }).optional(),
 });
 
 // =============================================================================
@@ -269,6 +276,11 @@ export interface CreateCommentInput {
   author_id?: string;
   contact_id?: string;
   metadata?: Record<string, any>;
+  /**
+   * One-off Cc/Bcc for this comment's outbound email. Persisted into
+   * `metadata.email_recipients`; rejected on internal comments.
+   */
+  emailRecipients?: { cc?: string[]; bcc?: string[] };
 }
 
 export interface CreateCommentOutput {
@@ -812,8 +824,8 @@ export class TicketModel {
     input: CreateTicketInput,
     tenant: string,
     trx: Knex.Transaction,
-    validationOptions: ValidationOptions = {},
-    eventPublisher?: IEventPublisher,
+    validationOptions: ValidationOptions,
+    eventPublisher: TicketCreationEvents,
     analyticsTracker?: IAnalyticsTracker,
     userId?: string,
     maxRetries: number = 3
@@ -876,11 +888,16 @@ export class TicketModel {
     input: CreateTicketInput,
     tenant: string,
     trx: Knex.Transaction,
-    validationOptions: ValidationOptions = {},
-    eventPublisher?: IEventPublisher,
+    validationOptions: ValidationOptions,
+    eventPublisher: TicketCreationEvents,
     analyticsTracker?: IAnalyticsTracker,
     userId?: string
   ): Promise<CreateTicketOutput> {
+    if (!eventPublisher) {
+      throw new Error(
+        'TicketModel.createTicket requires an eventPublisher (or silentTicketCreation(reason)); refusing to create a ticket that would never publish TICKET_CREATED'
+      );
+    }
     // Validate required tenant
     if (!tenant) {
       throw new Error('Tenant is required');
@@ -938,10 +955,15 @@ export class TicketModel {
     );
 
     // Prepare attributes object - description goes into attributes.description
-    const attributes = { ...cleanedInput.attributes };
+    const baseAttributes = { ...cleanedInput.attributes };
     if (cleanedInput.description) {
-      attributes.description = cleanedInput.description;
+      baseAttributes.description = cleanedInput.description;
     }
+    // Board default watchers are seeded in the creating transaction so the
+    // watch list exists before TICKET_CREATED is published. Existing entries
+    // (e.g. inbound To/Cc watchers) win over the defaults.
+    const attributes: Record<string, unknown> =
+      (await applyBoardDefaultWatchers(trx, tenant, cleanedInput.board_id, baseAttributes)) ?? {};
 
     // Assemble the insert row through the exhaustive field-handling map so
     // every CreateTicketInput key is either persisted, transformed, or
@@ -997,14 +1019,18 @@ export class TicketModel {
     }
 
     // Publish event if publisher provided
-    if (eventPublisher) {
+    if (!isSilentTicketCreation(eventPublisher)) {
+      const createdPublisher = isTicketCreationWithPayloadExtras(eventPublisher)
+        ? eventPublisher.publisher
+        : eventPublisher;
+      const payloadExtras = isTicketCreationWithPayloadExtras(eventPublisher) ? eventPublisher.payloadExtras : {};
       try {
         // Tickets from inbound email or the portal often have no contact or
         // client. Carry real names plus the sender email so a workflow title
         // like "New ticket from ..." never has to fall back to an id or "".
         const requester = await loadTicketRequesterIdentity(trx, tenant, cleanedInput);
         const requesterName = resolveTicketRequesterLabel(requester);
-        await eventPublisher.publishTicketCreated({
+        await createdPublisher.publishTicketCreated({
           tenantId: tenant,
           ticketId: ticketId,
           userId: userId,
@@ -1017,13 +1043,14 @@ export class TicketModel {
             ...(requester.contactName ? { contactName: requester.contactName } : {}),
             ...(requester.senderEmail ? { senderEmail: requester.senderEmail } : {}),
             ...(requesterName ? { requesterName } : {}),
+            ...payloadExtras
           }
         });
       } catch (error) {
         console.error('Failed to publish ticket created event:', error);
         // The transactional outbox adapter (durable inbound path) must
         // propagate so an outbox insert failure rolls back the core transaction.
-        if (eventPublisher && (eventPublisher as any).__inboundOutboxPublisher === true) {
+        if ((createdPublisher as any).__inboundOutboxPublisher === true) {
           throw error;
         }
         // Don't throw - event publishing failure shouldn't break ticket creation
@@ -1082,7 +1109,7 @@ export class TicketModel {
     enteredBy: string,
     tenant: string,
     trx: Knex.Transaction,
-    eventPublisher?: IEventPublisher,
+    eventPublisher: TicketCreationEvents,
     analyticsTracker?: IAnalyticsTracker
   ): Promise<CreateTicketOutput> {
     // Validate input data
@@ -1496,6 +1523,17 @@ export class TicketModel {
       commentIsInternal = Boolean(parent.thread_is_internal);
     }
 
+    // One-off Cc/Bcc ride along in metadata. Visibility is resolved above, so a
+    // reply inheriting an internal thread is rejected here too.
+    const emailRecipients = await prepareCommentEmailRecipients(trx, tenant, {
+      cc: validatedData.emailRecipients?.cc,
+      bcc: validatedData.emailRecipients?.bcc,
+      isInternal: commentIsInternal,
+    });
+    const commentMetadata = emailRecipients
+      ? { ...(validatedData.metadata ?? {}), email_recipients: emailRecipients }
+      : validatedData.metadata;
+
     const baseCommentData: any = {
       comment_id: commentId,
       tenant,
@@ -1507,7 +1545,7 @@ export class TicketModel {
       author_type: dbAuthorType as any,
       user_id: validatedData.author_id || null,
       contact_id: validatedData.contact_id || null,
-      metadata: validatedData.metadata ? JSON.stringify(validatedData.metadata) : null,
+      metadata: commentMetadata ? JSON.stringify(commentMetadata) : null,
       thread_id: threadId,
       parent_comment_id: parentCommentId,
       created_at: now,

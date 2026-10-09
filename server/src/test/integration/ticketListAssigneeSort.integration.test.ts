@@ -7,6 +7,7 @@ import { describeWithDb } from '../../../test-utils/requireDb';
 import { TicketModel } from '@shared/models/ticketModel';
 import { TICKET_STATUS_FILTER_ALL } from '@alga-psa/tickets/lib';
 import type { ITicketListFilters } from '@alga-psa/types';
+import { silentTicketCreation } from '@alga-psa/shared/lib/tickets/ticketLifecycleEvents';
 
 /**
  * DB-backed proof that the three newly supported sort keys actually execute
@@ -230,7 +231,7 @@ async function seedFixture(): Promise<void> {
           assigned_team_id: item.teamId,
         } as any,
         tenantId,
-        trx,
+        trx, {}, silentTicketCreation('test fixture'),
       ),
     );
     const ticketId = created.ticket_id!;

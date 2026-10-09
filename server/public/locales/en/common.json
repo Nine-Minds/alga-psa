@@ -214,6 +214,10 @@
         "updateComments": "Insufficient permissions to update comments",
         "deleteComments": "Insufficient permissions to delete comments",
         "viewDocuments": "Insufficient permissions to view ticket documents"
+      },
+      "projects": {
+        "read": "Insufficient permissions to view projects",
+        "readDetails": "Insufficient permissions to view project details"
       }
     },
     "tags": {
@@ -1740,5 +1744,9 @@
     "customPlaceholder": "Name this unit",
     "register": "Add",
     "selectPlaceholder": "Select a unit"
+  },
+  "emailRecipients": {
+    "remove": "Remove {{email}}",
+    "placeholder": "Type an address and press Enter"
   }
 }

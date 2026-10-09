@@ -14,6 +14,9 @@ const getContractSummaryMock = vi.hoisted(() => vi.fn());
 const getDetailedContractLinesMock = vi.hoisted(() => vi.fn());
 const getContractAssignmentsMock = vi.hoisted(() => vi.fn());
 const getTemplateLineServicesMock = vi.hoisted(() => vi.fn());
+const updateContractLineRateMock = vi.hoisted(() => vi.fn());
+const updateContractMock = vi.hoisted(() => vi.fn());
+const realDialog = vi.hoisted(() => ({ Component: null as null | React.ComponentType<any> }));
 const route = vi.hoisted(() => ({ contractId: 'template-1' }));
 
 vi.mock('next/navigation', () => ({
@@ -30,8 +33,8 @@ vi.mock('@alga-psa/billing/actions/contractActions', () => ({
   getContractSummary: async (...args: unknown[]) => getContractSummaryMock(...args),
   getDetailedContractLines: async (...args: unknown[]) => getDetailedContractLinesMock(...args),
   getContractAssignments: async (...args: unknown[]) => getContractAssignmentsMock(...args),
-  updateContract: vi.fn(),
-  updateContractLineRate: vi.fn(),
+  updateContract: async (...args: unknown[]) => updateContractMock(...args),
+  updateContractLineRate: async (...args: unknown[]) => updateContractLineRateMock(...args),
 }));
 
 vi.mock('@alga-psa/billing/actions/contractLineServiceActions', () => ({
@@ -41,7 +44,7 @@ vi.mock('@alga-psa/billing/actions/contractLineServiceActions', () => ({
 }));
 
 vi.mock('@alga-psa/billing/actions/billingSettingsActions', () => ({
-  getDefaultBillingSettings: async () => ({ defaultCurrencyCode: 'USD' }),
+  getDefaultBillingSettings: async () => ({ defaultCurrencyCode: 'EUR' }),
 }));
 
 vi.mock('@alga-psa/billing/actions/contractSimulationActions', () => ({
@@ -52,16 +55,17 @@ vi.mock('@alga-psa/billing/hooks/useBillingEnumOptions', () => ({
   useBillingFrequencyOptions: () => [{ value: 'monthly', label: 'Monthly' }],
 }));
 
+// `t` must be referentially stable: the component's load effect depends on it.
+const stableT = vi.hoisted(() => (key: string, fallback?: string | ({ defaultValue?: string } & Record<string, unknown>)) => {
+  if (!fallback) return key;
+  if (typeof fallback === 'string') return fallback;
+  const base = typeof fallback.defaultValue === 'string' ? fallback.defaultValue : key;
+  return base.replace(/\{\{(\w+)\}\}/g, (_, name: string) => String(fallback[name] ?? ''));
+});
+
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
   useOptionalI18n: () => null,
-  useTranslation: () => ({
-    t: (key: string, fallback?: string | ({ defaultValue?: string } & Record<string, unknown>)) => {
-      if (!fallback) return key;
-      if (typeof fallback === 'string') return fallback;
-      const base = typeof fallback.defaultValue === 'string' ? fallback.defaultValue : key;
-      return base.replace(/\{\{(\w+)\}\}/g, (_, name: string) => String(fallback[name] ?? ''));
-    },
-  }),
+  useTranslation: () => ({ t: stableT }),
   useFormatters: () => ({
     locale: 'en-US',
     formatNumber: (value: number, options?: Intl.NumberFormatOptions) =>
@@ -70,7 +74,11 @@ vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
 }));
 
 vi.mock('../contract-lines/GenericContractLineServicesList', () => ({ default: () => null }));
-vi.mock('./ContractLineEditDialog', () => ({ ContractLineEditDialog: () => null }));
+// Delegates to the real dialog so the template rate editor is exercised end to end.
+vi.mock('./ContractLineEditDialog', async () => {
+  const actual = await vi.importActual<typeof import('./ContractLineEditDialog')>('./ContractLineEditDialog');
+  return { ContractLineEditDialog: (props: any) => React.createElement(actual.ContractLineEditDialog, props) };
+});
 
 import { CurrencyFormatProvider } from '@alga-psa/ui/lib';
 import ContractTemplateDetail from './ContractTemplateDetail';
@@ -93,6 +101,7 @@ function primeTemplate(opts: { unitRate: number | null; lineRate?: number | null
     contract_name: 'Seat Template',
     contract_description: undefined,
     billing_frequency: 'monthly',
+    // The mapper's invented value; the UI must never surface it.
     currency_code: 'USD',
     is_active: true,
     status: 'published',
@@ -133,9 +142,10 @@ function primeTemplate(opts: { unitRate: number | null; lineRate?: number | null
   ]);
 }
 
-function renderDetail() {
+function renderDetail(currencyCode = 'EUR') {
+  // Tenant default is EUR while the template mapper says USD: neither may leak.
   return render(
-    <CurrencyFormatProvider currencyCode="USD">
+    <CurrencyFormatProvider currencyCode={currencyCode}>
       <ContractTemplateDetail />
     </CurrencyFormatProvider>,
   );
@@ -225,6 +235,89 @@ describe('ContractTemplateDetail per-seat unit rate (currency-neutral)', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Manage Services' }));
 
     expect(await screen.findByText(/Fixed Fee Rate:/)).toHaveTextContent('Fixed Fee Rate: Not set');
+  });
+
+  it('opens the template rate editor with no currency adornment and saves 200.00 as 20000 minor units', async () => {
+    primeTemplate({ unitRate: 25000, lineRate: 10000 });
+    updateContractLineRateMock.mockResolvedValue({});
+
+    renderDetail();
+
+    await screen.findByTestId(`template-recurring-amount-${SERVICE_ID}`);
+    fireEvent.click(screen.getByRole('button', { name: 'Manage Services' }));
+    await screen.findByText(/Fixed Fee Rate:/);
+    fireEvent.click(document.getElementById('edit-rate-line-1') as HTMLElement);
+
+    await vi.waitFor(() => expect(document.getElementById('contract-line-rate'), document.body.textContent ?? '').not.toBeNull());
+    const input = document.getElementById('contract-line-rate') as HTMLInputElement;
+    expect(input.value).toBe('100.00');
+    const wrapper = input.parentElement as HTMLElement;
+    expect(wrapper.textContent).not.toMatch(CURRENCY_MARKERS);
+    expect(input.className).not.toMatch(/pl-10/);
+
+    fireEvent.change(input, { target: { value: '200.00' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+
+    await vi.waitFor(() => expect(updateContractLineRateMock).toHaveBeenCalled());
+    expect(updateContractLineRateMock).toHaveBeenCalledWith('template-1', 'line-1', 20000, 'arrears');
+  });
+
+  it('scales the template rate editor by the same fraction digits as the neutral display (zero-decimal currency)', async () => {
+    primeTemplate({ unitRate: 25000, lineRate: 10000 });
+    updateContractLineRateMock.mockResolvedValue({});
+
+    renderDetail('JPY');
+
+    await screen.findByTestId(`template-recurring-amount-${SERVICE_ID}`);
+    fireEvent.click(screen.getByRole('button', { name: 'Manage Services' }));
+    const badge = await screen.findByText(/Fixed Fee Rate:/);
+    expect(badge).toHaveTextContent("Fixed Fee Rate: 10,000 in the client's currency");
+    fireEvent.click(document.getElementById('edit-rate-line-1') as HTMLElement);
+
+    await vi.waitFor(() => expect(document.getElementById('contract-line-rate')).not.toBeNull());
+    const input = document.getElementById('contract-line-rate') as HTMLInputElement;
+    expect(input.value).toBe('10000');
+    fireEvent.change(input, { target: { value: '300' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+    await vi.waitFor(() => expect(updateContractLineRateMock).toHaveBeenCalled());
+    expect(updateContractLineRateMock).toHaveBeenCalledWith('template-1', 'line-1', 300, 'arrears');
+  });
+
+  it('summary row reads currency-neutral and the basics form has no currency picker', async () => {
+    primeTemplate({ unitRate: 25000 });
+
+    renderDetail();
+
+    await screen.findByTestId(`template-recurring-amount-${SERVICE_ID}`);
+    const row = screen.getByText('Currency').parentElement as HTMLElement;
+    expect(row).toHaveTextContent("Client's currency");
+    expect(row.textContent).not.toMatch(/USD|EUR/);
+    expect(document.getElementById('template-currency-code-inline')).toBeNull();
+  });
+
+  it("formats each assignment's PO amount in that assignment's own currency", async () => {
+    primeTemplate({ unitRate: 25000 });
+    getContractAssignmentsMock.mockResolvedValue([
+      {
+        client_contract_id: 'cc-1', client_id: 'c-1', client_name: 'Acme GBP', start_date: '2026-01-01',
+        end_date: null, is_active: true, po_required: true, po_number: 'PO-1', po_amount: 123400,
+        currency_code: 'GBP', tenant: 'tenant-1',
+      },
+      {
+        client_contract_id: 'cc-2', client_id: 'c-2', client_name: 'Beta JPY', start_date: '2026-01-01',
+        end_date: null, is_active: true, po_required: true, po_number: 'PO-2', po_amount: 5000,
+        currency_code: 'JPY', tenant: 'tenant-1',
+      },
+    ]);
+
+    renderDetail();
+
+    const gbpRow = (await screen.findByText('Acme GBP')).closest('tr') as HTMLElement;
+    const jpyRow = (await screen.findByText('Beta JPY')).closest('tr') as HTMLElement;
+    expect(gbpRow.textContent).toContain('£1,234.00');
+    expect(gbpRow.textContent).not.toMatch(/[$€]/);
+    expect(jpyRow.textContent).toMatch(/¥|JP¥/);
+    expect(jpyRow.textContent).not.toMatch(/[$€£]/);
   });
 
   it('closes the services manager when the route changes before the next template loads', async () => {

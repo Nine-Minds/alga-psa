@@ -516,6 +516,13 @@ async function cleanupBoardStatuses(
     .whereIn('status_id', statusIds)
     .delete();
 
+  // 2b. Remove the board's notification rules: their status rows reference these
+  // statuses with no cascade, so they would block step 3. Recipients and rule
+  // statuses cascade from the rule rows; the board is going away with them.
+  await tenantScopedTable('board_notification_rules')
+    .where({ board_id: boardId })
+    .delete();
+
   // 3. Delete the statuses themselves
   await tenantScopedTable('statuses')
     .where({ board_id: boardId, status_type: 'ticket' })

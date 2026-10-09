@@ -23328,6 +23328,24 @@
             "maxLength": 64,
             "description": "IANA time zone the author scheduled in, e.g. America/New_York."
           },
+          "cc": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "email"
+            },
+            "maxItems": 20,
+            "description": "One-off Cc recipients for this comment's email only. They are never added to the ticket watch list and receive no later comments. Not allowed with is_internal. Max 20 cc + bcc combined."
+          },
+          "bcc": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "email"
+            },
+            "maxItems": 20,
+            "description": "One-off Bcc recipients for this comment's email only. Never returned to client-portal callers. Not allowed with is_internal. Max 20 cc + bcc combined."
+          },
           "suppressContactNotifications": {
             "type": "boolean",
             "description": "When true, suppresses customer-facing email and portal notifications for this operation."
@@ -23340,7 +23358,7 @@
         "required": [
           "comment_text"
         ],
-        "description": "Comment to add. Silent flags suppress the comment notification while preserving the comment and audit history. Set scheduled_publish_at + scheduled_publish_tz to schedule a client-visible comment: it is stored with publish_state=scheduled, hidden from client-portal callers, and published by a background job."
+        "description": "Comment to add. Silent flags suppress the comment notification while preserving the comment and audit history. Set scheduled_publish_at + scheduled_publish_tz to schedule a client-visible comment: it is stored with publish_state=scheduled, hidden from client-portal callers, and published by a background job. cc/bcc add one-off recipients to this comment's email without touching the watch list."
       },
       "WorkV1CreateTagBody": {
         "type": "object",
@@ -24533,7 +24551,7 @@
               "string",
               "null"
             ],
-            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}([T ].*)?$"
           },
           "next_action": {
             "type": "string",
@@ -24646,7 +24664,7 @@
               "string",
               "null"
             ],
-            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}([T ].*)?$"
           },
           "generator_key": {
             "type": [
@@ -24758,7 +24776,7 @@
           },
           "project_start_date": {
             "type": "string",
-            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}([T ].*)?$"
           }
         },
         "additionalProperties": false
@@ -24942,7 +24960,7 @@
               "string",
               "null"
             ],
-            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}([T ].*)?$"
           },
           "next_action": {
             "type": "string",
