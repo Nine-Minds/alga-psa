@@ -97,6 +97,16 @@ const printerAssetSchema = z.object({
   supply_levels: z.record(z.unknown())
 });
 
+const assetGroupSummarySchema = z.object({
+  group_id: z.string().uuid(),
+  name: z.string(),
+  kind: z.enum(['bundle', 'shared_workspace']),
+  location_id: z.string().uuid().nullable().optional(),
+  location_name: z.string().nullable().optional(),
+  member_count: z.number().optional(),
+  user_count: z.number().optional(),
+});
+
 export const assetSchema = z.object({
   asset_id: z.string().uuid(),
   // Built-in slug or tenant asset_type_registry slug (custom types).
@@ -110,6 +120,8 @@ export const assetSchema = z.object({
   // Client contact the device is assigned to (portal contact-scoped visibility).
   contact_name_id: z.string().uuid().nullable().optional(),
   contact_name: z.string().nullable().optional(),
+  // The group this asset belongs to, when it has one (FR-E12).
+  group: assetGroupSummarySchema.nullable().optional(),
   location: z.string().optional(),
   purchase_date: z.string().optional(),
   warranty_end_date: z.string().optional(),

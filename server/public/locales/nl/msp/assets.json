@@ -1679,6 +1679,18 @@
       "contactUnavailable": "Het geselecteerde contact is niet beschikbaar voor deze klant.",
       "vendorUnavailable": "De geselecteerde leverancier is niet beschikbaar.",
       "workspaceMember": "Dit asset hoort bij een gedeelde werkplek en kan daarom niet aan één persoon worden toegewezen."
+    },
+    "assetGroup": {
+      "not_found": "Assetgroep niet gevonden.",
+      "invalid_kind": "Dat groepstype is niet beschikbaar.",
+      "invalid_name": "Een groepsnaam is verplicht.",
+      "client_mismatch": "Dat asset of contact hoort bij een andere klant.",
+      "already_grouped": "Dat asset zit al in een andere groep.",
+      "owner_exists": "Een bundel kan maar één eigenaar hebben.",
+      "users_on_bundle": "Een bundel heeft één eigenaar, geen lijst met gebruikers.",
+      "owner_on_workspace": "Een gedeelde werkplek heeft gebruikers, geen eigenaar.",
+      "users_present": "Verwijder de gebruikers van de werkplek voordat u er een bundel van maakt.",
+      "invalid_location": "Die locatie is niet beschikbaar voor deze klant."
     }
   },
   "clientAssetMultiSelect": {

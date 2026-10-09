@@ -1679,6 +1679,18 @@
       "contactUnavailable": "Selected contact is not available for this client.",
       "vendorUnavailable": "Selected vendor is not available.",
       "workspaceMember": "This asset belongs to a shared workspace, so it cannot be assigned to one person."
+    },
+    "assetGroup": {
+      "not_found": "Asset group not found.",
+      "invalid_kind": "That group kind is not available.",
+      "invalid_name": "Group name is required.",
+      "client_mismatch": "That asset or contact belongs to another client.",
+      "already_grouped": "That asset is already in another group.",
+      "owner_exists": "A bundle can only have one owner.",
+      "users_on_bundle": "A bundle has one owner, not a list of users.",
+      "owner_on_workspace": "A shared workspace has users, not an owner.",
+      "users_present": "Remove the workspace users before turning this into a bundle.",
+      "invalid_location": "That location is not available for this client."
     }
   },
   "clientAssetMultiSelect": {

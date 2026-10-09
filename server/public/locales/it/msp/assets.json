@@ -1679,6 +1679,18 @@
       "contactUnavailable": "Il contatto selezionato non è disponibile per questo cliente.",
       "vendorUnavailable": "Il fornitore selezionato non è disponibile.",
       "workspaceMember": "Questo asset appartiene a una postazione condivisa, quindi non può essere assegnato a una sola persona."
+    },
+    "assetGroup": {
+      "not_found": "Gruppo di asset non trovato.",
+      "invalid_kind": "Questo tipo di gruppo non è disponibile.",
+      "invalid_name": "Il nome del gruppo è obbligatorio.",
+      "client_mismatch": "Quell'asset o contatto appartiene a un altro cliente.",
+      "already_grouped": "Quell'asset è già in un altro gruppo.",
+      "owner_exists": "Un bundle può avere un solo proprietario.",
+      "users_on_bundle": "Un bundle ha un proprietario, non un elenco di utenti.",
+      "owner_on_workspace": "Una postazione condivisa ha utenti, non un proprietario.",
+      "users_present": "Rimuovi gli utenti della postazione prima di trasformarla in un bundle.",
+      "invalid_location": "Quella sede non è disponibile per questo cliente."
     }
   },
   "clientAssetMultiSelect": {

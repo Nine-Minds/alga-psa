@@ -29,6 +29,7 @@ import { resolveWritableAssetType, resolveAttributeSchemaForWrite, validateAttri
 import { isTypedAssetWriteError } from '@alga-psa/assets/lib/assetTypeAttributes';
 import { validateAssetStatusSlug } from '@alga-psa/assets/lib/assetStatusRegistry';
 import { isAssetAssigneeError, setAssetAssignee } from '@alga-psa/assets/lib/assetAssignment';
+import { removeAssetFromAnyGroup } from '@alga-psa/assets/lib/assetGroups';
 
 function validationDetails(issues: Array<{ key: string; code: string; message: string }>) {
   return issues.map((issue) => ({ path: ['attributes', issue.key], code: issue.code, message: issue.message }));
@@ -476,6 +477,17 @@ export class AssetService extends BaseService<any> {
 
     if (!updated) {
       throw new NotFoundError('Asset not found');
+    }
+
+    if (
+      data.client_id &&
+      current?.client_id &&
+      data.client_id !== current.client_id
+    ) {
+      // FR-E5: the group belongs to the old client.
+      await knex.transaction(async (trx) => {
+        await removeAssetFromAnyGroup(trx, context.tenant, id, { actorUserId: context.userId });
+      });
     }
 
     if (nextContactId !== undefined) {

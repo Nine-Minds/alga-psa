@@ -9,6 +9,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { z } from 'zod';
 import { tenantDb } from '@alga-psa/db';
 import { closeOpenAssignmentsForContact } from './assetAssignmentModel';
+import { clearGroupContactLinksForContact } from './assetGroupContactModel';
 import {
   CONTACT_PHONE_CANONICAL_TYPES,
   type ContactPhoneCanonicalType,
@@ -71,6 +72,9 @@ export async function clearContactLinksBeforeDelete(
   // FR-C5: the assignments the contact held are closed, not deleted — "who had
   // this laptop in March" must survive the person leaving.
   await closeOpenAssignmentsForContact(db, tenant, contactId);
+  // FR-E6: the contact stops being a workspace user; a deleted bundle owner
+  // leaves its members unassigned.
+  await clearGroupContactLinksForContact(db, tenant, contactId);
 }
 
 /**

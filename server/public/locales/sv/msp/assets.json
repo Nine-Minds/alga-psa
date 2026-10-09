@@ -1651,6 +1651,18 @@
       "contactUnavailable": "Den valda kontakten är inte tillgänglig för den här kunden.",
       "vendorUnavailable": "Den valda leverantören är inte tillgänglig.",
       "workspaceMember": "Den här tillgången hör till en delad arbetsplats och kan därför inte tilldelas en enskild person."
+    },
+    "assetGroup": {
+      "not_found": "Tillgångsgruppen hittades inte.",
+      "invalid_kind": "Den gruppstypen är inte tillgänglig.",
+      "invalid_name": "Ett gruppnamn krävs.",
+      "client_mismatch": "Den tillgången eller kontakten hör till en annan kund.",
+      "already_grouped": "Den tillgången finns redan i en annan grupp.",
+      "owner_exists": "Ett paket kan bara ha en ägare.",
+      "users_on_bundle": "Ett paket har en ägare, inte en lista med användare.",
+      "owner_on_workspace": "En delad arbetsplats har användare, inte en ägare.",
+      "users_present": "Ta bort arbetsplatsens användare innan du gör den till ett paket.",
+      "invalid_location": "Den platsen är inte tillgänglig för den här kunden."
     }
   },
   "clientAssetMultiSelect": {

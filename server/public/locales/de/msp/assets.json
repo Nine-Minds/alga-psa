@@ -1679,6 +1679,18 @@
       "contactUnavailable": "Der ausgewählte Kontakt ist für diesen Kunden nicht verfügbar.",
       "vendorUnavailable": "Der ausgewählte Lieferant ist nicht verfügbar.",
       "workspaceMember": "Dieses Asset gehört zu einem gemeinsamen Arbeitsplatz und kann nicht einer einzelnen Person zugewiesen werden."
+    },
+    "assetGroup": {
+      "not_found": "Asset-Gruppe nicht gefunden.",
+      "invalid_kind": "Diese Gruppenart ist nicht verfügbar.",
+      "invalid_name": "Ein Gruppenname ist erforderlich.",
+      "client_mismatch": "Dieses Asset oder dieser Kontakt gehört zu einem anderen Kunden.",
+      "already_grouped": "Dieses Asset ist bereits in einer anderen Gruppe.",
+      "owner_exists": "Ein Bundle kann nur einen Eigentümer haben.",
+      "users_on_bundle": "Ein Bundle hat einen Eigentümer, keine Benutzerliste.",
+      "owner_on_workspace": "Ein gemeinsamer Arbeitsplatz hat Benutzer, keinen Eigentümer.",
+      "users_present": "Entfernen Sie die Benutzer des Arbeitsplatzes, bevor Sie daraus ein Bundle machen.",
+      "invalid_location": "Dieser Standort ist für diesen Kunden nicht verfügbar."
     }
   },
   "clientAssetMultiSelect": {

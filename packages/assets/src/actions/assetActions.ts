@@ -97,6 +97,7 @@ import {
 import { resolveWritableAssetType, resolveAttributeSchemaForWrite, validateAttributesForWrite, attributesMergeExpression, serializeAttributesForInsert } from '../lib/assetAttributeWrites';
 import { listDeployableStatusSlugs, validateAssetStatusSlug } from '../lib/assetStatusRegistry';
 import { isAssetAssigneeError, setAssetAssignee } from '../lib/assetAssignment';
+import { getAssetGroupSummary, removeAssetFromAnyGroup } from '../lib/assetGroups';
 import {
     ASSET_CONTACT_UNAVAILABLE_MESSAGE,
     ASSET_VENDOR_UNAVAILABLE_MESSAGE,
@@ -1491,6 +1492,12 @@ export async function updateAssetRecord(
                     .update({ updated_at: trx.fn.now() });
             }
 
+            if (baseCandidate.client_id && baseCandidate.client_id !== asset.client_id) {
+                // FR-E5: the group belongs to the old client, so the asset
+                // leaves it. Client merge is exempt — the groups move too.
+                await removeAssetFromAnyGroup(trx, tenant, asset_id, { actorUserId });
+            }
+
             if (pendingAssignee) {
                 await setAssetAssignee(trx, tenant, asset_id, pendingAssignee.contactId, {
                     actorUserId,
@@ -1729,6 +1736,10 @@ export async function deleteAssetRecord(
                 await tenantScopedTable(trx as Knex.Transaction, subtypeTable, tenantId).where({ asset_id }).delete();
             }
 
+            // FR-C1 / FR-E6: the assignment history and group membership point
+            // at the asset row, so both go before it.
+            await tenantScopedTable(trx as Knex.Transaction, 'asset_assignments', tenantId).where({ asset_id }).delete();
+            await tenantScopedTable(trx as Knex.Transaction, 'asset_group_members', tenantId).where({ asset_id }).delete();
             await tenantScopedTable(trx as Knex.Transaction, 'asset_history', tenantId).where({ asset_id }).delete();
             await tenantScopedTable(trx as Knex.Transaction, 'asset_maintenance_history', tenantId).where({ asset_id }).delete();
             await tenantScopedTable(trx as Knex.Transaction, 'asset_maintenance_schedules', tenantId).where({ asset_id }).delete();
@@ -1973,6 +1984,10 @@ async function getAssetWithExtensions(knex: Knex, tenant: string, asset_id: stri
         throw new Error('Asset not found');
     }
 
+    // FR-E12: the group summary travels with the asset so the details page,
+    // the drawer and mobile all render it without a second round trip.
+    const group = await getAssetGroupSummary(knex, tenant, asset_id);
+
     // Get extension table data if applicable
     const extensionData = await getExtensionData(knex, tenant, asset_id, asset.asset_type);
 
@@ -2015,6 +2030,7 @@ async function getAssetWithExtensions(knex: Knex, tenant: string, asset_id: stri
             client_name: asset.client_name || ''
         },
         relationships: relationships || [],  // Ensure relationships is always an array
+        group,
         // Add extension data under the appropriate key
         ...(extensionData ? {
             [asset.asset_type]: extensionData

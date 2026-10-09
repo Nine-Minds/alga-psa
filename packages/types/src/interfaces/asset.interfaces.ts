@@ -66,6 +66,8 @@ export interface Asset {
   contact_name_id?: string | null;
   /** Display name of the assigned contact; read-only, joined on read. */
   contact_name?: string | null;
+  /** The group this asset belongs to, when it has one; read-only. */
+  group?: AssetGroupSummary | null;
   location?: string;
   purchase_date?: string;
   warranty_end_date?: string;
@@ -637,6 +639,70 @@ export interface AssetTypeRegistryEntry {
   display_order: number;
   created_at: string;
   updated_at: string;
+}
+
+// Asset groups: bundles and shared workspaces
+/**
+ * A `bundle` travels and is assigned as one unit (one owner, no users); a
+ * `shared_workspace` is a place plus the people who use it (users, no owner,
+ * members carry no single assignee).
+ */
+export type AssetGroupKind = 'bundle' | 'shared_workspace';
+export type AssetGroupContactRole = 'owner' | 'user';
+
+export interface AssetGroup {
+  tenant: string;
+  group_id: string;
+  client_id: string;
+  name: string;
+  kind: AssetGroupKind;
+  location_id?: string | null;
+  description?: string | null;
+  created_by?: string | null;
+  created_at: string;
+  updated_at: string;
+  /** Joined on read. */
+  client_name?: string | null;
+  location_name?: string | null;
+  member_count?: number;
+  people_count?: number;
+  members?: AssetGroupMember[];
+  contacts?: AssetGroupContact[];
+}
+
+export interface AssetGroupMember {
+  tenant: string;
+  group_id: string;
+  asset_id: string;
+  added_at: string;
+  added_by?: string | null;
+  /** Joined on read. */
+  asset_name?: string | null;
+  asset_type?: string | null;
+  asset_tag?: string | null;
+  asset_status?: string | null;
+}
+
+export interface AssetGroupContact {
+  tenant: string;
+  group_id: string;
+  contact_name_id: string;
+  role: AssetGroupContactRole;
+  added_at: string;
+  /** Joined on read. */
+  contact_name?: string | null;
+  email?: string | null;
+}
+
+/** The group summary an asset read carries (FR-E12). */
+export interface AssetGroupSummary {
+  group_id: string;
+  name: string;
+  kind: AssetGroupKind;
+  location_id?: string | null;
+  location_name?: string | null;
+  member_count?: number;
+  user_count?: number;
 }
 
 // Assignment history

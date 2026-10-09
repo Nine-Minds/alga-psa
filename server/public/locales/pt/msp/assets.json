@@ -1679,6 +1679,18 @@
       "contactUnavailable": "O contato selecionado não está disponível para este cliente.",
       "vendorUnavailable": "O fornecedor selecionado não está disponível.",
       "workspaceMember": "Este ativo pertence a um espaço de trabalho compartilhado, portanto não pode ser atribuído a uma única pessoa."
+    },
+    "assetGroup": {
+      "not_found": "Grupo de ativos não encontrado.",
+      "invalid_kind": "Esse tipo de grupo não está disponível.",
+      "invalid_name": "O nome do grupo é obrigatório.",
+      "client_mismatch": "Esse ativo ou contato pertence a outro cliente.",
+      "already_grouped": "Esse ativo já está em outro grupo.",
+      "owner_exists": "Um pacote pode ter apenas um proprietário.",
+      "users_on_bundle": "Um pacote tem um proprietário, não uma lista de usuários.",
+      "owner_on_workspace": "Um espaço compartilhado tem usuários, não um proprietário.",
+      "users_present": "Remova os usuários do espaço antes de transformá-lo em um pacote.",
+      "invalid_location": "Essa localização não está disponível para este cliente."
     }
   },
   "clientAssetMultiSelect": {

@@ -353,6 +353,10 @@ export const CLIENT_OWNED_MOVE_TABLES: ClientOwnedMoveTable[] = [
   { table: 'contacts', label: 'contact' },
   { table: 'interactions', label: 'interaction' },
   { table: 'assets', label: 'asset' },
+  // FR-E11: groups belong to a client, so they move with it (and with their
+  // members and people, which are keyed by group). This is also why a merge is
+  // exempt from FR-E5's "a client change removes the asset from its group".
+  { table: 'asset_groups', label: 'asset group' },
   { table: 'client_locations', label: 'location' },
   { table: 'client_inbound_email_domains', label: 'inbound email domain' },
   { table: 'client_name_aliases', label: 'name alias' },

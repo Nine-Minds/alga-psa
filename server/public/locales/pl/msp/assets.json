@@ -1679,6 +1679,18 @@
       "contactUnavailable": "Wybrany kontakt jest niedostępny dla tego klienta.",
       "vendorUnavailable": "Wybrany dostawca jest niedostępny.",
       "workspaceMember": "Ten zasób należy do współdzielonego stanowiska, więc nie można przypisać go jednej osobie."
+    },
+    "assetGroup": {
+      "not_found": "Nie znaleziono grupy zasobów.",
+      "invalid_kind": "Ten rodzaj grupy jest niedostępny.",
+      "invalid_name": "Nazwa grupy jest wymagana.",
+      "client_mismatch": "Ten zasób lub kontakt należy do innego klienta.",
+      "already_grouped": "Ten zasób jest już w innej grupie.",
+      "owner_exists": "Zestaw może mieć tylko jednego właściciela.",
+      "users_on_bundle": "Zestaw ma jednego właściciela, nie listę użytkowników.",
+      "owner_on_workspace": "Współdzielone stanowisko ma użytkowników, nie właściciela.",
+      "users_present": "Usuń użytkowników stanowiska, zanim zmienisz je w zestaw.",
+      "invalid_location": "Ta lokalizacja jest niedostępna dla tego klienta."
     }
   },
   "clientAssetMultiSelect": {
