@@ -641,6 +641,8 @@
       "catalogPriceMissing": "Ningún precio de catálogo en {{currency}} cubre este límite, por lo que no se puede facturar una cantidad positiva. Agregue un precio de catálogo en {{currency}} o elija \"Anular precio unitario\" antes de guardar.",
       "invoiceImpact": "A partir del {{date}}, el subtotal recurrente de este artículo cambia en {{delta}} hasta {{total}} (antes de descuentos e impuestos). Los períodos facturados anteriormente no cambian.",
       "discardDirty": "Al cambiar la fecha de entrada en vigor se vuelven a cargar los valores vigentes y se descarta su edición sin guardar. ¿Desea continuar?",
+      "discardDirtyTitle": "¿Descartar la edición sin guardar?",
+      "discardDirtyConfirm": "Cambiar fecha",
       "invalidQuantity": "La cantidad debe ser un número entero igual o mayor que 0.",
       "invalidRate": "Introduzca un precio unitario igual o mayor que 0, o cambie al precio de catálogo.",
       "saved": "Programado: {{quantity}} a partir del {{date}}.",

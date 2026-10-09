@@ -7,6 +7,7 @@ import { Label } from '@alga-psa/ui/components/Label';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
+import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { History, Loader2 } from 'lucide-react';
 import {
   getErrorMessage,
@@ -40,6 +41,11 @@ const isReturnedActionError = (value: unknown): boolean =>
 
 const todayIso = (): string => new Date().toISOString().slice(0, 10);
 
+// A date input reports a complete value after every typed year digit
+// (0002-, 0020-, 0202-, 2026-...). Only a four-digit year without a leading
+// zero is a date the operator meant, so partial years never trigger a reload.
+const isCompleteBoundaryDate = (value: string): boolean => /^[1-9]\d{3}-\d{2}-\d{2}$/.test(value);
+
 export interface RecurringUnitSchedulePanelProps {
   contractLineId: string;
   serviceId: string;
@@ -70,6 +76,11 @@ export const RecurringUnitSchedulePanel: React.FC<RecurringUnitSchedulePanelProp
 
   const requestRef = useRef(0);
   const [boundary, setBoundary] = useState<string>('');
+  // What the date input shows while the operator is typing; it becomes the
+  // boundary only once it is a complete date (and any unsaved edit is
+  // knowingly discarded).
+  const [boundaryDraft, setBoundaryDraft] = useState<string>('');
+  const [pendingBoundary, setPendingBoundary] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -223,6 +234,7 @@ export const RecurringUnitSchedulePanel: React.FC<RecurringUnitSchedulePanelProp
       const initial =
         isReturnedActionError(nextBoundary) || !nextBoundary ? todayIso() : String(nextBoundary);
       setBoundary(initial);
+      setBoundaryDraft(initial);
       await load(initial);
     };
     void bootstrap();
@@ -269,29 +281,38 @@ export const RecurringUnitSchedulePanel: React.FC<RecurringUnitSchedulePanelProp
     };
   }, [midPeriod, midPeriodDate, contractLineId, serviceId, configId]);
 
+  const applyBoundary = (nextBoundary: string) => {
+    setBoundary(nextBoundary);
+    setBoundaryDraft(nextBoundary);
+    setSavedMessage(null);
+    setSaveError(null);
+    void load(nextBoundary);
+  };
+
   const handleBoundaryChange = (nextBoundary: string) => {
-    if (!nextBoundary) return;
+    setBoundaryDraft(nextBoundary);
+    if (!isCompleteBoundaryDate(nextBoundary) || nextBoundary === boundary) return;
     const loaded = loadedInputsRef.current;
     const dirty =
       quantityInput !== loaded.quantity ||
       pricePolicy !== loaded.policy ||
       rateInput !== loaded.rate;
-    if (
-      dirty &&
-      typeof window !== 'undefined' &&
-      !window.confirm(
-        t('contractLines.recurringSchedule.discardDirty', {
-          defaultValue:
-            'Changing the effective date reloads the values in force and discards your unsaved edit. Continue?',
-        }),
-      )
-    ) {
+    if (dirty) {
+      setPendingBoundary(nextBoundary);
       return;
     }
-    setBoundary(nextBoundary);
-    setSavedMessage(null);
-    setSaveError(null);
-    void load(nextBoundary);
+    applyBoundary(nextBoundary);
+  };
+
+  const handleDiscardConfirm = () => {
+    if (pendingBoundary) applyBoundary(pendingBoundary);
+    setPendingBoundary(null);
+  };
+
+  const handleDiscardCancel = () => {
+    if (pendingBoundary === null) return;
+    setPendingBoundary(null);
+    setBoundaryDraft(boundary);
   };
 
   // Only the revision stored at exactly the selected boundary is authoritative
@@ -544,7 +565,7 @@ export const RecurringUnitSchedulePanel: React.FC<RecurringUnitSchedulePanelProp
           <Input
             id={`recurring-effective-${configId}`}
             type="date"
-            value={standingBoundary}
+            value={midPeriod && midPeriodContext ? standingBoundary : boundaryDraft}
             disabled={disabled || saving || loading || (midPeriod && !!midPeriodContext)}
             onChange={(event) => handleBoundaryChange(event.target.value)}
             className="mt-1"
@@ -962,6 +983,20 @@ export const RecurringUnitSchedulePanel: React.FC<RecurringUnitSchedulePanelProp
           </table>
         </details>
       )}
+
+      <ConfirmationDialog
+        id={`recurring-discard-dirty-${configId}`}
+        isOpen={pendingBoundary !== null}
+        onClose={handleDiscardCancel}
+        onConfirm={handleDiscardConfirm}
+        title={t('contractLines.recurringSchedule.discardDirtyTitle', { defaultValue: 'Discard unsaved edit?' })}
+        message={t('contractLines.recurringSchedule.discardDirty', {
+          defaultValue:
+            'Changing the effective date reloads the values in force and discards your unsaved edit. Continue?',
+        })}
+        confirmLabel={t('contractLines.recurringSchedule.discardDirtyConfirm', { defaultValue: 'Change date' })}
+        cancelLabel={t('common.actions.cancel', { defaultValue: 'Cancel' })}
+      />
     </div>
   );
 };

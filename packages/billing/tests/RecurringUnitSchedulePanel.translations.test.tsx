@@ -41,6 +41,8 @@ vi.mock('@alga-psa/ui/components/Button', () => ({ Button: ({ children, variant,
 vi.mock('@alga-psa/ui/components/Input', () => ({ Input: (props: any) => <input {...props} /> }));
 vi.mock('@alga-psa/ui/components/Label', () => ({ Label: (props: any) => <label {...props} /> }));
 vi.mock('@alga-psa/ui/components/Badge', () => ({ Badge: ({ children }: any) => <span>{children}</span> }));
+vi.mock('@alga-psa/ui/components/ConfirmationDialog', () => ({ ConfirmationDialog: ({ isOpen, title, message, confirmLabel, cancelLabel, onConfirm, onClose }: any) =>
+  isOpen ? <div role="dialog" aria-label={title}><p>{message}</p><button onClick={() => onConfirm()}>{confirmLabel}</button><button onClick={onClose}>{cancelLabel}</button></div> : null }));
 vi.mock('@alga-psa/ui/components/Alert', () => ({ Alert: ({ children }: any) => <div role="alert">{children}</div>, AlertDescription: ({ children }: any) => <div>{children}</div> }));
 
 import { RecurringUnitSchedulePanel } from '../src/components/billing-dashboard/contracts/RecurringUnitSchedulePanel';
@@ -114,5 +116,49 @@ describe('Recurring unit schedule panel (loaded translations)', () => {
     expect(screen.queryByText(/Includes other items in this billing window and the one-time mid-period true-up/)).toBeNull();
     // With no true-up, the effective boundary is the selected boundary itself.
     expect((document.querySelector('#recurring-effective-config') as HTMLInputElement).value).toBe('2026-10-01');
+  });
+});
+
+describe('Recurring unit schedule panel effective date', () => {
+  const effectiveInput = () => document.querySelector('#recurring-effective-config') as HTMLInputElement;
+
+  it('does not reload for the partial years a typed date passes through', async () => {
+    await mount();
+    expect(actions.read).toHaveBeenCalledTimes(1);
+    for (const value of ['0002-12-01', '0020-12-01', '0202-12-01']) {
+      fireEvent.change(effectiveInput(), { target: { value } });
+      expect(effectiveInput().value).toBe(value);
+    }
+    expect(actions.read).toHaveBeenCalledTimes(1);
+
+    fireEvent.change(effectiveInput(), { target: { value: '2026-12-01' } });
+    await waitFor(() => expect(actions.read).toHaveBeenCalledTimes(2));
+    expect(actions.read).toHaveBeenLastCalledWith(expect.objectContaining({ service_period_start: '2026-12-01' }));
+  });
+
+  it('asks in an in-app dialog, never a native confirm, before discarding an unsaved edit', async () => {
+    const nativeConfirm = vi.spyOn(window, 'confirm');
+    await mount();
+    fireEvent.change(document.querySelector('#recurring-quantity-config')!, { target: { value: '26' } });
+
+    fireEvent.change(effectiveInput(), { target: { value: '2026-12-01' } });
+    await screen.findByRole('dialog', { name: 'Discard unsaved edit?' });
+    expect(nativeConfirm).not.toHaveBeenCalled();
+    expect(actions.read).toHaveBeenCalledTimes(1);
+
+    // Cancel keeps the edit and puts the date back.
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(effectiveInput().value).toBe('2026-10-01');
+    expect((document.querySelector('#recurring-quantity-config') as HTMLInputElement).value).toBe('26');
+
+    // Confirm discards it and loads the values in force at the new date.
+    fireEvent.change(effectiveInput(), { target: { value: '2026-12-01' } });
+    fireEvent.click(await screen.findByRole('button', { name: 'Change date' }));
+    await waitFor(() => expect(actions.read).toHaveBeenLastCalledWith(expect.objectContaining({ service_period_start: '2026-12-01' })));
+    await waitFor(() => expect((document.querySelector('#recurring-quantity-config') as HTMLInputElement).value).toBe('23'));
+    expect(effectiveInput().value).toBe('2026-12-01');
+    expect(nativeConfirm).not.toHaveBeenCalled();
+    nativeConfirm.mockRestore();
   });
 });

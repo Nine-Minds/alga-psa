@@ -641,6 +641,8 @@
       "catalogPriceMissing": "Geen catalogusprijs in {{currency}} dekt deze grens, dus een positieve hoeveelheid kan niet worden gefactureerd. Voeg een catalogusprijs in {{currency}} toe of kies \"Stukprijs overschrijven\" voordat u opslaat.",
       "invoiceImpact": "Vanaf {{date}} wijzigt het terugkerende subtotaal voor dit item met {{delta}} naar {{total}} (vóór kortingen en belasting). Eerder gefactureerde perioden blijven ongewijzigd.",
       "discardDirty": "Als u de ingangsdatum wijzigt, worden de geldende waarden opnieuw geladen en gaat uw niet-opgeslagen wijziging verloren. Doorgaan?",
+      "discardDirtyTitle": "Niet-opgeslagen wijziging verwerpen?",
+      "discardDirtyConfirm": "Datum wijzigen",
       "invalidQuantity": "De hoeveelheid moet een geheel getal van 0 of hoger zijn.",
       "invalidRate": "Voer een stukprijs van 0 of hoger in, of schakel over naar catalogusprijzen.",
       "saved": "Gepland: {{quantity}} met ingang van {{date}}.",
