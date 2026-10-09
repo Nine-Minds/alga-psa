@@ -18,6 +18,32 @@ const {
 } = require('../lib/translation-utils.cjs');
 const { compareBaseline, runAudit } = require('../audit.cjs');
 
+test('Swedish default time-entry service settings have localized copy at both scopes', () => {
+  for (const [namespace, path] of [
+    ['billing-settings', ['general', 'timeEntryService']],
+    ['clients', ['clientDefaultTimeEntryServiceSettings']],
+  ]) {
+    const readGroup = (locale) => {
+      const pack = JSON.parse(readFileSync(new URL(
+        `../../../server/public/locales/${locale}/msp/${namespace}.json`, import.meta.url,
+      ), 'utf8'));
+      return path.reduce((value, segment) => value?.[segment], pack);
+    };
+    const english = collectLeaves(readGroup('en'));
+    const swedish = collectLeaves(readGroup('sv') ?? {});
+
+    assert.ok(english.size > 0, `${namespace}: expected English settings copy`);
+    assert.deepEqual([...swedish.keys()], [...english.keys()], `${namespace}: Swedish settings keys`);
+    assert.match(swedish.get('title'), /tidposter/, `${namespace}: use the time-entry term`);
+    for (const [key, source] of english) {
+      const translated = swedish.get(key);
+      assert.equal(typeof translated, 'string', `${namespace}.${key}: expected text`);
+      assert.ok(translated.trim(), `${namespace}.${key}: empty translation`);
+      assert.notEqual(translated, source, `${namespace}.${key}: English fallback copy`);
+    }
+  }
+});
+
 test('French audit accepts the cognate Question but rejects English question prose', (t) => {
   const root = mkdtempSync(join(tmpdir(), 'question-audit-'));
   t.after(() => rmSync(root, { recursive: true, force: true }));

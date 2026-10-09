@@ -57,6 +57,8 @@ export interface DataTreeContext {
     itemVar: string;
     indexVar: string;
     itemType?: string;
+    /** The loop's items expression, used to preview with its first item. */
+    itemsExpr?: string;
   };
 }
 
@@ -415,7 +417,7 @@ export const SourceDataTree: React.FC<SourceDataTreeProps> = ({
                     {t('sourceDataTree.vars.emptyPrefix', { defaultValue: 'No vars yet. Use' })}{' '}
                     <span className="font-medium">{t('sourceDataTree.vars.saveOutput', { defaultValue: 'Save output' })}</span>{' '}
                     {t('sourceDataTree.vars.emptyConjunction', { defaultValue: 'or an' })}{' '}
-                    <span className="font-medium">{t('sourceDataTree.vars.assignStep', { defaultValue: 'Assign' })}</span>{' '}
+                    <span className="font-medium">{t('sourceDataTree.vars.assignStep', { defaultValue: 'Set variables' })}</span>{' '}
                     {t('sourceDataTree.vars.emptySuffix', { defaultValue: 'step to populate' })}{' '}
                     <code className="font-mono">vars.&lt;name&gt;</code>.
                   </div>

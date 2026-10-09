@@ -63,6 +63,7 @@ function createChainableQuery<T>(result: T, whereCalls: Array<unknown[]>): any {
 
   builder.join = vi.fn(() => builder);
   builder.leftJoin = vi.fn(() => builder);
+  builder.joinRaw = vi.fn(() => builder);
   builder.where = vi.fn(handleWhere);
   builder.andWhere = vi.fn(handleWhere);
   builder.orWhere = vi.fn(handleWhere);

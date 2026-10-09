@@ -535,6 +535,79 @@ describe('recurring due-work reader', () => {
     });
   });
 
+  it('clientName filters the full candidate set before pagination and reports filtered totals', async () => {
+    // Unfiltered order at pageSize 1: Zenith, Wonder, Acme — Acme sits on page 3.
+    const unfiltered = await getAvailableRecurringDueWork({ page: 1, pageSize: 1 });
+    const filtered = await getAvailableRecurringDueWork({
+      page: 1,
+      pageSize: 1,
+      clientName: '  aCM ',
+    });
+
+    expect(filtered.invoiceCandidates.map((candidate) => candidate.clientName)).toEqual(['Acme Co']);
+    expect(filtered.total).toBe(1);
+    expect(filtered.totalPages).toBe(1);
+    expect(unfiltered.total).toBe(3);
+    expect(filtered.materializationGaps).toEqual(unfiltered.materializationGaps);
+
+    const noMatch = await getAvailableRecurringDueWork({ page: 1, pageSize: 1, clientName: 'nomatch' });
+    expect(noMatch.invoiceCandidates).toEqual([]);
+    expect(noMatch.total).toBe(0);
+    expect(noMatch.totalPages).toBe(0);
+  });
+
+  it('clientName does not narrow materializationGaps', async () => {
+    mocks.rowsByTable.client_billing_cycles = [
+      {
+        tenant: 'tenant-1',
+        client_id: 'client-3',
+        client_name: 'Wonder Co',
+        billing_cycle_id: 'cycle-2025-03',
+        billing_cycle: 'monthly',
+        period_start_date: '2025-03-01',
+        period_end_date: '2025-04-01',
+        effective_date: '2025-03-01',
+        invoice_id: null,
+      },
+      {
+        tenant: 'tenant-1',
+        client_id: 'client-3',
+        client_name: 'Wonder Co',
+        billing_cycle_id: 'cycle-2025-04',
+        billing_cycle: 'monthly',
+        period_start_date: '2025-04-01',
+        period_end_date: '2025-05-01',
+        effective_date: '2025-04-01',
+        invoice_id: null,
+      },
+    ];
+    mocks.rowsByTable.client_contracts = [
+      {
+        tenant: 'tenant-1',
+        client_id: 'client-3',
+        client_contract_line_id: 'assignment-3',
+        cadence_owner: 'client',
+        billing_frequency: 'monthly',
+        billing_timing: 'arrears',
+        start_date: '2025-03-01',
+        end_date: null,
+        is_active: true,
+      },
+    ];
+    mocks.rowsByTable.recurring_service_periods = [];
+
+    const result = await getAvailableRecurringDueWork({
+      page: 1,
+      pageSize: 10,
+      clientName: 'zenith',
+    });
+
+    expect(result.invoiceCandidates).toEqual([]);
+    expect(result.materializationGaps).toEqual([
+      expect.objectContaining({ clientId: 'client-3', clientName: 'Wonder Co' }),
+    ]);
+  });
+
   it('T012: due-work reader date filter operates on service-period-start dates for contract-cadence rows', async () => {
     const result = await getAvailableRecurringDueWork({
       page: 1,

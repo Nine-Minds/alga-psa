@@ -388,9 +388,12 @@
       "RECURRING_PERIODS_NOT_MATERIALIZED": "I periodi di servizio per questa finestra di fatturazione non sono ancora stati generati. Usa Correggi tutto nella pagina delle fatture automatiche oppure rigenerali in Fatturazione > Periodi di servizio, poi ripeti l'anteprima.",
       "NO_ACTIVE_CONTRACT_LINES": "Nessuna riga del contratto è attiva in questo periodo di fatturazione. Controlla le date di inizio e fine del contratto e che il contratto sia attivo.",
       "NOTHING_TO_BILL": "Per questa finestra non c'è nulla pronto da fatturare. Le righe fatturate a posticipo possono essere fatturate solo dopo la fine del periodo di servizio: controlla la tempistica di fatturazione e le date.",
+      "FIXED_LINE_RATE_UNRESOLVED": "La linea a tariffa fissa {{lines}} non ha una tariffa. Imposta una tariffa sulla linea di contratto (o un prezzo per i suoi servizi nella valuta del contratto) e riprova.",
+      "FIXED_LINE_NO_SERVICES": "La riga a tariffa fissa {{lines}} ha una tariffa ma nessun servizio su cui fatturarla. Aggiungi un servizio alla riga del contratto e riprova.",
       "SOURCE_ALREADY_BILLED": "Alcuni elementi selezionati non sono più fatturabili (già fatturati, non approvati o rimossi). Aggiorna e riprova.",
       "SOURCE_NOT_ELIGIBLE": "Un elemento selezionato non appartiene a questo ticket o non è più idoneo. Aggiorna e riprova.",
       "SOURCE_CURRENCY_MISMATCH": "Alcuni prodotti selezionati sono prezzati in una valuta diversa da quella di fatturazione di questo cliente e non possono essere aggiunti. Fatturali separatamente nella loro valuta.",
+      "RECURRING_PRICING_STALE": "L'anteprima non è aggiornata: {{details}}. Esegui di nuovo l'anteprima per vedere i valori attuali, quindi genera di nuovo.",
       "BILLING_PROFILE_NOT_FOUND": "Il profilo di fatturazione selezionato non è disponibile per questo cliente. Aggiorna la pagina e riprova."
     },
     "warnings": {
@@ -793,7 +796,8 @@
       "back": "Torna ai layout di fattura",
       "cancel": "Annulla",
       "save": "Salva modello",
-      "saving": "Salvataggio..."
+      "saving": "Salvataggio...",
+      "close": "Chiudi"
     },
     "titles": {
       "create": "Crea un nuovo layout di fattura",
@@ -803,7 +807,9 @@
       "templateName": "Nome del modello",
       "templateAst": "Modello AST (JSON)",
       "created": "Creato",
-      "lastUpdated": "Ultimo aggiornamento"
+      "lastUpdated": "Ultimo aggiornamento",
+      "savedAt": "Salvato {{time}}",
+      "notSaved": "Non ancora salvato"
     },
     "tabs": {
       "visual": "Visivo",
@@ -819,6 +825,9 @@
       "templateNameRequired": "Il nome del modello è obbligatorio",
       "astExportFailed": "Impossibile esportare il modello AST dall'area di lavoro visiva: {{message}}",
       "unknownAstExport": "Errore di esportazione AST sconosciuto"
+    },
+    "toast": {
+      "saved": "Layout \"{{name}}\" salvato."
     }
   },
   "templates": {
@@ -1215,7 +1224,10 @@
         "drags": "Trascinamenti: {{count}}",
         "success": "Riusciti: {{count}}",
         "invalid": "Non validi: {{count}}"
-      }
+      },
+      "zoomOut": "Riduci",
+      "zoomIn": "Ingrandisci",
+      "zoomFit": "Adatta"
     },
     "palette": {
       "tabs": {
@@ -1256,6 +1268,15 @@
         "content": "Contenuto",
         "media": "Contenuti multimediali",
         "dynamic": "Dinamico"
+      },
+      "insertTarget": {
+        "page": "I nuovi blocchi vanno alla fine della pagina.",
+        "inside": "I nuovi blocchi vanno dentro {{name}}.",
+        "after": "I nuovi blocchi vanno subito dopo {{name}}.",
+        "label": "Dove vanno i nuovi blocchi",
+        "insideOption": "Dentro",
+        "afterOption": "Dopo",
+        "shiftHint": "Shift+click su + per aggiungerlo invece dopo."
       }
     },
     "inspector": {
@@ -1275,7 +1296,70 @@
       "fitSectionToContents": "Adatta sezione al contenuto",
       "sectionNoChildContent": "La sezione non ha contenuti da adattare.",
       "apply": "Applica",
-      "emptyHelp": "Seleziona un componente per modificarne le proprietà."
+      "emptyHelp": "Seleziona un componente per modificarne le proprietà.",
+      "size": "Dimensioni",
+      "width": "Larghezza",
+      "widthValue": "Valore larghezza",
+      "minWidth": "Larghezza min.",
+      "maxWidth": "Larghezza max.",
+      "height": "Altezza",
+      "heightValue": "Valore altezza",
+      "minHeight": "Altezza min.",
+      "maxHeight": "Altezza max.",
+      "mediaSource": "Origine immagine",
+      "mediaSourceLogo": "Logo aziendale",
+      "mediaSourceCustom": "Immagine personalizzata",
+      "mediaSourceLogoHint": "Mostra su ogni documento il logo delle impostazioni di branding della tua azienda.",
+      "mediaSourceUrl": "URL di origine",
+      "renameInner": "Rinominare anche {{count}} livelli interni ({{from}} → {{to}}…)?",
+      "renameInnerApply": "Rinomina",
+      "renameInnerDismiss": "No",
+      "tabsLabel": "Sezioni dell'ispettore",
+      "insertDataField": "+ Inserisci campo dati…",
+      "searchDataFields": "Cerca campi dati…",
+      "dataFields": "Campi dati",
+      "box": {
+        "top": "Sopra",
+        "right": "Destra",
+        "bottom": "Sotto",
+        "left": "Sinistra",
+        "all": "Tutti i lati",
+        "sameOnAllSides": "Uguale su tutti i lati",
+        "unit": "Unità",
+        "customValue": "Valore CSS personalizzato mantenuto finché non modifichi un lato: {{value}}"
+      },
+      "examplePlaceholder": "es. {{value}}",
+      "setCount": "{{count}} impostati",
+      "overrides": {
+        "none": "Usa solo i valori predefiniti.",
+        "jump": "Modifica nella scheda {{tab}}",
+        "title": "Impostato su questo blocco ({{count}}):"
+      },
+      "tabs": {
+        "content": "Contenuto",
+        "style": "Stile",
+        "layout": "Layout e dimensioni"
+      },
+      "sizeModes": {
+        "auto": {
+          "label": "Auto",
+          "widthTooltip": "Lascia decidere al contenitore (si allunga in una pila verticale)",
+          "heightTooltip": "Cresce con il contenuto"
+        },
+        "fill": {
+          "label": "Riempi",
+          "widthTooltip": "Occupa tutta la larghezza del contenitore"
+        },
+        "fit": {
+          "label": "Adatta",
+          "widthTooltip": "Riduci per adattarsi al contenuto"
+        },
+        "fixed": {
+          "label": "Fisso",
+          "widthTooltip": "Usa la larghezza esatta inserita sotto",
+          "heightTooltip": "Usa l'altezza esatta inserita sotto"
+        }
+      }
     },
     "shell": {
       "selectedLabel": "Selezionato:",
@@ -1567,6 +1651,12 @@
             },
             "margin": {
               "label": "Margine"
+            },
+            "padding": {
+              "label": "Riempimento"
+            },
+            "containerPadding": {
+              "label": "Riempimento"
             }
           }
         },
@@ -1654,6 +1744,84 @@
         },
         "totals-rows": {
           "title": "Righe totali"
+        },
+        "typography": {
+          "title": "Tipografia",
+          "fields": {
+            "fontSize": {
+              "label": "Dimensioni"
+            },
+            "fontWeight": {
+              "label": "Spessore",
+              "options": {
+                "400": "Normale (400)",
+                "500": "Medio (500)",
+                "600": "Semigrassetto (600)",
+                "700": "Grassetto (700)"
+              }
+            },
+            "lineHeight": {
+              "label": "Interlinea"
+            },
+            "textAlign": {
+              "label": "Allineamento",
+              "options": {
+                "left": "Sinistra",
+                "center": "Centro",
+                "right": "Destra",
+                "justify": "Giustificato"
+              }
+            },
+            "fontStyle": {
+              "label": "Stile",
+              "options": {
+                "normal": "Normale",
+                "italic": "Corsivo"
+              }
+            },
+            "color": {
+              "label": "Colore"
+            }
+          }
+        },
+        "value-typography": {
+          "title": "Testo valore",
+          "fields": {
+            "fontSize": {
+              "label": "Dimensioni"
+            },
+            "fontWeight": {
+              "label": "Spessore",
+              "options": {
+                "400": "Normale (400)",
+                "500": "Medio (500)",
+                "600": "Semigrassetto (600)",
+                "700": "Grassetto (700)"
+              }
+            },
+            "lineHeight": {
+              "label": "Interlinea"
+            },
+            "textAlign": {
+              "label": "Allineamento",
+              "options": {
+                "left": "Sinistra",
+                "center": "Centro",
+                "right": "Destra",
+                "justify": "Giustificato"
+              }
+            },
+            "fontStyle": {
+              "label": "Stile",
+              "options": {
+                "normal": "Normale",
+                "italic": "Corsivo"
+              }
+            },
+            "color": {
+              "label": "Colore"
+            }
+          }
         }
       }
     },
@@ -1753,10 +1921,80 @@
     },
     "canvas": {
       "templateBoundary": "Limite del modello",
-      "translatableHint": "Tradotto automaticamente nella lingua del destinatario. Se modifichi il testo, verrà usato il tuo testo fisso."
+      "translatableHint": "Tradotto automaticamente nella lingua del destinatario. Se modifichi il testo, verrà usato il tuo testo fisso.",
+      "noLineItems": "Nessuna voce",
+      "moreRows": "+{{count}} altre righe",
+      "subtotal": "Subtotale",
+      "tax": "Imposta",
+      "total": "Totale",
+      "buttonLabel": "Pulsante",
+      "signatureLabel": "Firma",
+      "attachmentsLabel": "Allegati",
+      "spacerLabel": "Spaziatore",
+      "companyLogo": "Logo aziendale",
+      "insertionMarker": "Il prossimo blocco che aggiungi andrà qui",
+      "emptyContainer": "Vuoto — selezionalo e aggiungi blocchi dal pannello a sinistra",
+      "localeChip": "Etichette tradotte mostrate in {{language}} (Lingua di anteprima)",
+      "badgeDragHint": "Trascina per spostare questo blocco"
     },
     "dragOverlay": {
       "component": "Componente"
+    },
+    "arrange": {
+      "up": "Su",
+      "upHint": "Sposta prima nel suo contenitore (↑)",
+      "down": "Giù",
+      "downHint": "Sposta dopo nel suo contenitore (↓)",
+      "out": "Fuori",
+      "outHint": "Sposta fuori dal contenitore, subito dopo di esso (Alt+←)",
+      "into": "Dentro",
+      "intoHint": "Sposta nel contenitore immediatamente precedente (Alt+→)",
+      "copy": "Copia",
+      "copyHint": "Copia (Ctrl/⌘+C). Seleziona dove inserirlo e incolla con Ctrl/⌘+V.",
+      "paste": "Incolla",
+      "pasteHint": "Incolla nel contenitore selezionato o dopo il blocco selezionato (Ctrl/⌘+V)",
+      "duplicate": "Duplica",
+      "duplicateHint": "Duplica subito dopo l'originale (Ctrl/⌘+D)",
+      "copyStyle": "Copia stile",
+      "copyStyleHint": "Copia colori, bordi, spaziatura e stile del testo (Ctrl/⌘+Alt+C)",
+      "pasteStyle": "Incolla stile",
+      "pasteStyleHint": "Applica lo stile copiato a questo blocco (Ctrl/⌘+Alt+V)",
+      "delete": "Elimina",
+      "deleteHint": "Elimina (tasto Canc)",
+      "title": "Disponi"
+    },
+    "feedback": {
+      "cannotInsert": "Impossibile aggiungere {{block}} qui.",
+      "insertedOnPage": "{{block}} aggiunto alla pagina.",
+      "insertedInto": "{{block}} aggiunto a {{parent}}.",
+      "fieldRebound": "{{name}} ora mostra {{path}}."
+    },
+    "translation": {
+      "translatedAs": "Etichetta standard \"{{name}}\", tradotta per ogni destinatario",
+      "useFixedText": "Usa testo fisso",
+      "pickStandardLabel": "Testo fisso. Traduci automaticamente…",
+      "searchStandardLabels": "Cerca etichette standard…",
+      "standardLabels": "Etichette standard",
+      "noMatches": "Nessuna etichetta standard trovata.",
+      "cancel": "Annulla"
+    },
+    "outline": {
+      "collapse": "Comprimi {{name}}",
+      "expand": "Espandi {{name}}",
+      "title": "Struttura"
+    },
+    "dragPreview": {
+      "noTarget": "Fuori dalla pagina: rilascia per annullare",
+      "noChange": "Resta dov'è",
+      "before": "Prima di {{block}}",
+      "after": "Dopo {{block}}",
+      "inside": "Dentro {{container}}",
+      "dropOnPage": "Rilascia sulla pagina per aggiungere questo blocco.",
+      "cancelled": "Non spostato: rilascia sopra la pagina o la Struttura per posizionarlo."
+    },
+    "resize": {
+      "handleHint": "Trascina per ridimensionare · doppio clic per adattare al contenuto",
+      "autoValue": "Automatico ({{value}})"
     }
   },
   "projectBilling": {
@@ -1822,7 +2060,8 @@
         "selectedCount": "{{count}} selezionati",
         "clear": "Annulla selezione"
       }
-    }
+    },
+    "emptyTimeHint": "Ore e materiali approvati non vengono mai messi in coda qui: vengono fatturati con la normale generazione fatture o con il pulsante Genera fattura di progetto."
   },
   "invoiceDesigner": {
     "transforms": {
@@ -2011,7 +2250,9 @@
         "addLine": "+ Riga",
         "clearLines": "Riga singola",
         "stackedLinesHint": "Ogni riga non vuota viene visualizzata su una riga propria. Quando tutte le righe sono vuote, viene mostrata la chiave di associazione della colonna indicata sopra.",
-        "removeLine": "Rimuovi la riga {{index}}"
+        "removeLine": "Rimuovi la riga {{index}}",
+        "align": "Allineamento",
+        "widthPlaceholder": "auto | 50% | 120px"
       },
       "columnTypes": {
         "text": "Testo",
@@ -2046,6 +2287,12 @@
         "groupedRowKey": "Chiave della riga raggruppata",
         "groupedRowItems": "Elementi della riga raggruppata",
         "availableBinding": "Associazione disponibile"
+      },
+      "columnAlign": {
+        "default": "Predefinito",
+        "left": "Sinistra",
+        "center": "Centro",
+        "right": "Destra"
       }
     },
     "imagePicker": {
@@ -2064,7 +2311,14 @@
       "clearRowBackground": "Cancella colore di sfondo riga",
       "clearRowTextColor": "Cancella colore del testo riga",
       "labelColorOverrideNote": "Questa etichetta mantiene il proprio colore salvato e non eredita il colore del testo della riga impostato sopra. L’importo segue comunque il colore del testo della riga.",
-      "noRows": "Questo blocco totali non ha ancora righe salvate. Salva il modello e riaprilo per modificare i colori delle righe."
+      "noRows": "Questo blocco totali non ha ancora righe salvate. Salva il modello e riaprilo per modificare i colori delle righe.",
+      "addRow": "Aggiungi riga:",
+      "empty": "Ancora nessuna riga. Aggiungine una qui sotto.",
+      "moveUp": "Sposta {{row}} verso l'alto",
+      "moveDown": "Sposta {{row}} verso il basso",
+      "remove": "Rimuovi {{row}}",
+      "label": "Etichetta",
+      "emphasize": "Evidenzia (stile del totale complessivo)"
     }
   },
   "draftInvoiceDetails": {

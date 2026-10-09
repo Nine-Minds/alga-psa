@@ -282,6 +282,9 @@
       "detail": {
         "title": "Zgłoszenie #{{ticketNumber}} - {{ticketTitle}}",
         "fallbackTitle": "Szczegóły zgłoszenia"
+      },
+      "recurring": {
+        "title": "Zgłoszenia cykliczne"
       }
     },
     "workflowEditor": {

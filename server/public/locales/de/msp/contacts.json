@@ -550,7 +550,11 @@
       "notes": "Notizen:",
       "notesPlaceholder": "Fügen Sie zusätzliche Notizen zum Kontakt hinzu...",
       "tags": "Tags:",
-      "emailAddresses": "E-Mail-Adressen:"
+      "emailAddresses": "E-Mail-Adressen:",
+      "reportsTo": "Berichtet an:",
+      "reportsToPlaceholder": "Keine Führungskraft",
+      "reportsToClear": "Zurücksetzen",
+      "reportsToHelp": "Muss eine Person desselben Kunden sein. Wird für die Portalsichtbarkeit von Tickets, Geräten und Projekten („meine Mitarbeitenden“) verwendet."
     },
     "loading": {
       "destinations": "Ziele werden geladen..."
@@ -568,7 +572,8 @@
     },
     "empty": {
       "notSet": "Nicht festgelegt",
-      "unknownClient": "Unbekannter Kunde"
+      "unknownClient": "Unbekannter Kunde",
+      "noManager": "Keine Führungskraft"
     },
     "phoneTypes": {
       "work": "Geschäftlich",
@@ -591,7 +596,8 @@
       "notes": "Notizen:",
       "tags": "Tags:",
       "emailAddresses": "E-Mail-Adressen:",
-      "defaultEmail": "Standard"
+      "defaultEmail": "Standard",
+      "reportsTo": "Berichtet an"
     },
     "status": {
       "active": "Aktiv",
@@ -737,8 +743,23 @@
       "scopeClient": "Alle Tickets dieses Kunden",
       "scopeContact": "Nur eigene Tickets",
       "scopeClientDescription": "Mitglieder sehen alle Tickets dieses Kunden auf den ausgewählten Boards.",
-      "scopeContactDescription": "Mitglieder sehen nur Tickets, bei denen sie als Kontakt eingetragen sind. Kundenadministratoren sehen alle Tickets auf den ausgewählten Boards, auch ohne Kontakt.",
-      "assignmentHelp": "Weisen Sie eine Gruppe zu, um Boards und Tickets einzuschränken, oder behalten Sie den vollständigen Kundenzugriff."
+      "scopeContactDescription": "Mitglieder sehen Tickets, bei denen sie als Kontakt eingetragen sind, Tickets der ihnen unterstellten Personen und Tickets, die sie beobachten. Kundenadministratoren sehen auf den ausgewählten Boards immer alles, auch Tickets ohne Kontakt.",
+      "assignmentHelp": "Weisen Sie eine Gruppe zu, um Boards sowie die sichtbaren Tickets, Geräte und Projekte dieser Person einzuschränken, oder behalten Sie den vollständigen Kundenzugriff.",
+      "assetScopeLabel": "Gerätesichtbarkeit",
+      "assetScopeClient": "Alle Geräte dieses Kunden",
+      "assetScopeContact": "Nur eigene Geräte",
+      "assetScopeClientDescription": "Mitglieder sehen alle Geräte dieses Kunden, auch nicht zugewiesene.",
+      "assetScopeContactDescription": "Mitglieder sehen nur Geräte, die ihnen oder ihnen unterstellten Personen zugewiesen sind. Nicht zugewiesene Geräte sind ausgeblendet. Kundenadministratoren sehen immer alles.",
+      "projectScopeLabel": "Projektsichtbarkeit",
+      "projectScopeClient": "Alle Projekte dieses Kunden",
+      "projectScopeContact": "Nur eigene Projekte",
+      "projectScopeClientDescription": "Mitglieder sehen alle Projekte dieses Kunden.",
+      "projectScopeContactDescription": "Mitglieder sehen nur Projekte, deren Kontakt sie selbst oder eine ihnen unterstellte Person ist. Projekte ohne Kontakt sind ausgeblendet. Kundenadministratoren sehen immer alles.",
+      "scopeSummary": "Tickets: {{tickets}} · Geräte: {{devices}} · Projekte: {{projects}}",
+      "scopeSummaryAll": "Alle",
+      "scopeSummaryOwn": "Eigene",
+      "managerScopeNote_one": "Die Ansicht umfasst auch Datensätze von {{count}} unterstellten Person.",
+      "managerScopeNote_other": "Die Ansicht umfasst auch Datensätze von {{count}} unterstellten Personen."
     }
   }
 }

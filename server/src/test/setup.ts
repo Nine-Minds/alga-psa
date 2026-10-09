@@ -7,7 +7,7 @@ import 'next/dist/server/node-environment-baseline';
 import path from 'node:path';
 import { mkdirSync } from 'node:fs';
 import { createRequire } from 'node:module';
-import { afterAll, afterEach, beforeAll, beforeEach, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, expect, vi } from 'vitest';
 
 // Native require reaches the SAME CJS instance the externalized imports use
 // (a Vite-side dynamic import would load a separate copy whose cleanup list
@@ -22,6 +22,48 @@ const loadRootRtl = (): any | null => {
     return null; // Root copy absent (deduped) — nothing to reach.
   }
 };
+
+// This setup file is shared by the unit lanes and the DB-backed ones (the
+// integration/infrastructure/e2e suites have no config of their own — they run
+// server/vitest.config.ts with a path filter). The per-test sweep below is unit
+// hygiene only: those DB-backed suites own their fork and legitimately
+// establish shared state in beforeAll — an emulator's dynamic port, a collab
+// API key, a hocuspocus URL, fake timers — which a per-test unstub would wipe
+// before the second test ever reads it (measured: an unscoped sweep failed
+// microsoftCalendarEmulator.integration 12/12). Exempting them here leaves
+// their behavior exactly as it was before this hook existed.
+//
+// Matched by DIRECTORY, not by filename. A `.integration.test.tsx` suffix does
+// NOT mean DB-backed here: 44 files in the unit selection use it for in-process
+// component tests (invoice-designer DesignCanvas/DesignerShell, i18n) that are
+// precisely the jsdom suites this sweep exists to clean up. `.db.` is the one
+// reliable filename signal — those suites recreate a live Postgres database
+// (see the SKIP_DB_TESTS note in server/vitest.config.ts).
+const DB_BACKED_SUITE =
+  /(^|\/)(src\/test\/(integration|infrastructure|e2e)|__tests__\/integration)\/|\.db\.(test|spec)\.[cm]?[jt]sx?$/;
+// An unknown path sweeps rather than exempts, deliberately: if testPath ever
+// stops resolving, the DB-backed suites fail loudly (their beforeAll state
+// disappears) instead of the unit lanes quietly losing the cleanup this card
+// exists to add.
+const isDbBackedSuite = (): boolean => {
+  const file = expect.getState().testPath;
+  return typeof file === 'string' && DB_BACKED_SUITE.test(file.replace(/\\/g, '/'));
+};
+
+// Whatever a test left running or replaced stops here. Registered BEFORE the
+// render cleanup below because vitest's default hook order is a stack: the
+// last afterEach registered runs first, so unmounting happens while the test's
+// timers and stubs are still in place, and this hook sweeps up afterwards.
+//
+// vi.restoreAllMocks() is deliberately absent — see the note beside
+// `restoreMocks` in server/vitest.config.ts, which also explains why the
+// matching unstubEnvs/unstubGlobals options are not set there.
+afterEach(() => {
+  if (isDbBackedSuite()) return;
+  vi.useRealTimers();
+  vi.unstubAllGlobals();
+  vi.unstubAllEnvs();
+});
 
 // @testing-library/react is externalized, so its module-level auto-cleanup
 // afterEach registers only in the first file that imports it per fork
@@ -105,6 +147,8 @@ if (typeof document !== 'undefined') {
 // require('dotenv').config(), so the first suite that reaches it (e.g. the
 // search-backfill script) dumps the developer's whole server/.env into the
 // shared fork and every later Microsoft OAuth assertion reads the emulator.
+// MICROSOFT_SSO_EMULATOR_MODE is the gate those base URLs need before Microsoft
+// *sign-in* follows them, so a leaked value flips the provider the same way.
 // TZ shifts every date the process formats — a timezone test that sets it
 // and doesn't restore turns later files' date assertions off by a day.
 const GUARDED_ENV_VARS = [
@@ -116,6 +160,7 @@ const GUARDED_ENV_VARS = [
   'MICROSOFT_LOGIN_BASE_URL',
   'MICROSOFT_GRAPH_BASE_URL',
   'MICROSOFT_GRAPH_BETA_BASE_URL',
+  'MICROSOFT_SSO_EMULATOR_MODE',
   'TZ',
 ] as const;
 type GuardedEnvVar = (typeof GUARDED_ENV_VARS)[number];
@@ -251,6 +296,16 @@ global.ResizeObserver = class ResizeObserver {
   unobserve() {}
   disconnect() {}
 };
+
+// jsdom does not implement IntersectionObserver either, and lazy-loading cards
+// (documents' DocumentStorageCard) construct one in a mount effect. Files that
+// stub their own still work: this is the value vi.unstubAllGlobals() restores.
+global.IntersectionObserver = class IntersectionObserver {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+  takeRecords() { return []; }
+} as unknown as typeof globalThis.IntersectionObserver;
 
 // jsdom does not implement scrollIntoView; components (e.g. scheduling's
 // AvailabilitySettings) call it inside requestAnimationFrame on selection

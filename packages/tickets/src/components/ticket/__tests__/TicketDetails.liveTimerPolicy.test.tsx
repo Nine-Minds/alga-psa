@@ -266,8 +266,22 @@ vi.mock('../TicketInfo', () => ({
 
 vi.mock('../TicketProperties', () => ({
   __esModule: true,
-  default: ({ isLiveTicketTimerEnabled }: { isLiveTicketTimerEnabled: boolean }) => (
-    <div data-testid="live-timer-enabled">{String(isLiveTicketTimerEnabled)}</div>
+  default: ({
+    isLiveTicketTimerEnabled,
+    isLaunchingTimeEntry,
+    onAddTimeEntry,
+  }: {
+    isLiveTicketTimerEnabled?: boolean;
+    isLaunchingTimeEntry?: boolean;
+    onAddTimeEntry?: () => void;
+  }) => (
+    <>
+      <div data-testid="live-timer-enabled">{String(isLiveTicketTimerEnabled)}</div>
+      <div data-testid="time-entry-launching">{String(isLaunchingTimeEntry)}</div>
+      <button type="button" data-testid="mock-add-time-entry" onClick={onAddTimeEntry}>
+        Add Time Entry
+      </button>
+    </>
   ),
 }));
 
@@ -526,6 +540,41 @@ describe('TicketDetails live timer board policy', () => {
     );
 
     expect(screen.getByTestId('ticket-live-connection-status')).toHaveTextContent('Live updates unavailable');
+  });
+
+  it('suppresses duplicate Add Time Entry launches while one launch chain is in flight', async () => {
+    const gate = deferredPromise<void>();
+    launchTimeEntryMock.mockReturnValue(gate.promise);
+
+    render(
+      <TicketDetails
+        bootstrap={entryLayoutBootstrap}
+        initialTicket={baseTicket}
+        initialBoard={enabledBoard}
+      />
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId('time-entry-launching')).toHaveTextContent('false');
+    });
+
+    const button = screen.getByTestId('mock-add-time-entry');
+    fireEvent.click(button);
+    fireEvent.click(button);
+
+    await waitFor(() => {
+      expect(launchTimeEntryMock).toHaveBeenCalledTimes(1);
+    });
+    await waitFor(() => {
+      expect(screen.getByTestId('time-entry-launching')).toHaveTextContent('true');
+    });
+
+    gate.resolve();
+
+    await waitFor(() => {
+      expect(screen.getByTestId('time-entry-launching')).toHaveTextContent('false');
+    });
+    expect(launchTimeEntryMock).toHaveBeenCalledTimes(1);
   });
 
   it('refreshes the ticket snapshot once after a reconnect signal', async () => {

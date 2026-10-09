@@ -24,6 +24,7 @@ import ProjectBillingCapUsage from '../models/projectBillingCapUsage';
 import ProjectBillingConfig from '../models/projectBillingConfig';
 import ProjectBillingScheduleEntry from '../models/projectBillingScheduleEntry';
 import {
+  capAppliesToInvoiceCurrency,
   computeCapWriteDown,
   detectThresholdCrossings,
   isFirstProjectCapOverage,
@@ -40,7 +41,7 @@ import {
   DEFAULT_RECURRING_SERVICE_PERIOD_DUE_SELECTION_STATES,
 } from '@alga-psa/types';
 import { WasmInvoiceViewModel } from '@alga-psa/types';
-import { IBillingResult, IBillingCharge, IBucketCharge, IUsageBasedCharge, ITimeBasedCharge, IFixedPriceCharge, IProductCharge, ILicenseCharge, IUsageServicePeriodStatus, BillingCycleType } from '@alga-psa/types';
+import { IBillingResult, IBillingCharge, IBucketCharge, IUsageBasedCharge, ITimeBasedCharge, IFixedPriceCharge, IProductCharge, ILicenseCharge, IUsageServicePeriodStatus, IFixedLineBlocker, BillingCycleType } from '@alga-psa/types';
 import { IClient, IClientWithLocation } from '@alga-psa/types';
 import Invoice from '@alga-psa/billing/models/invoice';
 import { attachInvoiceTimeCollections } from '../lib/adapters/invoiceAdapters';
@@ -57,6 +58,11 @@ import { resolveUnitOfMeasure } from '@alga-psa/core/unitOfMeasure';
 import { auditLog } from '@alga-psa/db';
 import { getClientDocumentLogoUrl } from '@alga-psa/formatting/avatarUtils';
 import { calculateAndDistributeTax, claimRecurringServicePeriodsForSelectionInputs, getClientDetails, persistInvoiceCharges, updateInvoiceTotalsAndRecordTransaction, validateClientBillingEmail } from '../services/invoiceService';
+import { reconcileAutomaticInvoiceAdjustments } from '../lib/billing/reconcileAutomaticInvoiceDiscounts';
+import {
+  reconcileContractChangeAdjustmentsForInvoice,
+  releaseOrphanedContractAdjustments,
+} from '../lib/billing/reconcileContractChangeAdjustments';
 
 
 
@@ -90,17 +96,28 @@ import {
   USAGE_RECORDS_MISSING_MESSAGE_KEY,
   USAGE_RECORDS_MISSING_ACK_REQUIRED_MESSAGE_KEY,
   USAGE_PERIOD_TOTAL_STALE_MESSAGE_KEY,
+  RECURRING_PRICING_STALE_MESSAGE_KEY,
   USAGE_CALCULATION_ERROR_MESSAGE_KEY,
+  FIXED_LINE_RATE_UNRESOLVED_MESSAGE_KEY,
+  FIXED_LINE_NO_SERVICES_MESSAGE_KEY,
 } from './invoiceGeneration.constants';
 import {
   ManualInvoiceError,
   type HandledManualInvoiceErrorCode,
 } from '../errors/manualInvoiceErrors';
+import { scheduleRecurringUnitRevisionInTransaction } from '../lib/billing/seatRevisions';
+import { resolveRecurringUnitKind } from '@alga-psa/shared/billingClients/recurringUnitPricing';
+import type { IContractLineUnitPricingRevisionInput } from '@alga-psa/types';
 import { lockTenantBilling } from '../lib/billing/billingMutationLock';
 import {
   bindUsagePeriodTotalInputs,
   type IExpectedUsagePeriodTotal,
 } from '../lib/billing/usagePeriodTotalIdentity';
+import {
+  bindRecurringPricingSources,
+  findStaleRecurringPricingSources,
+  type IExpectedRecurringPricingSource,
+} from '../lib/billing/recurringPricingIdentity';
 import type { HandledRecurringFailureCode } from './recurringBillingRunActions.shared';
 import {
   detectRecurringApprovalBlockers,
@@ -239,6 +256,13 @@ function getChargeUnitPrice(charge: IBillingCharge): number {
  * Bucket-style description for a prepaid-hour-block informational line:
  * "Prepaid hour block (Svc) — 4.0 hrs consumed, 12.5 hrs remaining".
  */
+/** Overtime entries bill as two lines; the overtime segment says so. */
+function timeChargeDescription(charge: IBillingCharge): string {
+  return isTimeBasedCharge(charge) && charge.timeSegment === 'overtime'
+    ? `${charge.serviceName} (overtime)`
+    : charge.serviceName;
+}
+
 function formatHourBlockChargeDescription(charge: IHourBlockCharge): string {
   const hourShortLabel = resolveUnitOfMeasure({ fallback: 'HUR' }).shortLabel;
   return `Prepaid hour block (${charge.serviceName}) — ${charge.hoursUsed.toFixed(1)} ${hourShortLabel} consumed, ${charge.hoursRemaining.toFixed(1)} ${hourShortLabel} remaining`;
@@ -366,6 +390,7 @@ type ProjectCapPersistenceDelta = {
 async function prepareProjectCapChargesForPersistence(
   trx: Knex.Transaction,
   charges: IBillingCharge[],
+  invoiceCurrency: string | null,
 ): Promise<ProjectCapPersistenceDelta[]> {
   type ProjectCapCharge = IBillingCharge & {
     project_billing_config_id: string;
@@ -396,6 +421,11 @@ async function prepareProjectCapChargesForPersistence(
   for (const [configId, configCharges] of chargesByConfig) {
     const config = await ProjectBillingConfig.getById(configId, trx);
     if (!config || config.cap_amount === null) {
+      continue;
+    }
+    // A cap counted in another currency would write these charges down against
+    // a number that means nothing here; the engine warns the biller instead.
+    if (!capAppliesToInvoiceCurrency(config.currency, invoiceCurrency)) {
       continue;
     }
 
@@ -773,7 +803,42 @@ function buildUsageCalculationError(
   );
 }
 
+/**
+ * Builds the coded failure for fixed-fee contract lines the engine could not
+ * price: `FIXED_LINE_RATE_UNRESOLVED` (no rate) or `FIXED_LINE_NO_SERVICES`
+ * (a rate, but no service to bill it on). Preview and generation both refuse
+ * with it: an unpriceable fixed line must never produce a silently short (or
+ * "Nothing to bill") invoice. The engine's blockers are the single source of
+ * truth. When both kinds are present the missing-rate failure is reported
+ * first; the other surfaces once it is fixed.
+ */
+function buildFixedLineBlockerError(
+  blockers: IFixedLineBlocker[],
+): ManualInvoiceError {
+  const code = blockers.some((blocker) => blocker.code === 'FIXED_LINE_RATE_UNRESOLVED')
+    ? 'FIXED_LINE_RATE_UNRESOLVED'
+    : 'FIXED_LINE_NO_SERVICES';
+  const lines = Array.from(
+    new Map(
+      blockers
+        .filter((blocker) => blocker.code === code)
+        .map((blocker) => [blocker.contractLineId, blocker]),
+    ).values(),
+  );
+  const lineNames = lines.map((blocker) => blocker.contractLineName);
+  const message =
+    code === 'FIXED_LINE_RATE_UNRESOLVED'
+      ? `Fixed fee line ${lineNames.join(', ')} has no rate. Set a rate on the contract line (or a price for its services in the contract currency), then try again.`
+      : `Fixed fee line ${lineNames.join(', ')} has a rate but no service to bill it on. Add a service to the contract line, then try again.`;
+  return new ManualInvoiceError(code, message, {
+    lines: lineNames.join(', '),
+    lineIds: lines.map((blocker) => blocker.contractLineId).join(','),
+    count: String(lines.length),
+  });
+}
+
 export type { IExpectedUsagePeriodTotal } from '../lib/billing/usagePeriodTotalIdentity';
+export type { IExpectedRecurringPricingSource } from '../lib/billing/recurringPricingIdentity';
 
 /**
  * Options accepted by every recurring invoice-generation entry point. All
@@ -801,6 +866,39 @@ export interface IInvoiceGenerationRequestOptions {
    * numbers than the operator approved.
    */
   expectedUsagePeriodTotals?: IExpectedUsagePeriodTotal[];
+  /**
+   * Recurring quantity/price revision sources the caller previewed. Generation
+   * refuses with `RECURRING_PRICING_STALE` when the selected revision, its
+   * version, its policy, its quantity, or the inherited catalog price identity
+   * changed since the preview, instead of silently billing different numbers.
+   */
+  expectedRecurringPricingSources?: IExpectedRecurringPricingSource[];
+}
+
+/**
+ * Enforces preview/generation consistency for recurring quantity/price
+ * revisions. Every reviewed source must still be present with the same
+ * revision/version/policy/rate/catalog identity; an unreviewed new source is
+ * also stale. Legacy/automated callers pass nothing and are unaffected.
+ */
+function assertExpectedRecurringPricingSourcesCurrent(params: {
+  charges: IBillingCharge[];
+  expected: IExpectedRecurringPricingSource[];
+}): void {
+  const stale = findStaleRecurringPricingSources({
+    expected: params.expected,
+    current: bindRecurringPricingSources(params.charges),
+  });
+  if (stale.length > 0) {
+    throw new ManualInvoiceError(
+      'RECURRING_PRICING_STALE',
+      `The preview is out of date: ${stale.map((detail) => detail.reason).join('; ')}. Re-run the preview to see the current numbers, then generate again.`,
+      {
+        serviceIds: stale.map((detail) => detail.serviceId).join(','),
+        details: stale.map((detail) => detail.reason).join('; '),
+      },
+    );
+  }
 }
 
 /**
@@ -971,7 +1069,9 @@ function previewInvoiceErrorInfo(error: unknown): {
     error instanceof ManualInvoiceError &&
     (error.code === 'NO_BILLING_EMAIL' ||
       error.code === 'USAGE_RECORDS_MISSING' ||
-      error.code === 'USAGE_CALCULATION_ERROR')
+      error.code === 'USAGE_CALCULATION_ERROR' ||
+      error.code === 'FIXED_LINE_RATE_UNRESOLVED' ||
+      error.code === 'FIXED_LINE_NO_SERVICES')
   ) {
     return {
       message: error.message,
@@ -1023,8 +1123,14 @@ function manualInvoiceErrorMessageKey(
       return USAGE_RECORDS_MISSING_ACK_REQUIRED_MESSAGE_KEY;
     case 'USAGE_PERIOD_TOTAL_STALE':
       return USAGE_PERIOD_TOTAL_STALE_MESSAGE_KEY;
+    case 'RECURRING_PRICING_STALE':
+      return RECURRING_PRICING_STALE_MESSAGE_KEY;
     case 'USAGE_CALCULATION_ERROR':
       return USAGE_CALCULATION_ERROR_MESSAGE_KEY;
+    case 'FIXED_LINE_RATE_UNRESOLVED':
+      return FIXED_LINE_RATE_UNRESOLVED_MESSAGE_KEY;
+    case 'FIXED_LINE_NO_SERVICES':
+      return FIXED_LINE_NO_SERVICES_MESSAGE_KEY;
     default:
       return undefined;
   }
@@ -2166,7 +2272,15 @@ async function adaptToWasmViewModel(
       item.time_entry_links = item.time_entry_links.map((link) => ({ ...link, itemId: item.item_id, invoiceId: item.invoice_id, tenant }));
     }
   }
-  const previewViewModelItems = invoiceItems.map(buildPreviewViewModelItem);
+  // Use the same signed, rounded discount lines as invoice persistence. Tax
+  // remains the existing engine policy; scheduling does not change that policy.
+  const discountItems = billingResult.discounts.map((discount) => {
+    const amount = Math.round(-(discount.amount || 0));
+    return { id: `preview-discount-${discount.discount_id}`, description: discount.discount_name,
+      quantity: 1, unitPrice: amount, total: amount };
+  });
+  const discountAdjustment = discountItems.reduce((sum, item) => sum + item.total, 0);
+  const previewViewModelItems = [...invoiceItems.map(buildPreviewViewModelItem), ...discountItems];
 
   const previewViewModel: WasmInvoiceViewModel = {
     invoiceNumber: 'PREVIEW',
@@ -2180,9 +2294,9 @@ async function adaptToWasmViewModel(
     },
     tenantClient: tenantClientInfo, // Use fetched tenant client info
     items: previewViewModelItems,
-    subtotal: billingResult.totalAmount,
+    subtotal: billingResult.totalAmount + discountAdjustment,
     tax: previewTax,
-    total: billingResult.totalAmount + previewTax,
+    total: billingResult.totalAmount + discountAdjustment + previewTax,
     // notes: undefined, // Add if needed
   };
 
@@ -2192,6 +2306,88 @@ async function adaptToWasmViewModel(
 
   return previewViewModel;
 }
+
+export type RecurringRevisionInvoiceImpact = {
+  success: true;
+  before: WasmInvoiceViewModel;
+  after: WasmInvoiceViewModel;
+  windowStart: string;
+  windowEnd: string;
+} | { success: false; error: string };
+
+/** Calculate a proposed revision through the invoice pipeline, without saving it. */
+export const previewRecurringRevisionInvoiceImpact = withAuth(async (
+  user, { tenant }, input: IContractLineUnitPricingRevisionInput,
+): Promise<RecurringRevisionInvoiceImpact> => {
+  if (!await hasPermission(user, 'billing', 'update') ||
+      (!await hasPermission(user, 'invoice', 'create') && !await hasPermission(user, 'invoice', 'generate'))) {
+    return { success: false, error: 'Permission denied: billing update and invoice preview access required.' };
+  }
+  const { knex } = await createTenantKnex();
+  // Carry the result out through rollback, including when the caller already
+  // has a transaction. Neither a revision nor its history may survive preview.
+  class PreviewRollback extends Error {
+    constructor(readonly result: RecurringRevisionInvoiceImpact) { super('Preview rollback'); }
+  }
+  try {
+    await knex.transaction(async (trx: Knex.Transaction) => {
+      await lockTenantBilling(trx, tenant);
+      const db = tenantDb(trx, tenant);
+      const config = await db.table('contract_line_service_configuration as cfg')
+        .join('contract_line_service_fixed_config as fc', function () {
+          this.on('fc.config_id', 'cfg.config_id').andOn('fc.tenant', 'cfg.tenant');
+        }).join('service_catalog as sc', function () {
+          this.on('sc.service_id', 'cfg.service_id').andOn('sc.tenant', 'cfg.tenant');
+        }).where({ 'cfg.config_id': input.config_id, 'cfg.contract_line_id': input.contract_line_id,
+          'cfg.service_id': input.service_id })
+        .first('cfg.configuration_type', 'fc.pricing_basis', 'sc.item_kind');
+      const kind = config && resolveRecurringUnitKind({ configurationType: config.configuration_type,
+        pricingBasis: config.pricing_basis, itemKind: config.item_kind });
+      if (!kind) throw new Error('This item does not support recurring quantity changes.');
+      // Resolve the invoice window from the period the true-up actually lands
+      // on: for a mid-period change that is the period containing the change
+      // date, not the next standing boundary. Boundary-only previews keep the
+      // selected period.
+      const windowAnchor =
+        input.allow_mid_period && input.mid_period_effective_date
+          ? String(input.mid_period_effective_date)
+          : String(input.effective_period_start);
+      const period = await db.table('recurring_service_periods as rsp')
+        .join('contract_lines as cl', function () {
+          this.on('cl.contract_line_id', '=', 'rsp.obligation_id').andOn('cl.tenant', '=', 'rsp.tenant');
+        }).join('contracts as ct', function () {
+          this.on('ct.contract_id', '=', 'cl.contract_id').andOn('ct.tenant', '=', 'cl.tenant');
+        }).where({ 'rsp.obligation_id': input.contract_line_id })
+        .where('rsp.service_period_start', '<=', windowAnchor)
+        .andWhere('rsp.service_period_end', '>', windowAnchor)
+        .whereNotIn('rsp.lifecycle_state', ['archived', 'superseded'])
+        .first('rsp.invoice_window_start', 'rsp.invoice_window_end', 'ct.owner_client_id');
+      if (!period) throw new Error('No service period is available for this boundary. Prepare service periods in Billing, then retry the preview.');
+      const windowStart = normalizeRecurringWindowDate(period.invoice_window_start);
+      const windowEnd = normalizeRecurringWindowDate(period.invoice_window_end);
+      const selectorInputs = await resolveCanonicalSelectorInputsForClientWindow({
+        knex: trx, tenant, clientId: period.owner_client_id, windowStart, windowEnd,
+      });
+      const before = await buildPreviewInvoiceForSelectionInputs({ knex: trx, tenant, selectorInputs });
+      const scheduled = await scheduleRecurringUnitRevisionInTransaction({
+        trx, tenant, userId: user.user_id, kind,
+        contractLineId: input.contract_line_id, serviceId: input.service_id, configId: input.config_id,
+        quantity: input.quantity, pricePolicy: input.price_policy ?? 'override',
+        unitRateCents: input.unit_rate_cents, effectivePeriodStart: input.effective_period_start,
+        allowMidPeriod: Boolean(input.allow_mid_period),
+        midPeriodEffectiveDate: input.mid_period_effective_date ?? null,
+        expectedVersion: input.expected_version,
+      });
+      if (!scheduled.ok) throw new Error(scheduled.error);
+      const after = await buildPreviewInvoiceForSelectionInputs({ knex: trx, tenant, selectorInputs });
+      throw new PreviewRollback({ success: true, before: before.viewModel, after: after.viewModel, windowStart, windowEnd });
+    });
+    return { success: false, error: 'Invoice impact could not be calculated.' };
+  } catch (error) {
+    if (error instanceof PreviewRollback) return error.result;
+    return { success: false, error: error instanceof Error ? error.message : 'Invoice impact could not be calculated.' };
+  }
+});
 
 interface BuiltPreviewInvoice {
   viewModel: WasmInvoiceViewModel;
@@ -2209,6 +2405,14 @@ interface BuiltPreviewInvoice {
    * after the preview.
    */
   expectedUsagePeriodTotals?: IExpectedUsagePeriodTotal[];
+  /**
+   * Recurring revision/catalog sources every charge was priced from, for the
+   * caller to hand back to generation so finalization refuses when a scheduled
+   * revision or its catalog source changed after the preview. Always present
+   * after a successful preview — an empty array means the preview reviewed no
+   * scheduled sources, which generation treats as a reviewed (empty) set.
+   */
+  expectedRecurringPricingSources: IExpectedRecurringPricingSource[];
 }
 
 async function buildPreviewInvoiceForSelectionInputs(params: {
@@ -2269,6 +2473,15 @@ async function buildPreviewInvoiceForSelectionInputs(params: {
 
   if (billingResult.error) {
     throw withRecurringWindowErrorContext(new Error(billingResult.error), canonicalSelection);
+  }
+
+  if (billingResult.fixedLineBlockers && billingResult.fixedLineBlockers.length > 0) {
+    // An unpriceable fixed line is named even when other charges exist: the
+    // preview must not present a short invoice as the full amount due.
+    throw withRecurringWindowErrorContext(
+      buildFixedLineBlockerError(billingResult.fixedLineBlockers),
+      canonicalSelection,
+    );
   }
 
   if (billingResult.charges.length === 0) {
@@ -2355,7 +2568,7 @@ async function buildPreviewInvoiceForSelectionInputs(params: {
       service_id: charge.serviceId,
       description: isHourBlockCharge(charge)
         ? formatHourBlockChargeDescription(charge)
-        : (charge.serviceName || 'Charge'),
+        : (timeChargeDescription(charge) || 'Charge'),
       quantity: getChargeQuantity(charge),
       unit_price: getChargeUnitPrice(charge),
       total_price: charge.total,
@@ -2402,7 +2615,7 @@ async function buildPreviewInvoiceForSelectionInputs(params: {
 
     charges.forEach(charge => {
       const recurringSummary = resolvePreviewRecurringSummary(charge);
-      let description = charge.serviceName;
+      let description = timeChargeDescription(charge);
       if (isBucketCharge(charge)) {
         const currencySymbol = getCurrencySymbol(billingResult.currency_code || 'USD');
         const hourShortLabel = resolveUnitOfMeasure({ fallback: 'HUR' }).shortLabel;
@@ -2529,12 +2742,17 @@ async function buildPreviewInvoiceForSelectionInputs(params: {
 
   const usageServicePeriodStatuses = billingResult.usageServicePeriodStatuses;
   const expectedUsagePeriodTotals = billingResult.expectedUsagePeriodTotals ?? [];
+  // Always present, even when empty: an empty review must still bind generation
+  // to "no scheduled revisions were billed", otherwise an untouched-contract
+  // preview followed by a concurrent first revision would silently bill it.
+  const expectedRecurringPricingSources = bindRecurringPricingSources(billingResult.charges);
   return {
     viewModel,
     ...(usageServicePeriodStatuses && usageServicePeriodStatuses.length > 0
       ? { usageServicePeriodStatuses }
       : {}),
     ...(expectedUsagePeriodTotals.length > 0 ? { expectedUsagePeriodTotals } : {}),
+    expectedRecurringPricingSources,
   };
 }
 
@@ -2708,6 +2926,12 @@ export type RecurringGroupedPreviewResponse = {
      * pass back through generation as expectedUsagePeriodTotals.
      */
     expectedUsagePeriodTotals?: IExpectedUsagePeriodTotal[];
+    /**
+     * Reviewed recurring revision/catalog sources for scheduled charges, to
+     * pass back through generation as expectedRecurringPricingSources. Always
+     * present after a successful preview; `[]` means none were reviewed.
+     */
+    expectedRecurringPricingSources: IExpectedRecurringPricingSource[];
   }>;
 } | {
   success: false;
@@ -2772,6 +2996,7 @@ export const previewGroupedInvoicesForSelectionInputs = withAuth(async (
           ...(preview.expectedUsagePeriodTotals
             ? { expectedUsagePeriodTotals: preview.expectedUsagePeriodTotals }
             : {}),
+          expectedRecurringPricingSources: preview.expectedRecurringPricingSources,
         };
       }),
     );
@@ -2847,6 +3072,7 @@ export const previewInvoiceForSelectionInput = withAuth(async (
       ...(preview.expectedUsagePeriodTotals
         ? { expectedUsagePeriodTotals: preview.expectedUsagePeriodTotals }
         : {}),
+      expectedRecurringPricingSources: preview.expectedRecurringPricingSources,
     };
   } catch (error) {
     logPreviewInvoiceFailure(
@@ -2936,6 +3162,7 @@ export const previewInvoice = withAuth(async (
       ...(preview.expectedUsagePeriodTotals
         ? { expectedUsagePeriodTotals: preview.expectedUsagePeriodTotals }
         : {}),
+      expectedRecurringPricingSources: preview.expectedRecurringPricingSources,
     };
   } catch (error) {
     logPreviewInvoiceFailure(
@@ -3430,6 +3657,32 @@ async function generateInvoiceForLockedSelectionInputs(params: Parameters<typeof
         charges: billingResult.charges,
         expected: expectedUsagePeriodTotals,
         statuses: billingResult.usageServicePeriodStatuses,
+      });
+    } catch (error) {
+      throw error instanceof ManualInvoiceError
+        ? withRecurringWindowErrorContext(error, normalizedSelectorInput)
+        : error;
+    }
+  }
+
+  if (billingResult.fixedLineBlockers && billingResult.fixedLineBlockers.length > 0) {
+    // Never finalize (and mark the period fulfilled) with an unpriceable
+    // fixed line silently missing from the invoice.
+    throw withRecurringWindowErrorContext(
+      buildFixedLineBlockerError(billingResult.fixedLineBlockers),
+      normalizedSelectorInput,
+    );
+  }
+
+  // Preview/generation consistency for scheduled recurring pricing: when the
+  // caller passed the revision/catalog sources it previewed, generation refuses
+  // if any changed (replaced revision, new version, switched policy, moved
+  // catalog price) rather than charging a different amount silently.
+  if (params.options?.expectedRecurringPricingSources !== undefined) {
+    try {
+      assertExpectedRecurringPricingSourcesCurrent({
+        charges: billingResult.charges,
+        expected: params.options.expectedRecurringPricingSources,
       });
     } catch (error) {
       throw error instanceof ManualInvoiceError
@@ -3936,10 +4189,17 @@ export async function createInvoiceFromBillingResultImpl(
     const capDeltas = await prepareProjectCapChargesForPersistence(
       trx,
       scopedCharges,
+      billingResult.currency_code ?? null,
     );
     persistedCapDeltas = capDeltas;
     const projectScheduleCharges = scopedCharges.filter(isProjectScheduleCharge);
-    const standardCharges = scopedCharges.filter((charge) => !isProjectScheduleCharge(charge));
+    // One-time mid-period true-ups are owned by the reconcile ledger, not by the
+    // engine's supplemental charge, so they keep their revision provenance and
+    // reconcile in place on regeneration. Exclude them from ordinary
+    // persistence and materialise them from the ledger instead.
+    const standardCharges = scopedCharges.filter(
+      (charge) => !isProjectScheduleCharge(charge) && !charge.contractChangeAdjustment,
+    );
     const standardSubtotal = await persistInvoiceCharges(
       trx,
       newInvoice!.invoice_id,
@@ -3962,7 +4222,16 @@ export async function createInvoiceFromBillingResultImpl(
       tenant,
       userId,
     );
-    const calculatedSubtotal = standardSubtotal + projectScheduleSubtotal;
+    // A deleted owner draft releases its settlement back to pending so this
+    // invoice can claim it instead of stranding the true-up.
+    await releaseOrphanedContractAdjustments({ trx, tenant });
+    const reconciledAdjustments = await reconcileContractChangeAdjustmentsForInvoice({
+      trx,
+      tenant,
+      invoiceId: newInvoice!.invoice_id,
+    });
+    const calculatedSubtotal =
+      standardSubtotal + projectScheduleSubtotal + reconciledAdjustments.amountCents;
 
     // Included recurring periods are linked to this invoice in this same
     // transaction, including legitimate zero-dollar leftovers. Profile-excluded
@@ -4035,41 +4304,17 @@ export async function createInvoiceFromBillingResultImpl(
       }
     }
 
-    // Process discounts (if any) - This might need adjustment if persistInvoiceCharges handles them
-    // For now, assume discounts are separate and need processing here.
-    let discountSubtotalAdjustment = 0;
-    // An invoice-level discount is not attributable to one segment — it applies
-    // across the whole invoice — so it takes the client default, which is what
-    // the chain's terminal step means (F029).
-    const discountBillingProfileId = billingResult.discounts.length > 0
-      ? await getClientDefaultBillingProfileId(trx, tenant, client.client_id)
-      : null;
-    for (const discount of billingResult.discounts) {
-      const netAmount = Math.round(-(discount.amount || 0));
-      const discountItem = {
-        item_id: uuidv4(),
-        invoice_id: newInvoice!.invoice_id,
-        description: discount.discount_name,
-        quantity: 1,
-        unit_price: netAmount,
-        net_amount: netAmount,
-        tax_amount: 0,
-        tax_rate: 0,
-        total_price: netAmount,
-        is_taxable: false,
-        is_discount: true,
-        is_manual: false,
-        billing_profile_id: discountBillingProfileId,
-        billing_profile_source: 'client_default' as const,
-        tenant,
-        created_by: userId
-      };
-      await tenantDb(trx, tenant).table('invoice_charges').insert(discountItem);
-      discountSubtotalAdjustment += netAmount; // Add negative amount
-    }
+    // Reconcile automatic discounts against the actual persisted (and
+    // reconciled) charge rows through the shared evaluator, with provenance, so
+    // a cancelled/edited true-up cannot leave a stale discount amount behind.
+    const discountMagnitude = await reconcileAutomaticInvoiceAdjustments({
+      trx,
+      tenant,
+      invoiceId: newInvoice!.invoice_id,
+    });
 
-    // Use the subtotal returned by persistInvoiceCharges + discount adjustment
-    const subtotal = calculatedSubtotal + discountSubtotalAdjustment;
+    // Use the subtotal from persisted charges minus the reconciled discounts.
+    const subtotal = calculatedSubtotal - discountMagnitude;
 
     // Leverage the shared tax helper so automated invoices mirror manual invoices
     const calculatedTax = await calculateAndDistributeTax(

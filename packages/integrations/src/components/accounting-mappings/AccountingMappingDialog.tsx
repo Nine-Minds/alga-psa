@@ -35,6 +35,12 @@ type AccountingMappingDialogProps = {
   existingMapping?: DisplayMapping | null;
   algaEntities: AccountingMappingEntityOption[];
   externalEntities: AccountingMappingEntityOption[];
+  /**
+   * Alga entity ids that already have a mapping in the loaded (realm-scoped)
+   * mappings. In add mode they are HIDDEN from the Alga picker; in edit mode
+   * the mapping's own entity stays visible, other mapped ones are hidden.
+   */
+  mappedAlgaIds?: ReadonlySet<string>;
   realmLabel?: string;
 };
 
@@ -47,6 +53,7 @@ export function AccountingMappingDialog({
   existingMapping,
   algaEntities,
   externalEntities,
+  mappedAlgaIds,
   realmLabel
 }: AccountingMappingDialogProps) {
   const { t } = useTranslation('msp/integrations');
@@ -129,9 +136,17 @@ export function AccountingMappingDialog({
   const cancelButtonId = `${dialogId}-cancel-button`;
   const saveButtonId = `${dialogId}-save-button`;
 
+  const ownAlgaId = existingMapping?.alga_entity_id;
   const algaOptions = useMemo(
-    () => algaEntities.map((entity) => ({ value: entity.id, label: entity.name })),
-    [algaEntities]
+    () =>
+      algaEntities
+        .filter(
+          (entity) =>
+            !mappedAlgaIds?.has(entity.id) ||
+            (isEditing && entity.id === ownAlgaId)
+        )
+        .map((entity) => ({ value: entity.id, label: entity.name })),
+    [algaEntities, mappedAlgaIds, isEditing, ownAlgaId]
   );
 
   const externalOptions = useMemo(

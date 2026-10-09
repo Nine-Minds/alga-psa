@@ -90,4 +90,87 @@ describe('expressionEngine guardrails', () => {
       })
     ).resolves.toBe('fallback@example.com');
   });
+
+  describe('truncate and substring', () => {
+    const run = (source: string, payload: Record<string, unknown> = {}) => evaluateExpressionSource(source, { payload });
+
+    it('truncates to at most length characters, ending included', async () => {
+      await expect(run('truncate(payload.note, 10)', { note: 'The printer is on fire again' })).resolves.toBe('The pri...');
+      await expect(run('truncate(payload.note, 10, "")', { note: 'The printer is on fire again' })).resolves.toBe('The printe');
+      await expect(run('truncate(payload.note, 10, " (more)")', { note: 'The printer is on fire again' })).resolves.toBe('The (more)');
+      await expect(run('truncate(payload.note, 50)', { note: 'short' })).resolves.toBe('short');
+      await expect(run('$truncate(payload.note, 2)', { note: 'abcdef' })).resolves.toBe('..');
+    });
+
+    it('counts characters, not UTF-16 units, so emoji are never split', async () => {
+      await expect(run('truncate(payload.note, 3, "")', { note: '😀😀😀😀' })).resolves.toBe('😀😀😀');
+      await expect(run('substring(payload.note, 1, 2)', { note: 'a😀b😀' })).resolves.toBe('😀b');
+    });
+
+    it('treats missing text as empty and rejects a missing length', async () => {
+      await expect(run('truncate(payload.missing, 5)')).resolves.toBe('');
+      await expect(run('substring(payload.missing, 0, 5)')).resolves.toBe('');
+      await expect(run('truncate(payload.note, payload.missing)', { note: 'abc' })).rejects.toThrow('truncate: length must be a number');
+    });
+
+    it('takes part of the text, counting a negative start from the end', async () => {
+      await expect(run('substring(payload.s, 0, 5)', { s: 'Hello world' })).resolves.toBe('Hello');
+      await expect(run('substring(payload.s, 6)', { s: 'Hello world' })).resolves.toBe('world');
+      await expect(run('substring(payload.s, -5)', { s: 'Hello world' })).resolves.toBe('world');
+      await expect(run('substring(payload.s, 50)', { s: 'Hello world' })).resolves.toBe('');
+      await expect(run('substring(payload.s, 2, -1)', { s: 'Hello world' })).resolves.toBe('');
+      await expect(run('substring(payload.s, 1.9, 2.9)', { s: 'Hello world' })).resolves.toBe('el');
+    });
+
+    it('stays linear on large text', async () => {
+      // Guards against quadratic helpers, not the 25ms production budget: a
+      // loaded, coverage-instrumented CI shard overshoots 25ms on linear work,
+      // while a quadratic walk of 200k characters takes seconds.
+      const budgetMs = 1_000;
+      const big = 'x'.repeat(200_000);
+      await expect(
+        evaluateExpressionSource('len(truncate(payload.big, 1000000))', { payload: { big } }, budgetMs)
+      ).resolves.toBe(100_000);
+      await expect(
+        evaluateExpressionSource('len(substring(payload.big, -10))', { payload: { big } }, budgetMs)
+      ).resolves.toBe(10);
+    });
+
+    it('stays well inside the evaluation budget on large text containing emoji', async () => {
+      const big = 'x😀'.repeat(100_000);
+      // 100,000 characters = 50,000 'x😀' pairs; len() counts UTF-16 units.
+      await expect(run('len(truncate(payload.big, 1000000, ""))', { big })).resolves.toBe(150_000);
+      await expect(run('truncate(payload.big, 4, "")', { big })).resolves.toBe('x😀x😀');
+      await expect(run('substring(payload.big, -3)', { big })).resolves.toBe('😀x😀');
+    });
+
+    it('treats a lone surrogate as one character', async () => {
+      await expect(run('substring(payload.s, 1, 2)', { s: 'a\uD83Db\uDE00c' })).resolves.toBe('\uD83Db');
+      await expect(run('truncate(payload.s, 3, "")', { s: '\uDE00😀ab' })).resolves.toBe('\uDE00😀a');
+    });
+
+    it('finds the same characters whether a position is nearer the start or the end of the text', async () => {
+      // Positions past the middle are located by walking back from the end; both walks
+      // must agree with code-point splitting, lone surrogates included.
+      const s = 'a😀\uDE00b\uD83D😀c\uDE00\uD83Dd😀';
+      const chars = Array.from(s);
+      for (let start = -chars.length; start <= chars.length; start += 1) {
+        const from = start < 0 ? chars.length + start : start;
+        await expect(run('substring(payload.s, payload.start)', { s, start })).resolves.toBe(chars.slice(from).join(''));
+        for (let length = 0; length <= chars.length - from + 1; length += 1) {
+          await expect(run('substring(payload.s, payload.start, payload.length)', { s, start, length })).resolves.toBe(
+            chars.slice(from, from + length).join('')
+          );
+        }
+      }
+      for (let max = 0; max <= chars.length; max += 1) {
+        await expect(run('truncate(payload.s, payload.max, "")', { s, max })).resolves.toBe(chars.slice(0, max).join(''));
+      }
+    });
+
+    it('is accepted by the validator the designer uses', () => {
+      expect(() => validateExpressionSource('truncate(payload.a, 10) & substring(payload.b, 0, 3)')).not.toThrow();
+    });
+  });
 });
+

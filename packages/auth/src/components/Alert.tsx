@@ -9,7 +9,9 @@ import type { AlertProps } from '@alga-psa/types';
 
 
 const Alert: React.FC<AlertProps> = ({ type, title, message, isOpen, onClose }) => {
-    const { t } = useTranslation('common');
+    // Auth pages fetch `common` rather than embedding it, and the pre-init
+    // translator echoes any key without a fallback, so the close control needs one.
+    const { t } = useTranslation('common', { useSuspense: false });
     // Status tokens, not palette literals: white on bg-yellow-400 measured 1.53:1,
     // and the per-pair *-foreground tokens already carry a readable ink for each fill.
     const getAlertStyles = (): { bgColor: string; textColor: string; fgColor: string; hoverColor: string; icon: React.JSX.Element } => {
@@ -42,7 +44,7 @@ const Alert: React.FC<AlertProps> = ({ type, title, message, isOpen, onClose }) 
               <button
                 onClick={onClose}
                 className={`absolute top-2 right-2 ${fgColor} hover:opacity-80 focus:outline-none focus:ring-2 focus:ring-current focus:ring-opacity-50 rounded-full`}
-                aria-label={t('common.close')}
+                aria-label={t('common.close', 'Close')}
               >
                 <X className="h-6 w-6" />
               </button>
@@ -57,7 +59,7 @@ const Alert: React.FC<AlertProps> = ({ type, title, message, isOpen, onClose }) 
                 onClick={onClose}
                 className={`mt-4 px-4 py-1 text-sm font-medium ${fgColor} ${textColor} rounded-full ${hoverColor} focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[rgb(var(--color-primary-500))]`}
               >
-                {t('common.close')}
+                {t('common.close', 'Close')}
               </button>
             </div>
           </div>

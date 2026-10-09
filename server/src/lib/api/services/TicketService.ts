@@ -1,4 +1,5 @@
 import { publishEvent } from '@alga-psa/event-bus/publishers';
+import { publishTicketTransitionsAfterCommit, ticketCreatedPublishedByCaller } from '@alga-psa/shared/lib/tickets/ticketLifecycleEvents';
 import { persistCommentPublication } from '@shared/lib/ticketCommentAttachments';
 /**
  * Ticket Service
@@ -32,6 +33,10 @@ import {
   type ClosedMasterChoice,
 } from '@alga-psa/tickets/lib/ticketBundlePolicy';
 import { deleteTicketChildRecords } from '@alga-psa/tickets/lib/deleteTicketChildRecords';
+import {
+  TICKET_LATEST_ACTIVITY_PUBLIC_SQL,
+  TICKET_LATEST_ACTIVITY_SQL,
+} from '@alga-psa/tickets/actions/ticketListSortSql';
 import { enforceTicketCloseRules, TicketCloseValidationError } from '@alga-psa/tickets/lib/validateTicketClosure';
 import { prepareTicketResourceReassignment } from '@alga-psa/db/reassignTicketResources';
 import {
@@ -40,13 +45,13 @@ import {
   getTicketResourcesCore,
   publishTicketResourceEvent,
   removeTicketResourceCore,
-} from '@alga-psa/tickets/lib/ticketResourceCore';
+} from '@alga-psa/shared/services/tickets/ticketResourceCore';
 import {
   TeamAssignmentError,
   assignTeamToTicketCore,
   removeTeamFromTicketCore,
   type RemoveTeamFromTicketOptions,
-} from '@alga-psa/tickets/lib/teamAssignmentCore';
+} from '@alga-psa/shared/services/tickets/teamAssignmentCore';
 import { deleteEntityWithValidation } from '@alga-psa/core/server';
 import { publishWorkflowEvent } from 'server/src/lib/eventBus/publishers';
 import {
@@ -58,6 +63,12 @@ import { locationAddressSql } from './locationAddressSql';
 import { inboundSenderLabel } from './ticketCommentAuthor';
 import { hasPermission } from '../../auth/rbac';
 import { TicketModel, CreateTicketInput } from '@shared/models/ticketModel';
+import {
+  CommentEmailRecipientsError,
+  prepareCommentEmailRecipients,
+  readCommentEmailRecipients,
+  stripCommentBccFromMetadata,
+} from '@shared/lib/tickets/commentEmailRecipients';
 import {
   TICKET_ACTIVITY_ACTOR,
   TICKET_ACTIVITY_ENTITY,
@@ -123,7 +134,58 @@ const BUNDLE_CHILD_LOCKED_FIELDS = ['status_id', 'assigned_to', 'priority_id'] a
 const TICKET_LIST_FIELD_ALLOWLIST = new Set<string>([
   ...TICKET_MOBILE_LIST_FIELDS,
   'mobile_list',
+  // Selectable on its own; deliberately not part of the mobile_list preset, so
+  // that payload (and its cost) is unchanged for existing mobile callers.
+  'latest_activity_at',
 ]);
+
+/**
+ * The sort keys `GET /api/v1/tickets` accepts, mapped to the physical ORDER BY
+ * term under this service's own join aliases (comp/stat/pri, not the web list's
+ * comp/s/p). This is an allowlist on purpose: the query schema only checks that
+ * `sort` is a string, so before this map an unknown value reached
+ * `orderBy('t.<value>')` and surfaced as a 500 from Postgres instead of a 400.
+ *
+ * `latest_activity_at` carries no fixed SQL — the expression depends on whether
+ * the caller is a client-portal contact (see TICKET_LATEST_ACTIVITY_PUBLIC_SQL).
+ */
+type TicketApiSortSpec = { column?: string; activity?: true };
+
+const TICKET_LIST_API_SORT_SQL: Record<string, TicketApiSortSpec> = {
+  ticket_number: { column: 't.ticket_number' },
+  title: { column: 't.title' },
+  entered_at: { column: 't.entered_at' },
+  updated_at: { column: 't.updated_at' },
+  closed_at: { column: 't.closed_at' },
+  due_date: { column: 't.due_date' },
+  client_name: { column: 'comp.client_name' },
+  status_name: { column: 'stat.name' },
+  priority_name: { column: 'pri.priority_name' },
+  latest_activity_at: { activity: true },
+};
+
+/** Long-standing API alias: tickets have no created_at column. */
+const TICKET_LIST_API_SORT_ALIASES: Record<string, string> = {
+  created_at: 'entered_at',
+};
+
+export const TICKET_LIST_API_SORT_KEYS = Object.keys(TICKET_LIST_API_SORT_SQL).sort();
+
+export function resolveTicketListApiSort(sort: string): { field: string; spec: TicketApiSortSpec } {
+  const field = TICKET_LIST_API_SORT_ALIASES[sort] ?? sort;
+  const spec = TICKET_LIST_API_SORT_SQL[field];
+  if (!spec) {
+    throw new ValidationError(
+      `Unknown sort field: ${sort}. Supported values: ${[
+        ...TICKET_LIST_API_SORT_KEYS,
+        ...Object.keys(TICKET_LIST_API_SORT_ALIASES),
+      ]
+        .sort()
+        .join(', ')}`
+    );
+  }
+  return { field, spec };
+}
 
 type TicketNotificationSuppressionInput = {
   suppressContactNotifications?: boolean;
@@ -357,6 +419,7 @@ export class TicketService extends BaseService<ITicket> {
       boardColumn: 't.board_id',
       contactColumn: 't.contact_name_id',
       billingProfileColumn: 't.billing_profile_id',
+      watchListColumn: 't.attributes',
     });
   }
 
@@ -460,11 +523,17 @@ export class TicketService extends BaseService<ITicket> {
       options.applyAuthorization(countScopedQuery.withBuilder(countQuery));
     }
 
-    // Apply sorting
+    // Apply sorting. Unknown keys are rejected here (400) rather than
+    // interpolated into `t.<key>` and failing as a database error (500).
     const sortField = sort || this.defaultSort;
-    const sortOrder = order || this.defaultOrder;
-    // Map created_at to entered_at for tickets table
-    const mappedSortField = sortField === 'created_at' ? 'entered_at' : sortField;
+    const sortDirection = (order || this.defaultOrder) === 'asc' ? 'asc' : 'desc';
+    const { field: mappedSortField, spec: sortSpec } = resolveTicketListApiSort(sortField);
+
+    // Client-portal callers must not be able to read the timing of internal
+    // notes off this column, nor have them reorder the portal list.
+    const latestActivitySql = clientVisibility
+      ? TICKET_LATEST_ACTIVITY_PUBLIC_SQL
+      : TICKET_LATEST_ACTIVITY_SQL;
 
     const wants = (field: string) => Boolean(selectedFields && selectedFields.includes(field));
 
@@ -505,16 +574,14 @@ export class TicketService extends BaseService<ITicket> {
       dataQuery = scopedDb.tenantJoin(dataQuery, 'users as assigned_user', 't.assigned_to', 'assigned_user.user_id', { type: 'left' });
     }
 
-    // Handle sorting by related fields
-    if (mappedSortField === 'client_name') {
-      dataQuery = dataQuery.orderBy('comp.client_name', sortOrder);
-    } else if (mappedSortField === 'status_name') {
-      dataQuery = dataQuery.orderBy('stat.name', sortOrder);
-    } else if (mappedSortField === 'priority_name') {
-      dataQuery = dataQuery.orderBy('pri.priority_name', sortOrder);
+    // Order by the allowlisted term, then ticket_id desc so pages stay stable
+    // across a tie (parity with applyTicketListSort on the web list).
+    if (sortSpec.activity) {
+      dataQuery = dataQuery.orderByRaw(`${latestActivitySql} ${sortDirection}`);
     } else {
-      dataQuery = dataQuery.orderBy(`t.${mappedSortField}`, sortOrder);
+      dataQuery = dataQuery.orderBy(sortSpec.column!, sortDirection);
     }
+    dataQuery = dataQuery.orderBy('t.ticket_id', 'desc');
 
     // Apply pagination
     const offset = (page - 1) * limit;
@@ -550,6 +617,9 @@ export class TicketService extends BaseService<ITicket> {
             THEN CONCAT(assigned_user.first_name, ' ', assigned_user.last_name) 
             ELSE NULL 
           END as assigned_to_name`),
+          // Same expression the latest_activity_at sort orders by, so the
+          // reported value is exactly the one the ordering used.
+          knex.raw(`${latestActivitySql} as latest_activity_at`),
         );
     } else {
       const selectParts: any[] = [];
@@ -567,6 +637,9 @@ export class TicketService extends BaseService<ITicket> {
       if (selectedFields.includes('entered_at')) selectParts.push('t.entered_at');
       if (selectedFields.includes('closed_at')) selectParts.push('t.closed_at');
       if (selectedFields.includes('master_ticket_id')) selectParts.push('t.master_ticket_id');
+      if (selectedFields.includes('latest_activity_at')) {
+        selectParts.push(knex.raw(`${latestActivitySql} as latest_activity_at`));
+      }
       if (needsBundleMaster) selectParts.push('mt.ticket_number as bundle_master_ticket_number');
       if (needsBundleChildCount) selectParts.push(bundleChildCountSelect);
 
@@ -596,6 +669,14 @@ export class TicketService extends BaseService<ITicket> {
       dataQuery,
       countQuery.count('* as count')
     ]);
+
+    // GREATEST() comes back as a Date; the list contract is an ISO string
+    // (same normalization as mapTicketListItems on the web list).
+    for (const ticket of tickets as Array<Record<string, unknown>>) {
+      if (ticket.latest_activity_at instanceof Date) {
+        ticket.latest_activity_at = ticket.latest_activity_at.toISOString();
+      }
+    }
 
     if (wants('tags')) {
       await this.attachTicketTags(knex, context.tenant, tickets as Array<Record<string, unknown>>);
@@ -1662,7 +1743,7 @@ export class TicketService extends BaseService<ITicket> {
           context.tenant,
           trx,
           {}, // validation options
-          undefined,
+          ticketCreatedPublishedByCaller('TicketService publishes TICKET_CREATED after the transaction commits'),
           analyticsTracker,
           context.userId,
           3 // max retries
@@ -2050,6 +2131,29 @@ export class TicketService extends BaseService<ITicket> {
         }
       }
 
+      // Transition events (TICKET_STATUS_CHANGED etc.), published after commit.
+      await publishTicketTransitionsAfterCommit(trx, {
+        tenant: context.tenant,
+        before: {
+          ticketId: id,
+          statusId: currentTicket.status_id,
+          priorityId: currentTicket.priority_id ?? null,
+          assignedTo: currentTicket.assigned_to ?? null,
+          boardId: currentTicket.board_id,
+          escalated: currentTicket.escalated,
+        },
+        after: {
+          ticketId: id,
+          statusId: ticket.status_id,
+          priorityId: ticket.priority_id ?? null,
+          assignedTo: ticket.assigned_to ?? null,
+          boardId: ticket.board_id,
+          escalated: ticket.escalated,
+        },
+        actorUserId: context.userId,
+        statusChangedPayloadExtras: { suppressContactNotifications, suppressInternalNotifications },
+      });
+
       const structuredChanges: Record<string, { old: unknown; new: unknown }> = {};
       const trackedChangeFields: Array<keyof ITicket> = [
         'title',
@@ -2179,7 +2283,7 @@ export class TicketService extends BaseService<ITicket> {
         context.userId,
         context.tenant,
         trx,
-        undefined,
+        ticketCreatedPublishedByCaller('TicketService publishes TICKET_CREATED after the transaction commits'),
         analyticsTracker
       );
 
@@ -2342,10 +2446,19 @@ export class TicketService extends BaseService<ITicket> {
         };
       }
 
+      // Bcc is MSP-only. The raw row is spread below, so a client-visible
+      // caller gets the metadata with the bcc list emptied before anything
+      // reads it — the mask lives here rather than at the route so no future
+      // client-facing caller of this service can leak it.
+      const metadata = clientVisibility
+        ? stripCommentBccFromMetadata(comment.metadata)
+        : comment.metadata;
+
       // Full branch: select('tc.*') above means ...comment already carries
       // thread_id / parent_comment_id / deleted_at — no explicit mapping needed.
       return {
         ...comment,
+        metadata,
         comment_text: comment.note,
         markdown_content: comment.markdown_content || null,
         comment_html: renderTicketRichTextHtml(comment.note),
@@ -2357,6 +2470,7 @@ export class TicketService extends BaseService<ITicket> {
         author_contact_email: comment.author_contact_email || null,
         reactions: reactionsMap[comment.comment_id] ?? [],
         reaction_user_names: reactionUserNames,
+        email_recipients: readCommentEmailRecipients(metadata),
       };
     });
   }
@@ -2463,6 +2577,25 @@ export class TicketService extends BaseService<ITicket> {
       // check runs after visibility is resolved rather than on the raw body.
       const scheduledPublication = resolveScheduledCommentPublication(data, apiIsInternal);
 
+      // One-off Cc/Bcc for this comment only. The schema already rejects them
+      // on an explicitly internal body; this also catches a reply that
+      // inherits internal visibility from its thread.
+      let emailRecipients: Awaited<ReturnType<typeof prepareCommentEmailRecipients>> = null;
+      try {
+        emailRecipients = await prepareCommentEmailRecipients(trx, context.tenant, {
+          cc: data.cc,
+          bcc: data.bcc,
+          isInternal: apiIsInternal,
+        });
+      } catch (error) {
+        if (error instanceof CommentEmailRecipientsError) {
+          throw new ValidationError('Validation failed', [
+            { path: [error.field], message: error.message },
+          ]);
+        }
+        throw error;
+      }
+
       const commentData = {
         comment_id: apiCommentId,
         thread_id: apiThreadId,
@@ -2475,7 +2608,9 @@ export class TicketService extends BaseService<ITicket> {
         tenant: context.tenant,
         created_at: apiNowIso,
         updated_at: apiNowIso,
-        metadata: data.metadata,
+        metadata: emailRecipients
+          ? { ...(data.metadata ?? {}), email_recipients: emailRecipients }
+          : data.metadata,
         ...(scheduledPublication
           ? {
               publish_state: 'scheduled',
@@ -2543,7 +2678,8 @@ export class TicketService extends BaseService<ITicket> {
         created_by: comment.user_id ?? null,
         author_contact_id: comment.contact_id ?? null,
         author_contact_name: null,
-        author_contact_email: null
+        author_contact_email: null,
+        email_recipients: readCommentEmailRecipients(comment.metadata),
       };
 
       const eventPayload = {

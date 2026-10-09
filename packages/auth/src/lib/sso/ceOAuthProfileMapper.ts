@@ -1,8 +1,29 @@
 import User from '@alga-psa/db/models/user';
-import type { OAuthProfileMappingInput, OAuthProfileMappingResult } from './types';
+import type {
+  OAuthMappingFailureCode,
+  OAuthProfileMappingInput,
+  OAuthProfileMappingResult,
+} from './types';
 
 function normalizeEmail(email: string | null | undefined): string {
   return (email || '').trim().toLowerCase();
+}
+
+// Throwing here would surface as Auth.js `error=Configuration`; report the
+// reason as data so `callbacks.signIn` can redirect with a readable message.
+function buildAuthFailureResult(
+  code: OAuthMappingFailureCode,
+  providerEmail?: string,
+): OAuthProfileMappingResult {
+  return {
+    id: '',
+    email: '',
+    name: '',
+    username: '',
+    proToken: '',
+    user_type: 'internal',
+    authFailure: { code, providerEmail, userType: 'internal' },
+  };
 }
 
 function buildDisplayName(user: {
@@ -20,20 +41,20 @@ export async function mapCeOAuthProfileToExtendedUser(
 ): Promise<OAuthProfileMappingResult> {
   const normalizedEmail = normalizeEmail(input.email);
   if (!normalizedEmail) {
-    throw new Error('OAuth profile did not include an email address');
+    return buildAuthFailureResult('missing_email');
   }
 
   const user = await User.findUserByEmailAndType(normalizedEmail, 'internal');
   if (!user) {
-    throw new Error('OAuth user is not authorized for MSP sign-in');
+    return buildAuthFailureResult('no_matching_user', normalizedEmail);
   }
 
   if (user.is_inactive) {
-    throw new Error('OAuth user account is inactive');
+    return buildAuthFailureResult('inactive_user', normalizedEmail);
   }
 
   if (user.user_type !== 'internal') {
-    throw new Error('OAuth user is not an internal MSP account');
+    return buildAuthFailureResult('user_type_mismatch', normalizedEmail);
   }
 
   return {

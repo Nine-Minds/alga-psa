@@ -58,9 +58,10 @@ function ContactQuickViewWithDocuments({
 /**
  * Open a contact's quick view in the shared drawer from just an id — one hop
  * to full contact details instead of contacts-list → row → quick view.
- * (Contacts.tsx and ClientContactsList still inline this shape with their
- * own list-refresh concerns; they're candidates to converge on this hook.)
+ * (Contacts.tsx still inlines this shape with its own list-refresh
+ * concerns; it's a candidate to converge on this hook.)
  */
+// LEVERAGE: pattern contact-drawer-loader — open loading drawer → load contact + getAllClients(true) → replaceDrawer
 export function useContactQuickViewDrawer(): (
   contactId: string,
   options?: { onChangesSaved?: () => void },

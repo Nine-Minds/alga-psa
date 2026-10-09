@@ -81,10 +81,10 @@ describe('InputMappingEditor structured literals', () => {
     );
 
     expect(
-      document.getElementById('mapping-step-nested-modes-requester.name-source-mode-container')
+      document.getElementById('mapping-step-nested-modes-requester.name-value-source-row')
     ).toBeInTheDocument();
     expect(
-      document.getElementById('mapping-step-nested-modes-requester.email-source-mode-container')
+      document.getElementById('mapping-step-nested-modes-requester.email-value-source-row')
     ).toBeInTheDocument();
     expect(screen.getByDisplayValue('alex@example.com')).toBeInTheDocument();
   });
@@ -295,7 +295,9 @@ describe('InputMappingEditor structured literals', () => {
     expect(numberInput?.value).toBe('3');
 
     expect(stringInput).not.toBeNull();
-    expect(stringInput?.type).toBe('text');
+    // One-line text wraps and grows instead of scrolling; it starts one row tall.
+    expect(stringInput?.tagName).toBe('TEXTAREA');
+    expect(stringInput?.getAttribute('rows')).toBe('1');
     expect(stringInput?.value).toBe('Printer offline');
   });
 
@@ -373,9 +375,113 @@ describe('InputMappingEditor structured literals', () => {
     ) as HTMLInputElement | null;
 
     expect(nameInput?.value).toBe('');
-    expect(emailInput?.value).toBe('');
+    // Optional sub-fields go back to unset rather than an empty placeholder value.
+    expect(emailInput).toBeNull();
+    expect(document.getElementById('mapping-step-reset-requester-literal-object-unset-email')).toBeInTheDocument();
     expect(screen.queryByDisplayValue('Alex')).not.toBeInTheDocument();
     expect(screen.queryByDisplayValue('alex@example.com')).not.toBeInTheDocument();
+  });
+
+  it('leaves optional sub-fields unset until the user sets one', () => {
+    const onChange = vi.fn();
+    render(
+      <InputMappingEditor
+        value={{ include: {} }}
+        onChange={onChange}
+        targetFields={[
+          {
+            name: 'include',
+            type: 'object',
+            children: [
+              { name: 'comments', type: 'boolean' },
+              { name: 'comments_limit', type: 'number', constraints: { minimum: 1, maximum: 200 } },
+            ],
+          },
+        ]}
+        fieldOptions={[]}
+        stepId="step-optional"
+        positionsHandlers={positionsHandlers}
+      />
+    );
+
+    expect(document.getElementById('mapping-step-optional-include-literal-object-unset-comments')).toBeInTheDocument();
+    expect(document.getElementById('mapping-step-optional-include-literal-object-unset-comments_limit')).toBeInTheDocument();
+    expect(screen.queryByDisplayValue('0')).not.toBeInTheDocument();
+    expect(onChange).not.toHaveBeenCalled();
+
+    fireEvent.click(document.getElementById('mapping-step-optional-include-literal-object-set-comments') as HTMLElement);
+    // Setting a yes/no starts it at yes: setting it implies wanting it on.
+    expect(onChange).toHaveBeenLastCalledWith({ include: { comments: true } });
+  });
+
+  it('counts an empty list, or a list of blank entries, as not filled in', () => {
+    const fields = [
+      {
+        name: 'to',
+        type: 'array',
+        required: true,
+        children: [{ name: 'email', type: 'string', required: true }],
+      },
+    ];
+    const { rerender } = render(
+      <InputMappingEditor
+        value={{ to: [] }}
+        onChange={vi.fn()}
+        targetFields={fields}
+        fieldOptions={[]}
+        stepId="step-empty-list"
+        positionsHandlers={positionsHandlers}
+      />
+    );
+    expect(screen.getByText('1 required missing')).toBeInTheDocument();
+
+    rerender(
+      <InputMappingEditor
+        value={{ to: [{ email: '' }] }}
+        onChange={vi.fn()}
+        targetFields={fields}
+        fieldOptions={[]}
+        stepId="step-empty-list"
+        positionsHandlers={positionsHandlers}
+      />
+    );
+    expect(screen.getByText('1 required missing')).toBeInTheDocument();
+
+    rerender(
+      <InputMappingEditor
+        value={{ to: [{ email: 'a@example.com' }] }}
+        onChange={vi.fn()}
+        targetFields={fields}
+        fieldOptions={[]}
+        stepId="step-empty-list"
+        positionsHandlers={positionsHandlers}
+      />
+    );
+    expect(screen.queryByText('1 required missing')).not.toBeInTheDocument();
+  });
+
+  it('shows plain-language labels for choice options from schema metadata', () => {
+    render(
+      <InputMappingEditor
+        value={{ on_not_found: 'return_null' }}
+        onChange={vi.fn()}
+        targetFields={[{
+          name: 'on_not_found',
+          type: 'string',
+          enum: ['return_null', 'error'],
+          optionLabels: {
+            return_null: 'Continue with an empty result',
+            error: 'Fail the step (a surrounding Try/Catch handles it)',
+          },
+        }]}
+        fieldOptions={[]}
+        stepId="step-option-labels"
+        positionsHandlers={positionsHandlers}
+      />
+    );
+    // The selected option reads in plain language instead of its stored value.
+    expect(screen.getAllByText('Continue with an empty result').length).toBeGreaterThan(0);
+    expect(screen.queryByText('return_null')).not.toBeInTheDocument();
   });
 
   it('T137: reopening a saved draft rehydrates nested authored values correctly', () => {

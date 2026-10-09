@@ -132,6 +132,23 @@ describe('pickBrandLogoVariant', () => {
     expect(pickBrandLogoVariant('wide', isDarkEmailHeader({ primary: '#fde68a', secondary: '#fcd34d' }), ALL))
       .toBe('wide');
   });
+
+  it('lets a pinned artwork overrule the header', () => {
+    // A mid grey header reads as light to the luminance rule, but the tenant
+    // drew a white wordmark for it.
+    const midGrey = isDarkEmailHeader({ primary: '#6b7280', secondary: '#808795' });
+    expect(midGrey).toBe(false);
+    expect(pickBrandLogoVariant('wide', midGrey, ALL, 'dark')).toBe('wide-dark');
+    expect(pickBrandLogoVariant('default', midGrey, ALL, 'dark')).toBe('dark');
+    expect(pickBrandLogoVariant('wide', true, ALL, 'light')).toBe('wide');
+    expect(pickBrandLogoVariant('wide', midGrey, ALL, 'auto')).toBe('wide');
+  });
+
+  it('still settles for what was uploaded when the pinned artwork is missing', () => {
+    expect(pickBrandLogoVariant('wide', false, { logoUrl: ALL.logoUrl, logoWideUrl: ALL.logoWideUrl }, 'dark'))
+      .toBe('wide');
+    expect(pickBrandLogoVariant('default', false, { logoUrl: ALL.logoUrl }, 'dark')).toBe('default');
+  });
 });
 
 describe('resolveBrandLogoForPreview', () => {

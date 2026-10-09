@@ -319,6 +319,57 @@ describe('quoteActions', () => {
     expect(result).toMatchObject({ quote_id: QUOTE_ID, quote_number: 'Q-0007' });
   });
 
+  it('T009: createQuote resolves omitted currency as client default, then tenant default, then USD, with explicit currency winning', async () => {
+    const baseImpl = mockKnex.getMockImplementation();
+    const withCurrency = (clientCurrency: string | null, tenantCurrency: string | null) => {
+      mockKnex.mockImplementation((table: string) => {
+        if (table === 'clients') {
+          return makeQuery(clientCurrency ? { default_currency_code: clientCurrency } : null);
+        }
+        if (table === 'default_billing_settings') {
+          return makeQuery(tenantCurrency ? { default_currency_code: tenantCurrency } : null);
+        }
+        return baseImpl!(table);
+      });
+    };
+
+    const { createQuote } = await import('../../src/actions/quoteActions');
+    const withoutCurrency = { ...baseQuoteInput, currency_code: undefined };
+
+    withCurrency('EUR', 'AUD');
+    await createQuote(withoutCurrency as any);
+    expect(Quote.create).toHaveBeenLastCalledWith(
+      mockKnex,
+      TENANT_ID,
+      expect.objectContaining({ currency_code: 'EUR' })
+    );
+
+    withCurrency(null, 'AUD');
+    await createQuote(withoutCurrency as any);
+    expect(Quote.create).toHaveBeenLastCalledWith(
+      mockKnex,
+      TENANT_ID,
+      expect.objectContaining({ currency_code: 'AUD' })
+    );
+
+    withCurrency(null, null);
+    await createQuote(withoutCurrency as any);
+    expect(Quote.create).toHaveBeenLastCalledWith(
+      mockKnex,
+      TENANT_ID,
+      expect.objectContaining({ currency_code: 'USD' })
+    );
+
+    // An explicit currency always wins over both defaults.
+    withCurrency('EUR', 'AUD');
+    await createQuote({ ...baseQuoteInput, currency_code: 'GBP' } as any);
+    expect(Quote.create).toHaveBeenLastCalledWith(
+      mockKnex,
+      TENANT_ID,
+      expect.objectContaining({ currency_code: 'GBP' })
+    );
+  });
+
   it('T044: updateQuote enforces status transition rules', async () => {
     vi.spyOn(Quote, 'update').mockRejectedValue(new Error('Invalid quote status transition from draft to accepted'));
 
@@ -1215,7 +1266,7 @@ describe('quoteActions', () => {
     const sendableQuote = {
       quote_id: QUOTE_ID,
       quote_number: 'Q-0001',
-      title: 'Quote',
+      title: 'Estimate',
       total_amount: 5000,
       currency_code: 'USD',
       valid_until: '2026-03-20T00:00:00.000Z',
@@ -1235,7 +1286,32 @@ describe('quoteActions', () => {
       subject: 'Quote Q-0001 from Acme MSP',
       html: expect.stringContaining('Q-0001'),
       text: expect.stringContaining('Valid Until:'),
-      attachments: [expect.objectContaining({ filename: 'Quote_Q-0001.pdf', content: Buffer.from('pdf-content') })],
+      attachments: [expect.objectContaining({ filename: 'Estimate.pdf', content: Buffer.from('pdf-content') })],
+    }));
+  });
+
+  it('uses the quote number fallback for a blank-title email attachment', async () => {
+    const blankTitleQuote = {
+      quote_id: QUOTE_ID,
+      quote_number: 'Q-0001',
+      title: '   ',
+      total_amount: 5000,
+      currency_code: 'USD',
+      valid_until: '2026-03-20T00:00:00.000Z',
+      status: 'draft',
+      is_template: false,
+      client_id: null,
+      contact_id: null,
+    };
+    vi.spyOn(Quote, 'getById')
+      .mockResolvedValueOnce(blankTitleQuote as any)
+      .mockResolvedValueOnce({ ...blankTitleQuote, status: 'sent' } as any);
+
+    const { sendQuote } = await import('../../src/actions/quoteActions');
+    await sendQuote(QUOTE_ID, { email_addresses: ['client@example.com'] });
+
+    expect(sendEmailMock).toHaveBeenCalledWith(expect.objectContaining({
+      attachments: [expect.objectContaining({ filename: 'Quote_Q-0001.pdf' })],
     }));
   });
 

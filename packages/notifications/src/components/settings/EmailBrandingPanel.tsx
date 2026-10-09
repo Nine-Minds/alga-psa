@@ -16,6 +16,7 @@ import {
   isDarkEmailHeader,
   pickBrandLogoVariant,
   STOCK_EMAIL_PALETTE,
+  type EmailBrandingLogoArtwork,
 } from "@alga-psa/email/branding";
 import {
   getEmailBrandingStatusAction,
@@ -42,6 +43,13 @@ import {
 
 /** Tried in order for the single panel preview; every template gets its own preview in the apply dialog. */
 const PREFERRED_PREVIEW_TEMPLATE_NAMES = ['ticket-created', 'invoice-email'];
+
+/** The artwork pin, in the order the panel offers it; auto follows the header color. */
+const LOGO_ARTWORK_OPTIONS: Array<{ value: EmailBrandingLogoArtwork; key: string; fallback: string }> = [
+  { value: 'auto', key: 'logoArtworkAuto', fallback: 'Match the header' },
+  { value: 'light', key: 'logoArtworkLight', fallback: 'Light-background logo' },
+  { value: 'dark', key: 'logoArtworkDark', fallback: 'Dark-background logo' },
+];
 
 /** Client-side edition check; the server enforces it again with isEnterprise. */
 const isEnterpriseEdition = process.env.NEXT_PUBLIC_EDITION === 'enterprise';
@@ -180,7 +188,9 @@ export function EmailBrandingPanel({
         primary: draft.primary,
         secondary: draft.singleColor ? null : draft.secondary,
         overrides: draft.overrides,
-        logo: draft.logoVariant ? { variant: draft.logoVariant } : null,
+        logo: draft.logoVariant
+          ? { variant: draft.logoVariant, ...(draft.logoArtwork !== 'auto' ? { artwork: draft.logoArtwork } : {}) }
+          : null,
         hideAttribution: draft.hideAttribution,
       });
       setSavedDraft(draft);
@@ -220,15 +230,16 @@ export function EmailBrandingPanel({
   const hasAnyLogo = hasWideLogo || hasSquareLogo;
 
   // Preview exactly what an apply would write, brand assets included — same
-  // chooser, same header-darkness rule. The row references the logo by
-  // content-id, so the preview swaps it back for the branding URL the iframe
+  // chooser, same header-darkness rule, same pin. The row references the logo
+  // by content-id, so the preview swaps it back for the branding URL the iframe
   // can actually load.
+  const headerIsDark = isDarkEmailHeader(resolved);
   const previewHtml = (html: string) => {
     const recolored = applyEmailPalette(html, STOCK_EMAIL_PALETTE, resolved);
     if (!isEnterpriseEdition || !status.isEnterprise) return recolored;
 
     const variant = draft.logoVariant
-      ? pickBrandLogoVariant(draft.logoVariant, isDarkEmailHeader(resolved), status.logoOptions)
+      ? pickBrandLogoVariant(draft.logoVariant, headerIsDark, status.logoOptions, draft.logoArtwork)
       : null;
 
     return decorateBrandedHtml(recolored, {
@@ -368,29 +379,54 @@ export function EmailBrandingPanel({
 
                 {hasAnyLogo ? (
                   draft.logoVariant && (
-                    <div className="flex gap-2">
-                      {hasWideLogo && (
-                        <Button
-                          id="email-branding-logo-variant-wide"
-                          size="sm"
-                          variant={draft.logoVariant === 'wide' ? 'default' : 'outline'}
-                          disabled={!status.canEdit}
-                          onClick={() => update({ logoVariant: 'wide' })}
-                        >
-                          {t('notifications.emailBranding.enterprise.logoWide', 'Wide logo')}
-                        </Button>
-                      )}
-                      {hasSquareLogo && (
-                        <Button
-                          id="email-branding-logo-variant-default"
-                          size="sm"
-                          variant={draft.logoVariant === 'default' ? 'default' : 'outline'}
-                          disabled={!status.canEdit}
-                          onClick={() => update({ logoVariant: 'default' })}
-                        >
-                          {t('notifications.emailBranding.enterprise.logoDefault', 'Square logo')}
-                        </Button>
-                      )}
+                    <div className="space-y-3">
+                      <div className="flex gap-2">
+                        {hasWideLogo && (
+                          <Button
+                            id="email-branding-logo-variant-wide"
+                            size="sm"
+                            variant={draft.logoVariant === 'wide' ? 'default' : 'outline'}
+                            disabled={!status.canEdit}
+                            onClick={() => update({ logoVariant: 'wide' })}
+                          >
+                            {t('notifications.emailBranding.enterprise.logoWide', 'Wide logo')}
+                          </Button>
+                        )}
+                        {hasSquareLogo && (
+                          <Button
+                            id="email-branding-logo-variant-default"
+                            size="sm"
+                            variant={draft.logoVariant === 'default' ? 'default' : 'outline'}
+                            disabled={!status.canEdit}
+                            onClick={() => update({ logoVariant: 'default' })}
+                          >
+                            {t('notifications.emailBranding.enterprise.logoDefault', 'Square logo')}
+                          </Button>
+                        )}
+                      </div>
+
+                      <div className="space-y-1">
+                        <Label>{t('notifications.emailBranding.enterprise.logoArtwork', 'Logo artwork')}</Label>
+                        <div className="flex flex-wrap gap-2">
+                          {LOGO_ARTWORK_OPTIONS.map(({ value, key, fallback }) => (
+                            <Button
+                              key={value}
+                              id={`email-branding-logo-artwork-${value}`}
+                              size="sm"
+                              variant={draft.logoArtwork === value ? 'default' : 'outline'}
+                              disabled={!status.canEdit}
+                              onClick={() => update({ logoArtwork: value })}
+                            >
+                              {t(`notifications.emailBranding.enterprise.${key}`, fallback)}
+                            </Button>
+                          ))}
+                        </div>
+                        <p id="email-branding-logo-artwork-hint" className="text-xs text-gray-500">
+                          {headerIsDark
+                            ? t('notifications.emailBranding.enterprise.logoArtworkAutoDark', 'Automatic reads this header as dark and uses the dark-background logo.')
+                            : t('notifications.emailBranding.enterprise.logoArtworkAutoLight', 'Automatic reads this header as light and uses the light-background logo.')}
+                        </p>
+                      </div>
                     </div>
                   )
                 ) : (

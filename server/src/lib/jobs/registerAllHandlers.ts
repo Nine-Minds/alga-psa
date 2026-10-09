@@ -53,6 +53,7 @@ import {
   ReconcileHourBlockAllocationsJobData,
 } from '@alga-psa/jobs/handlers/reconcileHourBlockAllocationsHandler';
 import { createDateTriggerScanHandler, dateTriggerScanHandler, DateTriggerScanJobData } from '@alga-psa/jobs/handlers/dateTriggerScanHandler';
+import { generateRecurringTicketsHandler, GENERATE_RECURRING_TICKETS_JOB, GenerateRecurringTicketsJobData } from './handlers/generateRecurringTicketsHandler';
 import { configureEditionDateTriggerWorkflowLauncher } from './dateTriggerWorkflowLauncher';
 import {
   processRenewalQueueHandler,
@@ -140,6 +141,8 @@ import {
   RMM_DEVICE_SYNC_JOB,
 } from '@alga-psa/jobs/handlers/rmmAlertPollingHandlers';
 import { slaTimerHandler, SlaTimerJobData } from './handlers/slaTimerHandler';
+import { MAINTENANCE_FANOUT_JOB } from './serverMaintenanceJobNames';
+import { prepareMaintenanceRegistry, runMaintenanceJobExclusive } from './runMaintenanceJobExclusive';
 import { autoCloseTicketsHandler, AutoCloseTicketsJobData } from '@alga-psa/jobs/handlers/autoCloseTicketsHandler';
 import {
   workflowQuotaResumeScanHandler,
@@ -524,6 +527,15 @@ export async function registerAllJobHandlers(
   const runDateTriggerScan = dateTriggerLauncher ? createDateTriggerScanHandler(dateTriggerLauncher) : dateTriggerScanHandler;
   JobHandlerRegistry.register<DateTriggerScanJobData & BaseJobData>({ name: 'date-trigger-scan', handler: async (_jobId, data) => { await runDateTriggerScan(data); }, retry: { maxAttempts: 3 } }, registerOpts);
 
+  JobHandlerRegistry.register<GenerateRecurringTicketsJobData & BaseJobData>(
+    {
+      name: GENERATE_RECURRING_TICKETS_JOB,
+      handler: async (_jobId, data) => { await generateRecurringTicketsHandler(data); },
+      retry: { maxAttempts: 3 },
+    },
+    registerOpts
+  );
+
   JobHandlerRegistry.register<RenewalQueueProcessorJobData & BaseJobData>(
     {
       name: 'process-renewal-queue',
@@ -817,6 +829,22 @@ export async function registerAllJobHandlers(
         },
         retry: { maxAttempts: 2 },
         timeoutMs: 300000, // 5 minutes
+      },
+      registerOpts
+    );
+
+    // CE maintenance fan-out: the global `maintenance-fanout:<jobName>` pg-boss
+    // schedules (convergeCeMaintenanceSchedules) all deliver to this handler. EE
+    // runs the same fan-out from its Temporal schedules and must not register it.
+    JobHandlerRegistry.register<BaseJobData & { jobName: string }>(
+      {
+        name: MAINTENANCE_FANOUT_JOB,
+        handler: async (_jobId, data) => {
+          await prepareMaintenanceRegistry();
+          await runMaintenanceJobExclusive(String(data.jobName));
+        },
+        retry: { maxAttempts: 3 },
+        timeoutMs: 3_600_000, // 1 hour, matches the schedules' expireInSeconds
       },
       registerOpts
     );

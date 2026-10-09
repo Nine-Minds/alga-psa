@@ -63,7 +63,7 @@ test('current first-attempt pass joins exact run and is deterministic without mu
   assert.equal(result.records[0].status,'observed-pass'); assert.equal(result.status,'passed');
   assert.deepEqual(reconcile(input),result);assert.deepEqual(input,before);
 });
-for(const [name,mutate,status] of [
+const cases = [
   ['CI success without export',x=>x.exportedRows.rows=[],'missing-export'],
   ['journey cannot substitute for run',x=>x.exportedRows.rows.shift(),'missing-export'],
   ['cancelled before recorder',x=>{x.expectedExecutions[0].conclusion='cancelled';x.exportedRows.rows=[]},'cancelled'],
@@ -78,7 +78,46 @@ for(const [name,mutate,status] of [
   ['missing journey',x=>x.exportedRows.rows.pop(),'incomplete'],
   ['duplicate journey identity',x=>{x.exportedRows.rows.push([...x.exportedRows.rows[1]]);set(x,0,'collected',2);set(x,0,'executed',2)},'incomplete'],
   ['unknown counts',x=>set(x,0,'collected',''),'incomplete'],
-]) test(name,()=>{const input=fixture();mutate(input);const result=reconcile(input);assert.equal(result.records[0].status,status);assert.equal(result.status,'incomplete')});
+];
+for(const [name,mutate,status] of cases) test(name,()=>{const input=fixture();mutate(input);const result=reconcile(input);assert.equal(result.records[0].status,status);assert.equal(result.status,'incomplete')});
+// Collection now hands reconcile only the rows whose run_url names the run being
+// reconciled. Padding the same input with rows it used to receive must leave the
+// report byte-identical; that is what proves no reconcile logic moved.
+const foreign=[row({row_kind:'run',schema_version:2,tested_sha:'a'.repeat(40),edition:'enterprise',event_name:'pull_request',
+  run_url:'https://github.com/Nine-Minds/alga-psa/actions/runs/124',run_id:'124',run_attempt:2,lane_status:'failed'}),
+ row({row_kind:'run',schema_version:2,edition:'enterprise',run_attempt:2,run_url:'https://github.com/other/repository/actions/runs/123',run_id:'123'}),
+ row({row_kind:'journey',edition:'enterprise',run_url:'https://github.com/Nine-Minds/alga-psa/actions/runs/1234',run_id:'1234'}),
+ row({row_kind:'run',edition:'enterprise',run_url:''}),[]];
+for(const [name,mutate] of [['unchanged',()=>{}],...cases]) test(`${name}: filtered rows reconcile identically to the whole table`,()=>{
+ const filtered=fixture();mutate(filtered);
+ const whole=structuredClone(filtered);
+ whole.exportedRows.rows=[foreign[0],...whole.exportedRows.rows,...foreign.slice(1)];
+ assert.deepEqual(reconcile(whole),reconcile(filtered));
+});
+test('a run older than the retention window reports outside-retention, not a gap',()=>{
+ const input=fixture();input.exportedRows.rows=[];input.runCreatedAt=new Date(Date.now()-120*86_400_000).toISOString();
+ const result=reconcile(input);
+ assert.equal(result.records[0].exportStatus,'outside-retention');
+ assert.equal(result.records[0].status,'outside-retention');
+ assert.equal(result.status,'incomplete');
+});
+test('a run inside the retention window still reports a missing export',()=>{
+ const input=fixture();input.exportedRows.rows=[];input.runCreatedAt=new Date(Date.now()-10*86_400_000).toISOString();
+ assert.equal(reconcile(input).records[0].exportStatus,'missing-export');
+});
+test('an absent run timestamp keeps the stricter missing-export verdict',()=>{
+ const input=fixture();input.exportedRows.rows=[];
+ assert.equal(reconcile(input).records[0].exportStatus,'missing-export');
+});
+test('an unreadable run timestamp fails closed',()=>{
+ const input=fixture();input.runCreatedAt='last tuesday';
+ assert.throws(()=>reconcile(input),/Invalid run creation timestamp/);
+});
+test('retention age cannot downgrade an export that is present',()=>{
+ const input=fixture();input.runCreatedAt=new Date(Date.now()-200*86_400_000).toISOString();
+ assert.equal(reconcile(input).records[0].status,'observed-pass');
+ assert.equal(reconcile(input).status,'passed');
+});
 test('older history is explicit but does not replace or poison a valid current export',()=>{
   const input=fixture();const old=structuredClone(input.exportedRows.rows);old.forEach(r=>r[BROWSER_HEADER.indexOf('run_attempt')]=1);input.exportedRows.rows.push(...old);
   const result=reconcile(input);assert.equal(result.records[0].status,'observed-pass');assert.deepEqual(result.records[0].staleAttempts,[1]);

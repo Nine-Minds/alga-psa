@@ -58,8 +58,22 @@
     },
     "clients": {
       "title": "Ihr Unternehmen",
-      "help": "Der als Ihr Unternehmen markierte Kunde ist Ihre eigene Organisation. Name, Adresse und Logo dieses Kunden erscheinen auf Rechnungen, Angeboten und in der Kundenkommunikation.",
+      "help": "Der als Ihr Unternehmen markierte Kunde ist Ihre eigene Organisation. Name, Adresse und Logo dieses Kunden erscheinen auf Rechnungen, Angeboten und in der Kundenkommunikation; das Land seines Standorts bestimmt außerdem Ihr Datumsformat und das Land, das in neuen Datensätzen vorausgewählt wird.",
       "currentDefault": "Ihr Unternehmen ist derzeit {{name}}.",
+      "defaults": {
+        "title": "Was Ihr Unternehmen bestimmt",
+        "intro": "Das Land am Standort von {{name}} bestimmt für alle in der MSP-App Folgendes:",
+        "country": "Neue Kunden, Kontakte und Standorte wählen {{country}} vor.",
+        "countryMissing": "Neue Kunden, Kontakte und Standorte wählen kein Land vor.",
+        "phoneCode": "Telefonnummern beginnen mit der Vorwahl {{code}}.",
+        "phoneCodeMissing": "Telefonnummern beginnen ohne Vorwahl.",
+        "dateFormat": "Datumsangaben werden als {{pattern}} geschrieben – {{example}} – mit {{clock}}-Anzeige.",
+        "clock12": "12-Stunden",
+        "clock24": "24-Stunden",
+        "noCountry": "Für {{name}} ist am Standort kein Land hinterlegt, daher gilt für alle drei der Standard {{pattern}}. Hinterlegen Sie für {{name}} einen Standort mit Land, um sie zu ändern – eine separate Einstellung für das Datumsformat gibt es nicht.",
+        "portalNote": "Im Kundenportal sehen Benutzer Datumsangaben im Format ihres eigenen Kunden, das sich aus dessen Standortland ergibt und nicht aus Ihrem.",
+        "changeIntro": "Der Wechsel zu {{name}} ändert außerdem diese Standardwerte:"
+      },
       "yourCompanyBadge": "Ihr Unternehmen",
       "table": {
         "name": "Name",
@@ -97,6 +111,18 @@
         "setDefaultClient": "Standardkunde konnte nicht festgelegt werden",
         "loadClients": "Kunden konnten nicht geladen werden"
       }
+    }
+  },
+  "dashboardWelcome": {
+    "label": "Firmennamen in der Dashboard-Begrüßung verwenden",
+    "help": "Standardmäßig deaktiviert: Das MSP-Dashboard zeigt „Willkommen in Ihrer MSP-Kommandozentrale“. Wenn Sie dies aktivieren, erscheint stattdessen der Name des als Ihr Unternehmen markierten Kunden. Dieser Schalter wird sofort und unabhängig gespeichert.",
+    "noCompany": "Bisher ist kein Kunde als Ihr Unternehmen markiert. Legen Sie unter Einstellungen → Allgemein einen fest, damit dessen Name hier erscheinen kann.",
+    "previewLabel": "Ihr Team sieht:",
+    "preview": "Willkommen in der Kommandozentrale von {{companyName}}",
+    "previewDefault": "Willkommen in Ihrer MSP-Kommandozentrale",
+    "messages": {
+      "saved": "Dashboard-Begrüßung aktualisiert",
+      "saveFailed": "Dashboard-Begrüßung konnte nicht aktualisiert werden"
     }
   },
   "experimentalFeatures": {
@@ -365,6 +391,7 @@
         "emailAlreadyExists": "Ein Benutzer mit dieser E-Mail-Adresse existiert bereits",
         "reportsToSelf": "Ein Benutzer kann sich nicht selbst als Vorgesetzten zuweisen",
         "reportsToCycle": "Dies würde eine zirkuläre Berichtskette erzeugen",
+        "invalidTimezone": "Wählen Sie eine Zeitzone mit Stadtbezug, z. B. America/New_York.",
         "permissionDenied": "Sie haben keine Berechtigung, Benutzerrollen zu ändern.",
         "invalidCapacity": "Die Wochenkapazität muss eine positive Zahl sein.",
         "invalidWorkSchedule": "Arbeitszeiten müssen gültige Zeiträume sein, die nach ihrem Beginn enden."
@@ -794,6 +821,27 @@
           "appearanceHelp": "Tab-Anheftung und die Standard-Listenansicht des Boards",
           "assignment": "Zuweisung & SLA",
           "assignmentHelp": "Standard-Routing, SLA und Board-Manager",
+          "notifications": "Benachrichtigungen",
+          "notificationsHelp": "Techniker über neue Tickets und Statusänderungen informieren und Standardbeobachter festlegen",
+          "notificationsRulesLabel": "Benachrichtigungsregeln",
+          "notificationsRulesHelp": "Empfänger erhalten pro Ereignis eine Benachrichtigung. Sie werden nicht als Beobachter hinzugefügt.",
+          "notificationsAddRule": "Regel hinzufügen",
+          "notificationsRuleTitle": "Regel {{number}}",
+          "notificationsRuleEnabled": "Aktiviert",
+          "notificationsRemoveRule": "Regel entfernen",
+          "notificationsOnCreate": "Wenn ein Ticket auf diesem Board erstellt wird",
+          "notificationsOnStatus": "Wenn ein Ticket in den Status wechselt",
+          "notificationsNoStatuses": "Status können ausgewählt werden, sobald das Board gespeichert wurde.",
+          "notificationsRecipients": "Benachrichtigen",
+          "notificationsRecipientsPlaceholder": "Benutzer und Teams auswählen...",
+          "notificationsRecipientsHelp": "Teammitglieder werden bei jedem Versand einer Benachrichtigung neu ermittelt.",
+          "notificationsDefaultWatchers": "Standardbeobachter",
+          "notificationsDefaultWatchersPlaceholder": "Benutzer auswählen...",
+          "notificationsDefaultWatchersHelp": "Werden zur Beobachterliste jedes neuen Tickets auf diesem Board hinzugefügt und über jede spätere Aktualisierung benachrichtigt.",
+          "notificationsTriggerRequired": "Jede Benachrichtigungsregel benötigt mindestens einen Auslöser: die Ticketerstellung oder einen Status.",
+          "notificationsRecipientRequired": "Jede Benachrichtigungsregel benötigt mindestens einen Benutzer oder ein Team, das benachrichtigt wird.",
+          "notificationsFetchFailed": "Benachrichtigungseinstellungen konnten nicht geladen werden",
+          "notificationsStatusRemapFailed": "Das Board wurde erstellt, aber der Status einer Benachrichtigungsregel konnte dem neuen Board nicht zugeordnet werden. Fügen Sie die Benachrichtigungsregeln erneut hinzu.",
           "inbound": "E-Mail & eingehende Antworten",
           "inboundHelp": "Tickets erneut öffnen, wenn Kunden per E-Mail antworten",
           "close": "Abschlussregeln",
@@ -1229,6 +1277,7 @@
         "followThemeActive": "Die Farben unten bleiben gespeichert, werden aber nicht angewendet, solange das Portal dem Organisationsdesign folgt."
       },
       "cropHelp": "Ziehen und zoomen Sie, um den Ausschnitt zu wählen, der im Seitenbereich des Portals und in allen runden Rahmen erscheint. Ihr breites Logo bleibt unverändert.",
+      "cropHelpFromSquare": "Ziehen und zoomen Sie, um den Ausschnitt zu wählen, der im Seitenbereich des Portals und in allen runden Rahmen erscheint. Nur das Zeichen wird geändert, sodass Sie es später erneut anpassen können.",
       "heroGradient": {
         "primaryShades": "Primärfarbe zu Primärfarbton",
         "primarySecondary": "Primärfarbe zu Sekundärfarbe"
@@ -1502,6 +1551,11 @@
       "description": "Laden Sie Ihr Logo einmal hoch. Es ersetzt die Alga-Marke im MSP-Seitenmenü, und das Kundenportal verwendet dieselben Bilder.",
       "logoHelp": "Das quadratische Zeichen wird überall dort verwendet, wo der Platz quadratisch ist: im eingeklappten Seitenmenü und in runden Rahmen. Legen Sie ein breites Logo in ein quadratisches Feld, wählen Sie, welcher Ausschnitt zum Zeichen wird; sobald ein breites Logo hochgeladen ist, können Sie das Zeichen auch direkt daraus ausschneiden. Das optionale breite Logo ersetzt im ausgeklappten Seitenmenü das Zeichen und den Namen — laden Sie daher eines hoch, das Ihren Firmennamen bereits enthält. Das Seitenmenü richtet sich nach seinem eigenen Hintergrund: bei dunklem Menü die Varianten für dunkle Hintergründe, bei hellem Menü die hellen — und andernfalls die Variante, die Sie hochgeladen haben.",
       "cropHelp": "Ziehen und zoomen Sie, um den Ausschnitt zu wählen, der im eingeklappten Seitenmenü und in allen runden Rahmen erscheint. Ihr breites Logo bleibt unverändert.",
+      "cropHelpFromSquare": "Ziehen und zoomen Sie, um den Ausschnitt zu wählen, der im eingeklappten Seitenmenü und in allen runden Rahmen erscheint. Nur das Zeichen wird geändert, sodass Sie es später erneut anpassen können.",
+      "linkDocument": {
+        "title": "Hochgeladenes Bild verwenden",
+        "description": "Wählen Sie ein Bild aus, das Sie bereits unter Dokumente hochgeladen haben. Das Dokument selbst bleibt unverändert."
+      },
       "fields": {
         "mark": "Quadratisches Zeichen",
         "markDark": "Quadratisches Zeichen für dunkle Hintergründe",
@@ -1792,6 +1846,12 @@
         "useLogo": "Mein Logo in der E-Mail-Kopfzeile verwenden",
         "logoWide": "Breites Logo",
         "logoDefault": "Quadratisches Logo",
+        "logoArtwork": "Logo-Variante",
+        "logoArtworkAuto": "An Kopfzeile anpassen",
+        "logoArtworkLight": "Logo für hellen Hintergrund",
+        "logoArtworkDark": "Logo für dunklen Hintergrund",
+        "logoArtworkAutoDark": "Automatisch stuft diese Kopfzeile als dunkel ein und verwendet das Logo für dunklen Hintergrund.",
+        "logoArtworkAutoLight": "Automatisch stuft diese Kopfzeile als hell ein und verwendet das Logo für hellen Hintergrund.",
         "noLogo": "Laden Sie unter Einstellungen → Kundenportal → Branding ein Logo hoch, um es hier zu verwenden.",
         "showAttribution": "„Powered by AlgaPSA“ in der Fußzeile anzeigen"
       }
@@ -2359,6 +2419,11 @@
       "updateFailed": "Rolle konnte nicht aktualisiert werden",
       "validateDeletionFailed": "Das Löschen konnte nicht überprüft werden. Bitte versuchen Sie es erneut.",
       "deleteFailed": "Rolle konnte nicht gelöscht werden"
+    },
+    "editDialog": {
+      "title": "Rolle bearbeiten",
+      "builtInNameLocked": "Namen integrierter Rollen können nicht geändert werden, da das System auf sie angewiesen ist.",
+      "portalLocked": "Der Portalzugriff kann nach dem Erstellen einer Rolle nicht mehr geändert werden."
     }
   },
   "security": {
@@ -3413,7 +3478,10 @@
       "duplicate": "Dieser Benutzer hat die ausgewählte Rolle bereits.",
       "changePermission": "Berechtigung verweigert: Sie haben keine Berechtigung, Benutzerrollen zu ändern.",
       "missingField": "Erforderliches Feld der Benutzerrolle fehlt.",
-      "missingFieldNamed": "Erforderliches Feld der Benutzerrolle fehlt: {{field}}."
+      "missingFieldNamed": "Erforderliches Feld der Benutzerrolle fehlt: {{field}}.",
+      "nameRequired": "Rollenname ist erforderlich.",
+      "builtInRename": "Integrierte Rollen können nicht umbenannt werden.",
+      "duplicateName": "Eine Rolle mit dem Namen „{{name}}“ existiert für dieses Portal bereits."
     },
     "secrets": {
       "tenantContextMissing": "Der Mandantenkontext fehlt. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
@@ -3438,6 +3506,7 @@
       "missingField": "Erforderliches Feld der Mandanteneinstellungen fehlt.",
       "missingFieldNamed": "Erforderliches Feld der Mandanteneinstellungen fehlt: {{field}}.",
       "invalidTimezone": "Ungültige Zeitzone: {{timezone}}",
+      "nonLocationTimezone": "{{timezone}} ist keine Zeitzone mit Stadtbezug. Wählen Sie eine Zone wie America/New_York.",
       "permissions": {
         "clearOnboarding": "Berechtigung verweigert: Nur Administratoren können Onboarding-Daten löschen.",
         "update": "Berechtigung verweigert: Einstellungen können nicht aktualisiert werden",

@@ -1,3 +1,7 @@
+import { ItilPriority, getSlaTarget } from '@alga-psa/shared/lib/itil/slaTargets';
+
+export { ItilPriority, getSlaTarget };
+
 // ITIL Utility Functions for Priority Calculation and Business Logic
 
 /**
@@ -20,17 +24,6 @@ export enum ItilUrgency {
   MEDIUM = 3,    // Work can continue with limitations
   MEDIUM_LOW = 4,   // Work can continue with minor inconvenience
   LOW = 5        // Work can continue normally
-}
-
-/**
- * ITIL Priority levels
- */
-export enum ItilPriority {
-  CRITICAL = 1,    // Resolve immediately
-  HIGH = 2,        // Resolve within 4 hours
-  MEDIUM = 3,      // Resolve within 24 hours
-  LOW = 4,         // Resolve within 72 hours
-  PLANNING = 5     // Resolve when resources permit
 }
 
 /**
@@ -116,23 +109,6 @@ export const ItilLabels = {
     5: 'Planning'
   }
 };
-
-/**
- * Get SLA target times based on priority level
- * @param priority ITIL priority level (1-5)
- * @returns Target resolution time in hours
- */
-export function getSlaTarget(priority: number): number {
-  const slaTargets: Record<number, number> = {
-    [ItilPriority.CRITICAL]: 1,    // 1 hour
-    [ItilPriority.HIGH]: 4,        // 4 hours
-    [ItilPriority.MEDIUM]: 24,     // 24 hours (1 day)
-    [ItilPriority.LOW]: 72,        // 72 hours (3 days)
-    [ItilPriority.PLANNING]: 168   // 168 hours (1 week)
-  };
-
-  return slaTargets[priority] || 24; // Default to 24 hours if unknown priority
-}
 
 /**
  * Check if SLA should be breached based on elapsed time

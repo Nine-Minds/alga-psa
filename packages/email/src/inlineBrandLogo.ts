@@ -29,11 +29,14 @@ import type { EmailAttachment } from '@alga-psa/types';
 import {
   brandLogoCid,
   parseBrandLogoVariant,
+  pickBrandLogoVariant,
   readImgSrc,
   removeBrandLogo,
   withImgSrc,
   BRAND_LOGO_MARKER,
 } from './branding/brandAssets';
+import { isDarkEmailHeader, isHexColor } from './branding/color';
+import { resolveEmailPalette } from './branding/resolveEmailPalette';
 import type { EmailBrandingLogoVariant } from './branding/types';
 
 /** Graph caps a simple attachment at 3 MB, and the upload UI accepts far more. */
@@ -262,7 +265,9 @@ async function loadLogoAsset(
 }
 
 /**
- * Which variant a row written before the cid form meant. Those rows are only
+ * Which variant a row written before the cid form meant: the same choice an
+ * apply makes today from the saved palette, so a hand-edited template the apply
+ * skipped still mails the artwork the tenant pinned. Those rows are only
  * repaired in the database by a re-apply, so this read recurs on every send
  * until then and is cached like the bytes.
  */
@@ -274,7 +279,20 @@ async function loadSavedVariant(knex: Knex, tenantId: string): Promise<EmailBran
     .select('settings')
     .first<{ settings?: Record<string, any> | null }>();
 
-  return cache(variantCache, tenantId, row?.settings?.emailBranding?.logo?.variant === 'wide' ? 'wide' : 'default');
+  const palette = row?.settings?.emailBranding ?? {};
+  const branding = row?.settings?.branding ?? {};
+  const shape: EmailBrandingLogoVariant = palette.logo?.variant === 'wide' ? 'wide' : 'default';
+  const headerIsDark = isHexColor(palette.primary)
+    ? isDarkEmailHeader(resolveEmailPalette({ primary: palette.primary, secondary: palette.secondary ?? null }))
+    : false;
+  const variant = pickBrandLogoVariant(shape, headerIsDark, {
+    logoUrl: branding.logoUrl || undefined,
+    logoDarkUrl: branding.logoDarkUrl || undefined,
+    logoWideUrl: branding.logoWideUrl || undefined,
+    logoWideDarkUrl: branding.logoWideDarkUrl || undefined,
+  }, palette.logo?.artwork) ?? shape;
+
+  return cache(variantCache, tenantId, variant);
 }
 
 /**

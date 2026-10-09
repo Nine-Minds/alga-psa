@@ -172,6 +172,10 @@
         "updateComments": "Permissions insuffisantes pour modifier les commentaires",
         "deleteComments": "Permissions insuffisantes pour supprimer les commentaires",
         "viewDocuments": "Autorisations insuffisantes pour consulter les documents du ticket"
+      },
+      "projects": {
+        "read": "Permissions insuffisantes pour afficher les projets",
+        "readDetails": "Permissions insuffisantes pour afficher les détails du projet"
       }
     },
     "tags": {
@@ -692,7 +696,16 @@
       "fileError": "Impossible de téléverser le fichier",
       "associatedEntityTypeLabel": "Associer à",
       "noAssociation": "Aucune association",
-      "selectAssociatedEntityError": "Sélectionnez une entité associée avant de téléverser."
+      "selectAssociatedEntityError": "Sélectionnez une entité associée avant de téléverser.",
+      "uploaded": "Téléversé",
+      "failed": "Échec",
+      "failureSummary": "{{failed}} sur {{total}} fichiers n'ont pas pu être téléversés. Consultez les erreurs ci-dessous.",
+      "outcomeSummary": "{{succeeded}} sur {{total}} fichiers téléversés",
+      "emptyDropTitle": "Aucun fichier reçu",
+      "emptyDropMessage": "Aucun fichier n'a été reçu. Enregistrez la pièce jointe ou l'e-mail sur votre ordinateur, puis glissez le fichier enregistré ici ou utilisez « Parcourir les fichiers ».",
+      "uploadInProgress": "Un téléversement est déjà en cours. Attendez qu'il se termine avant d'ajouter d'autres fichiers.",
+      "refreshFailed": "Vos fichiers ont été téléversés, mais la liste des documents n'a pas pu être actualisée. Rechargez la page pour les voir.",
+      "clearResults": "Effacer les résultats"
     },
     "folders": {
       "root": "Racine",
@@ -857,7 +870,8 @@
       "clientPortal": "Créé via le portail client",
       "inboundEmail": "Créé via e-mail entrant",
       "api": "Créé via API",
-      "other": "Créé via autre"
+      "other": "Créé via autre",
+      "recurring": "Créé par une planification récurrente"
     }
   },
   "surveys": {
@@ -1336,9 +1350,11 @@
   },
   "timezonePicker": {
     "selectPlaceholder": "Sélectionner un fuseau horaire...",
-    "searchPlaceholder": "Rechercher des fuseaux horaires ou des abréviations (par ex. EST)...",
+    "searchPlaceholder": "Rechercher par ville, nom ou abréviation (p. ex. New York, EST)...",
     "noResults": "Aucun fuseau horaire trouvé",
     "matchingGroup": "Correspondant à « {{query}} »",
+    "noDst": "Pas d'heure d'été",
+    "noDaylightSavingHint": "Pas d'heure d'été. Les horloges restent à {{offset}} toute l'année.",
     "regions": {
       "Africa": "Afrique",
       "America": "Amérique",
@@ -1728,5 +1744,9 @@
     "customPlaceholder": "Nommez cette unité",
     "register": "Ajouter",
     "selectPlaceholder": "Sélectionnez une unité"
+  },
+  "emailRecipients": {
+    "remove": "Supprimer {{email}}",
+    "placeholder": "Saisissez une adresse puis appuyez sur Entrée"
   }
 }

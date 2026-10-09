@@ -14,7 +14,13 @@ import {
   IProjectTicketLink,
   ProjectStatus
 } from 'server/src/interfaces/project.interfaces';
-import { 
+import type { ProjectServiceSource } from '@alga-psa/types';
+import {
+  effectiveServiceIdSql,
+  effectiveServiceNameSql,
+  effectiveServiceSourceSql,
+} from '@alga-psa/core';
+import {
   CreateProjectData,
   UpdateProjectData,
   ProjectFilterData,
@@ -23,12 +29,13 @@ import {
   CreateProjectTaskData,
   UpdateProjectTaskData,
   CreateTaskChecklistItemData,
+  UpdateTaskChecklistItemData,
   CreateProjectTicketLinkData,
   ProjectSearchData,
   ProjectExportQuery
 } from '../schemas/project';
 import { ConflictError, NotFoundError, ValidationError } from '../middleware/apiMiddleware';
-import { ProjectModel } from '@alga-psa/projects/models';
+import { ProjectModel, ProjectTaskModel } from '@alga-psa/projects/models';
 import { deleteEntityWithValidation } from '@alga-psa/core/server';
 import { projectKanbanHiddenStatusesKey } from '@alga-psa/projects/lib/kanbanPreferences';
 import { publishEvent, publishWorkflowEvent } from 'server/src/lib/eventBus/publishers';
@@ -53,6 +60,10 @@ type DeferredWorkflowEvent = {
   eventType: Parameters<typeof publishWorkflowEvent>[0]['eventType'];
   payload: Record<string, unknown>;
 };
+
+/** Hierarchy and `service_catalog` aliases used by `getTaskById`'s service fallback. */
+const TASK_SERVICE_ALIASES = { task: 'project_tasks', phase: 'project_phases', project: 'projects' };
+const TASK_SERVICE_CATALOG_ALIASES = { task: 'task_service', phase: 'phase_service', project: 'project_service' };
 
 function scopedTable<Row extends object = Record<string, any>>(
   conn: Knex | Knex.Transaction,
@@ -890,6 +901,7 @@ export class ProjectService extends BaseService<IProject> {
   
         const itemData = {
           ...data,
+          due_date: data.due_date ? new Date(data.due_date) : null,
           task_id: taskId,
           order_number: nextOrderNumber,
           tenant: context.tenant,
@@ -904,6 +916,45 @@ export class ProjectService extends BaseService<IProject> {
         return item;
       });
     }
+
+  /** Update one checklist item; the item must belong to the task in the path. */
+  async updateChecklistItem(
+    taskId: string,
+    checklistItemId: string,
+    data: UpdateTaskChecklistItemData,
+    context: ServiceContext
+  ): Promise<ITaskChecklistItem> {
+    const { knex } = await this.getKnex();
+
+    return withTransaction(knex, async (trx) => {
+      const existing = await scopedTable<ITaskChecklistItem>(trx, context.tenant, 'task_checklist_items')
+        .where({ task_id: taskId, checklist_item_id: checklistItemId })
+        .first();
+      if (!existing) {
+        throw new NotFoundError('Checklist item not found');
+      }
+
+      const { due_date, ...rest } = data;
+      const updates: Partial<ITaskChecklistItem> = { ...rest };
+      if (due_date !== undefined) updates.due_date = due_date ? new Date(due_date) : null;
+
+      return ProjectTaskModel.updateChecklistItem(trx, context.tenant, checklistItemId, updates);
+    });
+  }
+
+  async deleteChecklistItem(taskId: string, checklistItemId: string, context: ServiceContext): Promise<void> {
+    const { knex } = await this.getKnex();
+
+    await withTransaction(knex, async (trx) => {
+      const existing = await scopedTable<ITaskChecklistItem>(trx, context.tenant, 'task_checklist_items')
+        .where({ task_id: taskId, checklist_item_id: checklistItemId })
+        .first();
+      if (!existing) {
+        throw new NotFoundError('Checklist item not found');
+      }
+      await ProjectTaskModel.deleteChecklistItem(trx, context.tenant, checklistItemId);
+    });
+  }
 
 
   // Project ticket links
@@ -930,18 +981,64 @@ export class ProjectService extends BaseService<IProject> {
 
   async createTicketLink(projectId: string, data: CreateProjectTicketLinkData, context: ServiceContext): Promise<IProjectTicketLink> {
       const { knex } = await this.getKnex();
-      
+
       const linkData = {
-        ...data,
         project_id: projectId,
+        phase_id: data.phase_id ?? null,
+        task_id: data.task_id ?? null,
+        ticket_id: data.ticket_id,
+        // Default true, like every other link path: ticket time bills as
+        // project time unless the caller opts out (alga-2026-0002622).
+        bill_under_project: data.bill_under_project ?? true,
         tenant: context.tenant,
         created_at: new Date()
       };
-  
+
+      // The resolver bills by the link's project, so a phase or task from
+      // another project would leave a link that says one thing and bills another.
+      if (linkData.phase_id) {
+        const phase = await tenantDb(knex, context.tenant).table('project_phases')
+          .where({ phase_id: linkData.phase_id, project_id: projectId })
+          .first('phase_id');
+        if (!phase) {
+          throw new ValidationError('Phase does not belong to this project');
+        }
+      }
+      if (linkData.task_id) {
+        const taskQuery = tenantDb(knex, context.tenant).table('project_tasks');
+        tenantDb(knex, context.tenant).tenantJoin(
+          taskQuery, 'project_phases', 'project_tasks.phase_id', 'project_phases.phase_id',
+        );
+        const task = await taskQuery
+          .where({ 'project_tasks.task_id': linkData.task_id, 'project_phases.project_id': projectId })
+          .modify((query) => {
+            if (linkData.phase_id) query.where('project_tasks.phase_id', linkData.phase_id);
+          })
+          .first('project_tasks.task_id');
+        if (!task) {
+          throw new ValidationError('Task does not belong to this project');
+        }
+      }
+
+      // Same guard the model applies on the UI path. The table is unique only
+      // on (tenant, link_id), so without it one ticket collects duplicate
+      // links and the biller has to clean them up by hand.
+      const existing = await tenantDb(knex, context.tenant).table('project_ticket_links')
+        .where({
+          project_id: linkData.project_id,
+          phase_id: linkData.phase_id,
+          task_id: linkData.task_id,
+          ticket_id: linkData.ticket_id
+        })
+        .first();
+      if (existing) {
+        throw new ConflictError('This ticket is already linked to this project task');
+      }
+
       const [link] = await tenantDb(knex, context.tenant).table('project_ticket_links')
         .insert(linkData)
         .returning('*');
-  
+
       return link;
     }
 
@@ -1435,13 +1532,56 @@ export class ProjectService extends BaseService<IProject> {
   /**
    * Get task by ID
    */
-  async getTaskById(taskId: string, context: ServiceContext): Promise<IProjectTask | null> {
+  /**
+   * One task with the names a detail view needs: phase and project, the
+   * resolved status (custom mapping name, then project status, then standard),
+   * and the assignee. Mobile opens tasks by id from pushes and deep links, so
+   * the row has to stand on its own.
+   */
+  async getTaskById(taskId: string, context: ServiceContext): Promise<(IProjectTask & {
+    phase_name?: string | null;
+    project_id?: string | null;
+    project_name?: string | null;
+    client_id?: string | null;
+    status_name?: string | null;
+    is_closed?: boolean;
+    assigned_user_name?: string | null;
+    effective_service_id?: string | null;
+    service_source?: ProjectServiceSource | null;
+    service_name?: string | null;
+  }) | null> {
     const { knex } = await this.getKnex();
-    
-    const task = await scopedTable<IProjectTask>(knex, context.tenant, 'project_tasks')
-      .where({
-        task_id: taskId
-      })
+    const db = tenantDb(knex, context.tenant);
+
+    const query = scopedTable(knex, context.tenant, 'project_tasks');
+    db.tenantJoin(query, 'project_phases', 'project_tasks.phase_id', 'project_phases.phase_id', { type: 'left' });
+    db.tenantJoin(query, 'projects', 'project_phases.project_id', 'projects.project_id', { type: 'left' });
+    db.tenantJoin(query, 'project_status_mappings as psm', 'project_tasks.project_status_mapping_id', 'psm.project_status_mapping_id', { type: 'left' });
+    db.tenantJoin(query, 'statuses as s', 'psm.status_id', 's.status_id', { type: 'left' });
+    db.tenantJoin(query, 'standard_statuses as ss', 'psm.standard_status_id', 'ss.standard_status_id', { type: 'left' });
+    db.tenantJoin(query, 'users as assignee', 'project_tasks.assigned_to', 'assignee.user_id', { type: 'left' });
+    // One catalog join per level so the name matches the id the COALESCE picked.
+    db.tenantJoin(query, 'service_catalog as task_service', 'project_tasks.service_id', 'task_service.service_id', { type: 'left' });
+    db.tenantJoin(query, 'service_catalog as phase_service', 'project_phases.service_id', 'phase_service.service_id', { type: 'left' });
+    db.tenantJoin(query, 'service_catalog as project_service', 'projects.service_id', 'project_service.service_id', { type: 'left' });
+
+    const task = await query
+      .where('project_tasks.task_id', taskId)
+      .select(
+        'project_tasks.*',
+        'project_phases.phase_name',
+        'projects.project_id',
+        'projects.project_name',
+        'projects.client_id',
+        knex.raw('COALESCE(psm.custom_name, s.name, ss.name) as status_name'),
+        knex.raw('COALESCE(s.is_closed, ss.is_closed, false) as is_closed'),
+        knex.raw("NULLIF(TRIM(CONCAT(assignee.first_name, ' ', assignee.last_name)), '') as assigned_user_name"),
+        // The task's own service_id stays in `project_tasks.*`; these three say
+        // which service a time entry should actually prefill, and from where.
+        knex.raw(`${effectiveServiceIdSql(TASK_SERVICE_ALIASES)} as effective_service_id`),
+        knex.raw(`${effectiveServiceSourceSql(TASK_SERVICE_ALIASES)} as service_source`),
+        knex.raw(`${effectiveServiceNameSql(TASK_SERVICE_CATALOG_ALIASES)} as service_name`),
+      )
       .first();
 
     return task || null;

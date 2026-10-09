@@ -112,6 +112,9 @@ export class AssetService extends BaseService<any> {
       if (filters.location_id) {
         query.where(`${this.tableName}.location_id`, filters.location_id);
       }
+      if (filters.contact_name_id) {
+        query.where(`${this.tableName}.contact_name_id`, filters.contact_name_id);
+      }
       if (filters.asset_type) {
         query.where(`${this.tableName}.asset_type`, filters.asset_type);
       }
@@ -185,6 +188,9 @@ export class AssetService extends BaseService<any> {
       }
       if (filters.location_id) {
         countQuery.where(`${this.tableName}.location_id`, filters.location_id);
+      }
+      if (filters.contact_name_id) {
+        countQuery.where(`${this.tableName}.contact_name_id`, filters.contact_name_id);
       }
       if (filters.status) {
         countQuery.where(`${this.tableName}.status`, filters.status);
@@ -300,6 +306,9 @@ export class AssetService extends BaseService<any> {
     if (assetData.location_id) {
       await this.assertLocationBelongsToClient(knex, context.tenant, assetData.client_id, assetData.location_id);
     }
+    if (assetData.contact_name_id) {
+      await this.assertContactBelongsToClient(knex, context.tenant, assetData.client_id, assetData.contact_name_id);
+    }
     
     const assetRecord = {
       ...assetData,
@@ -341,13 +350,14 @@ export class AssetService extends BaseService<any> {
 
     const needsCurrent =
       data.location_id !== undefined ||
+      data.contact_name_id !== undefined ||
       data.client_id !== undefined;
     const needsAssetContext = needsCurrent || data.attributes !== undefined || data.asset_type !== undefined;
 
     const current = needsAssetContext
       ? await scopedTable(knex, context.tenant, this.tableName)
           .where({ [this.primaryKey]: id })
-          .first('client_id', 'location_id', 'asset_type')
+          .first('client_id', 'location_id', 'contact_name_id', 'asset_type')
       : null;
 
     if (needsAssetContext && !current) {
@@ -381,6 +391,24 @@ export class AssetService extends BaseService<any> {
       // Client changed without an explicit new location — clear the stale link
       // so the asset doesn't keep pointing at the previous client's location.
       updateData.location_id = null;
+    }
+
+    if (data.contact_name_id) {
+      const clientId = data.client_id || current?.client_id;
+      if (!clientId) {
+        throw new NotFoundError('Asset not found');
+      }
+      await this.assertContactBelongsToClient(knex, context.tenant, clientId, data.contact_name_id);
+    } else if (
+      data.client_id &&
+      current?.client_id &&
+      data.client_id !== current.client_id &&
+      current.contact_name_id &&
+      data.contact_name_id === undefined
+    ) {
+      // Client changed without an explicit new assignee — the old contact
+      // belongs to the previous client, so clear it.
+      updateData.contact_name_id = null;
     }
 
     updateData.updated_at = new Date();
@@ -429,6 +457,25 @@ export class AssetService extends BaseService<any> {
 
     if (!location) {
       throw new ValidationError('Selected location is not available for this client');
+    }
+  }
+
+  private async assertContactBelongsToClient(
+    knex: Knex,
+    tenant: string,
+    clientId: string,
+    contactNameId: string
+  ): Promise<void> {
+    const contact = await scopedTable(knex, tenant, 'contacts')
+      .where({
+        client_id: clientId,
+        contact_name_id: contactNameId,
+      })
+      .whereNot({ contact_kind: 'shared_mailbox' })
+      .first('contact_name_id');
+
+    if (!contact) {
+      throw new ValidationError('Selected contact is not available for this client');
     }
   }
 

@@ -42,17 +42,32 @@ export default function TicketNavigation({ currentTicketId, initialAdjacent }: T
 
   const returnFilters = searchParams?.get('returnFilters') ?? null;
 
+  // A post-save refresh recomputes the pager against the carried-over list
+  // filters, which the saved ticket may no longer match (a just-closed ticket
+  // against an open-only list), so the lookup comes back empty and the pager
+  // would vanish mid-session. Keep the last known neighbors — ids, position
+  // label and the enabled keyboard shortcuts — so paging still works.
+  const applyAdjacentData = useCallback((data: AdjacentTicketData | null) => {
+    setAdjacentData((previous) => {
+      const droppedOutOfList = !data || data.currentPosition === 0;
+      if (droppedOutOfList && previous && previous.currentPosition > 0) {
+        return previous;
+      }
+      return data;
+    });
+    setIsLoading(false);
+  }, []);
+
   const skipFirstAdjacentFetch = useRef(Boolean(initialAdjacent));
   useEffect(() => {
     if (!initialAdjacent) return;
     let cancelled = false;
     initialAdjacent.then((data) => {
       if (cancelled) return;
-      setAdjacentData(data);
-      setIsLoading(false);
+      applyAdjacentData(data);
     });
     return () => { cancelled = true; };
-  }, [initialAdjacent]);
+  }, [initialAdjacent, applyAdjacentData]);
 
   useEffect(() => {
     if (skipFirstAdjacentFetch.current) {
@@ -69,8 +84,7 @@ export default function TicketNavigation({ currentTicketId, initialAdjacent }: T
     getAdjacentTicketIds(currentTicketId, filters)
       .then((data) => {
         if (!cancelled) {
-          setAdjacentData(data);
-          setIsLoading(false);
+          applyAdjacentData(data);
         }
       })
       .catch((err) => {
@@ -81,11 +95,19 @@ export default function TicketNavigation({ currentTicketId, initialAdjacent }: T
       });
 
     return () => { cancelled = true; };
-  }, [currentTicketId, returnFilters]);
+  }, [currentTicketId, returnFilters, applyAdjacentData]);
 
   const navigateToTicket = useCallback((ticketId: string) => {
+    // `returnFilters` is itself a query string, and useSearchParams() already
+    // decoded it — so it has to be re-encoded on the way out. Interpolating it
+    // raw made every `&`-separated pair after the first one a top-level param
+    // of the ticket URL instead, silently truncating the carried-over list
+    // state to its first filter: paging to the next ticket kept `statusId` but
+    // dropped `sortBy`/`sortDirection`, so the pager recomputed position under
+    // the default sort (showing 1/N with Previous disabled) and Back to
+    // Tickets returned to an unsorted list.
     const href = returnFilters
-      ? `/msp/tickets/${ticketId}?returnFilters=${returnFilters}`
+      ? `/msp/tickets/${ticketId}?returnFilters=${encodeURIComponent(returnFilters)}`
       : `/msp/tickets/${ticketId}`;
 
     const doNavigate = () => {
@@ -154,7 +176,7 @@ export default function TicketNavigation({ currentTicketId, initialAdjacent }: T
         className="h-5 w-5 p-0"
         aria-label={t('navigation.nextTicket', 'Next ticket')}
       >
-        <ChevronRight className="h3 w-3" />
+        <ChevronRight className="h-3 w-3" />
       </Button>
     </div>
   );

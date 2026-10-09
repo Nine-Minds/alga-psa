@@ -33,6 +33,14 @@ interface EntityImageUploadProps {
    * fills 'auto' slots and is what "Adjust mark" re-crops from.
    */
   wideImageUrl?: string | null;
+  /**
+   * Image "Adjust mark" re-cuts from when it is not the wide wordmark: a mark
+   * uploaded as its own square is cropped from that upload instead. Falls back
+   * to `wideImageUrl`.
+   */
+  cropSourceUrl?: string | null;
+  /** Name of the stored file, shown under the preview so slots can be told apart. */
+  imageFileName?: string | null;
   /** Second argument carries the wide URL whenever this component knows it. */
   onImageChange?: (newImageUrl: string | null, wideImageUrl?: string | null) => void;
   uploadAction: (entityId: string, formData: FormData) => Promise<{
@@ -116,6 +124,8 @@ const EntityImageUpload = ({
   entityName,
   imageUrl,
   wideImageUrl = null,
+  cropSourceUrl = null,
+  imageFileName = null,
   onImageChange,
   uploadAction,
   deleteAction,
@@ -152,6 +162,10 @@ const EntityImageUpload = ({
 
   // Use the preview URL if available, otherwise use the current image URL
   const displayUrl = previewUrl || currentImageUrl;
+
+  // What "Adjust mark" cuts from: the caller's own source when it has one (a
+  // mark uploaded as its own square), else the stored wordmark.
+  const cropSource = cropSourceUrl || currentWideUrl;
 
   // 'auto' needs the real dimensions; the avatar's own <img> is internal, so
   // probe the same (cached) URL here. Undecodable images stay in the circle.
@@ -502,20 +516,31 @@ const EntityImageUpload = ({
   return (
     <div className={`flex flex-col ${className || ''}`}>
       <div className="flex items-start space-x-4">
-        {/* Avatar with Edit Button */}
-        <div className="relative">
-          {renderAvatar()}
-          {canModifyImage && !isEditing && (
-            <button
-              type="button"
-              onClick={() => setIsEditing(true)}
-              disabled={isPendingUpload || isPendingDelete}
-              className="absolute bottom-0 right-0 mb-[-4px] mr-[-4px] text-gray-700 p-1 rounded-full hover:bg-[rgb(var(--color-primary-100))] focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[rgb(var(--color-primary-100))] transition-colors"
-              aria-label={`Edit ${entityType} image`}
-              data-automation-id={`edit-${entityType}-image-button`}
+        {/* Avatar with Edit Button, and the stored file's name under it */}
+        <div className="flex flex-col items-start">
+          <div className="relative">
+            {renderAvatar()}
+            {canModifyImage && !isEditing && (
+              <button
+                type="button"
+                onClick={() => setIsEditing(true)}
+                disabled={isPendingUpload || isPendingDelete}
+                className="absolute bottom-0 right-0 mb-[-4px] mr-[-4px] text-gray-700 p-1 rounded-full hover:bg-[rgb(var(--color-primary-100))] focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[rgb(var(--color-primary-100))] transition-colors"
+                aria-label={`Edit ${entityType} image`}
+                data-automation-id={`edit-${entityType}-image-button`}
+              >
+                <Pen className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+          {imageFileName && (
+            <p
+              className="mt-1 max-w-[14rem] truncate text-xs text-[rgb(var(--color-text-500))]"
+              title={`${t('profile.imageUpload.fileNameLabel', 'Stored file')}: ${imageFileName}`}
+              data-automation-id={`${entityType}-image-file-name`}
             >
-              <Pen className="w-4 h-4" />
-            </button>
+              {imageFileName}
+            </p>
           )}
         </div>
 
@@ -581,14 +606,14 @@ const EntityImageUpload = ({
                 </Button>
               )}
 
-              {/* Adjust mark: re-cut the square from the stored wordmark */}
-              {recropAction && currentWideUrl && (
+              {/* Adjust mark: re-cut the square from the image it was made of */}
+              {recropAction && cropSource && (
                 <Button
                   id={`recrop-${entityType}-image-button`}
                   type="button"
                   variant="soft"
                   size="sm"
-                  onClick={() => setCropRequest({ imageUrl: currentWideUrl })}
+                  onClick={() => setCropRequest({ imageUrl: cropSource })}
                   disabled={isPendingUpload || isPendingDelete || isPendingLink || isPendingRecrop}
                   className="w-fit"
                   data-automation-id={`recrop-${entityType}-image-button`}

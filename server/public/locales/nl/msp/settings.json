@@ -58,8 +58,22 @@
     },
     "clients": {
       "title": "Uw bedrijf",
-      "help": "De klant die als uw bedrijf is gemarkeerd, is uw eigen organisatie. De naam, het adres en het logo van deze klant verschijnen op facturen, offertes en communicatie naar klanten.",
+      "help": "De klant die als uw bedrijf is gemarkeerd, is uw eigen organisatie. De naam, het adres en het logo van deze klant verschijnen op facturen, offertes en communicatie naar klanten, en het land van de locatie bepaalt uw datumnotatie en het land dat in nieuwe records wordt voorgeselecteerd.",
       "currentDefault": "Uw bedrijf is momenteel {{name}}.",
+      "defaults": {
+        "title": "Wat uw bedrijf bepaalt",
+        "intro": "Het land van de locatie van {{name}} bepaalt het volgende voor de hele MSP-app:",
+        "country": "Nieuwe klanten, contacten en locaties selecteren {{country}} vooraf.",
+        "countryMissing": "Nieuwe klanten, contacten en locaties selecteren geen land vooraf.",
+        "phoneCode": "Telefoonnummers beginnen met landnummer {{code}}.",
+        "phoneCodeMissing": "Telefoonnummers beginnen zonder landnummer.",
+        "dateFormat": "Datums worden geschreven als {{pattern}} — {{example}} — met een {{clock}}-klok.",
+        "clock12": "12-uurs",
+        "clock24": "24-uurs",
+        "noCountry": "{{name}} heeft geen land op de locatie, dus alle drie vallen terug op de standaard {{pattern}}. Voeg aan {{name}} een locatie met een land toe om ze te wijzigen — er is geen aparte instelling voor de datumnotatie.",
+        "portalNote": "In het klantenportaal staan datums in de notatie van de klant zelf, afgeleid van het land van diens locatie en niet van de uwe.",
+        "changeIntro": "Overschakelen naar {{name}} wijzigt ook deze standaardwaarden:"
+      },
       "yourCompanyBadge": "Uw bedrijf",
       "table": {
         "name": "Naam",
@@ -97,6 +111,18 @@
         "setDefaultClient": "Kan standaardklant niet instellen",
         "loadClients": "Kan klanten niet laden"
       }
+    }
+  },
+  "dashboardWelcome": {
+    "label": "Bedrijfsnaam gebruiken in de welkomsttekst van het dashboard",
+    "help": "Standaard uit: het MSP-dashboard toont „Welkom in uw MSP-commandocentrum”. Zet dit aan en het toont de naam van de klant die als uw bedrijf is gemarkeerd. Deze schakelaar wordt direct en afzonderlijk opgeslagen.",
+    "noCompany": "Er is nog geen klant als uw bedrijf gemarkeerd. Kies er een bij Instellingen → Algemeen zodat de naam hier kan verschijnen.",
+    "previewLabel": "Uw team ziet:",
+    "preview": "Welkom in het commandocentrum van {{companyName}}",
+    "previewDefault": "Welkom in uw MSP-commandocentrum",
+    "messages": {
+      "saved": "Welkomsttekst van dashboard bijgewerkt",
+      "saveFailed": "Kan de welkomsttekst van het dashboard niet bijwerken"
     }
   },
   "experimentalFeatures": {
@@ -365,6 +391,7 @@
         "emailAlreadyExists": "Er bestaat al een gebruiker met dit e-mailadres",
         "reportsToSelf": "Een gebruiker kan niet aan zichzelf rapporteren",
         "reportsToCycle": "Dit zou een circulaire rapportagelijn creëren",
+        "invalidTimezone": "Kies een tijdzone op basis van een stad, zoals America/New_York.",
         "permissionDenied": "U heeft geen toestemming om gebruikersrollen te wijzigen.",
         "invalidCapacity": "Wekelijkse capaciteit moet een positief getal zijn.",
         "invalidWorkSchedule": "Werktijden moeten geldige tijdvakken zijn die eindigen na de starttijd."
@@ -794,6 +821,27 @@
           "appearanceHelp": "Tabblad vastzetten en de standaardlijstweergave van het bord",
           "assignment": "Toewijzing & SLA",
           "assignmentHelp": "Standaardroutering, SLA en bordbeheerder",
+          "notifications": "Meldingen",
+          "notificationsHelp": "Technici op de hoogte brengen van nieuwe tickets en statuswijzigingen, en standaardvolgers instellen",
+          "notificationsRulesLabel": "Meldingsregels",
+          "notificationsRulesHelp": "Ontvangers krijgen één melding per gebeurtenis. Ze worden niet als volger toegevoegd.",
+          "notificationsAddRule": "Regel toevoegen",
+          "notificationsRuleTitle": "Regel {{number}}",
+          "notificationsRuleEnabled": "Ingeschakeld",
+          "notificationsRemoveRule": "Regel verwijderen",
+          "notificationsOnCreate": "Wanneer een ticket op dit bord wordt aangemaakt",
+          "notificationsOnStatus": "Wanneer een ticket de status krijgt",
+          "notificationsNoStatuses": "Statussen kunnen worden geselecteerd zodra het bord is opgeslagen.",
+          "notificationsRecipients": "Melden aan",
+          "notificationsRecipientsPlaceholder": "Selecteer gebruikers en teams...",
+          "notificationsRecipientsHelp": "Teamleden worden bij elke melding opnieuw opgezocht.",
+          "notificationsDefaultWatchers": "Standaardvolgers",
+          "notificationsDefaultWatchersPlaceholder": "Selecteer gebruikers...",
+          "notificationsDefaultWatchersHelp": "Toegevoegd aan de volgerslijst van elk nieuw ticket op dit bord en op de hoogte gebracht van elke latere update.",
+          "notificationsTriggerRequired": "Elke meldingsregel heeft minstens één trigger nodig: het aanmaken van een ticket of een status.",
+          "notificationsRecipientRequired": "Elke meldingsregel heeft minstens één gebruiker of team nodig om te informeren.",
+          "notificationsFetchFailed": "Meldingsinstellingen laden mislukt",
+          "notificationsStatusRemapFailed": "Het bord is aangemaakt, maar de status van een meldingsregel kon niet aan het nieuwe bord worden gekoppeld. Voeg de meldingsregels opnieuw toe.",
           "inbound": "E-mail & inkomende antwoorden",
           "inboundHelp": "Tickets heropenen wanneer klanten per e-mail antwoorden",
           "close": "Afsluitregels",
@@ -1229,6 +1277,7 @@
         "followThemeActive": "De kleuren hieronder blijven bewaard maar worden niet toegepast zolang het portaal het organisatiethema volgt."
       },
       "cropHelp": "Sleep en zoom om het deel te kiezen dat in het zijpaneel van het portaal en in elke ronde omlijsting wordt getoond. Uw brede logo verandert niet.",
+      "cropHelpFromSquare": "Sleep en zoom om het deel te kiezen dat in het zijpaneel van het portaal en in elke ronde omlijsting wordt getoond. Alleen het merkteken wordt gewijzigd, dus u kunt het later opnieuw aanpassen.",
       "heroGradient": {
         "primaryShades": "Primaire kleur naar primaire tint",
         "primarySecondary": "Primaire kleur naar secundaire kleur"
@@ -1502,6 +1551,11 @@
       "description": "Upload uw logo één keer. Het vervangt het Alga-merk in het MSP-zijmenu en het klantenportaal gebruikt dezelfde afbeeldingen.",
       "logoHelp": "Het vierkante merkteken wordt gebruikt overal waar de ruimte vierkant is: in het ingeklapte zijmenu en in ronde kaders. Zet een breed logo in een vierkant vak en kies welk deel het beeldmerk wordt; zodra een breed logo is geüpload, kunt u het beeldmerk er ook rechtstreeks uit knippen. Het optionele brede logo vervangt het merkteken en de naam in het uitgeklapte zijmenu, dus upload er een waarin uw bedrijfsnaam al staat. Het zijmenu volgt zijn eigen achtergrond: bij een donker menu de varianten voor donkere achtergronden, bij een licht menu de lichte, en anders de variant die u hebt geüpload.",
       "cropHelp": "Sleep en zoom om het deel te kiezen dat in het ingeklapte zijmenu en in elke ronde omlijsting wordt getoond. Uw brede logo verandert niet.",
+      "cropHelpFromSquare": "Sleep en zoom om het deel te kiezen dat in het ingeklapte zijmenu en in elk rond kader wordt getoond. Alleen het merkteken wordt gewijzigd, dus u kunt het later opnieuw aanpassen.",
+      "linkDocument": {
+        "title": "Geüploade afbeelding gebruiken",
+        "description": "Kies een afbeelding die u al naar Documenten hebt geüpload. Het document zelf blijft ongewijzigd."
+      },
       "fields": {
         "mark": "Vierkant merkteken",
         "markDark": "Vierkant merkteken voor donkere achtergronden",
@@ -1792,6 +1846,12 @@
         "useLogo": "Mijn logo in de e-mailkop gebruiken",
         "logoWide": "Breed logo",
         "logoDefault": "Vierkant logo",
+        "logoArtwork": "Logoversie",
+        "logoArtworkAuto": "Afstemmen op de koptekst",
+        "logoArtworkLight": "Logo voor lichte achtergrond",
+        "logoArtworkDark": "Logo voor donkere achtergrond",
+        "logoArtworkAutoDark": "Automatisch ziet deze koptekst als donker en gebruikt het logo voor donkere achtergrond.",
+        "logoArtworkAutoLight": "Automatisch ziet deze koptekst als licht en gebruikt het logo voor lichte achtergrond.",
         "noLogo": "Upload een logo via Instellingen → Klantenportaal → Huisstijl om het hier te gebruiken.",
         "showAttribution": "'Powered by AlgaPSA' in de voettekst tonen"
       }
@@ -2359,6 +2419,11 @@
       "updateFailed": "Kan de rol niet bijwerken",
       "validateDeletionFailed": "Kan de verwijdering niet valideren. Probeer het opnieuw.",
       "deleteFailed": "Kan de rol niet verwijderen"
+    },
+    "editDialog": {
+      "title": "Rol bewerken",
+      "builtInNameLocked": "Namen van ingebouwde rollen kunnen niet worden gewijzigd, omdat het systeem ervan afhankelijk is.",
+      "portalLocked": "Portaaltoegang kan niet worden gewijzigd nadat een rol is aangemaakt."
     }
   },
   "security": {
@@ -3413,7 +3478,10 @@
       "duplicate": "Die gebruiker heeft de geselecteerde rol al.",
       "changePermission": "Toestemming geweigerd: u hebt geen rechten om gebruikersrollen te wijzigen.",
       "missingField": "Er ontbreekt een verplicht veld van de gebruikersrol.",
-      "missingFieldNamed": "Er ontbreekt een verplicht veld van de gebruikersrol: {{field}}."
+      "missingFieldNamed": "Er ontbreekt een verplicht veld van de gebruikersrol: {{field}}.",
+      "nameRequired": "Rolnaam is verplicht.",
+      "builtInRename": "Ingebouwde rollen kunnen niet worden hernoemd.",
+      "duplicateName": "Er bestaat al een rol met de naam \"{{name}}\" voor dit portaal."
     },
     "secrets": {
       "tenantContextMissing": "De tenantcontext ontbreekt. Vernieuw de pagina en probeer het opnieuw.",
@@ -3438,6 +3506,7 @@
       "missingField": "Er ontbreekt een verplicht veld van de tenantinstellingen.",
       "missingFieldNamed": "Er ontbreekt een verplicht veld van de tenantinstellingen: {{field}}.",
       "invalidTimezone": "Ongeldige tijdzone: {{timezone}}",
+      "nonLocationTimezone": "{{timezone}} is geen tijdzone op basis van een stad. Kies een zone zoals America/New_York.",
       "permissions": {
         "clearOnboarding": "Toestemming geweigerd: alleen beheerders kunnen onboardinggegevens wissen.",
         "update": "Toestemming geweigerd: de instellingen kunnen niet worden bijgewerkt",

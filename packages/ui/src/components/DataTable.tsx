@@ -24,6 +24,7 @@ import {
   getColumnId,
   getColumnLayout,
   getColumnSizeConfig,
+  withUniqueColumnIds,
 } from './dataTableColumnFit';
 import { applyColumnVisibilityAndOrder } from './dataTableColumnState';
 import { ReflectionContainer } from '../ui-reflection/ReflectionContainer';
@@ -152,7 +153,9 @@ const hasOverflow = (element: HTMLElement): boolean => {
     return true;
   }
 
-  return Array.from(element.querySelectorAll<HTMLElement>('*')).some(isElementOverflowing);
+  // sr-only labels are clipped 1px boxes by design, not truncated content.
+  return Array.from(element.querySelectorAll<HTMLElement>('*'))
+    .some((child) => !child.closest('.sr-only') && isElementOverflowing(child));
 };
 
 // Shows the custom Tooltip only when the content is actually truncated. The open state is
@@ -281,7 +284,7 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
   const {
     id,
     data,
-    columns: inputColumns,
+    columns: rawColumns,
     pagination = true,
     onRowClick,
     currentPage = 1,
@@ -305,6 +308,8 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
     columnVisibility,
     columnOrder,
   } = props;
+  // Every downstream lookup (cells, sizing, sorting, visibility) is keyed by column id.
+  const inputColumns = useMemo(() => withUniqueColumnIds(rawColumns), [rawColumns]);
   // Caller-controlled visibility and order are applied first, so everything
   // below (auto-fit, sizing, reflection) sees only the columns the caller wants.
   const columns = useMemo(
@@ -358,7 +363,7 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
   
   // State to track which columns should be visible
   const [visibleColumnIds, setVisibleColumnIds] = useState<string[]>(
-    columns.map(col => getColumnId(col.dataIndex))
+    columns.map(col => getColumnId(col))
   );
   // When true, every column renders and the table scrolls horizontally; otherwise only the
   // columns that fully fit the container are shown (no horizontal overflow).
@@ -395,7 +400,26 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
 
   // Every column the caller defined, hidden or not: a width remembered for a
   // column a view hides must survive until the column is shown again.
-  const columnIds = useMemo(() => inputColumns.map(col => getColumnId(col.dataIndex)), [inputColumns]);
+  const columnIds = useMemo(() => inputColumns.map(col => getColumnId(col)), [inputColumns]);
+
+  // Duplicates are suffixed by withUniqueColumnIds, but those ids shift when columns are
+  // reordered (and saved widths with them), so callers should still set a unique id.
+  const declaredColumnIdsKey = rawColumns.map(col => getColumnId(col)).join('\u0000');
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'production') return;
+    const seen = new Set<string>();
+    const duplicates = new Set<string>();
+    for (const columnId of declaredColumnIdsKey.split('\u0000')) {
+      if (seen.has(columnId)) duplicates.add(columnId);
+      seen.add(columnId);
+    }
+    if (duplicates.size > 0) {
+      console.warn(
+        `DataTable${id ? ` "${id}"` : ''}: multiple columns share the same column id (dataIndex): ${[...duplicates].map((d) => `"${d}"`).join(', ')}. ` +
+        'Give each column a unique id (or dataIndex).'
+      );
+    }
+  }, [declaredColumnIdsKey, id]);
   const columnSizingStorageKey = id ? `datatable-column-sizing:${id}` : null;
   const [columnSizing, setColumnSizing] = useState<ColumnSizingState>({});
   const [hasLoadedColumnSizing, setHasLoadedColumnSizing] = useState(false);
@@ -457,7 +481,7 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
   // `showAllColumns` bypasses this and renders everything with horizontal scroll.
   useEffect(() => {
     if (showAllColumns) {
-      setVisibleColumnIds(columns.map(col => getColumnId(col.dataIndex)));
+      setVisibleColumnIds(columns.map(col => getColumnId(col)));
       setFittedSizeOverrides({});
       return;
     }
@@ -473,7 +497,7 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
   // Memoize the initial column configuration to prevent loops
   const columnConfig = useMemo(() => {
     return columns.map((col): { id: string; title: string; dataIndex: string | string[]; hasCustomRender: boolean; visible: boolean } => {
-      const colId = Array.isArray(col.dataIndex) ? col.dataIndex.join('_') : col.dataIndex;
+      const colId = getColumnId(col);
       return {
         id: colId,
         title: String(col.title), // Convert ReactNode to string
@@ -509,11 +533,11 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
     () =>
       columns
         .filter(col => {
-          const colId = getColumnId(col.dataIndex);
+          const colId = getColumnId(col);
           return visibleColumnIds.includes(colId);
         })
         .map((col): ColumnDef<T> => {
-          const colId = getColumnId(col.dataIndex);
+          const colId = getColumnId(col);
           const sizing = getColumnSizeConfig(col, columnLayout);
           return {
             id: colId,
@@ -812,7 +836,7 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
                   {headerGroup.headers.map((header, headerIndex): React.JSX.Element => {
                     const columnId = header.column.columnDef.id || header.id;
                   const colDef = columns.find(col => {
-                    const colId = Array.isArray(col.dataIndex) ? col.dataIndex.join('_') : col.dataIndex;
+                    const colId = getColumnId(col);
                     return colId === header.column.id;
                   });
                   const isSortable = header.column.getCanSort();
@@ -937,7 +961,7 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
                       
                       // For columns with custom renders, use the raw value; for others, convert to string
                       const columnDef = columns.find(col => {
-                        const colId = Array.isArray(col.dataIndex) ? col.dataIndex.join('_') : col.dataIndex;
+                        const colId = getColumnId(col);
                         return colId === columnId;
                       });
                       

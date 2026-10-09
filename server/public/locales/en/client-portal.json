@@ -338,6 +338,8 @@
     },
     "captchaRequired": "Please complete the verification below, then sign in again.",
     "tooManyAttempts": "Too many failed sign-in attempts. Please wait a few minutes before trying again.",
+    "tenantRequiredMessage": "Your email is linked to more than one organization — choose your organization to continue.",
+    "tenantRequiredLink": "Choose your organization",
     "tenantDiscovery": {
       "title": "Find Your Organization",
       "description": "Enter your email address and we'll send you login links for all organizations you have access to.",
@@ -375,7 +377,17 @@
         "verifiedContact": "Verified contact email",
         "validPassword": "Valid password"
       }
-    }
+    },
+    "ssoNoMatchTitle": "SSO sign-in failed",
+    "ssoNoMatch": {
+      "no_matching_user": "No client portal account matches {{providerEmail}}. Sign in with your password or contact your service provider.",
+      "missing_email": "Your identity provider did not return an email address, so no client portal account could be matched. Sign in with your password or contact your service provider.",
+      "inactive_user": "The client portal account for {{providerEmail}} is inactive. Contact your service provider to reactivate it.",
+      "user_type_mismatch": "{{providerEmail}} is not a client portal account. Contact your service provider.",
+      "tenant_mismatch": "{{providerEmail}} belongs to a different organization's portal. Sign in with your password or contact your service provider."
+    },
+    "configurationTitle": "Sign-in failed",
+    "configurationMessage": "Sign-in failed. Please try again or contact your service provider."
   },
   "account": {
     "title": "Account",
@@ -476,7 +488,8 @@
         "consent": "I authorize recurring charges to this card for finalized invoices.",
         "enable": "Enable auto-pay",
         "noCards": "Add a card to enable auto-pay.",
-        "changeCard": "Use this card for auto-pay"
+        "changeCard": "Use this card for auto-pay",
+        "updateError": "Could not update auto-pay. Please try again."
       },
       "publicCardSetup": {
         "saved": "Card saved",
@@ -615,6 +628,7 @@
       "emailAlreadyExists": "A user with this email address already exists",
       "reportsToSelf": "A user cannot report to themselves",
       "reportsToCycle": "This would create a circular reporting chain",
+      "invalidTimezone": "Choose a city-based time zone, such as America/New_York.",
       "photoUploaded": "Photo uploaded successfully",
       "photoRemoved": "Photo removed successfully",
       "userNotFound": "User not found",
@@ -655,7 +669,8 @@
       "adjustMark": "Adjust mark",
       "cropFromWide": "Crop from wide logo",
       "recropSuccess": "Mark updated.",
-      "recropError": "Failed to update the mark."
+      "recropError": "Failed to update the mark.",
+      "fileNameLabel": "Stored file"
     },
     "validation": {
       "clientNameRequired": "Client name is required",
@@ -735,7 +750,10 @@
       "reportsToSelf": "A user cannot report to themselves",
       "reportsToCycle": "This would create a circular reporting chain",
       "createError": "Failed to create user",
-      "deleteError": "Failed to delete user"
+      "deleteError": "Failed to delete user",
+      "reportsTo": "Reports to",
+      "noManager": "No manager",
+      "reportsToHelp": "A manager can see the tickets, devices and projects of the people who report to them, when their visibility group is limited to their own records."
     },
     "messages": {
       "saveChanges": "Save Changes",
@@ -787,9 +805,22 @@
       "scopeClient": "All of this client’s tickets",
       "scopeContact": "Only their own tickets",
       "scopeClientDescription": "Members see every ticket for this client on the selected boards.",
-      "scopeContactDescription": "Members see only tickets they are listed as the contact on. Client admins see all tickets on the selected boards, including tickets with no contact.",
-      "assignmentHelp": "Assign a group to limit boards and ticket visibility, or keep full client access.",
-      "boardHiddenFromPortal": "Hidden from client portal"
+      "scopeContactDescription": "Members see tickets they are the contact on, tickets of people who report to them, and tickets they watch. Client admins always see everything on the selected boards, including tickets with no contact.",
+      "assignmentHelp": "Assign a group to limit boards and what this person sees of tickets, devices and projects, or keep full client access.",
+      "boardHiddenFromPortal": "Hidden from client portal",
+      "assetScopeLabel": "Device visibility",
+      "assetScopeClient": "All of this client’s devices",
+      "assetScopeContact": "Only their own devices",
+      "assetScopeClientDescription": "Members see every device for this client, including unassigned ones.",
+      "assetScopeContactDescription": "Members see only devices assigned to them or to people who report to them. Unassigned devices are hidden. Client admins always see everything.",
+      "projectScopeLabel": "Project visibility",
+      "projectScopeClient": "All of this client’s projects",
+      "projectScopeContact": "Only their own projects",
+      "projectScopeClientDescription": "Members see every project for this client.",
+      "projectScopeContactDescription": "Members see only projects whose contact is them or someone who reports to them. Projects with no contact are hidden. Client admins always see everything.",
+      "scopeSummary": "Tickets: {{tickets}} · Devices: {{devices}} · Projects: {{projects}}",
+      "scopeSummaryAll": "All",
+      "scopeSummaryOwn": "Own"
     },
     "domain": {
       "title": "Custom Domain",

@@ -87,6 +87,19 @@ const ProjectBillingCapUsage = {
     return normalizeProjectBillingCapUsage(row as Record<string, unknown>);
   },
 
+  /** Zeroes the counters; a no-op when the config has no usage row yet. */
+  reset: async (configId: string, trx: Knex.Transaction): Promise<void> => {
+    const { tenant } = await resolveProjectBillingDb(trx);
+    await tenantDb(trx, tenant).table('project_billing_cap_usage')
+      .where({ config_id: configId })
+      .update({
+        billed_amount: 0,
+        written_down_amount: 0,
+        notified_thresholds: JSON.stringify([]),
+        updated_at: new Date().toISOString()
+      });
+  },
+
   recordNotifiedThreshold: async (
     configId: string,
     threshold: number,

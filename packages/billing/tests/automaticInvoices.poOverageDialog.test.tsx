@@ -48,6 +48,7 @@ vi.mock('@alga-psa/ui/lib/i18n/client', async () => {
       return value === undefined ? match : String(value);
     });
   return {
+    useOptionalI18n: () => null,
     useTranslation: () => ({
       t: (key: string, opts?: { defaultValue?: string } & Record<string, unknown>) => {
         if (key === 'manualInvoices.errors.NO_BILLING_EMAIL') {

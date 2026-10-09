@@ -856,6 +856,29 @@ describe('runRmmAlertReconciliation (DB integration)', { shuffle: false }, () =>
     expect(webhookAlert.status).toBe('active'); // conservatively untouched
   });
 
+  it('resets an alert whose linked ticket was deleted without failing the cycle', async () => {
+    remoteActive = [
+      event({ externalAlertId: 'recon-orphan', conditionIdentity: 'RECON_ORPHAN', alertClass: 'RECON_ORPHAN' }),
+    ];
+    await runRmmAlertReconciliation({ knex: db }, { tenantId, integrationId, provider: 'ninjaone' });
+    await tenantTable('rmm_alerts')
+      .where({ tenant: tenantId, external_alert_id: 'recon-orphan' })
+      .update({ ticket_id: uuidv4() });
+
+    remoteActive = [];
+    const result = await runRmmAlertReconciliation(
+      { knex: db },
+      { tenantId, integrationId, provider: 'ninjaone' }
+    );
+    expect(result.resetsSynthesized).toBe(1);
+
+    const orphan = await tenantTable('rmm_alerts')
+      .where({ tenant: tenantId, external_alert_id: 'recon-orphan' })
+      .first();
+    expect(orphan.status).toBe('resolved');
+    expect(orphan.ticket_id).toBeNull();
+  });
+
   it('reprocesses a still-active suppressed alert once its window ends', async () => {
     const reconWindowId = uuidv4();
     await tenantTable('rmm_maintenance_windows').insert({

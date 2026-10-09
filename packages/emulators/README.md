@@ -57,6 +57,7 @@ Emulators implement the vendor protocol subsets listed in this guide and the
 | Vendor | Env vars |
 | --- | --- |
 | Microsoft | `MICROSOFT_LOGIN_BASE_URL=http://localhost:4010`, `MICROSOFT_GRAPH_BASE_URL=http://localhost:4010/v1.0` |
+| Microsoft sign-in (SSO) | `MICROSOFT_SSO_EMULATOR_MODE=true`, the two Microsoft vars above, plus `MICROSOFT_OAUTH_CLIENT_ID` / `MICROSOFT_OAUTH_CLIENT_SECRET` seeded into the simulator with `seed/client` |
 | Teams / Bot Framework | `TEAMS_EMULATOR_MODE=true`, the two Microsoft vars above, plus `TEAMS_BOT_OPENID_CONFIG_URL=http://localhost:4010/v1/.well-known/openidconfiguration` and `TEAMS_BOT_SERVICE_URL_ALLOWLIST=http://localhost:4010` |
 | QBO | `QBO_OAUTH_AUTHORIZE_URL=http://localhost:4020/connect/oauth2`, `QBO_OAUTH_TOKEN_URL=http://localhost:4020/oauth2/v1/tokens/bearer`, `QBO_OAUTH_REVOKE_URL=http://localhost:4020/v2/oauth2/tokens/revoke`, `QBO_API_BASE_URL=http://localhost:4020/v3/company` |
 | Stripe | `STRIPE_API_BASE_URL=http://localhost:4050`, `STRIPE_SECRET_KEY=sk_test_algasim`, `STRIPE_PAYMENT_WEBHOOK_SECRET=whsec_algasim`, `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_algasim` |
@@ -77,6 +78,29 @@ the Teams integration specifically — `MICROSOFT_LOGIN_BASE_URL` and
 credentials, the Graph client secret, and activity-notification tokens are
 sent. (The email module honors those two Microsoft vars unconditionally; that
 is pre-existing behavior, unchanged here.)
+
+`MICROSOFT_SSO_EMULATOR_MODE` is the separate, equally deny-by-default gate for
+Microsoft **sign-in** (the `azure-ad` NextAuth provider behind the "Sign in with
+Microsoft" button and the Profile → Single Sign-On link flow). It decides where
+the browser is sent to authenticate and whose profile may become a session, so
+it is never implied by the two base-URL vars alone, and `NODE_ENV=production`
+locks it out. With it on, the provider runs as plain OAuth2 against the
+simulator — authorize, token, then Graph `/me` for the profile — because the
+simulator mints no signed id_token. Seed the client id/secret the app is
+configured with (`seed/client`) or `/authorize` answers `invalid_client`, and
+seed the account the browser should come back as:
+
+```bash
+curl -sX POST localhost:9500/control/msgraph/seed/signed-in-user \
+  -H 'content-type: application/json' \
+  -d '{"mail":"nd@computerbutlereurope.onmicrosoft.com",
+       "userPrincipalName":"nd@computerbutlereurope.onmicrosoft.com"}'
+```
+
+`mail` and `userPrincipalName` are seeded separately on purpose: an Entra
+account whose mail is on the tenant's `.onmicrosoft.com` domain while the
+AlgaPSA login uses a vanity domain is what produces the "no AlgaPSA account
+matches" surface, and that is the mismatch to stage when exercising it.
 
 `TEAMS_BOT_OPENID_CONFIG_URL` moves *discovery only*: the emulator generates
 an RSA keypair, publishes a JWKS, and RS256-signs the activities it injects,

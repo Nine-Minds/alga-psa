@@ -52,6 +52,7 @@
         "fillRequiredFields": "Veuillez remplir tous les champs obligatoires",
         "loadFailed": "Échec du chargement du profil",
         "saveFailed": "Échec de l'enregistrement du profil",
+        "invalidTimezone": "Choisissez un fuseau horaire basé sur une ville, comme America/New_York.",
         "errorPrefix": "Erreur : {{error}}"
       }
     },
@@ -726,6 +727,16 @@
     }
   },
   "connectSso": {
+    "linkError": {
+      "title": "Échec de l'association SSO.",
+      "no_matching_user": "Le compte avec lequel vous vous êtes connecté est {{providerEmail}}, alors que votre identifiant AlgaPSA est {{accountEmail}}. Associez un compte qui utilise {{accountEmail}}, ou demandez à l'administrateur de votre fournisseur d'identité de définir {{accountEmail}} comme adresse e-mail principale de ce compte.",
+      "missing_email": "Votre fournisseur d'identité n'a renvoyé aucune adresse e-mail pour ce compte, il est donc impossible de le rapprocher de votre identifiant AlgaPSA {{accountEmail}}. Demandez à l'administrateur de votre fournisseur d'identité de publier une adresse e-mail pour ce compte, puis réessayez.",
+      "inactive_user": "L'utilisateur AlgaPSA correspondant à {{providerEmail}} est inactif et ne peut donc pas être associé. Demandez à votre administrateur de le réactiver, puis réessayez.",
+      "user_type_mismatch": "{{providerEmail}} correspond à un utilisateur du portail client et non à un utilisateur interne AlgaPSA. Associez plutôt un compte qui utilise {{accountEmail}}.",
+      "tenant_mismatch": "{{providerEmail}} appartient à une autre organisation que {{accountEmail}}. Associez un compte de votre propre organisation.",
+      "generic": "Nous n'avons pas pu associer ce compte à {{accountEmail}}. Veuillez réessayer ou contacter votre administrateur.",
+      "unknownProviderEmail": "un compte sans adresse e-mail"
+    },
     "verify": {
       "title": "Sécurisez votre compte avec le SSO",
       "description": "Liez Azure AD ou Google Workspace pour réutiliser les politiques de l'organisation et éviter les invites d'authentification à deux facteurs locales.",

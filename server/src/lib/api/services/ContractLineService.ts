@@ -12,6 +12,7 @@ import { IContractLineServiceConfiguration } from 'server/src/interfaces/contrac
 import { IService } from 'server/src/interfaces/billing.interfaces';
 import { v4 as uuidv4 } from 'uuid';
 import { cloneTemplateContractLine } from '@alga-psa/billing/lib/billing/utils/templateClone';
+import { getFixedServiceBasisIssue, isUnitFixedService } from '@alga-psa/billing/lib/fixedServiceBasis';
 
 // Import existing models and actions for integration
 import ContractLine from '@alga-psa/billing/models/contractLine';
@@ -107,6 +108,40 @@ function throwPlanServiceConfigurationApiError(error: unknown): never {
   }
 
   throw error;
+}
+
+/**
+ * Authoring rules for a Fixed service's quantity and unit rate, shared by add
+ * and update so the two cannot disagree. A per-unit ('unit') service bills
+ * quantity x unit rate: a whole quantity of zero or more (zero bills zero) and
+ * an optional whole-cent unit rate (absent follows the catalog price in the
+ * contract currency). A bundle service keeps the historical rule of a quantity
+ * of at least 1. Throws ValidationError.
+ */
+function assertFixedServiceInputs(input: {
+  pricingBasis: string | null | undefined;
+  quantity: number | null | undefined;
+  unitRate: number | null | undefined;
+}): void {
+  const issue = getFixedServiceBasisIssue(
+    { pricing_basis: input.pricingBasis, quantity: input.quantity, unit_rate: input.unitRate },
+    { requireUnitRate: false },
+  );
+  if (isUnitFixedService({ pricing_basis: input.pricingBasis })) {
+    if (issue === 'quantity_invalid') {
+      throw new ValidationError('Quantity must be zero or more for a per-unit service');
+    }
+    if (issue === 'unit_quantity_not_whole') {
+      throw new ValidationError('Quantity must be a whole number for a per-unit service');
+    }
+    if (issue === 'unit_rate_required') {
+      throw new ValidationError('Unit rate must be a whole number of cents, zero or more');
+    }
+    return;
+  }
+  if (issue === 'quantity_invalid' || (input.quantity != null && input.quantity < 1)) {
+    throw new ValidationError('Quantity must be at least 1');
+  }
 }
 
 export interface PlanTemplate {
@@ -597,19 +632,73 @@ export class ContractLineService extends BaseService<IContractLine> {
         
         // Create service configuration
         this.planServiceConfigService = new ContractLineServiceConfigurationService(trx, context.tenant);
-        
+
+        const configurationType = data.configuration_type || plan.contract_line_type;
+        const requestedTypeConfig = (data.type_config || {}) as Record<string, any>;
+        const pricingBasis: string | undefined = requestedTypeConfig.pricing_basis ?? undefined;
+        const isUnit = isUnitFixedService({ pricing_basis: pricingBasis });
+        let typeConfig: Record<string, any> = requestedTypeConfig;
+        let customRate = data.custom_rate;
+
+        if (isUnit) {
+          if (configurationType !== 'Fixed') {
+            throw new ValidationError('Per-unit pricing is only available for Fixed services');
+          }
+          if (service.item_kind === 'product') {
+            throw new ValidationError('Products are billed by unit quantity and cannot be priced as recurring per-unit services');
+          }
+          // The unit rate lives in the fixed config's base_rate. custom_rate is
+          // accepted as an alias (as on update) but must not disagree.
+          const explicitBaseRate = requestedTypeConfig.base_rate;
+          if (explicitBaseRate != null && data.custom_rate != null && explicitBaseRate !== data.custom_rate) {
+            throw new ValidationError('custom_rate and type_config.base_rate disagree; provide the unit rate once');
+          }
+          const unitRate = explicitBaseRate ?? data.custom_rate ?? null;
+          typeConfig = { ...requestedTypeConfig, pricing_basis: 'unit', base_rate: unitRate };
+          // A second, conflicting price on the base configuration would be
+          // ambiguous; the per-unit rate is the only price.
+          customRate = undefined;
+        } else if (pricingBasis !== undefined && pricingBasis !== 'bundle') {
+          throw new ValidationError(`Unsupported pricing basis: ${pricingBasis}`);
+        }
+
+        if (configurationType === 'Fixed') {
+          assertFixedServiceInputs({
+            pricingBasis,
+            quantity: data.quantity ?? 1,
+            unitRate: isUnit ? typeConfig.base_rate : null,
+          });
+        } else if ((data.quantity ?? 1) < 1) {
+          throw new ValidationError('Quantity must be at least 1');
+        }
+
+        // The billing engine reads a line's members from contract_line_services;
+        // a configuration without a membership row never bills. This mirrors
+        // the UI action (addServiceToContractLineInTransaction).
+        const existingMembership = await tenantDb(trx, context.tenant).table('contract_line_services')
+          .where({ contract_line_id: planId, service_id: data.service_id })
+          .first();
+        if (!existingMembership) {
+          await tenantDb(trx, context.tenant).table('contract_line_services').insert({
+            tenant: context.tenant,
+            contract_line_id: planId,
+            service_id: data.service_id,
+          });
+        }
+
         const baseConfigData = {
           contract_line_id: planId,
           service_id: data.service_id,
-          configuration_type: data.configuration_type || plan.contract_line_type,
-          custom_rate: data.custom_rate,
-          quantity: data.quantity || 1,
+          configuration_type: configurationType,
+          custom_rate: customRate,
+          // ?? not ||: zero seats is a real per-unit quantity.
+          quantity: data.quantity ?? 1,
           tenant: context.tenant
         };
-        
+
         const configId = await this.planServiceConfigService.createConfiguration(
           baseConfigData,
-          data.type_config || {}
+          typeConfig
         ).catch(throwPlanServiceConfigurationApiError);
         
         // Return the created configuration
@@ -642,6 +731,9 @@ export class ContractLineService extends BaseService<IContractLine> {
       // Use service to delete configuration and related data
       this.planServiceConfigService = new ContractLineServiceConfigurationService(trx, context.tenant);
       await this.planServiceConfigService.deleteConfiguration(config.config_id);
+      await tenantDb(trx, context.tenant).table('contract_line_services')
+        .where({ contract_line_id: planId, service_id: serviceId })
+        .delete();
     });
   }
 
@@ -669,11 +761,46 @@ export class ContractLineService extends BaseService<IContractLine> {
         
         // Update service configuration
         this.planServiceConfigService = new ContractLineServiceConfigurationService(trx, context.tenant);
-        
+
+        let typeConfig: Record<string, any> = data.type_config || {};
+        if (config.configuration_type === 'Fixed') {
+          const fixed = await tenantDb(trx, context.tenant).table('contract_line_service_fixed_config')
+            .where('config_id', config.config_id)
+            .first();
+          const storedBasis = fixed?.pricing_basis ?? 'bundle';
+          const requestedBasis = typeConfig.pricing_basis;
+          if (requestedBasis !== undefined && requestedBasis !== null && requestedBasis !== storedBasis) {
+            throw new ValidationError('The pricing basis is chosen when the service is added and cannot be changed; remove the service and add it again');
+          }
+          const { pricing_basis: _unchangedBasis, ...restTypeConfig } = typeConfig;
+          typeConfig = restTypeConfig;
+          // custom_rate is the unit-rate alias for a per-unit service (see addServiceToPlan).
+          const isUnit = isUnitFixedService({ pricing_basis: storedBasis });
+          if (isUnit && typeConfig.base_rate != null && data.custom_rate != null && typeConfig.base_rate !== data.custom_rate) {
+            throw new ValidationError('custom_rate and type_config.base_rate disagree; provide the unit rate once');
+          }
+          if (data.quantity !== undefined || (isUnit && (typeConfig.base_rate !== undefined || data.custom_rate !== undefined))) {
+            assertFixedServiceInputs({
+              pricingBasis: storedBasis,
+              quantity: data.quantity ?? Number(config.quantity ?? 1),
+              unitRate: isUnit ? (typeConfig.base_rate ?? data.custom_rate ?? null) : null,
+            });
+          }
+        } else if (data.quantity !== undefined && data.quantity < 1) {
+          throw new ValidationError('Quantity must be at least 1');
+        }
+
+        // Quantity and unit-rate edits on a per-unit service are scheduled as a
+        // dated revision by updateConfiguration (never written in place once
+        // periods have been billed).
+        // type_config / rate_tiers / user_type_rates are not columns of the base
+        // configuration; passing them through as base fields fails the write.
+        const { type_config: _typeConfig, rate_tiers: rateTiers, user_type_rates: _userTypeRates, ...baseConfigUpdate } = data;
         await this.planServiceConfigService.updateConfiguration(
           config.config_id,
-          data,
-          data.type_config || {}
+          baseConfigUpdate,
+          typeConfig,
+          rateTiers as any
         ).catch(throwPlanServiceConfigurationApiError);
         
         // Return updated configuration
@@ -1989,23 +2116,48 @@ export class ContractLineService extends BaseService<IContractLine> {
     // Copy each service with modifications
     for (const sourceService of sourceServices) {
       let customRate = sourceService.custom_rate;
-      
+
+      const adjust = (rate: number) => {
+        let adjusted = rate;
+        if (modifyRates?.percentage_change) {
+          adjusted = adjusted * (1 + modifyRates.percentage_change / 100);
+        }
+        if (modifyRates?.fixed_adjustment) {
+          adjusted = adjusted + modifyRates.fixed_adjustment;
+        }
+        return adjusted;
+      };
+
       // Apply rate modifications
       if (modifyRates && customRate) {
-        if (modifyRates.percentage_change) {
-          customRate = customRate * (1 + modifyRates.percentage_change / 100);
-        }
-        if (modifyRates.fixed_adjustment) {
-          customRate = customRate + modifyRates.fixed_adjustment;
+        customRate = adjust(customRate);
+      }
+
+      // A per-unit service must stay per-unit in the copy: without its fixed
+      // config it would be re-created as a bundle allocation and the seats
+      // would silently stop billing.
+      let typeConfig: { pricing_basis: 'unit'; base_rate: number | null } | undefined;
+      if (sourceService.configuration_type === 'Fixed') {
+        const sourceFixed = await tenantDb(trx, context.tenant).table('contract_line_service_fixed_config')
+          .where('config_id', sourceService.config_id)
+          .first();
+        if (isUnitFixedService({ pricing_basis: sourceFixed?.pricing_basis })) {
+          const sourceRate = sourceFixed.base_rate == null ? null : Number(sourceFixed.base_rate);
+          typeConfig = {
+            pricing_basis: 'unit',
+            base_rate: sourceRate === null ? null : Math.round(modifyRates ? adjust(sourceRate) : sourceRate),
+          };
         }
       }
-      
+
       // Create new service configuration
       await this.addServiceToPlan(targetPlanId, {
         service_id: sourceService.service_id,
         configuration_type: sourceService.configuration_type,
-        custom_rate: customRate,
-        quantity: sourceService.quantity
+        custom_rate: typeConfig ? undefined : customRate,
+        // A bundle quantity of 0 was always normalised to 1 on copy.
+        quantity: typeConfig ? sourceService.quantity : (sourceService.quantity || 1),
+        ...(typeConfig ? { type_config: typeConfig } : {})
       }, context);
     }
   }

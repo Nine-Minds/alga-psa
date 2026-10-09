@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Label } from '@alga-psa/ui/components/Label';
 import { Input } from '@alga-psa/ui/components/Input';
+import { QuantityInput } from '../QuantityInput';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { BucketOverlayInput, ContractWizardData } from '../ContractWizard';
@@ -18,58 +19,226 @@ import { getRecurringAuthoringPreview } from '../recurringAuthoringPreview';
 import { getUnsupportedRecurringAuthoringCombination } from '@alga-psa/shared/billingClients/recurringAuthoringValidation';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useFormatBillingFrequency } from '@alga-psa/billing/hooks/useBillingEnumOptions';
+import { resolveContractAuthoringRate } from '../../../../lib/contractAuthoringRate';
+import { useCurrencyFormat } from '@alga-psa/ui/lib';
+import { getServiceCatalogRatesForCurrency } from '@alga-psa/billing/actions/serviceActions';
+import { FixedServiceConfigPanel } from '../../service-configurations/FixedServiceConfigPanel';
+import {
+  fixedServicesRecurringTotalCents,
+  hasBundleFixedService,
+  isUnitFixedService,
+  unitFixedServiceAmountCents,
+} from '../../../../lib/fixedServiceBasis';
 
 interface FixedFeeServicesStepProps {
   data: ContractWizardData;
-  updateData: (data: Partial<ContractWizardData>) => void;
+  /**
+   * Accepts a partial to shallow-merge, or a function that derives the partial
+   * from the latest wizard state. Use the function form after an `await`, where
+   * `data` is the render that started the async work and may be stale.
+   */
+  updateData: (
+    data: Partial<ContractWizardData> | ((prev: ContractWizardData) => Partial<ContractWizardData>),
+  ) => void;
+}
+
+type FixedServiceDraft = ContractWizardData['fixed_services'][number];
+
+function computeWeightedResolvedRate(services: FixedServiceDraft[]): number {
+  return services.reduce((sum, service) => {
+    // Only bundle members share the line base rate; per-seat/unit members bill
+    // quantity × unit rate separately and must not inflate the suggestion.
+    if (isUnitFixedService(service)) return sum;
+    const rate =
+      typeof service.resolved_rate === 'number' && Number.isFinite(service.resolved_rate)
+        ? service.resolved_rate
+        : 0;
+    const quantity = Number.isFinite(service.quantity) ? service.quantity : 0;
+    return sum + Math.round(rate * quantity);
+  }, 0);
 }
 
 export function FixedFeeServicesStep({ data, updateData }: FixedFeeServicesStepProps) {
   const { t } = useTranslation('msp/contracts');
   const [baseRateInput, setBaseRateInput] = useState<string>('');
+  // A populated base rate (manual edit, resumed draft, or existing line) is
+  // authoritative; the service-derived total is only a suggestion while the
+  // field remains auto-derived.
+  const [baseRateIsManual, setBaseRateIsManual] = useState<boolean>(
+    () => typeof data.fixed_base_rate === 'number' && data.fixed_base_rate > 0,
+  );
+  const { money } = useCurrencyFormat();
+  // Catalog price in the contract currency (service_prices), keyed by service so
+  // reordering or removing rows cannot attach a price to the wrong service.
+  const [catalogRates, setCatalogRates] = useState<Record<string, number | null>>({});
+
+  // Services whose unit rate the operator deliberately emptied. Catalog prefill
+  // is for rows that never had a rate; an emptied field must stay empty while
+  // the operator types the replacement, and is then rejected by step validation
+  // and submission (getFixedServiceBasisIssue) instead of being refilled. A ref
+  // so the async prefill below always reads the latest set, not a render's copy.
+  const clearedRateServices = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     if (data.fixed_base_rate !== undefined) {
       setBaseRateInput((data.fixed_base_rate / 100).toFixed(2));
+    } else {
+      // An auto-derived suggestion that drops to zero clears the field so the
+      // existing non-zero validation still applies. A manually cleared field is
+      // left alone.
+      setBaseRateInput((previous) => (baseRateIsManual ? previous : ''));
     }
+    // Intentionally keyed only on the committed rate: re-running when the
+    // manual flag flips would clobber an in-progress edit.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data.fixed_base_rate]);
 
+  /**
+   * Returns the base-rate field update that keeps the suggestion in sync while
+   * it is auto-derived. Once the author edits the field, returns nothing so the
+   * manual value survives later service/quantity changes.
+   */
+  const getAutoBaseRateUpdate = (services: FixedServiceDraft[]): Partial<ContractWizardData> => {
+    if (baseRateIsManual) {
+      return {};
+    }
+    const total = computeWeightedResolvedRate(services);
+    return { fixed_base_rate: total > 0 ? total : undefined };
+  };
+
+  // A per-seat service that arrives without a unit rate (from a template,
+  // which is currency-neutral, or a resumed draft) follows the catalog price in
+  // the contract currency until the operator overrides it.
+  const unitServicesMissingRate = data.fixed_services
+    .filter((service) => isUnitFixedService(service) && service.service_id && service.unit_rate == null && !clearedRateServices.current.has(service.service_id))
+    .map((service) => service.service_id);
+  const missingRateKey = Array.from(new Set(unitServicesMissingRate)).sort().join(',');
+
+  useEffect(() => {
+    if (!missingRateKey || !data.currency_code) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const rates = await getServiceCatalogRatesForCurrency(missingRateKey.split(','), data.currency_code);
+        if (cancelled) return;
+        setCatalogRates((prev) => ({ ...prev, ...rates }));
+        // Apply against the wizard state as it is now: the operator may have
+        // edited rows while the request was pending, and only a still-unpriced
+        // per-unit row on the same service is filled in.
+        updateData((prev) => ({
+          fixed_services: prev.fixed_services.map((service) =>
+            isUnitFixedService(service) && service.service_id && service.unit_rate == null && !clearedRateServices.current.has(service.service_id) && rates[service.service_id] != null
+              ? { ...service, unit_rate: rates[service.service_id] as number }
+              : service
+          ),
+        }));
+      } catch (error) {
+        console.error('Failed to load catalog prices for recurring services', error);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [missingRateKey, data.currency_code]);
+
   const handleAddService = () => {
-    updateData({
-      fixed_services: [
-        ...data.fixed_services,
-        { service_id: '', service_name: '', quantity: 1, bucket_overlay: undefined },
-      ],
-    });
+    const next = [
+      ...data.fixed_services,
+      {
+        service_id: '',
+        service_name: '',
+        quantity: 1,
+        pricing_basis: 'bundle' as const,
+        unit_rate: undefined,
+        bucket_overlay: undefined,
+      },
+    ];
+    updateData({ fixed_services: next, ...getAutoBaseRateUpdate(next) });
   };
 
   const handleRemoveService = (index: number) => {
+    clearedRateServices.current.delete(data.fixed_services[index]?.service_id);
     const next = data.fixed_services.filter((_, i) => i !== index);
-    updateData({ fixed_services: next });
+    updateData({ fixed_services: next, ...getAutoBaseRateUpdate(next) });
   };
 
   const handleServiceChange = (index: number, item: ServiceCatalogPickerItem) => {
+    const catalogRate =
+      item.currency_rate != null && item.currency_rate > 0 ? Math.round(item.currency_rate) : null;
+    setCatalogRates((prev) => ({ ...prev, [item.service_id]: catalogRate }));
+
     const next = [...data.fixed_services];
+    const current = next[index];
+    const resolved = resolveContractAuthoringRate(item, data.currency_code);
+    // A unit row follows the newly chosen service's catalog price; the operator
+    // can still overwrite it. A bundle row carries no unit rate.
+    const serviceChanged = current.service_id !== item.service_id;
+    if (serviceChanged) {
+      clearedRateServices.current.delete(current.service_id);
+      clearedRateServices.current.delete(item.service_id);
+    }
     next[index] = {
-      ...next[index],
+      ...current,
       service_id: item.service_id,
       service_name: item.service_name,
+      resolved_rate: resolved.rate,
+      resolved_rate_source: resolved.source,
+      unit_rate:
+        isUnitFixedService(current) && (serviceChanged || current.unit_rate == null)
+          ? (catalogRate ?? resolved.rate ?? undefined)
+          : current.unit_rate,
     };
-    updateData({ fixed_services: next });
+    updateData({ fixed_services: next, ...getAutoBaseRateUpdate(next) });
   };
 
-  const handleQuantityChange = (index: number, quantity: number) => {
+  const handleQuantityChange = (index: number, rawValue: number) => {
     const next = [...data.fixed_services];
+    const isUnit = isUnitFixedService(next[index]);
+    // Recurring seats are a whole number >= 0 (zero is a stored zero, never 1);
+    // an allocation keeps its historical minimum of 1.
+    const quantity = isUnit
+      ? Math.max(0, Math.floor(Number.isFinite(rawValue) ? rawValue : 0))
+      : Math.max(1, rawValue || 1);
     next[index] = { ...next[index], quantity };
-    updateData({ fixed_services: next });
+    updateData({ fixed_services: next, ...getAutoBaseRateUpdate(next) });
+  };
+
+  const handleConfigurationChange = (
+    index: number,
+    updates: { pricing_basis?: 'bundle' | 'unit' | null; base_rate?: number | null },
+  ) => {
+    const next = [...data.fixed_services];
+    const current = next[index];
+    const pricingBasis: 'bundle' | 'unit' = updates.pricing_basis === 'unit' ? 'unit' : updates.pricing_basis === 'bundle' ? 'bundle' : current.pricing_basis;
+    let unitRate = updates.base_rate !== undefined ? updates.base_rate : current.unit_rate;
+    if (updates.base_rate === null) clearedRateServices.current.add(current.service_id);
+    else if (updates.base_rate !== undefined) clearedRateServices.current.delete(current.service_id);
+    let quantity = current.quantity;
+    if (updates.pricing_basis && updates.pricing_basis !== current.pricing_basis) {
+      clearedRateServices.current.delete(current.service_id);
+      if (updates.pricing_basis === 'unit') {
+        // Prefill from the catalog price in the contract currency, overridable.
+        if (unitRate == null) unitRate = catalogRates[current.service_id] ?? undefined;
+      } else {
+        quantity = Math.max(1, quantity || 1);
+      }
+    }
+    next[index] = { ...current, pricing_basis: pricingBasis, unit_rate: unitRate, quantity };
+    updateData({ fixed_services: next, ...getAutoBaseRateUpdate(next) });
   };
 
   const currencySymbol = getCurrencySymbol(data.currency_code);
 
-  const formatCurrency = (cents: number | undefined) => {
-    if (!cents) return `${currencySymbol}0.00`;
-    return `${currencySymbol}${(cents / 100).toFixed(2)}`;
-  };
+  const formatCurrency = (cents: number | undefined) => money(cents ?? 0, data.currency_code);
+  const hasBundleMember = hasBundleFixedService(data.fixed_services);
+  const unitServices = data.fixed_services.filter(
+    (service) => service.service_id && isUnitFixedService(service),
+  );
+  const recurringTotalCents = fixedServicesRecurringTotalCents(
+    data.fixed_services.filter((service) => service.service_id),
+    data.fixed_base_rate,
+  );
 
   const getDefaultOverlay = (): BucketOverlayInput => ({
     total_minutes: undefined,
@@ -151,7 +320,7 @@ export function FixedFeeServicesStep({ data, updateData }: FixedFeeServicesStepP
           </p>
         </div>
 
-        {data.fixed_services.length > 0 && (
+        {data.fixed_services.length > 0 && hasBundleMember && (
           <div className="space-y-2">
             <Label htmlFor="fixed_base_rate" className="flex items-center gap-2">
               <Coins className="h-4 w-4" />
@@ -170,6 +339,9 @@ export function FixedFeeServicesStep({ data, updateData }: FixedFeeServicesStepP
                   const value = event.target.value.replace(/[^0-9.]/g, '');
                   const decimalCount = (value.match(/\./g) || []).length;
                   if (decimalCount <= 1) {
+                    // Any edit makes the field authoritative; later service or
+                    // quantity changes must not overwrite the author's value.
+                    setBaseRateIsManual(true);
                     setBaseRateInput(value);
                   }
                 }}
@@ -189,9 +361,14 @@ export function FixedFeeServicesStep({ data, updateData }: FixedFeeServicesStepP
               />
             </div>
             <p className="text-xs text-[rgb(var(--color-text-400))]">
-              {t('wizardFixed.baseRate.hint', {
-                defaultValue: 'Total recurring fee for all fixed services combined.',
-              })}
+              {unitServices.length > 0
+                ? t('wizardFixed.baseRate.hintWithUnits', {
+                    defaultValue:
+                      'Total recurring fee for the bundle services. Recurring seats/units bill quantity × unit rate separately and are not part of this rate.',
+                  })
+                : t('wizardFixed.baseRate.hint', {
+                    defaultValue: 'Total recurring fee for all fixed services combined.',
+                  })}
             </p>
           </div>
         )}
@@ -241,27 +418,55 @@ export function FixedFeeServicesStep({ data, updateData }: FixedFeeServicesStepP
                     selectedLabel={service.service_name}
                     onSelect={(item) => handleServiceChange(index, item)}
                     itemKinds={['service']}
+                    currencyCode={data.currency_code}
                     placeholder={t('wizardFixed.services.selectServicePlaceholder', {
                       defaultValue: 'Select a service',
                     })}
                   />
+                  {service.resolved_rate_source === 'catalog-default' && service.resolved_rate !== null && service.resolved_rate !== undefined ? (
+                    <p className="text-xs text-[rgb(var(--color-text-400))]">
+                      {t('wizardFixed.services.catalogDefaultHint', {
+                        defaultValue: 'No {{currency}} catalog price; using the catalog default rate.',
+                        currency: data.currency_code,
+                      })}
+                    </p>
+                  ) : null}
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor={`quantity-${index}`} className="text-sm">
-                    {t('wizardFixed.services.quantityLabel', { defaultValue: 'Quantity' })}
+                    {isUnitFixedService(service)
+                      ? t('wizardFixed.services.recurringQuantityLabel', { defaultValue: 'Recurring quantity' })
+                      : t('wizardFixed.services.allocationQuantityLabel', { defaultValue: 'Allocation quantity' })}
                   </Label>
-                  <Input
+                  <QuantityInput
                     id={`quantity-${index}`}
-                    type="number"
                     value={service.quantity}
-                    onChange={(event) =>
-                      handleQuantityChange(index, Math.max(1, Number(event.target.value) || 1))
-                    }
-                    min="1"
+                    onCommit={(value) => handleQuantityChange(index, value)}
+                    min={isUnitFixedService(service) ? 0 : 1}
                     className="w-24"
                   />
                 </div>
+
+                <FixedServiceConfigPanel
+                  idPrefix={`wizard-fixed-${index}-`}
+                  currencyCode={data.currency_code}
+                  configuration={{ pricing_basis: service.pricing_basis, base_rate: service.unit_rate }}
+                  quantity={service.quantity}
+                  planFixedConfig={{ enable_proration: data.enable_proration }}
+                  onConfigurationChange={(updates) => handleConfigurationChange(index, updates)}
+                  onPlanFixedConfigChange={() => undefined}
+                  hideProration
+                />
+
+                {isUnitFixedService(service) && service.service_id && catalogRates[service.service_id] === null && (
+                  <p className="text-xs text-amber-700" id={`fixed-service-no-catalog-price-${index}`}>
+                    {t('wizardFixed.services.noCurrencyPrice', {
+                      defaultValue: 'No {{currency}} price in the catalog. Enter a unit rate.',
+                      currency: data.currency_code,
+                    })}
+                  </p>
+                )}
               </div>
 
               <Button
@@ -319,12 +524,38 @@ export function FixedFeeServicesStep({ data, updateData }: FixedFeeServicesStepP
                   <strong>{t('wizardFixed.preview.labels.services', { defaultValue: 'Services:' })}</strong>{' '}
                   {data.fixed_services.length}
                 </p>
-                {data.fixed_base_rate ? (
+                {hasBundleMember && data.fixed_base_rate ? (
                   <p>
                     <strong>{t('wizardFixed.preview.labels.recurringRate', { defaultValue: 'Recurring Rate:' })}</strong>{' '}
                     {formatCurrency(data.fixed_base_rate)}
                   </p>
                 ) : null}
+                {unitServices.length > 0 && (
+                  <div id="fixed-unit-services-preview">
+                    <strong>{t('wizardFixed.preview.labels.recurringUnits', { defaultValue: 'Recurring seats/units:' })}</strong>
+                    <ul className="list-disc pl-5 space-y-1">
+                      {unitServices.map((service) => (
+                        <li key={service.service_id}>
+                          {t('wizardFixed.preview.unitRow', {
+                            defaultValue: '{{serviceName}}: {{quantity}} × {{rate}} = {{amount}}',
+                            serviceName: service.service_name || service.service_id,
+                            quantity: service.quantity,
+                            rate: formatCurrency(service.unit_rate ?? 0),
+                            amount: formatCurrency(
+                              unitFixedServiceAmountCents(service.quantity, service.unit_rate ?? 0),
+                            ),
+                          })}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {unitServices.length > 0 && (
+                  <p>
+                    <strong>{t('wizardFixed.preview.labels.recurringTotal', { defaultValue: 'Total per period:' })}</strong>{' '}
+                    {formatCurrency(recurringTotalCents)}
+                  </p>
+                )}
                 <p>
                   <strong>{t('wizardFixed.preview.labels.cadenceOwner', { defaultValue: 'Cadence Owner:' })}</strong>{' '}
                   {recurringPreview.cadenceOwnerLabel}

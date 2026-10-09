@@ -109,6 +109,7 @@ export default function MspTicketDetailsContainerClient({
         renderQuickInvoice={isAlgaDeskMode ? undefined : renderQuickInvoice}
         renderClientDetails={renderClientDetails}
         renderIntervalManagement={isAlgaDeskMode ? undefined : renderIntervalManagement}
+        isAlgaDeskMode={isAlgaDeskMode}
         hideSlaStatus={isAlgaDeskMode}
         hideBilling={isAlgaDeskMode}
         hideScheduling={isAlgaDeskMode}

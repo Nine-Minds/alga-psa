@@ -170,8 +170,26 @@ export interface IJobRunner {
       scheduleId?: string;
       timezone?: string;
       data?: Record<string, unknown>;
+      /** pg-boss queue policy for the schedule's queue; 'stately' allows one queued + one active job. */
+      queuePolicy?: 'standard' | 'stately';
+      /** Seconds before an active job is considered expired (pg-boss default is 900). */
+      expireInSeconds?: number;
     }
   ): Promise<{ scheduleId: string }>;
+
+  /**
+   * List the global recurring schedules whose id starts with `prefix`.
+   * Optional: only backends with durable schedules implement it.
+   */
+  listGlobalRecurringJobs?(
+    prefix: string
+  ): Promise<Array<{ scheduleId: string; cron: string; timezone: string }>>;
+
+  /**
+   * Remove a global recurring schedule created by scheduleGlobalRecurringJob.
+   * Optional: only backends with durable schedules implement it.
+   */
+  unscheduleGlobalRecurringJob?(scheduleId: string): Promise<void>;
 
   /**
    * Cancel a scheduled or running job

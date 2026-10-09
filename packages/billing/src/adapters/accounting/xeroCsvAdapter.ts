@@ -13,6 +13,9 @@ import { lockInvoiceForExternalSync } from '../../lib/invoiceExternalSyncLock';
 import { AccountingMappingResolver } from '../../services/accountingMappingResolver';
 import { KnexInvoiceMappingRepository } from '../../repositories/invoiceMappingRepository';
 import { AppError, unparseCSV } from '@alga-psa/core';
+import { reconcileExportLineQuantity } from './exportLineQuantity';
+
+const XERO_CSV_MAX_QUANTITY_DECIMALS = 4;
 
 /**
  * Fixed tracking category names for Xero CSV export.
@@ -44,8 +47,10 @@ type DbCharge = {
   quantity?: number | null;
   unit_price?: number | null;
   total_price: number;
+  net_amount?: number | null;
   tax_amount?: number | null;
   tax_region?: string | null;
+  is_discount?: boolean | null;
 };
 
 type DbClient = {
@@ -214,20 +219,26 @@ export class XeroCsvAdapter implements AccountingExportAdapter {
         let accountCode = '';
         let taxType = '';
 
-        if (charge.service_id) {
-          const serviceMapping = await resolver.resolveServiceMapping({
-            tenantId: context.batch.tenant,
-            adapterType: 'xero', // Use xero mappings (shared with OAuth adapter)
-            serviceId: charge.service_id,
-            targetRealm: context.batch.target_realm
-          });
+        const serviceMapping = charge.service_id
+          ? await resolver.resolveServiceMapping({
+              tenantId: context.batch.tenant,
+              adapterType: 'xero', // Use xero mappings (shared with OAuth adapter)
+              serviceId: charge.service_id,
+              targetRealm: context.batch.target_realm
+            })
+          : charge.is_discount
+            ? await resolver.resolveDiscountMapping({
+                tenantId: context.batch.tenant,
+                adapterType: 'xero',
+                targetRealm: context.batch.target_realm
+              })
+            : null;
 
-          if (serviceMapping) {
-            const metadata = serviceMapping.metadata ?? {};
-            itemCode = safeString(metadata.itemCode) ?? safeString(serviceMapping.external_entity_id) ?? '';
-            accountCode = safeString(metadata.accountCode) ?? '';
-            taxType = safeString(metadata.taxType) ?? '';
-          }
+        if (serviceMapping) {
+          const metadata = serviceMapping.metadata ?? {};
+          itemCode = safeString(metadata.itemCode) ?? safeString(serviceMapping.external_entity_id) ?? '';
+          accountCode = safeString(metadata.accountCode) ?? '';
+          taxType = safeString(metadata.taxType) ?? '';
         }
 
         // Resolve tax mapping if we have a tax region
@@ -245,10 +256,16 @@ export class XeroCsvAdapter implements AccountingExportAdapter {
         }
 
         const description = line.notes ?? charge.description ?? `Line item for invoice ${invoiceNumber}`;
-        const quantity = typeof charge.quantity === 'number' ? charge.quantity : 1;
-        const unitAmount = typeof charge.unit_price === 'number'
-          ? (charge.unit_price / 100).toFixed(2)
-          : (line.amount_cents / 100 / quantity).toFixed(2);
+        // The CSV has no line-amount column: Xero bills quantity × unit amount,
+        // so the pair must reproduce Alga's net amount.
+        const lineQuantity = reconcileExportLineQuantity({
+          quantity: charge.quantity,
+          unitPriceCents: coerceCents(charge.unit_price),
+          amountCents: coerceCents(charge.net_amount) ?? line.amount_cents,
+          maxQuantityDecimals: XERO_CSV_MAX_QUANTITY_DECIMALS
+        });
+        const quantity = lineQuantity.quantity;
+        const unitAmount = (lineQuantity.unitPriceCents / 100).toFixed(2);
 
         // Build CSV row
         const row: XeroCsvRow = {
@@ -535,8 +552,10 @@ export class XeroCsvAdapter implements AccountingExportAdapter {
         'quantity',
         'unit_price',
         'total_price',
+        'net_amount',
         'tax_amount',
-        'tax_region'
+        'tax_region',
+        'is_discount'
       )
       .whereIn('item_id', chargeIds);
 
@@ -652,4 +671,9 @@ function groupBy<T>(items: T[], iteratee: (item: T) => string): Map<string, T[]>
     }
     return acc;
   }, new Map<string, T[]>());
+}
+
+function coerceCents(value: unknown): number | null {
+  const parsed = typeof value === 'string' && value.trim().length > 0 ? Number(value) : value;
+  return typeof parsed === 'number' && Number.isFinite(parsed) ? Math.round(parsed) : null;
 }

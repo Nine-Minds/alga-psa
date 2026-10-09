@@ -448,8 +448,10 @@ const Documents = ({
     setTotalDocuments(initialDocuments.length);
   }, [searchTermFromParent, inFolderMode, initialDocuments]);
 
-  // Refresh documents - handles both folder mode and entity mode
-  const refreshDocuments = useCallback(async () => {
+  // Refresh documents - handles both folder mode and entity mode.
+  // Returns false when the refresh failed so upload batch completion can
+  // surface reload guidance instead of silently swallowing the failure.
+  const refreshDocuments = useCallback(async (): Promise<boolean> => {
     if (inFolderMode) {
       // Folder mode: refetch from server
       try {
@@ -458,14 +460,16 @@ const Documents = ({
         const response = await getDocumentsByFolder(folderToFetch, includeSubfolders, currentPage, pageSize, filters);
         if (isDocumentActionError(response)) {
           handleError(response, getErrorMessage(response));
-          return;
+          return false;
         }
         setDocumentsToDisplay(response.documents);
         setTotalDocuments(response.total);
         setTotalPages(Math.ceil(response.total / pageSize));
+        return true;
       } catch (err) {
         console.error('Error refreshing documents:', err);
         setError(tDoc('messages.fetchFailed', 'Failed to fetch documents.'));
+        return false;
       }
     } else {
       // Entity mode: directly fetch updated documents
@@ -474,7 +478,7 @@ const Documents = ({
           const response = await getDocumentsByEntity(entityId, entityType, filters, currentPage, pageSize);
           if (isDocumentActionError(response)) {
             handleError(response, getErrorMessage(response));
-            return;
+            return false;
           }
           setDocumentsToDisplay(response.documents);
           setTotalDocuments(response.totalCount);
@@ -482,12 +486,21 @@ const Documents = ({
         } catch (err) {
           console.error('Error refreshing entity documents:', err);
           setError(tDoc('messages.fetchFailed', 'Failed to fetch documents.'));
+          return false;
         }
       }
-      // Also notify parent in case it needs to update other state
+      // Also notify parent in case it needs to update other state. Await it so
+      // a rejected refresh propagates instead of becoming an unhandled promise.
       if (onDocumentCreated) {
-        onDocumentCreated();
+        try {
+          await onDocumentCreated();
+        } catch (err) {
+          console.error('Error notifying parent after document refresh:', err);
+          setError(tDoc('messages.fetchFailed', 'Failed to fetch documents.'));
+          return false;
+        }
       }
+      return true;
     }
   }, [inFolderMode, entityId, entityType, filters, currentFolder, currentPage, pageSize, onDocumentCreated, tDoc]);
 
@@ -1744,10 +1757,20 @@ const Documents = ({
                   entityId={entityId}
                   entityType={entityType}
                   folderPath={currentFolder}
-                  onUploadComplete={async () => {
-                    setShowUpload(false);
-                    await refreshDocuments();
-                    setFolderTreeKey(prev => prev + 1);
+                  onUploadComplete={() => {}}
+                  onAllUploadsComplete={async (summary) => {
+                    if (summary.succeeded > 0) {
+                      const refreshed = await refreshDocuments();
+                      if (!refreshed) {
+                        // Let the uploader surface reload guidance and stay
+                        // open rather than closing over a stale list.
+                        throw new Error('Document list refresh failed after upload');
+                      }
+                      setFolderTreeKey(prev => prev + 1);
+                    }
+                    if (summary.failed === 0) {
+                      setShowUpload(false);
+                    }
                   }}
                   onCancel={() => setShowUpload(false)}
                   getFoldersFn={getFoldersFn}
@@ -2032,12 +2055,22 @@ const Documents = ({
                   entityId={entityId}
                   entityType={entityType}
                   folderPath={forceUploadToRoot ? null : undefined}
-                  onUploadComplete={async () => {
-                    setShowUpload(false);
-                    // Refresh the documents list (triggers router.refresh() in entity mode)
-                    await refreshDocuments();
-                    if (inFolderMode) {
-                      setFolderTreeKey(prev => prev + 1);
+                  onUploadComplete={() => {}}
+                  onAllUploadsComplete={async (summary) => {
+                    if (summary.succeeded > 0) {
+                      // Refresh the documents list (triggers router.refresh() in entity mode)
+                      const refreshed = await refreshDocuments();
+                      if (!refreshed) {
+                        // Let the uploader surface reload guidance and stay
+                        // open rather than closing over a stale list.
+                        throw new Error('Document list refresh failed after upload');
+                      }
+                      if (inFolderMode) {
+                        setFolderTreeKey(prev => prev + 1);
+                      }
+                    }
+                    if (summary.failed === 0) {
+                      setShowUpload(false);
                     }
                   }}
                   onCancel={() => setShowUpload(false)}

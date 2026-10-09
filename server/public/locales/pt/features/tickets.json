@@ -146,6 +146,7 @@
     "assignedTeam": "Equipe Designada",
     "additionalAgents": "Agentes Adicionais",
     "createdBy": "Criado por",
+    "lastActivity": "Última atividade",
     "location": "Localização",
     "contactPhone": "Telefone de contato",
     "clientPhone": "Telefone do cliente",
@@ -176,9 +177,14 @@
     "tags": "Etiquetas",
     "sla": "SLA",
     "updated": "Atualizado",
+    "updatedAtBy": "Atualizado {{time}} por {{name}}",
+    "byName": "por {{name}}",
     "openInNewTab": "Abrir em nova aba",
     "actions": "Ações",
-    "linkedAssets": "Ativos vinculados"
+    "linkedAssets": "Ativos vinculados",
+    "assetName": "Nome",
+    "assetTag": "Etiqueta do ativo",
+    "assetType": "Tipo"
   },
   "actions": {
     "view": "Visualizar",
@@ -204,7 +210,10 @@
     "export": "Exportar",
     "reset": "Reiniciar",
     "importSelected": "Importar selecionado",
-    "printOptions": "Opções de impressão"
+    "printOptions": "Opções de impressão",
+    "duplicate": "Duplicar",
+    "rowActions": "Ações",
+    "openMenu": "Abrir menu"
   },
   "messages": {
     "noTickets": "Nenhum ticket encontrado",
@@ -369,7 +378,13 @@
     "schedule": "Agendar",
     "scheduled": "Agendado",
     "showMore": "Mostrar mais",
-    "showLess": "Mostrar menos"
+    "showLess": "Mostrar menos",
+    "ccBcc": "Cc/Cco",
+    "cc": "Cc",
+    "bcc": "Cco",
+    "ccBccInvalid": "Corrija os endereços destacados antes de enviar.",
+    "ccBccTooMany": "No máximo {{max}} destinatários Cc e Cco podem ser copiados em um comentário.",
+    "ccBccNotSentOnInternal": "Cc e Cco não são enviados com uma nota interna. Desative Interna para usá-los."
   },
   "responseState": {
     "awaitingYourResponse": "Aguardando sua resposta",
@@ -391,7 +406,8 @@
     "clientPortal": "Criado via Portal do Cliente",
     "inboundEmail": "Criado via e-mail de entrada",
     "api": "Criado via API",
-    "other": "Criado por outro"
+    "other": "Criado por outro",
+    "recurring": "Criado por agendamento recorrente"
   },
   "responseSource": {
     "clientPortal": "Recebido via Portal do Cliente",
@@ -741,7 +757,10 @@
       "success_other": "Status atualizado nos tickets {{count}}",
       "partialFailure": "Não foi possível atualizar o status de alguns tickets",
       "failure": "Falha ao atualizar o status dos tickets selecionados",
-      "failedHeading": "Não foi possível atualizar o status nos seguintes tickets:"
+      "failedHeading": "Não foi possível atualizar o status nos seguintes tickets:",
+      "resolutionLabel": "Comentário de resolução (opcional)",
+      "resolutionPlaceholder": "Descreva como esses tickets foram resolvidos",
+      "resolutionHelper": "Salvo como a resolução em cada ticket selecionado e atende aos quadros que exigem uma antes do fechamento."
     },
     "priority": {
       "dialogTitle": "Alterar prioridade para tickets selecionados",
@@ -811,7 +830,14 @@
     "clipboardUploadPartialFailure": "Ticket criado, mas não foi possível anexar imagens coladas à descrição.",
     "teamAssignmentPartialFailure": "Ticket criado, mas falha na atribuição da equipe",
     "tagCreatePartialFailure_one": "Não foi possível criar a tag {{count}}",
-    "tagCreatePartialFailure_other": "Não foi possível criar tags {{count}}"
+    "tagCreatePartialFailure_other": "Não foi possível criar tags {{count}}",
+    "duplicateDialogTitle": "Duplicar ticket #{{number}}",
+    "duplicatingPill": "A duplicar #{{number}}",
+    "duplicateLoadFailed": "Não foi possível carregar o ticket a duplicar. Tente novamente.",
+    "duplicateChecklistHeading": "Lista de verificação de #{{number}}",
+    "duplicateChecklistRequired": "(obrigatório)",
+    "duplicateCopyChecklist": "Copiar itens da lista de verificação (desmarcados)",
+    "duplicateCustomFieldsNote": "Os valores dos campos personalizados são copiados de #{{number}}."
   },
   "itil": {
     "calculatedPriority": "Prioridade (calculada)",
@@ -945,6 +971,11 @@
     "closeReasonPlaceholder": "Motivo para fechar mesmo assim (opcional, registrado no log de auditoria)",
     "closing": "Fechando…",
     "closeAnyway": "Fechar mesmo assim",
+    "markResolutionInternal": "Marcar como interno",
+    "markResolutionInternalHelper": "Uma resolução interna não aparece no portal do cliente e não entra no email de fechamento.",
+    "closeTicketNowTitle": "Fechar o ticket agora?",
+    "closeTicketNowPrompt": "Este comentário agora é a resolução. Escolha um status de fechamento para fechar o ticket ou deixe-o aberto.",
+    "leaveTicketOpen": "Deixar aberto",
     "timerActiveElsewhereTitle": "Timer ativo em outra janela",
     "timerTakeoverMessage": "O timer deste ticket está ativo em outra janela. Deseja assumir e substituí-lo aqui?",
     "replaceHere": "Substituir aqui",
@@ -954,7 +985,12 @@
     "emailNotificationLogs": "Logs de notificação por e-mail",
     "ticketActivity": "Atividade do ticket",
     "discardChanges": "Descartar alterações",
-    "saved": "Salvo"
+    "saved": "Salvo",
+    "changeContactTitle": "Alterar o contato do ticket?",
+    "removeContactTitle": "Remover o contato do ticket?",
+    "changeContactPrompt": "O contato, o responsável e os observadores são avisados desta atualização, a menos que você desative as notificações deles.",
+    "changeContact": "Alterar contato",
+    "removeContact": "Remover contato"
   },
   "properties": {
     "timeEntry": "Entrada de tempo",
@@ -1555,7 +1591,8 @@
       "closedMasterGating": "As regras de fechamento do quadro não permitem tickets filhos abertos sob um ticket principal fechado, portanto manter o ticket principal fechado não é uma opção."
     },
     "autoClose": "Será fechado automaticamente em {{date}}, a menos que haja nova atividade.",
-    "autoCloseWarned": "O cliente foi avisado."
+    "autoCloseWarned": "O cliente foi avisado.",
+    "duplicatedFrom": "Duplicado de #{{number}}"
   },
   "invalidTicketData": "Dados de ticket inválidos",
   "timeEntries": {
@@ -1580,6 +1617,8 @@
     "deleteConfirmTitle": "Excluir entrada de hora?",
     "deleteConfirmMessage": "Isso excluirá permanentemente a entrada de hora. Esta ação não pode ser desfeita.",
     "deleteConfirmAction": "Excluir",
+    "billable": "Faturável",
+    "nonBillable": "Não faturável",
     "duration": {
       "hr": "horas",
       "hrs": "horas",
@@ -1789,7 +1828,6 @@
       "replyTo": "Responder a {{name}}",
       "writeReply": "Escrever uma resposta",
       "modeInternal": "Interno",
-      "modeResolution": "Resolução",
       "sending": "Enviando…",
       "send": "Enviar",
       "systemActor": "Sistema",
@@ -1801,6 +1839,8 @@
       "bundleStatusNotPropagated": "{{actor}} alterou o status do mestre do pacote (tickets filhos não atualizados)",
       "bundleStatusClosed": "{{actor}} fechou o mestre do pacote e {{count}} ticket(s) filho(s)",
       "bundleStatusReopened": "{{actor}} reabriu o mestre do pacote e {{count}} ticket(s) filho(s)",
+      "duplicatedFrom": "{{actor}} criou este ticket como duplicado de #{{number}}",
+      "duplicatedTo": "{{actor}} duplicou este ticket como #{{number}}",
       "title": "Linha do tempo",
       "replyVisibility": "Visibilidade da resposta",
       "modeClient": "Cliente",
@@ -1891,7 +1931,8 @@
       "remove": "Remover",
       "cancel": "Cancelar",
       "save": "Salvar",
-      "menu": "Ações do link"
+      "menu": "Ações do link",
+      "openRecord": "Abrir registro externo"
     },
     "relationship": {
       "origin": "Origem",
@@ -1950,7 +1991,14 @@
       "systemLabelRequired": "O rótulo do sistema é obrigatório",
       "permissionDenied": "Permissão negada: não é possível gerenciar sistemas externos",
       "systemRequired": "Escolha um sistema externo.",
-      "urlRequired": "Uma URL é necessária para sistemas sem modelo de URL."
+      "urlRequired": "Uma URL é necessária para sistemas sem modelo de URL.",
+      "invalidVisibility": "Apenas links de tickets podem ser compartilhados, usando um valor booleano de visibilidade"
+    },
+    "visibility": {
+      "label": "Visibilidade",
+      "internal": "Somente interno",
+      "shared": "Visível no portal do cliente",
+      "help": "Os clientes com acesso a este ticket podem ver este link. Compartilhar o link não concede acesso ao sistema externo."
     }
   },
   "smartSearch": {
@@ -1976,5 +2024,288 @@
     "failedCount": "Não foi possível pontuar {{count}} tickets",
     "unscored": "Não pontuados",
     "addOnRequired": "A pesquisa inteligente requer o complemento Assistente de IA"
+  },
+  "recurring": {
+    "actions": {
+      "done": "Concluir",
+      "cancel": "Cancelar",
+      "saving": "Salvando…",
+      "save": "Salvar",
+      "pause": "Pausar",
+      "resume": "Retomar",
+      "archive": "Arquivar"
+    },
+    "clients": {
+      "addTitle": "Adicionar clientes",
+      "addHelp": "Escolha um cliente para adicioná-lo. A caixa de diálogo permanece aberta para você adicionar mais.",
+      "alreadyAdded": "Já adicionado",
+      "pickerPlaceholder": "Selecione um cliente para adicionar",
+      "addedHeading": "Adicionados nesta caixa de diálogo",
+      "columns": {
+        "client": "Cliente",
+        "overrides": "Substituições",
+        "contact": "Contato",
+        "location": "Local",
+        "assets": "Ativos",
+        "nextDue": "Próximo vencimento",
+        "active": "Ativo"
+      },
+      "inheritsAll": "Herda tudo",
+      "set": "Definido",
+      "actions": "Ações do cliente",
+      "editOverrides": "Editar substituições",
+      "remove": "Remover",
+      "add": "Adicionar clientes",
+      "empty": "Nenhum cliente ainda. Os tickets são criados apenas para os clientes que você adicionar aqui.",
+      "removeTitle": "Remover cliente",
+      "removeMessage": "Parar de criar tickets para {{client}}? Os tickets já criados e o histórico serão mantidos."
+    },
+    "errors": {
+      "clientNotFound": "Cliente não encontrado neste ticket recorrente",
+      "definitionNotFound": "Ticket recorrente não encontrado",
+      "unknownTitleTokens": "Token(s) de título desconhecido(s) {{tokens}}. Tokens disponíveis: {{available}}",
+      "subcategoryNeedsCategory": "Uma subcategoria exige uma categoria",
+      "definitionArchived": "Tickets recorrentes arquivados são somente leitura",
+      "clientAlreadyAdded": "Esse cliente já faz parte deste ticket recorrente",
+      "invalidReferences": "{{problems}}"
+    },
+    "overrides": {
+      "noneValue": "Nenhum",
+      "inherited": "Usa a configuração do ticket recorrente: {{value}}",
+      "title": "Configurações de {{client}}",
+      "intro": "Escolha os campos do ticket que este cliente define de forma diferente do ticket recorrente. Todo o resto é herdado e acompanha as alterações posteriores do ticket recorrente.",
+      "groups": {
+        "board": "Substituir quadro e status",
+        "priority": "Substituir prioridade",
+        "category": "Substituir categoria",
+        "assignment": "Substituir atribuição"
+      },
+      "attachedTo": "Vinculado ao ticket gerado",
+      "contact": "Contato",
+      "contactPlaceholder": "Sem contato",
+      "location": "Local",
+      "noLocation": "Sem local",
+      "assets": "Ativos",
+      "groupNames": {
+        "board": "Quadro e status",
+        "priority": "Prioridade",
+        "category": "Categoria",
+        "assignment": "Atribuição"
+      }
+    },
+    "sections": {
+      "clients": "Clientes",
+      "history": "Histórico",
+      "details": "Detalhes",
+      "template": "Modelo de ticket",
+      "schedule": "Agendamento",
+      "behaviour": "Comportamento"
+    },
+    "fields": {
+      "board": "Quadro",
+      "boardPlaceholder": "Selecione um quadro",
+      "status": "Status",
+      "statusBoardDefault": "Padrão do quadro",
+      "priority": "Prioridade",
+      "priorityPlaceholder": "Selecione uma prioridade",
+      "category": "Categoria",
+      "categoryPlaceholder": "Sem categoria",
+      "assignedTo": "Atribuído a",
+      "additionalAgents": "Agentes adicionais",
+      "name": "Nome",
+      "title": "Título do ticket",
+      "titleTokens": "Inserir:",
+      "description": "Descrição",
+      "descriptionPlaceholder": "Descrição",
+      "checklistTemplate": "Modelo de checklist",
+      "noChecklist": "Nenhum"
+    },
+    "history": {
+      "columns": {
+        "due": "Vencimento",
+        "client": "Cliente",
+        "status": "Status",
+        "ticket": "Ticket",
+        "reason": "Motivo"
+      },
+      "allStatuses": "Todos os status",
+      "allClients": "Todos os clientes",
+      "empty": "Nada foi gerado ainda.",
+      "reasons": {
+        "clientInactive": "O cliente estava inativo",
+        "previousOpen": "O ticket {{number}} da ocorrência anterior ainda está aberto"
+      },
+      "status": {
+        "created": "Criado",
+        "skipped": "Ignorado",
+        "missed": "Perdido",
+        "failed": "Falhou"
+      }
+    },
+    "editor": {
+      "created": "Ticket recorrente criado. Adicione os clientes para os quais ele deve ser executado.",
+      "saved": "Ticket recorrente salvo",
+      "back": "Tickets recorrentes",
+      "newTitle": "Novo ticket recorrente",
+      "archivedNotice": "Este ticket recorrente está arquivado e não pode mais ser alterado.",
+      "clientsAfterSave": "Salve primeiro o ticket recorrente e depois adicione os clientes para os quais ele deve ser executado.",
+      "archiveTitle": "Arquivar ticket recorrente",
+      "archiveMessage": "Arquivar interrompe todos os tickets futuros e não pode ser desfeito. Os tickets já criados e o histórico serão mantidos.",
+      "viewOnly": "Você pode visualizar este ticket recorrente, mas não pode alterá-lo."
+    },
+    "loading": "Carregando…",
+    "schedule": {
+      "policy": {
+        "keep": "Manter a data",
+        "previous": "Mover para o dia útil anterior",
+        "next": "Mover para o próximo dia útil"
+      },
+      "startDate": "Começa em",
+      "createTime": "Criar às",
+      "dueTime": "Vence às",
+      "leadDays": "Criar dias antes do vencimento",
+      "policyLabel": "Quando a data de vencimento não é um dia útil",
+      "calendarFallback": "Nenhum agendamento de horário comercial padrão foi definido, então os dias úteis são de segunda a sexta, mais os feriados válidos para toda a empresa.",
+      "calendarNote": "Os dias úteis seguem seu agendamento de horário comercial padrão ({{name}}), incluindo os feriados dele."
+    },
+    "status": {
+      "archived": "Arquivado",
+      "active": "Ativo",
+      "paused": "Pausado"
+    },
+    "preview": {
+      "heading": "Próximos 5 vencimentos",
+      "none": "Nenhum vencimento futuro."
+    },
+    "behaviour": {
+      "openPrevious": "Se o ticket anterior ainda estiver aberto",
+      "alwaysCreate": "Criar o próximo ticket mesmo assim",
+      "skip": "Ignorar esta ocorrência",
+      "notifyClient": "Enviar e-mail ao cliente quando um ticket for criado",
+      "notifyClientHelp": "Desativado por padrão. As notificações internas são sempre enviadas."
+    },
+    "list": {
+      "columns": {
+        "name": "Nome",
+        "schedule": "Agendamento",
+        "nextDue": "Próximo vencimento",
+        "status": "Status",
+        "clients": "Clientes"
+      },
+      "new": "Novo ticket recorrente",
+      "hasFailure": "A última execução falhou. Abra para ver o motivo.",
+      "title": "Tickets recorrentes",
+      "empty": "Nenhum ticket recorrente aqui ainda.",
+      "filter": {
+        "active": "Ativos",
+        "paused": "Pausados",
+        "archived": "Arquivados",
+        "all": "Todos"
+      }
+    },
+    "clientTab": {
+      "clientPaused": "Pausado para este cliente",
+      "pickDefinition": "Escolha um ticket recorrente",
+      "add": "Adicionar ao ticket recorrente",
+      "empty": "Este cliente não faz parte de nenhum ticket recorrente.",
+      "removeTitle": "Remover do ticket recorrente",
+      "removeMessage": "Parar de criar tickets para este cliente a partir de {{name}}? Os tickets já criados e o histórico serão mantidos."
+    },
+    "badge": {
+      "source": "Recorrente: {{name}}"
+    },
+    "rule": {
+      "editor": {
+        "unit": {
+          "days": "dia(s)",
+          "weeks": "semana(s)",
+          "months": "mês(es)",
+          "years": "ano(s)"
+        },
+        "lastDay": "Último dia",
+        "repeats": "Repete",
+        "every": "A cada",
+        "weekdaysOnly": "Somente dias da semana (segunda a sexta)",
+        "onDays": "Em",
+        "monthlyOn": "Em",
+        "mode": {
+          "dayOfMonth": "Dia do mês",
+          "nthWeekday": "N-ésimo dia da semana"
+        },
+        "day": "Dia",
+        "nth": "Qual",
+        "weekday": "Dia da semana",
+        "clampHint": "Em meses com menos dias, o ticket é criado no último dia do mês.",
+        "month": "Mês",
+        "ends": "Termina",
+        "end": {
+          "never": "Nunca",
+          "onDate": "Em uma data",
+          "afterCount": "Após um número de tickets"
+        },
+        "endDate": "Última data",
+        "endCount": "Ocorrências",
+        "frequency": {
+          "daily": "Diariamente",
+          "weekly": "Semanalmente",
+          "monthly": "Mensalmente",
+          "yearly": "Anualmente"
+        }
+      },
+      "weekdays": {
+        "mon": "Segunda-feira",
+        "tue": "Terça-feira",
+        "wed": "Quarta-feira",
+        "thu": "Quinta-feira",
+        "fri": "Sexta-feira",
+        "sat": "Sábado",
+        "sun": "Domingo"
+      },
+      "weekdaysShort": {
+        "mon": "Seg",
+        "tue": "Ter",
+        "wed": "Qua",
+        "thu": "Qui",
+        "fri": "Sex",
+        "sat": "Sáb",
+        "sun": "Dom"
+      },
+      "months": {
+        "1": "Janeiro",
+        "2": "Fevereiro",
+        "3": "Março",
+        "4": "Abril",
+        "5": "Maio",
+        "6": "Junho",
+        "7": "Julho",
+        "8": "Agosto",
+        "9": "Setembro",
+        "10": "Outubro",
+        "11": "Novembro",
+        "12": "Dezembro"
+      },
+      "ordinals": {
+        "1": "primeiro",
+        "2": "segundo",
+        "3": "terceiro",
+        "4": "quarto",
+        "last": "último"
+      },
+      "listSeparator": ", ",
+      "endOnDate": ", até {{date}}",
+      "endAfterCount": ", {{n}} vezes",
+      "dailyWeekdays": "Todos os dias úteis",
+      "daily": "Todos os dias",
+      "dailyEvery": "A cada {{n}} dias",
+      "weekly": "Toda semana: {{days}}",
+      "weeklyEvery": "A cada {{n}} semanas: {{days}}",
+      "everyMonth": "Todo mês",
+      "everyNMonths": "A cada {{n}} meses",
+      "lastDay": "último dia",
+      "dayOfMonth": "dia {{day}}",
+      "monthlyOnDay": "{{every}} no {{day}}",
+      "monthlyOnNthWeekday": "{{every}}, {{ordinal}}: {{weekday}}",
+      "yearly": "Todo ano em {{day}} de {{month}}"
+    }
   }
 }

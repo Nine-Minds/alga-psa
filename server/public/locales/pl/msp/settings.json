@@ -60,8 +60,22 @@
     },
     "clients": {
       "title": "Państwa firma",
-      "help": "Klient oznaczony jako Państwa firma reprezentuje Państwa własną organizację. Jego nazwa, adres i logo pojawiają się na fakturach, ofertach oraz w komunikacji z klientami.",
+      "help": "Klient oznaczony jako Państwa firma reprezentuje Państwa własną organizację. Jego nazwa, adres i logo pojawiają się na fakturach, ofertach oraz w komunikacji z klientami, a kraj jego lokalizacji określa format daty i kraj wstępnie wybierany w nowych rekordach.",
       "currentDefault": "Państwa firmą jest obecnie {{name}}.",
+      "defaults": {
+        "title": "Co określa Państwa firma",
+        "intro": "Kraj lokalizacji {{name}} określa poniższe ustawienia dla całej aplikacji MSP:",
+        "country": "Nowi klienci, kontakty i lokalizacje mają wstępnie wybrany kraj {{country}}.",
+        "countryMissing": "Nowi klienci, kontakty i lokalizacje nie mają wstępnie wybranego kraju.",
+        "phoneCode": "Numery telefonów zaczynają się od numeru kierunkowego {{code}}.",
+        "phoneCodeMissing": "Numery telefonów zaczynają się bez numeru kierunkowego.",
+        "dateFormat": "Daty są zapisywane jako {{pattern}} — {{example}} — w formacie {{clock}}.",
+        "clock12": "12-godzinnym",
+        "clock24": "24-godzinnym",
+        "noCountry": "{{name}} nie ma kraju w lokalizacji, więc wszystkie trzy wracają do domyślnego formatu {{pattern}}. Aby je zmienić, proszę dodać do {{name}} lokalizację z krajem — nie ma osobnego ustawienia formatu daty.",
+        "portalNote": "W portalu klienta daty są wyświetlane w formacie właściwym dla danego klienta, wynikającym z kraju jego lokalizacji, a nie Państwa.",
+        "changeIntro": "Przełączenie na {{name}} zmienia także te ustawienia domyślne:"
+      },
       "yourCompanyBadge": "Państwa firma",
       "table": {
         "name": "Nazwa",
@@ -99,6 +113,18 @@
         "setDefaultClient": "Nie udało się ustawić domyślnego klienta",
         "loadClients": "Nie udało się załadować klientów"
       }
+    }
+  },
+  "dashboardWelcome": {
+    "label": "Używaj nazwy firmy w powitaniu na pulpicie",
+    "help": "Domyślnie wyłączone: pulpit MSP wyświetla „Witamy w centrum dowodzenia MSP”. Po włączeniu pojawia się nazwa klienta oznaczonego jako Państwa firma. Ten przełącznik zapisuje się natychmiast i niezależnie.",
+    "noCompany": "Żaden klient nie jest jeszcze oznaczony jako Państwa firma. Proszę wybrać go w Ustawienia → Ogólne, aby jego nazwa mogła się tu pojawić.",
+    "previewLabel": "Państwa zespół zobaczy:",
+    "preview": "Witamy w centrum dowodzenia {{companyName}}",
+    "previewDefault": "Witamy w centrum dowodzenia MSP",
+    "messages": {
+      "saved": "Zaktualizowano powitanie na pulpicie",
+      "saveFailed": "Nie udało się zaktualizować powitania na pulpicie"
     }
   },
   "experimentalFeatures": {
@@ -367,6 +393,7 @@
         "emailAlreadyExists": "Użytkownik o tym adresie e-mail już istnieje",
         "reportsToSelf": "Użytkownik nie może podlegać samemu sobie",
         "reportsToCycle": "Spowodowałoby to cykliczną strukturę podległości",
+        "invalidTimezone": "Wybierz strefę czasową powiązaną z miastem, np. America/New_York.",
         "permissionDenied": "Nie masz uprawnień do zmiany ról użytkowników.",
         "invalidCapacity": "Tygodniowa wydajność musi być liczbą dodatnią.",
         "invalidWorkSchedule": "Godziny pracy muszą być prawidłowymi przedziałami kończącymi się po rozpoczęciu."
@@ -798,6 +825,27 @@
           "appearanceHelp": "Przypinanie karty i domyślny widok listy tablicy",
           "assignment": "Przypisanie i SLA",
           "assignmentHelp": "Domyślne kierowanie, SLA i menedżer tablicy",
+          "notifications": "Powiadomienia",
+          "notificationsHelp": "Powiadamiaj techników o nowych zgłoszeniach i zmianach statusu oraz ustaw domyślnych obserwatorów",
+          "notificationsRulesLabel": "Reguły powiadomień",
+          "notificationsRulesHelp": "Odbiorcy otrzymują jedno powiadomienie na zdarzenie. Nie są dodawani jako obserwatorzy.",
+          "notificationsAddRule": "Dodaj regułę",
+          "notificationsRuleTitle": "Reguła {{number}}",
+          "notificationsRuleEnabled": "Włączona",
+          "notificationsRemoveRule": "Usuń regułę",
+          "notificationsOnCreate": "Gdy zgłoszenie zostanie utworzone na tej tablicy",
+          "notificationsOnStatus": "Gdy zgłoszenie przechodzi do statusu",
+          "notificationsNoStatuses": "Statusy można wybrać po zapisaniu tablicy.",
+          "notificationsRecipients": "Powiadom",
+          "notificationsRecipientsPlaceholder": "Wybierz użytkowników i zespoły...",
+          "notificationsRecipientsHelp": "Członkowie zespołu są ustalani przy każdym wysłaniu powiadomienia.",
+          "notificationsDefaultWatchers": "Domyślni obserwatorzy",
+          "notificationsDefaultWatchersPlaceholder": "Wybierz użytkowników...",
+          "notificationsDefaultWatchersHelp": "Dodawani do listy obserwatorów każdego nowego zgłoszenia na tej tablicy i powiadamiani o każdej późniejszej aktualizacji.",
+          "notificationsTriggerRequired": "Każda reguła powiadomień wymaga co najmniej jednego wyzwalacza: utworzenia zgłoszenia lub statusu.",
+          "notificationsRecipientRequired": "Każda reguła powiadomień wymaga co najmniej jednego użytkownika lub zespołu do powiadomienia.",
+          "notificationsFetchFailed": "Nie udało się wczytać ustawień powiadomień",
+          "notificationsStatusRemapFailed": "Tablica została utworzona, ale nie udało się dopasować statusu reguły powiadomień do nowej tablicy. Dodaj reguły powiadomień ponownie.",
           "inbound": "E-mail i odpowiedzi przychodzące",
           "inboundHelp": "Ponownie otwieraj zgłoszenia, gdy klienci odpowiadają e-mailem",
           "close": "Reguły zamykania",
@@ -1235,6 +1283,7 @@
         "followThemeActive": "Kolory poniżej pozostają zapisane, ale nie są stosowane, dopóki portal podąża za motywem organizacji."
       },
       "cropHelp": "Przeciągaj i powiększaj, aby wybrać część widoczną w panelu bocznym portalu i w każdej okrągłej ramce. Szerokie logo pozostaje bez zmian.",
+      "cropHelpFromSquare": "Przeciągaj i powiększaj, aby wybrać część widoczną w panelu bocznym portalu i w każdej okrągłej ramce. Zmienia się tylko znak, więc możesz go później ponownie dostosować.",
       "heroGradient": {
         "primaryShades": "Kolor główny do odcienia głównego",
         "primarySecondary": "Kolor główny do koloru dodatkowego"
@@ -1508,6 +1557,11 @@
       "description": "Prześlij swoje logo jeden raz. Zastępuje ono znak Alga w menu bocznym MSP, a portal klienta korzysta z tych samych obrazów.",
       "logoHelp": "Kwadratowy znak jest używany wszędzie tam, gdzie miejsce jest kwadratowe: w zwiniętym menu bocznym i w okrągłych ramkach. Wrzuć szerokie logo do kwadratowego pola i wybierz, która część stanie się znakiem; po przesłaniu szerokiego logo możesz też wyciąć znak bezpośrednio z niego. Opcjonalne szerokie logo zastępuje znak i nazwę w rozwiniętym menu bocznym, prześlij więc takie, które zawiera już nazwę Twojej firmy. Menu boczne dopasowuje się do własnego tła: przy ciemnym menu używa wariantów na ciemne tła, przy jasnym — jasnych, a jeśli pasującego brakuje, sięga po ten, który przesłano.",
       "cropHelp": "Przeciągaj i powiększaj, aby wybrać część widoczną w zwiniętym menu bocznym i w każdej okrągłej ramce. Szerokie logo pozostaje bez zmian.",
+      "cropHelpFromSquare": "Przeciągaj i powiększaj, aby wybrać część widoczną w zwiniętym menu bocznym i w każdej okrągłej ramce. Zmienia się tylko znak, więc możesz go później ponownie dostosować.",
+      "linkDocument": {
+        "title": "Użyj przesłanego obrazu",
+        "description": "Wybierz obraz przesłany wcześniej do sekcji Dokumenty. Sam dokument pozostaje bez zmian."
+      },
       "fields": {
         "mark": "Znak kwadratowy",
         "markDark": "Znak kwadratowy na ciemne tła",
@@ -1798,6 +1852,12 @@
         "useLogo": "Używaj mojego logo w nagłówku e-maili",
         "logoWide": "Szerokie logo",
         "logoDefault": "Kwadratowe logo",
+        "logoArtwork": "Wersja logo",
+        "logoArtworkAuto": "Dopasuj do nagłówka",
+        "logoArtworkLight": "Logo na jasne tło",
+        "logoArtworkDark": "Logo na ciemne tło",
+        "logoArtworkAutoDark": "Tryb automatyczny uznaje ten nagłówek za ciemny i używa logo na ciemne tło.",
+        "logoArtworkAutoLight": "Tryb automatyczny uznaje ten nagłówek za jasny i używa logo na jasne tło.",
         "noLogo": "Prześlij logo w Ustawienia → Portal klienta → Branding, aby użyć go tutaj.",
         "showAttribution": "Pokazuj „Powered by AlgaPSA” w stopce"
       }
@@ -2367,6 +2427,11 @@
       "updateFailed": "Nie udało się zaktualizować roli",
       "validateDeletionFailed": "Nie udało się sprawdzić możliwości usunięcia. Spróbuj ponownie.",
       "deleteFailed": "Nie udało się usunąć roli"
+    },
+    "editDialog": {
+      "title": "Edytuj rolę",
+      "builtInNameLocked": "Nazw wbudowanych ról nie można zmienić, ponieważ system z nich korzysta.",
+      "portalLocked": "Dostępu do portalu nie można zmienić po utworzeniu roli."
     }
   },
   "security": {
@@ -3443,7 +3508,10 @@
       "duplicate": "Ten użytkownik ma już wybraną rolę.",
       "changePermission": "Odmowa uprawnień: brak uprawnień do zmiany ról użytkowników.",
       "missingField": "Brakuje wymaganego pola roli użytkownika.",
-      "missingFieldNamed": "Brakuje wymaganego pola roli użytkownika: {{field}}."
+      "missingFieldNamed": "Brakuje wymaganego pola roli użytkownika: {{field}}.",
+      "nameRequired": "Nazwa roli jest wymagana.",
+      "builtInRename": "Nie można zmieniać nazw wbudowanych ról.",
+      "duplicateName": "Rola o nazwie „{{name}}” już istnieje dla tego portalu."
     },
     "secrets": {
       "tenantContextMissing": "Brak kontekstu organizacji. Odśwież stronę i spróbuj ponownie.",
@@ -3468,6 +3536,7 @@
       "missingField": "Brakuje wymaganego pola ustawień organizacji.",
       "missingFieldNamed": "Brakuje wymaganego pola ustawień organizacji: {{field}}.",
       "invalidTimezone": "Nieprawidłowa strefa czasowa: {{timezone}}",
+      "nonLocationTimezone": "{{timezone}} nie jest strefą czasową powiązaną z miastem. Wybierz strefę, np. America/New_York.",
       "permissions": {
         "clearOnboarding": "Odmowa uprawnień: tylko administratorzy mogą usuwać dane onboardingu.",
         "update": "Odmowa uprawnień: nie można zaktualizować ustawień",

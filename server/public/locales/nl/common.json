@@ -172,6 +172,10 @@
         "updateComments": "Onvoldoende rechten om opmerkingen bij te werken",
         "deleteComments": "Onvoldoende rechten om opmerkingen te verwijderen",
         "viewDocuments": "Onvoldoende rechten om ticketdocumenten te bekijken"
+      },
+      "projects": {
+        "read": "Onvoldoende rechten om projecten te bekijken",
+        "readDetails": "Onvoldoende rechten om projectdetails te bekijken"
       }
     },
     "tags": {
@@ -692,7 +696,16 @@
       "fileError": "Bestand kon niet worden geüpload",
       "associatedEntityTypeLabel": "Koppelen aan",
       "noAssociation": "Geen koppeling",
-      "selectAssociatedEntityError": "Selecteer een gekoppelde entiteit voordat u uploadt."
+      "selectAssociatedEntityError": "Selecteer een gekoppelde entiteit voordat u uploadt.",
+      "uploaded": "Geüpload",
+      "failed": "Mislukt",
+      "failureSummary": "{{failed}} van {{total}} bestanden konden niet worden geüpload. Bekijk de fouten hieronder.",
+      "outcomeSummary": "{{succeeded}} van {{total}} bestanden geüpload",
+      "emptyDropTitle": "Geen bestanden ontvangen",
+      "emptyDropMessage": "Er zijn geen bestanden ontvangen. Sla de bijlage of e-mail op uw computer op en sleep het opgeslagen bestand hierheen of gebruik ‘Bestanden bladeren’.",
+      "uploadInProgress": "Er is al een upload bezig. Wacht tot deze is voltooid voordat u meer bestanden toevoegt.",
+      "refreshFailed": "Uw bestanden zijn geüpload, maar de documentenlijst kon niet worden vernieuwd. Herlaad de pagina om ze te zien.",
+      "clearResults": "Resultaten wissen"
     },
     "folders": {
       "root": "Hoofdmap",
@@ -857,7 +870,8 @@
       "clientPortal": "Aangemaakt via klantenportaal",
       "inboundEmail": "Aangemaakt via inkomende e-mail",
       "api": "Aangemaakt via API",
-      "other": "Aangemaakt via overig"
+      "other": "Aangemaakt via overig",
+      "recurring": "Aangemaakt door terugkerend schema"
     }
   },
   "surveys": {
@@ -1336,9 +1350,11 @@
   },
   "timezonePicker": {
     "selectPlaceholder": "Tijdzone selecteren...",
-    "searchPlaceholder": "Tijdzones of afkortingen zoeken (bijv. EST)...",
+    "searchPlaceholder": "Zoek op stad, naam of afkorting (bijv. New York, EST)...",
     "noResults": "Geen tijdzones gevonden",
     "matchingGroup": "Overeenkomsten met \"{{query}}\"",
+    "noDst": "Geen zomertijd",
+    "noDaylightSavingHint": "Geen zomertijd. De klokken blijven het hele jaar op {{offset}}.",
     "regions": {
       "Africa": "Afrika",
       "America": "Amerika",
@@ -1728,5 +1744,9 @@
     "customPlaceholder": "Geef deze eenheid een naam",
     "register": "Toevoegen",
     "selectPlaceholder": "Selecteer een eenheid"
+  },
+  "emailRecipients": {
+    "remove": "{{email}} verwijderen",
+    "placeholder": "Typ een adres en druk op Enter"
   }
 }

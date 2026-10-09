@@ -40,11 +40,23 @@ import {
 } from '../locations/locationGrouping';
 import { QuoteSendRecipientsField, type QuoteRecipient } from './QuoteSendRecipientsField';
 import QuoteStatusBadge from './QuoteStatusBadge';
-import { calculateDraftMonthlyRecurringNet, calculateDraftQuoteTotals, createDraftQuoteItemFromQuoteItem, formatDraftQuoteMoney, type DraftQuoteItem } from './quoteLineItemDraft';
+import { calculateDraftCadenceSummary, calculateDraftMonthlyRecurringNet, calculateDraftQuoteTotals, createDraftQuoteItemFromQuoteItem, formatDraftQuoteMoney, type DraftQuoteItem } from './quoteLineItemDraft';
 import { QuoteTermsContent, TextEditor } from '@alga-psa/ui/editor';
 import type { PartialBlock } from '@blocknote/core';
 import { flattenBlockContentToPlainText } from '@alga-psa/formatting/blocknoteUtils';
 import { getQuoteValidityDays } from '../../../constants/billing';
+import { isQuoteItemIncluded } from '../../../lib/quoteItemInclusion';
+
+// Cadence key -> the `quoteForm.sidebar.cadence.*` leaf. Unknown cadences fall
+// back to the adapter's English `entry.name` so a new cadence never renders a
+// raw key.
+const CADENCE_SIDEBAR_LABEL_KEYS: Record<string, string> = {
+  monthly: 'monthly',
+  quarterly: 'quarterly',
+  'semi-annually': 'semiAnnually',
+  annually: 'annually',
+  onetime: 'oneTime',
+};
 
 interface QuoteFormProps {
   quoteId?: string | null;
@@ -151,6 +163,14 @@ const formatRelativeMinutes = (iso?: string | null): string | null => {
 const isReturnedActionError = (value: unknown) =>
   isActionMessageError(value) || isActionPermissionError(value);
 
+/**
+ * Where the currently displayed quote currency came from. This is transient
+ * presentation state — `quotes.currency_code` remains authoritative — and the
+ * union makes each source explicit instead of inferring it from string
+ * comparisons against the tenant/client defaults.
+ */
+type QuoteCurrencySource = 'tenant' | 'client' | 'template' | 'saved' | 'saved_template' | 'manual';
+
 const QuoteForm: React.FC<QuoteFormProps> = ({
   quoteId,
   initialIsTemplate = false,
@@ -164,6 +184,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
   const { renderQuickAddClient } = useQuickAddClient();
   const isEditMode = Boolean(quoteId && quoteId !== 'new');
   const [defaultCurrency, setDefaultCurrency] = useState('USD');
+  const [currencySource, setCurrencySource] = useState<QuoteCurrencySource>('tenant');
   const [form, setForm] = useState<QuoteFormState>(EMPTY_FORM);
   const [termsBlock, setTermsBlock] = useState<PartialBlock[]>(() => termsBlocksFromLegacyText(''));
   // Bumped only when the editor's content is replaced from outside (quote load,
@@ -321,12 +342,15 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
         getDefaultBillingSettings().catch(() => null),
       ]);
 
+      // Resolve the tenant default in the same load as the clients so a late
+      // tenant-settings response can never overwrite a client or template
+      // choice (the previous separate effect raced the client seed).
       const billingSettings = billingSettingsResult && !isReturnedActionError(billingSettingsResult)
         ? billingSettingsResult
         : null;
       const validityDays = getQuoteValidityDays(billingSettings?.defaultQuoteValidityDays);
-      const currency = billingSettings?.defaultCurrencyCode || 'USD';
-      setDefaultCurrency(currency);
+      const tenantCurrency = billingSettings?.defaultCurrencyCode || 'USD';
+      setDefaultCurrency(tenantCurrency);
 
       setApprovalRequired(!isActionPermissionError(approvalSettings) && approvalSettings.approvalRequired === true);
       if (isActionPermissionError(fetchedContacts) || isActionMessageError(fetchedContacts)) {
@@ -368,8 +392,11 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
           po_number: quote.po_number || '',
           client_notes: quote.client_notes || '',
           terms_and_conditions: quote.terms_and_conditions || '',
-          currency_code: quote.currency_code || currency,
+          currency_code: quote.currency_code || tenantCurrency,
         });
+        // Edit mode never re-defaults: the persisted currency is authoritative
+        // and is labeled as saved (on the quote or on the template).
+        setCurrencySource(quote.is_template === true ? 'saved_template' : 'saved');
         setTermsBlock(seedTermsBlocks(quote.terms_and_conditions_block, quote.terms_and_conditions));
         setTermsEditorKey((key) => key + 1);
         setLineItems((quote.quote_items || []).map(createDraftQuoteItemFromQuoteItem));
@@ -380,15 +407,26 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
         const validUntil = new Date(today);
         validUntil.setDate(validUntil.getDate() + validityDays);
 
+        // Seed create-mode currency from the initial client when one is
+        // supplied (deep link / opportunity), otherwise from the tenant default.
+        const initialClientId = initialContext?.clientId ?? '';
+        const initialClient = initialClientId
+          ? fetchedClients.find((client) => client.client_id === initialClientId)
+          : undefined;
+        const initialCurrency = initialClient
+          ? (initialClient.default_currency_code || tenantCurrency)
+          : tenantCurrency;
+
         setForm({
           ...EMPTY_FORM,
-          client_id: initialContext?.clientId ?? '',
+          client_id: initialClientId,
           contact_id: initialContext?.contactId ?? '',
           title: initialContext?.title ?? '',
-          currency_code: currency,
+          currency_code: initialCurrency,
           quote_date: today.toISOString().slice(0, 10),
           valid_until: validUntil.toISOString().slice(0, 10),
         });
+        setCurrencySource(initialClient ? 'client' : 'tenant');
         setTermsBlock(termsBlocksFromLegacyText(''));
         setLineItems([]);
         setPersistedQuoteItemIds([]);
@@ -438,6 +476,13 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
     [lineItems],
   );
 
+  // Per-cadence required nets and optional add-on totals, so the editor
+  // summary shows the same cadence bands the grouped PDF renders.
+  const cadenceSummary = useMemo(
+    () => calculateDraftCadenceSummary(lineItems),
+    [lineItems],
+  );
+
   const selectedClient = useMemo(
     () => clients.find((c) => c.client_id === form.client_id) ?? null,
     [clients, form.client_id],
@@ -448,6 +493,37 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
     [documentTemplates, documentTemplateId],
   );
 
+  // Title of the source business template, when one is applied, so the currency
+  // source label can name it.
+  const selectedSourceTemplate = useMemo(
+    () => businessTemplates.find((template) => template.quote_id === form.source_template_id) ?? null,
+    [businessTemplates, form.source_template_id],
+  );
+
+  const currencySourceLabel = useMemo(() => {
+    switch (currencySource) {
+      case 'client':
+        return t('quoteForm.essentials.currencySource.client', {
+          defaultValue: 'Client default for {{clientName}}',
+          clientName: selectedClient?.client_name ?? '',
+        });
+      case 'template':
+        return t('quoteForm.essentials.currencySource.template', {
+          defaultValue: 'From quote template {{templateTitle}}',
+          templateTitle: selectedSourceTemplate?.title ?? '',
+        });
+      case 'saved':
+        return t('quoteForm.essentials.currencySource.saved', { defaultValue: 'Saved on this quote' });
+      case 'saved_template':
+        return t('quoteForm.essentials.currencySource.savedTemplate', { defaultValue: 'Saved on this template' });
+      case 'manual':
+        return t('quoteForm.essentials.currencySource.manual', { defaultValue: 'Selected manually' });
+      case 'tenant':
+      default:
+        return t('quoteForm.essentials.currencySource.tenant', { defaultValue: 'Tenant default' });
+    }
+  }, [currencySource, selectedClient, selectedSourceTemplate, t]);
+
   const lineItemCount = lineItems.filter((i) => !i.is_discount).length;
   const hasRecurring = lineItems.some((i) => i.is_recurring && !i.is_discount);
   const hasOneTime = lineItems.some((i) => !i.is_recurring && !i.is_discount);
@@ -456,11 +532,25 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
     setForm((current) => ({ ...current, [field]: value }));
   };
 
+  // Create-mode currency re-resolution: a selected client owns the default, an
+  // empty client falls back to the tenant default. Never called in edit mode so
+  // a saved quote's currency is not silently relabeled.
+  const applyClientCurrency = (clientId: string) => {
+    const client = clientId ? clients.find((c) => c.client_id === clientId) : undefined;
+    handleChange('currency_code', client ? (client.default_currency_code || defaultCurrency) : defaultCurrency);
+    setCurrencySource(client ? 'client' : 'tenant');
+  };
+
   const handleTemplateChange = async (templateId: string) => {
     handleChange('source_template_id', templateId);
 
     if (!templateId) {
       setLineItems([]);
+      // Clearing the template re-resolves to the client/tenant default rather
+      // than leaving a template label on a currency the template no longer owns.
+      if (!isEditMode) {
+        applyClientCurrency(form.client_id);
+      }
       return;
     }
 
@@ -474,6 +564,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
         return;
       }
 
+      const templateCurrency = template.currency_code || '';
       setForm((current) => ({
         ...current,
         source_template_id: templateId,
@@ -483,9 +574,12 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
         terms_and_conditions: current.terms_and_conditions || template.terms_and_conditions || '',
         // The template owns the currency; a blank/absent value falls back to the
         // form's existing choice, then the tenant default.
-        currency_code: template.currency_code || current.currency_code || defaultCurrency,
+        currency_code: templateCurrency || current.currency_code || defaultCurrency,
         po_number: current.po_number || template.po_number || '',
       }));
+      if (templateCurrency) {
+        setCurrencySource('template');
+      }
 
       setTermsBlock((currentBlock) =>
         hasTermsContent(currentBlock)
@@ -923,12 +1017,13 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
       setError(null);
       const result = await downloadQuotePdf(quote.quote_id);
       if (isReturnedActionError(result)) throw new Error(getErrorMessage(result));
-      const { pdfData, quoteNumber } = result as { pdfData: number[]; quoteNumber: string };
+      const { pdfData, fileName } = result as { pdfData: number[]; fileName: string };
+      // LEVERAGE: pattern pdf-blob-download — keep this established download flow aligned with the other quote screens.
       const blob = new Blob([new Uint8Array(pdfData)], { type: 'application/pdf' });
       const blobUrl = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = blobUrl;
-      link.setAttribute('download', `${quoteNumber}.pdf`);
+      link.setAttribute('download', fileName);
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -947,11 +1042,11 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
   };
 
   const canConvertToContract = useMemo(() => {
-    return Boolean((quote?.quote_items || []).some((item) => item.is_recurring && !item.is_discount && (!item.is_optional || item.is_selected !== false)));
+    return Boolean((quote?.quote_items || []).some((item) => item.is_recurring && !item.is_discount && isQuoteItemIncluded(item)));
   }, [quote]);
   const canConvertToInvoice = useMemo(() => {
     if (quote?.converted_invoice_id) return false;
-    const oneTimeItems = (quote?.quote_items || []).filter((item) => !item.is_recurring && (!item.is_optional || item.is_selected !== false));
+    const oneTimeItems = (quote?.quote_items || []).filter((item) => !item.is_recurring && isQuoteItemIncluded(item));
     return oneTimeItems.some((item) => !item.is_discount);
   }, [quote]);
   // Product one-time lines are what convert to a sales order (F002/D2).
@@ -963,7 +1058,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
             item.service_item_kind === 'product' &&
             !item.is_recurring &&
             !item.is_discount &&
-            (!item.is_optional || item.is_selected !== false),
+            isQuoteItemIncluded(item),
         ),
       ),
     [quote],
@@ -1242,6 +1337,17 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
   const formattedRecurringMonthly = recurringMonthlySubtotal > 0
     ? formatDraftQuoteMoney(recurringMonthlySubtotal, form.currency_code)
     : null;
+  const formattedOptionalTotal = draftTotals.optional_total > 0
+    ? formatDraftQuoteMoney(draftTotals.optional_total, form.currency_code)
+    : null;
+  const formattedCadenceSummary = cadenceSummary
+    .filter((entry) => entry.net > 0)
+    .map((entry) => ({
+      cadence_key: entry.cadence_key,
+      name: entry.name,
+      labelKey: CADENCE_SIDEBAR_LABEL_KEYS[entry.cadence_key] ?? null,
+      amount: formatDraftQuoteMoney(entry.net, form.currency_code),
+    }));
 
   const headerTitle = isTemplate
     ? (isEditMode
@@ -1476,9 +1582,18 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
                       selectedClientId={form.client_id || null}
                       onSelect={(clientId) => {
                         if (isReadOnly) return;
-                        handleChange('client_id', clientId || '');
-                        if (clientId !== form.client_id) {
+                        const nextClientId = clientId || '';
+                        const clientChanged = nextClientId !== form.client_id;
+                        handleChange('client_id', nextClientId);
+                        if (clientChanged) {
                           handleChange('contact_id', '');
+                          // A new quote re-defaults from the client, but a
+                          // source template still owns the currency (create
+                          // precedence: template, then client, then tenant).
+                          // Editing keeps the saved currency.
+                          if (!isEditMode && !form.source_template_id) {
+                            applyClientCurrency(nextClientId);
+                          }
                         }
                       }}
                       filterState={clientFilterState}
@@ -1513,10 +1628,20 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
                   <CurrencyPicker
                     id="quote-currency"
                     value={form.currency_code}
-                    onValueChange={(value) => handleChange('currency_code', value)}
+                    onValueChange={(value) => {
+                      if (isReadOnly) return;
+                      handleChange('currency_code', value);
+                      setCurrencySource('manual');
+                    }}
                     placeholder={t('quoteForm.essentials.currencyPlaceholder', { defaultValue: 'Select currency' })}
                     disabled={isReadOnly}
                   />
+                  <span
+                    id="quote-currency-source"
+                    className="text-xs font-normal text-muted-foreground"
+                  >
+                    {currencySourceLabel}
+                  </span>
                 </div>
 
                 {!isTemplate && (
@@ -1771,6 +1896,22 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
                     <dt className="text-muted-foreground">{t('quoteForm.sidebar.tax', { defaultValue: 'Tax' })}</dt>
                     <dd>{formattedTax}</dd>
                   </div>
+                  {formattedCadenceSummary.map((entry) => (
+                    <div key={entry.cadence_key} className="flex items-center justify-between">
+                      <dt className="text-muted-foreground">
+                        {entry.labelKey
+                          ? t(`quoteForm.sidebar.cadence.${entry.labelKey}`, { defaultValue: entry.name })
+                          : entry.name}
+                      </dt>
+                      <dd>{entry.amount}</dd>
+                    </div>
+                  ))}
+                  {formattedOptionalTotal && (
+                    <div className="flex items-center justify-between">
+                      <dt className="text-muted-foreground">{t('quoteForm.sidebar.optionalIfSelected', { defaultValue: 'Optional if selected' })}</dt>
+                      <dd>{formattedOptionalTotal}</dd>
+                    </div>
+                  )}
                 </dl>
               </section>
 
@@ -2187,7 +2328,16 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
             ...current,
             client_id: newClient.client_id,
             contact_id: '',
+            // Only a new quote without a source template adopts the created
+            // client's default currency; editing keeps the saved currency and a
+            // template keeps its own.
+            ...(isEditMode || form.source_template_id
+              ? {}
+              : { currency_code: newClient.default_currency_code || defaultCurrency }),
           }));
+          if (!isEditMode && !form.source_template_id) {
+            setCurrencySource('client');
+          }
         },
         skipSuccessDialog: true,
       })}
