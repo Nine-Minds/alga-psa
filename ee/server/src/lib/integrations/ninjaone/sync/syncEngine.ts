@@ -872,7 +872,8 @@ export class NinjaOneSyncEngine {
           name: baseFields.name,
           serial_number: baseFields.serial_number || '',
           location: baseFields.location || '',
-          status: baseFields.status,
+          // FR-B6: `status` is the human lifecycle state. Sync sets it on
+          // create only, so an MSP's "In repair" survives every run.
           agent_status: baseFields.agent_status,
           last_seen_at: baseFields.last_seen_at,
           last_rmm_sync_at: now,

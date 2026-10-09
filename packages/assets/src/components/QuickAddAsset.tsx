@@ -13,6 +13,7 @@ import { formatClientLocation } from '../lib/formatClientLocation';
 import { parseMoneyToMinorUnits } from '../lib/money';
 import { isBuiltinAssetTypeSlug, pickSchemaAttributes, validateAttributesAgainstSchema } from '../lib/assetTypeAttributes';
 import { buildAssetTypeOptions, findCustomAssetType, useAssetTypeRegistry } from './shared/useAssetTypeOptions';
+import { buildAssetStatusOptions, useAssetStatusRegistry } from './shared/useAssetStatusOptions';
 import { CustomTypeFieldsPanel } from './shared/CustomTypeFieldsPanel';
 import type { CreateAssetRequest, IClient, IClientLocation, IContact } from '@alga-psa/types';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
@@ -29,15 +30,13 @@ interface QuickAddAssetProps {
 }
 
 type NetworkDeviceType = 'switch' | 'router' | 'firewall' | 'access_point' | 'load_balancer';
-type AssetStatus = 'active' | 'inactive' | 'maintenance';
-
-const STATUS_OPTION_VALUES: AssetStatus[] = ['active', 'inactive', 'maintenance'];
 
 interface FormData {
   name: string;
   asset_tag: string;
   asset_type: string;
-  status: AssetStatus;
+  /** An asset_statuses slug (F020); no longer a closed union. */
+  status: string;
   serial_number: string;
   location_id: string | null;
   contact_name_id: string | null;
@@ -95,12 +94,9 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
     { value: '', label: t('quickAddAsset.placeholders.noVendor', { defaultValue: 'No vendor' }) },
     ...vendors.map((vendor) => ({ value: vendor.vendor_id, label: vendor.vendor_name })),
   ];
-  const statusOptions: SelectOption[] = STATUS_OPTION_VALUES.map((value) => ({
-    value,
-    label: t(`quickAddAsset.statusOptions.${value}`, {
-      defaultValue: value.charAt(0).toUpperCase() + value.slice(1)
-    })
-  }));
+  // F020: options come from the tenant's asset_statuses registry.
+  const { statuses: assetStatuses } = useAssetStatusRegistry(open);
+  const statusOptions: SelectOption[] = buildAssetStatusOptions(assetStatuses, t);
   // F308: type options come from the tenant registry (built-ins first with
   // their existing labels, then custom types by registry name).
   const registryEntries = useAssetTypeRegistry(open);
@@ -863,7 +859,7 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
                 {...withDataAutomationId({ id: 'asset-status-select' })}
                 options={statusOptions}
                 value={formData.status}
-                onValueChange={(value) => setFormData(prev => ({ ...prev, status: value as AssetStatus }))}
+                onValueChange={(value) => setFormData(prev => ({ ...prev, status: value }))}
                 placeholder={t('quickAddAsset.placeholders.selectStatus', {
                   defaultValue: 'Select status'
                 })}

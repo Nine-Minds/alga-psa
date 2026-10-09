@@ -25,7 +25,9 @@
       "inactive": "Inaktiv",
       "loading": "Läser in…",
       "na": "Saknas",
-      "none": "Ingen"
+      "none": "Ingen",
+      "yes": "Ja",
+      "no": "Nej"
     },
     "no": "Nej",
     "yes": "Ja"
@@ -1599,7 +1601,9 @@
       "manageAssetTypes": "Behörighet saknas: Du kan inte hantera tillgångstyper",
       "readDocuments": "Behörighet saknas: Du kan inte läsa tillgångsdokument",
       "associateDocuments": "Behörighet saknas: Du kan inte koppla dokument till tillgångar",
-      "removeDocuments": "Behörighet saknas: Du kan inte ta bort dokument från tillgångar"
+      "removeDocuments": "Behörighet saknas: Du kan inte ta bort dokument från tillgångar",
+      "readAssetStatuses": "Åtkomst nekad: kan inte läsa tillgångsstatusar",
+      "manageAssetStatuses": "Åtkomst nekad: kan inte hantera tillgångsstatusar"
     },
     "asset": {
       "notFoundRefresh": "Tillgången hittades inte. Den kan ha raderats. Ladda om sidan och försök igen.",
@@ -1632,5 +1636,50 @@
     "empty": "Inga matchande tillgångar för den här kunden",
     "loading": "Läser in...",
     "remove": "Ta bort tillgång"
+  },
+  "assetStatuses": {
+    "active": "Aktiv",
+    "in_stock": "I lager",
+    "maintenance": "Under underhåll",
+    "inactive": "Inaktiv",
+    "retired": "Utfasad"
+  },
+  "assetStatusKinds": {
+    "deployable": "Driftsättningsbar",
+    "pending": "Väntande",
+    "undeployable": "Ej driftsättningsbar",
+    "archived": "Arkiverad"
+  },
+  "assetStatusSettings": {
+    "title": "Tillgångsstatusar",
+    "description": "Tillgångarnas livscykeltillstånd. RMM-synkroniseringen skriver aldrig över dem efter att en enhet har skapats.",
+    "empty": "Inga tillgångsstatusar än.",
+    "addTitle": "Lägg till status",
+    "editTitle": "Redigera status",
+    "columns": {
+      "label": "Status",
+      "kind": "Livscykel",
+      "builtin": "Inbyggd",
+      "inUse": "Används",
+      "actions": "Åtgärder"
+    },
+    "fields": {
+      "label": "Etikett",
+      "kind": "Livscykel"
+    },
+    "actions": {
+      "add": "Lägg till status",
+      "rename": "Byt namn",
+      "archive": "Arkivera",
+      "moveUp": "Flytta upp",
+      "moveDown": "Flytta ned",
+      "openMenu": "Öppna meny"
+    },
+    "confirmArchiveTitle": "Arkivera denna status?",
+    "confirmArchiveMessage": "Arkivera \"{{label}}\"? Den stannar på tillgångar som redan använder den men erbjuds inte längre.",
+    "errors": {
+      "load": "Kunde inte läsa in tillgångsstatusar",
+      "inUse": "Används fortfarande av {{count}} tillgång(ar). Flytta dem till en annan status först."
+    }
   }
 }

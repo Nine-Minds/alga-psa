@@ -27,6 +27,7 @@ import { publishEvent } from 'server/src/lib/eventBus/publishers';
 import { NotFoundError, ConflictError, ValidationError } from '../middleware/apiMiddleware';
 import { resolveWritableAssetType, resolveAttributeSchemaForWrite, validateAttributesForWrite, attributesMergeExpression, serializeAttributesForInsert } from '@alga-psa/assets/lib/assetAttributeWrites';
 import { isTypedAssetWriteError } from '@alga-psa/assets/lib/assetTypeAttributes';
+import { validateAssetStatusSlug } from '@alga-psa/assets/lib/assetStatusRegistry';
 
 function validationDetails(issues: Array<{ key: string; code: string; message: string }>) {
   return issues.map((issue) => ({ path: ['attributes', issue.key], code: issue.code, message: issue.message }));
@@ -329,6 +330,7 @@ export class AssetService extends BaseService<any> {
     if (assetData.vendor_id) {
       await this.assertVendorExists(knex, context.tenant, assetData.vendor_id);
     }
+    await this.assertValidStatus(knex, context.tenant, assetData.status);
     if (assetData.purchase_cost !== undefined && assetData.purchase_cost !== null && !assetData.purchase_cost_currency) {
       assetData.purchase_cost_currency = await this.resolveTenantCurrency(knex, context.tenant);
     }
@@ -374,13 +376,14 @@ export class AssetService extends BaseService<any> {
     const needsCurrent =
       data.location_id !== undefined ||
       data.contact_name_id !== undefined ||
+      data.status !== undefined ||
       data.client_id !== undefined;
     const needsAssetContext = needsCurrent || data.attributes !== undefined || data.asset_type !== undefined;
 
     const current = needsAssetContext
       ? await scopedTable(knex, context.tenant, this.tableName)
           .where({ [this.primaryKey]: id })
-          .first('client_id', 'location_id', 'contact_name_id', 'asset_type')
+          .first('client_id', 'location_id', 'contact_name_id', 'asset_type', 'status')
       : null;
 
     if (needsAssetContext && !current) {
@@ -436,6 +439,9 @@ export class AssetService extends BaseService<any> {
 
     if (data.vendor_id) {
       await this.assertVendorExists(knex, context.tenant, data.vendor_id);
+    }
+    if (data.status !== undefined) {
+      await this.assertValidStatus(knex, context.tenant, data.status, current?.status);
     }
     if (data.purchase_cost !== undefined) {
       if (data.purchase_cost === null) {
@@ -510,6 +516,24 @@ export class AssetService extends BaseService<any> {
 
     if (!contact) {
       throw new ValidationError('Selected contact is not available for this client');
+    }
+  }
+
+  /**
+   * FR-B3: `status` must be an active tenant asset_statuses slug. An archived
+   * status is accepted only when it is the value already stored.
+   */
+  private async assertValidStatus(
+    knex: Knex,
+    tenant: string,
+    status: string | undefined,
+    storedStatus?: string | null
+  ): Promise<void> {
+    if (status === undefined) return;
+    const result = await validateAssetStatusSlug(knex, tenant, status, storedStatus);
+    if (!result.ok) {
+      const { error } = result as Extract<typeof result, { ok: false }>;
+      throw new ValidationError(error.message, { status: [error.message] });
     }
   }
 
@@ -1266,8 +1290,20 @@ export class AssetService extends BaseService<any> {
       ])
       .first();
 
+    // FR-B5: "deployed" is every status whose kind is `deployable`, so a
+    // tenant's custom "In use" counts and the literal `active` slug does not
+    // have to be special.
+    const deployed = await scopedTable(knex, context.tenant, this.tableName)
+      .whereIn(
+        'status',
+        scopedTable(knex, context.tenant, 'asset_statuses').where({ kind: 'deployable' }).select('slug')
+      )
+      .count<{ count: string }>('asset_id as count')
+      .first();
+
     return {
       total_assets: parseInt(stats?.total_assets || '0'),
+      deployed_assets: parseInt(String(deployed?.count ?? '0')),
       assets_added_this_month: parseInt(stats?.assets_added_this_month || '0'),
       average_asset_age_days: stats?.average_asset_age_days ? Math.round(parseFloat(stats.average_asset_age_days)) : null,
       total_asset_value: parseFloat(stats?.total_asset_value || '0')

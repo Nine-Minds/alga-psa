@@ -93,6 +93,7 @@ import {
   isTypedAssetWriteError,
 } from '../lib/assetTypeAttributes';
 import { resolveWritableAssetType, resolveAttributeSchemaForWrite, validateAttributesForWrite, attributesMergeExpression, serializeAttributesForInsert } from '../lib/assetAttributeWrites';
+import { listDeployableStatusSlugs, validateAssetStatusSlug } from '../lib/assetStatusRegistry';
 import {
     ASSET_CONTACT_UNAVAILABLE_MESSAGE,
     ASSET_VENDOR_UNAVAILABLE_MESSAGE,
@@ -384,6 +385,27 @@ async function resolveValidatedAssetContact(
     }
 
     return { contact_name_id: contact.contact_name_id };
+}
+
+/**
+ * FR-B3: `assets.status` must hold the slug of an active tenant status. An
+ * archived status is accepted only when it is the value the asset already
+ * carries, so a device left on a retired status stays editable.
+ */
+async function assertValidAssetStatus(
+    trx: Knex.Transaction,
+    tenant: string,
+    slug: string,
+    storedSlug?: string | null
+): Promise<void> {
+    const result = await validateAssetStatusSlug(trx, tenant, slug, storedSlug);
+    if (!result.ok) {
+        const { error } = result as Extract<typeof result, { ok: false }>;
+        throw new Error(JSON.stringify({
+            kind: 'validation',
+            issues: [{ code: error.code, path: ['status'], message: error.message }],
+        }));
+    }
 }
 
 /** Free-text asset field: blank means "cleared", not "empty string". */
@@ -1084,6 +1106,8 @@ export async function createAssetInTransaction(
                 validatedData.contact_name_id
             );
 
+            await assertValidAssetStatus(trx, tenant, validatedData.status);
+
             const selectedVendor = await resolveValidatedAssetVendor(trx, tenant, validatedData.vendor_id);
 
             const procurement: Record<string, unknown> = {
@@ -1389,6 +1413,10 @@ export async function updateAssetRecord(
             } else if (baseCandidate.client_id && baseCandidate.client_id !== asset.client_id && asset.contact_name_id) {
                 // The assignee belongs to the previous client; moving the asset clears it.
                 baseCandidate.contact_name_id = null;
+            }
+
+            if (typeof baseCandidate.status === 'string') {
+                await assertValidAssetStatus(trx, tenant, baseCandidate.status, asset.status);
             }
 
             if (Object.prototype.hasOwnProperty.call(baseCandidate, 'vendor_id')) {

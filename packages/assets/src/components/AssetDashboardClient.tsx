@@ -31,7 +31,7 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator
 } from '@alga-psa/ui/components/DropdownMenu';
-import type { Asset, AssetListResponse, AssetQueryParams, ClientMaintenanceSummary, ColumnDefinition, IClient, IClientLocation } from '@alga-psa/types';
+import type { Asset, AssetListResponse, AssetQueryParams, AssetStatus, ClientMaintenanceSummary, ColumnDefinition, IClient, IClientLocation } from '@alga-psa/types';
 import { bulkDeleteAssets, bulkUpdateAssets, getClientMaintenanceSummaries, listAssets } from '../actions/assetActions';
 import { unwrapAssetActionResult } from '../actions/assetActionErrors';
 import { loadAssetDetailDrawerData } from '../actions/assetDrawerActions';
@@ -44,6 +44,7 @@ import { QuickAddAsset } from './QuickAddAsset';
 import { AssetCommandPalette } from './AssetCommandPalette';
 import { AssetTypeBreakdownCard } from './AssetTypeBreakdownCard';
 import { useAssetTypeRegistry } from './shared/useAssetTypeOptions';
+import { buildAssetStatusOptions, useAssetStatusRegistry } from './shared/useAssetStatusOptions';
 import { fallbackAssetTypeLabel, resolveAssetTypeLabel } from '../lib/assetTypeDisplay';
 import { isBuiltinAssetTypeSlug } from '../lib/assetTypeAttributes';
 import { getIconComponent } from '@alga-psa/ui/components/IconPicker';
@@ -128,7 +129,29 @@ type ColumnKey =
   | 'location'
   | 'actions';
 
-const STATUS_OPTIONS: string[] = ['active', 'inactive', 'maintenance'];
+/**
+ * Status badge tone per lifecycle kind. Full class strings on purpose —
+ * Tailwind's JIT cannot see a template-interpolated class name.
+ */
+const STATUS_KIND_BADGE: Record<string, { pill: string; dot: string }> = {
+  deployable: {
+    pill: 'bg-[rgb(var(--badge-success-bg))] text-[rgb(var(--badge-success-text))] ring-1 ring-[rgb(var(--badge-success-border))]',
+    dot: 'bg-[rgb(var(--badge-success-text))]',
+  },
+  pending: {
+    pill: 'bg-[rgb(var(--badge-warning-bg))] text-[rgb(var(--badge-warning-text))] ring-1 ring-[rgb(var(--badge-warning-border))]',
+    dot: 'bg-[rgb(var(--badge-warning-text))]',
+  },
+  undeployable: {
+    pill: 'bg-[rgb(var(--badge-default-bg))] text-[rgb(var(--badge-default-text))] ring-1 ring-[rgb(var(--badge-default-border))]',
+    dot: 'bg-[rgb(var(--badge-default-text))]',
+  },
+  archived: {
+    pill: 'bg-[rgb(var(--badge-default-bg))] text-[rgb(var(--badge-default-text))] ring-1 ring-[rgb(var(--badge-default-border))]',
+    dot: 'bg-[rgb(var(--badge-default-text))]',
+  },
+};
+
 const TYPE_OPTIONS: string[] = ['workstation', 'server', 'network_device', 'mobile_device', 'printer'];
 const ASSETS_PRINT_PAGE_SIZE = 5000;
 
@@ -180,6 +203,8 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
   const [sortBy, setSortBy] = useState<string>('created_at');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const [statusFilters, setStatusFilters] = useState<string[]>([]);
+  // F021: status filter + bulk options come from the tenant's status registry.
+  const { statuses: assetStatuses } = useAssetStatusRegistry();
   const [typeFilters, setTypeFilters] = useState<string[]>([]);
   const [clientFilters, setClientFilters] = useState<string[]>([]);
   const [clients, setClients] = useState<IClient[]>([]);
@@ -806,11 +831,19 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
     return t('assetDashboardClient.details.noDetails', { defaultValue: 'No details available' });
   }, [t]);
 
+  // F021: the filter list and the bulk dialog read the tenant's
+  // asset_statuses registry instead of three hardcoded slugs.
   const getAssetStatusLabel = useCallback((status: string) => {
+    const registered = assetStatuses?.find((candidate: AssetStatus) => candidate.slug === status);
     return t(`assetDashboardClient.statuses.${status}`, {
-      defaultValue: status.charAt(0).toUpperCase() + status.slice(1)
+      defaultValue: registered?.label ?? status.charAt(0).toUpperCase() + status.slice(1)
     });
-  }, [t]);
+  }, [assetStatuses, t]);
+
+  const statusFilterOptions = useMemo(
+    () => buildAssetStatusOptions(assetStatuses, t),
+    [assetStatuses, t]
+  );
 
   const getAssetTypeLabel = useCallback((type: string) => {
     // Built-ins keep their existing i18n labels; custom slugs resolve to the
@@ -989,21 +1022,14 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
       title: t('assetDashboardClient.table.status', { defaultValue: 'Status' }),
       render: (value: unknown) => {
         const status = value as string;
+        // F021: the badge tone follows the registry's lifecycle kind, so a
+        // tenant's custom "In use" reads as deployed and "Retired" does not.
+        const kind = assetStatuses?.find((candidate: AssetStatus) => candidate.slug === status)?.kind
+          ?? (status === 'active' ? 'deployable' : status === 'inactive' ? 'undeployable' : 'pending');
+        const badge = STATUS_KIND_BADGE[kind] ?? STATUS_KIND_BADGE.undeployable;
         return (
-          <span
-            className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${
-              status === 'active'
-                ? 'bg-[rgb(var(--badge-success-bg))] text-[rgb(var(--badge-success-text))] ring-1 ring-[rgb(var(--badge-success-border))]'
-                : status === 'inactive'
-                ? 'bg-[rgb(var(--badge-default-bg))] text-[rgb(var(--badge-default-text))] ring-1 ring-[rgb(var(--badge-default-border))]'
-                : 'bg-[rgb(var(--badge-warning-bg))] text-[rgb(var(--badge-warning-text))] ring-1 ring-[rgb(var(--badge-warning-border))]'
-            }`}
-          >
-            <span
-              className={`w-1.5 h-1.5 rounded-full mr-1.5 ${
-                status === 'active' ? 'bg-[rgb(var(--badge-success-text))]' : status === 'inactive' ? 'bg-[rgb(var(--badge-default-text))]' : 'bg-[rgb(var(--badge-warning-text))]'
-              }`}
-            ></span>
+          <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${badge.pill}`}>
+            <span className={`w-1.5 h-1.5 rounded-full mr-1.5 ${badge.dot}`}></span>
             {getAssetStatusLabel(status)}
           </span>
         );
@@ -1335,7 +1361,7 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="start" className="w-48">
-                    {STATUS_OPTIONS.map((status) => (
+                    {statusFilterOptions.map(({ value: status }: { value: string }) => (
                       <DropdownMenuItem key={status} id={`filter-status-${status}`} onSelect={(event) => event.preventDefault()}>
                         <Checkbox
                           id={`status-checkbox-${status}`}
@@ -1708,10 +1734,7 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
               id="bulk-status-select"
               value={bulkStatusValue}
               onValueChange={setBulkStatusValue}
-              options={STATUS_OPTIONS.map((status) => ({
-                value: status,
-                label: getAssetStatusLabel(status),
-              }))}
+              options={statusFilterOptions}
             />
           </div>
         </DialogContent>

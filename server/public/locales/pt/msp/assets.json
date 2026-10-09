@@ -25,7 +25,9 @@
       "inactive": "Inativo",
       "loading": "Carregando...",
       "na": "N / D",
-      "none": "Nenhum"
+      "none": "Nenhum",
+      "yes": "Sim",
+      "no": "Não"
     },
     "no": "Não",
     "yes": "Sim"
@@ -1627,7 +1629,9 @@
       "manageAssetTypes": "Permissão negada: não é possível gerenciar os tipos de ativo",
       "readDocuments": "Permissão negada: não é possível ler os documentos do ativo",
       "associateDocuments": "Permissão negada: não é possível associar documentos aos ativos",
-      "removeDocuments": "Permissão negada: não é possível remover documentos dos ativos"
+      "removeDocuments": "Permissão negada: não é possível remover documentos dos ativos",
+      "readAssetStatuses": "Permissão negada: não é possível ler os status de ativos",
+      "manageAssetStatuses": "Permissão negada: não é possível gerenciar os status de ativos"
     },
     "asset": {
       "notFoundRefresh": "Ativo não encontrado. Ele pode ter sido excluído. Atualize a página e tente novamente.",
@@ -1660,5 +1664,50 @@
     "empty": "Nenhum ativo correspondente para este cliente",
     "loading": "Carregando...",
     "remove": "Remover ativo"
+  },
+  "assetStatuses": {
+    "active": "Ativo",
+    "in_stock": "Em estoque",
+    "maintenance": "Em manutenção",
+    "inactive": "Inativo",
+    "retired": "Desativado"
+  },
+  "assetStatusKinds": {
+    "deployable": "Implantável",
+    "pending": "Pendente",
+    "undeployable": "Não implantável",
+    "archived": "Arquivado"
+  },
+  "assetStatusSettings": {
+    "title": "Status de ativos",
+    "description": "Os estados do ciclo de vida dos ativos. A sincronização RMM nunca os sobrescreve depois de criar um dispositivo.",
+    "empty": "Ainda não há status de ativos.",
+    "addTitle": "Adicionar status",
+    "editTitle": "Editar status",
+    "columns": {
+      "label": "Status",
+      "kind": "Ciclo de vida",
+      "builtin": "Integrado",
+      "inUse": "Em uso",
+      "actions": "Ações"
+    },
+    "fields": {
+      "label": "Rótulo",
+      "kind": "Ciclo de vida"
+    },
+    "actions": {
+      "add": "Adicionar status",
+      "rename": "Renomear",
+      "archive": "Arquivar",
+      "moveUp": "Mover para cima",
+      "moveDown": "Mover para baixo",
+      "openMenu": "Abrir menu"
+    },
+    "confirmArchiveTitle": "Arquivar este status?",
+    "confirmArchiveMessage": "Arquivar \"{{label}}\"? Ele permanece nos ativos que já o usam, mas deixa de ser oferecido.",
+    "errors": {
+      "load": "Não foi possível carregar os status de ativos",
+      "inUse": "Ainda usado por {{count}} ativo(s). Mova-os para outro status primeiro."
+    }
   }
 }

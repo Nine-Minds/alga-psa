@@ -34,6 +34,13 @@ vi.mock('../actions/assetTypeRegistryActions', () => ({
   getAssetTypes: (...args: unknown[]) => mockGetAssetTypes(...args),
 }));
 
+vi.mock('../actions/assetStatusActions', () => ({
+  listAssetStatuses: vi.fn(async () => [
+    { tenant: 't', status_id: 'st-active', slug: 'active', label: 'Active', kind: 'deployable', is_builtin: true, is_active: true, display_order: 0, created_at: '', updated_at: '' },
+    { tenant: 't', status_id: 'st-inactive', slug: 'inactive', label: 'Inactive', kind: 'undeployable', is_builtin: true, is_active: true, display_order: 1, created_at: '', updated_at: '' },
+  ]),
+}));
+
 vi.mock('@alga-psa/ui/lib/i18n/client', () => {
   // Stable t identity — effects list `t` in their dependency arrays.
   const t = (key: string, options?: Record<string, unknown>) => {

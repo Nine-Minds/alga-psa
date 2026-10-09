@@ -43,6 +43,14 @@ const h = vi.hoisted(() => {
     dbState.server_assets = [];
     dbState.mobile_device_assets = [];
     dbState.printer_assets = [];
+    // The status registry backs FR-B3 validation on every asset write.
+    dbState.asset_statuses = [
+      { tenant: TENANT, status_id: 'st-active', slug: 'active', label: 'Active', kind: 'deployable', is_builtin: true, is_active: true, display_order: 0 },
+      { tenant: TENANT, status_id: 'st-in-stock', slug: 'in_stock', label: 'In stock', kind: 'deployable', is_builtin: true, is_active: true, display_order: 1 },
+      { tenant: TENANT, status_id: 'st-maintenance', slug: 'maintenance', label: 'In maintenance', kind: 'pending', is_builtin: true, is_active: true, display_order: 2 },
+      { tenant: TENANT, status_id: 'st-inactive', slug: 'inactive', label: 'Inactive', kind: 'undeployable', is_builtin: true, is_active: true, display_order: 3 },
+      { tenant: TENANT, status_id: 'st-retired', slug: 'retired', label: 'Retired', kind: 'archived', is_builtin: true, is_active: true, display_order: 4 },
+    ];
     updateCalls.length = 0;
     uuidCounter = 0;
   };

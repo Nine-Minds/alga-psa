@@ -639,6 +639,42 @@ export interface AssetTypeRegistryEntry {
   updated_at: string;
 }
 
+// Asset status registry (tenant-managed lifecycle list)
+/**
+ * Lifecycle bucket a status belongs to. Metrics that mean "deployed" use
+ * `deployable` rather than the literal `active` slug, so a tenant's custom
+ * "In use" status counts too.
+ */
+export type AssetStatusKind = 'deployable' | 'pending' | 'undeployable' | 'archived';
+
+export interface AssetStatus {
+  tenant: string;
+  status_id: string;
+  /** What `assets.status` stores. */
+  slug: string;
+  label: string;
+  kind: AssetStatusKind;
+  is_builtin: boolean;
+  is_active: boolean;
+  display_order: number;
+  created_at: string;
+  updated_at: string;
+  /** Assets currently on this status; only populated by the settings list. */
+  in_use_count?: number;
+}
+
+export interface CreateAssetStatusInput {
+  label: string;
+  kind: AssetStatusKind;
+  display_order?: number;
+}
+
+export interface UpdateAssetStatusInput {
+  label?: string;
+  kind?: AssetStatusKind;
+  display_order?: number;
+}
+
 export interface CreateAssetTypeInput {
   name: string;
   icon?: string | null;

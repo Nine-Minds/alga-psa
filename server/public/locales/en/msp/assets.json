@@ -25,7 +25,9 @@
       "inactive": "Inactive",
       "loading": "Loading...",
       "na": "N/A",
-      "none": "None"
+      "none": "None",
+      "yes": "Yes",
+      "no": "No"
     },
     "no": "No",
     "yes": "Yes"
@@ -1627,7 +1629,9 @@
       "manageAssetTypes": "Permission denied: Cannot manage asset types",
       "readDocuments": "Permission denied: Cannot read asset documents",
       "associateDocuments": "Permission denied: Cannot associate documents with assets",
-      "removeDocuments": "Permission denied: Cannot remove documents from assets"
+      "removeDocuments": "Permission denied: Cannot remove documents from assets",
+      "readAssetStatuses": "Permission denied: Cannot read asset statuses",
+      "manageAssetStatuses": "Permission denied: Cannot manage asset statuses"
     },
     "asset": {
       "notFoundRefresh": "Asset not found. It may have been deleted. Please refresh and try again.",
@@ -1660,5 +1664,50 @@
     "empty": "No matching assets for this client",
     "loading": "Loading...",
     "remove": "Remove asset"
+  },
+  "assetStatuses": {
+    "active": "Active",
+    "in_stock": "In stock",
+    "maintenance": "In maintenance",
+    "inactive": "Inactive",
+    "retired": "Retired"
+  },
+  "assetStatusKinds": {
+    "deployable": "Deployable",
+    "pending": "Pending",
+    "undeployable": "Undeployable",
+    "archived": "Archived"
+  },
+  "assetStatusSettings": {
+    "title": "Asset statuses",
+    "description": "The lifecycle states assets can be in. RMM sync never overwrites them after a device is created.",
+    "empty": "No asset statuses yet.",
+    "addTitle": "Add status",
+    "editTitle": "Edit status",
+    "columns": {
+      "label": "Status",
+      "kind": "Lifecycle",
+      "builtin": "Built-in",
+      "inUse": "In use",
+      "actions": "Actions"
+    },
+    "fields": {
+      "label": "Label",
+      "kind": "Lifecycle"
+    },
+    "actions": {
+      "add": "Add status",
+      "rename": "Rename",
+      "archive": "Archive",
+      "moveUp": "Move up",
+      "moveDown": "Move down",
+      "openMenu": "Open menu"
+    },
+    "confirmArchiveTitle": "Archive this status?",
+    "confirmArchiveMessage": "Archive \"{{label}}\"? It stays on assets that already use it but stops being offered.",
+    "errors": {
+      "load": "Unable to load asset statuses",
+      "inUse": "Still used by {{count}} asset(s). Move them to another status first."
+    }
   }
 }

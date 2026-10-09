@@ -25,7 +25,9 @@
       "inactive": "Inattivo",
       "loading": "Caricamento...",
       "na": "N/D",
-      "none": "Nessuno"
+      "none": "Nessuno",
+      "yes": "Sì",
+      "no": "No"
     },
     "no": "No",
     "yes": "Sì"
@@ -1627,7 +1629,9 @@
       "manageAssetTypes": "Autorizzazione negata: impossibile gestire i tipi di asset",
       "readDocuments": "Autorizzazione negata: impossibile leggere i documenti dell’asset",
       "associateDocuments": "Autorizzazione negata: impossibile associare documenti agli asset",
-      "removeDocuments": "Autorizzazione negata: impossibile rimuovere documenti dagli asset"
+      "removeDocuments": "Autorizzazione negata: impossibile rimuovere documenti dagli asset",
+      "readAssetStatuses": "Permesso negato: impossibile leggere gli stati degli asset",
+      "manageAssetStatuses": "Permesso negato: impossibile gestire gli stati degli asset"
     },
     "asset": {
       "notFoundRefresh": "Asset non trovato. Potrebbe essere stato eliminato. Aggiornare la pagina e riprovare.",
@@ -1660,5 +1664,50 @@
     "empty": "Nessun asset corrispondente per questo cliente",
     "loading": "Caricamento...",
     "remove": "Rimuovi asset"
+  },
+  "assetStatuses": {
+    "active": "Attivo",
+    "in_stock": "In magazzino",
+    "maintenance": "In manutenzione",
+    "inactive": "Inattivo",
+    "retired": "Dismesso"
+  },
+  "assetStatusKinds": {
+    "deployable": "Utilizzabile",
+    "pending": "In attesa",
+    "undeployable": "Non utilizzabile",
+    "archived": "Archiviato"
+  },
+  "assetStatusSettings": {
+    "title": "Stati degli asset",
+    "description": "Gli stati del ciclo di vita degli asset. La sincronizzazione RMM non li sovrascrive mai dopo la creazione di un dispositivo.",
+    "empty": "Nessuno stato asset per ora.",
+    "addTitle": "Aggiungi stato",
+    "editTitle": "Modifica stato",
+    "columns": {
+      "label": "Stato",
+      "kind": "Ciclo di vita",
+      "builtin": "Integrato",
+      "inUse": "In uso",
+      "actions": "Azioni"
+    },
+    "fields": {
+      "label": "Etichetta",
+      "kind": "Ciclo di vita"
+    },
+    "actions": {
+      "add": "Aggiungi stato",
+      "rename": "Rinomina",
+      "archive": "Archivia",
+      "moveUp": "Sposta su",
+      "moveDown": "Sposta giù",
+      "openMenu": "Apri menu"
+    },
+    "confirmArchiveTitle": "Archiviare questo stato?",
+    "confirmArchiveMessage": "Archiviare «{{label}}»? Rimane sugli asset che lo usano già ma non viene più proposto.",
+    "errors": {
+      "load": "Impossibile caricare gli stati degli asset",
+      "inUse": "Ancora usato da {{count}} asset. Spostali prima su un altro stato."
+    }
   }
 }

@@ -10,6 +10,7 @@ import {
   type AmpTicketCommentRecord,
   type AmpTicketRecord,
 } from '@alga-psa/migration-spec';
+import { tenantDb } from '@alga-psa/db';
 import { createLocation } from '@alga-psa/clients/models';
 import { ClientModel } from '@alga-psa/shared/models/clientModel';
 import { ContactModel } from '@alga-psa/shared/models/contactModel';
@@ -23,6 +24,31 @@ export interface AppliedTarget {
   targetEntityType: string;
   targetEntityId: string;
   warnings?: string[];
+}
+
+/**
+ * FR-B2: an imported asset keeps its source lifecycle state when the tenant
+ * already has a status with that slug or label (case-insensitive, so "Retired"
+ * lands on `retired`); anything else falls back to `active` rather than
+ * creating statuses behind the operator's back.
+ */
+async function resolveImportedAssetStatus(
+  trx: Knex.Transaction,
+  tenant: string,
+  sourceStatus?: string | null
+): Promise<string> {
+  const raw = String(sourceStatus ?? '').trim();
+  if (!raw) return 'active';
+
+  const slugCandidate = raw.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+  const match = await tenantDb(trx, tenant).table('asset_statuses')
+    .where({ is_active: true })
+    .where((builder: Knex.QueryBuilder) => {
+      builder.whereRaw('lower(slug) = ?', [slugCandidate]).orWhereRaw('lower(label) = ?', [raw.toLowerCase()]);
+    })
+    .first<{ slug: string }>('slug');
+
+  return match?.slug ?? 'active';
 }
 
 export interface EntityApplier {
@@ -452,7 +478,9 @@ export class AssetMigrationApplier implements EntityApplier {
         client_id: clientId,
         asset_tag: record.serial_number ?? record.source_record_id,
         name: record.name,
-        status: 'active',
+        // FR-B2: keep the source lifecycle state when the tenant has a status
+        // with that slug or label; otherwise fall back to `active`.
+        status: await resolveImportedAssetStatus(trx, context.tenant, record.status),
         location_id: locationId,
         serial_number: record.serial_number ?? undefined,
         purchase_date: record.purchase_date ?? undefined,

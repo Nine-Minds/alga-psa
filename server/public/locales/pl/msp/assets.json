@@ -25,7 +25,9 @@
       "inactive": "Nieaktywny",
       "loading": "Ładowanie...",
       "na": "n/d",
-      "none": "Brak"
+      "none": "Brak",
+      "yes": "Tak",
+      "no": "Nie"
     },
     "no": "Nie",
     "yes": "Tak"
@@ -1627,7 +1629,9 @@
       "manageAssetTypes": "Odmowa uprawnień: nie można zarządzać typami zasobów",
       "readDocuments": "Odmowa uprawnień: nie można odczytywać dokumentów zasobu",
       "associateDocuments": "Odmowa uprawnień: nie można powiązać dokumentów z zasobami",
-      "removeDocuments": "Odmowa uprawnień: nie można usuwać dokumentów z zasobów"
+      "removeDocuments": "Odmowa uprawnień: nie można usuwać dokumentów z zasobów",
+      "readAssetStatuses": "Brak uprawnień: nie można odczytać statusów zasobów",
+      "manageAssetStatuses": "Brak uprawnień: nie można zarządzać statusami zasobów"
     },
     "asset": {
       "notFoundRefresh": "Nie znaleziono zasobu. Mógł zostać usunięty. Odśwież stronę i spróbuj ponownie.",
@@ -1660,5 +1664,50 @@
     "empty": "Brak pasujących zasobów dla tego klienta",
     "loading": "Ładowanie...",
     "remove": "Usuń zasób"
+  },
+  "assetStatuses": {
+    "active": "Aktywny",
+    "in_stock": "W magazynie",
+    "maintenance": "W serwisie",
+    "inactive": "Nieaktywny",
+    "retired": "Wycofany"
+  },
+  "assetStatusKinds": {
+    "deployable": "Do użycia",
+    "pending": "Oczekujący",
+    "undeployable": "Nie do użycia",
+    "archived": "Zarchiwizowany"
+  },
+  "assetStatusSettings": {
+    "title": "Statusy zasobów",
+    "description": "Stany cyklu życia zasobów. Synchronizacja RMM nigdy ich nie nadpisuje po utworzeniu urządzenia.",
+    "empty": "Brak statusów zasobów.",
+    "addTitle": "Dodaj status",
+    "editTitle": "Edytuj status",
+    "columns": {
+      "label": "Status",
+      "kind": "Cykl życia",
+      "builtin": "Wbudowany",
+      "inUse": "W użyciu",
+      "actions": "Akcje"
+    },
+    "fields": {
+      "label": "Etykieta",
+      "kind": "Cykl życia"
+    },
+    "actions": {
+      "add": "Dodaj status",
+      "rename": "Zmień nazwę",
+      "archive": "Archiwizuj",
+      "moveUp": "W górę",
+      "moveDown": "W dół",
+      "openMenu": "Otwórz menu"
+    },
+    "confirmArchiveTitle": "Zarchiwizować ten status?",
+    "confirmArchiveMessage": "Zarchiwizować „{{label}}”? Pozostanie na zasobach, które go już używają, ale nie będzie oferowany.",
+    "errors": {
+      "load": "Nie udało się wczytać statusów zasobów",
+      "inUse": "Nadal używany przez {{count}} zasób/zasoby. Najpierw przenieś je na inny status."
+    }
   }
 }

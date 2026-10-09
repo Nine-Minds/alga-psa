@@ -20,6 +20,7 @@ const TENANT_TABLE_METADATA = {
   accounting_export_lines: { scope: 'tenant' },
   accounting_sync_cycles: { scope: 'tenant' },
   accounting_sync_operations: { scope: 'tenant' },
+  asset_statuses: { scope: 'tenant' },
   asset_types: { scope: 'tenant' },
   asset_type_registry: { scope: 'tenant' },
   asset_remote_access_links: { scope: 'tenant' },

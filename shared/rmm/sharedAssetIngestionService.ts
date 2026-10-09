@@ -156,7 +156,9 @@ async function markMappedAssetDeleted(
   await db.table('assets')
     .where({ asset_id: args.assetId })
     .update({
-      status: 'inactive',
+      // FR-B6: a deleted/tombstoned device is retired; connectivity lives in
+      // agent_status.
+      status: 'retired',
       agent_status: 'offline',
       last_rmm_sync_at: trx.fn.now(),
       updated_at: now,
@@ -278,11 +280,13 @@ export async function ingestNormalizedRmmDeviceSnapshot(
 
     if (existingAsset?.asset_id) {
       const assetId = String(existingAsset.asset_id);
+      // FR-B6: `status` is the human lifecycle state and is set only on
+      // create. Sync owns `agent_status` (connectivity), not `status`, so an
+      // MSP's "In repair" survives every run.
       const assetPatch: Record<string, unknown> = {
         asset_type: assetType,
         name: snapshot.displayName,
         serial_number: snapshot.serialNumber ?? '',
-        status: assetStatus,
         location: snapshot.location ?? '',
         rmm_provider: snapshot.provider,
         rmm_device_id: snapshot.externalDeviceId,

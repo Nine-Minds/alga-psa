@@ -25,7 +25,9 @@
       "inactive": "Inactivo",
       "loading": "Cargando...",
       "na": "N/D",
-      "none": "Ninguno"
+      "none": "Ninguno",
+      "yes": "Sí",
+      "no": "No"
     },
     "no": "No",
     "yes": "Sí"
@@ -1627,7 +1629,9 @@
       "manageAssetTypes": "Permiso denegado: no se pueden gestionar los tipos de activo",
       "readDocuments": "Permiso denegado: no se pueden leer los documentos del activo",
       "associateDocuments": "Permiso denegado: no se pueden asociar documentos a los activos",
-      "removeDocuments": "Permiso denegado: no se pueden quitar documentos de los activos"
+      "removeDocuments": "Permiso denegado: no se pueden quitar documentos de los activos",
+      "readAssetStatuses": "Permiso denegado: no se pueden leer los estados de activos",
+      "manageAssetStatuses": "Permiso denegado: no se pueden gestionar los estados de activos"
     },
     "asset": {
       "notFoundRefresh": "No se encontró el activo. Es posible que se haya eliminado. Actualice la página e inténtelo de nuevo.",
@@ -1660,5 +1664,50 @@
     "empty": "No hay activos coincidentes para este cliente",
     "loading": "Cargando...",
     "remove": "Quitar activo"
+  },
+  "assetStatuses": {
+    "active": "Activo",
+    "in_stock": "En stock",
+    "maintenance": "En mantenimiento",
+    "inactive": "Inactivo",
+    "retired": "Retirado"
+  },
+  "assetStatusKinds": {
+    "deployable": "Desplegable",
+    "pending": "Pendiente",
+    "undeployable": "No desplegable",
+    "archived": "Archivado"
+  },
+  "assetStatusSettings": {
+    "title": "Estados de activos",
+    "description": "Los estados del ciclo de vida de los activos. La sincronización RMM nunca los sobrescribe después de crear un dispositivo.",
+    "empty": "Todavía no hay estados de activos.",
+    "addTitle": "Añadir estado",
+    "editTitle": "Editar estado",
+    "columns": {
+      "label": "Estado",
+      "kind": "Ciclo de vida",
+      "builtin": "Integrado",
+      "inUse": "En uso",
+      "actions": "Acciones"
+    },
+    "fields": {
+      "label": "Etiqueta",
+      "kind": "Ciclo de vida"
+    },
+    "actions": {
+      "add": "Añadir estado",
+      "rename": "Renombrar",
+      "archive": "Archivar",
+      "moveUp": "Subir",
+      "moveDown": "Bajar",
+      "openMenu": "Abrir menú"
+    },
+    "confirmArchiveTitle": "¿Archivar este estado?",
+    "confirmArchiveMessage": "¿Archivar «{{label}}»? Se mantiene en los activos que ya lo usan, pero deja de ofrecerse.",
+    "errors": {
+      "load": "No se pudieron cargar los estados de activos",
+      "inUse": "Todavía lo usan {{count}} activo(s). Muévalos primero a otro estado."
+    }
   }
 }

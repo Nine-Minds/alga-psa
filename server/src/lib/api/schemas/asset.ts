@@ -378,6 +378,8 @@ export const bulkAssetStatusSchema = z.object({
 // Asset statistics schema
 export const assetStatsResponseSchema = z.object({
   total_assets: z.number(),
+  /** Assets whose status kind is `deployable` (FR-B5). */
+  deployed_assets: z.number().optional(),
   assets_by_type: z.record(z.number()),
   assets_by_status: z.record(z.number()),
   assets_by_client: z.record(z.number()),

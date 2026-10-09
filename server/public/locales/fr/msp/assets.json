@@ -25,7 +25,9 @@
       "inactive": "Inactif",
       "loading": "Chargement...",
       "na": "S/O",
-      "none": "Aucun"
+      "none": "Aucun",
+      "yes": "Oui",
+      "no": "Non"
     },
     "no": "Non",
     "yes": "Oui"
@@ -1627,7 +1629,9 @@
       "manageAssetTypes": "Autorisation refusée : impossible de gérer les types d’actif",
       "readDocuments": "Autorisation refusée : impossible de lire les documents de l’actif",
       "associateDocuments": "Autorisation refusée : impossible d’associer des documents aux actifs",
-      "removeDocuments": "Autorisation refusée : impossible de retirer des documents des actifs"
+      "removeDocuments": "Autorisation refusée : impossible de retirer des documents des actifs",
+      "readAssetStatuses": "Autorisation refusée : impossible de lire les statuts des actifs",
+      "manageAssetStatuses": "Autorisation refusée : impossible de gérer les statuts des actifs"
     },
     "asset": {
       "notFoundRefresh": "Actif introuvable. Il a peut-être été supprimé. Veuillez actualiser la page et réessayer.",
@@ -1660,5 +1664,50 @@
     "empty": "Aucun actif correspondant pour ce client",
     "loading": "Chargement...",
     "remove": "Retirer l'actif"
+  },
+  "assetStatuses": {
+    "active": "Actif",
+    "in_stock": "En stock",
+    "maintenance": "En maintenance",
+    "inactive": "Inactif",
+    "retired": "Retiré"
+  },
+  "assetStatusKinds": {
+    "deployable": "Déployable",
+    "pending": "En attente",
+    "undeployable": "Non déployable",
+    "archived": "Archivé"
+  },
+  "assetStatusSettings": {
+    "title": "Statuts des actifs",
+    "description": "Les états du cycle de vie des actifs. La synchronisation RMM ne les écrase jamais après la création d'un appareil.",
+    "empty": "Aucun statut d'actif pour le moment.",
+    "addTitle": "Ajouter un statut",
+    "editTitle": "Modifier le statut",
+    "columns": {
+      "label": "Statut",
+      "kind": "Cycle de vie",
+      "builtin": "Intégré",
+      "inUse": "Utilisé",
+      "actions": "Actions"
+    },
+    "fields": {
+      "label": "Libellé",
+      "kind": "Cycle de vie"
+    },
+    "actions": {
+      "add": "Ajouter un statut",
+      "rename": "Renommer",
+      "archive": "Archiver",
+      "moveUp": "Monter",
+      "moveDown": "Descendre",
+      "openMenu": "Ouvrir le menu"
+    },
+    "confirmArchiveTitle": "Archiver ce statut ?",
+    "confirmArchiveMessage": "Archiver « {{label}} » ? Il reste sur les actifs qui l'utilisent déjà mais n'est plus proposé.",
+    "errors": {
+      "load": "Impossible de charger les statuts des actifs",
+      "inUse": "Encore utilisé par {{count}} actif(s). Déplacez-les d'abord vers un autre statut."
+    }
   }
 }

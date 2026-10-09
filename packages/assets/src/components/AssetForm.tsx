@@ -38,6 +38,7 @@ import { calendarDateToLocalDate } from '../lib/calendarDate';
 import { toCalendarDateString } from '@alga-psa/core';
 import { pickSchemaAttributes, validateAttributesAgainstSchema } from '../lib/assetTypeAttributes';
 import { buildAssetTypeOptions, useAssetTypeRegistry } from './shared/useAssetTypeOptions';
+import { buildAssetStatusOptions, useAssetStatusRegistry } from './shared/useAssetStatusOptions';
 import { CustomTypeFieldsPanel } from './shared/CustomTypeFieldsPanel';
 import { getAllClientsForAssets, getClientContactsForAssets, getClientLocationsForAssets, getVendorOptionsForAssets } from '../actions/clientLookupActions';
 import { useRouter } from 'next/navigation';
@@ -69,7 +70,6 @@ type AssetFormData = Omit<CreateAssetRequest, 'workstation' | 'network_device' |
 type ClientOptionSummary = { id: string; name: string };
 
 
-const STATUS_OPTION_VALUES = ['active', 'inactive', 'maintenance'] as const;
 const NETWORK_DEVICE_TYPE_VALUES = ['switch', 'router', 'firewall', 'access_point', 'load_balancer'] as const;
 const STORAGE_TYPE_VALUES = ['ssd', 'hdd', 'nvme'] as const;
 const OS_TYPE_VALUES = ['windows', 'macos', 'linux'] as const;
@@ -143,14 +143,13 @@ export default function AssetForm({ assetId, onSaved }: AssetFormProps) {
   );
   const customTypeFields = selectedTypeEntry?.fields_schema ?? [];
 
-  const statusOptions = useMemo(() => (
-    STATUS_OPTION_VALUES.map((value) => ({
-      value,
-      label: t(`assetForm.statusOptions.${value}`, {
-        defaultValue: value.charAt(0).toUpperCase() + value.slice(1)
-      })
-    }))
-  ), [t]);
+  // F020: the select lists the tenant's asset_statuses, grouped by kind. An
+  // archived status the asset already carries stays selectable.
+  const { statuses: assetStatuses } = useAssetStatusRegistry(true, { includeArchived: true });
+  const statusOptions = useMemo(
+    () => buildAssetStatusOptions(assetStatuses, t, formData.status),
+    [assetStatuses, t, formData.status]
+  );
 
   const networkDeviceTypeOptions = useMemo(() => (
     NETWORK_DEVICE_TYPE_VALUES.map((value) => ({

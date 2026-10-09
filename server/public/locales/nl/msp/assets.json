@@ -25,7 +25,9 @@
       "inactive": "Inactief",
       "loading": "Laden...",
       "na": "n.v.t.",
-      "none": "Geen"
+      "none": "Geen",
+      "yes": "Ja",
+      "no": "Nee"
     },
     "no": "Nee",
     "yes": "Ja"
@@ -1627,7 +1629,9 @@
       "manageAssetTypes": "Toestemming geweigerd: assettypen kunnen niet worden beheerd",
       "readDocuments": "Toestemming geweigerd: assetdocumenten kunnen niet worden gelezen",
       "associateDocuments": "Toestemming geweigerd: documenten kunnen niet aan assets worden gekoppeld",
-      "removeDocuments": "Toestemming geweigerd: documenten kunnen niet van assets worden verwijderd"
+      "removeDocuments": "Toestemming geweigerd: documenten kunnen niet van assets worden verwijderd",
+      "readAssetStatuses": "Toegang geweigerd: assetstatussen kunnen niet worden gelezen",
+      "manageAssetStatuses": "Toegang geweigerd: assetstatussen kunnen niet worden beheerd"
     },
     "asset": {
       "notFoundRefresh": "Asset niet gevonden. Mogelijk is deze verwijderd. Vernieuw de pagina en probeer het opnieuw.",
@@ -1660,5 +1664,50 @@
     "empty": "Geen overeenkomende assets voor deze klant",
     "loading": "Laden...",
     "remove": "Asset verwijderen"
+  },
+  "assetStatuses": {
+    "active": "Actief",
+    "in_stock": "Op voorraad",
+    "maintenance": "In onderhoud",
+    "inactive": "Inactief",
+    "retired": "Afgevoerd"
+  },
+  "assetStatusKinds": {
+    "deployable": "Inzetbaar",
+    "pending": "In afwachting",
+    "undeployable": "Niet inzetbaar",
+    "archived": "Gearchiveerd"
+  },
+  "assetStatusSettings": {
+    "title": "Assetstatussen",
+    "description": "De levenscyclusstatussen van assets. RMM-synchronisatie overschrijft ze nooit nadat een apparaat is aangemaakt.",
+    "empty": "Nog geen assetstatussen.",
+    "addTitle": "Status toevoegen",
+    "editTitle": "Status bewerken",
+    "columns": {
+      "label": "Status",
+      "kind": "Levenscyclus",
+      "builtin": "Ingebouwd",
+      "inUse": "In gebruik",
+      "actions": "Acties"
+    },
+    "fields": {
+      "label": "Label",
+      "kind": "Levenscyclus"
+    },
+    "actions": {
+      "add": "Status toevoegen",
+      "rename": "Naam wijzigen",
+      "archive": "Archiveren",
+      "moveUp": "Omhoog",
+      "moveDown": "Omlaag",
+      "openMenu": "Menu openen"
+    },
+    "confirmArchiveTitle": "Deze status archiveren?",
+    "confirmArchiveMessage": "'{{label}}' archiveren? Hij blijft op assets die hem al gebruiken, maar wordt niet meer aangeboden.",
+    "errors": {
+      "load": "Assetstatussen konden niet worden geladen",
+      "inUse": "Nog gebruikt door {{count}} asset(s). Verplaats die eerst naar een andere status."
+    }
   }
 }
