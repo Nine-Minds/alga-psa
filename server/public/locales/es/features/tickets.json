@@ -136,6 +136,7 @@
     "assignedTo": "Asignado a",
     "requester": "Solicitante",
     "client": "Empresa",
+    "contact": "Contacto",
     "dueDate": "Fecha de vencimiento",
     "resolution": "Resolución",
     "timeSpent": "Tiempo invertido",

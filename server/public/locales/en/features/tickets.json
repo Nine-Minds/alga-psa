@@ -144,6 +144,7 @@
     "assignedTo": "Assigned To",
     "requester": "Requester",
     "client": "Client",
+    "contact": "Contact",
     "dueDate": "Due Date",
     "resolution": "Resolution",
     "timeSpent": "Time Spent",
