@@ -491,6 +491,21 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
     });
   }
 
+  // Contact
+  if (columnVisibility.contact) {
+    columns.push({
+      key: 'contact',
+      col: {
+        title: t('fields.contact', 'Contact'),
+        dataIndex: 'contact_name',
+        width: '8%',
+        render: (value: string | null) => value
+          ? <span className="block truncate text-[rgb(var(--color-text-700))]">{value}</span>
+          : <span className="text-[rgb(var(--color-text-400))]">—</span>,
+      }
+    });
+  }
+
   // Assigned To
   if (columnVisibility.assigned_to) {
     columns.push({
